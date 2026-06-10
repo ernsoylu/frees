@@ -1,15 +1,22 @@
 package com.frees.backend.core;
 
 /**
- * a reference solver Stop Criteria (Options > Preferences > Stop Crit). Defaults match a reference solver:
- * 250 iterations, relative residual 1e-6, change in variables 1e-9, 3600 s.
+ * a reference solver Stop Criteria (Options > Preferences > Stop Crit), plus the complex-mode
+ * toggle. frEES defaults are tighter than a reference solver's documented 1e-6/1e-9 (the
+ * residual scale floors at 1.0, so 1e-12 behaves like a high-precision
+ * absolute tolerance for unit-scale equations).
  */
 public record SolverSettings(int maxIterations,
                              double relativeResiduals,
                              double changeInVariables,
-                             double elapsedTimeSeconds) {
+                             double elapsedTimeSeconds,
+                             boolean complexMode) {
 
-    public static final SolverSettings DEFAULTS = new SolverSettings(250, 1e-6, 1e-9, 3600.0);
+    public static final SolverSettings DEFAULTS = new SolverSettings(250, 1e-12, 1e-15, 3600.0, false);
+
+    public SolverSettings(int maxIterations, double relativeResiduals, double changeInVariables, double elapsedTimeSeconds) {
+        this(maxIterations, relativeResiduals, changeInVariables, elapsedTimeSeconds, false);
+    }
 
     public SolverSettings {
         if (maxIterations < 1) {
