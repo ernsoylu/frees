@@ -136,7 +136,9 @@ public final class UnitRegistry {
         define("mv", 1e-3, 1, 2, -3, 0, 0, -1);
 
         // Resistance: Ω = kg·m²·s⁻³·A⁻²
+        define("Ω", 1.0, 1, 2, -3, 0, 0, -2);
         define("ohm", 1.0, 1, 2, -3, 0, 0, -2);
+        define("ohms", 1.0, 1, 2, -3, 0, 0, -2);
         define("kohm", 1e3, 1, 2, -3, 0, 0, -2);
         define("mohm", 1e6, 1, 2, -3, 0, 0, -2);
 
@@ -177,7 +179,7 @@ public final class UnitRegistry {
     }
 
     private static final Pattern FACTOR_PATTERN =
-            Pattern.compile("([a-zA-Z]+)\\s*(?:\\^\\s*(-?\\d+(?:\\.\\d+)?)|(-?\\d+(?:\\.\\d+)?))?");
+            Pattern.compile("(\\p{L}+)\\s*(?:\\^\\s*(-?\\d+(?:\\.\\d+)?)|(-?\\d+(?:\\.\\d+)?))?");
 
     private UnitRegistry() {}
 
@@ -247,10 +249,10 @@ public final class UnitRegistry {
             new NamedUnit("V", new double[]{1, 2, -3, 0, 0, -1, 0}),
             new NamedUnit("Ω", new double[]{1, 2, -3, 0, 0, -2, 0}),
             new NamedUnit("Hz", new double[]{0, 0, -1, 0, 0, 0, 0}),
-            new NamedUnit("C", new double[]{0, 0, 1, 0, 0, 1, 0}),
-            new NamedUnit("S", new double[]{-1, -2, 3, 0, 0, 2, 0}),
-            new NamedUnit("F", new double[]{-1, -2, 4, 0, 0, 2, 0}),
-            new NamedUnit("H", new double[]{1, 2, -2, 0, 0, -2, 0}),
+            new NamedUnit("Coulomb", new double[]{0, 0, 1, 0, 0, 1, 0}),
+            new NamedUnit("Siemens", new double[]{-1, -2, 3, 0, 0, 2, 0}),
+            new NamedUnit("Farad", new double[]{-1, -2, 4, 0, 0, 2, 0}),
+            new NamedUnit("Henry", new double[]{1, 2, -2, 0, 0, -2, 0}),
             new NamedUnit("Wb", new double[]{1, 2, -2, 0, 0, -1, 0}),
             new NamedUnit("T", new double[]{1, 0, -2, 0, 0, -1, 0}),
     };

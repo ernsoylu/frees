@@ -86,14 +86,14 @@ class UnitRegistryTest {
         Quantity c2 = UnitRegistry.parse("couloumb");
         assertTrue(c1.sameDimensionsAs(c2));
         assertEquals(1.0, UnitRegistry.convert("coulomb", "couloumb"), 1e-12);
-        assertEquals("C", UnitRegistry.siName(c1.dims()));
+        assertEquals("Coulomb", UnitRegistry.siName(c1.dims()));
 
         // Siemens & Siemes
         Quantity s1 = UnitRegistry.parse("siemens");
         Quantity s2 = UnitRegistry.parse("siemes");
         assertTrue(s1.sameDimensionsAs(s2));
         assertEquals(1.0, UnitRegistry.convert("siemens", "siemes"), 1e-12);
-        assertEquals("S", UnitRegistry.siName(s1.dims()));
+        assertEquals("Siemens", UnitRegistry.siName(s1.dims()));
 
         // Hertz
         Quantity hz = UnitRegistry.parse("hz");
@@ -123,7 +123,17 @@ class UnitRegistryTest {
         assertEquals("T", UnitRegistry.siName(weberPerMeterSquared.dims()));
 
         // Farad and Henry siName
-        assertEquals("F", UnitRegistry.siName(UnitRegistry.parse("farad").dims()));
-        assertEquals("H", UnitRegistry.siName(UnitRegistry.parse("henry").dims()));
+        assertEquals("Farad", UnitRegistry.siName(UnitRegistry.parse("farad").dims()));
+        assertEquals("Henry", UnitRegistry.siName(UnitRegistry.parse("henry").dims()));
+
+        // Ohm, ohms, and Ω
+        Quantity ohm1 = UnitRegistry.parse("ohm");
+        Quantity ohm2 = UnitRegistry.parse("Ω");
+        Quantity ohm3 = UnitRegistry.parse("ohms");
+        assertTrue(ohm1.sameDimensionsAs(ohm2));
+        assertTrue(ohm1.sameDimensionsAs(ohm3));
+        assertEquals(1.0, UnitRegistry.convert("ohm", "Ω"), 1e-12);
+        assertEquals(1.0, UnitRegistry.convert("ohm", "ohms"), 1e-12);
+        assertEquals("Ω", UnitRegistry.siName(ohm1.dims()));
     }
 }
