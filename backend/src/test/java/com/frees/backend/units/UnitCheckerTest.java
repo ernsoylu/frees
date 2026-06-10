@@ -92,6 +92,32 @@ class UnitCheckerTest {
     }
 
     @Test
+    void derivedUnitsSolveByRearrangement() {
+        // m appears inside the product: dims(m) = dims(F) - dims(g) = kg.
+        var derived = solver.deriveUnits("F = m * g",
+                Map.of("f", "N", "g", "m/s^2"));
+        assertEquals("kg", derived.get("m"));
+
+        // Solving for a denominator: mu = rho*u*D/Re.
+        var mu = solver.deriveUnits("Re = rho * u * D / mu",
+                Map.of("re", "-", "rho", "kg/m^3", "u", "m/s", "d", "m"));
+        assertEquals("kg/m-s", mu.get("mu"));
+
+        // Solving through a power: E = 0.5*m*v^2 gives v = sqrt(J/kg) = m/s.
+        var v = solver.deriveUnits("E = 0.5 * m * v^2",
+                Map.of("e", "J", "m", "kg"));
+        assertEquals("m/s", v.get("v"));
+    }
+
+    @Test
+    void rearrangementBailsOnNonMultiplicativeUnknowns() {
+        // x trapped inside a sum with a wildcard term: not isolatable.
+        var derived = solver.deriveUnits("F = m + x * 2",
+                Map.of("f", "N"));
+        assertEquals(null, derived.get("x"));
+    }
+
+    @Test
     void derivedUnitsPropagateThroughChains() {
         // m, g, A annotated; P derives Pa through the chain.
         var derived = solver.deriveUnits(

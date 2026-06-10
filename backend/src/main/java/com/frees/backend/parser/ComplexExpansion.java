@@ -15,6 +15,44 @@ public final class ComplexExpansion {
 
     private ComplexExpansion() {}
 
+    /** Functions with explicit complex-expansion rules below. */
+    private static final java.util.Set<String> SUPPORTED_FUNCTIONS = java.util.Set.of(
+            "real", "imag", "abs", "sin", "cos", "exp", "ln", "sqrt");
+
+    private static boolean isLiteralZero(Expr e) {
+        return e instanceof Expr.Num n && n.value() == 0.0;
+    }
+
+    /**
+     * |z^w| for z = a+bi, w = c+di: r^c * e^(-d*theta). When d is the literal
+     * zero (real exponent, the common case) the e-term is omitted so that
+     * z = 0 does not produce ln(0)*0 = NaN during iteration.
+     */
+    private static Expr powerMagnitude(Expr a, Expr b, Expr c, Expr d) {
+        Expr r2 = new Expr.BinOp('+', new Expr.BinOp('*', a, a), new Expr.BinOp('*', b, b));
+        Expr r = new Expr.Call("sqrt", List.of(r2));
+        Expr rPowC = new Expr.BinOp('^', r, c);
+        if (isLiteralZero(d)) {
+            return rPowC;
+        }
+        Expr theta = new Expr.Call("atan2", List.of(b, a));
+        Expr eTerm = new Expr.Call("exp",
+                List.of(new Expr.Neg(new Expr.BinOp('*', d, theta))));
+        return new Expr.BinOp('*', rPowC, eTerm);
+    }
+
+    /** arg(z^w): c*theta + d*ln(r), with the d-term omitted for real exponents. */
+    private static Expr powerAngle(Expr a, Expr b, Expr c, Expr d) {
+        Expr theta = new Expr.Call("atan2", List.of(b, a));
+        Expr cTheta = new Expr.BinOp('*', c, theta);
+        if (isLiteralZero(d)) {
+            return cTheta;
+        }
+        Expr r2 = new Expr.BinOp('+', new Expr.BinOp('*', a, a), new Expr.BinOp('*', b, b));
+        Expr lnR = new Expr.BinOp('*', new Expr.Num(0.5), new Expr.Call("ln", List.of(r2)));
+        return new Expr.BinOp('+', cTheta, new Expr.BinOp('*', d, lnR));
+    }
+
     public static List<Equation> expand(List<Equation> equations, Map<String, String> displayNames) {
         List<Equation> expanded = new ArrayList<>();
         for (Equation eq : equations) {
@@ -55,12 +93,9 @@ public final class ComplexExpansion {
                         yield new Expr.BinOp('/', num, denom);
                     }
                     case '^' -> {
-                        Expr r2 = new Expr.BinOp('+', new Expr.BinOp('*', lr, lr), new Expr.BinOp('*', li, li));
-                        Expr r = new Expr.Call("sqrt", List.of(r2));
-                        Expr theta = new Expr.Call("atan2", List.of(li, lr));
-                        Expr power = new Expr.BinOp('^', r, rr);
-                        Expr arg = new Expr.BinOp('*', rr, theta);
-                        yield new Expr.BinOp('*', power, new Expr.Call("cos", List.of(arg)));
+                        Expr magnitude = powerMagnitude(lr, li, rr, ri);
+                        Expr angle = powerAngle(lr, li, rr, ri);
+                        yield new Expr.BinOp('*', magnitude, new Expr.Call("cos", List.of(angle)));
                     }
                     default -> throw new IllegalStateException("Unknown operator: " + b.op());
                 };
@@ -110,8 +145,14 @@ public final class ComplexExpansion {
                     Expr halfTheta = new Expr.BinOp('*', new Expr.Num(0.5), theta);
                     yield new Expr.BinOp('*', sqrtR, new Expr.Call("cos", List.of(halfTheta)));
                 }
-                List<Expr> realArgs = c.args().stream().map(ComplexExpansion::realPart).toList();
-                yield new Expr.Call(c.function(), realArgs);
+                if ("abs".equals(c.function())) {
+                    // |z| = sqrt(x^2 + y^2): the complex magnitude.
+                    Expr x = realPart(c.args().get(0));
+                    Expr y = imagPart(c.args().get(0));
+                    Expr r2 = new Expr.BinOp('+', new Expr.BinOp('*', x, x), new Expr.BinOp('*', y, y));
+                    yield new Expr.Call("sqrt", List.of(r2));
+                }
+                throw unsupportedInComplexMode(c);
             }
             case Expr.ArrayAccess aa -> new Expr.ArrayAccess(aa.name() + "_r", aa.indices());
             case Expr.Range r -> new Expr.Range(realPart(r.start()), realPart(r.end()));
@@ -139,12 +180,9 @@ public final class ComplexExpansion {
                         yield new Expr.BinOp('/', num, denom);
                     }
                     case '^' -> {
-                        Expr r2 = new Expr.BinOp('+', new Expr.BinOp('*', lr, lr), new Expr.BinOp('*', li, li));
-                        Expr r = new Expr.Call("sqrt", List.of(r2));
-                        Expr theta = new Expr.Call("atan2", List.of(li, lr));
-                        Expr power = new Expr.BinOp('^', r, rr);
-                        Expr arg = new Expr.BinOp('*', rr, theta);
-                        yield new Expr.BinOp('*', power, new Expr.Call("sin", List.of(arg)));
+                        Expr magnitude = powerMagnitude(lr, li, rr, ri);
+                        Expr angle = powerAngle(lr, li, rr, ri);
+                        yield new Expr.BinOp('*', magnitude, new Expr.Call("sin", List.of(angle)));
                     }
                     default -> throw new IllegalStateException("Unknown operator: " + b.op());
                 };
@@ -193,12 +231,24 @@ public final class ComplexExpansion {
                     Expr halfTheta = new Expr.BinOp('*', new Expr.Num(0.5), theta);
                     yield new Expr.BinOp('*', sqrtR, new Expr.Call("sin", List.of(halfTheta)));
                 }
-                List<Expr> imagArgs = c.args().stream().map(ComplexExpansion::imagPart).toList();
-                yield new Expr.Call(c.function(), imagArgs);
+                if ("abs".equals(c.function())) {
+                    // The magnitude is real; its imaginary part is zero.
+                    yield new Expr.Num(0.0);
+                }
+                throw unsupportedInComplexMode(c);
             }
             case Expr.ArrayAccess aa -> new Expr.ArrayAccess(aa.name() + "_i", aa.indices());
             case Expr.Range r -> new Expr.Range(imagPart(r.start()), imagPart(r.end()));
             case Expr.ArrayLiteral al -> new Expr.ArrayLiteral(al.elements().stream().map(ComplexExpansion::imagPart).toList());
         };
+    }
+
+    private static EquationParser.ParseException unsupportedInComplexMode(Expr.Call c) {
+        // Silently mapping real/imag parts through an arbitrary function is
+        // mathematically wrong (Im tan(z) != tan(Im z)); reject instead.
+        return new EquationParser.ParseException(
+                "Function '" + c.function() + "' is not supported in complex mode. "
+                        + "Supported: " + String.join(", ",
+                        SUPPORTED_FUNCTIONS.stream().sorted().toList()));
     }
 }

@@ -75,8 +75,8 @@ export default function PreferencesModal({ criteria, unitSystem, onSave, onClose
   return (
     <Modal opened onClose={onClose} title="Preferences — Stop Criteria" centered>
       <Text size="sm" c="dimmed" mb="md">
-        Calculation stops when any criterion is satisfied (a reference solver defaults via
-        Restore Defaults).
+        Calculation stops when any criterion is satisfied. Restore Defaults
+        applies frEES defaults (tighter than a reference solver for higher precision).
       </Text>
 
       <Stack gap="sm">

@@ -290,8 +290,20 @@ public class SolveController {
             String error
     ) {}
 
+    public record TableStatsDto(
+            int runs,
+            int solved,
+            int failed,
+            int equations,
+            int unknowns,
+            int iterations,
+            long elapsedMillis,
+            double maxResidual
+    ) {}
+
     public record SolveTableResponse(
-            List<TableRowResult> results
+            List<TableRowResult> results,
+            TableStatsDto stats
     ) {}
 
     @PostMapping("/solve/table")
@@ -324,6 +336,12 @@ public class SolveController {
         units.forEach((name, unit) -> unitsByLowerName.put(name.toLowerCase(), unit));
         UnitRegistry.UnitSystem system = unitSystem(request.displayUnitSystem());
 
+        long startNanos = System.nanoTime();
+        int totalIterations = 0;
+        int equations = 0;
+        int unknowns = 0;
+        double maxResidual = 0.0;
+
         List<TableRowResult> results = new ArrayList<>();
         for (Map<String, Double> row : request.table().rows()) {
             StringBuilder sb = new StringBuilder(request.text());
@@ -343,12 +361,27 @@ public class SolveController {
                     rowValues.put(name, display.value());
                 }
                 results.add(new TableRowResult(true, rowValues, null));
+                totalIterations += result.stats().iterations();
+                maxResidual = Math.max(maxResidual, result.stats().maxResidual());
+                equations = result.stats().equationCount();
+                unknowns = result.stats().unknownCount();
             } catch (Exception e) {
                 results.add(new TableRowResult(false, Map.of(), e.getMessage()));
             }
         }
 
-        return ResponseEntity.ok(new SolveTableResponse(results));
+        int solved = (int) results.stream().filter(TableRowResult::success).count();
+        TableStatsDto stats = new TableStatsDto(
+                results.size(),
+                solved,
+                results.size() - solved,
+                equations,
+                unknowns,
+                totalIterations,
+                (System.nanoTime() - startNanos) / 1_000_000,
+                maxResidual);
+
+        return ResponseEntity.ok(new SolveTableResponse(results, stats));
     }
 
     private static BlockDto toBlockDto(Block block, Map<String, String> displayNames) {
