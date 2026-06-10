@@ -192,4 +192,30 @@ class EquationSystemSolverTest {
         assertTrue(!check.solvable());
         assertTrue(check.message().contains("structurally singular"));
     }
+
+    @Test
+    void solvesDuplicateLoopSystem() {
+        EquationSystemSolver.Result result = solver.solve(
+                "N = 5\n" +
+                "X[1] = 10\n" +
+                "Duplicate i = 2, N\n" +
+                "   X[i] = X[i-1] + i\n" +
+                "End\n" +
+                "Total = Sum(X[1..N])"
+        );
+
+        double x1 = result.variables().get("x[1]");
+        double x2 = result.variables().get("x[2]");
+        double x3 = result.variables().get("x[3]");
+        double x4 = result.variables().get("x[4]");
+        double x5 = result.variables().get("x[5]");
+        double total = result.variables().get("total");
+
+        assertEquals(10.0, x1, 1e-12);
+        assertEquals(12.0, x2, 1e-12);
+        assertEquals(15.0, x3, 1e-12);
+        assertEquals(19.0, x4, 1e-12);
+        assertEquals(24.0, x5, 1e-12);
+        assertEquals(80.0, total, 1e-12);
+    }
 }

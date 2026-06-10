@@ -128,6 +128,9 @@ public final class UnitChecker {
             case Expr.Neg neg -> dimOf(neg.operand());
             case Expr.BinOp b -> dimOfBinOp(b);
             case Expr.Call c -> dimOfCall(c);
+            case Expr.ArrayAccess aa -> Dim.UNKNOWN;
+            case Expr.Range r -> Dim.UNKNOWN;
+            case Expr.ArrayLiteral al -> Dim.UNKNOWN;
         };
     }
 

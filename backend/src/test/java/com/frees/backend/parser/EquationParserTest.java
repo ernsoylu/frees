@@ -2,6 +2,7 @@ package com.frees.backend.parser;
 
 import com.frees.backend.ast.Equation;
 import com.frees.backend.ast.Evaluator;
+import com.frees.backend.ast.Expr;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -133,5 +134,87 @@ class EquationParserTest {
     void convertWithMismatchedDimensionsFailsAtParseTime() {
         assertThrows(EquationParser.ParseException.class,
                 () -> parser.parse("x = Convert(kg, m)"));
+    }
+
+    @Test
+    void parsesSimpleArrayAccess() {
+        List<Equation> equations = parser.parse("X[1] = 5\nY = X[1] + 2");
+        assertEquals(2, equations.size());
+        assertEquals("x[1]", ((com.frees.backend.ast.Expr.Var) equations.get(0).lhs()).name());
+    }
+
+    @Test
+    void parsesDuplicateLoop() {
+        List<Equation> equations = parser.parse(
+                "N = 3\n" +
+                "Duplicate i = 1, N\n" +
+                "   X[i] = i * 2\n" +
+                "End"
+        );
+        // N = 3 (1 equation) plus 3 duplicated equations = 4 equations
+        assertEquals(4, equations.size());
+
+        // Check the generated equations: X[1] = 1 * 2, X[2] = 2 * 2, X[3] = 3 * 2
+        assertEquals("x[1]", ((com.frees.backend.ast.Expr.Var) equations.get(1).lhs()).name());
+        assertEquals("x[2]", ((com.frees.backend.ast.Expr.Var) equations.get(2).lhs()).name());
+        assertEquals("x[3]", ((com.frees.backend.ast.Expr.Var) equations.get(3).lhs()).name());
+    }
+
+    @Test
+    void parsesNestedDuplicateLoops() {
+        List<Equation> equations = parser.parse(
+                "Duplicate i = 1, 2\n" +
+                "   Duplicate j = 1, 3\n" +
+                "      A[i,j] = i + j\n" +
+                "   End\n" +
+                "End"
+        );
+        // Generates 2 * 3 = 6 equations
+        assertEquals(6, equations.size());
+        assertEquals("a[1,1]", ((com.frees.backend.ast.Expr.Var) equations.get(0).lhs()).name());
+        assertEquals("a[2,3]", ((com.frees.backend.ast.Expr.Var) equations.get(5).lhs()).name());
+    }
+
+    @Test
+    void parsesArrayRangeAssignmentWithList() {
+        List<Equation> equations = parser.parse("X[1..3] = [10, 20, 30]");
+        assertEquals(3, equations.size());
+        assertEquals("x[1]", ((com.frees.backend.ast.Expr.Var) equations.get(0).lhs()).name());
+        assertEquals(10.0, Evaluator.eval(equations.get(0).rhs(), Map.of()), 1e-9);
+        assertEquals("x[3]", ((com.frees.backend.ast.Expr.Var) equations.get(2).lhs()).name());
+        assertEquals(30.0, Evaluator.eval(equations.get(2).rhs(), Map.of()), 1e-9);
+    }
+
+    @Test
+    void parsesArrayRangeAssignmentWithScalar() {
+        List<Equation> equations = parser.parse("Y[1..3] = 100");
+        assertEquals(3, equations.size());
+        assertEquals("y[1]", ((com.frees.backend.ast.Expr.Var) equations.get(0).lhs()).name());
+        assertEquals(100.0, Evaluator.eval(equations.get(0).rhs(), Map.of()), 1e-9);
+        assertEquals("y[3]", ((com.frees.backend.ast.Expr.Var) equations.get(2).lhs()).name());
+        assertEquals(100.0, Evaluator.eval(equations.get(2).rhs(), Map.of()), 1e-9);
+    }
+
+    @Test
+    void parsesFunctionCallWithArrayRange() {
+        List<Equation> equations = parser.parse(
+                "X[1..3] = [10, 20, 30]\n" +
+                "Total = Sum(X[1..3])\n" +
+                "Avg = Average(X[1..3])"
+        );
+        // 3 + 1 + 1 = 5 equations
+        assertEquals(5, equations.size());
+
+        // Check Sum call expansion
+        Expr.Call sumCall = (Expr.Call) equations.get(3).rhs();
+        assertEquals("sum", sumCall.function());
+        assertEquals(3, sumCall.args().size());
+        assertEquals("x[1]", ((Expr.Var) sumCall.args().get(0)).name());
+        assertEquals("x[3]", ((Expr.Var) sumCall.args().get(2)).name());
+
+        // Check Average call expansion
+        Expr.Call avgCall = (Expr.Call) equations.get(4).rhs();
+        assertEquals("average", avgCall.function());
+        assertEquals(3, avgCall.args().size());
     }
 }

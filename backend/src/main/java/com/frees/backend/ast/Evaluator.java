@@ -32,6 +32,9 @@ public final class Evaluator {
                 };
             }
             case Expr.Call c -> evalCall(c, values);
+            case Expr.ArrayAccess aa -> throw new IllegalStateException("ArrayAccess cannot be evaluated directly: " + aa);
+            case Expr.Range r -> throw new IllegalStateException("Range cannot be evaluated directly: " + r);
+            case Expr.ArrayLiteral al -> throw new IllegalStateException("ArrayLiteral cannot be evaluated directly: " + al);
         };
     }
 
@@ -49,8 +52,10 @@ public final class Evaluator {
             case "arcsin" -> Math.asin(arg(c, args, 0, values));
             case "arccos" -> Math.acos(arg(c, args, 0, values));
             case "arctan" -> Math.atan(arg(c, args, 0, values));
-            case "min" -> Math.min(arg(c, args, 0, values), arg(c, args, 1, values));
-            case "max" -> Math.max(arg(c, args, 0, values), arg(c, args, 1, values));
+            case "min" -> args.stream().mapToDouble(a -> eval(a, values)).min().orElseThrow(() -> new IllegalStateException("min expects at least 1 argument"));
+            case "max" -> args.stream().mapToDouble(a -> eval(a, values)).max().orElseThrow(() -> new IllegalStateException("max expects at least 1 argument"));
+            case "sum" -> args.stream().mapToDouble(a -> eval(a, values)).sum();
+            case "average", "avg" -> args.stream().mapToDouble(a -> eval(a, values)).average().orElse(0.0);
             default -> throw new IllegalStateException("Unknown function: " + c.function());
         };
     }
