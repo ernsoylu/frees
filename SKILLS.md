@@ -16,7 +16,8 @@
 
 | Concern | Library / Tool |
 |---|---|
-| Framework | React + TypeScript |
+| Framework | React 19 + TypeScript |
+| UI components | Mantine (https://mantine.dev / https://ui.mantine.dev) — dark theme, `MantineProvider defaultColorScheme="dark"` |
 | Equation rendering | KaTeX or MathJax — Formatted Equations window (`_dot`, `_hat`, subscripts) |
 | Data grids | ag-Grid or Handsontable — Parametric, Lookup, and Array tables |
 | Charting | Plotly.js — X-Y, contour, 3D surface, and thermodynamic property plots |
