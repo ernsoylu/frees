@@ -2,6 +2,7 @@ package com.frees.backend.core;
 
 import com.frees.backend.ast.Equation;
 import com.frees.backend.ast.Evaluator;
+import com.frees.backend.ast.ProcDef;
 import org.apache.commons.math3.analysis.UnivariateFunction;
 import org.apache.commons.math3.analysis.solvers.BrentSolver;
 
@@ -40,14 +41,21 @@ public class AllRootsSolver {
 
     private final SolverSettings settings;
     private final Map<String, VariableSpec> specs;
+    private final Map<String, ProcDef> defs;
     private final NewtonSolver newton;
     private final NewtonSolver polisher;
     private int totalIterations;
 
     public AllRootsSolver(SolverSettings settings, Map<String, VariableSpec> specs) {
+        this(settings, specs, Map.of());
+    }
+
+    public AllRootsSolver(SolverSettings settings, Map<String, VariableSpec> specs,
+                          Map<String, ProcDef> defs) {
         this.settings = settings;
         this.specs = specs;
-        this.newton = new NewtonSolver(settings);
+        this.defs = defs;
+        this.newton = new NewtonSolver(settings, defs);
         // Use near-zero residual tolerance so the polisher keeps iterating
         // until variable change drops below 1e-15.  Critical for multiple
         // roots where residual ≈ error^m drops below tolerance long before
@@ -57,7 +65,7 @@ public class AllRootsSolver {
                 1e-30,
                 1e-15,
                 settings.elapsedTimeSeconds(),
-                settings.complexMode()));
+                settings.complexMode()), defs);
     }
 
     public int totalIterations() {
@@ -117,7 +125,7 @@ public class AllRootsSolver {
         Map<String, Double> work = new HashMap<>(branch);
         UnivariateFunction f = t -> {
             work.put(var, t);
-            return Evaluator.eval(eq.lhs(), work) - Evaluator.eval(eq.rhs(), work);
+            return Evaluator.eval(eq.lhs(), work, defs) - Evaluator.eval(eq.rhs(), work, defs);
         };
 
         List<Double> roots = new ArrayList<>();
@@ -211,8 +219,8 @@ public class AllRootsSolver {
     private boolean isValidRoot(Equation eq, String var, double root, Map<String, Double> work) {
         work.put(var, root);
         try {
-            double lhs = Evaluator.eval(eq.lhs(), work);
-            double rhs = Evaluator.eval(eq.rhs(), work);
+            double lhs = Evaluator.eval(eq.lhs(), work, defs);
+            double rhs = Evaluator.eval(eq.rhs(), work, defs);
             double scale = Math.max(Math.abs(lhs), 1.0e-12);
             return Math.abs(lhs - rhs) / scale <= Math.sqrt(settings.relativeResiduals());
         } catch (RuntimeException e) {

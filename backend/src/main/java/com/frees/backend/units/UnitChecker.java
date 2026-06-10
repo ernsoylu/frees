@@ -231,6 +231,10 @@ public final class UnitChecker {
             case Expr.ArrayAccess aa -> Dim.UNKNOWN;
             case Expr.Range r -> Dim.UNKNOWN;
             case Expr.ArrayLiteral al -> Dim.UNKNOWN;
+            // Comparisons and logical operators evaluate to dimensionless 1.0/0.0
+            case Expr.Compare cmp -> Dim.of(Quantity.dimensionless(1.0));
+            case Expr.Logical log -> Dim.of(Quantity.dimensionless(1.0));
+            case Expr.Not not -> Dim.of(Quantity.dimensionless(1.0));
         };
     }
 
