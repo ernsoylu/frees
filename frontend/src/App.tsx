@@ -327,38 +327,6 @@ export default function App() {
                 },
               }}
             />
-
-            {/* Single status area: only the latest check state is shown. */}
-            {!checked ? (
-              <Alert mt="sm" variant="light" color="gray" p="xs">
-                Check the equations to enable Solve.
-              </Alert>
-            ) : checkResult.unitWarnings.length > 0 ? (
-              <Alert
-                mt="sm"
-                variant="light"
-                color={solvable ? 'yellow' : 'red'}
-                p="xs"
-                title={checkResult.message}
-              >
-                <Stack gap={2}>
-                  {checkResult.unitWarnings.map((w, i) => (
-                    <Text size="xs" key={i}>
-                      ⚠ {w}
-                    </Text>
-                  ))}
-                </Stack>
-              </Alert>
-            ) : (
-              <Alert
-                mt="sm"
-                variant="light"
-                color={solvable ? 'green' : 'red'}
-                p="xs"
-              >
-                {checkResult.message}
-              </Alert>
-            )}
           </Paper>
 
           <Group mt="sm" gap="sm">
@@ -380,15 +348,31 @@ export default function App() {
               <Group gap="xs" style={{ display: 'inline-flex', alignItems: 'center' }}>
                 {!result && (
                   <>
-                    <Badge
-                      color={solvable ? (checkResult.unitWarnings.length > 0 ? 'yellow' : 'green') : 'red'}
-                      variant="light"
-                      leftSection={solvable ? (checkResult.unitWarnings.length > 0 ? '⚠' : '✓') : '✗'}
+                    <Tooltip
+                      label={
+                        checkResult.unitWarnings.length > 0 ? (
+                          <Stack gap={2}>
+                            {checkResult.unitWarnings.map((w, i) => (
+                              <Text size="xs" key={i}>
+                                ⚠ {w}
+                              </Text>
+                            ))}
+                          </Stack>
+                        ) : null
+                      }
+                      disabled={checkResult.unitWarnings.length === 0}
                     >
-                      {solvable 
-                        ? (checkResult.unitWarnings.length > 0 ? 'Check: Warnings' : 'Check: OK')
-                        : 'Check: Errors'}
-                    </Badge>
+                      <Badge
+                        color={solvable ? (checkResult.unitWarnings.length > 0 ? 'yellow' : 'green') : 'red'}
+                        variant="light"
+                        leftSection={solvable ? (checkResult.unitWarnings.length > 0 ? '⚠' : '✓') : '✗'}
+                        style={{ cursor: checkResult.unitWarnings.length > 0 ? 'help' : 'default' }}
+                      >
+                        {solvable 
+                          ? (checkResult.unitWarnings.length > 0 ? 'Check: Warnings' : 'Check: OK')
+                          : 'Check: Errors'}
+                      </Badge>
+                    </Tooltip>
                     <Text size="xs" c={solvable ? (checkResult.unitWarnings.length > 0 ? 'yellow' : 'green') : 'red'} style={{ fontWeight: 500 }}>
                       {checkResult.message}
                     </Text>
