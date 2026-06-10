@@ -15,3 +15,6 @@ frontend/dist/
 # OS
 .DS_Store
 frontend/tsconfig.tsbuildinfo
+
+# Claude Code
+.claude/
