@@ -35,7 +35,7 @@ powExpr
     ;
 
 atom
-    : NUMBER                          # NumberAtom
+    : NUMBER UNIT?                    # NumberAtom
     | IDENT LPAREN argList RPAREN     # CallAtom
     | IDENT                           # VarAtom
     | LPAREN expr RPAREN              # ParenAtom
@@ -59,6 +59,10 @@ SEMI    : ';' ;
 NUMBER
     : DIGIT+ ('.' DIGIT*)? EXPONENT?
     | '.' DIGIT+ EXPONENT?
+    ;
+
+UNIT
+    : '[' ~[\]\r\n]* ']'
     ;
 
 IDENT

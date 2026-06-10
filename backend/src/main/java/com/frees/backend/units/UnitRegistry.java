@@ -1,0 +1,348 @@
+package com.frees.backend.units;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+/**
+ * Engineering unit table and EES unit-expression parser.
+ *
+ * EES rules honored here:
+ *  - dash, space, star, or dot multiply units on the same side of the divisor
+ *  - at most one '/' per unit term; everything to its right is the denominator
+ *  - exponents may be written with or without '^' (m^2 == m2), negatives allowed
+ *  - unit names are case-insensitive
+ *  - '-' (alone) is the explicit dimensionless marker
+ */
+public final class UnitRegistry {
+
+    public static class UnknownUnitException extends RuntimeException {
+        public UnknownUnitException(String message) {
+            super(message);
+        }
+    }
+
+    private static final Map<String, Quantity> UNITS = new HashMap<>();
+
+    // dims index: [kg, m, s, K, mol, A, cd]
+    private static void define(String name, double factor, double... exponents) {
+        double[] dims = new double[Quantity.DIMENSIONS];
+        System.arraycopy(exponents, 0, dims, 0, exponents.length);
+        UNITS.put(name.toLowerCase(), new Quantity(factor, dims));
+    }
+
+    static {
+        // Dimensionless
+        define("1", 1.0);
+        define("rad", 1.0);
+        define("deg", Math.PI / 180.0);
+
+        // Mass
+        define("kg", 1.0, 1);
+        define("g", 1e-3, 1);
+        define("mg", 1e-6, 1);
+        define("lbm", 0.45359237, 1);
+        define("lb", 0.45359237, 1);
+        define("lbs", 0.45359237, 1);
+        define("slug", 14.59390294, 1);
+        define("tonne", 1000.0, 1);
+
+        // Length
+        define("m", 1.0, 0, 1);
+        define("cm", 0.01, 0, 1);
+        define("mm", 0.001, 0, 1);
+        define("km", 1000.0, 0, 1);
+        define("in", 0.0254, 0, 1);
+        define("inch", 0.0254, 0, 1);
+        define("ft", 0.3048, 0, 1);
+        define("yd", 0.9144, 0, 1);
+        define("mile", 1609.344, 0, 1);
+
+        // Time
+        define("s", 1.0, 0, 0, 1);
+        define("sec", 1.0, 0, 0, 1);
+        define("min", 60.0, 0, 0, 1);
+        define("hr", 3600.0, 0, 0, 1);
+        define("h", 3600.0, 0, 0, 1);
+        define("day", 86400.0, 0, 0, 1);
+        define("year", 3.1536e7, 0, 0, 1);
+
+        // Temperature (multiplicative scale only; Convert is multiplicative in EES)
+        define("k", 1.0, 0, 0, 0, 1);
+        define("c", 1.0, 0, 0, 0, 1);
+        define("r", 5.0 / 9.0, 0, 0, 0, 1);
+        define("f", 5.0 / 9.0, 0, 0, 0, 1);
+
+        // Amount / current / luminosity
+        define("mol", 1.0, 0, 0, 0, 0, 1);
+        define("kmol", 1000.0, 0, 0, 0, 0, 1);
+        define("a", 1.0, 0, 0, 0, 0, 0, 1);
+        define("ma", 1e-3, 0, 0, 0, 0, 0, 1);
+        define("cd", 1.0, 0, 0, 0, 0, 0, 0, 1);
+
+        // Force: kg·m/s²
+        define("n", 1.0, 1, 1, -2);
+        define("kn", 1e3, 1, 1, -2);
+        define("mn", 1e6, 1, 1, -2);
+        define("lbf", 4.4482216152605, 1, 1, -2);
+        define("dyne", 1e-5, 1, 1, -2);
+
+        // Pressure: kg/(m·s²)
+        define("pa", 1.0, 1, -1, -2);
+        define("kpa", 1e3, 1, -1, -2);
+        define("mpa", 1e6, 1, -1, -2);
+        define("gpa", 1e9, 1, -1, -2);
+        define("bar", 1e5, 1, -1, -2);
+        define("atm", 101325.0, 1, -1, -2);
+        define("psi", 6894.757293168, 1, -1, -2);
+        define("psia", 6894.757293168, 1, -1, -2);
+        define("torr", 133.3223684, 1, -1, -2);
+        define("mmhg", 133.3223684, 1, -1, -2);
+
+        // Energy: kg·m²/s²
+        define("j", 1.0, 1, 2, -2);
+        define("kj", 1e3, 1, 2, -2);
+        define("mj", 1e6, 1, 2, -2);
+        define("btu", 1055.05585262, 1, 2, -2);
+        define("cal", 4.1868, 1, 2, -2);
+        define("kcal", 4186.8, 1, 2, -2);
+        define("kwh", 3.6e6, 1, 2, -2);
+
+        // Power: kg·m²/s³
+        define("w", 1.0, 1, 2, -3);
+        define("kw", 1e3, 1, 2, -3);
+        define("mw", 1e6, 1, 2, -3);
+        define("hp", 745.69987158, 1, 2, -3);
+
+        // Volume
+        define("l", 1e-3, 0, 3);
+        define("liter", 1e-3, 0, 3);
+        define("ml", 1e-6, 0, 3);
+        define("gal", 0.003785411784, 0, 3);
+
+        // Frequency
+        define("hz", 1.0, 0, 0, -1);
+    }
+
+    private static final Pattern FACTOR_PATTERN =
+            Pattern.compile("([a-zA-Z]+)\\s*(?:\\^\\s*(-?\\d+(?:\\.\\d+)?)|(-?\\d+(?:\\.\\d+)?))?");
+
+    private UnitRegistry() {}
+
+    /** Parses an EES unit expression like "kJ/kg-K", "m^3", "Btu/hr-ft^2-R" or "-". */
+    public static Quantity parse(String expression) {
+        String text = expression.trim();
+        if (text.isEmpty() || text.equals("-")) {
+            return Quantity.dimensionless(1.0);
+        }
+
+        int slash = text.indexOf('/');
+        if (slash >= 0 && text.indexOf('/', slash + 1) >= 0) {
+            throw new UnknownUnitException(
+                    "Only one '/' is allowed in a unit expression: " + expression);
+        }
+
+        String numerator = slash >= 0 ? text.substring(0, slash) : text;
+        String denominator = slash >= 0 ? text.substring(slash + 1) : null;
+
+        Quantity result = parseProduct(numerator, expression);
+        if (denominator != null) {
+            result = result.divide(parseProduct(denominator, expression));
+        }
+        return result;
+    }
+
+    private static Quantity parseProduct(String part, String full) {
+        String trimmed = part.trim();
+        if (trimmed.isEmpty() || trimmed.equals("1")) {
+            return Quantity.dimensionless(1.0);
+        }
+
+        Quantity product = Quantity.dimensionless(1.0);
+        // Dash, star, and whitespace mean multiplication in EES units. (Dot is
+        // omitted so decimal exponents like m^1.5 survive; negative exponents
+        // are unsupported — use the denominator instead, as EES convention.)
+        for (String token : trimmed.split("[-*\\s]+")) {
+            if (token.isEmpty() || token.equals("1")) {
+                continue;
+            }
+            Matcher matcher = FACTOR_PATTERN.matcher(token);
+            if (!matcher.matches()) {
+                throw new UnknownUnitException("Cannot parse unit: '" + token
+                        + "' in '" + full + "'");
+            }
+            String name = matcher.group(1);
+            Quantity unit = UNITS.get(name.toLowerCase());
+            if (unit == null) {
+                throw new UnknownUnitException("Unknown unit: '" + name + "' in '" + full + "'");
+            }
+            String exponentText = matcher.group(2) != null ? matcher.group(2) : matcher.group(3);
+            double exponent = exponentText != null ? Double.parseDouble(exponentText) : 1.0;
+            product = product.multiply(unit.pow(exponent));
+        }
+        return product;
+    }
+
+    private static final String[] BASE_SYMBOLS = {"kg", "m", "s", "K", "mol", "A", "cd"};
+
+    private record NamedUnit(String symbol, double[] dims) {}
+
+    private static final NamedUnit[] NAMED_SI_UNITS = {
+            new NamedUnit("N", new double[]{1, 1, -2, 0, 0, 0, 0}),
+            new NamedUnit("Pa", new double[]{1, -1, -2, 0, 0, 0, 0}),
+            new NamedUnit("J", new double[]{1, 2, -2, 0, 0, 0, 0}),
+            new NamedUnit("W", new double[]{1, 2, -3, 0, 0, 0, 0}),
+    };
+
+    /**
+     * Canonical SI unit string for a dimension vector: named units (Pa, N, J,
+     * W) where they match, otherwise a composed, re-parseable expression like
+     * "kg/m-s^2" or "m/s^2". Dimensionless yields "-".
+     */
+    public static String siName(double[] dims) {
+        boolean dimensionless = true;
+        for (double d : dims) {
+            if (Math.abs(d) > 1e-9) {
+                dimensionless = false;
+                break;
+            }
+        }
+        if (dimensionless) {
+            return "-";
+        }
+
+        for (NamedUnit named : NAMED_SI_UNITS) {
+            boolean match = true;
+            for (int i = 0; i < Quantity.DIMENSIONS; i++) {
+                if (Math.abs(dims[i] - named.dims()[i]) > 1e-9) {
+                    match = false;
+                    break;
+                }
+            }
+            if (match) {
+                return named.symbol();
+            }
+        }
+
+        StringBuilder numerator = new StringBuilder();
+        StringBuilder denominator = new StringBuilder();
+        for (int i = 0; i < Quantity.DIMENSIONS; i++) {
+            double e = dims[i];
+            if (Math.abs(e) <= 1e-9) {
+                continue;
+            }
+            StringBuilder target = e > 0 ? numerator : denominator;
+            if (target.length() > 0) {
+                target.append(e > 0 ? ' ' : '-');
+            }
+            target.append(BASE_SYMBOLS[i]);
+            double abs = Math.abs(e);
+            if (Math.abs(abs - 1.0) > 1e-9) {
+                target.append('^').append(abs == Math.rint(abs)
+                        ? String.valueOf((long) abs) : String.valueOf(abs));
+            }
+        }
+        if (denominator.length() == 0) {
+            return numerator.toString();
+        }
+        return (numerator.length() == 0 ? "1" : numerator.toString()) + "/" + denominator;
+    }
+
+    /**
+     * A unit with an affine relation to SI: si = factor * value + offset.
+     * Offsets occur only for bare temperature units (C, F); compound
+     * expressions like kJ/kg-C use the multiplicative (delta) scale.
+     */
+    public record OffsetQuantity(double factor, double offset, double[] dims) {}
+
+    private static final double[] TEMPERATURE_DIMS = {0, 0, 0, 1, 0, 0, 0};
+    public static final double FAHRENHEIT_OFFSET_K = 459.67 * 5.0 / 9.0;
+
+    public static OffsetQuantity parseWithOffset(String expression) {
+        String t = expression.trim().toLowerCase();
+        if (t.equals("c")) {
+            return new OffsetQuantity(1.0, 273.15, TEMPERATURE_DIMS.clone());
+        }
+        if (t.equals("f")) {
+            return new OffsetQuantity(5.0 / 9.0, FAHRENHEIT_OFFSET_K, TEMPERATURE_DIMS.clone());
+        }
+        Quantity q = parse(expression);
+        return new OffsetQuantity(q.factor(), 0.0, q.dims());
+    }
+
+    // ------------------------------------------------------------------
+    // Display unit systems (Preferences): values are computed in SI and
+    // converted for display only, the Mathcad/SMath model.
+    // ------------------------------------------------------------------
+
+    public enum UnitSystem { SI, ENG_SI, ENGLISH }
+
+    /** display = (si - offset) / factor */
+    public record DisplayUnit(String name, double factor, double offset, double[] dims) {}
+
+    private static DisplayUnit display(String name, double factor, double offset,
+                                       double... exponents) {
+        double[] dims = new double[Quantity.DIMENSIONS];
+        System.arraycopy(exponents, 0, dims, 0, exponents.length);
+        return new DisplayUnit(name, factor, offset, dims);
+    }
+
+    // Temperature is deliberately absent from both tables: a temperature
+    // difference is dimensionally identical to an absolute temperature, so a
+    // blanket affine C/F conversion would corrupt deltas (75 K difference is
+    // not -198.15 C). Absolute display in C/F is opt-in per variable via the
+    // Variable Information window.
+    private static final List<DisplayUnit> ENG_SI_DISPLAY = List.of(
+            display("kPa", 1e3, 0, 1, -1, -2),
+            display("kJ", 1e3, 0, 1, 2, -2),
+            display("kW", 1e3, 0, 1, 2, -3));
+
+    private static final List<DisplayUnit> ENGLISH_DISPLAY = List.of(
+            display("psi", 6894.757293168, 0, 1, -1, -2),
+            display("Btu", 1055.05585262, 0, 1, 2, -2),
+            display("hp", 745.69987158, 0, 1, 2, -3),
+            display("lbf", 4.4482216152605, 0, 1, 1, -2),
+            display("lbm", 0.45359237, 0, 1),
+            display("ft", 0.3048, 0, 0, 1),
+            display("ft^2", 0.09290304, 0, 0, 2),
+            display("ft^3", 0.028316846592, 0, 0, 3),
+            display("lbm/ft^3", 16.018463373960142, 0, 1, -3),
+            display("ft/s", 0.3048, 0, 0, 1, -1),
+            display("ft/s^2", 0.3048, 0, 0, 1, -2));
+
+    /** Preferred display unit for a dimension in the given system; null = keep as-is. */
+    public static DisplayUnit preferredDisplayUnit(double[] dims, UnitSystem system) {
+        List<DisplayUnit> table = switch (system) {
+            case SI -> List.of();
+            case ENG_SI -> ENG_SI_DISPLAY;
+            case ENGLISH -> ENGLISH_DISPLAY;
+        };
+        for (DisplayUnit candidate : table) {
+            boolean match = true;
+            for (int i = 0; i < Quantity.DIMENSIONS; i++) {
+                if (Math.abs(dims[i] - candidate.dims()[i]) > 1e-9) {
+                    match = false;
+                    break;
+                }
+            }
+            if (match) {
+                return candidate;
+            }
+        }
+        return null;
+    }
+
+    /** EES Convert('From', 'To'): the multiplicative factor between two unit expressions. */
+    public static double convert(String from, String to) {
+        Quantity source = parse(from);
+        Quantity target = parse(to);
+        if (!source.sameDimensionsAs(target)) {
+            throw new UnknownUnitException(String.format(
+                    "Convert(%s, %s): units have different dimensions [%s] vs [%s].",
+                    from, to, source.dimensionString(), target.dimensionString()));
+        }
+        return source.factor() / target.factor();
+    }
+}

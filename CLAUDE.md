@@ -4,7 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**frEES** is a web-based, 100% functional clone of the Engineering Equation Solver (EES). It uses a Java Spring Boot backend for high-performance symbolic compiling and numerical solving, and a React/TypeScript frontend for a multi-window dashboard interface.
+**frEES** is a web-based, 100% functional clone of the Engineering Equation Solver (EES). It uses a Java Spring Boot backend for high-performance symbolic compiling and numerical solving, and a React 19/TypeScript frontend for a multi-window dashboard interface.
+
+**Frontend UI framework:** [Mantine](https://mantine.dev) (component patterns at https://ui.mantine.dev) with the **dark theme** (`MantineProvider defaultColorScheme="dark"`). Build all new UI with Mantine components (Paper, Tabs, Modal, Table, Alert, Group/Stack/Flex); do not write bespoke CSS components.
 
 ## Build and Run Commands
 
@@ -46,6 +48,7 @@ cd frontend && npm start                      # dev-only: Vite dev server (proxi
 - Variable names are **case-insensitive**.
 - The solver groups equations into blocks via Tarjan's algorithm, then solves each block using Newton's method with step-halving.
 - Data types are parsed dynamically by naming convention: `$` suffix → string, `#` suffix → constant, `[]` → array, `_r`/`_i` components → complex numbers.
+- **All calculations run in SI** (frEES decision, beyond EES): unit-annotated constants are converted to SI at parse time, and computed variables get dimensionally derived SI units. Unit warnings never block solving.
 
 ## Architecture Summary
 

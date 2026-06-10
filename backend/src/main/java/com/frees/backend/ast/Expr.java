@@ -9,7 +9,12 @@ import java.util.TreeSet;
  */
 public sealed interface Expr permits Expr.Num, Expr.Var, Expr.BinOp, Expr.Neg, Expr.Call {
 
-    record Num(double value) implements Expr {}
+    /** A numeric literal, optionally annotated with units: 140 [kPa]. */
+    record Num(double value, String unit) implements Expr {
+        public Num(double value) {
+            this(value, null);
+        }
+    }
 
     record Var(String name) implements Expr {
         public Var {

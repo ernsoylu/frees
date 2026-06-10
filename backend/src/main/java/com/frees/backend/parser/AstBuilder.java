@@ -1,12 +1,23 @@
 package com.frees.backend.parser;
 
 import com.frees.backend.ast.Expr;
+import com.frees.backend.units.UnitRegistry;
 
 import java.util.ArrayList;
 import java.util.List;
 
 /** Converts the ANTLR parse tree into the solver's AST. */
 public class AstBuilder extends EesBaseVisitor<Expr> {
+
+    /**
+     * EES unifies the case of variables to match their first appearance;
+     * maps canonical (lowercase) name -> first-seen spelling.
+     */
+    private final java.util.Map<String, String> displayNames = new java.util.LinkedHashMap<>();
+
+    public java.util.Map<String, String> displayNames() {
+        return displayNames;
+    }
 
     @Override
     public Expr visitExpr(EesParser.ExprContext ctx) {
@@ -56,21 +67,111 @@ public class AstBuilder extends EesBaseVisitor<Expr> {
 
     @Override
     public Expr visitNumberAtom(EesParser.NumberAtomContext ctx) {
-        return new Expr.Num(Double.parseDouble(ctx.NUMBER().getText()));
+        String unit = null;
+        double value = Double.parseDouble(ctx.NUMBER().getText());
+        if (ctx.UNIT() != null) {
+            String bracketed = ctx.UNIT().getText();
+            unit = bracketed.substring(1, bracketed.length() - 1).trim();
+            if (unit.isEmpty()) {
+                unit = null;
+            } else {
+                // All calculations run in SI: annotated constants are
+                // converted at parse time (120 [lb] -> 54.43 with unit kg).
+                // Bare temperature units convert affinely (25 [C] -> 298.15 K).
+                // Unknown units stay untouched; the unit checker reports them.
+                try {
+                    var quantity = UnitRegistry.parseWithOffset(unit);
+                    value = value * quantity.factor() + quantity.offset();
+                    unit = UnitRegistry.siName(quantity.dims());
+                } catch (UnitRegistry.UnknownUnitException ignored) {
+                    // Keep the original text; surfaces as a unit warning.
+                }
+            }
+        }
+        return new Expr.Num(value, unit);
     }
 
     @Override
     public Expr visitVarAtom(EesParser.VarAtomContext ctx) {
-        return new Expr.Var(ctx.IDENT().getText());
+        String original = ctx.IDENT().getText();
+        displayNames.putIfAbsent(original.toLowerCase(), original);
+        return new Expr.Var(original);
     }
 
     @Override
     public Expr visitCallAtom(EesParser.CallAtomContext ctx) {
+        String name = ctx.IDENT().getText();
+
+        // EES Convert(From, To): the arguments are unit expressions, not math.
+        // The factor is a constant, so it folds to a number at parse time.
+        if (name.equalsIgnoreCase("convert")) {
+            List<EesParser.ExprContext> args = ctx.argList().expr();
+            if (args.size() != 2) {
+                throw new EquationParser.ParseException(
+                        "Convert requires exactly two unit arguments: Convert(From, To)");
+            }
+            try {
+                double factor = UnitRegistry.convert(args.get(0).getText(), args.get(1).getText());
+                return new Expr.Num(factor, null);
+            } catch (UnitRegistry.UnknownUnitException e) {
+                throw new EquationParser.ParseException(e.getMessage());
+            }
+        }
+
+        // EES ConvertTemp(From, To, x): affine temperature conversion (the
+        // only EES conversion with an offset). Folds to a*x + b.
+        if (name.equalsIgnoreCase("converttemp")) {
+            List<EesParser.ExprContext> raw = ctx.argList().expr();
+            if (raw.size() != 3) {
+                throw new EquationParser.ParseException(
+                        "ConvertTemp requires three arguments: ConvertTemp(From, To, value)");
+            }
+            double[] toKelvin = temperatureToKelvin(raw.get(0).getText());
+            double[] fromKelvin = kelvinToTemperature(raw.get(1).getText());
+            double a = toKelvin[0] * fromKelvin[0];
+            double b = fromKelvin[0] * toKelvin[1] + fromKelvin[1];
+            Expr x = visit(raw.get(2));
+            // A constant argument folds completely; converting to Kelvin
+            // yields an SI value, so the unit metadata can carry K.
+            if (x instanceof Expr.Num n && n.unit() == null) {
+                String unit = raw.get(1).getText().trim().equalsIgnoreCase("k") ? "K" : null;
+                return new Expr.Num(a * n.value() + b, unit);
+            }
+            Expr scaled = a == 1.0 ? x : new Expr.BinOp('*', new Expr.Num(a), x);
+            return b == 0.0 ? scaled : new Expr.BinOp('+', scaled, new Expr.Num(b));
+        }
+
         List<Expr> args = new ArrayList<>();
         for (EesParser.ExprContext arg : ctx.argList().expr()) {
             args.add(visit(arg));
         }
-        return new Expr.Call(ctx.IDENT().getText(), args);
+        return new Expr.Call(name, args);
+    }
+
+    /** {a, b} such that K = a * T + b. */
+    private static double[] temperatureToKelvin(String scale) {
+        return switch (scale.trim().toLowerCase()) {
+            case "c" -> new double[]{1.0, 273.15};
+            case "k" -> new double[]{1.0, 0.0};
+            case "f" -> new double[]{5.0 / 9.0, UnitRegistry.FAHRENHEIT_OFFSET_K};
+            case "r" -> new double[]{5.0 / 9.0, 0.0};
+            default -> throw new EquationParser.ParseException(
+                    "ConvertTemp: unknown temperature scale '" + scale
+                            + "' (use C, K, F, or R)");
+        };
+    }
+
+    /** {a, b} such that T = a * K + b. */
+    private static double[] kelvinToTemperature(String scale) {
+        return switch (scale.trim().toLowerCase()) {
+            case "c" -> new double[]{1.0, -273.15};
+            case "k" -> new double[]{1.0, 0.0};
+            case "f" -> new double[]{9.0 / 5.0, -459.67};
+            case "r" -> new double[]{9.0 / 5.0, 0.0};
+            default -> throw new EquationParser.ParseException(
+                    "ConvertTemp: unknown temperature scale '" + scale
+                            + "' (use C, K, F, or R)");
+        };
     }
 
     @Override

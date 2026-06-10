@@ -34,7 +34,10 @@ public final class EquationParser {
         }
     }
 
-    public List<Equation> parse(String source) {
+    /** Parsed equations plus the first-appearance spelling of each variable. */
+    public record ParseResult(List<Equation> equations, java.util.Map<String, String> displayNames) {}
+
+    public ParseResult parseResult(String source) {
         CollectingErrorListener errorListener = new CollectingErrorListener();
 
         EesLexer lexer = new EesLexer(CharStreams.fromString(source));
@@ -57,6 +60,10 @@ public final class EquationParser {
             Expr rhs = builder.visit(eq.expr(1));
             equations.add(new Equation(lhs, rhs, eq.getText()));
         }
-        return equations;
+        return new ParseResult(equations, builder.displayNames());
+    }
+
+    public List<Equation> parse(String source) {
+        return parseResult(source).equations();
     }
 }

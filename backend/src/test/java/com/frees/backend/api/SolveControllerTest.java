@@ -26,7 +26,8 @@ class SolveControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.variables[0].name").value("x"))
-                .andExpect(jsonPath("$.variables[0].value").value(2.7015621187164243))
+                .andExpect(jsonPath("$.variables[0].value").value(
+                        org.hamcrest.Matchers.closeTo(2.7015621187164243, 1e-6)))
                 .andExpect(jsonPath("$.stats.equations").value(3))
                 .andExpect(jsonPath("$.stats.unknowns").value(3))
                 .andExpect(jsonPath("$.stats.blocks").value(1));
@@ -39,6 +40,61 @@ class SolveControllerTest {
                         .content("{\"text\": \"x + = 3\"}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.success").value(false));
+    }
+
+    @Test
+    void solveResponseCarriesSiUnitsIncludingDerived() throws Exception {
+        // SI everywhere: 100 bar -> 1e7 Pa; F = P*A derives N = 240000.
+        mockMvc.perform(post("/api/solve")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"text\": \"P = 100 [bar]\\nA = 0.024 [m^2]\\nF = P * A\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.variables[0].name").value("A"))
+                .andExpect(jsonPath("$.variables[0].units").value("m^2"))
+                .andExpect(jsonPath("$.variables[1].name").value("F"))
+                .andExpect(jsonPath("$.variables[1].value").value(
+                        org.hamcrest.Matchers.closeTo(240000.0, 1e-3)))
+                .andExpect(jsonPath("$.variables[1].units").value("N"))
+                .andExpect(jsonPath("$.variables[2].value").value(
+                        org.hamcrest.Matchers.closeTo(1.0e7, 1e-3)))
+                .andExpect(jsonPath("$.variables[2].units").value("Pa"));
+    }
+
+    @Test
+    void displayUnitSystemConvertsResults() throws Exception {
+        // Computed in SI (1e7 Pa); displayed per the requested system.
+        mockMvc.perform(post("/api/solve")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"text\": \"P = 100 [bar]\\nA = 0.024 [m^2]\\nF = P * A\","
+                                + "\"displayUnitSystem\": \"ENG_SI\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.variables[2].name").value("P"))
+                .andExpect(jsonPath("$.variables[2].value").value(
+                        org.hamcrest.Matchers.closeTo(10000.0, 1e-6)))
+                .andExpect(jsonPath("$.variables[2].units").value("kPa"));
+
+        mockMvc.perform(post("/api/solve")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"text\": \"P = 100 [bar]\\nA = 0.024 [m^2]\\nF = P * A\","
+                                + "\"displayUnitSystem\": \"ENGLISH\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.variables[1].units").value("lbf"))
+                .andExpect(jsonPath("$.variables[2].value").value(
+                        org.hamcrest.Matchers.closeTo(1450.377377, 1e-4)))
+                .andExpect(jsonPath("$.variables[2].units").value("psi"));
+    }
+
+    @Test
+    void declaredNonSiUnitsDisplayConverted() throws Exception {
+        // SI default: P computed as 1e7 Pa but declared in bar -> shown as 100 bar.
+        mockMvc.perform(post("/api/solve")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"text\": \"P = 100 [bar]\","
+                                + "\"variableInfo\": [{\"name\":\"P\",\"units\":\"bar\"}]}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.variables[0].value").value(
+                        org.hamcrest.Matchers.closeTo(100.0, 1e-6)))
+                .andExpect(jsonPath("$.variables[0].units").value("bar"));
     }
 
     @Test

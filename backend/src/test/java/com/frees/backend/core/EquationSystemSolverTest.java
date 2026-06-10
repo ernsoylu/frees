@@ -2,6 +2,8 @@ package com.frees.backend.core;
 
 import org.junit.jupiter.api.Test;
 
+import java.util.Map;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -69,6 +71,92 @@ class EquationSystemSolverTest {
         SolverException e = assertThrows(SolverException.class,
                 () -> solver.solve("x + y = 3"));
         assertTrue(e.getMessage().contains("underspecified"));
+    }
+
+    @Test
+    void respectsIterationLimitFromStopCriteria() {
+        // x^2 = 2 from guess 1.0 needs several Newton iterations; 1 is not enough.
+        SolverSettings oneIteration = new SolverSettings(1, 1e-10, 1e-13, 3600);
+        SolverException e = assertThrows(SolverException.class,
+                () -> solver.solve("x^2 = 2", oneIteration));
+        assertTrue(e.getMessage().contains("1 iterations"));
+    }
+
+    @Test
+    void looseResidualToleranceAcceptsEarly() {
+        SolverSettings loose = new SolverSettings(250, 0.5, 1e-13, 3600);
+        EquationSystemSolver.Result result = solver.solve("x^2 = 2", loose);
+        // Accepted within a loose relative residual; not the exact root.
+        assertTrue(Math.abs(result.variables().get("x") - Math.sqrt(2)) < 0.5);
+    }
+
+    @Test
+    void reportsIterationsInStats() {
+        EquationSystemSolver.Result result = solver.solve("x^2 = 2");
+        assertTrue(result.stats().iterations() >= 1, "expected at least one Newton iteration");
+        assertEquals(Math.sqrt(2), result.variables().get("x"), 1e-6);
+    }
+
+    @Test
+    void rejectsInvalidStopCriteria() {
+        assertThrows(SolverException.class, () -> new SolverSettings(0, 1e-6, 1e-9, 3600));
+        assertThrows(SolverException.class, () -> new SolverSettings(250, -1, 1e-9, 3600));
+    }
+
+    @Test
+    void guessValueSelectsRoot() {
+        // 4^x - 3*2^(x+1) + 8 = 0 has roots x=1 and x=2; the guess steers Newton.
+        String text = "4^x - 3 * 2^(x+1) + 8 = 0";
+
+        var nearOne = solver.solve(text, SolverSettings.DEFAULTS,
+                Map.of("x", new VariableSpec("x", 0.5,
+                        Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY)));
+        assertEquals(1.0, nearOne.variables().get("x"), 1e-6);
+
+        var nearTwo = solver.solve(text, SolverSettings.DEFAULTS,
+                Map.of("x", new VariableSpec("x", 2.5,
+                        Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY)));
+        assertEquals(2.0, nearTwo.variables().get("x"), 1e-6);
+    }
+
+    @Test
+    void boundsSelectRoot() {
+        // x^2 = 4 has roots ±2; bounds force the solver into one half-plane.
+        var negative = solver.solve("x^2 = 4", SolverSettings.DEFAULTS,
+                Map.of("x", new VariableSpec("x", -1.0, Double.NEGATIVE_INFINITY, 0.0)));
+        assertEquals(-2.0, negative.variables().get("x"), 1e-6);
+
+        var positive = solver.solve("x^2 = 4", SolverSettings.DEFAULTS,
+                Map.of("x", new VariableSpec("x", 1.0, 0.0, Double.POSITIVE_INFINITY)));
+        assertEquals(2.0, positive.variables().get("x"), 1e-6);
+    }
+
+    @Test
+    void rejectsGuessOutsideBounds() {
+        assertThrows(SolverException.class,
+                () -> new VariableSpec("x", 5.0, 0.0, 2.0));
+        assertThrows(SolverException.class,
+                () -> new VariableSpec("x", 1.0, 3.0, 2.0));
+    }
+
+    @Test
+    void checkResultListsVariables() {
+        EquationSystemSolver.CheckResult check = solver.check("x+y=3\ny=z-4\nz=x^2-3");
+        assertEquals(java.util.List.of("x", "y", "z"), check.variables());
+    }
+
+    @Test
+    void variableCaseFollowsFirstAppearance() {
+        // EES unifies variable case to the first appearance: F stays F.
+        EquationSystemSolver.Result result =
+                solver.solve("P = 100\nA = 0.024\nF = P * A");
+        assertEquals(java.util.Set.of("A", "F", "P"), result.variables().keySet());
+        // Lookups remain case-insensitive.
+        assertEquals(2.4, result.variables().get("f"), 1e-9);
+
+        EquationSystemSolver.CheckResult check =
+                solver.check("Temp = 300\npressure = Temp * 2");
+        assertEquals(java.util.List.of("pressure", "Temp"), check.variables());
     }
 
     @Test
