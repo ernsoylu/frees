@@ -123,11 +123,13 @@ export default function App() {
     // Like EES, any edit invalidates the previous Check; Solve is gated
     // until the system is re-checked.
     setCheckResult(null)
+    setResult(null)
   }
 
   async function onCheck() {
     if (checking) return
     setChecking(true)
+    setResult(null)
     try {
       const response = await check(text, buildVariableInfo())
       setCheckResult(response)
@@ -373,6 +375,48 @@ export default function App() {
               checked={findAll}
               onChange={(e) => setFindAll(e.currentTarget.checked)}
             />
+
+            {checked && (
+              <Group gap="xs" style={{ display: 'inline-flex', alignItems: 'center' }}>
+                {!result && (
+                  <>
+                    <Badge
+                      color={solvable ? (checkResult.unitWarnings.length > 0 ? 'yellow' : 'green') : 'red'}
+                      variant="light"
+                      leftSection={solvable ? (checkResult.unitWarnings.length > 0 ? '⚠' : '✓') : '✗'}
+                    >
+                      {solvable 
+                        ? (checkResult.unitWarnings.length > 0 ? 'Check: Warnings' : 'Check: OK')
+                        : 'Check: Errors'}
+                    </Badge>
+                    <Text size="xs" c={solvable ? (checkResult.unitWarnings.length > 0 ? 'yellow' : 'green') : 'red'} style={{ fontWeight: 500 }}>
+                      {checkResult.message}
+                    </Text>
+                  </>
+                )}
+
+                {result && (
+                  <>
+                    <Badge
+                      color={result.success ? (result.unitWarnings.length > 0 ? 'yellow' : 'green') : 'red'}
+                      variant="light"
+                      leftSection={result.success ? (result.unitWarnings.length > 0 ? '⚠' : '✓') : '✗'}
+                    >
+                      {result.success 
+                        ? (result.unitWarnings.length > 0 ? 'Solve: Warnings' : 'Solve: OK')
+                        : 'Solve: Failed'}
+                    </Badge>
+                    <Text size="xs" c={result.success ? (result.unitWarnings.length > 0 ? 'yellow' : 'green') : 'red'} style={{ fontWeight: 500 }}>
+                      {result.success 
+                        ? (result.unitWarnings.length > 0 
+                            ? `Solve successful with ${result.unitWarnings.length} unit consistency warning(s)` 
+                            : 'Solve successful') 
+                        : (result.error || 'Solve failed')}
+                    </Text>
+                  </>
+                )}
+              </Group>
+            )}
           </Group>
         </Flex>
 
