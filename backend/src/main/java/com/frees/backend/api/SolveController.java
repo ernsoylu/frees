@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -268,6 +269,86 @@ public class SolveController {
             return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
                     .body(SolveResponse.failure(e.getMessage()));
         }
+    }
+
+    public record TableDto(
+            List<String> variables,
+            List<Map<String, Double>> rows
+    ) {}
+
+    public record SolveTableRequest(
+            String text,
+            StopCriteriaDto stopCriteria,
+            List<VariableInfoDto> variableInfo,
+            String displayUnitSystem,
+            TableDto table
+    ) {}
+
+    public record TableRowResult(
+            boolean success,
+            Map<String, Double> values,
+            String error
+    ) {}
+
+    public record SolveTableResponse(
+            List<TableRowResult> results
+    ) {}
+
+    @PostMapping("/solve/table")
+    public ResponseEntity<SolveTableResponse> solveTable(@RequestBody SolveTableRequest request) {
+        if (request.text() == null || request.text().isBlank()) {
+            return ResponseEntity.badRequest().build();
+        }
+        if (request.table() == null || request.table().rows() == null) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        SolverSettings settings = request.stopCriteria() != null
+                ? request.stopCriteria().toSettings()
+                : SolverSettings.DEFAULTS;
+
+        Map<String, VariableSpec> specs = new HashMap<>();
+        if (request.variableInfo() != null) {
+            for (VariableInfoDto dto : request.variableInfo()) {
+                if (dto.name() != null && !dto.name().isBlank()) {
+                    VariableSpec spec = dto.toSpec();
+                    specs.put(spec.name(), spec);
+                }
+            }
+        }
+
+        Map<String, String> units = effectiveUnits(request.text(), request.variableInfo());
+        Map<String, String> unitsByLowerName = new HashMap<>();
+        solver.deriveUnits(request.text(), units)
+                .forEach((name, unit) -> unitsByLowerName.put(name.toLowerCase(), unit));
+        units.forEach((name, unit) -> unitsByLowerName.put(name.toLowerCase(), unit));
+        UnitRegistry.UnitSystem system = unitSystem(request.displayUnitSystem());
+
+        List<TableRowResult> results = new ArrayList<>();
+        for (Map<String, Double> row : request.table().rows()) {
+            StringBuilder sb = new StringBuilder(request.text());
+            for (Map.Entry<String, Double> entry : row.entrySet()) {
+                if (entry.getValue() != null) {
+                    sb.append("\n").append(entry.getKey()).append(" = ").append(entry.getValue());
+                }
+            }
+            try {
+                EquationSystemSolver.Result result = solver.solve(sb.toString(), settings, specs);
+                Map<String, Double> rowValues = new HashMap<>();
+                for (Map.Entry<String, Double> e : result.variables().entrySet()) {
+                    String name = e.getKey();
+                    double siValue = e.getValue();
+                    String unit = unitsByLowerName.getOrDefault(name.toLowerCase(), "");
+                    VariableDto display = toDisplay(name, siValue, unit, system);
+                    rowValues.put(name, display.value());
+                }
+                results.add(new TableRowResult(true, rowValues, null));
+            } catch (Exception e) {
+                results.add(new TableRowResult(false, Map.of(), e.getMessage()));
+            }
+        }
+
+        return ResponseEntity.ok(new SolveTableResponse(results));
     }
 
     private static BlockDto toBlockDto(Block block, Map<String, String> displayNames) {
