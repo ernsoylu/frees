@@ -136,4 +136,25 @@ class SolveControllerTest {
                 .andExpect(status().isUnprocessableEntity())
                 .andExpect(jsonPath("$.success").value(false));
     }
+
+    @Test
+    void solvesParametricTable() throws Exception {
+        mockMvc.perform(post("/api/solve/table")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{"
+                                + "\"text\": \"I = V / R_1\","
+                                + "\"table\": {"
+                                + "  \"variables\": [\"V\", \"R_1\", \"I\"],"
+                                + "  \"rows\": ["
+                                + "    {\"V\": 30.0, \"R_1\": 120.0},"
+                                + "    {\"V\": 60.0, \"R_1\": 120.0}"
+                                + "  ]"
+                                + "}"
+                                + "}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.results[0].success").value(true))
+                .andExpect(jsonPath("$.results[0].values.I").value(0.25))
+                .andExpect(jsonPath("$.results[1].success").value(true))
+                .andExpect(jsonPath("$.results[1].values.I").value(0.5));
+    }
 }
