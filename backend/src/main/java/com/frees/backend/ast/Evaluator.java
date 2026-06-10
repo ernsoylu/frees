@@ -52,6 +52,7 @@ public final class Evaluator {
             case "arcsin" -> Math.asin(arg(c, args, 0, values));
             case "arccos" -> Math.acos(arg(c, args, 0, values));
             case "arctan" -> Math.atan(arg(c, args, 0, values));
+            case "atan2" -> Math.atan2(arg(c, args, 0, values), arg(c, args, 1, values));
             case "min" -> args.stream().mapToDouble(a -> eval(a, values)).min().orElseThrow(() -> new IllegalStateException("min expects at least 1 argument"));
             case "max" -> args.stream().mapToDouble(a -> eval(a, values)).max().orElseThrow(() -> new IllegalStateException("max expects at least 1 argument"));
             case "sum" -> args.stream().mapToDouble(a -> eval(a, values)).sum();

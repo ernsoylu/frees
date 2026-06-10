@@ -14,8 +14,10 @@ interface Props {
   onClose: () => void
 }
 
+type StopCriteriaField = Exclude<keyof StopCriteria, 'complexMode'>
+
 interface Field {
-  key: keyof StopCriteria
+  key: StopCriteriaField
   label: string
   hint: string
 }
@@ -29,7 +31,7 @@ const FIELDS: Field[] = [
 ]
 
 export default function PreferencesModal({ criteria, unitSystem, onSave, onClose }: Props) {
-  const [draft, setDraft] = useState<Record<keyof StopCriteria, string>>({
+  const [draft, setDraft] = useState<Record<StopCriteriaField, string>>({
     maxIterations: String(criteria.maxIterations),
     relativeResiduals: String(criteria.relativeResiduals),
     changeInVariables: String(criteria.changeInVariables),
@@ -38,7 +40,7 @@ export default function PreferencesModal({ criteria, unitSystem, onSave, onClose
   const [system, setSystem] = useState<UnitSystem>(unitSystem)
   const [error, setError] = useState<string | null>(null)
 
-  function setField(key: keyof StopCriteria, value: string) {
+  function setField(key: StopCriteriaField, value: string) {
     setDraft((d) => ({ ...d, [key]: value }))
     setError(null)
   }
@@ -54,7 +56,7 @@ export default function PreferencesModal({ criteria, unitSystem, onSave, onClose
   }
 
   function save() {
-    const parsed: Partial<Record<keyof StopCriteria, number>> = {}
+    const parsed: Partial<Record<StopCriteriaField, number>> = {}
     for (const field of FIELDS) {
       const value = Number(draft[field.key])
       if (!Number.isFinite(value) || value <= 0) {
@@ -67,7 +69,7 @@ export default function PreferencesModal({ criteria, unitSystem, onSave, onClose
       setError('No. iterations must be a whole number.')
       return
     }
-    onSave(parsed as unknown as StopCriteria, system)
+    onSave({ ...criteria, ...parsed } as StopCriteria, system)
   }
 
   return (

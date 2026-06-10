@@ -29,12 +29,13 @@ export interface StopCriteria {
   relativeResiduals: number
   changeInVariables: number
   elapsedTimeSeconds: number
+  complexMode?: boolean
 }
 
 export const DEFAULT_STOP_CRITERIA: StopCriteria = {
   maxIterations: 250,
-  relativeResiduals: 1e-6,
-  changeInVariables: 1e-9,
+  relativeResiduals: 1e-12,
+  changeInVariables: 1e-15,
   elapsedTimeSeconds: 3600,
 }
 
@@ -60,6 +61,7 @@ export interface SolveResponse {
   solutions: SolutionResult[]
   unitWarnings: string[]
   error: string | null
+  formattedEquations: string[]
 }
 
 export interface CheckResponse {
@@ -70,6 +72,7 @@ export interface CheckResponse {
   unitWarnings: string[]
   inferredUnits: Record<string, string>
   message: string
+  formattedEquations: string[]
 }
 
 export interface VariableInfo {
@@ -83,11 +86,12 @@ export interface VariableInfo {
 export async function check(
   text: string,
   variableInfo: VariableInfo[],
+  complexMode: boolean,
 ): Promise<CheckResponse> {
   const response = await fetch('/api/check', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ text, variableInfo }),
+    body: JSON.stringify({ text, variableInfo, stopCriteria: { complexMode } }),
   })
   return (await response.json()) as CheckResponse
 }

@@ -122,8 +122,58 @@ public final class UnitRegistry {
         define("ml", 1e-6, 0, 3);
         define("gal", 0.003785411784, 0, 3);
 
-        // Frequency
+        // Frequency: Hz = s⁻¹
         define("hz", 1.0, 0, 0, -1);
+        define("hertz", 1.0, 0, 0, -1);
+        define("khz", 1e3, 0, 0, -1);
+        define("mhz", 1e6, 0, 0, -1);
+        define("ghz", 1e9, 0, 0, -1);
+
+        // Electrical: derived from kg, m, s, A
+        // Voltage: V = kg·m²·s⁻³·A⁻¹
+        define("v", 1.0, 1, 2, -3, 0, 0, -1);
+        define("kv", 1e3, 1, 2, -3, 0, 0, -1);
+        define("mv", 1e-3, 1, 2, -3, 0, 0, -1);
+
+        // Resistance: Ω = kg·m²·s⁻³·A⁻²
+        define("ohm", 1.0, 1, 2, -3, 0, 0, -2);
+        define("kohm", 1e3, 1, 2, -3, 0, 0, -2);
+        define("mohm", 1e6, 1, 2, -3, 0, 0, -2);
+
+        // Capacitance: F = s⁴·A²·kg⁻¹·m⁻²
+        define("farad", 1.0, -1, -2, 4, 0, 0, 2);
+        define("uf", 1e-6, -1, -2, 4, 0, 0, 2);
+        define("nf", 1e-9, -1, -2, 4, 0, 0, 2);
+        define("pf", 1e-12, -1, -2, 4, 0, 0, 2);
+
+        // Inductance: H = kg·m²·s⁻²·A⁻²
+        define("henry", 1.0, 1, 2, -2, 0, 0, -2);
+        define("mh", 1e-3, 1, 2, -2, 0, 0, -2);
+        define("uh", 1e-6, 1, 2, -2, 0, 0, -2);
+
+        // Charge: C = A·s
+        define("coulomb", 1.0, 0, 0, 1, 0, 0, 1);
+        define("couloumb", 1.0, 0, 0, 1, 0, 0, 1);
+        define("uc", 1e-6, 0, 0, 1, 0, 0, 1);
+        define("nc", 1e-9, 0, 0, 1, 0, 0, 1);
+        define("pc", 1e-12, 0, 0, 1, 0, 0, 1);
+
+        // Conductance: S = A²·s³·kg⁻¹·m⁻²
+        define("siemens", 1.0, -1, -2, 3, 0, 0, 2);
+        define("siemes", 1.0, -1, -2, 3, 0, 0, 2);
+        define("msiemens", 1e-3, -1, -2, 3, 0, 0, 2);
+        define("usiemens", 1e-6, -1, -2, 3, 0, 0, 2);
+
+        // Magnetic flux: Wb = kg·m²·s⁻²·A⁻¹
+        define("wb", 1.0, 1, 2, -2, 0, 0, -1);
+        define("weber", 1.0, 1, 2, -2, 0, 0, -1);
+        define("mwb", 1e-3, 1, 2, -2, 0, 0, -1);
+
+        // Magnetic flux density: T = kg·s⁻²·A⁻¹
+        define("tesla", 1.0, 1, 0, -2, 0, 0, -1);
+        define("t", 1.0, 1, 0, -2, 0, 0, -1);
+        define("mt", 1e-3, 1, 0, -2, 0, 0, -1);
+        define("ut", 1e-6, 1, 0, -2, 0, 0, -1);
     }
 
     private static final Pattern FACTOR_PATTERN =
@@ -194,6 +244,15 @@ public final class UnitRegistry {
             new NamedUnit("Pa", new double[]{1, -1, -2, 0, 0, 0, 0}),
             new NamedUnit("J", new double[]{1, 2, -2, 0, 0, 0, 0}),
             new NamedUnit("W", new double[]{1, 2, -3, 0, 0, 0, 0}),
+            new NamedUnit("V", new double[]{1, 2, -3, 0, 0, -1, 0}),
+            new NamedUnit("Ω", new double[]{1, 2, -3, 0, 0, -2, 0}),
+            new NamedUnit("Hz", new double[]{0, 0, -1, 0, 0, 0, 0}),
+            new NamedUnit("C", new double[]{0, 0, 1, 0, 0, 1, 0}),
+            new NamedUnit("S", new double[]{-1, -2, 3, 0, 0, 2, 0}),
+            new NamedUnit("F", new double[]{-1, -2, 4, 0, 0, 2, 0}),
+            new NamedUnit("H", new double[]{1, 2, -2, 0, 0, -2, 0}),
+            new NamedUnit("Wb", new double[]{1, 2, -2, 0, 0, -1, 0}),
+            new NamedUnit("T", new double[]{1, 0, -2, 0, 0, -1, 0}),
     };
 
     /**

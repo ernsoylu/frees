@@ -7,9 +7,14 @@ package com.frees.backend.core;
 public record SolverSettings(int maxIterations,
                              double relativeResiduals,
                              double changeInVariables,
-                             double elapsedTimeSeconds) {
+                             double elapsedTimeSeconds,
+                             boolean complexMode) {
 
-    public static final SolverSettings DEFAULTS = new SolverSettings(250, 1e-6, 1e-9, 3600.0);
+    public static final SolverSettings DEFAULTS = new SolverSettings(250, 1e-12, 1e-15, 3600.0, false);
+
+    public SolverSettings(int maxIterations, double relativeResiduals, double changeInVariables, double elapsedTimeSeconds) {
+        this(maxIterations, relativeResiduals, changeInVariables, elapsedTimeSeconds, false);
+    }
 
     public SolverSettings {
         if (maxIterations < 1) {

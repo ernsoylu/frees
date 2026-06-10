@@ -25,7 +25,8 @@ public class SolveController {
     public record StopCriteriaDto(Integer maxIterations,
                                   Double relativeResiduals,
                                   Double changeInVariables,
-                                  Double elapsedTimeSeconds) {
+                                  Double elapsedTimeSeconds,
+                                  Boolean complexMode) {
 
         SolverSettings toSettings() {
             SolverSettings d = SolverSettings.DEFAULTS;
@@ -33,7 +34,8 @@ public class SolveController {
                     maxIterations != null ? maxIterations : d.maxIterations(),
                     relativeResiduals != null ? relativeResiduals : d.relativeResiduals(),
                     changeInVariables != null ? changeInVariables : d.changeInVariables(),
-                    elapsedTimeSeconds != null ? elapsedTimeSeconds : d.elapsedTimeSeconds());
+                    elapsedTimeSeconds != null ? elapsedTimeSeconds : d.elapsedTimeSeconds(),
+                    complexMode != null ? complexMode : d.complexMode());
         }
     }
 
@@ -43,8 +45,6 @@ public class SolveController {
         VariableSpec toSpec() {
             double lo = lower != null ? lower : Double.NEGATIVE_INFINITY;
             double hi = upper != null ? upper : Double.POSITIVE_INFINITY;
-            // An explicit guess outside the bounds is the user's error; the
-            // implicit default of 1.0 is clamped into the bounds instead.
             double g = guess != null ? guess
                     : Math.clamp(VariableSpec.DEFAULT_GUESS, lo, hi);
             return new VariableSpec(name, g, lo, hi);
@@ -79,11 +79,12 @@ public class SolveController {
                                 StatsDto stats,
                                 List<SolutionDto> solutions,
                                 List<String> unitWarnings,
-                                String error) {
+                                String error,
+                                List<String> formattedEquations) {
 
         static SolveResponse failure(String error) {
             return new SolveResponse(false, List.of(), List.of(), List.of(), null,
-                    List.of(), List.of(), error);
+                    List.of(), List.of(), error, List.of());
         }
     }
 
@@ -99,7 +100,8 @@ public class SolveController {
                                 List<String> variables,
                                 List<String> unitWarnings,
                                 Map<String, String> inferredUnits,
-                                String message) {}
+                                String message,
+                                List<String> formattedEquations) {}
 
     private static Map<String, String> unitsByVariable(List<VariableInfoDto> variableInfo) {
         Map<String, String> units = new HashMap<>();
@@ -113,11 +115,6 @@ public class SolveController {
         return units;
     }
 
-    /**
-     * Inferred units from annotated constants, overridden by explicit
-     * Variable Info. Keys are normalized to lowercase so the override is
-     * deterministic regardless of display casing.
-     */
     private Map<String, String> effectiveUnits(String text, List<VariableInfoDto> variableInfo) {
         Map<String, String> units = new HashMap<>();
         solver.inferUnits(text)
@@ -126,12 +123,6 @@ public class SolveController {
         return units;
     }
 
-    /**
-     * Values are computed in SI; this converts a variable for display only
-     * (the Mathcad/SMath model). The recorded unit (declared or derived) is
-     * the default display target — so a variable declared in bar shows in bar
-     * — and the Preferences unit system overrides it by dimension.
-     */
     private static VariableDto toDisplay(String name, double siValue, String unit,
                                          UnitRegistry.UnitSystem system) {
         if (unit == null || unit.isBlank() || unit.equals("-")) {
@@ -168,17 +159,22 @@ public class SolveController {
     public ResponseEntity<CheckResponse> check(@RequestBody SolveRequest request) {
         if (request.text() == null || request.text().isBlank()) {
             return ResponseEntity.ok(new CheckResponse(false, 0, 0, List.of(), List.of(),
-                    Map.of(), "No equations entered."));
+                    Map.of(), "No equations entered.", List.of()));
         }
         try {
-            EquationSystemSolver.CheckResult result = solver.check(request.text());
+            boolean complexMode = request.stopCriteria() != null && Boolean.TRUE.equals(request.stopCriteria().complexMode());
+            EquationSystemSolver.CheckResult result = solver.check(request.text(), complexMode);
             Map<String, String> effective = effectiveUnits(request.text(), request.variableInfo());
-            // Inferred (from annotations) plus dimensionally derived SI units,
-            // so the Variable Info table fills in computed variables too.
             Map<String, String> inferredUnits =
                     new HashMap<>(solver.deriveUnits(request.text(), effective));
             inferredUnits.putAll(solver.inferUnits(request.text()));
             List<String> unitWarnings = solver.checkUnits(request.text(), effective);
+
+            EquationParser.ParseResult parsed = new EquationParser().parseResult(request.text());
+            List<String> formattedEquations = parsed.equations().stream()
+                    .map(eq -> com.frees.backend.parser.LatexConverter.toLatex(eq, parsed.displayNames()))
+                    .toList();
+
             return ResponseEntity.ok(new CheckResponse(
                     result.solvable(),
                     result.equationCount(),
@@ -186,13 +182,13 @@ public class SolveController {
                     result.variables(),
                     unitWarnings,
                     inferredUnits,
-                    result.message()));
+                    result.message(),
+                    formattedEquations));
         } catch (EquationParser.ParseException e) {
-            // EES halts at the first syntax error; report the first one found.
             String firstError = e.getMessage().lines().findFirst().orElse(e.getMessage());
             return ResponseEntity.ok(new CheckResponse(
                     false, 0, 0, List.of(), List.of(), Map.of(),
-                    "Syntax error: " + firstError));
+                    "Syntax error: " + firstError, List.of()));
         }
     }
 
@@ -219,15 +215,19 @@ public class SolveController {
             EquationSystemSolver.Result result = findAll
                     ? solver.solveAll(request.text(), settings, specs)
                     : solver.solve(request.text(), settings, specs);
-            // EES checks units automatically after calculations finish.
             Map<String, String> units = effectiveUnits(request.text(), request.variableInfo());
             List<String> unitWarnings = solver.checkUnits(request.text(), units);
             Map<String, String> unitsByLowerName = new HashMap<>();
-            // Derived SI units fill in computed variables; declared units win.
             solver.deriveUnits(request.text(), units)
                     .forEach((name, unit) -> unitsByLowerName.put(name.toLowerCase(), unit));
             units.forEach((name, unit) -> unitsByLowerName.put(name.toLowerCase(), unit));
             UnitRegistry.UnitSystem system = unitSystem(request.displayUnitSystem());
+
+            EquationParser.ParseResult parsed = new EquationParser().parseResult(request.text());
+            List<String> formattedEquations = parsed.equations().stream()
+                    .map(eq -> com.frees.backend.parser.LatexConverter.toLatex(eq, parsed.displayNames()))
+                    .toList();
+
             return ResponseEntity.ok(new SolveResponse(
                     true,
                     result.variables().entrySet().stream()
@@ -259,7 +259,8 @@ public class SolveController {
                                     s.maxResidual()))
                             .toList(),
                     unitWarnings,
-                    null));
+                    null,
+                    formattedEquations));
         } catch (EquationParser.ParseException e) {
             return ResponseEntity.badRequest()
                     .body(SolveResponse.failure("Syntax error:\n" + e.getMessage()));

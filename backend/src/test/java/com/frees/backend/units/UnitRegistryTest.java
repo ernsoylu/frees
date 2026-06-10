@@ -78,4 +78,52 @@ class UnitRegistryTest {
         assertTrue(btu.sameDimensionsAs(si));
         assertEquals(5.678263, UnitRegistry.convert("Btu/hr-ft^2-R", "W/m^2-K"), 1e-5);
     }
+
+    @Test
+    void newElectricalUnitsWork() {
+        // Coulomb & Couloumb
+        Quantity c1 = UnitRegistry.parse("coulomb");
+        Quantity c2 = UnitRegistry.parse("couloumb");
+        assertTrue(c1.sameDimensionsAs(c2));
+        assertEquals(1.0, UnitRegistry.convert("coulomb", "couloumb"), 1e-12);
+        assertEquals("C", UnitRegistry.siName(c1.dims()));
+
+        // Siemens & Siemes
+        Quantity s1 = UnitRegistry.parse("siemens");
+        Quantity s2 = UnitRegistry.parse("siemes");
+        assertTrue(s1.sameDimensionsAs(s2));
+        assertEquals(1.0, UnitRegistry.convert("siemens", "siemes"), 1e-12);
+        assertEquals("S", UnitRegistry.siName(s1.dims()));
+
+        // Hertz
+        Quantity hz = UnitRegistry.parse("hz");
+        Quantity hertz = UnitRegistry.parse("hertz");
+        assertTrue(hz.sameDimensionsAs(hertz));
+        assertEquals(1.0, UnitRegistry.convert("hz", "hertz"), 1e-12);
+        assertEquals("Hz", UnitRegistry.siName(hz.dims()));
+
+        // Tesla & t
+        Quantity t1 = UnitRegistry.parse("tesla");
+        Quantity t2 = UnitRegistry.parse("t");
+        assertTrue(t1.sameDimensionsAs(t2));
+        assertEquals(1.0, UnitRegistry.convert("tesla", "t"), 1e-12);
+        assertEquals("T", UnitRegistry.siName(t1.dims()));
+
+        // Weber & wb
+        Quantity wb1 = UnitRegistry.parse("weber");
+        Quantity wb2 = UnitRegistry.parse("wb");
+        assertTrue(wb1.sameDimensionsAs(wb2));
+        assertEquals(1.0, UnitRegistry.convert("weber", "wb"), 1e-12);
+        assertEquals("Wb", UnitRegistry.siName(wb1.dims()));
+
+        // Weber/m^2 vs Tesla
+        Quantity weberPerMeterSquared = UnitRegistry.parse("weber/m^2");
+        assertTrue(weberPerMeterSquared.sameDimensionsAs(t1));
+        assertEquals(1.0, UnitRegistry.convert("weber/m^2", "tesla"), 1e-12);
+        assertEquals("T", UnitRegistry.siName(weberPerMeterSquared.dims()));
+
+        // Farad and Henry siName
+        assertEquals("F", UnitRegistry.siName(UnitRegistry.parse("farad").dims()));
+        assertEquals("H", UnitRegistry.siName(UnitRegistry.parse("henry").dims()));
+    }
 }
