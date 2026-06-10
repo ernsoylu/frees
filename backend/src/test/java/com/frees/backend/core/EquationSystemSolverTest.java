@@ -120,6 +120,36 @@ class EquationSystemSolverTest {
     }
 
     @Test
+    void complexSolving() {
+        SolverSettings complexSettings = new SolverSettings(250, 1e-6, 1e-9, 3600.0, true);
+        var result = solver.solve("z^2 = -4", complexSettings);
+        double z_r = result.variables().get("z_r");
+        double z_i = result.variables().get("z_i");
+        assertEquals(0.0, z_r, 1e-6);
+        org.junit.jupiter.api.Assertions.assertTrue(Math.abs(z_i - 2.0) < 1e-6 || Math.abs(z_i + 2.0) < 1e-6);
+    }
+
+    @Test
+    void complexAbsIsMagnitude() {
+        SolverSettings complexSettings = new SolverSettings(250, 1e-9, 1e-12, 3600.0, true);
+        // sqrt(-16) = ±4i (branch depends on the sign of the zero imaginary
+        // part), so z = 3±4i and |z| = 5 either way.
+        var result = solver.solve("z = 3 + sqrt(-16)\nm = abs(z)", complexSettings);
+        assertEquals(3.0, result.variables().get("z_r"), 1e-6);
+        assertEquals(4.0, Math.abs(result.variables().get("z_i")), 1e-6);
+        assertEquals(5.0, result.variables().get("m_r"), 1e-6);
+        assertEquals(0.0, result.variables().get("m_i"), 1e-9);
+    }
+
+    @Test
+    void complexUnsupportedFunctionIsRejected() {
+        SolverSettings complexSettings = new SolverSettings(250, 1e-9, 1e-12, 3600.0, true);
+        var e = assertThrows(Exception.class,
+                () -> solver.solve("y = tan(z)\nz = 1", complexSettings));
+        assertTrue(e.getMessage().contains("not supported in complex mode"));
+    }
+
+    @Test
     void boundsSelectRoot() {
         // x^2 = 4 has roots ±2; bounds force the solver into one half-plane.
         var negative = solver.solve("x^2 = 4", SolverSettings.DEFAULTS,
@@ -191,5 +221,31 @@ class EquationSystemSolverTest {
         EquationSystemSolver.CheckResult check = solver.check("a = 1\na = 2\nb + c = 3");
         assertTrue(!check.solvable());
         assertTrue(check.message().contains("structurally singular"));
+    }
+
+    @Test
+    void solvesDuplicateLoopSystem() {
+        EquationSystemSolver.Result result = solver.solve(
+                "N = 5\n" +
+                "X[1] = 10\n" +
+                "Duplicate i = 2, N\n" +
+                "   X[i] = X[i-1] + i\n" +
+                "End\n" +
+                "Total = Sum(X[1..N])"
+        );
+
+        double x1 = result.variables().get("x[1]");
+        double x2 = result.variables().get("x[2]");
+        double x3 = result.variables().get("x[3]");
+        double x4 = result.variables().get("x[4]");
+        double x5 = result.variables().get("x[5]");
+        double total = result.variables().get("total");
+
+        assertEquals(10.0, x1, 1e-12);
+        assertEquals(12.0, x2, 1e-12);
+        assertEquals(15.0, x3, 1e-12);
+        assertEquals(19.0, x4, 1e-12);
+        assertEquals(24.0, x5, 1e-12);
+        assertEquals(80.0, total, 1e-12);
     }
 }

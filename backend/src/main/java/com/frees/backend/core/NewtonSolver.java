@@ -67,16 +67,12 @@ public class NewtonSolver {
             double[][] jacobian = numericalJacobian(equations, vars, x, residual, values);
             double[] step = solveLinear(jacobian, residual, block);
 
-            // Step-halving: back off until the residual norm actually improves,
-            // preventing divergence from a full Newton step.
             double lambda = 1.0;
             double[] candidate = new double[n];
             double[] candidateResidual = null;
             double candidateNorm = Double.POSITIVE_INFINITY;
             for (int halving = 0; halving < MAX_HALVINGS; halving++) {
                 for (int i = 0; i < n; i++) {
-                    // Project the Newton step onto the variable's bounds
-                    // (EES: bounds constrain the solver's search space).
                     candidate[i] = Math.clamp(x[i] - lambda * step[i], lo[i], hi[i]);
                 }
                 candidateResidual = residuals(equations, vars, candidate, values);
@@ -138,7 +134,7 @@ public class NewtonSolver {
         writeBack(vars, x, values);
         for (int i = 0; i < equations.size(); i++) {
             double lhsMagnitude = Math.abs(Evaluator.eval(equations.get(i).lhs(), values));
-            double scale = Math.max(lhsMagnitude, 1.0e-12);
+            double scale = Math.max(lhsMagnitude, 1.0);
             if (Math.abs(residual[i]) / scale > settings.relativeResiduals()) {
                 return false;
             }
@@ -173,15 +169,21 @@ public class NewtonSolver {
             for (int attempt = 0; attempt < 5; attempt++) {
                 perturbed[j] = x[j] + h;
                 double[] residual = residuals(equations, vars, perturbed, values);
-                boolean columnNonZero = false;
+                boolean columnClean = true;
+                boolean anyChange = false;
                 for (int i = 0; i < n; i++) {
+                    double change = Math.abs(residual[i] - baseResidual[i]);
                     jacobian[i][j] = (residual[i] - baseResidual[i]) / h;
-                    if (jacobian[i][j] != 0.0) {
-                        columnNonZero = true;
+                    if (change > 0.0) {
+                        anyChange = true;
+                        double ulpScale = Math.ulp(Math.max(Math.abs(residual[i]), Math.abs(baseResidual[i])));
+                        if (change < 1.0e5 * ulpScale) {
+                            columnClean = false;
+                        }
                     }
                 }
                 perturbed[j] = x[j];
-                if (columnNonZero) {
+                if (anyChange && columnClean) {
                     break;
                 }
                 h *= 1.0e4;
@@ -201,7 +203,8 @@ public class NewtonSolver {
         } catch (SingularMatrixException e) {
             throw new SolverException(
                     "Singular Jacobian in block " + block.index()
-                            + ": the equations may be redundant or the guess values degenerate.");
+                            + " (variables " + block.variables() + "): the equations may be "
+                            + "redundant or the guess values degenerate.");
         }
     }
 

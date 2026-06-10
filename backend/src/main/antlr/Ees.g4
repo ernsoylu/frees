@@ -1,11 +1,24 @@
 grammar Ees;
 
 program
-    : sep? (equation (sep equation)* sep?)? EOF
+    : sep? (statement (sep statement)* sep?)? EOF
     ;
 
 sep
     : (SEMI | NEWLINE)+
+    ;
+
+statement
+    : duplicateBlock
+    | equation
+    ;
+
+duplicateBlock
+    : DUPLICATE IDENT EQ expr COMMA expr sep statementList sep? END
+    ;
+
+statementList
+    : (statement (sep statement)*)?
     ;
 
 equation
@@ -35,14 +48,32 @@ powExpr
     ;
 
 atom
-    : NUMBER UNIT?                    # NumberAtom
-    | IDENT LPAREN argList RPAREN     # CallAtom
-    | IDENT                           # VarAtom
-    | LPAREN expr RPAREN              # ParenAtom
+    : NUMBER unit?                           # NumberAtom
+    | IDENT LPAREN argList RPAREN            # CallAtom
+    | IDENT LBRACKET arrayIndexList RBRACKET # ArrayAtom
+    | IDENT                                  # VarAtom
+    | LBRACKET argList RBRACKET              # ArrayLiteralAtom
+    | LPAREN expr RPAREN                     # ParenAtom
     ;
 
 argList
     : expr (COMMA expr)*
+    ;
+
+arrayIndexList
+    : arrayIndex (COMMA arrayIndex)*
+    ;
+
+arrayIndex
+    : expr (DOTDOT expr)?
+    ;
+
+unit
+    : LBRACKET unitContent RBRACKET
+    ;
+
+unitContent
+    : (IDENT | NUMBER | TIMES | DIV | CARET | MINUS | PLUS | COMMA | LPAREN | RPAREN)*
     ;
 
 EQ      : '=' ;
@@ -55,14 +86,16 @@ LPAREN  : '(' ;
 RPAREN  : ')' ;
 COMMA   : ',' ;
 SEMI    : ';' ;
+LBRACKET: '[' ;
+RBRACKET: ']' ;
+DOTDOT  : '..' ;
+
+DUPLICATE : [dD][uU][pP][lL][iI][cC][aA][tT][eE] ;
+END       : [eE][nN][dD] ;
 
 NUMBER
-    : DIGIT+ ('.' DIGIT*)? EXPONENT?
+    : DIGIT+ ('.' DIGIT+)? EXPONENT?
     | '.' DIGIT+ EXPONENT?
-    ;
-
-UNIT
-    : '[' ~[\]\r\n]* ']'
     ;
 
 IDENT
@@ -96,3 +129,4 @@ fragment DIGIT
 fragment EXPONENT
     : [eE] [+-]? DIGIT+
     ;
+

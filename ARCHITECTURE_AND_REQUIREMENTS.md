@@ -22,7 +22,7 @@ The Solve button is enabled only after a successful Check; any edit to the equat
 ### Variable Information & Solver Preferences (EES parity)
 
 - **Variable Information window** — per-variable guess value (default 1.0) and lower/upper bounds (default ±infinity), populated from the Check response. Newton iterates are projected onto the bounds; a solution pinned at a bound that cannot meet the residual tolerance is reported as a *constrained solution*, matching EES. Guess values and bounds are how a specific root is selected when multiple roots exist.
-- **Preferences (Stop Criteria)** — the four EES stop criteria (no. iterations 250, relative residuals 1e-6, change in variables 1e-9, elapsed time 3600 s), configurable per solve via a Preferences modal and persisted client-side.
+- **Preferences (Stop Criteria)** — the four EES stop criteria (no. iterations, relative residuals, change in variables, elapsed time), configurable per solve via a Preferences modal and persisted client-side. frEES defaults (250, 1e-12, 1e-15, 3600 s) are tighter than EES's documented 1e-6/1e-9 because the residual scale floors at 1.0, giving high-precision results without a separate polish pass. The modal also hosts the complex-mode toggle and display unit system.
 
 ### Units and Dimensional Consistency (Epic 2)
 

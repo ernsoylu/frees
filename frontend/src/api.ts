@@ -29,13 +29,20 @@ export interface StopCriteria {
   relativeResiduals: number
   changeInVariables: number
   elapsedTimeSeconds: number
+  complexMode?: boolean
 }
 
 export const DEFAULT_STOP_CRITERIA: StopCriteria = {
   maxIterations: 250,
-  relativeResiduals: 1e-6,
-  changeInVariables: 1e-9,
+  relativeResiduals: 1e-12,
+  changeInVariables: 1e-15,
   elapsedTimeSeconds: 3600,
+}
+
+export interface TableRowResult {
+  success: boolean
+  values: Record<string, number>
+  error: string | null
 }
 
 export type UnitSystem = 'SI' | 'ENG_SI' | 'ENGLISH'
@@ -60,6 +67,7 @@ export interface SolveResponse {
   solutions: SolutionResult[]
   unitWarnings: string[]
   error: string | null
+  formattedEquations: string[]
 }
 
 export interface CheckResponse {
@@ -70,6 +78,7 @@ export interface CheckResponse {
   unitWarnings: string[]
   inferredUnits: Record<string, string>
   message: string
+  formattedEquations: string[]
 }
 
 export interface VariableInfo {
@@ -83,11 +92,12 @@ export interface VariableInfo {
 export async function check(
   text: string,
   variableInfo: VariableInfo[],
+  complexMode: boolean,
 ): Promise<CheckResponse> {
   const response = await fetch('/api/check', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ text, variableInfo }),
+    body: JSON.stringify({ text, variableInfo, stopCriteria: { complexMode } }),
   })
   return (await response.json()) as CheckResponse
 }
@@ -111,4 +121,45 @@ export async function solve(
     }),
   })
   return (await response.json()) as SolveResponse
+}
+
+export interface TableStats {
+  runs: number
+  solved: number
+  failed: number
+  equations: number
+  unknowns: number
+  iterations: number
+  elapsedMillis: number
+  maxResidual: number
+}
+
+export interface SolveTableResponse {
+  results: TableRowResult[]
+  stats: TableStats | null
+}
+
+export async function solveTable(
+  text: string,
+  stopCriteria: StopCriteria,
+  variableInfo: VariableInfo[],
+  displayUnitSystem: UnitSystem,
+  variables: string[],
+  rows: Record<string, number>[],
+): Promise<SolveTableResponse> {
+  const response = await fetch('/api/solve/table', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      text,
+      stopCriteria,
+      variableInfo,
+      displayUnitSystem,
+      table: { variables, rows },
+    }),
+  })
+  if (!response.ok) {
+    throw new Error(`Table solve failed with status ${response.status}`)
+  }
+  return (await response.json()) as SolveTableResponse
 }

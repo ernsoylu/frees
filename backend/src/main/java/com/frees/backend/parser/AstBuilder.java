@@ -69,8 +69,10 @@ public class AstBuilder extends EesBaseVisitor<Expr> {
     public Expr visitNumberAtom(EesParser.NumberAtomContext ctx) {
         String unit = null;
         double value = Double.parseDouble(ctx.NUMBER().getText());
-        if (ctx.UNIT() != null) {
-            String bracketed = ctx.UNIT().getText();
+        if (ctx.unit() != null) {
+            int startIdx = ctx.unit().start.getStartIndex();
+            int stopIdx = ctx.unit().stop.getStopIndex();
+            String bracketed = ctx.unit().start.getInputStream().getText(new org.antlr.v4.runtime.misc.Interval(startIdx, stopIdx));
             unit = bracketed.substring(1, bracketed.length() - 1).trim();
             if (unit.isEmpty()) {
                 unit = null;
@@ -97,6 +99,35 @@ public class AstBuilder extends EesBaseVisitor<Expr> {
         displayNames.putIfAbsent(original.toLowerCase(), original);
         return new Expr.Var(original);
     }
+
+    @Override
+    public Expr visitArrayAtom(EesParser.ArrayAtomContext ctx) {
+        String name = ctx.IDENT().getText();
+        displayNames.putIfAbsent(name.toLowerCase(), name);
+        List<Expr> indices = new ArrayList<>();
+        for (EesParser.ArrayIndexContext idxCtx : ctx.arrayIndexList().arrayIndex()) {
+            indices.add(visit(idxCtx));
+        }
+        return new Expr.ArrayAccess(name, indices);
+    }
+
+    @Override
+    public Expr visitArrayIndex(EesParser.ArrayIndexContext ctx) {
+        if (ctx.DOTDOT() != null) {
+            return new Expr.Range(visit(ctx.expr(0)), visit(ctx.expr(1)));
+        }
+        return visit(ctx.expr(0));
+    }
+
+    @Override
+    public Expr visitArrayLiteralAtom(EesParser.ArrayLiteralAtomContext ctx) {
+        List<Expr> elements = new ArrayList<>();
+        for (EesParser.ExprContext exprCtx : ctx.argList().expr()) {
+            elements.add(visit(exprCtx));
+        }
+        return new Expr.ArrayLiteral(elements);
+    }
+
 
     @Override
     public Expr visitCallAtom(EesParser.CallAtomContext ctx) {
@@ -177,5 +208,42 @@ public class AstBuilder extends EesBaseVisitor<Expr> {
     @Override
     public Expr visitParenAtom(EesParser.ParenAtomContext ctx) {
         return visit(ctx.expr());
+    }
+
+    public List<com.frees.backend.ast.Statement> buildProgram(EesParser.ProgramContext ctx) {
+        List<com.frees.backend.ast.Statement> statements = new ArrayList<>();
+        if (ctx.statement() != null) {
+            for (EesParser.StatementContext stmtCtx : ctx.statement()) {
+                statements.add(buildStatement(stmtCtx));
+            }
+        }
+        return statements;
+    }
+
+    public com.frees.backend.ast.Statement buildStatement(EesParser.StatementContext ctx) {
+        if (ctx.duplicateBlock() != null) {
+            return buildDuplicateBlock(ctx.duplicateBlock());
+        } else {
+            return buildEquation(ctx.equation());
+        }
+    }
+
+    public com.frees.backend.ast.Statement.Duplicate buildDuplicateBlock(EesParser.DuplicateBlockContext ctx) {
+        String varName = ctx.IDENT().getText().toLowerCase();
+        Expr start = visit(ctx.expr(0));
+        Expr end = visit(ctx.expr(1));
+        List<com.frees.backend.ast.Statement> body = new ArrayList<>();
+        if (ctx.statementList() != null && ctx.statementList().statement() != null) {
+            for (EesParser.StatementContext stmtCtx : ctx.statementList().statement()) {
+                body.add(buildStatement(stmtCtx));
+            }
+        }
+        return new com.frees.backend.ast.Statement.Duplicate(varName, start, end, body);
+    }
+
+    public com.frees.backend.ast.Statement.Eq buildEquation(EesParser.EquationContext ctx) {
+        Expr lhs = visit(ctx.expr(0));
+        Expr rhs = visit(ctx.expr(1));
+        return new com.frees.backend.ast.Statement.Eq(lhs, rhs, ctx.getText());
     }
 }

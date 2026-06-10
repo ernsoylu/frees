@@ -7,7 +7,7 @@ import java.util.TreeSet;
  * AST for an EES expression. Variable names are stored lowercase because
  * EES variable names are case-insensitive.
  */
-public sealed interface Expr permits Expr.Num, Expr.Var, Expr.BinOp, Expr.Neg, Expr.Call {
+public sealed interface Expr permits Expr.Num, Expr.Var, Expr.BinOp, Expr.Neg, Expr.Call, Expr.ArrayAccess, Expr.Range, Expr.ArrayLiteral {
 
     /** A numeric literal, optionally annotated with units: 140 [kPa]. */
     record Num(double value, String unit) implements Expr {
@@ -32,6 +32,16 @@ public sealed interface Expr permits Expr.Num, Expr.Var, Expr.BinOp, Expr.Neg, E
         }
     }
 
+    record ArrayAccess(String name, java.util.List<Expr> indices) implements Expr {
+        public ArrayAccess {
+            name = name.toLowerCase();
+        }
+    }
+
+    record Range(Expr start, Expr end) implements Expr {}
+
+    record ArrayLiteral(java.util.List<Expr> elements) implements Expr {}
+
     default Set<String> variables() {
         Set<String> vars = new TreeSet<>();
         collectVariables(this, vars);
@@ -48,6 +58,17 @@ public sealed interface Expr permits Expr.Num, Expr.Var, Expr.BinOp, Expr.Neg, E
                 collectVariables(b.right(), out);
             }
             case Call c -> c.args().forEach(a -> collectVariables(a, out));
+            case ArrayAccess aa -> {
+                out.add(aa.name());
+                aa.indices().forEach(idx -> collectVariables(idx, out));
+            }
+            case Range r -> {
+                collectVariables(r.start(), out);
+                collectVariables(r.end(), out);
+            }
+            case ArrayLiteral al -> {
+                al.elements().forEach(elem -> collectVariables(elem, out));
+            }
         }
     }
 }
