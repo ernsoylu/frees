@@ -175,11 +175,12 @@ export default function App() {
       setVarDrafts((drafts) => {
         const next: Record<string, VariableDraft> = {}
         for (const name of response.variables) {
-          next[name] = drafts[name] ?? { ...DEFAULT_DRAFT }
-          // EES assigns units to a variable set from an annotated constant
-          // (P = 100 [bar]); explicit Variable Info entries win.
-          if (!next[name].units.trim() && response.inferredUnits[name]) {
-            next[name] = { ...next[name], units: response.inferredUnits[name] }
+          const existing = drafts[name] ?? { ...DEFAULT_DRAFT }
+          next[name] = { ...existing }
+          // Automatically inferred units are dynamic: if they are not explicitly
+          // configured by the user, we update/sync them with the newly inferred ones.
+          if (!existing.isUnitsUserSet) {
+            next[name].units = response.inferredUnits[name] ?? ''
           }
         }
         return next
@@ -213,6 +214,19 @@ export default function App() {
       )
       setSolvedComplexMode(complexMode)
       setResult(response)
+      if (response.success && response.variables) {
+        setVarDrafts((drafts) => {
+          const next = { ...drafts }
+          for (const v of response.variables) {
+            const name = v.name
+            const existing = next[name] ?? { ...DEFAULT_DRAFT }
+            if (!existing.isUnitsUserSet) {
+              next[name] = { ...existing, units: v.units || '' }
+            }
+          }
+          return next
+        })
+      }
     } catch (e) {
       setResult({
         success: false,

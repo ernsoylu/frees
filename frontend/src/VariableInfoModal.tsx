@@ -14,6 +14,7 @@ export interface VariableDraft {
   lower: string
   upper: string
   units: string
+  isUnitsUserSet?: boolean
 }
 
 export const DEFAULT_DRAFT: VariableDraft = {
@@ -21,6 +22,7 @@ export const DEFAULT_DRAFT: VariableDraft = {
   lower: '-infinity',
   upper: 'infinity',
   units: '',
+  isUnitsUserSet: false,
 }
 
 export function parseBound(raw: string): number | null | undefined {
@@ -65,6 +67,7 @@ export default function VariableInfoModal({ variables, drafts, onSave, onClose }
   }
 
   function save() {
+    const saved: Record<string, VariableDraft> = {}
     for (const name of variables) {
       const draft = local[name]
       const guess = Number(draft.guess)
@@ -92,8 +95,12 @@ export default function VariableInfoModal({ variables, drafts, onSave, onClose }
         setError(`Guess value for ${name} is outside its bounds.`)
         return
       }
+      saved[name] = {
+        ...draft,
+        isUnitsUserSet: draft.units.trim() !== '',
+      }
     }
-    onSave(local)
+    onSave(saved)
   }
 
   return (
