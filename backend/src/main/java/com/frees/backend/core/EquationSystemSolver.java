@@ -115,10 +115,20 @@ public class EquationSystemSolver {
         }
 
         NewtonSolver newtonSolver = new NewtonSolver(settings);
+        NewtonSolver polisher = new NewtonSolver(new SolverSettings(
+                50,
+                Math.min(settings.relativeResiduals(), 1e-12),
+                1e-15,
+                settings.elapsedTimeSeconds()));
         List<Block> blocks = blocker.block(equations);
         int totalIterations = 0;
         for (Block block : blocks) {
             totalIterations += newtonSolver.solveBlock(block, values, deadlineNanos, specs);
+            try {
+                totalIterations += polisher.solveBlock(block, values, deadlineNanos, specs);
+            } catch (SolverException ignored) {
+                // Polishing is best-effort; the main solution is still valid.
+            }
         }
 
         return buildResult(equations, allVars, blocks, List.of(values),
