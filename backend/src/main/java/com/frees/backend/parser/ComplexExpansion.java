@@ -157,6 +157,10 @@ public final class ComplexExpansion {
             case Expr.ArrayAccess aa -> new Expr.ArrayAccess(aa.name() + "_r", aa.indices());
             case Expr.Range r -> new Expr.Range(realPart(r.start()), realPart(r.end()));
             case Expr.ArrayLiteral al -> new Expr.ArrayLiteral(al.elements().stream().map(ComplexExpansion::realPart).toList());
+            // Comparisons and logical ops are always real (evaluate to 1.0 or 0.0)
+            case Expr.Compare cmp -> new Expr.Compare(cmp.op(), realPart(cmp.left()), realPart(cmp.right()));
+            case Expr.Logical log -> new Expr.Logical(log.op(), realPart(log.left()), realPart(log.right()));
+            case Expr.Not not -> new Expr.Not(realPart(not.operand()));
         };
     }
 
@@ -240,6 +244,10 @@ public final class ComplexExpansion {
             case Expr.ArrayAccess aa -> new Expr.ArrayAccess(aa.name() + "_i", aa.indices());
             case Expr.Range r -> new Expr.Range(imagPart(r.start()), imagPart(r.end()));
             case Expr.ArrayLiteral al -> new Expr.ArrayLiteral(al.elements().stream().map(ComplexExpansion::imagPart).toList());
+            // Comparisons and logical ops have zero imaginary part
+            case Expr.Compare cmp -> new Expr.Num(0.0);
+            case Expr.Logical log -> new Expr.Num(0.0);
+            case Expr.Not not -> new Expr.Num(0.0);
         };
     }
 

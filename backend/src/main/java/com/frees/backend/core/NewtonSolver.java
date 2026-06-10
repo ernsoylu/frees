@@ -2,6 +2,7 @@ package com.frees.backend.core;
 
 import com.frees.backend.ast.Equation;
 import com.frees.backend.ast.Evaluator;
+import com.frees.backend.ast.ProcDef;
 import org.apache.commons.math3.linear.Array2DRowRealMatrix;
 import org.apache.commons.math3.linear.ArrayRealVector;
 import org.apache.commons.math3.linear.DecompositionSolver;
@@ -28,9 +29,15 @@ public class NewtonSolver {
     private static final double JACOBIAN_EPS = Math.sqrt(Math.ulp(1.0));
 
     private final SolverSettings settings;
+    private final Map<String, ProcDef> defs;
 
     public NewtonSolver(SolverSettings settings) {
+        this(settings, Map.of());
+    }
+
+    public NewtonSolver(SolverSettings settings, Map<String, ProcDef> defs) {
         this.settings = settings;
+        this.defs = defs;
     }
 
     /** Solves one block in place; returns the number of Newton iterations used. */
@@ -133,7 +140,7 @@ public class NewtonSolver {
                                             Map<String, Double> values) {
         writeBack(vars, x, values);
         for (int i = 0; i < equations.size(); i++) {
-            double lhsMagnitude = Math.abs(Evaluator.eval(equations.get(i).lhs(), values));
+            double lhsMagnitude = Math.abs(Evaluator.eval(equations.get(i).lhs(), values, defs));
             double scale = Math.max(lhsMagnitude, 1.0);
             if (Math.abs(residual[i]) / scale > settings.relativeResiduals()) {
                 return false;
@@ -148,7 +155,7 @@ public class NewtonSolver {
         double[] result = new double[equations.size()];
         for (int i = 0; i < equations.size(); i++) {
             Equation eq = equations.get(i);
-            result[i] = Evaluator.eval(eq.lhs(), values) - Evaluator.eval(eq.rhs(), values);
+            result[i] = Evaluator.eval(eq.lhs(), values, defs) - Evaluator.eval(eq.rhs(), values, defs);
         }
         return result;
     }

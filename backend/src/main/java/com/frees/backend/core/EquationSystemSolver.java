@@ -3,6 +3,7 @@ package com.frees.backend.core;
 import com.frees.backend.ast.Equation;
 import com.frees.backend.ast.Evaluator;
 import com.frees.backend.ast.Expr;
+import com.frees.backend.ast.ProcDef;
 import com.frees.backend.parser.EquationParser;
 import com.frees.backend.units.UnitChecker;
 import org.springframework.stereotype.Service;
@@ -126,7 +127,8 @@ public class EquationSystemSolver {
             values.put(var, spec != null ? spec.guess() : DEFAULT_GUESS);
         }
 
-        NewtonSolver newtonSolver = new NewtonSolver(settings);
+        Map<String, ProcDef> defs = parsed.defs();
+        NewtonSolver newtonSolver = new NewtonSolver(settings, defs);
         // Use near-zero residual tolerance so the polisher keeps iterating
         // until variable change drops below 1e-15.  This is critical for
         // multiple roots where residual ≈ error^m drops below tolerance
@@ -136,7 +138,7 @@ public class EquationSystemSolver {
                 1e-30,
                 1e-15,
                 settings.elapsedTimeSeconds(),
-                settings.complexMode()));
+                settings.complexMode()), defs);
         List<Block> blocks = blocker.block(equations);
         int totalIterations = 0;
         for (Block block : blocks) {
@@ -149,7 +151,7 @@ public class EquationSystemSolver {
         }
 
         return buildResult(equations, allVars, blocks, List.of(values),
-                totalIterations, startNanos, parsed.displayNames());
+                totalIterations, startNanos, parsed.displayNames(), defs);
     }
 
     /**
@@ -223,18 +225,20 @@ public class EquationSystemSolver {
             guesses.put(var, spec != null ? spec.guess() : DEFAULT_GUESS);
         }
 
+        Map<String, ProcDef> defs = parsed.defs();
         List<Block> blocks = blocker.block(equations);
-        AllRootsSolver allRoots = new AllRootsSolver(settings, expandedSpecs);
+        AllRootsSolver allRoots = new AllRootsSolver(settings, expandedSpecs, defs);
         List<Map<String, Double>> solutions = allRoots.findAll(blocks, guesses, deadlineNanos);
 
         return buildResult(equations, allVars, blocks, solutions,
-                allRoots.totalIterations(), startNanos, parsed.displayNames());
+                allRoots.totalIterations(), startNanos, parsed.displayNames(), defs);
     }
 
     private Result buildResult(List<Equation> equations, TreeSet<String> allVars,
                                List<Block> blocks, List<Map<String, Double>> solutionMaps,
                                int totalIterations, long startNanos,
-                               Map<String, String> displayNames) {
+                               Map<String, String> displayNames,
+                               Map<String, ProcDef> defs) {
         List<Solution> solutions = new ArrayList<>();
         double worstResidual = 0.0;
         for (Map<String, Double> values : solutionMaps) {
@@ -242,7 +246,7 @@ public class EquationSystemSolver {
             double maxResidual = 0.0;
             for (Equation eq : equations) {
                 double residual =
-                        Evaluator.eval(eq.lhs(), values) - Evaluator.eval(eq.rhs(), values);
+                        Evaluator.eval(eq.lhs(), values, defs) - Evaluator.eval(eq.rhs(), values, defs);
                 residuals.add(new EquationResidual(eq.sourceText(), residual));
                 maxResidual = Math.max(maxResidual, Math.abs(residual));
             }

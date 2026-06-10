@@ -1,6 +1,9 @@
 package com.frees.backend.parser;
 
 import com.frees.backend.ast.Expr;
+import com.frees.backend.ast.ProcDef;
+import com.frees.backend.ast.ProcStatement;
+import com.frees.backend.ast.Statement;
 import com.frees.backend.units.UnitRegistry;
 
 import java.util.ArrayList;
@@ -18,6 +21,231 @@ public class AstBuilder extends EesBaseVisitor<Expr> {
     public java.util.Map<String, String> displayNames() {
         return displayNames;
     }
+
+    // ── Top-level program ────────────────────────────────────────────────────
+
+    public record ProgramResult(
+            List<Statement> statements,
+            java.util.Map<String, ProcDef> defs) {}
+
+    public ProgramResult buildProgram(EesParser.ProgramContext ctx) {
+        List<Statement> statements = new ArrayList<>();
+        java.util.Map<String, ProcDef> defs = new java.util.LinkedHashMap<>();
+
+        if (ctx.topLevel() != null) {
+            for (EesParser.TopLevelContext tl : ctx.topLevel()) {
+                if (tl.functionDef() != null) {
+                    ProcDef.FunctionDef fd = buildFunctionDef(tl.functionDef());
+                    defs.put(fd.name().toLowerCase(), fd);
+                } else if (tl.procedureDef() != null) {
+                    ProcDef.ProcedureDef pd = buildProcedureDef(tl.procedureDef());
+                    defs.put(pd.name().toLowerCase(), pd);
+                } else if (tl.moduleDef() != null) {
+                    ProcDef.ModuleDef md = buildModuleDef(tl.moduleDef());
+                    defs.put(md.name().toLowerCase(), md);
+                } else if (tl.statement() != null) {
+                    statements.add(buildStatement(tl.statement()));
+                }
+            }
+        }
+        return new ProgramResult(statements, defs);
+    }
+
+    // ── FUNCTION / PROCEDURE / MODULE definitions ────────────────────────────
+
+    private ProcDef.FunctionDef buildFunctionDef(EesParser.FunctionDefContext ctx) {
+        String name = ctx.IDENT().getText().toLowerCase();
+        List<String> params = buildParamList(ctx.paramList());
+        List<ProcStatement> body = buildProcBody(ctx.procBody());
+        return new ProcDef.FunctionDef(name, params, body);
+    }
+
+    private ProcDef.ProcedureDef buildProcedureDef(EesParser.ProcedureDefContext ctx) {
+        String name = ctx.IDENT().getText().toLowerCase();
+        List<String> inputs = buildParamList(ctx.paramList(0));
+        List<String> outputs = buildParamList(ctx.paramList(1));
+        List<ProcStatement> body = buildProcBody(ctx.procBody());
+        return new ProcDef.ProcedureDef(name, inputs, outputs, body);
+    }
+
+    private ProcDef.ModuleDef buildModuleDef(EesParser.ModuleDefContext ctx) {
+        String name = ctx.IDENT().getText().toLowerCase();
+        List<String> inputs = buildParamList(ctx.paramList(0));
+        List<String> outputs = buildParamList(ctx.paramList(1));
+        List<Statement> body = new ArrayList<>();
+        if (ctx.statementList() != null) {
+            for (EesParser.StatementContext stmtCtx : ctx.statementList().statement()) {
+                body.add(buildStatement(stmtCtx));
+            }
+        }
+        return new ProcDef.ModuleDef(name, inputs, outputs, body);
+    }
+
+    private List<String> buildParamList(EesParser.ParamListContext ctx) {
+        List<String> params = new ArrayList<>();
+        if (ctx != null) {
+            for (var ident : ctx.IDENT()) {
+                params.add(ident.getText().toLowerCase());
+            }
+        }
+        return params;
+    }
+
+    // ── Procedural body ──────────────────────────────────────────────────────
+
+    private List<ProcStatement> buildProcBody(EesParser.ProcBodyContext ctx) {
+        List<ProcStatement> stmts = new ArrayList<>();
+        if (ctx != null && ctx.procStatement() != null) {
+            for (EesParser.ProcStatementContext ps : ctx.procStatement()) {
+                stmts.add(buildProcStatement(ps));
+            }
+        }
+        return stmts;
+    }
+
+    private ProcStatement buildProcStatement(EesParser.ProcStatementContext ctx) {
+        if (ctx.assignment() != null) {
+            return buildAssignment(ctx.assignment());
+        } else if (ctx.ifStatement() != null) {
+            return buildIfStatement(ctx.ifStatement());
+        } else if (ctx.repeatStatement() != null) {
+            return buildRepeatStatement(ctx.repeatStatement());
+        } else if (ctx.duplicateBlock() != null) {
+            return buildProcDuplicate(ctx.duplicateBlock());
+        } else {
+            // equation
+            EesParser.EquationContext eq = ctx.equation();
+            Expr lhs = visit(eq.expr(0));
+            Expr rhs = visit(eq.expr(1));
+            return new ProcStatement.Eq(lhs, rhs, eq.getText());
+        }
+    }
+
+    private ProcStatement.Assign buildAssignment(EesParser.AssignmentContext ctx) {
+        String var = ctx.IDENT().getText().toLowerCase();
+        Expr value = visit(ctx.expr());
+        return new ProcStatement.Assign(var, value);
+    }
+
+    private ProcStatement.IfElse buildIfStatement(EesParser.IfStatementContext ctx) {
+        Expr condition = buildBoolExpr(ctx.boolExpr());
+        List<ProcStatement> thenBranch = buildProcBody(ctx.procBody(0));
+        List<ProcStatement> elseBranch = ctx.procBody().size() > 1
+                ? buildProcBody(ctx.procBody(1))
+                : List.of();
+        return new ProcStatement.IfElse(condition, thenBranch, elseBranch);
+    }
+
+    private ProcStatement.RepeatUntil buildRepeatStatement(EesParser.RepeatStatementContext ctx) {
+        List<ProcStatement> body = buildProcBody(ctx.procBody());
+        Expr condition = buildBoolExpr(ctx.boolExpr());
+        return new ProcStatement.RepeatUntil(body, condition);
+    }
+
+    private ProcStatement.Duplicate buildProcDuplicate(EesParser.DuplicateBlockContext ctx) {
+        String varName = ctx.IDENT().getText().toLowerCase();
+        Expr start = visit(ctx.expr(0));
+        Expr end = visit(ctx.expr(1));
+        // procBody version — re-parse body as proc statements (duplicate inside proc body)
+        List<ProcStatement> body = new ArrayList<>();
+        if (ctx.statementList() != null) {
+            for (EesParser.StatementContext stmtCtx : ctx.statementList().statement()) {
+                Statement s = buildStatement(stmtCtx);
+                // Convert Statement.Eq to ProcStatement.Eq for procedural context
+                if (s instanceof Statement.Eq eq) {
+                    body.add(new ProcStatement.Eq(eq.lhs(), eq.rhs(), eq.sourceText()));
+                }
+                // DUPLICATE inside DUPLICATE inside PROC is not supported; skip silently
+            }
+        }
+        return new ProcStatement.Duplicate(varName, start, end, body);
+    }
+
+    // ── Boolean expression ────────────────────────────────────────────────────
+
+    private Expr buildBoolExpr(EesParser.BoolExprContext ctx) {
+        return switch (ctx) {
+            case EesParser.BoolNotContext not ->
+                    new Expr.Not(buildBoolExpr(not.boolExpr()));
+            case EesParser.BoolAndContext and ->
+                    new Expr.Logical("and",
+                            buildBoolExpr(and.boolExpr(0)),
+                            buildBoolExpr(and.boolExpr(1)));
+            case EesParser.BoolOrContext or ->
+                    new Expr.Logical("or",
+                            buildBoolExpr(or.boolExpr(0)),
+                            buildBoolExpr(or.boolExpr(1)));
+            case EesParser.BoolParenContext paren ->
+                    buildBoolExpr(paren.boolExpr());
+            case EesParser.BoolRelContext rel -> {
+                Expr left = visit(rel.expr(0));
+                Expr right = visit(rel.expr(1));
+                // Extract the operator token text (child at index 1)
+                String op = rel.getChild(1).getText();
+                yield new Expr.Compare(op, left, right);
+            }
+            case EesParser.BoolTruthyContext plain ->
+                    visit(plain.expr());
+            default -> throw new IllegalStateException("Unexpected boolExpr type: " + ctx.getClass().getSimpleName());
+        };
+    }
+
+    // ── Top-level statement ───────────────────────────────────────────────────
+
+    public Statement buildStatement(EesParser.StatementContext ctx) {
+        if (ctx.duplicateBlock() != null) {
+            return buildDuplicateBlock(ctx.duplicateBlock());
+        } else if (ctx.callStatement() != null) {
+            return buildCallStatement(ctx.callStatement());
+        } else {
+            return buildEquation(ctx.equation());
+        }
+    }
+
+    private Statement.CallProc buildCallStatement(EesParser.CallStatementContext ctx) {
+        String name = ctx.IDENT().getText().toLowerCase();
+        List<Expr> inputs = new ArrayList<>();
+        if (ctx.callArgList(0) != null) {
+            for (EesParser.ExprContext exprCtx : ctx.callArgList(0).expr()) {
+                inputs.add(visit(exprCtx));
+            }
+        }
+        List<String> outputs = new ArrayList<>();
+        if (ctx.callArgList(1) != null) {
+            for (EesParser.ExprContext exprCtx : ctx.callArgList(1).expr()) {
+                // Output args should be variable names; extract them
+                Expr e = visit(exprCtx);
+                if (e instanceof Expr.Var v) {
+                    outputs.add(v.name());
+                } else {
+                    throw new EquationParser.ParseException(
+                            "CALL output argument must be a simple variable name");
+                }
+            }
+        }
+        return new Statement.CallProc(name, inputs, outputs);
+    }
+
+    public Statement.Duplicate buildDuplicateBlock(EesParser.DuplicateBlockContext ctx) {
+        String varName = ctx.IDENT().getText().toLowerCase();
+        Expr start = visit(ctx.expr(0));
+        Expr end = visit(ctx.expr(1));
+        List<Statement> body = new ArrayList<>();
+        if (ctx.statementList() != null && ctx.statementList().statement() != null) {
+            for (EesParser.StatementContext stmtCtx : ctx.statementList().statement()) {
+                body.add(buildStatement(stmtCtx));
+            }
+        }
+        return new Statement.Duplicate(varName, start, end, body);
+    }
+
+    public Statement.Eq buildEquation(EesParser.EquationContext ctx) {
+        Expr lhs = visit(ctx.expr(0));
+        Expr rhs = visit(ctx.expr(1));
+        return new Statement.Eq(lhs, rhs, ctx.getText());
+    }
+
+    // ── Arithmetic expression visitors ────────────────────────────────────────
 
     @Override
     public Expr visitExpr(EesParser.ExprContext ctx) {
@@ -77,10 +305,6 @@ public class AstBuilder extends EesBaseVisitor<Expr> {
             if (unit.isEmpty()) {
                 unit = null;
             } else {
-                // All calculations run in SI: annotated constants are
-                // converted at parse time (120 [lb] -> 54.43 with unit kg).
-                // Bare temperature units convert affinely (25 [C] -> 298.15 K).
-                // Unknown units stay untouched; the unit checker reports them.
                 try {
                     var quantity = UnitRegistry.parseWithOffset(unit);
                     value = value * quantity.factor() + quantity.offset();
@@ -128,13 +352,10 @@ public class AstBuilder extends EesBaseVisitor<Expr> {
         return new Expr.ArrayLiteral(elements);
     }
 
-
     @Override
     public Expr visitCallAtom(EesParser.CallAtomContext ctx) {
         String name = ctx.IDENT().getText();
 
-        // EES Convert(From, To): the arguments are unit expressions, not math.
-        // The factor is a constant, so it folds to a number at parse time.
         if (name.equalsIgnoreCase("convert")) {
             List<EesParser.ExprContext> args = ctx.argList().expr();
             if (args.size() != 2) {
@@ -149,8 +370,6 @@ public class AstBuilder extends EesBaseVisitor<Expr> {
             }
         }
 
-        // EES ConvertTemp(From, To, x): affine temperature conversion (the
-        // only EES conversion with an offset). Folds to a*x + b.
         if (name.equalsIgnoreCase("converttemp")) {
             List<EesParser.ExprContext> raw = ctx.argList().expr();
             if (raw.size() != 3) {
@@ -162,8 +381,6 @@ public class AstBuilder extends EesBaseVisitor<Expr> {
             double a = toKelvin[0] * fromKelvin[0];
             double b = fromKelvin[0] * toKelvin[1] + fromKelvin[1];
             Expr x = visit(raw.get(2));
-            // A constant argument folds completely; converting to Kelvin
-            // yields an SI value, so the unit metadata can carry K.
             if (x instanceof Expr.Num n && n.unit() == null) {
                 String unit = raw.get(1).getText().trim().equalsIgnoreCase("k") ? "K" : null;
                 return new Expr.Num(a * n.value() + b, unit);
@@ -179,7 +396,13 @@ public class AstBuilder extends EesBaseVisitor<Expr> {
         return new Expr.Call(name, args);
     }
 
-    /** {a, b} such that K = a * T + b. */
+    @Override
+    public Expr visitParenAtom(EesParser.ParenAtomContext ctx) {
+        return visit(ctx.expr());
+    }
+
+    // ── Temperature helpers ───────────────────────────────────────────────────
+
     private static double[] temperatureToKelvin(String scale) {
         return switch (scale.trim().toLowerCase()) {
             case "c" -> new double[]{1.0, 273.15};
@@ -187,12 +410,10 @@ public class AstBuilder extends EesBaseVisitor<Expr> {
             case "f" -> new double[]{5.0 / 9.0, UnitRegistry.FAHRENHEIT_OFFSET_K};
             case "r" -> new double[]{5.0 / 9.0, 0.0};
             default -> throw new EquationParser.ParseException(
-                    "ConvertTemp: unknown temperature scale '" + scale
-                            + "' (use C, K, F, or R)");
+                    "ConvertTemp: unknown temperature scale '" + scale + "' (use C, K, F, or R)");
         };
     }
 
-    /** {a, b} such that T = a * K + b. */
     private static double[] kelvinToTemperature(String scale) {
         return switch (scale.trim().toLowerCase()) {
             case "c" -> new double[]{1.0, -273.15};
@@ -200,50 +421,7 @@ public class AstBuilder extends EesBaseVisitor<Expr> {
             case "f" -> new double[]{9.0 / 5.0, -459.67};
             case "r" -> new double[]{9.0 / 5.0, 0.0};
             default -> throw new EquationParser.ParseException(
-                    "ConvertTemp: unknown temperature scale '" + scale
-                            + "' (use C, K, F, or R)");
+                    "ConvertTemp: unknown temperature scale '" + scale + "' (use C, K, F, or R)");
         };
-    }
-
-    @Override
-    public Expr visitParenAtom(EesParser.ParenAtomContext ctx) {
-        return visit(ctx.expr());
-    }
-
-    public List<com.frees.backend.ast.Statement> buildProgram(EesParser.ProgramContext ctx) {
-        List<com.frees.backend.ast.Statement> statements = new ArrayList<>();
-        if (ctx.statement() != null) {
-            for (EesParser.StatementContext stmtCtx : ctx.statement()) {
-                statements.add(buildStatement(stmtCtx));
-            }
-        }
-        return statements;
-    }
-
-    public com.frees.backend.ast.Statement buildStatement(EesParser.StatementContext ctx) {
-        if (ctx.duplicateBlock() != null) {
-            return buildDuplicateBlock(ctx.duplicateBlock());
-        } else {
-            return buildEquation(ctx.equation());
-        }
-    }
-
-    public com.frees.backend.ast.Statement.Duplicate buildDuplicateBlock(EesParser.DuplicateBlockContext ctx) {
-        String varName = ctx.IDENT().getText().toLowerCase();
-        Expr start = visit(ctx.expr(0));
-        Expr end = visit(ctx.expr(1));
-        List<com.frees.backend.ast.Statement> body = new ArrayList<>();
-        if (ctx.statementList() != null && ctx.statementList().statement() != null) {
-            for (EesParser.StatementContext stmtCtx : ctx.statementList().statement()) {
-                body.add(buildStatement(stmtCtx));
-            }
-        }
-        return new com.frees.backend.ast.Statement.Duplicate(varName, start, end, body);
-    }
-
-    public com.frees.backend.ast.Statement.Eq buildEquation(EesParser.EquationContext ctx) {
-        Expr lhs = visit(ctx.expr(0));
-        Expr rhs = visit(ctx.expr(1));
-        return new com.frees.backend.ast.Statement.Eq(lhs, rhs, ctx.getText());
     }
 }
