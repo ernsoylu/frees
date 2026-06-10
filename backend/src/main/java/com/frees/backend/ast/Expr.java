@@ -7,7 +7,9 @@ import java.util.TreeSet;
  * AST for an EES expression. Variable names are stored lowercase because
  * EES variable names are case-insensitive.
  */
-public sealed interface Expr permits Expr.Num, Expr.Var, Expr.BinOp, Expr.Neg, Expr.Call, Expr.ArrayAccess, Expr.Range, Expr.ArrayLiteral {
+public sealed interface Expr permits Expr.Num, Expr.Var, Expr.BinOp, Expr.Neg,
+        Expr.Call, Expr.ArrayAccess, Expr.Range, Expr.ArrayLiteral,
+        Expr.Compare, Expr.Logical, Expr.Not {
 
     /** A numeric literal, optionally annotated with units: 140 [kPa]. */
     record Num(double value, String unit) implements Expr {
@@ -42,6 +44,15 @@ public sealed interface Expr permits Expr.Num, Expr.Var, Expr.BinOp, Expr.Neg, E
 
     record ArrayLiteral(java.util.List<Expr> elements) implements Expr {}
 
+    /** Relational comparison: op is one of "<", ">", "<=", ">=", "<>", "=". Evaluates to 1.0 (true) or 0.0 (false). */
+    record Compare(String op, Expr left, Expr right) implements Expr {}
+
+    /** Boolean AND / OR. Evaluates to 1.0 (true) or 0.0 (false). */
+    record Logical(String op, Expr left, Expr right) implements Expr {}
+
+    /** Boolean NOT. Evaluates to 1.0 if operand == 0.0, else 0.0. */
+    record Not(Expr operand) implements Expr {}
+
     default Set<String> variables() {
         Set<String> vars = new TreeSet<>();
         collectVariables(this, vars);
@@ -66,9 +77,16 @@ public sealed interface Expr permits Expr.Num, Expr.Var, Expr.BinOp, Expr.Neg, E
                 collectVariables(r.start(), out);
                 collectVariables(r.end(), out);
             }
-            case ArrayLiteral al -> {
-                al.elements().forEach(elem -> collectVariables(elem, out));
+            case ArrayLiteral al -> al.elements().forEach(elem -> collectVariables(elem, out));
+            case Compare cmp -> {
+                collectVariables(cmp.left(), out);
+                collectVariables(cmp.right(), out);
             }
+            case Logical log -> {
+                collectVariables(log.left(), out);
+                collectVariables(log.right(), out);
+            }
+            case Not not -> collectVariables(not.operand(), out);
         }
     }
 }
