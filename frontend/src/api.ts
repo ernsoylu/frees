@@ -39,6 +39,12 @@ export const DEFAULT_STOP_CRITERIA: StopCriteria = {
   elapsedTimeSeconds: 3600,
 }
 
+export interface TableRowResult {
+  success: boolean
+  values: Record<string, number>
+  error: string | null
+}
+
 export type UnitSystem = 'SI' | 'ENG_SI' | 'ENGLISH'
 
 export const UNIT_SYSTEM_OPTIONS: { value: UnitSystem; label: string }[] = [
@@ -115,4 +121,45 @@ export async function solve(
     }),
   })
   return (await response.json()) as SolveResponse
+}
+
+export interface TableStats {
+  runs: number
+  solved: number
+  failed: number
+  equations: number
+  unknowns: number
+  iterations: number
+  elapsedMillis: number
+  maxResidual: number
+}
+
+export interface SolveTableResponse {
+  results: TableRowResult[]
+  stats: TableStats | null
+}
+
+export async function solveTable(
+  text: string,
+  stopCriteria: StopCriteria,
+  variableInfo: VariableInfo[],
+  displayUnitSystem: UnitSystem,
+  variables: string[],
+  rows: Record<string, number>[],
+): Promise<SolveTableResponse> {
+  const response = await fetch('/api/solve/table', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      text,
+      stopCriteria,
+      variableInfo,
+      displayUnitSystem,
+      table: { variables, rows },
+    }),
+  })
+  if (!response.ok) {
+    throw new Error(`Table solve failed with status ${response.status}`)
+  }
+  return (await response.json()) as SolveTableResponse
 }

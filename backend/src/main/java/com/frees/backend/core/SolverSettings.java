@@ -1,8 +1,10 @@
 package com.frees.backend.core;
 
 /**
- * EES Stop Criteria (Options > Preferences > Stop Crit). Defaults match EES:
- * 250 iterations, relative residual 1e-6, change in variables 1e-9, 3600 s.
+ * EES Stop Criteria (Options > Preferences > Stop Crit), plus the complex-mode
+ * toggle. frEES defaults are tighter than EES's documented 1e-6/1e-9 (the
+ * residual scale floors at 1.0, so 1e-12 behaves like a high-precision
+ * absolute tolerance for unit-scale equations).
  */
 public record SolverSettings(int maxIterations,
                              double relativeResiduals,

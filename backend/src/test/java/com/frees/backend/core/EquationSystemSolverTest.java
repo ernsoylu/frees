@@ -130,6 +130,26 @@ class EquationSystemSolverTest {
     }
 
     @Test
+    void complexAbsIsMagnitude() {
+        SolverSettings complexSettings = new SolverSettings(250, 1e-9, 1e-12, 3600.0, true);
+        // sqrt(-16) = ±4i (branch depends on the sign of the zero imaginary
+        // part), so z = 3±4i and |z| = 5 either way.
+        var result = solver.solve("z = 3 + sqrt(-16)\nm = abs(z)", complexSettings);
+        assertEquals(3.0, result.variables().get("z_r"), 1e-6);
+        assertEquals(4.0, Math.abs(result.variables().get("z_i")), 1e-6);
+        assertEquals(5.0, result.variables().get("m_r"), 1e-6);
+        assertEquals(0.0, result.variables().get("m_i"), 1e-9);
+    }
+
+    @Test
+    void complexUnsupportedFunctionIsRejected() {
+        SolverSettings complexSettings = new SolverSettings(250, 1e-9, 1e-12, 3600.0, true);
+        var e = assertThrows(Exception.class,
+                () -> solver.solve("y = tan(z)\nz = 1", complexSettings));
+        assertTrue(e.getMessage().contains("not supported in complex mode"));
+    }
+
+    @Test
     void boundsSelectRoot() {
         // x^2 = 4 has roots ±2; bounds force the solver into one half-plane.
         var negative = solver.solve("x^2 = 4", SolverSettings.DEFAULTS,

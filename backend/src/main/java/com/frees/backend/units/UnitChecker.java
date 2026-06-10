@@ -68,30 +68,29 @@ public final class UnitChecker {
             }
         }
 
-        // Derivation passes (warnings suppressed): propagate dimensions to
-        // variables defined as Var = expr until a fixpoint is reached.
+        // Derivation passes (warnings suppressed): when an equation has
+        // exactly one variable with unknown dimensions and it participates
+        // multiplicatively, its dimensions are solved by rearrangement
+        // (F = m*g with F and g known gives m = kg). Iterates to a fixpoint
+        // so chains propagate.
         Map<String, String> derived = new java.util.HashMap<>();
         UnitChecker deriver = new UnitChecker(dims, false);
         for (int pass = 0; pass < 5; pass++) {
             boolean changed = false;
             for (Equation eq : equations) {
-                String var = null;
-                Expr defining = null;
-                if (eq.lhs() instanceof Expr.Var v && !dims.containsKey(v.name())) {
-                    var = v.name();
-                    defining = eq.rhs();
-                } else if (eq.rhs() instanceof Expr.Var v && !dims.containsKey(v.name())) {
-                    var = v.name();
-                    defining = eq.lhs();
+                List<String> unknowns = eq.variables().stream()
+                        .filter(v -> !dims.containsKey(v))
+                        .toList();
+                if (unknowns.size() != 1) {
+                    continue;
                 }
-                if (var != null) {
-                    deriver.currentEquation = eq.sourceText();
-                    Dim dim = deriver.dimOf(defining);
-                    if (dim.known()) {
-                        dims.put(var, dim.quantity());
-                        derived.put(var, UnitRegistry.siName(dim.quantity().dims()));
-                        changed = true;
-                    }
+                String unknown = unknowns.get(0);
+                deriver.currentEquation = eq.sourceText();
+                Quantity solvedDims = deriver.solveDimsFor(eq, unknown);
+                if (solvedDims != null) {
+                    dims.put(unknown, solvedDims);
+                    derived.put(unknown, UnitRegistry.siName(solvedDims.dims()));
+                    changed = true;
                 }
             }
             if (!changed) {
@@ -116,6 +115,107 @@ public final class UnitChecker {
 
         warnings.addAll(checker.warnings);
         return new Result(warnings, derived);
+    }
+
+    /** Known-dimension contribution plus the net exponent of the unknown. */
+    private record DimTerm(double[] dims, double unknownExponent) {}
+
+    /**
+     * Solves an equation dimensionally for the single unknown variable:
+     * analyzes both sides as (known dims) * unknown^e and rearranges.
+     * Returns null when the unknown does not appear purely multiplicatively
+     * or the other dimensions cannot be determined.
+     */
+    private Quantity solveDimsFor(Equation eq, String unknown) {
+        DimTerm lhs = analyze(eq.lhs(), unknown);
+        DimTerm rhs = analyze(eq.rhs(), unknown);
+        if (lhs == null || rhs == null) {
+            return null;
+        }
+        double exponent = lhs.unknownExponent() - rhs.unknownExponent();
+        if (Math.abs(exponent) < 1e-9) {
+            return null;
+        }
+        double[] solved = new double[Quantity.DIMENSIONS];
+        for (int i = 0; i < Quantity.DIMENSIONS; i++) {
+            solved[i] = (rhs.dims()[i] - lhs.dims()[i]) / exponent;
+        }
+        return new Quantity(1.0, solved);
+    }
+
+    private boolean mentions(Expr e, String name) {
+        return e.variables().contains(name);
+    }
+
+    private DimTerm analyze(Expr e, String unknown) {
+        return switch (e) {
+            case Expr.Num n -> {
+                // A bare constant is dimensionless inside a product chain.
+                if (n.unit() == null) {
+                    yield new DimTerm(new double[Quantity.DIMENSIONS], 0.0);
+                }
+                try {
+                    yield new DimTerm(UnitRegistry.parse(n.unit()).dims(), 0.0);
+                } catch (UnitRegistry.UnknownUnitException ex) {
+                    yield null;
+                }
+            }
+            case Expr.Var v -> {
+                if (v.name().equals(unknown)) {
+                    yield new DimTerm(new double[Quantity.DIMENSIONS], 1.0);
+                }
+                Quantity q = variableDims.get(v.name());
+                yield q != null ? new DimTerm(q.dims(), 0.0) : null;
+            }
+            case Expr.Neg neg -> analyze(neg.operand(), unknown);
+            case Expr.BinOp b -> switch (b.op()) {
+                case '*' -> combine(analyze(b.left(), unknown), analyze(b.right(), unknown), 1);
+                case '/' -> combine(analyze(b.left(), unknown), analyze(b.right(), unknown), -1);
+                case '^' -> {
+                    if (!(b.right() instanceof Expr.Num n) || mentions(b.right(), unknown)) {
+                        yield null;
+                    }
+                    DimTerm base = analyze(b.left(), unknown);
+                    if (base == null) {
+                        yield null;
+                    }
+                    double[] scaled = new double[Quantity.DIMENSIONS];
+                    for (int i = 0; i < Quantity.DIMENSIONS; i++) {
+                        scaled[i] = base.dims()[i] * n.value();
+                    }
+                    yield new DimTerm(scaled, base.unknownExponent() * n.value());
+                }
+                // The unknown inside a sum or difference cannot be isolated
+                // multiplicatively; an unknown-free sum falls back to dimOf.
+                default -> {
+                    if (mentions(e, unknown)) {
+                        yield null;
+                    }
+                    Dim dim = dimOf(e);
+                    yield dim.known() ? new DimTerm(dim.quantity().dims(), 0.0) : null;
+                }
+            };
+            // Function arguments containing the unknown are not invertible here;
+            // unknown-free calls fall back to dimOf.
+            default -> {
+                if (mentions(e, unknown)) {
+                    yield null;
+                }
+                Dim dim = dimOf(e);
+                yield dim.known() ? new DimTerm(dim.quantity().dims(), 0.0) : null;
+            }
+        };
+    }
+
+    private static DimTerm combine(DimTerm a, DimTerm b, int sign) {
+        if (a == null || b == null) {
+            return null;
+        }
+        double[] dims = new double[Quantity.DIMENSIONS];
+        for (int i = 0; i < Quantity.DIMENSIONS; i++) {
+            dims[i] = a.dims()[i] + sign * b.dims()[i];
+        }
+        return new DimTerm(dims, a.unknownExponent() + sign * b.unknownExponent());
     }
 
     private Dim dimOf(Expr e) {

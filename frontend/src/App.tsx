@@ -16,6 +16,7 @@ import {
   Tabs,
   Text,
   Textarea,
+  TextInput,
   Title,
   Tooltip,
 } from '@mantine/core'
@@ -24,8 +25,11 @@ import {
   CheckResponse,
   DEFAULT_STOP_CRITERIA,
   solve,
+  solveTable,
   SolveResponse,
   StopCriteria,
+  TableRowResult,
+  TableStats,
   UnitSystem,
   VariableInfo,
 } from './api'
@@ -37,6 +41,8 @@ import VariableInfoModal, {
 } from './VariableInfoModal'
 import HelpModal from './HelpModal'
 import Latex from './Latex'
+import ConfigureTableModal from './ConfigureTableModal'
+import AlterValuesModal from './AlterValuesModal'
 
 const STOP_CRITERIA_KEY = 'frees.stopCriteria'
 const UNIT_SYSTEM_KEY = 'frees.unitSystem'
@@ -127,6 +133,16 @@ export default function App() {
   const [showVariableInfo, setShowVariableInfo] = useState(false)
   const [showHelp, setShowHelp] = useState(false)
   const [activeTab, setActiveTab] = useState<string>('equations')
+  const [tableVars, setTableVars] = useState<string[]>([])
+  const [paramRows, setParamRows] = useState<Record<string, string>[]>([{}, {}, {}])
+  const [tableResults, setTableResults] = useState<TableRowResult[]>([])
+  const [tableSolving, setTableSolving] = useState(false)
+  const [showConfigureTable, setShowConfigureTable] = useState(false)
+  const [alterColumn, setAlterColumn] = useState<string | null>(null)
+  const [tableCheckResult, setTableCheckResult] = useState<CheckResponse | null>(null)
+  const [tableCheckMessage, setTableCheckMessage] = useState('')
+  const [tableChecking, setTableChecking] = useState(false)
+  const [tableStats, setTableStats] = useState<TableStats | null>(null)
 
   const checked = checkResult !== null
   const solvable = checkResult?.solvable === true
@@ -157,9 +173,10 @@ export default function App() {
   function onTextChange(value: string) {
     setText(value)
     // Like EES, any edit invalidates the previous Check; Solve is gated
-    // until the system is re-checked.
+    // until the system is re-checked. Table checks depend on the same text.
     setCheckResult(null)
     setResult(null)
+    invalidateTable()
   }
 
   async function onCheck() {
@@ -198,6 +215,143 @@ export default function App() {
       })
     } finally {
       setChecking(false)
+    }
+  }
+
+  function invalidateTable() {
+    setTableResults([])
+    setTableStats(null)
+    setTableCheckResult(null)
+    setTableCheckMessage('')
+  }
+
+  function setTableCell(rowIndex: number, name: string, value: string) {
+    setParamRows((rows) =>
+      rows.map((row, i) => (i === rowIndex ? { ...row, [name]: value } : row)),
+    )
+    invalidateTable()
+  }
+
+  function setColumnUnits(name: string, units: string) {
+    setVarDrafts((drafts) => ({
+      ...drafts,
+      [name]: {
+        ...(drafts[name] ?? { ...DEFAULT_DRAFT }),
+        units,
+        isUnitsUserSet: units.trim() !== '',
+      },
+    }))
+    invalidateTable()
+  }
+
+  /** Table columns that have at least one usable numeric input value. */
+  function filledTableColumns(): Map<string, number> {
+    const filled = new Map<string, number>()
+    for (const name of tableVars) {
+      for (const row of paramRows) {
+        const raw = (row[name] ?? '').trim()
+        if (raw !== '' && Number.isFinite(Number(raw))) {
+          filled.set(name, Number(raw))
+          break
+        }
+      }
+    }
+    return filled
+  }
+
+  async function onCheckTable() {
+    if (tableChecking) return
+    setTableChecking(true)
+    setTableResults([])
+    try {
+      // Check the augmented system: the equations plus one representative
+      // fixed value per table input column (EES table semantics).
+      const filled = filledTableColumns()
+      let augmented = text
+      for (const [name, value] of filled) {
+        augmented += `\n${name} = ${value}`
+      }
+      const response = await check(augmented, buildVariableInfo(), complexMode)
+      setTableCheckResult(response)
+
+      // Sync variable list and units so the column headers show units for
+      // calculated variables too (inferred + dimensionally derived).
+      if (response.variables.length > 0) {
+        setVariables(response.variables)
+        setVarDrafts((drafts) => {
+          const next: Record<string, VariableDraft> = { ...drafts }
+          for (const name of response.variables) {
+            const existing = next[name] ?? { ...DEFAULT_DRAFT }
+            next[name] = { ...existing }
+            if (!existing.isUnitsUserSet) {
+              next[name].units = response.inferredUnits[name] ?? existing.units ?? ''
+            }
+          }
+          return next
+        })
+      }
+
+      if (response.solvable) {
+        setTableCheckMessage(
+          `Table check passed: ${response.equations} equations and ` +
+            `${response.unknowns} variables, with ${filled.size} value(s) ` +
+            `supplied by the table.`,
+        )
+      } else {
+        const unfilledColumns = tableVars.filter((v) => !filled.has(v))
+        const hint =
+          unfilledColumns.length > 0
+            ? ` Fill input values for: ${unfilledColumns.join(', ')} (or use the column fill).`
+            : ' Add the missing variables as table columns via Configure Columns, or fix the equations.'
+        setTableCheckMessage(response.message + hint)
+      }
+    } catch (e) {
+      setTableCheckResult(null)
+      setTableCheckMessage(`Could not reach the solver backend: ${String(e)}`)
+    } finally {
+      setTableChecking(false)
+    }
+  }
+
+  async function onSolveTable() {
+    if (tableSolving || tableVars.length === 0) return
+    if (tableCheckResult?.solvable !== true) return
+    setTableSolving(true)
+    try {
+      // Non-empty cells become fixed inputs for that run; blank cells are
+      // solved per row (EES Solve Table semantics).
+      const rows = paramRows.map((row) => {
+        const fixed: Record<string, number> = {}
+        for (const name of tableVars) {
+          const raw = (row[name] ?? '').trim()
+          if (raw !== '') {
+            const value = Number(raw)
+            if (Number.isFinite(value)) fixed[name] = value
+          }
+        }
+        return fixed
+      })
+      const response = await solveTable(
+        text,
+        { ...stopCriteria, complexMode },
+        buildVariableInfo(),
+        unitSystem,
+        tableVars,
+        rows,
+      )
+      setTableResults(response.results)
+      setTableStats(response.stats)
+    } catch (e) {
+      setTableStats(null)
+      setTableResults(
+        paramRows.map(() => ({
+          success: false,
+          values: {},
+          error: `Could not reach the solver backend: ${String(e)}`,
+        })),
+      )
+    } finally {
+      setTableSolving(false)
     }
   }
 
@@ -247,13 +401,14 @@ export default function App() {
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
+      // Shortcuts act on the active section: equations vs parametric table.
       if (e.key === 'F2') {
         e.preventDefault()
-        void onSolve()
+        void (activeTab === 'table' ? onSolveTable() : onSolve())
       }
       if (e.key === 'F4') {
         e.preventDefault()
-        void onCheck()
+        void (activeTab === 'table' ? onCheckTable() : onCheck())
       }
     }
     window.addEventListener('keydown', onKeyDown)
@@ -395,6 +550,36 @@ export default function App() {
         />
       )}
 
+      {alterColumn && (
+        <AlterValuesModal
+          variable={alterColumn}
+          rowCount={paramRows.length}
+          initialFirst={paramRows[0]?.[alterColumn] ?? ''}
+          initialLast={paramRows[paramRows.length - 1]?.[alterColumn] ?? ''}
+          onApply={(values) => {
+            setParamRows((rows) =>
+              rows.map((row, i) => ({ ...row, [alterColumn]: String(values[i]) })),
+            )
+            invalidateTable()
+            setAlterColumn(null)
+          }}
+          onClose={() => setAlterColumn(null)}
+        />
+      )}
+
+      {showConfigureTable && (
+        <ConfigureTableModal
+          variables={variables}
+          selected={tableVars}
+          onSave={(selected) => {
+            setTableVars(selected)
+            invalidateTable()
+            setShowConfigureTable(false)
+          }}
+          onClose={() => setShowConfigureTable(false)}
+        />
+      )}
+
       {showVariableInfo && (
         <VariableInfoModal
           variables={variables}
@@ -433,6 +618,7 @@ export default function App() {
             <Tabs.List>
               <Tabs.Tab value="equations">Equations</Tabs.Tab>
               <Tabs.Tab value="formatted">Formatted Equations</Tabs.Tab>
+              <Tabs.Tab value="table">Parametric Table</Tabs.Tab>
               <Tooltip label="Epic 4 — coming soon">
                 <Tabs.Tab value="plots" disabled>
                   Plots
@@ -472,6 +658,146 @@ export default function App() {
                   },
                 }}
               />
+            ) : activeTab === 'table' ? (
+              <Stack gap="sm" style={{ flex: 1, minHeight: 0 }}>
+                <Group gap="xs">
+                  <Button
+                    size="xs"
+                    variant="default"
+                    onClick={() => setShowConfigureTable(true)}
+                  >
+                    Configure Columns
+                  </Button>
+                  <Button
+                    size="xs"
+                    variant="default"
+                    onClick={() => {
+                      setParamRows((r) => [...r, {}])
+                      invalidateTable()
+                    }}
+                  >
+                    Add Row
+                  </Button>
+                  <Button
+                    size="xs"
+                    variant="default"
+                    disabled={paramRows.length <= 1}
+                    onClick={() => {
+                      setParamRows((r) => r.slice(0, -1))
+                      invalidateTable()
+                    }}
+                  >
+                    Remove Row
+                  </Button>
+                  {tableResults.length > 0 && (
+                    <Button size="xs" variant="subtle" onClick={() => setTableResults([])}>
+                      Clear Results
+                    </Button>
+                  )}
+                </Group>
+
+                {tableVars.length === 0 ? (
+                  <Text size="sm" c="dimmed">
+                    Run Check first, then Configure Columns to choose the table
+                    variables. Fill cells for independent variables; blank
+                    cells are solved for each run.
+                  </Text>
+                ) : (
+                  <div style={{ overflow: 'auto', flex: 1 }}>
+                    <Table striped withColumnBorders stickyHeader>
+                      <Table.Thead>
+                        <Table.Tr>
+                          <Table.Th w={50}>Run</Table.Th>
+                          {tableVars.map((name) => (
+                            <Table.Th key={name}>
+                              <Stack gap={4}>
+                                <Tooltip label="Click to fill values (linear / logarithmic)">
+                                  <Text
+                                    size="sm"
+                                    fw={600}
+                                    ff="monospace"
+                                    c="blue.4"
+                                    style={{ cursor: 'pointer' }}
+                                    onClick={() => setAlterColumn(name)}
+                                  >
+                                    {name} ⤓
+                                  </Text>
+                                </Tooltip>
+                                <TextInput
+                                  size="xs"
+                                  w={110}
+                                  placeholder="units"
+                                  value={varDrafts[name]?.units ?? ''}
+                                  onChange={(e) => setColumnUnits(name, e.currentTarget.value)}
+                                  spellCheck={false}
+                                  styles={{
+                                    input: {
+                                      fontFamily: 'var(--mantine-font-family-monospace)',
+                                      fontWeight: 400,
+                                    },
+                                  }}
+                                />
+                              </Stack>
+                            </Table.Th>
+                          ))}
+                        </Table.Tr>
+                      </Table.Thead>
+                      <Table.Tbody>
+                        {paramRows.map((row, ri) => {
+                          const rowResult = tableResults[ri]
+                          return (
+                            <Table.Tr key={ri}>
+                              <Table.Td c="dimmed">
+                                {rowResult && !rowResult.success ? (
+                                  <Tooltip label={rowResult.error ?? 'failed'}>
+                                    <Text c="red" size="sm">
+                                      {ri + 1} ✗
+                                    </Text>
+                                  </Tooltip>
+                                ) : (
+                                  ri + 1
+                                )}
+                              </Table.Td>
+                              {tableVars.map((name) => {
+                                const draft = row[name] ?? ''
+                                const computed =
+                                  rowResult?.success && draft.trim() === ''
+                                    ? rowResult.values[name]
+                                    : undefined
+                                return (
+                                  <Table.Td key={name}>
+                                    {computed !== undefined ? (
+                                      <Text size="sm" ff="monospace" c="green.4">
+                                        {formatValue(computed)}
+                                      </Text>
+                                    ) : (
+                                      <TextInput
+                                        size="xs"
+                                        value={draft}
+                                        placeholder="auto"
+                                        spellCheck={false}
+                                        onChange={(e) =>
+                                          setTableCell(ri, name, e.currentTarget.value)
+                                        }
+                                        styles={{
+                                          input: {
+                                            fontFamily:
+                                              'var(--mantine-font-family-monospace)',
+                                          },
+                                        }}
+                                      />
+                                    )}
+                                  </Table.Td>
+                                )
+                              })}
+                            </Table.Tr>
+                          )
+                        })}
+                      </Table.Tbody>
+                    </Table>
+                  </div>
+                )}
+              </Stack>
             ) : (
               <Stack gap="sm" style={{ overflowY: 'auto', flex: 1 }}>
                 {formattedEqs.length > 0 ? (
@@ -489,6 +815,69 @@ export default function App() {
             )}
           </Paper>
 
+          {activeTab === 'table' ? (
+            <Group mt="sm" gap="sm">
+              <Button variant="default" onClick={onCheckTable} loading={tableChecking}>
+                Check Table (F4)
+              </Button>
+              <Tooltip
+                label={
+                  tableCheckResult?.solvable
+                    ? 'Solve every table run'
+                    : 'Run Check Table first'
+                }
+              >
+                <Button
+                  onClick={onSolveTable}
+                  loading={tableSolving}
+                  disabled={tableCheckResult?.solvable !== true}
+                >
+                  Solve Table (F2)
+                </Button>
+              </Tooltip>
+
+              {tableResults.length > 0 ? (
+                <Group gap="xs">
+                  <Badge
+                    color={tableResults.every((r) => r.success) ? 'green' : 'red'}
+                    variant="light"
+                    leftSection={tableResults.every((r) => r.success) ? '✓' : '✗'}
+                  >
+                    Table:{' '}
+                    {tableResults.filter((r) => r.success).length}/{tableResults.length}{' '}
+                    runs solved
+                  </Badge>
+                  {!tableResults.every((r) => r.success) && (
+                    <Text size="xs" c="red" fw={500}>
+                      Failed runs are marked ✗ — hover for the reason.
+                    </Text>
+                  )}
+                </Group>
+              ) : tableCheckResult || tableCheckMessage ? (
+                <Group gap="xs">
+                  <Badge
+                    color={tableCheckResult?.solvable ? 'green' : 'red'}
+                    variant="light"
+                    leftSection={tableCheckResult?.solvable ? '✓' : '✗'}
+                  >
+                    {tableCheckResult?.solvable ? 'Table Check: OK' : 'Table Check: Errors'}
+                  </Badge>
+                  <Text
+                    size="xs"
+                    c={tableCheckResult?.solvable ? 'green' : 'red'}
+                    fw={500}
+                  >
+                    {tableCheckMessage}
+                  </Text>
+                </Group>
+              ) : (
+                <Text size="xs" c="dimmed">
+                  Configure columns, fill input values (use the ⤓ column fill),
+                  then Check Table.
+                </Text>
+              )}
+            </Group>
+          ) : (
           <Group mt="sm" gap="sm">
             <Button variant="default" onClick={onCheck} loading={checking}>
               Check (F4)
@@ -513,6 +902,7 @@ export default function App() {
                 setComplexMode(e.currentTarget.checked)
                 setCheckResult(null)
                 setResult(null)
+                invalidateTable()
               }}
             />
 
@@ -574,6 +964,7 @@ export default function App() {
               </Group>
             )}
           </Group>
+          )}
         </Flex>
 
         <Paper
@@ -584,16 +975,50 @@ export default function App() {
         >
           <Group justify="space-between" mb="sm">
             <Title order={4}>Solution</Title>
-            {solveCount > 0 && <Badge variant="light">run #{solveCount}</Badge>}
+            {activeTab !== 'table' && solveCount > 0 && (
+              <Badge variant="light">run #{solveCount}</Badge>
+            )}
+            {activeTab === 'table' && tableStats && (
+              <Badge variant="light">parametric table</Badge>
+            )}
           </Group>
 
-          {result === null && (
+          {activeTab === 'table' && (
+            tableStats ? (
+              <Stack gap="sm">
+                <SimpleGrid cols={{ base: 2, xs: 3 }} spacing="xs">
+                  <Stat label="runs" value={tableStats.runs} />
+                  <Stat label="solved" value={tableStats.solved} />
+                  <Stat label="failed" value={tableStats.failed} />
+                  <Stat label="equations" value={tableStats.equations} />
+                  <Stat label="unknowns" value={tableStats.unknowns} />
+                  <Stat label="iterations" value={tableStats.iterations} />
+                  <Stat label="solve time" value={`${tableStats.elapsedMillis} ms`} />
+                  <Stat label="max residual" value={formatValue(tableStats.maxResidual)} />
+                </SimpleGrid>
+                {tableStats.failed > 0 && (
+                  <Alert color="red" variant="light" p="xs">
+                    <Text size="xs">
+                      {tableStats.failed} run{tableStats.failed === 1 ? '' : 's'} failed —
+                      rows marked ✗ in the table; hover them for the reason.
+                    </Text>
+                  </Alert>
+                )}
+              </Stack>
+            ) : (
+              <Text c="dimmed" size="sm">
+                Check Table, then Solve Table. Statistics appear here.
+              </Text>
+            )
+          )}
+
+          {activeTab !== 'table' && result === null && (
             <Text c="dimmed" size="sm">
               Check, then Solve. Results appear here.
             </Text>
           )}
 
-          {result && (
+          {activeTab !== 'table' && result && (
             <Stack gap="sm">
               {stats && (
                 <SimpleGrid cols={{ base: 2, xs: 3 }} spacing="xs">

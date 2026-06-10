@@ -65,7 +65,7 @@ public class NewtonSolver {
             }
 
             double[][] jacobian = numericalJacobian(equations, vars, x, residual, values);
-            double[] step = solveLinear(jacobian, residual, x, block);
+            double[] step = solveLinear(jacobian, residual, block);
 
             double lambda = 1.0;
             double[] candidate = new double[n];
@@ -194,38 +194,17 @@ public class NewtonSolver {
         return jacobian;
     }
 
-    private double[] solveLinear(double[][] jacobian, double[] residual, double[] x, Block block) {
+    private double[] solveLinear(double[][] jacobian, double[] residual, Block block) {
         try {
             DecompositionSolver solver =
                     new LUDecomposition(new Array2DRowRealMatrix(jacobian, false)).getSolver();
             RealVector step = solver.solve(new ArrayRealVector(residual, false));
             return step.toArray();
         } catch (SingularMatrixException e) {
-            System.err.println("--- SINGULAR JACOBIAN DEBUG ---");
-            System.err.println("Block variables: " + block.variables());
-            java.util.StringJoiner sjX = new java.util.StringJoiner(", ", "[", "]");
-            for (double val : x) {
-                sjX.add(String.format("%.8e", val));
-            }
-            System.err.println("Variable values x: " + sjX.toString());
-            System.err.println("Jacobian matrix:");
-            for (int i = 0; i < jacobian.length; i++) {
-                java.util.StringJoiner sj = new java.util.StringJoiner(", ", "[", "]");
-                for (int j = 0; j < jacobian[i].length; j++) {
-                    sj.add(String.format("%.8e", jacobian[i][j]));
-                }
-                System.err.println(sj.toString());
-            }
-            System.err.println("Residuals:");
-            java.util.StringJoiner sjRes = new java.util.StringJoiner(", ", "[", "]");
-            for (double r : residual) {
-                sjRes.add(String.format("%.8e", r));
-            }
-            System.err.println(sjRes.toString());
-            System.err.println("--------------------------------");
             throw new SolverException(
                     "Singular Jacobian in block " + block.index()
-                            + ": the equations may be redundant or the guess values degenerate.");
+                            + " (variables " + block.variables() + "): the equations may be "
+                            + "redundant or the guess values degenerate.");
         }
     }
 
