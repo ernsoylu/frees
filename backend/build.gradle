@@ -1,0 +1,40 @@
+plugins {
+    id 'java'
+    id 'antlr'
+    id 'org.springframework.boot' version '3.5.6'
+}
+
+group = 'com.frees'
+version = '0.1.0'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    antlr 'org.antlr:antlr4:4.13.2'
+
+    implementation platform('org.springframework.boot:spring-boot-dependencies:3.5.6')
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.antlr:antlr4-runtime:4.13.2'
+    implementation 'org.jgrapht:jgrapht-core:1.5.2'
+    implementation 'org.apache.commons:commons-math3:3.6.1'
+
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+generateGrammarSource {
+    arguments += ['-visitor', '-no-listener', '-package', 'com.frees.backend.parser']
+    outputDirectory = file('build/generated-src/antlr/main/com/frees/backend/parser')
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}
