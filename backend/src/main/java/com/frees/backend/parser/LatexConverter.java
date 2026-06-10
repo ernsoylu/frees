@@ -91,6 +91,9 @@ public final class LatexConverter {
                 List<String> elems = al.elements().stream().map(a -> toLatex(a, displayNames)).toList();
                 yield "\\left[" + String.join(", ", elems) + "\\right]";
             }
+            case Expr.Compare cmp -> toLatex(cmp.left(), displayNames) + " " + cmp.op() + " " + toLatex(cmp.right(), displayNames);
+            case Expr.Logical log -> toLatex(log.left(), displayNames) + " \\text{ " + log.op() + " } " + toLatex(log.right(), displayNames);
+            case Expr.Not not -> "\\neg " + toLatex(not.operand(), displayNames);
         };
     }
 
