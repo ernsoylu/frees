@@ -120,6 +120,16 @@ class EquationSystemSolverTest {
     }
 
     @Test
+    void complexSolving() {
+        SolverSettings complexSettings = new SolverSettings(250, 1e-6, 1e-9, 3600.0, true);
+        var result = solver.solve("z^2 = -4", complexSettings);
+        double z_r = result.variables().get("z_r");
+        double z_i = result.variables().get("z_i");
+        assertEquals(0.0, z_r, 1e-6);
+        org.junit.jupiter.api.Assertions.assertTrue(Math.abs(z_i - 2.0) < 1e-6 || Math.abs(z_i + 2.0) < 1e-6);
+    }
+
+    @Test
     void boundsSelectRoot() {
         // x^2 = 4 has roots ±2; bounds force the solver into one half-plane.
         var negative = solver.solve("x^2 = 4", SolverSettings.DEFAULTS,

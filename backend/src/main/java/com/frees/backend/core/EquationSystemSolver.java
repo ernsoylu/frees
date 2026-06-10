@@ -65,8 +65,15 @@ public class EquationSystemSolver {
      * solve anything.
      */
     public CheckResult check(String source) {
+        return check(source, false);
+    }
+
+    public CheckResult check(String source, boolean complexMode) {
         EquationParser.ParseResult parsed = parser.parseResult(source);
         List<Equation> equations = parsed.equations();
+        if (complexMode) {
+            equations = com.frees.backend.parser.ComplexExpansion.expand(equations, parsed.displayNames());
+        }
 
         TreeSet<String> allVars = new TreeSet<>();
         for (Equation eq : equations) {
@@ -103,29 +110,39 @@ public class EquationSystemSolver {
         long deadlineNanos = startNanos + (long) (settings.elapsedTimeSeconds() * 1.0e9);
         EquationParser.ParseResult parsed = parser.parseResult(source);
         List<Equation> equations = parsed.equations();
+        if (settings.complexMode()) {
+            equations = com.frees.backend.parser.ComplexExpansion.expand(equations, parsed.displayNames());
+        }
 
         TreeSet<String> allVars = new TreeSet<>();
         for (Equation eq : equations) {
             allVars.addAll(eq.variables());
         }
+        Map<String, VariableSpec> expandedSpecs = expandSpecs(allVars, specs, settings.complexMode());
+
         Map<String, Double> values = new HashMap<>();
         for (String var : allVars) {
-            VariableSpec spec = specs.get(var);
+            VariableSpec spec = expandedSpecs.get(var);
             values.put(var, spec != null ? spec.guess() : DEFAULT_GUESS);
         }
 
         NewtonSolver newtonSolver = new NewtonSolver(settings);
+        // Use near-zero residual tolerance so the polisher keeps iterating
+        // until variable change drops below 1e-15.  This is critical for
+        // multiple roots where residual ≈ error^m drops below tolerance
+        // long before the variable has converged.
         NewtonSolver polisher = new NewtonSolver(new SolverSettings(
                 50,
-                Math.min(settings.relativeResiduals(), 1e-12),
+                1e-30,
                 1e-15,
-                settings.elapsedTimeSeconds()));
+                settings.elapsedTimeSeconds(),
+                settings.complexMode()));
         List<Block> blocks = blocker.block(equations);
         int totalIterations = 0;
         for (Block block : blocks) {
-            totalIterations += newtonSolver.solveBlock(block, values, deadlineNanos, specs);
+            totalIterations += newtonSolver.solveBlock(block, values, deadlineNanos, expandedSpecs);
             try {
-                totalIterations += polisher.solveBlock(block, values, deadlineNanos, specs);
+                totalIterations += polisher.solveBlock(block, values, deadlineNanos, expandedSpecs);
             } catch (SolverException ignored) {
                 // Polishing is best-effort; the main solution is still valid.
             }
@@ -190,19 +207,24 @@ public class EquationSystemSolver {
         long deadlineNanos = startNanos + (long) (settings.elapsedTimeSeconds() * 1.0e9);
         EquationParser.ParseResult parsed = parser.parseResult(source);
         List<Equation> equations = parsed.equations();
+        if (settings.complexMode()) {
+            equations = com.frees.backend.parser.ComplexExpansion.expand(equations, parsed.displayNames());
+        }
 
         TreeSet<String> allVars = new TreeSet<>();
         for (Equation eq : equations) {
             allVars.addAll(eq.variables());
         }
+        Map<String, VariableSpec> expandedSpecs = expandSpecs(allVars, specs, settings.complexMode());
+
         Map<String, Double> guesses = new HashMap<>();
         for (String var : allVars) {
-            VariableSpec spec = specs.get(var);
+            VariableSpec spec = expandedSpecs.get(var);
             guesses.put(var, spec != null ? spec.guess() : DEFAULT_GUESS);
         }
 
         List<Block> blocks = blocker.block(equations);
-        AllRootsSolver allRoots = new AllRootsSolver(settings, specs);
+        AllRootsSolver allRoots = new AllRootsSolver(settings, expandedSpecs);
         List<Map<String, Double>> solutions = allRoots.findAll(blocks, guesses, deadlineNanos);
 
         return buildResult(equations, allVars, blocks, solutions,
@@ -244,5 +266,29 @@ public class EquationSystemSolver {
         Solution first = solutions.get(0);
         return new Result(first.variables(), blocks, first.residuals(), stats, solutions,
                 displayNames);
+    }
+
+    private Map<String, VariableSpec> expandSpecs(TreeSet<String> allVars, Map<String, VariableSpec> specs, boolean complexMode) {
+        Map<String, VariableSpec> expandedSpecs = new HashMap<>();
+        if (complexMode) {
+            for (String var : allVars) {
+                if (specs.containsKey(var)) {
+                    expandedSpecs.put(var, specs.get(var));
+                } else if (var.endsWith("_r") || var.endsWith("_i")) {
+                    String baseName = var.substring(0, var.length() - 2);
+                    VariableSpec parentSpec = specs.get(baseName);
+                    if (parentSpec != null) {
+                        double guess = var.endsWith("_r") ? parentSpec.guess() : DEFAULT_GUESS;
+                        expandedSpecs.put(var, new VariableSpec(var, guess, parentSpec.lower(), parentSpec.upper()));
+                    } else {
+                        double guess = DEFAULT_GUESS;
+                        expandedSpecs.put(var, new VariableSpec(var, guess, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY));
+                    }
+                }
+            }
+        } else {
+            expandedSpecs = specs;
+        }
+        return expandedSpecs;
     }
 }

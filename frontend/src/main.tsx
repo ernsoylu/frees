@@ -1,6 +1,7 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import '@mantine/core/styles.css'
+import 'katex/dist/katex.min.css'
 import { createTheme, MantineProvider } from '@mantine/core'
 import App from './App'
 import './index.css'

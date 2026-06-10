@@ -48,14 +48,16 @@ public class AllRootsSolver {
         this.settings = settings;
         this.specs = specs;
         this.newton = new NewtonSolver(settings);
-        // Converged-but-loose solutions from different starts can differ by
-        // more than the dedup tolerance; a strict polish pass makes duplicates
-        // collapse onto each other.
+        // Use near-zero residual tolerance so the polisher keeps iterating
+        // until variable change drops below 1e-15.  Critical for multiple
+        // roots where residual ≈ error^m drops below tolerance long before
+        // the variable has converged.
         this.polisher = new NewtonSolver(new SolverSettings(
                 50,
-                Math.min(settings.relativeResiduals(), 1e-12),
+                1e-30,
                 1e-15,
-                settings.elapsedTimeSeconds()));
+                settings.elapsedTimeSeconds(),
+                settings.complexMode()));
     }
 
     public int totalIterations() {
@@ -143,6 +145,26 @@ public class AllRootsSolver {
                         // Bracket failed to converge; skip it.
                     }
                 }
+                // Detect tangent / double roots: if the function changes
+                // direction and the magnitude near the turning point is tiny,
+                // Newton-polish the midpoint to extract the root.
+                if (Double.isFinite(prevF) && Double.isFinite(ft)
+                        && prevF * ft > 0
+                        && Math.abs(prevF) + Math.abs(ft) > 0) {
+                    double minAbs = Math.min(Math.abs(prevF), Math.abs(ft));
+                    if (minAbs < Math.sqrt(settings.relativeResiduals())) {
+                        double mid = (prevT + t) / 2.0;
+                        try {
+                            Map<String, Double> tangentWork = new HashMap<>(branch);
+                            tangentWork.put(var, mid);
+                            totalIterations += newton.solveBlock(block, tangentWork, deadlineNanos, specs);
+                            double tangentRoot = tangentWork.get(var);
+                            if (isValidRoot(eq, var, tangentRoot, tangentWork)) {
+                                addRoot(roots, tangentRoot);
+                            }
+                        } catch (SolverException ignored) {}
+                    }
+                }
                 prevT = t;
                 prevF = ft;
             }
@@ -162,10 +184,17 @@ public class AllRootsSolver {
             // The scan results stand on their own.
         }
 
+        // Polish every root for maximum precision (critical for multiple roots
+        // where the residual drops to tolerance well before x converges).
         List<Map<String, Double>> result = new ArrayList<>();
         for (double root : roots) {
             Map<String, Double> copy = new HashMap<>(branch);
             copy.put(var, root);
+            try {
+                totalIterations += polisher.solveBlock(block, copy, deadlineNanos, specs);
+            } catch (SolverException ignored) {
+                // Polishing is best-effort.
+            }
             result.add(copy);
         }
         return result;

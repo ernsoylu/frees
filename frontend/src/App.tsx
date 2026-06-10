@@ -35,6 +35,8 @@ import VariableInfoModal, {
   parseBound,
   VariableDraft,
 } from './VariableInfoModal'
+import HelpModal from './HelpModal'
+import Latex from './Latex'
 
 const STOP_CRITERIA_KEY = 'frees.stopCriteria'
 const UNIT_SYSTEM_KEY = 'frees.unitSystem'
@@ -52,7 +54,10 @@ z = x^2 - 3`
 function loadStopCriteria(): StopCriteria {
   try {
     const raw = localStorage.getItem(STOP_CRITERIA_KEY)
-    if (raw) return { ...DEFAULT_STOP_CRITERIA, ...JSON.parse(raw) }
+    if (raw) {
+      const { complexMode: _ignored, ...rest } = JSON.parse(raw)
+      return { ...DEFAULT_STOP_CRITERIA, ...rest }
+    }
   } catch {
     // Corrupt storage falls back to defaults.
   }
@@ -65,6 +70,31 @@ function formatValue(value: number): string {
   if (abs >= 1e7 || abs < 1e-4) return value.toExponential(6)
   return Number(value.toPrecision(8)).toString()
 }
+
+function formatComplex(real: number, imag: number): string {
+  let cleanImag = Math.abs(imag) < 1e-12 ? 0 : imag
+  if (cleanImag !== 0 && Math.abs(real) > 0) {
+    const relativeRatio = Math.abs(cleanImag) / Math.abs(real)
+    if (relativeRatio < 1e-6 && Math.abs(cleanImag) < 1e-5) {
+      cleanImag = 0
+    }
+  }
+
+  let cleanReal = Math.abs(real) < 1e-12 ? 0 : real
+  if (cleanReal !== 0 && Math.abs(cleanImag) > 0) {
+    const relativeRatio = Math.abs(cleanReal) / Math.abs(cleanImag)
+    if (relativeRatio < 1e-6 && Math.abs(cleanReal) < 1e-5) {
+      cleanReal = 0
+    }
+  }
+
+  if (cleanImag === 0) return formatValue(cleanReal)
+  const formattedReal = cleanReal !== 0 ? formatValue(cleanReal) : ''
+  const sign = cleanImag > 0 ? (cleanReal !== 0 ? ' + ' : '') : (cleanReal !== 0 ? ' - ' : '-')
+  const formattedImag = Math.abs(cleanImag) === 1 ? '' : formatValue(Math.abs(cleanImag))
+  return `${formattedReal}${sign}${formattedImag}i`
+}
+
 
 function Stat({ label, value }: { label: string; value: string | number }) {
   return (
@@ -87,20 +117,26 @@ export default function App() {
   const [solving, setSolving] = useState(false)
   const [solveCount, setSolveCount] = useState(0)
   const [findAll, setFindAll] = useState(false)
+  const [complexMode, setComplexMode] = useState(false)
+  const [solvedComplexMode, setSolvedComplexMode] = useState(false)
   const [stopCriteria, setStopCriteria] = useState<StopCriteria>(loadStopCriteria)
   const [unitSystem, setUnitSystem] = useState<UnitSystem>(loadUnitSystem)
   const [showPreferences, setShowPreferences] = useState(false)
   const [variables, setVariables] = useState<string[]>([])
   const [varDrafts, setVarDrafts] = useState<Record<string, VariableDraft>>({})
   const [showVariableInfo, setShowVariableInfo] = useState(false)
+  const [showHelp, setShowHelp] = useState(false)
+  const [activeTab, setActiveTab] = useState<string>('equations')
 
   const checked = checkResult !== null
   const solvable = checkResult?.solvable === true
 
   function savePreferences(criteria: StopCriteria, system: UnitSystem) {
-    setStopCriteria(criteria)
+    // Never persist complexMode inside stopCriteria — it is a separate toggle
+    const { complexMode: _ignored, ...persistable } = criteria
+    setStopCriteria(persistable as StopCriteria)
     setUnitSystem(system)
-    localStorage.setItem(STOP_CRITERIA_KEY, JSON.stringify(criteria))
+    localStorage.setItem(STOP_CRITERIA_KEY, JSON.stringify(persistable))
     localStorage.setItem(UNIT_SYSTEM_KEY, system)
     setShowPreferences(false)
   }
@@ -131,7 +167,7 @@ export default function App() {
     setChecking(true)
     setResult(null)
     try {
-      const response = await check(text, buildVariableInfo())
+      const response = await check(text, buildVariableInfo(), complexMode)
       setCheckResult(response)
       // Sync the Variable Information table: keep edited rows for variables
       // that still exist, add defaults for new ones.
@@ -157,6 +193,7 @@ export default function App() {
         unitWarnings: [],
         inferredUnits: {},
         message: `Could not reach the solver backend: ${String(e)}`,
+        formattedEquations: [],
       })
     } finally {
       setChecking(false)
@@ -169,11 +206,12 @@ export default function App() {
     try {
       const response = await solve(
         text,
-        stopCriteria,
+        { ...stopCriteria, complexMode },
         buildVariableInfo(),
         findAll,
         unitSystem,
       )
+      setSolvedComplexMode(complexMode)
       setResult(response)
     } catch (e) {
       setResult({
@@ -185,6 +223,7 @@ export default function App() {
         solutions: [],
         unitWarnings: [],
         error: `Could not reach the solver backend: ${String(e)}`,
+        formattedEquations: [],
       })
     } finally {
       setSolveCount((n) => n + 1)
@@ -209,27 +248,105 @@ export default function App() {
 
   const stats = result?.stats ?? null
   const solutions = result?.solutions ?? []
+  const formattedEqs = result?.formattedEquations ?? checkResult?.formattedEquations ?? []
 
   // One row per variable. With multiple solutions, the value cell shows the
   // set of values across solutions: {2.7016, -3.7016}.
   const baseVariables =
     solutions.length > 0 ? solutions[0].variables : result?.variables ?? []
-  const tableRows = baseVariables.map((v) => {
-    const values =
-      solutions.length > 1
-        ? solutions.map(
-            (s) => s.variables.find((x) => x.name === v.name)?.value ?? NaN,
-          )
-        : [v.value]
-    const formatted = values.map(formatValue)
-    const isSet = new Set(formatted).size > 1
-    return {
-      name: v.name,
-      units: v.units,
-      display: isSet ? `{${formatted.join(', ')}}` : formatted[0],
-      isSet,
+
+  let tableRows: { name: string; units: string; display: string; isSet: boolean }[] = []
+
+  // Use the mode that was active when the result was solved, not the live checkbox
+  const resultIsComplex = result ? solvedComplexMode : false
+
+  if (resultIsComplex) {
+    const baseNames = new Set<string>()
+    for (const v of baseVariables) {
+      if (v.name.endsWith('_r') || v.name.endsWith('_i')) {
+        baseNames.add(v.name.substring(0, v.name.length - 2))
+      } else {
+        baseNames.add(v.name)
+      }
     }
-  })
+
+    const unitsMap = new Map<string, string>()
+    for (const v of baseVariables) {
+      if (v.name.endsWith('_r') || !v.name.endsWith('_i')) {
+        const baseName = v.name.endsWith('_r') ? v.name.substring(0, v.name.length - 2) : v.name
+        unitsMap.set(baseName, v.units)
+      }
+    }
+
+    const processed = new Set<string>()
+
+    for (const v of baseVariables) {
+      const isComplex = v.name.endsWith('_r') || v.name.endsWith('_i')
+      const baseName = isComplex ? v.name.substring(0, v.name.length - 2) : v.name
+
+      if (processed.has(baseName)) continue
+      processed.add(baseName)
+
+      if (isComplex) {
+        const rName = baseName + '_r'
+        const iName = baseName + '_i'
+
+        const formattedValues: string[] = []
+
+        if (solutions.length > 1) {
+          for (const s of solutions) {
+            const rVal = s.variables.find((x) => x.name === rName)?.value ?? 0
+            const iVal = s.variables.find((x) => x.name === iName)?.value ?? 0
+            formattedValues.push(formatComplex(rVal, iVal))
+          }
+        } else {
+          const rVal = baseVariables.find((x) => x.name === rName)?.value ?? 0
+          const iVal = baseVariables.find((x) => x.name === iName)?.value ?? 0
+          formattedValues.push(formatComplex(rVal, iVal))
+        }
+
+        const isSet = new Set(formattedValues).size > 1
+        tableRows.push({
+          name: baseName,
+          units: unitsMap.get(baseName) ?? '',
+          display: isSet ? `{${formattedValues.join(', ')}}` : formattedValues[0],
+          isSet,
+        })
+      } else {
+        const values =
+          solutions.length > 1
+            ? solutions.map(
+                (s) => s.variables.find((x) => x.name === v.name)?.value ?? NaN,
+              )
+            : [v.value]
+        const formatted = values.map(formatValue)
+        const isSet = new Set(formatted).size > 1
+        tableRows.push({
+          name: v.name,
+          units: v.units,
+          display: isSet ? `{${formatted.join(', ')}}` : formatted[0],
+          isSet,
+        })
+      }
+    }
+  } else {
+    tableRows = baseVariables.map((v) => {
+      const values =
+        solutions.length > 1
+          ? solutions.map(
+              (s) => s.variables.find((x) => x.name === v.name)?.value ?? NaN,
+            )
+          : [v.value]
+      const formatted = values.map(formatValue)
+      const isSet = new Set(formatted).size > 1
+      return {
+        name: v.name,
+        units: v.units,
+        display: isSet ? `{${formatted.join(', ')}}` : formatted[0],
+        isSet,
+      }
+    })
+  }
 
   return (
     <Flex direction="column" p="md" gap="md" style={{ minHeight: '100vh' }}>
@@ -248,6 +365,9 @@ export default function App() {
           </Button>
           <Button variant="default" size="xs" onClick={() => setShowPreferences(true)}>
             Preferences
+          </Button>
+          <Button variant="default" size="xs" onClick={() => setShowHelp(true)}>
+            Help
           </Button>
         </Group>
       </Group>
@@ -273,6 +393,20 @@ export default function App() {
         />
       )}
 
+      {showHelp && (
+        <HelpModal
+          onLoadExample={(ex) => {
+            onTextChange(ex)
+            if (ex.includes("z^2 = -4")) {
+              setComplexMode(true)
+            } else {
+              setComplexMode(false)
+            }
+          }}
+          onClose={() => setShowHelp(false)}
+        />
+      )}
+
       <Flex
         flex={1}
         gap="md"
@@ -281,14 +415,10 @@ export default function App() {
         style={{ minHeight: 0 }}
       >
         <Flex direction="column" flex={1} miw={0}>
-          <Tabs value="equations">
+          <Tabs value={activeTab} onChange={(val) => val && setActiveTab(val)}>
             <Tabs.List>
               <Tabs.Tab value="equations">Equations</Tabs.Tab>
-              <Tooltip label="Epic 3 — coming soon">
-                <Tabs.Tab value="formatted" disabled>
-                  Formatted Equations
-                </Tabs.Tab>
-              </Tooltip>
+              <Tabs.Tab value="formatted">Formatted Equations</Tabs.Tab>
               <Tooltip label="Epic 4 — coming soon">
                 <Tabs.Tab value="plots" disabled>
                   Plots
@@ -310,23 +440,39 @@ export default function App() {
             display="flex"
             style={{ flexDirection: 'column', minHeight: 0 }}
           >
-            <Textarea
-              value={text}
-              onChange={(e) => onTextChange(e.currentTarget.value)}
-              spellCheck={false}
-              placeholder={'Enter equations, e.g.\nx + y = 3\ny = z - 4'}
-              styles={{
-                root: { flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 },
-                wrapper: { flex: 1, display: 'flex', minHeight: 0 },
-                input: {
-                  flex: 1,
-                  minHeight: 260,
-                  fontFamily: 'var(--mantine-font-family-monospace)',
-                  fontSize: 'var(--mantine-font-size-sm)',
-                  lineHeight: 1.6,
-                },
-              }}
-            />
+            {activeTab === 'equations' ? (
+              <Textarea
+                value={text}
+                onChange={(e) => onTextChange(e.currentTarget.value)}
+                spellCheck={false}
+                placeholder={'Enter equations, e.g.\nx + y = 3\ny = z - 4'}
+                styles={{
+                  root: { flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 },
+                  wrapper: { flex: 1, display: 'flex', minHeight: 0 },
+                  input: {
+                    flex: 1,
+                    minHeight: 260,
+                    fontFamily: 'var(--mantine-font-family-monospace)',
+                    fontSize: 'var(--mantine-font-size-sm)',
+                    lineHeight: 1.6,
+                  },
+                }}
+              />
+            ) : (
+              <Stack gap="sm" style={{ overflowY: 'auto', flex: 1 }}>
+                {formattedEqs.length > 0 ? (
+                  formattedEqs.map((eq, i) => (
+                    <Paper key={i} withBorder p="sm" style={{ display: 'flex', justifyContent: 'center' }}>
+                      <Latex math={eq} block />
+                    </Paper>
+                  ))
+                ) : (
+                  <Text size="sm" c="dimmed" style={{ fontStyle: 'italic' }}>
+                    No equations compiled. Click "Check" (F4) or "Solve" (F2) to compile.
+                  </Text>
+                )}
+              </Stack>
+            )}
           </Paper>
 
           <Group mt="sm" gap="sm">
@@ -341,7 +487,19 @@ export default function App() {
             <Checkbox
               label="Find all solutions"
               checked={findAll}
-              onChange={(e) => setFindAll(e.currentTarget.checked)}
+              onChange={(e) => {
+                setFindAll(e.currentTarget.checked)
+                setResult(null)
+              }}
+            />
+            <Checkbox
+              label="Complex mode"
+              checked={complexMode}
+              onChange={(e) => {
+                setComplexMode(e.currentTarget.checked)
+                setCheckResult(null)
+                setResult(null)
+              }}
             />
 
             {checked && (
