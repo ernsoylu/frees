@@ -1,0 +1,387 @@
+import { useState } from 'react'
+import {
+  Button,
+  Checkbox,
+  Divider,
+  Group,
+  Modal,
+  MultiSelect,
+  NumberInput,
+  SegmentedControl,
+  Select,
+  Stack,
+  Text,
+  TextInput,
+} from '@mantine/core'
+import {
+  DIAGRAM_TYPES,
+  PlotFormat,
+  PlotKind,
+  PlotSpec,
+  PropertyConfig,
+  PsychroConfig,
+  XYConfig,
+  newPlotSpec,
+} from './types'
+
+interface Props {
+  /** Existing spec to edit, or null to create a new plot. */
+  spec: PlotSpec | null
+  fluids: string[]
+  tableVars: string[]
+  hasStates: boolean
+  onSave: (spec: PlotSpec) => void
+  onClose: () => void
+}
+
+function XYSection({
+  config,
+  tableVars,
+  onChange,
+}: Readonly<{
+  config: XYConfig
+  tableVars: string[]
+  onChange: (config: XYConfig) => void
+}>) {
+  return (
+    <Stack gap="xs">
+      <Text size="xs" c="dimmed">
+        Plots solved parametric table runs. Configure and solve the table
+        first.
+      </Text>
+      <Group grow>
+        <Select
+          label="X-axis variable"
+          size="xs"
+          data={tableVars}
+          value={config.xVar}
+          onChange={(xVar) => onChange({ ...config, xVar })}
+          searchable
+        />
+        <MultiSelect
+          label="Y-axis variables"
+          size="xs"
+          data={tableVars}
+          value={config.yVars}
+          onChange={(yVars) => onChange({ ...config, yVars })}
+          searchable
+        />
+      </Group>
+    </Stack>
+  )
+}
+
+function PropertySection({
+  config,
+  fluids,
+  hasStates,
+  onChange,
+}: Readonly<{
+  config: PropertyConfig
+  fluids: string[]
+  hasStates: boolean
+  onChange: (config: PropertyConfig) => void
+}>) {
+  return (
+    <Stack gap="xs">
+      <Group grow>
+        <Select
+          label="Fluid"
+          size="xs"
+          data={fluids}
+          value={config.fluid}
+          onChange={(fluid) => fluid && onChange({ ...config, fluid })}
+          searchable
+        />
+        <Select
+          label="Diagram"
+          size="xs"
+          data={DIAGRAM_TYPES}
+          value={config.diagram}
+          onChange={(diagram) => diagram && onChange({ ...config, diagram })}
+        />
+      </Group>
+      <Group gap="md">
+        <Checkbox
+          label="Quality lines"
+          size="xs"
+          checked={config.quality}
+          onChange={(e) => onChange({ ...config, quality: e.currentTarget.checked })}
+        />
+        <Checkbox
+          label="Isolines (P/T/s)"
+          size="xs"
+          checked={config.isolines}
+          onChange={(e) => onChange({ ...config, isolines: e.currentTarget.checked })}
+        />
+      </Group>
+      <Divider label="State points" labelPosition="left" />
+      {!hasStates && (
+        <Text size="xs" c="dimmed">
+          No states detected. Solve a system with numbered properties (h1,
+          s1, T[2], ...) and they appear here and in the States tab.
+        </Text>
+      )}
+      <Group gap="md">
+        <Checkbox
+          label="Overlay states"
+          size="xs"
+          checked={config.overlayStates}
+          onChange={(e) =>
+            onChange({ ...config, overlayStates: e.currentTarget.checked })
+          }
+        />
+        <Checkbox
+          label="Connect in order"
+          size="xs"
+          checked={config.connectStates}
+          disabled={!config.overlayStates}
+          onChange={(e) =>
+            onChange({ ...config, connectStates: e.currentTarget.checked })
+          }
+        />
+        <Checkbox
+          label="Close cycle"
+          size="xs"
+          checked={config.closeCycle}
+          disabled={!config.overlayStates || !config.connectStates}
+          onChange={(e) => onChange({ ...config, closeCycle: e.currentTarget.checked })}
+        />
+      </Group>
+    </Stack>
+  )
+}
+
+function PsychroSection({
+  config,
+  onChange,
+}: Readonly<{
+  config: PsychroConfig
+  onChange: (config: PsychroConfig) => void
+}>) {
+  return (
+    <Stack gap="xs">
+      <Group grow>
+        <NumberInput
+          label="Pressure [kPa]"
+          size="xs"
+          value={config.pressureKPa}
+          onChange={(v) =>
+            onChange({ ...config, pressureKPa: typeof v === 'number' ? v : 101.325 })
+          }
+          min={2}
+        />
+        <NumberInput
+          label="T min [°C]"
+          size="xs"
+          value={config.tMinC}
+          onChange={(v) =>
+            onChange({ ...config, tMinC: typeof v === 'number' ? v : 0 })
+          }
+        />
+        <NumberInput
+          label="T max [°C]"
+          size="xs"
+          value={config.tMaxC}
+          onChange={(v) =>
+            onChange({ ...config, tMaxC: typeof v === 'number' ? v : 50 })
+          }
+        />
+      </Group>
+      <Group gap="md">
+        <Checkbox
+          label="Wet-bulb lines"
+          size="xs"
+          checked={config.wetBulb}
+          onChange={(e) => onChange({ ...config, wetBulb: e.currentTarget.checked })}
+        />
+        <Checkbox
+          label="Enthalpy lines"
+          size="xs"
+          checked={config.enthalpy}
+          onChange={(e) => onChange({ ...config, enthalpy: e.currentTarget.checked })}
+        />
+        <Checkbox
+          label="Specific volume lines"
+          size="xs"
+          checked={config.volume}
+          onChange={(e) => onChange({ ...config, volume: e.currentTarget.checked })}
+        />
+      </Group>
+    </Stack>
+  )
+}
+
+function FormatSection({
+  format,
+  kind,
+  onChange,
+}: Readonly<{
+  format: PlotFormat
+  kind: PlotKind
+  onChange: (format: PlotFormat) => void
+}>) {
+  return (
+    <Stack gap="xs">
+      <Group grow>
+        <TextInput
+          label="Title"
+          size="xs"
+          value={format.title}
+          placeholder="auto"
+          onChange={(e) => onChange({ ...format, title: e.currentTarget.value })}
+        />
+        <NumberInput
+          label="Font size"
+          size="xs"
+          value={format.fontSize}
+          min={8}
+          max={24}
+          onChange={(v) =>
+            onChange({ ...format, fontSize: typeof v === 'number' ? v : 13 })
+          }
+        />
+      </Group>
+      <Group grow>
+        <TextInput
+          label="X-axis label"
+          size="xs"
+          value={format.xLabel}
+          placeholder="auto"
+          onChange={(e) => onChange({ ...format, xLabel: e.currentTarget.value })}
+        />
+        <TextInput
+          label="Y-axis label"
+          size="xs"
+          value={format.yLabel}
+          placeholder="auto"
+          onChange={(e) => onChange({ ...format, yLabel: e.currentTarget.value })}
+        />
+      </Group>
+      <Group gap="md">
+        <Checkbox
+          label="Log X"
+          size="xs"
+          checked={format.xLog ?? false}
+          indeterminate={format.xLog === null}
+          onChange={(e) => onChange({ ...format, xLog: e.currentTarget.checked })}
+        />
+        <Checkbox
+          label="Log Y"
+          size="xs"
+          checked={format.yLog ?? false}
+          indeterminate={format.yLog === null}
+          onChange={(e) => onChange({ ...format, yLog: e.currentTarget.checked })}
+        />
+        <Checkbox
+          label="Grid"
+          size="xs"
+          checked={format.grid}
+          onChange={(e) => onChange({ ...format, grid: e.currentTarget.checked })}
+        />
+        <Checkbox
+          label="Legend"
+          size="xs"
+          checked={format.legend}
+          onChange={(e) => onChange({ ...format, legend: e.currentTarget.checked })}
+        />
+        {kind !== 'xy' && (
+          <Checkbox
+            label="Temperatures in °C"
+            size="xs"
+            checked={format.celsius}
+            onChange={(e) => onChange({ ...format, celsius: e.currentTarget.checked })}
+          />
+        )}
+      </Group>
+    </Stack>
+  )
+}
+
+const KIND_OPTIONS = [
+  { value: 'property', label: 'Property diagram' },
+  { value: 'psychro', label: 'Psychrometric chart' },
+  { value: 'xy', label: 'X-Y (parametric table)' },
+]
+
+export default function PlotConfigModal({
+  spec,
+  fluids,
+  tableVars,
+  hasStates,
+  onSave,
+  onClose,
+}: Readonly<Props>) {
+  const [draft, setDraft] = useState<PlotSpec>(
+    () => spec ?? newPlotSpec('property', 'Plot 1'),
+  )
+  const creating = spec === null
+
+  function changeKind(kind: PlotKind) {
+    setDraft((d) => ({ ...d, kind, format: { ...d.format, celsius: kind === 'psychro' } }))
+  }
+
+  return (
+    <Modal
+      opened
+      onClose={onClose}
+      title={creating ? 'Add Plot' : `Configure — ${draft.name}`}
+      size="lg"
+    >
+      <Stack gap="sm">
+        <Group grow align="flex-end">
+          <TextInput
+            label="Plot name"
+            size="xs"
+            value={draft.name}
+            onChange={(e) => setDraft({ ...draft, name: e.currentTarget.value })}
+          />
+          <SegmentedControl
+            size="xs"
+            data={KIND_OPTIONS}
+            value={draft.kind}
+            onChange={(kind) => changeKind(kind as PlotKind)}
+          />
+        </Group>
+
+        {draft.kind === 'xy' && (
+          <XYSection
+            config={draft.xy}
+            tableVars={tableVars}
+            onChange={(xy) => setDraft({ ...draft, xy })}
+          />
+        )}
+        {draft.kind === 'property' && (
+          <PropertySection
+            config={draft.property}
+            fluids={fluids}
+            hasStates={hasStates}
+            onChange={(property) => setDraft({ ...draft, property })}
+          />
+        )}
+        {draft.kind === 'psychro' && (
+          <PsychroSection
+            config={draft.psychro}
+            onChange={(psychro) => setDraft({ ...draft, psychro })}
+          />
+        )}
+
+        <Divider label="Format" labelPosition="left" />
+        <FormatSection
+          format={draft.format}
+          kind={draft.kind}
+          onChange={(format) => setDraft({ ...draft, format })}
+        />
+
+        <Group justify="flex-end" mt="xs">
+          <Button variant="default" size="xs" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button size="xs" onClick={() => onSave(draft)}>
+            {creating ? 'Add plot' : 'Apply'}
+          </Button>
+        </Group>
+      </Stack>
+    </Modal>
+  )
+}

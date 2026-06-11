@@ -17,6 +17,7 @@ public final class PropertyFunctions {
     private static final String CO2 = "CO2";
     /** CoolProp key for mass density, also used for the v/volume indicators. */
     private static final String DMASS = "Dmass";
+    private static final String VOLUME = "volume";
 
     /** EES output function name -> CoolProp PropsSI output key. */
     private static final Map<String, String> OUTPUTS = Map.ofEntries(
@@ -25,7 +26,7 @@ public final class PropertyFunctions {
             Map.entry("temperature", "T"),
             Map.entry("pressure", "P"),
             Map.entry("density", DMASS),
-            Map.entry("volume", DMASS),
+            Map.entry(VOLUME, DMASS),
             Map.entry("intenergy", "Umass"),
             Map.entry("quality", "Q"),
             Map.entry("cp", "Cpmass"),
@@ -89,14 +90,54 @@ public final class PropertyFunctions {
             Map.entry("butane", "n-Butane"),
             Map.entry("r600", "n-Butane"));
 
+    /** EES humid-air output function name -> HAPropsSI output key. */
+    private static final Map<String, String> HA_OUTPUTS = Map.ofEntries(
+            Map.entry("enthalpy", "H"),
+            Map.entry("entropy", "S"),
+            Map.entry("temperature", "T"),
+            Map.entry(VOLUME, "V"),
+            Map.entry("humrat", "W"),
+            Map.entry("relhum", "R"),
+            Map.entry("wetbulb", "B"),
+            Map.entry("dewpoint", "D"),
+            Map.entry("cp", "C"),
+            Map.entry("specheat", "C"));
+
+    /** EES humid-air indicator -> HAPropsSI input key. */
+    private static final Map<String, String> HA_INPUTS = Map.ofEntries(
+            Map.entry("t", "T"),
+            Map.entry("p", "P"),
+            Map.entry("h", "H"),
+            Map.entry("s", "S"),
+            Map.entry("v", "V"),
+            Map.entry("w", "W"),
+            Map.entry("r", "R"),
+            Map.entry("rh", "R"),
+            Map.entry("b", "B"),
+            Map.entry("twb", "B"),
+            Map.entry("d", "D"),
+            Map.entry("tdp", "D"));
+
     private PropertyFunctions() {}
+
+    /** Canonical CoolProp fluid names available for property diagrams. */
+    public static List<String> plotFluids() {
+        return FLUIDS.values().stream()
+                .distinct()
+                .filter(f -> !"HumidAir".equals(f))
+                .sorted()
+                .toList();
+    }
 
     private record Input(String key, double value) {}
 
-    /** Evaluates an encoded property call against the two indicator values. */
+    /** Evaluates an encoded property call against the indicator values. */
     public static double evaluate(String encoded, List<Double> values) {
         String[] parts = encoded.split("\\$");
         String output = parts[1];
+        if ("airh2o".equals(parts[2]) || "humidair".equals(parts[2])) {
+            return evaluateHumidAir(output, parts, values);
+        }
         String outputKey = OUTPUTS.get(output);
         if (outputKey == null) {
             throw new IllegalStateException("Unknown property function: " + output
@@ -113,7 +154,32 @@ public final class PropertyFunctions {
         double raw = CoolProp.propsSI(outputKey, first.key(), first.value(),
                 second.key(), second.value(), fluid);
         // Volume is reported as specific volume = 1/density.
-        return "volume".equals(output) ? 1.0 / raw : raw;
+        return VOLUME.equals(output) ? 1.0 / raw : raw;
+    }
+
+    /** AirH2O calls map to HAPropsSI and need three indicators (e.g. T, P, R). */
+    private static double evaluateHumidAir(String output, String[] parts, List<Double> values) {
+        String outputKey = HA_OUTPUTS.get(output);
+        if (outputKey == null) {
+            throw new IllegalStateException("Unknown humid-air function: " + output
+                    + ". Supported: " + String.join(", ", HA_OUTPUTS.keySet().stream().sorted().toList()));
+        }
+        if (parts.length != 6 || values.size() != 3) {
+            throw new IllegalStateException(capitalize(output)
+                    + "(AirH2O, ...) requires exactly three property indicators, "
+                    + "e.g. " + capitalize(output) + "(AirH2O, T=300, P=101325, R=0.5)");
+        }
+        String[] keys = new String[3];
+        for (int i = 0; i < 3; i++) {
+            keys[i] = HA_INPUTS.get(parts[i + 3]);
+            if (keys[i] == null) {
+                throw new IllegalStateException("Unknown humid-air indicator '" + parts[i + 3]
+                        + "' in " + capitalize(output) + "(AirH2O, ...). Supported: "
+                        + String.join(", ", HA_INPUTS.keySet().stream().sorted().toList()));
+            }
+        }
+        return CoolProp.haPropsSI(outputKey, keys[0], values.get(0),
+                keys[1], values.get(1), keys[2], values.get(2));
     }
 
     private static Input toInput(String indicator, double value, String output) {

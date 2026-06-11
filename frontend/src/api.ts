@@ -164,6 +164,94 @@ export async function optimize(
   return (await response.json()) as OptimizeResponse
 }
 
+export interface DiagramCurve {
+  family: string
+  label: string
+  x: (number | null)[]
+  y: (number | null)[]
+}
+
+export interface DiagramMarker {
+  label: string
+  x: number
+  y: number
+}
+
+export interface DiagramResponse {
+  fluid: string
+  kind: string
+  xProperty: string
+  yProperty: string
+  xLog: boolean
+  yLog: boolean
+  dome: DiagramCurve[]
+  isolines: DiagramCurve[]
+  markers: DiagramMarker[]
+}
+
+export interface PsychartResponse {
+  pressure: number
+  tMin: number
+  tMax: number
+  curves: DiagramCurve[]
+}
+
+export async function getFluids(): Promise<string[]> {
+  const response = await fetch('/api/fluids')
+  if (!response.ok) return []
+  const body = (await response.json()) as { available: boolean; fluids: string[] }
+  return body.available ? body.fluids : []
+}
+
+export async function getPropertyDiagram(
+  fluid: string,
+  type: string,
+): Promise<DiagramResponse> {
+  const response = await fetch('/api/propplot', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ fluid, type }),
+  })
+  if (!response.ok) {
+    const body = (await response.json()) as { error?: string }
+    throw new Error(body.error ?? `Diagram request failed (${response.status})`)
+  }
+  return (await response.json()) as DiagramResponse
+}
+
+export async function getPsychrometricChart(
+  pressure: number,
+  tMin: number,
+  tMax: number,
+): Promise<PsychartResponse> {
+  const response = await fetch('/api/psychart', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ pressure, tMin, tMax }),
+  })
+  if (!response.ok) {
+    const body = (await response.json()) as { error?: string }
+    throw new Error(body.error ?? `Chart request failed (${response.status})`)
+  }
+  return (await response.json()) as PsychartResponse
+}
+
+/** Converts a plot SVG to a vector PDF or EPS on the backend. */
+export async function exportVector(
+  svg: string,
+  format: 'pdf' | 'eps',
+): Promise<Blob> {
+  const response = await fetch('/api/export', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ svg, format }),
+  })
+  if (!response.ok) {
+    throw new Error(`Vector export failed (${response.status})`)
+  }
+  return await response.blob()
+}
+
 export interface TableStats {
   runs: number
   solved: number

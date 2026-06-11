@@ -16,6 +16,13 @@ public final class CoolProp {
         double PropsSI(String output, String name1, double prop1,
                        String name2, double prop2, String fluid);
 
+        @SuppressWarnings({"java:S100", "java:S117"}) // CoolProp's exported C names
+        double Props1SI(String fluid, String output);
+
+        @SuppressWarnings({"java:S100", "java:S117"}) // CoolProp's exported C names
+        double HAPropsSI(String output, String name1, double prop1,
+                         String name2, double prop2, String name3, double prop3);
+
         int get_global_param_string(String param, byte[] output, int n);
     }
 
@@ -45,17 +52,64 @@ public final class CoolProp {
     /** PropsSI with CoolProp's error string surfaced on failure. */
     public static synchronized double propsSI(String output, String name1, double prop1,
                                               String name2, double prop2, String fluid) {
+        requireLibrary();
+        double value = LIB.PropsSI(output, name1, prop1, name2, prop2, fluid);
+        if (!Double.isFinite(value) || Math.abs(value) > FAILURE_THRESHOLD) {
+            throw new IllegalStateException("CoolProp: " + lastError());
+        }
+        return value;
+    }
+
+    /** PropsSI returning NaN instead of throwing; for diagram curve sweeps. */
+    public static synchronized double propsSIOrNaN(String output, String name1, double prop1,
+                                                   String name2, double prop2, String fluid) {
+        if (LIB == null) {
+            return Double.NaN;
+        }
+        double value = LIB.PropsSI(output, name1, prop1, name2, prop2, fluid);
+        return Math.abs(value) > FAILURE_THRESHOLD ? Double.NaN : value;
+    }
+
+    /** Trivial (state-independent) fluid constants, e.g. Tcrit, pcrit, Ttriple. */
+    public static synchronized double props1SI(String fluid, String output) {
+        requireLibrary();
+        double value = LIB.Props1SI(fluid, output);
+        if (!Double.isFinite(value) || Math.abs(value) > FAILURE_THRESHOLD) {
+            throw new IllegalStateException("CoolProp: " + lastError());
+        }
+        return value;
+    }
+
+    /** Humid air properties (HAPropsSI), all SI; requires three input pairs. */
+    public static synchronized double haPropsSI(String output, String name1, double prop1,
+                                                String name2, double prop2,
+                                                String name3, double prop3) {
+        requireLibrary();
+        double value = LIB.HAPropsSI(output, name1, prop1, name2, prop2, name3, prop3);
+        if (!Double.isFinite(value) || Math.abs(value) > FAILURE_THRESHOLD) {
+            throw new IllegalStateException("CoolProp: " + lastError());
+        }
+        return value;
+    }
+
+    /** HAPropsSI returning NaN instead of throwing; for chart curve sweeps. */
+    public static synchronized double haPropsSIOrNaN(String output, String name1, double prop1,
+                                                     String name2, double prop2,
+                                                     String name3, double prop3) {
+        if (LIB == null) {
+            return Double.NaN;
+        }
+        double value = LIB.HAPropsSI(output, name1, prop1, name2, prop2, name3, prop3);
+        return Math.abs(value) > FAILURE_THRESHOLD ? Double.NaN : value;
+    }
+
+    private static void requireLibrary() {
         if (LIB == null) {
             throw new IllegalStateException(
                     "The CoolProp native library is not available. Set the "
                             + "COOLPROP_LIBRARY environment variable to the path of "
                             + "libCoolProp.so to enable fluid property functions.");
         }
-        double value = LIB.PropsSI(output, name1, prop1, name2, prop2, fluid);
-        if (!Double.isFinite(value) || Math.abs(value) > FAILURE_THRESHOLD) {
-            throw new IllegalStateException("CoolProp: " + lastError());
-        }
-        return value;
     }
 
     private static String lastError() {
