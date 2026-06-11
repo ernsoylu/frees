@@ -2,6 +2,7 @@ package com.frees.backend.api;
 
 import com.frees.backend.core.Block;
 import com.frees.backend.core.EquationSystemSolver;
+import com.frees.backend.core.Optimizer;
 import com.frees.backend.core.SolverException;
 import com.frees.backend.core.SolverSettings;
 import com.frees.backend.core.VariableSpec;
@@ -89,6 +90,8 @@ public class SolveController {
         }
     }
 
+    private static final String NO_EQUATIONS_MESSAGE = "No equations entered.";
+
     private final EquationSystemSolver solver;
 
     public SolveController(EquationSystemSolver solver) {
@@ -122,6 +125,17 @@ public class SolveController {
                 .forEach((name, unit) -> units.put(name.toLowerCase(), unit));
         units.putAll(unitsByVariable(variableInfo));
         return units;
+    }
+
+    /** Declared + inferred + dimensionally derived units, keyed lowercase. */
+    private Map<String, String> unitsByLowerName(String text,
+                                                 List<VariableInfoDto> variableInfo) {
+        Map<String, String> units = effectiveUnits(text, variableInfo);
+        Map<String, String> byLower = new HashMap<>();
+        solver.deriveUnits(text, units)
+                .forEach((name, unit) -> byLower.put(name.toLowerCase(), unit));
+        units.forEach((name, unit) -> byLower.put(name.toLowerCase(), unit));
+        return byLower;
     }
 
     private static VariableDto toDisplay(String name, double siValue, String unit,
@@ -160,7 +174,7 @@ public class SolveController {
     public ResponseEntity<CheckResponse> check(@RequestBody SolveRequest request) {
         if (request.text() == null || request.text().isBlank()) {
             return ResponseEntity.ok(new CheckResponse(false, 0, 0, List.of(), List.of(),
-                    Map.of(), "No equations entered.", List.of()));
+                    Map.of(), NO_EQUATIONS_MESSAGE, List.of()));
         }
         try {
             boolean complexMode = request.stopCriteria() != null && Boolean.TRUE.equals(request.stopCriteria().complexMode());
@@ -197,31 +211,21 @@ public class SolveController {
     public ResponseEntity<SolveResponse> solve(@RequestBody SolveRequest request) {
         if (request.text() == null || request.text().isBlank()) {
             return ResponseEntity.badRequest()
-                    .body(SolveResponse.failure("No equations entered."));
+                    .body(SolveResponse.failure(NO_EQUATIONS_MESSAGE));
         }
         try {
             SolverSettings settings = request.stopCriteria() != null
                     ? request.stopCriteria().toSettings()
                     : SolverSettings.DEFAULTS;
-            Map<String, VariableSpec> specs = new HashMap<>();
-            if (request.variableInfo() != null) {
-                for (VariableInfoDto dto : request.variableInfo()) {
-                    if (dto.name() != null && !dto.name().isBlank()) {
-                        VariableSpec spec = dto.toSpec();
-                        specs.put(spec.name(), spec);
-                    }
-                }
-            }
+            Map<String, VariableSpec> specs = specsOf(request.variableInfo());
             boolean findAll = Boolean.TRUE.equals(request.findAllSolutions());
             EquationSystemSolver.Result result = findAll
                     ? solver.solveAll(request.text(), settings, specs)
                     : solver.solve(request.text(), settings, specs);
-            Map<String, String> units = effectiveUnits(request.text(), request.variableInfo());
-            List<String> unitWarnings = solver.checkUnits(request.text(), units);
-            Map<String, String> unitsByLowerName = new HashMap<>();
-            solver.deriveUnits(request.text(), units)
-                    .forEach((name, unit) -> unitsByLowerName.put(name.toLowerCase(), unit));
-            units.forEach((name, unit) -> unitsByLowerName.put(name.toLowerCase(), unit));
+            List<String> unitWarnings = solver.checkUnits(request.text(),
+                    effectiveUnits(request.text(), request.variableInfo()));
+            Map<String, String> unitsByLowerName =
+                    unitsByLowerName(request.text(), request.variableInfo());
             UnitRegistry.UnitSystem system = unitSystem(request.displayUnitSystem());
 
             EquationParser.ParseResult parsed = new EquationParser().parseResult(request.text());
@@ -318,22 +322,9 @@ public class SolveController {
         SolverSettings settings = request.stopCriteria() != null
                 ? request.stopCriteria().toSettings()
                 : SolverSettings.DEFAULTS;
-
-        Map<String, VariableSpec> specs = new HashMap<>();
-        if (request.variableInfo() != null) {
-            for (VariableInfoDto dto : request.variableInfo()) {
-                if (dto.name() != null && !dto.name().isBlank()) {
-                    VariableSpec spec = dto.toSpec();
-                    specs.put(spec.name(), spec);
-                }
-            }
-        }
-
-        Map<String, String> units = effectiveUnits(request.text(), request.variableInfo());
-        Map<String, String> unitsByLowerName = new HashMap<>();
-        solver.deriveUnits(request.text(), units)
-                .forEach((name, unit) -> unitsByLowerName.put(name.toLowerCase(), unit));
-        units.forEach((name, unit) -> unitsByLowerName.put(name.toLowerCase(), unit));
+        Map<String, VariableSpec> specs = specsOf(request.variableInfo());
+        Map<String, String> unitsByLowerName =
+                unitsByLowerName(request.text(), request.variableInfo());
         UnitRegistry.UnitSystem system = unitSystem(request.displayUnitSystem());
 
         long startNanos = System.nanoTime();
@@ -344,29 +335,14 @@ public class SolveController {
 
         List<TableRowResult> results = new ArrayList<>();
         for (Map<String, Double> row : request.table().rows()) {
-            StringBuilder sb = new StringBuilder(request.text());
-            for (Map.Entry<String, Double> entry : row.entrySet()) {
-                if (entry.getValue() != null) {
-                    sb.append("\n").append(entry.getKey()).append(" = ").append(entry.getValue());
-                }
-            }
-            try {
-                EquationSystemSolver.Result result = solver.solve(sb.toString(), settings, specs);
-                Map<String, Double> rowValues = new HashMap<>();
-                for (Map.Entry<String, Double> e : result.variables().entrySet()) {
-                    String name = e.getKey();
-                    double siValue = e.getValue();
-                    String unit = unitsByLowerName.getOrDefault(name.toLowerCase(), "");
-                    VariableDto display = toDisplay(name, siValue, unit, system);
-                    rowValues.put(name, display.value());
-                }
-                results.add(new TableRowResult(true, rowValues, null));
-                totalIterations += result.stats().iterations();
-                maxResidual = Math.max(maxResidual, result.stats().maxResidual());
-                equations = result.stats().equationCount();
-                unknowns = result.stats().unknownCount();
-            } catch (Exception e) {
-                results.add(new TableRowResult(false, Map.of(), e.getMessage()));
+            RowOutcome outcome = solveTableRow(request.text(), row, settings, specs,
+                    unitsByLowerName, system);
+            results.add(outcome.row());
+            if (outcome.stats() != null) {
+                totalIterations += outcome.stats().iterations();
+                maxResidual = Math.max(maxResidual, outcome.stats().maxResidual());
+                equations = outcome.stats().equationCount();
+                unknowns = outcome.stats().unknownCount();
             }
         }
 
@@ -382,6 +358,116 @@ public class SolveController {
                 maxResidual);
 
         return ResponseEntity.ok(new SolveTableResponse(results, stats));
+    }
+
+    private record RowOutcome(TableRowResult row, EquationSystemSolver.Stats stats) {}
+
+    /** One parametric-table run: non-null cells are fixed, the rest solved. */
+    private RowOutcome solveTableRow(String text, Map<String, Double> row,
+                                     SolverSettings settings,
+                                     Map<String, VariableSpec> specs,
+                                     Map<String, String> unitsByLowerName,
+                                     UnitRegistry.UnitSystem system) {
+        StringBuilder sb = new StringBuilder(text);
+        for (Map.Entry<String, Double> entry : row.entrySet()) {
+            if (entry.getValue() != null) {
+                sb.append("\n").append(entry.getKey()).append(" = ").append(entry.getValue());
+            }
+        }
+        try {
+            EquationSystemSolver.Result result = solver.solve(sb.toString(), settings, specs);
+            Map<String, Double> rowValues = new HashMap<>();
+            for (Map.Entry<String, Double> e : result.variables().entrySet()) {
+                String name = e.getKey();
+                String unit = unitsByLowerName.getOrDefault(name.toLowerCase(), "");
+                rowValues.put(name, toDisplay(name, e.getValue(), unit, system).value());
+            }
+            return new RowOutcome(new TableRowResult(true, rowValues, null), result.stats());
+        } catch (Exception e) {
+            return new RowOutcome(new TableRowResult(false, Map.of(), e.getMessage()), null);
+        }
+    }
+
+    public record OptimizeRequest(String text,
+                                  StopCriteriaDto stopCriteria,
+                                  List<VariableInfoDto> variableInfo,
+                                  String displayUnitSystem,
+                                  String objective,
+                                  String decision,
+                                  Double lower,
+                                  Double upper,
+                                  Boolean maximize) {}
+
+    public record OptimizeResponse(boolean success,
+                                   String error,
+                                   VariableDto objective,
+                                   VariableDto decision,
+                                   int evaluations,
+                                   List<VariableDto> variables) {
+
+        static OptimizeResponse failure(String error) {
+            return new OptimizeResponse(false, error, null, null, 0, List.of());
+        }
+    }
+
+    private static Map<String, VariableSpec> specsOf(List<VariableInfoDto> variableInfo) {
+        Map<String, VariableSpec> specs = new HashMap<>();
+        if (variableInfo != null) {
+            for (VariableInfoDto dto : variableInfo) {
+                if (dto.name() != null && !dto.name().isBlank()) {
+                    VariableSpec spec = dto.toSpec();
+                    specs.put(spec.name(), spec);
+                }
+            }
+        }
+        return specs;
+    }
+
+    @PostMapping("/optimize")
+    public ResponseEntity<OptimizeResponse> optimize(@RequestBody OptimizeRequest request) {
+        if (request.text() == null || request.text().isBlank()) {
+            return ResponseEntity.ok(OptimizeResponse.failure(NO_EQUATIONS_MESSAGE));
+        }
+        if (request.lower() == null || request.upper() == null) {
+            return ResponseEntity.ok(OptimizeResponse.failure(
+                    "Both bounds of the independent variable are required."));
+        }
+        SolverSettings settings = request.stopCriteria() != null
+                ? request.stopCriteria().toSettings()
+                : SolverSettings.DEFAULTS;
+        try {
+            Optimizer.OptimizeResult result = new Optimizer(solver).optimize(
+                    new Optimizer.Problem(request.text(), settings,
+                            specsOf(request.variableInfo()),
+                            request.objective(), request.decision(),
+                            request.lower(), request.upper(),
+                            Boolean.TRUE.equals(request.maximize())));
+
+            Map<String, String> unitsByLowerName =
+                    unitsByLowerName(request.text(), request.variableInfo());
+            UnitRegistry.UnitSystem system = unitSystem(request.displayUnitSystem());
+
+            List<VariableDto> variables = result.solution().variables().entrySet().stream()
+                    .map(e -> toDisplay(e.getKey(), e.getValue(),
+                            unitsByLowerName.getOrDefault(e.getKey().toLowerCase(), ""),
+                            system))
+                    .toList();
+            VariableDto objective = toDisplay(request.objective(),
+                    result.objectiveValue(),
+                    unitsByLowerName.getOrDefault(request.objective().toLowerCase(), ""),
+                    system);
+            VariableDto decision = toDisplay(request.decision(),
+                    result.decisionValue(),
+                    unitsByLowerName.getOrDefault(request.decision().toLowerCase(), ""),
+                    system);
+            return ResponseEntity.ok(new OptimizeResponse(true, null, objective,
+                    decision, result.evaluations(), variables));
+        } catch (EquationParser.ParseException e) {
+            String firstError = e.getMessage().lines().findFirst().orElse(e.getMessage());
+            return ResponseEntity.ok(OptimizeResponse.failure("Syntax error: " + firstError));
+        } catch (SolverException e) {
+            return ResponseEntity.ok(OptimizeResponse.failure(e.getMessage()));
+        }
     }
 
     private static BlockDto toBlockDto(Block block, Map<String, String> displayNames) {

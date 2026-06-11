@@ -120,6 +120,9 @@ public final class Evaluator {
             case "sum"    -> args.stream().mapToDouble(a -> eval(a, values, defs)).sum();
             case "average", "avg" -> args.stream().mapToDouble(a -> eval(a, values, defs))
                     .average().orElse(0.0);
+            case "integral" -> throw new IllegalStateException(
+                    "Integral can only appear alone on one side of an equation: "
+                            + "F = Integral(f, t, a, b)");
             default -> throw new IllegalStateException("Unknown function: " + c.function());
         };
     }

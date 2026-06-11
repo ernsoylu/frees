@@ -32,6 +32,7 @@ import VariableInfoModal, {
 } from './VariableInfoModal'
 import HelpModal from './HelpModal'
 import Latex from './Latex'
+import MinMaxModal from './MinMaxModal'
 import ConfigureTableModal from './ConfigureTableModal'
 import AlterValuesModal from './AlterValuesModal'
 import ParametricTableTab, { newParamRow, ParamRow } from './ParametricTableTab'
@@ -112,6 +113,7 @@ export default function App() {
   const [variables, setVariables] = useState<string[]>([])
   const [varDrafts, setVarDrafts] = useState<Record<string, VariableDraft>>({})
   const [showVariableInfo, setShowVariableInfo] = useState(false)
+  const [showMinMax, setShowMinMax] = useState(false)
   const [showHelp, setShowHelp] = useState(false)
   const [activeTab, setActiveTab] = useState<string>('equations')
   const [tableVars, setTableVars] = useState<string[]>([])
@@ -429,6 +431,9 @@ export default function App() {
           <Button variant="default" size="xs" onClick={() => setShowVariableInfo(true)}>
             Variable Info
           </Button>
+          <Button variant="default" size="xs" onClick={() => setShowMinMax(true)}>
+            Min/Max
+          </Button>
           <Button variant="default" size="xs" onClick={() => setShowPreferences(true)}>
             Preferences
           </Button>
@@ -489,6 +494,18 @@ export default function App() {
             setShowVariableInfo(false)
           }}
           onClose={() => setShowVariableInfo(false)}
+        />
+      )}
+
+      {showMinMax && (
+        <MinMaxModal
+          variables={variables}
+          text={text}
+          stopCriteria={stopCriteria}
+          complexMode={complexMode}
+          variableInfo={buildVariableInfo()}
+          unitSystem={unitSystem}
+          onClose={() => setShowMinMax(false)}
         />
       )}
 
