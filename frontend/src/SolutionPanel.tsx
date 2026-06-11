@@ -17,6 +17,7 @@ import {
 import { IconLayoutSidebarRightCollapse } from '@tabler/icons-react'
 import { SolveResponse, SolveStats, TableStats } from './api'
 import { formatValue, SolutionRow, withStableKeys } from './format'
+import Latex from './Latex'
 
 function Stat({
   label,
@@ -101,12 +102,69 @@ function UnitWarningsAlert({ warnings }: Readonly<{ warnings: string[] }>) {
     </Alert>
   )
 }
-
 function SuccessBody({
   result,
   rows,
 }: Readonly<{ result: SolveResponse; rows: SolutionRow[] }>) {
   const solutionCount = result.solutions?.length ?? 0
+  const scalars: SolutionRow[] = []
+  interface ArrayMatrix {
+    name: string
+    is2D: boolean
+    rows: number[]
+    cols: number[]
+    cells: Map<string, SolutionRow>
+  }
+  const arrayGroups = new Map<string, ArrayMatrix>()
+  const arrayElementRegex = /^([^\[]+)\[([\d,\s\-]+)\]$/
+
+  for (const row of rows) {
+    const match = row.name.match(arrayElementRegex)
+    if (!match) {
+      scalars.push(row)
+      continue
+    }
+    const baseName = match[1]
+    const indices = match[2].split(',').map(s => parseInt(s.trim(), 10))
+    if (indices.some(Number.isNaN)) {
+      scalars.push(row)
+      continue
+    }
+
+    let group = arrayGroups.get(baseName)
+    if (!group) {
+      group = {
+        name: baseName,
+        is2D: indices.length === 2,
+        rows: [],
+        cols: [],
+        cells: new Map()
+      }
+      arrayGroups.set(baseName, group)
+    }
+
+    if (indices.length === 2) {
+      group.is2D = true
+      const [r, c] = indices
+      if (!group.rows.includes(r)) group.rows.push(r)
+      if (!group.cols.includes(c)) group.cols.push(c)
+      group.cells.set(`${r},${c}`, row)
+    } else if (indices.length === 1) {
+      const [r] = indices
+      if (!group.rows.includes(r)) group.rows.push(r)
+      group.cells.set(`${r}`, row)
+    } else {
+      scalars.push(row)
+    }
+  }
+
+  for (const group of arrayGroups.values()) {
+    group.rows.sort((a, b) => a - b)
+    group.cols.sort((a, b) => a - b)
+  }
+
+  const groupsList = Array.from(arrayGroups.values()).sort((a, b) => a.name.localeCompare(b.name))
+
   return (
     <>
       {solutionCount > 1 && (
@@ -116,28 +174,129 @@ function SuccessBody({
         </Text>
       )}
 
-      <Table striped highlightOnHover>
-        <Table.Thead>
-          <Table.Tr>
-            <Table.Th>Variable</Table.Th>
-            <Table.Th>Value</Table.Th>
-            <Table.Th>Units</Table.Th>
-          </Table.Tr>
-        </Table.Thead>
-        <Table.Tbody>
-          {rows.map((row) => (
-            <Table.Tr key={row.name}>
-              <Table.Td>{row.name}</Table.Td>
-              <Table.Td ff="monospace" c={row.isSet ? 'yellow.4' : 'green.4'}>
-                {row.display}
-              </Table.Td>
-              <Table.Td ff="monospace" c="dimmed">
-                {row.units || '-'}
-              </Table.Td>
+      {scalars.length > 0 && (
+        <Table striped highlightOnHover mb="md">
+          <Table.Thead>
+            <Table.Tr>
+              <Table.Th>Variable</Table.Th>
+              <Table.Th>Value</Table.Th>
+              <Table.Th>Units</Table.Th>
             </Table.Tr>
-          ))}
-        </Table.Tbody>
-      </Table>
+          </Table.Thead>
+          <Table.Tbody>
+            {scalars.map((row) => (
+              <Table.Tr key={row.name}>
+                <Table.Td style={{ textTransform: 'none' }}>{row.name}</Table.Td>
+                <Table.Td ff="monospace" c={row.isSet ? 'yellow.4' : 'green.4'}>
+                  {row.display}
+                </Table.Td>
+                <Table.Td ff="monospace" c="dimmed">
+                  {row.units || '-'}
+                </Table.Td>
+              </Table.Tr>
+            ))}
+          </Table.Tbody>
+        </Table>
+      )}
+
+      {groupsList.length > 0 && (
+        <Stack gap="xs" mb="md">
+          <Text size="xs" fw={700} c="dimmed" tt="uppercase" lts="0.05em">Arrays & Matrices</Text>
+          <Accordion variant="separated">
+            {groupsList.map((group) => {
+              const units = [...group.cells.values()][0]?.units || ''
+              const unitsStr = units ? ` \\,\\left[\\text{${units}}\\right]` : ''
+              let bodyMath = ''
+              if (group.is2D) {
+                bodyMath = group.rows.map(r => {
+                  return group.cols.map(c => {
+                    const cell = group.cells.get(`${r},${c}`)
+                    return cell ? cell.display : '0'
+                  }).join(' & ')
+                }).join(' \\\\ ')
+              } else {
+                bodyMath = group.rows.map(r => {
+                  const cell = group.cells.get(`${r}`)
+                  return cell ? cell.display : '0'
+                }).join(' \\\\ ')
+              }
+              const math = `${group.name} = \\begin{pmatrix} ${bodyMath} \\end{pmatrix}${unitsStr}`
+
+              return (
+                <Accordion.Item key={group.name} value={group.name}>
+                  <Accordion.Control>
+                    <Group justify="space-between">
+                      <Text size="sm" fw={600} style={{ textTransform: 'none' }}>{group.name}</Text>
+                      <Badge variant="light" size="xs">
+                        {group.is2D ? `${group.rows.length}x${group.cols.length} Matrix` : `${group.rows.length} Vector`}
+                      </Badge>
+                    </Group>
+                  </Accordion.Control>
+                  <Accordion.Panel>
+                    <Stack gap="sm">
+                      <div style={{ display: 'flex', justifyContent: 'center', backgroundColor: 'var(--mantine-color-dark-8)', padding: '8px', borderRadius: '4px', overflowX: 'auto' }}>
+                        <Latex math={math} block />
+                      </div>
+                      
+                      <div style={{ overflowX: 'auto' }}>
+                        {group.is2D ? (
+                          <Table striped highlightOnHover withTableBorder withColumnBorders>
+                            <Table.Thead>
+                              <Table.Tr>
+                                <Table.Th style={{ width: 60, textAlign: 'center', backgroundColor: 'var(--mantine-color-dark-6)' }}>Row\Col</Table.Th>
+                                {group.cols.map(c => (
+                                  <Table.Th key={c} style={{ textAlign: 'center', backgroundColor: 'var(--mantine-color-dark-6)' }}>{c}</Table.Th>
+                                ))}
+                              </Table.Tr>
+                            </Table.Thead>
+                            <Table.Tbody>
+                              {group.rows.map(r => (
+                                <Table.Tr key={r}>
+                                  <Table.Td style={{ fontWeight: 'bold', textAlign: 'center', backgroundColor: 'var(--mantine-color-dark-6)' }}>{r}</Table.Td>
+                                  {group.cols.map(c => {
+                                    const cell = group.cells.get(`${r},${c}`)
+                                    return (
+                                      <Table.Td key={c} style={{ fontFamily: 'monospace', textAlign: 'right' }}>
+                                        {cell ? cell.display : '—'}
+                                      </Table.Td>
+                                    )
+                                  })}
+                                </Table.Tr>
+                              ))}
+                            </Table.Tbody>
+                          </Table>
+                        ) : (
+                          <Table striped highlightOnHover withTableBorder withColumnBorders>
+                            <Table.Thead>
+                              <Table.Tr>
+                                <Table.Th style={{ width: 80, textAlign: 'center', backgroundColor: 'var(--mantine-color-dark-6)' }}>Index</Table.Th>
+                                <Table.Th style={{ textAlign: 'center', backgroundColor: 'var(--mantine-color-dark-6)' }}>Value</Table.Th>
+                              </Table.Tr>
+                            </Table.Thead>
+                            <Table.Tbody>
+                              {group.rows.map(r => {
+                                const cell = group.cells.get(`${r}`)
+                                return (
+                                  <Table.Tr key={r}>
+                                    <Table.Td style={{ fontWeight: 'bold', textAlign: 'center', backgroundColor: 'var(--mantine-color-dark-6)' }}>{r}</Table.Td>
+                                    <Table.Td style={{ fontFamily: 'monospace', textAlign: 'right' }}>
+                                      {cell ? cell.display : '—'}
+                                    </Table.Td>
+                                  </Table.Tr>
+                                )
+                              })}
+                            </Table.Tbody>
+                          </Table>
+                        )}
+                      </div>
+                    </Stack>
+                  </Accordion.Panel>
+                </Accordion.Item>
+              )
+            })}
+          </Accordion>
+        </Stack>
+      )}
 
       <Accordion variant="contained">
         <Accordion.Item value="order">

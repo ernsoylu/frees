@@ -363,14 +363,15 @@ const SECTIONS = [
   { id: 'variables', label: '3. Variables & Bounds' },
   { id: 'units', label: '4. Units & Consistency' },
   { id: 'arrays', label: '5. Arrays & Loops' },
-  { id: 'functions', label: '6. Functions & Procedures' },
-  { id: 'modules', label: '7. Modular Submodels' },
-  { id: 'thermo', label: '8. Fluid Properties (CoolProp)' },
-  { id: 'humidair', label: '9. Psychrometrics (AirH2O)' },
-  { id: 'calculus', label: '10. Numerical Integration' },
-  { id: 'complex', label: '11. Complex Numbers' },
-  { id: 'examples', label: '12. Engineering Examples' },
-  { id: 'api', label: '13. Solver Reference & API' },
+  { id: 'matrices', label: '6. Matrices & Vectors' },
+  { id: 'functions', label: '7. Functions & Procedures' },
+  { id: 'modules', label: '8. Modular Submodels' },
+  { id: 'thermo', label: '9. Fluid Properties (CoolProp)' },
+  { id: 'humidair', label: '10. Psychrometrics (AirH2O)' },
+  { id: 'calculus', label: '11. Numerical Integration' },
+  { id: 'complex', label: '12. Complex Numbers' },
+  { id: 'examples', label: '13. Engineering Examples' },
+  { id: 'api', label: '14. Solver Reference & API' },
 ];
 
 export default function HelpPage() {
@@ -783,10 +784,108 @@ Here is the thermodynamic T-s diagram showing the cycle state points:
             </Paper>
           </Stack>
         );
+      case 'matrices':
+        return (
+          <Stack gap="md">
+            <Title order={2} c="blue.4">6. Matrices & Vectors</Title>
+            <Text style={{ lineHeight: 1.6 }}>
+              frEES supports robust vector and matrix algebra. Rather than using runtime libraries that bypass equation dependencies, matrix and vector equations are compiled down to scalar constraint equations solved via Newton's method. This allows full differentiability, respects variable bounds, and works seamlessly with the rest of the solver.
+            </Text>
+
+            <Title order={3}>Declaring Vectors & Matrices</Title>
+            <Text>
+              Vectors and matrices are declared using slice notation or duplicate blocks:
+            </Text>
+            <Paper withBorder p="md" bg="dark.8" radius="md" style={{ position: 'relative' }}>
+              <CopyButton code={`v[1..3] = [1, 2, 3]\nA[1..3, 1..3] = 0\nDUPLICATE i = 1, 3\n  A[i,i] = 10\nEND`} />
+              <Code block style={{ background: 'transparent' }}>
+                {`v[1..3] = [1, 2, 3]\nA[1..3, 1..3] = 0\nDUPLICATE i = 1, 3\n  A[i,i] = 10\nEND`}
+              </Code>
+            </Paper>
+
+            <Title order={3} mt="sm">Matrix & Vector Operations</Title>
+            <Text>
+              frEES provides built-in functions for algebraic operations:
+            </Text>
+            <Table striped highlightOnHover withTableBorder>
+              <Table.Thead>
+                <Table.Tr>
+                  <Table.Th>Function</Table.Th>
+                  <Table.Th>Description</Table.Th>
+                  <Table.Th>Example Syntax</Table.Th>
+                </Table.Tr>
+              </Table.Thead>
+              <Table.Tbody>
+                <Table.Tr>
+                  <Table.Td><Code>transpose(A)</Code></Table.Td>
+                  <Table.Td>Matrix transpose</Table.Td>
+                  <Table.Td><Code>B[1..3, 1..3] = transpose(A[1..2, 1..3])</Code></Table.Td>
+                </Table.Tr>
+                <Table.Tr>
+                  <Table.Td><Code>inverse(A)</Code></Table.Td>
+                  <Table.Td>Matrix inverse</Table.Td>
+                  <Table.Td><Code>A_inv[1..3, 1..3] = inverse(A[1..3, 1..3])</Code></Table.Td>
+                </Table.Tr>
+                <Table.Tr>
+                  <Table.Td><Code>dot(u, v)</Code></Table.Td>
+                  <Table.Td>Vector dot product (scalar outcome)</Table.Td>
+                  <Table.Td><Code>d = dot(u[1..3], v[1..3])</Code></Table.Td>
+                </Table.Tr>
+                <Table.Tr>
+                  <Table.Td><Code>norm(v)</Code></Table.Td>
+                  <Table.Td>Vector Euclidean ($L_2$) norm</Table.Td>
+                  <Table.Td><Code>mag = norm(v[1..3])</Code></Table.Td>
+                </Table.Tr>
+                <Table.Tr>
+                  <Table.Td><Code>cross(u, v)</Code></Table.Td>
+                  <Table.Td>3D vector cross product</Table.Td>
+                  <Table.Td><Code>w[1..3] = cross(u[1..3], v[1..3])</Code></Table.Td>
+                </Table.Tr>
+                <Table.Tr>
+                  <Table.Td><Code>determinant(A)</Code></Table.Td>
+                  <Table.Td>Matrix determinant (scalar outcome)</Table.Td>
+                  <Table.Td><Code>det = determinant(A[1..3, 1..3])</Code></Table.Td>
+                </Table.Tr>
+                <Table.Tr>
+                  <Table.Td><Code>SolveLinear(A, b)</Code></Table.Td>
+                  <Table.Td>Solves the linear system $A \cdot x = b$ for vector $x$</Table.Td>
+                  <Table.Td><Code>x[1..3] = SolveLinear(A[1..3, 1..3], b[1..3])</Code></Table.Td>
+                </Table.Tr>
+              </Table.Tbody>
+            </Table>
+
+            <Title order={3} mt="sm">Triangular & Euler Decompositions</Title>
+            <Text>
+              Procedural submodels are available via the <Code>CALL</Code> statement for matrix factorizations and rotational dynamics:
+            </Text>
+            <List spacing="xs">
+              <List.Item>
+                <strong>LU Decomposition:</strong> Factorizes square matrix $A$ into lower triangular $L$ (with unit diagonal) and upper triangular $U$:
+                <Code block mt="xs">{`CALL LUDecompose(A[1..3,1..3] : L[1..3,1..3], U[1..3,1..3])`}</Code>
+              </List.Item>
+              <List.Item>
+                <strong>Euler rotation matrix:</strong> Generates a ZXZ rotation matrix $R$ based on Euler angles $\phi, \theta, \psi$ (in radians):
+                <Code block mt="xs">{`CALL EulerRotate(phi, theta, psi : R[1..3, 1..3])`}</Code>
+              </List.Item>
+              <List.Item>
+                <strong>Euler decomposition:</strong> Extracts ZXZ Euler angles $\phi, \theta, \psi$ from a 3D rotation matrix $R$:
+                <Code block mt="xs">{`CALL EulerDecompose(R[1..3,1..3] : phi, theta, psi)`}</Code>
+              </List.Item>
+            </List>
+
+            <Title order={3} mt="sm">Practical Example: Linear System Solving</Title>
+            <Paper withBorder p="md" bg="dark.8" radius="md" style={{ position: 'relative' }}>
+              <CopyButton code={`A[1,1] = 2;  A[1,2] = 1;  A[1,3] = -1\nA[2,1] = -3; A[2,2] = -1; A[2,3] = 2\nA[3,1] = -2; A[3,2] = 1;  A[3,3] = 2\n\nb[1..3] = [8, -11, -3]\n\nx[1..3] = SolveLinear(A[1..3,1..3], b[1..3])`} />
+              <Code block style={{ background: 'transparent' }}>
+                {`A[1,1] = 2;  A[1,2] = 1;  A[1,3] = -1\nA[2,1] = -3; A[2,2] = -1; A[2,3] = 2\nA[3,1] = -2; A[3,2] = 1;  A[3,3] = 2\n\nb[1..3] = [8, -11, -3]\n\nx[1..3] = SolveLinear(A[1..3,1..3], b[1..3])`}
+              </Code>
+            </Paper>
+          </Stack>
+        );
       case 'functions':
         return (
           <Stack gap="md">
-            <Title order={2} c="blue.4">6. Functions & Procedures (Imperative Logic)</Title>
+            <Title order={2} c="blue.4">7. Functions & Procedures (Imperative Logic)</Title>
             <Text style={{ lineHeight: 1.6 }}>
               While the global Editor window is declarative and order-independent, you can write procedural, sequential logic using **Functions** and **Procedures**. Inside these blocks, code is executed top-to-bottom.
             </Text>
@@ -844,7 +943,7 @@ CALL CylinderGeo(0.5, 2.0 : A_cyl, V_cyl)`}
       case 'modules':
         return (
           <Stack gap="md">
-            <Title order={2} c="blue.4">7. Modular Submodels (Modules)</Title>
+            <Title order={2} c="blue.4">8. Modular Submodels (Modules)</Title>
             <Text style={{ lineHeight: 1.6 }}>
               A <strong>Module</strong> is a declarative submodel. Unlike procedures (which solve sequentially), modules contain equations that are grafted directly into the global system of equations and solved <strong>simultaneously</strong>.
             </Text>
@@ -914,7 +1013,7 @@ m_flow_total = m_flow_1 + m_flow_2`}
       case 'thermo':
         return (
           <Stack gap="md">
-            <Title order={2} c="blue.4">8. Thermodynamic Fluid Properties (CoolProp)</Title>
+            <Title order={2} c="blue.4">9. Thermodynamic Fluid Properties (CoolProp)</Title>
             <Text style={{ lineHeight: 1.6 }}>
               frEES is equipped with a direct bridge to the industry-standard **CoolProp** thermodynamic database, allowing you to fetch high-accuracy properties for dozens of fluids.
             </Text>
@@ -1123,7 +1222,7 @@ H_react = H_prod`}
       case 'humidair':
         return (
           <Stack gap="md">
-            <Title order={2} c="blue.4">9. Psychrometrics (AirH2O / Humid Air)</Title>
+            <Title order={2} c="blue.4">10. Psychrometrics (AirH2O / Humid Air)</Title>
             <Text style={{ lineHeight: 1.6 }}>
               Psychrometric calculations (heating, cooling, and humidifying moist air) are a core pillar of HVAC engineering. frEES provides dedicated functions for moist air by calling the specialized <code>AirH2O</code> (or <code>HumidAir</code>) database.
             </Text>
@@ -1230,7 +1329,7 @@ T_wb = WetBulb(AirH2O, T=T_db, P=P_atm, R=RH)`}
       case 'calculus':
         return (
           <Stack gap="md">
-            <Title order={2} c="blue.4">10. Numerical Integration (ODEs & Calculus)</Title>
+            <Title order={2} c="blue.4">11. Numerical Integration (ODEs & Calculus)</Title>
             <Text style={{ lineHeight: 1.6 }}>
               frEES includes equation-based calculus solvers that run numerical integration. You can compute integrals and solve systems containing first-order Ordinary Differential Equations (ODEs) alongside standard algebraic equations.
             </Text>
@@ -1272,7 +1371,7 @@ y0 = 1`}
       case 'complex':
         return (
           <Stack gap="md">
-            <Title order={2} c="blue.4">11. Complex Number Arithmetic</Title>
+            <Title order={2} c="blue.4">12. Complex Number Arithmetic</Title>
             <Text style={{ lineHeight: 1.6 }}>
               Electrical, vibration, and control engineering models frequently rely on complex number arithmetic. frEES supports full complex variables when **Complex Mode** is active.
             </Text>
@@ -1344,7 +1443,7 @@ y0 = 1`}
       case 'examples':
         return (
           <Stack gap="md">
-            <Title order={2} c="blue.4">12. Engineering Examples & Case Studies</Title>
+            <Title order={2} c="blue.4">13. Engineering Examples & Case Studies</Title>
             <Text>
               These real-world examples highlight how students and engineers can use frEES to model multi-domain physics and thermodynamic cycles.
             </Text>
@@ -1532,7 +1631,7 @@ H_reactants = H_products`}
       case 'api':
         return (
           <Stack gap="md">
-            <Title order={2} c="blue.4">13. Solver Reference & Troubleshooting API</Title>
+            <Title order={2} c="blue.4">14. Solver Reference & Troubleshooting API</Title>
             <Text style={{ lineHeight: 1.6 }}>
               This section is a technical reference for debugging failed systems, syntax limitations, and error codes in frEES.
             </Text>

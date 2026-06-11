@@ -16,5 +16,5 @@ public sealed interface Statement permits Statement.Eq, Statement.Duplicate, Sta
      * CALL name(inputs : outputs) — invokes a PROCEDURE or MODULE.
      * At flatten time this generates equations that bind the outputs.
      */
-    record CallProc(String name, List<Expr> inputs, List<String> outputs) implements Statement {}
+    record CallProc(String name, List<Expr> inputs, List<Expr> outputs, String sourceText) implements Statement {}
 }
