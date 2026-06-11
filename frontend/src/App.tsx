@@ -36,7 +36,9 @@ import MinMaxModal from './MinMaxModal'
 import ConfigureTableModal from './ConfigureTableModal'
 import AlterValuesModal from './AlterValuesModal'
 import ParametricTableTab, { newParamRow, ParamRow } from './ParametricTableTab'
-import PlotTab, { DEFAULT_PLOT_CONFIG, PlotConfig } from './PlotTab'
+import PlotTab from './PlotTab'
+import StatesTab from './StatesTab'
+import { PlotSpec } from './plots/types'
 import SolutionPanel from './SolutionPanel'
 import { EquationActionBar, TableActionBar } from './ActionBars'
 import {
@@ -130,7 +132,7 @@ export default function App() {
   const [tableCheckMessage, setTableCheckMessage] = useState('')
   const [tableChecking, setTableChecking] = useState(false)
   const [tableStats, setTableStats] = useState<TableStats | null>(null)
-  const [plotConfig, setPlotConfig] = useState<PlotConfig>(DEFAULT_PLOT_CONFIG)
+  const [plots, setPlots] = useState<PlotSpec[]>([])
 
   const solvable = checkResult?.solvable === true
 
@@ -533,6 +535,7 @@ export default function App() {
               <Tabs.Tab value="formatted">Formatted Equations</Tabs.Tab>
               <Tabs.Tab value="table">Parametric Table</Tabs.Tab>
               <Tabs.Tab value="plots">Plots</Tabs.Tab>
+              <Tabs.Tab value="states">State Points</Tabs.Tab>
               <Tooltip label="Epic 6 — coming soon">
                 <Tabs.Tab value="diagram" disabled>
                   Diagram
@@ -591,12 +594,16 @@ export default function App() {
             )}
             {activeTab === 'plots' && (
               <PlotTab
+                plots={plots}
+                onPlotsChange={setPlots}
+                solvedVariables={result?.variables ?? []}
                 tableVars={tableVars}
                 rows={paramRows}
                 results={tableResults}
-                config={plotConfig}
-                onConfigChange={setPlotConfig}
               />
+            )}
+            {activeTab === 'states' && (
+              <StatesTab solvedVariables={result?.variables ?? []} />
             )}
             {activeTab === 'formatted' && (
               <FormattedEquationsView equations={formattedEqs} />
