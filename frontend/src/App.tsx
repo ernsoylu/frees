@@ -14,6 +14,7 @@ import {
   Textarea,
   Title,
   Tooltip,
+  Badge,
 } from '@mantine/core'
 import { IconLayoutSidebarRightExpand } from '@tabler/icons-react'
 import {
@@ -29,6 +30,7 @@ import {
   TableStats,
   UnitSystem,
   VariableInfo,
+  VariableResult,
 } from './api'
 import PreferencesModal from './PreferencesModal'
 import VariableInfoModal, {
@@ -38,7 +40,11 @@ import VariableInfoModal, {
 } from './VariableInfoModal'
 import Latex from './Latex'
 import MinMaxModal from './MinMaxModal'
-import FormattedReportView from './FormattedReportView'
+import FormattedReportView, {
+  getLhsVariable,
+  getTooltipLabel,
+  getVariablesInMath,
+} from './FormattedReportView'
 import ConfigureTableModal from './ConfigureTableModal'
 import AlterValuesModal from './AlterValuesModal'
 import ParametricTableTab, { newParamRow, ParamRow } from './ParametricTableTab'
@@ -53,6 +59,7 @@ import PlotConfigModal from './plots/PlotConfigModal'
 import {
   buildComplexSolutionRows,
   buildRealSolutionRows,
+  formatValue,
   withStableKeys,
 } from './format'
 
@@ -85,12 +92,14 @@ function loadStopCriteria(): StopCriteria {
 function FormattedEquationsView({
   equations,
   report,
+  variables,
 }: Readonly<{
   equations: string[]
   report?: string
+  variables?: VariableResult[]
 }>) {
   if (report) {
-    return <FormattedReportView report={report} />
+    return <FormattedReportView report={report} variables={variables} />
   }
 
   if (equations.length === 0) {
@@ -104,16 +113,45 @@ function FormattedEquationsView({
   }
   return (
     <Stack gap="sm" style={{ overflowY: 'auto', flex: 1 }}>
-      {withStableKeys(equations).map((eq) => (
-        <Paper
-          key={eq.key}
-          withBorder
-          p="sm"
-          style={{ display: 'flex', justifyContent: 'center' }}
-        >
-          <Latex math={eq.value} block />
-        </Paper>
-      ))}
+      {withStableKeys(equations).map((eq) => {
+        const tooltip = getTooltipLabel(eq.value, variables)
+        const lhsVar = getLhsVariable(eq.value, variables)
+        const allVars = getVariablesInMath(eq.value, variables)
+        const otherVars = allVars.filter((v) => v.name !== lhsVar?.name)
+
+        return (
+          <Paper
+            key={eq.key}
+            withBorder
+            p="sm"
+            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}
+          >
+            {tooltip ? (
+              <Tooltip label={tooltip} withArrow>
+                <div style={{ cursor: 'help' }}>
+                  <Latex math={eq.value} block />
+                </div>
+              </Tooltip>
+            ) : (
+              <Latex math={eq.value} block />
+            )}
+            {variables && allVars.length > 0 && (
+              <Group gap="xs" justify="center" mt="xs" wrap="wrap">
+                {lhsVar && (
+                  <Badge variant="light" color="blue" size="sm">
+                    {lhsVar.name} = {formatValue(lhsVar.value)} {lhsVar.units ? `[${lhsVar.units}]` : ''}
+                  </Badge>
+                )}
+                {otherVars.map((v) => (
+                  <Text key={v.name} size="xs" c="dimmed">
+                    {v.name} = {formatValue(v.value)} {v.units ? `[${v.units}]` : ''}
+                  </Text>
+                ))}
+              </Group>
+            )}
+          </Paper>
+        )
+      })}
     </Stack>
   )
 }
@@ -651,6 +689,7 @@ export default function App() {
                   <FormattedEquationsView
                     equations={formattedEqs}
                     report={result?.formattedReport ?? checkResult?.formattedReport}
+                    variables={result?.variables}
                   />
                 )}
               </>

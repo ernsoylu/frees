@@ -1,14 +1,70 @@
 import React from 'react'
-import { List, Stack, Text, Title } from '@mantine/core'
+import { Badge, Group, List, Stack, Text, Title, Tooltip } from '@mantine/core'
 import Latex from './Latex'
+import { VariableResult } from './api'
+import { formatValue } from './format'
 
 interface FormattedReportViewProps {
   report: string
+  variables?: VariableResult[]
 }
 
 interface ParsedPart {
   type: 'text' | 'inline_math' | 'block_math' | 'bold' | 'italic' | 'code'
   value: string
+}
+
+export function getVariablesInMath(math: string, variables?: VariableResult[]): VariableResult[] {
+  if (!variables || variables.length === 0) return []
+  
+  // Replace LaTeX commands with space
+  let s = math.replace(/\\[a-zA-Z]+/g, ' ')
+  // Remove curly braces, brackets, and underscores
+  s = s.replace(/[\{\}_\[\]]/g, '')
+  // Match alphanumeric words starting with a letter
+  const words = s.match(/[a-zA-Z][a-zA-Z0-9]*/g) || []
+  const uniqueWords = new Set(words.map(w => w.toLowerCase()))
+
+  return variables.filter(v => {
+    const cleanName = v.name.replace(/[^a-zA-Z0-9]/g, '').toLowerCase()
+    return uniqueWords.has(cleanName)
+  })
+}
+
+export function getLhsVariable(math: string, variables?: VariableResult[]): VariableResult | null {
+  if (!variables || variables.length === 0) return null
+  const eqIdx = math.indexOf('=')
+  if (eqIdx === -1) return null
+  const lhsPart = math.substring(0, eqIdx)
+  
+  // Clean the LHS part
+  let s = lhsPart.replace(/\\[a-zA-Z]+/g, ' ')
+  s = s.replace(/[\{\}_\[\]]/g, '')
+  const words = s.match(/[a-zA-Z][a-zA-Z0-9]*/g) || []
+  const firstWord = words[0]
+  if (!firstWord) return null
+  const firstWordClean = firstWord.toLowerCase()
+  return variables.find(v => {
+    const cleanName = v.name.replace(/[^a-zA-Z0-9]/g, '').toLowerCase()
+    return cleanName === firstWordClean
+  }) || null
+}
+
+export function getTooltipLabel(math: string, variables?: VariableResult[]): string {
+  const allVars = getVariablesInMath(math, variables)
+  if (allVars.length === 0) return ''
+  const lhsVar = getLhsVariable(math, variables)
+  
+  const sorted = [...allVars]
+  if (lhsVar) {
+    const idx = sorted.findIndex(v => v.name === lhsVar.name)
+    if (idx !== -1) {
+      sorted.splice(idx, 1)
+      sorted.unshift(lhsVar)
+    }
+  }
+  
+  return sorted.map(v => `${v.name} = ${formatValue(v.value)}${v.units ? ` [${v.units}]` : ''}`).join(', ')
 }
 
 function splitReportText(text: string): ParsedPart[] {
@@ -101,14 +157,57 @@ function splitReportText(text: string): ParsedPart[] {
   return result
 }
 
-function renderInlineContent(text: string): React.ReactNode[] {
+function renderInlineContent(text: string, variables?: VariableResult[]): React.ReactNode[] {
   const parts = splitReportText(text)
   return parts.map((part, index) => {
     switch (part.type) {
-      case 'inline_math':
+      case 'inline_math': {
+        const tooltip = getTooltipLabel(part.value, variables)
+        if (tooltip) {
+          return (
+            <Tooltip key={index} label={tooltip} withArrow>
+              <span style={{ cursor: 'help', borderBottom: '1px dotted var(--mantine-color-blue-4)', display: 'inline-block' }}>
+                <Latex math={part.value} />
+              </span>
+            </Tooltip>
+          )
+        }
         return <Latex key={index} math={part.value} />
-      case 'block_math':
-        return <Latex key={index} math={part.value} block />
+      }
+      case 'block_math': {
+        const tooltip = getTooltipLabel(part.value, variables)
+        const lhsVar = getLhsVariable(part.value, variables)
+        const allVars = getVariablesInMath(part.value, variables)
+        const otherVars = allVars.filter(v => v.name !== lhsVar?.name)
+        
+        return (
+          <div key={index} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', margin: '12px 0' }}>
+            {tooltip ? (
+              <Tooltip label={tooltip} withArrow>
+                <div style={{ cursor: 'help' }}>
+                  <Latex math={part.value} block />
+                </div>
+              </Tooltip>
+            ) : (
+              <Latex math={part.value} block />
+            )}
+            {variables && allVars.length > 0 && (
+              <Group gap="xs" justify="center" mt="xs" wrap="wrap">
+                {lhsVar && (
+                  <Badge variant="light" color="blue" size="sm">
+                    {lhsVar.name} = {formatValue(lhsVar.value)} {lhsVar.units ? `[${lhsVar.units}]` : ''}
+                  </Badge>
+                )}
+                {otherVars.map((v) => (
+                  <Text key={v.name} size="xs" c="dimmed">
+                    {v.name} = {formatValue(v.value)} {v.units ? `[${v.units}]` : ''}
+                  </Text>
+                ))}
+              </Group>
+            )}
+          </div>
+        )
+      }
       case 'bold':
         return <strong key={index}>{part.value}</strong>
       case 'italic':
@@ -134,7 +233,7 @@ function renderInlineContent(text: string): React.ReactNode[] {
   })
 }
 
-export default function FormattedReportView({ report }: Readonly<FormattedReportViewProps>) {
+export default function FormattedReportView({ report, variables }: Readonly<FormattedReportViewProps>) {
   if (!report || report.trim() === '') {
     return (
       <Stack gap="sm" style={{ overflowY: 'auto', flex: 1 }}>
@@ -173,42 +272,69 @@ export default function FormattedReportView({ report }: Readonly<FormattedReport
       flushList()
       elements.push(
         <Title key={`h1-${index}`} order={2} mt="md" mb="xs" c="blue.4">
-          {renderInlineContent(trimmed.substring(2))}
+          {renderInlineContent(trimmed.substring(2), variables)}
         </Title>
       )
     } else if (trimmed.startsWith('## ')) {
       flushList()
       elements.push(
         <Title key={`h2-${index}`} order={3} mt="sm" mb="xs" c="blue.4">
-          {renderInlineContent(trimmed.substring(3))}
+          {renderInlineContent(trimmed.substring(3), variables)}
         </Title>
       )
     } else if (trimmed.startsWith('### ')) {
       flushList()
       elements.push(
         <Title key={`h3-${index}`} order={4} mt="sm" mb="xs" c="blue.4">
-          {renderInlineContent(trimmed.substring(4))}
+          {renderInlineContent(trimmed.substring(4), variables)}
         </Title>
       )
     } else if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
       currentList.push(
         <List.Item key={`li-${index}`}>
-          {renderInlineContent(trimmed.substring(2))}
+          {renderInlineContent(trimmed.substring(2), variables)}
         </List.Item>
       )
     } else {
       flushList()
       if (trimmed.startsWith('[MATH_BLOCK:') && trimmed.endsWith(']')) {
         const math = trimmed.substring(12, trimmed.length - 1)
+        const tooltip = getTooltipLabel(math, variables)
+        const lhsVar = getLhsVariable(math, variables)
+        const allVars = getVariablesInMath(math, variables)
+        const otherVars = allVars.filter(v => v.name !== lhsVar?.name)
+        
         elements.push(
-          <div key={`mathblk-${index}`} style={{ display: 'flex', justifyContent: 'center', margin: '12px 0' }}>
-            <Latex math={math} block />
+          <div key={`mathblk-${index}`} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', margin: '12px 0' }}>
+            {tooltip ? (
+              <Tooltip label={tooltip} withArrow>
+                <div style={{ cursor: 'help' }}>
+                  <Latex math={math} block />
+                </div>
+              </Tooltip>
+            ) : (
+              <Latex math={math} block />
+            )}
+            {variables && allVars.length > 0 && (
+              <Group gap="xs" justify="center" mt="xs" wrap="wrap">
+                {lhsVar && (
+                  <Badge variant="light" color="blue" size="sm">
+                    {lhsVar.name} = {formatValue(lhsVar.value)} {lhsVar.units ? `[${lhsVar.units}]` : ''}
+                  </Badge>
+                )}
+                {otherVars.map((v) => (
+                  <Text key={v.name} size="xs" c="dimmed">
+                    {v.name} = {formatValue(v.value)} {v.units ? `[${v.units}]` : ''}
+                  </Text>
+                ))}
+              </Group>
+            )}
           </div>
         )
       } else {
         elements.push(
           <Text key={`p-${index}`} size="sm" style={{ lineHeight: 1.6 }}>
-            {renderInlineContent(line)}
+            {renderInlineContent(line, variables)}
           </Text>
         )
       }
