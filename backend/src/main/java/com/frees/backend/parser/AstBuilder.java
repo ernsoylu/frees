@@ -122,9 +122,9 @@ public class AstBuilder extends FreesBaseVisitor<Expr> {
     }
 
     private ProcStatement.Assign buildAssignment(FreesParser.AssignmentContext ctx) {
-        String var = ctx.IDENT().getText().toLowerCase();
+        String target = ctx.IDENT().getText().toLowerCase();
         Expr value = visit(ctx.expr());
-        return new ProcStatement.Assign(var, value);
+        return new ProcStatement.Assign(target, value);
     }
 
     private ProcStatement.IfElse buildIfStatement(FreesParser.IfStatementContext ctx) {
@@ -346,54 +346,113 @@ public class AstBuilder extends FreesBaseVisitor<Expr> {
     @Override
     public Expr visitArrayLiteralAtom(FreesParser.ArrayLiteralAtomContext ctx) {
         List<Expr> elements = new ArrayList<>();
-        for (FreesParser.ExprContext exprCtx : ctx.argList().expr()) {
+        for (FreesParser.ExprContext exprCtx : positionalExprs(ctx.argList(), "array literal")) {
             elements.add(visit(exprCtx));
         }
         return new Expr.ArrayLiteral(elements);
+    }
+
+    /** Positional argument expressions; named args are rejected here. */
+    private static List<FreesParser.ExprContext> positionalExprs(
+            FreesParser.ArgListContext argList, String function) {
+        List<FreesParser.ExprContext> exprs = new ArrayList<>();
+        for (FreesParser.ArgContext arg : argList.arg()) {
+            if (!(arg instanceof FreesParser.PositionalArgContext positional)) {
+                throw new EquationParser.ParseException(
+                        "Named arguments (name=value) are only valid in fluid "
+                                + "property functions: " + function);
+            }
+            exprs.add(positional.expr());
+        }
+        return exprs;
+    }
+
+    /**
+     * Fluid property call, a reference solver-style: Enthalpy(R134a, T=T1, x=1). Encoded as
+     * a synthetic call prop$<output>$<fluid>$<indicators...> over the value
+     * expressions, so the fluid and indicator labels never become variables.
+     */
+    private Expr buildPropertyCall(String function, FreesParser.ArgListContext argList) {
+        List<FreesParser.ArgContext> args = argList.arg();
+        if (!(args.get(0) instanceof FreesParser.PositionalArgContext fluidArg)) {
+            throw new EquationParser.ParseException(
+                    "Property functions take the fluid name first: "
+                            + function + "(R134a, T=..., x=...)");
+        }
+        String fluid = fluidArg.expr().getText();
+        if (!fluid.matches("[A-Za-z]\\w*")) {
+            throw new EquationParser.ParseException(
+                    "Invalid fluid name '" + fluid + "' in " + function + "(...)");
+        }
+        StringBuilder encoded = new StringBuilder("prop$")
+                .append(function.toLowerCase()).append('$').append(fluid.toLowerCase());
+        List<Expr> values = new ArrayList<>();
+        for (int i = 1; i < args.size(); i++) {
+            if (!(args.get(i) instanceof FreesParser.NamedArgContext named)) {
+                throw new EquationParser.ParseException(
+                        "Property indicators must be named after the fluid, "
+                                + "e.g. " + function + "(R134a, T=300, x=1)");
+            }
+            encoded.append('$').append(named.IDENT().getText().toLowerCase());
+            values.add(visit(named.expr()));
+        }
+        return new Expr.Call(encoded.toString(), values);
     }
 
     @Override
     public Expr visitCallAtom(FreesParser.CallAtomContext ctx) {
         String name = ctx.IDENT().getText();
 
+        boolean hasNamedArgs = ctx.argList().arg().stream()
+                .anyMatch(a -> a instanceof FreesParser.NamedArgContext);
+        if (hasNamedArgs) {
+            return buildPropertyCall(name, ctx.argList());
+        }
+
         if (name.equalsIgnoreCase("convert")) {
-            List<FreesParser.ExprContext> args = ctx.argList().expr();
-            if (args.size() != 2) {
-                throw new EquationParser.ParseException(
-                        "Convert requires exactly two unit arguments: Convert(From, To)");
-            }
-            try {
-                double factor = UnitRegistry.convert(args.get(0).getText(), args.get(1).getText());
-                return new Expr.Num(factor, null);
-            } catch (UnitRegistry.UnknownUnitException e) {
-                throw new EquationParser.ParseException(e.getMessage());
-            }
+            return buildConvert(positionalExprs(ctx.argList(), name));
         }
 
         if (name.equalsIgnoreCase("converttemp")) {
-            List<FreesParser.ExprContext> raw = ctx.argList().expr();
-            if (raw.size() != 3) {
-                throw new EquationParser.ParseException(
-                        "ConvertTemp requires three arguments: ConvertTemp(From, To, value)");
-            }
-            double[] toKelvin = temperatureToKelvin(raw.get(0).getText());
-            double[] fromKelvin = kelvinToTemperature(raw.get(1).getText());
-            double a = toKelvin[0] * fromKelvin[0];
-            double b = fromKelvin[0] * toKelvin[1] + fromKelvin[1];
-            Expr x = visit(raw.get(2));
-            if (x instanceof Expr.Num n && n.unit() == null) {
-                String unit = raw.get(1).getText().trim().equalsIgnoreCase("k") ? "K" : null;
-                return new Expr.Num(a * n.value() + b, unit);
-            }
-            Expr scaled = a == 1.0 ? x : new Expr.BinOp('*', new Expr.Num(a), x);
-            return b == 0.0 ? scaled : new Expr.BinOp('+', scaled, new Expr.Num(b));
+            return buildConvertTemp(positionalExprs(ctx.argList(), name));
         }
 
         List<Expr> args = new ArrayList<>();
-        for (FreesParser.ExprContext arg : ctx.argList().expr()) {
+        for (FreesParser.ExprContext arg : positionalExprs(ctx.argList(), name)) {
             args.add(visit(arg));
         }
         return new Expr.Call(name, args);
+    }
+
+    private Expr buildConvert(List<FreesParser.ExprContext> args) {
+        if (args.size() != 2) {
+            throw new EquationParser.ParseException(
+                    "Convert requires exactly two unit arguments: Convert(From, To)");
+        }
+        try {
+            double factor = UnitRegistry.convert(args.get(0).getText(), args.get(1).getText());
+            return new Expr.Num(factor, null);
+        } catch (UnitRegistry.UnknownUnitException e) {
+            throw new EquationParser.ParseException(e.getMessage());
+        }
+    }
+
+    private Expr buildConvertTemp(List<FreesParser.ExprContext> raw) {
+        if (raw.size() != 3) {
+            throw new EquationParser.ParseException(
+                    "ConvertTemp requires three arguments: ConvertTemp(From, To, value)");
+        }
+        double[] toKelvin = temperatureToKelvin(raw.get(0).getText());
+        double[] fromKelvin = kelvinToTemperature(raw.get(1).getText());
+        double a = toKelvin[0] * fromKelvin[0];
+        double b = fromKelvin[0] * toKelvin[1] + fromKelvin[1];
+        Expr x = visit(raw.get(2));
+        if (x instanceof Expr.Num n && n.unit() == null) {
+            String unit = raw.get(1).getText().trim().equalsIgnoreCase("k") ? "K" : null;
+            return new Expr.Num(a * n.value() + b, unit);
+        }
+        Expr scaled = a == 1.0 ? x : new Expr.BinOp('*', new Expr.Num(a), x);
+        return b == 0.0 ? scaled : new Expr.BinOp('+', scaled, new Expr.Num(b));
     }
 
     @Override
