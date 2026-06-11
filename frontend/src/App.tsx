@@ -199,7 +199,7 @@ export default function App() {
             : null,
         lower: parseBound(draft.lower) ?? null,
         upper: parseBound(draft.upper) ?? null,
-        units: draft.units.trim() || null,
+        units: draft.isUnitsUserSet ? (draft.units.trim() || null) : null,
       }
     })
   }

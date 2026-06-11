@@ -143,7 +143,8 @@ public class SolveController {
     }
 
     private static VariableDto toDisplay(String name, double siValue, String unit,
-                                         UnitRegistry.UnitSystem system) {
+                                         UnitRegistry.UnitSystem system,
+                                         Map<String, String> explicitUnits) {
         if (unit == null || unit.isBlank() || unit.equals("-")) {
             return new VariableDto(name, siValue, unit == null ? "" : unit);
         }
@@ -152,6 +153,10 @@ public class SolveController {
             recorded = UnitRegistry.parseWithOffset(unit);
         } catch (UnitRegistry.UnknownUnitException e) {
             return new VariableDto(name, siValue, unit);
+        }
+        if (explicitUnits != null && explicitUnits.containsKey(name.toLowerCase())) {
+            return new VariableDto(name,
+                    (siValue - recorded.offset()) / recorded.factor(), unit);
         }
         UnitRegistry.DisplayUnit preferred =
                 UnitRegistry.preferredDisplayUnit(recorded.dims(), system);
@@ -244,6 +249,7 @@ public class SolveController {
                 result = rawResult;
             }
 
+            Map<String, String> explicitUnits = unitsByVariable(request.variableInfo());
             List<String> unitWarnings = solver.checkUnits(request.text(),
                     effectiveUnits(request.text(), request.variableInfo()));
             Map<String, String> unitsByLowerName =
@@ -260,7 +266,8 @@ public class SolveController {
                     result.variables().entrySet().stream()
                             .map(e -> toDisplay(e.getKey(), e.getValue(),
                                     unitsByLowerName.getOrDefault(e.getKey().toLowerCase(), ""),
-                                    system))
+                                    system,
+                                    explicitUnits))
                             .toList(),
                     result.blocks().stream()
                             .map(b -> toBlockDto(b, result.displayNames()))
@@ -281,7 +288,8 @@ public class SolveController {
                                             .map(e -> toDisplay(e.getKey(), e.getValue(),
                                                     unitsByLowerName.getOrDefault(
                                                             e.getKey().toLowerCase(), ""),
-                                                    system))
+                                                    system,
+                                                    explicitUnits))
                                             .toList(),
                                     s.maxResidual()))
                             .toList(),
@@ -352,6 +360,8 @@ public class SolveController {
         Map<String, String> unitsByLowerName =
                 unitsByLowerName(request.text(), request.variableInfo());
         UnitRegistry.UnitSystem system = unitSystem(request.displayUnitSystem());
+        Map<String, String> explicitUnits =
+                unitsByVariable(request.variableInfo());
 
         long startNanos = System.nanoTime();
         int totalIterations = 0;
@@ -362,7 +372,7 @@ public class SolveController {
         List<TableRowResult> results = new ArrayList<>();
         for (Map<String, Double> row : request.table().rows()) {
             RowOutcome outcome = solveTableRow(request.text(), row, settings, specs,
-                    unitsByLowerName, system, request.table().variables());
+                    unitsByLowerName, system, request.table().variables(), explicitUnits);
             results.add(outcome.row());
             if (outcome.stats() != null) {
                 totalIterations += outcome.stats().iterations();
@@ -394,7 +404,8 @@ public class SolveController {
                                      Map<String, VariableSpec> specs,
                                      Map<String, String> unitsByLowerName,
                                      UnitRegistry.UnitSystem system,
-                                     List<String> tableVariables) {
+                                     List<String> tableVariables,
+                                     Map<String, String> explicitUnits) {
         StringBuilder sb = new StringBuilder(text);
         for (Map.Entry<String, Double> entry : row.entrySet()) {
             if (entry.getValue() != null) {
@@ -409,7 +420,7 @@ public class SolveController {
             for (Map.Entry<String, Double> e : result.variables().entrySet()) {
                 String name = e.getKey();
                 String unit = unitsByLowerName.getOrDefault(name.toLowerCase(), "");
-                rowValues.put(name, toDisplay(name, e.getValue(), unit, system).value());
+                rowValues.put(name, toDisplay(name, e.getValue(), unit, system, explicitUnits).value());
             }
             return new RowOutcome(new TableRowResult(true, rowValues, null), result.stats());
         } catch (Exception e) {
@@ -472,6 +483,8 @@ public class SolveController {
                             request.lower(), request.upper(),
                             Boolean.TRUE.equals(request.maximize())));
 
+            Map<String, String> explicitUnits =
+                    unitsByVariable(request.variableInfo());
             Map<String, String> unitsByLowerName =
                     unitsByLowerName(request.text(), request.variableInfo());
             UnitRegistry.UnitSystem system = unitSystem(request.displayUnitSystem());
@@ -479,16 +492,19 @@ public class SolveController {
             List<VariableDto> variables = result.solution().variables().entrySet().stream()
                     .map(e -> toDisplay(e.getKey(), e.getValue(),
                             unitsByLowerName.getOrDefault(e.getKey().toLowerCase(), ""),
-                            system))
+                            system,
+                            explicitUnits))
                     .toList();
             VariableDto objective = toDisplay(request.objective(),
                     result.objectiveValue(),
                     unitsByLowerName.getOrDefault(request.objective().toLowerCase(), ""),
-                    system);
+                    system,
+                    explicitUnits);
             VariableDto decision = toDisplay(request.decision(),
                     result.decisionValue(),
                     unitsByLowerName.getOrDefault(request.decision().toLowerCase(), ""),
-                    system);
+                    system,
+                    explicitUnits);
             return ResponseEntity.ok(new OptimizeResponse(true, null, objective,
                     decision, result.evaluations(), variables));
         } catch (EquationParser.ParseException e) {
