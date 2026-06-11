@@ -118,6 +118,8 @@ public final class Evaluator {
             case "sin"    -> Math.sin(arg(c, args, 0, values, defs));
             case "cos"    -> Math.cos(arg(c, args, 0, values, defs));
             case "tan"    -> Math.tan(arg(c, args, 0, values, defs));
+            case "real"   -> arg(c, args, 0, values, defs);
+            case "imag"   -> 0.0;
             case "arcsin" -> Math.asin(arg(c, args, 0, values, defs));
             case "arccos" -> Math.acos(arg(c, args, 0, values, defs));
             case "arctan" -> Math.atan(arg(c, args, 0, values, defs));
@@ -129,11 +131,81 @@ public final class Evaluator {
             case "sum"    -> args.stream().mapToDouble(a -> eval(a, values, defs)).sum();
             case "average", "avg" -> args.stream().mapToDouble(a -> eval(a, values, defs))
                     .average().orElse(0.0);
-            case "integral" -> throw new IllegalStateException(
-                    "Integral can only appear alone on one side of an equation: "
-                            + "F = Integral(f, t, a, b)");
+            case "integral" -> integralQuadrature(c, values, defs);
             default -> throw new IllegalStateException("Unknown function: " + c.function());
         };
+    }
+
+    /**
+     * Quadrature for an Integral whose limits contain unknowns (see
+     * IntegralSolver.inlinedEquation): by construction the integrand is
+     * closed-form in the integration variable, so the integral is an
+     * ordinary function of its limits, re-evaluated at every Newton
+     * residual evaluation. Adaptive Simpson is exact for the polynomial
+     * c_p fits of combustion problems and refines only where needed
+     * otherwise; the noise floor must stay far below the perturbations of
+     * the numerical Jacobian, hence the tight tolerance.
+     */
+    private static final double SIMPSON_REL_TOL = 1e-12;
+    private static final int SIMPSON_MAX_DEPTH = 24;
+
+    private static double integralQuadrature(Expr.Call c, Map<String, Double> values,
+                                             Map<String, ProcDef> defs) {
+        List<Expr> args = c.args();
+        if (args.size() < 4 || !(args.get(1) instanceof Expr.Var t)) {
+            throw new IllegalStateException(
+                    "Integral expects Integral(f, t, lower, upper[, step]).");
+        }
+        double lower = eval(args.get(2), values, defs);
+        double upper = eval(args.get(3), values, defs);
+        if (lower == upper) {
+            return 0.0;
+        }
+        String var = t.name();
+        boolean had = values.containsKey(var);
+        Double saved = had ? values.get(var) : null;
+        try {
+            Expr f = args.get(0);
+            double fa = evalAt(f, var, lower, values, defs);
+            double fm = evalAt(f, var, (lower + upper) / 2.0, values, defs);
+            double fb = evalAt(f, var, upper, values, defs);
+            double whole = (upper - lower) / 6.0 * (fa + 4.0 * fm + fb);
+            return adaptiveSimpson(f, var, lower, upper, fa, fm, fb, whole,
+                    SIMPSON_MAX_DEPTH, values, defs);
+        } finally {
+            if (had) {
+                values.put(var, saved);
+            } else {
+                values.remove(var);
+            }
+        }
+    }
+
+    private static double evalAt(Expr f, String var, double t,
+                                 Map<String, Double> values, Map<String, ProcDef> defs) {
+        values.put(var, t);
+        return eval(f, values, defs);
+    }
+
+    private static double adaptiveSimpson(Expr f, String var, double a, double b,
+                                          double fa, double fm, double fb, double whole,
+                                          int depth, Map<String, Double> values,
+                                          Map<String, ProcDef> defs) {
+        double m = (a + b) / 2.0;
+        double lm = (a + m) / 2.0;
+        double rm = (m + b) / 2.0;
+        double flm = evalAt(f, var, lm, values, defs);
+        double frm = evalAt(f, var, rm, values, defs);
+        double left = (m - a) / 6.0 * (fa + 4.0 * flm + fm);
+        double right = (b - m) / 6.0 * (fm + 4.0 * frm + fb);
+        double halves = left + right;
+        double delta = halves - whole;
+        if (depth <= 0
+                || Math.abs(delta) <= 15.0 * SIMPSON_REL_TOL * Math.max(Math.abs(halves), 1.0)) {
+            return halves + delta / 15.0;
+        }
+        return adaptiveSimpson(f, var, a, m, fa, flm, fm, left, depth - 1, values, defs)
+                + adaptiveSimpson(f, var, m, b, fm, frm, fb, right, depth - 1, values, defs);
     }
 
     private static double arg(Expr.Call c, List<Expr> args, int i,

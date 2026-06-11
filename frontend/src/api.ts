@@ -68,6 +68,7 @@ export interface SolveResponse {
   unitWarnings: string[]
   error: string | null
   formattedEquations: string[]
+  cyclePath?: Record<string, number>[]
 }
 
 export interface CheckResponse {
@@ -94,12 +95,59 @@ export async function check(
   variableInfo: VariableInfo[],
   complexMode: boolean,
 ): Promise<CheckResponse> {
-  const response = await fetch('/api/check', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ text, variableInfo, stopCriteria: { complexMode } }),
-  })
-  return (await response.json()) as CheckResponse
+  try {
+    const response = await fetch('/api/check', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text, variableInfo, stopCriteria: { complexMode } }),
+    })
+    if (!response.ok) {
+      let errorMessage = `Server error (${response.status})`
+      try {
+        const errJson = await response.json()
+        if (errJson && typeof errJson === 'object') {
+          errorMessage = errJson.message || errJson.error || errorMessage
+        }
+      } catch {
+        try {
+          const textBody = await response.text()
+          if (textBody) errorMessage = textBody
+        } catch {}
+      }
+      return {
+        solvable: false,
+        equations: 0,
+        unknowns: 0,
+        variables: [],
+        unitWarnings: [],
+        inferredUnits: {},
+        message: errorMessage,
+        formattedEquations: [],
+      }
+    }
+    const data = await response.json()
+    return {
+      solvable: data.solvable ?? false,
+      equations: data.equations ?? 0,
+      unknowns: data.unknowns ?? 0,
+      variables: data.variables ?? [],
+      unitWarnings: data.unitWarnings ?? [],
+      inferredUnits: data.inferredUnits ?? {},
+      message: data.message ?? '',
+      formattedEquations: data.formattedEquations ?? [],
+    }
+  } catch (e) {
+    return {
+      solvable: false,
+      equations: 0,
+      unknowns: 0,
+      variables: [],
+      unitWarnings: [],
+      inferredUnits: {},
+      message: `Could not reach the solver backend: ${String(e)}`,
+      formattedEquations: [],
+    }
+  }
 }
 
 export async function solve(
@@ -108,19 +156,72 @@ export async function solve(
   variableInfo: VariableInfo[],
   findAllSolutions: boolean,
   displayUnitSystem: UnitSystem,
+  fillMissing: boolean,
 ): Promise<SolveResponse> {
-  const response = await fetch('/api/solve', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      text,
-      stopCriteria,
-      variableInfo,
-      findAllSolutions,
-      displayUnitSystem,
-    }),
-  })
-  return (await response.json()) as SolveResponse
+  try {
+    const response = await fetch('/api/solve', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        text,
+        stopCriteria,
+        variableInfo,
+        findAllSolutions,
+        displayUnitSystem,
+        fillMissing,
+      }),
+    })
+    if (!response.ok) {
+      let errorMessage = `Server error (${response.status})`
+      try {
+        const errJson = await response.json()
+        if (errJson && typeof errJson === 'object') {
+          errorMessage = errJson.message || errJson.error || errorMessage
+        }
+      } catch {
+        try {
+          const textBody = await response.text()
+          if (textBody) errorMessage = textBody
+        } catch {}
+      }
+      return {
+        success: false,
+        variables: [],
+        blocks: [],
+        residuals: [],
+        stats: null,
+        solutions: [],
+        unitWarnings: [],
+        error: errorMessage,
+        formattedEquations: [],
+      }
+    }
+    const data = await response.json()
+    return {
+      success: data.success ?? false,
+      variables: data.variables ?? [],
+      blocks: data.blocks ?? [],
+      residuals: data.residuals ?? [],
+      stats: data.stats ?? null,
+      solutions: data.solutions ?? [],
+      unitWarnings: data.unitWarnings ?? [],
+      error: data.error ?? null,
+      formattedEquations: data.formattedEquations ?? [],
+      cyclePath: data.cyclePath ?? [],
+    }
+  } catch (e) {
+    return {
+      success: false,
+      variables: [],
+      blocks: [],
+      residuals: [],
+      stats: null,
+      solutions: [],
+      unitWarnings: [],
+      error: `Could not reach the solver backend: ${String(e)}`,
+      formattedEquations: [],
+    }
+  }
 }
 
 export interface OptimizeParams {
@@ -147,21 +248,59 @@ export async function optimize(
   displayUnitSystem: UnitSystem,
   params: OptimizeParams,
 ): Promise<OptimizeResponse> {
-  const response = await fetch('/api/optimize', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      text,
-      stopCriteria,
-      variableInfo,
-      displayUnitSystem,
-      ...params,
-    }),
-  })
-  if (!response.ok) {
-    throw new Error(`Optimization failed with status ${response.status}`)
+  try {
+    const response = await fetch('/api/optimize', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        text,
+        stopCriteria,
+        variableInfo,
+        displayUnitSystem,
+        ...params,
+      }),
+    })
+    if (!response.ok) {
+      let errorMessage = `Server error (${response.status})`
+      try {
+        const errJson = await response.json()
+        if (errJson && typeof errJson === 'object') {
+          errorMessage = errJson.message || errJson.error || errorMessage
+        }
+      } catch {
+        try {
+          const textBody = await response.text()
+          if (textBody) errorMessage = textBody
+        } catch {}
+      }
+      return {
+        success: false,
+        error: errorMessage,
+        objective: null,
+        decision: null,
+        evaluations: 0,
+        variables: [],
+      }
+    }
+    const data = await response.json()
+    return {
+      success: data.success ?? false,
+      error: data.error ?? null,
+      objective: data.objective ?? null,
+      decision: data.decision ?? null,
+      evaluations: data.evaluations ?? 0,
+      variables: data.variables ?? [],
+    }
+  } catch (e) {
+    return {
+      success: false,
+      error: `Could not reach the solver backend: ${String(e)}`,
+      objective: null,
+      decision: null,
+      evaluations: 0,
+      variables: [],
+    }
   }
-  return (await response.json()) as OptimizeResponse
 }
 
 export interface DiagramCurve {
@@ -276,19 +415,39 @@ export async function solveTable(
   variables: string[],
   rows: Record<string, number>[],
 ): Promise<SolveTableResponse> {
-  const response = await fetch('/api/solve/table', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      text,
-      stopCriteria,
-      variableInfo,
-      displayUnitSystem,
-      table: { variables, rows },
-    }),
-  })
-  if (!response.ok) {
-    throw new Error(`Table solve failed with status ${response.status}`)
+  try {
+    const response = await fetch('/api/solve/table', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        text,
+        stopCriteria,
+        variableInfo,
+        displayUnitSystem,
+        table: { variables, rows },
+      }),
+    })
+    if (!response.ok) {
+      let errorMessage = `Table solve failed with status ${response.status}`
+      try {
+        const errJson = await response.json()
+        if (errJson && typeof errJson === 'object') {
+          errorMessage = errJson.message || errJson.error || errorMessage
+        }
+      } catch {
+        try {
+          const textBody = await response.text()
+          if (textBody) errorMessage = textBody
+        } catch {}
+      }
+      throw new Error(errorMessage)
+    }
+    const data = await response.json()
+    return {
+      results: data.results ?? [],
+      stats: data.stats ?? null,
+    }
+  } catch (e) {
+    throw e instanceof Error ? e : new Error(String(e))
   }
-  return (await response.json()) as SolveTableResponse
 }

@@ -18,7 +18,10 @@ export interface VariableDraft {
 }
 
 export const DEFAULT_DRAFT: VariableDraft = {
-  guess: '1',
+  // Empty guess means automatic: the solver picks per-variable defaults
+  // (1.0, and 0.0 for imaginary components in complex mode) and explores
+  // alternative starts itself when a block fails to converge.
+  guess: '',
   lower: '-infinity',
   upper: 'infinity',
   units: '',
@@ -70,9 +73,10 @@ export default function VariableInfoModal({ variables, drafts, onSave, onClose }
     const saved: Record<string, VariableDraft> = {}
     for (const name of variables) {
       const draft = local[name]
-      const guess = Number(draft.guess)
-      if (draft.guess.trim() === '' || !Number.isFinite(guess)) {
-        setError(`Guess value for ${name} must be a number.`)
+      const guessText = draft.guess.trim()
+      const guess = guessText === '' ? null : Number(draft.guess)
+      if (guess !== null && !Number.isFinite(guess)) {
+        setError(`Guess value for ${name} must be a number (or empty for automatic).`)
         return
       }
       const lower = parseBound(draft.lower)
@@ -91,7 +95,7 @@ export default function VariableInfoModal({ variables, drafts, onSave, onClose }
         setError(`Lower bound exceeds upper bound for ${name}.`)
         return
       }
-      if (guess < lo || guess > hi) {
+      if (guess !== null && (guess < lo || guess > hi)) {
         setError(`Guess value for ${name} is outside its bounds.`)
         return
       }
@@ -106,10 +110,12 @@ export default function VariableInfoModal({ variables, drafts, onSave, onClose }
   return (
     <Modal opened onClose={onClose} title="Variable Information" size="xl" centered>
       <Text size="sm" c="dimmed" mb="md">
-        Guess values steer Newton&apos;s method toward a root; bounds constrain
-        the search space (<Code>-infinity</Code> / <Code>infinity</Code> for
-        unbounded). Units like <Code>kPa</Code> or <Code>kJ/kg-K</Code> enable
-        dimensional checking; <Code>-</Code> means dimensionless.
+        Guess values steer Newton&apos;s method toward a root; leave a guess
+        empty to let the solver choose and explore starts automatically.
+        Bounds constrain the search space (<Code>-infinity</Code> /{' '}
+        <Code>infinity</Code> for unbounded). Units like <Code>kPa</Code> or{' '}
+        <Code>kJ/kg-K</Code> enable dimensional checking; <Code>-</Code> means
+        dimensionless.
       </Text>
 
       {variables.length === 0 ? (
@@ -138,6 +144,7 @@ export default function VariableInfoModal({ variables, drafts, onSave, onClose }
                     <TextInput
                       size="xs"
                       value={local[name][field]}
+                      placeholder={field === 'guess' ? 'auto' : undefined}
                       onChange={(e) => setField(name, field, e.currentTarget.value)}
                       spellCheck={false}
                       styles={{

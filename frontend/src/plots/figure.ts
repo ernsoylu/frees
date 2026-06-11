@@ -97,8 +97,11 @@ function axisLayout(
   log: boolean,
   format: PlotFormat,
   colors: ThemeColors,
+  min: number | null | undefined,
+  max: number | null | undefined,
+  tick: number | null | undefined,
 ): PlotlyAxisLayout {
-  return {
+  const layout: PlotlyAxisLayout = {
     title: { text: label },
     type: log ? 'log' : 'linear',
     gridcolor: colors.grid,
@@ -107,6 +110,22 @@ function axisLayout(
     showgrid: format.grid,
     exponentformat: 'power',
   }
+
+  if ((min !== null && min !== undefined) || (max !== null && max !== undefined)) {
+    const rMin = min !== null && min !== undefined
+      ? (log ? Math.log10(Math.max(min, 1e-20)) : min)
+      : null
+    const rMax = max !== null && max !== undefined
+      ? (log ? Math.log10(Math.max(max, 1e-20)) : max)
+      : null
+    ;(layout as any).range = [rMin, rMax]
+  }
+
+  if (tick !== null && tick !== undefined && tick > 0) {
+    ;(layout as any).dtick = tick
+  }
+
+  return layout
 }
 
 function baseLayout(
@@ -125,8 +144,8 @@ function baseLayout(
     plot_bgcolor: background,
     font: { color: colors.font, size: format.fontSize },
     margin: { t: format.title ? 48 : 24, r: 16, b: 56, l: 64 },
-    xaxis: axisLayout(format.xLabel || xLabel, xLog, format, colors),
-    yaxis: axisLayout(format.yLabel || yLabel, yLog, format, colors),
+    xaxis: axisLayout(format.xLabel || xLabel, xLog, format, colors, format.xMin, format.xMax, format.xTick),
+    yaxis: axisLayout(format.yLabel || yLabel, yLog, format, colors, format.yMin, format.yMax, format.yTick),
     showlegend: format.legend,
     legend: { orientation: 'h', bgcolor: 'rgba(0,0,0,0)' },
   }
@@ -145,26 +164,67 @@ function stateTraces(
   colors: ThemeColors,
   xUnit: UnitChoice,
   yUnit: UnitChoice,
+  customStateColor?: string,
+  cyclePath?: Record<string, number>[],
 ): PlotlyTrace[] {
   const points = statesForAxes(states, overlay.xProperty, overlay.yProperty)
   if (points.length === 0) return []
-  const looped =
-    overlay.close && points.length > 2 ? [...points, points[0]] : points
-  return [
-    {
-      type: 'scatter',
-      mode: overlay.connect ? 'lines+markers+text' : 'markers+text',
-      name: 'States',
-      x: looped.map((p) => p.x * xUnit.scale + xUnit.offset),
-      y: looped.map((p) => p.y * yUnit.scale + yUnit.offset),
-      line: { color: colors.states, width: 2 },
-      marker: { color: colors.states, size: 9 },
-      text: looped.map((p) => String(p.index)),
-      textposition: 'top right',
-      textfont: { color: colors.states },
-      showlegend: true,
-    },
-  ]
+
+  const traces: PlotlyTrace[] = []
+  const stateColor = customStateColor || colors.states
+
+  if (overlay.connect) {
+    if (cyclePath && cyclePath.length > 0) {
+      const pathPoints: { x: number; y: number }[] = []
+      for (const pt of cyclePath) {
+        const xVal = pt[overlay.xProperty]
+        const yVal = pt[overlay.yProperty]
+        if (xVal !== undefined && yVal !== undefined) {
+          pathPoints.push({ x: xVal, y: yVal })
+        }
+      }
+      if (pathPoints.length > 0) {
+        traces.push({
+          type: 'scatter',
+          mode: 'lines',
+          name: 'Cycle Path',
+          x: pathPoints.map((p) => p.x * xUnit.scale + xUnit.offset),
+          y: pathPoints.map((p) => p.y * yUnit.scale + yUnit.offset),
+          line: { color: stateColor, width: 2 },
+          showlegend: false,
+          hoverinfo: 'none',
+        })
+      }
+    } else {
+      const looped =
+        overlay.close && points.length > 2 ? [...points, points[0]] : points
+      traces.push({
+        type: 'scatter',
+        mode: 'lines',
+        name: 'Cycle Connections',
+        x: looped.map((p) => p.x * xUnit.scale + xUnit.offset),
+        y: looped.map((p) => p.y * yUnit.scale + yUnit.offset),
+        line: { color: stateColor, width: 2 },
+        showlegend: false,
+        hoverinfo: 'none',
+      })
+    }
+  }
+
+  traces.push({
+    type: 'scatter',
+    mode: 'markers+text',
+    name: 'States',
+    x: points.map((p) => p.x * xUnit.scale + xUnit.offset),
+    y: points.map((p) => p.y * yUnit.scale + yUnit.offset),
+    marker: { color: stateColor, size: 9 },
+    text: points.map((p) => String(p.index)),
+    textposition: 'top right',
+    textfont: { color: stateColor },
+    showlegend: true,
+  })
+
+  return traces
 }
 
 export function buildPropertyFigure(
@@ -173,6 +233,7 @@ export function buildPropertyFigure(
   format: PlotFormat,
   states: StateTable,
   theme: PlotTheme,
+  cyclePath?: Record<string, number>[],
 ): PlotlyFigure {
   const colors = THEMES[theme]
   const xUnit = resolveUnit(diagram.xProperty, format.xUnit, format.celsius)
@@ -199,6 +260,7 @@ export function buildPropertyFigure(
     })
   }
   if (config.overlayStates) {
+    const customStateColor = format.lineColors?.['states']
     traces.push(
       ...stateTraces(
         {
@@ -211,6 +273,8 @@ export function buildPropertyFigure(
         colors,
         xUnit,
         yUnit,
+        customStateColor,
+        cyclePath,
       ),
     )
   }
@@ -235,6 +299,7 @@ export function buildPsychroFigure(
   format: PlotFormat,
   states: StateTable,
   theme: PlotTheme,
+  cyclePath?: Record<string, number>[],
 ): PlotlyFigure {
   const colors = THEMES[theme]
   const xUnit = resolveUnit('T', format.xUnit, format.celsius)
@@ -253,6 +318,7 @@ export function buildPsychroFigure(
     traces.push(trace)
   }
   if (config.overlayStates) {
+    const customStateColor = format.lineColors?.['states']
     traces.push(
       ...stateTraces(
         { xProperty: 'T', yProperty: 'w', connect: config.connectStates, close: false },
@@ -260,6 +326,8 @@ export function buildPsychroFigure(
         colors,
         xUnit,
         yUnit,
+        customStateColor,
+        cyclePath,
       ),
     )
   }
@@ -298,6 +366,7 @@ export function buildXYFigure(
     name: s.name,
     x: s.x,
     y: s.y,
+    line: { color: format.lineColors?.[s.name] || undefined },
   }))
   return {
     data: traces,

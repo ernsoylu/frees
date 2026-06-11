@@ -130,6 +130,16 @@ class EquationSystemSolverTest {
     }
 
     @Test
+    void complexLiterals() {
+        SolverSettings complexSettings = new SolverSettings(250, 1e-9, 1e-12, 3600.0, true);
+        var result = solver.solve("z = 3 + 4i\nw = 1j * z", complexSettings);
+        assertEquals(3.0, result.variables().get("z_r"), 1e-6);
+        assertEquals(4.0, result.variables().get("z_i"), 1e-6);
+        assertEquals(-4.0, result.variables().get("w_r"), 1e-6);
+        assertEquals(3.0, result.variables().get("w_i"), 1e-6);
+    }
+
+    @Test
     void complexAbsIsMagnitude() {
         SolverSettings complexSettings = new SolverSettings(250, 1e-9, 1e-12, 3600.0, true);
         // sqrt(-16) = ±4i (branch depends on the sign of the zero imaginary
@@ -139,6 +149,26 @@ class EquationSystemSolverTest {
         assertEquals(4.0, Math.abs(result.variables().get("z_i")), 1e-6);
         assertEquals(5.0, result.variables().get("m_r"), 1e-6);
         assertEquals(0.0, result.variables().get("m_i"), 1e-9);
+    }
+
+    @Test
+    void complexRealAndImag() {
+        SolverSettings complexSettings = new SolverSettings(250, 1e-9, 1e-12, 3600.0, true);
+        var result = solver.solve("z = 3 + 4i\na = real(z)\nb = imag(z)", complexSettings);
+        assertEquals(3.0, result.variables().get("z_r"), 1e-6);
+        assertEquals(4.0, result.variables().get("z_i"), 1e-6);
+        assertEquals(3.0, result.variables().get("a_r"), 1e-6);
+        assertEquals(0.0, result.variables().get("a_i"), 1e-9);
+        assertEquals(4.0, result.variables().get("b_r"), 1e-6);
+        assertEquals(0.0, result.variables().get("b_i"), 1e-9);
+    }
+
+    @Test
+    void realModeRealAndImag() {
+        var result = solver.solve("x = 5\na = real(x)\nb = imag(x)", SolverSettings.DEFAULTS);
+        assertEquals(5.0, result.variables().get("x"), 1e-6);
+        assertEquals(5.0, result.variables().get("a"), 1e-6);
+        assertEquals(0.0, result.variables().get("b"), 1e-6);
     }
 
     @Test
@@ -247,5 +277,67 @@ class EquationSystemSolverTest {
         assertEquals(19.0, x4, 1e-12);
         assertEquals(24.0, x5, 1e-12);
         assertEquals(80.0, total, 1e-12);
+    }
+
+    @Test
+    void solvesPowerFactorCorrectionComplex() {
+        String source = """
+                V_rms = 230 + 0i
+                f = 50 [Hz]
+                omega = 2 * pi * f
+                
+                R_load = 15 [ohm]
+                L_load = 0.05 [H]
+                Z_load = R_load + 1i * omega * L_load
+                
+                I_load = V_rms / Z_load
+                S_uncorrected = V_rms * (real(I_load) - 1i * imag(I_load))
+                P_active = real(S_uncorrected)
+                Q_reactive_old = imag(S_uncorrected)
+                PF_old = P_active / abs(S_uncorrected)
+                
+                PF_new = 0.98
+                S_corrected_mag = P_active / PF_new
+                Q_reactive_new = sqrt(S_corrected_mag^2 - P_active^2)
+                
+                Q_c = Q_reactive_old - Q_reactive_new
+                
+                Q_c = abs(V_rms)^2 / abs(Z_c)
+                Z_c = -1i / (omega * C_corr)
+                
+                x + y = 3
+                y = z - 4
+                z = x^2 - 3
+                """;
+        SolverSettings settings = new SolverSettings(250, 1e-6, 1e-9, 3600.0, true);
+        try {
+            var result = solver.solve(source, settings);
+            double cCorr = result.variables().get("c_corr_r");
+            assertEquals(8.55e-5, cCorr, 1e-6);
+            assertEquals(0.0, result.variables().get("c_corr_i"), 1e-9);
+
+            // The Variable Information window may submit an explicit guess for
+            // every expanded component — including 1.0 for imaginary parts,
+            // which puts Z_c's phase on the wrong side of the plane. The
+            // conjugate entries of the retry ladder must recover from that.
+            java.util.Map<String, VariableSpec> allOnes = new java.util.HashMap<>();
+            for (String name : result.variables().keySet()) {
+                allOnes.put(name.toLowerCase(), new VariableSpec(name, 1.0,
+                        Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY));
+            }
+            var explicit = solver.solve(source, settings, allOnes);
+            assertEquals(8.55e-5, explicit.variables().get("c_corr_r"), 1e-6);
+        } catch (SolverException e) {
+            // Re-parse and print blocks to stdout for debugging
+            var parsed = new com.frees.backend.parser.EquationParser().parseResult(source);
+            var eqList = com.frees.backend.parser.ComplexExpansion.expand(parsed.equations(), parsed.displayNames());
+            var blocker = new com.frees.backend.core.Blocker();
+            var blocks = blocker.block(eqList);
+            System.out.println("DEBUG BLOCKS:");
+            for (var b : blocks) {
+                System.out.println("Block " + b.index() + ": variables=" + b.variables() + ", equations=" + b.equations());
+            }
+            throw e;
+        }
     }
 }

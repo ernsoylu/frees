@@ -26,11 +26,20 @@ public final class UnitRegistry {
 
     private static final Map<String, Quantity> UNITS = new HashMap<>();
 
+    /** SI symbols whose meaning depends on letter case (H henry vs h hour). */
+    private static final Map<String, Quantity> CASE_SENSITIVE_UNITS = new HashMap<>();
+
     // dims index: [kg, m, s, K, mol, A, cd]
     private static void define(String name, double factor, double... exponents) {
         double[] dims = new double[Quantity.DIMENSIONS];
         System.arraycopy(exponents, 0, dims, 0, exponents.length);
         UNITS.put(name.toLowerCase(), new Quantity(factor, dims));
+    }
+
+    private static void defineCaseSensitive(String name, double factor, double... exponents) {
+        double[] dims = new double[Quantity.DIMENSIONS];
+        System.arraycopy(exponents, 0, dims, 0, exponents.length);
+        CASE_SENSITIVE_UNITS.put(name, new Quantity(factor, dims));
     }
 
     static {
@@ -65,7 +74,8 @@ public final class UnitRegistry {
         define("sec", 1.0, 0, 0, 1);
         define("min", 60.0, 0, 0, 1);
         define("hr", 3600.0, 0, 0, 1);
-        define("h", 3600.0, 0, 0, 1);
+        define("hour", 3600.0, 0, 0, 1);
+        defineCaseSensitive("h", 3600.0, 0, 0, 1);
         define("day", 86400.0, 0, 0, 1);
         define("year", 3.1536e7, 0, 0, 1);
 
@@ -150,6 +160,7 @@ public final class UnitRegistry {
 
         // Inductance: H = kg·m²·s⁻²·A⁻²
         define("henry", 1.0, 1, 2, -2, 0, 0, -2);
+        defineCaseSensitive("H", 1.0, 1, 2, -2, 0, 0, -2);
         define("mh", 1e-3, 1, 2, -2, 0, 0, -2);
         define("uh", 1e-6, 1, 2, -2, 0, 0, -2);
 
@@ -226,7 +237,10 @@ public final class UnitRegistry {
                         + "' in '" + full + "'");
             }
             String name = matcher.group(1);
-            Quantity unit = UNITS.get(name.toLowerCase());
+            Quantity unit = CASE_SENSITIVE_UNITS.get(name);
+            if (unit == null) {
+                unit = UNITS.get(name.toLowerCase());
+            }
             if (unit == null) {
                 throw new UnknownUnitException("Unknown unit: '" + name + "' in '" + full + "'");
             }

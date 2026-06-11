@@ -75,22 +75,40 @@ public final class UnitChecker {
         // so chains propagate.
         Map<String, String> derived = new java.util.HashMap<>();
         UnitChecker deriver = new UnitChecker(dims, false);
-        for (int pass = 0; pass < 5; pass++) {
+        for (int pass = 0; pass < 8; pass++) {
             boolean changed = false;
             for (Equation eq : equations) {
                 List<String> unknowns = eq.variables().stream()
                         .filter(v -> !dims.containsKey(v))
                         .toList();
-                if (unknowns.size() != 1) {
+                if (unknowns.isEmpty()) {
                     continue;
                 }
-                String unknown = unknowns.get(0);
                 deriver.currentEquation = eq.sourceText();
-                Quantity solvedDims = deriver.solveDimsFor(eq, unknown);
-                if (solvedDims != null) {
-                    dims.put(unknown, solvedDims);
-                    derived.put(unknown, UnitRegistry.siName(solvedDims.dims()));
-                    changed = true;
+                if (unknowns.size() == 1) {
+                    String unknown = unknowns.get(0);
+                    Quantity solvedDims = deriver.solveDimsFor(eq, unknown);
+                    if (solvedDims != null) {
+                        dims.put(unknown, solvedDims);
+                        derived.put(unknown, UnitRegistry.siName(solvedDims.dims()));
+                        changed = true;
+                        continue;
+                    }
+                }
+                // Additive homogeneity: in T[3] - T[4], the unknown T[3]
+                // must carry T[4]'s dimensions, no matter how many other
+                // unknowns the equation has. This grounds variables that
+                // appear only implicitly (on both sides of their equations).
+                for (String unknown : unknowns) {
+                    if (dims.containsKey(unknown)) {
+                        continue;
+                    }
+                    Quantity additive = deriver.additiveDims(eq, unknown);
+                    if (additive != null) {
+                        dims.put(unknown, additive);
+                        derived.put(unknown, UnitRegistry.siName(additive.dims()));
+                        changed = true;
+                    }
                 }
             }
             if (!changed) {
@@ -147,6 +165,53 @@ public final class UnitChecker {
         return e.variables().contains(name);
     }
 
+    /** Dimensions of the unknown forced by a sum/difference with a
+     * known-dimension partner anywhere in the equation, or null. */
+    private Quantity additiveDims(Equation eq, String unknown) {
+        Quantity q = additiveDims(eq.lhs(), unknown);
+        return q != null ? q : additiveDims(eq.rhs(), unknown);
+    }
+
+    private Quantity additiveDims(Expr e, String unknown) {
+        return switch (e) {
+            case Expr.BinOp b -> {
+                if (b.op() == '+' || b.op() == '-') {
+                    Quantity q = additivePartnerDims(b.left(), b.right(), unknown);
+                    if (q == null) {
+                        q = additivePartnerDims(b.right(), b.left(), unknown);
+                    }
+                    if (q != null) {
+                        yield q;
+                    }
+                }
+                Quantity left = additiveDims(b.left(), unknown);
+                yield left != null ? left : additiveDims(b.right(), unknown);
+            }
+            case Expr.Neg neg -> additiveDims(neg.operand(), unknown);
+            case Expr.Call c -> {
+                for (Expr arg : c.args()) {
+                    Quantity q = additiveDims(arg, unknown);
+                    if (q != null) {
+                        yield q;
+                    }
+                }
+                yield null;
+            }
+            default -> null;
+        };
+    }
+
+    private Quantity additivePartnerDims(Expr candidate, Expr partner, String unknown) {
+        if (candidate instanceof Expr.Var v && v.name().equals(unknown)
+                && !mentions(partner, unknown)) {
+            Dim dim = dimOf(partner);
+            if (dim.known()) {
+                return dim.quantity();
+            }
+        }
+        return null;
+    }
+
     private DimTerm analyze(Expr e, String unknown) {
         return switch (e) {
             case Expr.Num n -> {
@@ -173,6 +238,15 @@ public final class UnitChecker {
                 case '/' -> combine(analyze(b.left(), unknown), analyze(b.right(), unknown), -1);
                 case '^' -> {
                     if (!(b.right() instanceof Expr.Num n) || mentions(b.right(), unknown)) {
+                        // Non-constant exponent: well-defined only when the
+                        // unknown-free base is dimensionless, as in
+                        // T * (P2/P1)^((k-1)/k), which keeps T's units.
+                        if (!mentions(b.left(), unknown) && !mentions(b.right(), unknown)) {
+                            Dim base = dimOf(b.left());
+                            if (base.known() && base.quantity().isDimensionless()) {
+                                yield new DimTerm(new double[Quantity.DIMENSIONS], 0.0);
+                            }
+                        }
                         yield null;
                     }
                     DimTerm base = analyze(b.left(), unknown);
@@ -339,7 +413,7 @@ public final class UnitChecker {
         }
         List<Expr> args = c.args();
         return switch (c.function()) {
-            case "abs" -> dimOf(args.get(0));
+            case "abs", "real", "imag" -> dimOf(args.get(0));
             case "min", "max" -> {
                 Dim first = dimOf(args.get(0));
                 Dim second = args.size() > 1 ? dimOf(args.get(1)) : first;

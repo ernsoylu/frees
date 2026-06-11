@@ -2,6 +2,7 @@ import { useState } from 'react'
 import {
   Button,
   Checkbox,
+  ColorInput,
   Divider,
   Group,
   Modal,
@@ -29,6 +30,9 @@ import { defaultUnitId, unitIdsFor } from './units'
 interface Props {
   /** Existing spec to edit, or null to create a new plot. */
   spec: PlotSpec | null
+  /** Plot kinds this window offers (Plots: xy; Thermodynamics: property/psychro). */
+  allowedKinds: PlotKind[]
+  defaultName: string
   fluids: string[]
   tableVars: string[]
   hasStates: boolean
@@ -295,6 +299,60 @@ function FormatSection({
           onChange={(e) => onChange({ ...format, yLabel: e.currentTarget.value })}
         />
       </Group>
+      <Group grow>
+        <NumberInput
+          label="X min (auto if empty)"
+          size="xs"
+          value={format.xMin ?? ''}
+          onChange={(v) =>
+            onChange({ ...format, xMin: typeof v === 'number' ? v : null })
+          }
+        />
+        <NumberInput
+          label="X max (auto if empty)"
+          size="xs"
+          value={format.xMax ?? ''}
+          onChange={(v) =>
+            onChange({ ...format, xMax: typeof v === 'number' ? v : null })
+          }
+        />
+        <NumberInput
+          label="X tick interval"
+          size="xs"
+          value={format.xTick ?? ''}
+          min={0}
+          onChange={(v) =>
+            onChange({ ...format, xTick: typeof v === 'number' && v > 0 ? v : null })
+          }
+        />
+      </Group>
+      <Group grow>
+        <NumberInput
+          label="Y min (auto if empty)"
+          size="xs"
+          value={format.yMin ?? ''}
+          onChange={(v) =>
+            onChange({ ...format, yMin: typeof v === 'number' ? v : null })
+          }
+        />
+        <NumberInput
+          label="Y max (auto if empty)"
+          size="xs"
+          value={format.yMax ?? ''}
+          onChange={(v) =>
+            onChange({ ...format, yMax: typeof v === 'number' ? v : null })
+          }
+        />
+        <NumberInput
+          label="Y tick interval"
+          size="xs"
+          value={format.yTick ?? ''}
+          min={0}
+          onChange={(v) =>
+            onChange({ ...format, yTick: typeof v === 'number' && v > 0 ? v : null })
+          }
+        />
+      </Group>
       {axes && (
         <Group grow>
           <Select
@@ -341,6 +399,43 @@ function FormatSection({
           onChange={(e) => onChange({ ...format, legend: e.currentTarget.checked })}
         />
       </Group>
+
+      <Divider label="Line Colors" labelPosition="left" />
+      {spec.kind === 'xy' ? (
+        spec.xy.yVars.length > 0 ? (
+          <Group gap="xs">
+            {spec.xy.yVars.map((yVar) => (
+              <ColorInput
+                key={yVar}
+                label={`Color for ${yVar}`}
+                size="xs"
+                style={{ flex: '1 1 120px' }}
+                value={format.lineColors?.[yVar] ?? '#228be6'}
+                onChange={(color) => {
+                  const lineColors = { ...(format.lineColors ?? {}), [yVar]: color }
+                  onChange({ ...format, lineColors })
+                }}
+              />
+            ))}
+          </Group>
+        ) : (
+          <Text size="xs" c="dimmed">
+            Select Y-axis variables first to configure their colors.
+          </Text>
+        )
+      ) : (
+        <Group grow>
+          <ColorInput
+            label="States Overlay / Cycle path color"
+            size="xs"
+            value={format.lineColors?.['states'] ?? '#ffa94b'}
+            onChange={(color) => {
+              const lineColors = { ...(format.lineColors ?? {}), states: color }
+              onChange({ ...format, lineColors })
+            }}
+          />
+        </Group>
+      )}
     </Stack>
   )
 }
@@ -353,6 +448,8 @@ const KIND_OPTIONS = [
 
 export default function PlotConfigModal({
   spec,
+  allowedKinds,
+  defaultName,
   fluids,
   tableVars,
   hasStates,
@@ -360,9 +457,12 @@ export default function PlotConfigModal({
   onClose,
 }: Readonly<Props>) {
   const [draft, setDraft] = useState<PlotSpec>(
-    () => spec ?? newPlotSpec('property', 'Plot 1'),
+    () => spec ?? newPlotSpec(allowedKinds[0], defaultName),
   )
   const creating = spec === null
+  const kindOptions = KIND_OPTIONS.filter((o) =>
+    allowedKinds.includes(o.value as PlotKind),
+  )
 
   function changeKind(kind: PlotKind) {
     setDraft((d) => ({ ...d, kind, format: { ...d.format, celsius: kind === 'psychro' } }))
@@ -383,12 +483,14 @@ export default function PlotConfigModal({
             value={draft.name}
             onChange={(e) => setDraft({ ...draft, name: e.currentTarget.value })}
           />
-          <SegmentedControl
-            size="xs"
-            data={KIND_OPTIONS}
-            value={draft.kind}
-            onChange={(kind) => changeKind(kind as PlotKind)}
-          />
+          {kindOptions.length > 1 && (
+            <SegmentedControl
+              size="xs"
+              data={kindOptions}
+              value={draft.kind}
+              onChange={(kind) => changeKind(kind as PlotKind)}
+            />
+          )}
         </Group>
 
         {draft.kind === 'xy' && (

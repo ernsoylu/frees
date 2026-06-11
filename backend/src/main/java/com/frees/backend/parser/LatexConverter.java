@@ -23,6 +23,15 @@ public final class LatexConverter {
         return switch (e) {
             case Expr.Num n -> {
                 String val = formatValue(n.value());
+                if (n.isImaginary()) {
+                    if (n.value() == 1.0) {
+                        val = "i";
+                    } else if (n.value() == -1.0) {
+                        val = "-i";
+                    } else {
+                        val = val + "i";
+                    }
+                }
                 if (n.unit() != null && !n.unit().isBlank()) {
                     yield val + "\\,\\left[" + n.unit() + "\\right]";
                 }

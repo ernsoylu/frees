@@ -24,10 +24,15 @@ import PlotlyChart from './PlotlyChart'
 interface Props {
   spec: PlotSpec
   states: StateTable
+  cyclePath?: Record<string, number>[]
   tableRows: ParamRow[]
   tableResults: TableRowResult[]
   onConfigure: () => void
   onRemove: () => void
+  leftSection?: React.ReactNode
+  rightSection?: React.ReactNode
+  hideHeader?: boolean
+  exportTrigger?: { format: string; timestamp: number } | null
 }
 
 /** Value of one variable in one run: solved value or the typed input. */
@@ -110,6 +115,7 @@ function useDiagramData(spec: PlotSpec) {
 function buildFigure(
   spec: PlotSpec,
   states: StateTable,
+  cyclePath: Record<string, number>[] | undefined,
   tableRows: ParamRow[],
   tableResults: TableRowResult[],
   diagram: DiagramResponse | null,
@@ -117,10 +123,10 @@ function buildFigure(
   theme: PlotTheme,
 ): PlotlyFigure | null {
   if (spec.kind === 'property' && diagram) {
-    return buildPropertyFigure(diagram, spec.property, spec.format, states, theme)
+    return buildPropertyFigure(diagram, spec.property, spec.format, states, theme, cyclePath)
   }
   if (spec.kind === 'psychro' && psychart) {
-    return buildPsychroFigure(psychart, spec.psychro, spec.format, states, theme)
+    return buildPsychroFigure(psychart, spec.psychro, spec.format, states, theme, cyclePath)
   }
   if (spec.kind === 'xy' && spec.xy.xVar && spec.xy.yVars.length > 0) {
     const series = buildXYSeries(tableRows, tableResults, spec.xy.xVar, spec.xy.yVars)
@@ -138,19 +144,30 @@ function buildFigure(
 export default function PlotCard({
   spec,
   states,
+  cyclePath,
   tableRows,
   tableResults,
   onConfigure,
   onRemove,
+  leftSection,
+  rightSection,
+  hideHeader = false,
+  exportTrigger = null,
 }: Readonly<Props>) {
   const { diagram, psychart, loading, error } = useDiagramData(spec)
   const [exporting, setExporting] = useState(false)
   const [exportError, setExportError] = useState<string | null>(null)
   const [publicationStyle, setPublicationStyle] = useState(true)
 
+  useEffect(() => {
+    if (exportTrigger) {
+      void onExport(exportTrigger.format as any)
+    }
+  }, [exportTrigger])
+
   const figure = useMemo(
-    () => buildFigure(spec, states, tableRows, tableResults, diagram, psychart, 'dark'),
-    [spec, states, tableRows, tableResults, diagram, psychart],
+    () => buildFigure(spec, states, cyclePath, tableRows, tableResults, diagram, psychart, 'dark'),
+    [spec, states, cyclePath, tableRows, tableResults, diagram, psychart],
   )
 
   async function onExport(format: (typeof EXPORT_FORMATS)[number]['value']) {
@@ -158,6 +175,7 @@ export default function PlotCard({
     const exportFigure = buildFigure(
       spec,
       states,
+      cyclePath,
       tableRows,
       tableResults,
       diagram,
@@ -178,37 +196,43 @@ export default function PlotCard({
 
   return (
     <>
-      <Group justify="space-between" mb="xs">
-        <Group gap="xs">
-          <Button variant="default" size="xs" onClick={onConfigure}>
-            Configure
-          </Button>
-          <Menu shadow="md">
-            <Menu.Target>
-              <Button variant="default" size="xs" loading={exporting}>
-                Export
-              </Button>
-            </Menu.Target>
-            <Menu.Dropdown>
-              {EXPORT_FORMATS.map((f) => (
-                <Menu.Item key={f.value} onClick={() => void onExport(f.value)}>
-                  {f.label}
+      {!hideHeader && (
+        <Group justify="space-between" mb="xs" wrap="nowrap" align="center">
+          <Group gap="xs" style={{ flex: 1 }} wrap="nowrap">
+            {leftSection}
+            <Button variant="default" size="xs" onClick={onConfigure}>
+              Configure
+            </Button>
+            <Menu shadow="md">
+              <Menu.Target>
+                <Button variant="default" size="xs" loading={exporting}>
+                  Export
+                </Button>
+              </Menu.Target>
+              <Menu.Dropdown>
+                {EXPORT_FORMATS.map((f) => (
+                  <Menu.Item key={f.value} onClick={() => void onExport(f.value)}>
+                    {f.label}
+                  </Menu.Item>
+                ))}
+                <Menu.Divider />
+                <Menu.Item
+                  onClick={() => setPublicationStyle((v) => !v)}
+                  rightSection={publicationStyle ? '✓' : undefined}
+                >
+                  Publication style (white)
                 </Menu.Item>
-              ))}
-              <Menu.Divider />
-              <Menu.Item
-                onClick={() => setPublicationStyle((v) => !v)}
-                rightSection={publicationStyle ? '✓' : undefined}
-              >
-                Publication style (white)
-              </Menu.Item>
-            </Menu.Dropdown>
-          </Menu>
+              </Menu.Dropdown>
+            </Menu>
+          </Group>
+          <Group gap="xs" wrap="nowrap">
+            <Button variant="subtle" color="red" size="xs" onClick={onRemove}>
+              Remove
+            </Button>
+            {rightSection}
+          </Group>
         </Group>
-        <Button variant="subtle" color="red" size="xs" onClick={onRemove}>
-          Remove
-        </Button>
-      </Group>
+      )}
 
       {error && (
         <Alert color="red" mb="xs">

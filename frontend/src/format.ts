@@ -1,8 +1,10 @@
 import { SolutionResult, VariableResult } from './api'
 
-export function formatValue(value: number): string {
+export function formatValue(value: number | null | undefined): string {
+  if (value === null || value === undefined || Number.isNaN(value)) return '—'
   if (value === 0) return '0'
   const abs = Math.abs(value)
+  if (!Number.isFinite(value)) return String(value)
   if (abs >= 1e7 || abs < 1e-4) return value.toExponential(6)
   return Number(value.toPrecision(8)).toString()
 }
@@ -25,9 +27,14 @@ function imagSign(cleanReal: number, cleanImag: number): string {
   return cleanReal === 0 ? '-' : ' - '
 }
 
-export function formatComplex(real: number, imag: number): string {
-  const cleanImag = suppressRoundoff(imag, real)
-  const cleanReal = suppressRoundoff(real, cleanImag)
+export function formatComplex(
+  real: number | null | undefined,
+  imag: number | null | undefined,
+): string {
+  const r = real ?? 0
+  const i = imag ?? 0
+  const cleanImag = suppressRoundoff(i, r)
+  const cleanReal = suppressRoundoff(r, cleanImag)
   if (cleanImag === 0) return formatValue(cleanReal)
   const formattedReal = cleanReal === 0 ? '' : formatValue(cleanReal)
   const formattedImag =
