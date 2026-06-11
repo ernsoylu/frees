@@ -1,159 +1,119 @@
-import { Checkbox, Group, MultiSelect, Select, Stack, Text } from '@mantine/core'
-import { TableRowResult } from './api'
+import { useEffect, useState } from 'react'
+import { Button, Group, Stack, Tabs, Text } from '@mantine/core'
+import { TableRowResult, VariableResult, getFluids } from './api'
 import { ParamRow } from './ParametricTableTab'
-import Plot, { PlotSeries } from './Plot'
-
-export interface PlotConfig {
-  xVar: string | null
-  yVars: string[]
-  xLog: boolean
-  yLog: boolean
-}
-
-export const DEFAULT_PLOT_CONFIG: PlotConfig = {
-  xVar: null,
-  yVars: [],
-  xLog: false,
-  yLog: false,
-}
-
-/**
- * Value of one variable in one run: the solved value when the run
- * succeeded, otherwise the numeric value typed into the table cell.
- */
-function runValue(
-  row: ParamRow,
-  result: TableRowResult | undefined,
-  name: string,
-): number | undefined {
-  const solved = result?.success ? result.values[name] : undefined
-  if (solved !== undefined) return solved
-  const raw = (row.values[name] ?? '').trim()
-  if (raw === '') return undefined
-  const value = Number(raw)
-  return Number.isFinite(value) ? value : undefined
-}
-
-/** One overlay series per Y variable, in run order, skipping unusable runs. */
-function buildSeries(
-  rows: ParamRow[],
-  results: TableRowResult[],
-  xVar: string,
-  yVars: string[],
-): PlotSeries[] {
-  return yVars.map((yVar) => {
-    const x: number[] = []
-    const y: number[] = []
-    rows.forEach((row, i) => {
-      const xValue = runValue(row, results[i], xVar)
-      const yValue = runValue(row, results[i], yVar)
-      if (xValue !== undefined && yValue !== undefined) {
-        x.push(xValue)
-        y.push(yValue)
-      }
-    })
-    return { name: yVar, x, y }
-  })
-}
+import { PlotSpec } from './plots/types'
+import { detectStates } from './plots/stateTable'
+import PlotCard from './plots/PlotCard'
+import PlotConfigModal from './plots/PlotConfigModal'
 
 interface Props {
+  plots: PlotSpec[]
+  onPlotsChange: (plots: PlotSpec[]) => void
+  solvedVariables: VariableResult[]
   tableVars: string[]
   rows: ParamRow[]
   results: TableRowResult[]
-  config: PlotConfig
-  onConfigChange: (config: PlotConfig) => void
 }
 
-function PlotBody({
-  tableVars,
-  rows,
-  results,
-  config,
-}: Readonly<Omit<Props, 'onConfigChange'>>) {
-  if (tableVars.length === 0 || results.length === 0) {
-    return (
-      <Text size="sm" c="dimmed">
-        No table data to plot yet. Configure columns in the Parametric Table
-        tab, run Check Table, then Solve Table — the runs become the plot
-        data.
-      </Text>
-    )
-  }
-  if (config.xVar === null || config.yVars.length === 0) {
-    return (
-      <Text size="sm" c="dimmed">
-        Choose an X-axis variable and at least one Y-axis variable to plot
-        the table runs.
-      </Text>
-    )
-  }
-  return (
-    <Plot
-      series={buildSeries(rows, results, config.xVar, config.yVars)}
-      xLabel={config.xVar}
-      yLabel={config.yVars.join(', ')}
-      xLog={config.xLog}
-      yLog={config.yLog}
-    />
-  )
-}
-
+/**
+ * The Plots window: any number of plots (property diagrams, psychrometric
+ * charts, X-Y parametric plots), each with its own configuration, format
+ * options and export menu.
+ */
 export default function PlotTab({
+  plots,
+  onPlotsChange,
+  solvedVariables,
   tableVars,
   rows,
   results,
-  config,
-  onConfigChange,
 }: Readonly<Props>) {
+  const [fluids, setFluids] = useState<string[]>([])
+  const [activePlot, setActivePlot] = useState<string | null>(plots[0]?.id ?? null)
+  const [editing, setEditing] = useState<PlotSpec | null>(null)
+  const [adding, setAdding] = useState(false)
+
+  useEffect(() => {
+    void getFluids().then(setFluids)
+  }, [])
+
+  const states = detectStates(solvedVariables)
+
+  function addPlot(spec: PlotSpec) {
+    onPlotsChange([...plots, spec])
+    setActivePlot(spec.id)
+    setAdding(false)
+  }
+
+  function updatePlot(spec: PlotSpec) {
+    onPlotsChange(plots.map((p) => (p.id === spec.id ? spec : p)))
+    setEditing(null)
+  }
+
+  function removePlot(id: string) {
+    const next = plots.filter((p) => p.id !== id)
+    onPlotsChange(next)
+    if (activePlot === id) {
+      setActivePlot(next[0]?.id ?? null)
+    }
+  }
+
+  const current = plots.find((p) => p.id === activePlot) ?? plots[0] ?? null
+
   return (
     <Stack gap="sm" style={{ flex: 1, minHeight: 0 }}>
-      <Group gap="md" align="flex-end">
-        <Select
-          label="X-Axis"
-          size="xs"
-          w={160}
-          data={tableVars}
-          value={config.xVar}
-          onChange={(xVar) => onConfigChange({ ...config, xVar })}
-          placeholder="variable"
-          searchable
-        />
-        <MultiSelect
-          label="Y-Axis (overlay multiple)"
-          size="xs"
-          w={280}
-          data={tableVars}
-          value={config.yVars}
-          onChange={(yVars) => onConfigChange({ ...config, yVars })}
-          placeholder="variables"
-          searchable
-        />
-        <Checkbox
-          label="Log X"
-          size="xs"
-          checked={config.xLog}
-          onChange={(e) =>
-            onConfigChange({ ...config, xLog: e.currentTarget.checked })
-          }
-        />
-        <Checkbox
-          label="Log Y"
-          size="xs"
-          checked={config.yLog}
-          onChange={(e) =>
-            onConfigChange({ ...config, yLog: e.currentTarget.checked })
-          }
-        />
+      <Group justify="space-between">
+        <Tabs
+          value={current?.id ?? null}
+          onChange={(id) => id && setActivePlot(id)}
+          variant="pills"
+        >
+          <Tabs.List>
+            {plots.map((p) => (
+              <Tabs.Tab key={p.id} value={p.id}>
+                {p.name}
+              </Tabs.Tab>
+            ))}
+          </Tabs.List>
+        </Tabs>
+        <Button size="xs" onClick={() => setAdding(true)}>
+          Add Plot
+        </Button>
       </Group>
 
-      <div style={{ flex: 1, minHeight: 0 }}>
-        <PlotBody
+      {(adding || editing) && (
+        <PlotConfigModal
+          spec={editing}
+          fluids={fluids}
           tableVars={tableVars}
-          rows={rows}
-          results={results}
-          config={config}
+          hasStates={states.indices.length > 0}
+          onSave={editing ? updatePlot : addPlot}
+          onClose={() => {
+            setAdding(false)
+            setEditing(null)
+          }}
         />
-      </div>
+      )}
+
+      {current === null && (
+        <Text size="sm" c="dimmed">
+          No plots yet. Click "Add Plot" to create a property diagram (T-s,
+          log P-h, P-v, …), a psychrometric chart, or an X-Y plot of
+          parametric table runs.
+        </Text>
+      )}
+      {current !== null && (
+        <PlotCard
+          key={current.id}
+          spec={current}
+          states={states}
+          tableRows={rows}
+          tableResults={results}
+          onConfigure={() => setEditing(current)}
+          onRemove={() => removePlot(current.id)}
+        />
+      )}
     </Stack>
   )
 }

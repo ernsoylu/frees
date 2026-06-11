@@ -1,0 +1,100 @@
+/** Plot model shared by the Plots tab, the config modal and exports. */
+
+export type PlotKind = 'xy' | 'property' | 'psychro'
+
+export const DIAGRAM_TYPES = [
+  { value: 'T-s', label: 'T-s (temperature–entropy)' },
+  { value: 'P-h', label: 'log P-h (pressure–enthalpy)' },
+  { value: 'P-v', label: 'P-v (pressure–volume)' },
+  { value: 'T-v', label: 'T-v (temperature–volume)' },
+  { value: 'h-s', label: 'h-s (Mollier)' },
+  { value: 'P-T', label: 'P-T (saturation curve)' },
+]
+
+/** Presentation options shared by every plot kind. */
+export interface PlotFormat {
+  title: string
+  xLabel: string
+  yLabel: string
+  xLog: boolean | null
+  yLog: boolean | null
+  grid: boolean
+  legend: boolean
+  fontSize: number
+  celsius: boolean
+}
+
+export interface XYConfig {
+  xVar: string | null
+  yVars: string[]
+}
+
+export interface PropertyConfig {
+  fluid: string
+  diagram: string
+  quality: boolean
+  isolines: boolean
+  overlayStates: boolean
+  connectStates: boolean
+  closeCycle: boolean
+}
+
+export interface PsychroConfig {
+  pressureKPa: number
+  tMinC: number
+  tMaxC: number
+  wetBulb: boolean
+  enthalpy: boolean
+  volume: boolean
+}
+
+export interface PlotSpec {
+  id: string
+  name: string
+  kind: PlotKind
+  xy: XYConfig
+  property: PropertyConfig
+  psychro: PsychroConfig
+  format: PlotFormat
+}
+
+export function defaultFormat(kind: PlotKind): PlotFormat {
+  return {
+    title: '',
+    xLabel: '',
+    yLabel: '',
+    xLog: null,
+    yLog: null,
+    grid: true,
+    legend: true,
+    fontSize: 13,
+    celsius: kind === 'psychro',
+  }
+}
+
+export function newPlotSpec(kind: PlotKind, name: string): PlotSpec {
+  return {
+    id: crypto.randomUUID(),
+    name,
+    kind,
+    xy: { xVar: null, yVars: [] },
+    property: {
+      fluid: 'Water',
+      diagram: 'T-s',
+      quality: true,
+      isolines: true,
+      overlayStates: true,
+      connectStates: true,
+      closeCycle: false,
+    },
+    psychro: {
+      pressureKPa: 101.325,
+      tMinC: 0,
+      tMaxC: 50,
+      wetBulb: true,
+      enthalpy: true,
+      volume: false,
+    },
+    format: defaultFormat(kind),
+  }
+}
