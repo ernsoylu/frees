@@ -320,6 +320,9 @@ public final class UnitChecker {
                 Dim arg = dimOf(args.get(0));
                 yield arg.known() ? Dim.of(arg.quantity().pow(0.5)) : Dim.UNKNOWN;
             }
+            // Integral(f, t, a, b) has the dimensions of f*t; the checker
+            // does not track them, so stay agnostic instead of warning.
+            case "integral" -> Dim.UNKNOWN;
             default -> {
                 // sin, cos, tan, exp, ln, log10, arc*: argument must be dimensionless.
                 Dim arg = dimOf(args.get(0));
