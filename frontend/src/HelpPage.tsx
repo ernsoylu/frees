@@ -460,7 +460,38 @@ export default function HelpPage() {
               </Code>
             </Paper>
             <Text size="sm" c="dimmed">
-              Paste this in the Equations Window, click <strong>Check (F4)</strong> to verify (2 variables, 2 equations), and click <strong>Solve (F2)</strong>. The solver will find the root: <code>x = 1.562</code>, <code>y = 1.438</code>.
+              Paste this in the Editor, click <strong>Check (F4)</strong> to verify (2 variables, 2 equations), and click <strong>Solve (F2)</strong>. The solver will find the root: <code>x = 1.562</code>, <code>y = 1.438</code>.
+            </Text>
+
+            <Title order={3} mt="lg">Markdown Reports & Inline Equations</Title>
+            <Text size="md" style={{ lineHeight: 1.6 }}>
+              frEES allows you to mix standard Markdown and mathematical equations directly in the <strong>Editor</strong>. When you click <strong>Check</strong> or <strong>Solve</strong>, the solver automatically extracts and evaluates all equations, generating a beautifully integrated <strong>Formatted</strong> report.
+            </Text>
+            <Alert color="blue" title="Prose with Equations" mt="xs">
+              You can write inline variables and equations anywhere in your text. Any statement containing an <code>=</code> sign is automatically parsed as an equation, solved, and formatted as a LaTeX/KaTeX formula.
+            </Alert>
+            <Paper withBorder p="md" bg="dark.8" radius="md" style={{ position: 'relative' }}>
+              <CopyButton code={`# Rankine Cycle Report
+The initial temperature is T1 = 100 [C] and initial pressure is P1 = 250 [kPa].
+
+Let's compute the enthalpy at state 1:
+h1 = Enthalpy(Water, T=T1, P=P1)
+
+* The variables \`T1\`, \`P1\`, and \`h1\` are resolved simultaneously.
+* Markdown formatting such as headers, bullets, bold text, and inline code are preserved in the Formatted report view.`} />
+              <Code block style={{ background: 'transparent' }}>
+                {`# Rankine Cycle Report
+The initial temperature is T1 = 100 [C] and initial pressure is P1 = 250 [kPa].
+
+Let's compute the enthalpy at state 1:
+h1 = Enthalpy(Water, T=T1, P=P1)
+
+* The variables \`T1\`, \`P1\`, and \`h1\` are resolved simultaneously.
+* Markdown formatting such as headers, bullets, bold text, and inline code are preserved in the Formatted report view.`}
+              </Code>
+            </Paper>
+            <Text size="sm" c="dimmed">
+              Paste this example in the <strong>Editor</strong> tab, then toggle the control at the top-right to <strong>Formatted</strong> to see the rendered KaTeX equations integrated directly within the markdown report.
             </Text>
           </Stack>
         );
@@ -469,7 +500,7 @@ export default function HelpPage() {
           <Stack gap="md">
             <Title order={2} c="blue.4">2. Equation Syntax & Math Functions</Title>
             <Text>
-              The equations window allows you to enter relationships between variables using standard mathematical notation.
+              The Editor allows you to enter relationships between variables using standard mathematical notation.
             </Text>
             <Title order={3}>Rules & Syntax</Title>
             <List spacing="xs">
@@ -658,7 +689,7 @@ export default function HelpPage() {
           <Stack gap="md">
             <Title order={2} c="blue.4">6. Functions & Procedures (Imperative Logic)</Title>
             <Text style={{ lineHeight: 1.6 }}>
-              While the global equations window is declarative and order-independent, you can write procedural, sequential logic using **Functions** and **Procedures**. Inside these blocks, code is executed top-to-bottom.
+              While the global Editor window is declarative and order-independent, you can write procedural, sequential logic using **Functions** and **Procedures**. Inside these blocks, code is executed top-to-bottom.
             </Text>
 
             <Title order={3}>Functions (Scalar output)</Title>
