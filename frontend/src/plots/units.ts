@@ -23,9 +23,7 @@ export const PROPERTY_UNITS: Record<string, UnitChoice[]> = {
   T: [
     u('K', 1),
     u('°C', 1, -273.15),
-    u('C', 1, -273.15),
     u('°F', 1.8, -459.67),
-    u('F', 1.8, -459.67),
     u('R', 1.8),
   ],
   P: [
@@ -47,30 +45,22 @@ export const PROPERTY_UNITS: Record<string, UnitChoice[]> = {
   ],
   s: [
     u('J/kg·K', 1),
-    u('J/kg-K', 1),
     u('kJ/kg·K', 1e-3),
-    u('kJ/kg-K', 1e-3),
     u('J/kg-C', 1),
     u('kJ/kg-C', 1e-3),
     u('Btu/lbm·R', 1 / CAL_KG),
-    u('Btu/lbm-R', 1 / CAL_KG),
     u('kcal/kg·K', 1 / CAL_KG),
     u('kcal/kg-C', 1 / CAL_KG),
   ],
   v: [
     u('m³/kg', 1),
-    u('m^3/kg', 1),
     u('L/kg', 1e3),
     u('ft³/lbm', FT3_PER_LBM),
-    u('ft^3/lbm', FT3_PER_LBM),
   ],
   rho: [
     u('kg/m³', 1),
-    u('kg/m^3', 1),
     u('g/cm³', 1e-3),
-    u('g/cm^3', 1e-3),
     u('lbm/ft³', 1 / FT3_PER_LBM),
-    u('lbm/ft^3', 1 / FT3_PER_LBM),
   ],
   w: [
     u('kg/kg', 1),
@@ -105,6 +95,16 @@ export function defaultUnitId(property: string, celsius: boolean): string {
   }
 }
 
+function normalizeId(id: string): string {
+  return id
+    .replace(/°/g, '')
+    .replace(/[··]/g, '-')
+    .replace(/[\^³³]/g, '3')
+    .replace(/\*/g, '')
+    .trim()
+    .toLowerCase()
+}
+
 /** Resolves a unit selection, falling back to the property default. */
 export function resolveUnit(
   property: string,
@@ -113,7 +113,8 @@ export function resolveUnit(
 ): UnitChoice {
   const choices = PROPERTY_UNITS[property] ?? [u('-', 1)]
   const id = selectedId ?? defaultUnitId(property, celsius)
-  return choices.find((c) => c.id === id) ?? choices[0]
+  const normId = normalizeId(id)
+  return choices.find((c) => normalizeId(c.id) === normId) ?? choices[0]
 }
 
 export function unitIdsFor(property: string): string[] {
