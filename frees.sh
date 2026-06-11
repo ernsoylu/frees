@@ -6,14 +6,13 @@ set -euo pipefail
 cd "$(dirname "$0")"
 
 usage() {
-    echo "Usage: $0 {start|stop|restart|status|logs|rebuild|build}"
+    echo "Usage: $0 {start|stop|restart|status|logs|build}"
     echo
     echo "  start           Build (if needed) and start backend + frontend containers"
     echo "  stop            Stop and remove the containers"
     echo "  restart         stop, then start"
     echo "  status          Show container status"
     echo "  logs            Follow container logs (Ctrl-C to detach)"
-    echo "  rebuild         Force a clean image rebuild, then start"
     echo "  build [target]  Build docker images (target: backend, frontend, or all (default))"
     exit 1
 }
@@ -40,12 +39,6 @@ case "${1:-}" in
         ;;
     logs)
         docker compose logs -f
-        ;;
-    rebuild)
-        docker compose down
-        docker compose build --no-cache
-        docker compose up -d
-        echo "frEES rebuilt and started: http://localhost:5173"
         ;;
     build)
         target="${2:-all}"
