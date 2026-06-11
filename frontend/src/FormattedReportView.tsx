@@ -6,34 +6,131 @@ interface FormattedReportViewProps {
   report: string
 }
 
+interface ParsedPart {
+  type: 'text' | 'inline_math' | 'block_math' | 'bold' | 'italic' | 'code'
+  value: string
+}
+
+function splitReportText(text: string): ParsedPart[] {
+  const result: ParsedPart[] = []
+  let i = 0
+  let lastTextStart = 0
+
+  const flushText = (endIdx: number) => {
+    if (endIdx > lastTextStart) {
+      result.push({ type: 'text', value: text.substring(lastTextStart, endIdx) })
+    }
+  }
+
+  while (i < text.length) {
+    if (text.startsWith('[MATH_INLINE:', i)) {
+      flushText(i)
+      let depth = 1
+      let j = i + 13
+      while (j < text.length && depth > 0) {
+        if (text[j] === '[') {
+          depth++
+        } else if (text[j] === ']') {
+          depth--
+        }
+        j++
+      }
+      const mathContent = text.substring(i + 13, j - 1)
+      result.push({ type: 'inline_math', value: mathContent })
+      i = j
+      lastTextStart = i
+      continue
+    }
+
+    if (text.startsWith('[MATH_BLOCK:', i)) {
+      flushText(i)
+      let depth = 1
+      let j = i + 12
+      while (j < text.length && depth > 0) {
+        if (text[j] === '[') {
+          depth++
+        } else if (text[j] === ']') {
+          depth--
+        }
+        j++
+      }
+      const mathContent = text.substring(i + 12, j - 1)
+      result.push({ type: 'block_math', value: mathContent })
+      i = j
+      lastTextStart = i
+      continue
+    }
+
+    if (text.startsWith('**', i)) {
+      const endBold = text.indexOf('**', i + 2)
+      if (endBold !== -1) {
+        flushText(i)
+        result.push({ type: 'bold', value: text.substring(i + 2, endBold) })
+        i = endBold + 2
+        lastTextStart = i
+        continue
+      }
+    }
+
+    if (text.startsWith('*', i)) {
+      const endItalic = text.indexOf('*', i + 1)
+      if (endItalic !== -1) {
+        flushText(i)
+        result.push({ type: 'italic', value: text.substring(i + 1, endItalic) })
+        i = endItalic + 1
+        lastTextStart = i
+        continue
+      }
+    }
+
+    if (text.startsWith('`', i)) {
+      const endCode = text.indexOf('`', i + 1)
+      if (endCode !== -1) {
+        flushText(i)
+        result.push({ type: 'code', value: text.substring(i + 1, endCode) })
+        i = endCode + 1
+        lastTextStart = i
+        continue
+      }
+    }
+
+    i++
+  }
+
+  flushText(text.length)
+  return result
+}
+
 function renderInlineContent(text: string): React.ReactNode[] {
-  // Regex to split by inline math, block math, bold, italic, and inline code
-  const parts = text.split(/(\[MATH_INLINE:[^\]]+\]|\[MATH_BLOCK:[^\]]+\]|\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`)/g)
+  const parts = splitReportText(text)
   return parts.map((part, index) => {
-    if (part.startsWith('[MATH_INLINE:') && part.endsWith(']')) {
-      const math = part.substring(13, part.length - 1)
-      return <Latex key={index} math={math} />
+    switch (part.type) {
+      case 'inline_math':
+        return <Latex key={index} math={part.value} />
+      case 'block_math':
+        return <Latex key={index} math={part.value} block />
+      case 'bold':
+        return <strong key={index}>{part.value}</strong>
+      case 'italic':
+        return <em key={index}>{part.value}</em>
+      case 'code':
+        return (
+          <code
+            key={index}
+            style={{
+              fontFamily: 'var(--mantine-font-family-monospace)',
+              backgroundColor: 'var(--mantine-color-dark-6)',
+              padding: '2px 4px',
+              borderRadius: '4px',
+              fontSize: '90%',
+            }}
+          >
+            {part.value}
+          </code>
+        )
+      default:
+        return part.value
     }
-    if (part.startsWith('[MATH_BLOCK:') && part.endsWith(']')) {
-      const math = part.substring(12, part.length - 1)
-      return <Latex key={index} math={math} block />
-    }
-    if (part.startsWith('**') && part.endsWith('**')) {
-      return <strong key={index}>{part.substring(2, part.length - 2)}</strong>
-    }
-    if (part.startsWith('*') && part.endsWith('*')) {
-      return <em key={index}>{part.substring(1, part.length - 1)}</em>
-    }
-    if (part.startsWith('`') && part.endsWith('`')) {
-      return <code key={index} style={{
-        fontFamily: 'var(--mantine-font-family-monospace)',
-        backgroundColor: 'var(--mantine-color-dark-6)',
-        padding: '2px 4px',
-        borderRadius: '4px',
-        fontSize: '90%'
-      }}>{part.substring(1, part.length - 1)}</code>
-    }
-    return part
   })
 }
 
