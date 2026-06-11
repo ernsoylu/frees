@@ -11,11 +11,32 @@ export const DIAGRAM_TYPES = [
   { value: 'P-T', label: 'P-T (saturation curve)' },
 ]
 
+/** Axis properties of each property diagram type. */
+export function diagramAxes(diagram: string): { x: string; y: string } {
+  switch (diagram) {
+    case 'P-h':
+      return { x: 'h', y: 'P' }
+    case 'P-v':
+      return { x: 'v', y: 'P' }
+    case 'T-v':
+      return { x: 'v', y: 'T' }
+    case 'h-s':
+      return { x: 's', y: 'h' }
+    case 'P-T':
+      return { x: 'T', y: 'P' }
+    default:
+      return { x: 's', y: 'T' }
+  }
+}
+
 /** Presentation options shared by every plot kind. */
 export interface PlotFormat {
   title: string
   xLabel: string
   yLabel: string
+  /** Display unit ids per axis (see plots/units.ts); null = default. */
+  xUnit: string | null
+  yUnit: string | null
   xLog: boolean | null
   yLog: boolean | null
   grid: boolean
@@ -46,6 +67,8 @@ export interface PsychroConfig {
   wetBulb: boolean
   enthalpy: boolean
   volume: boolean
+  overlayStates: boolean
+  connectStates: boolean
 }
 
 export interface PlotSpec {
@@ -63,6 +86,8 @@ export function defaultFormat(kind: PlotKind): PlotFormat {
     title: '',
     xLabel: '',
     yLabel: '',
+    xUnit: null,
+    yUnit: null,
     xLog: null,
     yLog: null,
     grid: true,
@@ -94,6 +119,8 @@ export function newPlotSpec(kind: PlotKind, name: string): PlotSpec {
       wetBulb: true,
       enthalpy: true,
       volume: false,
+      overlayStates: true,
+      connectStates: false,
     },
     format: defaultFormat(kind),
   }

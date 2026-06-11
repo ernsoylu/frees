@@ -6,7 +6,43 @@ import { VariableResult } from '../api'
  * EES convention for cycle analyses. All values are SI.
  */
 
-const STATE_PROPERTIES = ['T', 'P', 'v', 'u', 'h', 's', 'x', 'rho', 'w']
+/** Canonical property columns, in display order. */
+const STATE_PROPERTIES = ['T', 'P', 'v', 'u', 'h', 's', 'x', 'rho', 'w', 'Twb', 'Tdp', 'rh']
+
+const PROPERTY_ALIASES: Record<string, string> = {
+  t: 'T',
+  drybulb: 'T',
+  tdrybulb: 'T',
+  p: 'P',
+  pressure: 'P',
+  v: 'v',
+  volume: 'v',
+  u: 'u',
+  internalenergy: 'u',
+  h: 'h',
+  enthalpy: 'h',
+  s: 's',
+  entropy: 's',
+  x: 'x',
+  quality: 'x',
+  rho: 'rho',
+  density: 'rho',
+  w: 'w',
+  humrat: 'w',
+  omega: 'w',
+  humidityratio: 'w',
+  twb: 'Twb',
+  twetbulb: 'Twb',
+  wetbulb: 'Twb',
+  tdp: 'Tdp',
+  tdew: 'Tdp',
+  tdewpoint: 'Tdp',
+  dewpoint: 'Tdp',
+  rh: 'rh',
+  relhum: 'rh',
+  phi: 'rh',
+  relativehumidity: 'rh',
+}
 
 export interface StateTable {
   /** State indices in ascending numeric order. */
@@ -18,13 +54,12 @@ export interface StateTable {
 }
 
 function matchStateVariable(name: string): { property: string; index: number } | null {
-  const m = /^([a-z]+)(?:_?(\d+)|\[(\d+)\])$/i.exec(name)
+  const m = /^([a-z]+(?:_[a-z]+)*?)_?(\d+)$|^([a-z]+)\[(\d+)\]$/i.exec(name)
   if (!m) return null
-  const property = STATE_PROPERTIES.find(
-    (p) => p.toLowerCase() === m[1].toLowerCase(),
-  )
+  const base = (m[1] ?? m[3]).replace(/_/g, '').toLowerCase()
+  const property = PROPERTY_ALIASES[base]
   if (!property) return null
-  return { property, index: Number(m[2] ?? m[3]) }
+  return { property, index: Number(m[2] ?? m[4]) }
 }
 
 export function detectStates(variables: VariableResult[]): StateTable {

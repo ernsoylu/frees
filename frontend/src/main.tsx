@@ -4,6 +4,7 @@ import '@mantine/core/styles.css'
 import 'katex/dist/katex.min.css'
 import { createTheme, MantineProvider } from '@mantine/core'
 import App from './App'
+import HelpPage from './HelpPage'
 import './index.css'
 
 const theme = createTheme({
@@ -13,10 +14,12 @@ const theme = createTheme({
   defaultRadius: 'md',
 })
 
+const isHelpPage = window.location.pathname === '/help';
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <MantineProvider theme={theme} defaultColorScheme="dark">
-      <App />
+      {isHelpPage ? <HelpPage /> : <App />}
     </MantineProvider>
   </React.StrictMode>,
 )

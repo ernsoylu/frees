@@ -101,7 +101,7 @@ class UnitCheckerTest {
         // Solving for a denominator: mu = rho*u*D/Re.
         var mu = solver.deriveUnits("Re = rho * u * D / mu",
                 Map.of("re", "-", "rho", "kg/m^3", "u", "m/s", "d", "m"));
-        assertEquals("kg/m-s", mu.get("mu"));
+        assertEquals("Pa-s", mu.get("mu"));
 
         // Solving through a power: E = 0.5*m*v^2 gives v = sqrt(J/kg) = m/s.
         var v = solver.deriveUnits("E = 0.5 * m * v^2",

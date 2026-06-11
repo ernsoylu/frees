@@ -21,8 +21,10 @@ import {
   PropertyConfig,
   PsychroConfig,
   XYConfig,
+  diagramAxes,
   newPlotSpec,
 } from './types'
+import { defaultUnitId, unitIdsFor } from './units'
 
 interface Props {
   /** Existing spec to edit, or null to create a new plot. */
@@ -208,19 +210,54 @@ function PsychroSection({
           onChange={(e) => onChange({ ...config, volume: e.currentTarget.checked })}
         />
       </Group>
+      <Divider label="State points" labelPosition="left" />
+      <Text size="xs" c="dimmed">
+        States with a dry-bulb temperature and a humidity ratio (e.g. T1 and
+        w1) are drawn on the chart.
+      </Text>
+      <Group gap="md">
+        <Checkbox
+          label="Overlay states"
+          size="xs"
+          checked={config.overlayStates}
+          onChange={(e) =>
+            onChange({ ...config, overlayStates: e.currentTarget.checked })
+          }
+        />
+        <Checkbox
+          label="Connect in order"
+          size="xs"
+          checked={config.connectStates}
+          disabled={!config.overlayStates}
+          onChange={(e) =>
+            onChange({ ...config, connectStates: e.currentTarget.checked })
+          }
+        />
+      </Group>
     </Stack>
   )
 }
 
+/** Axis properties whose units can be selected for the current plot. */
+function axisProperties(spec: PlotSpec): { x: string; y: string } | null {
+  if (spec.kind === 'property') {
+    return diagramAxes(spec.property.diagram)
+  }
+  if (spec.kind === 'psychro') {
+    return { x: 'T', y: 'w' }
+  }
+  return null
+}
+
 function FormatSection({
-  format,
-  kind,
+  spec,
   onChange,
 }: Readonly<{
-  format: PlotFormat
-  kind: PlotKind
+  spec: PlotSpec
   onChange: (format: PlotFormat) => void
 }>) {
+  const format = spec.format
+  const axes = axisProperties(spec)
   return (
     <Stack gap="xs">
       <Group grow>
@@ -258,6 +295,24 @@ function FormatSection({
           onChange={(e) => onChange({ ...format, yLabel: e.currentTarget.value })}
         />
       </Group>
+      {axes && (
+        <Group grow>
+          <Select
+            label={`X unit (${axes.x})`}
+            size="xs"
+            data={unitIdsFor(axes.x)}
+            value={format.xUnit ?? defaultUnitId(axes.x, format.celsius)}
+            onChange={(xUnit) => onChange({ ...format, xUnit })}
+          />
+          <Select
+            label={`Y unit (${axes.y})`}
+            size="xs"
+            data={unitIdsFor(axes.y)}
+            value={format.yUnit ?? defaultUnitId(axes.y, false)}
+            onChange={(yUnit) => onChange({ ...format, yUnit })}
+          />
+        </Group>
+      )}
       <Group gap="md">
         <Checkbox
           label="Log X"
@@ -285,14 +340,6 @@ function FormatSection({
           checked={format.legend}
           onChange={(e) => onChange({ ...format, legend: e.currentTarget.checked })}
         />
-        {kind !== 'xy' && (
-          <Checkbox
-            label="Temperatures in °C"
-            size="xs"
-            checked={format.celsius}
-            onChange={(e) => onChange({ ...format, celsius: e.currentTarget.checked })}
-          />
-        )}
       </Group>
     </Stack>
   )
@@ -356,7 +403,17 @@ export default function PlotConfigModal({
             config={draft.property}
             fluids={fluids}
             hasStates={hasStates}
-            onChange={(property) => setDraft({ ...draft, property })}
+            onChange={(property) =>
+              setDraft((d) => ({
+                ...d,
+                property,
+                // A new diagram has different axes; drop unit overrides.
+                format:
+                  property.diagram === d.property.diagram
+                    ? d.format
+                    : { ...d.format, xUnit: null, yUnit: null },
+              }))
+            }
           />
         )}
         {draft.kind === 'psychro' && (
@@ -368,8 +425,7 @@ export default function PlotConfigModal({
 
         <Divider label="Format" labelPosition="left" />
         <FormatSection
-          format={draft.format}
-          kind={draft.kind}
+          spec={draft}
           onChange={(format) => setDraft({ ...draft, format })}
         />
 

@@ -120,7 +120,7 @@ function buildFigure(
     return buildPropertyFigure(diagram, spec.property, spec.format, states, theme)
   }
   if (spec.kind === 'psychro' && psychart) {
-    return buildPsychroFigure(psychart, spec.psychro, spec.format, theme)
+    return buildPsychroFigure(psychart, spec.psychro, spec.format, states, theme)
   }
   if (spec.kind === 'xy' && spec.xy.xVar && spec.xy.yVars.length > 0) {
     const series = buildXYSeries(tableRows, tableResults, spec.xy.xVar, spec.xy.yVars)

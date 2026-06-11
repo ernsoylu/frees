@@ -7,6 +7,7 @@ import type {
 import { DiagramCurve, DiagramResponse, PsychartResponse } from '../api'
 import { PlotFormat, PropertyConfig, PsychroConfig } from './types'
 import { StateTable, statesForAxes } from './stateTable'
+import { UnitChoice, resolveUnit } from './units'
 
 /**
  * Builds Plotly figures for every plot kind in one place so the on-screen
@@ -57,30 +58,10 @@ const FAMILY_STYLES: Record<string, FamilyStyle> = {
   volume: { color: '#b197fc', width: 1, dash: 'dashdot' },
 }
 
-/** Display transform of an SI axis property: textbook kPa/kJ scaling. */
-function axisScale(property: string): number {
-  return property === 'P' || property === 'h' || property === 's' ? 1e-3 : 1
-}
-
-function axisOffset(property: string, celsius: boolean): number {
-  return property === 'T' && celsius ? -273.15 : 0
-}
-
-export function axisDisplayLabel(property: string, celsius: boolean): string {
-  switch (property) {
-    case 'T':
-      return celsius ? 'T [°C]' : 'T [K]'
-    case 'P':
-      return 'P [kPa]'
-    case 'h':
-      return 'h [kJ/kg]'
-    case 's':
-      return 's [kJ/kg·K]'
-    case 'v':
-      return 'v [m³/kg]'
-    default:
-      return property
-  }
+/** Axis title with the active display unit, e.g. "P [kPa]". */
+function axisTitle(property: string, unit: UnitChoice): string {
+  const name = property === 'w' ? 'Humidity ratio ω' : property
+  return `${name} [${unit.label}]`
 }
 
 function transformAxis(
@@ -151,24 +132,31 @@ function baseLayout(
   }
 }
 
+interface StateOverlay {
+  xProperty: string
+  yProperty: string
+  connect: boolean
+  close: boolean
+}
+
 function stateTraces(
-  diagram: DiagramResponse,
-  config: PropertyConfig,
+  overlay: StateOverlay,
   states: StateTable,
   colors: ThemeColors,
-  scales: { xScale: number; xOffset: number; yScale: number; yOffset: number },
+  xUnit: UnitChoice,
+  yUnit: UnitChoice,
 ): PlotlyTrace[] {
-  const points = statesForAxes(states, diagram.xProperty, diagram.yProperty)
+  const points = statesForAxes(states, overlay.xProperty, overlay.yProperty)
   if (points.length === 0) return []
   const looped =
-    config.closeCycle && points.length > 2 ? [...points, points[0]] : points
+    overlay.close && points.length > 2 ? [...points, points[0]] : points
   return [
     {
       type: 'scatter',
-      mode: config.connectStates ? 'lines+markers+text' : 'markers+text',
+      mode: overlay.connect ? 'lines+markers+text' : 'markers+text',
       name: 'States',
-      x: looped.map((p) => p.x * scales.xScale + scales.xOffset),
-      y: looped.map((p) => p.y * scales.yScale + scales.yOffset),
+      x: looped.map((p) => p.x * xUnit.scale + xUnit.offset),
+      y: looped.map((p) => p.y * yUnit.scale + yUnit.offset),
       line: { color: colors.states, width: 2 },
       marker: { color: colors.states, size: 9 },
       text: looped.map((p) => String(p.index)),
@@ -187,46 +175,50 @@ export function buildPropertyFigure(
   theme: PlotTheme,
 ): PlotlyFigure {
   const colors = THEMES[theme]
-  const xScale = axisScale(diagram.xProperty)
-  const yScale = axisScale(diagram.yProperty)
-  const xOffset = axisOffset(diagram.xProperty, format.celsius)
-  const yOffset = axisOffset(diagram.yProperty, format.celsius)
+  const xUnit = resolveUnit(diagram.xProperty, format.xUnit, format.celsius)
+  const yUnit = resolveUnit(diagram.yProperty, format.yUnit, format.celsius)
 
   const traces: PlotlyTrace[] = []
   for (const curve of diagram.isolines) {
     if (curve.family === 'quality' && !config.quality) continue
     if (curve.family !== 'quality' && !config.isolines) continue
     const style = FAMILY_STYLES[curve.family] ?? FAMILY_STYLES.isobar
-    traces.push(curveTrace(curve, style, xScale, xOffset, yScale, yOffset))
+    traces.push(curveTrace(curve, style, xUnit.scale, xUnit.offset, yUnit.scale, yUnit.offset))
   }
   for (const dome of diagram.dome) {
     traces.push({
       ...curveTrace(
         dome,
         { color: colors.dome, width: 2.5, dash: 'solid' },
-        xScale,
-        xOffset,
-        yScale,
-        yOffset,
+        xUnit.scale,
+        xUnit.offset,
+        yUnit.scale,
+        yUnit.offset,
       ),
       showlegend: true,
     })
   }
   if (config.overlayStates) {
     traces.push(
-      ...stateTraces(diagram, config, states, colors, {
-        xScale,
-        xOffset,
-        yScale,
-        yOffset,
-      }),
+      ...stateTraces(
+        {
+          xProperty: diagram.xProperty,
+          yProperty: diagram.yProperty,
+          connect: config.connectStates,
+          close: config.closeCycle,
+        },
+        states,
+        colors,
+        xUnit,
+        yUnit,
+      ),
     )
   }
 
   const layout = baseLayout(
     format,
-    axisDisplayLabel(diagram.xProperty, format.celsius),
-    axisDisplayLabel(diagram.yProperty, format.celsius),
+    axisTitle(diagram.xProperty, xUnit),
+    axisTitle(diagram.yProperty, yUnit),
     format.xLog ?? diagram.xLog,
     format.yLog ?? diagram.yLog,
     theme,
@@ -241,10 +233,12 @@ export function buildPsychroFigure(
   chart: PsychartResponse,
   config: PsychroConfig,
   format: PlotFormat,
+  states: StateTable,
   theme: PlotTheme,
 ): PlotlyFigure {
   const colors = THEMES[theme]
-  const xOffset = format.celsius ? -273.15 : 0
+  const xUnit = resolveUnit('T', format.xUnit, format.celsius)
+  const yUnit = resolveUnit('w', format.yUnit, false)
   const traces: PlotlyTrace[] = []
   for (const curve of chart.curves) {
     if (curve.family === 'wetbulb' && !config.wetBulb) continue
@@ -254,17 +248,25 @@ export function buildPsychroFigure(
     const style: FamilyStyle = saturation
       ? { color: colors.dome, width: 2.5, dash: 'solid' }
       : (FAMILY_STYLES[curve.family] ?? FAMILY_STYLES.rh)
-    const trace = curveTrace(curve, style, 1, xOffset, 1, 0)
+    const trace = curveTrace(curve, style, xUnit.scale, xUnit.offset, yUnit.scale, yUnit.offset)
     trace.showlegend = saturation
     traces.push(trace)
   }
-  const xLabel = format.celsius
-    ? 'Dry-bulb temperature [°C]'
-    : 'Dry-bulb temperature [K]'
+  if (config.overlayStates) {
+    traces.push(
+      ...stateTraces(
+        { xProperty: 'T', yProperty: 'w', connect: config.connectStates, close: false },
+        states,
+        colors,
+        xUnit,
+        yUnit,
+      ),
+    )
+  }
   const layout = baseLayout(
     format,
-    xLabel,
-    'Humidity ratio ω [kg/kg dry air]',
+    `Dry-bulb temperature [${xUnit.label}]`,
+    axisTitle('w', yUnit),
     format.xLog ?? false,
     format.yLog ?? false,
     theme,

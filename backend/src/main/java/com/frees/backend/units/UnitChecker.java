@@ -299,11 +299,43 @@ public final class UnitChecker {
         return Dim.UNKNOWN;
     }
 
-    private Dim dimOfCall(Expr.Call c) {
-        // Fluid property calls have property-specific dimensions the checker
-        // does not track; stay agnostic instead of warning.
-        if (c.function().startsWith("prop$")) {
+    /** SI unit expression of each property function output. */
+    private static String propertyUnit(String output) {
+        return switch (output) {
+            case "temperature", "wetbulb", "dewpoint" -> "K";
+            case "pressure" -> "Pa";
+            case "enthalpy", "intenergy" -> "J/kg";
+            case "entropy", "cp", "cv", "specheat" -> "J/kg-K";
+            case "density" -> "kg/m^3";
+            case "volume" -> "m^3/kg";
+            case "viscosity" -> "Pa-s";
+            case "conductivity" -> "W/m-K";
+            case "soundspeed" -> "m/s";
+            case "quality", "relhum", "humrat" -> "-";
+            default -> null;
+        };
+    }
+
+    /** Property calls carry the dimensions of the requested output. */
+    private static Dim propertyDim(String encoded) {
+        String[] parts = encoded.split("\\$");
+        String unit = parts.length > 1 ? propertyUnit(parts[1]) : null;
+        if (unit == null) {
             return Dim.UNKNOWN;
+        }
+        if ("-".equals(unit)) {
+            return Dim.of(Quantity.dimensionless(1.0));
+        }
+        try {
+            return Dim.of(UnitRegistry.parse(unit));
+        } catch (UnitRegistry.UnknownUnitException e) {
+            return Dim.UNKNOWN;
+        }
+    }
+
+    private Dim dimOfCall(Expr.Call c) {
+        if (c.function().startsWith("prop$")) {
+            return propertyDim(c.function());
         }
         List<Expr> args = c.args();
         return switch (c.function()) {
