@@ -38,6 +38,7 @@ import VariableInfoModal, {
 } from './VariableInfoModal'
 import Latex from './Latex'
 import MinMaxModal from './MinMaxModal'
+import FormattedReportView from './FormattedReportView'
 import ConfigureTableModal from './ConfigureTableModal'
 import AlterValuesModal from './AlterValuesModal'
 import ParametricTableTab, { newParamRow, ParamRow } from './ParametricTableTab'
@@ -81,7 +82,17 @@ function loadStopCriteria(): StopCriteria {
   return DEFAULT_STOP_CRITERIA
 }
 
-function FormattedEquationsView({ equations }: Readonly<{ equations: string[] }>) {
+function FormattedEquationsView({
+  equations,
+  report,
+}: Readonly<{
+  equations: string[]
+  report?: string
+}>) {
+  if (report) {
+    return <FormattedReportView report={report} />
+  }
+
   if (equations.length === 0) {
     return (
       <Stack gap="sm" style={{ overflowY: 'auto', flex: 1 }}>
@@ -623,7 +634,7 @@ export default function App() {
                     value={text}
                     onChange={(e) => onTextChange(e.currentTarget.value)}
                     spellCheck={false}
-                    placeholder={'Enter equations, e.g.\nx + y = 3\ny = z - 4'}
+                    placeholder={'Enter equations and markdown notes, e.g.\n# Rankine Cycle\nT1 = 100 [C]\nP1 = 250 [kPa]'}
                     styles={{
                       root: { flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 },
                       wrapper: { flex: 1, display: 'flex', minHeight: 0 },
@@ -637,7 +648,10 @@ export default function App() {
                     }}
                   />
                 ) : (
-                  <FormattedEquationsView equations={formattedEqs} />
+                  <FormattedEquationsView
+                    equations={formattedEqs}
+                    report={result?.formattedReport ?? checkResult?.formattedReport}
+                  />
                 )}
               </>
             )}

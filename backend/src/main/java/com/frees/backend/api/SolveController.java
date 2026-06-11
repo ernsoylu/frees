@@ -8,6 +8,7 @@ import com.frees.backend.core.SolverSettings;
 import com.frees.backend.core.VariableSpec;
 import com.frees.backend.units.UnitRegistry;
 import com.frees.backend.parser.EquationParser;
+import com.frees.backend.parser.MarkdownEquationExtractor;
 import com.frees.backend.props.CoolProp;
 import com.frees.backend.props.PropertyFunctions;
 import org.springframework.http.HttpStatus;
@@ -86,11 +87,12 @@ public class SolveController {
                                 List<String> unitWarnings,
                                 String error,
                                 List<String> formattedEquations,
-                                List<Map<String, Double>> cyclePath) {
+                                List<Map<String, Double>> cyclePath,
+                                String formattedReport) {
 
         static SolveResponse failure(String error) {
             return new SolveResponse(false, List.of(), List.of(), List.of(), null,
-                    List.of(), List.of(), error, List.of(), List.of());
+                    List.of(), List.of(), error, List.of(), List.of(), null);
         }
     }
 
@@ -109,7 +111,8 @@ public class SolveController {
                                 List<String> unitWarnings,
                                 Map<String, String> inferredUnits,
                                 String message,
-                                List<String> formattedEquations) {}
+                                List<String> formattedEquations,
+                                String formattedReport) {}
 
     private static Map<String, String> unitsByVariable(List<VariableInfoDto> variableInfo) {
         Map<String, String> units = new HashMap<>();
@@ -183,21 +186,26 @@ public class SolveController {
     public ResponseEntity<CheckResponse> check(@RequestBody SolveRequest request) {
         if (request.text() == null || request.text().isBlank()) {
             return ResponseEntity.ok(new CheckResponse(false, 0, 0, List.of(), List.of(),
-                    Map.of(), NO_EQUATIONS_MESSAGE, List.of()));
+                    Map.of(), NO_EQUATIONS_MESSAGE, List.of(), null));
         }
         try {
             boolean complexMode = request.stopCriteria() != null && Boolean.TRUE.equals(request.stopCriteria().complexMode());
-            EquationSystemSolver.CheckResult result = solver.check(request.text(), complexMode);
-            Map<String, String> effective = effectiveUnits(request.text(), request.variableInfo());
-            Map<String, String> inferredUnits =
-                    new HashMap<>(solver.deriveUnits(request.text(), effective));
-            inferredUnits.putAll(solver.inferUnits(request.text()));
-            List<String> unitWarnings = solver.checkUnits(request.text(), effective);
+            var extraction = MarkdownEquationExtractor.extract(request.text());
+            String cleanText = extraction.cleanText;
 
-            EquationParser.ParseResult parsed = new EquationParser().parseResult(request.text());
+            EquationSystemSolver.CheckResult result = solver.check(cleanText, complexMode);
+            Map<String, String> effective = effectiveUnits(cleanText, request.variableInfo());
+            Map<String, String> inferredUnits =
+                    new HashMap<>(solver.deriveUnits(cleanText, effective));
+            inferredUnits.putAll(solver.inferUnits(cleanText));
+            List<String> unitWarnings = solver.checkUnits(cleanText, effective);
+
+            EquationParser.ParseResult parsed = new EquationParser().parseResult(cleanText);
             List<String> formattedEquations = parsed.equations().stream()
                     .map(eq -> com.frees.backend.parser.LatexConverter.toLatex(eq, parsed.displayNames()))
                     .toList();
+
+            String formattedReport = MarkdownEquationExtractor.generateFormattedReport(request.text(), extraction.equations, formattedEquations);
 
             return ResponseEntity.ok(new CheckResponse(
                     result.solvable(),
@@ -207,17 +215,18 @@ public class SolveController {
                     unitWarnings,
                     inferredUnits,
                     result.message(),
-                    formattedEquations));
+                    formattedEquations,
+                    formattedReport));
         } catch (EquationParser.ParseException e) {
             String firstError = e.getMessage().lines().findFirst().orElse(e.getMessage());
             return ResponseEntity.ok(new CheckResponse(
                     false, 0, 0, List.of(), List.of(), Map.of(),
-                    "Syntax error: " + firstError, List.of()));
+                    "Syntax error: " + firstError, List.of(), null));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(new CheckResponse(
                             false, 0, 0, List.of(), List.of(), Map.of(),
-                            e.getMessage() != null ? e.getMessage() : e.toString(), List.of()));
+                            e.getMessage() != null ? e.getMessage() : e.toString(), List.of(), null));
         }
     }
 
@@ -233,14 +242,18 @@ public class SolveController {
                     : SolverSettings.DEFAULTS;
             Map<String, VariableSpec> specs = specsOf(request.variableInfo());
             boolean findAll = Boolean.TRUE.equals(request.findAllSolutions());
+
+            var extraction = MarkdownEquationExtractor.extract(request.text());
+            String cleanText = extraction.cleanText;
+
             EquationSystemSolver.Result rawResult = findAll
-                    ? solver.solveAll(request.text(), settings, specs)
-                    : solver.solve(request.text(), settings, specs);
+                    ? solver.solveAll(cleanText, settings, specs)
+                    : solver.solve(cleanText, settings, specs);
             final EquationSystemSolver.Result result;
             List<Map<String, Double>> cyclePath = List.of();
             if (Boolean.TRUE.equals(request.fillMissing())) {
-                result = resolveMissingProperties(rawResult, request.text(), null);
-                String fluid = PropertyFunctions.detectFluid(request.text());
+                result = resolveMissingProperties(rawResult, cleanText, null);
+                String fluid = PropertyFunctions.detectFluid(cleanText);
                 if (fluid == null) {
                     fluid = "Water";
                 }
@@ -250,16 +263,18 @@ public class SolveController {
             }
 
             Map<String, String> explicitUnits = unitsByVariable(request.variableInfo());
-            List<String> unitWarnings = solver.checkUnits(request.text(),
-                    effectiveUnits(request.text(), request.variableInfo()));
+            List<String> unitWarnings = solver.checkUnits(cleanText,
+                    effectiveUnits(cleanText, request.variableInfo()));
             Map<String, String> unitsByLowerName =
-                    unitsByLowerName(request.text(), request.variableInfo());
+                    unitsByLowerName(cleanText, request.variableInfo());
             UnitRegistry.UnitSystem system = unitSystem(request.displayUnitSystem());
 
-            EquationParser.ParseResult parsed = new EquationParser().parseResult(request.text());
+            EquationParser.ParseResult parsed = new EquationParser().parseResult(cleanText);
             List<String> formattedEquations = parsed.equations().stream()
                     .map(eq -> com.frees.backend.parser.LatexConverter.toLatex(eq, parsed.displayNames()))
                     .toList();
+
+            String formattedReport = MarkdownEquationExtractor.generateFormattedReport(request.text(), extraction.equations, formattedEquations);
 
             return ResponseEntity.ok(new SolveResponse(
                     true,
@@ -296,7 +311,8 @@ public class SolveController {
                     unitWarnings,
                     null,
                     formattedEquations,
-                    cyclePath));
+                    cyclePath,
+                    formattedReport));
         } catch (EquationParser.ParseException e) {
             return ResponseEntity.badRequest()
                     .body(SolveResponse.failure("Syntax error:\n" + e.getMessage()));
@@ -353,12 +369,15 @@ public class SolveController {
             return ResponseEntity.badRequest().build();
         }
 
+        var extraction = MarkdownEquationExtractor.extract(request.text());
+        String cleanText = extraction.cleanText;
+
         SolverSettings settings = request.stopCriteria() != null
                 ? request.stopCriteria().toSettings()
                 : SolverSettings.DEFAULTS;
         Map<String, VariableSpec> specs = specsOf(request.variableInfo());
         Map<String, String> unitsByLowerName =
-                unitsByLowerName(request.text(), request.variableInfo());
+                unitsByLowerName(cleanText, request.variableInfo());
         UnitRegistry.UnitSystem system = unitSystem(request.displayUnitSystem());
         Map<String, String> explicitUnits =
                 unitsByVariable(request.variableInfo());
@@ -371,7 +390,7 @@ public class SolveController {
 
         List<TableRowResult> results = new ArrayList<>();
         for (Map<String, Double> row : request.table().rows()) {
-            RowOutcome outcome = solveTableRow(request.text(), row, settings, specs,
+            RowOutcome outcome = solveTableRow(cleanText, row, settings, specs,
                     unitsByLowerName, system, request.table().variables(), explicitUnits);
             results.add(outcome.row());
             if (outcome.stats() != null) {
@@ -472,12 +491,16 @@ public class SolveController {
             return ResponseEntity.ok(OptimizeResponse.failure(
                     "Both bounds of the independent variable are required."));
         }
+
+        var extraction = MarkdownEquationExtractor.extract(request.text());
+        String cleanText = extraction.cleanText;
+
         SolverSettings settings = request.stopCriteria() != null
                 ? request.stopCriteria().toSettings()
                 : SolverSettings.DEFAULTS;
         try {
             Optimizer.OptimizeResult result = new Optimizer(solver).optimize(
-                    new Optimizer.Problem(request.text(), settings,
+                    new Optimizer.Problem(cleanText, settings,
                             specsOf(request.variableInfo()),
                             request.objective(), request.decision(),
                             request.lower(), request.upper(),
@@ -486,7 +509,7 @@ public class SolveController {
             Map<String, String> explicitUnits =
                     unitsByVariable(request.variableInfo());
             Map<String, String> unitsByLowerName =
-                    unitsByLowerName(request.text(), request.variableInfo());
+                    unitsByLowerName(cleanText, request.variableInfo());
             UnitRegistry.UnitSystem system = unitSystem(request.displayUnitSystem());
 
             List<VariableDto> variables = result.solution().variables().entrySet().stream()
