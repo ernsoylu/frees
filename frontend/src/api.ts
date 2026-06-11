@@ -123,6 +123,47 @@ export async function solve(
   return (await response.json()) as SolveResponse
 }
 
+export interface OptimizeParams {
+  objective: string
+  decision: string
+  lower: number
+  upper: number
+  maximize: boolean
+}
+
+export interface OptimizeResponse {
+  success: boolean
+  error: string | null
+  objective: VariableResult | null
+  decision: VariableResult | null
+  evaluations: number
+  variables: VariableResult[]
+}
+
+export async function optimize(
+  text: string,
+  stopCriteria: StopCriteria,
+  variableInfo: VariableInfo[],
+  displayUnitSystem: UnitSystem,
+  params: OptimizeParams,
+): Promise<OptimizeResponse> {
+  const response = await fetch('/api/optimize', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      text,
+      stopCriteria,
+      variableInfo,
+      displayUnitSystem,
+      ...params,
+    }),
+  })
+  if (!response.ok) {
+    throw new Error(`Optimization failed with status ${response.status}`)
+  }
+  return (await response.json()) as OptimizeResponse
+}
+
 export interface TableStats {
   runs: number
   solved: number
