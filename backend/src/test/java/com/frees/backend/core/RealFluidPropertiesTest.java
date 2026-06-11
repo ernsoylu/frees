@@ -91,6 +91,23 @@ class RealFluidPropertiesTest {
     }
 
     @Test
+    void propertyCallsCarryInferredSiUnits() {
+        var equations = new com.frees.backend.parser.EquationParser().parse("""
+                h1 = Enthalpy(R134a, T=300, x=1)
+                s1 = Entropy(R134a, T=300, x=1)
+                P1 = Pressure(R134a, T=300, x=1)
+                v1 = Volume(R134a, T=300, x=1)
+                """);
+        var derived = com.frees.backend.units.UnitChecker
+                .check(equations, java.util.Map.of()).derivedUnits();
+        // Derived-unit keys are lowercased variable names.
+        assertEquals("J/kg", derived.get("h1"));
+        assertEquals("J/kg-K", derived.get("s1"));
+        assertEquals("Pa", derived.get("p1"));
+        assertEquals("m^3/kg", derived.get("v1"));
+    }
+
+    @Test
     void unknownFluidGivesClearError() {
         Exception e = org.junit.jupiter.api.Assertions.assertThrows(Exception.class,
                 () -> solver.solve("h1 = Enthalpy(Unobtainium, T=300, x=1)"));

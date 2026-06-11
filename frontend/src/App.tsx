@@ -30,7 +30,6 @@ import VariableInfoModal, {
   parseBound,
   VariableDraft,
 } from './VariableInfoModal'
-import HelpModal from './HelpModal'
 import Latex from './Latex'
 import MinMaxModal from './MinMaxModal'
 import ConfigureTableModal from './ConfigureTableModal'
@@ -116,7 +115,6 @@ export default function App() {
   const [varDrafts, setVarDrafts] = useState<Record<string, VariableDraft>>({})
   const [showVariableInfo, setShowVariableInfo] = useState(false)
   const [showMinMax, setShowMinMax] = useState(false)
-  const [showHelp, setShowHelp] = useState(false)
   const [activeTab, setActiveTab] = useState<string>('equations')
   const [tableVars, setTableVars] = useState<string[]>([])
   const [paramRows, setParamRows] = useState<ParamRow[]>(() => [
@@ -439,7 +437,7 @@ export default function App() {
           <Button variant="default" size="xs" onClick={() => setShowPreferences(true)}>
             Preferences
           </Button>
-          <Button variant="default" size="xs" onClick={() => setShowHelp(true)}>
+          <Button variant="default" size="xs" component="a" href="/help" target="_blank">
             Help
           </Button>
         </Group>
@@ -511,15 +509,6 @@ export default function App() {
         />
       )}
 
-      {showHelp && (
-        <HelpModal
-          onLoadExample={(ex) => {
-            onTextChange(ex)
-            setComplexMode(ex.includes('z^2 = -4'))
-          }}
-          onClose={() => setShowHelp(false)}
-        />
-      )}
 
       <Flex
         flex={1}
