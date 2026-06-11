@@ -29,7 +29,7 @@ export default function AlterValuesModal({
   initialLast,
   onApply,
   onClose,
-}: Props) {
+}: Readonly<Props>) {
   const [first, setFirst] = useState(initialFirst)
   const [last, setLast] = useState(initialLast)
   const [mode, setMode] = useState<'linear' | 'log'>('linear')

@@ -6,7 +6,7 @@ interface Props {
   block?: boolean
 }
 
-export default function Latex({ math, block = false }: Props) {
+export default function Latex({ math, block = false }: Readonly<Props>) {
   const containerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -17,6 +17,9 @@ export default function Latex({ math, block = false }: Props) {
           throwOnError: false,
         })
       } catch (err) {
+        // KaTeX can still throw on malformed input despite throwOnError:
+        // false; degrade to plain text so the equation stays visible.
+        console.error('KaTeX rendering failed, showing plain text:', err)
         containerRef.current.textContent = math
       }
     }
