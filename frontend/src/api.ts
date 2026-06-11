@@ -69,6 +69,7 @@ export interface SolveResponse {
   error: string | null
   formattedEquations: string[]
   cyclePath?: Record<string, number>[]
+  formattedReport?: string
 }
 
 export interface CheckResponse {
@@ -80,6 +81,7 @@ export interface CheckResponse {
   inferredUnits: Record<string, string>
   message: string
   formattedEquations: string[]
+  formattedReport?: string
 }
 
 export interface VariableInfo {
@@ -123,6 +125,7 @@ export async function check(
         inferredUnits: {},
         message: errorMessage,
         formattedEquations: [],
+        formattedReport: undefined,
       }
     }
     const data = await response.json()
@@ -135,6 +138,7 @@ export async function check(
       inferredUnits: data.inferredUnits ?? {},
       message: data.message ?? '',
       formattedEquations: data.formattedEquations ?? [],
+      formattedReport: data.formattedReport ?? undefined,
     }
   } catch (e) {
     return {
@@ -146,6 +150,7 @@ export async function check(
       inferredUnits: {},
       message: `Could not reach the solver backend: ${String(e)}`,
       formattedEquations: [],
+      formattedReport: undefined,
     }
   }
 }
@@ -194,6 +199,7 @@ export async function solve(
         unitWarnings: [],
         error: errorMessage,
         formattedEquations: [],
+        formattedReport: undefined,
       }
     }
     const data = await response.json()
@@ -208,6 +214,7 @@ export async function solve(
       error: data.error ?? null,
       formattedEquations: data.formattedEquations ?? [],
       cyclePath: data.cyclePath ?? [],
+      formattedReport: data.formattedReport ?? undefined,
     }
   } catch (e) {
     return {
@@ -220,6 +227,7 @@ export async function solve(
       unitWarnings: [],
       error: `Could not reach the solver backend: ${String(e)}`,
       formattedEquations: [],
+      formattedReport: undefined,
     }
   }
 }

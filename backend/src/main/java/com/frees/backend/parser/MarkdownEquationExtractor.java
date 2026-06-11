@@ -1,0 +1,426 @@
+package com.frees.backend.parser;
+
+import java.util.ArrayList;
+import java.util.List;
+
+public final class MarkdownEquationExtractor {
+
+    public static class ExtractedEquation {
+        public final String originalText;
+        public final String cleanEquation;
+        public final int startIndex;
+        public final int endIndex;
+
+        public ExtractedEquation(String originalText, String cleanEquation, int startIndex, int endIndex) {
+            this.originalText = originalText;
+            this.cleanEquation = cleanEquation;
+            this.startIndex = startIndex;
+            this.endIndex = endIndex;
+        }
+    }
+
+    public static class ExtractionResult {
+        public final String cleanText;
+        public final List<ExtractedEquation> equations;
+
+        public ExtractionResult(String cleanText, List<ExtractedEquation> equations) {
+            this.cleanText = cleanText;
+            this.equations = equations;
+        }
+    }
+
+    private enum TokenType {
+        NUMBER, UNIT, IDENTIFIER, OPERATOR, OPEN_PAREN, CLOSE_PAREN, OPEN_BRACKET, CLOSE_BRACKET, COMMA
+    }
+
+    private static class Token {
+        final TokenType type;
+        final String text;
+        final int endIdx;
+
+        Token(TokenType type, String text, int endIdx) {
+            this.type = type;
+            this.text = text;
+            this.endIdx = endIdx;
+        }
+    }
+
+    private MarkdownEquationExtractor() {}
+
+    public static String stripComments(String text) {
+        StringBuilder sb = new StringBuilder();
+        boolean inBraces = false;
+        boolean inQuotes = false;
+        for (int i = 0; i < text.length(); i++) {
+            char c = text.charAt(i);
+            if (inBraces) {
+                if (c == '}') {
+                    inBraces = false;
+                }
+            } else if (inQuotes) {
+                if (c == '"') {
+                    inQuotes = false;
+                }
+            } else {
+                if (c == '{') {
+                    inBraces = true;
+                } else if (c == '"') {
+                    inQuotes = true;
+                } else {
+                    sb.append(c);
+                }
+            }
+        }
+        return sb.toString();
+    }
+
+    public static boolean isPureEquationLine(String line) {
+        String clean = stripComments(line).trim();
+        if (clean.isEmpty()) {
+            return true;
+        }
+        if (clean.startsWith("#") || clean.startsWith("-") || clean.startsWith("*") || clean.startsWith(">")) {
+            return false;
+        }
+        String upper = clean.toUpperCase();
+        if (upper.startsWith("DUPLICATE") || upper.startsWith("END") ||
+            upper.startsWith("FUNCTION") || upper.startsWith("PROCEDURE") ||
+            upper.startsWith("MODULE") || upper.startsWith("CALL")) {
+            return true;
+        }
+        if (!clean.contains("=")) {
+            return false;
+        }
+        return isValidMathTokenSequence(clean);
+    }
+
+
+    private static boolean isValidMathTokenSequence(String line) {
+        int i = 0;
+        TokenType lastType = null;
+        while (i < line.length()) {
+            Token token = nextToken(line, i);
+            if (token == null) {
+                return false;
+            }
+
+            if (lastType != null) {
+                boolean allowed = true;
+                switch (lastType) {
+                    case NUMBER:
+                        if (token.type == TokenType.IDENTIFIER || token.type == TokenType.NUMBER || token.type == TokenType.OPEN_PAREN) {
+                            allowed = false;
+                        }
+                        break;
+                    case IDENTIFIER:
+                        // "CALL ModuleName" or function call is allowed. But in general two adjacent variables is not.
+                        // Let's allow if last identifier was CALL
+                        if (token.type == TokenType.IDENTIFIER || token.type == TokenType.NUMBER || token.type == TokenType.UNIT) {
+                            allowed = false;
+                        }
+                        break;
+                    case UNIT:
+                        if (token.type == TokenType.IDENTIFIER || token.type == TokenType.NUMBER || token.type == TokenType.UNIT || token.type == TokenType.OPEN_PAREN) {
+                            allowed = false;
+                        }
+                        break;
+                    case CLOSE_PAREN:
+                    case CLOSE_BRACKET:
+                        if (token.type == TokenType.IDENTIFIER || token.type == TokenType.NUMBER || token.type == TokenType.UNIT || token.type == TokenType.OPEN_PAREN) {
+                            allowed = false;
+                        }
+                        break;
+                    default:
+                        break;
+                }
+                if (!allowed) {
+                    return false;
+                }
+            }
+
+            lastType = token.type;
+            i = token.endIdx;
+        }
+        return true;
+    }
+
+    public static ExtractionResult extract(String source) {
+        if (source == null) {
+            return new ExtractionResult("", List.of());
+        }
+        StringBuilder clean = new StringBuilder();
+        List<ExtractedEquation> equations = new ArrayList<>();
+        String[] lines = source.split("\\r?\\n", -1);
+        for (int lineIdx = 0; lineIdx < lines.length; lineIdx++) {
+            String line = lines[lineIdx];
+            String stripped = stripComments(line).trim();
+            if (isPureEquationLine(line)) {
+                if (stripped.contains("=")) {
+                    clean.append(line).append("\n");
+                    equations.add(new ExtractedEquation(line, line, 0, line.length()));
+                } else {
+                    clean.append(line).append("\n");
+                }
+            } else {
+                List<ExtractedEquation> lineEqs = extractFromLine(line);
+                if (lineEqs.isEmpty()) {
+                    clean.append("\n");
+                } else {
+                    StringBuilder cleanLine = new StringBuilder();
+                    for (int i = 0; i < lineEqs.size(); i++) {
+                        cleanLine.append(lineEqs.get(i).cleanEquation);
+                        if (i < lineEqs.size() - 1) {
+                            cleanLine.append(" ; ");
+                        }
+                    }
+                    clean.append(cleanLine).append("\n");
+                    equations.addAll(lineEqs);
+                }
+            }
+        }
+        return new ExtractionResult(clean.toString(), equations);
+    }
+
+    public static List<ExtractedEquation> extractFromLine(String line) {
+        List<ExtractedEquation> list = new ArrayList<>();
+        int index = 0;
+        while (index < line.length()) {
+            int eqIndex = line.indexOf('=', index);
+            if (eqIndex == -1) {
+                break;
+            }
+
+            int lhsStart = scanLhsStart(line, eqIndex);
+            if (lhsStart == -1) {
+                index = eqIndex + 1;
+                continue;
+            }
+
+            int rhsEnd = scanRhsEnd(line, eqIndex + 1);
+            if (rhsEnd <= eqIndex + 1) {
+                index = eqIndex + 1;
+                continue;
+            }
+
+            String original = line.substring(lhsStart, rhsEnd);
+            list.add(new ExtractedEquation(original, original, lhsStart, rhsEnd));
+            index = rhsEnd;
+        }
+        return list;
+    }
+
+    private static int scanLhsStart(String line, int eqIndex) {
+        int i = eqIndex - 1;
+        while (i >= 0 && Character.isWhitespace(line.charAt(i))) {
+            i--;
+        }
+        if (i < 0) {
+            return -1;
+        }
+
+        if (line.charAt(i) == ']') {
+            i--;
+            while (i >= 0 && line.charAt(i) != '[') {
+                char c = line.charAt(i);
+                if (!Character.isLetterOrDigit(c) && c != '_' && !Character.isWhitespace(c)) {
+                    return -1;
+                }
+                i--;
+            }
+            if (i < 0) {
+                return -1;
+            }
+            i--;
+            while (i >= 0 && Character.isWhitespace(line.charAt(i))) {
+                i--;
+            }
+        }
+
+        int idEnd = i;
+        while (i >= 0 && (Character.isLetterOrDigit(line.charAt(i)) || line.charAt(i) == '_')) {
+            i--;
+        }
+        int idStart = i + 1;
+        if (idStart > idEnd) {
+            return -1;
+        }
+        char first = line.charAt(idStart);
+        if (!Character.isLetter(first) && first != '_') {
+            return -1;
+        }
+        return idStart;
+    }
+
+    private static int scanRhsEnd(String line, int start) {
+        int i = start;
+        TokenType lastType = null;
+        int lastValidEnd = start;
+
+        while (i < line.length()) {
+            Token token = nextToken(line, i);
+            if (token == null) {
+                break;
+            }
+
+            if (lastType != null) {
+                boolean allowed = true;
+                switch (lastType) {
+                    case NUMBER:
+                        if (token.type == TokenType.IDENTIFIER || token.type == TokenType.NUMBER || token.type == TokenType.OPEN_PAREN) {
+                            allowed = false;
+                        }
+                        break;
+                    case IDENTIFIER:
+                        if (token.type == TokenType.IDENTIFIER || token.type == TokenType.NUMBER || token.type == TokenType.UNIT) {
+                            allowed = false;
+                        }
+                        break;
+                    case UNIT:
+                        if (token.type == TokenType.IDENTIFIER || token.type == TokenType.NUMBER || token.type == TokenType.UNIT || token.type == TokenType.OPEN_PAREN) {
+                            allowed = false;
+                        }
+                        break;
+                    case CLOSE_PAREN:
+                    case CLOSE_BRACKET:
+                        if (token.type == TokenType.IDENTIFIER || token.type == TokenType.NUMBER || token.type == TokenType.UNIT || token.type == TokenType.OPEN_PAREN) {
+                            allowed = false;
+                        }
+                        break;
+                    default:
+                        break;
+                }
+                if (!allowed) {
+                    break;
+                }
+            }
+
+            lastType = token.type;
+            i = token.endIdx;
+            lastValidEnd = i;
+        }
+
+        while (lastValidEnd > start && Character.isWhitespace(line.charAt(lastValidEnd - 1))) {
+            lastValidEnd--;
+        }
+        return lastValidEnd;
+    }
+
+    private static Token nextToken(String line, int start) {
+        int i = start;
+        while (i < line.length() && Character.isWhitespace(line.charAt(i))) {
+            i++;
+        }
+        if (i >= line.length()) {
+            return null;
+        }
+
+        char c = line.charAt(i);
+
+        if (c == '[') {
+            int end = line.indexOf(']', i);
+            if (end != -1) {
+                String unitText = line.substring(i, end + 1);
+                return new Token(TokenType.UNIT, unitText, end + 1);
+            }
+            return new Token(TokenType.OPEN_BRACKET, "[", i + 1);
+        }
+        if (c == ']') {
+            return new Token(TokenType.CLOSE_BRACKET, "]", i + 1);
+        }
+        if (c == '(') {
+            return new Token(TokenType.OPEN_PAREN, "(", i + 1);
+        }
+        if (c == ')') {
+            return new Token(TokenType.CLOSE_PAREN, ")", i + 1);
+        }
+        if (c == ',') {
+            return new Token(TokenType.COMMA, ",", i + 1);
+        }
+
+        if (Character.isDigit(c) || (c == '.' && i + 1 < line.length() && Character.isDigit(line.charAt(i + 1)))) {
+            int end = i;
+            while (end < line.length() && (Character.isDigit(line.charAt(end)) || line.charAt(end) == '.')) {
+                end++;
+            }
+            if (end < line.length() && (line.charAt(end) == 'e' || line.charAt(end) == 'E')) {
+                int exp = end + 1;
+                if (exp < line.length() && (line.charAt(exp) == '+' || line.charAt(exp) == '-')) {
+                    exp++;
+                }
+                while (exp < line.length() && Character.isDigit(line.charAt(exp))) {
+                    exp++;
+                }
+                end = exp;
+            }
+            return new Token(TokenType.NUMBER, line.substring(i, end), end);
+        }
+
+        if (Character.isLetter(c) || c == '_') {
+            int end = i;
+            while (end < line.length() && (Character.isLetterOrDigit(line.charAt(end)) || line.charAt(end) == '_')) {
+                end++;
+            }
+            return new Token(TokenType.IDENTIFIER, line.substring(i, end), end);
+        }
+
+        if (c == '+' || c == '-' || c == '*' || c == '/' || c == '^' || c == '=') {
+            return new Token(TokenType.OPERATOR, String.valueOf(c), i + 1);
+        }
+
+        return null;
+    }
+
+    public static String generateFormattedReport(String originalText, List<ExtractedEquation> extracted, List<String> formattedEquations) {
+        if (extracted.size() != formattedEquations.size()) {
+            return originalText;
+        }
+        String[] lines = originalText.split("\\r?\\n", -1);
+        StringBuilder report = new StringBuilder();
+        int eqIndex = 0;
+        for (String line : lines) {
+            if (isPureEquationLine(line)) {
+                String stripped = stripComments(line).trim();
+                if (stripped.contains("=")) {
+                    String latex = formattedEquations.get(eqIndex++);
+                    report.append("[MATH_BLOCK:").append(latex).append("]").append("\n");
+                } else {
+                    report.append(line).append("\n");
+                }
+            } else {
+                List<ExtractedEquation> lineEqs = extractFromLine(line);
+                if (lineEqs.isEmpty()) {
+                    report.append(line).append("\n");
+                } else {
+                    StringBuilder newLine = new StringBuilder();
+                    int currentPos = 0;
+                    for (ExtractedEquation eq : lineEqs) {
+                        newLine.append(line, currentPos, eq.startIndex);
+                        String latex = formattedEquations.get(eqIndex++);
+                        boolean isBlock = isEntireLineEquation(line, eq);
+                        if (isBlock) {
+                            newLine.append("[MATH_BLOCK:").append(latex).append("]");
+                        } else {
+                            newLine.append("[MATH_INLINE:").append(latex).append("]");
+                        }
+                        currentPos = eq.endIndex;
+                    }
+                    newLine.append(line.substring(currentPos));
+                    report.append(newLine).append("\n");
+                }
+            }
+        }
+        if (!originalText.endsWith("\n") && report.length() > 0) {
+            report.setLength(report.length() - 1);
+        }
+        return report.toString();
+    }
+
+    private static boolean isEntireLineEquation(String line, ExtractedEquation eq) {
+        String before = line.substring(0, eq.startIndex).trim();
+        String after = line.substring(eq.endIndex).trim();
+        if (after.equals(".") || after.equals(",") || after.equals(";")) {
+            after = "";
+        }
+        return before.isEmpty() && after.isEmpty();
+    }
+}

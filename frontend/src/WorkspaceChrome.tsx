@@ -34,7 +34,7 @@ import { withStableKeys } from './format'
 // ---------------------------------------------------------------------------
 
 const VIEWS = [
-  { value: 'equations', label: 'Equations', icon: IconCode },
+  { value: 'equations', label: 'Editor', icon: IconCode },
   { value: 'table', label: 'Parametric Table', icon: IconTable },
   { value: 'plots', label: 'Plots (X-Y)', icon: IconChartLine },
   {
