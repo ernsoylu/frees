@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import {
   ActionIcon,
   Button,
@@ -11,7 +11,6 @@ import {
   Select,
   Stack,
   Text,
-  Textarea,
   Title,
   Tooltip,
   Badge,
@@ -178,6 +177,19 @@ export default function App() {
   const [showMinMax, setShowMinMax] = useState(false)
   const [activeTab, setActiveTab] = useState<string>('equations')
   const [eqView, setEqView] = useState<'editor' | 'formatted'>('editor')
+
+  const lineNumbersRef = useRef<HTMLDivElement>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  const syncScroll = () => {
+    if (textareaRef.current && lineNumbersRef.current) {
+      lineNumbersRef.current.scrollTop = textareaRef.current.scrollTop
+    }
+  }
+
+  useEffect(() => {
+    syncScroll()
+  }, [text])
   const [solutionOpen, setSolutionOpen] = useState(true)
   const [tableVars, setTableVars] = useState<string[]>([])
   const [paramRows, setParamRows] = useState<ParamRow[]>(() => [
@@ -668,23 +680,61 @@ export default function App() {
                   />
                 </Group>
                 {eqView === 'editor' ? (
-                  <Textarea
-                    value={text}
-                    onChange={(e) => onTextChange(e.currentTarget.value)}
-                    spellCheck={false}
-                    placeholder={'Enter equations and markdown notes, e.g.\n# Rankine Cycle\nT1 = 100 [C]\nP1 = 250 [kPa]'}
-                    styles={{
-                      root: { flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 },
-                      wrapper: { flex: 1, display: 'flex', minHeight: 0 },
-                      input: {
-                        flex: 1,
-                        minHeight: 260,
+                  <div
+                    style={{
+                      display: 'flex',
+                      flex: 1,
+                      minHeight: 260,
+                      border: '1px solid var(--mantine-color-dark-4)',
+                      borderRadius: '4px',
+                      overflow: 'hidden',
+                      backgroundColor: 'var(--mantine-color-dark-7)',
+                    }}
+                  >
+                    <div
+                      ref={lineNumbersRef}
+                      style={{
+                        padding: '12px 8px',
+                        textAlign: 'right',
+                        color: 'var(--mantine-color-dark-3)',
+                        backgroundColor: 'var(--mantine-color-dark-8)',
+                        borderRight: '1px solid var(--mantine-color-dark-5)',
                         fontFamily: 'var(--mantine-font-family-monospace)',
                         fontSize: 'var(--mantine-font-size-sm)',
                         lineHeight: 1.6,
-                      },
-                    }}
-                  />
+                        userSelect: 'none',
+                        overflow: 'hidden',
+                        whiteSpace: 'pre',
+                        minWidth: '35px',
+                      }}
+                    >
+                      {Array.from({ length: text.split('\n').length }, (_, i) => i + 1).join('\n')}
+                    </div>
+                    <textarea
+                      ref={textareaRef}
+                      value={text}
+                      onChange={(e) => onTextChange(e.currentTarget.value)}
+                      onScroll={syncScroll}
+                      spellCheck={false}
+                      wrap="off"
+                      placeholder={'Enter equations and markdown notes, e.g.\n# Rankine Cycle\nT1 = 100 [C]\nP1 = 250 [kPa]'}
+                      style={{
+                        flex: 1,
+                        padding: '12px',
+                        border: 'none',
+                        outline: 'none',
+                        resize: 'none',
+                        color: 'var(--mantine-color-dark-0)',
+                        backgroundColor: 'transparent',
+                        fontFamily: 'var(--mantine-font-family-monospace)',
+                        fontSize: 'var(--mantine-font-size-sm)',
+                        lineHeight: 1.6,
+                        overflowY: 'auto',
+                        overflowX: 'auto',
+                        whiteSpace: 'pre',
+                      }}
+                    />
+                  </div>
                 ) : (
                   <FormattedEquationsView
                     equations={formattedEqs}

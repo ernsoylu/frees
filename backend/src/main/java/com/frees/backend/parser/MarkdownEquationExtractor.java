@@ -317,10 +317,23 @@ public final class MarkdownEquationExtractor {
         char c = line.charAt(i);
 
         if (c == '[') {
-            int end = line.indexOf(']', i);
-            if (end != -1) {
-                String unitText = line.substring(i, end + 1);
-                return new Token(TokenType.UNIT, unitText, end + 1);
+            int prev = i - 1;
+            while (prev >= 0 && Character.isWhitespace(line.charAt(prev))) {
+                prev--;
+            }
+            boolean isArrayAccess = false;
+            if (prev >= 0) {
+                char pc = line.charAt(prev);
+                if (Character.isLetterOrDigit(pc) || pc == '_' || pc == ']' || pc == ')') {
+                    isArrayAccess = true;
+                }
+            }
+            if (!isArrayAccess) {
+                int end = line.indexOf(']', i);
+                if (end != -1) {
+                    String unitText = line.substring(i, end + 1);
+                    return new Token(TokenType.UNIT, unitText, end + 1);
+                }
             }
             return new Token(TokenType.OPEN_BRACKET, "[", i + 1);
         }
