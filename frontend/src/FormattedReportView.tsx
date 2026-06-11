@@ -1,12 +1,21 @@
 import React from 'react'
-import { Badge, Group, List, Stack, Text, Title, Tooltip } from '@mantine/core'
+import { Badge, Group, List, Stack, Text, Title, Tooltip, Loader, Alert, Paper } from '@mantine/core'
 import Latex from './Latex'
-import { VariableResult } from './api'
+import { VariableResult, TableRowResult } from './api'
 import { formatValue } from './format'
+import { useDiagramData, buildFigure } from './plots/PlotCard'
+import PlotlyChart from './plots/PlotlyChart'
+import { detectStates } from './plots/stateTable'
+import { PlotSpec } from './plots/types'
+import { ParamRow } from './ParametricTableTab'
 
 interface FormattedReportViewProps {
   report: string
   variables?: VariableResult[]
+  plots?: PlotSpec[]
+  cyclePath?: Record<string, number>[]
+  tableRows?: ParamRow[]
+  tableResults?: TableRowResult[]
 }
 
 interface ParsedPart {
@@ -233,7 +242,108 @@ function renderInlineContent(text: string, variables?: VariableResult[]): React.
   })
 }
 
-export default function FormattedReportView({ report, variables }: Readonly<FormattedReportViewProps>) {
+interface ReportGraphProps {
+  spec: PlotSpec
+  variables?: VariableResult[]
+  cyclePath?: Record<string, number>[]
+  tableRows?: ParamRow[]
+  tableResults?: TableRowResult[]
+  caption: string
+}
+
+function ReportGraph({
+  spec,
+  variables = [],
+  cyclePath,
+  tableRows = [],
+  tableResults = [],
+  caption,
+}: Readonly<ReportGraphProps>) {
+  const { diagram, psychart, loading, error } = useDiagramData(spec)
+  const states = detectStates(variables)
+  const figure = React.useMemo(
+    () => buildFigure(spec, states, cyclePath, tableRows, tableResults, diagram, psychart, 'dark'),
+    [spec, states, cyclePath, tableRows, tableResults, diagram, psychart]
+  )
+
+  if (loading) {
+    return (
+      <Group gap="xs" justify="center" p="md" key={spec.id}>
+        <Loader size="xs" />
+        <Text size="sm" c="dimmed">
+          Loading diagram {spec.name}...
+        </Text>
+      </Group>
+    )
+  }
+
+  if (error) {
+    return (
+      <Alert color="red" mb="xs" key={spec.id}>
+        Failed to load diagram: {error}
+      </Alert>
+    )
+  }
+
+  return (
+    <Stack align="center" gap="xs" my="md" key={spec.id}>
+      {figure ? (
+        <div style={{ width: '100%', maxWidth: 650, height: 400, border: '1px solid var(--mantine-color-dark-4)', borderRadius: 4, overflow: 'hidden' }}>
+          <PlotlyChart figure={figure} />
+        </div>
+      ) : (
+        <Text size="sm" c="dimmed">No data for diagram {spec.name}.</Text>
+      )}
+      <Text size="sm" c="dimmed" style={{ fontStyle: 'italic', textAlign: 'center' }}>
+        {caption}
+      </Text>
+    </Stack>
+  )
+}
+
+function ReportGraphPlaceholder({
+  name,
+  caption,
+}: Readonly<{
+  name: string
+  caption: string
+}>) {
+  return (
+    <Stack align="center" gap="xs" my="md">
+      <Paper
+        withBorder
+        p="xl"
+        style={{
+          width: '100%',
+          maxWidth: 650,
+          height: 400,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          borderStyle: 'dashed',
+          backgroundColor: 'var(--mantine-color-dark-8)',
+        }}
+      >
+        <Text size="sm" c="dimmed" style={{ textAlign: 'center' }}>
+          ⚠️ Diagram "{name}" is not generated yet. Please generate {name}.
+        </Text>
+      </Paper>
+      <Text size="sm" c="dimmed" style={{ fontStyle: 'italic', textAlign: 'center' }}>
+        {caption}
+      </Text>
+    </Stack>
+  )
+}
+
+export default function FormattedReportView({
+  report,
+  variables,
+  plots = [],
+  cyclePath,
+  tableRows = [],
+  tableResults = [],
+}: Readonly<FormattedReportViewProps>) {
   if (!report || report.trim() === '') {
     return (
       <Stack gap="sm" style={{ overflowY: 'auto', flex: 1 }}>
@@ -248,6 +358,7 @@ export default function FormattedReportView({ report, variables }: Readonly<Form
   const elements: React.ReactNode[] = []
   let currentList: React.ReactNode[] = []
   let listKey = 0
+  let figureCounter = 0
 
   const flushList = () => {
     if (currentList.length > 0) {
@@ -265,6 +376,41 @@ export default function FormattedReportView({ report, variables }: Readonly<Form
     if (trimmed === '') {
       flushList()
       elements.push(<div key={`space-${index}`} style={{ height: '0.8em' }} />)
+      return
+    }
+
+    const GRAPH_TAG_REGEX = /^\[Graph=["']?([^"']+)["']?\](.*?)\[\/Graph\]$/i
+    const match = trimmed.match(GRAPH_TAG_REGEX)
+    if (match) {
+      flushList()
+      const diagramName = match[1].trim()
+      const captionText = match[2].trim()
+      figureCounter++
+      const caption = `Figure ${figureCounter} - ${captionText}`
+
+      const spec = plots.find((p) => p.name.toLowerCase() === diagramName.toLowerCase())
+
+      if (spec) {
+        elements.push(
+          <ReportGraph
+            key={`graph-${index}`}
+            spec={spec}
+            variables={variables}
+            cyclePath={cyclePath}
+            tableRows={tableRows}
+            tableResults={tableResults}
+            caption={caption}
+          />
+        )
+      } else {
+        elements.push(
+          <ReportGraphPlaceholder
+            key={`graph-placeholder-${index}`}
+            name={diagramName}
+            caption={caption}
+          />
+        )
+      }
       return
     }
 

@@ -92,13 +92,30 @@ function FormattedEquationsView({
   equations,
   report,
   variables,
+  plots,
+  cyclePath,
+  tableRows,
+  tableResults,
 }: Readonly<{
   equations: string[]
   report?: string
   variables?: VariableResult[]
+  plots?: PlotSpec[]
+  cyclePath?: Record<string, number>[]
+  tableRows?: ParamRow[]
+  tableResults?: TableRowResult[]
 }>) {
   if (report) {
-    return <FormattedReportView report={report} variables={variables} />
+    return (
+      <FormattedReportView
+        report={report}
+        variables={variables}
+        plots={plots}
+        cyclePath={cyclePath}
+        tableRows={tableRows}
+        tableResults={tableResults}
+      />
+    )
   }
 
   if (equations.length === 0) {
@@ -740,6 +757,10 @@ export default function App() {
                     equations={formattedEqs}
                     report={result?.formattedReport ?? checkResult?.formattedReport}
                     variables={result?.variables}
+                    plots={plots}
+                    cyclePath={result?.cyclePath}
+                    tableRows={paramRows}
+                    tableResults={tableResults}
                   />
                 )}
               </>
