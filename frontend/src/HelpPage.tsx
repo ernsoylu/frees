@@ -470,6 +470,9 @@ export default function HelpPage() {
             <Alert color="blue" title="Prose with Equations" mt="xs">
               You can write inline variables and equations anywhere in your text. Any statement containing an <code>=</code> sign is automatically parsed as an equation, solved, and formatted as a LaTeX/KaTeX formula.
             </Alert>
+            <Alert color="blue" title="Embedding Diagrams & Graphs" mt="xs">
+              You can embed property diagrams, psychrometric charts, and X-Y parametric plots directly within your Formatted Report. Simply use the tag <code>{`[Graph="Diagram Name"] Caption Text [/Graph]`}</code>. The solver automatically resolves the diagram name and embeds the interactive plot with auto-incrementing figure numbers.
+            </Alert>
             <Paper withBorder p="md" bg="dark.8" radius="md" style={{ position: 'relative' }}>
               <CopyButton code={`# Ideal Rankine Steam Power Cycle
 
@@ -522,7 +525,11 @@ q_cond = h[2] - h[3]
 Net work output, thermal efficiency, and mass flow rate:
 w_net = w_turb - w_pump
 eta_th = w_net / q_boiler * 100
-W_dot_net = m_dot * w_net`} />
+W_dot_net = m_dot * w_net
+
+## Visualization
+Here is the thermodynamic T-s diagram showing the cycle state points:
+[Graph="Diagram 1"] Ts Diagram of the Cycle [/Graph]`} />
               <Code block style={{ background: 'transparent' }}>
                 {`# Ideal Rankine Steam Power Cycle
 
@@ -575,11 +582,15 @@ q_cond = h[2] - h[3]
 Net work output, thermal efficiency, and mass flow rate:
 w_net = w_turb - w_pump
 eta_th = w_net / q_boiler * 100
-W_dot_net = m_dot * w_net`}
+W_dot_net = m_dot * w_net
+
+## Visualization
+Here is the thermodynamic T-s diagram showing the cycle state points:
+[Graph="Diagram 1"] Ts Diagram of the Cycle [/Graph]`}
               </Code>
             </Paper>
             <Text size="sm" c="dimmed">
-              Paste this example in the <strong>Editor</strong> tab, then toggle the control at the top-right to <strong>Formatted</strong> to see the rendered KaTeX equations integrated directly within the markdown report.
+              Paste this example in the <strong>Editor</strong> tab, then toggle the control at the top-right to <strong>Formatted</strong> to see the rendered KaTeX equations and the embedded plot.
             </Text>
           </Stack>
         );
