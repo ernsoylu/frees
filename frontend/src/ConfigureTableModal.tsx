@@ -20,7 +20,7 @@ export default function ConfigureTableModal({
   selected,
   onSave,
   onClose,
-}: Props) {
+}: Readonly<Props>) {
   const [local, setLocal] = useState<string[]>(selected)
 
   function toggle(name: string) {

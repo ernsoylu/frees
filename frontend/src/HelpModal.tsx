@@ -5,7 +5,7 @@ interface Props {
   onLoadExample: (text: string) => void
 }
 
-export default function HelpModal({ onClose, onLoadExample }: Props) {
+export default function HelpModal({ onClose, onLoadExample }: Readonly<Props>) {
   return (
     <Modal opened onClose={onClose} title="frEES Documentation & Help" size="lg" centered>
       <Tabs defaultValue="started" color="blue" variant="outline">

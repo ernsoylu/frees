@@ -30,7 +30,7 @@ const FIELDS: Field[] = [
   { key: 'elapsedTimeSeconds', label: 'Elapsed time (sec)', hint: 'Abort the solve after this many seconds' },
 ]
 
-export default function PreferencesModal({ criteria, unitSystem, onSave, onClose }: Props) {
+export default function PreferencesModal({ criteria, unitSystem, onSave, onClose }: Readonly<Props>) {
   const [draft, setDraft] = useState<Record<StopCriteriaField, string>>({
     maxIterations: String(criteria.maxIterations),
     relativeResiduals: String(criteria.relativeResiduals),
@@ -69,7 +69,7 @@ export default function PreferencesModal({ criteria, unitSystem, onSave, onClose
       setError('No. iterations must be a whole number.')
       return
     }
-    onSave({ ...criteria, ...parsed } as StopCriteria, system)
+    onSave({ ...criteria, ...parsed }, system)
   }
 
   return (
