@@ -35,6 +35,7 @@ import Latex from './Latex'
 import ConfigureTableModal from './ConfigureTableModal'
 import AlterValuesModal from './AlterValuesModal'
 import ParametricTableTab, { newParamRow, ParamRow } from './ParametricTableTab'
+import PlotTab, { DEFAULT_PLOT_CONFIG, PlotConfig } from './PlotTab'
 import SolutionPanel from './SolutionPanel'
 import { EquationActionBar, TableActionBar } from './ActionBars'
 import {
@@ -127,6 +128,7 @@ export default function App() {
   const [tableCheckMessage, setTableCheckMessage] = useState('')
   const [tableChecking, setTableChecking] = useState(false)
   const [tableStats, setTableStats] = useState<TableStats | null>(null)
+  const [plotConfig, setPlotConfig] = useState<PlotConfig>(DEFAULT_PLOT_CONFIG)
 
   const solvable = checkResult?.solvable === true
 
@@ -513,11 +515,7 @@ export default function App() {
               <Tabs.Tab value="equations">Equations</Tabs.Tab>
               <Tabs.Tab value="formatted">Formatted Equations</Tabs.Tab>
               <Tabs.Tab value="table">Parametric Table</Tabs.Tab>
-              <Tooltip label="Epic 4 — coming soon">
-                <Tabs.Tab value="plots" disabled>
-                  Plots
-                </Tabs.Tab>
-              </Tooltip>
+              <Tabs.Tab value="plots">Plots</Tabs.Tab>
               <Tooltip label="Epic 6 — coming soon">
                 <Tabs.Tab value="diagram" disabled>
                   Diagram
@@ -572,6 +570,15 @@ export default function App() {
                 onAlterColumn={setAlterColumn}
                 onColumnUnitsChange={setColumnUnits}
                 onCellChange={setTableCell}
+              />
+            )}
+            {activeTab === 'plots' && (
+              <PlotTab
+                tableVars={tableVars}
+                rows={paramRows}
+                results={tableResults}
+                config={plotConfig}
+                onConfigChange={setPlotConfig}
               />
             )}
             {activeTab === 'formatted' && (
