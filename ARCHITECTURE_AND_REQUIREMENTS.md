@@ -116,3 +116,15 @@ Both servers run as Docker containers orchestrated by Docker Compose and managed
 - **Story 6.2: Application Mode.** Lock the canvas. Render interactive HTML inputs/outputs and dropdown lists over the Canvas coordinates.
 - **Story 6.3: Animation Binding.** Bind frontend Canvas object properties (e.g., `Name.Left`, `Name.Angle`) to calculated backend variables, updating them dynamically during Parametric Table runs.
 - **Milestone 6:** *Working software with a fully interactive schematic (like a nozzle or heat exchanger) controlling the solver.*
+
+### Epic 7: Matrix & Linear Algebra System
+
+*Goal: Implement comprehensive matrix operations, linear algebra solvers, high-performance BLAS integration, and 2D grid/LaTeX formatting.*
+
+- **Story 7.1: Matrix Parsing & Representation.** Extend the ANTLR grammar to support 2-dimensional matrix variables (e.g., `A[1,1] = 5`, `A[2,2] = x`), mapping them to 2D matrix representations in the backend solver.
+- **Story 7.2: Gauss Elimination & LU Decomposition.** Implement core solvers for linear systems of equations (`A * x = b`) using Gauss elimination and LU decomposition (lower/upper triangular factorizations).
+- **Story 7.3: Matrix Algebra Functions.** Add advanced matrix functions to the parser: Inverse (`Inverse(A)`), Transpose (`Transpose(A)`), Determinant (`Determinant(A)`), Eigenvalues/Eigenvectors, and Euler decomposition/rotations.
+- **Story 7.4: High-Performance BLAS/LAPACK Solver.** Integrate a high-performance linear algebra library (such as LAPACK/BLAS wrappers using EJML or Apache Commons Math) for solving dense, sparse, and large-scale linear systems.
+- **Story 7.5: Matrix Formatting & UI Representation.** Extend the frontend Arrays/Solution windows to render 2D matrices in a spreadsheet-like grid, and format equations using KaTeX block matrices (e.g., `\begin{pmatrix} ... \end{pmatrix}`).
+- **Story 7.6: Matrix Help Menu.** Update the help page with matrix syntax, operation guides, and practical examples (e.g., solving structural/state-space linear systems).
+- **Milestone 7:** *Working software capable of declaring a 3x3 matrix, computing its inverse, resolving a linear system of equations, and displaying the matrix result in the UI.*
