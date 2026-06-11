@@ -31,6 +31,9 @@ public final class CoolProp {
 
     private static final Lib LIB = load();
 
+    private record CacheKey(String output, String name1, double prop1, String name2, double prop2, String fluid) {}
+    private static final java.util.Map<CacheKey, Double> PROPS_CACHE = new java.util.concurrent.ConcurrentHashMap<>();
+
     private CoolProp() {}
 
     private static Lib load() {
@@ -55,7 +58,7 @@ public final class CoolProp {
         requireLibrary();
         double value = LIB.PropsSI(output, name1, prop1, name2, prop2, fluid);
         if (!Double.isFinite(value) || Math.abs(value) > FAILURE_THRESHOLD) {
-            throw new IllegalStateException("CoolProp: " + lastError());
+            throw new PropertyEvaluationException("CoolProp: " + lastError());
         }
         return value;
     }
@@ -66,8 +69,15 @@ public final class CoolProp {
         if (LIB == null) {
             return Double.NaN;
         }
+        CacheKey key = new CacheKey(output, name1, prop1, name2, prop2, fluid);
+        Double cached = PROPS_CACHE.get(key);
+        if (cached != null) {
+            return cached;
+        }
         double value = LIB.PropsSI(output, name1, prop1, name2, prop2, fluid);
-        return Math.abs(value) > FAILURE_THRESHOLD ? Double.NaN : value;
+        double result = Math.abs(value) > FAILURE_THRESHOLD ? Double.NaN : value;
+        PROPS_CACHE.put(key, result);
+        return result;
     }
 
     /** Trivial (state-independent) fluid constants, e.g. Tcrit, pcrit, Ttriple. */
@@ -75,7 +85,7 @@ public final class CoolProp {
         requireLibrary();
         double value = LIB.Props1SI(fluid, output);
         if (!Double.isFinite(value) || Math.abs(value) > FAILURE_THRESHOLD) {
-            throw new IllegalStateException("CoolProp: " + lastError());
+            throw new PropertyEvaluationException("CoolProp: " + lastError());
         }
         return value;
     }
@@ -87,7 +97,7 @@ public final class CoolProp {
         requireLibrary();
         double value = LIB.HAPropsSI(output, name1, prop1, name2, prop2, name3, prop3);
         if (!Double.isFinite(value) || Math.abs(value) > FAILURE_THRESHOLD) {
-            throw new IllegalStateException("CoolProp: " + lastError());
+            throw new PropertyEvaluationException("CoolProp: " + lastError());
         }
         return value;
     }

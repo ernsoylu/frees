@@ -43,6 +43,320 @@ function CopyButton({ code }: { code: string }) {
   );
 }
 
+const CENGEL_EXAMPLES = [
+  {
+    value: "cengel-10-40",
+    title: "Power Cycles: Reheat Rankine Cycle with Moisture Limit (Cengel 10-40)",
+    description: "A reheat Rankine cycle where the condenser pressure is itself an unknown, fixed by the requirement that turbine-exit moisture not exceed 5%. frEES finds it implicitly from the quality constraint.",
+    note: "Verified against the textbook: condenser pressure 9.73 kPa, net power 10.2 MW, thermal efficiency 36.9%.",
+    code: `{ Reheat Rankine Cycle - Cengel 10-40 }
+{ Find the condenser pressure that limits turbine-exit moisture to 5%,
+  then the net power output and thermal efficiency. }
+m_dot = 7.7 [kg/s]
+P[3] = 12500 [kPa]   { HP turbine inlet }
+T[3] = 550 [C]
+P[4] = 2000 [kPa]    { Reheat pressure }
+T[5] = 450 [C]       { Reheat temperature }
+P[5] = P[4]
+eta_turb = 0.85
+eta_pump = 0.90
+x[6] = 0.95          { Max 5% moisture at LP turbine exit }
+
+{ State 3: HP turbine inlet }
+h[3] = Enthalpy(Water, P=P[3], T=T[3])
+s[3] = Entropy(Water, P=P[3], T=T[3])
+
+{ State 4: HP turbine exit }
+h_4s = Enthalpy(Water, P=P[4], s=s[3])
+h[4] = h[3] - eta_turb * (h[3] - h_4s)
+
+{ State 5: reheater exit }
+h[5] = Enthalpy(Water, P=P[5], T=T[5])
+s[5] = Entropy(Water, P=P[5], T=T[5])
+
+{ State 6: LP turbine exit; the quality constraint fixes P[6] }
+h_6s = Enthalpy(Water, P=P[6], s=s[5])
+h[6] = h[5] - eta_turb * (h[5] - h_6s)
+h[6] = Enthalpy(Water, P=P[6], x=x[6])
+
+{ State 1: condenser exit (saturated liquid) }
+h[1] = Enthalpy(Water, P=P[6], x=0)
+v[1] = Volume(Water, P=P[6], x=0)
+
+{ State 2: pump exit }
+w_pump = v[1] * (P[3] - P[6]) / eta_pump
+h[2] = h[1] + w_pump
+
+{ Energy balances }
+q_in = (h[3] - h[2]) + (h[5] - h[4])
+w_turb = (h[3] - h[4]) + (h[5] - h[6])
+w_net = w_turb - w_pump
+W_dot_net = m_dot * w_net
+eta_th = w_net / q_in * 100`,
+  },
+  {
+    value: "cengel-10-62e",
+    title: "Power Cycles: Ideal Reheat-Regenerative Rankine Cycle, English Units (Cengel 10-62E)",
+    description: "One reheater and two open feedwater heaters with extractions at 250 and 40 psia. All inputs are in English units (psia, F, Btu/s); frEES converts them to SI automatically and solves the two feedwater-heater mass balances simultaneously.",
+    note: "With 4e5 Btu/s of boiler heat input the cycle delivers about 200 MW at 47.4% thermal efficiency.",
+    code: `{ Ideal Reheat-Regenerative Rankine Cycle - Cengel 10-62E }
+{ One reheater and two open feedwater heaters; everything isentropic.
+  English-unit inputs are converted to SI automatically. Find the boiler
+  flow rate, net power and thermal efficiency. }
+P[7] = 1500 [psia]   { HP turbine inlet }
+T[7] = 1100 [F]
+P[8] = 250 [psia]    { Extraction to FWH II }
+P[9] = 140 [psia]    { HP exit / reheater }
+T[10] = 1000 [F]     { Reheat temperature }
+P[11] = 40 [psia]    { Extraction to FWH I }
+P[12] = 1 [psia]     { Condenser }
+Q_dot_in = 400000 [Btu/s]
+
+{ HP turbine: 7 -> 8 (extraction) -> 9 (to reheater), isentropic }
+h[7] = Enthalpy(Water, P=P[7], T=T[7])
+s[7] = Entropy(Water, P=P[7], T=T[7])
+h[8] = Enthalpy(Water, P=P[8], s=s[7])
+h[9] = Enthalpy(Water, P=P[9], s=s[7])
+
+{ Reheater and LP turbine: 10 -> 11 (extraction) -> 12, isentropic }
+h[10] = Enthalpy(Water, P=P[9], T=T[10])
+s[10] = Entropy(Water, P=P[9], T=T[10])
+h[11] = Enthalpy(Water, P=P[11], s=s[10])
+h[12] = Enthalpy(Water, P=P[12], s=s[10])
+
+{ Condensate and feedwater path: saturated liquid out of each FWH }
+h[1] = Enthalpy(Water, P=P[12], x=0)
+v[1] = Volume(Water, P=P[12], x=0)
+h[2] = h[1] + v[1] * (P[11] - P[12])
+h[3] = Enthalpy(Water, P=P[11], x=0)
+v[3] = Volume(Water, P=P[11], x=0)
+h[4] = h[3] + v[3] * (P[8] - P[11])
+h[5] = Enthalpy(Water, P=P[8], x=0)
+v[5] = Volume(Water, P=P[8], x=0)
+h[6] = h[5] + v[5] * (P[7] - P[8])
+
+{ Feedwater heater balances (per kg of boiler flow):
+  y extracted at 250 psia, z at 40 psia }
+y * h[8] + (1 - y) * h[4] = h[5]
+z * h[11] + (1 - y - z) * h[2] = (1 - y) * h[3]
+
+{ Boiler heat input fixes the mass flow rate }
+q_in = (h[7] - h[6]) + (1 - y) * (h[10] - h[9])
+Q_dot_in = m_dot * q_in
+
+{ Net power and efficiency }
+w_turb = (h[7] - h[8]) + (1 - y) * (h[8] - h[9]) + (1 - y) * (h[10] - h[11]) + (1 - y - z) * (h[11] - h[12])
+w_pumps = (1 - y - z) * (h[2] - h[1]) + (1 - y) * (h[4] - h[3]) + (h[6] - h[5])
+w_net = w_turb - w_pumps
+W_dot_net = m_dot * w_net
+eta_th = w_net / q_in * 100`,
+  },
+  {
+    value: "cengel-10-78",
+    title: "Power Cycles: Cogeneration Plant with Regeneration (Cengel 10-78)",
+    description: "35% of the turbine flow is extracted at 1.6 MPa; one part feeds an open feedwater heater, the rest a process heater. The open-FWH energy balance determines the split.",
+    note: "Verified against the textbook: boiler mass flow rate 29.1 kg/s for 25 MW of net power.",
+    code: `{ Cogeneration Plant with Regeneration - Cengel 10-78 }
+{ 35% of the turbine flow is extracted at 1.6 MPa; part heats the open
+  feedwater heater, the rest serves the process heater. Isentropic
+  turbine and pumps. Find the boiler flow rate for 25 MW net power. }
+P[6] = 9000 [kPa]
+T[6] = 400 [C]
+P[7] = 1600 [kPa]    { Extraction pressure }
+P[8] = 10 [kPa]      { Condenser pressure }
+f_ext = 0.35         { Extracted fraction of the boiler flow }
+W_dot_net = 25000 [kW]
+
+{ State 6: turbine inlet }
+h[6] = Enthalpy(Water, P=P[6], T=T[6])
+s[6] = Entropy(Water, P=P[6], T=T[6])
+
+{ States 7 and 8: isentropic expansion }
+h[7] = Enthalpy(Water, P=P[7], s=s[6])
+h[8] = Enthalpy(Water, P=P[8], s=s[6])
+
+{ State 1: condenser exit; pump I to extraction pressure }
+h[1] = Enthalpy(Water, P=P[8], x=0)
+v[1] = Volume(Water, P=P[8], x=0)
+w_pI = v[1] * (P[7] - P[8])
+h[2] = h[1] + w_pI
+
+{ States 3 and 9: FWH and process heater both yield sat. liquid at 1.6 MPa }
+h[3] = Enthalpy(Water, P=P[7], x=0)
+v[3] = Volume(Water, P=P[7], x=0)
+
+{ Open FWH balance: y of the boiler flow condenses the feedwater stream }
+(1 - f_ext) * h[2] + y * h[7] = (1 - f_ext + y) * h[3]
+
+{ Mixing of FWH exit and process-heater drain is at the same state,
+  then pump II raises it to boiler pressure }
+w_pII = v[3] * (P[6] - P[7])
+h[5] = h[3] + w_pII
+
+{ Specific work per kg of boiler flow }
+w_turb = (h[6] - h[7]) + (1 - f_ext) * (h[7] - h[8])
+w_pumps = (1 - f_ext) * w_pI + w_pII
+w_net = w_turb - w_pumps
+W_dot_net = m_dot * w_net
+
+{ Process heat delivered }
+Q_dot_process = m_dot * (f_ext - y) * (h[7] - h[3])`,
+  },
+  {
+    value: "cengel-10-28",
+    title: "Power Cycles: Binary Geothermal Plant with Isobutane (Cengel 10-28)",
+    description: "A binary-cycle plant where geothermal brine at 160 C drives a Rankine cycle on isobutane. The problem supplies the isobutane properties directly, so this is a pure energy-balance system.",
+    note: "Results: turbine isentropic efficiency 78.8%, net power 22.6 MW, thermal efficiency 13.7%.",
+    code: `{ Binary Geothermal Power Plant with Isobutane - Cengel 10-28 }
+{ Property values are given in the problem statement. Find the turbine
+  isentropic efficiency, net power and thermal efficiency. }
+m_dot_geo = 555.9 [kg/s]
+T_geo_in = 160 [C]
+T_geo_out = 90 [C]
+cp_geo = 4.258 [kJ/kg-K]
+P[2] = 3250 [kPa]    { Turbine inlet pressure (pump exit) }
+P[1] = 410 [kPa]     { Condenser pressure }
+eta_pump = 0.90
+
+{ Given isobutane properties }
+h[1] = 273.01 [kJ/kg]    { Condenser exit, saturated liquid }
+v[1] = 0.001842 [m^3/kg]
+h[3] = 761.54 [kJ/kg]    { Turbine inlet }
+h[4] = 689.74 [kJ/kg]    { Turbine exit, actual }
+h_4s = 670.40 [kJ/kg]    { Turbine exit, isentropic }
+
+{ (a) Turbine isentropic efficiency }
+eta_turb = (h[3] - h[4]) / (h[3] - h_4s)
+
+{ Pump work and heat-exchanger inlet state }
+w_pump = v[1] * (P[2] - P[1]) / eta_pump
+h[2] = h[1] + w_pump
+
+{ Heat picked up from the geothermal brine }
+Q_dot_in = m_dot_geo * cp_geo * (T_geo_in - T_geo_out)
+Q_dot_in = m_dot_iso * (h[3] - h[2])
+
+{ (b) Net power and (c) thermal efficiency }
+W_dot_turb = m_dot_iso * (h[3] - h[4])
+W_dot_pump = m_dot_iso * w_pump
+W_dot_net = W_dot_turb - W_dot_pump
+eta_th = W_dot_net / Q_dot_in * 100`,
+  },
+  {
+    value: "cengel-9-95",
+    title: "Gas Turbines: Simple Brayton Cycle with Irreversibilities (Cengel 9-95)",
+    description: "A gas-turbine plant between 100 and 1600 kPa with compressor and turbine efficiencies of 85% and 88%. The turbine inlet temperature is unknown and recovered from the known exhaust temperature.",
+    note: "Verified against the textbook: net power 6488 kW, back work ratio 0.511, thermal efficiency 37.8%.",
+    code: `{ Simple Brayton Cycle with Irreversibilities - Cengel 9-95 }
+{ Air enters the compressor at 40 C and 850 m^3/min; the turbine exhausts
+  at 650 C. Find net power, back work ratio and thermal efficiency. }
+P[1] = 100 [kPa]
+P[2] = 1600 [kPa]
+T[1] = 40 [C]
+T[4] = 650 [C]       { Turbine exit temperature }
+V_dot = 850 [m^3/min]
+eta_C = 0.85
+eta_T = 0.88
+cp = 1.108 [kJ/kg-K]
+cv = 0.821 [kJ/kg-K]
+k = 1.35
+
+{ Mass flow rate from ideal gas at compressor inlet }
+R = cp - cv
+rho[1] = P[1] / (R * T[1])
+m_dot = rho[1] * V_dot
+
+{ Compressor }
+T_2s = T[1] * (P[2] / P[1])^((k - 1) / k)
+w_C = cp * (T_2s - T[1]) / eta_C
+T[2] = T[1] + w_C / cp
+
+{ Turbine: exit temperature known, inlet T[3] unknown }
+T_4s = T[3] * (P[1] / P[2])^((k - 1) / k)
+T[3] - T[4] = eta_T * (T[3] - T_4s)
+w_T = cp * (T[3] - T[4])
+
+{ Performance }
+w_net = w_T - w_C
+W_dot_net = m_dot * w_net
+bwr = w_C / w_T
+q_in = cp * (T[3] - T[2])
+eta_th = w_net / q_in * 100`,
+  },
+  {
+    value: "cengel-9-105",
+    title: "Gas Turbines: Automotive Gas Turbine with Regenerator (Cengel 9-105)",
+    description: "An isentropic Brayton cycle with a regenerator whose cold stream leaves 10 C cooler than the turbine exhaust entering it. Find the heat addition and rejection rates for 115 kW of net power.",
+    note: "Verified against the textbook: heat addition 240 kW, heat rejection 125 kW.",
+    code: `{ Automotive Gas Turbine with Regenerator - Cengel 9-105 }
+{ Isentropic compressor and turbine; the cold stream leaves the
+  regenerator 10 C cooler than the turbine exhaust entering it. }
+P[1] = 100 [kPa]
+T[1] = 30 [C]
+r_p = 8
+T[4] = 800 [C]       { Maximum cycle temperature (turbine inlet) }
+W_dot_net = 115 [kW]
+cp = 1.005 [kJ/kg-K]
+k = 1.4
+
+{ Compressor (isentropic) }
+T[2] = T[1] * r_p^((k - 1) / k)
+
+{ Turbine (isentropic) }
+T[5] = T[4] * (1 / r_p)^((k - 1) / k)
+
+{ Regenerator: cold-side exit 10 C below the hot-side inlet }
+T[3] = T[5] - 10
+
+{ Work and heat rates }
+w_net = cp * (T[4] - T[5]) - cp * (T[2] - T[1])
+W_dot_net = m_dot * w_net
+Q_dot_in = m_dot * cp * (T[4] - T[3])
+Q_dot_out = Q_dot_in - W_dot_net`,
+  },
+  {
+    value: "cengel-9-112",
+    title: "Gas Turbines: Brayton Cycle with Regeneration and Variable Specific Heats (Cengel 9-112)",
+    description: "Instead of assuming constant specific heats, this model uses real-gas air properties (Enthalpy/Entropy of Air) for the compressor, turbine and regenerator, exactly like the air-table solution in the book.",
+    note: "Verified against the textbook: turbine exit temperature 783 K, net work 108 kJ/kg, thermal efficiency 22.5%.",
+    code: `{ Brayton Cycle with Regeneration, Variable Specific Heats - Cengel 9-112 }
+{ Real-gas air properties replace the constant-cp assumption. Find the
+  turbine exit temperature, net work and thermal efficiency. }
+P[1] = 100 [kPa]
+T[1] = 310 [K]
+r_p = 7
+P[2] = P[1] * r_p
+T[3] = 1150 [K]
+eta_C = 0.75
+eta_T = 0.82
+epsilon = 0.65       { Regenerator effectiveness }
+
+{ Compressor }
+h[1] = Enthalpy(Air, T=T[1], P=P[1])
+s[1] = Entropy(Air, T=T[1], P=P[1])
+h_2s = Enthalpy(Air, P=P[2], s=s[1])
+w_C = (h_2s - h[1]) / eta_C
+h[2] = h[1] + w_C
+T[2] = Temperature(Air, P=P[2], h=h[2])
+
+{ Turbine }
+h[3] = Enthalpy(Air, T=T[3], P=P[2])
+s[3] = Entropy(Air, T=T[3], P=P[2])
+h_4s = Enthalpy(Air, P=P[1], s=s[3])
+w_T = eta_T * (h[3] - h_4s)
+h[4] = h[3] - w_T
+T[4] = Temperature(Air, P=P[1], h=h[4])
+
+{ Regenerator }
+h[5] = h[2] + epsilon * (h[4] - h[2])
+
+{ Performance }
+q_in = h[3] - h[5]
+w_net = w_T - w_C
+eta_th = w_net / q_in * 100`,
+  },
+];
+
 const SECTIONS = [
   { id: 'started', label: '1. Getting Started' },
   { id: 'syntax', label: '2. Equation Syntax & Math' },
@@ -491,7 +805,7 @@ m_flow_total = m_flow_1 + m_flow_2`}
               <Badge color="blue" variant="filled">Water</Badge>
               <Badge color="blue" variant="filled">Steam</Badge>
               <Badge color="indigo" variant="filled">Air</Badge>
-              <Badge color="cyan" variant="filled">CO2</Badge>
+              <Badge color="cyan" variant="filled">CarbonDioxide (R744)</Badge>
               <Badge color="cyan" variant="filled">Nitrogen</Badge>
               <Badge color="cyan" variant="filled">Oxygen</Badge>
               <Badge color="cyan" variant="filled">Hydrogen</Badge>
@@ -612,6 +926,68 @@ m_flow_total = m_flow_1 + m_flow_2`}
               <br/>
               - <Code>V</Code>, <Code>D</Code>, or <Code>Rho</Code>: density or specific volume
             </Text>
+
+            <Title order={3} mt="sm">Ideal Gases (Chemical Formulas)</Title>
+            <Text style={{ lineHeight: 1.6 }}>
+              Spelled chemical formulas select <strong>ideal-gas</strong> property routines whose enthalpy
+              is referenced to the <strong>enthalpy of formation at 298.15 K, 1 atm</strong> — the
+              convention that makes combustion energy balances work directly (EES behavior).
+              <code> Enthalpy(CO2, T=298.15)</code> returns −8941.6 kJ/kg, not 0. Full names
+              (Nitrogen, CarbonDioxide, Methane) keep the real-fluid CoolProp models above.
+            </Text>
+            <Group gap="xs">
+              <Badge color="orange" variant="filled">N2</Badge>
+              <Badge color="orange" variant="filled">O2</Badge>
+              <Badge color="orange" variant="filled">CO2</Badge>
+              <Badge color="orange" variant="filled">CO</Badge>
+              <Badge color="orange" variant="filled">H2O</Badge>
+              <Badge color="orange" variant="filled">H2</Badge>
+              <Badge color="orange" variant="filled">CH4</Badge>
+              <Badge color="orange" variant="filled">C2H6</Badge>
+              <Badge color="orange" variant="filled">C3H8</Badge>
+              <Badge color="orange" variant="filled">C4H10</Badge>
+              <Badge color="orange" variant="filled">C2H4</Badge>
+              <Badge color="orange" variant="filled">C2H2</Badge>
+              <Badge color="orange" variant="filled">SO2</Badge>
+              <Badge color="orange" variant="filled">NO</Badge>
+              <Badge color="orange" variant="filled">NO2</Badge>
+            </Group>
+            <Text size="sm" style={{ lineHeight: 1.6 }}>
+              Ideal-gas enthalpy depends on temperature only: <code>h = Enthalpy(N2, T=1000)</code>.
+              Entropy is absolute (third law) and needs the pressure:{' '}
+              <code>s = Entropy(N2, T=400, P=101325)</code>. Also available:{' '}
+              <Code>IntEnergy(gas, T=...)</Code>, <Code>Cp</Code>/<Code>Cv(gas, T=...)</Code>,{' '}
+              <Code>Volume(gas, T=..., P=...)</Code>, and the inverses{' '}
+              <Code>Temperature(gas, h=...)</Code> and <Code>Temperature(gas, s=..., P=...)</Code>.
+              Specific heats use the Cengel A-2(c) polynomial fits, valid through flame
+              temperatures — far beyond the real-fluid equations of state.
+            </Text>
+            <Paper withBorder p="md" bg="dark.8" radius="md" style={{ position: 'relative' }}>
+              <CopyButton code={`{ Adiabatic flame temperature with ideal-gas functions }
+{ CH4 + 2 O2 + 7.52 N2 -> CO2 + 2 H2O + 7.52 N2; per kmol of fuel }
+M_ch4 = 16.043
+M_o2 = 31.999
+M_n2 = 28.013
+M_co2 = 44.01
+M_h2o = 18.015
+T_in = 298.15 [K]
+H_react = 1 * M_ch4 * Enthalpy(CH4, T=T_in) / 1000 + 2 * M_o2 * Enthalpy(O2, T=T_in) / 1000 + 7.52 * M_n2 * Enthalpy(N2, T=T_in) / 1000
+H_prod = 1 * M_co2 * Enthalpy(CO2, T=T_flame) / 1000 + 2 * M_h2o * Enthalpy(H2O, T=T_flame) / 1000 + 7.52 * M_n2 * Enthalpy(N2, T=T_flame) / 1000
+H_react = H_prod`} />
+              <Code block style={{ background: 'transparent', maxHeight: '300px', overflowY: 'auto' }}>
+                {`{ Adiabatic flame temperature with ideal-gas functions }
+{ CH4 + 2 O2 + 7.52 N2 -> CO2 + 2 H2O + 7.52 N2; per kmol of fuel }
+M_ch4 = 16.043
+M_o2 = 31.999
+M_n2 = 28.013
+M_co2 = 44.01
+M_h2o = 18.015
+T_in = 298.15 [K]
+H_react = 1 * M_ch4 * Enthalpy(CH4, T=T_in) / 1000 + 2 * M_o2 * Enthalpy(O2, T=T_in) / 1000 + 7.52 * M_n2 * Enthalpy(N2, T=T_in) / 1000
+H_prod = 1 * M_co2 * Enthalpy(CO2, T=T_flame) / 1000 + 2 * M_h2o * Enthalpy(H2O, T=T_flame) / 1000 + 7.52 * M_n2 * Enthalpy(N2, T=T_flame) / 1000
+H_react = H_prod`}
+              </Code>
+            </Paper>
           </Stack>
         );
       case 'humidair':
@@ -962,7 +1338,7 @@ Z_c = -1i / (omega * C_corr)`}
                     Finds the adiabatic flame temperature of methane ($CH_4$) burned with 100% theoretical air, balancing stoichiometric enthalpies and variable specific heat capacities.
                   </Text>
                   <Paper withBorder p="md" bg="dark.8" radius="md" style={{ position: 'relative' }}>
-                    <CopyButton code={`{ Adiabatic Flame Temp - Methane Combustion }\nT_reactants = 298.15 [K]  { Inlet temp }\n\n{ Enthalpies of formation in kJ/kmol }\nhf_ch4 = -74850\nhf_o2 = 0\nhf_n2 = 0\nhf_co2 = -393520\nhf_h2o = -241820\n\n{ Enthalpy of reactants at T_reactants (sensible enthalpy is 0) }\nH_reactants = 1 * hf_ch4 + 2 * hf_o2 + 7.52 * hf_n2\n\n{ Enthalpy of products at Adiabatic Flame Temp (T_flame) }\n{ Specific heats modeled as polynomial function of T }\n{ Cp = A + B*T + C*T^2 + D*T^3 }\n\n{ Sensible enthalpy integrations from reference 298.15K }\ndH_co2 = Integral(Cp_co2, T, 298.15, T_flame)\ndH_h2o = Integral(Cp_h2o, T, 298.15, T_flame)\ndH_n2 = Integral(Cp_n2, T, 298.15, T_flame)\n\n{ Sensible heats in kJ/kmol-K }\nCp_co2 = 22.26 + 5.98e-2 * T - 3.50e-5 * T^2 + 7.47e-9 * T^3\nCp_h2o = 32.24 + 0.19e-2 * T + 1.06e-5 * T^2 - 3.60e-9 * T^3\nCp_n2 = 28.90 - 0.16e-2 * T + 0.57e-5 * T^2 - 2.87e-9 * T^3\n\nH_products = 1 * (hf_co2 + dH_co2) + 2 * (hf_h2o + dH_h2o) + 7.52 * (hf_n2 + dH_n2)\n\n{ Energy Balance: H_reactants = H_products }\nH_reactants = H_products`} />
+                    <CopyButton code={`{ Adiabatic Flame Temp - Methane Combustion }\nT_reactants = 298.15 [K]  { Inlet temp }\n\n{ Enthalpies of formation in kJ/kmol }\nhf_ch4 = -74850\nhf_o2 = 0\nhf_n2 = 0\nhf_co2 = -393520\nhf_h2o = -241820\n\n{ Enthalpy of reactants at T_reactants (sensible enthalpy is 0) }\nH_reactants = 1 * hf_ch4 + 2 * hf_o2 + 7.52 * hf_n2\n\n{ Enthalpy of products at Adiabatic Flame Temp (T_flame) }\n{ Specific heats modeled as polynomial function of T }\n{ Cp = A + B*T + C*T^2 + D*T^3 }\n\n{ Sensible enthalpy integrations from reference 298.15K }\ndH_co2 = Integral(Cp_co2, T, 298.15, T_flame)\ndH_h2o = Integral(Cp_h2o, T, 298.15, T_flame)\ndH_n2 = Integral(Cp_n2, T, 298.15, T_flame)\n\n{ Sensible heats in kJ/kmol-K }\nCp_co2 = 22.26 + 5.981e-2 * T - 3.501e-5 * T^2 + 7.469e-9 * T^3\nCp_h2o = 32.24 + 0.1923e-2 * T + 1.055e-5 * T^2 - 3.595e-9 * T^3\nCp_n2 = 28.90 - 0.1571e-2 * T + 0.8081e-5 * T^2 - 2.873e-9 * T^3\n\nH_products = 1 * (hf_co2 + dH_co2) + 2 * (hf_h2o + dH_h2o) + 7.52 * (hf_n2 + dH_n2)\n\n{ Energy Balance: H_reactants = H_products }\nH_reactants = H_products`} />
                     <Code block style={{ background: 'transparent', maxHeight: '300px', overflowY: 'auto' }}>
                       {`{ Adiabatic Flame Temp - Methane Combustion }
 T_reactants = 298.15 [K]  { Inlet temp }
@@ -987,9 +1363,9 @@ dH_h2o = Integral(Cp_h2o, T, 298.15, T_flame)
 dH_n2 = Integral(Cp_n2, T, 298.15, T_flame)
 
 { Sensible heats in kJ/kmol-K }
-Cp_co2 = 22.26 + 5.98e-2 * T - 3.50e-5 * T^2 + 7.47e-9 * T^3
-Cp_h2o = 32.24 + 0.19e-2 * T + 1.06e-5 * T^2 - 3.60e-9 * T^3
-Cp_n2 = 28.90 - 0.16e-2 * T + 0.57e-5 * T^2 - 2.87e-9 * T^3
+Cp_co2 = 22.26 + 5.981e-2 * T - 3.501e-5 * T^2 + 7.469e-9 * T^3
+Cp_h2o = 32.24 + 0.1923e-2 * T + 1.055e-5 * T^2 - 3.595e-9 * T^3
+Cp_n2 = 28.90 - 0.1571e-2 * T + 0.8081e-5 * T^2 - 2.873e-9 * T^3
 
 H_products = 1 * (hf_co2 + dH_co2) + 2 * (hf_h2o + dH_h2o) + 7.52 * (hf_n2 + dH_n2)
 
@@ -998,10 +1374,28 @@ H_reactants = H_products`}
                     </Code>
                   </Paper>
                   <Text size="xs" mt="xs" c="dimmed">
-                    *Tip: Set guess value of T_flame to <code>2000</code> and lower bound to <code>298</code> in Variable Info before solving.*
+                    The upper limit T_flame is an unknown of the system: frEES inlines the c_p polynomials into the integrals and solves the energy balance directly (about 2345 K, matching the ideal-gas table data) with no manual guesses needed.
                   </Text>
                 </Accordion.Panel>
               </Accordion.Item>
+
+              {CENGEL_EXAMPLES.map((ex) => (
+                <Accordion.Item value={ex.value} key={ex.value}>
+                  <Accordion.Control>
+                    <Text fw={600} c="cyan.4">{ex.title}</Text>
+                  </Accordion.Control>
+                  <Accordion.Panel>
+                    <Text size="sm" mb="sm">{ex.description}</Text>
+                    <Paper withBorder p="md" bg="dark.8" radius="md" style={{ position: 'relative' }}>
+                      <CopyButton code={ex.code} />
+                      <Code block style={{ background: 'transparent', maxHeight: '300px', overflowY: 'auto' }}>
+                        {ex.code}
+                      </Code>
+                    </Paper>
+                    <Text size="xs" mt="xs" c="dimmed">{ex.note}</Text>
+                  </Accordion.Panel>
+                </Accordion.Item>
+              ))}
             </Accordion>
           </Stack>
         );

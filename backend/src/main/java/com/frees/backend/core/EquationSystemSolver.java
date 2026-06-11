@@ -10,8 +10,10 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
@@ -73,6 +75,7 @@ public class EquationSystemSolver {
         EquationParser.ParseResult parsed = parser.parseResult(source);
         List<Equation> equations = parsed.equations();
         try {
+            requireComplexModeForImaginaryLiterals(equations, complexMode);
             List<IntegralSolver.IntegralEquation> integrals =
                     findIntegrals(equations, parsed.defs(), complexMode);
             if (!integrals.isEmpty()) {
@@ -102,6 +105,16 @@ public class EquationSystemSolver {
                 String.format(
                         "No syntax errors were detected. There are %d equations and %d variables.",
                         equations.size(), allVars.size()));
+    }
+
+    /** Imaginary literals are meaningless in real mode; fail with guidance. */
+    private static void requireComplexModeForImaginaryLiterals(List<Equation> equations,
+                                                               boolean complexMode) {
+        if (!complexMode
+                && com.frees.backend.parser.ComplexExpansion.mentionsImaginary(equations)) {
+            throw new SolverException("The equations contain complex literals "
+                    + "(e.g. 1i): enable Complex mode to solve them.");
+        }
     }
 
     private static TreeSet<String> collectVariables(List<Equation> equations) {
@@ -150,6 +163,7 @@ public class EquationSystemSolver {
         long startNanos = System.nanoTime();
         long deadlineNanos = startNanos + (long) (settings.elapsedTimeSeconds() * 1.0e9);
         EquationParser.ParseResult parsed = parser.parseResult(source);
+        requireComplexModeForImaginaryLiterals(parsed.equations(), settings.complexMode());
         List<IntegralSolver.IntegralEquation> integrals =
                 findIntegrals(parsed.equations(), parsed.defs(), settings.complexMode());
         if (!integrals.isEmpty()) {
@@ -204,18 +218,200 @@ public class EquationSystemSolver {
             values.put(name, initialGuess(name, expandedSpecs, warmStart));
         }
         NewtonSolver newtonSolver = new NewtonSolver(settings, defs);
+        NewtonSolver retrySolver = new NewtonSolver(retrySettings(settings), defs);
         NewtonSolver polisher = new NewtonSolver(polishSettings(settings), defs);
         List<Block> blocks = blocker.block(equations);
         int totalIterations = 0;
-        for (Block block : blocks) {
-            totalIterations += newtonSolver.solveBlock(block, values, deadlineNanos, expandedSpecs);
+        Set<Integer> skipIndices = new HashSet<>();
+        for (int bi = 0; bi < blocks.size(); bi++) {
+            if (skipIndices.contains(bi)) continue;
+            Block block = blocks.get(bi);
+            Block actualSolved = block;
             try {
-                totalIterations += polisher.solveBlock(block, values, deadlineNanos, expandedSpecs);
+                totalIterations += newtonSolver.solveBlock(block, values, deadlineNanos, expandedSpecs);
+            } catch (SolverException ex) {
+                // First resort when a block fails: retry it alone from
+                // transformed guesses. This is local and cheap, and keeps the
+                // solutions of all other blocks intact.
+                int retryIterations = retryWithTransformedGuesses(retrySolver, block,
+                        values, deadlineNanos, expandedSpecs, warmStart);
+                if (retryIterations >= 0) {
+                    totalIterations += retryIterations;
+                } else {
+                    // Second resort: merge with connected blocks in both
+                    // directions and re-solve the combined system.
+                    List<Integer> mergedIndices = new ArrayList<>();
+                    Block merged = tryMergeBidirectional(blocks, bi, block, mergedIndices, skipIndices);
+                    if (merged != null && merged.variables().size() > block.variables().size()) {
+                        // Reset ALL variables in the merged block to initial guesses.
+                        // Previously solved blocks may have incorrect values from
+                        // SVD fallback on rank-deficient Jacobians.
+                        for (String v : merged.variables()) {
+                            values.put(v, initialGuess(v, expandedSpecs, null));
+                        }
+                        totalIterations += newtonSolver.solveBlock(merged, values, deadlineNanos, expandedSpecs);
+                        skipIndices.addAll(mergedIndices);
+                        actualSolved = merged;
+                    } else {
+                        throw ex;
+                    }
+                }
+            }
+            try {
+                totalIterations += polisher.solveBlock(actualSolved, values, deadlineNanos, expandedSpecs);
             } catch (SolverException ignored) {
                 // Polishing is best-effort; the main solution is still valid.
             }
         }
         return new InnerSolve(values, blocks, totalIterations);
+    }
+
+    /**
+     * Retries a failed block from transformed guesses, exploring symmetry
+     * offsets and magnitudes. Offsets break invariant manifolds (for
+     * z^2 = -4 the real axis z_i = 0, the default guess, is invariant, so
+     * no Newton step ever acquires an imaginary component); scales reach
+     * Newton basins far from 1.0 (a reciprocal like Z = -1/(omega*C) only
+     * converges when the guess for C is within a factor of ~2 of the
+     * solution's magnitude). Returns the iterations used, or -1 on failure
+     * (with the block's variables restored to their unmodified guesses).
+     */
+    /**
+     * One alternative start: a zero guess becomes ±zeroOffset (off the
+     * invariant manifold), a nonzero guess is rescaled (toward a distant
+     * Newton basin), and conjugate flips the sign of imaginary components
+     * (_i) — solutions of real-coefficient complex systems come in
+     * conjugate pairs, so the mirror branch is the natural alternative when
+     * a guess sits on the wrong side of the phase plane.
+     */
+    private record GuessTransform(double zeroOffset, double scale, boolean conjugate) {}
+
+    private static final List<GuessTransform> GUESS_TRANSFORMS = buildGuessTransforms();
+
+    private static List<GuessTransform> buildGuessTransforms() {
+        List<GuessTransform> transforms = new ArrayList<>();
+        for (boolean conjugate : new boolean[] {false, true}) {
+            for (double scale : new double[] {1.0, 1.0e-2, 1.0e-4, 1.0e2, 1.0e4}) {
+                for (double zeroOffset : new double[] {1.0, -1.0}) {
+                    transforms.add(new GuessTransform(zeroOffset, scale, conjugate));
+                }
+            }
+        }
+        return transforms;
+    }
+
+    /** Retry attempts cap iterations: healthy Newton converges quickly, and
+     * a generous user limit must not multiply across the whole ladder. */
+    private static final int MAX_RETRY_ITERATIONS = 500;
+
+    private static SolverSettings retrySettings(SolverSettings settings) {
+        return new SolverSettings(
+                Math.min(settings.maxIterations(), MAX_RETRY_ITERATIONS),
+                settings.relativeResiduals(),
+                settings.changeInVariables(),
+                settings.elapsedTimeSeconds(),
+                settings.complexMode());
+    }
+
+    private static int retryWithTransformedGuesses(NewtonSolver retrySolver, Block block,
+                                                   Map<String, Double> values,
+                                                   long deadlineNanos,
+                                                   Map<String, VariableSpec> specs,
+                                                   Map<String, Double> warmStart) {
+        for (GuessTransform transform : GUESS_TRANSFORMS) {
+            for (String v : block.variables()) {
+                VariableSpec spec = specs.get(v);
+                double base = initialGuess(v, specs, warmStart);
+                double guess = base == 0.0 ? transform.zeroOffset() : base * transform.scale();
+                if (transform.conjugate() && v.endsWith("_i")) {
+                    guess = -guess;
+                }
+                if (spec != null) {
+                    guess = Math.clamp(guess, spec.lower(), spec.upper());
+                }
+                values.put(v, guess);
+            }
+            try {
+                return retrySolver.solveBlock(block, values, deadlineNanos, specs);
+            } catch (SolverException retryFailed) {
+                // try the next transform
+            }
+        }
+        for (String v : block.variables()) {
+            values.put(v, initialGuess(v, specs, warmStart));
+        }
+        return -1;
+    }
+
+    /**
+     * Merges the failed block with blocks that share variable dependencies
+     * (in both forward and backward directions). Also takes skipIndices to
+     * avoid re-merging blocks that were already solved in a prior merge.
+     */
+    private static Block tryMergeBidirectional(List<Block> blocks, int failedIdx, Block failed,
+                                                List<Integer> mergedIndices,
+                                                Set<Integer> skipIndices) {
+        Set<String> involvedVars = new HashSet<>();
+        List<Equation> mergedEquations = new ArrayList<>(failed.equations());
+        List<String> mergedVars = new ArrayList<>(failed.variables());
+        Set<String> mergedVarSet = new HashSet<>(failed.variables());
+        // Collect all variables referenced by the failed block's equations
+        for (Equation eq : failed.equations()) {
+            involvedVars.addAll(eq.variables());
+        }
+        boolean merged = false;
+
+        // Scan forward: merge blocks whose variables are referenced by the
+        // current merged block, or whose equations reference merged variables.
+        for (int i = failedIdx + 1; i < blocks.size(); i++) {
+            if (skipIndices.contains(i)) continue;
+            if (shouldMerge(blocks.get(i), involvedVars, mergedVarSet)) {
+                addBlock(blocks.get(i), mergedEquations, mergedVars, mergedVarSet, involvedVars);
+                mergedIndices.add(i);
+                merged = true;
+            }
+        }
+
+        // Scan backward: merge earlier blocks whose variables are referenced
+        // by the failed block's equations, or that reference our variables.
+        for (int i = failedIdx - 1; i >= 0; i--) {
+            if (skipIndices.contains(i)) continue;
+            if (shouldMerge(blocks.get(i), involvedVars, mergedVarSet)) {
+                addBlock(blocks.get(i), mergedEquations, mergedVars, mergedVarSet, involvedVars);
+                mergedIndices.add(i);
+                merged = true;
+            }
+        }
+
+        if (!merged) {
+            return null;
+        }
+        return new Block(failedIdx, mergedEquations, mergedVars);
+    }
+
+    private static boolean shouldMerge(Block candidate, Set<String> involvedVars,
+                                        Set<String> mergedVarSet) {
+        // Check if any variable determined by candidate is in our involved set
+        for (String v : candidate.variables()) {
+            if (involvedVars.contains(v)) return true;
+        }
+        // Check if candidate's equations reference any of our merged variables
+        for (Equation eq : candidate.equations()) {
+            for (String v : eq.variables()) {
+                if (mergedVarSet.contains(v)) return true;
+            }
+        }
+        return false;
+    }
+
+    private static void addBlock(Block block, List<Equation> equations, List<String> vars,
+                                  Set<String> varSet, Set<String> involvedVars) {
+        equations.addAll(block.equations());
+        vars.addAll(block.variables());
+        varSet.addAll(block.variables());
+        for (Equation eq : block.equations()) {
+            involvedVars.addAll(eq.variables());
+        }
     }
 
     /** Mutable cursor shared across integrand evaluations of one Integral. */
@@ -250,6 +446,21 @@ public class EquationSystemSolver {
         List<Equation> finalEquations = new ArrayList<>(ordinary);
         TreeSet<String> fixedIntegrationVars = new TreeSet<>();
         for (IntegralSolver.IntegralEquation ie : integrals) {
+            if (!ie.constantLimits()) {
+                // A variable limit (e.g. T_flame) is an unknown of the
+                // system: the integral becomes an ordinary equation that the
+                // Evaluator computes by quadrature on each residual
+                // evaluation, and the integration variable lands on the
+                // upper limit, as in EES.
+                finalEquations.add(IntegralSolver.inlinedEquation(ie, ordinary));
+                if (fixedIntegrationVars.add(ie.integrationVar())) {
+                    finalEquations.add(new Equation(new Expr.Var(ie.integrationVar()),
+                            ie.upperExpr(),
+                            ie.integrationVar() + " = upper limit of "
+                                    + ie.original().sourceText()));
+                }
+                continue;
+            }
             IntegralContext context = new IntegralContext(ie, ordinary, settings,
                     specs, parsed.defs(), deadlineNanos, state);
             double value = IntegralSolver.integrate(
@@ -346,6 +557,7 @@ public class EquationSystemSolver {
         long deadlineNanos = startNanos + (long) (settings.elapsedTimeSeconds() * 1.0e9);
         EquationParser.ParseResult parsed = parser.parseResult(source);
         List<Equation> equations = parsed.equations();
+        requireComplexModeForImaginaryLiterals(equations, settings.complexMode());
         if (settings.complexMode()) {
             equations = com.frees.backend.parser.ComplexExpansion.expand(equations, parsed.displayNames());
         }
@@ -443,10 +655,11 @@ public class EquationSystemSolver {
         String baseName = name.substring(0, name.length() - 2);
         VariableSpec parentSpec = specs.get(baseName);
         if (parentSpec == null) {
-            return new VariableSpec(name, DEFAULT_GUESS,
+            double guess = name.endsWith("_i") ? 0.0 : DEFAULT_GUESS;
+            return new VariableSpec(name, guess,
                     Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY);
         }
-        double guess = name.endsWith("_r") ? parentSpec.guess() : DEFAULT_GUESS;
+        double guess = name.endsWith("_r") ? parentSpec.guess() : 0.0;
         return new VariableSpec(name, guess, parentSpec.lower(), parentSpec.upper());
     }
 }

@@ -1,5 +1,6 @@
 import {
   Accordion,
+  ActionIcon,
   Alert,
   Badge,
   Code,
@@ -11,7 +12,9 @@ import {
   Table,
   Text,
   Title,
+  Tooltip,
 } from '@mantine/core'
+import { IconLayoutSidebarRightCollapse } from '@tabler/icons-react'
 import { SolveResponse, SolveStats, TableStats } from './api'
 import { formatValue, SolutionRow, withStableKeys } from './format'
 
@@ -203,6 +206,7 @@ interface Props {
   tableStats: TableStats | null
   result: SolveResponse | null
   rows: SolutionRow[]
+  onCollapse?: () => void
 }
 
 export default function SolutionPanel({
@@ -211,6 +215,7 @@ export default function SolutionPanel({
   tableStats,
   result,
   rows,
+  onCollapse,
 }: Readonly<Props>) {
   return (
     <Paper
@@ -221,10 +226,25 @@ export default function SolutionPanel({
     >
       <Group justify="space-between" mb="sm">
         <Title order={4}>Solution</Title>
-        {!showTable && solveCount > 0 && (
-          <Badge variant="light">run #{solveCount}</Badge>
-        )}
-        {showTable && tableStats && <Badge variant="light">parametric table</Badge>}
+        <Group gap="xs">
+          {!showTable && solveCount > 0 && (
+            <Badge variant="light">run #{solveCount}</Badge>
+          )}
+          {showTable && tableStats && <Badge variant="light">parametric table</Badge>}
+          {onCollapse && (
+            <Tooltip label="Hide solution panel">
+              <ActionIcon
+                variant="subtle"
+                color="gray"
+                size="sm"
+                onClick={onCollapse}
+                aria-label="Hide solution panel"
+              >
+                <IconLayoutSidebarRightCollapse size={16} />
+              </ActionIcon>
+            </Tooltip>
+          )}
+        </Group>
       </Group>
 
       {showTable ? (

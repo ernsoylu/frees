@@ -1,20 +1,26 @@
 import { useEffect, useState } from 'react'
 import {
+  ActionIcon,
   Button,
+  Divider,
   Flex,
   Group,
+  Menu,
   Paper,
+  SegmentedControl,
+  Select,
   Stack,
-  Tabs,
   Text,
   Textarea,
   Title,
   Tooltip,
 } from '@mantine/core'
+import { IconLayoutSidebarRightExpand } from '@tabler/icons-react'
 import {
   check,
   CheckResponse,
   DEFAULT_STOP_CRITERIA,
+  getFluids,
   solve,
   solveTable,
   SolveResponse,
@@ -39,7 +45,10 @@ import PlotTab from './PlotTab'
 import StatesTab from './StatesTab'
 import { PlotSpec } from './plots/types'
 import SolutionPanel from './SolutionPanel'
-import { EquationActionBar, TableActionBar } from './ActionBars'
+import { Rail, TopBar } from './WorkspaceChrome'
+import { EXPORT_FORMATS } from './plots/exportPlot'
+import { detectStates } from './plots/stateTable'
+import PlotConfigModal from './plots/PlotConfigModal'
 import {
   buildComplexSolutionRows,
   buildRealSolutionRows,
@@ -110,12 +119,17 @@ export default function App() {
   const [solvedComplexMode, setSolvedComplexMode] = useState(false)
   const [stopCriteria, setStopCriteria] = useState<StopCriteria>(loadStopCriteria)
   const [unitSystem, setUnitSystem] = useState<UnitSystem>(loadUnitSystem)
+  const [fillMissing, setFillMissing] = useState<boolean>(() => {
+    return localStorage.getItem('frees.fillMissing') === 'true'
+  })
   const [showPreferences, setShowPreferences] = useState(false)
   const [variables, setVariables] = useState<string[]>([])
   const [varDrafts, setVarDrafts] = useState<Record<string, VariableDraft>>({})
   const [showVariableInfo, setShowVariableInfo] = useState(false)
   const [showMinMax, setShowMinMax] = useState(false)
   const [activeTab, setActiveTab] = useState<string>('equations')
+  const [eqView, setEqView] = useState<'editor' | 'formatted'>('editor')
+  const [solutionOpen, setSolutionOpen] = useState(true)
   const [tableVars, setTableVars] = useState<string[]>([])
   const [paramRows, setParamRows] = useState<ParamRow[]>(() => [
     newParamRow(),
@@ -131,16 +145,46 @@ export default function App() {
   const [tableChecking, setTableChecking] = useState(false)
   const [tableStats, setTableStats] = useState<TableStats | null>(null)
   const [plots, setPlots] = useState<PlotSpec[]>([])
+  const [activeThermoPlotId, setActiveThermoPlotId] = useState<string | null>(null)
+  const [editingThermoPlot, setEditingThermoPlot] = useState<PlotSpec | null>(null)
+  const [addingThermoPlot, setAddingThermoPlot] = useState(false)
+  const [thermoExportTrigger, setThermoExportTrigger] = useState<{ format: string; timestamp: number } | null>(null)
+  const [fluids, setFluids] = useState<string[]>([])
+  const [stateUnitIds, setStateUnitIds] = useState<Record<string, string>>(() => {
+    try {
+      const saved = localStorage.getItem('frees.stateUnitIds')
+      return saved ? JSON.parse(saved) : {}
+    } catch {
+      return {}
+    }
+  })
+  const [lastSolvedWithFillMissing, setLastSolvedWithFillMissing] = useState(false)
+
+  useEffect(() => {
+    void getFluids().then(setFluids)
+  }, [])
+
+  const handleStateUnitIdsChange = (
+    val: Record<string, string> | ((prev: Record<string, string>) => Record<string, string>)
+  ) => {
+    setStateUnitIds((prev) => {
+      const next = typeof val === 'function' ? val(prev) : val
+      localStorage.setItem('frees.stateUnitIds', JSON.stringify(next))
+      return next
+    })
+  }
 
   const solvable = checkResult?.solvable === true
 
-  function savePreferences(criteria: StopCriteria, system: UnitSystem) {
+  function savePreferences(criteria: StopCriteria, system: UnitSystem, fill: boolean) {
     // Never persist complexMode inside stopCriteria — it is a separate toggle
     const { complexMode: _ignored, ...persistable } = criteria
     setStopCriteria(persistable)
     setUnitSystem(system)
+    setFillMissing(fill)
     localStorage.setItem(STOP_CRITERIA_KEY, JSON.stringify(persistable))
     localStorage.setItem(UNIT_SYSTEM_KEY, system)
+    localStorage.setItem('frees.fillMissing', String(fill))
     setShowPreferences(false)
   }
 
@@ -149,7 +193,10 @@ export default function App() {
       const draft = varDrafts[name] ?? DEFAULT_DRAFT
       return {
         name,
-        guess: Number.isFinite(Number(draft.guess)) ? Number(draft.guess) : null,
+        guess:
+          draft.guess.trim() !== '' && Number.isFinite(Number(draft.guess))
+            ? Number(draft.guess)
+            : null,
         lower: parseBound(draft.lower) ?? null,
         upper: parseBound(draft.upper) ?? null,
         units: draft.units.trim() || null,
@@ -163,6 +210,7 @@ export default function App() {
     // until the system is re-checked. Table checks depend on the same text.
     setCheckResult(null)
     setResult(null)
+    setLastSolvedWithFillMissing(false)
     invalidateTable()
   }
 
@@ -170,6 +218,7 @@ export default function App() {
     if (checking) return
     setChecking(true)
     setResult(null)
+    setLastSolvedWithFillMissing(false)
     try {
       const response = await check(text, buildVariableInfo(), complexMode)
       setCheckResult(response)
@@ -344,19 +393,24 @@ export default function App() {
     }
   }
 
-  async function onSolve() {
+  async function onSolve(forceFill: boolean | unknown = false, overridePlots?: PlotSpec[]) {
     if (solving || !solvable) return
     setSolving(true)
     try {
+      const activePlots = overridePlots ?? plots
+      const needMissing = activePlots.some((p) => p.kind === 'property' && p.property.overlayStates)
+      const shouldFillMissing = (forceFill === true) || fillMissing || needMissing
       const response = await solve(
         text,
         { ...stopCriteria, complexMode },
         buildVariableInfo(),
         findAll,
         unitSystem,
+        shouldFillMissing,
       )
       setSolvedComplexMode(complexMode)
       setResult(response)
+      setLastSolvedWithFillMissing(shouldFillMissing && response.success)
       if (response.success && response.variables) {
         setVarDrafts((drafts) => {
           const next = { ...drafts }
@@ -382,9 +436,18 @@ export default function App() {
         error: `Could not reach the solver backend: ${String(e)}`,
         formattedEquations: [],
       })
+      setLastSolvedWithFillMissing(false)
     } finally {
       setSolveCount((n) => n + 1)
       setSolving(false)
+    }
+  }
+
+  const handlePlotsChange = (nextPlots: PlotSpec[]) => {
+    setPlots(nextPlots)
+    const needMissing = nextPlots.some((p) => p.kind === 'property' && p.property.overlayStates)
+    if (needMissing && result?.success && !lastSolvedWithFillMissing && !solving && solvable) {
+      void onSolve(true, nextPlots)
     }
   }
 
@@ -417,36 +480,20 @@ export default function App() {
     : buildRealSolutionRows(baseVariables, solutions)
 
   return (
-    <Flex direction="column" p="md" gap="md" style={{ minHeight: '100vh' }}>
-      <Group justify="space-between">
-        <Group gap="sm" align="baseline">
-          <Title order={2} c="blue.4">
-            frEES
-          </Title>
-          <Text c="dimmed" size="sm">
-            free Engineering Equation Solver
-          </Text>
-        </Group>
-        <Group gap="xs">
-          <Button variant="default" size="xs" onClick={() => setShowVariableInfo(true)}>
-            Variable Info
-          </Button>
-          <Button variant="default" size="xs" onClick={() => setShowMinMax(true)}>
-            Min/Max
-          </Button>
-          <Button variant="default" size="xs" onClick={() => setShowPreferences(true)}>
-            Preferences
-          </Button>
-          <Button variant="default" size="xs" component="a" href="/help" target="_blank">
-            Help
-          </Button>
-        </Group>
-      </Group>
+    <Flex h="100vh" style={{ overflow: 'hidden' }}>
+      <Rail
+        active={activeTab}
+        onSelect={setActiveTab}
+        onVariableInfo={() => setShowVariableInfo(true)}
+        onMinMax={() => setShowMinMax(true)}
+        onPreferences={() => setShowPreferences(true)}
+      />
 
       {showPreferences && (
         <PreferencesModal
           criteria={stopCriteria}
           unitSystem={unitSystem}
+          fillMissing={fillMissing}
           onSave={savePreferences}
           onClose={() => setShowPreferences(false)}
         />
@@ -510,55 +557,89 @@ export default function App() {
       )}
 
 
-      <Flex
-        flex={1}
-        gap="md"
-        align="stretch"
-        direction={{ base: 'column', md: 'row' }}
-        style={{ minHeight: 0 }}
-      >
-        <Flex direction="column" flex={1} miw={0}>
-          <Tabs value={activeTab} onChange={(val) => val && setActiveTab(val)}>
-            <Tabs.List>
-              <Tabs.Tab value="equations">Equations</Tabs.Tab>
-              <Tabs.Tab value="formatted">Formatted Equations</Tabs.Tab>
-              <Tabs.Tab value="table">Parametric Table</Tabs.Tab>
-              <Tabs.Tab value="plots">Plots</Tabs.Tab>
-              <Tabs.Tab value="states">State Points</Tabs.Tab>
-              <Tooltip label="Epic 6 — coming soon">
-                <Tabs.Tab value="diagram" disabled>
-                  Diagram
-                </Tabs.Tab>
-              </Tooltip>
-            </Tabs.List>
-          </Tabs>
+      <Flex direction="column" flex={1} miw={0} p="sm" gap="sm">
+        <TopBar
+          isTable={activeTab === 'table'}
+          checking={checking}
+          solving={solving}
+          solvable={solvable}
+          findAll={findAll}
+          complexMode={complexMode}
+          checkResult={checkResult}
+          result={result}
+          tableChecking={tableChecking}
+          tableSolving={tableSolving}
+          tableCheckResult={tableCheckResult}
+          tableCheckMessage={tableCheckMessage}
+          tableResults={tableResults}
+          onCheck={onCheck}
+          onSolve={onSolve}
+          onCheckTable={onCheckTable}
+          onSolveTable={onSolveTable}
+          onFindAllChange={(checked) => {
+            setFindAll(checked)
+            setResult(null)
+            setLastSolvedWithFillMissing(false)
+          }}
+          onComplexModeChange={(checked) => {
+            setComplexMode(checked)
+            setCheckResult(null)
+            setResult(null)
+            setLastSolvedWithFillMissing(false)
+            invalidateTable()
+          }}
+        />
 
+        <Flex
+          flex={1}
+          gap="sm"
+          align="stretch"
+          direction={{ base: 'column', md: 'row' }}
+          style={{ minHeight: 0 }}
+        >
           <Paper
             withBorder
             p="md"
-            mt="xs"
             flex={1}
+            miw={0}
             display="flex"
-            style={{ flexDirection: 'column', minHeight: 0 }}
+            style={{ flexDirection: 'column', minHeight: 0, overflow: 'auto' }}
           >
             {activeTab === 'equations' && (
-              <Textarea
-                value={text}
-                onChange={(e) => onTextChange(e.currentTarget.value)}
-                spellCheck={false}
-                placeholder={'Enter equations, e.g.\nx + y = 3\ny = z - 4'}
-                styles={{
-                  root: { flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 },
-                  wrapper: { flex: 1, display: 'flex', minHeight: 0 },
-                  input: {
-                    flex: 1,
-                    minHeight: 260,
-                    fontFamily: 'var(--mantine-font-family-monospace)',
-                    fontSize: 'var(--mantine-font-size-sm)',
-                    lineHeight: 1.6,
-                  },
-                }}
-              />
+              <>
+                <Group justify="flex-end" mb={6}>
+                  <SegmentedControl
+                    size="xs"
+                    value={eqView}
+                    onChange={(v) => setEqView(v as 'editor' | 'formatted')}
+                    data={[
+                      { label: 'Editor', value: 'editor' },
+                      { label: 'Formatted', value: 'formatted' },
+                    ]}
+                  />
+                </Group>
+                {eqView === 'editor' ? (
+                  <Textarea
+                    value={text}
+                    onChange={(e) => onTextChange(e.currentTarget.value)}
+                    spellCheck={false}
+                    placeholder={'Enter equations, e.g.\nx + y = 3\ny = z - 4'}
+                    styles={{
+                      root: { flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 },
+                      wrapper: { flex: 1, display: 'flex', minHeight: 0 },
+                      input: {
+                        flex: 1,
+                        minHeight: 260,
+                        fontFamily: 'var(--mantine-font-family-monospace)',
+                        fontSize: 'var(--mantine-font-size-sm)',
+                        lineHeight: 1.6,
+                      },
+                    }}
+                  />
+                ) : (
+                  <FormattedEquationsView equations={formattedEqs} />
+                )}
+              </>
             )}
             {activeTab === 'table' && (
               <ParametricTableTab
@@ -583,65 +664,184 @@ export default function App() {
             )}
             {activeTab === 'plots' && (
               <PlotTab
+                kinds={['xy']}
+                emptyHint='No plots yet. Click "Add Plot" to chart parametric table runs as X-Y series.'
                 plots={plots}
-                onPlotsChange={setPlots}
+                onPlotsChange={handlePlotsChange}
                 solvedVariables={result?.variables ?? []}
+                cyclePath={result?.cyclePath}
                 tableVars={tableVars}
                 rows={paramRows}
                 results={tableResults}
               />
             )}
-            {activeTab === 'states' && (
-              <StatesTab solvedVariables={result?.variables ?? []} />
-            )}
-            {activeTab === 'formatted' && (
-              <FormattedEquationsView equations={formattedEqs} />
+            {activeTab === 'thermo' && (
+              <PlotTab
+                kinds={['property', 'psychro']}
+                emptyHint="No diagrams yet. Click 'Add Diagram' in the right-hand panel to create a property diagram (T-s, log P-h, P-v, …) or a psychrometric chart; solved state points can be overlaid on both."
+                plots={plots}
+                onPlotsChange={handlePlotsChange}
+                solvedVariables={result?.variables ?? []}
+                cyclePath={result?.cyclePath}
+                tableVars={tableVars}
+                rows={paramRows}
+                results={tableResults}
+                activePlotId={activeThermoPlotId}
+                onActivePlotIdChange={setActiveThermoPlotId}
+                hideHeader={true}
+                exportTrigger={thermoExportTrigger}
+              />
             )}
           </Paper>
 
-          {activeTab === 'table' ? (
-            <TableActionBar
-              tableChecking={tableChecking}
-              tableSolving={tableSolving}
-              tableCheckResult={tableCheckResult}
-              tableCheckMessage={tableCheckMessage}
-              tableResults={tableResults}
-              onCheckTable={onCheckTable}
-              onSolveTable={onSolveTable}
+          {activeTab === 'thermo' ? (
+            <Paper
+              withBorder
+              p="md"
+              w={{ base: '100%', md: 480 }}
+              display="flex"
+              style={{ flexDirection: 'column', minHeight: 0 }}
+            >
+              <Group justify="space-between" mb="xs" wrap="nowrap" align="center">
+                <Title order={4} c="blue.4">Thermodynamics</Title>
+                <Button size="xs" onClick={() => setAddingThermoPlot(true)}>
+                  Add Diagram
+                </Button>
+              </Group>
+
+              {plots.filter((p) => p.kind === 'property' || p.kind === 'psychro').length > 0 ? (
+                <Stack gap="xs" mb="md">
+                  <Select
+                    label="Active Diagram"
+                    size="xs"
+                    data={plots
+                      .filter((p) => p.kind === 'property' || p.kind === 'psychro')
+                      .map((p) => ({ value: p.id, label: p.name }))}
+                    value={
+                      activeThermoPlotId ??
+                      plots.find((p) => p.kind === 'property' || p.kind === 'psychro')?.id ??
+                      ''
+                    }
+                    onChange={(val) => val && setActiveThermoPlotId(val)}
+                  />
+                  {(() => {
+                    const current = plots.find((p) => p.id === activeThermoPlotId) || plots.find((p) => p.kind === 'property' || p.kind === 'psychro') || null;
+                    if (!current) return null;
+                    return (
+                      <Group gap="xs" wrap="nowrap">
+                        <Button
+                          variant="default"
+                          size="xs"
+                          flex={1}
+                          onClick={() => setEditingThermoPlot(current)}
+                        >
+                          Configure
+                        </Button>
+                        <Menu shadow="md">
+                          <Menu.Target>
+                            <Button variant="default" size="xs" flex={1}>
+                              Export
+                            </Button>
+                          </Menu.Target>
+                          <Menu.Dropdown>
+                            {EXPORT_FORMATS.map((f) => (
+                              <Menu.Item
+                                key={f.value}
+                                onClick={() =>
+                                  setThermoExportTrigger({
+                                    format: f.value,
+                                    timestamp: Date.now(),
+                                  })
+                                }
+                              >
+                                {f.label}
+                              </Menu.Item>
+                            ))}
+                          </Menu.Dropdown>
+                        </Menu>
+                        <Button
+                          variant="subtle"
+                          color="red"
+                          size="xs"
+                          onClick={() => {
+                            const nextPlots = plots.filter((p) => p.id !== current.id);
+                            handlePlotsChange(nextPlots);
+                            const remaining = nextPlots.filter((p) => p.kind === 'property' || p.kind === 'psychro');
+                            setActiveThermoPlotId(remaining[0]?.id ?? null);
+                          }}
+                        >
+                          Remove
+                        </Button>
+                      </Group>
+                    );
+                  })()}
+                </Stack>
+              ) : (
+                <Text size="xs" c="dimmed" mb="md" style={{ fontStyle: 'italic' }}>
+                  No diagrams added yet. Click "Add Diagram" above to start.
+                </Text>
+              )}
+
+              <Divider my="sm" label="State Points" labelPosition="left" />
+              <StatesTab
+                solvedVariables={result?.variables ?? []}
+                unitIds={stateUnitIds}
+                onUnitIdsChange={handleStateUnitIdsChange}
+                onFillMissing={() => onSolve(true)}
+                solving={solving}
+                solvable={solvable}
+              />
+            </Paper>
+          ) : solutionOpen ? (
+            <SolutionPanel
+              showTable={activeTab === 'table'}
+              solveCount={solveCount}
+              tableStats={tableStats}
+              result={result}
+              rows={solutionRows}
+              onCollapse={() => setSolutionOpen(false)}
             />
           ) : (
-            <EquationActionBar
-              checking={checking}
-              solving={solving}
-              solvable={solvable}
-              findAll={findAll}
-              complexMode={complexMode}
-              checkResult={checkResult}
-              result={result}
-              onCheck={onCheck}
-              onSolve={onSolve}
-              onFindAllChange={(checked) => {
-                setFindAll(checked)
-                setResult(null)
-              }}
-              onComplexModeChange={(checked) => {
-                setComplexMode(checked)
-                setCheckResult(null)
-                setResult(null)
-                invalidateTable()
-              }}
-            />
+            <Paper withBorder p={4} visibleFrom="md">
+              <Tooltip label="Show solution panel" position="left">
+                <ActionIcon
+                  variant="subtle"
+                  color="gray"
+                  onClick={() => setSolutionOpen(true)}
+                  aria-label="Show solution panel"
+                >
+                  <IconLayoutSidebarRightExpand size={18} />
+                </ActionIcon>
+              </Tooltip>
+            </Paper>
           )}
         </Flex>
-
-        <SolutionPanel
-          showTable={activeTab === 'table'}
-          solveCount={solveCount}
-          tableStats={tableStats}
-          result={result}
-          rows={solutionRows}
-        />
       </Flex>
+
+      {(addingThermoPlot || editingThermoPlot) && (
+        <PlotConfigModal
+          spec={editingThermoPlot}
+          allowedKinds={['property', 'psychro']}
+          defaultName={editingThermoPlot ? editingThermoPlot.name : `Diagram ${plots.filter(p => p.kind === 'property' || p.kind === 'psychro').length + 1}`}
+          fluids={fluids}
+          tableVars={tableVars}
+          hasStates={detectStates(result?.variables ?? []).indices.length > 0}
+          onSave={(spec) => {
+            if (editingThermoPlot) {
+              handlePlotsChange(plots.map((p) => (p.id === spec.id ? spec : p)))
+              setEditingThermoPlot(null)
+            } else {
+              handlePlotsChange([...plots, spec])
+              setActiveThermoPlotId(spec.id)
+              setAddingThermoPlot(false)
+            }
+          }}
+          onClose={() => {
+            setAddingThermoPlot(false)
+            setEditingThermoPlot(null)
+          }}
+        />
+      )}
     </Flex>
   )
 }

@@ -138,6 +138,7 @@ powExpr
 
 atom
     : NUMBER unit?                           # NumberAtom
+    | IMAG_NUMBER unit?                      # ImagNumberAtom
     | IDENT LPAREN argList RPAREN            # CallAtom
     | IDENT LBRACKET arrayIndexList RBRACKET # ArrayAtom
     | IDENT                                  # VarAtom
@@ -217,6 +218,11 @@ OR        : [oO][rR] ;
 NOT       : [nN][oO][tT] ;
 
 // ── Literals & identifiers ─────────────────────────────────────────────────────
+
+IMAG_NUMBER
+    : DIGIT+ ('.' DIGIT+)? EXPONENT? [iIjJ]
+    | '.' DIGIT+ EXPONENT? [iIjJ]
+    ;
 
 NUMBER
     : DIGIT+ ('.' DIGIT+)? EXPONENT?

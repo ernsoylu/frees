@@ -9,6 +9,7 @@ import org.apache.commons.math3.linear.DecompositionSolver;
 import org.apache.commons.math3.linear.LUDecomposition;
 import org.apache.commons.math3.linear.RealVector;
 import org.apache.commons.math3.linear.SingularMatrixException;
+import org.apache.commons.math3.linear.SingularValueDecomposition;
 
 import java.util.List;
 import java.util.Map;
@@ -30,6 +31,10 @@ public class NewtonSolver {
 
     private final SolverSettings settings;
     private final Map<String, ProcDef> defs;
+
+    /** Last property failure seen while evaluating residuals; appended to
+     * failure reports so a NaN stall still names its physical cause. */
+    private String lastPropertyError;
 
     public NewtonSolver(SolverSettings settings) {
         this(settings, Map.of());
@@ -93,7 +98,8 @@ public class NewtonSolver {
             if (!Double.isFinite(candidateNorm) || candidateNorm >= norm) {
                 throw new SolverException(
                         "Newton iteration stalled in block " + block.index()
-                                + " (residual " + norm + "). Try different guess values.");
+                                + " (residual " + norm + "). Try different guess values."
+                                + propertyErrorSuffix());
             }
 
             double maxChange = 0.0;
@@ -131,7 +137,11 @@ public class NewtonSolver {
         throw new SolverException(String.format(
                 "Block %d did not converge within %d iterations (residual norm %g). "
                         + "Increase the iteration limit in Preferences or adjust guess values.",
-                block.index(), settings.maxIterations(), norm));
+                block.index(), settings.maxIterations(), norm) + propertyErrorSuffix());
+    }
+
+    private String propertyErrorSuffix() {
+        return lastPropertyError == null ? "" : " Last property error: " + lastPropertyError;
     }
 
     /** EES relative residual: |lhs - rhs| / |lhs|, guarding against |lhs| ~ 0. */
@@ -140,7 +150,13 @@ public class NewtonSolver {
                                             Map<String, Double> values) {
         writeBack(vars, x, values);
         for (int i = 0; i < equations.size(); i++) {
-            double lhsMagnitude = Math.abs(Evaluator.eval(equations.get(i).lhs(), values, defs));
+            double lhsMagnitude;
+            try {
+                lhsMagnitude = Math.abs(Evaluator.eval(equations.get(i).lhs(), values, defs));
+            } catch (com.frees.backend.props.PropertyEvaluationException e) {
+                lastPropertyError = e.getMessage();
+                return false;
+            }
             double scale = Math.max(lhsMagnitude, 1.0);
             if (Math.abs(residual[i]) / scale > settings.relativeResiduals()) {
                 return false;
@@ -155,7 +171,16 @@ public class NewtonSolver {
         double[] result = new double[equations.size()];
         for (int i = 0; i < equations.size(); i++) {
             Equation eq = equations.get(i);
-            result[i] = Evaluator.eval(eq.lhs(), values, defs) - Evaluator.eval(eq.rhs(), values, defs);
+            try {
+                result[i] = Evaluator.eval(eq.lhs(), values, defs)
+                        - Evaluator.eval(eq.rhs(), values, defs);
+            } catch (com.frees.backend.props.PropertyEvaluationException e) {
+                // An invalid state point (pressure below the triple point at
+                // a poor guess) is a bad region, not a fatal error: NaN sends
+                // the line search and the retry ladder elsewhere.
+                lastPropertyError = e.getMessage();
+                result[i] = Double.NaN;
+            }
         }
         return result;
     }
@@ -202,16 +227,21 @@ public class NewtonSolver {
     }
 
     private double[] solveLinear(double[][] jacobian, double[] residual, Block block) {
+        Array2DRowRealMatrix jMat = new Array2DRowRealMatrix(jacobian, false);
+        ArrayRealVector rVec = new ArrayRealVector(residual, false);
         try {
-            DecompositionSolver solver =
-                    new LUDecomposition(new Array2DRowRealMatrix(jacobian, false)).getSolver();
-            RealVector step = solver.solve(new ArrayRealVector(residual, false));
+            DecompositionSolver solver = new LUDecomposition(jMat).getSolver();
+            RealVector step = solver.solve(rVec);
             return step.toArray();
         } catch (SingularMatrixException e) {
-            throw new SolverException(
-                    "Singular Jacobian in block " + block.index()
-                            + " (variables " + block.variables() + "): the equations may be "
-                            + "redundant or the guess values degenerate.");
+            // Fall back to SVD pseudoinverse for rank-deficient Jacobians.
+            // This arises when complex expansion produces equations whose
+            // imaginary part is structurally non-trivial but numerically
+            // always zero (e.g., abs(V)^2 / abs(Z)).  Combined with block
+            // merging, this handles underdetermined sub-systems.
+            SingularValueDecomposition svd = new SingularValueDecomposition(jMat);
+            RealVector step = svd.getSolver().solve(rVec);
+            return step.toArray();
         }
     }
 

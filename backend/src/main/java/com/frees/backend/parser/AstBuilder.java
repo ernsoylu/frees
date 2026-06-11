@@ -318,8 +318,38 @@ public class AstBuilder extends EesBaseVisitor<Expr> {
     }
 
     @Override
+    public Expr visitImagNumberAtom(EesParser.ImagNumberAtomContext ctx) {
+        String text = ctx.IMAG_NUMBER().getText();
+        // Remove trailing 'i', 'I', 'j', or 'J'
+        String numericText = text.substring(0, text.length() - 1);
+        double value = Double.parseDouble(numericText);
+        String unit = null;
+        if (ctx.unit() != null) {
+            int startIdx = ctx.unit().start.getStartIndex();
+            int stopIdx = ctx.unit().stop.getStopIndex();
+            String bracketed = ctx.unit().start.getInputStream().getText(new org.antlr.v4.runtime.misc.Interval(startIdx, stopIdx));
+            unit = bracketed.substring(1, bracketed.length() - 1).trim();
+            if (unit.isEmpty()) {
+                unit = null;
+            } else {
+                try {
+                    var quantity = UnitRegistry.parseWithOffset(unit);
+                    value = value * quantity.factor() + quantity.offset();
+                    unit = UnitRegistry.siName(quantity.dims());
+                } catch (UnitRegistry.UnknownUnitException ignored) {
+                    // Keep the original text; surfaces as a unit warning.
+                }
+            }
+        }
+        return new Expr.Num(value, unit, true);
+    }
+
+    @Override
     public Expr visitVarAtom(EesParser.VarAtomContext ctx) {
         String original = ctx.IDENT().getText();
+        if ("pi".equalsIgnoreCase(original)) {
+            return new Expr.Num(Math.PI);
+        }
         displayNames.putIfAbsent(original.toLowerCase(), original);
         return new Expr.Var(original);
     }

@@ -1,42 +1,75 @@
 import { useEffect, useState } from 'react'
-import { Button, Group, Stack, Tabs, Text } from '@mantine/core'
+import { Button, Stack, Tabs, Text } from '@mantine/core'
 import { TableRowResult, VariableResult, getFluids } from './api'
 import { ParamRow } from './ParametricTableTab'
-import { PlotSpec } from './plots/types'
+import { PlotKind, PlotSpec } from './plots/types'
 import { detectStates } from './plots/stateTable'
 import PlotCard from './plots/PlotCard'
 import PlotConfigModal from './plots/PlotConfigModal'
 
 interface Props {
+  /** Which plot kinds this window shows and creates; the spec list is
+   * shared, so the Plots and Thermodynamics windows each see their slice. */
+  kinds: PlotKind[]
+  emptyHint: string
   plots: PlotSpec[]
   onPlotsChange: (plots: PlotSpec[]) => void
   solvedVariables: VariableResult[]
+  cyclePath?: Record<string, number>[]
   tableVars: string[]
   rows: ParamRow[]
   results: TableRowResult[]
+  activePlotId?: string | null
+  onActivePlotIdChange?: (id: string | null) => void
+  hideHeader?: boolean
+  exportTrigger?: { format: string; timestamp: number } | null
 }
 
 /**
- * The Plots window: any number of plots (property diagrams, psychrometric
- * charts, X-Y parametric plots), each with its own configuration, format
- * options and export menu.
+ * A plot window: any number of plots of the given kinds, each with its own
+ * configuration, format options and export menu.
  */
 export default function PlotTab({
+  kinds,
+  emptyHint,
   plots,
   onPlotsChange,
   solvedVariables,
+  cyclePath,
   tableVars,
   rows,
   results,
+  activePlotId,
+  onActivePlotIdChange,
+  hideHeader = false,
+  exportTrigger = null,
 }: Readonly<Props>) {
+  const visible = plots.filter((p) => kinds.includes(p.kind))
   const [fluids, setFluids] = useState<string[]>([])
-  const [activePlot, setActivePlot] = useState<string | null>(plots[0]?.id ?? null)
+  const [localActivePlot, setLocalActivePlot] = useState<string | null>(null)
   const [editing, setEditing] = useState<PlotSpec | null>(null)
   const [adding, setAdding] = useState(false)
+
+  const activePlot = activePlotId !== undefined ? activePlotId : (localActivePlot ?? visible[0]?.id ?? null)
+  const setActivePlot = (id: string | null) => {
+    if (onActivePlotIdChange) {
+      onActivePlotIdChange(id)
+    } else {
+      setLocalActivePlot(id)
+    }
+  }
 
   useEffect(() => {
     void getFluids().then(setFluids)
   }, [])
+
+  useEffect(() => {
+    if (activePlot === null && visible.length > 0) {
+      setActivePlot(visible[0].id)
+    } else if (activePlot !== null && !visible.some((p) => p.id === activePlot) && visible.length > 0) {
+      setActivePlot(visible[0].id)
+    }
+  }, [visible, activePlot])
 
   const states = detectStates(solvedVariables)
 
@@ -52,39 +85,22 @@ export default function PlotTab({
   }
 
   function removePlot(id: string) {
-    const next = plots.filter((p) => p.id !== id)
-    onPlotsChange(next)
+    onPlotsChange(plots.filter((p) => p.id !== id))
     if (activePlot === id) {
-      setActivePlot(next[0]?.id ?? null)
+      const remaining = visible.filter((p) => p.id !== id)
+      setActivePlot(remaining[0]?.id ?? null)
     }
   }
 
-  const current = plots.find((p) => p.id === activePlot) ?? plots[0] ?? null
+  const current = visible.find((p) => p.id === activePlot) ?? visible[0] ?? null
 
   return (
     <Stack gap="sm" style={{ flex: 1, minHeight: 0 }}>
-      <Group justify="space-between">
-        <Tabs
-          value={current?.id ?? null}
-          onChange={(id) => id && setActivePlot(id)}
-          variant="pills"
-        >
-          <Tabs.List>
-            {plots.map((p) => (
-              <Tabs.Tab key={p.id} value={p.id}>
-                {p.name}
-              </Tabs.Tab>
-            ))}
-          </Tabs.List>
-        </Tabs>
-        <Button size="xs" onClick={() => setAdding(true)}>
-          Add Plot
-        </Button>
-      </Group>
-
       {(adding || editing) && (
         <PlotConfigModal
           spec={editing}
+          allowedKinds={kinds}
+          defaultName={editing ? editing.name : `Plot ${visible.length + 1}`}
           fluids={fluids}
           tableVars={tableVars}
           hasStates={states.indices.length > 0}
@@ -97,21 +113,49 @@ export default function PlotTab({
       )}
 
       {current === null && (
-        <Text size="sm" c="dimmed">
-          No plots yet. Click "Add Plot" to create a property diagram (T-s,
-          log P-h, P-v, …), a psychrometric chart, or an X-Y plot of
-          parametric table runs.
-        </Text>
+        <Stack gap="xs" align="center" justify="center" style={{ flex: 1 }}>
+          <Text size="sm" c="dimmed">
+            {emptyHint}
+          </Text>
+          <Button size="xs" onClick={() => setAdding(true)}>
+            Add Plot
+          </Button>
+        </Stack>
       )}
+
       {current !== null && (
         <PlotCard
           key={current.id}
           spec={current}
           states={states}
+          cyclePath={cyclePath}
           tableRows={rows}
           tableResults={results}
           onConfigure={() => setEditing(current)}
           onRemove={() => removePlot(current.id)}
+          hideHeader={hideHeader}
+          exportTrigger={exportTrigger}
+          leftSection={
+            <Tabs
+              value={current.id}
+              onChange={(id) => id && setActivePlot(id)}
+              variant="pills"
+              styles={{ tab: { height: 26, fontSize: 12, padding: '0 8px' } }}
+            >
+              <Tabs.List>
+                {visible.map((p) => (
+                  <Tabs.Tab key={p.id} value={p.id}>
+                    {p.name}
+                  </Tabs.Tab>
+                ))}
+              </Tabs.List>
+            </Tabs>
+          }
+          rightSection={
+            <Button size="xs" onClick={() => setAdding(true)}>
+              Add Plot
+            </Button>
+          }
         />
       )}
     </Stack>

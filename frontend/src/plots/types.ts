@@ -43,6 +43,13 @@ export interface PlotFormat {
   legend: boolean
   fontSize: number
   celsius: boolean
+  xMin?: number | null
+  xMax?: number | null
+  yMin?: number | null
+  yMax?: number | null
+  xTick?: number | null
+  yTick?: number | null
+  lineColors?: Record<string, string>
 }
 
 export interface XYConfig {
@@ -94,6 +101,13 @@ export function defaultFormat(kind: PlotKind): PlotFormat {
     legend: true,
     fontSize: 13,
     celsius: kind === 'psychro',
+    xMin: null,
+    xMax: null,
+    yMin: null,
+    yMax: null,
+    xTick: null,
+    yTick: null,
+    lineColors: {},
   }
 }
 

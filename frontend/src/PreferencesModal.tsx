@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Button, Group, Modal, Select, Stack, Text, TextInput } from '@mantine/core'
+import { Button, Checkbox, Group, Modal, Select, Stack, Text, TextInput } from '@mantine/core'
 import {
   DEFAULT_STOP_CRITERIA,
   StopCriteria,
@@ -10,7 +10,8 @@ import {
 interface Props {
   criteria: StopCriteria
   unitSystem: UnitSystem
-  onSave: (criteria: StopCriteria, unitSystem: UnitSystem) => void
+  fillMissing: boolean
+  onSave: (criteria: StopCriteria, unitSystem: UnitSystem, fillMissing: boolean) => void
   onClose: () => void
 }
 
@@ -30,7 +31,7 @@ const FIELDS: Field[] = [
   { key: 'elapsedTimeSeconds', label: 'Elapsed time (sec)', hint: 'Abort the solve after this many seconds' },
 ]
 
-export default function PreferencesModal({ criteria, unitSystem, onSave, onClose }: Readonly<Props>) {
+export default function PreferencesModal({ criteria, unitSystem, fillMissing, onSave, onClose }: Readonly<Props>) {
   const [draft, setDraft] = useState<Record<StopCriteriaField, string>>({
     maxIterations: String(criteria.maxIterations),
     relativeResiduals: String(criteria.relativeResiduals),
@@ -38,6 +39,7 @@ export default function PreferencesModal({ criteria, unitSystem, onSave, onClose
     elapsedTimeSeconds: String(criteria.elapsedTimeSeconds),
   })
   const [system, setSystem] = useState<UnitSystem>(unitSystem)
+  const [fillMissingState, setFillMissingState] = useState<boolean>(fillMissing)
   const [error, setError] = useState<string | null>(null)
 
   function setField(key: StopCriteriaField, value: string) {
@@ -52,6 +54,7 @@ export default function PreferencesModal({ criteria, unitSystem, onSave, onClose
       changeInVariables: String(DEFAULT_STOP_CRITERIA.changeInVariables),
       elapsedTimeSeconds: String(DEFAULT_STOP_CRITERIA.elapsedTimeSeconds),
     })
+    setFillMissingState(false)
     setError(null)
   }
 
@@ -69,7 +72,7 @@ export default function PreferencesModal({ criteria, unitSystem, onSave, onClose
       setError('No. iterations must be a whole number.')
       return
     }
-    onSave({ ...criteria, ...parsed }, system)
+    onSave({ ...criteria, ...parsed }, system, fillMissingState)
   }
 
   return (
@@ -87,6 +90,12 @@ export default function PreferencesModal({ criteria, unitSystem, onSave, onClose
           value={system}
           onChange={(v) => v && setSystem(v as UnitSystem)}
           allowDeselect={false}
+        />
+        <Checkbox
+          label="Fill all missing state variables in background"
+          description="Runs thermodynamic queries to compute other properties (like specific volume, quality, enthalpy) for detected state points"
+          checked={fillMissingState}
+          onChange={(e) => setFillMissingState(e.currentTarget.checked)}
         />
         {FIELDS.map((field) => (
           <TextInput

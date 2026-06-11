@@ -72,10 +72,66 @@ class IntegralTest {
     }
 
     @Test
-    void rejectsNonConstantLimits() {
-        SolverException e = assertThrows(SolverException.class,
+    void solvesVariableUpperLimit() {
+        // ∫ 2t dt from 0 to b = b² = 9, so b = 3 (the root Newton reaches
+        // from the default guess 1); t lands on the upper limit, as in EES.
+        EquationSystemSolver.Result result =
+                solver.solve("F = Integral(2*t, t, 0, b)\nF = 9");
+        assertEquals(3.0, result.variables().get("b"), 1e-6);
+        assertEquals(9.0, result.variables().get("F"), 1e-6);
+        assertEquals(3.0, result.variables().get("t"), 1e-6);
+    }
+
+    @Test
+    void variableLimitInlinesIntegrandDefinitions() {
+        // The integrand g = 3*t^2 is defined by its own equation and must be
+        // substituted into the quadrature; ∫ 3t² dt from 0 to b = b³ = 8.
+        EquationSystemSolver.Result result =
+                solver.solve("g = 3 * t^2\nF = Integral(g, t, 0, b)\nF = 8");
+        assertEquals(2.0, result.variables().get("b"), 1e-6);
+    }
+
+    @Test
+    void freeVariableLimitIsRejected() {
+        // Nothing determines b: one more unknown than equations.
+        assertThrows(SolverException.class,
                 () -> solver.solve("F = Integral(t, t, 0, b)"));
-        assertTrue(e.getMessage().contains("numeric constant"), e.getMessage());
+    }
+
+    @Test
+    void adiabaticFlameTemperature() {
+        // Methane combustion with polynomial c_p fits: the upper limit of the
+        // sensible-enthalpy integrals is the unknown flame temperature,
+        // closed by the energy balance.
+        String source = """
+                T_reactants = 298.15 [K]
+                hf_ch4 = -74850
+                hf_o2 = 0
+                hf_n2 = 0
+                hf_co2 = -393520
+                hf_h2o = -241820
+                H_reactants = 1 * hf_ch4 + 2 * hf_o2 + 7.52 * hf_n2
+                dH_co2 = Integral(Cp_co2, T, 298.15, T_flame)
+                dH_h2o = Integral(Cp_h2o, T, 298.15, T_flame)
+                dH_n2 = Integral(Cp_n2, T, 298.15, T_flame)
+                Cp_co2 = 22.26 + 5.981e-2 * T - 3.501e-5 * T^2 + 7.469e-9 * T^3
+                Cp_h2o = 32.24 + 0.1923e-2 * T + 1.055e-5 * T^2 - 3.595e-9 * T^3
+                Cp_n2 = 28.90 - 0.1571e-2 * T + 0.8081e-5 * T^2 - 2.873e-9 * T^3
+                H_products = 1 * (hf_co2 + dH_co2) + 2 * (hf_h2o + dH_h2o) + 7.52 * (hf_n2 + dH_n2)
+                H_reactants = H_products
+                """;
+        EquationSystemSolver.Result result = solver.solve(source);
+        double tFlame = result.variables().get("T_flame");
+        // The exact value depends only on these polynomial fits; what must
+        // hold is a physically plausible temperature, a tightly closed
+        // energy balance, and T landing on the upper limit.
+        assertTrue(tFlame > 2000 && tFlame < 3000, "T_flame = " + tFlame);
+        assertEquals(result.variables().get("H_reactants"),
+                result.variables().get("H_products"), 1e-3);
+        assertEquals(tFlame, result.variables().get("T"), 1e-9);
+
+        EquationSystemSolver.CheckResult check = solver.check(source);
+        assertTrue(check.solvable(), check.message());
     }
 
     @Test

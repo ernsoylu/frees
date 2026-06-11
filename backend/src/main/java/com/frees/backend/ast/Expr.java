@@ -12,9 +12,12 @@ public sealed interface Expr permits Expr.Num, Expr.Var, Expr.BinOp, Expr.Neg,
         Expr.Compare, Expr.Logical, Expr.Not {
 
     /** A numeric literal, optionally annotated with units: 140 [kPa]. */
-    record Num(double value, String unit) implements Expr {
+    record Num(double value, String unit, boolean isImaginary) implements Expr {
         public Num(double value) {
-            this(value, null);
+            this(value, null, false);
+        }
+        public Num(double value, String unit) {
+            this(value, unit, false);
         }
     }
 

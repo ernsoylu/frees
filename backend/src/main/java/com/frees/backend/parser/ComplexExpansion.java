@@ -2,10 +2,21 @@ package com.frees.backend.parser;
 
 import com.frees.backend.ast.Equation;
 import com.frees.backend.ast.Expr;
+import org.jgrapht.Graph;
+import org.jgrapht.graph.DefaultEdge;
+import org.jgrapht.graph.SimpleGraph;
+import org.jgrapht.alg.interfaces.MatchingAlgorithm;
+import org.jgrapht.alg.matching.HopcroftKarpMaximumCardinalityBipartiteMatching;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.HashSet;
+import java.util.TreeSet;
+import java.util.LinkedHashSet;
 
 /**
  * Splits equations and variables into real (_r) and imaginary (_i) parts
@@ -53,16 +64,126 @@ public final class ComplexExpansion {
         return new Expr.BinOp('+', cTheta, new Expr.BinOp('*', d, lnR));
     }
 
+    private static Expr simplify(Expr e) {
+        return switch (e) {
+            case Expr.Neg neg -> {
+                Expr op = simplify(neg.operand());
+                if (op instanceof Expr.Num n && n.value() == 0.0) {
+                    yield op;
+                }
+                if (op instanceof Expr.Neg inner) {
+                    yield inner.operand();
+                }
+                yield new Expr.Neg(op);
+            }
+            case Expr.BinOp b -> {
+                Expr l = simplify(b.left());
+                Expr r = simplify(b.right());
+                boolean lZero = l instanceof Expr.Num n && n.value() == 0.0;
+                boolean rZero = r instanceof Expr.Num n && n.value() == 0.0;
+                boolean lOne = l instanceof Expr.Num n && n.value() == 1.0;
+                boolean rOne = r instanceof Expr.Num n && n.value() == 1.0;
+
+                yield switch (b.op()) {
+                    case '+' -> {
+                        if (lZero) yield r;
+                        if (rZero) yield l;
+                        yield new Expr.BinOp('+', l, r);
+                    }
+                    case '-' -> {
+                        if (rZero) yield l;
+                        if (lZero) yield new Expr.Neg(r);
+                        yield new Expr.BinOp('-', l, r);
+                    }
+                    case '*' -> {
+                        if (lZero || rZero) yield new Expr.Num(0.0);
+                        if (lOne) yield r;
+                        if (rOne) yield l;
+                        yield new Expr.BinOp('*', l, r);
+                    }
+                    case '/' -> {
+                        if (lZero) yield new Expr.Num(0.0);
+                        if (rOne) yield l;
+                        yield new Expr.BinOp('/', l, r);
+                    }
+                    case '^' -> {
+                        if (rZero) yield new Expr.Num(1.0);
+                        if (rOne) yield l;
+                        if (lZero) yield new Expr.Num(0.0);
+                        yield new Expr.BinOp('^', l, r);
+                    }
+                    default -> new Expr.BinOp(b.op(), l, r);
+                };
+            }
+            case Expr.Call c -> {
+                List<Expr> args = c.args().stream().map(ComplexExpansion::simplify).toList();
+                // The expansion rules wrap structurally real subtrees in
+                // sin/cos/atan2 (e.g. |z|^w produces sin(w*atan2(0, sqrt(..)))).
+                // Folding these reveals which imaginary parts are identically
+                // zero, so the matching below sees the true structure.
+                if ("atan2".equals(c.function()) && args.size() == 2
+                        && isLiteralZero(args.get(0)) && isNonNegative(args.get(1))) {
+                    yield new Expr.Num(0.0);
+                }
+                if ("sin".equals(c.function()) && args.size() == 1 && isLiteralZero(args.get(0))) {
+                    yield new Expr.Num(0.0);
+                }
+                if ("cos".equals(c.function()) && args.size() == 1 && isLiteralZero(args.get(0))) {
+                    yield new Expr.Num(1.0);
+                }
+                yield new Expr.Call(c.function(), args);
+            }
+            default -> e;
+        };
+    }
+
+    /** Whether the expression is non-negative by construction. */
+    private static boolean isNonNegative(Expr e) {
+        return switch (e) {
+            case Expr.Num n -> !n.isImaginary() && n.value() >= 0.0;
+            case Expr.Call c -> ("sqrt".equals(c.function()) || "abs".equals(c.function()));
+            default -> false;
+        };
+    }
+
+    /** Whether any equation contains an imaginary literal (1i, 2j, ...). */
+    public static boolean mentionsImaginary(List<Equation> equations) {
+        return equations.stream().anyMatch(eq ->
+                mentionsImaginary(eq.lhs()) || mentionsImaginary(eq.rhs()));
+    }
+
+    private static boolean mentionsImaginary(Expr e) {
+        return switch (e) {
+            case Expr.Num n -> n.isImaginary();
+            case Expr.Var v -> false;
+            case Expr.Neg neg -> mentionsImaginary(neg.operand());
+            case Expr.BinOp b -> mentionsImaginary(b.left()) || mentionsImaginary(b.right());
+            case Expr.Call c -> c.args().stream().anyMatch(ComplexExpansion::mentionsImaginary);
+            case Expr.ArrayAccess aa -> aa.indices().stream().anyMatch(ComplexExpansion::mentionsImaginary);
+            case Expr.Range r -> mentionsImaginary(r.start()) || mentionsImaginary(r.end());
+            case Expr.ArrayLiteral al -> al.elements().stream().anyMatch(ComplexExpansion::mentionsImaginary);
+            case Expr.Compare cmp -> mentionsImaginary(cmp.left()) || mentionsImaginary(cmp.right());
+            case Expr.Logical log -> mentionsImaginary(log.left()) || mentionsImaginary(log.right());
+            case Expr.Not not -> mentionsImaginary(not.operand());
+        };
+    }
+
     public static List<Equation> expand(List<Equation> equations, Map<String, String> displayNames) {
         List<Equation> expanded = new ArrayList<>();
-        for (Equation eq : equations) {
-            Expr lr = realPart(eq.lhs());
-            Expr rr = realPart(eq.rhs());
-            Expr li = imagPart(eq.lhs());
-            Expr ri = imagPart(eq.rhs());
+        Set<String> baseVars = new TreeSet<>();
 
+        for (Equation eq : equations) {
+            baseVars.addAll(eq.variables());
+
+            Expr lr = simplify(realPart(eq.lhs()));
+            Expr rr = simplify(realPart(eq.rhs()));
             expanded.add(new Equation(lr, rr, eq.sourceText() + " (real)"));
-            expanded.add(new Equation(li, ri, eq.sourceText() + " (imag)"));
+
+            Expr li = simplify(imagPart(eq.lhs()));
+            Expr ri = simplify(imagPart(eq.rhs()));
+            if (!(isLiteralZero(li) && isLiteralZero(ri))) {
+                expanded.add(new Equation(li, ri, eq.sourceText() + " (imag)"));
+            }
 
             for (String var : eq.variables()) {
                 String disp = displayNames.getOrDefault(var, var);
@@ -70,12 +191,171 @@ public final class ComplexExpansion {
                 displayNames.put(var + "_i", disp + "_i");
             }
         }
+
+        // Collect all expanded variables and their real/imag parts
+        Set<String> allVars = new TreeSet<>();
+        for (String baseVar : baseVars) {
+            allVars.add(baseVar + "_r");
+            allVars.add(baseVar + "_i");
+        }
+
+        // Run bipartite matching to find unmatched variables
+        Graph<String, DefaultEdge> graph = new SimpleGraph<>(DefaultEdge.class);
+        Set<String> eqNodes = new LinkedHashSet<>();
+        Set<String> varNodes = new LinkedHashSet<>();
+
+        for (int i = 0; i < expanded.size(); i++) {
+            String eqNode = "eq:" + i;
+            eqNodes.add(eqNode);
+            graph.addVertex(eqNode);
+        }
+        for (String var : allVars) {
+            String varNode = "var:" + var;
+            varNodes.add(varNode);
+            graph.addVertex(varNode);
+        }
+        for (int i = 0; i < expanded.size(); i++) {
+            for (String var : expanded.get(i).variables()) {
+                graph.addEdge("eq:" + i, "var:" + var);
+            }
+        }
+
+        MatchingAlgorithm.Matching<String, DefaultEdge> matching =
+                new HopcroftKarpMaximumCardinalityBipartiteMatching<>(graph, eqNodes, varNodes)
+                        .getMatching();
+
+        Map<String, Integer> varToEq = new HashMap<>();
+        Map<Integer, String> eqToVar = new HashMap<>();
+        for (DefaultEdge edge : matching.getEdges()) {
+            String source = graph.getEdgeSource(edge);
+            String target = graph.getEdgeTarget(edge);
+            String varNode = source.startsWith("var:") ? source : target;
+            String eqNode = source.startsWith("eq:") ? source : target;
+            String var = varNode.substring(4);
+            int eq = Integer.parseInt(eqNode.substring(3));
+            varToEq.put(var, eq);
+            eqToVar.put(eq, var);
+        }
+
+        // An exposed variable signals phase freedom: an equation like
+        // Q = abs(V)^2 / abs(Z) constrains only the magnitude of Z, leaving a
+        // rotational degree of freedom that some complex variable absorbs.
+        // Ground it the way an EES user would: treat the least-referenced
+        // base variable (an output-like leaf such as a capacitance) as real
+        // by pinning its imaginary part to zero. The alternating-path swap
+        // re-matches so exactly that component is the exposed one.
+        Map<String, Integer> baseOccurrences = new HashMap<>();
+        for (Equation eq : equations) {
+            for (String v : eq.variables()) {
+                baseOccurrences.merge(v, 1, Integer::sum);
+            }
+        }
+        Map<String, List<Integer>> eqsByVar = new HashMap<>();
+        for (int i = 0; i < expanded.size(); i++) {
+            for (String var : expanded.get(i).variables()) {
+                eqsByVar.computeIfAbsent(var, k -> new ArrayList<>()).add(i);
+            }
+        }
+        int sizeBeforePins = expanded.size();
+        for (String var : allVars) {
+            if (varToEq.containsKey(var)) {
+                continue;
+            }
+            String pin = swapToPreferredImaginary(var, eqsByVar, varToEq, eqToVar,
+                    baseOccurrences);
+            if (pin == null) {
+                continue; // structurally singular; the Blocker reports it
+            }
+            expanded.add(new Equation(new Expr.Var(pin), new Expr.Num(0.0),
+                    pin + " = 0 (default complex real)"));
+        }
+
+        // Pinning adds equations; the matching left equally many equations
+        // unmatched (the numerically redundant imaginary split of a
+        // magnitude-only equation). Drop them to keep the system square.
+        int excess = expanded.size() - allVars.size();
+        if (excess > 0) {
+            for (int i = sizeBeforePins - 1; i >= 0 && excess > 0; i--) {
+                if (!eqToVar.containsKey(i)
+                        && expanded.get(i).sourceText().endsWith("(imag)")) {
+                    expanded.remove(i);
+                    excess--;
+                }
+            }
+        }
+
         return expanded;
+    }
+
+    /**
+     * BFS over alternating paths from the exposed variable: variable -> any
+     * equation containing it -> that equation's matched variable. Every
+     * reachable matched variable can trade places with the exposed one by
+     * flipping the path. Picks the imaginary component whose base variable
+     * appears in the fewest source equations, flips the matching so it
+     * becomes the exposed one, and returns it; null when no imaginary
+     * component is reachable.
+     */
+    private static String swapToPreferredImaginary(String exposedVar,
+                                                   Map<String, List<Integer>> eqsByVar,
+                                                   Map<String, Integer> varToEq,
+                                                   Map<Integer, String> eqToVar,
+                                                   Map<String, Integer> baseOccurrences) {
+        Map<String, Integer> reachedViaEq = new HashMap<>();
+        Map<Integer, String> reachedFromVar = new HashMap<>();
+        Set<String> seenVars = new HashSet<>();
+        Set<Integer> seenEqs = new HashSet<>();
+        ArrayDeque<String> queue = new ArrayDeque<>();
+        queue.add(exposedVar);
+        seenVars.add(exposedVar);
+
+        List<String> candidates = new ArrayList<>();
+        if (exposedVar.endsWith("_i")) {
+            candidates.add(exposedVar);
+        }
+        while (!queue.isEmpty()) {
+            String v = queue.poll();
+            for (int ei : eqsByVar.getOrDefault(v, List.of())) {
+                if (!seenEqs.add(ei)) {
+                    continue;
+                }
+                reachedFromVar.put(ei, v);
+                String w = eqToVar.get(ei);
+                if (w == null || !seenVars.add(w)) {
+                    continue;
+                }
+                reachedViaEq.put(w, ei);
+                if (w.endsWith("_i")) {
+                    candidates.add(w);
+                }
+                queue.add(w);
+            }
+        }
+        if (candidates.isEmpty()) {
+            return null;
+        }
+        String best = candidates.stream()
+                .min(java.util.Comparator
+                        .comparingInt((String w) -> baseOccurrences
+                                .getOrDefault(w.substring(0, w.length() - 2), 0))
+                        .thenComparing(w -> w))
+                .orElseThrow();
+        // Flip the alternating path so `best` becomes the exposed variable.
+        String cur = best;
+        varToEq.remove(best);
+        while (!cur.equals(exposedVar)) {
+            int eq = reachedViaEq.get(cur);
+            String prev = reachedFromVar.get(eq);
+            eqToVar.put(eq, prev);
+            varToEq.put(prev, eq);
+            cur = prev;
+        }
+        return best;
     }
 
     public static Expr realPart(Expr e) {
         return switch (e) {
-            case Expr.Num n -> n;
+            case Expr.Num n -> n.isImaginary() ? new Expr.Num(0.0, n.unit()) : n;
             case Expr.Var v -> new Expr.Var(v.name() + "_r");
             case Expr.Neg neg -> new Expr.Neg(realPart(neg.operand()));
             case Expr.BinOp b -> {
@@ -166,7 +446,7 @@ public final class ComplexExpansion {
 
     public static Expr imagPart(Expr e) {
         return switch (e) {
-            case Expr.Num n -> new Expr.Num(0.0);
+            case Expr.Num n -> n.isImaginary() ? new Expr.Num(n.value(), n.unit()) : new Expr.Num(0.0);
             case Expr.Var v -> new Expr.Var(v.name() + "_i");
             case Expr.Neg neg -> new Expr.Neg(imagPart(neg.operand()));
             case Expr.BinOp b -> {
@@ -193,7 +473,7 @@ public final class ComplexExpansion {
             }
             case Expr.Call c -> {
                 if ("real".equals(c.function())) {
-                    yield imagPart(c.args().get(0));
+                    yield new Expr.Num(0.0);
                 }
                 if ("imag".equals(c.function())) {
                     yield new Expr.Num(0.0);

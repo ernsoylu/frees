@@ -1,5 +1,4 @@
-import { useState } from 'react'
-import { Group, Select, Table, Text } from '@mantine/core'
+import { Button, Group, Select, Table, Text, Stack } from '@mantine/core'
 import { VariableResult } from './api'
 import { detectStates } from './plots/stateTable'
 import { PROPERTY_UNITS, resolveUnit, unitIdsFor } from './plots/units'
@@ -58,11 +57,24 @@ function ColumnHeader({
  * (columns), with a display unit selector per column. These states can be
  * overlaid on property diagrams and psychrometric charts in the Plots tab.
  */
+interface StatesTabProps {
+  solvedVariables: VariableResult[]
+  unitIds: Record<string, string>
+  onUnitIdsChange: (unitIds: Record<string, string> | ((prev: Record<string, string>) => Record<string, string>)) => void
+  onFillMissing?: () => void
+  solving?: boolean
+  solvable?: boolean
+}
+
 export default function StatesTab({
   solvedVariables,
-}: Readonly<{ solvedVariables: VariableResult[] }>) {
+  unitIds,
+  onUnitIdsChange,
+  onFillMissing,
+  solving = false,
+  solvable = false,
+}: Readonly<StatesTabProps>) {
   const states = detectStates(solvedVariables)
-  const [unitIds, setUnitIds] = useState<Record<string, string>>({})
 
   if (states.indices.length === 0) {
     return (
@@ -80,45 +92,68 @@ export default function StatesTab({
   }
 
   return (
-    <Table striped highlightOnHover withTableBorder stickyHeader>
-      <Table.Thead>
-        <Table.Tr>
-          <Table.Th>State</Table.Th>
-          {states.columns.map((p) => (
-            <Table.Th key={p}>
-              <ColumnHeader
-                property={p}
-                unitId={unitIdOf(p)}
-                onUnitChange={(id) => setUnitIds((u) => ({ ...u, [p]: id }))}
-              />
-            </Table.Th>
-          ))}
-        </Table.Tr>
-      </Table.Thead>
-      <Table.Tbody>
-        {states.indices.map((index) => (
-          <Table.Tr key={index}>
-            <Table.Td>{index}</Table.Td>
-            {states.columns.map((p) => {
-              const value = states.values[index][p]
-              const unit = resolveUnit(p, unitIdOf(p), false)
-              return (
-                <Table.Td
-                  key={p}
-                  style={{
-                    textAlign: 'right',
-                    fontFamily: 'var(--mantine-font-family-monospace)',
-                  }}
-                >
-                  {value === undefined
-                    ? '—'
-                    : formatValue(value * unit.scale + unit.offset)}
-                </Table.Td>
-              )
-            })}
-          </Table.Tr>
-        ))}
-      </Table.Tbody>
-    </Table>
+    <Stack gap="md" style={{ flex: 1, minHeight: 0 }}>
+      <Group justify="space-between" align="center">
+        <Text size="sm" c="dimmed">
+          Each numbered state is displayed as a row. Missing variables can be solved using the button.
+        </Text>
+        {onFillMissing && (
+          <Button
+            size="xs"
+            variant="light"
+            color="blue"
+            onClick={onFillMissing}
+            loading={solving}
+            disabled={!solvable}
+          >
+            Fill Missing Values
+          </Button>
+        )}
+      </Group>
+
+      <div style={{ overflow: 'auto', flex: 1 }}>
+        <Table striped highlightOnHover withTableBorder stickyHeader>
+          <Table.Thead>
+            <Table.Tr>
+              <Table.Th>State</Table.Th>
+              {states.columns.map((p) => (
+                <Table.Th key={p}>
+                  <ColumnHeader
+                    property={p}
+                    unitId={unitIdOf(p)}
+                    onUnitChange={(id) => onUnitIdsChange((u) => ({ ...u, [p]: id }))}
+                  />
+                </Table.Th>
+              ))}
+            </Table.Tr>
+          </Table.Thead>
+          <Table.Tbody>
+            {states.indices.map((index) => (
+              <Table.Tr key={index}>
+                <Table.Td>{index}</Table.Td>
+                {states.columns.map((p) => {
+                  const value = states.values[index][p]
+                  const unit = resolveUnit(p, unitIdOf(p), false)
+                  return (
+                    <Table.Td
+                      key={p}
+                      style={{
+                        textAlign: 'right',
+                        fontFamily: 'var(--mantine-font-family-monospace)',
+                      }}
+                    >
+                      {value === undefined
+                        ? '—'
+                        : formatValue(value * unit.scale + unit.offset)}
+                    </Table.Td>
+                  )
+                })}
+              </Table.Tr>
+            ))}
+          </Table.Tbody>
+        </Table>
+      </div>
+    </Stack>
   )
 }
+

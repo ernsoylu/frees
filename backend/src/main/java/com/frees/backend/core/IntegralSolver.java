@@ -36,13 +36,30 @@ public final class IntegralSolver {
                                    String resultVar,
                                    Expr integrand,
                                    String integrationVar,
-                                   double lower,
-                                   double upper,
-                                   double fixedStep) {}
+                                   Expr lowerExpr,
+                                   Expr upperExpr,
+                                   Double lowerConst,
+                                   Double upperConst,
+                                   double fixedStep) {
+
+        /** Constant limits use the stepping driver; variable limits (an
+         * unknown like T_flame) are inlined into the equation system. */
+        public boolean constantLimits() {
+            return lowerConst != null && upperConst != null;
+        }
+
+        public double lower() {
+            return lowerConst;
+        }
+
+        public double upper() {
+            return upperConst;
+        }
+    }
 
     /**
      * Finds every Integral equation. Throws when Integral is used anywhere
-     * except alone on one side of an equation, or with non-constant limits.
+     * except alone on one side of an equation.
      */
     public static List<IntegralEquation> extract(List<Equation> equations,
                                                  Map<String, ProcDef> defs) {
@@ -92,13 +109,21 @@ public final class IntegralSolver {
                     "The second argument of Integral must be the integration variable: "
                             + eq.sourceText());
         }
-        double lower = constantArg(args.get(2), "lower limit", eq, defs);
-        double upper = constantArg(args.get(3), "upper limit", eq, defs);
+        Double lower = tryConstant(args.get(2), defs);
+        Double upper = tryConstant(args.get(3), defs);
         double step = args.size() == 5
                 ? constantArg(args.get(4), "step size", eq, defs)
                 : 0.0;
         return new IntegralEquation(eq, resultVar, args.get(0), tVar.name(),
-                lower, upper, step);
+                args.get(2), args.get(3), lower, upper, step);
+    }
+
+    private static Double tryConstant(Expr e, Map<String, ProcDef> defs) {
+        try {
+            return Evaluator.eval(e, Map.of(), defs);
+        } catch (IllegalStateException ex) {
+            return null; // contains unknowns; resolved by the equation system
+        }
     }
 
     private static double constantArg(Expr e, String what, Equation eq,
@@ -133,22 +158,147 @@ public final class IntegralSolver {
 
     /**
      * Equations equivalent to the originals for structure checking only:
-     * each Integral equation pins its result variable, and each integration
-     * variable gets a synthetic defining equation (it is driven internally).
+     * each constant-limit Integral pins its result variable (it is driven
+     * internally) while variable-limit Integrals contribute their actual
+     * inlined equation; each integration variable gets a synthetic defining
+     * equation.
      */
     public static List<Equation> structuralView(List<Equation> equations,
                                                 List<IntegralEquation> integrals) {
-        List<Equation> view = new ArrayList<>(ordinaryEquations(equations, integrals));
+        List<Equation> ordinary = ordinaryEquations(equations, integrals);
+        List<Equation> view = new ArrayList<>(ordinary);
         TreeSet<String> pinnedIntegrationVars = new TreeSet<>();
         for (IntegralEquation ie : integrals) {
-            view.add(new Equation(new Expr.Var(ie.resultVar()), new Expr.Num(0.0),
-                    ie.original().sourceText()));
+            if (ie.constantLimits()) {
+                view.add(new Equation(new Expr.Var(ie.resultVar()), new Expr.Num(0.0),
+                        ie.original().sourceText()));
+            } else {
+                view.add(inlinedEquation(ie, ordinary));
+            }
             if (pinnedIntegrationVars.add(ie.integrationVar())) {
-                view.add(new Equation(new Expr.Var(ie.integrationVar()), new Expr.Num(0.0),
+                view.add(new Equation(new Expr.Var(ie.integrationVar()),
+                        ie.constantLimits() ? new Expr.Num(0.0) : ie.upperExpr(),
                         ie.integrationVar() + " (integration variable)"));
             }
         }
         return view;
+    }
+
+    /**
+     * An Integral with a variable limit (find T_flame such that the energy
+     * balance closes) cannot be driven by stepping: the limit is unknown
+     * until the system is solved. Instead the integral becomes an ordinary
+     * equation, result = Integral(f, t, a, b), that the Evaluator computes
+     * by quadrature at every Newton residual evaluation. For that, the
+     * integrand must be closed-form in the integration variable, so every
+     * variable in it that (transitively) depends on t is replaced by its
+     * explicit definition: Cp_co2 = A + B*T + ... gets substituted into
+     * Integral(Cp_co2, T, ...).
+     */
+    public static Equation inlinedEquation(IntegralEquation ie, List<Equation> ordinary) {
+        if (ie.integrand().variables().contains(ie.resultVar())) {
+            throw new SolverException(
+                    "An Integral with variable limits cannot reference its own result: "
+                            + ie.original().sourceText());
+        }
+        Map<String, Expr> definitions = explicitDefinitions(ordinary);
+        Map<String, Boolean> dependsMemo = new java.util.HashMap<>();
+        Expr inlined = inline(ie.integrand(), ie, definitions, dependsMemo,
+                new java.util.HashSet<>());
+        Expr call = new Expr.Call(FUNCTION_NAME, List.of(
+                inlined, new Expr.Var(ie.integrationVar()), ie.lowerExpr(), ie.upperExpr()));
+        return new Equation(new Expr.Var(ie.resultVar()), call, ie.original().sourceText());
+    }
+
+    /** Unambiguous explicit definitions: equations of the form v = expr
+     * (or expr = v) where expr does not contain v and v is defined once. */
+    private static Map<String, Expr> explicitDefinitions(List<Equation> equations) {
+        Map<String, Expr> definitions = new java.util.HashMap<>();
+        java.util.Set<String> ambiguous = new java.util.HashSet<>();
+        for (Equation eq : equations) {
+            String name = null;
+            Expr expr = null;
+            if (eq.lhs() instanceof Expr.Var v && !eq.rhs().variables().contains(v.name())) {
+                name = v.name();
+                expr = eq.rhs();
+            } else if (eq.rhs() instanceof Expr.Var v && !eq.lhs().variables().contains(v.name())) {
+                name = v.name();
+                expr = eq.lhs();
+            }
+            if (name != null && (definitions.putIfAbsent(name, expr) != null)) {
+                ambiguous.add(name);
+            }
+        }
+        definitions.keySet().removeAll(ambiguous);
+        return definitions;
+    }
+
+    private static boolean dependsOnIntegrationVar(String var, IntegralEquation ie,
+                                                   Map<String, Expr> definitions,
+                                                   Map<String, Boolean> memo,
+                                                   java.util.Set<String> visiting) {
+        if (var.equals(ie.integrationVar())) {
+            return true;
+        }
+        Boolean known = memo.get(var);
+        if (known != null) {
+            return known;
+        }
+        if (!visiting.add(var)) {
+            return false; // circular chains resolve through their other members
+        }
+        Expr definition = definitions.get(var);
+        boolean depends = false;
+        if (definition != null) {
+            for (String inner : definition.variables()) {
+                if (dependsOnIntegrationVar(inner, ie, definitions, memo, visiting)) {
+                    depends = true;
+                    break;
+                }
+            }
+        }
+        visiting.remove(var);
+        memo.put(var, depends);
+        return depends;
+    }
+
+    private static Expr inline(Expr e, IntegralEquation ie, Map<String, Expr> definitions,
+                               Map<String, Boolean> memo, java.util.Set<String> expanding) {
+        return switch (e) {
+            case Expr.Num n -> n;
+            case Expr.Var v -> {
+                if (v.name().equals(ie.integrationVar())
+                        || !dependsOnIntegrationVar(v.name(), ie, definitions, memo,
+                                new java.util.HashSet<>())) {
+                    yield v;
+                }
+                Expr definition = definitions.get(v.name());
+                if (definition == null || !expanding.add(v.name())) {
+                    throw new SolverException("In " + ie.original().sourceText()
+                            + ": '" + v.name() + "' depends on the integration variable "
+                            + ie.integrationVar() + " but has no explicit definition "
+                            + "of the form " + v.name() + " = expression.");
+                }
+                Expr inlined = inline(definition, ie, definitions, memo, expanding);
+                expanding.remove(v.name());
+                yield inlined;
+            }
+            case Expr.Neg neg -> new Expr.Neg(inline(neg.operand(), ie, definitions, memo, expanding));
+            case Expr.BinOp b -> new Expr.BinOp(b.op(),
+                    inline(b.left(), ie, definitions, memo, expanding),
+                    inline(b.right(), ie, definitions, memo, expanding));
+            case Expr.Call c -> new Expr.Call(c.function(), c.args().stream()
+                    .map(a -> inline(a, ie, definitions, memo, expanding)).toList());
+            case Expr.Compare cmp -> new Expr.Compare(cmp.op(),
+                    inline(cmp.left(), ie, definitions, memo, expanding),
+                    inline(cmp.right(), ie, definitions, memo, expanding));
+            case Expr.Logical log -> new Expr.Logical(log.op(),
+                    inline(log.left(), ie, definitions, memo, expanding),
+                    inline(log.right(), ie, definitions, memo, expanding));
+            case Expr.Not not -> new Expr.Not(inline(not.operand(), ie, definitions, memo, expanding));
+            default -> throw new SolverException("In " + ie.original().sourceText()
+                    + ": unsupported construct inside an Integral with variable limits.");
+        };
     }
 
     /** The system without its Integral equations. */

@@ -157,4 +157,19 @@ class SolveControllerTest {
                 .andExpect(jsonPath("$.results[1].success").value(true))
                 .andExpect(jsonPath("$.results[1].values.I").value(0.5));
     }
+
+    @Test
+    void automaticallyResolvesMissingStatePropertiesFromBackground() throws Exception {
+        mockMvc.perform(post("/api/solve")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"text\": \"T[1] = 373.15\\nP[1] = 101325\", \"fillMissing\": true}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.variables[?(@.name == 'T[1]')].value").value(373.15))
+                .andExpect(jsonPath("$.variables[?(@.name == 'P[1]')].value").value(101325.0))
+                .andExpect(jsonPath("$.variables[?(@.name == 'h[1]')].value").exists())
+                .andExpect(jsonPath("$.variables[?(@.name == 's[1]')].value").exists())
+                .andExpect(jsonPath("$.variables[?(@.name == 'v[1]')].value").exists());
+    }
 }
+

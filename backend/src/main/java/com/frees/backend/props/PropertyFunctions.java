@@ -69,19 +69,17 @@ public final class PropertyFunctions {
             Map.entry("r1234ze", "R1234ze(E)"),
             Map.entry("ammonia", "Ammonia"),
             Map.entry("r717", "Ammonia"),
+            // Spelled formulas (CO2, N2, CH4, ...) are ideal gases with
+            // formation-reference enthalpy (see IdealGas); only full names
+            // select the CoolProp real fluids, as in EES.
             Map.entry("carbondioxide", CO2),
-            Map.entry("co2", CO2),
             Map.entry("r744", CO2),
             Map.entry("nitrogen", "Nitrogen"),
-            Map.entry("n2", "Nitrogen"),
             Map.entry("oxygen", "Oxygen"),
-            Map.entry("o2", "Oxygen"),
             Map.entry("hydrogen", "Hydrogen"),
-            Map.entry("h2", "Hydrogen"),
             Map.entry("helium", "Helium"),
             Map.entry("argon", "Argon"),
             Map.entry("methane", "Methane"),
-            Map.entry("ch4", "Methane"),
             Map.entry("ethane", "Ethane"),
             Map.entry("propane", "Propane"),
             Map.entry("r290", "Propane"),
@@ -137,6 +135,9 @@ public final class PropertyFunctions {
         String output = parts[1];
         if ("airh2o".equals(parts[2]) || "humidair".equals(parts[2])) {
             return evaluateHumidAir(output, parts, values);
+        }
+        if (IdealGas.isIdealGas(parts[2])) {
+            return IdealGas.evaluate(output, parts, values);
         }
         String outputKey = OUTPUTS.get(output);
         if (outputKey == null) {
@@ -203,4 +204,28 @@ public final class PropertyFunctions {
     private static String capitalize(String s) {
         return s.substring(0, 1).toUpperCase() + s.substring(1);
     }
+
+    /**
+     * Scans the equations text (case-insensitively) to find any mention of a known fluid.
+     * Returns the canonical CoolProp fluid name if found, or "Water" as a fallback.
+     */
+    public static String detectFluid(String text) {
+        if (text == null || text.isBlank()) {
+            return "Water";
+        }
+        String lower = text.toLowerCase();
+
+        // Sort keys by length descending to match longer names first (e.g. "airh2o" before "air")
+        java.util.List<String> sortedKeys = new java.util.ArrayList<>(FLUIDS.keySet());
+        sortedKeys.sort((a, b) -> Integer.compare(b.length(), a.length()));
+
+        for (String key : sortedKeys) {
+            java.util.regex.Pattern pattern = java.util.regex.Pattern.compile("\\b" + java.util.regex.Pattern.quote(key) + "\\b");
+            if (pattern.matcher(lower).find()) {
+                return FLUIDS.get(key);
+            }
+        }
+        return "Water";
+    }
 }
+
