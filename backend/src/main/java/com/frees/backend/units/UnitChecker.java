@@ -300,6 +300,11 @@ public final class UnitChecker {
     }
 
     private Dim dimOfCall(Expr.Call c) {
+        // Fluid property calls have property-specific dimensions the checker
+        // does not track; stay agnostic instead of warning.
+        if (c.function().startsWith("prop$")) {
+            return Dim.UNKNOWN;
+        }
         List<Expr> args = c.args();
         return switch (c.function()) {
             case "abs" -> dimOf(args.get(0));
