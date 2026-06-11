@@ -42,7 +42,7 @@ interface Props {
 }
 
 /** Mirrors the EES Options > Variable Information window. */
-export default function VariableInfoModal({ variables, drafts, onSave, onClose }: Props) {
+export default function VariableInfoModal({ variables, drafts, onSave, onClose }: Readonly<Props>) {
   const [local, setLocal] = useState<Record<string, VariableDraft>>(() => {
     const initial: Record<string, VariableDraft> = {}
     for (const name of variables) {
