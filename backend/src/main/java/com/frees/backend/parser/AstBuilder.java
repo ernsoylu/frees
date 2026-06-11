@@ -210,20 +210,13 @@ public class AstBuilder extends EesBaseVisitor<Expr> {
                 inputs.add(visit(exprCtx));
             }
         }
-        List<String> outputs = new ArrayList<>();
+        List<Expr> outputs = new ArrayList<>();
         if (ctx.callArgList(1) != null) {
             for (EesParser.ExprContext exprCtx : ctx.callArgList(1).expr()) {
-                // Output args should be variable names; extract them
-                Expr e = visit(exprCtx);
-                if (e instanceof Expr.Var v) {
-                    outputs.add(v.name());
-                } else {
-                    throw new EquationParser.ParseException(
-                            "CALL output argument must be a simple variable name");
-                }
+                outputs.add(visit(exprCtx));
             }
         }
-        return new Statement.CallProc(name, inputs, outputs);
+        return new Statement.CallProc(name, inputs, outputs, ctx.getText());
     }
 
     public Statement.Duplicate buildDuplicateBlock(EesParser.DuplicateBlockContext ctx) {

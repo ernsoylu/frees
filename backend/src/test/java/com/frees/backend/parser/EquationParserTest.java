@@ -292,4 +292,61 @@ class EquationParserTest {
         System.out.println(clean);
         parser.parse(clean);
     }
+
+    @Test
+    void testMatrixVectorOperations() {
+        // Transpose test
+        List<Equation> transposeEqs = parser.parse(
+                "A[1..2, 1..3] = 1\n" +
+                "B[1..3, 1..2] = transpose(A[1..2, 1..3])"
+        );
+        assertEquals(12, transposeEqs.size());
+
+        // Dot product test
+        List<Equation> dotEqs = parser.parse(
+                "u[1..3] = [1, 2, 3]\n" +
+                "v[1..3] = [4, 5, 6]\n" +
+                "d = dot(u[1..3], v[1..3])"
+        );
+        assertEquals(7, dotEqs.size());
+
+        // Determinant test
+        List<Equation> detEqs = parser.parse(
+                "A[1..2,1..2] = 1\n" +
+                "det = determinant(A[1..2,1..2])"
+        );
+        assertEquals(5, detEqs.size());
+
+        // Cross product test
+        List<Equation> crossEqs = parser.parse(
+                "u[1..3] = [1, 0, 0]\n" +
+                "v[1..3] = [0, 1, 0]\n" +
+                "w[1..3] = cross(u[1..3], v[1..3])"
+        );
+        assertEquals(9, crossEqs.size());
+
+        // LUDecompose test
+        List<Equation> luEqs = parser.parse(
+                "A[1..2, 1..2] = 1\n" +
+                "CALL LUDecompose(A[1..2, 1..2] : L[1..2, 1..2], U[1..2, 1..2])"
+        );
+        assertEquals(12, luEqs.size());
+
+        // EulerRotate test
+        List<Equation> eulerEqs = parser.parse(
+                "phi = 0\n" +
+                "theta = 0\n" +
+                "psi = 0\n" +
+                "CALL EulerRotate(phi, theta, psi : R[1..3, 1..3])"
+        );
+        assertEquals(12, eulerEqs.size());
+
+        // SolveLinear test
+        List<Equation> solveEqs = parser.parse(
+                "A[1..2, 1..2] = 1\n" +
+                "b[1..2] = [2, 3]\n" +
+                "x[1..2] = SolveLinear(A[1..2, 1..2], b[1..2])"
+        );
+        assertEquals(8, solveEqs.size());
+    }
 }
