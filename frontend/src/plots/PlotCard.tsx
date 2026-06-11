@@ -70,7 +70,7 @@ function buildXYSeries(
   })
 }
 
-function useDiagramData(spec: PlotSpec) {
+export function useDiagramData(spec: PlotSpec) {
   const [diagram, setDiagram] = useState<DiagramResponse | null>(null)
   const [psychart, setPsychart] = useState<PsychartResponse | null>(null)
   const [loading, setLoading] = useState(false)
@@ -112,7 +112,7 @@ function useDiagramData(spec: PlotSpec) {
   return { diagram, psychart, loading, error }
 }
 
-function buildFigure(
+export function buildFigure(
   spec: PlotSpec,
   states: StateTable,
   cyclePath: Record<string, number>[] | undefined,
