@@ -55,10 +55,13 @@ cd frontend && npm start                      # dev-only: Vite dev server (proxi
 See `ARCHITECTURE_AND_REQUIREMENTS.md` for the full system design and six-Epic Agile plan.
 
 **Client-Server flow:**
-1. React frontend collects equation text → POST to Spring Boot backend on "Solve"
-2. Backend: lex → build AST (ANTLR) → check units → block via Tarjan → solve via Newton's method
-3. Backend returns JSON: variable solutions, residuals, array tables, compiled LaTeX strings
-4. Frontend renders each window (Solution, Formatted Equations, Arrays, Plots, Diagram) from the JSON payload
+1. React frontend collects equation + markdown text → POST to Spring Boot backend on "Solve" / "Check"
+2. Backend: extracts equations from markdown lines (preserving text structure), lexes/parses them (ANTLR), performs unit verification, blocks equations via Tarjan SCC, and solves via Newton's method.
+3. Backend returns JSON: variable solutions, residuals, array tables, compiled LaTeX strings, and the rebuilt formatted report.
+4. Frontend renders each window:
+   - **Editor**: Custom monospace text editor with a scroll-synchronized line numbers gutter on the left.
+   - **Formatted**: Renders compiled Markdown report combining normal text with LaTeX/KaTeX equations, inline solutions, hover tooltips, and embedded interactive plots via `[Graph="..."]` tag resolution.
+   - **Solution, Arrays, Plots, Diagram**: Grid, charts, and overlay layouts built from the JSON payload.
 
 **Check-before-Solve (EES Check/Format):** `POST /api/check` verifies syntax and structural solvability (zero degrees of freedom + complete equation↔variable matching) without solving. The frontend gates the Solve button on a successful check; any edit invalidates it.
 

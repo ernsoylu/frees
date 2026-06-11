@@ -4,10 +4,11 @@
 
 The application operates on a **Client-Server model**.
 
-1. The **React Frontend** provides a multi-window dashboard representing the Equations, Formatted Equations, Solution, Arrays, Residuals, Parametric Tables, Plot, and Diagram windows.
-2. The user inputs text into the Equations Window. Upon pressing "Solve", the frontend posts the text string to the **Spring Boot Backend**.
-3. The **Backend** lexes the string, builds an Abstract Syntax Tree (AST), checks units, blocks equations via Tarjan's algorithm, and solves them using a numerical Jacobian matrix and Newton's method.
-4. The backend returns a JSON payload containing variable solutions, residuals, array tables, and compiled LaTeX strings back to the frontend for display.
+1. The **React Frontend** provides a multi-window dashboard representing the Editor, Formatted Report, Solution, Arrays, Residuals, Parametric Tables, Plot, and Diagram windows. The **Editor** is equipped with a vertical line-numbering gutter.
+2. The user inputs text containing equations and standard Markdown notes into the Editor Window. Upon pressing "Solve" or "Check", the frontend posts the text string to the **Spring Boot Backend**.
+3. The **Backend** extracts equations from markdown lines (preserving text structure), lexes/parses them, builds an Abstract Syntax Tree (AST), checks units, blocks equations via Tarjan's algorithm, and solves them using a numerical Jacobian matrix and Newton's method.
+4. The backend returns a JSON payload containing variable solutions, residuals, array tables, compiled LaTeX strings, and a reconstructed formatted report template back to the frontend.
+5. The frontend compiles and renders the formatted report, overlaying KaTeX math formulas, inline solution badges, tooltips, and embedding interactive plots dynamically via `[Graph="Diagram Name"] Caption [/Graph]` tags.
 
 ### Check-before-Solve (EES Check/Format behavior)
 
