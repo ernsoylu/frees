@@ -17,6 +17,11 @@ repositories {
     mavenCentral()
 }
 
+// Lock dependency versions (gradle.lockfile) so builds are reproducible.
+dependencyLocking {
+    lockAllConfigurations()
+}
+
 dependencies {
     antlr 'org.antlr:antlr4:4.13.2'
 
