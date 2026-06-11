@@ -20,6 +20,7 @@ jakarta.annotation:jakarta.annotation-api:2.1.1=compileClasspath,productionRunti
 jakarta.xml.bind:jakarta.xml.bind-api:4.0.2=testCompileClasspath,testRuntimeClasspath
 net.bytebuddy:byte-buddy-agent:1.17.7=testCompileClasspath,testRuntimeClasspath
 net.bytebuddy:byte-buddy:1.17.7=testCompileClasspath,testRuntimeClasspath
+net.java.dev.jna:jna:5.14.0=compileClasspath,productionRuntimeClasspath,runtimeClasspath,testCompileClasspath,testRuntimeClasspath
 net.minidev:accessors-smart:2.5.2=testCompileClasspath,testRuntimeClasspath
 net.minidev:json-smart:2.5.2=testCompileClasspath,testRuntimeClasspath
 org.abego.treelayout:org.abego.treelayout.core:1.0.3=antlr,compileClasspath,productionRuntimeClasspath,runtimeClasspath,testCompileClasspath,testRuntimeClasspath

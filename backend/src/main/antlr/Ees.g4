@@ -146,7 +146,14 @@ atom
     ;
 
 argList
-    : expr (COMMA expr)*
+    : arg (COMMA arg)*
+    ;
+
+// Named arguments (T=300) select fluid property inputs, EES-style:
+// Enthalpy(R134a, T=T1, x=1)
+arg
+    : IDENT EQ expr   # NamedArg
+    | expr            # PositionalArg
     ;
 
 arrayIndexList
