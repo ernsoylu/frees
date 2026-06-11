@@ -853,7 +853,7 @@ y0 = 1`}
                     This example analyzes an ideal Rankine steam power cycle, computing state enthalpies, turbine work, pump work, thermal efficiency, and mass flow rate.
                   </Text>
                   <Paper withBorder p="md" bg="dark.8" radius="md" style={{ position: 'relative' }}>
-                    <CopyButton code={`{ Ideal Rankine Steam Power Cycle }\nP_high = 8000 [kPa]  { Boiler pressure }\nP_low = 10 [kPa]     { Condenser pressure }\nT_boiler = 500 [C]   { Boiler temperature }\neta_turb = 0.85      { Isentropic turbine efficiency }\neta_pump = 0.90      { Isentropic pump efficiency }\nW_dot_net = 10000 [kW] { Target net power output }\n\n{ State 1: Turbine Inlet (Superheated Steam) }\nh[1] = Enthalpy(Water, P=P_high, T=T_boiler)\ns[1] = Entropy(Water, P=P_high, T=T_boiler)\n\n{ State 2s: Isentropic Turbine Exit }\ns_2s = s[1]\nh_2s = Enthalpy(Water, P=P_low, s=s_2s)\n\n{ State 2: Actual Turbine Exit }\nh[2] = h[1] - eta_turb * (h[1] - h_2s)\n\n{ State 3: Condenser Exit (Saturated Liquid) }\nh[3] = Enthalpy(Water, P=P_low, x=0)\nv[3] = Volume(Water, P=P_low, x=0)\ns[3] = Entropy(Water, P=P_low, x=0)\n\n{ State 4s: Isentropic Pump Exit }\ns_4s = s[3]\nh_4s = Enthalpy(Water, P=P_high, s=s_4s)\n\n{ State 4: Actual Pump Exit }\nh[4] = h[3] + (h_4s - h[3]) / eta_pump\n\n{ Work and Heat Transfers }\nw_turb = h[1] - h[2]\nw_pump = h[4] - h[3]\nq_boiler = h[1] - h[4]\nq_cond = h[2] - h[3]\n\n{ Performance Parameters }\nw_net = w_turb - w_pump\neta_th = w_net / q_boiler * 100\n\n{ Mass flow rate needed for 10 MW net power }\nW_dot_net = m_dot * w_net`} />
+                    <CopyButton code={`{ Ideal Rankine Steam Power Cycle }\nP_high = 8000 [kPa]  { Boiler pressure }\nP_low = 10 [kPa]     { Condenser pressure }\nT_boiler = 500 [C]   { Boiler temperature }\neta_turb = 0.85      { Isentropic turbine efficiency }\neta_pump = 0.90      { Isentropic pump efficiency }\nW_dot_net = 10000 [kW] { Target net power output }\n\n{ State 1: Turbine Inlet (Superheated Steam) }\nh[1] = Enthalpy(Water, P=P_high, T=T_boiler)\ns[1] = Entropy(Water, P=P_high, T=T_boiler)\nT[1] = T_boiler\n\n{ State 2s: Isentropic Turbine Exit }\ns_2s = s[1]\nh_2s = Enthalpy(Water, P=P_low, s=s_2s)\n\n{ State 2: Actual Turbine Exit }\nh[2] = h[1] - eta_turb * (h[1] - h_2s)\ns[2] = Entropy(Water, P=P_low, h=h[2])\nT[2] = Temperature(Water, P=P_low, h=h[2])\n\n{ State 3: Condenser Exit (Saturated Liquid) }\nh[3] = Enthalpy(Water, P=P_low, x=0)\nv[3] = Volume(Water, P=P_low, x=0)\ns[3] = Entropy(Water, P=P_low, x=0)\nT[3] = Temperature(Water, P=P_low, x=0)\n\n{ State 4s: Isentropic Pump Exit }\ns_4s = s[3]\nh_4s = Enthalpy(Water, P=P_high, s=s_4s)\n\n{ State 4: Actual Pump Exit }\nh[4] = h[3] + (h_4s - h[3]) / eta_pump\ns[4] = Entropy(Water, P=P_high, h=h[4])\nT[4] = Temperature(Water, P=P_high, h=h[4])\n\n{ Work and Heat Transfers }\nw_turb = h[1] - h[2]\nw_pump = h[4] - h[3]\nq_boiler = h[1] - h[4]\nq_cond = h[2] - h[3]\n\n{ Performance Parameters }\nw_net = w_turb - w_pump\neta_th = w_net / q_boiler * 100\n\n{ Mass flow rate needed for 10 MW net power }\nW_dot_net = m_dot * w_net`} />
                     <Code block style={{ background: 'transparent', maxHeight: '300px', overflowY: 'auto' }}>
                       {`{ Ideal Rankine Steam Power Cycle }
 P_high = 8000 [kPa]  { Boiler pressure }
@@ -866,6 +866,7 @@ W_dot_net = 10000 [kW] { Target net power output }
 { State 1: Turbine Inlet (Superheated Steam) }
 h[1] = Enthalpy(Water, P=P_high, T=T_boiler)
 s[1] = Entropy(Water, P=P_high, T=T_boiler)
+T[1] = T_boiler
 
 { State 2s: Isentropic Turbine Exit }
 s_2s = s[1]
@@ -873,11 +874,14 @@ h_2s = Enthalpy(Water, P=P_low, s=s_2s)
 
 { State 2: Actual Turbine Exit }
 h[2] = h[1] - eta_turb * (h[1] - h_2s)
+s[2] = Entropy(Water, P=P_low, h=h[2])
+T[2] = Temperature(Water, P=P_low, h=h[2])
 
 { State 3: Condenser Exit (Saturated Liquid) }
 h[3] = Enthalpy(Water, P=P_low, x=0)
 v[3] = Volume(Water, P=P_low, x=0)
 s[3] = Entropy(Water, P=P_low, x=0)
+T[3] = Temperature(Water, P=P_low, x=0)
 
 { State 4s: Isentropic Pump Exit }
 s_4s = s[3]
@@ -885,6 +889,8 @@ h_4s = Enthalpy(Water, P=P_high, s=s_4s)
 
 { State 4: Actual Pump Exit }
 h[4] = h[3] + (h_4s - h[3]) / eta_pump
+s[4] = Entropy(Water, P=P_high, h=h[4])
+T[4] = Temperature(Water, P=P_high, h=h[4])
 
 { Work and Heat Transfers }
 w_turb = h[1] - h[2]
