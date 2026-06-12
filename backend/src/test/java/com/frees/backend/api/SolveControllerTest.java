@@ -193,6 +193,29 @@ class SolveControllerTest {
     }
 
     @Test
+    void optimizesMultiVariableProblem() throws Exception {
+        mockMvc.perform(post("/api/optimize")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{"
+                                + "\"text\": \"f = (x - 1)^2 + (y - 2)^2 + 3\","
+                                + "\"objective\": \"f\","
+                                + "\"decisions\": [\"x\", \"y\"],"
+                                + "\"lowers\": [-5.0, -5.0],"
+                                + "\"uppers\": [5.0, 5.0],"
+                                + "\"maximize\": false,"
+                                + "\"method\": \"simplex\""
+                                + "}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.objective.name").value("f"))
+                .andExpect(jsonPath("$.objective.value").value(org.hamcrest.Matchers.closeTo(3.0, 1e-3)))
+                .andExpect(jsonPath("$.decisions[0].name").value("x"))
+                .andExpect(jsonPath("$.decisions[0].value").value(org.hamcrest.Matchers.closeTo(1.0, 1e-3)))
+                .andExpect(jsonPath("$.decisions[1].name").value("y"))
+                .andExpect(jsonPath("$.decisions[1].value").value(org.hamcrest.Matchers.closeTo(2.0, 1e-3)));
+    }
+
+    @Test
     void customStopCriteriaAreApplied() throws Exception {
         mockMvc.perform(post("/api/solve")
                         .contentType(MediaType.APPLICATION_JSON)
