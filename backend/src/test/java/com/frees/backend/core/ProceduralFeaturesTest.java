@@ -2,8 +2,6 @@ package com.frees.backend.core;
 
 import org.junit.jupiter.api.Test;
 
-import java.util.Map;
-
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
@@ -158,6 +156,22 @@ class ProceduralFeaturesTest {
         EquationSystemSolver.Result result = solver.solve(source);
         // y = 2*3 + 1 = 7
         assertEquals(7.0, result.variables().get("result"), 1e-9);
+    }
+
+    @Test
+    void moduleNamespacesFunctionCallsAndNegation() {
+        // The module body mixes negation and a function call; both must be
+        // rewritten into the instance namespace.
+        String source = """
+                MODULE Shift(x : y)
+                  buf = -x + sin(0)
+                  y = buf + 1
+                END
+
+                CALL Shift(4 : out)
+                """;
+        EquationSystemSolver.Result result = solver.solve(source);
+        assertEquals(-3.0, result.variables().get("out"), 1e-9);
     }
 
     // ── Milestone 3 verification ──────────────────────────────────────────────

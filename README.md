@@ -35,6 +35,15 @@ cd frontend && npm ci && npm run build   # frontend type-check + build
 
 See [CLAUDE.md](CLAUDE.md) for the development workflow and [ARCHITECTURE_AND_REQUIREMENTS.md](ARCHITECTURE_AND_REQUIREMENTS.md) for the architecture and roadmap.
 
+## Deployment
+
+The app is deployed on [Render](https://render.com) as two Docker web services built from this repository's `main` branch:
+
+- **Frontend**: <https://frees.onrender.com> (`frontend/Dockerfile`), calling the backend API directly via `VITE_API_BASE`.
+- **Backend**: <https://frees-backend.onrender.com> (`backend/Dockerfile`, Spring Boot).
+
+Cross-origin access to the API is restricted to `http://localhost:5173` and `https://*.onrender.com` by default; set `FREES_CORS_ALLOWED_ORIGINS` (comma-separated origin patterns) on the backend service to allow other origins.
+
 ## License
 
 MIT

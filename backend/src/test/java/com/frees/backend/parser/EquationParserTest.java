@@ -27,7 +27,9 @@ class EquationParserTest {
 
     @Test
     void parsesArrayAccessInNamedArg() {
-        parser.parse("s[2] = Entropy(Water, P=P_low, h=h[2])");
+        List<Equation> equations = parser.parse("s[2] = Entropy(Water, P=P_low, h=h[2])");
+        assertEquals(1, equations.size());
+        assertEquals(Set.of("s[2]", "p_low", "h[2]"), equations.get(0).variables());
     }
 
     @Test
@@ -288,9 +290,9 @@ class EquationParserTest {
                 "W_dot_net = m_dot * w_net";
         
         String clean = MarkdownEquationExtractor.extract(report).cleanText;
-        System.out.println("CLEAN TEXT:");
-        System.out.println(clean);
-        parser.parse(clean);
+        // 30 equations survive extraction (including the six inline
+        // bullet-point assignments); headings and prose are dropped.
+        assertEquals(30, parser.parse(clean).size());
     }
 
     @Test
@@ -348,6 +350,58 @@ class EquationParserTest {
                 "x[1..2] = SolveLinear(A[1..2, 1..2], b[1..2])"
         );
         assertEquals(8, solveEqs.size());
+    }
+
+    @Test
+    void expandsInverseIntoProductEquations() {
+        // A * B = I row by row: n^2 equations plus the 4 matrix entries.
+        List<Equation> eqs = parser.parse(
+                "A[1..2,1..2] = 1\n"
+                        + "B[1..2,1..2] = Inverse(A[1..2,1..2])");
+        assertEquals(8, eqs.size());
+    }
+
+    @Test
+    void expandsNormIntoSqrtOfSquares() {
+        List<Equation> eqs = parser.parse(
+                "u[1..3] = [3, 0, 4]\n"
+                        + "n = Norm(u[1..3])");
+        assertEquals(4, eqs.size());
+        assertEquals(Set.of("n", "u[1]", "u[2]", "u[3]"), eqs.get(3).variables());
+    }
+
+    @Test
+    void expandsRangeToRangeAssignment() {
+        List<Equation> eqs = parser.parse("a[1..3] = 1\nb[1..3] = a[1..3]");
+        assertEquals(6, eqs.size());
+        assertEquals(Set.of("a[2]", "b[2]"), eqs.get(4).variables());
+    }
+
+    @Test
+    void expandsEulerDecomposeIntoAngleEquations() {
+        // 9 matrix entries + 3 decomposition equations.
+        List<Equation> eqs = parser.parse(
+                "R[1..3,1..3] = 0.5\n"
+                        + "CALL EulerDecompose(R[1..3,1..3] : phi, theta, psi)");
+        assertEquals(12, eqs.size());
+    }
+
+    @Test
+    void rejectsMismatchedMatrixAndVectorDimensions() {
+        assertThrows(EquationParser.ParseException.class, () ->
+                parser.parse("a[1..3] = 1\nb[1..2] = a[1..3]"));
+        assertThrows(EquationParser.ParseException.class, () ->
+                parser.parse("a[1..2] = [1, 2, 3]"));
+        assertThrows(EquationParser.ParseException.class, () ->
+                parser.parse("A[1..2,1..3] = 1\nB[1..2,1..3] = transpose(A[1..2,1..3])"));
+        assertThrows(EquationParser.ParseException.class, () ->
+                parser.parse("u[1..2] = [1, 2]\nv[1..3] = [1, 2, 3]\nd = dot(u[1..2], v[1..3])"));
+        assertThrows(EquationParser.ParseException.class, () ->
+                parser.parse("A[1..2,1..3] = 1\nd = determinant(A[1..2,1..3])"));
+        assertThrows(EquationParser.ParseException.class, () ->
+                parser.parse("u[1..2] = [1, 2]\nv[1..2] = [3, 4]\nw[1..2] = cross(u[1..2], v[1..2])"));
+        assertThrows(EquationParser.ParseException.class, () ->
+                parser.parse("R[1..2,1..2] = 1\nCALL EulerDecompose(R[1..2,1..2] : phi, theta, psi)"));
     }
 
     @Test

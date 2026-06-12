@@ -193,6 +193,177 @@ class SolveControllerTest {
     }
 
     @Test
+    void customStopCriteriaAreApplied() throws Exception {
+        mockMvc.perform(post("/api/solve")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"text\": \"x = 2 + 2\","
+                                + "\"stopCriteria\": {\"maxIterations\": 100,"
+                                + "\"relativeResiduals\": 1e-8,"
+                                + "\"changeInVariables\": 1e-10,"
+                                + "\"elapsedTimeSeconds\": 60,"
+                                + "\"complexMode\": false}}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.variables[0].value").value(4.0));
+    }
+
+    @Test
+    void unknownDisplayUnitSystemFallsBackToSi() throws Exception {
+        mockMvc.perform(post("/api/solve")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"text\": \"P = 100 [bar]\","
+                                + "\"displayUnitSystem\": \"NOT_A_SYSTEM\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.variables[0].units").value("Pa"));
+    }
+
+    @Test
+    void unknownDeclaredUnitIsEchoedUnconverted() throws Exception {
+        mockMvc.perform(post("/api/solve")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"text\": \"x = 5\","
+                                + "\"variableInfo\": [{\"name\":\"x\",\"units\":\"widgets\"}]}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.variables[0].value").value(5.0))
+                .andExpect(jsonPath("$.variables[0].units").value("widgets"));
+    }
+
+    @Test
+    void checkEndpointRejectsBlankText() throws Exception {
+        mockMvc.perform(post("/api/check")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"text\": \"\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("No equations entered."));
+    }
+
+    @Test
+    void tableEndpointValidatesBlankTextAndMissingTable() throws Exception {
+        mockMvc.perform(post("/api/solve/table")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"text\": \"\"}"))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(post("/api/solve/table")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"text\": \"I = V / R\"}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void tableEndpointReportsFailedRows() throws Exception {
+        mockMvc.perform(post("/api/solve/table")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{"
+                                + "\"text\": \"x = 4\","
+                                + "\"table\": {"
+                                + "  \"variables\": [\"x\"],"
+                                + "  \"rows\": [{\"x\": 5.0}]"
+                                + "}"
+                                + "}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.results[0].success").value(false))
+                .andExpect(jsonPath("$.stats.failed").value(1));
+    }
+
+    @Test
+    void optimizeEndpointRequiresBounds() throws Exception {
+        mockMvc.perform(post("/api/optimize")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{"
+                                + "\"text\": \"y = (x - 3)^2 + 4\","
+                                + "\"objective\": \"y\","
+                                + "\"decision\": \"x\","
+                                + "\"maximize\": false"
+                                + "}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value(
+                        "Both bounds of the independent variable are required."));
+    }
+
+    @Test
+    void cyclePathInterpolatesIsobaricSegments() throws Exception {
+        // Two states on the same isobar: both segments interpolate at
+        // constant pressure over the entropy span.
+        mockMvc.perform(post("/api/solve")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"text\": \"T[1] = 400\\nP[1] = 101325\\n"
+                                + "T[2] = 500\\nP[2] = 101325\", \"fillMissing\": true}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.cyclePath").isNotEmpty())
+                .andExpect(jsonPath("$.cyclePath[0].P").value(
+                        org.hamcrest.Matchers.closeTo(101325.0, 1.0)));
+    }
+
+    @Test
+    void cyclePathInterpolatesIsentropicSegments() throws Exception {
+        mockMvc.perform(post("/api/solve")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"text\": \"P[1] = 100000\\ns[1] = 7000\\n"
+                                + "P[2] = 400000\\ns[2] = 7000\", \"fillMissing\": true}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.cyclePath").isNotEmpty());
+    }
+
+    @Test
+    void cyclePathInterpolatesIsothermalSegments() throws Exception {
+        mockMvc.perform(post("/api/solve")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"text\": \"T[1] = 500\\ns[1] = 7000\\n"
+                                + "T[2] = 500\\ns[2] = 7600\", \"fillMissing\": true}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.cyclePath").isNotEmpty());
+    }
+
+    @Test
+    void cyclePathInterpolatesIsenthalpicSegments() throws Exception {
+        // Throttling: equal enthalpies at different pressures.
+        mockMvc.perform(post("/api/solve")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"text\": \"P[1] = 1000000\\nh[1] = 2800000\\n"
+                                + "P[2] = 100000\\nh[2] = 2800000\", \"fillMissing\": true}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.cyclePath").isNotEmpty());
+    }
+
+    @Test
+    void cyclePathInterpolatesIsochoricSegments() throws Exception {
+        mockMvc.perform(post("/api/solve")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"text\": \"T[1] = 400\\nv[1] = 0.2\\n"
+                                + "T[2] = 500\\nv[2] = 0.2\", \"fillMissing\": true}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.cyclePath").isNotEmpty());
+    }
+
+    @Test
+    void cyclePathFallsBackToLinearInterpolation() throws Exception {
+        // Nothing is held constant between the states: every property
+        // interpolates linearly.
+        mockMvc.perform(post("/api/solve")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"text\": \"T[1] = 300\\nP[1] = 100000\\n"
+                                + "T[2] = 450\\nP[2] = 300000\", \"fillMissing\": true}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.cyclePath").isNotEmpty());
+    }
+
+    @Test
+    void singleStateProducesNoCyclePath() throws Exception {
+        mockMvc.perform(post("/api/solve")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"text\": \"T[1] = 400\\nP[1] = 101325\", \"fillMissing\": true}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.cyclePath").isEmpty());
+    }
+
+    @Test
     void optimizeEndpointValidatesBlankText() throws Exception {
         mockMvc.perform(post("/api/optimize")
                         .contentType(MediaType.APPLICATION_JSON)

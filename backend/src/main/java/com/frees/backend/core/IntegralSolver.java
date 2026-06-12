@@ -58,6 +58,75 @@ public final class IntegralSolver {
     }
 
     /**
+     * EES allows Integral inside arbitrary expressions
+     * (y = y0 + Integral(f, t, a, b)). The solver drives integrals only in
+     * the alone form F = Integral(...), so every nested call is hoisted into
+     * a synthetic result variable with its own defining equation; the
+     * rewritten system is otherwise unchanged.
+     */
+    public static List<Equation> hoistNested(List<Equation> equations) {
+        boolean mentions = equations.stream().anyMatch(eq ->
+                mentionsIntegral(eq.lhs()) || mentionsIntegral(eq.rhs()));
+        if (!mentions) {
+            return equations;
+        }
+        java.util.Set<String> taken = new java.util.HashSet<>();
+        for (Equation eq : equations) {
+            taken.addAll(eq.variables());
+        }
+        List<Equation> rewritten = new ArrayList<>();
+        List<Equation> hoisted = new ArrayList<>();
+        for (Equation eq : equations) {
+            if (aloneForm(eq)) {
+                rewritten.add(eq);
+                continue;
+            }
+            Expr lhs = hoistCalls(eq.lhs(), eq.sourceText(), taken, hoisted);
+            Expr rhs = hoistCalls(eq.rhs(), eq.sourceText(), taken, hoisted);
+            rewritten.add(new Equation(lhs, rhs, eq.sourceText()));
+        }
+        rewritten.addAll(hoisted);
+        return rewritten;
+    }
+
+    private static boolean aloneForm(Equation eq) {
+        return (eq.lhs() instanceof Expr.Var && isIntegralCall(eq.rhs()))
+                || (eq.rhs() instanceof Expr.Var && isIntegralCall(eq.lhs()));
+    }
+
+    /** Integral calls inside other node types (array indices, ranges) are
+     * left in place; extract() rejects them with its usual guidance. */
+    private static Expr hoistCalls(Expr e, String sourceText,
+                                   java.util.Set<String> taken, List<Equation> hoisted) {
+        return switch (e) {
+            case Expr.Neg(Expr operand) ->
+                    new Expr.Neg(hoistCalls(operand, sourceText, taken, hoisted));
+            case Expr.BinOp(char op, Expr left, Expr right) -> new Expr.BinOp(op,
+                    hoistCalls(left, sourceText, taken, hoisted),
+                    hoistCalls(right, sourceText, taken, hoisted));
+            case Expr.Call(String function, List<Expr> args) -> {
+                if (function.equals(FUNCTION_NAME)) {
+                    String name = freshName(taken);
+                    hoisted.add(new Equation(new Expr.Var(name), e, sourceText));
+                    yield new Expr.Var(name);
+                }
+                yield new Expr.Call(function, args.stream()
+                        .map(a -> hoistCalls(a, sourceText, taken, hoisted)).toList());
+            }
+            default -> e;
+        };
+    }
+
+    private static String freshName(java.util.Set<String> taken) {
+        int n = 1;
+        String name = "integral_" + n;
+        while (!taken.add(name)) {
+            name = "integral_" + (++n);
+        }
+        return name;
+    }
+
+    /**
      * Finds every Integral equation. Throws when Integral is used anywhere
      * except alone on one side of an equation.
      */

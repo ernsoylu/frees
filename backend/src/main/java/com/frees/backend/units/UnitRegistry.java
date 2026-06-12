@@ -24,6 +24,7 @@ public final class UnitRegistry {
         }
     }
 
+    private static final String DIMS_LABEL = ", dims=";
     private static final Map<String, Quantity> UNITS = new HashMap<>();
 
     /** SI symbols whose meaning depends on letter case (H henry vs h hour). */
@@ -270,7 +271,7 @@ public final class UnitRegistry {
 
         @Override
         public String toString() {
-            return "NamedUnit[symbol=" + symbol + ", dims=" + java.util.Arrays.toString(dims) + "]";
+            return "NamedUnit[symbol=" + symbol + DIMS_LABEL + java.util.Arrays.toString(dims) + "]";
         }
     }
 
@@ -376,7 +377,7 @@ public final class UnitRegistry {
 
         @Override
         public String toString() {
-            return "OffsetQuantity[factor=" + factor + ", offset=" + offset + ", dims=" + java.util.Arrays.toString(dims) + "]";
+            return "OffsetQuantity[factor=" + factor + ", offset=" + offset + DIMS_LABEL + java.util.Arrays.toString(dims) + "]";
         }
     }
 
@@ -424,7 +425,7 @@ public final class UnitRegistry {
 
         @Override
         public String toString() {
-            return "DisplayUnit[name=" + name + ", factor=" + factor + ", offset=" + offset + ", dims=" + java.util.Arrays.toString(dims) + "]";
+            return "DisplayUnit[name=" + name + ", factor=" + factor + ", offset=" + offset + DIMS_LABEL + java.util.Arrays.toString(dims) + "]";
         }
     }
 

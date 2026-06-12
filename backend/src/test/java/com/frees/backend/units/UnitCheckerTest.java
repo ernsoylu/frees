@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class UnitCheckerTest {
@@ -173,10 +174,10 @@ class UnitCheckerTest {
         UnitChecker.DimTerm t4 = new UnitChecker.DimTerm(dims1, 3.0);
 
         assertEquals(t1, t2);
-        assertTrue(!t1.equals(t3));
-        assertTrue(!t1.equals(t4));
-        assertTrue(!t1.equals(null));
-        assertTrue(!t1.equals("string"));
+        assertNotEquals(t1, t3);
+        assertNotEquals(t1, t4);
+        assertNotEquals(t1, null);
+        assertNotEquals(t1, "string");
         assertEquals(t1.hashCode(), t2.hashCode());
         assertTrue(t1.toString().contains("DimTerm"));
     }

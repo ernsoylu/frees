@@ -3,6 +3,7 @@ package com.frees.backend.units;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -149,10 +150,10 @@ class UnitRegistryTest {
         Quantity q3 = new Quantity(2.5, dims3);
         Quantity q4 = new Quantity(3.0, dims1);
         assertEquals(q1, q2);
-        assertTrue(!q1.equals(q3));
-        assertTrue(!q1.equals(q4));
-        assertTrue(!q1.equals(null));
-        assertTrue(!q1.equals("string"));
+        assertNotEquals(q1, q3);
+        assertNotEquals(q1, q4);
+        assertNotEquals(q1, null);
+        assertNotEquals(q1, "string");
         assertEquals(q1.hashCode(), q2.hashCode());
         assertTrue(q1.toString().contains("Quantity"));
 
@@ -162,10 +163,10 @@ class UnitRegistryTest {
         UnitRegistry.NamedUnit nu3 = new UnitRegistry.NamedUnit("J", dims1);
         UnitRegistry.NamedUnit nu4 = new UnitRegistry.NamedUnit("N", dims3);
         assertEquals(nu1, nu2);
-        assertTrue(!nu1.equals(nu3));
-        assertTrue(!nu1.equals(nu4));
-        assertTrue(!nu1.equals(null));
-        assertTrue(!nu1.equals("string"));
+        assertNotEquals(nu1, nu3);
+        assertNotEquals(nu1, nu4);
+        assertNotEquals(nu1, null);
+        assertNotEquals(nu1, "string");
         assertEquals(nu1.hashCode(), nu2.hashCode());
         assertTrue(nu1.toString().contains("NamedUnit"));
 
@@ -176,11 +177,11 @@ class UnitRegistryTest {
         UnitRegistry.OffsetQuantity oq4 = new UnitRegistry.OffsetQuantity(1.8, 2.0, dims1);
         UnitRegistry.OffsetQuantity oq5 = new UnitRegistry.OffsetQuantity(1.5, 2.5, dims1);
         assertEquals(oq1, oq2);
-        assertTrue(!oq1.equals(oq3));
-        assertTrue(!oq1.equals(oq4));
-        assertTrue(!oq1.equals(oq5));
-        assertTrue(!oq1.equals(null));
-        assertTrue(!oq1.equals("string"));
+        assertNotEquals(oq1, oq3);
+        assertNotEquals(oq1, oq4);
+        assertNotEquals(oq1, oq5);
+        assertNotEquals(oq1, null);
+        assertNotEquals(oq1, "string");
         assertEquals(oq1.hashCode(), oq2.hashCode());
         assertTrue(oq1.toString().contains("OffsetQuantity"));
 
@@ -192,12 +193,12 @@ class UnitRegistryTest {
         UnitRegistry.DisplayUnit du5 = new UnitRegistry.DisplayUnit("m", 1.8, 2.0, dims1);
         UnitRegistry.DisplayUnit du6 = new UnitRegistry.DisplayUnit("m", 1.5, 2.5, dims1);
         assertEquals(du1, du2);
-        assertTrue(!du1.equals(du3));
-        assertTrue(!du1.equals(du4));
-        assertTrue(!du1.equals(du5));
-        assertTrue(!du1.equals(du6));
-        assertTrue(!du1.equals(null));
-        assertTrue(!du1.equals("string"));
+        assertNotEquals(du1, du3);
+        assertNotEquals(du1, du4);
+        assertNotEquals(du1, du5);
+        assertNotEquals(du1, du6);
+        assertNotEquals(du1, null);
+        assertNotEquals(du1, "string");
         assertEquals(du1.hashCode(), du2.hashCode());
         assertTrue(du1.toString().contains("DisplayUnit"));
     }

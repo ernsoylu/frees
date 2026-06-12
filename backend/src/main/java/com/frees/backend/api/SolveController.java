@@ -947,19 +947,19 @@ public class SolveController {
 
         int steps = 30;
 
-        if (isClose(pA, pB) && pA != null && sA != null && sB != null) {
+        if (sA != null && sB != null && isClose(pA, pB)) {
             return interpolateIsobaric(pA, sA, sB, fluid, steps);
         }
-        if (isClose(sA, sB) && sA != null && pA != null && pB != null) {
+        if (pA != null && pB != null && isClose(sA, sB)) {
             return interpolateIsentropic(sA, pA, pB, fluid, steps);
         }
-        if (isClose(tA, tB) && tA != null && sA != null && sB != null) {
+        if (sA != null && sB != null && isClose(tA, tB)) {
             return interpolateIsothermal(tA, sA, sB, fluid, steps);
         }
-        if (isClose(hA, hB) && hA != null && pA != null && pB != null) {
+        if (pA != null && pB != null && isClose(hA, hB)) {
             return interpolateIsenthalpic(hA, pA, pB, fluid, steps);
         }
-        if (isClose(vA, vB) && vA != null && tA != null && tB != null) {
+        if (tA != null && tB != null && isClose(vA, vB)) {
             return interpolateIsochoric(vA, tA, tB, fluid, steps);
         }
         return interpolateDefault(stateA, stateB, steps);

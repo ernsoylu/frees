@@ -211,7 +211,7 @@ public final class PropertyFunctions {
      */
     public static String detectFluid(String text) {
         if (text == null || text.isBlank()) {
-            return "Water";
+            return WATER;
         }
         String lower = text.toLowerCase();
 
@@ -225,7 +225,7 @@ public final class PropertyFunctions {
                 return FLUIDS.get(key);
             }
         }
-        return "Water";
+        return WATER;
     }
 }
 

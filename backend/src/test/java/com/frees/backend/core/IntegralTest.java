@@ -5,7 +5,6 @@ import org.junit.jupiter.api.Test;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -64,11 +63,14 @@ class IntegralTest {
     }
 
     @Test
-    void checkRejectsNestedIntegralUsage() {
+    void solvesIntegralNestedInExpression() {
+        // As in EES, Integral may appear inside an expression: the nested
+        // call is hoisted into a synthetic alone-form equation internally.
         EquationSystemSolver.CheckResult check =
                 solver.check("F = 2*Integral(t, t, 0, 1)");
-        assertFalse(check.solvable());
-        assertTrue(check.message().contains("alone on one side"), check.message());
+        assertTrue(check.solvable(), check.message());
+        EquationSystemSolver.Result result = solver.solve("F = 2*Integral(t, t, 0, 1)");
+        assertEquals(1.0, result.variables().get("F"), 1e-6);
     }
 
     @Test
