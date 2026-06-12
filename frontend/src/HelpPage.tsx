@@ -2021,6 +2021,76 @@ R = 0.287 { Air gas constant in kJ/kg-K }`}
                 7. Click <strong>Apply</strong>. A fully interactive 3D surface plot will be generated, allowing you to rotate, pan, and hover over individual state values.
               </Text>
             </Card>
+
+            <Card withBorder padding="md" radius="md" bg="dark.8" mt="sm">
+              <Text fw={600} size="sm" c="blue.4">Example 3: Container Loading (Bin Packing Continuous Optimization)</Text>
+              <Text size="xs" mt="xs" style={{ lineHeight: 1.6 }}>
+                Suppose we need to load boxes of three different sizes (Small, Medium, Large) into a standard 20 ft shipping container. 
+                We want to maximize the total dollar value of the cargo we carry. The container has a volume limit of 33 m³ and a payload weight limit of 20,000 kg.
+              </Text>
+              <Text size="xs" mt="xs" fw={500}>Parameters:</Text>
+              <List spacing="xs" size="xs" mt="xs" style={{ paddingLeft: '20px' }}>
+                <List.Item><strong>Box A (Small):</strong> Volume = 0.04 m³, Weight = 10 kg, Value = $100</List.Item>
+                <List.Item><strong>Box B (Medium):</strong> Volume = 0.15 m³, Weight = 25 kg, Value = $300</List.Item>
+                <List.Item><strong>Box C (Large):</strong> Volume = 0.50 m³, Weight = 60 kg, Value = $800</List.Item>
+              </List>
+              <Text size="xs" mt="xs" fw={500}>Equations:</Text>
+              <Paper withBorder p="xs" bg="dark.9" radius="md" mt="xs" style={{ position: 'relative' }}>
+                <CopyButton code={`{ Container Loading Optimization }
+{ Box quantities }
+{ xA: Small, xB: Medium, xC: Large }
+
+V_total = 0.04 * xA + 0.15 * xB + 0.50 * xC
+W_total = 10 * xA + 25 * xB + 60 * xC
+
+value = 100 * xA + 300 * xB + 800 * xC
+
+{ Penalty variables if container volume (33m³) or weight (20t) limits are exceeded }
+V_penalty = (V_total > 33) * 10000 * (V_total - 33)^2
+W_penalty = (W_total > 20000) * 100 * (W_total - 20000)^2
+
+{ Objective function to maximize }
+U = value - V_penalty - W_penalty`} />
+                <Code block style={{ background: 'transparent' }}>
+                  {`{ Container Loading Optimization }
+{ Box quantities }
+{ xA: Small, xB: Medium, xC: Large }
+
+V_total = 0.04 * xA + 0.15 * xB + 0.50 * xC
+W_total = 10 * xA + 25 * xB + 60 * xC
+
+value = 100 * xA + 300 * xB + 800 * xC
+
+{ Penalty variables if container volume (33m³) or weight (20t) limits are exceeded }
+V_penalty = (V_total > 33) * 10000 * (V_total - 33)^2
+W_penalty = (W_total > 20000) * 100 * (W_total - 20000)^2
+
+{ Objective function to maximize }
+U = value - V_penalty - W_penalty`}
+                </Code>
+              </Paper>
+              <Text size="xs" mt="xs" style={{ lineHeight: 1.6 }}>
+                <strong>How to Optimize:</strong>
+                <br/>
+                1. Paste these equations into the editor and click <strong>Check (F4)</strong>.
+                <br/>
+                2. Click the <strong>Min/Max</strong> button at the top.
+                <br/>
+                3. Choose the objective variable <code>U</code>, set Goal to <strong>Maximize</strong>.
+                <br/>
+                4. Add Independent Variables:
+                <br/>
+                &nbsp;&nbsp;&nbsp;&nbsp;- <code>xA</code> (bounds 0 to 825)
+                <br/>
+                &nbsp;&nbsp;&nbsp;&nbsp;- <code>xB</code> (bounds 0 to 220)
+                <br/>
+                &nbsp;&nbsp;&nbsp;&nbsp;- <code>xC</code> (bounds 0 to 66)
+                <br/>
+                5. Select <strong>Nelder-Mead Simplex</strong> or <strong>BOBYQA</strong> as the optimizer method.
+                <br/>
+                6. Click <strong>Optimize</strong>. The continuous solver will automatically allocate quantities to maximize value while strictly respecting both physical volume and weight constraints.
+              </Text>
+            </Card>
           </Stack>
         );
       default:
