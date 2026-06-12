@@ -946,6 +946,36 @@ END
 CALL CylinderGeo(0.5, 2.0 : A_cyl, V_cyl)`}
               </Code>
             </Paper>
+
+            <Title order={3} mt="sm">Function Tables (Tabulated Functions)</Title>
+            <Text size="sm">
+              Function Tables allow you to turn tabular data (from the **Graph Digitizer** or entered manually) into callable functions directly within your equations.
+            </Text>
+            <List spacing="xs" mb="sm">
+              <List.Item>
+                <strong>Function Table (without Curve) — 1D:</strong> Represents a single-argument function <Code>y = f(x)</Code>. It consists of one input column (<Code>x</Code>) and one output column (<Code>y</Code>).
+              </List.Item>
+              <List.Item>
+                <strong>Function Table (with Curve family) — 2D:</strong> Represents a multi-argument function <Code>y = f(x, z)</Code> where <Code>z</Code> is a curve family parameter (e.g., temperature, pressure). The table interpolates linearly across the independent variables and blends between the closest parameter curves.
+              </List.Item>
+            </List>
+
+            <Alert color="blue" title="Out-of-Range Guess Auto-Adjustment" mt="xs">
+              Tabulated functions clamp out-of-range values to the nearest edge. Because clamping creates a flat line (zero derivative), Newton's method can stall if your initial guess starts outside the table.
+              <br/><br/>
+              To solve this, <strong>frees automatically checks initial guesses</strong> before solving. If any argument variable lies outside the table's range, its guess value is automatically overridden to the <strong>average of the range</strong> (i.e. <Code>(min + max) / 2</Code>). This provides a non-zero derivative and ensures stable convergence.
+            </Alert>
+
+            <Paper withBorder p="md" bg="dark.8" radius="md" style={{ position: 'relative' }}>
+              <CopyButton code={`{ Call 1D Function Table }\nU1 = myfunc(Re)\n\n{ Call 2D Function Table with family parameter }\nU2 = htc(Re, T)`} />
+              <Code block style={{ background: 'transparent' }}>
+                {`{ Call 1D Function Table }
+U1 = myfunc(Re)
+
+{ Call 2D Function Table with family parameter }
+U2 = htc(Re, T)`}
+              </Code>
+            </Paper>
           </Stack>
         );
       case 'modules':
