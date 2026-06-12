@@ -364,14 +364,14 @@ class SolveControllerTest {
     }
 
     @Test
-    void solvesWithCurveTableFunction() throws Exception {
-        // A Curve Table named "htc" with curves at T = 100 and T = 200:
+    void solvesWithFunctionTable() throws Exception {
+        // A Function Table named "htc" with curves at T = 100 and T = 200:
         // the table name is the function, called as htc(Re, T).
         mockMvc.perform(post("/api/solve")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{"
                                 + "\"text\": \"Re = 5\\nT = 150\\nU = htc(Re, T)\","
-                                + "\"curveTables\": [{"
+                                + "\"functionTables\": [{"
                                 + "  \"name\": \"htc\","
                                 + "  \"argNames\": [\"Re\", \"T\"],"
                                 + "  \"curves\": ["
@@ -386,12 +386,12 @@ class SolveControllerTest {
     }
 
     @Test
-    void checkEndpointAcceptsCurveTableFunction() throws Exception {
+    void checkEndpointAcceptsFunctionTable() throws Exception {
         mockMvc.perform(post("/api/check")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{"
                                 + "\"text\": \"Re = 1500\\nU = htc(Re)\","
-                                + "\"curveTables\": [{"
+                                + "\"functionTables\": [{"
                                 + "  \"name\": \"htc\","
                                 + "  \"argNames\": [\"Re\"],"
                                 + "  \"curves\": [{\"points\": [[1000, 50], [2000, 80]]}]"

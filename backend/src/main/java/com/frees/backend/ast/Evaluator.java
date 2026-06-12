@@ -75,10 +75,10 @@ public final class Evaluator {
     private static double evalCall(Expr.Call c, Map<String, Double> values, Map<String, ProcDef> defs) {
         ProcDef def = defs.get(c.function());
 
-        // Tabulated Curve Table function: name(x) or name(x, param)
-        if (def instanceof ProcDef.CurveDef cd) {
+        // Tabulated Function Table function: name(x) or name(x, param)
+        if (def instanceof ProcDef.FunctionTableDef cd) {
             if (c.args().isEmpty() || c.args().size() > 2) {
-                throw new IllegalStateException("Curve table function '" + cd.name()
+                throw new IllegalStateException("Function table '" + cd.name()
                         + "' expects " + cd.name() + "(x) or " + cd.name() + "(x, param).");
             }
             double x = eval(c.args().get(0), values, defs);

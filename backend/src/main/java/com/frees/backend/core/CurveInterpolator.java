@@ -19,10 +19,10 @@ public final class CurveInterpolator {
 
     private CurveInterpolator() {}
 
-    public static double evaluate(ProcDef.CurveDef def, double x, Double param) {
+    public static double evaluate(ProcDef.FunctionTableDef def, double x, Double param) {
         List<ProcDef.Curve> curves = def.curves();
         if (curves.isEmpty()) {
-            throw new SolverException("Curve table '" + def.name() + "' has no curves.");
+            throw new SolverException("Function table '" + def.name() + "' has no curves.");
         }
         if (param == null || curves.size() == 1) {
             return interpolate(curves.get(0), x, def);
@@ -33,7 +33,7 @@ public final class CurveInterpolator {
         ProcDef.Curve first = sorted.get(0);
         ProcDef.Curve last = sorted.get(sorted.size() - 1);
         if (first.param() == null || last.param() == null) {
-            throw new SolverException("Curve table '" + def.name()
+            throw new SolverException("Function table '" + def.name()
                     + "' is called with two arguments but its curves have no parameter values.");
         }
         if (param <= first.param()) {
@@ -55,11 +55,11 @@ public final class CurveInterpolator {
         return interpolate(last, x, def);
     }
 
-    private static double interpolate(ProcDef.Curve curve, double x, ProcDef.CurveDef def) {
+    private static double interpolate(ProcDef.Curve curve, double x, ProcDef.FunctionTableDef def) {
         double[] xs = curve.xs();
         double[] ys = curve.ys();
         if (xs.length == 0) {
-            throw new SolverException("Curve table '" + def.name() + "' has an empty curve.");
+            throw new SolverException("Function table '" + def.name() + "' has an empty curve.");
         }
         if (xs.length == 1 || x <= xs[0]) {
             return ys[0];

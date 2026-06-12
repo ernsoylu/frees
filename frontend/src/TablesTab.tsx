@@ -12,11 +12,11 @@ import {
 } from '@mantine/core'
 import { IconChartGridDots, IconPlus, IconTable, IconTrash } from '@tabler/icons-react'
 import { TableRowResult } from './api'
-import CurveTableEditor from './CurveTableEditor'
+import FunctionTableEditor from './FunctionTableEditor'
 import ParametricTableTab, { ParamRow } from './ParametricTableTab'
 import {
-  CurveTableSpec,
-  newCurveTable,
+  FunctionTableSpec,
+  newFunctionTable,
   newParamTable,
   TableSpec,
 } from './tables'
@@ -24,7 +24,7 @@ import { VariableDraft } from './VariableInfoModal'
 
 // ---------------------------------------------------------------------------
 // Tables window (Story 8.6): manages any number of Parametric Tables and
-// Curve Tables, added like plots. The active parametric table is the one
+// Function Tables, added like plots. The active parametric table is the one
 // Check Table / Solve Table and the plots operate on.
 // ---------------------------------------------------------------------------
 
@@ -51,8 +51,11 @@ export default function TablesTab(props: Readonly<Props>) {
   const { tables, activeTableId, onTablesChange, onActiveTableIdChange } = props
   const active = tables.find((t) => t.id === activeTableId) ?? tables[0] ?? null
 
-  const addTable = (kind: 'parametric' | 'curve') => {
-    const table = kind === 'parametric' ? newParamTable(tables) : newCurveTable(tables)
+  const addTable = (kind: 'parametric' | 'function-1d' | 'function-2d') => {
+    const table =
+      kind === 'parametric'
+        ? newParamTable(tables)
+        : newFunctionTable(tables, kind === 'function-1d')
     onTablesChange([...tables, table])
     onActiveTableIdChange(table.id)
   }
@@ -69,7 +72,7 @@ export default function TablesTab(props: Readonly<Props>) {
     onTablesChange(tables.map((t) => (t.id === id ? { ...t, name } : t)))
   }
 
-  const updateCurveTable = (next: CurveTableSpec) => {
+  const updateFunctionTable = (next: FunctionTableSpec) => {
     onTablesChange(tables.map((t) => (t.id === next.id ? next : t)))
   }
 
@@ -133,16 +136,22 @@ export default function TablesTab(props: Readonly<Props>) {
             </Menu.Item>
             <Menu.Item
               leftSection={<IconChartGridDots size={14} />}
-              onClick={() => addTable('curve')}
+              onClick={() => addTable('function-1d')}
             >
-              Curve Table — tabulated function callable in equations
+              Function Table (without Curve) — single-argument function
+            </Menu.Item>
+            <Menu.Item
+              leftSection={<IconChartGridDots size={14} />}
+              onClick={() => addTable('function-2d')}
+            >
+              Function Table (with Curve family) — multi-argument function
             </Menu.Item>
           </Menu.Dropdown>
         </Menu>
-        {active?.kind === 'curve' && (
+        {active?.kind === 'function' && (
           <Tooltip label="The table name is the function name; the first column is its argument.">
             <Badge size="xs" variant="light" color="teal">
-              curve function
+              tabulated function
             </Badge>
           </Tooltip>
         )}
@@ -150,7 +159,7 @@ export default function TablesTab(props: Readonly<Props>) {
 
       {active === null && (
         <Text size="sm" c="dimmed" mt="md">
-          No tables yet. Add a Parametric Table to run the system over value sets, or a Curve
+          No tables yet. Add a Parametric Table to run the system over value sets, or a Function
           Table to turn digitized graph data into a function you can call from the equations.
         </Text>
       )}
@@ -171,8 +180,8 @@ export default function TablesTab(props: Readonly<Props>) {
         />
       )}
 
-      {active?.kind === 'curve' && (
-        <CurveTableEditor table={active} onChange={updateCurveTable} />
+      {active?.kind === 'function' && (
+        <FunctionTableEditor table={active} onChange={updateFunctionTable} />
       )}
     </Stack>
   )

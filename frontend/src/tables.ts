@@ -1,13 +1,14 @@
-import { CheckResponse, CurveTableDto, TableRowResult, TableStats } from './api'
+import { CheckResponse, FunctionTableDto, TableRowResult, TableStats } from './api'
 import { newParamRow, ParamRow } from './ParametricTableTab'
 
 // ---------------------------------------------------------------------------
-// Tables (Epic 8, Stories 8.6-8.7): the Tables window manages any number of
-// Parametric Tables (run tables) and Curve Tables (tabulated functions from
-// the Graph Digitizer). A Curve Table's name is the function name callable
-// in equations; its column names are the arguments — the first column is the
-// lookup argument, the rest are one curve each with the family parameter
-// value in the header (e.g. T = 100, 200, ...).
+// Tables (Epic 8): the Tables window manages any number of
+// Parametric Tables (run tables) and Function Tables (tabulated functions from
+// the Graph Digitizer or entered manually). A Function Table's name is the
+// function name callable in equations; its column names are the arguments —
+// the first column is the lookup argument. If it has a curve family parameter,
+// the rest are curves with the family parameter value in the header
+// (e.g. T = 100, 200, ...).
 // ---------------------------------------------------------------------------
 
 export interface ParamTableSpec {
@@ -27,9 +28,9 @@ export interface CurveRow {
   ys: string[]
 }
 
-export interface CurveTableSpec {
+export interface FunctionTableSpec {
   id: string
-  kind: 'curve'
+  kind: 'function'
   name: string // function name callable in equations
   argName: string // first column: the lookup argument, e.g. Re
   paramName: string // family parameter name, e.g. T ('' for a lone curve)
@@ -37,9 +38,10 @@ export interface CurveTableSpec {
   yLog: boolean
   columns: string[] // family parameter value per curve column
   rows: CurveRow[]
+  is1D?: boolean // if true, it represents a function without a curve family/parameter
 }
 
-export type TableSpec = ParamTableSpec | CurveTableSpec
+export type TableSpec = ParamTableSpec | FunctionTableSpec
 
 let tableCounter = 1
 
@@ -62,26 +64,27 @@ export function newParamTable(existing: TableSpec[]): ParamTableSpec {
   }
 }
 
-export function newCurveTable(existing: TableSpec[]): CurveTableSpec {
-  const count = existing.filter((t) => t.kind === 'curve').length
+export function newFunctionTable(existing: TableSpec[], is1D: boolean): FunctionTableSpec {
+  const count = existing.filter((t) => t.kind === 'function').length
   return {
     id: newTableId(),
-    kind: 'curve',
-    name: `curve${count + 1}`,
+    kind: 'function',
+    name: `func${count + 1}`,
     argName: 'x',
     paramName: '',
     xLog: false,
     yLog: false,
-    columns: [''],
-    rows: Array.from({ length: 5 }, () => ({ x: '', ys: [''] })),
+    columns: is1D ? [''] : ['100', '200'],
+    rows: Array.from({ length: 5 }, () => ({ x: '', ys: is1D ? [''] : ['', ''] })),
+    is1D,
   }
 }
 
-/** Curve tables in solver wire format; blank cells are simply omitted. */
-export function toCurveTableDtos(tables: TableSpec[]): CurveTableDto[] {
-  const dtos: CurveTableDto[] = []
+/** Function tables in solver wire format; blank cells are simply omitted. */
+export function toFunctionTableDtos(tables: TableSpec[]): FunctionTableDto[] {
+  const dtos: FunctionTableDto[] = []
   for (const table of tables) {
-    if (table.kind !== 'curve' || table.name.trim() === '') continue
+    if (table.kind !== 'function' || table.name.trim() === '') continue
     const curves = table.columns.map((paramRaw, j) => {
       const points: number[][] = []
       for (const row of table.rows) {
@@ -111,7 +114,7 @@ export function toCurveTableDtos(tables: TableSpec[]): CurveTableDto[] {
 }
 
 function scaleVal(v: number, log: boolean): number {
-  return log ? Math.log10(v) : v
+  return log && v > 0 ? Math.log10(v) : v
 }
 
 function unscaleVal(v: number, log: boolean): number {
@@ -128,7 +131,7 @@ function fmtCell(v: number): string {
  * in log space for log axes). Cells outside the span stay blank — the
  * chart carries no information there.
  */
-export function fillMissingCells(table: CurveTableSpec): CurveTableSpec {
+export function fillMissingCells(table: FunctionTableSpec): FunctionTableSpec {
   const rows = table.rows.map((r) => ({ x: r.x, ys: [...r.ys] }))
   for (let j = 0; j < table.columns.length; j++) {
     const known: { x: number; y: number }[] = []
@@ -160,7 +163,7 @@ export function fillMissingCells(table: CurveTableSpec): CurveTableSpec {
 }
 
 /** Rows sorted ascending by numeric x (blank x rows sink to the bottom). */
-export function sortCurveRows(table: CurveTableSpec): CurveTableSpec {
+export function sortFunctionRows(table: FunctionTableSpec): FunctionTableSpec {
   const rows = [...table.rows].sort((a, b) => {
     const xa = a.x.trim() === '' ? Number.POSITIVE_INFINITY : Number(a.x)
     const xb = b.x.trim() === '' ? Number.POSITIVE_INFINITY : Number(b.x)
@@ -180,20 +183,20 @@ function identifier(raw: string, fallback: string): string {
 }
 
 /**
- * Builds a Curve Table from digitized curves (Story 8.7 "Send to Curve
+ * Builds a Function Table from digitized curves (Story 8.7 "Send to Function
  * Table"): the x grid is the union of every curve's x samples, each curve
  * fills its own rows, and the gaps left by differing samples are
  * interpolated right away via fillMissingCells.
  */
-export function curveTableFromDigitizer(input: {
+export function functionTableFromDigitizer(input: {
   existing: TableSpec[]
   xName: string
   yName: string
   xLog: boolean
   yLog: boolean
   curves: { param: string; points: { x: number; y: number }[] }[]
-}): CurveTableSpec {
-  const count = input.existing.filter((t) => t.kind === 'curve').length
+}): FunctionTableSpec {
+  const count = input.existing.filter((t) => t.kind === 'function').length
   const xKeys = new Set<string>()
   for (const curve of input.curves) {
     for (const p of curve.points) xKeys.add(fmt6(p.x))
@@ -206,16 +209,18 @@ export function curveTableFromDigitizer(input: {
       return hit ? fmt6(hit.y) : ''
     }),
   }))
-  const table: CurveTableSpec = {
+  const is1D = input.curves.length <= 1
+  const table: FunctionTableSpec = {
     id: newTableId(),
-    kind: 'curve',
-    name: identifier(input.yName, '').toLowerCase() || `curve${count + 1}`,
+    kind: 'function',
+    name: identifier(input.yName, '').toLowerCase() || `func${count + 1}`,
     argName: identifier(input.xName, 'x'),
-    paramName: input.curves.length > 1 ? 'param' : '',
+    paramName: is1D ? '' : 'param',
     xLog: input.xLog,
     yLog: input.yLog,
     columns: input.curves.map((c) => c.param),
     rows,
+    is1D,
   }
   return fillMissingCells(table)
 }
@@ -226,13 +231,17 @@ export function loadTables(): TableSpec[] {
   try {
     const raw = localStorage.getItem(TABLES_KEY)
     if (!raw) return []
-    const tables = JSON.parse(raw) as TableSpec[]
-    // Run results and check state are transient.
-    return tables.map((t) =>
-      t.kind === 'parametric'
-        ? { ...t, results: [], stats: null, checkResult: null, checkMessage: '' }
-        : t,
-    )
+    const tables = JSON.parse(raw) as any[]
+    // Migrate 'curve' kind to 'function' kind, and run results/check state are transient.
+    return tables.map((t) => {
+      let mapped = t
+      if (t.kind === 'curve') {
+        mapped = { ...t, kind: 'function' }
+      }
+      return mapped.kind === 'parametric'
+        ? { ...mapped, results: [], stats: null, checkResult: null, checkMessage: '' }
+        : mapped
+    })
   } catch {
     return []
   }

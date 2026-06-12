@@ -6,7 +6,7 @@ import java.util.List;
  * Top-level definition: FUNCTION, PROCEDURE, MODULE, or a tabulated curve.
  */
 public sealed interface ProcDef
-        permits ProcDef.FunctionDef, ProcDef.ProcedureDef, ProcDef.ModuleDef, ProcDef.CurveDef {
+        permits ProcDef.FunctionDef, ProcDef.ProcedureDef, ProcDef.ModuleDef, ProcDef.FunctionTableDef {
 
     String name();
 
@@ -33,7 +33,7 @@ public sealed interface ProcDef
                      List<Statement> body) implements ProcDef {}
 
     /**
-     * Tabulated curve function defined by a Curve Table (Epic 8): the table
+     * Tabulated function table defined by a Function Table (Epic 8): the table
      * name is the function name and the column names are the arguments —
      * the first column is the lookup argument (e.g. Re) and each further
      * column is one curve whose header holds the family parameter value
@@ -41,8 +41,8 @@ public sealed interface ProcDef
      * evaluates name(x, param) by interpolating across the curves
      * (see CurveInterpolator).
      */
-    record CurveDef(String name, List<String> argNames, boolean xLog, boolean yLog,
-                    List<Curve> curves) implements ProcDef {}
+    record FunctionTableDef(String name, List<String> argNames, boolean xLog, boolean yLog,
+                            List<Curve> curves) implements ProcDef {}
 
     /** One tabulated curve: its family parameter value (null for a lone
      * curve) and sample arrays sorted ascending by x. */

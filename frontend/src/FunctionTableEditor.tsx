@@ -18,10 +18,10 @@ import {
   IconSparkles,
   IconTrash,
 } from '@tabler/icons-react'
-import { CurveTableSpec, fillMissingCells, sortCurveRows } from './tables'
+import { FunctionTableSpec, fillMissingCells, sortFunctionRows } from './tables'
 
 // ---------------------------------------------------------------------------
-// Curve Table editor (Story 8.7): the table name is the function name, the
+// Function Table editor (Story 8.7): the table name is the function name, the
 // first column is the lookup argument, and every further column is one curve
 // with the family parameter value in its header. "Fill missing" interpolates
 // blank cells from the column's known points so curves digitized on
@@ -29,12 +29,12 @@ import { CurveTableSpec, fillMissingCells, sortCurveRows } from './tables'
 // ---------------------------------------------------------------------------
 
 interface Props {
-  table: CurveTableSpec
-  onChange: (table: CurveTableSpec) => void
+  table: FunctionTableSpec
+  onChange: (table: FunctionTableSpec) => void
 }
 
-export default function CurveTableEditor({ table, onChange }: Readonly<Props>) {
-  const update = (patch: Partial<CurveTableSpec>) => onChange({ ...table, ...patch })
+export default function FunctionTableEditor({ table, onChange }: Readonly<Props>) {
+  const update = (patch: Partial<FunctionTableSpec>) => onChange({ ...table, ...patch })
 
   const setCell = (rowIdx: number, colIdx: number | null, value: string) => {
     const rows = table.rows.map((row, i) => {
@@ -56,6 +56,7 @@ export default function CurveTableEditor({ table, onChange }: Readonly<Props>) {
   }
 
   const addColumn = () => {
+    if (table.is1D) return
     update({
       columns: [...table.columns, ''],
       rows: table.rows.map((row) => ({ ...row, ys: [...row.ys, ''] })),
@@ -99,15 +100,17 @@ export default function CurveTableEditor({ table, onChange }: Readonly<Props>) {
           onChange={(e) => update({ argName: e.currentTarget.value })}
           w={140}
         />
-        <TextInput
-          size="xs"
-          label="Curve parameter"
-          placeholder="e.g. T"
-          value={table.paramName}
-          onChange={(e) => update({ paramName: e.currentTarget.value })}
-          w={140}
-          disabled={!multiCurve}
-        />
+        {!table.is1D && (
+          <TextInput
+            size="xs"
+            label="Curve parameter"
+            placeholder="e.g. T"
+            value={table.paramName}
+            onChange={(e) => update({ paramName: e.currentTarget.value })}
+            w={140}
+            disabled={!multiCurve}
+          />
+        )}
         <Checkbox
           size="xs"
           label="log X"
@@ -134,10 +137,12 @@ export default function CurveTableEditor({ table, onChange }: Readonly<Props>) {
         <Button size="compact-xs" variant="default" leftSection={<IconRowInsertBottom size={13} />} onClick={addRow}>
           Add row
         </Button>
-        <Button size="compact-xs" variant="default" leftSection={<IconColumnInsertRight size={13} />} onClick={addColumn}>
-          Add curve
-        </Button>
-        <Button size="compact-xs" variant="default" leftSection={<IconArrowsSort size={13} />} onClick={() => onChange(sortCurveRows(table))}>
+        {!table.is1D && (
+          <Button size="compact-xs" variant="default" leftSection={<IconColumnInsertRight size={13} />} onClick={addColumn}>
+            Add curve
+          </Button>
+        )}
+        <Button size="compact-xs" variant="default" leftSection={<IconArrowsSort size={13} />} onClick={() => onChange(sortFunctionRows(table))}>
           Sort by {table.argName || 'x'}
         </Button>
         <Tooltip label="Interpolate blank cells from each curve's known points (log-aware)">
