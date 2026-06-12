@@ -1947,6 +1947,80 @@ H_reactants = H_products`}
                 </Table.Tr>
               </Table.Tbody>
             </Table>
+
+            <Title order={3} mt="md">Detailed Examples & Walkthroughs</Title>
+
+            <Card withBorder padding="md" radius="md" bg="dark.8" mt="xs">
+              <Text fw={600} size="sm" c="blue.4">Example 1: Multi-Variable Cylinder Surface Area Minimization</Text>
+              <Text size="xs" mt="xs" style={{ lineHeight: 1.6 }}>
+                Suppose we want to design a cylindrical canister that holds exactly 1000 cm³ of fluid. We want to minimize its surface area (to reduce material cost) by adjusting the radius <code>r</code> and height <code>h</code>.
+              </Text>
+              <Text size="xs" mt="xs" fw={500}>Equations:</Text>
+              <Paper withBorder p="xs" bg="dark.9" radius="md" mt="xs" style={{ position: 'relative' }}>
+                <CopyButton code={`{ Cylinder Minimization }
+V = pi * r^2 * h
+A = 2 * pi * r^2 + 2 * pi * r * h
+V = 1000
+pi = 3.14159265`} />
+                <Code block style={{ background: 'transparent' }}>
+                  {`{ Cylinder Minimization }
+V = pi * r^2 * h
+A = 2 * pi * r^2 + 2 * pi * r * h
+V = 1000
+pi = 3.14159265`}
+                </Code>
+              </Paper>
+              <Text size="xs" mt="xs" style={{ lineHeight: 1.6 }}>
+                <strong>How to Optimize:</strong>
+                <br/>
+                1. Paste the equations into the editor and click <strong>Check (F4)</strong>.
+                <br/>
+                2. Click the <strong>Min/Max</strong> button at the top.
+                <br/>
+                3. Set the Objective Variable to <code>A</code>, and set Goal to <strong>Minimize</strong>.
+                <br/>
+                4. Add Independent Variables: add <code>r</code> (bounds 1 to 20) and <code>h</code> (bounds 1 to 20).
+                <br/>
+                5. Select <strong>Nelder-Mead Simplex</strong> or <strong>BOBYQA</strong> as the optimizer method.
+                <br/>
+                6. Click <strong>Optimize</strong>. The solver will find the optimum dimensions: <code>r ≈ 5.42 cm</code> and <code>h ≈ 10.84 cm</code>, yielding a minimal surface area <code>A ≈ 553.58 cm²</code>.
+              </Text>
+            </Card>
+
+            <Card withBorder padding="md" radius="md" bg="dark.8" mt="sm">
+              <Text fw={600} size="sm" c="blue.4">Example 2: Visualizing 3D Thermodynamic Surfaces</Text>
+              <Text size="xs" mt="xs" style={{ lineHeight: 1.6 }}>
+                We can map the relationship between Pressure (P), Specific Volume (v), and Temperature (T) of a substance over a range of states and plot a 3D Surface diagram.
+              </Text>
+              <Text size="xs" mt="xs" fw={500}>Equations:</Text>
+              <Paper withBorder p="xs" bg="dark.9" radius="md" mt="xs" style={{ position: 'relative' }}>
+                <CopyButton code={`{ Ideal Gas law grid }
+P * v = R * T
+R = 0.287 { Air gas constant in kJ/kg-K }`} />
+                <Code block style={{ background: 'transparent' }}>
+                  {`{ Ideal Gas law grid }
+P * v = R * T
+R = 0.287 { Air gas constant in kJ/kg-K }`}
+                </Code>
+              </Paper>
+              <Text size="xs" mt="xs" style={{ lineHeight: 1.6 }}>
+                <strong>How to Plot a 3D Surface:</strong>
+                <br/>
+                1. Set up a Parametric Table by clicking the <strong>Parametric Table</strong> tab.
+                <br/>
+                2. Add <code>T</code> and <code>P</code> as table variables, and fill the columns with a grid of values (e.g., T from 300 to 600 K, P from 100 to 500 kPa).
+                <br/>
+                3. Click <strong>Solve Table</strong>. The solver will calculate the corresponding volumes (<code>v</code>) for every run.
+                <br/>
+                4. Go to the <strong>Plots</strong> tab, click <strong>Add Plot</strong>, and select <strong>X-Y (parametric table)</strong>.
+                <br/>
+                5. Set the Chart Type to <strong>3D Surface</strong>.
+                <br/>
+                6. Configure the variables: set X-axis to <code>T</code>, Y-axis (Value) to <code>P</code>, and Z-axis to <code>v</code>.
+                <br/>
+                7. Click <strong>Apply</strong>. A fully interactive 3D surface plot will be generated, allowing you to rotate, pan, and hover over individual state values.
+              </Text>
+            </Card>
           </Stack>
         );
       default:
