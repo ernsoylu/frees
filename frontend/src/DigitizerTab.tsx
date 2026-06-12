@@ -915,13 +915,19 @@ export function DigitizerTab() {
                 size="xs"
                 label="X axis"
                 value={calibration.xName}
-                onChange={(e) => setCalibration((c) => ({ ...c, xName: e.currentTarget.value }))}
+                onChange={(e) => {
+                  const xName = e.currentTarget.value
+                  setCalibration((c) => ({ ...c, xName }))
+                }}
               />
               <TextInput
                 size="xs"
                 label="Y axis"
                 value={calibration.yName}
-                onChange={(e) => setCalibration((c) => ({ ...c, yName: e.currentTarget.value }))}
+                onChange={(e) => {
+                  const yName = e.currentTarget.value
+                  setCalibration((c) => ({ ...c, yName }))
+                }}
               />
             </Group>
             {(['x1', 'x2', 'y1', 'y2'] as const).map((key) => (
@@ -959,13 +965,19 @@ export function DigitizerTab() {
                 size="xs"
                 label="log X"
                 checked={calibration.xLog}
-                onChange={(e) => setCalibration((c) => ({ ...c, xLog: e.currentTarget.checked }))}
+                onChange={(e) => {
+                  const xLog = e.currentTarget.checked
+                  setCalibration((c) => ({ ...c, xLog }))
+                }}
               />
               <Checkbox
                 size="xs"
                 label="log Y"
                 checked={calibration.yLog}
-                onChange={(e) => setCalibration((c) => ({ ...c, yLog: e.currentTarget.checked }))}
+                onChange={(e) => {
+                  const yLog = e.currentTarget.checked
+                  setCalibration((c) => ({ ...c, yLog }))
+                }}
               />
               <Badge size="xs" color={resolved ? 'teal' : 'gray'} variant="light">
                 {resolved ? 'Calibrated' : 'Not calibrated'}
