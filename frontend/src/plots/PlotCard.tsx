@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Alert, Button, Group, Loader, Menu, Text } from '@mantine/core'
-import type { PlotlyFigure } from 'plotly.js-basic-dist-min'
+import type { PlotlyFigure } from 'plotly.js-dist-min'
 import {
   DiagramResponse,
   PsychartResponse,
@@ -54,19 +54,39 @@ function buildXYSeries(
   results: TableRowResult[],
   xVar: string,
   yVars: string[],
+  zVar?: string | null,
+  sizeVar?: string | null,
 ): XYSeries[] {
   return yVars.map((yVar) => {
     const x: number[] = []
     const y: number[] = []
+    const z: number[] = []
+    const size: number[] = []
     rows.forEach((row, i) => {
       const xValue = runValue(row, results[i], xVar)
       const yValue = runValue(row, results[i], yVar)
-      if (xValue !== undefined && yValue !== undefined) {
+      const zValue = zVar ? runValue(row, results[i], zVar) : undefined
+      const sizeValue = sizeVar ? runValue(row, results[i], sizeVar) : undefined
+
+      const hasX = xValue !== undefined
+      const hasY = yValue !== undefined
+      const hasZ = !zVar || zValue !== undefined
+      const hasSize = !sizeVar || sizeValue !== undefined
+
+      if (hasX && hasY && hasZ && hasSize) {
         x.push(xValue)
         y.push(yValue)
+        if (zVar && zValue !== undefined) z.push(zValue)
+        if (sizeVar && sizeValue !== undefined) size.push(sizeValue)
       }
     })
-    return { name: yVar, x, y }
+    return {
+      name: yVar,
+      x,
+      y,
+      z: zVar ? z : undefined,
+      size: sizeVar ? size : undefined,
+    }
   })
 }
 
@@ -131,13 +151,21 @@ export function buildFigure(spec: PlotSpec, inputs: FigureInputs): PlotlyFigure 
     return buildPsychroFigure(psychart, spec.psychro, spec.format, states, theme, cyclePath)
   }
   if (spec.kind === 'xy' && spec.xy.xVar && spec.xy.yVars.length > 0) {
-    const series = buildXYSeries(tableRows, tableResults, spec.xy.xVar, spec.xy.yVars)
+    const series = buildXYSeries(
+      tableRows,
+      tableResults,
+      spec.xy.xVar,
+      spec.xy.yVars,
+      spec.xy.zVar,
+      spec.xy.sizeVar,
+    )
     return buildXYFigure(
       series,
       spec.format,
       spec.xy.xVar,
       spec.xy.yVars.join(', '),
       theme,
+      spec.xy,
     )
   }
   return null
