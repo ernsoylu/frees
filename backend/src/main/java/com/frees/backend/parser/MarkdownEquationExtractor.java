@@ -94,14 +94,12 @@ public final class MarkdownEquationExtractor {
                 if (c == '"') {
                     inQuotes = false;
                 }
+            } else if (c == '{') {
+                inBraces = true;
+            } else if (c == '"') {
+                inQuotes = true;
             } else {
-                if (c == '{') {
-                    inBraces = true;
-                } else if (c == '"') {
-                    inQuotes = true;
-                } else {
-                    sb.append(c);
-                }
+                sb.append(c);
             }
         }
         return sb.toString();
@@ -138,6 +136,18 @@ public final class MarkdownEquationExtractor {
     }
 
 
+    private static boolean isTransitionAllowed(TokenType lastType, TokenType tokenType) {
+        if (lastType == null) {
+            return true;
+        }
+        return switch (lastType) {
+            case NUMBER -> tokenType != TokenType.IDENTIFIER && tokenType != TokenType.NUMBER && tokenType != TokenType.OPEN_PAREN;
+            case IDENTIFIER -> tokenType != TokenType.IDENTIFIER && tokenType != TokenType.NUMBER && tokenType != TokenType.UNIT;
+            case UNIT, CLOSE_PAREN, CLOSE_BRACKET -> tokenType != TokenType.IDENTIFIER && tokenType != TokenType.NUMBER && tokenType != TokenType.UNIT && tokenType != TokenType.OPEN_PAREN;
+            default -> true;
+        };
+    }
+
     private static boolean isValidMathTokenSequence(String line) {
         int i = 0;
         TokenType lastType = null;
@@ -147,38 +157,8 @@ public final class MarkdownEquationExtractor {
                 return false;
             }
 
-            if (lastType != null) {
-                boolean allowed = true;
-                switch (lastType) {
-                    case NUMBER:
-                        if (token.type == TokenType.IDENTIFIER || token.type == TokenType.NUMBER || token.type == TokenType.OPEN_PAREN) {
-                            allowed = false;
-                        }
-                        break;
-                    case IDENTIFIER:
-                        // "CALL ModuleName" or function call is allowed. But in general two adjacent variables is not.
-                        // Let's allow if last identifier was CALL
-                        if (token.type == TokenType.IDENTIFIER || token.type == TokenType.NUMBER || token.type == TokenType.UNIT) {
-                            allowed = false;
-                        }
-                        break;
-                    case UNIT:
-                        if (token.type == TokenType.IDENTIFIER || token.type == TokenType.NUMBER || token.type == TokenType.UNIT || token.type == TokenType.OPEN_PAREN) {
-                            allowed = false;
-                        }
-                        break;
-                    case CLOSE_PAREN:
-                    case CLOSE_BRACKET:
-                        if (token.type == TokenType.IDENTIFIER || token.type == TokenType.NUMBER || token.type == TokenType.UNIT || token.type == TokenType.OPEN_PAREN) {
-                            allowed = false;
-                        }
-                        break;
-                    default:
-                        break;
-                }
-                if (!allowed) {
-                    return false;
-                }
+            if (!isTransitionAllowed(lastType, token.type)) {
+                return false;
             }
 
             lastType = token.type;
@@ -309,36 +289,8 @@ public final class MarkdownEquationExtractor {
                 break;
             }
 
-            if (lastType != null) {
-                boolean allowed = true;
-                switch (lastType) {
-                    case NUMBER:
-                        if (token.type == TokenType.IDENTIFIER || token.type == TokenType.NUMBER || token.type == TokenType.OPEN_PAREN) {
-                            allowed = false;
-                        }
-                        break;
-                    case IDENTIFIER:
-                        if (token.type == TokenType.IDENTIFIER || token.type == TokenType.NUMBER || token.type == TokenType.UNIT) {
-                            allowed = false;
-                        }
-                        break;
-                    case UNIT:
-                        if (token.type == TokenType.IDENTIFIER || token.type == TokenType.NUMBER || token.type == TokenType.UNIT || token.type == TokenType.OPEN_PAREN) {
-                            allowed = false;
-                        }
-                        break;
-                    case CLOSE_PAREN:
-                    case CLOSE_BRACKET:
-                        if (token.type == TokenType.IDENTIFIER || token.type == TokenType.NUMBER || token.type == TokenType.UNIT || token.type == TokenType.OPEN_PAREN) {
-                            allowed = false;
-                        }
-                        break;
-                    default:
-                        break;
-                }
-                if (!allowed) {
-                    break;
-                }
+            if (!isTransitionAllowed(lastType, token.type)) {
+                break;
             }
 
             lastType = token.type;

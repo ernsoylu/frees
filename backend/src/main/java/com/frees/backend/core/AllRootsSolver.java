@@ -116,24 +116,14 @@ public class AllRootsSolver {
     private List<Map<String, Double>> scanRoots1D(Block block, Map<String, Double> branch,
                                                    long deadlineNanos) {
         String varName = block.variables().get(0);
-        Equation eq = block.equations().get(0);
         VariableSpec spec = specs.get(varName);
 
         double lo = spec != null && Double.isFinite(spec.lower()) ? spec.lower() : -SCAN_LIMIT;
         double hi = spec != null && Double.isFinite(spec.upper()) ? spec.upper() : SCAN_LIMIT;
 
-        Map<String, Double> work = new HashMap<>(branch);
-        UnivariateFunction f = t -> {
-            work.put(varName, t);
-            return Evaluator.eval(eq.lhs(), work, defs) - Evaluator.eval(eq.rhs(), work, defs);
-        };
-
-        List<Double> roots = new ArrayList<>();
-
-        double step = (hi - lo) / SCAN_INTERVALS;
-        if (step > 0 && Double.isFinite(step)) {
-            scanIntervals(f, eq, varName, lo, hi, step, work, branch, roots, deadlineNanos, block);
-        }
+        Scan1D scanner = new Scan1D(block, branch, deadlineNanos);
+        scanner.runScan(lo, hi);
+        List<Double> roots = scanner.roots;
 
         // Also run plain Newton from the guess: it preserves single-root
         // behavior for roots outside the scan window or tangent (non-crossing)
@@ -162,61 +152,84 @@ public class AllRootsSolver {
         return result;
     }
 
-    private void scanIntervals(UnivariateFunction f, Equation eq, String varName, double lo, double hi,
-                               double step, Map<String, Double> work, Map<String, Double> branch,
-                               List<Double> roots, long deadlineNanos, Block block) {
-        double prevT = lo;
-        double prevF = safeEval(f, prevT);
-        for (int i = 1; i <= SCAN_INTERVALS; i++) {
-            double t = (i == SCAN_INTERVALS) ? hi : lo + i * step;
-            double ft = safeEval(f, t);
+    private class Scan1D {
+        final Block block;
+        final Map<String, Double> branch;
+        final long deadlineNanos;
+        final String varName;
+        final Equation eq;
+        final Map<String, Double> work;
+        final UnivariateFunction f;
+        final List<Double> roots = new ArrayList<>();
+
+        Scan1D(Block block, Map<String, Double> branch, long deadlineNanos) {
+            this.block = block;
+            this.branch = branch;
+            this.deadlineNanos = deadlineNanos;
+            this.varName = block.variables().get(0);
+            this.eq = block.equations().get(0);
+            this.work = new HashMap<>(branch);
+            this.f = t -> {
+                work.put(varName, t);
+                return Evaluator.eval(eq.lhs(), work, defs) - Evaluator.eval(eq.rhs(), work, defs);
+            };
+        }
+
+        void runScan(double lo, double hi) {
+            double step = (hi - lo) / SCAN_INTERVALS;
+            if (step <= 0 || !Double.isFinite(step)) {
+                return;
+            }
+            double prevT = lo;
+            double prevF = safeEval(f, prevT);
+            for (int i = 1; i <= SCAN_INTERVALS; i++) {
+                double t = (i == SCAN_INTERVALS) ? hi : lo + i * step;
+                double ft = safeEval(f, t);
+                if (prevF == 0.0 && isValidRoot(eq, varName, prevT, work)) {
+                    addRoot(roots, prevT);
+                }
+                if (Double.isFinite(prevF) && Double.isFinite(ft) && prevF * ft < 0) {
+                    checkBrentRoot(prevT, t);
+                }
+                if (Double.isFinite(prevF) && Double.isFinite(ft) && prevF * ft > 0 && Math.abs(prevF) + Math.abs(ft) > 0) {
+                    checkTangentRoot(prevT, t, prevF, ft);
+                }
+                prevT = t;
+                prevF = ft;
+            }
             if (prevF == 0.0 && isValidRoot(eq, varName, prevT, work)) {
                 addRoot(roots, prevT);
             }
-            if (Double.isFinite(prevF) && Double.isFinite(ft) && prevF * ft < 0) {
-                checkBrentRoot(f, eq, varName, prevT, t, work, roots);
-            }
-            if (Double.isFinite(prevF) && Double.isFinite(ft) && prevF * ft > 0 && Math.abs(prevF) + Math.abs(ft) > 0) {
-                checkTangentRoot(block, varName, prevT, t, prevF, ft, branch, roots, deadlineNanos);
-            }
-            prevT = t;
-            prevF = ft;
         }
-        if (prevF == 0.0 && isValidRoot(eq, varName, prevT, work)) {
-            addRoot(roots, prevT);
-        }
-    }
 
-    private void checkBrentRoot(UnivariateFunction f, Equation eq, String varName, double prevT, double t,
-                                Map<String, Double> work, List<Double> roots) {
-        try {
-            double root = new BrentSolver(1e-14, 1e-12)
-                    .solve(200, f, Math.min(prevT, t), Math.max(prevT, t));
-            // A sign change across a pole (e.g. reciprocal of x) also brackets;
-            // accept only genuine roots.
-            if (isValidRoot(eq, varName, root, work)) {
-                addRoot(roots, root);
-            }
-        } catch (RuntimeException ignored) {
-            // Bracket failed to converge; skip it.
-        }
-    }
-
-    private void checkTangentRoot(Block block, String varName, double prevT, double t, double prevF, double ft,
-                                  Map<String, Double> branch, List<Double> roots, long deadlineNanos) {
-        double minAbs = Math.min(Math.abs(prevF), Math.abs(ft));
-        if (minAbs < Math.sqrt(settings.relativeResiduals())) {
-            double mid = (prevT + t) / 2.0;
+        private void checkBrentRoot(double prevT, double t) {
             try {
-                Map<String, Double> tangentWork = new HashMap<>(branch);
-                tangentWork.put(varName, mid);
-                totalIterations += newton.solveBlock(block, tangentWork, deadlineNanos, specs);
-                double tangentRoot = tangentWork.get(varName);
-                if (isValidRoot(block.equations().get(0), varName, tangentRoot, tangentWork)) {
-                    addRoot(roots, tangentRoot);
+                double root = new BrentSolver(1e-14, 1e-12)
+                        .solve(200, f, Math.min(prevT, t), Math.max(prevT, t));
+                // Validate brent root to handle poles
+                if (isValidRoot(eq, varName, root, work)) {
+                    addRoot(roots, root);
                 }
-            } catch (SolverException ignored) {
-                // Tangent root solve failed; skip it.
+            } catch (RuntimeException ignored) {
+                // Bracket failed to converge; skip it.
+            }
+        }
+
+        private void checkTangentRoot(double prevT, double t, double prevF, double ft) {
+            double minAbs = Math.min(Math.abs(prevF), Math.abs(ft));
+            if (minAbs < Math.sqrt(settings.relativeResiduals())) {
+                double mid = (prevT + t) / 2.0;
+                try {
+                    Map<String, Double> tangentWork = new HashMap<>(branch);
+                    tangentWork.put(varName, mid);
+                    totalIterations += newton.solveBlock(block, tangentWork, deadlineNanos, specs);
+                    double tangentRoot = tangentWork.get(varName);
+                    if (isValidRoot(eq, varName, tangentRoot, tangentWork)) {
+                        addRoot(roots, tangentRoot);
+                    }
+                } catch (SolverException ignored) {
+                    // Tangent root solve failed; skip it.
+                }
             }
         }
     }
