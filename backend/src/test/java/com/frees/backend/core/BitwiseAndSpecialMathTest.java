@@ -70,6 +70,29 @@ class BitwiseAndSpecialMathTest {
     }
 
     @Test
+    void testBesselI() {
+        // Signature matches besselj: besseli(x, order)
+        String code = """
+                a = besseli(0, 0)
+                b = besseli(0, 1)
+                c = besseli(1, 0)
+                d = besseli(2, 1)
+                e = besseli(2.5, 1)
+                """;
+        var result = solver.solve(code, SolverSettings.DEFAULTS);
+        Map<String, Double> vars = result.variables();
+
+        assertEquals(1.0, vars.get("a"), 1e-12);          // I_0(0) = 1
+        assertEquals(0.0, vars.get("b"), 1e-12);          // I_1(0) = 0
+        // I_0(1) ≈ 1.2660658778
+        assertEquals(1.2660658778, vars.get("c"), 1e-9);
+        // I_1(2) ≈ 1.5906368546
+        assertEquals(1.5906368546, vars.get("d"), 1e-9);
+        // I_1(2.5) ≈ 2.5167162452
+        assertEquals(2.5167162452, vars.get("e"), 1e-9);
+    }
+
+    @Test
     void testBaseConvert() {
         String code = """
                 a = BaseConvert('FF', 16, 10)

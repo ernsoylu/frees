@@ -718,6 +718,11 @@ Here is the thermodynamic T-s diagram showing the cycle state points:
                   <Table.Td><Code>y = besselj(2.5, 0)</Code> (y = -0.0484)</Table.Td>
                 </Table.Tr>
                 <Table.Tr>
+                  <Table.Td><Code>besseli(x, order)</Code></Table.Td>
+                  <Table.Td>Modified Bessel function of the first kind I_order(x)</Table.Td>
+                  <Table.Td><Code>y = besseli(2, 1)</Code> (y = 1.5906)</Table.Td>
+                </Table.Tr>
+                <Table.Tr>
                   <Table.Td><Code>BaseConvert(digits, from, to)</Code></Table.Td>
                   <Table.Td>Converts a number between bases 2–36. The digits are given as a string literal (or an integer); the result is returned as the number whose decimal digits spell the converted value, so the target base should be 10 or lower-digit.</Table.Td>
                   <Table.Td><Code>{`y = BaseConvert('FF', 16, 10)`}</Code> (y = 255)</Table.Td>
@@ -725,12 +730,29 @@ Here is the thermodynamic T-s diagram showing the cycle state points:
               </Table.Tbody>
             </Table>
 
-            <Title order={3} mt="md">String Literals</Title>
+            <Title order={3} mt="md">String Literals & String Variables</Title>
             <Text style={{ lineHeight: 1.6 }}>
               Text in <strong>single quotes</strong> is a string literal: <Code>{`'R134a'`}</Code>. Strings are
-              used as function arguments — the digit string of <Code>BaseConvert</Code> or the fluid name of a
-              property call like <Code>{`h = Enthalpy('R134a', T=300, x=1)`}</Code> (the unquoted fluid name is
-              still accepted). Note that <strong>double quotes remain comments</strong>: <Code>"this text is ignored"</Code>.
+              used as function arguments — the digit string of <Code>BaseConvert</Code>, the unit names of
+              <Code>{`Convert('ft^2', 'in^2')`}</Code>, or the fluid name of a property call like
+              <Code>{`h = Enthalpy('R134a', T=300, x=1)`}</Code> (unquoted names are still accepted).
+              Note that <strong>double quotes remain comments</strong>: <Code>"this text is ignored"</Code>.
+            </Text>
+            <Text style={{ lineHeight: 1.6 }}>
+              A variable whose name ends in <Code>$</Code> is a <strong>string variable</strong> (EES
+              convention). Assign it a literal once and use it anywhere a string is accepted:
+            </Text>
+            <Paper withBorder p="xs" bg="dark.9" radius="md">
+              <Code block style={{ background: 'transparent' }}>
+                {`R$ = 'R134a'
+h1 = Enthalpy(R$, T=300, x=1)
+s1 = Entropy(R$, T=300, x=1)`}
+              </Code>
+            </Paper>
+            <Text size="sm" style={{ lineHeight: 1.6 }}>
+              String assignments are compile-time constants: they are substituted before solving and do not
+              count toward the equation/variable balance. Defining the same string variable twice with
+              different values, or using an undefined one, is a syntax error.
             </Text>
           </Stack>
         );
@@ -1964,9 +1986,11 @@ H_reactants = H_products`}
             <Text size="md" style={{ lineHeight: 1.6 }}>
               The Newton solver differentiates equation blocks <strong>symbolically</strong> whenever every
               equation in the block has a closed-form derivative — including the special functions
-              (<Code>erf</Code>, <Code>erfc</Code>, <Code>gamma</Code>) via their analytical derivatives
-              (e.g. Γ'(x) = Γ(x)·ψ(x)). Blocks containing constructs without symbolic derivatives (property
-              calls, integrals, procedures) automatically fall back to finite-difference Jacobians.
+              (<Code>erf</Code>, <Code>erfc</Code>, <Code>erfinv</Code>, <Code>gamma</Code>,
+              <Code>loggamma</Code>, <Code>beta</Code>, <Code>besselj</Code>, <Code>besseli</Code>) via their
+              analytical derivatives (e.g. Γ'(x) = Γ(x)·ψ(x), J'ₙ = (Jₙ₋₁ − Jₙ₊₁)/2). Blocks containing
+              constructs without symbolic derivatives (property calls, integrals, procedures) automatically
+              fall back to finite-difference Jacobians.
             </Text>
 
             <Title order={3} mt="md">Advanced Plot Window Extensions</Title>
@@ -1984,8 +2008,8 @@ H_reactants = H_products`}
               <Table.Tbody>
                 <Table.Tr>
                   <Table.Td><strong>Line Chart</strong></Table.Td>
-                  <Table.Td>Plots continuous lines joining the data points of parametric runs.</Table.Td>
-                  <Table.Td>Requires an X-axis variable and one or more Y-axis variables.</Table.Td>
+                  <Table.Td>Plots continuous lines joining the data points of parametric runs. Variables with different magnitudes can be assigned to a secondary right Y axis (dual-Y).</Table.Td>
+                  <Table.Td>Requires an X-axis variable and one or more Y-axis variables; right-axis variables are optional.</Table.Td>
                 </Table.Tr>
                 <Table.Tr>
                   <Table.Td><strong>Bar Chart</strong></Table.Td>

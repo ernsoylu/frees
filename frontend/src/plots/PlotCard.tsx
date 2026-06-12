@@ -56,6 +56,7 @@ function buildXYSeries(
   yVars: string[],
   zVar?: string | null,
   sizeVar?: string | null,
+  axis: 'y' | 'y2' = 'y',
 ): XYSeries[] {
   return yVars.map((yVar) => {
     const x: number[] = []
@@ -86,6 +87,7 @@ function buildXYSeries(
       y,
       z: zVar ? z : undefined,
       size: sizeVar ? size : undefined,
+      axis,
     }
   })
 }
@@ -159,6 +161,19 @@ export function buildFigure(spec: PlotSpec, inputs: FigureInputs): PlotlyFigure 
       spec.xy.zVar,
       spec.xy.sizeVar,
     )
+    if (spec.xy.y2Vars && spec.xy.y2Vars.length > 0) {
+      series.push(
+        ...buildXYSeries(
+          tableRows,
+          tableResults,
+          spec.xy.xVar,
+          spec.xy.y2Vars,
+          null,
+          null,
+          'y2',
+        ),
+      )
+    }
     return buildXYFigure(
       series,
       spec.format,

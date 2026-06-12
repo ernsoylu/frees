@@ -334,6 +334,10 @@ public final class MarkdownEquationExtractor {
         }
 
         int idEnd = i;
+        // String variables carry a trailing '$': R$ = 'R134a'
+        if (i >= 0 && line.charAt(i) == '$') {
+            i--;
+        }
         while (i >= 0 && (Character.isLetterOrDigit(line.charAt(i)) || line.charAt(i) == '_')) {
             i--;
         }
@@ -456,6 +460,10 @@ public final class MarkdownEquationExtractor {
         if (Character.isLetter(c) || c == '_') {
             int end = i;
             while (end < line.length() && (Character.isLetterOrDigit(line.charAt(end)) || line.charAt(end) == '_')) {
+                end++;
+            }
+            // String variables carry a trailing '$': R$ = 'R134a'
+            if (end < line.length() && line.charAt(end) == '$') {
                 end++;
             }
             return new Token(TokenType.IDENTIFIER, line.substring(i, end), end);

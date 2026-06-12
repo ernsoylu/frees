@@ -322,6 +322,52 @@ class DifferentiatorTest {
         assertDerivativeNumerically(expr, "x", Map.of("x", 3.0), 1e-4);
     }
 
+    @Test
+    void logGammaDerivative() {
+        // d/dx lnΓ(x) = ψ(x)
+        Expr expr = call("loggamma", var("x"));
+        assertDerivativeNumerically(expr, "x", Map.of("x", 3.0), 1e-5);
+    }
+
+    @Test
+    void erfInvDerivative() {
+        // d/dx erfinv(x) = (√π/2) exp(erfinv(x)²)
+        Expr expr = call("erfinv", var("x"));
+        assertDerivativeNumerically(expr, "x", Map.of("x", 0.5), 1e-5);
+    }
+
+    @Test
+    void betaDerivative() {
+        // ∂/∂a B(a,b) = B(a,b)(ψ(a) − ψ(a+b)), and the same through both args
+        Expr expr = call("beta", var("a"), var("b"));
+        assertDerivativeNumerically(expr, "a", Map.of("a", 2.0, "b", 3.0), 1e-6);
+        assertDerivativeNumerically(expr, "b", Map.of("a", 2.0, "b", 3.0), 1e-6);
+        // Chain rule through a composite first argument
+        Expr composite = call("beta", mul(var("x"), num(2)), num(3));
+        assertDerivativeNumerically(composite, "x", Map.of("x", 1.5), 1e-6);
+    }
+
+    @Test
+    void besselJDerivative() {
+        // d/dx J_n(x) = (J_{n−1}(x) − J_{n+1}(x)) / 2, constant order
+        Expr expr = call("besselj", var("x"), num(1));
+        assertDerivativeNumerically(expr, "x", Map.of("x", 2.5), 1e-6);
+    }
+
+    @Test
+    void besselIDerivative() {
+        // d/dx I_n(x) = (I_{n−1}(x) + I_{n+1}(x)) / 2, constant order
+        Expr expr = call("besseli", var("x"), num(1));
+        assertDerivativeNumerically(expr, "x", Map.of("x", 2.0), 1e-6);
+    }
+
+    @Test
+    void besselWithVariableOrderIsNotDifferentiable() {
+        // The recurrence derivative only holds for a constant order.
+        Expr expr = call("besselj", var("x"), var("n"));
+        assertNull(Differentiator.differentiate(expr, "x"));
+    }
+
     // ── unsupported expressions return null ──────────────────────────────
 
     @Test

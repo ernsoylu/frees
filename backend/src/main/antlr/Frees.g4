@@ -236,8 +236,9 @@ NUMBER
     | '.' DIGIT+ EXPONENT?
     ;
 
+// A trailing '$' marks a string variable (EES convention): R$ = 'R134a'.
 IDENT
-    : [a-zA-Z] [a-zA-Z0-9_]*
+    : [a-zA-Z] [a-zA-Z0-9_]* '$'?
     ;
 
 NEWLINE

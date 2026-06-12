@@ -149,8 +149,15 @@ function baseLayout(
     xaxis: axisLayout(format.xLabel || xLabel, xLog, format, colors, format.xMin, format.xMax, format.xTick),
     yaxis: axisLayout(format.yLabel || yLabel, yLog, format, colors, format.yMin, format.yMax, format.yTick),
     showlegend: format.legend,
-    legend: { orientation: 'h', bgcolor: 'rgba(0,0,0,0)' },
+    legend: legendLayout(format.legendAlign),
   }
+}
+
+/** Horizontal legend anchored per the configured alignment (default center). */
+function legendLayout(align: 'left' | 'center' | 'right' | undefined) {
+  const x = align === 'left' ? 0 : align === 'right' ? 1 : 0.5
+  const xanchor = align ?? 'center'
+  return { orientation: 'h' as const, bgcolor: 'rgba(0,0,0,0)', x, xanchor }
 }
 
 interface StateOverlay {
@@ -352,6 +359,8 @@ export interface XYSeries {
   y: number[]
   z?: number[]
   size?: number[]
+  /** Which Y axis the series belongs to; 'y2' is the secondary right axis. */
+  axis?: 'y' | 'y2'
 }
 
 function scaleSizes(values: number[]): number[] {
@@ -402,7 +411,8 @@ export function buildXYFigure(
         x: s.x.map((val) => val as any),
         y: s.y.map((val) => val as any),
         marker: { color: format.lineColors?.[s.name] || undefined },
-      })
+        ...(s.axis === 'y2' ? { yaxis: 'y2' } : {}),
+      } as PlotlyTrace)
     })
   } else if (chartType === 'scatter') {
     series.forEach((s) => {
@@ -417,7 +427,8 @@ export function buildXYFigure(
           size: markerSize,
           color: format.lineColors?.[s.name] || undefined,
         },
-      })
+        ...(s.axis === 'y2' ? { yaxis: 'y2' } : {}),
+      } as PlotlyTrace)
     })
   } else if (chartType === 'surface3d') {
     series.forEach((s) => {
@@ -444,7 +455,8 @@ export function buildXYFigure(
         x: s.x,
         y: s.y,
         line: { color: format.lineColors?.[s.name] || undefined },
-      })
+        ...(s.axis === 'y2' ? { yaxis: 'y2' } : {}),
+      } as PlotlyTrace)
     })
   }
 
@@ -459,6 +471,22 @@ export function buildXYFigure(
 
   if (chartType === 'bar') {
     layout.barmode = 'group'
+  }
+
+  // Secondary right Y axis for the series tagged 'y2'.
+  if (traces.some((t) => (t as any).yaxis === 'y2')) {
+    const colors = THEMES[theme]
+    const y2Names = series.filter((s) => s.axis === 'y2').map((s) => s.name)
+    ;(layout as any).yaxis2 = {
+      title: { text: format.y2Label || y2Names.join(', ') },
+      overlaying: 'y',
+      side: 'right',
+      type: 'linear',
+      color: colors.font,
+      showgrid: false,
+      exponentformat: 'power',
+    }
+    layout.margin = { ...layout.margin, r: 64 }
   }
 
   if (chartType === 'surface3d') {

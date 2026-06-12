@@ -174,14 +174,32 @@ public final class Differentiator {
             // d/dx Γ(f) = Γ(f) * ψ(f) * f'   (ψ = digamma)
             case "gamma" -> chainRule(args, var, f ->
                     simplifyMul(call("gamma", f), call("digamma", f)));
+            // d/dx lnΓ(f) = ψ(f) * f'
+            case "loggamma" -> chainRule(args, var, f -> call("digamma", f));
             // digamma itself is evaluated numerically at runtime; it only
             // appears as an intermediate inside a Jacobian expression.
+
+            // d/dx erfinv(f) = (√π/2) exp(erfinv(f)²) f'
+            case "erfinv" -> chainRule(args, var, f -> {
+                Expr inv = call("erfinv", f);
+                return simplifyMul(
+                        simplifyDiv(call("sqrt", num(Math.PI)), num(2)),
+                        call("exp", simplifyMul(inv, inv)));
+            });
+
+            // ∂/∂x B(a,b) = B(a,b) [(ψ(a) − ψ(a+b)) a' + (ψ(b) − ψ(a+b)) b']
+            case "beta" -> diffBeta(args, var);
+
+            // d/dx J_n(x) = (J_{n−1}(x) − J_{n+1}(x)) / 2 · x'  (constant n)
+            case "besselj" -> diffBessel(args, var, "besselj", true);
+            // d/dx I_n(x) = (I_{n−1}(x) + I_{n+1}(x)) / 2 · x'  (constant n)
+            case "besseli" -> diffBessel(args, var, "besseli", false);
 
             // ── unsupported multi-arg or procedural functions ────────────
             case "integral", "min", "max", "sum", "average", "avg",
                  "atan2", "mod", "gcd", "lcm",
                  "bitand", "bitor", "bitxor", "bitnot", "bitshiftl", "bitshiftr",
-                 "beta", "besselj", "erfinv", "loggamma",
+                 "baseconvert", "digamma",
                  "real", "imag" -> null;
 
             // Unknown function → cannot differentiate
@@ -198,6 +216,39 @@ public final class Differentiator {
     @FunctionalInterface
     private interface OuterDerivative {
         Expr apply(Expr f);
+    }
+
+    /** ∂/∂x B(a,b) = B(a,b) [(ψ(a) − ψ(a+b)) a' + (ψ(b) − ψ(a+b)) b']. */
+    private static Expr diffBeta(List<Expr> args, String var) {
+        if (args.size() != 2) return null;
+        Expr a = args.get(0);
+        Expr b = args.get(1);
+        Expr da = diff(a, var);
+        Expr db = diff(b, var);
+        if (da == null || db == null) return null;
+        Expr psiSum = call("digamma", simplifyAdd(a, b));
+        Expr termA = simplifyMul(simplifySub(call("digamma", a), psiSum), da);
+        Expr termB = simplifyMul(simplifySub(call("digamma", b), psiSum), db);
+        return simplifyMul(new Expr.Call("beta", List.of(a, b)),
+                simplifyAdd(termA, termB));
+    }
+
+    /**
+     * Bessel recurrence derivative for {@code besselj(x, n)} / {@code besseli(x, n)}
+     * with a constant order n:  J'_n = (J_{n−1} − J_{n+1})/2,  I'_n = (I_{n−1} + I_{n+1})/2.
+     */
+    private static Expr diffBessel(List<Expr> args, String var,
+                                   String function, boolean subtract) {
+        if (args.size() != 2) return null;
+        Expr x = args.get(0);
+        Expr order = args.get(1);
+        if (!isConstant(order)) return null;
+        Expr dx = diff(x, var);
+        if (dx == null) return null;
+        Expr lower = new Expr.Call(function, List.of(x, simplifySub(order, num(1))));
+        Expr upper = new Expr.Call(function, List.of(x, simplifyAdd(order, num(1))));
+        Expr combined = subtract ? simplifySub(lower, upper) : simplifyAdd(lower, upper);
+        return simplifyMul(simplifyDiv(combined, num(2)), dx);
     }
 
     private static Expr chainRule(List<Expr> args, String var,
