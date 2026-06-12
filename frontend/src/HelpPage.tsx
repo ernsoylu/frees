@@ -871,6 +871,14 @@ Here is the thermodynamic T-s diagram showing the cycle state points:
                 <strong>Euler decomposition:</strong> Extracts ZXZ Euler angles $\phi, \theta, \psi$ from a 3D rotation matrix $R$:
                 <Code block mt="xs">{`CALL EulerDecompose(R[1..3,1..3] : phi, theta, psi)`}</Code>
               </List.Item>
+              <List.Item>
+                <strong>Eigenvalues:</strong> Computes the eigenvalues of a square matrix $A$, reported in ascending order. The matrix entries may themselves be unknowns — the decomposition runs once they are solved:
+                <Code block mt="xs">{`CALL Eigenvalues(A[1..3,1..3] : lambda[1..3])`}</Code>
+              </List.Item>
+              <List.Item>
+                <strong>Eigenvalues & eigenvectors:</strong> Also returns the matrix $V$ whose column $k$ is the unit eigenvector of $\lambda_k$ (largest-magnitude component made positive). Real spectra only — symmetric matrices always qualify:
+                <Code block mt="xs">{`CALL Eigen(A[1..3,1..3] : lambda[1..3], V[1..3,1..3])`}</Code>
+              </List.Item>
             </List>
 
             <Title order={3} mt="sm">Practical Example: Linear System Solving</Title>
@@ -1555,6 +1563,120 @@ Q_c = abs(V_rms)^2 / abs(Z_c)
 Z_c = -1i / (omega * C_corr)`}
                     </Code>
                   </Paper>
+                </Accordion.Panel>
+              </Accordion.Item>
+
+              <Accordion.Item value="circuit-matrix">
+                <Accordion.Control>
+                  <Text fw={600} c="cyan.4">Electrical Engineering: DC Mesh Analysis with Matrix Algebra</Text>
+                </Accordion.Control>
+                <Accordion.Panel>
+                  <Text size="sm" mb="sm">
+                    This example applies Kirchhoff's Voltage Law to a three-mesh resistive network with two voltage sources. The mesh equations are written directly as a resistance matrix and solved in one step with <Code>SolveLinear</Code>.
+                  </Text>
+                  <Paper withBorder p="md" bg="dark.8" radius="md" style={{ position: 'relative' }}>
+                    <CopyButton code={`{ DC Circuit Mesh Analysis via Matrix Algebra }\nV_s1 = 10 [V]   { Source driving mesh 1 }\nV_s2 = 8 [V]    { Source driving mesh 3 }\n\nR_1 = 2 [ohm];  R_2 = 4 [ohm];  R_3 = 2 [ohm]\nR_4 = 6 [ohm];  R_5 = 4 [ohm]\n\n{ Resistance matrix from Kirchhoff's Voltage Law }\n{ Diagonal: total resistance around each mesh. Off-diagonal: -(shared resistance) }\nR[1,1] = R_1 + R_2;  R[1,2] = -R_2;             R[1,3] = 0\nR[2,1] = -R_2;       R[2,2] = R_2 + R_3 + R_4;  R[2,3] = -R_4\nR[3,1] = 0;          R[3,2] = -R_4;             R[3,3] = R_4 + R_5\n\n{ Source vector: net EMF driving each mesh }\nV[1..3] = [V_s1, 0, V_s2]\n\n{ Solve R * I = V for the mesh currents }\nI[1..3] = SolveLinear(R[1..3,1..3], V[1..3])\n\n{ Branch currents through the shared resistors }\nI_R2 = I[1] - I[2]\nI_R4 = I[2] - I[3]\n\n{ Energy check: delivered power equals dissipated power }\nP_delivered = V_s1 * I[1] + V_s2 * I[3]`} />
+                    <Code block style={{ background: 'transparent', maxHeight: '300px', overflowY: 'auto' }}>
+                      {`{ DC Circuit Mesh Analysis via Matrix Algebra }
+V_s1 = 10 [V]   { Source driving mesh 1 }
+V_s2 = 8 [V]    { Source driving mesh 3 }
+
+R_1 = 2 [ohm];  R_2 = 4 [ohm];  R_3 = 2 [ohm]
+R_4 = 6 [ohm];  R_5 = 4 [ohm]
+
+{ Resistance matrix from Kirchhoff's Voltage Law }
+{ Diagonal: total resistance around each mesh. Off-diagonal: -(shared resistance) }
+R[1,1] = R_1 + R_2;  R[1,2] = -R_2;             R[1,3] = 0
+R[2,1] = -R_2;       R[2,2] = R_2 + R_3 + R_4;  R[2,3] = -R_4
+R[3,1] = 0;          R[3,2] = -R_4;             R[3,3] = R_4 + R_5
+
+{ Source vector: net EMF driving each mesh }
+V[1..3] = [V_s1, 0, V_s2]
+
+{ Solve R * I = V for the mesh currents }
+I[1..3] = SolveLinear(R[1..3,1..3], V[1..3])
+
+{ Branch currents through the shared resistors }
+I_R2 = I[1] - I[2]
+I_R4 = I[2] - I[3]
+
+{ Energy check: delivered power equals dissipated power }
+P_delivered = V_s1 * I[1] + V_s2 * I[3]`}
+                    </Code>
+                  </Paper>
+                  <Text size="xs" mt="xs" c="dimmed">
+                    The solver expands SolveLinear into the three KVL equations and finds the mesh currents I[1] = 3 A, I[2] = 2 A, I[3] = 2 A, so the shared resistor R_4 carries no current and the sources deliver 46 W. The same pattern scales to any n×n nodal or mesh formulation.
+                  </Text>
+                </Accordion.Panel>
+              </Accordion.Item>
+
+              <Accordion.Item value="vibration-eigen">
+                <Accordion.Control>
+                  <Text fw={600} c="cyan.4">Mechanical Vibrations: Natural Frequencies & Mode Shapes (Eigenvalues)</Text>
+                </Accordion.Control>
+                <Accordion.Panel>
+                  <Text size="sm" mb="sm">
+                    Two equal carts coupled by three springs form a classic 2-DOF free-vibration problem. The natural frequencies are the square roots of the eigenvalues of the dynamic matrix $D = K/m$, and the eigenvector columns are the mode shapes.
+                  </Text>
+                  <Paper withBorder p="md" bg="dark.8" radius="md" style={{ position: 'relative' }}>
+                    <CopyButton code={`{ Two-DOF Vibration: Natural Frequencies & Mode Shapes }\nm = 10 [kg]       { Mass of each cart }\nk = 1000 [N/m]    { Stiffness of each of the three springs }\n\n{ Stiffness matrix for two equal masses coupled by three springs }\nK[1,1] = 2*k;  K[1,2] = -k\nK[2,1] = -k;   K[2,2] = 2*k\n\n{ Dynamic matrix D = K/m (equal masses) }\nD[1,1] = K[1,1]/m; D[1,2] = K[1,2]/m\nD[2,1] = K[2,1]/m; D[2,2] = K[2,2]/m\n\n{ Eigenvalues are omega^2; columns of Phi are the mode shapes }\nCALL Eigen(D[1..2,1..2] : lambda[1..2], Phi[1..2,1..2])\n\nomega[1] = sqrt(lambda[1]);  omega[2] = sqrt(lambda[2])\nf[1] = omega[1]/(2*pi);      f[2] = omega[2]/(2*pi)`} />
+                    <Code block style={{ background: 'transparent', maxHeight: '300px', overflowY: 'auto' }}>
+                      {`{ Two-DOF Vibration: Natural Frequencies & Mode Shapes }
+m = 10 [kg]       { Mass of each cart }
+k = 1000 [N/m]    { Stiffness of each of the three springs }
+
+{ Stiffness matrix for two equal masses coupled by three springs }
+K[1,1] = 2*k;  K[1,2] = -k
+K[2,1] = -k;   K[2,2] = 2*k
+
+{ Dynamic matrix D = K/m (equal masses) }
+D[1,1] = K[1,1]/m; D[1,2] = K[1,2]/m
+D[2,1] = K[2,1]/m; D[2,2] = K[2,2]/m
+
+{ Eigenvalues are omega^2; columns of Phi are the mode shapes }
+CALL Eigen(D[1..2,1..2] : lambda[1..2], Phi[1..2,1..2])
+
+omega[1] = sqrt(lambda[1]);  omega[2] = sqrt(lambda[2])
+f[1] = omega[1]/(2*pi);      f[2] = omega[2]/(2*pi)`}
+                    </Code>
+                  </Paper>
+                  <Text size="xs" mt="xs" c="dimmed">
+                    Eigenvalues come back ascending: lambda = 100 and 300, so omega = 10 and 17.32 rad/s (f = 1.59 and 2.76 Hz). The first mode shape (0.707, 0.707) has both carts moving in phase; the second (0.707, −0.707) is the anti-phase mode where the middle spring works.
+                  </Text>
+                </Accordion.Panel>
+              </Accordion.Item>
+
+              <Accordion.Item value="stress-eigen">
+                <Accordion.Control>
+                  <Text fw={600} c="cyan.4">Solid Mechanics: Principal Stresses from the Stress Tensor (Eigenvalues)</Text>
+                </Accordion.Control>
+                <Accordion.Panel>
+                  <Text size="sm" mb="sm">
+                    The principal stresses of a plane stress state are the eigenvalues of the Cauchy stress tensor, and the principal directions are its eigenvectors — no Mohr's circle construction needed.
+                  </Text>
+                  <Paper withBorder p="md" bg="dark.8" radius="md" style={{ position: 'relative' }}>
+                    <CopyButton code={`{ Principal Stresses of a 2D Stress State }\nsigma_x = 60 [MPa]\nsigma_y = 20 [MPa]\ntau_xy = 15 [MPa]\n\n{ Cauchy stress tensor }\nS[1,1] = sigma_x;  S[1,2] = tau_xy\nS[2,1] = tau_xy;   S[2,2] = sigma_y\n\n{ Principal stresses = eigenvalues; principal directions = eigenvectors }\nCALL Eigen(S[1..2,1..2] : sigma_p[1..2], N[1..2,1..2])\n\n{ Maximum in-plane shear stress and major principal angle }\ntau_max = (sigma_p[2] - sigma_p[1]) / 2\ntheta_p = arctan(N[2,2]/N[1,2]) * 180/pi`} />
+                    <Code block style={{ background: 'transparent', maxHeight: '300px', overflowY: 'auto' }}>
+                      {`{ Principal Stresses of a 2D Stress State }
+sigma_x = 60 [MPa]
+sigma_y = 20 [MPa]
+tau_xy = 15 [MPa]
+
+{ Cauchy stress tensor }
+S[1,1] = sigma_x;  S[1,2] = tau_xy
+S[2,1] = tau_xy;   S[2,2] = sigma_y
+
+{ Principal stresses = eigenvalues; principal directions = eigenvectors }
+CALL Eigen(S[1..2,1..2] : sigma_p[1..2], N[1..2,1..2])
+
+{ Maximum in-plane shear stress and major principal angle }
+tau_max = (sigma_p[2] - sigma_p[1]) / 2
+theta_p = arctan(N[2,2]/N[1,2]) * 180/pi`}
+                    </Code>
+                  </Paper>
+                  <Text size="xs" mt="xs" c="dimmed">
+                    With sigma_x = 60, sigma_y = 20, tau_xy = 15 MPa the principal stresses are 15 and 65 MPa (ascending), tau_max = 25 MPa, and the major principal axis sits at theta_p = 18.43° — matching the Mohr's circle result tan(2θ) = 2τ/(σx−σy). Stresses solve in SI (Pa) per the frEES SI-always rule.
+                  </Text>
                 </Accordion.Panel>
               </Accordion.Item>
 
