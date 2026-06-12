@@ -49,7 +49,7 @@ const VIEWS = [
     label: 'Graph Digitizer — extract curves from chart images',
     icon: IconChartGridDots,
   },
-  { value: 'diagram', label: 'Diagram — Epic 6, coming soon', icon: IconSchema, disabled: true },
+  { value: 'diagram', label: 'Diagram — interactive schematic editor', icon: IconSchema },
 ]
 
 interface RailProps {
@@ -111,7 +111,6 @@ export function Rail({
             key={view.value}
             label={view.label}
             active={active === view.value}
-            disabled={view.disabled}
             onClick={() => onSelect(view.value)}
           >
             <view.icon size={22} stroke={1.6} />
