@@ -12,6 +12,7 @@ import org.antlr.v4.runtime.RecognitionException;
 import org.antlr.v4.runtime.Recognizer;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -185,7 +186,7 @@ public final class EquationParser {
                                     }
                                 }
                             }
-                            return;
+                            continue;
                         }
                         if (func.equals("dot") || func.equals("norm") || func.equals("determinant")) {
                             Expr expandedLhs = expandExpr(lhs, loopVars, constants, displayNames, defs);
@@ -226,7 +227,7 @@ public final class EquationParser {
                                 Expr detExpr = expandDeterminant(m.elements);
                                 out.add(new Equation(expandedLhs, detExpr, eq.sourceText()));
                             }
-                            return;
+                            continue;
                         }
                         if (func.equals("cross")) {
                             VectorInfo w = parseVectorInfo(lhs, loopVars, constants, displayNames, defs);
@@ -248,7 +249,7 @@ public final class EquationParser {
                             out.add(new Equation(w.elements[0], w1, eq.sourceText()));
                             out.add(new Equation(w.elements[1], w2, eq.sourceText()));
                             out.add(new Equation(w.elements[2], w3, eq.sourceText()));
-                            return;
+                            continue;
                         }
                         if (func.equals("solvelinear")) {
                             VectorInfo x = parseVectorInfo(lhs, loopVars, constants, displayNames, defs);
@@ -270,7 +271,7 @@ public final class EquationParser {
                                 }
                                 out.add(new Equation(sum, b.elements[i], eq.sourceText()));
                             }
-                            return;
+                            continue;
                         }
                     }
 
@@ -307,6 +308,44 @@ public final class EquationParser {
                 }
                 case Statement.CallProc call -> {
                     String defName = call.name().toLowerCase();
+                    if (defName.equals("eigenvalues") || defName.equals("eigen")) {
+                        boolean wantVectors = defName.equals("eigen");
+                        int expectedOutputs = wantVectors ? 2 : 1;
+                        if (call.inputs().size() != 1 || call.outputs().size() != expectedOutputs) {
+                            throw new ParseException(wantVectors
+                                    ? "Eigen expects 1 input matrix and 2 outputs (eigenvalue vector, eigenvector matrix), e.g. CALL Eigen(A[1..3,1..3] : lambda[1..3], V[1..3,1..3])"
+                                    : "Eigenvalues expects 1 input matrix and 1 output vector, e.g. CALL Eigenvalues(A[1..3,1..3] : lambda[1..3])");
+                        }
+                        MatrixInfo a = parseMatrixInfo(call.inputs().get(0), loopVars, constants, displayNames, defs);
+                        VectorInfo lambda = parseVectorInfo(call.outputs().get(0), loopVars, constants, displayNames, defs);
+                        if (a.rows != a.cols || lambda.size != a.rows) {
+                            throw new ParseException("Eigenvalues requires a square matrix and an eigenvalue vector of matching size.");
+                        }
+                        int n = a.rows;
+                        // The matrix entries become arguments of synthetic eigen$ calls, so the
+                        // Tarjan blocker orders the decomposition after the entries are solved.
+                        List<Expr> entries = new ArrayList<>(n * n);
+                        for (int i = 0; i < n; i++) {
+                            entries.addAll(Arrays.asList(a.elements[i]));
+                        }
+                        for (int k = 0; k < n; k++) {
+                            out.add(new Equation(lambda.elements[k],
+                                    new Expr.Call("eigen$val$" + k + "$" + n, entries), call.sourceText()));
+                        }
+                        if (wantVectors) {
+                            MatrixInfo v = parseMatrixInfo(call.outputs().get(1), loopVars, constants, displayNames, defs);
+                            if (v.rows != n || v.cols != n) {
+                                throw new ParseException("Eigen requires an n x n eigenvector matrix (eigenvectors as columns).");
+                            }
+                            for (int i = 0; i < n; i++) {
+                                for (int k = 0; k < n; k++) {
+                                    out.add(new Equation(v.elements[i][k],
+                                            new Expr.Call("eigen$vec$" + i + "$" + k + "$" + n, entries), call.sourceText()));
+                                }
+                            }
+                        }
+                        continue;
+                    }
                     if (defName.equals("ludecompose") || defName.equals("eulerdecompose") || defName.equals("eulerrotate")) {
                         if (defName.equals("ludecompose")) {
                             if (call.inputs().size() != 1 || call.outputs().size() != 2) {
@@ -341,7 +380,7 @@ public final class EquationParser {
                                     out.add(new Equation(sum, a.elements[i][j], call.sourceText()));
                                 }
                             }
-                            return;
+                            continue;
                         }
                         if (defName.equals("eulerrotate")) {
                             if (call.inputs().size() != 3 || call.outputs().size() != 1) {
@@ -384,7 +423,7 @@ public final class EquationParser {
                             out.add(new Equation(r.elements[2][0], new Expr.BinOp('*', sinTheta, sinPsi), call.sourceText()));
                             out.add(new Equation(r.elements[2][1], new Expr.BinOp('*', sinTheta, cosPsi), call.sourceText()));
                             out.add(new Equation(r.elements[2][2], cosTheta, call.sourceText()));
-                            return;
+                            continue;
                         }
                         if (defName.equals("eulerdecompose")) {
                             if (call.inputs().size() != 1 || call.outputs().size() != 3) {
@@ -401,7 +440,7 @@ public final class EquationParser {
                             out.add(new Equation(new Expr.Call("cos", List.of(theta)), r.elements[2][2], call.sourceText()));
                             out.add(new Equation(new Expr.BinOp('*', new Expr.Call("sin", List.of(phi)), new Expr.Call("sin", List.of(theta))), r.elements[0][2], call.sourceText()));
                             out.add(new Equation(new Expr.BinOp('*', new Expr.Call("sin", List.of(theta)), new Expr.Call("sin", List.of(psi))), r.elements[2][0], call.sourceText()));
-                            return;
+                            continue;
                         }
                     }
 

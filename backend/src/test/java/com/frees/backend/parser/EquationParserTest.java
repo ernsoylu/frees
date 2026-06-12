@@ -349,4 +349,41 @@ class EquationParserTest {
         );
         assertEquals(8, solveEqs.size());
     }
+
+    @Test
+    void expandsEigenCallsIntoElementEquations() {
+        EquationParser parser = new EquationParser();
+        // 4 matrix entries + 2 eigenvalue equations
+        List<Equation> valEqs = parser.parse(
+                "A[1,1] = 2; A[1,2] = 1\n" +
+                "A[2,1] = 1; A[2,2] = 2\n" +
+                "CALL Eigenvalues(A[1..2,1..2] : lambda[1..2])"
+        );
+        assertEquals(6, valEqs.size());
+
+        // 4 matrix entries + 2 eigenvalue equations + 4 eigenvector component equations + 1 trailing
+        List<Equation> pairEqs = parser.parse(
+                "A[1,1] = 2; A[1,2] = 1\n" +
+                "A[2,1] = 1; A[2,2] = 2\n" +
+                "CALL Eigen(A[1..2,1..2] : lambda[1..2], V[1..2,1..2])\n" +
+                "trace = lambda[1] + lambda[2]"
+        );
+        assertEquals(11, pairEqs.size());
+    }
+
+    @Test
+    void equationsAfterMatrixFunctionsAreKept() {
+        EquationParser parser = new EquationParser();
+        List<Equation> eqs = parser.parse(
+                "A[1,1] = 2; A[1,2] = 0\n" +
+                "A[2,1] = 0; A[2,2] = 2\n" +
+                "b[1..2] = [4, 6]\n" +
+                "x[1..2] = SolveLinear(A[1..2, 1..2], b[1..2])\n" +
+                "y = x[1] + 1\n" +
+                "d = Determinant(A[1..2, 1..2])\n" +
+                "z = y + d"
+        );
+        // 4 matrix entries + 2 b + 2 SolveLinear rows + y + d + z
+        assertEquals(11, eqs.size());
+    }
 }
