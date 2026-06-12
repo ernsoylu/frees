@@ -315,6 +315,7 @@ public final class UnitChecker {
     private Dim dimOf(Expr e) {
         return switch (e) {
             case Expr.Num n -> dimOfNum(n);
+            case Expr.Str s -> Dim.UNKNOWN;
             case Expr.Var v -> {
                 Quantity q = variableDims.get(v.name());
                 yield q != null ? Dim.of(q) : Dim.UNKNOWN;

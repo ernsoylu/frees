@@ -20,6 +20,9 @@ public final class Evaluator {
     public static double eval(Expr e, Map<String, Double> values, Map<String, ProcDef> defs) {
         return switch (e) {
             case Expr.Num(double value, String unit, boolean isImaginary) -> value;
+            case Expr.Str(String value) -> throw new IllegalStateException(
+                    "String literal '" + value + "' cannot be evaluated as a number. "
+                    + "String literals are only valid in function arguments like property calls.");
             case Expr.Var(String name) -> {
                 Double value = values.get(name);
                 if (value == null) {
@@ -176,8 +179,12 @@ public final class Evaluator {
             case "erfinv"  -> org.apache.commons.math3.special.Erf.erfInv(arg(c, args, 0, values, defs));
             case "gamma"   -> org.apache.commons.math3.special.Gamma.gamma(arg(c, args, 0, values, defs));
             case "loggamma"-> org.apache.commons.math3.special.Gamma.logGamma(arg(c, args, 0, values, defs));
+            case "digamma" -> org.apache.commons.math3.special.Gamma.digamma(arg(c, args, 0, values, defs));
             case "beta"    -> Math.exp(org.apache.commons.math3.special.Beta.logBeta(arg(c, args, 0, values, defs), arg(c, args, 1, values, defs)));
             case "besselj" -> org.apache.commons.math3.special.BesselJ.value(arg(c, args, 1, values, defs), arg(c, args, 0, values, defs));
+
+            // Base conversion: BaseConvert('FF', 16, 10) -> 255
+            case "baseconvert" -> evalBaseConvert(c, values, defs);
 
             default -> throw new IllegalStateException("Unknown function: " + c.function());
         };
@@ -317,5 +324,63 @@ public final class Evaluator {
                     "Function " + c.function() + " expects at least " + (i + 1) + " argument(s)");
         }
         return eval(args.get(i), values, defs);
+    }
+
+    /**
+     * BaseConvert(digits, fromBase, toBase): converts a number between bases 2-36.
+     * The digits argument is a string literal (e.g. 'FF') or a numeric expression
+     * whose integer decimal representation is used. The result is returned as the
+     * number whose decimal digits spell the converted value, so it must contain
+     * only the digits 0-9 (i.e. toBase <= 10, or a value small enough to avoid
+     * letter digits).
+     */
+    private static double evalBaseConvert(Expr.Call c, Map<String, Double> values, Map<String, ProcDef> defs) {
+        if (c.args().size() != 3) {
+            throw new IllegalStateException(
+                    "BaseConvert expects 3 arguments: BaseConvert('digits', fromBase, toBase).");
+        }
+        Expr first = c.args().get(0);
+        String digits;
+        if (first instanceof Expr.Str s) {
+            digits = s.value().trim();
+        } else {
+            double v = eval(first, values, defs);
+            if (v != Math.rint(v) || Double.isInfinite(v)) {
+                throw new IllegalStateException(
+                        "BaseConvert input must be an integer, got: " + v);
+            }
+            digits = Long.toString((long) v);
+        }
+        int fromBase = (int) Math.rint(eval(c.args().get(1), values, defs));
+        int toBase = (int) Math.rint(eval(c.args().get(2), values, defs));
+        if (fromBase < 2 || fromBase > 36 || toBase < 2 || toBase > 36) {
+            throw new IllegalStateException(
+                    "BaseConvert bases must be between 2 and 36, got " + fromBase + " and " + toBase + ".");
+        }
+        long value;
+        try {
+            value = Long.parseLong(digits, fromBase);
+        } catch (NumberFormatException e) {
+            throw new IllegalStateException(
+                    "'" + digits + "' is not a valid base-" + fromBase + " number.");
+        }
+        String converted = Long.toString(value, toBase);
+        if (!converted.matches("-?[0-9]+")) {
+            throw new IllegalStateException(
+                    "BaseConvert result '" + converted.toUpperCase() + "' in base " + toBase
+                    + " contains letter digits and cannot be represented as a number; use toBase <= 10.");
+        }
+        return Double.parseDouble(converted);
+    }
+
+    /**
+     * Extracts a string value from an expression.
+     * Supports {@link Expr.Str} (quoted strings) and {@link Expr.Var}
+     * (backward compatibility: bare identifiers treated as string labels).
+     */
+    public static String evalString(Expr e) {
+        if (e instanceof Expr.Str s) return s.value();
+        if (e instanceof Expr.Var v) return v.name();  // backward compat: bare idents as strings
+        throw new IllegalStateException("Expected a string argument, got: " + e);
     }
 }

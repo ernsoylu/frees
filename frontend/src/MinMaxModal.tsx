@@ -10,6 +10,7 @@ import {
   Stack,
   Table,
   Text,
+  Textarea,
   TextInput,
 } from '@mantine/core'
 import {
@@ -119,6 +120,7 @@ export default function MinMaxModal({
   const [decision, setDecision] = useState<string | null>(null)
   const [lower, setLower] = useState('')
   const [upper, setUpper] = useState('')
+  const [constraints, setConstraints] = useState('')
   const [running, setRunning] = useState(false)
   const [validation, setValidation] = useState<string | null>(null)
   const [result, setResult] = useState<OptimizeResponse | null>(null)
@@ -138,7 +140,19 @@ export default function MinMaxModal({
     if (lo >= hi) {
       return 'The lower bound must be less than the upper bound.'
     }
+    for (const line of constraintLines()) {
+      if (!/(<=|>=|=)/.test(line)) {
+        return `Constraint "${line}" needs <=, >= or = followed by a number.`
+      }
+    }
     return null
+  }
+
+  function constraintLines(): string[] {
+    return constraints
+      .split('\n')
+      .map((line) => line.trim())
+      .filter((line) => line !== '')
   }
 
   async function run() {
@@ -159,6 +173,7 @@ export default function MinMaxModal({
           lower: Number(lower),
           upper: Number(upper),
           maximize: goal === 'maximize',
+          constraints: constraintLines(),
         },
       )
       setResult(response)
@@ -226,6 +241,18 @@ export default function MinMaxModal({
             styles={MONO_INPUT}
           />
         </Group>
+        <Textarea
+          label="Constraints (optional)"
+          description="One per line: expr <= value, expr >= value, or expr = value. Inequalities use a log-barrier, equalities an augmented Lagrangian."
+          placeholder={'x + y <= 10\nx * y = 4'}
+          value={constraints}
+          onChange={(e) => setConstraints(e.currentTarget.value)}
+          autosize
+          minRows={2}
+          maxRows={6}
+          spellCheck={false}
+          styles={MONO_INPUT}
+        />
 
         {validation && (
           <Text c="red" size="sm">

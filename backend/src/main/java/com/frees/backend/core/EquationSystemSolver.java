@@ -740,6 +740,7 @@ public class EquationSystemSolver {
         if (e == null) return;
         switch (e) {
             case Expr.Num num -> {}
+            case Expr.Str str -> {}
             case Expr.Var var -> {}
             case Expr.Neg neg -> checkExpr(neg.operand(), defs, expandedSpecs, warmStart);
             case Expr.BinOp bin -> {

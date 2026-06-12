@@ -560,6 +560,7 @@ public final class EquationParser {
                                 List<String> inputs, List<String> outputs) {
         return switch (e) {
             case Expr.Num n -> n;
+            case Expr.Str s -> s;
             case Expr.Var(String name) -> new Expr.Var(ns + name);
             case Expr.Neg(Expr operand) -> new Expr.Neg(namespaceExpr(operand, ns, inputs, outputs));
             case Expr.BinOp(char op, Expr left, Expr right) -> new Expr.BinOp(op,
@@ -601,6 +602,7 @@ public final class EquationParser {
                              Map<String, ProcDef> defs) {
         return switch (e) {
             case Expr.Num n -> n;
+            case Expr.Str s -> s;
             case Expr.Var(String name) -> {
                 if (loopVars.containsKey(name)) {
                     yield new Expr.Num(loopVars.get(name));
