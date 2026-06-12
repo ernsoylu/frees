@@ -372,6 +372,7 @@ const SECTIONS = [
   { id: 'complex', label: '12. Complex Numbers' },
   { id: 'examples', label: '13. Engineering Examples' },
   { id: 'api', label: '14. Solver Reference & API' },
+  { id: 'optimization', label: '15. Optimization & Plotting' },
 ];
 
 export default function HelpPage() {
@@ -1871,6 +1872,81 @@ H_reactants = H_products`}
                 </Accordion.Panel>
               </Accordion.Item>
             </Accordion>
+          </Stack>
+        );
+      case 'optimization':
+        return (
+          <Stack gap="md">
+            <Title order={2} c="blue.4">15. Multi-Variable Optimization & Advanced Plotting</Title>
+            
+            <Title order={3} mt="sm">Multi-Variable Optimization</Title>
+            <Text size="md" style={{ lineHeight: 1.6 }}>
+              frees supports optimizing a target objective variable by adjusting one or more independent (decision) variables within specified bounds.
+            </Text>
+            <Text size="md" style={{ lineHeight: 1.6 }}>
+              You can choose from three optimization algorithms depending on your problem:
+            </Text>
+            <List spacing="xs" size="sm" mt="xs" style={{ paddingLeft: '20px' }}>
+              <List.Item>
+                <strong>Brent's Method:</strong> Best for one-dimensional optimization. Requires a single independent variable and finite bounds. Extremely fast and guarantees convergence for unimodal functions.
+              </List.Item>
+              <List.Item>
+                <strong>Nelder-Mead Simplex:</strong> A derivative-free optimization method suitable for multi-variable problems. It works by constructing a simplex (a generalized triangle) and moving it towards the minimum/maximum. Highly robust for non-smooth or noisy objectives.
+              </List.Item>
+              <List.Item>
+                <strong>BOBYQA (Bound Optimization BY Quadratic Approximation):</strong> An advanced algorithm for multi-variable bound-constrained optimization. It iteratively builds a quadratic model of the objective function. Extremely efficient and requires fewer function evaluations than Simplex for smooth functions.
+              </List.Item>
+            </List>
+
+            <Alert color="blue" title="Optimization Setup" mt="xs">
+              To run an optimization, click the <strong>Min/Max</strong> button or press the corresponding hotkey. Choose your objective variable, select one or more independent variables, specify their bounds, select the method (Brent, Simplex, or BOBYQA), and click <strong>Optimize</strong>.
+            </Alert>
+
+            <Title order={3} mt="md">Advanced Plot Window Extensions</Title>
+            <Text size="md" style={{ lineHeight: 1.6 }}>
+              The Plot Window features rich data visualization capabilities to analyze parametric sweeps and cycle paths. You can configure and display the following chart styles:
+            </Text>
+            <Table striped highlightOnHover withTableBorder>
+              <Table.Thead>
+                <Table.Tr>
+                  <Table.Th style={{ width: '180px' }}>Chart Type</Table.Th>
+                  <Table.Th>Description</Table.Th>
+                  <Table.Th>Configuration Requirements</Table.Th>
+                </Table.Tr>
+              </Table.Thead>
+              <Table.Tbody>
+                <Table.Tr>
+                  <Table.Td><strong>Line Chart</strong></Table.Td>
+                  <Table.Td>Plots continuous lines joining the data points of parametric runs.</Table.Td>
+                  <Table.Td>Requires an X-axis variable and one or more Y-axis variables.</Table.Td>
+                </Table.Tr>
+                <Table.Tr>
+                  <Table.Td><strong>Bar Chart</strong></Table.Td>
+                  <Table.Td>Displays discrete rectangular bars grouped or stacked for comparison.</Table.Td>
+                  <Table.Td>Requires an X-axis variable and one or more Y-axis variables.</Table.Td>
+                </Table.Tr>
+                <Table.Tr>
+                  <Table.Td><strong>Pie Chart</strong></Table.Td>
+                  <Table.Td>Displays proportion slices representing the values of a variable.</Table.Td>
+                  <Table.Td>Requires an X-axis variable (categories) and a single Y-axis variable (values).</Table.Td>
+                </Table.Tr>
+                <Table.Tr>
+                  <Table.Td><strong>Histogram</strong></Table.Td>
+                  <Table.Td>Shows the frequency distribution of a variable's values.</Table.Td>
+                  <Table.Td>Requires only selecting the variable in the Y-axis variables picker (X-axis is ignored).</Table.Td>
+                </Table.Tr>
+                <Table.Tr>
+                  <Table.Td><strong>Scatter (Bubble) Chart</strong></Table.Td>
+                  <Table.Td>Plots individual points where markers can have a variable size based on a third dimension.</Table.Td>
+                  <Table.Td>Requires an X-axis variable, Y-axis variables, and an optional bubble size variable.</Table.Td>
+                </Table.Tr>
+                <Table.Tr>
+                  <Table.Td><strong>3D Surface Chart</strong></Table.Td>
+                  <Table.Td>Renders a 3D mesh surface using three continuous variables.</Table.Td>
+                  <Table.Td>Requires X-axis, Y-axis, and Z-axis variables.</Table.Td>
+                </Table.Tr>
+              </Table.Tbody>
+            </Table>
           </Stack>
         );
       default:

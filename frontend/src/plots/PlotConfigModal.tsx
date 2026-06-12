@@ -22,6 +22,7 @@ import {
   PropertyConfig,
   PsychroConfig,
   XYConfig,
+  ChartType,
   diagramAxes,
   newPlotSpec,
 } from './types'
@@ -40,6 +41,15 @@ interface Props {
   onClose: () => void
 }
 
+const CHART_TYPE_OPTIONS = [
+  { value: 'line', label: 'Line chart' },
+  { value: 'bar', label: 'Bar chart' },
+  { value: 'pie', label: 'Pie chart' },
+  { value: 'histogram', label: 'Histogram' },
+  { value: 'scatter', label: 'Scatter (bubble)' },
+  { value: 'surface3d', label: '3D Surface' },
+]
+
 function XYSection({
   config,
   tableVars,
@@ -49,6 +59,8 @@ function XYSection({
   tableVars: string[]
   onChange: (config: XYConfig) => void
 }>) {
+  const chartType = config.chartType ?? 'line'
+
   return (
     <Stack gap="xs">
       <Text size="xs" c="dimmed">
@@ -57,21 +69,60 @@ function XYSection({
       </Text>
       <Group grow>
         <Select
-          label="X-axis variable"
+          label="Chart Type"
+          size="xs"
+          data={CHART_TYPE_OPTIONS}
+          value={chartType}
+          onChange={(val) => {
+            onChange({
+              ...config,
+              chartType: (val as ChartType) ?? 'line',
+              zVar: val === 'surface3d' ? config.zVar : null,
+              sizeVar: val === 'scatter' ? config.sizeVar : null,
+            })
+          }}
+        />
+        <Select
+          label={chartType === 'histogram' ? 'Variable (uses Y-axis)' : 'X-axis variable'}
           size="xs"
           data={tableVars}
           value={config.xVar}
           onChange={(xVar) => onChange({ ...config, xVar })}
           searchable
+          disabled={chartType === 'histogram'}
         />
+      </Group>
+      <Group grow>
         <MultiSelect
-          label="Y-axis variables"
+          label={chartType === 'pie' ? 'Value variable (uses first Y)' : 'Y-axis variables'}
           size="xs"
           data={tableVars}
           value={config.yVars}
           onChange={(yVars) => onChange({ ...config, yVars })}
+          maxValues={chartType === 'pie' ? 1 : undefined}
           searchable
         />
+        {chartType === 'surface3d' && (
+          <Select
+            label="Z-axis variable"
+            size="xs"
+            data={tableVars}
+            value={config.zVar ?? null}
+            onChange={(zVar) => onChange({ ...config, zVar })}
+            searchable
+          />
+        )}
+        {chartType === 'scatter' && (
+          <Select
+            label="Bubble size variable (optional)"
+            size="xs"
+            data={tableVars}
+            value={config.sizeVar ?? null}
+            onChange={(sizeVar) => onChange({ ...config, sizeVar })}
+            searchable
+            clearable
+          />
+        )}
       </Group>
     </Stack>
   )

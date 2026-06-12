@@ -1,8 +1,8 @@
 /**
- * Minimal typings for the basic Plotly bundle (scatter/line charts only).
+ * Minimal typings for the full Plotly bundle (supporting 2D & 3D charts).
  * The dist packages ship without their own type definitions.
  */
-declare module 'plotly.js-basic-dist-min' {
+declare module 'plotly.js-dist-min' {
   export interface PlotlyLineStyle {
     color?: string
     width?: number
@@ -11,16 +11,22 @@ declare module 'plotly.js-basic-dist-min' {
 
   export interface PlotlyMarkerStyle {
     color?: string
-    size?: number
+    size?: number | number[]
     symbol?: string
   }
 
   export interface PlotlyTrace {
-    type: 'scatter'
-    mode: string
+    type: 'scatter' | 'bar' | 'pie' | 'histogram' | 'mesh3d' | 'scatter3d'
+    mode?: string
     name: string
-    x: (number | null)[]
-    y: (number | null)[]
+    x?: (number | null)[]
+    y?: (number | null)[]
+    z?: (number | null)[]
+    labels?: string[]
+    values?: number[]
+    intensity?: (number | null)[]
+    colorscale?: string
+    opacity?: number
     line?: PlotlyLineStyle
     marker?: PlotlyMarkerStyle
     text?: string[]
@@ -32,7 +38,7 @@ declare module 'plotly.js-basic-dist-min' {
   }
 
   export interface PlotlyAxisLayout {
-    title?: { text: string }
+    title?: { text: string } | string
     type?: 'linear' | 'log'
     gridcolor?: string
     zerolinecolor?: string
@@ -57,6 +63,12 @@ declare module 'plotly.js-basic-dist-min' {
       orientation?: 'h' | 'v'
       font?: { size?: number }
       bgcolor?: string
+    }
+    barmode?: 'group' | 'stack' | 'overlay' | 'relative'
+    scene?: {
+      xaxis?: PlotlyAxisLayout
+      yaxis?: PlotlyAxisLayout
+      zaxis?: PlotlyAxisLayout
     }
   }
 

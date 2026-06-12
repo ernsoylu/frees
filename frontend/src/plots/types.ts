@@ -52,9 +52,14 @@ export interface PlotFormat {
   lineColors?: Record<string, string>
 }
 
+export type ChartType = 'line' | 'bar' | 'pie' | 'histogram' | 'scatter' | 'surface3d'
+
 export interface XYConfig {
   xVar: string | null
   yVars: string[]
+  chartType?: ChartType
+  zVar?: string | null
+  sizeVar?: string | null
 }
 
 export interface PropertyConfig {
@@ -116,7 +121,7 @@ export function newPlotSpec(kind: PlotKind, name: string): PlotSpec {
     id: crypto.randomUUID(),
     name,
     kind,
-    xy: { xVar: null, yVars: [] },
+    xy: { xVar: null, yVars: [], chartType: 'line', zVar: null, sizeVar: null },
     property: {
       fluid: 'Water',
       diagram: 'T-s',

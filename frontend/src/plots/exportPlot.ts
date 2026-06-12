@@ -1,4 +1,4 @@
-import type { PlotlyFigure } from 'plotly.js-basic-dist-min'
+import type { PlotlyFigure } from 'plotly.js-dist-min'
 import { exportVector } from '../api'
 
 /**
@@ -22,7 +22,7 @@ const EXPORT_HEIGHT = 800
 const RASTER_SCALE = 4
 
 async function figureToSvg(figure: PlotlyFigure): Promise<string> {
-  const { default: Plotly } = await import('plotly.js-basic-dist-min')
+  const { default: Plotly } = await import('plotly.js-dist-min')
   const url = await Plotly.toImage(figure, {
     format: 'svg',
     width: EXPORT_WIDTH,
@@ -63,7 +63,7 @@ export async function exportPlot(
     downloadBlob(await exportVector(svg, format), filename)
     return
   }
-  const { default: Plotly } = await import('plotly.js-basic-dist-min')
+  const { default: Plotly } = await import('plotly.js-dist-min')
   const url = await Plotly.toImage(figure, {
     format: format === 'jpg' ? 'jpeg' : 'png',
     width: EXPORT_WIDTH,

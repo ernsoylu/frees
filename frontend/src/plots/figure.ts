@@ -3,9 +3,9 @@ import type {
   PlotlyFigure,
   PlotlyLayout,
   PlotlyTrace,
-} from 'plotly.js-basic-dist-min'
+} from 'plotly.js-dist-min'
 import { DiagramCurve, DiagramResponse, PsychartResponse } from '../api'
-import { PlotFormat, PropertyConfig, PsychroConfig } from './types'
+import { PlotFormat, PropertyConfig, PsychroConfig, XYConfig } from './types'
 import { StateTable, statesForAxes } from './stateTable'
 import { UnitChoice, resolveUnit } from './units'
 
@@ -350,6 +350,15 @@ export interface XYSeries {
   name: string
   x: number[]
   y: number[]
+  z?: number[]
+  size?: number[]
+}
+
+function scaleSizes(values: number[]): number[] {
+  const min = Math.min(...values)
+  const max = Math.max(...values)
+  if (max === min) return values.map(() => 15)
+  return values.map((v) => 8 + ((v - min) / (max - min)) * 32)
 }
 
 export function buildXYFigure(
@@ -358,24 +367,107 @@ export function buildXYFigure(
   xLabel: string,
   yLabel: string,
   theme: PlotTheme,
+  config?: XYConfig,
 ): PlotlyFigure {
-  const traces: PlotlyTrace[] = series.map((s) => ({
-    type: 'scatter',
-    mode: 'lines+markers',
-    name: s.name,
-    x: s.x,
-    y: s.y,
-    line: { color: format.lineColors?.[s.name] || undefined },
-  }))
-  return {
-    data: traces,
-    layout: baseLayout(
-      format,
-      format.xLabel || xLabel,
-      format.yLabel || yLabel,
-      format.xLog ?? false,
-      format.yLog ?? false,
-      theme,
-    ),
+  const chartType = config?.chartType || 'line'
+  const traces: PlotlyTrace[] = []
+
+  if (chartType === 'pie') {
+    if (series.length > 0) {
+      const s = series[0]
+      traces.push({
+        type: 'pie',
+        labels: s.x.map((val) => String(val)),
+        values: s.y,
+        name: s.name,
+        textposition: 'inside',
+        hoverinfo: 'label+value+percent',
+      })
+    }
+  } else if (chartType === 'histogram') {
+    series.forEach((s) => {
+      traces.push({
+        type: 'histogram',
+        x: s.y,
+        name: s.name,
+        opacity: 0.75,
+        marker: { color: format.lineColors?.[s.name] || undefined },
+      })
+    })
+  } else if (chartType === 'bar') {
+    series.forEach((s) => {
+      traces.push({
+        type: 'bar',
+        name: s.name,
+        x: s.x.map((val) => val as any),
+        y: s.y.map((val) => val as any),
+        marker: { color: format.lineColors?.[s.name] || undefined },
+      })
+    })
+  } else if (chartType === 'scatter') {
+    series.forEach((s) => {
+      const markerSize = s.size && s.size.length > 0 ? scaleSizes(s.size) : 10
+      traces.push({
+        type: 'scatter',
+        mode: 'markers',
+        name: s.name,
+        x: s.x,
+        y: s.y,
+        marker: {
+          size: markerSize,
+          color: format.lineColors?.[s.name] || undefined,
+        },
+      })
+    })
+  } else if (chartType === 'surface3d') {
+    series.forEach((s) => {
+      if (s.z && s.z.length > 0) {
+        traces.push({
+          type: 'mesh3d',
+          name: s.name,
+          x: s.x,
+          y: s.y,
+          z: s.z,
+          intensity: s.z,
+          colorscale: 'Viridis',
+          opacity: 0.8,
+        })
+      }
+    })
+  } else {
+    // Default: 'line'
+    series.forEach((s) => {
+      traces.push({
+        type: 'scatter',
+        mode: 'lines+markers',
+        name: s.name,
+        x: s.x,
+        y: s.y,
+        line: { color: format.lineColors?.[s.name] || undefined },
+      })
+    })
   }
+
+  const layout = baseLayout(
+    format,
+    chartType === 'histogram' ? 'Value' : (format.xLabel || xLabel),
+    chartType === 'histogram' ? 'Frequency' : (format.yLabel || yLabel),
+    chartType === 'histogram' ? false : (format.xLog ?? false),
+    chartType === 'histogram' ? false : (format.yLog ?? false),
+    theme,
+  )
+
+  if (chartType === 'bar') {
+    layout.barmode = 'group'
+  }
+
+  if (chartType === 'surface3d') {
+    layout.scene = {
+      xaxis: { title: format.xLabel || xLabel, color: THEMES[theme].font, gridcolor: THEMES[theme].grid },
+      yaxis: { title: format.yLabel || yLabel, color: THEMES[theme].font, gridcolor: THEMES[theme].grid },
+      zaxis: { title: config?.zVar || 'Z', color: THEMES[theme].font, gridcolor: THEMES[theme].grid },
+    }
+  }
+
+  return { data: traces, layout }
 }
