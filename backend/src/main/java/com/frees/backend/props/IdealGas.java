@@ -4,13 +4,13 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * EES ideal-gas property functions: spelled chemical formulas (N2, CO2, ...)
+ * Ideal-gas property functions: spelled chemical formulas (N2, CO2, ...)
  * are ideal gases whose enthalpy is referenced to the enthalpy of formation
  * at 298.15 K, 1 atm — the convention that makes combustion energy balances
  * work directly (h of CO2 at 25 C is -8941 kJ/kg, not 0). Full fluid names
  * (Nitrogen, CarbonDioxide) remain real fluids via CoolProp.
  *
- * Specific heats use the cubic fits of Cengel Table A-2(c),
+ * Specific heats use standard cubic polynomial fits (JANAF-style data),
  * cp = a + bT + cT^2 + dT^3 [kJ/kmol-K], integrated in closed form for
  * enthalpy and entropy. Unlike CoolProp's real-fluid equations of state
  * (whose validity ends near 600-2000 K depending on the fluid), the
@@ -28,8 +28,8 @@ public final class IdealGas {
 
     /**
      * molarMass [kg/kmol], formation enthalpy hf [kJ/kmol] and absolute
-     * entropy s0 [kJ/kmol-K] at 298.15 K / 1 atm (Cengel A-26), and the
-     * cp(T) cubic coefficients [kJ/kmol-K] (Cengel A-2c).
+     * entropy s0 [kJ/kmol-K] at 298.15 K / 1 atm, and the
+     * cp(T) cubic coefficients [kJ/kmol-K] from standard thermochemical tables.
      */
     private record Species(double molarMass, double hf, double s0,
                            double a, double b, double c, double d) {}

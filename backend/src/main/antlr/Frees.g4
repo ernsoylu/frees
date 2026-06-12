@@ -1,4 +1,4 @@
-grammar Ees;
+grammar Frees;
 
 program
     : sep? (topLevel (sep topLevel)* sep?)? EOF
@@ -150,7 +150,7 @@ argList
     : arg (COMMA arg)*
     ;
 
-// Named arguments (T=300) select fluid property inputs, EES-style:
+// Named arguments (T=300) select fluid property inputs:
 // Enthalpy(R134a, T=T1, x=1)
 arg
     : IDENT EQ expr   # NamedArg

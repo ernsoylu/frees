@@ -4,8 +4,8 @@ import java.util.Set;
 import java.util.TreeSet;
 
 /**
- * AST for an EES expression. Variable names are stored lowercase because
- * EES variable names are case-insensitive.
+ * AST for a frees expression. Variable names are stored lowercase because
+ * variable names are case-insensitive.
  */
 public sealed interface Expr permits Expr.Num, Expr.Var, Expr.BinOp, Expr.Neg,
         Expr.Call, Expr.ArrayAccess, Expr.Range, Expr.ArrayLiteral,

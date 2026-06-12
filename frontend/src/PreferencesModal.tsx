@@ -23,7 +23,7 @@ interface Field {
   hint: string
 }
 
-// Mirrors the EES Options > Preferences > Stop Crit tab.
+// Mirrors the Options > Preferences > Stop Crit tab.
 const FIELDS: Field[] = [
   { key: 'maxIterations', label: 'No. iterations', hint: 'Maximum Newton iterations per block' },
   { key: 'relativeResiduals', label: 'Relative residuals', hint: '|lhs − rhs| / |lhs| convergence tolerance' },
@@ -79,7 +79,7 @@ export default function PreferencesModal({ criteria, unitSystem, fillMissing, on
     <Modal opened onClose={onClose} title="Preferences — Stop Criteria" centered>
       <Text size="sm" c="dimmed" mb="md">
         Calculation stops when any criterion is satisfied. Restore Defaults
-        applies frEES defaults (tighter than EES for higher precision).
+        applies the frees defaults (tight tolerances for higher precision).
       </Text>
 
       <Stack gap="sm">

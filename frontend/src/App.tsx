@@ -248,7 +248,7 @@ export default function App() {
 
   function onTextChange(value: string) {
     setText(value)
-    // Like EES, any edit invalidates the previous Check; Solve is gated
+    // Any edit invalidates the previous Check; Solve is gated
     // until the system is re-checked. Table checks depend on the same text.
     setCheckResult(null)
     setResult(null)
@@ -345,7 +345,7 @@ export default function App() {
     setTableResults([])
     try {
       // Check the augmented system: the equations plus one representative
-      // fixed value per table input column (EES table semantics).
+      // fixed value per table input column (table semantics).
       const filled = filledTableColumns()
       let augmented = text
       for (const [name, value] of filled) {
@@ -399,7 +399,7 @@ export default function App() {
     setTableSolving(true)
     try {
       // Non-empty cells become fixed inputs for that run; blank cells are
-      // solved per row (EES Solve Table semantics).
+      // solved per row (Solve Table semantics).
       const rows = paramRows.map((row) => {
         const fixed: Record<string, number> = {}
         for (const name of tableVars) {

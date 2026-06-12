@@ -1,8 +1,8 @@
 package com.frees.backend.core;
 
 /**
- * EES Stop Criteria (Options > Preferences > Stop Crit), plus the complex-mode
- * toggle. frEES defaults are tighter than EES's documented 1e-6/1e-9 (the
+ * Stop Criteria (Options > Preferences > Stop Crit), plus the complex-mode
+ * toggle. frees defaults are tighter than the classic 1e-6/1e-9 (the
  * residual scale floors at 1.0, so 1e-12 behaves like a high-precision
  * absolute tolerance for unit-scale equations).
  */

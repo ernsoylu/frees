@@ -48,7 +48,7 @@ public final class MarkdownEquationExtractor {
     private MarkdownEquationExtractor() {}
 
     /**
-     * Splits a line at top-level semicolons (EES allows several equations per line,
+     * Splits a line at top-level semicolons (several equations per line are allowed,
      * e.g. "A[1,1] = 2; A[1,2] = 1"), ignoring semicolons inside {comments} and "strings".
      * Returns [start, end) index pairs into the given string; always at least one segment.
      */
@@ -167,6 +167,51 @@ public final class MarkdownEquationExtractor {
         return true;
     }
 
+    /** FUNCTION/PROCEDURE/MODULE keyword opening a body that runs to END. */
+    private static boolean opensCodeBlock(String line) {
+        String upper = stripComments(line).trim().toUpperCase();
+        return upper.startsWith("FUNCTION") || upper.startsWith("PROCEDURE")
+                || upper.startsWith("MODULE");
+    }
+
+    /** Depth change contributed by a line inside a FUNCTION/PROCEDURE/MODULE
+     * body: IF and REPEAT open nested blocks, END and UNTIL close one. */
+    private static int nestedDepthDelta(String line) {
+        String upper = stripComments(line).trim().toUpperCase();
+        if (upper.startsWith("IF ") || upper.startsWith("IF(")
+                || upper.startsWith("REPEAT") || upper.startsWith("DUPLICATE")) {
+            return 1;
+        }
+        if (upper.equals("END") || upper.startsWith("END ")
+                || upper.startsWith("UNTIL")) {
+            return -1;
+        }
+        return 0;
+    }
+
+    /** Whether the line ends inside a still-open {comment}. */
+    private static boolean leavesCommentOpen(String line) {
+        boolean inBraces = false;
+        boolean inQuotes = false;
+        for (int i = 0; i < line.length(); i++) {
+            char c = line.charAt(i);
+            if (inBraces) {
+                if (c == '}') {
+                    inBraces = false;
+                }
+            } else if (inQuotes) {
+                if (c == '"') {
+                    inQuotes = false;
+                }
+            } else if (c == '{') {
+                inBraces = true;
+            } else if (c == '"') {
+                inQuotes = true;
+            }
+        }
+        return inBraces;
+    }
+
     public static ExtractionResult extract(String source) {
         if (source == null) {
             return new ExtractionResult("", List.of());
@@ -174,11 +219,36 @@ public final class MarkdownEquationExtractor {
         StringBuilder clean = new StringBuilder();
         List<ExtractedEquation> equations = new ArrayList<>();
         String[] lines = source.split("\\r?\\n", -1);
+        int blockDepth = 0;
+        boolean inComment = false;
         for (int lineIdx = 0; lineIdx < lines.length; lineIdx++) {
             String line = lines[lineIdx];
             String stripped = stripComments(line).trim();
+            if (inComment) {
+                // Continuation of a multi-line {comment} opened on a kept
+                // line: preserve it so the parser sees the closing brace.
+                clean.append(line).append("\n");
+                inComment = line.indexOf('}') == -1;
+                continue;
+            }
+            if (blockDepth > 0) {
+                // Inside a FUNCTION/PROCEDURE/MODULE body: assignments
+                // (:=), IF/ELSE and loop lines are code, not prose — keep
+                // them verbatim and out of the equation list.
+                blockDepth += nestedDepthDelta(line);
+                clean.append(line).append("\n");
+                inComment = leavesCommentOpen(line);
+                continue;
+            }
+            if (opensCodeBlock(line)) {
+                blockDepth = 1;
+                clean.append(line).append("\n");
+                inComment = leavesCommentOpen(line);
+                continue;
+            }
             if (isPureEquationLine(line)) {
                 clean.append(line).append("\n");
+                inComment = leavesCommentOpen(line);
                 if (stripped.contains("=")) {
                     for (int[] seg : semicolonSegments(line)) {
                         String segText = line.substring(seg[0], seg[1]);
@@ -364,6 +434,14 @@ public final class MarkdownEquationExtractor {
                 }
                 end = exp;
             }
+            // Imaginary literal suffix: 0i, 1.5i — but not the start of an
+            // identifier (2items stays a number followed by an identifier).
+            if (end < line.length() && (line.charAt(end) == 'i' || line.charAt(end) == 'j')
+                    && (end + 1 >= line.length()
+                        || (!Character.isLetterOrDigit(line.charAt(end + 1))
+                            && line.charAt(end + 1) != '_'))) {
+                end++;
+            }
             return new Token(TokenType.NUMBER, line.substring(i, end), end);
         }
 
@@ -389,8 +467,28 @@ public final class MarkdownEquationExtractor {
         String[] lines = originalText.split("\\r?\\n", -1);
         StringBuilder report = new StringBuilder();
         int eqIndex = 0;
+        int blockDepth = 0;
+        boolean inComment = false;
         for (String line : lines) {
+            if (inComment) {
+                report.append(line).append("\n");
+                inComment = line.indexOf('}') == -1;
+                continue;
+            }
+            if (blockDepth > 0) {
+                blockDepth += nestedDepthDelta(line);
+                report.append(line).append("\n");
+                inComment = leavesCommentOpen(line);
+                continue;
+            }
+            if (opensCodeBlock(line)) {
+                blockDepth = 1;
+                report.append(line).append("\n");
+                inComment = leavesCommentOpen(line);
+                continue;
+            }
             if (isPureEquationLine(line)) {
+                inComment = leavesCommentOpen(line);
                 String stripped = stripComments(line).trim();
                 if (stripped.contains("=")) {
                     for (int[] seg : semicolonSegments(line)) {

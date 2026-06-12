@@ -3,7 +3,7 @@ import { VariableResult } from '../api'
 /**
  * Thermodynamic state detection: solved variables named like h1, s[2] or
  * T_3 are grouped into numbered states (rows) by property (columns), the
- * EES convention for cycle analyses. All values are SI.
+ * the usual convention for cycle analyses. All values are SI.
  */
 
 /** Canonical property columns, in display order. */

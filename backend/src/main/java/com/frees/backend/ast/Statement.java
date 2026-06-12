@@ -3,7 +3,7 @@ package com.frees.backend.ast;
 import java.util.List;
 
 /**
- * Represents a parsed statement in frEES, which can be an equation,
+ * Represents a parsed statement in frees, which can be an equation,
  * a duplicate block, or a CALL to a PROCEDURE or MODULE.
  */
 public sealed interface Statement permits Statement.Eq, Statement.Duplicate, Statement.CallProc {

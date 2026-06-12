@@ -11,7 +11,7 @@ class UnitRegistryTest {
 
     @Test
     void convertFtSquaredToInSquaredIs144() {
-        // The canonical example from the EES manual (Story 2.2).
+        // The canonical example from the unit-conversion references (Story 2.2).
         assertEquals(144.0, UnitRegistry.convert("ft^2", "in^2"), 1e-9);
     }
 
@@ -73,7 +73,7 @@ class UnitRegistryTest {
 
     @Test
     void heatTransferCoefficientUnits() {
-        // Btu/hr-ft^2-R from the EES manual: dimensions of W/m^2-K.
+        // Btu/hr-ft^2-R from the unit-conversion references: dimensions of W/m^2-K.
         Quantity btu = UnitRegistry.parse("Btu/hr-ft^2-R");
         Quantity si = UnitRegistry.parse("W/m^2-K");
         assertTrue(btu.sameDimensionsAs(si));

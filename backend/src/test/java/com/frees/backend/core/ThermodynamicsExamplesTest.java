@@ -6,9 +6,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Known engineering problems from Cengel & Boles, "Thermodynamics: An
- * Engineering Approach" (9th ed.), solved with frEES and compared against the
- * book's published answers.
+ * Classic introductory thermodynamics problems solved with frees and
+ * compared against well-known published answers.
  */
 class ThermodynamicsExamplesTest {
 
@@ -22,11 +21,11 @@ class ThermodynamicsExamplesTest {
      */
     @Test
     void example1_1_windTurbineEnergyAndSavings() {
-        // frEES computes in SI: 30 kW -> 30000 W, 2200 h -> 7.92e6 s, so
+        // frees computes in SI: 30 kW -> 30000 W, 2200 h -> 7.92e6 s, so
         // E_total lands in joules; kWh is recovered via Convert for the
         // book comparison.
         EquationSystemSolver.Result result = solver.solve("""
-                { Cengel & Boles Example 1-1 }
+                { Worked example: weight on the moon }
                 W_dot = 30 [kW]                  { rated power -> W }
                 hours = 2200 [h]                 { operating time -> s }
                 unitcost = 0.12                  { $/kWh }
@@ -68,7 +67,7 @@ class ThermodynamicsExamplesTest {
     @Test
     void example1_2_oilTankMass() {
         EquationSystemSolver.Result result = solver.solve("""
-                { Cengel & Boles Example 1-2 }
+                { Worked example: tank mass and weight }
                 rho = 850 [kg/m^3]   { oil density }
                 V = 2 [m^3]          { tank volume }
                 m = rho * V          { mass in the tank }
@@ -107,7 +106,7 @@ class ThermodynamicsExamplesTest {
         // SI throughout: 55 cm -> 0.55 m and 96 kPa -> 96000 Pa automatically,
         // so P = P_atm + rho*g*h needs no manual conversion factors at all.
         EquationSystemSolver.Result result = solver.solve("""
-                { Cengel & Boles Example 1-9 }
+                { Worked example: manometer pressure }
                 SG = 0.85                      { specific gravity of manometer fluid }
                 rho_water = 1000 [kg/m^3]      { standard density of water }
                 rho = SG * rho_water           { manometer fluid density }

@@ -25,6 +25,59 @@ class MarkdownEquationExtractorTest {
     }
 
     @Test
+    void preservesFunctionAndProcedureBodies() {
+        // IF/ELSE lines and := assignments inside FUNCTION/PROCEDURE bodies
+        // are code, not prose: they must survive extraction verbatim.
+        String source = """
+                FUNCTION F(x)
+                  IF x < 10 THEN
+                    F := 64 / x
+                  ELSE
+                    { turbulent branch }
+                    F := (1.8 * log10(x))^-2
+                  END
+                END
+                f = F(5)""";
+        String clean = MarkdownEquationExtractor.extract(source).cleanText;
+        assertTrue(clean.contains("IF x < 10 THEN"), clean);
+        assertTrue(clean.contains("F := 64 / x"), clean);
+        assertTrue(clean.contains("ELSE"), clean);
+        assertEquals(2, clean.lines().filter(l -> l.trim().equals("END")).count(), clean);
+
+        String proc = """
+                PROCEDURE P(d, h : area)
+                  radius := d / 2
+                  area := 2 * radius * h
+                END
+                CALL P(0.5, 2.0 : A_c)""";
+        String cleanProc = MarkdownEquationExtractor.extract(proc).cleanText;
+        assertTrue(cleanProc.contains("radius := d / 2"), cleanProc);
+    }
+
+    @Test
+    void preservesMultiLineComments() {
+        // A {comment} spanning lines must keep its closing brace, otherwise
+        // the parser swallows the following equations as comment text.
+        String source = """
+                { Find the condenser pressure,
+                  then the net power output. }
+                m_dot = 7.7 [kg/s]
+                P = 12500 [kPa]   { turbine inlet }""";
+        var result = MarkdownEquationExtractor.extract(source);
+        assertTrue(result.cleanText.contains("then the net power output. }"), result.cleanText);
+        assertEquals(2, result.equations.size());
+    }
+
+    @Test
+    void keepsImaginaryLiteralsIntact() {
+        // 1i must lex as one number: previously the line was cut after "1".
+        String line = "S = V * (2 - 1i * 3)";
+        assertTrue(MarkdownEquationExtractor.isPureEquationLine(line));
+        var result = MarkdownEquationExtractor.extract(line);
+        assertTrue(result.cleanText.contains("(2 - 1i * 3)"), result.cleanText);
+    }
+
+    @Test
     void testExtractFromLine() {
         String line = "The initial temperature T1 = 100 [C] and initial pressure P1 = 250 [kPa].";
         List<MarkdownEquationExtractor.ExtractedEquation> eqList = MarkdownEquationExtractor.extractFromLine(line);

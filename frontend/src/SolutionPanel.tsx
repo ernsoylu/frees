@@ -90,7 +90,7 @@ function UnitWarningsAlert({ warnings }: Readonly<{ warnings: string[] }>) {
       color="red"
       variant="light"
       p="xs"
-      title="Unit consistency warnings (EES Check Units)"
+      title="Unit consistency warnings (Check Units)"
     >
       <Stack gap={2}>
         {withStableKeys(warnings).map((w) => (

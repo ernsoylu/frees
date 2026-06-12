@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**frEES** is a web-based, 100% functional clone of the Engineering Equation Solver (EES). It uses a Java Spring Boot backend for high-performance symbolic compiling and numerical solving, and a React 19/TypeScript frontend for a multi-window dashboard interface.
+**frees** (free solver) is a web-based, declarative equation-solving environment for engineering problems. It uses a Java Spring Boot backend for high-performance symbolic compiling and numerical solving, and a React 19/TypeScript frontend for a multi-window dashboard interface.
 
 **Frontend UI framework:** [Mantine](https://mantine.dev) (component patterns at https://ui.mantine.dev) with the **dark theme** (`MantineProvider defaultColorScheme="dark"`). Build all new UI with Mantine components (Paper, Tabs, Modal, Table, Alert, Group/Stack/Flex); do not write bespoke CSS components.
 
@@ -42,13 +42,13 @@ cd frontend && npm start                      # dev-only: Vite dev server (proxi
 2. **Backend-Driven** — implement AST parsing and mathematical solvers before building the UI for each feature.
 3. **Continuous Verification** — write unit tests for the parser and solver (e.g., `x^2+y^3=77` and `x/y=1.23456` solve correctly) before touching React.
 
-## Core EES Principles
+## Core Solver Principles
 
-- EES is an **equation solver**, not a sequential programming language. Equations can be entered in any order.
+- frees is an **equation solver**, not a sequential programming language. Equations can be entered in any order.
 - Variable names are **case-insensitive**.
 - The solver groups equations into blocks via Tarjan's algorithm, then solves each block using Newton's method with step-halving.
 - Data types are parsed dynamically by naming convention: `$` suffix → string, `#` suffix → constant, `[]` → array, `_r`/`_i` components → complex numbers.
-- **All calculations run in SI** (frEES decision, beyond EES): unit-annotated constants are converted to SI at parse time, and computed variables get dimensionally derived SI units. Unit warnings never block solving.
+- **All calculations run in SI** (frees decision): unit-annotated constants are converted to SI at parse time, and computed variables get dimensionally derived SI units. Unit warnings never block solving.
 
 ## Architecture Summary
 
@@ -63,6 +63,6 @@ See `ARCHITECTURE_AND_REQUIREMENTS.md` for the full system design and six-Epic A
    - **Formatted**: Renders compiled Markdown report combining normal text with LaTeX/KaTeX equations, inline solutions, hover tooltips, and embedded interactive plots via `[Graph="..."]` tag resolution.
    - **Solution, Arrays, Plots, Diagram**: Grid, charts, and overlay layouts built from the JSON payload.
 
-**Check-before-Solve (EES Check/Format):** `POST /api/check` verifies syntax and structural solvability (zero degrees of freedom + complete equation↔variable matching) without solving. The frontend gates the Solve button on a successful check; any edit invalidates it.
+**Check-before-Solve (Check/Format):** `POST /api/check` verifies syntax and structural solvability (zero degrees of freedom + complete equation↔variable matching) without solving. The frontend gates the Solve button on a successful check; any edit invalidates it.
 
 **Deployment:** Both servers are containerized (`backend/Dockerfile` multi-stage Gradle build → JRE; `frontend/Dockerfile` Vite build → nginx with `/api` reverse proxy to the `backend` service). `docker-compose.yml` wires them with a TCP healthcheck so the frontend waits for a healthy backend.

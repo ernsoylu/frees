@@ -20,7 +20,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 
 /**
- * Parses EES source text into a list of equations using the ANTLR-generated
+ * Parses frees source text into a list of equations using the ANTLR-generated
  * lexer/parser and an AST-building visitor.
  */
 public final class EquationParser {
@@ -57,15 +57,15 @@ public final class EquationParser {
     public ParseResult parseResult(String source) {
         CollectingErrorListener errorListener = new CollectingErrorListener();
 
-        EesLexer lexer = new EesLexer(CharStreams.fromString(source));
+        FreesLexer lexer = new FreesLexer(CharStreams.fromString(source));
         lexer.removeErrorListeners();
         lexer.addErrorListener(errorListener);
 
-        EesParser parser = new EesParser(new CommonTokenStream(lexer));
+        FreesParser parser = new FreesParser(new CommonTokenStream(lexer));
         parser.removeErrorListeners();
         parser.addErrorListener(errorListener);
 
-        EesParser.ProgramContext program = parser.program();
+        FreesParser.ProgramContext program = parser.program();
         if (!errorListener.errors.isEmpty()) {
             throw new ParseException(String.join("\n", errorListener.errors));
         }

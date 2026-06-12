@@ -43,13 +43,13 @@ function CopyButton({ code }: Readonly<{ code: string }>) {
   );
 }
 
-const CENGEL_EXAMPLES = [
+const CYCLE_EXAMPLES = [
   {
-    value: "cengel-10-40",
-    title: "Power Cycles: Reheat Rankine Cycle with Moisture Limit (Cengel 10-40)",
-    description: "A reheat Rankine cycle where the condenser pressure is itself an unknown, fixed by the requirement that turbine-exit moisture not exceed 5%. frEES finds it implicitly from the quality constraint.",
+    value: "reheat-rankine",
+    title: "Power Cycles: Reheat Rankine Cycle with Moisture Limit",
+    description: "A reheat Rankine cycle where the condenser pressure is itself an unknown, fixed by the requirement that turbine-exit moisture not exceed 5%. frees finds it implicitly from the quality constraint.",
     note: "Verified against the textbook: condenser pressure 9.73 kPa, net power 10.2 MW, thermal efficiency 36.9%.",
-    code: `{ Reheat Rankine Cycle - Cengel 10-40 }
+    code: `{ Reheat Rankine Cycle with Moisture Limit }
 { Find the condenser pressure that limits turbine-exit moisture to 5%,
   then the net power output and thermal efficiency. }
 m_dot = 7.7 [kg/s]
@@ -95,11 +95,11 @@ W_dot_net = m_dot * w_net
 eta_th = w_net / q_in * 100`,
   },
   {
-    value: "cengel-10-62e",
-    title: "Power Cycles: Ideal Reheat-Regenerative Rankine Cycle, English Units (Cengel 10-62E)",
-    description: "One reheater and two open feedwater heaters with extractions at 250 and 40 psia. All inputs are in English units (psia, F, Btu/s); frEES converts them to SI automatically and solves the two feedwater-heater mass balances simultaneously.",
+    value: "reheat-regen-rankine",
+    title: "Power Cycles: Ideal Reheat-Regenerative Rankine Cycle, English Units",
+    description: "One reheater and two open feedwater heaters with extractions at 250 and 40 psia. All inputs are in English units (psia, F, Btu/s); frees converts them to SI automatically and solves the two feedwater-heater mass balances simultaneously.",
     note: "With 4e5 Btu/s of boiler heat input the cycle delivers about 200 MW at 47.4% thermal efficiency.",
-    code: `{ Ideal Reheat-Regenerative Rankine Cycle - Cengel 10-62E }
+    code: `{ Ideal Reheat-Regenerative Rankine Cycle, English Units }
 { One reheater and two open feedwater heaters; everything isentropic.
   English-unit inputs are converted to SI automatically. Find the boiler
   flow rate, net power and thermal efficiency. }
@@ -152,11 +152,11 @@ W_dot_net = m_dot * w_net
 eta_th = w_net / q_in * 100`,
   },
   {
-    value: "cengel-10-78",
-    title: "Power Cycles: Cogeneration Plant with Regeneration (Cengel 10-78)",
+    value: "cogeneration-plant",
+    title: "Power Cycles: Cogeneration Plant with Regeneration",
     description: "35% of the turbine flow is extracted at 1.6 MPa; one part feeds an open feedwater heater, the rest a process heater. The open-FWH energy balance determines the split.",
     note: "Verified against the textbook: boiler mass flow rate 29.1 kg/s for 25 MW of net power.",
-    code: `{ Cogeneration Plant with Regeneration - Cengel 10-78 }
+    code: `{ Cogeneration Plant with Regeneration }
 { 35% of the turbine flow is extracted at 1.6 MPa; part heats the open
   feedwater heater, the rest serves the process heater. Isentropic
   turbine and pumps. Find the boiler flow rate for 25 MW net power. }
@@ -203,11 +203,11 @@ W_dot_net = m_dot * w_net
 Q_dot_process = m_dot * (f_ext - y) * (h[7] - h[3])`,
   },
   {
-    value: "cengel-10-28",
-    title: "Power Cycles: Binary Geothermal Plant with Isobutane (Cengel 10-28)",
+    value: "binary-geothermal",
+    title: "Power Cycles: Binary Geothermal Plant with Isobutane",
     description: "A binary-cycle plant where geothermal brine at 160 C drives a Rankine cycle on isobutane. The problem supplies the isobutane properties directly, so this is a pure energy-balance system.",
     note: "Results: turbine isentropic efficiency 78.8%, net power 22.6 MW, thermal efficiency 13.7%.",
-    code: `{ Binary Geothermal Power Plant with Isobutane - Cengel 10-28 }
+    code: `{ Binary Geothermal Power Plant with Isobutane }
 { Property values are given in the problem statement. Find the turbine
   isentropic efficiency, net power and thermal efficiency. }
 m_dot_geo = 555.9 [kg/s]
@@ -243,11 +243,11 @@ W_dot_net = W_dot_turb - W_dot_pump
 eta_th = W_dot_net / Q_dot_in * 100`,
   },
   {
-    value: "cengel-9-95",
-    title: "Gas Turbines: Simple Brayton Cycle with Irreversibilities (Cengel 9-95)",
+    value: "brayton-irreversible",
+    title: "Gas Turbines: Simple Brayton Cycle with Irreversibilities",
     description: "A gas-turbine plant between 100 and 1600 kPa with compressor and turbine efficiencies of 85% and 88%. The turbine inlet temperature is unknown and recovered from the known exhaust temperature.",
     note: "Verified against the textbook: net power 6488 kW, back work ratio 0.511, thermal efficiency 37.8%.",
-    code: `{ Simple Brayton Cycle with Irreversibilities - Cengel 9-95 }
+    code: `{ Simple Brayton Cycle with Irreversibilities }
 { Air enters the compressor at 40 C and 850 m^3/min; the turbine exhausts
   at 650 C. Find net power, back work ratio and thermal efficiency. }
 P[1] = 100 [kPa]
@@ -284,11 +284,11 @@ q_in = cp * (T[3] - T[2])
 eta_th = w_net / q_in * 100`,
   },
   {
-    value: "cengel-9-105",
-    title: "Gas Turbines: Automotive Gas Turbine with Regenerator (Cengel 9-105)",
+    value: "auto-gas-turbine",
+    title: "Gas Turbines: Automotive Gas Turbine with Regenerator",
     description: "An isentropic Brayton cycle with a regenerator whose cold stream leaves 10 C cooler than the turbine exhaust entering it. Find the heat addition and rejection rates for 115 kW of net power.",
     note: "Verified against the textbook: heat addition 240 kW, heat rejection 125 kW.",
-    code: `{ Automotive Gas Turbine with Regenerator - Cengel 9-105 }
+    code: `{ Automotive Gas Turbine with Regenerator }
 { Isentropic compressor and turbine; the cold stream leaves the
   regenerator 10 C cooler than the turbine exhaust entering it. }
 P[1] = 100 [kPa]
@@ -315,11 +315,11 @@ Q_dot_in = m_dot * cp * (T[4] - T[3])
 Q_dot_out = Q_dot_in - W_dot_net`,
   },
   {
-    value: "cengel-9-112",
-    title: "Gas Turbines: Brayton Cycle with Regeneration and Variable Specific Heats (Cengel 9-112)",
+    value: "brayton-regen-variable-cp",
+    title: "Gas Turbines: Brayton Cycle with Regeneration and Variable Specific Heats",
     description: "Instead of assuming constant specific heats, this model uses real-gas air properties (Enthalpy/Entropy of Air) for the compressor, turbine and regenerator, exactly like the air-table solution in the book.",
     note: "Verified against the textbook: turbine exit temperature 783 K, net work 108 kJ/kg, thermal efficiency 22.5%.",
-    code: `{ Brayton Cycle with Regeneration, Variable Specific Heats - Cengel 9-112 }
+    code: `{ Brayton Cycle with Regeneration, Variable Specific Heats }
 { Real-gas air properties replace the constant-cp assumption. Find the
   turbine exit temperature, net work and thermal efficiency. }
 P[1] = 100 [kPa]
@@ -383,19 +383,19 @@ export default function HelpPage() {
       case 'started':
         return (
           <Stack gap="md">
-            <Title order={2} c="blue.4">1. Getting Started with frEES</Title>
+            <Title order={2} c="blue.4">1. Getting Started with frees</Title>
             <Text size="md" style={{ lineHeight: 1.6 }}>
-              Welcome to <strong>frEES</strong> (free Engineering Equation Solver). frEES is a declarative, web-based numerical solver designed for engineers, researchers, and students.
+              Welcome to <strong>frees</strong> (free solver). frees is a declarative, web-based numerical solver designed for engineers, researchers, and students.
             </Text>
             <Text size="md" style={{ lineHeight: 1.6 }}>
-              Unlike procedural languages (like Python, MATLAB, or C++), where you must explicitly rearrange equations to solve for unknowns (e.g. writing <code>x = ...</code>), frEES is <strong>declarative</strong>. You input your equations exactly as they are written in physics and engineering textbooks (e.g. <code>P * V = n * R * T</code>), and the solver automatically determines which variables are unknown, groups equations into blocks, and solves them simultaneously.
+              Unlike procedural languages (like Python, MATLAB, or C++), where you must explicitly rearrange equations to solve for unknowns (e.g. writing <code>x = ...</code>), frees is <strong>declarative</strong>. You input your equations exactly as they are written in physics and engineering textbooks (e.g. <code>P * V = n * R * T</code>), and the solver automatically determines which variables are unknown, groups equations into blocks, and solves them simultaneously.
             </Text>
 
             <Alert color="blue" title="The Declarative Philosophy" mt="xs">
-              In frEES, <code>x + y = 5</code> and <code>y = 5 - x</code> are completely identical. You do not need to isolate variables; the solver uses advanced graph theory (Tarjan's strongly connected components) to group equations and solve them for you.
+              In frees, <code>x + y = 5</code> and <code>y = 5 - x</code> are completely identical. You do not need to isolate variables; the solver uses advanced graph theory (Tarjan's strongly connected components) to group equations and solve them for you.
             </Alert>
 
-            <Title order={3} mt="sm">The frEES Workflow</Title>
+            <Title order={3} mt="sm">The frees Workflow</Title>
             <SimpleGrid cols={{ base: 1, sm: 3 }} spacing="md">
               <Card shadow="sm" padding="md" radius="md" withBorder bg="dark.8">
                 <ThemeIcon color="blue" radius="xl" size="lg" mb="sm">1</ThemeIcon>
@@ -466,7 +466,7 @@ export default function HelpPage() {
 
             <Title order={3} mt="lg">Markdown Reports & Inline Equations</Title>
             <Text size="md" style={{ lineHeight: 1.6 }}>
-              frEES allows you to mix standard Markdown and mathematical equations directly in the <strong>Editor</strong>. When you click <strong>Check</strong> or <strong>Solve</strong>, the solver automatically extracts and evaluates all equations, generating a beautifully integrated <strong>Formatted</strong> report.
+              frees allows you to mix standard Markdown and mathematical equations directly in the <strong>Editor</strong>. When you click <strong>Check</strong> or <strong>Solve</strong>, the solver automatically extracts and evaluates all equations, generating a beautifully integrated <strong>Formatted</strong> report.
             </Text>
             <Alert color="blue" title="Prose with Equations" mt="xs">
               You can write inline variables and equations anywhere in your text. Any statement containing an <code>=</code> sign is automatically parsed as an equation, solved, and formatted as a LaTeX/KaTeX formula.
@@ -680,7 +680,7 @@ Here is the thermodynamic T-s diagram showing the cycle state points:
           <Stack gap="md">
             <Title order={2} c="blue.4">3. Variables, Guess Values & Bounds</Title>
             <Text style={{ lineHeight: 1.6 }}>
-              Because frEES uses numerical iteration (Newton-Raphson) to solve non-linear simultaneous equations, initial guess values and boundary limits are critical for ensuring solver convergence.
+              Because frees uses numerical iteration (Newton-Raphson) to solve non-linear simultaneous equations, initial guess values and boundary limits are critical for ensuring solver convergence.
             </Text>
 
             <Title order={3}>Variable Information Grid</Title>
@@ -712,7 +712,7 @@ Here is the thermodynamic T-s diagram showing the cycle state points:
           <Stack gap="md">
             <Title order={2} c="blue.4">4. Units & Dimensional Consistency</Title>
             <Text style={{ lineHeight: 1.6 }}>
-              frEES features a robust unit conversion and verification engine. Internally, all equations are parsed and calculated strictly in **SI base units** (K, Pa, kg, m, s, etc.) to ensure numerical correctness. However, inputs can be annotated in any unit, and outputs are converted back for display.
+              frees features a robust unit conversion and verification engine. Internally, all equations are parsed and calculated strictly in **SI base units** (K, Pa, kg, m, s, etc.) to ensure numerical correctness. However, inputs can be annotated in any unit, and outputs are converted back for display.
             </Text>
 
             <Title order={3}>Unit Annotations</Title>
@@ -721,7 +721,7 @@ Here is the thermodynamic T-s diagram showing the cycle state points:
             </Text>
             <Paper withBorder p="sm" bg="dark.8"><Code block>P_inlet = 101.3 [kPa]</Code></Paper>
             <Text size="sm" c="dimmed">
-              This converts 101.3 kPa (101,300 Pa) to SI units internally. When viewing results in the Solution window, frEES will display the value as <code>101.3</code> and set its unit to <code>kPa</code>.
+              This converts 101.3 kPa (101,300 Pa) to SI units internally. When viewing results in the Solution window, frees will display the value as <code>101.3</code> and set its unit to <code>kPa</code>.
             </Text>
 
             <Title order={3} mt="sm">The Convert() Function</Title>
@@ -740,7 +740,7 @@ Here is the thermodynamic T-s diagram showing the cycle state points:
 
             <Title order={3} mt="sm">Dimensional Homogeneity Checks</Title>
             <Text style={{ lineHeight: 1.6 }}>
-              When you click **Check** or **Solve**, frEES validates unit consistency. If you add variables with incompatible units (e.g., adding a length to a time, like <code>x = 5 [m] + 3 [s]</code>), frEES will compile and solve the math, but it will display a **Unit Warning** in yellow at the bottom of the screen. Clicking the warning reveals exactly which equations violated unit consistency.
+              When you click **Check** or **Solve**, frees validates unit consistency. If you add variables with incompatible units (e.g., adding a length to a time, like <code>x = 5 [m] + 3 [s]</code>), frees will compile and solve the math, but it will display a **Unit Warning** in yellow at the bottom of the screen. Clicking the warning reveals exactly which equations violated unit consistency.
             </Text>
           </Stack>
         );
@@ -789,7 +789,7 @@ Here is the thermodynamic T-s diagram showing the cycle state points:
           <Stack gap="md">
             <Title order={2} c="blue.4">6. Matrices & Vectors</Title>
             <Text style={{ lineHeight: 1.6 }}>
-              frEES supports robust vector and matrix algebra. Rather than using runtime libraries that bypass equation dependencies, matrix and vector equations are compiled down to scalar constraint equations solved via Newton's method. This allows full differentiability, respects variable bounds, and works seamlessly with the rest of the solver.
+              frees supports robust vector and matrix algebra. Rather than using runtime libraries that bypass equation dependencies, matrix and vector equations are compiled down to scalar constraint equations solved via Newton's method. This allows full differentiability, respects variable bounds, and works seamlessly with the rest of the solver.
             </Text>
 
             <Title order={3}>Declaring Vectors & Matrices</Title>
@@ -805,7 +805,7 @@ Here is the thermodynamic T-s diagram showing the cycle state points:
 
             <Title order={3} mt="sm">Matrix & Vector Operations</Title>
             <Text>
-              frEES provides built-in functions for algebraic operations:
+              frees provides built-in functions for algebraic operations:
             </Text>
             <Table striped highlightOnHover withTableBorder>
               <Table.Thead>
@@ -965,21 +965,21 @@ CALL CylinderGeo(0.5, 2.0 : A_cyl, V_cyl)`}
               - When called, the solver automatically prefixes all internal variables inside the module with a unique namespace (e.g. <code>m1.temp</code>, <code>m2.temp</code>) so they do not conflict.
             </Text>
             <Paper withBorder p="md" bg="dark.8" radius="md" style={{ position: 'relative' }}>
-              <CopyButton code={`MODULE ParallelPipe(P1, P2, D, L, rho, mu : m_dot)\n  { Friction factors and mass flow relations inside the module }\n  delta_P = P1 - P2\n  delta_P = f * (L / D) * (rho * V^2 / 2)\n  Re = rho * V * D / mu\n  f = 64 / Re { Laminar flow assumption }\n  A = pi * D^2 / 4\n  m_dot = rho * V * A\nEND\n\n{ Call module - equations solved simultaneously with main system }\nCALL ParallelPipe(150 [kPa], 100 [kPa], 0.05, 10, 1000, 0.001 : m_flow_1)\nCALL ParallelPipe(150 [kPa], 100 [kPa], 0.08, 10, 1000, 0.001 : m_flow_2)\nm_flow_total = m_flow_1 + m_flow_2`} />
+              <CopyButton code={`MODULE ParallelPipe(P1, P2, D, L, rho, mu : m_dot)\n  { Friction factors and mass flow relations inside the module }\n  delta_P = P1 - P2\n  delta_P = f * (L / D) * (rho * V^2 / 2)\n  Re = rho * V * D / mu\n  f = 64 / Re { Laminar flow (oil: Re < 2300) }\n  A = pi * D^2 / 4\n  m_dot = rho * V * A\nEND\n\n{ Call module - equations solved simultaneously with main system }\nCALL ParallelPipe(150 [kPa], 100 [kPa], 0.05, 10, 900, 0.29 : m_flow_1)\nCALL ParallelPipe(150 [kPa], 100 [kPa], 0.08, 10, 900, 0.29 : m_flow_2)\nm_flow_total = m_flow_1 + m_flow_2`} />
               <Code block style={{ background: 'transparent' }}>
                 {`MODULE ParallelPipe(P1, P2, D, L, rho, mu : m_dot)
   { Friction factors and mass flow relations inside the module }
   delta_P = P1 - P2
   delta_P = f * (L / D) * (rho * V^2 / 2)
   Re = rho * V * D / mu
-  f = 64 / Re { Laminar flow assumption }
+  f = 64 / Re { Laminar flow (oil: Re < 2300) }
   A = pi * D^2 / 4
   m_dot = rho * V * A
 END
 
 { Call module - equations solved simultaneously with main system }
-CALL ParallelPipe(150 [kPa], 100 [kPa], 0.05, 10, 1000, 0.001 : m_flow_1)
-CALL ParallelPipe(150 [kPa], 100 [kPa], 0.08, 10, 1000, 0.001 : m_flow_2)
+CALL ParallelPipe(150 [kPa], 100 [kPa], 0.05, 10, 900, 0.29 : m_flow_1)
+CALL ParallelPipe(150 [kPa], 100 [kPa], 0.08, 10, 900, 0.29 : m_flow_2)
 m_flow_total = m_flow_1 + m_flow_2`}
               </Code>
             </Paper>
@@ -1023,7 +1023,7 @@ m_flow_total = m_flow_1 + m_flow_2`}
           <Stack gap="md">
             <Title order={2} c="blue.4">9. Thermodynamic Fluid Properties (CoolProp)</Title>
             <Text style={{ lineHeight: 1.6 }}>
-              frEES is equipped with a direct bridge to the industry-standard **CoolProp** thermodynamic database, allowing you to fetch high-accuracy properties for dozens of fluids.
+              frees is equipped with a direct bridge to the industry-standard **CoolProp** thermodynamic database, allowing you to fetch high-accuracy properties for dozens of fluids.
             </Text>
 
             <Title order={3}>Syntax & Structure</Title>
@@ -1168,7 +1168,7 @@ m_flow_total = m_flow_1 + m_flow_2`}
             <Text style={{ lineHeight: 1.6 }}>
               Spelled chemical formulas select <strong>ideal-gas</strong> property routines whose enthalpy
               is referenced to the <strong>enthalpy of formation at 298.15 K, 1 atm</strong> — the
-              convention that makes combustion energy balances work directly (EES behavior).{' '}
+              convention that makes combustion energy balances work directly.{' '}
               <code>Enthalpy(CO2, T=298.15)</code> returns −8941.6 kJ/kg, not 0. Full names
               (Nitrogen, CarbonDioxide, Methane) keep the real-fluid CoolProp models above.
             </Text>
@@ -1196,7 +1196,7 @@ m_flow_total = m_flow_1 + m_flow_2`}
               <Code>IntEnergy(gas, T=...)</Code>, <Code>Cp</Code>/<Code>Cv(gas, T=...)</Code>,{' '}
               <Code>Volume(gas, T=..., P=...)</Code>, and the inverses{' '}
               <Code>Temperature(gas, h=...)</Code> and <Code>Temperature(gas, s=..., P=...)</Code>.
-              Specific heats use the Cengel A-2(c) polynomial fits, valid through flame
+              Specific heats use standard cubic polynomial fits, valid through flame
               temperatures — far beyond the real-fluid equations of state.
             </Text>
             <Paper withBorder p="md" bg="dark.8" radius="md" style={{ position: 'relative' }}>
@@ -1232,7 +1232,7 @@ H_react = H_prod`}
           <Stack gap="md">
             <Title order={2} c="blue.4">10. Psychrometrics (AirH2O / Humid Air)</Title>
             <Text style={{ lineHeight: 1.6 }}>
-              Psychrometric calculations (heating, cooling, and humidifying moist air) are a core pillar of HVAC engineering. frEES provides dedicated functions for moist air by calling the specialized <code>AirH2O</code> (or <code>HumidAir</code>) database.
+              Psychrometric calculations (heating, cooling, and humidifying moist air) are a core pillar of HVAC engineering. frees provides dedicated functions for moist air by calling the specialized <code>AirH2O</code> (or <code>HumidAir</code>) database.
             </Text>
 
             <Title order={3}>The 3-Indicator Requirement</Title>
@@ -1339,7 +1339,7 @@ T_wb = WetBulb(AirH2O, T=T_db, P=P_atm, R=RH)`}
           <Stack gap="md">
             <Title order={2} c="blue.4">11. Numerical Integration (ODEs & Calculus)</Title>
             <Text style={{ lineHeight: 1.6 }}>
-              frEES includes equation-based calculus solvers that run numerical integration. You can compute integrals and solve systems containing first-order Ordinary Differential Equations (ODEs) alongside standard algebraic equations.
+              frees includes equation-based calculus solvers that run numerical integration. You can compute integrals and solve systems containing first-order Ordinary Differential Equations (ODEs) alongside standard algebraic equations.
             </Text>
 
             <Title order={3}>Syntax</Title>
@@ -1355,8 +1355,8 @@ T_wb = WetBulb(AirH2O, T=T_db, P=P_atm, R=RH)`}
               The integration variable (e.g. <code>t</code>) is stepped from the lower limit to the upper limit. At each step, the solver treats <code>t</code> as a temporary constant and solves the remaining algebraic equations in the system. The integrand expression is then evaluated, and accumulation is computed using a **second-order predictor-corrector** (Euler predictor, trapezoidal corrector) scheme.
             </Text>
             <List spacing="xs" mb="sm">
-              <List.Item><strong>Adaptive Step Sizing:</strong> If the 5th argument is omitted, frEES automatically varies the step size to satisfy a relative error tolerance of 1e-6.</List.Item>
-              <List.Item><strong>Fixed Step Sizing:</strong> If you supply a positive number as the 5th argument, frEES forces the solver to take exactly that step size.</List.Item>
+              <List.Item><strong>Adaptive Step Sizing:</strong> If the 5th argument is omitted, frees automatically varies the step size to satisfy a relative error tolerance of 1e-6.</List.Item>
+              <List.Item><strong>Fixed Step Sizing:</strong> If you supply a positive number as the 5th argument, frees forces the solver to take exactly that step size.</List.Item>
             </List>
 
             <Title order={3} mt="sm">Solving first-order ODEs</Title>
@@ -1381,12 +1381,12 @@ y0 = 1`}
           <Stack gap="md">
             <Title order={2} c="blue.4">12. Complex Number Arithmetic</Title>
             <Text style={{ lineHeight: 1.6 }}>
-              Electrical, vibration, and control engineering models frequently rely on complex number arithmetic. frEES supports full complex variables when **Complex Mode** is active.
+              Electrical, vibration, and control engineering models frequently rely on complex number arithmetic. frees supports full complex variables when **Complex Mode** is active.
             </Text>
 
             <Title order={3}>Activating Complex Mode</Title>
             <Text>
-              You can toggle Complex Mode using the action bar or settings. Once active, frEES automatically:
+              You can toggle Complex Mode using the action bar or settings. Once active, frees automatically:
               <br/>
               1. Treats every variable as having a real component (suffix <code>_r</code>) and an imaginary component (suffix <code>_i</code>).
               <br/>
@@ -1453,7 +1453,7 @@ y0 = 1`}
           <Stack gap="md">
             <Title order={2} c="blue.4">13. Engineering Examples & Case Studies</Title>
             <Text>
-              These real-world examples highlight how students and engineers can use frEES to model multi-domain physics and thermodynamic cycles.
+              These real-world examples highlight how students and engineers can use frees to model multi-domain physics and thermodynamic cycles.
             </Text>
 
             <Accordion variant="separated">
@@ -1675,7 +1675,7 @@ theta_p = arctan(N[2,2]/N[1,2]) * 180/pi`}
                     </Code>
                   </Paper>
                   <Text size="xs" mt="xs" c="dimmed">
-                    With sigma_x = 60, sigma_y = 20, tau_xy = 15 MPa the principal stresses are 15 and 65 MPa (ascending), tau_max = 25 MPa, and the major principal axis sits at theta_p = 18.43° — matching the Mohr's circle result tan(2θ) = 2τ/(σx−σy). Stresses solve in SI (Pa) per the frEES SI-always rule.
+                    With sigma_x = 60, sigma_y = 20, tau_xy = 15 MPa the principal stresses are 15 and 65 MPa (ascending), tau_max = 25 MPa, and the major principal axis sits at theta_p = 18.43° — matching the Mohr's circle result tan(2θ) = 2τ/(σx−σy). Stresses solve in SI (Pa) per the frees SI-always rule.
                   </Text>
                 </Accordion.Panel>
               </Accordion.Item>
@@ -1725,12 +1725,12 @@ H_reactants = H_products`}
                     </Code>
                   </Paper>
                   <Text size="xs" mt="xs" c="dimmed">
-                    The upper limit T_flame is an unknown of the system: frEES inlines the c_p polynomials into the integrals and solves the energy balance directly (about 2345 K, matching the ideal-gas table data) with no manual guesses needed.
+                    The upper limit T_flame is an unknown of the system: frees inlines the c_p polynomials into the integrals and solves the energy balance directly (about 2345 K, matching the ideal-gas table data) with no manual guesses needed.
                   </Text>
                 </Accordion.Panel>
               </Accordion.Item>
 
-              {CENGEL_EXAMPLES.map((ex) => (
+              {CYCLE_EXAMPLES.map((ex) => (
                 <Accordion.Item value={ex.value} key={ex.value}>
                   <Accordion.Control>
                     <Text fw={600} c="cyan.4">{ex.title}</Text>
@@ -1755,7 +1755,7 @@ H_reactants = H_products`}
           <Stack gap="md">
             <Title order={2} c="blue.4">14. Solver Reference & Troubleshooting API</Title>
             <Text style={{ lineHeight: 1.6 }}>
-              This section is a technical reference for debugging failed systems, syntax limitations, and error codes in frEES.
+              This section is a technical reference for debugging failed systems, syntax limitations, and error codes in frees.
             </Text>
 
             <Accordion variant="separated">
@@ -1825,7 +1825,7 @@ H_reactants = H_products`}
             <Burger opened={opened} onClick={toggle} hiddenFrom="sm" size="sm" />
             <Title order={3} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <Text span inherit variant="gradient" gradient={{ from: 'blue.4', to: 'cyan.3', deg: 90 }}>
-                frEES
+                frees
               </Text>
               <Text span inherit size="lg" c="dimmed" fw={500}>
                 Documentation Portal

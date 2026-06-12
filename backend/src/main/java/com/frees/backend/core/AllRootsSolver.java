@@ -16,7 +16,8 @@ import java.util.TreeSet;
 
 /**
  * Finds (in practice) all roots of a blocked equation system, going beyond
- * EES, which only ever reports the single root nearest the guess values.
+ * plain Newton iteration, which only ever reports the single root nearest
+ * the guess values.
  *
  * Strategy per block, composed by Cartesian branching across blocks:
  *  - 1-variable blocks: scan the bounded interval for sign changes of the

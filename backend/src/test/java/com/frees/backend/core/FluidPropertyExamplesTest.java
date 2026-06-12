@@ -9,17 +9,16 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
- * Worked examples from Cengel & Boles, "Thermodynamics: An Engineering
- * Approach" (9th ed., ch. 3), solved as frEES equation systems against
- * CoolProp. All values SI: K, Pa, J/kg, m3/kg.
+ * Classic steam and refrigerant property-lookup examples solved as frees
+ * equation systems against CoolProp. All values SI: K, Pa, J/kg, m3/kg.
  *
- * Note: the book's R134a tables use the ASHRAE reference state while
+ * Note: many R134a tables use the ASHRAE reference state while
  * CoolProp defaults to IIR, so R134a checks use reference-independent
- * quantities (h_fg, quality, T, v). Water tables share CoolProp's
+ * quantities (h_fg, quality, T, v). Common water tables share CoolProp's
  * reference (u = 0 for saturated liquid at the triple point), so water
  * energies are compared directly.
  */
-class CengelExamplesTest {
+class FluidPropertyExamplesTest {
 
     private final EquationSystemSolver solver = new EquationSystemSolver();
 

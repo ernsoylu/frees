@@ -14,7 +14,7 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * EES Calculate > Min/Max: one-dimensional optimization of an objective
+ * Calculate > Min/Max: one-dimensional optimization of an objective
  * variable by manipulating one independent variable inside given bounds.
  * Uses Brent's method (golden-section search with parabolic interpolation);
  * every candidate value fixes the independent variable and solves the

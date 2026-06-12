@@ -307,10 +307,10 @@ export function TopBar(props: Readonly<TopBarProps>) {
     <Group justify="space-between" wrap="nowrap" gap="sm">
       <Group gap="sm" wrap="nowrap" align="baseline">
         <Title order={3} c="blue.4">
-          frEES
+          frees
         </Title>
         <Text c="dimmed" size="xs" visibleFrom="lg">
-          free Engineering Equation Solver
+          free solver
         </Text>
       </Group>
 

@@ -18,7 +18,7 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 
 /**
- * Orchestrates the full EES solve pipeline:
+ * Orchestrates the full solve pipeline:
  * parse -> extract variables (guess 1.0, bounds ±infinity) -> block -> solve.
  */
 @Service
@@ -46,7 +46,7 @@ public class EquationSystemSolver {
      * variables/residuals describe the first solution (single-solve returns
      * exactly one); solutions lists every distinct solution found.
      * displayNames maps canonical (lowercase) variable names to the spelling
-     * of their first appearance, which EES uses for display.
+     * of their first appearance, used for display.
      */
     public record Result(Map<String, Double> variables,
                          List<Block> blocks,
@@ -62,7 +62,7 @@ public class EquationSystemSolver {
                               String message) {}
 
     /**
-     * EES Check/Format: verifies syntax and reports equation/variable counts,
+     * Check/Format: verifies syntax and reports equation/variable counts,
      * then verifies the system is structurally solvable (zero degrees of
      * freedom and an independent equation-to-variable assignment). Does not
      * solve anything.
@@ -447,7 +447,7 @@ public class EquationSystemSolver {
                                    IntegrationState state) {}
 
     /**
-     * EES equation-based Integral: each F = Integral(f, t, a, b) drives t
+     * Equation-based Integral: each F = Integral(f, t, a, b) drives t
      * from a to b, solving the rest of the system at every step, and the
      * final solution reports the system at t = b with F at its accumulated
      * value (see IntegralSolver for the quadrature).
@@ -469,7 +469,7 @@ public class EquationSystemSolver {
                 // system: the integral becomes an ordinary equation that the
                 // Evaluator computes by quadrature on each residual
                 // evaluation, and the integration variable lands on the
-                // upper limit, as in EES.
+                // upper limit.
                 finalEquations.add(IntegralSolver.inlinedEquation(ie, ordinary));
                 if (fixedIntegrationVars.add(ie.integrationVar())) {
                     finalEquations.add(new Equation(new Expr.Var(ie.integrationVar()),
@@ -521,7 +521,7 @@ public class EquationSystemSolver {
     }
 
     /**
-     * EES Check Units: dimensional consistency warnings for the given source
+     * Check Units: dimensional consistency warnings for the given source
      * against declared variable units. Never blocks solving.
      */
     public List<String> checkUnits(String source, Map<String, String> variableUnits) {
@@ -544,7 +544,7 @@ public class EquationSystemSolver {
     }
 
     /**
-     * EES assigns a variable its units when it is set from an annotated
+     * A variable gets its units when it is set from an annotated
      * constant (P = 100 [bar] gives P the units bar). Returns the inferred
      * units by variable name; explicit Variable Information entries take
      * precedence over these.
@@ -619,7 +619,7 @@ public class EquationSystemSolver {
                 maxResidual = Math.max(maxResidual, Math.abs(residual));
             }
             // Display variables with the spelling of their first appearance
-            // (EES Check/Format behavior); lookups stay case-insensitive.
+            // (Check/Format behavior); lookups stay case-insensitive.
             TreeMap<String, Double> displayed = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
             values.forEach((name, value) ->
                     displayed.put(displayNames.getOrDefault(name, name), value));

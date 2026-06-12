@@ -19,7 +19,7 @@ import java.util.Map;
  * block of simultaneous equations. Values of variables solved by earlier
  * blocks are passed in and held fixed.
  *
- * Stopping follows the EES Stop Criteria: iterations stop successfully when
+ * Stopping follows the Stop Criteria: iterations stop successfully when
  * every relative residual (|lhs-rhs| / |lhs|) is below the tolerance or when
  * the largest change in a variable falls below the threshold; they abort on
  * the iteration limit or the elapsed-time budget.
@@ -91,7 +91,7 @@ public class NewtonSolver {
             residual = candidateResidual;
             norm = candidateNorm;
 
-            // EES stop criterion: change in variables below threshold.
+            // stop criterion: change in variables below threshold.
             if (maxChange < settings.changeInVariables()) {
                 return handleConvergenceOrPinning(ctx, x, residual, iteration);
             }
@@ -129,7 +129,7 @@ public class NewtonSolver {
         return lastPropertyError == null ? "" : " Last property error: " + lastPropertyError;
     }
 
-    /** EES relative residual: |lhs - rhs| / |lhs|, guarding against |lhs| ~ 0. */
+    /** Relative residual: |lhs - rhs| / |lhs|, guarding against |lhs| ~ 0. */
     private boolean withinResidualTolerance(List<Equation> equations, List<String> vars,
                                              double[] x, double[] residual,
                                              Map<String, Double> values) {

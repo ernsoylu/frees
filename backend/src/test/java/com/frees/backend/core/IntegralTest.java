@@ -64,7 +64,7 @@ class IntegralTest {
 
     @Test
     void solvesIntegralNestedInExpression() {
-        // As in EES, Integral may appear inside an expression: the nested
+        // Integral may appear inside an expression: the nested
         // call is hoisted into a synthetic alone-form equation internally.
         EquationSystemSolver.CheckResult check =
                 solver.check("F = 2*Integral(t, t, 0, 1)");
@@ -76,7 +76,7 @@ class IntegralTest {
     @Test
     void solvesVariableUpperLimit() {
         // ∫ 2t dt from 0 to b = b² = 9, so b = 3 (the root Newton reaches
-        // from the default guess 1); t lands on the upper limit, as in EES.
+        // from the default guess 1); t lands on the upper limit.
         EquationSystemSolver.Result result =
                 solver.solve("F = Integral(2*t, t, 0, b)\nF = 9");
         assertEquals(3.0, result.variables().get("b"), 1e-6);

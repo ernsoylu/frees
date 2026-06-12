@@ -19,7 +19,7 @@ import java.util.TreeSet;
 
 /**
  * Decomposes an equation system into sequentially solvable blocks
- * (the EES "blocking" step).
+ * (the "blocking" step).
  *
  * 1. A maximum bipartite matching assigns each equation the variable it will
  *    determine (Hopcroft-Karp via JGraphT).
@@ -35,9 +35,9 @@ public class Blocker {
     }
 
     /**
-     * EES-style structural solvability check: zero degrees of freedom and a
+     * structural solvability check: zero degrees of freedom and a
      * complete equation-to-variable assignment. Throws SolverException with an
-     * EES-style message if the system cannot be solved; returns the matching
+     * message if the system cannot be solved; returns the matching
      * otherwise.
      */
     public Map<Integer, String> verifyStructure(List<Equation> equations) {

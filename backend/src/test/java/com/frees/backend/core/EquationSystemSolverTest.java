@@ -207,7 +207,7 @@ class EquationSystemSolverTest {
 
     @Test
     void variableCaseFollowsFirstAppearance() {
-        // EES unifies variable case to the first appearance: F stays F.
+        // Variable case is unified to the first appearance: F stays F.
         EquationSystemSolver.Result result =
                 solver.solve("P = 100\nA = 0.024\nF = P * A");
         assertEquals(java.util.Set.of("A", "F", "P"), result.variables().keySet());

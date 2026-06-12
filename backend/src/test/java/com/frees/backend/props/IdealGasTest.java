@@ -10,8 +10,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Story 5.2: spelled chemical formulas are ideal gases with the 298.15 K /
- * 1 atm enthalpy-of-formation reference (Cengel A-2c polynomials, A-26
- * formation data). Reference values from the Cengel ideal-gas tables.
+ * 1 atm enthalpy-of-formation reference (standard cubic cp polynomials and
+ * formation data). Reference values from published ideal-gas tables.
  */
 class IdealGasTest {
 
@@ -32,12 +32,12 @@ class IdealGasTest {
 
     @Test
     void sensibleEnthalpyMatchesIdealGasTables() {
-        // Cengel A-18: h(N2, 1000 K) - h(N2, 298 K) = 30,129 - 8,669 kJ/kmol.
+        // Ideal-gas tables: h(N2, 1000 K) - h(N2, 298 K) = 30,129 - 8,669 kJ/kmol.
         double dh = eval("prop$enthalpy$n2$t", 1000.0)
                 - eval("prop$enthalpy$n2$t", 298.15);
         assertEquals(21_460.0 / 28.013 * 1000.0, dh, 3000.0);
 
-        // Cengel A-20: h(CO2, 1000 K) - h(CO2, 298 K) = 42,769 - 9,364 kJ/kmol.
+        // Ideal-gas tables: h(CO2, 1000 K) - h(CO2, 298 K) = 42,769 - 9,364 kJ/kmol.
         double dhCo2 = eval("prop$enthalpy$co2$t", 1000.0)
                 - eval("prop$enthalpy$co2$t", 298.15);
         assertEquals(33_405.0 / 44.01 * 1000.0, dhCo2, 3000.0);

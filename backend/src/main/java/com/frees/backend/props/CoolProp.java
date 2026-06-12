@@ -7,7 +7,7 @@ import com.sun.jna.Native;
  * Minimal JNA binding to the CoolProp shared library's high-level interface.
  * The library path comes from the COOLPROP_LIBRARY environment variable
  * (explicit file path), falling back to normal system lookup of "CoolProp".
- * PropsSI works entirely in SI, which matches frEES's all-SI calculations.
+ * PropsSI works entirely in SI, which matches frees's all-SI calculations.
  */
 public final class CoolProp {
 

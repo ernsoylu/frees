@@ -1,7 +1,7 @@
 package com.frees.backend.core;
 
 /**
- * Per-variable solver information, mirroring the EES Variable Information
+ * Per-variable solver information, mirroring the Variable Information
  * window: guess value (default 1.0) and lower/upper bounds (default
  * ±infinity).
  */

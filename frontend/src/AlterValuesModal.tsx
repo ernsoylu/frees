@@ -19,7 +19,7 @@ interface Props {
 }
 
 /**
- * EES "Alter Values": fills a parametric-table column from first to last
+ * "Alter Values": fills a parametric-table column from first to last
  * row with a linear or logarithmic progression (Excel-style fill).
  */
 export default function AlterValuesModal({

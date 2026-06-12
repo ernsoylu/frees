@@ -12,7 +12,7 @@ import java.util.TreeSet;
 import java.util.function.DoubleBinaryOperator;
 
 /**
- * Equation-based Integral support (EES Calculus): F = Integral(f, t, a, b[, step]).
+ * Equation-based Integral support (calculus): F = Integral(f, t, a, b[, step]).
  *
  * The integration variable t is driven internally from a to b; at every step
  * the rest of the system is solved with t fixed and the integrand evaluated.
@@ -58,7 +58,7 @@ public final class IntegralSolver {
     }
 
     /**
-     * EES allows Integral inside arbitrary expressions
+     * Integral may appear inside arbitrary expressions
      * (y = y0 + Integral(f, t, a, b)). The solver drives integrals only in
      * the alone form F = Integral(...), so every nested call is hoisted into
      * a synthetic result variable with its own defining equation; the
