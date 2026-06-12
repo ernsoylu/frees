@@ -36,7 +36,7 @@ import { withStableKeys } from './format'
 
 const VIEWS = [
   { value: 'equations', label: 'Editor', icon: IconCode },
-  { value: 'table', label: 'Parametric Table', icon: IconTable },
+  { value: 'table', label: 'Tables — parametric runs & curve functions', icon: IconTable },
   { value: 'plots', label: 'Plots (X-Y)', icon: IconChartLine },
   {
     value: 'thermo',

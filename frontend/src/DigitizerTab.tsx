@@ -26,6 +26,7 @@ import {
   IconEraser,
   IconPhotoUp,
   IconPlus,
+  IconTable,
   IconTrash,
   IconWand,
   IconZoomIn,
@@ -37,9 +38,18 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 // Graph Digitizer (Epic 8, Stories 8.1-8.5): turn a chart image into numeric
 // curves. Calibrate the axes with two points each (linear or log), then click
 // points manually or auto-extract them by color; every curve is a named
-// dataset with an optional parameter value (e.g. T = 100) so families of
-// curves can later feed a Curve Table and graphfunc(Re, T)-style equations.
+// dataset with an optional parameter value (e.g. T = 100). "Send to Curve
+// Table" turns the datasets into a tabulated function callable in equations.
 // ---------------------------------------------------------------------------
+
+/** Calibrated curves handed to the Tables window. */
+export interface DigitizedExport {
+  xName: string
+  yName: string
+  xLog: boolean
+  yLog: boolean
+  curves: { param: string; points: { x: number; y: number }[] }[]
+}
 
 interface CalPoint {
   px: number
@@ -200,16 +210,51 @@ function pxToValue(rc: ResolvedCal, xt: number, yt: number): { x: number; y: num
 
 // --- color-based auto extraction (ports of the starry-digitizer strategies)
 
+/**
+ * Perceptual "redmean" color distance: plain RGB distance treats a red
+ * curve, a magenta curve, and red scatter markers as near-identical;
+ * redmean weights the channels by human sensitivity and separates chart
+ * colors much more reliably (the classic low-cost CIELAB approximation).
+ */
 function colorMatches(
   data: Uint8ClampedArray,
   idx: number,
   target: [number, number, number],
   threshold: number,
 ): boolean {
+  if (data[idx + 3] <= 64) return false
+  const rMean = (data[idx] + target[0]) / 2
   const dr = data[idx] - target[0]
   const dg = data[idx + 1] - target[1]
   const db = data[idx + 2] - target[2]
-  return data[idx + 3] > 64 && Math.sqrt(dr * dr + dg * dg + db * db) <= threshold
+  const dist = Math.sqrt(
+    (2 + rMean / 256) * dr * dr + 4 * dg * dg + (2 + (255 - rMean) / 256) * db * db,
+  )
+  return dist <= threshold * 2
+}
+
+/**
+ * Rejects extraction outliers in line mode: a curve is a continuous path,
+ * so cluster centroids far from the local moving median of y (legend
+ * swatches, stray markers of a similar color) are dropped.
+ */
+function filterByContinuity(points: DigPoint[]): DigPoint[] {
+  if (points.length < 8) return points
+  const sorted = [...points].sort((p, q) => p.x - q.x)
+  const half = 4
+  const kept: DigPoint[] = []
+  for (let i = 0; i < sorted.length; i++) {
+    const lo = Math.max(0, i - half)
+    const hi = Math.min(sorted.length, i + half + 1)
+    const window = sorted.slice(lo, hi).map((p) => p.y).sort((a, b) => a - b)
+    const median = window[Math.floor(window.length / 2)]
+    const deviations = window.map((y) => Math.abs(y - median)).sort((a, b) => a - b)
+    const mad = deviations[Math.floor(deviations.length / 2)]
+    if (Math.abs(sorted[i].y - median) <= Math.max(6, 4 * mad)) {
+      kept.push(sorted[i])
+    }
+  }
+  return kept
 }
 
 interface ExtractOptions {
@@ -347,7 +392,9 @@ function newDataset(existing: Dataset[]): Dataset {
   }
 }
 
-export function DigitizerTab() {
+export function DigitizerTab({
+  onSendToCurveTable,
+}: Readonly<{ onSendToCurveTable?: (data: DigitizedExport) => void }>) {
   const saved = useMemo(loadSaved, [])
   const [image, setImage] = useState<HTMLImageElement | null>(null)
   const [imageDataUrl, setImageDataUrl] = useState<string | null>(saved?.imageDataUrl ?? null)
@@ -370,6 +417,7 @@ export function DigitizerTab() {
   const [minDia, setMinDia] = useState(4)
   const [maxDia, setMaxDia] = useState(60)
   const [resampleCount, setResampleCount] = useState(40)
+  const [showPreview, setShowPreview] = useState(true)
   const [extracting, setExtracting] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
 
@@ -418,6 +466,31 @@ export function DigitizerTab() {
   const resolved = useMemo(() => resolveCalibration(calibration), [calibration])
   const activeDataset = datasets.find((d) => d.id === activeDatasetId) ?? null
 
+  // Live overlay of the pixels the current color + threshold would match,
+  // so the user can tune the picker before extracting.
+  const previewCanvas = useMemo(() => {
+    if (!image || !showPreview) return null
+    const off = document.createElement('canvas')
+    off.width = image.width
+    off.height = image.height
+    const ctx = off.getContext('2d')
+    if (!ctx) return null
+    ctx.drawImage(image, 0, 0)
+    const src = ctx.getImageData(0, 0, image.width, image.height)
+    const overlay = ctx.createImageData(image.width, image.height)
+    for (let i = 0; i < src.data.length; i += 4) {
+      if (colorMatches(src.data, i, targetColor, threshold)) {
+        overlay.data[i] = 0
+        overlay.data[i + 1] = 255
+        overlay.data[i + 2] = 255
+        overlay.data[i + 3] = 170
+      }
+    }
+    ctx.clearRect(0, 0, off.width, off.height)
+    ctx.putImageData(overlay, 0, 0)
+    return off
+  }, [image, showPreview, targetColor, threshold])
+
   const loadImageFile = useCallback((file: File | null) => {
     if (!file) return
     const reader = new FileReader()
@@ -458,6 +531,9 @@ export function DigitizerTab() {
     if (!ctx) return
     ctx.imageSmoothingEnabled = scale < 2
     ctx.drawImage(image, 0, 0, canvas.width, canvas.height)
+    if (previewCanvas) {
+      ctx.drawImage(previewCanvas, 0, 0, canvas.width, canvas.height)
+    }
 
     const cross = (px: number, py: number, color: string, label: string) => {
       const cx = px * scale
@@ -510,7 +586,7 @@ export function DigitizerTab() {
       )
       ctx.setLineDash([])
     }
-  }, [image, scale, calibration, datasets, selected, activeDatasetId, maskRect, maskDraft])
+  }, [image, scale, calibration, datasets, selected, activeDatasetId, maskRect, maskDraft, previewCanvas])
 
   useEffect(draw, [draw])
 
@@ -524,18 +600,46 @@ export function DigitizerTab() {
       ctx.fillRect(0, 0, MAG_SIZE, MAG_SIZE)
       if (!image || !pt) return
       const region = MAG_SIZE / MAG_ZOOM
+      const originX = pt.x - region / 2
+      const originY = pt.y - region / 2
       ctx.imageSmoothingEnabled = false
-      ctx.drawImage(
-        image,
-        pt.x - region / 2,
-        pt.y - region / 2,
-        region,
-        region,
-        0,
-        0,
-        MAG_SIZE,
-        MAG_SIZE,
-      )
+      ctx.drawImage(image, originX, originY, region, region, 0, 0, MAG_SIZE, MAG_SIZE)
+
+      // Placed markers are part of the precision loop: show them magnified.
+      const toMag = (p: DigPoint) => ({
+        x: (p.x - originX) * MAG_ZOOM,
+        y: (p.y - originY) * MAG_ZOOM,
+      })
+      const inView = (m: { x: number; y: number }) =>
+        m.x >= -10 && m.x <= MAG_SIZE + 10 && m.y >= -10 && m.y <= MAG_SIZE + 10
+      for (const ds of datasets) {
+        ctx.fillStyle = ds.color
+        for (const p of ds.points) {
+          const m = toMag(p)
+          if (!inView(m)) continue
+          ctx.beginPath()
+          ctx.arc(m.x, m.y, 4, 0, Math.PI * 2)
+          ctx.fill()
+        }
+      }
+      for (const key of ['x1', 'x2', 'y1', 'y2'] as const) {
+        const cp = calibration[key]
+        if (!cp) continue
+        const m = toMag({ x: cp.px, y: cp.py })
+        if (!inView(m)) continue
+        ctx.strokeStyle = key.startsWith('x') ? '#ff6b6b' : '#51cf66'
+        ctx.lineWidth = 1.5
+        ctx.beginPath()
+        ctx.moveTo(m.x - 7, m.y)
+        ctx.lineTo(m.x + 7, m.y)
+        ctx.moveTo(m.x, m.y - 7)
+        ctx.lineTo(m.x, m.y + 7)
+        ctx.stroke()
+        ctx.fillStyle = ctx.strokeStyle
+        ctx.font = 'bold 10px sans-serif'
+        ctx.fillText(CAL_LABELS[key], m.x + 4, m.y - 4)
+      }
+
       ctx.strokeStyle = 'rgba(255, 107, 107, 0.9)'
       ctx.lineWidth = 1
       ctx.beginPath()
@@ -545,7 +649,7 @@ export function DigitizerTab() {
       ctx.lineTo(MAG_SIZE, MAG_SIZE / 2)
       ctx.stroke()
     },
-    [image],
+    [image, datasets, calibration],
   )
 
   useEffect(() => drawMagnifier(cursor), [cursor, drawMagnifier])
@@ -579,6 +683,8 @@ export function DigitizerTab() {
     setDatasets((all) => all.map((d) => (d.id === id ? update(d) : d)))
   }
 
+  /** Samples a 3x3 region average — a single pixel on an anti-aliased
+   * curve often lands on a blended edge color and mismatches the line. */
   const sampleColor = (pt: DigPoint): [number, number, number] | null => {
     if (!image) return null
     const off = document.createElement('canvas')
@@ -587,8 +693,18 @@ export function DigitizerTab() {
     const ctx = off.getContext('2d')
     if (!ctx) return null
     ctx.drawImage(image, 0, 0)
-    const d = ctx.getImageData(Math.round(pt.x), Math.round(pt.y), 1, 1).data
-    return [d[0], d[1], d[2]]
+    const x = Math.max(1, Math.min(image.width - 2, Math.round(pt.x)))
+    const y = Math.max(1, Math.min(image.height - 2, Math.round(pt.y)))
+    const d = ctx.getImageData(x - 1, y - 1, 3, 3).data
+    let r = 0
+    let g = 0
+    let b = 0
+    for (let i = 0; i < 9; i++) {
+      r += d[i * 4]
+      g += d[i * 4 + 1]
+      b += d[i * 4 + 2]
+    }
+    return [Math.round(r / 9), Math.round(g / 9), Math.round(b / 9)]
   }
 
   const onCanvasMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -703,7 +819,7 @@ export function DigitizerTab() {
           mask: maskRect,
         })
         if (algorithm === 'line') {
-          points = resampleByX(points, resampleCount)
+          points = resampleByX(filterByContinuity(points), resampleCount)
         }
         if (points.length === 0) {
           setNotice(
@@ -773,6 +889,27 @@ export function DigitizerTab() {
       })),
     }
     download('digitized-curves.json', JSON.stringify(payload, null, 2), 'application/json')
+  }
+
+  const sendToCurveTable = () => {
+    if (!resolved) {
+      setNotice('Calibrate all four axis points before sending to a Curve Table.')
+      return
+    }
+    const curves = datasets
+      .map((ds) => ({ param: ds.param, points: datasetValues(ds) }))
+      .filter((c) => c.points.length > 0)
+    if (curves.length === 0) {
+      setNotice('Digitize at least one curve first.')
+      return
+    }
+    onSendToCurveTable?.({
+      xName: calibration.xName,
+      yName: calibration.yName,
+      xLog: calibration.xLog,
+      yLog: calibration.yLog,
+      curves,
+    })
   }
 
   const clearAll = () => {
@@ -1094,6 +1231,17 @@ export function DigitizerTab() {
               Color threshold: {threshold}
             </Text>
             <Slider size="xs" min={5} max={150} value={threshold} onChange={setThreshold} mb={6} />
+            <Checkbox
+              size="xs"
+              label="Highlight matching pixels"
+              description="Tune color + threshold until only the curve glows"
+              checked={showPreview}
+              onChange={(e) => {
+                const on = e.currentTarget.checked
+                setShowPreview(on)
+              }}
+              mb={6}
+            />
             {algorithm === 'line' ? (
               <NumberInput
                 size="xs"
@@ -1139,6 +1287,11 @@ export function DigitizerTab() {
                 </Button>
               </Group>
             </Group>
+            {onSendToCurveTable && (
+              <Button size="xs" fullWidth mb={6} leftSection={<IconTable size={14} />} onClick={sendToCurveTable}>
+                Send to Curve Table
+              </Button>
+            )}
             {activeDataset && resolved ? (
               <Table withTableBorder striped highlightOnHover stickyHeader>
                 <Table.Thead>

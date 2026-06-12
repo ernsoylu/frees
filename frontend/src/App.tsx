@@ -25,7 +25,6 @@ import {
   SolveResponse,
   StopCriteria,
   TableRowResult,
-  TableStats,
   UnitSystem,
   VariableInfo,
   VariableResult,
@@ -40,10 +39,20 @@ import MinMaxModal from './MinMaxModal'
 import FormattedReportView, { MathWithBadges } from './FormattedReportView'
 import ConfigureTableModal from './ConfigureTableModal'
 import AlterValuesModal from './AlterValuesModal'
-import ParametricTableTab, { newParamRow, ParamRow } from './ParametricTableTab'
+import { newParamRow, ParamRow } from './ParametricTableTab'
+import TablesTab from './TablesTab'
+import {
+  curveTableFromDigitizer,
+  loadTables,
+  newParamTable,
+  ParamTableSpec,
+  saveTables,
+  TableSpec,
+  toCurveTableDtos,
+} from './tables'
 import PlotTab from './PlotTab'
 import StatesTab from './StatesTab'
-import { DigitizerTab } from './DigitizerTab'
+import { DigitizerTab, DigitizedExport } from './DigitizerTab'
 import { PlotSpec } from './plots/types'
 import SolutionPanel from './SolutionPanel'
 import { Rail, TopBar } from './WorkspaceChrome'
@@ -173,20 +182,17 @@ export default function App() {
     syncScroll()
   }, [text])
   const [solutionOpen, setSolutionOpen] = useState(true)
-  const [tableVars, setTableVars] = useState<string[]>([])
-  const [paramRows, setParamRows] = useState<ParamRow[]>(() => [
-    newParamRow(),
-    newParamRow(),
-    newParamRow(),
-  ])
-  const [tableResults, setTableResults] = useState<TableRowResult[]>([])
+  // Tables (Epic 8): any number of Parametric and Curve Tables; the active
+  // parametric table is the one Check/Solve Table and the plots act on.
+  const [tables, setTables] = useState<TableSpec[]>(() => {
+    const loaded = loadTables()
+    return loaded.length > 0 ? loaded : [newParamTable([])]
+  })
+  const [activeTableId, setActiveTableId] = useState<string | null>(null)
   const [tableSolving, setTableSolving] = useState(false)
   const [showConfigureTable, setShowConfigureTable] = useState(false)
   const [alterColumn, setAlterColumn] = useState<string | null>(null)
-  const [tableCheckResult, setTableCheckResult] = useState<CheckResponse | null>(null)
-  const [tableCheckMessage, setTableCheckMessage] = useState('')
   const [tableChecking, setTableChecking] = useState(false)
-  const [tableStats, setTableStats] = useState<TableStats | null>(null)
   const [plots, setPlots] = useState<PlotSpec[]>([])
   const [activeThermoPlotId, setActiveThermoPlotId] = useState<string | null>(null)
   const [editingThermoPlot, setEditingThermoPlot] = useState<PlotSpec | null>(null)
@@ -206,6 +212,41 @@ export default function App() {
   useEffect(() => {
     void getFluids().then(setFluids)
   }, [])
+
+  useEffect(() => {
+    saveTables(tables)
+  }, [tables])
+
+  // The active table, defaulting to the first; the parametric-table solver
+  // state below is derived from the active *parametric* table so all the
+  // existing single-table wiring (plots, reports, top bar) keeps working.
+  const activeTable = tables.find((t) => t.id === activeTableId) ?? tables[0] ?? null
+  const activeParam: ParamTableSpec | null =
+    activeTable?.kind === 'parametric' ? activeTable : null
+  const tableVars = activeParam?.vars ?? []
+  const paramRows = activeParam?.rows ?? []
+  const tableResults = activeParam?.results ?? []
+  const tableStats = activeParam?.stats ?? null
+  const tableCheckResult = activeParam?.checkResult ?? null
+  const tableCheckMessage = activeParam?.checkMessage ?? ''
+  const curveTableDtos = toCurveTableDtos(tables)
+
+  function updateParamTable(id: string, update: (t: ParamTableSpec) => ParamTableSpec) {
+    setTables((all) =>
+      all.map((t) => (t.id === id && t.kind === 'parametric' ? update(t) : t)),
+    )
+  }
+
+  function updateActiveParam(update: (t: ParamTableSpec) => ParamTableSpec) {
+    if (activeParam) updateParamTable(activeParam.id, update)
+  }
+
+  function sendDigitizedToCurveTable(data: DigitizedExport) {
+    const table = curveTableFromDigitizer({ existing: tables, ...data })
+    setTables((all) => [...all, table])
+    setActiveTableId(table.id)
+    setActiveTab('table')
+  }
 
   const handleStateUnitIdsChange = (
     val: Record<string, string> | ((prev: Record<string, string>) => Record<string, string>)
@@ -263,7 +304,7 @@ export default function App() {
     setResult(null)
     setLastSolvedWithFillMissing(false)
     try {
-      const response = await check(text, buildVariableInfo(), complexMode)
+      const response = await check(text, buildVariableInfo(), complexMode, curveTableDtos)
       setCheckResult(response)
       // Sync the Variable Information table: keep edited rows for variables
       // that still exist, add defaults for new ones.
@@ -298,19 +339,29 @@ export default function App() {
   }
 
   function invalidateTable() {
-    setTableResults([])
-    setTableStats(null)
-    setTableCheckResult(null)
-    setTableCheckMessage('')
+    // Text edits invalidate the runs of every parametric table.
+    setTables((all) =>
+      all.map((t) =>
+        t.kind === 'parametric'
+          ? { ...t, results: [], stats: null, checkResult: null, checkMessage: '' }
+          : t,
+      ),
+    )
+  }
+
+  function invalidateActiveParam(t: ParamTableSpec): ParamTableSpec {
+    return { ...t, results: [], stats: null, checkResult: null, checkMessage: '' }
   }
 
   function setTableCell(rowIndex: number, name: string, value: string) {
-    setParamRows((rows) =>
-      rows.map((row, i) =>
-        i === rowIndex ? { ...row, values: { ...row.values, [name]: value } } : row,
-      ),
+    updateActiveParam((t) =>
+      invalidateActiveParam({
+        ...t,
+        rows: t.rows.map((row, i) =>
+          i === rowIndex ? { ...row, values: { ...row.values, [name]: value } } : row,
+        ),
+      }),
     )
-    invalidateTable()
   }
 
   function setColumnUnits(name: string, units: string) {
@@ -341,9 +392,10 @@ export default function App() {
   }
 
   async function onCheckTable() {
-    if (tableChecking) return
+    if (tableChecking || !activeParam) return
+    const tableId = activeParam.id
     setTableChecking(true)
-    setTableResults([])
+    updateParamTable(tableId, (t) => ({ ...t, results: [] }))
     try {
       // Check the augmented system: the equations plus one representative
       // fixed value per table input column (table semantics).
@@ -352,8 +404,8 @@ export default function App() {
       for (const [name, value] of filled) {
         augmented += `\n${name} = ${value}`
       }
-      const response = await check(augmented, buildVariableInfo(), complexMode)
-      setTableCheckResult(response)
+      const response = await check(augmented, buildVariableInfo(), complexMode, curveTableDtos)
+      updateParamTable(tableId, (t) => ({ ...t, checkResult: response }))
 
       // Sync variable list and units so the column headers show units for
       // calculated variables too (inferred + dimensionally derived).
@@ -373,30 +425,36 @@ export default function App() {
       }
 
       if (response.solvable) {
-        setTableCheckMessage(
-          `Table check passed: ${response.equations} equations and ` +
+        updateParamTable(tableId, (t) => ({
+          ...t,
+          checkMessage:
+            `Table check passed: ${response.equations} equations and ` +
             `${response.unknowns} variables, with ${filled.size} value(s) ` +
             `supplied by the table.`,
-        )
+        }))
       } else {
         const unfilledColumns = tableVars.filter((v) => !filled.has(v))
         const hint =
           unfilledColumns.length > 0
             ? ` Fill input values for: ${unfilledColumns.join(', ')} (or use the column fill).`
             : ' Add the missing variables as table columns via Configure Columns, or fix the equations.'
-        setTableCheckMessage(response.message + hint)
+        updateParamTable(tableId, (t) => ({ ...t, checkMessage: response.message + hint }))
       }
     } catch (e) {
-      setTableCheckResult(null)
-      setTableCheckMessage(`Could not reach the solver backend: ${String(e)}`)
+      updateParamTable(tableId, (t) => ({
+        ...t,
+        checkResult: null,
+        checkMessage: `Could not reach the solver backend: ${String(e)}`,
+      }))
     } finally {
       setTableChecking(false)
     }
   }
 
   async function onSolveTable() {
-    if (tableSolving || tableVars.length === 0) return
+    if (tableSolving || !activeParam || tableVars.length === 0) return
     if (tableCheckResult?.solvable !== true) return
+    const tableId = activeParam.id
     setTableSolving(true)
     try {
       // Non-empty cells become fixed inputs for that run; blank cells are
@@ -419,18 +477,23 @@ export default function App() {
         unitSystem,
         tableVars,
         rows,
+        curveTableDtos,
       )
-      setTableResults(response.results)
-      setTableStats(response.stats)
+      updateParamTable(tableId, (t) => ({
+        ...t,
+        results: response.results,
+        stats: response.stats,
+      }))
     } catch (e) {
-      setTableStats(null)
-      setTableResults(
-        paramRows.map(() => ({
+      updateParamTable(tableId, (t) => ({
+        ...t,
+        stats: null,
+        results: t.rows.map(() => ({
           success: false,
           values: {},
           error: `Could not reach the solver backend: ${String(e)}`,
         })),
-      )
+      }))
     } finally {
       setTableSolving(false)
     }
@@ -450,6 +513,7 @@ export default function App() {
         findAll,
         unitSystem,
         shouldFillMissing,
+        curveTableDtos,
       )
       setSolvedComplexMode(complexMode)
       setResult(response)
@@ -524,7 +588,7 @@ export default function App() {
 
   const solutionSidePanel = solutionOpen ? (
     <SolutionPanel
-      showTable={activeTab === 'table'}
+      showTable={activeTab === 'table' && activeParam !== null}
       solveCount={solveCount}
       tableStats={tableStats}
       result={result}
@@ -573,13 +637,15 @@ export default function App() {
           initialFirst={paramRows[0]?.values[alterColumn] ?? ''}
           initialLast={paramRows[paramRows.length - 1]?.values[alterColumn] ?? ''}
           onApply={(values) => {
-            setParamRows((rows) =>
-              rows.map((row, i) => ({
-                ...row,
-                values: { ...row.values, [alterColumn]: String(values[i]) },
-              })),
+            updateActiveParam((t) =>
+              invalidateActiveParam({
+                ...t,
+                rows: t.rows.map((row, i) => ({
+                  ...row,
+                  values: { ...row.values, [alterColumn]: String(values[i]) },
+                })),
+              }),
             )
-            invalidateTable()
             setAlterColumn(null)
           }}
           onClose={() => setAlterColumn(null)}
@@ -591,8 +657,7 @@ export default function App() {
           variables={variables}
           selected={tableVars}
           onSave={(selected) => {
-            setTableVars(selected)
-            invalidateTable()
+            updateActiveParam((t) => invalidateActiveParam({ ...t, vars: selected }))
             setShowConfigureTable(false)
           }}
           onClose={() => setShowConfigureTable(false)}
@@ -626,7 +691,7 @@ export default function App() {
 
       <Flex direction="column" flex={1} miw={0} p="sm" gap="sm">
         <TopBar
-          isTable={activeTab === 'table'}
+          isTable={activeTab === 'table' && activeParam !== null}
           checking={checking}
           solving={solving}
           solvable={solvable}
@@ -755,21 +820,29 @@ export default function App() {
               </>
             )}
             {activeTab === 'table' && (
-              <ParametricTableTab
+              <TablesTab
+                tables={tables}
+                activeTableId={activeTable?.id ?? null}
+                onTablesChange={setTables}
+                onActiveTableIdChange={setActiveTableId}
                 tableVars={tableVars}
                 rows={paramRows}
                 results={tableResults}
                 varDrafts={varDrafts}
                 onConfigure={() => setShowConfigureTable(true)}
-                onAddRow={() => {
-                  setParamRows((r) => [...r, newParamRow()])
-                  invalidateTable()
-                }}
-                onRemoveRow={() => {
-                  setParamRows((r) => r.slice(0, -1))
-                  invalidateTable()
-                }}
-                onClearResults={() => setTableResults([])}
+                onAddRow={() =>
+                  updateActiveParam((t) =>
+                    invalidateActiveParam({ ...t, rows: [...t.rows, newParamRow()] }),
+                  )
+                }
+                onRemoveRow={() =>
+                  updateActiveParam((t) =>
+                    invalidateActiveParam({ ...t, rows: t.rows.slice(0, -1) }),
+                  )
+                }
+                onClearResults={() =>
+                  updateActiveParam((t) => ({ ...t, results: [] }))
+                }
                 onAlterColumn={setAlterColumn}
                 onColumnUnitsChange={setColumnUnits}
                 onCellChange={setTableCell}
@@ -805,7 +878,9 @@ export default function App() {
                 exportTrigger={thermoExportTrigger}
               />
             )}
-            {activeTab === 'digitizer' && <DigitizerTab />}
+            {activeTab === 'digitizer' && (
+              <DigitizerTab onSendToCurveTable={sendDigitizedToCurveTable} />
+            )}
           </Paper>
 
           {activeTab === 'thermo' ? (
