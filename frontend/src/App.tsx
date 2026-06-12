@@ -54,6 +54,7 @@ import {
 import PlotTab from './PlotTab'
 import StatesTab from './StatesTab'
 import { DigitizerTab, DigitizedExport } from './DigitizerTab'
+import DiagramTab from './diagram/DiagramTab'
 import { PlotSpec } from './plots/types'
 import SolutionPanel from './SolutionPanel'
 import { Rail, TopBar } from './WorkspaceChrome'
@@ -885,6 +886,9 @@ export default function App() {
             )}
             {activeTab === 'digitizer' && (
               <DigitizerTab onSendToFunctionTable={sendDigitizedToFunctionTable} />
+            )}
+            {activeTab === 'diagram' && (
+              <DiagramTab variables={result?.variables ?? []} />
             )}
           </Paper>
 
