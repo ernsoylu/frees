@@ -225,45 +225,56 @@ public class EquationSystemSolver {
         Set<Integer> skipIndices = new HashSet<>();
         for (int bi = 0; bi < blocks.size(); bi++) {
             if (skipIndices.contains(bi)) continue;
-            Block block = blocks.get(bi);
-            Block actualSolved = block;
-            try {
-                totalIterations += newtonSolver.solveBlock(block, values, deadlineNanos, expandedSpecs);
-            } catch (SolverException ex) {
-                // First resort when a block fails: retry it alone from
-                // transformed guesses. This is local and cheap, and keeps the
-                // solutions of all other blocks intact.
-                int retryIterations = retryWithTransformedGuesses(retrySolver, block,
-                        values, deadlineNanos, expandedSpecs, warmStart);
-                if (retryIterations >= 0) {
-                    totalIterations += retryIterations;
-                } else {
-                    // Second resort: merge with connected blocks in both
-                    // directions and re-solve the combined system.
-                    List<Integer> mergedIndices = new ArrayList<>();
-                    Block merged = tryMergeBidirectional(blocks, bi, block, mergedIndices, skipIndices);
-                    if (merged != null && merged.variables().size() > block.variables().size()) {
-                        // Reset ALL variables in the merged block to initial guesses.
-                        // Previously solved blocks may have incorrect values from
-                        // SVD fallback on rank-deficient Jacobians.
-                        for (String v : merged.variables()) {
-                            values.put(v, initialGuess(v, expandedSpecs, null));
-                        }
-                        totalIterations += newtonSolver.solveBlock(merged, values, deadlineNanos, expandedSpecs);
-                        skipIndices.addAll(mergedIndices);
-                        actualSolved = merged;
-                    } else {
-                        throw ex;
-                    }
-                }
-            }
-            try {
-                totalIterations += polisher.solveBlock(actualSolved, values, deadlineNanos, expandedSpecs);
-            } catch (SolverException ignored) {
-                // Polishing is best-effort; the main solution is still valid.
-            }
+            totalIterations += solveBlockWithFallback(bi, blocks, values, deadlineNanos, expandedSpecs,
+                    newtonSolver, retrySolver, polisher, warmStart, skipIndices);
         }
         return new InnerSolve(values, blocks, totalIterations);
+    }
+
+    private int solveBlockWithFallback(int bi, List<Block> blocks, Map<String, Double> values,
+                                       long deadlineNanos, Map<String, VariableSpec> expandedSpecs,
+                                       NewtonSolver newtonSolver, NewtonSolver retrySolver,
+                                       NewtonSolver polisher, Map<String, Double> warmStart,
+                                       Set<Integer> skipIndices) {
+        Block block = blocks.get(bi);
+        Block actualSolved = block;
+        int iterations = 0;
+        try {
+            iterations += newtonSolver.solveBlock(block, values, deadlineNanos, expandedSpecs);
+        } catch (SolverException ex) {
+            // First resort when a block fails: retry it alone from
+            // transformed guesses. This is local and cheap, and keeps the
+            // solutions of all other blocks intact.
+            int retryIterations = retryWithTransformedGuesses(retrySolver, block,
+                    values, deadlineNanos, expandedSpecs, warmStart);
+            if (retryIterations >= 0) {
+                iterations += retryIterations;
+            } else {
+                // Second resort: merge with connected blocks in both
+                // directions and re-solve the combined system.
+                List<Integer> mergedIndices = new ArrayList<>();
+                Block merged = tryMergeBidirectional(blocks, bi, block, mergedIndices, skipIndices);
+                if (merged != null && merged.variables().size() > block.variables().size()) {
+                    // Reset ALL variables in the merged block to initial guesses.
+                    // Previously solved blocks may have incorrect values from
+                    // SVD fallback on rank-deficient Jacobians.
+                    for (String v : merged.variables()) {
+                        values.put(v, initialGuess(v, expandedSpecs, null));
+                    }
+                    iterations += newtonSolver.solveBlock(merged, values, deadlineNanos, expandedSpecs);
+                    skipIndices.addAll(mergedIndices);
+                    actualSolved = merged;
+                } else {
+                    throw ex;
+                }
+            }
+        }
+        try {
+            iterations += polisher.solveBlock(actualSolved, values, deadlineNanos, expandedSpecs);
+        } catch (SolverException ignored) {
+            // Polishing is best-effort; the main solution is still valid.
+        }
+        return iterations;
     }
 
     /**
@@ -275,8 +286,7 @@ public class EquationSystemSolver {
      * converges when the guess for C is within a factor of ~2 of the
      * solution's magnitude). Returns the iterations used, or -1 on failure
      * (with the block's variables restored to their unmodified guesses).
-     */
-    /**
+     *
      * One alternative start: a zero guess becomes ±zeroOffset (off the
      * invariant manifold), a nonzero guess is rescaled (toward a distant
      * Newton basin), and conjugate flips the sign of imaginary components
@@ -313,24 +323,31 @@ public class EquationSystemSolver {
                 settings.complexMode());
     }
 
+    private static void applyTransform(Block block, GuessTransform transform,
+                                       Map<String, Double> values,
+                                       Map<String, VariableSpec> specs,
+                                       Map<String, Double> warmStart) {
+        for (String v : block.variables()) {
+            VariableSpec spec = specs.get(v);
+            double base = initialGuess(v, specs, warmStart);
+            double guess = base == 0.0 ? transform.zeroOffset() : base * transform.scale();
+            if (transform.conjugate() && v.endsWith("_i")) {
+                guess = -guess;
+            }
+            if (spec != null) {
+                guess = Math.clamp(guess, spec.lower(), spec.upper());
+            }
+            values.put(v, guess);
+        }
+    }
+
     private static int retryWithTransformedGuesses(NewtonSolver retrySolver, Block block,
                                                    Map<String, Double> values,
                                                    long deadlineNanos,
                                                    Map<String, VariableSpec> specs,
                                                    Map<String, Double> warmStart) {
         for (GuessTransform transform : GUESS_TRANSFORMS) {
-            for (String v : block.variables()) {
-                VariableSpec spec = specs.get(v);
-                double base = initialGuess(v, specs, warmStart);
-                double guess = base == 0.0 ? transform.zeroOffset() : base * transform.scale();
-                if (transform.conjugate() && v.endsWith("_i")) {
-                    guess = -guess;
-                }
-                if (spec != null) {
-                    guess = Math.clamp(guess, spec.lower(), spec.upper());
-                }
-                values.put(v, guess);
-            }
+            applyTransform(block, transform, values, specs, warmStart);
             try {
                 return retrySolver.solveBlock(block, values, deadlineNanos, specs);
             } catch (SolverException retryFailed) {

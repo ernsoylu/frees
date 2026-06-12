@@ -153,56 +153,55 @@ public class Blocker {
         work.push(new int[]{v, 0});
 
         while (!work.isEmpty()) {
-            int[] frame = work.peek();
-            if (frame == null || frame.length < 2) {
-                work.pop();
-                continue;
-            }
-            int node = frame[0];
+            processTarjanFrame(work, ctx);
+        }
+    }
 
-            if (frame[1] == 0) {
-                ctx.indices[node] = ctx.counter;
-                ctx.lowLinks[node] = ctx.counter;
-                ctx.counter++;
-                ctx.stack.push(node);
-                ctx.onStack[node] = true;
-            }
-
-            boolean recursed = false;
-            List<Integer> edges = ctx.adjacency.get(node);
-            while (frame[1] < edges.size()) {
-                int next = edges.get(frame[1]);
-                frame[1]++;
-                if (ctx.indices[next] == -1) {
-                    work.push(new int[]{next, 0});
-                    recursed = true;
-                    break;
-                } else if (ctx.onStack[next]) {
-                    ctx.lowLinks[node] = Math.min(ctx.lowLinks[node], ctx.indices[next]);
-                }
-            }
-            if (recursed) {
-                continue;
-            }
-
-            if (ctx.lowLinks[node] == ctx.indices[node]) {
-                List<Integer> component = new ArrayList<>();
-                int popped;
-                do {
-                    popped = ctx.stack.pop();
-                    ctx.onStack[popped] = false;
-                    component.add(popped);
-                } while (popped != node);
-                ctx.components.add(component);
-            }
-
+    private void processTarjanFrame(Deque<int[]> work, TarjanContext ctx) {
+        int[] frame = work.peek();
+        if (frame == null || frame.length < 2) {
             work.pop();
-            if (!work.isEmpty()) {
-                int[] parentFrame = work.peek();
-                if (parentFrame != null && parentFrame.length >= 1) {
-                    int parent = parentFrame[0];
-                    ctx.lowLinks[parent] = Math.min(ctx.lowLinks[parent], ctx.lowLinks[node]);
-                }
+            return;
+        }
+        int node = frame[0];
+
+        if (frame[1] == 0) {
+            ctx.indices[node] = ctx.counter;
+            ctx.lowLinks[node] = ctx.counter;
+            ctx.counter++;
+            ctx.stack.push(node);
+            ctx.onStack[node] = true;
+        }
+
+        List<Integer> edges = ctx.adjacency.get(node);
+        while (frame[1] < edges.size()) {
+            int next = edges.get(frame[1]);
+            frame[1]++;
+            if (ctx.indices[next] == -1) {
+                work.push(new int[]{next, 0});
+                return;
+            } else if (ctx.onStack[next]) {
+                ctx.lowLinks[node] = Math.min(ctx.lowLinks[node], ctx.indices[next]);
+            }
+        }
+
+        if (ctx.lowLinks[node] == ctx.indices[node]) {
+            List<Integer> component = new ArrayList<>();
+            int popped;
+            do {
+                popped = ctx.stack.pop();
+                ctx.onStack[popped] = false;
+                component.add(popped);
+            } while (popped != node);
+            ctx.components.add(component);
+        }
+
+        work.pop();
+        if (!work.isEmpty()) {
+            int[] parentFrame = work.peek();
+            if (parentFrame != null && parentFrame.length >= 1) {
+                int parent = parentFrame[0];
+                ctx.lowLinks[parent] = Math.min(ctx.lowLinks[parent], ctx.lowLinks[node]);
             }
         }
     }

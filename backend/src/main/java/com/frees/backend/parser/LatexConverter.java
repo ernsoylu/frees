@@ -21,41 +21,41 @@ public final class LatexConverter {
 
     public static String toLatex(Expr e, Map<String, String> displayNames) {
         return switch (e) {
-            case Expr.Num n -> {
-                String val = formatValue(n.value());
-                if (n.isImaginary()) {
-                    if (n.value() == 1.0) {
+            case Expr.Num(double value, String unit, boolean isImaginary) -> {
+                String val = formatValue(value);
+                if (isImaginary) {
+                    if (value == 1.0) {
                         val = "i";
-                    } else if (n.value() == -1.0) {
+                    } else if (value == -1.0) {
                         val = "-i";
                     } else {
                         val = val + "i";
                     }
                 }
-                if (n.unit() != null && !n.unit().isBlank()) {
-                    yield val + "\\,\\left[" + n.unit() + "\\right]";
+                if (unit != null && !unit.isBlank()) {
+                    yield val + "\\,\\left[" + unit + "\\right]";
                 }
                 yield val;
             }
-            case Expr.Var v -> {
-                String disp = displayNames.getOrDefault(v.name(), v.name());
+            case Expr.Var(String name) -> {
+                String disp = displayNames.getOrDefault(name, name);
                 yield formatVariable(disp);
             }
-            case Expr.Neg neg -> {
-                String opStr = toLatex(neg.operand(), displayNames);
-                if (neg.operand() instanceof Expr.BinOp b && (b.op() == '+' || b.op() == '-')) {
+            case Expr.Neg(Expr operand) -> {
+                String opStr = toLatex(operand, displayNames);
+                if (operand instanceof Expr.BinOp(char op, Expr left, Expr right) && (op == '+' || op == '-')) {
                     yield "-\\left(" + opStr + RIGHT_PAREN;
                 }
                 yield "-" + opStr;
             }
-            case Expr.BinOp b -> {
-                String leftStr = toLatex(b.left(), displayNames);
-                String rightStr = toLatex(b.right(), displayNames);
-                yield switch (b.op()) {
+            case Expr.BinOp(char op, Expr left, Expr right) -> {
+                String leftStr = toLatex(left, displayNames);
+                String rightStr = toLatex(right, displayNames);
+                yield switch (op) {
                     case '+' -> leftStr + " + " + rightStr;
                     case '-' -> leftStr + " - " + rightStr;
                     case '*' -> {
-                        if (b.left() instanceof Expr.Num) {
+                        if (left instanceof Expr.Num) {
                             yield leftStr + "\\," + rightStr;
                         }
                         yield leftStr + "\\cdot " + rightStr;
@@ -63,22 +63,21 @@ public final class LatexConverter {
                     case '/' -> "\\frac{" + leftStr + "}{" + rightStr + "}";
                     case '^' -> {
                         String base = leftStr;
-                        if (b.left() instanceof Expr.BinOp || b.left() instanceof Expr.Neg) {
+                        if (left instanceof Expr.BinOp || left instanceof Expr.Neg) {
                             base = "\\left(" + leftStr + RIGHT_PAREN;
                         }
                         yield base + "^{" + rightStr + "}";
                     }
-                    default -> throw new IllegalStateException("Unknown operator: " + b.op());
+                    default -> throw new IllegalStateException("Unknown operator: " + op);
                 };
             }
-            case Expr.Call c -> {
-                String func = c.function();
-                List<String> argLates = c.args().stream().map(a -> toLatex(a, displayNames)).toList();
+            case Expr.Call(String function, List<Expr> args) -> {
+                List<String> argLates = args.stream().map(a -> toLatex(a, displayNames)).toList();
                 String argsStr = String.join(", ", argLates);
-                if (func.startsWith("prop$")) {
-                    yield propertyCallLatex(func, argLates);
+                if (function.startsWith("prop$")) {
+                    yield propertyCallLatex(function, argLates);
                 }
-                yield switch (func) {
+                yield switch (function) {
                     case "sqrt" -> "\\sqrt{" + argLates.get(0) + "}";
                     case "sin" -> "\\sin\\left(" + argsStr + RIGHT_PAREN;
                     case "cos" -> "\\cos\\left(" + argsStr + RIGHT_PAREN;
@@ -91,23 +90,23 @@ public final class LatexConverter {
                     case "exp" -> "e^{" + argLates.get(0) + "}";
                     case "abs" -> "\\left|" + argLates.get(0) + "\\right|";
                     case "convert" -> "\\text{Convert}\\left(" + argsStr + RIGHT_PAREN;
-                    default -> "\\text{" + func + "}\\left(" + argsStr + RIGHT_PAREN;
+                    default -> "\\text{" + function + "}\\left(" + argsStr + RIGHT_PAREN;
                 };
             }
-            case Expr.ArrayAccess aa -> {
-                String dispName = displayNames.getOrDefault(aa.name(), aa.name());
+            case Expr.ArrayAccess(String name, List<Expr> indices) -> {
+                String dispName = displayNames.getOrDefault(name, name);
                 String base = formatVariable(dispName);
-                List<String> idxLates = aa.indices().stream().map(a -> toLatex(a, displayNames)).toList();
+                List<String> idxLates = indices.stream().map(a -> toLatex(a, displayNames)).toList();
                 yield base + "_{" + String.join(", ", idxLates) + "}";
             }
-            case Expr.Range r -> toLatex(r.start(), displayNames) + "\\dots" + toLatex(r.end(), displayNames);
-            case Expr.ArrayLiteral al -> {
-                List<String> elems = al.elements().stream().map(a -> toLatex(a, displayNames)).toList();
+            case Expr.Range(Expr start, Expr end) -> toLatex(start, displayNames) + "\\dots" + toLatex(end, displayNames);
+            case Expr.ArrayLiteral(List<Expr> elements) -> {
+                List<String> elems = elements.stream().map(a -> toLatex(a, displayNames)).toList();
                 yield "\\left[" + String.join(", ", elems) + "\\right]";
             }
-            case Expr.Compare cmp -> toLatex(cmp.left(), displayNames) + " " + cmp.op() + " " + toLatex(cmp.right(), displayNames);
-            case Expr.Logical log -> toLatex(log.left(), displayNames) + " \\text{ " + log.op() + " } " + toLatex(log.right(), displayNames);
-            case Expr.Not not -> "\\neg " + toLatex(not.operand(), displayNames);
+            case Expr.Compare(String op, Expr left, Expr right) -> toLatex(left, displayNames) + " " + op + " " + toLatex(right, displayNames);
+            case Expr.Logical(String op, Expr left, Expr right) -> toLatex(left, displayNames) + " \\text{ " + op + " } " + toLatex(right, displayNames);
+            case Expr.Not(Expr operand) -> "\\neg " + toLatex(operand, displayNames);
         };
     }
 

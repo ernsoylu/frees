@@ -48,21 +48,18 @@ public class NewtonSolver {
     /** Solves one block in place; returns the number of Newton iterations used. */
     public int solveBlock(Block block, Map<String, Double> values, long deadlineNanos,
                           Map<String, VariableSpec> specs) {
-        List<Equation> equations = block.equations();
-        List<String> vars = block.variables();
-        int n = vars.size();
+        IterationContext ctx = new IterationContext(block, values, specs);
+        double[] x = new double[ctx.vars.size()];
+        for (int i = 0; i < ctx.vars.size(); i++) {
+            x[i] = values.get(ctx.vars.get(i));
+        }
 
-        SolverState state = new SolverState(block, values, specs);
-        double[] x = state.x;
-        double[] lo = state.lo;
-        double[] hi = state.hi;
-
-        double[] residual = residuals(equations, vars, x, values);
+        double[] residual = residuals(ctx.equations, ctx.vars, x, values);
         double norm = norm(residual);
 
         for (int iteration = 0; iteration < settings.maxIterations(); iteration++) {
-            if (withinResidualTolerance(equations, vars, x, residual, values)) {
-                writeBack(vars, x, values);
+            if (withinResidualTolerance(ctx.equations, ctx.vars, x, residual, values)) {
+                writeBack(ctx.vars, x, values);
                 return iteration;
             }
             if (System.nanoTime() > deadlineNanos) {
@@ -71,10 +68,10 @@ public class NewtonSolver {
                         settings.elapsedTimeSeconds(), block.index()));
             }
 
-            double[][] jacobian = numericalJacobian(equations, vars, x, residual, values);
+            double[][] jacobian = numericalJacobian(ctx, x, residual);
             double[] step = solveLinear(jacobian, residual);
 
-            LineSearchResult searchResult = backtrackLineSearch(equations, vars, x, step, lo, hi, norm, values);
+            LineSearchResult searchResult = backtrackLineSearch(ctx, x, step, norm);
             double[] candidate = searchResult.candidate;
             double[] candidateResidual = searchResult.candidateResidual;
             double candidateNorm = searchResult.candidateNorm;
@@ -87,7 +84,7 @@ public class NewtonSolver {
             }
 
             double maxChange = 0.0;
-            for (int i = 0; i < n; i++) {
+            for (int i = 0; i < x.length; i++) {
                 maxChange = Math.max(maxChange, Math.abs(x[i] - candidate[i]));
                 x[i] = candidate[i];
             }
@@ -96,32 +93,36 @@ public class NewtonSolver {
 
             // EES stop criterion: change in variables below threshold.
             if (maxChange < settings.changeInVariables()) {
-                if (withinResidualTolerance(equations, vars, x, residual, values)) {
-                    writeBack(vars, x, values);
-                    return iteration + 1;
-                }
-                if (atBound(x, lo, hi)) {
-                    throw new SolverException(
-                            "Constrained solution in block " + block.index()
-                                    + ": a variable is pinned at its lower or upper bound "
-                                    + "and the residuals cannot be reduced further. "
-                                    + "Relax the bounds in the Variable Information window.");
-                }
-                throw new SolverException(
-                        "Iteration stalled in block " + block.index()
-                                + " before reaching the residual tolerance. "
-                                + "Try different guess values.");
+                return handleConvergenceOrPinning(ctx, x, residual, iteration);
             }
         }
 
-        if (withinResidualTolerance(equations, vars, x, residual, values)) {
-            writeBack(vars, x, values);
+        if (withinResidualTolerance(ctx.equations, ctx.vars, x, residual, values)) {
+            writeBack(ctx.vars, x, values);
             return settings.maxIterations();
         }
         throw new SolverException(String.format(
                 "Block %d did not converge within %d iterations (residual norm %g). "
                         + "Increase the iteration limit in Preferences or adjust guess values.",
                 block.index(), settings.maxIterations(), norm) + propertyErrorSuffix());
+    }
+
+    private int handleConvergenceOrPinning(IterationContext ctx, double[] x, double[] residual, int iteration) {
+        if (withinResidualTolerance(ctx.equations, ctx.vars, x, residual, ctx.values)) {
+            writeBack(ctx.vars, x, ctx.values);
+            return iteration + 1;
+        }
+        if (atBound(x, ctx.lo, ctx.hi)) {
+            throw new SolverException(
+                    "Constrained solution in block " + ctx.blockIndex
+                            + ": a variable is pinned at its lower or upper bound "
+                            + "and the residuals cannot be reduced further. "
+                            + "Relax the bounds in the Variable Information window.");
+        }
+        throw new SolverException(
+                "Iteration stalled in block " + ctx.blockIndex
+                        + " before reaching the residual tolerance. "
+                        + "Try different guess values.");
     }
 
     private String propertyErrorSuffix() {
@@ -169,28 +170,25 @@ public class NewtonSolver {
         return result;
     }
 
-    private double[][] numericalJacobian(List<Equation> equations, List<String> vars,
-                                         double[] x, double[] baseResidual,
-                                         Map<String, Double> values) {
-        int n = vars.size();
+    private double[][] numericalJacobian(IterationContext ctx, double[] x, double[] baseResidual) {
+        int n = ctx.vars.size();
         double[][] jacobian = new double[n][n];
         double[] perturbed = x.clone();
         for (int j = 0; j < n; j++) {
-            computeJacobianColumn(equations, vars, x, baseResidual, values, jacobian, perturbed, j);
+            computeJacobianColumn(ctx, x, baseResidual, jacobian, perturbed, j);
         }
         // Restore the unperturbed values.
-        writeBack(vars, x, values);
+        writeBack(ctx.vars, x, ctx.values);
         return jacobian;
     }
 
-    private void computeJacobianColumn(List<Equation> equations, List<String> vars, double[] x,
-                                       double[] baseResidual, Map<String, Double> values,
+    private void computeJacobianColumn(IterationContext ctx, double[] x, double[] baseResidual,
                                        double[][] jacobian, double[] perturbed, int j) {
-        int n = vars.size();
+        int n = ctx.vars.size();
         double h = JACOBIAN_EPS * Math.max(Math.abs(x[j]), 1.0);
         for (int attempt = 0; attempt < 5; attempt++) {
             perturbed[j] = x[j] + h;
-            double[] residual = residuals(equations, vars, perturbed, values);
+            double[] residual = residuals(ctx.equations, ctx.vars, perturbed, ctx.values);
             boolean columnClean = true;
             boolean anyChange = false;
             for (int i = 0; i < n; i++) {
@@ -231,60 +229,6 @@ public class NewtonSolver {
         }
     }
 
-    private static class SolverState {
-        final double[] x;
-        final double[] lo;
-        final double[] hi;
-
-        SolverState(Block block, Map<String, Double> values, Map<String, VariableSpec> specs) {
-            List<String> vars = block.variables();
-            int n = vars.size();
-            this.x = new double[n];
-            this.lo = new double[n];
-            this.hi = new double[n];
-            for (int i = 0; i < n; i++) {
-                x[i] = values.get(vars.get(i));
-                VariableSpec spec = specs.get(vars.get(i));
-                lo[i] = spec != null ? spec.lower() : Double.NEGATIVE_INFINITY;
-                hi[i] = spec != null ? spec.upper() : Double.POSITIVE_INFINITY;
-            }
-        }
-    }
-
-    private static class LineSearchResult {
-        final double[] candidate;
-        final double[] candidateResidual;
-        final double candidateNorm;
-
-        LineSearchResult(double[] candidate, double[] candidateResidual, double candidateNorm) {
-            this.candidate = candidate;
-            this.candidateResidual = candidateResidual;
-            this.candidateNorm = candidateNorm;
-        }
-    }
-
-    private LineSearchResult backtrackLineSearch(List<Equation> equations, List<String> vars, double[] x,
-                                                 double[] step, double[] lo, double[] hi, double norm,
-                                                 Map<String, Double> values) {
-        int n = x.length;
-        double lambda = 1.0;
-        double[] candidate = new double[n];
-        double[] candidateResidual = null;
-        double candidateNorm = Double.POSITIVE_INFINITY;
-        for (int halving = 0; halving < MAX_HALVINGS; halving++) {
-            for (int i = 0; i < n; i++) {
-                candidate[i] = Math.clamp(x[i] - lambda * step[i], lo[i], hi[i]);
-            }
-            candidateResidual = residuals(equations, vars, candidate, values);
-            candidateNorm = norm(candidateResidual);
-            if (Double.isFinite(candidateNorm) && candidateNorm < norm) {
-                break;
-            }
-            lambda /= 2.0;
-        }
-        return new LineSearchResult(candidate, candidateResidual, candidateNorm);
-    }
-
     private static boolean atBound(double[] x, double[] lo, double[] hi) {
         for (int i = 0; i < x.length; i++) {
             if (x[i] == lo[i] || x[i] == hi[i]) {
@@ -306,5 +250,61 @@ public class NewtonSolver {
             sum += value * value;
         }
         return Math.sqrt(sum);
+    }
+
+    private class IterationContext {
+        final int blockIndex;
+        final List<Equation> equations;
+        final List<String> vars;
+        final Map<String, Double> values;
+        final double[] lo;
+        final double[] hi;
+
+        IterationContext(Block block, Map<String, Double> values, Map<String, VariableSpec> specs) {
+            this.blockIndex = block.index();
+            this.equations = block.equations();
+            this.vars = block.variables();
+            this.values = values;
+            int n = vars.size();
+            this.lo = new double[n];
+            this.hi = new double[n];
+            for (int i = 0; i < n; i++) {
+                VariableSpec spec = specs.get(vars.get(i));
+                lo[i] = spec != null ? spec.lower() : Double.NEGATIVE_INFINITY;
+                hi[i] = spec != null ? spec.upper() : Double.POSITIVE_INFINITY;
+            }
+        }
+    }
+
+    private static class LineSearchResult {
+        final double[] candidate;
+        final double[] candidateResidual;
+        final double candidateNorm;
+
+        LineSearchResult(double[] candidate, double[] candidateResidual, double candidateNorm) {
+            this.candidate = candidate;
+            this.candidateResidual = candidateResidual;
+            this.candidateNorm = candidateNorm;
+        }
+    }
+
+    private LineSearchResult backtrackLineSearch(IterationContext ctx, double[] x, double[] step, double norm) {
+        int n = x.length;
+        double lambda = 1.0;
+        double[] candidate = new double[n];
+        double[] candidateResidual = null;
+        double candidateNorm = Double.POSITIVE_INFINITY;
+        for (int halving = 0; halving < MAX_HALVINGS; halving++) {
+            for (int i = 0; i < n; i++) {
+                candidate[i] = Math.clamp(x[i] - lambda * step[i], ctx.lo[i], ctx.hi[i]);
+            }
+            candidateResidual = residuals(ctx.equations, ctx.vars, candidate, ctx.values);
+            candidateNorm = norm(candidateResidual);
+            if (Double.isFinite(candidateNorm) && candidateNorm < norm) {
+                break;
+            }
+            lambda /= 2.0;
+        }
+        return new LineSearchResult(candidate, candidateResidual, candidateNorm);
     }
 }

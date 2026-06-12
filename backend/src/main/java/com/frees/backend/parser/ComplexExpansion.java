@@ -101,42 +101,60 @@ public final class ComplexExpansion {
         };
     }
 
+    private static boolean isZeroNum(Expr e) {
+        return e instanceof Expr.Num(double value, String unit, boolean isImaginary) && value == 0.0;
+    }
+
+    private static boolean isOneNum(Expr e) {
+        return e instanceof Expr.Num(double value, String unit, boolean isImaginary) && value == 1.0;
+    }
+
+    private static Expr simplifyPlus(Expr l, Expr r, boolean lZero, boolean rZero) {
+        if (lZero) return r;
+        if (rZero) return l;
+        return new Expr.BinOp('+', l, r);
+    }
+
+    private static Expr simplifyMinus(Expr l, Expr r, boolean lZero, boolean rZero) {
+        if (rZero) return l;
+        if (lZero) return new Expr.Neg(r);
+        return new Expr.BinOp('-', l, r);
+    }
+
+    private static Expr simplifyMult(Expr l, Expr r, boolean lZero, boolean rZero, boolean lOne, boolean rOne) {
+        if (lZero || rZero) return new Expr.Num(0.0);
+        if (lOne) return r;
+        if (rOne) return l;
+        return new Expr.BinOp('*', l, r);
+    }
+
+    private static Expr simplifyDiv(Expr l, Expr r, boolean lZero, boolean rOne) {
+        if (lZero) return new Expr.Num(0.0);
+        if (rOne) return l;
+        return new Expr.BinOp('/', l, r);
+    }
+
+    private static Expr simplifyPower(Expr l, Expr r, boolean lZero, boolean rZero, boolean rOne) {
+        if (rZero) return new Expr.Num(1.0);
+        if (rOne) return l;
+        if (lZero) return new Expr.Num(0.0);
+        return new Expr.BinOp('^', l, r);
+    }
+
     private static Expr simplifyBinOp(char op, Expr left, Expr right) {
         Expr l = simplify(left);
         Expr r = simplify(right);
-        boolean lZero = l instanceof Expr.Num(double value, String unit, boolean isImaginary) && value == 0.0;
-        boolean rZero = r instanceof Expr.Num(double value, String unit, boolean isImaginary) && value == 0.0;
-        boolean lOne = l instanceof Expr.Num(double value, String unit, boolean isImaginary) && value == 1.0;
-        boolean rOne = r instanceof Expr.Num(double value, String unit, boolean isImaginary) && value == 1.0;
+        boolean lZero = isZeroNum(l);
+        boolean rZero = isZeroNum(r);
+        boolean lOne = isOneNum(l);
+        boolean rOne = isOneNum(r);
 
         return switch (op) {
-            case '+' -> {
-                if (lZero) yield r;
-                if (rZero) yield l;
-                yield new Expr.BinOp('+', l, r);
-            }
-            case '-' -> {
-                if (rZero) yield l;
-                if (lZero) yield new Expr.Neg(r);
-                yield new Expr.BinOp('-', l, r);
-            }
-            case '*' -> {
-                if (lZero || rZero) yield new Expr.Num(0.0);
-                if (lOne) yield r;
-                if (rOne) yield l;
-                yield new Expr.BinOp('*', l, r);
-            }
-            case '/' -> {
-                if (lZero) yield new Expr.Num(0.0);
-                if (rOne) yield l;
-                yield new Expr.BinOp('/', l, r);
-            }
-            case '^' -> {
-                if (rZero) yield new Expr.Num(1.0);
-                if (rOne) yield l;
-                if (lZero) yield new Expr.Num(0.0);
-                yield new Expr.BinOp('^', l, r);
-            }
+            case '+' -> simplifyPlus(l, r, lZero, rZero);
+            case '-' -> simplifyMinus(l, r, lZero, rZero);
+            case '*' -> simplifyMult(l, r, lZero, rZero, lOne, rOne);
+            case '/' -> simplifyDiv(l, r, lZero, rOne);
+            case '^' -> simplifyPower(l, r, lZero, rZero, rOne);
             default -> new Expr.BinOp(op, l, r);
         };
     }
@@ -256,66 +274,72 @@ public final class ComplexExpansion {
         }
     }
 
-    private static void pinUnmatchedImaginaryParts(List<Equation> expanded, Set<String> allVars,
-                                                   Map<String, Integer> varToEq, Map<Integer, String> eqToVar,
-                                                   List<Equation> equations) {
-        // An exposed variable signals phase freedom: an equation like
-        // Q = abs(V)^2 / abs(Z) constrains only the magnitude of Z, leaving a
-        // rotational degree of freedom that some complex variable absorbs.
-        // Ground it the way an EES user would: treat the least-referenced
-        // base variable (an output-like leaf such as a capacitance) as real
-        // by pinning its imaginary part to zero. The alternating-path swap
-        // re-matches so exactly that component is the exposed one.
+    private static Map<String, Integer> countOccurrences(List<Equation> equations) {
         Map<String, Integer> baseOccurrences = new HashMap<>();
         for (Equation eq : equations) {
             for (String v : eq.variables()) {
                 baseOccurrences.merge(v, 1, Integer::sum);
             }
         }
+        return baseOccurrences;
+    }
+
+    private static Map<String, List<Integer>> buildEqsByVar(List<Equation> expanded) {
         Map<String, List<Integer>> eqsByVar = new HashMap<>();
         for (int i = 0; i < expanded.size(); i++) {
             for (String varName : expanded.get(i).variables()) {
                 eqsByVar.computeIfAbsent(varName, k -> new ArrayList<>()).add(i);
             }
         }
-        int sizeBeforePins = expanded.size();
-        for (String varName : allVars) {
-            if (varToEq.containsKey(varName)) {
-                continue;
-            }
-            String pin = swapToPreferredImaginary(varName, eqsByVar, varToEq, eqToVar,
-                    baseOccurrences);
-            if (pin == null) {
-                continue; // structurally singular; the Blocker reports it
-            }
-            expanded.add(new Equation(new Expr.Var(pin), new Expr.Num(0.0),
-                    pin + " = 0 (default complex real)"));
-        }
+        return eqsByVar;
+    }
 
-        // Pinning adds equations; the matching left equally many equations
-        // unmatched (the numerically redundant imaginary split of a
-        // magnitude-only equation). Drop them to keep the system square.
-        int excess = expanded.size() - allVars.size();
-        if (excess > 0) {
-            for (int i = sizeBeforePins - 1; i >= 0 && excess > 0; i--) {
-                if (!eqToVar.containsKey(i)
-                        && expanded.get(i).sourceText().endsWith("(imag)")) {
-                    expanded.remove(i);
-                    excess--;
-                }
+    private static void trimExcessEquations(List<Equation> expanded, Map<Integer, String> eqToVar, int sizeBeforePins, int excess) {
+        int ext = excess;
+        for (int i = sizeBeforePins - 1; i >= 0 && ext > 0; i--) {
+            if (!eqToVar.containsKey(i)
+                    && expanded.get(i).sourceText().endsWith("(imag)")) {
+                expanded.remove(i);
+                ext--;
             }
         }
     }
 
-    /**
-     * BFS over alternating paths from the exposed variable: variable -> any
-     * equation containing it -> that equation's matched variable. Every
-     * reachable matched variable can trade places with the exposed one by
-     * flipping the path. Picks the imaginary component whose base variable
-     * appears in the fewest source equations, flips the matching so it
-     * becomes the exposed one, and returns it; null when no imaginary
-     * component is reachable.
-     */
+    private static void pinUnmatchedImaginaryParts(List<Equation> expanded, Set<String> allVars,
+                                                   Map<String, Integer> varToEq, Map<Integer, String> eqToVar,
+                                                   List<Equation> equations) {
+        Map<String, Integer> baseOccurrences = countOccurrences(equations);
+        Map<String, List<Integer>> eqsByVar = buildEqsByVar(expanded);
+        int sizeBeforePins = expanded.size();
+        for (String varName : allVars) {
+            if (!varToEq.containsKey(varName)) {
+                String pin = swapToPreferredImaginary(varName, eqsByVar, varToEq, eqToVar,
+                        baseOccurrences);
+                if (pin != null) {
+                    expanded.add(new Equation(new Expr.Var(pin), new Expr.Num(0.0),
+                            pin + " = 0 (default complex real)"));
+                }
+            }
+        }
+
+        int excess = expanded.size() - allVars.size();
+        if (excess > 0) {
+            trimExcessEquations(expanded, eqToVar, sizeBeforePins, excess);
+        }
+    }
+
+    private static void flipAlternatingPath(String best, String exposedVar, Map<String, Integer> varToEq, Map<Integer, String> eqToVar, Map<String, Integer> reachedViaEq, Map<Integer, String> reachedFromVar) {
+        String cur = best;
+        varToEq.remove(best);
+        while (!cur.equals(exposedVar)) {
+            int eq = reachedViaEq.get(cur);
+            String prev = reachedFromVar.get(eq);
+            eqToVar.put(eq, prev);
+            varToEq.put(prev, eq);
+            cur = prev;
+        }
+    }
+
     private static String swapToPreferredImaginary(String exposedVar,
                                                    Map<String, List<Integer>> eqsByVar,
                                                    Map<String, Integer> varToEq,
@@ -336,19 +360,17 @@ public final class ComplexExpansion {
         while (!queue.isEmpty()) {
             String v = queue.poll();
             for (int ei : eqsByVar.getOrDefault(v, List.of())) {
-                if (!seenEqs.add(ei)) {
-                    continue;
+                if (seenEqs.add(ei)) {
+                    reachedFromVar.put(ei, v);
+                    String w = eqToVar.get(ei);
+                    if (w != null && seenVars.add(w)) {
+                        reachedViaEq.put(w, ei);
+                        if (w.endsWith("_i")) {
+                            candidates.add(w);
+                        }
+                        queue.add(w);
+                    }
                 }
-                reachedFromVar.put(ei, v);
-                String w = eqToVar.get(ei);
-                if (w == null || !seenVars.add(w)) {
-                    continue;
-                }
-                reachedViaEq.put(w, ei);
-                if (w.endsWith("_i")) {
-                    candidates.add(w);
-                }
-                queue.add(w);
             }
         }
         if (candidates.isEmpty()) {
@@ -360,30 +382,21 @@ public final class ComplexExpansion {
                                 .getOrDefault(w.substring(0, w.length() - 2), 0))
                         .thenComparing(w -> w))
                 .orElseThrow();
-        // Flip the alternating path so `best` becomes the exposed variable.
-        String cur = best;
-        varToEq.remove(best);
-        while (!cur.equals(exposedVar)) {
-            int eq = reachedViaEq.get(cur);
-            String prev = reachedFromVar.get(eq);
-            eqToVar.put(eq, prev);
-            varToEq.put(prev, eq);
-            cur = prev;
-        }
+        flipAlternatingPath(best, exposedVar, varToEq, eqToVar, reachedViaEq, reachedFromVar);
         return best;
     }
 
     public static Expr realPart(Expr e) {
         return switch (e) {
-            case Expr.Num n -> n.isImaginary() ? new Expr.Num(0.0, n.unit()) : n;
-            case Expr.Var v -> new Expr.Var(v.name() + "_r");
-            case Expr.Neg neg -> new Expr.Neg(realPart(neg.operand()));
-            case Expr.BinOp b -> {
-                Expr lr = realPart(b.left());
-                Expr li = imagPart(b.left());
-                Expr rr = realPart(b.right());
-                Expr ri = imagPart(b.right());
-                yield switch (b.op()) {
+            case Expr.Num(double value, String unit, boolean isImaginary) -> isImaginary ? new Expr.Num(0.0, unit) : new Expr.Num(value, unit, isImaginary);
+            case Expr.Var(String name) -> new Expr.Var(name + "_r");
+            case Expr.Neg(Expr operand) -> new Expr.Neg(realPart(operand));
+            case Expr.BinOp(char op, Expr left, Expr right) -> {
+                Expr lr = realPart(left);
+                Expr li = imagPart(left);
+                Expr rr = realPart(right);
+                Expr ri = imagPart(right);
+                yield switch (op) {
                     case '+' -> new Expr.BinOp('+', lr, rr);
                     case '-' -> new Expr.BinOp('-', lr, rr);
                     case '*' -> new Expr.BinOp('-', new Expr.BinOp('*', lr, rr), new Expr.BinOp('*', li, ri));
@@ -397,84 +410,84 @@ public final class ComplexExpansion {
                         Expr angle = powerAngle(lr, li, rr, ri);
                         yield new Expr.BinOp('*', magnitude, new Expr.Call("cos", List.of(angle)));
                     }
-                    default -> throw new IllegalStateException("Unknown operator: " + b.op());
+                    default -> throw new IllegalStateException("Unknown operator: " + op);
                 };
             }
-            case Expr.Call c -> {
-                if ("real".equals(c.function())) {
-                    yield realPart(c.args().get(0));
+            case Expr.Call(String function, List<Expr> args) -> {
+                if ("real".equals(function)) {
+                    yield realPart(args.get(0));
                 }
-                if ("imag".equals(c.function())) {
-                    yield imagPart(c.args().get(0));
+                if ("imag".equals(function)) {
+                    yield imagPart(args.get(0));
                 }
-                if ("sin".equals(c.function())) {
-                    Expr x = realPart(c.args().get(0));
-                    Expr y = imagPart(c.args().get(0));
+                if ("sin".equals(function)) {
+                    Expr x = realPart(args.get(0));
+                    Expr y = imagPart(args.get(0));
                     Expr expY = new Expr.Call("exp", List.of(y));
                     Expr expNegY = new Expr.Call("exp", List.of(new Expr.Neg(y)));
                     Expr coshY = new Expr.BinOp('*', new Expr.Num(0.5), new Expr.BinOp('+', expY, expNegY));
                     yield new Expr.BinOp('*', new Expr.Call("sin", List.of(x)), coshY);
                 }
-                if ("cos".equals(c.function())) {
-                    Expr x = realPart(c.args().get(0));
-                    Expr y = imagPart(c.args().get(0));
+                if ("cos".equals(function)) {
+                    Expr x = realPart(args.get(0));
+                    Expr y = imagPart(args.get(0));
                     Expr expY = new Expr.Call("exp", List.of(y));
                     Expr expNegY = new Expr.Call("exp", List.of(new Expr.Neg(y)));
                     Expr coshY = new Expr.BinOp('*', new Expr.Num(0.5), new Expr.BinOp('+', expY, expNegY));
                     yield new Expr.BinOp('*', new Expr.Call("cos", List.of(x)), coshY);
                 }
-                if ("exp".equals(c.function())) {
-                    Expr x = realPart(c.args().get(0));
-                    Expr y = imagPart(c.args().get(0));
+                if ("exp".equals(function)) {
+                    Expr x = realPart(args.get(0));
+                    Expr y = imagPart(args.get(0));
                     Expr expX = new Expr.Call("exp", List.of(x));
                     yield new Expr.BinOp('*', expX, new Expr.Call("cos", List.of(y)));
                 }
-                if ("ln".equals(c.function())) {
-                    Expr x = realPart(c.args().get(0));
-                    Expr y = imagPart(c.args().get(0));
+                if ("ln".equals(function)) {
+                    Expr x = realPart(args.get(0));
+                    Expr y = imagPart(args.get(0));
                     Expr arg = new Expr.BinOp('+', new Expr.BinOp('*', x, x), new Expr.BinOp('*', y, y));
                     yield new Expr.BinOp('*', new Expr.Num(0.5), new Expr.Call("ln", List.of(arg)));
                 }
-                if ("sqrt".equals(c.function())) {
-                    Expr x = realPart(c.args().get(0));
-                    Expr y = imagPart(c.args().get(0));
+                if ("sqrt".equals(function)) {
+                    Expr x = realPart(args.get(0));
+                    Expr y = imagPart(args.get(0));
                     Expr r2 = new Expr.BinOp('+', new Expr.BinOp('*', x, x), new Expr.BinOp('*', y, y));
                     Expr r = new Expr.Call("sqrt", List.of(r2));
-                    Expr theta = new Expr.Call("atan2", List.of(y, x));
+                    Expr theta = new Expr.Call(ATAN2, List.of(y, x));
                     Expr sqrtR = new Expr.Call("sqrt", List.of(r));
                     Expr halfTheta = new Expr.BinOp('*', new Expr.Num(0.5), theta);
                     yield new Expr.BinOp('*', sqrtR, new Expr.Call("cos", List.of(halfTheta)));
                 }
-                if ("abs".equals(c.function())) {
+                if ("abs".equals(function)) {
                     // |z| = sqrt(x^2 + y^2): the complex magnitude.
-                    Expr x = realPart(c.args().get(0));
-                    Expr y = imagPart(c.args().get(0));
+                    Expr x = realPart(args.get(0));
+                    Expr y = imagPart(args.get(0));
                     Expr r2 = new Expr.BinOp('+', new Expr.BinOp('*', x, x), new Expr.BinOp('*', y, y));
                     yield new Expr.Call("sqrt", List.of(r2));
                 }
-                throw unsupportedInComplexMode(c);
+                throw unsupportedInComplexMode(new Expr.Call(function, args));
             }
-            case Expr.ArrayAccess aa -> new Expr.ArrayAccess(aa.name() + "_r", aa.indices());
-            case Expr.Range r -> new Expr.Range(realPart(r.start()), realPart(r.end()));
-            case Expr.ArrayLiteral al -> new Expr.ArrayLiteral(al.elements().stream().map(ComplexExpansion::realPart).toList());
+            case Expr.ArrayAccess(String name, List<Expr> indices) -> new Expr.ArrayAccess(name + "_r", indices);
+            case Expr.Range(Expr start, Expr end) -> new Expr.Range(realPart(start), realPart(end));
+            case Expr.ArrayLiteral(List<Expr> elements) -> new Expr.ArrayLiteral(elements.stream().map(ComplexExpansion::realPart).toList());
             // Comparisons and logical ops are always real (evaluate to 1.0 or 0.0)
-            case Expr.Compare cmp -> new Expr.Compare(cmp.op(), realPart(cmp.left()), realPart(cmp.right()));
-            case Expr.Logical log -> new Expr.Logical(log.op(), realPart(log.left()), realPart(log.right()));
-            case Expr.Not not -> new Expr.Not(realPart(not.operand()));
+            case Expr.Compare(String op, Expr left, Expr right) -> new Expr.Compare(op, realPart(left), realPart(right));
+            case Expr.Logical(String op, Expr left, Expr right) -> new Expr.Logical(op, realPart(left), realPart(right));
+            case Expr.Not(Expr operand) -> new Expr.Not(realPart(operand));
         };
     }
 
     public static Expr imagPart(Expr e) {
         return switch (e) {
-            case Expr.Num n -> n.isImaginary() ? new Expr.Num(n.value(), n.unit()) : new Expr.Num(0.0);
-            case Expr.Var v -> new Expr.Var(v.name() + "_i");
-            case Expr.Neg neg -> new Expr.Neg(imagPart(neg.operand()));
-            case Expr.BinOp b -> {
-                Expr lr = realPart(b.left());
-                Expr li = imagPart(b.left());
-                Expr rr = realPart(b.right());
-                Expr ri = imagPart(b.right());
-                yield switch (b.op()) {
+            case Expr.Num(double value, String unit, boolean isImaginary) -> isImaginary ? new Expr.Num(value, unit) : new Expr.Num(0.0);
+            case Expr.Var(String name) -> new Expr.Var(name + "_i");
+            case Expr.Neg(Expr operand) -> new Expr.Neg(imagPart(operand));
+            case Expr.BinOp(char op, Expr left, Expr right) -> {
+                Expr lr = realPart(left);
+                Expr li = imagPart(left);
+                Expr rr = realPart(right);
+                Expr ri = imagPart(right);
+                yield switch (op) {
                     case '+' -> new Expr.BinOp('+', li, ri);
                     case '-' -> new Expr.BinOp('-', li, ri);
                     case '*' -> new Expr.BinOp('+', new Expr.BinOp('*', lr, ri), new Expr.BinOp('*', li, rr));
@@ -488,66 +501,66 @@ public final class ComplexExpansion {
                         Expr angle = powerAngle(lr, li, rr, ri);
                         yield new Expr.BinOp('*', magnitude, new Expr.Call("sin", List.of(angle)));
                     }
-                    default -> throw new IllegalStateException("Unknown operator: " + b.op());
+                    default -> throw new IllegalStateException("Unknown operator: " + op);
                 };
             }
-            case Expr.Call c -> {
-                if ("real".equals(c.function())) {
+            case Expr.Call(String function, List<Expr> args) -> {
+                if ("real".equals(function)) {
                     yield new Expr.Num(0.0);
                 }
-                if ("imag".equals(c.function())) {
+                if ("imag".equals(function)) {
                     yield new Expr.Num(0.0);
                 }
-                if ("sin".equals(c.function())) {
-                    Expr x = realPart(c.args().get(0));
-                    Expr y = imagPart(c.args().get(0));
+                if ("sin".equals(function)) {
+                    Expr x = realPart(args.get(0));
+                    Expr y = imagPart(args.get(0));
                     Expr expY = new Expr.Call("exp", List.of(y));
                     Expr expNegY = new Expr.Call("exp", List.of(new Expr.Neg(y)));
                     Expr sinhY = new Expr.BinOp('*', new Expr.Num(0.5), new Expr.BinOp('-', expY, expNegY));
                     yield new Expr.BinOp('*', new Expr.Call("cos", List.of(x)), sinhY);
                 }
-                if ("cos".equals(c.function())) {
-                    Expr x = realPart(c.args().get(0));
-                    Expr y = imagPart(c.args().get(0));
+                if ("cos".equals(function)) {
+                    Expr x = realPart(args.get(0));
+                    Expr y = imagPart(args.get(0));
                     Expr expY = new Expr.Call("exp", List.of(y));
                     Expr expNegY = new Expr.Call("exp", List.of(new Expr.Neg(y)));
                     Expr sinhY = new Expr.BinOp('*', new Expr.Num(0.5), new Expr.BinOp('-', expY, expNegY));
                     yield new Expr.Neg(new Expr.BinOp('*', new Expr.Call("sin", List.of(x)), sinhY));
                 }
-                if ("exp".equals(c.function())) {
-                    Expr x = realPart(c.args().get(0));
-                    Expr y = imagPart(c.args().get(0));
+                if ("exp".equals(function)) {
+                    Expr x = realPart(args.get(0));
+                    Expr y = imagPart(args.get(0));
                     Expr expX = new Expr.Call("exp", List.of(x));
                     yield new Expr.BinOp('*', expX, new Expr.Call("sin", List.of(y)));
                 }
-                if ("ln".equals(c.function())) {
-                    Expr x = realPart(c.args().get(0));
-                    Expr y = imagPart(c.args().get(0));
-                    yield new Expr.Call("atan2", List.of(y, x));
+                if ("ln".equals(function)) {
+                    Expr x = realPart(args.get(0));
+                    Expr y = imagPart(args.get(0));
+                    yield new Expr.Call(ATAN2, List.of(y, x));
                 }
-                if ("sqrt".equals(c.function())) {
-                    Expr x = realPart(c.args().get(0));
-                    Expr y = imagPart(c.args().get(0));
+                if ("sqrt".equals(function)) {
+                    Expr x = realPart(args.get(0));
+                    Expr y = imagPart(args.get(0));
                     Expr r2 = new Expr.BinOp('+', new Expr.BinOp('*', x, x), new Expr.BinOp('*', y, y));
                     Expr r = new Expr.Call("sqrt", List.of(r2));
-                    Expr theta = new Expr.Call("atan2", List.of(y, x));
+                    Expr theta = new Expr.Call(ATAN2, List.of(y, x));
                     Expr sqrtR = new Expr.Call("sqrt", List.of(r));
                     Expr halfTheta = new Expr.BinOp('*', new Expr.Num(0.5), theta);
                     yield new Expr.BinOp('*', sqrtR, new Expr.Call("sin", List.of(halfTheta)));
                 }
-                if ("abs".equals(c.function())) {
+                if ("abs".equals(function)) {
                     // The magnitude is real; its imaginary part is zero.
                     yield new Expr.Num(0.0);
                 }
-                throw unsupportedInComplexMode(c);
+                throw unsupportedInComplexMode(new Expr.Call(function, args));
             }
-            case Expr.ArrayAccess aa -> new Expr.ArrayAccess(aa.name() + "_i", aa.indices());
-            case Expr.Range r -> new Expr.Range(imagPart(r.start()), imagPart(r.end()));
-            case Expr.ArrayLiteral al -> new Expr.ArrayLiteral(al.elements().stream().map(ComplexExpansion::imagPart).toList());
+            case Expr.ArrayAccess(String name, List<Expr> indices) -> new Expr.ArrayAccess(name + "_i", indices);
+            case Expr.Range(Expr start, Expr end) -> new Expr.Range(imagPart(start), imagPart(end));
+            case Expr.ArrayLiteral(List<Expr> elements) -> new Expr.ArrayLiteral(elements.stream().map(ComplexExpansion::imagPart).toList());
             // Comparisons and logical ops have zero imaginary part
-            case Expr.Compare cmp -> new Expr.Num(0.0);
-            case Expr.Logical log -> new Expr.Num(0.0);
-            case Expr.Not not -> new Expr.Num(0.0);
+            case Expr.Compare(String op, Expr left, Expr right) -> new Expr.Num(0.0);
+            case Expr.Logical(String op, Expr left, Expr right) -> new Expr.Num(0.0);
+            case Expr.Not(Expr operand) -> new Expr.Num(0.0);
         };
     }
 
