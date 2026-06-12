@@ -104,7 +104,7 @@ interface Props {
   onClose: () => void
 }
 
-/** a reference solver Calculate > Min/Max: 1-D optimization over one independent variable. */
+/** Calculate > Min/Max: 1-D optimization over one independent variable. */
 export default function MinMaxModal({
   variables,
   text,

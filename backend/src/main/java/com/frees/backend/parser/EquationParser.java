@@ -20,7 +20,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 
 /**
- * Parses a reference solver source text into a list of equations using the ANTLR-generated
+ * Parses frees source text into a list of equations using the ANTLR-generated
  * lexer/parser and an AST-building visitor.
  */
 public final class EquationParser {

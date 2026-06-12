@@ -13,7 +13,7 @@ import java.util.List;
 public class AstBuilder extends FreesBaseVisitor<Expr> {
 
     /**
-     * a reference solver unifies the case of variables to match their first appearance;
+     * Variable case is unified to match their first appearance;
      * maps canonical (lowercase) name -> first-seen spelling.
      */
     private final java.util.Map<String, String> displayNames = new java.util.LinkedHashMap<>();
@@ -391,7 +391,7 @@ public class AstBuilder extends FreesBaseVisitor<Expr> {
     }
 
     /**
-     * Fluid property call, a reference solver-style: Enthalpy(R134a, T=T1, x=1). Encoded as
+     * Fluid property call: Enthalpy(R134a, T=T1, x=1). Encoded as
      * a synthetic call prop$<output>$<fluid>$<indicators...> over the value
      * expressions, so the fluid and indicator labels never become variables.
      */

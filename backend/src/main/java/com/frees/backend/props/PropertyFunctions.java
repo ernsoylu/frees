@@ -4,7 +4,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * a reference solver real-fluid property functions mapped onto CoolProp's PropsSI.
+ * Real-fluid property functions mapped onto CoolProp's PropsSI.
  * Calls arrive encoded as prop$<output>$<fluid>$<ind1>$<ind2> with the two
  * indicator value expressions as arguments (see AstBuilder), e.g.
  * Enthalpy(R134a, T=T1, x=1) -> prop$enthalpy$r134a$t$x with [T1, 1].
@@ -19,7 +19,7 @@ public final class PropertyFunctions {
     private static final String DMASS = "Dmass";
     private static final String VOLUME = "volume";
 
-    /** a reference solver output function name -> CoolProp PropsSI output key. */
+    /** Output function name -> CoolProp PropsSI output key. */
     private static final Map<String, String> OUTPUTS = Map.ofEntries(
             Map.entry("enthalpy", "Hmass"),
             Map.entry("entropy", "Smass"),
@@ -36,7 +36,7 @@ public final class PropertyFunctions {
             Map.entry("conductivity", "conductivity"),
             Map.entry("soundspeed", "speed_of_sound"));
 
-    /** a reference solver indicator letter -> CoolProp PropsSI input key. */
+    /** Indicator letter -> CoolProp PropsSI input key. */
     private static final Map<String, String> INPUTS = Map.ofEntries(
             Map.entry("t", "T"),
             Map.entry("p", "P"),
@@ -49,7 +49,7 @@ public final class PropertyFunctions {
             Map.entry("d", DMASS),
             Map.entry("rho", DMASS));
 
-    /** Lowercased a reference solver fluid spellings -> CoolProp canonical names. */
+    /** Lowercased accepted fluid spellings -> CoolProp canonical names. */
     private static final Map<String, String> FLUIDS = Map.ofEntries(
             Map.entry("water", WATER),
             Map.entry("steam", WATER),
@@ -71,7 +71,7 @@ public final class PropertyFunctions {
             Map.entry("r717", "Ammonia"),
             // Spelled formulas (CO2, N2, CH4, ...) are ideal gases with
             // formation-reference enthalpy (see IdealGas); only full names
-            // select the CoolProp real fluids, as in a reference solver.
+            // select the CoolProp real fluids.
             Map.entry("carbondioxide", CO2),
             Map.entry("r744", CO2),
             Map.entry("nitrogen", "Nitrogen"),
@@ -88,7 +88,7 @@ public final class PropertyFunctions {
             Map.entry("butane", "n-Butane"),
             Map.entry("r600", "n-Butane"));
 
-    /** a reference solver humid-air output function name -> HAPropsSI output key. */
+    /** Humid-air output function name -> HAPropsSI output key. */
     private static final Map<String, String> HA_OUTPUTS = Map.ofEntries(
             Map.entry("enthalpy", "H"),
             Map.entry("entropy", "S"),
@@ -101,7 +101,7 @@ public final class PropertyFunctions {
             Map.entry("cp", "C"),
             Map.entry("specheat", "C"));
 
-    /** a reference solver humid-air indicator -> HAPropsSI input key. */
+    /** Humid-air indicator -> HAPropsSI input key. */
     private static final Map<String, String> HA_INPUTS = Map.ofEntries(
             Map.entry("t", "T"),
             Map.entry("p", "P"),

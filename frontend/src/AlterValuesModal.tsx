@@ -19,7 +19,7 @@ interface Props {
 }
 
 /**
- * a reference solver "Alter Values": fills a parametric-table column from first to last
+ * "Alter Values": fills a parametric-table column from first to last
  * row with a linear or logarithmic progression (spreadsheet-style fill).
  */
 export default function AlterValuesModal({

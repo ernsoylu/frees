@@ -7,9 +7,9 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Engineering unit table and a reference solver unit-expression parser.
+ * Engineering unit table and unit-expression parser.
  *
- * a reference solver rules honored here:
+ * Rules honored here:
  *  - dash, space, star, or dot multiply units on the same side of the divisor
  *  - at most one '/' per unit term; everything to its right is the denominator
  *  - exponents may be written with or without '^' (m^2 == m2), negatives allowed
@@ -80,7 +80,7 @@ public final class UnitRegistry {
         define("day", 86400.0, 0, 0, 1);
         define("year", 3.1536e7, 0, 0, 1);
 
-        // Temperature (multiplicative scale only; Convert is multiplicative in a reference solver)
+        // Temperature (multiplicative scale only; Convert is multiplicative)
         define("k", 1.0, 0, 0, 0, 1);
         define("c", 1.0, 0, 0, 0, 1);
         define("r", 5.0 / 9.0, 0, 0, 0, 1);
@@ -195,7 +195,7 @@ public final class UnitRegistry {
 
     private UnitRegistry() {}
 
-    /** Parses an a reference solver unit expression like "kJ/kg-K", "m^3", "Btu/hr-ft^2-R" or "-". */
+    /** Parses a unit expression like "kJ/kg-K", "m^3", "Btu/hr-ft^2-R" or "-". */
     public static Quantity parse(String expression) {
         String text = expression.trim();
         if (text.isEmpty() || text.equals("-")) {
@@ -225,9 +225,9 @@ public final class UnitRegistry {
         }
 
         Quantity product = Quantity.dimensionless(1.0);
-        // Dash, star, and whitespace mean multiplication in a reference solver units. (Dot is
+        // Dash, star, and whitespace mean multiplication in unit expressions. (Dot is
         // omitted so decimal exponents like m^1.5 survive; negative exponents
-        // are unsupported — use the denominator instead, as a reference solver convention.)
+        // are unsupported — use the denominator instead, by convention.)
         for (String token : trimmed.split("[-*\\s]+")) {
             if (token.isEmpty() || token.equals("1")) {
                 continue;
@@ -481,7 +481,7 @@ public final class UnitRegistry {
         return null;
     }
 
-    /** a reference solver Convert('From', 'To'): the multiplicative factor between two unit expressions. */
+    /** Convert('From', 'To'): the multiplicative factor between two unit expressions. */
     public static double convert(String from, String to) {
         Quantity source = parse(from);
         Quantity target = parse(to);

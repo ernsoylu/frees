@@ -9,9 +9,9 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * a reference solver Check Units: traverses each equation's AST verifying dimensional
+ * Check Units: traverses each equation's AST verifying dimensional
  * homogeneity across '=' and '+'/'-'. Inconsistencies are warnings — they
- * never block solving, exactly as in a reference solver.
+ * never block solving.
  *
  * Variables with blank units are wildcards (unknown); the explicit
  * dimensionless marker is "-".
@@ -334,7 +334,7 @@ public final class UnitChecker {
 
     private Dim dimOfNum(Expr.Num n) {
         if (n.unit() == null) {
-            // A bare numeric constant adapts to its context (a reference solver behavior).
+            // A bare numeric constant adapts to its context.
             return Dim.UNKNOWN;
         }
         try {
