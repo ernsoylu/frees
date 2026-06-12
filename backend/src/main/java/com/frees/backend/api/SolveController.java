@@ -97,6 +97,9 @@ public class SolveController {
     }
 
     private static final String NO_EQUATIONS_MESSAGE = "No equations entered.";
+    private static final String HMASS = "Hmass";
+    private static final String SMASS = "Smass";
+    private static final String DMASS = "Dmass";
 
     private final EquationSystemSolver solver;
 
@@ -185,7 +188,7 @@ public class SolveController {
     @PostMapping("/check")
     public ResponseEntity<CheckResponse> check(@RequestBody SolveRequest request) {
         if (request.text() == null || request.text().isBlank()) {
-            return ResponseEntity.ok(new CheckResponse(false, 0, 0, List.of(), List.of(),
+            return ResponseEntity.badRequest().body(new CheckResponse(false, 0, 0, List.of(), List.of(),
                     Map.of(), NO_EQUATIONS_MESSAGE, List.of(), null));
         }
         try {
@@ -219,7 +222,7 @@ public class SolveController {
                     formattedReport));
         } catch (EquationParser.ParseException e) {
             String firstError = e.getMessage().lines().findFirst().orElse(e.getMessage());
-            return ResponseEntity.ok(new CheckResponse(
+            return ResponseEntity.badRequest().body(new CheckResponse(
                     false, 0, 0, List.of(), List.of(), Map.of(),
                     "Syntax error: " + firstError, List.of(), null));
         } catch (Exception e) {
@@ -388,10 +391,14 @@ public class SolveController {
         int unknowns = 0;
         double maxResidual = 0.0;
 
+        TableRowContext context = new TableRowContext(
+                cleanText, settings, specs, unitsByLowerName, system,
+                request.table().variables(), explicitUnits
+        );
+
         List<TableRowResult> results = new ArrayList<>();
         for (Map<String, Double> row : request.table().rows()) {
-            RowOutcome outcome = solveTableRow(cleanText, row, settings, specs,
-                    unitsByLowerName, system, request.table().variables(), explicitUnits);
+            RowOutcome outcome = solveTableRow(row, context);
             results.add(outcome.row());
             if (outcome.stats() != null) {
                 totalIterations += outcome.stats().iterations();
@@ -417,29 +424,33 @@ public class SolveController {
 
     private record RowOutcome(TableRowResult row, EquationSystemSolver.Stats stats) {}
 
+    private record TableRowContext(
+            String text,
+            SolverSettings settings,
+            Map<String, VariableSpec> specs,
+            Map<String, String> unitsByLowerName,
+            UnitRegistry.UnitSystem system,
+            List<String> tableVariables,
+            Map<String, String> explicitUnits
+    ) {}
+
     /** One parametric-table run: non-null cells are fixed, the rest solved. */
-    private RowOutcome solveTableRow(String text, Map<String, Double> row,
-                                     SolverSettings settings,
-                                     Map<String, VariableSpec> specs,
-                                     Map<String, String> unitsByLowerName,
-                                     UnitRegistry.UnitSystem system,
-                                     List<String> tableVariables,
-                                     Map<String, String> explicitUnits) {
-        StringBuilder sb = new StringBuilder(text);
+    private RowOutcome solveTableRow(Map<String, Double> row, TableRowContext context) {
+        StringBuilder sb = new StringBuilder(context.text());
         for (Map.Entry<String, Double> entry : row.entrySet()) {
             if (entry.getValue() != null) {
                 sb.append("\n").append(entry.getKey()).append(" = ").append(entry.getValue());
             }
         }
         try {
-            EquationSystemSolver.Result result = solver.solve(sb.toString(), settings, specs);
-            java.util.Set<String> targetVars = new java.util.HashSet<>(tableVariables);
+            EquationSystemSolver.Result result = solver.solve(sb.toString(), context.settings(), context.specs());
+            java.util.Set<String> targetVars = new java.util.HashSet<>(context.tableVariables());
             result = resolveMissingProperties(result, sb.toString(), targetVars);
             Map<String, Double> rowValues = new HashMap<>();
             for (Map.Entry<String, Double> e : result.variables().entrySet()) {
                 String name = e.getKey();
-                String unit = unitsByLowerName.getOrDefault(name.toLowerCase(), "");
-                rowValues.put(name, toDisplay(name, e.getValue(), unit, system, explicitUnits).value());
+                String unit = context.unitsByLowerName().getOrDefault(name.toLowerCase(), "");
+                rowValues.put(name, toDisplay(name, e.getValue(), unit, context.system(), context.explicitUnits()).value());
             }
             return new RowOutcome(new TableRowResult(true, rowValues, null), result.stats());
         } catch (Exception e) {
@@ -485,10 +496,10 @@ public class SolveController {
     @PostMapping("/optimize")
     public ResponseEntity<OptimizeResponse> optimize(@RequestBody OptimizeRequest request) {
         if (request.text() == null || request.text().isBlank()) {
-            return ResponseEntity.ok(OptimizeResponse.failure(NO_EQUATIONS_MESSAGE));
+            return ResponseEntity.badRequest().body(OptimizeResponse.failure(NO_EQUATIONS_MESSAGE));
         }
         if (request.lower() == null || request.upper() == null) {
-            return ResponseEntity.ok(OptimizeResponse.failure(
+            return ResponseEntity.badRequest().body(OptimizeResponse.failure(
                     "Both bounds of the independent variable are required."));
         }
 
@@ -532,9 +543,9 @@ public class SolveController {
                     decision, result.evaluations(), variables));
         } catch (EquationParser.ParseException e) {
             String firstError = e.getMessage().lines().findFirst().orElse(e.getMessage());
-            return ResponseEntity.ok(OptimizeResponse.failure("Syntax error: " + firstError));
+            return ResponseEntity.badRequest().body(OptimizeResponse.failure("Syntax error: " + firstError));
         } catch (SolverException e) {
-            return ResponseEntity.ok(OptimizeResponse.failure(e.getMessage()));
+            return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(OptimizeResponse.failure(e.getMessage()));
         }
     }
 
@@ -570,18 +581,18 @@ public class SolveController {
     );
 
     private static final List<PropPair> PREFERRED_PAIRS = List.of(
-            new PropPair("P", "P", "h", "Hmass"),
-            new PropPair("P", "P", "s", "Smass"),
-            new PropPair("h", "Hmass", "s", "Smass"),
+            new PropPair("P", "P", "h", HMASS),
+            new PropPair("P", "P", "s", SMASS),
+            new PropPair("h", HMASS, "s", SMASS),
             new PropPair("P", "P", "x", "Q"),
             new PropPair("T", "T", "x", "Q"),
             new PropPair("T", "T", "P", "P"),
-            new PropPair("T", "T", "s", "Smass"),
-            new PropPair("T", "T", "h", "Hmass"),
-            new PropPair("P", "P", "v", "Dmass"),
-            new PropPair("T", "T", "v", "Dmass"),
-            new PropPair("P", "P", "rho", "Dmass"),
-            new PropPair("T", "T", "rho", "Dmass")
+            new PropPair("T", "T", "s", SMASS),
+            new PropPair("T", "T", "h", HMASS),
+            new PropPair("P", "P", "v", DMASS),
+            new PropPair("T", "T", "v", DMASS),
+            new PropPair("P", "P", "rho", DMASS),
+            new PropPair("T", "T", "rho", DMASS)
     );
 
     private static double getPropOrNaN(String output, String name1, double prop1, String name2, double prop2, String fluid) {
@@ -628,13 +639,15 @@ public class SolveController {
         );
     }
 
-    private void resolveForVariables(Map<String, Double> variables, Map<String, String> displayNames, String fluid, java.util.Set<String> targetVariables) {
-        // Find state variables and group them by state index
-        Map<Integer, Map<String, Double>> stateKnowns = new HashMap<>();
-        Map<Integer, String> stateStyle = new HashMap<>();
+    private static class StateData {
+        final Map<Integer, Map<String, Double>> stateKnowns = new HashMap<>();
+        final Map<Integer, String> stateStyle = new HashMap<>();
+    }
 
+    private StateData parseStateVariables(Map<String, Double> variables) {
+        StateData data = new StateData();
         java.util.regex.Pattern pattern = java.util.regex.Pattern.compile(
-                "^([a-zA-Z]+(?:_[a-zA-Z]+)*?)_?(\\d+)$|^([a-zA-Z]+)\\[(\\d+)\\]$");
+                "^([a-zA-Z][a-zA-Z_]*?)_?(\\d+)$|^([a-zA-Z][a-zA-Z_]*)\\[(\\d+)\\]$");
 
         for (Map.Entry<String, Double> entry : variables.entrySet()) {
             String name = entry.getKey();
@@ -647,149 +660,124 @@ public class SolveController {
                 String base = propName.replace("_", "").toLowerCase();
                 String canonicalProp = PROPERTY_ALIASES.get(base);
                 if (canonicalProp != null) {
-                    stateKnowns.computeIfAbsent(index, k -> new HashMap<>()).put(canonicalProp, entry.getValue());
+                    data.stateKnowns.computeIfAbsent(index, k -> new HashMap<>()).put(canonicalProp, entry.getValue());
 
-                    // Determine template style
-                    if (!stateStyle.containsKey(index)) {
-                        String template;
-                        if (name.contains("[")) {
-                            template = "%s[" + index + "]";
-                        } else if (name.contains("_")) {
-                            template = "%s_" + index;
-                        } else {
-                            template = "%s" + index;
-                        }
-                        stateStyle.put(index, template);
+                    if (!data.stateStyle.containsKey(index)) {
+                        String template = name.contains("[") ? "%s[" + index + "]"
+                                : (name.contains("_") ? "%s_" + index : "%s" + index);
+                        data.stateStyle.put(index, template);
                     }
                 }
             }
         }
+        return data;
+    }
 
-        // Solve each state that has >= 2 known properties
-        for (Map.Entry<Integer, Map<String, Double>> entry : stateKnowns.entrySet()) {
+    private PropPair findMatchedPair(Map<String, Double> knowns) {
+        for (PropPair pair : PREFERRED_PAIRS) {
+            if (knowns.containsKey(pair.key1()) && knowns.containsKey(pair.key2())) {
+                return pair;
+            }
+        }
+        return null;
+    }
+
+    private boolean shouldSkipProp(String prop, String template, java.util.Set<String> targetVariables) {
+        if (targetVariables == null) {
+            return false;
+        }
+        String casedProp = prop;
+        if ("rho".equals(prop)) {
+            casedProp = "rho";
+        } else if ("v".equals(prop) || "h".equals(prop) || "s".equals(prop) || "u".equals(prop) || "x".equals(prop)) {
+            casedProp = prop.toLowerCase();
+        } else if ("T".equals(prop) || "P".equals(prop)) {
+            casedProp = prop.toUpperCase();
+        }
+        String varName = String.format(template, casedProp);
+        return !containsIgnoreCase(targetVariables, varName);
+    }
+
+    private void solveSingleState(int index, Map<String, Double> knowns, String template, Map<String, Double> variables, Map<String, String> displayNames, String fluid, java.util.Set<String> targetVariables) {
+        PropPair matchedPair = findMatchedPair(knowns);
+        if (matchedPair == null) {
+            return;
+        }
+
+        double inputVal1 = knowns.get(matchedPair.key1());
+        double inputVal2 = knowns.get(matchedPair.key2());
+        double propVal1 = "v".equals(matchedPair.key1()) ? 1.0 / inputVal1 : inputVal1;
+        double propVal2 = "v".equals(matchedPair.key2()) ? 1.0 / inputVal2 : inputVal2;
+
+        Map<String, Double> solvedProps = new HashMap<>();
+        Map<String, String> outputs = Map.of(
+                "T", "T",
+                "P", "P",
+                "h", HMASS,
+                "s", SMASS,
+                "u", "Umass",
+                "rho", DMASS
+        );
+
+        for (Map.Entry<String, String> out : outputs.entrySet()) {
+            String canonical = out.getKey();
+            if (knowns.containsKey(canonical) || shouldSkipProp(canonical, template, targetVariables)) {
+                continue;
+            }
+            double res = getPropOrNaN(out.getValue(), matchedPair.valKey1(), propVal1, matchedPair.valKey2(), propVal2, fluid);
+            if (Double.isFinite(res)) {
+                solvedProps.put(canonical, res);
+            }
+        }
+
+        // Specific volume v = 1 / Dmass
+        if (!knowns.containsKey("v") && !shouldSkipProp("v", template, targetVariables)) {
+            double resDmass = solvedProps.containsKey("rho") ? solvedProps.get("rho") :
+                    getPropOrNaN(DMASS, matchedPair.valKey1(), propVal1, matchedPair.valKey2(), propVal2, fluid);
+            if (Double.isFinite(resDmass) && resDmass != 0.0) {
+                solvedProps.put("v", 1.0 / resDmass);
+            }
+        }
+
+        // Quality x = Q
+        if (!knowns.containsKey("x") && !shouldSkipProp("x", template, targetVariables)) {
+            double resQ = getPropOrNaN("Q", matchedPair.valKey1(), propVal1, matchedPair.valKey2(), propVal2, fluid);
+            if (Double.isFinite(resQ)) {
+                solvedProps.put("x", resQ);
+            }
+        }
+
+        // Add back
+        for (Map.Entry<String, Double> solved : solvedProps.entrySet()) {
+            String propName = solved.getKey();
+            String casedProp = propName;
+            if ("rho".equals(propName)) {
+                casedProp = "rho";
+            } else if ("v".equals(propName) || "h".equals(propName) || "s".equals(propName) || "u".equals(propName) || "x".equals(propName)) {
+                casedProp = propName.toLowerCase();
+            } else if ("T".equals(propName) || "P".equals(propName)) {
+                casedProp = propName.toUpperCase();
+            }
+
+            String varName = String.format(template, casedProp);
+            variables.put(varName, solved.getValue());
+            displayNames.put(varName.toLowerCase(), varName);
+        }
+    }
+
+    private void resolveForVariables(Map<String, Double> variables, Map<String, String> displayNames, String fluid, java.util.Set<String> targetVariables) {
+        StateData data = parseStateVariables(variables);
+
+        for (Map.Entry<Integer, Map<String, Double>> entry : data.stateKnowns.entrySet()) {
             int index = entry.getKey();
             Map<String, Double> knowns = entry.getValue();
             if (knowns.size() < 2) {
                 continue;
             }
 
-            // Find a valid pair of inputs for CoolProp
-            PropPair matchedPair = null;
-            for (PropPair pair : PREFERRED_PAIRS) {
-                if (knowns.containsKey(pair.key1()) && knowns.containsKey(pair.key2())) {
-                    matchedPair = pair;
-                    break;
-                }
-            }
-
-            if (matchedPair == null) {
-                continue;
-            }
-
-            double inputVal1 = knowns.get(matchedPair.key1());
-            double inputVal2 = knowns.get(matchedPair.key2());
-
-            // If the property is specific volume (v), convert to density (Dmass = 1/v) for CoolProp inputs
-            double propVal1 = "v".equals(matchedPair.key1()) ? 1.0 / inputVal1 : inputVal1;
-            double propVal2 = "v".equals(matchedPair.key2()) ? 1.0 / inputVal2 : inputVal2;
-
-            // Query CoolProp for all standard outputs
-            Map<String, String> outputs = Map.of(
-                    "T", "T",
-                    "P", "P",
-                    "h", "Hmass",
-                    "s", "Smass",
-                    "u", "Umass",
-                    "rho", "Dmass"
-            );
-
-            Map<String, Double> solvedProps = new HashMap<>();
-            String template = stateStyle.get(index);
-            if (template == null) {
-                continue;
-            }
-
-            for (Map.Entry<String, String> out : outputs.entrySet()) {
-                String canonical = out.getKey();
-                String coolpropKey = out.getValue();
-
-                // Do not query if already known in variables (we want to preserve exact solved value)
-                if (knowns.containsKey(canonical)) {
-                    continue;
-                }
-
-                // Optimization: skip if this variable is not requested in targetVariables
-                if (targetVariables != null) {
-                    String casedProp = canonical;
-                    if ("rho".equals(canonical)) {
-                        casedProp = "rho";
-                    } else if ("v".equals(canonical) || "h".equals(canonical) || "s".equals(canonical) || "u".equals(canonical) || "x".equals(canonical)) {
-                        casedProp = canonical.toLowerCase();
-                    } else if ("T".equals(canonical) || "P".equals(canonical)) {
-                        casedProp = canonical.toUpperCase();
-                    }
-                    String varName = String.format(template, casedProp);
-                    if (!containsIgnoreCase(targetVariables, varName)) {
-                        continue;
-                    }
-                }
-
-                double res = getPropOrNaN(coolpropKey, matchedPair.valKey1(), propVal1, matchedPair.valKey2(), propVal2, fluid);
-                if (Double.isFinite(res)) {
-                    solvedProps.put(canonical, res);
-                }
-            }
-
-            // Specific volume v = 1 / Dmass, solve if not already known
-            if (!knowns.containsKey("v")) {
-                boolean needV = true;
-                if (targetVariables != null) {
-                    String varName = String.format(template, "v");
-                    needV = containsIgnoreCase(targetVariables, varName);
-                }
-                if (needV) {
-                    double resDmass = solvedProps.containsKey("rho") ? solvedProps.get("rho") :
-                            getPropOrNaN("Dmass", matchedPair.valKey1(), propVal1, matchedPair.valKey2(), propVal2, fluid);
-                    if (Double.isFinite(resDmass) && resDmass != 0.0) {
-                        solvedProps.put("v", 1.0 / resDmass);
-                    }
-                }
-            }
-
-            // Quality x = Q, solve if not already known
-            if (!knowns.containsKey("x")) {
-                boolean needX = true;
-                if (targetVariables != null) {
-                    String varName = String.format(template, "x");
-                    needX = containsIgnoreCase(targetVariables, varName);
-                }
-                if (needX) {
-                    double resQ = getPropOrNaN("Q", matchedPair.valKey1(), propVal1, matchedPair.valKey2(), propVal2, fluid);
-                    if (Double.isFinite(resQ)) {
-                        solvedProps.put("x", resQ);
-                    }
-                }
-            }
-
-            // Add solved values back to variables map
-            for (Map.Entry<String, Double> solved : solvedProps.entrySet()) {
-                String propName = solved.getKey();
-                double val = solved.getValue();
-
-                // Format variable name with matching casing and notation style
-                // Casings: T, P, v, h, s, u, x, rho
-                String casedProp = propName;
-                if ("rho".equals(propName)) {
-                    casedProp = "rho";
-                } else if ("v".equals(propName) || "h".equals(propName) || "s".equals(propName) || "u".equals(propName) || "x".equals(propName)) {
-                    casedProp = propName.toLowerCase();
-                } else if ("T".equals(propName) || "P".equals(propName)) {
-                    casedProp = propName.toUpperCase();
-                }
-
-                String varName = String.format(template, casedProp);
-                variables.put(varName, val);
-                displayNames.put(varName.toLowerCase(), varName);
+            String template = data.stateStyle.get(index);
+            if (template != null) {
+                solveSingleState(index, knowns, template, variables, displayNames, fluid, targetVariables);
             }
         }
     }
@@ -802,20 +790,13 @@ public class SolveController {
         return false;
     }
 
-    private List<Map<String, Double>> generateCyclePath(Map<String, Double> variables, String fluid) {
-        List<Map<String, Double>> path = new ArrayList<>();
-        if (!CoolProp.isAvailable()) {
-            return path;
-        }
-
-        // Group variables by state index
+    private Map<Integer, Map<String, Double>> groupStateKnowns(Map<String, Double> variables) {
         Map<Integer, Map<String, Double>> stateKnowns = new HashMap<>();
         java.util.regex.Pattern pattern = java.util.regex.Pattern.compile(
-                "^([a-zA-Z]+(?:_[a-zA-Z]+)*?)_?(\\d+)$|^([a-zA-Z]+)\\[(\\d+)\\]$");
+                "^([a-zA-Z][a-zA-Z_]*?)_?(\\d+)$|^([a-zA-Z][a-zA-Z_]*)\\[(\\d+)\\]$");
 
         for (Map.Entry<String, Double> entry : variables.entrySet()) {
-            String name = entry.getKey();
-            java.util.regex.Matcher m = pattern.matcher(name);
+            java.util.regex.Matcher m = pattern.matcher(entry.getKey());
             if (m.matches()) {
                 String propName = (m.group(1) != null) ? m.group(1) : m.group(3);
                 String idxStr = (m.group(2) != null) ? m.group(2) : m.group(4);
@@ -828,8 +809,17 @@ public class SolveController {
                 }
             }
         }
+        return stateKnowns;
+    }
 
-        // Get sorted list of state indices
+    private List<Map<String, Double>> generateCyclePath(Map<String, Double> variables, String fluid) {
+        List<Map<String, Double>> path = new ArrayList<>();
+        if (!CoolProp.isAvailable()) {
+            return path;
+        }
+
+        Map<Integer, Map<String, Double>> stateKnowns = groupStateKnowns(variables);
+
         List<Integer> indices = new ArrayList<>(stateKnowns.keySet());
         java.util.Collections.sort(indices);
 
@@ -837,19 +827,13 @@ public class SolveController {
             return path;
         }
 
-        // Build the loop segments
         int segmentsCount = indices.size();
         for (int i = 0; i < segmentsCount; i++) {
-            int idxA = indices.get(i);
-            int idxB = indices.get((i + 1) % segmentsCount); // loop back to start
+            Map<String, Double> stateA = stateKnowns.get(indices.get(i));
+            Map<String, Double> stateB = stateKnowns.get(indices.get((i + 1) % segmentsCount));
 
-            Map<String, Double> stateA = stateKnowns.get(idxA);
-            Map<String, Double> stateB = stateKnowns.get(idxB);
-
-            // Interpolate process between A and B
             List<Map<String, Double>> segmentPoints = interpolateProcess(stateA, stateB, fluid);
             if (i > 0 && !segmentPoints.isEmpty()) {
-                // Skip the first point of subsequent segments to avoid duplication
                 path.addAll(segmentPoints.subList(1, segmentPoints.size()));
             } else {
                 path.addAll(segmentPoints);
@@ -859,10 +843,76 @@ public class SolveController {
         return path;
     }
 
-    private List<Map<String, Double>> interpolateProcess(Map<String, Double> stateA, Map<String, Double> stateB, String fluid) {
+    private List<Map<String, Double>> interpolateIsobaric(double p, double sA, double sB, String fluid, int steps) {
         List<Map<String, Double>> points = new ArrayList<>();
-        int steps = 30;
+        for (int i = 0; i <= steps; i++) {
+            double u = (double) i / steps;
+            double s = sA + u * (sB - sA);
+            points.add(flash("P", p, "S", s, fluid, s, p));
+        }
+        return points;
+    }
 
+    private List<Map<String, Double>> interpolateIsentropic(double s, double pA, double pB, String fluid, int steps) {
+        List<Map<String, Double>> points = new ArrayList<>();
+        double logPa = Math.log(pA);
+        double logPb = Math.log(pB);
+        for (int i = 0; i <= steps; i++) {
+            double u = (double) i / steps;
+            double p = Math.exp(logPa + u * (logPb - logPa));
+            points.add(flash("P", p, "S", s, fluid, s, p));
+        }
+        return points;
+    }
+
+    private List<Map<String, Double>> interpolateIsothermal(double t, double sA, double sB, String fluid, int steps) {
+        List<Map<String, Double>> points = new ArrayList<>();
+        for (int i = 0; i <= steps; i++) {
+            double u = (double) i / steps;
+            double s = sA + u * (sB - sA);
+            points.add(flash("T", t, "S", s, fluid, s, null));
+        }
+        return points;
+    }
+
+    private List<Map<String, Double>> interpolateIsenthalpic(double h, double pA, double pB, String fluid, int steps) {
+        List<Map<String, Double>> points = new ArrayList<>();
+        double logPa = Math.log(pA);
+        double logPb = Math.log(pB);
+        for (int i = 0; i <= steps; i++) {
+            double u = (double) i / steps;
+            double p = Math.exp(logPa + u * (logPb - logPa));
+            points.add(flash("P", p, HMASS, h, fluid, null, p));
+        }
+        return points;
+    }
+
+    private List<Map<String, Double>> interpolateIsochoric(double v, double tA, double tB, String fluid, int steps) {
+        List<Map<String, Double>> points = new ArrayList<>();
+        for (int i = 0; i <= steps; i++) {
+            double u = (double) i / steps;
+            double t = tA + u * (tB - tA);
+            points.add(flash("T", t, DMASS, 1.0 / v, fluid, null, null));
+        }
+        return points;
+    }
+
+    private List<Map<String, Double>> interpolateDefault(Double tA, Double tB, Double pA, Double pB, Double vA, Double vB, Double hA, Double hB, Double sA, Double sB, int steps) {
+        List<Map<String, Double>> points = new ArrayList<>();
+        for (int i = 0; i <= steps; i++) {
+            double u = (double) i / steps;
+            Map<String, Double> pt = new HashMap<>();
+            if (tA != null && tB != null) pt.put("T", tA + u * (tB - tA));
+            if (pA != null && pB != null) pt.put("P", pA + u * (pB - pA));
+            if (vA != null && vB != null) pt.put("v", vA + u * (vB - vA));
+            if (hA != null && hB != null) pt.put("h", hA + u * (hB - hA));
+            if (sA != null && sB != null) pt.put("s", sA + u * (sB - sA));
+            points.add(pt);
+        }
+        return points;
+    }
+
+    private List<Map<String, Double>> interpolateProcess(Map<String, Double> stateA, Map<String, Double> stateB, String fluid) {
         Double pA = stateA.get("P");
         Double pB = stateB.get("P");
         Double tA = stateA.get("T");
@@ -874,78 +924,45 @@ public class SolveController {
         Double vA = stateA.get("v");
         Double vB = stateB.get("v");
 
-        // Detect process type
-        boolean isobaric = isClose(pA, pB);
-        boolean isothermal = isClose(tA, tB);
-        boolean isentropic = isClose(sA, sB);
-        boolean isenthalpic = isClose(hA, hB);
-        boolean isochoric = isClose(vA, vB);
+        int steps = 30;
 
-        // We need at least the inputs to perform JNA flashes
-        if (isobaric && pA != null && sA != null && sB != null) {
-            // Isobaric process: sweep entropy s
-            for (int i = 0; i <= steps; i++) {
-                double u = (double) i / steps;
-                double s = sA + u * (sB - sA);
-                points.add(flash("P", pA, "S", s, fluid, s, pA));
-            }
-        } else if (isentropic && sA != null && pA != null && pB != null) {
-            // Isentropic process: sweep pressure P log-linearly
-            double logPa = Math.log(pA);
-            double logPb = Math.log(pB);
-            for (int i = 0; i <= steps; i++) {
-                double u = (double) i / steps;
-                double p = Math.exp(logPa + u * (logPb - logPa));
-                points.add(flash("P", p, "S", sA, fluid, sA, p));
-            }
-        } else if (isothermal && tA != null && sA != null && sB != null) {
-            // Isothermal process: sweep entropy s
-            for (int i = 0; i <= steps; i++) {
-                double u = (double) i / steps;
-                double s = sA + u * (sB - sA);
-                points.add(flash("T", tA, "S", s, fluid, s, null));
-            }
-        } else if (isenthalpic && hA != null && pA != null && pB != null) {
-            // Isenthalpic process: sweep pressure P log-linearly
-            double logPa = Math.log(pA);
-            double logPb = Math.log(pB);
-            for (int i = 0; i <= steps; i++) {
-                double u = (double) i / steps;
-                double p = Math.exp(logPa + u * (logPb - logPa));
-                points.add(flash("P", p, "Hmass", hA, fluid, null, p));
-            }
-        } else if (isochoric && vA != null && tA != null && tB != null) {
-            // Isochoric process: sweep temperature T
-            for (int i = 0; i <= steps; i++) {
-                double u = (double) i / steps;
-                double t = tA + u * (tB - tA);
-                points.add(flash("T", t, "Dmass", 1.0 / vA, fluid, null, null));
-            }
-        } else {
-            // Default: linear interpolation in state space
-            for (int i = 0; i <= steps; i++) {
-                double u = (double) i / steps;
-                Map<String, Double> pt = new HashMap<>();
-                if (tA != null && tB != null) pt.put("T", tA + u * (tB - tA));
-                if (pA != null && pB != null) pt.put("P", pA + u * (pB - pA));
-                if (vA != null && vB != null) pt.put("v", vA + u * (vB - vA));
-                if (hA != null && hB != null) pt.put("h", hA + u * (hB - hA));
-                if (sA != null && sB != null) pt.put("s", sA + u * (sB - sA));
-                points.add(pt);
-            }
+        if (isClose(pA, pB) && pA != null && sA != null && sB != null) {
+            return interpolateIsobaric(pA, sA, sB, fluid, steps);
         }
-        return points;
+        if (isClose(sA, sB) && sA != null && pA != null && pB != null) {
+            return interpolateIsentropic(sA, pA, pB, fluid, steps);
+        }
+        if (isClose(tA, tB) && tA != null && sA != null && sB != null) {
+            return interpolateIsothermal(tA, sA, sB, fluid, steps);
+        }
+        if (isClose(hA, hB) && hA != null && pA != null && pB != null) {
+            return interpolateIsenthalpic(hA, pA, pB, fluid, steps);
+        }
+        if (isClose(vA, vB) && vA != null && tA != null && tB != null) {
+            return interpolateIsochoric(vA, tA, tB, fluid, steps);
+        }
+        return interpolateDefault(tA, tB, pA, pB, vA, vB, hA, hB, sA, sB, steps);
+    }
+
+    private double getFlashVal(String prop, String name1, double val1, String name2, double val2, String fluid) {
+        if (prop.equals(name1)) {
+            return val1;
+        }
+        if (prop.equals(name2)) {
+            return val2;
+        }
+        return CoolProp.propsSIOrNaN(prop, name1, val1, name2, val2, fluid);
     }
 
     private Map<String, Double> flash(String name1, double val1, String name2, double val2, String fluid, Double fallbackS, Double fallbackP) {
         Map<String, Double> pt = new HashMap<>();
 
         // Output properties we want: T, P, v, h, s
-        double tVal = "T".equals(name1) ? val1 : ("T".equals(name2) ? val2 : CoolProp.propsSIOrNaN("T", name1, val1, name2, val2, fluid));
-        double pVal = "P".equals(name1) ? val1 : ("P".equals(name2) ? val2 : CoolProp.propsSIOrNaN("P", name1, val1, name2, val2, fluid));
-        double hVal = "Hmass".equals(name1) ? val1 : ("Hmass".equals(name2) ? val2 : CoolProp.propsSIOrNaN("Hmass", name1, val1, name2, val2, fluid));
-        double sVal = "S".equals(name1) ? val1 : ("S".equals(name2) ? val2 : CoolProp.propsSIOrNaN("S", name1, val1, name2, val2, fluid));
-        double dVal = "Dmass".equals(name1) ? val1 : ("Dmass".equals(name2) ? val2 : CoolProp.propsSIOrNaN("Dmass", name1, val1, name2, val2, fluid));
+        double tVal = getFlashVal("T", name1, val1, name2, val2, fluid);
+        double pVal = getFlashVal("P", name1, val1, name2, val2, fluid);
+        double hVal = getFlashVal(HMASS, name1, val1, name2, val2, fluid);
+        double sVal = getFlashVal("S", name1, val1, name2, val2, fluid);
+        double dVal = getFlashVal(DMASS, name1, val1, name2, val2, fluid);
 
         if (Double.isFinite(tVal)) pt.put("T", tVal);
         if (Double.isFinite(pVal)) pt.put("P", pVal);

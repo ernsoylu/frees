@@ -124,7 +124,7 @@ class SolveControllerTest {
         mockMvc.perform(post("/api/check")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"text\": \"x + = 3\"}"))
-                .andExpect(status().isOk())
+                .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.solvable").value(false));
     }
 
