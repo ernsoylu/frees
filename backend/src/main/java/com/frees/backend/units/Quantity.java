@@ -62,7 +62,7 @@ public record Quantity(double factor, double[] dims) {
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < DIMENSIONS; i++) {
             if (Math.abs(dims[i]) > 1e-9) {
-                if (sb.length() > 0) {
+                if (!sb.isEmpty()) {
                     sb.append(' ');
                 }
                 sb.append(BASE_SYMBOLS[i]);
@@ -73,7 +73,7 @@ public record Quantity(double factor, double[] dims) {
                 }
             }
         }
-        return sb.length() == 0 ? "-" : sb.toString();
+        return sb.isEmpty() ? "-" : sb.toString();
     }
 
     @Override
@@ -84,5 +84,10 @@ public record Quantity(double factor, double[] dims) {
     @Override
     public int hashCode() {
         return Arrays.hashCode(dims);
+    }
+
+    @Override
+    public String toString() {
+        return "Quantity[factor=" + factor + ", dims=" + Arrays.toString(dims) + "]";
     }
 }

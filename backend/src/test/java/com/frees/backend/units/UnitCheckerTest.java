@@ -161,4 +161,23 @@ class UnitCheckerTest {
                 Map.of());
         assertEquals(List.of(), warnings);
     }
+
+    @Test
+    void testDimTermRecordContracts() {
+        double[] dims1 = {1, 0, 0, 0, 0, 0, 0};
+        double[] dims2 = {1, 0, 0, 0, 0, 0, 0};
+        double[] dims3 = {0, 1, 0, 0, 0, 0, 0};
+        UnitChecker.DimTerm t1 = new UnitChecker.DimTerm(dims1, 2.0);
+        UnitChecker.DimTerm t2 = new UnitChecker.DimTerm(dims2, 2.0);
+        UnitChecker.DimTerm t3 = new UnitChecker.DimTerm(dims3, 2.0);
+        UnitChecker.DimTerm t4 = new UnitChecker.DimTerm(dims1, 3.0);
+
+        assertEquals(t1, t2);
+        assertTrue(!t1.equals(t3));
+        assertTrue(!t1.equals(t4));
+        assertTrue(!t1.equals(null));
+        assertTrue(!t1.equals("string"));
+        assertEquals(t1.hashCode(), t2.hashCode());
+        assertTrue(t1.toString().contains("DimTerm"));
+    }
 }

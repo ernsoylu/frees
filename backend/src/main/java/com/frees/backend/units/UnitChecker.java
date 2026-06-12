@@ -4,6 +4,7 @@ import com.frees.backend.ast.Equation;
 import com.frees.backend.ast.Expr;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -136,7 +137,26 @@ public final class UnitChecker {
     }
 
     /** Known-dimension contribution plus the net exponent of the unknown. */
-    private record DimTerm(double[] dims, double unknownExponent) {}
+    record DimTerm(double[] dims, double unknownExponent) {
+        @Override
+        public boolean equals(Object o) {
+            return o instanceof DimTerm other
+                    && Arrays.equals(dims, other.dims)
+                    && Double.compare(unknownExponent, other.unknownExponent) == 0;
+        }
+
+        @Override
+        public int hashCode() {
+            int result = Arrays.hashCode(dims);
+            result = 31 * result + Double.hashCode(unknownExponent);
+            return result;
+        }
+
+        @Override
+        public String toString() {
+            return "DimTerm[dims=" + Arrays.toString(dims) + ", unknownExponent=" + unknownExponent + "]";
+        }
+    }
 
     /**
      * Solves an equation dimensionally for the single unknown variable:

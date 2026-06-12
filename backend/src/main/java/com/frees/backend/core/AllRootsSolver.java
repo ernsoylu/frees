@@ -287,7 +287,7 @@ public class AllRootsSolver {
         // Start 0: the user's guess values (preserves single-solve behavior).
         attemptStart(block, branch, null, found, deadlineNanos);
 
-        Random random = new Random(RANDOM_SEED);
+        Random random = new java.security.SecureRandom();
         for (int s = 1; s < starts; s++) {
             double[] start = generateRandomStart(s, n, lo, hi, random);
             attemptStart(block, branch, start, found, deadlineNanos);

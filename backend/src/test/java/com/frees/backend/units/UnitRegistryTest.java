@@ -136,4 +136,69 @@ class UnitRegistryTest {
         assertEquals(1.0, UnitRegistry.convert("ohm", "ohms"), 1e-12);
         assertEquals("Ω", UnitRegistry.siName(ohm1.dims()));
     }
+
+    @Test
+    void testUnitRecordsContracts() {
+        double[] dims1 = {1, 0, 0, 0, 0, 0, 0};
+        double[] dims2 = {1, 0, 0, 0, 0, 0, 0};
+        double[] dims3 = {0, 1, 0, 0, 0, 0, 0};
+
+        // Quantity
+        Quantity q1 = new Quantity(2.5, dims1);
+        Quantity q2 = new Quantity(2.5, dims2);
+        Quantity q3 = new Quantity(2.5, dims3);
+        Quantity q4 = new Quantity(3.0, dims1);
+        assertEquals(q1, q2);
+        assertTrue(!q1.equals(q3));
+        assertTrue(!q1.equals(q4));
+        assertTrue(!q1.equals(null));
+        assertTrue(!q1.equals("string"));
+        assertEquals(q1.hashCode(), q2.hashCode());
+        assertTrue(q1.toString().contains("Quantity"));
+
+        // NamedUnit
+        UnitRegistry.NamedUnit nu1 = new UnitRegistry.NamedUnit("N", dims1);
+        UnitRegistry.NamedUnit nu2 = new UnitRegistry.NamedUnit("N", dims2);
+        UnitRegistry.NamedUnit nu3 = new UnitRegistry.NamedUnit("J", dims1);
+        UnitRegistry.NamedUnit nu4 = new UnitRegistry.NamedUnit("N", dims3);
+        assertEquals(nu1, nu2);
+        assertTrue(!nu1.equals(nu3));
+        assertTrue(!nu1.equals(nu4));
+        assertTrue(!nu1.equals(null));
+        assertTrue(!nu1.equals("string"));
+        assertEquals(nu1.hashCode(), nu2.hashCode());
+        assertTrue(nu1.toString().contains("NamedUnit"));
+
+        // OffsetQuantity
+        UnitRegistry.OffsetQuantity oq1 = new UnitRegistry.OffsetQuantity(1.5, 2.0, dims1);
+        UnitRegistry.OffsetQuantity oq2 = new UnitRegistry.OffsetQuantity(1.5, 2.0, dims2);
+        UnitRegistry.OffsetQuantity oq3 = new UnitRegistry.OffsetQuantity(1.5, 2.0, dims3);
+        UnitRegistry.OffsetQuantity oq4 = new UnitRegistry.OffsetQuantity(1.8, 2.0, dims1);
+        UnitRegistry.OffsetQuantity oq5 = new UnitRegistry.OffsetQuantity(1.5, 2.5, dims1);
+        assertEquals(oq1, oq2);
+        assertTrue(!oq1.equals(oq3));
+        assertTrue(!oq1.equals(oq4));
+        assertTrue(!oq1.equals(oq5));
+        assertTrue(!oq1.equals(null));
+        assertTrue(!oq1.equals("string"));
+        assertEquals(oq1.hashCode(), oq2.hashCode());
+        assertTrue(oq1.toString().contains("OffsetQuantity"));
+
+        // DisplayUnit
+        UnitRegistry.DisplayUnit du1 = new UnitRegistry.DisplayUnit("m", 1.5, 2.0, dims1);
+        UnitRegistry.DisplayUnit du2 = new UnitRegistry.DisplayUnit("m", 1.5, 2.0, dims2);
+        UnitRegistry.DisplayUnit du3 = new UnitRegistry.DisplayUnit("m", 1.5, 2.0, dims3);
+        UnitRegistry.DisplayUnit du4 = new UnitRegistry.DisplayUnit("ft", 1.5, 2.0, dims1);
+        UnitRegistry.DisplayUnit du5 = new UnitRegistry.DisplayUnit("m", 1.8, 2.0, dims1);
+        UnitRegistry.DisplayUnit du6 = new UnitRegistry.DisplayUnit("m", 1.5, 2.5, dims1);
+        assertEquals(du1, du2);
+        assertTrue(!du1.equals(du3));
+        assertTrue(!du1.equals(du4));
+        assertTrue(!du1.equals(du5));
+        assertTrue(!du1.equals(du6));
+        assertTrue(!du1.equals(null));
+        assertTrue(!du1.equals("string"));
+        assertEquals(du1.hashCode(), du2.hashCode());
+        assertTrue(du1.toString().contains("DisplayUnit"));
+    }
 }
