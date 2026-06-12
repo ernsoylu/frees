@@ -47,6 +47,39 @@ public final class MarkdownEquationExtractor {
 
     private MarkdownEquationExtractor() {}
 
+    /**
+     * Splits a line at top-level semicolons (EES allows several equations per line,
+     * e.g. "A[1,1] = 2; A[1,2] = 1"), ignoring semicolons inside {comments} and "strings".
+     * Returns [start, end) index pairs into the given string; always at least one segment.
+     */
+    private static List<int[]> semicolonSegments(String line) {
+        List<int[]> segments = new ArrayList<>();
+        boolean inBraces = false;
+        boolean inQuotes = false;
+        int segStart = 0;
+        for (int i = 0; i < line.length(); i++) {
+            char c = line.charAt(i);
+            if (inBraces) {
+                if (c == '}') {
+                    inBraces = false;
+                }
+            } else if (inQuotes) {
+                if (c == '"') {
+                    inQuotes = false;
+                }
+            } else if (c == '{') {
+                inBraces = true;
+            } else if (c == '"') {
+                inQuotes = true;
+            } else if (c == ';') {
+                segments.add(new int[]{segStart, i});
+                segStart = i + 1;
+            }
+        }
+        segments.add(new int[]{segStart, line.length()});
+        return segments;
+    }
+
     public static String stripComments(String text) {
         StringBuilder sb = new StringBuilder();
         boolean inBraces = false;
@@ -81,6 +114,16 @@ public final class MarkdownEquationExtractor {
         }
         if (clean.startsWith("#") || clean.startsWith("-") || clean.startsWith("*") || clean.startsWith(">")) {
             return false;
+        }
+        List<int[]> segments = semicolonSegments(clean);
+        if (segments.size() > 1) {
+            for (int[] seg : segments) {
+                String segment = clean.substring(seg[0], seg[1]).trim();
+                if (!segment.isEmpty() && !isPureEquationLine(segment)) {
+                    return false;
+                }
+            }
+            return true;
         }
         String upper = clean.toUpperCase();
         if (upper.startsWith("DUPLICATE") || upper.startsWith("END") ||
@@ -155,11 +198,14 @@ public final class MarkdownEquationExtractor {
             String line = lines[lineIdx];
             String stripped = stripComments(line).trim();
             if (isPureEquationLine(line)) {
+                clean.append(line).append("\n");
                 if (stripped.contains("=")) {
-                    clean.append(line).append("\n");
-                    equations.add(new ExtractedEquation(line, line, 0, line.length()));
-                } else {
-                    clean.append(line).append("\n");
+                    for (int[] seg : semicolonSegments(line)) {
+                        String segText = line.substring(seg[0], seg[1]);
+                        if (stripComments(segText).trim().contains("=")) {
+                            equations.add(new ExtractedEquation(segText, segText, seg[0], seg[1]));
+                        }
+                    }
                 }
             } else {
                 List<ExtractedEquation> lineEqs = extractFromLine(line);
@@ -222,7 +268,8 @@ public final class MarkdownEquationExtractor {
             i--;
             while (i >= 0 && line.charAt(i) != '[') {
                 char c = line.charAt(i);
-                if (!Character.isLetterOrDigit(c) && c != '_' && !Character.isWhitespace(c)) {
+                // Subscripts may be multi-dimensional or ranged: A[1,2], x[1..3]
+                if (!Character.isLetterOrDigit(c) && c != '_' && c != ',' && c != '.' && !Character.isWhitespace(c)) {
                     return -1;
                 }
                 i--;
@@ -394,8 +441,12 @@ public final class MarkdownEquationExtractor {
             if (isPureEquationLine(line)) {
                 String stripped = stripComments(line).trim();
                 if (stripped.contains("=")) {
-                    String latex = formattedEquations.get(eqIndex++);
-                    report.append("[MATH_BLOCK:").append(latex).append("]").append("\n");
+                    for (int[] seg : semicolonSegments(line)) {
+                        if (stripComments(line.substring(seg[0], seg[1])).trim().contains("=")) {
+                            String latex = formattedEquations.get(eqIndex++);
+                            report.append("[MATH_BLOCK:").append(latex).append("]").append("\n");
+                        }
+                    }
                 } else {
                     report.append(line).append("\n");
                 }
