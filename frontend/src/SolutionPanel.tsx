@@ -102,35 +102,46 @@ function UnitWarningsAlert({ warnings }: Readonly<{ warnings: string[] }>) {
     </Alert>
   )
 }
-function SuccessBody({
-  result,
-  rows,
-}: Readonly<{ result: SolveResponse; rows: SolutionRow[] }>) {
-  const solutionCount = result.solutions?.length ?? 0
-  const scalars: SolutionRow[] = []
-  interface ArrayMatrix {
-    name: string
-    is2D: boolean
-    rows: number[]
-    cols: number[]
-    cells: Map<string, SolutionRow>
+interface ArrayMatrix {
+  name: string
+  is2D: boolean
+  rows: number[]
+  cols: number[]
+  cells: Map<string, SolutionRow>
+}
+
+const ARRAY_ELEMENT_REGEX = /^([^[]+)\[([\d,\s-]+)\]$/
+
+function addToGroup(group: ArrayMatrix, indices: number[], row: SolutionRow) {
+  if (indices.length === 2) {
+    group.is2D = true
+    const [r, c] = indices
+    if (!group.rows.includes(r)) group.rows.push(r)
+    if (!group.cols.includes(c)) group.cols.push(c)
+    group.cells.set(`${r},${c}`, row)
+  } else {
+    const [r] = indices
+    if (!group.rows.includes(r)) group.rows.push(r)
+    group.cells.set(`${r}`, row)
   }
+}
+
+/** Splits solution rows into scalars and vector/matrix groups by subscript shape. */
+function groupSolutionRows(rows: SolutionRow[]): { scalars: SolutionRow[]; groupsList: ArrayMatrix[] } {
+  const scalars: SolutionRow[] = []
   const arrayGroups = new Map<string, ArrayMatrix>()
-  const arrayElementRegex = /^([^\[]+)\[([\d,\s\-]+)\]$/
 
   for (const row of rows) {
-    const match = row.name.match(arrayElementRegex)
-    if (!match) {
-      scalars.push(row)
-      continue
-    }
-    const baseName = match[1]
-    const indices = match[2].split(',').map(s => parseInt(s.trim(), 10))
-    if (indices.some(Number.isNaN)) {
+    const match = ARRAY_ELEMENT_REGEX.exec(row.name)
+    const indices = match
+      ? match[2].split(',').map((s) => Number.parseInt(s.trim(), 10))
+      : []
+    if (!match || indices.length > 2 || indices.some(Number.isNaN)) {
       scalars.push(row)
       continue
     }
 
+    const baseName = match[1]
     let group = arrayGroups.get(baseName)
     if (!group) {
       group = {
@@ -142,20 +153,7 @@ function SuccessBody({
       }
       arrayGroups.set(baseName, group)
     }
-
-    if (indices.length === 2) {
-      group.is2D = true
-      const [r, c] = indices
-      if (!group.rows.includes(r)) group.rows.push(r)
-      if (!group.cols.includes(c)) group.cols.push(c)
-      group.cells.set(`${r},${c}`, row)
-    } else if (indices.length === 1) {
-      const [r] = indices
-      if (!group.rows.includes(r)) group.rows.push(r)
-      group.cells.set(`${r}`, row)
-    } else {
-      scalars.push(row)
-    }
+    addToGroup(group, indices, row)
   }
 
   for (const group of arrayGroups.values()) {
@@ -164,6 +162,32 @@ function SuccessBody({
   }
 
   const groupsList = Array.from(arrayGroups.values()).sort((a, b) => a.name.localeCompare(b.name))
+  return { scalars, groupsList }
+}
+
+function matrixLatex(group: ArrayMatrix): string {
+  const rowSeparator = String.raw` \\ `
+  let bodyMath = ''
+  if (group.is2D) {
+    bodyMath = group.rows
+      .map((r) => group.cols.map((c) => group.cells.get(`${r},${c}`)?.display ?? '0').join(' & '))
+      .join(rowSeparator)
+  } else {
+    bodyMath = group.rows
+      .map((r) => group.cells.get(`${r}`)?.display ?? '0')
+      .join(rowSeparator)
+  }
+  const units = [...group.cells.values()][0]?.units || ''
+  const unitsStr = units ? String.raw` \,\left[\text{${units}}\right]` : ''
+  return String.raw`${group.name} = \begin{pmatrix} ${bodyMath} \end{pmatrix}${unitsStr}`
+}
+
+function SuccessBody({
+  result,
+  rows,
+}: Readonly<{ result: SolveResponse; rows: SolutionRow[] }>) {
+  const solutionCount = result.solutions?.length ?? 0
+  const { scalars, groupsList } = groupSolutionRows(rows)
 
   return (
     <>
@@ -204,23 +228,7 @@ function SuccessBody({
           <Text size="xs" fw={700} c="dimmed" tt="uppercase" lts="0.05em">Arrays & Matrices</Text>
           <Accordion variant="separated">
             {groupsList.map((group) => {
-              const units = [...group.cells.values()][0]?.units || ''
-              const unitsStr = units ? ` \\,\\left[\\text{${units}}\\right]` : ''
-              let bodyMath = ''
-              if (group.is2D) {
-                bodyMath = group.rows.map(r => {
-                  return group.cols.map(c => {
-                    const cell = group.cells.get(`${r},${c}`)
-                    return cell ? cell.display : '0'
-                  }).join(' & ')
-                }).join(' \\\\ ')
-              } else {
-                bodyMath = group.rows.map(r => {
-                  const cell = group.cells.get(`${r}`)
-                  return cell ? cell.display : '0'
-                }).join(' \\\\ ')
-              }
-              const math = `${group.name} = \\begin{pmatrix} ${bodyMath} \\end{pmatrix}${unitsStr}`
+              const math = matrixLatex(group)
 
               return (
                 <Accordion.Item key={group.name} value={group.name}>

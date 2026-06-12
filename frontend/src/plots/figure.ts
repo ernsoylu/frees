@@ -92,6 +92,12 @@ function curveTrace(
   }
 }
 
+/** Axis range bound in plot coordinates; log axes take the exponent. */
+function rangeValue(value: number | null | undefined, log: boolean): number | null {
+  if (value === null || value === undefined) return null
+  return log ? Math.log10(Math.max(value, 1e-20)) : value
+}
+
 function axisLayout(
   label: string,
   log: boolean,
@@ -111,13 +117,9 @@ function axisLayout(
     exponentformat: 'power',
   }
 
-  if ((min !== null && min !== undefined) || (max !== null && max !== undefined)) {
-    const rMin = min !== null && min !== undefined
-      ? (log ? Math.log10(Math.max(min, 1e-20)) : min)
-      : null
-    const rMax = max !== null && max !== undefined
-      ? (log ? Math.log10(Math.max(max, 1e-20)) : max)
-      : null
+  const rMin = rangeValue(min, log)
+  const rMax = rangeValue(max, log)
+  if (rMin !== null || rMax !== null) {
     ;(layout as any).range = [rMin, rMax]
   }
 
@@ -158,6 +160,38 @@ interface StateOverlay {
   close: boolean
 }
 
+/** Line trace joining the state points: the solver's cycle path when present, else the points in order. */
+function connectionTrace(
+  overlay: StateOverlay,
+  points: { x: number; y: number }[],
+  cyclePath: Record<string, number>[] | undefined,
+  color: string,
+  xUnit: UnitChoice,
+  yUnit: UnitChoice,
+): PlotlyTrace | null {
+  let name = 'Cycle Connections'
+  let linePoints = overlay.close && points.length > 2 ? [...points, points[0]] : points
+
+  if (cyclePath && cyclePath.length > 0) {
+    name = 'Cycle Path'
+    linePoints = cyclePath
+      .map((pt) => ({ x: pt[overlay.xProperty], y: pt[overlay.yProperty] }))
+      .filter((p): p is { x: number; y: number } => p.x !== undefined && p.y !== undefined)
+    if (linePoints.length === 0) return null
+  }
+
+  return {
+    type: 'scatter',
+    mode: 'lines',
+    name,
+    x: linePoints.map((p) => p.x * xUnit.scale + xUnit.offset),
+    y: linePoints.map((p) => p.y * yUnit.scale + yUnit.offset),
+    line: { color, width: 2 },
+    showlegend: false,
+    hoverinfo: 'none',
+  }
+}
+
 function stateTraces(
   overlay: StateOverlay,
   states: StateTable,
@@ -174,40 +208,9 @@ function stateTraces(
   const stateColor = customStateColor || colors.states
 
   if (overlay.connect) {
-    if (cyclePath && cyclePath.length > 0) {
-      const pathPoints: { x: number; y: number }[] = []
-      for (const pt of cyclePath) {
-        const xVal = pt[overlay.xProperty]
-        const yVal = pt[overlay.yProperty]
-        if (xVal !== undefined && yVal !== undefined) {
-          pathPoints.push({ x: xVal, y: yVal })
-        }
-      }
-      if (pathPoints.length > 0) {
-        traces.push({
-          type: 'scatter',
-          mode: 'lines',
-          name: 'Cycle Path',
-          x: pathPoints.map((p) => p.x * xUnit.scale + xUnit.offset),
-          y: pathPoints.map((p) => p.y * yUnit.scale + yUnit.offset),
-          line: { color: stateColor, width: 2 },
-          showlegend: false,
-          hoverinfo: 'none',
-        })
-      }
-    } else {
-      const looped =
-        overlay.close && points.length > 2 ? [...points, points[0]] : points
-      traces.push({
-        type: 'scatter',
-        mode: 'lines',
-        name: 'Cycle Connections',
-        x: looped.map((p) => p.x * xUnit.scale + xUnit.offset),
-        y: looped.map((p) => p.y * yUnit.scale + yUnit.offset),
-        line: { color: stateColor, width: 2 },
-        showlegend: false,
-        hoverinfo: 'none',
-      })
+    const connection = connectionTrace(overlay, points, cyclePath, stateColor, xUnit, yUnit)
+    if (connection) {
+      traces.push(connection)
     }
   }
 
@@ -287,9 +290,7 @@ export function buildPropertyFigure(
     format.yLog ?? diagram.yLog,
     theme,
   )
-  if (!layout.title) {
-    layout.title = { text: `${diagram.fluid}` }
-  }
+  layout.title ??= { text: `${diagram.fluid}` }
   return { data: traces, layout }
 }
 
@@ -339,10 +340,8 @@ export function buildPsychroFigure(
     format.yLog ?? false,
     theme,
   )
-  if (!layout.title) {
-    layout.title = {
-      text: `Psychrometric chart — ${(chart.pressure / 1000).toFixed(2)} kPa`,
-    }
+  layout.title ??= {
+    text: `Psychrometric chart — ${(chart.pressure / 1000).toFixed(2)} kPa`,
   }
   return { data: traces, layout }
 }

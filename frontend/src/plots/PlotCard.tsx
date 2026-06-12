@@ -112,16 +112,18 @@ export function useDiagramData(spec: PlotSpec) {
   return { diagram, psychart, loading, error }
 }
 
-export function buildFigure(
-  spec: PlotSpec,
-  states: StateTable,
-  cyclePath: Record<string, number>[] | undefined,
-  tableRows: ParamRow[],
-  tableResults: TableRowResult[],
-  diagram: DiagramResponse | null,
-  psychart: PsychartResponse | null,
-  theme: PlotTheme,
-): PlotlyFigure | null {
+export interface FigureInputs {
+  states: StateTable
+  cyclePath?: Record<string, number>[]
+  tableRows: ParamRow[]
+  tableResults: TableRowResult[]
+  diagram: DiagramResponse | null
+  psychart: PsychartResponse | null
+  theme: PlotTheme
+}
+
+export function buildFigure(spec: PlotSpec, inputs: FigureInputs): PlotlyFigure | null {
+  const { states, cyclePath, tableRows, tableResults, diagram, psychart, theme } = inputs
   if (spec.kind === 'property' && diagram) {
     return buildPropertyFigure(diagram, spec.property, spec.format, states, theme, cyclePath)
   }
@@ -166,14 +168,13 @@ export default function PlotCard({
   }, [exportTrigger])
 
   const figure = useMemo(
-    () => buildFigure(spec, states, cyclePath, tableRows, tableResults, diagram, psychart, 'dark'),
+    () => buildFigure(spec, { states, cyclePath, tableRows, tableResults, diagram, psychart, theme: 'dark' }),
     [spec, states, cyclePath, tableRows, tableResults, diagram, psychart],
   )
 
   async function onExport(format: (typeof EXPORT_FORMATS)[number]['value']) {
     const theme: PlotTheme = publicationStyle ? 'light' : 'dark'
-    const exportFigure = buildFigure(
-      spec,
+    const exportFigure = buildFigure(spec, {
       states,
       cyclePath,
       tableRows,
@@ -181,7 +182,7 @@ export default function PlotCard({
       diagram,
       psychart,
       theme,
-    )
+    })
     if (!exportFigure) return
     setExporting(true)
     setExportError(null)

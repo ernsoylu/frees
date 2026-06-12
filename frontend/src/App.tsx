@@ -13,7 +13,6 @@ import {
   Text,
   Title,
   Tooltip,
-  Badge,
 } from '@mantine/core'
 import { IconLayoutSidebarRightExpand } from '@tabler/icons-react'
 import {
@@ -37,13 +36,8 @@ import VariableInfoModal, {
   parseBound,
   VariableDraft,
 } from './VariableInfoModal'
-import Latex from './Latex'
 import MinMaxModal from './MinMaxModal'
-import FormattedReportView, {
-  getLhsVariable,
-  getTooltipLabel,
-  getVariablesInMath,
-} from './FormattedReportView'
+import FormattedReportView, { MathWithBadges } from './FormattedReportView'
 import ConfigureTableModal from './ConfigureTableModal'
 import AlterValuesModal from './AlterValuesModal'
 import ParametricTableTab, { newParamRow, ParamRow } from './ParametricTableTab'
@@ -58,7 +52,6 @@ import PlotConfigModal from './plots/PlotConfigModal'
 import {
   buildComplexSolutionRows,
   buildRealSolutionRows,
-  formatValue,
   withStableKeys,
 } from './format'
 
@@ -129,45 +122,16 @@ function FormattedEquationsView({
   }
   return (
     <Stack gap="sm" style={{ overflowY: 'auto', flex: 1 }}>
-      {withStableKeys(equations).map((eq) => {
-        const tooltip = getTooltipLabel(eq.value, variables)
-        const lhsVar = getLhsVariable(eq.value, variables)
-        const allVars = getVariablesInMath(eq.value, variables)
-        const otherVars = allVars.filter((v) => v.name !== lhsVar?.name)
-
-        return (
-          <Paper
-            key={eq.key}
-            withBorder
-            p="sm"
-            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}
-          >
-            {tooltip ? (
-              <Tooltip label={tooltip} withArrow>
-                <div style={{ cursor: 'help' }}>
-                  <Latex math={eq.value} block />
-                </div>
-              </Tooltip>
-            ) : (
-              <Latex math={eq.value} block />
-            )}
-            {variables && allVars.length > 0 && (
-              <Group gap="xs" justify="center" mt="xs" wrap="wrap">
-                {lhsVar && (
-                  <Badge variant="light" color="blue" size="sm">
-                    {lhsVar.name} = {formatValue(lhsVar.value)} {lhsVar.units ? `[${lhsVar.units}]` : ''}
-                  </Badge>
-                )}
-                {otherVars.map((v) => (
-                  <Text key={v.name} size="xs" c="dimmed">
-                    {v.name} = {formatValue(v.value)} {v.units ? `[${v.units}]` : ''}
-                  </Text>
-                ))}
-              </Group>
-            )}
-          </Paper>
-        )
-      })}
+      {withStableKeys(equations).map((eq) => (
+        <Paper
+          key={eq.key}
+          withBorder
+          p="sm"
+          style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}
+        >
+          <MathWithBadges math={eq.value} variables={variables} />
+        </Paper>
+      ))}
     </Stack>
   )
 }
@@ -471,7 +435,7 @@ export default function App() {
     }
   }
 
-  async function onSolve(forceFill: boolean | unknown = false, overridePlots?: PlotSpec[]) {
+  async function onSolve(forceFill: unknown = false, overridePlots?: PlotSpec[]) {
     if (solving || !solvable) return
     setSolving(true)
     try {
@@ -556,6 +520,30 @@ export default function App() {
   const solutionRows = resultIsComplex
     ? buildComplexSolutionRows(baseVariables, solutions)
     : buildRealSolutionRows(baseVariables, solutions)
+
+  const solutionSidePanel = solutionOpen ? (
+    <SolutionPanel
+      showTable={activeTab === 'table'}
+      solveCount={solveCount}
+      tableStats={tableStats}
+      result={result}
+      rows={solutionRows}
+      onCollapse={() => setSolutionOpen(false)}
+    />
+  ) : (
+    <Paper withBorder p={4} visibleFrom="md">
+      <Tooltip label="Show solution panel" position="left">
+        <ActionIcon
+          variant="subtle"
+          color="gray"
+          onClick={() => setSolutionOpen(true)}
+          aria-label="Show solution panel"
+        >
+          <IconLayoutSidebarRightExpand size={18} />
+        </ActionIcon>
+      </Tooltip>
+    </Paper>
+  )
 
   return (
     <Flex h="100vh" style={{ overflow: 'hidden' }}>
@@ -833,7 +821,7 @@ export default function App() {
                 </Button>
               </Group>
 
-              {plots.filter((p) => p.kind === 'property' || p.kind === 'psychro').length > 0 ? (
+              {plots.some((p) => p.kind === 'property' || p.kind === 'psychro') ? (
                 <Stack gap="xs" mb="md">
                   <Select
                     label="Active Diagram"
@@ -890,8 +878,8 @@ export default function App() {
                           onClick={() => {
                             const nextPlots = plots.filter((p) => p.id !== current.id);
                             handlePlotsChange(nextPlots);
-                            const remaining = nextPlots.filter((p) => p.kind === 'property' || p.kind === 'psychro');
-                            setActiveThermoPlotId(remaining[0]?.id ?? null);
+                            const remaining = nextPlots.find((p) => p.kind === 'property' || p.kind === 'psychro');
+                            setActiveThermoPlotId(remaining?.id ?? null);
                           }}
                         >
                           Remove
@@ -916,28 +904,8 @@ export default function App() {
                 solvable={solvable}
               />
             </Paper>
-          ) : solutionOpen ? (
-            <SolutionPanel
-              showTable={activeTab === 'table'}
-              solveCount={solveCount}
-              tableStats={tableStats}
-              result={result}
-              rows={solutionRows}
-              onCollapse={() => setSolutionOpen(false)}
-            />
           ) : (
-            <Paper withBorder p={4} visibleFrom="md">
-              <Tooltip label="Show solution panel" position="left">
-                <ActionIcon
-                  variant="subtle"
-                  color="gray"
-                  onClick={() => setSolutionOpen(true)}
-                  aria-label="Show solution panel"
-                >
-                  <IconLayoutSidebarRightExpand size={18} />
-                </ActionIcon>
-              </Tooltip>
-            </Paper>
+            solutionSidePanel
           )}
         </Flex>
       </Flex>

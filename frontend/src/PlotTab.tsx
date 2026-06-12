@@ -50,7 +50,7 @@ export default function PlotTab({
   const [editing, setEditing] = useState<PlotSpec | null>(null)
   const [adding, setAdding] = useState(false)
 
-  const activePlot = activePlotId !== undefined ? activePlotId : (localActivePlot ?? visible[0]?.id ?? null)
+  const activePlot = activePlotId === undefined ? (localActivePlot ?? visible[0]?.id ?? null) : activePlotId
   const setActivePlot = (id: string | null) => {
     if (onActivePlotIdChange) {
       onActivePlotIdChange(id)
@@ -64,9 +64,7 @@ export default function PlotTab({
   }, [])
 
   useEffect(() => {
-    if (activePlot === null && visible.length > 0) {
-      setActivePlot(visible[0].id)
-    } else if (activePlot !== null && !visible.some((p) => p.id === activePlot) && visible.length > 0) {
+    if (visible.length > 0 && (activePlot === null || !visible.some((p) => p.id === activePlot))) {
       setActivePlot(visible[0].id)
     }
   }, [visible, activePlot])
@@ -87,8 +85,8 @@ export default function PlotTab({
   function removePlot(id: string) {
     onPlotsChange(plots.filter((p) => p.id !== id))
     if (activePlot === id) {
-      const remaining = visible.filter((p) => p.id !== id)
-      setActivePlot(remaining[0]?.id ?? null)
+      const remaining = visible.find((p) => p.id !== id)
+      setActivePlot(remaining?.id ?? null)
     }
   }
 

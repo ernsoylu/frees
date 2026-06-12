@@ -14,7 +14,7 @@ const theme = createTheme({
   defaultRadius: 'md',
 })
 
-const isHelpPage = window.location.pathname === '/help';
+const isHelpPage = globalThis.location.pathname === '/help';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
