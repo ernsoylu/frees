@@ -171,5 +171,59 @@ class SolveControllerTest {
                 .andExpect(jsonPath("$.variables[?(@.name == 's[1]')].value").exists())
                 .andExpect(jsonPath("$.variables[?(@.name == 'v[1]')].value").exists());
     }
+
+    @Test
+    void optimizesSingleVariableProblem() throws Exception {
+        mockMvc.perform(post("/api/optimize")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{"
+                                + "\"text\": \"y = (x - 3)^2 + 4\","
+                                + "\"objective\": \"y\","
+                                + "\"decision\": \"x\","
+                                + "\"lower\": 0.0,"
+                                + "\"upper\": 10.0,"
+                                + "\"maximize\": false"
+                                + "}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.objective.name").value("y"))
+                .andExpect(jsonPath("$.objective.value").value(org.hamcrest.Matchers.closeTo(4.0, 1e-3)))
+                .andExpect(jsonPath("$.decision.name").value("x"))
+                .andExpect(jsonPath("$.decision.value").value(org.hamcrest.Matchers.closeTo(3.0, 1e-3)));
+    }
+
+    @Test
+    void optimizeEndpointValidatesBlankText() throws Exception {
+        mockMvc.perform(post("/api/optimize")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{"
+                                + "\"text\": \"\","
+                                + "\"objective\": \"y\","
+                                + "\"decision\": \"x\","
+                                + "\"lower\": 0.0,"
+                                + "\"upper\": 10.0,"
+                                + "\"maximize\": false"
+                                + "}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.error").value("No equations entered."));
+    }
+
+    @Test
+    void optimizeEndpointValidatesSyntaxError() throws Exception {
+        mockMvc.perform(post("/api/optimize")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{"
+                                + "\"text\": \"y = (x - 3)^2 + \","
+                                + "\"objective\": \"y\","
+                                + "\"decision\": \"x\","
+                                + "\"lower\": 0.0,"
+                                + "\"upper\": 10.0,"
+                                + "\"maximize\": false"
+                                + "}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.error").value(org.hamcrest.Matchers.containsString("Syntax error")));
+    }
 }
 

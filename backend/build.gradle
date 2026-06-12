@@ -79,6 +79,6 @@ sonar {
         property 'sonar.cpd.exclusions', 'frontend/src/HelpPage.tsx'
         property 'sonar.coverage.jacoco.xmlReportPaths',
                 "${layout.buildDirectory.get()}/reports/jacoco/test/jacocoTestReport.xml"
-        property 'sonar.coverage.exclusions', 'frontend/**/*'
+        property 'sonar.coverage.exclusions', 'frontend/**/*,frontend/src/**/*,**/frontend/**/*,backend/Dockerfile,frontend/Dockerfile,docker-compose.yml,.github/workflows/**/*'
     }
 }
