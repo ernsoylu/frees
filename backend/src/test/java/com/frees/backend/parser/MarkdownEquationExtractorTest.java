@@ -68,6 +68,53 @@ class MarkdownEquationExtractorTest {
     }
 
     @Test
+    void testSemicolonSeparatedEquationsArePure() {
+        assertTrue(MarkdownEquationExtractor.isPureEquationLine("A[1,1] = 2;  A[1,2] = 1;  A[1,3] = -1"));
+        assertTrue(MarkdownEquationExtractor.isPureEquationLine("x = 1; y = 2"));
+        assertTrue(MarkdownEquationExtractor.isPureEquationLine("x = 1;"));
+        assertFalse(MarkdownEquationExtractor.isPureEquationLine("some text here; x = 1"));
+    }
+
+    @Test
+    void testExtractSemicolonSeparatedMatrixAssignments() {
+        String source = "A[1,1] = 2;  A[1,2] = 1;  A[1,3] = -1\n" +
+                "b[1..3] = [8, -11, -3]\n" +
+                "x[1..3] = SolveLinear(A[1..3,1..3], b[1..3])";
+
+        MarkdownEquationExtractor.ExtractionResult result = MarkdownEquationExtractor.extract(source);
+
+        assertEquals(source + "\n", result.cleanText);
+        assertEquals(5, result.equations.size());
+        assertEquals("A[1,1] = 2", result.equations.get(0).originalText.trim());
+        assertEquals("A[1,2] = 1", result.equations.get(1).originalText.trim());
+        assertEquals("A[1,3] = -1", result.equations.get(2).originalText.trim());
+        assertEquals("b[1..3] = [8, -11, -3]", result.equations.get(3).originalText.trim());
+        assertEquals("x[1..3] = SolveLinear(A[1..3,1..3], b[1..3])", result.equations.get(4).originalText.trim());
+    }
+
+    @Test
+    void testExtractFromLineWithMatrixSubscript() {
+        String line = "The matrix entry A[1,2] = 1 appears in row one.";
+        List<MarkdownEquationExtractor.ExtractedEquation> eqList = MarkdownEquationExtractor.extractFromLine(line);
+        assertEquals(1, eqList.size());
+        assertEquals("A[1,2] = 1", eqList.get(0).originalText);
+    }
+
+    @Test
+    void testGenerateFormattedReportWithSemicolonLine() {
+        String source = "x = 1; y = 2";
+        List<MarkdownEquationExtractor.ExtractedEquation> extracted = List.of(
+                new MarkdownEquationExtractor.ExtractedEquation("x = 1", "x = 1", 0, 5),
+                new MarkdownEquationExtractor.ExtractedEquation(" y = 2", " y = 2", 6, 12)
+        );
+        List<String> formatted = List.of("x = 1", "y = 2");
+
+        String report = MarkdownEquationExtractor.generateFormattedReport(source, extracted, formatted);
+
+        assertEquals("[MATH_BLOCK:x = 1]\n[MATH_BLOCK:y = 2]", report);
+    }
+
+    @Test
     void testGenerateFormattedReport() {
         String source = "# Header\n" +
                 "Text T1 = 100 [C] text.\n" +
