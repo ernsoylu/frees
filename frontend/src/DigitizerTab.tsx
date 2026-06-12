@@ -76,7 +76,9 @@ interface DigPoint {
 interface Dataset {
   id: number
   name: string
-  color: string
+  /** The curve's color sampled from the image with the picker; null until
+   * picked. Drives both the swatch and auto-extraction for this dataset. */
+  color: string | null
   param: string // optional curve parameter value, e.g. "100" for T = 100
   points: DigPoint[]
 }
@@ -386,10 +388,28 @@ function newDataset(existing: Dataset[]): Dataset {
   return {
     id,
     name: `Curve ${existing.length + 1}`,
-    color: DATASET_COLORS[existing.length % DATASET_COLORS.length],
+    color: null,
     param: '',
     points: [],
   }
+}
+
+/** Points are rendered in the picked color; unpicked datasets fall back to
+ * a palette color so several curves stay distinguishable on the canvas. */
+function renderColor(ds: Dataset, index: number): string {
+  return ds.color ?? DATASET_COLORS[index % DATASET_COLORS.length]
+}
+
+function rgbToHex(rgb: [number, number, number]): string {
+  return `#${rgb.map((c) => c.toString(16).padStart(2, '0')).join('')}`
+}
+
+function hexToRgb(hex: string): [number, number, number] {
+  return [
+    parseInt(hex.slice(1, 3), 16),
+    parseInt(hex.slice(3, 5), 16),
+    parseInt(hex.slice(5, 7), 16),
+  ]
 }
 
 export function DigitizerTab({
@@ -411,7 +431,6 @@ export function DigitizerTab({
   const [cursor, setCursor] = useState<DigPoint | null>(null)
   const [maskRect, setMaskRect] = useState<MaskRect | null>(null)
   const [maskDraft, setMaskDraft] = useState<MaskRect | null>(null)
-  const [targetColor, setTargetColor] = useState<[number, number, number]>([220, 30, 30])
   const [threshold, setThreshold] = useState(60)
   const [algorithm, setAlgorithm] = useState<'line' | 'symbol'>('line')
   const [minDia, setMinDia] = useState(4)
@@ -465,11 +484,15 @@ export function DigitizerTab({
 
   const resolved = useMemo(() => resolveCalibration(calibration), [calibration])
   const activeDataset = datasets.find((d) => d.id === activeDatasetId) ?? null
+  // Auto-extraction targets the active dataset's picked color.
+  const targetColor = activeDataset?.color ? hexToRgb(activeDataset.color) : null
 
   // Live overlay of the pixels the current color + threshold would match,
   // so the user can tune the picker before extracting.
+  const targetColorKey = activeDataset?.color ?? null
   const previewCanvas = useMemo(() => {
-    if (!image || !showPreview) return null
+    if (!image || !showPreview || !targetColorKey) return null
+    const target = hexToRgb(targetColorKey)
     const off = document.createElement('canvas')
     off.width = image.width
     off.height = image.height
@@ -479,7 +502,7 @@ export function DigitizerTab({
     const src = ctx.getImageData(0, 0, image.width, image.height)
     const overlay = ctx.createImageData(image.width, image.height)
     for (let i = 0; i < src.data.length; i += 4) {
-      if (colorMatches(src.data, i, targetColor, threshold)) {
+      if (colorMatches(src.data, i, target, threshold)) {
         overlay.data[i] = 0
         overlay.data[i + 1] = 255
         overlay.data[i + 2] = 255
@@ -489,7 +512,7 @@ export function DigitizerTab({
     ctx.clearRect(0, 0, off.width, off.height)
     ctx.putImageData(overlay, 0, 0)
     return off
-  }, [image, showPreview, targetColor, threshold])
+  }, [image, showPreview, targetColorKey, threshold])
 
   const loadImageFile = useCallback((file: File | null) => {
     if (!file) return
@@ -555,13 +578,14 @@ export function DigitizerTab({
       if (cp) cross(cp.px, cp.py, key.startsWith('x') ? '#ff6b6b' : '#51cf66', CAL_LABELS[key])
     }
 
-    for (const ds of datasets) {
+    for (let di = 0; di < datasets.length; di++) {
+      const ds = datasets[di]
       for (let i = 0; i < ds.points.length; i++) {
         const p = ds.points[i]
         const isSel = selected?.datasetId === ds.id && selected.index === i
         ctx.beginPath()
         ctx.arc(p.x * scale, p.y * scale, isSel ? 6 : 4, 0, Math.PI * 2)
-        ctx.fillStyle = ds.color
+        ctx.fillStyle = renderColor(ds, di)
         ctx.globalAlpha = ds.id === activeDatasetId ? 0.95 : 0.55
         ctx.fill()
         ctx.globalAlpha = 1
@@ -612,8 +636,9 @@ export function DigitizerTab({
       })
       const inView = (m: { x: number; y: number }) =>
         m.x >= -10 && m.x <= MAG_SIZE + 10 && m.y >= -10 && m.y <= MAG_SIZE + 10
-      for (const ds of datasets) {
-        ctx.fillStyle = ds.color
+      for (let di = 0; di < datasets.length; di++) {
+        const ds = datasets[di]
+        ctx.fillStyle = renderColor(ds, di)
         for (const p of ds.points) {
           const m = toMag(p)
           if (!inView(m)) continue
@@ -733,7 +758,12 @@ export function DigitizerTab({
     if (mode === 'pick') {
       const c = sampleColor(pt)
       if (c) {
-        setTargetColor(c)
+        if (activeDataset) {
+          const hex = rgbToHex(c)
+          updateDataset(activeDataset.id, (ds) => ({ ...ds, color: hex }))
+        } else {
+          setNotice('Add a dataset first, then pick its curve color.')
+        }
         setMode('add')
       }
       return
@@ -812,6 +842,12 @@ export function DigitizerTab({
       setNotice(image ? 'Add a dataset first.' : 'Load a graph image first.')
       return
     }
+    if (!targetColor) {
+      setNotice(`Pick ${activeDataset.name}'s curve color from the image first.`)
+      setMode('pick')
+      return
+    }
+    const target = targetColor
     setExtracting(true)
     // Defer so the spinner renders before the synchronous pixel scan.
     setTimeout(() => {
@@ -825,7 +861,7 @@ export function DigitizerTab({
         const data = ctx.getImageData(0, 0, image.width, image.height)
         let points = extractByColor(data, {
           kind: algorithm,
-          target: targetColor,
+          target,
           threshold,
           minDiameterPx: minDia,
           maxDiameterPx: maxDia,
@@ -1174,7 +1210,19 @@ export function DigitizerTab({
                   onClick={() => setActiveDatasetId(ds.id)}
                 >
                   <Group gap={6} wrap="nowrap">
-                    <ColorSwatch color={ds.color} size={14} />
+                    {ds.color ? (
+                      <Tooltip label="Curve color picked from the image">
+                        <ColorSwatch color={ds.color} size={14} />
+                      </Tooltip>
+                    ) : (
+                      <Tooltip label="No color yet — use the picker with this dataset active">
+                        <IconColorPicker
+                          size={14}
+                          color="var(--mantine-color-dark-2)"
+                          style={{ flexShrink: 0 }}
+                        />
+                      </Tooltip>
+                    )}
                     <TextInput
                       size="xs"
                       variant="unstyled"
@@ -1199,6 +1247,21 @@ export function DigitizerTab({
                     <Badge size="xs" variant="light">
                       {ds.points.length}
                     </Badge>
+                    <Tooltip label="Reset points (keep the dataset)">
+                      <ActionIcon
+                        size="xs"
+                        variant="subtle"
+                        color="yellow"
+                        aria-label={`Reset points of ${ds.name}`}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          updateDataset(ds.id, (d) => ({ ...d, points: [] }))
+                          if (selected?.datasetId === ds.id) setSelected(null)
+                        }}
+                      >
+                        <IconEraser size={12} />
+                      </ActionIcon>
+                    </Tooltip>
                     <ActionIcon
                       size="xs"
                       variant="subtle"
@@ -1229,15 +1292,25 @@ export function DigitizerTab({
               Auto extract
             </Title>
             <Group gap={6} mb={6} wrap="nowrap">
-              <Tooltip label="Pick the curve color from the image">
+              <Tooltip
+                label={
+                  activeDataset
+                    ? `Pick ${activeDataset.name}'s curve color from the image`
+                    : 'Add a dataset first'
+                }
+              >
                 <Button
                   size="compact-xs"
                   variant={mode === 'pick' ? 'filled' : 'default'}
-                  leftSection={<ColorSwatch color={`rgb(${targetColor.join(',')})`} size={12} />}
+                  leftSection={
+                    activeDataset?.color ? (
+                      <ColorSwatch color={activeDataset.color} size={12} />
+                    ) : undefined
+                  }
                   rightSection={<IconColorPicker size={12} />}
                   onClick={() => setMode('pick')}
                 >
-                  Color
+                  {activeDataset?.color ? 'Color' : 'Pick color'}
                 </Button>
               </Tooltip>
               <SegmentedControl
