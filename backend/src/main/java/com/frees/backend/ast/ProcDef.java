@@ -3,9 +3,10 @@ package com.frees.backend.ast;
 import java.util.List;
 
 /**
- * Top-level definition: FUNCTION, PROCEDURE, or MODULE.
+ * Top-level definition: FUNCTION, PROCEDURE, MODULE, or a tabulated curve.
  */
-public sealed interface ProcDef permits ProcDef.FunctionDef, ProcDef.ProcedureDef, ProcDef.ModuleDef {
+public sealed interface ProcDef
+        permits ProcDef.FunctionDef, ProcDef.ProcedureDef, ProcDef.ModuleDef, ProcDef.CurveDef {
 
     String name();
 
@@ -30,4 +31,20 @@ public sealed interface ProcDef permits ProcDef.FunctionDef, ProcDef.ProcedureDe
      */
     record ModuleDef(String name, List<String> inputs, List<String> outputs,
                      List<Statement> body) implements ProcDef {}
+
+    /**
+     * Tabulated curve function defined by a Curve Table (Epic 8): the table
+     * name is the function name and the column names are the arguments —
+     * the first column is the lookup argument (e.g. Re) and each further
+     * column is one curve whose header holds the family parameter value
+     * (e.g. T = 100, 200, ...). One curve evaluates name(x); a family
+     * evaluates name(x, param) by interpolating across the curves
+     * (see CurveInterpolator).
+     */
+    record CurveDef(String name, List<String> argNames, boolean xLog, boolean yLog,
+                    List<Curve> curves) implements ProcDef {}
+
+    /** One tabulated curve: its family parameter value (null for a lone
+     * curve) and sample arrays sorted ascending by x. */
+    record Curve(Double param, double[] xs, double[] ys) {}
 }

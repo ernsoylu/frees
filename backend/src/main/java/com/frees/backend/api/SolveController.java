@@ -9,6 +9,7 @@ import com.frees.backend.core.VariableSpec;
 import com.frees.backend.units.UnitRegistry;
 import com.frees.backend.parser.EquationParser;
 import com.frees.backend.ast.Equation;
+import com.frees.backend.ast.ProcDef;
 import com.frees.backend.parser.MarkdownEquationExtractor;
 import com.frees.backend.props.CoolProp;
 import com.frees.backend.props.PropertyFunctions;
@@ -62,7 +63,63 @@ public class SolveController {
                                List<VariableInfoDto> variableInfo,
                                Boolean findAllSolutions,
                                String displayUnitSystem,
-                               Boolean fillMissing) {}
+                               Boolean fillMissing,
+                               List<CurveTableDto> curveTables) {}
+
+    /** One curve of a Curve Table: family parameter value (null for a lone
+     * curve) and [x, y] sample pairs. */
+    public record CurveDto(Double param, List<List<Double>> points) {}
+
+    /** A Curve Table (Epic 8): the table name is the function name callable
+     * from equations; argNames holds the column names (lookup argument
+     * first, then the family parameter name, if any). */
+    public record CurveTableDto(String name,
+                                List<String> argNames,
+                                Boolean xLog,
+                                Boolean yLog,
+                                List<CurveDto> curves) {}
+
+    /** Converts Curve Table DTOs into solver definitions, keyed by the
+     * case-insensitive function name. Curves are sorted ascending by x. */
+    static Map<String, ProcDef> curveDefsOf(List<CurveTableDto> tables) {
+        if (tables == null || tables.isEmpty()) {
+            return Map.of();
+        }
+        Map<String, ProcDef> defs = new HashMap<>();
+        for (CurveTableDto table : tables) {
+            if (table.name() == null || table.name().isBlank() || table.curves() == null) {
+                continue;
+            }
+            String name = table.name().trim().toLowerCase();
+            List<ProcDef.Curve> curves = new ArrayList<>();
+            for (CurveDto curve : table.curves()) {
+                List<List<Double>> pts = curve.points() == null ? List.of() : curve.points();
+                List<List<Double>> valid = pts.stream()
+                        .filter(p -> p != null && p.size() >= 2
+                                && p.get(0) != null && p.get(1) != null)
+                        .sorted(java.util.Comparator.comparingDouble(p -> p.get(0)))
+                        .toList();
+                if (valid.isEmpty()) {
+                    continue;
+                }
+                double[] xs = new double[valid.size()];
+                double[] ys = new double[valid.size()];
+                for (int i = 0; i < valid.size(); i++) {
+                    xs[i] = valid.get(i).get(0);
+                    ys[i] = valid.get(i).get(1);
+                }
+                curves.add(new ProcDef.Curve(curve.param(), xs, ys));
+            }
+            if (!curves.isEmpty()) {
+                defs.put(name, new ProcDef.CurveDef(name,
+                        table.argNames() == null ? List.of() : table.argNames(),
+                        Boolean.TRUE.equals(table.xLog()),
+                        Boolean.TRUE.equals(table.yLog()),
+                        curves));
+            }
+        }
+        return defs;
+    }
 
     public record VariableDto(String name, double value, String units) {}
 
@@ -197,7 +254,8 @@ public class SolveController {
             var extraction = MarkdownEquationExtractor.extract(request.text());
             String cleanText = extraction.cleanText;
 
-            EquationSystemSolver.CheckResult result = solver.check(cleanText, complexMode);
+            EquationSystemSolver.CheckResult result = solver.check(cleanText, complexMode,
+                    curveDefsOf(request.curveTables()));
             Map<String, String> effective = effectiveUnits(cleanText, request.variableInfo());
             Map<String, String> inferredUnits =
                     new HashMap<>(solver.deriveUnits(cleanText, effective));
@@ -250,9 +308,10 @@ public class SolveController {
             var extraction = MarkdownEquationExtractor.extract(request.text());
             String cleanText = extraction.cleanText;
 
+            Map<String, ProcDef> curveDefs = curveDefsOf(request.curveTables());
             EquationSystemSolver.Result rawResult = findAll
-                    ? solver.solveAll(cleanText, settings, specs)
-                    : solver.solve(cleanText, settings, specs);
+                    ? solver.solveAll(cleanText, settings, specs, curveDefs)
+                    : solver.solve(cleanText, settings, specs, curveDefs);
             final EquationSystemSolver.Result result;
             List<Map<String, Double>> cyclePath = List.of();
             if (Boolean.TRUE.equals(request.fillMissing())) {
@@ -339,7 +398,8 @@ public class SolveController {
             StopCriteriaDto stopCriteria,
             List<VariableInfoDto> variableInfo,
             String displayUnitSystem,
-            TableDto table
+            TableDto table,
+            List<CurveTableDto> curveTables
     ) {}
 
     public record TableRowResult(
@@ -394,7 +454,8 @@ public class SolveController {
 
         TableRowContext context = new TableRowContext(
                 cleanText, settings, specs, unitsByLowerName, system,
-                request.table().variables(), explicitUnits
+                request.table().variables(), explicitUnits,
+                curveDefsOf(request.curveTables())
         );
 
         List<TableRowResult> results = new ArrayList<>();
@@ -432,7 +493,8 @@ public class SolveController {
             Map<String, String> unitsByLowerName,
             UnitRegistry.UnitSystem system,
             List<String> tableVariables,
-            Map<String, String> explicitUnits
+            Map<String, String> explicitUnits,
+            Map<String, ProcDef> curveDefs
     ) {}
 
     /** One parametric-table run: non-null cells are fixed, the rest solved. */
@@ -444,7 +506,8 @@ public class SolveController {
             }
         }
         try {
-            EquationSystemSolver.Result result = solver.solve(sb.toString(), context.settings(), context.specs());
+            EquationSystemSolver.Result result = solver.solve(sb.toString(),
+                    context.settings(), context.specs(), context.curveDefs());
             java.util.Set<String> targetVars = new java.util.HashSet<>(context.tableVariables());
             result = resolveMissingProperties(result, sb.toString(), targetVars);
             Map<String, Double> rowValues = new HashMap<>();

@@ -72,7 +72,15 @@ public class EquationSystemSolver {
     }
 
     public CheckResult check(String source, boolean complexMode) {
-        EquationParser.ParseResult parsed = parser.parseResult(source);
+        return check(source, complexMode, Map.of());
+    }
+
+    /** extraDefs adds externally supplied definitions (Curve Tables) to the
+     * source-defined functions; source definitions win on name collision. */
+    public CheckResult check(String source, boolean complexMode,
+                             Map<String, ProcDef> extraDefs) {
+        EquationParser.ParseResult parsed =
+                withExtraDefs(parser.parseResult(source), extraDefs);
         List<Equation> equations = IntegralSolver.hoistNested(parsed.equations());
         try {
             requireComplexModeForImaginaryLiterals(equations, complexMode);
@@ -105,6 +113,17 @@ public class EquationSystemSolver {
                 String.format(
                         "No syntax errors were detected. There are %d equations and %d variables.",
                         equations.size(), allVars.size()));
+    }
+
+    private static EquationParser.ParseResult withExtraDefs(
+            EquationParser.ParseResult parsed, Map<String, ProcDef> extraDefs) {
+        if (extraDefs.isEmpty()) {
+            return parsed;
+        }
+        Map<String, ProcDef> merged = new HashMap<>(extraDefs);
+        merged.putAll(parsed.defs());
+        return new EquationParser.ParseResult(
+                parsed.equations(), parsed.displayNames(), merged);
     }
 
     /** Imaginary literals are meaningless in real mode; fail with guidance. */
@@ -160,9 +179,16 @@ public class EquationSystemSolver {
 
     public Result solve(String source, SolverSettings settings,
                         Map<String, VariableSpec> specs) {
+        return solve(source, settings, specs, Map.of());
+    }
+
+    public Result solve(String source, SolverSettings settings,
+                        Map<String, VariableSpec> specs,
+                        Map<String, ProcDef> extraDefs) {
         long startNanos = System.nanoTime();
         long deadlineNanos = startNanos + (long) (settings.elapsedTimeSeconds() * 1.0e9);
-        EquationParser.ParseResult parsed = parser.parseResult(source);
+        EquationParser.ParseResult parsed =
+                withExtraDefs(parser.parseResult(source), extraDefs);
         requireComplexModeForImaginaryLiterals(parsed.equations(), settings.complexMode());
         List<Equation> equations = IntegralSolver.hoistNested(parsed.equations());
         List<IntegralSolver.IntegralEquation> integrals =
@@ -571,9 +597,16 @@ public class EquationSystemSolver {
     /** Finds all distinct solutions of the system (see AllRootsSolver). */
     public Result solveAll(String source, SolverSettings settings,
                            Map<String, VariableSpec> specs) {
+        return solveAll(source, settings, specs, Map.of());
+    }
+
+    public Result solveAll(String source, SolverSettings settings,
+                           Map<String, VariableSpec> specs,
+                           Map<String, ProcDef> extraDefs) {
         long startNanos = System.nanoTime();
         long deadlineNanos = startNanos + (long) (settings.elapsedTimeSeconds() * 1.0e9);
-        EquationParser.ParseResult parsed = parser.parseResult(source);
+        EquationParser.ParseResult parsed =
+                withExtraDefs(parser.parseResult(source), extraDefs);
         List<Equation> equations = parsed.equations();
         requireComplexModeForImaginaryLiterals(equations, settings.complexMode());
         if (settings.complexMode()) {

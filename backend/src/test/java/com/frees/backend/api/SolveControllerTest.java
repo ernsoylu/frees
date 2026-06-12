@@ -364,6 +364,44 @@ class SolveControllerTest {
     }
 
     @Test
+    void solvesWithCurveTableFunction() throws Exception {
+        // A Curve Table named "htc" with curves at T = 100 and T = 200:
+        // the table name is the function, called as htc(Re, T).
+        mockMvc.perform(post("/api/solve")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{"
+                                + "\"text\": \"Re = 5\\nT = 150\\nU = htc(Re, T)\","
+                                + "\"curveTables\": [{"
+                                + "  \"name\": \"htc\","
+                                + "  \"argNames\": [\"Re\", \"T\"],"
+                                + "  \"curves\": ["
+                                + "    {\"param\": 100, \"points\": [[0, 0], [10, 10]]},"
+                                + "    {\"param\": 200, \"points\": [[0, 0], [10, 30]]}"
+                                + "  ]"
+                                + "}]"
+                                + "}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.variables[?(@.name == 'U')].value").value(10.0));
+    }
+
+    @Test
+    void checkEndpointAcceptsCurveTableFunction() throws Exception {
+        mockMvc.perform(post("/api/check")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{"
+                                + "\"text\": \"Re = 1500\\nU = htc(Re)\","
+                                + "\"curveTables\": [{"
+                                + "  \"name\": \"htc\","
+                                + "  \"argNames\": [\"Re\"],"
+                                + "  \"curves\": [{\"points\": [[1000, 50], [2000, 80]]}]"
+                                + "}]"
+                                + "}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.solvable").value(true));
+    }
+
+    @Test
     void optimizeEndpointValidatesBlankText() throws Exception {
         mockMvc.perform(post("/api/optimize")
                         .contentType(MediaType.APPLICATION_JSON)

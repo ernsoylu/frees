@@ -73,8 +73,20 @@ public final class Evaluator {
     }
 
     private static double evalCall(Expr.Call c, Map<String, Double> values, Map<String, ProcDef> defs) {
-        // Dispatch to user-defined FUNCTION
         ProcDef def = defs.get(c.function());
+
+        // Tabulated Curve Table function: name(x) or name(x, param)
+        if (def instanceof ProcDef.CurveDef cd) {
+            if (c.args().isEmpty() || c.args().size() > 2) {
+                throw new IllegalStateException("Curve table function '" + cd.name()
+                        + "' expects " + cd.name() + "(x) or " + cd.name() + "(x, param).");
+            }
+            double x = eval(c.args().get(0), values, defs);
+            Double param = c.args().size() == 2 ? eval(c.args().get(1), values, defs) : null;
+            return com.frees.backend.core.CurveInterpolator.evaluate(cd, x, param);
+        }
+
+        // Dispatch to user-defined FUNCTION
         if (def instanceof ProcDef.FunctionDef fd) {
             List<Double> args = c.args().stream()
                     .map(a -> eval(a, values, defs))
