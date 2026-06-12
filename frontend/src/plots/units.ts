@@ -11,7 +11,7 @@ export interface UnitChoice {
   offset: number
 }
 
-const BTU_PER_LBM = 2326.0
+const BTU_PER_LBM = 2326
 const CAL_KG = 4186.8
 const FT3_PER_LBM = 16.018463
 
@@ -98,8 +98,8 @@ export function defaultUnitId(property: string, celsius: boolean): string {
 function normalizeId(id: string): string {
   return id
     .replace(/°/g, '')
-    .replace(/[··]/g, '-')
-    .replace(/[\^³³]/g, '3')
+    .replace(/·/g, '-')
+    .replace(/[\^³]/g, '3')
     .replace(/\*/g, '')
     .trim()
     .toLowerCase()

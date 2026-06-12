@@ -253,6 +253,41 @@ function axisProperties(spec: PlotSpec): { x: string; y: string } | null {
   return null
 }
 
+function XyLineColors({
+  spec,
+  format,
+  onChange,
+}: Readonly<{
+  spec: PlotSpec
+  format: PlotFormat
+  onChange: (format: PlotFormat) => void
+}>) {
+  if (spec.xy.yVars.length === 0) {
+    return (
+      <Text size="xs" c="dimmed">
+        Select Y-axis variables first to configure their colors.
+      </Text>
+    )
+  }
+  return (
+    <Group gap="xs">
+      {spec.xy.yVars.map((yVar) => (
+        <ColorInput
+          key={yVar}
+          label={`Color for ${yVar}`}
+          size="xs"
+          style={{ flex: '1 1 120px' }}
+          value={format.lineColors?.[yVar] ?? '#228be6'}
+          onChange={(color) => {
+            const lineColors = { ...format.lineColors, [yVar]: color }
+            onChange({ ...format, lineColors })
+          }}
+        />
+      ))}
+    </Group>
+  )
+}
+
 function FormatSection({
   spec,
   onChange,
@@ -402,27 +437,7 @@ function FormatSection({
 
       <Divider label="Line Colors" labelPosition="left" />
       {spec.kind === 'xy' ? (
-        spec.xy.yVars.length > 0 ? (
-          <Group gap="xs">
-            {spec.xy.yVars.map((yVar) => (
-              <ColorInput
-                key={yVar}
-                label={`Color for ${yVar}`}
-                size="xs"
-                style={{ flex: '1 1 120px' }}
-                value={format.lineColors?.[yVar] ?? '#228be6'}
-                onChange={(color) => {
-                  const lineColors = { ...(format.lineColors ?? {}), [yVar]: color }
-                  onChange({ ...format, lineColors })
-                }}
-              />
-            ))}
-          </Group>
-        ) : (
-          <Text size="xs" c="dimmed">
-            Select Y-axis variables first to configure their colors.
-          </Text>
-        )
+        <XyLineColors spec={spec} format={format} onChange={onChange} />
       ) : (
         <Group grow>
           <ColorInput
@@ -430,7 +445,7 @@ function FormatSection({
             size="xs"
             value={format.lineColors?.['states'] ?? '#ffa94b'}
             onChange={(color) => {
-              const lineColors = { ...(format.lineColors ?? {}), states: color }
+              const lineColors = { ...format.lineColors, states: color }
               onChange({ ...format, lineColors })
             }}
           />

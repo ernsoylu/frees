@@ -280,19 +280,25 @@ interface TopBarProps {
   onComplexModeChange: (checked: boolean) => void
 }
 
+function solveTooltipFor(canSolve: boolean, isTable: boolean): string {
+  if (!canSolve) return 'Run Check first (F4)'
+  return isTable ? 'Solve every table run (F2)' : 'Solve the system (F2)'
+}
+
+function statusPillFor(props: Readonly<TopBarProps>) {
+  if (props.isTable) {
+    return tablePill(props.tableResults, props.tableCheckResult, props.tableCheckMessage)
+  }
+  if (props.result) return solvePill(props.result)
+  if (props.checkResult) return checkPill(props.checkResult)
+  return null
+}
+
 export function TopBar(props: Readonly<TopBarProps>) {
   const { isTable } = props
   const canSolve = isTable ? props.tableCheckResult?.solvable === true : props.solvable
-  const solveTooltip = canSolve
-    ? `${isTable ? 'Solve every table run' : 'Solve the system'} (F2)`
-    : `Run Check first (F4)`
-  const pill = isTable
-    ? tablePill(props.tableResults, props.tableCheckResult, props.tableCheckMessage)
-    : props.result
-      ? solvePill(props.result)
-      : props.checkResult
-        ? checkPill(props.checkResult)
-        : null
+  const solveTooltip = solveTooltipFor(canSolve, isTable)
+  const pill = statusPillFor(props)
   const hint = isTable
     ? 'Configure columns, fill values, then Check (F4) · Solve (F2)'
     : 'Check (F4) · Solve (F2)'

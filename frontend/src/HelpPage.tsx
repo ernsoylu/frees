@@ -23,7 +23,7 @@ import {
 import { useDisclosure } from '@mantine/hooks';
 import { useState } from 'react';
 
-function CopyButton({ code }: { code: string }) {
+function CopyButton({ code }: Readonly<{ code: string }>) {
   const [copied, setCopied] = useState(false);
   const handleCopy = () => {
     navigator.clipboard.writeText(code);
@@ -1168,8 +1168,8 @@ m_flow_total = m_flow_1 + m_flow_2`}
             <Text style={{ lineHeight: 1.6 }}>
               Spelled chemical formulas select <strong>ideal-gas</strong> property routines whose enthalpy
               is referenced to the <strong>enthalpy of formation at 298.15 K, 1 atm</strong> — the
-              convention that makes combustion energy balances work directly (EES behavior).
-              <code> Enthalpy(CO2, T=298.15)</code> returns −8941.6 kJ/kg, not 0. Full names
+              convention that makes combustion energy balances work directly (EES behavior).{' '}
+              <code>Enthalpy(CO2, T=298.15)</code> returns −8941.6 kJ/kg, not 0. Full names
               (Nitrogen, CarbonDioxide, Methane) keep the real-fluid CoolProp models above.
             </Text>
             <Group gap="xs">

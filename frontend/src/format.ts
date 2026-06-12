@@ -27,14 +27,9 @@ function imagSign(cleanReal: number, cleanImag: number): string {
   return cleanReal === 0 ? '-' : ' - '
 }
 
-export function formatComplex(
-  real: number | null | undefined,
-  imag: number | null | undefined,
-): string {
-  const r = real ?? 0
-  const i = imag ?? 0
-  const cleanImag = suppressRoundoff(i, r)
-  const cleanReal = suppressRoundoff(r, cleanImag)
+export function formatComplex(real = 0, imag = 0): string {
+  const cleanImag = suppressRoundoff(imag, real)
+  const cleanReal = suppressRoundoff(real, cleanImag)
   if (cleanImag === 0) return formatValue(cleanReal)
   const formattedReal = cleanReal === 0 ? '' : formatValue(cleanReal)
   const formattedImag =

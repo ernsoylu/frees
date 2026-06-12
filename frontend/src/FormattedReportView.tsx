@@ -29,7 +29,7 @@ export function getVariablesInMath(math: string, variables?: VariableResult[]): 
   // Replace LaTeX commands with space
   let s = math.replace(/\\[a-zA-Z]+/g, ' ')
   // Remove curly braces, brackets, and underscores
-  s = s.replace(/[\{\}_\[\]]/g, '')
+  s = s.replace(/[{}_[\]]/g, '')
   // Match alphanumeric words starting with a letter
   const words = s.match(/[a-zA-Z][a-zA-Z0-9]*/g) || []
   const uniqueWords = new Set(words.map(w => w.toLowerCase()))
@@ -48,7 +48,7 @@ export function getLhsVariable(math: string, variables?: VariableResult[]): Vari
   
   // Clean the LHS part
   let s = lhsPart.replace(/\\[a-zA-Z]+/g, ' ')
-  s = s.replace(/[\{\}_\[\]]/g, '')
+  s = s.replace(/[{}_[\]]/g, '')
   const words = s.match(/[a-zA-Z][a-zA-Z0-9]*/g) || []
   const firstWord = words[0]
   if (!firstWord) return null
@@ -73,7 +73,38 @@ export function getTooltipLabel(math: string, variables?: VariableResult[]): str
     }
   }
   
-  return sorted.map(v => `${v.name} = ${formatValue(v.value)}${v.units ? ` [${v.units}]` : ''}`).join(', ')
+  return sorted
+    .map((v) => {
+      const units = v.units ? ` [${v.units}]` : ''
+      return `${v.name} = ${formatValue(v.value)}${units}`
+    })
+    .join(', ')
+}
+
+const MATH_MARKERS = [
+  { tag: '[MATH_INLINE:', type: 'inline_math' },
+  { tag: '[MATH_BLOCK:', type: 'block_math' },
+] as const
+
+const SPAN_MARKERS = [
+  { delim: '**', type: 'bold' },
+  { delim: '*', type: 'italic' },
+  { delim: '`', type: 'code' },
+] as const
+
+/** Scans past a [MATH_...: tag, tracking bracket depth, and returns the content. */
+function scanBracketedMath(text: string, start: number, tagLength: number): { value: string; end: number } {
+  let depth = 1
+  let j = start + tagLength
+  while (j < text.length && depth > 0) {
+    if (text[j] === '[') {
+      depth++
+    } else if (text[j] === ']') {
+      depth--
+    }
+    j++
+  }
+  return { value: text.substring(start + tagLength, j - 1), end: j }
 }
 
 function splitReportText(text: string): ParsedPart[] {
@@ -88,72 +119,23 @@ function splitReportText(text: string): ParsedPart[] {
   }
 
   while (i < text.length) {
-    if (text.startsWith('[MATH_INLINE:', i)) {
+    const math = MATH_MARKERS.find((m) => text.startsWith(m.tag, i))
+    if (math) {
       flushText(i)
-      let depth = 1
-      let j = i + 13
-      while (j < text.length && depth > 0) {
-        if (text[j] === '[') {
-          depth++
-        } else if (text[j] === ']') {
-          depth--
-        }
-        j++
-      }
-      const mathContent = text.substring(i + 13, j - 1)
-      result.push({ type: 'inline_math', value: mathContent })
-      i = j
+      const { value, end } = scanBracketedMath(text, i, math.tag.length)
+      result.push({ type: math.type, value })
+      i = end
       lastTextStart = i
       continue
     }
 
-    if (text.startsWith('[MATH_BLOCK:', i)) {
-      flushText(i)
-      let depth = 1
-      let j = i + 12
-      while (j < text.length && depth > 0) {
-        if (text[j] === '[') {
-          depth++
-        } else if (text[j] === ']') {
-          depth--
-        }
-        j++
-      }
-      const mathContent = text.substring(i + 12, j - 1)
-      result.push({ type: 'block_math', value: mathContent })
-      i = j
-      lastTextStart = i
-      continue
-    }
-
-    if (text.startsWith('**', i)) {
-      const endBold = text.indexOf('**', i + 2)
-      if (endBold !== -1) {
+    const span = SPAN_MARKERS.find((m) => text.startsWith(m.delim, i))
+    if (span) {
+      const endIdx = text.indexOf(span.delim, i + span.delim.length)
+      if (endIdx !== -1) {
         flushText(i)
-        result.push({ type: 'bold', value: text.substring(i + 2, endBold) })
-        i = endBold + 2
-        lastTextStart = i
-        continue
-      }
-    }
-
-    if (text.startsWith('*', i)) {
-      const endItalic = text.indexOf('*', i + 1)
-      if (endItalic !== -1) {
-        flushText(i)
-        result.push({ type: 'italic', value: text.substring(i + 1, endItalic) })
-        i = endItalic + 1
-        lastTextStart = i
-        continue
-      }
-    }
-
-    if (text.startsWith('`', i)) {
-      const endCode = text.indexOf('`', i + 1)
-      if (endCode !== -1) {
-        flushText(i)
-        result.push({ type: 'code', value: text.substring(i + 1, endCode) })
-        i = endCode + 1
+        result.push({ type: span.type, value: text.substring(i + span.delim.length, endIdx) })
+        i = endIdx + span.delim.length
         lastTextStart = i
         continue
       }
@@ -166,65 +148,92 @@ function splitReportText(text: string): ParsedPart[] {
   return result
 }
 
+/**
+ * Block-rendered equation with a value tooltip and solved-variable badges.
+ * Shared by the formatted report and the plain formatted-equations panel.
+ */
+export function MathWithBadges({
+  math,
+  variables,
+}: Readonly<{ math: string; variables?: VariableResult[] }>) {
+  const tooltip = getTooltipLabel(math, variables)
+  const lhsVar = getLhsVariable(math, variables)
+  const allVars = getVariablesInMath(math, variables)
+  const otherVars = allVars.filter((v) => v.name !== lhsVar?.name)
+
+  return (
+    <>
+      {tooltip ? (
+        <Tooltip label={tooltip} withArrow>
+          <div style={{ cursor: 'help' }}>
+            <Latex math={math} block />
+          </div>
+        </Tooltip>
+      ) : (
+        <Latex math={math} block />
+      )}
+      {variables && allVars.length > 0 && (
+        <Group gap="xs" justify="center" mt="xs" wrap="wrap">
+          {lhsVar && (
+            <Badge variant="light" color="blue" size="sm">
+              {lhsVar.name} = {formatValue(lhsVar.value)} {lhsVar.units ? `[${lhsVar.units}]` : ''}
+            </Badge>
+          )}
+          {otherVars.map((v) => (
+            <Text key={v.name} size="xs" c="dimmed">
+              {v.name} = {formatValue(v.value)} {v.units ? `[${v.units}]` : ''}
+            </Text>
+          ))}
+        </Group>
+      )}
+    </>
+  )
+}
+
+/** Content-derived React keys: identical parts get an occurrence suffix. */
+function makeKeyFactory() {
+  const seen = new Map<string, number>()
+  return (kind: string, value: string) => {
+    const base = `${kind}:${value}`
+    const n = seen.get(base) ?? 0
+    seen.set(base, n + 1)
+    return `${base}#${n}`
+  }
+}
+
 function renderInlineContent(text: string, variables?: VariableResult[]): React.ReactNode[] {
   const parts = splitReportText(text)
-  return parts.map((part, index) => {
+  const keyFor = makeKeyFactory()
+  return parts.map((part) => {
+    const key = keyFor(part.type, part.value)
     switch (part.type) {
       case 'inline_math': {
         const tooltip = getTooltipLabel(part.value, variables)
         if (tooltip) {
           return (
-            <Tooltip key={index} label={tooltip} withArrow>
+            <Tooltip key={key} label={tooltip} withArrow>
               <span style={{ cursor: 'help', borderBottom: '1px dotted var(--mantine-color-blue-4)', display: 'inline-block' }}>
                 <Latex math={part.value} />
               </span>
             </Tooltip>
           )
         }
-        return <Latex key={index} math={part.value} />
+        return <Latex key={key} math={part.value} />
       }
-      case 'block_math': {
-        const tooltip = getTooltipLabel(part.value, variables)
-        const lhsVar = getLhsVariable(part.value, variables)
-        const allVars = getVariablesInMath(part.value, variables)
-        const otherVars = allVars.filter(v => v.name !== lhsVar?.name)
-        
+      case 'block_math':
         return (
-          <div key={index} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', margin: '12px 0' }}>
-            {tooltip ? (
-              <Tooltip label={tooltip} withArrow>
-                <div style={{ cursor: 'help' }}>
-                  <Latex math={part.value} block />
-                </div>
-              </Tooltip>
-            ) : (
-              <Latex math={part.value} block />
-            )}
-            {variables && allVars.length > 0 && (
-              <Group gap="xs" justify="center" mt="xs" wrap="wrap">
-                {lhsVar && (
-                  <Badge variant="light" color="blue" size="sm">
-                    {lhsVar.name} = {formatValue(lhsVar.value)} {lhsVar.units ? `[${lhsVar.units}]` : ''}
-                  </Badge>
-                )}
-                {otherVars.map((v) => (
-                  <Text key={v.name} size="xs" c="dimmed">
-                    {v.name} = {formatValue(v.value)} {v.units ? `[${v.units}]` : ''}
-                  </Text>
-                ))}
-              </Group>
-            )}
+          <div key={key} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', margin: '12px 0' }}>
+            <MathWithBadges math={part.value} variables={variables} />
           </div>
         )
-      }
       case 'bold':
-        return <strong key={index}>{part.value}</strong>
+        return <strong key={key}>{part.value}</strong>
       case 'italic':
-        return <em key={index}>{part.value}</em>
+        return <em key={key}>{part.value}</em>
       case 'code':
         return (
           <code
-            key={index}
+            key={key}
             style={{
               fontFamily: 'var(--mantine-font-family-monospace)',
               backgroundColor: 'var(--mantine-color-dark-6)',
@@ -262,7 +271,7 @@ function ReportGraph({
   const { diagram, psychart, loading, error } = useDiagramData(spec)
   const states = detectStates(variables)
   const figure = React.useMemo(
-    () => buildFigure(spec, states, cyclePath, tableRows, tableResults, diagram, psychart, 'dark'),
+    () => buildFigure(spec, { states, cyclePath, tableRows, tableResults, diagram, psychart, theme: 'dark' }),
     [spec, states, cyclePath, tableRows, tableResults, diagram, psychart]
   )
 
@@ -299,6 +308,25 @@ function ReportGraph({
       </Text>
     </Stack>
   )
+}
+
+/**
+ * Parses a [Graph="Name"] Caption [/Graph] line without regular expressions
+ * (the equivalent regex is vulnerable to super-linear backtracking).
+ */
+function parseGraphTag(trimmed: string): { name: string; caption: string } | null {
+  const lower = trimmed.toLowerCase()
+  if (!lower.startsWith('[graph=') || !lower.endsWith('[/graph]')) return null
+  const closeIdx = trimmed.indexOf(']')
+  if (closeIdx === -1 || closeIdx > trimmed.length - 8) return null
+  let name = trimmed.substring(7, closeIdx).trim()
+  if ((name.startsWith('"') && name.endsWith('"')) || (name.startsWith("'") && name.endsWith("'"))) {
+    name = name.substring(1, name.length - 1)
+  }
+  name = name.trim()
+  if (!name) return null
+  const caption = trimmed.substring(closeIdx + 1, trimmed.length - 8).trim()
+  return { name, caption }
 }
 
 function ReportGraphPlaceholder({
@@ -359,6 +387,7 @@ export default function FormattedReportView({
   let currentList: React.ReactNode[] = []
   let listKey = 0
   let figureCounter = 0
+  const keyFor = makeKeyFactory()
 
   const flushList = () => {
     if (currentList.length > 0) {
@@ -371,73 +400,64 @@ export default function FormattedReportView({
     }
   }
 
-  lines.forEach((line, index) => {
+  const pushGraph = (graph: { name: string; caption: string }, key: string) => {
+    figureCounter++
+    const caption = `Figure ${figureCounter} - ${graph.caption}`
+    const spec = plots.find((p) => p.name.toLowerCase() === graph.name.toLowerCase())
+    if (spec) {
+      elements.push(
+        <ReportGraph
+          key={key}
+          spec={spec}
+          variables={variables}
+          cyclePath={cyclePath}
+          tableRows={tableRows}
+          tableResults={tableResults}
+          caption={caption}
+        />
+      )
+    } else {
+      elements.push(
+        <ReportGraphPlaceholder key={key} name={graph.name} caption={caption} />
+      )
+    }
+  }
+
+  const headingOrder = (trimmed: string): { order: 2 | 3 | 4; text: string } | null => {
+    if (trimmed.startsWith('# ')) return { order: 2, text: trimmed.substring(2) }
+    if (trimmed.startsWith('## ')) return { order: 3, text: trimmed.substring(3) }
+    if (trimmed.startsWith('### ')) return { order: 4, text: trimmed.substring(4) }
+    return null
+  }
+
+  for (const line of lines) {
     const trimmed = line.trim()
+    const key = keyFor('line', trimmed)
+
     if (trimmed === '') {
       flushList()
-      elements.push(<div key={`space-${index}`} style={{ height: '0.8em' }} />)
-      return
+      elements.push(<div key={key} style={{ height: '0.8em' }} />)
+      continue
     }
 
-    const GRAPH_TAG_REGEX = /^\[Graph=["']?([^"']+)["']?\](.*?)\[\/Graph\]$/i
-    const match = trimmed.match(GRAPH_TAG_REGEX)
-    if (match) {
+    const graph = parseGraphTag(trimmed)
+    if (graph) {
       flushList()
-      const diagramName = match[1].trim()
-      const captionText = match[2].trim()
-      figureCounter++
-      const caption = `Figure ${figureCounter} - ${captionText}`
-
-      const spec = plots.find((p) => p.name.toLowerCase() === diagramName.toLowerCase())
-
-      if (spec) {
-        elements.push(
-          <ReportGraph
-            key={`graph-${index}`}
-            spec={spec}
-            variables={variables}
-            cyclePath={cyclePath}
-            tableRows={tableRows}
-            tableResults={tableResults}
-            caption={caption}
-          />
-        )
-      } else {
-        elements.push(
-          <ReportGraphPlaceholder
-            key={`graph-placeholder-${index}`}
-            name={diagramName}
-            caption={caption}
-          />
-        )
-      }
-      return
+      pushGraph(graph, key)
+      continue
     }
 
-    if (trimmed.startsWith('# ')) {
+    const heading = headingOrder(trimmed)
+    if (heading) {
       flushList()
       elements.push(
-        <Title key={`h1-${index}`} order={2} mt="md" mb="xs" c="blue.4">
-          {renderInlineContent(trimmed.substring(2), variables)}
-        </Title>
-      )
-    } else if (trimmed.startsWith('## ')) {
-      flushList()
-      elements.push(
-        <Title key={`h2-${index}`} order={3} mt="sm" mb="xs" c="blue.4">
-          {renderInlineContent(trimmed.substring(3), variables)}
-        </Title>
-      )
-    } else if (trimmed.startsWith('### ')) {
-      flushList()
-      elements.push(
-        <Title key={`h3-${index}`} order={4} mt="sm" mb="xs" c="blue.4">
-          {renderInlineContent(trimmed.substring(4), variables)}
+        <Title key={key} order={heading.order} mt={heading.order === 2 ? 'md' : 'sm'} mb="xs" c="blue.4">
+          {renderInlineContent(heading.text, variables)}
         </Title>
       )
     } else if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
       currentList.push(
-        <List.Item key={`li-${index}`}>
+        <List.Item key={key}>
           {renderInlineContent(trimmed.substring(2), variables)}
         </List.Item>
       )
@@ -445,47 +465,20 @@ export default function FormattedReportView({
       flushList()
       if (trimmed.startsWith('[MATH_BLOCK:') && trimmed.endsWith(']')) {
         const math = trimmed.substring(12, trimmed.length - 1)
-        const tooltip = getTooltipLabel(math, variables)
-        const lhsVar = getLhsVariable(math, variables)
-        const allVars = getVariablesInMath(math, variables)
-        const otherVars = allVars.filter(v => v.name !== lhsVar?.name)
-        
         elements.push(
-          <div key={`mathblk-${index}`} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', margin: '12px 0' }}>
-            {tooltip ? (
-              <Tooltip label={tooltip} withArrow>
-                <div style={{ cursor: 'help' }}>
-                  <Latex math={math} block />
-                </div>
-              </Tooltip>
-            ) : (
-              <Latex math={math} block />
-            )}
-            {variables && allVars.length > 0 && (
-              <Group gap="xs" justify="center" mt="xs" wrap="wrap">
-                {lhsVar && (
-                  <Badge variant="light" color="blue" size="sm">
-                    {lhsVar.name} = {formatValue(lhsVar.value)} {lhsVar.units ? `[${lhsVar.units}]` : ''}
-                  </Badge>
-                )}
-                {otherVars.map((v) => (
-                  <Text key={v.name} size="xs" c="dimmed">
-                    {v.name} = {formatValue(v.value)} {v.units ? `[${v.units}]` : ''}
-                  </Text>
-                ))}
-              </Group>
-            )}
+          <div key={key} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', margin: '12px 0' }}>
+            <MathWithBadges math={math} variables={variables} />
           </div>
         )
       } else {
         elements.push(
-          <Text key={`p-${index}`} size="sm" style={{ lineHeight: 1.6 }}>
+          <Text key={key} size="sm" style={{ lineHeight: 1.6 }}>
             {renderInlineContent(line, variables)}
           </Text>
         )
       }
     }
-  })
+  }
 
   flushList()
 
