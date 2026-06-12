@@ -49,6 +49,48 @@ class OptimizerTest {
     }
 
     @Test
+    void minimizesRosenbrockSimplex() {
+        // Rosenbrock function: f(x, y) = (1 - x)^2 + 100 * (y - x^2)^2
+        // Minimum at (1, 1) with value 0
+        String equations = "f = (1 - x)^2 + 100 * (y - x^2)^2";
+        Optimizer.OptimizeResult result = optimizer.optimize(new Optimizer.Problem(
+                equations,
+                SolverSettings.DEFAULTS,
+                Map.of(),
+                "f",
+                java.util.List.of("x", "y"),
+                java.util.List.of(-5.0, -5.0),
+                java.util.List.of(5.0, 5.0),
+                "simplex",
+                false
+        ));
+        assertEquals(1.0, result.decisionValues()[0], 1e-4);
+        assertEquals(1.0, result.decisionValues()[1], 1e-4);
+        assertEquals(0.0, result.objectiveValue(), 1e-6);
+    }
+
+    @Test
+    void minimizesRosenbrockBobyqa() {
+        // Rosenbrock function: f(x, y) = (1 - x)^2 + 100 * (y - x^2)^2
+        // Minimum at (1, 1) with value 0
+        String equations = "f = (1 - x)^2 + 100 * (y - x^2)^2";
+        Optimizer.OptimizeResult result = optimizer.optimize(new Optimizer.Problem(
+                equations,
+                SolverSettings.DEFAULTS,
+                Map.of(),
+                "f",
+                java.util.List.of("x", "y"),
+                java.util.List.of(-5.0, -5.0),
+                java.util.List.of(5.0, 5.0),
+                "bobyqa",
+                false
+        ));
+        assertEquals(1.0, result.decisionValues()[0], 1e-5);
+        assertEquals(1.0, result.decisionValues()[1], 1e-5);
+        assertEquals(0.0, result.objectiveValue(), 1e-8);
+    }
+
+    @Test
     void rejectsInvalidBounds() {
         SolverException e = assertThrows(SolverException.class,
                 () -> run("y = x^2", "y", "x", 5, 5, false));

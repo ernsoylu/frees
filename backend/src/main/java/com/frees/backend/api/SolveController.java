@@ -530,17 +530,22 @@ public class SolveController {
                                   String decision,
                                   Double lower,
                                   Double upper,
-                                  Boolean maximize) {}
+                                  Boolean maximize,
+                                  List<String> decisions,
+                                  List<Double> lowers,
+                                  List<Double> uppers,
+                                  String method) {}
 
     public record OptimizeResponse(boolean success,
                                    String error,
                                    VariableDto objective,
                                    VariableDto decision,
+                                   List<VariableDto> decisions,
                                    int evaluations,
                                    List<VariableDto> variables) {
 
         static OptimizeResponse failure(String error) {
-            return new OptimizeResponse(false, error, null, null, 0, List.of());
+            return new OptimizeResponse(false, error, null, null, null, 0, List.of());
         }
     }
 
@@ -562,9 +567,29 @@ public class SolveController {
         if (request.text() == null || request.text().isBlank()) {
             return ResponseEntity.badRequest().body(OptimizeResponse.failure(NO_EQUATIONS_MESSAGE));
         }
-        if (request.lower() == null || request.upper() == null) {
-            return ResponseEntity.badRequest().body(OptimizeResponse.failure(
-                    "Both bounds of the independent variable are required."));
+
+        List<String> decisions = request.decisions();
+        List<Double> lowers = request.lowers();
+        List<Double> uppers = request.uppers();
+        String method = request.method() != null ? request.method() : "brent";
+
+        if (decisions == null || decisions.isEmpty()) {
+            if (request.decision() == null) {
+                return ResponseEntity.badRequest().body(OptimizeResponse.failure(
+                        "Independent variable name is required."));
+            }
+            if (request.lower() == null || request.upper() == null) {
+                return ResponseEntity.badRequest().body(OptimizeResponse.failure(
+                        "Both bounds of the independent variable are required."));
+            }
+            decisions = List.of(request.decision());
+            lowers = List.of(request.lower());
+            uppers = List.of(request.upper());
+        } else {
+            if (lowers == null || uppers == null || lowers.size() != decisions.size() || uppers.size() != decisions.size()) {
+                return ResponseEntity.badRequest().body(OptimizeResponse.failure(
+                        "Each independent variable requires lower and upper bounds."));
+            }
         }
 
         var extraction = MarkdownEquationExtractor.extract(request.text());
@@ -577,8 +602,8 @@ public class SolveController {
             Optimizer.OptimizeResult result = new Optimizer(solver).optimize(
                     new Optimizer.Problem(cleanText, settings,
                             specsOf(request.variableInfo()),
-                            request.objective(), request.decision(),
-                            request.lower(), request.upper(),
+                            request.objective(), decisions,
+                            lowers, uppers, method,
                             Boolean.TRUE.equals(request.maximize())));
 
             Map<String, String> explicitUnits =
@@ -598,13 +623,21 @@ public class SolveController {
                     unitsByLowerName.getOrDefault(request.objective().toLowerCase(), ""),
                     system,
                     explicitUnits);
-            VariableDto decision = toDisplay(request.decision(),
-                    result.decisionValue(),
-                    unitsByLowerName.getOrDefault(request.decision().toLowerCase(), ""),
-                    system,
-                    explicitUnits);
+
+            List<VariableDto> decisionDtos = new ArrayList<>();
+            for (int i = 0; i < decisions.size(); i++) {
+                String dec = decisions.get(i);
+                decisionDtos.add(toDisplay(dec,
+                        result.decisionValues()[i],
+                        unitsByLowerName.getOrDefault(dec.toLowerCase(), ""),
+                        system,
+                        explicitUnits));
+            }
+
+            VariableDto primaryDecision = decisionDtos.get(0);
+
             return ResponseEntity.ok(new OptimizeResponse(true, null, objective,
-                    decision, result.evaluations(), variables));
+                    primaryDecision, decisionDtos, result.evaluations(), variables));
         } catch (EquationParser.ParseException e) {
             String firstError = e.getMessage().lines().findFirst().orElse(e.getMessage());
             return ResponseEntity.badRequest().body(OptimizeResponse.failure("Syntax error: " + firstError));
