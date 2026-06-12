@@ -1,7 +1,9 @@
 plugins {
     id 'java'
     id 'antlr'
+    id 'jacoco'
     id 'org.springframework.boot' version '3.5.6'
+    id 'org.sonarqube' version '7.3.1.8318'
 }
 
 group = 'com.frees'
@@ -50,4 +52,32 @@ tasks.named('test') {
 
 tasks.named('bootRun') {
     environment 'COOLPROP_LIBRARY', "${projectDir}/native/libCoolProp.so"
+}
+
+jacocoTestReport {
+    dependsOn test
+    reports {
+        xml.required = true
+    }
+}
+
+// CI-based SonarCloud scan covering the whole repository in one project:
+// Java is analyzed with bytecode here (automatic analysis cannot do that),
+// and the frontend, Dockerfiles and CI workflows are swept into the same scan.
+sonar {
+    properties {
+        property 'sonar.projectKey', 'ernsoylu_frEES'
+        property 'sonar.organization', 'ernsoylu'
+        property 'sonar.host.url', 'https://sonarcloud.io'
+        property 'sonar.projectBaseDir', "${projectDir}/.."
+        property 'sonar.sources', 'backend/src/main/java,frontend/src,backend/Dockerfile,frontend/Dockerfile,docker-compose.yml,.github/workflows'
+        property 'sonar.tests', 'backend/src/test/java'
+        property 'sonar.exclusions', '**/node_modules/**,**/build/**,**/dist/**'
+        // HelpPage.tsx is documentation content: the duplication detector
+        // anonymizes string literals, so its distinct EES example listings
+        // register as false-positive duplicate blocks.
+        property 'sonar.cpd.exclusions', 'frontend/src/HelpPage.tsx'
+        property 'sonar.coverage.jacoco.xmlReportPaths',
+                "${layout.buildDirectory.get()}/reports/jacoco/test/jacocoTestReport.xml"
+    }
 }
