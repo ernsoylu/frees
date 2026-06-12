@@ -131,14 +131,15 @@ Both servers run as Docker containers orchestrated by Docker Compose and managed
 - **Story 5.3: Property Plots.** Use Plotly.js to render built-in T-s, P-h, and psychrometric charts with saturation domes.
 - **Milestone 5:** *Working software that analyzes a standard Vapor Compression Cycle.*
 
-### Epic 6: The Diagram Window (Interactive Dashboard)
+### Epic 6: The Diagram Window (Interactive Dashboard & Animations)
 
-*Goal: Build the graphical GUI builder overlay.*
+*Goal: Build a rich, web-first graphical GUI builder dashboard with physics-driven animations, responsive viewports, and custom control components.*
 
-- **Story 6.1: Development Mode.** Use Canvas to let users draw primitives, import images, and drop text variables.
-- **Story 6.2: Application Mode.** Lock the canvas. Render interactive HTML inputs/outputs and dropdown lists over the Canvas coordinates.
-- **Story 6.3: Animation Binding.** Bind frontend Canvas object properties (e.g., `Name.Left`, `Name.Angle`) to calculated backend variables, updating them dynamically during Parametric Table runs.
-- **Milestone 6:** *Working software with a fully interactive schematic (like a nozzle or heat exchanger) controlling the solver.*
+- **Story 6.1: Vector Diagram Editor (Development Mode).** Develop a vector canvas editor (SVG + HTML Layer) with a grid system, snap-to-grid, and toolbar shapes (Line/Arrow, Rectangle, Circle, Rich Label). Create a Component Library containing pre-built vector icons for standard engineering objects (turbines, pumps, valves, heat exchangers, vessels, spring-dampers).
+- **Story 6.2: Variable Binding & Form Controls.** Place drag-and-drop form controls on the canvas: Inputs (Mantine NumberInput that overrides solver guess/enforces fixed values), Outputs (read-only text badges linked to solved variables showing values and units), Dropdowns (bound to string selectors like fluid names), and Checkboxes/Sliders.
+- **Story 6.3: Web-First Visual Animations.** Link SVG object attributes (X/Y coordinates, rotation angle, width/height, opacity) to calculated solver variables. Implement pipeline path-flow animations using keyframed SVG dashes (`stroke-dashoffset`) where flow velocity is driven by variables. Add node tooltips showing thermodynamic states on hover.
+- **Story 6.4: Playback Controls & Embedded Widgets.** Add an animation playback control bar to step, play, pause, and loop through Parametric Table runs, animating the diagram dynamically. Support embedding live resizable chart widgets (Plotly.js diagrams) inside the canvas. Integrate responsive zoom-to-fit viewport layouts.
+- **Milestone 6:** *Working software with a fully interactive cycle schematic or dynamics animation (e.g. spring-damper/piston mechanism) whose visual variables, speeds, and states animate in sync with numerical solvers.*
 
 ### Epic 7: Matrix & Vector Algebra System
 
@@ -173,3 +174,13 @@ Both servers run as Docker containers orchestrated by Docker Compose and managed
 - **Story 8.8: Backend curve functions.** Solve/Check requests carry the project's curve tables. A curve-table name becomes a callable function in equations — `U = graphfunc(Re)` for a single curve, `U = graphfunc(Re, T)` for a family: 1-D evaluation uses monotone piecewise-cubic (PCHIP) interpolation with linear fallback, computed in log space for log axes; 2-D evaluation interpolates along the two bracketing curves first, then linearly across their parameter values. Out-of-range arguments clamp to the table edge and raise a unit-style warning (never blocking the solve, consistent with unit checking). Functions participate in Newton residuals like any other intrinsic.
 - **Story 8.9: End-to-end verification & docs.** Worked example on the Help page: digitize a `U`–`Re` chart with curves at several temperatures, send to a Curve Table, then solve a heat-transfer balance that calls `graphfunc(Re, T)` inside an equation system. Backend tests cover 1-D/2-D interpolation, log-axis evaluation, clamping warnings, and blocking/Tarjan integration of curve-function calls.
 - **Milestone 8:** *Working software where a user uploads a heat-transfer chart image, digitizes four temperature curves, and solves an equation system whose unknown `Re` is determined through `U = graphfunc(Re, T)` — without ever typing the curve data.*
+
+### Epic 9: Advanced Solver Engine & Algorithmic Optimizations
+
+*Goal: Implement low-level bitwise operations, computer science number-theory functions, special transcendental functions, and advanced multi-dimensional/least-squares optimization solvers using Apache Commons Math.*
+
+- **Story 9.1: Bitwise & Logic Operations.** Extend the ANTLR grammar to support double-to-long bitwise functions: AND (`BitAnd`), OR (`BitOr`), XOR (`BitXor`), NOT (`BitNot`), and bitwise shifts (`BitShiftL`, `BitShiftR`).
+- **Story 9.2: Computer Science & Base Conversions.** Add floating-point modulo (`Mod`), Greatest Common Divisor (`Gcd`), and Least Common Multiple (`Lcm`) number-theory functions. Implement base string conversions (`BaseConvert`) supporting conversions between bases 2 to 36.
+- **Story 9.3: Special Mathematical Functions.** Support special functions with analytical derivative bounds integrated into Jacobian calculations: Error Functions (`Erf`, `Erfc`, `ErfInv`), Gamma functions (`Gamma`, `LogGamma`), Beta function (`Beta`), and Bessel functions (`BesselJ`, `BesselI`).
+- **Story 9.4: Multi-Dimensional Optimizers.** Integrate advanced multi-variable optimizers from Apache Commons Math: Nelder-Mead (Simplex) for non-differentiable systems, BOBYQA for bound-constrained non-derivative search, and Levenberg-Marquardt for least-squares parameter fitting (matching model equations to experimental data).
+- **Milestone 9:** *Working software capable of solving transient heat-conduction models using Erf, evaluating modular logic gates with bitwise operations, and fitting dynamic fluid correlations to datasets using least-squares optimizers.*
