@@ -56,7 +56,7 @@ See `ARCHITECTURE_AND_REQUIREMENTS.md` for the full system design and six-Epic A
 
 **Client-Server flow:**
 1. React frontend collects equation + markdown text → POST to Spring Boot backend on "Solve" / "Check"
-2. Backend: extracts equations from markdown lines (preserving text structure), lexes/parses them (ANTLR), performs unit verification, blocks equations via Tarjan SCC, and solves via Newton's method.
+2. Backend: extracts equations from markdown lines (preserving text structure; multiple `;`-separated equations per line are supported), lexes/parses them (ANTLR), expands matrix/vector operations (`SolveLinear`, `Inverse`, `Dot`, …) into scalar equations, performs unit verification, blocks equations via Tarjan SCC, and solves via Newton's method.
 3. Backend returns JSON: variable solutions, residuals, array tables, compiled LaTeX strings, and the rebuilt formatted report.
 4. Frontend renders each window:
    - **Editor**: Custom monospace text editor with a scroll-synchronized line numbers gutter on the left.
