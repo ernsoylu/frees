@@ -80,6 +80,13 @@ function ResultView({ result }: Readonly<{ result: OptimizeResponse }>) {
           {result.evaluations} objective evaluations
         </Text>
       </Group>
+      {result.warning && (
+        <Alert color="yellow" variant="light" p="xs">
+          <Text size="sm" style={{ whiteSpace: 'pre-wrap' }}>
+            {result.warning}
+          </Text>
+        </Alert>
+      )}
       <OptimumLine label="Objective" variable={result.objective} />
       {result.decisions.map((d) => (
         <OptimumLine key={d.name} label="At" variable={d} />
@@ -238,6 +245,7 @@ export default function MinMaxModal({
       setResult({
         success: false,
         error: `Could not reach the solver backend: ${String(e)}`,
+        warning: null,
         objective: null,
         decision: null,
         decisions: [],
@@ -250,7 +258,7 @@ export default function MinMaxModal({
   }
 
   return (
-    <Modal opened onClose={onClose} title="Min/Max — Optimization" centered size="md">
+    <Modal opened onClose={onClose} title="Min/Max — Optimization" centered size="xl">
       <Text size="sm" c="dimmed" mb="md">
         Finds the values of the independent variables inside their bounds that
         minimize or maximize the objective. The system is solved for every

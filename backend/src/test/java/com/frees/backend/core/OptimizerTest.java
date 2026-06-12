@@ -156,6 +156,37 @@ class OptimizerTest {
     }
 
     @Test
+    void constrainedMaximumOnBoundCornerSatisfiesConstraint() {
+        // max A s.t. V = 1000 with h >= 1: the optimum sits exactly on the
+        // h = 1 bound at r = sqrt(1000/pi) ≈ 17.8412, A ≈ 2112. The
+        // bounds-unaware simplex must not wander below h = 1 and then get
+        // clamped to a point that violates V = 1000 (regression: it returned
+        // r = 17.48 where V = 960 without any warning).
+        Optimizer.OptimizeResult result = optimizer.optimize(new Optimizer.Problem(
+                "V = pi * r^2 * h\nA = 2 * pi * r^2 + 2 * pi * r * h",
+                SolverSettings.DEFAULTS,
+                Map.of(),
+                "A",
+                java.util.List.of("r", "h"),
+                java.util.List.of(1.0, 1.0),
+                java.util.List.of(20.0, 20.0),
+                "simplex",
+                true,
+                java.util.List.of("V = 1000")
+        ));
+        double v = result.solution().variables().get("v");
+        if (result.warning() == null) {
+            // Converged: the constraint must actually hold at the optimum.
+            assertEquals(1000.0, v, 1.0);
+            assertEquals(17.8412, result.decisionValues()[0], 0.05);
+            assertEquals(2112.1, result.objectiveValue(), 5.0);
+        } else {
+            // If it could not converge it must say so, not pretend success.
+            assertTrue(result.warning().contains("V"), result.warning());
+        }
+    }
+
+    @Test
     void rejectsMalformedConstraint() {
         SolverException e = assertThrows(SolverException.class,
                 () -> optimizer.optimize(new Optimizer.Problem(

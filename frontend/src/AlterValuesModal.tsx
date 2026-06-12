@@ -61,7 +61,7 @@ export default function AlterValuesModal({
   }
 
   return (
-    <Modal opened onClose={onClose} title={`Alter Values — ${variable}`} centered>
+    <Modal opened onClose={onClose} title={`Alter Values — ${variable}`} centered size="lg">
       <Text size="sm" c="dimmed" mb="md">
         Fills all {rowCount} rows of <strong>{variable}</strong> from the first
         to the last value.

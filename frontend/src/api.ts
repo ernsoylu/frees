@@ -263,6 +263,7 @@ export interface OptimizeParams {
 export interface OptimizeResponse {
   success: boolean
   error: string | null
+  warning: string | null
   objective: VariableResult | null
   decision: VariableResult | null
   decisions: VariableResult[]
@@ -305,6 +306,7 @@ export async function optimize(
       return {
         success: false,
         error: errorMessage,
+        warning: null,
         objective: null,
         decision: null,
         decisions: [],
@@ -316,6 +318,7 @@ export async function optimize(
     return {
       success: data.success ?? false,
       error: data.error ?? null,
+      warning: data.warning ?? null,
       objective: data.objective ?? null,
       decision: data.decision ?? null,
       decisions: data.decisions ?? [],
@@ -326,6 +329,7 @@ export async function optimize(
     return {
       success: false,
       error: `Could not reach the solver backend: ${String(e)}`,
+      warning: null,
       objective: null,
       decision: null,
       decisions: [],

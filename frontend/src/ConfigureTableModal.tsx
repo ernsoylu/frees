@@ -36,7 +36,7 @@ export default function ConfigureTableModal({
   }
 
   return (
-    <Modal opened onClose={onClose} title="Configure Table Columns" centered>
+    <Modal opened onClose={onClose} title="Configure Table Columns" centered size="lg">
       <Text size="sm" c="dimmed" mb="md">
         Select which variables you want to include as columns in the parametric table.
       </Text>

@@ -540,6 +540,7 @@ public class SolveController {
 
     public record OptimizeResponse(boolean success,
                                    String error,
+                                   String warning,
                                    VariableDto objective,
                                    VariableDto decision,
                                    List<VariableDto> decisions,
@@ -547,7 +548,7 @@ public class SolveController {
                                    List<VariableDto> variables) {
 
         static OptimizeResponse failure(String error) {
-            return new OptimizeResponse(false, error, null, null, null, 0, List.of());
+            return new OptimizeResponse(false, error, null, null, null, null, 0, List.of());
         }
     }
 
@@ -641,8 +642,8 @@ public class SolveController {
 
             VariableDto primaryDecision = decisionDtos.get(0);
 
-            return ResponseEntity.ok(new OptimizeResponse(true, null, objective,
-                    primaryDecision, decisionDtos, result.evaluations(), variables));
+            return ResponseEntity.ok(new OptimizeResponse(true, null, result.warning(),
+                    objective, primaryDecision, decisionDtos, result.evaluations(), variables));
         } catch (EquationParser.ParseException e) {
             String firstError = e.getMessage().lines().findFirst().orElse(e.getMessage());
             return ResponseEntity.badRequest().body(OptimizeResponse.failure("Syntax error: " + firstError));
