@@ -5,15 +5,18 @@ import {
   Button,
   Group,
   Modal,
+  MultiSelect,
   SegmentedControl,
   Select,
   Stack,
   Table,
   Text,
+  Textarea,
   TextInput,
 } from '@mantine/core'
 import {
   optimize,
+  OptimizeMethod,
   OptimizeResponse,
   StopCriteria,
   UnitSystem,
@@ -24,6 +27,17 @@ import { formatValue } from './format'
 
 const MONO_INPUT = {
   input: { fontFamily: 'var(--mantine-font-family-monospace)' },
+}
+
+const METHOD_OPTIONS = [
+  { value: 'brent', label: "Brent (1-D)" },
+  { value: 'nelder-mead', label: 'Nelder-Mead Simplex' },
+  { value: 'bobyqa', label: 'BOBYQA' },
+]
+
+interface Bounds {
+  lower: string
+  upper: string
 }
 
 function OptimumLine({
@@ -66,8 +80,17 @@ function ResultView({ result }: Readonly<{ result: OptimizeResponse }>) {
           {result.evaluations} objective evaluations
         </Text>
       </Group>
+      {result.warning && (
+        <Alert color="yellow" variant="light" p="xs">
+          <Text size="sm" style={{ whiteSpace: 'pre-wrap' }}>
+            {result.warning}
+          </Text>
+        </Alert>
+      )}
       <OptimumLine label="Objective" variable={result.objective} />
-      <OptimumLine label="At" variable={result.decision} />
+      {result.decisions.map((d) => (
+        <OptimumLine key={d.name} label="At" variable={d} />
+      ))}
       <Table striped highlightOnHover>
         <Table.Thead>
           <Table.Tr>
@@ -104,7 +127,11 @@ interface Props {
   onClose: () => void
 }
 
-/** Calculate > Min/Max: 1-D optimization over one independent variable. */
+/**
+ * Calculate > Min/Max: optimization of an objective variable over one or more
+ * independent variables. Brent's method for 1-D, Nelder-Mead Simplex or BOBYQA
+ * for multi-variable, with optional barrier/Lagrangian constraints.
+ */
 export default function MinMaxModal({
   variables,
   text,
@@ -116,27 +143,77 @@ export default function MinMaxModal({
 }: Readonly<Props>) {
   const [goal, setGoal] = useState<'minimize' | 'maximize'>('minimize')
   const [objective, setObjective] = useState<string | null>(null)
-  const [decision, setDecision] = useState<string | null>(null)
-  const [lower, setLower] = useState('')
-  const [upper, setUpper] = useState('')
+  const [decisions, setDecisions] = useState<string[]>([])
+  const [bounds, setBounds] = useState<Record<string, Bounds>>({})
+  const [method, setMethod] = useState<OptimizeMethod>('brent')
+  const [constraints, setConstraints] = useState('')
   const [running, setRunning] = useState(false)
   const [validation, setValidation] = useState<string | null>(null)
   const [result, setResult] = useState<OptimizeResponse | null>(null)
 
+  function onDecisionsChange(selected: string[]) {
+    setDecisions(selected)
+    setBounds((prev) => {
+      const next: Record<string, Bounds> = {}
+      for (const name of selected) {
+        next[name] = prev[name] ?? { lower: '', upper: '' }
+      }
+      return next
+    })
+    // Brent is 1-D only; switch to Simplex when a second variable is added.
+    if (selected.length > 1 && method === 'brent') {
+      setMethod('nelder-mead')
+    }
+    if (selected.length === 1) {
+      setMethod('brent')
+    }
+  }
+
+  function setBound(name: string, key: keyof Bounds, value: string) {
+    setBounds((prev) => ({ ...prev, [name]: { ...prev[name], [key]: value } }))
+  }
+
+  function constraintLines(): string[] {
+    return constraints
+      .split('\n')
+      .map((line) => line.trim())
+      .filter((line) => line !== '')
+  }
+
   function validate(): string | null {
-    if (objective === null || decision === null) {
-      return 'Choose both an objective and an independent variable.'
+    if (objective === null) {
+      return 'Choose an objective variable.'
     }
-    if (objective === decision) {
-      return 'The objective and the independent variable must differ.'
+    if (decisions.length === 0) {
+      return 'Choose at least one independent variable.'
     }
-    const lo = Number(lower)
-    const hi = Number(upper)
-    if (lower.trim() === '' || upper.trim() === '' || !Number.isFinite(lo) || !Number.isFinite(hi)) {
-      return 'Both bounds must be numbers.'
+    if (decisions.includes(objective)) {
+      return 'The objective cannot also be an independent variable.'
     }
-    if (lo >= hi) {
-      return 'The lower bound must be less than the upper bound.'
+    for (const name of decisions) {
+      const b = bounds[name]
+      const lo = Number(b?.lower)
+      const hi = Number(b?.upper)
+      if (
+        !b ||
+        b.lower.trim() === '' ||
+        b.upper.trim() === '' ||
+        !Number.isFinite(lo) ||
+        !Number.isFinite(hi)
+      ) {
+        return `Both bounds of ${name} must be numbers.`
+      }
+      if (lo >= hi) {
+        return `The lower bound of ${name} must be less than the upper bound.`
+      }
+    }
+    if (method === 'brent' && decisions.length > 1) {
+      return "Brent's method is 1-D only; pick Nelder-Mead or BOBYQA."
+    }
+    for (const line of constraintLines()) {
+      if (!/(<=|>=|=)/.test(line)) {
+        return `Constraint "${line}" needs <=, >= or = followed by a number.`
+      }
     }
     return null
   }
@@ -155,10 +232,12 @@ export default function MinMaxModal({
         unitSystem,
         {
           objective: objective ?? '',
-          decision: decision ?? '',
-          lower: Number(lower),
-          upper: Number(upper),
+          decisions,
+          lowers: decisions.map((name) => Number(bounds[name].lower)),
+          uppers: decisions.map((name) => Number(bounds[name].upper)),
+          method,
           maximize: goal === 'maximize',
+          constraints: constraintLines(),
         },
       )
       setResult(response)
@@ -166,8 +245,10 @@ export default function MinMaxModal({
       setResult({
         success: false,
         error: `Could not reach the solver backend: ${String(e)}`,
+        warning: null,
         objective: null,
         decision: null,
+        decisions: [],
         evaluations: 0,
         variables: [],
       })
@@ -177,12 +258,12 @@ export default function MinMaxModal({
   }
 
   return (
-    <Modal opened onClose={onClose} title="Min/Max — 1-D Optimization" centered size="md">
+    <Modal opened onClose={onClose} title="Min/Max — Optimization" centered size="xl">
       <Text size="sm" c="dimmed" mb="md">
-        Finds the value of the independent variable inside the bounds that
-        minimizes or maximizes the objective (Brent's method). The system is
-        solved for every candidate value, so it must have one degree of
-        freedom before fixing the independent variable.
+        Finds the values of the independent variables inside their bounds that
+        minimize or maximize the objective. The system is solved for every
+        candidate point, so it must have one degree of freedom per independent
+        variable before they are fixed.
       </Text>
 
       <Stack gap="sm">
@@ -202,30 +283,83 @@ export default function MinMaxModal({
           placeholder="variable to optimize"
           searchable
         />
-        <Select
-          label="Independent (varied) variable"
-          data={variables}
-          value={decision}
-          onChange={setDecision}
-          placeholder="variable to vary"
+        <MultiSelect
+          label="Independent (varied) variables"
+          data={variables.filter((v) => v !== objective)}
+          value={decisions}
+          onChange={onDecisionsChange}
+          placeholder={decisions.length === 0 ? 'variables to vary' : undefined}
           searchable
+          clearable
         />
-        <Group grow>
-          <TextInput
-            label="Lower bound"
-            value={lower}
-            onChange={(e) => setLower(e.currentTarget.value)}
-            spellCheck={false}
-            styles={MONO_INPUT}
-          />
-          <TextInput
-            label="Upper bound"
-            value={upper}
-            onChange={(e) => setUpper(e.currentTarget.value)}
-            spellCheck={false}
-            styles={MONO_INPUT}
-          />
-        </Group>
+
+        {decisions.length > 0 && (
+          <Table withRowBorders={false} verticalSpacing={4}>
+            <Table.Thead>
+              <Table.Tr>
+                <Table.Th>Variable</Table.Th>
+                <Table.Th>Lower bound</Table.Th>
+                <Table.Th>Upper bound</Table.Th>
+              </Table.Tr>
+            </Table.Thead>
+            <Table.Tbody>
+              {decisions.map((name) => (
+                <Table.Tr key={name}>
+                  <Table.Td ff="monospace">{name}</Table.Td>
+                  <Table.Td>
+                    <TextInput
+                      value={bounds[name]?.lower ?? ''}
+                      onChange={(e) => setBound(name, 'lower', e.currentTarget.value)}
+                      spellCheck={false}
+                      size="xs"
+                      styles={MONO_INPUT}
+                      aria-label={`Lower bound of ${name}`}
+                    />
+                  </Table.Td>
+                  <Table.Td>
+                    <TextInput
+                      value={bounds[name]?.upper ?? ''}
+                      onChange={(e) => setBound(name, 'upper', e.currentTarget.value)}
+                      spellCheck={false}
+                      size="xs"
+                      styles={MONO_INPUT}
+                      aria-label={`Upper bound of ${name}`}
+                    />
+                  </Table.Td>
+                </Table.Tr>
+              ))}
+            </Table.Tbody>
+          </Table>
+        )}
+
+        <Select
+          label="Method"
+          description={
+            decisions.length > 1
+              ? "Brent's method only works with a single independent variable."
+              : undefined
+          }
+          data={METHOD_OPTIONS.map((option) => ({
+            ...option,
+            disabled: option.value === 'brent' && decisions.length > 1,
+          }))}
+          value={method}
+          onChange={(value) => setMethod((value as OptimizeMethod) ?? 'brent')}
+          allowDeselect={false}
+        />
+
+        <Textarea
+          label="Constraints (optional)"
+          description="One per line: expr <= value, expr >= value, or expr = value. Inequalities use a log-barrier, equalities an augmented Lagrangian."
+          placeholder={'r + h <= 20'}
+          value={constraints}
+          onChange={(e) => setConstraints(e.currentTarget.value)}
+          autosize
+          minRows={2}
+          maxRows={6}
+          spellCheck={false}
+          styles={MONO_INPUT}
+        />
 
         {validation && (
           <Text c="red" size="sm">

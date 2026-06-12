@@ -2,6 +2,7 @@ package com.frees.backend.api;
 
 import com.frees.backend.core.Block;
 import com.frees.backend.core.EquationSystemSolver;
+import com.frees.backend.core.CurveFitter;
 import com.frees.backend.core.Optimizer;
 import com.frees.backend.core.SolverException;
 import com.frees.backend.core.SolverSettings;
@@ -530,17 +531,24 @@ public class SolveController {
                                   String decision,
                                   Double lower,
                                   Double upper,
-                                  Boolean maximize) {}
+                                  Boolean maximize,
+                                  List<String> decisions,
+                                  List<Double> lowers,
+                                  List<Double> uppers,
+                                  String method,
+                                  List<String> constraints) {}
 
     public record OptimizeResponse(boolean success,
                                    String error,
+                                   String warning,
                                    VariableDto objective,
                                    VariableDto decision,
+                                   List<VariableDto> decisions,
                                    int evaluations,
                                    List<VariableDto> variables) {
 
         static OptimizeResponse failure(String error) {
-            return new OptimizeResponse(false, error, null, null, 0, List.of());
+            return new OptimizeResponse(false, error, null, null, null, null, 0, List.of());
         }
     }
 
@@ -562,9 +570,29 @@ public class SolveController {
         if (request.text() == null || request.text().isBlank()) {
             return ResponseEntity.badRequest().body(OptimizeResponse.failure(NO_EQUATIONS_MESSAGE));
         }
-        if (request.lower() == null || request.upper() == null) {
-            return ResponseEntity.badRequest().body(OptimizeResponse.failure(
-                    "Both bounds of the independent variable are required."));
+
+        List<String> decisions = request.decisions();
+        List<Double> lowers = request.lowers();
+        List<Double> uppers = request.uppers();
+        String method = request.method() != null ? request.method() : "brent";
+
+        if (decisions == null || decisions.isEmpty()) {
+            if (request.decision() == null) {
+                return ResponseEntity.badRequest().body(OptimizeResponse.failure(
+                        "Independent variable name is required."));
+            }
+            if (request.lower() == null || request.upper() == null) {
+                return ResponseEntity.badRequest().body(OptimizeResponse.failure(
+                        "Both bounds of the independent variable are required."));
+            }
+            decisions = List.of(request.decision());
+            lowers = List.of(request.lower());
+            uppers = List.of(request.upper());
+        } else {
+            if (lowers == null || uppers == null || lowers.size() != decisions.size() || uppers.size() != decisions.size()) {
+                return ResponseEntity.badRequest().body(OptimizeResponse.failure(
+                        "Each independent variable requires lower and upper bounds."));
+            }
         }
 
         var extraction = MarkdownEquationExtractor.extract(request.text());
@@ -574,12 +602,15 @@ public class SolveController {
                 ? request.stopCriteria().toSettings()
                 : SolverSettings.DEFAULTS;
         try {
+            List<String> constraints = request.constraints() != null
+                    ? request.constraints() : List.of();
             Optimizer.OptimizeResult result = new Optimizer(solver).optimize(
                     new Optimizer.Problem(cleanText, settings,
                             specsOf(request.variableInfo()),
-                            request.objective(), request.decision(),
-                            request.lower(), request.upper(),
-                            Boolean.TRUE.equals(request.maximize())));
+                            request.objective(), decisions,
+                            lowers, uppers, method,
+                            Boolean.TRUE.equals(request.maximize()),
+                            constraints));
 
             Map<String, String> explicitUnits =
                     unitsByVariable(request.variableInfo());
@@ -598,18 +629,129 @@ public class SolveController {
                     unitsByLowerName.getOrDefault(request.objective().toLowerCase(), ""),
                     system,
                     explicitUnits);
-            VariableDto decision = toDisplay(request.decision(),
-                    result.decisionValue(),
-                    unitsByLowerName.getOrDefault(request.decision().toLowerCase(), ""),
-                    system,
-                    explicitUnits);
-            return ResponseEntity.ok(new OptimizeResponse(true, null, objective,
-                    decision, result.evaluations(), variables));
+
+            List<VariableDto> decisionDtos = new ArrayList<>();
+            for (int i = 0; i < decisions.size(); i++) {
+                String dec = decisions.get(i);
+                decisionDtos.add(toDisplay(dec,
+                        result.decisionValues()[i],
+                        unitsByLowerName.getOrDefault(dec.toLowerCase(), ""),
+                        system,
+                        explicitUnits));
+            }
+
+            VariableDto primaryDecision = decisionDtos.get(0);
+
+            return ResponseEntity.ok(new OptimizeResponse(true, null, result.warning(),
+                    objective, primaryDecision, decisionDtos, result.evaluations(), variables));
         } catch (EquationParser.ParseException e) {
             String firstError = e.getMessage().lines().findFirst().orElse(e.getMessage());
             return ResponseEntity.badRequest().body(OptimizeResponse.failure("Syntax error: " + firstError));
         } catch (SolverException e) {
             return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(OptimizeResponse.failure(e.getMessage()));
+        }
+    }
+
+    // ── Curve Fit (Story 9.7) ────────────────────────────────────────────────
+
+    public record CurveFitRequest(
+            String model,
+            String yVariable,
+            String xVariable,
+            List<String> parameters,
+            List<Double> xData,
+            List<Double> yData,
+            List<Double> initialGuess,
+            List<Double> lowerBounds,
+            List<Double> upperBounds) {}
+
+    public record CurveFitResponse(
+            boolean success,
+            String error,
+            List<Double> fittedParameters,
+            List<String> parameterNames,
+            double rSquared,
+            double rmse,
+            int iterations,
+            List<Double> residuals,
+            List<Double> fittedValues) {
+
+        static CurveFitResponse failure(String error) {
+            return new CurveFitResponse(false, error, List.of(), List.of(),
+                    0.0, 0.0, 0, List.of(), List.of());
+        }
+    }
+
+    @PostMapping("/curve-fit")
+    public ResponseEntity<CurveFitResponse> curveFit(@RequestBody CurveFitRequest request) {
+        if (request.model() == null || request.model().isBlank()) {
+            return ResponseEntity.badRequest()
+                    .body(CurveFitResponse.failure("Model equation is required."));
+        }
+        if (request.xVariable() == null || request.xVariable().isBlank()) {
+            return ResponseEntity.badRequest()
+                    .body(CurveFitResponse.failure("Independent variable name is required."));
+        }
+        if (request.yVariable() == null || request.yVariable().isBlank()) {
+            return ResponseEntity.badRequest()
+                    .body(CurveFitResponse.failure("Dependent variable name is required."));
+        }
+        if (request.parameters() == null || request.parameters().isEmpty()) {
+            return ResponseEntity.badRequest()
+                    .body(CurveFitResponse.failure("At least one parameter to fit is required."));
+        }
+        if (request.xData() == null || request.yData() == null
+                || request.xData().isEmpty() || request.yData().isEmpty()) {
+            return ResponseEntity.badRequest()
+                    .body(CurveFitResponse.failure("Data points are required."));
+        }
+        if (request.xData().size() != request.yData().size()) {
+            return ResponseEntity.badRequest()
+                    .body(CurveFitResponse.failure(
+                            "x and y data must have the same length (got "
+                            + request.xData().size() + " and " + request.yData().size() + ")."));
+        }
+
+        try {
+            CurveFitter fitter = new CurveFitter();
+            CurveFitter.FitResult result = fitter.fit(
+                    request.model(),
+                    request.yVariable(),
+                    request.xVariable(),
+                    request.parameters(),
+                    request.xData(),
+                    request.yData(),
+                    request.initialGuess(),
+                    request.lowerBounds(),
+                    request.upperBounds());
+
+            List<Double> fittedParams = new java.util.ArrayList<>();
+            for (double v : result.fittedParameters()) fittedParams.add(v);
+            List<Double> residuals = new java.util.ArrayList<>();
+            for (double v : result.residuals()) residuals.add(v);
+            List<Double> fittedVals = new java.util.ArrayList<>();
+            for (double v : result.fittedValues()) fittedVals.add(v);
+
+            return ResponseEntity.ok(new CurveFitResponse(
+                    true, null,
+                    fittedParams,
+                    result.parameterNames(),
+                    result.rSquared(),
+                    result.rmse(),
+                    result.iterations(),
+                    residuals,
+                    fittedVals));
+        } catch (EquationParser.ParseException e) {
+            String firstError = e.getMessage().lines().findFirst().orElse(e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body(CurveFitResponse.failure("Syntax error: " + firstError));
+        } catch (SolverException e) {
+            return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
+                    .body(CurveFitResponse.failure(e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
+                    .body(CurveFitResponse.failure(
+                            "Curve fitting failed: " + e.getMessage()));
         }
     }
 

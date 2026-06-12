@@ -30,7 +30,7 @@ public final class MarkdownEquationExtractor {
     }
 
     private enum TokenType {
-        NUMBER, UNIT, IDENTIFIER, OPERATOR, OPEN_PAREN, CLOSE_PAREN, OPEN_BRACKET, CLOSE_BRACKET, COMMA
+        NUMBER, STRING, UNIT, IDENTIFIER, OPERATOR, OPEN_PAREN, CLOSE_PAREN, OPEN_BRACKET, CLOSE_BRACKET, COMMA
     }
 
     private static class Token {
@@ -141,9 +141,9 @@ public final class MarkdownEquationExtractor {
             return true;
         }
         return switch (lastType) {
-            case NUMBER -> tokenType != TokenType.IDENTIFIER && tokenType != TokenType.NUMBER && tokenType != TokenType.OPEN_PAREN;
-            case IDENTIFIER -> tokenType != TokenType.IDENTIFIER && tokenType != TokenType.NUMBER && tokenType != TokenType.UNIT;
-            case UNIT, CLOSE_PAREN, CLOSE_BRACKET -> tokenType != TokenType.IDENTIFIER && tokenType != TokenType.NUMBER && tokenType != TokenType.UNIT && tokenType != TokenType.OPEN_PAREN;
+            case NUMBER, STRING -> tokenType != TokenType.IDENTIFIER && tokenType != TokenType.NUMBER && tokenType != TokenType.STRING && tokenType != TokenType.OPEN_PAREN;
+            case IDENTIFIER -> tokenType != TokenType.IDENTIFIER && tokenType != TokenType.NUMBER && tokenType != TokenType.STRING && tokenType != TokenType.UNIT;
+            case UNIT, CLOSE_PAREN, CLOSE_BRACKET -> tokenType != TokenType.IDENTIFIER && tokenType != TokenType.NUMBER && tokenType != TokenType.STRING && tokenType != TokenType.UNIT && tokenType != TokenType.OPEN_PAREN;
             default -> true;
         };
     }
@@ -334,6 +334,10 @@ public final class MarkdownEquationExtractor {
         }
 
         int idEnd = i;
+        // String variables carry a trailing '$': R$ = 'R134a'
+        if (i >= 0 && line.charAt(i) == '$') {
+            i--;
+        }
         while (i >= 0 && (Character.isLetterOrDigit(line.charAt(i)) || line.charAt(i) == '_')) {
             i--;
         }
@@ -418,6 +422,14 @@ public final class MarkdownEquationExtractor {
         if (c == ',') {
             return new Token(TokenType.COMMA, ",", i + 1);
         }
+        // String literal: 'R134a' — single quotes, no nesting.
+        if (c == '\'') {
+            int end = line.indexOf('\'', i + 1);
+            if (end != -1) {
+                return new Token(TokenType.STRING, line.substring(i, end + 1), end + 1);
+            }
+            return null;
+        }
 
         if (Character.isDigit(c) || (c == '.' && i + 1 < line.length() && Character.isDigit(line.charAt(i + 1)))) {
             int end = i;
@@ -448,6 +460,10 @@ public final class MarkdownEquationExtractor {
         if (Character.isLetter(c) || c == '_') {
             int end = i;
             while (end < line.length() && (Character.isLetterOrDigit(line.charAt(end)) || line.charAt(end) == '_')) {
+                end++;
+            }
+            // String variables carry a trailing '$': R$ = 'R134a'
+            if (end < line.length() && line.charAt(end) == '$') {
                 end++;
             }
             return new Token(TokenType.IDENTIFIER, line.substring(i, end), end);

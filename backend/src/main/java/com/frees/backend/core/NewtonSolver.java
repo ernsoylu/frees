@@ -1,7 +1,9 @@
 package com.frees.backend.core;
 
+import com.frees.backend.ast.Differentiator;
 import com.frees.backend.ast.Equation;
 import com.frees.backend.ast.Evaluator;
+import com.frees.backend.ast.Expr;
 import com.frees.backend.ast.ProcDef;
 import org.apache.commons.math3.linear.Array2DRowRealMatrix;
 import org.apache.commons.math3.linear.ArrayRealVector;
@@ -68,7 +70,7 @@ public class NewtonSolver {
                         settings.elapsedTimeSeconds(), block.index()));
             }
 
-            double[][] jacobian = numericalJacobian(ctx, x, residual);
+            double[][] jacobian = computeJacobian(ctx, x, residual);
             double[] step = solveLinear(jacobian, residual);
 
             LineSearchResult searchResult = backtrackLineSearch(ctx, x, step, norm);
@@ -168,6 +170,57 @@ public class NewtonSolver {
             }
         }
         return result;
+    }
+
+    /**
+     * Chooses between analytical and numerical Jacobian computation.
+     * If every equation in the block can be symbolically differentiated w.r.t.
+     * every variable, the analytical path is used; otherwise falls back to
+     * the numerical finite-difference approach.
+     */
+    private double[][] computeJacobian(IterationContext ctx, double[] x, double[] baseResidual) {
+        double[][] analytical = analyticalJacobian(ctx, x);
+        if (analytical != null) {
+            return analytical;
+        }
+        return numericalJacobian(ctx, x, baseResidual);
+    }
+
+    /**
+     * Attempts to build the Jacobian entirely from symbolic derivatives.
+     * Returns {@code null} if any equation cannot be differentiated w.r.t.
+     * any variable, signalling fallback to numerical.
+     */
+    private double[][] analyticalJacobian(IterationContext ctx, double[] x) {
+        int n = ctx.vars.size();
+        // Pre-compute all derivative expressions: derivs[i][j] = d(residual_i)/d(var_j)
+        Expr[][] derivExprs = new Expr[n][n];
+        for (int i = 0; i < n; i++) {
+            Equation eq = ctx.equations.get(i);
+            // residual = lhs − rhs
+            Expr residualExpr = new Expr.BinOp('-', eq.lhs(), eq.rhs());
+            for (int j = 0; j < n; j++) {
+                Expr d = Differentiator.differentiate(residualExpr, ctx.vars.get(j));
+                if (d == null) {
+                    return null; // fallback to numerical
+                }
+                derivExprs[i][j] = d;
+            }
+        }
+        // Evaluate all derivative expressions at the current point.
+        writeBack(ctx.vars, x, ctx.values);
+        double[][] jacobian = new double[n][n];
+        for (int i = 0; i < n; i++) {
+            for (int j = 0; j < n; j++) {
+                try {
+                    jacobian[i][j] = Evaluator.eval(derivExprs[i][j], ctx.values, defs);
+                } catch (Exception e) {
+                    // Evaluation failure (e.g. domain error in derivative) → fall back.
+                    return null;
+                }
+            }
+        }
+        return jacobian;
     }
 
     private double[][] numericalJacobian(IterationContext ctx, double[] x, double[] baseResidual) {

@@ -372,6 +372,7 @@ const SECTIONS = [
   { id: 'complex', label: '12. Complex Numbers' },
   { id: 'examples', label: '13. Engineering Examples' },
   { id: 'api', label: '14. Solver Reference & API' },
+  { id: 'optimization', label: '15. Optimization & Plotting' },
 ];
 
 export default function HelpPage() {
@@ -716,8 +717,43 @@ Here is the thermodynamic T-s diagram showing the cycle state points:
                   <Table.Td>Bessel function of the first kind J_order(x)</Table.Td>
                   <Table.Td><Code>y = besselj(2.5, 0)</Code> (y = -0.0484)</Table.Td>
                 </Table.Tr>
+                <Table.Tr>
+                  <Table.Td><Code>besseli(x, order)</Code></Table.Td>
+                  <Table.Td>Modified Bessel function of the first kind I_order(x)</Table.Td>
+                  <Table.Td><Code>y = besseli(2, 1)</Code> (y = 1.5906)</Table.Td>
+                </Table.Tr>
+                <Table.Tr>
+                  <Table.Td><Code>BaseConvert(digits, from, to)</Code></Table.Td>
+                  <Table.Td>Converts a number between bases 2–36. The digits are given as a string literal (or an integer); the result is returned as the number whose decimal digits spell the converted value, so the target base should be 10 or lower-digit.</Table.Td>
+                  <Table.Td><Code>{`y = BaseConvert('FF', 16, 10)`}</Code> (y = 255)</Table.Td>
+                </Table.Tr>
               </Table.Tbody>
             </Table>
+
+            <Title order={3} mt="md">String Literals & String Variables</Title>
+            <Text style={{ lineHeight: 1.6 }}>
+              Text in <strong>single quotes</strong> is a string literal: <Code>{`'R134a'`}</Code>. Strings are
+              used as function arguments — the digit string of <Code>BaseConvert</Code>, the unit names of
+              <Code>{`Convert('ft^2', 'in^2')`}</Code>, or the fluid name of a property call like
+              <Code>{`h = Enthalpy('R134a', T=300, x=1)`}</Code> (unquoted names are still accepted).
+              Note that <strong>double quotes remain comments</strong>: <Code>"this text is ignored"</Code>.
+            </Text>
+            <Text style={{ lineHeight: 1.6 }}>
+              A variable whose name ends in <Code>$</Code> is a <strong>string variable</strong> (EES
+              convention). Assign it a literal once and use it anywhere a string is accepted:
+            </Text>
+            <Paper withBorder p="xs" bg="dark.9" radius="md">
+              <Code block style={{ background: 'transparent' }}>
+                {`R$ = 'R134a'
+h1 = Enthalpy(R$, T=300, x=1)
+s1 = Entropy(R$, T=300, x=1)`}
+              </Code>
+            </Paper>
+            <Text size="sm" style={{ lineHeight: 1.6 }}>
+              String assignments are compile-time constants: they are substituted before solving and do not
+              count toward the equation/variable balance. Defining the same string variable twice with
+              different values, or using an undefined one, is a syntax error.
+            </Text>
           </Stack>
         );
       case 'variables':
@@ -1871,6 +1907,290 @@ H_reactants = H_products`}
                 </Accordion.Panel>
               </Accordion.Item>
             </Accordion>
+          </Stack>
+        );
+      case 'optimization':
+        return (
+          <Stack gap="md">
+            <Title order={2} c="blue.4">15. Multi-Variable Optimization & Advanced Plotting</Title>
+            
+            <Title order={3} mt="sm">Multi-Variable Optimization</Title>
+            <Text size="md" style={{ lineHeight: 1.6 }}>
+              frees supports optimizing a target objective variable by adjusting one or more independent (decision) variables within specified bounds.
+            </Text>
+            <Text size="md" style={{ lineHeight: 1.6 }}>
+              You can choose from three optimization algorithms depending on your problem:
+            </Text>
+            <List spacing="xs" size="sm" mt="xs" style={{ paddingLeft: '20px' }}>
+              <List.Item>
+                <strong>Brent's Method:</strong> Best for one-dimensional optimization. Requires a single independent variable and finite bounds. Extremely fast and guarantees convergence for unimodal functions.
+              </List.Item>
+              <List.Item>
+                <strong>Nelder-Mead Simplex:</strong> A derivative-free optimization method suitable for multi-variable problems. It works by constructing a simplex (a generalized triangle) and moving it towards the minimum/maximum. Highly robust for non-smooth or noisy objectives.
+              </List.Item>
+              <List.Item>
+                <strong>BOBYQA (Bound Optimization BY Quadratic Approximation):</strong> An advanced algorithm for multi-variable bound-constrained optimization. It iteratively builds a quadratic model of the objective function. Extremely efficient and requires fewer function evaluations than Simplex for smooth functions.
+              </List.Item>
+            </List>
+
+            <Alert color="blue" title="Optimization Setup" mt="xs">
+              To run an optimization, click the <strong>Min/Max</strong> (target) icon in the left rail. Choose your objective variable, select one or more independent variables, give each its bounds, pick the method (Brent for one variable, Nelder-Mead Simplex or BOBYQA for several), optionally add constraints, and click <strong>Minimize</strong>/<strong>Maximize</strong>.
+            </Alert>
+
+            <Title order={3} mt="md">Constrained Optimization (Barrier & Augmented Lagrangian)</Title>
+            <Text size="md" style={{ lineHeight: 1.6 }}>
+              Beyond simple variable bounds, the Min/Max dialog accepts <strong>constraints</strong> — one per
+              line — that the optimum must satisfy. Each constraint is an expression compared against a numeric
+              constant:
+            </Text>
+            <List spacing="xs" size="sm" mt="xs" style={{ paddingLeft: '20px' }}>
+              <List.Item>
+                <strong>Inequalities</strong> (<Code>x + y &lt;= 10</Code>, <Code>m_dot &gt;= 0.5</Code>) are
+                enforced with a <strong>log-barrier method</strong>: a term −μ·ln(−g(x)) repels the search from
+                the constraint boundary, and μ is tightened geometrically over successive outer iterations.
+                Infeasible trial points receive a smooth exterior quadratic penalty so the optimizer can recover
+                from an infeasible start.
+              </List.Item>
+              <List.Item>
+                <strong>Equalities</strong> (<Code>x * y = 4</Code>) are enforced with an
+                <strong> augmented Lagrangian</strong>: the objective is augmented with λ·h(x) + (ρ/2)·h(x)²,
+                and the multiplier λ is updated after each outer iteration until the violation falls below
+                tolerance.
+              </List.Item>
+            </List>
+            <Text size="sm" style={{ lineHeight: 1.6 }}>
+              Example: maximizing the rectangle area <Code>A = w*h</Code> with <Code>w + h = 10</Code> in the
+              equations and the constraint <Code>w &lt;= 3</Code> yields the boundary optimum w = 3, A = 21
+              instead of the unconstrained w = 5, A = 25.
+            </Text>
+
+            <Title order={3} mt="md">Curve Fitting (Levenberg-Marquardt Least Squares)</Title>
+            <Text size="md" style={{ lineHeight: 1.6 }}>
+              The <strong>Curve Fit</strong> tool (function icon in the left rail) fits the parameters of a model
+              equation to experimental (x, y) data by minimizing the sum of squared residuals with the
+              Levenberg-Marquardt algorithm.
+            </Text>
+            <List spacing="xs" size="sm" mt="xs" style={{ paddingLeft: '20px' }}>
+              <List.Item>Enter a model such as <Code>y = a * exp(-b * x) + c</Code> with the dependent variable alone on one side.</List.Item>
+              <List.Item>Name the independent variable and the parameters to fit (e.g. <Code>a, b, c</Code>).</List.Item>
+              <List.Item>Paste the data points one pair per line (<Code>x y</Code>, separated by spaces, commas, or tabs).</List.Item>
+              <List.Item>Optionally give initial guesses (defaults to 1 for every parameter).</List.Item>
+            </List>
+            <Text size="sm" style={{ lineHeight: 1.6 }}>
+              The result reports the fitted parameter values together with the goodness-of-fit measures
+              R² and RMSE and the iteration count. Any expression the equation engine understands — including
+              special functions like <Code>erf</Code> or <Code>gamma</Code> — can appear in the model.
+            </Text>
+
+            <Title order={3} mt="md">Analytical Jacobians</Title>
+            <Text size="md" style={{ lineHeight: 1.6 }}>
+              The Newton solver differentiates equation blocks <strong>symbolically</strong> whenever every
+              equation in the block has a closed-form derivative — including the special functions
+              (<Code>erf</Code>, <Code>erfc</Code>, <Code>erfinv</Code>, <Code>gamma</Code>,
+              <Code>loggamma</Code>, <Code>beta</Code>, <Code>besselj</Code>, <Code>besseli</Code>) via their
+              analytical derivatives (e.g. Γ'(x) = Γ(x)·ψ(x), J'ₙ = (Jₙ₋₁ − Jₙ₊₁)/2). Blocks containing
+              constructs without symbolic derivatives (property calls, integrals, procedures) automatically
+              fall back to finite-difference Jacobians.
+            </Text>
+
+            <Title order={3} mt="md">Advanced Plot Window Extensions</Title>
+            <Text size="md" style={{ lineHeight: 1.6 }}>
+              The Plot Window features rich data visualization capabilities to analyze parametric sweeps and cycle paths. You can configure and display the following chart styles:
+            </Text>
+            <Table striped highlightOnHover withTableBorder>
+              <Table.Thead>
+                <Table.Tr>
+                  <Table.Th style={{ width: '180px' }}>Chart Type</Table.Th>
+                  <Table.Th>Description</Table.Th>
+                  <Table.Th>Configuration Requirements</Table.Th>
+                </Table.Tr>
+              </Table.Thead>
+              <Table.Tbody>
+                <Table.Tr>
+                  <Table.Td><strong>Line Chart</strong></Table.Td>
+                  <Table.Td>Plots continuous lines joining the data points of parametric runs. Variables with different magnitudes can be assigned to a secondary right Y axis (dual-Y).</Table.Td>
+                  <Table.Td>Requires an X-axis variable and one or more Y-axis variables; right-axis variables are optional.</Table.Td>
+                </Table.Tr>
+                <Table.Tr>
+                  <Table.Td><strong>Bar Chart</strong></Table.Td>
+                  <Table.Td>Displays discrete rectangular bars grouped or stacked for comparison.</Table.Td>
+                  <Table.Td>Requires an X-axis variable and one or more Y-axis variables.</Table.Td>
+                </Table.Tr>
+                <Table.Tr>
+                  <Table.Td><strong>Pie Chart</strong></Table.Td>
+                  <Table.Td>Displays proportion slices representing the values of a variable.</Table.Td>
+                  <Table.Td>Requires an X-axis variable (categories) and a single Y-axis variable (values).</Table.Td>
+                </Table.Tr>
+                <Table.Tr>
+                  <Table.Td><strong>Histogram</strong></Table.Td>
+                  <Table.Td>Shows the frequency distribution of a variable's values.</Table.Td>
+                  <Table.Td>Requires only selecting the variable in the Y-axis variables picker (X-axis is ignored).</Table.Td>
+                </Table.Tr>
+                <Table.Tr>
+                  <Table.Td><strong>Scatter (Bubble) Chart</strong></Table.Td>
+                  <Table.Td>Plots individual points where markers can have a variable size based on a third dimension.</Table.Td>
+                  <Table.Td>Requires an X-axis variable, Y-axis variables, and an optional bubble size variable.</Table.Td>
+                </Table.Tr>
+                <Table.Tr>
+                  <Table.Td><strong>3D Surface Chart</strong></Table.Td>
+                  <Table.Td>Renders a 3D mesh surface using three continuous variables.</Table.Td>
+                  <Table.Td>Requires X-axis, Y-axis, and Z-axis variables.</Table.Td>
+                </Table.Tr>
+              </Table.Tbody>
+            </Table>
+
+            <Title order={3} mt="md">Detailed Examples & Walkthroughs</Title>
+
+            <Card withBorder padding="md" radius="md" bg="dark.8" mt="xs">
+              <Text fw={600} size="sm" c="blue.4">Example 1: Multi-Variable Cylinder Surface Area Minimization</Text>
+              <Text size="xs" mt="xs" style={{ lineHeight: 1.6 }}>
+                Suppose we want to design a cylindrical canister that holds exactly 1000 cm³ of fluid. We want to minimize its surface area (to reduce material cost) by adjusting the radius <code>r</code> and height <code>h</code>.
+              </Text>
+              <Text size="xs" mt="xs" fw={500}>Equations:</Text>
+              <Paper withBorder p="xs" bg="dark.9" radius="md" mt="xs" style={{ position: 'relative' }}>
+                <CopyButton code={`{ Cylinder Minimization }
+V = pi * r^2 * h
+A = 2 * pi * r^2 + 2 * pi * r * h`} />
+                <Code block style={{ background: 'transparent' }}>
+                  {`{ Cylinder Minimization }
+V = pi * r^2 * h
+A = 2 * pi * r^2 + 2 * pi * r * h`}
+                </Code>
+              </Paper>
+              <Text size="xs" mt="xs" style={{ lineHeight: 1.6 }}>
+                Note that <code>pi</code> is a built-in constant — writing <code>pi = 3.14159265</code> would
+                add an extra equation and overspecify the system. The volume requirement is entered as an
+                equality <em>constraint</em> rather than an equation, so that both <code>r</code> and
+                <code>h</code> stay free for the optimizer.
+              </Text>
+              <Text size="xs" mt="xs" style={{ lineHeight: 1.6 }}>
+                <strong>How to Optimize:</strong>
+                <br/>
+                1. Paste the equations into the editor and click <strong>Check (F4)</strong>.
+                <br/>
+                2. Click the <strong>Min/Max</strong> (target) icon in the left rail.
+                <br/>
+                3. Set the Objective Variable to <code>A</code>, and set Goal to <strong>Minimize</strong>.
+                <br/>
+                4. Add Independent Variables <code>r</code> and <code>h</code> and give each the bounds 1 to 20.
+                <br/>
+                5. Select <strong>Nelder-Mead Simplex</strong> or <strong>BOBYQA</strong> as the method (Brent is only available with a single variable).
+                <br/>
+                6. Enter <code>V = 1000</code> in the Constraints box.
+                <br/>
+                7. Click <strong>Minimize</strong>. The solver finds the optimum dimensions <code>r ≈ 5.42 cm</code> and <code>h ≈ 10.84 cm</code> (h = 2r), yielding the minimal surface area <code>A ≈ 553.58 cm²</code>.
+              </Text>
+              <Text size="xs" mt="xs" style={{ lineHeight: 1.6 }}>
+                <strong>1-D alternative:</strong> keep <code>V = 1000</code> as an equation in the editor
+                instead; then the system has a single degree of freedom, and varying only <code>r</code> with
+                <strong> Brent's method</strong> reaches the same optimum.
+              </Text>
+            </Card>
+
+            <Card withBorder padding="md" radius="md" bg="dark.8" mt="sm">
+              <Text fw={600} size="sm" c="blue.4">Example 2: Visualizing 3D Thermodynamic Surfaces</Text>
+              <Text size="xs" mt="xs" style={{ lineHeight: 1.6 }}>
+                We can map the relationship between Pressure (P), Specific Volume (v), and Temperature (T) of a substance over a range of states and plot a 3D Surface diagram.
+              </Text>
+              <Text size="xs" mt="xs" fw={500}>Equations:</Text>
+              <Paper withBorder p="xs" bg="dark.9" radius="md" mt="xs" style={{ position: 'relative' }}>
+                <CopyButton code={`{ Ideal Gas law grid }
+P * v = R * T
+R = 0.287 { Air gas constant in kJ/kg-K }`} />
+                <Code block style={{ background: 'transparent' }}>
+                  {`{ Ideal Gas law grid }
+P * v = R * T
+R = 0.287 { Air gas constant in kJ/kg-K }`}
+                </Code>
+              </Paper>
+              <Text size="xs" mt="xs" style={{ lineHeight: 1.6 }}>
+                <strong>How to Plot a 3D Surface:</strong>
+                <br/>
+                1. Set up a Parametric Table by clicking the <strong>Parametric Table</strong> tab.
+                <br/>
+                2. Add <code>T</code> and <code>P</code> as table variables, and fill the columns with a grid of values (e.g., T from 300 to 600 K, P from 100 to 500 kPa).
+                <br/>
+                3. Click <strong>Solve Table</strong>. The solver will calculate the corresponding volumes (<code>v</code>) for every run.
+                <br/>
+                4. Go to the <strong>Plots</strong> tab, click <strong>Add Plot</strong>, and select <strong>X-Y (parametric table)</strong>.
+                <br/>
+                5. Set the Chart Type to <strong>3D Surface</strong>.
+                <br/>
+                6. Configure the variables: set X-axis to <code>T</code>, Y-axis (Value) to <code>P</code>, and Z-axis to <code>v</code>.
+                <br/>
+                7. Click <strong>Apply</strong>. A fully interactive 3D surface plot will be generated, allowing you to rotate, pan, and hover over individual state values.
+              </Text>
+            </Card>
+
+            <Card withBorder padding="md" radius="md" bg="dark.8" mt="sm">
+              <Text fw={600} size="sm" c="blue.4">Example 3: Container Loading (Bin Packing Continuous Optimization)</Text>
+              <Text size="xs" mt="xs" style={{ lineHeight: 1.6 }}>
+                Suppose we need to load boxes of three different sizes (Small, Medium, Large) into a standard 20 ft shipping container. 
+                We want to maximize the total dollar value of the cargo we carry. The container has a volume limit of 33 m³ and a payload weight limit of 20,000 kg.
+              </Text>
+              <Text size="xs" mt="xs" fw={500}>Parameters:</Text>
+              <List spacing="xs" size="xs" mt="xs" style={{ paddingLeft: '20px' }}>
+                <List.Item><strong>Box A (Small):</strong> Volume = 0.04 m³, Weight = 10 kg, Value = $100</List.Item>
+                <List.Item><strong>Box B (Medium):</strong> Volume = 0.15 m³, Weight = 25 kg, Value = $300</List.Item>
+                <List.Item><strong>Box C (Large):</strong> Volume = 0.50 m³, Weight = 60 kg, Value = $800</List.Item>
+              </List>
+              <Text size="xs" mt="xs" fw={500}>Equations:</Text>
+              <Paper withBorder p="xs" bg="dark.9" radius="md" mt="xs" style={{ position: 'relative' }}>
+                <CopyButton code={`{ Container Loading Optimization }
+{ Box quantities }
+{ xA: Small, xB: Medium, xC: Large }
+
+V_total = 0.04 * xA + 0.15 * xB + 0.50 * xC
+W_total = 10 * xA + 25 * xB + 60 * xC
+
+value = 100 * xA + 300 * xB + 800 * xC
+
+{ Penalty variables if container volume (33m³) or weight (20t) limits are exceeded }
+V_penalty = (V_total > 33) * 10000 * (V_total - 33)^2
+W_penalty = (W_total > 20000) * 100 * (W_total - 20000)^2
+
+{ Objective function to maximize }
+U = value - V_penalty - W_penalty`} />
+                <Code block style={{ background: 'transparent' }}>
+                  {`{ Container Loading Optimization }
+{ Box quantities }
+{ xA: Small, xB: Medium, xC: Large }
+
+V_total = 0.04 * xA + 0.15 * xB + 0.50 * xC
+W_total = 10 * xA + 25 * xB + 60 * xC
+
+value = 100 * xA + 300 * xB + 800 * xC
+
+{ Penalty variables if container volume (33m³) or weight (20t) limits are exceeded }
+V_penalty = (V_total > 33) * 10000 * (V_total - 33)^2
+W_penalty = (W_total > 20000) * 100 * (W_total - 20000)^2
+
+{ Objective function to maximize }
+U = value - V_penalty - W_penalty`}
+                </Code>
+              </Paper>
+              <Text size="xs" mt="xs" style={{ lineHeight: 1.6 }}>
+                <strong>How to Optimize:</strong>
+                <br/>
+                1. Paste these equations into the editor and click <strong>Check (F4)</strong>.
+                <br/>
+                2. Click the <strong>Min/Max</strong> (target) icon in the left rail.
+                <br/>
+                3. Choose the objective variable <code>U</code>, set Goal to <strong>Maximize</strong>.
+                <br/>
+                4. Add Independent Variables:
+                <br/>
+                &nbsp;&nbsp;&nbsp;&nbsp;- <code>xA</code> (bounds 0 to 825)
+                <br/>
+                &nbsp;&nbsp;&nbsp;&nbsp;- <code>xB</code> (bounds 0 to 220)
+                <br/>
+                &nbsp;&nbsp;&nbsp;&nbsp;- <code>xC</code> (bounds 0 to 66)
+                <br/>
+                5. Select <strong>Nelder-Mead Simplex</strong> or <strong>BOBYQA</strong> as the optimizer method.
+                <br/>
+                6. Click <strong>Optimize</strong>. The continuous solver will automatically allocate quantities to maximize value while strictly respecting both physical volume and weight constraints.
+              </Text>
+            </Card>
           </Stack>
         );
       default:

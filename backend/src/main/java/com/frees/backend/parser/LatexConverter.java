@@ -37,6 +37,7 @@ public final class LatexConverter {
                 }
                 yield val;
             }
+            case Expr.Str(String value) -> "\\text{'" + value + "'}";
             case Expr.Var(String name) -> {
                 String disp = displayNames.getOrDefault(name, name);
                 yield formatVariable(disp);

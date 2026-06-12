@@ -139,6 +139,7 @@ powExpr
 atom
     : NUMBER unit?                           # NumberAtom
     | IMAG_NUMBER unit?                      # ImagNumberAtom
+    | STRING_LITERAL                          # StringAtom
     | IDENT LPAREN argList RPAREN            # CallAtom
     | IDENT LBRACKET arrayIndexList RBRACKET # ArrayAtom
     | IDENT                                  # VarAtom
@@ -217,6 +218,12 @@ AND       : [aA][nN][dD] ;
 OR        : [oO][rR] ;
 NOT       : [nN][oO][tT] ;
 
+// ── String literals ────────────────────────────────────────────────────────────
+
+STRING_LITERAL
+    : '\'' ( ~'\'' )* '\''
+    ;
+
 // ── Literals & identifiers ─────────────────────────────────────────────────────
 
 IMAG_NUMBER
@@ -229,8 +236,9 @@ NUMBER
     | '.' DIGIT+ EXPONENT?
     ;
 
+// A trailing '$' marks a string variable (EES convention): R$ = 'R134a'.
 IDENT
-    : [a-zA-Z] [a-zA-Z0-9_]*
+    : [a-zA-Z] [a-zA-Z0-9_]* '$'?
     ;
 
 NEWLINE

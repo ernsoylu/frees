@@ -338,6 +338,13 @@ public class AstBuilder extends FreesBaseVisitor<Expr> {
     }
 
     @Override
+    public Expr visitStringAtom(FreesParser.StringAtomContext ctx) {
+        String text = ctx.STRING_LITERAL().getText();
+        // Remove the surrounding single quotes
+        return new Expr.Str(text.substring(1, text.length() - 1));
+    }
+
+    @Override
     public Expr visitVarAtom(FreesParser.VarAtomContext ctx) {
         String original = ctx.IDENT().getText();
         if ("pi".equalsIgnoreCase(original)) {
@@ -402,8 +409,11 @@ public class AstBuilder extends FreesBaseVisitor<Expr> {
                     "Property functions take the fluid name first: "
                             + function + "(R134a, T=..., x=...)");
         }
-        String fluid = fluidArg.expr().getText();
-        if (!fluid.matches("[A-Za-z]\\w*")) {
+        // The fluid may be a bare name (R134a), a quoted string literal
+        // ('R134a'), or a string variable (R$, resolved by EquationParser
+        // once its assignment is known).
+        String fluid = unquote(fluidArg.expr().getText());
+        if (!fluid.matches("[A-Za-z]\\w*\\$?")) {
             throw new EquationParser.ParseException(
                     "Invalid fluid name '" + fluid + "' in " + function + "(...)");
         }
@@ -447,13 +457,22 @@ public class AstBuilder extends FreesBaseVisitor<Expr> {
         return new Expr.Call(name, args);
     }
 
+    /** Strips optional surrounding single quotes: Convert('ft^2', 'in^2') ≡ Convert(ft^2, in^2). */
+    private static String unquote(String text) {
+        if (text.length() >= 2 && text.startsWith("'") && text.endsWith("'")) {
+            return text.substring(1, text.length() - 1);
+        }
+        return text;
+    }
+
     private Expr buildConvert(List<FreesParser.ExprContext> args) {
         if (args.size() != 2) {
             throw new EquationParser.ParseException(
                     "Convert requires exactly two unit arguments: Convert(From, To)");
         }
         try {
-            double factor = UnitRegistry.convert(args.get(0).getText(), args.get(1).getText());
+            double factor = UnitRegistry.convert(unquote(args.get(0).getText()),
+                    unquote(args.get(1).getText()));
             return new Expr.Num(factor, null);
         } catch (UnitRegistry.UnknownUnitException e) {
             throw new EquationParser.ParseException(e.getMessage());
@@ -465,13 +484,13 @@ public class AstBuilder extends FreesBaseVisitor<Expr> {
             throw new EquationParser.ParseException(
                     "ConvertTemp requires three arguments: ConvertTemp(From, To, value)");
         }
-        double[] toKelvin = temperatureToKelvin(raw.get(0).getText());
-        double[] fromKelvin = kelvinToTemperature(raw.get(1).getText());
+        double[] toKelvin = temperatureToKelvin(unquote(raw.get(0).getText()));
+        double[] fromKelvin = kelvinToTemperature(unquote(raw.get(1).getText()));
         double a = toKelvin[0] * fromKelvin[0];
         double b = fromKelvin[0] * toKelvin[1] + fromKelvin[1];
         Expr x = visit(raw.get(2));
         if (x instanceof Expr.Num n && n.unit() == null) {
-            String unit = raw.get(1).getText().trim().equalsIgnoreCase("k") ? "K" : null;
+            String unit = unquote(raw.get(1).getText()).trim().equalsIgnoreCase("k") ? "K" : null;
             return new Expr.Num(a * n.value() + b, unit);
         }
         Expr scaled = a == 1.0 ? x : new Expr.BinOp('*', new Expr.Num(a), x);
