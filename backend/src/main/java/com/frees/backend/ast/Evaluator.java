@@ -20,10 +20,10 @@ public final class Evaluator {
     public static double eval(Expr e, Map<String, Double> values, Map<String, ProcDef> defs) {
         return switch (e) {
             case Expr.Num n -> n.value();
-            case Expr.Var v -> {
-                Double value = values.get(v.name());
+            case Expr.Var(String name) -> {
+                Double value = values.get(name);
                 if (value == null) {
-                    throw new IllegalStateException("Variable has no value: " + v.name());
+                    throw new IllegalStateException("Variable has no value: " + name);
                 }
                 yield value;
             }
