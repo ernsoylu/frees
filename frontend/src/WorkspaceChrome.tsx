@@ -19,6 +19,7 @@ import {
   IconChevronDown,
   IconCode,
   IconHelp,
+  IconMathFunction,
   IconPlayerPlayFilled,
   IconSchema,
   IconSettings,
@@ -56,6 +57,7 @@ interface RailProps {
   onSelect: (view: string) => void
   onVariableInfo: () => void
   onMinMax: () => void
+  onCurveFit: () => void
   onPreferences: () => void
 }
 
@@ -94,6 +96,7 @@ export function Rail({
   onSelect,
   onVariableInfo,
   onMinMax,
+  onCurveFit,
   onPreferences,
 }: Readonly<RailProps>) {
   return (
@@ -121,6 +124,9 @@ export function Rail({
         </RailIcon>
         <RailIcon label="Min/Max (optimization)" onClick={onMinMax}>
           <IconTargetArrow size={22} stroke={1.6} />
+        </RailIcon>
+        <RailIcon label="Curve Fit (least squares)" onClick={onCurveFit}>
+          <IconMathFunction size={22} stroke={1.6} />
         </RailIcon>
         <RailIcon label="Preferences" onClick={onPreferences}>
           <IconSettings size={22} stroke={1.6} />

@@ -25,6 +25,20 @@ class MarkdownEquationExtractorTest {
     }
 
     @Test
+    void stringLiteralLinesAreEquations() {
+        // Lines with quoted string arguments are pure equations and must
+        // survive extraction intact (Story 9.9).
+        assertTrue(MarkdownEquationExtractor.isPureEquationLine("a = BaseConvert('FF', 16, 10)"));
+        assertTrue(MarkdownEquationExtractor.isPureEquationLine("h = Enthalpy('R134a', T=300, x=1)"));
+
+        var extraction = MarkdownEquationExtractor.extract(
+                "a = BaseConvert('FF', 16, 10)\nSome prose with x = BaseConvert('1010', 2, 10) inline.");
+        assertEquals(2, extraction.equations.size());
+        assertEquals("a = BaseConvert('FF', 16, 10)", extraction.equations.get(0).cleanEquation);
+        assertEquals("x = BaseConvert('1010', 2, 10)", extraction.equations.get(1).cleanEquation);
+    }
+
+    @Test
     void preservesFunctionAndProcedureBodies() {
         // IF/ELSE lines and := assignments inside FUNCTION/PROCEDURE bodies
         // are code, not prose: they must survive extraction verbatim.

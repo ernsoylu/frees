@@ -22,6 +22,7 @@ import {
   PropertyConfig,
   PsychroConfig,
   XYConfig,
+  ChartType,
   diagramAxes,
   newPlotSpec,
 } from './types'
@@ -40,6 +41,15 @@ interface Props {
   onClose: () => void
 }
 
+const CHART_TYPE_OPTIONS = [
+  { value: 'line', label: 'Line chart' },
+  { value: 'bar', label: 'Bar chart' },
+  { value: 'pie', label: 'Pie chart' },
+  { value: 'histogram', label: 'Histogram' },
+  { value: 'scatter', label: 'Scatter (bubble)' },
+  { value: 'surface3d', label: '3D Surface' },
+]
+
 function XYSection({
   config,
   tableVars,
@@ -49,6 +59,8 @@ function XYSection({
   tableVars: string[]
   onChange: (config: XYConfig) => void
 }>) {
+  const chartType = config.chartType ?? 'line'
+
   return (
     <Stack gap="xs">
       <Text size="xs" c="dimmed">
@@ -57,22 +69,72 @@ function XYSection({
       </Text>
       <Group grow>
         <Select
-          label="X-axis variable"
+          label="Chart Type"
+          size="xs"
+          data={CHART_TYPE_OPTIONS}
+          value={chartType}
+          onChange={(val) => {
+            onChange({
+              ...config,
+              chartType: (val as ChartType) ?? 'line',
+              zVar: val === 'surface3d' ? config.zVar : null,
+              sizeVar: val === 'scatter' ? config.sizeVar : null,
+            })
+          }}
+        />
+        <Select
+          label={chartType === 'histogram' ? 'Variable (uses Y-axis)' : 'X-axis variable'}
           size="xs"
           data={tableVars}
           value={config.xVar}
           onChange={(xVar) => onChange({ ...config, xVar })}
           searchable
+          disabled={chartType === 'histogram'}
         />
+      </Group>
+      <Group grow>
         <MultiSelect
-          label="Y-axis variables"
+          label={chartType === 'pie' ? 'Value variable (uses first Y)' : 'Y-axis variables'}
           size="xs"
           data={tableVars}
           value={config.yVars}
           onChange={(yVars) => onChange({ ...config, yVars })}
+          maxValues={chartType === 'pie' ? 1 : undefined}
           searchable
         />
+        {chartType === 'surface3d' && (
+          <Select
+            label="Z-axis variable"
+            size="xs"
+            data={tableVars}
+            value={config.zVar ?? null}
+            onChange={(zVar) => onChange({ ...config, zVar })}
+            searchable
+          />
+        )}
+        {chartType === 'scatter' && (
+          <Select
+            label="Bubble size variable (optional)"
+            size="xs"
+            data={tableVars}
+            value={config.sizeVar ?? null}
+            onChange={(sizeVar) => onChange({ ...config, sizeVar })}
+            searchable
+            clearable
+          />
+        )}
       </Group>
+      {(chartType === 'line' || chartType === 'bar' || chartType === 'scatter') && (
+        <MultiSelect
+          label="Right Y-axis variables (optional, dual-Y)"
+          size="xs"
+          data={tableVars.filter((v) => !config.yVars.includes(v))}
+          value={config.y2Vars ?? []}
+          onChange={(y2Vars) => onChange({ ...config, y2Vars })}
+          searchable
+          clearable
+        />
+      )}
     </Stack>
   )
 }
@@ -333,6 +395,15 @@ function FormatSection({
           placeholder="auto"
           onChange={(e) => onChange({ ...format, yLabel: e.currentTarget.value })}
         />
+        {spec.kind === 'xy' && (spec.xy.y2Vars?.length ?? 0) > 0 && (
+          <TextInput
+            label="Right Y-axis label"
+            size="xs"
+            value={format.y2Label ?? ''}
+            placeholder="auto"
+            onChange={(e) => onChange({ ...format, y2Label: e.currentTarget.value })}
+          />
+        )}
       </Group>
       <Group grow>
         <NumberInput
@@ -433,6 +504,22 @@ function FormatSection({
           checked={format.legend}
           onChange={(e) => onChange({ ...format, legend: e.currentTarget.checked })}
         />
+        <Select
+          label="Legend alignment"
+          size="xs"
+          w={130}
+          data={[
+            { value: 'left', label: 'Left' },
+            { value: 'center', label: 'Center' },
+            { value: 'right', label: 'Right' },
+          ]}
+          value={format.legendAlign ?? 'center'}
+          onChange={(v) =>
+            onChange({ ...format, legendAlign: (v as 'left' | 'center' | 'right') ?? 'center' })
+          }
+          disabled={!format.legend}
+          allowDeselect={false}
+        />
       </Group>
 
       <Divider label="Line Colors" labelPosition="left" />
@@ -488,7 +575,7 @@ export default function PlotConfigModal({
       opened
       onClose={onClose}
       title={creating ? 'Add Plot' : `Configure — ${draft.name}`}
-      size="lg"
+      size="xl"
     >
       <Stack gap="sm">
         <Group grow align="flex-end">

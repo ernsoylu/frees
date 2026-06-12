@@ -76,7 +76,7 @@ export default function PreferencesModal({ criteria, unitSystem, fillMissing, on
   }
 
   return (
-    <Modal opened onClose={onClose} title="Preferences — Stop Criteria" centered>
+    <Modal opened onClose={onClose} title="Preferences — Stop Criteria" centered size="lg">
       <Text size="sm" c="dimmed" mb="md">
         Calculation stops when any criterion is satisfied. Restore Defaults
         applies the frees defaults (tight tolerances for higher precision).

@@ -7,7 +7,7 @@ import java.util.TreeSet;
  * AST for a frees expression. Variable names are stored lowercase because
  * variable names are case-insensitive.
  */
-public sealed interface Expr permits Expr.Num, Expr.Var, Expr.BinOp, Expr.Neg,
+public sealed interface Expr permits Expr.Num, Expr.Str, Expr.Var, Expr.BinOp, Expr.Neg,
         Expr.Call, Expr.ArrayAccess, Expr.Range, Expr.ArrayLiteral,
         Expr.Compare, Expr.Logical, Expr.Not {
 
@@ -20,6 +20,9 @@ public sealed interface Expr permits Expr.Num, Expr.Var, Expr.BinOp, Expr.Neg,
             this(value, unit, false);
         }
     }
+
+    /** A string literal: 'hello'. */
+    record Str(String value) implements Expr {}
 
     record Var(String name) implements Expr {
         public Var {
@@ -66,6 +69,9 @@ public sealed interface Expr permits Expr.Num, Expr.Var, Expr.BinOp, Expr.Neg,
         switch (e) {
             case Num(double value, String unit, boolean isImaginary) -> {
                 // Number literals do not contain variables
+            }
+            case Str(String value) -> {
+                // String literals do not contain variables
             }
             case Var(String name) -> out.add(name);
             case Neg(Expr operand) -> collectVariables(operand, out);
