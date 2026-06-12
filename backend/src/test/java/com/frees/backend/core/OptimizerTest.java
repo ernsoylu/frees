@@ -133,6 +133,29 @@ class OptimizerTest {
     }
 
     @Test
+    void constrainedBobyqaSurvivesEvaluationBudget() {
+        // Help-page Example 1: min cylinder surface area s.t. V = 1000.
+        // BOBYQA tends to exhaust the inner evaluation budget under the
+        // equality penalty; the optimizer must degrade to its best iterate
+        // instead of letting TooManyEvaluationsException escape.
+        Optimizer.OptimizeResult result = optimizer.optimize(new Optimizer.Problem(
+                "V = pi * r^2 * h\nA = 2 * pi * r^2 + 2 * pi * r * h",
+                SolverSettings.DEFAULTS,
+                Map.of(),
+                "A",
+                java.util.List.of("r", "h"),
+                java.util.List.of(1.0, 1.0),
+                java.util.List.of(20.0, 20.0),
+                "bobyqa",
+                false,
+                java.util.List.of("V = 1000")
+        ));
+        assertEquals(5.4193, result.decisionValues()[0], 0.05);
+        assertEquals(10.8385, result.decisionValues()[1], 0.1);
+        assertEquals(553.58, result.objectiveValue(), 1.0);
+    }
+
+    @Test
     void rejectsMalformedConstraint() {
         SolverException e = assertThrows(SolverException.class,
                 () -> optimizer.optimize(new Optimizer.Problem(
