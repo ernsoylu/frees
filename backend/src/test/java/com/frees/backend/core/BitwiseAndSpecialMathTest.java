@@ -53,6 +53,7 @@ class BitwiseAndSpecialMathTest {
                 d = loggamma(4)
                 e = beta(2, 3)
                 f = besselj(2.5, 0)
+                g = erfinv(0.5)
                 """;
         var result = solver.solve(code, SolverSettings.DEFAULTS);
         Map<String, Double> vars = result.variables();
@@ -64,5 +65,7 @@ class BitwiseAndSpecialMathTest {
         assertEquals(1.0 / 12.0, vars.get("e"), 1e-9);
         // J0(2.5) ≈ -0.048383776
         assertEquals(-0.048383776, vars.get("f"), 1e-6);
+        // erfinv(0.5) ≈ 0.476936276
+        assertEquals(0.476936276, vars.get("g"), 1e-6);
     }
 }
