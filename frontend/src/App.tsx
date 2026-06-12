@@ -43,6 +43,7 @@ import AlterValuesModal from './AlterValuesModal'
 import ParametricTableTab, { newParamRow, ParamRow } from './ParametricTableTab'
 import PlotTab from './PlotTab'
 import StatesTab from './StatesTab'
+import { DigitizerTab } from './DigitizerTab'
 import { PlotSpec } from './plots/types'
 import SolutionPanel from './SolutionPanel'
 import { Rail, TopBar } from './WorkspaceChrome'
@@ -804,6 +805,7 @@ export default function App() {
                 exportTrigger={thermoExportTrigger}
               />
             )}
+            {activeTab === 'digitizer' && <DigitizerTab />}
           </Paper>
 
           {activeTab === 'thermo' ? (
@@ -905,7 +907,8 @@ export default function App() {
               />
             </Paper>
           ) : (
-            solutionSidePanel
+            // The digitizer brings its own side panel and needs the width.
+            activeTab !== 'digitizer' && solutionSidePanel
           )}
         </Flex>
       </Flex>
