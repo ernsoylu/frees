@@ -182,6 +182,7 @@ public final class Evaluator {
             case "digamma" -> org.apache.commons.math3.special.Gamma.digamma(arg(c, args, 0, values, defs));
             case "beta"    -> Math.exp(org.apache.commons.math3.special.Beta.logBeta(arg(c, args, 0, values, defs), arg(c, args, 1, values, defs)));
             case "besselj" -> org.apache.commons.math3.special.BesselJ.value(arg(c, args, 1, values, defs), arg(c, args, 0, values, defs));
+            case "besseli" -> besselI(arg(c, args, 1, values, defs), arg(c, args, 0, values, defs));
 
             // Base conversion: BaseConvert('FF', 16, 10) -> 255
             case "baseconvert" -> evalBaseConvert(c, values, defs);
@@ -324,6 +325,45 @@ public final class Evaluator {
                     "Function " + c.function() + " expects at least " + (i + 1) + " argument(s)");
         }
         return eval(args.get(i), values, defs);
+    }
+
+    /**
+     * Modified Bessel function of the first kind I_order(x), via the ascending
+     * series with log-space terms (overflow-safe up to x ≈ 700). Commons Math
+     * provides BesselJ but not BesselI.
+     */
+    static double besselI(double order, double x) {
+        if (x < 0) {
+            if (order != Math.rint(order)) {
+                throw new IllegalStateException(
+                        "BesselI of a negative argument requires an integer order.");
+            }
+            double sign = ((long) Math.rint(order)) % 2 == 0 ? 1.0 : -1.0;
+            return sign * besselI(order, -x);
+        }
+        if (order < 0) {
+            if (order != Math.rint(order)) {
+                throw new IllegalStateException(
+                        "BesselI supports integer or non-negative orders, got " + order + ".");
+            }
+            order = -order; // I_{-n}(x) = I_n(x) for integer n
+        }
+        if (x == 0.0) {
+            return order == 0.0 ? 1.0 : 0.0;
+        }
+        double lnHalfX = Math.log(x / 2.0);
+        double sum = 0.0;
+        for (int k = 0; k < 2000; k++) {
+            double lnTerm = (2.0 * k + order) * lnHalfX
+                    - org.apache.commons.math3.special.Gamma.logGamma(k + 1.0)
+                    - org.apache.commons.math3.special.Gamma.logGamma(k + order + 1.0);
+            double term = Math.exp(lnTerm);
+            sum += term;
+            if (term < sum * 1e-17 && k > x / 2.0) {
+                break;
+            }
+        }
+        return sum;
     }
 
     /**

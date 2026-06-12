@@ -98,4 +98,67 @@ class StringLiteralTest {
         assertThrows(IllegalStateException.class,
                 () -> Evaluator.evalString(new Expr.Num(42.0)));
     }
+
+    // ── String variables (name$, Story 9.9 / Milestone 9) ────────────────
+
+    @Test
+    void stringVariableResolvesAndLeavesNumericSystem() {
+        // The definition is a compile-time constant: it is substituted and
+        // removed, so only the numeric equation remains.
+        List<Equation> equations = parser.parse("d$ = '1010'\nx = BaseConvert(d$, 2, 10)");
+        assertEquals(1, equations.size());
+        assertEquals(Set.of("x"), equations.get(0).variables());
+        assertEquals(10.0, Evaluator.eval(equations.get(0).rhs(), Map.of()), 1e-9);
+    }
+
+    @Test
+    void stringVariableDefinitionReversedSidesWorks() {
+        List<Equation> equations = parser.parse("'FF' = d$\nx = BaseConvert(d$, 16, 10)");
+        assertEquals(1, equations.size());
+        assertEquals(255.0, Evaluator.eval(equations.get(0).rhs(), Map.of()), 1e-9);
+    }
+
+    @Test
+    void stringVariableAsFluidName() {
+        // R$ = 'R134a' resolves inside the synthetic prop$ call encoding.
+        List<Equation> equations = parser.parse("R$ = 'R134a'\nh = Enthalpy(R$, T=300, x=1)");
+        assertEquals(1, equations.size());
+        Expr rhs = equations.get(0).rhs();
+        assertInstanceOf(Expr.Call.class, rhs);
+        assertTrue(((Expr.Call) rhs).function().startsWith("prop$enthalpy$r134a$"),
+                ((Expr.Call) rhs).function());
+    }
+
+    @Test
+    void undefinedStringVariableThrows() {
+        EquationParser.ParseException e = assertThrows(
+                EquationParser.ParseException.class,
+                () -> parser.parse("x = BaseConvert(d$, 2, 10)"));
+        assertTrue(e.getMessage().contains("d$"), e.getMessage());
+        assertTrue(e.getMessage().contains("not defined"), e.getMessage());
+    }
+
+    @Test
+    void conflictingStringVariableDefinitionsThrow() {
+        EquationParser.ParseException e = assertThrows(
+                EquationParser.ParseException.class,
+                () -> parser.parse("a$ = 'one'\na$ = 'two'"));
+        assertTrue(e.getMessage().contains("defined twice"), e.getMessage());
+    }
+
+    @Test
+    void stringVariableIsCaseInsensitive() {
+        List<Equation> equations = parser.parse("D$ = 'FF'\nx = BaseConvert(d$, 16, 10)");
+        assertEquals(1, equations.size());
+        assertEquals(255.0, Evaluator.eval(equations.get(0).rhs(), Map.of()), 1e-9);
+    }
+
+    @Test
+    void quotedConvertArguments() {
+        // Story 2.2 writes Convert('From', 'To'); quoted and bare both work.
+        List<Equation> equations = parser.parse("x = Convert('ft^2', 'in^2')");
+        assertEquals(144.0, Evaluator.eval(equations.get(0).rhs(), Map.of()), 1e-9);
+        List<Equation> bare = parser.parse("x = Convert(ft^2, in^2)");
+        assertEquals(144.0, Evaluator.eval(bare.get(0).rhs(), Map.of()), 1e-9);
+    }
 }

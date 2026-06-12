@@ -41,6 +41,9 @@ export interface PlotFormat {
   yLog: boolean | null
   grid: boolean
   legend: boolean
+  legendAlign?: 'left' | 'center' | 'right'
+  /** Title of the secondary (right) Y axis used by XYConfig.y2Vars. */
+  y2Label?: string
   fontSize: number
   celsius: boolean
   xMin?: number | null
@@ -57,6 +60,8 @@ export type ChartType = 'line' | 'bar' | 'pie' | 'histogram' | 'scatter' | 'surf
 export interface XYConfig {
   xVar: string | null
   yVars: string[]
+  /** Variables plotted against a secondary (right) Y axis. */
+  y2Vars?: string[]
   chartType?: ChartType
   zVar?: string | null
   sizeVar?: string | null

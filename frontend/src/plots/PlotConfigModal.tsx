@@ -124,6 +124,17 @@ function XYSection({
           />
         )}
       </Group>
+      {(chartType === 'line' || chartType === 'bar' || chartType === 'scatter') && (
+        <MultiSelect
+          label="Right Y-axis variables (optional, dual-Y)"
+          size="xs"
+          data={tableVars.filter((v) => !config.yVars.includes(v))}
+          value={config.y2Vars ?? []}
+          onChange={(y2Vars) => onChange({ ...config, y2Vars })}
+          searchable
+          clearable
+        />
+      )}
     </Stack>
   )
 }
@@ -384,6 +395,15 @@ function FormatSection({
           placeholder="auto"
           onChange={(e) => onChange({ ...format, yLabel: e.currentTarget.value })}
         />
+        {spec.kind === 'xy' && (spec.xy.y2Vars?.length ?? 0) > 0 && (
+          <TextInput
+            label="Right Y-axis label"
+            size="xs"
+            value={format.y2Label ?? ''}
+            placeholder="auto"
+            onChange={(e) => onChange({ ...format, y2Label: e.currentTarget.value })}
+          />
+        )}
       </Group>
       <Group grow>
         <NumberInput
@@ -483,6 +503,22 @@ function FormatSection({
           size="xs"
           checked={format.legend}
           onChange={(e) => onChange({ ...format, legend: e.currentTarget.checked })}
+        />
+        <Select
+          label="Legend alignment"
+          size="xs"
+          w={130}
+          data={[
+            { value: 'left', label: 'Left' },
+            { value: 'center', label: 'Center' },
+            { value: 'right', label: 'Right' },
+          ]}
+          value={format.legendAlign ?? 'center'}
+          onChange={(v) =>
+            onChange({ ...format, legendAlign: (v as 'left' | 'center' | 'right') ?? 'center' })
+          }
+          disabled={!format.legend}
+          allowDeselect={false}
         />
       </Group>
 

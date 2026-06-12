@@ -84,6 +84,10 @@ public final class EquationParser {
         List<Equation> equations = new ArrayList<>();
         flatten(statements, new HashMap<>(), constants, displayNames, equations, defs, moduleCounter);
 
+        // String variables (R$ = 'R134a') are compile-time constants:
+        // substitute their values and drop the definition equations.
+        equations = StringVariables.resolve(equations, displayNames);
+
         return new ParseResult(equations, displayNames, defs);
     }
 
