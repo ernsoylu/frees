@@ -253,7 +253,26 @@ public final class UnitRegistry {
 
     private static final String[] BASE_SYMBOLS = {"kg", "m", "s", "K", "mol", "A", "cd"};
 
-    private record NamedUnit(String symbol, double[] dims) {}
+    record NamedUnit(String symbol, double[] dims) {
+        @Override
+        public boolean equals(Object o) {
+            return o instanceof NamedUnit other
+                    && java.util.Objects.equals(symbol, other.symbol)
+                    && java.util.Arrays.equals(dims, other.dims);
+        }
+
+        @Override
+        public int hashCode() {
+            int result = java.util.Objects.hashCode(symbol);
+            result = 31 * result + java.util.Arrays.hashCode(dims);
+            return result;
+        }
+
+        @Override
+        public String toString() {
+            return "NamedUnit[symbol=" + symbol + ", dims=" + java.util.Arrays.toString(dims) + "]";
+        }
+    }
 
     private static final NamedUnit[] NAMED_SI_UNITS = {
             new NamedUnit("N", new double[]{1, 1, -2, 0, 0, 0, 0}),
@@ -338,7 +357,28 @@ public final class UnitRegistry {
      * Offsets occur only for bare temperature units (C, F); compound
      * expressions like kJ/kg-C use the multiplicative (delta) scale.
      */
-    public record OffsetQuantity(double factor, double offset, double[] dims) {}
+    public record OffsetQuantity(double factor, double offset, double[] dims) {
+        @Override
+        public boolean equals(Object o) {
+            return o instanceof OffsetQuantity other
+                    && Double.compare(factor, other.factor) == 0
+                    && Double.compare(offset, other.offset) == 0
+                    && java.util.Arrays.equals(dims, other.dims);
+        }
+
+        @Override
+        public int hashCode() {
+            int result = Double.hashCode(factor);
+            result = 31 * result + Double.hashCode(offset);
+            result = 31 * result + java.util.Arrays.hashCode(dims);
+            return result;
+        }
+
+        @Override
+        public String toString() {
+            return "OffsetQuantity[factor=" + factor + ", offset=" + offset + ", dims=" + java.util.Arrays.toString(dims) + "]";
+        }
+    }
 
     private static final double[] TEMPERATURE_DIMS = {0, 0, 0, 1, 0, 0, 0};
     public static final double FAHRENHEIT_OFFSET_K = 459.67 * 5.0 / 9.0;
@@ -363,7 +403,30 @@ public final class UnitRegistry {
     public enum UnitSystem { SI, ENG_SI, ENGLISH }
 
     /** display = (si - offset) / factor */
-    public record DisplayUnit(String name, double factor, double offset, double[] dims) {}
+    public record DisplayUnit(String name, double factor, double offset, double[] dims) {
+        @Override
+        public boolean equals(Object o) {
+            return o instanceof DisplayUnit other
+                    && java.util.Objects.equals(name, other.name)
+                    && Double.compare(factor, other.factor) == 0
+                    && Double.compare(offset, other.offset) == 0
+                    && java.util.Arrays.equals(dims, other.dims);
+        }
+
+        @Override
+        public int hashCode() {
+            int result = java.util.Objects.hashCode(name);
+            result = 31 * result + Double.hashCode(factor);
+            result = 31 * result + Double.hashCode(offset);
+            result = 31 * result + java.util.Arrays.hashCode(dims);
+            return result;
+        }
+
+        @Override
+        public String toString() {
+            return "DisplayUnit[name=" + name + ", factor=" + factor + ", offset=" + offset + ", dims=" + java.util.Arrays.toString(dims) + "]";
+        }
+    }
 
     private static DisplayUnit display(String name, double factor, double offset,
                                        double... exponents) {

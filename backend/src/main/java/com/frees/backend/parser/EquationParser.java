@@ -255,7 +255,10 @@ public final class EquationParser {
                         Expr term = new Expr.BinOp('*', rhsMat.elements[i][k], lhsMat.elements[k][j]);
                         sum = sum == null ? term : new Expr.BinOp('+', sum, term);
                     }
-                    double expected = (i == j) ? 1.0 : 0.0;
+                    double expected = 0.0;
+                    if (i == j) {
+                        expected = 1.0;
+                    }
                     ctx.out().add(new Equation(sum, new Expr.Num(expected), sourceText));
                 }
             }
