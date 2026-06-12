@@ -535,12 +535,12 @@ public class EquationSystemSolver {
         EquationParser.ParseResult parsed = parser.parseResult(source);
         Map<String, String> inferred = new HashMap<>();
         for (Equation eq : parsed.equations()) {
-            if (eq.lhs() instanceof Expr.Var v && eq.rhs() instanceof Expr.Num n
-                    && n.unit() != null) {
-                inferred.putIfAbsent(v.name(), n.unit());
-            } else if (eq.rhs() instanceof Expr.Var v && eq.lhs() instanceof Expr.Num n
-                    && n.unit() != null) {
-                inferred.putIfAbsent(v.name(), n.unit());
+            if (eq.lhs() instanceof Expr.Var(String name) && eq.rhs() instanceof Expr.Num(double val, String unit, boolean isImaginary)
+                    && unit != null) {
+                inferred.putIfAbsent(name, unit);
+            } else if (eq.rhs() instanceof Expr.Var(String name) && eq.lhs() instanceof Expr.Num(double val, String unit, boolean isImaginary)
+                    && unit != null) {
+                inferred.putIfAbsent(name, unit);
             }
         }
         // Key by the display spelling so the frontend tables match directly.

@@ -14,7 +14,7 @@ public sealed interface ProcStatement permits
         ProcStatement.Duplicate {
 
     /** Sequential assignment: var := expr */
-    record Assign(String var, Expr value) implements ProcStatement {}
+    record Assign(String varName, Expr value) implements ProcStatement {}
 
     /** IF condition THEN thenBranch [ELSE elseBranch] END */
     record IfElse(Expr condition, List<ProcStatement> thenBranch,

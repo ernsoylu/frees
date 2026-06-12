@@ -24,6 +24,8 @@ import java.util.LinkedHashSet;
  */
 public final class ComplexExpansion {
 
+    private static final String ATAN2 = "atan2";
+
     private ComplexExpansion() {}
 
     /** Functions with explicit complex-expansion rules below. */
@@ -46,7 +48,7 @@ public final class ComplexExpansion {
         if (isLiteralZero(d)) {
             return rPowC;
         }
-        Expr theta = new Expr.Call("atan2", List.of(b, a));
+        Expr theta = new Expr.Call(ATAN2, List.of(b, a));
         Expr eTerm = new Expr.Call("exp",
                 List.of(new Expr.Neg(new Expr.BinOp('*', d, theta))));
         return new Expr.BinOp('*', rPowC, eTerm);
@@ -54,7 +56,7 @@ public final class ComplexExpansion {
 
     /** arg(z^w): c*theta + d*ln(r), with the d-term omitted for real exponents. */
     private static Expr powerAngle(Expr a, Expr b, Expr c, Expr d) {
-        Expr theta = new Expr.Call("atan2", List.of(b, a));
+        Expr theta = new Expr.Call(ATAN2, List.of(b, a));
         Expr cTheta = new Expr.BinOp('*', c, theta);
         if (isLiteralZero(d)) {
             return cTheta;
@@ -66,74 +68,76 @@ public final class ComplexExpansion {
 
     private static Expr simplify(Expr e) {
         return switch (e) {
-            case Expr.Neg neg -> {
-                Expr op = simplify(neg.operand());
-                if (op instanceof Expr.Num n && n.value() == 0.0) {
+            case Expr.Neg(Expr operand) -> {
+                Expr op = simplify(operand);
+                if (op instanceof Expr.Num(double value, String unit, boolean isImaginary) && value == 0.0) {
                     yield op;
                 }
-                if (op instanceof Expr.Neg inner) {
-                    yield inner.operand();
+                if (op instanceof Expr.Neg(Expr inner)) {
+                    yield inner;
                 }
                 yield new Expr.Neg(op);
             }
-            case Expr.BinOp b -> {
-                Expr l = simplify(b.left());
-                Expr r = simplify(b.right());
-                boolean lZero = l instanceof Expr.Num n && n.value() == 0.0;
-                boolean rZero = r instanceof Expr.Num n && n.value() == 0.0;
-                boolean lOne = l instanceof Expr.Num n && n.value() == 1.0;
-                boolean rOne = r instanceof Expr.Num n && n.value() == 1.0;
-
-                yield switch (b.op()) {
-                    case '+' -> {
-                        if (lZero) yield r;
-                        if (rZero) yield l;
-                        yield new Expr.BinOp('+', l, r);
-                    }
-                    case '-' -> {
-                        if (rZero) yield l;
-                        if (lZero) yield new Expr.Neg(r);
-                        yield new Expr.BinOp('-', l, r);
-                    }
-                    case '*' -> {
-                        if (lZero || rZero) yield new Expr.Num(0.0);
-                        if (lOne) yield r;
-                        if (rOne) yield l;
-                        yield new Expr.BinOp('*', l, r);
-                    }
-                    case '/' -> {
-                        if (lZero) yield new Expr.Num(0.0);
-                        if (rOne) yield l;
-                        yield new Expr.BinOp('/', l, r);
-                    }
-                    case '^' -> {
-                        if (rZero) yield new Expr.Num(1.0);
-                        if (rOne) yield l;
-                        if (lZero) yield new Expr.Num(0.0);
-                        yield new Expr.BinOp('^', l, r);
-                    }
-                    default -> new Expr.BinOp(b.op(), l, r);
-                };
-            }
-            case Expr.Call c -> {
-                List<Expr> args = c.args().stream().map(ComplexExpansion::simplify).toList();
+            case Expr.BinOp(char op, Expr left, Expr right) -> simplifyBinOp(op, left, right);
+            case Expr.Call(String function, List<Expr> args) -> {
+                List<Expr> simplifiedArgs = args.stream().map(ComplexExpansion::simplify).toList();
                 // The expansion rules wrap structurally real subtrees in
                 // sin/cos/atan2 (e.g. |z|^w produces sin(w*atan2(0, sqrt(..)))).
                 // Folding these reveals which imaginary parts are identically
                 // zero, so the matching below sees the true structure.
-                if ("atan2".equals(c.function()) && args.size() == 2
-                        && isLiteralZero(args.get(0)) && isNonNegative(args.get(1))) {
+                if (ATAN2.equals(function) && simplifiedArgs.size() == 2
+                        && isLiteralZero(simplifiedArgs.get(0)) && isNonNegative(simplifiedArgs.get(1))) {
                     yield new Expr.Num(0.0);
                 }
-                if ("sin".equals(c.function()) && args.size() == 1 && isLiteralZero(args.get(0))) {
+                if ("sin".equals(function) && simplifiedArgs.size() == 1 && isLiteralZero(simplifiedArgs.get(0))) {
                     yield new Expr.Num(0.0);
                 }
-                if ("cos".equals(c.function()) && args.size() == 1 && isLiteralZero(args.get(0))) {
+                if ("cos".equals(function) && simplifiedArgs.size() == 1 && isLiteralZero(simplifiedArgs.get(0))) {
                     yield new Expr.Num(1.0);
                 }
-                yield new Expr.Call(c.function(), args);
+                yield new Expr.Call(function, simplifiedArgs);
             }
             default -> e;
+        };
+    }
+
+    private static Expr simplifyBinOp(char op, Expr left, Expr right) {
+        Expr l = simplify(left);
+        Expr r = simplify(right);
+        boolean lZero = l instanceof Expr.Num(double value, String unit, boolean isImaginary) && value == 0.0;
+        boolean rZero = r instanceof Expr.Num(double value, String unit, boolean isImaginary) && value == 0.0;
+        boolean lOne = l instanceof Expr.Num(double value, String unit, boolean isImaginary) && value == 1.0;
+        boolean rOne = r instanceof Expr.Num(double value, String unit, boolean isImaginary) && value == 1.0;
+
+        return switch (op) {
+            case '+' -> {
+                if (lZero) yield r;
+                if (rZero) yield l;
+                yield new Expr.BinOp('+', l, r);
+            }
+            case '-' -> {
+                if (rZero) yield l;
+                if (lZero) yield new Expr.Neg(r);
+                yield new Expr.BinOp('-', l, r);
+            }
+            case '*' -> {
+                if (lZero || rZero) yield new Expr.Num(0.0);
+                if (lOne) yield r;
+                if (rOne) yield l;
+                yield new Expr.BinOp('*', l, r);
+            }
+            case '/' -> {
+                if (lZero) yield new Expr.Num(0.0);
+                if (rOne) yield l;
+                yield new Expr.BinOp('/', l, r);
+            }
+            case '^' -> {
+                if (rZero) yield new Expr.Num(1.0);
+                if (rOne) yield l;
+                if (lZero) yield new Expr.Num(0.0);
+                yield new Expr.BinOp('^', l, r);
+            }
+            default -> new Expr.BinOp(op, l, r);
         };
     }
 
@@ -154,17 +158,17 @@ public final class ComplexExpansion {
 
     private static boolean mentionsImaginary(Expr e) {
         return switch (e) {
-            case Expr.Num n -> n.isImaginary();
-            case Expr.Var v -> false;
-            case Expr.Neg neg -> mentionsImaginary(neg.operand());
-            case Expr.BinOp b -> mentionsImaginary(b.left()) || mentionsImaginary(b.right());
-            case Expr.Call c -> c.args().stream().anyMatch(ComplexExpansion::mentionsImaginary);
-            case Expr.ArrayAccess aa -> aa.indices().stream().anyMatch(ComplexExpansion::mentionsImaginary);
-            case Expr.Range r -> mentionsImaginary(r.start()) || mentionsImaginary(r.end());
-            case Expr.ArrayLiteral al -> al.elements().stream().anyMatch(ComplexExpansion::mentionsImaginary);
-            case Expr.Compare cmp -> mentionsImaginary(cmp.left()) || mentionsImaginary(cmp.right());
-            case Expr.Logical log -> mentionsImaginary(log.left()) || mentionsImaginary(log.right());
-            case Expr.Not not -> mentionsImaginary(not.operand());
+            case Expr.Num(double value, String unit, boolean isImaginary) -> isImaginary;
+            case Expr.Var(String name) -> false;
+            case Expr.Neg(Expr operand) -> mentionsImaginary(operand);
+            case Expr.BinOp(char op, Expr left, Expr right) -> mentionsImaginary(left) || mentionsImaginary(right);
+            case Expr.Call(String function, List<Expr> args) -> args.stream().anyMatch(ComplexExpansion::mentionsImaginary);
+            case Expr.ArrayAccess(String name, List<Expr> indices) -> indices.stream().anyMatch(ComplexExpansion::mentionsImaginary);
+            case Expr.Range(Expr start, Expr end) -> mentionsImaginary(start) || mentionsImaginary(end);
+            case Expr.ArrayLiteral(List<Expr> elements) -> elements.stream().anyMatch(ComplexExpansion::mentionsImaginary);
+            case Expr.Compare(String op, Expr left, Expr right) -> mentionsImaginary(left) || mentionsImaginary(right);
+            case Expr.Logical(String op, Expr left, Expr right) -> mentionsImaginary(left) || mentionsImaginary(right);
+            case Expr.Not(Expr operand) -> mentionsImaginary(operand);
         };
     }
 
@@ -172,6 +176,27 @@ public final class ComplexExpansion {
         List<Equation> expanded = new ArrayList<>();
         Set<String> baseVars = new TreeSet<>();
 
+        generateRealImagEquations(equations, displayNames, baseVars, expanded);
+
+        // Collect all expanded variables and their real/imag parts
+        Set<String> allVars = new TreeSet<>();
+        for (String baseVar : baseVars) {
+            allVars.add(baseVar + "_r");
+            allVars.add(baseVar + "_i");
+        }
+
+        // Run bipartite matching to find unmatched variables
+        Map<String, Integer> varToEq = new HashMap<>();
+        Map<Integer, String> eqToVar = new HashMap<>();
+        matchExpandedVariables(expanded, allVars, varToEq, eqToVar);
+
+        pinUnmatchedImaginaryParts(expanded, allVars, varToEq, eqToVar, equations);
+
+        return expanded;
+    }
+
+    private static void generateRealImagEquations(List<Equation> equations, Map<String, String> displayNames,
+                                                  Set<String> baseVars, List<Equation> expanded) {
         for (Equation eq : equations) {
             baseVars.addAll(eq.variables());
 
@@ -185,21 +210,16 @@ public final class ComplexExpansion {
                 expanded.add(new Equation(li, ri, eq.sourceText() + " (imag)"));
             }
 
-            for (String var : eq.variables()) {
-                String disp = displayNames.getOrDefault(var, var);
-                displayNames.put(var + "_r", disp + "_r");
-                displayNames.put(var + "_i", disp + "_i");
+            for (String varName : eq.variables()) {
+                String disp = displayNames.getOrDefault(varName, varName);
+                displayNames.put(varName + "_r", disp + "_r");
+                displayNames.put(varName + "_i", disp + "_i");
             }
         }
+    }
 
-        // Collect all expanded variables and their real/imag parts
-        Set<String> allVars = new TreeSet<>();
-        for (String baseVar : baseVars) {
-            allVars.add(baseVar + "_r");
-            allVars.add(baseVar + "_i");
-        }
-
-        // Run bipartite matching to find unmatched variables
+    private static void matchExpandedVariables(List<Equation> expanded, Set<String> allVars,
+                                               Map<String, Integer> varToEq, Map<Integer, String> eqToVar) {
         Graph<String, DefaultEdge> graph = new SimpleGraph<>(DefaultEdge.class);
         Set<String> eqNodes = new LinkedHashSet<>();
         Set<String> varNodes = new LinkedHashSet<>();
@@ -209,14 +229,14 @@ public final class ComplexExpansion {
             eqNodes.add(eqNode);
             graph.addVertex(eqNode);
         }
-        for (String var : allVars) {
-            String varNode = "var:" + var;
+        for (String varName : allVars) {
+            String varNode = "var:" + varName;
             varNodes.add(varNode);
             graph.addVertex(varNode);
         }
         for (int i = 0; i < expanded.size(); i++) {
-            for (String var : expanded.get(i).variables()) {
-                graph.addEdge("eq:" + i, "var:" + var);
+            for (String varName : expanded.get(i).variables()) {
+                graph.addEdge("eq:" + i, "var:" + varName);
             }
         }
 
@@ -224,19 +244,21 @@ public final class ComplexExpansion {
                 new HopcroftKarpMaximumCardinalityBipartiteMatching<>(graph, eqNodes, varNodes)
                         .getMatching();
 
-        Map<String, Integer> varToEq = new HashMap<>();
-        Map<Integer, String> eqToVar = new HashMap<>();
         for (DefaultEdge edge : matching.getEdges()) {
             String source = graph.getEdgeSource(edge);
             String target = graph.getEdgeTarget(edge);
             String varNode = source.startsWith("var:") ? source : target;
             String eqNode = source.startsWith("eq:") ? source : target;
-            String var = varNode.substring(4);
+            String varName = varNode.substring(4);
             int eq = Integer.parseInt(eqNode.substring(3));
-            varToEq.put(var, eq);
-            eqToVar.put(eq, var);
+            varToEq.put(varName, eq);
+            eqToVar.put(eq, varName);
         }
+    }
 
+    private static void pinUnmatchedImaginaryParts(List<Equation> expanded, Set<String> allVars,
+                                                   Map<String, Integer> varToEq, Map<Integer, String> eqToVar,
+                                                   List<Equation> equations) {
         // An exposed variable signals phase freedom: an equation like
         // Q = abs(V)^2 / abs(Z) constrains only the magnitude of Z, leaving a
         // rotational degree of freedom that some complex variable absorbs.
@@ -252,16 +274,16 @@ public final class ComplexExpansion {
         }
         Map<String, List<Integer>> eqsByVar = new HashMap<>();
         for (int i = 0; i < expanded.size(); i++) {
-            for (String var : expanded.get(i).variables()) {
-                eqsByVar.computeIfAbsent(var, k -> new ArrayList<>()).add(i);
+            for (String varName : expanded.get(i).variables()) {
+                eqsByVar.computeIfAbsent(varName, k -> new ArrayList<>()).add(i);
             }
         }
         int sizeBeforePins = expanded.size();
-        for (String var : allVars) {
-            if (varToEq.containsKey(var)) {
+        for (String varName : allVars) {
+            if (varToEq.containsKey(varName)) {
                 continue;
             }
-            String pin = swapToPreferredImaginary(var, eqsByVar, varToEq, eqToVar,
+            String pin = swapToPreferredImaginary(varName, eqsByVar, varToEq, eqToVar,
                     baseOccurrences);
             if (pin == null) {
                 continue; // structurally singular; the Blocker reports it
@@ -283,8 +305,6 @@ public final class ComplexExpansion {
                 }
             }
         }
-
-        return expanded;
     }
 
     /**

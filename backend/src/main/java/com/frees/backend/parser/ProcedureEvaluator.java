@@ -80,46 +80,46 @@ public final class ProcedureEvaluator {
 
     private void executeOne(ProcStatement stmt, Map<String, Double> locals) {
         switch (stmt) {
-            case ProcStatement.Assign a -> {
-                double val = evalExpr(a.value(), locals);
-                locals.put(a.var().toLowerCase(), val);
+            case ProcStatement.Assign(String varName, Expr value) -> {
+                double val = evalExpr(value, locals);
+                locals.put(varName.toLowerCase(), val);
             }
-            case ProcStatement.IfElse ife -> {
-                double cond = evalExpr(ife.condition(), locals);
+            case ProcStatement.IfElse(Expr condition, List<ProcStatement> thenBranch, List<ProcStatement> elseBranch) -> {
+                double cond = evalExpr(condition, locals);
                 if (cond != 0.0) {
-                    executeBody(ife.thenBranch(), locals);
+                    executeBody(thenBranch, locals);
                 } else {
-                    executeBody(ife.elseBranch(), locals);
+                    executeBody(elseBranch, locals);
                 }
             }
-            case ProcStatement.RepeatUntil ru -> {
+            case ProcStatement.RepeatUntil(List<ProcStatement> body, Expr condition) -> {
                 int iterations = 0;
                 do {
-                    executeBody(ru.body(), locals);
+                    executeBody(body, locals);
                     if (++iterations > MAX_ITERATIONS) {
                         throw new IllegalStateException("REPEAT-UNTIL exceeded " + MAX_ITERATIONS + " iterations");
                     }
-                } while (evalExpr(ru.condition(), locals) == 0.0);
+                } while (evalExpr(condition, locals) == 0.0);
             }
-            case ProcStatement.Eq eq -> {
+            case ProcStatement.Eq(Expr lhs, Expr rhs, String sourceText) -> {
                 // An equation inside a function body: treat it as an assignment
                 // if one side is a simple variable; otherwise it's informational.
-                if (eq.lhs() instanceof Expr.Var v) {
-                    locals.put(v.name(), evalExpr(eq.rhs(), locals));
-                } else if (eq.rhs() instanceof Expr.Var v) {
-                    locals.put(v.name(), evalExpr(eq.lhs(), locals));
+                if (lhs instanceof Expr.Var(String name)) {
+                    locals.put(name, evalExpr(rhs, locals));
+                } else if (rhs instanceof Expr.Var(String name)) {
+                    locals.put(name, evalExpr(lhs, locals));
                 }
             }
-            case ProcStatement.Duplicate dup -> {
-                double startVal = evalExpr(dup.start(), locals);
-                double endVal = evalExpr(dup.end(), locals);
-                int start = (int) Math.round(startVal);
-                int end = (int) Math.round(endVal);
-                int step = start <= end ? 1 : -1;
-                for (int i = start; i != end + step; i += step) {
+            case ProcStatement.Duplicate(String varName, Expr start, Expr end, List<ProcStatement> body) -> {
+                double startVal = evalExpr(start, locals);
+                double endVal = evalExpr(end, locals);
+                int startValInt = (int) Math.round(startVal);
+                int endValInt = (int) Math.round(endVal);
+                int step = startValInt <= endValInt ? 1 : -1;
+                for (int i = startValInt; i != endValInt + step; i += step) {
                     Map<String, Double> loopLocals = new HashMap<>(locals);
-                    loopLocals.put(dup.varName().toLowerCase(), (double) i);
-                    executeBody(dup.body(), loopLocals);
+                    loopLocals.put(varName.toLowerCase(), (double) i);
+                    executeBody(body, loopLocals);
                     locals.putAll(loopLocals);
                 }
             }
