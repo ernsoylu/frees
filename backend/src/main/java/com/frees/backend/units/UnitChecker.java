@@ -411,6 +411,20 @@ public final class UnitChecker {
         if (c.function().startsWith("prop$")) {
             return propertyDim(c.function());
         }
+        // Eigendecomposition: matrix entries may carry any units. Eigenvalues
+        // inherit the entry dimensions; eigenvector components are dimensionless.
+        if (c.function().startsWith("eigen$")) {
+            if (c.function().startsWith("eigen$vec")) {
+                return Dim.of(Quantity.dimensionless(1.0));
+            }
+            for (Expr arg : c.args()) {
+                Dim d = dimOf(arg);
+                if (d.known()) {
+                    return d;
+                }
+            }
+            return Dim.UNKNOWN;
+        }
         List<Expr> args = c.args();
         return switch (c.function()) {
             case "abs", "real", "imag" -> dimOf(args.get(0));

@@ -340,4 +340,53 @@ class EquationSystemSolverTest {
             throw e;
         }
     }
+
+    @Test
+    void solvesEigenvaluesOfSymmetricMatrix() {
+        EquationSystemSolver.Result result = solver.solve(
+                "A[1,1] = 2; A[1,2] = 1\n" +
+                "A[2,1] = 1; A[2,2] = 2\n" +
+                "CALL Eigenvalues(A[1..2,1..2] : lambda[1..2])");
+
+        // Eigenvalues of [[2,1],[1,2]] are 1 and 3, reported in ascending order.
+        assertEquals(1.0, result.variables().get("lambda[1]"), 1e-8);
+        assertEquals(3.0, result.variables().get("lambda[2]"), 1e-8);
+    }
+
+    @Test
+    void solvesEigenDecompositionWithVectorsAndDownstreamEquations() {
+        EquationSystemSolver.Result result = solver.solve(
+                "A[1,1] = 2; A[1,2] = 1\n" +
+                "A[2,1] = 1; A[2,2] = 2\n" +
+                "CALL Eigen(A[1..2,1..2] : lambda[1..2], V[1..2,1..2])\n" +
+                "trace = lambda[1] + lambda[2]");
+
+        double s = Math.sqrt(0.5);
+        assertEquals(1.0, result.variables().get("lambda[1]"), 1e-8);
+        assertEquals(3.0, result.variables().get("lambda[2]"), 1e-8);
+        // Column k holds the unit eigenvector of lambda[k]; sign fixed so the
+        // largest-magnitude component is positive.
+        assertEquals(s, Math.abs(result.variables().get("V[1, 1]")), 1e-8);
+        assertEquals(s, Math.abs(result.variables().get("V[2, 1]")), 1e-8);
+        assertEquals(-1.0, result.variables().get("V[1, 1]") * result.variables().get("V[2, 1]") / 0.5, 1e-8);
+        assertEquals(s, result.variables().get("V[1, 2]"), 1e-8);
+        assertEquals(s, result.variables().get("V[2, 2]"), 1e-8);
+        assertEquals(4.0, result.variables().get("trace"), 1e-8);
+    }
+
+    @Test
+    void eigenWaitsForMatrixEntriesSolvedElsewhere() {
+        // A's entries are themselves unknowns: Tarjan must order the
+        // eigendecomposition after the block that determines them.
+        EquationSystemSolver.Result result = solver.solve(
+                "x + y = 5\n" +
+                "x - y = 1\n" +
+                "A[1,1] = x; A[1,2] = 0\n" +
+                "A[2,1] = 0; A[2,2] = y\n" +
+                "CALL Eigenvalues(A[1..2,1..2] : lambda[1..2])");
+
+        // x = 3, y = 2 -> diagonal matrix with eigenvalues 2 and 3 ascending.
+        assertEquals(2.0, result.variables().get("lambda[1]"), 1e-8);
+        assertEquals(3.0, result.variables().get("lambda[2]"), 1e-8);
+    }
 }
