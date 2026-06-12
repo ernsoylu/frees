@@ -139,6 +139,7 @@ powExpr
 atom
     : NUMBER unit?                           # NumberAtom
     | IMAG_NUMBER unit?                      # ImagNumberAtom
+    | STRING_LITERAL                          # StringAtom
     | IDENT LPAREN argList RPAREN            # CallAtom
     | IDENT LBRACKET arrayIndexList RBRACKET # ArrayAtom
     | IDENT                                  # VarAtom
@@ -216,6 +217,12 @@ CALL      : [cC][aA][lL][lL] ;
 AND       : [aA][nN][dD] ;
 OR        : [oO][rR] ;
 NOT       : [nN][oO][tT] ;
+
+// ── String literals ────────────────────────────────────────────────────────────
+
+STRING_LITERAL
+    : '\'' ( ~'\'' )* '\''
+    ;
 
 // ── Literals & identifiers ─────────────────────────────────────────────────────
 

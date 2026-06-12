@@ -36,6 +36,7 @@ import VariableInfoModal, {
   VariableDraft,
 } from './VariableInfoModal'
 import MinMaxModal from './MinMaxModal'
+import CurveFitModal from './CurveFitModal'
 import FormattedReportView, { MathWithBadges } from './FormattedReportView'
 import ConfigureTableModal from './ConfigureTableModal'
 import AlterValuesModal from './AlterValuesModal'
@@ -166,6 +167,7 @@ export default function App() {
   const [varDrafts, setVarDrafts] = useState<Record<string, VariableDraft>>({})
   const [showVariableInfo, setShowVariableInfo] = useState(false)
   const [showMinMax, setShowMinMax] = useState(false)
+  const [showCurveFit, setShowCurveFit] = useState(false)
   const [activeTab, setActiveTab] = useState<string>('equations')
   const [eqView, setEqView] = useState<'editor' | 'formatted'>('editor')
 
@@ -617,6 +619,7 @@ export default function App() {
         onSelect={setActiveTab}
         onVariableInfo={() => setShowVariableInfo(true)}
         onMinMax={() => setShowMinMax(true)}
+        onCurveFit={() => setShowCurveFit(true)}
         onPreferences={() => setShowPreferences(true)}
       />
 
@@ -687,6 +690,8 @@ export default function App() {
           onClose={() => setShowMinMax(false)}
         />
       )}
+
+      {showCurveFit && <CurveFitModal onClose={() => setShowCurveFit(false)} />}
 
 
       <Flex direction="column" flex={1} miw={0} p="sm" gap="sm">

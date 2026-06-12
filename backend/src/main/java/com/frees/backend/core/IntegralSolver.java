@@ -209,6 +209,7 @@ public final class IntegralSolver {
     public static boolean mentionsIntegral(Expr e) {
         return switch (e) {
             case Expr.Num(double value, String unit, boolean isImaginary) -> false;
+            case Expr.Str s -> false;
             case Expr.Var(String name) -> false;
             case Expr.Neg(Expr operand) -> mentionsIntegral(operand);
             case Expr.BinOp(char op, Expr left, Expr right) -> mentionsIntegral(left) || mentionsIntegral(right);

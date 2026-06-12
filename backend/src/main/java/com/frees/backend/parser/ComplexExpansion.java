@@ -177,6 +177,7 @@ public final class ComplexExpansion {
     private static boolean mentionsImaginary(Expr e) {
         return switch (e) {
             case Expr.Num(double value, String unit, boolean isImaginary) -> isImaginary;
+            case Expr.Str s -> false;
             case Expr.Var(String name) -> false;
             case Expr.Neg(Expr operand) -> mentionsImaginary(operand);
             case Expr.BinOp(char op, Expr left, Expr right) -> mentionsImaginary(left) || mentionsImaginary(right);
@@ -389,6 +390,7 @@ public final class ComplexExpansion {
     public static Expr realPart(Expr e) {
         return switch (e) {
             case Expr.Num(double value, String unit, boolean isImaginary) -> isImaginary ? new Expr.Num(0.0, unit) : new Expr.Num(value, unit, isImaginary);
+            case Expr.Str s -> s;
             case Expr.Var(String name) -> new Expr.Var(name + "_r");
             case Expr.Neg(Expr operand) -> new Expr.Neg(realPart(operand));
             case Expr.BinOp(char op, Expr left, Expr right) -> {
@@ -480,6 +482,7 @@ public final class ComplexExpansion {
     public static Expr imagPart(Expr e) {
         return switch (e) {
             case Expr.Num(double value, String unit, boolean isImaginary) -> isImaginary ? new Expr.Num(value, unit) : new Expr.Num(0.0);
+            case Expr.Str s -> new Expr.Num(0.0);
             case Expr.Var(String name) -> new Expr.Var(name + "_i");
             case Expr.Neg(Expr operand) -> new Expr.Neg(imagPart(operand));
             case Expr.BinOp(char op, Expr left, Expr right) -> {

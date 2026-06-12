@@ -68,4 +68,21 @@ class BitwiseAndSpecialMathTest {
         // erfinv(0.5) ≈ 0.476936276
         assertEquals(0.476936276, vars.get("g"), 1e-6);
     }
+
+    @Test
+    void testBaseConvert() {
+        String code = """
+                a = BaseConvert('FF', 16, 10)
+                b = BaseConvert('1010', 2, 10)
+                c = BaseConvert('255', 10, 2)
+                d = BaseConvert(777, 8, 10)
+                """;
+        var result = solver.solve(code, SolverSettings.DEFAULTS);
+        Map<String, Double> vars = result.variables();
+
+        assertEquals(255.0, vars.get("a"), 1e-9);
+        assertEquals(10.0, vars.get("b"), 1e-9);
+        assertEquals(11111111.0, vars.get("c"), 1e-9);
+        assertEquals(511.0, vars.get("d"), 1e-9);
+    }
 }

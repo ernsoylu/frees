@@ -91,6 +91,65 @@ class OptimizerTest {
     }
 
     @Test
+    void minimizesWithInequalityConstraintBarrier() {
+        // min (x-3)^2 + (y-2)^2 s.t. x + y <= 4.
+        // The unconstrained optimum (3, 2) is infeasible; the constrained
+        // optimum lies on x + y = 4 at (2.5, 1.5) with f = 0.5.
+        Optimizer.OptimizeResult result = optimizer.optimize(new Optimizer.Problem(
+                "f = (x - 3)^2 + (y - 2)^2",
+                SolverSettings.DEFAULTS,
+                Map.of(),
+                "f",
+                java.util.List.of("x", "y"),
+                java.util.List.of(0.0, 0.0),
+                java.util.List.of(10.0, 10.0),
+                "simplex",
+                false,
+                java.util.List.of("x + y <= 4")
+        ));
+        assertEquals(2.5, result.decisionValues()[0], 1e-2);
+        assertEquals(1.5, result.decisionValues()[1], 1e-2);
+        assertEquals(0.5, result.objectiveValue(), 1e-2);
+    }
+
+    @Test
+    void maximizesWithEqualityConstraintAugmentedLagrangian() {
+        // max x * y s.t. x + y = 10 -> x = y = 5, f = 25.
+        Optimizer.OptimizeResult result = optimizer.optimize(new Optimizer.Problem(
+                "f = x * y",
+                SolverSettings.DEFAULTS,
+                Map.of(),
+                "f",
+                java.util.List.of("x", "y"),
+                java.util.List.of(0.0, 0.0),
+                java.util.List.of(10.0, 10.0),
+                "simplex",
+                true,
+                java.util.List.of("x + y = 10")
+        ));
+        assertEquals(5.0, result.decisionValues()[0], 1e-2);
+        assertEquals(5.0, result.decisionValues()[1], 1e-2);
+        assertEquals(25.0, result.objectiveValue(), 1e-1);
+    }
+
+    @Test
+    void rejectsMalformedConstraint() {
+        SolverException e = assertThrows(SolverException.class,
+                () -> optimizer.optimize(new Optimizer.Problem(
+                        "f = x^2",
+                        SolverSettings.DEFAULTS,
+                        Map.of(),
+                        "f",
+                        java.util.List.of("x"),
+                        java.util.List.of(-1.0),
+                        java.util.List.of(1.0),
+                        "simplex",
+                        false,
+                        java.util.List.of("x + y"))));
+        assertTrue(e.getMessage().contains("Cannot parse constraint"), e.getMessage());
+    }
+
+    @Test
     void rejectsInvalidBounds() {
         SolverException e = assertThrows(SolverException.class,
                 () -> run("y = x^2", "y", "x", 5, 5, false));

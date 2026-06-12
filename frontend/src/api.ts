@@ -254,6 +254,7 @@ export interface OptimizeParams {
   lower: number
   upper: number
   maximize: boolean
+  constraints?: string[]
 }
 
 export interface OptimizeResponse {
@@ -323,6 +324,72 @@ export async function optimize(
       decision: null,
       evaluations: 0,
       variables: [],
+    }
+  }
+}
+
+export interface CurveFitParams {
+  model: string
+  yVariable: string
+  xVariable: string
+  parameters: string[]
+  xData: number[]
+  yData: number[]
+  initialGuess?: number[]
+}
+
+export interface CurveFitResponse {
+  success: boolean
+  error: string | null
+  fittedParameters: number[]
+  parameterNames: string[]
+  rSquared: number
+  rmse: number
+  iterations: number
+  residuals: number[]
+  fittedValues: number[]
+}
+
+const CURVE_FIT_FAILURE: Omit<CurveFitResponse, 'error'> = {
+  success: false,
+  fittedParameters: [],
+  parameterNames: [],
+  rSquared: 0,
+  rmse: 0,
+  iterations: 0,
+  residuals: [],
+  fittedValues: [],
+}
+
+export async function curveFit(params: CurveFitParams): Promise<CurveFitResponse> {
+  try {
+    const response = await fetch(`${API_BASE}/api/curve-fit`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(params),
+    })
+    const data = await response.json().catch(() => null)
+    if (!response.ok) {
+      return {
+        ...CURVE_FIT_FAILURE,
+        error: data?.error || data?.message || `Server error (${response.status})`,
+      }
+    }
+    return {
+      success: data?.success ?? false,
+      error: data?.error ?? null,
+      fittedParameters: data?.fittedParameters ?? [],
+      parameterNames: data?.parameterNames ?? [],
+      rSquared: data?.rSquared ?? 0,
+      rmse: data?.rmse ?? 0,
+      iterations: data?.iterations ?? 0,
+      residuals: data?.residuals ?? [],
+      fittedValues: data?.fittedValues ?? [],
+    }
+  } catch (e) {
+    return {
+      ...CURVE_FIT_FAILURE,
+      error: `Could not reach the solver backend: ${String(e)}`,
     }
   }
 }

@@ -717,8 +717,21 @@ Here is the thermodynamic T-s diagram showing the cycle state points:
                   <Table.Td>Bessel function of the first kind J_order(x)</Table.Td>
                   <Table.Td><Code>y = besselj(2.5, 0)</Code> (y = -0.0484)</Table.Td>
                 </Table.Tr>
+                <Table.Tr>
+                  <Table.Td><Code>BaseConvert(digits, from, to)</Code></Table.Td>
+                  <Table.Td>Converts a number between bases 2–36. The digits are given as a string literal (or an integer); the result is returned as the number whose decimal digits spell the converted value, so the target base should be 10 or lower-digit.</Table.Td>
+                  <Table.Td><Code>{`y = BaseConvert('FF', 16, 10)`}</Code> (y = 255)</Table.Td>
+                </Table.Tr>
               </Table.Tbody>
             </Table>
+
+            <Title order={3} mt="md">String Literals</Title>
+            <Text style={{ lineHeight: 1.6 }}>
+              Text in <strong>single quotes</strong> is a string literal: <Code>{`'R134a'`}</Code>. Strings are
+              used as function arguments — the digit string of <Code>BaseConvert</Code> or the fluid name of a
+              property call like <Code>{`h = Enthalpy('R134a', T=300, x=1)`}</Code> (the unquoted fluid name is
+              still accepted). Note that <strong>double quotes remain comments</strong>: <Code>"this text is ignored"</Code>.
+            </Text>
           </Stack>
         );
       case 'variables':
@@ -1901,6 +1914,60 @@ H_reactants = H_products`}
             <Alert color="blue" title="Optimization Setup" mt="xs">
               To run an optimization, click the <strong>Min/Max</strong> button or press the corresponding hotkey. Choose your objective variable, select one or more independent variables, specify their bounds, select the method (Brent, Simplex, or BOBYQA), and click <strong>Optimize</strong>.
             </Alert>
+
+            <Title order={3} mt="md">Constrained Optimization (Barrier & Augmented Lagrangian)</Title>
+            <Text size="md" style={{ lineHeight: 1.6 }}>
+              Beyond simple variable bounds, the Min/Max dialog accepts <strong>constraints</strong> — one per
+              line — that the optimum must satisfy. Each constraint is an expression compared against a numeric
+              constant:
+            </Text>
+            <List spacing="xs" size="sm" mt="xs" style={{ paddingLeft: '20px' }}>
+              <List.Item>
+                <strong>Inequalities</strong> (<Code>x + y &lt;= 10</Code>, <Code>m_dot &gt;= 0.5</Code>) are
+                enforced with a <strong>log-barrier method</strong>: a term −μ·ln(−g(x)) repels the search from
+                the constraint boundary, and μ is tightened geometrically over successive outer iterations.
+                Infeasible trial points receive a smooth exterior quadratic penalty so the optimizer can recover
+                from an infeasible start.
+              </List.Item>
+              <List.Item>
+                <strong>Equalities</strong> (<Code>x * y = 4</Code>) are enforced with an
+                <strong> augmented Lagrangian</strong>: the objective is augmented with λ·h(x) + (ρ/2)·h(x)²,
+                and the multiplier λ is updated after each outer iteration until the violation falls below
+                tolerance.
+              </List.Item>
+            </List>
+            <Text size="sm" style={{ lineHeight: 1.6 }}>
+              Example: maximizing the rectangle area <Code>A = w*h</Code> with <Code>w + h = 10</Code> in the
+              equations and the constraint <Code>w &lt;= 3</Code> yields the boundary optimum w = 3, A = 21
+              instead of the unconstrained w = 5, A = 25.
+            </Text>
+
+            <Title order={3} mt="md">Curve Fitting (Levenberg-Marquardt Least Squares)</Title>
+            <Text size="md" style={{ lineHeight: 1.6 }}>
+              The <strong>Curve Fit</strong> tool (function icon in the left rail) fits the parameters of a model
+              equation to experimental (x, y) data by minimizing the sum of squared residuals with the
+              Levenberg-Marquardt algorithm.
+            </Text>
+            <List spacing="xs" size="sm" mt="xs" style={{ paddingLeft: '20px' }}>
+              <List.Item>Enter a model such as <Code>y = a * exp(-b * x) + c</Code> with the dependent variable alone on one side.</List.Item>
+              <List.Item>Name the independent variable and the parameters to fit (e.g. <Code>a, b, c</Code>).</List.Item>
+              <List.Item>Paste the data points one pair per line (<Code>x y</Code>, separated by spaces, commas, or tabs).</List.Item>
+              <List.Item>Optionally give initial guesses (defaults to 1 for every parameter).</List.Item>
+            </List>
+            <Text size="sm" style={{ lineHeight: 1.6 }}>
+              The result reports the fitted parameter values together with the goodness-of-fit measures
+              R² and RMSE and the iteration count. Any expression the equation engine understands — including
+              special functions like <Code>erf</Code> or <Code>gamma</Code> — can appear in the model.
+            </Text>
+
+            <Title order={3} mt="md">Analytical Jacobians</Title>
+            <Text size="md" style={{ lineHeight: 1.6 }}>
+              The Newton solver differentiates equation blocks <strong>symbolically</strong> whenever every
+              equation in the block has a closed-form derivative — including the special functions
+              (<Code>erf</Code>, <Code>erfc</Code>, <Code>gamma</Code>) via their analytical derivatives
+              (e.g. Γ'(x) = Γ(x)·ψ(x)). Blocks containing constructs without symbolic derivatives (property
+              calls, integrals, procedures) automatically fall back to finite-difference Jacobians.
+            </Text>
 
             <Title order={3} mt="md">Advanced Plot Window Extensions</Title>
             <Text size="md" style={{ lineHeight: 1.6 }}>

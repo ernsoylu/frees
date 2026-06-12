@@ -338,6 +338,13 @@ public class AstBuilder extends FreesBaseVisitor<Expr> {
     }
 
     @Override
+    public Expr visitStringAtom(FreesParser.StringAtomContext ctx) {
+        String text = ctx.STRING_LITERAL().getText();
+        // Remove the surrounding single quotes
+        return new Expr.Str(text.substring(1, text.length() - 1));
+    }
+
+    @Override
     public Expr visitVarAtom(FreesParser.VarAtomContext ctx) {
         String original = ctx.IDENT().getText();
         if ("pi".equalsIgnoreCase(original)) {
@@ -403,6 +410,10 @@ public class AstBuilder extends FreesBaseVisitor<Expr> {
                             + function + "(R134a, T=..., x=...)");
         }
         String fluid = fluidArg.expr().getText();
+        // Fluid names may be quoted string literals: Enthalpy('R134a', T=..., x=...)
+        if (fluid.length() >= 2 && fluid.startsWith("'") && fluid.endsWith("'")) {
+            fluid = fluid.substring(1, fluid.length() - 1);
+        }
         if (!fluid.matches("[A-Za-z]\\w*")) {
             throw new EquationParser.ParseException(
                     "Invalid fluid name '" + fluid + "' in " + function + "(...)");
