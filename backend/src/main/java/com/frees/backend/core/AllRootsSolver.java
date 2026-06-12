@@ -37,7 +37,7 @@ public class AllRootsSolver {
     private static final int STARTS_PER_VARIABLE = 32;
     private static final int MAX_STARTS = 128;
     private static final int MAX_SOLUTIONS = 32;
-    private static final long RANDOM_SEED = 987654321L;
+    private static final java.security.SecureRandom RANDOM = new java.security.SecureRandom();
 
     private final SolverSettings settings;
     private final Map<String, VariableSpec> specs;
@@ -287,7 +287,7 @@ public class AllRootsSolver {
         // Start 0: the user's guess values (preserves single-solve behavior).
         attemptStart(block, branch, null, found, deadlineNanos);
 
-        Random random = new java.security.SecureRandom();
+        Random random = RANDOM;
         for (int s = 1; s < starts; s++) {
             double[] start = generateRandomStart(s, n, lo, hi, random);
             attemptStart(block, branch, start, found, deadlineNanos);
