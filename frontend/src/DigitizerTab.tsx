@@ -1083,26 +1083,27 @@ export function DigitizerTab({
       </Stack>
 
       {/* --- side panel --- */}
-      <ScrollArea w={340} style={{ flexShrink: 0 }}>
-        <Stack gap="sm" pr={6}>
-          <Paper withBorder p="xs">
-            <Group justify="space-between" mb={4}>
-              <Title order={6}>Magnifier</Title>
-              {cursorValue && (
-                <Text size="xs" c="dimmed" ff="monospace">
-                  {fmt(cursorValue.x)}, {fmt(cursorValue.y)}
-                </Text>
-              )}
-            </Group>
-            <canvas
-              ref={magRef}
-              width={MAG_SIZE}
-              height={MAG_SIZE}
-              style={{ width: '100%', borderRadius: 4, background: 'var(--mantine-color-dark-8)' }}
-            />
-          </Paper>
+      <Stack w={340} style={{ flexShrink: 0, height: '100%', overflow: 'hidden' }} gap="sm">
+        <Paper withBorder p="xs" style={{ flexShrink: 0 }}>
+          <Group justify="space-between" mb={4}>
+            <Title order={6}>Magnifier</Title>
+            {cursorValue && (
+              <Text size="xs" c="dimmed" ff="monospace">
+                {fmt(cursorValue.x)}, {fmt(cursorValue.y)}
+              </Text>
+            )}
+          </Group>
+          <canvas
+            ref={magRef}
+            width={MAG_SIZE}
+            height={MAG_SIZE}
+            style={{ width: '100%', borderRadius: 4, background: 'var(--mantine-color-dark-8)' }}
+          />
+        </Paper>
 
-          <Paper withBorder p="xs">
+        <ScrollArea style={{ flex: 1, minHeight: 0 }}>
+          <Stack gap="sm" pr={6}>
+            <Paper withBorder p="xs">
             <Title order={6} mb={6}>
               Axes
             </Title>
@@ -1457,6 +1458,7 @@ export function DigitizerTab({
           </Paper>
         </Stack>
       </ScrollArea>
-    </Group>
+    </Stack>
+  </Group>
   )
 }
