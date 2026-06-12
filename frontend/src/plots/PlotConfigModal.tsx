@@ -539,7 +539,7 @@ export default function PlotConfigModal({
       opened
       onClose={onClose}
       title={creating ? 'Add Plot' : `Configure — ${draft.name}`}
-      size="lg"
+      size="xl"
     >
       <Stack gap="sm">
         <Group grow align="flex-end">

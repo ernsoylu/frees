@@ -43,6 +43,9 @@ public final class Optimizer {
     // penalized sub-problems of constrained runs) need a larger budget than
     // 1-D Brent before they converge.
     private static final int MULTIVARIATE_MAX_EVALUATIONS = 2000;
+    // Weight of the quadratic out-of-bounds penalty used to keep the
+    // bounds-unaware Nelder-Mead simplex inside the box.
+    private static final double BOUNDS_PENALTY_WEIGHT = 1e8;
     private static final int CONSTRAINED_MAX_OUTER_ITERATIONS = 15;
     private static final double BARRIER_MU_INITIAL = 1.0;
     private static final double BARRIER_MU_FACTOR = 0.1;
@@ -161,7 +164,13 @@ public final class Optimizer {
     public record OptimizeResult(double[] decisionValues,
                                  double objectiveValue,
                                  int evaluations,
-                                 EquationSystemSolver.Result solution) {
+                                 EquationSystemSolver.Result solution,
+                                 String warning) {
+
+        public OptimizeResult(double[] decisionValues, double objectiveValue,
+                              int evaluations, EquationSystemSolver.Result solution) {
+            this(decisionValues, objectiveValue, evaluations, solution, null);
+        }
 
         // Backwards compatibility for single decision
         public double decisionValue() {
@@ -244,34 +253,28 @@ public final class Optimizer {
             bestPoint = inner.decisionValues();
             totalEvaluations += inner.evaluations();
 
-            // Evaluate constraint violations at the current point
-            EquationSystemSolver.Result currentSolution = solveWithDecisions(problem, bestPoint);
-            Map<String, Double> vars = currentSolution.variables();
-
             boolean allSatisfied = true;
 
             // Check inequality constraints
             for (ParsedConstraint c : inequalities) {
                 double lhsVal = evaluateConstraintExpression(c.lhsExpr(), problem, bestPoint);
                 double g = c.normalised(lhsVal);
-                if (g > CONSTRAINT_TOLERANCE) {
+                if (g > tolerance(c)) {
                     allSatisfied = false;
                     break;
                 }
             }
 
             // Check & update equality constraints
-            double maxEqViolation = 0;
             for (int j = 0; j < equalities.size(); j++) {
                 ParsedConstraint c = equalities.get(j);
                 double lhsVal = evaluateConstraintExpression(c.lhsExpr(), problem, bestPoint);
                 double h = c.normalised(lhsVal);
-                maxEqViolation = Math.max(maxEqViolation, Math.abs(h));
+                if (Math.abs(h) > tolerance(c)) {
+                    allSatisfied = false;
+                }
                 // Update Lagrange multiplier: λ_j += ρ * h_j(x)
                 lambda[j] += rho * h;
-            }
-            if (maxEqViolation > CONSTRAINT_TOLERANCE) {
-                allSatisfied = false;
             }
 
             if (allSatisfied) break;
@@ -292,7 +295,34 @@ public final class Optimizer {
             throw new SolverException("The objective variable '" + problem.objective()
                     + "' is not part of the solution.");
         }
-        return new OptimizeResult(bestPoint, objectiveValue, totalEvaluations, solution);
+
+        // Report any remaining constraint violation honestly instead of
+        // presenting a point that silently breaks a constraint as the optimum.
+        StringBuilder warning = null;
+        for (ParsedConstraint c : allConstraints) {
+            double lhsVal = evaluateConstraintExpression(c.lhsExpr(), problem, bestPoint);
+            double v = c.isEquality()
+                    ? Math.abs(c.normalised(lhsVal))
+                    : Math.max(0, c.normalised(lhsVal));
+            if (v > tolerance(c)) {
+                if (warning == null) {
+                    warning = new StringBuilder("Constraints not satisfied at the returned point: ");
+                } else {
+                    warning.append("; ");
+                }
+                warning.append('\'').append(c.lhsExpr()).append(' ').append(c.operator())
+                        .append(' ').append(c.rhsValue()).append("' is off by ")
+                        .append(String.format("%.4g", v));
+            }
+        }
+
+        return new OptimizeResult(bestPoint, objectiveValue, totalEvaluations, solution,
+                warning == null ? null : warning.toString());
+    }
+
+    /** Constraint tolerance relative to the magnitude of the RHS constant. */
+    private static double tolerance(ParsedConstraint c) {
+        return CONSTRAINT_TOLERANCE * Math.max(1.0, Math.abs(c.rhsValue()));
     }
 
     // ── Multivariate inner optimisation ─────────────────────────────────
@@ -346,6 +376,33 @@ public final class Optimizer {
             lowerBounds[i] = problem.lowers().get(i);
             upperBounds[i] = problem.uppers().get(i);
             initialGuess[i] = Math.max(lowerBounds[i], Math.min(upperBounds[i], initialGuess[i]));
+        }
+
+        // The Nelder-Mead simplex is bounds-unaware: evaluate out-of-box
+        // points at their projection onto the box plus a smooth quadratic
+        // distance penalty. This keeps the landscape continuous at the
+        // bounds (no cliffs to stagnate on) while never rewarding points
+        // outside the box. BOBYQA enforces bounds natively and skips this.
+        if (problem.method() == null || !problem.method().equalsIgnoreCase("bobyqa")) {
+            final MultivariateFunction unbounded = fn;
+            final double penaltySign = problem.maximize() ? -1.0 : 1.0;
+            fn = point -> {
+                double violation = 0;
+                double[] projected = point.clone();
+                for (int i = 0; i < point.length; i++) {
+                    if (point[i] < lowerBounds[i]) {
+                        double d = lowerBounds[i] - point[i];
+                        violation += d * d;
+                        projected[i] = lowerBounds[i];
+                    } else if (point[i] > upperBounds[i]) {
+                        double d = point[i] - upperBounds[i];
+                        violation += d * d;
+                        projected[i] = upperBounds[i];
+                    }
+                }
+                double value = unbounded.value(projected);
+                return value + penaltySign * BOUNDS_PENALTY_WEIGHT * violation;
+            };
         }
 
         // Track the best point seen so far: when the evaluation budget runs

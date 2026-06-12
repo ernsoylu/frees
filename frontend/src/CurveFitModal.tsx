@@ -150,7 +150,7 @@ export default function CurveFitModal({ onClose }: Readonly<Props>) {
   }
 
   return (
-    <Modal opened onClose={onClose} title="Curve Fit — Least Squares (Levenberg-Marquardt)" centered size="lg">
+    <Modal opened onClose={onClose} title="Curve Fit — Least Squares (Levenberg-Marquardt)" centered size="xl">
       <Text size="sm" c="dimmed" mb="md">
         Fits the model parameters to the observed data by minimizing the sum of
         squared residuals. Enter one data point per line as “x y” (spaces,
