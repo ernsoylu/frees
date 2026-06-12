@@ -13,6 +13,7 @@ import {
   UnstyledButton,
 } from '@mantine/core'
 import {
+  IconChartGridDots,
   IconChartLine,
   IconChecks,
   IconChevronDown,
@@ -41,6 +42,11 @@ const VIEWS = [
     value: 'thermo',
     label: 'Thermodynamics — property & psychrometric plots, state points',
     icon: IconTemperature,
+  },
+  {
+    value: 'digitizer',
+    label: 'Graph Digitizer — extract curves from chart images',
+    icon: IconChartGridDots,
   },
   { value: 'diagram', label: 'Diagram — Epic 6, coming soon', icon: IconSchema, disabled: true },
 ]
