@@ -152,8 +152,8 @@ public class AstBuilder extends EesBaseVisitor<Expr> {
             for (EesParser.StatementContext stmtCtx : ctx.statementList().statement()) {
                 Statement s = buildStatement(stmtCtx);
                 // Convert Statement.Eq to ProcStatement.Eq for procedural context
-                if (s instanceof Statement.Eq eq) {
-                    body.add(new ProcStatement.Eq(eq.lhs(), eq.rhs(), eq.sourceText()));
+                if (s instanceof Statement.Eq(Expr lhs, Expr rhs, String sourceText)) {
+                    body.add(new ProcStatement.Eq(lhs, rhs, sourceText));
                 }
                 // DUPLICATE inside DUPLICATE inside PROC is not supported; skip silently
             }

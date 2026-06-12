@@ -19,7 +19,7 @@ public final class Evaluator {
 
     public static double eval(Expr e, Map<String, Double> values, Map<String, ProcDef> defs) {
         return switch (e) {
-            case Expr.Num n -> n.value();
+            case Expr.Num(double value, String unit, boolean isImaginary) -> value;
             case Expr.Var(String name) -> {
                 Double value = values.get(name);
                 if (value == null) {
@@ -27,48 +27,48 @@ public final class Evaluator {
                 }
                 yield value;
             }
-            case Expr.Neg neg -> -eval(neg.operand(), values, defs);
-            case Expr.BinOp b -> {
-                double l = eval(b.left(), values, defs);
-                double r = eval(b.right(), values, defs);
-                yield switch (b.op()) {
+            case Expr.Neg(Expr operand) -> -eval(operand, values, defs);
+            case Expr.BinOp(char op, Expr left, Expr right) -> {
+                double l = eval(left, values, defs);
+                double r = eval(right, values, defs);
+                yield switch (op) {
                     case '+' -> l + r;
                     case '-' -> l - r;
                     case '*' -> l * r;
                     case '/' -> l / r;
                     case '^' -> Math.pow(l, r);
-                    default -> throw new IllegalStateException("Unknown operator: " + b.op());
+                    default -> throw new IllegalStateException("Unknown operator: " + op);
                 };
             }
-            case Expr.Call c -> evalCall(c, values, defs);
-            case Expr.ArrayAccess aa -> throw new IllegalStateException("ArrayAccess cannot be evaluated directly: " + aa);
-            case Expr.Range r -> throw new IllegalStateException("Range cannot be evaluated directly: " + r);
-            case Expr.ArrayLiteral al -> throw new IllegalStateException("ArrayLiteral cannot be evaluated directly: " + al);
-            case Expr.Compare cmp -> {
-                double l = eval(cmp.left(), values, defs);
-                double r = eval(cmp.right(), values, defs);
-                boolean result = switch (cmp.op()) {
+            case Expr.Call(String function, List<Expr> args) -> evalCall(new Expr.Call(function, args), values, defs);
+            case Expr.ArrayAccess(String name, List<Expr> indices) -> throw new IllegalStateException("ArrayAccess cannot be evaluated directly: " + name);
+            case Expr.Range(Expr start, Expr end) -> throw new IllegalStateException("Range cannot be evaluated directly: " + start + ".." + end);
+            case Expr.ArrayLiteral(List<Expr> elements) -> throw new IllegalStateException("ArrayLiteral cannot be evaluated directly: " + elements);
+            case Expr.Compare(String op, Expr left, Expr right) -> {
+                double l = eval(left, values, defs);
+                double r = eval(right, values, defs);
+                boolean result = switch (op) {
                     case "<"  -> l < r;
                     case ">"  -> l > r;
                     case "<=" -> l <= r;
                     case ">=" -> l >= r;
                     case "<>" -> l != r;
                     case "="  -> l == r;
-                    default -> throw new IllegalStateException("Unknown comparison operator: " + cmp.op());
+                    default -> throw new IllegalStateException("Unknown comparison operator: " + op);
                 };
                 yield result ? 1.0 : 0.0;
             }
-            case Expr.Logical log -> {
-                double l = eval(log.left(), values, defs);
-                double r = eval(log.right(), values, defs);
-                boolean result = switch (log.op()) {
+            case Expr.Logical(String op, Expr left, Expr right) -> {
+                double l = eval(left, values, defs);
+                double r = eval(right, values, defs);
+                boolean result = switch (op) {
                     case "and" -> l != 0.0 && r != 0.0;
                     case "or"  -> l != 0.0 || r != 0.0;
-                    default -> throw new IllegalStateException("Unknown logical operator: " + log.op());
+                    default -> throw new IllegalStateException("Unknown logical operator: " + op);
                 };
                 yield result ? 1.0 : 0.0;
             }
-            case Expr.Not not -> eval(not.operand(), values, defs) == 0.0 ? 1.0 : 0.0;
+            case Expr.Not(Expr operand) -> eval(operand, values, defs) == 0.0 ? 1.0 : 0.0;
         };
     }
 
@@ -210,7 +210,7 @@ public final class Evaluator {
     private static double integralQuadrature(Expr.Call c, Map<String, Double> values,
                                              Map<String, ProcDef> defs) {
         List<Expr> args = c.args();
-        if (args.size() < 4 || !(args.get(1) instanceof Expr.Var t)) {
+        if (args.size() < 4 || !(args.get(1) instanceof Expr.Var(String varName))) {
             throw new IllegalStateException(
                     "Integral expects Integral(f, t, lower, upper[, step]).");
         }
@@ -219,51 +219,60 @@ public final class Evaluator {
         if (lower == upper) {
             return 0.0;
         }
-        String var = t.name();
-        boolean had = values.containsKey(var);
-        Double saved = had ? values.get(var) : null;
+        boolean had = values.containsKey(varName);
+        Double saved = had ? values.get(varName) : null;
         try {
             Expr f = args.get(0);
-            double fa = evalAt(f, var, lower, values, defs);
-            double fm = evalAt(f, var, (lower + upper) / 2.0, values, defs);
-            double fb = evalAt(f, var, upper, values, defs);
+            SimpsonContext context = new SimpsonContext(f, varName, values, defs);
+            double fa = context.evalAt(lower);
+            double fm = context.evalAt((lower + upper) / 2.0);
+            double fb = context.evalAt(upper);
             double whole = (upper - lower) / 6.0 * (fa + 4.0 * fm + fb);
-            return adaptiveSimpson(f, var, lower, upper, fa, fm, fb, whole,
-                    SIMPSON_MAX_DEPTH, values, defs);
+            return context.adaptiveSimpson(lower, upper, fa, fm, fb, whole, SIMPSON_MAX_DEPTH);
         } finally {
             if (had) {
-                values.put(var, saved);
+                values.put(varName, saved);
             } else {
-                values.remove(var);
+                values.remove(varName);
             }
         }
     }
 
-    private static double evalAt(Expr f, String var, double t,
-                                 Map<String, Double> values, Map<String, ProcDef> defs) {
-        values.put(var, t);
-        return eval(f, values, defs);
-    }
+    private static class SimpsonContext {
+        final Expr f;
+        final String varName;
+        final Map<String, Double> values;
+        final Map<String, ProcDef> defs;
 
-    private static double adaptiveSimpson(Expr f, String var, double a, double b,
-                                          double fa, double fm, double fb, double whole,
-                                          int depth, Map<String, Double> values,
-                                          Map<String, ProcDef> defs) {
-        double m = (a + b) / 2.0;
-        double lm = (a + m) / 2.0;
-        double rm = (m + b) / 2.0;
-        double flm = evalAt(f, var, lm, values, defs);
-        double frm = evalAt(f, var, rm, values, defs);
-        double left = (m - a) / 6.0 * (fa + 4.0 * flm + fm);
-        double right = (b - m) / 6.0 * (fm + 4.0 * frm + fb);
-        double halves = left + right;
-        double delta = halves - whole;
-        if (depth <= 0
-                || Math.abs(delta) <= 15.0 * SIMPSON_REL_TOL * Math.max(Math.abs(halves), 1.0)) {
-            return halves + delta / 15.0;
+        SimpsonContext(Expr f, String varName, Map<String, Double> values, Map<String, ProcDef> defs) {
+            this.f = f;
+            this.varName = varName;
+            this.values = values;
+            this.defs = defs;
         }
-        return adaptiveSimpson(f, var, a, m, fa, flm, fm, left, depth - 1, values, defs)
-                + adaptiveSimpson(f, var, m, b, fm, frm, fb, right, depth - 1, values, defs);
+
+        double evalAt(double t) {
+            values.put(varName, t);
+            return eval(f, values, defs);
+        }
+
+        double adaptiveSimpson(double a, double b, double fa, double fm, double fb, double whole, int depth) {
+            double m = (a + b) / 2.0;
+            double lm = (a + m) / 2.0;
+            double rm = (m + b) / 2.0;
+            double flm = evalAt(lm);
+            double frm = evalAt(rm);
+            double left = (m - a) / 6.0 * (fa + 4.0 * flm + fm);
+            double right = (b - m) / 6.0 * (fm + 4.0 * frm + fb);
+            double halves = left + right;
+            double delta = halves - whole;
+            if (depth <= 0
+                    || Math.abs(delta) <= 15.0 * SIMPSON_REL_TOL * Math.max(Math.abs(halves), 1.0)) {
+                return halves + delta / 15.0;
+            }
+            return adaptiveSimpson(a, m, fa, flm, fm, left, depth - 1)
+                    + adaptiveSimpson(m, b, fm, frm, fb, right, depth - 1);
+        }
     }
 
     private static double arg(Expr.Call c, List<Expr> args, int i,

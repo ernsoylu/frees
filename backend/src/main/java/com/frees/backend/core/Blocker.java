@@ -11,7 +11,6 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -71,14 +70,14 @@ public class Blocker {
             eqNodes.add(eqNode);
             graph.addVertex(eqNode);
         }
-        for (String var : allVars) {
-            String varNode = "var:" + var;
+        for (String varName : allVars) {
+            String varNode = "var:" + varName;
             varNodes.add(varNode);
             graph.addVertex(varNode);
         }
         for (int i = 0; i < equations.size(); i++) {
-            for (String var : equations.get(i).variables()) {
-                graph.addEdge("eq:" + i, "var:" + var);
+            for (String varName : equations.get(i).variables()) {
+                graph.addEdge("eq:" + i, "var:" + varName);
             }
         }
 
@@ -112,13 +111,13 @@ public class Blocker {
     private List<Block> tarjanBlocks(List<Equation> equations, Map<Integer, String> assignment) {
         int n = equations.size();
         Map<String, Integer> varToEq = new HashMap<>();
-        assignment.forEach((eq, var) -> varToEq.put(var, eq));
+        assignment.forEach((eq, varName) -> varToEq.put(varName, eq));
 
         List<List<Integer>> adjacency = new ArrayList<>();
         for (int i = 0; i < n; i++) {
             List<Integer> edges = new ArrayList<>();
-            for (String var : equations.get(i).variables()) {
-                int j = varToEq.get(var);
+            for (String varName : equations.get(i).variables()) {
+                int j = varToEq.get(varName);
                 if (j != i) {
                     edges.add(j);
                 }
@@ -126,22 +125,16 @@ public class Blocker {
             adjacency.add(edges);
         }
 
-        int[] indices = new int[n];
-        int[] lowLinks = new int[n];
-        boolean[] onStack = new boolean[n];
-        java.util.Arrays.fill(indices, -1);
-        Deque<Integer> stack = new ArrayDeque<>();
-        List<List<Integer>> components = new ArrayList<>();
-        int[] counter = {0};
+        TarjanContext ctx = new TarjanContext(n, adjacency);
 
         for (int v = 0; v < n; v++) {
-            if (indices[v] == -1) {
-                strongConnect(v, adjacency, indices, lowLinks, onStack, stack, components, counter);
+            if (ctx.indices[v] == -1) {
+                strongConnect(v, ctx);
             }
         }
 
         List<Block> blocks = new ArrayList<>();
-        for (List<Integer> component : components) {
+        for (List<Integer> component : ctx.components) {
             List<Equation> blockEquations = new ArrayList<>();
             List<String> blockVars = new ArrayList<>();
             for (int eqIndex : component) {
@@ -153,9 +146,7 @@ public class Blocker {
         return blocks;
     }
 
-    private void strongConnect(int v, List<List<Integer>> adjacency, int[] indices,
-                               int[] lowLinks, boolean[] onStack, Deque<Integer> stack,
-                               List<List<Integer>> components, int[] counter) {
+    private void strongConnect(int v, TarjanContext ctx) {
         // Iterative Tarjan to avoid stack overflow on large systems (EES
         // supports thousands of equations).
         Deque<int[]> work = new ArrayDeque<>();
@@ -163,49 +154,76 @@ public class Blocker {
 
         while (!work.isEmpty()) {
             int[] frame = work.peek();
+            if (frame == null || frame.length < 2) {
+                work.pop();
+                continue;
+            }
             int node = frame[0];
 
             if (frame[1] == 0) {
-                indices[node] = counter[0];
-                lowLinks[node] = counter[0];
-                counter[0]++;
-                stack.push(node);
-                onStack[node] = true;
+                ctx.indices[node] = ctx.counter;
+                ctx.lowLinks[node] = ctx.counter;
+                ctx.counter++;
+                ctx.stack.push(node);
+                ctx.onStack[node] = true;
             }
 
             boolean recursed = false;
-            List<Integer> edges = adjacency.get(node);
+            List<Integer> edges = ctx.adjacency.get(node);
             while (frame[1] < edges.size()) {
                 int next = edges.get(frame[1]);
                 frame[1]++;
-                if (indices[next] == -1) {
+                if (ctx.indices[next] == -1) {
                     work.push(new int[]{next, 0});
                     recursed = true;
                     break;
-                } else if (onStack[next]) {
-                    lowLinks[node] = Math.min(lowLinks[node], indices[next]);
+                } else if (ctx.onStack[next]) {
+                    ctx.lowLinks[node] = Math.min(ctx.lowLinks[node], ctx.indices[next]);
                 }
             }
             if (recursed) {
                 continue;
             }
 
-            if (lowLinks[node] == indices[node]) {
+            if (ctx.lowLinks[node] == ctx.indices[node]) {
                 List<Integer> component = new ArrayList<>();
                 int popped;
                 do {
-                    popped = stack.pop();
-                    onStack[popped] = false;
+                    popped = ctx.stack.pop();
+                    ctx.onStack[popped] = false;
                     component.add(popped);
                 } while (popped != node);
-                components.add(component);
+                ctx.components.add(component);
             }
 
             work.pop();
             if (!work.isEmpty()) {
-                int parent = work.peek()[0];
-                lowLinks[parent] = Math.min(lowLinks[parent], lowLinks[node]);
+                int[] parentFrame = work.peek();
+                if (parentFrame != null && parentFrame.length >= 1) {
+                    int parent = parentFrame[0];
+                    ctx.lowLinks[parent] = Math.min(ctx.lowLinks[parent], ctx.lowLinks[node]);
+                }
             }
+        }
+    }
+
+    private static class TarjanContext {
+        final List<List<Integer>> adjacency;
+        final int[] indices;
+        final int[] lowLinks;
+        final boolean[] onStack;
+        final Deque<Integer> stack;
+        final List<List<Integer>> components;
+        int counter = 0;
+
+        TarjanContext(int n, List<List<Integer>> adjacency) {
+            this.adjacency = adjacency;
+            this.indices = new int[n];
+            this.lowLinks = new int[n];
+            this.onStack = new boolean[n];
+            java.util.Arrays.fill(this.indices, -1);
+            this.stack = new ArrayDeque<>();
+            this.components = new ArrayList<>();
         }
     }
 }

@@ -80,19 +80,19 @@ public final class IntegralSolver {
 
     private static IntegralEquation matchIntegralEquation(Equation eq,
                                                           Map<String, ProcDef> defs) {
-        if (eq.lhs() instanceof Expr.Var v && isIntegralCall(eq.rhs())
+        if (eq.lhs() instanceof Expr.Var(String name) && isIntegralCall(eq.rhs())
                 && !mentionsIntegral(eq.lhs())) {
-            return toIntegralEquation(eq, v.name(), (Expr.Call) eq.rhs(), defs);
+            return toIntegralEquation(eq, name, (Expr.Call) eq.rhs(), defs);
         }
-        if (eq.rhs() instanceof Expr.Var v && isIntegralCall(eq.lhs())
+        if (eq.rhs() instanceof Expr.Var(String name) && isIntegralCall(eq.lhs())
                 && !mentionsIntegral(eq.rhs())) {
-            return toIntegralEquation(eq, v.name(), (Expr.Call) eq.lhs(), defs);
+            return toIntegralEquation(eq, name, (Expr.Call) eq.lhs(), defs);
         }
         return null;
     }
 
     private static boolean isIntegralCall(Expr e) {
-        return e instanceof Expr.Call c && c.function().equals(FUNCTION_NAME);
+        return e instanceof Expr.Call(String function, List<Expr> args) && function.equals(FUNCTION_NAME);
     }
 
     private static IntegralEquation toIntegralEquation(Equation eq, String resultVar,
@@ -104,7 +104,7 @@ public final class IntegralSolver {
                     "Integral expects Integral(f, t, lower, upper[, step]): "
                             + eq.sourceText());
         }
-        if (!(args.get(1) instanceof Expr.Var tVar)) {
+        if (!(args.get(1) instanceof Expr.Var(String tName))) {
             throw new SolverException(
                     "The second argument of Integral must be the integration variable: "
                             + eq.sourceText());
@@ -114,7 +114,7 @@ public final class IntegralSolver {
         double step = args.size() == 5
                 ? constantArg(args.get(4), "step size", eq, defs)
                 : 0.0;
-        return new IntegralEquation(eq, resultVar, args.get(0), tVar.name(),
+        return new IntegralEquation(eq, resultVar, args.get(0), tName,
                 args.get(2), args.get(3), lower, upper, step);
     }
 
@@ -139,20 +139,20 @@ public final class IntegralSolver {
 
     public static boolean mentionsIntegral(Expr e) {
         return switch (e) {
-            case Expr.Num n -> false;
-            case Expr.Var v -> false;
-            case Expr.Neg neg -> mentionsIntegral(neg.operand());
-            case Expr.BinOp b -> mentionsIntegral(b.left()) || mentionsIntegral(b.right());
-            case Expr.Call c -> c.function().equals(FUNCTION_NAME)
-                    || c.args().stream().anyMatch(IntegralSolver::mentionsIntegral);
-            case Expr.ArrayAccess aa ->
-                    aa.indices().stream().anyMatch(IntegralSolver::mentionsIntegral);
-            case Expr.Range r -> mentionsIntegral(r.start()) || mentionsIntegral(r.end());
-            case Expr.ArrayLiteral al ->
-                    al.elements().stream().anyMatch(IntegralSolver::mentionsIntegral);
-            case Expr.Compare cmp -> mentionsIntegral(cmp.left()) || mentionsIntegral(cmp.right());
-            case Expr.Logical log -> mentionsIntegral(log.left()) || mentionsIntegral(log.right());
-            case Expr.Not not -> mentionsIntegral(not.operand());
+            case Expr.Num(double value, String unit, boolean isImaginary) -> false;
+            case Expr.Var(String name) -> false;
+            case Expr.Neg(Expr operand) -> mentionsIntegral(operand);
+            case Expr.BinOp(char op, Expr left, Expr right) -> mentionsIntegral(left) || mentionsIntegral(right);
+            case Expr.Call(String function, List<Expr> args) -> function.equals(FUNCTION_NAME)
+                    || args.stream().anyMatch(IntegralSolver::mentionsIntegral);
+            case Expr.ArrayAccess(String name, List<Expr> indices) ->
+                    indices.stream().anyMatch(IntegralSolver::mentionsIntegral);
+            case Expr.Range(Expr start, Expr end) -> mentionsIntegral(start) || mentionsIntegral(end);
+            case Expr.ArrayLiteral(List<Expr> elements) ->
+                    elements.stream().anyMatch(IntegralSolver::mentionsIntegral);
+            case Expr.Compare(String op, Expr left, Expr right) -> mentionsIntegral(left) || mentionsIntegral(right);
+            case Expr.Logical(String op, Expr left, Expr right) -> mentionsIntegral(left) || mentionsIntegral(right);
+            case Expr.Not(Expr operand) -> mentionsIntegral(operand);
         };
     }
 
@@ -218,11 +218,11 @@ public final class IntegralSolver {
         for (Equation eq : equations) {
             String name = null;
             Expr expr = null;
-            if (eq.lhs() instanceof Expr.Var v && !eq.rhs().variables().contains(v.name())) {
-                name = v.name();
+            if (eq.lhs() instanceof Expr.Var(String lhsName) && !eq.rhs().variables().contains(lhsName)) {
+                name = lhsName;
                 expr = eq.rhs();
-            } else if (eq.rhs() instanceof Expr.Var v && !eq.lhs().variables().contains(v.name())) {
-                name = v.name();
+            } else if (eq.rhs() instanceof Expr.Var(String rhsName) && !eq.lhs().variables().contains(rhsName)) {
+                name = rhsName;
                 expr = eq.lhs();
             }
             if (name != null && (definitions.putIfAbsent(name, expr) != null)) {
@@ -233,21 +233,21 @@ public final class IntegralSolver {
         return definitions;
     }
 
-    private static boolean dependsOnIntegrationVar(String var, IntegralEquation ie,
+    private static boolean dependsOnIntegrationVar(String varName, IntegralEquation ie,
                                                    Map<String, Expr> definitions,
                                                    Map<String, Boolean> memo,
                                                    java.util.Set<String> visiting) {
-        if (var.equals(ie.integrationVar())) {
+        if (varName.equals(ie.integrationVar())) {
             return true;
         }
-        Boolean known = memo.get(var);
+        Boolean known = memo.get(varName);
         if (known != null) {
             return known;
         }
-        if (!visiting.add(var)) {
+        if (!visiting.add(varName)) {
             return false; // circular chains resolve through their other members
         }
-        Expr definition = definitions.get(var);
+        Expr definition = definitions.get(varName);
         boolean depends = false;
         if (definition != null) {
             for (String inner : definition.variables()) {
@@ -257,8 +257,8 @@ public final class IntegralSolver {
                 }
             }
         }
-        visiting.remove(var);
-        memo.put(var, depends);
+        visiting.remove(varName);
+        memo.put(varName, depends);
         return depends;
     }
 
@@ -266,36 +266,36 @@ public final class IntegralSolver {
                                Map<String, Boolean> memo, java.util.Set<String> expanding) {
         return switch (e) {
             case Expr.Num n -> n;
-            case Expr.Var v -> {
-                if (v.name().equals(ie.integrationVar())
-                        || !dependsOnIntegrationVar(v.name(), ie, definitions, memo,
+            case Expr.Var(String name) -> {
+                if (name.equals(ie.integrationVar())
+                        || !dependsOnIntegrationVar(name, ie, definitions, memo,
                                 new java.util.HashSet<>())) {
-                    yield v;
+                    yield new Expr.Var(name);
                 }
-                Expr definition = definitions.get(v.name());
-                if (definition == null || !expanding.add(v.name())) {
+                Expr definition = definitions.get(name);
+                if (definition == null || !expanding.add(name)) {
                     throw new SolverException("In " + ie.original().sourceText()
-                            + ": '" + v.name() + "' depends on the integration variable "
+                            + ": '" + name + "' depends on the integration variable "
                             + ie.integrationVar() + " but has no explicit definition "
-                            + "of the form " + v.name() + " = expression.");
+                            + "of the form " + name + " = expression.");
                 }
                 Expr inlined = inline(definition, ie, definitions, memo, expanding);
-                expanding.remove(v.name());
+                expanding.remove(name);
                 yield inlined;
             }
-            case Expr.Neg neg -> new Expr.Neg(inline(neg.operand(), ie, definitions, memo, expanding));
-            case Expr.BinOp b -> new Expr.BinOp(b.op(),
-                    inline(b.left(), ie, definitions, memo, expanding),
-                    inline(b.right(), ie, definitions, memo, expanding));
-            case Expr.Call c -> new Expr.Call(c.function(), c.args().stream()
+            case Expr.Neg(Expr operand) -> new Expr.Neg(inline(operand, ie, definitions, memo, expanding));
+            case Expr.BinOp(char op, Expr left, Expr right) -> new Expr.BinOp(op,
+                    inline(left, ie, definitions, memo, expanding),
+                    inline(right, ie, definitions, memo, expanding));
+            case Expr.Call(String function, List<Expr> args) -> new Expr.Call(function, args.stream()
                     .map(a -> inline(a, ie, definitions, memo, expanding)).toList());
-            case Expr.Compare cmp -> new Expr.Compare(cmp.op(),
-                    inline(cmp.left(), ie, definitions, memo, expanding),
-                    inline(cmp.right(), ie, definitions, memo, expanding));
-            case Expr.Logical log -> new Expr.Logical(log.op(),
-                    inline(log.left(), ie, definitions, memo, expanding),
-                    inline(log.right(), ie, definitions, memo, expanding));
-            case Expr.Not not -> new Expr.Not(inline(not.operand(), ie, definitions, memo, expanding));
+            case Expr.Compare(String op, Expr left, Expr right) -> new Expr.Compare(op,
+                    inline(left, ie, definitions, memo, expanding),
+                    inline(right, ie, definitions, memo, expanding));
+            case Expr.Logical(String op, Expr left, Expr right) -> new Expr.Logical(op,
+                    inline(left, ie, definitions, memo, expanding),
+                    inline(right, ie, definitions, memo, expanding));
+            case Expr.Not(Expr operand) -> new Expr.Not(inline(operand, ie, definitions, memo, expanding));
             default -> throw new SolverException("In " + ie.original().sourceText()
                     + ": unsupported construct inside an Integral with variable limits.");
         };

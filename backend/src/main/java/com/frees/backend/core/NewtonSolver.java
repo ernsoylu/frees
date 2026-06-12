@@ -52,15 +52,10 @@ public class NewtonSolver {
         List<String> vars = block.variables();
         int n = vars.size();
 
-        double[] x = new double[n];
-        double[] lo = new double[n];
-        double[] hi = new double[n];
-        for (int i = 0; i < n; i++) {
-            x[i] = values.get(vars.get(i));
-            VariableSpec spec = specs.get(vars.get(i));
-            lo[i] = spec != null ? spec.lower() : Double.NEGATIVE_INFINITY;
-            hi[i] = spec != null ? spec.upper() : Double.POSITIVE_INFINITY;
-        }
+        SolverState state = new SolverState(block, values, specs);
+        double[] x = state.x;
+        double[] lo = state.lo;
+        double[] hi = state.hi;
 
         double[] residual = residuals(equations, vars, x, values);
         double norm = norm(residual);
@@ -77,23 +72,12 @@ public class NewtonSolver {
             }
 
             double[][] jacobian = numericalJacobian(equations, vars, x, residual, values);
-            double[] step = solveLinear(jacobian, residual, block);
+            double[] step = solveLinear(jacobian, residual);
 
-            double lambda = 1.0;
-            double[] candidate = new double[n];
-            double[] candidateResidual = null;
-            double candidateNorm = Double.POSITIVE_INFINITY;
-            for (int halving = 0; halving < MAX_HALVINGS; halving++) {
-                for (int i = 0; i < n; i++) {
-                    candidate[i] = Math.clamp(x[i] - lambda * step[i], lo[i], hi[i]);
-                }
-                candidateResidual = residuals(equations, vars, candidate, values);
-                candidateNorm = norm(candidateResidual);
-                if (Double.isFinite(candidateNorm) && candidateNorm < norm) {
-                    break;
-                }
-                lambda /= 2.0;
-            }
+            LineSearchResult searchResult = backtrackLineSearch(equations, vars, x, step, lo, hi, norm, values);
+            double[] candidate = searchResult.candidate;
+            double[] candidateResidual = searchResult.candidateResidual;
+            double candidateNorm = searchResult.candidateNorm;
 
             if (!Double.isFinite(candidateNorm) || candidateNorm >= norm) {
                 throw new SolverException(
@@ -146,8 +130,8 @@ public class NewtonSolver {
 
     /** EES relative residual: |lhs - rhs| / |lhs|, guarding against |lhs| ~ 0. */
     private boolean withinResidualTolerance(List<Equation> equations, List<String> vars,
-                                            double[] x, double[] residual,
-                                            Map<String, Double> values) {
+                                             double[] x, double[] residual,
+                                             Map<String, Double> values) {
         writeBack(vars, x, values);
         for (int i = 0; i < equations.size(); i++) {
             double lhsMagnitude;
@@ -192,41 +176,43 @@ public class NewtonSolver {
         double[][] jacobian = new double[n][n];
         double[] perturbed = x.clone();
         for (int j = 0; j < n; j++) {
-            // When residuals are much larger in magnitude than x_j (common in
-            // engineering problems with values like 1e8 kJ), a perturbation
-            // scaled only to x_j underflows against the residual in double
-            // precision and the whole column computes as zero. Grow h until
-            // the column registers.
-            double h = JACOBIAN_EPS * Math.max(Math.abs(x[j]), 1.0);
-            for (int attempt = 0; attempt < 5; attempt++) {
-                perturbed[j] = x[j] + h;
-                double[] residual = residuals(equations, vars, perturbed, values);
-                boolean columnClean = true;
-                boolean anyChange = false;
-                for (int i = 0; i < n; i++) {
-                    double change = Math.abs(residual[i] - baseResidual[i]);
-                    jacobian[i][j] = (residual[i] - baseResidual[i]) / h;
-                    if (change > 0.0) {
-                        anyChange = true;
-                        double ulpScale = Math.ulp(Math.max(Math.abs(residual[i]), Math.abs(baseResidual[i])));
-                        if (change < 1.0e5 * ulpScale) {
-                            columnClean = false;
-                        }
-                    }
-                }
-                perturbed[j] = x[j];
-                if (anyChange && columnClean) {
-                    break;
-                }
-                h *= 1.0e4;
-            }
+            computeJacobianColumn(equations, vars, x, baseResidual, values, jacobian, perturbed, j);
         }
         // Restore the unperturbed values.
         writeBack(vars, x, values);
         return jacobian;
     }
 
-    private double[] solveLinear(double[][] jacobian, double[] residual, Block block) {
+    private void computeJacobianColumn(List<Equation> equations, List<String> vars, double[] x,
+                                       double[] baseResidual, Map<String, Double> values,
+                                       double[][] jacobian, double[] perturbed, int j) {
+        int n = vars.size();
+        double h = JACOBIAN_EPS * Math.max(Math.abs(x[j]), 1.0);
+        for (int attempt = 0; attempt < 5; attempt++) {
+            perturbed[j] = x[j] + h;
+            double[] residual = residuals(equations, vars, perturbed, values);
+            boolean columnClean = true;
+            boolean anyChange = false;
+            for (int i = 0; i < n; i++) {
+                double change = Math.abs(residual[i] - baseResidual[i]);
+                jacobian[i][j] = (residual[i] - baseResidual[i]) / h;
+                if (change > 0.0) {
+                    anyChange = true;
+                    double ulpScale = Math.ulp(Math.max(Math.abs(residual[i]), Math.abs(baseResidual[i])));
+                    if (change < 1.0e5 * ulpScale) {
+                        columnClean = false;
+                    }
+                }
+            }
+            perturbed[j] = x[j];
+            if (anyChange && columnClean) {
+                break;
+            }
+            h *= 1.0e4;
+        }
+    }
+
+    private double[] solveLinear(double[][] jacobian, double[] residual) {
         Array2DRowRealMatrix jMat = new Array2DRowRealMatrix(jacobian, false);
         ArrayRealVector rVec = new ArrayRealVector(residual, false);
         try {
@@ -243,6 +229,60 @@ public class NewtonSolver {
             RealVector step = svd.getSolver().solve(rVec);
             return step.toArray();
         }
+    }
+
+    private static class SolverState {
+        final double[] x;
+        final double[] lo;
+        final double[] hi;
+
+        SolverState(Block block, Map<String, Double> values, Map<String, VariableSpec> specs) {
+            List<String> vars = block.variables();
+            int n = vars.size();
+            this.x = new double[n];
+            this.lo = new double[n];
+            this.hi = new double[n];
+            for (int i = 0; i < n; i++) {
+                x[i] = values.get(vars.get(i));
+                VariableSpec spec = specs.get(vars.get(i));
+                lo[i] = spec != null ? spec.lower() : Double.NEGATIVE_INFINITY;
+                hi[i] = spec != null ? spec.upper() : Double.POSITIVE_INFINITY;
+            }
+        }
+    }
+
+    private static class LineSearchResult {
+        final double[] candidate;
+        final double[] candidateResidual;
+        final double candidateNorm;
+
+        LineSearchResult(double[] candidate, double[] candidateResidual, double candidateNorm) {
+            this.candidate = candidate;
+            this.candidateResidual = candidateResidual;
+            this.candidateNorm = candidateNorm;
+        }
+    }
+
+    private LineSearchResult backtrackLineSearch(List<Equation> equations, List<String> vars, double[] x,
+                                                 double[] step, double[] lo, double[] hi, double norm,
+                                                 Map<String, Double> values) {
+        int n = x.length;
+        double lambda = 1.0;
+        double[] candidate = new double[n];
+        double[] candidateResidual = null;
+        double candidateNorm = Double.POSITIVE_INFINITY;
+        for (int halving = 0; halving < MAX_HALVINGS; halving++) {
+            for (int i = 0; i < n; i++) {
+                candidate[i] = Math.clamp(x[i] - lambda * step[i], lo[i], hi[i]);
+            }
+            candidateResidual = residuals(equations, vars, candidate, values);
+            candidateNorm = norm(candidateResidual);
+            if (Double.isFinite(candidateNorm) && candidateNorm < norm) {
+                break;
+            }
+            lambda /= 2.0;
+        }
+        return new LineSearchResult(candidate, candidateResidual, candidateNorm);
     }
 
     private static boolean atBound(double[] x, double[] lo, double[] hi) {

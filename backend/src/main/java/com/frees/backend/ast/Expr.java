@@ -64,32 +64,34 @@ public sealed interface Expr permits Expr.Num, Expr.Var, Expr.BinOp, Expr.Neg,
 
     private static void collectVariables(Expr e, Set<String> out) {
         switch (e) {
-            case Num n -> {}
-            case Var v -> out.add(v.name());
-            case Neg neg -> collectVariables(neg.operand(), out);
-            case BinOp b -> {
-                collectVariables(b.left(), out);
-                collectVariables(b.right(), out);
+            case Num(double value, String unit, boolean isImaginary) -> {
+                // Number literals do not contain variables
             }
-            case Call c -> c.args().forEach(a -> collectVariables(a, out));
-            case ArrayAccess aa -> {
-                out.add(aa.name());
-                aa.indices().forEach(idx -> collectVariables(idx, out));
+            case Var(String name) -> out.add(name);
+            case Neg(Expr operand) -> collectVariables(operand, out);
+            case BinOp(char op, Expr left, Expr right) -> {
+                collectVariables(left, out);
+                collectVariables(right, out);
             }
-            case Range r -> {
-                collectVariables(r.start(), out);
-                collectVariables(r.end(), out);
+            case Call(String function, java.util.List<Expr> args) -> args.forEach(a -> collectVariables(a, out));
+            case ArrayAccess(String name, java.util.List<Expr> indices) -> {
+                out.add(name);
+                indices.forEach(idx -> collectVariables(idx, out));
             }
-            case ArrayLiteral al -> al.elements().forEach(elem -> collectVariables(elem, out));
-            case Compare cmp -> {
-                collectVariables(cmp.left(), out);
-                collectVariables(cmp.right(), out);
+            case Range(Expr start, Expr end) -> {
+                collectVariables(start, out);
+                collectVariables(end, out);
             }
-            case Logical log -> {
-                collectVariables(log.left(), out);
-                collectVariables(log.right(), out);
+            case ArrayLiteral(java.util.List<Expr> elements) -> elements.forEach(elem -> collectVariables(elem, out));
+            case Compare(String op, Expr left, Expr right) -> {
+                collectVariables(left, out);
+                collectVariables(right, out);
             }
-            case Not not -> collectVariables(not.operand(), out);
+            case Logical(String op, Expr left, Expr right) -> {
+                collectVariables(left, out);
+                collectVariables(right, out);
+            }
+            case Not(Expr operand) -> collectVariables(operand, out);
         }
     }
 }
