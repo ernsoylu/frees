@@ -153,7 +153,7 @@ class UnitRegistryTest {
         assertNotEquals(q1, q3);
         assertNotEquals(q1, q4);
         assertNotEquals(q1, null);
-        assertNotEquals(q1, "string");
+        assertNotEquals(q1, new Object());
         assertEquals(q1.hashCode(), q2.hashCode());
         assertTrue(q1.toString().contains("Quantity"));
 
@@ -166,7 +166,7 @@ class UnitRegistryTest {
         assertNotEquals(nu1, nu3);
         assertNotEquals(nu1, nu4);
         assertNotEquals(nu1, null);
-        assertNotEquals(nu1, "string");
+        assertNotEquals(nu1, new Object());
         assertEquals(nu1.hashCode(), nu2.hashCode());
         assertTrue(nu1.toString().contains("NamedUnit"));
 
@@ -181,7 +181,7 @@ class UnitRegistryTest {
         assertNotEquals(oq1, oq4);
         assertNotEquals(oq1, oq5);
         assertNotEquals(oq1, null);
-        assertNotEquals(oq1, "string");
+        assertNotEquals(oq1, new Object());
         assertEquals(oq1.hashCode(), oq2.hashCode());
         assertTrue(oq1.toString().contains("OffsetQuantity"));
 
@@ -198,7 +198,7 @@ class UnitRegistryTest {
         assertNotEquals(du1, du5);
         assertNotEquals(du1, du6);
         assertNotEquals(du1, null);
-        assertNotEquals(du1, "string");
+        assertNotEquals(du1, new Object());
         assertEquals(du1.hashCode(), du2.hashCode());
         assertTrue(du1.toString().contains("DisplayUnit"));
     }
