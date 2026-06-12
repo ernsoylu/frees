@@ -709,6 +709,19 @@ export function DigitizerTab({
 
   const onCanvasMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const pt = eventToImagePx(e)
+    // Ctrl+Click removes the point under the cursor in any mode — the
+    // quick fix for stray auto-extracted points.
+    if (e.ctrlKey || e.metaKey) {
+      const hit = nearestPoint(pt)
+      if (hit) {
+        updateDataset(hit.datasetId, (ds) => ({
+          ...ds,
+          points: ds.points.filter((_, i) => i !== hit.index),
+        }))
+        if (selected?.datasetId === hit.datasetId) setSelected(null)
+      }
+      return
+    }
     if (mode === 'x1' || mode === 'x2' || mode === 'y1' || mode === 'y2') {
       const key = mode
       setCalibration((c) => ({ ...c, [key]: { px: pt.x, py: pt.y, raw: c[key]?.raw ?? '' } }))
@@ -837,13 +850,21 @@ export function DigitizerTab({
 
   // --- export
 
-  const datasetValues = (ds: Dataset): { x: number; y: number }[] => {
+  /** Calibrated values sorted by x, each keeping its point index so list
+   * rows can select and delete the underlying point. */
+  const datasetEntries = (ds: Dataset): { x: number; y: number; index: number }[] => {
     if (!resolved) return []
     return ds.points
-      .map((p) => pxToValue(resolved, p.x, p.y))
-      .filter((v): v is { x: number; y: number } => v !== null)
+      .map((p, index) => {
+        const v = pxToValue(resolved, p.x, p.y)
+        return v ? { x: v.x, y: v.y, index } : null
+      })
+      .filter((v): v is { x: number; y: number; index: number } => v !== null)
       .sort((p, q) => p.x - q.x)
   }
+
+  const datasetValues = (ds: Dataset): { x: number; y: number }[] =>
+    datasetEntries(ds).map(({ x, y }) => ({ x, y }))
 
   const download = (filename: string, content: string, type: string) => {
     const blob = new Blob([content], { type })
@@ -1017,6 +1038,8 @@ export function DigitizerTab({
                 Load a graph image, drop it here, or paste it from the clipboard (Ctrl+V).
                 <br />
                 Then place X1, X2, Y1, Y2 on the axes and start digitizing curves.
+                <br />
+                Ctrl+Click removes a point; Select mode drags points; Delete removes the selection.
               </Text>
             </Stack>
           </Paper>
@@ -1302,11 +1325,23 @@ export function DigitizerTab({
                     <Table.Th>
                       <Text size="xs">{calibration.yName}</Text>
                     </Table.Th>
+                    <Table.Th w={26} />
                   </Table.Tr>
                 </Table.Thead>
                 <Table.Tbody>
-                  {datasetValues(activeDataset).map((v) => (
-                    <Table.Tr key={`${v.x}-${v.y}`}>
+                  {datasetEntries(activeDataset).map((v) => (
+                    <Table.Tr
+                      key={`pt-${v.index}`}
+                      bg={
+                        selected?.datasetId === activeDataset.id && selected.index === v.index
+                          ? 'dark.5'
+                          : undefined
+                      }
+                      style={{ cursor: 'pointer' }}
+                      onClick={() =>
+                        setSelected({ datasetId: activeDataset.id, index: v.index })
+                      }
+                    >
                       <Table.Td>
                         <Text size="xs" ff="monospace">
                           {fmt(v.x)}
@@ -1316,6 +1351,24 @@ export function DigitizerTab({
                         <Text size="xs" ff="monospace">
                           {fmt(v.y)}
                         </Text>
+                      </Table.Td>
+                      <Table.Td p={0} w={26}>
+                        <ActionIcon
+                          size="xs"
+                          variant="subtle"
+                          color="red"
+                          aria-label="Delete point"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            updateDataset(activeDataset.id, (ds) => ({
+                              ...ds,
+                              points: ds.points.filter((_, i) => i !== v.index),
+                            }))
+                            setSelected(null)
+                          }}
+                        >
+                          <IconTrash size={11} />
+                        </ActionIcon>
                       </Table.Td>
                     </Table.Tr>
                   ))}
