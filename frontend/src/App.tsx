@@ -42,13 +42,13 @@ import AlterValuesModal from './AlterValuesModal'
 import { newParamRow, ParamRow } from './ParametricTableTab'
 import TablesTab from './TablesTab'
 import {
-  curveTableFromDigitizer,
+  functionTableFromDigitizer,
   loadTables,
   newParamTable,
   ParamTableSpec,
   saveTables,
   TableSpec,
-  toCurveTableDtos,
+  toFunctionTableDtos,
 } from './tables'
 import PlotTab from './PlotTab'
 import StatesTab from './StatesTab'
@@ -229,7 +229,7 @@ export default function App() {
   const tableStats = activeParam?.stats ?? null
   const tableCheckResult = activeParam?.checkResult ?? null
   const tableCheckMessage = activeParam?.checkMessage ?? ''
-  const curveTableDtos = toCurveTableDtos(tables)
+  const functionTableDtos = toFunctionTableDtos(tables)
 
   function updateParamTable(id: string, update: (t: ParamTableSpec) => ParamTableSpec) {
     setTables((all) =>
@@ -241,8 +241,8 @@ export default function App() {
     if (activeParam) updateParamTable(activeParam.id, update)
   }
 
-  function sendDigitizedToCurveTable(data: DigitizedExport) {
-    const table = curveTableFromDigitizer({ existing: tables, ...data })
+  function sendDigitizedToFunctionTable(data: DigitizedExport) {
+    const table = functionTableFromDigitizer({ existing: tables, ...data })
     setTables((all) => [...all, table])
     setActiveTableId(table.id)
     setActiveTab('table')
@@ -304,7 +304,7 @@ export default function App() {
     setResult(null)
     setLastSolvedWithFillMissing(false)
     try {
-      const response = await check(text, buildVariableInfo(), complexMode, curveTableDtos)
+      const response = await check(text, buildVariableInfo(), complexMode, functionTableDtos)
       setCheckResult(response)
       // Sync the Variable Information table: keep edited rows for variables
       // that still exist, add defaults for new ones.
@@ -404,7 +404,7 @@ export default function App() {
       for (const [name, value] of filled) {
         augmented += `\n${name} = ${value}`
       }
-      const response = await check(augmented, buildVariableInfo(), complexMode, curveTableDtos)
+      const response = await check(augmented, buildVariableInfo(), complexMode, functionTableDtos)
       updateParamTable(tableId, (t) => ({ ...t, checkResult: response }))
 
       // Sync variable list and units so the column headers show units for
@@ -477,7 +477,7 @@ export default function App() {
         unitSystem,
         tableVars,
         rows,
-        curveTableDtos,
+        functionTableDtos,
       )
       updateParamTable(tableId, (t) => ({
         ...t,
@@ -513,7 +513,7 @@ export default function App() {
         findAll,
         unitSystem,
         shouldFillMissing,
-        curveTableDtos,
+        functionTableDtos,
       )
       setSolvedComplexMode(complexMode)
       setResult(response)
@@ -879,7 +879,7 @@ export default function App() {
               />
             )}
             {activeTab === 'digitizer' && (
-              <DigitizerTab onSendToCurveTable={sendDigitizedToCurveTable} />
+              <DigitizerTab onSendToFunctionTable={sendDigitizedToFunctionTable} />
             )}
           </Paper>
 

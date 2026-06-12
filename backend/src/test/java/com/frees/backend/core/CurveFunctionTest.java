@@ -19,13 +19,13 @@ class CurveFunctionTest {
 
     private static Map<String, ProcDef> singleCurve(String name, boolean xLog, boolean yLog,
                                                     double[] xs, double[] ys) {
-        return Map.of(name, new ProcDef.CurveDef(name, List.of("re"), xLog, yLog,
+        return Map.of(name, new ProcDef.FunctionTableDef(name, List.of("re"), xLog, yLog,
                 List.of(new ProcDef.Curve(null, xs, ys))));
     }
 
     private static Map<String, ProcDef> family(String name) {
         // U(Re) lines at two temperatures: T=100 -> U = Re, T=200 -> U = 3*Re
-        return Map.of(name, new ProcDef.CurveDef(name, List.of("re", "t"), false, false,
+        return Map.of(name, new ProcDef.FunctionTableDef(name, List.of("re", "t"), false, false,
                 List.of(
                         new ProcDef.Curve(100.0, new double[]{0, 10}, new double[]{0, 10}),
                         new ProcDef.Curve(200.0, new double[]{0, 10}, new double[]{0, 30}))));
@@ -38,6 +38,19 @@ class CurveFunctionTest {
         var result = solver.solve("Re = 3000\nU = htc(Re)", SolverSettings.DEFAULTS,
                 Map.of(), defs);
         assertEquals(100.0, result.variables().get("U"), 1e-9);
+    }
+
+    @Test
+    void adjustsOutofRangeGuessesToRangeAverage() {
+        var defs = singleCurve("htc", false, false,
+                new double[]{1000, 2000, 4000}, new double[]{50, 80, 120});
+        // Without guess adjustment, a default guess of 1.0 (or 0.0) clamps to 1000.0,
+        // has a derivative of 0, and Newton fails/stalls.
+        // With guess adjustment, Re's guess of 0.0 becomes (1000 + 4000)/2 = 2500.0,
+        // and Newton converges to 3000.0.
+        var result = solver.solve("U = 100\nU = htc(Re)", SolverSettings.DEFAULTS,
+                Map.of("re", new VariableSpec("re", 0.0, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY)), defs);
+        assertEquals(3000.0, result.variables().get("Re"), 1e-6);
     }
 
     @Test

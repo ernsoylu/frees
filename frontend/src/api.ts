@@ -94,10 +94,10 @@ export interface VariableInfo {
 
 const API_BASE = import.meta.env.VITE_API_BASE || '';
 
-/** A Curve Table in solver wire format (Epic 8): the table name is the
+/** A Function Table in solver wire format (Epic 8): the table name is the
  * function name callable from equations; argNames lists the column names
  * (lookup argument first, then the family parameter, if any). */
-export interface CurveTableDto {
+export interface FunctionTableDto {
   name: string
   argNames: string[]
   xLog: boolean
@@ -109,13 +109,13 @@ export async function check(
   text: string,
   variableInfo: VariableInfo[],
   complexMode: boolean,
-  curveTables: CurveTableDto[] = [],
+  functionTables: FunctionTableDto[] = [],
 ): Promise<CheckResponse> {
   try {
     const response = await fetch(`${API_BASE}/api/check`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text, variableInfo, stopCriteria: { complexMode }, curveTables }),
+      body: JSON.stringify({ text, variableInfo, stopCriteria: { complexMode }, functionTables }),
     })
     if (!response.ok) {
       let errorMessage = `Server error (${response.status})`
@@ -176,7 +176,7 @@ export async function solve(
   findAllSolutions: boolean,
   displayUnitSystem: UnitSystem,
   fillMissing: boolean,
-  curveTables: CurveTableDto[] = [],
+  functionTables: FunctionTableDto[] = [],
 ): Promise<SolveResponse> {
   try {
     const response = await fetch(`${API_BASE}/api/solve`, {
@@ -189,7 +189,7 @@ export async function solve(
         findAllSolutions,
         displayUnitSystem,
         fillMissing,
-        curveTables,
+        functionTables,
       }),
     })
     if (!response.ok) {
@@ -438,7 +438,7 @@ export async function solveTable(
   displayUnitSystem: UnitSystem,
   variables: string[],
   rows: Record<string, number>[],
-  curveTables: CurveTableDto[] = [],
+  functionTables: FunctionTableDto[] = [],
 ): Promise<SolveTableResponse> {
   try {
     const response = await fetch(`${API_BASE}/api/solve/table`, {
@@ -450,7 +450,7 @@ export async function solveTable(
         variableInfo,
         displayUnitSystem,
         table: { variables, rows },
-        curveTables,
+        functionTables,
       }),
     })
     if (!response.ok) {

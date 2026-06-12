@@ -237,11 +237,15 @@ public class EquationSystemSolver {
                                          long deadlineNanos,
                                          Map<String, Double> warmStart) {
         TreeSet<String> allVars = collectVariables(equations);
-        Map<String, VariableSpec> expandedSpecs =
-                expandSpecs(allVars, specs, settings.complexMode());
+        Map<String, VariableSpec> expandedSpecs = new HashMap<>(
+                expandSpecs(allVars, specs, settings.complexMode()));
+        Map<String, Double> mutableWarmStart = warmStart != null ? new HashMap<>(warmStart) : null;
+
+        checkAndAdjustGuesses(equations, defs, expandedSpecs, mutableWarmStart);
+
         Map<String, Double> values = new HashMap<>();
         for (String name : allVars) {
-            values.put(name, initialGuess(name, expandedSpecs, warmStart));
+            values.put(name, initialGuess(name, expandedSpecs, mutableWarmStart));
         }
         NewtonSolver newtonSolver = new NewtonSolver(settings, defs);
         NewtonSolver retrySolver = new NewtonSolver(retrySettings(settings), defs);
@@ -252,7 +256,7 @@ public class EquationSystemSolver {
         for (int bi = 0; bi < blocks.size(); bi++) {
             if (skipIndices.contains(bi)) continue;
             totalIterations += solveBlockWithFallback(bi, blocks, values, deadlineNanos, expandedSpecs,
-                    newtonSolver, retrySolver, polisher, warmStart, skipIndices);
+                    newtonSolver, retrySolver, polisher, mutableWarmStart, skipIndices);
         }
         return new InnerSolve(values, blocks, totalIterations);
     }
@@ -617,14 +621,16 @@ public class EquationSystemSolver {
         for (Equation eq : equations) {
             allVars.addAll(eq.variables());
         }
-        Map<String, VariableSpec> expandedSpecs = expandSpecs(allVars, specs, settings.complexMode());
+        Map<String, VariableSpec> expandedSpecs = new HashMap<>(expandSpecs(allVars, specs, settings.complexMode()));
+        Map<String, ProcDef> defs = parsed.defs();
+
+        checkAndAdjustGuesses(equations, defs, expandedSpecs, null);
 
         Map<String, Double> guesses = new HashMap<>();
         for (String name : allVars) {
             guesses.put(name, initialGuess(name, expandedSpecs, null));
         }
 
-        Map<String, ProcDef> defs = parsed.defs();
         List<Block> blocks = blocker.block(equations);
         AllRootsSolver allRoots = new AllRootsSolver(settings, expandedSpecs, defs);
         List<Map<String, Double>> solutions = allRoots.findAll(blocks, guesses, deadlineNanos);
@@ -712,5 +718,146 @@ public class EquationSystemSolver {
         }
         double guess = name.endsWith("_r") ? parentSpec.guess() : 0.0;
         return new VariableSpec(name, guess, parentSpec.lower(), parentSpec.upper());
+    }
+
+    private static void checkAndAdjustGuesses(List<Equation> equations,
+                                              Map<String, ProcDef> defs,
+                                              Map<String, VariableSpec> expandedSpecs,
+                                              Map<String, Double> warmStart) {
+        if (equations == null || defs == null || expandedSpecs == null) {
+            return;
+        }
+        for (Equation eq : equations) {
+            checkExpr(eq.lhs(), defs, expandedSpecs, warmStart);
+            checkExpr(eq.rhs(), defs, expandedSpecs, warmStart);
+        }
+    }
+
+    private static void checkExpr(Expr e,
+                                  Map<String, ProcDef> defs,
+                                  Map<String, VariableSpec> expandedSpecs,
+                                  Map<String, Double> warmStart) {
+        if (e == null) return;
+        switch (e) {
+            case Expr.Num num -> {}
+            case Expr.Var var -> {}
+            case Expr.Neg neg -> checkExpr(neg.operand(), defs, expandedSpecs, warmStart);
+            case Expr.BinOp bin -> {
+                checkExpr(bin.left(), defs, expandedSpecs, warmStart);
+                checkExpr(bin.right(), defs, expandedSpecs, warmStart);
+            }
+            case Expr.Call call -> {
+                ProcDef def = defs.get(call.function());
+                if (def instanceof ProcDef.FunctionTableDef cd) {
+                    adjustCallArguments(cd, call.args(), expandedSpecs, warmStart);
+                }
+                for (Expr arg : call.args()) {
+                    checkExpr(arg, defs, expandedSpecs, warmStart);
+                }
+            }
+            case Expr.ArrayAccess arr -> {
+                for (Expr idx : arr.indices()) {
+                    checkExpr(idx, defs, expandedSpecs, warmStart);
+                }
+            }
+            case Expr.Range range -> {
+                checkExpr(range.start(), defs, expandedSpecs, warmStart);
+                checkExpr(range.end(), defs, expandedSpecs, warmStart);
+            }
+            case Expr.ArrayLiteral lit -> {
+                for (Expr elem : lit.elements()) {
+                    checkExpr(elem, defs, expandedSpecs, warmStart);
+                }
+            }
+            case Expr.Compare comp -> {
+                checkExpr(comp.left(), defs, expandedSpecs, warmStart);
+                checkExpr(comp.right(), defs, expandedSpecs, warmStart);
+            }
+            case Expr.Logical log -> {
+                checkExpr(log.left(), defs, expandedSpecs, warmStart);
+                checkExpr(log.right(), defs, expandedSpecs, warmStart);
+            }
+            case Expr.Not not -> checkExpr(not.operand(), defs, expandedSpecs, warmStart);
+        }
+    }
+
+    private static void adjustCallArguments(ProcDef.FunctionTableDef cd,
+                                            List<Expr> args,
+                                            Map<String, VariableSpec> expandedSpecs,
+                                            Map<String, Double> warmStart) {
+        if (args.isEmpty() || cd.curves() == null || cd.curves().isEmpty()) {
+            return;
+        }
+
+        // Check 1st argument (X)
+        Expr arg1 = args.get(0);
+        if (arg1 instanceof Expr.Var varExpr) {
+            String varName = varExpr.name();
+            double minX = Double.POSITIVE_INFINITY;
+            double maxX = Double.NEGATIVE_INFINITY;
+            for (ProcDef.Curve curve : cd.curves()) {
+                double[] xs = curve.xs();
+                if (xs != null && xs.length > 0) {
+                    if (xs[0] < minX) minX = xs[0];
+                    if (xs[xs.length - 1] > maxX) maxX = xs[xs.length - 1];
+                }
+            }
+            if (minX <= maxX && !Double.isInfinite(minX) && !Double.isInfinite(maxX)) {
+                adjustVarGuess(varName, minX, maxX, expandedSpecs, warmStart);
+                adjustVarGuess(varName + "_r", minX, maxX, expandedSpecs, warmStart);
+            }
+        }
+
+        // Check 2nd argument (Parameter) if it exists
+        if (args.size() > 1) {
+            Expr arg2 = args.get(1);
+            if (arg2 instanceof Expr.Var varExpr) {
+                String varName = varExpr.name();
+                double minParam = Double.POSITIVE_INFINITY;
+                double maxParam = Double.NEGATIVE_INFINITY;
+                int paramCount = 0;
+                for (ProcDef.Curve curve : cd.curves()) {
+                    if (curve.param() != null) {
+                        double p = curve.param();
+                        if (p < minParam) minParam = p;
+                        if (p > maxParam) maxParam = p;
+                        paramCount++;
+                    }
+                }
+                if (paramCount > 0 && minParam <= maxParam && !Double.isInfinite(minParam) && !Double.isInfinite(maxParam)) {
+                    adjustVarGuess(varName, minParam, maxParam, expandedSpecs, warmStart);
+                    adjustVarGuess(varName + "_r", minParam, maxParam, expandedSpecs, warmStart);
+                }
+            }
+        }
+    }
+
+    private static void adjustVarGuess(String varName,
+                                       double minVal,
+                                       double maxVal,
+                                       Map<String, VariableSpec> expandedSpecs,
+                                       Map<String, Double> warmStart) {
+        double currentGuess = DEFAULT_GUESS;
+        if (warmStart != null && warmStart.containsKey(varName)) {
+            currentGuess = warmStart.get(varName);
+        } else {
+            VariableSpec spec = expandedSpecs.get(varName);
+            if (spec != null) {
+                currentGuess = spec.guess();
+            }
+        }
+
+        if (currentGuess < minVal || currentGuess > maxVal) {
+            double avg = (minVal + maxVal) / 2.0;
+            VariableSpec spec = expandedSpecs.get(varName);
+            if (spec != null) {
+                expandedSpecs.put(varName, new VariableSpec(spec.name(), avg, spec.lower(), spec.upper()));
+            } else {
+                expandedSpecs.put(varName, new VariableSpec(varName, avg, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY));
+            }
+            if (warmStart != null && warmStart.containsKey(varName)) {
+                warmStart.put(varName, avg);
+            }
+        }
     }
 }

@@ -413,8 +413,8 @@ function hexToRgb(hex: string): [number, number, number] {
 }
 
 export function DigitizerTab({
-  onSendToCurveTable,
-}: Readonly<{ onSendToCurveTable?: (data: DigitizedExport) => void }>) {
+  onSendToFunctionTable,
+}: Readonly<{ onSendToFunctionTable?: (data: DigitizedExport) => void }>) {
   const saved = useMemo(loadSaved, [])
   const [image, setImage] = useState<HTMLImageElement | null>(null)
   const [imageDataUrl, setImageDataUrl] = useState<string | null>(saved?.imageDataUrl ?? null)
@@ -948,9 +948,9 @@ export function DigitizerTab({
     download('digitized-curves.json', JSON.stringify(payload, null, 2), 'application/json')
   }
 
-  const sendToCurveTable = () => {
+  const sendToFunctionTable = () => {
     if (!resolved) {
-      setNotice('Calibrate all four axis points before sending to a Curve Table.')
+      setNotice('Calibrate all four axis points before sending to a Function Table.')
       return
     }
     const curves = datasets
@@ -960,7 +960,7 @@ export function DigitizerTab({
       setNotice('Digitize at least one curve first.')
       return
     }
-    onSendToCurveTable?.({
+    onSendToFunctionTable?.({
       xName: calibration.xName,
       yName: calibration.yName,
       xLog: calibration.xLog,
@@ -1383,9 +1383,9 @@ export function DigitizerTab({
                 </Button>
               </Group>
             </Group>
-            {onSendToCurveTable && (
-              <Button size="xs" fullWidth mb={6} leftSection={<IconTable size={14} />} onClick={sendToCurveTable}>
-                Send to Curve Table
+            {onSendToFunctionTable && (
+              <Button size="xs" fullWidth mb={6} leftSection={<IconTable size={14} />} onClick={sendToFunctionTable}>
+                Send to Function Table
               </Button>
             )}
             {activeDataset && resolved ? (
