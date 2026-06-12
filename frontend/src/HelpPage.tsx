@@ -1912,7 +1912,7 @@ H_reactants = H_products`}
             </List>
 
             <Alert color="blue" title="Optimization Setup" mt="xs">
-              To run an optimization, click the <strong>Min/Max</strong> button or press the corresponding hotkey. Choose your objective variable, select one or more independent variables, specify their bounds, select the method (Brent, Simplex, or BOBYQA), and click <strong>Optimize</strong>.
+              To run an optimization, click the <strong>Min/Max</strong> (target) icon in the left rail. Choose your objective variable, select one or more independent variables, give each its bounds, pick the method (Brent for one variable, Nelder-Mead Simplex or BOBYQA for several), optionally add constraints, and click <strong>Minimize</strong>/<strong>Maximize</strong>.
             </Alert>
 
             <Title order={3} mt="md">Constrained Optimization (Barrier & Augmented Lagrangian)</Title>
@@ -2026,31 +2026,40 @@ H_reactants = H_products`}
               <Paper withBorder p="xs" bg="dark.9" radius="md" mt="xs" style={{ position: 'relative' }}>
                 <CopyButton code={`{ Cylinder Minimization }
 V = pi * r^2 * h
-A = 2 * pi * r^2 + 2 * pi * r * h
-V = 1000
-pi = 3.14159265`} />
+A = 2 * pi * r^2 + 2 * pi * r * h`} />
                 <Code block style={{ background: 'transparent' }}>
                   {`{ Cylinder Minimization }
 V = pi * r^2 * h
-A = 2 * pi * r^2 + 2 * pi * r * h
-V = 1000
-pi = 3.14159265`}
+A = 2 * pi * r^2 + 2 * pi * r * h`}
                 </Code>
               </Paper>
+              <Text size="xs" mt="xs" style={{ lineHeight: 1.6 }}>
+                Note that <code>pi</code> is a built-in constant — writing <code>pi = 3.14159265</code> would
+                add an extra equation and overspecify the system. The volume requirement is entered as an
+                equality <em>constraint</em> rather than an equation, so that both <code>r</code> and
+                <code>h</code> stay free for the optimizer.
+              </Text>
               <Text size="xs" mt="xs" style={{ lineHeight: 1.6 }}>
                 <strong>How to Optimize:</strong>
                 <br/>
                 1. Paste the equations into the editor and click <strong>Check (F4)</strong>.
                 <br/>
-                2. Click the <strong>Min/Max</strong> button at the top.
+                2. Click the <strong>Min/Max</strong> (target) icon in the left rail.
                 <br/>
                 3. Set the Objective Variable to <code>A</code>, and set Goal to <strong>Minimize</strong>.
                 <br/>
-                4. Add Independent Variables: add <code>r</code> (bounds 1 to 20) and <code>h</code> (bounds 1 to 20).
+                4. Add Independent Variables <code>r</code> and <code>h</code> and give each the bounds 1 to 20.
                 <br/>
-                5. Select <strong>Nelder-Mead Simplex</strong> or <strong>BOBYQA</strong> as the optimizer method.
+                5. Select <strong>Nelder-Mead Simplex</strong> or <strong>BOBYQA</strong> as the method (Brent is only available with a single variable).
                 <br/>
-                6. Click <strong>Optimize</strong>. The solver will find the optimum dimensions: <code>r ≈ 5.42 cm</code> and <code>h ≈ 10.84 cm</code>, yielding a minimal surface area <code>A ≈ 553.58 cm²</code>.
+                6. Enter <code>V = 1000</code> in the Constraints box.
+                <br/>
+                7. Click <strong>Minimize</strong>. The solver finds the optimum dimensions <code>r ≈ 5.42 cm</code> and <code>h ≈ 10.84 cm</code> (h = 2r), yielding the minimal surface area <code>A ≈ 553.58 cm²</code>.
+              </Text>
+              <Text size="xs" mt="xs" style={{ lineHeight: 1.6 }}>
+                <strong>1-D alternative:</strong> keep <code>V = 1000</code> as an equation in the editor
+                instead; then the system has a single degree of freedom, and varying only <code>r</code> with
+                <strong> Brent's method</strong> reaches the same optimum.
               </Text>
             </Card>
 
@@ -2141,7 +2150,7 @@ U = value - V_penalty - W_penalty`}
                 <br/>
                 1. Paste these equations into the editor and click <strong>Check (F4)</strong>.
                 <br/>
-                2. Click the <strong>Min/Max</strong> button at the top.
+                2. Click the <strong>Min/Max</strong> (target) icon in the left rail.
                 <br/>
                 3. Choose the objective variable <code>U</code>, set Goal to <strong>Maximize</strong>.
                 <br/>

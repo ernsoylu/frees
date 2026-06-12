@@ -39,6 +39,10 @@ public final class Optimizer {
 
     private static final double PENALTY = 1e100;
     private static final int MAX_EVALUATIONS = 500;
+    // Each evaluation is a full system solve; multivariate searches (and the
+    // penalized sub-problems of constrained runs) need a larger budget than
+    // 1-D Brent before they converge.
+    private static final int MULTIVARIATE_MAX_EVALUATIONS = 2000;
     private static final int CONSTRAINED_MAX_OUTER_ITERATIONS = 15;
     private static final double BARRIER_MU_INITIAL = 1.0;
     private static final double BARRIER_MU_FACTOR = 0.1;
@@ -344,29 +348,57 @@ public final class Optimizer {
             initialGuess[i] = Math.max(lowerBounds[i], Math.min(upperBounds[i], initialGuess[i]));
         }
 
+        // Track the best point seen so far: when the evaluation budget runs
+        // out, Commons Math throws TooManyEvaluationsException without
+        // returning its best iterate, so we keep our own copy and degrade
+        // gracefully instead of failing the request.
+        final double[] trackedPoint = initialGuess.clone();
+        final double[] trackedValue = { problem.maximize()
+                ? Double.NEGATIVE_INFINITY : Double.POSITIVE_INFINITY };
+        final MultivariateFunction inner = fn;
+        MultivariateFunction trackedFn = point -> {
+            double value = inner.value(point);
+            boolean better = problem.maximize()
+                    ? value > trackedValue[0] : value < trackedValue[0];
+            if (better) {
+                trackedValue[0] = value;
+                System.arraycopy(point, 0, trackedPoint, 0, n);
+            }
+            return value;
+        };
+
         double[] bestPoints;
-        if (problem.method() != null && problem.method().equalsIgnoreCase("bobyqa")) {
-            int numInterpolationPoints = 2 * n + 1;
-            BOBYQAOptimizer bobyqa = new BOBYQAOptimizer(numInterpolationPoints);
-            PointValuePair best = bobyqa.optimize(
-                    new MaxEval(MAX_EVALUATIONS),
-                    new ObjectiveFunction(fn),
-                    problem.maximize() ? GoalType.MAXIMIZE : GoalType.MINIMIZE,
-                    new SimpleBounds(lowerBounds, upperBounds),
-                    new InitialGuess(initialGuess)
-            );
-            bestPoints = best.getPoint();
-        } else {
-            // Nelder-Mead Simplex (default for multivariate)
-            SimplexOptimizer simplex = new SimplexOptimizer(1e-10, 1e-12);
-            PointValuePair best = simplex.optimize(
-                    new MaxEval(MAX_EVALUATIONS),
-                    new ObjectiveFunction(fn),
-                    problem.maximize() ? GoalType.MAXIMIZE : GoalType.MINIMIZE,
-                    new NelderMeadSimplex(n),
-                    new InitialGuess(initialGuess)
-            );
-            bestPoints = best.getPoint();
+        try {
+            if (problem.method() != null && problem.method().equalsIgnoreCase("bobyqa")) {
+                int numInterpolationPoints = 2 * n + 1;
+                BOBYQAOptimizer bobyqa = new BOBYQAOptimizer(numInterpolationPoints);
+                PointValuePair best = bobyqa.optimize(
+                        new MaxEval(MULTIVARIATE_MAX_EVALUATIONS),
+                        new ObjectiveFunction(trackedFn),
+                        problem.maximize() ? GoalType.MAXIMIZE : GoalType.MINIMIZE,
+                        new SimpleBounds(lowerBounds, upperBounds),
+                        new InitialGuess(initialGuess)
+                );
+                bestPoints = best.getPoint();
+            } else {
+                // Nelder-Mead Simplex (default for multivariate)
+                SimplexOptimizer simplex = new SimplexOptimizer(1e-10, 1e-12);
+                PointValuePair best = simplex.optimize(
+                        new MaxEval(MULTIVARIATE_MAX_EVALUATIONS),
+                        new ObjectiveFunction(trackedFn),
+                        problem.maximize() ? GoalType.MAXIMIZE : GoalType.MINIMIZE,
+                        new NelderMeadSimplex(n),
+                        new InitialGuess(initialGuess)
+                );
+                bestPoints = best.getPoint();
+            }
+        } catch (org.apache.commons.math3.exception.TooManyEvaluationsException e) {
+            bestPoints = trackedPoint.clone();
+        }
+        // The simplex is unaware of bounds and the tracked point may stem
+        // from an out-of-bounds probe: clamp before the final solve.
+        for (int i = 0; i < n; i++) {
+            bestPoints[i] = Math.max(lowerBounds[i], Math.min(upperBounds[i], bestPoints[i]));
         }
 
         EquationSystemSolver.Result solution = solveWithDecisions(problem, bestPoints);

@@ -248,11 +248,14 @@ export async function solve(
   }
 }
 
+export type OptimizeMethod = 'brent' | 'nelder-mead' | 'bobyqa'
+
 export interface OptimizeParams {
   objective: string
-  decision: string
-  lower: number
-  upper: number
+  decisions: string[]
+  lowers: number[]
+  uppers: number[]
+  method: OptimizeMethod
   maximize: boolean
   constraints?: string[]
 }
@@ -262,6 +265,7 @@ export interface OptimizeResponse {
   error: string | null
   objective: VariableResult | null
   decision: VariableResult | null
+  decisions: VariableResult[]
   evaluations: number
   variables: VariableResult[]
 }
@@ -303,6 +307,7 @@ export async function optimize(
         error: errorMessage,
         objective: null,
         decision: null,
+        decisions: [],
         evaluations: 0,
         variables: [],
       }
@@ -313,6 +318,7 @@ export async function optimize(
       error: data.error ?? null,
       objective: data.objective ?? null,
       decision: data.decision ?? null,
+      decisions: data.decisions ?? [],
       evaluations: data.evaluations ?? 0,
       variables: data.variables ?? [],
     }
@@ -322,6 +328,7 @@ export async function optimize(
       error: `Could not reach the solver backend: ${String(e)}`,
       objective: null,
       decision: null,
+      decisions: [],
       evaluations: 0,
       variables: [],
     }
