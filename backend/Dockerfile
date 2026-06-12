@@ -16,5 +16,7 @@ WORKDIR /app
 COPY --from=build /app/build/libs/*.jar app.jar
 COPY native/libCoolProp.so /opt/coolprop/libCoolProp.so
 ENV COOLPROP_LIBRARY=/opt/coolprop/libCoolProp.so
+RUN useradd --system --no-create-home --uid 10001 frees
+USER frees
 EXPOSE 8080
 ENTRYPOINT ["java", "-jar", "app.jar"]
