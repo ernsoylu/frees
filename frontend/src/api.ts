@@ -92,13 +92,15 @@ export interface VariableInfo {
   units: string | null
 }
 
+const API_BASE = import.meta.env.VITE_API_BASE || '';
+
 export async function check(
   text: string,
   variableInfo: VariableInfo[],
   complexMode: boolean,
 ): Promise<CheckResponse> {
   try {
-    const response = await fetch('/api/check', {
+    const response = await fetch(`${API_BASE}/api/check`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ text, variableInfo, stopCriteria: { complexMode } }),
@@ -164,7 +166,7 @@ export async function solve(
   fillMissing: boolean,
 ): Promise<SolveResponse> {
   try {
-    const response = await fetch('/api/solve', {
+    const response = await fetch(`${API_BASE}/api/solve`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -257,7 +259,7 @@ export async function optimize(
   params: OptimizeParams,
 ): Promise<OptimizeResponse> {
   try {
-    const response = await fetch('/api/optimize', {
+    const response = await fetch(`${API_BASE}/api/optimize`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -344,7 +346,7 @@ export interface PsychartResponse {
 }
 
 export async function getFluids(): Promise<string[]> {
-  const response = await fetch('/api/fluids')
+  const response = await fetch(`${API_BASE}/api/fluids`)
   if (!response.ok) return []
   const body = (await response.json()) as { available: boolean; fluids: string[] }
   return body.available ? body.fluids : []
@@ -354,7 +356,7 @@ export async function getPropertyDiagram(
   fluid: string,
   type: string,
 ): Promise<DiagramResponse> {
-  const response = await fetch('/api/propplot', {
+  const response = await fetch(`${API_BASE}/api/propplot`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ fluid, type }),
@@ -371,7 +373,7 @@ export async function getPsychrometricChart(
   tMin: number,
   tMax: number,
 ): Promise<PsychartResponse> {
-  const response = await fetch('/api/psychart', {
+  const response = await fetch(`${API_BASE}/api/psychart`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ pressure, tMin, tMax }),
@@ -388,7 +390,7 @@ export async function exportVector(
   svg: string,
   format: 'pdf' | 'eps',
 ): Promise<Blob> {
-  const response = await fetch('/api/export', {
+  const response = await fetch(`${API_BASE}/api/export`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ svg, format }),
@@ -424,7 +426,7 @@ export async function solveTable(
   rows: Record<string, number>[],
 ): Promise<SolveTableResponse> {
   try {
-    const response = await fetch('/api/solve/table', {
+    const response = await fetch(`${API_BASE}/api/solve/table`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
