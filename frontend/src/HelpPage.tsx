@@ -671,6 +671,51 @@ Here is the thermodynamic T-s diagram showing the cycle state points:
                   <Table.Td>Sum or average of values (useful with array slices)</Table.Td>
                   <Table.Td><Code>y = sum(x[1..5])</Code></Table.Td>
                 </Table.Tr>
+                <Table.Tr>
+                  <Table.Td><Code>bitand(x, y), bitor(x, y), bitxor(x, y)</Code></Table.Td>
+                  <Table.Td>Bitwise AND, OR, and XOR operations on 64-bit integer casts</Table.Td>
+                  <Table.Td><Code>y = bitand(5, 6)</Code> (y = 4)</Table.Td>
+                </Table.Tr>
+                <Table.Tr>
+                  <Table.Td><Code>bitnot(x)</Code></Table.Td>
+                  <Table.Td>Bitwise NOT (one's complement) operation</Table.Td>
+                  <Table.Td><Code>y = bitnot(0)</Code> (y = -1)</Table.Td>
+                </Table.Tr>
+                <Table.Tr>
+                  <Table.Td><Code>bitshiftl(x, n), bitshiftr(x, n)</Code></Table.Td>
+                  <Table.Td>Bitwise left-shift and right-shift of x by n bits</Table.Td>
+                  <Table.Td><Code>y = bitshiftl(2, 3)</Code> (y = 16)</Table.Td>
+                </Table.Tr>
+                <Table.Tr>
+                  <Table.Td><Code>mod(x, y)</Code></Table.Td>
+                  <Table.Td>Floating-point modulo (remainder of x / y)</Table.Td>
+                  <Table.Td><Code>y = mod(10.5, 3)</Code> (y = 1.5)</Table.Td>
+                </Table.Tr>
+                <Table.Tr>
+                  <Table.Td><Code>gcd(x, y), lcm(x, y)</Code></Table.Td>
+                  <Table.Td>Greatest Common Divisor and Least Common Multiple (integer cast)</Table.Td>
+                  <Table.Td><Code>y = gcd(24, 36)</Code> (y = 12)</Table.Td>
+                </Table.Tr>
+                <Table.Tr>
+                  <Table.Td><Code>erf(x), erfc(x), erfinv(x)</Code></Table.Td>
+                  <Table.Td>Error, complementary error, and inverse error functions</Table.Td>
+                  <Table.Td><Code>y = erf(0)</Code> (y = 0)</Table.Td>
+                </Table.Tr>
+                <Table.Tr>
+                  <Table.Td><Code>gamma(x), loggamma(x)</Code></Table.Td>
+                  <Table.Td>Gamma function Γ(x) and natural log of gamma function</Table.Td>
+                  <Table.Td><Code>y = gamma(4)</Code> (y = 6)</Table.Td>
+                </Table.Tr>
+                <Table.Tr>
+                  <Table.Td><Code>beta(a, b)</Code></Table.Td>
+                  <Table.Td>Beta function B(a, b)</Table.Td>
+                  <Table.Td><Code>y = beta(2, 3)</Code> (y = 0.0833)</Table.Td>
+                </Table.Tr>
+                <Table.Tr>
+                  <Table.Td><Code>besselj(x, order)</Code></Table.Td>
+                  <Table.Td>Bessel function of the first kind J_order(x)</Table.Td>
+                  <Table.Td><Code>y = besselj(2.5, 0)</Code> (y = -0.0484)</Table.Td>
+                </Table.Tr>
               </Table.Tbody>
             </Table>
           </Stack>

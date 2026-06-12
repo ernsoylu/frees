@@ -1,0 +1,68 @@
+package com.frees.backend.core;
+
+import org.junit.jupiter.api.Test;
+import java.util.Map;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+class BitwiseAndSpecialMathTest {
+
+    private final EquationSystemSolver solver = new EquationSystemSolver();
+
+    @Test
+    void testBitwiseOperations() {
+        String code = """
+                a = bitand(5, 6)
+                b = bitor(5, 6)
+                c = bitxor(5, 6)
+                d = bitnot(0)
+                e = bitshiftl(2, 3)
+                f = bitshiftr(16, 2)
+                """;
+        var result = solver.solve(code, SolverSettings.DEFAULTS);
+        Map<String, Double> vars = result.variables();
+
+        assertEquals(4.0, vars.get("a"), 1e-9);
+        assertEquals(7.0, vars.get("b"), 1e-9);
+        assertEquals(3.0, vars.get("c"), 1e-9);
+        assertEquals(-1.0, vars.get("d"), 1e-9);
+        assertEquals(16.0, vars.get("e"), 1e-9);
+        assertEquals(4.0, vars.get("f"), 1e-9);
+    }
+
+    @Test
+    void testCSNumberTheory() {
+        String code = """
+                a = mod(10.5, 3)
+                b = gcd(24, 36)
+                c = lcm(12, 18)
+                """;
+        var result = solver.solve(code, SolverSettings.DEFAULTS);
+        Map<String, Double> vars = result.variables();
+
+        assertEquals(1.5, vars.get("a"), 1e-9);
+        assertEquals(12.0, vars.get("b"), 1e-9);
+        assertEquals(36.0, vars.get("c"), 1e-9);
+    }
+
+    @Test
+    void testSpecialMathFunctions() {
+        String code = """
+                a = erf(0)
+                b = erfc(0)
+                c = gamma(4)
+                d = loggamma(4)
+                e = beta(2, 3)
+                f = besselj(2.5, 0)
+                """;
+        var result = solver.solve(code, SolverSettings.DEFAULTS);
+        Map<String, Double> vars = result.variables();
+
+        assertEquals(0.0, vars.get("a"), 1e-9);
+        assertEquals(1.0, vars.get("b"), 1e-9);
+        assertEquals(6.0, vars.get("c"), 1e-9);
+        assertEquals(Math.log(6.0), vars.get("d"), 1e-9);
+        assertEquals(1.0 / 12.0, vars.get("e"), 1e-9);
+        // J0(2.5) ≈ -0.048383776
+        assertEquals(-0.048383776, vars.get("f"), 1e-6);
+    }
+}

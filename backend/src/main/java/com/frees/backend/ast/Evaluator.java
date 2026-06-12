@@ -156,6 +156,29 @@ public final class Evaluator {
             case "average", "avg" -> args.stream().mapToDouble(a -> eval(a, values, defs))
                     .average().orElse(0.0);
             case "integral" -> integralQuadrature(c, values, defs);
+
+            // Bitwise operations
+            case "bitand" -> (double) ((long) arg(c, args, 0, values, defs) & (long) arg(c, args, 1, values, defs));
+            case "bitor"  -> (double) ((long) arg(c, args, 0, values, defs) | (long) arg(c, args, 1, values, defs));
+            case "bitxor" -> (double) ((long) arg(c, args, 0, values, defs) ^ (long) arg(c, args, 1, values, defs));
+            case "bitnot" -> (double) (~((long) arg(c, args, 0, values, defs)));
+            case "bitshiftl" -> (double) ((long) arg(c, args, 0, values, defs) << (int) arg(c, args, 1, values, defs));
+            case "bitshiftr" -> (double) ((long) arg(c, args, 0, values, defs) >> (int) arg(c, args, 1, values, defs));
+
+            // CS & Number theory
+            case "mod" -> arg(c, args, 0, values, defs) % arg(c, args, 1, values, defs);
+            case "gcd" -> (double) org.apache.commons.math3.util.ArithmeticUtils.gcd((long) arg(c, args, 0, values, defs), (long) arg(c, args, 1, values, defs));
+            case "lcm" -> (double) org.apache.commons.math3.util.ArithmeticUtils.lcm((long) arg(c, args, 0, values, defs), (long) arg(c, args, 1, values, defs));
+
+            // Special math functions
+            case "erf"     -> org.apache.commons.math3.special.Erf.erf(arg(c, args, 0, values, defs));
+            case "erfc"    -> org.apache.commons.math3.special.Erf.erfc(arg(c, args, 0, values, defs));
+            case "erfinv"  -> org.apache.commons.math3.special.Erf.erfInv(arg(c, args, 0, values, defs));
+            case "gamma"   -> org.apache.commons.math3.special.Gamma.gamma(arg(c, args, 0, values, defs));
+            case "loggamma"-> org.apache.commons.math3.special.Gamma.logGamma(arg(c, args, 0, values, defs));
+            case "beta"    -> Math.exp(org.apache.commons.math3.special.Beta.logBeta(arg(c, args, 0, values, defs), arg(c, args, 1, values, defs)));
+            case "besselj" -> org.apache.commons.math3.special.BesselJ.value(arg(c, args, 1, values, defs), arg(c, args, 0, values, defs));
+
             default -> throw new IllegalStateException("Unknown function: " + c.function());
         };
     }
