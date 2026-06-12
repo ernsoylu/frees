@@ -73,7 +73,7 @@ public class EquationSystemSolver {
 
     public CheckResult check(String source, boolean complexMode) {
         EquationParser.ParseResult parsed = parser.parseResult(source);
-        List<Equation> equations = parsed.equations();
+        List<Equation> equations = IntegralSolver.hoistNested(parsed.equations());
         try {
             requireComplexModeForImaginaryLiterals(equations, complexMode);
             List<IntegralSolver.IntegralEquation> integrals =
@@ -164,14 +164,14 @@ public class EquationSystemSolver {
         long deadlineNanos = startNanos + (long) (settings.elapsedTimeSeconds() * 1.0e9);
         EquationParser.ParseResult parsed = parser.parseResult(source);
         requireComplexModeForImaginaryLiterals(parsed.equations(), settings.complexMode());
+        List<Equation> equations = IntegralSolver.hoistNested(parsed.equations());
         List<IntegralSolver.IntegralEquation> integrals =
-                findIntegrals(parsed.equations(), parsed.defs(), settings.complexMode());
+                findIntegrals(equations, parsed.defs(), settings.complexMode());
         if (!integrals.isEmpty()) {
-            return solveWithIntegrals(parsed, integrals, settings, specs,
+            return solveWithIntegrals(parsed, equations, integrals, settings, specs,
                     startNanos, deadlineNanos);
         }
 
-        List<Equation> equations = parsed.equations();
         if (settings.complexMode()) {
             equations = com.frees.backend.parser.ComplexExpansion.expand(equations, parsed.displayNames());
         }
@@ -453,12 +453,13 @@ public class EquationSystemSolver {
      * value (see IntegralSolver for the quadrature).
      */
     private Result solveWithIntegrals(EquationParser.ParseResult parsed,
+                                      List<Equation> equations,
                                       List<IntegralSolver.IntegralEquation> integrals,
                                       SolverSettings settings,
                                       Map<String, VariableSpec> specs,
                                       long startNanos, long deadlineNanos) {
         List<Equation> ordinary =
-                IntegralSolver.ordinaryEquations(parsed.equations(), integrals);
+                IntegralSolver.ordinaryEquations(equations, integrals);
         IntegrationState state = new IntegrationState();
         List<Equation> finalEquations = new ArrayList<>(ordinary);
         TreeSet<String> fixedIntegrationVars = new TreeSet<>();
