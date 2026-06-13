@@ -127,6 +127,17 @@ export interface ChartElement extends ElementBase {
   yVars: string[]
 }
 
+/** Imported SVG/image background or glyph reference (Story 10.5). */
+export interface ImageElement extends ElementBase {
+  kind: 'image'
+  x: number
+  y: number
+  w: number
+  h: number
+  url: string
+  isBackground?: boolean
+}
+
 /** A single solved parametric-table run fed to the diagram for playback. */
 export interface DiagramRun {
   label: string
@@ -193,6 +204,7 @@ export type DiagramElement =
   | ChartElement
   | ControlElement
   | ConnectorElement
+  | ImageElement
 
 export function isControl(el: DiagramElement): el is ControlElement {
   return el.kind.startsWith('ctl-')
@@ -211,6 +223,7 @@ const KIND_LABELS: Record<string, string> = {
   'ctl-checkbox': 'Checkbox',
   'ctl-slider': 'Slider',
   connector: 'Connector',
+  image: 'Image/SVG',
 }
 
 /** Display name for the Layers panel (Story 10.3). */
@@ -349,6 +362,105 @@ export const ANCHOR_DEFS: Record<string, Record<string, AnchorDefinition>> = {
   springdamper: {
     inlet: { rx: 0.5, ry: 0, nx: 0, ny: -1 },
     outlet: { rx: 0.5, ry: 0.8, nx: 0, ny: 1 },
+  },
+  boiler: {
+    inlet: { rx: 0.25, ry: 0.5, nx: -1, ny: 0 },
+    outlet: { rx: 0.75, ry: 0.5, nx: 1, ny: 0 },
+  },
+  evaporator: {
+    inlet: { rx: 0.05, ry: 0.5, nx: -1, ny: 0 },
+    outlet: { rx: 0.95, ry: 0.5, nx: 1, ny: 0 },
+    top: { rx: 0.5, ry: 0.25, nx: 0, ny: -1 },
+    bottom: { rx: 0.5, ry: 0.75, nx: 0, ny: 1 },
+  },
+  nozzle: {
+    inlet: { rx: 0.15, ry: 0.5, nx: -1, ny: 0 },
+    outlet: { rx: 0.85, ry: 0.5, nx: 1, ny: 0 },
+  },
+  diffuser: {
+    inlet: { rx: 0.15, ry: 0.5, nx: -1, ny: 0 },
+    outlet: { rx: 0.85, ry: 0.5, nx: 1, ny: 0 },
+  },
+  mixing: {
+    inlet1: { rx: 0.1, ry: 0.5, nx: -1, ny: 0 },
+    inlet2: { rx: 0.5, ry: 0.1, nx: 0, ny: -1 },
+    outlet: { rx: 0.9, ry: 0.5, nx: 1, ny: 0 },
+  },
+  separator: {
+    inlet: { rx: 0.1, ry: 0.5, nx: -1, ny: 0 },
+    'gas-out': { rx: 0.5, ry: 0.15, nx: 0, ny: -1 },
+    'liq-out': { rx: 0.5, ry: 0.85, nx: 0, ny: 1 },
+  },
+  plate_heatx: {
+    inlet1: { rx: 0.2, ry: 0.2, nx: -1, ny: 0 },
+    outlet1: { rx: 0.8, ry: 0.2, nx: 1, ny: 0 },
+    inlet2: { rx: 0.2, ry: 0.8, nx: -1, ny: 0 },
+    outlet2: { rx: 0.8, ry: 0.8, nx: 1, ny: 0 },
+  },
+  finned_heatx: {
+    inlet: { rx: 0.2, ry: 0.5, nx: -1, ny: 0 },
+    outlet: { rx: 0.8, ry: 0.5, nx: 1, ny: 0 },
+  },
+  elbow: {
+    port1: { rx: 0.1, ry: 0.5, nx: -1, ny: 0 },
+    port2: { rx: 0.5, ry: 0.9, nx: 0, ny: 1 },
+  },
+  tee: {
+    port1: { rx: 0.1, ry: 0.5, nx: -1, ny: 0 },
+    port2: { rx: 0.9, ry: 0.5, nx: 1, ny: 0 },
+    port3: { rx: 0.5, ry: 0.9, nx: 0, ny: 1 },
+  },
+  mass: {
+    left: { rx: 0.2, ry: 0.5, nx: -1, ny: 0 },
+    right: { rx: 0.8, ry: 0.5, nx: 1, ny: 0 },
+    top: { rx: 0.5, ry: 0.25, nx: 0, ny: -1 },
+    bottom: { rx: 0.5, ry: 0.75, nx: 0, ny: 1 },
+  },
+  pulley: {
+    center: { rx: 0.5, ry: 0.5, nx: 0, ny: 0 },
+    left: { rx: 0.2, ry: 0.5, nx: -1, ny: 0 },
+    right: { rx: 0.8, ry: 0.5, nx: 1, ny: 0 },
+  },
+  gear: {
+    center: { rx: 0.5, ry: 0.5, nx: 0, ny: 0 },
+    top: { rx: 0.5, ry: 0.22, nx: 0, ny: -1 },
+    bottom: { rx: 0.5, ry: 0.78, nx: 0, ny: 1 },
+  },
+  piston: {
+    cylinder: { rx: 0.2, ry: 0.5, nx: -1, ny: 0 },
+    rod: { rx: 0.95, ry: 0.5, nx: 1, ny: 0 },
+  },
+  ground: {
+    top: { rx: 0.5, ry: 0.5, nx: 0, ny: -1 },
+  },
+  temp_sensor: {
+    port: { rx: 0.1, ry: 0.5, nx: -1, ny: 0 },
+  },
+  press_sensor: {
+    port: { rx: 0.1, ry: 0.5, nx: -1, ny: 0 },
+  },
+  flow_meter: {
+    inlet: { rx: 0.1, ry: 0.5, nx: -1, ny: 0 },
+    outlet: { rx: 0.9, ry: 0.5, nx: 1, ny: 0 },
+  },
+  resistor: {
+    port1: { rx: 0.1, ry: 0.5, nx: -1, ny: 0 },
+    port2: { rx: 0.9, ry: 0.5, nx: 1, ny: 0 },
+  },
+  capacitor: {
+    port1: { rx: 0.1, ry: 0.5, nx: -1, ny: 0 },
+    port2: { rx: 0.9, ry: 0.5, nx: 1, ny: 0 },
+  },
+  inductor: {
+    port1: { rx: 0.1, ry: 0.5, nx: -1, ny: 0 },
+    port2: { rx: 0.9, ry: 0.5, nx: 1, ny: 0 },
+  },
+  source: {
+    port1: { rx: 0.1, ry: 0.5, nx: -1, ny: 0 },
+    port2: { rx: 0.9, ry: 0.5, nx: 1, ny: 0 },
+  },
+  elec_ground: {
+    port: { rx: 0.5, ry: 0.2, nx: 0, ny: -1 },
   },
 }
 
