@@ -5,7 +5,10 @@ import type { PlotlyFigure } from 'plotly.js-dist-min'
  * Renders a pre-built Plotly figure. Plotly is loaded on demand so the
  * main bundle does not carry the charting library.
  */
-export default function PlotlyChart({ figure }: Readonly<{ figure: PlotlyFigure }>) {
+export default function PlotlyChart({
+  figure,
+  minHeight = 380,
+}: Readonly<{ figure: PlotlyFigure; minHeight?: number }>) {
   const containerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -39,7 +42,7 @@ export default function PlotlyChart({ figure }: Readonly<{ figure: PlotlyFigure 
   return (
     <div
       ref={containerRef}
-      style={{ width: '100%', height: '100%', minHeight: 380 }}
+      style={{ width: '100%', height: '100%', minHeight }}
     />
   )
 }

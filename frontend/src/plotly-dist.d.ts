@@ -70,6 +70,8 @@ declare module 'plotly.js-dist-min' {
       yaxis?: PlotlyAxisLayout
       zaxis?: PlotlyAxisLayout
     }
+    /** Layout shapes (lines/rects); used for the embedded-chart playback marker. */
+    shapes?: Record<string, unknown>[]
   }
 
   export interface PlotlyConfig {
