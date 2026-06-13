@@ -57,6 +57,17 @@ interface ElementBase extends ElementStyle {
   name?: string
   rules?: ConditionalStyleRule[]
   valueFill?: ValueDrivenFill
+  /** Path-following motion (Story 10.11): the element's center tracks a point
+   *  along another line element, at the given progress (0..1 formula, may use
+   *  the time clock `t`). `orient` rotates the element to the path tangent. */
+  motion?: MotionBinding
+}
+
+/** Path-following motion binding (Story 10.11). */
+export interface MotionBinding {
+  pathId: string
+  progress: string
+  orient?: boolean
 }
 
 /** Animated dashed-line flow (Story 6.3): speed is a formula; sign sets direction. */
