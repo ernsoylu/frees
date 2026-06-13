@@ -14,19 +14,25 @@ import {
   Stack,
   Text,
   Textarea,
+  TextInput,
   Tooltip,
 } from '@mantine/core'
 import {
+  IconAdjustmentsHorizontal,
   IconArrowNarrowRight,
+  IconCheckbox,
   IconCircle,
   IconCopy,
+  IconForms,
   IconLine,
   IconPlayerPlayFilled,
   IconPointer,
   IconRectangle,
+  IconSelector,
   IconStack2,
   IconStackPop,
   IconStackPush,
+  IconTag,
   IconTags,
   IconTrash,
   IconTypography,
@@ -36,10 +42,13 @@ import { VariableResult } from '../api'
 import { formatValue } from '../format'
 import { LIBRARY_ICONS, libraryIcon } from './library'
 import {
+  ControlElement,
+  controlBindings,
   DEFAULT_DIAGRAM_STATE,
   DEFAULT_STYLE,
   DiagramElement,
   DiagramState,
+  isControl,
   LabelElement,
   LineElement,
   elementBounds,
@@ -128,16 +137,163 @@ function LabelText({
   )
 }
 
+// ── Form controls (Story 6.2) ─────────────────────────────────────────────
+
+const fieldStyle: React.CSSProperties = {
+  width: '100%',
+  background: '#2C2E33',
+  color: '#e9ecef',
+  border: '1px solid #495057',
+  borderRadius: 4,
+  padding: '2px 6px',
+  fontSize: 12,
+  boxSizing: 'border-box',
+}
+
+const captionStyle: React.CSSProperties = {
+  color: '#909296',
+  fontSize: 11,
+  marginBottom: 2,
+  whiteSpace: 'nowrap',
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+}
+
+/** A short descriptor of a control's binding, shown on the develop-mode box. */
+function controlSummary(el: ControlElement): string {
+  const v = el.varName.trim() || '(unbound)'
+  switch (el.kind) {
+    case 'ctl-input':
+      return `${v} = ${el.value || '?'}`
+    case 'ctl-output':
+      return `▸ ${v}`
+    case 'ctl-dropdown':
+      return `${v} ⌄ ${el.value || el.options[0] || ''}`
+    case 'ctl-checkbox':
+      return `${el.checked ? '☑' : '☐'} ${v}`
+    case 'ctl-slider':
+      return `${v} = ${el.value}`
+  }
+}
+
+/** Live HTML widget rendered inside an SVG foreignObject in Run mode. */
+function ControlWidget({
+  el,
+  values,
+  onValue,
+}: Readonly<{
+  el: ControlElement
+  values: Map<string, VariableResult>
+  onValue: (patch: Partial<ControlElement>) => void
+}>) {
+  const caption = el.label || el.varName
+  if (el.kind === 'ctl-output') {
+    const v = values.get(el.varName.trim().toLowerCase())
+    const unit = v && v.units && v.units !== '-' ? ` ${v.units}` : ''
+    return (
+      <div style={{ fontFamily: 'system-ui, sans-serif' }}>
+        <div style={captionStyle}>{caption}</div>
+        <div
+          style={{
+            ...fieldStyle,
+            background: '#1A1B1E',
+            color: '#69db7c',
+            fontFamily: 'monospace',
+          }}
+        >
+          {v ? `${formatValue(v.value)}${unit}` : '—'}
+        </div>
+      </div>
+    )
+  }
+  if (el.kind === 'ctl-checkbox') {
+    return (
+      <label
+               style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 6,
+          color: '#e9ecef',
+          fontSize: 12,
+          fontFamily: 'system-ui, sans-serif',
+          cursor: 'pointer',
+        }}
+      >
+        <input
+          type="checkbox"
+          checked={el.checked}
+          onChange={(e) => onValue({ checked: e.currentTarget.checked })}
+        />
+        {caption}
+      </label>
+    )
+  }
+  if (el.kind === 'ctl-dropdown') {
+    return (
+      <div style={{ fontFamily: 'system-ui, sans-serif' }}>
+        <div style={captionStyle}>{caption}</div>
+        <select
+          value={el.value}
+          onChange={(e) => onValue({ value: e.currentTarget.value })}
+          style={fieldStyle}
+        >
+          <option value="" disabled>
+            choose…
+          </option>
+          {el.options.map((opt) => (
+            <option key={opt} value={opt}>
+              {opt}
+            </option>
+          ))}
+        </select>
+      </div>
+    )
+  }
+  if (el.kind === 'ctl-slider') {
+    return (
+      <div style={{ fontFamily: 'system-ui, sans-serif' }}>
+        <div style={captionStyle}>
+          {caption}: <span style={{ color: '#e9ecef' }}>{el.value}</span>
+        </div>
+        <input
+          type="range"
+          min={el.min}
+          max={el.max}
+          step={el.step}
+          value={el.value}
+          onChange={(e) => onValue({ value: Number(e.currentTarget.value) })}
+          style={{ width: '100%' }}
+        />
+      </div>
+    )
+  }
+  // ctl-input
+  const isString = el.varName.trim().endsWith('$')
+  return (
+    <div style={{ fontFamily: 'system-ui, sans-serif' }}>
+      <div style={captionStyle}>{caption}</div>
+      <input
+        type={isString ? 'text' : 'number'}
+        value={el.value}
+        onChange={(e) => onValue({ value: e.currentTarget.value })}
+        style={fieldStyle}
+      />
+    </div>
+  )
+}
+
 function ElementView({
   el,
   runMode,
   values,
   onMouseDown,
+  onControlValue,
 }: Readonly<{
   el: DiagramElement
   runMode: boolean
   values: Map<string, VariableResult>
   onMouseDown: (e: React.MouseEvent, el: DiagramElement) => void
+  onControlValue: (id: string, patch: Partial<ControlElement>) => void
 }>) {
   const { cx, cy } = elementCenter(el)
   const transform = el.rotation ? `rotate(${el.rotation} ${cx} ${cy})` : undefined
@@ -216,7 +372,7 @@ function ElementView({
   } else if (el.kind === 'label') {
     const text = runMode ? interpolateLabel(el.text, values) : el.text
     body = <LabelText el={el} text={text} />
-  } else {
+  } else if (el.kind === 'icon') {
     const icon = libraryIcon(el.icon)
     if (!icon) return null
     body = (
@@ -228,6 +384,60 @@ function ElementView({
         <rect x="0" y="0" width="100" height="100" fill="rgba(0,0,0,0.001)" stroke="none" />
       </g>
     )
+  } else if (isControl(el)) {
+    if (runMode) {
+      body = (
+        <foreignObject x={el.x} y={el.y} width={el.w} height={el.h} opacity={el.opacity}>
+          <div
+                       style={{ width: '100%', height: '100%', padding: 2, boxSizing: 'border-box' }}
+          >
+            <ControlWidget
+              el={el}
+              values={values}
+              onValue={(patch) => onControlValue(el.id, patch)}
+            />
+          </div>
+        </foreignObject>
+      )
+    } else {
+      // Development mode: static, draggable placeholder box.
+      body = (
+        <g opacity={el.opacity}>
+          <rect
+            x={el.x}
+            y={el.y}
+            width={el.w}
+            height={el.h}
+            rx={6}
+            fill="#1f2937"
+            fillOpacity={0.55}
+            stroke="#4dabf7"
+            strokeWidth={1}
+            strokeDasharray="4 3"
+          />
+          <text
+            x={el.x + 8}
+            y={el.y + 18}
+            fill="#909296"
+            fontSize={11}
+            fontFamily="system-ui, sans-serif"
+            style={{ userSelect: 'none' }}
+          >
+            {el.label || el.kind.replace('ctl-', '')}
+          </text>
+          <text
+            x={el.x + 8}
+            y={el.y + 36}
+            fill="#e9ecef"
+            fontSize={13}
+            fontFamily="monospace"
+            style={{ userSelect: 'none' }}
+          >
+            {controlSummary(el)}
+          </text>
+        </g>
+      )
+    }
   }
 
   return (
@@ -322,6 +532,113 @@ function SelectionHandles({
 // Properties panel
 // ---------------------------------------------------------------------------
 
+const CONTROL_LABELS: Record<ControlElement['kind'], string> = {
+  'ctl-input': 'Input',
+  'ctl-output': 'Output',
+  'ctl-dropdown': 'Dropdown',
+  'ctl-checkbox': 'Checkbox',
+  'ctl-slider': 'Slider',
+}
+
+function ControlFields({
+  el,
+  set,
+}: Readonly<{ el: ControlElement; set: (patch: Partial<DiagramElement>) => void }>) {
+  return (
+    <>
+      <TextInput
+        label="Bound variable"
+        description="A trailing $ binds a string variable"
+        size="xs"
+        value={el.varName}
+        placeholder="e.g. T1 or fluid$"
+        onChange={(e) => set({ varName: e.currentTarget.value })}
+      />
+      <TextInput
+        label="Caption"
+        size="xs"
+        value={el.label}
+        onChange={(e) => set({ label: e.currentTarget.value })}
+      />
+      {el.kind === 'ctl-input' && (
+        <TextInput
+          label="Default value"
+          size="xs"
+          value={el.value}
+          onChange={(e) => set({ value: e.currentTarget.value })}
+        />
+      )}
+      {el.kind === 'ctl-dropdown' && (
+        <Textarea
+          label="Options (one per line)"
+          size="xs"
+          autosize
+          minRows={2}
+          value={el.options.join('\n')}
+          onChange={(e) =>
+            set({
+              options: e.currentTarget.value
+                .split('\n')
+                .map((o) => o.trim())
+                .filter((o) => o !== ''),
+            })
+          }
+        />
+      )}
+      {el.kind === 'ctl-checkbox' && (
+        <Checkbox
+          label="Checked by default"
+          size="xs"
+          checked={el.checked}
+          onChange={(e) => set({ checked: e.currentTarget.checked })}
+        />
+      )}
+      {el.kind === 'ctl-slider' && (
+        <>
+          <Group grow>
+            <NumberInput
+              label="Min"
+              size="xs"
+              value={el.min}
+              onChange={(v) => set({ min: typeof v === 'number' ? v : el.min })}
+            />
+            <NumberInput
+              label="Max"
+              size="xs"
+              value={el.max}
+              onChange={(v) => set({ max: typeof v === 'number' ? v : el.max })}
+            />
+          </Group>
+          <Group grow>
+            <NumberInput
+              label="Step"
+              size="xs"
+              min={0}
+              value={el.step}
+              onChange={(v) => set({ step: typeof v === 'number' && v > 0 ? v : el.step })}
+            />
+            <NumberInput
+              label="Value"
+              size="xs"
+              value={el.value}
+              onChange={(v) => set({ value: typeof v === 'number' ? v : el.value })}
+            />
+          </Group>
+        </>
+      )}
+      <NumberInput
+        label="Opacity"
+        size="xs"
+        min={0.1}
+        max={1}
+        step={0.1}
+        value={el.opacity}
+        onChange={(v) => set({ opacity: typeof v === 'number' ? v : el.opacity })}
+      />
+    </>
+  )
+}
+
 function PropertiesPanel({
   el,
   onChange,
@@ -341,9 +658,17 @@ function PropertiesPanel({
   return (
     <Stack gap="xs">
       <Text fw={600} size="sm" c="blue.4">
-        {el.kind === 'icon' ? (libraryIcon(el.icon)?.label ?? 'Component') : el.kind}
+        {el.kind === 'icon'
+          ? (libraryIcon(el.icon)?.label ?? 'Component')
+          : isControl(el)
+            ? CONTROL_LABELS[el.kind]
+            : el.kind}
       </Text>
 
+      {isControl(el) && <ControlFields el={el} set={set} />}
+
+      {!isControl(el) && (
+        <>
       {el.kind === 'label' && (
         <>
           <Textarea
@@ -438,6 +763,8 @@ function PropertiesPanel({
           onChange={(v) => set({ opacity: typeof v === 'number' ? v : el.opacity })}
         />
       </Group>
+        </>
+      )}
 
       <Divider />
       <Group gap="xs">
@@ -477,13 +804,16 @@ type Tool =
   | 'rect'
   | 'ellipse'
   | 'label'
+  | ControlElement['kind']
   | `icon:${string}`
 
 interface Props {
   variables: VariableResult[]
+  /** Reports the `var = value` lines contributed by input-type controls. */
+  onBindingsChange?: (lines: string[]) => void
 }
 
-export default function DiagramTab({ variables }: Readonly<Props>) {
+export default function DiagramTab({ variables, onBindingsChange }: Readonly<Props>) {
   const [state, setState] = useState<DiagramState>(loadState)
   const [tool, setTool] = useState<Tool>('select')
   const [mode, setMode] = useState<'develop' | 'run'>('develop')
@@ -509,6 +839,28 @@ export default function DiagramTab({ variables }: Readonly<Props>) {
       // Quota exceeded: diagram simply won't persist.
     }
   }, [state])
+
+  // Report the input-control bindings to the host so they participate in
+  // Check/Solve (Story 6.2). Joined string compared to avoid redundant calls.
+  const bindingsKey = useMemo(
+    () => controlBindings(state.elements).join('\n'),
+    [state.elements],
+  )
+  useEffect(() => {
+    onBindingsChange?.(bindingsKey === '' ? [] : bindingsKey.split('\n'))
+  }, [bindingsKey, onBindingsChange])
+
+  const onControlValue = useCallback(
+    (id: string, patch: Partial<ControlElement>) => {
+      setState((s) => ({
+        ...s,
+        elements: s.elements.map((el) =>
+          el.id === id ? ({ ...el, ...patch } as DiagramElement) : el,
+        ),
+      }))
+    },
+    [],
+  )
 
   const snap = useCallback(
     (v: number) => (state.snap ? Math.round(v / state.gridSize) * state.gridSize : v),
@@ -598,6 +950,40 @@ export default function DiagramTab({ variables }: Readonly<Props>) {
         const iconId = tool.slice(5)
         return { ...base, kind: 'icon', icon: iconId, x, y, w: 100, h: 100 }
       }
+      const ctlBase = { ...base, x, y, varName: '' }
+      if (tool === 'ctl-input') {
+        return { ...ctlBase, kind: 'ctl-input', w: 150, h: 48, label: 'Input', value: '' }
+      }
+      if (tool === 'ctl-output') {
+        return { ...ctlBase, kind: 'ctl-output', w: 150, h: 48, label: 'Output' }
+      }
+      if (tool === 'ctl-dropdown') {
+        return {
+          ...ctlBase,
+          kind: 'ctl-dropdown',
+          w: 160,
+          h: 48,
+          label: 'Select',
+          options: ['Option A', 'Option B'],
+          value: '',
+        }
+      }
+      if (tool === 'ctl-checkbox') {
+        return { ...ctlBase, kind: 'ctl-checkbox', w: 150, h: 30, label: 'Option', checked: false }
+      }
+      if (tool === 'ctl-slider') {
+        return {
+          ...ctlBase,
+          kind: 'ctl-slider',
+          w: 190,
+          h: 52,
+          label: 'Slider',
+          min: 0,
+          max: 100,
+          step: 1,
+          value: 50,
+        }
+      }
       return null
     },
     [tool, snap],
@@ -622,7 +1008,7 @@ export default function DiagramTab({ variables }: Readonly<Props>) {
     if (!el) return
     setState((s) => ({ ...s, elements: [...s.elements, el] }))
     setSelectedId(el.id)
-    if (el.kind === 'label' || el.kind === 'icon') {
+    if (el.kind === 'label' || el.kind === 'icon' || isControl(el)) {
       // Click-to-place: immediately movable.
       setDrag({ type: 'move', id: el.id, startX: world.x, startY: world.y, original: el })
     } else {
@@ -862,6 +1248,14 @@ export default function DiagramTab({ variables }: Readonly<Props>) {
     { tool: 'label', label: 'Rich Label', icon: <IconTypography size={18} /> },
   ]
 
+  const CONTROL_TOOLS: { tool: ControlElement['kind']; label: string; icon: React.ReactNode }[] = [
+    { tool: 'ctl-input', label: 'Input (fixes a variable)', icon: <IconForms size={16} /> },
+    { tool: 'ctl-output', label: 'Output (shows a solved value)', icon: <IconTag size={16} /> },
+    { tool: 'ctl-dropdown', label: 'Dropdown selector', icon: <IconSelector size={16} /> },
+    { tool: 'ctl-checkbox', label: 'Checkbox (0 / 1)', icon: <IconCheckbox size={16} /> },
+    { tool: 'ctl-slider', label: 'Slider', icon: <IconAdjustmentsHorizontal size={16} /> },
+  ]
+
   const gridStep = state.gridSize * view.k
 
   return (
@@ -931,6 +1325,30 @@ export default function DiagramTab({ variables }: Readonly<Props>) {
                     ))}
                   </Menu.Dropdown>
                 </Menu>
+                <Menu shadow="md" position="bottom-start">
+                  <Menu.Target>
+                    <Tooltip label="Form Controls (variable binding)">
+                      <ActionIcon
+                        variant={tool.startsWith('ctl-') ? 'filled' : 'default'}
+                        size="lg"
+                      >
+                        <IconForms size={18} />
+                      </ActionIcon>
+                    </Tooltip>
+                  </Menu.Target>
+                  <Menu.Dropdown>
+                    <Menu.Label>Form controls</Menu.Label>
+                    {CONTROL_TOOLS.map((ct) => (
+                      <Menu.Item
+                        key={ct.tool}
+                        leftSection={ct.icon}
+                        onClick={() => setTool(ct.tool)}
+                      >
+                        {ct.label}
+                      </Menu.Item>
+                    ))}
+                  </Menu.Dropdown>
+                </Menu>
               </Group>
               <Divider orientation="vertical" />
               <Checkbox
@@ -967,7 +1385,8 @@ export default function DiagramTab({ variables }: Readonly<Props>) {
             <Group gap={6}>
               <IconTags size={14} color="var(--mantine-color-dimmed)" />
               <Text size="xs" c="dimmed">
-                Labels show solved values for {'{varname}'} placeholders — solve first.
+                Set inputs/sliders/dropdowns, then press Solve — outputs and{' '}
+                {'{varname}'} labels update with the results.
               </Text>
             </Group>
           )}
@@ -998,6 +1417,7 @@ export default function DiagramTab({ variables }: Readonly<Props>) {
                   runMode={runMode}
                   values={valueMap}
                   onMouseDown={onElementDown}
+                  onControlValue={onControlValue}
                 />
               ))}
               {!runMode && selected && (
@@ -1038,6 +1458,12 @@ export default function DiagramTab({ variables }: Readonly<Props>) {
                 <Text size="xs" c="dimmed" style={{ lineHeight: 1.6 }}>
                   Labels may contain {'{varname}'} placeholders: in Run mode
                   they display the solved value with units.
+                </Text>
+                <Text size="xs" c="dimmed" style={{ lineHeight: 1.6 }}>
+                  Form controls bind to variables: Inputs, Dropdowns,
+                  Checkboxes and Sliders fix a variable's value for the solve;
+                  Outputs display a solved result. Set a control's bound
+                  variable in its properties, switch to Run mode, then Solve.
                 </Text>
                 <Divider />
                 <Text size="xs" c="dimmed">

@@ -373,6 +373,7 @@ const SECTIONS = [
   { id: 'examples', label: '13. Engineering Examples' },
   { id: 'api', label: '14. Solver Reference & API' },
   { id: 'optimization', label: '15. Optimization & Plotting' },
+  { id: 'diagram', label: '16. Diagram Window' },
 ];
 
 export default function HelpPage() {
@@ -2191,6 +2192,94 @@ U = value - V_penalty - W_penalty`}
                 6. Click <strong>Optimize</strong>. The continuous solver will automatically allocate quantities to maximize value while strictly respecting both physical volume and weight constraints.
               </Text>
             </Card>
+          </Stack>
+        );
+      case 'diagram':
+        return (
+          <Stack gap="md">
+            <Title order={2} c="blue.4">16. Diagram Window</Title>
+            <Text style={{ lineHeight: 1.6 }}>
+              The <strong>Diagram</strong> tab (schematic icon in the left rail) is a vector editor for building
+              interactive schematics — cycle diagrams, free-body sketches, control panels — whose values come
+              live from the solver. It has two modes, switched at the top-left:
+            </Text>
+            <List spacing="xs" size="sm" style={{ paddingLeft: '20px' }}>
+              <List.Item>
+                <strong>Development</strong> — draw and arrange the diagram.
+              </List.Item>
+              <List.Item>
+                <strong>Run</strong> — editing is locked; form controls become live and labels show solved values.
+              </List.Item>
+            </List>
+
+            <Title order={3} mt="sm">Drawing</Title>
+            <Text style={{ lineHeight: 1.6 }}>
+              Pick a tool — line, arrow, rectangle, circle/ellipse, or rich label — and drag on the canvas. The
+              <strong> Component Library</strong> menu adds pre-built engineering symbols (turbine, pump,
+              compressor, valve, heat exchanger, vessel, condenser/evaporator, spring-damper). A configurable
+              grid with snap-to-grid keeps things aligned; drag empty canvas to pan, scroll to zoom, and use
+              the zoom-to-fit button to frame everything. Selected elements show resize handles (line endpoints
+              are individually draggable); arrow keys nudge by one grid step (Shift = 1&nbsp;px), and the
+              properties panel sets colors, stroke width, rotation, opacity, and per-shape options. Diagrams are
+              saved automatically in the browser.
+            </Text>
+
+            <Title order={3} mt="md">Variable Binding & Form Controls</Title>
+            <Text style={{ lineHeight: 1.6 }}>
+              The <strong>Form Controls</strong> menu places widgets that bind to solver variables. Each widget
+              has a <strong>bound variable</strong> set in its properties (a trailing <code>$</code> binds a
+              string variable):
+            </Text>
+            <Table striped highlightOnHover withTableBorder>
+              <Table.Thead>
+                <Table.Tr>
+                  <Table.Th style={{ width: '140px' }}>Control</Table.Th>
+                  <Table.Th>Effect on the solve</Table.Th>
+                </Table.Tr>
+              </Table.Thead>
+              <Table.Tbody>
+                <Table.Tr>
+                  <Table.Td><strong>Input</strong></Table.Td>
+                  <Table.Td>Fixes the variable to the typed value (adds <code>var = value</code>).</Table.Td>
+                </Table.Tr>
+                <Table.Tr>
+                  <Table.Td><strong>Slider</strong></Table.Td>
+                  <Table.Td>Fixes the variable to the slider position (min/max/step configurable).</Table.Td>
+                </Table.Tr>
+                <Table.Tr>
+                  <Table.Td><strong>Dropdown</strong></Table.Td>
+                  <Table.Td>Fixes the variable to the chosen option — numeric, or a string for a <code>name$</code> variable (e.g. a fluid).</Table.Td>
+                </Table.Tr>
+                <Table.Tr>
+                  <Table.Td><strong>Checkbox</strong></Table.Td>
+                  <Table.Td>Fixes the variable to 1 (checked) or 0 (unchecked).</Table.Td>
+                </Table.Tr>
+                <Table.Tr>
+                  <Table.Td><strong>Output</strong></Table.Td>
+                  <Table.Td>Read-only — displays the solved value and units of its variable.</Table.Td>
+                </Table.Tr>
+              </Table.Tbody>
+            </Table>
+            <Text style={{ lineHeight: 1.6 }}>
+              The input-type controls are appended to your equations as fixed values, so a control should supply
+              a degree of freedom the equations leave open. For example, with{' '}
+              <code>Q = m * cp * (T2 - T1)</code> and <code>m</code>, <code>cp</code>, <code>T1</code> given,
+              <code> T2</code> is free — bind a slider to <code>T2</code> and the system becomes solvable, with
+              <code> Q</code> updating as you drag. Binding a control to an already-determined variable makes the
+              system overspecified (reported by Check), exactly as if you had typed the extra equation.
+            </Text>
+            <Alert color="blue" title="Workflow" mt="xs">
+              Build the diagram in Development mode and set each control's bound variable. Switch to{' '}
+              <strong>Run</strong> mode, then use the top bar's <strong>Check</strong> and <strong>Solve</strong>{' '}
+              buttons as usual: adjust inputs/sliders/dropdowns and press Solve to see Outputs and{' '}
+              <code>{'{varname}'}</code> labels update. Changing a control's value does not require re-Checking;
+              adding, removing, or rebinding a control does.
+            </Alert>
+            <Text style={{ lineHeight: 1.6 }}>
+              <strong>Rich labels</strong> may embed <code>{'{varname}'}</code> placeholders anywhere in their
+              text; in Run mode each is replaced by that variable's solved value and unit — handy for annotating
+              state points directly on a schematic.
+            </Text>
           </Stack>
         );
       default:
