@@ -32,6 +32,14 @@ interface ElementBase extends ElementStyle {
   id: string
   rotation: number
   bind?: AttributeBindings
+  /** Group membership (Story 10.3): elements sharing a groupId select/move together. */
+  groupId?: string
+  /** Locked elements cannot be selected or transformed on the canvas. */
+  locked?: boolean
+  /** Hidden elements are not drawn in Run mode and dimmed in Development mode. */
+  hidden?: boolean
+  /** Optional user-given name shown in the Layers panel. */
+  name?: string
 }
 
 /** Animated dashed-line flow (Story 6.3): speed is a formula; sign sets direction. */
@@ -175,6 +183,47 @@ export type DiagramElement =
 
 export function isControl(el: DiagramElement): el is ControlElement {
   return el.kind.startsWith('ctl-')
+}
+
+const KIND_LABELS: Record<string, string> = {
+  line: 'Line',
+  rect: 'Rectangle',
+  ellipse: 'Ellipse',
+  label: 'Label',
+  icon: 'Component',
+  chart: 'Chart',
+  'ctl-input': 'Input',
+  'ctl-output': 'Output',
+  'ctl-dropdown': 'Dropdown',
+  'ctl-checkbox': 'Checkbox',
+  'ctl-slider': 'Slider',
+}
+
+/** Display name for the Layers panel (Story 10.3). */
+export function elementLabel(el: DiagramElement): string {
+  if (el.name && el.name.trim()) return el.name.trim()
+  if (el.kind === 'label') {
+    const first = el.text.split('\n')[0]?.trim()
+    return first ? first.slice(0, 24) : 'Label'
+  }
+  if (el.kind === 'icon') return el.icon
+  if (el.kind === 'chart') return el.xVar ? `Chart: ${el.xVar}` : 'Chart'
+  if (isControl(el)) return `${KIND_LABELS[el.kind]}${el.varName ? ` · ${el.varName}` : ''}`
+  return KIND_LABELS[el.kind] ?? el.kind
+}
+
+/** Expands a set of selected ids to include all members of any touched group. */
+export function expandGroups(ids: Iterable<string>, elements: DiagramElement[]): string[] {
+  const idSet = new Set(ids)
+  const groups = new Set<string>()
+  for (const el of elements) {
+    if (idSet.has(el.id) && el.groupId) groups.add(el.groupId)
+  }
+  if (groups.size === 0) return [...idSet]
+  for (const el of elements) {
+    if (el.groupId && groups.has(el.groupId)) idSet.add(el.id)
+  }
+  return [...idSet]
 }
 
 /**

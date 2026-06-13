@@ -31,7 +31,15 @@ import {
   IconCheckbox,
   IconCircle,
   IconCopy,
+  IconEye,
+  IconEyeOff,
+  IconFolderMinus,
+  IconFolderPlus,
   IconForms,
+  IconGripVertical,
+  IconLock,
+  IconLockOpen,
+  IconStack3,
   IconLayoutAlignBottom,
   IconLayoutAlignCenter,
   IconLayoutAlignLeft,
@@ -73,6 +81,8 @@ import {
   DiagramElement,
   DiagramRun,
   DiagramState,
+  elementLabel,
+  expandGroups,
   isControl,
   LabelElement,
   LineElement,
@@ -1152,6 +1162,125 @@ function BindingFields({
   )
 }
 
+/** Layers / outline panel (Story 10.3): reorder, rename, hide, lock elements. */
+function LayersPanel({
+  elements,
+  selectedSet,
+  onSelect,
+  onFlag,
+  onRename,
+  onReorder,
+}: Readonly<{
+  elements: DiagramElement[]
+  selectedSet: Set<string>
+  onSelect: (id: string, additive: boolean) => void
+  onFlag: (id: string, patch: Partial<DiagramElement>) => void
+  onRename: (id: string, name: string) => void
+  onReorder: (fromId: string, beforeId: string | null) => void
+}>) {
+  const [renamingId, setRenamingId] = useState<string | null>(null)
+  const [dragId, setDragId] = useState<string | null>(null)
+  const ordered = [...elements].reverse() // top-most first
+
+  if (elements.length === 0) {
+    return (
+      <Text size="xs" c="dimmed">
+        No elements yet.
+      </Text>
+    )
+  }
+
+  return (
+    <Stack gap={1}>
+      {ordered.map((el) => (
+        <Group
+          key={el.id}
+          gap={4}
+          wrap="nowrap"
+          draggable
+          onDragStart={() => setDragId(el.id)}
+          onDragOver={(e) => e.preventDefault()}
+          onDrop={() => {
+            if (dragId && dragId !== el.id) onReorder(dragId, el.id)
+            setDragId(null)
+          }}
+          onClick={(e) => onSelect(el.id, e.shiftKey || e.ctrlKey || e.metaKey)}
+          style={{
+            padding: '1px 3px',
+            borderRadius: 4,
+            cursor: 'pointer',
+            background: selectedSet.has(el.id)
+              ? 'var(--mantine-color-blue-light)'
+              : undefined,
+          }}
+        >
+          <IconGripVertical size={12} style={{ cursor: 'grab', opacity: 0.4, flexShrink: 0 }} />
+          <ActionIcon
+            size="xs"
+            variant="subtle"
+            color="gray"
+            onClick={(e) => {
+              e.stopPropagation()
+              onFlag(el.id, { hidden: !el.hidden })
+            }}
+          >
+            {el.hidden ? <IconEyeOff size={13} /> : <IconEye size={13} />}
+          </ActionIcon>
+          <ActionIcon
+            size="xs"
+            variant="subtle"
+            color={el.locked ? 'orange' : 'gray'}
+            onClick={(e) => {
+              e.stopPropagation()
+              onFlag(el.id, { locked: !el.locked })
+            }}
+          >
+            {el.locked ? <IconLock size={13} /> : <IconLockOpen size={13} />}
+          </ActionIcon>
+          {renamingId === el.id ? (
+            <TextInput
+              size="xs"
+              variant="unstyled"
+              autoFocus
+              defaultValue={el.name ?? ''}
+              placeholder={elementLabel(el)}
+              onClick={(e) => e.stopPropagation()}
+              onBlur={(e) => {
+                onRename(el.id, e.currentTarget.value)
+                setRenamingId(null)
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  onRename(el.id, e.currentTarget.value)
+                  setRenamingId(null)
+                } else if (e.key === 'Escape') {
+                  setRenamingId(null)
+                }
+                e.stopPropagation()
+              }}
+              style={{ flex: 1 }}
+            />
+          ) : (
+            <Text
+              size="xs"
+              flex={1}
+              truncate
+              c={el.hidden ? 'dimmed' : undefined}
+              onDoubleClick={(e) => {
+                e.stopPropagation()
+                setRenamingId(el.id)
+              }}
+            >
+              {el.groupId ? '⛓ ' : ''}
+              {elementLabel(el)}
+            </Text>
+          )}
+        </Group>
+      ))}
+    </Stack>
+  )
+}
+
 function PropertiesPanel({
   el,
   varNames,
@@ -1372,6 +1501,8 @@ export default function DiagramTab({ variables, runs = [], onBindingsChange }: R
   const [hover, setHover] = useState<{ id: string; x: number; y: number } | null>(null)
   const [marquee, setMarquee] = useState<{ x: number; y: number; w: number; h: number } | null>(null)
   const [guides, setGuides] = useState<{ v: number[]; h: number[] } | null>(null)
+  const [editingLabelId, setEditingLabelId] = useState<string | null>(null)
+  const [showLayers, setShowLayers] = useState(true)
 
   // ── Undo/redo history (Story 10.1) ───────────────────────────────────
   // Refs (not state) hold the stacks; every history change rides on a state
@@ -1449,6 +1580,17 @@ export default function DiagramTab({ variables, runs = [], onBindingsChange }: R
   const selectedSet = useMemo(() => new Set(selectedIds), [selectedIds])
   const selectedElements = state.elements.filter((el) => selectedSet.has(el.id))
   const selected = selectedElements.length === 1 ? selectedElements[0] : null
+  const editingLabel =
+    editingLabelId !== null
+      ? (state.elements.find((e) => e.id === editingLabelId && e.kind === 'label') as
+          | LabelElement
+          | undefined)
+      : undefined
+  const editLabelWidth = editingLabel
+    ? Math.max(1, ...editingLabel.text.split('\n').map((l) => l.length)) *
+      editingLabel.fontSize *
+      0.62
+    : 0
 
   // The active run during playback (clamped); null means use the live solve.
   const activeIndex =
@@ -1499,6 +1641,17 @@ export default function DiagramTab({ variables, runs = [], onBindingsChange }: R
 
   const onHover = useCallback((id: string | null, x: number, y: number) => {
     setHover(id ? { id, x, y } : null)
+  }, [])
+
+  const onSelectLayer = useCallback((id: string, additive: boolean) => {
+    const grp = expandGroups([id], stateRef.current.elements)
+    setSelectedIds((prev) => {
+      if (additive) {
+        const all = grp.every((g) => prev.includes(g))
+        return all ? prev.filter((p) => !grp.includes(p)) : [...new Set([...prev, ...grp])]
+      }
+      return grp
+    })
   }, [])
 
   // ── Playback (Story 6.4) ─────────────────────────────────────────────
@@ -1728,6 +1881,61 @@ export default function DiagramTab({ variables, runs = [], onBindingsChange }: R
     [selectedElements, commit],
   )
 
+  // ── grouping, lock/hide, layers (Story 10.3) ─────────────────────────
+
+  const groupSelection = useCallback(() => {
+    if (selectedElements.length < 2) return
+    const gid = crypto.randomUUID()
+    commit((s) => ({
+      ...s,
+      elements: s.elements.map((el) =>
+        selectedSet.has(el.id) ? ({ ...el, groupId: gid } as DiagramElement) : el,
+      ),
+    }))
+  }, [selectedElements, selectedSet, commit])
+
+  const ungroupSelection = useCallback(() => {
+    if (selectedElements.length === 0) return
+    commit((s) => ({
+      ...s,
+      elements: s.elements.map((el) =>
+        selectedSet.has(el.id) && el.groupId
+          ? ({ ...el, groupId: undefined } as DiagramElement)
+          : el,
+      ),
+    }))
+  }, [selectedElements, selectedSet, commit])
+
+  const setElementFlag = useCallback(
+    (id: string, patch: Partial<DiagramElement>, coalesceKey?: string) => {
+      commit(
+        (s) => ({
+          ...s,
+          elements: s.elements.map((el) =>
+            el.id === id ? ({ ...el, ...patch } as DiagramElement) : el,
+          ),
+        }),
+        coalesceKey,
+      )
+    },
+    [commit],
+  )
+
+  /** Reorder the z-stack: move `fromId` to just before `beforeId` (or to the end). */
+  const reorderElement = useCallback(
+    (fromId: string, beforeId: string | null) => {
+      commit((s) => {
+        const from = s.elements.find((e) => e.id === fromId)
+        if (!from) return s
+        const without = s.elements.filter((e) => e.id !== fromId)
+        const idx = beforeId ? without.findIndex((e) => e.id === beforeId) : without.length
+        const at = idx === -1 ? without.length : idx
+        return { ...s, elements: [...without.slice(0, at), from, ...without.slice(at)] }
+      })
+    },
+    [commit],
+  )
+
   // ── element creation ─────────────────────────────────────────────────
 
   const createElement = useCallback(
@@ -1836,22 +2044,26 @@ export default function DiagramTab({ variables, runs = [], onBindingsChange }: R
   }
 
   const onElementDown = (e: React.MouseEvent, el: DiagramElement) => {
-    if (e.button !== 0 || tool !== 'select') return
+    if (e.button !== 0 || tool !== 'select' || el.locked) return
     e.stopPropagation()
     const additive = e.shiftKey || e.ctrlKey || e.metaKey
+    const els = stateRef.current.elements
+    // Clicking any group member selects the whole group.
+    const clickGroup = expandGroups([el.id], els)
     let ids: string[]
     if (additive) {
-      ids = selectedSet.has(el.id)
-        ? selectedIds.filter((id) => id !== el.id)
-        : [...selectedIds, el.id]
+      const allSelected = clickGroup.every((id) => selectedSet.has(id))
+      ids = allSelected
+        ? selectedIds.filter((id) => !clickGroup.includes(id))
+        : [...new Set([...selectedIds, ...clickGroup])]
     } else {
-      ids = selectedSet.has(el.id) ? selectedIds : [el.id]
+      ids = clickGroup.every((id) => selectedSet.has(id)) ? selectedIds : clickGroup
     }
     setSelectedIds(ids)
     if (ids.length === 0) return
-    // Drag moves the whole current selection.
+    // Drag moves the whole current selection (locked elements excluded).
     gestureBaseRef.current = stateRef.current
-    const originals = stateRef.current.elements.filter((x) => ids.includes(x.id))
+    const originals = els.filter((x) => ids.includes(x.id) && !x.locked)
     const world = toWorld(e.clientX, e.clientY)
     setDrag({ type: 'move', startX: world.x, startY: world.y, originals })
   }
@@ -2083,7 +2295,9 @@ export default function DiagramTab({ variables, runs = [], onBindingsChange }: R
       } else if (drag.type === 'marquee') {
         const box = marqueeRef.current
         if (box && (box.w > 2 || box.h > 2)) {
-          const hit = stateRef.current.elements
+          const els = stateRef.current.elements
+          const hit = els
+            .filter((el) => !el.locked && !el.hidden)
             .filter((el) => {
               const b = elementBounds(el)
               return (
@@ -2094,8 +2308,9 @@ export default function DiagramTab({ variables, runs = [], onBindingsChange }: R
               )
             })
             .map((el) => el.id)
+          const expanded = expandGroups(hit, els)
           setSelectedIds((prev) =>
-            drag.additive ? [...new Set([...prev, ...hit])] : hit,
+            drag.additive ? [...new Set([...prev, ...expanded])] : expanded,
           )
         }
         setMarquee(null)
@@ -2207,7 +2422,13 @@ export default function DiagramTab({ variables, runs = [], onBindingsChange }: R
       }
       if (mod && e.key.toLowerCase() === 'a') {
         e.preventDefault()
-        setSelectedIds(state.elements.map((el) => el.id))
+        setSelectedIds(state.elements.filter((el) => !el.locked).map((el) => el.id))
+        return
+      }
+      if (mod && e.key.toLowerCase() === 'g') {
+        e.preventDefault()
+        if (e.shiftKey) ungroupSelection()
+        else groupSelection()
         return
       }
       if ((e.key === 'Delete' || e.key === 'Backspace') && selectedIds.length > 0) {
@@ -2244,6 +2465,8 @@ export default function DiagramTab({ variables, runs = [], onBindingsChange }: R
     copySelected,
     cutSelected,
     pasteClipboard,
+    groupSelection,
+    ungroupSelection,
     undo,
     redo,
     state.elements,
@@ -2526,20 +2749,35 @@ export default function DiagramTab({ variables, runs = [], onBindingsChange }: R
               {state.showGrid && !runMode && gridStep > 4 && (
                 <GridPattern gridSize={state.gridSize} view={view} />
               )}
-              {state.elements.map((el) => (
-                <ElementView
-                  key={el.id}
-                  el={resolveElement(el, numValues, runMode)}
-                  runMode={runMode}
-                  values={valueMap}
-                  numValues={numValues}
-                  runs={runs}
-                  activeIndex={activeIndex}
-                  onMouseDown={onElementDown}
-                  onControlValue={onControlValue}
-                  onHover={onHover}
-                />
-              ))}
+              {state.elements.map((el) => {
+                if (el.hidden && runMode) return null
+                return (
+                  <g
+                    key={el.id}
+                    opacity={el.hidden ? 0.25 : 1}
+                    onDoubleClick={
+                      !runMode && el.kind === 'label' && !el.locked
+                        ? (e) => {
+                            e.stopPropagation()
+                            setEditingLabelId(el.id)
+                          }
+                        : undefined
+                    }
+                  >
+                    <ElementView
+                      el={resolveElement(el, numValues, runMode)}
+                      runMode={runMode}
+                      values={valueMap}
+                      numValues={numValues}
+                      runs={runs}
+                      activeIndex={activeIndex}
+                      onMouseDown={onElementDown}
+                      onControlValue={onControlValue}
+                      onHover={onHover}
+                    />
+                  </g>
+                )
+              })}
               {!runMode && selectedElements.length > 1 &&
                 selectedElements.map((el) => {
                   const b = elementBounds(el)
@@ -2608,6 +2846,49 @@ export default function DiagramTab({ variables, runs = [], onBindingsChange }: R
                   strokeDasharray={`${4 / view.k} ${3 / view.k}`}
                   pointerEvents="none"
                 />
+              )}
+              {!runMode && editingLabel && (
+                <foreignObject
+                  x={editingLabel.x}
+                  y={editingLabel.y}
+                  width={Math.max(120, editLabelWidth)}
+                  height={Math.max(28, (editingLabel.fontSize ?? 16) * 2.4)}
+                >
+                  <textarea
+                    autoFocus
+                    value={editingLabel.text}
+                    onChange={(e) =>
+                      updateElement(
+                        editingLabel.id,
+                        { ...editingLabel, text: e.currentTarget.value },
+                        `labeltext:${editingLabel.id}`,
+                      )
+                    }
+                    onBlur={() => setEditingLabelId(null)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Escape' || (e.key === 'Enter' && !e.shiftKey)) {
+                        e.preventDefault()
+                        setEditingLabelId(null)
+                      }
+                      e.stopPropagation()
+                    }}
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      resize: 'none',
+                      fontSize: editingLabel.fontSize ?? 16,
+                      fontWeight: editingLabel.bold ? 700 : 400,
+                      fontFamily: 'system-ui, sans-serif',
+                      color: editingLabel.stroke,
+                      background: 'rgba(26,27,30,0.95)',
+                      border: '1px solid #4dabf7',
+                      borderRadius: 4,
+                      padding: 2,
+                      boxSizing: 'border-box',
+                      outline: 'none',
+                    }}
+                  />
+                </foreignObject>
               )}
             </g>
           </svg>
@@ -2693,6 +2974,16 @@ export default function DiagramTab({ variables, runs = [], onBindingsChange }: R
                 )}
                 <Divider />
                 <Group gap="xs">
+                  <Tooltip label="Group (Ctrl+G)">
+                    <ActionIcon variant="default" size="md" onClick={groupSelection}>
+                      <IconFolderPlus size={16} />
+                    </ActionIcon>
+                  </Tooltip>
+                  <Tooltip label="Ungroup (Ctrl+Shift+G)">
+                    <ActionIcon variant="default" size="md" onClick={ungroupSelection}>
+                      <IconFolderMinus size={16} />
+                    </ActionIcon>
+                  </Tooltip>
                   <Tooltip label="Bring to front">
                     <ActionIcon variant="default" size="md" onClick={() => zOrder('front')}>
                       <IconStackPop size={16} />
@@ -2753,6 +3044,38 @@ export default function DiagramTab({ variables, runs = [], onBindingsChange }: R
                     Clear diagram
                   </Button>
                 )}
+              </Stack>
+            )}
+
+            <Divider my="sm" />
+            <Group
+              gap={4}
+              justify="space-between"
+              style={{ cursor: 'pointer' }}
+              onClick={() => setShowLayers((v) => !v)}
+            >
+              <Group gap={4}>
+                <IconStack3 size={14} />
+                <Text fw={600} size="xs">
+                  Layers ({state.elements.length})
+                </Text>
+              </Group>
+              <Text size="xs" c="dimmed">
+                {showLayers ? '▾' : '▸'}
+              </Text>
+            </Group>
+            {showLayers && (
+              <Stack gap={4} mt={6}>
+                <LayersPanel
+                  elements={state.elements}
+                  selectedSet={selectedSet}
+                  onSelect={onSelectLayer}
+                  onFlag={(id, patch) => setElementFlag(id, patch)}
+                  onRename={(id, name) =>
+                    setElementFlag(id, { name: name.trim() || undefined }, `rename:${id}`)
+                  }
+                  onReorder={reorderElement}
+                />
               </Stack>
             )}
           </ScrollArea>
