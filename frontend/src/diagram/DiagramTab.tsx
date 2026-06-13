@@ -40,8 +40,10 @@ import {
 } from '@tabler/icons-react'
 import { VariableResult } from '../api'
 import { formatValue } from '../format'
+import { evalFormula, formulaVars } from './formula'
 import { LIBRARY_ICONS, libraryIcon } from './library'
 import {
+  AttributeBindings,
   ControlElement,
   controlBindings,
   DEFAULT_DIAGRAM_STATE,
@@ -99,9 +101,90 @@ function elementCenter(el: DiagramElement): { cx: number; cy: number } {
   return { cx: b.x + b.w / 2, cy: b.y + b.h / 2 }
 }
 
+const BINDABLE_LABELS: Record<keyof AttributeBindings, string> = {
+  dx: 'Δx (shift X)',
+  dy: 'Δy (shift Y)',
+  w: 'Width',
+  h: 'Height',
+  rotation: 'Rotation °',
+  opacity: 'Opacity',
+}
+
+/**
+ * Applies an element's attribute bindings (Story 6.3) against solved values.
+ * Off-run-mode or when a formula can't yet be evaluated, the authored value is
+ * kept, so the diagram still renders before a solve.
+ */
+function resolveElement(
+  el: DiagramElement,
+  numValues: Map<string, number>,
+  runMode: boolean,
+): DiagramElement {
+  if (!runMode || !el.bind) return el
+  const b = el.bind
+  const num = (f: string | undefined, fallback: number) => {
+    const v = evalFormula(f, numValues)
+    return v === null ? fallback : v
+  }
+  const opacity = b.opacity ? Math.max(0, Math.min(1, num(b.opacity, el.opacity))) : el.opacity
+  const rotation = b.rotation ? num(b.rotation, el.rotation) : el.rotation
+  const dx = b.dx ? num(b.dx, 0) : 0
+  const dy = b.dy ? num(b.dy, 0) : 0
+
+  if (el.kind === 'line') {
+    return { ...el, opacity, rotation, x1: el.x1 + dx, y1: el.y1 + dy, x2: el.x2 + dx, y2: el.y2 + dy }
+  }
+  if (el.kind === 'label') {
+    return { ...el, opacity, rotation, x: el.x + dx, y: el.y + dy }
+  }
+  const w = b.w ? num(b.w, el.w) : el.w
+  const h = b.h ? num(b.h, el.h) : el.h
+  return { ...el, opacity, rotation, x: el.x + dx, y: el.y + dy, w, h }
+}
+
+/** The solved variables an element references — for the Run-mode hover tooltip. */
+function elementVars(el: DiagramElement): string[] {
+  const out = new Set<string>()
+  if (el.bind) {
+    for (const f of Object.values(el.bind)) formulaVars(f).forEach((v) => out.add(v))
+  }
+  if (el.kind === 'line' && el.flow) formulaVars(el.flow.speed).forEach((v) => out.add(v))
+  if (el.kind === 'label') {
+    for (const m of el.text.matchAll(/\{([A-Za-z][\w$]*)\}/g)) out.add(m[1].toLowerCase())
+  }
+  if (isControl(el) && el.varName.trim()) out.add(el.varName.trim().toLowerCase())
+  return [...out]
+}
+
 // ---------------------------------------------------------------------------
 // Element rendering
 // ---------------------------------------------------------------------------
+
+const FLOW_DASH = '10 6'
+const FLOW_KEYFRAMES = '@keyframes frees-flow { to { stroke-dashoffset: -16; } }'
+
+/**
+ * Dash + animation props for a flowing pipe line (Story 6.3). The flow speed
+ * is a formula of solved variables; its magnitude sets the animation rate and
+ * its sign the direction. Returns nothing when not flowing.
+ */
+function flowDashProps(
+  el: LineElement,
+  runMode: boolean,
+  numValues: Map<string, number>,
+): React.SVGProps<SVGLineElement> {
+  if (!runMode || !el.flow) return {}
+  const speed = evalFormula(el.flow.speed, numValues) ?? 0
+  if (Math.abs(speed) < 1e-9) return { strokeDasharray: FLOW_DASH }
+  const duration = Math.max(0.1, Math.min(20, 6 / Math.abs(speed)))
+  return {
+    strokeDasharray: FLOW_DASH,
+    style: {
+      animation: `frees-flow ${duration}s linear infinite`,
+      animationDirection: speed < 0 ? 'reverse' : 'normal',
+    },
+  }
+}
 
 function interpolateLabel(text: string, values: Map<string, VariableResult>): string {
   return text.replace(/\{([A-Za-z][\w$]*)\}/g, (match, name: string) => {
@@ -286,14 +369,18 @@ function ElementView({
   el,
   runMode,
   values,
+  numValues,
   onMouseDown,
   onControlValue,
+  onHover,
 }: Readonly<{
   el: DiagramElement
   runMode: boolean
   values: Map<string, VariableResult>
+  numValues: Map<string, number>
   onMouseDown: (e: React.MouseEvent, el: DiagramElement) => void
   onControlValue: (id: string, patch: Partial<ControlElement>) => void
+  onHover: (id: string | null, clientX: number, clientY: number) => void
 }>) {
   const { cx, cy } = elementCenter(el)
   const transform = el.rotation ? `rotate(${el.rotation} ${cx} ${cy})` : undefined
@@ -330,6 +417,7 @@ function ElementView({
           strokeWidth={el.strokeWidth}
           opacity={el.opacity}
           markerEnd={marker}
+          {...flowDashProps(el, runMode, numValues)}
         />
         {/* wide invisible hit area */}
         <line
@@ -440,10 +528,13 @@ function ElementView({
     }
   }
 
+  const hoverable = runMode && elementVars(el).length > 0
   return (
     <g
       transform={transform}
       onMouseDown={handleDown}
+      onMouseMove={hoverable ? (e) => onHover(el.id, e.clientX, e.clientY) : undefined}
+      onMouseLeave={hoverable ? () => onHover(null, 0, 0) : undefined}
       style={{ cursor: runMode ? 'default' : 'move' }}
     >
       {body}
@@ -525,6 +616,57 @@ function SelectionHandles({
           />
         ))}
     </>
+  )
+}
+
+/** Run-mode hover tooltip listing the solved values an element references. */
+function HoverTooltip({
+  el,
+  values,
+  x,
+  y,
+}: Readonly<{
+  el: DiagramElement | undefined
+  values: Map<string, VariableResult>
+  x: number
+  y: number
+}>) {
+  if (!el) return null
+  const vars = elementVars(el)
+  if (vars.length === 0) return null
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        left: x + 14,
+        top: y + 14,
+        zIndex: 400,
+        pointerEvents: 'none',
+        background: '#1A1B1E',
+        border: '1px solid #373A40',
+        borderRadius: 6,
+        padding: '6px 8px',
+        boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
+        fontSize: 12,
+        fontFamily: 'system-ui, sans-serif',
+        color: '#e9ecef',
+        maxWidth: 260,
+      }}
+    >
+      {vars.map((name) => {
+        const v = values.get(name)
+        const unit = v && v.units && v.units !== '-' ? ` ${v.units}` : ''
+        const display = v ? v.name : name
+        return (
+          <div key={name} style={{ whiteSpace: 'nowrap' }}>
+            <span style={{ color: '#909296' }}>{display} = </span>
+            <span style={{ fontFamily: 'monospace', color: v ? '#69db7c' : '#868e96' }}>
+              {v ? `${formatValue(v.value)}${unit}` : 'unsolved'}
+            </span>
+          </div>
+        )
+      })}
+    </div>
   )
 }
 
@@ -635,6 +777,62 @@ function ControlFields({
         value={el.opacity}
         onChange={(v) => set({ opacity: typeof v === 'number' ? v : el.opacity })}
       />
+    </>
+  )
+}
+
+function BindingFields({
+  el,
+  set,
+}: Readonly<{ el: DiagramElement; set: (patch: Partial<DiagramElement>) => void }>) {
+  const keys: (keyof AttributeBindings)[] =
+    el.kind === 'line' || el.kind === 'label'
+      ? ['dx', 'dy', 'rotation', 'opacity']
+      : ['dx', 'dy', 'w', 'h', 'rotation', 'opacity']
+
+  const setBind = (key: keyof AttributeBindings, value: string) =>
+    set({ bind: { ...el.bind, [key]: value.trim() === '' ? undefined : value } })
+
+  return (
+    <>
+      <Divider label="Run-mode bindings" labelPosition="left" />
+      <Text size="10px" c="dimmed">
+        Formulas of solved variables drive these attributes when you Solve in
+        Run mode (e.g. <code>{'30*sin(theta)'}</code>). Δx/Δy offset the position.
+      </Text>
+      {keys.map((key) => (
+        <TextInput
+          key={key}
+          label={BINDABLE_LABELS[key]}
+          size="xs"
+          placeholder="(static)"
+          value={el.bind?.[key] ?? ''}
+          onChange={(e) => setBind(key, e.currentTarget.value)}
+          styles={{ input: { fontFamily: 'monospace' } }}
+        />
+      ))}
+      {el.kind === 'line' && (
+        <>
+          <Checkbox
+            label="Flow animation"
+            size="xs"
+            checked={!!el.flow}
+            onChange={(e) =>
+              set({ flow: e.currentTarget.checked ? { speed: el.flow?.speed ?? '1' } : undefined })
+            }
+          />
+          {el.flow && (
+            <TextInput
+              label="Flow speed (formula; sign = direction)"
+              size="xs"
+              placeholder="e.g. m_dot or 2"
+              value={el.flow.speed}
+              onChange={(e) => set({ flow: { speed: e.currentTarget.value } })}
+              styles={{ input: { fontFamily: 'monospace' } }}
+            />
+          )}
+        </>
+      )}
     </>
   )
 }
@@ -763,6 +961,7 @@ function PropertiesPanel({
           onChange={(v) => set({ opacity: typeof v === 'number' ? v : el.opacity })}
         />
       </Group>
+      <BindingFields el={el} set={set} />
         </>
       )}
 
@@ -820,6 +1019,7 @@ export default function DiagramTab({ variables, onBindingsChange }: Readonly<Pro
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [view, setView] = useState<ViewTransform>({ x: 60, y: 40, k: 1 })
   const [drag, setDrag] = useState<DragState | null>(null)
+  const [hover, setHover] = useState<{ id: string; x: number; y: number } | null>(null)
   const svgRef = useRef<SVGSVGElement | null>(null)
 
   const runMode = mode === 'run'
@@ -830,6 +1030,16 @@ export default function DiagramTab({ variables, onBindingsChange }: Readonly<Pro
     for (const v of variables) map.set(v.name.toLowerCase(), v)
     return map
   }, [variables])
+
+  const numValues = useMemo(() => {
+    const map = new Map<string, number>()
+    for (const v of variables) map.set(v.name.toLowerCase(), v.value)
+    return map
+  }, [variables])
+
+  const onHover = useCallback((id: string | null, x: number, y: number) => {
+    setHover(id ? { id, x, y } : null)
+  }, [])
 
   // Persist on every change.
   useEffect(() => {
@@ -1396,8 +1606,9 @@ export default function DiagramTab({ variables, onBindingsChange }: Readonly<Pro
           withBorder
           flex={1}
           mih={0}
-          style={{ overflow: 'hidden', background: '#141517' }}
+          style={{ overflow: 'hidden', background: '#141517', position: 'relative' }}
         >
+          <style>{FLOW_KEYFRAMES}</style>
           <svg
             ref={svgRef}
             width="100%"
@@ -1413,11 +1624,13 @@ export default function DiagramTab({ variables, onBindingsChange }: Readonly<Pro
               {state.elements.map((el) => (
                 <ElementView
                   key={el.id}
-                  el={el}
+                  el={resolveElement(el, numValues, runMode)}
                   runMode={runMode}
                   values={valueMap}
+                  numValues={numValues}
                   onMouseDown={onElementDown}
                   onControlValue={onControlValue}
+                  onHover={onHover}
                 />
               ))}
               {!runMode && selected && (
@@ -1430,6 +1643,14 @@ export default function DiagramTab({ variables, onBindingsChange }: Readonly<Pro
               )}
             </g>
           </svg>
+          {runMode && hover && (
+            <HoverTooltip
+              el={state.elements.find((e) => e.id === hover.id)}
+              values={valueMap}
+              x={hover.x}
+              y={hover.y}
+            />
+          )}
         </Paper>
       </Stack>
 

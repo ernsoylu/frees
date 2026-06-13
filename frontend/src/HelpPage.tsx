@@ -2280,6 +2280,30 @@ U = value - V_penalty - W_penalty`}
               text; in Run mode each is replaced by that variable's solved value and unit — handy for annotating
               state points directly on a schematic.
             </Text>
+
+            <Title order={3} mt="md">Animations & Live Attributes (Run mode)</Title>
+            <Text style={{ lineHeight: 1.6 }}>
+              Every shape's properties panel has a <strong>Run-mode bindings</strong> section. Enter a formula
+              of solved variables for any attribute — <strong>Δx</strong>, <strong>Δy</strong>,{' '}
+              <strong>Width</strong>, <strong>Height</strong>, <strong>Rotation</strong>, or{' '}
+              <strong>Opacity</strong> — and it is recomputed each time you Solve. Δx/Δy offset the authored
+              position, so a piston bound with Δy = <code>{'stroke*sin(theta)'}</code> slides as{' '}
+              <code>theta</code> changes across parametric runs.
+            </Text>
+            <Text style={{ lineHeight: 1.6 }}>
+              Formulas support <code>+ - * / ^</code>, parentheses, the constant <code>pi</code>, and the
+              functions <code>sin cos tan asin acos atan sqrt abs exp ln log10 min max pow mod</code>. A formula
+              that references an unsolved variable simply leaves the authored value in place.
+            </Text>
+            <Text style={{ lineHeight: 1.6 }}>
+              Lines and arrows offer a <strong>Flow animation</strong> toggle: the line becomes a moving dashed
+              pipe whose speed is a formula (e.g. a mass-flow or velocity variable) and whose sign sets the
+              direction. Combined with bound geometry, this drives schematic flow visualizations.
+            </Text>
+            <Text style={{ lineHeight: 1.6 }}>
+              In Run mode, hovering any bound element shows a <strong>tooltip</strong> with the live values of
+              every variable it references — a quick way to read the thermodynamic state at a node.
+            </Text>
           </Stack>
         );
       default:
