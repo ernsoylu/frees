@@ -2233,6 +2233,14 @@ U = value - V_penalty - W_penalty`}
               paste; <strong>Ctrl+D</strong> duplicates; <strong>Ctrl+A</strong> selects all; <strong>Del</strong>
               {' '}removes the selection. Undo and redo are also on the toolbar.
             </Text>
+            <Text style={{ lineHeight: 1.6 }}>
+              While dragging, elements <strong>snap</strong> to other elements' edges and centers with pink guide
+              lines (in addition to the grid). Hold <strong>Shift</strong> while resizing to lock the aspect
+              ratio. A selected element shows a <strong>rotate handle</strong> above it — drag to rotate, holding
+              Shift to snap to 15° steps. With two or more elements selected, the properties panel offers
+              <strong> align</strong> (left/right/top/bottom/centers) and, for three or more,
+              <strong> distribute</strong> (even horizontal/vertical spacing).
+            </Text>
 
             <Title order={3} mt="md">Variable Binding & Form Controls</Title>
             <Text style={{ lineHeight: 1.6 }}>

@@ -32,6 +32,14 @@ import {
   IconCircle,
   IconCopy,
   IconForms,
+  IconLayoutAlignBottom,
+  IconLayoutAlignCenter,
+  IconLayoutAlignLeft,
+  IconLayoutAlignMiddle,
+  IconLayoutAlignRight,
+  IconLayoutAlignTop,
+  IconLayoutDistributeHorizontal,
+  IconLayoutDistributeVertical,
   IconLine,
   IconPlayerPauseFilled,
   IconPlayerPlayFilled,
@@ -109,6 +117,7 @@ type DragState =
   | { type: 'resize'; id: string; handle: Handle; original: DiagramElement }
   | { type: 'groupResize'; handle: Handle; originals: DiagramElement[]; bbox: Box }
   | { type: 'endpoint'; id: string; which: 1 | 2 }
+  | { type: 'rotate'; id: string; original: DiagramElement; cx: number; cy: number }
   | { type: 'marquee'; startX: number; startY: number; additive: boolean }
 
 const HISTORY_LIMIT = 100
@@ -163,6 +172,53 @@ function scaleElement(
     return { ...el, x: tx(el.x), y: ty(el.y) } // don't scale text box geometry
   }
   return { ...el, x: tx(el.x), y: ty(el.y), w: Math.max(1, el.w * sx), h: Math.max(1, el.h * sy) }
+}
+
+const SNAP_THRESHOLD_PX = 6
+
+interface SnapResult {
+  dx: number
+  dy: number
+  vGuides: number[]
+  hGuides: number[]
+}
+
+/**
+ * Aligns a moving box's left/center/right and top/middle/bottom to the nearest
+ * matching edge of any static box within the threshold (Story 10.2 smart
+ * guides). Returns the adjustment to add to the raw delta and the guide lines.
+ */
+function computeSnap(moving: Box, statics: Box[], threshold: number): SnapResult {
+  const movingXs = [moving.x, moving.x + moving.w / 2, moving.x + moving.w]
+  const movingYs = [moving.y, moving.y + moving.h / 2, moving.y + moving.h]
+  let bestX: { delta: number; line: number } | null = null
+  let bestY: { delta: number; line: number } | null = null
+  for (const s of statics) {
+    const sx = [s.x, s.x + s.w / 2, s.x + s.w]
+    const sy = [s.y, s.y + s.h / 2, s.y + s.h]
+    for (const mx of movingXs) {
+      for (const tx of sx) {
+        const d = tx - mx
+        if (Math.abs(d) <= threshold && (!bestX || Math.abs(d) < Math.abs(bestX.delta))) {
+          bestX = { delta: d, line: tx }
+        }
+      }
+    }
+    for (const my of movingYs) {
+      for (const ty of sy) {
+        const d = ty - my
+        if (Math.abs(d) <= threshold && (!bestY || Math.abs(d) < Math.abs(bestY.delta))) {
+          bestY = { delta: d, line: ty }
+        }
+      }
+    }
+  }
+  return {
+    dx: bestX?.delta ?? 0,
+    dy: bestY?.delta ?? 0,
+    vGuides: bestX ? [bestX.line] : [],
+    hGuides: bestY ? [bestY.line] : [],
+  }
 }
 
 function elementCenter(el: DiagramElement): { cx: number; cy: number } {
@@ -733,18 +789,22 @@ function SelectionHandles({
   view,
   onHandleDown,
   onEndpointDown,
+  onRotateDown,
 }: Readonly<{
   el: DiagramElement
   view: ViewTransform
   onHandleDown: (e: React.MouseEvent, handle: 'nw' | 'ne' | 'sw' | 'se') => void
   onEndpointDown: (e: React.MouseEvent, which: 1 | 2) => void
+  onRotateDown: (e: React.MouseEvent) => void
 }>) {
   const size = 8 / view.k
   const color = '#4dabf7'
+  const { cx, cy } = elementCenter(el)
+  const transform = el.rotation ? `rotate(${el.rotation} ${cx} ${cy})` : undefined
 
   if (el.kind === 'line') {
     return (
-      <>
+      <g transform={transform}>
         {[1, 2].map((which) => {
           const x = which === 1 ? el.x1 : el.x2
           const y = which === 1 ? el.y1 : el.y2
@@ -762,7 +822,7 @@ function SelectionHandles({
             />
           )
         })}
-      </>
+      </g>
     )
   }
 
@@ -774,7 +834,7 @@ function SelectionHandles({
     { id: 'se', x: b.x + b.w, y: b.y + b.h, cursor: 'nwse-resize' },
   ]
   return (
-    <>
+    <g transform={transform}>
       <rect
         x={b.x}
         y={b.y}
@@ -801,7 +861,27 @@ function SelectionHandles({
             onMouseDown={(e) => onHandleDown(e, h.id)}
           />
         ))}
-    </>
+      {/* Rotate handle above the top edge (Shift snaps to 15°). */}
+      <line
+        x1={b.x + b.w / 2}
+        y1={b.y}
+        x2={b.x + b.w / 2}
+        y2={b.y - 22 / view.k}
+        stroke={color}
+        strokeWidth={1 / view.k}
+        pointerEvents="none"
+      />
+      <circle
+        cx={b.x + b.w / 2}
+        cy={b.y - 22 / view.k}
+        r={size * 0.7}
+        fill="#1a1b1e"
+        stroke={color}
+        strokeWidth={1.5 / view.k}
+        style={{ cursor: 'grab' }}
+        onMouseDown={onRotateDown}
+      />
+    </g>
   )
 }
 
@@ -1291,6 +1371,7 @@ export default function DiagramTab({ variables, runs = [], onBindingsChange }: R
   const [drag, setDrag] = useState<DragState | null>(null)
   const [hover, setHover] = useState<{ id: string; x: number; y: number } | null>(null)
   const [marquee, setMarquee] = useState<{ x: number; y: number; w: number; h: number } | null>(null)
+  const [guides, setGuides] = useState<{ v: number[]; h: number[] } | null>(null)
 
   // ── Undo/redo history (Story 10.1) ───────────────────────────────────
   // Refs (not state) hold the stacks; every history change rides on a state
@@ -1593,6 +1674,60 @@ export default function DiagramTab({ variables, runs = [], onBindingsChange }: R
     [selectedIds, selectedSet, commit],
   )
 
+  // ── alignment & distribution (Story 10.2) ────────────────────────────
+
+  type AlignMode = 'left' | 'hcenter' | 'right' | 'top' | 'vcenter' | 'bottom'
+
+  const alignSelection = useCallback(
+    (mode: AlignMode) => {
+      if (selectedElements.length < 2) return
+      const box = combinedBounds(selectedElements)
+      commit((s) => ({
+        ...s,
+        elements: s.elements.map((el) => {
+          if (!selectedSet.has(el.id)) return el
+          const b = elementBounds(el)
+          let dx = 0
+          let dy = 0
+          if (mode === 'left') dx = box.x - b.x
+          else if (mode === 'right') dx = box.x + box.w - (b.x + b.w)
+          else if (mode === 'hcenter') dx = box.x + box.w / 2 - (b.x + b.w / 2)
+          else if (mode === 'top') dy = box.y - b.y
+          else if (mode === 'bottom') dy = box.y + box.h - (b.y + b.h)
+          else dy = box.y + box.h / 2 - (b.y + b.h / 2)
+          return translateElement(el, dx, dy)
+        }),
+      }))
+    },
+    [selectedElements, selectedSet, commit],
+  )
+
+  const distributeSelection = useCallback(
+    (axis: 'h' | 'v') => {
+      if (selectedElements.length < 3) return
+      const items = selectedElements.map((el) => ({ el, b: elementBounds(el) }))
+      const center = (b: Box) => (axis === 'h' ? b.x + b.w / 2 : b.y + b.h / 2)
+      items.sort((a, c) => center(a.b) - center(c.b))
+      const first = center(items[0].b)
+      const last = center(items[items.length - 1].b)
+      const step = (last - first) / (items.length - 1)
+      const moves = new Map<string, { dx: number; dy: number }>()
+      items.forEach((it, i) => {
+        if (i === 0 || i === items.length - 1) return
+        const delta = first + step * i - center(it.b)
+        moves.set(it.el.id, axis === 'h' ? { dx: delta, dy: 0 } : { dx: 0, dy: delta })
+      })
+      commit((s) => ({
+        ...s,
+        elements: s.elements.map((el) => {
+          const m = moves.get(el.id)
+          return m ? translateElement(el, m.dx, m.dy) : el
+        }),
+      }))
+    },
+    [selectedElements, commit],
+  )
+
   // ── element creation ─────────────────────────────────────────────────
 
   const createElement = useCallback(
@@ -1743,10 +1878,35 @@ export default function DiagramTab({ variables, runs = [], onBindingsChange }: R
     setDrag({ type: 'endpoint', id: selected.id, which })
   }
 
+  const onRotateDown = (e: React.MouseEvent) => {
+    if (!selected) return
+    e.stopPropagation()
+    gestureBaseRef.current = stateRef.current
+    const { cx, cy } = elementCenter(selected)
+    setDrag({ type: 'rotate', id: selected.id, original: selected, cx, cy })
+  }
+
   const applyMove = useCallback(
     (d: Extract<DragState, { type: 'move' }>, world: { x: number; y: number }) => {
-      const dx = snap(world.x - d.startX)
-      const dy = snap(world.y - d.startY)
+      const ids = new Set(d.originals.map((o) => o.id))
+      const baseBox = combinedBounds(d.originals)
+      let dx = world.x - d.startX
+      let dy = world.y - d.startY
+      let vGuides: number[] = []
+      let hGuides: number[] = []
+      if (state.snap) {
+        // Smart guides first: align to other elements' edges/centers.
+        const statics = stateRef.current.elements
+          .filter((e) => !ids.has(e.id))
+          .map(elementBounds)
+        const moving = { x: baseBox.x + dx, y: baseBox.y + dy, w: baseBox.w, h: baseBox.h }
+        const sr = computeSnap(moving, statics, SNAP_THRESHOLD_PX / view.k)
+        dx = sr.vGuides.length ? dx + sr.dx : Math.round(dx / state.gridSize) * state.gridSize
+        dy = sr.hGuides.length ? dy + sr.dy : Math.round(dy / state.gridSize) * state.gridSize
+        vGuides = sr.vGuides
+        hGuides = sr.hGuides
+      }
+      setGuides(vGuides.length || hGuides.length ? { v: vGuides, h: hGuides } : null)
       setStateRaw((s) => {
         const moved = new Map(
           d.originals.map((orig) => [orig.id, translateElement(orig, dx, dy)]),
@@ -1754,7 +1914,7 @@ export default function DiagramTab({ variables, runs = [], onBindingsChange }: R
         return { ...s, elements: s.elements.map((el) => moved.get(el.id) ?? el) }
       })
     },
-    [snap],
+    [state.snap, state.gridSize, view.k],
   )
 
   const applyCreate = useCallback(
@@ -1779,7 +1939,7 @@ export default function DiagramTab({ variables, runs = [], onBindingsChange }: R
   )
 
   const applyResize = useCallback(
-    (d: Extract<DragState, { type: 'resize' }>, world: { x: number; y: number }) => {
+    (d: Extract<DragState, { type: 'resize' }>, world: { x: number; y: number }, lockAspect: boolean) => {
       const orig = d.original
       if (orig.kind === 'line' || orig.kind === 'label') return
       const b = { x: orig.x, y: orig.y, w: orig.w, h: orig.h }
@@ -1787,26 +1947,43 @@ export default function DiagramTab({ variables, runs = [], onBindingsChange }: R
       const fixedY = d.handle === 'nw' || d.handle === 'ne' ? b.y + b.h : b.y
       const wx = snap(world.x)
       const wy = snap(world.y)
+      let newW = Math.max(state.gridSize, Math.abs(wx - fixedX))
+      let newH = Math.max(state.gridSize, Math.abs(wy - fixedY))
+      if (lockAspect && b.w > 0 && b.h > 0) {
+        // Hold Shift: preserve the original aspect ratio.
+        const ratio = b.w / b.h
+        if (newW / b.w >= newH / b.h) newH = newW / ratio
+        else newW = newH * ratio
+      }
+      const dirX = Math.sign(wx - fixedX) || 1
+      const dirY = Math.sign(wy - fixedY) || 1
+      const cornerX = fixedX + dirX * newW
+      const cornerY = fixedY + dirY * newH
       updateElementLive(d.id, {
         ...orig,
-        x: Math.min(fixedX, wx),
-        y: Math.min(fixedY, wy),
-        w: Math.max(state.gridSize, Math.abs(wx - fixedX)),
-        h: Math.max(state.gridSize, Math.abs(wy - fixedY)),
+        x: Math.min(fixedX, cornerX),
+        y: Math.min(fixedY, cornerY),
+        w: newW,
+        h: newH,
       })
     },
     [snap, state.gridSize, updateElementLive],
   )
 
   const applyGroupResize = useCallback(
-    (d: Extract<DragState, { type: 'groupResize' }>, world: { x: number; y: number }) => {
+    (d: Extract<DragState, { type: 'groupResize' }>, world: { x: number; y: number }, lockAspect: boolean) => {
       const { bbox, handle } = d
       const fixedX = handle === 'nw' || handle === 'sw' ? bbox.x + bbox.w : bbox.x
       const fixedY = handle === 'nw' || handle === 'ne' ? bbox.y + bbox.h : bbox.y
       const wx = snap(world.x)
       const wy = snap(world.y)
-      const sx = bbox.w === 0 ? 1 : Math.max(0.05, Math.abs(wx - fixedX) / bbox.w)
-      const sy = bbox.h === 0 ? 1 : Math.max(0.05, Math.abs(wy - fixedY) / bbox.h)
+      let sx = bbox.w === 0 ? 1 : Math.max(0.05, Math.abs(wx - fixedX) / bbox.w)
+      let sy = bbox.h === 0 ? 1 : Math.max(0.05, Math.abs(wy - fixedY) / bbox.h)
+      if (lockAspect) {
+        const s = Math.max(sx, sy)
+        sx = s
+        sy = s
+      }
       setStateRaw((s) => {
         const scaled = new Map(
           d.originals.map((orig) => [orig.id, scaleElement(orig, fixedX, fixedY, sx, sy)]),
@@ -1842,6 +2019,18 @@ export default function DiagramTab({ variables, runs = [], onBindingsChange }: R
     [],
   )
 
+  const applyRotate = useCallback(
+    (d: Extract<DragState, { type: 'rotate' }>, world: { x: number; y: number }, snap15: boolean) => {
+      let angle = (Math.atan2(world.y - d.cy, world.x - d.cx) * 180) / Math.PI + 90
+      angle = snap15 ? Math.round(angle / 15) * 15 : Math.round(angle)
+      // Normalize to [-180, 180].
+      if (angle > 180) angle -= 360
+      if (angle < -180) angle += 360
+      updateElementLive(d.id, { ...d.original, rotation: angle })
+    },
+    [updateElementLive],
+  )
+
   useEffect(() => {
     if (!drag) return
     const onMove = (e: MouseEvent) => {
@@ -1854,11 +2043,13 @@ export default function DiagramTab({ variables, runs = [], onBindingsChange }: R
         return
       }
       const world = toWorld(e.clientX, e.clientY)
+      const shift = e.shiftKey
       if (drag.type === 'move') applyMove(drag, world)
       else if (drag.type === 'create') applyCreate(drag, world)
-      else if (drag.type === 'resize') applyResize(drag, world)
-      else if (drag.type === 'groupResize') applyGroupResize(drag, world)
+      else if (drag.type === 'resize') applyResize(drag, world, shift)
+      else if (drag.type === 'groupResize') applyGroupResize(drag, world, shift)
       else if (drag.type === 'endpoint') applyEndpoint(drag, world)
+      else if (drag.type === 'rotate') applyRotate(drag, world, shift)
       else if (drag.type === 'marquee') applyMarquee(drag, world)
     }
     const onUp = () => {
@@ -1882,7 +2073,12 @@ export default function DiagramTab({ variables, runs = [], onBindingsChange }: R
       } else if (drag.type === 'move') {
         endGesture()
         if (tool !== 'select') setTool('select')
-      } else if (drag.type === 'resize' || drag.type === 'groupResize' || drag.type === 'endpoint') {
+      } else if (
+        drag.type === 'resize' ||
+        drag.type === 'groupResize' ||
+        drag.type === 'endpoint' ||
+        drag.type === 'rotate'
+      ) {
         endGesture()
       } else if (drag.type === 'marquee') {
         const box = marqueeRef.current
@@ -1904,6 +2100,7 @@ export default function DiagramTab({ variables, runs = [], onBindingsChange }: R
         }
         setMarquee(null)
       }
+      setGuides(null)
       setDrag(null)
     }
     window.addEventListener('mousemove', onMove)
@@ -1920,6 +2117,7 @@ export default function DiagramTab({ variables, runs = [], onBindingsChange }: R
     applyResize,
     applyGroupResize,
     applyEndpoint,
+    applyRotate,
     applyMarquee,
     endGesture,
     tool,
@@ -2369,8 +2567,35 @@ export default function DiagramTab({ variables, runs = [], onBindingsChange }: R
                   view={view}
                   onHandleDown={onHandleDown}
                   onEndpointDown={onEndpointDown}
+                  onRotateDown={onRotateDown}
                 />
               )}
+              {!runMode && guides &&
+                guides.v.map((x) => (
+                  <line
+                    key={`gv-${x}`}
+                    x1={x}
+                    y1={-view.y / view.k}
+                    x2={x}
+                    y2={(-view.y + 4000) / view.k}
+                    stroke="#f783ac"
+                    strokeWidth={1 / view.k}
+                    pointerEvents="none"
+                  />
+                ))}
+              {!runMode && guides &&
+                guides.h.map((y) => (
+                  <line
+                    key={`gh-${y}`}
+                    x1={-view.x / view.k}
+                    y1={y}
+                    x2={(-view.x + 6000) / view.k}
+                    y2={y}
+                    stroke="#f783ac"
+                    strokeWidth={1 / view.k}
+                    pointerEvents="none"
+                  />
+                ))}
               {!runMode && marquee && (
                 <rect
                   x={marquee.x}
@@ -2416,8 +2641,56 @@ export default function DiagramTab({ variables, runs = [], onBindingsChange }: R
                 </Text>
                 <Text size="xs" c="dimmed" style={{ lineHeight: 1.6 }}>
                   Drag to move them together, or drag a corner handle to resize
-                  the group. Arrow keys nudge; Ctrl+D duplicates; Del removes.
+                  the group (Shift locks aspect). Arrow keys nudge; Ctrl+D
+                  duplicates; Del removes.
                 </Text>
+                <Divider label="Align" labelPosition="left" />
+                <Group gap={4}>
+                  <Tooltip label="Align left">
+                    <ActionIcon variant="default" size="md" onClick={() => alignSelection('left')}>
+                      <IconLayoutAlignLeft size={16} />
+                    </ActionIcon>
+                  </Tooltip>
+                  <Tooltip label="Align horizontal centers">
+                    <ActionIcon variant="default" size="md" onClick={() => alignSelection('hcenter')}>
+                      <IconLayoutAlignCenter size={16} />
+                    </ActionIcon>
+                  </Tooltip>
+                  <Tooltip label="Align right">
+                    <ActionIcon variant="default" size="md" onClick={() => alignSelection('right')}>
+                      <IconLayoutAlignRight size={16} />
+                    </ActionIcon>
+                  </Tooltip>
+                  <Tooltip label="Align top">
+                    <ActionIcon variant="default" size="md" onClick={() => alignSelection('top')}>
+                      <IconLayoutAlignTop size={16} />
+                    </ActionIcon>
+                  </Tooltip>
+                  <Tooltip label="Align vertical centers">
+                    <ActionIcon variant="default" size="md" onClick={() => alignSelection('vcenter')}>
+                      <IconLayoutAlignMiddle size={16} />
+                    </ActionIcon>
+                  </Tooltip>
+                  <Tooltip label="Align bottom">
+                    <ActionIcon variant="default" size="md" onClick={() => alignSelection('bottom')}>
+                      <IconLayoutAlignBottom size={16} />
+                    </ActionIcon>
+                  </Tooltip>
+                </Group>
+                {selectedElements.length > 2 && (
+                  <Group gap={4}>
+                    <Tooltip label="Distribute horizontally">
+                      <ActionIcon variant="default" size="md" onClick={() => distributeSelection('h')}>
+                        <IconLayoutDistributeHorizontal size={16} />
+                      </ActionIcon>
+                    </Tooltip>
+                    <Tooltip label="Distribute vertically">
+                      <ActionIcon variant="default" size="md" onClick={() => distributeSelection('v')}>
+                        <IconLayoutDistributeVertical size={16} />
+                      </ActionIcon>
+                    </Tooltip>
+                  </Group>
+                )}
                 <Divider />
                 <Group gap="xs">
                   <Tooltip label="Bring to front">
