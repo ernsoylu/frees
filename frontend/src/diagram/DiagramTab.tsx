@@ -3164,7 +3164,9 @@ interface Props {
   // Epic 10.9 props for multiple diagrams:
   diagrams?: DiagramSpec[]
   activeDiagramId?: string | null
-  onDiagramsChange?: (diagrams: DiagramSpec[]) => void
+  onDiagramsChange?: (
+    update: DiagramSpec[] | ((prev: DiagramSpec[]) => DiagramSpec[]),
+  ) => void
   onActiveDiagramIdChange?: (id: string | null) => void
 }
 
@@ -3205,27 +3207,40 @@ export default function DiagramTab(props: Readonly<Props>) {
 
   const diagrams = propsDiagrams ?? localDiagrams
   const activeDiagramId = propsActiveId ?? localActiveDiagramId
-  const onDiagramsChange = propsOnDiagramsChange ?? ((next) => {
-    setLocalDiagrams(next)
-    saveDiagrams(next)
+  const onDiagramsChange = propsOnDiagramsChange ?? ((update) => {
+    setLocalDiagrams((prev) => {
+      const next = typeof update === 'function' ? update(prev) : update
+      saveDiagrams(next)
+      return next
+    })
   })
   const onActiveDiagramIdChange = propsOnActiveIdChange ?? setLocalActiveDiagramId
 
   const activeDiagram = diagrams.find((d) => d.id === activeDiagramId) ?? diagrams[0] ?? { id: 'default', name: 'Main Diagram', state: DEFAULT_DIAGRAM_STATE }
   const state = activeDiagram.state
 
+  // Always resolve the active id at apply time so the functional update below
+  // targets the right diagram even mid-gesture.
+  const activeIdRef = useRef(activeDiagramId)
+  activeIdRef.current = activeDiagramId
+
+  // Functional update form is essential: a single gesture can fire several
+  // updates before React re-renders (e.g. create-then-size while drawing, or
+  // rapid drag ticks). Reading `diagrams` from the closure would let the second
+  // update clobber the first with a stale list, making the element vanish.
   const setStateRaw = useCallback(
     (updater: DiagramState | ((s: DiagramState) => DiagramState)) => {
-      const nextList = diagrams.map((d) => {
-        if (d.id === activeDiagramId) {
-          const nextState = typeof updater === 'function' ? updater(d.state) : updater
-          return { ...d, state: nextState }
-        }
-        return d
-      })
-      onDiagramsChange(nextList)
+      onDiagramsChange((prevList) =>
+        prevList.map((d) => {
+          if (d.id === activeIdRef.current) {
+            const nextState = typeof updater === 'function' ? updater(d.state) : updater
+            return { ...d, state: nextState }
+          }
+          return d
+        }),
+      )
     },
-    [diagrams, activeDiagramId, onDiagramsChange],
+    [onDiagramsChange],
   )
   const [tool, setTool] = useState<Tool>('select')
   const [mode, setMode] = useState<'develop' | 'run'>('develop')
