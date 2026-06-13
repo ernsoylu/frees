@@ -43,6 +43,9 @@ import {
   IconTarget,
   IconPlus,
   IconDownload,
+  IconVideo,
+  IconClock,
+  IconRefresh,
   IconChevronDown,
   IconArrowLeft,
   IconArrowRight,
@@ -125,6 +128,7 @@ import {
   DiagramExportFormat,
   DiagramExportTheme,
 } from './exportDiagram'
+import { DiagramRecorder } from './recordDiagram'
 
 const DIAGRAMS_STORAGE_KEY = 'frees-diagrams'
 
@@ -369,10 +373,20 @@ function resolveConditionalStyles(
   } as DiagramElement
 }
 
+// Easing functions for tweened playback (Story 10.11). Each maps 0..1 → 0..1.
+export type EasingName = 'linear' | 'ease' | 'ease-in' | 'ease-out'
+const EASINGS: Record<EasingName, (t: number) => number> = {
+  linear: (t) => t,
+  ease: (t) => t * t * (3 - 2 * t), // smoothstep
+  'ease-in': (t) => t * t,
+  'ease-out': (t) => t * (2 - t),
+}
+
 function resolveElement(
   el: DiagramElement,
   numValues: Map<string, number>,
   runMode: boolean,
+  paths?: Map<string, LineElement>,
 ): DiagramElement {
   let resolved = el
   if (runMode && el.bind) {
@@ -417,7 +431,41 @@ function resolveElement(
   if (runMode) {
     resolved = resolveConditionalStyles(resolved, numValues)
   }
-  
+
+  // Path-following motion (Story 10.11): move the element's center along a line
+  // element at the eased/animated progress (0..1), optionally orienting it to
+  // the path tangent. Line/connector elements are not themselves movers.
+  if (
+    runMode &&
+    el.motion &&
+    paths &&
+    resolved.kind !== 'line' &&
+    resolved.kind !== 'connector'
+  ) {
+    const line = paths.get(el.motion.pathId)
+    if (line) {
+      const raw = evalFormula(el.motion.progress, numValues) ?? 0
+      const p = Math.max(0, Math.min(1, raw))
+      const px = line.x1 + (line.x2 - line.x1) * p
+      const py = line.y1 + (line.y2 - line.y1) * p
+      const rot = el.motion.orient
+        ? (Math.atan2(line.y2 - line.y1, line.x2 - line.x1) * 180) / Math.PI
+        : resolved.rotation
+      const next = { ...resolved } as DiagramElement & {
+        x?: number
+        y?: number
+        w?: number
+        h?: number
+      }
+      const halfW = resolved.kind === 'label' ? 0 : (typeof next.w === 'number' ? next.w / 2 : 0)
+      const halfH = resolved.kind === 'label' ? 0 : (typeof next.h === 'number' ? next.h / 2 : 0)
+      next.x = px - halfW
+      next.y = py - halfH
+      next.rotation = rot
+      resolved = next
+    }
+  }
+
   return resolved
 }
 
@@ -454,6 +502,7 @@ function elementVars(el: DiagramElement): string[] {
       formulaVars(r.formula).forEach((v) => out.add(v))
     }
   }
+  if (el.motion) formulaVars(el.motion.progress).forEach((v) => out.add(v))
   return [...out]
 }
 
@@ -2083,7 +2132,12 @@ function ControlFields({
 function BindingFields({
   el,
   set,
-}: Readonly<{ el: DiagramElement; set: (patch: Partial<DiagramElement>) => void }>) {
+  pathOptions = [],
+}: Readonly<{
+  el: DiagramElement
+  set: (patch: Partial<DiagramElement>) => void
+  pathOptions?: { value: string; label: string }[]
+}>) {
   const keys: (keyof AttributeBindings)[] =
     el.kind === 'line' || el.kind === 'label'
       ? ['dx', 'dy', 'rotation', 'opacity']
@@ -2091,6 +2145,19 @@ function BindingFields({
 
   const setBind = (key: keyof AttributeBindings, value: string) =>
     set({ bind: { ...el.bind, [key]: value.trim() === '' ? undefined : value } })
+
+  // Path-following motion (Story 10.11): not offered for the path elements
+  // (lines/connectors) themselves.
+  const canFollowPath = el.kind !== 'line' && el.kind !== 'connector'
+  const setMotion = (patch: Partial<NonNullable<DiagramElement['motion']>>) =>
+    set({
+      motion: {
+        pathId: el.motion?.pathId ?? '',
+        progress: el.motion?.progress ?? 't',
+        orient: el.motion?.orient,
+        ...patch,
+      },
+    })
 
   return (
     <>
@@ -2129,6 +2196,55 @@ function BindingFields({
               onChange={(e) => set({ flow: { speed: e.currentTarget.value } })}
               styles={{ input: { fontFamily: 'monospace' } }}
             />
+          )}
+        </>
+      )}
+      {canFollowPath && (
+        <>
+          <Divider label="Path-following motion" labelPosition="left" />
+          <Checkbox
+            label="Move along a line path"
+            size="xs"
+            checked={!!el.motion}
+            disabled={pathOptions.length === 0 && !el.motion}
+            onChange={(e) =>
+              set({
+                motion: e.currentTarget.checked
+                  ? { pathId: pathOptions[0]?.value ?? '', progress: 't', orient: false }
+                  : undefined,
+              })
+            }
+          />
+          {pathOptions.length === 0 && !el.motion && (
+            <Text size="10px" c="dimmed">
+              Draw a Line element to use as a motion path.
+            </Text>
+          )}
+          {el.motion && (
+            <>
+              <Select
+                label="Path (line)"
+                size="xs"
+                value={el.motion.pathId || null}
+                data={pathOptions}
+                onChange={(v) => v && setMotion({ pathId: v })}
+                placeholder="Choose a line…"
+              />
+              <TextInput
+                label="Progress 0→1 (formula; t = time clock)"
+                size="xs"
+                placeholder="e.g. t/5 or (T-300)/200"
+                value={el.motion.progress}
+                onChange={(e) => setMotion({ progress: e.currentTarget.value })}
+                styles={{ input: { fontFamily: 'monospace' } }}
+              />
+              <Checkbox
+                label="Orient to path direction"
+                size="xs"
+                checked={!!el.motion.orient}
+                onChange={(e) => setMotion({ orient: e.currentTarget.checked })}
+              />
+            </>
           )}
         </>
       )}
@@ -2625,6 +2741,7 @@ function ValueDrivenFillFields({
 function PropertiesPanel({
   el,
   varNames,
+  pathOptions = [],
   onChange,
   onDuplicate,
   onDelete,
@@ -2635,6 +2752,7 @@ function PropertiesPanel({
 }: Readonly<{
   el: DiagramElement
   varNames: string[]
+  pathOptions?: { value: string; label: string }[]
   onChange: (next: DiagramElement) => void
   onDuplicate: () => void
   onDelete: () => void
@@ -2838,7 +2956,7 @@ function PropertiesPanel({
           <ValueDrivenFillFields el={el} set={set} varNames={varNames} />
         </>
       )}
-      <BindingFields el={el} set={set} />
+      <BindingFields el={el} set={set} pathOptions={pathOptions} />
       <ConditionalRulesFields el={el} set={set} />
         </>
       )}
@@ -3191,11 +3309,21 @@ export default function DiagramTab(props: Readonly<Props>) {
     }
   }, [])
 
-  // Playback: null = show the live single solve; a number = that table run.
-  const [playIndex, setPlayIndex] = useState<number | null>(null)
+  // Playback (Story 6.4 + 10.11): playPos is a *continuous* position in the run
+  // sequence (null = live single solve). Tweening interpolates bound attributes
+  // between adjacent runs; the time clock (clockT) drives `t`-based formulas
+  // independently of the table.
+  const [playPos, setPlayPos] = useState<number | null>(null)
   const [playing, setPlaying] = useState(false)
   const [loop, setLoop] = useState(true)
   const [speed, setSpeed] = useState('normal')
+  const [tween, setTween] = useState(true)
+  const [easing, setEasing] = useState<EasingName>('ease')
+  const [clockT, setClockT] = useState(0)
+  const [timePlaying, setTimePlaying] = useState(false)
+  const [timeScale, setTimeScale] = useState(1)
+  const [recording, setRecording] = useState(false)
+  const recorderRef = useRef<DiagramRecorder | null>(null)
   const svgRef = useRef<SVGSVGElement | null>(null)
 
   const runMode = mode === 'run'
@@ -3214,9 +3342,12 @@ export default function DiagramTab(props: Readonly<Props>) {
       0.62
     : 0
 
-  // The active run during playback (clamped); null means use the live solve.
+  // The nearest discrete run (for the chart marker and the run counter); the
+  // continuous numeric values are interpolated separately below.
   const activeIndex =
-    playIndex !== null && runs.length > 0 ? Math.min(playIndex, runs.length - 1) : null
+    playPos !== null && runs.length > 0
+      ? Math.max(0, Math.min(runs.length - 1, Math.round(playPos)))
+      : null
   const activeRun = activeIndex !== null ? runs[activeIndex] : null
 
   // Variable names available to chart pickers: from the table runs, else the
@@ -3236,30 +3367,45 @@ export default function DiagramTab(props: Readonly<Props>) {
     return map
   }, [variables])
 
-  const valueMap = useMemo(() => {
-    const map = new Map<string, VariableResult>()
-    if (activeRun) {
-      for (const [name, value] of Object.entries(activeRun.values)) {
-        const key = name.toLowerCase()
-        map.set(key, { name, value, units: liveUnits.get(key) ?? '' })
-      }
-    } else {
-      for (const v of variables) map.set(v.name.toLowerCase(), v)
-    }
-    return map
-  }, [activeRun, variables, liveUnits])
-
+  // Numeric values feeding every formula binding. During playback these are
+  // interpolated between adjacent runs (eased) when tweening is on, else snapped
+  // to the nearest run. The time clock is always exposed as `t`.
   const numValues = useMemo(() => {
     const map = new Map<string, number>()
-    if (activeRun) {
-      for (const [name, value] of Object.entries(activeRun.values)) {
-        map.set(name.toLowerCase(), value)
+    if (playPos !== null && runs.length > 0) {
+      const p = Math.max(0, Math.min(runs.length - 1, playPos))
+      const i0 = Math.floor(p)
+      const i1 = Math.min(runs.length - 1, i0 + 1)
+      const frac = tween ? EASINGS[easing](p - i0) : 0
+      const a = runs[tween ? i0 : Math.round(p)].values
+      const b = runs[i1].values
+      const keys = new Set([...Object.keys(a), ...Object.keys(b)])
+      for (const k of keys) {
+        const va = a[k]
+        const vb = b[k]
+        if (tween && Number.isFinite(va) && Number.isFinite(vb)) {
+          map.set(k.toLowerCase(), va + (vb - va) * frac)
+        } else {
+          map.set(k.toLowerCase(), Number.isFinite(va) ? va : vb)
+        }
       }
     } else {
       for (const v of variables) map.set(v.name.toLowerCase(), v.value)
     }
+    map.set('t', clockT)
     return map
-  }, [activeRun, variables])
+  }, [playPos, runs, variables, tween, easing, clockT])
+
+  const valueMap = useMemo(() => {
+    const map = new Map<string, VariableResult>()
+    const nameFor = new Map<string, string>()
+    if (activeRun) for (const n of Object.keys(activeRun.values)) nameFor.set(n.toLowerCase(), n)
+    for (const v of variables) if (!nameFor.has(v.name.toLowerCase())) nameFor.set(v.name.toLowerCase(), v.name)
+    for (const [k, value] of numValues) {
+      map.set(k, { name: nameFor.get(k) ?? k, value, units: liveUnits.get(k) ?? '' })
+    }
+    return map
+  }, [numValues, activeRun, variables, liveUnits])
 
   const onHover = useCallback((id: string | null, x: number, y: number) => {
     setHover(id ? { id, x, y } : null)
@@ -3276,55 +3422,118 @@ export default function DiagramTab(props: Readonly<Props>) {
     })
   }, [])
 
-  // ── Playback (Story 6.4) ─────────────────────────────────────────────
+  // ── Playback & animation (Story 6.4 + 10.11) ─────────────────────────
   const runCount = runs.length
 
+  // Single requestAnimationFrame loop driving both tweened table playback and
+  // the independent time clock, for smooth (interpolated) motion.
   useEffect(() => {
-    if (!playing || runCount === 0) return
-    const ms = PLAYBACK_SPEEDS.find((s) => s.value === speed)?.ms ?? 550
-    const id = setInterval(() => {
-      setPlayIndex((prev) => {
-        const next = (prev ?? -1) + 1
-        return next >= runCount ? (loop ? 0 : runCount - 1) : next
-      })
-    }, ms)
-    return () => clearInterval(id)
-  }, [playing, runCount, speed, loop])
-
-  // Stop at the final run when not looping.
-  useEffect(() => {
-    if (!loop && playing && playIndex !== null && playIndex >= runCount - 1) {
-      setPlaying(false)
+    const tableActive = playing && runCount > 1
+    if (!tableActive && !timePlaying) return
+    const msPerRun = PLAYBACK_SPEEDS.find((s) => s.value === speed)?.ms ?? 550
+    let last = performance.now()
+    let raf = 0
+    const tick = (now: number) => {
+      const dt = now - last
+      last = now
+      if (tableActive) {
+        setPlayPos((prev) => {
+          let next = (prev ?? 0) + dt / msPerRun
+          if (next >= runCount - 1) {
+            if (loop) {
+              next = ((next - (runCount - 1)) % (runCount - 1 || 1))
+            } else {
+              next = runCount - 1
+              setPlaying(false)
+            }
+          }
+          return next
+        })
+      }
+      if (timePlaying) setClockT((t) => t + (dt / 1000) * timeScale)
+      raf = requestAnimationFrame(tick)
     }
-  }, [playIndex, loop, playing, runCount])
+    raf = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(raf)
+  }, [playing, timePlaying, runCount, speed, loop, timeScale])
 
-  // Leaving Run mode or losing the runs returns to the live solve.
+  // Leaving Run mode stops all animation and returns to the live solve.
   useEffect(() => {
-    if (!runMode || runCount === 0) {
+    if (!runMode) {
       setPlaying(false)
-      setPlayIndex(null)
+      setPlayPos(null)
+      setTimePlaying(false)
     }
-  }, [runMode, runCount])
+  }, [runMode])
+
+  useEffect(() => {
+    if (runCount === 0) {
+      setPlaying(false)
+      setPlayPos(null)
+    }
+  }, [runCount])
 
   const togglePlay = () => {
-    if (runCount === 0) return
-    if (playIndex === null) setPlayIndex(0)
+    if (runCount <= 1) return
+    if (playPos === null) setPlayPos(0)
     setPlaying((p) => !p)
   }
 
   const stepRun = (dir: 1 | -1) => {
     if (runCount === 0) return
     setPlaying(false)
-    setPlayIndex((prev) => {
-      const base = prev ?? 0
+    setPlayPos((prev) => {
+      const base = prev === null ? 0 : Math.round(prev)
       return Math.max(0, Math.min(runCount - 1, base + dir))
     })
   }
 
   const goLive = () => {
     setPlaying(false)
-    setPlayIndex(null)
+    setPlayPos(null)
   }
+
+  // Line elements usable as motion paths (Story 10.11 path-following).
+  const motionPaths = useMemo(() => {
+    const m = new Map<string, LineElement>()
+    for (const el of state.elements) if (el.kind === 'line') m.set(el.id, el)
+    return m
+  }, [state.elements])
+
+  const pathOptions = useMemo(
+    () =>
+      state.elements
+        .filter((el) => el.kind === 'line')
+        .map((el, i) => ({ value: el.id, label: el.name?.trim() || `Line ${i + 1}` })),
+    [state.elements],
+  )
+
+  const toggleRecord = async () => {
+    if (recording) {
+      setRecording(false)
+      await recorderRef.current?.stop(activeDiagram.name)
+      recorderRef.current = null
+      return
+    }
+    if (!svgRef.current) return
+    try {
+      const rec = new DiagramRecorder()
+      rec.start(svgRef.current, 'dark')
+      recorderRef.current = rec
+      setRecording(true)
+    } catch {
+      recorderRef.current = null
+      setRecording(false)
+    }
+  }
+
+  // Stop any in-progress recording if the component unmounts.
+  useEffect(() => {
+    return () => {
+      if (recorderRef.current) void recorderRef.current.stop(activeDiagram.name)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
 
   // Report the input-control bindings to the host so they participate in
@@ -4832,68 +5041,152 @@ export default function DiagramTab(props: Readonly<Props>) {
           )}
         </Group>
 
-        {runMode && runCount > 0 && (
+        {runMode && (
           <Paper withBorder px="sm" py={6}>
-            <Group gap="sm" wrap="nowrap">
-              <Group gap={2} wrap="nowrap">
-                <Tooltip label="Previous run">
-                  <ActionIcon variant="default" onClick={() => stepRun(-1)}>
-                    <IconPlayerSkipBackFilled size={16} />
-                  </ActionIcon>
-                </Tooltip>
-                <Tooltip label={playing ? 'Pause' : 'Play runs'}>
-                  <ActionIcon variant="filled" onClick={togglePlay}>
-                    {playing ? (
-                      <IconPlayerPauseFilled size={16} />
-                    ) : (
-                      <IconPlayerPlayFilled size={16} />
-                    )}
-                  </ActionIcon>
-                </Tooltip>
-                <Tooltip label="Next run">
-                  <ActionIcon variant="default" onClick={() => stepRun(1)}>
-                    <IconPlayerSkipForwardFilled size={16} />
-                  </ActionIcon>
-                </Tooltip>
-                <Tooltip label={loop ? 'Looping' : 'Loop off'}>
+            <Stack gap={6}>
+              {runCount > 0 && (
+                <Group gap="sm" wrap="nowrap">
+                  <Group gap={2} wrap="nowrap">
+                    <Tooltip label="Previous run">
+                      <ActionIcon variant="default" onClick={() => stepRun(-1)}>
+                        <IconPlayerSkipBackFilled size={16} />
+                      </ActionIcon>
+                    </Tooltip>
+                    <Tooltip label={playing ? 'Pause' : 'Play runs'}>
+                      <ActionIcon variant="filled" onClick={togglePlay} disabled={runCount <= 1}>
+                        {playing ? (
+                          <IconPlayerPauseFilled size={16} />
+                        ) : (
+                          <IconPlayerPlayFilled size={16} />
+                        )}
+                      </ActionIcon>
+                    </Tooltip>
+                    <Tooltip label="Next run">
+                      <ActionIcon variant="default" onClick={() => stepRun(1)}>
+                        <IconPlayerSkipForwardFilled size={16} />
+                      </ActionIcon>
+                    </Tooltip>
+                    <Tooltip label={loop ? 'Looping' : 'Loop off'}>
+                      <ActionIcon
+                        variant={loop ? 'light' : 'default'}
+                        onClick={() => setLoop((l) => !l)}
+                      >
+                        {loop ? <IconRepeat size={16} /> : <IconRepeatOff size={16} />}
+                      </ActionIcon>
+                    </Tooltip>
+                  </Group>
+                  <Slider
+                    flex={1}
+                    min={0}
+                    max={Math.max(0, runCount - 1)}
+                    step={0.01}
+                    value={playPos ?? 0}
+                    label={(v) => runs[Math.round(v)]?.label ?? ''}
+                    onChange={(v) => {
+                      setPlaying(false)
+                      setPlayPos(v)
+                    }}
+                  />
+                  <Text size="xs" c="dimmed" w={64} ta="center" style={{ flexShrink: 0 }}>
+                    {playPos === null || activeIndex === null
+                      ? 'live'
+                      : `${activeIndex + 1} / ${runCount}`}
+                  </Text>
+                  <SegmentedControl
+                    size="xs"
+                    value={speed}
+                    onChange={setSpeed}
+                    data={PLAYBACK_SPEEDS.map((s) => ({ label: s.label, value: s.value }))}
+                  />
+                  <Tooltip label="Show the live single solve">
+                    <ActionIcon
+                      variant={playPos === null ? 'light' : 'default'}
+                      onClick={goLive}
+                    >
+                      <IconBroadcast size={16} />
+                    </ActionIcon>
+                  </Tooltip>
+                </Group>
+              )}
+
+              {/* Animation options (Story 10.11): tweening, time clock, recording. */}
+              <Group gap="sm" wrap="wrap">
+                {runCount > 1 && (
+                  <>
+                    <Tooltip label="Smoothly interpolate bound attributes between runs">
+                      <Checkbox
+                        size="xs"
+                        label="Tween"
+                        checked={tween}
+                        onChange={(e) => setTween(e.currentTarget.checked)}
+                      />
+                    </Tooltip>
+                    <Select
+                      size="xs"
+                      w={120}
+                      disabled={!tween}
+                      value={easing}
+                      onChange={(v) => v && setEasing(v as EasingName)}
+                      data={[
+                        { value: 'linear', label: 'Linear' },
+                        { value: 'ease', label: 'Ease' },
+                        { value: 'ease-in', label: 'Ease in' },
+                        { value: 'ease-out', label: 'Ease out' },
+                      ]}
+                      aria-label="Easing"
+                    />
+                    <Divider orientation="vertical" />
+                  </>
+                )}
+                <Tooltip label="Free-running time clock — drives formulas that use the variable t">
                   <ActionIcon
-                    variant={loop ? 'light' : 'default'}
-                    onClick={() => setLoop((l) => !l)}
+                    variant={timePlaying ? 'filled' : 'default'}
+                    onClick={() => setTimePlaying((p) => !p)}
                   >
-                    {loop ? <IconRepeat size={16} /> : <IconRepeatOff size={16} />}
+                    {timePlaying ? <IconPlayerPauseFilled size={16} /> : <IconClock size={16} />}
                   </ActionIcon>
                 </Tooltip>
+                <Text size="xs" c="dimmed" ff="monospace" w={70}>
+                  t = {clockT.toFixed(2)}s
+                </Text>
+                <Tooltip label="Reset the time clock to 0">
+                  <ActionIcon
+                    variant="default"
+                    onClick={() => {
+                      setTimePlaying(false)
+                      setClockT(0)
+                    }}
+                  >
+                    <IconRefresh size={16} />
+                  </ActionIcon>
+                </Tooltip>
+                <NumberInput
+                  size="xs"
+                  w={96}
+                  min={0.1}
+                  max={20}
+                  step={0.5}
+                  value={timeScale}
+                  onChange={(v) => setTimeScale(typeof v === 'number' ? v : 1)}
+                  suffix="×"
+                  aria-label="Time speed"
+                />
+                <Divider orientation="vertical" />
+                {DiagramRecorder.isSupported() && (
+                  <Tooltip label={recording ? 'Stop recording & download' : 'Record animation to video'}>
+                    <Button
+                      size="compact-xs"
+                      variant={recording ? 'filled' : 'light'}
+                      color={recording ? 'red' : 'gray'}
+                      leftSection={<IconVideo size={14} />}
+                      onClick={() => void toggleRecord()}
+                    >
+                      {recording ? 'Stop' : 'Record'}
+                    </Button>
+                  </Tooltip>
+                )}
               </Group>
-              <Slider
-                flex={1}
-                min={0}
-                max={runCount - 1}
-                step={1}
-                value={playIndex ?? 0}
-                label={(v) => runs[v]?.label ?? ''}
-                onChange={(v) => {
-                  setPlaying(false)
-                  setPlayIndex(v)
-                }}
-              />
-              <Text size="xs" c="dimmed" w={64} ta="center" style={{ flexShrink: 0 }}>
-                {playIndex === null ? 'live' : `${playIndex + 1} / ${runCount}`}
-              </Text>
-              <SegmentedControl
-                size="xs"
-                value={speed}
-                onChange={setSpeed}
-                data={PLAYBACK_SPEEDS.map((s) => ({ label: s.label, value: s.value }))}
-              />
-              <Tooltip label="Show the live single solve">
-                <ActionIcon
-                  variant={playIndex === null ? 'light' : 'default'}
-                  onClick={goLive}
-                >
-                  <IconBroadcast size={16} />
-                </ActionIcon>
-              </Tooltip>
-            </Group>
+            </Stack>
           </Paper>
         )}
 
@@ -4966,7 +5259,7 @@ export default function DiagramTab(props: Readonly<Props>) {
                     }
                   >
                     <ElementView
-                      el={resolveElement(el, numValues, runMode)}
+                      el={resolveElement(el, numValues, runMode, motionPaths)}
                       runMode={runMode}
                       values={valueMap}
                       numValues={numValues}
@@ -5156,6 +5449,7 @@ export default function DiagramTab(props: Readonly<Props>) {
               <PropertiesPanel
                 el={selected}
                 varNames={varNames}
+                pathOptions={pathOptions.filter((p) => p.value !== selected.id)}
                 onChange={(next) => updateElement(selected.id, next, `prop:${selected.id}`)}
                 onDuplicate={duplicateSelected}
                 onDelete={deleteSelected}
