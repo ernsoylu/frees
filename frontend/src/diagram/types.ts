@@ -70,12 +70,99 @@ export interface IconElement extends ElementBase {
   h: number
 }
 
+// ── Form controls (Story 6.2) ────────────────────────────────────────────
+// Controls bind canvas widgets to solver variables: Inputs/Dropdowns/
+// Checkboxes/Sliders feed values INTO the solve (appended as equations),
+// Outputs display solved values.
+
+interface ControlBase extends ElementBase {
+  x: number
+  y: number
+  w: number
+  h: number
+  /** Bound variable name; a trailing '$' binds a string variable. */
+  varName: string
+  /** Caption shown next to the widget. */
+  label: string
+}
+
+export interface InputControl extends ControlBase {
+  kind: 'ctl-input'
+  value: string
+}
+
+export interface OutputControl extends ControlBase {
+  kind: 'ctl-output'
+}
+
+export interface DropdownControl extends ControlBase {
+  kind: 'ctl-dropdown'
+  options: string[]
+  value: string
+}
+
+export interface CheckboxControl extends ControlBase {
+  kind: 'ctl-checkbox'
+  checked: boolean
+}
+
+export interface SliderControl extends ControlBase {
+  kind: 'ctl-slider'
+  min: number
+  max: number
+  step: number
+  value: number
+}
+
+export type ControlElement =
+  | InputControl
+  | OutputControl
+  | DropdownControl
+  | CheckboxControl
+  | SliderControl
+
 export type DiagramElement =
   | LineElement
   | RectElement
   | EllipseElement
   | LabelElement
   | IconElement
+  | ControlElement
+
+export function isControl(el: DiagramElement): el is ControlElement {
+  return el.kind.startsWith('ctl-')
+}
+
+/**
+ * Equation lines injected into Check/Solve by the diagram's input-type
+ * controls (Story 6.2): each bound control contributes `var = value`.
+ * Output controls contribute nothing — they only display results.
+ */
+export function controlBindings(elements: DiagramElement[]): string[] {
+  const lines: string[] = []
+  for (const el of elements) {
+    if (!isControl(el) || el.varName.trim() === '') continue
+    const name = el.varName.trim()
+    if (el.kind === 'ctl-input') {
+      const value = Number(el.value)
+      if (el.value.trim() !== '' && Number.isFinite(value)) {
+        lines.push(`${name} = ${el.value.trim()}`)
+      }
+    } else if (el.kind === 'ctl-dropdown') {
+      if (el.value === '') continue
+      if (name.endsWith('$')) {
+        lines.push(`${name} = '${el.value}'`)
+      } else if (Number.isFinite(Number(el.value))) {
+        lines.push(`${name} = ${el.value}`)
+      }
+    } else if (el.kind === 'ctl-checkbox') {
+      lines.push(`${name} = ${el.checked ? 1 : 0}`)
+    } else if (el.kind === 'ctl-slider') {
+      lines.push(`${name} = ${el.value}`)
+    }
+  }
+  return lines
+}
 
 export interface DiagramState {
   elements: DiagramElement[]

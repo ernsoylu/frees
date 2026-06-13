@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react'
+import { useCallback, useEffect, useState, useRef } from 'react'
 import {
   ActionIcon,
   Button,
@@ -150,6 +150,10 @@ function FormattedEquationsView({
 
 export default function App() {
   const [text, setText] = useState(EXAMPLE)
+  // Equation lines contributed by the Diagram window's input controls
+  // (Story 6.2). They are appended to the text on Check/Solve.
+  const [diagramBindings, setDiagramBindings] = useState<string[]>([])
+  const diagramBoundVarsRef = useRef('')
   const [checkResult, setCheckResult] = useState<CheckResponse | null>(null)
   const [checking, setChecking] = useState(false)
   const [result, setResult] = useState<SolveResponse | null>(null)
@@ -301,13 +305,39 @@ export default function App() {
     invalidateTable()
   }
 
+  /** The equations actually solved: editor text plus diagram control bindings. */
+  function effectiveText(): string {
+    return diagramBindings.length > 0
+      ? `${text}\n${diagramBindings.join('\n')}`
+      : text
+  }
+
+  // Diagram input controls report their `var = value` lines here. Changing a
+  // control's VALUE keeps the system structure intact (same equation/variable
+  // counts), so the existing Check stays valid and Solve can run immediately.
+  // Adding/removing a control or renaming its variable changes the structure
+  // and invalidates the Check, forcing a re-Check before Solve.
+  const handleDiagramBindings = useCallback((lines: string[]) => {
+    setDiagramBindings(lines)
+    const vars = lines
+      .map((l) => l.split('=')[0].trim().toLowerCase())
+      .sort((a, b) => a.localeCompare(b))
+      .join(',')
+    if (vars !== diagramBoundVarsRef.current) {
+      diagramBoundVarsRef.current = vars
+      setCheckResult(null)
+      setResult(null)
+      setLastSolvedWithFillMissing(false)
+    }
+  }, [])
+
   async function onCheck() {
     if (checking) return
     setChecking(true)
     setResult(null)
     setLastSolvedWithFillMissing(false)
     try {
-      const response = await check(text, buildVariableInfo(), complexMode, functionTableDtos)
+      const response = await check(effectiveText(), buildVariableInfo(), complexMode, functionTableDtos)
       setCheckResult(response)
       // Sync the Variable Information table: keep edited rows for variables
       // that still exist, add defaults for new ones.
@@ -510,7 +540,7 @@ export default function App() {
       const needMissing = activePlots.some((p) => p.kind === 'property' && p.property.overlayStates)
       const shouldFillMissing = (forceFill === true) || fillMissing || needMissing
       const response = await solve(
-        text,
+        effectiveText(),
         { ...stopCriteria, complexMode },
         buildVariableInfo(),
         findAll,
@@ -888,7 +918,10 @@ export default function App() {
               <DigitizerTab onSendToFunctionTable={sendDigitizedToFunctionTable} />
             )}
             {activeTab === 'diagram' && (
-              <DiagramTab variables={result?.variables ?? []} />
+              <DiagramTab
+                variables={result?.variables ?? []}
+                onBindingsChange={handleDiagramBindings}
+              />
             )}
           </Paper>
 
