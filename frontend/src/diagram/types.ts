@@ -13,9 +13,30 @@ export interface ElementStyle {
   opacity: number
 }
 
+/**
+ * Attribute bindings (Story 6.3): each key holds a formula of solved variables
+ * evaluated in Run mode to drive the element's geometry/appearance. A binding
+ * offsets the element's authored value — e.g. `dx` shifts x, `rotation` sets
+ * the absolute angle. Empty/absent formulas leave the authored value untouched.
+ */
+export interface AttributeBindings {
+  dx?: string
+  dy?: string
+  w?: string
+  h?: string
+  rotation?: string
+  opacity?: string
+}
+
 interface ElementBase extends ElementStyle {
   id: string
   rotation: number
+  bind?: AttributeBindings
+}
+
+/** Animated dashed-line flow (Story 6.3): speed is a formula; sign sets direction. */
+export interface FlowAnimation {
+  speed: string
 }
 
 /** Straight line, optionally with an arrow head at the (x2, y2) end. */
@@ -26,6 +47,7 @@ export interface LineElement extends ElementBase {
   x2: number
   y2: number
   arrow: boolean
+  flow?: FlowAnimation
 }
 
 export interface RectElement extends ElementBase {
