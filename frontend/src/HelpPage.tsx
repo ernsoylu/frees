@@ -2304,6 +2304,25 @@ U = value - V_penalty - W_penalty`}
               In Run mode, hovering any bound element shows a <strong>tooltip</strong> with the live values of
               every variable it references — a quick way to read the thermodynamic state at a node.
             </Text>
+
+            <Title order={3} mt="md">Playback Over Parametric Table Runs</Title>
+            <Text style={{ lineHeight: 1.6 }}>
+              Solve a <strong>Parametric Table</strong> and a <strong>playback bar</strong> appears at the top of
+              the Diagram in Run mode. Play, pause, step, or scrub through the table's solved runs, and the whole
+              diagram animates — bound positions, rotations, sizes, flow speeds, output badges, and{' '}
+              <code>{'{varname}'}</code> labels all update to each run's values. Toggle looping, set the speed
+              (0.5× / 1× / 2×), or press the <strong>broadcast</strong> button to drop back to the single live
+              solve. This turns a parametric study into an animation — e.g. a piston cycling through crank
+              angles, or a refrigeration cycle sweeping condenser temperatures.
+            </Text>
+
+            <Title order={3} mt="md">Embedded Charts</Title>
+            <Text style={{ lineHeight: 1.6 }}>
+              The <strong>Embedded Chart</strong> tool drops a live line chart onto the canvas. Set its X and Y
+              variables in the properties panel and it plots those columns across the parametric table runs;
+              during playback a marker tracks the current run. The chart is a normal diagram element — move,
+              resize, and place it alongside the schematic so the plot sits next to the equipment it describes.
+            </Text>
           </Stack>
         );
       default:
