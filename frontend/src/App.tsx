@@ -54,7 +54,8 @@ import {
 import PlotTab from './PlotTab'
 import StatesTab from './StatesTab'
 import { DigitizerTab, DigitizedExport } from './DigitizerTab'
-import DiagramTab from './diagram/DiagramTab'
+import DiagramTab, { loadDiagrams, saveDiagrams } from './diagram/DiagramTab'
+import { DiagramSpec } from './diagram/types'
 import { PlotSpec } from './plots/types'
 import SolutionPanel from './SolutionPanel'
 import { Rail, TopBar } from './WorkspaceChrome'
@@ -202,6 +203,12 @@ export default function App() {
   const [tableChecking, setTableChecking] = useState(false)
   const [plots, setPlots] = useState<PlotSpec[]>([])
   const [activeThermoPlotId, setActiveThermoPlotId] = useState<string | null>(null)
+  const [activePlotId, setActivePlotId] = useState<string | null>(null)
+  const [diagrams, setDiagrams] = useState<DiagramSpec[]>(() => loadDiagrams())
+  const [activeDiagramId, setActiveDiagramId] = useState<string | null>(() => {
+    const list = loadDiagrams()
+    return list[0]?.id ?? null
+  })
   const [editingThermoPlot, setEditingThermoPlot] = useState<PlotSpec | null>(null)
   const [addingThermoPlot, setAddingThermoPlot] = useState(false)
   const [thermoExportTrigger, setThermoExportTrigger] = useState<{ format: string; timestamp: number } | null>(null)
@@ -223,6 +230,10 @@ export default function App() {
   useEffect(() => {
     saveTables(tables)
   }, [tables])
+
+  useEffect(() => {
+    saveDiagrams(diagrams)
+  }, [diagrams])
 
   // The active table, defaulting to the first; the parametric-table solver
   // state below is derived from the active *parametric* table so all the
@@ -596,6 +607,61 @@ export default function App() {
     }
   }
 
+  const handleNavigate = useCallback(
+    (action: { tab?: string; query?: string; plotId?: string; diagramId?: string }) => {
+      if (action.tab) {
+        setActiveTab(action.tab)
+      }
+      if (action.diagramId) {
+        setActiveTab('diagram')
+        setActiveDiagramId(action.diagramId)
+      }
+      if (action.plotId) {
+        const targetPlot = plots.find((p) => p.id === action.plotId)
+        if (targetPlot) {
+          if (targetPlot.kind === 'property' || targetPlot.kind === 'psychro') {
+            setActiveTab('thermo')
+            setActiveThermoPlotId(action.plotId)
+          } else {
+            setActiveTab('plots')
+            setActivePlotId(action.plotId)
+          }
+        }
+      }
+      if (action.query && textareaRef.current) {
+        const editorText = text
+        const query = action.query.trim().toLowerCase()
+        if (query) {
+          const lines = editorText.split('\n')
+          const matchingIdx = lines.findIndex((l) => l.toLowerCase().includes(query))
+          if (matchingIdx !== -1) {
+            let charOffset = 0
+            for (let i = 0; i < matchingIdx; i++) {
+              charOffset += lines[i].length + 1
+            }
+            const start = charOffset
+            const end = charOffset + lines[matchingIdx].length
+
+            setActiveTab('equations')
+            setTimeout(() => {
+              if (textareaRef.current) {
+                textareaRef.current.focus()
+                textareaRef.current.setSelectionRange(start, end)
+                const lineHeight = 20
+                const scrollTop = matchingIdx * lineHeight - textareaRef.current.clientHeight / 2
+                textareaRef.current.scrollTop = Math.max(0, scrollTop)
+                if (lineNumbersRef.current) {
+                  lineNumbersRef.current.scrollTop = textareaRef.current.scrollTop
+                }
+              }
+            }, 50)
+          }
+        }
+      }
+    },
+    [plots, text],
+  )
+
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
       // Shortcuts act on the active section: equations vs parametric table.
@@ -900,6 +966,8 @@ export default function App() {
                 tableVars={tableVars}
                 rows={paramRows}
                 results={tableResults}
+                activePlotId={activePlotId}
+                onActivePlotIdChange={setActivePlotId}
               />
             )}
             {activeTab === 'thermo' && (
@@ -927,6 +995,16 @@ export default function App() {
                 variables={result?.variables ?? []}
                 runs={diagramRuns}
                 onBindingsChange={handleDiagramBindings}
+                plots={plots}
+                solving={solving}
+                onSolve={onSolve}
+                onCheck={onCheck}
+                onNavigate={handleNavigate}
+                onVarDraftsChange={setVarDrafts}
+                diagrams={diagrams}
+                activeDiagramId={activeDiagramId}
+                onDiagramsChange={setDiagrams}
+                onActiveDiagramIdChange={setActiveDiagramId}
               />
             )}
           </Paper>
