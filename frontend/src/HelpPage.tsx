@@ -2217,11 +2217,21 @@ U = value - V_penalty - W_penalty`}
               Pick a tool — line, arrow, rectangle, circle/ellipse, or rich label — and drag on the canvas. The
               <strong> Component Library</strong> menu adds pre-built engineering symbols (turbine, pump,
               compressor, valve, heat exchanger, vessel, condenser/evaporator, spring-damper). A configurable
-              grid with snap-to-grid keeps things aligned; drag empty canvas to pan, scroll to zoom, and use
-              the zoom-to-fit button to frame everything. Selected elements show resize handles (line endpoints
-              are individually draggable); arrow keys nudge by one grid step (Shift = 1&nbsp;px), and the
-              properties panel sets colors, stroke width, rotation, opacity, and per-shape options. Diagrams are
-              saved automatically in the browser.
+              grid with snap-to-grid keeps things aligned; use the <strong>Pan</strong> tool (or a middle-mouse
+              drag) to pan, scroll to zoom, and the zoom-to-fit button to frame everything. Selected elements
+              show resize handles (line endpoints are individually draggable); arrow keys nudge by one grid step
+              (Shift = 1&nbsp;px), and the properties panel sets colors, stroke width, rotation, opacity, and
+              per-shape options. Diagrams are saved automatically in the browser.
+            </Text>
+            <Title order={4} mt="xs">Selecting & editing</Title>
+            <Text style={{ lineHeight: 1.6 }}>
+              With the <strong>Select</strong> tool, click an element to select it, drag a <strong>marquee</strong>
+              {' '}over empty canvas to select everything it touches, or <strong>Shift/Ctrl-click</strong> to add
+              and remove elements from the selection. A multi-selection moves together and resizes proportionally
+              from its group handles. Standard shortcuts apply: <strong>Ctrl+Z</strong> / <strong>Ctrl+Y</strong>
+              {' '}(or Ctrl+Shift+Z) undo and redo every change; <strong>Ctrl+C / X / V</strong> copy, cut, and
+              paste; <strong>Ctrl+D</strong> duplicates; <strong>Ctrl+A</strong> selects all; <strong>Del</strong>
+              {' '}removes the selection. Undo and redo are also on the toolbar.
             </Text>
 
             <Title order={3} mt="md">Variable Binding & Form Controls</Title>

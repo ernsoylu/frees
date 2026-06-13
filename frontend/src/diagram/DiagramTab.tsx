@@ -22,8 +22,11 @@ import {
 } from '@mantine/core'
 import {
   IconAdjustmentsHorizontal,
+  IconArrowBackUp,
+  IconArrowForwardUp,
   IconArrowNarrowRight,
   IconBroadcast,
+  IconHandStop,
   IconChartLine,
   IconCheckbox,
   IconCircle,
@@ -96,17 +99,71 @@ interface ViewTransform {
   k: number
 }
 
+type Handle = 'nw' | 'ne' | 'sw' | 'se'
+type Box = { x: number; y: number; w: number; h: number }
+
 type DragState =
   | { type: 'pan'; startClientX: number; startClientY: number; startView: ViewTransform }
   | { type: 'create'; id: string; startX: number; startY: number }
-  | { type: 'move'; id: string; startX: number; startY: number; original: DiagramElement }
-  | {
-      type: 'resize'
-      id: string
-      handle: 'nw' | 'ne' | 'sw' | 'se'
-      original: DiagramElement
-    }
+  | { type: 'move'; startX: number; startY: number; originals: DiagramElement[] }
+  | { type: 'resize'; id: string; handle: Handle; original: DiagramElement }
+  | { type: 'groupResize'; handle: Handle; originals: DiagramElement[]; bbox: Box }
   | { type: 'endpoint'; id: string; which: 1 | 2 }
+  | { type: 'marquee'; startX: number; startY: number; additive: boolean }
+
+const HISTORY_LIMIT = 100
+
+/** Identity-compares two diagram states' element lists (cheap; drags reuse refs). */
+function elementsChanged(a: DiagramState, b: DiagramState): boolean {
+  if (a.elements.length !== b.elements.length) return true
+  for (let i = 0; i < a.elements.length; i++) {
+    if (a.elements[i] !== b.elements[i]) return true
+  }
+  return false
+}
+
+/** Translates an element by (dx, dy), handling line endpoints vs x/y origin. */
+function translateElement(el: DiagramElement, dx: number, dy: number): DiagramElement {
+  if (el.kind === 'line') {
+    return { ...el, x1: el.x1 + dx, y1: el.y1 + dy, x2: el.x2 + dx, y2: el.y2 + dy }
+  }
+  return { ...el, x: el.x + dx, y: el.y + dy }
+}
+
+/** Combined bounding box of several elements. */
+function combinedBounds(els: DiagramElement[]): Box {
+  let minX = Infinity
+  let minY = Infinity
+  let maxX = -Infinity
+  let maxY = -Infinity
+  for (const el of els) {
+    const b = elementBounds(el)
+    minX = Math.min(minX, b.x)
+    minY = Math.min(minY, b.y)
+    maxX = Math.max(maxX, b.x + b.w)
+    maxY = Math.max(maxY, b.y + b.h)
+  }
+  return { x: minX, y: minY, w: maxX - minX, h: maxY - minY }
+}
+
+/** Scales an element about a fixed point (for proportional group resize). */
+function scaleElement(
+  el: DiagramElement,
+  fixedX: number,
+  fixedY: number,
+  sx: number,
+  sy: number,
+): DiagramElement {
+  const tx = (x: number) => fixedX + (x - fixedX) * sx
+  const ty = (y: number) => fixedY + (y - fixedY) * sy
+  if (el.kind === 'line') {
+    return { ...el, x1: tx(el.x1), y1: ty(el.y1), x2: tx(el.x2), y2: ty(el.y2) }
+  }
+  if (el.kind === 'label') {
+    return { ...el, x: tx(el.x), y: ty(el.y) } // don't scale text box geometry
+  }
+  return { ...el, x: tx(el.x), y: ty(el.y), w: Math.max(1, el.w * sx), h: Math.max(1, el.h * sy) }
+}
 
 function elementCenter(el: DiagramElement): { cx: number; cy: number } {
   const b = elementBounds(el)
@@ -748,6 +805,55 @@ function SelectionHandles({
   )
 }
 
+/** Combined bounding box with corner handles for a multi-element selection. */
+function GroupHandles({
+  els,
+  view,
+  onHandleDown,
+}: Readonly<{
+  els: DiagramElement[]
+  view: ViewTransform
+  onHandleDown: (e: React.MouseEvent, handle: Handle) => void
+}>) {
+  const b = combinedBounds(els)
+  const size = 8 / view.k
+  const color = '#4dabf7'
+  const handles: { id: Handle; x: number; y: number; cursor: string }[] = [
+    { id: 'nw', x: b.x, y: b.y, cursor: 'nwse-resize' },
+    { id: 'ne', x: b.x + b.w, y: b.y, cursor: 'nesw-resize' },
+    { id: 'sw', x: b.x, y: b.y + b.h, cursor: 'nesw-resize' },
+    { id: 'se', x: b.x + b.w, y: b.y + b.h, cursor: 'nwse-resize' },
+  ]
+  return (
+    <>
+      <rect
+        x={b.x}
+        y={b.y}
+        width={b.w}
+        height={b.h}
+        fill="none"
+        stroke={color}
+        strokeWidth={1 / view.k}
+        pointerEvents="none"
+      />
+      {handles.map((h) => (
+        <rect
+          key={h.id}
+          x={h.x - size / 2}
+          y={h.y - size / 2}
+          width={size}
+          height={size}
+          fill={color}
+          stroke="#1a1b1e"
+          strokeWidth={1 / view.k}
+          style={{ cursor: h.cursor }}
+          onMouseDown={(e) => onHandleDown(e, h.id)}
+        />
+      ))}
+    </>
+  )
+}
+
 /** Run-mode hover tooltip listing the solved values an element references. */
 function HoverTooltip({
   el,
@@ -1152,6 +1258,7 @@ function PropertiesPanel({
 
 type Tool =
   | 'select'
+  | 'pan'
   | 'line'
   | 'arrow'
   | 'rect'
@@ -1176,13 +1283,80 @@ const PLAYBACK_SPEEDS: { label: string; value: string; ms: number }[] = [
 ]
 
 export default function DiagramTab({ variables, runs = [], onBindingsChange }: Readonly<Props>) {
-  const [state, setState] = useState<DiagramState>(loadState)
+  const [state, setStateRaw] = useState<DiagramState>(loadState)
   const [tool, setTool] = useState<Tool>('select')
   const [mode, setMode] = useState<'develop' | 'run'>('develop')
-  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [view, setView] = useState<ViewTransform>({ x: 60, y: 40, k: 1 })
   const [drag, setDrag] = useState<DragState | null>(null)
   const [hover, setHover] = useState<{ id: string; x: number; y: number } | null>(null)
+  const [marquee, setMarquee] = useState<{ x: number; y: number; w: number; h: number } | null>(null)
+
+  // ── Undo/redo history (Story 10.1) ───────────────────────────────────
+  // Refs (not state) hold the stacks; every history change rides on a state
+  // change that re-renders, so the buttons reflect the latest stack depth.
+  const pastRef = useRef<DiagramState[]>([])
+  const futureRef = useRef<DiagramState[]>([])
+  const coalesceRef = useRef<{ key: string; time: number }>({ key: '', time: 0 })
+  const stateRef = useRef(state)
+  stateRef.current = state
+  const marqueeRef = useRef(marquee)
+  marqueeRef.current = marquee
+  const gestureBaseRef = useRef<DiagramState | null>(null)
+  const clipboardRef = useRef<DiagramElement[]>([])
+
+  /** Commit a state change to history (with optional coalescing of rapid edits). */
+  const commit = useCallback(
+    (updater: DiagramState | ((s: DiagramState) => DiagramState), coalesceKey?: string) => {
+      setStateRaw((prev) => {
+        const next = typeof updater === 'function' ? updater(prev) : updater
+        if (next === prev) return prev
+        const now = Date.now()
+        const c = coalesceRef.current
+        if (coalesceKey && coalesceKey === c.key && now - c.time < 700) {
+          c.time = now // same rapid edit: extend the existing history entry
+        } else {
+          pastRef.current = [...pastRef.current, prev].slice(-HISTORY_LIMIT)
+          futureRef.current = []
+          coalesceRef.current = { key: coalesceKey ?? '', time: now }
+        }
+        return next
+      })
+    },
+    [],
+  )
+
+  const undo = useCallback(() => {
+    if (pastRef.current.length === 0) return
+    const prev = pastRef.current[pastRef.current.length - 1]
+    pastRef.current = pastRef.current.slice(0, -1)
+    futureRef.current = [stateRef.current, ...futureRef.current].slice(0, HISTORY_LIMIT)
+    coalesceRef.current = { key: '', time: 0 }
+    setStateRaw(prev)
+    setSelectedIds([])
+  }, [])
+
+  const redo = useCallback(() => {
+    if (futureRef.current.length === 0) return
+    const next = futureRef.current[0]
+    futureRef.current = futureRef.current.slice(1)
+    pastRef.current = [...pastRef.current, stateRef.current].slice(-HISTORY_LIMIT)
+    coalesceRef.current = { key: '', time: 0 }
+    setStateRaw(next)
+    setSelectedIds([])
+  }, [])
+
+  /** End a drag/create gesture: record one history entry for the whole gesture. */
+  const endGesture = useCallback(() => {
+    const base = gestureBaseRef.current
+    gestureBaseRef.current = null
+    if (base && elementsChanged(base, stateRef.current)) {
+      pastRef.current = [...pastRef.current, base].slice(-HISTORY_LIMIT)
+      futureRef.current = []
+      coalesceRef.current = { key: '', time: 0 }
+    }
+  }, [])
+
   // Playback: null = show the live single solve; a number = that table run.
   const [playIndex, setPlayIndex] = useState<number | null>(null)
   const [playing, setPlaying] = useState(false)
@@ -1191,7 +1365,9 @@ export default function DiagramTab({ variables, runs = [], onBindingsChange }: R
   const svgRef = useRef<SVGSVGElement | null>(null)
 
   const runMode = mode === 'run'
-  const selected = state.elements.find((el) => el.id === selectedId) ?? null
+  const selectedSet = useMemo(() => new Set(selectedIds), [selectedIds])
+  const selectedElements = state.elements.filter((el) => selectedSet.has(el.id))
+  const selected = selectedElements.length === 1 ? selectedElements[0] : null
 
   // The active run during playback (clamped); null means use the live solve.
   const activeIndex =
@@ -1313,9 +1489,10 @@ export default function DiagramTab({ variables, runs = [], onBindingsChange }: R
     onBindingsChange?.(bindingsKey === '' ? [] : bindingsKey.split('\n'))
   }, [bindingsKey, onBindingsChange])
 
+  // Run-mode control interaction is not design editing → transient (no history).
   const onControlValue = useCallback(
     (id: string, patch: Partial<ControlElement>) => {
-      setState((s) => ({
+      setStateRaw((s) => ({
         ...s,
         elements: s.elements.map((el) =>
           el.id === id ? ({ ...el, ...patch } as DiagramElement) : el,
@@ -1342,51 +1519,78 @@ export default function DiagramTab({ variables, runs = [], onBindingsChange }: R
     [view],
   )
 
-  const updateElement = useCallback((id: string, next: DiagramElement) => {
-    setState((s) => ({
+  /** History-recording element update (property panel, nudge); coalesces rapid edits. */
+  const updateElement = useCallback(
+    (id: string, next: DiagramElement, coalesceKey?: string) => {
+      commit(
+        (s) => ({ ...s, elements: s.elements.map((el) => (el.id === id ? next : el)) }),
+        coalesceKey,
+      )
+    },
+    [commit],
+  )
+
+  /** Transient element update (during drag); history is recorded once on gesture end. */
+  const updateElementLive = useCallback((id: string, next: DiagramElement) => {
+    setStateRaw((s) => ({
       ...s,
       elements: s.elements.map((el) => (el.id === id ? next : el)),
     }))
   }, [])
 
   const deleteSelected = useCallback(() => {
-    if (!selectedId) return
-    setState((s) => ({ ...s, elements: s.elements.filter((el) => el.id !== selectedId) }))
-    setSelectedId(null)
-  }, [selectedId])
+    if (selectedIds.length === 0) return
+    commit((s) => ({ ...s, elements: s.elements.filter((el) => !selectedSet.has(el.id)) }))
+    setSelectedIds([])
+  }, [selectedIds, selectedSet, commit])
+
+  const duplicateElements = useCallback(
+    (els: DiagramElement[], offset: number) => {
+      if (els.length === 0) return
+      const copies = els.map((el) => {
+        const copy = structuredClone(el)
+        copy.id = crypto.randomUUID()
+        return translateElement(copy, offset, offset)
+      })
+      commit((s) => ({ ...s, elements: [...s.elements, ...copies] }))
+      setSelectedIds(copies.map((c) => c.id))
+    },
+    [commit],
+  )
 
   const duplicateSelected = useCallback(() => {
-    if (!selected) return
-    const copy = structuredClone(selected)
-    copy.id = crypto.randomUUID()
-    const dx = state.gridSize * 2
-    if (copy.kind === 'line') {
-      copy.x1 += dx
-      copy.x2 += dx
-      copy.y1 += dx
-      copy.y2 += dx
-    } else {
-      copy.x += dx
-      copy.y += dx
-    }
-    setState((s) => ({ ...s, elements: [...s.elements, copy] }))
-    setSelectedId(copy.id)
-  }, [selected, state.gridSize])
+    duplicateElements(selectedElements, state.gridSize * 2)
+  }, [duplicateElements, selectedElements, state.gridSize])
+
+  const copySelected = useCallback(() => {
+    clipboardRef.current = selectedElements.map((el) => structuredClone(el))
+  }, [selectedElements])
+
+  const cutSelected = useCallback(() => {
+    if (selectedElements.length === 0) return
+    clipboardRef.current = selectedElements.map((el) => structuredClone(el))
+    deleteSelected()
+  }, [selectedElements, deleteSelected])
+
+  const pasteClipboard = useCallback(() => {
+    const els = clipboardRef.current
+    if (els.length === 0) return
+    duplicateElements(els, state.gridSize * 2)
+  }, [duplicateElements, state.gridSize])
 
   const zOrder = useCallback(
     (direction: 'front' | 'back') => {
-      if (!selectedId) return
-      setState((s) => {
-        const el = s.elements.find((e) => e.id === selectedId)
-        if (!el) return s
-        const rest = s.elements.filter((e) => e.id !== selectedId)
+      if (selectedIds.length === 0) return
+      commit((s) => {
+        const picked = s.elements.filter((e) => selectedSet.has(e.id))
+        const rest = s.elements.filter((e) => !selectedSet.has(e.id))
         return {
           ...s,
-          elements: direction === 'front' ? [...rest, el] : [el, ...rest],
+          elements: direction === 'front' ? [...rest, ...picked] : [...picked, ...rest],
         }
       })
     },
-    [selectedId],
+    [selectedIds, selectedSet, commit],
   )
 
   // ── element creation ─────────────────────────────────────────────────
@@ -1457,26 +1661,40 @@ export default function DiagramTab({ variables, runs = [], onBindingsChange }: R
 
   // ── mouse interactions ───────────────────────────────────────────────
 
+  const startPan = (e: React.MouseEvent) => {
+    setDrag({ type: 'pan', startClientX: e.clientX, startClientY: e.clientY, startView: view })
+  }
+
   const onBackgroundDown = (e: React.MouseEvent) => {
-    if (e.button !== 0) return
-    if (runMode || tool === 'select') {
-      setSelectedId(null)
-      setDrag({
-        type: 'pan',
-        startClientX: e.clientX,
-        startClientY: e.clientY,
-        startView: view,
-      })
+    // Middle mouse pans regardless of tool/mode.
+    if (e.button === 1) {
+      e.preventDefault()
+      startPan(e)
       return
     }
+    if (e.button !== 0) return
+    if (runMode || tool === 'pan') {
+      startPan(e)
+      return
+    }
+    if (tool === 'select') {
+      // Rubber-band marquee; Shift/Ctrl keeps the existing selection (additive).
+      const additive = e.shiftKey || e.ctrlKey || e.metaKey
+      if (!additive) setSelectedIds([])
+      const world = toWorld(e.clientX, e.clientY)
+      setMarquee({ x: world.x, y: world.y, w: 0, h: 0 })
+      setDrag({ type: 'marquee', startX: world.x, startY: world.y, additive })
+      return
+    }
+    // A drawing tool: create a new element (one gesture in history).
+    gestureBaseRef.current = stateRef.current
     const world = toWorld(e.clientX, e.clientY)
     const el = createElement(world.x, world.y)
     if (!el) return
-    setState((s) => ({ ...s, elements: [...s.elements, el] }))
-    setSelectedId(el.id)
+    setStateRaw((s) => ({ ...s, elements: [...s.elements, el] }))
+    setSelectedIds([el.id])
     if (el.kind === 'label' || el.kind === 'icon' || el.kind === 'chart' || isControl(el)) {
-      // Click-to-place: immediately movable.
-      setDrag({ type: 'move', id: el.id, startX: world.x, startY: world.y, original: el })
+      setDrag({ type: 'move', startX: world.x, startY: world.y, originals: [el] })
     } else {
       setDrag({ type: 'create', id: el.id, startX: snap(world.x), startY: snap(world.y) })
     }
@@ -1485,20 +1703,43 @@ export default function DiagramTab({ variables, runs = [], onBindingsChange }: R
   const onElementDown = (e: React.MouseEvent, el: DiagramElement) => {
     if (e.button !== 0 || tool !== 'select') return
     e.stopPropagation()
-    setSelectedId(el.id)
+    const additive = e.shiftKey || e.ctrlKey || e.metaKey
+    let ids: string[]
+    if (additive) {
+      ids = selectedSet.has(el.id)
+        ? selectedIds.filter((id) => id !== el.id)
+        : [...selectedIds, el.id]
+    } else {
+      ids = selectedSet.has(el.id) ? selectedIds : [el.id]
+    }
+    setSelectedIds(ids)
+    if (ids.length === 0) return
+    // Drag moves the whole current selection.
+    gestureBaseRef.current = stateRef.current
+    const originals = stateRef.current.elements.filter((x) => ids.includes(x.id))
     const world = toWorld(e.clientX, e.clientY)
-    setDrag({ type: 'move', id: el.id, startX: world.x, startY: world.y, original: el })
+    setDrag({ type: 'move', startX: world.x, startY: world.y, originals })
   }
 
-  const onHandleDown = (e: React.MouseEvent, handle: 'nw' | 'ne' | 'sw' | 'se') => {
-    if (!selected) return
+  const onHandleDown = (e: React.MouseEvent, handle: Handle) => {
     e.stopPropagation()
-    setDrag({ type: 'resize', id: selected.id, handle, original: selected })
+    gestureBaseRef.current = stateRef.current
+    if (selectedElements.length > 1) {
+      setDrag({
+        type: 'groupResize',
+        handle,
+        originals: selectedElements,
+        bbox: combinedBounds(selectedElements),
+      })
+    } else if (selected) {
+      setDrag({ type: 'resize', id: selected.id, handle, original: selected })
+    }
   }
 
   const onEndpointDown = (e: React.MouseEvent, which: 1 | 2) => {
     if (!selected) return
     e.stopPropagation()
+    gestureBaseRef.current = stateRef.current
     setDrag({ type: 'endpoint', id: selected.id, which })
   }
 
@@ -1506,32 +1747,26 @@ export default function DiagramTab({ variables, runs = [], onBindingsChange }: R
     (d: Extract<DragState, { type: 'move' }>, world: { x: number; y: number }) => {
       const dx = snap(world.x - d.startX)
       const dy = snap(world.y - d.startY)
-      const orig = d.original
-      if (orig.kind === 'line') {
-        updateElement(d.id, {
-          ...orig,
-          x1: orig.x1 + dx,
-          y1: orig.y1 + dy,
-          x2: orig.x2 + dx,
-          y2: orig.y2 + dy,
-        })
-      } else {
-        updateElement(d.id, { ...orig, x: orig.x + dx, y: orig.y + dy })
-      }
+      setStateRaw((s) => {
+        const moved = new Map(
+          d.originals.map((orig) => [orig.id, translateElement(orig, dx, dy)]),
+        )
+        return { ...s, elements: s.elements.map((el) => moved.get(el.id) ?? el) }
+      })
     },
-    [snap, updateElement],
+    [snap],
   )
 
   const applyCreate = useCallback(
     (d: Extract<DragState, { type: 'create' }>, world: { x: number; y: number }) => {
-      const el = state.elements.find((e) => e.id === d.id)
+      const el = stateRef.current.elements.find((e) => e.id === d.id)
       if (!el) return
       const wx = snap(world.x)
       const wy = snap(world.y)
       if (el.kind === 'line') {
-        updateElement(d.id, { ...el, x2: wx, y2: wy })
+        updateElementLive(d.id, { ...el, x2: wx, y2: wy })
       } else if (el.kind === 'rect' || el.kind === 'ellipse') {
-        updateElement(d.id, {
+        updateElementLive(d.id, {
           ...el,
           x: Math.min(d.startX, wx),
           y: Math.min(d.startY, wy),
@@ -1540,7 +1775,7 @@ export default function DiagramTab({ variables, runs = [], onBindingsChange }: R
         })
       }
     },
-    [state.elements, snap, updateElement],
+    [snap, updateElementLive],
   )
 
   const applyResize = useCallback(
@@ -1548,12 +1783,11 @@ export default function DiagramTab({ variables, runs = [], onBindingsChange }: R
       const orig = d.original
       if (orig.kind === 'line' || orig.kind === 'label') return
       const b = { x: orig.x, y: orig.y, w: orig.w, h: orig.h }
-      // The corner opposite to the dragged handle stays fixed.
       const fixedX = d.handle === 'nw' || d.handle === 'sw' ? b.x + b.w : b.x
       const fixedY = d.handle === 'nw' || d.handle === 'ne' ? b.y + b.h : b.y
       const wx = snap(world.x)
       const wy = snap(world.y)
-      updateElement(d.id, {
+      updateElementLive(d.id, {
         ...orig,
         x: Math.min(fixedX, wx),
         y: Math.min(fixedY, wy),
@@ -1561,20 +1795,51 @@ export default function DiagramTab({ variables, runs = [], onBindingsChange }: R
         h: Math.max(state.gridSize, Math.abs(wy - fixedY)),
       })
     },
-    [snap, state.gridSize, updateElement],
+    [snap, state.gridSize, updateElementLive],
+  )
+
+  const applyGroupResize = useCallback(
+    (d: Extract<DragState, { type: 'groupResize' }>, world: { x: number; y: number }) => {
+      const { bbox, handle } = d
+      const fixedX = handle === 'nw' || handle === 'sw' ? bbox.x + bbox.w : bbox.x
+      const fixedY = handle === 'nw' || handle === 'ne' ? bbox.y + bbox.h : bbox.y
+      const wx = snap(world.x)
+      const wy = snap(world.y)
+      const sx = bbox.w === 0 ? 1 : Math.max(0.05, Math.abs(wx - fixedX) / bbox.w)
+      const sy = bbox.h === 0 ? 1 : Math.max(0.05, Math.abs(wy - fixedY) / bbox.h)
+      setStateRaw((s) => {
+        const scaled = new Map(
+          d.originals.map((orig) => [orig.id, scaleElement(orig, fixedX, fixedY, sx, sy)]),
+        )
+        return { ...s, elements: s.elements.map((el) => scaled.get(el.id) ?? el) }
+      })
+    },
+    [snap],
   )
 
   const applyEndpoint = useCallback(
     (d: Extract<DragState, { type: 'endpoint' }>, world: { x: number; y: number }) => {
-      const el = state.elements.find((e) => e.id === d.id)
+      const el = stateRef.current.elements.find((e) => e.id === d.id)
       if (!el || el.kind !== 'line') return
       const wx = snap(world.x)
       const wy = snap(world.y)
       const next: LineElement =
         d.which === 1 ? { ...el, x1: wx, y1: wy } : { ...el, x2: wx, y2: wy }
-      updateElement(d.id, next)
+      updateElementLive(d.id, next)
     },
-    [state.elements, snap, updateElement],
+    [snap, updateElementLive],
+  )
+
+  const applyMarquee = useCallback(
+    (d: Extract<DragState, { type: 'marquee' }>, world: { x: number; y: number }) => {
+      setMarquee({
+        x: Math.min(d.startX, world.x),
+        y: Math.min(d.startY, world.y),
+        w: Math.abs(world.x - d.startX),
+        h: Math.abs(world.y - d.startY),
+      })
+    },
+    [],
   )
 
   useEffect(() => {
@@ -1592,12 +1857,14 @@ export default function DiagramTab({ variables, runs = [], onBindingsChange }: R
       if (drag.type === 'move') applyMove(drag, world)
       else if (drag.type === 'create') applyCreate(drag, world)
       else if (drag.type === 'resize') applyResize(drag, world)
-      else applyEndpoint(drag, world)
+      else if (drag.type === 'groupResize') applyGroupResize(drag, world)
+      else if (drag.type === 'endpoint') applyEndpoint(drag, world)
+      else if (drag.type === 'marquee') applyMarquee(drag, world)
     }
     const onUp = () => {
       if (drag.type === 'create') {
         // A click without a drag: give the shape a sensible default size.
-        setState((s) => ({
+        setStateRaw((s) => ({
           ...s,
           elements: s.elements.map((el) => {
             if (el.id !== drag.id) return el
@@ -1610,10 +1877,32 @@ export default function DiagramTab({ variables, runs = [], onBindingsChange }: R
             return el
           }),
         }))
+        endGesture()
         setTool('select')
-      }
-      if (drag.type === 'move' && tool !== 'select') {
-        setTool('select')
+      } else if (drag.type === 'move') {
+        endGesture()
+        if (tool !== 'select') setTool('select')
+      } else if (drag.type === 'resize' || drag.type === 'groupResize' || drag.type === 'endpoint') {
+        endGesture()
+      } else if (drag.type === 'marquee') {
+        const box = marqueeRef.current
+        if (box && (box.w > 2 || box.h > 2)) {
+          const hit = stateRef.current.elements
+            .filter((el) => {
+              const b = elementBounds(el)
+              return (
+                b.x < box.x + box.w &&
+                b.x + b.w > box.x &&
+                b.y < box.y + box.h &&
+                b.y + b.h > box.y
+              )
+            })
+            .map((el) => el.id)
+          setSelectedIds((prev) =>
+            drag.additive ? [...new Set([...prev, ...hit])] : hit,
+          )
+        }
+        setMarquee(null)
       }
       setDrag(null)
     }
@@ -1623,7 +1912,18 @@ export default function DiagramTab({ variables, runs = [], onBindingsChange }: R
       window.removeEventListener('mousemove', onMove)
       window.removeEventListener('mouseup', onUp)
     }
-  }, [drag, toWorld, applyMove, applyCreate, applyResize, applyEndpoint, tool])
+  }, [
+    drag,
+    toWorld,
+    applyMove,
+    applyCreate,
+    applyResize,
+    applyGroupResize,
+    applyEndpoint,
+    applyMarquee,
+    endGesture,
+    tool,
+  ])
 
   const onWheel = (e: React.WheelEvent) => {
     const rect = svgRef.current?.getBoundingClientRect()
@@ -1674,39 +1974,90 @@ export default function DiagramTab({ variables, runs = [], onBindingsChange }: R
     const onKey = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement
       if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return
+      const mod = e.ctrlKey || e.metaKey
+      // Undo/redo and clipboard work regardless of mode.
+      if (mod && e.key.toLowerCase() === 'z') {
+        e.preventDefault()
+        if (e.shiftKey) redo()
+        else undo()
+        return
+      }
+      if (mod && e.key.toLowerCase() === 'y') {
+        e.preventDefault()
+        redo()
+        return
+      }
       if (runMode) return
-      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedId) {
+      if (mod && e.key.toLowerCase() === 'c') {
+        copySelected()
+        return
+      }
+      if (mod && e.key.toLowerCase() === 'x') {
+        e.preventDefault()
+        cutSelected()
+        return
+      }
+      if (mod && e.key.toLowerCase() === 'v') {
+        e.preventDefault()
+        pasteClipboard()
+        return
+      }
+      if (mod && e.key.toLowerCase() === 'd') {
+        e.preventDefault()
+        duplicateSelected()
+        return
+      }
+      if (mod && e.key.toLowerCase() === 'a') {
+        e.preventDefault()
+        setSelectedIds(state.elements.map((el) => el.id))
+        return
+      }
+      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedIds.length > 0) {
         e.preventDefault()
         deleteSelected()
       } else if (e.key === 'Escape') {
-        setSelectedId(null)
+        setSelectedIds([])
         setTool('select')
-      } else if (e.key.startsWith('Arrow') && selected) {
+      } else if (e.key.startsWith('Arrow') && selectedElements.length > 0) {
         e.preventDefault()
         const step = e.shiftKey ? 1 : state.gridSize
         const dx = e.key === 'ArrowLeft' ? -step : e.key === 'ArrowRight' ? step : 0
         const dy = e.key === 'ArrowUp' ? -step : e.key === 'ArrowDown' ? step : 0
-        if (selected.kind === 'line') {
-          updateElement(selected.id, {
-            ...selected,
-            x1: selected.x1 + dx,
-            y1: selected.y1 + dy,
-            x2: selected.x2 + dx,
-            y2: selected.y2 + dy,
-          })
-        } else {
-          updateElement(selected.id, { ...selected, x: selected.x + dx, y: selected.y + dy })
-        }
+        commit(
+          (s) => ({
+            ...s,
+            elements: s.elements.map((el) =>
+              selectedSet.has(el.id) ? translateElement(el, dx, dy) : el,
+            ),
+          }),
+          'nudge',
+        )
       }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [runMode, selectedId, selected, deleteSelected, state.gridSize, updateElement])
+  }, [
+    runMode,
+    selectedIds,
+    selectedSet,
+    selectedElements.length,
+    deleteSelected,
+    duplicateSelected,
+    copySelected,
+    cutSelected,
+    pasteClipboard,
+    undo,
+    redo,
+    state.elements,
+    state.gridSize,
+    commit,
+  ])
 
   // ── render ───────────────────────────────────────────────────────────
 
   const TOOL_BUTTONS: { tool: Tool; label: string; icon: React.ReactNode }[] = [
-    { tool: 'select', label: 'Select / Move (Esc)', icon: <IconPointer size={18} /> },
+    { tool: 'select', label: 'Select / Move (Esc); drag a marquee to multi-select', icon: <IconPointer size={18} /> },
+    { tool: 'pan', label: 'Pan (or middle-mouse drag)', icon: <IconHandStop size={18} /> },
     { tool: 'line', label: 'Line', icon: <IconLine size={18} /> },
     { tool: 'arrow', label: 'Arrow', icon: <IconArrowNarrowRight size={18} /> },
     { tool: 'rect', label: 'Rectangle', icon: <IconRectangle size={18} /> },
@@ -1734,7 +2085,7 @@ export default function DiagramTab({ variables, runs = [], onBindingsChange }: R
             value={mode}
             onChange={(v) => {
               setMode(v as 'develop' | 'run')
-              setSelectedId(null)
+              setSelectedIds([])
               setTool('select')
             }}
             data={[
@@ -1822,13 +2173,13 @@ export default function DiagramTab({ variables, runs = [], onBindingsChange }: R
                 label="Grid"
                 size="xs"
                 checked={state.showGrid}
-                onChange={(e) => setState({ ...state, showGrid: e.currentTarget.checked })}
+                onChange={(e) => setStateRaw({ ...state, showGrid: e.currentTarget.checked })}
               />
               <Checkbox
                 label="Snap"
                 size="xs"
                 checked={state.snap}
-                onChange={(e) => setState({ ...state, snap: e.currentTarget.checked })}
+                onChange={(e) => setStateRaw({ ...state, snap: e.currentTarget.checked })}
               />
               <NumberInput
                 size="xs"
@@ -1837,11 +2188,35 @@ export default function DiagramTab({ variables, runs = [], onBindingsChange }: R
                 max={100}
                 value={state.gridSize}
                 onChange={(v) =>
-                  setState({ ...state, gridSize: typeof v === 'number' ? v : state.gridSize })
+                  setStateRaw({ ...state, gridSize: typeof v === 'number' ? v : state.gridSize })
                 }
                 aria-label="Grid size"
               />
             </>
+          )}
+          {!runMode && (
+            <Group gap={4}>
+              <Tooltip label="Undo (Ctrl+Z)">
+                <ActionIcon
+                  variant="default"
+                  size="lg"
+                  onClick={undo}
+                  disabled={pastRef.current.length === 0}
+                >
+                  <IconArrowBackUp size={18} />
+                </ActionIcon>
+              </Tooltip>
+              <Tooltip label="Redo (Ctrl+Y)">
+                <ActionIcon
+                  variant="default"
+                  size="lg"
+                  onClick={redo}
+                  disabled={futureRef.current.length === 0}
+                >
+                  <IconArrowForwardUp size={18} />
+                </ActionIcon>
+              </Tooltip>
+            </Group>
           )}
           <Tooltip label="Zoom to fit">
             <ActionIcon variant="default" size="lg" onClick={zoomToFit}>
@@ -1937,7 +2312,17 @@ export default function DiagramTab({ variables, runs = [], onBindingsChange }: R
             height="100%"
             onMouseDown={onBackgroundDown}
             onWheel={onWheel}
-            style={{ display: 'block', cursor: tool === 'select' ? 'default' : 'crosshair' }}
+            style={{
+              display: 'block',
+              cursor:
+                drag?.type === 'pan'
+                  ? 'grabbing'
+                  : tool === 'pan'
+                    ? 'grab'
+                    : tool === 'select'
+                      ? 'default'
+                      : 'crosshair',
+            }}
           >
             <g transform={`translate(${view.x} ${view.y}) scale(${view.k})`}>
               {state.showGrid && !runMode && gridStep > 4 && (
@@ -1957,12 +2342,46 @@ export default function DiagramTab({ variables, runs = [], onBindingsChange }: R
                   onHover={onHover}
                 />
               ))}
+              {!runMode && selectedElements.length > 1 &&
+                selectedElements.map((el) => {
+                  const b = elementBounds(el)
+                  return (
+                    <rect
+                      key={`sel-${el.id}`}
+                      x={b.x}
+                      y={b.y}
+                      width={b.w}
+                      height={b.h}
+                      fill="none"
+                      stroke="#4dabf7"
+                      strokeWidth={1 / view.k}
+                      strokeDasharray={`${3 / view.k} ${2 / view.k}`}
+                      pointerEvents="none"
+                    />
+                  )
+                })}
+              {!runMode && selectedElements.length > 1 && (
+                <GroupHandles els={selectedElements} view={view} onHandleDown={onHandleDown} />
+              )}
               {!runMode && selected && (
                 <SelectionHandles
                   el={selected}
                   view={view}
                   onHandleDown={onHandleDown}
                   onEndpointDown={onEndpointDown}
+                />
+              )}
+              {!runMode && marquee && (
+                <rect
+                  x={marquee.x}
+                  y={marquee.y}
+                  width={marquee.w}
+                  height={marquee.h}
+                  fill="rgba(77,171,247,0.12)"
+                  stroke="#4dabf7"
+                  strokeWidth={1 / view.k}
+                  strokeDasharray={`${4 / view.k} ${3 / view.k}`}
+                  pointerEvents="none"
                 />
               )}
             </g>
@@ -1985,21 +2404,54 @@ export default function DiagramTab({ variables, runs = [], onBindingsChange }: R
               <PropertiesPanel
                 el={selected}
                 varNames={varNames}
-                onChange={(next) => updateElement(selected.id, next)}
+                onChange={(next) => updateElement(selected.id, next, `prop:${selected.id}`)}
                 onDuplicate={duplicateSelected}
                 onDelete={deleteSelected}
                 onZOrder={zOrder}
               />
+            ) : selectedElements.length > 1 ? (
+              <Stack gap="xs">
+                <Text fw={600} size="sm" c="blue.4">
+                  {selectedElements.length} elements selected
+                </Text>
+                <Text size="xs" c="dimmed" style={{ lineHeight: 1.6 }}>
+                  Drag to move them together, or drag a corner handle to resize
+                  the group. Arrow keys nudge; Ctrl+D duplicates; Del removes.
+                </Text>
+                <Divider />
+                <Group gap="xs">
+                  <Tooltip label="Bring to front">
+                    <ActionIcon variant="default" size="md" onClick={() => zOrder('front')}>
+                      <IconStackPop size={16} />
+                    </ActionIcon>
+                  </Tooltip>
+                  <Tooltip label="Send to back">
+                    <ActionIcon variant="default" size="md" onClick={() => zOrder('back')}>
+                      <IconStackPush size={16} />
+                    </ActionIcon>
+                  </Tooltip>
+                  <Tooltip label="Duplicate (Ctrl+D)">
+                    <ActionIcon variant="default" size="md" onClick={duplicateSelected}>
+                      <IconCopy size={16} />
+                    </ActionIcon>
+                  </Tooltip>
+                  <Tooltip label="Delete (Del)">
+                    <ActionIcon variant="default" color="red" size="md" onClick={deleteSelected}>
+                      <IconTrash size={16} />
+                    </ActionIcon>
+                  </Tooltip>
+                </Group>
+              </Stack>
             ) : (
               <Stack gap="xs">
                 <Text fw={600} size="sm" c="blue.4">
                   Diagram
                 </Text>
                 <Text size="xs" c="dimmed" style={{ lineHeight: 1.6 }}>
-                  Pick a tool and drag on the canvas to draw. Click a shape to
-                  select it; drag the corner handles to resize, arrow keys to
-                  nudge, Del to remove. The component library holds standard
-                  engineering symbols (turbine, pump, valve, …).
+                  Pick a tool and drag on the canvas to draw. Click to select;
+                  drag a marquee or Shift-click for multiple. Drag handles to
+                  resize, arrow keys to nudge. Ctrl+Z/Y undo/redo;
+                  Ctrl+C/X/V/D clipboard; Ctrl+A select all.
                 </Text>
                 <Text size="xs" c="dimmed" style={{ lineHeight: 1.6 }}>
                   Labels may contain {'{varname}'} placeholders: in Run mode
@@ -2021,8 +2473,8 @@ export default function DiagramTab({ variables, runs = [], onBindingsChange }: R
                     color="red"
                     variant="light"
                     onClick={() => {
-                      setState({ ...state, elements: [] })
-                      setSelectedId(null)
+                      commit((s) => ({ ...s, elements: [] }))
+                      setSelectedIds([])
                     }}
                   >
                     Clear diagram
