@@ -7,6 +7,7 @@ import {
   Divider,
   Group,
   Menu,
+  Modal,
   MultiSelect,
   NumberInput,
   Paper,
@@ -93,6 +94,7 @@ import {
   getAnchorNormal,
   getElementAnchors,
   FlowAnimation,
+  ImageElement,
 } from './types'
 
 const STORAGE_KEY = 'frees-diagram-v1'
@@ -847,6 +849,17 @@ function ElementView({
     )
   } else if (el.kind === 'chart') {
     body = <ChartView el={el} runs={runs} activeIndex={runMode ? activeIndex : null} />
+  } else if (el.kind === 'image') {
+    body = (
+      <image
+        href={el.url}
+        x={el.x}
+        y={el.y}
+        width={el.w}
+        height={el.h}
+        preserveAspectRatio="none"
+      />
+    )
   } else if (isControl(el)) {
     if (runMode) {
       body = (
@@ -1434,6 +1447,7 @@ function PropertiesPanel({
   onDuplicate,
   onDelete,
   onZOrder,
+  onSaveComponent,
 }: Readonly<{
   el: DiagramElement
   varNames: string[]
@@ -1441,6 +1455,7 @@ function PropertiesPanel({
   onDuplicate: () => void
   onDelete: () => void
   onZOrder: (direction: 'front' | 'back') => void
+  onSaveComponent: () => void
 }>) {
   const set = (patch: Partial<DiagramElement>) =>
     onChange({ ...el, ...patch } as DiagramElement)
@@ -1562,6 +1577,18 @@ function PropertiesPanel({
         />
       )}
 
+      {el.kind === 'image' && (
+        <Checkbox
+          label="Send to background (ignore clicks)"
+          size="xs"
+          checked={!!el.isBackground}
+          onChange={(e) => {
+            const isBg = e.currentTarget.checked
+            set({ isBackground: isBg, locked: isBg })
+          }}
+        />
+      )}
+
       <ColorInput
         label={el.kind === 'label' ? 'Color' : 'Stroke color'}
         size="xs"
@@ -1629,6 +1656,11 @@ function PropertiesPanel({
             <IconCopy size={16} />
           </ActionIcon>
         </Tooltip>
+        <Tooltip label="Save as Custom Component">
+          <ActionIcon variant="default" color="blue" size="md" onClick={onSaveComponent}>
+            <IconFolderPlus size={16} />
+          </ActionIcon>
+        </Tooltip>
         <Tooltip label="Delete (Del)">
           <ActionIcon variant="default" color="red" size="md" onClick={onDelete}>
             <IconTrash size={16} />
@@ -1653,14 +1685,22 @@ type Tool =
   | 'label'
   | 'chart'
   | 'connector'
+  | 'image'
   | ControlElement['kind']
   | `icon:${string}`
+  | `custom:${string}`
 
 interface ElementAnchorInfo {
   elId: string
   name: string
   x: number
   y: number
+}
+
+interface CustomComponent {
+  id: string
+  label: string
+  elements: DiagramElement[]
 }
 
 interface Props {
@@ -1691,6 +1731,23 @@ export default function DiagramTab({ variables, runs = [], onBindingsChange }: R
   const [showLayers, setShowLayers] = useState(true)
 
   const [hoveredAnchor, setHoveredAnchor] = useState<ElementAnchorInfo | null>(null)
+
+  const [customComponents, setCustomComponents] = useState<CustomComponent[]>(() => {
+    try {
+      const raw = localStorage.getItem('frees-custom-components')
+      return raw ? JSON.parse(raw) : []
+    } catch {
+      return []
+    }
+  })
+
+  const [saveCompModalOpen, setSaveCompModalOpen] = useState(false)
+  const [newCompName, setNewCompName] = useState('')
+  const imageInputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    localStorage.setItem('frees-custom-components', JSON.stringify(customComponents))
+  }, [customComponents])
 
   const allAnchors = useMemo(() => {
     const list: ElementAnchorInfo[] = []
@@ -2024,6 +2081,87 @@ export default function DiagramTab({ variables, runs = [], onBindingsChange }: R
     [commit],
   )
 
+  const saveSelectionAsComponent = useCallback((name: string) => {
+    if (selectedElements.length === 0) return
+    const id = crypto.randomUUID()
+    
+    // Normalize coordinates relative to bbox
+    const bbox = combinedBounds(selectedElements, stateRef.current.elements)
+    const dx = -bbox.x
+    const dy = -bbox.y
+    
+    const relativeElements = selectedElements.map((el): DiagramElement => {
+      if (el.kind === 'connector') {
+        return { ...el }
+      }
+      if (el.kind === 'line') {
+        return {
+          ...el,
+          x1: el.x1 + dx,
+          y1: el.y1 + dy,
+          x2: el.x2 + dx,
+          y2: el.y2 + dy,
+        }
+      }
+      return {
+        ...el,
+        x: (el as any).x + dx,
+        y: (el as any).y + dy,
+      } as any
+    })
+    
+    const newComp: CustomComponent = {
+      id,
+      label: name,
+      elements: relativeElements,
+    }
+    
+    setCustomComponents((prev) => [...prev, newComp])
+  }, [selectedElements])
+
+  const handleImageUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    
+    const reader = new FileReader()
+    reader.onload = (event) => {
+      const url = event.target?.result as string
+      if (!url) return
+      
+      const rect = svgRef.current?.getBoundingClientRect()
+      const cx = rect ? rect.width / 2 : 300
+      const cy = rect ? rect.height / 2 : 200
+      
+      const worldCenter = toWorld(
+        (rect?.left ?? 0) + cx,
+        (rect?.top ?? 0) + cy
+      )
+      
+      const newImage: ImageElement = {
+        id: crypto.randomUUID(),
+        kind: 'image',
+        x: worldCenter.x - 100,
+        y: worldCenter.y - 100,
+        w: 200,
+        h: 200,
+        url,
+        rotation: 0,
+        stroke: '#c1c2c5',
+        strokeWidth: 2,
+        fill: 'transparent',
+        opacity: 1,
+      }
+      
+      commit((s) => ({
+        ...s,
+        elements: [...s.elements, newImage],
+      }))
+      setSelectedIds([newImage.id])
+    }
+    reader.readAsDataURL(file)
+    e.target.value = ''
+  }, [toWorld, commit])
+
   const duplicateSelected = useCallback(() => {
     duplicateElements(selectedElements, state.gridSize * 2)
   }, [duplicateElements, selectedElements, state.gridSize])
@@ -2277,6 +2415,63 @@ export default function DiagramTab({ variables, runs = [], onBindingsChange }: R
             tempY: coord.y,
           })
         }
+      }
+      return
+    }
+    if (tool.startsWith('custom:')) {
+      const compId = tool.slice(7)
+      const comp = customComponents.find((c) => c.id === compId)
+      if (comp) {
+        gestureBaseRef.current = stateRef.current
+        const world = toWorld(e.clientX, e.clientY)
+        const bbox = combinedBounds(comp.elements, comp.elements)
+        const cx = bbox.x + bbox.w / 2
+        const cy = bbox.y + bbox.h / 2
+        const dx = world.x - cx
+        const dy = world.y - cy
+
+        const idMap = new Map<string, string>()
+        comp.elements.forEach((el) => {
+          idMap.set(el.id, crypto.randomUUID())
+        })
+
+        const clonedElements = comp.elements.map((el): DiagramElement => {
+          const newId = idMap.get(el.id)!
+          const base = { ...el, id: newId }
+          if (base.groupId) {
+            const newGroupId = idMap.get(base.groupId) || crypto.randomUUID()
+            idMap.set(base.groupId, newGroupId)
+            base.groupId = newGroupId
+          }
+          if (base.kind === 'connector') {
+            return {
+              ...base,
+              fromId: idMap.get(base.fromId) ?? base.fromId,
+              toId: idMap.get(base.toId) ?? base.toId,
+            } as ConnectorElement
+          }
+          if (base.kind === 'line') {
+            return {
+              ...base,
+              x1: base.x1 + dx,
+              y1: base.y1 + dy,
+              x2: base.x2 + dx,
+              y2: base.y2 + dy,
+            } as LineElement
+          }
+          return {
+            ...base,
+            x: (base as any).x + dx,
+            y: (base as any).y + dy,
+          } as any
+        })
+
+        commit((s) => ({
+          ...s,
+          elements: [...s.elements, ...clonedElements],
+        }))
+        setSelectedIds(clonedElements.map((el) => el.id))
+        setTool('select')
       }
       return
     }
@@ -2857,8 +3052,16 @@ export default function DiagramTab({ variables, runs = [], onBindingsChange }: R
                     </Tooltip>
                   </Menu.Target>
                   <Menu.Dropdown>
-                    <Menu.Label>Engineering components</Menu.Label>
-                    {LIBRARY_ICONS.map((icon) => (
+                    <Menu.Item
+                      leftSection={<IconFolderPlus size={16} />}
+                      onClick={() => imageInputRef.current?.click()}
+                    >
+                      Import Image / SVG...
+                    </Menu.Item>
+                    
+                    <Menu.Divider />
+                    <Menu.Label>Thermo-fluid</Menu.Label>
+                    {LIBRARY_ICONS.filter((i) => i.category === 'Thermo-fluid').map((icon) => (
                       <Menu.Item
                         key={icon.id}
                         leftSection={
@@ -2871,6 +3074,84 @@ export default function DiagramTab({ variables, runs = [], onBindingsChange }: R
                         {icon.label}
                       </Menu.Item>
                     ))}
+                    
+                    <Menu.Label>Mechanical</Menu.Label>
+                    {LIBRARY_ICONS.filter((i) => i.category === 'Mechanical').map((icon) => (
+                      <Menu.Item
+                        key={icon.id}
+                        leftSection={
+                          <svg width="22" height="22" viewBox="0 0 100 100">
+                            {icon.render('#c1c2c5', 6, 'none')}
+                          </svg>
+                        }
+                        onClick={() => setTool(`icon:${icon.id}`)}
+                      >
+                        {icon.label}
+                      </Menu.Item>
+                    ))}
+
+                    <Menu.Label>Sensors & Gauges</Menu.Label>
+                    {LIBRARY_ICONS.filter((i) => i.category === 'Sensors & Gauges').map((icon) => (
+                      <Menu.Item
+                        key={icon.id}
+                        leftSection={
+                          <svg width="22" height="22" viewBox="0 0 100 100">
+                            {icon.render('#c1c2c5', 6, 'none')}
+                          </svg>
+                        }
+                        onClick={() => setTool(`icon:${icon.id}`)}
+                      >
+                        {icon.label}
+                      </Menu.Item>
+                    ))}
+
+                    <Menu.Label>Electrical</Menu.Label>
+                    {LIBRARY_ICONS.filter((i) => i.category === 'Electrical').map((icon) => (
+                      <Menu.Item
+                        key={icon.id}
+                        leftSection={
+                          <svg width="22" height="22" viewBox="0 0 100 100">
+                            {icon.render('#c1c2c5', 6, 'none')}
+                          </svg>
+                        }
+                        onClick={() => setTool(`icon:${icon.id}`)}
+                      >
+                        {icon.label}
+                      </Menu.Item>
+                    ))}
+
+                    {customComponents.length > 0 && (
+                      <>
+                        <Menu.Divider />
+                        <Menu.Label>Custom Components</Menu.Label>
+                        {customComponents.map((cc) => (
+                          <Menu.Item
+                            key={cc.id}
+                            leftSection={
+                              <svg width="22" height="22" viewBox="0 0 100 100">
+                                <rect x="20" y="20" width="60" height="60" rx="8" fill="none" stroke="#4dabf7" strokeWidth="6" />
+                              </svg>
+                            }
+                            rightSection={
+                              <ActionIcon
+                                variant="subtle"
+                                color="red"
+                                size="xs"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setCustomComponents((prev) => prev.filter((c) => c.id !== cc.id))
+                                }}
+                              >
+                                <IconTrash size={12} />
+                              </ActionIcon>
+                            }
+                            onClick={() => setTool(`custom:${cc.id}`)}
+                          >
+                            {cc.label}
+                          </Menu.Item>
+                        ))}
+                      </>
+                    )}
                   </Menu.Dropdown>
                 </Menu>
                 <Menu shadow="md" position="bottom-start">
@@ -3284,6 +3565,7 @@ export default function DiagramTab({ variables, runs = [], onBindingsChange }: R
                 onDuplicate={duplicateSelected}
                 onDelete={deleteSelected}
                 onZOrder={zOrder}
+                onSaveComponent={() => setSaveCompModalOpen(true)}
               />
             ) : selectedElements.length > 1 ? (
               <Stack gap="xs">
@@ -3369,6 +3651,11 @@ export default function DiagramTab({ variables, runs = [], onBindingsChange }: R
                       <IconCopy size={16} />
                     </ActionIcon>
                   </Tooltip>
+                  <Tooltip label="Save as Custom Component">
+                    <ActionIcon variant="default" color="blue" size="md" onClick={() => setSaveCompModalOpen(true)}>
+                      <IconFolderPlus size={16} />
+                    </ActionIcon>
+                  </Tooltip>
                   <Tooltip label="Delete (Del)">
                     <ActionIcon variant="default" color="red" size="md" onClick={deleteSelected}>
                       <IconTrash size={16} />
@@ -3451,6 +3738,50 @@ export default function DiagramTab({ variables, runs = [], onBindingsChange }: R
           </ScrollArea>
         </Paper>
       )}
+
+      <Modal
+        opened={saveCompModalOpen}
+        onClose={() => setSaveCompModalOpen(false)}
+        title="Save Selection as Custom Component"
+        size="xs"
+      >
+        <Stack gap="sm">
+          <TextInput
+            label="Component Name"
+            placeholder="e.g. Dual Compressor"
+            value={newCompName}
+            onChange={(e) => setNewCompName(e.currentTarget.value)}
+            autoFocus
+          />
+          <Group justify="flex-end">
+            <Button variant="default" size="xs" onClick={() => setSaveCompModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              size="xs"
+              disabled={!newCompName.trim()}
+              onClick={() => {
+                const name = newCompName.trim()
+                if (name) {
+                  saveSelectionAsComponent(name)
+                  setSaveCompModalOpen(false)
+                  setNewCompName('')
+                }
+              }}
+            >
+              Save
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
+
+      <input
+        type="file"
+        ref={imageInputRef}
+        accept="image/*,image/svg+xml"
+        onChange={handleImageUpload}
+        style={{ display: 'none' }}
+      />
     </Group>
   )
 }
