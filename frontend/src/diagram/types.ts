@@ -92,6 +92,27 @@ export interface IconElement extends ElementBase {
   h: number
 }
 
+/**
+ * Embedded live chart widget (Story 6.4): plots one or more Y variables
+ * against an X variable across the parametric table runs, with a marker at the
+ * current playback run.
+ */
+export interface ChartElement extends ElementBase {
+  kind: 'chart'
+  x: number
+  y: number
+  w: number
+  h: number
+  xVar: string
+  yVars: string[]
+}
+
+/** A single solved parametric-table run fed to the diagram for playback. */
+export interface DiagramRun {
+  label: string
+  values: Record<string, number>
+}
+
 // ── Form controls (Story 6.2) ────────────────────────────────────────────
 // Controls bind canvas widgets to solver variables: Inputs/Dropdowns/
 // Checkboxes/Sliders feed values INTO the solve (appended as equations),
@@ -149,6 +170,7 @@ export type DiagramElement =
   | EllipseElement
   | LabelElement
   | IconElement
+  | ChartElement
   | ControlElement
 
 export function isControl(el: DiagramElement): el is ControlElement {

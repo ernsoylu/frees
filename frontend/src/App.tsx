@@ -233,6 +233,11 @@ export default function App() {
   const tableVars = activeParam?.vars ?? []
   const paramRows = activeParam?.rows ?? []
   const tableResults = activeParam?.results ?? []
+  // Solved table runs fed to the Diagram window for animation playback (6.4).
+  const diagramRuns = tableResults
+    .map((r, i) => ({ ok: r.success, label: `Run ${i + 1}`, values: r.values }))
+    .filter((r) => r.ok)
+    .map(({ label, values }) => ({ label, values }))
   const tableStats = activeParam?.stats ?? null
   const tableCheckResult = activeParam?.checkResult ?? null
   const tableCheckMessage = activeParam?.checkMessage ?? ''
@@ -920,6 +925,7 @@ export default function App() {
             {activeTab === 'diagram' && (
               <DiagramTab
                 variables={result?.variables ?? []}
+                runs={diagramRuns}
                 onBindingsChange={handleDiagramBindings}
               />
             )}

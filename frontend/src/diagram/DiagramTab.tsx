@@ -7,10 +7,13 @@ import {
   Divider,
   Group,
   Menu,
+  MultiSelect,
   NumberInput,
   Paper,
   ScrollArea,
   SegmentedControl,
+  Select,
+  Slider,
   Stack,
   Text,
   Textarea,
@@ -20,14 +23,21 @@ import {
 import {
   IconAdjustmentsHorizontal,
   IconArrowNarrowRight,
+  IconBroadcast,
+  IconChartLine,
   IconCheckbox,
   IconCircle,
   IconCopy,
   IconForms,
   IconLine,
+  IconPlayerPauseFilled,
   IconPlayerPlayFilled,
+  IconPlayerSkipBackFilled,
+  IconPlayerSkipForwardFilled,
   IconPointer,
   IconRectangle,
+  IconRepeat,
+  IconRepeatOff,
   IconSelector,
   IconStack2,
   IconStackPop,
@@ -44,11 +54,13 @@ import { evalFormula, formulaVars } from './formula'
 import { LIBRARY_ICONS, libraryIcon } from './library'
 import {
   AttributeBindings,
+  ChartElement,
   ControlElement,
   controlBindings,
   DEFAULT_DIAGRAM_STATE,
   DEFAULT_STYLE,
   DiagramElement,
+  DiagramRun,
   DiagramState,
   isControl,
   LabelElement,
@@ -365,11 +377,124 @@ function ControlWidget({
   )
 }
 
+const CHART_PALETTE = ['#4dabf7', '#ff8787', '#69db7c', '#ffd43b', '#da77f2', '#3bc9db']
+
+/** Inline SVG line chart of yVars vs xVar across the parametric table runs (6.4). */
+function ChartView({
+  el,
+  runs,
+  activeIndex,
+}: Readonly<{ el: ChartElement; runs: DiagramRun[]; activeIndex: number | null }>) {
+  const pad = 24
+  const innerW = Math.max(1, el.w - pad * 1.5)
+  const innerH = Math.max(1, el.h - pad * 1.6)
+  const x0 = el.x + pad
+  const y0 = el.y + el.h - pad
+
+  const frame = (
+    <>
+      <rect
+        x={el.x}
+        y={el.y}
+        width={el.w}
+        height={el.h}
+        rx={6}
+        fill="#1A1B1E"
+        stroke="#373A40"
+        strokeWidth={1}
+      />
+      <line x1={x0} y1={el.y + pad * 0.6} x2={x0} y2={y0} stroke="#495057" strokeWidth={1} />
+      <line x1={x0} y1={y0} x2={el.x + el.w - pad * 0.5} y2={y0} stroke="#495057" strokeWidth={1} />
+    </>
+  )
+
+  const points = (varName: string) =>
+    runs.map((r) => ({ x: r.values[el.xVar], y: r.values[varName] }))
+
+  const usableYVars = el.yVars.filter((v) =>
+    runs.some((r) => Number.isFinite(r.values[v])),
+  )
+  const hasX = !!el.xVar && runs.some((r) => Number.isFinite(r.values[el.xVar]))
+
+  if (!hasX || usableYVars.length === 0 || runs.length === 0) {
+    return (
+      <g opacity={el.opacity}>
+        {frame}
+        <text
+          x={el.x + el.w / 2}
+          y={el.y + el.h / 2}
+          fill="#868e96"
+          fontSize={11}
+          textAnchor="middle"
+          fontFamily="system-ui, sans-serif"
+          style={{ userSelect: 'none' }}
+        >
+          {runs.length === 0 ? 'Solve a parametric table' : 'Pick X and Y variables'}
+        </text>
+      </g>
+    )
+  }
+
+  const xs = runs.map((r) => r.values[el.xVar]).filter(Number.isFinite)
+  const ys = usableYVars.flatMap((v) =>
+    runs.map((r) => r.values[v]).filter(Number.isFinite),
+  )
+  const xMin = Math.min(...xs)
+  const xMax = Math.max(...xs)
+  const yMin = Math.min(...ys)
+  const yMax = Math.max(...ys)
+  const sx = (v: number) => x0 + (xMax === xMin ? innerW / 2 : ((v - xMin) / (xMax - xMin)) * innerW)
+  const sy = (v: number) => y0 - (yMax === yMin ? innerH / 2 : ((v - yMin) / (yMax - yMin)) * innerH)
+
+  return (
+    <g opacity={el.opacity}>
+      {frame}
+      {usableYVars.map((v, i) => {
+        const pts = points(v)
+          .filter((p) => Number.isFinite(p.x) && Number.isFinite(p.y))
+          .map((p) => `${sx(p.x)},${sy(p.y)}`)
+          .join(' ')
+        return (
+          <polyline
+            key={v}
+            points={pts}
+            fill="none"
+            stroke={CHART_PALETTE[i % CHART_PALETTE.length]}
+            strokeWidth={1.5}
+          />
+        )
+      })}
+      {activeIndex !== null && Number.isFinite(runs[activeIndex]?.values[el.xVar]) && (
+        <line
+          x1={sx(runs[activeIndex].values[el.xVar])}
+          y1={el.y + pad * 0.6}
+          x2={sx(runs[activeIndex].values[el.xVar])}
+          y2={y0}
+          stroke="#ffa94b"
+          strokeWidth={1}
+          strokeDasharray="3 2"
+        />
+      )}
+      <text x={x0} y={el.y + pad * 0.5} fill="#909296" fontSize={9} fontFamily="system-ui">
+        {usableYVars.join(', ')} vs {el.xVar}
+      </text>
+      <text x={x0 - 2} y={el.y + pad * 0.6 + 8} fill="#868e96" fontSize={8} textAnchor="end" fontFamily="monospace">
+        {formatValue(yMax)}
+      </text>
+      <text x={x0 - 2} y={y0} fill="#868e96" fontSize={8} textAnchor="end" fontFamily="monospace">
+        {formatValue(yMin)}
+      </text>
+    </g>
+  )
+}
+
 function ElementView({
   el,
   runMode,
   values,
   numValues,
+  runs,
+  activeIndex,
   onMouseDown,
   onControlValue,
   onHover,
@@ -378,6 +503,8 @@ function ElementView({
   runMode: boolean
   values: Map<string, VariableResult>
   numValues: Map<string, number>
+  runs: DiagramRun[]
+  activeIndex: number | null
   onMouseDown: (e: React.MouseEvent, el: DiagramElement) => void
   onControlValue: (id: string, patch: Partial<ControlElement>) => void
   onHover: (id: string | null, clientX: number, clientY: number) => void
@@ -472,6 +599,8 @@ function ElementView({
         <rect x="0" y="0" width="100" height="100" fill="rgba(0,0,0,0.001)" stroke="none" />
       </g>
     )
+  } else if (el.kind === 'chart') {
+    body = <ChartView el={el} runs={runs} activeIndex={runMode ? activeIndex : null} />
   } else if (isControl(el)) {
     if (runMode) {
       body = (
@@ -839,12 +968,14 @@ function BindingFields({
 
 function PropertiesPanel({
   el,
+  varNames,
   onChange,
   onDuplicate,
   onDelete,
   onZOrder,
 }: Readonly<{
   el: DiagramElement
+  varNames: string[]
   onChange: (next: DiagramElement) => void
   onDuplicate: () => void
   onDelete: () => void
@@ -860,10 +991,33 @@ function PropertiesPanel({
           ? (libraryIcon(el.icon)?.label ?? 'Component')
           : isControl(el)
             ? CONTROL_LABELS[el.kind]
-            : el.kind}
+            : el.kind === 'chart'
+              ? 'Chart'
+              : el.kind}
       </Text>
 
       {isControl(el) && <ControlFields el={el} set={set} />}
+
+      {el.kind === 'chart' && (
+        <>
+          <Select
+            label="X-axis variable"
+            size="xs"
+            data={varNames}
+            value={el.xVar || null}
+            onChange={(v) => set({ xVar: v ?? '' })}
+            searchable
+          />
+          <MultiSelect
+            label="Y-axis variables"
+            size="xs"
+            data={varNames}
+            value={el.yVars}
+            onChange={(v) => set({ yVars: v })}
+            searchable
+          />
+        </>
+      )}
 
       {!isControl(el) && (
         <>
@@ -1003,16 +1157,25 @@ type Tool =
   | 'rect'
   | 'ellipse'
   | 'label'
+  | 'chart'
   | ControlElement['kind']
   | `icon:${string}`
 
 interface Props {
   variables: VariableResult[]
+  /** Solved parametric-table runs for playback animation (Story 6.4). */
+  runs?: DiagramRun[]
   /** Reports the `var = value` lines contributed by input-type controls. */
   onBindingsChange?: (lines: string[]) => void
 }
 
-export default function DiagramTab({ variables, onBindingsChange }: Readonly<Props>) {
+const PLAYBACK_SPEEDS: { label: string; value: string; ms: number }[] = [
+  { label: '0.5×', value: 'slow', ms: 1000 },
+  { label: '1×', value: 'normal', ms: 550 },
+  { label: '2×', value: 'fast', ms: 280 },
+]
+
+export default function DiagramTab({ variables, runs = [], onBindingsChange }: Readonly<Props>) {
   const [state, setState] = useState<DiagramState>(loadState)
   const [tool, setTool] = useState<Tool>('select')
   const [mode, setMode] = useState<'develop' | 'run'>('develop')
@@ -1020,26 +1183,116 @@ export default function DiagramTab({ variables, onBindingsChange }: Readonly<Pro
   const [view, setView] = useState<ViewTransform>({ x: 60, y: 40, k: 1 })
   const [drag, setDrag] = useState<DragState | null>(null)
   const [hover, setHover] = useState<{ id: string; x: number; y: number } | null>(null)
+  // Playback: null = show the live single solve; a number = that table run.
+  const [playIndex, setPlayIndex] = useState<number | null>(null)
+  const [playing, setPlaying] = useState(false)
+  const [loop, setLoop] = useState(true)
+  const [speed, setSpeed] = useState('normal')
   const svgRef = useRef<SVGSVGElement | null>(null)
 
   const runMode = mode === 'run'
   const selected = state.elements.find((el) => el.id === selectedId) ?? null
 
-  const valueMap = useMemo(() => {
-    const map = new Map<string, VariableResult>()
-    for (const v of variables) map.set(v.name.toLowerCase(), v)
+  // The active run during playback (clamped); null means use the live solve.
+  const activeIndex =
+    playIndex !== null && runs.length > 0 ? Math.min(playIndex, runs.length - 1) : null
+  const activeRun = activeIndex !== null ? runs[activeIndex] : null
+
+  // Variable names available to chart pickers: from the table runs, else the
+  // live solve.
+  const varNames = useMemo(() => {
+    const names = new Set<string>()
+    for (const r of runs) for (const k of Object.keys(r.values)) names.add(k)
+    if (names.size === 0) for (const v of variables) names.add(v.name)
+    return [...names].sort((a, b) => a.localeCompare(b))
+  }, [runs, variables])
+
+  // Units come from the last live solve even while scrubbing table runs (the
+  // run values are unit-less numbers).
+  const liveUnits = useMemo(() => {
+    const map = new Map<string, string>()
+    for (const v of variables) map.set(v.name.toLowerCase(), v.units)
     return map
   }, [variables])
 
+  const valueMap = useMemo(() => {
+    const map = new Map<string, VariableResult>()
+    if (activeRun) {
+      for (const [name, value] of Object.entries(activeRun.values)) {
+        const key = name.toLowerCase()
+        map.set(key, { name, value, units: liveUnits.get(key) ?? '' })
+      }
+    } else {
+      for (const v of variables) map.set(v.name.toLowerCase(), v)
+    }
+    return map
+  }, [activeRun, variables, liveUnits])
+
   const numValues = useMemo(() => {
     const map = new Map<string, number>()
-    for (const v of variables) map.set(v.name.toLowerCase(), v.value)
+    if (activeRun) {
+      for (const [name, value] of Object.entries(activeRun.values)) {
+        map.set(name.toLowerCase(), value)
+      }
+    } else {
+      for (const v of variables) map.set(v.name.toLowerCase(), v.value)
+    }
     return map
-  }, [variables])
+  }, [activeRun, variables])
 
   const onHover = useCallback((id: string | null, x: number, y: number) => {
     setHover(id ? { id, x, y } : null)
   }, [])
+
+  // ── Playback (Story 6.4) ─────────────────────────────────────────────
+  const runCount = runs.length
+
+  useEffect(() => {
+    if (!playing || runCount === 0) return
+    const ms = PLAYBACK_SPEEDS.find((s) => s.value === speed)?.ms ?? 550
+    const id = setInterval(() => {
+      setPlayIndex((prev) => {
+        const next = (prev ?? -1) + 1
+        return next >= runCount ? (loop ? 0 : runCount - 1) : next
+      })
+    }, ms)
+    return () => clearInterval(id)
+  }, [playing, runCount, speed, loop])
+
+  // Stop at the final run when not looping.
+  useEffect(() => {
+    if (!loop && playing && playIndex !== null && playIndex >= runCount - 1) {
+      setPlaying(false)
+    }
+  }, [playIndex, loop, playing, runCount])
+
+  // Leaving Run mode or losing the runs returns to the live solve.
+  useEffect(() => {
+    if (!runMode || runCount === 0) {
+      setPlaying(false)
+      setPlayIndex(null)
+    }
+  }, [runMode, runCount])
+
+  const togglePlay = () => {
+    if (runCount === 0) return
+    if (playIndex === null) setPlayIndex(0)
+    setPlaying((p) => !p)
+  }
+
+  const stepRun = (dir: 1 | -1) => {
+    if (runCount === 0) return
+    setPlaying(false)
+    setPlayIndex((prev) => {
+      const base = prev ?? 0
+      return Math.max(0, Math.min(runCount - 1, base + dir))
+    })
+  }
+
+  const goLive = () => {
+    setPlaying(false)
+    setPlayIndex(null)
+  }
 
   // Persist on every change.
   useEffect(() => {
@@ -1156,6 +1409,9 @@ export default function DiagramTab({ variables, onBindingsChange }: Readonly<Pro
       if (tool === 'label') {
         return { ...base, kind: 'label', x, y, text: 'Label', fontSize: 16, bold: false }
       }
+      if (tool === 'chart') {
+        return { ...base, kind: 'chart', x, y, w: 240, h: 160, xVar: '', yVars: [] }
+      }
       if (tool.startsWith('icon:')) {
         const iconId = tool.slice(5)
         return { ...base, kind: 'icon', icon: iconId, x, y, w: 100, h: 100 }
@@ -1218,7 +1474,7 @@ export default function DiagramTab({ variables, onBindingsChange }: Readonly<Pro
     if (!el) return
     setState((s) => ({ ...s, elements: [...s.elements, el] }))
     setSelectedId(el.id)
-    if (el.kind === 'label' || el.kind === 'icon' || isControl(el)) {
+    if (el.kind === 'label' || el.kind === 'icon' || el.kind === 'chart' || isControl(el)) {
       // Click-to-place: immediately movable.
       setDrag({ type: 'move', id: el.id, startX: world.x, startY: world.y, original: el })
     } else {
@@ -1456,6 +1712,7 @@ export default function DiagramTab({ variables, onBindingsChange }: Readonly<Pro
     { tool: 'rect', label: 'Rectangle', icon: <IconRectangle size={18} /> },
     { tool: 'ellipse', label: 'Circle / Ellipse', icon: <IconCircle size={18} /> },
     { tool: 'label', label: 'Rich Label', icon: <IconTypography size={18} /> },
+    { tool: 'chart', label: 'Embedded Chart (table runs)', icon: <IconChartLine size={18} /> },
   ]
 
   const CONTROL_TOOLS: { tool: ControlElement['kind']; label: string; icon: React.ReactNode }[] = [
@@ -1591,7 +1848,7 @@ export default function DiagramTab({ variables, onBindingsChange }: Readonly<Pro
               <IconZoomScan size={18} />
             </ActionIcon>
           </Tooltip>
-          {runMode && (
+          {runMode && runCount === 0 && (
             <Group gap={6}>
               <IconTags size={14} color="var(--mantine-color-dimmed)" />
               <Text size="xs" c="dimmed">
@@ -1601,6 +1858,71 @@ export default function DiagramTab({ variables, onBindingsChange }: Readonly<Pro
             </Group>
           )}
         </Group>
+
+        {runMode && runCount > 0 && (
+          <Paper withBorder px="sm" py={6}>
+            <Group gap="sm" wrap="nowrap">
+              <Group gap={2} wrap="nowrap">
+                <Tooltip label="Previous run">
+                  <ActionIcon variant="default" onClick={() => stepRun(-1)}>
+                    <IconPlayerSkipBackFilled size={16} />
+                  </ActionIcon>
+                </Tooltip>
+                <Tooltip label={playing ? 'Pause' : 'Play runs'}>
+                  <ActionIcon variant="filled" onClick={togglePlay}>
+                    {playing ? (
+                      <IconPlayerPauseFilled size={16} />
+                    ) : (
+                      <IconPlayerPlayFilled size={16} />
+                    )}
+                  </ActionIcon>
+                </Tooltip>
+                <Tooltip label="Next run">
+                  <ActionIcon variant="default" onClick={() => stepRun(1)}>
+                    <IconPlayerSkipForwardFilled size={16} />
+                  </ActionIcon>
+                </Tooltip>
+                <Tooltip label={loop ? 'Looping' : 'Loop off'}>
+                  <ActionIcon
+                    variant={loop ? 'light' : 'default'}
+                    onClick={() => setLoop((l) => !l)}
+                  >
+                    {loop ? <IconRepeat size={16} /> : <IconRepeatOff size={16} />}
+                  </ActionIcon>
+                </Tooltip>
+              </Group>
+              <Slider
+                flex={1}
+                min={0}
+                max={runCount - 1}
+                step={1}
+                value={playIndex ?? 0}
+                label={(v) => runs[v]?.label ?? ''}
+                onChange={(v) => {
+                  setPlaying(false)
+                  setPlayIndex(v)
+                }}
+              />
+              <Text size="xs" c="dimmed" w={64} ta="center" style={{ flexShrink: 0 }}>
+                {playIndex === null ? 'live' : `${playIndex + 1} / ${runCount}`}
+              </Text>
+              <SegmentedControl
+                size="xs"
+                value={speed}
+                onChange={setSpeed}
+                data={PLAYBACK_SPEEDS.map((s) => ({ label: s.label, value: s.value }))}
+              />
+              <Tooltip label="Show the live single solve">
+                <ActionIcon
+                  variant={playIndex === null ? 'light' : 'default'}
+                  onClick={goLive}
+                >
+                  <IconBroadcast size={16} />
+                </ActionIcon>
+              </Tooltip>
+            </Group>
+          </Paper>
+        )}
 
         <Paper
           withBorder
@@ -1628,6 +1950,8 @@ export default function DiagramTab({ variables, onBindingsChange }: Readonly<Pro
                   runMode={runMode}
                   values={valueMap}
                   numValues={numValues}
+                  runs={runs}
+                  activeIndex={activeIndex}
                   onMouseDown={onElementDown}
                   onControlValue={onControlValue}
                   onHover={onHover}
@@ -1660,6 +1984,7 @@ export default function DiagramTab({ variables, onBindingsChange }: Readonly<Pro
             {selected ? (
               <PropertiesPanel
                 el={selected}
+                varNames={varNames}
                 onChange={(next) => updateElement(selected.id, next)}
                 onDuplicate={duplicateSelected}
                 onDelete={deleteSelected}
