@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, useRef } from 'react'
+import { ChangeEvent, useCallback, useEffect, useState, useRef } from 'react'
 import {
   ActionIcon,
   Button,
@@ -67,6 +67,17 @@ import {
   buildRealSolutionRows,
   withStableKeys,
 } from './format'
+import {
+  buildProject,
+  clearProjectLocal,
+  downloadProject,
+  FreesProject,
+  loadProjectLocal,
+  ProjectSlices,
+  readProjectFile,
+  saveProjectLocal,
+  writeBridgedKeys,
+} from './project'
 
 const STOP_CRITERIA_KEY = 'frees.stopCriteria'
 const UNIT_SYSTEM_KEY = 'frees.unitSystem'
@@ -150,7 +161,21 @@ function FormattedEquationsView({
 }
 
 export default function App() {
-  const [text, setText] = useState(EXAMPLE)
+  // Story 10.10: restore the whole workspace from the unified `.frees` project
+  // (autosaved to localStorage). Computed once before any state initializer so
+  // every slice below can seed from it, falling back to the legacy per-feature
+  // keys when no unified project exists (one-time migration). Child-owned slices
+  // (digitizer, custom components) self-restore from their own keys, so they are
+  // intentionally not written back here on reload.
+  const bootRef = useRef<FreesProject | null | undefined>(undefined)
+  if (bootRef.current === undefined) bootRef.current = loadProjectLocal()
+  const boot = bootRef.current
+
+  const [projectName, setProjectName] = useState('untitled')
+  const [workspaceEpoch, setWorkspaceEpoch] = useState(0)
+  const projectFileRef = useRef<HTMLInputElement>(null)
+
+  const [text, setText] = useState(boot?.text ?? EXAMPLE)
   // Equation lines contributed by the Diagram window's input controls
   // (Story 6.2). They are appended to the text on Check/Solve.
   const [diagramBindings, setDiagramBindings] = useState<string[]>([])
@@ -163,14 +188,21 @@ export default function App() {
   const [findAll, setFindAll] = useState(false)
   const [complexMode, setComplexMode] = useState(false)
   const [solvedComplexMode, setSolvedComplexMode] = useState(false)
-  const [stopCriteria, setStopCriteria] = useState<StopCriteria>(loadStopCriteria)
-  const [unitSystem, setUnitSystem] = useState<UnitSystem>(loadUnitSystem)
+  const [stopCriteria, setStopCriteria] = useState<StopCriteria>(
+    () => boot?.stopCriteria ?? loadStopCriteria(),
+  )
+  const [unitSystem, setUnitSystem] = useState<UnitSystem>(
+    () => boot?.unitSystem ?? loadUnitSystem(),
+  )
   const [fillMissing, setFillMissing] = useState<boolean>(() => {
+    if (boot) return boot.fillMissing
     return localStorage.getItem('frees.fillMissing') === 'true'
   })
   const [showPreferences, setShowPreferences] = useState(false)
   const [variables, setVariables] = useState<string[]>([])
-  const [varDrafts, setVarDrafts] = useState<Record<string, VariableDraft>>({})
+  const [varDrafts, setVarDrafts] = useState<Record<string, VariableDraft>>(
+    () => boot?.varDrafts ?? {},
+  )
   const [showVariableInfo, setShowVariableInfo] = useState(false)
   const [showMinMax, setShowMinMax] = useState(false)
   const [showCurveFit, setShowCurveFit] = useState(false)
@@ -193,6 +225,7 @@ export default function App() {
   // Tables (Epic 8): any number of Parametric and Curve Tables; the active
   // parametric table is the one Check/Solve Table and the plots act on.
   const [tables, setTables] = useState<TableSpec[]>(() => {
+    if (boot) return boot.tables.length > 0 ? boot.tables : [newParamTable([])]
     const loaded = loadTables()
     return loaded.length > 0 ? loaded : [newParamTable([])]
   })
@@ -201,12 +234,14 @@ export default function App() {
   const [showConfigureTable, setShowConfigureTable] = useState(false)
   const [alterColumn, setAlterColumn] = useState<string | null>(null)
   const [tableChecking, setTableChecking] = useState(false)
-  const [plots, setPlots] = useState<PlotSpec[]>([])
+  const [plots, setPlots] = useState<PlotSpec[]>(() => boot?.plots ?? [])
   const [activeThermoPlotId, setActiveThermoPlotId] = useState<string | null>(null)
   const [activePlotId, setActivePlotId] = useState<string | null>(null)
-  const [diagrams, setDiagrams] = useState<DiagramSpec[]>(() => loadDiagrams())
+  const [diagrams, setDiagrams] = useState<DiagramSpec[]>(() =>
+    boot?.diagrams?.length ? boot.diagrams : loadDiagrams(),
+  )
   const [activeDiagramId, setActiveDiagramId] = useState<string | null>(() => {
-    const list = loadDiagrams()
+    const list = boot?.diagrams?.length ? boot.diagrams : loadDiagrams()
     return list[0]?.id ?? null
   })
   const [editingThermoPlot, setEditingThermoPlot] = useState<PlotSpec | null>(null)
@@ -214,6 +249,7 @@ export default function App() {
   const [thermoExportTrigger, setThermoExportTrigger] = useState<{ format: string; timestamp: number } | null>(null)
   const [fluids, setFluids] = useState<string[]>([])
   const [stateUnitIds, setStateUnitIds] = useState<Record<string, string>>(() => {
+    if (boot) return boot.stateUnitIds ?? {}
     try {
       const saved = localStorage.getItem('frees.stateUnitIds')
       return saved ? JSON.parse(saved) : {}
@@ -234,6 +270,122 @@ export default function App() {
   useEffect(() => {
     saveDiagrams(diagrams)
   }, [diagrams])
+
+  // Story 10.10: the current App-owned slices of the unified project. Child-owned
+  // slices (digitizer, custom components) are read from their localStorage caches
+  // by buildProject(), so they are captured without lifting them into App.
+  const currentSlices = useCallback(
+    (): ProjectSlices => ({
+      text,
+      varDrafts,
+      stopCriteria,
+      unitSystem,
+      fillMissing,
+      stateUnitIds,
+      tables,
+      plots,
+      diagrams,
+    }),
+    [text, varDrafts, stopCriteria, unitSystem, fillMissing, stateUnitIds, tables, plots, diagrams],
+  )
+
+  // Debounced autosave of the entire workspace to a single localStorage key,
+  // superseding the scattered per-feature keys as the source of truth on reload.
+  useEffect(() => {
+    const id = setTimeout(() => {
+      saveProjectLocal(buildProject(currentSlices()))
+    }, 800)
+    return () => clearTimeout(id)
+  }, [currentSlices])
+
+  // Apply an opened/loaded project to every workspace slice. Child-owned slices
+  // are written back to their caches and the relevant tabs are remounted (epoch
+  // bump) so they re-read the restored state.
+  const applyProject = useCallback((p: FreesProject) => {
+    setText(p.text ?? '')
+    setVarDrafts(p.varDrafts ?? {})
+    setStopCriteria(p.stopCriteria)
+    setUnitSystem(p.unitSystem ?? 'SI')
+    setFillMissing(Boolean(p.fillMissing))
+    setStateUnitIds(p.stateUnitIds ?? {})
+    setTables(p.tables.length > 0 ? p.tables : [newParamTable([])])
+    setPlots(p.plots ?? [])
+    setDiagrams(p.diagrams ?? [])
+    setActiveDiagramId(p.diagrams?.[0]?.id ?? null)
+    setResult(null)
+    setCheckResult(null)
+    writeBridgedKeys(p)
+    saveProjectLocal(p)
+    setWorkspaceEpoch((e) => e + 1)
+  }, [])
+
+  const handleSaveProject = useCallback(() => {
+    downloadProject(buildProject(currentSlices()), projectName)
+  }, [currentSlices, projectName])
+
+  const handleSaveProjectAs = useCallback(() => {
+    const name = window.prompt('Save project as:', projectName)
+    if (name == null) return
+    const clean = name.trim() || 'untitled'
+    setProjectName(clean)
+    downloadProject(buildProject(currentSlices()), clean)
+  }, [currentSlices, projectName])
+
+  const handleOpenProject = useCallback(() => {
+    projectFileRef.current?.click()
+  }, [])
+
+  const onProjectFileSelected = useCallback(
+    async (e: ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0]
+      e.target.value = '' // allow re-opening the same file
+      if (!file) return
+      try {
+        const p = await readProjectFile(file)
+        applyProject(p)
+        setProjectName(file.name.replace(/\.frees$/i, ''))
+      } catch (err) {
+        window.alert(err instanceof Error ? err.message : 'Could not open project file.')
+      }
+    },
+    [applyProject],
+  )
+
+  const handleNewProject = useCallback(() => {
+    if (!window.confirm('Start a new project? Unsaved changes will be lost.')) return
+    clearProjectLocal()
+    writeBridgedKeys({
+      version: 1,
+      savedAt: '',
+      text: '',
+      varDrafts: {},
+      stopCriteria,
+      unitSystem,
+      fillMissing,
+      stateUnitIds: {},
+      tables: [],
+      plots: [],
+      diagrams: [],
+      customComponents: null,
+      digitizer: null,
+    })
+    setText(EXAMPLE)
+    setVarDrafts({})
+    setStateUnitIds({})
+    setTables([newParamTable([])])
+    setPlots([])
+    const blank: DiagramSpec = {
+      id: crypto.randomUUID(),
+      name: 'Diagram 1',
+      state: { elements: [], gridSize: 10, snap: true, showGrid: true },
+    }
+    setDiagrams([blank])
+    setActiveDiagramId(blank.id)
+    setResult(null)
+    setCheckResult(null)
+    setProjectName('untitled')
+    setWorkspaceEpoch((e) => e + 1)
+  }, [stopCriteria, unitSystem, fillMissing])
 
   // The active table, defaulting to the first; the parametric-table solver
   // state below is derived from the active *parametric* table so all the
@@ -827,6 +979,18 @@ export default function App() {
             setLastSolvedWithFillMissing(false)
             invalidateTable()
           }}
+          projectName={projectName}
+          onNewProject={handleNewProject}
+          onOpenProject={handleOpenProject}
+          onSaveProject={handleSaveProject}
+          onSaveProjectAs={handleSaveProjectAs}
+        />
+        <input
+          ref={projectFileRef}
+          type="file"
+          accept=".frees,application/json"
+          style={{ display: 'none' }}
+          onChange={onProjectFileSelected}
         />
 
         <Flex
@@ -988,10 +1152,14 @@ export default function App() {
               />
             )}
             {activeTab === 'digitizer' && (
-              <DigitizerTab onSendToFunctionTable={sendDigitizedToFunctionTable} />
+              <DigitizerTab
+                key={`digitizer-${workspaceEpoch}`}
+                onSendToFunctionTable={sendDigitizedToFunctionTable}
+              />
             )}
             {activeTab === 'diagram' && (
               <DiagramTab
+                key={`diagram-${workspaceEpoch}`}
                 variables={result?.variables ?? []}
                 runs={diagramRuns}
                 onBindingsChange={handleDiagramBindings}

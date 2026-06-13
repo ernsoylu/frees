@@ -42,6 +42,7 @@ import {
   IconPlusMinus,
   IconTarget,
   IconPlus,
+  IconDownload,
   IconChevronDown,
   IconArrowLeft,
   IconArrowRight,
@@ -119,6 +120,11 @@ import {
   DiagramSpec,
 } from './types'
 import { TEMPLATES, instantiateTemplate } from './templates'
+import {
+  exportDiagram,
+  DiagramExportFormat,
+  DiagramExportTheme,
+} from './exportDiagram'
 
 const DIAGRAMS_STORAGE_KEY = 'frees-diagrams'
 
@@ -3052,6 +3058,29 @@ export default function DiagramTab(props: Readonly<Props>) {
 
   const [templateModalOpen, setTemplateModalOpen] = useState(false)
 
+  // Diagram export (Story 10.10): standalone SVG/PNG client-side, PDF/EPS via FOP.
+  const [exportModalOpen, setExportModalOpen] = useState(false)
+  const [exportScale, setExportScale] = useState(2)
+  const [exportTheme, setExportTheme] = useState<DiagramExportTheme>('dark')
+  const [exporting, setExporting] = useState<DiagramExportFormat | null>(null)
+  const [exportError, setExportError] = useState<string | null>(null)
+
+  const runExport = async (format: DiagramExportFormat) => {
+    if (!svgRef.current) return
+    setExportError(null)
+    setExporting(format)
+    try {
+      await exportDiagram(svgRef.current, format, activeDiagram.name, {
+        scale: exportScale,
+        theme: exportTheme,
+      })
+    } catch (err) {
+      setExportError(err instanceof Error ? err.message : 'Export failed.')
+    } finally {
+      setExporting(null)
+    }
+  }
+
   const addDiagram = (name: string, elements: DiagramElement[] = []) => {
     const nextSpec: DiagramSpec = {
       id: crypto.randomUUID(),
@@ -4521,6 +4550,20 @@ export default function DiagramTab(props: Readonly<Props>) {
               </Menu.Item>
             </Menu.Dropdown>
           </Menu>
+          <Tooltip label="Export this diagram (SVG, PNG, PDF, EPS)">
+            <Button
+              size="compact-xs"
+              variant="light"
+              color="gray"
+              leftSection={<IconDownload size={13} />}
+              onClick={() => {
+                setExportError(null)
+                setExportModalOpen(true)
+              }}
+            >
+              Export
+            </Button>
+          </Tooltip>
         </Group>
 
         {/* Canvas Toolbar Row */}
@@ -4904,6 +4947,9 @@ export default function DiagramTab(props: Readonly<Props>) {
               {state.showGrid && !runMode && gridStep > 4 && (
                 <GridPattern gridSize={state.gridSize} view={view} />
               )}
+              {/* Marked group captured by diagram export (Story 10.10); excludes
+                  grid, smart guides, and selection chrome rendered as siblings. */}
+              <g data-export-content="">
               {state.elements.map((el) => {
                 if (el.hidden && runMode) return null
                 return (
@@ -4938,6 +4984,7 @@ export default function DiagramTab(props: Readonly<Props>) {
                   </g>
                 )
               })}
+              </g>
               {!runMode && selectedElements.length > 1 &&
                 selectedElements.map((el) => {
                   const b = elementBounds(el, state.elements)
@@ -5386,6 +5433,65 @@ export default function DiagramTab(props: Readonly<Props>) {
               </div>
             ))}
           </div>
+        </Stack>
+      </Modal>
+
+      <Modal
+        opened={exportModalOpen}
+        onClose={() => setExportModalOpen(false)}
+        title={<Text fw={700}>Export “{activeDiagram.name}”</Text>}
+        size="sm"
+      >
+        <Stack gap="md">
+          <Text size="sm" c="dimmed">
+            SVG and PNG are generated in your browser; PDF and EPS are rendered by
+            the backend. The editor grid, guides, and selection handles are excluded.
+          </Text>
+          <NumberInput
+            label="Raster scale (PNG)"
+            description="Pixel multiplier for the bitmap export"
+            min={1}
+            max={8}
+            step={1}
+            value={exportScale}
+            onChange={(v) => setExportScale(typeof v === 'number' ? v : 2)}
+          />
+          <div>
+            <Text size="sm" fw={500} mb={4}>
+              Background
+            </Text>
+            <SegmentedControl
+              fullWidth
+              size="xs"
+              value={exportTheme}
+              onChange={(v) => setExportTheme(v as DiagramExportTheme)}
+              data={[
+                { label: 'Dark', value: 'dark' },
+                { label: 'Light', value: 'light' },
+              ]}
+            />
+          </div>
+          <Divider label="Download as" labelPosition="left" />
+          <Group grow gap="xs">
+            {(['svg', 'png', 'pdf', 'eps'] as DiagramExportFormat[]).map((fmt) => (
+              <Button
+                key={fmt}
+                size="sm"
+                variant="light"
+                loading={exporting === fmt}
+                disabled={exporting !== null}
+                leftSection={<IconDownload size={14} />}
+                onClick={() => void runExport(fmt)}
+              >
+                {fmt.toUpperCase()}
+              </Button>
+            ))}
+          </Group>
+          {exportError && (
+            <Text size="sm" c="red.5">
+              {exportError}
+            </Text>
+          )}
         </Stack>
       </Modal>
     </Group>

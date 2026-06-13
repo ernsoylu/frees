@@ -18,6 +18,10 @@ import {
   IconChecks,
   IconChevronDown,
   IconCode,
+  IconDeviceFloppy,
+  IconFile,
+  IconFilePlus,
+  IconFolderOpen,
   IconHelp,
   IconMathFunction,
   IconPlayerPlayFilled,
@@ -289,6 +293,11 @@ interface TopBarProps {
   onSolveTable: () => void
   onFindAllChange: (checked: boolean) => void
   onComplexModeChange: (checked: boolean) => void
+  projectName: string
+  onNewProject: () => void
+  onOpenProject: () => void
+  onSaveProject: () => void
+  onSaveProjectAs: () => void
 }
 
 function solveTooltipFor(canSolve: boolean, isTable: boolean): string {
@@ -316,10 +325,39 @@ export function TopBar(props: Readonly<TopBarProps>) {
 
   return (
     <Group justify="space-between" wrap="nowrap" gap="sm">
-      <Group gap="sm" wrap="nowrap" align="baseline">
+      <Group gap="sm" wrap="nowrap" align="center">
         <Title order={3} c="blue.4">
           frees
         </Title>
+        <Menu position="bottom-start" shadow="md" width={220}>
+          <Menu.Target>
+            <Button
+              variant="subtle"
+              color="gray"
+              size="xs"
+              leftSection={<IconFile size={14} />}
+              rightSection={<IconChevronDown size={12} />}
+            >
+              File
+            </Button>
+          </Menu.Target>
+          <Menu.Dropdown>
+            <Menu.Label>{props.projectName}.frees</Menu.Label>
+            <Menu.Item leftSection={<IconFilePlus size={14} />} onClick={props.onNewProject}>
+              New Project
+            </Menu.Item>
+            <Menu.Item leftSection={<IconFolderOpen size={14} />} onClick={props.onOpenProject}>
+              Open Project…
+            </Menu.Item>
+            <Menu.Divider />
+            <Menu.Item leftSection={<IconDeviceFloppy size={14} />} onClick={props.onSaveProject}>
+              Save Project
+            </Menu.Item>
+            <Menu.Item leftSection={<IconDeviceFloppy size={14} />} onClick={props.onSaveProjectAs}>
+              Save Project As…
+            </Menu.Item>
+          </Menu.Dropdown>
+        </Menu>
         <Text c="dimmed" size="xs" visibleFrom="lg">
           free solver
         </Text>
