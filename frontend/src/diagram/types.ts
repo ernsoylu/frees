@@ -28,6 +28,21 @@ export interface AttributeBindings {
   opacity?: string
 }
 
+export interface ConditionalStyleRule {
+  id: string
+  property: 'stroke' | 'fill' | 'opacity' | 'hidden'
+  formula: string
+  value: string
+}
+
+export interface ValueDrivenFill {
+  varName: string
+  minFormula: string
+  maxFormula: string
+  colorStart: string
+  colorEnd: string
+}
+
 interface ElementBase extends ElementStyle {
   id: string
   rotation: number
@@ -40,6 +55,8 @@ interface ElementBase extends ElementStyle {
   hidden?: boolean
   /** Optional user-given name shown in the Layers panel. */
   name?: string
+  rules?: ConditionalStyleRule[]
+  valueFill?: ValueDrivenFill
 }
 
 /** Animated dashed-line flow (Story 6.3): speed is a formula; sign sets direction. */
@@ -158,6 +175,8 @@ interface ControlBase extends ElementBase {
   varName: string
   /** Caption shown next to the widget. */
   label: string
+  /** Binding target (Story 10.8): equation fixes a variable, others write to guess/bounds */
+  target?: 'equation' | 'guess' | 'lower' | 'upper'
 }
 
 export interface InputControl extends ControlBase {
@@ -188,12 +207,70 @@ export interface SliderControl extends ControlBase {
   value: number
 }
 
+export interface StepperControl extends ControlBase {
+  kind: 'ctl-stepper'
+  min: number
+  max: number
+  step: number
+  value: number
+}
+
+export interface RadioControl extends ControlBase {
+  kind: 'ctl-radio'
+  options: string[]
+  value: string
+}
+
+export interface ButtonControl extends ElementBase {
+  kind: 'ctl-button'
+  x: number
+  y: number
+  w: number
+  h: number
+  label: string
+  action: 'solve' | 'check'
+}
+
 export type ControlElement =
   | InputControl
   | OutputControl
   | DropdownControl
   | CheckboxControl
   | SliderControl
+  | StepperControl
+  | RadioControl
+  | ButtonControl
+
+export interface WidgetElement extends ElementBase {
+  kind: 'widget'
+  widgetType: 'dial' | 'bar-h' | 'bar-v' | 'tank' | 'thermometer'
+  x: number
+  y: number
+  w: number
+  h: number
+  varName: string
+  minFormula: string
+  maxFormula: string
+  lowWarningFormula?: string
+  highWarningFormula?: string
+  lowDangerFormula?: string
+  highDangerFormula?: string
+  units?: string
+  label?: string
+}
+
+export interface HotspotElement extends ElementBase {
+  kind: 'hotspot'
+  x: number
+  y: number
+  w: number
+  h: number
+  targetType: 'tab' | 'equation' | 'plot' | 'diagram'
+  targetTab?: string
+  targetQuery?: string
+  targetPlotId?: string
+  targetDiagramId?: string
+}
 
 export type DiagramElement =
   | LineElement
@@ -205,6 +282,8 @@ export type DiagramElement =
   | ControlElement
   | ConnectorElement
   | ImageElement
+  | WidgetElement
+  | HotspotElement
 
 export function isControl(el: DiagramElement): el is ControlElement {
   return el.kind.startsWith('ctl-')
@@ -222,8 +301,13 @@ const KIND_LABELS: Record<string, string> = {
   'ctl-dropdown': 'Dropdown',
   'ctl-checkbox': 'Checkbox',
   'ctl-slider': 'Slider',
+  'ctl-stepper': 'Stepper',
+  'ctl-radio': 'Radio Group',
+  'ctl-button': 'Calculate Button',
   connector: 'Connector',
   image: 'Image/SVG',
+  widget: 'Widget',
+  hotspot: 'Hotspot',
 }
 
 /** Display name for the Layers panel (Story 10.3). */
@@ -238,6 +322,9 @@ export function elementLabel(el: DiagramElement): string {
   }
   if (el.kind === 'icon') return el.icon
   if (el.kind === 'chart') return el.xVar ? `Chart: ${el.xVar}` : 'Chart'
+  if (el.kind === 'widget') return `Widget: ${el.widgetType}${el.varName ? ` · ${el.varName}` : ''}`
+  if (el.kind === 'hotspot') return `Hotspot ➔ ${el.targetType}`
+  if (el.kind === 'ctl-button') return `Button · ${el.action}`
   if (isControl(el)) return `${KIND_LABELS[el.kind]}${el.varName ? ` · ${el.varName}` : ''}`
   return KIND_LABELS[el.kind] ?? el.kind
 }
@@ -264,14 +351,15 @@ export function expandGroups(ids: Iterable<string>, elements: DiagramElement[]):
 export function controlBindings(elements: DiagramElement[]): string[] {
   const lines: string[] = []
   for (const el of elements) {
-    if (!isControl(el) || el.varName.trim() === '') continue
+    if (!isControl(el) || el.kind === 'ctl-button' || el.varName.trim() === '') continue
+    if (el.target && el.target !== 'equation') continue
     const name = el.varName.trim()
     if (el.kind === 'ctl-input') {
       const value = Number(el.value)
       if (el.value.trim() !== '' && Number.isFinite(value)) {
         lines.push(`${name} = ${el.value.trim()}`)
       }
-    } else if (el.kind === 'ctl-dropdown') {
+    } else if (el.kind === 'ctl-dropdown' || el.kind === 'ctl-radio') {
       if (el.value === '') continue
       if (name.endsWith('$')) {
         lines.push(`${name} = '${el.value}'`)
@@ -280,7 +368,7 @@ export function controlBindings(elements: DiagramElement[]): string[] {
       }
     } else if (el.kind === 'ctl-checkbox') {
       lines.push(`${name} = ${el.checked ? 1 : 0}`)
-    } else if (el.kind === 'ctl-slider') {
+    } else if (el.kind === 'ctl-slider' || el.kind === 'ctl-stepper') {
       lines.push(`${name} = ${el.value}`)
     }
   }
@@ -292,6 +380,12 @@ export interface DiagramState {
   gridSize: number
   snap: boolean
   showGrid: boolean
+}
+
+export interface DiagramSpec {
+  id: string
+  name: string
+  state: DiagramState
 }
 
 export const DEFAULT_DIAGRAM_STATE: DiagramState = {

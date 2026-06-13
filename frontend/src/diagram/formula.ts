@@ -62,6 +62,36 @@ function tokenize(src: string): Token[] {
     } else if ('+-*/^'.includes(c)) {
       tokens.push({ t: 'op', v: c })
       i++
+    } else if (c === '<' || c === '>') {
+      let v = c
+      if (src[i + 1] === '=') {
+        v += '='
+        i++
+      }
+      tokens.push({ t: 'op', v })
+      i++
+    } else if (c === '=') {
+      let v = c
+      if (src[i + 1] === '=') {
+        v += '='
+        i++
+      }
+      tokens.push({ t: 'op', v })
+      i++
+    } else if (c === '!') {
+      let v = c
+      if (src[i + 1] === '=') {
+        v += '='
+        i++
+      }
+      tokens.push({ t: 'op', v })
+      i++
+    } else if (c === '&' && src[i + 1] === '&') {
+      tokens.push({ t: 'op', v: '&&' })
+      i += 2
+    } else if (c === '|' && src[i + 1] === '|') {
+      tokens.push({ t: 'op', v: '||' })
+      i += 2
     } else if (c === '(') {
       tokens.push({ t: 'lp' })
       i++
@@ -86,7 +116,7 @@ class Parser {
   ) {}
 
   parse(): number {
-    const value = this.expr()
+    const value = this.logicalOr()
     if (this.pos < this.tokens.length) {
       throw new Error('Unexpected trailing input')
     }
@@ -95,6 +125,61 @@ class Parser {
 
   private peek(): Token | undefined {
     return this.tokens[this.pos]
+  }
+
+  private logicalOr(): number {
+    let value = this.logicalAnd()
+    let tok = this.peek()
+    while (tok && tok.t === 'op' && tok.v === '||') {
+      this.pos++
+      const rhs = this.logicalAnd()
+      value = (value !== 0 || rhs !== 0) ? 1 : 0
+      tok = this.peek()
+    }
+    return value
+  }
+
+  private logicalAnd(): number {
+    let value = this.equality()
+    let tok = this.peek()
+    while (tok && tok.t === 'op' && tok.v === '&&') {
+      this.pos++
+      const rhs = this.equality()
+      value = (value !== 0 && rhs !== 0) ? 1 : 0
+      tok = this.peek()
+    }
+    return value
+  }
+
+  private equality(): number {
+    let value = this.relational()
+    let tok = this.peek()
+    while (tok && tok.t === 'op' && (tok.v === '==' || tok.v === '!=')) {
+      this.pos++
+      const rhs = this.relational()
+      if (tok.v === '==') {
+        value = Math.abs(value - rhs) < 1e-9 ? 1 : 0
+      } else {
+        value = Math.abs(value - rhs) >= 1e-9 ? 1 : 0
+      }
+      tok = this.peek()
+    }
+    return value
+  }
+
+  private relational(): number {
+    let value = this.expr()
+    let tok = this.peek()
+    while (tok && tok.t === 'op' && (tok.v === '<' || tok.v === '>' || tok.v === '<=' || tok.v === '>=')) {
+      this.pos++
+      const rhs = this.expr()
+      if (tok.v === '<') value = value < rhs ? 1 : 0
+      else if (tok.v === '>') value = value > rhs ? 1 : 0
+      else if (tok.v === '<=') value = value <= rhs ? 1 : 0
+      else if (tok.v === '>=') value = value >= rhs ? 1 : 0
+      tok = this.peek()
+    }
+    return value
   }
 
   private expr(): number {
@@ -133,10 +218,12 @@ class Parser {
 
   private unary(): number {
     const tok = this.peek()
-    if (tok && tok.t === 'op' && (tok.v === '+' || tok.v === '-')) {
+    if (tok && tok.t === 'op' && (tok.v === '+' || tok.v === '-' || tok.v === '!')) {
       this.pos++
       const v = this.unary()
-      return tok.v === '-' ? -v : v
+      if (tok.v === '-') return -v
+      if (tok.v === '!') return v === 0 ? 1 : 0
+      return v
     }
     return this.primary()
   }

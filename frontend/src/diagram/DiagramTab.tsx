@@ -28,10 +28,25 @@ import {
   IconArrowNarrowRight,
   IconBinaryTree,
   IconBroadcast,
+  IconGauge,
+  IconArrowAutofitWidth,
+  IconArrowAutofitHeight,
+  IconRipple,
+  IconThermometer,
   IconHandStop,
   IconChartLine,
   IconCheckbox,
   IconCircle,
+  IconCircleDot,
+  IconClick,
+  IconPlusMinus,
+  IconTarget,
+  IconPlus,
+  IconChevronDown,
+  IconArrowLeft,
+  IconArrowRight,
+  IconLayoutGrid,
+  IconSchema,
   IconCopy,
   IconEye,
   IconEyeOff,
@@ -71,6 +86,8 @@ import {
 } from '@tabler/icons-react'
 import { VariableResult } from '../api'
 import { formatValue } from '../format'
+import { PROPERTY_UNITS } from '../plots/units'
+import { PlotSpec } from '../plots/types'
 import { evalFormula, formulaVars } from './formula'
 import { LIBRARY_ICONS, libraryIcon } from './library'
 import {
@@ -95,24 +112,57 @@ import {
   getElementAnchors,
   FlowAnimation,
   ImageElement,
+  ConditionalStyleRule,
+  WidgetElement,
+  ValueDrivenFill,
+  HotspotElement,
+  DiagramSpec,
 } from './types'
+import { TEMPLATES, instantiateTemplate } from './templates'
 
-const STORAGE_KEY = 'frees-diagram-v1'
+const DIAGRAMS_STORAGE_KEY = 'frees-diagrams'
 
-// ---------------------------------------------------------------------------
-// Persistence
-// ---------------------------------------------------------------------------
-
-function loadState(): DiagramState {
+export function loadDiagrams(): DiagramSpec[] {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    if (!raw) return DEFAULT_DIAGRAM_STATE
-    const parsed = JSON.parse(raw)
-    if (!Array.isArray(parsed.elements)) return DEFAULT_DIAGRAM_STATE
-    return { ...DEFAULT_DIAGRAM_STATE, ...parsed }
-  } catch {
-    return DEFAULT_DIAGRAM_STATE
-  }
+    const raw = localStorage.getItem(DIAGRAMS_STORAGE_KEY)
+    if (raw) {
+      const parsed = JSON.parse(raw)
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed
+    }
+  } catch {}
+
+  // Fallback to legacy single diagram:
+  try {
+    const rawLegacy = localStorage.getItem('frees-diagram-v1')
+    if (rawLegacy) {
+      const parsed = JSON.parse(rawLegacy)
+      if (Array.isArray(parsed.elements)) {
+        const legacySpec: DiagramSpec = {
+          id: crypto.randomUUID(),
+          name: 'Main Diagram',
+          state: parsed,
+        }
+        const initial = [legacySpec]
+        localStorage.setItem(DIAGRAMS_STORAGE_KEY, JSON.stringify(initial))
+        return initial
+      }
+    }
+  } catch {}
+
+  const initial: DiagramSpec[] = [
+    {
+      id: 'default',
+      name: 'Main Diagram',
+      state: DEFAULT_DIAGRAM_STATE,
+    },
+  ]
+  return initial
+}
+
+export function saveDiagrams(diagrams: DiagramSpec[]) {
+  try {
+    localStorage.setItem(DIAGRAMS_STORAGE_KEY, JSON.stringify(diagrams))
+  } catch {}
 }
 
 // ---------------------------------------------------------------------------
@@ -276,34 +326,93 @@ const BINDABLE_LABELS: Record<keyof AttributeBindings, string> = {
  * Off-run-mode or when a formula can't yet be evaluated, the authored value is
  * kept, so the diagram still renders before a solve.
  */
+function resolveConditionalStyles(
+  el: DiagramElement,
+  numValues: Map<string, number>,
+): DiagramElement {
+  if (!el.rules || el.rules.length === 0) return el
+  
+  let stroke = el.stroke
+  let fill = el.fill
+  let opacity = el.opacity
+  let hidden = el.hidden
+  
+  for (const rule of el.rules) {
+    if (!rule.formula || rule.formula.trim() === '') continue
+    const result = evalFormula(rule.formula, numValues)
+    if (result !== null && result !== 0) {
+      if (rule.property === 'stroke') {
+        stroke = rule.value
+      } else if (rule.property === 'fill') {
+        fill = rule.value
+      } else if (rule.property === 'opacity') {
+        const op = parseFloat(rule.value)
+        if (Number.isFinite(op)) opacity = op
+      } else if (rule.property === 'hidden') {
+        hidden = rule.value === 'true' || rule.value === '1'
+      }
+    }
+  }
+  
+  return {
+    ...el,
+    stroke,
+    fill,
+    opacity,
+    hidden,
+  } as DiagramElement
+}
+
 function resolveElement(
   el: DiagramElement,
   numValues: Map<string, number>,
   runMode: boolean,
 ): DiagramElement {
-  if (!runMode || !el.bind) return el
-  const b = el.bind
-  const num = (f: string | undefined, fallback: number) => {
-    const v = evalFormula(f, numValues)
-    return v === null ? fallback : v
-  }
-  const opacity = b.opacity ? Math.max(0, Math.min(1, num(b.opacity, el.opacity))) : el.opacity
-  const rotation = b.rotation ? num(b.rotation, el.rotation) : el.rotation
-  const dx = b.dx ? num(b.dx, 0) : 0
-  const dy = b.dy ? num(b.dy, 0) : 0
+  let resolved = el
+  if (runMode && el.bind) {
+    const b = el.bind
+    const num = (f: string | undefined, fallback: number) => {
+      const v = evalFormula(f, numValues)
+      return v === null ? fallback : v
+    }
+    const opacity = b.opacity ? Math.max(0, Math.min(1, num(b.opacity, el.opacity))) : el.opacity
+    const rotation = b.rotation ? num(b.rotation, el.rotation) : el.rotation
+    const dx = b.dx ? num(b.dx, 0) : 0
+    const dy = b.dy ? num(b.dy, 0) : 0
 
-  if (el.kind === 'connector') {
-    return { ...el, opacity }
+    if (el.kind === 'connector') {
+      resolved = { ...el, opacity }
+    } else if (el.kind === 'line') {
+      resolved = { ...el, opacity, rotation, x1: el.x1 + dx, y1: el.y1 + dy, x2: el.x2 + dx, y2: el.y2 + dy }
+    } else if (el.kind === 'label') {
+      resolved = { ...el, opacity, rotation, x: el.x + dx, y: el.y + dy }
+    } else {
+      const w = b.w ? num(b.w, el.w) : el.w
+      const h = b.h ? num(b.h, el.h) : el.h
+      resolved = { ...el, opacity, rotation, x: el.x + dx, y: el.y + dy, w, h }
+    }
   }
-  if (el.kind === 'line') {
-    return { ...el, opacity, rotation, x1: el.x1 + dx, y1: el.y1 + dy, x2: el.x2 + dx, y2: el.y2 + dy }
+  
+  if (runMode && el.valueFill) {
+    const vf = el.valueFill
+    const val = numValues.get(vf.varName.trim().toLowerCase())
+    if (val !== undefined && Number.isFinite(val)) {
+      const minVal = evalFormula(vf.minFormula, numValues) ?? 0
+      const maxVal = evalFormula(vf.maxFormula, numValues) ?? 100
+      let t = 0
+      if (maxVal > minVal) {
+        t = Math.max(0, Math.min(1, (val - minVal) / (maxVal - minVal)))
+      }
+      const fill = interpolateColor(vf.colorStart || '#3b82f6', vf.colorEnd || '#ef4444', t)
+      resolved = { ...resolved, fill }
+    }
   }
-  if (el.kind === 'label') {
-    return { ...el, opacity, rotation, x: el.x + dx, y: el.y + dy }
+  
+  if (runMode) {
+    resolved = resolveConditionalStyles(resolved, numValues)
   }
-  const w = b.w ? num(b.w, el.w) : el.w
-  const h = b.h ? num(b.h, el.h) : el.h
-  return { ...el, opacity, rotation, x: el.x + dx, y: el.y + dy, w, h }
+  
+  return resolved
 }
 
 /** The solved variables an element references — for the Run-mode hover tooltip. */
@@ -314,9 +423,31 @@ function elementVars(el: DiagramElement): string[] {
   }
   if ((el.kind === 'line' || el.kind === 'connector') && el.flow) formulaVars(el.flow.speed).forEach((v) => out.add(v))
   if (el.kind === 'label') {
-    for (const m of el.text.matchAll(/\{([A-Za-z][\w$]*)\}/g)) out.add(m[1].toLowerCase())
+    for (const m of el.text.matchAll(/\{([^}]+)\}/g)) {
+      const expr = m[1].split(':')[0]
+      formulaVars(expr).forEach((v) => out.add(v))
+    }
   }
-  if (isControl(el) && el.varName.trim()) out.add(el.varName.trim().toLowerCase())
+  if (isControl(el) && el.kind !== 'ctl-button' && el.varName.trim()) out.add(el.varName.trim().toLowerCase())
+  if (el.kind === 'widget') {
+    if (el.varName.trim()) out.add(el.varName.trim().toLowerCase())
+    formulaVars(el.minFormula).forEach((v) => out.add(v))
+    formulaVars(el.maxFormula).forEach((v) => out.add(v))
+    formulaVars(el.lowWarningFormula).forEach((v) => out.add(v))
+    formulaVars(el.highWarningFormula).forEach((v) => out.add(v))
+    formulaVars(el.lowDangerFormula).forEach((v) => out.add(v))
+    formulaVars(el.highDangerFormula).forEach((v) => out.add(v))
+  }
+  if (el.valueFill) {
+    if (el.valueFill.varName.trim()) out.add(el.valueFill.varName.trim().toLowerCase())
+    formulaVars(el.valueFill.minFormula).forEach((v) => out.add(v))
+    formulaVars(el.valueFill.maxFormula).forEach((v) => out.add(v))
+  }
+  if (el.rules) {
+    for (const r of el.rules) {
+      formulaVars(r.formula).forEach((v) => out.add(v))
+    }
+  }
   return [...out]
 }
 
@@ -350,12 +481,76 @@ function flowDashProps(
   }
 }
 
-function interpolateLabel(text: string, values: Map<string, VariableResult>): string {
-  return text.replace(/\{([A-Za-z][\w$]*)\}/g, (match, name: string) => {
-    const v = values.get(name.toLowerCase())
-    if (!v) return match
-    const unit = v.units && v.units !== '-' ? ` ${v.units}` : ''
-    return `${formatValue(v.value)}${unit}`
+function formatExpressionValue(val: number, formatSpec: string): string {
+  if (val === null || val === undefined || !Number.isFinite(val)) return '—'
+  
+  let convertedVal = val
+  let numberFormat: { precision: number; type: 'f' | 'e' | 'g' } | null = null
+  let unitLabel = ''
+  
+  const parts = formatSpec.split(':').map(p => p.trim()).filter(Boolean)
+  for (const part of parts) {
+    const numMatch = part.match(/^\.(\d+)([feg])$/)
+    if (numMatch) {
+      numberFormat = {
+        precision: parseInt(numMatch[1], 10),
+        type: numMatch[2] as 'f' | 'e' | 'g'
+      }
+      continue
+    }
+    
+    let foundUnit = false
+    const normPart = part.replace(/°/g, '').toLowerCase()
+    
+    for (const units of Object.values(PROPERTY_UNITS)) {
+      const u = units.find(choice => choice.id.replace(/°/g, '').toLowerCase() === normPart)
+      if (u) {
+        convertedVal = val * u.scale + u.offset
+        unitLabel = ' ' + u.id
+        foundUnit = true
+        break
+      }
+    }
+    
+    if (!foundUnit) {
+      unitLabel = ' ' + part
+    }
+  }
+  
+  let formattedStr = ''
+  if (numberFormat) {
+    const { precision, type } = numberFormat
+    if (type === 'f') formattedStr = convertedVal.toFixed(precision)
+    else if (type === 'e') formattedStr = convertedVal.toExponential(precision)
+    else if (type === 'g') formattedStr = convertedVal.toPrecision(precision)
+  } else {
+    formattedStr = formatValue(convertedVal)
+  }
+  
+  return `${formattedStr}${unitLabel}`
+}
+
+function interpolateLabel(
+  text: string,
+  values: Map<string, VariableResult>,
+  numValues: Map<string, number>,
+): string {
+  return text.replace(/\{([^}]+)\}/g, (match, inner: string) => {
+    const colonIndex = inner.indexOf(':')
+    const exprStr = colonIndex === -1 ? inner : inner.slice(0, colonIndex)
+    const formatSpec = colonIndex === -1 ? '' : inner.slice(colonIndex + 1)
+    
+    const val = evalFormula(exprStr, numValues)
+    if (val === null) {
+      const varName = exprStr.trim().toLowerCase()
+      const v = values.get(varName)
+      if (v) {
+        return formatExpressionValue(v.value, formatSpec || v.units)
+      }
+      return match
+    }
+    
+    return formatExpressionValue(val, formatSpec)
   })
 }
 
@@ -408,6 +603,9 @@ const captionStyle: React.CSSProperties = {
 
 /** A short descriptor of a control's binding, shown on the develop-mode box. */
 function controlSummary(el: ControlElement): string {
+  if (el.kind === 'ctl-button') {
+    return `Btn: ${el.action}`
+  }
   const v = el.varName.trim() || '(unbound)'
   switch (el.kind) {
     case 'ctl-input':
@@ -419,6 +617,10 @@ function controlSummary(el: ControlElement): string {
     case 'ctl-checkbox':
       return `${el.checked ? '☑' : '☐'} ${v}`
     case 'ctl-slider':
+      return `${v} = ${el.value}`
+    case 'ctl-stepper':
+      return `${v} = ${el.value}`
+    case 'ctl-radio':
       return `${v} = ${el.value}`
   }
 }
@@ -433,6 +635,7 @@ function ControlWidget({
   values: Map<string, VariableResult>
   onValue: (patch: Partial<ControlElement>) => void
 }>) {
+  if (el.kind === 'ctl-button') return null
   const caption = el.label || el.varName
   if (el.kind === 'ctl-output') {
     const v = values.get(el.varName.trim().toLowerCase())
@@ -456,7 +659,7 @@ function ControlWidget({
   if (el.kind === 'ctl-checkbox') {
     return (
       <label
-               style={{
+        style={{
           display: 'flex',
           alignItems: 'center',
           gap: 6,
@@ -511,6 +714,94 @@ function ControlWidget({
           onChange={(e) => onValue({ value: Number(e.currentTarget.value) })}
           style={{ width: '100%' }}
         />
+      </div>
+    )
+  }
+  if (el.kind === 'ctl-stepper') {
+    const handleStep = (dir: number) => {
+      let nextVal = el.value + dir * el.step
+      if (el.min !== undefined && nextVal < el.min) nextVal = el.min
+      if (el.max !== undefined && nextVal > el.max) nextVal = el.max
+      onValue({ value: nextVal })
+    }
+    return (
+      <div style={{ fontFamily: 'system-ui, sans-serif' }}>
+        <div style={captionStyle}>{caption}</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+          <button
+            type="button"
+            onClick={() => handleStep(-1)}
+            style={{
+              background: '#2C2E33',
+              color: '#fff',
+              border: '1px solid #495057',
+              borderRadius: 4,
+              width: 24,
+              height: 24,
+              cursor: 'pointer',
+              fontWeight: 'bold',
+            }}
+          >
+            -
+          </button>
+          <div
+            style={{
+              ...fieldStyle,
+              flex: 1,
+              textAlign: 'center',
+              lineHeight: '20px',
+              height: 24,
+              padding: '2px 4px',
+            }}
+          >
+            {el.value}
+          </div>
+          <button
+            type="button"
+            onClick={() => handleStep(1)}
+            style={{
+              background: '#2C2E33',
+              color: '#fff',
+              border: '1px solid #495057',
+              borderRadius: 4,
+              width: 24,
+              height: 24,
+              cursor: 'pointer',
+              fontWeight: 'bold',
+            }}
+          >
+            +
+          </button>
+        </div>
+      </div>
+    )
+  }
+  if (el.kind === 'ctl-radio') {
+    return (
+      <div style={{ fontFamily: 'system-ui, sans-serif', display: 'flex', flexDirection: 'column', gap: 4 }}>
+        {caption && <div style={captionStyle}>{caption}</div>}
+        {el.options.map((opt) => (
+          <label
+            key={opt}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              color: '#e9ecef',
+              fontSize: 11,
+              cursor: 'pointer',
+            }}
+          >
+            <input
+              type="radio"
+              name={`radio-${el.id}`}
+              checked={el.value === opt}
+              onChange={() => onValue({ value: opt })}
+              style={{ cursor: 'pointer' }}
+            />
+            {opt}
+          </label>
+        ))}
       </div>
     )
   }
@@ -675,6 +966,363 @@ function getConnectorPath(el: ConnectorElement, elements: DiagramElement[]): str
   }
 }
 
+function parseColor(color: string): { r: number; g: number; b: number } {
+  let hex = color.trim().replace(/^#/, '')
+  if (hex.length === 3) {
+    hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2]
+  }
+  const num = parseInt(hex, 16)
+  if (Number.isNaN(num)) {
+    return { r: 128, g: 128, b: 128 }
+  }
+  return {
+    r: (num >> 16) & 255,
+    g: (num >> 8) & 255,
+    b: num & 255,
+  }
+}
+
+function interpolateColor(color1: string, color2: string, t: number): string {
+  const c1 = parseColor(color1)
+  const c2 = parseColor(color2)
+  const r = Math.round(c1.r + (c2.r - c1.r) * t)
+  const g = Math.round(c1.g + (c2.g - c1.g) * t)
+  const b = Math.round(c1.b + (c2.b - c1.b) * t)
+  return `rgb(${r}, ${g}, ${b})`
+}
+
+function convertValue(val: number, targetUnit: string | undefined): { value: number; unit: string } {
+  if (!targetUnit) return { value: val, unit: '' }
+  const normUnit = targetUnit.replace(/°/g, '').toLowerCase()
+  for (const units of Object.values(PROPERTY_UNITS)) {
+    const u = units.find(choice => choice.id.replace(/°/g, '').toLowerCase() === normUnit)
+    if (u) {
+      return { value: val * u.scale + u.offset, unit: u.id }
+    }
+  }
+  return { value: val, unit: targetUnit }
+}
+
+function polarToCartesian(cx: number, cy: number, r: number, angleInDegrees: number) {
+  const angleInRadians = ((angleInDegrees - 90) * Math.PI) / 180
+  return {
+    x: cx + r * Math.cos(angleInRadians),
+    y: cy + r * Math.sin(angleInRadians),
+  }
+}
+
+function getArcPath(cx: number, cy: number, r: number, startAngle: number, endAngle: number): string {
+  const start = polarToCartesian(cx, cy, r, endAngle)
+  const end = polarToCartesian(cx, cy, r, startAngle)
+  const largeArcFlag = endAngle - startAngle <= 180 ? '0' : '1'
+  return `M ${start.x} ${start.y} A ${r} ${r} 0 ${largeArcFlag} 0 ${end.x} ${end.y}`
+}
+
+function WidgetView({
+  el,
+  values,
+  numValues,
+  runMode,
+}: Readonly<{
+  el: WidgetElement
+  values: Map<string, VariableResult>
+  numValues: Map<string, number>
+  runMode: boolean
+}>) {
+  const varKey = el.varName.trim().toLowerCase()
+  const solvedVal = numValues.get(varKey) ?? 0
+  const solvedUnit = values.get(varKey)?.units || ''
+  
+  const targetUnit = el.units ?? (solvedUnit !== '-' ? solvedUnit : undefined)
+  const { value: val, unit } = convertValue(solvedVal, targetUnit)
+  
+  const minValRaw = evalFormula(el.minFormula, numValues) ?? 0
+  const maxValRaw = evalFormula(el.maxFormula, numValues) ?? 100
+  const minVal = convertValue(minValRaw, targetUnit).value
+  const maxVal = convertValue(maxValRaw, targetUnit).value
+
+  let t = 0
+  if (maxVal > minVal) {
+    t = Math.max(0, Math.min(1, (val - minVal) / (maxVal - minVal)))
+  }
+
+  // Warning/danger limits
+  const lowWarningRaw = el.lowWarningFormula ? evalFormula(el.lowWarningFormula, numValues) : null
+  const highWarningRaw = el.highWarningFormula ? evalFormula(el.highWarningFormula, numValues) : null
+  const lowDangerRaw = el.lowDangerFormula ? evalFormula(el.lowDangerFormula, numValues) : null
+  const highDangerRaw = el.highDangerFormula ? evalFormula(el.highDangerFormula, numValues) : null
+
+  const lowWarning = lowWarningRaw !== null ? convertValue(lowWarningRaw, targetUnit).value : null
+  const highWarning = highWarningRaw !== null ? convertValue(highWarningRaw, targetUnit).value : null
+  const lowDanger = lowDangerRaw !== null ? convertValue(lowDangerRaw, targetUnit).value : null
+  const highDanger = highDangerRaw !== null ? convertValue(highDangerRaw, targetUnit).value : null
+
+  let statusColor = '#228be6' // default blue
+  if (runMode) {
+    if (lowDanger !== null && val < lowDanger) statusColor = '#fa5252'
+    else if (highDanger !== null && val > highDanger) statusColor = '#fa5252'
+    else if (lowWarning !== null && val < lowWarning) statusColor = '#fab005'
+    else if (highWarning !== null && val > highWarning) statusColor = '#fab005'
+    else statusColor = '#40c057'
+  }
+
+  const formattedVal = formatValue(val)
+  const caption = el.label || el.varName || 'Widget'
+
+  if (el.widgetType === 'dial') {
+    const cx = el.x + el.w / 2
+    const cy = el.y + el.h / 2
+    const r = Math.min(el.w, el.h) / 2 - 12
+    const needleAngle = -140 + t * 280
+    const tip = polarToCartesian(cx, cy, r - 10, needleAngle)
+
+    const valToAngle = (v: number) => {
+      if (maxVal === minVal) return -140
+      const pct = Math.max(0, Math.min(1, (v - minVal) / (maxVal - minVal)))
+      return -140 + pct * 280
+    }
+
+    return (
+      <g>
+        {/* dial background shadow and border */}
+        <circle cx={cx} cy={cy} r={r + 6} fill="#1A1B1E" fillOpacity={0.7} stroke="#373A40" strokeWidth={1} />
+        {/* grey background arc track */}
+        <path d={getArcPath(cx, cy, r, -140, 140)} fill="none" stroke="#2C2E33" strokeWidth={8} strokeLinecap="round" />
+        
+        {/* colored zones */}
+        {runMode && (
+          <>
+            {/* normal/green base */}
+            <path d={getArcPath(cx, cy, r, -140, 140)} fill="none" stroke="#40c057" strokeWidth={4} strokeLinecap="round" opacity={0.3} />
+            {/* Danger low */}
+            {lowDanger !== null && (
+              <path
+                d={getArcPath(cx, cy, r, -140, valToAngle(lowDanger))}
+                fill="none"
+                stroke="#fa5252"
+                strokeWidth={5}
+                strokeLinecap="round"
+              />
+            )}
+            {/* Warning low */}
+            {lowWarning !== null && (
+              <path
+                d={getArcPath(cx, cy, r, valToAngle(lowDanger ?? minVal), valToAngle(lowWarning))}
+                fill="none"
+                stroke="#fab005"
+                strokeWidth={5}
+                strokeLinecap="round"
+              />
+            )}
+            {/* Warning high */}
+            {highWarning !== null && (
+              <path
+                d={getArcPath(cx, cy, r, valToAngle(highWarning), valToAngle(highDanger ?? maxVal))}
+                fill="none"
+                stroke="#fab005"
+                strokeWidth={5}
+                strokeLinecap="round"
+              />
+            )}
+            {/* Danger high */}
+            {highDanger !== null && (
+              <path
+                d={getArcPath(cx, cy, r, valToAngle(highDanger), 140)}
+                fill="none"
+                stroke="#fa5252"
+                strokeWidth={5}
+                strokeLinecap="round"
+              />
+            )}
+          </>
+        )}
+
+        {/* scale ticks */}
+        {[0, 1, 2, 3, 4, 5].map((i) => {
+          const ang = -140 + i * 56
+          const p1 = polarToCartesian(cx, cy, r - 6, ang)
+          const p2 = polarToCartesian(cx, cy, r, ang)
+          return <line key={i} x1={p1.x} y1={p1.y} x2={p2.x} y2={p2.y} stroke="#909296" strokeWidth={1} />
+        })}
+
+        {/* needle */}
+        <line x1={cx} y1={cy} x2={tip.x} y2={tip.y} stroke={statusColor} strokeWidth={2.5} strokeLinecap="round" />
+        <circle cx={cx} cy={cy} r={5} fill={statusColor} stroke="#1A1B1E" strokeWidth={1.5} />
+
+        {/* labels */}
+        <text x={cx} y={cy + r - 16} fill="#909296" fontSize={10} fontFamily="system-ui" textAnchor="middle" fontWeight="bold">
+          {caption}
+        </text>
+        <text x={cx} y={cy + r - 2} fill={runMode ? statusColor : '#e9ecef'} fontSize={11} fontFamily="monospace" textAnchor="middle" fontWeight={600}>
+          {formattedVal} {unit}
+        </text>
+      </g>
+    )
+  }
+
+  if (el.widgetType === 'bar-h') {
+    const tx = el.x + 8
+    const ty = el.y + 22
+    const tw = el.w - 16
+    const th = 14
+    const fillW = t * tw
+
+    return (
+      <g>
+        <rect x={el.x} y={el.y} width={el.w} height={el.h} rx={4} fill="#1A1B1E" fillOpacity={0.7} stroke="#373A40" strokeWidth={1} />
+        {/* caption */}
+        <text x={tx} y={el.y + 14} fill="#909296" fontSize={10} fontFamily="system-ui" fontWeight="bold">
+          {caption}
+        </text>
+        {/* value */}
+        <text x={el.x + el.w - 8} y={el.y + 14} fill={runMode ? statusColor : '#e9ecef'} fontSize={11} fontFamily="monospace" textAnchor="end" fontWeight={600}>
+          {formattedVal} {unit}
+        </text>
+        {/* bar track */}
+        <rect x={tx} y={ty} width={tw} height={th} rx={3} fill="#2C2E33" stroke="#495057" strokeWidth={0.5} />
+        {/* bar fill */}
+        {fillW > 0 && (
+          <rect x={tx} y={ty} width={fillW} height={th} rx={2} fill={statusColor} />
+        )}
+        {/* limit markers */}
+        {runMode && lowWarning !== null && (
+          <line x1={tx + ((lowWarning - minVal) / (maxVal - minVal)) * tw} y1={ty} x2={tx + ((lowWarning - minVal) / (maxVal - minVal)) * tw} y2={ty + th} stroke="#fab005" strokeWidth={1.5} strokeDasharray="2 1" />
+        )}
+        {runMode && highWarning !== null && (
+          <line x1={tx + ((highWarning - minVal) / (maxVal - minVal)) * tw} y1={ty} x2={tx + ((highWarning - minVal) / (maxVal - minVal)) * tw} y2={ty + th} stroke="#fab005" strokeWidth={1.5} strokeDasharray="2 1" />
+        )}
+        {/* min/max ticks */}
+        <text x={tx} y={el.y + el.h - 4} fill="#909296" fontSize={8} fontFamily="monospace">
+          {formatValue(minVal)}
+        </text>
+        <text x={el.x + el.w - 8} y={el.y + el.h - 4} fill="#909296" fontSize={8} fontFamily="monospace" textAnchor="end">
+          {formatValue(maxVal)}
+        </text>
+      </g>
+    )
+  }
+
+  if (el.widgetType === 'bar-v') {
+    const tx = el.x + el.w / 2 - 7
+    const ty = el.y + 24
+    const tw = 14
+    const th = el.h - 44
+    const fillH = t * th
+
+    return (
+      <g>
+        <rect x={el.x} y={el.y} width={el.w} height={el.h} rx={4} fill="#1A1B1E" fillOpacity={0.7} stroke="#373A40" strokeWidth={1} />
+        <text x={el.x + el.w / 2} y={el.y + 14} fill="#909296" fontSize={10} fontFamily="system-ui" textAnchor="middle" fontWeight="bold">
+          {caption}
+        </text>
+        {/* bar track */}
+        <rect x={tx} y={ty} width={tw} height={th} rx={3} fill="#2C2E33" stroke="#495057" strokeWidth={0.5} />
+        {/* bar fill */}
+        {fillH > 0 && (
+          <rect x={tx} y={ty + th - fillH} width={tw} height={fillH} rx={2} fill={statusColor} />
+        )}
+        <text x={el.x + el.w / 2} y={el.y + el.h - 6} fill={runMode ? statusColor : '#e9ecef'} fontSize={10} fontFamily="monospace" textAnchor="middle" fontWeight={600}>
+          {formattedVal} {unit}
+        </text>
+      </g>
+    )
+  }
+
+  if (el.widgetType === 'tank') {
+    const rx = (el.w - 20) / 2
+    const ry = Math.max(3, Math.min(8, rx / 3))
+    const cx = el.x + el.w / 2
+    const topY = el.y + 22
+    const bottomY = el.y + el.h - 22
+    const th = bottomY - topY
+    const fluidH = t * th
+    const fluidY = bottomY - fluidH
+
+    return (
+      <g>
+        <rect x={el.x} y={el.y} width={el.w} height={el.h} rx={4} fill="#1A1B1E" fillOpacity={0.7} stroke="#373A40" strokeWidth={1} />
+        
+        <text x={cx} y={el.y + 14} fill="#909296" fontSize={10} fontFamily="system-ui" textAnchor="middle" fontWeight="bold">
+          {caption}
+        </text>
+
+        {/* Tank background fill inside */}
+        <path
+          d={`M ${cx - rx} ${topY} L ${cx - rx} ${bottomY} A ${rx} ${ry} 0 0 0 ${cx + rx} ${bottomY} L ${cx + rx} ${topY} A ${rx} ${ry} 0 0 0 ${cx - rx} ${topY}`}
+          fill="#2C2E33"
+          stroke="none"
+        />
+
+        {/* Fluid level */}
+        {fluidH > 0 && (
+          <g>
+            <path
+              d={`M ${cx - rx} ${fluidY} L ${cx - rx} ${bottomY} A ${rx} ${ry} 0 0 0 ${cx + rx} ${bottomY} L ${cx + rx} ${fluidY} A ${rx} ${ry} 0 0 1 ${cx - rx} ${fluidY}`}
+              fill={statusColor}
+              fillOpacity={0.65}
+              stroke="none"
+            />
+            <ellipse cx={cx} cy={fluidY} rx={rx} ry={ry} fill={statusColor} fillOpacity={0.8} />
+          </g>
+        )}
+
+        {/* Tank outline container */}
+        <path
+          d={`M ${cx - rx} ${topY} L ${cx - rx} ${bottomY} A ${rx} ${ry} 0 0 0 ${cx + rx} ${bottomY} L ${cx + rx} ${topY} A ${rx} ${ry} 0 0 0 ${cx - rx} ${topY}`}
+          fill="none"
+          stroke="#495057"
+          strokeWidth={1.5}
+        />
+        <ellipse cx={cx} cy={topY} rx={rx} ry={ry} fill="none" stroke="#495057" strokeWidth={1.5} />
+
+        <text x={cx} y={el.y + el.h - 6} fill={runMode ? statusColor : '#e9ecef'} fontSize={10} fontFamily="monospace" textAnchor="middle" fontWeight={600}>
+          {formattedVal} {unit}
+        </text>
+      </g>
+    )
+  }
+
+  // thermometer
+  const cx = el.x + el.w / 2
+  const bulbRadius = Math.min(16, el.w / 3.5)
+  const bulbY = el.y + el.h - bulbRadius - 10
+  const stemW = Math.min(12, bulbRadius * 0.7)
+  const stemY = el.y + 22
+  const stemH = bulbY - stemY - bulbRadius + 4
+  const fluidH = t * stemH
+
+  return (
+    <g>
+      <rect x={el.x} y={el.y} width={el.w} height={el.h} rx={4} fill="#1A1B1E" fillOpacity={0.7} stroke="#373A40" strokeWidth={1} />
+      <text x={cx} y={el.y + 14} fill="#909296" fontSize={10} fontFamily="system-ui" textAnchor="middle" fontWeight="bold">
+        {caption}
+      </text>
+
+      {/* Background shapes */}
+      <rect x={cx - stemW / 2} y={stemY} width={stemW} height={stemH + bulbRadius} rx={stemW / 2} fill="#2C2E33" stroke="#495057" strokeWidth={1} />
+      <circle cx={cx} cy={bulbY} r={bulbRadius} fill="#2C2E33" stroke="#495057" strokeWidth={1} />
+
+      {/* Fluid Bulb */}
+      <circle cx={cx} cy={bulbY} r={bulbRadius - 2} fill={statusColor} />
+
+      {/* Fluid stem */}
+      {fluidH > 0 && (
+        <rect x={cx - stemW / 2 + 1.5} y={bulbY - bulbRadius + 4 - fluidH} width={stemW - 3} height={fluidH + bulbRadius} rx={(stemW - 3) / 2} fill={statusColor} />
+      )}
+
+      {/* ticks on left */}
+      {[0, 1, 2, 3, 4].map((i) => {
+        const yPos = bulbY - bulbRadius + 4 - (i / 4) * stemH
+        return <line key={i} x1={cx - stemW / 2 - 4} y1={yPos} x2={cx - stemW / 2} y2={yPos} stroke="#868e96" strokeWidth={1} />
+      })}
+
+      <text x={cx} y={el.y + el.h - 6} fill={runMode ? statusColor : '#e9ecef'} fontSize={10} fontFamily="monospace" textAnchor="middle" fontWeight={600}>
+        {formattedVal} {unit}
+      </text>
+    </g>
+  )
+}
+
 function ElementView({
   el,
   runMode,
@@ -686,6 +1334,10 @@ function ElementView({
   onControlValue,
   onHover,
   elements = [],
+  onSolve,
+  onCheck,
+  solving = false,
+  onNavigate,
 }: Readonly<{
   el: DiagramElement
   runMode: boolean
@@ -697,6 +1349,10 @@ function ElementView({
   onControlValue: (id: string, patch: Partial<ControlElement>) => void
   onHover: (id: string | null, clientX: number, clientY: number) => void
   elements?: DiagramElement[]
+  onSolve?: () => Promise<void>
+  onCheck?: () => Promise<void>
+  solving?: boolean
+  onNavigate?: (action: { tab?: string; query?: string; plotId?: string }) => void
 }>) {
   const { cx, cy } = elementCenter(el)
   const transform = el.rotation ? `rotate(${el.rotation} ${cx} ${cy})` : undefined
@@ -833,7 +1489,7 @@ function ElementView({
       />
     )
   } else if (el.kind === 'label') {
-    const text = runMode ? interpolateLabel(el.text, values) : el.text
+    const text = runMode ? interpolateLabel(el.text, values, numValues) : el.text
     body = <LabelText el={el} text={text} />
   } else if (el.kind === 'icon') {
     const icon = libraryIcon(el.icon)
@@ -849,6 +1505,8 @@ function ElementView({
     )
   } else if (el.kind === 'chart') {
     body = <ChartView el={el} runs={runs} activeIndex={runMode ? activeIndex : null} />
+  } else if (el.kind === 'widget') {
+    body = <WidgetView el={el} values={values} numValues={numValues} runMode={runMode} />
   } else if (el.kind === 'image') {
     body = (
       <image
@@ -860,6 +1518,118 @@ function ElementView({
         preserveAspectRatio="none"
       />
     )
+  } else if (el.kind === 'hotspot') {
+    if (runMode) {
+      const handleHotspotClick = (e: React.MouseEvent) => {
+        e.stopPropagation()
+        onNavigate?.({
+          tab: el.targetType === 'equation' ? 'equations' : el.targetType === 'plot' ? 'plots' : el.targetTab,
+          query: el.targetType === 'equation' ? el.targetQuery : undefined,
+          plotId: el.targetType === 'plot' ? el.targetPlotId : undefined,
+        })
+      }
+      body = (
+        <rect
+          x={el.x}
+          y={el.y}
+          width={el.w}
+          height={el.h}
+          fill="rgba(0,0,0,0.001)"
+          stroke="none"
+          onClick={handleHotspotClick}
+          style={{ cursor: 'pointer' }}
+        />
+      )
+    } else {
+      body = (
+        <g opacity={el.opacity}>
+          <rect
+            x={el.x}
+            y={el.y}
+            width={el.w}
+            height={el.h}
+            fill="rgba(230,73,128,0.12)"
+            stroke="#e64980"
+            strokeWidth={1.5}
+            strokeDasharray="4 2"
+          />
+          <text
+            x={el.x + 6}
+            y={el.y + 16}
+            fill="#e64980"
+            fontSize={10}
+            fontFamily="system-ui, sans-serif"
+            style={{ userSelect: 'none', fontWeight: 'bold' }}
+          >
+            Hotspot ➔ {el.targetType}
+          </text>
+        </g>
+      )
+    }
+  } else if (el.kind === 'ctl-button') {
+    if (runMode) {
+      const handleButtonClick = (e: React.MouseEvent) => {
+        e.stopPropagation()
+        if (el.action === 'check') {
+          onCheck?.()
+        } else {
+          onSolve?.()
+        }
+      }
+      body = (
+        <foreignObject x={el.x} y={el.y} width={el.w} height={el.h} opacity={el.opacity}>
+          <button
+            type="button"
+            disabled={solving}
+            onClick={handleButtonClick}
+            style={{
+              width: '100%',
+              height: '100%',
+              background: el.action === 'solve' ? '#228be6' : '#495057',
+              color: '#fff',
+              border: 'none',
+              borderRadius: 4,
+              cursor: solving ? 'not-allowed' : 'pointer',
+              fontWeight: 'bold',
+              fontSize: 13,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.15)',
+            }}
+          >
+            {solving && el.action === 'solve' ? 'Solving...' : el.label || (el.action === 'solve' ? 'Calculate' : 'Check')}
+          </button>
+        </foreignObject>
+      )
+    } else {
+      body = (
+        <g opacity={el.opacity}>
+          <rect
+            x={el.x}
+            y={el.y}
+            width={el.w}
+            height={el.h}
+            rx={4}
+            fill="#1c7ed6"
+            fillOpacity={0.6}
+            stroke="#228be6"
+            strokeWidth={1}
+          />
+          <text
+            x={el.x + el.w / 2}
+            y={el.y + el.h / 2 + 4}
+            fill="#fff"
+            fontSize={12}
+            fontFamily="system-ui, sans-serif"
+            textAnchor="middle"
+            style={{ userSelect: 'none', fontWeight: 'bold' }}
+          >
+            {el.label || (el.action === 'solve' ? 'Calculate' : 'Check')}
+          </text>
+        </g>
+      )
+    }
   } else if (isControl(el)) {
     if (runMode) {
       body = (
@@ -1164,6 +1934,9 @@ const CONTROL_LABELS: Record<ControlElement['kind'], string> = {
   'ctl-dropdown': 'Dropdown',
   'ctl-checkbox': 'Checkbox',
   'ctl-slider': 'Slider',
+  'ctl-stepper': 'Stepper',
+  'ctl-radio': 'Radio Group',
+  'ctl-button': 'Calculate Button',
 }
 
 function ControlFields({
@@ -1172,20 +1945,36 @@ function ControlFields({
 }: Readonly<{ el: ControlElement; set: (patch: Partial<DiagramElement>) => void }>) {
   return (
     <>
-      <TextInput
-        label="Bound variable"
-        description="A trailing $ binds a string variable"
-        size="xs"
-        value={el.varName}
-        placeholder="e.g. T1 or fluid$"
-        onChange={(e) => set({ varName: e.currentTarget.value })}
-      />
+      {el.kind !== 'ctl-button' && (
+        <TextInput
+          label="Bound variable"
+          description="A trailing $ binds a string variable"
+          size="xs"
+          value={el.varName}
+          placeholder="e.g. T1 or fluid$"
+          onChange={(e) => set({ varName: e.currentTarget.value })}
+        />
+      )}
       <TextInput
         label="Caption"
         size="xs"
         value={el.label}
         onChange={(e) => set({ label: e.currentTarget.value })}
       />
+      {el.kind !== 'ctl-button' && el.kind !== 'ctl-output' && (
+        <Select
+          label="Binding target"
+          size="xs"
+          data={[
+            { label: 'Fix value via equation (e.g. x = 5)', value: 'equation' },
+            { label: 'Write to solver guess value', value: 'guess' },
+            { label: 'Write to solver lower bound', value: 'lower' },
+            { label: 'Write to solver upper bound', value: 'upper' },
+          ]}
+          value={el.target || 'equation'}
+          onChange={(v) => set({ target: v as any })}
+        />
+      )}
       {el.kind === 'ctl-input' && (
         <TextInput
           label="Default value"
@@ -1194,22 +1983,30 @@ function ControlFields({
           onChange={(e) => set({ value: e.currentTarget.value })}
         />
       )}
-      {el.kind === 'ctl-dropdown' && (
-        <Textarea
-          label="Options (one per line)"
-          size="xs"
-          autosize
-          minRows={2}
-          value={el.options.join('\n')}
-          onChange={(e) =>
-            set({
-              options: e.currentTarget.value
-                .split('\n')
-                .map((o) => o.trim())
-                .filter((o) => o !== ''),
-            })
-          }
-        />
+      {(el.kind === 'ctl-dropdown' || el.kind === 'ctl-radio') && (
+        <>
+          <Textarea
+            label="Options (one per line)"
+            size="xs"
+            autosize
+            minRows={2}
+            value={el.options.join('\n')}
+            onChange={(e) =>
+              set({
+                options: e.currentTarget.value
+                  .split('\n')
+                  .map((o) => o.trim())
+                  .filter((o) => o !== ''),
+              })
+            }
+          />
+          <TextInput
+            label="Default value"
+            size="xs"
+            value={el.value}
+            onChange={(e) => set({ value: e.currentTarget.value })}
+          />
+        </>
       )}
       {el.kind === 'ctl-checkbox' && (
         <Checkbox
@@ -1219,7 +2016,7 @@ function ControlFields({
           onChange={(e) => set({ checked: e.currentTarget.checked })}
         />
       )}
-      {el.kind === 'ctl-slider' && (
+      {(el.kind === 'ctl-slider' || el.kind === 'ctl-stepper') && (
         <>
           <Group grow>
             <NumberInput
@@ -1251,6 +2048,18 @@ function ControlFields({
             />
           </Group>
         </>
+      )}
+      {el.kind === 'ctl-button' && (
+        <Select
+          label="Button Action"
+          size="xs"
+          data={[
+            { label: 'Check syntax & equations', value: 'check' },
+            { label: 'Calculate / Solve equations', value: 'solve' },
+          ]}
+          value={el.action}
+          onChange={(v) => set({ action: v as any })}
+        />
       )}
       <NumberInput
         label="Opacity"
@@ -1317,6 +2126,118 @@ function BindingFields({
           )}
         </>
       )}
+    </>
+  )
+}
+
+function ConditionalRulesFields({
+  el,
+  set,
+}: Readonly<{
+  el: DiagramElement
+  set: (patch: Partial<DiagramElement>) => void
+}>) {
+  const rules = el.rules ?? []
+  
+  const addRule = () => {
+    const newRule: ConditionalStyleRule = {
+      id: crypto.randomUUID(),
+      property: 'stroke',
+      formula: '',
+      value: '#ff0000',
+    }
+    set({ rules: [...rules, newRule] })
+  }
+  
+  const updateRule = (id: string, patch: Partial<ConditionalStyleRule>) => {
+    set({
+      rules: rules.map((r) => (r.id === id ? { ...r, ...patch } : r)),
+    })
+  }
+  
+  const removeRule = (id: string) => {
+    set({ rules: rules.filter((r) => r.id !== id) })
+  }
+  
+  return (
+    <>
+      <Divider label="Conditional style rules" labelPosition="left" />
+      <Text size="10px" c="dimmed" mb={4}>
+        Formulas evaluating to true (non-zero) trigger these style overrides in Run mode.
+      </Text>
+      <Stack gap="xs">
+        {rules.map((rule) => (
+          <Paper key={rule.id} withBorder p="xs" style={{ background: '#1A1B1E', borderColor: '#373A40' }}>
+            <Stack gap="xs">
+              <Group justify="space-between" align="center" wrap="nowrap">
+                <Select
+                  size="xs"
+                  style={{ flex: 1 }}
+                  data={[
+                    { label: 'Stroke color', value: 'stroke' },
+                    { label: 'Fill color', value: 'fill' },
+                    { label: 'Opacity', value: 'opacity' },
+                    { label: 'Hidden', value: 'hidden' },
+                  ]}
+                  value={rule.property}
+                  onChange={(v) => {
+                    const prop = v as ConditionalStyleRule['property']
+                    let defaultValue = '#ff0000'
+                    if (prop === 'opacity') defaultValue = '0.5'
+                    else if (prop === 'hidden') defaultValue = 'true'
+                    updateRule(rule.id, { property: prop, value: defaultValue })
+                  }}
+                />
+                <ActionIcon size="sm" variant="subtle" color="red" onClick={() => removeRule(rule.id)}>
+                  <IconTrash size={14} />
+                </ActionIcon>
+              </Group>
+              
+              <TextInput
+                label="Condition (formula)"
+                size="xs"
+                placeholder="e.g. T > 100"
+                value={rule.formula}
+                onChange={(e) => updateRule(rule.id, { formula: e.currentTarget.value })}
+                styles={{ input: { fontFamily: 'monospace' } }}
+              />
+              
+              {rule.property === 'stroke' || rule.property === 'fill' ? (
+                <ColorInput
+                  label="Value"
+                  size="xs"
+                  value={rule.value}
+                  onChange={(v) => updateRule(rule.id, { value: v })}
+                />
+              ) : rule.property === 'opacity' ? (
+                <NumberInput
+                  label="Value"
+                  size="xs"
+                  min={0}
+                  max={1}
+                  step={0.1}
+                  value={parseFloat(rule.value) || 0}
+                  onChange={(v) => updateRule(rule.id, { value: String(v) })}
+                />
+              ) : (
+                <Select
+                  label="Value"
+                  size="xs"
+                  data={[
+                    { label: 'Hidden', value: 'true' },
+                    { label: 'Visible', value: 'false' },
+                  ]}
+                  value={rule.value}
+                  onChange={(v) => updateRule(rule.id, { value: v || 'true' })}
+                />
+              )}
+            </Stack>
+          </Paper>
+        ))}
+        <Button variant="default" size="xs" onClick={addRule} leftSection={<IconFolderPlus size={14} />}>
+          Add Rule
+        </Button>
+      </Stack>
     </>
   )
 }
@@ -1440,6 +2361,261 @@ function LayersPanel({
   )
 }
 
+function HotspotFields({
+  el,
+  set,
+  plots = [],
+  diagrams = [],
+}: Readonly<{
+  el: HotspotElement
+  set: (patch: Partial<DiagramElement>) => void
+  plots?: PlotSpec[]
+  diagrams?: DiagramSpec[]
+}>) {
+  const plotOptions = plots.map((p) => ({
+    label: `${p.kind === 'xy' ? 'X-Y' : p.kind === 'psychro' ? 'Psychrometric' : 'Property'} · ${p.name || 'Untitled'}`,
+    value: p.id,
+  }))
+
+  const diagramOptions = diagrams.map((d) => ({
+    label: d.name,
+    value: d.id,
+  }))
+
+  return (
+    <>
+      <Select
+        label="Navigation Target Type"
+        size="xs"
+        data={[
+          { label: 'Switch to Workspace Tab', value: 'tab' },
+          { label: 'Jump to Equation in Editor', value: 'equation' },
+          { label: 'Open Plot / Diagram', value: 'plot' },
+          { label: 'Switch to Schematic Diagram', value: 'diagram' },
+        ]}
+        value={el.targetType}
+        onChange={(v) =>
+          set({
+            targetType: v as HotspotElement['targetType'],
+            targetTab: undefined,
+            targetQuery: undefined,
+            targetPlotId: undefined,
+            targetDiagramId: undefined,
+          })
+        }
+      />
+
+      {el.targetType === 'tab' && (
+        <Select
+          label="Target Tab"
+          size="xs"
+          data={[
+            { label: 'Editor', value: 'equations' },
+            { label: 'Tables', value: 'table' },
+            { label: 'Plots (X-Y)', value: 'plots' },
+            { label: 'Thermodynamics', value: 'thermo' },
+            { label: 'Graph Digitizer', value: 'digitizer' },
+          ]}
+          value={el.targetTab || null}
+          onChange={(v) => set({ targetTab: v ?? undefined })}
+          placeholder="Choose tab…"
+        />
+      )}
+
+      {el.targetType === 'equation' && (
+        <TextInput
+          label="Search Text / Equation"
+          size="xs"
+          placeholder="e.g. T2 = or sin(theta)"
+          value={el.targetQuery ?? ''}
+          onChange={(e) => set({ targetQuery: e.currentTarget.value || undefined })}
+        />
+      )}
+
+      {el.targetType === 'plot' && (
+        <Select
+          label="Target Plot / Diagram"
+          size="xs"
+          data={plotOptions}
+          value={el.targetPlotId || null}
+          onChange={(v) => set({ targetPlotId: v ?? undefined })}
+          placeholder={plotOptions.length > 0 ? "Select plot…" : "No plots created yet"}
+          disabled={plotOptions.length === 0}
+        />
+      )}
+
+      {el.targetType === 'diagram' && (
+        <Select
+          label="Target Schematic Diagram"
+          size="xs"
+          data={diagramOptions}
+          value={el.targetDiagramId || null}
+          onChange={(v) => set({ targetDiagramId: v ?? undefined })}
+          placeholder={diagramOptions.length > 0 ? "Select diagram…" : "No other diagrams"}
+          disabled={diagramOptions.length === 0}
+        />
+      )}
+    </>
+  )
+}
+
+function WidgetFields({
+  el,
+  set,
+  varNames,
+}: Readonly<{ el: WidgetElement; set: (patch: Partial<DiagramElement>) => void; varNames: string[] }>) {
+  return (
+    <>
+      <Select
+        label="Widget type"
+        size="xs"
+        data={[
+          { label: 'Analog Gauge/Dial', value: 'dial' },
+          { label: 'Horizontal Bar', value: 'bar-h' },
+          { label: 'Vertical Bar', value: 'bar-v' },
+          { label: 'Tank Fill-Level', value: 'tank' },
+          { label: 'Thermometer', value: 'thermometer' },
+        ]}
+        value={el.widgetType}
+        onChange={(v) => set({ widgetType: v as WidgetElement['widgetType'] })}
+      />
+      <Select
+        label="Bound variable"
+        size="xs"
+        data={varNames}
+        value={el.varName || null}
+        onChange={(v) => set({ varName: v ?? '' })}
+        searchable
+        placeholder="e.g. T2"
+      />
+      <TextInput
+        label="Display Unit"
+        size="xs"
+        value={el.units ?? ''}
+        placeholder="e.g. °C, bar (default uses solved units)"
+        onChange={(e) => set({ units: e.currentTarget.value })}
+      />
+      <Group grow>
+        <TextInput
+          label="Min Value/Formula"
+          size="xs"
+          value={el.minFormula}
+          onChange={(e) => set({ minFormula: e.currentTarget.value })}
+        />
+        <TextInput
+          label="Max Value/Formula"
+          size="xs"
+          value={el.maxFormula}
+          onChange={(e) => set({ maxFormula: e.currentTarget.value })}
+        />
+      </Group>
+      <Group grow>
+        <TextInput
+          label="Low Warning Limit"
+          size="xs"
+          placeholder="e.g. 20"
+          value={el.lowWarningFormula ?? ''}
+          onChange={(e) => set({ lowWarningFormula: e.currentTarget.value || undefined })}
+        />
+        <TextInput
+          label="High Warning Limit"
+          size="xs"
+          placeholder="e.g. 80"
+          value={el.highWarningFormula ?? ''}
+          onChange={(e) => set({ highWarningFormula: e.currentTarget.value || undefined })}
+        />
+      </Group>
+      <Group grow>
+        <TextInput
+          label="Low Danger Limit"
+          size="xs"
+          placeholder="e.g. 10"
+          value={el.lowDangerFormula ?? ''}
+          onChange={(e) => set({ lowDangerFormula: e.currentTarget.value || undefined })}
+        />
+        <TextInput
+          label="High Danger Limit"
+          size="xs"
+          placeholder="e.g. 90"
+          value={el.highDangerFormula ?? ''}
+          onChange={(e) => set({ highDangerFormula: e.currentTarget.value || undefined })}
+        />
+      </Group>
+    </>
+  )
+}
+
+function ValueDrivenFillFields({
+  el,
+  set,
+  varNames,
+}: Readonly<{ el: DiagramElement; set: (patch: Partial<DiagramElement>) => void; varNames: string[] }>) {
+  const enabled = !!el.valueFill
+  const vf = el.valueFill ?? { varName: '', minFormula: '0', maxFormula: '100', colorStart: '#3b82f6', colorEnd: '#ef4444' }
+  const toggle = (chk: boolean) => {
+    if (chk) {
+      set({ valueFill: vf })
+    } else {
+      set({ valueFill: undefined })
+    }
+  }
+  const updateVf = (patch: Partial<ValueDrivenFill>) => {
+    set({ valueFill: { ...vf, ...patch } })
+  }
+
+  return (
+    <>
+      <Checkbox
+        label="Enable Value-Driven Fill"
+        size="xs"
+        checked={enabled}
+        onChange={(e) => toggle(e.currentTarget.checked)}
+      />
+      {enabled && (
+        <Stack gap="xs" style={{ borderLeft: '2px solid #373A40', paddingLeft: 8, marginLeft: 4 }}>
+          <Select
+            label="Bound variable"
+            size="xs"
+            data={varNames}
+            value={vf.varName || null}
+            onChange={(v) => updateVf({ varName: v ?? '' })}
+            searchable
+            placeholder="e.g. T"
+          />
+          <Group grow>
+            <TextInput
+              label="Min Formula"
+              size="xs"
+              value={vf.minFormula}
+              onChange={(e) => updateVf({ minFormula: e.currentTarget.value })}
+            />
+            <TextInput
+              label="Max Formula"
+              size="xs"
+              value={vf.maxFormula}
+              onChange={(e) => updateVf({ maxFormula: e.currentTarget.value })}
+            />
+          </Group>
+          <Group grow>
+            <ColorInput
+              label="Color Start"
+              size="xs"
+              value={vf.colorStart}
+              onChange={(colorStart) => updateVf({ colorStart })}
+            />
+            <ColorInput
+              label="Color End"
+              size="xs"
+              value={vf.colorEnd}
+              onChange={(colorEnd) => updateVf({ colorEnd })}
+            />
+          </Group>
+        </Stack>
+      )}
+    </>
+  )
+}
+
 function PropertiesPanel({
   el,
   varNames,
@@ -1448,6 +2624,8 @@ function PropertiesPanel({
   onDelete,
   onZOrder,
   onSaveComponent,
+  plots = [],
+  diagrams = [],
 }: Readonly<{
   el: DiagramElement
   varNames: string[]
@@ -1456,6 +2634,8 @@ function PropertiesPanel({
   onDelete: () => void
   onZOrder: (direction: 'front' | 'back') => void
   onSaveComponent: () => void
+  plots?: PlotSpec[]
+  diagrams?: DiagramSpec[]
 }>) {
   const set = (patch: Partial<DiagramElement>) =>
     onChange({ ...el, ...patch } as DiagramElement)
@@ -1469,9 +2649,11 @@ function PropertiesPanel({
             ? CONTROL_LABELS[el.kind]
             : el.kind === 'chart'
               ? 'Chart'
-              : el.kind === 'connector'
-                ? 'Connector'
-                : el.kind}
+              : el.kind === 'widget'
+                ? `Widget: ${el.widgetType}`
+                : el.kind === 'connector'
+                  ? 'Connector'
+                  : el.kind}
       </Text>
 
       {isControl(el) && <ControlFields el={el} set={set} />}
@@ -1499,36 +2681,45 @@ function PropertiesPanel({
 
       {!isControl(el) && (
         <>
-      {el.kind === 'label' && (
-        <>
-          <Textarea
-            label="Text"
-            description="Use {varname} to show a solved value in Run mode"
-            size="xs"
-            autosize
-            minRows={2}
-            value={el.text}
-            onChange={(e) => set({ text: e.currentTarget.value })}
-          />
-          <Group grow>
-            <NumberInput
-              label="Font size"
-              size="xs"
-              min={6}
-              max={96}
-              value={el.fontSize}
-              onChange={(v) => set({ fontSize: typeof v === 'number' ? v : el.fontSize })}
-            />
-            <Checkbox
-              label="Bold"
-              size="xs"
-              mt={22}
-              checked={el.bold}
-              onChange={(e) => set({ bold: e.currentTarget.checked })}
-            />
-          </Group>
-        </>
-      )}
+          {el.kind === 'widget' && (
+            <WidgetFields el={el} set={set} varNames={varNames} />
+          )}
+          {el.kind === 'hotspot' && (
+            <HotspotFields el={el} set={set} plots={plots} diagrams={diagrams} />
+          )}
+          {el.kind === 'label' && (
+            <>
+              <Textarea
+                label="Text"
+                description="Use {varname} to show a solved value in Run mode"
+                size="xs"
+                autosize
+                minRows={2}
+                value={el.text}
+                onChange={(e) => set({ text: e.currentTarget.value })}
+              />
+              <Text size="xs" c="dimmed" lh="xs" style={{ marginTop: -4 }}>
+                Format guide: <code>{`{T2:.2f}`}</code> (2 decimals), <code>{`{P1:bar}`}</code> (unit conversion), <code>{`{h1:.1f:kJ/kg}`}</code> (1 decimal, custom label/conversion).
+              </Text>
+              <Group grow>
+                <NumberInput
+                  label="Font size"
+                  size="xs"
+                  min={6}
+                  max={96}
+                  value={el.fontSize}
+                  onChange={(v) => set({ fontSize: typeof v === 'number' ? v : el.fontSize })}
+                />
+                <Checkbox
+                  label="Bold"
+                  size="xs"
+                  mt={22}
+                  checked={el.bold}
+                  onChange={(e) => set({ bold: e.currentTarget.checked })}
+                />
+              </Group>
+            </>
+          )}
 
       {el.kind === 'line' && (
         <Checkbox
@@ -1635,7 +2826,14 @@ function PropertiesPanel({
           onChange={(v) => set({ opacity: typeof v === 'number' ? v : el.opacity })}
         />
       </Group>
+      {(el.kind === 'rect' || el.kind === 'ellipse' || el.kind === 'icon' || el.kind === 'line') && (
+        <>
+          <Divider label="Value-Driven Fill" labelPosition="center" size="xs" />
+          <ValueDrivenFillFields el={el} set={set} varNames={varNames} />
+        </>
+      )}
       <BindingFields el={el} set={set} />
+      <ConditionalRulesFields el={el} set={set} />
         </>
       )}
 
@@ -1686,9 +2884,11 @@ type Tool =
   | 'chart'
   | 'connector'
   | 'image'
+  | 'hotspot'
   | ControlElement['kind']
   | `icon:${string}`
   | `custom:${string}`
+  | `widget:${WidgetElement['widgetType']}`
 
 interface ElementAnchorInfo {
   elId: string
@@ -1709,6 +2909,18 @@ interface Props {
   runs?: DiagramRun[]
   /** Reports the `var = value` lines contributed by input-type controls. */
   onBindingsChange?: (lines: string[]) => void
+  // Epic 10.8 props:
+  plots?: PlotSpec[]
+  solving?: boolean
+  onSolve?: () => Promise<void>
+  onCheck?: () => Promise<void>
+  onNavigate?: (action: { tab?: string; query?: string; plotId?: string; diagramId?: string }) => void
+  onVarDraftsChange?: React.Dispatch<React.SetStateAction<Record<string, any>>>
+  // Epic 10.9 props for multiple diagrams:
+  diagrams?: DiagramSpec[]
+  activeDiagramId?: string | null
+  onDiagramsChange?: (diagrams: DiagramSpec[]) => void
+  onActiveDiagramIdChange?: (id: string | null) => void
 }
 
 const PLAYBACK_SPEEDS: { label: string; value: string; ms: number }[] = [
@@ -1717,8 +2929,56 @@ const PLAYBACK_SPEEDS: { label: string; value: string; ms: number }[] = [
   { label: '2×', value: 'fast', ms: 280 },
 ]
 
-export default function DiagramTab({ variables, runs = [], onBindingsChange }: Readonly<Props>) {
-  const [state, setStateRaw] = useState<DiagramState>(loadState)
+export default function DiagramTab(props: Readonly<Props>) {
+  const {
+    variables,
+    runs = [],
+    onBindingsChange,
+    plots = [],
+    solving = false,
+    onSolve,
+    onCheck,
+    onNavigate,
+    onVarDraftsChange,
+    diagrams: propsDiagrams,
+    activeDiagramId: propsActiveId,
+    onDiagramsChange: propsOnDiagramsChange,
+    onActiveDiagramIdChange: propsOnActiveIdChange,
+  } = props
+
+  const [localDiagrams, setLocalDiagrams] = useState<DiagramSpec[]>(() => {
+    if (propsDiagrams && propsDiagrams.length > 0) return propsDiagrams
+    return loadDiagrams()
+  })
+  const [localActiveDiagramId, setLocalActiveDiagramId] = useState<string>(() => {
+    if (propsActiveId) return propsActiveId
+    return localDiagrams[0]?.id ?? 'default'
+  })
+
+  const diagrams = propsDiagrams ?? localDiagrams
+  const activeDiagramId = propsActiveId ?? localActiveDiagramId
+  const onDiagramsChange = propsOnDiagramsChange ?? ((next) => {
+    setLocalDiagrams(next)
+    saveDiagrams(next)
+  })
+  const onActiveDiagramIdChange = propsOnActiveIdChange ?? setLocalActiveDiagramId
+
+  const activeDiagram = diagrams.find((d) => d.id === activeDiagramId) ?? diagrams[0] ?? { id: 'default', name: 'Main Diagram', state: DEFAULT_DIAGRAM_STATE }
+  const state = activeDiagram.state
+
+  const setStateRaw = useCallback(
+    (updater: DiagramState | ((s: DiagramState) => DiagramState)) => {
+      const nextList = diagrams.map((d) => {
+        if (d.id === activeDiagramId) {
+          const nextState = typeof updater === 'function' ? updater(d.state) : updater
+          return { ...d, state: nextState }
+        }
+        return d
+      })
+      onDiagramsChange(nextList)
+    },
+    [diagrams, activeDiagramId, onDiagramsChange],
+  )
   const [tool, setTool] = useState<Tool>('select')
   const [mode, setMode] = useState<'develop' | 'run'>('develop')
   const [selectedIds, setSelectedIds] = useState<string[]>([])
@@ -1783,6 +3043,72 @@ export default function DiagramTab({ variables, runs = [], onBindingsChange }: R
   marqueeRef.current = marquee
   const gestureBaseRef = useRef<DiagramState | null>(null)
   const clipboardRef = useRef<DiagramElement[]>([])
+
+  useEffect(() => {
+    pastRef.current = []
+    futureRef.current = []
+    setSelectedIds([])
+  }, [activeDiagramId])
+
+  const [templateModalOpen, setTemplateModalOpen] = useState(false)
+
+  const addDiagram = (name: string, elements: DiagramElement[] = []) => {
+    const nextSpec: DiagramSpec = {
+      id: crypto.randomUUID(),
+      name,
+      state: {
+        elements,
+        gridSize: 10,
+        snap: true,
+        showGrid: true,
+      },
+    }
+    const nextList = [...diagrams, nextSpec]
+    onDiagramsChange(nextList)
+    onActiveDiagramIdChange?.(nextSpec.id)
+  }
+
+  const duplicateDiagram = (id: string) => {
+    const target = diagrams.find((d) => d.id === id)
+    if (!target) return
+    const clonedElements = instantiateTemplate(target.state.elements)
+    const nextSpec: DiagramSpec = {
+      id: crypto.randomUUID(),
+      name: `${target.name} (Copy)`,
+      state: {
+        ...target.state,
+        elements: clonedElements,
+      },
+    }
+    const nextList = [...diagrams, nextSpec]
+    onDiagramsChange(nextList)
+    onActiveDiagramIdChange?.(nextSpec.id)
+  }
+
+  const moveDiagram = (id: string, dir: number) => {
+    const index = diagrams.findIndex((d) => d.id === id)
+    if (index === -1) return
+    const nextIndex = index + dir
+    if (nextIndex < 0 || nextIndex >= diagrams.length) return
+    const nextList = [...diagrams]
+    const [temp] = nextList.splice(index, 1)
+    nextList.splice(nextIndex, 0, temp)
+    onDiagramsChange(nextList)
+  }
+
+  const removeDiagram = (id: string) => {
+    if (diagrams.length <= 1) return
+    const nextList = diagrams.filter((d) => d.id !== id)
+    onDiagramsChange(nextList)
+    if (activeDiagramId === id) {
+      onActiveDiagramIdChange?.(nextList[0]?.id ?? 'default')
+    }
+  }
+
+  const renameDiagram = (id: string, name: string) => {
+    const nextList = diagrams.map((d) => (d.id === id ? { ...d, name } : d))
+    onDiagramsChange(nextList)
+  }
 
   /** Commit a state change to history (with optional coalescing of rapid edits). */
   const commit = useCallback(
@@ -1971,14 +3297,6 @@ export default function DiagramTab({ variables, runs = [], onBindingsChange }: R
     setPlayIndex(null)
   }
 
-  // Persist on every change.
-  useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
-    } catch {
-      // Quota exceeded: diagram simply won't persist.
-    }
-  }, [state])
 
   // Report the input-control bindings to the host so they participate in
   // Check/Solve (Story 6.2). Joined string compared to avoid redundant calls.
@@ -1993,14 +3311,56 @@ export default function DiagramTab({ variables, runs = [], onBindingsChange }: R
   // Run-mode control interaction is not design editing → transient (no history).
   const onControlValue = useCallback(
     (id: string, patch: Partial<ControlElement>) => {
-      setStateRaw((s) => ({
-        ...s,
-        elements: s.elements.map((el) =>
+      setStateRaw((s) => {
+        const nextElements = s.elements.map((el) =>
           el.id === id ? ({ ...el, ...patch } as DiagramElement) : el,
-        ),
-      }))
+        )
+        const control = nextElements.find((el) => el.id === id)
+        if (
+          control &&
+          isControl(control) &&
+          control.kind !== 'ctl-button' &&
+          control.varName.trim() &&
+          control.target &&
+          control.target !== 'equation'
+        ) {
+          const varName = control.varName.trim()
+          let valStr = ''
+          if (control.kind === 'ctl-input') valStr = control.value
+          else if (control.kind === 'ctl-slider') valStr = String(control.value)
+          else if (control.kind === 'ctl-checkbox') valStr = control.checked ? '1' : '0'
+          else if (control.kind === 'ctl-dropdown') valStr = control.value
+          else if (control.kind === 'ctl-stepper') valStr = String(control.value)
+          else if (control.kind === 'ctl-radio') valStr = control.value
+
+          if (valStr.trim() !== '') {
+            onVarDraftsChange?.((drafts) => {
+              const existing = drafts[varName] ?? {
+                guess: '',
+                lower: '',
+                upper: '',
+                units: '',
+                isUnitsUserSet: false,
+              }
+              const nextDrafts = { ...drafts }
+              if (control.target === 'guess') {
+                nextDrafts[varName] = { ...existing, guess: valStr }
+              } else if (control.target === 'lower') {
+                nextDrafts[varName] = { ...existing, lower: valStr }
+              } else if (control.target === 'upper') {
+                nextDrafts[varName] = { ...existing, upper: valStr }
+              }
+              return nextDrafts
+            })
+          }
+        }
+        return {
+          ...s,
+          elements: nextElements,
+        }
+      })
     },
-    [],
+    [onVarDraftsChange],
   )
 
   const snap = useCallback(
@@ -2333,6 +3693,23 @@ export default function DiagramTab({ variables, runs = [], onBindingsChange }: R
         const iconId = tool.slice(5)
         return { ...base, kind: 'icon', icon: iconId, x, y, w: 100, h: 100 }
       }
+      if (tool.startsWith('widget:')) {
+        const widgetType = tool.slice(7) as WidgetElement['widgetType']
+        const w = widgetType === 'dial' ? 120 : widgetType === 'bar-h' ? 145 : widgetType === 'bar-v' ? 60 : widgetType === 'tank' ? 90 : 70
+        const h = widgetType === 'dial' ? 120 : widgetType === 'bar-h' ? 64 : widgetType === 'bar-v' ? 145 : widgetType === 'tank' ? 120 : 145
+        return {
+          ...base,
+          kind: 'widget',
+          widgetType,
+          x,
+          y,
+          w,
+          h,
+          varName: '',
+          minFormula: '0',
+          maxFormula: '100',
+        }
+      }
       const ctlBase = { ...base, x, y, varName: '' }
       if (tool === 'ctl-input') {
         return { ...ctlBase, kind: 'ctl-input', w: 150, h: 48, label: 'Input', value: '' }
@@ -2365,6 +3742,53 @@ export default function DiagramTab({ variables, runs = [], onBindingsChange }: R
           max: 100,
           step: 1,
           value: 50,
+        }
+      }
+      if (tool === 'ctl-stepper') {
+        return {
+          ...ctlBase,
+          kind: 'ctl-stepper',
+          w: 150,
+          h: 48,
+          label: 'Stepper',
+          min: 0,
+          max: 100,
+          step: 1,
+          value: 0,
+        }
+      }
+      if (tool === 'ctl-radio') {
+        return {
+          ...ctlBase,
+          kind: 'ctl-radio',
+          w: 160,
+          h: 80,
+          label: 'Options',
+          options: ['Option A', 'Option B'],
+          value: 'Option A',
+        }
+      }
+      if (tool === 'ctl-button') {
+        return {
+          ...base,
+          kind: 'ctl-button',
+          x,
+          y,
+          w: 120,
+          h: 40,
+          label: 'Calculate',
+          action: 'solve',
+        }
+      }
+      if (tool === 'hotspot') {
+        return {
+          ...base,
+          kind: 'hotspot',
+          x,
+          y,
+          w: 100,
+          h: 60,
+          targetType: 'tab',
         }
       }
       return null
@@ -2436,8 +3860,9 @@ export default function DiagramTab({ variables, runs = [], onBindingsChange }: R
         })
 
         const clonedElements = comp.elements.map((el): DiagramElement => {
-          const newId = idMap.get(el.id)!
-          const base = { ...el, id: newId }
+          const copy = structuredClone(el)
+          copy.id = idMap.get(el.id)!
+          const base = copy
           if (base.groupId) {
             const newGroupId = idMap.get(base.groupId) || crypto.randomUUID()
             idMap.set(base.groupId, newGroupId)
@@ -2482,7 +3907,7 @@ export default function DiagramTab({ variables, runs = [], onBindingsChange }: R
     if (!el) return
     setStateRaw((s) => ({ ...s, elements: [...s.elements, el] }))
     setSelectedIds([el.id])
-    if (el.kind === 'label' || el.kind === 'icon' || el.kind === 'chart' || isControl(el)) {
+    if (el.kind === 'label' || el.kind === 'icon' || el.kind === 'chart' || el.kind === 'widget' || isControl(el) || el.kind === 'hotspot') {
       setDrag({ type: 'move', startX: world.x, startY: world.y, originals: [el] })
     } else {
       setDrag({ type: 'create', id: el.id, startX: snap(world.x), startY: snap(world.y) })
@@ -2989,6 +4414,7 @@ export default function DiagramTab({ variables, runs = [], onBindingsChange }: R
     { tool: 'label', label: 'Rich Label', icon: <IconTypography size={18} /> },
     { tool: 'chart', label: 'Embedded Chart (table runs)', icon: <IconChartLine size={18} /> },
     { tool: 'connector', label: 'Connector (Link)', icon: <IconBinaryTree size={18} /> },
+    { tool: 'hotspot', label: 'Navigation Hotspot', icon: <IconTarget size={18} /> },
   ]
 
   const CONTROL_TOOLS: { tool: ControlElement['kind']; label: string; icon: React.ReactNode }[] = [
@@ -2997,13 +4423,107 @@ export default function DiagramTab({ variables, runs = [], onBindingsChange }: R
     { tool: 'ctl-dropdown', label: 'Dropdown selector', icon: <IconSelector size={16} /> },
     { tool: 'ctl-checkbox', label: 'Checkbox (0 / 1)', icon: <IconCheckbox size={16} /> },
     { tool: 'ctl-slider', label: 'Slider', icon: <IconAdjustmentsHorizontal size={16} /> },
+    { tool: 'ctl-stepper', label: 'Stepper input', icon: <IconPlusMinus size={16} /> },
+    { tool: 'ctl-radio', label: 'Radio option group', icon: <IconCircleDot size={16} /> },
+    { tool: 'ctl-button', label: 'Calculate / Check button', icon: <IconClick size={16} /> },
+  ]
+
+  const WIDGET_TOOLS: { tool: Tool; label: string; icon: React.ReactNode }[] = [
+    { tool: 'widget:dial', label: 'Analog Gauge/Dial', icon: <IconGauge size={16} /> },
+    { tool: 'widget:bar-h', label: 'Horizontal Bar', icon: <IconArrowAutofitWidth size={16} /> },
+    { tool: 'widget:bar-v', label: 'Vertical Bar', icon: <IconArrowAutofitHeight size={16} /> },
+    { tool: 'widget:tank', label: 'Tank Fill-Level', icon: <IconRipple size={16} /> },
+    { tool: 'widget:thermometer', label: 'Thermometer', icon: <IconThermometer size={16} /> },
   ]
 
   const gridStep = state.gridSize * view.k
 
   return (
     <Group align="stretch" gap="sm" h="100%" wrap="nowrap">
-      <Stack gap="sm" flex={1} miw={0}>
+      <Stack gap="xs" flex={1} miw={0}>
+        {/* Diagram Tabs Row */}
+        <Group gap="xs" wrap="wrap" style={{ borderBottom: '1px solid var(--mantine-color-dark-4)', paddingBottom: 8 }}>
+          {diagrams.map((d, index) => (
+            <Menu key={d.id} position="bottom-start" shadow="md" trigger="hover" openDelay={200}>
+              <Menu.Target>
+                <Paper
+                  withBorder
+                  px={8}
+                  py={4}
+                  style={{
+                    cursor: 'pointer',
+                    borderColor: activeDiagramId === d.id ? 'var(--mantine-color-blue-7)' : undefined,
+                    backgroundColor: activeDiagramId === d.id ? 'var(--mantine-color-dark-6)' : 'var(--mantine-color-dark-8)',
+                  }}
+                  onClick={() => onActiveDiagramIdChange?.(d.id)}
+                >
+                  <Group gap={6} wrap="nowrap">
+                    <IconSchema size={14} color="var(--mantine-color-blue-4)" />
+                    {activeDiagramId === d.id ? (
+                      <TextInput
+                        size="xs"
+                        variant="unstyled"
+                        w={100}
+                        styles={{ input: { height: 18, minHeight: 18, padding: 0 } }}
+                        value={d.name}
+                        onClick={(e) => e.stopPropagation()}
+                        onChange={(e) => renameDiagram(d.id, e.currentTarget.value)}
+                      />
+                    ) : (
+                      <Text size="xs" style={{ userSelect: 'none' }}>{d.name}</Text>
+                    )}
+                    <IconChevronDown size={11} color="gray" />
+                  </Group>
+                </Paper>
+              </Menu.Target>
+              <Menu.Dropdown>
+                <Menu.Item leftSection={<IconCopy size={14} />} onClick={() => duplicateDiagram(d.id)}>
+                  Duplicate
+                </Menu.Item>
+                <Menu.Item
+                  leftSection={<IconArrowLeft size={14} />}
+                  disabled={index === 0}
+                  onClick={() => moveDiagram(d.id, -1)}
+                >
+                  Move Left
+                </Menu.Item>
+                <Menu.Item
+                  leftSection={<IconArrowRight size={14} />}
+                  disabled={index === diagrams.length - 1}
+                  onClick={() => moveDiagram(d.id, 1)}
+                >
+                  Move Right
+                </Menu.Item>
+                <Menu.Divider />
+                <Menu.Item
+                  color="red"
+                  leftSection={<IconTrash size={14} />}
+                  disabled={diagrams.length <= 1}
+                  onClick={() => removeDiagram(d.id)}
+                >
+                  Delete
+                </Menu.Item>
+              </Menu.Dropdown>
+            </Menu>
+          ))}
+          <Menu position="bottom-start" shadow="md">
+            <Menu.Target>
+              <Button size="compact-xs" variant="light" leftSection={<IconPlus size={13} />}>
+                Add Diagram
+              </Button>
+            </Menu.Target>
+            <Menu.Dropdown>
+              <Menu.Item leftSection={<IconPlus size={14} />} onClick={() => addDiagram(`Diagram ${diagrams.length + 1}`)}>
+                New Blank Diagram
+              </Menu.Item>
+              <Menu.Item leftSection={<IconLayoutGrid size={14} />} onClick={() => setTemplateModalOpen(true)}>
+                From Template...
+              </Menu.Item>
+            </Menu.Dropdown>
+          </Menu>
+        </Group>
+
+        {/* Canvas Toolbar Row */}
         <Group gap="xs" wrap="wrap">
           <SegmentedControl
             size="xs"
@@ -3174,6 +4694,30 @@ export default function DiagramTab({ variables, runs = [], onBindingsChange }: R
                         onClick={() => setTool(ct.tool)}
                       >
                         {ct.label}
+                      </Menu.Item>
+                    ))}
+                  </Menu.Dropdown>
+                </Menu>
+                <Menu shadow="md" position="bottom-start">
+                  <Menu.Target>
+                    <Tooltip label="Indicator & Gauge Widgets">
+                      <ActionIcon
+                        variant={tool.startsWith('widget:') ? 'filled' : 'default'}
+                        size="lg"
+                      >
+                        <IconGauge size={18} />
+                      </ActionIcon>
+                    </Tooltip>
+                  </Menu.Target>
+                  <Menu.Dropdown>
+                    <Menu.Label>Indicator & Gauge Widgets</Menu.Label>
+                    {WIDGET_TOOLS.map((wt) => (
+                      <Menu.Item
+                        key={wt.tool}
+                        leftSection={wt.icon}
+                        onClick={() => setTool(wt.tool)}
+                      >
+                        {wt.label}
                       </Menu.Item>
                     ))}
                   </Menu.Dropdown>
@@ -3386,6 +4930,10 @@ export default function DiagramTab({ variables, runs = [], onBindingsChange }: R
                       onControlValue={onControlValue}
                       onHover={onHover}
                       elements={state.elements}
+                      onSolve={onSolve}
+                      onCheck={onCheck}
+                      solving={solving}
+                      onNavigate={onNavigate}
                     />
                   </g>
                 )
@@ -3566,6 +5114,8 @@ export default function DiagramTab({ variables, runs = [], onBindingsChange }: R
                 onDelete={deleteSelected}
                 onZOrder={zOrder}
                 onSaveComponent={() => setSaveCompModalOpen(true)}
+                plots={plots}
+                diagrams={diagrams}
               />
             ) : selectedElements.length > 1 ? (
               <Stack gap="xs">
@@ -3782,6 +5332,62 @@ export default function DiagramTab({ variables, runs = [], onBindingsChange }: R
         onChange={handleImageUpload}
         style={{ display: 'none' }}
       />
+
+      <Modal
+        opened={templateModalOpen}
+        onClose={() => setTemplateModalOpen(false)}
+        title={<Text fw={700}>Select a Diagram Template</Text>}
+        size="lg"
+      >
+        <Stack gap="md">
+          <Text size="sm" c="dimmed">
+            Choose a starter template. The diagram will be created as a new tab with pre-wired schematic elements, connectors, and labels.
+          </Text>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))',
+              gap: 12,
+            }}
+          >
+            {TEMPLATES.map((tmpl) => (
+              <div
+                key={tmpl.name}
+                style={{
+                  border: '1px solid var(--mantine-color-dark-4)',
+                  borderRadius: 8,
+                  padding: 12,
+                  backgroundColor: 'var(--mantine-color-dark-8)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'space-between',
+                  gap: 12,
+                }}
+              >
+                <div>
+                  <Text fw={600} size="sm" c="blue.4">
+                    {tmpl.name}
+                  </Text>
+                  <Text size="xs" c="dimmed" style={{ marginTop: 4, lineHeight: 1.5 }}>
+                    {tmpl.description}
+                  </Text>
+                </div>
+                <Button
+                  size="xs"
+                  variant="light"
+                  fullWidth
+                  onClick={() => {
+                    addDiagram(tmpl.name, instantiateTemplate(tmpl.elements))
+                    setTemplateModalOpen(false)
+                  }}
+                >
+                  Load Template
+                </Button>
+              </div>
+            ))}
+          </div>
+        </Stack>
+      </Modal>
     </Group>
   )
 }
