@@ -153,6 +153,10 @@ export interface ChartElement extends ElementBase {
   h: number
   xVar: string
   yVars: string[]
+  /** Story 10.12: when set, embed an existing Plot (xy/property/psychro) by id
+   *  and render it with the full Plotly engine instead of the built-in X-Y
+   *  chart built from xVar/yVars. */
+  plotId?: string
 }
 
 /** Imported SVG/image background or glyph reference (Story 10.5). */

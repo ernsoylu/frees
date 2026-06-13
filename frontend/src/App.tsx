@@ -1164,6 +1164,9 @@ export default function App() {
                 runs={diagramRuns}
                 onBindingsChange={handleDiagramBindings}
                 plots={plots}
+                tableRows={paramRows}
+                tableResults={tableResults}
+                cyclePath={result?.cyclePath}
                 solving={solving}
                 onSolve={onSolve}
                 onCheck={onCheck}

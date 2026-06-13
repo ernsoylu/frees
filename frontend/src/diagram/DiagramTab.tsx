@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   ActionIcon,
   Button,
+  Center,
   Checkbox,
   ColorInput,
   Divider,
@@ -88,10 +89,13 @@ import {
   IconTypography,
   IconZoomScan,
 } from '@tabler/icons-react'
-import { VariableResult } from '../api'
+import { TableRowResult, VariableResult } from '../api'
 import { formatValue } from '../format'
 import { PROPERTY_UNITS } from '../plots/units'
-import { PlotSpec } from '../plots/types'
+import { PlotSpec, newPlotSpec } from '../plots/types'
+import { detectStates, StateTable } from '../plots/stateTable'
+import { ParamRow } from '../ParametricTableTab'
+import EmbeddedPlot, { EmbedInputs } from './EmbeddedPlot'
 import { evalFormula, formulaVars } from './formula'
 import { LIBRARY_ICONS, libraryIcon } from './library'
 import {
@@ -986,6 +990,70 @@ function ChartView({
   )
 }
 
+/**
+ * Embedded Plotly chart widget (Story 10.12). Renders either an existing Plot
+ * (when el.plotId is set) or a built-in X-Y chart synthesized from the chart's
+ * xVar/yVars, both through the full Plotly engine inside a foreignObject. A
+ * vertical marker is synced to the active playback run on X-Y charts.
+ */
+function EmbeddedChart({
+  el,
+  plots,
+  inputs,
+  activeIndex,
+  runMode,
+}: Readonly<{
+  el: ChartElement
+  plots: PlotSpec[]
+  inputs: EmbedInputs
+  activeIndex: number | null
+  runMode: boolean
+}>) {
+  const yKey = el.yVars.join(',')
+  const spec = useMemo<PlotSpec | null>(() => {
+    if (el.plotId) return plots.find((p) => p.id === el.plotId) ?? null
+    const base = newPlotSpec('xy', 'Chart')
+    return {
+      ...base,
+      xy: { ...base.xy, xVar: el.xVar || null, yVars: el.yVars },
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [el.plotId, el.xVar, yKey, plots])
+
+  const activeX =
+    activeIndex != null && spec?.kind === 'xy' && spec.xy.xVar
+      ? inputs.tableResults[activeIndex]?.values?.[spec.xy.xVar]
+      : null
+
+  return (
+    <foreignObject x={el.x} y={el.y} width={el.w} height={el.h}>
+      <div
+        style={{
+          width: '100%',
+          height: '100%',
+          background: '#1a1b1e',
+          border: '1px solid #2c2e33',
+          borderRadius: 4,
+          overflow: 'hidden',
+          // In develop mode let clicks fall through to the SVG so the widget can
+          // be selected/dragged; in run mode allow Plotly hover/zoom.
+          pointerEvents: runMode ? 'auto' : 'none',
+        }}
+      >
+        {el.plotId && !spec ? (
+          <Center h="100%" p="xs">
+            <Text size="xs" c="dimmed" ta="center">
+              Embedded plot was deleted. Pick another in the panel.
+            </Text>
+          </Center>
+        ) : spec ? (
+          <EmbeddedPlot spec={spec} inputs={inputs} activeX={activeX} />
+        ) : null}
+      </div>
+    </foreignObject>
+  )
+}
+
 function getConnectorPath(el: ConnectorElement, elements: DiagramElement[]): string {
   const fromEl = elements.find((e) => e.id === el.fromId)
   const toEl = elements.find((e) => e.id === el.toId)
@@ -1393,6 +1461,8 @@ function ElementView({
   onCheck,
   solving = false,
   onNavigate,
+  plots = [],
+  chartInputs,
 }: Readonly<{
   el: DiagramElement
   runMode: boolean
@@ -1408,6 +1478,8 @@ function ElementView({
   onCheck?: () => Promise<void>
   solving?: boolean
   onNavigate?: (action: { tab?: string; query?: string; plotId?: string }) => void
+  plots?: PlotSpec[]
+  chartInputs?: EmbedInputs
 }>) {
   const { cx, cy } = elementCenter(el)
   const transform = el.rotation ? `rotate(${el.rotation} ${cx} ${cy})` : undefined
@@ -1559,7 +1631,17 @@ function ElementView({
       </g>
     )
   } else if (el.kind === 'chart') {
-    body = <ChartView el={el} runs={runs} activeIndex={runMode ? activeIndex : null} />
+    body = chartInputs ? (
+      <EmbeddedChart
+        el={el}
+        plots={plots}
+        inputs={chartInputs}
+        activeIndex={runMode ? activeIndex : null}
+        runMode={runMode}
+      />
+    ) : (
+      <ChartView el={el} runs={runs} activeIndex={runMode ? activeIndex : null} />
+    )
   } else if (el.kind === 'widget') {
     body = <WidgetView el={el} values={values} numValues={numValues} runMode={runMode} />
   } else if (el.kind === 'image') {
@@ -2764,6 +2846,8 @@ function PropertiesPanel({
   const set = (patch: Partial<DiagramElement>) =>
     onChange({ ...el, ...patch } as DiagramElement)
 
+  const plotOptions = plots.map((p) => ({ value: p.id, label: p.name }))
+
   return (
     <Stack gap="xs">
       <Text fw={600} size="sm" c="blue.4">
@@ -2784,22 +2868,55 @@ function PropertiesPanel({
 
       {el.kind === 'chart' && (
         <>
-          <Select
-            label="X-axis variable"
+          <SegmentedControl
             size="xs"
-            data={varNames}
-            value={el.xVar || null}
-            onChange={(v) => set({ xVar: v ?? '' })}
-            searchable
+            fullWidth
+            value={el.plotId ? 'embed' : 'table'}
+            onChange={(v) =>
+              set({ plotId: v === 'embed' ? (plotOptions[0]?.value ?? '') : undefined })
+            }
+            data={[
+              { label: 'Table X-Y', value: 'table' },
+              { label: 'Embed plot', value: 'embed' },
+            ]}
           />
-          <MultiSelect
-            label="Y-axis variables"
-            size="xs"
-            data={varNames}
-            value={el.yVars}
-            onChange={(v) => set({ yVars: v })}
-            searchable
-          />
+          {el.plotId !== undefined ? (
+            plotOptions.length > 0 ? (
+              <Select
+                label="Embedded plot"
+                description="Live Plotly chart from the Plots / Thermo windows"
+                size="xs"
+                data={plotOptions}
+                value={el.plotId || null}
+                onChange={(v) => set({ plotId: v ?? '' })}
+                placeholder="Choose a plot…"
+              />
+            ) : (
+              <Text size="10px" c="dimmed">
+                No plots exist yet. Create one in the Plots or Thermodynamics
+                window, then embed it here.
+              </Text>
+            )
+          ) : (
+            <>
+              <Select
+                label="X-axis variable"
+                size="xs"
+                data={varNames}
+                value={el.xVar || null}
+                onChange={(v) => set({ xVar: v ?? '' })}
+                searchable
+              />
+              <MultiSelect
+                label="Y-axis variables"
+                size="xs"
+                data={varNames}
+                value={el.yVars}
+                onChange={(v) => set({ yVars: v })}
+                searchable
+              />
+            </>
+          )}
         </>
       )}
 
@@ -3035,6 +3152,10 @@ interface Props {
   onBindingsChange?: (lines: string[]) => void
   // Epic 10.8 props:
   plots?: PlotSpec[]
+  // Story 10.12: parametric-table data for embedded Plotly chart widgets.
+  tableRows?: ParamRow[]
+  tableResults?: TableRowResult[]
+  cyclePath?: Record<string, number>[]
   solving?: boolean
   onSolve?: () => Promise<void>
   onCheck?: () => Promise<void>
@@ -3059,6 +3180,9 @@ export default function DiagramTab(props: Readonly<Props>) {
     runs = [],
     onBindingsChange,
     plots = [],
+    tableRows = [],
+    tableResults = [],
+    cyclePath,
     solving = false,
     onSolve,
     onCheck,
@@ -3506,6 +3630,15 @@ export default function DiagramTab(props: Readonly<Props>) {
         .filter((el) => el.kind === 'line')
         .map((el, i) => ({ value: el.id, label: el.name?.trim() || `Line ${i + 1}` })),
     [state.elements],
+  )
+
+  // Story 10.12: inputs for embedded Plotly chart widgets. Memoized with stable
+  // deps so playback frames don't rebuild Plotly figures (only the run data,
+  // not the animation clock, affects them).
+  const chartStates: StateTable = useMemo(() => detectStates(variables), [variables])
+  const chartInputs: EmbedInputs = useMemo(
+    () => ({ states: chartStates, cyclePath, tableRows, tableResults }),
+    [chartStates, cyclePath, tableRows, tableResults],
   )
 
   const toggleRecord = async () => {
@@ -4650,7 +4783,7 @@ export default function DiagramTab(props: Readonly<Props>) {
     { tool: 'rect', label: 'Rectangle', icon: <IconRectangle size={18} /> },
     { tool: 'ellipse', label: 'Circle / Ellipse', icon: <IconCircle size={18} /> },
     { tool: 'label', label: 'Rich Label', icon: <IconTypography size={18} /> },
-    { tool: 'chart', label: 'Embedded Chart (table runs)', icon: <IconChartLine size={18} /> },
+    { tool: 'chart', label: 'Chart widget (Plotly: table X-Y or embedded plot)', icon: <IconChartLine size={18} /> },
     { tool: 'connector', label: 'Connector (Link)', icon: <IconBinaryTree size={18} /> },
     { tool: 'hotspot', label: 'Navigation Hotspot', icon: <IconTarget size={18} /> },
   ]
@@ -5273,6 +5406,8 @@ export default function DiagramTab(props: Readonly<Props>) {
                       onCheck={onCheck}
                       solving={solving}
                       onNavigate={onNavigate}
+                      plots={plots}
+                      chartInputs={chartInputs}
                     />
                   </g>
                 )
