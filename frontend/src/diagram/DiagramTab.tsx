@@ -25,6 +25,7 @@ import {
   IconArrowBackUp,
   IconArrowForwardUp,
   IconArrowNarrowRight,
+  IconBinaryTree,
   IconBroadcast,
   IconHandStop,
   IconChartLine,
@@ -87,6 +88,11 @@ import {
   LabelElement,
   LineElement,
   elementBounds,
+  ConnectorElement,
+  getAnchorCoordinate,
+  getAnchorNormal,
+  getElementAnchors,
+  FlowAnimation,
 } from './types'
 
 const STORAGE_KEY = 'frees-diagram-v1'
@@ -129,6 +135,15 @@ type DragState =
   | { type: 'endpoint'; id: string; which: 1 | 2 }
   | { type: 'rotate'; id: string; original: DiagramElement; cx: number; cy: number }
   | { type: 'marquee'; startX: number; startY: number; additive: boolean }
+  | {
+      type: 'create-connector'
+      fromId: string
+      fromAnchor: string
+      startX: number
+      startY: number
+      tempX: number
+      tempY: number
+    }
 
 const HISTORY_LIMIT = 100
 
@@ -143,6 +158,9 @@ function elementsChanged(a: DiagramState, b: DiagramState): boolean {
 
 /** Translates an element by (dx, dy), handling line endpoints vs x/y origin. */
 function translateElement(el: DiagramElement, dx: number, dy: number): DiagramElement {
+  if (el.kind === 'connector') {
+    return el
+  }
   if (el.kind === 'line') {
     return { ...el, x1: el.x1 + dx, y1: el.y1 + dy, x2: el.x2 + dx, y2: el.y2 + dy }
   }
@@ -150,13 +168,13 @@ function translateElement(el: DiagramElement, dx: number, dy: number): DiagramEl
 }
 
 /** Combined bounding box of several elements. */
-function combinedBounds(els: DiagramElement[]): Box {
+function combinedBounds(els: DiagramElement[], elements: DiagramElement[] = []): Box {
   let minX = Infinity
   let minY = Infinity
   let maxX = -Infinity
   let maxY = -Infinity
   for (const el of els) {
-    const b = elementBounds(el)
+    const b = elementBounds(el, elements)
     minX = Math.min(minX, b.x)
     minY = Math.min(minY, b.y)
     maxX = Math.max(maxX, b.x + b.w)
@@ -173,6 +191,9 @@ function scaleElement(
   sx: number,
   sy: number,
 ): DiagramElement {
+  if (el.kind === 'connector') {
+    return el
+  }
   const tx = (x: number) => fixedX + (x - fixedX) * sx
   const ty = (y: number) => fixedY + (y - fixedY) * sy
   if (el.kind === 'line') {
@@ -232,6 +253,9 @@ function computeSnap(moving: Box, statics: Box[], threshold: number): SnapResult
 }
 
 function elementCenter(el: DiagramElement): { cx: number; cy: number } {
+  if (el.kind === 'connector') {
+    return { cx: 0, cy: 0 }
+  }
   const b = elementBounds(el)
   return { cx: b.x + b.w / 2, cy: b.y + b.h / 2 }
 }
@@ -266,6 +290,9 @@ function resolveElement(
   const dx = b.dx ? num(b.dx, 0) : 0
   const dy = b.dy ? num(b.dy, 0) : 0
 
+  if (el.kind === 'connector') {
+    return { ...el, opacity }
+  }
   if (el.kind === 'line') {
     return { ...el, opacity, rotation, x1: el.x1 + dx, y1: el.y1 + dy, x2: el.x2 + dx, y2: el.y2 + dy }
   }
@@ -283,7 +310,7 @@ function elementVars(el: DiagramElement): string[] {
   if (el.bind) {
     for (const f of Object.values(el.bind)) formulaVars(f).forEach((v) => out.add(v))
   }
-  if (el.kind === 'line' && el.flow) formulaVars(el.flow.speed).forEach((v) => out.add(v))
+  if ((el.kind === 'line' || el.kind === 'connector') && el.flow) formulaVars(el.flow.speed).forEach((v) => out.add(v))
   if (el.kind === 'label') {
     for (const m of el.text.matchAll(/\{([A-Za-z][\w$]*)\}/g)) out.add(m[1].toLowerCase())
   }
@@ -304,10 +331,10 @@ const FLOW_KEYFRAMES = '@keyframes frees-flow { to { stroke-dashoffset: -16; } }
  * its sign the direction. Returns nothing when not flowing.
  */
 function flowDashProps(
-  el: LineElement,
+  el: { flow?: FlowAnimation },
   runMode: boolean,
   numValues: Map<string, number>,
-): React.SVGProps<SVGLineElement> {
+): React.SVGProps<any> {
   if (!runMode || !el.flow) return {}
   const speed = evalFormula(el.flow.speed, numValues) ?? 0
   if (Math.abs(speed) < 1e-9) return { strokeDasharray: FLOW_DASH }
@@ -611,6 +638,41 @@ function ChartView({
   )
 }
 
+function getConnectorPath(el: ConnectorElement, elements: DiagramElement[]): string {
+  const fromEl = elements.find((e) => e.id === el.fromId)
+  const toEl = elements.find((e) => e.id === el.toId)
+  if (!fromEl || !toEl) return ''
+  
+  const p1 = getAnchorCoordinate(fromEl, el.fromAnchor)
+  const p2 = getAnchorCoordinate(toEl, el.toAnchor)
+  
+  if (el.style === 'straight') {
+    return `M ${p1.x} ${p1.y} L ${p2.x} ${p2.y}`
+  }
+  
+  const n1 = getAnchorNormal(fromEl, el.fromAnchor)
+  const n2 = getAnchorNormal(toEl, el.toAnchor)
+  
+  if (el.style === 'curved') {
+    const dist = Math.max(40, Math.hypot(p2.x - p1.x, p2.y - p1.y) * 0.35)
+    const cx1 = p1.x + n1.x * dist
+    const cy1 = p1.y + n1.y * dist
+    const cx2 = p2.x + n2.x * dist
+    const cy2 = p2.y + n2.y * dist
+    return `M ${p1.x} ${p1.y} C ${cx1} ${cy1}, ${cx2} ${cy2}, ${p2.x} ${p2.y}`
+  }
+  
+  // Orthogonal (elbow)
+  const isHorizontal = Math.abs(n1.x) > Math.abs(n1.y)
+  if (isHorizontal) {
+    const mx = (p1.x + p2.x) / 2
+    return `M ${p1.x} ${p1.y} L ${mx} ${p1.y} L ${mx} ${p2.y} L ${p2.x} ${p2.y}`
+  } else {
+    const my = (p1.y + p2.y) / 2
+    return `M ${p1.x} ${p1.y} L ${p1.x} ${my} L ${p2.x} ${my} L ${p2.x} ${p2.y}`
+  }
+}
+
 function ElementView({
   el,
   runMode,
@@ -621,6 +683,7 @@ function ElementView({
   onMouseDown,
   onControlValue,
   onHover,
+  elements = [],
 }: Readonly<{
   el: DiagramElement
   runMode: boolean
@@ -631,6 +694,7 @@ function ElementView({
   onMouseDown: (e: React.MouseEvent, el: DiagramElement) => void
   onControlValue: (id: string, patch: Partial<ControlElement>) => void
   onHover: (id: string | null, clientX: number, clientY: number) => void
+  elements?: DiagramElement[]
 }>) {
   const { cx, cy } = elementCenter(el)
   const transform = el.rotation ? `rotate(${el.rotation} ${cx} ${cy})` : undefined
@@ -639,7 +703,66 @@ function ElementView({
   }
 
   let body: React.ReactNode = null
-  if (el.kind === 'line') {
+  if (el.kind === 'connector') {
+    const pathD = getConnectorPath(el, elements)
+    if (pathD) {
+      const markerStart = (el.arrow === 'from' || el.arrow === 'both') ? `url(#diagram-arrow-start-${el.id})` : undefined
+      const markerEnd = (el.arrow === 'to' || el.arrow === 'both') ? `url(#diagram-arrow-end-${el.id})` : undefined
+      body = (
+        <>
+          {(el.arrow === 'from' || el.arrow === 'both') && (
+            <defs>
+              <marker
+                id={`diagram-arrow-start-${el.id}`}
+                viewBox="0 0 10 10"
+                refX="9"
+                refY="5"
+                markerWidth="7"
+                markerHeight="7"
+                orient="auto-start-reverse"
+              >
+                <path d="M 0 0 L 10 5 L 0 10 z" fill={el.stroke} />
+              </marker>
+            </defs>
+          )}
+          {(el.arrow === 'to' || el.arrow === 'both') && (
+            <defs>
+              <marker
+                id={`diagram-arrow-end-${el.id}`}
+                viewBox="0 0 10 10"
+                refX="9"
+                refY="5"
+                markerWidth="7"
+                markerHeight="7"
+                orient="auto-start-reverse"
+              >
+                <path d="M 0 0 L 10 5 L 0 10 z" fill={el.stroke} />
+              </marker>
+            </defs>
+          )}
+          <path
+            d={pathD}
+            stroke={el.stroke}
+            strokeWidth={el.strokeWidth}
+            fill="none"
+            opacity={el.opacity}
+            markerStart={markerStart}
+            markerEnd={markerEnd}
+            {...flowDashProps(el, runMode, numValues)}
+          />
+          {/* wide invisible hit area */}
+          <path
+            d={pathD}
+            stroke="transparent"
+            strokeWidth={Math.max(12, el.strokeWidth + 8)}
+            fill="none"
+            onMouseDown={handleDown}
+            style={{ cursor: runMode ? 'default' : 'pointer' }}
+          />
+        </>
+      )
+    }
+  } else if (el.kind === 'line') {
     const marker = el.arrow ? `url(#diagram-arrow-${el.id})` : undefined
     body = (
       <>
@@ -800,17 +923,38 @@ function SelectionHandles({
   onHandleDown,
   onEndpointDown,
   onRotateDown,
+  elements = [],
 }: Readonly<{
   el: DiagramElement
   view: ViewTransform
   onHandleDown: (e: React.MouseEvent, handle: 'nw' | 'ne' | 'sw' | 'se') => void
   onEndpointDown: (e: React.MouseEvent, which: 1 | 2) => void
   onRotateDown: (e: React.MouseEvent) => void
+  elements?: DiagramElement[]
 }>) {
   const size = 8 / view.k
   const color = '#4dabf7'
   const { cx, cy } = elementCenter(el)
   const transform = el.rotation ? `rotate(${el.rotation} ${cx} ${cy})` : undefined
+
+  if (el.kind === 'connector') {
+    const b = elementBounds(el, elements)
+    return (
+      <g>
+        <rect
+          x={b.x}
+          y={b.y}
+          width={b.w}
+          height={b.h}
+          fill="none"
+          stroke={color}
+          strokeWidth={1 / view.k}
+          strokeDasharray={`${4 / view.k} ${3 / view.k}`}
+          pointerEvents="none"
+        />
+      </g>
+    )
+  }
 
   if (el.kind === 'line') {
     return (
@@ -900,12 +1044,14 @@ function GroupHandles({
   els,
   view,
   onHandleDown,
+  elements = [],
 }: Readonly<{
   els: DiagramElement[]
   view: ViewTransform
   onHandleDown: (e: React.MouseEvent, handle: Handle) => void
+  elements?: DiagramElement[]
 }>) {
-  const b = combinedBounds(els)
+  const b = combinedBounds(els, elements)
   const size = 8 / view.k
   const color = '#4dabf7'
   const handles: { id: Handle; x: number; y: number; cursor: string }[] = [
@@ -1308,7 +1454,9 @@ function PropertiesPanel({
             ? CONTROL_LABELS[el.kind]
             : el.kind === 'chart'
               ? 'Chart'
-              : el.kind}
+              : el.kind === 'connector'
+                ? 'Connector'
+                : el.kind}
       </Text>
 
       {isControl(el) && <ControlFields el={el} set={set} />}
@@ -1376,6 +1524,34 @@ function PropertiesPanel({
         />
       )}
 
+      {el.kind === 'connector' && (
+        <>
+          <Select
+            label="Style"
+            size="xs"
+            data={[
+              { label: 'Straight', value: 'straight' },
+              { label: 'Orthogonal (Elbow)', value: 'orthogonal' },
+              { label: 'Curved', value: 'curved' },
+            ]}
+            value={el.style}
+            onChange={(v) => set({ style: v as ConnectorElement['style'] })}
+          />
+          <Select
+            label="Arrowheads"
+            size="xs"
+            data={[
+              { label: 'None', value: 'none' },
+              { label: 'Start (From)', value: 'from' },
+              { label: 'End (To)', value: 'to' },
+              { label: 'Both', value: 'both' },
+            ]}
+            value={el.arrow}
+            onChange={(v) => set({ arrow: v as ConnectorElement['arrow'] })}
+          />
+        </>
+      )}
+
       {el.kind === 'rect' && (
         <NumberInput
           label="Corner radius"
@@ -1412,14 +1588,16 @@ function PropertiesPanel({
         />
       )}
       <Group grow>
-        <NumberInput
-          label="Rotation °"
-          size="xs"
-          min={-360}
-          max={360}
-          value={el.rotation}
-          onChange={(v) => set({ rotation: typeof v === 'number' ? v : el.rotation })}
-        />
+        {el.kind !== 'connector' && (
+          <NumberInput
+            label="Rotation °"
+            size="xs"
+            min={-360}
+            max={360}
+            value={el.rotation}
+            onChange={(v) => set({ rotation: typeof v === 'number' ? v : el.rotation })}
+          />
+        )}
         <NumberInput
           label="Opacity"
           size="xs"
@@ -1474,8 +1652,16 @@ type Tool =
   | 'ellipse'
   | 'label'
   | 'chart'
+  | 'connector'
   | ControlElement['kind']
   | `icon:${string}`
+
+interface ElementAnchorInfo {
+  elId: string
+  name: string
+  x: number
+  y: number
+}
 
 interface Props {
   variables: VariableResult[]
@@ -1503,6 +1689,30 @@ export default function DiagramTab({ variables, runs = [], onBindingsChange }: R
   const [guides, setGuides] = useState<{ v: number[]; h: number[] } | null>(null)
   const [editingLabelId, setEditingLabelId] = useState<string | null>(null)
   const [showLayers, setShowLayers] = useState(true)
+
+  const [hoveredAnchor, setHoveredAnchor] = useState<ElementAnchorInfo | null>(null)
+
+  const allAnchors = useMemo(() => {
+    const list: ElementAnchorInfo[] = []
+    for (const el of state.elements) {
+      if (el.kind === 'connector' || el.kind === 'line') continue
+      const anchors = getElementAnchors(el)
+      for (const name of Object.keys(anchors)) {
+        const coord = getAnchorCoordinate(el, name)
+        list.push({
+          elId: el.id,
+          name,
+          x: coord.x,
+          y: coord.y,
+        })
+      }
+    }
+    return list
+  }, [state.elements])
+
+  useEffect(() => {
+    setHoveredAnchor(null)
+  }, [tool])
 
   // ── Undo/redo history (Story 10.1) ───────────────────────────────────
   // Refs (not state) hold the stacks; every history change rides on a state
@@ -1774,18 +1984,40 @@ export default function DiagramTab({ variables, runs = [], onBindingsChange }: R
 
   const deleteSelected = useCallback(() => {
     if (selectedIds.length === 0) return
-    commit((s) => ({ ...s, elements: s.elements.filter((el) => !selectedSet.has(el.id)) }))
+    commit((s) => {
+      const remaining = s.elements.filter((el) => !selectedSet.has(el.id))
+      const remainingIds = new Set(remaining.map((r) => r.id))
+      const cleaned = remaining.filter((el) => {
+        if (el.kind === 'connector') {
+          return remainingIds.has(el.fromId) && remainingIds.has(el.toId)
+        }
+        return true
+      })
+      return { ...s, elements: cleaned }
+    })
     setSelectedIds([])
   }, [selectedIds, selectedSet, commit])
 
   const duplicateElements = useCallback(
     (els: DiagramElement[], offset: number) => {
       if (els.length === 0) return
+      const idMap = new Map<string, string>()
       const copies = els.map((el) => {
         const copy = structuredClone(el)
         copy.id = crypto.randomUUID()
+        idMap.set(el.id, copy.id)
         return translateElement(copy, offset, offset)
       })
+      for (const copy of copies) {
+        if (copy.kind === 'connector') {
+          const newFrom = idMap.get(copy.fromId)
+          const newTo = idMap.get(copy.toId)
+          if (newFrom && newTo) {
+            copy.fromId = newFrom
+            copy.toId = newTo
+          }
+        }
+      }
       commit((s) => ({ ...s, elements: [...s.elements, ...copies] }))
       setSelectedIds(copies.map((c) => c.id))
     },
@@ -2029,6 +2261,25 @@ export default function DiagramTab({ variables, runs = [], onBindingsChange }: R
       setDrag({ type: 'marquee', startX: world.x, startY: world.y, additive })
       return
     }
+    if (tool === 'connector') {
+      if (hoveredAnchor) {
+        const targetEl = stateRef.current.elements.find((el) => el.id === hoveredAnchor.elId)
+        if (targetEl) {
+          const coord = getAnchorCoordinate(targetEl, hoveredAnchor.name)
+          gestureBaseRef.current = stateRef.current
+          setDrag({
+            type: 'create-connector',
+            fromId: hoveredAnchor.elId,
+            fromAnchor: hoveredAnchor.name,
+            startX: coord.x,
+            startY: coord.y,
+            tempX: coord.x,
+            tempY: coord.y,
+          })
+        }
+      }
+      return
+    }
     // A drawing tool: create a new element (one gesture in history).
     gestureBaseRef.current = stateRef.current
     const world = toWorld(e.clientX, e.clientY)
@@ -2110,7 +2361,7 @@ export default function DiagramTab({ variables, runs = [], onBindingsChange }: R
         // Smart guides first: align to other elements' edges/centers.
         const statics = stateRef.current.elements
           .filter((e) => !ids.has(e.id))
-          .map(elementBounds)
+          .map((e) => elementBounds(e, stateRef.current.elements))
         const moving = { x: baseBox.x + dx, y: baseBox.y + dy, w: baseBox.w, h: baseBox.h }
         const sr = computeSnap(moving, statics, SNAP_THRESHOLD_PX / view.k)
         dx = sr.vGuides.length ? dx + sr.dx : Math.round(dx / state.gridSize) * state.gridSize
@@ -2153,7 +2404,7 @@ export default function DiagramTab({ variables, runs = [], onBindingsChange }: R
   const applyResize = useCallback(
     (d: Extract<DragState, { type: 'resize' }>, world: { x: number; y: number }, lockAspect: boolean) => {
       const orig = d.original
-      if (orig.kind === 'line' || orig.kind === 'label') return
+      if (orig.kind === 'line' || orig.kind === 'label' || orig.kind === 'connector') return
       const b = { x: orig.x, y: orig.y, w: orig.w, h: orig.h }
       const fixedX = d.handle === 'nw' || d.handle === 'sw' ? b.x + b.w : b.x
       const fixedY = d.handle === 'nw' || d.handle === 'ne' ? b.y + b.h : b.y
@@ -2243,6 +2494,33 @@ export default function DiagramTab({ variables, runs = [], onBindingsChange }: R
     [updateElementLive],
   )
 
+  const applyCreateConnector = useCallback(
+    (d: Extract<DragState, { type: 'create-connector' }>, world: { x: number; y: number }) => {
+      let closest: ElementAnchorInfo | null = null
+      let minDistance = 12 // screen pixels
+      
+      for (const anchor of allAnchors) {
+        if (anchor.elId === d.fromId) continue
+        const dist = Math.hypot(anchor.x - world.x, anchor.y - world.y) * view.k
+        if (dist < minDistance) {
+          minDistance = dist
+          closest = anchor
+        }
+      }
+      
+      const tempX = closest ? closest.x : world.x
+      const tempY = closest ? closest.y : world.y
+      
+      setDrag(prev => {
+        if (!prev || prev.type !== 'create-connector') return prev
+        return { ...prev, tempX, tempY }
+      })
+      
+      setHoveredAnchor(closest)
+    },
+    [allAnchors, view.k],
+  )
+
   useEffect(() => {
     if (!drag) return
     const onMove = (e: MouseEvent) => {
@@ -2263,6 +2541,7 @@ export default function DiagramTab({ variables, runs = [], onBindingsChange }: R
       else if (drag.type === 'endpoint') applyEndpoint(drag, world)
       else if (drag.type === 'rotate') applyRotate(drag, world, shift)
       else if (drag.type === 'marquee') applyMarquee(drag, world)
+      else if (drag.type === 'create-connector') applyCreateConnector(drag, world)
     }
     const onUp = () => {
       if (drag.type === 'create') {
@@ -2292,6 +2571,32 @@ export default function DiagramTab({ variables, runs = [], onBindingsChange }: R
         drag.type === 'rotate'
       ) {
         endGesture()
+      } else if (drag.type === 'create-connector') {
+        if (hoveredAnchor && hoveredAnchor.elId !== drag.fromId) {
+          const newConnector: ConnectorElement = {
+            id: crypto.randomUUID(),
+            kind: 'connector',
+            fromId: drag.fromId,
+            fromAnchor: drag.fromAnchor,
+            toId: hoveredAnchor.elId,
+            toAnchor: hoveredAnchor.name,
+            style: 'orthogonal',
+            arrow: 'to',
+            rotation: 0,
+            stroke: '#c1c2c5',
+            strokeWidth: 2,
+            fill: 'transparent',
+            opacity: 1,
+          }
+          commit((s) => ({
+            ...s,
+            elements: [...s.elements, newConnector],
+          }))
+          setSelectedIds([newConnector.id])
+        }
+        setHoveredAnchor(null)
+        gestureBaseRef.current = null
+        setTool('select')
       } else if (drag.type === 'marquee') {
         const box = marqueeRef.current
         if (box && (box.w > 2 || box.h > 2)) {
@@ -2334,8 +2639,11 @@ export default function DiagramTab({ variables, runs = [], onBindingsChange }: R
     applyEndpoint,
     applyRotate,
     applyMarquee,
+    applyCreateConnector,
     endGesture,
     tool,
+    hoveredAnchor,
+    commit,
   ])
 
   const onWheel = (e: React.WheelEvent) => {
@@ -2485,6 +2793,7 @@ export default function DiagramTab({ variables, runs = [], onBindingsChange }: R
     { tool: 'ellipse', label: 'Circle / Ellipse', icon: <IconCircle size={18} /> },
     { tool: 'label', label: 'Rich Label', icon: <IconTypography size={18} /> },
     { tool: 'chart', label: 'Embedded Chart (table runs)', icon: <IconChartLine size={18} /> },
+    { tool: 'connector', label: 'Connector (Link)', icon: <IconBinaryTree size={18} /> },
   ]
 
   const CONTROL_TOOLS: { tool: ControlElement['kind']; label: string; icon: React.ReactNode }[] = [
@@ -2733,6 +3042,27 @@ export default function DiagramTab({ variables, runs = [], onBindingsChange }: R
             height="100%"
             onMouseDown={onBackgroundDown}
             onWheel={onWheel}
+            onMouseMove={(e) => {
+              if (runMode) return
+              if (tool === 'connector' && !drag) {
+                const world = toWorld(e.clientX, e.clientY)
+                let closest: ElementAnchorInfo | null = null
+                let minDistance = 12 // screen pixels
+                for (const anchor of allAnchors) {
+                  const dist = Math.hypot(anchor.x - world.x, anchor.y - world.y) * view.k
+                  if (dist < minDistance) {
+                    minDistance = dist
+                    closest = anchor
+                  }
+                }
+                setHoveredAnchor(closest)
+              }
+            }}
+            onMouseLeave={() => {
+              if (tool === 'connector' && !drag) {
+                setHoveredAnchor(null)
+              }
+            }}
             style={{
               display: 'block',
               cursor:
@@ -2774,13 +3104,14 @@ export default function DiagramTab({ variables, runs = [], onBindingsChange }: R
                       onMouseDown={onElementDown}
                       onControlValue={onControlValue}
                       onHover={onHover}
+                      elements={state.elements}
                     />
                   </g>
                 )
               })}
               {!runMode && selectedElements.length > 1 &&
                 selectedElements.map((el) => {
-                  const b = elementBounds(el)
+                  const b = elementBounds(el, state.elements)
                   return (
                     <rect
                       key={`sel-${el.id}`}
@@ -2797,7 +3128,7 @@ export default function DiagramTab({ variables, runs = [], onBindingsChange }: R
                   )
                 })}
               {!runMode && selectedElements.length > 1 && (
-                <GroupHandles els={selectedElements} view={view} onHandleDown={onHandleDown} />
+                <GroupHandles els={selectedElements} view={view} onHandleDown={onHandleDown} elements={state.elements} />
               )}
               {!runMode && selected && (
                 <SelectionHandles
@@ -2806,6 +3137,7 @@ export default function DiagramTab({ variables, runs = [], onBindingsChange }: R
                   onHandleDown={onHandleDown}
                   onEndpointDown={onEndpointDown}
                   onRotateDown={onRotateDown}
+                  elements={state.elements}
                 />
               )}
               {!runMode && guides &&
@@ -2846,6 +3178,44 @@ export default function DiagramTab({ variables, runs = [], onBindingsChange }: R
                   strokeDasharray={`${4 / view.k} ${3 / view.k}`}
                   pointerEvents="none"
                 />
+              )}
+              {!runMode && tool === 'connector' && allAnchors.map((anchor) => {
+                const isHovered = hoveredAnchor && hoveredAnchor.elId === anchor.elId && hoveredAnchor.name === anchor.name
+                const r = (isHovered ? 6 : 4) / view.k
+                return (
+                  <circle
+                    key={`anchor-${anchor.elId}-${anchor.name}`}
+                    cx={anchor.x}
+                    cy={anchor.y}
+                    r={r}
+                    fill={isHovered ? '#69db7c' : 'rgba(77,171,247,0.5)'}
+                    stroke={isHovered ? '#1b5e20' : '#4dabf7'}
+                    strokeWidth={1.5 / view.k}
+                    style={{ cursor: 'pointer', transition: 'r 0.1s ease, fill 0.1s ease' }}
+                    pointerEvents="none"
+                  />
+                )
+              })}
+              {drag?.type === 'create-connector' && (
+                <g>
+                  <line
+                    x1={drag.startX}
+                    y1={drag.startY}
+                    x2={drag.tempX}
+                    y2={drag.tempY}
+                    stroke="#4dabf7"
+                    strokeWidth={2 / view.k}
+                    strokeDasharray={`${4 / view.k} ${3 / view.k}`}
+                    pointerEvents="none"
+                  />
+                  <circle
+                    cx={drag.tempX}
+                    cy={drag.tempY}
+                    r={4 / view.k}
+                    fill="#4dabf7"
+                    pointerEvents="none"
+                  />
+                </g>
               )}
               {!runMode && editingLabel && (
                 <foreignObject

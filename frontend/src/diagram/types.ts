@@ -58,6 +58,18 @@ export interface LineElement extends ElementBase {
   flow?: FlowAnimation
 }
 
+/** Smart connector line between two element anchors. */
+export interface ConnectorElement extends ElementBase {
+  kind: 'connector'
+  fromId: string
+  fromAnchor: string
+  toId: string
+  toAnchor: string
+  style: 'straight' | 'orthogonal' | 'curved'
+  arrow: 'none' | 'from' | 'to' | 'both'
+  flow?: FlowAnimation
+}
+
 export interface RectElement extends ElementBase {
   kind: 'rect'
   x: number
@@ -180,6 +192,7 @@ export type DiagramElement =
   | IconElement
   | ChartElement
   | ControlElement
+  | ConnectorElement
 
 export function isControl(el: DiagramElement): el is ControlElement {
   return el.kind.startsWith('ctl-')
@@ -197,11 +210,15 @@ const KIND_LABELS: Record<string, string> = {
   'ctl-dropdown': 'Dropdown',
   'ctl-checkbox': 'Checkbox',
   'ctl-slider': 'Slider',
+  connector: 'Connector',
 }
 
 /** Display name for the Layers panel (Story 10.3). */
 export function elementLabel(el: DiagramElement): string {
   if (el.name && el.name.trim()) return el.name.trim()
+  if (el.kind === 'connector') {
+    return `Connector · ${el.fromAnchor} ➔ ${el.toAnchor}`
+  }
   if (el.kind === 'label') {
     const first = el.text.split('\n')[0]?.trim()
     return first ? first.slice(0, 24) : 'Label'
@@ -278,13 +295,134 @@ export const DEFAULT_STYLE: ElementStyle = {
   opacity: 1,
 }
 
+export interface AnchorDefinition {
+  rx: number
+  ry: number
+  nx: number
+  ny: number
+}
+
+export const ANCHOR_DEFS: Record<string, Record<string, AnchorDefinition>> = {
+  default: {
+    N: { rx: 0.5, ry: 0, nx: 0, ny: -1 },
+    E: { rx: 1, ry: 0.5, nx: 1, ny: 0 },
+    S: { rx: 0.5, ry: 1, nx: 0, ny: 1 },
+    W: { rx: 0, ry: 0.5, nx: -1, ny: 0 },
+    center: { rx: 0.5, ry: 0.5, nx: 0, ny: 0 },
+  },
+  turbine: {
+    inlet: { rx: 0, ry: 0.5, nx: -1, ny: 0 },
+    outlet: { rx: 1, ry: 0.5, nx: 1, ny: 0 },
+    N: { rx: 0.5, ry: 0.12, nx: 0, ny: -1 },
+    S: { rx: 0.5, ry: 0.88, nx: 0, ny: 1 },
+  },
+  pump: {
+    inlet: { rx: 0, ry: 0.5, nx: -1, ny: 0 },
+    outlet: { rx: 1, ry: 0.5, nx: 1, ny: 0 },
+  },
+  compressor: {
+    inlet: { rx: 0, ry: 0.5, nx: -1, ny: 0 },
+    outlet: { rx: 1, ry: 0.5, nx: 1, ny: 0 },
+  },
+  valve: {
+    inlet: { rx: 0.1, ry: 0.5, nx: -1, ny: 0 },
+    outlet: { rx: 0.9, ry: 0.5, nx: 1, ny: 0 },
+  },
+  heatx: {
+    inlet: { rx: 0, ry: 0.5, nx: -1, ny: 0 },
+    outlet: { rx: 1, ry: 0.5, nx: 1, ny: 0 },
+    'shell-in': { rx: 0.5, ry: 0, nx: 0, ny: -1 },
+    'shell-out': { rx: 0.5, ry: 1, nx: 0, ny: 1 },
+  },
+  vessel: {
+    inlet: { rx: 0.5, ry: 0.05, nx: 0, ny: -1 },
+    outlet: { rx: 0.5, ry: 0.95, nx: 0, ny: 1 },
+    left: { rx: 0.25, ry: 0.5, nx: -1, ny: 0 },
+    right: { rx: 0.75, ry: 0.5, nx: 1, ny: 0 },
+  },
+  condenser: {
+    inlet: { rx: 0.05, ry: 0.5, nx: -1, ny: 0 },
+    outlet: { rx: 0.95, ry: 0.5, nx: 1, ny: 0 },
+    top: { rx: 0.5, ry: 0.25, nx: 0, ny: -1 },
+    bottom: { rx: 0.5, ry: 0.75, nx: 0, ny: 1 },
+  },
+  springdamper: {
+    inlet: { rx: 0.5, ry: 0, nx: 0, ny: -1 },
+    outlet: { rx: 0.5, ry: 0.8, nx: 0, ny: 1 },
+  },
+}
+
+export function getElementAnchors(el: DiagramElement): Record<string, AnchorDefinition> {
+  const defaults = ANCHOR_DEFS.default
+  if (el.kind === 'icon') {
+    const specific = ANCHOR_DEFS[el.icon]
+    return specific ? { ...defaults, ...specific } : defaults
+  }
+  return defaults
+}
+
+export function getAnchorCoordinate(el: DiagramElement, anchorName: string): { x: number; y: number } {
+  if (el.kind === 'line') {
+    return { x: el.x1, y: el.y1 }
+  }
+  if (el.kind === 'connector') {
+    return { x: 0, y: 0 }
+  }
+  const bounds = elementBounds(el)
+  const anchors = getElementAnchors(el)
+  const pos = anchors[anchorName] ?? anchors.center ?? { rx: 0.5, ry: 0.5, nx: 0, ny: 0 }
+  
+  const cx = bounds.x + bounds.w / 2
+  const cy = bounds.y + bounds.h / 2
+  const lx = bounds.x + pos.rx * bounds.w
+  const ly = bounds.y + pos.ry * bounds.h
+  
+  if (!el.rotation) {
+    return { x: lx, y: ly }
+  }
+  
+  const rad = (el.rotation * Math.PI) / 180
+  const dx = lx - cx
+  const dy = ly - cy
+  const rx = cx + dx * Math.cos(rad) - dy * Math.sin(rad)
+  const ry = cy + dx * Math.sin(rad) + dy * Math.cos(rad)
+  return { x: rx, y: ry }
+}
+
+export function getAnchorNormal(el: DiagramElement, anchorName: string): { x: number; y: number } {
+  if (el.kind === 'line' || el.kind === 'connector') {
+    return { x: 1, y: 0 }
+  }
+  const anchors = getElementAnchors(el)
+  const pos = anchors[anchorName] ?? anchors.center ?? { rx: 0.5, ry: 0.5, nx: 0, ny: 0 }
+  
+  if (!el.rotation) {
+    return { x: pos.nx, y: pos.ny }
+  }
+  
+  const rad = (el.rotation * Math.PI) / 180
+  const rx = pos.nx * Math.cos(rad) - pos.ny * Math.sin(rad)
+  const ry = pos.nx * Math.sin(rad) + pos.ny * Math.cos(rad)
+  return { x: rx, y: ry }
+}
+
 /** Axis-aligned bounding box of an element in world coordinates. */
-export function elementBounds(el: DiagramElement): {
+export function elementBounds(el: DiagramElement, elements: DiagramElement[] = []): {
   x: number
   y: number
   w: number
   h: number
 } {
+  if (el.kind === 'connector') {
+    const fromEl = elements.find((e) => e.id === el.fromId)
+    const toEl = elements.find((e) => e.id === el.toId)
+    if (!fromEl || !toEl) return { x: 0, y: 0, w: 0, h: 0 }
+    const p1 = getAnchorCoordinate(fromEl, el.fromAnchor)
+    const p2 = getAnchorCoordinate(toEl, el.toAnchor)
+    const x = Math.min(p1.x, p2.x)
+    const y = Math.min(p1.y, p2.y)
+    return { x, y, w: Math.max(1, Math.abs(p2.x - p1.x)), h: Math.max(1, Math.abs(p2.y - p1.y)) }
+  }
   if (el.kind === 'line') {
     const x = Math.min(el.x1, el.x2)
     const y = Math.min(el.y1, el.y2)
