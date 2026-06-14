@@ -10,11 +10,12 @@ import {
   TextInput,
   Tooltip,
 } from '@mantine/core'
-import { IconChartGridDots, IconPlus, IconTable, IconTrash } from '@tabler/icons-react'
+import { IconChartGridDots, IconCopy, IconPlus, IconTable, IconTrash } from '@tabler/icons-react'
 import { TableRowResult } from './api'
 import FunctionTableEditor from './FunctionTableEditor'
 import ParametricTableTab, { ParamRow } from './ParametricTableTab'
 import {
+  duplicateAsEditable,
   FunctionTableSpec,
   newFunctionTable,
   newParamTable,
@@ -76,6 +77,12 @@ export default function TablesTab(props: Readonly<Props>) {
     onTablesChange(tables.map((t) => (t.id === next.id ? next : t)))
   }
 
+  const copyToEditable = (table: TableSpec) => {
+    const copy = duplicateAsEditable(table)
+    onTablesChange([...tables, copy])
+    onActiveTableIdChange(copy.id)
+  }
+
   return (
     <Stack gap="xs" style={{ flex: 1, minHeight: 0 }}>
       <Group gap="xs" wrap="wrap">
@@ -110,11 +117,27 @@ export default function TablesTab(props: Readonly<Props>) {
                 <Text size="xs">{t.name}</Text>
               )}
               {t.source === 'code' ? (
-                <Tooltip label="Defined by a TABLE … END block in the editor (read-only)">
-                  <Badge size="xs" variant="light" color="grape">
-                    code
-                  </Badge>
-                </Tooltip>
+                <Group gap={2} wrap="nowrap">
+                  <Tooltip label="Defined by a code block in the editor (read-only)">
+                    <Badge size="xs" variant="light" color="grape">
+                      code
+                    </Badge>
+                  </Tooltip>
+                  <Tooltip label="Make an editable copy (decoupled from the text)">
+                    <ActionIcon
+                      size="xs"
+                      variant="subtle"
+                      color="grape"
+                      aria-label={`Copy ${t.name} to an editable table`}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        copyToEditable(t)
+                      }}
+                    >
+                      <IconCopy size={11} />
+                    </ActionIcon>
+                  </Tooltip>
+                </Group>
               ) : (
                 <ActionIcon
                   size="xs"
