@@ -1006,11 +1006,11 @@ const CATEGORIES = [
     icon: <IconCalculator size={16} />,
     items: [
       { id: 'syntax', label: 'Equation Syntax & Rules', keywords: ['syntax', 'equality', 'case', 'comment', 'rules'] },
-      { id: 'math-funcs', label: 'Mathematical Functions', keywords: ['abs', 'sqrt', 'ln', 'log10', 'exp', 'sin', 'cos', 'tan', 'min', 'max', 'sum', 'avg', 'sinh', 'cosh', 'tanh', 'arcsinh', 'arccosh', 'arctanh', 'round', 'floor', 'ceil', 'trunc', 'sign', 'factorial', 'step', 'if', 'product'] },
-      { id: 'special-funcs', label: 'Special & Statistical Functions', keywords: ['bessel', 'besselk', 'bessely', 'bessel_i0', 'bessel_j0', 'chi_square', 'random', 'probability'] },
+      { id: 'math-funcs', label: 'Mathematical Functions', keywords: ['abs', 'sqrt', 'ln', 'log10', 'exp', 'sin', 'cos', 'tan', 'atan2', 'min', 'max', 'sum', 'avg', 'sinh', 'cosh', 'tanh', 'arcsinh', 'arccosh', 'arctanh', 'round', 'floor', 'ceil', 'trunc', 'sign', 'factorial', 'step', 'if', 'product', 'gcd', 'lcm', 'bitand', 'bitor', 'bitxor', 'bitnot', 'bitshiftl', 'bitshiftr', 'bitwise', 'shift', 'baseconvert'] },
+      { id: 'special-funcs', label: 'Special & Statistical Functions', keywords: ['bessel', 'besselk', 'bessely', 'bessel_i0', 'bessel_j0', 'chi_square', 'random', 'randg', 'probability', 'gamma', 'loggamma', 'digamma', 'beta', 'erf', 'erfc', 'erfinv'] },
       { id: 'variables', label: 'Variables, Guesses & Bounds', keywords: ['variables', 'guess', 'bounds', 'limits', 'variable info'] },
       { id: 'uncertainty', label: 'Uncertainty Propagation', keywords: ['uncertainty', 'propagation', 'error', 'uncertaintyof', 'svd'] },
-      { id: 'units', label: 'Units & Consistency', keywords: ['unit', 'si', 'convert', 'dimension', 'annotation'] },
+      { id: 'units', label: 'Units & Consistency', keywords: ['unit', 'si', 'convert', 'converttemp', 'temperature', 'dimension', 'annotation'] },
       { id: 'arrays', label: 'Arrays & For Loops', keywords: ['array', 'for', 'duplicate', 'loops', 'slice', 'index'] },
       { id: 'complex', label: 'Complex Numbers & Helpers', keywords: ['complex', 'imaginary', 'real', 'i', 'j', 'angle', 'polar', 'conj', 'magnitude', 'cis'] },
       { id: 'strings', label: 'String Variables & Functions', keywords: ['string', 'chr$', 'concat$', 'copy$', 'lowercase$', 'uppercase$', 'trim$', 'stringlen', 'stringpos', 'stringval', 'date$', 'time$', 'timestamp$', 'unitsystem$', 'unitsof$'] },
@@ -1023,14 +1023,14 @@ const CATEGORIES = [
       { id: 'matrices-decl', label: 'Declaring Matrices & Vectors', keywords: ['matrix', 'vector', 'declaring', 'literal', 'semicolon', 'brackets', 'matlab'] },
       { id: 'matrices-ops', label: 'Matrix Operators (+, -, *, \\, \')', keywords: ['operators', 'transpose', 'backslash', 'multiplication', 'solve', 'matlab'] },
       { id: 'matrices-blas', label: 'OpenBLAS Algebra Functions', keywords: ['blas', 'axpy', 'scal', 'copy', 'asum', 'nrm2', 'gemv', 'ger', 'gemm', 'openblas'] },
-      { id: 'matrices-sys', label: 'Linear Systems & Decomp', keywords: ['solvelinear', 'ludecompose', 'eigen', 'eigenvalues', 'eulerrotate', 'eulerdecompose', 'rotation'] },
+      { id: 'matrices-sys', label: 'Linear Systems & Decomp', keywords: ['solvelinear', 'determinant', 'ludecompose', 'eigen', 'eigenvalues', 'eulerrotate', 'eulerdecompose', 'rotation'] },
     ]
   },
   {
     title: 'Programming & Logic',
     icon: <IconCode size={16} />,
     items: [
-      { id: 'functions', label: 'Custom Functions & Procedures', keywords: ['functions', 'procedures', 'call', 'custom', 'outputs'] },
+      { id: 'functions', label: 'Custom Functions & Procedures', keywords: ['functions', 'procedures', 'call', 'custom', 'outputs', 'while', 'repeat', 'until', 'loop', 'if', 'then', 'else'] },
       { id: 'tables-code', label: 'Custom Tables (TABLE)', keywords: ['table', 'interp', 'tabulated', 'custom tables', 'curve fit'] },
       { id: 'lookup-tables', label: 'Lookup Tables & Interpolation', keywords: ['lookup', 'interpolate', 'differentiate', 'table', 'interpolation', 'spline'] },
       { id: 'table-accessors', label: 'Table Accessors & Aggregates', keywords: ['parametric', 'integral', 'run', 'tablevalue', 'tablerun#', 'nparametricruns', 'sum', 'avg', 'min', 'max', 'stddev', 'integralvalue'] },
@@ -1478,6 +1478,85 @@ k = If(temp, 300, 1.2, 1.5, 1.8)`}
               outputs={[{ name: "y", desc: "Computed product" }]}
               example={`val = Product(i, 1, 4, i^2)   { val = 1 * 4 * 9 * 16 = 576 }`}
             />
+
+            <Title order={3}>Trigonometric & Inverse Trig</Title>
+            <Text size="sm" c="dimmed">
+              <code>sin</code>, <code>cos</code>, <code>tan</code> and inverses <code>arcsin</code>, <code>arccos</code>, <code>arctan</code> work in radians. <code>angledeg</code>/<code>angle</code> and the unit annotations help with degrees.
+            </Text>
+            <FunctionRef
+              name="atan2"
+              desc="Two-argument arctangent that returns the angle of the point (x, y) in the correct quadrant."
+              syntax={`theta = atan2(y, x)`}
+              inputs={[
+                { name: "y", desc: "Ordinate (numerator)" },
+                { name: "x", desc: "Abscissa (denominator)" }
+              ]}
+              outputs={[{ name: "theta", desc: "Angle in radians in (-pi, pi]" }]}
+              example={`theta = atan2(1, -1)   { = 2.356 rad (135 deg) }`}
+            />
+
+            <Title order={3}>Number Theory</Title>
+            <FunctionRef
+              name="gcd / lcm"
+              desc="Greatest common divisor and least common multiple of two integers (operands are truncated to whole numbers)."
+              syntax={`g = gcd(a, b)
+l = lcm(a, b)`}
+              inputs={[
+                { name: "a", desc: "First integer" },
+                { name: "b", desc: "Second integer" }
+              ]}
+              outputs={[{ name: "g / l", desc: "Greatest common divisor / least common multiple" }]}
+              example={`g = gcd(48, 36)   { 12 }
+l = lcm(4, 6)     { 12 }`}
+            />
+
+            <Title order={3}>Bitwise Operations</Title>
+            <Text size="sm" c="dimmed">
+              Operands are truncated to 64-bit integers before the operation; the result is returned as a number.
+            </Text>
+            <FunctionRef
+              name="BitAnd / BitOr / BitXor / BitNot"
+              desc="Bitwise AND, OR, XOR (two operands) and NOT (one operand)."
+              syntax={`y = BitAnd(a, b)
+y = BitOr(a, b)
+y = BitXor(a, b)
+y = BitNot(a)`}
+              inputs={[
+                { name: "a", desc: "First integer operand" },
+                { name: "b", desc: "Second integer operand (not used by BitNot)" }
+              ]}
+              outputs={[{ name: "y", desc: "Result of the bitwise operation" }]}
+              example={`y1 = BitAnd(12, 10)   { 8 }
+y2 = BitOr(12, 10)    { 14 }
+y3 = BitXor(12, 10)   { 6 }`}
+            />
+            <FunctionRef
+              name="BitShiftL / BitShiftR"
+              desc="Left and (arithmetic) right bit-shift of an integer by n bit positions."
+              syntax={`y = BitShiftL(a, n)
+y = BitShiftR(a, n)`}
+              inputs={[
+                { name: "a", desc: "Integer value to shift" },
+                { name: "n", desc: "Number of bit positions to shift" }
+              ]}
+              outputs={[{ name: "y", desc: "Shifted value (a << n or a >> n)" }]}
+              example={`y1 = BitShiftL(3, 4)    { 48 }
+y2 = BitShiftR(48, 2)   { 12 }`}
+            />
+
+            <Title order={3}>Base Conversion</Title>
+            <FunctionRef
+              name="BaseConvert"
+              desc="Converts a number written as a string in one base into its value in another base."
+              syntax={`y = BaseConvert(value$, fromBase, toBase)`}
+              inputs={[
+                { name: "value$", desc: "The number as a quoted string (e.g. 'FF')" },
+                { name: "fromBase", desc: "Base the string is written in (2–36)" },
+                { name: "toBase", desc: "Base to convert to (2–36)" }
+              ]}
+              outputs={[{ name: "y", desc: "The converted value" }]}
+              example={`y = BaseConvert('FF', 16, 10)   { 255 }`}
+            />
           </Stack>
         );
       case 'special-funcs':
@@ -1510,6 +1589,44 @@ y = Bessel_k1(x)`}
 y2 = Bessel_k0(2.0)`}
             />
 
+            <Title order={3}>Gamma Functions</Title>
+            <FunctionRef
+              name="Gamma / LogGamma / Digamma"
+              desc="The gamma function Γ(x), its natural logarithm ln Γ(x), and the digamma function ψ(x) = d/dx ln Γ(x)."
+              syntax={`y = Gamma(x)
+y = LogGamma(x)
+y = Digamma(x)`}
+              inputs={[{ name: "x", desc: "Real argument" }]}
+              outputs={[{ name: "y", desc: "Function value" }]}
+              example={`g = Gamma(5)       { = 24 = 4! }
+lg = LogGamma(10)`}
+            />
+            <FunctionRef
+              name="Beta"
+              desc="The beta function B(a, b) = Γ(a)·Γ(b) / Γ(a+b)."
+              syntax={`y = Beta(a, b)`}
+              inputs={[
+                { name: "a", desc: "First shape parameter (> 0)" },
+                { name: "b", desc: "Second shape parameter (> 0)" }
+              ]}
+              outputs={[{ name: "y", desc: "Beta function value" }]}
+              example={`y = Beta(2, 3)   { = 1/12 }`}
+            />
+
+            <Title order={3}>Error Functions</Title>
+            <FunctionRef
+              name="Erf / Erfc / ErfInv"
+              desc="The error function erf(x), the complementary error function erfc(x) = 1 − erf(x), and the inverse error function."
+              syntax={`y = Erf(x)
+y = Erfc(x)
+x = ErfInv(y)`}
+              inputs={[{ name: "x / y", desc: "Argument (ErfInv expects a value in (-1, 1))" }]}
+              outputs={[{ name: "y / x", desc: "Function value" }]}
+              example={`a = Erf(1)        { 0.8427 }
+b = Erfc(1)       { 0.1573 }
+c = ErfInv(0.8427) { ≈ 1 }`}
+            />
+
             <Title order={3}>Statistical & Probability Distributions</Title>
             <FunctionRef
               name="Chi_Square"
@@ -1536,11 +1653,30 @@ y2 = Bessel_k0(2.0)`}
             />
             <FunctionRef
               name="Random"
-              desc="Uniformly distributed pseudo-random number generator."
-              syntax={`y = Random()`}
-              inputs={[]}
-              outputs={[{ name: "y", desc: "Random value between 0.0 and 1.0" }]}
-              example={`val = Random()`}
+              desc="Uniformly distributed pseudo-random number in the range [a, b]. An optional third argument fixes the seed for reproducible runs."
+              syntax={`y = Random(a, b)
+y = Random(a, b, seed)`}
+              inputs={[
+                { name: "a", desc: "Lower bound of the range" },
+                { name: "b", desc: "Upper bound of the range" },
+                { name: "seed", desc: "Optional integer seed for repeatable sequences" }
+              ]}
+              outputs={[{ name: "y", desc: "Random value uniformly distributed in [a, b]" }]}
+              example={`val = Random(0, 1)
+fixed = Random(10, 20, 42)`}
+            />
+            <FunctionRef
+              name="RandG"
+              desc="Gaussian (normally distributed) pseudo-random number with the given mean and standard deviation. An optional third argument fixes the seed."
+              syntax={`y = RandG(mean, stddev)
+y = RandG(mean, stddev, seed)`}
+              inputs={[
+                { name: "mean", desc: "Mean of the normal distribution" },
+                { name: "stddev", desc: "Standard deviation of the distribution" },
+                { name: "seed", desc: "Optional integer seed for repeatable sequences" }
+              ]}
+              outputs={[{ name: "y", desc: "Normally distributed random value" }]}
+              example={`noise = RandG(0, 0.5)`}
             />
           </Stack>
         );
@@ -1613,6 +1749,24 @@ m = 120 [lb]     { Converted to 54.43 kg }`}</Code>
             <Title order={3} mt="sm">The Convert() Function</Title>
             <Text>Multiply variables by <code>Convert(From, To)</code> to apply factor conversion:</Text>
             <Code block>{`area_in2 = area_ft2 * Convert(ft^2, in^2)`}</Code>
+
+            <Title order={3} mt="sm">Temperature Conversion</Title>
+            <Text>
+              Because temperature scales differ by an offset (not just a factor), use <code>ConvertTemp(From, To, value)</code> instead of <code>Convert</code>. Scales are <code>C</code>, <code>K</code>, <code>F</code>, and <code>R</code> (Rankine).
+            </Text>
+            <FunctionRef
+              name="ConvertTemp"
+              desc="Converts a temperature value between scales, accounting for both scale factor and offset."
+              syntax={`T_out = ConvertTemp(From, To, value)`}
+              inputs={[
+                { name: "From", desc: "Source scale: C, K, F, or R" },
+                { name: "To", desc: "Target scale: C, K, F, or R" },
+                { name: "value", desc: "Temperature value in the source scale" }
+              ]}
+              outputs={[{ name: "T_out", desc: "Temperature in the target scale" }]}
+              example={`T_f = ConvertTemp(C, F, 100)   { 212 }
+T_k = ConvertTemp(F, K, 32)    { 273.15 }`}
+            />
           </Stack>
         );
       case 'plot-code':
@@ -2035,6 +2189,17 @@ b[1..2] = [8, -11]
 x[1..2] = SolveLinear(A[1..2, 1..2], b[1..2])`}
             />
 
+            <FunctionRef
+              name="Determinant"
+              desc="Computes the determinant of a square matrix."
+              syntax={`d = Determinant(A)`}
+              inputs={[{ name: "A", desc: "Square matrix of size N x N" }]}
+              outputs={[{ name: "d", desc: "Scalar determinant of A" }]}
+              example={`A[1,1]=2; A[1,2]=1
+A[2,1]=-3; A[2,2]=-1
+d = Determinant(A[1..2, 1..2])   { = 1 }`}
+            />
+
             <ProcedureRef
               name="LUDecompose"
               desc="Performs LU decomposition on a square matrix A: A = L * U"
@@ -2081,7 +2246,7 @@ CALL Eigen(A[1..2, 1..2] : lambda[1..2], V[1..2, 1..2])`}
           <Stack gap="md">
             <Title order={2} c="blue.4">Custom Functions & Procedures</Title>
             <Text style={{ lineHeight: 1.6 }}>
-              You can declare custom functions (single output value) and procedures (multiple output variables) using imperative logic (IF-THEN-ELSE, REPEAT-UNTIL, assignments):
+              You can declare custom functions (single output value) and procedures (multiple output variables) using imperative logic (IF-THEN-ELSE, REPEAT-UNTIL, WHILE-DO, assignments):
             </Text>
             <Title order={3}>Custom Functions</Title>
             <Paper withBorder p="md" bg="dark.8">
@@ -2099,6 +2264,24 @@ END`}</Code>
   a := x * 10
   b := y * 100
 END`}</Code>
+            </Paper>
+
+            <Title order={3} mt="sm">Loops inside Functions & Procedures</Title>
+            <Text style={{ lineHeight: 1.6 }}>
+              Function and procedure bodies support <code>REPEAT … UNTIL cond</code> (runs at least once) and <code>WHILE cond DO … END</code> (checks the condition first). Both are guarded against runaway iteration.
+            </Text>
+            <Paper withBorder p="md" bg="dark.8">
+              <Code block>{`FUNCTION SumTo(n)
+  i := 1
+  s := 0
+  WHILE i <= n DO
+    s := s + i
+    i := i + 1
+  END
+  SumTo := s
+END
+
+total = SumTo(10)   { 55 }`}</Code>
             </Paper>
           </Stack>
         );
