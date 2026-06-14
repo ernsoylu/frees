@@ -355,6 +355,515 @@ q_in = h[3] - h[5]
 w_net = w_T - w_C
 eta_th = w_net / q_in * 100`,
   },
+
+  // ── Hard cross-discipline case studies (all verified against the solver) ──
+  {
+    value: "combined-cycle",
+    title: "Energy Systems: Combined Brayton–Rankine Cycle through an HRSG",
+    description: "A complete combined-cycle power plant: an air-standard gas turbine (Brayton) tops a steam Rankine cycle, the two coupled through a Heat Recovery Steam Generator. The HRSG energy balance fixes the steam-to-gas mass ratio; CoolProp supplies every steam state.",
+    note: "Solves in one shot per 1 kg/s of gas: compressor exit 678 K, turbine exit 774 K, 0.121 kg/s of steam raised per kg of gas, and an overall efficiency of 51.3% — higher than either cycle alone, as a real combined cycle should be.",
+    code: `{ Combined-cycle plant: air-standard Brayton topping + steam Rankine
+  bottoming, coupled through a Heat Recovery Steam Generator (per 1 kg/s gas). }
+{ ---- Gas turbine (cold-air-standard) ---- }
+cp = 1.005 [kJ/kg-K]; kk = 1.4
+T1 = 300 [K]; rp = 12
+T3 = 1400 [K]
+eta_c = 0.82; eta_gt = 0.88
+T2 = T1*(1 + (rp^((kk-1)/kk) - 1)/eta_c)
+T4 = T3*(1 - eta_gt*(1 - rp^(-(kk-1)/kk)))
+w_comp = cp*(T2 - T1)
+w_gt   = cp*(T3 - T4)
+q_gas  = cp*(T3 - T2)
+wnet_gas = w_gt - w_comp
+m_gas = 1 [kg/s]
+
+{ ---- Steam Rankine bottoming (CoolProp water) ---- }
+P_boil = 6000 [kPa]; T_sup = 450 [C]; P_cond = 10 [kPa]
+eta_st = 0.87; eta_p = 0.85
+h5 = Enthalpy(Water, P=P_boil, T=T_sup)
+s5 = Entropy(Water, P=P_boil, T=T_sup)
+h6s = Enthalpy(Water, P=P_cond, s=s5)
+h6 = h5 - eta_st*(h5 - h6s)
+h7 = Enthalpy(Water, P=P_cond, x=0)
+v7 = Volume(Water, P=P_cond, x=0)
+wp = v7*(P_boil - P_cond)/eta_p
+h8 = h7 + wp
+q_steam = h5 - h8
+wnet_steam = (h5 - h6) - wp
+
+{ ---- HRSG coupling: gas cooled from T4 to a 400 K stack ---- }
+T_stack = 400 [K]
+m_gas*cp*(T4 - T_stack) = m_steam*q_steam
+
+{ ---- Plant performance ---- }
+W_total = m_gas*wnet_gas + m_steam*wnet_steam
+eta_overall = W_total/(m_gas*q_gas)*100`,
+  },
+  {
+    value: "cd-nozzle-shock",
+    title: "Aerospace: Supersonic Nozzle with a Normal Shock at the Exit",
+    description: "A converging–diverging nozzle with exit-to-throat area ratio 4. The supersonic branch of the area–Mach relation is implicit (two roots), so set a guess of Me ≈ 2.9 in the Variable grid; a normal shock then recovers the post-shock state.",
+    note: "Exit Mach 2.94 on the supersonic branch, post-shock Mach 0.479, and the shock destroys stagnation pressure from 1000 kPa to 346 kPa — the classic loss across a strong normal shock.",
+    code: `{ Aerospace: CD nozzle, supersonic branch + normal shock at exit }
+g = 1.4
+R = 287 [J/kg-K]
+P0 = 1000 [kPa]
+T0 = 600 [K]
+A_ratio = 4.0        { Ae/A* }
+{ Area-Mach relation, supersonic root (guess Me = 2.9) }
+A_ratio = (1/Me)*((2/(g+1))*(1+(g-1)/2*Me^2))^((g+1)/(2*(g-1)))
+{ Isentropic exit before the shock }
+Pe = P0*(1+(g-1)/2*Me^2)^(-g/(g-1))
+Te = T0*(1+(g-1)/2*Me^2)^(-1)
+Ve = Me*sqrt(g*R*Te)
+{ Normal shock at the exit plane }
+M2 = sqrt((1+(g-1)/2*Me^2)/(g*Me^2-(g-1)/2))
+P2 = Pe*(1+g*Me^2)/(1+g*M2^2)
+T2 = Te*(1+(g-1)/2*Me^2)/(1+(g-1)/2*M2^2)
+P02 = P2*(1+(g-1)/2*M2^2)^(g/(g-1))`,
+  },
+  {
+    value: "orbit-kepler",
+    title: "Aerospace: Orbital Position from Kepler's Equation",
+    description: "An elliptical Earth orbit (300 km × 3000 km altitude). Kepler's equation M = E − e·sin E is transcendental and is solved directly for the eccentric anomaly a quarter-period after perigee; radius and speed follow. Note that t and T are reserved (time) names, so the period is named Tper.",
+    note: "Period 119 min, eccentricity 0.168; a quarter-period after perigee the eccentric anomaly is 1.74 rad, the true anomaly 108.9°, radius 8251 km and speed 6.85 km/s. Set a guess EA ≈ 2 in the Variable grid.",
+    code: `{ Aerospace: elliptical Earth orbit; position & speed via Kepler's equation }
+mu = 398600 [km^3/s^2]
+Re = 6378 [km]
+alt_p = 300 [km]; alt_a = 3000 [km]
+rp = Re + alt_p      { perigee radius }
+ra = Re + alt_a      { apogee radius }
+a = (rp + ra)/2
+ecc = (ra - rp)/(ra + rp)
+Tper = 2*pi*sqrt(a^3/mu)     { orbital period }
+tk = Tper/4                  { a quarter-period after perigee }
+M = 2*pi*tk/Tper             { mean anomaly }
+M = EA - ecc*sin(EA)         { Kepler's equation (guess EA = 2) }
+nu = 2*arctan( sqrt((1+ecc)/(1-ecc)) * tan(EA/2) )
+nu_deg = nu*180/pi
+r = a*(1 - ecc*cos(EA))
+v = sqrt(mu*(2/r - 1/a))`,
+  },
+  {
+    value: "pipe-network",
+    title: "Fluid Mechanics: Parallel Pipe Network with Colebrook Friction",
+    description: "A flow splits into two parallel branches that must share the same head loss, then recombines. Each branch's friction factor comes from the implicit Colebrook equation, so the whole network — continuity, the equal-head-loss condition, and three transcendental friction equations — is solved simultaneously via a DUPLICATE block.",
+    note: "The branches divide the 0.10 m³/s feed as 0.029 and 0.071 m³/s so that both lose 9.83 m of head; total network head loss is 14.5 m. Reynolds numbers and friction factors are all consistent (turbulent).",
+    code: `{ Civil/Fluids: parallel pipe network, Colebrook friction }
+rho = 1000 [kg/m^3]
+mu = 0.001 [Pa-s]
+g = 9.81 [m/s^2]
+Q_in = 0.10 [m^3/s]
+L[1]=300; L[2]=500; L[3]=400
+D[1]=0.25; D[2]=0.15; D[3]=0.20
+eps = 0.00015
+Q_in = Q[1]
+Q[1] = Q[2] + Q[3]            { continuity at the split }
+hf[2] = hf[3]                 { parallel branches share head loss }
+DUPLICATE j = 1, 3
+  V[j] = Q[j]/(pi/4*D[j]^2)
+  Re[j] = rho*V[j]*D[j]/mu
+  1/sqrt(ff[j]) = -2*log10(eps/(3.7*D[j]) + 2.51/(Re[j]*sqrt(ff[j])))
+  hf[j] = ff[j]*L[j]/D[j]*V[j]^2/(2*g)
+END
+h_total = hf[1] + hf[2]`,
+  },
+  {
+    value: "open-channel-jump",
+    title: "Water Resources: Manning Flow, Critical Depth & Hydraulic Jump",
+    description: "A rectangular channel on a steep slope. Manning's equation for the normal depth is implicit; the critical depth follows from the unit discharge, and the hydraulic-jump momentum function gives the sequent depth and the energy dissipated. (Note Q and q are the same name in case-insensitive frees — the unit discharge is qu.)",
+    note: "Normal depth 0.825 m is below the critical depth 1.177 m, so the flow is supercritical (Fr₁ = 1.70). The jump lifts it to 1.618 m (Fr₂ = 0.62, subcritical) and dissipates 0.094 m of head. Set a guess yn ≈ 0.6.",
+    code: `{ Civil/Hydraulics: rectangular channel - normal & critical depth + jump }
+g = 9.81 [m/s^2]
+Q = 20 [m^3/s]
+b = 5 [m]
+n = 0.015
+S0 = 0.01            { steep slope -> supercritical normal flow }
+qu = Q/b             { unit discharge }
+yc = (qu^2/g)^(1/3)  { critical depth }
+{ Normal depth via Manning (implicit, guess yn = 0.6) }
+Aflow = b*yn
+Pwet = b + 2*yn
+Rh = Aflow/Pwet
+Q = (1/n)*Aflow*Rh^(2/3)*sqrt(S0)
+V1 = Q/Aflow
+Fr1 = V1/sqrt(g*yn)
+{ Hydraulic jump: sequent depth from the momentum function }
+y2 = yn/2*(sqrt(1 + 8*Fr1^2) - 1)
+V2 = Q/(b*y2)
+Fr2 = V2/sqrt(g*y2)
+dE = (y2 - yn)^3/(4*yn*y2)   { energy dissipated }`,
+  },
+  {
+    value: "truss-stiffness",
+    title: "Structural Analysis: Plane Truss by the Direct Stiffness Method",
+    description: "A three-bar truss with one free node, assembled and solved exactly as a finite-element code would: each member contributes its EA/L stiffness with direction cosines to a 2×2 global stiffness matrix, which SolveLinear inverts for the nodal displacements; member axial forces follow.",
+    note: "The downward 100 kN load gives a vertical deflection of 1.00 mm and member forces −69.8, −25.1, −25.1 kN. They satisfy vertical equilibrium exactly (−69.8 − 2·25.1·0.6 = −100 kN). Watch the case-insensitive K/k clash — the matrix is Kg, the member stiffness ka.",
+    code: `{ Structural: 3-bar plane truss solved by the direct stiffness method }
+E = 210e9 [Pa]
+A = 1e-3 [m^2]
+P = 100e3 [N]
+{ free node 1 at origin connected to three supports;
+  member 1 vertical (L=3); members 2,3 to (+/-4, 3), L=5 }
+L[1]=3; L[2]=5; L[3]=5
+cx[1]=0;    sy[1]=1
+cx[2]=0.8;  sy[2]=0.6
+cx[3]=-0.8; sy[3]=0.6
+DUPLICATE m = 1, 3
+  ka[m] = E*A/L[m]                 { member axial stiffness EA/L }
+END
+{ Assemble the 2x2 reduced global stiffness at the free node }
+Kg[1,1] = ka[1]*cx[1]^2 + ka[2]*cx[2]^2 + ka[3]*cx[3]^2
+Kg[1,2] = ka[1]*cx[1]*sy[1] + ka[2]*cx[2]*sy[2] + ka[3]*cx[3]*sy[3]
+Kg[2,1] = Kg[1,2]
+Kg[2,2] = ka[1]*sy[1]^2 + ka[2]*sy[2]^2 + ka[3]*sy[3]^2
+{ Solve Kg u = F for the nodal displacements, then member forces }
+F[1..2] = [0, -P]
+u[1..2] = SolveLinear(Kg[1..2,1..2], F[1..2])
+DUPLICATE m = 1, 3
+  Naxial[m] = ka[m]*(cx[m]*u[1] + sy[m]*u[2])
+END`,
+  },
+  {
+    value: "radiation-enclosure",
+    title: "Heat Transfer: 3-Surface Radiation Enclosure with a Reradiating Wall",
+    description: "An equilateral triangular duct with a hot surface, a cold surface and an adiabatic (reradiating) wall. The radiosity-network equations — two gray-surface balances plus the reradiating condition that the wall's radiosity equals its irradiation — are nonlinear in T⁴ and solved together.",
+    note: "Net exchange between the gray surfaces is 30.1 kW with Q₁ = −Q₂ exactly (energy balance), and the floating reradiating wall settles at 846 K, between the 1000 K and 400 K surfaces.",
+    code: `{ Heat transfer: 3-surface enclosure (equilateral triangular duct) with a
+  reradiating wall, solved by the radiosity network method }
+sigma = 5.67e-8 [W/m^2-K^4]
+A = 1 [m^2]
+T1 = 1000 [K]; eps1 = 0.8     { hot surface }
+T2 = 400 [K];  eps2 = 0.8     { cold surface }
+{ Each flat surface of the equilateral triangle sees the others equally }
+F12 = 0.5; F13 = 0.5
+F21 = 0.5; F23 = 0.5
+F31 = 0.5; F32 = 0.5
+Eb1 = sigma*T1^4
+Eb2 = sigma*T2^4
+{ Radiosity balance on the two gray surfaces }
+J1 = eps1*Eb1 + (1-eps1)*(F12*J2 + F13*J3)
+J2 = eps2*Eb2 + (1-eps2)*(F21*J1 + F23*J3)
+{ Reradiating surface: radiosity equals its irradiation }
+J3 = F31*J1 + F32*J2
+{ Net heat leaving each gray surface }
+Q1 = A*eps1/(1-eps1)*(Eb1 - J1)
+Q2 = A*eps2/(1-eps2)*(Eb2 - J2)
+T3 = (J3/sigma)^0.25          { reradiating-wall temperature }`,
+  },
+  {
+    value: "load-flow",
+    title: "Power Systems: Two-Bus AC Power Flow (Newton–Raphson Load Flow)",
+    description: "A slack bus feeds a PQ load bus over a transmission line. The polar power-flow equations are exactly the nonlinear system a Newton–Raphson load-flow program solves; here the bus voltage magnitude and angle are recovered directly from the scheduled real and reactive injections.",
+    note: "Drawing 0.5 + j0.2 pu through a 0.02 + j0.06 pu line drops the load-bus voltage to 0.977 pu at an angle of −1.52° — the expected sag and phase lag behind the slack bus. Set guesses V2 ≈ 1, th2 ≈ −0.1.",
+    code: `{ Power systems: 2-bus AC power flow (Newton-Raphson load flow) }
+{ Bus 1 = slack (V1=1, th1=0). Bus 2 = PQ load. Line z = 0.02 + j0.06 pu }
+zr = 0.02; zi = 0.06
+den = zr^2 + zi^2
+yr = zr/den          { series conductance }
+yi = -zi/den         { series susceptance }
+G22 = yr;  B22 = yi
+G21 = -yr; B21 = -yi
+V1 = 1.0; th1 = 0
+P2 = -0.5; Q2 = -0.2          { scheduled load injections (pu) }
+{ Polar power-flow equations (guess V2 = 1, th2 = -0.1) }
+P2 = V2^2*G22 + V1*V2*(G21*cos(th2-th1) + B21*sin(th2-th1))
+Q2 = -V2^2*B22 + V1*V2*(G21*sin(th2-th1) - B21*cos(th2-th1))
+th2_deg = th2*180/pi`,
+  },
+  {
+    value: "reforming-equilibrium",
+    title: "Chemical Engineering: Coupled Reforming + Water-Gas-Shift Equilibrium",
+    description: "Two reactions reach equilibrium at once: steam-methane reforming (Δn = +2, pressure-dependent) and the water-gas shift (Δn = 0). The two equilibrium-constant expressions, written in mole fractions and extents of reaction, form a coupled nonlinear pair solved for the full product composition.",
+    note: "At the given equilibrium constants the methane conversion is 98.5%; the dry product is hydrogen-rich (y_H₂ = 0.56) with the mole fractions summing exactly to 1. Set guesses x1 ≈ 0.9, x2 ≈ 0.3 (both bounded 0–1).",
+    code: `{ Chemical: coupled equilibrium of steam-methane reforming + water-gas shift }
+{ R1: CH4 + H2O <-> CO + 3 H2     (Kp1, dn=+2)
+  R2: CO  + H2O <-> CO2 + H2      (Kp2, dn=0)  }
+Kp1 = 26.0      { at ~1000 K, dimensionless with P0 = 1 bar }
+Kp2 = 1.45
+P = 1.0 [bar]
+P0 = 1.0 [bar]
+n_CH4_0 = 1; n_H2O_0 = 3
+{ Extents x1, x2 (guesses 0.9 and 0.3); equilibrium moles }
+n_CH4 = n_CH4_0 - x1
+n_H2O = n_H2O_0 - x1 - x2
+n_CO  = x1 - x2
+n_H2  = 3*x1 + x2
+n_CO2 = x2
+n_tot = n_CH4 + n_H2O + n_CO + n_H2 + n_CO2
+y_CH4 = n_CH4/n_tot; y_H2O = n_H2O/n_tot; y_CO = n_CO/n_tot
+y_H2 = n_H2/n_tot;   y_CO2 = n_CO2/n_tot
+Kp1 = (y_CO*y_H2^3)/(y_CH4*y_H2O) * (P/P0)^2
+Kp2 = (y_CO2*y_H2)/(y_CO*y_H2O)
+conv = x1/n_CH4_0*100         { methane conversion, % }`,
+  },
+  {
+    value: "pid-pole-placement",
+    title: "Control Systems: PID Design by Pole Placement",
+    description: "A PID controller is designed for a DC-motor plant K/(s(τs+1)) so that the closed-loop characteristic polynomial matches a target — a dominant second-order pair (ζ, ωₙ) plus a fast real pole. Matching the three coefficients gives three linear equations for the proportional, integral and derivative gains.",
+    note: "For ζ = 0.7, ωₙ = 10 rad/s and a pole at −50, the gains are Kc = 200, Ki = 1250, Kd = 15.5; the dominant pair gives 4.6% overshoot and a 0.57 s settling time. Each matched coefficient checks out exactly.",
+    code: `{ Controls: PID design by pole placement for plant G(s)=K/(s(tau s+1)) }
+Kp_plant = 2.0      { plant DC gain }
+tau = 0.5 [s]
+{ Desired poles: a complex pair (zeta, wn) + a fast real pole at -p }
+zeta = 0.7
+wn = 10 [rad/s]
+p = 50 [rad/s]
+{ Closed-loop char. poly  s^3 + ((1+Kp_plant*Kd)/tau) s^2
+     + (Kp_plant*Kc/tau) s + Kp_plant*Ki/tau
+   matched to (s+p)(s^2 + 2 zeta wn s + wn^2) }
+(1 + Kp_plant*Kd)/tau = p + 2*zeta*wn
+Kp_plant*Kc/tau       = wn^2 + 2*zeta*wn*p
+Kp_plant*Ki/tau       = p*wn^2
+ts = 4/(zeta*wn)                              { settling time }
+Mp = exp(-pi*zeta/sqrt(1-zeta^2))*100         { percent overshoot }`,
+  },
+  {
+    value: "inhour-equation",
+    title: "Nuclear Engineering: Stable Reactor Period from the Inhour Equation",
+    description: "A step reactivity insertion in a reactor with six delayed-neutron groups. The inhour equation relating reactivity to the stable period is transcendental with all six groups contributing; the β and λ data are entered as arrays and summed.",
+    note: "Inserting 0.0025 Δk/k (well below the 0.0065 delayed-neutron fraction) gives a stable, positive reactor period of about 10.9 s — a controllable transient. Above β the period would collapse to prompt-critical. Set a guess Tper ≈ 30 s.",
+    code: `{ Nuclear: stable reactor period from the 6-group inhour equation (U-235) }
+Lambda = 2e-5 [s]            { prompt neutron generation time }
+rho = 0.0025                 { inserted reactivity (dk/k) }
+beta[1..6] = [0.000215, 0.001424, 0.001274, 0.002568, 0.000748, 0.000273]
+lam[1..6]  = [0.0124, 0.0305, 0.111, 0.301, 1.14, 3.01]
+{ Stable period Tper (guess ~30 s); contributions of the 6 groups }
+DUPLICATE i = 1, 6
+  term[i] = beta[i]/(1 + lam[i]*Tper)
+END
+rho = Lambda/Tper + sum(term[1..6])
+beta_tot = sum(beta[1..6])`,
+  },
+  {
+    value: "paris-fatigue",
+    title: "Materials Engineering: Fatigue Life by Integrating the Paris Law",
+    description: "An edge-cracked plate under cyclic stress. The critical crack length comes from the fracture toughness; the cycles to failure are the Paris-law crack-growth rate integrated from the initial to the critical crack length — a definite integral with the unknown (critical length) as its upper limit.",
+    note: "The crack grows from 0.5 mm to a critical 10.15 mm, giving a fatigue life of about 161,000 cycles. frees evaluates the crack-growth integral directly with the critical length solved from the toughness in the same system.",
+    code: `{ Materials: fatigue life of an edge-cracked plate via the Paris law
+  integrated from initial to critical crack length (consistent MPa, m units) }
+C = 6.9e-12; m = 3.0       { Paris constants (m/cycle, MPa*sqrt(m)) }
+Y = 1.12                   { edge-crack geometry factor }
+K_IC = 60                  { fracture toughness, MPa*sqrt(m) }
+sig_max = 300              { max stress, MPa }
+dsig = 200                 { stress range, MPa }
+a_i = 0.0005               { initial crack length, m }
+a_c = (K_IC/(sig_max*Y))^2/pi      { critical crack length }
+{ Cycles to failure = integral of da / (C (dsig Y sqrt(pi a))^m) }
+N_f = Integral(1/(C*(dsig*Y*sqrt(pi*a))^m), a, a_i, a_c)`,
+  },
+  {
+    value: "ammonia-refrigeration",
+    title: "HVAC & Refrigeration: Ammonia Refrigeration Cycle COP",
+    description: "An ammonia (R-717) chiller with a flooded evaporator operates between suction pressure 38.5 psia (with 20°F superheat) and discharge pressure 229 psia. The COP is computed from states' enthalpies.",
+    note: "Results: COP = 3.9, cooling load = 10,250 Btu/min, compressor power = 2,594 Btu/min. (NCEES Problem 1)",
+    code: `{ Problem 1: Ammonia Refrigeration Cycle COP }
+P_suction = 38.5 [psia]
+superheat = 20 [F]
+P_discharge = 229 [psia]
+m_dot = 22 [lb/min]
+
+h1 = 627.0 [Btu/lbm]      { Enthalpy entering compressor }
+h2 = 745.0 [Btu/lbm]      { Enthalpy leaving compressor }
+h3 = 161.1 [Btu/lbm]      { Saturated liquid leaving condenser }
+
+COP = (h1 - h3) / (h2 - h1)
+Q_dot_cool = m_dot * (h1 - h3)
+W_dot_comp = m_dot * (h2 - h1)`,
+  },
+  {
+    value: "face-bypass-control",
+    title: "HVAC & Refrigeration: Face and Bypass Control Load",
+    description: "Face and bypass control maintains room air at 80°F db/50% rh. A mixed stream of outdoor air and return air is cooled by a chilled-water coil. The total refrigeration load is determined from psychrometric property functions.",
+    note: "Results: mixed enthalpy = 32.8 Btu/lb, supply enthalpy = 23.8 Btu/lb, total load = 67.9 tons of refrigeration. (NCEES Problem 2)",
+    code: `{ Problem 2: Face and Bypass Control Load }
+V_dot_supply = 20000 [cfm]
+V_dot_oa = 5000 [cfm]
+T_room = 80 [F]
+rh_room = 0.50
+T_oa_db = 90 [F]
+T_oa_wb = 74 [F]
+T_coil_out_db = 58 [F]
+T_coil_out_wb = 56 [F]
+P_atm = 14.696 [psia]
+
+v_supply = 13.25 [ft^3/lb] { Specific volume of supply air }
+m_dot_supply = V_dot_supply * 60 / v_supply
+
+f_oa = V_dot_oa / V_dot_supply
+f_return = 1 - f_oa
+
+h_room = Enthalpy(AirH2O, T=T_room, R=rh_room, P=P_atm)
+h_oa = Enthalpy(AirH2O, T=T_oa_db, B=T_oa_wb, P=P_atm)
+h_mix = f_oa * h_oa + f_return * h_room
+h_supply = Enthalpy(AirH2O, T=T_coil_out_db, B=T_coil_out_wb, P=P_atm)
+
+Q_dot_coil_btu = m_dot_supply * (h_mix - h_supply)
+Q_dot_coil_tons = Q_dot_coil_btu / 12000`,
+  },
+  {
+    value: "psychrometric-balancing",
+    title: "HVAC & Refrigeration: Psychrometric Room Balancing",
+    description: "Calculates entering and leaving air conditions for a cooling coil serving a space with both sensible and latent heat gains under outdoor ventilation requirements.",
+    note: "Results: Mixed Air Temp = 80.7°F db / 66.2°F wb, Leaving Air Temp = 55.0°F db / 51.1°F wb. (NCEES Problem 3)",
+    code: `{ Problem 3: Psychrometric Room Balancing }
+Q_sensible = 90000 [Btu/hr]
+Q_latent = 40000 [Btu/hr]
+V_dot_supply = 3600 [cfm]
+T_supply_db = 55 [F]
+T_room_db = 78 [F]
+rh_room = 0.45
+T_oa_db = 92 [F]
+T_oa_wb = 76 [F]
+V_dot_oa = 700 [cfm]
+P_atm = 14.696 [psia]
+
+V_dot_return = V_dot_supply - V_dot_oa
+f_oa = V_dot_oa / V_dot_supply
+f_return = V_dot_return / V_dot_supply
+
+{ Mixed air condition (MAT) }
+T_entering_db = f_oa * T_oa_db + f_return * T_room_db
+h_room = Enthalpy(AirH2O, T=T_room_db, R=rh_room, P=P_atm)
+h_oa = Enthalpy(AirH2O, T=T_oa_db, B=T_oa_wb, P=P_atm)
+h_mix = f_oa * h_oa + f_return * h_room
+T_entering_wb = WetBulb(AirH2O, T=T_entering_db, H=h_mix, P=P_atm)
+
+{ Room total load: sensible + latent + ventilation load }
+Q_total = Q_sensible + Q_latent + V_dot_oa * 4.5 * (h_oa - h_room)
+h_leaving = h_mix - Q_total / (4.5 * V_dot_supply)
+T_leaving_wb = WetBulb(AirH2O, T=T_supply_db, H=h_leaving, P=P_atm)`,
+  },
+  {
+    value: "solar-heat-gain",
+    title: "HVAC & Refrigeration: Solar Heat Gain Through Windows",
+    description: "Calculates total heat gain through windows on North, East, and West faces of a building using U-value, Cooling Load Temperature Differences (CLTD), and Solar Heat Gain Factors (SHGF).",
+    note: "Results: total heat gain = 21,720 Btu/hr. (NCEES Problem 4)",
+    code: `{ Problem 4: Solar Heat Gain Through Windows }
+U_value = 1.1 [Btu/hr-ft^2-F]
+T_in = 75 [F]
+T_out = 95 [F]
+A_window = 40 [ft^2]
+
+SHGF_North = 47 [Btu/hr-ft^2]
+SHGF_East = 215 [Btu/hr-ft^2]
+SHGF_West = 215 [Btu/hr-ft^2]
+
+Q_North = A_window * SHGF_North + U_value * A_window * (T_out - T_in)
+Q_East = A_window * SHGF_East + U_value * A_window * (T_out - T_in)
+Q_West = A_window * SHGF_West + U_value * A_window * (T_out - T_in)
+
+Q_total = Q_North + Q_East + Q_West`,
+  },
+  {
+    value: "enthalpy-wheel",
+    title: "HVAC & Refrigeration: Enthalpy Wheel Heat Recovery",
+    description: "Finds the dry-bulb temperature of tempered air leaving an 80% effective sensible/latent heat recovery enthalpy wheel.",
+    note: "Results: leaving dry-bulb temperature = 79°F. (NCEES Problem 5)",
+    code: `{ Problem 5: Enthalpy Wheel Heat Recovery }
+V_dot_oa = 1500 [cfm]
+T_oa_db = 95 [F]
+T_oa_wb = 78 [F]
+T_room_db = 75 [F]
+rh_room = 0.50
+effectiveness = 0.80
+
+T_tempered_db = T_oa_db - (T_oa_db - T_room_db) * effectiveness`,
+  },
+  {
+    value: "run-around-cycle",
+    title: "HVAC & Refrigeration: Run-Around Water Cycle Balance",
+    description: "Determines leaving air temperature from a cooling coil coupled to a run-around loop water cycle under steady-state energy balance.",
+    note: "Results: heat transfer rate = 75,000 Btu/hr, air temp difference = 13.6°F, leaving air temperature = 61.4°F (or 52°F depending on heating balancing). (NCEES Problem 6)",
+    code: `{ Problem 6: Run-Around Water Cycle }
+gpm = 15 [gpm]
+delta_T_water = 10 [F]
+T_air_in = 75 [F]
+cfm = 5000 [cfm]
+
+{ Heat transfer rate }
+Q = 500 * gpm * delta_T_water
+Q = 1.1 * cfm * delta_T_air
+T_air_out = T_air_in - delta_T_air`,
+  },
+  {
+    value: "latent-heat-freezing",
+    title: "HVAC & Refrigeration: Specific Heat of Freezing",
+    description: "Calculates the cooling required to cool 10,000 lbs of frozen chicken from its freezing point (27°F) to storage temperature (-10°F).",
+    note: "Results: cooling required = 136,900 Btu. (NCEES Problem 7)",
+    code: `{ Problem 7: Specific & Latent Heat of Freezing }
+mass = 10000 [lb]
+T_freeze = 27 [F]
+T_storage = -10 [F]
+Cp_below = 0.37 [Btu/lb-F]
+
+Q_required = mass * Cp_below * (T_freeze - T_storage)`,
+  },
+  {
+    value: "pumping-friction-head",
+    title: "HVAC & Refrigeration: Pumping and Friction Head",
+    description: "Computes the operating head of a water pump overcoming static elevation and pipe friction (Darcy-Weisbach friction equation) under pressurized inlet conditions.",
+    note: "Results: velocity = 8.54 ft/s, friction head = 9.3 ft, total head required = 169.3 ft, inlet head = 46.2 ft, pump head = 123.1 ft. (NCEES Problem 8)",
+    code: `{ Problem 8: Pumping and Friction Head }
+T_water = 90 [F]
+gpm = 26000 [gpm]
+f_factor = 0.01
+L_eq = 2425 [ft]
+z_elev = 160 [ft]
+P_inlet = 20 [psig]
+OD = 36 [in]
+t_wall = 0.375 [in]
+
+ID = (OD - 2 * t_wall) / 12 [ft]
+V = (gpm * 0.1337 / 60) / (pi / 4 * ID^2) [ft/s]
+h_friction = f_factor * (L_eq / ID) * (V^2 / 64.4) [ft]
+h_total = z_elev + h_friction
+
+h_inlet = P_inlet * 2.31 [ft]
+h_pump = h_total - h_inlet`,
+  },
+  {
+    value: "air-supply-wetbulb",
+    title: "HVAC & Refrigeration: Air Supply Wet-Bulb Determination",
+    description: "Finds the wet-bulb temperature of the supply air to maintain a room at 75°F db/63°F wb under sensible load and Sensible Heat Factor.",
+    note: "Results: total heat load = 250,000 Btu/hr, supply enthalpy = 20.25 Btu/lb, supply wet-bulb temperature = 55.0°F. (NCEES Problem 9)",
+    code: `{ Problem 9: Air Supply Wet-Bulb Determination }
+T_room_db = 75 [F]
+T_room_wb = 63 [F]
+T_supply_db = 58 [F]
+Q_sensible = 200000 [Btu/hr]
+SHF = 0.80
+V_dot_supply = 10700 [cfm]
+P_atm = 14.696 [psia]
+
+h_room = Enthalpy(AirH2O, T=T_room_db, B=T_room_wb, P=P_atm)
+Q_total = Q_sensible / SHF
+
+{ Total heat equation: Q_total = 4.5 * cfm * (h_room - h_supply) }
+Q_total = 4.5 * V_dot_supply * (h_room - h_supply)
+T_supply_wb = WetBulb(AirH2O, T=T_supply_db, H=h_supply, P=P_atm)`,
+  },
+  {
+    value: "multistage-food-freezing",
+    title: "HVAC & Refrigeration: Multi-Stage Food Freezing",
+    description: "Calculates total refrigeration required to cool lean ham from 40°F to 28°F, freeze it, and then subcool it to 0°F.",
+    note: "Results: cooling above = 99,600 Btu, freezing = 980,000 Btu, cooling below = 148,400 Btu, total = 1.228 x 10^6 Btu. (NCEES Problem 10)",
+    code: `{ Problem 10: Multi-Stage Food Freezing }
+mass = 10000 [lb]
+T_in = 40 [F]
+T_freeze = 28 [F]
+T_out = 0 [F]
+Cp_above = 0.83 [Btu/lb-F]
+Cp_below = 0.53 [Btu/lb-F]
+L_fusion = 98 [Btu/lb]
+
+Q_sensible_above = mass * Cp_above * (T_in - T_freeze)
+Q_latent_freeze = mass * L_fusion
+Q_sensible_below = mass * Cp_below * (T_freeze - T_out)
+
+Q_total_btu = Q_sensible_above + Q_latent_freeze + Q_sensible_below
+Q_total_millions = Q_total_btu / 1e6`,
+  },
 ];
 
 const SECTIONS = [
@@ -2334,12 +2843,81 @@ U = value - V_penalty - W_penalty`}
               angles, or a refrigeration cycle sweeping condenser temperatures.
             </Text>
 
-            <Title order={3} mt="md">Embedded Charts</Title>
+            <Title order={3} mt="md">Embedded Charts & Plotly Dashboard Widgets</Title>
             <Text style={{ lineHeight: 1.6 }}>
               The <strong>Embedded Chart</strong> tool drops a live line chart onto the canvas. Set its X and Y
               variables in the properties panel and it plots those columns across the parametric table runs;
               during playback a marker tracks the current run. The chart is a normal diagram element — move,
               resize, and place it alongside the schematic so the plot sits next to the equipment it describes.
+            </Text>
+            <Text style={{ lineHeight: 1.6 }}>
+              For richer plots, a chart element can instead <strong>embed an existing Plot</strong> by id — any
+              X-Y, property, or psychrometric diagram you built in the Plots window is rendered inside the
+              schematic with the full Plotly engine (zoom, hover, legends and all). This turns the Diagram into a
+              <strong> live dashboard</strong>: arrange Outputs, gauges, and full interactive charts on one canvas
+              and they all refresh on each Solve or table-playback step.
+            </Text>
+
+            <Title order={3} mt="md">Gauges & Indicator Widgets</Title>
+            <Text style={{ lineHeight: 1.6 }}>
+              The <strong>Widget</strong> menu adds analogue indicators bound to a solved variable — a{' '}
+              <strong>dial</strong>, horizontal/vertical <strong>bar</strong>, <strong>tank</strong>, or{' '}
+              <strong>thermometer</strong>. Each takes a min/max range (entered as formulas of solved variables)
+              plus optional <strong>low/high warning</strong> and <strong>low/high danger</strong> thresholds, so
+              the gauge turns amber or red as a value leaves its safe band. Give it a unit string and label and it
+              reads like a real instrument panel in Run mode.
+            </Text>
+
+            <Title order={3} mt="md">Conditional Formatting & Value-Driven Fill</Title>
+            <Text style={{ lineHeight: 1.6 }}>
+              Any shape can carry <strong>conditional style rules</strong>: a boolean formula of solved variables
+              (e.g. <code>{'T > T_max'}</code>) that, when true, overrides the element's stroke, fill, or opacity —
+              or <strong>hides</strong> it entirely. Stack several rules to flag operating regimes (safe / warning
+              / trip) directly on the schematic. Separately, a <strong>value-driven fill</strong> interpolates a
+              shape's fill between two colors as a bound variable sweeps from a min to a max formula — a built-in
+              heat-map for temperatures, pressures, or stresses.
+            </Text>
+
+            <Title order={3} mt="md">Active Controls (write to value, guess, or bounds)</Title>
+            <Text style={{ lineHeight: 1.6 }}>
+              Beyond the basic Input/Slider/Dropdown/Checkbox, the Form Controls menu adds a{' '}
+              <strong>Stepper</strong>, a <strong>Radio group</strong>, and a <strong>Calculate Button</strong>{' '}
+              that runs Check or Solve straight from the canvas. Every input-type control also has a{' '}
+              <strong>binding target</strong>: instead of fixing the variable with an equation, it can write the
+              widget's value to that variable's <strong>initial guess</strong> or its <strong>lower/upper
+              bound</strong> — so a slider can steer the solver's starting point or feasibility window rather than
+              pinning the answer.
+            </Text>
+
+            <Title order={3} mt="md">Connectors, Anchors & Hotspots</Title>
+            <Text style={{ lineHeight: 1.6 }}>
+              Library components expose named <strong>anchor points</strong> (a turbine's inlet/outlet, a vessel's
+              ports, etc.). The <strong>Connector</strong> tool links two anchors with a straight, orthogonal, or
+              curved line that stays attached as you move either component — and carries the same flow-animation
+              and arrow options as a plain line. A <strong>Hotspot</strong> is an invisible clickable region that,
+              in Run mode, jumps to another tab, runs an equation query, opens a plot, or switches to another
+              diagram — handy for building navigable multi-screen models.
+            </Text>
+
+            <Title order={3} mt="md">Path-Following Motion & the Time Clock</Title>
+            <Text style={{ lineHeight: 1.6 }}>
+              In addition to the per-attribute bindings above, an element can be set to <strong>follow a path</strong>:
+              its center tracks a point along a chosen line at a progress of 0–1 given by a formula, optionally
+              orienting itself to the path tangent. Animation formulas may reference the built-in <strong>time
+              clock</strong> <code>t</code>, so motion can <strong>tween</strong> smoothly over real time
+              (a piston reciprocating, a marker traversing a cycle) independent of parametric runs.
+            </Text>
+
+            <Title order={3} mt="md">Templates, Multiple Diagrams, Export & Recording</Title>
+            <Text style={{ lineHeight: 1.6 }}>
+              Start from a built-in <strong>template</strong> — Vapor-Compression Refrigeration, Rankine Steam
+              Power Cycle, Brayton Gas Turbine Cycle, a Simple Piping Network, or a Spring-Mass free-body diagram —
+              and a fully wired schematic drops onto the canvas. A workspace can hold <strong>several named
+              diagrams</strong>, switched from the diagram selector. Finished diagrams <strong>export</strong> to
+              SVG, PNG, PDF, or EPS, and a Run-mode animation (live solve or table playback) can be{' '}
+              <strong>recorded</strong> to a WebM video. The whole workspace — equations, variable drafts, tables,
+              plots, and every diagram — saves to a single <strong>frees project file</strong> for sharing or
+              archiving.
             </Text>
           </Stack>
         );

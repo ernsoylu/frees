@@ -5,13 +5,17 @@ package com.frees.backend.core;
  * window: guess value (default 1.0) and lower/upper bounds (default
  * ±infinity).
  */
-public record VariableSpec(String name, double guess, double lower, double upper) {
+public record VariableSpec(String name, double guess, double lower, double upper, double uncertainty) {
 
     public static final double DEFAULT_GUESS = 1.0;
 
+    public VariableSpec(String name, double guess, double lower, double upper) {
+        this(name, guess, lower, upper, 0.0);
+    }
+
     public VariableSpec {
         name = name.toLowerCase();
-        if (Double.isNaN(guess) || Double.isNaN(lower) || Double.isNaN(upper)) {
+        if (Double.isNaN(guess) || Double.isNaN(lower) || Double.isNaN(upper) || Double.isNaN(uncertainty)) {
             throw new SolverException("Variable information for " + name + " contains NaN.");
         }
         if (lower > upper) {
@@ -27,6 +31,6 @@ public record VariableSpec(String name, double guess, double lower, double upper
 
     public static VariableSpec defaults(String name) {
         return new VariableSpec(name, DEFAULT_GUESS,
-                Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY);
+                Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY, 0.0);
     }
 }

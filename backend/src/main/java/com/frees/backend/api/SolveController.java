@@ -48,14 +48,15 @@ public class SolveController {
     }
 
     public record VariableInfoDto(String name, Double guess, Double lower, Double upper,
-                                  String units) {
+                                  String units, Double uncertainty) {
 
         VariableSpec toSpec() {
             double lo = lower != null ? lower : Double.NEGATIVE_INFINITY;
             double hi = upper != null ? upper : Double.POSITIVE_INFINITY;
             double g = guess != null ? guess
                     : Math.clamp(VariableSpec.DEFAULT_GUESS, lo, hi);
-            return new VariableSpec(name, g, lo, hi);
+            double unc = uncertainty != null ? uncertainty : 0.0;
+            return new VariableSpec(name, g, lo, hi, unc);
         }
     }
 
@@ -122,7 +123,11 @@ public class SolveController {
         return defs;
     }
 
-    public record VariableDto(String name, double value, String units) {}
+    public record VariableDto(String name, double value, String units, Double uncertainty) {
+        public VariableDto(String name, double value, String units) {
+            this(name, value, units, null);
+        }
+    }
 
     public record BlockDto(int index, List<String> equations, List<String> variables) {}
 
@@ -207,30 +212,49 @@ public class SolveController {
         return byLower;
     }
 
+    private static VariableDto toDisplay(String name, double siValue, Double siUnc, String unit,
+                                         UnitRegistry.UnitSystem system,
+                                         Map<String, String> explicitUnits) {
+        double displayVal;
+        double displayUnc = siUnc != null ? siUnc : 0.0;
+        String displayUnit;
+        
+        if (unit == null || unit.isBlank() || unit.equals("-")) {
+            displayVal = siValue;
+            displayUnit = unit == null ? "" : unit;
+        } else {
+            UnitRegistry.OffsetQuantity recorded;
+            try {
+                recorded = UnitRegistry.parseWithOffset(unit);
+                if (explicitUnits != null && explicitUnits.containsKey(name.toLowerCase())) {
+                    displayVal = (siValue - recorded.offset()) / recorded.factor();
+                    displayUnc = siUnc != null ? siUnc / recorded.factor() : 0.0;
+                    displayUnit = unit;
+                } else {
+                    UnitRegistry.DisplayUnit preferred =
+                            UnitRegistry.preferredDisplayUnit(recorded.dims(), system);
+                    if (preferred != null) {
+                        displayVal = (siValue - preferred.offset()) / preferred.factor();
+                        displayUnc = siUnc != null ? siUnc / preferred.factor() : 0.0;
+                        displayUnit = preferred.name();
+                    } else {
+                        displayVal = (siValue - recorded.offset()) / recorded.factor();
+                        displayUnc = siUnc != null ? siUnc / recorded.factor() : 0.0;
+                        displayUnit = unit;
+                    }
+                }
+            } catch (UnitRegistry.UnknownUnitException e) {
+                displayVal = siValue;
+                displayUnit = unit;
+            }
+        }
+        return new VariableDto(name, displayVal, displayUnit, siUnc != null ? displayUnc : null);
+    }
+
     private static VariableDto toDisplay(String name, double siValue, String unit,
                                          UnitRegistry.UnitSystem system,
                                          Map<String, String> explicitUnits) {
-        if (unit == null || unit.isBlank() || unit.equals("-")) {
-            return new VariableDto(name, siValue, unit == null ? "" : unit);
-        }
-        UnitRegistry.OffsetQuantity recorded;
-        try {
-            recorded = UnitRegistry.parseWithOffset(unit);
-        } catch (UnitRegistry.UnknownUnitException e) {
-            return new VariableDto(name, siValue, unit);
-        }
-        if (explicitUnits != null && explicitUnits.containsKey(name.toLowerCase())) {
-            return new VariableDto(name,
-                    (siValue - recorded.offset()) / recorded.factor(), unit);
-        }
-        UnitRegistry.DisplayUnit preferred =
-                UnitRegistry.preferredDisplayUnit(recorded.dims(), system);
-        if (preferred != null) {
-            return new VariableDto(name,
-                    (siValue - preferred.offset()) / preferred.factor(), preferred.name());
-        }
-        return new VariableDto(name,
-                (siValue - recorded.offset()) / recorded.factor(), unit);
+        return toDisplay(name, siValue, null, unit, system, explicitUnits);
     }
 
     private static UnitRegistry.UnitSystem unitSystem(String requested) {
@@ -343,10 +367,14 @@ public class SolveController {
             return ResponseEntity.ok(new SolveResponse(
                     true,
                     result.variables().entrySet().stream()
-                            .map(e -> toDisplay(e.getKey(), e.getValue(),
-                                    unitsByLowerName.getOrDefault(e.getKey().toLowerCase(), ""),
-                                    system,
-                                    explicitUnits))
+                            .map(e -> {
+                                String canonicalName = e.getKey().toLowerCase();
+                                Double siUnc = result.uncertainties() != null ? result.uncertainties().get(canonicalName) : null;
+                                return toDisplay(e.getKey(), e.getValue(), siUnc,
+                                        unitsByLowerName.getOrDefault(canonicalName, ""),
+                                        system,
+                                        explicitUnits);
+                            })
                             .toList(),
                     result.blocks().stream()
                             .map(b -> toBlockDto(b, result.displayNames()))
@@ -364,11 +392,14 @@ public class SolveController {
                     result.solutions().stream()
                             .map(s -> new SolutionDto(
                                     s.variables().entrySet().stream()
-                                            .map(e -> toDisplay(e.getKey(), e.getValue(),
-                                                    unitsByLowerName.getOrDefault(
-                                                            e.getKey().toLowerCase(), ""),
-                                                    system,
-                                                    explicitUnits))
+                                            .map(e -> {
+                                                String canonicalName = e.getKey().toLowerCase();
+                                                Double siUnc = result.uncertainties() != null ? result.uncertainties().get(canonicalName) : null;
+                                                return toDisplay(e.getKey(), e.getValue(), siUnc,
+                                                        unitsByLowerName.getOrDefault(canonicalName, ""),
+                                                        system,
+                                                        explicitUnits);
+                                            })
                                             .toList(),
                                     s.maxResidual()))
                             .toList(),
@@ -841,7 +872,8 @@ public class SolveController {
                 result.residuals(),
                 result.stats(),
                 resolvedSolutions,
-                mutableDisplayNames
+                mutableDisplayNames,
+                result.uncertainties()
         );
     }
 

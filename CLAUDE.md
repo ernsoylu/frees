@@ -49,6 +49,7 @@ cd frontend && npm start                      # dev-only: Vite dev server (proxi
 - The solver groups equations into blocks via Tarjan's algorithm, then solves each block using Newton's method with step-halving.
 - Data types are parsed dynamically by naming convention: `$` suffix → string, `#` suffix → constant, `[]` → array, `_r`/`_i` components → complex numbers.
 - **All calculations run in SI** (frees decision): unit-annotated constants are converted to SI at parse time, and computed variables get dimensionally derived SI units. Unit warnings never block solving.
+- **Uncertainty Propagation**: Computes system-wide first-order error propagation using finite-difference numerical Jacobians and an SVD solver. Propagated errors are combined via root-sum-square (RSS). When the `UncertaintyOf(X)` accessor is present, the solver runs a second-solve pass, copying `"uncertaintyof$"` keys from the first pass to resolve these calls dynamically.
 
 ## Architecture Summary
 

@@ -1,5 +1,6 @@
 package com.frees.backend.ast;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -191,12 +192,160 @@ public final class Differentiator {
             case "beta" -> diffBeta(args, var);
 
             // d/dx J_n(x) = (J_{n−1}(x) − J_{n+1}(x)) / 2 · x'  (constant n)
-            case "besselj" -> diffBessel(args, var, "besselj", true);
+            case "besselj", "bessel_j" -> diffBessel(args, var, function, true, false);
             // d/dx I_n(x) = (I_{n−1}(x) + I_{n+1}(x)) / 2 · x'  (constant n)
-            case "besseli" -> diffBessel(args, var, "besseli", false);
+            case "besseli", "bessel_i" -> diffBessel(args, var, function, false, false);
+            // d/dx Y_n(x) = (Y_{n−1}(x) − Y_{n+1}(x)) / 2 · x'  (constant n)
+            case "bessely", "bessel_y" -> diffBessel(args, var, function, true, false);
+            // d/dx K_n(x) = -(K_{n−1}(x) + K_{n+1}(x)) / 2 · x'  (constant n)
+            case "besselk", "bessel_k" -> diffBessel(args, var, function, false, true);
+
+            // Shortcut Bessel functions
+            case "besselj0", "bessel_j0" -> chainRule(args, var, f -> simplifyNeg(call(function.substring(0, function.length() - 1) + "1", f)));
+            case "besseli0", "bessel_i0" -> chainRule(args, var, f -> call(function.substring(0, function.length() - 1) + "1", f));
+            case "bessely0", "bessel_y0" -> chainRule(args, var, f -> simplifyNeg(call(function.substring(0, function.length() - 1) + "1", f)));
+            case "besselk0", "bessel_k0" -> chainRule(args, var, f -> simplifyNeg(call(function.substring(0, function.length() - 1) + "1", f)));
+
+            case "besselj1", "bessel_j1" -> chainRule(args, var, f -> simplifySub(call(function.substring(0, function.length() - 1) + "0", f), simplifyDiv(call(function, f), f)));
+            case "besseli1", "bessel_i1" -> chainRule(args, var, f -> simplifySub(call(function.substring(0, function.length() - 1) + "0", f), simplifyDiv(call(function, f), f)));
+            case "bessely1", "bessel_y1" -> chainRule(args, var, f -> simplifySub(call(function.substring(0, function.length() - 1) + "0", f), simplifyDiv(call(function, f), f)));
+            case "besselk1", "bessel_k1" -> chainRule(args, var, f -> simplifySub(simplifyNeg(call(function.substring(0, function.length() - 1) + "0", f)), simplifyDiv(call(function, f), f)));
+
+            // Chi-Square distribution derivative: the PDF
+            case "chi_square" -> {
+                if (args.size() != 2) yield null;
+                Expr x = args.get(0);
+                Expr df = args.get(1);
+                if (!isConstant(df)) yield null;
+                Expr dx = diff(x, var);
+                if (dx == null) yield null;
+                Expr halfDf = simplifyDiv(df, num(2));
+                Expr numerator = simplifyMul(
+                        call("exp", simplifyNeg(simplifyDiv(x, num(2)))),
+                        simplifyPow(x, simplifySub(halfDf, num(1)))
+                );
+                Expr denominator = simplifyMul(
+                        simplifyPow(num(2), halfDf),
+                        call("gamma", halfDf)
+                );
+                yield simplifyMul(simplifyDiv(numerator, denominator), dx);
+            }
+            case "random", "randg", "uncertaintyof" -> num(0.0);
+            case "probability" -> {
+                if (args.size() != 4) yield null;
+                Expr x1 = args.get(0);
+                Expr x2 = args.get(1);
+                Expr mean = args.get(2);
+                Expr stdDev = args.get(3);
+                if (!isConstant(mean) || !isConstant(stdDev)) yield null;
+                Expr dx1 = diff(x1, var);
+                Expr dx2 = diff(x2, var);
+                if (dx1 == null || dx2 == null) yield null;
+                Expr factor = simplifyMul(stdDev, num(Math.sqrt(2.0 * Math.PI)));
+                Expr pdf1 = simplifyDiv(
+                        call("exp", simplifyNeg(simplifyDiv(simplifyPow(simplifySub(x1, mean), num(2)), simplifyMul(num(2), simplifyPow(stdDev, num(2)))))),
+                        factor
+                );
+                Expr pdf2 = simplifyDiv(
+                        call("exp", simplifyNeg(simplifyDiv(simplifyPow(simplifySub(x2, mean), num(2)), simplifyMul(num(2), simplifyPow(stdDev, num(2)))))),
+                        factor
+                );
+                yield simplifySub(simplifyMul(pdf2, dx2), simplifyMul(pdf1, dx1));
+            }
+
+            // ── hyperbolic functions ────────────────────────────────────
+            case "sinh" -> chainRule(args, var, f -> call("cosh", f));
+            case "cosh" -> chainRule(args, var, f -> call("sinh", f));
+            case "tanh" -> chainRule(args, var, f ->
+                    simplifySub(num(1), simplifyMul(call("tanh", f), call("tanh", f))));
+            case "arcsinh" -> chainRule(args, var, f ->
+                    simplifyDiv(num(1), call("sqrt", simplifyAdd(simplifyMul(f, f), num(1)))));
+            case "arccosh" -> chainRule(args, var, f ->
+                    simplifyDiv(num(1), call("sqrt", simplifySub(simplifyMul(f, f), num(1)))));
+            case "arctanh" -> chainRule(args, var, f ->
+                    simplifyDiv(num(1), simplifySub(num(1), simplifyMul(f, f))));
+
+            // ── rounding and piecewise ─────────────────────────────────
+            case "floor", "ceil", "trunc", "sign", "step" ->
+                    args.stream().anyMatch(a -> a.variables().contains(var)) ? num(0) : num(0);
+            case "round" -> {
+                if (args.isEmpty() || args.size() > 2) yield null;
+                Expr f = args.get(0);
+                Expr df = diff(f, var);
+                yield df == null ? null : num(0);
+            }
+            case "factorial" -> {
+                if (args.size() != 1) yield null;
+                Expr f = args.get(0);
+                Expr df = diff(f, var);
+                if (df == null) yield null;
+                Expr fact = call("factorial", f);
+                Expr digamma = call("digamma", simplifyAdd(f, num(1)));
+                yield simplifyMul(simplifyMul(fact, digamma), df);
+            }
+
+            // ── conditionals & series ───────────────────────────────────
+            case "if" -> {
+                if (args.size() != 5) yield null;
+                Expr a = args.get(0);
+                Expr b = args.get(1);
+                Expr x = args.get(2);
+                Expr y = args.get(3);
+                Expr z = args.get(4);
+                Expr dx = diff(x, var);
+                Expr dy = diff(y, var);
+                Expr dz = diff(z, var);
+                if (dx == null || dy == null || dz == null) yield null;
+                yield new Expr.Call("if", List.of(a, b, dx, dy, dz));
+            }
+            case "sum" -> {
+                if (args.size() == 4 && args.get(0) instanceof Expr.Var(String idxVar)) {
+                    Expr term = args.get(3);
+                    Expr dTerm = diff(term, var);
+                    if (dTerm == null) yield null;
+                    yield new Expr.Call("sum", List.of(args.get(0), args.get(1), args.get(2), dTerm));
+                } else {
+                    List<Expr> dArgs = new ArrayList<>();
+                    for (Expr arg : args) {
+                        Expr da = diff(arg, var);
+                        if (da == null) yield null;
+                        dArgs.add(da);
+                    }
+                    yield new Expr.Call("sum", dArgs);
+                }
+            }
+            case "product" -> {
+                if (args.size() == 4 && args.get(0) instanceof Expr.Var(String idxVar)) {
+                    Expr lower = args.get(1);
+                    Expr upper = args.get(2);
+                    Expr term = args.get(3);
+                    Expr dTerm = diff(term, var);
+                    if (dTerm == null) yield null;
+                    Expr prod = new Expr.Call("product", List.of(args.get(0), lower, upper, term));
+                    Expr sumTerm = simplifyDiv(dTerm, term);
+                    Expr sum = new Expr.Call("sum", List.of(args.get(0), lower, upper, sumTerm));
+                    yield simplifyMul(prod, sum);
+                } else {
+                    yield null;
+                }
+            }
+
+            // ── complex helpers in real mode ────────────────────────────
+            case "conj" -> {
+                if (args.size() != 1) yield null;
+                yield diff(args.get(0), var);
+            }
+            case "magnitude" -> chainRule(args, var, f -> simplifyDiv(f, call("abs", f)));
+            case "angle", "anglerad", "angledeg" -> {
+                if (args.size() != 1) yield null;
+                Expr f = args.get(0);
+                Expr df = diff(f, var);
+                yield df == null ? null : num(0);
+            }
+            case "cis" -> chainRule(args, var, f -> simplifyNeg(call("sin", f)));
 
             // ── unsupported multi-arg or procedural functions ────────────
-            case "integral", "min", "max", "sum", "average", "avg",
+            case "integral", "min", "max", "average", "avg",
                  "atan2", "mod", "gcd", "lcm",
                  "bitand", "bitor", "bitxor", "bitnot", "bitshiftl", "bitshiftr",
                  "baseconvert", "digamma",
@@ -238,7 +387,7 @@ public final class Differentiator {
      * with a constant order n:  J'_n = (J_{n−1} − J_{n+1})/2,  I'_n = (I_{n−1} + I_{n+1})/2.
      */
     private static Expr diffBessel(List<Expr> args, String var,
-                                   String function, boolean subtract) {
+                                   String function, boolean subtract, boolean negate) {
         if (args.size() != 2) return null;
         Expr x = args.get(0);
         Expr order = args.get(1);
@@ -248,7 +397,8 @@ public final class Differentiator {
         Expr lower = new Expr.Call(function, List.of(x, simplifySub(order, num(1))));
         Expr upper = new Expr.Call(function, List.of(x, simplifyAdd(order, num(1))));
         Expr combined = subtract ? simplifySub(lower, upper) : simplifyAdd(lower, upper);
-        return simplifyMul(simplifyDiv(combined, num(2)), dx);
+        Expr result = simplifyMul(simplifyDiv(combined, num(2)), dx);
+        return negate ? simplifyNeg(result) : result;
     }
 
     private static Expr chainRule(List<Expr> args, String var,

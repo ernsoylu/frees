@@ -368,6 +368,44 @@ class DifferentiatorTest {
         assertNull(Differentiator.differentiate(expr, "x"));
     }
 
+    @Test
+    void newBesselAndChiSquareDerivatives() {
+        Expr k = call("besselk", var("x"), num(1));
+        assertDerivativeNumerically(k, "x", Map.of("x", 1.5), 1e-6);
+
+        Expr y = call("bessely", var("x"), num(1));
+        assertDerivativeNumerically(y, "x", Map.of("x", 2.0), 1e-6);
+
+        // Shortcut functions
+        Expr j0 = call("besselj0", var("x"));
+        assertDerivativeNumerically(j0, "x", Map.of("x", 2.0), 1e-6);
+
+        Expr j1 = call("besselj1", var("x"));
+        assertDerivativeNumerically(j1, "x", Map.of("x", 2.0), 1e-6);
+
+        Expr i0 = call("besseli0", var("x"));
+        assertDerivativeNumerically(i0, "x", Map.of("x", 2.0), 1e-6);
+
+        Expr i1 = call("besseli1", var("x"));
+        assertDerivativeNumerically(i1, "x", Map.of("x", 2.0), 1e-6);
+
+        Expr k0 = call("besselk0", var("x"));
+        assertDerivativeNumerically(k0, "x", Map.of("x", 1.5), 1e-6);
+
+        Expr k1 = call("besselk1", var("x"));
+        assertDerivativeNumerically(k1, "x", Map.of("x", 1.5), 1e-6);
+
+        Expr y0 = call("bessely0", var("x"));
+        assertDerivativeNumerically(y0, "x", Map.of("x", 2.0), 1e-6);
+
+        Expr y1 = call("bessely1", var("x"));
+        assertDerivativeNumerically(y1, "x", Map.of("x", 2.0), 1e-6);
+
+        // Chi-Square
+        Expr chi2 = call("chi_square", var("x"), num(2));
+        assertDerivativeNumerically(chi2, "x", Map.of("x", 4.0), 1e-6);
+    }
+
     // ── unsupported expressions return null ──────────────────────────────
 
     @Test
@@ -557,5 +595,66 @@ class DifferentiatorTest {
         Expr expr = mul(var("x"),
                 new Expr.Call("proc$myfunc$0", List.of(var("x"))));
         assertNull(Differentiator.differentiate(expr, "x"));
+    }
+
+    @Test
+    void differentiatesHyperbolicFunctions() {
+        assertDerivativeNumerically(call("sinh", var("x")), "x", Map.of("x", 1.0), 1e-6);
+        assertDerivativeNumerically(call("cosh", var("x")), "x", Map.of("x", 1.0), 1e-6);
+        assertDerivativeNumerically(call("tanh", var("x")), "x", Map.of("x", 1.0), 1e-6);
+        assertDerivativeNumerically(call("arcsinh", var("x")), "x", Map.of("x", 1.0), 1e-6);
+        assertDerivativeNumerically(call("arccosh", var("x")), "x", Map.of("x", 2.0), 1e-6);
+        assertDerivativeNumerically(call("arctanh", var("x")), "x", Map.of("x", 0.5), 1e-6);
+    }
+
+    @Test
+    void differentiatesPiecewiseAndRounding() {
+        Expr fl = call("floor", var("x"));
+        Expr cl = call("ceil", var("x"));
+        Expr tr = call("trunc", var("x"));
+        Expr sg = call("sign", var("x"));
+        Expr st = call("step", var("x"));
+        Expr rd = call("round", var("x"));
+        Expr rd2 = call("round", var("x"), num(2));
+
+        assertEquals(0.0, eval(Differentiator.differentiate(fl, "x"), "x", 1.5));
+        assertEquals(0.0, eval(Differentiator.differentiate(cl, "x"), "x", 1.5));
+        assertEquals(0.0, eval(Differentiator.differentiate(tr, "x"), "x", 1.5));
+        assertEquals(0.0, eval(Differentiator.differentiate(sg, "x"), "x", 1.5));
+        assertEquals(0.0, eval(Differentiator.differentiate(st, "x"), "x", 1.5));
+        assertEquals(0.0, eval(Differentiator.differentiate(rd, "x"), "x", 1.5));
+        assertEquals(0.0, eval(Differentiator.differentiate(rd2, "x"), "x", 1.5));
+
+        // factorial (Gamma-based): Factorial(x) = Gamma(x+1)
+        assertDerivativeNumerically(call("factorial", var("x")), "x", Map.of("x", 2.0), 1e-4);
+    }
+
+    @Test
+    void differentiatesConditionalsAndSeries() {
+        // If(a, b, x^2, y, z) -> w.r.t x -> If(a, b, 2x, 0, 0)
+        Expr ifExpr = new Expr.Call("if", List.of(num(1), num(2), pow(var("x"), num(2)), var("y"), var("z")));
+        Expr dIf = Differentiator.differentiate(ifExpr, "x");
+        assertNotNull(dIf);
+        assertEquals(4.0, eval(dIf, Map.of("x", 2.0, "y", 10.0, "z", 20.0)));
+
+        // Sum(i, 1, 3, i*x^2) -> w.r.t x -> Sum(i, 1, 3, 2*i*x) = 2x + 4x + 6x = 12x
+        Expr sumExpr = new Expr.Call("sum", List.of(var("i"), num(1), num(3), mul(var("i"), pow(var("x"), num(2)))));
+        Expr dSum = Differentiator.differentiate(sumExpr, "x");
+        assertNotNull(dSum);
+        assertEquals(24.0, eval(dSum, Map.of("x", 2.0)), 1e-9);
+
+        // Product(i, 1, 3, x) -> Product of 3 x's = x^3 -> derivative 3x^2
+        Expr prodExpr = new Expr.Call("product", List.of(var("i"), num(1), num(3), var("x")));
+        Expr dProd = Differentiator.differentiate(prodExpr, "x");
+        assertNotNull(dProd);
+        assertEquals(12.0, eval(dProd, Map.of("x", 2.0)), 1e-9);
+    }
+
+    @Test
+    void differentiatesComplexHelpersInRealMode() {
+        assertDerivativeNumerically(call("conj", var("x")), "x", Map.of("x", 2.0), 1e-6);
+        assertDerivativeNumerically(call("magnitude", var("x")), "x", Map.of("x", 2.0), 1e-6);
+        assertEquals(0.0, eval(Differentiator.differentiate(call("angle", var("x")), "x"), "x", 2.0));
+        assertDerivativeNumerically(call("cis", var("x")), "x", Map.of("x", 1.0), 1e-6);
     }
 }

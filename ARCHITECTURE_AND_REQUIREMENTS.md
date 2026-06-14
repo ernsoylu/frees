@@ -67,6 +67,18 @@ Matrix support follows a compile-to-scalars philosophy: **everything compiles do
 - **Dense linear algebra (Story 7.4)** — the Newton step solves `J·Δx = r` via Apache Commons Math `LUDecomposition`, falling back to SVD pseudoinverse for rank-deficient Jacobians; the same library backs the eigendecomposition. No separate BLAS/LAPACK native binding is used.
 - **UI** — the Arrays window renders 2D matrices as spreadsheet grids; the formatted report renders matrix equations with KaTeX block matrices. The help page documents the syntax and includes worked examples (3×3 linear system, DC circuit mesh analysis via `R·I = V`).
 
+### Uncertainty Propagation Engine (Epic 11)
+
+The uncertainty engine implements a system-wide numerical first-order propagation of error through implicit, non-linear simultaneous systems of equations, utilizing Singular Value Decomposition (SVD):
+
+1. **Mathematical Model**: For a system of $M$ equations $F(y, x) = 0$, where $y$ is the vector of $q$ dependent (solved) variables, and $x$ is the vector of $p$ independent variables (e.g. measurements or fixed inputs) with specified uncertainties $u_x$:
+   $$J_y dy + J_x dx = 0 \implies J_y dy = - J_x dx$$
+   where $J_y = \frac{\partial F}{\partial y}$ ($M \times q$) and $J_x = \frac{\partial F}{\partial x}$ ($M \times p$) are the Jacobians evaluated numerically via finite differences at the solution point.
+2. **Solving Sensitivities**: For each independent variable $x_i$ carrying an uncertainty $u_{x_i}$, the solver constructs a perturbation vector $b_i = -J_{x,i} u_{x_i}$ (where $J_{x,i}$ is the $i$-th column of $J_x$). It solves the linear system $J_y dy_i = b_i$ using an SVD pseudoinverse solver (via Apache Commons Math `SingularValueDecomposition`). SVD handles cases where a block is overdetermined, underdetermined, or rank-deficient.
+3. **Combining Uncertainties**: The total propagated uncertainty $u_{y_j}$ for each dependent variable $y_j$ is calculated by the root-sum-square (RSS) of its sensitivity contributions:
+   $$u_{y_j} = \sqrt{\sum_{i=1}^{p} (dy_{i,j})^2}$$
+4. **`UncertaintyOf(X)` Accessor**: When equations contain the `UncertaintyOf` accessor function, the solver executes a second-solve pass. The calculated uncertainty values are stored under special keys (`uncertaintyof$variable_name`) inside the solver's values map. During the second pass, the evaluator resolves `UncertaintyOf(X)` calls to these values, enabling downstream equations to dynamically react to computed uncertainties.
+
 ### Deployment (Docker)
 
 Both servers run as Docker containers orchestrated by Docker Compose and managed via `./frees.sh`:
@@ -219,3 +231,34 @@ Both servers run as Docker containers orchestrated by Docker Compose and managed
 - **Story 10.12: Embedded Plotly Charts & Live Dashboard Widgets.** Replace the minimal inline SVG chart with the project's full Plotly engine embedded in a resizable canvas widget — real axes, ticks, legends, hover, log scales, and multiple series — driven by the parametric table and synced to the playback marker. Allow embedding any existing Plot or property/psychrometric diagram as a live widget on the canvas, so a single dashboard can compose schematic, controls, gauges, and charts together.
 
 - **Milestone 10:** *Working software where an engineer assembles a vapor-compression refrigeration schematic from connected library components (pipes stay wired as equipment is rearranged), binds inputs, sliders, and gauge widgets to the solver, annotates state points with expression labels and limit-alarm coloring, smoothly animates the cycle across a parametric sweep, embeds a live P-h chart, exports the diagram to PDF, and saves the entire model — equations, tables, plots, and diagrams — to a single project file.*
+
+
+### Epic 11: EES Function Appendix Completion (100% Intrinsic Coverage)
+
+*Goal: Close every remaining gap between the* Mastering EES *function appendix and frees' built-in function set. An audit of the appendix against the live solver found the high-value computational core already implemented (≈49 of ~168 appendix names) — elementary math, core trig, the main CoolProp/psychrometric properties, the special functions from Epic 9, and a linear-algebra suite EES lacks — but with concrete holes: no hyperbolic functions, no rounding/`Sign`/`If`/`Step` family, an incomplete Bessel/statistical set, missing complex-number helpers, ~25 specialty fluid and solid-material properties, the entire Lookup/Interpolate/Parametric-accessor family, and all `$`-suffixed string functions. This Epic implements the missing intrinsics (or, for desktop-IDE-bound functions, ships a documented web-native equivalent) so that every appendix name resolves, each scalar function carries an analytical derivative for the Jacobian (per the Epic 9 pattern), and the Help page §2/§9/§10 carry a complete function reference. Work extends `Evaluator.java`, `Differentiator.java`, the `props/` package, and the Tables infrastructure.*
+
+- **Story 11.1: Hyperbolic & Inverse-Hyperbolic Functions.** Add `Sinh`, `Cosh`, `Tanh`, `ArcSinh`, `ArcCosh`, `ArcTanh` to the lexer/AST and `Evaluator`, each with its analytical derivative wired into `Differentiator` so they participate cleanly in Newton residuals and Jacobians (e.g. heat-transfer fin and catenary problems).
+
+- **Story 11.2: Elementary Rounding & Integer Functions.** Add `Round`, `Floor`, `Ceil`, `Trunc`, `Sign`, `Factorial` (Gamma-based), and `Step`. Because these are piecewise-constant/non-smooth, define a consistent derivative convention (zero a.e. with subgradient at breakpoints, optional smoothed variants) and document that they belong in known/precomputable blocks rather than inside Newton loops, with a solver warning if a residual depends on one.
+
+- **Story 11.3: Conditional & Series Functions.** Implement EES-style `If(A, B, x, y, z)` conditional-value selection and `Product(i, lower, upper, term)` series (mirroring the existing `Sum` series form), integrated with array expansion and block ordering so conditionals resolve before the simultaneous blocks that consume them.
+
+- **Story 11.4: Complex-Number Function Set.** In complex mode, add `Conj`, `Magnitude`, `Angle`/`AngleRad`/`AngleDeg`, and `Cis` (cos + i·sin), expressed over the internal `_r`/`_i` component split, so AC-circuit and signal problems no longer need manual `real()/imag()` reconstruction of conjugates and phasor angles.
+
+- **Story 11.5: Special-Function Completion. [Implemented]** Extend the Epic 9 special-function set with `BesselK`, `BesselY`, and the order-0/1 shortcut forms (`Bessel_i0/i1/j0/j1/k0/k1/y0/y1`), plus the `Chi_Square` cumulative distribution, each with analytical or stable numerical derivatives added to the Jacobian differentiator.
+
+- **Story 11.6: Statistical & Uncertainty Functions. [Implemented]** Add `Random` (uniform) and `Probability` (normal distribution) plus an **uncertainty-propagation engine**: optional per-variable uncertainties in Variable Information, first-order propagation through the solved system, reported result uncertainties in the Solution window, and the `UncertaintyOf` accessor function.
+
+- **Story 11.7: Thermophysical Property Completion (Fluids).** Surface the remaining CoolProp fluid properties as functions: `P_sat`, `T_sat`, `MolarMass`, `CompressibilityFactor`, `Prandtl`, `SurfaceTension`, `Fugacity`, `Enthalpy_fusion`, `Dipole`, the critical/triple-point properties (`P_crit`, `T_crit`, `v_crit`, `T_triple`), `IsIdealGas`, and `Phase$`, routed through the existing `PropertyFunctions`/`CoolProp` dispatch with SI conversion and the established non-blocking property warnings.
+
+- **Story 11.8: Solid & Incompressible Material Properties.** Add an incompressible-substance/solid-material property source backing EES's underscore-suffixed functions: `c_`, `k_`, `rho_`, `mu_`, `Pv_`, `E_` (Young's modulus), `nu_` (Poisson's ratio), `epsilon_` (emissivity), `VolExpCoef`, `FreezingPt`, `DELTAL\L_293` (linear expansion), and the Lennard-Jones parameters `ek_LJ`/`sigma_LJ`.
+
+- **Story 11.9: Lookup Tables & Interpolation Functions.** Add a **Lookup Table** kind to the Tables window (reusing the Epic 8 Tables/Curve-Table infrastructure) and the functions that read it: `Lookup`, `LookupRow`, `Lookup$Row`, `LookupColName$`, `LookupTabName$`, `NLookupRows`, `Interpolate`, `Interpolate1`, `Interpolate2`, `Interpolate2D`, and `Differentiate`/`Differentiate1`/`Differentiate2`, with the lookup data carried on Solve/Check requests like curve tables.
+
+- **Story 11.10: Parametric & Integral Table Accessors.** Implement the functions that read run tables from inside equations: `TableValue`, `TableRun#`, `NParametricRuns`, `ntableruns`, the `*Lookup`/`*Parametric` column aggregates (`Sum`, `Avg`, `Min`, `Max`, `StdDev`), and `IntegralValue` (the Integral Table accessor), respecting the current-run context during `Solve Table`.
+
+- **Story 11.11: String Function Library.** Add the `$`-suffixed string intrinsics on top of the existing string-variable support: `Chr$`, `Concat$`, `Copy$`, `Lowercase$`, `Uppercase$`, `Trim$`, `String$`, `StringLen`, `StringPos`, `StringVal`, and the environment/time forms (`Date$`, `Time$`, `TimeStamp`/`TimeStamp$`, `UnitSystem`/`UnitSystem$`, `UnitsOf$`), remapping desktop-file functions (`EESFileName$`, `EESFileDir$`, `EESProgramDir$`, `ShortFileName$`) to web-native project equivalents.
+
+- **Story 11.12: Array/Environment Functions & 100% Coverage Verification.** Add `ArrayElmt` and `Product` array forms; map or document the remaining IDE-bound info functions (`DiagramHeight#`, `DiagramWidth#`, `Loop#`, `PixelsperInch#`, `RGB`) to frees' web diagram or mark them web-N/A in the docs. Add a backend coverage test asserting every appendix function name resolves (or has a documented equivalent), and update Help page §2 (math), §9 (properties), and §10 (psychrometrics) with the complete, categorized function reference.
+
+- **Milestone 11:** *Working software where every function listed in the* Mastering EES *appendix either evaluates in frees or has a documented web-native equivalent — verified by an automated coverage test — so an engineer porting an EES model finds its hyperbolic, rounding, conditional, statistical, lookup, string, and full thermophysical-property calls all resolve, each scalar intrinsic differentiates correctly inside the solver, and the Help page documents the complete function set.*

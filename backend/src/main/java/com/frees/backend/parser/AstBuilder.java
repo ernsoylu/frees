@@ -433,6 +433,15 @@ public class AstBuilder extends FreesBaseVisitor<Expr> {
     }
 
     @Override
+    public Expr visitIfCallAtom(FreesParser.IfCallAtomContext ctx) {
+        List<Expr> args = new ArrayList<>();
+        for (FreesParser.ExprContext arg : positionalExprs(ctx.argList(), "if")) {
+            args.add(visit(arg));
+        }
+        return new Expr.Call("if", args);
+    }
+
+    @Override
     public Expr visitCallAtom(FreesParser.CallAtomContext ctx) {
         String name = ctx.IDENT().getText();
 
