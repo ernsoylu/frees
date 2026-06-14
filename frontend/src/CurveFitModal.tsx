@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
   Alert,
   Badge,
@@ -88,7 +88,64 @@ const FIT_TEMPLATES: FitTemplate[] = [
   },
 ]
 
-function ResultView({ result }: Readonly<{ result: CurveFitResponse }>) {
+function parseValueAndUnit(str: string): { value: number; unit?: string } | null {
+  const trimmed = str.trim()
+  if (trimmed === '') return null
+  const regex = /^(-?\d*\.?\d+(?:[eE][-+]?\d+)?)(?:\s*\[([^\]]*)\])?$/
+  const match = trimmed.match(regex)
+  if (!match) return null
+  return {
+    value: Number(match[1]),
+    unit: match[2] || undefined,
+  }
+}
+
+function getDefaultParameterUnit(
+  paramName: string,
+  template: string,
+  xUnit: string,
+  yUnit: string
+): string {
+  if (!xUnit && !yUnit) return ''
+  const xu = xUnit || '1'
+  const yu = yUnit || '1'
+
+  if (template.startsWith('Linear')) {
+    if (paramName === 'a') return xUnit ? `${yu}/${xu}` : yu
+    if (paramName === 'b') return yUnit
+  } else if (template.startsWith('Quadratic')) {
+    if (paramName === 'a') return xUnit ? `${yu}/${xu}^2` : yu
+    if (paramName === 'b') return xUnit ? `${yu}/${xu}` : yu
+    if (paramName === 'c') return yUnit
+  } else if (template.startsWith('Cubic')) {
+    if (paramName === 'a') return xUnit ? `${yu}/${xu}^3` : yu
+    if (paramName === 'b') return xUnit ? `${yu}/${xu}^2` : yu
+    if (paramName === 'c') return xUnit ? `${yu}/${xu}` : yu
+    if (paramName === 'd') return yUnit
+  } else if (template.startsWith('Exponential')) {
+    if (paramName === 'a') return yUnit
+    if (paramName === 'b') return xUnit ? `1/${xu}` : ''
+    if (paramName === 'c') return yUnit
+  } else if (template.startsWith('Logarithmic')) {
+    if (paramName === 'a') return yUnit
+    if (paramName === 'b') return yUnit
+  } else if (template.startsWith('Power')) {
+    if (paramName === 'a') return ''
+    if (paramName === 'b') return ''
+    if (paramName === 'c') return yUnit
+  }
+  return ''
+}
+
+function ResultView({
+  result,
+  parameterUnits,
+  setParameterUnits,
+}: Readonly<{
+  result: CurveFitResponse
+  parameterUnits: Record<string, string>
+  setParameterUnits: (units: Record<string, string>) => void
+}>) {
   if (!result.success) {
     return (
       <Alert color="red" variant="light" p="xs">
@@ -112,8 +169,9 @@ function ResultView({ result }: Readonly<{ result: CurveFitResponse }>) {
       <Table striped highlightOnHover>
         <Table.Thead>
           <Table.Tr>
-            <Table.Th>Parameter</Table.Th>
-            <Table.Th>Fitted value</Table.Th>
+            <Table.Th style={{ width: '120px' }}>Parameter</Table.Th>
+            <Table.Th style={{ width: '180px' }}>Fitted value</Table.Th>
+            <Table.Th>Unit (optional)</Table.Th>
           </Table.Tr>
         </Table.Thead>
         <Table.Tbody>
@@ -122,6 +180,20 @@ function ResultView({ result }: Readonly<{ result: CurveFitResponse }>) {
               <Table.Td ff="monospace">{name}</Table.Td>
               <Table.Td ff="monospace" c="green.4">
                 {formatValue(result.fittedParameters[i])}
+              </Table.Td>
+              <Table.Td>
+                <TextInput
+                  size="xs"
+                  placeholder="e.g. kPa"
+                  value={parameterUnits[name] || ''}
+                  onChange={(e) => {
+                    setParameterUnits({
+                      ...parameterUnits,
+                      [name]: e.currentTarget.value,
+                    })
+                  }}
+                  styles={MONO_INPUT}
+                />
               </Table.Td>
             </Table.Tr>
           ))}
@@ -135,13 +207,19 @@ interface Props {
   tables?: TableSpec[]
   defaultTableId?: string | null
   onClose: () => void
+  onInsertEquation?: (eq: string) => void
 }
 
 /**
  * Calculate > Curve Fit: Levenberg-Marquardt least-squares fitting of a model
  * equation's parameters to observed (x, y) data (Story 9.7).
  */
-export default function CurveFitModal({ tables = [], defaultTableId, onClose }: Readonly<Props>) {
+export default function CurveFitModal({
+  tables = [],
+  defaultTableId,
+  onClose,
+  onInsertEquation,
+}: Readonly<Props>) {
   const [templateKey, setTemplateKey] = useState<string>('custom')
   const [model, setModel] = useState('y = a * exp(-b * x) + c')
   const [yVariable, setYVariable] = useState('y')
@@ -151,6 +229,11 @@ export default function CurveFitModal({ tables = [], defaultTableId, onClose }: 
   const [running, setRunning] = useState(false)
   const [validation, setValidation] = useState<string | null>(null)
   const [result, setResult] = useState<CurveFitResponse | null>(null)
+
+  // Units states
+  const [inferredXUnit, setInferredXUnit] = useState<string>('')
+  const [inferredYUnit, setInferredYUnit] = useState<string>('')
+  const [parameterUnits, setParameterUnits] = useState<Record<string, string>>({})
 
   // Table selection states
   const [dataMode, setDataMode] = useState<'manual' | 'table'>('manual')
@@ -205,35 +288,49 @@ export default function CurveFitModal({ tables = [], defaultTableId, onClose }: 
     }
   }
 
-  function parseData(): { x: number[]; y: number[] } | string {
+  function parseData(): { x: number[]; y: number[]; xUnit?: string; yUnit?: string } | string {
     const x: number[] = []
     const y: number[] = []
+    let xUnit: string | undefined
+    let yUnit: string | undefined
+
     for (const rawLine of data.split('\n')) {
       const line = rawLine.trim()
       if (line === '') continue
-      const parts = line.split(/[,;\s\t]+/).filter((p) => p !== '')
-      if (parts.length !== 2) {
+
+      // Regex matching floating point numbers optionally followed by [unit]
+      const regex = /(-?\d*\.?\d+(?:[eE][-+]?\d+)?)(?:\s*\[([^\]]*)\])?/g
+      const matches = Array.from(line.matchAll(regex))
+      if (matches.length < 2) {
         return `Each data line needs exactly two numbers (x y), got: "${line}"`
       }
-      const xi = Number(parts[0])
-      const yi = Number(parts[1])
+
+      const xi = Number(matches[0][1])
+      const xUi = matches[0][2] || undefined
+      const yi = Number(matches[1][1])
+      const yUi = matches[1][2] || undefined
+
       if (!Number.isFinite(xi) || !Number.isFinite(yi)) {
         return `Not a numeric data pair: "${line}"`
       }
       x.push(xi)
       y.push(yi)
+      if (xUnit === undefined && xUi) xUnit = xUi
+      if (yUnit === undefined && yUi) yUnit = yUi
     }
     if (x.length < 2) return 'At least two data points are required.'
-    return { x, y }
+    return { x, y, xUnit, yUnit }
   }
 
-  function extractDataFromTable(): { x: number[]; y: number[] } | string {
+  function extractDataFromTable(): { x: number[]; y: number[]; xUnit?: string; yUnit?: string } | string {
     if (!selectedTableId) return 'No table selected.'
     const table = tables.find((t) => t.id === selectedTableId)
     if (!table) return 'Selected table not found.'
 
     const x: number[] = []
     const y: number[] = []
+    let xUnit: string | undefined
+    let yUnit: string | undefined
 
     if (table.kind === 'parametric') {
       if (!xColumnName || !yColumnName) {
@@ -243,13 +340,13 @@ export default function CurveFitModal({ tables = [], defaultTableId, onClose }: 
         const xValRaw = row.values[xColumnName]
         const yValRaw = row.values[yColumnName]
         if (xValRaw === undefined || yValRaw === undefined) continue
-        const xi = Number(xValRaw.trim())
-        const yi = Number(yValRaw.trim())
-        if (xValRaw.trim() === '' || yValRaw.trim() === '' || !Number.isFinite(xi) || !Number.isFinite(yi)) {
-          continue
-        }
-        x.push(xi)
-        y.push(yi)
+        const parsedX = parseValueAndUnit(xValRaw)
+        const parsedY = parseValueAndUnit(yValRaw)
+        if (!parsedX || !parsedY) continue
+        x.push(parsedX.value)
+        y.push(parsedY.value)
+        if (xUnit === undefined && parsedX.unit) xUnit = parsedX.unit
+        if (yUnit === undefined && parsedY.unit) yUnit = parsedY.unit
       }
     } else {
       const yColIndex = Number(yColumnName)
@@ -261,21 +358,57 @@ export default function CurveFitModal({ tables = [], defaultTableId, onClose }: 
         const xValRaw = row.x
         const yValRaw = row.ys[yColIndex]
         if (xValRaw === undefined || yValRaw === undefined) continue
-        const xi = Number(xValRaw.trim())
-        const yi = Number(yValRaw.trim())
-        if (xValRaw.trim() === '' || yValRaw.trim() === '' || !Number.isFinite(xi) || !Number.isFinite(yi)) {
-          continue
-        }
-        x.push(xi)
-        y.push(yi)
+        const parsedX = parseValueAndUnit(xValRaw)
+        const parsedY = parseValueAndUnit(yValRaw)
+        if (!parsedX || !parsedY) continue
+        x.push(parsedX.value)
+        y.push(parsedY.value)
+        if (xUnit === undefined && parsedX.unit) xUnit = parsedX.unit
+        if (yUnit === undefined && parsedY.unit) yUnit = parsedY.unit
       }
     }
 
     if (x.length < 2) {
       return 'Selected table columns must contain at least two numeric data points.'
     }
-    return { x, y }
+    return { x, y, xUnit, yUnit }
   }
+
+  // Reactive unit inference update
+  const prevSourceRef = useRef<string>('')
+  useEffect(() => {
+    const parsed = dataMode === 'manual' ? parseData() : extractDataFromTable()
+    if (typeof parsed !== 'string') {
+      const sourceKey = `${dataMode}-${selectedTableId}-${xColumnName}-${yColumnName}-${data.length}`
+      if (prevSourceRef.current !== sourceKey) {
+        prevSourceRef.current = sourceKey
+        setInferredXUnit(parsed.xUnit || '')
+        setInferredYUnit(parsed.yUnit || '')
+      }
+    }
+  }, [data, dataMode, selectedTableId, xColumnName, yColumnName, tables])
+
+  // Parameter default units propagation
+  useEffect(() => {
+    const paramList = parameters
+      .split(',')
+      .map((p) => p.trim())
+      .filter((p) => p !== '')
+    const newUnits = { ...parameterUnits }
+    let changed = false
+    for (const p of paramList) {
+      if (!newUnits[p]) {
+        const defUnit = getDefaultParameterUnit(p, templateKey, inferredXUnit, inferredYUnit)
+        if (defUnit) {
+          newUnits[p] = defUnit
+          changed = true
+        }
+      }
+    }
+    if (changed) {
+      setParameterUnits(newUnits)
+    }
+  }, [parameters, templateKey, inferredXUnit, inferredYUnit])
 
   async function run() {
     setResult(null)
@@ -319,7 +452,7 @@ export default function CurveFitModal({ tables = [], defaultTableId, onClose }: 
         initialGuess,
       })
       setResult(response)
-    }  catch (err) {
+    } catch (err) {
       setResult({
         success: false,
         error: String(err),
@@ -334,6 +467,28 @@ export default function CurveFitModal({ tables = [], defaultTableId, onClose }: 
     } finally {
       setRunning(false)
     }
+  }
+
+  function insertToEditor() {
+    if (!result || !result.success || !onInsertEquation) return
+
+    const paramEquations = result.parameterNames.map((name, i) => {
+      const val = formatValue(result.fittedParameters[i])
+      const unit = parameterUnits[name]?.trim()
+      const unitStr = unit ? ` [${unit}]` : ''
+      return `${name} = ${val}${unitStr}`
+    })
+
+    const modelEq = model.trim()
+
+    const output = [
+      `{ Fitted Model: ${templateKey === 'custom' ? 'Custom' : templateKey} }`,
+      ...paramEquations,
+      modelEq,
+    ].join('\n')
+
+    onInsertEquation(output)
+    onClose()
   }
 
   return (
@@ -368,6 +523,7 @@ export default function CurveFitModal({ tables = [], defaultTableId, onClose }: 
           spellCheck={false}
           styles={MONO_INPUT}
         />
+
         <Group grow>
           <TextInput
             label="Dependent variable"
@@ -401,6 +557,24 @@ export default function CurveFitModal({ tables = [], defaultTableId, onClose }: 
           />
         </Group>
 
+        <Group grow>
+          <TextInput
+            label="Y (Dependent) Unit"
+            placeholder="e.g. kPa"
+            value={inferredYUnit}
+            onChange={(e) => setInferredYUnit(e.currentTarget.value)}
+            styles={MONO_INPUT}
+          />
+          <TextInput
+            label="X (Independent) Unit"
+            placeholder="e.g. m"
+            value={inferredXUnit}
+            onChange={(e) => setInferredXUnit(e.currentTarget.value)}
+            styles={MONO_INPUT}
+          />
+          <div style={{ flex: 1 }} />
+        </Group>
+
         {tables && tables.length > 0 && (
           <Group justify="space-between" align="center" mt="xs">
             <Text size="sm" fw={500}>Data points source</Text>
@@ -421,7 +595,7 @@ export default function CurveFitModal({ tables = [], defaultTableId, onClose }: 
         {dataMode === 'manual' ? (
           <Textarea
             label="Data points"
-            placeholder={'0.0  5.1\n1.0  3.2\n2.0  2.1\n3.0  1.6'}
+            placeholder={'0.0 [m]  5.1 [kPa]\n1.0 [m]  3.2 [kPa]\n2.0 [m]  2.1 [kPa]'}
             value={data}
             onChange={(e) => setData(e.currentTarget.value)}
             autosize
@@ -530,12 +704,23 @@ export default function CurveFitModal({ tables = [], defaultTableId, onClose }: 
           </Text>
         )}
 
-        {result && <ResultView result={result} />}
+        {result && (
+          <ResultView
+            result={result}
+            parameterUnits={parameterUnits}
+            setParameterUnits={setParameterUnits}
+          />
+        )}
 
         <Group justify="flex-end" mt="xs">
           <Button variant="default" onClick={onClose}>
             Close
           </Button>
+          {result && result.success && onInsertEquation && (
+            <Button color="teal" onClick={insertToEditor}>
+              Copy to Editor
+            </Button>
+          )}
           <Button onClick={run} loading={running}>
             Fit
           </Button>
@@ -544,3 +729,4 @@ export default function CurveFitModal({ tables = [], defaultTableId, onClose }: 
     </Modal>
   )
 }
+

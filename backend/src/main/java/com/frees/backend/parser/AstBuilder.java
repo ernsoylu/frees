@@ -513,7 +513,12 @@ public class AstBuilder extends FreesBaseVisitor<Expr> {
     public Expr visitPowExpr(FreesParser.PowExprContext ctx) {
         Expr base = visit(ctx.atom());
         if (ctx.unaryExpr() != null) {
-            return new Expr.BinOp('^', base, visit(ctx.unaryExpr()));
+            base = new Expr.BinOp('^', base, visit(ctx.unaryExpr()));
+        }
+        if (ctx.TRANSPOSE() != null && !ctx.TRANSPOSE().isEmpty()) {
+            for (int i = 0; i < ctx.TRANSPOSE().size(); i++) {
+                base = new Expr.Call("transpose", List.of(base));
+            }
         }
         return base;
     }
@@ -539,16 +544,16 @@ public class AstBuilder extends FreesBaseVisitor<Expr> {
                 }
             }
         }
-        return new Expr.Num(value, unit);
+        return new Expr.Num(value, unit, false);
     }
 
     @Override
     public Expr visitImagNumberAtom(FreesParser.ImagNumberAtomContext ctx) {
-        String text = ctx.IMAG_NUMBER().getText();
-        // Remove trailing 'i', 'I', 'j', or 'J'
-        String numericText = text.substring(0, text.length() - 1);
-        double value = Double.parseDouble(numericText);
         String unit = null;
+        String text = ctx.IMAG_NUMBER().getText();
+        // Remove trailing i or j
+        text = text.substring(0, text.length() - 1);
+        double value = Double.parseDouble(text);
         if (ctx.unit() != null) {
             int startIdx = ctx.unit().start.getStartIndex();
             int stopIdx = ctx.unit().stop.getStopIndex();
@@ -572,8 +577,9 @@ public class AstBuilder extends FreesBaseVisitor<Expr> {
     @Override
     public Expr visitStringAtom(FreesParser.StringAtomContext ctx) {
         String text = ctx.STRING_LITERAL().getText();
-        // Remove the surrounding single quotes
-        return new Expr.Str(text.substring(1, text.length() - 1));
+        // Remove single quotes
+        text = text.substring(1, text.length() - 1);
+        return new Expr.Str(text);
     }
 
     @Override
@@ -606,12 +612,16 @@ public class AstBuilder extends FreesBaseVisitor<Expr> {
     }
 
     @Override
-    public Expr visitArrayLiteralAtom(FreesParser.ArrayLiteralAtomContext ctx) {
-        List<Expr> elements = new ArrayList<>();
-        for (FreesParser.ExprContext exprCtx : positionalExprs(ctx.argList(), "array literal")) {
-            elements.add(visit(exprCtx));
+    public Expr visitMatrixLiteralAtom(FreesParser.MatrixLiteralAtomContext ctx) {
+        List<Expr> rows = new ArrayList<>();
+        for (FreesParser.MatrixRowContext rowCtx : ctx.matrixRow()) {
+            List<Expr> rowElements = new ArrayList<>();
+            for (FreesParser.ExprContext exprCtx : rowCtx.expr()) {
+                rowElements.add(visit(exprCtx));
+            }
+            rows.add(new Expr.ArrayLiteral(rowElements));
         }
-        return new Expr.ArrayLiteral(elements);
+        return new Expr.ArrayLiteral(rows);
     }
 
     /** Positional argument expressions; named args are rejected here. */

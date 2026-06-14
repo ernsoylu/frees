@@ -440,4 +440,67 @@ class EquationParserTest {
         // 4 matrix entries + 2 b + 2 SolveLinear rows + y + d + z
         assertEquals(11, eqs.size());
     }
+
+    @Test
+    void testBlasFunctions() {
+        EquationParser parser = new EquationParser();
+        
+        // Level 1: axpy, scal, copy, asum, nrm2
+        List<Equation> axpyEqs = parser.parse(
+                "x[1..2] = [1, 2]\n" +
+                "y[1..2] = [3, 4]\n" +
+                "z[1..2] = axpy(2, x[1..2], y[1..2])"
+        );
+        assertEquals(6, axpyEqs.size()); // 2 + 2 + 2 = 6
+
+        List<Equation> scalEqs = parser.parse(
+                "x[1..2] = [1, 2]\n" +
+                "y[1..2] = scal(3, x[1..2])"
+        );
+        assertEquals(4, scalEqs.size()); // 2 + 2 = 4
+
+        List<Equation> copyEqs = parser.parse(
+                "x[1..2] = [1, 2]\n" +
+                "y[1..2] = copy(x[1..2])"
+        );
+        assertEquals(4, copyEqs.size()); // 2 + 2 = 4
+
+        List<Equation> asumEq = parser.parse(
+                "x[1..2] = [1, -2]\n" +
+                "val = asum(x[1..2])"
+        );
+        assertEquals(3, asumEq.size()); // 2 + 1 = 3
+
+        List<Equation> nrm2Eq = parser.parse(
+                "x[1..2] = [3, 4]\n" +
+                "val = nrm2(x[1..2])"
+        );
+        assertEquals(3, nrm2Eq.size()); // 2 + 1 = 3
+
+        // Level 2: gemv, ger
+        List<Equation> gemvEqs = parser.parse(
+                "A[1..2, 1..2] = 1\n" +
+                "x[1..2] = [2, 3]\n" +
+                "y[1..2] = [4, 5]\n" +
+                "z[1..2] = gemv(2, A[1..2, 1..2], x[1..2], 3, y[1..2])"
+        );
+        assertEquals(10, gemvEqs.size()); // 4 + 2 + 2 + 2 = 10
+
+        List<Equation> gerEqs = parser.parse(
+                "x[1..2] = [2, 3]\n" +
+                "y[1..2] = [4, 5]\n" +
+                "A[1..2, 1..2] = 1\n" +
+                "B[1..2, 1..2] = ger(2, x[1..2], y[1..2], A[1..2, 1..2])"
+        );
+        assertEquals(12, gerEqs.size()); // 2 + 2 + 4 + 4 = 12
+
+        // Level 3: gemm
+        List<Equation> gemmEqs = parser.parse(
+                "A[1..2, 1..2] = 1\n" +
+                "B[1..2, 1..2] = 2\n" +
+                "C[1..2, 1..2] = 3\n" +
+                "D[1..2, 1..2] = gemm(2, A[1..2, 1..2], B[1..2, 1..2], 3, C[1..2, 1..2])"
+        );
+        assertEquals(16, gemmEqs.size()); // 4 + 4 + 4 + 4 = 16
+    }
 }

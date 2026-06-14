@@ -981,6 +981,9 @@ export default function App() {
           tables={tables}
           defaultTableId={activeTableId}
           onClose={() => setShowCurveFit(false)}
+          onInsertEquation={(eq) => {
+            setText((prev) => prev.trim() + '\n\n' + eq)
+          }}
         />
       )}
 
