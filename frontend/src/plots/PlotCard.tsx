@@ -5,6 +5,7 @@ import {
   DiagramResponse,
   PsychartResponse,
   TableRowResult,
+  VariableResult,
   getPropertyDiagram,
   getPsychrometricChart,
 } from '../api'
@@ -27,6 +28,9 @@ interface Props {
   cyclePath?: Record<string, number>[]
   tableRows: ParamRow[]
   tableResults: TableRowResult[]
+  /** Flat solved variables; the data source for XY plots that reference solved
+   * arrays (e.g. x = speed[1..N]) rather than a parametric table. */
+  variables?: VariableResult[]
   onConfigure: () => void
   onRemove: () => void
   leftSection?: React.ReactNode
@@ -92,6 +96,46 @@ function buildXYSeries(
   })
 }
 
+/** Collects the elements of a solved array variable (base[1], base[2], …) into
+ * a dense, index-ordered list. Returns the value at each 1-based index. */
+function arrayValues(variables: VariableResult[], base: string): Map<number, number> {
+  const out = new Map<number, number>()
+  const prefix = `${base.toLowerCase()}[`
+  for (const v of variables) {
+    const name = v.name.toLowerCase()
+    if (!name.startsWith(prefix) || !name.endsWith(']')) continue
+    const inner = v.name.substring(prefix.length, v.name.length - 1)
+    const idx = Number(inner)
+    if (Number.isInteger(idx)) out.set(idx, v.value)
+  }
+  return out
+}
+
+/** Builds XY series from solved array variables: x = base[i] vs each y base.
+ * Points are emitted only for indices present in both the x and y arrays. */
+function buildArrayXYSeries(
+  variables: VariableResult[],
+  xVar: string,
+  yVars: string[],
+  axis: 'y' | 'y2' = 'y',
+): XYSeries[] {
+  const xArr = arrayValues(variables, xVar)
+  const indices = [...xArr.keys()].sort((a, b) => a - b)
+  return yVars.map((yVar) => {
+    const yArr = arrayValues(variables, yVar)
+    const x: number[] = []
+    const y: number[] = []
+    for (const i of indices) {
+      const yValue = yArr.get(i)
+      if (yValue !== undefined) {
+        x.push(xArr.get(i) as number)
+        y.push(yValue)
+      }
+    }
+    return { name: yVar, x, y, axis }
+  })
+}
+
 export function useDiagramData(spec: PlotSpec) {
   const [diagram, setDiagram] = useState<DiagramResponse | null>(null)
   const [psychart, setPsychart] = useState<PsychartResponse | null>(null)
@@ -139,13 +183,16 @@ export interface FigureInputs {
   cyclePath?: Record<string, number>[]
   tableRows: ParamRow[]
   tableResults: TableRowResult[]
+  /** Flat solved variables, used as the XY data source when no parametric
+   * table rows are available (plots referencing solved arrays). */
+  variables?: VariableResult[]
   diagram: DiagramResponse | null
   psychart: PsychartResponse | null
   theme: PlotTheme
 }
 
 export function buildFigure(spec: PlotSpec, inputs: FigureInputs): PlotlyFigure | null {
-  const { states, cyclePath, tableRows, tableResults, diagram, psychart, theme } = inputs
+  const { states, cyclePath, tableRows, tableResults, variables = [], diagram, psychart, theme } = inputs
   if (spec.kind === 'property' && diagram) {
     return buildPropertyFigure(diagram, spec.property, spec.format, states, theme, cyclePath)
   }
@@ -153,25 +200,18 @@ export function buildFigure(spec: PlotSpec, inputs: FigureInputs): PlotlyFigure 
     return buildPsychroFigure(psychart, spec.psychro, spec.format, states, theme, cyclePath)
   }
   if (spec.kind === 'xy' && spec.xy.xVar && spec.xy.yVars.length > 0) {
-    const series = buildXYSeries(
-      tableRows,
-      tableResults,
-      spec.xy.xVar,
-      spec.xy.yVars,
-      spec.xy.zVar,
-      spec.xy.sizeVar,
-    )
+    // Prefer parametric-table rows; fall back to solved array variables so a
+    // PLOT block referencing arrays (x = speed[1..N]) renders after a solve.
+    const useArrays = tableRows.length === 0
+    const xVar = spec.xy.xVar
+    const series = useArrays
+      ? buildArrayXYSeries(variables, xVar, spec.xy.yVars)
+      : buildXYSeries(tableRows, tableResults, xVar, spec.xy.yVars, spec.xy.zVar, spec.xy.sizeVar)
     if (spec.xy.y2Vars && spec.xy.y2Vars.length > 0) {
       series.push(
-        ...buildXYSeries(
-          tableRows,
-          tableResults,
-          spec.xy.xVar,
-          spec.xy.y2Vars,
-          null,
-          null,
-          'y2',
-        ),
+        ...(useArrays
+          ? buildArrayXYSeries(variables, xVar, spec.xy.y2Vars, 'y2')
+          : buildXYSeries(tableRows, tableResults, xVar, spec.xy.y2Vars, null, null, 'y2')),
       )
     }
     return buildXYFigure(
@@ -192,6 +232,7 @@ export default function PlotCard({
   cyclePath,
   tableRows,
   tableResults,
+  variables = [],
   onConfigure,
   onRemove,
   leftSection,
@@ -211,8 +252,8 @@ export default function PlotCard({
   }, [exportTrigger])
 
   const figure = useMemo(
-    () => buildFigure(spec, { states, cyclePath, tableRows, tableResults, diagram, psychart, theme: 'dark' }),
-    [spec, states, cyclePath, tableRows, tableResults, diagram, psychart],
+    () => buildFigure(spec, { states, cyclePath, tableRows, tableResults, variables, diagram, psychart, theme: 'dark' }),
+    [spec, states, cyclePath, tableRows, tableResults, variables, diagram, psychart],
   )
 
   async function onExport(format: (typeof EXPORT_FORMATS)[number]['value']) {
@@ -222,6 +263,7 @@ export default function PlotCard({
       cyclePath,
       tableRows,
       tableResults,
+      variables,
       diagram,
       psychart,
       theme,

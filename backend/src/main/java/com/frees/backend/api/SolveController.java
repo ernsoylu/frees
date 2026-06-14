@@ -165,11 +165,12 @@ public class SolveController {
                                 List<Map<String, Double>> cyclePath,
                                 String formattedReport,
                                 List<FunctionTableDto> codeTables,
-                                List<ParametricTableDto> parametricTables) {
+                                List<ParametricTableDto> parametricTables,
+                                List<PlotDefDto> definedPlots) {
 
         static SolveResponse failure(String error) {
             return new SolveResponse(false, List.of(), List.of(), List.of(), null,
-                    List.of(), List.of(), error, List.of(), List.of(), null, List.of(), List.of());
+                    List.of(), List.of(), error, List.of(), List.of(), null, List.of(), List.of(), List.of());
         }
     }
 
@@ -183,6 +184,18 @@ public class SolveController {
         List<ParametricTableDto> out = new ArrayList<>();
         for (com.frees.backend.ast.ParametricTable t : tables) {
             out.add(new ParametricTableDto(t.name(), t.vars(), t.rows()));
+        }
+        return out;
+    }
+
+    /** A plot parsed from a PLOT 'name' ... END block: the name and a raw
+     * attribute map the frontend maps onto its PlotSpec. */
+    public record PlotDefDto(String name, Map<String, List<String>> attributes) {}
+
+    static List<PlotDefDto> plotsOf(List<com.frees.backend.ast.PlotDef> plots) {
+        List<PlotDefDto> out = new ArrayList<>();
+        for (com.frees.backend.ast.PlotDef p : plots) {
+            out.add(new PlotDefDto(p.name(), p.attributes()));
         }
         return out;
     }
@@ -230,7 +243,8 @@ public class SolveController {
                                 List<String> formattedEquations,
                                 String formattedReport,
                                 List<FunctionTableDto> codeTables,
-                                List<ParametricTableDto> parametricTables) {}
+                                List<ParametricTableDto> parametricTables,
+                                List<PlotDefDto> definedPlots) {}
 
     private static Map<String, String> unitsByVariable(List<VariableInfoDto> variableInfo) {
         Map<String, String> units = new HashMap<>();
@@ -323,7 +337,7 @@ public class SolveController {
     public ResponseEntity<CheckResponse> check(@RequestBody SolveRequest request) {
         if (request.text() == null || request.text().isBlank()) {
             return ResponseEntity.badRequest().body(new CheckResponse(false, 0, 0, List.of(), List.of(),
-                    Map.of(), NO_EQUATIONS_MESSAGE, List.of(), null, List.of(), List.of()));
+                    Map.of(), NO_EQUATIONS_MESSAGE, List.of(), null, List.of(), List.of(), List.of()));
         }
         try {
             boolean complexMode = request.stopCriteria() != null && Boolean.TRUE.equals(request.stopCriteria().complexMode());
@@ -356,17 +370,18 @@ public class SolveController {
                     formattedEquations,
                     formattedReport,
                     codeTablesOf(parsed.defs()),
-                    parametricTablesOf(parsed.parametricTables())));
+                    parametricTablesOf(parsed.parametricTables()),
+                    plotsOf(parsed.plots())));
         } catch (EquationParser.ParseException e) {
             String firstError = e.getMessage().lines().findFirst().orElse(e.getMessage());
             return ResponseEntity.badRequest().body(new CheckResponse(
                     false, 0, 0, List.of(), List.of(), Map.of(),
-                    "Syntax error: " + firstError, List.of(), null, List.of(), List.of()));
+                    "Syntax error: " + firstError, List.of(), null, List.of(), List.of(), List.of()));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(new CheckResponse(
                             false, 0, 0, List.of(), List.of(), Map.of(),
-                            e.getMessage() != null ? e.getMessage() : e.toString(), List.of(), null, List.of(), List.of()));
+                            e.getMessage() != null ? e.getMessage() : e.toString(), List.of(), null, List.of(), List.of(), List.of()));
         }
     }
 
@@ -462,7 +477,8 @@ public class SolveController {
                     cyclePath,
                     formattedReport,
                     codeTablesOf(parsed.defs()),
-                    parametricTablesOf(parsed.parametricTables())));
+                    parametricTablesOf(parsed.parametricTables()),
+                    plotsOf(parsed.plots())));
         } catch (EquationParser.ParseException e) {
             return ResponseEntity.badRequest()
                     .body(SolveResponse.failure("Syntax error:\n" + e.getMessage()));

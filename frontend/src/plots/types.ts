@@ -96,6 +96,10 @@ export interface PlotSpec {
   property: PropertyConfig
   psychro: PsychroConfig
   format: PlotFormat
+  /** True when the plot was declared in the editor text with a PLOT ... END
+   * block rather than created in the GUI. Code plots are regenerated on every
+   * solve and never persisted with the project. */
+  fromCode?: boolean
 }
 
 export function defaultFormat(kind: PlotKind): PlotFormat {

@@ -271,8 +271,8 @@ function ReportGraph({
   const { diagram, psychart, loading, error } = useDiagramData(spec)
   const states = detectStates(variables)
   const figure = React.useMemo(
-    () => buildFigure(spec, { states, cyclePath, tableRows, tableResults, diagram, psychart, theme: 'dark' }),
-    [spec, states, cyclePath, tableRows, tableResults, diagram, psychart]
+    () => buildFigure(spec, { states, cyclePath, tableRows, tableResults, variables, diagram, psychart, theme: 'dark' }),
+    [spec, states, cyclePath, tableRows, tableResults, variables, diagram, psychart]
   )
 
   if (loading) {

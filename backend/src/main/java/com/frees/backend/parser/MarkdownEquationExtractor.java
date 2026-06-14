@@ -127,7 +127,7 @@ public final class MarkdownEquationExtractor {
         if (upper.startsWith("FOR") || upper.startsWith("WHILE") || upper.startsWith("END") ||
             upper.startsWith("FUNCTION") || upper.startsWith("PROCEDURE") ||
             upper.startsWith("MODULE") || upper.startsWith("CALL") ||
-            upper.startsWith("PARAMETRIC") || opensTableBlock(upper)) {
+            upper.startsWith("PARAMETRIC") || opensTableBlock(upper) || opensPlotBlock(upper)) {
             return true;
         }
         if (!clean.contains("=")) {
@@ -173,7 +173,7 @@ public final class MarkdownEquationExtractor {
         String upper = stripComments(line).trim().toUpperCase();
         return upper.startsWith("FUNCTION") || upper.startsWith("PROCEDURE")
                 || upper.startsWith("MODULE") || upper.startsWith("PARAMETRIC")
-                || opensTableBlock(upper);
+                || opensTableBlock(upper) || opensPlotBlock(upper);
     }
 
     /** A TABLE block opener: the keyword followed by a word boundary, so a
@@ -182,6 +182,14 @@ public final class MarkdownEquationExtractor {
         return upper.equals("TABLE")
                 || (upper.startsWith("TABLE") && upper.length() > 5
                         && !isIdentChar(upper.charAt(5)));
+    }
+
+    /** A PLOT block opener: the keyword followed by a word boundary, so a
+     * variable like {@code plot_x = 5} is not mistaken for a block. */
+    private static boolean opensPlotBlock(String upper) {
+        return upper.equals("PLOT")
+                || (upper.startsWith("PLOT") && upper.length() > 4
+                        && !isIdentChar(upper.charAt(4)));
     }
 
     private static boolean isIdentChar(char c) {
