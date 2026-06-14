@@ -949,6 +949,33 @@ Q_sensible_below = mass * Cp_below * (T_freeze - T_out)
 Q_total_btu = Q_sensible_above + Q_latent_freeze + Q_sensible_below
 Q_total_millions = Q_total_btu / 1e6`,
   },
+  {
+    value: "siyavula-correlation",
+    title: "Statistics: Linear Correlation Coefficient (Siyavula Grade 12)",
+    description: "Computes the Pearson correlation coefficient (r) for a bivariate dataset from Siyavula Grade 12 Statistics. This model defines the data vectors and computes sums, sums of squares, and sum of products using arrays and duplicate blocks.",
+    note: "Results: r = -0.9961 (indicating a nearly perfect negative linear correlation, which rounds to -1.00). Siyavula Grade 12 Statistics, Interactive Exercise 9.4.",
+    code: `{ Statistics: Linear Correlation Coefficient (r) }
+{ Computes the Pearson correlation coefficient (r) for a bivariate data set.
+  Source: Siyavula Grade 12 Mathematics, Interactive Exercise 9.4. }
+N = 10
+x[1..10] = [58, -81, -94, 67, -13, 52, -100, -11, 44, -54]
+y[1..10] = [-100, 195, 210, -126, 9, -102, 228, 40, -96, 131]
+
+DUPLICATE i = 1, 10
+  xy[i] = x[i] * y[i]
+  x2[i] = x[i]^2
+  y2[i] = y[i]^2
+END
+
+sum_x = sum(x[1..10])
+sum_y = sum(y[1..10])
+sum_xy = sum(xy[1..10])
+sum_x2 = sum(x2[1..10])
+sum_y2 = sum(y2[1..10])
+
+{ Correlation coefficient r }
+r = (N * sum_xy - sum_x * sum_y) / sqrt((N * sum_x2 - sum_x^2) * (N * sum_y2 - sum_y^2))`,
+  },
 ];
 
 const SECTIONS = [
