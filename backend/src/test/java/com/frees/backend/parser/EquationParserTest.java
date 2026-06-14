@@ -210,6 +210,29 @@ class EquationParserTest {
     }
 
     @Test
+    void rejectsOversizedForLoop() {
+        // DoS guard: a tiny input must not expand to a huge equation system.
+        EquationParser.ParseException ex = assertThrows(EquationParser.ParseException.class,
+                () -> parser.parse("FOR i = 1 TO 2000000\n  x[i] = i\nEND"));
+        org.junit.jupiter.api.Assertions.assertTrue(ex.getMessage().toLowerCase().contains("too large"));
+    }
+
+    @Test
+    void rejectsOversizedArrayRange() {
+        // DoS guard: an array slice range is bounded too.
+        EquationParser.ParseException ex = assertThrows(EquationParser.ParseException.class,
+                () -> parser.parse("x[1..3000000] = 5"));
+        org.junit.jupiter.api.Assertions.assertTrue(ex.getMessage().toLowerCase().contains("too large"));
+    }
+
+    @Test
+    void allowsReasonableLoop() {
+        // A normal loop within the limit still works.
+        List<Equation> equations = parser.parse("FOR i = 1 TO 50\n  x[i] = i\nEND");
+        assertEquals(50, equations.size());
+    }
+
+    @Test
     void parsesNestedDuplicateLoops() {
         List<Equation> equations = parser.parse(
                 "FOR i = 1 TO 2\n" +
