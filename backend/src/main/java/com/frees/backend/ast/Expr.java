@@ -79,7 +79,20 @@ public sealed interface Expr permits Expr.Num, Expr.Str, Expr.Var, Expr.BinOp, E
                 collectVariables(left, out);
                 collectVariables(right, out);
             }
-            case Call(String function, java.util.List<Expr> args) -> args.forEach(a -> collectVariables(a, out));
+            case Call(String function, java.util.List<Expr> args) -> {
+                String lowerFn = function.toLowerCase();
+                if ((lowerFn.equals("sum") || lowerFn.equals("product"))
+                        && args.size() == 4 && args.get(0) instanceof Var(String varName)) {
+                    collectVariables(args.get(1), out);
+                    collectVariables(args.get(2), out);
+                    Set<String> temp = new TreeSet<>();
+                    collectVariables(args.get(3), temp);
+                    temp.remove(varName.toLowerCase());
+                    out.addAll(temp);
+                } else {
+                    args.forEach(a -> collectVariables(a, out));
+                }
+            }
             case ArrayAccess(String name, java.util.List<Expr> indices) -> {
                 out.add(name);
                 indices.forEach(idx -> collectVariables(idx, out));

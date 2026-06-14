@@ -30,7 +30,8 @@ public final class ComplexExpansion {
 
     /** Functions with explicit complex-expansion rules below. */
     private static final java.util.Set<String> SUPPORTED_FUNCTIONS = java.util.Set.of(
-            "real", "imag", "abs", "sin", "cos", "exp", "ln", "sqrt");
+            "real", "imag", "abs", "sin", "cos", "exp", "ln", "sqrt",
+            "conj", "magnitude", "angle", "anglerad", "angledeg", "cis");
 
     private static boolean isLiteralZero(Expr e) {
         return e instanceof Expr.Num n && n.value() == 0.0;
@@ -467,6 +468,30 @@ public final class ComplexExpansion {
                     Expr r2 = new Expr.BinOp('+', new Expr.BinOp('*', x, x), new Expr.BinOp('*', y, y));
                     yield new Expr.Call("sqrt", List.of(r2));
                 }
+                if ("conj".equals(function)) {
+                    yield realPart(args.get(0));
+                }
+                if ("magnitude".equals(function)) {
+                    Expr x = realPart(args.get(0));
+                    Expr y = imagPart(args.get(0));
+                    Expr r2 = new Expr.BinOp('+', new Expr.BinOp('*', x, x), new Expr.BinOp('*', y, y));
+                    yield new Expr.Call("sqrt", List.of(r2));
+                }
+                if ("angle".equals(function) || "anglerad".equals(function)) {
+                    Expr x = realPart(args.get(0));
+                    Expr y = imagPart(args.get(0));
+                    yield new Expr.Call(ATAN2, List.of(y, x));
+                }
+                if ("angledeg".equals(function)) {
+                    Expr x = realPart(args.get(0));
+                    Expr y = imagPart(args.get(0));
+                    Expr rad = new Expr.Call(ATAN2, List.of(y, x));
+                    yield new Expr.BinOp('*', rad, new Expr.BinOp('/', new Expr.Num(180.0), new Expr.Num(Math.PI)));
+                }
+                if ("cis".equals(function)) {
+                    Expr theta = realPart(args.get(0));
+                    yield new Expr.Call("cos", List.of(theta));
+                }
                 throw unsupportedInComplexMode(new Expr.Call(function, args));
             }
             case Expr.ArrayAccess(String name, List<Expr> indices) -> new Expr.ArrayAccess(name + "_r", indices);
@@ -554,6 +579,17 @@ public final class ComplexExpansion {
                 if ("abs".equals(function)) {
                     // The magnitude is real; its imaginary part is zero.
                     yield new Expr.Num(0.0);
+                }
+                if ("conj".equals(function)) {
+                    yield new Expr.Neg(imagPart(args.get(0)));
+                }
+                if ("magnitude".equals(function) || "angle".equals(function) 
+                        || "anglerad".equals(function) || "angledeg".equals(function)) {
+                    yield new Expr.Num(0.0);
+                }
+                if ("cis".equals(function)) {
+                    Expr theta = realPart(args.get(0));
+                    yield new Expr.Call("sin", List.of(theta));
                 }
                 throw unsupportedInComplexMode(new Expr.Call(function, args));
             }

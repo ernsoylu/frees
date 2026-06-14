@@ -2,9 +2,11 @@ package com.frees.backend.core;
 
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -389,4 +391,141 @@ class EquationSystemSolverTest {
         assertEquals(2.0, result.variables().get("lambda[1]"), 1e-8);
         assertEquals(3.0, result.variables().get("lambda[2]"), 1e-8);
     }
+
+    @Test
+    void solvesWithHyperbolicFunctions() {
+        EquationSystemSolver.Result result = solver.solve(
+                "y = sinh(x)\n" +
+                "z = cosh(x)\n" +
+                "w = tanh(x)\n" +
+                "x_asinh = arcsinh(y)\n" +
+                "x_acosh = arccosh(z)\n" +
+                "x_atanh = arctanh(w)\n" +
+                "x = 1.25"
+        );
+        assertEquals(Math.sinh(1.25), result.variables().get("y"), 1e-12);
+        assertEquals(Math.cosh(1.25), result.variables().get("z"), 1e-12);
+        assertEquals(Math.tanh(1.25), result.variables().get("w"), 1e-12);
+        assertEquals(1.25, result.variables().get("x_asinh"), 1e-12);
+        assertEquals(1.25, result.variables().get("x_acosh"), 1e-12);
+        assertEquals(1.25, result.variables().get("x_atanh"), 1e-12);
+    }
+
+    @Test
+    void solvesWithPiecewiseAndRounding() {
+        EquationSystemSolver.Result result = solver.solve(
+                "a = round(1.6)\n" +
+                "b = round(1.2345, 2)\n" +
+                "c = floor(2.8)\n" +
+                "d = ceil(2.1)\n" +
+                "e = trunc(-3.7)\n" +
+                "f = sign(-4.2)\n" +
+                "g = factorial(3.0)\n" +
+                "h = step(0.0)\n" +
+                "h2 = step(-0.5)"
+        );
+        assertEquals(2.0, result.variables().get("a"), 1e-12);
+        assertEquals(1.23, result.variables().get("b"), 1e-12);
+        assertEquals(2.0, result.variables().get("c"), 1e-12);
+        assertEquals(3.0, result.variables().get("d"), 1e-12);
+        assertEquals(-3.0, result.variables().get("e"), 1e-12);
+        assertEquals(-1.0, result.variables().get("f"), 1e-12);
+        assertEquals(6.0, result.variables().get("g"), 1e-12);
+        assertEquals(1.0, result.variables().get("h"), 1e-12);
+        assertEquals(0.0, result.variables().get("h2"), 1e-12);
+    }
+
+    @Test
+    void solvesWithConditionalsAndSeries() {
+        EquationSystemSolver.Result result = solver.solve(
+                "x = 5\n" +
+                "y = If(x, 10, 100, 200, 300)\n" +
+                "total = Sum(i, 1, 4, i^2)\n" +
+                "prod = Product(j, 1, 3, j + 1)"
+        );
+        // x < 10 -> y = 100
+        assertEquals(100.0, result.variables().get("y"), 1e-12);
+        // 1^2 + 2^2 + 3^2 + 4^2 = 30
+        assertEquals(30.0, result.variables().get("total"), 1e-12);
+        // 2 * 3 * 4 = 24
+        assertEquals(24.0, result.variables().get("prod"), 1e-12);
+    }
+
+    @Test
+    void solvesWithComplexHelpers() {
+        SolverSettings settings = new SolverSettings(250, 1e-12, 1e-15, 3600.0, true);
+        EquationSystemSolver.Result result = solver.solve(
+                "z = 3 + 4i\n" +
+                "real_z = real(z)\n" +
+                "imag_z = imag(z)\n" +
+                "z_conj = conj(z)\n" +
+                "z_mag = magnitude(z)\n" +
+                "z_angle = anglerad(z)\n" +
+                "z_angle_deg = angledeg(z)\n" +
+                "z_cis = cis(z_angle)",
+                settings
+        );
+        assertEquals(3.0, result.variables().get("real_z_r"), 1e-8);
+        assertEquals(4.0, result.variables().get("imag_z_r"), 1e-8);
+        assertEquals(3.0, result.variables().get("z_conj_r"), 1e-8);
+        assertEquals(-4.0, result.variables().get("z_conj_i"), 1e-8);
+        assertEquals(5.0, result.variables().get("z_mag_r"), 1e-8);
+        assertEquals(Math.atan2(4.0, 3.0), result.variables().get("z_angle_r"), 1e-8);
+        assertEquals(Math.atan2(4.0, 3.0) * 180.0 / Math.PI, result.variables().get("z_angle_deg_r"), 1e-8);
+        assertEquals(3.0 / 5.0, result.variables().get("z_cis_r"), 1e-8);
+        assertEquals(4.0 / 5.0, result.variables().get("z_cis_i"), 1e-8);
+    }
+
+    @Test
+    void generatesWarningsForNonSmoothFunctionsInSimultaneousBlocks() {
+        // Simultaneous block: x + y = 10, y = floor(x)
+        List<String> warnings = solver.checkUnits(
+                "x + y = 10\n" +
+                "y = floor(x)",
+                Map.of()
+        );
+        boolean hasNonSmoothWarning = warnings.stream().anyMatch(w -> w.contains("depends on non-smooth function"));
+        assertTrue(hasNonSmoothWarning, "Expected simultaneous block non-smooth function warning");
+
+        // Sequential block: x = 10, y = floor(x) -> no warning
+        List<String> warningsSeq = solver.checkUnits(
+                "x = 10\n" +
+                "y = floor(x)",
+                Map.of()
+                );
+        boolean hasNonSmoothWarningSeq = warningsSeq.stream().anyMatch(w -> w.contains("depends on non-smooth function"));
+        assertFalse(hasNonSmoothWarningSeq, "Expected no warning for sequential block");
+    }
+
+    @Test
+    void propagatesUncertaintySimple() {
+        var specs = Map.of("x", new VariableSpec("x", 5.0, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY, 0.1));
+        var result = solver.solve("y = x\nx = 5", SolverSettings.DEFAULTS, specs);
+        
+        assertEquals(5.0, result.variables().get("y"), 1e-6);
+        assertEquals(0.1, result.uncertainties().get("y"), 1e-6);
+        assertEquals(0.1, result.uncertainties().get("x"), 1e-6);
+    }
+
+    @Test
+    void propagatesUncertaintyMultipleInputs() {
+        var specs = Map.of(
+            "x1", new VariableSpec("x1", 3.0, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY, 0.1),
+            "x2", new VariableSpec("x2", 4.0, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY, 0.2)
+        );
+        var result = solver.solve("y = x1 + 2 * x2\nx1 = 3\nx2 = 4", SolverSettings.DEFAULTS, specs);
+        
+        assertEquals(11.0, result.variables().get("y"), 1e-6);
+        assertEquals(Math.sqrt(0.17), result.uncertainties().get("y"), 1e-5);
+    }
+
+    @Test
+    void evaluatesUncertaintyOfAccessor() {
+        var specs = Map.of("x", new VariableSpec("x", 5.0, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY, 0.15));
+        var result = solver.solve("y = x\nx = 5\nu_y = UncertaintyOf(y)", SolverSettings.DEFAULTS, specs);
+        assertEquals(5.0, result.variables().get("y"), 1e-6);
+        assertEquals(0.15, result.variables().get("u_y"), 1e-6);
+        assertEquals(0.15, result.uncertainties().get("y"), 1e-6);
+    }
 }
+

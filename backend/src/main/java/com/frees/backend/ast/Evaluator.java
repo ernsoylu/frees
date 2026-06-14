@@ -155,10 +155,149 @@ public final class Evaluator {
                     .orElseThrow(() -> new IllegalStateException("min expects at least 1 argument"));
             case "max"    -> args.stream().mapToDouble(a -> eval(a, values, defs)).max()
                     .orElseThrow(() -> new IllegalStateException("max expects at least 1 argument"));
-            case "sum"    -> args.stream().mapToDouble(a -> eval(a, values, defs)).sum();
+            case "sum"    -> {
+                if (args.size() == 4 && args.get(0) instanceof Expr.Var(String varName)) {
+                    double lowerVal = eval(args.get(1), values, defs);
+                    double upperVal = eval(args.get(2), values, defs);
+                    int start = (int) Math.round(lowerVal);
+                    int end = (int) Math.round(upperVal);
+                    Expr term = args.get(3);
+                    double s = 0.0;
+                    boolean had = values.containsKey(varName);
+                    Double saved = had ? values.get(varName) : null;
+                    try {
+                        if (start <= end) {
+                            for (int i = start; i <= end; i++) {
+                                values.put(varName, (double) i);
+                                s += eval(term, values, defs);
+                            }
+                        } else {
+                            for (int i = start; i >= end; i--) {
+                                values.put(varName, (double) i);
+                                s += eval(term, values, defs);
+                            }
+                        }
+                    } finally {
+                        if (had) {
+                            values.put(varName, saved);
+                        } else {
+                            values.remove(varName);
+                        }
+                    }
+                    yield s;
+                } else {
+                    yield args.stream().mapToDouble(a -> eval(a, values, defs)).sum();
+                }
+            }
             case "average", "avg" -> args.stream().mapToDouble(a -> eval(a, values, defs))
                     .average().orElse(0.0);
             case "integral" -> integralQuadrature(c, values, defs);
+
+            // Hyperbolic functions
+            case "sinh" -> Math.sinh(arg(c, args, 0, values, defs));
+            case "cosh" -> Math.cosh(arg(c, args, 0, values, defs));
+            case "tanh" -> Math.tanh(arg(c, args, 0, values, defs));
+            case "arcsinh" -> {
+                double val = arg(c, args, 0, values, defs);
+                yield Math.log(val + Math.sqrt(val * val + 1.0));
+            }
+            case "arccosh" -> {
+                double val = arg(c, args, 0, values, defs);
+                if (val < 1.0) {
+                    throw new IllegalStateException("ArcCosh argument must be >= 1.0, got: " + val);
+                }
+                yield Math.log(val + Math.sqrt(val * val - 1.0));
+            }
+            case "arctanh" -> {
+                double val = arg(c, args, 0, values, defs);
+                if (Math.abs(val) >= 1.0) {
+                    throw new IllegalStateException("ArcTanh argument must be in (-1, 1), got: " + val);
+                }
+                yield 0.5 * Math.log((1.0 + val) / (1.0 - val));
+            }
+
+            // Elementary rounding & integer functions
+            case "round" -> {
+                double val = arg(c, args, 0, values, defs);
+                if (args.size() == 2) {
+                    double digits = arg(c, args, 1, values, defs);
+                    double factor = Math.pow(10.0, Math.round(digits));
+                    yield Math.round(val * factor) / factor;
+                }
+                yield (double) Math.round(val);
+            }
+            case "floor" -> Math.floor(arg(c, args, 0, values, defs));
+            case "ceil"  -> Math.ceil(arg(c, args, 0, values, defs));
+            case "trunc" -> {
+                double val = arg(c, args, 0, values, defs);
+                yield val < 0 ? Math.ceil(val) : Math.floor(val);
+            }
+            case "sign"  -> Math.signum(arg(c, args, 0, values, defs));
+            case "factorial" -> {
+                double val = arg(c, args, 0, values, defs);
+                if (val < -1.0) {
+                    throw new IllegalStateException("Factorial argument must be > -1, got: " + val);
+                }
+                yield org.apache.commons.math3.special.Gamma.gamma(val + 1.0);
+            }
+            case "step"  -> arg(c, args, 0, values, defs) >= 0.0 ? 1.0 : 0.0;
+
+            // Conditional & Series Functions
+            case "if" -> {
+                if (args.size() != 5) {
+                    throw new IllegalStateException("If expects 5 arguments: If(A, B, x, y, z)");
+                }
+                double a = eval(args.get(0), values, defs);
+                double b = eval(args.get(1), values, defs);
+                if (a < b) {
+                    yield eval(args.get(2), values, defs);
+                } else if (a == b) {
+                    yield eval(args.get(3), values, defs);
+                } else {
+                    yield eval(args.get(4), values, defs);
+                }
+            }
+            case "product" -> {
+                if (args.size() == 4 && args.get(0) instanceof Expr.Var(String varName)) {
+                    double lowerVal = eval(args.get(1), values, defs);
+                    double upperVal = eval(args.get(2), values, defs);
+                    int start = (int) Math.round(lowerVal);
+                    int end = (int) Math.round(upperVal);
+                    Expr term = args.get(3);
+                    double p = 1.0;
+                    boolean had = values.containsKey(varName);
+                    Double saved = had ? values.get(varName) : null;
+                    try {
+                        if (start <= end) {
+                            for (int i = start; i <= end; i++) {
+                                values.put(varName, (double) i);
+                                p *= eval(term, values, defs);
+                            }
+                        } else {
+                            for (int i = start; i >= end; i--) {
+                                values.put(varName, (double) i);
+                                p *= eval(term, values, defs);
+                            }
+                        }
+                    } finally {
+                        if (had) {
+                            values.put(varName, saved);
+                        } else {
+                            values.remove(varName);
+                        }
+                    }
+                    yield p;
+                } else {
+                    yield args.stream().mapToDouble(a -> eval(a, values, defs)).reduce(1.0, (x, y) -> x * y);
+                }
+            }
+
+            // Complex-Number functions
+            case "conj" -> arg(c, args, 0, values, defs);
+            case "magnitude" -> Math.abs(arg(c, args, 0, values, defs));
+            case "angle", "anglerad" -> Math.atan2(0.0, arg(c, args, 0, values, defs));
+            case "angledeg" -> Math.atan2(0.0, arg(c, args, 0, values, defs)) * 180.0 / Math.PI;
+            case "cis" -> Math.cos(arg(c, args, 0, values, defs));
 
             // Bitwise operations
             case "bitand" -> (double) ((long) arg(c, args, 0, values, defs) & (long) arg(c, args, 1, values, defs));
@@ -181,8 +320,46 @@ public final class Evaluator {
             case "loggamma"-> org.apache.commons.math3.special.Gamma.logGamma(arg(c, args, 0, values, defs));
             case "digamma" -> org.apache.commons.math3.special.Gamma.digamma(arg(c, args, 0, values, defs));
             case "beta"    -> Math.exp(org.apache.commons.math3.special.Beta.logBeta(arg(c, args, 0, values, defs), arg(c, args, 1, values, defs)));
-            case "besselj" -> org.apache.commons.math3.special.BesselJ.value(arg(c, args, 1, values, defs), arg(c, args, 0, values, defs));
-            case "besseli" -> besselI(arg(c, args, 1, values, defs), arg(c, args, 0, values, defs));
+            case "besselj", "bessel_j" -> org.apache.commons.math3.special.BesselJ.value(arg(c, args, 1, values, defs), arg(c, args, 0, values, defs));
+            case "besseli", "bessel_i" -> besselI(arg(c, args, 1, values, defs), arg(c, args, 0, values, defs));
+            case "bessely", "bessel_y" -> besselY(arg(c, args, 1, values, defs), arg(c, args, 0, values, defs));
+            case "besselk", "bessel_k" -> besselK(arg(c, args, 1, values, defs), arg(c, args, 0, values, defs));
+            case "besselj0", "bessel_j0" -> bessj0(arg(c, args, 0, values, defs));
+            case "besselj1", "bessel_j1" -> bessj1(arg(c, args, 0, values, defs));
+            case "besseli0", "bessel_i0" -> bessi0(arg(c, args, 0, values, defs));
+            case "besseli1", "bessel_i1" -> bessi1(arg(c, args, 0, values, defs));
+            case "bessely0", "bessel_y0" -> bessy0(arg(c, args, 0, values, defs));
+            case "bessely1", "bessel_y1" -> bessy1(arg(c, args, 0, values, defs));
+            case "besselk0", "bessel_k0" -> bessk0(arg(c, args, 0, values, defs));
+            case "besselk1", "bessel_k1" -> bessk1(arg(c, args, 0, values, defs));
+            case "chi_square" -> {
+                double x = arg(c, args, 0, values, defs);
+                double df = arg(c, args, 1, values, defs);
+                if (x <= 0.0) yield 0.0;
+                if (df <= 0.0) {
+                    throw new IllegalStateException("Chi_Square degrees of freedom must be > 0, got: " + df);
+                }
+                yield org.apache.commons.math3.special.Gamma.regularizedGammaP(df / 2.0, x / 2.0);
+            }
+            case "random" -> evalRandom(c, values, defs);
+            case "randg" -> evalRandG(c, values, defs);
+            case "probability" -> {
+                double x1 = arg(c, args, 0, values, defs);
+                double x2 = arg(c, args, 1, values, defs);
+                double mean = arg(c, args, 2, values, defs);
+                double stdDev = arg(c, args, 3, values, defs);
+                if (stdDev <= 0.0) {
+                    throw new IllegalStateException("Probability standard deviation must be > 0, got: " + stdDev);
+                }
+                double z1 = (x1 - mean) / (stdDev * Math.sqrt(2.0));
+                double z2 = (x2 - mean) / (stdDev * Math.sqrt(2.0));
+                yield 0.5 * (org.apache.commons.math3.special.Erf.erf(z2) - org.apache.commons.math3.special.Erf.erf(z1));
+            }
+            case "uncertaintyof" -> {
+                String varName = evalString(args.get(0));
+                Double uncVal = values.get("uncertaintyof$" + varName.toLowerCase());
+                yield uncVal != null ? uncVal : 0.0;
+            }
 
             // Base conversion: BaseConvert('FF', 16, 10) -> 255
             case "baseconvert" -> evalBaseConvert(c, values, defs);
@@ -366,6 +543,242 @@ public final class Evaluator {
         return sum;
     }
 
+    static double bessj0(double x) {
+        double ax = Math.abs(x);
+        double ans;
+        if (ax < 8.0) {
+            double y = x * x;
+            double ans1 = 57568490574.0 + y * (-13362590354.0 + y * (651619640.7
+                    + y * (-11214424.18 + y * (77392.33017 + y * (-184.9052456)))));
+            double ans2 = 57568490411.0 + y * (1029532985.0 + y * (9494680.718
+                    + y * (59272.64853 + y * (267.8532712 + y * 1.0))));
+            ans = ans1 / ans2;
+        } else {
+            double z = 8.0 / ax;
+            double y = z * z;
+            double xx = ax - 0.785398164;
+            double ans1 = 1.0 + y * (-0.1098628627e-2 + y * (0.2734510407e-4
+                    + y * (-0.2073370639e-5 + y * 0.2093887211e-6)));
+            double ans2 = -0.1562499995e-1 + y * (0.1430488765e-3
+                    + y * (-0.6911147651e-5 + y * (0.7621095161e-6
+                    - y * 0.934935152e-7)));
+            ans = Math.sqrt(0.636619772 / ax) * (Math.cos(xx) * ans1 - z * Math.sin(xx) * ans2);
+        }
+        return ans;
+    }
+
+    static double bessj1(double x) {
+        double ax = Math.abs(x);
+        double ans;
+        if (ax < 8.0) {
+            double y = x * x;
+            double ans1 = x * (72362614232.0 + y * (-7895059235.0 + y * (242396853.1
+                    + y * (-2972611.439 + y * (15704.48260 + y * (-30.16036606))))));
+            double ans2 = 144725228442.0 + y * (2300535178.0 + y * (18583304.74
+                    + y * (99447.43394 + y * (376.9991397 + y * 1.0))));
+            ans = ans1 / ans2;
+        } else {
+            double z = 8.0 / ax;
+            double y = z * z;
+            double xx = ax - 2.356194491;
+            double ans1 = 1.0 + y * (0.183105e-2 + y * (-0.3516396496e-4
+                    + y * (0.2457520174e-5 + y * (-0.240337019e-6))));
+            double ans2 = 0.04687499995 + y * (-0.2002690873e-3
+                    + y * (0.8449199096e-5 + y * (-0.88228987e-6
+                    + y * 0.105787412e-6)));
+            ans = Math.sqrt(0.636619772 / ax) * (Math.cos(xx) * ans1 - z * Math.sin(xx) * ans2);
+            if (x < 0.0) ans = -ans;
+        }
+        return ans;
+    }
+
+    static double bessy0(double x) {
+        if (x <= 0.0) {
+            throw new IllegalArgumentException("BesselY0 requires x > 0, got: " + x);
+        }
+        double ans;
+        if (x < 8.0) {
+            double y = x * x;
+            double ans1 = -2957821389.0 + y * (7062834065.0 + y * (-512359803.6
+                    + y * (10879881.29 + y * (-86327.92757 + y * 228.4622733))));
+            double ans2 = 40076544269.0 + y * (745249964.8 + y * (7189466.438
+                    + y * (47447.26470 + y * (226.1030244 + y * 1.0))));
+            ans = (ans1 / ans2) + 0.636619772 * bessj0(x) * Math.log(x);
+        } else {
+            double z = 8.0 / x;
+            double y = z * z;
+            double xx = x - 0.785398164;
+            double ans1 = 1.0 + y * (-0.1098628627e-2 + y * (0.2734510407e-4
+                    + y * (-0.2073370639e-5 + y * 0.2093887211e-6)));
+            double ans2 = -0.1562499995e-1 + y * (0.1430488765e-3
+                    + y * (-0.6911147651e-5 + y * (0.7621095161e-6
+                    + y * (-0.934945152e-7))));
+            ans = Math.sqrt(0.636619772 / x) * (Math.sin(xx) * ans1 + z * Math.cos(xx) * ans2);
+        }
+        return ans;
+    }
+
+    static double bessy1(double x) {
+        if (x <= 0.0) {
+            throw new IllegalArgumentException("BesselY1 requires x > 0, got: " + x);
+        }
+        double ans;
+        if (x < 8.0) {
+            double y = x * x;
+            double ans1 = x * (-0.4900604943e13 + y * (0.1275274390e13
+                    + y * (-0.5153438139e11 + y * (0.7349264551e9
+                    + y * (-0.4237922726e7 + y * 0.8511937935e4)))));
+            double ans2 = 0.2499580570e14 + y * (0.4244419664e12
+                    + y * (0.3733650367e10 + y * (0.2245904002e8
+                    + y * (0.1020426050e6 + y * (0.3549632885e3 + y)))));
+            ans = (ans1 / ans2) + 0.636619772 * (bessj1(x) * Math.log(x) - 1.0 / x);
+        } else {
+            double z = 8.0 / x;
+            double y = z * z;
+            double xx = x - 2.356194491;
+            double ans1 = 1.0 + y * (0.183105e-2 + y * (-0.3516396496e-4
+                    + y * (0.2457520174e-5 + y * (-0.240337019e-6))));
+            double ans2 = 0.04687499995 + y * (-0.2002690873e-3
+                    + y * (0.8449199096e-5 + y * (-0.88228987e-6
+                    + y * 0.105787412e-6)));
+            ans = Math.sqrt(0.636619772 / x) * (Math.sin(xx) * ans1 + z * Math.cos(xx) * ans2);
+        }
+        return ans;
+    }
+
+    static double bessi0(double x) {
+        double ax = Math.abs(x);
+        double ans;
+        if (ax < 3.75) {
+            double y = x / 3.75;
+            y = y * y;
+            ans = 1.0 + y * (3.5156229 + y * (3.0899424 + y * (1.2067492
+                    + y * (0.2659732 + y * (0.360768e-1 + y * 0.45813e-2)))));
+        } else {
+            double y = 3.75 / ax;
+            ans = (Math.exp(ax) / Math.sqrt(ax)) * (0.39894228 + y * (0.1328592e-1
+                    + y * (0.225319e-2 + y * (-0.157565e-2 + y * (0.916281e-2
+                    + y * (-0.2057706e-1 + y * (0.2635537e-1 + y * (-0.1647633e-1
+                    + y * 0.392377e-2))))))));
+        }
+        return ans;
+    }
+
+    static double bessi1(double x) {
+        double ax = Math.abs(x);
+        double ans;
+        if (ax < 3.75) {
+            double y = x / 3.75;
+            y = y * y;
+            ans = ax * (0.5 + y * (0.87890594 + y * (0.51498869 + y * (0.15084934
+                    + y * (0.2658733e-1 + y * (0.301532e-2 + y * 0.32411e-3))))));
+        } else {
+            double y = 3.75 / ax;
+            ans = 0.2282967e-1 + y * (-0.2895312e-1 + y * (0.1787654e-1 - y * 0.420059e-2));
+            ans = 0.39894228 + y * (-0.3988024e-1 + y * (-0.362018e-2
+                    + y * (0.163801e-2 + y * (-0.1031555e-1 + y * ans))));
+            ans *= (Math.exp(ax) / Math.sqrt(ax));
+        }
+        return x < 0.0 ? -ans : ans;
+    }
+
+    static double bessk0(double x) {
+        if (x <= 0.0) {
+            throw new IllegalArgumentException("BesselK0 requires x > 0, got: " + x);
+        }
+        double ans;
+        if (x <= 2.0) {
+            double y = x * x / 4.0;
+            ans = (-Math.log(x / 2.0) * bessi0(x)) + (-0.57721566 + y * (0.42278420
+                    + y * (0.23069756 + y * (0.3488590e-1 + y * (0.262698e-2
+                    + y * (0.10750e-3 + y * 0.74e-5))))));
+        } else {
+            double y = 2.0 / x;
+            ans = (Math.exp(-x) / Math.sqrt(x)) * (1.25331414 + y * (-0.7832358e-1
+                    + y * (0.2189568e-1 + y * (-0.1062446e-1 + y * (0.587872e-2
+                    + y * (-0.251540e-2 + y * 0.53208e-3))))));
+        }
+        return ans;
+    }
+
+    static double bessk1(double x) {
+        if (x <= 0.0) {
+            throw new IllegalArgumentException("BesselK1 requires x > 0, got: " + x);
+        }
+        double ans;
+        if (x <= 2.0) {
+            double y = x * x / 4.0;
+            ans = (Math.log(x / 2.0) * bessi1(x)) + (1.0 / x) * (1.0 + y * (0.15443144
+                    + y * (-0.67278579 + y * (-0.18156897 + y * (-0.1919402e-1
+                    + y * (-0.110404e-2 + y * (-0.4686e-4)))))));
+        } else {
+            double y = 2.0 / x;
+            ans = (Math.exp(-x) / Math.sqrt(x)) * (1.25331414 + y * (0.23498619
+                    + y * (-0.3655620e-1 + y * (0.1504268e-1 + y * (-0.780353e-2
+                    + y * (0.325614e-2 + y * (-0.68245e-3)))))));
+        }
+        return ans;
+    }
+
+    static double bessy(int n, double x) {
+        if (x <= 0.0) {
+            throw new IllegalArgumentException("BesselY requires x > 0, got: " + x);
+        }
+        if (n < 0) {
+            double sign = n % 2 == 0 ? 1.0 : -1.0;
+            return sign * bessy(-n, x);
+        }
+        if (n == 0) return bessy0(x);
+        if (n == 1) return bessy1(x);
+
+        double tox = 2.0 / x;
+        double by = bessy1(x);
+        double bym = bessy0(x);
+        double byp = 0.0;
+        for (int j = 1; j < n; j++) {
+            byp = j * tox * by - bym;
+            bym = by;
+            by = byp;
+        }
+        return by;
+    }
+
+    static double bessk(int n, double x) {
+        if (x <= 0.0) {
+            throw new IllegalArgumentException("BesselK requires x > 0, got: " + x);
+        }
+        if (n < 0) {
+            return bessk(-n, x);
+        }
+        if (n == 0) return bessk0(x);
+        if (n == 1) return bessk1(x);
+
+        double tox = 2.0 / x;
+        double bkm = bessk0(x);
+        double bk = bessk1(x);
+        double bkp = 0.0;
+        for (int j = 1; j < n; j++) {
+            bkp = bkm + j * tox * bk;
+            bkm = bk;
+            bk = bkp;
+        }
+        return bk;
+    }
+
+    static double besselK(double order, double x) {
+        if (order != Math.rint(order)) {
+            throw new IllegalStateException("BesselK requires an integer order, got: " + order);
+        }
+        return bessk((int) Math.round(order), x);
+    }
+
+    static double besselY(double order, double x) {
+        if (order != Math.rint(order)) {
+            throw new IllegalStateException("BesselY requires an integer order, got: " + order);
+        }
+        return bessy((int) Math.round(order), x);
+    }
+
     /**
      * BaseConvert(digits, fromBase, toBase): converts a number between bases 2-36.
      * The digits argument is a string literal (e.g. 'FF') or a numeric expression
@@ -411,6 +824,30 @@ public final class Evaluator {
                     + " contains letter digits and cannot be represented as a number; use toBase <= 10.");
         }
         return Double.parseDouble(converted);
+    }
+
+    private static double evalRandom(Expr.Call c, Map<String, Double> values, Map<String, ProcDef> defs) {
+        double a = arg(c, c.args(), 0, values, defs);
+        double b = arg(c, c.args(), 1, values, defs);
+        long seed = c.args().size() > 2 ? (long) arg(c, c.args(), 2, values, defs) : System.identityHashCode(c);
+        if (seed == 0) {
+            seed = System.identityHashCode(c);
+        }
+        java.util.Random rand = new java.util.Random(seed);
+        double r = rand.nextDouble();
+        return a + r * (b - a);
+    }
+
+    private static double evalRandG(Expr.Call c, Map<String, Double> values, Map<String, ProcDef> defs) {
+        double mean = arg(c, c.args(), 0, values, defs);
+        double stdDev = arg(c, c.args(), 1, values, defs);
+        long seed = c.args().size() > 2 ? (long) arg(c, c.args(), 2, values, defs) : System.identityHashCode(c);
+        if (seed == 0) {
+            seed = System.identityHashCode(c);
+        }
+        java.util.Random rand = new java.util.Random(seed);
+        double g = rand.nextGaussian();
+        return mean + g * stdDev;
     }
 
     /**

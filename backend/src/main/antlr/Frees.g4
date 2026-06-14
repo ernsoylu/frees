@@ -141,6 +141,7 @@ atom
     | IMAG_NUMBER unit?                      # ImagNumberAtom
     | STRING_LITERAL                          # StringAtom
     | IDENT LPAREN argList RPAREN            # CallAtom
+    | IF LPAREN argList RPAREN               # IfCallAtom
     | IDENT LBRACKET arrayIndexList RBRACKET # ArrayAtom
     | IDENT                                  # VarAtom
     | LBRACKET argList RBRACKET              # ArrayLiteralAtom

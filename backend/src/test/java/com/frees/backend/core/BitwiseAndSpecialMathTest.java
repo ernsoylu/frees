@@ -108,4 +108,43 @@ class BitwiseAndSpecialMathTest {
         assertEquals(11111111.0, vars.get("c"), 1e-9);
         assertEquals(511.0, vars.get("d"), 1e-9);
     }
+
+    @Test
+    void testNewBesselAndChiSquare() {
+        String code = """
+                j0_val = bessel_j0(2)
+                j1_val = bessel_j1(2)
+                i0_val = bessel_i0(2)
+                i1_val = bessel_i1(2)
+                k0_val = bessel_k0(2)
+                k1_val = bessel_k1(2)
+                y0_val = bessel_y0(2)
+                y1_val = bessel_y1(2)
+                
+                k_order2 = bessel_k(2, 2)
+                y_order2 = bessel_y(2, 2)
+                
+                chi2_val = chi_square(4, 2)
+                """;
+        var result = solver.solve(code, SolverSettings.DEFAULTS);
+        Map<String, Double> vars = result.variables();
+
+        assertEquals(0.2238907791, vars.get("j0_val"), 1e-6);
+        assertEquals(0.5767248078, vars.get("j1_val"), 1e-6);
+        assertEquals(2.2795853023, vars.get("i0_val"), 1e-6);
+        assertEquals(1.5906368546, vars.get("i1_val"), 1e-6);
+        assertEquals(0.1138938727, vars.get("k0_val"), 1e-6);
+        assertEquals(0.1398658818, vars.get("k1_val"), 1e-6);
+        assertEquals(0.5103756726, vars.get("y0_val"), 1e-6);
+        assertEquals(-0.1070324315, vars.get("y1_val"), 1e-6);
+
+        // K2(2) = K0(2) + 2/2 * K1(2) = K0(2) + K1(2) ≈ 0.1138938727 + 0.1398658818 = 0.2537597545
+        assertEquals(0.2537597545, vars.get("k_order2"), 1e-6);
+        
+        // Y2(2) = 2/2 * Y1(2) - Y0(2) = Y1(2) - Y0(2) ≈ -0.1070324315 - 0.5103756726 = -0.6174081041
+        assertEquals(-0.6174081041, vars.get("y_order2"), 1e-6);
+
+        // Chi-Square(4, 2) ≈ 0.86466471676
+        assertEquals(0.86466471676, vars.get("chi2_val"), 1e-6);
+    }
 }
