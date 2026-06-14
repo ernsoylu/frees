@@ -1365,7 +1365,9 @@ export default function HelpPage() {
 
             <Text fw={600} size="sm">Example of Curve-Fitted Equation Usage:</Text>
             <Paper withBorder p="xs" bg="dark.9" radius="sm" style={{ position: 'relative' }}>
-              <CopyButton code={`{ Using a fitted curve in solver equations }\nflow_rate = 1.25 [m^3/s]\nhead_loss [m] = -0.084 * flow_rate^2 + 1.54 * flow_rate + 0.12 [m]`} />
+              <CopyButton code={`{ Using a fitted curve in solver equations }
+flow_rate = 1.25 [m^3/s]
+head_loss [m] = -0.084 * flow_rate^2 + 1.54 * flow_rate + 0.12 [m]`} />
               <Code block style={{ background: 'transparent' }}>
                 {`{ Using a fitted curve in solver equations }
 flow_rate = 1.25 [m^3/s]
@@ -1398,46 +1400,59 @@ head_loss [m] = -0.084 * flow_rate^2 + 1.54 * flow_rate + 0.12 [m]`}
             <FunctionRef
               name="sinh / cosh / tanh"
               desc="Evaluates hyperbolic sine, cosine, or tangent of an expression."
-              syntax="y = sinh(x)\ny = cosh(x)\ny = tanh(x)"
+              syntax={`y = sinh(x)
+y = cosh(x)
+y = tanh(x)`}
               inputs={[{ name: "x", desc: "Angle in radians or dimensionless value" }]}
               outputs={[{ name: "y", desc: "Resulting value" }]}
-              example="x = 1.25\ny = sinh(x) + cosh(x)   { Equals exp(1.25) }"
+              example={`x = 1.25
+y = sinh(x) + cosh(x)   { Equals exp(1.25) }`}
             />
             <FunctionRef
               name="arcsinh / arccosh / arctanh"
               desc="Evaluates inverse hyperbolic sine, cosine, or tangent of an expression."
-              syntax="y = arcsinh(x)\ny = arccosh(x)\ny = arctanh(x)"
+              syntax={`y = arcsinh(x)
+y = arccosh(x)
+y = arctanh(x)`}
               inputs={[{ name: "x", desc: "Input scalar value (restrictions apply to domain of arccosh and arctanh)" }]}
               outputs={[{ name: "y", desc: "Inverse hyperbolic value in radians" }]}
-              example="x = 1.5\ny = arccosh(x)"
+              example={`x = 1.5
+y = arccosh(x)`}
             />
 
             <Title order={3}>Rounding & Integer Functions</Title>
             <FunctionRef
               name="round"
               desc="Rounds a value to a specified number of decimal places."
-              syntax="y = round(x, decimals)"
+              syntax={`y = round(x, decimals)`}
               inputs={[
                 { name: "x", desc: "Value to round" },
                 { name: "decimals", desc: "Integer number of decimal places to round to" }
               ]}
               outputs={[{ name: "y", desc: "Rounded value" }]}
-              example="val = round(3.14159, 3)   { val = 3.142 }"
+              example={`val = round(3.14159, 3)   { val = 3.142 }`}
             />
             <FunctionRef
               name="floor / ceil / trunc / sign / step"
               desc="Non-smooth arithmetic functions for discretization and stepping."
-              syntax="y = floor(x)\ny = ceil(x)\ny = trunc(x)\ny = sign(x)\ny = step(x)"
+              syntax={`y = floor(x)
+y = ceil(x)
+y = trunc(x)
+y = sign(x)
+y = step(x)`}
               inputs={[{ name: "x", desc: "Scalar input expression" }]}
               outputs={[{ name: "y", desc: "floor/ceil (rounded integer), trunc (discard decimals), sign (-1/0/1 depending on sign), step (1 if x >= 0, else 0)" }]}
-              example="val1 = floor(2.7)   { 2 }\nval2 = ceil(2.1)    { 3 }\nval3 = step(0.5)    { 1 }\nval4 = sign(-15)    { -1 }"
+              example={`val1 = floor(2.7)   { 2 }
+val2 = ceil(2.1)    { 3 }
+val3 = step(0.5)    { 1 }
+val4 = sign(-15)    { -1 }`}
             />
 
             <Title order={3}>Conditional Selection & Series</Title>
             <FunctionRef
               name="If"
               desc="Conditional expression evaluator. Selects a value depending on comparison."
-              syntax="val = If(a, b, val_lt, val_eq, val_gt)"
+              syntax={`val = If(a, b, val_lt, val_eq, val_gt)`}
               inputs={[
                 { name: "a", desc: "First expression to compare" },
                 { name: "b", desc: "Second expression to compare" },
@@ -1446,12 +1461,13 @@ head_loss [m] = -0.084 * flow_rate^2 + 1.54 * flow_rate + 0.12 [m]`}
                 { name: "val_gt", desc: "Returned value if a > b" }
               ]}
               outputs={[{ name: "val", desc: "The selected conditional value" }]}
-              example="temp = 350 [K]\nk = If(temp, 300, 1.2, 1.5, 1.8)"
+              example={`temp = 350 [K]
+k = If(temp, 300, 1.2, 1.5, 1.8)`}
             />
             <FunctionRef
               name="Product"
               desc="Evaluates product of a term series over an index range."
-              syntax="y = Product(i, lower, upper, term)"
+              syntax={`y = Product(i, lower, upper, term)`}
               inputs={[
                 { name: "i", desc: "Loop index variable name (e.g. i)" },
                 { name: "lower", desc: "Lower bound of loop (integer)" },
@@ -1459,7 +1475,7 @@ head_loss [m] = -0.084 * flow_rate^2 + 1.54 * flow_rate + 0.12 [m]`}
                 { name: "term", desc: "Expression containing the loop index i" }
               ]}
               outputs={[{ name: "y", desc: "Computed product" }]}
-              example="val = Product(i, 1, 4, i^2)   { val = 1 * 4 * 9 * 16 = 576 }"
+              example={`val = Product(i, 1, 4, i^2)   { val = 1 * 4 * 9 * 16 = 576 }`}
             />
           </Stack>
         );
@@ -1473,54 +1489,57 @@ head_loss [m] = -0.084 * flow_rate^2 + 1.54 * flow_rate + 0.12 [m]`}
             <FunctionRef
               name="BesselK / BesselY"
               desc="Modified Bessel function of the second kind (K_n(x)), and Bessel function of the second kind (Y_n(x))."
-              syntax="y = BesselK(n, x)\ny = BesselY(n, x)"
+              syntax={`y = BesselK(n, x)
+y = BesselY(n, x)`}
               inputs={[
                 { name: "n", desc: "Order of the Bessel function (integer)" },
                 { name: "x", desc: "Evaluated variable coordinate (must be positive)" }
               ]}
               outputs={[{ name: "y", desc: "Bessel function value" }]}
-              example="val = BesselK(1, 2.5)"
+              example={`val = BesselK(1, 2.5)`}
             />
             <FunctionRef
               name="Bessel Shortcuts (i0, j0, k0, y0, i1, j1, k1, y1)"
               desc="Direct shortcut functions for Bessel functions of order 0 and 1."
-              syntax="y = Bessel_j0(x)\ny = Bessel_k1(x)"
+              syntax={`y = Bessel_j0(x)
+y = Bessel_k1(x)`}
               inputs={[{ name: "x", desc: "Variable coordinate" }]}
               outputs={[{ name: "y", desc: "Bessel function value" }]}
-              example="y1 = Bessel_j0(1.5)\ny2 = Bessel_k0(2.0)"
+              example={`y1 = Bessel_j0(1.5)
+y2 = Bessel_k0(2.0)`}
             />
 
             <Title order={3}>Statistical & Probability Distributions</Title>
             <FunctionRef
               name="Chi_Square"
               desc="Cumulative Chi-Square distribution function."
-              syntax="y = Chi_Square(x, dof)"
+              syntax={`y = Chi_Square(x, dof)`}
               inputs={[
                 { name: "x", desc: "Chi-square statistic" },
                 { name: "dof", desc: "Degrees of freedom" }
               ]}
               outputs={[{ name: "y", desc: "Cumulative probability" }]}
-              example="prob = Chi_Square(5.99, 2)"
+              example={`prob = Chi_Square(5.99, 2)`}
             />
             <FunctionRef
               name="Probability"
               desc="Normal cumulative distribution function."
-              syntax="y = Probability(x, mean, stddev)"
+              syntax={`y = Probability(x, mean, stddev)`}
               inputs={[
                 { name: "x", desc: "Evaluated point" },
                 { name: "mean", desc: "Mean of the normal distribution" },
                 { name: "stddev", desc: "Standard deviation of the distribution" }
               ]}
               outputs={[{ name: "y", desc: "Cumulative probability" }]}
-              example="prob = Probability(85, 80, 5)   { prob = 0.8413 }"
+              example={`prob = Probability(85, 80, 5)   { prob = 0.8413 }`}
             />
             <FunctionRef
               name="Random"
               desc="Uniformly distributed pseudo-random number generator."
-              syntax="y = Random()"
+              syntax={`y = Random()`}
               inputs={[]}
               outputs={[{ name: "y", desc: "Random value between 0.0 and 1.0" }]}
-              example="val = Random()"
+              example={`val = Random()`}
             />
           </Stack>
         );
@@ -1560,17 +1579,22 @@ head_loss [m] = -0.084 * flow_rate^2 + 1.54 * flow_rate + 0.12 [m]`}
               </List.Item>
             </List>
             <Paper withBorder p="md" bg="dark.8" mb="md">
-              <Code block>{`P = 100000 [Pa]\nT = 300 [K]\n\n{ Explicit uncertainties in code }\nUncertaintyOf(P) = 500 [Pa]\nUncertaintyOf(T) = 2.0 [K]`}</Code>
+              <Code block>{`P = 100000 [Pa]
+T = 300 [K]
+
+{ Explicit uncertainties in code }
+UncertaintyOf(P) = 500 [Pa]
+UncertaintyOf(T) = 2.0 [K]`}</Code>
             </Paper>
 
             <Title order={3}>Uncertainty Propagation Function</Title>
             <FunctionRef
               name="UncertaintyOf"
               desc="Queries the computed uncertainty value of a solved variable."
-              syntax="u = UncertaintyOf(x)"
+              syntax={`u = UncertaintyOf(x)`}
               inputs={[{ name: "x", desc: "Target solved variable" }]}
               outputs={[{ name: "u", desc: "Computed absolute uncertainty value of the variable" }]}
-              example="unc_P = UncertaintyOf(P)"
+              example={`unc_P = UncertaintyOf(P)`}
             />
           </Stack>
         );
@@ -1607,13 +1631,14 @@ END`}</Code>
             <FunctionRef
               name="ArrayElmt"
               desc="Retrieves the value of an array element at a dynamic index."
-              syntax="val = ArrayElmt(array[1..N], index)"
+              syntax={`val = ArrayElmt(array[1..N], index)`}
               inputs={[
                 { name: "array[1..N]", desc: "Reference to the array name" },
                 { name: "index", desc: "Dynamic index expression to extract" }
               ]}
               outputs={[{ name: "val", desc: "Value at the selected index" }]}
-              example="idx = 3\nval = ArrayElmt(T[1..10], idx)   { Equals T[3] }"
+              example={`idx = 3
+val = ArrayElmt(T[1..10], idx)   { Equals T[3] }`}
             />
           </Stack>
         );
@@ -1625,41 +1650,48 @@ END`}</Code>
               frees supports complex arithmetic. Complex variables are declared by matching components ending in <code>_r</code> (real) and <code>_i</code> (imaginary), or using imaginary literals ending in <code>i</code> or <code>j</code>:
             </Text>
             <Paper withBorder p="md" bg="dark.8" mb="md">
-              <Code block>{`z1 = 3 + 4i\nz2 = 5 - 2j\nz3 = z1 * z2`}</Code>
+              <Code block>{`z1 = 3 + 4i
+z2 = 5 - 2j
+z3 = z1 * z2`}</Code>
             </Paper>
 
             <Title order={3}>Complex Numbers Helper Functions</Title>
             <FunctionRef
               name="Conj"
               desc="Computes the complex conjugate of a complex number."
-              syntax="z_conj = Conj(z)"
+              syntax={`z_conj = Conj(z)`}
               inputs={[{ name: "z", desc: "Complex number variable or expression" }]}
               outputs={[{ name: "z_conj", desc: "Conjugate complex number" }]}
-              example="z = 3 + 4i\nz_c = Conj(z)   { z_c = 3 - 4i }"
+              example={`z = 3 + 4i
+z_c = Conj(z)   { z_c = 3 - 4i }`}
             />
             <FunctionRef
               name="Magnitude"
               desc="Computes the absolute value/magnitude of a complex number or phasor."
-              syntax="mag = Magnitude(z)"
+              syntax={`mag = Magnitude(z)`}
               inputs={[{ name: "z", desc: "Complex expression" }]}
               outputs={[{ name: "mag", desc: "Scalar magnitude value" }]}
-              example="z = 3 + 4i\nr = Magnitude(z)   { r = 5.0 }"
+              example={`z = 3 + 4i
+r = Magnitude(z)   { r = 5.0 }`}
             />
             <FunctionRef
               name="Angle / AngleRad / AngleDeg"
               desc="Computes phasor angle of a complex number in radians or degrees."
-              syntax="theta = Angle(z)\ntheta_rad = AngleRad(z)\ntheta_deg = AngleDeg(z)"
+              syntax={`theta = Angle(z)
+theta_rad = AngleRad(z)
+theta_deg = AngleDeg(z)`}
               inputs={[{ name: "z", desc: "Complex expression" }]}
               outputs={[{ name: "theta", desc: "Phasor angle" }]}
-              example="z = 1 + 1i\nphi = AngleDeg(z)   { phi = 45.0 }"
+              example={`z = 1 + 1i
+phi = AngleDeg(z)   { phi = 45.0 }`}
             />
             <FunctionRef
               name="Cis"
               desc="Helper to declare polar phasor using Euler's formula: cos(theta) + i*sin(theta)."
-              syntax="z = mag * Cis(theta)"
+              syntax={`z = mag * Cis(theta)`}
               inputs={[{ name: "theta", desc: "Angle in radians" }]}
               outputs={[{ name: "z", desc: "Unit complex phasor" }]}
-              example="z = 5 * Cis(pi/4)"
+              example={`z = 5 * Cis(pi/4)`}
             />
           </Stack>
         );
@@ -1675,62 +1707,73 @@ END`}</Code>
             <FunctionRef
               name="Concat$"
               desc="Concatenates two strings together."
-              syntax="out$ = Concat$(str1$, str2$)"
+              syntax={`out$ = Concat$(str1$, str2$)`}
               inputs={[
                 { name: "str1$", desc: "First string" },
                 { name: "str2$", desc: "Second string" }
               ]}
               outputs={[{ name: "out$", desc: "Combined string" }]}
-              example="msg$ = Concat$('Fluid is ', 'Water')"
+              example={`msg$ = Concat$('Fluid is ', 'Water')`}
             />
             <FunctionRef
               name="Copy$"
               desc="Extracts a substring from a string."
-              syntax="out$ = Copy$(str$, start, len)"
+              syntax={`out$ = Copy$(str$, start, len)`}
               inputs={[
                 { name: "str$", desc: "Source string" },
                 { name: "start", desc: "1-based starting character index" },
                 { name: "len", desc: "Length of substring to copy" }
               ]}
               outputs={[{ name: "out$", desc: "Copied substring" }]}
-              example="s$ = Copy$('R134a', 2, 3)   { s$ = '134' }"
+              example={`s$ = Copy$('R134a', 2, 3)   { s$ = '134' }`}
             />
             <FunctionRef
               name="Lowercase$ / Uppercase$ / Trim$"
               desc="Modifies string case and trims whitespaces."
-              syntax="out$ = Lowercase$(str$)\nout$ = Uppercase$(str$)\nout$ = Trim$(str$)"
+              syntax={`out$ = Lowercase$(str$)
+out$ = Uppercase$(str$)
+out$ = Trim$(str$)`}
               inputs={[{ name: "str$", desc: "Input string" }]}
               outputs={[{ name: "out$", desc: "Transformed string" }]}
-              example="s$ = Lowercase$('Water')   { s$ = 'water' }"
+              example={`s$ = Lowercase$('Water')   { s$ = 'water' }`}
             />
             <FunctionRef
               name="StringLen / StringPos / StringVal / String$"
               desc="Length, find substring index, convert string to value, and convert value to string."
-              syntax="len = StringLen(str$)\npos = StringPos(str$, sub$)\nval = StringVal(str$)\nout$ = String$(val)"
+              syntax={`len = StringLen(str$)
+pos = StringPos(str$, sub$)
+val = StringVal(str$)
+out$ = String$(val)`}
               inputs={[
                 { name: "str$", desc: "Target string or variable" },
                 { name: "sub$", desc: "Substring to search for in StringPos" }
               ]}
               outputs={[{ name: "len/pos/val/out$", desc: "Resulting metric or value" }]}
-              example="len = StringLen('Ammonia')       { 7 }\npos = StringPos('R134a', '134')     { 2 }\nv = StringVal('101.3')             { 101.3 }\ns$ = String$(15.5)                 { '15.5' }"
+              example={`len = StringLen('Ammonia')       { 7 }
+pos = StringPos('R134a', '134')     { 2 }
+v = StringVal('101.3')             { 101.3 }
+s$ = String$(15.5)                 { '15.5' }`}
             />
 
             <Title order={3}>Environment & Environment Info Functions</Title>
             <FunctionRef
               name="Date$ / Time$ / TimeStamp$"
               desc="Retrieves the current system date, time, or timestamp."
-              syntax="d$ = Date$()\nt$ = Time$()\nts$ = TimeStamp$()"
+              syntax={`d$ = Date$()
+t$ = Time$()
+ts$ = TimeStamp$()`}
               inputs={[]}
               outputs={[{ name: "d$/t$/ts$", desc: "Date, Time or Timestamp string" }]}
-              example="current_date$ = Date$()"
+              example={`current_date$ = Date$()`}
             />
             <FunctionRef
               name="UnitSystem$ / UnitsOf$"
               desc="Queries active solver unit system settings or the units of a specific variable."
-              syntax="us$ = UnitSystem$()\nu$ = UnitsOf$(var)"
+              syntax={`us$ = UnitSystem$()
+u$ = UnitsOf$(var)`}
               inputs={[{ name: "var", desc: "Variable name to query units of" }]}
               outputs={[{ name: "us$/u$", desc: "Unit system settings description or variable unit string" }]}
-              example="p_unit$ = UnitsOf$(P)"
+              example={`p_unit$ = UnitsOf$(P)`}
             />
           </Stack>
         );
@@ -1808,60 +1851,66 @@ x[1..2] = A[1..2, 1..2] \\\\ b[1..2]`}</Code>
             <FunctionRef
               name="axpy"
               desc="Constant times vector/matrix plus vector/matrix: alpha * x + y"
-              syntax="result = axpy(alpha, x, y)"
+              syntax={`result = axpy(alpha, x, y)`}
               inputs={[
                 { name: "alpha", desc: "Scalar coefficient expression" },
                 { name: "x", desc: "First vector or matrix of size M x N" },
                 { name: "y", desc: "Second vector or matrix of size M x N" }
               ]}
               outputs={[{ name: "result", desc: "Resulting M x N matrix or vector" }]}
-              example={`x[1..2] = [1, 2]\ny[1..2] = [3, 4]\nz[1..2] = axpy(2, x[1..2], y[1..2])   { z = [5; 8] }`}
+              example={`x[1..2] = [1, 2]
+y[1..2] = [3, 4]
+z[1..2] = axpy(2, x[1..2], y[1..2])   { z = [5; 8] }`}
             />
 
             <FunctionRef
               name="scal"
               desc="Scale a vector or matrix by a constant factor: alpha * x"
-              syntax="result = scal(alpha, x)"
+              syntax={`result = scal(alpha, x)`}
               inputs={[
                 { name: "alpha", desc: "Scalar scale factor" },
                 { name: "x", desc: "Matrix or vector to scale" }
               ]}
               outputs={[{ name: "result", desc: "Scaled matrix or vector" }]}
-              example={`x[1..2] = [1, 2]\ny[1..2] = scal(3, x[1..2])   { y = [3; 6] }`}
+              example={`x[1..2] = [1, 2]
+y[1..2] = scal(3, x[1..2])   { y = [3; 6] }`}
             />
 
             <FunctionRef
               name="asum"
               desc="L1 norm (sum of absolute values) of a vector: sum(|x_i|)"
-              syntax="result = asum(x)"
+              syntax={`result = asum(x)`}
               inputs={[{ name: "x", desc: "Vector of size N" }]}
               outputs={[{ name: "result", desc: "Scalar sum of absolute values" }]}
-              example={`x[1..2] = [1, -2]\nval = asum(x[1..2])   { val = 3 }`}
+              example={`x[1..2] = [1, -2]
+val = asum(x[1..2])   { val = 3 }`}
             />
 
             <FunctionRef
               name="nrm2"
               desc="L2 Euclidean norm (root-sum-square) of a vector: sqrt(sum(x_i^2))"
-              syntax="result = nrm2(x)"
+              syntax={`result = nrm2(x)`}
               inputs={[{ name: "x", desc: "Vector of size N" }]}
               outputs={[{ name: "result", desc: "Scalar L2 norm value" }]}
-              example={`x[1..2] = [3, 4]\nval = nrm2(x[1..2])   { val = 5 }`}
+              example={`x[1..2] = [3, 4]
+val = nrm2(x[1..2])   { val = 5 }`}
             />
 
             <FunctionRef
               name="copy"
               desc="Returns a symbolic copy of the vector or matrix"
-              syntax="result = copy(x)"
+              syntax={`result = copy(x)`}
               inputs={[{ name: "x", desc: "Matrix or vector" }]}
               outputs={[{ name: "result", desc: "Identical copy" }]}
-              example={`x[1..2] = [1, 2]\ny[1..2] = copy(x[1..2])`}
+              example={`x[1..2] = [1, 2]
+y[1..2] = copy(x[1..2])`}
             />
 
             <Title order={3} mt="md">Level 2 BLAS (Matrix-Vector)</Title>
             <FunctionRef
               name="gemv"
               desc="General matrix-vector product: alpha * A * x + beta * y"
-              syntax="result = gemv(alpha, A, x, beta, y)"
+              syntax={`result = gemv(alpha, A, x, beta, y)`}
               inputs={[
                 { name: "alpha", desc: "Scalar multiplier for product" },
                 { name: "A", desc: "Matrix of size M x N" },
@@ -1870,13 +1919,16 @@ x[1..2] = A[1..2, 1..2] \\\\ b[1..2]`}</Code>
                 { name: "y", desc: "Column vector of size M x 1" }
               ]}
               outputs={[{ name: "result", desc: "Resulting column vector of size M x 1" }]}
-              example={`A[1..2, 1..2] = 1\nx[1..2] = [2, 3]\ny[1..2] = [4, 5]\nz[1..2] = gemv(2, A[1..2, 1..2], x[1..2], 3, y[1..2])`}
+              example={`A[1..2, 1..2] = 1
+x[1..2] = [2, 3]
+y[1..2] = [4, 5]
+z[1..2] = gemv(2, A[1..2, 1..2], x[1..2], 3, y[1..2])`}
             />
 
             <FunctionRef
               name="ger"
               desc="Vector outer product (Rank-1 update): alpha * x * y' + A"
-              syntax="result = ger(alpha, x, y, A)"
+              syntax={`result = ger(alpha, x, y, A)`}
               inputs={[
                 { name: "alpha", desc: "Scalar multiplier" },
                 { name: "x", desc: "Column vector of size M x 1" },
@@ -1884,14 +1936,17 @@ x[1..2] = A[1..2, 1..2] \\\\ b[1..2]`}</Code>
                 { name: "A", desc: "Matrix of size M x N" }
               ]}
               outputs={[{ name: "result", desc: "Resulting M x N matrix" }]}
-              example={`x[1..2] = [2, 3]\ny[1..2] = [4, 5]\nA[1..2, 1..2] = 1\nB[1..2, 1..2] = ger(2, x[1..2], y[1..2], A[1..2, 1..2])`}
+              example={`x[1..2] = [2, 3]
+y[1..2] = [4, 5]
+A[1..2, 1..2] = 1
+B[1..2, 1..2] = ger(2, x[1..2], y[1..2], A[1..2, 1..2])`}
             />
 
             <Title order={3} mt="md">Level 3 BLAS (Matrix-Matrix)</Title>
             <FunctionRef
               name="gemm"
               desc="General matrix-matrix product: alpha * A * B + beta * C"
-              syntax="result = gemm(alpha, A, B, beta, C)"
+              syntax={`result = gemm(alpha, A, B, beta, C)`}
               inputs={[
                 { name: "alpha", desc: "Scalar multiplier" },
                 { name: "A", desc: "Matrix of size M x K" },
@@ -1900,7 +1955,10 @@ x[1..2] = A[1..2, 1..2] \\\\ b[1..2]`}</Code>
                 { name: "C", desc: "Matrix of size M x N" }
               ]}
               outputs={[{ name: "result", desc: "Resulting M x N matrix" }]}
-              example={`A[1..2, 1..2] = 1\nB[1..2, 1..2] = 2\nC[1..2, 1..2] = 3\nD[1..2, 1..2] = gemm(2, A[1..2, 1..2], B[1..2, 1..2], 3, C[1..2, 1..2])`}
+              example={`A[1..2, 1..2] = 1
+B[1..2, 1..2] = 2
+C[1..2, 1..2] = 3
+D[1..2, 1..2] = gemm(2, A[1..2, 1..2], B[1..2, 1..2], 3, C[1..2, 1..2])`}
             />
           </Stack>
         );
@@ -1913,43 +1971,49 @@ x[1..2] = A[1..2, 1..2] \\\\ b[1..2]`}</Code>
             <FunctionRef
               name="SolveLinear"
               desc="Solves a square linear system: A * x = b"
-              syntax="x = SolveLinear(A, b)"
+              syntax={`x = SolveLinear(A, b)`}
               inputs={[
                 { name: "A", desc: "Square coefficient matrix of size N x N" },
                 { name: "b", desc: "Right-hand side vector of size N x 1" }
               ]}
               outputs={[{ name: "x", desc: "Solution vector of size N x 1" }]}
-              example={`A[1,1]=2; A[1,2]=1\nA[2,1]=-3; A[2,2]=-1\nb[1..2] = [8, -11]\nx[1..2] = SolveLinear(A[1..2, 1..2], b[1..2])`}
+              example={`A[1,1]=2; A[1,2]=1
+A[2,1]=-3; A[2,2]=-1
+b[1..2] = [8, -11]
+x[1..2] = SolveLinear(A[1..2, 1..2], b[1..2])`}
             />
 
             <ProcedureRef
               name="LUDecompose"
               desc="Performs LU decomposition on a square matrix A: A = L * U"
-              syntax="CALL LUDecompose(A : L, U)"
+              syntax={`CALL LUDecompose(A : L, U)`}
               inputs={[{ name: "A", desc: "Square matrix of size N x N to decompose" }]}
               outputs={[
                 { name: "L", desc: "Lower triangular matrix of size N x N (unit diagonal)" },
                 { name: "U", desc: "Upper triangular matrix of size N x N" }
               ]}
-              example={`A[1..2, 1..2] = 1\nCALL LUDecompose(A[1..2, 1..2] : L[1..2, 1..2], U[1..2, 1..2])`}
+              example={`A[1..2, 1..2] = 1
+CALL LUDecompose(A[1..2, 1..2] : L[1..2, 1..2], U[1..2, 1..2])`}
             />
 
             <ProcedureRef
               name="Eigen"
               desc="Computes eigenvalues and Unit eigenvectors of a symmetric matrix A"
-              syntax="CALL Eigen(A : lambda, V)"
+              syntax={`CALL Eigen(A : lambda, V)`}
               inputs={[{ name: "A", desc: "Symmetric square matrix of size N x N" }]}
               outputs={[
                 { name: "lambda", desc: "Vector of eigenvalues of size N x 1 (sorted ascending)" },
                 { name: "V", desc: "Orthonormal eigenvector matrix of size N x N (columns are eigenvectors)" }
               ]}
-              example={`A[1,1]=2; A[1,2]=1\nA[2,1]=1; A[2,2]=2\nCALL Eigen(A[1..2, 1..2] : lambda[1..2], V[1..2, 1..2])`}
+              example={`A[1,1]=2; A[1,2]=1
+A[2,1]=1; A[2,2]=2
+CALL Eigen(A[1..2, 1..2] : lambda[1..2], V[1..2, 1..2])`}
             />
 
             <ProcedureRef
               name="EulerRotate"
               desc="Assembles a 3D ZXZ rotation matrix from Euler angles"
-              syntax="CALL EulerRotate(phi, theta, psi : R)"
+              syntax={`CALL EulerRotate(phi, theta, psi : R)`}
               inputs={[
                 { name: "phi", desc: "Precession angle (radians)" },
                 { name: "theta", desc: "Nutation angle (radians)" },
@@ -2017,33 +2081,36 @@ k_val = thermal_conductivity(350)`}</Code>
             <FunctionRef
               name="Lookup"
               desc="Retrieves the value of a cell in a lookup table."
-              syntax="val = Lookup('TableName', row, col)"
+              syntax={`val = Lookup('TableName', row, col)`}
               inputs={[
                 { name: "TableName", desc: "String literal naming the table" },
                 { name: "row", desc: "1-based row index (integer)" },
                 { name: "col", desc: "1-based column index or string column name" }
               ]}
               outputs={[{ name: "val", desc: "The numeric cell value" }]}
-              example="x = Lookup('thermo_data', 5, 'Temperature')"
+              example={`x = Lookup('thermo_data', 5, 'Temperature')`}
             />
             <FunctionRef
               name="LookupRow / Lookup$Row / NLookupRows"
               desc="Search for matching rows and query table size."
-              syntax="row_idx = LookupRow('TableName', col, val)\nrow_idx = Lookup$Row('TableName', col, val$)\nnum_rows = NLookupRows('TableName')"
+              syntax={`row_idx = LookupRow('TableName', col, val)
+row_idx = Lookup$Row('TableName', col, val$)
+num_rows = NLookupRows('TableName')`}
               inputs={[
                 { name: "TableName", desc: "Name of target table" },
                 { name: "col", desc: "Target column index or name" },
                 { name: "val / val$", desc: "Value to search for" }
               ]}
               outputs={[{ name: "row_idx / num_rows", desc: "Row index or size count" }]}
-              example="idx = Lookup$Row('fluid_table', 'FluidName', 'Water')\ncount = NLookupRows('fluid_table')"
+              example={`idx = Lookup$Row('fluid_table', 'FluidName', 'Water')
+count = NLookupRows('fluid_table')`}
             />
 
             <Title order={3}>Spline & Linear Interpolation</Title>
             <FunctionRef
               name="Interpolate"
               desc="Performs 1D linear interpolation to find a dependent variable value."
-              syntax="y = Interpolate('TableName', y_col, x_col, x_val)"
+              syntax={`y = Interpolate('TableName', y_col, x_col, x_val)`}
               inputs={[
                 { name: "TableName", desc: "Name of the table" },
                 { name: "y_col", desc: "Name of the dependent output column" },
@@ -2051,32 +2118,33 @@ k_val = thermal_conductivity(350)`}</Code>
                 { name: "x_val", desc: "Independent coordinate value to interpolate" }
               ]}
               outputs={[{ name: "y", desc: "Interpolated value" }]}
-              example="cond = Interpolate('copper_conductivity', 'k', 'temp', 325)"
+              example={`cond = Interpolate('copper_conductivity', 'k', 'temp', 325)`}
             />
             <FunctionRef
               name="Interpolate1 / Interpolate2 / Interpolate2D"
               desc="Advanced 1D cubic spline and 2D bilinear/bicubic interpolation."
-              syntax="y = Interpolate1('TableName', y_col, x_col, x_val)\nz = Interpolate2D('TableName', z_col, x_col, x_val, y_col, y_val)"
+              syntax={`y = Interpolate1('TableName', y_col, x_col, x_val)
+z = Interpolate2D('TableName', z_col, x_col, x_val, y_col, y_val)`}
               inputs={[
                 { name: "TableName", desc: "Table name" },
                 { name: "x_val, y_val", desc: "Coordinates for interpolation" }
               ]}
               outputs={[{ name: "y / z", desc: "Interpolated value" }]}
-              example="cp_val = Interpolate1('gas_properties', 'Cp', 'Temperature', 450)"
+              example={`cp_val = Interpolate1('gas_properties', 'Cp', 'Temperature', 450)`}
             />
 
             <Title order={3}>Tabular Numerical Differentiation</Title>
             <FunctionRef
               name="Differentiate / Differentiate1 / Differentiate2"
               desc="Estimates derivative dy/dx from tabulated values at a specified coordinate point."
-              syntax="slope = Differentiate('TableName', y_col, x_col, x_val)"
+              syntax={`slope = Differentiate('TableName', y_col, x_col, x_val)`}
               inputs={[
                 { name: "TableName", desc: "Table name" },
                 { name: "y_col, x_col", desc: "Output/Input columns" },
                 { name: "x_val", desc: "Evaluation point" }
               ]}
               outputs={[{ name: "slope", desc: "Computed numerical derivative dy/dx" }]}
-              example="dslope = Differentiate('pressure_drop', 'dP', 'Velocity', 2.5)"
+              example={`dslope = Differentiate('pressure_drop', 'dP', 'Velocity', 2.5)`}
             />
           </Stack>
         );
@@ -2092,41 +2160,45 @@ k_val = thermal_conductivity(350)`}</Code>
             <FunctionRef
               name="TableValue"
               desc="Reads a cell in the active Parametric Table."
-              syntax="val = TableValue(row, col)"
+              syntax={`val = TableValue(row, col)`}
               inputs={[
                 { name: "row", desc: "Row index" },
                 { name: "col", desc: "Column index or name string" }
               ]}
               outputs={[{ name: "val", desc: "Numeric value at the cell" }]}
-              example="initial_P = TableValue(1, 'Pressure')"
+              example={`initial_P = TableValue(1, 'Pressure')`}
             />
             <FunctionRef
               name="TableRun# / NParametricRuns"
               desc="Queries current sweep run index and total sweep size."
-              syntax="run_idx = TableRun#()\ntotal_runs = NParametricRuns()"
+              syntax={`run_idx = TableRun#()
+total_runs = NParametricRuns()`}
               inputs={[]}
               outputs={[{ name: "run_idx / total_runs", desc: "Run indices and count statistics" }]}
-              example="current_sweep = TableRun#()"
+              example={`current_sweep = TableRun#()`}
             />
 
             <Title order={3}>Column Aggregate Functions</Title>
             <FunctionRef
               name="Sum / Avg / Min / Max / StdDev (Table columns)"
               desc="Calculates mathematical aggregate of all populated values in a Parametric Table column."
-              syntax="total = Sum('ColName')\naverage = Avg('ColName')\nminimum = Min('ColName')"
+              syntax={`total = Sum('ColName')
+average = Avg('ColName')
+minimum = Min('ColName')`}
               inputs={[{ name: "ColName", desc: "String name of the column in the Parametric Table" }]}
               outputs={[{ name: "total/average/minimum", desc: "Computed scalar value" }]}
-              example="mean_eff = Avg('efficiency')\nmax_temp = Max('T_boiler')"
+              example={`mean_eff = Avg('efficiency')
+max_temp = Max('T_boiler')`}
             />
 
             <Title order={3}>Integral Table Accessors</Title>
             <FunctionRef
               name="IntegralValue"
               desc="Reads computed value from the ODE Integral Table at the end of the solve."
-              syntax="val = IntegralValue('VarName')"
+              syntax={`val = IntegralValue('VarName')`}
               inputs={[{ name: "VarName", desc: "String name of the integrated variable" }]}
               outputs={[{ name: "val", desc: "Integrated ODE step value" }]}
-              example="net_heat = IntegralValue('Q_dot')"
+              example={`net_heat = IntegralValue('Q_dot')`}
             />
           </Stack>
         );
@@ -2250,48 +2322,60 @@ CALL pipe_flow(D1, Q1 : dP1)`}</Code>
             <FunctionRef
               name="P_sat / T_sat"
               desc="Evaluates saturation pressure or temperature for a fluid."
-              syntax="ps = P_sat(Fluid, T=temp)\nts = T_sat(Fluid, P=pres)"
+              syntax={`ps = P_sat(Fluid, T=temp)
+ts = T_sat(Fluid, P=pres)`}
               inputs={[
                 { name: "Fluid", desc: "Fluid name" },
                 { name: "T / P", desc: "Saturation state coordinate" }
               ]}
               outputs={[{ name: "ps / ts", desc: "Saturation pressure (Pa) / temperature (K)" }]}
-              example="P_sat_water = P_sat(Water, T=373.15)   { ~101325 Pa }"
+              example={`P_sat_water = P_sat(Water, T=373.15)   { ~101325 Pa }`}
             />
             <FunctionRef
               name="MolarMass / CompressibilityFactor / Prandtl"
               desc="Molar mass (kg/kmol), Compressibility factor Z (dimensionless), and Prandtl number."
-              syntax="m = MolarMass(Fluid)\nz = CompressibilityFactor(Fluid, T=temp, P=pres)\npr = Prandtl(Fluid, T=temp, P=pres)"
+              syntax={`m = MolarMass(Fluid)
+z = CompressibilityFactor(Fluid, T=temp, P=pres)
+pr = Prandtl(Fluid, T=temp, P=pres)`}
               inputs={[{ name: "Fluid", desc: "Fluid name" }]}
               outputs={[{ name: "m / z / pr", desc: "Property metrics" }]}
-              example="M = MolarMass(CarbonDioxide)\nZ = CompressibilityFactor(Nitrogen, T=300, P=5e6)"
+              example={`M = MolarMass(CarbonDioxide)
+Z = CompressibilityFactor(Nitrogen, T=300, P=5e6)`}
             />
             <FunctionRef
               name="SurfaceTension / Fugacity / Enthalpy_fusion / Dipole"
               desc="Queries surface tension (N/m), fugacity coefficient (dimensionless), enthalpy of fusion (J/kg), and dipole moment."
-              syntax="st = SurfaceTension(Fluid, T=temp)\nfc = Fugacity(Fluid, T=temp, P=pres)\nhf = Enthalpy_fusion(Fluid)\ndp = Dipole(Fluid)"
+              syntax={`st = SurfaceTension(Fluid, T=temp)
+fc = Fugacity(Fluid, T=temp, P=pres)
+hf = Enthalpy_fusion(Fluid)
+dp = Dipole(Fluid)`}
               inputs={[{ name: "Fluid", desc: "Fluid name" }]}
               outputs={[{ name: "st / fc / hf / dp", desc: "Special properties" }]}
-              example="sigma_st = SurfaceTension(Water, T=300)"
+              example={`sigma_st = SurfaceTension(Water, T=300)`}
             />
             <FunctionRef
               name="P_crit / T_crit / v_crit / T_triple"
               desc="Critical pressure, critical temperature, critical specific volume, and triple point temperature."
-              syntax="pc = P_crit(Fluid)\ntc = T_crit(Fluid)\nvc = v_crit(Fluid)\ntt = T_triple(Fluid)"
+              syntax={`pc = P_crit(Fluid)
+tc = T_crit(Fluid)
+vc = v_crit(Fluid)
+tt = T_triple(Fluid)`}
               inputs={[{ name: "Fluid", desc: "Fluid name" }]}
               outputs={[{ name: "pc / tc / vc / tt", desc: "State constant parameters" }]}
-              example="P_crit_co2 = P_crit(CO2)"
+              example={`P_crit_co2 = P_crit(CO2)`}
             />
             <FunctionRef
               name="IsIdealGas / Phase$"
               desc="Checks if fluid behaves ideally, and queries string phase."
-              syntax="chk = IsIdealGas(Fluid)\nph$ = Phase$(Fluid, T=temp, P=pres)"
+              syntax={`chk = IsIdealGas(Fluid)
+ph$ = Phase$(Fluid, T=temp, P=pres)`}
               inputs={[
                 { name: "Fluid", desc: "Fluid name" },
                 { name: "T, P", desc: "Coordinate points for phase evaluation" }
               ]}
               outputs={[{ name: "chk / ph$", desc: "1 or 0 flag, or Phase description string (e.g. 'twophase', 'liquid', 'gas', 'supercritical')" }]}
-              example="is_ideal = IsIdealGas(Air)\nstate$ = Phase$(R134a, T=25 [C], P=100 [kPa])"
+              example={`is_ideal = IsIdealGas(Air)
+state$ = Phase$(R134a, T=25 [C], P=100 [kPa])`}
             />
           </Stack>
         );
@@ -2307,40 +2391,51 @@ CALL pipe_flow(D1, Q1 : dP1)`}</Code>
             <FunctionRef
               name="c_ / k_ / rho_ / mu_ / Pv_"
               desc="Evaluates material specific heat (J/kg-K), thermal conductivity (W/m-K), density (kg/m³), dynamic viscosity (Pa-s), and vapor pressure (Pa)."
-              syntax="cp = c_(Material, T=temp)\ncond = k_(Material, T=temp)\ndens = rho_(Material)\nvisc = mu_(Material, T=temp)\nvap_p = Pv_(Material, T=temp)"
+              syntax={`cp = c_(Material, T=temp)
+cond = k_(Material, T=temp)
+dens = rho_(Material)
+visc = mu_(Material, T=temp)
+vap_p = Pv_(Material, T=temp)`}
               inputs={[
                 { name: "Material", desc: "Solid or incompressible material name" },
                 { name: "T", desc: "Evaluation temperature coordinate" }
               ]}
               outputs={[{ name: "cp/cond/dens/visc/vap_p", desc: "Material properties" }]}
-              example="k_copper = k_(Copper, T=300 [K])\ncp_iron = c_(Iron, T=400 [K])"
+              example={`k_copper = k_(Copper, T=300 [K])
+cp_iron = c_(Iron, T=400 [K])`}
             />
             <FunctionRef
               name="E_ / nu_ / epsilon_ / VolExpCoef / FreezingPt"
               desc="Young's modulus (Pa), Poisson's ratio (dimensionless), Surface emissivity, Volumetric thermal expansion (1/K), and Freezing point temperature (K)."
-              syntax="mod = E_(Material)\npr = nu_(Material)\nem = epsilon_(Material)\nb = VolExpCoef(Material)\ntf = FreezingPt(Material)"
+              syntax={`mod = E_(Material)
+pr = nu_(Material)
+em = epsilon_(Material)
+b = VolExpCoef(Material)
+tf = FreezingPt(Material)`}
               inputs={[{ name: "Material", desc: "Material name" }]}
               outputs={[{ name: "mod / pr / em / b / tf", desc: "Solid state variables" }]}
-              example="mod_steel = E_(Steel)\nem_glass = epsilon_(Glass)"
+              example={`mod_steel = E_(Steel)
+em_glass = epsilon_(Glass)`}
             />
             <FunctionRef
               name="DELTAL\L_293"
               desc="Linear thermal expansion coefficient relative to reference 293 K."
-              syntax="exp_ratio = DELTAL\\L_293(Material, T=temp)"
+              syntax={`exp_ratio = DELTAL\\L_293(Material, T=temp)`}
               inputs={[
                 { name: "Material", desc: "Material name" },
                 { name: "T", desc: "Evaluated temperature" }
               ]}
               outputs={[{ name: "exp_ratio", desc: "Expansion ratio delta L / L_293" }]}
-              example="dl_ratio = DELTAL\\L_293(Aluminum, T=500 [K])"
+              example={`dl_ratio = DELTAL\\L_293(Aluminum, T=500 [K])`}
             />
             <FunctionRef
               name="ek_LJ / sigma_LJ"
               desc="Lennard-Jones potential energy parameter epsilon/k (K) and collision diameter sigma (m)."
-              syntax="eps_k = ek_LJ(Material)\nsig = sigma_LJ(Material)"
+              syntax={`eps_k = ek_LJ(Material)
+sig = sigma_LJ(Material)`}
               inputs={[{ name: "Material", desc: "Gas/Solid name" }]}
               outputs={[{ name: "eps_k / sig", desc: "Lennard-Jones parameter values" }]}
-              example="ek_val = ek_LJ(Argon)"
+              example={`ek_val = ek_LJ(Argon)`}
             />
           </Stack>
         );
@@ -2417,7 +2512,28 @@ CALL pipe_flow(D1, Q1 : dP1)`}</Code>
                 <MantineAccordion.Panel>
                   <Text size="sm" mb="xs">Analyses an ideal Rankine cycle, computing state enthalpies, work, and efficiency.</Text>
                   <Paper withBorder p="xs" bg="dark.9" style={{ position: 'relative' }}>
-                    <CopyButton code={`{ Ideal Rankine Steam Power Cycle }\\nP_high = 8000 [kPa]\\nP_low = 10 [kPa]\\nT_boiler = 500 [C]\\neta_turb = 0.85\\neta_pump = 0.90\\nW_dot_net = 10000 [kW]\\nh1 = Enthalpy(Water, P=P_high, T=T_boiler)\\ns1 = Entropy(Water, P=P_high, T=T_boiler)\\ns_2s = s1\\nh_2s = Enthalpy(Water, P=P_low, s=s_2s)\\nh2 = h1 - eta_turb * (h1 - h_2s)\\nh3 = Enthalpy(Water, P=P_low, x=0)\\nv3 = Volume(Water, P=P_low, x=0)\\nh_4s = Enthalpy(Water, P=P_high, s=Entropy(Water, P=P_low, x=0))\\nh4 = h3 + (h_4s - h3) / eta_pump\\nw_turb = h1 - h2\\nw_pump = h4 - h3\\nq_boiler = h1 - h4\\nw_net = w_turb - w_pump\\neta_th = w_net / q_boiler * 100\\nW_dot_net = m_dot * w_net`} />
+                    <CopyButton code={`{ Ideal Rankine Steam Power Cycle }\
+P_high = 8000 [kPa]\
+P_low = 10 [kPa]\
+T_boiler = 500 [C]\
+eta_turb = 0.85\
+eta_pump = 0.90\
+W_dot_net = 10000 [kW]\
+h1 = Enthalpy(Water, P=P_high, T=T_boiler)\
+s1 = Entropy(Water, P=P_high, T=T_boiler)\
+s_2s = s1\
+h_2s = Enthalpy(Water, P=P_low, s=s_2s)\
+h2 = h1 - eta_turb * (h1 - h_2s)\
+h3 = Enthalpy(Water, P=P_low, x=0)\
+v3 = Volume(Water, P=P_low, x=0)\
+h_4s = Enthalpy(Water, P=P_high, s=Entropy(Water, P=P_low, x=0))\
+h4 = h3 + (h_4s - h3) / eta_pump\
+w_turb = h1 - h2\
+w_pump = h4 - h3\
+q_boiler = h1 - h4\
+w_net = w_turb - w_pump\
+eta_th = w_net / q_boiler * 100\
+W_dot_net = m_dot * w_net`} />
                     <Code block style={{ background: 'transparent', maxHeight: '250px', overflowY: 'auto' }}>
                       {`{ Ideal Rankine Steam Power Cycle }
 P_high = 8000 [kPa]
