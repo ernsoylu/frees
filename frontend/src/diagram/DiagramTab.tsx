@@ -3511,6 +3511,10 @@ export default function DiagramTab(props: Readonly<Props>) {
   // to the nearest run. The time clock is always exposed as `t`.
   const numValues = useMemo(() => {
     const map = new Map<string, number>()
+    // The time clock seeds `t` as a fallback only; a real solved/run variable
+    // named t (or T — names are case-insensitive) must override it, so it is
+    // set BEFORE the solved values, not after (Story 10.11 fix).
+    map.set('t', clockT)
     if (playPos !== null && runs.length > 0) {
       const p = Math.max(0, Math.min(runs.length - 1, playPos))
       const i0 = Math.floor(p)
@@ -3530,10 +3534,24 @@ export default function DiagramTab(props: Readonly<Props>) {
       }
     } else {
       for (const v of variables) map.set(v.name.toLowerCase(), v.value)
+      // Live input-control feedback (run-mode operator dashboard): a value-fixing
+      // control's current value overrides the last solved value for the variable
+      // it drives, so gauges, value-driven fill, and {var} labels track sliders /
+      // inputs immediately — without needing a re-Solve. (Skipped during table
+      // playback above, where the swept run values must win.)
+      if (runMode) {
+        for (const el of state.elements) {
+          if (!isControl(el) || el.kind === 'ctl-button') continue
+          const name = el.varName?.trim()
+          if (!name || name.endsWith('$')) continue
+          if (el.target && el.target !== 'equation') continue
+          const n = Number((el as { value?: unknown }).value)
+          if (Number.isFinite(n)) map.set(name.toLowerCase(), n)
+        }
+      }
     }
-    map.set('t', clockT)
     return map
-  }, [playPos, runs, variables, tween, easing, clockT])
+  }, [playPos, runs, variables, tween, easing, clockT, runMode, state.elements])
 
   const valueMap = useMemo(() => {
     const map = new Map<string, VariableResult>()
