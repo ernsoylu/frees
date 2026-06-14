@@ -719,7 +719,11 @@ export default function App() {
     setSolving(true)
     try {
       const activePlots = overridePlots ?? plots
-      const needMissing = activePlots.some((p) => p.kind === 'property' && p.property.overlayStates)
+      const needMissing =
+        activePlots.some((p) => p.kind === 'property' && p.property.overlayStates) ||
+        // PLOT-block property diagrams (resolved after Check) also need the
+        // interpolated cycle path, so request it when one is present.
+        codePlots.some((p) => p.kind === 'property' && p.property.overlayStates)
       const shouldFillMissing = (forceFill === true) || fillMissing || needMissing
       const response = await solve(
         effectiveText(),
