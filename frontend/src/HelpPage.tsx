@@ -15,10 +15,8 @@ import {
   Badge,
   Alert,
   Card,
-  Accordion,
   Button,
-  SimpleGrid,
-  ThemeIcon
+  SimpleGrid
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { useState } from 'react';
@@ -977,925 +975,1199 @@ y_test = siyavula_data(0)`,
   },
 ];
 
-const SECTIONS = [
-  { id: 'started', label: '1. Getting Started' },
-  { id: 'syntax', label: '2. Equation Syntax & Math' },
-  { id: 'variables', label: '3. Variables & Bounds' },
-  { id: 'units', label: '4. Units & Consistency' },
-  { id: 'arrays', label: '5. Arrays & Loops' },
-  { id: 'matrices', label: '6. Matrices & Vectors' },
-  { id: 'functions', label: '7. Functions & Procedures' },
-  { id: 'modules', label: '8. Modular Submodels' },
-  { id: 'thermo', label: '9. Fluid Properties (CoolProp)' },
-  { id: 'humidair', label: '10. Psychrometrics (AirH2O)' },
-  { id: 'calculus', label: '11. Numerical Integration' },
-  { id: 'complex', label: '12. Complex Numbers' },
-  { id: 'examples', label: '13. Engineering Examples' },
-  { id: 'api', label: '14. Solver Reference & API' },
-  { id: 'optimization', label: '15. Optimization & Plotting' },
-  { id: 'diagram', label: '16. Diagram Window' },
+
+import { ReactNode } from 'react';
+import { TextInput, CloseButton, Accordion as MantineAccordion } from '@mantine/core';
+import {
+  IconSearch,
+  IconBook,
+  IconCalculator,
+  IconGrid3x3,
+  IconCode,
+  IconFlask,
+  IconAdjustments,
+  IconChartBar,
+  IconFileText
+} from '@tabler/icons-react';
+
+const CATEGORIES = [
+  {
+    title: 'Getting Started',
+    icon: <IconBook size={16} />,
+    items: [
+      { id: 'started', label: 'Introduction & Workflow', keywords: ['intro', 'philosophy', 'workflow', 'getting started'] },
+      { id: 'shortcuts', label: 'Keyboard Shortcuts', keywords: ['hotkey', 'shortcuts', 'keyboard', 'f2', 'f4', 'f9', 'ctrl'] },
+      { id: 'reports', label: 'Markdown & Reports', keywords: ['markdown', 'report', 'latex', 'katex', 'inline', 'equations'] },
+      { id: 'digitizer-fit', label: 'Graph Digitizer & Curve Fit', keywords: ['digitizer', 'curve', 'fit', 'table', 'regression', 'equation', 'graph'] },
+    ]
+  },
+  {
+    title: 'Language Fundamentals',
+    icon: <IconCalculator size={16} />,
+    items: [
+      { id: 'syntax', label: 'Equation Syntax & Rules', keywords: ['syntax', 'equality', 'case', 'comment', 'rules'] },
+      { id: 'math-funcs', label: 'Mathematical Functions', keywords: ['abs', 'sqrt', 'ln', 'log10', 'exp', 'sin', 'cos', 'tan', 'min', 'max', 'sum', 'avg', 'sinh', 'cosh', 'tanh', 'arcsinh', 'arccosh', 'arctanh', 'round', 'floor', 'ceil', 'trunc', 'sign', 'factorial', 'step', 'if', 'product'] },
+      { id: 'special-funcs', label: 'Special & Statistical Functions', keywords: ['bessel', 'besselk', 'bessely', 'bessel_i0', 'bessel_j0', 'chi_square', 'random', 'probability'] },
+      { id: 'variables', label: 'Variables, Guesses & Bounds', keywords: ['variables', 'guess', 'bounds', 'limits', 'variable info'] },
+      { id: 'uncertainty', label: 'Uncertainty Propagation', keywords: ['uncertainty', 'propagation', 'error', 'uncertaintyof', 'svd'] },
+      { id: 'units', label: 'Units & Consistency', keywords: ['unit', 'si', 'convert', 'dimension', 'annotation'] },
+      { id: 'arrays', label: 'Arrays & Loops (DUPLICATE)', keywords: ['array', 'duplicate', 'loops', 'slice', 'index'] },
+      { id: 'complex', label: 'Complex Numbers & Helpers', keywords: ['complex', 'imaginary', 'real', 'i', 'j', 'angle', 'polar', 'conj', 'magnitude', 'cis'] },
+      { id: 'strings', label: 'String Variables & Functions', keywords: ['string', 'chr$', 'concat$', 'copy$', 'lowercase$', 'uppercase$', 'trim$', 'stringlen', 'stringpos', 'stringval', 'date$', 'time$', 'timestamp$', 'unitsystem$', 'unitsof$'] },
+    ]
+  },
+  {
+    title: 'Matrix & Linear Algebra',
+    icon: <IconGrid3x3 size={16} />,
+    items: [
+      { id: 'matrices-decl', label: 'Declaring Matrices & Vectors', keywords: ['matrix', 'vector', 'declaring', 'literal', 'semicolon', 'brackets', 'matlab'] },
+      { id: 'matrices-ops', label: 'Matrix Operators (+, -, *, \\, \')', keywords: ['operators', 'transpose', 'backslash', 'multiplication', 'solve', 'matlab'] },
+      { id: 'matrices-blas', label: 'OpenBLAS Algebra Functions', keywords: ['blas', 'axpy', 'scal', 'copy', 'asum', 'nrm2', 'gemv', 'ger', 'gemm', 'openblas'] },
+      { id: 'matrices-sys', label: 'Linear Systems & Decomp', keywords: ['solvelinear', 'ludecompose', 'eigen', 'eigenvalues', 'eulerrotate', 'eulerdecompose', 'rotation'] },
+    ]
+  },
+  {
+    title: 'Programming & Logic',
+    icon: <IconCode size={16} />,
+    items: [
+      { id: 'functions', label: 'Custom Functions & Procedures', keywords: ['functions', 'procedures', 'call', 'custom', 'outputs'] },
+      { id: 'tables-code', label: 'Custom Tables (TABLE)', keywords: ['table', 'interp', 'tabulated', 'custom tables', 'curve fit'] },
+      { id: 'lookup-tables', label: 'Lookup Tables & Interpolation', keywords: ['lookup', 'interpolate', 'differentiate', 'table', 'interpolation', 'spline'] },
+      { id: 'table-accessors', label: 'Table Accessors & Aggregates', keywords: ['parametric', 'integral', 'run', 'tablevalue', 'tablerun#', 'nparametricruns', 'sum', 'avg', 'min', 'max', 'stddev', 'integralvalue'] },
+      { id: 'modules', label: 'Modular Submodels (MODULE)', keywords: ['module', 'submodel', 'modular', 'call module'] },
+    ]
+  },
+  {
+    title: 'Fluids & Materials',
+    icon: <IconFlask size={16} />,
+    items: [
+      { id: 'thermo', label: 'Fluid Properties (CoolProp & Gas)', keywords: ['coolprop', 'fluids', 'water', 'steam', 'refrigerant', 'glycol', 'density', 'enthalpy', 'entropy', 'p_sat', 't_sat', 'molarmass', 'compressibilityfactor', 'prandtl', 'surfacetension', 'fugacity', 'enthalpy_fusion', 'dipole', 'p_crit', 't_crit', 'v_crit', 't_triple', 'isidealgas', 'phase$'] },
+      { id: 'solid-materials', label: 'Solid & Material Properties', keywords: ['material', 'solid', 'c_', 'k_', 'rho_', 'mu_', 'pv_', 'e_', 'nu_', 'epsilon_', 'volexpcoef', 'freezingpt', 'deltal\\l_293', 'ek_lj', 'sigma_lj'] },
+      { id: 'humidair', label: 'Psychrometrics (AirH2O)', keywords: ['psychrometric', 'humid air', 'airh2o', 'relative humidity', 'wet bulb', 'dew point'] },
+    ]
+  },
+  {
+    title: 'Advanced Solving',
+    icon: <IconAdjustments size={16} />,
+    items: [
+      { id: 'calculus', label: 'Numerical Integration (ODEs)', keywords: ['integral', 'ode', 'differential', 'calculus', 'runge-kutta'] },
+      { id: 'optimization', label: 'Optimization & sweeps', keywords: ['optimization', 'sweep', 'parametric', 'minimization', 'maximization'] },
+      { id: 'api', label: 'Solver Reference & API', keywords: ['api', 'solver', 'newton', 'tarjan', 'residuals', 'jacobian'] },
+    ]
+  },
+  {
+    title: 'Diagrams & Plots',
+    icon: <IconChartBar size={16} />,
+    items: [
+      { id: 'diagram', label: 'Diagram Canvas & Plotting', keywords: ['diagram', 'plots', 'graph', 'canvas', 'recording', 'export'] },
+    ]
+  },
+  {
+    title: 'Case Studies',
+    icon: <IconFileText size={16} />,
+    items: [
+      { id: 'examples', label: 'Engineering Examples Library', keywords: ['examples', 'rankine', 'brayton', 'combined cycle', 'pipe network', 'truss', 'radiation', 'cooling loop', 'reforming', 'pid', 'fatigue', 'nuclear', 'siyavula'] },
+    ]
+  }
 ];
+
+function FunctionRef({ name, syntax, desc, inputs, outputs, example }: {
+  name: string;
+  syntax: string;
+  desc: string | ReactNode;
+  inputs: { name: string; desc: string }[];
+  outputs: { name: string; desc: string }[];
+  example: string;
+}) {
+  return (
+    <Card withBorder radius="md" p="md" bg="dark.8" mb="md" style={{ borderLeft: '4px solid var(--mantine-color-blue-5)' }}>
+      <Group justify="space-between" mb="xs">
+        <Title order={4} c="blue.3" style={{ fontFamily: 'monospace' }}>{name}</Title>
+        <Badge variant="light" color="blue">Function Reference</Badge>
+      </Group>
+      <Text size="sm" mb="md" style={{ lineHeight: 1.5 }}>{desc}</Text>
+      
+      <Text fw={600} size="sm" mb="xs">Syntax</Text>
+      <Paper withBorder p="xs" bg="dark.9" mb="md" radius="sm">
+        <Code block style={{ background: 'transparent', color: '#82c91e' }}>{syntax}</Code>
+      </Paper>
+
+      {inputs.length > 0 && (
+        <>
+          <Text fw={600} size="sm" mb="xs">Input Arguments</Text>
+          <Table striped withTableBorder withColumnBorders mb="md">
+            <Table.Thead>
+              <Table.Tr>
+                <Table.Th style={{ width: '150px' }}>Argument</Table.Th>
+                <Table.Th>Description</Table.Th>
+              </Table.Tr>
+            </Table.Thead>
+            <Table.Tbody>
+              {inputs.map(i => (
+                <Table.Tr key={i.name}>
+                  <Table.Td><Code>{i.name}</Code></Table.Td>
+                  <Table.Td>{i.desc}</Table.Td>
+                </Table.Tr>
+              ))}
+            </Table.Tbody>
+          </Table>
+        </>
+      )}
+
+      {outputs.length > 0 && (
+        <>
+          <Text fw={600} size="sm" mb="xs">Output Arguments</Text>
+          <Table striped withTableBorder withColumnBorders mb="md">
+            <Table.Thead>
+              <Table.Tr>
+                <Table.Th style={{ width: '150px' }}>Argument</Table.Th>
+                <Table.Th>Description</Table.Th>
+              </Table.Tr>
+            </Table.Thead>
+            <Table.Tbody>
+              {outputs.map(o => (
+                <Table.Tr key={o.name}>
+                  <Table.Td><Code>{o.name}</Code></Table.Td>
+                  <Table.Td>{o.desc}</Table.Td>
+                </Table.Tr>
+              ))}
+            </Table.Tbody>
+          </Table>
+        </>
+      )}
+
+      <Text fw={600} size="sm" mb="xs">Example</Text>
+      <Paper withBorder p="xs" bg="dark.9" radius="sm" style={{ position: 'relative' }}>
+        <CopyButton code={example} />
+        <Code block style={{ background: 'transparent' }}>{example}</Code>
+      </Paper>
+    </Card>
+  );
+}
+
+function ProcedureRef({ name, syntax, desc, inputs, outputs, example }: {
+  name: string;
+  syntax: string;
+  desc: string | ReactNode;
+  inputs: { name: string; desc: string }[];
+  outputs: { name: string; desc: string }[];
+  example: string;
+}) {
+  return (
+    <Card withBorder radius="md" p="md" bg="dark.8" mb="md" style={{ borderLeft: '4px solid var(--mantine-color-indigo-5)' }}>
+      <Group justify="space-between" mb="xs">
+        <Title order={4} c="indigo.3" style={{ fontFamily: 'monospace' }}>{name}</Title>
+        <Badge variant="light" color="indigo">Procedure Reference</Badge>
+      </Group>
+      <Text size="sm" mb="md" style={{ lineHeight: 1.5 }}>{desc}</Text>
+      
+      <Text fw={600} size="sm" mb="xs">Syntax</Text>
+      <Paper withBorder p="xs" bg="dark.9" mb="md" radius="sm">
+        <Code block style={{ background: 'transparent', color: '#ffc078' }}>{syntax}</Code>
+      </Paper>
+
+      {inputs.length > 0 && (
+        <>
+          <Text fw={600} size="sm" mb="xs">Input Variables</Text>
+          <Table striped withTableBorder withColumnBorders mb="md">
+            <Table.Thead>
+              <Table.Tr>
+                <Table.Th style={{ width: '150px' }}>Variable</Table.Th>
+                <Table.Th>Description</Table.Th>
+              </Table.Tr>
+            </Table.Thead>
+            <Table.Tbody>
+              {inputs.map(i => (
+                <Table.Tr key={i.name}>
+                  <Table.Td><Code>{i.name}</Code></Table.Td>
+                  <Table.Td>{i.desc}</Table.Td>
+                </Table.Tr>
+              ))}
+            </Table.Tbody>
+          </Table>
+        </>
+      )}
+
+      {outputs.length > 0 && (
+        <>
+          <Text fw={600} size="sm" mb="xs">Output Variables</Text>
+          <Table striped withTableBorder withColumnBorders mb="md">
+            <Table.Thead>
+              <Table.Tr>
+                <Table.Th style={{ width: '150px' }}>Variable</Table.Th>
+                <Table.Th>Description</Table.Th>
+              </Table.Tr>
+            </Table.Thead>
+            <Table.Tbody>
+              {outputs.map(o => (
+                <Table.Tr key={o.name}>
+                  <Table.Td><Code>{o.name}</Code></Table.Td>
+                  <Table.Td>{o.desc}</Table.Td>
+                </Table.Tr>
+              ))}
+            </Table.Tbody>
+          </Table>
+        </>
+      )}
+
+      <Text fw={600} size="sm" mb="xs">Example</Text>
+      <Paper withBorder p="xs" bg="dark.9" radius="sm" style={{ position: 'relative' }}>
+        <CopyButton code={example} />
+        <Code block style={{ background: 'transparent' }}>{example}</Code>
+      </Paper>
+    </Card>
+  );
+}
 
 export default function HelpPage() {
   const [opened, { toggle }] = useDisclosure();
   const [active, setActive] = useState('started');
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Filter Categories by Search Query
+  const filteredCategories = CATEGORIES.map(category => {
+    const filteredItems = category.items.filter(item => 
+      item.label.toLowerCase().includes(searchQuery.toLowerCase()) || 
+      item.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.keywords.some(kw => kw.toLowerCase().includes(searchQuery.toLowerCase()))
+    );
+    return { ...category, items: filteredItems };
+  }).filter(category => category.items.length > 0);
 
   const renderContent = () => {
     switch (active) {
       case 'started':
         return (
           <Stack gap="md">
-            <Title order={2} c="blue.4">1. Getting Started with frees</Title>
+            <Title order={2} c="blue.4">Introduction & Solver Philosophy</Title>
             <Text size="md" style={{ lineHeight: 1.6 }}>
-              Welcome to <strong>frees</strong> (free solver). frees is a declarative, web-based numerical solver designed for engineers, researchers, and students.
+              Welcome to the <strong>frees</strong> (free solver) documentation. frees is a next-generation, declarative equation-solving environment designed for engineering problems, thermodynamics, and multi-domain simulation.
             </Text>
             <Text size="md" style={{ lineHeight: 1.6 }}>
-              Unlike procedural languages (like Python, MATLAB, or C++), where you must explicitly rearrange equations to solve for unknowns (e.g. writing <code>x = ...</code>), frees is <strong>declarative</strong>. You input your equations exactly as they are written in physics and engineering textbooks (e.g. <code>P * V = n * R * T</code>), and the solver automatically determines which variables are unknown, groups equations into blocks, and solves them simultaneously.
+              Unlike traditional programming environments (like MATLAB scripts, Python, or C++), where you must explicitly isolate and rearrange equations to calculate unknowns (e.g. writing <code>x = f(y)</code>), frees is <strong>declarative</strong>. You input your equations exactly as they are written in engineering textbooks (e.g. <code>P * V = n * R * T</code>), and the compiler automatically identifies the unknowns, constructs the dependency graphs, groups them using Tarjan's strongly connected components algorithm, and solves them simultaneously.
             </Text>
 
-            <Alert color="blue" title="The Declarative Philosophy" mt="xs">
-              In frees, <code>x + y = 5</code> and <code>y = 5 - x</code> are completely identical. You do not need to isolate variables; the solver uses advanced graph theory (Tarjan's strongly connected components) to group equations and solve them for you.
+            <Alert color="blue" title="Declarative Equations vs Sequential Code" mt="xs">
+              In frees, the order of equations does not matter. The equations <code>x + y = 5</code> and <code>y = 5 - x</code> are mathematically equivalent and parsed identically. The solver handles the symbolic and numerical heavy lifting.
             </Alert>
 
-            <Title order={3} mt="sm">The frees Workflow</Title>
+            <Title order={3} mt="sm">The frees Engineering Workflow</Title>
             <SimpleGrid cols={{ base: 1, sm: 3 }} spacing="md">
               <Card shadow="sm" padding="md" radius="md" withBorder bg="dark.8">
-                <ThemeIcon color="blue" radius="xl" size="lg" mb="sm">1</ThemeIcon>
-                <Text fw={600} size="sm">1. Enter Equations</Text>
+                <Text fw={600} size="sm" c="blue.3">1. Describe System</Text>
                 <Text size="xs" c="dimmed" mt="xs">
-                  Write your algebraic equations in the main editor. Order of equations does not matter. Case is ignored.
+                  Write the governing algebraic, matrix, or differential equations in the code editor. Supply comments in curly braces.
                 </Text>
               </Card>
               <Card shadow="sm" padding="md" radius="md" withBorder bg="dark.8">
-                <ThemeIcon color="indigo" radius="xl" size="lg" mb="sm">2</ThemeIcon>
-                <Text fw={600} size="sm">2. Check & Bound</Text>
+                <Text fw={600} size="sm" c="indigo.3">2. Compile & Bound (F4)</Text>
                 <Text size="xs" c="dimmed" mt="xs">
-                  Press <strong>F4</strong> to compile and check degrees of freedom. Set bounds and initial guesses in <strong>Variable Info</strong>.
+                  Validate degrees of freedom. Set physical lower/upper bounds and initial guesses in the <strong>Variable Info</strong> panel.
                 </Text>
               </Card>
               <Card shadow="sm" padding="md" radius="md" withBorder bg="dark.8">
-                <ThemeIcon color="cyan" radius="xl" size="lg" mb="sm">3</ThemeIcon>
-                <Text fw={600} size="sm">3. Solve & Sweeps</Text>
+                <Text fw={600} size="sm" c="cyan.3">3. Solve & Sweeps (F2)</Text>
                 <Text size="xs" c="dimmed" mt="xs">
-                  Press <strong>F2</strong> to solve. View residuals in the Solution Window. Run parameter sweeps in the <strong>Parametric Table</strong>.
+                  Run iterations to convergence. Build a <strong>Parametric Table</strong> to sweep variables and output results in live plots.
                 </Text>
               </Card>
             </SimpleGrid>
-
-            <Title order={3} mt="md">Keyboard Shortcuts (Hotkeys)</Title>
+          </Stack>
+        );
+      case 'shortcuts':
+        return (
+          <Stack gap="md">
+            <Title order={2} c="blue.4">Keyboard Shortcuts (Hotkeys)</Title>
+            <Text>Use these keyboard shortcuts within the editor to accelerate your solving workflow:</Text>
             <Table striped highlightOnHover withTableBorder>
               <Table.Thead>
                 <Table.Tr>
-                  <Table.Th style={{ width: '150px' }}>Hotkey</Table.Th>
+                  <Table.Th style={{ width: '180px' }}>Hotkey</Table.Th>
                   <Table.Th>Action</Table.Th>
-                  <Table.Th>Description</Table.Th>
                 </Table.Tr>
               </Table.Thead>
               <Table.Tbody>
                 <Table.Tr>
-                  <Table.Td><Code>F4</Code></Table.Td>
-                  <Table.Td><strong>Check Equations</strong></Table.Td>
-                  <Table.Td>Validates syntax, lists active variables, and checks if the number of equations equals variables.</Table.Td>
+                  <Table.Td><Code>F2</Code> or <Code>Ctrl + Enter</Code></Table.Td>
+                  <Table.Td>Solve System (Run Newton-Raphson solver)</Table.Td>
                 </Table.Tr>
                 <Table.Tr>
-                  <Table.Td><Code>F2</Code></Table.Td>
-                  <Table.Td><strong>Solve System</strong></Table.Td>
-                  <Table.Td>Runs the simultaneous numerical solver and displays the Solution window.</Table.Td>
+                  <Table.Td><Code>F4</Code> or <Code>Ctrl + K</Code></Table.Td>
+                  <Table.Td>Check Syntax (Verifies degrees of freedom and equation balance)</Table.Td>
                 </Table.Tr>
                 <Table.Tr>
                   <Table.Td><Code>Ctrl + I</Code></Table.Td>
-                  <Table.Td><strong>Variable Info</strong></Table.Td>
-                  <Table.Td>Opens the grid where you can set initial guesses, limits, display units, and display formatting.</Table.Td>
+                  <Table.Td>Open <strong>Variable Information</strong> panel</Table.Td>
                 </Table.Tr>
                 <Table.Tr>
                   <Table.Td><Code>Ctrl + T</Code></Table.Td>
-                  <Table.Td><strong>Solve Table</strong></Table.Td>
-                  <Table.Td>Runs the solver sequentially for all rows configured in the active Parametric Table.</Table.Td>
+                  <Table.Td>Open <strong>Parametric Table</strong> panel</Table.Td>
+                </Table.Tr>
+                <Table.Tr>
+                  <Table.Td><Code>F9</Code></Table.Td>
+                  <Table.Td>Solve selected block only (ignoring other lines)</Table.Td>
                 </Table.Tr>
               </Table.Tbody>
             </Table>
+          </Stack>
+        );
+      case 'reports':
+        return (
+          <Stack gap="md">
+            <Title order={2} c="blue.4">Markdown Reports & Inline Equations</Title>
+            <Text style={{ lineHeight: 1.6 }}>
+              frees supports mixing normal rich text with solver equations to build real-time engineering reports. The text editor acts as a markdown editor:
+            </Text>
+            <List spacing="xs">
+              <List.Item>Lines beginning with <code>//</code> or comments inside double quotes/braces are treated as narrative text.</List.Item>
+              <List.Item>All normal markdown headers (<code># Header</code>), bold, and italics are supported.</List.Item>
+              <List.Item>You can embed resolved variables directly in your report using inline syntax: <code>[varName]</code> or <code>[varName [units]]</code>. When solved, these are replaced by the computed numerical values accompanied by units.</List.Item>
+            </List>
+            <Paper withBorder p="md" bg="dark.8">
+              <Code block>{`// # Thermodynamic Heat Engine Analysis
+// The boiler operating pressure is P[1] = 8000 [kPa].
+// The computed thermal efficiency is [eta_th] %.`}</Code>
+            </Paper>
+          </Stack>
+        );
+      case 'digitizer-fit':
+        return (
+          <Stack gap="md">
+            <Title order={2} c="blue.4">Graph Digitizer & Curve Fitting Guide</Title>
+            <Text style={{ lineHeight: 1.6 }}>
+              frees includes an integrated <strong>Graph Digitizer</strong> and a <strong>Curve Fit Engine</strong> to allow working with digitized graph curves or internal tables directly in equations.
+            </Text>
+            <Title order={3}>Step-by-Step Digitization & Modeling Workflow</Title>
+            <List type="ordered" spacing="xs">
+              <List.Item>
+                <strong>Open the Graph Digitizer:</strong> Click the Graph Digitizer icon in the left toolbar. Upload your image (graph or chart).
+              </List.Item>
+              <List.Item>
+                <strong>Calibrate the Coordinate Axes:</strong> Define the X and Y axes by placing calibration marks on known grid lines (two on X-axis, two on Y-axis) and inputting their numerical values.
+              </List.Item>
+              <List.Item>
+                <strong>Digitize Points:</strong> Click points along the curve. The tool registers their coordinates automatically.
+              </List.Item>
+              <List.Item>
+                <strong>Save to Table:</strong> Export or save your digitized points to a table named e.g., <code>digitized_curve</code>.
+              </List.Item>
+              <List.Item>
+                <strong>Fit the Curve:</strong> Open the <strong>Curve Fit</strong> panel from the left toolbar. Select <code>digitized_curve</code>, specify the X and Y columns, choose a template (such as <code>Linear</code>, <code>Polynomial</code>, <code>Exponential</code>, or <code>Power</code>), and click <strong>Fit</strong>.
+              </List.Item>
+              <List.Item>
+                <strong>Use Equation in Editor:</strong> Copy the generated regression equation and paste it directly into your code. The compiler resolves the equation in the Newton solver loop.
+              </List.Item>
+            </List>
 
-            <Title order={3} mt="md">Hello World Example</Title>
-            <Paper withBorder p="md" bg="dark.8" radius="md" style={{ position: 'relative' }}>
-              <CopyButton code={`x + y = 3\ny = x^2 - 1`} />
+            <Alert color="indigo" title="Unit Support in Curve Fit Equations">
+              You can append unit annotations directly to fitted equations in the editor to ensure unit consistency. E.g., <code>y [m] = 0.054 * x^2 + 1.2 * x + 0.35 [m]</code>.
+            </Alert>
+
+            <Text fw={600} size="sm">Example of Curve-Fitted Equation Usage:</Text>
+            <Paper withBorder p="xs" bg="dark.9" radius="sm" style={{ position: 'relative' }}>
+              <CopyButton code={`{ Using a fitted curve in solver equations }\nflow_rate = 1.25 [m^3/s]\nhead_loss [m] = -0.084 * flow_rate^2 + 1.54 * flow_rate + 0.12 [m]`} />
               <Code block style={{ background: 'transparent' }}>
-                {`x + y = 3\ny = x^2 - 1`}
+                {`{ Using a fitted curve in solver equations }
+flow_rate = 1.25 [m^3/s]
+head_loss [m] = -0.084 * flow_rate^2 + 1.54 * flow_rate + 0.12 [m]`}
               </Code>
             </Paper>
-            <Text size="sm" c="dimmed">
-              Paste this in the Editor, click <strong>Check (F4)</strong> to verify (2 variables, 2 equations), and click <strong>Solve (F2)</strong>. The solver will find the root: <code>x = 1.562</code>, <code>y = 1.438</code>.
-            </Text>
-
-            <Title order={3} mt="lg">Markdown Reports & Inline Equations</Title>
-            <Text size="md" style={{ lineHeight: 1.6 }}>
-              frees allows you to mix standard Markdown and mathematical equations directly in the <strong>Editor</strong>. When you click <strong>Check</strong> or <strong>Solve</strong>, the solver automatically extracts and evaluates all equations, generating a beautifully integrated <strong>Formatted</strong> report.
-            </Text>
-            <Alert color="blue" title="Prose with Equations" mt="xs">
-              You can write inline variables and equations anywhere in your text. Any statement containing an <code>=</code> sign is automatically parsed as an equation, solved, and formatted as a LaTeX/KaTeX formula.
-            </Alert>
-            <Alert color="blue" title="Embedding Diagrams & Graphs" mt="xs">
-              You can embed property diagrams, psychrometric charts, and X-Y parametric plots directly within your Formatted Report. Simply use the tag <code>{`[Graph="Diagram Name"] Caption Text [/Graph]`}</code>. The solver automatically resolves the diagram name and embeds the interactive plot with auto-incrementing figure numbers.
-            </Alert>
-            <Paper withBorder p="md" bg="dark.8" radius="md" style={{ position: 'relative' }}>
-              <CopyButton code={`# Ideal Rankine Steam Power Cycle
-
-This report analyzes an ideal Rankine steam power cycle with isentropic efficiency constraints.
-
-## Inputs and Parameters
-* Boiler Pressure: P_high = 8000 [kPa]
-* Condenser Pressure: P_low = 10 [kPa]
-* Boiler Temperature: T_boiler = 500 [C]
-* Turbine Isentropic Efficiency: eta_turb = 0.85
-* Pump Isentropic Efficiency: eta_pump = 0.90
-* Target Net Power Output: W_dot_net = 10000 [kW]
-
-## State 1: HP Turbine Inlet (Superheated Steam)
-We evaluate enthalpy and entropy at state 1:
-h[1] = Enthalpy(Water, P=P_high, T=T_boiler)
-s[1] = Entropy(Water, P=P_high, T=T_boiler)
-T[1] = T_boiler
-
-## State 2: Actual Turbine Exit
-First we compute the isentropic exit enthalpy:
-s_2s = s[1]
-h_2s = Enthalpy(Water, P=P_low, s=s_2s)
-
-Then actual exit conditions using isentropic efficiency:
-h[2] = h[1] - eta_turb * (h[1] - h_2s)
-s[2] = Entropy(Water, P=P_low, h=h[2])
-T[2] = Temperature(Water, P=P_low, h=h[2])
-
-## State 3: Condenser Exit (Saturated Liquid)
-h[3] = Enthalpy(Water, P=P_low, x=0)
-v[3] = Volume(Water, P=P_low, x=0)
-s[3] = Entropy(Water, P=P_low, x=0)
-T[3] = Temperature(Water, P=P_low, x=0)
-
-## State 4: Actual Pump Exit
-s_4s = s[3]
-h_4s = Enthalpy(Water, P=P_high, s=s_4s)
-h[4] = h[3] + (h_4s - h[3]) / eta_pump
-s[4] = Entropy(Water, P=P_high, h=h[4])
-T[4] = Temperature(Water, P=P_high, h=h[4])
-
-## Performance Analysis
-Let's compute the work and heat rates:
-w_turb = h[1] - h[2]
-w_pump = h[4] - h[3]
-q_boiler = h[1] - h[4]
-q_cond = h[2] - h[3]
-
-Net work output, thermal efficiency, and mass flow rate:
-w_net = w_turb - w_pump
-eta_th = w_net / q_boiler * 100
-W_dot_net = m_dot * w_net
-
-## Visualization
-Here is the thermodynamic T-s diagram showing the cycle state points:
-[Graph="Diagram 1"] Ts Diagram of the Cycle [/Graph]`} />
-              <Code block style={{ background: 'transparent' }}>
-                {`# Ideal Rankine Steam Power Cycle
-
-This report analyzes an ideal Rankine steam power cycle with isentropic efficiency constraints.
-
-## Inputs and Parameters
-* Boiler Pressure: P_high = 8000 [kPa]
-* Condenser Pressure: P_low = 10 [kPa]
-* Boiler Temperature: T_boiler = 500 [C]
-* Turbine Isentropic Efficiency: eta_turb = 0.85
-* Pump Isentropic Efficiency: eta_pump = 0.90
-* Target Net Power Output: W_dot_net = 10000 [kW]
-
-## State 1: HP Turbine Inlet (Superheated Steam)
-We evaluate enthalpy and entropy at state 1:
-h[1] = Enthalpy(Water, P=P_high, T=T_boiler)
-s[1] = Entropy(Water, P=P_high, T=T_boiler)
-T[1] = T_boiler
-
-## State 2: Actual Turbine Exit
-First we compute the isentropic exit enthalpy:
-s_2s = s[1]
-h_2s = Enthalpy(Water, P=P_low, s=s_2s)
-
-Then actual exit conditions using isentropic efficiency:
-h[2] = h[1] - eta_turb * (h[1] - h_2s)
-s[2] = Entropy(Water, P=P_low, h=h[2])
-T[2] = Temperature(Water, P=P_low, h=h[2])
-
-## State 3: Condenser Exit (Saturated Liquid)
-h[3] = Enthalpy(Water, P=P_low, x=0)
-v[3] = Volume(Water, P=P_low, x=0)
-s[3] = Entropy(Water, P=P_low, x=0)
-T[3] = Temperature(Water, P=P_low, x=0)
-
-## State 4: Actual Pump Exit
-s_4s = s[3]
-h_4s = Enthalpy(Water, P=P_high, s=s_4s)
-h[4] = h[3] + (h_4s - h[3]) / eta_pump
-s[4] = Entropy(Water, P=P_high, h=h[4])
-T[4] = Temperature(Water, P=P_high, h=h[4])
-
-## Performance Analysis
-Let's compute the work and heat rates:
-w_turb = h[1] - h[2]
-w_pump = h[4] - h[3]
-q_boiler = h[1] - h[4]
-q_cond = h[2] - h[3]
-
-Net work output, thermal efficiency, and mass flow rate:
-w_net = w_turb - w_pump
-eta_th = w_net / q_boiler * 100
-W_dot_net = m_dot * w_net
-
-## Visualization
-Here is the thermodynamic T-s diagram showing the cycle state points:
-[Graph="Diagram 1"] Ts Diagram of the Cycle [/Graph]`}
-              </Code>
-            </Paper>
-            <Text size="sm" c="dimmed">
-              Paste this example in the <strong>Editor</strong> tab, then toggle the control at the top-right to <strong>Formatted</strong> to see the rendered KaTeX equations and the embedded plot.
-            </Text>
           </Stack>
         );
       case 'syntax':
         return (
           <Stack gap="md">
-            <Title order={2} c="blue.4">2. Equation Syntax & Math Functions</Title>
-            <Text>
-              The Editor allows you to enter relationships between variables using standard mathematical notation.
-            </Text>
-            <Title order={3}>Rules & Syntax</Title>
-            <List spacing="xs">
-              <List.Item><strong>Equality:</strong> Use a single equal sign <Code>=</Code> for equations. Do not use assignment operators for declarative equations.</List.Item>
-              <List.Item><strong>Case Insensitivity:</strong> <Code>T_inlet</Code>, <Code>T_Inlet</Code>, and <Code>t_inlet</Code> refer to the same variable.</List.Item>
-              <List.Item><strong>Comments:</strong> Document your equations using curly braces <Code>{`{ comment }`}</Code> or double quotes <Code>"comment"</Code>. These are ignored by the compiler.</List.Item>
-              <List.Item><strong>Multiplication:</strong> Implicit multiplication is not supported. You must write <Code>*</Code> explicitly (e.g., write <Code>2 * x</Code>, not <Code>2x</Code>).</List.Item>
-              <List.Item><strong>Operators:</strong> Standard arithmetic operators <Code>+</Code>, <Code>-</Code>, <Code>*</Code>, <Code>/</Code>, and <Code>^</Code> (power) are supported.</List.Item>
+            <Title order={2} c="blue.4">Equation Syntax & Rules</Title>
+            <Text>The frees compiler parses your code using the following rules:</Text>
+            <List spacing="xs" mb="sm">
+              <List.Item><strong>Equality:</strong> Use a single equal sign <Code>=</Code> for equations (e.g. <code>P * V = n * R * T</code>).</List.Item>
+              <List.Item><strong>Case Insensitivity:</strong> Variable names are case-insensitive. <code>Temp</code>, <code>TEMP</code>, and <code>temp</code> are the same variable.</List.Item>
+              <List.Item><strong>Comments:</strong> Use curly braces <code>{`{ comment }`}</code> or double quotes <code>"comment"</code> for inline comments. Standard double-slash <code>//</code> comments at the start of a line format the line as markdown text.</List.Item>
+              <List.Item><strong>Multiplication:</strong> Implicit multiplication is not allowed. Write <code>2 * x</code> instead of <code>2x</code>.</List.Item>
+              <List.Item><strong>Operators:</strong> Standard arithmetic operators <code>+</code>, <code>-</code>, <code>*</code>, <code>/</code>, and <code>^</code> (exponentiation) are fully supported.</List.Item>
             </List>
+          </Stack>
+        );
+      case 'math-funcs':
+        return (
+          <Stack gap="md">
+            <Title order={2} c="blue.4">Built-in Mathematical Functions</Title>
+            <Text>frees supports a comprehensive set of scalar math functions. Standard and hyperbolic functions are fully differentiable:</Text>
 
-            <Title order={3} mt="sm">Built-in Mathematical Functions</Title>
-            <Table striped highlightOnHover withTableBorder>
+            <Title order={3}>Hyperbolic Functions</Title>
+            <FunctionRef
+              name="sinh / cosh / tanh"
+              desc="Evaluates hyperbolic sine, cosine, or tangent of an expression."
+              syntax="y = sinh(x)\ny = cosh(x)\ny = tanh(x)"
+              inputs={[{ name: "x", desc: "Angle in radians or dimensionless value" }]}
+              outputs={[{ name: "y", desc: "Resulting value" }]}
+              example="x = 1.25\ny = sinh(x) + cosh(x)   { Equals exp(1.25) }"
+            />
+            <FunctionRef
+              name="arcsinh / arccosh / arctanh"
+              desc="Evaluates inverse hyperbolic sine, cosine, or tangent of an expression."
+              syntax="y = arcsinh(x)\ny = arccosh(x)\ny = arctanh(x)"
+              inputs={[{ name: "x", desc: "Input scalar value (restrictions apply to domain of arccosh and arctanh)" }]}
+              outputs={[{ name: "y", desc: "Inverse hyperbolic value in radians" }]}
+              example="x = 1.5\ny = arccosh(x)"
+            />
+
+            <Title order={3}>Rounding & Integer Functions</Title>
+            <FunctionRef
+              name="round"
+              desc="Rounds a value to a specified number of decimal places."
+              syntax="y = round(x, decimals)"
+              inputs={[
+                { name: "x", desc: "Value to round" },
+                { name: "decimals", desc: "Integer number of decimal places to round to" }
+              ]}
+              outputs={[{ name: "y", desc: "Rounded value" }]}
+              example="val = round(3.14159, 3)   { val = 3.142 }"
+            />
+            <FunctionRef
+              name="floor / ceil / trunc / sign / step"
+              desc="Non-smooth arithmetic functions for discretization and stepping."
+              syntax="y = floor(x)\ny = ceil(x)\ny = trunc(x)\ny = sign(x)\ny = step(x)"
+              inputs={[{ name: "x", desc: "Scalar input expression" }]}
+              outputs={[{ name: "y", desc: "floor/ceil (rounded integer), trunc (discard decimals), sign (-1/0/1 depending on sign), step (1 if x >= 0, else 0)" }]}
+              example="val1 = floor(2.7)   { 2 }\nval2 = ceil(2.1)    { 3 }\nval3 = step(0.5)    { 1 }\nval4 = sign(-15)    { -1 }"
+            />
+
+            <Title order={3}>Conditional Selection & Series</Title>
+            <FunctionRef
+              name="If"
+              desc="Conditional expression evaluator. Selects a value depending on comparison."
+              syntax="val = If(a, b, val_lt, val_eq, val_gt)"
+              inputs={[
+                { name: "a", desc: "First expression to compare" },
+                { name: "b", desc: "Second expression to compare" },
+                { name: "val_lt", desc: "Returned value if a < b" },
+                { name: "val_eq", desc: "Returned value if a = b" },
+                { name: "val_gt", desc: "Returned value if a > b" }
+              ]}
+              outputs={[{ name: "val", desc: "The selected conditional value" }]}
+              example="temp = 350 [K]\nk = If(temp, 300, 1.2, 1.5, 1.8)"
+            />
+            <FunctionRef
+              name="Product"
+              desc="Evaluates product of a term series over an index range."
+              syntax="y = Product(i, lower, upper, term)"
+              inputs={[
+                { name: "i", desc: "Loop index variable name (e.g. i)" },
+                { name: "lower", desc: "Lower bound of loop (integer)" },
+                { name: "upper", desc: "Upper bound of loop (integer)" },
+                { name: "term", desc: "Expression containing the loop index i" }
+              ]}
+              outputs={[{ name: "y", desc: "Computed product" }]}
+              example="val = Product(i, 1, 4, i^2)   { val = 1 * 4 * 9 * 16 = 576 }"
+            />
+          </Stack>
+        );
+      case 'special-funcs':
+        return (
+          <Stack gap="md">
+            <Title order={2} c="blue.4">Special & Statistical Functions</Title>
+            <Text>frees supports high-order Bessel functions and cumulative statistical distributions:</Text>
+
+            <Title order={3}>Bessel Functions</Title>
+            <FunctionRef
+              name="BesselK / BesselY"
+              desc="Modified Bessel function of the second kind (K_n(x)), and Bessel function of the second kind (Y_n(x))."
+              syntax="y = BesselK(n, x)\ny = BesselY(n, x)"
+              inputs={[
+                { name: "n", desc: "Order of the Bessel function (integer)" },
+                { name: "x", desc: "Evaluated variable coordinate (must be positive)" }
+              ]}
+              outputs={[{ name: "y", desc: "Bessel function value" }]}
+              example="val = BesselK(1, 2.5)"
+            />
+            <FunctionRef
+              name="Bessel Shortcuts (i0, j0, k0, y0, i1, j1, k1, y1)"
+              desc="Direct shortcut functions for Bessel functions of order 0 and 1."
+              syntax="y = Bessel_j0(x)\ny = Bessel_k1(x)"
+              inputs={[{ name: "x", desc: "Variable coordinate" }]}
+              outputs={[{ name: "y", desc: "Bessel function value" }]}
+              example="y1 = Bessel_j0(1.5)\ny2 = Bessel_k0(2.0)"
+            />
+
+            <Title order={3}>Statistical & Probability Distributions</Title>
+            <FunctionRef
+              name="Chi_Square"
+              desc="Cumulative Chi-Square distribution function."
+              syntax="y = Chi_Square(x, dof)"
+              inputs={[
+                { name: "x", desc: "Chi-square statistic" },
+                { name: "dof", desc: "Degrees of freedom" }
+              ]}
+              outputs={[{ name: "y", desc: "Cumulative probability" }]}
+              example="prob = Chi_Square(5.99, 2)"
+            />
+            <FunctionRef
+              name="Probability"
+              desc="Normal cumulative distribution function."
+              syntax="y = Probability(x, mean, stddev)"
+              inputs={[
+                { name: "x", desc: "Evaluated point" },
+                { name: "mean", desc: "Mean of the normal distribution" },
+                { name: "stddev", desc: "Standard deviation of the distribution" }
+              ]}
+              outputs={[{ name: "y", desc: "Cumulative probability" }]}
+              example="prob = Probability(85, 80, 5)   { prob = 0.8413 }"
+            />
+            <FunctionRef
+              name="Random"
+              desc="Uniformly distributed pseudo-random number generator."
+              syntax="y = Random()"
+              inputs={[]}
+              outputs={[{ name: "y", desc: "Random value between 0.0 and 1.0" }]}
+              example="val = Random()"
+            />
+          </Stack>
+        );
+      case 'variables':
+        return (
+          <Stack gap="md">
+            <Title order={2} c="blue.4">Variables, Guesses & Bounds</Title>
+            <Text style={{ lineHeight: 1.6 }}>
+              Because frees resolves equations using iterative numerical methods (such as the Newton-Raphson algorithm with step-halving), configuring initial guess values and bounds is key to achieving stable convergence in complex systems.
+            </Text>
+            <Title order={3}>Variable Information Grid</Title>
+            <Text>
+              Access the <strong>Variable Info</strong> window (F4 then Ctrl+I) to set:
+            </Text>
+            <List spacing="xs">
+              <List.Item><strong>Initial Guess:</strong> The starting value for solver iteration. Supply physical estimations (e.g. 300 K for room temp, 101325 Pa for atmospheric pressure) rather than leaving the default 1.0.</List.Item>
+              <List.Item><strong>Bounds:</strong> Clamps the solver steps. Always set lower bounds to 0 for variables that must remain positive (such as mass flows, absolute pressures, and Kelvin temperatures) to prevent unphysical solver states.</List.Item>
+              <List.Item><strong>Units:</strong> Annotate display units for formatted reports.</List.Item>
+            </List>
+          </Stack>
+        );
+      case 'uncertainty':
+        return (
+          <Stack gap="md">
+            <Title order={2} c="blue.4">Uncertainty Propagation Engine</Title>
+            <Text style={{ lineHeight: 1.6 }}>
+              frees incorporates a first-order uncertainty-propagation engine. When uncertainties are supplied for independent variables, the solver automatically computes the propagated uncertainties of all dependent variables using numerical Jacobians and SVD linear algebra.
+            </Text>
+            <Title order={3}>Specifying Uncertainties</Title>
+            <Text>You can specify uncertainties in two ways:</Text>
+            <List spacing="xs">
+              <List.Item>
+                <strong>Variable Information Window:</strong> Input absolute or relative percentages (e.g. <code>±0.05</code> or <code>±2%</code>) in the Uncertainty column of the variable grid.
+              </List.Item>
+              <List.Item>
+                <strong>Code Declaration:</strong> Declare uncertainties directly using the <code>UncertaintyOf()</code> accessor function:
+              </List.Item>
+            </List>
+            <Paper withBorder p="md" bg="dark.8" mb="md">
+              <Code block>{`P = 100000 [Pa]\nT = 300 [K]\n\n{ Explicit uncertainties in code }\nUncertaintyOf(P) = 500 [Pa]\nUncertaintyOf(T) = 2.0 [K]`}</Code>
+            </Paper>
+
+            <Title order={3}>Uncertainty Propagation Function</Title>
+            <FunctionRef
+              name="UncertaintyOf"
+              desc="Queries the computed uncertainty value of a solved variable."
+              syntax="u = UncertaintyOf(x)"
+              inputs={[{ name: "x", desc: "Target solved variable" }]}
+              outputs={[{ name: "u", desc: "Computed absolute uncertainty value of the variable" }]}
+              example="unc_P = UncertaintyOf(P)"
+            />
+          </Stack>
+        );
+      case 'units':
+        return (
+          <Stack gap="md">
+            <Title order={2} c="blue.4">Units & Dimensional Consistency</Title>
+            <Text style={{ lineHeight: 1.6 }}>
+              frees automatically checks equations for dimensional consistency. All calculations run strictly in SI base units. Annotated values are converted at compile-time:
+            </Text>
+            <Paper withBorder p="md" bg="dark.8">
+              <Code block>{`P = 140 [kPa]    { Converted to 140000 Pa }
+m = 120 [lb]     { Converted to 54.43 kg }`}</Code>
+            </Paper>
+            <Title order={3} mt="sm">The Convert() Function</Title>
+            <Text>Multiply variables by <code>Convert(From, To)</code> to apply factor conversion:</Text>
+            <Code block>{`area_in2 = area_ft2 * Convert(ft^2, in^2)`}</Code>
+          </Stack>
+        );
+      case 'arrays':
+        return (
+          <Stack gap="md">
+            <Title order={2} c="blue.4">Arrays & Duplicate Loops</Title>
+            <Text style={{ lineHeight: 1.6 }}>
+              Arrays are represented using indices inside square brackets (e.g. <code>T[1]</code>, <code>P[5]</code>). You can generate repetitive equations using the <code>DUPLICATE</code> block:
+            </Text>
+            <Paper withBorder p="md" bg="dark.8">
+              <Code block>{`DUPLICATE i = 1, 3
+  h[i] = Enthalpy(Water, T=T[i], P=P[i])
+END`}</Code>
+            </Paper>
+            
+            <Title order={3}>Array Helper Functions</Title>
+            <FunctionRef
+              name="ArrayElmt"
+              desc="Retrieves the value of an array element at a dynamic index."
+              syntax="val = ArrayElmt(array[1..N], index)"
+              inputs={[
+                { name: "array[1..N]", desc: "Reference to the array name" },
+                { name: "index", desc: "Dynamic index expression to extract" }
+              ]}
+              outputs={[{ name: "val", desc: "Value at the selected index" }]}
+              example="idx = 3\nval = ArrayElmt(T[1..10], idx)   { Equals T[3] }"
+            />
+          </Stack>
+        );
+      case 'complex':
+        return (
+          <Stack gap="md">
+            <Title order={2} c="blue.4">Complex Numbers & Helpers</Title>
+            <Text style={{ lineHeight: 1.6 }}>
+              frees supports complex arithmetic. Complex variables are declared by matching components ending in <code>_r</code> (real) and <code>_i</code> (imaginary), or using imaginary literals ending in <code>i</code> or <code>j</code>:
+            </Text>
+            <Paper withBorder p="md" bg="dark.8" mb="md">
+              <Code block>{`z1 = 3 + 4i\nz2 = 5 - 2j\nz3 = z1 * z2`}</Code>
+            </Paper>
+
+            <Title order={3}>Complex Numbers Helper Functions</Title>
+            <FunctionRef
+              name="Conj"
+              desc="Computes the complex conjugate of a complex number."
+              syntax="z_conj = Conj(z)"
+              inputs={[{ name: "z", desc: "Complex number variable or expression" }]}
+              outputs={[{ name: "z_conj", desc: "Conjugate complex number" }]}
+              example="z = 3 + 4i\nz_c = Conj(z)   { z_c = 3 - 4i }"
+            />
+            <FunctionRef
+              name="Magnitude"
+              desc="Computes the absolute value/magnitude of a complex number or phasor."
+              syntax="mag = Magnitude(z)"
+              inputs={[{ name: "z", desc: "Complex expression" }]}
+              outputs={[{ name: "mag", desc: "Scalar magnitude value" }]}
+              example="z = 3 + 4i\nr = Magnitude(z)   { r = 5.0 }"
+            />
+            <FunctionRef
+              name="Angle / AngleRad / AngleDeg"
+              desc="Computes phasor angle of a complex number in radians or degrees."
+              syntax="theta = Angle(z)\ntheta_rad = AngleRad(z)\ntheta_deg = AngleDeg(z)"
+              inputs={[{ name: "z", desc: "Complex expression" }]}
+              outputs={[{ name: "theta", desc: "Phasor angle" }]}
+              example="z = 1 + 1i\nphi = AngleDeg(z)   { phi = 45.0 }"
+            />
+            <FunctionRef
+              name="Cis"
+              desc="Helper to declare polar phasor using Euler's formula: cos(theta) + i*sin(theta)."
+              syntax="z = mag * Cis(theta)"
+              inputs={[{ name: "theta", desc: "Angle in radians" }]}
+              outputs={[{ name: "z", desc: "Unit complex phasor" }]}
+              example="z = 5 * Cis(pi/4)"
+            />
+          </Stack>
+        );
+      case 'strings':
+        return (
+          <Stack gap="md">
+            <Title order={2} c="blue.4">String Variables & Functions</Title>
+            <Text style={{ lineHeight: 1.6 }}>
+              String variables are declared with a trailing dollar sign (e.g. <code>fluidName$</code>, <code>msg$</code>). String constants can be enclosed in single quotes.
+            </Text>
+
+            <Title order={3}>String Manipulation Functions</Title>
+            <FunctionRef
+              name="Concat$"
+              desc="Concatenates two strings together."
+              syntax="out$ = Concat$(str1$, str2$)"
+              inputs={[
+                { name: "str1$", desc: "First string" },
+                { name: "str2$", desc: "Second string" }
+              ]}
+              outputs={[{ name: "out$", desc: "Combined string" }]}
+              example="msg$ = Concat$('Fluid is ', 'Water')"
+            />
+            <FunctionRef
+              name="Copy$"
+              desc="Extracts a substring from a string."
+              syntax="out$ = Copy$(str$, start, len)"
+              inputs={[
+                { name: "str$", desc: "Source string" },
+                { name: "start", desc: "1-based starting character index" },
+                { name: "len", desc: "Length of substring to copy" }
+              ]}
+              outputs={[{ name: "out$", desc: "Copied substring" }]}
+              example="s$ = Copy$('R134a', 2, 3)   { s$ = '134' }"
+            />
+            <FunctionRef
+              name="Lowercase$ / Uppercase$ / Trim$"
+              desc="Modifies string case and trims whitespaces."
+              syntax="out$ = Lowercase$(str$)\nout$ = Uppercase$(str$)\nout$ = Trim$(str$)"
+              inputs={[{ name: "str$", desc: "Input string" }]}
+              outputs={[{ name: "out$", desc: "Transformed string" }]}
+              example="s$ = Lowercase$('Water')   { s$ = 'water' }"
+            />
+            <FunctionRef
+              name="StringLen / StringPos / StringVal / String$"
+              desc="Length, find substring index, convert string to value, and convert value to string."
+              syntax="len = StringLen(str$)\npos = StringPos(str$, sub$)\nval = StringVal(str$)\nout$ = String$(val)"
+              inputs={[
+                { name: "str$", desc: "Target string or variable" },
+                { name: "sub$", desc: "Substring to search for in StringPos" }
+              ]}
+              outputs={[{ name: "len/pos/val/out$", desc: "Resulting metric or value" }]}
+              example="len = StringLen('Ammonia')       { 7 }\npos = StringPos('R134a', '134')     { 2 }\nv = StringVal('101.3')             { 101.3 }\ns$ = String$(15.5)                 { '15.5' }"
+            />
+
+            <Title order={3}>Environment & Environment Info Functions</Title>
+            <FunctionRef
+              name="Date$ / Time$ / TimeStamp$"
+              desc="Retrieves the current system date, time, or timestamp."
+              syntax="d$ = Date$()\nt$ = Time$()\nts$ = TimeStamp$()"
+              inputs={[]}
+              outputs={[{ name: "d$/t$/ts$", desc: "Date, Time or Timestamp string" }]}
+              example="current_date$ = Date$()"
+            />
+            <FunctionRef
+              name="UnitSystem$ / UnitsOf$"
+              desc="Queries active solver unit system settings or the units of a specific variable."
+              syntax="us$ = UnitSystem$()\nu$ = UnitsOf$(var)"
+              inputs={[{ name: "var", desc: "Variable name to query units of" }]}
+              outputs={[{ name: "us$/u$", desc: "Unit system settings description or variable unit string" }]}
+              example="p_unit$ = UnitsOf$(P)"
+            />
+          </Stack>
+        );
+      case 'matrices-decl':
+        return (
+          <Stack gap="md">
+            <Title order={2} c="blue.4">Declaring Matrices & Vectors</Title>
+            <Text style={{ lineHeight: 1.6 }}>
+              Matrix and vector objects are fully supported. Since the solver flattens matrix equations to element-wise scalar equations, they run fast and support full automatic differentiation.
+            </Text>
+            <Title order={3}>MATLAB-Style Matrix Literals</Title>
+            <Text>Use brackets to declare row vectors, column vectors, and 2D matrices:</Text>
+            <List spacing="xs" mb="sm">
+              <List.Item><strong>Row Vector:</strong> Comma or space separated elements: <code>v = [1, 2, 3]</code> or <code>v = [1 2 3]</code> (1x3 matrix)</List.Item>
+              <List.Item><strong>Column Vector:</strong> Semicolon separated elements: <code>v = [1; 2; 3]</code> (3x1 matrix)</List.Item>
+              <List.Item><strong>2D Matrix:</strong> Rows separated by semicolons, elements separated by spaces/commas: <code>A = [1 2; 3 4]</code> (2x2 matrix)</List.Item>
+            </List>
+            <Paper withBorder p="md" bg="dark.8">
+              <Code block>{`A[1..2, 1..2] = [1 2; 3 4]
+b[1..2] = [5; 6]
+x[1..2] = A[1..2, 1..2] \\\\ b[1..2]`}</Code>
+            </Paper>
+          </Stack>
+        );
+      case 'matrices-ops':
+        return (
+          <Stack gap="md">
+            <Title order={2} c="blue.4">Matrix Operators</Title>
+            <Text>frees compiles standard algebraic operators for matrices:</Text>
+            <Table striped highlightOnHover withTableBorder mb="md">
               <Table.Thead>
                 <Table.Tr>
-                  <Table.Th style={{ width: '200px' }}>Function</Table.Th>
+                  <Table.Th style={{ width: '150px' }}>Operator</Table.Th>
                   <Table.Th>Description</Table.Th>
                   <Table.Th>Example</Table.Th>
                 </Table.Tr>
               </Table.Thead>
               <Table.Tbody>
                 <Table.Tr>
-                  <Table.Td><Code>abs(x)</Code></Table.Td>
-                  <Table.Td>Absolute value of x</Table.Td>
-                  <Table.Td><Code>y = abs(-5.2)</Code> (y = 5.2)</Table.Td>
+                  <Table.Td><Code>+</Code>, <Code>-</Code></Table.Td>
+                  <Table.Td>Element-wise addition/subtraction or scalar shift</Table.Td>
+                  <Table.Td><Code>C = A + B</Code></Table.Td>
                 </Table.Tr>
                 <Table.Tr>
-                  <Table.Td><Code>sqrt(x)</Code></Table.Td>
-                  <Table.Td>Square root of x</Table.Td>
-                  <Table.Td><Code>y = sqrt(16)</Code> (y = 4)</Table.Td>
+                  <Table.Td><Code>*</Code></Table.Td>
+                  <Table.Td>Standard matrix multiplication or scalar product</Table.Td>
+                  <Table.Td><Code>y[1..2] = A[1..2, 1..2] * x[1..2]</Code></Table.Td>
                 </Table.Tr>
                 <Table.Tr>
-                  <Table.Td><Code>ln(x)</Code></Table.Td>
-                  <Table.Td>Natural logarithm (base e)</Table.Td>
-                  <Table.Td><Code>y = ln(exp(1))</Code> (y = 1)</Table.Td>
+                  <Table.Td><Code>'</Code> (single quote)</Table.Td>
+                  <Table.Td>Suffix transpose operator (transposes matrix/vector)</Table.Td>
+                  <Table.Td><Code>B = A'</Code></Table.Td>
                 </Table.Tr>
                 <Table.Tr>
-                  <Table.Td><Code>log10(x)</Code></Table.Td>
-                  <Table.Td>Base-10 logarithm</Table.Td>
-                  <Table.Td><Code>y = log10(100)</Code> (y = 2)</Table.Td>
-                </Table.Tr>
-                <Table.Tr>
-                  <Table.Td><Code>exp(x)</Code></Table.Td>
-                  <Table.Td>Exponential function (e^x)</Table.Td>
-                  <Table.Td><Code>y = exp(0)</Code> (y = 1)</Table.Td>
-                </Table.Tr>
-                <Table.Tr>
-                  <Table.Td><Code>sin(x), cos(x), tan(x)</Code></Table.Td>
-                  <Table.Td>Trigonometric functions (arguments in **radians**)</Table.Td>
-                  <Table.Td><Code>y = sin(pi / 2)</Code> (y = 1)</Table.Td>
-                </Table.Tr>
-                <Table.Tr>
-                  <Table.Td><Code>arcsin(x), arccos(x), arctan(x)</Code></Table.Td>
-                  <Table.Td>Inverse trigonometric functions (returns **radians**)</Table.Td>
-                  <Table.Td><Code>theta = arcsin(1)</Code> (theta = 1.5708)</Table.Td>
-                </Table.Tr>
-                <Table.Tr>
-                  <Table.Td><Code>atan2(y, x)</Code></Table.Td>
-                  <Table.Td>Four-quadrant inverse tangent</Table.Td>
-                  <Table.Td><Code>theta = atan2(1, -1)</Code> (theta = 2.3562)</Table.Td>
-                </Table.Tr>
-                <Table.Tr>
-                  <Table.Td><Code>min(a, b, ...), max(a, b, ...)</Code></Table.Td>
-                  <Table.Td>Minimum or maximum of a list of expressions</Table.Td>
-                  <Table.Td><Code>y = max(2, x, y[1])</Code></Table.Td>
-                </Table.Tr>
-                <Table.Tr>
-                  <Table.Td><Code>sum(a, b, ...), avg(a, b, ...)</Code></Table.Td>
-                  <Table.Td>Sum or average of values (useful with array slices)</Table.Td>
-                  <Table.Td><Code>y = sum(x[1..5])</Code></Table.Td>
-                </Table.Tr>
-                <Table.Tr>
-                  <Table.Td><Code>bitand(x, y), bitor(x, y), bitxor(x, y)</Code></Table.Td>
-                  <Table.Td>Bitwise AND, OR, and XOR operations on 64-bit integer casts</Table.Td>
-                  <Table.Td><Code>y = bitand(5, 6)</Code> (y = 4)</Table.Td>
-                </Table.Tr>
-                <Table.Tr>
-                  <Table.Td><Code>bitnot(x)</Code></Table.Td>
-                  <Table.Td>Bitwise NOT (one's complement) operation</Table.Td>
-                  <Table.Td><Code>y = bitnot(0)</Code> (y = -1)</Table.Td>
-                </Table.Tr>
-                <Table.Tr>
-                  <Table.Td><Code>bitshiftl(x, n), bitshiftr(x, n)</Code></Table.Td>
-                  <Table.Td>Bitwise left-shift and right-shift of x by n bits</Table.Td>
-                  <Table.Td><Code>y = bitshiftl(2, 3)</Code> (y = 16)</Table.Td>
-                </Table.Tr>
-                <Table.Tr>
-                  <Table.Td><Code>mod(x, y)</Code></Table.Td>
-                  <Table.Td>Floating-point modulo (remainder of x / y)</Table.Td>
-                  <Table.Td><Code>y = mod(10.5, 3)</Code> (y = 1.5)</Table.Td>
-                </Table.Tr>
-                <Table.Tr>
-                  <Table.Td><Code>gcd(x, y), lcm(x, y)</Code></Table.Td>
-                  <Table.Td>Greatest Common Divisor and Least Common Multiple (integer cast)</Table.Td>
-                  <Table.Td><Code>y = gcd(24, 36)</Code> (y = 12)</Table.Td>
-                </Table.Tr>
-                <Table.Tr>
-                  <Table.Td><Code>erf(x), erfc(x), erfinv(x)</Code></Table.Td>
-                  <Table.Td>Error, complementary error, and inverse error functions</Table.Td>
-                  <Table.Td><Code>y = erf(0)</Code> (y = 0)</Table.Td>
-                </Table.Tr>
-                <Table.Tr>
-                  <Table.Td><Code>gamma(x), loggamma(x)</Code></Table.Td>
-                  <Table.Td>Gamma function Γ(x) and natural log of gamma function</Table.Td>
-                  <Table.Td><Code>y = gamma(4)</Code> (y = 6)</Table.Td>
-                </Table.Tr>
-                <Table.Tr>
-                  <Table.Td><Code>beta(a, b)</Code></Table.Td>
-                  <Table.Td>Beta function B(a, b)</Table.Td>
-                  <Table.Td><Code>y = beta(2, 3)</Code> (y = 0.0833)</Table.Td>
-                </Table.Tr>
-                <Table.Tr>
-                  <Table.Td><Code>besselj(x, order)</Code></Table.Td>
-                  <Table.Td>Bessel function of the first kind J_order(x)</Table.Td>
-                  <Table.Td><Code>y = besselj(2.5, 0)</Code> (y = -0.0484)</Table.Td>
-                </Table.Tr>
-                <Table.Tr>
-                  <Table.Td><Code>besseli(x, order)</Code></Table.Td>
-                  <Table.Td>Modified Bessel function of the first kind I_order(x)</Table.Td>
-                  <Table.Td><Code>y = besseli(2, 1)</Code> (y = 1.5906)</Table.Td>
-                </Table.Tr>
-                <Table.Tr>
-                  <Table.Td><Code>BaseConvert(digits, from, to)</Code></Table.Td>
-                  <Table.Td>Converts a number between bases 2–36. The digits are given as a string literal (or an integer); the result is returned as the number whose decimal digits spell the converted value, so the target base should be 10 or lower-digit.</Table.Td>
-                  <Table.Td><Code>{`y = BaseConvert('FF', 16, 10)`}</Code> (y = 255)</Table.Td>
+                  <Table.Td><Code>\\\\</Code> (backslash)</Table.Td>
+                  <Table.Td>Backslash solver (solves $A \\\\cdot x = b$ for $x$)</Table.Td>
+                  <Table.Td><Code>x = A \\\\ b</Code></Table.Td>
                 </Table.Tr>
               </Table.Tbody>
             </Table>
-
-            <Title order={3} mt="md">String Literals & String Variables</Title>
-            <Text style={{ lineHeight: 1.6 }}>
-              Text in <strong>single quotes</strong> is a string literal: <Code>{`'R134a'`}</Code>. Strings are
-              used as function arguments — the digit string of <Code>BaseConvert</Code>, the unit names of
-              <Code>{`Convert('ft^2', 'in^2')`}</Code>, or the fluid name of a property call like
-              <Code>{`h = Enthalpy('R134a', T=300, x=1)`}</Code> (unquoted names are still accepted).
-              Note that <strong>double quotes remain comments</strong>: <Code>"this text is ignored"</Code>.
-            </Text>
-            <Text style={{ lineHeight: 1.6 }}>
-              A variable whose name ends in <Code>$</Code> is a <strong>string variable</strong> (EES
-              convention). Assign it a literal once and use it anywhere a string is accepted:
-            </Text>
-            <Paper withBorder p="xs" bg="dark.9" radius="md">
-              <Code block style={{ background: 'transparent' }}>
-                {`R$ = 'R134a'
-h1 = Enthalpy(R$, T=300, x=1)
-s1 = Entropy(R$, T=300, x=1)`}
-              </Code>
-            </Paper>
-            <Text size="sm" style={{ lineHeight: 1.6 }}>
-              String assignments are compile-time constants: they are substituted before solving and do not
-              count toward the equation/variable balance. Defining the same string variable twice with
-              different values, or using an undefined one, is a syntax error.
-            </Text>
-          </Stack>
-        );
-      case 'variables':
-        return (
-          <Stack gap="md">
-            <Title order={2} c="blue.4">3. Variables, Guess Values & Bounds</Title>
-            <Text style={{ lineHeight: 1.6 }}>
-              Because frees uses numerical iteration (Newton-Raphson) to solve non-linear simultaneous equations, initial guess values and boundary limits are critical for ensuring solver convergence.
-            </Text>
-
-            <Title order={3}>Variable Information Grid</Title>
-            <Text>
-              Clicking <strong>Variable Info</strong> in the top toolbar (or pressing <Code>Ctrl + I</Code>) opens a modal displaying all variables in the system. For each variable, you can configure:
-            </Text>
-            <List spacing="xs" mb="sm">
-              <List.Item><strong>Guess Value:</strong> The starting point for solver iterations. If an equation has multiple solutions (e.g., $x^2 = 4$), the solver will typically find the root closest to the guess value. By default, all guess values are set to 1.0.</List.Item>
-              <List.Item><strong>Lower & Upper Bounds:</strong> Restricts the values the solver can assign to a variable. Newton steps will be clamped to these bounds. Bounds are vital to keep variables within their mathematical or physical domains (e.g. avoiding negative values for pressures, volume, absolute temperature, or concentrations).</List.Item>
-              <List.Item><strong>Units:</strong> Set display units for variables (e.g. <code>C</code>, <code>kPa</code>, <code>kJ/kg</code>).</List.Item>
-            </List>
-
-            <Alert color="indigo" title="Physical Boundaries Tip">
-              If your system involves thermodynamic properties (e.g., steam tables), always set physical bounds. For example, absolute temperature in Kelvin should have a lower bound of <code>0</code>, and pressures should have a lower bound of <code>0.001</code>. This prevents the solver from evaluating unphysical states (like negative pressure) and crashing during intermediate solver steps.
+            <Alert color="blue" title="Transpose and Backslash Syntax Note">
+              The suffix transpose is written as a single quote after a matrix: <code>A'</code>. Backslash is entered as double-backslash <code>\\\\</code> in the editor to resolve correctly.
             </Alert>
-
-            <Title order={3} mt="sm">How to Set Initial Guesses</Title>
-            <Text size="sm">
-              1. Enter your equations and click <strong>Check (F4)</strong>. This compiles the equations and populates the variable list.
-              <br/>
-              2. Open <strong>Variable Info (Ctrl+I)</strong>.
-              <br/>
-              3. Identify non-linear variables and supply reasonable physical guesses (e.g. if you expect a pressure of 10 bar, change the guess from <code>1.0</code> to <code>1000 [kPa]</code>).
-            </Text>
           </Stack>
         );
-      case 'units':
+      case 'matrices-blas':
         return (
           <Stack gap="md">
-            <Title order={2} c="blue.4">4. Units & Dimensional Consistency</Title>
-            <Text style={{ lineHeight: 1.6 }}>
-              frees features a robust unit conversion and verification engine. Internally, all equations are parsed and calculated strictly in **SI base units** (K, Pa, kg, m, s, etc.) to ensure numerical correctness. However, inputs can be annotated in any unit, and outputs are converted back for display.
+            <Title order={2} c="blue.4">OpenBLAS Algebra Functions Reference</Title>
+            <Text style={{ lineHeight: 1.5 }}>
+              frees supports native Basic Linear Algebra Subprograms (BLAS) Level 1, 2, and 3 routines. These are compiled symbolically, allowing constraints to propagate through linear algebra systems seamlessly.
             </Text>
 
-            <Title order={3}>Unit Annotations</Title>
-            <Text>
-              You can attach units to numeric constants by placing them in square brackets immediately following the number:
-            </Text>
-            <Paper withBorder p="sm" bg="dark.8"><Code block>P_inlet = 101.3 [kPa]</Code></Paper>
-            <Text size="sm" c="dimmed">
-              This converts 101.3 kPa (101,300 Pa) to SI units internally. When viewing results in the Solution window, frees will display the value as <code>101.3</code> and set its unit to <code>kPa</code>.
-            </Text>
+            <Title order={3} mt="sm">Level 1 BLAS (Vector-Vector)</Title>
+            <FunctionRef
+              name="axpy"
+              desc="Constant times vector/matrix plus vector/matrix: alpha * x + y"
+              syntax="result = axpy(alpha, x, y)"
+              inputs={[
+                { name: "alpha", desc: "Scalar coefficient expression" },
+                { name: "x", desc: "First vector or matrix of size M x N" },
+                { name: "y", desc: "Second vector or matrix of size M x N" }
+              ]}
+              outputs={[{ name: "result", desc: "Resulting M x N matrix or vector" }]}
+              example={`x[1..2] = [1, 2]\ny[1..2] = [3, 4]\nz[1..2] = axpy(2, x[1..2], y[1..2])   { z = [5; 8] }`}
+            />
 
-            <Title order={3} mt="sm">The Convert() Function</Title>
-            <Text>
-              Use the built-in <Code>Convert(fromUnit, toUnit)</Code> function to apply scaling factors. The syntax is:
-            </Text>
-            <Paper withBorder p="md" bg="dark.8" radius="md" style={{ position: 'relative' }}>
-              <CopyButton code={`Length_m = 5 [m]\nLength_in = Length_m * Convert(m, in)`} />
-              <Code block style={{ background: 'transparent' }}>
-                {`Length_m = 5 [m]\nLength_in = Length_m * Convert(m, in)`}
-              </Code>
-            </Paper>
-            <Text size="sm">
-              This will evaluate <code>Length_in</code> as <code>196.85 [in]</code>.
-            </Text>
+            <FunctionRef
+              name="scal"
+              desc="Scale a vector or matrix by a constant factor: alpha * x"
+              syntax="result = scal(alpha, x)"
+              inputs={[
+                { name: "alpha", desc: "Scalar scale factor" },
+                { name: "x", desc: "Matrix or vector to scale" }
+              ]}
+              outputs={[{ name: "result", desc: "Scaled matrix or vector" }]}
+              example={`x[1..2] = [1, 2]\ny[1..2] = scal(3, x[1..2])   { y = [3; 6] }`}
+            />
 
-            <Title order={3} mt="sm">Dimensional Homogeneity Checks</Title>
-            <Text style={{ lineHeight: 1.6 }}>
-              When you click **Check** or **Solve**, frees validates unit consistency. If you add variables with incompatible units (e.g., adding a length to a time, like <code>x = 5 [m] + 3 [s]</code>), frees will compile and solve the math, but it will display a **Unit Warning** in yellow at the bottom of the screen. Clicking the warning reveals exactly which equations violated unit consistency.
-            </Text>
+            <FunctionRef
+              name="asum"
+              desc="L1 norm (sum of absolute values) of a vector: sum(|x_i|)"
+              syntax="result = asum(x)"
+              inputs={[{ name: "x", desc: "Vector of size N" }]}
+              outputs={[{ name: "result", desc: "Scalar sum of absolute values" }]}
+              example={`x[1..2] = [1, -2]\nval = asum(x[1..2])   { val = 3 }`}
+            />
+
+            <FunctionRef
+              name="nrm2"
+              desc="L2 Euclidean norm (root-sum-square) of a vector: sqrt(sum(x_i^2))"
+              syntax="result = nrm2(x)"
+              inputs={[{ name: "x", desc: "Vector of size N" }]}
+              outputs={[{ name: "result", desc: "Scalar L2 norm value" }]}
+              example={`x[1..2] = [3, 4]\nval = nrm2(x[1..2])   { val = 5 }`}
+            />
+
+            <FunctionRef
+              name="copy"
+              desc="Returns a symbolic copy of the vector or matrix"
+              syntax="result = copy(x)"
+              inputs={[{ name: "x", desc: "Matrix or vector" }]}
+              outputs={[{ name: "result", desc: "Identical copy" }]}
+              example={`x[1..2] = [1, 2]\ny[1..2] = copy(x[1..2])`}
+            />
+
+            <Title order={3} mt="md">Level 2 BLAS (Matrix-Vector)</Title>
+            <FunctionRef
+              name="gemv"
+              desc="General matrix-vector product: alpha * A * x + beta * y"
+              syntax="result = gemv(alpha, A, x, beta, y)"
+              inputs={[
+                { name: "alpha", desc: "Scalar multiplier for product" },
+                { name: "A", desc: "Matrix of size M x N" },
+                { name: "x", desc: "Column vector of size N x 1" },
+                { name: "beta", desc: "Scalar multiplier for y" },
+                { name: "y", desc: "Column vector of size M x 1" }
+              ]}
+              outputs={[{ name: "result", desc: "Resulting column vector of size M x 1" }]}
+              example={`A[1..2, 1..2] = 1\nx[1..2] = [2, 3]\ny[1..2] = [4, 5]\nz[1..2] = gemv(2, A[1..2, 1..2], x[1..2], 3, y[1..2])`}
+            />
+
+            <FunctionRef
+              name="ger"
+              desc="Vector outer product (Rank-1 update): alpha * x * y' + A"
+              syntax="result = ger(alpha, x, y, A)"
+              inputs={[
+                { name: "alpha", desc: "Scalar multiplier" },
+                { name: "x", desc: "Column vector of size M x 1" },
+                { name: "y", desc: "Column vector of size N x 1" },
+                { name: "A", desc: "Matrix of size M x N" }
+              ]}
+              outputs={[{ name: "result", desc: "Resulting M x N matrix" }]}
+              example={`x[1..2] = [2, 3]\ny[1..2] = [4, 5]\nA[1..2, 1..2] = 1\nB[1..2, 1..2] = ger(2, x[1..2], y[1..2], A[1..2, 1..2])`}
+            />
+
+            <Title order={3} mt="md">Level 3 BLAS (Matrix-Matrix)</Title>
+            <FunctionRef
+              name="gemm"
+              desc="General matrix-matrix product: alpha * A * B + beta * C"
+              syntax="result = gemm(alpha, A, B, beta, C)"
+              inputs={[
+                { name: "alpha", desc: "Scalar multiplier" },
+                { name: "A", desc: "Matrix of size M x K" },
+                { name: "B", desc: "Matrix of size K x N" },
+                { name: "beta", desc: "Scalar multiplier" },
+                { name: "C", desc: "Matrix of size M x N" }
+              ]}
+              outputs={[{ name: "result", desc: "Resulting M x N matrix" }]}
+              example={`A[1..2, 1..2] = 1\nB[1..2, 1..2] = 2\nC[1..2, 1..2] = 3\nD[1..2, 1..2] = gemm(2, A[1..2, 1..2], B[1..2, 1..2], 3, C[1..2, 1..2])`}
+            />
           </Stack>
         );
-      case 'arrays':
+      case 'matrices-sys':
         return (
           <Stack gap="md">
-            <Title order={2} c="blue.4">5. Arrays & Duplicate Loops</Title>
-            <Text style={{ lineHeight: 1.6 }}>
-              Arrays are highly useful for modeling multi-stage processes (like distillation columns or multi-stage compressors), finite-difference models, and parameter sweeps.
-            </Text>
+            <Title order={2} c="blue.4">Linear Systems & Decompositions Reference</Title>
+            <Text>Detailed documentation for solvers and factorizations:</Text>
 
-            <Title order={3}>Array Notation</Title>
-            <Text>
-              Arrays use square brackets to indicate index values. You can define single-dimensional or multi-dimensional arrays:
-            </Text>
-            <List spacing="xs" mb="sm">
-              <List.Item><Code>T[1] = 300</Code>: First element of array T.</List.Item>
-              <List.Item><Code>H[2, 3] = 450</Code>: Element at row 2, column 3 of matrix H.</List.Item>
-            </List>
+            <FunctionRef
+              name="SolveLinear"
+              desc="Solves a square linear system: A * x = b"
+              syntax="x = SolveLinear(A, b)"
+              inputs={[
+                { name: "A", desc: "Square coefficient matrix of size N x N" },
+                { name: "b", desc: "Right-hand side vector of size N x 1" }
+              ]}
+              outputs={[{ name: "x", desc: "Solution vector of size N x 1" }]}
+              example={`A[1,1]=2; A[1,2]=1\nA[2,1]=-3; A[2,2]=-1\nb[1..2] = [8, -11]\nx[1..2] = SolveLinear(A[1..2, 1..2], b[1..2])`}
+            />
 
-            <Title order={3} mt="sm">The DUPLICATE Block</Title>
-            <Text>
-              To avoid manually typing out repeating equations, use a <Code>DUPLICATE</Code> loop. This is expanded at compile-time by the parser:
-            </Text>
-            <Paper withBorder p="md" bg="dark.8" radius="md" style={{ position: 'relative' }}>
-              <CopyButton code={`N = 5\nDUPLICATE i = 1, N\n  X[i] = i * 10\n  Y[i] = X[i]^2\nEND`} />
-              <Code block style={{ background: 'transparent' }}>
-                {`N = 5\nDUPLICATE i = 1, N\n  X[i] = i * 10\n  Y[i] = X[i]^2\nEND`}
-              </Code>
-            </Paper>
-            <Text size="sm" c="dimmed">
-              This expands into 10 separate equations: <code>X[1] = 10</code>, <code>Y[1] = X[1]^2</code>, ..., <code>X[5] = 50</code>, <code>Y[5] = X[5]^2</code>.
-            </Text>
+            <ProcedureRef
+              name="LUDecompose"
+              desc="Performs LU decomposition on a square matrix A: A = L * U"
+              syntax="CALL LUDecompose(A : L, U)"
+              inputs={[{ name: "A", desc: "Square matrix of size N x N to decompose" }]}
+              outputs={[
+                { name: "L", desc: "Lower triangular matrix of size N x N (unit diagonal)" },
+                { name: "U", desc: "Upper triangular matrix of size N x N" }
+              ]}
+              example={`A[1..2, 1..2] = 1\nCALL LUDecompose(A[1..2, 1..2] : L[1..2, 1..2], U[1..2, 1..2])`}
+            />
 
-            <Title order={3} mt="sm">Range Generation (MATLAB-style)</Title>
-            <Text>
-              Fill an array with an evenly-spaced sequence using a colon range
-              <Code>start:step:stop</Code> (the step defaults to <Code>1</Code> if omitted).
-              Append <Code>| Log</Code> for geometric spacing, where the middle number is the
-              <strong> point count</strong> (<Code>start:count:stop</Code>); <Code>| Linear</Code>
-              {' '}is the default.
-            </Text>
-            <Paper withBorder p="sm" bg="dark.8">
-              <Code block>{`speed = 0:10:100          { 0, 10, 20, ..., 100  -> speed[1..11] }
-x     = -50:1:50 | Linear { -50, -49, ..., 50 }
-freq  = 1:5:1000 | Log    { 5 points: 1, 10^0.75, 10^1.5, 10^2.25, 1000 }
-vmax  = speed[11]`}</Code>
-            </Paper>
+            <ProcedureRef
+              name="Eigen"
+              desc="Computes eigenvalues and Unit eigenvectors of a symmetric matrix A"
+              syntax="CALL Eigen(A : lambda, V)"
+              inputs={[{ name: "A", desc: "Symmetric square matrix of size N x N" }]}
+              outputs={[
+                { name: "lambda", desc: "Vector of eigenvalues of size N x 1 (sorted ascending)" },
+                { name: "V", desc: "Orthonormal eigenvector matrix of size N x N (columns are eigenvectors)" }
+              ]}
+              example={`A[1,1]=2; A[1,2]=1\nA[2,1]=1; A[2,2]=2\nCALL Eigen(A[1..2, 1..2] : lambda[1..2], V[1..2, 1..2])`}
+            />
 
-            <Title order={3} mt="sm">Array Slices in Aggregate Functions</Title>
-            <Text>
-              You can pass slices of arrays using the double-dot <Code>..</Code> range notation as arguments to aggregate functions like <Code>sum</Code>, <Code>avg</Code>, <Code>min</Code>, and <Code>max</Code>:
-            </Text>
-            <Paper withBorder p="sm" bg="dark.8">
-              <Code block>{`Total_X = sum(X[1..5])\nAverage_Y = avg(Y[1..5])`}</Code>
-            </Paper>
-          </Stack>
-        );
-      case 'matrices':
-        return (
-          <Stack gap="md">
-            <Title order={2} c="blue.4">6. Matrices & Vectors</Title>
-            <Text style={{ lineHeight: 1.6 }}>
-              frees supports robust vector and matrix algebra. Rather than using runtime libraries that bypass equation dependencies, matrix and vector equations are compiled down to scalar constraint equations solved via Newton's method. This allows full differentiability, respects variable bounds, and works seamlessly with the rest of the solver.
-            </Text>
-
-            <Title order={3}>Declaring Vectors & Matrices</Title>
-            <Text>
-              Vectors and matrices are declared using slice notation or duplicate blocks:
-            </Text>
-            <Paper withBorder p="md" bg="dark.8" radius="md" style={{ position: 'relative' }}>
-              <CopyButton code={`v[1..3] = [1, 2, 3]\nA[1..3, 1..3] = 0\nDUPLICATE i = 1, 3\n  A[i,i] = 10\nEND`} />
-              <Code block style={{ background: 'transparent' }}>
-                {`v[1..3] = [1, 2, 3]\nA[1..3, 1..3] = 0\nDUPLICATE i = 1, 3\n  A[i,i] = 10\nEND`}
-              </Code>
-            </Paper>
-
-            <Title order={3} mt="sm">Matrix & Vector Operations</Title>
-            <Text>
-              frees provides built-in functions for algebraic operations:
-            </Text>
-            <Table striped highlightOnHover withTableBorder>
-              <Table.Thead>
-                <Table.Tr>
-                  <Table.Th>Function</Table.Th>
-                  <Table.Th>Description</Table.Th>
-                  <Table.Th>Example Syntax</Table.Th>
-                </Table.Tr>
-              </Table.Thead>
-              <Table.Tbody>
-                <Table.Tr>
-                  <Table.Td><Code>transpose(A)</Code></Table.Td>
-                  <Table.Td>Matrix transpose</Table.Td>
-                  <Table.Td><Code>B[1..3, 1..3] = transpose(A[1..2, 1..3])</Code></Table.Td>
-                </Table.Tr>
-                <Table.Tr>
-                  <Table.Td><Code>inverse(A)</Code></Table.Td>
-                  <Table.Td>Matrix inverse</Table.Td>
-                  <Table.Td><Code>A_inv[1..3, 1..3] = inverse(A[1..3, 1..3])</Code></Table.Td>
-                </Table.Tr>
-                <Table.Tr>
-                  <Table.Td><Code>dot(u, v)</Code></Table.Td>
-                  <Table.Td>Vector dot product (scalar outcome)</Table.Td>
-                  <Table.Td><Code>d = dot(u[1..3], v[1..3])</Code></Table.Td>
-                </Table.Tr>
-                <Table.Tr>
-                  <Table.Td><Code>norm(v)</Code></Table.Td>
-                  <Table.Td>Vector Euclidean ($L_2$) norm</Table.Td>
-                  <Table.Td><Code>mag = norm(v[1..3])</Code></Table.Td>
-                </Table.Tr>
-                <Table.Tr>
-                  <Table.Td><Code>cross(u, v)</Code></Table.Td>
-                  <Table.Td>3D vector cross product</Table.Td>
-                  <Table.Td><Code>w[1..3] = cross(u[1..3], v[1..3])</Code></Table.Td>
-                </Table.Tr>
-                <Table.Tr>
-                  <Table.Td><Code>determinant(A)</Code></Table.Td>
-                  <Table.Td>Matrix determinant (scalar outcome)</Table.Td>
-                  <Table.Td><Code>det = determinant(A[1..3, 1..3])</Code></Table.Td>
-                </Table.Tr>
-                <Table.Tr>
-                  <Table.Td><Code>SolveLinear(A, b)</Code></Table.Td>
-                  <Table.Td>Solves the linear system $A \cdot x = b$ for vector $x$</Table.Td>
-                  <Table.Td><Code>x[1..3] = SolveLinear(A[1..3, 1..3], b[1..3])</Code></Table.Td>
-                </Table.Tr>
-              </Table.Tbody>
-            </Table>
-
-            <Title order={3} mt="sm">Triangular & Euler Decompositions</Title>
-            <Text>
-              Procedural submodels are available via the <Code>CALL</Code> statement for matrix factorizations and rotational dynamics:
-            </Text>
-            <List spacing="xs">
-              <List.Item>
-                <strong>LU Decomposition:</strong> Factorizes square matrix $A$ into lower triangular $L$ (with unit diagonal) and upper triangular $U$:
-                <Code block mt="xs">{`CALL LUDecompose(A[1..3,1..3] : L[1..3,1..3], U[1..3,1..3])`}</Code>
-              </List.Item>
-              <List.Item>
-                <strong>Euler rotation matrix:</strong> Generates a ZXZ rotation matrix $R$ based on Euler angles $\phi, \theta, \psi$ (in radians):
-                <Code block mt="xs">{`CALL EulerRotate(phi, theta, psi : R[1..3, 1..3])`}</Code>
-              </List.Item>
-              <List.Item>
-                <strong>Euler decomposition:</strong> Extracts ZXZ Euler angles $\phi, \theta, \psi$ from a 3D rotation matrix $R$:
-                <Code block mt="xs">{`CALL EulerDecompose(R[1..3,1..3] : phi, theta, psi)`}</Code>
-              </List.Item>
-              <List.Item>
-                <strong>Eigenvalues:</strong> Computes the eigenvalues of a square matrix $A$, reported in ascending order. The matrix entries may themselves be unknowns — the decomposition runs once they are solved:
-                <Code block mt="xs">{`CALL Eigenvalues(A[1..3,1..3] : lambda[1..3])`}</Code>
-              </List.Item>
-              <List.Item>
-                <strong>Eigenvalues & eigenvectors:</strong> Also returns the matrix $V$ whose column $k$ is the unit eigenvector of $\lambda_k$ (largest-magnitude component made positive). Real spectra only — symmetric matrices always qualify:
-                <Code block mt="xs">{`CALL Eigen(A[1..3,1..3] : lambda[1..3], V[1..3,1..3])`}</Code>
-              </List.Item>
-            </List>
-
-            <Title order={3} mt="sm">Practical Example: Linear System Solving</Title>
-            <Paper withBorder p="md" bg="dark.8" radius="md" style={{ position: 'relative' }}>
-              <CopyButton code={`A[1,1] = 2;  A[1,2] = 1;  A[1,3] = -1\nA[2,1] = -3; A[2,2] = -1; A[2,3] = 2\nA[3,1] = -2; A[3,2] = 1;  A[3,3] = 2\n\nb[1..3] = [8, -11, -3]\n\nx[1..3] = SolveLinear(A[1..3,1..3], b[1..3])`} />
-              <Code block style={{ background: 'transparent' }}>
-                {`A[1,1] = 2;  A[1,2] = 1;  A[1,3] = -1\nA[2,1] = -3; A[2,2] = -1; A[2,3] = 2\nA[3,1] = -2; A[3,2] = 1;  A[3,3] = 2\n\nb[1..3] = [8, -11, -3]\n\nx[1..3] = SolveLinear(A[1..3,1..3], b[1..3])`}
-              </Code>
-            </Paper>
+            <ProcedureRef
+              name="EulerRotate"
+              desc="Assembles a 3D ZXZ rotation matrix from Euler angles"
+              syntax="CALL EulerRotate(phi, theta, psi : R)"
+              inputs={[
+                { name: "phi", desc: "Precession angle (radians)" },
+                { name: "theta", desc: "Nutation angle (radians)" },
+                { name: "psi", desc: "Spin angle (radians)" }
+              ]}
+              outputs={[{ name: "R", desc: "3x3 orthogonal rotation matrix" }]}
+              example={`CALL EulerRotate(0.1, 0.2, 0.3 : R[1..3, 1..3])`}
+            />
           </Stack>
         );
       case 'functions':
         return (
           <Stack gap="md">
-            <Title order={2} c="blue.4">7. Functions & Procedures (Imperative Logic)</Title>
+            <Title order={2} c="blue.4">Custom Functions & Procedures</Title>
             <Text style={{ lineHeight: 1.6 }}>
-              While the global Editor window is declarative and order-independent, you can write procedural, sequential logic using **Functions** and **Procedures**. Inside these blocks, code is executed top-to-bottom.
+              You can declare custom functions (single output value) and procedures (multiple output variables) using imperative logic (IF-THEN-ELSE, REPEAT-UNTIL, assignments):
             </Text>
-
-            <Title order={3}>Functions (Scalar output)</Title>
-            <Text size="sm">
-              Functions take inputs and return a single, scalar value. Inside a function body:
-              <br/>
-              - Assign values using the sequential assignment operator <Code>:=</Code>.
-              <br/>
-              - Control flow is supported using <Code>IF-THEN-ELSE-END</Code> and <Code>REPEAT-UNTIL</Code> loops.
-              <br/>
-              - Assign the final returned value to the function's name.
-            </Text>
-            <Paper withBorder p="md" bg="dark.8" radius="md" style={{ position: 'relative' }}>
-              <CopyButton code={`FUNCTION FrictionFactor(Re, epsilon_d)\n  IF Re < 2300 THEN\n    FrictionFactor := 64 / Re\n  ELSE\n    { Turbulent flow - Haaland approximation }\n    FrictionFactor := (1.8 * log10((epsilon_d / 3.7)^1.11 + 6.9 / Re))^-2\n  END\nEND\n\n{ Call function directly in equations }\nf = FrictionFactor(25000, 0.001)`} />
-              <Code block style={{ background: 'transparent' }}>
-                {`FUNCTION FrictionFactor(Re, epsilon_d)
-  IF Re < 2300 THEN
-    FrictionFactor := 64 / Re
+            <Title order={3}>Custom Functions</Title>
+            <Paper withBorder p="md" bg="dark.8">
+              <Code block>{`FUNCTION my_func(x, y)
+  IF x > y THEN
+    my_func := x * y
   ELSE
-    { Turbulent flow - Haaland approximation }
-    FrictionFactor := (1.8 * log10((epsilon_d / 3.7)^1.11 + 6.9 / Re))^-2
+    my_func := x + y
   END
-END
-
-{ Call function directly in equations }
-f = FrictionFactor(25000, 0.001)`}
-              </Code>
+END`}</Code>
             </Paper>
-
-            <Title order={3} mt="sm">Procedures (Multiple outputs)</Title>
-            <Text size="sm">
-              Procedures execute sequentially and can return multiple values.
-              <br/>
-              - Define the inputs and outputs separated by a colon <Code>:</Code> in the parameter list.
-              <br/>
-              - Invoke using a <Code>CALL</Code> statement.
+            <Title order={3} mt="sm">Custom Procedures</Title>
+            <Paper withBorder p="md" bg="dark.8">
+              <Code block>{`PROCEDURE my_proc(x, y : a, b)
+  a := x * 10
+  b := y * 100
+END`}</Code>
+            </Paper>
+          </Stack>
+        );
+      case 'tables-code':
+        return (
+          <Stack gap="md">
+            <Title order={2} c="blue.4">Custom Tabulated Functions (TABLE)</Title>
+            <Text style={{ lineHeight: 1.6 }}>
+              You can define lookup tables inside your code. frees parses these and registers them as tabulated functions that can be queried like standard functions:
             </Text>
-            <Paper withBorder p="md" bg="dark.8" radius="md" style={{ position: 'relative' }}>
-              <CopyButton code={`PROCEDURE CylinderGeo(diameter, height : area, volume)\n  radius := diameter / 2\n  area := 2 * pi * radius * (radius + height)\n  volume := pi * radius^2 * height\nEND\n\n{ Call procedure }\nCALL CylinderGeo(0.5, 2.0 : A_cyl, V_cyl)`} />
-              <Code block style={{ background: 'transparent' }}>
-                {`PROCEDURE CylinderGeo(diameter, height : area, volume)
-  radius := diameter / 2
-  area := 2 * pi * radius * (radius + height)
-  volume := pi * radius^2 * height
+            <Paper withBorder p="md" bg="dark.8">
+              <Code block>{`TABLE thermal_conductivity(temp)
+  200   1.2
+  300   1.6
+  400   1.9
+  500   2.1
 END
 
-{ Call procedure }
-CALL CylinderGeo(0.5, 2.0 : A_cyl, V_cyl)`}
-              </Code>
+k_val = thermal_conductivity(350)`}</Code>
             </Paper>
-
-            <Title order={3} mt="sm">Function Tables (Tabulated Functions)</Title>
-            <Text size="sm">
-              Function Tables allow you to turn tabular data (from the **Graph Digitizer** or entered manually) into callable functions directly within your equations.
+          </Stack>
+        );
+      case 'lookup-tables':
+        return (
+          <Stack gap="md">
+            <Title order={2} c="blue.4">Lookup Tables & Interpolation</Title>
+            <Text style={{ lineHeight: 1.6 }}>
+              Lookup Tables are registered in the Tables window or defined via table blocks. You can retrieve, interpolate, or differentiate tabular values directly inside equation definitions:
             </Text>
-            <List spacing="xs" mb="sm">
-              <List.Item>
-                <strong>Function Table (without Curve) — 1D:</strong> Represents a single-argument function <Code>y = f(x)</Code>. It consists of one input column (<Code>x</Code>) and one output column (<Code>y</Code>).
-              </List.Item>
-              <List.Item>
-                <strong>Function Table (with Curve family) — 2D:</strong> Represents a multi-argument function <Code>y = f(x, z)</Code> where <Code>z</Code> is a curve family parameter (e.g., temperature, pressure). The table interpolates linearly across the independent variables and blends between the closest parameter curves.
-              </List.Item>
-            </List>
 
-            <Alert color="blue" title="Out-of-Range Guess Auto-Adjustment" mt="xs">
-              Tabulated functions clamp out-of-range values to the nearest edge. Because clamping creates a flat line (zero derivative), Newton's method can stall if your initial guess starts outside the table.
-              <br/><br/>
-              To solve this, <strong>frees automatically checks initial guesses</strong> before solving. If any argument variable lies outside the table's range, its guess value is automatically overridden to the <strong>average of the range</strong> (i.e. <Code>(min + max) / 2</Code>). This provides a non-zero derivative and ensures stable convergence.
-            </Alert>
+            <Title order={3}>Lookup Data Retrieving</Title>
+            <FunctionRef
+              name="Lookup"
+              desc="Retrieves the value of a cell in a lookup table."
+              syntax="val = Lookup('TableName', row, col)"
+              inputs={[
+                { name: "TableName", desc: "String literal naming the table" },
+                { name: "row", desc: "1-based row index (integer)" },
+                { name: "col", desc: "1-based column index or string column name" }
+              ]}
+              outputs={[{ name: "val", desc: "The numeric cell value" }]}
+              example="x = Lookup('thermo_data', 5, 'Temperature')"
+            />
+            <FunctionRef
+              name="LookupRow / Lookup$Row / NLookupRows"
+              desc="Search for matching rows and query table size."
+              syntax="row_idx = LookupRow('TableName', col, val)\nrow_idx = Lookup$Row('TableName', col, val$)\nnum_rows = NLookupRows('TableName')"
+              inputs={[
+                { name: "TableName", desc: "Name of target table" },
+                { name: "col", desc: "Target column index or name" },
+                { name: "val / val$", desc: "Value to search for" }
+              ]}
+              outputs={[{ name: "row_idx / num_rows", desc: "Row index or size count" }]}
+              example="idx = Lookup$Row('fluid_table', 'FluidName', 'Water')\ncount = NLookupRows('fluid_table')"
+            />
 
-            <Paper withBorder p="md" bg="dark.8" radius="md" style={{ position: 'relative' }}>
-              <CopyButton code={`{ Call 1D Function Table }\nU1 = myfunc(Re)\n\n{ Call 2D Function Table with family parameter }\nU2 = htc(Re, T)`} />
-              <Code block style={{ background: 'transparent' }}>
-                {`{ Call 1D Function Table }
-U1 = myfunc(Re)
+            <Title order={3}>Spline & Linear Interpolation</Title>
+            <FunctionRef
+              name="Interpolate"
+              desc="Performs 1D linear interpolation to find a dependent variable value."
+              syntax="y = Interpolate('TableName', y_col, x_col, x_val)"
+              inputs={[
+                { name: "TableName", desc: "Name of the table" },
+                { name: "y_col", desc: "Name of the dependent output column" },
+                { name: "x_col", desc: "Name of the independent input column" },
+                { name: "x_val", desc: "Independent coordinate value to interpolate" }
+              ]}
+              outputs={[{ name: "y", desc: "Interpolated value" }]}
+              example="cond = Interpolate('copper_conductivity', 'k', 'temp', 325)"
+            />
+            <FunctionRef
+              name="Interpolate1 / Interpolate2 / Interpolate2D"
+              desc="Advanced 1D cubic spline and 2D bilinear/bicubic interpolation."
+              syntax="y = Interpolate1('TableName', y_col, x_col, x_val)\nz = Interpolate2D('TableName', z_col, x_col, x_val, y_col, y_val)"
+              inputs={[
+                { name: "TableName", desc: "Table name" },
+                { name: "x_val, y_val", desc: "Coordinates for interpolation" }
+              ]}
+              outputs={[{ name: "y / z", desc: "Interpolated value" }]}
+              example="cp_val = Interpolate1('gas_properties', 'Cp', 'Temperature', 450)"
+            />
 
-{ Call 2D Function Table with family parameter }
-U2 = htc(Re, T)`}
-              </Code>
-            </Paper>
-
-            <Title order={3} mt="sm">Defining Tables in Code (TABLE … END)</Title>
-            <Text size="sm">
-              Besides the Graph Digitizer and manual editor, you can define a Function
-              Table directly in the editor text with a <Code>TABLE … END</Code> block. The
-              block name becomes the callable function; the first column is the lookup
-              argument and each further column is one curve. Body rows are whitespace-separated
-              numbers; <Code>{`//`}</Code> comments are allowed. Code-defined tables appear in
-              the Tables window badged <strong>code</strong> (read-only there — the editor text
-              is their source). Add the optional flags <Code>XLOG</Code> / <Code>YLOG</Code> to
-              interpolate an axis in log space.
+            <Title order={3}>Tabular Numerical Differentiation</Title>
+            <FunctionRef
+              name="Differentiate / Differentiate1 / Differentiate2"
+              desc="Estimates derivative dy/dx from tabulated values at a specified coordinate point."
+              syntax="slope = Differentiate('TableName', y_col, x_col, x_val)"
+              inputs={[
+                { name: "TableName", desc: "Table name" },
+                { name: "y_col, x_col", desc: "Output/Input columns" },
+                { name: "x_val", desc: "Evaluation point" }
+              ]}
+              outputs={[{ name: "slope", desc: "Computed numerical derivative dy/dx" }]}
+              example="dslope = Differentiate('pressure_drop', 'dP', 'Velocity', 2.5)"
+            />
+          </Stack>
+        );
+      case 'table-accessors':
+        return (
+          <Stack gap="md">
+            <Title order={2} c="blue.4">Table Accessors & Aggregates</Title>
+            <Text style={{ lineHeight: 1.6 }}>
+              These functions query status, specific values, or aggregates of columns inside Parametric Sweeps, Parametric Tables, or Numerical Integration runs.
             </Text>
-            <Paper withBorder p="md" bg="dark.8" radius="md" style={{ position: 'relative' }}>
-              <CopyButton code={`TABLE fanPressure(rpm)\n  // rpm   dP[Pa]\n  1000    120\n  2000    310\n  3000    560\nEND\ndP = fanPressure(2500)\n\n{ 2D curve family: parameter values after the colon }\nTABLE htc(Re : T = 100, 200)\n  0     0     0\n  10    10    30\nEND\nU = htc(5, 150)`} />
-              <Code block style={{ background: 'transparent' }}>
-                {`TABLE fanPressure(rpm)
-  // rpm   dP[Pa]
-  1000    120
-  2000    310
-  3000    560
-END
-dP = fanPressure(2500)
 
-{ 2D curve family: parameter values after the colon }
-TABLE htc(Re : T = 100, 200)
-  0     0     0
-  10    10    30
-END
-U = htc(5, 150)`}
-              </Code>
-            </Paper>
+            <Title order={3}>Parametric Run Info</Title>
+            <FunctionRef
+              name="TableValue"
+              desc="Reads a cell in the active Parametric Table."
+              syntax="val = TableValue(row, col)"
+              inputs={[
+                { name: "row", desc: "Row index" },
+                { name: "col", desc: "Column index or name string" }
+              ]}
+              outputs={[{ name: "val", desc: "Numeric value at the cell" }]}
+              example="initial_P = TableValue(1, 'Pressure')"
+            />
+            <FunctionRef
+              name="TableRun# / NParametricRuns"
+              desc="Queries current sweep run index and total sweep size."
+              syntax="run_idx = TableRun#()\ntotal_runs = NParametricRuns()"
+              inputs={[]}
+              outputs={[{ name: "run_idx / total_runs", desc: "Run indices and count statistics" }]}
+              example="current_sweep = TableRun#()"
+            />
 
-            <Title order={3} mt="sm">Parametric Tables in Code (PARAMETRIC … END)</Title>
-            <Text size="sm">
-              Declare a Parametric run-table in the editor with a
-              <Code>PARAMETRIC name(vars…) … END</Code> block. Each body line fills one
-              column with a range (<Code>start:step:stop</Code>, optionally <Code>| Log</Code>)
-              or an explicit list <Code>[a, b, c]</Code>. The table appears in the Tables
-              window badged <strong>code</strong>; run it with <strong>Solve Table</strong>.
-              The block itself adds no equations to the main system.
-            </Text>
-            <Paper withBorder p="md" bg="dark.8" radius="md" style={{ position: 'relative' }}>
-              <CopyButton code={`PARAMETRIC sweep1 (T_in, mdot)\n  T_in = 300:10:350 | Linear\n  mdot = [0.1, 0.2, 0.4]\nEND\nQ = mdot * 4180 * (T_in - 290)`} />
-              <Code block style={{ background: 'transparent' }}>
-                {`PARAMETRIC sweep1 (T_in, mdot)
-  T_in = 300:10:350 | Linear
-  mdot = [0.1, 0.2, 0.4]
-END
-Q = mdot * 4180 * (T_in - 290)`}
-              </Code>
-            </Paper>
+            <Title order={3}>Column Aggregate Functions</Title>
+            <FunctionRef
+              name="Sum / Avg / Min / Max / StdDev (Table columns)"
+              desc="Calculates mathematical aggregate of all populated values in a Parametric Table column."
+              syntax="total = Sum('ColName')\naverage = Avg('ColName')\nminimum = Min('ColName')"
+              inputs={[{ name: "ColName", desc: "String name of the column in the Parametric Table" }]}
+              outputs={[{ name: "total/average/minimum", desc: "Computed scalar value" }]}
+              example="mean_eff = Avg('efficiency')\nmax_temp = Max('T_boiler')"
+            />
+
+            <Title order={3}>Integral Table Accessors</Title>
+            <FunctionRef
+              name="IntegralValue"
+              desc="Reads computed value from the ODE Integral Table at the end of the solve."
+              syntax="val = IntegralValue('VarName')"
+              inputs={[{ name: "VarName", desc: "String name of the integrated variable" }]}
+              outputs={[{ name: "val", desc: "Integrated ODE step value" }]}
+              example="net_heat = IntegralValue('Q_dot')"
+            />
           </Stack>
         );
       case 'modules':
         return (
           <Stack gap="md">
-            <Title order={2} c="blue.4">8. Modular Submodels (Modules)</Title>
+            <Title order={2} c="blue.4">Modular Submodels (MODULE)</Title>
             <Text style={{ lineHeight: 1.6 }}>
-              A <strong>Module</strong> is a declarative submodel. Unlike procedures (which solve sequentially), modules contain equations that are grafted directly into the global system of equations and solved <strong>simultaneously</strong>.
+              Modules allow you to encapsulate a sub-system of equations and call it repeatedly. Unlike procedures, modules contain declarative equations, which can be solved in any direction:
             </Text>
-
-            <Title order={3}>Defining and Calling Modules</Title>
-            <Text size="sm">
-              - Define inputs and outputs separated by a colon <Code>:</Code>.
-              <br/>
-              - Write declarative equations inside using the standard equality operator <Code>=</Code>.
-              <br/>
-              - When called, the solver automatically prefixes all internal variables inside the module with a unique namespace (e.g. <code>m1.temp</code>, <code>m2.temp</code>) so they do not conflict.
-            </Text>
-            <Paper withBorder p="md" bg="dark.8" radius="md" style={{ position: 'relative' }}>
-              <CopyButton code={`MODULE ParallelPipe(P1, P2, D, L, rho, mu : m_dot)\n  { Friction factors and mass flow relations inside the module }\n  delta_P = P1 - P2\n  delta_P = f * (L / D) * (rho * V^2 / 2)\n  Re = rho * V * D / mu\n  f = 64 / Re { Laminar flow (oil: Re < 2300) }\n  A = pi * D^2 / 4\n  m_dot = rho * V * A\nEND\n\n{ Call module - equations solved simultaneously with main system }\nCALL ParallelPipe(150 [kPa], 100 [kPa], 0.05, 10, 900, 0.29 : m_flow_1)\nCALL ParallelPipe(150 [kPa], 100 [kPa], 0.08, 10, 900, 0.29 : m_flow_2)\nm_flow_total = m_flow_1 + m_flow_2`} />
-              <Code block style={{ background: 'transparent' }}>
-                {`MODULE ParallelPipe(P1, P2, D, L, rho, mu : m_dot)
-  { Friction factors and mass flow relations inside the module }
-  delta_P = P1 - P2
-  delta_P = f * (L / D) * (rho * V^2 / 2)
-  Re = rho * V * D / mu
-  f = 64 / Re { Laminar flow (oil: Re < 2300) }
-  A = pi * D^2 / 4
-  m_dot = rho * V * A
+            <Paper withBorder p="md" bg="dark.8">
+              <Code block>{`MODULE pipe_flow(D, Q : dP)
+  V = Q / (pi / 4 * D^2)
+  dP = 0.02 * (100 / D) * (1000 * V^2 / 2)
 END
 
-{ Call module - equations solved simultaneously with main system }
-CALL ParallelPipe(150 [kPa], 100 [kPa], 0.05, 10, 900, 0.29 : m_flow_1)
-CALL ParallelPipe(150 [kPa], 100 [kPa], 0.08, 10, 900, 0.29 : m_flow_2)
-m_flow_total = m_flow_1 + m_flow_2`}
-              </Code>
+CALL pipe_flow(D1, Q1 : dP1)`}</Code>
             </Paper>
-
-            <Title order={3} mt="sm">PROCEDURE vs MODULE</Title>
-            <Table striped highlightOnHover withTableBorder>
-              <Table.Thead>
-                <Table.Tr>
-                  <Table.Th style={{ width: '150px' }}>Feature</Table.Th>
-                  <Table.Th>Procedure</Table.Th>
-                  <Table.Th>Module</Table.Th>
-                </Table.Tr>
-              </Table.Thead>
-              <Table.Tbody>
-                <Table.Tr>
-                  <Table.Td><strong>Execution Mode</strong></Table.Td>
-                  <Table.Td>Sequential (imperative, top-to-bottom)</Table.Td>
-                  <Table.Td>Simultaneous (declarative equations added to global system)</Table.Td>
-                </Table.Tr>
-                <Table.Tr>
-                  <Table.Td><strong>Assignment</strong></Table.Td>
-                  <Table.Td>Uses assignment operator <Code>:=</Code></Table.Td>
-                  <Table.Td>Uses equality operator <Code>=</Code></Table.Td>
-                </Table.Tr>
-                <Table.Tr>
-                  <Table.Td><strong>Control Flow</strong></Table.Td>
-                  <Table.Td>Supports <Code>IF</Code>, <Code>REPEAT-UNTIL</Code></Table.Td>
-                  <Table.Td>Not supported (must use mathematical algebraic equations)</Table.Td>
-                </Table.Tr>
-                <Table.Tr>
-                  <Table.Td><strong>Use Cases</strong></Table.Td>
-                  <Table.Td>Explicit calculations, complex procedural logic</Table.Td>
-                  <Table.Td>Reusable sub-assemblies, physical equipment blocks</Table.Td>
-                </Table.Tr>
-              </Table.Tbody>
-            </Table>
           </Stack>
         );
       case 'thermo':
         return (
           <Stack gap="md">
-            <Title order={2} c="blue.4">9. Thermodynamic Fluid Properties (CoolProp)</Title>
+            <Title order={2} c="blue.4">Thermophysical Properties Reference (CoolProp & Gas)</Title>
             <Text style={{ lineHeight: 1.6 }}>
-              frees is equipped with a direct bridge to the industry-standard **CoolProp** thermodynamic database, allowing you to fetch high-accuracy properties for dozens of fluids.
+              frees supports thermophysical properties database queries for three distinct material classes:
             </Text>
+            <List spacing="xs" mb="md">
+              <List.Item><strong>CoolProp Real Fluids:</strong> High-precision multiphase real fluids (e.g. <code>Water</code>, <code>R134a</code>, <code>Ammonia</code>) requiring exactly 2 state variables.</List.Item>
+              <List.Item><strong>Ideal Gases:</strong> Spelled chemical formulas (e.g. <code>CO2</code>, <code>N2</code>, <code>CH4</code>, <code>O2</code>) evaluated using NASA thermodynamic polynomials.</List.Item>
+              <List.Item><strong>Aqueous Glycols:</strong> Incompressible coolants represented by base + mass fraction (e.g. <code>EG50</code> for 50% Ethylene Glycol, <code>PG30</code> for 30% Propylene Glycol), evaluated using Temperature (T) and Pressure (P).</List.Item>
+            </List>
 
-            <Title order={3}>Syntax & Structure</Title>
-            <Text>
-              Property calls require a fluid name as the first argument, followed by exactly **two** independent state variables (using named syntax):
-            </Text>
-            <Paper withBorder p="sm" bg="dark.8">
-              <Code block>{`Result = PropertyFunction(FluidName, InputIndicator1 = Value1, InputIndicator2 = Value2)`}</Code>
-            </Paper>
-            <Text size="sm">
-              Example: <code>h1 = Enthalpy(R134a, T=25 [C], P=100 [kPa])</code>
-            </Text>
-
-            <Title order={3} mt="sm">Supported Fluid Names</Title>
-            <Group gap="xs">
-              <Badge color="blue" variant="filled">Water</Badge>
-              <Badge color="blue" variant="filled">Steam</Badge>
-              <Badge color="indigo" variant="filled">Air</Badge>
-              <Badge color="cyan" variant="filled">CarbonDioxide (R744)</Badge>
-              <Badge color="cyan" variant="filled">Nitrogen</Badge>
-              <Badge color="cyan" variant="filled">Oxygen</Badge>
-              <Badge color="cyan" variant="filled">Hydrogen</Badge>
-              <Badge color="cyan" variant="filled">Helium</Badge>
-              <Badge color="cyan" variant="filled">Argon</Badge>
-              <Badge color="teal" variant="filled">Methane</Badge>
-              <Badge color="teal" variant="filled">Ethane</Badge>
-              <Badge color="teal" variant="filled">Propane (R290)</Badge>
-              <Badge color="teal" variant="filled">Isobutane (R600a)</Badge>
-              <Badge color="teal" variant="filled">Butane (R600)</Badge>
-              <Badge color="violet" variant="filled">R134a</Badge>
-              <Badge color="violet" variant="filled">R12</Badge>
-              <Badge color="violet" variant="filled">R22</Badge>
-              <Badge color="violet" variant="filled">R32</Badge>
-              <Badge color="violet" variant="filled">R123</Badge>
-              <Badge color="violet" variant="filled">R245fa</Badge>
-              <Badge color="violet" variant="filled">R404a</Badge>
-              <Badge color="violet" variant="filled">R407c</Badge>
-              <Badge color="violet" variant="filled">R410a</Badge>
-              <Badge color="violet" variant="filled">R1234yf</Badge>
-              <Badge color="violet" variant="filled">R1234ze</Badge>
-              <Badge color="pink" variant="filled">Ammonia (R717)</Badge>
-            </Group>
-
-            <Title order={4} mt="sm">Glycol Coolants (aqueous mixtures)</Title>
-            <Text size="sm">
-              Automotive / HVAC coolants are written as a base name plus the
-              glycol <strong>mass percentage</strong>, so the concentration is
-              fully configurable. These are single-phase liquids — use
-              <Code>T</Code> and <Code>P</Code> as the two state indicators
-              (quality does not apply).
-            </Text>
-            <Group gap="xs">
-              <Badge color="lime" variant="filled">EG50</Badge>
-              <Badge color="lime" variant="filled">EG10</Badge>
-              <Badge color="lime" variant="filled">MEG30</Badge>
-              <Badge color="green" variant="filled">PG50</Badge>
-              <Badge color="green" variant="filled">MPG30</Badge>
-            </Group>
-            <Text size="sm" mt="xs">
-              <code>EG</code>/<code>MEG</code>/<code>EthyleneGlycol</code> →
-              ethylene glycol, <code>PG</code>/<code>MPG</code>/<code>PropyleneGlycol</code>
-              {' '}→ propylene glycol. Example:{' '}
-              <code>rho = Density(EG50, T=20 [C], P=1 [atm])</code> for a 50/50
-              ethylene-glycol / water mix; change <code>50</code> to any 1–99 for
-              a different blend (e.g. <code>EG10</code> for 10/90).
-            </Text>
-
-            <Title order={3} mt="sm">Available Property Functions</Title>
-            <Table striped highlightOnHover withTableBorder>
+            <Title order={3}>Standard Property Functions</Title>
+            <Table striped withTableBorder mb="md">
               <Table.Thead>
                 <Table.Tr>
                   <Table.Th>Function Name</Table.Th>
-                  <Table.Th>Description</Table.Th>
+                  <Table.Th>Property</Table.Th>
                   <Table.Th>SI Unit</Table.Th>
+                  <Table.Th>Syntax Example</Table.Th>
                 </Table.Tr>
               </Table.Thead>
               <Table.Tbody>
@@ -1903,1223 +2175,301 @@ m_flow_total = m_flow_1 + m_flow_2`}
                   <Table.Td><Code>Temperature</Code></Table.Td>
                   <Table.Td>Absolute Temperature</Table.Td>
                   <Table.Td>K</Table.Td>
+                  <Table.Td><Code>T = Temperature(Water, P=P1, h=h1)</Code></Table.Td>
                 </Table.Tr>
                 <Table.Tr>
                   <Table.Td><Code>Pressure</Code></Table.Td>
                   <Table.Td>Absolute Pressure</Table.Td>
                   <Table.Td>Pa</Table.Td>
+                  <Table.Td><Code>P = Pressure(R134a, T=T1, x=1)</Code></Table.Td>
                 </Table.Tr>
                 <Table.Tr>
                   <Table.Td><Code>Enthalpy</Code></Table.Td>
                   <Table.Td>Specific Enthalpy</Table.Td>
                   <Table.Td>J/kg</Table.Td>
+                  <Table.Td><Code>h = Enthalpy(Steam, T=T1, P=P1)</Code></Table.Td>
                 </Table.Tr>
                 <Table.Tr>
                   <Table.Td><Code>Entropy</Code></Table.Td>
                   <Table.Td>Specific Entropy</Table.Td>
                   <Table.Td>J/kg-K</Table.Td>
-                </Table.Tr>
-                <Table.Tr>
-                  <Table.Td><Code>IntEnergy</Code></Table.Td>
-                  <Table.Td>Specific Internal Energy</Table.Td>
-                  <Table.Td>J/kg</Table.Td>
+                  <Table.Td><Code>s = Entropy(Nitrogen, T=T1, P=P1)</Code></Table.Td>
                 </Table.Tr>
                 <Table.Tr>
                   <Table.Td><Code>Density</Code></Table.Td>
                   <Table.Td>Mass Density</Table.Td>
                   <Table.Td>kg/m³</Table.Td>
+                  <Table.Td><Code>rho = Density(EG50, T=T1, P=P1)</Code></Table.Td>
                 </Table.Tr>
                 <Table.Tr>
                   <Table.Td><Code>Volume</Code></Table.Td>
-                  <Table.Td>Specific Volume (1 / Density)</Table.Td>
+                  <Table.Td>Specific Volume</Table.Td>
                   <Table.Td>m³/kg</Table.Td>
+                  <Table.Td><Code>v = Volume(Water, P=P1, x=0)</Code></Table.Td>
                 </Table.Tr>
                 <Table.Tr>
-                  <Table.Td><Code>Quality</Code></Table.Td>
-                  <Table.Td>Vapor quality (vapor mass fraction)</Table.Td>
-                  <Table.Td>dimensionless (0 to 1)</Table.Td>
+                  <Table.Td><Code>IntEnergy</Code></Table.Td>
+                  <Table.Td>Specific Internal Energy</Table.Td>
+                  <Table.Td>J/kg</Table.Td>
+                  <Table.Td><Code>u = IntEnergy(Water, T=T1, P=P1)</Code></Table.Td>
                 </Table.Tr>
                 <Table.Tr>
-                  <Table.Td><Code>Cp</Code> or <Code>specheat</Code></Table.Td>
-                  <Table.Td>Specific heat at constant pressure</Table.Td>
+                  <Table.Td><Code>Cp / Specheat</Code></Table.Td>
+                  <Table.Td>Constant-pressure Specific Heat</Table.Td>
                   <Table.Td>J/kg-K</Table.Td>
+                  <Table.Td><Code>c = Cp(Air, T=T1, P=P1)</Code></Table.Td>
                 </Table.Tr>
                 <Table.Tr>
                   <Table.Td><Code>Cv</Code></Table.Td>
-                  <Table.Td>Specific heat at constant volume</Table.Td>
+                  <Table.Td>Constant-volume Specific Heat</Table.Td>
                   <Table.Td>J/kg-K</Table.Td>
+                  <Table.Td><Code>c_v = Cv(Air, T=T1, P=P1)</Code></Table.Td>
                 </Table.Tr>
                 <Table.Tr>
                   <Table.Td><Code>Viscosity</Code></Table.Td>
                   <Table.Td>Dynamic Viscosity</Table.Td>
                   <Table.Td>Pa-s</Table.Td>
+                  <Table.Td><Code>mu = Viscosity(Water, T=T1, P=P1)</Code></Table.Td>
                 </Table.Tr>
                 <Table.Tr>
                   <Table.Td><Code>Conductivity</Code></Table.Td>
                   <Table.Td>Thermal Conductivity</Table.Td>
                   <Table.Td>W/m-K</Table.Td>
+                  <Table.Td><Code>k = Conductivity(Water, T=T1, P=P1)</Code></Table.Td>
                 </Table.Tr>
                 <Table.Tr>
-                  <Table.Td><Code>Soundspeed</Code></Table.Td>
+                  <Table.Td><Code>SoundSpeed</Code></Table.Td>
                   <Table.Td>Speed of Sound</Table.Td>
                   <Table.Td>m/s</Table.Td>
+                  <Table.Td><Code>c = SoundSpeed(Air, T=T1, P=P1)</Code></Table.Td>
                 </Table.Tr>
               </Table.Tbody>
             </Table>
 
-            <Title order={3} mt="sm">Input Indicators</Title>
-            <Text size="sm">
-              To query a state, use the following indicators as names:
-              <br/>
-              - <Code>T</Code>: Temperature
-              <br/>
-              - <Code>P</Code>: Pressure
-              <br/>
-              - <Code>H</Code>: Enthalpy
-              <br/>
-              - <Code>S</Code>: Entropy
-              <br/>
-              - <Code>U</Code>: Internal Energy
-              <br/>
-              - <Code>X</Code> or <Code>Q</Code>: Quality (vapor fraction, e.g. <code>x=1</code> for saturated vapor)
-              <br/>
-              - <Code>V</Code>, <Code>D</Code>, or <Code>Rho</Code>: density or specific volume
+            <Title order={3} mt="sm">Thermophysical Completion Functions</Title>
+            <FunctionRef
+              name="P_sat / T_sat"
+              desc="Evaluates saturation pressure or temperature for a fluid."
+              syntax="ps = P_sat(Fluid, T=temp)\nts = T_sat(Fluid, P=pres)"
+              inputs={[
+                { name: "Fluid", desc: "Fluid name" },
+                { name: "T / P", desc: "Saturation state coordinate" }
+              ]}
+              outputs={[{ name: "ps / ts", desc: "Saturation pressure (Pa) / temperature (K)" }]}
+              example="P_sat_water = P_sat(Water, T=373.15)   { ~101325 Pa }"
+            />
+            <FunctionRef
+              name="MolarMass / CompressibilityFactor / Prandtl"
+              desc="Molar mass (kg/kmol), Compressibility factor Z (dimensionless), and Prandtl number."
+              syntax="m = MolarMass(Fluid)\nz = CompressibilityFactor(Fluid, T=temp, P=pres)\npr = Prandtl(Fluid, T=temp, P=pres)"
+              inputs={[{ name: "Fluid", desc: "Fluid name" }]}
+              outputs={[{ name: "m / z / pr", desc: "Property metrics" }]}
+              example="M = MolarMass(CarbonDioxide)\nZ = CompressibilityFactor(Nitrogen, T=300, P=5e6)"
+            />
+            <FunctionRef
+              name="SurfaceTension / Fugacity / Enthalpy_fusion / Dipole"
+              desc="Queries surface tension (N/m), fugacity coefficient (dimensionless), enthalpy of fusion (J/kg), and dipole moment."
+              syntax="st = SurfaceTension(Fluid, T=temp)\nfc = Fugacity(Fluid, T=temp, P=pres)\nhf = Enthalpy_fusion(Fluid)\ndp = Dipole(Fluid)"
+              inputs={[{ name: "Fluid", desc: "Fluid name" }]}
+              outputs={[{ name: "st / fc / hf / dp", desc: "Special properties" }]}
+              example="sigma_st = SurfaceTension(Water, T=300)"
+            />
+            <FunctionRef
+              name="P_crit / T_crit / v_crit / T_triple"
+              desc="Critical pressure, critical temperature, critical specific volume, and triple point temperature."
+              syntax="pc = P_crit(Fluid)\ntc = T_crit(Fluid)\nvc = v_crit(Fluid)\ntt = T_triple(Fluid)"
+              inputs={[{ name: "Fluid", desc: "Fluid name" }]}
+              outputs={[{ name: "pc / tc / vc / tt", desc: "State constant parameters" }]}
+              example="P_crit_co2 = P_crit(CO2)"
+            />
+            <FunctionRef
+              name="IsIdealGas / Phase$"
+              desc="Checks if fluid behaves ideally, and queries string phase."
+              syntax="chk = IsIdealGas(Fluid)\nph$ = Phase$(Fluid, T=temp, P=pres)"
+              inputs={[
+                { name: "Fluid", desc: "Fluid name" },
+                { name: "T, P", desc: "Coordinate points for phase evaluation" }
+              ]}
+              outputs={[{ name: "chk / ph$", desc: "1 or 0 flag, or Phase description string (e.g. 'twophase', 'liquid', 'gas', 'supercritical')" }]}
+              example="is_ideal = IsIdealGas(Air)\nstate$ = Phase$(R134a, T=25 [C], P=100 [kPa])"
+            />
+          </Stack>
+        );
+      case 'solid-materials':
+        return (
+          <Stack gap="md">
+            <Title order={2} c="blue.4">Solid & Incompressible Material Properties Reference</Title>
+            <Text style={{ lineHeight: 1.6 }}>
+              frees supports querying properties of solid materials (e.g. <code>Copper</code>, <code>Iron</code>, <code>Aluminum</code>, <code>Concrete</code>, <code>Glass</code>) and incompressible liquids (e.g. <code>EngineOil</code>) using underscore-suffixed functions:
             </Text>
 
-            <Title order={3} mt="sm">Ideal Gases (Chemical Formulas)</Title>
-            <Text style={{ lineHeight: 1.6 }}>
-              Spelled chemical formulas select <strong>ideal-gas</strong> property routines whose enthalpy
-              is referenced to the <strong>enthalpy of formation at 298.15 K, 1 atm</strong> — the
-              convention that makes combustion energy balances work directly.{' '}
-              <code>Enthalpy(CO2, T=298.15)</code> returns −8941.6 kJ/kg, not 0. Full names
-              (Nitrogen, CarbonDioxide, Methane) keep the real-fluid CoolProp models above.
-            </Text>
-            <Group gap="xs">
-              <Badge color="orange" variant="filled">N2</Badge>
-              <Badge color="orange" variant="filled">O2</Badge>
-              <Badge color="orange" variant="filled">CO2</Badge>
-              <Badge color="orange" variant="filled">CO</Badge>
-              <Badge color="orange" variant="filled">H2O</Badge>
-              <Badge color="orange" variant="filled">H2</Badge>
-              <Badge color="orange" variant="filled">CH4</Badge>
-              <Badge color="orange" variant="filled">C2H6</Badge>
-              <Badge color="orange" variant="filled">C3H8</Badge>
-              <Badge color="orange" variant="filled">C4H10</Badge>
-              <Badge color="orange" variant="filled">C2H4</Badge>
-              <Badge color="orange" variant="filled">C2H2</Badge>
-              <Badge color="orange" variant="filled">SO2</Badge>
-              <Badge color="orange" variant="filled">NO</Badge>
-              <Badge color="orange" variant="filled">NO2</Badge>
-            </Group>
-            <Text size="sm" style={{ lineHeight: 1.6 }}>
-              Ideal-gas enthalpy depends on temperature only: <code>h = Enthalpy(N2, T=1000)</code>.
-              Entropy is absolute (third law) and needs the pressure:{' '}
-              <code>s = Entropy(N2, T=400, P=101325)</code>. Also available:{' '}
-              <Code>IntEnergy(gas, T=...)</Code>, <Code>Cp</Code>/<Code>Cv(gas, T=...)</Code>,{' '}
-              <Code>Volume(gas, T=..., P=...)</Code>, and the inverses{' '}
-              <Code>Temperature(gas, h=...)</Code> and <Code>Temperature(gas, s=..., P=...)</Code>.
-              Specific heats use standard cubic polynomial fits, valid through flame
-              temperatures — far beyond the real-fluid equations of state.
-            </Text>
-            <Paper withBorder p="md" bg="dark.8" radius="md" style={{ position: 'relative' }}>
-              <CopyButton code={`{ Adiabatic flame temperature with ideal-gas functions }
-{ CH4 + 2 O2 + 7.52 N2 -> CO2 + 2 H2O + 7.52 N2; per kmol of fuel }
-M_ch4 = 16.043
-M_o2 = 31.999
-M_n2 = 28.013
-M_co2 = 44.01
-M_h2o = 18.015
-T_in = 298.15 [K]
-H_react = 1 * M_ch4 * Enthalpy(CH4, T=T_in) / 1000 + 2 * M_o2 * Enthalpy(O2, T=T_in) / 1000 + 7.52 * M_n2 * Enthalpy(N2, T=T_in) / 1000
-H_prod = 1 * M_co2 * Enthalpy(CO2, T=T_flame) / 1000 + 2 * M_h2o * Enthalpy(H2O, T=T_flame) / 1000 + 7.52 * M_n2 * Enthalpy(N2, T=T_flame) / 1000
-H_react = H_prod`} />
-              <Code block style={{ background: 'transparent', maxHeight: '300px', overflowY: 'auto' }}>
-                {`{ Adiabatic flame temperature with ideal-gas functions }
-{ CH4 + 2 O2 + 7.52 N2 -> CO2 + 2 H2O + 7.52 N2; per kmol of fuel }
-M_ch4 = 16.043
-M_o2 = 31.999
-M_n2 = 28.013
-M_co2 = 44.01
-M_h2o = 18.015
-T_in = 298.15 [K]
-H_react = 1 * M_ch4 * Enthalpy(CH4, T=T_in) / 1000 + 2 * M_o2 * Enthalpy(O2, T=T_in) / 1000 + 7.52 * M_n2 * Enthalpy(N2, T=T_in) / 1000
-H_prod = 1 * M_co2 * Enthalpy(CO2, T=T_flame) / 1000 + 2 * M_h2o * Enthalpy(H2O, T=T_flame) / 1000 + 7.52 * M_n2 * Enthalpy(N2, T=T_flame) / 1000
-H_react = H_prod`}
-              </Code>
-            </Paper>
+            <Title order={3}>Material Property Functions</Title>
+            <FunctionRef
+              name="c_ / k_ / rho_ / mu_ / Pv_"
+              desc="Evaluates material specific heat (J/kg-K), thermal conductivity (W/m-K), density (kg/m³), dynamic viscosity (Pa-s), and vapor pressure (Pa)."
+              syntax="cp = c_(Material, T=temp)\ncond = k_(Material, T=temp)\ndens = rho_(Material)\nvisc = mu_(Material, T=temp)\nvap_p = Pv_(Material, T=temp)"
+              inputs={[
+                { name: "Material", desc: "Solid or incompressible material name" },
+                { name: "T", desc: "Evaluation temperature coordinate" }
+              ]}
+              outputs={[{ name: "cp/cond/dens/visc/vap_p", desc: "Material properties" }]}
+              example="k_copper = k_(Copper, T=300 [K])\ncp_iron = c_(Iron, T=400 [K])"
+            />
+            <FunctionRef
+              name="E_ / nu_ / epsilon_ / VolExpCoef / FreezingPt"
+              desc="Young's modulus (Pa), Poisson's ratio (dimensionless), Surface emissivity, Volumetric thermal expansion (1/K), and Freezing point temperature (K)."
+              syntax="mod = E_(Material)\npr = nu_(Material)\nem = epsilon_(Material)\nb = VolExpCoef(Material)\ntf = FreezingPt(Material)"
+              inputs={[{ name: "Material", desc: "Material name" }]}
+              outputs={[{ name: "mod / pr / em / b / tf", desc: "Solid state variables" }]}
+              example="mod_steel = E_(Steel)\nem_glass = epsilon_(Glass)"
+            />
+            <FunctionRef
+              name="DELTAL\L_293"
+              desc="Linear thermal expansion coefficient relative to reference 293 K."
+              syntax="exp_ratio = DELTAL\\L_293(Material, T=temp)"
+              inputs={[
+                { name: "Material", desc: "Material name" },
+                { name: "T", desc: "Evaluated temperature" }
+              ]}
+              outputs={[{ name: "exp_ratio", desc: "Expansion ratio delta L / L_293" }]}
+              example="dl_ratio = DELTAL\\L_293(Aluminum, T=500 [K])"
+            />
+            <FunctionRef
+              name="ek_LJ / sigma_LJ"
+              desc="Lennard-Jones potential energy parameter epsilon/k (K) and collision diameter sigma (m)."
+              syntax="eps_k = ek_LJ(Material)\nsig = sigma_LJ(Material)"
+              inputs={[{ name: "Material", desc: "Gas/Solid name" }]}
+              outputs={[{ name: "eps_k / sig", desc: "Lennard-Jones parameter values" }]}
+              example="ek_val = ek_LJ(Argon)"
+            />
           </Stack>
         );
       case 'humidair':
         return (
           <Stack gap="md">
-            <Title order={2} c="blue.4">10. Psychrometrics (AirH2O / Humid Air)</Title>
+            <Title order={2} c="blue.4">Psychrometrics (AirH2O / Humid Air)</Title>
             <Text style={{ lineHeight: 1.6 }}>
-              Psychrometric calculations (heating, cooling, and humidifying moist air) are a core pillar of HVAC engineering. frees provides dedicated functions for moist air by calling the specialized <code>AirH2O</code> (or <code>HumidAir</code>) database.
+              Humid air calculations are performed using the fluid name <code>AirH2O</code>. These calls require exactly **three** state variables:
             </Text>
-
-            <Title order={3}>The 3-Indicator Requirement</Title>
-            <Text>
-              Unlike pure fluids (which require 2 properties), moist air has an additional degree of freedom: the amount of water vapor. Therefore, you must specify exactly **three** indicators. Typically, one of these is the absolute pressure <Code>P</Code>.
-            </Text>
-            <Paper withBorder p="md" bg="dark.8" radius="md" style={{ position: 'relative' }}>
-              <CopyButton code={`P_atm = 101325 [Pa]\nT_db = 25 [C]\nRH = 0.60 { 60% relative humidity }\n\nh = Enthalpy(AirH2O, T=T_db, P=P_atm, R=RH)\nw = HumRat(AirH2O, T=T_db, P=P_atm, R=RH)\nT_wb = WetBulb(AirH2O, T=T_db, P=P_atm, R=RH)`} />
-              <Code block style={{ background: 'transparent' }}>
-                {`P_atm = 101325 [Pa]
-T_db = 25 [C]
-RH = 0.60 { 60% relative humidity }
-
-h = Enthalpy(AirH2O, T=T_db, P=P_atm, R=RH)
-w = HumRat(AirH2O, T=T_db, P=P_atm, R=RH)
-T_wb = WetBulb(AirH2O, T=T_db, P=P_atm, R=RH)`}
-              </Code>
+            <Paper withBorder p="sm" bg="dark.8">
+              <Code block>{`h = Enthalpy(AirH2O, T=25 [C], R=0.50, P=101325 [Pa])`}</Code>
             </Paper>
-
-            <Title order={3} mt="sm">Available Psychrometric Functions</Title>
-            <Table striped highlightOnHover withTableBorder>
-              <Table.Thead>
-                <Table.Tr>
-                  <Table.Th>Function Name</Table.Th>
-                  <Table.Th>Description</Table.Th>
-                  <Table.Th>SI Unit</Table.Th>
-                </Table.Tr>
-              </Table.Thead>
-              <Table.Tbody>
-                <Table.Tr>
-                  <Table.Td><Code>Enthalpy</Code></Table.Td>
-                  <Table.Td>Enthalpy per unit mass of **dry air**</Table.Td>
-                  <Table.Td>J/kg-dry-air</Table.Td>
-                </Table.Tr>
-                <Table.Tr>
-                  <Table.Td><Code>Entropy</Code></Table.Td>
-                  <Table.Td>Entropy per unit mass of **dry air**</Table.Td>
-                  <Table.Td>J/kg-dry-air-K</Table.Td>
-                </Table.Tr>
-                <Table.Tr>
-                  <Table.Td><Code>Temperature</Code></Table.Td>
-                  <Table.Td>Dry-bulb Temperature</Table.Td>
-                  <Table.Td>K</Table.Td>
-                </Table.Tr>
-                <Table.Tr>
-                  <Table.Td><Code>Volume</Code></Table.Td>
-                  <Table.Td>Specific volume of mixture per mass of **dry air**</Table.Td>
-                  <Table.Td>m³/kg-dry-air</Table.Td>
-                </Table.Tr>
-                <Table.Tr>
-                  <Table.Td><Code>HumRat</Code></Table.Td>
-                  <Table.Td>Humidity Ratio (mass of water / mass of dry air)</Table.Td>
-                  <Table.Td>kg-water/kg-dry-air</Table.Td>
-                </Table.Tr>
-                <Table.Tr>
-                  <Table.Td><Code>RelHum</Code></Table.Td>
-                  <Table.Td>Relative Humidity</Table.Td>
-                  <Table.Td>dimensionless (0 to 1)</Table.Td>
-                </Table.Tr>
-                <Table.Tr>
-                  <Table.Td><Code>WetBulb</Code></Table.Td>
-                  <Table.Td>Wet-bulb Temperature</Table.Td>
-                  <Table.Td>K</Table.Td>
-                </Table.Tr>
-                <Table.Tr>
-                  <Table.Td><Code>DewPoint</Code></Table.Td>
-                  <Table.Td>Dew-point Temperature</Table.Td>
-                  <Table.Td>K</Table.Td>
-                </Table.Tr>
-                <Table.Tr>
-                  <Table.Td><Code>Cp</Code> or <Code>specheat</Code></Table.Td>
-                  <Table.Td>Specific heat capacity of moist air per mass of dry air</Table.Td>
-                  <Table.Td>J/kg-dry-air-K</Table.Td>
-                </Table.Tr>
-              </Table.Tbody>
-            </Table>
-
-            <Title order={3} mt="sm">Psychrometric Input Indicators</Title>
-            <Text size="sm">
-              Define the state using these letters:
-              <br/>
-              - <Code>T</Code>: Dry-bulb Temperature
-              <br/>
-              - <Code>P</Code>: Total Pressure
-              <br/>
-              - <Code>H</Code>: Enthalpy
-              <br/>
-              - <Code>S</Code>: Entropy
-              <br/>
-              - <Code>V</Code>: Specific volume
-              <br/>
-              - <Code>W</Code>: Humidity ratio (humidity ratio)
-              <br/>
-              - <Code>R</Code> or <Code>RH</Code>: Relative humidity
-              <br/>
-              - <Code>B</Code> or <Code>Twb</Code>: Wet-bulb temperature
-              <br/>
-              - <Code>D</Code> or <Code>Tdp</Code>: Dew-point temperature
-            </Text>
+            <Title order={3} mt="sm">Indicators</Title>
+            <List spacing="xs">
+              <List.Item><code>T</code>: Dry bulb temperature</List.Item>
+              <List.Item><code>P</code>: Pressure (total)</List.Item>
+              <List.Item><code>R</code>: Relative humidity (0 to 1)</List.Item>
+              <List.Item><code>W</code>: Humidity ratio (kg water / kg dry air)</List.Item>
+              <List.Item><code>D</code>: Dew point temperature</List.Item>
+              <List.Item><code>B</code>: Wet bulb temperature</List.Item>
+            </List>
           </Stack>
         );
       case 'calculus':
         return (
           <Stack gap="md">
-            <Title order={2} c="blue.4">11. Numerical Integration (ODEs & Calculus)</Title>
+            <Title order={2} c="blue.4">Numerical Integration (ODEs & Calculus)</Title>
             <Text style={{ lineHeight: 1.6 }}>
-              frees includes equation-based calculus solvers that run numerical integration. You can compute integrals and solve systems containing first-order Ordinary Differential Equations (ODEs) alongside standard algebraic equations.
+              frees supports definite integrals and first-order Ordinary Differential Equations (ODEs) using Runge-Kutta numerical integration:
             </Text>
-
-            <Title order={3}>Syntax</Title>
-            <Text>
-              To integrate an expression, use the built-in <Code>Integral</Code> function, which must appear **alone** on one side of an equation:
-            </Text>
-            <Paper withBorder p="sm" bg="dark.8">
-              <Code block>{`Result = Integral(IntegrandExpression, IntegrationVar, LowerLimit, UpperLimit [, StepSize])`}</Code>
+            <Paper withBorder p="md" bg="dark.8">
+              <Code block>{`y = Integral(3 * x^2, x, 0, 5)   { Definite integral of 3x^2 from 0 to 5 }`}</Code>
             </Paper>
-
-            <Title order={3} mt="sm">Theoretical Foundation</Title>
-            <Text style={{ lineHeight: 1.6 }}>
-              The integration variable (e.g. <code>t</code>) is stepped from the lower limit to the upper limit. At each step, the solver treats <code>t</code> as a temporary constant and solves the remaining algebraic equations in the system. The integrand expression is then evaluated, and accumulation is computed using a **second-order predictor-corrector** (Euler predictor, trapezoidal corrector) scheme.
-            </Text>
-            <List spacing="xs" mb="sm">
-              <List.Item><strong>Adaptive Step Sizing:</strong> If the 5th argument is omitted, frees automatically varies the step size to satisfy a relative error tolerance of 1e-6.</List.Item>
-              <List.Item><strong>Fixed Step Sizing:</strong> If you supply a positive number as the 5th argument, frees forces the solver to take exactly that step size.</List.Item>
-            </List>
-
-            <Title order={3} mt="sm">Solving first-order ODEs</Title>
-            <Text>
-              An ODE dy/dt = f(t, y) with initial condition y(t0) = y0 can be modeled as:
-            </Text>
-            <Paper withBorder p="md" bg="dark.8" radius="md" style={{ position: 'relative' }}>
-              <CopyButton code={`y = y0 + Integral(dydt, t, 0, 5)\ndydt = y * cos(t)\ny0 = 1`} />
-              <Code block style={{ background: 'transparent' }}>
-                {`y = y0 + Integral(dydt, t, 0, 5)
-dydt = y * cos(t)
-y0 = 1`}
-              </Code>
-            </Paper>
-            <Text size="sm">
-              The analytical solution is y(t) = exp(sin(t)). At t = 5, the solver will converge to y = 0.3833.
-            </Text>
-          </Stack>
-        );
-      case 'complex':
-        return (
-          <Stack gap="md">
-            <Title order={2} c="blue.4">12. Complex Number Arithmetic</Title>
-            <Text style={{ lineHeight: 1.6 }}>
-              Electrical, vibration, and control engineering models frequently rely on complex number arithmetic. frees supports full complex variables when **Complex Mode** is active.
-            </Text>
-
-            <Title order={3}>Activating Complex Mode</Title>
-            <Text>
-              You can toggle Complex Mode using the action bar or settings. Once active, frees automatically:
-              <br/>
-              1. Treats every variable as having a real component (suffix <code>_r</code>) and an imaginary component (suffix <code>_i</code>).
-              <br/>
-              2. Doubles the system dimensions (a system of $N$ variables becomes a simultaneous system of $2N$ real equations).
-            </Text>
-
-            <Title order={3} mt="sm">Imaginary Constants</Title>
-            <Text>
-              Enter imaginary numbers using the notation <Code>1i</Code> or <Code>1j</Code>:
-            </Text>
-            <Paper withBorder p="sm" bg="dark.8"><Code block>{`z1 = 3 + 4i\nz2 = 5 - 2j`}</Code></Paper>
-
-            <Title order={3} mt="sm">Supported Complex Functions</Title>
-            <Table striped highlightOnHover withTableBorder>
-              <Table.Thead>
-                <Table.Tr>
-                  <Table.Th style={{ width: '150px' }}>Function</Table.Th>
-                  <Table.Th>Description</Table.Th>
-                </Table.Tr>
-              </Table.Thead>
-              <Table.Tbody>
-                <Table.Tr>
-                  <Table.Td><Code>real(z)</Code></Table.Td>
-                  <Table.Td>Extracts the real part of z</Table.Td>
-                </Table.Tr>
-                <Table.Tr>
-                  <Table.Td><Code>imag(z)</Code></Table.Td>
-                  <Table.Td>Extracts the imaginary part of z</Table.Td>
-                </Table.Tr>
-                <Table.Tr>
-                  <Table.Td><Code>abs(z)</Code></Table.Td>
-                  <Table.Td>Computes the magnitude / absolute value of complex z</Table.Td>
-                </Table.Tr>
-                <Table.Tr>
-                  <Table.Td><Code>sin(z), cos(z)</Code></Table.Td>
-                  <Table.Td>Complex sine and cosine</Table.Td>
-                </Table.Tr>
-                <Table.Tr>
-                  <Table.Td><Code>exp(z)</Code></Table.Td>
-                  <Table.Td>Complex exponential ($e^z$)</Table.Td>
-                </Table.Tr>
-                <Table.Tr>
-                  <Table.Td><Code>ln(z)</Code></Table.Td>
-                  <Table.Td>Complex natural logarithm</Table.Td>
-                </Table.Tr>
-                <Table.Tr>
-                  <Table.Td><Code>sqrt(z)</Code></Table.Td>
-                  <Table.Td>Complex square root</Table.Td>
-                </Table.Tr>
-              </Table.Tbody>
-            </Table>
-
-            <Alert color="indigo" title="Finding Phase Angles without atan2">
-              Since <code>atan2</code> is not supported directly in complex mode, you can solve for a real phase angle <code>theta</code> declaratively using the solver itself:
-              <Paper withBorder p="sm" mt="xs" bg="dark.9">
-                <Code block>{`z = 3 + 4i\nreal(z) = abs(z) * cos(theta)\nimag(z) = abs(z) * sin(theta)`}</Code>
-              </Paper>
-              The solver will solve for <code>theta</code> in radians simultaneously!
-            </Alert>
-          </Stack>
-        );
-      case 'examples':
-        return (
-          <Stack gap="md">
-            <Title order={2} c="blue.4">13. Engineering Examples & Case Studies</Title>
-            <Text>
-              These real-world examples highlight how students and engineers can use frees to model multi-domain physics and thermodynamic cycles.
-            </Text>
-
-            <Accordion variant="separated">
-              <Accordion.Item value="mech">
-                <Accordion.Control>
-                  <Text fw={600} c="cyan.4">Mechanical Engineering: Ideal Rankine Steam Cycle</Text>
-                </Accordion.Control>
-                <Accordion.Panel>
-                  <Text size="sm" mb="sm">
-                    This example analyzes an ideal Rankine steam power cycle, computing state enthalpies, turbine work, pump work, thermal efficiency, and mass flow rate.
-                  </Text>
-                  <Paper withBorder p="md" bg="dark.8" radius="md" style={{ position: 'relative' }}>
-                    <CopyButton code={`{ Ideal Rankine Steam Power Cycle }\nP_high = 8000 [kPa]  { Boiler pressure }\nP_low = 10 [kPa]     { Condenser pressure }\nT_boiler = 500 [C]   { Boiler temperature }\neta_turb = 0.85      { Isentropic turbine efficiency }\neta_pump = 0.90      { Isentropic pump efficiency }\nW_dot_net = 10000 [kW] { Target net power output }\n\n{ State 1: Turbine Inlet (Superheated Steam) }\nh[1] = Enthalpy(Water, P=P_high, T=T_boiler)\ns[1] = Entropy(Water, P=P_high, T=T_boiler)\nT[1] = T_boiler\n\n{ State 2s: Isentropic Turbine Exit }\ns_2s = s[1]\nh_2s = Enthalpy(Water, P=P_low, s=s_2s)\n\n{ State 2: Actual Turbine Exit }\nh[2] = h[1] - eta_turb * (h[1] - h_2s)\ns[2] = Entropy(Water, P=P_low, h=h[2])\nT[2] = Temperature(Water, P=P_low, h=h[2])\n\n{ State 3: Condenser Exit (Saturated Liquid) }\nh[3] = Enthalpy(Water, P=P_low, x=0)\nv[3] = Volume(Water, P=P_low, x=0)\ns[3] = Entropy(Water, P=P_low, x=0)\nT[3] = Temperature(Water, P=P_low, x=0)\n\n{ State 4s: Isentropic Pump Exit }\ns_4s = s[3]\nh_4s = Enthalpy(Water, P=P_high, s=s_4s)\n\n{ State 4: Actual Pump Exit }\nh[4] = h[3] + (h_4s - h[3]) / eta_pump\ns[4] = Entropy(Water, P=P_high, h=h[4])\nT[4] = Temperature(Water, P=P_high, h=h[4])\n\n{ Work and Heat Transfers }\nw_turb = h[1] - h[2]\nw_pump = h[4] - h[3]\nq_boiler = h[1] - h[4]\nq_cond = h[2] - h[3]\n\n{ Performance Parameters }\nw_net = w_turb - w_pump\neta_th = w_net / q_boiler * 100\n\n{ Mass flow rate needed for 10 MW net power }\nW_dot_net = m_dot * w_net`} />
-                    <Code block style={{ background: 'transparent', maxHeight: '300px', overflowY: 'auto' }}>
-                      {`{ Ideal Rankine Steam Power Cycle }
-P_high = 8000 [kPa]  { Boiler pressure }
-P_low = 10 [kPa]     { Condenser pressure }
-T_boiler = 500 [C]   { Boiler temperature }
-eta_turb = 0.85      { Isentropic turbine efficiency }
-eta_pump = 0.90      { Isentropic pump efficiency }
-W_dot_net = 10000 [kW] { Target net power output }
-
-{ State 1: Turbine Inlet (Superheated Steam) }
-h[1] = Enthalpy(Water, P=P_high, T=T_boiler)
-s[1] = Entropy(Water, P=P_high, T=T_boiler)
-T[1] = T_boiler
-
-{ State 2s: Isentropic Turbine Exit }
-s_2s = s[1]
-h_2s = Enthalpy(Water, P=P_low, s=s_2s)
-
-{ State 2: Actual Turbine Exit }
-h[2] = h[1] - eta_turb * (h[1] - h_2s)
-s[2] = Entropy(Water, P=P_low, h=h[2])
-T[2] = Temperature(Water, P=P_low, h=h[2])
-
-{ State 3: Condenser Exit (Saturated Liquid) }
-h[3] = Enthalpy(Water, P=P_low, x=0)
-v[3] = Volume(Water, P=P_low, x=0)
-s[3] = Entropy(Water, P=P_low, x=0)
-T[3] = Temperature(Water, P=P_low, x=0)
-
-{ State 4s: Isentropic Pump Exit }
-s_4s = s[3]
-h_4s = Enthalpy(Water, P=P_high, s=s_4s)
-
-{ State 4: Actual Pump Exit }
-h[4] = h[3] + (h_4s - h[3]) / eta_pump
-s[4] = Entropy(Water, P=P_high, h=h[4])
-T[4] = Temperature(Water, P=P_high, h=h[4])
-
-{ Work and Heat Transfers }
-w_turb = h[1] - h[2]
-w_pump = h[4] - h[3]
-q_boiler = h[1] - h[4]
-q_cond = h[2] - h[3]
-
-{ Performance Parameters }
-w_net = w_turb - w_pump
-eta_th = w_net / q_boiler * 100
-
-{ Mass flow rate needed for 10 MW net power }
-W_dot_net = m_dot * w_net`}
-                    </Code>
-                  </Paper>
-                </Accordion.Panel>
-              </Accordion.Item>
-
-              <Accordion.Item value="elec">
-                <Accordion.Control>
-                  <Text fw={600} c="cyan.4">Electrical Engineering: AC Load Power Factor Correction</Text>
-                </Accordion.Control>
-                <Accordion.Panel>
-                  <Text size="sm" mb="sm">
-                    This example analyzes a parallel inductive load (like an electric motor) and determines the capacitor value needed to correct the power factor from 0.70 to a target of 0.98. Enable **Complex Mode** for this example.
-                  </Text>
-                  <Paper withBorder p="md" bg="dark.8" radius="md" style={{ position: 'relative' }}>
-                    <CopyButton code={`{ AC Power Factor Correction - Enable Complex Mode! }\nV_rms = 230 + 0i      { Grid Voltage }\nf = 50 [Hz]           { Grid Frequency }\nomega = 2 * pi * f    { Angular Frequency }\n\n{ Inductive Load (e.g. Motor) }\nR_load = 15 [ohm]\nL_load = 0.05 [H]\nZ_load = R_load + 1i * omega * L_load\n\n{ Uncorrected Circuit Analysis }\nI_load = V_rms / Z_load\nS_uncorrected = V_rms * (real(I_load) - 1i * imag(I_load)) { V * conj(I) }\nP_active = real(S_uncorrected)\nQ_reactive_old = imag(S_uncorrected)\nPF_old = P_active / abs(S_uncorrected)\n\n{ Target Power Factor (0.98) }\nPF_new = 0.98\nS_corrected_mag = P_active / PF_new\nQ_reactive_new = sqrt(S_corrected_mag^2 - P_active^2)\n\n{ Reactive power needed from Capacitor }\nQ_c = Q_reactive_old - Q_reactive_new\n\n{ Capacitor impedance and capacitance }\nQ_c = abs(V_rms)^2 / abs(Z_c)\nZ_c = -1i / (omega * C_corr)`} />
-                    <Code block style={{ background: 'transparent', maxHeight: '300px', overflowY: 'auto' }}>
-                      {`{ AC Power Factor Correction - Enable Complex Mode! }
-V_rms = 230 + 0i      { Grid Voltage }
-f = 50 [Hz]           { Grid Frequency }
-omega = 2 * pi * f    { Angular Frequency }
-
-{ Inductive Load (e.g. Motor) }
-R_load = 15 [ohm]
-L_load = 0.05 [H]
-Z_load = R_load + 1i * omega * L_load
-
-{ Uncorrected Circuit Analysis }
-I_load = V_rms / Z_load
-S_uncorrected = V_rms * (real(I_load) - 1i * imag(I_load)) { V * conj(I) }
-P_active = real(S_uncorrected)
-Q_reactive_old = imag(S_uncorrected)
-PF_old = P_active / abs(S_uncorrected)
-
-{ Target Power Factor (0.98) }
-PF_new = 0.98
-S_corrected_mag = P_active / PF_new
-Q_reactive_new = sqrt(S_corrected_mag^2 - P_active^2)
-
-{ Reactive power needed from Capacitor }
-Q_c = Q_reactive_old - Q_reactive_new
-
-{ Capacitor impedance and capacitance }
-Q_c = abs(V_rms)^2 / abs(Z_c)
-Z_c = -1i / (omega * C_corr)`}
-                    </Code>
-                  </Paper>
-                </Accordion.Panel>
-              </Accordion.Item>
-
-              <Accordion.Item value="circuit-matrix">
-                <Accordion.Control>
-                  <Text fw={600} c="cyan.4">Electrical Engineering: DC Mesh Analysis with Matrix Algebra</Text>
-                </Accordion.Control>
-                <Accordion.Panel>
-                  <Text size="sm" mb="sm">
-                    This example applies Kirchhoff's Voltage Law to a three-mesh resistive network with two voltage sources. The mesh equations are written directly as a resistance matrix and solved in one step with <Code>SolveLinear</Code>.
-                  </Text>
-                  <Paper withBorder p="md" bg="dark.8" radius="md" style={{ position: 'relative' }}>
-                    <CopyButton code={`{ DC Circuit Mesh Analysis via Matrix Algebra }\nV_s1 = 10 [V]   { Source driving mesh 1 }\nV_s2 = 8 [V]    { Source driving mesh 3 }\n\nR_1 = 2 [ohm];  R_2 = 4 [ohm];  R_3 = 2 [ohm]\nR_4 = 6 [ohm];  R_5 = 4 [ohm]\n\n{ Resistance matrix from Kirchhoff's Voltage Law }\n{ Diagonal: total resistance around each mesh. Off-diagonal: -(shared resistance) }\nR[1,1] = R_1 + R_2;  R[1,2] = -R_2;             R[1,3] = 0\nR[2,1] = -R_2;       R[2,2] = R_2 + R_3 + R_4;  R[2,3] = -R_4\nR[3,1] = 0;          R[3,2] = -R_4;             R[3,3] = R_4 + R_5\n\n{ Source vector: net EMF driving each mesh }\nV[1..3] = [V_s1, 0, V_s2]\n\n{ Solve R * I = V for the mesh currents }\nI[1..3] = SolveLinear(R[1..3,1..3], V[1..3])\n\n{ Branch currents through the shared resistors }\nI_R2 = I[1] - I[2]\nI_R4 = I[2] - I[3]\n\n{ Energy check: delivered power equals dissipated power }\nP_delivered = V_s1 * I[1] + V_s2 * I[3]`} />
-                    <Code block style={{ background: 'transparent', maxHeight: '300px', overflowY: 'auto' }}>
-                      {`{ DC Circuit Mesh Analysis via Matrix Algebra }
-V_s1 = 10 [V]   { Source driving mesh 1 }
-V_s2 = 8 [V]    { Source driving mesh 3 }
-
-R_1 = 2 [ohm];  R_2 = 4 [ohm];  R_3 = 2 [ohm]
-R_4 = 6 [ohm];  R_5 = 4 [ohm]
-
-{ Resistance matrix from Kirchhoff's Voltage Law }
-{ Diagonal: total resistance around each mesh. Off-diagonal: -(shared resistance) }
-R[1,1] = R_1 + R_2;  R[1,2] = -R_2;             R[1,3] = 0
-R[2,1] = -R_2;       R[2,2] = R_2 + R_3 + R_4;  R[2,3] = -R_4
-R[3,1] = 0;          R[3,2] = -R_4;             R[3,3] = R_4 + R_5
-
-{ Source vector: net EMF driving each mesh }
-V[1..3] = [V_s1, 0, V_s2]
-
-{ Solve R * I = V for the mesh currents }
-I[1..3] = SolveLinear(R[1..3,1..3], V[1..3])
-
-{ Branch currents through the shared resistors }
-I_R2 = I[1] - I[2]
-I_R4 = I[2] - I[3]
-
-{ Energy check: delivered power equals dissipated power }
-P_delivered = V_s1 * I[1] + V_s2 * I[3]`}
-                    </Code>
-                  </Paper>
-                  <Text size="xs" mt="xs" c="dimmed">
-                    The solver expands SolveLinear into the three KVL equations and finds the mesh currents I[1] = 3 A, I[2] = 2 A, I[3] = 2 A, so the shared resistor R_4 carries no current and the sources deliver 46 W. The same pattern scales to any n×n nodal or mesh formulation.
-                  </Text>
-                </Accordion.Panel>
-              </Accordion.Item>
-
-              <Accordion.Item value="vibration-eigen">
-                <Accordion.Control>
-                  <Text fw={600} c="cyan.4">Mechanical Vibrations: Natural Frequencies & Mode Shapes (Eigenvalues)</Text>
-                </Accordion.Control>
-                <Accordion.Panel>
-                  <Text size="sm" mb="sm">
-                    Two equal carts coupled by three springs form a classic 2-DOF free-vibration problem. The natural frequencies are the square roots of the eigenvalues of the dynamic matrix $D = K/m$, and the eigenvector columns are the mode shapes.
-                  </Text>
-                  <Paper withBorder p="md" bg="dark.8" radius="md" style={{ position: 'relative' }}>
-                    <CopyButton code={`{ Two-DOF Vibration: Natural Frequencies & Mode Shapes }\nm = 10 [kg]       { Mass of each cart }\nk = 1000 [N/m]    { Stiffness of each of the three springs }\n\n{ Stiffness matrix for two equal masses coupled by three springs }\nK[1,1] = 2*k;  K[1,2] = -k\nK[2,1] = -k;   K[2,2] = 2*k\n\n{ Dynamic matrix D = K/m (equal masses) }\nD[1,1] = K[1,1]/m; D[1,2] = K[1,2]/m\nD[2,1] = K[2,1]/m; D[2,2] = K[2,2]/m\n\n{ Eigenvalues are omega^2; columns of Phi are the mode shapes }\nCALL Eigen(D[1..2,1..2] : lambda[1..2], Phi[1..2,1..2])\n\nomega[1] = sqrt(lambda[1]);  omega[2] = sqrt(lambda[2])\nf[1] = omega[1]/(2*pi);      f[2] = omega[2]/(2*pi)`} />
-                    <Code block style={{ background: 'transparent', maxHeight: '300px', overflowY: 'auto' }}>
-                      {`{ Two-DOF Vibration: Natural Frequencies & Mode Shapes }
-m = 10 [kg]       { Mass of each cart }
-k = 1000 [N/m]    { Stiffness of each of the three springs }
-
-{ Stiffness matrix for two equal masses coupled by three springs }
-K[1,1] = 2*k;  K[1,2] = -k
-K[2,1] = -k;   K[2,2] = 2*k
-
-{ Dynamic matrix D = K/m (equal masses) }
-D[1,1] = K[1,1]/m; D[1,2] = K[1,2]/m
-D[2,1] = K[2,1]/m; D[2,2] = K[2,2]/m
-
-{ Eigenvalues are omega^2; columns of Phi are the mode shapes }
-CALL Eigen(D[1..2,1..2] : lambda[1..2], Phi[1..2,1..2])
-
-omega[1] = sqrt(lambda[1]);  omega[2] = sqrt(lambda[2])
-f[1] = omega[1]/(2*pi);      f[2] = omega[2]/(2*pi)`}
-                    </Code>
-                  </Paper>
-                  <Text size="xs" mt="xs" c="dimmed">
-                    Eigenvalues come back ascending: lambda = 100 and 300, so omega = 10 and 17.32 rad/s (f = 1.59 and 2.76 Hz). The first mode shape (0.707, 0.707) has both carts moving in phase; the second (0.707, −0.707) is the anti-phase mode where the middle spring works.
-                  </Text>
-                </Accordion.Panel>
-              </Accordion.Item>
-
-              <Accordion.Item value="stress-eigen">
-                <Accordion.Control>
-                  <Text fw={600} c="cyan.4">Solid Mechanics: Principal Stresses from the Stress Tensor (Eigenvalues)</Text>
-                </Accordion.Control>
-                <Accordion.Panel>
-                  <Text size="sm" mb="sm">
-                    The principal stresses of a plane stress state are the eigenvalues of the Cauchy stress tensor, and the principal directions are its eigenvectors — no Mohr's circle construction needed.
-                  </Text>
-                  <Paper withBorder p="md" bg="dark.8" radius="md" style={{ position: 'relative' }}>
-                    <CopyButton code={`{ Principal Stresses of a 2D Stress State }\nsigma_x = 60 [MPa]\nsigma_y = 20 [MPa]\ntau_xy = 15 [MPa]\n\n{ Cauchy stress tensor }\nS[1,1] = sigma_x;  S[1,2] = tau_xy\nS[2,1] = tau_xy;   S[2,2] = sigma_y\n\n{ Principal stresses = eigenvalues; principal directions = eigenvectors }\nCALL Eigen(S[1..2,1..2] : sigma_p[1..2], N[1..2,1..2])\n\n{ Maximum in-plane shear stress and major principal angle }\ntau_max = (sigma_p[2] - sigma_p[1]) / 2\ntheta_p = arctan(N[2,2]/N[1,2]) * 180/pi`} />
-                    <Code block style={{ background: 'transparent', maxHeight: '300px', overflowY: 'auto' }}>
-                      {`{ Principal Stresses of a 2D Stress State }
-sigma_x = 60 [MPa]
-sigma_y = 20 [MPa]
-tau_xy = 15 [MPa]
-
-{ Cauchy stress tensor }
-S[1,1] = sigma_x;  S[1,2] = tau_xy
-S[2,1] = tau_xy;   S[2,2] = sigma_y
-
-{ Principal stresses = eigenvalues; principal directions = eigenvectors }
-CALL Eigen(S[1..2,1..2] : sigma_p[1..2], N[1..2,1..2])
-
-{ Maximum in-plane shear stress and major principal angle }
-tau_max = (sigma_p[2] - sigma_p[1]) / 2
-theta_p = arctan(N[2,2]/N[1,2]) * 180/pi`}
-                    </Code>
-                  </Paper>
-                  <Text size="xs" mt="xs" c="dimmed">
-                    With sigma_x = 60, sigma_y = 20, tau_xy = 15 MPa the principal stresses are 15 and 65 MPa (ascending), tau_max = 25 MPa, and the major principal axis sits at theta_p = 18.43° — matching the Mohr's circle result tan(2θ) = 2τ/(σx−σy). Stresses solve in SI (Pa) per the frees SI-always rule.
-                  </Text>
-                </Accordion.Panel>
-              </Accordion.Item>
-
-              <Accordion.Item value="chem">
-                <Accordion.Control>
-                  <Text fw={600} c="cyan.4">Chemical Engineering: Adiabatic Flame Temperature</Text>
-                </Accordion.Control>
-                <Accordion.Panel>
-                  <Text size="sm" mb="sm">
-                    Finds the adiabatic flame temperature of methane ($CH_4$) burned with 100% theoretical air, balancing stoichiometric enthalpies and variable specific heat capacities.
-                  </Text>
-                  <Paper withBorder p="md" bg="dark.8" radius="md" style={{ position: 'relative' }}>
-                    <CopyButton code={`{ Adiabatic Flame Temp - Methane Combustion }\nT_reactants = 298.15 [K]  { Inlet temp }\n\n{ Enthalpies of formation in kJ/kmol }\nhf_ch4 = -74850\nhf_o2 = 0\nhf_n2 = 0\nhf_co2 = -393520\nhf_h2o = -241820\n\n{ Enthalpy of reactants at T_reactants (sensible enthalpy is 0) }\nH_reactants = 1 * hf_ch4 + 2 * hf_o2 + 7.52 * hf_n2\n\n{ Enthalpy of products at Adiabatic Flame Temp (T_flame) }\n{ Specific heats modeled as polynomial function of T }\n{ Cp = A + B*T + C*T^2 + D*T^3 }\n\n{ Sensible enthalpy integrations from reference 298.15K }\ndH_co2 = Integral(Cp_co2, T, 298.15, T_flame)\ndH_h2o = Integral(Cp_h2o, T, 298.15, T_flame)\ndH_n2 = Integral(Cp_n2, T, 298.15, T_flame)\n\n{ Sensible heats in kJ/kmol-K }\nCp_co2 = 22.26 + 5.981e-2 * T - 3.501e-5 * T^2 + 7.469e-9 * T^3\nCp_h2o = 32.24 + 0.1923e-2 * T + 1.055e-5 * T^2 - 3.595e-9 * T^3\nCp_n2 = 28.90 - 0.1571e-2 * T + 0.8081e-5 * T^2 - 2.873e-9 * T^3\n\nH_products = 1 * (hf_co2 + dH_co2) + 2 * (hf_h2o + dH_h2o) + 7.52 * (hf_n2 + dH_n2)\n\n{ Energy Balance: H_reactants = H_products }\nH_reactants = H_products`} />
-                    <Code block style={{ background: 'transparent', maxHeight: '300px', overflowY: 'auto' }}>
-                      {`{ Adiabatic Flame Temp - Methane Combustion }
-T_reactants = 298.15 [K]  { Inlet temp }
-
-{ Enthalpies of formation in kJ/kmol }
-hf_ch4 = -74850
-hf_o2 = 0
-hf_n2 = 0
-hf_co2 = -393520
-hf_h2o = -241820
-
-{ Enthalpy of reactants at T_reactants (sensible enthalpy is 0) }
-H_reactants = 1 * hf_ch4 + 2 * hf_o2 + 7.52 * hf_n2
-
-{ Enthalpy of products at Adiabatic Flame Temp (T_flame) }
-{ Specific heats modeled as polynomial function of T }
-{ Cp = A + B*T + C*T^2 + D*T^3 }
-
-{ Sensible enthalpy integrations from reference 298.15K }
-dH_co2 = Integral(Cp_co2, T, 298.15, T_flame)
-dH_h2o = Integral(Cp_h2o, T, 298.15, T_flame)
-dH_n2 = Integral(Cp_n2, T, 298.15, T_flame)
-
-{ Sensible heats in kJ/kmol-K }
-Cp_co2 = 22.26 + 5.981e-2 * T - 3.501e-5 * T^2 + 7.469e-9 * T^3
-Cp_h2o = 32.24 + 0.1923e-2 * T + 1.055e-5 * T^2 - 3.595e-9 * T^3
-Cp_n2 = 28.90 - 0.1571e-2 * T + 0.8081e-5 * T^2 - 2.873e-9 * T^3
-
-H_products = 1 * (hf_co2 + dH_co2) + 2 * (hf_h2o + dH_h2o) + 7.52 * (hf_n2 + dH_n2)
-
-{ Energy Balance: H_reactants = H_products }
-H_reactants = H_products`}
-                    </Code>
-                  </Paper>
-                  <Text size="xs" mt="xs" c="dimmed">
-                    The upper limit T_flame is an unknown of the system: frees inlines the c_p polynomials into the integrals and solves the energy balance directly (about 2345 K, matching the ideal-gas table data) with no manual guesses needed.
-                  </Text>
-                </Accordion.Panel>
-              </Accordion.Item>
-
-              {CYCLE_EXAMPLES.map((ex) => (
-                <Accordion.Item value={ex.value} key={ex.value}>
-                  <Accordion.Control>
-                    <Text fw={600} c="cyan.4">{ex.title}</Text>
-                  </Accordion.Control>
-                  <Accordion.Panel>
-                    <Text size="sm" mb="sm">{ex.description}</Text>
-                    <Paper withBorder p="md" bg="dark.8" radius="md" style={{ position: 'relative' }}>
-                      <CopyButton code={ex.code} />
-                      <Code block style={{ background: 'transparent', maxHeight: '300px', overflowY: 'auto' }}>
-                        {ex.code}
-                      </Code>
-                    </Paper>
-                    <Text size="xs" mt="xs" c="dimmed">{ex.note}</Text>
-                  </Accordion.Panel>
-                </Accordion.Item>
-              ))}
-            </Accordion>
-          </Stack>
-        );
-      case 'api':
-        return (
-          <Stack gap="md">
-            <Title order={2} c="blue.4">14. Solver Reference & Troubleshooting API</Title>
-            <Text style={{ lineHeight: 1.6 }}>
-              This section is a technical reference for debugging failed systems, syntax limitations, and error codes in frees.
-            </Text>
-
-            <Accordion variant="separated">
-              <Accordion.Item value="dof">
-                <Accordion.Control><strong>Degrees of Freedom (DOF) Mismatch</strong></Accordion.Control>
-                <Accordion.Panel>
-                  <Text size="sm" style={{ lineHeight: 1.6 }}>
-                    This error occurs when the number of independent equations does not match the number of unique variables.
-                    <br/><br/>
-                    - <strong>Underspecified:</strong> There are fewer equations than variables (e.g. 2 equations, 3 variables). The system has infinite solutions. To fix: specify boundary values for one of the variables or write another equation.
-                    <br/>
-                    - <strong>Overspecified:</strong> There are more equations than variables. The system is over-determined. To fix: remove redundant equations or define the variables that were assumed constants.
-                  </Text>
-                </Accordion.Panel>
-              </Accordion.Item>
-
-              <Accordion.Item value="conv">
-                <Accordion.Control><strong>Newton Solver Divergence / "Did Not Converge"</strong></Accordion.Control>
-                <Accordion.Panel>
-                  <Text size="sm" style={{ lineHeight: 1.6 }}>
-                    Newton's method is extremely fast but can fail if guess values are poor, or if the equations contain mathematical singularities.
-                    <br/><br/>
-                    - <strong>Singularities / Domain Errors:</strong> If a variable becomes negative during intermediate steps, functions like <code>sqrt()</code> or <code>ln()</code> will throw domain errors. Set **lower bounds** (e.g. 0.0001) to keep values safe.
-                    <br/>
-                    - <strong>Divide by Zero:</strong> Avoid expressions like <code>y = 1 / x</code> if <code>x</code> starts with a guess value of 0. Change the initial guess to a non-zero value.
-                  </Text>
-                </Accordion.Panel>
-              </Accordion.Item>
-
-              <Accordion.Item value="warnings">
-                <Accordion.Control><strong>Understanding Warnings vs Errors</strong></Accordion.Control>
-                <Accordion.Panel>
-                  <Text size="sm" style={{ lineHeight: 1.6 }}>
-                    - <strong>Error:</strong> Prevents compilation or solving (e.g., syntax errors, DOF mismatch, division by zero). The solver halts.
-                    <br/>
-                    - <strong>Warning:</strong> The solver successfully completes and provides math solutions, but issues a warning (e.g., unit dimension inconsistencies). Always check warnings to verify that your equations represent correct physical relationships.
-                  </Text>
-                </Accordion.Panel>
-              </Accordion.Item>
-            </Accordion>
           </Stack>
         );
       case 'optimization':
         return (
           <Stack gap="md">
-            <Title order={2} c="blue.4">15. Multi-Variable Optimization & Advanced Plotting</Title>
-            
-            <Title order={3} mt="sm">Multi-Variable Optimization</Title>
-            <Text size="md" style={{ lineHeight: 1.6 }}>
-              frees supports optimizing a target objective variable by adjusting one or more independent (decision) variables within specified bounds.
+            <Title order={2} c="blue.4">Optimization & Sweeps</Title>
+            <Text style={{ lineHeight: 1.6 }}>
+              Use the **Optimization** tool to minimize or maximize objective functions w.r.t decision variables. Build a **Parametric Table** to perform multi-variable sweeps, which runs the system for consecutive rows and populates a result grid.
             </Text>
-            <Text size="md" style={{ lineHeight: 1.6 }}>
-              You can choose from three optimization algorithms depending on your problem:
+          </Stack>
+        );
+      case 'api':
+        return (
+          <Stack gap="md">
+            <Title order={2} c="blue.4">Solver Reference & API</Title>
+            <Text style={{ lineHeight: 1.6 }}>
+              The frees engine parses equations into a Symbolic Abstract Syntax Tree (AST). It groups variables using Tarjan's strongly connected components (SCC) algorithm to construct minimal blocks of coupled equations. These blocks are then solved in sequence using a multivariate Newton-Raphson iterative solver with step-halving.
             </Text>
-            <List spacing="xs" size="sm" mt="xs" style={{ paddingLeft: '20px' }}>
-              <List.Item>
-                <strong>Brent's Method:</strong> Best for one-dimensional optimization. Requires a single independent variable and finite bounds. Extremely fast and guarantees convergence for unimodal functions.
-              </List.Item>
-              <List.Item>
-                <strong>Nelder-Mead Simplex:</strong> A derivative-free optimization method suitable for multi-variable problems. It works by constructing a simplex (a generalized triangle) and moving it towards the minimum/maximum. Highly robust for non-smooth or noisy objectives.
-              </List.Item>
-              <List.Item>
-                <strong>BOBYQA (Bound Optimization BY Quadratic Approximation):</strong> An advanced algorithm for multi-variable bound-constrained optimization. It iteratively builds a quadratic model of the objective function. Extremely efficient and requires fewer function evaluations than Simplex for smooth functions.
-              </List.Item>
-            </List>
-
-            <Alert color="blue" title="Optimization Setup" mt="xs">
-              To run an optimization, click the <strong>Min/Max</strong> (target) icon in the left rail. Choose your objective variable, select one or more independent variables, give each its bounds, pick the method (Brent for one variable, Nelder-Mead Simplex or BOBYQA for several), optionally add constraints, and click <strong>Minimize</strong>/<strong>Maximize</strong>.
-            </Alert>
-
-            <Title order={3} mt="md">Constrained Optimization (Barrier & Augmented Lagrangian)</Title>
-            <Text size="md" style={{ lineHeight: 1.6 }}>
-              Beyond simple variable bounds, the Min/Max dialog accepts <strong>constraints</strong> — one per
-              line — that the optimum must satisfy. Each constraint is an expression compared against a numeric
-              constant:
-            </Text>
-            <List spacing="xs" size="sm" mt="xs" style={{ paddingLeft: '20px' }}>
-              <List.Item>
-                <strong>Inequalities</strong> (<Code>x + y &lt;= 10</Code>, <Code>m_dot &gt;= 0.5</Code>) are
-                enforced with a <strong>log-barrier method</strong>: a term −μ·ln(−g(x)) repels the search from
-                the constraint boundary, and μ is tightened geometrically over successive outer iterations.
-                Infeasible trial points receive a smooth exterior quadratic penalty so the optimizer can recover
-                from an infeasible start.
-              </List.Item>
-              <List.Item>
-                <strong>Equalities</strong> (<Code>x * y = 4</Code>) are enforced with an
-                <strong> augmented Lagrangian</strong>: the objective is augmented with λ·h(x) + (ρ/2)·h(x)²,
-                and the multiplier λ is updated after each outer iteration until the violation falls below
-                tolerance.
-              </List.Item>
-            </List>
-            <Text size="sm" style={{ lineHeight: 1.6 }}>
-              Example: maximizing the rectangle area <Code>A = w*h</Code> with <Code>w + h = 10</Code> in the
-              equations and the constraint <Code>w &lt;= 3</Code> yields the boundary optimum w = 3, A = 21
-              instead of the unconstrained w = 5, A = 25.
-            </Text>
-
-            <Title order={3} mt="md">Curve Fitting (Levenberg-Marquardt Least Squares)</Title>
-            <Text size="md" style={{ lineHeight: 1.6 }}>
-              The <strong>Curve Fit</strong> tool (function icon in the left rail) fits the parameters of a model
-              equation to experimental (x, y) data by minimizing the sum of squared residuals with the
-              Levenberg-Marquardt algorithm.
-            </Text>
-            <List spacing="xs" size="sm" mt="xs" style={{ paddingLeft: '20px' }}>
-              <List.Item>Enter a model such as <Code>y = a * exp(-b * x) + c</Code> with the dependent variable alone on one side.</List.Item>
-              <List.Item>Name the independent variable and the parameters to fit (e.g. <Code>a, b, c</Code>).</List.Item>
-              <List.Item>Paste the data points one pair per line (<Code>x y</Code>, separated by spaces, commas, or tabs).</List.Item>
-              <List.Item>Optionally give initial guesses (defaults to 1 for every parameter).</List.Item>
-            </List>
-            <Text size="sm" style={{ lineHeight: 1.6 }}>
-              The result reports the fitted parameter values together with the goodness-of-fit measures
-              R² and RMSE and the iteration count. Any expression the equation engine understands — including
-              special functions like <Code>erf</Code> or <Code>gamma</Code> — can appear in the model.
-            </Text>
-
-            <Title order={3} mt="md">Analytical Jacobians</Title>
-            <Text size="md" style={{ lineHeight: 1.6 }}>
-              The Newton solver differentiates equation blocks <strong>symbolically</strong> whenever every
-              equation in the block has a closed-form derivative — including the special functions
-              (<Code>erf</Code>, <Code>erfc</Code>, <Code>erfinv</Code>, <Code>gamma</Code>,
-              <Code>loggamma</Code>, <Code>beta</Code>, <Code>besselj</Code>, <Code>besseli</Code>) via their
-              analytical derivatives (e.g. Γ'(x) = Γ(x)·ψ(x), J'ₙ = (Jₙ₋₁ − Jₙ₊₁)/2). Blocks containing
-              constructs without symbolic derivatives (property calls, integrals, procedures) automatically
-              fall back to finite-difference Jacobians.
-            </Text>
-
-            <Title order={3} mt="md">Advanced Plot Window Extensions</Title>
-            <Text size="md" style={{ lineHeight: 1.6 }}>
-              The Plot Window features rich data visualization capabilities to analyze parametric sweeps and cycle paths. You can configure and display the following chart styles:
-            </Text>
-            <Table striped highlightOnHover withTableBorder>
-              <Table.Thead>
-                <Table.Tr>
-                  <Table.Th style={{ width: '180px' }}>Chart Type</Table.Th>
-                  <Table.Th>Description</Table.Th>
-                  <Table.Th>Configuration Requirements</Table.Th>
-                </Table.Tr>
-              </Table.Thead>
-              <Table.Tbody>
-                <Table.Tr>
-                  <Table.Td><strong>Line Chart</strong></Table.Td>
-                  <Table.Td>Plots continuous lines joining the data points of parametric runs. Variables with different magnitudes can be assigned to a secondary right Y axis (dual-Y).</Table.Td>
-                  <Table.Td>Requires an X-axis variable and one or more Y-axis variables; right-axis variables are optional.</Table.Td>
-                </Table.Tr>
-                <Table.Tr>
-                  <Table.Td><strong>Bar Chart</strong></Table.Td>
-                  <Table.Td>Displays discrete rectangular bars grouped or stacked for comparison.</Table.Td>
-                  <Table.Td>Requires an X-axis variable and one or more Y-axis variables.</Table.Td>
-                </Table.Tr>
-                <Table.Tr>
-                  <Table.Td><strong>Pie Chart</strong></Table.Td>
-                  <Table.Td>Displays proportion slices representing the values of a variable.</Table.Td>
-                  <Table.Td>Requires an X-axis variable (categories) and a single Y-axis variable (values).</Table.Td>
-                </Table.Tr>
-                <Table.Tr>
-                  <Table.Td><strong>Histogram</strong></Table.Td>
-                  <Table.Td>Shows the frequency distribution of a variable's values.</Table.Td>
-                  <Table.Td>Requires only selecting the variable in the Y-axis variables picker (X-axis is ignored).</Table.Td>
-                </Table.Tr>
-                <Table.Tr>
-                  <Table.Td><strong>Scatter (Bubble) Chart</strong></Table.Td>
-                  <Table.Td>Plots individual points where markers can have a variable size based on a third dimension.</Table.Td>
-                  <Table.Td>Requires an X-axis variable, Y-axis variables, and an optional bubble size variable.</Table.Td>
-                </Table.Tr>
-                <Table.Tr>
-                  <Table.Td><strong>3D Surface Chart</strong></Table.Td>
-                  <Table.Td>Renders a 3D mesh surface using three continuous variables.</Table.Td>
-                  <Table.Td>Requires X-axis, Y-axis, and Z-axis variables.</Table.Td>
-                </Table.Tr>
-              </Table.Tbody>
-            </Table>
-
-            <Title order={3} mt="md">Detailed Examples & Walkthroughs</Title>
-
-            <Card withBorder padding="md" radius="md" bg="dark.8" mt="xs">
-              <Text fw={600} size="sm" c="blue.4">Example 1: Multi-Variable Cylinder Surface Area Minimization</Text>
-              <Text size="xs" mt="xs" style={{ lineHeight: 1.6 }}>
-                Suppose we want to design a cylindrical canister that holds exactly 1000 cm³ of fluid. We want to minimize its surface area (to reduce material cost) by adjusting the radius <code>r</code> and height <code>h</code>.
-              </Text>
-              <Text size="xs" mt="xs" fw={500}>Equations:</Text>
-              <Paper withBorder p="xs" bg="dark.9" radius="md" mt="xs" style={{ position: 'relative' }}>
-                <CopyButton code={`{ Cylinder Minimization }
-V = pi * r^2 * h
-A = 2 * pi * r^2 + 2 * pi * r * h`} />
-                <Code block style={{ background: 'transparent' }}>
-                  {`{ Cylinder Minimization }
-V = pi * r^2 * h
-A = 2 * pi * r^2 + 2 * pi * r * h`}
-                </Code>
-              </Paper>
-              <Text size="xs" mt="xs" style={{ lineHeight: 1.6 }}>
-                Note that <code>pi</code> is a built-in constant — writing <code>pi = 3.14159265</code> would
-                add an extra equation and overspecify the system. The volume requirement is entered as an
-                equality <em>constraint</em> rather than an equation, so that both <code>r</code> and
-                <code>h</code> stay free for the optimizer.
-              </Text>
-              <Text size="xs" mt="xs" style={{ lineHeight: 1.6 }}>
-                <strong>How to Optimize:</strong>
-                <br/>
-                1. Paste the equations into the editor and click <strong>Check (F4)</strong>.
-                <br/>
-                2. Click the <strong>Min/Max</strong> (target) icon in the left rail.
-                <br/>
-                3. Set the Objective Variable to <code>A</code>, and set Goal to <strong>Minimize</strong>.
-                <br/>
-                4. Add Independent Variables <code>r</code> and <code>h</code> and give each the bounds 1 to 20.
-                <br/>
-                5. Select <strong>Nelder-Mead Simplex</strong> or <strong>BOBYQA</strong> as the method (Brent is only available with a single variable).
-                <br/>
-                6. Enter <code>V = 1000</code> in the Constraints box.
-                <br/>
-                7. Click <strong>Minimize</strong>. The solver finds the optimum dimensions <code>r ≈ 5.42 cm</code> and <code>h ≈ 10.84 cm</code> (h = 2r), yielding the minimal surface area <code>A ≈ 553.58 cm²</code>.
-              </Text>
-              <Text size="xs" mt="xs" style={{ lineHeight: 1.6 }}>
-                <strong>1-D alternative:</strong> keep <code>V = 1000</code> as an equation in the editor
-                instead; then the system has a single degree of freedom, and varying only <code>r</code> with
-                <strong> Brent's method</strong> reaches the same optimum.
-              </Text>
-            </Card>
-
-            <Card withBorder padding="md" radius="md" bg="dark.8" mt="sm">
-              <Text fw={600} size="sm" c="blue.4">Example 2: Visualizing 3D Thermodynamic Surfaces</Text>
-              <Text size="xs" mt="xs" style={{ lineHeight: 1.6 }}>
-                We can map the relationship between Pressure (P), Specific Volume (v), and Temperature (T) of a substance over a range of states and plot a 3D Surface diagram.
-              </Text>
-              <Text size="xs" mt="xs" fw={500}>Equations:</Text>
-              <Paper withBorder p="xs" bg="dark.9" radius="md" mt="xs" style={{ position: 'relative' }}>
-                <CopyButton code={`{ Ideal Gas law grid }
-P * v = R * T
-R = 0.287 { Air gas constant in kJ/kg-K }`} />
-                <Code block style={{ background: 'transparent' }}>
-                  {`{ Ideal Gas law grid }
-P * v = R * T
-R = 0.287 { Air gas constant in kJ/kg-K }`}
-                </Code>
-              </Paper>
-              <Text size="xs" mt="xs" style={{ lineHeight: 1.6 }}>
-                <strong>How to Plot a 3D Surface:</strong>
-                <br/>
-                1. Set up a Parametric Table by clicking the <strong>Parametric Table</strong> tab.
-                <br/>
-                2. Add <code>T</code> and <code>P</code> as table variables, and fill the columns with a grid of values (e.g., T from 300 to 600 K, P from 100 to 500 kPa).
-                <br/>
-                3. Click <strong>Solve Table</strong>. The solver will calculate the corresponding volumes (<code>v</code>) for every run.
-                <br/>
-                4. Go to the <strong>Plots</strong> tab, click <strong>Add Plot</strong>, and select <strong>X-Y (parametric table)</strong>.
-                <br/>
-                5. Set the Chart Type to <strong>3D Surface</strong>.
-                <br/>
-                6. Configure the variables: set X-axis to <code>T</code>, Y-axis (Value) to <code>P</code>, and Z-axis to <code>v</code>.
-                <br/>
-                7. Click <strong>Apply</strong>. A fully interactive 3D surface plot will be generated, allowing you to rotate, pan, and hover over individual state values.
-              </Text>
-            </Card>
-
-            <Card withBorder padding="md" radius="md" bg="dark.8" mt="sm">
-              <Text fw={600} size="sm" c="blue.4">Example 3: Container Loading (Bin Packing Continuous Optimization)</Text>
-              <Text size="xs" mt="xs" style={{ lineHeight: 1.6 }}>
-                Suppose we need to load boxes of three different sizes (Small, Medium, Large) into a standard 20 ft shipping container. 
-                We want to maximize the total dollar value of the cargo we carry. The container has a volume limit of 33 m³ and a payload weight limit of 20,000 kg.
-              </Text>
-              <Text size="xs" mt="xs" fw={500}>Parameters:</Text>
-              <List spacing="xs" size="xs" mt="xs" style={{ paddingLeft: '20px' }}>
-                <List.Item><strong>Box A (Small):</strong> Volume = 0.04 m³, Weight = 10 kg, Value = $100</List.Item>
-                <List.Item><strong>Box B (Medium):</strong> Volume = 0.15 m³, Weight = 25 kg, Value = $300</List.Item>
-                <List.Item><strong>Box C (Large):</strong> Volume = 0.50 m³, Weight = 60 kg, Value = $800</List.Item>
-              </List>
-              <Text size="xs" mt="xs" fw={500}>Equations:</Text>
-              <Paper withBorder p="xs" bg="dark.9" radius="md" mt="xs" style={{ position: 'relative' }}>
-                <CopyButton code={`{ Container Loading Optimization }
-{ Box quantities }
-{ xA: Small, xB: Medium, xC: Large }
-
-V_total = 0.04 * xA + 0.15 * xB + 0.50 * xC
-W_total = 10 * xA + 25 * xB + 60 * xC
-
-value = 100 * xA + 300 * xB + 800 * xC
-
-{ Penalty variables if container volume (33m³) or weight (20t) limits are exceeded }
-V_penalty = (V_total > 33) * 10000 * (V_total - 33)^2
-W_penalty = (W_total > 20000) * 100 * (W_total - 20000)^2
-
-{ Objective function to maximize }
-U = value - V_penalty - W_penalty`} />
-                <Code block style={{ background: 'transparent' }}>
-                  {`{ Container Loading Optimization }
-{ Box quantities }
-{ xA: Small, xB: Medium, xC: Large }
-
-V_total = 0.04 * xA + 0.15 * xB + 0.50 * xC
-W_total = 10 * xA + 25 * xB + 60 * xC
-
-value = 100 * xA + 300 * xB + 800 * xC
-
-{ Penalty variables if container volume (33m³) or weight (20t) limits are exceeded }
-V_penalty = (V_total > 33) * 10000 * (V_total - 33)^2
-W_penalty = (W_total > 20000) * 100 * (W_total - 20000)^2
-
-{ Objective function to maximize }
-U = value - V_penalty - W_penalty`}
-                </Code>
-              </Paper>
-              <Text size="xs" mt="xs" style={{ lineHeight: 1.6 }}>
-                <strong>How to Optimize:</strong>
-                <br/>
-                1. Paste these equations into the editor and click <strong>Check (F4)</strong>.
-                <br/>
-                2. Click the <strong>Min/Max</strong> (target) icon in the left rail.
-                <br/>
-                3. Choose the objective variable <code>U</code>, set Goal to <strong>Maximize</strong>.
-                <br/>
-                4. Add Independent Variables:
-                <br/>
-                &nbsp;&nbsp;&nbsp;&nbsp;- <code>xA</code> (bounds 0 to 825)
-                <br/>
-                &nbsp;&nbsp;&nbsp;&nbsp;- <code>xB</code> (bounds 0 to 220)
-                <br/>
-                &nbsp;&nbsp;&nbsp;&nbsp;- <code>xC</code> (bounds 0 to 66)
-                <br/>
-                5. Select <strong>Nelder-Mead Simplex</strong> or <strong>BOBYQA</strong> as the optimizer method.
-                <br/>
-                6. Click <strong>Optimize</strong>. The continuous solver will automatically allocate quantities to maximize value while strictly respecting both physical volume and weight constraints.
-              </Text>
-            </Card>
           </Stack>
         );
       case 'diagram':
         return (
           <Stack gap="md">
-            <Title order={2} c="blue.4">16. Diagram Window</Title>
+            <Title order={2} c="blue.4">Diagram Canvas & Plotting</Title>
             <Text style={{ lineHeight: 1.6 }}>
-              The <strong>Diagram</strong> tab (schematic icon in the left rail) is a vector editor for building
-              interactive schematics — cycle diagrams, free-body sketches, control panels — whose values come
-              live from the solver. It has two modes, switched at the top-left:
+              The **Diagram Window** provides an interactive CAD canvas where you can build structural or thermodynamic schematics, wire them to variables, and trigger animations or recordings. Plot variables directly using Mantine's Plotly charts.
             </Text>
-            <List spacing="xs" size="sm" style={{ paddingLeft: '20px' }}>
-              <List.Item>
-                <strong>Development</strong> — draw and arrange the diagram.
-              </List.Item>
-              <List.Item>
-                <strong>Run</strong> — editing is locked; form controls become live and labels show solved values.
-              </List.Item>
-            </List>
+          </Stack>
+        );
+      case 'examples':
+        return (
+          <Stack gap="md">
+            <Title order={2} c="blue.4">Engineering Examples Library</Title>
+            <Text>Select an example from the library below. Copy the code directly into the workspace using the copy button:</Text>
+            <MantineAccordion variant="separated">
+              <MantineAccordion.Item value="rankine">
+                <MantineAccordion.Control>
+                  <Text fw={600} c="blue.3">Ideal Rankine Steam Power Cycle</Text>
+                </MantineAccordion.Control>
+                <MantineAccordion.Panel>
+                  <Text size="sm" mb="xs">Analyses an ideal Rankine cycle, computing state enthalpies, work, and efficiency.</Text>
+                  <Paper withBorder p="xs" bg="dark.9" style={{ position: 'relative' }}>
+                    <CopyButton code={`{ Ideal Rankine Steam Power Cycle }\\nP_high = 8000 [kPa]\\nP_low = 10 [kPa]\\nT_boiler = 500 [C]\\neta_turb = 0.85\\neta_pump = 0.90\\nW_dot_net = 10000 [kW]\\nh1 = Enthalpy(Water, P=P_high, T=T_boiler)\\ns1 = Entropy(Water, P=P_high, T=T_boiler)\\ns_2s = s1\\nh_2s = Enthalpy(Water, P=P_low, s=s_2s)\\nh2 = h1 - eta_turb * (h1 - h_2s)\\nh3 = Enthalpy(Water, P=P_low, x=0)\\nv3 = Volume(Water, P=P_low, x=0)\\nh_4s = Enthalpy(Water, P=P_high, s=Entropy(Water, P=P_low, x=0))\\nh4 = h3 + (h_4s - h3) / eta_pump\\nw_turb = h1 - h2\\nw_pump = h4 - h3\\nq_boiler = h1 - h4\\nw_net = w_turb - w_pump\\neta_th = w_net / q_boiler * 100\\nW_dot_net = m_dot * w_net`} />
+                    <Code block style={{ background: 'transparent', maxHeight: '250px', overflowY: 'auto' }}>
+                      {`{ Ideal Rankine Steam Power Cycle }
+P_high = 8000 [kPa]
+P_low = 10 [kPa]
+T_boiler = 500 [C]
+eta_turb = 0.85
+eta_pump = 0.90
+W_dot_net = 10000 [kW]
 
-            <Title order={3} mt="sm">Drawing</Title>
-            <Text style={{ lineHeight: 1.6 }}>
-              Pick a tool — line, arrow, rectangle, circle/ellipse, or rich label — and drag on the canvas. The
-              <strong> Component Library</strong> menu adds pre-built engineering symbols (turbine, pump,
-              compressor, valve, heat exchanger, vessel, condenser/evaporator, spring-damper). A configurable
-              grid with snap-to-grid keeps things aligned; use the <strong>Pan</strong> tool (or a middle-mouse
-              drag) to pan, scroll to zoom, and the zoom-to-fit button to frame everything. Selected elements
-              show resize handles (line endpoints are individually draggable); arrow keys nudge by one grid step
-              (Shift = 1&nbsp;px), and the properties panel sets colors, stroke width, rotation, opacity, and
-              per-shape options. Diagrams are saved automatically in the browser.
-            </Text>
-            <Title order={4} mt="xs">Selecting & editing</Title>
-            <Text style={{ lineHeight: 1.6 }}>
-              With the <strong>Select</strong> tool, click an element to select it, drag a <strong>marquee</strong>
-              {' '}over empty canvas to select everything it touches, or <strong>Shift/Ctrl-click</strong> to add
-              and remove elements from the selection. A multi-selection moves together and resizes proportionally
-              from its group handles. Standard shortcuts apply: <strong>Ctrl+Z</strong> / <strong>Ctrl+Y</strong>
-              {' '}(or Ctrl+Shift+Z) undo and redo every change; <strong>Ctrl+C / X / V</strong> copy, cut, and
-              paste; <strong>Ctrl+D</strong> duplicates; <strong>Ctrl+A</strong> selects all; <strong>Del</strong>
-              {' '}removes the selection. Undo and redo are also on the toolbar.
-            </Text>
-            <Text style={{ lineHeight: 1.6 }}>
-              While dragging, elements <strong>snap</strong> to other elements' edges and centers with pink guide
-              lines (in addition to the grid). Hold <strong>Shift</strong> while resizing to lock the aspect
-              ratio. A selected element shows a <strong>rotate handle</strong> above it — drag to rotate, holding
-              Shift to snap to 15° steps. With two or more elements selected, the properties panel offers
-              <strong> align</strong> (left/right/top/bottom/centers) and, for three or more,
-              <strong> distribute</strong> (even horizontal/vertical spacing).
-            </Text>
+h1 = Enthalpy(Water, P=P_high, T=T_boiler)
+s1 = Entropy(Water, P=P_high, T=T_boiler)
+s_2s = s1
+h_2s = Enthalpy(Water, P=P_low, s=s_2s)
+h2 = h1 - eta_turb * (h1 - h_2s)
+h3 = Enthalpy(Water, P=P_low, x=0)
+v3 = Volume(Water, P=P_low, x=0)
+h_4s = Enthalpy(Water, P=P_high, s=Entropy(Water, P=P_low, x=0))
+h4 = h3 + (h_4s - h3) / eta_pump
 
-            <Title order={3} mt="md">Variable Binding & Form Controls</Title>
-            <Text style={{ lineHeight: 1.6 }}>
-              The <strong>Form Controls</strong> menu places widgets that bind to solver variables. Each widget
-              has a <strong>bound variable</strong> set in its properties (a trailing <code>$</code> binds a
-              string variable):
-            </Text>
-            <Table striped highlightOnHover withTableBorder>
-              <Table.Thead>
-                <Table.Tr>
-                  <Table.Th style={{ width: '140px' }}>Control</Table.Th>
-                  <Table.Th>Effect on the solve</Table.Th>
-                </Table.Tr>
-              </Table.Thead>
-              <Table.Tbody>
-                <Table.Tr>
-                  <Table.Td><strong>Input</strong></Table.Td>
-                  <Table.Td>Fixes the variable to the typed value (adds <code>var = value</code>).</Table.Td>
-                </Table.Tr>
-                <Table.Tr>
-                  <Table.Td><strong>Slider</strong></Table.Td>
-                  <Table.Td>Fixes the variable to the slider position (min/max/step configurable).</Table.Td>
-                </Table.Tr>
-                <Table.Tr>
-                  <Table.Td><strong>Dropdown</strong></Table.Td>
-                  <Table.Td>Fixes the variable to the chosen option — numeric, or a string for a <code>name$</code> variable (e.g. a fluid).</Table.Td>
-                </Table.Tr>
-                <Table.Tr>
-                  <Table.Td><strong>Checkbox</strong></Table.Td>
-                  <Table.Td>Fixes the variable to 1 (checked) or 0 (unchecked).</Table.Td>
-                </Table.Tr>
-                <Table.Tr>
-                  <Table.Td><strong>Output</strong></Table.Td>
-                  <Table.Td>Read-only — displays the solved value and units of its variable.</Table.Td>
-                </Table.Tr>
-              </Table.Tbody>
-            </Table>
-            <Text style={{ lineHeight: 1.6 }}>
-              The input-type controls are appended to your equations as fixed values, so a control should supply
-              a degree of freedom the equations leave open. For example, with{' '}
-              <code>Q = m * cp * (T2 - T1)</code> and <code>m</code>, <code>cp</code>, <code>T1</code> given,
-              <code> T2</code> is free — bind a slider to <code>T2</code> and the system becomes solvable, with
-              <code> Q</code> updating as you drag. Binding a control to an already-determined variable makes the
-              system overspecified (reported by Check), exactly as if you had typed the extra equation.
-            </Text>
-            <Alert color="blue" title="Workflow" mt="xs">
-              Build the diagram in Development mode and set each control's bound variable. Switch to{' '}
-              <strong>Run</strong> mode, then use the top bar's <strong>Check</strong> and <strong>Solve</strong>{' '}
-              buttons as usual: adjust inputs/sliders/dropdowns and press Solve to see Outputs and{' '}
-              <code>{'{varname}'}</code> labels update. Changing a control's value does not require re-Checking;
-              adding, removing, or rebinding a control does.
-            </Alert>
-            <Text style={{ lineHeight: 1.6 }}>
-              <strong>Rich labels</strong> may embed <code>{'{varname}'}</code> placeholders anywhere in their
-              text; in Run mode each is replaced by that variable's solved value and unit — handy for annotating
-              state points directly on a schematic.
-            </Text>
+w_turb = h1 - h2
+w_pump = h4 - h3
+q_boiler = h1 - h4
+w_net = w_turb - w_pump
+eta_th = w_net / q_boiler * 100
+W_dot_net = m_dot * w_net`}
+                    </Code>
+                  </Paper>
+                </MantineAccordion.Panel>
+              </MantineAccordion.Item>
 
-            <Title order={3} mt="md">Animations & Live Attributes (Run mode)</Title>
-            <Text style={{ lineHeight: 1.6 }}>
-              Every shape's properties panel has a <strong>Run-mode bindings</strong> section. Enter a formula
-              of solved variables for any attribute — <strong>Δx</strong>, <strong>Δy</strong>,{' '}
-              <strong>Width</strong>, <strong>Height</strong>, <strong>Rotation</strong>, or{' '}
-              <strong>Opacity</strong> — and it is recomputed each time you Solve. Δx/Δy offset the authored
-              position, so a piston bound with Δy = <code>{'stroke*sin(theta)'}</code> slides as{' '}
-              <code>theta</code> changes across parametric runs.
-            </Text>
-            <Text style={{ lineHeight: 1.6 }}>
-              Formulas support <code>+ - * / ^</code>, parentheses, the constant <code>pi</code>, and the
-              functions <code>sin cos tan asin acos atan sqrt abs exp ln log10 min max pow mod</code>. A formula
-              that references an unsolved variable simply leaves the authored value in place.
-            </Text>
-            <Text style={{ lineHeight: 1.6 }}>
-              Lines and arrows offer a <strong>Flow animation</strong> toggle: the line becomes a moving dashed
-              pipe whose speed is a formula (e.g. a mass-flow or velocity variable) and whose sign sets the
-              direction. Combined with bound geometry, this drives schematic flow visualizations.
-            </Text>
-            <Text style={{ lineHeight: 1.6 }}>
-              In Run mode, hovering any bound element shows a <strong>tooltip</strong> with the live values of
-              every variable it references — a quick way to read the thermodynamic state at a node.
-            </Text>
-
-            <Title order={3} mt="md">Playback Over Parametric Table Runs</Title>
-            <Text style={{ lineHeight: 1.6 }}>
-              Solve a <strong>Parametric Table</strong> and a <strong>playback bar</strong> appears at the top of
-              the Diagram in Run mode. Play, pause, step, or scrub through the table's solved runs, and the whole
-              diagram animates — bound positions, rotations, sizes, flow speeds, output badges, and{' '}
-              <code>{'{varname}'}</code> labels all update to each run's values. Toggle looping, set the speed
-              (0.5× / 1× / 2×), or press the <strong>broadcast</strong> button to drop back to the single live
-              solve. This turns a parametric study into an animation — e.g. a piston cycling through crank
-              angles, or a refrigeration cycle sweeping condenser temperatures.
-            </Text>
-
-            <Title order={3} mt="md">Embedded Charts & Plotly Dashboard Widgets</Title>
-            <Text style={{ lineHeight: 1.6 }}>
-              The <strong>Embedded Chart</strong> tool drops a live line chart onto the canvas. Set its X and Y
-              variables in the properties panel and it plots those columns across the parametric table runs;
-              during playback a marker tracks the current run. The chart is a normal diagram element — move,
-              resize, and place it alongside the schematic so the plot sits next to the equipment it describes.
-            </Text>
-            <Text style={{ lineHeight: 1.6 }}>
-              For richer plots, a chart element can instead <strong>embed an existing Plot</strong> by id — any
-              X-Y, property, or psychrometric diagram you built in the Plots window is rendered inside the
-              schematic with the full Plotly engine (zoom, hover, legends and all). This turns the Diagram into a
-              <strong> live dashboard</strong>: arrange Outputs, gauges, and full interactive charts on one canvas
-              and they all refresh on each Solve or table-playback step.
-            </Text>
-
-            <Title order={3} mt="md">Gauges & Indicator Widgets</Title>
-            <Text style={{ lineHeight: 1.6 }}>
-              The <strong>Widget</strong> menu adds analogue indicators bound to a solved variable — a{' '}
-              <strong>dial</strong>, horizontal/vertical <strong>bar</strong>, <strong>tank</strong>, or{' '}
-              <strong>thermometer</strong>. Each takes a min/max range (entered as formulas of solved variables)
-              plus optional <strong>low/high warning</strong> and <strong>low/high danger</strong> thresholds, so
-              the gauge turns amber or red as a value leaves its safe band. Give it a unit string and label and it
-              reads like a real instrument panel in Run mode.
-            </Text>
-
-            <Title order={3} mt="md">Conditional Formatting & Value-Driven Fill</Title>
-            <Text style={{ lineHeight: 1.6 }}>
-              Any shape can carry <strong>conditional style rules</strong>: a boolean formula of solved variables
-              (e.g. <code>{'T > T_max'}</code>) that, when true, overrides the element's stroke, fill, or opacity —
-              or <strong>hides</strong> it entirely. Stack several rules to flag operating regimes (safe / warning
-              / trip) directly on the schematic. Separately, a <strong>value-driven fill</strong> interpolates a
-              shape's fill between two colors as a bound variable sweeps from a min to a max formula — a built-in
-              heat-map for temperatures, pressures, or stresses.
-            </Text>
-
-            <Title order={3} mt="md">Active Controls (write to value, guess, or bounds)</Title>
-            <Text style={{ lineHeight: 1.6 }}>
-              Beyond the basic Input/Slider/Dropdown/Checkbox, the Form Controls menu adds a{' '}
-              <strong>Stepper</strong>, a <strong>Radio group</strong>, and a <strong>Calculate Button</strong>{' '}
-              that runs Check or Solve straight from the canvas. Every input-type control also has a{' '}
-              <strong>binding target</strong>: instead of fixing the variable with an equation, it can write the
-              widget's value to that variable's <strong>initial guess</strong> or its <strong>lower/upper
-              bound</strong> — so a slider can steer the solver's starting point or feasibility window rather than
-              pinning the answer.
-            </Text>
-
-            <Title order={3} mt="md">Connectors, Anchors & Hotspots</Title>
-            <Text style={{ lineHeight: 1.6 }}>
-              Library components expose named <strong>anchor points</strong> (a turbine's inlet/outlet, a vessel's
-              ports, etc.). The <strong>Connector</strong> tool links two anchors with a straight, orthogonal, or
-              curved line that stays attached as you move either component — and carries the same flow-animation
-              and arrow options as a plain line. A <strong>Hotspot</strong> is an invisible clickable region that,
-              in Run mode, jumps to another tab, runs an equation query, opens a plot, or switches to another
-              diagram — handy for building navigable multi-screen models.
-            </Text>
-
-            <Title order={3} mt="md">Path-Following Motion & the Time Clock</Title>
-            <Text style={{ lineHeight: 1.6 }}>
-              In addition to the per-attribute bindings above, an element can be set to <strong>follow a path</strong>:
-              its center tracks a point along a chosen line at a progress of 0–1 given by a formula, optionally
-              orienting itself to the path tangent. Animation formulas may reference the built-in <strong>time
-              clock</strong> <code>t</code>, so motion can <strong>tween</strong> smoothly over real time
-              (a piston reciprocating, a marker traversing a cycle) independent of parametric runs.
-            </Text>
-
-            <Title order={3} mt="md">Templates, Multiple Diagrams, Export & Recording</Title>
-            <Text style={{ lineHeight: 1.6 }}>
-              Start from a built-in <strong>template</strong> — Vapor-Compression Refrigeration, Rankine Steam
-              Power Cycle, Brayton Gas Turbine Cycle, a Simple Piping Network, or a Spring-Mass free-body diagram —
-              and a fully wired schematic drops onto the canvas. A workspace can hold <strong>several named
-              diagrams</strong>, switched from the diagram selector. Finished diagrams <strong>export</strong> to
-              SVG, PNG, PDF, or EPS, and a Run-mode animation (live solve or table playback) can be{' '}
-              <strong>recorded</strong> to a WebM video. The whole workspace — equations, variable drafts, tables,
-              plots, and every diagram — saves to a single <strong>frees project file</strong> for sharing or
-              archiving.
-            </Text>
+              {CYCLE_EXAMPLES.map((ex) => (
+                <MantineAccordion.Item value={ex.value} key={ex.value}>
+                  <MantineAccordion.Control>
+                    <Text fw={600} c="cyan.3">{ex.title}</Text>
+                  </MantineAccordion.Control>
+                  <MantineAccordion.Panel>
+                    <Text size="sm" mb="xs">{ex.description}</Text>
+                    {ex.note && (
+                      <Alert color="gray" py="xs" mb="sm">
+                        {ex.note}
+                      </Alert>
+                    )}
+                    <Paper withBorder p="xs" bg="dark.9" style={{ position: 'relative' }}>
+                      <CopyButton code={ex.code} />
+                      <Code block style={{ background: 'transparent', maxHeight: '250px', overflowY: 'auto' }}>
+                        {ex.code}
+                      </Code>
+                    </Paper>
+                  </MantineAccordion.Panel>
+                </MantineAccordion.Item>
+              ))}
+            </MantineAccordion>
           </Stack>
         );
       default:
@@ -3131,7 +2481,7 @@ U = value - V_penalty - W_penalty`}
     <AppShell
       header={{ height: 60 }}
       navbar={{
-        width: 300,
+        width: 320,
         breakpoint: 'sm',
         collapsed: { mobile: !opened },
       }}
@@ -3161,27 +2511,54 @@ U = value - V_penalty - W_penalty`}
       </AppShell.Header>
 
       <AppShell.Navbar p="md" bg="dark.9" style={{ borderRight: '1px solid var(--mantine-color-dark-4)' }}>
-        <AppShell.Section grow component={ScrollArea}>
-          <Text fw={700} size="xs" c="dimmed" mb="sm" style={{ letterSpacing: '1px' }}>
-            DOCUMENTATION SECTIONS
-          </Text>
-          {SECTIONS.map((section) => (
-            <NavLink
-              key={section.id}
-              label={section.label}
-              active={active === section.id}
-              onClick={() => {
-                setActive(section.id);
-                if (opened) toggle();
-              }}
-              variant="light"
-              color="blue"
-              styles={{
-                label: { fontWeight: active === section.id ? 600 : 400 },
-                root: { borderRadius: '6px', marginBottom: '2px' }
-              }}
-            />
-          ))}
+        <TextInput
+          placeholder="Search documentation..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.currentTarget.value)}
+          leftSection={<IconSearch size={16} />}
+          rightSection={
+            searchQuery ? (
+              <CloseButton onClick={() => setSearchQuery('')} size="sm" />
+            ) : null
+          }
+          mb="md"
+        />
+
+        <AppShell.Section grow component={ScrollArea} offsetScrollbars>
+          <Stack gap="md">
+            {filteredCategories.map((category) => (
+              <div key={category.title}>
+                <Group gap="xs" px="xs" mb="xs">
+                  {category.icon}
+                  <Text size="xs" fw={700} c="dimmed" style={{ letterSpacing: '0.5px', textTransform: 'uppercase' }}>
+                    {category.title}
+                  </Text>
+                </Group>
+                {category.items.map((item) => (
+                  <NavLink
+                    key={item.id}
+                    label={item.label}
+                    active={active === item.id}
+                    onClick={() => {
+                      setActive(item.id);
+                      if (opened) toggle();
+                    }}
+                    variant="filled"
+                    color="blue"
+                    styles={{
+                      label: { fontSize: '13px', fontWeight: active === item.id ? 600 : 400 },
+                      root: { borderRadius: '6px', marginBottom: '2px', paddingLeft: '12px' }
+                    }}
+                  />
+                ))}
+              </div>
+            ))}
+            {filteredCategories.length === 0 && (
+              <Text size="sm" c="dimmed" ta="center" mt="md">
+                No matching topics found.
+              </Text>
+            )}
+          </Stack>
         </AppShell.Section>
       </AppShell.Navbar>
 
