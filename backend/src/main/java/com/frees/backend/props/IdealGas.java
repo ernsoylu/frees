@@ -102,7 +102,7 @@ public final class IdealGas {
     }
 
     /** Inverts a monotone molar function of T by safeguarded Newton. */
-    private static double temperatureFrom(Species gas, double target,
+    private static double temperatureFrom(double target,
                                           java.util.function.DoubleUnaryOperator f,
                                           java.util.function.DoubleUnaryOperator slope) {
         double t = 1000.0;
@@ -151,14 +151,14 @@ public final class IdealGas {
             case "temperature" -> {
                 if (indicators.length == 1 && "h".equals(indicators[0])) {
                     double target = values.get(0) * gas.molarMass() / 1000.0;
-                    return temperatureFrom(gas, target,
+                    return temperatureFrom(target,
                             t -> hMolar(gas, t), t -> cpMolar(gas, t));
                 }
                 if (indicators.length == 2 && "s".equals(indicators[0])
                         && "p".equals(indicators[1])) {
                     double target = values.get(0) * gas.molarMass() / 1000.0;
                     double p = values.get(1);
-                    return temperatureFrom(gas, target,
+                    return temperatureFrom(target,
                             t -> sMolar(gas, t, p), t -> cpMolar(gas, t) / t);
                 }
                 throw new IllegalStateException("Temperature(" + parts[2].toUpperCase()

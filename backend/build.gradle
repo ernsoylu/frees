@@ -66,7 +66,7 @@ jacocoTestReport {
 // and the frontend, Dockerfiles and CI workflows are swept into the same scan.
 sonar {
     properties {
-        property 'sonar.projectKey', 'ernsoylu_frees'
+        property 'sonar.projectKey', 'ernsoylu_frEES'
         property 'sonar.organization', 'ernsoylu'
         property 'sonar.host.url', 'https://sonarcloud.io'
         property 'sonar.projectBaseDir', "${projectDir}/.."
