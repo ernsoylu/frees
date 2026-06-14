@@ -98,6 +98,8 @@ public class EquationSystemSolver {
         EquationParser.ParseResult parsed =
                 withExtraDefs(parser.parseResult(source), extraDefs);
         List<Equation> equations = IntegralSolver.hoistNested(parsed.equations());
+        ExtractedUncertainties ext = extractUncertaintyEquations(equations);
+        equations = ext.activeEquations();
         try {
             requireComplexModeForImaginaryLiterals(equations, complexMode);
             List<IntegralSolver.IntegralEquation> integrals =
@@ -207,10 +209,12 @@ public class EquationSystemSolver {
                 withExtraDefs(parser.parseResult(source), extraDefs);
         requireComplexModeForImaginaryLiterals(parsed.equations(), settings.complexMode());
         List<Equation> equations = IntegralSolver.hoistNested(parsed.equations());
+        ExtractedUncertainties ext = extractUncertaintyEquations(equations);
+        equations = ext.activeEquations();
         List<IntegralSolver.IntegralEquation> integrals =
                 findIntegrals(equations, parsed.defs(), settings.complexMode());
         if (!integrals.isEmpty()) {
-            return solveWithIntegrals(parsed, equations, integrals, settings, specs,
+            return solveWithIntegrals(parsed, equations, ext.uncertaintyExprs(), integrals, settings, specs,
                     startNanos, deadlineNanos);
         }
 
@@ -220,14 +224,43 @@ public class EquationSystemSolver {
 
         InnerSolve solved = solveEquationList(equations, settings, specs,
                 parsed.defs(), deadlineNanos, null);
-        Map<String, Double> uncertainties = propagateUncertainty(equations, solved.values(), specs, parsed.defs());
+        Map<String, VariableSpec> mutableSpecs = new HashMap<>(specs);
+        for (Map.Entry<String, Expr> entry : ext.uncertaintyExprs().entrySet()) {
+            String varName = entry.getKey();
+            try {
+                double val = Evaluator.eval(entry.getValue(), solved.values(), parsed.defs());
+                VariableSpec old = mutableSpecs.get(varName);
+                mutableSpecs.put(varName, new VariableSpec(
+                        varName,
+                        old != null ? old.guess() : 1.0,
+                        old != null ? old.lower() : Double.NEGATIVE_INFINITY,
+                        old != null ? old.upper() : Double.POSITIVE_INFINITY,
+                        val
+                ));
+            } catch (Exception ignored) {}
+        }
+        Map<String, Double> uncertainties = propagateUncertainty(equations, solved.values(), mutableSpecs, parsed.defs());
         if (mentionsUncertaintyOf(equations)) {
             for (Map.Entry<String, Double> entry : uncertainties.entrySet()) {
                 solved.values().put("uncertaintyof$" + entry.getKey().toLowerCase(), entry.getValue());
             }
-            solved = solveEquationList(equations, settings, specs,
+            solved = solveEquationList(equations, settings, mutableSpecs,
                     parsed.defs(), deadlineNanos, solved.values());
-            uncertainties = propagateUncertainty(equations, solved.values(), specs, parsed.defs());
+            for (Map.Entry<String, Expr> entry : ext.uncertaintyExprs().entrySet()) {
+                String varName = entry.getKey();
+                try {
+                    double val = Evaluator.eval(entry.getValue(), solved.values(), parsed.defs());
+                    VariableSpec old = mutableSpecs.get(varName);
+                    mutableSpecs.put(varName, new VariableSpec(
+                            varName,
+                            old != null ? old.guess() : 1.0,
+                            old != null ? old.lower() : Double.NEGATIVE_INFINITY,
+                            old != null ? old.upper() : Double.POSITIVE_INFINITY,
+                            val
+                    ));
+                } catch (Exception ignored) {}
+            }
+            uncertainties = propagateUncertainty(equations, solved.values(), mutableSpecs, parsed.defs());
             for (Map.Entry<String, Double> entry : uncertainties.entrySet()) {
                 solved.values().put("uncertaintyof$" + entry.getKey().toLowerCase(), entry.getValue());
             }
@@ -519,6 +552,7 @@ public class EquationSystemSolver {
      */
     private Result solveWithIntegrals(EquationParser.ParseResult parsed,
                                       List<Equation> equations,
+                                      Map<String, Expr> uncertaintyExprs,
                                       List<IntegralSolver.IntegralEquation> integrals,
                                       SolverSettings settings,
                                       Map<String, VariableSpec> specs,
@@ -559,14 +593,43 @@ public class EquationSystemSolver {
         }
         InnerSolve solved = solveEquationList(finalEquations, settings, specs,
                 parsed.defs(), deadlineNanos, null);
-        Map<String, Double> uncertainties = propagateUncertainty(finalEquations, solved.values(), specs, parsed.defs());
+        Map<String, VariableSpec> mutableSpecs = new HashMap<>(specs);
+        for (Map.Entry<String, Expr> entry : uncertaintyExprs.entrySet()) {
+            String varName = entry.getKey();
+            try {
+                double val = Evaluator.eval(entry.getValue(), solved.values(), parsed.defs());
+                VariableSpec old = mutableSpecs.get(varName);
+                mutableSpecs.put(varName, new VariableSpec(
+                        varName,
+                        old != null ? old.guess() : 1.0,
+                        old != null ? old.lower() : Double.NEGATIVE_INFINITY,
+                        old != null ? old.upper() : Double.POSITIVE_INFINITY,
+                        val
+                ));
+            } catch (Exception ignored) {}
+        }
+        Map<String, Double> uncertainties = propagateUncertainty(finalEquations, solved.values(), mutableSpecs, parsed.defs());
         if (mentionsUncertaintyOf(finalEquations)) {
             for (Map.Entry<String, Double> entry : uncertainties.entrySet()) {
                 solved.values().put("uncertaintyof$" + entry.getKey().toLowerCase(), entry.getValue());
             }
-            solved = solveEquationList(finalEquations, settings, specs,
+            solved = solveEquationList(finalEquations, settings, mutableSpecs,
                     parsed.defs(), deadlineNanos, solved.values());
-            uncertainties = propagateUncertainty(finalEquations, solved.values(), specs, parsed.defs());
+            for (Map.Entry<String, Expr> entry : uncertaintyExprs.entrySet()) {
+                String varName = entry.getKey();
+                try {
+                    double val = Evaluator.eval(entry.getValue(), solved.values(), parsed.defs());
+                    VariableSpec old = mutableSpecs.get(varName);
+                    mutableSpecs.put(varName, new VariableSpec(
+                            varName,
+                            old != null ? old.guess() : 1.0,
+                            old != null ? old.lower() : Double.NEGATIVE_INFINITY,
+                            old != null ? old.upper() : Double.POSITIVE_INFINITY,
+                            val
+                    ));
+                } catch (Exception ignored) {}
+            }
+            uncertainties = propagateUncertainty(finalEquations, solved.values(), mutableSpecs, parsed.defs());
             for (Map.Entry<String, Double> entry : uncertainties.entrySet()) {
                 solved.values().put("uncertaintyof$" + entry.getKey().toLowerCase(), entry.getValue());
             }
@@ -732,6 +795,8 @@ public class EquationSystemSolver {
         EquationParser.ParseResult parsed =
                 withExtraDefs(parser.parseResult(source), extraDefs);
         List<Equation> equations = parsed.equations();
+        ExtractedUncertainties ext = extractUncertaintyEquations(equations);
+        equations = ext.activeEquations();
         requireComplexModeForImaginaryLiterals(equations, settings.complexMode());
         if (settings.complexMode()) {
             equations = com.frees.backend.parser.ComplexExpansion.expand(equations, parsed.displayNames());
@@ -1187,5 +1252,34 @@ public class EquationSystemSolver {
             }
             case Expr.Not(Expr operand) -> { return mentionsUncertaintyOfExpr(operand); }
         }
+    }
+
+    private record ExtractedUncertainties(List<Equation> activeEquations,
+                                         Map<String, Expr> uncertaintyExprs) {}
+
+    private ExtractedUncertainties extractUncertaintyEquations(List<Equation> equations) {
+        List<Equation> active = new ArrayList<>();
+        Map<String, Expr> uncExprs = new HashMap<>();
+        for (Equation eq : equations) {
+            String varL = getUncertaintyTarget(eq.lhs());
+            if (varL != null) {
+                uncExprs.put(varL.toLowerCase(), eq.rhs());
+                continue;
+            }
+            active.add(eq);
+        }
+        return new ExtractedUncertainties(active, uncExprs);
+    }
+
+    private String getUncertaintyTarget(Expr expr) {
+        if (expr instanceof Expr.Call call && call.function().equalsIgnoreCase("uncertaintyof") && call.args().size() == 1) {
+            Expr arg = call.args().get(0);
+            if (arg instanceof Expr.Var varExpr) {
+                return varExpr.name();
+            } else if (arg instanceof Expr.Str strExpr) {
+                return strExpr.value();
+            }
+        }
+        return null;
     }
 }

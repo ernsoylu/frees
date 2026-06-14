@@ -78,6 +78,8 @@ The uncertainty engine implements a system-wide numerical first-order propagatio
 3. **Combining Uncertainties**: The total propagated uncertainty $u_{y_j}$ for each dependent variable $y_j$ is calculated by the root-sum-square (RSS) of its sensitivity contributions:
    $$u_{y_j} = \sqrt{\sum_{i=1}^{p} (dy_{i,j})^2}$$
 4. **`UncertaintyOf(X)` Accessor**: When equations contain the `UncertaintyOf` accessor function, the solver executes a second-solve pass. The calculated uncertainty values are stored under special keys (`uncertaintyof$variable_name`) inside the solver's values map. During the second pass, the evaluator resolves `UncertaintyOf(X)` calls to these values, enabling downstream equations to dynamically react to computed uncertainties.
+5. **Absolute vs. Relative Uncertainty GUI Inputs**: The Variable Information window allows inputting uncertainties as absolute values or relative percentages, automatically calculating one from the other if the solved variable value is known. When a solve successfully completes, relative uncertainties are dynamically re-evaluated and converted to absolute values for the propagation engine.
+6. **Code-Defined Uncertainty Assignment**: Users can assign uncertainties directly in code using equations of the form `UncertaintyOf(X) = <expr>`. The solver extracts these statements at the beginning of the solve, evaluates `<expr>` at the solved state, and injects the resulting absolute uncertainties into the propagation engine.
 
 ### Deployment (Docker)
 

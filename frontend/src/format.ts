@@ -74,13 +74,23 @@ export function buildRealSolutionRows(
   variables: VariableResult[],
   solutions: SolutionResult[],
 ): SolutionRow[] {
-  return variables.map((v) =>
-    toRow(
+  return variables.map((v) => {
+    const unc = v.uncertainty
+    const formattedVals = valuesAcrossSolutions(v.name, v.value, solutions).map(formatValue)
+    if (unc !== undefined && unc !== null && unc > 0) {
+      const formattedUnc = formatValue(unc)
+      return toRow(
+        v.name,
+        v.units,
+        formattedVals.map((val) => `${val} ± ${formattedUnc}`),
+      )
+    }
+    return toRow(
       v.name,
       v.units,
-      valuesAcrossSolutions(v.name, v.value, solutions).map(formatValue),
-    ),
-  )
+      formattedVals,
+    )
+  })
 }
 
 function isComplexComponent(name: string): boolean {
@@ -112,9 +122,44 @@ function formatComplexPerSolution(
   const sources =
     solutions.length > 1 ? solutions.map((s) => s.variables) : [variables]
   return sources.map((vars) => {
-    const rVal = vars.find((x) => x.name === rName)?.value ?? 0
-    const iVal = vars.find((x) => x.name === iName)?.value ?? 0
-    return formatComplex(rVal, iVal)
+    const rVar = vars.find((x) => x.name === rName)
+    const iVar = vars.find((x) => x.name === iName)
+    const rVal = rVar?.value ?? 0
+    const iVal = iVar?.value ?? 0
+    const rUnc = rVar?.uncertainty
+    const iUnc = iVar?.uncertainty
+
+    if (
+      (rUnc === undefined || rUnc === null || rUnc === 0) &&
+      (iUnc === undefined || iUnc === null || iUnc === 0)
+    ) {
+      return formatComplex(rVal, iVal)
+    }
+
+    const cleanImag = suppressRoundoff(iVal, rVal)
+    const cleanReal = suppressRoundoff(rVal, cleanImag)
+
+    let out = ''
+    if (cleanReal !== 0 || cleanImag === 0) {
+      out = formatValue(cleanReal)
+      if (rUnc !== undefined && rUnc !== null && rUnc > 0) {
+        out = `(${out} ± ${formatValue(rUnc)})`
+      }
+    }
+
+    if (cleanImag !== 0) {
+      const formattedImag = Math.abs(cleanImag) === 1 ? '' : formatValue(Math.abs(cleanImag))
+      let imagPart = `${formattedImag}i`
+      if (iUnc !== undefined && iUnc !== null && iUnc > 0) {
+        imagPart = `(${formatValue(Math.abs(cleanImag))} ± ${formatValue(iUnc)})i`
+      }
+      if (out !== '') {
+        out += cleanImag > 0 ? ` + ${imagPart}` : ` - ${imagPart}`
+      } else {
+        out = cleanImag > 0 ? imagPart : `-${imagPart}`
+      }
+    }
+    return out
   })
 }
 
@@ -138,13 +183,26 @@ export function buildComplexSolutionRows(
         ),
       )
     } else {
-      rows.push(
-        toRow(
-          v.name,
-          v.units,
-          valuesAcrossSolutions(v.name, v.value, solutions).map(formatValue),
-        ),
-      )
+      const unc = v.uncertainty
+      const formattedVals = valuesAcrossSolutions(v.name, v.value, solutions).map(formatValue)
+      if (unc !== undefined && unc !== null && unc > 0) {
+        const formattedUnc = formatValue(unc)
+        rows.push(
+          toRow(
+            v.name,
+            v.units,
+            formattedVals.map((val) => `${val} ± ${formattedUnc}`),
+          ),
+        )
+      } else {
+        rows.push(
+          toRow(
+            v.name,
+            v.units,
+            formattedVals,
+          ),
+        )
+      }
     }
   }
   return rows
