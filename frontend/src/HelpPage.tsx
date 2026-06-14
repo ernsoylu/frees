@@ -552,6 +552,91 @@ Q2 = A*eps2/(1-eps2)*(Eb2 - J2)
 T3 = (J3/sigma)^0.25          { reradiating-wall temperature }`,
   },
   {
+    value: "auto-cooling-loop",
+    title: "Thermal/Automotive: Radiator + Pump + Fan Cooling Loop (EG50 coolant)",
+    description: "An automotive cooling loop where the fan and pump operating points are found implicitly — each performance curve, entered as a TABLE and called like a function, is intersected with its quadratic flow resistance — and the radiator heat duty follows from a digitized effectiveness table. The coolant is a 50/50 ethylene glycol/water mixture (EG50) whose density and specific heat come straight from CoolProp. The fan curve is affinity-scaled by f_rpm so you can slow the fan or sweep it in a Parametric Table.",
+    note: "Solves to Q = 38.2 kW rejected, fan power 262 W and pump power 97 W, at an air-side operating point of 0.90 m³/s (~1910 CFM, 131 Pa) and a coolant flow of 89.8 L/min. EG50 at 90 °C gives ρ = 1019 kg/m³, cp = 3616 J/kg·K (vs water 965 / 4205). Data sources: cross-flow radiator effectiveness ε≈0.6–0.85 and heat rejection 25–50 kW (ResearchGate 397980466, FSAE study 356606738); SPAL 16-inch fan ~2500 CFM free-air / ~250 Pa max static (streetmusclemag.com); Davies-Craig EWP pump 90–162 L/min (daviescraig.com.au/electric-water-pumps).",
+    code: `{ Automotive cooling loop: radiator + electric pump + electric fan.
+  Coolant = 50/50 ethylene glycol / water (EG50), properties from CoolProp.
+  Pump and fan curves are entered as TABLE blocks and used as functions.
+
+  Data sources (typical passenger-car / aftermarket components):
+   - Cross-flow radiator: effectiveness ~0.6-0.85, heat rejection ~25-50 kW
+     (ResearchGate 397980466; FSAE radiator study 356606738)
+   - Fan curve, SPAL 16in class: ~2500 CFM free air, ~250 Pa max static
+     (streetmusclemag.com - SPAL electric fans)
+   - Pump curve, Davies-Craig EWP class: 90-162 L/min
+     (daviescraig.com.au/electric-water-pumps) }
+
+{ Inputs }
+T_c_in = 95 [C]        { hot coolant into radiator }
+T_a_in = 35 [C]        { ambient air }
+P_atm  = 101325 [Pa]
+eta_fan  = 0.45        { fan total efficiency }
+eta_pump = 0.55        { pump total efficiency }
+f_rpm    = 1           { fan speed / rated (set < 1 to slow the fan) }
+
+{ Fan curve: static pressure [Pa] vs air flow [m^3/s] }
+TABLE fanCurve(Vair)
+  0.0    250
+  0.3    232
+  0.6    195
+  0.9    132
+  1.18   0
+END
+
+{ Pump curve: head [Pa] vs coolant flow [m^3/s] }
+TABLE pumpCurve(Vc)
+  0.0      55000
+  0.0008   48000
+  0.0016   34000
+  0.0023   0
+END
+
+{ Radiator effectiveness (digitized): epsilon vs air flow [m^3/s] }
+TABLE radEff(Vair)
+  0.3   0.45
+  0.6   0.55
+  0.9   0.62
+  1.2   0.67
+END
+
+{ Flow resistances: dP = K * V^2 }
+K_air = 160
+K_c   = 1.6e10
+
+{ Fan operating point (affinity-scaled to f_rpm) meets air-side resistance }
+dP_air = f_rpm^2 * fanCurve(Vair / f_rpm)
+dP_air = K_air * Vair^2
+
+{ Pump operating point meets coolant-loop resistance }
+head = pumpCurve(Vc)
+head = K_c * Vc^2
+
+{ Coolant properties from the EG50 mixture; air properties at ~40 C }
+rho_c = Density(EG50, T=90 [C], P=P_atm)
+cp_c  = Cp(EG50, T=90 [C], P=P_atm)
+rho_air = 1.13 [kg/m^3]
+cp_air  = 1006 [J/kg-K]
+
+{ Mass flows and capacity rates }
+m_air = rho_air * Vair
+m_c   = rho_c * Vc
+C_air = m_air * cp_air
+C_c   = m_c * cp_c
+C_min = min(C_air, C_c)
+
+{ Heat transfer (effectiveness method) }
+eps = radEff(Vair)
+Q = eps * C_min * (T_c_in - T_a_in)
+T_c_out = T_c_in - Q / C_c
+T_a_out = T_a_in + Q / C_air
+
+{ Power draw }
+W_fan  = dP_air * Vair / eta_fan
+W_pump = head * Vc / eta_pump`,
+  },
+  {
     value: "load-flow",
     title: "Power Systems: Two-Bus AC Power Flow (Newton–Raphson Load Flow)",
     description: "A slack bus feeds a PQ load bus over a transmission line. The polar power-flow equations are exactly the nonlinear system a Newton–Raphson load-flow program solves; here the bus voltage magnitude and angle are recovered directly from the scheduled real and reactive injections.",
