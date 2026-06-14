@@ -168,6 +168,48 @@ class EquationParserTest {
     }
 
     @Test
+    void parsesPlotBlockIntoDefinedPlot() {
+        EquationParser.ParseResult parsed = parser.parseResult(
+                "N = 3\n" +
+                "PLOT 'Speed vs Distance'\n" +
+                "  kind = xy\n" +
+                "  x = speed[1..N]\n" +
+                "  y = distance[1..N], time[1..N]\n" +
+                "  type = line\n" +
+                "  xlabel = 'Speed [m/s]'\n" +
+                "END");
+        // The PLOT block is a directive, not an equation: only N = 3 is solved.
+        assertEquals(1, parsed.equations().size());
+        assertEquals(1, parsed.plots().size());
+
+        com.frees.backend.ast.PlotDef plot = parsed.plots().get(0);
+        assertEquals("Speed vs Distance", plot.name());
+        assertEquals(List.of("xy"), plot.attributes().get("kind"));
+        assertEquals(List.of("speed"), plot.attributes().get("x"));
+        assertEquals(List.of("distance", "time"), plot.attributes().get("y"));
+        assertEquals(List.of("line"), plot.attributes().get("type"));
+        assertEquals(List.of("Speed [m/s]"), plot.attributes().get("xlabel"));
+    }
+
+    @Test
+    void parsesPropertyPlotBlock() {
+        EquationParser.ParseResult parsed = parser.parseResult(
+                "PLOT 'Rankine Cycle'\n" +
+                "  kind = property\n" +
+                "  fluid = Water\n" +
+                "  diagram = 'T-s'\n" +
+                "  overlaystates = true\n" +
+                "END");
+        assertEquals(1, parsed.plots().size());
+        com.frees.backend.ast.PlotDef plot = parsed.plots().get(0);
+        assertEquals("Rankine Cycle", plot.name());
+        assertEquals(List.of("property"), plot.attributes().get("kind"));
+        assertEquals(List.of("Water"), plot.attributes().get("fluid"));
+        assertEquals(List.of("T-s"), plot.attributes().get("diagram"));
+        assertEquals(List.of("true"), plot.attributes().get("overlaystates"));
+    }
+
+    @Test
     void parsesNestedDuplicateLoops() {
         List<Equation> equations = parser.parse(
                 "FOR i = 1 TO 2\n" +

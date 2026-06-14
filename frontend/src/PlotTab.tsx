@@ -129,6 +129,7 @@ export default function PlotTab({
           cyclePath={cyclePath}
           tableRows={rows}
           tableResults={results}
+          variables={solvedVariables}
           onConfigure={() => setEditing(current)}
           onRemove={() => removePlot(current.id)}
           hideHeader={hideHeader}

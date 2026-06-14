@@ -27,12 +27,14 @@ public class AstBuilder extends FreesBaseVisitor<Expr> {
     public record ProgramResult(
             List<Statement> statements,
             java.util.Map<String, ProcDef> defs,
-            List<com.frees.backend.ast.ParametricTable> parametricTables) {}
+            List<com.frees.backend.ast.ParametricTable> parametricTables,
+            List<com.frees.backend.ast.PlotDef> plots) {}
 
     public ProgramResult buildProgram(FreesParser.ProgramContext ctx) {
         List<Statement> statements = new ArrayList<>();
         java.util.Map<String, ProcDef> defs = new java.util.LinkedHashMap<>();
         List<com.frees.backend.ast.ParametricTable> parametricTables = new ArrayList<>();
+        List<com.frees.backend.ast.PlotDef> plots = new ArrayList<>();
 
         if (ctx.topLevel() != null) {
             for (FreesParser.TopLevelContext tl : ctx.topLevel()) {
@@ -50,12 +52,42 @@ public class AstBuilder extends FreesBaseVisitor<Expr> {
                     defs.put(td.name().toLowerCase(), td);
                 } else if (tl.parametricDef() != null) {
                     parametricTables.add(buildParametricDef(tl.parametricDef()));
+                } else if (tl.plotDef() != null) {
+                    plots.add(buildPlotDef(tl.plotDef()));
                 } else if (tl.statement() != null) {
                     statements.add(buildStatement(tl.statement()));
                 }
             }
         }
-        return new ProgramResult(statements, defs, parametricTables);
+        return new ProgramResult(statements, defs, parametricTables, plots);
+    }
+
+    /** Builds a code-defined plot: a name and a raw {@code key -> values} map of
+     * attributes the frontend maps onto its PlotSpec. Values are normalized to
+     * their string form (string content, number text, or variable base name). */
+    private com.frees.backend.ast.PlotDef buildPlotDef(FreesParser.PlotDefContext ctx) {
+        String name = unquote(ctx.STRING_LITERAL().getText());
+        java.util.Map<String, List<String>> attributes = new java.util.LinkedHashMap<>();
+        for (FreesParser.PlotAttrContext attr : ctx.plotAttr()) {
+            String key = attr.IDENT().getText().toLowerCase();
+            List<String> values = new ArrayList<>();
+            for (FreesParser.PlotValueContext value : attr.plotValue()) {
+                values.add(plotValueText(value));
+            }
+            attributes.put(key, values);
+        }
+        return new com.frees.backend.ast.PlotDef(name, attributes);
+    }
+
+    private String plotValueText(FreesParser.PlotValueContext value) {
+        if (value instanceof FreesParser.PlotValStrContext str) {
+            return unquote(str.STRING_LITERAL().getText());
+        }
+        if (value instanceof FreesParser.PlotValRefContext ref) {
+            return ref.IDENT().getText();
+        }
+        // PlotValNum (and any fallback): the literal source text.
+        return value.getText();
     }
 
     /** Builds a parametric run-table: each column is a declared variable filled

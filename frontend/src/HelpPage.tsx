@@ -1060,6 +1060,7 @@ const CATEGORIES = [
     icon: <IconChartBar size={16} />,
     items: [
       { id: 'diagram', label: 'Diagram Canvas & Plotting', keywords: ['diagram', 'plots', 'graph', 'canvas', 'recording', 'export'] },
+      { id: 'plot-code', label: 'Plots in Code (PLOT)', keywords: ['plot', 'graph', 'chart', 'code', 'programmatic', 'xy', 'property', 'psychro'] },
     ]
   },
   {
@@ -1612,6 +1613,57 @@ m = 120 [lb]     { Converted to 54.43 kg }`}</Code>
             <Title order={3} mt="sm">The Convert() Function</Title>
             <Text>Multiply variables by <code>Convert(From, To)</code> to apply factor conversion:</Text>
             <Code block>{`area_in2 = area_ft2 * Convert(ft^2, in^2)`}</Code>
+          </Stack>
+        );
+      case 'plot-code':
+        return (
+          <Stack gap="md">
+            <Title order={2} c="blue.4">Plots in Code (PLOT)</Title>
+            <Text style={{ lineHeight: 1.6 }}>
+              Besides building plots in the Plots / Thermodynamics windows, you can declare a graph directly in the equation text with a <code>PLOT 'name' … END</code> block. Each line is a <code>key = value</code> attribute. The plot is created automatically on every Check / Solve, appears in the matching plot window, and is resolved by <code>[Graph='name']</code> tags in the formatted report. Code-defined plots are regenerated from the text each solve and are <em>not</em> saved with the project (edit them in code, not the GUI).
+            </Text>
+            <Text style={{ lineHeight: 1.6 }}>
+              Strings use <strong>single quotes</strong> (double quotes are comments). The leading string is the plot name; <code>kind</code> is <code>xy</code> (default), <code>property</code>, or <code>psychro</code>.
+            </Text>
+
+            <Title order={3}>X-Y plot of solved arrays</Title>
+            <Paper withBorder p="md" bg="dark.8">
+              <Code block>{`N = 5
+FOR i = 1 TO N
+  speed[i] = 10*i
+  distance[i] = 0.5*speed[i]^2
+END
+
+PLOT 'Speed vs Distance'
+  kind = xy
+  x = speed[1..N]
+  y = distance[1..N]
+  type = line
+  xlabel = 'Speed [m/s]'
+  ylabel = 'Distance [m]'
+END
+
+[Graph='Speed vs Distance'] Stopping distance versus speed [/Graph]`}</Code>
+            </Paper>
+            <Text size="sm" c="dimmed" style={{ lineHeight: 1.6 }}>
+              XY attributes: <code>x</code>, <code>y</code> (comma-separated for multiple series), <code>y2</code> (secondary axis), <code>type</code> (<code>line</code>, <code>bar</code>, <code>scatter</code>, <code>pie</code>, <code>histogram</code>), <code>z</code>, <code>size</code>. Data comes from the parametric table when present, otherwise from solved array variables.
+            </Text>
+
+            <Title order={3}>Property diagram with state overlay</Title>
+            <Paper withBorder p="md" bg="dark.8">
+              <Code block>{`PLOT 'Rankine T-s'
+  kind = property
+  fluid = Water
+  diagram = 'T-s'
+  overlaystates = true
+  connectstates = true
+END
+
+[Graph='Rankine T-s'] Rankine cycle on a T-s diagram [/Graph]`}</Code>
+            </Paper>
+            <Text size="sm" c="dimmed" style={{ lineHeight: 1.6 }}>
+              Property attributes: <code>fluid</code>, <code>diagram</code> (<code>'T-s'</code>, <code>'P-h'</code>, <code>'P-v'</code>, <code>'T-v'</code>, <code>'h-s'</code>, <code>'P-T'</code>), and the booleans <code>quality</code>, <code>isolines</code>, <code>overlaystates</code>, <code>connectstates</code>, <code>closecycle</code>. Psychrometric charts use <code>kind = psychro</code> with <code>pressure</code>, <code>tmin</code>, <code>tmax</code>, <code>wetbulb</code>, <code>enthalpy</code>, <code>volume</code>. All kinds accept the shared <code>title</code>, <code>xlabel</code>, <code>ylabel</code>, <code>xlog</code>/<code>ylog</code>, <code>grid</code>, <code>legend</code>, <code>xmin</code>/<code>xmax</code>/<code>ymin</code>/<code>ymax</code> format options.
+            </Text>
           </Stack>
         );
       case 'arrays':

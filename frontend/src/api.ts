@@ -75,6 +75,8 @@ export interface SolveResponse {
   codeTables?: FunctionTableDto[]
   /** Parametric run-tables parsed from PARAMETRIC ... END blocks. */
   parametricTables?: ParametricTableDto[]
+  /** Plots declared in the editor text with PLOT 'name' ... END blocks. */
+  definedPlots?: PlotDefDto[]
 }
 
 export interface CheckResponse {
@@ -91,6 +93,8 @@ export interface CheckResponse {
   codeTables?: FunctionTableDto[]
   /** Parametric run-tables parsed from PARAMETRIC ... END blocks. */
   parametricTables?: ParametricTableDto[]
+  /** Plots declared in the editor text with PLOT 'name' ... END blocks. */
+  definedPlots?: PlotDefDto[]
 }
 
 /** A parametric run-table parsed from a PARAMETRIC ... END block: the declared
@@ -99,6 +103,14 @@ export interface ParametricTableDto {
   name: string
   vars: string[]
   rows: (number | null)[][]
+}
+
+/** A plot parsed from a PLOT 'name' ... END block: the plot name and a raw
+ * attribute map (lowercased keys → string values) the frontend maps onto a
+ * PlotSpec via plotDefToSpec. */
+export interface PlotDefDto {
+  name: string
+  attributes: Record<string, string[]>
 }
 
 export interface VariableInfo {
@@ -173,6 +185,7 @@ export async function check(
       formattedReport: data.formattedReport ?? undefined,
       codeTables: data.codeTables ?? [],
       parametricTables: data.parametricTables ?? [],
+      definedPlots: data.definedPlots ?? [],
     }
   } catch (e) {
     return {
@@ -253,6 +266,7 @@ export async function solve(
       formattedReport: data.formattedReport ?? undefined,
       codeTables: data.codeTables ?? [],
       parametricTables: data.parametricTables ?? [],
+      definedPlots: data.definedPlots ?? [],
     }
   } catch (e) {
     return {

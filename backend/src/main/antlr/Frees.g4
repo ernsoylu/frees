@@ -14,6 +14,7 @@ topLevel
     | moduleDef
     | tableDef
     | parametricDef
+    | plotDef
     | statement
     ;
 
@@ -69,6 +70,34 @@ parametricDef
 paramColumn
     : IDENT EQ signedNumber COLON signedNumber (COLON signedNumber)? (PIPE IDENT)?   # ParamColRange
     | IDENT EQ LBRACKET numberList RBRACKET                                          # ParamColList
+    ;
+
+// ── Code-defined plot ────────────────────────────────────────────────────────
+//   PLOT 'Speed vs Distance'
+//     kind = xy
+//     x = speed[1..N]
+//     y = distance[1..N], time[1..N]
+//     type = line
+//     xlabel = 'Speed [m/s]'
+//   END
+// Declares a graph the frontend renders (xy / property / psychro). Each line is
+// a `key = value(s)` attribute; values are quoted strings, numbers, or variable
+// references (optionally an array slice). The leading string is the plot name
+// referenced by [Graph='...'] tags in the report.
+plotDef
+    : PLOT STRING_LITERAL sep
+      plotAttr (sep plotAttr)* sep?
+      END
+    ;
+
+plotAttr
+    : IDENT EQ plotValue (COMMA plotValue)*
+    ;
+
+plotValue
+    : STRING_LITERAL                              # PlotValStr
+    | signedNumber                                # PlotValNum
+    | IDENT (LBRACKET arrayIndexList RBRACKET)?   # PlotValRef
     ;
 
 numberList
@@ -283,6 +312,7 @@ PROCEDURE : [pP][rR][oO][cC][eE][dD][uU][rR][eE] ;
 MODULE    : [mM][oO][dD][uU][lL][eE] ;
 TABLE     : [tT][aA][bB][lL][eE] ;
 PARAMETRIC : [pP][aA][rR][aA][mM][eE][tT][rR][iI][cC] ;
+PLOT      : [pP][lL][oO][tT] ;
 IF        : [iI][fF] ;
 THEN      : [tT][hH][eE][nN] ;
 ELSE      : [eE][lL][sS][eE] ;

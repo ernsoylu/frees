@@ -1,4 +1,4 @@
-import { ChangeEvent, useCallback, useEffect, useState, useRef } from 'react'
+import { ChangeEvent, useCallback, useEffect, useMemo, useState, useRef } from 'react'
 import {
   ActionIcon,
   Button,
@@ -58,6 +58,7 @@ import { DigitizerTab, DigitizedExport } from './DigitizerTab'
 import DiagramTab, { loadDiagrams, saveDiagrams } from './diagram/DiagramTab'
 import { DiagramSpec } from './diagram/types'
 import { PlotSpec } from './plots/types'
+import { plotDefToSpec } from './plots/fromCode'
 import SolutionPanel from './SolutionPanel'
 import { Rail, TopBar } from './WorkspaceChrome'
 import { EXPORT_FORMATS } from './plots/exportPlot'
@@ -774,10 +775,13 @@ export default function App() {
   }
 
   const handlePlotsChange = (nextPlots: PlotSpec[]) => {
-    setPlots(nextPlots)
-    const needMissing = nextPlots.some((p) => p.kind === 'property' && p.property.overlayStates)
+    // Code-defined plots are derived from the solve response, not persisted, so
+    // strip them before saving — they are re-merged on the next solve/check.
+    const userPlots = nextPlots.filter((p) => !p.fromCode)
+    setPlots(userPlots)
+    const needMissing = userPlots.some((p) => p.kind === 'property' && p.property.overlayStates)
     if (needMissing && result?.success && !lastSolvedWithFillMissing && !solving && solvable) {
-      void onSolve(true, nextPlots)
+      void onSolve(true, userPlots)
     }
   }
 
@@ -854,6 +858,19 @@ export default function App() {
 
   const solutions = result?.solutions ?? []
   const formattedEqs = result?.formattedEquations ?? checkResult?.formattedEquations ?? []
+
+  // Plots declared in the editor text with PLOT ... END blocks, regenerated on
+  // every solve/check. Merged with GUI plots for display and [Graph] resolution
+  // but kept out of the persisted project (handlePlotsChange strips fromCode).
+  const codePlots = useMemo<PlotSpec[]>(() => {
+    const dtos = result?.definedPlots ?? checkResult?.definedPlots ?? []
+    return dtos.map(plotDefToSpec)
+  }, [result?.definedPlots, checkResult?.definedPlots])
+
+  const mergedPlots = useMemo<PlotSpec[]>(() => {
+    const userNames = new Set(plots.map((p) => p.name.toLowerCase()))
+    return [...plots, ...codePlots.filter((c) => !userNames.has(c.name.toLowerCase()))]
+  }, [plots, codePlots])
 
   const baseVariables =
     solutions.length > 0 ? solutions[0].variables : result?.variables ?? []
@@ -1123,7 +1140,7 @@ export default function App() {
                     equations={formattedEqs}
                     report={result?.formattedReport ?? checkResult?.formattedReport}
                     variables={result?.variables}
-                    plots={plots}
+                    plots={mergedPlots}
                     cyclePath={result?.cyclePath}
                     tableRows={paramRows}
                     tableResults={tableResults}
@@ -1164,7 +1181,7 @@ export default function App() {
               <PlotTab
                 kinds={['xy']}
                 emptyHint='No plots yet. Click "Add Plot" to chart parametric table runs as X-Y series.'
-                plots={plots}
+                plots={mergedPlots}
                 onPlotsChange={handlePlotsChange}
                 solvedVariables={result?.variables ?? []}
                 cyclePath={result?.cyclePath}
@@ -1179,7 +1196,7 @@ export default function App() {
               <PlotTab
                 kinds={['property', 'psychro']}
                 emptyHint="No diagrams yet. Click 'Add Diagram' in the right-hand panel to create a property diagram (T-s, log P-h, P-v, …) or a psychrometric chart; solved state points can be overlaid on both."
-                plots={plots}
+                plots={mergedPlots}
                 onPlotsChange={handlePlotsChange}
                 solvedVariables={result?.variables ?? []}
                 cyclePath={result?.cyclePath}
@@ -1204,7 +1221,7 @@ export default function App() {
                 variables={result?.variables ?? []}
                 runs={diagramRuns}
                 onBindingsChange={handleDiagramBindings}
-                plots={plots}
+                plots={mergedPlots}
                 tableRows={paramRows}
                 tableResults={tableResults}
                 cyclePath={result?.cyclePath}
