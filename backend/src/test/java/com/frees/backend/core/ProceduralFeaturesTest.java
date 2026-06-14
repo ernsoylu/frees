@@ -7,7 +7,7 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * Epic 3.4 / 3.5 milestone tests: FUNCTION, PROCEDURE, MODULE, IF-THEN-ELSE, REPEAT-UNTIL.
  *
- * Milestone 3: "Working software that solves arrays using DUPLICATE loops
+ * Milestone 3: "Working software that solves arrays using FOR loops
  * and calculates factorial using internal Procedures."
  */
 class ProceduralFeaturesTest {
@@ -67,6 +67,27 @@ class ProceduralFeaturesTest {
                 END
 
                 result = SumN(10)
+                """;
+        EquationSystemSolver.Result result = solver.solve(source);
+        // Sum 1..10 = 55
+        assertEquals(55.0, result.variables().get("result"), 1e-9);
+    }
+
+    @Test
+    void functionWhileLoop() {
+        // Iterative sum: sum 1..n using WHILE-DO
+        String source = """
+                FUNCTION SumWhile(n)
+                  i := 1
+                  s := 0
+                  WHILE i <= n DO
+                    s := s + i
+                    i := i + 1
+                  END
+                  SumWhile := s
+                END
+
+                result = SumWhile(10)
                 """;
         EquationSystemSolver.Result result = solver.solve(source);
         // Sum 1..10 = 55
@@ -178,7 +199,7 @@ class ProceduralFeaturesTest {
 
     @Test
     void milestone3FactorialAndArrays() {
-        // DUPLICATE loop (already proven) + FUNCTION factorial (this epic)
+        // FOR loop (already proven) + FUNCTION factorial (this epic)
         String source = """
                 FUNCTION Factorial(n)
                   IF n <= 1 THEN
@@ -188,7 +209,7 @@ class ProceduralFeaturesTest {
                   END
                 END
 
-                DUPLICATE i = 1, 5
+                FOR i = 1 TO 5
                   f[i] = Factorial(i)
                 END
                 """;

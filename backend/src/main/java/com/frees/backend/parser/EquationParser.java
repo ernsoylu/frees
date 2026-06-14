@@ -153,8 +153,8 @@ public final class EquationParser {
         FlattenContext ctx = new FlattenContext(loopVars, constants, displayNames, out, defs, moduleCounter);
         for (Statement stmt : statements) {
             switch (stmt) {
-                case Statement.Duplicate(String varName, Expr start, Expr end, List<Statement> body) ->
-                    flattenDuplicate(varName, start, end, body, ctx);
+                case Statement.For(String varName, Expr start, Expr end, List<Statement> body) ->
+                    flattenFor(varName, start, end, body, ctx);
                 case Statement.Eq(Expr lhs, Expr rhs, String sourceText) ->
                     flattenEq(lhs, rhs, sourceText, ctx);
                 case Statement.CallProc(String name, List<Expr> inputs, List<Expr> outputs, String sourceText) ->
@@ -163,8 +163,8 @@ public final class EquationParser {
         }
     }
 
-    private void flattenDuplicate(String varName, Expr start, Expr end, List<Statement> body,
-                                  FlattenContext ctx) {
+    private void flattenFor(String varName, Expr start, Expr end, List<Statement> body,
+                            FlattenContext ctx) {
         double startVal = evalIndexExpr(expandExpr(start, ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs()), ctx.loopVars(), ctx.constants(), ctx.defs());
         double endVal = evalIndexExpr(expandExpr(end, ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs()), ctx.loopVars(), ctx.constants(), ctx.defs());
         int startInt = (int) Math.round(startVal);

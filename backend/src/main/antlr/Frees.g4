@@ -94,9 +94,10 @@ procBody
     ;
 
 procStatement
-    : duplicateBlock
+    : forBlock
     | ifStatement
     | repeatStatement
+    | whileStatement
     | assignment
     | equation
     ;
@@ -121,7 +122,7 @@ repeatStatement
 // ── Top-level statements ──────────────────────────────────────────────────────
 
 statement
-    : duplicateBlock
+    : forBlock
     | callStatement
     | rangeAssign
     | equation
@@ -145,8 +146,12 @@ callArgList
 
 // ── Existing rules ─────────────────────────────────────────────────────────────
 
-duplicateBlock
-    : DUPLICATE IDENT EQ expr COMMA expr sep statementList sep? END
+forBlock
+    : FOR IDENT EQ expr TO expr sep statementList sep? END
+    ;
+
+whileStatement
+    : WHILE boolExpr DO sep procBody END
     ;
 
 statementList
@@ -268,7 +273,10 @@ GT      : '>' ;
 
 // ── Keywords (case-insensitive) ────────────────────────────────────────────────
 
-DUPLICATE : [dD][uU][pP][lL][iI][cC][aA][tT][eE] ;
+FOR       : [fF][oO][rR] ;
+TO        : [tT][oO] ;
+WHILE     : [wW][hH][iI][lL][eE] ;
+DO        : [dD][oO] ;
 END       : [eE][nN][dD] ;
 FUNCTION  : [fF][uU][nN][cC][tT][iI][oO][nN] ;
 PROCEDURE : [pP][rR][oO][cC][eE][dD][uU][rR][eE] ;

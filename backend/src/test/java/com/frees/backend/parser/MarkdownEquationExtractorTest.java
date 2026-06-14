@@ -12,7 +12,7 @@ class MarkdownEquationExtractorTest {
         assertTrue(MarkdownEquationExtractor.isPureEquationLine(""));
         assertTrue(MarkdownEquationExtractor.isPureEquationLine("x + y = 3"));
         assertTrue(MarkdownEquationExtractor.isPureEquationLine("T1 = 100 [C]"));
-        assertTrue(MarkdownEquationExtractor.isPureEquationLine("Duplicate i = 1, 5"));
+        assertTrue(MarkdownEquationExtractor.isPureEquationLine("FOR i = 1 TO 5"));
         assertTrue(MarkdownEquationExtractor.isPureEquationLine("End"));
         assertTrue(MarkdownEquationExtractor.isPureEquationLine("Function MyFunc(x)"));
 

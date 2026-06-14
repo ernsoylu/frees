@@ -110,7 +110,7 @@ public final class ProcedureEvaluator {
                     locals.put(name, evalExpr(lhs, locals));
                 }
             }
-            case ProcStatement.Duplicate(String varName, Expr start, Expr end, List<ProcStatement> body) -> {
+            case ProcStatement.For(String varName, Expr start, Expr end, List<ProcStatement> body) -> {
                 double startVal = evalExpr(start, locals);
                 double endVal = evalExpr(end, locals);
                 int startValInt = (int) Math.round(startVal);
@@ -121,6 +121,15 @@ public final class ProcedureEvaluator {
                     loopLocals.put(varName.toLowerCase(), (double) i);
                     executeBody(body, loopLocals);
                     locals.putAll(loopLocals);
+                }
+            }
+            case ProcStatement.While(Expr condition, List<ProcStatement> body) -> {
+                int iterations = 0;
+                while (evalExpr(condition, locals) != 0.0) {
+                    executeBody(body, locals);
+                    if (++iterations > MAX_ITERATIONS) {
+                        throw new IllegalStateException("WHILE loop exceeded " + MAX_ITERATIONS + " iterations");
+                    }
                 }
             }
         }

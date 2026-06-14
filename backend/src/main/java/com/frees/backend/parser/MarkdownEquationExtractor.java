@@ -124,7 +124,7 @@ public final class MarkdownEquationExtractor {
             return true;
         }
         String upper = clean.toUpperCase();
-        if (upper.startsWith("DUPLICATE") || upper.startsWith("END") ||
+        if (upper.startsWith("FOR") || upper.startsWith("WHILE") || upper.startsWith("END") ||
             upper.startsWith("FUNCTION") || upper.startsWith("PROCEDURE") ||
             upper.startsWith("MODULE") || upper.startsWith("CALL") ||
             upper.startsWith("PARAMETRIC") || opensTableBlock(upper)) {
@@ -193,7 +193,7 @@ public final class MarkdownEquationExtractor {
     private static int nestedDepthDelta(String line) {
         String upper = stripComments(line).trim().toUpperCase();
         if (upper.startsWith("IF ") || upper.startsWith("IF(")
-                || upper.startsWith("REPEAT") || upper.startsWith("DUPLICATE")) {
+                || upper.startsWith("REPEAT") || upper.startsWith("FOR") || upper.startsWith("WHILE")) {
             return 1;
         }
         if (upper.equals("END") || upper.startsWith("END ")

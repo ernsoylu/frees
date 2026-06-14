@@ -4,13 +4,13 @@ import java.util.List;
 
 /**
  * Represents a parsed statement in frees, which can be an equation,
- * a duplicate block, or a CALL to a PROCEDURE or MODULE.
+ * a FOR loop block, or a CALL to a PROCEDURE or MODULE.
  */
-public sealed interface Statement permits Statement.Eq, Statement.Duplicate, Statement.CallProc {
+public sealed interface Statement permits Statement.Eq, Statement.For, Statement.CallProc {
 
     record Eq(Expr lhs, Expr rhs, String sourceText) implements Statement {}
 
-    record Duplicate(String varName, Expr start, Expr end, List<Statement> body) implements Statement {}
+    record For(String varName, Expr start, Expr end, List<Statement> body) implements Statement {}
 
     /**
      * CALL name(inputs : outputs) — invokes a PROCEDURE or MODULE.

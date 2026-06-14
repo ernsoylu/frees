@@ -154,7 +154,7 @@ class EquationParserTest {
     void parsesDuplicateLoop() {
         List<Equation> equations = parser.parse(
                 "N = 3\n" +
-                "Duplicate i = 1, N\n" +
+                "FOR i = 1 TO N\n" +
                 "   X[i] = i * 2\n" +
                 "End"
         );
@@ -170,8 +170,8 @@ class EquationParserTest {
     @Test
     void parsesNestedDuplicateLoops() {
         List<Equation> equations = parser.parse(
-                "Duplicate i = 1, 2\n" +
-                "   Duplicate j = 1, 3\n" +
+                "FOR i = 1 TO 2\n" +
+                "   FOR j = 1 TO 3\n" +
                 "      A[i,j] = i + j\n" +
                 "   End\n" +
                 "End"
