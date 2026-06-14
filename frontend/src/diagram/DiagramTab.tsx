@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   ActionIcon,
+  Autocomplete,
   Button,
   Center,
   Checkbox,
@@ -2683,13 +2684,12 @@ function WidgetFields({
         value={el.widgetType}
         onChange={(v) => set({ widgetType: v as WidgetElement['widgetType'] })}
       />
-      <Select
+      <Autocomplete
         label="Bound variable"
         size="xs"
         data={varNames}
-        value={el.varName || null}
-        onChange={(v) => set({ varName: v ?? '' })}
-        searchable
+        value={el.varName}
+        onChange={(v) => set({ varName: v })}
         placeholder="e.g. T2"
       />
       <TextInput
@@ -2777,13 +2777,12 @@ function ValueDrivenFillFields({
       />
       {enabled && (
         <Stack gap="xs" style={{ borderLeft: '2px solid #373A40', paddingLeft: 8, marginLeft: 4 }}>
-          <Select
+          <Autocomplete
             label="Bound variable"
             size="xs"
             data={varNames}
-            value={vf.varName || null}
-            onChange={(v) => updateVf({ varName: v ?? '' })}
-            searchable
+            value={vf.varName}
+            onChange={(v) => updateVf({ varName: v })}
             placeholder="e.g. T"
           />
           <Group grow>
