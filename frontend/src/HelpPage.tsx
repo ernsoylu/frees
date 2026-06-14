@@ -447,6 +447,33 @@ T2 = Te*(1+(g-1)/2*Me^2)/(1+(g-1)/2*M2^2)
 P02 = P2*(1+(g-1)/2*M2^2)^(g/(g-1))`,
   },
   {
+    value: "co2-nozzle-throat",
+    title: "Compressible Flow: CO₂ Nozzle Throat Velocity",
+    description: "Carbon dioxide enters a converging–diverging nozzle at 60 m/s, 310°C and 300 kPa and leaves supersonic. Because the diverging section reaches supersonic speed, the throat is choked (Ma = 1), so the throat velocity equals the local speed of sound there. The stagnation temperature comes from the inlet energy balance; the sonic temperature and speed of sound follow from constant-specific-heat ideal-gas relations.",
+    note: "Throat velocity ≈ 348 m/s, confirming answer (d) 353 m/s. cp and cv come from frees's built-in CO₂ ideal-gas property functions at the inlet temperature (cp ≈ 1.06 kJ/kg-K, k ≈ 1.22); the textbook's 353 m/s uses room-temperature constant specific heats (k = 1.289), so the small difference is just the temperature dependence of cp.",
+    code: `{ Throat velocity of a choked CO2 nozzle }
+{ Supersonic exit => the throat is sonic (Ma = 1), so the throat velocity
+  is the local speed of sound there. }
+V1 = 60 [m/s]
+T1 = 310 [C]
+P1 = 300 [kPa]
+
+{ CO2 ideal-gas properties from frees, evaluated at the inlet temperature }
+cp = Cp(CO2, T=T1)
+cv = Cv(CO2, T=T1)
+k = cp / cv
+R = cp - cv          { ideal gas: R = cp - cv }
+
+{ Stagnation temperature from the inlet energy balance }
+T0 = T1 + V1^2 / (2 * cp)
+
+{ Throat is sonic (Ma = 1) }
+T_throat = T0 * 2 / (k + 1)
+
+{ Throat velocity = local speed of sound }
+V_throat = sqrt(k * R * T_throat)`,
+  },
+  {
     value: "orbit-kepler",
     title: "Aerospace: Orbital Position from Kepler's Equation",
     description: "An elliptical Earth orbit (300 km × 3000 km altitude). Kepler's equation M = E − e·sin E is transcendental and is solved directly for the eccentric anomaly a quarter-period after perigee; radius and speed follow. Note that t and T are reserved (time) names, so the period is named Tper.",
@@ -1093,7 +1120,7 @@ const CATEGORIES = [
     title: 'Case Studies',
     icon: <IconFileText size={16} />,
     items: [
-      { id: 'examples', label: 'Engineering Examples Library', keywords: ['examples', 'rankine', 'brayton', 'combined cycle', 'pipe network', 'truss', 'radiation', 'cooling loop', 'reforming', 'pid', 'fatigue', 'nuclear', 'siyavula'] },
+      { id: 'examples', label: 'Engineering Examples Library', keywords: ['examples', 'rankine', 'brayton', 'combined cycle', 'pipe network', 'truss', 'radiation', 'cooling loop', 'reforming', 'pid', 'fatigue', 'nuclear', 'siyavula', 'nozzle', 'co2', 'compressible', 'throat', 'sonic'] },
     ]
   }
 ];
