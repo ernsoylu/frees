@@ -303,6 +303,34 @@ export function mergeCodeTables(
   return [...guiTables, ...codeFunctionTables, ...codeParamTables]
 }
 
+/** Makes an independent, editable GUI copy of a code-defined table, decoupled
+ * from the editor text. The copy is renamed to avoid clashing with the
+ * code-defined original (which still wins in the solver by its text name). */
+export function duplicateAsEditable(table: TableSpec): TableSpec {
+  const name = `${table.name}_copy`
+  if (table.kind === 'function') {
+    return {
+      ...table,
+      id: newTableId(),
+      name,
+      rows: table.rows.map((r) => ({ x: r.x, ys: [...r.ys] })),
+      columns: [...table.columns],
+      source: 'gui',
+    }
+  }
+  return {
+    ...table,
+    id: newTableId(),
+    name,
+    rows: table.rows.map((r) => ({ id: crypto.randomUUID(), values: { ...r.values } })),
+    results: [],
+    stats: null,
+    checkResult: null,
+    checkMessage: '',
+    source: 'gui',
+  }
+}
+
 const TABLES_KEY = 'frees.tables'
 
 export function loadTables(): TableSpec[] {
