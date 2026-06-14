@@ -126,7 +126,8 @@ public final class MarkdownEquationExtractor {
         String upper = clean.toUpperCase();
         if (upper.startsWith("DUPLICATE") || upper.startsWith("END") ||
             upper.startsWith("FUNCTION") || upper.startsWith("PROCEDURE") ||
-            upper.startsWith("MODULE") || upper.startsWith("CALL")) {
+            upper.startsWith("MODULE") || upper.startsWith("CALL") ||
+            upper.startsWith("PARAMETRIC") || opensTableBlock(upper)) {
             return true;
         }
         if (!clean.contains("=")) {
@@ -171,7 +172,20 @@ public final class MarkdownEquationExtractor {
     private static boolean opensCodeBlock(String line) {
         String upper = stripComments(line).trim().toUpperCase();
         return upper.startsWith("FUNCTION") || upper.startsWith("PROCEDURE")
-                || upper.startsWith("MODULE");
+                || upper.startsWith("MODULE") || upper.startsWith("PARAMETRIC")
+                || opensTableBlock(upper);
+    }
+
+    /** A TABLE block opener: the keyword followed by a word boundary, so a
+     * variable like {@code table_temp = 5} is not mistaken for a block. */
+    private static boolean opensTableBlock(String upper) {
+        return upper.equals("TABLE")
+                || (upper.startsWith("TABLE") && upper.length() > 5
+                        && !isIdentChar(upper.charAt(5)));
+    }
+
+    private static boolean isIdentChar(char c) {
+        return Character.isLetterOrDigit(c) || c == '_' || c == '$';
     }
 
     /** Depth change contributed by a line inside a FUNCTION/PROCEDURE/MODULE
@@ -469,7 +483,11 @@ public final class MarkdownEquationExtractor {
             return new Token(TokenType.IDENTIFIER, line.substring(i, end), end);
         }
 
-        if (c == '+' || c == '-' || c == '*' || c == '/' || c == '^' || c == '=') {
+        // ':' and '|' appear in MATLAB-style range assignments
+        // (speed = 0:10:100 | Linear); treat them as operators so the line is
+        // recognized as an equation rather than dropped as prose.
+        if (c == '+' || c == '-' || c == '*' || c == '/' || c == '^' || c == '='
+                || c == ':' || c == '|') {
             return new Token(TokenType.OPERATOR, String.valueOf(c), i + 1);
         }
 

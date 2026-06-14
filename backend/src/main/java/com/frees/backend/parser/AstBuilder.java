@@ -26,11 +26,13 @@ public class AstBuilder extends FreesBaseVisitor<Expr> {
 
     public record ProgramResult(
             List<Statement> statements,
-            java.util.Map<String, ProcDef> defs) {}
+            java.util.Map<String, ProcDef> defs,
+            List<com.frees.backend.ast.ParametricTable> parametricTables) {}
 
     public ProgramResult buildProgram(FreesParser.ProgramContext ctx) {
         List<Statement> statements = new ArrayList<>();
         java.util.Map<String, ProcDef> defs = new java.util.LinkedHashMap<>();
+        List<com.frees.backend.ast.ParametricTable> parametricTables = new ArrayList<>();
 
         if (ctx.topLevel() != null) {
             for (FreesParser.TopLevelContext tl : ctx.topLevel()) {
@@ -43,12 +45,63 @@ public class AstBuilder extends FreesBaseVisitor<Expr> {
                 } else if (tl.moduleDef() != null) {
                     ProcDef.ModuleDef md = buildModuleDef(tl.moduleDef());
                     defs.put(md.name().toLowerCase(), md);
+                } else if (tl.tableDef() != null) {
+                    ProcDef.FunctionTableDef td = buildTableDef(tl.tableDef());
+                    defs.put(td.name().toLowerCase(), td);
+                } else if (tl.parametricDef() != null) {
+                    parametricTables.add(buildParametricDef(tl.parametricDef()));
                 } else if (tl.statement() != null) {
                     statements.add(buildStatement(tl.statement()));
                 }
             }
         }
-        return new ProgramResult(statements, defs);
+        return new ProgramResult(statements, defs, parametricTables);
+    }
+
+    /** Builds a parametric run-table: each column is a declared variable filled
+     * by a range or an explicit list; columns are aligned into row-major rows. */
+    private com.frees.backend.ast.ParametricTable buildParametricDef(FreesParser.ParametricDefContext ctx) {
+        String name = ctx.IDENT().getText();
+        List<String> vars = buildParamList(ctx.paramList());
+
+        java.util.Map<String, List<Double>> columns = new java.util.LinkedHashMap<>();
+        for (FreesParser.ParamColumnContext colCtx : ctx.paramColumn()) {
+            if (colCtx instanceof FreesParser.ParamColRangeContext range) {
+                String col = range.IDENT(0).getText().toLowerCase();
+                List<FreesParser.SignedNumberContext> nums = range.signedNumber();
+                boolean threeForm = nums.size() == 3;
+                double start = signedNumberValue(nums.get(0));
+                double stop = signedNumberValue(nums.get(threeForm ? 2 : 1));
+                double middle = threeForm ? signedNumberValue(nums.get(1)) : 1.0;
+                String fill = range.PIPE() != null ? range.IDENT(1).getText().toLowerCase() : "linear";
+                columns.put(col, switch (fill) {
+                    case "linear" -> linearRange(col, start, middle, stop);
+                    case "log" -> logRange(col, start, middle, stop, threeForm);
+                    default -> throw new EquationParser.ParseException(
+                            "Unknown range spacing '" + range.IDENT(1).getText() + "' in PARAMETRIC "
+                                    + name + ". Supported: Linear, Log.");
+                });
+            } else if (colCtx instanceof FreesParser.ParamColListContext list) {
+                String col = list.IDENT().getText().toLowerCase();
+                List<Double> vals = new ArrayList<>();
+                for (FreesParser.SignedNumberContext sn : list.numberList().signedNumber()) {
+                    vals.add(signedNumberValue(sn));
+                }
+                columns.put(col, vals);
+            }
+        }
+
+        int numRows = columns.values().stream().mapToInt(List::size).max().orElse(0);
+        List<List<Double>> rows = new ArrayList<>();
+        for (int i = 0; i < numRows; i++) {
+            List<Double> row = new ArrayList<>();
+            for (String var : vars) {
+                List<Double> col = columns.get(var);
+                row.add(col != null && i < col.size() ? col.get(i) : null);
+            }
+            rows.add(row);
+        }
+        return new com.frees.backend.ast.ParametricTable(name, vars, rows);
     }
 
     // ── FUNCTION / PROCEDURE / MODULE definitions ────────────────────────────
@@ -79,6 +132,96 @@ public class AstBuilder extends FreesBaseVisitor<Expr> {
             }
         }
         return new ProcDef.ModuleDef(name, inputs, outputs, body);
+    }
+
+    // ── Code-defined Function/Curve table (TABLE ... END) ────────────────────
+
+    /**
+     * Builds a tabulated curve function from a TABLE block. The first body
+     * column is the lookup argument; each further column is one curve. A 1D
+     * table has a single (param=null) curve; a family declares its parameter
+     * values in the header (TABLE name(arg : p = v1, v2)). Produces the same
+     * {@link ProcDef.FunctionTableDef} the Graph Digitizer emits, so the
+     * solver/Evaluator/CurveInterpolator handle it unchanged.
+     */
+    private ProcDef.FunctionTableDef buildTableDef(FreesParser.TableDefContext ctx) {
+        String name = ctx.IDENT(0).getText().toLowerCase();
+        String argName = ctx.IDENT(1).getText().toLowerCase();
+        boolean family = ctx.numberList() != null;
+
+        List<Double> paramValues = new ArrayList<>();
+        if (family) {
+            for (FreesParser.SignedNumberContext sn : ctx.numberList().signedNumber()) {
+                paramValues.add(signedNumberValue(sn));
+            }
+        }
+
+        boolean xLog = false;
+        boolean yLog = false;
+        if (ctx.tableFlags() != null) {
+            for (var flag : ctx.tableFlags().IDENT()) {
+                String f = flag.getText().toLowerCase();
+                if (f.equals("xlog") || f.equals("logx")) {
+                    xLog = true;
+                } else if (f.equals("ylog") || f.equals("logy")) {
+                    yLog = true;
+                } else {
+                    throw new EquationParser.ParseException(
+                            "Unknown TABLE flag '" + flag.getText() + "' in " + name
+                                    + "(...). Supported flags: XLOG, YLOG.");
+                }
+            }
+        }
+
+        // Read every row as [x, y1, y2, ...]; ragged rows simply omit later columns.
+        List<double[]> rows = new ArrayList<>();
+        int maxCols = 0;
+        for (FreesParser.TableRowContext rowCtx : ctx.tableRow()) {
+            List<FreesParser.SignedNumberContext> nums = rowCtx.signedNumber();
+            double[] row = new double[nums.size()];
+            for (int i = 0; i < nums.size(); i++) {
+                row[i] = signedNumberValue(nums.get(i));
+            }
+            rows.add(row);
+            maxCols = Math.max(maxCols, row.length);
+        }
+        int curveCount = Math.max(1, maxCols - 1);
+        if (family && paramValues.size() != curveCount) {
+            throw new EquationParser.ParseException(
+                    "TABLE " + name + ": header declares " + paramValues.size()
+                            + " curve parameter value(s) but the rows have " + curveCount
+                            + " value column(s).");
+        }
+
+        List<ProcDef.Curve> curves = new ArrayList<>();
+        for (int j = 0; j < curveCount; j++) {
+            List<double[]> pts = new ArrayList<>();
+            for (double[] row : rows) {
+                if (row.length >= j + 2) {
+                    pts.add(new double[]{row[0], row[j + 1]});
+                }
+            }
+            pts.sort((a, b) -> Double.compare(a[0], b[0]));
+            double[] xs = new double[pts.size()];
+            double[] ys = new double[pts.size()];
+            for (int i = 0; i < pts.size(); i++) {
+                xs[i] = pts.get(i)[0];
+                ys[i] = pts.get(i)[1];
+            }
+            curves.add(new ProcDef.Curve(family ? paramValues.get(j) : null, xs, ys));
+        }
+
+        List<String> argNames = new ArrayList<>();
+        argNames.add(argName);
+        if (family) {
+            argNames.add(ctx.IDENT(2).getText().toLowerCase());
+        }
+        return new ProcDef.FunctionTableDef(name, argNames, xLog, yLog, curves);
+    }
+
+    private static double signedNumberValue(FreesParser.SignedNumberContext ctx) {
+        double v = Double.parseDouble(ctx.NUMBER().getText());
+        return ctx.MINUS() != null ? -v : v;
     }
 
     private List<String> buildParamList(FreesParser.ParamListContext ctx) {
@@ -197,9 +340,98 @@ public class AstBuilder extends FreesBaseVisitor<Expr> {
             return buildDuplicateBlock(ctx.duplicateBlock());
         } else if (ctx.callStatement() != null) {
             return buildCallStatement(ctx.callStatement());
+        } else if (ctx.rangeAssign() != null) {
+            return buildRangeAssign(ctx.rangeAssign());
         } else {
             return buildEquation(ctx.equation());
         }
+    }
+
+    /** Maximum elements a single range may generate, to keep a typo like
+     * {@code x = 0:0.0000001:100} from exploding the equation system. */
+    private static final int MAX_RANGE_ELEMENTS = 100_000;
+
+    /**
+     * MATLAB-style range that fills an array: {@code speed = 0:10:100 | Linear}.
+     * Lowered to the equivalent array assignment {@code speed[1..N] = [v1, ...]}
+     * so the existing array-literal expansion in EquationParser materializes the
+     * element equations. Linear (default) uses an arithmetic step; Log treats
+     * the middle number as a point count and spaces values geometrically.
+     */
+    private Statement.Eq buildRangeAssign(FreesParser.RangeAssignContext ctx) {
+        String var = ctx.IDENT(0).getText().toLowerCase();
+        List<FreesParser.SignedNumberContext> nums = ctx.signedNumber();
+        boolean threeForm = nums.size() == 3;
+        double start = signedNumberValue(nums.get(0));
+        double stop = signedNumberValue(nums.get(threeForm ? 2 : 1));
+        // 2-number form (start:stop) implies step 1; 3-number form gives step/count.
+        double middle = threeForm ? signedNumberValue(nums.get(1)) : 1.0;
+
+        String fill = ctx.PIPE() != null ? ctx.IDENT(1).getText().toLowerCase() : "linear";
+        List<Double> values = switch (fill) {
+            case "linear" -> linearRange(var, start, middle, stop);
+            case "log" -> logRange(var, start, middle, stop, threeForm);
+            default -> throw new EquationParser.ParseException(
+                    "Unknown range spacing '" + ctx.IDENT(1).getText() + "' in " + var
+                            + " = ... Supported: Linear, Log.");
+        };
+
+        Expr lhs = new Expr.ArrayAccess(var, List.of(
+                new Expr.Range(new Expr.Num(1), new Expr.Num(values.size()))));
+        List<Expr> elements = new ArrayList<>();
+        for (double v : values) {
+            elements.add(new Expr.Num(v));
+        }
+        return new Statement.Eq(lhs, new Expr.ArrayLiteral(elements), ctx.getText());
+    }
+
+    private static List<Double> linearRange(String var, double start, double step, double stop) {
+        if (step == 0.0) {
+            throw new EquationParser.ParseException("Range step is zero in " + var + " = ...");
+        }
+        if ((stop - start) * step < 0) {
+            throw new EquationParser.ParseException(
+                    "Range step points the wrong way in " + var + " = " + start + ":" + step + ":" + stop + ".");
+        }
+        long count = (long) Math.floor((stop - start) / step + 1e-9) + 1;
+        if (count > MAX_RANGE_ELEMENTS) {
+            throw new EquationParser.ParseException(
+                    "Range " + var + " = ... would generate " + count + " elements (max "
+                            + MAX_RANGE_ELEMENTS + "). Use a larger step.");
+        }
+        List<Double> values = new ArrayList<>();
+        for (long k = 0; k < count; k++) {
+            values.add(start + k * step);
+        }
+        return values;
+    }
+
+    private static List<Double> logRange(String var, double start, double countRaw,
+                                         double stop, boolean threeForm) {
+        if (!threeForm) {
+            throw new EquationParser.ParseException(
+                    "A logarithmic range needs start:count:stop (three numbers) in " + var + " = ...");
+        }
+        if (start <= 0 || stop <= 0) {
+            throw new EquationParser.ParseException(
+                    "A logarithmic range needs positive bounds in " + var + " = ...");
+        }
+        long count = Math.round(countRaw);
+        if (count < 2) {
+            throw new EquationParser.ParseException(
+                    "A logarithmic range needs a point count of at least 2 in " + var + " = ...");
+        }
+        if (count > MAX_RANGE_ELEMENTS) {
+            throw new EquationParser.ParseException(
+                    "Range " + var + " = ... would generate " + count + " elements (max "
+                            + MAX_RANGE_ELEMENTS + ").");
+        }
+        double ratio = Math.pow(stop / start, 1.0 / (count - 1));
+        List<Double> values = new ArrayList<>();
+        for (long k = 0; k < count; k++) {
+            values.add(k == count - 1 ? stop : start * Math.pow(ratio, k));
+        }
+        return values;
     }
 
     private Statement.CallProc buildCallStatement(FreesParser.CallStatementContext ctx) {

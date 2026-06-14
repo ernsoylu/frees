@@ -1366,6 +1366,21 @@ s1 = Entropy(R$, T=300, x=1)`}
               This expands into 10 separate equations: <code>X[1] = 10</code>, <code>Y[1] = X[1]^2</code>, ..., <code>X[5] = 50</code>, <code>Y[5] = X[5]^2</code>.
             </Text>
 
+            <Title order={3} mt="sm">Range Generation (MATLAB-style)</Title>
+            <Text>
+              Fill an array with an evenly-spaced sequence using a colon range
+              <Code>start:step:stop</Code> (the step defaults to <Code>1</Code> if omitted).
+              Append <Code>| Log</Code> for geometric spacing, where the middle number is the
+              <strong> point count</strong> (<Code>start:count:stop</Code>); <Code>| Linear</Code>
+              {' '}is the default.
+            </Text>
+            <Paper withBorder p="sm" bg="dark.8">
+              <Code block>{`speed = 0:10:100          { 0, 10, 20, ..., 100  -> speed[1..11] }
+x     = -50:1:50 | Linear { -50, -49, ..., 50 }
+freq  = 1:5:1000 | Log    { 5 points: 1, 10^0.75, 10^1.5, 10^2.25, 1000 }
+vmax  = speed[11]`}</Code>
+            </Paper>
+
             <Title order={3} mt="sm">Array Slices in Aggregate Functions</Title>
             <Text>
               You can pass slices of arrays using the double-dot <Code>..</Code> range notation as arguments to aggregate functions like <Code>sum</Code>, <Code>avg</Code>, <Code>min</Code>, and <Code>max</Code>:
@@ -1567,6 +1582,57 @@ U1 = myfunc(Re)
 U2 = htc(Re, T)`}
               </Code>
             </Paper>
+
+            <Title order={3} mt="sm">Defining Tables in Code (TABLE … END)</Title>
+            <Text size="sm">
+              Besides the Graph Digitizer and manual editor, you can define a Function
+              Table directly in the editor text with a <Code>TABLE … END</Code> block. The
+              block name becomes the callable function; the first column is the lookup
+              argument and each further column is one curve. Body rows are whitespace-separated
+              numbers; <Code>{`//`}</Code> comments are allowed. Code-defined tables appear in
+              the Tables window badged <strong>code</strong> (read-only there — the editor text
+              is their source). Add the optional flags <Code>XLOG</Code> / <Code>YLOG</Code> to
+              interpolate an axis in log space.
+            </Text>
+            <Paper withBorder p="md" bg="dark.8" radius="md" style={{ position: 'relative' }}>
+              <CopyButton code={`TABLE fanPressure(rpm)\n  // rpm   dP[Pa]\n  1000    120\n  2000    310\n  3000    560\nEND\ndP = fanPressure(2500)\n\n{ 2D curve family: parameter values after the colon }\nTABLE htc(Re : T = 100, 200)\n  0     0     0\n  10    10    30\nEND\nU = htc(5, 150)`} />
+              <Code block style={{ background: 'transparent' }}>
+                {`TABLE fanPressure(rpm)
+  // rpm   dP[Pa]
+  1000    120
+  2000    310
+  3000    560
+END
+dP = fanPressure(2500)
+
+{ 2D curve family: parameter values after the colon }
+TABLE htc(Re : T = 100, 200)
+  0     0     0
+  10    10    30
+END
+U = htc(5, 150)`}
+              </Code>
+            </Paper>
+
+            <Title order={3} mt="sm">Parametric Tables in Code (PARAMETRIC … END)</Title>
+            <Text size="sm">
+              Declare a Parametric run-table in the editor with a
+              <Code>PARAMETRIC name(vars…) … END</Code> block. Each body line fills one
+              column with a range (<Code>start:step:stop</Code>, optionally <Code>| Log</Code>)
+              or an explicit list <Code>[a, b, c]</Code>. The table appears in the Tables
+              window badged <strong>code</strong>; run it with <strong>Solve Table</strong>.
+              The block itself adds no equations to the main system.
+            </Text>
+            <Paper withBorder p="md" bg="dark.8" radius="md" style={{ position: 'relative' }}>
+              <CopyButton code={`PARAMETRIC sweep1 (T_in, mdot)\n  T_in = 300:10:350 | Linear\n  mdot = [0.1, 0.2, 0.4]\nEND\nQ = mdot * 4180 * (T_in - 290)`} />
+              <Code block style={{ background: 'transparent' }}>
+                {`PARAMETRIC sweep1 (T_in, mdot)
+  T_in = 300:10:350 | Linear
+  mdot = [0.1, 0.2, 0.4]
+END
+Q = mdot * 4180 * (T_in - 290)`}
+              </Code>
+            </Paper>
           </Stack>
         );
       case 'modules':
@@ -1687,6 +1753,30 @@ m_flow_total = m_flow_1 + m_flow_2`}
               <Badge color="violet" variant="filled">R1234ze</Badge>
               <Badge color="pink" variant="filled">Ammonia (R717)</Badge>
             </Group>
+
+            <Title order={4} mt="sm">Glycol Coolants (aqueous mixtures)</Title>
+            <Text size="sm">
+              Automotive / HVAC coolants are written as a base name plus the
+              glycol <strong>mass percentage</strong>, so the concentration is
+              fully configurable. These are single-phase liquids — use
+              <Code>T</Code> and <Code>P</Code> as the two state indicators
+              (quality does not apply).
+            </Text>
+            <Group gap="xs">
+              <Badge color="lime" variant="filled">EG50</Badge>
+              <Badge color="lime" variant="filled">EG10</Badge>
+              <Badge color="lime" variant="filled">MEG30</Badge>
+              <Badge color="green" variant="filled">PG50</Badge>
+              <Badge color="green" variant="filled">MPG30</Badge>
+            </Group>
+            <Text size="sm" mt="xs">
+              <code>EG</code>/<code>MEG</code>/<code>EthyleneGlycol</code> →
+              ethylene glycol, <code>PG</code>/<code>MPG</code>/<code>PropyleneGlycol</code>
+              {' '}→ propylene glycol. Example:{' '}
+              <code>rho = Density(EG50, T=20 [C], P=1 [atm])</code> for a 50/50
+              ethylene-glycol / water mix; change <code>50</code> to any 1–99 for
+              a different blend (e.g. <code>EG10</code> for 10/90).
+            </Text>
 
             <Title order={3} mt="sm">Available Property Functions</Title>
             <Table striped highlightOnHover withTableBorder>

@@ -34,6 +34,62 @@ class SolveControllerTest {
     }
 
     @Test
+    void solveEchoesCodeDefinedTables() throws Exception {
+        // A TABLE block in the editor text is callable and echoed back so the
+        // frontend can show it in the Tables window.
+        String text = "TABLE fanPressure(rpm)\\n  1000  120\\n  2000  310\\n  3000  560\\nEND\\ndP = fanPressure(2500)";
+        mockMvc.perform(post("/api/solve")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"text\": \"" + text + "\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.codeTables[0].name").value("fanpressure"))
+                .andExpect(jsonPath("$.codeTables[0].argNames[0]").value("rpm"))
+                .andExpect(jsonPath("$.codeTables[0].curves[0].points.length()").value(3));
+    }
+
+    @Test
+    void checkEchoesCodeDefinedTables() throws Exception {
+        String text = "TABLE htc(re : t = 100, 200)\\n  0   0   0\\n  10  10  30\\nEND\\nU = htc(5, 150)";
+        mockMvc.perform(post("/api/check")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"text\": \"" + text + "\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.codeTables[0].name").value("htc"))
+                .andExpect(jsonPath("$.codeTables[0].argNames[1]").value("t"))
+                .andExpect(jsonPath("$.codeTables[0].curves.length()").value(2));
+    }
+
+    @Test
+    void checkEchoesParametricTables() throws Exception {
+        // A PARAMETRIC block defines a run-table that the frontend renders;
+        // it must not pollute the main equation system.
+        String text = "PARAMETRIC sweep1 (T_in, mdot)\\n  T_in = 300:10:320\\n  mdot = [0.1, 0.2, 0.4]\\nEND\\nQ = mdot * 4180 * (T_in - 290)";
+        mockMvc.perform(post("/api/check")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"text\": \"" + text + "\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.parametricTables[0].name").value("sweep1"))
+                .andExpect(jsonPath("$.parametricTables[0].vars[0]").value("t_in"))
+                .andExpect(jsonPath("$.parametricTables[0].rows.length()").value(3))
+                .andExpect(jsonPath("$.parametricTables[0].rows[2][0]").value(320.0));
+    }
+
+    @Test
+    void rangeAssignmentSurvivesMarkdownExtraction() throws Exception {
+        // The range line must reach the parser (not be dropped as prose).
+        String text = "speed = 0:10:100 | Linear\\ntop = speed[11]";
+        mockMvc.perform(post("/api/solve")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"text\": \"" + text + "\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.variables[?(@.name == 'top')].value")
+                        .value(org.hamcrest.Matchers.contains(
+                                org.hamcrest.Matchers.closeTo(100.0, 1e-6))));
+    }
+
+    @Test
     void reportsSyntaxErrorsAsBadRequest() throws Exception {
         mockMvc.perform(post("/api/solve")
                         .contentType(MediaType.APPLICATION_JSON)

@@ -163,12 +163,50 @@ public class SolveController {
                                 String error,
                                 List<String> formattedEquations,
                                 List<Map<String, Double>> cyclePath,
-                                String formattedReport) {
+                                String formattedReport,
+                                List<FunctionTableDto> codeTables,
+                                List<ParametricTableDto> parametricTables) {
 
         static SolveResponse failure(String error) {
             return new SolveResponse(false, List.of(), List.of(), List.of(), null,
-                    List.of(), List.of(), error, List.of(), List.of(), null);
+                    List.of(), List.of(), error, List.of(), List.of(), null, List.of(), List.of());
         }
+    }
+
+    /** A parametric run-table parsed from a PARAMETRIC ... END block: the
+     * declared variables and the row-major value grid the frontend turns into
+     * a Parametric Table. */
+    public record ParametricTableDto(String name, List<String> vars, List<List<Double>> rows) {}
+
+    static List<ParametricTableDto> parametricTablesOf(
+            List<com.frees.backend.ast.ParametricTable> tables) {
+        List<ParametricTableDto> out = new ArrayList<>();
+        for (com.frees.backend.ast.ParametricTable t : tables) {
+            out.add(new ParametricTableDto(t.name(), t.vars(), t.rows()));
+        }
+        return out;
+    }
+
+    /** Function tables parsed from the editor text (TABLE ... END blocks), in
+     * the same wire format the GUI sends, so the frontend can show them in the
+     * Tables window badged as defined-in-code. */
+    static List<FunctionTableDto> codeTablesOf(Map<String, ProcDef> defs) {
+        List<FunctionTableDto> out = new ArrayList<>();
+        for (ProcDef def : defs.values()) {
+            if (def instanceof ProcDef.FunctionTableDef td) {
+                List<FunctionCurveDto> curves = new ArrayList<>();
+                for (ProcDef.Curve c : td.curves()) {
+                    List<List<Double>> points = new ArrayList<>();
+                    for (int i = 0; i < c.xs().length; i++) {
+                        points.add(List.of(c.xs()[i], c.ys()[i]));
+                    }
+                    curves.add(new FunctionCurveDto(c.param(), points));
+                }
+                out.add(new FunctionTableDto(td.name(), td.argNames(),
+                        td.xLog(), td.yLog(), curves));
+            }
+        }
+        return out;
     }
 
     private static final String NO_EQUATIONS_MESSAGE = "No equations entered.";
@@ -190,7 +228,9 @@ public class SolveController {
                                 Map<String, String> inferredUnits,
                                 String message,
                                 List<String> formattedEquations,
-                                String formattedReport) {}
+                                String formattedReport,
+                                List<FunctionTableDto> codeTables,
+                                List<ParametricTableDto> parametricTables) {}
 
     private static Map<String, String> unitsByVariable(List<VariableInfoDto> variableInfo) {
         Map<String, String> units = new HashMap<>();
@@ -283,7 +323,7 @@ public class SolveController {
     public ResponseEntity<CheckResponse> check(@RequestBody SolveRequest request) {
         if (request.text() == null || request.text().isBlank()) {
             return ResponseEntity.badRequest().body(new CheckResponse(false, 0, 0, List.of(), List.of(),
-                    Map.of(), NO_EQUATIONS_MESSAGE, List.of(), null));
+                    Map.of(), NO_EQUATIONS_MESSAGE, List.of(), null, List.of(), List.of()));
         }
         try {
             boolean complexMode = request.stopCriteria() != null && Boolean.TRUE.equals(request.stopCriteria().complexMode());
@@ -314,17 +354,19 @@ public class SolveController {
                     inferredUnits,
                     result.message(),
                     formattedEquations,
-                    formattedReport));
+                    formattedReport,
+                    codeTablesOf(parsed.defs()),
+                    parametricTablesOf(parsed.parametricTables())));
         } catch (EquationParser.ParseException e) {
             String firstError = e.getMessage().lines().findFirst().orElse(e.getMessage());
             return ResponseEntity.badRequest().body(new CheckResponse(
                     false, 0, 0, List.of(), List.of(), Map.of(),
-                    "Syntax error: " + firstError, List.of(), null));
+                    "Syntax error: " + firstError, List.of(), null, List.of(), List.of()));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(new CheckResponse(
                             false, 0, 0, List.of(), List.of(), Map.of(),
-                            e.getMessage() != null ? e.getMessage() : e.toString(), List.of(), null));
+                            e.getMessage() != null ? e.getMessage() : e.toString(), List.of(), null, List.of(), List.of()));
         }
     }
 
@@ -418,7 +460,9 @@ public class SolveController {
                     null,
                     formattedEquations,
                     cyclePath,
-                    formattedReport));
+                    formattedReport,
+                    codeTablesOf(parsed.defs()),
+                    parametricTablesOf(parsed.parametricTables())));
         } catch (EquationParser.ParseException e) {
             return ResponseEntity.badRequest()
                     .body(SolveResponse.failure("Syntax error:\n" + e.getMessage()));

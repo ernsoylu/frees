@@ -28,6 +28,7 @@ const MONO_INPUT = {
 interface ColumnHeaderProps {
   name: string
   units: string
+  readOnly?: boolean
   onAlter: () => void
   onUnitsChange: (units: string) => void
 }
@@ -35,21 +36,22 @@ interface ColumnHeaderProps {
 function ColumnHeader({
   name,
   units,
+  readOnly,
   onAlter,
   onUnitsChange,
 }: Readonly<ColumnHeaderProps>) {
   return (
     <Stack gap={4}>
-      <Tooltip label="Click to fill values (linear / logarithmic)">
+      <Tooltip label={readOnly ? 'Defined in code' : 'Click to fill values (linear / logarithmic)'}>
         <Text
           size="sm"
           fw={600}
           ff="monospace"
           c="blue.4"
-          style={{ cursor: 'pointer' }}
-          onClick={onAlter}
+          style={{ cursor: readOnly ? 'default' : 'pointer' }}
+          onClick={readOnly ? undefined : onAlter}
         >
-          {name} ⤓
+          {name}{readOnly ? '' : ' ⤓'}
         </Text>
       </Tooltip>
       <TextInput
@@ -58,6 +60,7 @@ function ColumnHeader({
         placeholder="units"
         value={units}
         onChange={(e) => onUnitsChange(e.currentTarget.value)}
+        readOnly={readOnly}
         spellCheck={false}
         styles={{
           input: {
@@ -89,10 +92,11 @@ function RunCell({
 interface ValueCellProps {
   draft: string
   computed: number | undefined
+  readOnly?: boolean
   onChange: (value: string) => void
 }
 
-function ValueCell({ draft, computed, onChange }: Readonly<ValueCellProps>) {
+function ValueCell({ draft, computed, readOnly, onChange }: Readonly<ValueCellProps>) {
   if (computed === undefined) {
     return (
       <TextInput
@@ -100,6 +104,7 @@ function ValueCell({ draft, computed, onChange }: Readonly<ValueCellProps>) {
         value={draft}
         placeholder="auto"
         spellCheck={false}
+        readOnly={readOnly}
         onChange={(e) => onChange(e.currentTarget.value)}
         styles={MONO_INPUT}
       />
@@ -117,6 +122,7 @@ interface Props {
   rows: ParamRow[]
   results: TableRowResult[]
   varDrafts: Record<string, VariableDraft>
+  readOnly?: boolean
   onConfigure: () => void
   onAddRow: () => void
   onRemoveRow: () => void
@@ -131,6 +137,7 @@ export default function ParametricTableTab({
   rows,
   results,
   varDrafts,
+  readOnly,
   onConfigure,
   onAddRow,
   onRemoveRow,
@@ -142,20 +149,29 @@ export default function ParametricTableTab({
   return (
     <Stack gap="sm" style={{ flex: 1, minHeight: 0 }}>
       <Group gap="xs">
-        <Button size="xs" variant="default" onClick={onConfigure}>
-          Configure Columns
-        </Button>
-        <Button size="xs" variant="default" onClick={onAddRow}>
-          Add Row
-        </Button>
-        <Button
-          size="xs"
-          variant="default"
-          disabled={rows.length <= 1}
-          onClick={onRemoveRow}
-        >
-          Remove Row
-        </Button>
+        {readOnly ? (
+          <Text size="xs" c="dimmed">
+            Defined in code (PARAMETRIC … END) — its columns and rows come from
+            the editor text. Run it with Solve Table.
+          </Text>
+        ) : (
+          <>
+            <Button size="xs" variant="default" onClick={onConfigure}>
+              Configure Columns
+            </Button>
+            <Button size="xs" variant="default" onClick={onAddRow}>
+              Add Row
+            </Button>
+            <Button
+              size="xs"
+              variant="default"
+              disabled={rows.length <= 1}
+              onClick={onRemoveRow}
+            >
+              Remove Row
+            </Button>
+          </>
+        )}
         {results.length > 0 && (
           <Button size="xs" variant="subtle" onClick={onClearResults}>
             Clear Results
@@ -180,6 +196,7 @@ export default function ParametricTableTab({
                     <ColumnHeader
                       name={name}
                       units={varDrafts[name]?.units ?? ''}
+                      readOnly={readOnly}
                       onAlter={() => onAlterColumn(name)}
                       onUnitsChange={(units) => onColumnUnitsChange(name, units)}
                     />
@@ -204,6 +221,7 @@ export default function ParametricTableTab({
                         <ValueCell
                           draft={draft}
                           computed={computed}
+                          readOnly={readOnly}
                           onChange={(value) => onCellChange(ri, name, value)}
                         />
                       </Table.Td>

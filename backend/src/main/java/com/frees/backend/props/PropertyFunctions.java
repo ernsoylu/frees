@@ -116,7 +116,47 @@ public final class PropertyFunctions {
             Map.entry("d", "D"),
             Map.entry("tdp", "D"));
 
+    /**
+     * Aqueous glycol coolants, written as a base name plus the glycol mass
+     * percentage, e.g. EG50 (50 % ethylene glycol / 50 % water) or PG30.
+     * Accepted bases: ethylene glycol = EG / MEG / EthyleneGlycol; propylene
+     * glycol = PG / MPG / PropyleneGlycol. An optional underscore is allowed
+     * (EG_50). Resolved to CoolProp's incompressible mixtures
+     * INCOMP::MEG[frac] / INCOMP::MPG[frac]. These are single-phase liquids:
+     * use T and P as the two state indicators (quality does not apply).
+     */
+    private static final java.util.regex.Pattern GLYCOL_MIX =
+            java.util.regex.Pattern.compile(
+                    "(eg|meg|ethyleneglycol|pg|mpg|propyleneglycol)_?(\\d{1,3})");
+
     private PropertyFunctions() {}
+
+    /**
+     * Maps a written fluid token to a CoolProp fluid name: a known alias from
+     * {@link #FLUIDS}, an aqueous glycol mixture (EG50, PG30, ...), or the
+     * token unchanged so CoolProp can report an unknown fluid itself.
+     */
+    static String resolveFluid(String token) {
+        String alias = FLUIDS.get(token);
+        if (alias != null) {
+            return alias;
+        }
+        java.util.regex.Matcher m = GLYCOL_MIX.matcher(token);
+        if (m.matches()) {
+            String base = m.group(1);
+            int percent = Integer.parseInt(m.group(2));
+            if (percent <= 0 || percent >= 100) {
+                throw new IllegalStateException(
+                        "Glycol mixture concentration must be between 1 and 99 mass-%, "
+                                + "got " + percent + "%. Example: EG50 for a 50 % "
+                                + "ethylene-glycol / 50 % water coolant.");
+            }
+            String coolpropBase = (base.startsWith("p") || base.startsWith("mp")) ? "MPG" : "MEG";
+            String fraction = java.math.BigDecimal.valueOf(percent).movePointLeft(2).toPlainString();
+            return "INCOMP::" + coolpropBase + "[" + fraction + "]";
+        }
+        return token;
+    }
 
     /** Canonical CoolProp fluid names available for property diagrams. */
     public static List<String> plotFluids() {
@@ -149,7 +189,7 @@ public final class PropertyFunctions {
                     + " requires a fluid and exactly two property indicators, "
                     + "e.g. " + capitalize(output) + "(R134a, T=300, x=1)");
         }
-        String fluid = FLUIDS.getOrDefault(parts[2], parts[2]);
+        String fluid = resolveFluid(parts[2]);
         Input first = toInput(parts[3], values.get(0), output);
         Input second = toInput(parts[4], values.get(1), output);
         double raw = CoolProp.propsSI(outputKey, first.key(), first.value(),

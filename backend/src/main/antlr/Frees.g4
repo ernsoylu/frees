@@ -12,6 +12,8 @@ topLevel
     : functionDef
     | procedureDef
     | moduleDef
+    | tableDef
+    | parametricDef
     | statement
     ;
 
@@ -33,6 +35,52 @@ moduleDef
     : MODULE IDENT LPAREN paramList COLON paramList RPAREN sep
       statementList sep?
       END
+    ;
+
+// ── Code-defined tables (Epic 8 programmatic tables) ─────────────────────────
+// 1D:  TABLE name(arg) [XLOG] [YLOG] <rows> END
+// 2D:  TABLE name(arg : param = v1, v2, ...) <rows> END
+// Body rows are whitespace-separated signed numbers; the first column is the
+// lookup argument, each further column is one curve of the family.
+
+tableDef
+    : TABLE IDENT LPAREN IDENT (COLON IDENT EQ numberList)? RPAREN tableFlags? sep
+      tableRow (sep tableRow)* sep?
+      END
+    ;
+
+tableFlags
+    : IDENT+
+    ;
+
+// ── Code-defined parametric run-table ────────────────────────────────────────
+//   PARAMETRIC sweep1 (T_in, mdot)
+//     T_in = -50:1:50 | Linear
+//     mdot = [0.1, 0.2, 0.4]
+//   END
+// Each column assigns one declared variable to a range or an explicit list.
+
+parametricDef
+    : PARAMETRIC IDENT LPAREN paramList RPAREN sep
+      paramColumn (sep paramColumn)* sep?
+      END
+    ;
+
+paramColumn
+    : IDENT EQ signedNumber COLON signedNumber (COLON signedNumber)? (PIPE IDENT)?   # ParamColRange
+    | IDENT EQ LBRACKET numberList RBRACKET                                          # ParamColList
+    ;
+
+numberList
+    : signedNumber (COMMA signedNumber)*
+    ;
+
+signedNumber
+    : (PLUS | MINUS)? NUMBER
+    ;
+
+tableRow
+    : signedNumber+
     ;
 
 paramList
@@ -75,7 +123,16 @@ repeatStatement
 statement
     : duplicateBlock
     | callStatement
+    | rangeAssign
     | equation
+    ;
+
+// MATLAB-style range that fills an array variable:
+//   speed = 0:10:100        (start:step:stop, step defaults to 1 if omitted)
+//   freq  = 1:5:1000 | Log  (start:count:stop, geometrically spaced)
+// The trailing flag (Linear | Log) selects the spacing; Linear is the default.
+rangeAssign
+    : IDENT EQ signedNumber COLON signedNumber (COLON signedNumber)? (PIPE IDENT)?
     ;
 
 callStatement
@@ -190,6 +247,7 @@ SEMI    : ';' ;
 LBRACKET: '[' ;
 RBRACKET: ']' ;
 DOTDOT  : '..' ;
+PIPE    : '|' ;
 
 // ASSIGN must be defined before COLON so ':=' beats ':'
 ASSIGN  : ':=' ;
@@ -209,6 +267,8 @@ END       : [eE][nN][dD] ;
 FUNCTION  : [fF][uU][nN][cC][tT][iI][oO][nN] ;
 PROCEDURE : [pP][rR][oO][cC][eE][dD][uU][rR][eE] ;
 MODULE    : [mM][oO][dD][uU][lL][eE] ;
+TABLE     : [tT][aA][bB][lL][eE] ;
+PARAMETRIC : [pP][aA][rR][aA][mM][eE][tT][rR][iI][cC] ;
 IF        : [iI][fF] ;
 THEN      : [tT][hH][eE][nN] ;
 ELSE      : [eE][lL][sS][eE] ;

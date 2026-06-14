@@ -98,7 +98,7 @@ export default function TablesTab(props: Readonly<Props>) {
               ) : (
                 <IconChartGridDots size={13} color="var(--mantine-color-teal-4)" />
               )}
-              {active?.id === t.id ? (
+              {active?.id === t.id && t.source !== 'code' ? (
                 <TextInput
                   size="xs"
                   variant="unstyled"
@@ -109,18 +109,26 @@ export default function TablesTab(props: Readonly<Props>) {
               ) : (
                 <Text size="xs">{t.name}</Text>
               )}
-              <ActionIcon
-                size="xs"
-                variant="subtle"
-                color="red"
-                aria-label={`Delete ${t.name}`}
-                onClick={(e) => {
-                  e.stopPropagation()
-                  removeTable(t.id)
-                }}
-              >
-                <IconTrash size={11} />
-              </ActionIcon>
+              {t.source === 'code' ? (
+                <Tooltip label="Defined by a TABLE … END block in the editor (read-only)">
+                  <Badge size="xs" variant="light" color="grape">
+                    code
+                  </Badge>
+                </Tooltip>
+              ) : (
+                <ActionIcon
+                  size="xs"
+                  variant="subtle"
+                  color="red"
+                  aria-label={`Delete ${t.name}`}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    removeTable(t.id)
+                  }}
+                >
+                  <IconTrash size={11} />
+                </ActionIcon>
+              )}
             </Group>
           </Paper>
         ))}
@@ -170,6 +178,7 @@ export default function TablesTab(props: Readonly<Props>) {
           rows={props.rows}
           results={props.results}
           varDrafts={props.varDrafts}
+          readOnly={active.source === 'code'}
           onConfigure={props.onConfigure}
           onAddRow={props.onAddRow}
           onRemoveRow={props.onRemoveRow}
