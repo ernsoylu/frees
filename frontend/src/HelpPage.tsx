@@ -951,30 +951,29 @@ Q_total_millions = Q_total_btu / 1e6`,
   },
   {
     value: "siyavula-correlation",
-    title: "Statistics: Linear Correlation Coefficient (Siyavula Grade 12)",
-    description: "Computes the Pearson correlation coefficient (r) for a bivariate dataset from Siyavula Grade 12 Statistics. This model defines the data vectors and computes sums, sums of squares, and sum of products using arrays and duplicate blocks.",
-    note: "Results: r = -0.9961 (indicating a nearly perfect negative linear correlation, which rounds to -1.00). Siyavula Grade 12 Statistics, Interactive Exercise 9.4.",
-    code: `{ Statistics: Linear Correlation Coefficient (r) }
-{ Computes the Pearson correlation coefficient (r) for a bivariate data set.
-  Source: Siyavula Grade 12 Mathematics, Interactive Exercise 9.4. }
-N = 10
-x[1..10] = [58, -81, -94, 67, -13, 52, -100, -11, 44, -54]
-y[1..10] = [-100, 195, 210, -126, 9, -102, 228, 40, -96, 131]
+    title: "Statistics: Linear Correlation (Siyavula Grade 12 Table & Curve Fit)",
+    description: "Defines a bivariate dataset from Siyavula Grade 12 Statistics using an inline TABLE block. When compiled, the table is registered as an internal table and can be selected as the data source in the Curve Fit tool (function icon in the left rail) to find the regression line and correlation coefficient.",
+    note: "How-To: 1. Paste this code and press Check (F4). 2. Open the Curve Fit tool on the left rail. 3. Select 'siyavula_data' from the Table dropdown. 4. Select 'x' as independent, 'y' as dependent column. 5. Choose the Linear template and click Fit. R² = 0.9921 yields |r| = sqrt(0.9921) = 0.9961, and since the slope is negative, r = -0.9961.",
+    code: `{ Statistics: Linear Correlation (Siyavula Grade 12) }
+{ This example defines the Siyavula Grade 12 Statistics bivariate dataset
+  using an inline TABLE block. Once compiled (F4), the table is registered
+  in the app's internal tables and can be loaded into the Curve Fit engine. }
 
-DUPLICATE i = 1, 10
-  xy[i] = x[i] * y[i]
-  x2[i] = x[i]^2
-  y2[i] = y[i]^2
+TABLE siyavula_data(x)
+   58   -100
+  -81    195
+  -94    210
+   67   -126
+  -13      9
+   52   -102
+ -100    228
+  -11     40
+   44    -96
+  -54    131
 END
 
-sum_x = sum(x[1..10])
-sum_y = sum(y[1..10])
-sum_xy = sum(xy[1..10])
-sum_x2 = sum(x2[1..10])
-sum_y2 = sum(y2[1..10])
-
-{ Correlation coefficient r }
-r = (N * sum_xy - sum_x * sum_y) / sqrt((N * sum_x2 - sum_x^2) * (N * sum_y2 - sum_y^2))`,
+{ A dummy equation using the table function to ensure it compiles }
+y_test = siyavula_data(0)`,
   },
 ];
 

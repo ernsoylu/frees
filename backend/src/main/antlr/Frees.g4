@@ -180,7 +180,7 @@ addExpr
     ;
 
 mulExpr
-    : unaryExpr ((TIMES | DIV) unaryExpr)*
+    : unaryExpr ((TIMES | DIV | BACKSLASH) unaryExpr)*
     ;
 
 unaryExpr
@@ -190,7 +190,7 @@ unaryExpr
     ;
 
 powExpr
-    : atom (CARET unaryExpr)?
+    : atom (CARET unaryExpr)? TRANSPOSE*
     ;
 
 atom
@@ -201,8 +201,12 @@ atom
     | IF LPAREN argList RPAREN               # IfCallAtom
     | IDENT LBRACKET arrayIndexList RBRACKET # ArrayAtom
     | IDENT                                  # VarAtom
-    | LBRACKET argList RBRACKET              # ArrayLiteralAtom
+    | LBRACKET matrixRow (SEMI matrixRow)* RBRACKET # MatrixLiteralAtom
     | LPAREN expr RPAREN                     # ParenAtom
+    ;
+
+matrixRow
+    : expr (COMMA? expr)*
     ;
 
 argList
@@ -248,6 +252,8 @@ LBRACKET: '[' ;
 RBRACKET: ']' ;
 DOTDOT  : '..' ;
 PIPE    : '|' ;
+BACKSLASH : '\\' ;
+TRANSPOSE : '\'' ;
 
 // ASSIGN must be defined before COLON so ':=' beats ':'
 ASSIGN  : ':=' ;
