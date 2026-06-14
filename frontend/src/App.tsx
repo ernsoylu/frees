@@ -323,6 +323,13 @@ export default function App() {
     downloadProject(buildProject(currentSlices()), projectName)
   }, [currentSlices, projectName])
 
+  const handleRenameProject = useCallback(() => {
+    const name = window.prompt('Rename project:', projectName)
+    if (name == null) return
+    const clean = name.trim() || 'untitled'
+    setProjectName(clean)
+  }, [projectName])
+
   const handleSaveProjectAs = useCallback(() => {
     const name = window.prompt('Save project as:', projectName)
     if (name == null) return
@@ -1001,6 +1008,7 @@ export default function App() {
             invalidateTable()
           }}
           projectName={projectName}
+          onRenameProject={handleRenameProject}
           onNewProject={handleNewProject}
           onOpenProject={handleOpenProject}
           onSaveProject={handleSaveProject}

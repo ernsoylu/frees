@@ -46,16 +46,27 @@ public class SolveController {
                     complexMode != null ? complexMode : d.complexMode());
         }
     }
-
     public record VariableInfoDto(String name, Double guess, Double lower, Double upper,
                                   String units, Double uncertainty) {
 
         VariableSpec toSpec() {
-            double lo = lower != null ? lower : Double.NEGATIVE_INFINITY;
-            double hi = upper != null ? upper : Double.POSITIVE_INFINITY;
-            double g = guess != null ? guess
+            double factor = 1.0;
+            double offset = 0.0;
+            if (units != null && !units.isBlank() && !units.equals("-")) {
+                try {
+                    UnitRegistry.OffsetQuantity recorded = UnitRegistry.parseWithOffset(units);
+                    factor = recorded.factor();
+                    offset = recorded.offset();
+                } catch (UnitRegistry.UnknownUnitException e) {
+                    // Fall back to default factor 1.0, offset 0.0
+                }
+            }
+
+            double lo = lower != null ? (lower * factor + offset) : Double.NEGATIVE_INFINITY;
+            double hi = upper != null ? (upper * factor + offset) : Double.POSITIVE_INFINITY;
+            double g = guess != null ? (guess * factor + offset)
                     : Math.clamp(VariableSpec.DEFAULT_GUESS, lo, hi);
-            double unc = uncertainty != null ? uncertainty : 0.0;
+            double unc = uncertainty != null ? (uncertainty * factor) : 0.0;
             return new VariableSpec(name, g, lo, hi, unc);
         }
     }

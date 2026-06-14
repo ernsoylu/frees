@@ -31,6 +31,7 @@ import {
   IconTargetArrow,
   IconTemperature,
   IconVariable,
+  IconPencil,
 } from '@tabler/icons-react'
 import { CheckResponse, SolveResponse, TableRowResult } from './api'
 import { withStableKeys } from './format'
@@ -294,6 +295,7 @@ interface TopBarProps {
   onFindAllChange: (checked: boolean) => void
   onComplexModeChange: (checked: boolean) => void
   projectName: string
+  onRenameProject: () => void
   onNewProject: () => void
   onOpenProject: () => void
   onSaveProject: () => void
@@ -343,6 +345,10 @@ export function TopBar(props: Readonly<TopBarProps>) {
           </Menu.Target>
           <Menu.Dropdown>
             <Menu.Label>{props.projectName}.frees</Menu.Label>
+            <Menu.Item leftSection={<IconPencil size={14} />} onClick={props.onRenameProject}>
+              Rename Project…
+            </Menu.Item>
+            <Menu.Divider />
             <Menu.Item leftSection={<IconFilePlus size={14} />} onClick={props.onNewProject}>
               New Project
             </Menu.Item>
@@ -358,6 +364,24 @@ export function TopBar(props: Readonly<TopBarProps>) {
             </Menu.Item>
           </Menu.Dropdown>
         </Menu>
+        <Tooltip label="Click to rename project">
+          <UnstyledButton
+            onClick={props.onRenameProject}
+            style={{
+              padding: '2px 8px',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              border: '1px solid var(--mantine-color-dark-4)',
+              backgroundColor: 'var(--mantine-color-dark-6)',
+              display: 'flex',
+              alignItems: 'center',
+            }}
+          >
+            <Text size="xs" c="gray.4" style={{ fontFamily: 'monospace' }}>
+              {props.projectName}.frees
+            </Text>
+          </UnstyledButton>
+        </Tooltip>
         <Text c="dimmed" size="xs" visibleFrom="lg">
           free solver
         </Text>
