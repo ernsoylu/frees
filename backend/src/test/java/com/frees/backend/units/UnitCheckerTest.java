@@ -176,8 +176,8 @@ class UnitCheckerTest {
         assertEquals(t1, t2);
         assertNotEquals(t1, t3);
         assertNotEquals(t1, t4);
-        assertNotEquals(t1, null);
-        assertNotEquals(t1, new Object());
+        assertNotEquals(null, t1);
+        assertNotEquals(new Object(), t1);
         assertEquals(t1.hashCode(), t2.hashCode());
         assertTrue(t1.toString().contains("DimTerm"));
     }

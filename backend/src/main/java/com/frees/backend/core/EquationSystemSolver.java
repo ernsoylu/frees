@@ -269,6 +269,15 @@ public class EquationSystemSolver {
                 solved.iterations(), startNanos, parsed, uncertainties);
     }
 
+    private record SolveConfig(
+            long deadlineNanos,
+            Map<String, VariableSpec> specs,
+            Map<String, Double> warmStart,
+            NewtonSolver newton,
+            NewtonSolver retry,
+            NewtonSolver polisher
+    ) {}
+
     private record InnerSolve(Map<String, Double> values, List<Block> blocks,
                               int iterations) {}
 
@@ -318,33 +327,31 @@ public class EquationSystemSolver {
         NewtonSolver newtonSolver = new NewtonSolver(settings, defs);
         NewtonSolver retrySolver = new NewtonSolver(retrySettings(settings), defs);
         NewtonSolver polisher = new NewtonSolver(polishSettings(settings), defs);
+        SolveConfig config = new SolveConfig(deadlineNanos, expandedSpecs, mutableWarmStart, newtonSolver, retrySolver, polisher);
+
         List<Block> blocks = blocker.block(equations);
         int totalIterations = 0;
         Set<Integer> skipIndices = new HashSet<>();
         for (int bi = 0; bi < blocks.size(); bi++) {
             if (skipIndices.contains(bi)) continue;
-            totalIterations += solveBlockWithFallback(bi, blocks, values, deadlineNanos, expandedSpecs,
-                    newtonSolver, retrySolver, polisher, mutableWarmStart, skipIndices);
+            totalIterations += solveBlockWithFallback(bi, blocks, values, config, skipIndices);
         }
         return new InnerSolve(values, blocks, totalIterations);
     }
 
     private int solveBlockWithFallback(int bi, List<Block> blocks, Map<String, Double> values,
-                                       long deadlineNanos, Map<String, VariableSpec> expandedSpecs,
-                                       NewtonSolver newtonSolver, NewtonSolver retrySolver,
-                                       NewtonSolver polisher, Map<String, Double> warmStart,
-                                       Set<Integer> skipIndices) {
+                                       SolveConfig config, Set<Integer> skipIndices) {
         Block block = blocks.get(bi);
         Block actualSolved = block;
         int iterations = 0;
         try {
-            iterations += newtonSolver.solveBlock(block, values, deadlineNanos, expandedSpecs);
+            iterations += config.newton().solveBlock(block, values, config.deadlineNanos(), config.specs());
         } catch (SolverException ex) {
             // First resort when a block fails: retry it alone from
             // transformed guesses. This is local and cheap, and keeps the
             // solutions of all other blocks intact.
-            int retryIterations = retryWithTransformedGuesses(retrySolver, block,
-                    values, deadlineNanos, expandedSpecs, warmStart);
+            int retryIterations = retryWithTransformedGuesses(config.retry(), block,
+                    values, config.deadlineNanos(), config.specs(), config.warmStart());
             if (retryIterations >= 0) {
                 iterations += retryIterations;
             } else {
@@ -357,9 +364,9 @@ public class EquationSystemSolver {
                     // Previously solved blocks may have incorrect values from
                     // SVD fallback on rank-deficient Jacobians.
                     for (String v : merged.variables()) {
-                        values.put(v, initialGuess(v, expandedSpecs, null));
+                        values.put(v, initialGuess(v, config.specs(), null));
                     }
-                    iterations += newtonSolver.solveBlock(merged, values, deadlineNanos, expandedSpecs);
+                    iterations += config.newton().solveBlock(merged, values, config.deadlineNanos(), config.specs());
                     skipIndices.addAll(mergedIndices);
                     actualSolved = merged;
                 } else {
@@ -368,7 +375,7 @@ public class EquationSystemSolver {
             }
         }
         try {
-            iterations += polisher.solveBlock(actualSolved, values, deadlineNanos, expandedSpecs);
+            iterations += config.polisher().solveBlock(actualSolved, values, config.deadlineNanos(), config.specs());
         } catch (SolverException ignored) {
             // Polishing is best-effort; the main solution is still valid.
         }

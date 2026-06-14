@@ -1002,24 +1002,6 @@ public class SolveController {
         return !containsIgnoreCase(targetVariables, varName);
     }
 
-    private void solveDerivedProps(Map<String, Double> knowns, String template, PropPair matchedPair, double propVal1, double propVal2, String fluid, java.util.Set<String> targetVariables, Map<String, Double> solvedProps) {
-        // Specific volume v = 1 / Dmass
-        if (!knowns.containsKey("v") && !shouldSkipProp("v", template, targetVariables)) {
-            double resDmass = solvedProps.containsKey("rho") ? solvedProps.get("rho") :
-                    getPropOrNaN(DMASS, matchedPair.valKey1(), propVal1, matchedPair.valKey2(), propVal2, fluid);
-            if (Double.isFinite(resDmass) && resDmass != 0.0) {
-                solvedProps.put("v", 1.0 / resDmass);
-            }
-        }
-
-        // Quality x = Q
-        if (!knowns.containsKey("x") && !shouldSkipProp("x", template, targetVariables)) {
-            double resQ = getPropOrNaN("Q", matchedPair.valKey1(), propVal1, matchedPair.valKey2(), propVal2, fluid);
-            if (Double.isFinite(resQ)) {
-                solvedProps.put("x", resQ);
-            }
-        }
-    }
 
     private void populateSolvedProperties(Map<String, Double> solvedProps, String template, Map<String, Double> variables, Map<String, String> displayNames) {
         for (Map.Entry<String, Double> solved : solvedProps.entrySet()) {
@@ -1071,7 +1053,23 @@ public class SolveController {
             }
         }
 
-        solveDerivedProps(knowns, template, matchedPair, propVal1, propVal2, fluid, targetVariables, solvedProps);
+        // Specific volume v = 1 / Dmass
+        if (!knowns.containsKey("v") && !shouldSkipProp("v", template, targetVariables)) {
+            double resDmass = solvedProps.containsKey("rho") ? solvedProps.get("rho") :
+                    getPropOrNaN(DMASS, matchedPair.valKey1(), propVal1, matchedPair.valKey2(), propVal2, fluid);
+            if (Double.isFinite(resDmass) && resDmass != 0.0) {
+                solvedProps.put("v", 1.0 / resDmass);
+            }
+        }
+
+        // Quality x = Q
+        if (!knowns.containsKey("x") && !shouldSkipProp("x", template, targetVariables)) {
+            double resQ = getPropOrNaN("Q", matchedPair.valKey1(), propVal1, matchedPair.valKey2(), propVal2, fluid);
+            if (Double.isFinite(resQ)) {
+                solvedProps.put("x", resQ);
+            }
+        }
+
         populateSolvedProperties(solvedProps, template, variables, displayNames);
     }
 

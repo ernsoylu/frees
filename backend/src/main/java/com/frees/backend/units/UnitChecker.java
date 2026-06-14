@@ -140,9 +140,9 @@ public final class UnitChecker {
     record DimTerm(double[] dims, double unknownExponent) {
         @Override
         public boolean equals(Object o) {
-            return o instanceof DimTerm other
-                    && Arrays.equals(dims, other.dims)
-                    && Double.compare(unknownExponent, other.unknownExponent) == 0;
+            return o instanceof DimTerm(double[] otherDims, double otherExp)
+                    && Arrays.equals(dims, otherDims)
+                    && Double.compare(unknownExponent, otherExp) == 0;
         }
 
         @Override

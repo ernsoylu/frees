@@ -257,9 +257,9 @@ public final class UnitRegistry {
     record NamedUnit(String symbol, double[] dims) {
         @Override
         public boolean equals(Object o) {
-            return o instanceof NamedUnit other
-                    && java.util.Objects.equals(symbol, other.symbol)
-                    && java.util.Arrays.equals(dims, other.dims);
+            return o instanceof NamedUnit(String otherSymbol, double[] otherDims)
+                    && java.util.Objects.equals(symbol, otherSymbol)
+                    && java.util.Arrays.equals(dims, otherDims);
         }
 
         @Override
@@ -361,10 +361,10 @@ public final class UnitRegistry {
     public record OffsetQuantity(double factor, double offset, double[] dims) {
         @Override
         public boolean equals(Object o) {
-            return o instanceof OffsetQuantity other
-                    && Double.compare(factor, other.factor) == 0
-                    && Double.compare(offset, other.offset) == 0
-                    && java.util.Arrays.equals(dims, other.dims);
+            return o instanceof OffsetQuantity(double otherFactor, double otherOffset, double[] otherDims)
+                    && Double.compare(factor, otherFactor) == 0
+                    && Double.compare(offset, otherOffset) == 0
+                    && java.util.Arrays.equals(dims, otherDims);
         }
 
         @Override
@@ -407,11 +407,11 @@ public final class UnitRegistry {
     public record DisplayUnit(String name, double factor, double offset, double[] dims) {
         @Override
         public boolean equals(Object o) {
-            return o instanceof DisplayUnit other
-                    && java.util.Objects.equals(name, other.name)
-                    && Double.compare(factor, other.factor) == 0
-                    && Double.compare(offset, other.offset) == 0
-                    && java.util.Arrays.equals(dims, other.dims);
+            return o instanceof DisplayUnit(String otherName, double otherFactor, double otherOffset, double[] otherDims)
+                    && java.util.Objects.equals(name, otherName)
+                    && Double.compare(factor, otherFactor) == 0
+                    && Double.compare(offset, otherOffset) == 0
+                    && java.util.Arrays.equals(dims, otherDims);
         }
 
         @Override

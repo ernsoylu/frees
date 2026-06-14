@@ -186,9 +186,7 @@ public class AllRootsSolver {
             for (int i = 1; i <= SCAN_INTERVALS; i++) {
                 double t = (i == SCAN_INTERVALS) ? hi : lo + i * step;
                 double ft = safeEval(f, t);
-                if (prevF == 0.0 && isValidRoot(eq, varName, prevT, work)) {
-                    addRoot(roots, prevT);
-                }
+                checkAndAddRoot(prevT, prevF);
                 if (Double.isFinite(prevF) && Double.isFinite(ft) && prevF * ft < 0) {
                     checkBrentRoot(prevT, t);
                 }
@@ -198,8 +196,12 @@ public class AllRootsSolver {
                 prevT = t;
                 prevF = ft;
             }
-            if (prevF == 0.0 && isValidRoot(eq, varName, prevT, work)) {
-                addRoot(roots, prevT);
+            checkAndAddRoot(prevT, prevF);
+        }
+
+        private void checkAndAddRoot(double t, double ft) {
+            if (ft == 0.0 && isValidRoot(eq, varName, t, work)) {
+                addRoot(roots, t);
             }
         }
 
@@ -233,13 +235,13 @@ public class AllRootsSolver {
                 }
             }
         }
-    }
 
-    private static double safeEval(UnivariateFunction f, double t) {
-        try {
-            return f.value(t);
-        } catch (RuntimeException e) {
-            return Double.NaN;
+        private double safeEval(UnivariateFunction f, double t) {
+            try {
+                return f.value(t);
+            } catch (RuntimeException e) {
+                return Double.NaN;
+            }
         }
     }
 
