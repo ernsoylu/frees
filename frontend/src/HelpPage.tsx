@@ -90,7 +90,18 @@ q_in = (h[3] - h[2]) + (h[5] - h[4])
 w_turb = (h[3] - h[4]) + (h[5] - h[6])
 w_net = w_turb - w_pump
 W_dot_net = m_dot * w_net
-eta_th = w_net / q_in * 100`,
+eta_th = w_net / q_in * 100
+
+{ Plot the cycle on a temperature-entropy diagram (see "Plots in Code"). }
+PLOT 'Reheat Rankine T-s'
+  kind = property
+  fluid = Water
+  diagram = 'T-s'
+  overlaystates = true
+  connectstates = true
+END
+
+[Graph="Reheat Rankine T-s"] T-s diagram of the reheat Rankine cycle [/Graph]`,
   },
   {
     value: "reheat-regen-rankine",
@@ -351,7 +362,18 @@ h[5] = h[2] + epsilon * (h[4] - h[2])
 { Performance }
 q_in = h[3] - h[5]
 w_net = w_T - w_C
-eta_th = w_net / q_in * 100`,
+eta_th = w_net / q_in * 100
+
+{ Plot the cycle on a temperature-entropy diagram (see "Plots in Code"). }
+PLOT 'Brayton T-s'
+  kind = property
+  fluid = Air
+  diagram = 'T-s'
+  overlaystates = true
+  connectstates = true
+END
+
+[Graph="Brayton T-s"] T-s diagram of the regenerative Brayton cycle [/Graph]`,
   },
 
   // ── Hard cross-discipline case studies (all verified against the solver) ──
@@ -1774,10 +1796,10 @@ T_k = ConvertTemp(F, K, 32)    { 273.15 }`}
           <Stack gap="md">
             <Title order={2} c="blue.4">Plots in Code (PLOT)</Title>
             <Text style={{ lineHeight: 1.6 }}>
-              Besides building plots in the Plots / Thermodynamics windows, you can declare a graph directly in the equation text with a <code>PLOT 'name' … END</code> block. Each line is a <code>key = value</code> attribute. The plot is created automatically on every Check / Solve, appears in the matching plot window, and is resolved by <code>[Graph='name']</code> tags in the formatted report. Code-defined plots are regenerated from the text each solve and are <em>not</em> saved with the project (edit them in code, not the GUI).
+              Besides building plots in the Plots / Thermodynamics windows, you can declare a graph directly in the equation text with a <code>PLOT 'name' … END</code> block. Each line is a <code>key = value</code> attribute. The plot is created automatically on every Check / Solve, appears in the matching plot window, and is resolved by a <code>[Graph="name"]</code> tag in the formatted report. Code-defined plots are regenerated from the text each solve and are <em>not</em> saved with the project (edit them in code, not the GUI).
             </Text>
             <Text style={{ lineHeight: 1.6 }}>
-              Strings use <strong>single quotes</strong> (double quotes are comments). The leading string is the plot name; <code>kind</code> is <code>xy</code> (default), <code>property</code>, or <code>psychro</code>.
+              Mind the quotes: inside the <code>PLOT</code> block, strings use <strong>single quotes</strong> (<code>'T-s'</code>) — the equation grammar treats double quotes as comments. The <code>[Graph="name"]</code> report tag, however, uses <strong>double quotes</strong> so the line stays prose rather than being parsed as an equation. The leading string is the plot name; <code>kind</code> is <code>xy</code> (default), <code>property</code>, or <code>psychro</code>.
             </Text>
 
             <Title order={3}>X-Y plot of solved arrays</Title>
@@ -1797,7 +1819,7 @@ PLOT 'Speed vs Distance'
   ylabel = 'Distance [m]'
 END
 
-[Graph='Speed vs Distance'] Stopping distance versus speed [/Graph]`}</Code>
+[Graph="Speed vs Distance"] Stopping distance versus speed [/Graph]`}</Code>
             </Paper>
             <Text size="sm" c="dimmed" style={{ lineHeight: 1.6 }}>
               XY attributes: <code>x</code>, <code>y</code> (comma-separated for multiple series), <code>y2</code> (secondary axis), <code>type</code> (<code>line</code>, <code>bar</code>, <code>scatter</code>, <code>pie</code>, <code>histogram</code>), <code>z</code>, <code>size</code>. Data comes from the parametric table when present, otherwise from solved array variables.
@@ -1813,7 +1835,7 @@ END
   connectstates = true
 END
 
-[Graph='Rankine T-s'] Rankine cycle on a T-s diagram [/Graph]`}</Code>
+[Graph="Rankine T-s"] Rankine cycle on a T-s diagram [/Graph]`}</Code>
             </Paper>
             <Text size="sm" c="dimmed" style={{ lineHeight: 1.6 }}>
               Property attributes: <code>fluid</code>, <code>diagram</code> (<code>'T-s'</code>, <code>'P-h'</code>, <code>'P-v'</code>, <code>'T-v'</code>, <code>'h-s'</code>, <code>'P-T'</code>), and the booleans <code>quality</code>, <code>isolines</code>, <code>overlaystates</code>, <code>connectstates</code>, <code>closecycle</code>. Psychrometric charts use <code>kind = psychro</code> with <code>pressure</code>, <code>tmin</code>, <code>tmax</code>, <code>wetbulb</code>, <code>enthalpy</code>, <code>volume</code>. All kinds accept the shared <code>title</code>, <code>xlabel</code>, <code>ylabel</code>, <code>xlog</code>/<code>ylog</code>, <code>grid</code>, <code>legend</code>, <code>xmin</code>/<code>xmax</code>/<code>ymin</code>/<code>ymax</code> format options.
