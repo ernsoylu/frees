@@ -25,6 +25,13 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public final class EquationParser {
 
+    /** Largest span a single FOR loop or array range (1..N) may expand to, and
+     * the backstop on the total number of equations a program may generate.
+     * These bound parse-time expansion so a tiny input (e.g. FOR i = 1 TO 1e9)
+     * cannot exhaust memory/CPU — a denial-of-service guard. */
+    static final int MAX_RANGE_SPAN = 1_000_000;
+    static final int MAX_GENERATED_EQUATIONS = 500_000;
+
     public static class ParseException extends RuntimeException {
         public ParseException(String message) {
             super(message);
@@ -177,18 +184,26 @@ public final class EquationParser {
         double endVal = evalIndexExpr(expandExpr(end, ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs()), ctx.loopVars(), ctx.constants(), ctx.defs());
         int startInt = (int) Math.round(startVal);
         int endInt = (int) Math.round(endVal);
-        if (startInt <= endInt) {
-            for (int i = startInt; i <= endInt; i++) {
-                Map<String, Double> newLoopVars = new HashMap<>(ctx.loopVars());
-                newLoopVars.put(varName, (double) i);
-                flatten(body, newLoopVars, ctx.constants(), ctx.displayNames(), ctx.out(), ctx.defs(), ctx.moduleCounter());
-            }
-        } else {
-            for (int i = startInt; i >= endInt; i--) {
-                Map<String, Double> newLoopVars = new HashMap<>(ctx.loopVars());
-                newLoopVars.put(varName, (double) i);
-                flatten(body, newLoopVars, ctx.constants(), ctx.displayNames(), ctx.out(), ctx.defs(), ctx.moduleCounter());
-            }
+        long span = Math.abs((long) endInt - startInt) + 1;
+        if (span > MAX_RANGE_SPAN) {
+            throw new ParseException("FOR loop range is too large (" + span
+                    + " iterations; limit " + MAX_RANGE_SPAN + "). Reduce the loop bounds.");
+        }
+        int step = startInt <= endInt ? 1 : -1;
+        for (int i = startInt; startInt <= endInt ? i <= endInt : i >= endInt; i += step) {
+            Map<String, Double> newLoopVars = new HashMap<>(ctx.loopVars());
+            newLoopVars.put(varName, (double) i);
+            flatten(body, newLoopVars, ctx.constants(), ctx.displayNames(), ctx.out(), ctx.defs(), ctx.moduleCounter());
+            checkEquationBudget(ctx.out());
+        }
+    }
+
+    /** Backstop against runaway expansion (e.g. deeply nested loops): a program
+     * may not generate more than {@link #MAX_GENERATED_EQUATIONS} equations. */
+    private static void checkEquationBudget(List<Equation> out) {
+        if (out.size() > MAX_GENERATED_EQUATIONS) {
+            throw new ParseException("Too many equations generated (over "
+                    + MAX_GENERATED_EQUATIONS + "). Reduce loop or array sizes.");
         }
     }
 
@@ -710,6 +725,11 @@ public final class EquationParser {
                 double endVal = evalIndexExpr(endExpr, loopVars, constants, defs);
                 int start = (int) Math.round(startVal);
                 int end = (int) Math.round(endVal);
+                long count = Math.abs((long) end - start) + 1;
+                if (count > MAX_RANGE_SPAN) {
+                    throw new ParseException("Array range is too large (" + count
+                            + " elements; limit " + MAX_RANGE_SPAN + "). Reduce the index range.");
+                }
                 List<Integer> rangeVals = new ArrayList<>();
                 int dir = start <= end ? 1 : -1;
                 for (int v = start; start <= end ? v <= end : v >= end; v += dir) {
@@ -750,6 +770,14 @@ public final class EquationParser {
                                                     Map<String, Double> constants, Map<String, String> displayNames,
                                                     Map<String, ProcDef> defs) {
         List<List<Integer>> indexPossibilities = evaluateIndexPossibilities(indices, loopVars, constants, displayNames, defs);
+        long total = 1;
+        for (List<Integer> dim : indexPossibilities) {
+            total *= dim.size();
+            if (total > MAX_RANGE_SPAN) {
+                throw new ParseException("Array expansion of '" + name + "[...]' is too large ("
+                        + total + " elements; limit " + MAX_RANGE_SPAN + "). Reduce the index ranges.");
+            }
+        }
         List<List<Integer>> combinations = new ArrayList<>();
         generateCombinations(indexPossibilities, 0, new ArrayList<>(), combinations);
         return buildElementVars(name, combinations, displayNames);
@@ -816,6 +844,11 @@ public final class EquationParser {
 
         int numRows = Math.abs(rEnd - rStart) + 1;
         int numCols = Math.abs(cEnd - cStart) + 1;
+        long cells = (long) numRows * numCols;
+        if (cells > MAX_RANGE_SPAN) {
+            throw new ParseException("Matrix '" + name + "[...]' is too large (" + cells
+                    + " elements; limit " + MAX_RANGE_SPAN + "). Reduce the index ranges.");
+        }
 
         Expr.Var[][] elements = new Expr.Var[numRows][numCols];
         int rDir = rStart <= rEnd ? 1 : -1;
@@ -862,7 +895,12 @@ public final class EquationParser {
         int vStart = (int) Math.round(evalIndexExpr(start, loopVars, constants, defs));
         int vEnd = (int) Math.round(evalIndexExpr(end, loopVars, constants, defs));
 
-        int size = Math.abs(vEnd - vStart) + 1;
+        long span = Math.abs((long) vEnd - vStart) + 1;
+        if (span > MAX_RANGE_SPAN) {
+            throw new ParseException("Vector '" + name + "[...]' is too large (" + span
+                    + " elements; limit " + MAX_RANGE_SPAN + "). Reduce the index range.");
+        }
+        int size = (int) span;
         Expr.Var[] elements = new Expr.Var[size];
         int dir = vStart <= vEnd ? 1 : -1;
 

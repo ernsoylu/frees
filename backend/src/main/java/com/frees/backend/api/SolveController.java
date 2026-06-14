@@ -30,6 +30,19 @@ import java.util.Map;
 @RequestMapping("/api")
 public class SolveController {
 
+    /** Server-side ceilings on the client-supplied solve budget. They prevent a
+     * request from pinning a worker thread indefinitely (a denial-of-service
+     * guard): no single solve may run longer than this wall-clock time or more
+     * than this many Newton iterations, whatever the request asks for. */
+    static final int MAX_ITERATIONS_CAP = 10_000;
+    static final double MAX_ELAPSED_SECONDS_CAP = 60.0;
+
+    /** Default solve budget with the server-side ceilings applied, used when a
+     * request omits stopCriteria entirely (so the cap can't be bypassed). */
+    static SolverSettings cappedDefaults() {
+        return new StopCriteriaDto(null, null, null, null, null).toSettings();
+    }
+
     public record StopCriteriaDto(Integer maxIterations,
                                   Double relativeResiduals,
                                   Double changeInVariables,
@@ -38,11 +51,13 @@ public class SolveController {
 
         SolverSettings toSettings() {
             SolverSettings d = SolverSettings.DEFAULTS;
+            int iterations = maxIterations != null ? maxIterations : d.maxIterations();
+            double elapsed = elapsedTimeSeconds != null ? elapsedTimeSeconds : d.elapsedTimeSeconds();
             return new SolverSettings(
-                    maxIterations != null ? maxIterations : d.maxIterations(),
+                    Math.min(Math.max(iterations, 1), MAX_ITERATIONS_CAP),
                     relativeResiduals != null ? relativeResiduals : d.relativeResiduals(),
                     changeInVariables != null ? changeInVariables : d.changeInVariables(),
-                    elapsedTimeSeconds != null ? elapsedTimeSeconds : d.elapsedTimeSeconds(),
+                    Math.min(Math.max(elapsed, 0.0), MAX_ELAPSED_SECONDS_CAP),
                     complexMode != null ? complexMode : d.complexMode());
         }
     }
@@ -394,7 +409,7 @@ public class SolveController {
         try {
             SolverSettings settings = request.stopCriteria() != null
                     ? request.stopCriteria().toSettings()
-                    : SolverSettings.DEFAULTS;
+                    : cappedDefaults();
             Map<String, VariableSpec> specs = specsOf(request.variableInfo());
             boolean findAll = Boolean.TRUE.equals(request.findAllSolutions());
 
@@ -541,7 +556,7 @@ public class SolveController {
 
         SolverSettings settings = request.stopCriteria() != null
                 ? request.stopCriteria().toSettings()
-                : SolverSettings.DEFAULTS;
+                : cappedDefaults();
         Map<String, VariableSpec> specs = specsOf(request.variableInfo());
         Map<String, String> unitsByLowerName =
                 unitsByLowerName(cleanText, request.variableInfo());
@@ -702,7 +717,7 @@ public class SolveController {
 
         SolverSettings settings = request.stopCriteria() != null
                 ? request.stopCriteria().toSettings()
-                : SolverSettings.DEFAULTS;
+                : cappedDefaults();
         try {
             List<String> constraints = request.constraints() != null
                     ? request.constraints() : List.of();

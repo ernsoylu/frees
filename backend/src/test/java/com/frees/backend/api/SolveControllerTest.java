@@ -19,6 +19,28 @@ class SolveControllerTest {
     private MockMvc mockMvc;
 
     @Test
+    void clampsClientSuppliedSolveBudget() {
+        // DoS guard: a client cannot request an unbounded solve budget.
+        SolveController.StopCriteriaDto greedy =
+                new SolveController.StopCriteriaDto(10_000_000, null, null, 99_999.0, null);
+        var settings = greedy.toSettings();
+        org.junit.jupiter.api.Assertions.assertEquals(
+                SolveController.MAX_ITERATIONS_CAP, settings.maxIterations());
+        org.junit.jupiter.api.Assertions.assertEquals(
+                SolveController.MAX_ELAPSED_SECONDS_CAP, settings.elapsedTimeSeconds(), 1e-9);
+    }
+
+    @Test
+    void rejectsOversizedLoopOverRest() throws Exception {
+        // A tiny request that would expand to ~100M equations is rejected, not
+        // allowed to exhaust memory.
+        mockMvc.perform(post("/api/solve")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"text\": \"FOR i = 1 TO 100000000\\n  x[i] = i\\nEND\"}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
     void solvesMilestoneSystemOverRest() throws Exception {
         mockMvc.perform(post("/api/solve")
                         .contentType(MediaType.APPLICATION_JSON)
