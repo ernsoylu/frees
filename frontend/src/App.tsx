@@ -976,7 +976,13 @@ export default function App() {
         />
       )}
 
-      {showCurveFit && <CurveFitModal onClose={() => setShowCurveFit(false)} />}
+      {showCurveFit && (
+        <CurveFitModal
+          tables={tables}
+          defaultTableId={activeTableId}
+          onClose={() => setShowCurveFit(false)}
+        />
+      )}
 
 
       <Flex direction="column" flex={1} miw={0} p="sm" gap="sm">
