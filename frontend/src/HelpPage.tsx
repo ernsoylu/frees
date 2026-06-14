@@ -78,10 +78,12 @@ h[6] = h[5] - eta_turb * (h[5] - h_6s)
 h[6] = Enthalpy(Water, P=P[6], x=x[6])
 
 { State 1: condenser exit (saturated liquid) }
+P[1] = P[6]                  { condenser pressure, so state 1 plots on the diagram }
 h[1] = Enthalpy(Water, P=P[6], x=0)
 v[1] = Volume(Water, P=P[6], x=0)
 
 { State 2: pump exit }
+P[2] = P[3]                  { pump discharges to boiler pressure }
 w_pump = v[1] * (P[3] - P[6]) / eta_pump
 h[2] = h[1] + w_pump
 
@@ -354,9 +356,11 @@ s[3] = Entropy(Air, T=T[3], P=P[2])
 h_4s = Enthalpy(Air, P=P[1], s=s[3])
 w_T = eta_T * (h[3] - h_4s)
 h[4] = h[3] - w_T
+P[4] = P[1]                  { turbine exits to inlet pressure }
 T[4] = Temperature(Air, P=P[1], h=h[4])
 
 { Regenerator }
+P[5] = P[2]                  { regenerator cold side at compressor-discharge pressure }
 h[5] = h[2] + epsilon * (h[4] - h[2])
 
 { Performance }
