@@ -69,17 +69,19 @@ class IntegralSolverTest {
     @Test
     void solvesInitialValueProblemWithNestedIntegral() {
         // dy/dt = y*cos(t), y(0) = 1  =>  y(t) = exp(sin(t))
-        var result = solver.solve("y = y0 + Integral(dydt, t, 0, 5)\n"
-                + "dydt = y * cos(t)\n"
-                + "y0 = 1");
+        var result = solver.solve("""
+                y = y0 + Integral(dydt, t, 0, 5)
+                dydt = y * cos(t)
+                y0 = 1""");
         assertEquals(Math.exp(Math.sin(5.0)), result.variables().get("y"), 1e-3);
     }
 
     @Test
     void checkAcceptsIntegralNestedInExpression() {
-        var check = solver.check("y = y0 + Integral(dydt, t, 0, 5)\n"
-                + "dydt = y * cos(t)\n"
-                + "y0 = 1");
+        var check = solver.check("""
+                y = y0 + Integral(dydt, t, 0, 5)
+                dydt = y * cos(t)
+                y0 = 1""");
         assertTrue(check.solvable(), check.message());
     }
 

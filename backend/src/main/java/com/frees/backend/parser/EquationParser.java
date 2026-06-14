@@ -112,25 +112,21 @@ public final class EquationParser {
         if (!(stmt instanceof Statement.Eq(Expr lhs, Expr rhs, String sourceText))) {
             return false;
         }
-        if (lhs instanceof Expr.Var(String name)) {
-            if (!constants.containsKey(name)) {
-                try {
-                    double val = Evaluator.eval(rhs, constants);
-                    constants.put(name, val);
-                    return true;
-                } catch (Exception ignored) {
-                    // Ignored: evaluation may fail until dependent variables are resolved
-                }
+        if (lhs instanceof Expr.Var(String name) && !constants.containsKey(name)) {
+            try {
+                double val = Evaluator.eval(rhs, constants);
+                constants.put(name, val);
+                return true;
+            } catch (Exception ignored) {
+                // Ignored: evaluation may fail until dependent variables are resolved
             }
-        } else if (rhs instanceof Expr.Var(String name)) {
-            if (!constants.containsKey(name)) {
-                try {
-                    double val = Evaluator.eval(lhs, constants);
-                    constants.put(name, val);
-                    return true;
-                } catch (Exception ignored) {
-                    // Ignored: evaluation may fail until dependent variables are resolved
-                }
+        } else if (rhs instanceof Expr.Var(String name) && !constants.containsKey(name)) {
+            try {
+                double val = Evaluator.eval(lhs, constants);
+                constants.put(name, val);
+                return true;
+            } catch (Exception ignored) {
+                // Ignored: evaluation may fail until dependent variables are resolved
             }
         }
         return false;
@@ -265,10 +261,7 @@ public final class EquationParser {
                         Expr term = new Expr.BinOp('*', rhsMat.elements[i][k], lhsMat.elements[k][j]);
                         sum = sum == null ? term : new Expr.BinOp('+', sum, term);
                     }
-                    double expected = 0.0;
-                    if (i == j) {
-                        expected = 1.0;
-                    }
+                    double expected = (i == j) ? 1.0 : 0.0;
                     ctx.out().add(new Equation(sum, new Expr.Num(expected), sourceText));
                 }
             }

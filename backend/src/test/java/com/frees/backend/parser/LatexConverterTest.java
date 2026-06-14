@@ -80,7 +80,8 @@ class LatexConverterTest {
         Expr pow2 = new Expr.BinOp('^', new Expr.Neg(new Expr.Var("x")), new Expr.Num(2));
         assertEquals("\\left(-x\\right)^{2}", LatexConverter.toLatex(pow2, Map.of()));
 
-        assertThrows(IllegalStateException.class, () -> LatexConverter.toLatex(new Expr.BinOp('%', new Expr.Var("x"), new Expr.Var("y")), Map.of()));
+        Expr expr = new Expr.BinOp('%', new Expr.Var("x"), new Expr.Var("y"));
+        assertThrows(IllegalStateException.class, () -> LatexConverter.toLatex(expr, Map.of()));
     }
 
     @Test

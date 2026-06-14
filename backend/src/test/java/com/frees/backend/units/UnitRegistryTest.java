@@ -139,12 +139,11 @@ class UnitRegistryTest {
     }
 
     @Test
-    void testUnitRecordsContracts() {
+    void testQuantityRecordContract() {
         double[] dims1 = {1, 0, 0, 0, 0, 0, 0};
         double[] dims2 = {1, 0, 0, 0, 0, 0, 0};
         double[] dims3 = {0, 1, 0, 0, 0, 0, 0};
 
-        // Quantity
         Quantity q1 = new Quantity(2.5, dims1);
         Quantity q2 = new Quantity(2.5, dims2);
         Quantity q3 = new Quantity(2.5, dims3);
@@ -152,12 +151,18 @@ class UnitRegistryTest {
         assertEquals(q1, q2);
         assertNotEquals(q1, q3);
         assertNotEquals(q1, q4);
-        assertNotEquals(q1, null);
-        assertNotEquals(q1, new Object());
+        assertNotEquals(null, q1);
+        assertNotEquals(new Object(), q1);
         assertEquals(q1.hashCode(), q2.hashCode());
         assertTrue(q1.toString().contains("Quantity"));
+    }
 
-        // NamedUnit
+    @Test
+    void testNamedUnitRecordContract() {
+        double[] dims1 = {1, 0, 0, 0, 0, 0, 0};
+        double[] dims2 = {1, 0, 0, 0, 0, 0, 0};
+        double[] dims3 = {0, 1, 0, 0, 0, 0, 0};
+
         UnitRegistry.NamedUnit nu1 = new UnitRegistry.NamedUnit("N", dims1);
         UnitRegistry.NamedUnit nu2 = new UnitRegistry.NamedUnit("N", dims2);
         UnitRegistry.NamedUnit nu3 = new UnitRegistry.NamedUnit("J", dims1);
@@ -165,12 +170,18 @@ class UnitRegistryTest {
         assertEquals(nu1, nu2);
         assertNotEquals(nu1, nu3);
         assertNotEquals(nu1, nu4);
-        assertNotEquals(nu1, null);
-        assertNotEquals(nu1, new Object());
+        assertNotEquals(null, nu1);
+        assertNotEquals(new Object(), nu1);
         assertEquals(nu1.hashCode(), nu2.hashCode());
         assertTrue(nu1.toString().contains("NamedUnit"));
+    }
 
-        // OffsetQuantity
+    @Test
+    void testOffsetQuantityRecordContract() {
+        double[] dims1 = {1, 0, 0, 0, 0, 0, 0};
+        double[] dims2 = {1, 0, 0, 0, 0, 0, 0};
+        double[] dims3 = {0, 1, 0, 0, 0, 0, 0};
+
         UnitRegistry.OffsetQuantity oq1 = new UnitRegistry.OffsetQuantity(1.5, 2.0, dims1);
         UnitRegistry.OffsetQuantity oq2 = new UnitRegistry.OffsetQuantity(1.5, 2.0, dims2);
         UnitRegistry.OffsetQuantity oq3 = new UnitRegistry.OffsetQuantity(1.5, 2.0, dims3);
@@ -180,12 +191,18 @@ class UnitRegistryTest {
         assertNotEquals(oq1, oq3);
         assertNotEquals(oq1, oq4);
         assertNotEquals(oq1, oq5);
-        assertNotEquals(oq1, null);
-        assertNotEquals(oq1, new Object());
+        assertNotEquals(null, oq1);
+        assertNotEquals(new Object(), oq1);
         assertEquals(oq1.hashCode(), oq2.hashCode());
         assertTrue(oq1.toString().contains("OffsetQuantity"));
+    }
 
-        // DisplayUnit
+    @Test
+    void testDisplayUnitRecordContract() {
+        double[] dims1 = {1, 0, 0, 0, 0, 0, 0};
+        double[] dims2 = {1, 0, 0, 0, 0, 0, 0};
+        double[] dims3 = {0, 1, 0, 0, 0, 0, 0};
+
         UnitRegistry.DisplayUnit du1 = new UnitRegistry.DisplayUnit("m", 1.5, 2.0, dims1);
         UnitRegistry.DisplayUnit du2 = new UnitRegistry.DisplayUnit("m", 1.5, 2.0, dims2);
         UnitRegistry.DisplayUnit du3 = new UnitRegistry.DisplayUnit("m", 1.5, 2.0, dims3);
@@ -197,8 +214,8 @@ class UnitRegistryTest {
         assertNotEquals(du1, du4);
         assertNotEquals(du1, du5);
         assertNotEquals(du1, du6);
-        assertNotEquals(du1, null);
-        assertNotEquals(du1, new Object());
+        assertNotEquals(null, du1);
+        assertNotEquals(new Object(), du1);
         assertEquals(du1.hashCode(), du2.hashCode());
         assertTrue(du1.toString().contains("DisplayUnit"));
     }
