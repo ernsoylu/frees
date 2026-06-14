@@ -445,7 +445,7 @@ v = sqrt(mu*(2/r - 1/a))`,
   {
     value: "pipe-network",
     title: "Fluid Mechanics: Parallel Pipe Network with Colebrook Friction",
-    description: "A flow splits into two parallel branches that must share the same head loss, then recombines. Each branch's friction factor comes from the implicit Colebrook equation, so the whole network — continuity, the equal-head-loss condition, and three transcendental friction equations — is solved simultaneously via a DUPLICATE block.",
+    description: "A flow splits into two parallel branches that must share the same head loss, then recombines. Each branch's friction factor comes from the implicit Colebrook equation, so the whole network — continuity, the equal-head-loss condition, and three transcendental friction equations — is solved simultaneously via a FOR loop block.",
     note: "The branches divide the 0.10 m³/s feed as 0.029 and 0.071 m³/s so that both lose 9.83 m of head; total network head loss is 14.5 m. Reynolds numbers and friction factors are all consistent (turbulent).",
     code: `{ Civil/Fluids: parallel pipe network, Colebrook friction }
 rho = 1000 [kg/m^3]
@@ -458,7 +458,7 @@ eps = 0.00015
 Q_in = Q[1]
 Q[1] = Q[2] + Q[3]            { continuity at the split }
 hf[2] = hf[3]                 { parallel branches share head loss }
-DUPLICATE j = 1, 3
+FOR j = 1 TO 3
   V[j] = Q[j]/(pi/4*D[j]^2)
   Re[j] = rho*V[j]*D[j]/mu
   1/sqrt(ff[j]) = -2*log10(eps/(3.7*D[j]) + 2.51/(Re[j]*sqrt(ff[j])))
@@ -507,7 +507,7 @@ L[1]=3; L[2]=5; L[3]=5
 cx[1]=0;    sy[1]=1
 cx[2]=0.8;  sy[2]=0.6
 cx[3]=-0.8; sy[3]=0.6
-DUPLICATE m = 1, 3
+FOR m = 1 TO 3
   ka[m] = E*A/L[m]                 { member axial stiffness EA/L }
 END
 { Assemble the 2x2 reduced global stiffness at the free node }
@@ -518,7 +518,7 @@ Kg[2,2] = ka[1]*sy[1]^2 + ka[2]*sy[2]^2 + ka[3]*sy[3]^2
 { Solve Kg u = F for the nodal displacements, then member forces }
 F[1..2] = [0, -P]
 u[1..2] = SolveLinear(Kg[1..2,1..2], F[1..2])
-DUPLICATE m = 1, 3
+FOR m = 1 TO 3
   Naxial[m] = ka[m]*(cx[m]*u[1] + sy[m]*u[2])
 END`,
   },
@@ -712,7 +712,7 @@ rho = 0.0025                 { inserted reactivity (dk/k) }
 beta[1..6] = [0.000215, 0.001424, 0.001274, 0.002568, 0.000748, 0.000273]
 lam[1..6]  = [0.0124, 0.0305, 0.111, 0.301, 1.14, 3.01]
 { Stable period Tper (guess ~30 s); contributions of the 6 groups }
-DUPLICATE i = 1, 6
+FOR i = 1 TO 6
   term[i] = beta[i]/(1 + lam[i]*Tper)
 END
 rho = Lambda/Tper + sum(term[1..6])
@@ -1011,7 +1011,7 @@ const CATEGORIES = [
       { id: 'variables', label: 'Variables, Guesses & Bounds', keywords: ['variables', 'guess', 'bounds', 'limits', 'variable info'] },
       { id: 'uncertainty', label: 'Uncertainty Propagation', keywords: ['uncertainty', 'propagation', 'error', 'uncertaintyof', 'svd'] },
       { id: 'units', label: 'Units & Consistency', keywords: ['unit', 'si', 'convert', 'dimension', 'annotation'] },
-      { id: 'arrays', label: 'Arrays & Duplicate Loops', keywords: ['array', 'duplicate', 'loops', 'slice', 'index'] },
+      { id: 'arrays', label: 'Arrays & For Loops', keywords: ['array', 'for', 'duplicate', 'loops', 'slice', 'index'] },
       { id: 'complex', label: 'Complex Numbers & Helpers', keywords: ['complex', 'imaginary', 'real', 'i', 'j', 'angle', 'polar', 'conj', 'magnitude', 'cis'] },
       { id: 'strings', label: 'String Variables & Functions', keywords: ['string', 'chr$', 'concat$', 'copy$', 'lowercase$', 'uppercase$', 'trim$', 'stringlen', 'stringpos', 'stringval', 'date$', 'time$', 'timestamp$', 'unitsystem$', 'unitsof$'] },
     ]
@@ -1617,12 +1617,12 @@ m = 120 [lb]     { Converted to 54.43 kg }`}</Code>
       case 'arrays':
         return (
           <Stack gap="md">
-            <Title order={2} c="blue.4">Arrays & Duplicate Loops</Title>
+            <Title order={2} c="blue.4">Arrays & For Loops</Title>
             <Text style={{ lineHeight: 1.6 }}>
-              Arrays are represented using indices inside square brackets (e.g. <code>T[1]</code>, <code>P[5]</code>). You can generate repetitive equations using the <code>DUPLICATE</code> block:
+              Arrays are represented using indices inside square brackets (e.g. <code>T[1]</code>, <code>P[5]</code>). You can generate repetitive equations using the <code>FOR</code> loop block:
             </Text>
             <Paper withBorder p="md" bg="dark.8">
-              <Code block>{`DUPLICATE i = 1, 3
+              <Code block>{`FOR i = 1 TO 3
   h[i] = Enthalpy(Water, T=T[i], P=P[i])
 END`}</Code>
             </Paper>

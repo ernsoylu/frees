@@ -260,7 +260,7 @@ class EquationSystemSolverTest {
         EquationSystemSolver.Result result = solver.solve(
                 "N = 5\n" +
                 "X[1] = 10\n" +
-                "Duplicate i = 2, N\n" +
+                "FOR i = 2 TO N\n" +
                 "   X[i] = X[i-1] + i\n" +
                 "End\n" +
                 "Total = Sum(X[1..N])"

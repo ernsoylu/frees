@@ -253,8 +253,10 @@ public class AstBuilder extends FreesBaseVisitor<Expr> {
             return buildIfStatement(ctx.ifStatement());
         } else if (ctx.repeatStatement() != null) {
             return buildRepeatStatement(ctx.repeatStatement());
-        } else if (ctx.duplicateBlock() != null) {
-            return buildProcDuplicate(ctx.duplicateBlock());
+        } else if (ctx.whileStatement() != null) {
+            return buildWhileStatement(ctx.whileStatement());
+        } else if (ctx.forBlock() != null) {
+            return buildProcFor(ctx.forBlock());
         } else {
             // equation
             FreesParser.EquationContext eq = ctx.equation();
@@ -285,11 +287,11 @@ public class AstBuilder extends FreesBaseVisitor<Expr> {
         return new ProcStatement.RepeatUntil(body, condition);
     }
 
-    private ProcStatement.Duplicate buildProcDuplicate(FreesParser.DuplicateBlockContext ctx) {
+    private ProcStatement.For buildProcFor(FreesParser.ForBlockContext ctx) {
         String varName = ctx.IDENT().getText().toLowerCase();
         Expr start = visit(ctx.expr(0));
         Expr end = visit(ctx.expr(1));
-        // procBody version — re-parse body as proc statements (duplicate inside proc body)
+        // procBody version — re-parse body as proc statements (for loop inside proc body)
         List<ProcStatement> body = new ArrayList<>();
         if (ctx.statementList() != null) {
             for (FreesParser.StatementContext stmtCtx : ctx.statementList().statement()) {
@@ -298,10 +300,16 @@ public class AstBuilder extends FreesBaseVisitor<Expr> {
                 if (s instanceof Statement.Eq(Expr lhs, Expr rhs, String sourceText)) {
                     body.add(new ProcStatement.Eq(lhs, rhs, sourceText));
                 }
-                // DUPLICATE inside DUPLICATE inside PROC is not supported; skip silently
+                // FOR inside FOR inside PROC is not supported; skip silently
             }
         }
-        return new ProcStatement.Duplicate(varName, start, end, body);
+        return new ProcStatement.For(varName, start, end, body);
+    }
+
+    private ProcStatement.While buildWhileStatement(FreesParser.WhileStatementContext ctx) {
+        Expr condition = buildBoolExpr(ctx.boolExpr());
+        List<ProcStatement> body = buildProcBody(ctx.procBody());
+        return new ProcStatement.While(condition, body);
     }
 
     // ── Boolean expression ────────────────────────────────────────────────────
@@ -336,8 +344,8 @@ public class AstBuilder extends FreesBaseVisitor<Expr> {
     // ── Top-level statement ───────────────────────────────────────────────────
 
     public Statement buildStatement(FreesParser.StatementContext ctx) {
-        if (ctx.duplicateBlock() != null) {
-            return buildDuplicateBlock(ctx.duplicateBlock());
+        if (ctx.forBlock() != null) {
+            return buildForBlock(ctx.forBlock());
         } else if (ctx.callStatement() != null) {
             return buildCallStatement(ctx.callStatement());
         } else if (ctx.rangeAssign() != null) {
@@ -451,7 +459,7 @@ public class AstBuilder extends FreesBaseVisitor<Expr> {
         return new Statement.CallProc(name, inputs, outputs, ctx.getText());
     }
 
-    public Statement.Duplicate buildDuplicateBlock(FreesParser.DuplicateBlockContext ctx) {
+    public Statement.For buildForBlock(FreesParser.ForBlockContext ctx) {
         String varName = ctx.IDENT().getText().toLowerCase();
         Expr start = visit(ctx.expr(0));
         Expr end = visit(ctx.expr(1));
@@ -461,7 +469,7 @@ public class AstBuilder extends FreesBaseVisitor<Expr> {
                 body.add(buildStatement(stmtCtx));
             }
         }
-        return new Statement.Duplicate(varName, start, end, body);
+        return new Statement.For(varName, start, end, body);
     }
 
     public Statement.Eq buildEquation(FreesParser.EquationContext ctx) {

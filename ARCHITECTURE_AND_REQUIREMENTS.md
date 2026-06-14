@@ -120,11 +120,11 @@ Both servers run as Docker containers orchestrated by Docker Compose and managed
 *Goal: Support complex algebra, array variables, and multi-paradigm programming.*
 
 - **Story 3.1: Basic Math Functions.** Implement `Abs`, `Exp`, `Ln`, `Max`, `Min`, `Sin`, `Cos`, etc., mapped to the AST.
-- **Story 3.2: Array Variables.** Parse `X[1..5]` notation. Treat array elements as completely unique variables internally. Implement the `DUPLICATE` loop syntax.
+- **Story 3.2: Array Variables.** Parse `X[1..5]` notation. Treat array elements as completely unique variables internally. Implement the `FOR` loop syntax.
 - **Story 3.3: Complex Numbers.** Add a toggle. When active, split every variable internally into real (`_r`) and imaginary (`_i`) components, solving them as 2N simultaneous equations.
 - **Story 3.4: Functions and Procedures.** Implement logic constructs (`If-Then-Else`, `Repeat-Until`) using assignment statements (`:=`) parsed before the main equation body.
 - **Story 3.5: Modules.** Implement Modules using equality statements, grafting their AST into the main AST and renaming variables with qualifiers (e.g., `Module\1.X`) to prevent namespace collisions.
-- **Milestone 3:** *Working software that solves arrays using `DUPLICATE` loops and calculates factorial using internal Procedures.*
+- **Milestone 3:** *Working software that solves arrays using `FOR` loops and calculates factorial using internal Procedures.*
 
 ### Epic 4: Data Tables, Visualization, & Optimization
 

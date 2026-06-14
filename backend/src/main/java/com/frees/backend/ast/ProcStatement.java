@@ -11,7 +11,8 @@ public sealed interface ProcStatement permits
         ProcStatement.IfElse,
         ProcStatement.RepeatUntil,
         ProcStatement.Eq,
-        ProcStatement.Duplicate {
+        ProcStatement.For,
+        ProcStatement.While {
 
     /** Sequential assignment: var := expr */
     record Assign(String varName, Expr value) implements ProcStatement {}
@@ -26,7 +27,10 @@ public sealed interface ProcStatement permits
     /** An equation used inside a FUNCTION body for intermediate relations */
     record Eq(Expr lhs, Expr rhs, String sourceText) implements ProcStatement {}
 
-    /** DUPLICATE loop inside a procedure */
-    record Duplicate(String varName, Expr start, Expr end,
-                     List<ProcStatement> body) implements ProcStatement {}
+    /** FOR loop inside a procedure */
+    record For(String varName, Expr start, Expr end,
+               List<ProcStatement> body) implements ProcStatement {}
+
+    /** WHILE loop inside a procedure */
+    record While(Expr condition, List<ProcStatement> body) implements ProcStatement {}
 }
