@@ -98,6 +98,22 @@ class SolveControllerTest {
     }
 
     @Test
+    void convertsBoundsAndGuessesForTemperatureToSi() throws Exception {
+        // T_1 is solved at 100 [C] (373.15 K). We specify bounds [0, 250] in Celsius.
+        // If they were not converted, the solver would check bounds [0, 250] w.r.t Kelvin,
+        // and 373.15 K would exceed the upper bound of 250, causing solver failure or incorrect clamping.
+        mockMvc.perform(post("/api/solve")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"text\": \"T_1 = 100 [C]\","
+                                + "\"variableInfo\": [{\"name\":\"T_1\",\"units\":\"C\",\"lower\":0.0,\"upper\":250.0}]}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.variables[0].value").value(
+                        org.hamcrest.Matchers.closeTo(100.0, 1e-6)))
+                .andExpect(jsonPath("$.variables[0].units").value("C"));
+    }
+
+    @Test
     void checkEndpointReportsSolvableSystem() throws Exception {
         mockMvc.perform(post("/api/check")
                         .contentType(MediaType.APPLICATION_JSON)
