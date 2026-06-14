@@ -15,6 +15,9 @@ export interface VariableDraft {
   upper: string
   units: string
   isUnitsUserSet?: boolean
+  uncertainty: string
+  relativeUncertainty: string
+  uncertaintyType: 'absolute' | 'relative'
 }
 
 export const DEFAULT_DRAFT: VariableDraft = {
@@ -26,6 +29,9 @@ export const DEFAULT_DRAFT: VariableDraft = {
   upper: 'infinity',
   units: '',
   isUnitsUserSet: false,
+  uncertainty: '',
+  relativeUncertainty: '',
+  uncertaintyType: 'absolute',
 }
 
 export function parseBound(raw: string): number | null | undefined {
@@ -40,12 +46,13 @@ export function parseBound(raw: string): number | null | undefined {
 interface Props {
   variables: string[]
   drafts: Record<string, VariableDraft>
+  solvedValues: Record<string, number>
   onSave: (drafts: Record<string, VariableDraft>) => void
   onClose: () => void
 }
 
 /** Mirrors the Options > Variable Information window. */
-export default function VariableInfoModal({ variables, drafts, onSave, onClose }: Readonly<Props>) {
+export default function VariableInfoModal({ variables, drafts, solvedValues, onSave, onClose }: Readonly<Props>) {
   const [local, setLocal] = useState<Record<string, VariableDraft>>(() => {
     const initial: Record<string, VariableDraft> = {}
     for (const name of variables) {
@@ -56,7 +63,38 @@ export default function VariableInfoModal({ variables, drafts, onSave, onClose }
   const [error, setError] = useState<string | null>(null)
 
   function setField(name: string, field: keyof VariableDraft, value: string) {
-    setLocal((d) => ({ ...d, [name]: { ...d[name], [field]: value } }))
+    setLocal((d) => {
+      const draft = d[name] ?? { ...DEFAULT_DRAFT }
+      const updated = { ...draft, [field]: value }
+      const val = solvedValues[name.toLowerCase()]
+      
+      if (field === 'uncertainty') {
+        updated.uncertaintyType = 'absolute'
+        if (val !== undefined && val !== 0 && value.trim() !== '') {
+          const numVal = Number(value)
+          if (Number.isFinite(numVal)) {
+            updated.relativeUncertainty = String(Number(((numVal / Math.abs(val)) * 100).toPrecision(6)))
+          } else {
+            updated.relativeUncertainty = ''
+          }
+        } else {
+          updated.relativeUncertainty = ''
+        }
+      } else if (field === 'relativeUncertainty') {
+        updated.uncertaintyType = 'relative'
+        if (val !== undefined && value.trim() !== '') {
+          const numVal = Number(value)
+          if (Number.isFinite(numVal)) {
+            updated.uncertainty = String(Number(((numVal / 100) * Math.abs(val)).toPrecision(6)))
+          } else {
+            updated.uncertainty = ''
+          }
+        } else {
+          updated.uncertainty = ''
+        }
+      }
+      return { ...d, [name]: updated }
+    })
     setError(null)
   }
 
@@ -99,8 +137,17 @@ export default function VariableInfoModal({ variables, drafts, onSave, onClose }
         setError(`Guess value for ${name} is outside its bounds.`)
         return
       }
+      const uncertaintyText = draft.uncertainty?.trim() ?? ''
+      const uncertainty = uncertaintyText === '' ? 0.0 : Number(uncertaintyText)
+      if (uncertaintyText !== '' && (!Number.isFinite(uncertainty) || uncertainty < 0)) {
+        setError(`Uncertainty for ${name} must be a non-negative number.`)
+        return
+      }
       saved[name] = {
         ...draft,
+        uncertainty: uncertaintyText,
+        relativeUncertainty: draft.relativeUncertainty?.trim() ?? '',
+        uncertaintyType: draft.uncertaintyType ?? 'absolute',
         isUnitsUserSet: draft.units.trim() !== '',
       }
     }
@@ -131,6 +178,8 @@ export default function VariableInfoModal({ variables, drafts, onSave, onClose }
               <Table.Th>Lower</Table.Th>
               <Table.Th>Upper</Table.Th>
               <Table.Th>Units</Table.Th>
+              <Table.Th>Uncertainty (Abs)</Table.Th>
+              <Table.Th>Uncertainty (Rel %)</Table.Th>
             </Table.Tr>
           </Table.Thead>
           <Table.Tbody>
@@ -139,11 +188,11 @@ export default function VariableInfoModal({ variables, drafts, onSave, onClose }
                 <Table.Td ff="monospace" c="blue.4">
                   {name}
                 </Table.Td>
-                {(['guess', 'lower', 'upper', 'units'] as const).map((field) => (
+                {(['guess', 'lower', 'upper', 'units', 'uncertainty', 'relativeUncertainty'] as const).map((field) => (
                   <Table.Td key={field}>
                     <TextInput
                       size="xs"
-                      value={local[name][field]}
+                      value={local[name][field] ?? ''}
                       placeholder={field === 'guess' ? 'auto' : undefined}
                       onChange={(e) => setField(name, field, e.currentTarget.value)}
                       spellCheck={false}

@@ -527,5 +527,15 @@ class EquationSystemSolverTest {
         assertEquals(0.15, result.variables().get("u_y"), 1e-6);
         assertEquals(0.15, result.uncertainties().get("y"), 1e-6);
     }
+
+    @Test
+    void evaluatesUncertaintyOfFromCode() {
+        var result = solver.solve("x = 10\ny = 2 * x\nUncertaintyOf(x) = 0.05 * x\nu_y = UncertaintyOf(y)");
+        assertEquals(10.0, result.variables().get("x"), 1e-6);
+        assertEquals(20.0, result.variables().get("y"), 1e-6);
+        assertEquals(0.5, result.uncertainties().get("x"), 1e-6);
+        assertEquals(1.0, result.uncertainties().get("y"), 1e-6);
+        assertEquals(1.0, result.variables().get("u_y"), 1e-6);
+    }
 }
 

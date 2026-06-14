@@ -2,6 +2,7 @@ export interface VariableResult {
   name: string
   value: number
   units: string
+  uncertainty?: number | null
 }
 
 export interface BlockResult {
@@ -90,6 +91,7 @@ export interface VariableInfo {
   lower: number | null
   upper: number | null
   units: string | null
+  uncertainty: number | null
 }
 
 const API_BASE = import.meta.env.VITE_API_BASE || '';

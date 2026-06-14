@@ -459,6 +459,10 @@ export default function App() {
         lower: parseBound(draft.lower) ?? null,
         upper: parseBound(draft.upper) ?? null,
         units: draft.isUnitsUserSet ? (draft.units.trim() || null) : null,
+        uncertainty:
+          draft.uncertainty && draft.uncertainty.trim() !== '' && Number.isFinite(Number(draft.uncertainty))
+            ? Number(draft.uncertainty)
+            : null,
       }
     })
   }
@@ -725,9 +729,17 @@ export default function App() {
           for (const v of response.variables) {
             const name = v.name
             const existing = next[name] ?? { ...DEFAULT_DRAFT }
+            const updated = { ...existing }
             if (!existing.isUnitsUserSet) {
-              next[name] = { ...existing, units: v.units || '' }
+              updated.units = v.units || ''
             }
+            if (existing.uncertaintyType === 'relative' && existing.relativeUncertainty.trim() !== '') {
+              const relVal = Number(existing.relativeUncertainty)
+              if (Number.isFinite(relVal)) {
+                updated.uncertainty = String(Number(((relVal / 100) * Math.abs(v.value)).toPrecision(6)))
+              }
+            }
+            next[name] = updated
           }
           return next
         })
@@ -925,6 +937,15 @@ export default function App() {
         <VariableInfoModal
           variables={variables}
           drafts={varDrafts}
+          solvedValues={(() => {
+            const solvedValues: Record<string, number> = {}
+            if (result && result.variables) {
+              for (const v of result.variables) {
+                solvedValues[v.name.toLowerCase()] = v.value
+              }
+            }
+            return solvedValues
+          })()}
           onSave={(drafts) => {
             setVarDrafts(drafts)
             setShowVariableInfo(false)
