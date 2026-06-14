@@ -1011,7 +1011,7 @@ const CATEGORIES = [
       { id: 'variables', label: 'Variables, Guesses & Bounds', keywords: ['variables', 'guess', 'bounds', 'limits', 'variable info'] },
       { id: 'uncertainty', label: 'Uncertainty Propagation', keywords: ['uncertainty', 'propagation', 'error', 'uncertaintyof', 'svd'] },
       { id: 'units', label: 'Units & Consistency', keywords: ['unit', 'si', 'convert', 'dimension', 'annotation'] },
-      { id: 'arrays', label: 'Arrays & Loops (DUPLICATE)', keywords: ['array', 'duplicate', 'loops', 'slice', 'index'] },
+      { id: 'arrays', label: 'Arrays & Duplicate Loops', keywords: ['array', 'duplicate', 'loops', 'slice', 'index'] },
       { id: 'complex', label: 'Complex Numbers & Helpers', keywords: ['complex', 'imaginary', 'real', 'i', 'j', 'angle', 'polar', 'conj', 'magnitude', 'cis'] },
       { id: 'strings', label: 'String Variables & Functions', keywords: ['string', 'chr$', 'concat$', 'copy$', 'lowercase$', 'uppercase$', 'trim$', 'stringlen', 'stringpos', 'stringval', 'date$', 'time$', 'timestamp$', 'unitsystem$', 'unitsof$'] },
     ]
