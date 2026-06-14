@@ -71,6 +71,10 @@ export interface SolveResponse {
   formattedEquations: string[]
   cyclePath?: Record<string, number>[]
   formattedReport?: string
+  /** Function tables parsed from TABLE ... END blocks in the editor text. */
+  codeTables?: FunctionTableDto[]
+  /** Parametric run-tables parsed from PARAMETRIC ... END blocks. */
+  parametricTables?: ParametricTableDto[]
 }
 
 export interface CheckResponse {
@@ -83,6 +87,18 @@ export interface CheckResponse {
   message: string
   formattedEquations: string[]
   formattedReport?: string
+  /** Function tables parsed from TABLE ... END blocks in the editor text. */
+  codeTables?: FunctionTableDto[]
+  /** Parametric run-tables parsed from PARAMETRIC ... END blocks. */
+  parametricTables?: ParametricTableDto[]
+}
+
+/** A parametric run-table parsed from a PARAMETRIC ... END block: the declared
+ * variables and a row-major value grid (null cells where a column is short). */
+export interface ParametricTableDto {
+  name: string
+  vars: string[]
+  rows: (number | null)[][]
 }
 
 export interface VariableInfo {
@@ -155,6 +171,8 @@ export async function check(
       message: data.message ?? '',
       formattedEquations: data.formattedEquations ?? [],
       formattedReport: data.formattedReport ?? undefined,
+      codeTables: data.codeTables ?? [],
+      parametricTables: data.parametricTables ?? [],
     }
   } catch (e) {
     return {
@@ -233,6 +251,8 @@ export async function solve(
       formattedEquations: data.formattedEquations ?? [],
       cyclePath: data.cyclePath ?? [],
       formattedReport: data.formattedReport ?? undefined,
+      codeTables: data.codeTables ?? [],
+      parametricTables: data.parametricTables ?? [],
     }
   } catch (e) {
     return {

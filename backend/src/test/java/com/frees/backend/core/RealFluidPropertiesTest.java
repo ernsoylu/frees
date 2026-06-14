@@ -108,6 +108,40 @@ class RealFluidPropertiesTest {
     }
 
     @Test
+    void ethyleneGlycolMixtureResolvesToIncompressibleSolution() {
+        // EG50 = 50 mass-% ethylene glycol / 50 % water (CoolProp INCOMP::MEG[0.5]).
+        EquationSystemSolver.Result result = solver.solve(
+                "rho = Density(EG50, T=293.15, P=101325)\n"
+                        + "cp = Cp(EG50, T=293.15, P=101325)");
+        // ~1065 kg/m3 and ~3312 J/kg-K at 20 C for a 50/50 mix.
+        assertEquals(1065.0, result.variables().get("rho"), 5.0);
+        assertEquals(3312.0, result.variables().get("cp"), 20.0);
+    }
+
+    @Test
+    void glycolConcentrationIsConfigurable() {
+        // A leaner 10 % mix is closer to water: lower density, higher cp than 50 %.
+        EquationSystemSolver.Result result = solver.solve(
+                "rho10 = Density(EG10, T=293.15, P=101325)\n"
+                        + "rho50 = Density(EG50, T=293.15, P=101325)\n"
+                        + "cp10 = Cp(EG10, T=293.15, P=101325)\n"
+                        + "cp50 = Cp(EG50, T=293.15, P=101325)");
+        assertTrue(result.variables().get("rho10") < result.variables().get("rho50"),
+                "10% mix should be less dense than 50%");
+        assertTrue(result.variables().get("cp10") > result.variables().get("cp50"),
+                "10% mix should have higher specific heat than 50%");
+    }
+
+    @Test
+    void propyleneGlycolMixtureIsSupported() {
+        // PG30 = 30 mass-% propylene glycol (CoolProp INCOMP::MPG[0.3]).
+        EquationSystemSolver.Result result =
+                solver.solve("rho = Density(PG30, T=293.15, P=101325)");
+        double rho = result.variables().get("rho");
+        assertTrue(rho > 1000.0 && rho < 1060.0, "rho = " + rho);
+    }
+
+    @Test
     void unknownFluidGivesClearError() {
         Exception e = org.junit.jupiter.api.Assertions.assertThrows(Exception.class,
                 () -> solver.solve("h1 = Enthalpy(Unobtainium, T=300, x=1)"));

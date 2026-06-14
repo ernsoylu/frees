@@ -45,6 +45,7 @@ import TablesTab from './TablesTab'
 import {
   functionTableFromDigitizer,
   loadTables,
+  mergeCodeTables,
   newParamTable,
   ParamTableSpec,
   saveTables,
@@ -518,6 +519,7 @@ export default function App() {
     try {
       const response = await check(effectiveText(), buildVariableInfo(), complexMode, functionTableDtos)
       setCheckResult(response)
+      setTables((all) => mergeCodeTables(all, response.codeTables, response.parametricTables))
       // Sync the Variable Information table: keep edited rows for variables
       // that still exist, add defaults for new ones.
       setVariables(response.variables)
@@ -729,6 +731,7 @@ export default function App() {
       )
       setSolvedComplexMode(complexMode)
       setResult(response)
+      setTables((all) => mergeCodeTables(all, response.codeTables, response.parametricTables))
       setLastSolvedWithFillMissing(shouldFillMissing && response.success)
       if (response.success && response.variables) {
         setVarDrafts((drafts) => {

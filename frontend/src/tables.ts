@@ -1,4 +1,4 @@
-import { CheckResponse, FunctionTableDto, TableRowResult, TableStats } from './api'
+import { CheckResponse, FunctionTableDto, ParametricTableDto, TableRowResult, TableStats } from './api'
 import { newParamRow, ParamRow } from './ParametricTableTab'
 
 // ---------------------------------------------------------------------------
@@ -21,6 +21,7 @@ export interface ParamTableSpec {
   stats: TableStats | null
   checkResult: CheckResponse | null
   checkMessage: string
+  source?: 'code' | 'gui'
 }
 
 export interface CurveRow {
@@ -39,6 +40,10 @@ export interface FunctionTableSpec {
   columns: string[] // family parameter value per curve column
   rows: CurveRow[]
   is1D?: boolean // if true, it represents a function without a curve family/parameter
+  // 'code' tables are parsed from TABLE ... END blocks in the editor text and
+  // are shown read-only (the editor text is their source of truth). Undefined
+  // / 'gui' tables are created and edited in the Tables window.
+  source?: 'code' | 'gui'
 }
 
 export type TableSpec = ParamTableSpec | FunctionTableSpec
@@ -80,11 +85,14 @@ export function newFunctionTable(existing: TableSpec[], is1D: boolean): Function
   }
 }
 
-/** Function tables in solver wire format; blank cells are simply omitted. */
+/** Function tables in solver wire format; blank cells are simply omitted.
+ * Code-sourced tables are skipped — the backend parses them from the editor
+ * text itself, so re-sending them would be redundant. */
 export function toFunctionTableDtos(tables: TableSpec[]): FunctionTableDto[] {
   const dtos: FunctionTableDto[] = []
   for (const table of tables) {
     if (table.kind !== 'function' || table.name.trim() === '') continue
+    if (table.source === 'code') continue
     const curves = table.columns.map((paramRaw, j) => {
       const points: number[][] = []
       for (const row of table.rows) {
@@ -225,6 +233,76 @@ export function functionTableFromDigitizer(input: {
   return fillMissingCells(table)
 }
 
+/** Builds a read-only Function Table spec from a solver-wire DTO (a TABLE
+ * block the backend parsed out of the editor text). The x grid is the union of
+ * every curve's x samples; each curve fills its own rows. */
+export function functionTableFromDto(dto: FunctionTableDto): FunctionTableSpec {
+  const is1D = dto.curves.length <= 1 && (dto.curves[0]?.param == null)
+  const xKeys = new Set<string>()
+  for (const curve of dto.curves) {
+    for (const p of curve.points) xKeys.add(fmt6(p[0]))
+  }
+  const xs = [...xKeys].map(Number).sort((a, b) => a - b)
+  const rows: CurveRow[] = xs.map((x) => ({
+    x: fmt6(x),
+    ys: dto.curves.map((curve) => {
+      const hit = curve.points.find((p) => fmt6(p[0]) === fmt6(x))
+      return hit ? fmt6(hit[1]) : ''
+    }),
+  }))
+  return {
+    // Stable id keyed by name so the table keeps its identity across solves.
+    id: `code-${dto.name.toLowerCase()}`,
+    kind: 'function',
+    name: dto.name,
+    argName: dto.argNames[0] ?? 'x',
+    paramName: is1D ? '' : (dto.argNames[1] ?? 'param'),
+    xLog: dto.xLog,
+    yLog: dto.yLog,
+    columns: dto.curves.map((c) => (c.param == null ? '' : fmt6(c.param))),
+    rows,
+    is1D,
+    source: 'code',
+  }
+}
+
+/** Builds a read-only Parametric Table spec from a PARAMETRIC ... END block. */
+export function paramTableFromDto(dto: ParametricTableDto): ParamTableSpec {
+  const rows: ParamRow[] = dto.rows.map((row) => {
+    const values: Record<string, string> = {}
+    dto.vars.forEach((v, j) => {
+      const cell = row[j]
+      values[v] = cell == null ? '' : fmt6(cell)
+    })
+    return { id: crypto.randomUUID(), values }
+  })
+  return {
+    id: `code-param-${dto.name.toLowerCase()}`,
+    kind: 'parametric',
+    name: dto.name,
+    vars: dto.vars,
+    rows: rows.length > 0 ? rows : [newParamRow()],
+    results: [],
+    stats: null,
+    checkResult: null,
+    checkMessage: '',
+    source: 'code',
+  }
+}
+
+/** Replaces the code-sourced tables in the list with the freshly parsed set
+ * from the latest solve/check, leaving GUI tables untouched. */
+export function mergeCodeTables(
+  existing: TableSpec[],
+  functionDtos: FunctionTableDto[] | undefined,
+  parametricDtos?: ParametricTableDto[] | undefined,
+): TableSpec[] {
+  const guiTables = existing.filter((t) => t.source !== 'code')
+  const codeFunctionTables = (functionDtos ?? []).map(functionTableFromDto)
+  const codeParamTables = (parametricDtos ?? []).map(paramTableFromDto)
+  return [...guiTables, ...codeFunctionTables, ...codeParamTables]
+}
+
 const TABLES_KEY = 'frees.tables'
 
 export function loadTables(): TableSpec[] {
@@ -249,11 +327,15 @@ export function loadTables(): TableSpec[] {
 
 export function saveTables(tables: TableSpec[]) {
   try {
-    const slim = tables.map((t) =>
-      t.kind === 'parametric'
-        ? { ...t, results: [], stats: null, checkResult: null, checkMessage: '' }
-        : t,
-    )
+    // Code-sourced tables are re-derived from the editor text on each solve;
+    // never persist them (they would otherwise show stale before a re-solve).
+    const slim = tables
+      .filter((t) => t.source !== 'code')
+      .map((t) =>
+        t.kind === 'parametric'
+          ? { ...t, results: [], stats: null, checkResult: null, checkMessage: '' }
+          : t,
+      )
     localStorage.setItem(TABLES_KEY, JSON.stringify(slim))
   } catch {
     // storage unavailable: tables still work for the session

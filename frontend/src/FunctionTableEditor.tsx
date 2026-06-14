@@ -34,6 +34,9 @@ interface Props {
 }
 
 export default function FunctionTableEditor({ table, onChange }: Readonly<Props>) {
+  // Code-defined tables (parsed from a TABLE ... END block) are shown
+  // read-only; edit them in the editor text, not here.
+  const readOnly = table.source === 'code'
   const update = (patch: Partial<FunctionTableSpec>) => onChange({ ...table, ...patch })
 
   const setCell = (rowIdx: number, colIdx: number | null, value: string) => {
@@ -91,6 +94,7 @@ export default function FunctionTableEditor({ table, onChange }: Readonly<Props>
           description="Call it in equations"
           value={table.name}
           onChange={(e) => update({ name: e.currentTarget.value })}
+          readOnly={readOnly}
           w={140}
         />
         <TextInput
@@ -98,6 +102,7 @@ export default function FunctionTableEditor({ table, onChange }: Readonly<Props>
           label="Argument (X column)"
           value={table.argName}
           onChange={(e) => update({ argName: e.currentTarget.value })}
+          readOnly={readOnly}
           w={140}
         />
         {!table.is1D && (
@@ -108,6 +113,7 @@ export default function FunctionTableEditor({ table, onChange }: Readonly<Props>
             value={table.paramName}
             onChange={(e) => update({ paramName: e.currentTarget.value })}
             w={140}
+            readOnly={readOnly}
             disabled={!multiCurve}
           />
         )}
@@ -119,6 +125,7 @@ export default function FunctionTableEditor({ table, onChange }: Readonly<Props>
             const xLog = e.currentTarget.checked
             update({ xLog })
           }}
+          disabled={readOnly}
           mb={6}
         />
         <Checkbox
@@ -129,10 +136,19 @@ export default function FunctionTableEditor({ table, onChange }: Readonly<Props>
             const yLog = e.currentTarget.checked
             update({ yLog })
           }}
+          disabled={readOnly}
           mb={6}
         />
       </Group>
 
+      {readOnly ? (
+        <Group gap="xs">
+          <Text size="xs" c="dimmed">
+            Defined in code (<Code>TABLE {table.name} … END</Code>) — edit it in the
+            editor. Use in equations: <Code>U = {callSignature}</Code>
+          </Text>
+        </Group>
+      ) : (
       <Group gap="xs">
         <Button size="compact-xs" variant="default" leftSection={<IconRowInsertBottom size={13} />} onClick={addRow}>
           Add row
@@ -154,6 +170,7 @@ export default function FunctionTableEditor({ table, onChange }: Readonly<Props>
           Use in equations: <Code>U = {callSignature}</Code>
         </Text>
       </Group>
+      )}
 
       <ScrollArea style={{ flex: 1, minHeight: 0 }}>
         <Table withTableBorder withColumnBorders stickyHeader>
@@ -183,13 +200,14 @@ export default function FunctionTableEditor({ table, onChange }: Readonly<Props>
                         leftSectionWidth={table.paramName ? 26 : undefined}
                         value={param}
                         onChange={(e) => setColumnParam(j, e.currentTarget.value)}
+                        readOnly={readOnly}
                       />
                     ) : (
                       <Text size="xs" fw={700} style={{ flex: 1 }}>
                         y
                       </Text>
                     )}
-                    {multiCurve && (
+                    {multiCurve && !readOnly && (
                       <ActionIcon
                         size="xs"
                         variant="subtle"
@@ -217,6 +235,7 @@ export default function FunctionTableEditor({ table, onChange }: Readonly<Props>
                     px={6}
                     value={row.x}
                     onChange={(e) => setCell(i, null, e.currentTarget.value)}
+                    readOnly={readOnly}
                   />
                 </Table.Td>
                 {table.columns.map((_, j) => (
@@ -228,19 +247,22 @@ export default function FunctionTableEditor({ table, onChange }: Readonly<Props>
                       px={6}
                       value={row.ys[j] ?? ''}
                       onChange={(e) => setCell(i, j, e.currentTarget.value)}
+                      readOnly={readOnly}
                     />
                   </Table.Td>
                 ))}
                 <Table.Td p={2}>
-                  <ActionIcon
-                    size="xs"
-                    variant="subtle"
-                    color="red"
-                    aria-label="Remove row"
-                    onClick={() => removeRow(i)}
-                  >
-                    <IconTrash size={11} />
-                  </ActionIcon>
+                  {!readOnly && (
+                    <ActionIcon
+                      size="xs"
+                      variant="subtle"
+                      color="red"
+                      aria-label="Remove row"
+                      onClick={() => removeRow(i)}
+                    >
+                      <IconTrash size={11} />
+                    </ActionIcon>
+                  )}
                 </Table.Td>
               </Table.Tr>
             ))}
