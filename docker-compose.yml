@@ -2,8 +2,13 @@ services:
   backend:
     build: ./backend
     container_name: frees-backend
+    # Bind the API to the loopback interface only: local dev can still reach
+    # http://localhost:8080/api, but remote/LAN hosts cannot hit the backend
+    # directly — they must go through the rate-limited nginx proxy (which also
+    # sees the real client IP). The frontend container reaches it over the
+    # compose network as backend:8080 regardless of this published binding.
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
     healthcheck:
       test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/localhost/8080' || exit 1"]
       interval: 5s
