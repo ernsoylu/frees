@@ -362,20 +362,38 @@ public final class UnitChecker {
                 }
                 yield left.known() ? left : right;
             }
-            case '*' -> left.known() && right.known()
-                    ? Dim.of(left.quantity().multiply(right.quantity()))
-                    : (bothDimensionless(left, right) ? left : Dim.UNKNOWN);
-            case '/' -> left.known() && right.known()
-                    ? Dim.of(left.quantity().divide(right.quantity()))
-                    : Dim.UNKNOWN;
+            // In a product/quotient a bare numeric literal is a dimensionless
+            // scale factor, so 0.5*rho keeps rho's dimensions rather than
+            // collapsing to a wildcard.
+            case '*' -> {
+                Dim l = asFactor(b.left(), left);
+                Dim r = asFactor(b.right(), right);
+                yield l.known() && r.known()
+                        ? Dim.of(l.quantity().multiply(r.quantity()))
+                        : Dim.UNKNOWN;
+            }
+            case '/' -> {
+                Dim l = asFactor(b.left(), left);
+                Dim r = asFactor(b.right(), right);
+                yield l.known() && r.known()
+                        ? Dim.of(l.quantity().divide(r.quantity()))
+                        : Dim.UNKNOWN;
+            }
             case '^' -> dimOfPower(b, left);
             default -> Dim.UNKNOWN;
         };
     }
 
-    private static boolean bothDimensionless(Dim a, Dim b) {
-        return a.known() && b.known()
-                && a.quantity().isDimensionless() && b.quantity().isDimensionless();
+    /**
+     * Treats an unresolved bare numeric literal as dimensionless when it
+     * appears as a multiplicative factor. Other wildcards (unit-less
+     * variables) stay unknown so genuine ambiguity is not masked.
+     */
+    private static Dim asFactor(Expr operand, Dim resolved) {
+        if (!resolved.known() && operand instanceof Expr.Num n && n.unit() == null) {
+            return Dim.of(Quantity.dimensionless(1.0));
+        }
+        return resolved;
     }
 
     private Dim dimOfPower(Expr.BinOp b, Dim base) {
