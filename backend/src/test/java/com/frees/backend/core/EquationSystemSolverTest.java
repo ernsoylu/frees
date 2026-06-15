@@ -37,6 +37,28 @@ class EquationSystemSolverTest {
     }
 
     @Test
+    void solvesMatlabMatrixGenerators() {
+        EquationSystemSolver.Result r = solver.solve(
+                "I = eye(3)\nZ = zeros(2,2)\nu = ones(3,1)\nD = diag([2; 5; 7])\ng = linspace(0, 10, 5)");
+        assertEquals(1.0, r.variables().get("I[1,1]"), 1e-9);
+        assertEquals(0.0, r.variables().get("I[1,2]"), 1e-9);
+        assertEquals(0.0, r.variables().get("Z[2,1]"), 1e-9);
+        assertEquals(1.0, r.variables().get("u[3]"), 1e-9);
+        assertEquals(5.0, r.variables().get("D[2,2]"), 1e-9);
+        assertEquals(0.0, r.variables().get("D[1,2]"), 1e-9);
+        assertEquals(2.5, r.variables().get("g[2]"), 1e-9); // 0,2.5,5,7.5,10
+        assertEquals(10.0, r.variables().get("g[5]"), 1e-9);
+    }
+
+    @Test
+    void solvesMatlabInvDetAliases() {
+        EquationSystemSolver.Result r = solver.solve(
+                "A = [4 0; 0 5]\nC = inv(A)\nd = det(A)");
+        assertEquals(0.25, r.variables().get("C[1,1]"), 1e-9);
+        assertEquals(20.0, r.variables().get("d"), 1e-9);
+    }
+
+    @Test
     void solvesMilestoneOneSystem() {
         // Milestone 1 from ARCHITECTURE_AND_REQUIREMENTS.md.
         EquationSystemSolver.Result result = solver.solve("x+y=3\ny=z-4\nz=x^2-3");

@@ -2403,11 +2403,28 @@ u$ = UnitsOf$(var)`}
               <List.Item><strong>Column Vector:</strong> Semicolon separated elements: <code>v = [1; 2; 3]</code> (3x1 matrix)</List.Item>
               <List.Item><strong>2D Matrix:</strong> Rows separated by semicolons, elements separated by spaces/commas: <code>A = [1 2; 3 4]</code> (2x2 matrix)</List.Item>
             </List>
+            <Text mt="xs">
+              You can use <strong>bare names</strong> (MATLAB style) — <code>A = [3 4 5; 1 2 6; 7 8 1]</code> creates the matrix and <code>SolveLinear(A, b)</code>, <code>inv(A)</code>, <code>A * b</code> all accept it directly — or the explicit indexed form <code>A[1..3, 1..3] = …</code> when you want to address elements.
+            </Text>
+            <Text mt="xs"><strong>Generators &amp; aliases:</strong></Text>
+            <List size="sm" withPadding>
+              <List.Item><code>zeros(m, n)</code>, <code>ones(m, n)</code> — m×n of 0 / 1 (one arg ⇒ square)</List.Item>
+              <List.Item><code>eye(n)</code> / <code>identity(n)</code> — n×n identity</List.Item>
+              <List.Item><code>diag([a; b; c])</code> — diagonal matrix; <code>diag(A)</code> — extract diagonal</List.Item>
+              <List.Item><code>linspace(a, b, n)</code> — n linearly spaced values from a to b</List.Item>
+              <List.Item><code>inv(A)</code> = Inverse, <code>det(A)</code> = Determinant (MATLAB aliases)</List.Item>
+            </List>
             <Paper withBorder p="md" bg="dark.8">
-              <Code block>{`A[1..2, 1..2] = [1 2; 3 4]
-b[1..2] = [5; 6]
-x[1..2] = A[1..2, 1..2] \\\\ b[1..2]`}</Code>
+              <Code block>{`A = [3 4 5; 1 2 6; 7 8 1]
+b = [2; 3; 1]
+x = SolveLinear(A, b)      { bare names — no [1..3] needed }
+Ai = inv(A)
+I = eye(3)
+g = linspace(0, 10, 5)`}</Code>
             </Paper>
+            <Text size="xs" c="dimmed" mt="xs">
+              Note: frees is a declarative solver, so it uses bracket indexing with ranges (<code>A[i, j]</code>, <code>A[1..n]</code>) rather than MATLAB's parenthesis indexing and <code>A(:, 2)</code> / <code>end</code> slicing.
+            </Text>
           </Stack>
         );
       case 'matrices-ops':

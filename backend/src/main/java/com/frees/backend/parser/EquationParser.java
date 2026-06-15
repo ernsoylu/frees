@@ -284,7 +284,11 @@ public final class EquationParser {
         }
 
         if (rhs instanceof Expr.Call(String function, List<Expr> args)) {
-            String func = function.toLowerCase();
+            String func = switch (function.toLowerCase()) {
+                case "inv" -> "inverse";          // MATLAB aliases
+                case "det" -> "determinant";
+                default -> function.toLowerCase();
+            };
             if (func.equals("inverse") || func.equals("transpose")) {
                 flattenMatrixTransform(func, lhs, args.get(0), sourceText, ctx);
                 return;
@@ -1067,12 +1071,98 @@ public final class EquationParser {
             case Expr.BinOp(char op, Expr left, Expr right) -> 
                 (op == '*' || op == '+' || op == '-' || op == '\\') && 
                 (isMatrixExpr(left, loopVars, constants, defs) || isMatrixExpr(right, loopVars, constants, defs));
-            case Expr.Call(String function, List<Expr> args) -> 
-                function.equals("transpose") || function.equals("inverse") || function.equals("solvelinear") ||
-                function.equals("axpy") || function.equals("scal") || function.equals("gemv") ||
-                function.equals("gemm") || function.equals("ger") || function.equals("copy");
+            case Expr.Call(String function, List<Expr> args) -> isMatrixFunction(function);
             default -> false;
         };
+    }
+
+    /** Functions whose result is a matrix/vector (so an equation using one is a
+     * matrix equation). Scalar-valued ones (det, dot, norm) are excluded. */
+    private static final java.util.Set<String> MATRIX_FUNCTIONS = java.util.Set.of(
+            "transpose", "inverse", "inv", "solvelinear",
+            "axpy", "scal", "gemv", "gemm", "ger", "copy",
+            "zeros", "ones", "eye", "identity", "diag", "linspace");
+
+    private static boolean isMatrixFunction(String function) {
+        return MATRIX_FUNCTIONS.contains(function.toLowerCase());
+    }
+
+    private void checkGeneratorSize(int rows, int cols, String fn) {
+        if (rows < 1 || cols < 1) {
+            throw new ParseException(fn + " dimensions must be >= 1");
+        }
+        if ((long) rows * cols > MAX_RANGE_SPAN) {
+            throw new ParseException(fn + " matrix is too large (limit " + MAX_RANGE_SPAN + ").");
+        }
+    }
+
+    /** MATLAB-style matrix generators: zeros, ones, eye/identity, diag, linspace. */
+    private Expr[][] compileMatrixGenerator(String fn, List<Expr> args, FlattenContext ctx) {
+        Map<String, Double> loopVars = ctx.loopVars();
+        Map<String, Double> constants = ctx.constants();
+        Map<String, String> displayNames = ctx.displayNames();
+        Map<String, ProcDef> defs = ctx.defs();
+        java.util.function.ToDoubleFunction<Expr> num = a ->
+                evalIndexExpr(expandExpr(a, loopVars, constants, displayNames, defs), loopVars, constants, defs);
+
+        switch (fn) {
+            case "zeros", "ones" -> {
+                int r = (int) Math.round(num.applyAsDouble(args.get(0)));
+                int c = args.size() > 1 ? (int) Math.round(num.applyAsDouble(args.get(1))) : r;
+                checkGeneratorSize(r, c, fn);
+                double fill = fn.equals("ones") ? 1.0 : 0.0;
+                Expr[][] m = new Expr[r][c];
+                for (int i = 0; i < r; i++) {
+                    for (int j = 0; j < c; j++) {
+                        m[i][j] = new Expr.Num(fill);
+                    }
+                }
+                return m;
+            }
+            case "eye", "identity" -> {
+                int r = (int) Math.round(num.applyAsDouble(args.get(0)));
+                int c = args.size() > 1 ? (int) Math.round(num.applyAsDouble(args.get(1))) : r;
+                checkGeneratorSize(r, c, fn);
+                Expr[][] m = new Expr[r][c];
+                for (int i = 0; i < r; i++) {
+                    for (int j = 0; j < c; j++) {
+                        m[i][j] = new Expr.Num(i == j ? 1.0 : 0.0);
+                    }
+                }
+                return m;
+            }
+            case "linspace" -> {
+                double a = num.applyAsDouble(args.get(0));
+                double b = num.applyAsDouble(args.get(1));
+                int n = args.size() > 2 ? (int) Math.round(num.applyAsDouble(args.get(2))) : 100;
+                checkGeneratorSize(n, 1, fn);
+                Expr[][] m = new Expr[n][1];
+                for (int k = 0; k < n; k++) {
+                    double t = n == 1 ? b : a + (b - a) * k / (n - 1);
+                    m[k][0] = new Expr.Num(t);
+                }
+                return m;
+            }
+            default -> { // diag
+                Expr[][] v = compileMatrixExpr(args.get(0), ctx);
+                if (v.length == 1 || v[0].length == 1) { // vector -> diagonal matrix
+                    int n = Math.max(v.length, v[0].length);
+                    Expr[][] m = new Expr[n][n];
+                    for (int i = 0; i < n; i++) {
+                        for (int j = 0; j < n; j++) {
+                            m[i][j] = i == j ? (v.length == 1 ? v[0][i] : v[i][0]) : new Expr.Num(0.0);
+                        }
+                    }
+                    return m;
+                }
+                int n = Math.min(v.length, v[0].length); // matrix -> extract diagonal
+                Expr[][] m = new Expr[n][1];
+                for (int i = 0; i < n; i++) {
+                    m[i][0] = v[i][i];
+                }
+                return m;
+            }
+        }
     }
 
     private Expr[][] compileMatrixExpr(Expr e, FlattenContext ctx) {
@@ -1242,7 +1332,12 @@ public final class EquationParser {
                 }
             }
             case Expr.Call(String function, List<Expr> args) -> {
-                if (function.equals("transpose")) {
+                String fn = function.toLowerCase();
+                if (fn.equals("zeros") || fn.equals("ones") || fn.equals("eye")
+                        || fn.equals("identity") || fn.equals("diag") || fn.equals("linspace")) {
+                    yield compileMatrixGenerator(fn, args, ctx);
+                }
+                if (fn.equals("transpose")) {
                     Expr[][] mat = compileMatrixExpr(args.get(0), ctx);
                     int rows = mat.length;
                     int cols = mat[0].length;
@@ -1253,7 +1348,7 @@ public final class EquationParser {
                         }
                     }
                     yield result;
-                } else if (function.equals("inverse")) {
+                } else if (fn.equals("inverse") || fn.equals("inv")) {
                     Expr[][] aMat = compileMatrixExpr(args.get(0), ctx);
                     if (aMat.length != aMat[0].length) {
                         throw new ParseException("Inverse requires a square matrix");
@@ -1279,7 +1374,7 @@ public final class EquationParser {
                         }
                     }
                     yield invMat;
-                } else if (function.equals("axpy")) {
+                } else if (fn.equals("axpy")) {
                     if (args.size() != 3) {
                         throw new ParseException("axpy expects exactly 3 arguments: axpy(alpha, x, y)");
                     }
@@ -1299,7 +1394,7 @@ public final class EquationParser {
                         }
                     }
                     yield result;
-                } else if (function.equals("scal")) {
+                } else if (fn.equals("scal")) {
                     if (args.size() != 2) {
                         throw new ParseException("scal expects exactly 2 arguments: scal(alpha, x)");
                     }
@@ -1314,7 +1409,7 @@ public final class EquationParser {
                         }
                     }
                     yield result;
-                } else if (function.equals("gemv")) {
+                } else if (fn.equals("gemv")) {
                     if (args.size() != 5) {
                         throw new ParseException("gemv expects exactly 5 arguments: gemv(alpha, A, x, beta, y)");
                     }
@@ -1349,7 +1444,7 @@ public final class EquationParser {
                         result[i][0] = new Expr.BinOp('+', new Expr.BinOp('*', alpha, sum), new Expr.BinOp('*', beta, yMat[i][0]));
                     }
                     yield result;
-                } else if (function.equals("gemm")) {
+                } else if (fn.equals("gemm")) {
                     if (args.size() != 5) {
                         throw new ParseException("gemm expects exactly 5 arguments: gemm(alpha, A, B, beta, C)");
                     }
@@ -1381,7 +1476,7 @@ public final class EquationParser {
                         }
                     }
                     yield result;
-                } else if (function.equals("ger")) {
+                } else if (fn.equals("ger")) {
                     if (args.size() != 4) {
                         throw new ParseException("ger expects exactly 4 arguments: ger(alpha, x, y, A)");
                     }
@@ -1411,12 +1506,12 @@ public final class EquationParser {
                         }
                     }
                     yield result;
-                } else if (function.equals("copy")) {
+                } else if (fn.equals("copy")) {
                     if (args.size() != 1) {
                         throw new ParseException("copy expects exactly 1 argument: copy(x)");
                     }
                     yield compileMatrixExpr(args.get(0), ctx);
-                } else if (function.equals("solvelinear")) {
+                } else if (fn.equals("solvelinear")) {
                     if (args.size() != 2) {
                         throw new ParseException("solvelinear expects exactly 2 arguments: solvelinear(A, b)");
                     }
