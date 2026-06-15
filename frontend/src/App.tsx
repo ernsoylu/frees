@@ -1,6 +1,7 @@
 import { ChangeEvent, useCallback, useEffect, useMemo, useState, useRef } from 'react'
 import {
   ActionIcon,
+  Alert,
   Button,
   Divider,
   Flex,
@@ -14,7 +15,28 @@ import {
   Title,
   Tooltip,
 } from '@mantine/core'
-import { IconLayoutSidebarRightExpand } from '@tabler/icons-react'
+import { Spotlight, SpotlightActionGroupData } from '@mantine/spotlight'
+import {
+  IconChartGridDots,
+  IconChartLine,
+  IconChecks,
+  IconCode,
+  IconDeviceFloppy,
+  IconFilePlus,
+  IconFolderOpen,
+  IconHelp,
+  IconInfoCircle,
+  IconLayoutSidebarRightExpand,
+  IconMathFunction,
+  IconPlayerPlayFilled,
+  IconSchema,
+  IconSearch,
+  IconSettings,
+  IconTable,
+  IconTargetArrow,
+  IconTemperature,
+  IconVariable,
+} from '@tabler/icons-react'
 import {
   check,
   CheckResponse,
@@ -61,6 +83,8 @@ import { DiagramSpec } from './diagram/types'
 import { PlotSpec } from './plots/types'
 import { plotDefToSpec } from './plots/fromCode'
 import SolutionPanel from './SolutionPanel'
+import EquationEditor, { EquationEditorHandle } from './EquationEditor'
+import { ConfirmModal, MessageModal, TextPromptModal } from './dialogs'
 import { Rail, TopBar } from './WorkspaceChrome'
 import { EXPORT_FORMATS } from './plots/exportPlot'
 import { detectStates } from './plots/stateTable'
@@ -84,6 +108,7 @@ import {
 
 const STOP_CRITERIA_KEY = 'frees.stopCriteria'
 const UNIT_SYSTEM_KEY = 'frees.unitSystem'
+const FIRST_RUN_KEY = 'frees.firstRunDismissed'
 
 function loadUnitSystem(): UnitSystem {
   const raw = localStorage.getItem(UNIT_SYSTEM_KEY)
@@ -202,6 +227,20 @@ export default function App() {
     return localStorage.getItem('frees.fillMissing') === 'true'
   })
   const [showPreferences, setShowPreferences] = useState(false)
+  // Mantine-styled replacements for native prompt()/confirm()/alert().
+  const [renameOpen, setRenameOpen] = useState(false)
+  const [saveAsOpen, setSaveAsOpen] = useState(false)
+  const [confirmNewOpen, setConfirmNewOpen] = useState(false)
+  const [dialogError, setDialogError] = useState<string | null>(null)
+  const [dismissedWarnings, setDismissedWarnings] = useState(false)
+  const [showFirstRun, setShowFirstRun] = useState(
+    () => localStorage.getItem(FIRST_RUN_KEY) !== 'true',
+  )
+
+  const dismissFirstRun = useCallback(() => {
+    setShowFirstRun(false)
+    localStorage.setItem(FIRST_RUN_KEY, 'true')
+  }, [])
   const [variables, setVariables] = useState<string[]>([])
   const [varDrafts, setVarDrafts] = useState<Record<string, VariableDraft>>(
     () => boot?.varDrafts ?? {},
@@ -213,44 +252,16 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<string>('equations')
   const [eqView, setEqView] = useState<'editor' | 'formatted'>('editor')
 
-  const lineNumbersRef = useRef<HTMLDivElement>(null)
-  const textareaRef = useRef<HTMLTextAreaElement>(null)
-
-  const syncScroll = () => {
-    if (textareaRef.current && lineNumbersRef.current) {
-      lineNumbersRef.current.scrollTop = textareaRef.current.scrollTop
-    }
-  }
+  const editorRef = useRef<EquationEditorHandle>(null)
 
   // Insert a function template at the editor caret (Functions menu). "$0" in
-  // the snippet marks where the caret lands; selected text is replaced.
-  const insertFunction = useCallback(
-    (snippet: string) => {
-      const caretMark = snippet.indexOf('$0')
-      const clean = snippet.replace('$0', '')
-      setActiveTab('equations')
-      setEqView('editor')
-      setText((prev) => {
-        const ta = textareaRef.current
-        const start = ta ? ta.selectionStart : prev.length
-        const end = ta ? ta.selectionEnd : prev.length
-        const next = prev.slice(0, start) + clean + prev.slice(end)
-        const caret = start + (caretMark >= 0 ? caretMark : clean.length)
-        setTimeout(() => {
-          if (textareaRef.current) {
-            textareaRef.current.focus()
-            textareaRef.current.setSelectionRange(caret, caret)
-          }
-        }, 0)
-        return next
-      })
-    },
-    [],
-  )
-
-  useEffect(() => {
-    syncScroll()
-  }, [text])
+  // the snippet marks where the caret lands; selected text is replaced. The
+  // editor must be visible first, so switch to it before inserting.
+  const insertFunction = useCallback((snippet: string) => {
+    setActiveTab('equations')
+    setEqView('editor')
+    setTimeout(() => editorRef.current?.insertSnippet(snippet), 50)
+  }, [])
   const [solutionOpen, setSolutionOpen] = useState(true)
   // Tables (Epic 8): any number of Parametric and Curve Tables; the active
   // parametric table is the one Check/Solve Table and the plots act on.
@@ -353,20 +364,24 @@ export default function App() {
     downloadProject(buildProject(currentSlices()), projectName)
   }, [currentSlices, projectName])
 
-  const handleRenameProject = useCallback(() => {
-    const name = globalThis.prompt('Rename project:', projectName)
-    if (name == null) return
-    const clean = name.trim() || 'untitled'
-    setProjectName(clean)
-  }, [projectName])
+  const handleRenameProject = useCallback(() => setRenameOpen(true), [])
 
-  const handleSaveProjectAs = useCallback(() => {
-    const name = globalThis.prompt('Save project as:', projectName)
-    if (name == null) return
-    const clean = name.trim() || 'untitled'
-    setProjectName(clean)
-    downloadProject(buildProject(currentSlices()), clean)
-  }, [currentSlices, projectName])
+  const submitRename = useCallback((name: string) => {
+    setProjectName(name.trim() || 'untitled')
+    setRenameOpen(false)
+  }, [])
+
+  const handleSaveProjectAs = useCallback(() => setSaveAsOpen(true), [])
+
+  const submitSaveAs = useCallback(
+    (name: string) => {
+      const clean = name.trim() || 'untitled'
+      setProjectName(clean)
+      downloadProject(buildProject(currentSlices()), clean)
+      setSaveAsOpen(false)
+    },
+    [currentSlices],
+  )
 
   const handleOpenProject = useCallback(() => {
     projectFileRef.current?.click()
@@ -382,14 +397,16 @@ export default function App() {
         applyProject(p)
         setProjectName(file.name.replace(/\.frees$/i, ''))
       } catch (err) {
-        globalThis.alert(err instanceof Error ? err.message : 'Could not open project file.')
+        setDialogError(err instanceof Error ? err.message : 'Could not open project file.')
       }
     },
     [applyProject],
   )
 
-  const handleNewProject = useCallback(() => {
-    if (!globalThis.confirm('Start a new project? Unsaved changes will be lost.')) return
+  const handleNewProject = useCallback(() => setConfirmNewOpen(true), [])
+
+  const performNewProject = useCallback(() => {
+    setConfirmNewOpen(false)
     clearProjectLocal()
     writeBridgedKeys({
       version: 1,
@@ -540,8 +557,8 @@ export default function App() {
     }
   }, [])
 
-  async function onCheck() {
-    if (checking) return
+  async function onCheck(): Promise<CheckResponse | null> {
+    if (checking) return null
     setChecking(true)
     setResult(null)
     setLastSolvedWithFillMissing(false)
@@ -565,8 +582,9 @@ export default function App() {
         }
         return next
       })
+      return response
     } catch (e) {
-      setCheckResult({
+      const errorResponse: CheckResponse = {
         solvable: false,
         equations: 0,
         unknowns: 0,
@@ -575,7 +593,9 @@ export default function App() {
         inferredUnits: {},
         message: `Could not reach the solver backend: ${String(e)}`,
         formattedEquations: [],
-      })
+      }
+      setCheckResult(errorResponse)
+      return errorResponse
     } finally {
       setChecking(false)
     }
@@ -634,8 +654,8 @@ export default function App() {
     return filled
   }
 
-  async function onCheckTable() {
-    if (tableChecking || !activeParam) return
+  async function onCheckTable(): Promise<CheckResponse | null> {
+    if (tableChecking || !activeParam) return null
     const tableId = activeParam.id
     setTableChecking(true)
     updateParamTable(tableId, (t) => ({ ...t, results: [] }))
@@ -683,20 +703,25 @@ export default function App() {
             : ' Add the missing variables as table columns via Configure Columns, or fix the equations.'
         updateParamTable(tableId, (t) => ({ ...t, checkMessage: response.message + hint }))
       }
+      return response
     } catch (e) {
       updateParamTable(tableId, (t) => ({
         ...t,
         checkResult: null,
         checkMessage: `Could not reach the solver backend: ${String(e)}`,
       }))
+      return null
     } finally {
       setTableChecking(false)
     }
   }
 
-  async function onSolveTable() {
+  async function onSolveTable(checkOverride?: CheckResponse) {
     if (tableSolving || !activeParam || tableVars.length === 0) return
-    if (tableCheckResult?.solvable !== true) return
+    const okCheck = checkOverride
+      ? checkOverride.solvable === true
+      : tableCheckResult?.solvable === true
+    if (!okCheck) return
     const tableId = activeParam.id
     setTableSolving(true)
     try {
@@ -742,8 +767,13 @@ export default function App() {
     }
   }
 
-  async function onSolve(forceFill: unknown = false, overridePlots?: PlotSpec[]) {
-    if (solving || !solvable) return
+  async function onSolve(
+    forceFill: unknown = false,
+    overridePlots?: PlotSpec[],
+    checkOverride?: CheckResponse,
+  ) {
+    const canRun = checkOverride ? checkOverride.solvable === true : solvable
+    if (solving || !canRun) return
     setSolving(true)
     try {
       const activePlots = overridePlots ?? plots
@@ -806,6 +836,29 @@ export default function App() {
     }
   }
 
+  // "Just solve it": if the system is already checked, solve; otherwise run
+  // Check first and chain into Solve when it passes. The fresh CheckResponse is
+  // passed through so the solve guard doesn't read stale `solvable` state.
+  async function checkThenSolve() {
+    if (solving || checking) return
+    if (solvable) {
+      void onSolve()
+      return
+    }
+    const res = await onCheck()
+    if (res?.solvable) void onSolve(false, undefined, res)
+  }
+
+  async function checkThenSolveTable() {
+    if (tableSolving || tableChecking || !activeParam) return
+    if (tableCheckResult?.solvable === true) {
+      void onSolveTable()
+      return
+    }
+    const res = await onCheckTable()
+    if (res?.solvable) void onSolveTable(res)
+  }
+
   const handlePlotsChange = (nextPlots: PlotSpec[]) => {
     // Code-defined plots are derived from the solve response, not persisted, so
     // strip them before saving — they are re-merged on the next solve/check.
@@ -838,33 +891,15 @@ export default function App() {
           }
         }
       }
-      if (action.query && textareaRef.current) {
-        const editorText = text
+      if (action.query) {
         const query = action.query.trim().toLowerCase()
         if (query) {
-          const lines = editorText.split('\n')
+          const lines = text.split('\n')
           const matchingIdx = lines.findIndex((l) => l.toLowerCase().includes(query))
           if (matchingIdx !== -1) {
-            let charOffset = 0
-            for (let i = 0; i < matchingIdx; i++) {
-              charOffset += lines[i].length + 1
-            }
-            const start = charOffset
-            const end = charOffset + lines[matchingIdx].length
-
             setActiveTab('equations')
-            setTimeout(() => {
-              if (textareaRef.current) {
-                textareaRef.current.focus()
-                textareaRef.current.setSelectionRange(start, end)
-                const lineHeight = 20
-                const scrollTop = matchingIdx * lineHeight - textareaRef.current.clientHeight / 2
-                textareaRef.current.scrollTop = Math.max(0, scrollTop)
-                if (lineNumbersRef.current) {
-                  lineNumbersRef.current.scrollTop = textareaRef.current.scrollTop
-                }
-              }
-            }, 50)
+            setEqView('editor')
+            setTimeout(() => editorRef.current?.goToLine(matchingIdx + 1), 50)
           }
         }
       }
@@ -872,12 +907,20 @@ export default function App() {
     [plots, text],
   )
 
+  // Jump the editor to a 1-based line (selecting it) — used to reach the line a
+  // syntax error points at. Ensures the editor is visible first.
+  const goToLine = useCallback((lineNo: number) => {
+    setActiveTab('equations')
+    setEqView('editor')
+    setTimeout(() => editorRef.current?.goToLine(lineNo), 50)
+  }, [])
+
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
       // Shortcuts act on the active section: equations vs parametric table.
       if (e.key === 'F2') {
         e.preventDefault()
-        void (activeTab === 'table' ? onSolveTable() : onSolve())
+        void (activeTab === 'table' ? checkThenSolveTable() : checkThenSolve())
       }
       if (e.key === 'F4') {
         e.preventDefault()
@@ -890,6 +933,18 @@ export default function App() {
 
   const solutions = result?.solutions ?? []
   const formattedEqs = result?.formattedEquations ?? checkResult?.formattedEquations ?? []
+
+  // Unit-consistency warnings from the latest Solve (preferred) or Check, shown
+  // as a dismissible banner above the editor. Re-shown whenever the set changes.
+  const unitWarnings = result?.unitWarnings ?? checkResult?.unitWarnings ?? []
+  const warningsKey = unitWarnings.join('|')
+  useEffect(() => {
+    setDismissedWarnings(false)
+  }, [warningsKey])
+
+  // 1-based editor line a syntax error points at (from Solve, then Check), used
+  // to mark the gutter and offer a jump-to-line action.
+  const errorLine = result?.errorLine ?? checkResult?.errorLine ?? null
 
   // Plots declared in the editor text with PLOT ... END blocks, regenerated on
   // every solve/check. Merged with GUI plots for display and [Graph] resolution
@@ -912,6 +967,72 @@ export default function App() {
   const solutionRows = resultIsComplex
     ? buildComplexSolutionRows(baseVariables, solutions)
     : buildRealSolutionRows(baseVariables, solutions)
+
+  // Command palette (Ctrl/Cmd+K): jump to any view, open any tool window, run
+  // Check/Solve, or manage the project — all from one searchable list.
+  const spotlightActions: SpotlightActionGroupData[] = [
+    {
+      group: 'Run',
+      actions: [
+        {
+          id: 'check',
+          label: 'Check',
+          description: 'Validate the system (F4)',
+          leftSection: <IconChecks size={18} />,
+          onClick: () => {
+            setActiveTab('equations')
+            void onCheck()
+          },
+        },
+        {
+          id: 'solve',
+          label: 'Solve',
+          description: 'Check & solve the system (F2)',
+          leftSection: <IconPlayerPlayFilled size={16} />,
+          onClick: () => {
+            setActiveTab('equations')
+            void checkThenSolve()
+          },
+        },
+      ],
+    },
+    {
+      group: 'Views',
+      actions: [
+        { id: 'view-editor', label: 'Editor', leftSection: <IconCode size={18} />, onClick: () => setActiveTab('equations') },
+        { id: 'view-table', label: 'Tables', leftSection: <IconTable size={18} />, onClick: () => setActiveTab('table') },
+        { id: 'view-plots', label: 'Plots (X-Y)', leftSection: <IconChartLine size={18} />, onClick: () => setActiveTab('plots') },
+        { id: 'view-thermo', label: 'Thermodynamics', leftSection: <IconTemperature size={18} />, onClick: () => setActiveTab('thermo') },
+        { id: 'view-digitizer', label: 'Graph Digitizer', leftSection: <IconChartGridDots size={18} />, onClick: () => setActiveTab('digitizer') },
+        { id: 'view-diagram', label: 'Diagram', leftSection: <IconSchema size={18} />, onClick: () => setActiveTab('diagram') },
+      ],
+    },
+    {
+      group: 'Tools',
+      actions: [
+        { id: 'tool-variables', label: 'Variable Information', leftSection: <IconVariable size={18} />, onClick: () => setShowVariableInfo(true) },
+        { id: 'tool-minmax', label: 'Min/Max (Optimization)', leftSection: <IconTargetArrow size={18} />, onClick: () => setShowMinMax(true) },
+        { id: 'tool-curvefit', label: 'Curve Fit', leftSection: <IconMathFunction size={18} />, onClick: () => setShowCurveFit(true) },
+        { id: 'tool-preferences', label: 'Preferences', leftSection: <IconSettings size={18} />, onClick: () => setShowPreferences(true) },
+        { id: 'tool-about', label: 'About', leftSection: <IconInfoCircle size={18} />, onClick: () => setShowAbout(true) },
+      ],
+    },
+    {
+      group: 'Project',
+      actions: [
+        { id: 'proj-new', label: 'New Project', leftSection: <IconFilePlus size={18} />, onClick: handleNewProject },
+        { id: 'proj-open', label: 'Open Project…', leftSection: <IconFolderOpen size={18} />, onClick: handleOpenProject },
+        { id: 'proj-save', label: 'Save Project', leftSection: <IconDeviceFloppy size={18} />, onClick: handleSaveProject },
+        { id: 'proj-saveas', label: 'Save Project As…', leftSection: <IconDeviceFloppy size={18} />, onClick: handleSaveProjectAs },
+      ],
+    },
+    {
+      group: 'Help',
+      actions: [
+        { id: 'help', label: 'Help', leftSection: <IconHelp size={18} />, onClick: () => globalThis.open('/help', '_blank') },
+      ],
+    },
+  ]
 
   const solutionSidePanel = solutionOpen ? (
     <SolutionPanel
@@ -950,6 +1071,52 @@ export default function App() {
       />
 
       {showAbout && <AboutModal onClose={() => setShowAbout(false)} />}
+
+      <Spotlight
+        actions={spotlightActions}
+        nothingFound="Nothing found…"
+        highlightQuery
+        searchProps={{
+          leftSection: <IconSearch size={18} />,
+          placeholder: 'Search views, tools, and actions…',
+        }}
+      />
+
+      <TextPromptModal
+        opened={renameOpen}
+        title="Rename Project"
+        label="Project name"
+        defaultValue={projectName}
+        confirmLabel="Rename"
+        onSubmit={submitRename}
+        onClose={() => setRenameOpen(false)}
+      />
+
+      <TextPromptModal
+        opened={saveAsOpen}
+        title="Save Project As"
+        label="Project name"
+        defaultValue={projectName}
+        confirmLabel="Save"
+        onSubmit={submitSaveAs}
+        onClose={() => setSaveAsOpen(false)}
+      />
+
+      <ConfirmModal
+        opened={confirmNewOpen}
+        title="New Project"
+        message="Start a new project? Unsaved changes will be lost."
+        confirmLabel="New Project"
+        onConfirm={performNewProject}
+        onClose={() => setConfirmNewOpen(false)}
+      />
+
+      <MessageModal
+        opened={dialogError !== null}
+        title="Could not open project"
+        message={dialogError ?? ''}
+        onClose={() => setDialogError(null)}
+      />
 
       {showPreferences && (
         <PreferencesModal
@@ -1056,9 +1223,9 @@ export default function App() {
           tableCheckMessage={tableCheckMessage}
           tableResults={tableResults}
           onCheck={onCheck}
-          onSolve={onSolve}
+          onSolve={checkThenSolve}
           onCheckTable={onCheckTable}
-          onSolveTable={onSolveTable}
+          onSolveTable={checkThenSolveTable}
           onFindAllChange={(checked) => {
             setFindAll(checked)
             setResult(null)
@@ -1077,12 +1244,6 @@ export default function App() {
           onOpenProject={handleOpenProject}
           onSaveProject={handleSaveProject}
           onSaveProjectAs={handleSaveProjectAs}
-          activeTab={activeTab}
-          onSelectView={setActiveTab}
-          onVariableInfo={() => setShowVariableInfo(true)}
-          onMinMax={() => setShowMinMax(true)}
-          onCurveFit={() => setShowCurveFit(true)}
-          onPreferences={() => setShowPreferences(true)}
           onInsertFunction={insertFunction}
         />
         <input
@@ -1110,6 +1271,39 @@ export default function App() {
           >
             {activeTab === 'equations' && (
               <>
+                {errorLine != null && (
+                  <Alert color="red" variant="light" p="xs" mb={6} title="Syntax error">
+                    <Group justify="space-between" wrap="nowrap" gap="xs">
+                      <Text size="xs">Syntax error on line {errorLine}.</Text>
+                      <Button
+                        size="compact-xs"
+                        variant="light"
+                        color="red"
+                        onClick={() => goToLine(errorLine)}
+                      >
+                        Go to line {errorLine}
+                      </Button>
+                    </Group>
+                  </Alert>
+                )}
+                {showFirstRun && (
+                  <Alert
+                    color="blue"
+                    variant="light"
+                    p="xs"
+                    mb={6}
+                    withCloseButton
+                    onClose={dismissFirstRun}
+                    title="Welcome to frees"
+                  >
+                    <Text size="xs">
+                      Write equations and markdown notes on the left — they can be
+                      entered in any order. Click <strong>Check</strong> (F4) to
+                      validate, then <strong>Solve</strong> (F2). Solve also runs
+                      Check for you automatically.
+                    </Text>
+                  </Alert>
+                )}
                 <Group justify="flex-end" mb={6}>
                   <SegmentedControl
                     size="xs"
@@ -1121,6 +1315,27 @@ export default function App() {
                     ]}
                   />
                 </Group>
+                {unitWarnings.length > 0 && !dismissedWarnings && (
+                  <Alert
+                    color="yellow"
+                    variant="light"
+                    p="xs"
+                    mb={6}
+                    withCloseButton
+                    onClose={() => setDismissedWarnings(true)}
+                    title={`${unitWarnings.length} unit consistency warning${
+                      unitWarnings.length === 1 ? '' : 's'
+                    }`}
+                  >
+                    <Stack gap={2} mah={120} style={{ overflowY: 'auto' }}>
+                      {withStableKeys(unitWarnings).map((w) => (
+                        <Text size="xs" key={w.key}>
+                          ⚠ {w.value}
+                        </Text>
+                      ))}
+                    </Stack>
+                  </Alert>
+                )}
                 {eqView === 'editor' ? (
                   <div
                     style={{
@@ -1130,51 +1345,15 @@ export default function App() {
                       border: '1px solid var(--mantine-color-dark-4)',
                       borderRadius: '4px',
                       overflow: 'hidden',
-                      backgroundColor: 'var(--mantine-color-dark-7)',
                     }}
                   >
-                    <div
-                      ref={lineNumbersRef}
-                      style={{
-                        padding: '12px 8px',
-                        textAlign: 'right',
-                        color: 'var(--mantine-color-dark-3)',
-                        backgroundColor: 'var(--mantine-color-dark-8)',
-                        borderRight: '1px solid var(--mantine-color-dark-5)',
-                        fontFamily: 'var(--mantine-font-family-monospace)',
-                        fontSize: 'var(--mantine-font-size-sm)',
-                        lineHeight: 1.6,
-                        userSelect: 'none',
-                        overflow: 'hidden',
-                        whiteSpace: 'pre',
-                        minWidth: '35px',
-                      }}
-                    >
-                      {Array.from({ length: text.split('\n').length }, (_, i) => i + 1).join('\n')}
-                    </div>
-                    <textarea
-                      ref={textareaRef}
+                    <EquationEditor
+                      ref={editorRef}
                       value={text}
-                      onChange={(e) => onTextChange(e.currentTarget.value)}
-                      onScroll={syncScroll}
-                      spellCheck={false}
-                      wrap="off"
+                      onChange={onTextChange}
+                      variables={variables}
+                      errorLine={errorLine}
                       placeholder={'Enter equations and markdown notes, e.g.\n# Rankine Cycle\nT1 = 100 [C]\nP1 = 250 [kPa]'}
-                      style={{
-                        flex: 1,
-                        padding: '12px',
-                        border: 'none',
-                        outline: 'none',
-                        resize: 'none',
-                        color: 'var(--mantine-color-dark-0)',
-                        backgroundColor: 'transparent',
-                        fontFamily: 'var(--mantine-font-family-monospace)',
-                        fontSize: 'var(--mantine-font-size-sm)',
-                        lineHeight: 1.6,
-                        overflowY: 'auto',
-                        overflowX: 'auto',
-                        whiteSpace: 'pre',
-                      }}
                     />
                   </div>
                 ) : (
@@ -1269,7 +1448,9 @@ export default function App() {
                 cyclePath={result?.cyclePath}
                 solving={solving}
                 onSolve={onSolve}
-                onCheck={onCheck}
+                onCheck={async () => {
+                  await onCheck()
+                }}
                 onNavigate={handleNavigate}
                 onVarDraftsChange={setVarDrafts}
                 diagrams={diagrams}

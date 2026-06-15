@@ -570,5 +570,47 @@ class SolveControllerTest {
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.error").value(org.hamcrest.Matchers.containsString("Syntax error")));
     }
+
+    @Test
+    void parsesErrorLineFromAntlrMessage() {
+        org.junit.jupiter.api.Assertions.assertEquals(
+                4, SolveController.parseErrorLine("line 4:6 mismatched input '+'"));
+        org.junit.jupiter.api.Assertions.assertEquals(
+                2, SolveController.parseErrorLine("line 2:0 foo\nline 9:1 bar"));
+        org.junit.jupiter.api.Assertions.assertNull(
+                SolveController.parseErrorLine("some non-positional error"));
+        org.junit.jupiter.api.Assertions.assertNull(SolveController.parseErrorLine(null));
+    }
+
+    @Test
+    void checkReportsEditorLineForSyntaxError() throws Exception {
+        // The malformed equation is on the second editor line; the response must
+        // anchor the error there so the frontend can jump to it.
+        mockMvc.perform(post("/api/check")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"text\": \"a = 1\\nb = * 3\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value(
+                        org.hamcrest.Matchers.containsString("Syntax error")))
+                .andExpect(jsonPath("$.errorLine").value(2));
+    }
+
+    @Test
+    void solveReportsEditorLineForSyntaxError() throws Exception {
+        mockMvc.perform(post("/api/solve")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"text\": \"a = 1\\nb = * 3\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errorLine").value(2));
+    }
+
+    @Test
+    void successfulCheckHasNoErrorLine() throws Exception {
+        mockMvc.perform(post("/api/check")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"text\": \"x + y = 3\\ny = 2\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.errorLine").value(org.hamcrest.Matchers.nullValue()));
+    }
 }
 

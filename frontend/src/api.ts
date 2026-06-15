@@ -68,6 +68,8 @@ export interface SolveResponse {
   solutions: SolutionResult[]
   unitWarnings: string[]
   error: string | null
+  /** 1-based editor line a syntax error points at, or null for whole-system errors. */
+  errorLine?: number | null
   formattedEquations: string[]
   cyclePath?: Record<string, number>[]
   formattedReport?: string
@@ -87,6 +89,8 @@ export interface CheckResponse {
   unitWarnings: string[]
   inferredUnits: Record<string, string>
   message: string
+  /** 1-based editor line a syntax error points at, or null for whole-system errors. */
+  errorLine?: number | null
   formattedEquations: string[]
   formattedReport?: string
   /** Function tables parsed from TABLE ... END blocks in the editor text. */
