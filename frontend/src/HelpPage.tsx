@@ -734,6 +734,80 @@ C_rate = I_peak/Q_pack         { pack C-rate [1/h] }
 margin = I_cell_max - I_cell   { per-cell headroom [A], must be > 0 }`,
   },
   {
+    value: "ev-regen",
+    title: "Vehicle Dynamics: Regenerative Braking Energy Recovery",
+    description: "How much kinetic energy a regenerative brake can return. The motor-as-generator recovers a fraction (regen efficiency) of the vehicle's ½·m·V² when slowing from a speed, with the rotational-inertia mass factor included. Shows the energy per stop, how many stops fill 1 kWh, and the total recovered over a stop-and-go trip.",
+    note: "From 50 km/h a 1600 kg car holds ≈ 162 kJ of kinetic energy; at 65% regen ≈ 105 kJ (0.029 kWh) returns per stop, so ≈ 34 such stops bank 1 kWh, and a 20-stop city run recovers ≈ 2.1 MJ (≈ 0.58 kWh). (Source caveat: the books note real-world regen return is drive-cycle dependent, often 10–30% of pack energy in stop-and-go.)",
+    code: `{ Regenerative braking: kinetic energy recovered per stop and per trip }
+M = 1600 [kg]
+V = 50 [km/h]          { speed before braking }
+eta_regen = 0.65       { fraction of kinetic energy returned to the battery }
+delta = 1.05           { rotational-inertia mass factor }
+
+E_kin = 0.5*M*delta*V^2        { kinetic energy [J] }
+E_regen = eta_regen*E_kin      { recovered per stop [J]; /3.6e6 for kWh }
+
+E_oneKWh = 1 [kWh]
+stops_per_kWh = E_oneKWh/E_regen   { stops to bank 1 kWh }
+
+N_stops = 20                   { stops on a city run }
+E_recovered = E_regen*N_stops  { total recovered [J] }`,
+  },
+  {
+    value: "ev-drive-cycle",
+    title: "Vehicle Dynamics: Combined Drive-Cycle Consumption & Range",
+    description: "A two-phase (city + highway) drive-cycle estimate. The flat road-load consumption is computed at each phase speed, the city phase gets a regenerative-braking credit, and the phases are blended by distance fraction into a combined consumption and the resulting range from a usable pack.",
+    note: "55% city / 45% highway: city ≈ 183 J/m (after a 25% regen credit), highway ≈ 596 J/m, blended ≈ 369 J/m (≈ 102 Wh/km), giving ≈ 5.86e5 m ≈ 586 km from a 60 kWh pack.",
+    code: `{ Combined city/highway drive-cycle consumption and range }
+M = 1550 [kg]
+g = 9.81 [m/s^2]
+Crr = 0.011
+rho = 1.2 [kg/m^3]
+Cd = 0.29
+A_f = 2.2 [m^2]
+eta = 0.88
+E_pack = 60 [kWh]
+regen_credit = 0.25        { city energy returned by regen }
+
+V_city = 40 [km/h]
+V_hwy = 110 [km/h]
+frac_city = 0.55
+frac_hwy = 0.45
+
+F_city = M*g*Crr + 0.5*rho*Cd*A_f*V_city^2
+F_hwy  = M*g*Crr + 0.5*rho*Cd*A_f*V_hwy^2
+cons_city = F_city/eta*(1 - regen_credit)   { [J/m] }
+cons_hwy  = F_hwy/eta
+cons_avg  = frac_city*cons_city + frac_hwy*cons_hwy
+Range     = E_pack/cons_avg                 { [m]; /1000 for km }`,
+  },
+  {
+    value: "fcev-sizing",
+    title: "EV Powertrain: Hydrogen Fuel-Cell Vehicle (FCEV) Sizing & Range",
+    description: "Sizes a hydrogen fuel-cell vehicle from its 700-bar tank. Usable electrical energy is the stored hydrogen mass times its lower heating value times the net fuel-cell system efficiency; range follows from the cruise road-load, and the continuous stack power must cover that load. Hydrogen consumption per 100 km falls out for comparison with real cars. (Grounded in the hydrogen-vehicle books in the linked notebook; Toyota Mirai II ≈ 5.6 kg tank.)",
+    note: "5.6 kg H2 at 45% net FC efficiency ≈ 3.02e8 J usable → ≈ 5.15e5 m ≈ 515 km. Continuous stack power at 100 km/h ≈ 16.3 kW; hydrogen consumption cons_H2 ≈ 1.09e-5 kg/m ≈ 1.09 kg/100 km — right in the 1.0–1.16 kg/100 km band for passenger FCEVs.",
+    code: `{ Hydrogen fuel-cell vehicle: usable energy, range and consumption }
+m_H2 = 5.6 [kg]        { usable hydrogen (700 bar tank, Mirai-II class) }
+LHV = 120 [MJ/kg]      { hydrogen lower heating value }
+eta_fc = 0.45          { net fuel-cell system efficiency }
+E_usable = m_H2*LHV*eta_fc      { electrical energy to the drivetrain [J] }
+
+M = 1800 [kg]
+g = 9.81 [m/s^2]
+Crr = 0.011
+rho = 1.2 [kg/m^3]
+Cd = 0.29
+A_f = 2.4 [m^2]
+eta_dt = 0.88
+V = 100 [km/h]
+
+F_cr = M*g*Crr + 0.5*rho*Cd*A_f*V^2
+cons = F_cr/eta_dt              { road-load energy per distance [J/m] }
+Range = E_usable/cons           { [m]; /1000 for km }
+P_fc = cons*V                   { continuous stack power at cruise [W] }
+cons_H2 = m_H2/Range            { hydrogen use [kg/m]; *1e5 for kg/100 km }`,
+  },
+  {
     value: "truss-stiffness",
     title: "Structural Analysis: Plane Truss by the Direct Stiffness Method",
     description: "A three-bar truss with one free node, assembled and solved exactly as a finite-element code would: each member contributes its EA/L stiffness with direction cosines to a 2×2 global stiffness matrix, which SolveLinear inverts for the nodal displacements; member axial forces follow.",
