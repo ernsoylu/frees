@@ -309,6 +309,16 @@ function SuccessBody({
       )}
 
       <Accordion variant="contained">
+        {result.stats && (
+          <Accordion.Item value="stats">
+            <Accordion.Control>
+              <Text size="sm">Solver details</Text>
+            </Accordion.Control>
+            <Accordion.Panel>
+              <SolveStatsGrid stats={result.stats} solutionCount={solutionCount || 1} />
+            </Accordion.Panel>
+          </Accordion.Item>
+        )}
         <Accordion.Item value="order">
           <Accordion.Control>
             <Text size="sm">
@@ -345,13 +355,6 @@ function EquationSection({
   }
   return (
     <Stack gap="sm">
-      {result.stats && (
-        <SolveStatsGrid
-          stats={result.stats}
-          solutionCount={result.solutions?.length || 1}
-        />
-      )}
-
       {!result.success && (
         <Alert color="red" variant="light">
           <Text size="sm" style={{ whiteSpace: 'pre-wrap' }}>
