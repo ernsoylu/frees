@@ -121,7 +121,69 @@ public final class EquationParser {
                                   Map<String, String> displayNames,
                                   List<Equation> out,
                                   Map<String, ProcDef> defs,
-                                  AtomicInteger moduleCounter) {}
+                                  AtomicInteger moduleCounter,
+                                  // Declared shapes of matrix/vector variables ({rows, cols},
+                                  // lowercased name) so a bare reference like SolveLinear(A, b)
+                                  // resolves to the explicit A[1..r,1..c] form.
+                                  Map<String, int[]> shapes) {}
+
+    private static void registerShape(String name, int rows, int cols, FlattenContext ctx) {
+        ctx.shapes().put(name.toLowerCase(), new int[]{rows, cols});
+    }
+
+    private static Expr rangeAccess(String name, int[] shape) {
+        List<Expr> idx = new ArrayList<>();
+        if (shape[0] == 1 || shape[1] == 1) { // vector: single 1..n index
+            int n = Math.max(shape[0], shape[1]);
+            idx.add(new Expr.Range(new Expr.Num(1), new Expr.Num(n)));
+        } else {
+            idx.add(new Expr.Range(new Expr.Num(1), new Expr.Num(shape[0])));
+            idx.add(new Expr.Range(new Expr.Num(1), new Expr.Num(shape[1])));
+        }
+        return new Expr.ArrayAccess(name, idx);
+    }
+
+    /** Rewrites bare references to a registered matrix/vector variable into the
+     * explicit A[1..r,1..c] form, so MATLAB-style bare names work in operations. */
+    private Expr resolveShapes(Expr e, FlattenContext ctx) {
+        return switch (e) {
+            case Expr.Var(String name) -> {
+                int[] shape = ctx.shapes().get(name.toLowerCase());
+                yield shape == null ? e : rangeAccess(name, shape);
+            }
+            case Expr.BinOp(char op, Expr l, Expr r) ->
+                new Expr.BinOp(op, resolveShapes(l, ctx), resolveShapes(r, ctx));
+            case Expr.Neg(Expr o) -> new Expr.Neg(resolveShapes(o, ctx));
+            case Expr.Call(String fn, List<Expr> args) -> {
+                List<Expr> na = new ArrayList<>();
+                for (Expr a : args) {
+                    na.add(resolveShapes(a, ctx));
+                }
+                yield new Expr.Call(fn, na);
+            }
+            default -> e;
+        };
+    }
+
+    /** If lhs is a bare name, register it as a vector of the given size and
+     * return the explicit v[1..size] form; otherwise return it unchanged. */
+    private Expr explicitVectorOutput(Expr lhs, int size, FlattenContext ctx) {
+        if (lhs instanceof Expr.Var(String name)) {
+            registerShape(name, size, 1, ctx);
+            return new Expr.ArrayAccess(name,
+                    List.of(new Expr.Range(new Expr.Num(1), new Expr.Num(size))));
+        }
+        return lhs;
+    }
+
+    /** As {@link #explicitVectorOutput} but for a rows×cols matrix output. */
+    private Expr explicitMatrixOutput(Expr lhs, int rows, int cols, FlattenContext ctx) {
+        if (lhs instanceof Expr.Var(String name)) {
+            registerShape(name, rows, cols, ctx);
+            return rangeAccess(name, new int[]{rows, cols});
+        }
+        return lhs;
+    }
 
     private boolean tryExtractConstant(Statement stmt, Map<String, Double> constants) {
         if (!(stmt instanceof Statement.Eq(Expr lhs, Expr rhs, String sourceText))) {
@@ -165,7 +227,7 @@ public final class EquationParser {
                          Map<String, Double> constants, Map<String, String> displayNames,
                          List<Equation> out, Map<String, ProcDef> defs,
                          AtomicInteger moduleCounter) {
-        FlattenContext ctx = new FlattenContext(loopVars, constants, displayNames, out, defs, moduleCounter);
+        FlattenContext ctx = new FlattenContext(loopVars, constants, displayNames, out, defs, moduleCounter, new HashMap<>());
         for (Statement stmt : statements) {
             switch (stmt) {
                 case Statement.For(String varName, Expr start, Expr end, List<Statement> body) ->
@@ -208,6 +270,19 @@ public final class EquationParser {
     }
 
     private void flattenEq(Expr lhs, Expr rhs, String sourceText, FlattenContext ctx) {
+        // Rewrite bare references to known matrix/vector variables (e.g. the A, b
+        // in SolveLinear(A, b)) into their explicit A[1..r,1..c] form.
+        lhs = resolveShapes(lhs, ctx);
+        rhs = resolveShapes(rhs, ctx);
+
+        // MATLAB-style bare creation: A = [1 2; 3 4] or v = [1, 2, 3].
+        if (lhs instanceof Expr.Var(String vname)
+                && (rhs instanceof Expr.ArrayLiteral
+                    || isMatrixExpr(rhs, ctx.loopVars(), ctx.constants(), ctx.defs()))) {
+            flattenBareMatrixCreation(vname, rhs, sourceText, ctx);
+            return;
+        }
+
         if (rhs instanceof Expr.Call(String function, List<Expr> args)) {
             String func = function.toLowerCase();
             if (func.equals("inverse") || func.equals("transpose")) {
@@ -231,6 +306,11 @@ public final class EquationParser {
         if (isMatrixExpr(lhs, ctx.loopVars(), ctx.constants(), ctx.defs()) || isMatrixExpr(rhs, ctx.loopVars(), ctx.constants(), ctx.defs())) {
             Expr[][] lhsMat = compileMatrixExpr(lhs, ctx);
             Expr[][] rhsMat = compileMatrixExpr(rhs, ctx);
+            // Remember an explicitly-dimensioned LHS (A[1..r,1..c] = ...) so a
+            // later bare reference to it resolves.
+            if (lhs instanceof Expr.ArrayAccess(String ln, List<Expr> li) && !li.isEmpty()) {
+                registerShape(ln, lhsMat.length, lhsMat[0].length, ctx);
+            }
             if (rhsMat.length == 1 && rhsMat[0].length == 1) {
                 Expr scalarVal = rhsMat[0][0];
                 rhsMat = new Expr[lhsMat.length][lhsMat[0].length];
@@ -266,9 +346,34 @@ public final class EquationParser {
         }
     }
 
+    /** MATLAB-style bare creation: A = [1 2; 3 4], v = [1, 2, 3] or v = [1; 2; 3].
+     * Emits element equations (A[i,j] or v[k]) and registers the shape. */
+    private void flattenBareMatrixCreation(String name, Expr rhs, String sourceText, FlattenContext ctx) {
+        Expr[][] m = compileMatrixExpr(rhs, ctx);
+        int rows = m.length;
+        int cols = m[0].length;
+        boolean vector = rows == 1 || cols == 1;
+        for (int i = 0; i < rows; i++) {
+            for (int j = 0; j < cols; j++) {
+                String canonical = vector
+                        ? name + "[" + (Math.max(i, j) + 1) + "]"
+                        : name + "[" + (i + 1) + "," + (j + 1) + "]";
+                ctx.displayNames().putIfAbsent(canonical,
+                        ctx.displayNames().getOrDefault(name, name)
+                                + canonical.substring(name.length()));
+                ctx.out().add(new Equation(new Expr.Var(canonical), m[i][j], sourceText));
+            }
+        }
+        registerShape(name, rows, cols, ctx);
+    }
+
     private void flattenMatrixTransform(String func, Expr lhs, Expr firstArg, String sourceText, FlattenContext ctx) {
-        MatrixInfo lhsMat = parseMatrixInfo(lhs, ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
         MatrixInfo rhsMat = parseMatrixInfo(firstArg, ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        // Allow a bare output name (C = Inverse(A)): size it from the operation.
+        int outRows = func.equals("transpose") ? rhsMat.cols : rhsMat.rows;
+        int outCols = func.equals("transpose") ? rhsMat.rows : rhsMat.cols;
+        lhs = explicitMatrixOutput(lhs, outRows, outCols, ctx);
+        MatrixInfo lhsMat = parseMatrixInfo(lhs, ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
         if (func.equals("transpose")) {
             if (lhsMat.rows != rhsMat.cols || lhsMat.cols != rhsMat.rows) {
                 throw new ParseException("Dimension mismatch for Transpose: LHS is " + lhsMat.rows + "x" + lhsMat.cols + ", RHS is " + rhsMat.cols + "x" + rhsMat.rows);
@@ -361,9 +466,11 @@ public final class EquationParser {
     }
 
     private void flattenSolveLinear(Expr lhs, List<Expr> args, String sourceText, FlattenContext ctx) {
-        VectorInfo x = parseVectorInfo(lhs, ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
         MatrixInfo a = parseMatrixInfo(args.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
         VectorInfo b = parseVectorInfo(args.get(1), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        // Allow a bare output name (x = SolveLinear(A, b)): size it from b.
+        lhs = explicitVectorOutput(lhs, b.size, ctx);
+        VectorInfo x = parseVectorInfo(lhs, ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
         if (a.rows != a.cols || a.rows != x.size || b.size != x.size) {
             throw new ParseException("SolveLinear requires square matrix A and vectors x, b of compatible size.");
         }

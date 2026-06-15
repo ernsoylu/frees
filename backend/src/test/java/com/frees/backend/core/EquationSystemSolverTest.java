@@ -15,6 +15,28 @@ class EquationSystemSolverTest {
     private final EquationSystemSolver solver = new EquationSystemSolver();
 
     @Test
+    void solvesMatlabStyleBareNameMatrix() {
+        // MATLAB-style bare creation + bare references in SolveLinear.
+        EquationSystemSolver.Result result =
+                solver.solve("A = [2 0; 0 4]\nb = [6; 8]\nx = SolveLinear(A, b)");
+        assertEquals(3.0, result.variables().get("x[1]"), 1e-9);
+        assertEquals(2.0, result.variables().get("x[2]"), 1e-9);
+    }
+
+    @Test
+    void solvesMatlabStyleBareNameInverseAndMatVec() {
+        EquationSystemSolver.Result inv =
+                solver.solve("A = [4 0; 0 5]\nC = Inverse(A)");
+        assertEquals(0.25, inv.variables().get("C[1,1]"), 1e-9);
+        assertEquals(0.2, inv.variables().get("C[2,2]"), 1e-9);
+
+        EquationSystemSolver.Result mv =
+                solver.solve("A = [1 2; 3 4]\nx = [5; 6]\ny = A * x");
+        assertEquals(17.0, mv.variables().get("y[1]"), 1e-9); // 1*5 + 2*6
+        assertEquals(39.0, mv.variables().get("y[2]"), 1e-9); // 3*5 + 4*6
+    }
+
+    @Test
     void solvesMilestoneOneSystem() {
         // Milestone 1 from ARCHITECTURE_AND_REQUIREMENTS.md.
         EquationSystemSolver.Result result = solver.solve("x+y=3\ny=z-4\nz=x^2-3");
