@@ -1,26 +1,43 @@
-import { Anchor, Avatar, Group, Modal, Stack, Text } from '@mantine/core'
+import { Anchor, Divider, Group, Modal, Stack, Text } from '@mantine/core'
 import { IconBrandGithub, IconBrandLinkedin } from '@tabler/icons-react'
 
 interface Props {
   onClose: () => void
 }
 
-// Author / about-me card. Static content; no app state needed.
+// About card: software identity + license on top, author at the bottom.
 export default function AboutModal({ onClose }: Readonly<Props>) {
   return (
     <Modal opened onClose={onClose} title="About" centered size="sm">
-      <Stack align="center" gap="xs" py="sm">
-        <Avatar size={72} radius="xl" color="blue">
-          ES
-        </Avatar>
-        <Text fw={600} size="lg">
-          Eren Soylu
-        </Text>
-        <Text c="dimmed" size="sm" ta="center">
-          Creator of frees — a free, declarative equation-solving environment.
+      <Stack gap="sm">
+        <Stack gap={2}>
+          <Group gap="xs" align="baseline">
+            <Text fw={700} size="xl">
+              frees
+            </Text>
+            <Text c="dimmed" size="sm">
+              free solver · v0.1.0
+            </Text>
+          </Group>
+          <Text size="sm">
+            A free, web-based, open-source equation-solving environment for
+            engineers. Solves systems of non-linear simultaneous equations with
+            symbolic compiling, unit handling, and uncertainty propagation.
+          </Text>
+        </Stack>
+
+        <Text c="dimmed" size="xs">
+          Licensed under the MIT License. Copyright © 2026 Eren Soylu. Provided
+          “as is”, without warranty of any kind.
         </Text>
 
-        <Stack gap={6} mt="sm" w="100%">
+        <Divider />
+
+        <Stack gap={6}>
+          <Text fw={600} size="sm">
+            Author
+          </Text>
+          <Text size="sm">Eren Soylu</Text>
           <Group gap="xs" wrap="nowrap">
             <IconBrandLinkedin size={20} stroke={1.6} />
             <Anchor
