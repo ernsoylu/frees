@@ -111,6 +111,36 @@ class UnitCheckerTest {
     }
 
     @Test
+    void bernoulliPressureDerivesThroughScaledSiblingTerm() {
+        // P2 is additive; its unit comes from its sibling 0.5*rho*V2^2. The
+        // bare 0.5 must not erase rho*V2^2's dimensions (Pa).
+        var derived = solver.deriveUnits(
+                "P1 + 0.5*rho*V1^2 + rho*g*h1 = P2 + 0.5*rho*V2^2 + rho*g*h2",
+                Map.of("p1", "Pa", "rho", "kg/m^3", "v1", "m/s", "v2", "m/s",
+                        "g", "m/s^2", "h1", "m", "h2", "m"));
+        assertEquals("Pa", derived.get("P2"));
+    }
+
+    @Test
+    void scaledQuantityKeepsDimensions() {
+        // 0.5*m*v^2 is specific... here KE: a dimensionless literal factor must
+        // pass the kg*m^2/s^2 dimensions through to E.
+        var derived = solver.deriveUnits("E = 0.5 * m * v^2",
+                Map.of("m", "kg", "v", "m/s"));
+        assertEquals("J", derived.get("E"));
+    }
+
+    @Test
+    void dividingByConstantKeepsDimensions() {
+        // Bernoulli written with /2 instead of 0.5*: P2's sibling rho*V2^2/2
+        // must keep its Pa dimensions despite the constant divisor.
+        var derived = solver.deriveUnits(
+                "P1 + rho*V1^2/2 = P2 + rho*V2^2/2",
+                Map.of("p1", "Pa", "rho", "kg/m^3", "v1", "m/s", "v2", "m/s"));
+        assertEquals("Pa", derived.get("P2"));
+    }
+
+    @Test
     void rearrangementBailsOnNonMultiplicativeUnknowns() {
         // x trapped inside a sum with a wildcard term: not isolatable.
         var derived = solver.deriveUnits("F = m + x * 2",
