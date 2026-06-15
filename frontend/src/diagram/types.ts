@@ -96,6 +96,20 @@ export interface ConnectorElement extends ElementBase {
   style: 'straight' | 'orthogonal' | 'curved'
   arrow: 'none' | 'from' | 'to' | 'both'
   flow?: FlowAnimation
+  /**
+   * Manual elbow position for the orthogonal route (Visio/Lucid-style). Holds
+   * the world coordinate of the draggable mid-segment — an x when the route
+   * leaves its first anchor horizontally, a y when it leaves vertically. When
+   * undefined the elbow auto-centres between the two anchors. Ignored once
+   * `waypoints` are present.
+   */
+  mid?: number
+  /**
+   * Explicit user-placed bend points the route threads through, in order from
+   * the `from` anchor to the `to` anchor (Visio/Lucid multi-waypoint routing).
+   * Drag to move, double-click to delete; drag a segment to insert a new one.
+   */
+  waypoints?: { x: number; y: number }[]
 }
 
 export interface RectElement extends ElementBase {
@@ -732,9 +746,14 @@ export function elementBounds(el: DiagramElement, elements: DiagramElement[] = [
     if (!fromEl || !toEl) return { x: 0, y: 0, w: 0, h: 0 }
     const p1 = getAnchorCoordinate(fromEl, el.fromAnchor)
     const p2 = getAnchorCoordinate(toEl, el.toAnchor)
-    const x = Math.min(p1.x, p2.x)
-    const y = Math.min(p1.y, p2.y)
-    return { x, y, w: Math.max(1, Math.abs(p2.x - p1.x)), h: Math.max(1, Math.abs(p2.y - p1.y)) }
+    // Include any manual waypoints so the box encloses the full bent route
+    // (matters for zoom-to-fit and export framing).
+    const pts = [p1, p2, ...(el.waypoints ?? [])]
+    const xs = pts.map((p) => p.x)
+    const ys = pts.map((p) => p.y)
+    const x = Math.min(...xs)
+    const y = Math.min(...ys)
+    return { x, y, w: Math.max(1, Math.max(...xs) - x), h: Math.max(1, Math.max(...ys) - y) }
   }
   if (el.kind === 'line') {
     const x = Math.min(el.x1, el.x2)
