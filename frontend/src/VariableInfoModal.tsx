@@ -138,7 +138,7 @@ export default function VariableInfoModal({ variables, drafts, solvedValues, onS
         return
       }
       const uncertaintyText = draft.uncertainty?.trim() ?? ''
-      const uncertainty = uncertaintyText === '' ? 0.0 : Number(uncertaintyText)
+      const uncertainty = uncertaintyText === '' ? 0 : Number(uncertaintyText)
       if (uncertaintyText !== '' && (!Number.isFinite(uncertainty) || uncertainty < 0)) {
         setError(`Uncertainty for ${name} must be a non-negative number.`)
         return

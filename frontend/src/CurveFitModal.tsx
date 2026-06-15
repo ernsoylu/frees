@@ -91,8 +91,8 @@ const FIT_TEMPLATES: FitTemplate[] = [
 function parseValueAndUnit(str: string): { value: number; unit?: string } | null {
   const trimmed = str.trim()
   if (trimmed === '') return null
-  const regex = /^(-?\d*\.?\d+(?:[eE][-+]?\d+)?)(?:\s*\[([^\]]*)\])?$/
-  const match = trimmed.match(regex)
+  const regex = /^(-?(?:\d+(?:\.\d+)?|\.\d+)(?:[eE][-+]?\d+)?)(?:\s*\[([^\]]*)\])?$/
+  const match = regex.exec(trimmed)
   if (!match) return null
   return {
     value: Number(match[1]),
@@ -350,7 +350,7 @@ export default function CurveFitModal({
       }
     } else {
       const yColIndex = Number(yColumnName)
-      if (isNaN(yColIndex) || yColIndex < 0 || yColIndex >= table.columns.length) {
+      if (Number.isNaN(yColIndex) || yColIndex < 0 || yColIndex >= table.columns.length) {
         return 'Please select a valid Y column.'
       }
 

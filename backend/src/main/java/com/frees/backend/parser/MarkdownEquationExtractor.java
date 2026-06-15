@@ -565,7 +565,7 @@ public final class MarkdownEquationExtractor {
                 }
             }
         }
-        if (!originalText.endsWith("\n") && report.length() > 0) {
+        if (!originalText.endsWith("\n") && !report.isEmpty()) {
             report.setLength(report.length() - 1);
         }
         return report.toString();

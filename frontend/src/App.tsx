@@ -328,14 +328,14 @@ export default function App() {
   }, [currentSlices, projectName])
 
   const handleRenameProject = useCallback(() => {
-    const name = window.prompt('Rename project:', projectName)
+    const name = globalThis.prompt('Rename project:', projectName)
     if (name == null) return
     const clean = name.trim() || 'untitled'
     setProjectName(clean)
   }, [projectName])
 
   const handleSaveProjectAs = useCallback(() => {
-    const name = window.prompt('Save project as:', projectName)
+    const name = globalThis.prompt('Save project as:', projectName)
     if (name == null) return
     const clean = name.trim() || 'untitled'
     setProjectName(clean)
@@ -356,14 +356,14 @@ export default function App() {
         applyProject(p)
         setProjectName(file.name.replace(/\.frees$/i, ''))
       } catch (err) {
-        window.alert(err instanceof Error ? err.message : 'Could not open project file.')
+        globalThis.alert(err instanceof Error ? err.message : 'Could not open project file.')
       }
     },
     [applyProject],
   )
 
   const handleNewProject = useCallback(() => {
-    if (!window.confirm('Start a new project? Unsaved changes will be lost.')) return
+    if (!globalThis.confirm('Start a new project? Unsaved changes will be lost.')) return
     clearProjectLocal()
     writeBridgedKeys({
       version: 1,

@@ -224,7 +224,7 @@ public final class Evaluator {
                     double factor = Math.pow(10.0, Math.round(digits));
                     yield Math.round(val * factor) / factor;
                 }
-                yield (double) Math.round(val);
+                yield Math.round(val);
             }
             case "floor" -> Math.floor(arg(c, args, 0, values, defs));
             case "ceil"  -> Math.ceil(arg(c, args, 0, values, defs));
@@ -300,17 +300,17 @@ public final class Evaluator {
             case "cis" -> Math.cos(arg(c, args, 0, values, defs));
 
             // Bitwise operations
-            case "bitand" -> (double) ((long) arg(c, args, 0, values, defs) & (long) arg(c, args, 1, values, defs));
-            case "bitor"  -> (double) ((long) arg(c, args, 0, values, defs) | (long) arg(c, args, 1, values, defs));
-            case "bitxor" -> (double) ((long) arg(c, args, 0, values, defs) ^ (long) arg(c, args, 1, values, defs));
-            case "bitnot" -> (double) (~((long) arg(c, args, 0, values, defs)));
-            case "bitshiftl" -> (double) ((long) arg(c, args, 0, values, defs) << (int) arg(c, args, 1, values, defs));
-            case "bitshiftr" -> (double) ((long) arg(c, args, 0, values, defs) >> (int) arg(c, args, 1, values, defs));
+            case "bitand" -> ((long) arg(c, args, 0, values, defs) & (long) arg(c, args, 1, values, defs));
+            case "bitor"  -> ((long) arg(c, args, 0, values, defs) | (long) arg(c, args, 1, values, defs));
+            case "bitxor" -> ((long) arg(c, args, 0, values, defs) ^ (long) arg(c, args, 1, values, defs));
+            case "bitnot" -> (~((long) arg(c, args, 0, values, defs)));
+            case "bitshiftl" -> ((long) arg(c, args, 0, values, defs) << (int) arg(c, args, 1, values, defs));
+            case "bitshiftr" -> ((long) arg(c, args, 0, values, defs) >> (int) arg(c, args, 1, values, defs));
 
             // CS & Number theory
             case "mod" -> arg(c, args, 0, values, defs) % arg(c, args, 1, values, defs);
-            case "gcd" -> (double) org.apache.commons.math3.util.ArithmeticUtils.gcd((long) arg(c, args, 0, values, defs), (long) arg(c, args, 1, values, defs));
-            case "lcm" -> (double) org.apache.commons.math3.util.ArithmeticUtils.lcm((long) arg(c, args, 0, values, defs), (long) arg(c, args, 1, values, defs));
+            case "gcd" -> org.apache.commons.math3.util.ArithmeticUtils.gcd((long) arg(c, args, 0, values, defs), (long) arg(c, args, 1, values, defs));
+            case "lcm" -> org.apache.commons.math3.util.ArithmeticUtils.lcm((long) arg(c, args, 0, values, defs), (long) arg(c, args, 1, values, defs));
 
             // Special math functions
             case "erf"     -> org.apache.commons.math3.special.Erf.erf(arg(c, args, 0, values, defs));
@@ -818,7 +818,7 @@ public final class Evaluator {
                     "'" + digits + "' is not a valid base-" + fromBase + " number.");
         }
         String converted = Long.toString(value, toBase);
-        if (!converted.matches("-?[0-9]+")) {
+        if (!converted.matches("-?\\d+")) {
             throw new IllegalStateException(
                     "BaseConvert result '" + converted.toUpperCase() + "' in base " + toBase
                     + " contains letter digits and cannot be represented as a number; use toBase <= 10.");

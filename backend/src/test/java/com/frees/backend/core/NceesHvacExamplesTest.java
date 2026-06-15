@@ -2,7 +2,6 @@ package com.frees.backend.core;
 
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Validates the 10 NCEES Mechanical: HVAC and Refrigeration Sample Questions

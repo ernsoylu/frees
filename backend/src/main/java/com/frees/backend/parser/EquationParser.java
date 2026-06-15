@@ -980,9 +980,7 @@ public final class EquationParser {
                     MatrixInfo m = parseMatrixInfo(e, loopVars, constants, displayNames, defs);
                     Expr[][] mat = new Expr[m.rows][m.cols];
                     for (int i = 0; i < m.rows; i++) {
-                        for (int j = 0; j < m.cols; j++) {
-                            mat[i][j] = m.elements[i][j];
-                        }
+                        System.arraycopy(m.elements[i], 0, mat[i], 0, m.cols);
                     }
                     yield mat;
                 } else if (indices.size() == 1) {
@@ -997,7 +995,7 @@ public final class EquationParser {
                 }
             }
             case Expr.ArrayLiteral(List<Expr> elements) -> {
-                if (elements.size() > 0 && elements.get(0) instanceof Expr.ArrayLiteral) {
+                if (!elements.isEmpty() && elements.get(0) instanceof Expr.ArrayLiteral) {
                     int numRows = elements.size();
                     int numCols = -1;
                     Expr[][] mat = null;
@@ -1345,9 +1343,7 @@ public final class EquationParser {
                     throw new ParseException("Unsupported matrix function: " + function);
                 }
             }
-            default -> {
-                yield new Expr[][] { { expandExpr(e, loopVars, constants, displayNames, defs) } };
-            }
+            default -> new Expr[][] { { expandExpr(e, loopVars, constants, displayNames, defs) } };
         };
     }
 }
