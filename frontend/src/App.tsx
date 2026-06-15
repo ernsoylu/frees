@@ -26,6 +26,8 @@ import {
   IconFolderOpen,
   IconHelp,
   IconInfoCircle,
+  IconKeyboard,
+  IconLayoutGrid,
   IconLayoutSidebarRightExpand,
   IconMathFunction,
   IconPlayerPlayFilled,
@@ -83,6 +85,10 @@ import { DiagramSpec } from './diagram/types'
 import { PlotSpec } from './plots/types'
 import { plotDefToSpec } from './plots/fromCode'
 import SolutionPanel from './SolutionPanel'
+import ExamplesModal from './ExamplesModal'
+import ShortcutsModal from './ShortcutsModal'
+import SyntaxHelp from './SyntaxHelp'
+import { DEFAULT_EXAMPLE_TEXT, Example } from './examples'
 import EquationEditor, { EquationEditorHandle } from './EquationEditor'
 import { ConfirmModal, MessageModal, TextPromptModal } from './dialogs'
 import { Rail, TopBar } from './WorkspaceChrome'
@@ -116,10 +122,7 @@ function loadUnitSystem(): UnitSystem {
   return raw === 'ENG_SI' || raw === 'ENGLISH' ? raw : 'SI'
 }
 
-const EXAMPLE = `{ Milestone 1 example }
-x + y = 3
-y = z - 4
-z = x^2 - 3`
+const EXAMPLE = DEFAULT_EXAMPLE_TEXT
 
 function loadStopCriteria(): StopCriteria {
   try {
@@ -250,6 +253,8 @@ export default function App() {
   const [showMinMax, setShowMinMax] = useState(false)
   const [showCurveFit, setShowCurveFit] = useState(false)
   const [showAbout, setShowAbout] = useState(false)
+  const [showExamples, setShowExamples] = useState(false)
+  const [showShortcuts, setShowShortcuts] = useState(false)
   const [activeTab, setActiveTab] = useState<string>('equations')
   const [eqView, setEqView] = useState<'editor' | 'formatted'>('editor')
 
@@ -532,6 +537,20 @@ export default function App() {
     invalidateTable()
   }
 
+  // Load a curated example into the editor, replacing the current document and
+  // invalidating any stale check/solve so the user can immediately re-Solve.
+  function loadExample(example: Example) {
+    setText(example.text)
+    setVarDrafts({})
+    setCheckResult(null)
+    setResult(null)
+    setLastSolvedWithFillMissing(false)
+    invalidateTable()
+    setActiveTab('equations')
+    setEqView('editor')
+    setShowExamples(false)
+  }
+
   /** The equations actually solved: editor text plus diagram control bindings. */
   function effectiveText(): string {
     return diagramBindings.length > 0
@@ -797,6 +816,10 @@ export default function App() {
       setResult(response)
       setTables((all) => mergeCodeTables(all, response.codeTables, response.parametricTables))
       setLastSolvedWithFillMissing(shouldFillMissing && response.success)
+      // Once the user has solved successfully, they've learned the core
+      // workflow — retire the first-run welcome banner so it stops eating
+      // editor space.
+      if (response.success && showFirstRun) dismissFirstRun()
       if (response.success && response.variables) {
         setVarDrafts((drafts) => {
           const next = { ...drafts }
@@ -927,6 +950,21 @@ export default function App() {
         e.preventDefault()
         void (activeTab === 'table' ? onCheckTable() : onCheck())
       }
+      // "?" opens the shortcuts overlay, but only when the user isn't typing
+      // into the editor, an input, or any text field.
+      if (e.key === '?') {
+        const el = e.target as HTMLElement | null
+        const typing =
+          !!el &&
+          (el.tagName === 'INPUT' ||
+            el.tagName === 'TEXTAREA' ||
+            el.isContentEditable ||
+            el.closest('.cm-editor') !== null)
+        if (!typing) {
+          e.preventDefault()
+          setShowShortcuts(true)
+        }
+      }
     }
     globalThis.addEventListener('keydown', onKeyDown)
     return () => globalThis.removeEventListener('keydown', onKeyDown)
@@ -1021,6 +1059,7 @@ export default function App() {
     {
       group: 'Project',
       actions: [
+        { id: 'proj-examples', label: 'Open Example…', description: 'Load a ready-to-solve worked example', leftSection: <IconLayoutGrid size={18} />, onClick: () => setShowExamples(true) },
         { id: 'proj-new', label: 'New Project', leftSection: <IconFilePlus size={18} />, onClick: handleNewProject },
         { id: 'proj-open', label: 'Open Project…', leftSection: <IconFolderOpen size={18} />, onClick: handleOpenProject },
         { id: 'proj-save', label: 'Save Project', leftSection: <IconDeviceFloppy size={18} />, onClick: handleSaveProject },
@@ -1030,6 +1069,7 @@ export default function App() {
     {
       group: 'Help',
       actions: [
+        { id: 'shortcuts', label: 'Keyboard shortcuts', description: 'Show the hotkey reference (?)', leftSection: <IconKeyboard size={18} />, onClick: () => setShowShortcuts(true) },
         { id: 'help', label: 'Help', leftSection: <IconHelp size={18} />, onClick: () => globalThis.open('/help', '_blank') },
       ],
     },
@@ -1058,6 +1098,7 @@ export default function App() {
       result={result}
       rows={solutionRows}
       onCollapse={() => setSolutionOpen(false)}
+      onOpenExamples={() => setShowExamples(true)}
     />
   ) : (
     <Paper withBorder p={4} visibleFrom="md">
@@ -1087,6 +1128,14 @@ export default function App() {
       />
 
       {showAbout && <AboutModal onClose={() => setShowAbout(false)} />}
+
+      <ExamplesModal
+        opened={showExamples}
+        onClose={() => setShowExamples(false)}
+        onSelect={loadExample}
+      />
+
+      <ShortcutsModal opened={showShortcuts} onClose={() => setShowShortcuts(false)} />
 
       <Spotlight
         actions={spotlightActions}
@@ -1261,6 +1310,7 @@ export default function App() {
           onSaveProject={handleSaveProject}
           onSaveProjectAs={handleSaveProjectAs}
           onInsertFunction={insertFunction}
+          onOpenExamples={() => setShowExamples(true)}
         />
         <input
           ref={projectFileRef}
@@ -1320,7 +1370,8 @@ export default function App() {
                     </Text>
                   </Alert>
                 )}
-                <Group justify="flex-end" mb={6}>
+                <Group justify="space-between" mb={6} wrap="nowrap">
+                  {eqView === 'editor' ? <SyntaxHelp /> : <span />}
                   <SegmentedControl
                     size="xs"
                     value={eqView}
@@ -1358,7 +1409,7 @@ export default function App() {
                       display: 'flex',
                       flex: 1,
                       minHeight: 260,
-                      border: '1px solid var(--mantine-color-dark-4)',
+                      border: '1px solid var(--mantine-color-default-border)',
                       borderRadius: '4px',
                       overflow: 'hidden',
                     }}
@@ -1485,12 +1536,18 @@ export default function App() {
               display="flex"
               style={{ flexDirection: 'column', minHeight: 0 }}
             >
-              <Group justify="space-between" mb="xs" wrap="nowrap" align="center">
+              <Group justify="space-between" mb={4} wrap="nowrap" align="center">
                 <Title order={4} c="blue.4">Thermodynamics</Title>
                 <Button size="xs" onClick={() => setAddingThermoPlot(true)}>
                   Add Diagram
                 </Button>
               </Group>
+              {/* This panel replaces the Solution panel on the Thermo tab, so
+                  tell the user where the full variable solution lives. */}
+              <Text size="xs" c="dimmed" mb="xs">
+                Diagrams &amp; state points. Full variable solutions are on the
+                Solution panel — switch to the Editor tab.
+              </Text>
 
               {plots.some((p) => p.kind === 'property' || p.kind === 'psychro') ? (
                 <Stack gap="xs" mb="md">

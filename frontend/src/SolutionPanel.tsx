@@ -3,20 +3,29 @@ import {
   ActionIcon,
   Alert,
   Badge,
+  Button,
   Code,
   Group,
+  Kbd,
   List,
   Paper,
   SimpleGrid,
   Stack,
   Table,
   Text,
+  ThemeIcon,
   Title,
   Tooltip,
 } from '@mantine/core'
-import { IconLayoutSidebarRightCollapse } from '@tabler/icons-react'
+import {
+  IconChecks,
+  IconLayoutGrid,
+  IconLayoutSidebarRightCollapse,
+  IconPencil,
+  IconPlayerPlayFilled,
+} from '@tabler/icons-react'
 import { SolveResponse, SolveStats, TableStats } from './api'
-import { formatValue, SolutionRow, withStableKeys } from './format'
+import { formatValue, SolutionRow } from './format'
 import Latex from './Latex'
 
 function Stat({
@@ -84,21 +93,17 @@ function SolveStatsGrid({
   )
 }
 
+// A compact pointer rather than a third full copy of the warning list: the
+// in-context banner above the editor and the status badge popover already show
+// the details. Avoids triple-reporting the same set.
 function UnitWarningsAlert({ warnings }: Readonly<{ warnings: string[] }>) {
+  const n = warnings.length
   return (
-    <Alert
-      color="red"
-      variant="light"
-      p="xs"
-      title="Unit consistency warnings (Check Units)"
-    >
-      <Stack gap={2}>
-        {withStableKeys(warnings).map((w) => (
-          <Text size="xs" key={w.key}>
-            {w.value}
-          </Text>
-        ))}
-      </Stack>
+    <Alert color="yellow" variant="light" p="xs">
+      <Text size="xs">
+        ⚠ {n} unit consistency warning{n === 1 ? '' : 's'} — see the banner above
+        the editor or the status badge for details.
+      </Text>
     </Alert>
   )
 }
@@ -217,7 +222,11 @@ function SuccessBody({
                   {row.display}
                 </Table.Td>
                 <Table.Td ff="monospace" c="dimmed">
-                  {row.units || '-'}
+                  {row.units ? (
+                    row.units
+                  ) : (
+                    <span title="dimensionless">—</span>
+                  )}
                 </Table.Td>
               </Table.Tr>
             ))}
@@ -244,7 +253,7 @@ function SuccessBody({
                   </Accordion.Control>
                   <Accordion.Panel>
                     <Stack gap="sm">
-                      <div style={{ display: 'flex', justifyContent: 'center', backgroundColor: 'var(--mantine-color-dark-8)', padding: '8px', borderRadius: '4px', overflowX: 'auto' }}>
+                      <div style={{ display: 'flex', justifyContent: 'center', backgroundColor: 'light-dark(var(--mantine-color-gray-1), var(--mantine-color-dark-8))', padding: '8px', borderRadius: '4px', overflowX: 'auto' }}>
                         <Latex math={math} block />
                       </div>
                       
@@ -253,16 +262,16 @@ function SuccessBody({
                           <Table striped highlightOnHover withTableBorder withColumnBorders>
                             <Table.Thead>
                               <Table.Tr>
-                                <Table.Th style={{ width: 60, textAlign: 'center', backgroundColor: 'var(--mantine-color-dark-6)' }}>Row\Col</Table.Th>
+                                <Table.Th style={{ width: 60, textAlign: 'center', backgroundColor: 'var(--mantine-color-default)' }}>Row\Col</Table.Th>
                                 {group.cols.map(c => (
-                                  <Table.Th key={c} style={{ textAlign: 'center', backgroundColor: 'var(--mantine-color-dark-6)' }}>{c}</Table.Th>
+                                  <Table.Th key={c} style={{ textAlign: 'center', backgroundColor: 'var(--mantine-color-default)' }}>{c}</Table.Th>
                                 ))}
                               </Table.Tr>
                             </Table.Thead>
                             <Table.Tbody>
                               {group.rows.map(r => (
                                 <Table.Tr key={r}>
-                                  <Table.Td style={{ fontWeight: 'bold', textAlign: 'center', backgroundColor: 'var(--mantine-color-dark-6)' }}>{r}</Table.Td>
+                                  <Table.Td style={{ fontWeight: 'bold', textAlign: 'center', backgroundColor: 'var(--mantine-color-default)' }}>{r}</Table.Td>
                                   {group.cols.map(c => {
                                     const cell = group.cells.get(`${r},${c}`)
                                     return (
@@ -279,8 +288,8 @@ function SuccessBody({
                           <Table striped highlightOnHover withTableBorder withColumnBorders>
                             <Table.Thead>
                               <Table.Tr>
-                                <Table.Th style={{ width: 80, textAlign: 'center', backgroundColor: 'var(--mantine-color-dark-6)' }}>Index</Table.Th>
-                                <Table.Th style={{ textAlign: 'center', backgroundColor: 'var(--mantine-color-dark-6)' }}>Value</Table.Th>
+                                <Table.Th style={{ width: 80, textAlign: 'center', backgroundColor: 'var(--mantine-color-default)' }}>Index</Table.Th>
+                                <Table.Th style={{ textAlign: 'center', backgroundColor: 'var(--mantine-color-default)' }}>Value</Table.Th>
                               </Table.Tr>
                             </Table.Thead>
                             <Table.Tbody>
@@ -288,7 +297,7 @@ function SuccessBody({
                                 const cell = group.cells.get(`${r}`)
                                 return (
                                   <Table.Tr key={r}>
-                                    <Table.Td style={{ fontWeight: 'bold', textAlign: 'center', backgroundColor: 'var(--mantine-color-dark-6)' }}>{r}</Table.Td>
+                                    <Table.Td style={{ fontWeight: 'bold', textAlign: 'center', backgroundColor: 'var(--mantine-color-default)' }}>{r}</Table.Td>
                                     <Table.Td style={{ fontFamily: 'monospace', textAlign: 'right' }}>
                                       {cell ? cell.display : '—'}
                                     </Table.Td>
@@ -342,16 +351,81 @@ function SuccessBody({
   )
 }
 
+// Step shown in the empty-state guide: a numbered icon, a label, and a hint.
+function Step({
+  index,
+  icon,
+  label,
+  children,
+}: Readonly<{
+  index: number
+  icon: React.ReactNode
+  label: React.ReactNode
+  children: React.ReactNode
+}>) {
+  return (
+    <Group gap="sm" wrap="nowrap" align="flex-start">
+      <ThemeIcon variant="light" radius="xl" size={28}>
+        {icon}
+      </ThemeIcon>
+      <div>
+        <Text size="sm" fw={600}>
+          {index}. {label}
+        </Text>
+        <Text size="xs" c="dimmed">
+          {children}
+        </Text>
+      </div>
+    </Group>
+  )
+}
+
+// Onboarding shown before the first solve: a 3-step "how to solve" guide plus a
+// shortcut into the example gallery, so the wide Solution panel isn't dead space
+// for new users.
+function Onboarding({ onOpenExamples }: Readonly<{ onOpenExamples?: () => void }>) {
+  return (
+    <Stack gap="md">
+      <Text c="dimmed" size="sm">
+        Results appear here once you solve. Get started in three steps:
+      </Text>
+      <Stack gap="sm">
+        <Step index={1} icon={<IconPencil size={16} />} label="Write equations">
+          Type equations and notes on the left — in any order. Units go in
+          brackets, e.g. <Code>P = 250 [kPa]</Code>.
+        </Step>
+        <Step index={2} icon={<IconChecks size={16} />} label={<>Check <Kbd>F4</Kbd></>}>
+          Validates syntax and that the system is fully determined.
+        </Step>
+        <Step index={3} icon={<IconPlayerPlayFilled size={14} />} label={<>Solve <Kbd>F2</Kbd></>}>
+          Solves the system (running Check first if needed).
+        </Step>
+      </Stack>
+      {onOpenExamples && (
+        <Button
+          variant="light"
+          leftSection={<IconLayoutGrid size={16} />}
+          onClick={onOpenExamples}
+          fullWidth
+        >
+          Open an example
+        </Button>
+      )}
+    </Stack>
+  )
+}
+
 function EquationSection({
   result,
   rows,
-}: Readonly<{ result: SolveResponse | null; rows: SolutionRow[] }>) {
+  onOpenExamples,
+}: Readonly<{
+  result: SolveResponse | null
+  rows: SolutionRow[]
+  onOpenExamples?: () => void
+}>) {
   if (result === null) {
-    return (
-      <Text c="dimmed" size="sm">
-        Check, then Solve. Results appear here.
-      </Text>
-    )
+    return <Onboarding onOpenExamples={onOpenExamples} />
   }
   return (
     <Stack gap="sm">
@@ -379,6 +453,7 @@ interface Props {
   result: SolveResponse | null
   rows: SolutionRow[]
   onCollapse?: () => void
+  onOpenExamples?: () => void
 }
 
 export default function SolutionPanel({
@@ -388,6 +463,7 @@ export default function SolutionPanel({
   result,
   rows,
   onCollapse,
+  onOpenExamples,
 }: Readonly<Props>) {
   return (
     <Paper
@@ -422,7 +498,7 @@ export default function SolutionPanel({
       {showTable ? (
         <TableSection stats={tableStats} />
       ) : (
-        <EquationSection result={result} rows={rows} />
+        <EquationSection result={result} rows={rows} onOpenExamples={onOpenExamples} />
       )}
     </Paper>
   )

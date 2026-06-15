@@ -15,6 +15,9 @@ export default function Latex({ math, block = false }: Readonly<Props>) {
         katex.render(math, containerRef.current, {
           displayMode: block,
           throwOnError: false,
+          // Emit MathML alongside the visual HTML so screen readers can read the
+          // equation (KaTeX marks the HTML aria-hidden and exposes the MathML).
+          output: 'htmlAndMathml',
         })
       } catch (err) {
         // KaTeX can still throw on malformed input despite throwOnError:

@@ -236,7 +236,7 @@ function renderInlineContent(text: string, variables?: VariableResult[]): React.
             key={key}
             style={{
               fontFamily: 'var(--mantine-font-family-monospace)',
-              backgroundColor: 'var(--mantine-color-dark-6)',
+              backgroundColor: 'var(--mantine-color-default)',
               padding: '2px 4px',
               borderRadius: '4px',
               fontSize: '90%',
@@ -297,7 +297,7 @@ function ReportGraph({
   return (
     <Stack align="center" gap="xs" my="md" key={spec.id}>
       {figure ? (
-        <div style={{ width: '100%', maxWidth: 650, height: 400, border: '1px solid var(--mantine-color-dark-4)', borderRadius: 4, overflow: 'hidden' }}>
+        <div style={{ width: '100%', maxWidth: 650, height: 400, border: '1px solid var(--mantine-color-default-border)', borderRadius: 4, overflow: 'hidden' }}>
           <PlotlyChart figure={figure} />
         </div>
       ) : (
@@ -350,7 +350,7 @@ function ReportGraphPlaceholder({
           alignItems: 'center',
           justifyContent: 'center',
           borderStyle: 'dashed',
-          backgroundColor: 'var(--mantine-color-dark-8)',
+          backgroundColor: 'light-dark(var(--mantine-color-gray-1), var(--mantine-color-dark-8))',
         }}
       >
         <Text size="sm" c="dimmed" style={{ textAlign: 'center' }}>

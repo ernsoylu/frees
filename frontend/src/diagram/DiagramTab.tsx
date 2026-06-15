@@ -4845,7 +4845,7 @@ export default function DiagramTab(props: Readonly<Props>) {
     <Group align="stretch" gap="sm" h="100%" wrap="nowrap">
       <Stack gap="xs" flex={1} miw={0}>
         {/* Diagram Tabs Row */}
-        <Group gap="xs" wrap="wrap" style={{ borderBottom: '1px solid var(--mantine-color-dark-4)', paddingBottom: 8 }}>
+        <Group gap="xs" wrap="wrap" style={{ borderBottom: '1px solid var(--mantine-color-default-border)', paddingBottom: 8 }}>
           {diagrams.map((d, index) => (
             <Menu key={d.id} position="bottom-start" shadow="md" trigger="hover" openDelay={200}>
               <Menu.Target>
@@ -4856,7 +4856,9 @@ export default function DiagramTab(props: Readonly<Props>) {
                   style={{
                     cursor: 'pointer',
                     borderColor: activeDiagramId === d.id ? 'var(--mantine-color-blue-7)' : undefined,
-                    backgroundColor: activeDiagramId === d.id ? 'var(--mantine-color-dark-6)' : 'var(--mantine-color-dark-8)',
+                    backgroundColor: activeDiagramId === d.id
+                      ? 'var(--mantine-color-default)'
+                      : 'light-dark(var(--mantine-color-gray-1), var(--mantine-color-dark-8))',
                   }}
                   onClick={() => onActiveDiagramIdChange?.(d.id)}
                 >
@@ -5862,10 +5864,10 @@ export default function DiagramTab(props: Readonly<Props>) {
               <div
                 key={tmpl.name}
                 style={{
-                  border: '1px solid var(--mantine-color-dark-4)',
+                  border: '1px solid var(--mantine-color-default-border)',
                   borderRadius: 8,
                   padding: 12,
-                  backgroundColor: 'var(--mantine-color-dark-8)',
+                  backgroundColor: 'light-dark(var(--mantine-color-gray-1), var(--mantine-color-dark-8))',
                   display: 'flex',
                   flexDirection: 'column',
                   justifyContent: 'space-between',
