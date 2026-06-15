@@ -619,6 +619,121 @@ eta_hydraulic = P_bucket / (0.5 * rho * Q * Vj^2) * 100
 eta_wheel = P_bucket / P_water * 100`,
   },
   {
+    value: "ev-longitudinal",
+    title: "Vehicle Dynamics: EV Longitudinal Road-Load, Power & Range",
+    description: "The longitudinal road-load model for an electric car: tractive force as the sum of rolling resistance, aerodynamic drag and road grade, then wheel power, battery power through the drivetrain efficiency, the energy consumed per metre, and the range from a usable pack. Change the grade angle alpha to see hill-climb demand. (Grounded in the Electric Vehicle Design text in the linked notebook.)",
+    note: "Flat 120 km/h cruise: tractive force ≈ 617 N, battery power ≈ 24 kW, consumption ≈ 722 J/m (≈ 200 Wh/km), and ≈ 2.995e5 m ≈ 300 km of range from a 60 kWh pack. Set alpha = 5 [deg] and the climb term M·g·sin(alpha) dominates.",
+    code: `{ EV longitudinal road-load: force, power, consumption and range }
+{ F_trac = rolling + grade + aero; P_batt = P_wheel / drivetrain efficiency. }
+M = 1500 [kg]          { vehicle mass }
+g = 9.81 [m/s^2]
+Crr = 0.012            { rolling-resistance coefficient }
+rho = 1.2 [kg/m^3]     { air density }
+Cd = 0.30              { drag coefficient }
+A_f = 2.2 [m^2]        { frontal area }
+alpha = 0 [deg]        { road grade angle (0 = flat) }
+V = 120 [km/h]         { cruise speed (auto-converts to m/s) }
+eta_t = 0.90           { transmission efficiency }
+eta_m = 0.95           { motor + inverter efficiency }
+E_pack = 60 [kWh]      { usable battery energy }
+
+F_roll  = M*g*Crr*cos(alpha)
+F_grade = M*g*sin(alpha)
+F_aero  = 0.5*rho*Cd*A_f*V^2
+F_trac  = F_roll + F_grade + F_aero
+P_wheel = F_trac*V
+P_batt  = P_wheel/(eta_t*eta_m)
+cons    = P_batt/V          { energy per distance [J/m]; divide by 3.6 for Wh/km }
+Range   = E_pack/cons       { [m]; /1000 for km }`,
+  },
+  {
+    value: "ev-lateral",
+    title: "Vehicle Dynamics: Lateral Bicycle Model & Understeer Gradient",
+    description: "The steady-state single-track (bicycle) model: axle loads from the CG position, the understeer gradient from front/rear cornering stiffness, the front steer angle to hold a curve (Ackermann plus the dynamic term), and the characteristic speed of the understeering vehicle. Kus > 0 confirms a stable, understeering layout.",
+    note: "With the front-biased CG and equal axle stiffness, Kus ≈ 0.037 (understeer). At R = 100 m and 25 m/s the required steer is δ ≈ 3.0°, and the characteristic speed (steer = twice Ackermann, peak yaw gain) is ≈ 27.6 m/s ≈ 99 km/h.",
+    code: `{ Steady-state lateral (bicycle) model: understeer gradient and steer angle }
+m = 1730 [kg]
+g = 9.81 [m/s^2]
+a = 1.189 [m]          { CG to front axle }
+b = 1.696 [m]          { CG to rear axle }
+Cf = 80000 [N/rad]     { front axle cornering stiffness }
+Cr = 80000 [N/rad]     { rear axle cornering stiffness }
+R = 100 [m]            { turn radius }
+V = 25 [m/s]           { cornering speed }
+
+L = a + b                       { wheelbase }
+W_f = m*g*b/L                   { static front axle load }
+W_r = m*g*a/L                   { static rear axle load }
+Kus = W_f/Cf - W_r/Cr           { understeer gradient (>0 understeer) }
+a_y = V^2/(g*R)                 { lateral acceleration [g] }
+delta = L/R + Kus*a_y           { front steer angle [rad] }
+delta_deg = delta*Convert('rad','deg')
+u_char = sqrt(g*L/Kus)          { characteristic speed [m/s] }`,
+  },
+  {
+    value: "ev-sizing",
+    title: "EV Powertrain: Motor & Battery Sizing (acceleration, gradeability, range)",
+    description: "Sizes the traction motor and battery from performance targets. The motor must satisfy the harder of two demands — mean power to reach 100 km/h in the acceleration time, and steady power to hold a 6° grade at 60 km/h — taken with max(). The battery is sized from the cruise road-load and a target range. (Methodology from the Electric Vehicle Design text in the linked notebook.)",
+    note: "Acceleration (≈93 kW) dominates gradeability (≈37 kW), so size the motor at ≈93 kW. A 400 km range at 110 km/h needs E_need ≈ 2.5e8 J ≈ 69 kWh of usable energy.",
+    code: `{ EV motor + battery sizing from acceleration, gradeability and range }
+M = 1600 [kg]
+g = 9.81 [m/s^2]
+Crr = 0.012
+rho = 1.2 [kg/m^3]
+Cd = 0.28
+A_f = 2.3 [m^2]
+eta = 0.88             { combined drivetrain efficiency }
+
+{ 1) Acceleration: mean power to reach V_f in t_acc (energy method) }
+V_f = 100 [km/h]
+t_acc = 7 [s]
+delta = 1.05           { rotational-inertia mass factor }
+E_kin = 0.5*M*delta*V_f^2
+P_acc = E_kin/t_acc
+
+{ 2) Gradeability: hold a grade at steady speed }
+theta = 6 [deg]
+V_grade = 60 [km/h]
+F_grade = M*g*(Crr*cos(theta)+sin(theta)) + 0.5*rho*Cd*A_f*V_grade^2
+P_grade = F_grade*V_grade/eta
+
+{ Motor must cover the harder requirement }
+P_motor = max(P_acc, P_grade)
+
+{ 3) Battery sizing from cruise road-load and target range }
+V_cr = 110 [km/h]
+F_cr = M*g*Crr + 0.5*rho*Cd*A_f*V_cr^2
+cons = F_cr/eta            { [J/m] }
+Range_target = 400 [km]
+E_need = cons*Range_target { usable energy [J]; /3.6e6 for kWh }`,
+  },
+  {
+    value: "ev-battery-pack",
+    title: "EV Powertrain: Battery Pack Design & Cell Selection (Batemo database)",
+    description: "Designs a pack from a target voltage, energy and peak power, then checks a real cell against the load. The cell is the Molicel INR21700-P42A taken from the Batemo Cell Explorer database in the linked notebook. Series count sets voltage, parallel count sets energy; the per-cell peak current must stay under the cell's rating. Battery quantities use conventional units (V, Ah, A, Wh, kWh) rather than SI, so they are kept unitless here.",
+    note: "112S × 42P ≈ 4700 cells gives ~400 V, ~175 Ah and ~70 kWh. A 150 kW peak draws 375 A from the pack (2.1C) = 9 A per cell — well under the P42A's 45 A continuous limit (36 A headroom). Round Ns/Np up to whole cells in practice.",
+    code: `{ Battery pack design + cell selection (engineering units, see comments) }
+{ Cell: Molicel INR21700-P42A from the Batemo Cell Explorer database. }
+V_pack = 400           { target nominal pack voltage [V] }
+E_target = 70          { required usable energy [kWh] }
+P_peak = 150           { peak power demand [kW] }
+
+V_cell = 3.6           { cell nominal voltage [V] }
+Q_cell = 4.2           { cell capacity [Ah] }
+I_cell_max = 45        { cell max continuous discharge [A] }
+E_cell = V_cell*Q_cell { cell energy [Wh] }
+
+Ns = V_pack/V_cell             { cells in series (round up) }
+Np = E_target*1000/(Ns*E_cell) { parallel strings (kWh -> Wh) }
+N_cells = Ns*Np
+E_pack = N_cells*E_cell/1000   { pack energy [kWh] }
+Q_pack = Np*Q_cell             { pack capacity [Ah] }
+I_peak = P_peak*1000/V_pack    { peak pack current [A] }
+I_cell = I_peak/Np             { current per cell [A] }
+C_rate = I_peak/Q_pack         { pack C-rate [1/h] }
+margin = I_cell_max - I_cell   { per-cell headroom [A], must be > 0 }`,
+  },
+  {
     value: "truss-stiffness",
     title: "Structural Analysis: Plane Truss by the Direct Stiffness Method",
     description: "A three-bar truss with one free node, assembled and solved exactly as a finite-element code would: each member contributes its EA/L stiffness with direction cosines to a 2×2 global stiffness matrix, which SolveLinear inverts for the nodal displacements; member axial forces follow.",
@@ -1218,7 +1333,7 @@ const CATEGORIES = [
     title: 'Case Studies',
     icon: <IconFileText size={16} />,
     items: [
-      { id: 'examples', label: 'Engineering Examples Library', keywords: ['examples', 'rankine', 'brayton', 'combined cycle', 'pipe network', 'truss', 'radiation', 'cooling loop', 'reforming', 'pid', 'fatigue', 'nuclear', 'siyavula', 'nozzle', 'co2', 'compressible', 'throat', 'sonic', 'pelton', 'turbine', 'turbomachinery', 'hydropower', 'impulse'] },
+      { id: 'examples', label: 'Engineering Examples Library', keywords: ['examples', 'rankine', 'brayton', 'combined cycle', 'pipe network', 'truss', 'radiation', 'cooling loop', 'reforming', 'pid', 'fatigue', 'nuclear', 'siyavula', 'nozzle', 'co2', 'compressible', 'throat', 'sonic', 'pelton', 'turbine', 'turbomachinery', 'hydropower', 'impulse', 'vehicle', 'ev', 'electric vehicle', 'longitudinal', 'lateral', 'bicycle model', 'understeer', 'road load', 'drag', 'battery', 'pack', 'cell', 'sizing', 'motor', 'range', 'batemo', 'c-rate'] },
     ]
   }
 ];
