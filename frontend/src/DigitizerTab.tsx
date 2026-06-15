@@ -1042,7 +1042,7 @@ export function DigitizerTab({
         )}
 
         {image ? (
-          <ScrollArea style={{ flex: 1, border: '1px solid var(--mantine-color-dark-4)', borderRadius: 4 }}>
+          <ScrollArea style={{ flex: 1, border: '1px solid var(--mantine-color-default-border)', borderRadius: 4 }}>
             <canvas
               ref={canvasRef}
               style={{ display: 'block', cursor: 'crosshair' }}
@@ -1069,7 +1069,7 @@ export function DigitizerTab({
             }}
           >
             <Stack align="center" gap="xs">
-              <IconCrosshair size={40} stroke={1.2} color="var(--mantine-color-dark-2)" />
+              <IconCrosshair size={40} stroke={1.2} color="var(--mantine-color-dimmed)" />
               <Text c="dimmed" size="sm" ta="center">
                 Load a graph image, drop it here, or paste it from the clipboard (Ctrl+V).
                 <br />
@@ -1097,7 +1097,7 @@ export function DigitizerTab({
             ref={magRef}
             width={MAG_SIZE}
             height={MAG_SIZE}
-            style={{ width: '100%', borderRadius: 4, background: 'var(--mantine-color-dark-8)' }}
+            style={{ width: '100%', borderRadius: 4, background: 'light-dark(var(--mantine-color-gray-1), var(--mantine-color-dark-8))' }}
           />
         </Paper>
 
@@ -1219,7 +1219,7 @@ export function DigitizerTab({
                       <Tooltip label="No color yet — use the picker with this dataset active">
                         <IconColorPicker
                           size={14}
-                          color="var(--mantine-color-dark-2)"
+                          color="var(--mantine-color-dimmed)"
                           style={{ flexShrink: 0 }}
                         />
                       </Tooltip>

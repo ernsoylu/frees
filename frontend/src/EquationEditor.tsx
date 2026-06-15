@@ -1,4 +1,5 @@
 import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef } from 'react'
+import { useComputedColorScheme } from '@mantine/core'
 import CodeMirror, { ReactCodeMirrorRef } from '@uiw/react-codemirror'
 import { Decoration, DecorationSet, EditorView } from '@codemirror/view'
 import { Extension, StateEffect, StateField } from '@codemirror/state'
@@ -100,7 +101,8 @@ const freesLanguage = StreamLanguage.define<StreamState>({
   },
 })
 
-const freesHighlight = HighlightStyle.define([
+// Syntax palette for dark mode (bright tokens on a dark background).
+const freesHighlightDark = HighlightStyle.define([
   { tag: tags.comment, color: '#7d8590', fontStyle: 'italic' },
   { tag: tags.string, color: '#38d9a9' },
   { tag: tags.number, color: '#ffa94d' },
@@ -109,40 +111,63 @@ const freesHighlight = HighlightStyle.define([
   { tag: tags.operator, color: '#ced4da' },
 ])
 
-// Dark theme tuned to the surrounding Mantine dark palette so the editor blends
-// with the rest of the workspace (matches the old textarea colours).
-const freesTheme = EditorView.theme(
-  {
-    '&': {
-      backgroundColor: 'var(--mantine-color-dark-7)',
-      color: 'var(--mantine-color-dark-0)',
-      fontSize: 'var(--mantine-font-size-sm)',
-      height: '100%',
+// Light-mode counterpart: darker, higher-contrast tokens that stay legible on a
+// white background (the bright dark-mode colours wash out on light).
+const freesHighlightLight = HighlightStyle.define([
+  { tag: tags.comment, color: '#6e7781', fontStyle: 'italic' },
+  { tag: tags.string, color: '#0a7c5a' },
+  { tag: tags.number, color: '#b35900' },
+  { tag: tags.keyword, color: '#9c36b5', fontWeight: 'bold' },
+  { tag: tags.function(tags.variableName), color: '#1971c2' },
+  { tag: tags.operator, color: '#495057' },
+])
+
+// Build an editor theme for the active colour scheme so the editor blends with
+// the surrounding Mantine surface in both light and dark mode.
+function makeFreesTheme(dark: boolean) {
+  return EditorView.theme(
+    {
+      '&': {
+        backgroundColor: dark
+          ? 'var(--mantine-color-dark-7)'
+          : 'var(--mantine-color-white)',
+        color: dark ? 'var(--mantine-color-dark-0)' : 'var(--mantine-color-gray-9)',
+        fontSize: 'var(--mantine-font-size-sm)',
+        height: '100%',
+      },
+      '.cm-content': {
+        fontFamily: 'var(--mantine-font-family-monospace)',
+        caretColor: dark ? 'var(--mantine-color-dark-0)' : 'var(--mantine-color-gray-9)',
+      },
+      '.cm-scroller': {
+        fontFamily: 'var(--mantine-font-family-monospace)',
+        lineHeight: '1.6',
+      },
+      '.cm-gutters': {
+        backgroundColor: dark
+          ? 'var(--mantine-color-dark-8)'
+          : 'var(--mantine-color-gray-0)',
+        color: dark ? 'var(--mantine-color-dark-3)' : 'var(--mantine-color-gray-6)',
+        border: 'none',
+        borderRight: '1px solid var(--mantine-color-default-border)',
+      },
+      '.cm-activeLine': {
+        backgroundColor: dark ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0, 0, 0, 0.04)',
+      },
+      '.cm-activeLineGutter': {
+        backgroundColor: dark
+          ? 'var(--mantine-color-dark-7)'
+          : 'var(--mantine-color-gray-1)',
+      },
+      '.cm-errorLine': {
+        backgroundColor: 'rgba(250, 82, 82, 0.13)',
+        boxShadow: 'inset 2px 0 0 var(--mantine-color-red-6)',
+      },
+      '&.cm-focused': { outline: 'none' },
     },
-    '.cm-content': {
-      fontFamily: 'var(--mantine-font-family-monospace)',
-      caretColor: 'var(--mantine-color-dark-0)',
-    },
-    '.cm-scroller': {
-      fontFamily: 'var(--mantine-font-family-monospace)',
-      lineHeight: '1.6',
-    },
-    '.cm-gutters': {
-      backgroundColor: 'var(--mantine-color-dark-8)',
-      color: 'var(--mantine-color-dark-3)',
-      border: 'none',
-      borderRight: '1px solid var(--mantine-color-dark-5)',
-    },
-    '.cm-activeLine': { backgroundColor: 'rgba(255, 255, 255, 0.03)' },
-    '.cm-activeLineGutter': { backgroundColor: 'var(--mantine-color-dark-7)' },
-    '.cm-errorLine': {
-      backgroundColor: 'rgba(250, 82, 82, 0.13)',
-      boxShadow: 'inset 2px 0 0 var(--mantine-color-red-6)',
-    },
-    '&.cm-focused': { outline: 'none' },
-  },
-  { dark: true },
-)
+    { dark },
+  )
+}
 
 // State-managed decoration that paints the line a syntax error points at. The
 // parent pushes the line number via the setErrorLine effect.
@@ -203,15 +228,20 @@ function EquationEditorInner(
   const namesRef = useRef({ functions: FUNCTION_NAMES, variables })
   namesRef.current.variables = variables
 
+  // Rebuild the theme/highlight when the Mantine colour scheme changes so the
+  // editor follows light/dark like the rest of the workspace.
+  const colorScheme = useComputedColorScheme('dark')
+  const isDark = colorScheme === 'dark'
+
   const extensions = useMemo<Extension[]>(
     () => [
       freesLanguage,
       freesLanguage.data.of({ autocomplete: makeCompletionSource(namesRef) }),
-      syntaxHighlighting(freesHighlight),
-      freesTheme,
+      syntaxHighlighting(isDark ? freesHighlightDark : freesHighlightLight),
+      makeFreesTheme(isDark),
       errorLineField,
     ],
-    [],
+    [isDark],
   )
 
   // Push the error-line decoration whenever the prop changes (and once on mount,
