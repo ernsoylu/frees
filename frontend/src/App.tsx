@@ -1051,6 +1051,12 @@ export default function App() {
           onOpenProject={handleOpenProject}
           onSaveProject={handleSaveProject}
           onSaveProjectAs={handleSaveProjectAs}
+          activeTab={activeTab}
+          onSelectView={setActiveTab}
+          onVariableInfo={() => setShowVariableInfo(true)}
+          onMinMax={() => setShowMinMax(true)}
+          onCurveFit={() => setShowCurveFit(true)}
+          onPreferences={() => setShowPreferences(true)}
         />
         <input
           ref={projectFileRef}
