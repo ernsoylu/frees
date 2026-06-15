@@ -94,6 +94,7 @@ import {
   buildRealSolutionRows,
   withStableKeys,
 } from './format'
+import { FUNCTION_CATEGORIES } from './functionCatalog'
 import {
   buildProject,
   clearProjectLocal,
@@ -1032,6 +1033,21 @@ export default function App() {
         { id: 'help', label: 'Help', leftSection: <IconHelp size={18} />, onClick: () => globalThis.open('/help', '_blank') },
       ],
     },
+    // Every catalog function as a searchable palette entry: explanation plus a
+    // sample call in the description, inserting the snippet at the editor caret.
+    ...FUNCTION_CATEGORIES.map((cat) => ({
+      group: cat.category,
+      actions: cat.items.map((item) => ({
+        id: `fn-${cat.category}-${item.label}`,
+        label: item.label,
+        description: item.usage
+          ? `${item.description ?? ''}  e.g. ${item.usage}`
+          : item.description,
+        keywords: [cat.category, 'function'],
+        leftSection: <IconMathFunction size={18} />,
+        onClick: () => insertFunction(item.snippet),
+      })),
+    })),
   ]
 
   const solutionSidePanel = solutionOpen ? (

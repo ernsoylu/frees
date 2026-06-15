@@ -262,6 +262,7 @@ function EquationEditorInner(
       onChange={onChange}
       extensions={extensions}
       placeholder={placeholder}
+      theme="none"
       height="100%"
       style={{ flex: 1, minHeight: 260, overflow: 'hidden' }}
       basicSetup={{ foldGutter: false, highlightActiveLine: true, bracketMatching: true }}
