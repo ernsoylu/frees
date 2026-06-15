@@ -472,10 +472,12 @@ export function TopBar(props: Readonly<TopBarProps>) {
             </Button>
           </Menu.Target>
           <Menu.Dropdown>
-            <div style={{ maxHeight: 420, overflowY: 'auto' }}>
-              {FUNCTION_CATEGORIES.map((cat) => (
-                <div key={cat.category}>
-                  <Menu.Label>{cat.category}</Menu.Label>
+            {FUNCTION_CATEGORIES.map((cat) => (
+              <Menu.Sub key={cat.category}>
+                <Menu.Sub.Target>
+                  <Menu.Sub.Item>{cat.category}</Menu.Sub.Item>
+                </Menu.Sub.Target>
+                <Menu.Sub.Dropdown>
                   {cat.items.map((item) => (
                     <Menu.Item
                       key={item.label}
@@ -484,9 +486,9 @@ export function TopBar(props: Readonly<TopBarProps>) {
                       {item.label}
                     </Menu.Item>
                   ))}
-                </div>
-              ))}
-            </div>
+                </Menu.Sub.Dropdown>
+              </Menu.Sub>
+            ))}
           </Menu.Dropdown>
         </Menu>
 
