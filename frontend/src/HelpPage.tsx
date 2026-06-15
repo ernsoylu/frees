@@ -1487,7 +1487,7 @@ function FunctionRef({ name, syntax, desc, inputs, outputs, example }: {
   example: string;
 }) {
   return (
-    <Card withBorder radius="md" p="md" bg="dark.8" mb="md" style={{ borderLeft: '4px solid var(--mantine-color-blue-5)' }}>
+    <Card withBorder radius="md" p="md" bg="light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8))" mb="md" style={{ borderLeft: '4px solid var(--mantine-color-blue-5)' }}>
       <Group justify="space-between" mb="xs">
         <Title order={4} c="blue.3" style={{ fontFamily: 'monospace' }}>{name}</Title>
         <Badge variant="light" color="blue">Function Reference</Badge>
@@ -1495,8 +1495,8 @@ function FunctionRef({ name, syntax, desc, inputs, outputs, example }: {
       <Text size="sm" mb="md" style={{ lineHeight: 1.5 }}>{desc}</Text>
       
       <Text fw={600} size="sm" mb="xs">Syntax</Text>
-      <Paper withBorder p="xs" bg="dark.9" mb="md" radius="sm">
-        <Code block style={{ background: 'transparent', color: '#82c91e' }}>{syntax}</Code>
+      <Paper withBorder p="xs" bg="light-dark(var(--mantine-color-gray-1), var(--mantine-color-dark-9))" mb="md" radius="sm">
+        <Code block style={{ background: 'transparent', color: 'light-dark(#5c940d, #82c91e)' }}>{syntax}</Code>
       </Paper>
 
       {inputs.length > 0 && (
@@ -1544,7 +1544,7 @@ function FunctionRef({ name, syntax, desc, inputs, outputs, example }: {
       )}
 
       <Text fw={600} size="sm" mb="xs">Example</Text>
-      <Paper withBorder p="xs" bg="dark.9" radius="sm" style={{ position: 'relative' }}>
+      <Paper withBorder p="xs" bg="light-dark(var(--mantine-color-gray-1), var(--mantine-color-dark-9))" radius="sm" style={{ position: 'relative' }}>
         <CopyButton code={example} />
         <Code block style={{ background: 'transparent' }}>{example}</Code>
       </Paper>
@@ -1561,7 +1561,7 @@ function ProcedureRef({ name, syntax, desc, inputs, outputs, example }: {
   example: string;
 }) {
   return (
-    <Card withBorder radius="md" p="md" bg="dark.8" mb="md" style={{ borderLeft: '4px solid var(--mantine-color-indigo-5)' }}>
+    <Card withBorder radius="md" p="md" bg="light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8))" mb="md" style={{ borderLeft: '4px solid var(--mantine-color-indigo-5)' }}>
       <Group justify="space-between" mb="xs">
         <Title order={4} c="indigo.3" style={{ fontFamily: 'monospace' }}>{name}</Title>
         <Badge variant="light" color="indigo">Procedure Reference</Badge>
@@ -1569,8 +1569,8 @@ function ProcedureRef({ name, syntax, desc, inputs, outputs, example }: {
       <Text size="sm" mb="md" style={{ lineHeight: 1.5 }}>{desc}</Text>
       
       <Text fw={600} size="sm" mb="xs">Syntax</Text>
-      <Paper withBorder p="xs" bg="dark.9" mb="md" radius="sm">
-        <Code block style={{ background: 'transparent', color: '#ffc078' }}>{syntax}</Code>
+      <Paper withBorder p="xs" bg="light-dark(var(--mantine-color-gray-1), var(--mantine-color-dark-9))" mb="md" radius="sm">
+        <Code block style={{ background: 'transparent', color: 'light-dark(#d9480f, #ffc078)' }}>{syntax}</Code>
       </Paper>
 
       {inputs.length > 0 && (
@@ -1618,7 +1618,7 @@ function ProcedureRef({ name, syntax, desc, inputs, outputs, example }: {
       )}
 
       <Text fw={600} size="sm" mb="xs">Example</Text>
-      <Paper withBorder p="xs" bg="dark.9" radius="sm" style={{ position: 'relative' }}>
+      <Paper withBorder p="xs" bg="light-dark(var(--mantine-color-gray-1), var(--mantine-color-dark-9))" radius="sm" style={{ position: 'relative' }}>
         <CopyButton code={example} />
         <Code block style={{ background: 'transparent' }}>{example}</Code>
       </Paper>
@@ -1660,19 +1660,19 @@ export default function HelpPage() {
 
             <Title order={3} mt="sm">The frees Engineering Workflow</Title>
             <SimpleGrid cols={{ base: 1, sm: 3 }} spacing="md">
-              <Card shadow="sm" padding="md" radius="md" withBorder bg="dark.8">
+              <Card shadow="sm" padding="md" radius="md" withBorder bg="light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8))">
                 <Text fw={600} size="sm" c="blue.3">1. Describe System</Text>
                 <Text size="xs" c="dimmed" mt="xs">
                   Write the governing algebraic, matrix, or differential equations in the code editor. Supply comments in curly braces.
                 </Text>
               </Card>
-              <Card shadow="sm" padding="md" radius="md" withBorder bg="dark.8">
+              <Card shadow="sm" padding="md" radius="md" withBorder bg="light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8))">
                 <Text fw={600} size="sm" c="indigo.3">2. Compile & Bound (F4)</Text>
                 <Text size="xs" c="dimmed" mt="xs">
                   Validate degrees of freedom. Set physical lower/upper bounds and initial guesses in the <strong>Variable Info</strong> panel.
                 </Text>
               </Card>
-              <Card shadow="sm" padding="md" radius="md" withBorder bg="dark.8">
+              <Card shadow="sm" padding="md" radius="md" withBorder bg="light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8))">
                 <Text fw={600} size="sm" c="cyan.3">3. Solve & Sweeps (F2)</Text>
                 <Text size="xs" c="dimmed" mt="xs">
                   Run iterations to convergence. Build a <strong>Parametric Table</strong> to sweep variables and output results in live plots.
@@ -1730,7 +1730,7 @@ export default function HelpPage() {
               <List.Item>All normal markdown headers (<code># Header</code>), bold, and italics are supported.</List.Item>
               <List.Item>You can embed resolved variables directly in your report using inline syntax: <code>[varName]</code> or <code>[varName [units]]</code>. When solved, these are replaced by the computed numerical values accompanied by units.</List.Item>
             </List>
-            <Paper withBorder p="md" bg="dark.8">
+            <Paper withBorder p="md" bg="light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8))">
               <Code block>{`// # Thermodynamic Heat Engine Analysis
 // The boiler operating pressure is P[1] = 8000 [kPa].
 // The computed thermal efficiency is [eta_th] %.`}</Code>
@@ -1771,7 +1771,7 @@ export default function HelpPage() {
             </Alert>
 
             <Text fw={600} size="sm">Example of Curve-Fitted Equation Usage:</Text>
-            <Paper withBorder p="xs" bg="dark.9" radius="sm" style={{ position: 'relative' }}>
+            <Paper withBorder p="xs" bg="light-dark(var(--mantine-color-gray-1), var(--mantine-color-dark-9))" radius="sm" style={{ position: 'relative' }}>
               <CopyButton code={`{ Using a fitted curve in solver equations }
 flow_rate = 1.25 [m^3/s]
 head_loss [m] = -0.084 * flow_rate^2 + 1.54 * flow_rate + 0.12 [m]`} />
@@ -2121,7 +2121,7 @@ y = RandG(mean, stddev, seed)`}
                 <strong>Code Declaration:</strong> Declare uncertainties directly using the <code>UncertaintyOf()</code> accessor function:
               </List.Item>
             </List>
-            <Paper withBorder p="md" bg="dark.8" mb="md">
+            <Paper withBorder p="md" bg="light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8))" mb="md">
               <Code block>{`P = 100000 [Pa]
 T = 300 [K]
 
@@ -2148,7 +2148,7 @@ UncertaintyOf(T) = 2.0 [K]`}</Code>
             <Text style={{ lineHeight: 1.6 }}>
               frees automatically checks equations for dimensional consistency. All calculations run strictly in SI base units. Annotated values are converted at compile-time:
             </Text>
-            <Paper withBorder p="md" bg="dark.8">
+            <Paper withBorder p="md" bg="light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8))">
               <Code block>{`P = 140 [kPa]    { Converted to 140000 Pa }
 m = 120 [lb]     { Converted to 54.43 kg }`}</Code>
             </Paper>
@@ -2187,7 +2187,7 @@ T_k = ConvertTemp(F, K, 32)    { 273.15 }`}
             </Text>
 
             <Title order={3}>X-Y plot of solved arrays</Title>
-            <Paper withBorder p="md" bg="dark.8">
+            <Paper withBorder p="md" bg="light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8))">
               <Code block>{`N = 5
 FOR i = 1 TO N
   speed[i] = 10*i
@@ -2210,7 +2210,7 @@ END
             </Text>
 
             <Title order={3}>Property diagram with state overlay</Title>
-            <Paper withBorder p="md" bg="dark.8">
+            <Paper withBorder p="md" bg="light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8))">
               <Code block>{`PLOT 'Rankine T-s'
   kind = property
   fluid = Water
@@ -2233,7 +2233,7 @@ END
             <Text style={{ lineHeight: 1.6 }}>
               Arrays are represented using indices inside square brackets (e.g. <code>T[1]</code>, <code>P[5]</code>). You can generate repetitive equations using the <code>FOR</code> loop block:
             </Text>
-            <Paper withBorder p="md" bg="dark.8">
+            <Paper withBorder p="md" bg="light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8))">
               <Code block>{`FOR i = 1 TO 3
   h[i] = Enthalpy(Water, T=T[i], P=P[i])
 END`}</Code>
@@ -2261,7 +2261,7 @@ val = ArrayElmt(T[1..10], idx)   { Equals T[3] }`}
             <Text style={{ lineHeight: 1.6 }}>
               frees supports complex arithmetic. Complex variables are declared by matching components ending in <code>_r</code> (real) and <code>_i</code> (imaginary), or using imaginary literals ending in <code>i</code> or <code>j</code>:
             </Text>
-            <Paper withBorder p="md" bg="dark.8" mb="md">
+            <Paper withBorder p="md" bg="light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8))" mb="md">
               <Code block>{`z1 = 3 + 4i
 z2 = 5 - 2j
 z3 = z1 * z2`}</Code>
@@ -2414,7 +2414,7 @@ u$ = UnitsOf$(var)`}
               <List.Item><code>linspace(a, b, n)</code> — n linearly spaced values from a to b</List.Item>
               <List.Item><code>inv(A)</code> = Inverse, <code>det(A)</code> = Determinant (MATLAB aliases)</List.Item>
             </List>
-            <Paper withBorder p="md" bg="dark.8">
+            <Paper withBorder p="md" bg="light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8))">
               <Code block>{`A = [3 4 5; 1 2 6; 7 8 1]
 b = [2; 3; 1]
 x = SolveLinear(A, b)      { bare names — no [1..3] needed }
@@ -2672,7 +2672,7 @@ CALL Eigen(A[1..2, 1..2] : lambda[1..2], V[1..2, 1..2])`}
               You can declare custom functions (single output value) and procedures (multiple output variables) using imperative logic (IF-THEN-ELSE, REPEAT-UNTIL, WHILE-DO, assignments):
             </Text>
             <Title order={3}>Custom Functions</Title>
-            <Paper withBorder p="md" bg="dark.8">
+            <Paper withBorder p="md" bg="light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8))">
               <Code block>{`FUNCTION my_func(x, y)
   IF x > y THEN
     my_func := x * y
@@ -2682,7 +2682,7 @@ CALL Eigen(A[1..2, 1..2] : lambda[1..2], V[1..2, 1..2])`}
 END`}</Code>
             </Paper>
             <Title order={3} mt="sm">Custom Procedures</Title>
-            <Paper withBorder p="md" bg="dark.8">
+            <Paper withBorder p="md" bg="light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8))">
               <Code block>{`PROCEDURE my_proc(x, y : a, b)
   a := x * 10
   b := y * 100
@@ -2693,7 +2693,7 @@ END`}</Code>
             <Text style={{ lineHeight: 1.6 }}>
               Function and procedure bodies support <code>REPEAT … UNTIL cond</code> (runs at least once) and <code>WHILE cond DO … END</code> (checks the condition first). Both are guarded against runaway iteration.
             </Text>
-            <Paper withBorder p="md" bg="dark.8">
+            <Paper withBorder p="md" bg="light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8))">
               <Code block>{`FUNCTION SumTo(n)
   i := 1
   s := 0
@@ -2715,7 +2715,7 @@ total = SumTo(10)   { 55 }`}</Code>
             <Text style={{ lineHeight: 1.6 }}>
               You can define lookup tables inside your code. frees parses these and registers them as tabulated functions that can be queried like standard functions:
             </Text>
-            <Paper withBorder p="md" bg="dark.8">
+            <Paper withBorder p="md" bg="light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8))">
               <Code block>{`TABLE thermal_conductivity(temp)
   200   1.2
   300   1.6
@@ -2731,7 +2731,7 @@ k_val = thermal_conductivity(350)`}</Code>
               <Code>-</Code>. The same syntax works on <Code>FUNCTION</Code>{' '}
               (e.g. <Code>FUNCTION f(x [m], y [s]) [m/s]</Code>):
             </Text>
-            <Paper withBorder p="md" bg="dark.8">
+            <Paper withBorder p="md" bg="light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8))">
               <Code block>{`TABLE fanCurve(Vair [m^3/s]) [Pa]
   0.0    250
   0.6    195
@@ -2882,7 +2882,7 @@ max_temp = Max('T_boiler')`}
             <Text style={{ lineHeight: 1.6 }}>
               Modules allow you to encapsulate a sub-system of equations and call it repeatedly. Unlike procedures, modules contain declarative equations, which can be solved in any direction:
             </Text>
-            <Paper withBorder p="md" bg="dark.8">
+            <Paper withBorder p="md" bg="light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8))">
               <Code block>{`MODULE pipe_flow(D, Q : dP)
   V = Q / (pi / 4 * D^2)
   dP = 0.02 * (100 / D) * (1000 * V^2 / 2)
@@ -3119,7 +3119,7 @@ sig = sigma_LJ(Material)`}
             <Text style={{ lineHeight: 1.6 }}>
               Humid air calculations are performed using the fluid name <code>AirH2O</code>. These calls require exactly **three** state variables:
             </Text>
-            <Paper withBorder p="sm" bg="dark.8">
+            <Paper withBorder p="sm" bg="light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8))">
               <Code block>{`h = Enthalpy(AirH2O, T=25 [C], R=0.50, P=101325 [Pa])`}</Code>
             </Paper>
             <Title order={3} mt="sm">Indicators</Title>
@@ -3140,7 +3140,7 @@ sig = sigma_LJ(Material)`}
             <Text style={{ lineHeight: 1.6 }}>
               frees supports definite integrals and first-order Ordinary Differential Equations (ODEs) using Runge-Kutta numerical integration:
             </Text>
-            <Paper withBorder p="md" bg="dark.8">
+            <Paper withBorder p="md" bg="light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8))">
               <Code block>{`y = Integral(3 * x^2, x, 0, 5)   { Definite integral of 3x^2 from 0 to 5 }`}</Code>
             </Paper>
           </Stack>
@@ -3193,7 +3193,7 @@ sig = sigma_LJ(Material)`}
                             {ex.note}
                           </Alert>
                         )}
-                        <Paper withBorder p="xs" bg="dark.9" style={{ position: 'relative' }}>
+                        <Paper withBorder p="xs" bg="light-dark(var(--mantine-color-gray-1), var(--mantine-color-dark-9))" style={{ position: 'relative' }}>
                           <CopyButton code={ex.code} />
                           <Code block style={{ background: 'transparent', maxHeight: '250px', overflowY: 'auto' }}>
                             {ex.code}
@@ -3223,12 +3223,12 @@ sig = sigma_LJ(Material)`}
       padding="md"
       styles={{
         main: {
-          background: 'var(--mantine-color-dark-8)',
+          background: 'light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8))',
           minHeight: 'calc(100vh - 60px)'
         }
       }}
     >
-      <AppShell.Header bg="dark.8" style={{ borderBottom: '1px solid var(--mantine-color-dark-4)' }}>
+      <AppShell.Header bg="var(--mantine-color-body)" style={{ borderBottom: '1px solid var(--mantine-color-default-border)' }}>
         <Group h="100%" px="md" justify="space-between">
           <Group>
             <Burger opened={opened} onClick={toggle} hiddenFrom="sm" size="sm" />
@@ -3245,7 +3245,7 @@ sig = sigma_LJ(Material)`}
         </Group>
       </AppShell.Header>
 
-      <AppShell.Navbar p="md" bg="dark.9" style={{ borderRight: '1px solid var(--mantine-color-dark-4)' }}>
+      <AppShell.Navbar p="md" bg="var(--mantine-color-body)" style={{ borderRight: '1px solid var(--mantine-color-default-border)' }}>
         <TextInput
           placeholder="Search documentation..."
           value={searchQuery}

@@ -11,12 +11,16 @@ import {
   Title,
   Tooltip,
   UnstyledButton,
+  useComputedColorScheme,
+  useMantineColorScheme,
 } from '@mantine/core'
 import {
   IconChartGridDots,
   IconChartLine,
   IconChecks,
   IconChevronDown,
+  IconLayoutSidebarLeftCollapse,
+  IconLayoutSidebarLeftExpand,
   IconCode,
   IconDeviceFloppy,
   IconFile,
@@ -24,7 +28,11 @@ import {
   IconFolderOpen,
   IconHelp,
   IconInfoCircle,
+  IconLayoutGrid,
   IconMathFunction,
+  IconMoon,
+  IconSun,
+  IconPencil,
   IconPlayerPlayFilled,
   IconSchema,
   IconSettings,
@@ -35,6 +43,7 @@ import {
   IconVariable,
 } from '@tabler/icons-react'
 import { spotlight } from '@mantine/spotlight'
+import { useState } from 'react'
 import { CheckResponse, SolveResponse, TableRowResult } from './api'
 import { withStableKeys } from './format'
 import { FUNCTION_CATEGORIES } from './functionCatalog'
@@ -43,22 +52,28 @@ import { FUNCTION_CATEGORIES } from './functionCatalog'
 // Left icon rail: views on top, tool windows at the bottom (VS Code style).
 // ---------------------------------------------------------------------------
 
+// Each view carries a short `label` (shown when the rail is expanded) and a
+// longer `tip` (the hover tooltip when collapsed).
 const VIEWS = [
-  { value: 'equations', label: 'Editor', icon: IconCode },
-  { value: 'table', label: 'Tables — parametric runs & curve functions', icon: IconTable },
-  { value: 'plots', label: 'Plots (X-Y)', icon: IconChartLine },
+  { value: 'equations', label: 'Editor', tip: 'Editor', icon: IconCode },
+  { value: 'table', label: 'Tables', tip: 'Tables — parametric runs & curve functions', icon: IconTable },
+  { value: 'plots', label: 'Plots', tip: 'Plots (X-Y)', icon: IconChartLine },
   {
     value: 'thermo',
-    label: 'Thermodynamics — property & psychrometric plots, state points',
+    label: 'Thermo',
+    tip: 'Thermodynamics — property & psychrometric plots, state points',
     icon: IconTemperature,
   },
   {
     value: 'digitizer',
-    label: 'Graph Digitizer — extract curves from chart images',
+    label: 'Digitizer',
+    tip: 'Graph Digitizer — extract curves from chart images',
     icon: IconChartGridDots,
   },
-  { value: 'diagram', label: 'Diagram — interactive schematic editor', icon: IconSchema },
+  { value: 'diagram', label: 'Diagram', tip: 'Diagram — interactive schematic editor', icon: IconSchema },
 ]
+
+const RAIL_EXPANDED_KEY = 'frees.railExpanded'
 
 interface RailProps {
   active: string
@@ -70,32 +85,64 @@ interface RailProps {
   onAbout: () => void
 }
 
-function RailIcon({
+// One rail entry. Collapsed → an icon button with a hover tooltip; expanded →
+// a full-width button with the icon and a text label. `href` turns it into a
+// link (used by Help); otherwise it is a click action.
+function RailEntry({
+  icon,
   label,
+  tip,
   active,
-  disabled,
+  expanded,
   onClick,
-  children,
+  href,
 }: Readonly<{
+  icon: React.ReactNode
   label: string
+  tip: string
   active?: boolean
-  disabled?: boolean
+  expanded: boolean
   onClick?: () => void
-  children: React.ReactNode
+  href?: string
 }>) {
+  const variant = active ? 'light' : 'subtle'
+  const color = active ? 'blue' : 'gray'
+
+  if (expanded) {
+    const shared = {
+      variant,
+      color,
+      justify: 'flex-start' as const,
+      fullWidth: true,
+      size: 'sm' as const,
+      radius: 'md' as const,
+      leftSection: icon,
+      'aria-label': tip,
+    }
+    return href ? (
+      <Button component="a" href={href} target="_blank" {...shared}>
+        {label}
+      </Button>
+    ) : (
+      <Button onClick={onClick} {...shared}>
+        {label}
+      </Button>
+    )
+  }
+
+  const shared = { variant, color, size: 40, radius: 'md' as const, 'aria-label': tip }
+  const button = href ? (
+    <ActionIcon component="a" href={href} target="_blank" {...shared}>
+      {icon}
+    </ActionIcon>
+  ) : (
+    <ActionIcon onClick={onClick} {...shared}>
+      {icon}
+    </ActionIcon>
+  )
   return (
-    <Tooltip label={label} position="right" openDelay={300}>
-      <ActionIcon
-        size={40}
-        radius="md"
-        variant={active ? 'light' : 'subtle'}
-        color={active ? 'blue' : 'gray'}
-        disabled={disabled}
-        onClick={onClick}
-        aria-label={label}
-      >
-        {children}
-      </ActionIcon>
+    <Tooltip label={tip} position="right" openDelay={300}>
+      {button}
     </Tooltip>
   )
 }
@@ -109,54 +156,97 @@ export function Rail({
   onPreferences,
   onAbout,
 }: Readonly<RailProps>) {
+  const [expanded, setExpanded] = useState(
+    () => localStorage.getItem(RAIL_EXPANDED_KEY) === 'true',
+  )
+  const toggle = () => {
+    setExpanded((e) => {
+      const next = !e
+      localStorage.setItem(RAIL_EXPANDED_KEY, String(next))
+      return next
+    })
+  }
+
+  // Light/dark toggle. Mantine persists the choice to localStorage via its
+  // default color-scheme manager.
+  const { setColorScheme } = useMantineColorScheme()
+  const computedScheme = useComputedColorScheme('dark')
+  const toggleScheme = () =>
+    setColorScheme(computedScheme === 'dark' ? 'light' : 'dark')
+
+  const iconSize = 22
+  const tools = [
+    { label: 'Variables', tip: 'Variable Information', icon: IconVariable, onClick: onVariableInfo },
+    { label: 'Min/Max', tip: 'Min/Max (optimization)', icon: IconTargetArrow, onClick: onMinMax },
+    { label: 'Curve Fit', tip: 'Curve Fit (least squares)', icon: IconMathFunction, onClick: onCurveFit },
+    { label: 'Preferences', tip: 'Preferences', icon: IconSettings, onClick: onPreferences },
+    { label: 'About', tip: 'About', icon: IconInfoCircle, onClick: onAbout },
+  ]
+
   return (
     <Stack
       justify="space-between"
       p={6}
-      style={{ borderRight: '1px solid var(--mantine-color-dark-5)' }}
+      w={expanded ? 200 : undefined}
+      style={{ borderRight: '1px solid var(--mantine-color-default-border)', flexShrink: 0 }}
     >
       <Stack gap={4}>
+        <RailEntry
+          icon={
+            expanded ? (
+              <IconLayoutSidebarLeftCollapse size={iconSize} stroke={1.6} />
+            ) : (
+              <IconLayoutSidebarLeftExpand size={iconSize} stroke={1.6} />
+            )
+          }
+          label="Collapse"
+          tip={expanded ? 'Collapse sidebar' : 'Expand sidebar'}
+          expanded={expanded}
+          onClick={toggle}
+        />
         {VIEWS.map((view) => (
-          <RailIcon
+          <RailEntry
             key={view.value}
+            icon={<view.icon size={iconSize} stroke={1.6} />}
             label={view.label}
+            tip={view.tip}
             active={active === view.value}
+            expanded={expanded}
             onClick={() => onSelect(view.value)}
-          >
-            <view.icon size={22} stroke={1.6} />
-          </RailIcon>
+          />
         ))}
       </Stack>
       <Stack gap={4}>
-        <RailIcon label="Variable Information" onClick={onVariableInfo}>
-          <IconVariable size={22} stroke={1.6} />
-        </RailIcon>
-        <RailIcon label="Min/Max (optimization)" onClick={onMinMax}>
-          <IconTargetArrow size={22} stroke={1.6} />
-        </RailIcon>
-        <RailIcon label="Curve Fit (least squares)" onClick={onCurveFit}>
-          <IconMathFunction size={22} stroke={1.6} />
-        </RailIcon>
-        <RailIcon label="Preferences" onClick={onPreferences}>
-          <IconSettings size={22} stroke={1.6} />
-        </RailIcon>
-        <RailIcon label="About" onClick={onAbout}>
-          <IconInfoCircle size={22} stroke={1.6} />
-        </RailIcon>
-        <Tooltip label="Help" position="right" openDelay={300}>
-          <ActionIcon
-            size={40}
-            radius="md"
-            variant="subtle"
-            color="gray"
-            component="a"
-            href="/help"
-            target="_blank"
-            aria-label="Help"
-          >
-            <IconHelp size={22} stroke={1.6} />
-          </ActionIcon>
-        </Tooltip>
+        {tools.map((tool) => (
+          <RailEntry
+            key={tool.label}
+            icon={<tool.icon size={iconSize} stroke={1.6} />}
+            label={tool.label}
+            tip={tool.tip}
+            expanded={expanded}
+            onClick={tool.onClick}
+          />
+        ))}
+        <RailEntry
+          icon={
+            computedScheme === 'dark' ? (
+              <IconSun size={iconSize} stroke={1.6} />
+            ) : (
+              <IconMoon size={iconSize} stroke={1.6} />
+            )
+          }
+          label={computedScheme === 'dark' ? 'Light mode' : 'Dark mode'}
+          tip={computedScheme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+          expanded={expanded}
+          onClick={toggleScheme}
+        />
+        <RailEntry
+          icon={<IconHelp size={iconSize} stroke={1.6} />}
+          label="Help"
+          tip="Help"
+          expanded={expanded}
+          href="/help"
+        />
       </Stack>
     </Stack>
   )
@@ -309,6 +399,7 @@ interface TopBarProps {
   onSaveProject: () => void
   onSaveProjectAs: () => void
   onInsertFunction: (snippet: string) => void
+  onOpenExamples: () => void
 }
 
 function solveTooltipFor(canSolve: boolean, isTable: boolean): string {
@@ -335,7 +426,10 @@ export function TopBar(props: Readonly<TopBarProps>) {
     : 'Check (F4) · Solve (F2)'
 
   return (
-    <Group justify="space-between" wrap="nowrap" gap="sm">
+    // Wrap (not nowrap) so the Check/Solve action group drops to a second row
+    // on narrow viewports instead of overflowing off-screen — the solver
+    // trigger must always stay reachable.
+    <Group justify="space-between" wrap="wrap" gap="sm">
       <Group gap="sm" wrap="nowrap" align="center">
         <Title order={3} c="blue.4">
           frees
@@ -359,6 +453,9 @@ export function TopBar(props: Readonly<TopBarProps>) {
             </Menu.Item>
             <Menu.Item leftSection={<IconFolderOpen size={14} />} onClick={props.onOpenProject}>
               Open Project…
+            </Menu.Item>
+            <Menu.Item leftSection={<IconLayoutGrid size={14} />} onClick={props.onOpenExamples}>
+              Open Example…
             </Menu.Item>
             <Menu.Divider />
             <Menu.Item leftSection={<IconDeviceFloppy size={14} />} onClick={props.onSaveProject}>
@@ -389,14 +486,34 @@ export function TopBar(props: Readonly<TopBarProps>) {
                   <Menu.Sub.Item>{cat.category}</Menu.Sub.Item>
                 </Menu.Sub.Target>
                 <Menu.Sub.Dropdown>
-                  {cat.items.map((item) => (
-                    <Menu.Item
-                      key={item.label}
-                      onClick={() => props.onInsertFunction(item.snippet)}
-                    >
-                      {item.label}
-                    </Menu.Item>
-                  ))}
+                  {cat.items.map((item) => {
+                    const tip = [
+                      item.description,
+                      item.usage ? `e.g. ${item.usage}` : null,
+                    ]
+                      .filter(Boolean)
+                      .join('\n')
+                    const menuItem = (
+                      <Menu.Item onClick={() => props.onInsertFunction(item.snippet)}>
+                        {item.label}
+                      </Menu.Item>
+                    )
+                    return tip ? (
+                      <Tooltip
+                        key={item.label}
+                        label={<div style={{ whiteSpace: 'pre-line' }}>{tip}</div>}
+                        position="right"
+                        multiline
+                        w={260}
+                        withArrow
+                        openDelay={400}
+                      >
+                        {menuItem}
+                      </Tooltip>
+                    ) : (
+                      <div key={item.label}>{menuItem}</div>
+                    )
+                  })}
                 </Menu.Sub.Dropdown>
               </Menu.Sub>
             ))}
@@ -414,22 +531,28 @@ export function TopBar(props: Readonly<TopBarProps>) {
           </ActionIcon>
         </Tooltip>
 
-        <Tooltip label="Click to rename project">
+        <Tooltip label="Rename project">
           <UnstyledButton
             onClick={props.onRenameProject}
+            visibleFrom="sm"
+            aria-label={`Rename project (currently ${props.projectName}.frees)`}
             style={{
               padding: '2px 8px',
               borderRadius: '4px',
               cursor: 'pointer',
-              border: '1px solid var(--mantine-color-dark-4)',
-              backgroundColor: 'var(--mantine-color-dark-6)',
+              border: '1px solid var(--mantine-color-default-border)',
+              backgroundColor: 'light-dark(var(--mantine-color-gray-1), var(--mantine-color-dark-6))',
               display: 'flex',
               alignItems: 'center',
+              gap: 6,
             }}
           >
-            <Text size="xs" c="gray.4" style={{ fontFamily: 'monospace' }}>
+            <Text size="xs" c="dimmed" style={{ fontFamily: 'monospace' }}>
               {props.projectName}.frees
             </Text>
+            {/* Edit affordance: signals the pill opens the rename dialog rather
+                than being an inline text field. */}
+            <IconPencil size={12} color="var(--mantine-color-dimmed)" />
           </UnstyledButton>
         </Tooltip>
         <Text c="dimmed" size="xs" visibleFrom="lg">
