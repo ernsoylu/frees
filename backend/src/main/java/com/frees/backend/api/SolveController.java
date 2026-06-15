@@ -181,11 +181,34 @@ public class SolveController {
                                 String formattedReport,
                                 List<FunctionTableDto> codeTables,
                                 List<ParametricTableDto> parametricTables,
-                                List<PlotDefDto> definedPlots) {
+                                List<PlotDefDto> definedPlots,
+                                // 1-based editor line a syntax error points at, or
+                                // null for whole-system errors (no single line).
+                                Integer errorLine) {
+
+        /** Backward-compatible constructor for the common no-error-line case. */
+        public SolveResponse(boolean success, List<VariableDto> variables,
+                             List<BlockDto> blocks, List<ResidualDto> residuals,
+                             StatsDto stats, List<SolutionDto> solutions,
+                             List<String> unitWarnings, String error,
+                             List<String> formattedEquations,
+                             List<Map<String, Double>> cyclePath, String formattedReport,
+                             List<FunctionTableDto> codeTables,
+                             List<ParametricTableDto> parametricTables,
+                             List<PlotDefDto> definedPlots) {
+            this(success, variables, blocks, residuals, stats, solutions, unitWarnings,
+                    error, formattedEquations, cyclePath, formattedReport, codeTables,
+                    parametricTables, definedPlots, null);
+        }
 
         static SolveResponse failure(String error) {
+            return failure(error, null);
+        }
+
+        static SolveResponse failure(String error, Integer errorLine) {
             return new SolveResponse(false, List.of(), List.of(), List.of(), null,
-                    List.of(), List.of(), error, List.of(), List.of(), null, List.of(), List.of(), List.of());
+                    List.of(), List.of(), error, List.of(), List.of(), null, List.of(),
+                    List.of(), List.of(), errorLine);
         }
     }
 
@@ -259,7 +282,47 @@ public class SolveController {
                                 String formattedReport,
                                 List<FunctionTableDto> codeTables,
                                 List<ParametricTableDto> parametricTables,
-                                List<PlotDefDto> definedPlots) {}
+                                List<PlotDefDto> definedPlots,
+                                // 1-based editor line a syntax error points at, or
+                                // null for whole-system errors (no single line).
+                                Integer errorLine) {
+
+        /** Backward-compatible constructor for the common no-error-line case. */
+        public CheckResponse(boolean solvable, int equations, int unknowns,
+                             List<String> variables, List<String> unitWarnings,
+                             Map<String, String> inferredUnits, String message,
+                             List<String> formattedEquations, String formattedReport,
+                             List<FunctionTableDto> codeTables,
+                             List<ParametricTableDto> parametricTables,
+                             List<PlotDefDto> definedPlots) {
+            this(solvable, equations, unknowns, variables, unitWarnings, inferredUnits,
+                    message, formattedEquations, formattedReport, codeTables,
+                    parametricTables, definedPlots, null);
+        }
+    }
+
+    /** ANTLR syntax errors are formatted "line L:C msg" by CollectingErrorListener.
+     * Because the extractor's cleanText is line-for-line aligned with the editor
+     * text, that line number is also the editor line. Returns the 1-based line of
+     * the first error, or null if none can be parsed. */
+    private static final java.util.regex.Pattern ERROR_LINE_PATTERN =
+            java.util.regex.Pattern.compile("^line (\\d+):");
+
+    static Integer parseErrorLine(String message) {
+        if (message == null) {
+            return null;
+        }
+        String first = message.lines().findFirst().orElse(message).trim();
+        java.util.regex.Matcher m = ERROR_LINE_PATTERN.matcher(first);
+        if (m.find()) {
+            try {
+                return Integer.parseInt(m.group(1));
+            } catch (NumberFormatException e) {
+                return null;
+            }
+        }
+        return null;
+    }
 
     private static Map<String, String> unitsByVariable(List<VariableInfoDto> variableInfo) {
         Map<String, String> units = new HashMap<>();
@@ -391,7 +454,8 @@ public class SolveController {
             String firstError = e.getMessage().lines().findFirst().orElse(e.getMessage());
             return ResponseEntity.badRequest().body(new CheckResponse(
                     false, 0, 0, List.of(), List.of(), Map.of(),
-                    "Syntax error: " + firstError, List.of(), null, List.of(), List.of(), List.of()));
+                    "Syntax error: " + firstError, List.of(), null, List.of(), List.of(), List.of(),
+                    parseErrorLine(e.getMessage())));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(new CheckResponse(
@@ -498,7 +562,8 @@ public class SolveController {
                     plotsOf(parsed.plots())));
         } catch (EquationParser.ParseException e) {
             return ResponseEntity.badRequest()
-                    .body(SolveResponse.failure("Syntax error:\n" + e.getMessage()));
+                    .body(SolveResponse.failure("Syntax error:\n" + e.getMessage(),
+                            parseErrorLine(e.getMessage())));
         } catch (SolverException e) {
             return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
                     .body(SolveResponse.failure(e.getMessage()));

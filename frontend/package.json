@@ -10,9 +10,16 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@codemirror/autocomplete": "^6.20.3",
+    "@codemirror/language": "^6.12.3",
+    "@codemirror/state": "^6.6.0",
+    "@codemirror/view": "^6.43.1",
+    "@lezer/highlight": "^1.2.3",
     "@mantine/core": "^9.3.1",
     "@mantine/hooks": "^9.3.1",
+    "@mantine/spotlight": "^9.3.1",
     "@tabler/icons-react": "^3.44.0",
+    "@uiw/react-codemirror": "^4.25.10",
     "katex": "^0.17.0",
     "plotly.js-basic-dist-min": "^3.6.0",
     "plotly.js-dist-min": "^3.6.0",
