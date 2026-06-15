@@ -15,6 +15,7 @@ import {
 import {
   IconChartGridDots,
   IconChartLine,
+  IconCheck,
   IconChecks,
   IconChevronDown,
   IconCode,
@@ -56,6 +57,16 @@ const VIEWS = [
     icon: IconChartGridDots,
   },
   { value: 'diagram', label: 'Diagram — interactive schematic editor', icon: IconSchema },
+]
+
+// Short labels for the top-bar View menu (the rail tooltips above are verbose).
+const VIEW_MENU = [
+  { value: 'equations', label: 'Editor', icon: IconCode },
+  { value: 'table', label: 'Tables', icon: IconTable },
+  { value: 'plots', label: 'Plots (X-Y)', icon: IconChartLine },
+  { value: 'thermo', label: 'Property Plots', icon: IconTemperature },
+  { value: 'digitizer', label: 'Graph Digitizer', icon: IconChartGridDots },
+  { value: 'diagram', label: 'Diagram', icon: IconSchema },
 ]
 
 interface RailProps {
@@ -306,6 +317,12 @@ interface TopBarProps {
   onOpenProject: () => void
   onSaveProject: () => void
   onSaveProjectAs: () => void
+  activeTab: string
+  onSelectView: (view: string) => void
+  onVariableInfo: () => void
+  onMinMax: () => void
+  onCurveFit: () => void
+  onPreferences: () => void
 }
 
 function solveTooltipFor(canSolve: boolean, isTable: boolean): string {
@@ -370,6 +387,76 @@ export function TopBar(props: Readonly<TopBarProps>) {
             </Menu.Item>
           </Menu.Dropdown>
         </Menu>
+
+        <Menu position="bottom-start" shadow="md" width={200}>
+          <Menu.Target>
+            <Button
+              variant="subtle"
+              color="gray"
+              size="xs"
+              rightSection={<IconChevronDown size={12} />}
+            >
+              View
+            </Button>
+          </Menu.Target>
+          <Menu.Dropdown>
+            {VIEW_MENU.map((view) => (
+              <Menu.Item
+                key={view.value}
+                leftSection={<view.icon size={14} />}
+                rightSection={props.activeTab === view.value ? <IconCheck size={13} /> : null}
+                color={props.activeTab === view.value ? 'blue' : undefined}
+                onClick={() => props.onSelectView(view.value)}
+              >
+                {view.label}
+              </Menu.Item>
+            ))}
+          </Menu.Dropdown>
+        </Menu>
+
+        <Menu position="bottom-start" shadow="md" width={220}>
+          <Menu.Target>
+            <Button
+              variant="subtle"
+              color="gray"
+              size="xs"
+              rightSection={<IconChevronDown size={12} />}
+            >
+              Tools
+            </Button>
+          </Menu.Target>
+          <Menu.Dropdown>
+            <Menu.Label>Windows</Menu.Label>
+            <Menu.Item leftSection={<IconVariable size={14} />} onClick={props.onVariableInfo}>
+              Variable Information
+            </Menu.Item>
+            <Menu.Item leftSection={<IconTargetArrow size={14} />} onClick={props.onMinMax}>
+              Min/Max (Optimization)
+            </Menu.Item>
+            <Menu.Item leftSection={<IconMathFunction size={14} />} onClick={props.onCurveFit}>
+              Curve Fit
+            </Menu.Item>
+            <Menu.Item leftSection={<IconSettings size={14} />} onClick={props.onPreferences}>
+              Preferences
+            </Menu.Item>
+            <Menu.Divider />
+            <Menu.Label>Run</Menu.Label>
+            <Menu.Item
+              leftSection={<IconChecks size={14} />}
+              onClick={isTable ? props.onCheckTable : props.onCheck}
+            >
+              Check
+            </Menu.Item>
+            <Menu.Item
+              leftSection={<IconPlayerPlayFilled size={13} />}
+              disabled={!canSolve}
+              onClick={isTable ? props.onSolveTable : props.onSolve}
+            >
+              Solve
+            </Menu.Item>
+          </Menu.Dropdown>
+        </Menu>
+
         <Tooltip label="Click to rename project">
           <UnstyledButton
             onClick={props.onRenameProject}
