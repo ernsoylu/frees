@@ -71,6 +71,25 @@ class SolveControllerTest {
     }
 
     @Test
+    void hidesMatrixLibraryHelperTemporariesFromSolution() throws Exception {
+        // x = Inverse(A) * b: the inverse appears inside an expression, so the
+        // compiler materializes inverse_temp_* helper unknowns. They are solver
+        // internals and must not surface in the user-facing variable list.
+        String text = "A = [3 4 5; 3 2 1; 4 1 2]\\nb = [3;2;1]\\nx = Inverse(A) * b";
+        mockMvc.perform(post("/api/solve")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"text\": \"" + text + "\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.variables[*].name",
+                        org.hamcrest.Matchers.everyItem(
+                                org.hamcrest.Matchers.not(
+                                        org.hamcrest.Matchers.containsString("inverse_temp")))))
+                .andExpect(jsonPath("$.variables[*].name",
+                        org.hamcrest.Matchers.hasItem("x[1]")));
+    }
+
+    @Test
     void checkEchoesCodeDefinedTables() throws Exception {
         String text = "TABLE htc(re : t = 100, 200)\\n  0   0   0\\n  10  10  30\\nEND\\nU = htc(5, 150)";
         mockMvc.perform(post("/api/check")
