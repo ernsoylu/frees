@@ -142,7 +142,54 @@ public class AstBuilder extends FreesBaseVisitor<Expr> {
         String name = ctx.IDENT().getText().toLowerCase();
         List<String> params = buildParamList(ctx.paramList());
         List<ProcStatement> body = buildProcBody(ctx.procBody());
-        return new ProcDef.FunctionDef(name, params, body);
+        return new ProcDef.FunctionDef(name, params, body,
+                siUnitOf(ctx.unit()), paramUnits(ctx.paramList()));
+    }
+
+    /**
+     * SI units for each parameter's optional [unit] annotation, aligned to the
+     * parameter list (null where a parameter carries no unit). Lets a call like
+     * {@code fanCurve(Vair/f_rpm)} ground the argument's variable.
+     */
+    private List<String> paramUnits(FreesParser.ParamListContext ctx) {
+        List<String> units = new ArrayList<>();
+        if (ctx == null) {
+            return units;
+        }
+        for (int i = 0; i < ctx.getChildCount(); i++) {
+            var child = ctx.getChild(i);
+            if (child instanceof FreesParser.UnitContext uc) {
+                units.set(units.size() - 1, siUnitOf(uc));
+            } else if (child instanceof org.antlr.v4.runtime.tree.TerminalNode tn
+                    && !",".equals(tn.getText())) {
+                units.add(null); // a parameter IDENT; unit (if any) follows
+            }
+        }
+        return units;
+    }
+
+    /**
+     * SI unit string for an optional [unit] annotation on a TABLE/FUNCTION
+     * output (e.g. {@code TABLE fanCurve(Vair) [Pa]}). Returns null when absent
+     * or unparseable; lets derived variables inherit the declared dimensions.
+     */
+    private String siUnitOf(FreesParser.UnitContext unitCtx) {
+        if (unitCtx == null) {
+            return null;
+        }
+        int startIdx = unitCtx.start.getStartIndex();
+        int stopIdx = unitCtx.stop.getStopIndex();
+        String bracketed = unitCtx.start.getInputStream()
+                .getText(new org.antlr.v4.runtime.misc.Interval(startIdx, stopIdx));
+        String unit = bracketed.substring(1, bracketed.length() - 1).trim();
+        if (unit.isEmpty()) {
+            return null;
+        }
+        try {
+            return UnitRegistry.siName(UnitRegistry.parseWithOffset(unit).dims());
+        } catch (UnitRegistry.UnknownUnitException ignored) {
+            return null;
+        }
     }
 
     private ProcDef.ProcedureDef buildProcedureDef(FreesParser.ProcedureDefContext ctx) {
@@ -248,7 +295,25 @@ public class AstBuilder extends FreesBaseVisitor<Expr> {
         if (family) {
             argNames.add(ctx.IDENT(2).getText().toLowerCase());
         }
-        return new ProcDef.FunctionTableDef(name, argNames, xLog, yLog, curves);
+        // Two optional [unit]s: the argument unit (inside the parens, before
+        // RPAREN) and the output unit (after RPAREN). Split them by position.
+        FreesParser.UnitContext argUnitCtx = null;
+        FreesParser.UnitContext outUnitCtx = null;
+        int rparenIdx = ctx.RPAREN().getSymbol().getTokenIndex();
+        for (FreesParser.UnitContext u : ctx.unit()) {
+            if (u.start.getTokenIndex() < rparenIdx) {
+                argUnitCtx = u;
+            } else {
+                outUnitCtx = u;
+            }
+        }
+        List<String> argUnits = new ArrayList<>();
+        argUnits.add(siUnitOf(argUnitCtx));
+        if (family) {
+            argUnits.add(null); // family-parameter units are not annotated yet
+        }
+        return new ProcDef.FunctionTableDef(name, argNames, xLog, yLog, curves,
+                siUnitOf(outUnitCtx), argUnits);
     }
 
     private static double signedNumberValue(FreesParser.SignedNumberContext ctx) {

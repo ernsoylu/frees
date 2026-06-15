@@ -21,7 +21,7 @@ topLevel
 // ── FUNCTION / PROCEDURE / MODULE definitions ─────────────────────────────────
 
 functionDef
-    : FUNCTION IDENT LPAREN paramList RPAREN sep
+    : FUNCTION IDENT LPAREN paramList RPAREN unit? sep
       procBody
       END
     ;
@@ -45,7 +45,7 @@ moduleDef
 // lookup argument, each further column is one curve of the family.
 
 tableDef
-    : TABLE IDENT LPAREN IDENT (COLON IDENT EQ numberList)? RPAREN tableFlags? sep
+    : TABLE IDENT LPAREN IDENT unit? (COLON IDENT EQ numberList)? RPAREN unit? tableFlags? sep
       tableRow (sep tableRow)* sep?
       END
     ;
@@ -113,7 +113,7 @@ tableRow
     ;
 
 paramList
-    : (IDENT (COMMA IDENT)*)?
+    : (IDENT unit? (COMMA IDENT unit?)*)?
     ;
 
 // ── Procedural body (inside FUNCTION / PROCEDURE) ─────────────────────────────

@@ -679,7 +679,7 @@ T3 = (J3/sigma)^0.25          { reradiating-wall temperature }`,
     value: "auto-cooling-loop",
     title: "Thermal/Automotive: Radiator + Pump + Fan Cooling Loop (EG50 coolant)",
     description: "An automotive cooling loop where the fan and pump operating points are found implicitly — each performance curve, entered as a TABLE and called like a function, is intersected with its quadratic flow resistance — and the radiator heat duty follows from a digitized effectiveness table. The coolant is a 50/50 ethylene glycol/water mixture (EG50) whose density and specific heat come straight from CoolProp. The fan curve is affinity-scaled by f_rpm so you can slow the fan or sweep it in a Parametric Table.",
-    note: "Solves to Q = 38.2 kW rejected, fan power 262 W and pump power 97 W, at an air-side operating point of 0.90 m³/s (~1910 CFM, 131 Pa) and a coolant flow of 89.8 L/min. EG50 at 90 °C gives ρ = 1019 kg/m³, cp = 3616 J/kg·K (vs water 965 / 4205). Data sources: cross-flow radiator effectiveness ε≈0.6–0.85 and heat rejection 25–50 kW (ResearchGate 397980466, FSAE study 356606738); SPAL 16-inch fan ~2500 CFM free-air / ~250 Pa max static (streetmusclemag.com); Davies-Craig EWP pump 90–162 L/min (daviescraig.com.au/electric-water-pumps).",
+    note: "Solves to Q = 38.2 kW rejected, fan power 262 W and pump power 97 W, at an air-side operating point of 0.90 m³/s (~1910 CFM, 131 Pa) and a coolant flow of 89.8 L/min. The TABLE input/output units ([m^3/s] → [Pa]) let frees derive SI units all the way through (Vair m³/s, dP_air Pa, Q W, T_c_out K) instead of showing '-'. EG50 at 90 °C gives ρ = 1019 kg/m³, cp = 3616 J/kg·K (vs water 965 / 4205). Data sources: cross-flow radiator effectiveness ε≈0.6–0.85 and heat rejection 25–50 kW (ResearchGate 397980466, FSAE study 356606738); SPAL 16-inch fan ~2500 CFM free-air / ~250 Pa max static (streetmusclemag.com); Davies-Craig EWP pump 90–162 L/min (daviescraig.com.au/electric-water-pumps).",
     code: `{ Automotive cooling loop: radiator + electric pump + electric fan.
   Coolant = 50/50 ethylene glycol / water (EG50), properties from CoolProp.
   Pump and fan curves are entered as TABLE blocks and used as functions.
@@ -700,8 +700,10 @@ eta_fan  = 0.45        { fan total efficiency }
 eta_pump = 0.55        { pump total efficiency }
 f_rpm    = 1           { fan speed / rated (set < 1 to slow the fan) }
 
-{ Fan curve: static pressure [Pa] vs air flow [m^3/s] }
-TABLE fanCurve(Vair)
+{ Fan curve: static pressure [Pa] vs air flow [m^3/s].
+  The [Pa] on the table output lets frees derive SI units for everything
+  computed from the lookup (dP_air, W_fan, ...). }
+TABLE fanCurve(Vair [m^3/s]) [Pa]
   0.0    250
   0.3    232
   0.6    195
@@ -710,24 +712,25 @@ TABLE fanCurve(Vair)
 END
 
 { Pump curve: head [Pa] vs coolant flow [m^3/s] }
-TABLE pumpCurve(Vc)
+TABLE pumpCurve(Vc [m^3/s]) [Pa]
   0.0      55000
   0.0008   48000
   0.0016   34000
   0.0023   0
 END
 
-{ Radiator effectiveness (digitized): epsilon vs air flow [m^3/s] }
-TABLE radEff(Vair)
+{ Radiator effectiveness (digitized): dimensionless epsilon vs air flow }
+TABLE radEff(Vair [m^3/s]) [-]
   0.3   0.45
   0.6   0.55
   0.9   0.62
   1.2   0.67
 END
 
-{ Flow resistances: dP = K * V^2 }
-K_air = 160
-K_c   = 1.6e10
+{ Flow resistances: dP = K * V^2, so K carries [Pa/(m^3/s)^2] = [kg/m^7].
+  Annotating K grounds the flows Vair, Vc at m^3/s. }
+K_air = 160 [kg/m^7]
+K_c   = 1.6e10 [kg/m^7]
 
 { Fan operating point (affinity-scaled to f_rpm) meets air-side resistance }
 dP_air = f_rpm^2 * fanCurve(Vair / f_rpm)
@@ -2449,6 +2452,21 @@ total = SumTo(10)   { 55 }`}</Code>
 END
 
 k_val = thermal_conductivity(350)`}</Code>
+            </Paper>
+            <Text style={{ lineHeight: 1.6 }}>
+              Declare <b>units</b> on the argument and/or the output so values
+              computed from a lookup inherit dimensions instead of showing
+              <Code>-</Code>. The same syntax works on <Code>FUNCTION</Code>{' '}
+              (e.g. <Code>FUNCTION f(x [m], y [s]) [m/s]</Code>):
+            </Text>
+            <Paper withBorder p="md" bg="dark.8">
+              <Code block>{`TABLE fanCurve(Vair [m^3/s]) [Pa]
+  0.0    250
+  0.6    195
+  1.18   0
+END
+
+dP = fanCurve(Vair)   { dP now derives in Pa, Vair in m^3/s }`}</Code>
             </Paper>
           </Stack>
         );

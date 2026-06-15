@@ -141,6 +141,56 @@ class UnitCheckerTest {
     }
 
     @Test
+    void tableOutputUnitFlowsToDerivedVariables() {
+        // A declared TABLE output unit ([Pa]) grounds the lookup result, so
+        // variables computed from it resolve instead of showing '-'.
+        String src = String.join("\n",
+                "TABLE pumpCurve(Vc) [Pa]",
+                "0.0    55000",
+                "0.001  40000",
+                "0.002  0",
+                "END",
+                "Vc = 0.001 [m^3/s]",
+                "head = pumpCurve(Vc)",
+                "W = head * Vc");
+        var derived = solver.deriveUnits(src, Map.of());
+        assertEquals("Pa", derived.get("head"));
+        assertEquals("W", derived.get("W"));
+    }
+
+    @Test
+    void tableInputUnitGroundsImplicitArgument() {
+        // Vair appears only inside the lookup arg and a K*V^2 resistance, so no
+        // single equation can ground it from output units alone. The declared
+        // input unit [m^3/s] grounds Vair; the rest then resolves.
+        String src = String.join("\n",
+                "TABLE fan(Vair [m^3/s]) [Pa]",
+                "0.0   250",
+                "0.6   195",
+                "1.18  0",
+                "END",
+                "K = 160 [kg/m^7]",
+                "dP = fan(Vair)",
+                "dP = K * Vair^2",
+                "W = dP * Vair");
+        var derived = solver.deriveUnits(src, Map.of());
+        assertEquals("m^3/s", derived.get("Vair"));
+        assertEquals("Pa", derived.get("dP"));
+        assertEquals("W", derived.get("W"));
+    }
+
+    @Test
+    void functionOutputUnitFlowsToDerivedVariables() {
+        String src = String.join("\n",
+                "FUNCTION sqr(x) [m^2]",
+                "  sqr := x*x",
+                "END",
+                "A = sqr(3)");
+        var derived = solver.deriveUnits(src, Map.of());
+        assertEquals("m^2", derived.get("A"));
+    }
+
+    @Test
     void rearrangementBailsOnNonMultiplicativeUnknowns() {
         // x trapped inside a sum with a wildcard term: not isolatable.
         var derived = solver.deriveUnits("F = m + x * 2",
