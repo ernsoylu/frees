@@ -667,13 +667,48 @@ public class EquationSystemSolver {
         }
     }
 
+    /** Declared output units of TABLE/FUNCTION defs (lowercased name -> SI unit). */
+    private static Map<String, String> functionOutputUnits(Map<String, ProcDef> defs) {
+        Map<String, String> units = new HashMap<>();
+        for (ProcDef def : defs.values()) {
+            String unit = switch (def) {
+                case ProcDef.FunctionTableDef t -> t.outputUnit();
+                case ProcDef.FunctionDef f -> f.outputUnit();
+                default -> null;
+            };
+            if (unit != null) {
+                units.put(def.name().toLowerCase(), unit);
+            }
+        }
+        return units;
+    }
+
+    /** Declared argument units of TABLE/FUNCTION defs (lowercased name -> per-arg SI units). */
+    private static Map<String, List<String>> functionInputUnits(Map<String, ProcDef> defs) {
+        Map<String, List<String>> units = new HashMap<>();
+        for (ProcDef def : defs.values()) {
+            List<String> argUnits = switch (def) {
+                case ProcDef.FunctionTableDef t -> t.argUnits();
+                case ProcDef.FunctionDef f -> f.paramUnits();
+                default -> null;
+            };
+            if (argUnits != null && argUnits.stream().anyMatch(java.util.Objects::nonNull)) {
+                units.put(def.name().toLowerCase(), argUnits);
+            }
+        }
+        return units;
+    }
+
     /**
      * Check Units: dimensional consistency warnings for the given source
      * against declared variable units. Never blocks solving.
      */
     public List<String> checkUnits(String source, Map<String, String> variableUnits) {
-        List<Equation> equations = parser.parse(source);
-        List<String> warnings = new ArrayList<>(UnitChecker.check(equations, variableUnits).warnings());
+        EquationParser.ParseResult parsed = parser.parseResult(source);
+        List<Equation> equations = parsed.equations();
+        List<String> warnings = new ArrayList<>(UnitChecker.check(
+                equations, variableUnits, functionOutputUnits(parsed.defs()),
+                functionInputUnits(parsed.defs())).warnings());
         try {
             List<Block> blocks = blocker.block(equations);
             for (Block block : blocks) {
@@ -756,7 +791,9 @@ public class EquationSystemSolver {
     public Map<String, String> deriveUnits(String source, Map<String, String> variableUnits) {
         EquationParser.ParseResult parsed = parser.parseResult(source);
         Map<String, String> derived =
-                UnitChecker.check(parsed.equations(), variableUnits).derivedUnits();
+                UnitChecker.check(parsed.equations(), variableUnits,
+                        functionOutputUnits(parsed.defs()),
+                        functionInputUnits(parsed.defs())).derivedUnits();
         Map<String, String> byDisplayName = new HashMap<>();
         derived.forEach((name, unit) ->
                 byDisplayName.put(parsed.displayNames().getOrDefault(name, name), unit));

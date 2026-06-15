@@ -31,12 +31,15 @@ public final class UnitChecker {
     public record Result(List<String> warnings, Map<String, String> derivedUnits) {}
 
     private final Map<String, Quantity> variableDims;
+    private final Map<String, Quantity> functionDims;
     private final List<String> warnings = new ArrayList<>();
     private final boolean collectWarnings;
     private String currentEquation;
 
-    private UnitChecker(Map<String, Quantity> variableDims, boolean collectWarnings) {
+    private UnitChecker(Map<String, Quantity> variableDims,
+                        Map<String, Quantity> functionDims, boolean collectWarnings) {
         this.variableDims = variableDims;
+        this.functionDims = functionDims;
         this.collectWarnings = collectWarnings;
     }
 
@@ -54,6 +57,26 @@ public final class UnitChecker {
      */
     public static Result check(List<Equation> equations,
                                Map<String, String> variableUnits) {
+        return check(equations, variableUnits, Map.of(), Map.of());
+    }
+
+    public static Result check(List<Equation> equations,
+                               Map<String, String> variableUnits,
+                               Map<String, String> functionUnits) {
+        return check(equations, variableUnits, functionUnits, Map.of());
+    }
+
+    /**
+     * As {@link #check(List, Map)}, plus declared units for TABLE/FUNCTION
+     * calls: output units (function name -> SI unit) carry the call's result
+     * dimensions, and argument units (function name -> per-arg SI units) ground
+     * the call's argument variables. Together they let variables computed from
+     * lookups/functions resolve instead of collapsing to dimensionless.
+     */
+    public static Result check(List<Equation> equations,
+                               Map<String, String> variableUnits,
+                               Map<String, String> functionUnits,
+                               Map<String, List<String>> functionInputUnits) {
         Map<String, Quantity> dims = new java.util.HashMap<>();
         List<String> warnings = new ArrayList<>();
 
@@ -69,16 +92,40 @@ public final class UnitChecker {
             }
         }
 
+        Map<String, Quantity> functionDims = new java.util.HashMap<>();
+        functionUnits.forEach((name, units) -> {
+            if (units != null && !units.isBlank()) {
+                try {
+                    functionDims.put(name.toLowerCase(), UnitRegistry.parse(units));
+                } catch (UnitRegistry.UnknownUnitException ignored) {
+                    // A bad declared unit just leaves the function unitless.
+                }
+            }
+        });
+
         // Derivation passes (warnings suppressed): when an equation has
         // exactly one variable with unknown dimensions and it participates
         // multiplicatively, its dimensions are solved by rearrangement
         // (F = m*g with F and g known gives m = kg). Iterates to a fixpoint
         // so chains propagate.
+        // Argument-unit declarations become synthetic "argExpr = X[unit]"
+        // equations, so the existing rearrangement grounds the argument's
+        // variable (e.g. fanCurve(Vair/f_rpm) with arg unit m^3/s gives Vair).
+        List<Equation> derivationEquations = equations;
+        if (!functionInputUnits.isEmpty()) {
+            List<Equation> augmented = new ArrayList<>(equations);
+            for (Equation eq : equations) {
+                collectArgUnitEquations(eq.lhs(), functionInputUnits, augmented);
+                collectArgUnitEquations(eq.rhs(), functionInputUnits, augmented);
+            }
+            derivationEquations = augmented;
+        }
+
         Map<String, String> derived = new java.util.HashMap<>();
-        UnitChecker deriver = new UnitChecker(dims, false);
+        UnitChecker deriver = new UnitChecker(dims, functionDims, false);
         for (int pass = 0; pass < 8; pass++) {
             boolean changed = false;
-            for (Equation eq : equations) {
+            for (Equation eq : derivationEquations) {
                 List<String> unknowns = eq.variables().stream()
                         .filter(v -> !dims.containsKey(v))
                         .toList();
@@ -117,7 +164,7 @@ public final class UnitChecker {
             }
         }
 
-        UnitChecker checker = new UnitChecker(dims, true);
+        UnitChecker checker = new UnitChecker(dims, functionDims, true);
         for (Equation eq : equations) {
             checker.currentEquation = eq.sourceText();
             Dim lhs = checker.dimOf(eq.lhs());
@@ -134,6 +181,45 @@ public final class UnitChecker {
 
         warnings.addAll(checker.warnings);
         return new Result(warnings, derived);
+    }
+
+    /**
+     * Walks an expression and, for each call to a function with declared
+     * argument units, emits a synthetic {@code argExpr = X[unit]} equation that
+     * the derivation passes solve to ground the argument's variable.
+     */
+    private static void collectArgUnitEquations(Expr e,
+                                                Map<String, List<String>> functionInputUnits,
+                                                List<Equation> out) {
+        switch (e) {
+            case Expr.Call c -> {
+                List<String> argUnits = functionInputUnits.get(c.function().toLowerCase());
+                List<Expr> args = c.args();
+                if (argUnits != null) {
+                    for (int k = 0; k < args.size() && k < argUnits.size(); k++) {
+                        String unit = argUnits.get(k);
+                        if (unit != null) {
+                            out.add(new Equation(args.get(k),
+                                    new Expr.Num(0.0, unit, false), "<arg unit>"));
+                        }
+                    }
+                }
+                for (Expr arg : args) {
+                    collectArgUnitEquations(arg, functionInputUnits, out);
+                }
+            }
+            case Expr.BinOp b -> {
+                collectArgUnitEquations(b.left(), functionInputUnits, out);
+                collectArgUnitEquations(b.right(), functionInputUnits, out);
+            }
+            case Expr.Neg n -> collectArgUnitEquations(n.operand(), functionInputUnits, out);
+            case Expr.ArrayLiteral al -> {
+                for (Expr el : al.elements()) {
+                    collectArgUnitEquations(el, functionInputUnits, out);
+                }
+            }
+            default -> { /* leaves carry no calls */ }
+        }
     }
 
     /** Known-dimension contribution plus the net exponent of the unknown. */
@@ -447,6 +533,11 @@ public final class UnitChecker {
     }
 
     private Dim dimOfCall(Expr.Call c) {
+        // User TABLE/FUNCTION with a declared output unit carries those dims.
+        Quantity declared = functionDims.get(c.function().toLowerCase());
+        if (declared != null) {
+            return Dim.of(declared);
+        }
         if (c.function().startsWith("prop$")) {
             return propertyDim(c.function());
         }

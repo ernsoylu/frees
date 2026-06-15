@@ -60,7 +60,7 @@ cd frontend && npm start                      # dev-only: Vite dev server (proxi
 - Variable names are **case-insensitive**.
 - The solver groups equations into blocks via Tarjan's algorithm, then solves each block using Newton's method with step-halving.
 - Data types are parsed dynamically by naming convention: `$` suffix → string, `#` suffix → constant, `[]` → array, `_r`/`_i` components → complex numbers.
-- **All calculations run in SI** (frees decision): unit-annotated constants are converted to SI at parse time, and computed variables get dimensionally derived SI units. Unit warnings never block solving.
+- **All calculations run in SI** (frees decision): unit-annotated constants are converted to SI at parse time, and computed variables get dimensionally derived SI units. Unit warnings never block solving. `TABLE`/`FUNCTION` blocks may declare argument and output units (`TABLE fanCurve(Vair [m^3/s]) [Pa]`, `FUNCTION f(x [m]) [m/s]`); the unit checker uses them to ground lookup/function arguments and results so downstream variables resolve instead of going dimensionless.
 - **Uncertainty Propagation**: Computes system-wide first-order error propagation using finite-difference numerical Jacobians and an SVD solver. Propagated errors are combined via root-sum-square (RSS) and displayed as `val ± unc` in solutions. GUI inputs allow absolute or relative percentage values (which calculate each other). Users can also specify uncertainties directly in code using equations of the form `UncertaintyOf(X) = <expr>`, which are evaluated at the solved state before error propagation. When `UncertaintyOf(X)` queries are present in active equations, a second-solve pass resolves them w.r.t the computed uncertainties.
 
 ## Architecture Summary

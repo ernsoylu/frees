@@ -284,6 +284,8 @@ public final class UnitRegistry {
             new NamedUnit("Pa", new double[]{1, -1, -2, 0, 0, 0, 0}),
             new NamedUnit("J", new double[]{1, 2, -2, 0, 0, 0, 0}),
             new NamedUnit("W", new double[]{1, 2, -3, 0, 0, 0, 0}),
+            // Heat-capacity rate / thermal conductance, common in heat transfer.
+            new NamedUnit("W/K", new double[]{1, 2, -3, -1, 0, 0, 0}),
             // Engineering composites common in thermodynamics output.
             new NamedUnit("J/kg", new double[]{0, 2, -2, 0, 0, 0, 0}),
             new NamedUnit("J/kg-K", new double[]{0, 2, -2, -1, 0, 0, 0}),

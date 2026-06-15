@@ -14,8 +14,13 @@ public sealed interface ProcDef
      * FUNCTION name(params) ... END
      * Returns a single value assigned to the function name via ':='.
      */
-    record FunctionDef(String name, List<String> params,
-                       List<ProcStatement> body) implements ProcDef {}
+    record FunctionDef(String name, List<String> params, List<ProcStatement> body,
+                       String outputUnit, List<String> paramUnits) implements ProcDef {
+        /** Function without declared output/parameter units. */
+        public FunctionDef(String name, List<String> params, List<ProcStatement> body) {
+            this(name, params, body, null, null);
+        }
+    }
 
     /**
      * PROCEDURE name(inputs : outputs) ... END
@@ -42,7 +47,14 @@ public sealed interface ProcDef
      * (see CurveInterpolator).
      */
     record FunctionTableDef(String name, List<String> argNames, boolean xLog, boolean yLog,
-                            List<Curve> curves) implements ProcDef {}
+                            List<Curve> curves, String outputUnit, List<String> argUnits)
+            implements ProcDef {
+        /** Table without declared output/argument units. */
+        public FunctionTableDef(String name, List<String> argNames, boolean xLog, boolean yLog,
+                                List<Curve> curves) {
+            this(name, argNames, xLog, yLog, curves, null, null);
+        }
+    }
 
     /** One tabulated curve: its family parameter value (null for a lone
      * curve) and sample arrays sorted ascending by x. */
