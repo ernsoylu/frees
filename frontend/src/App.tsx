@@ -1633,8 +1633,13 @@ export default function App() {
               />
             </Paper>
           ) : (
-            // The digitizer brings its own side panel and needs the width.
-            activeTab !== 'digitizer' && solutionSidePanel
+            // The digitizer, diagram, and tables views own the full width and
+            // hide the Solution panel — the solve summary stays in the top-bar
+            // status pill, and the panel returns on the Editor/Plots tabs.
+            activeTab !== 'digitizer' &&
+            activeTab !== 'diagram' &&
+            activeTab !== 'table' &&
+            solutionSidePanel
           )}
         </Flex>
       </Flex>
