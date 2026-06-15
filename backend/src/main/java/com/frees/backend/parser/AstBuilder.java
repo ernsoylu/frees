@@ -578,7 +578,7 @@ public class AstBuilder extends FreesBaseVisitor<Expr> {
                 try {
                     var quantity = UnitRegistry.parseWithOffset(unit);
                     value = value * quantity.factor() + quantity.offset();
-                    unit = UnitRegistry.siName(quantity.dims());
+                    unit = UnitRegistry.siDisplayName(unit, quantity.dims());
                 } catch (UnitRegistry.UnknownUnitException ignored) {
                     // Keep the original text; surfaces as a unit warning.
                 }
@@ -605,7 +605,7 @@ public class AstBuilder extends FreesBaseVisitor<Expr> {
                 try {
                     var quantity = UnitRegistry.parseWithOffset(unit);
                     value = value * quantity.factor() + quantity.offset();
-                    unit = UnitRegistry.siName(quantity.dims());
+                    unit = UnitRegistry.siDisplayName(unit, quantity.dims());
                 } catch (UnitRegistry.UnknownUnitException ignored) {
                     // Keep the original text; surfaces as a unit warning.
                 }

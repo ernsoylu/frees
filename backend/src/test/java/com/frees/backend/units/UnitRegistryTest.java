@@ -139,6 +139,44 @@ class UnitRegistryTest {
     }
 
     @Test
+    void rpmConvertsToRadiansPerSecond() {
+        // 1 rpm = 2π/60 rad/s; case-insensitivity covers RPM.
+        assertEquals(2.0 * Math.PI / 60.0, UnitRegistry.parse("rpm").factor(), 1e-12);
+        assertEquals(UnitRegistry.parse("rpm").factor(), UnitRegistry.parse("RPM").factor(), 1e-12);
+        // 1000 rpm ≈ 104.72 rad/s.
+        assertEquals(104.71975511966, UnitRegistry.convert("rpm", "rad/s") * 1000.0, 1e-9);
+    }
+
+    @Test
+    void angularRateDisplaysAsRadPerSecondNotHz() {
+        double[] sInverse = UnitRegistry.parse("rpm").dims();
+        // rad/s and Hz share dimensions, so siName canonicalizes to Hz...
+        assertEquals("Hz", UnitRegistry.siName(sInverse));
+        // ...but angular-rate inputs keep the rad/s display.
+        assertEquals("rad/s", UnitRegistry.siDisplayName("rpm", sInverse));
+        assertEquals("rad/s", UnitRegistry.siDisplayName("rad/s", sInverse));
+        assertEquals("rad/s", UnitRegistry.siDisplayName("RAD/S", sInverse));
+        // A genuine frequency input still displays as Hz.
+        assertEquals("Hz", UnitRegistry.siDisplayName("1/s", sInverse));
+        assertEquals("Hz", UnitRegistry.siDisplayName("hz", sInverse));
+    }
+
+    @Test
+    void radPerMinuteAndHourConvertToRadPerSecond() {
+        // rad is dimensionless, so these are s⁻¹ scaled by the time unit.
+        assertEquals(1.0 / 60.0, UnitRegistry.parse("rad/min").factor(), 1e-12);
+        assertEquals(1.0 / 3600.0, UnitRegistry.parse("rad/h").factor(), 1e-12);
+        assertEquals(1.0 / 3600.0, UnitRegistry.parse("rad/hr").factor(), 1e-12);
+        assertEquals(60.0, UnitRegistry.convert("rad/s", "rad/min"), 1e-9);
+        assertEquals(3600.0, UnitRegistry.convert("rad/s", "rad/h"), 1e-9);
+        // All angular rates display as rad/s.
+        double[] sInverse = UnitRegistry.parse("rad/min").dims();
+        assertEquals("rad/s", UnitRegistry.siDisplayName("rad/min", sInverse));
+        assertEquals("rad/s", UnitRegistry.siDisplayName("rad/h", sInverse));
+        assertEquals("rad/s", UnitRegistry.siDisplayName("rad/hr", sInverse));
+    }
+
+    @Test
     void testQuantityRecordContract() {
         double[] dims1 = {1, 0, 0, 0, 0, 0, 0};
         double[] dims2 = {1, 0, 0, 0, 0, 0, 0};
