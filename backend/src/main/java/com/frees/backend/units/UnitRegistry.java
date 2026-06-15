@@ -140,6 +140,10 @@ public final class UnitRegistry {
         define("mhz", 1e6, 0, 0, -1);
         define("ghz", 1e9, 0, 0, -1);
 
+        // Angular velocity: rad/s (rad is dimensionless, so this is s⁻¹).
+        // rpm = revolutions per minute = 2π rad / 60 s.
+        define("rpm", 2.0 * Math.PI / 60.0, 0, 0, -1);
+
         // Electrical: derived from kg, m, s, A
         // Voltage: V = kg·m²·s⁻³·A⁻¹
         define("v", 1.0, 1, 2, -3, 0, 0, -1);
@@ -351,6 +355,29 @@ public final class UnitRegistry {
             return numerator.toString();
         }
         return (numerator.length() == 0 ? "1" : numerator.toString()) + "/" + denominator;
+    }
+
+    /** Angular-rate units (s⁻¹) that engineers expect displayed as rad/s, not Hz. */
+    private static final java.util.Set<String> ANGULAR_RATE_UNITS = java.util.Set.of(
+            "rpm", "rad/s", "rad/sec", "radian/s", "radians/s",
+            "rad/min", "rad/h", "rad/hr", "rad/hour");
+
+    /**
+     * SI display name for a value originally written with {@code originalUnit}.
+     *
+     * Angular-rate units (rpm, rad/s) are dimensionally identical to frequency
+     * (s⁻¹) because radians are dimensionless, so {@link #siName} alone would
+     * canonicalize them to "Hz". This preserves the engineer's intent and shows
+     * "rad/s" instead; everything else defers to {@link #siName}.
+     */
+    public static String siDisplayName(String originalUnit, double[] dims) {
+        if (originalUnit != null) {
+            String normalized = originalUnit.trim().toLowerCase().replace(" ", "");
+            if (ANGULAR_RATE_UNITS.contains(normalized)) {
+                return "rad/s";
+            }
+        }
+        return siName(dims);
     }
 
     /**
