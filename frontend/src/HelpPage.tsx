@@ -2910,7 +2910,7 @@ W_dot_net = m_dot * w_net`}
               </Text>
             </Title>
           </Group>
-          <Badge color="blue" variant="filled" size="lg">v1.2.0 (Stable)</Badge>
+          <Badge color="blue" variant="filled" size="lg">v0.0.1</Badge>
         </Group>
       </AppShell.Header>
 
