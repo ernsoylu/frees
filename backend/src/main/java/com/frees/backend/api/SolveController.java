@@ -450,6 +450,7 @@ public class SolveController {
             return ResponseEntity.ok(new SolveResponse(
                     true,
                     result.variables().entrySet().stream()
+                            .filter(e -> !isInternalTemp(e.getKey()))
                             .map(e -> {
                                 String canonicalName = e.getKey().toLowerCase();
                                 Double siUnc = result.uncertainties() != null ? result.uncertainties().get(canonicalName) : null;
@@ -475,6 +476,7 @@ public class SolveController {
                     result.solutions().stream()
                             .map(s -> new SolutionDto(
                                     s.variables().entrySet().stream()
+                                            .filter(e -> !isInternalTemp(e.getKey()))
                                             .map(e -> {
                                                 String canonicalName = e.getKey().toLowerCase();
                                                 Double siUnc = result.uncertainties() != null ? result.uncertainties().get(canonicalName) : null;
@@ -504,6 +506,29 @@ public class SolveController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(SolveResponse.failure(e.getMessage() != null ? e.getMessage() : e.toString()));
         }
+    }
+
+    /** Prefixes of helper unknowns the matrix library materializes for a matrix
+     * function used inside a larger expression (e.g. {@code x = Inverse(A) * b}).
+     * They are real solver variables but an implementation detail, so they are
+     * filtered out of the user-facing solution. A direct assignment like
+     * {@code C = Inverse(A)} writes its output directly and never creates one. */
+    private static final List<String> INTERNAL_TEMP_PREFIXES =
+            List.of("inverse_temp_", "backslash_temp_", "solvelinear_temp_");
+
+    /** True for an indexed element of an internal matrix-library temporary,
+     * e.g. {@code inverse_temp_12[1,2]}. Matches on the canonical name (its
+     * base index, before any '['), so a user variable such as {@code motor_temp_5}
+     * is never affected. */
+    private static boolean isInternalTemp(String name) {
+        int bracket = name.indexOf('[');
+        String base = (bracket >= 0 ? name.substring(0, bracket) : name).toLowerCase();
+        for (String prefix : INTERNAL_TEMP_PREFIXES) {
+            if (base.startsWith(prefix)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public record TableDto(
