@@ -222,6 +222,32 @@ export default function App() {
     }
   }
 
+  // Insert a function template at the editor caret (Functions menu). "$0" in
+  // the snippet marks where the caret lands; selected text is replaced.
+  const insertFunction = useCallback(
+    (snippet: string) => {
+      const caretMark = snippet.indexOf('$0')
+      const clean = snippet.replace('$0', '')
+      setActiveTab('equations')
+      setEqView('editor')
+      setText((prev) => {
+        const ta = textareaRef.current
+        const start = ta ? ta.selectionStart : prev.length
+        const end = ta ? ta.selectionEnd : prev.length
+        const next = prev.slice(0, start) + clean + prev.slice(end)
+        const caret = start + (caretMark >= 0 ? caretMark : clean.length)
+        setTimeout(() => {
+          if (textareaRef.current) {
+            textareaRef.current.focus()
+            textareaRef.current.setSelectionRange(caret, caret)
+          }
+        }, 0)
+        return next
+      })
+    },
+    [],
+  )
+
   useEffect(() => {
     syncScroll()
   }, [text])
@@ -1057,6 +1083,7 @@ export default function App() {
           onMinMax={() => setShowMinMax(true)}
           onCurveFit={() => setShowCurveFit(true)}
           onPreferences={() => setShowPreferences(true)}
+          onInsertFunction={insertFunction}
         />
         <input
           ref={projectFileRef}
