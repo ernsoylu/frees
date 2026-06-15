@@ -230,6 +230,8 @@ type DragState =
   | { type: 'resize'; id: string; handle: Handle; original: DiagramElement }
   | { type: 'groupResize'; handle: Handle; originals: DiagramElement[]; bbox: Box }
   | { type: 'endpoint'; id: string; which: 1 | 2 }
+  | { type: 'connector-mid'; id: string; axis: 'x' | 'y' }
+  | { type: 'waypoint'; id: string; index: number }
   | { type: 'rotate'; id: string; original: DiagramElement; cx: number; cy: number }
   | { type: 'marquee'; startX: number; startY: number; additive: boolean }
   | {
@@ -1085,21 +1087,69 @@ function EmbeddedChart({
   )
 }
 
-function getConnectorPath(el: ConnectorElement, elements: DiagramElement[]): string {
+/** Resolved end anchors of a connector, or null if its elements are gone. */
+function getConnectorEnds(
+  el: ConnectorElement,
+  elements: DiagramElement[],
+): { p1: { x: number; y: number }; p2: { x: number; y: number } } | null {
   const fromEl = elements.find((e) => e.id === el.fromId)
   const toEl = elements.find((e) => e.id === el.toId)
-  if (!fromEl || !toEl) return ''
-  
-  const p1 = getAnchorCoordinate(fromEl, el.fromAnchor)
-  const p2 = getAnchorCoordinate(toEl, el.toAnchor)
-  
+  if (!fromEl || !toEl) return null
+  return {
+    p1: getAnchorCoordinate(fromEl, el.fromAnchor),
+    p2: getAnchorCoordinate(toEl, el.toAnchor),
+  }
+}
+
+/** Ordered vertices the route threads through: from-anchor, waypoints, to-anchor. */
+function getConnectorVertices(
+  el: ConnectorElement,
+  elements: DiagramElement[],
+): { x: number; y: number }[] | null {
+  const ends = getConnectorEnds(el, elements)
+  if (!ends) return null
+  return [ends.p1, ...(el.waypoints ?? []), ends.p2]
+}
+
+/** Smooth Catmull-Rom spline through the given points (for the curved style). */
+function smoothPath(pts: { x: number; y: number }[]): string {
+  if (pts.length < 3) return `M ${pts.map((p) => `${p.x} ${p.y}`).join(' L ')}`
+  let d = `M ${pts[0].x} ${pts[0].y}`
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p0 = pts[i - 1] ?? pts[i]
+    const p1 = pts[i]
+    const p2 = pts[i + 1]
+    const p3 = pts[i + 2] ?? p2
+    const c1x = p1.x + (p2.x - p0.x) / 6
+    const c1y = p1.y + (p2.y - p0.y) / 6
+    const c2x = p2.x - (p3.x - p1.x) / 6
+    const c2y = p2.y - (p3.y - p1.y) / 6
+    d += ` C ${c1x} ${c1y}, ${c2x} ${c2y}, ${p2.x} ${p2.y}`
+  }
+  return d
+}
+
+function getConnectorPath(el: ConnectorElement, elements: DiagramElement[]): string {
+  const ends = getConnectorEnds(el, elements)
+  if (!ends) return ''
+  const { p1, p2 } = ends
+  const wps = el.waypoints ?? []
+
+  // Once the user has placed waypoints, the route threads through them as a
+  // polyline (curved style smooths it) — this is the manual multi-bend mode.
+  if (wps.length > 0) {
+    const pts = [p1, ...wps, p2]
+    if (el.style === 'curved') return smoothPath(pts)
+    return `M ${pts.map((p) => `${p.x} ${p.y}`).join(' L ')}`
+  }
+
   if (el.style === 'straight') {
     return `M ${p1.x} ${p1.y} L ${p2.x} ${p2.y}`
   }
-  
-  const n1 = getAnchorNormal(fromEl, el.fromAnchor)
-  const n2 = getAnchorNormal(toEl, el.toAnchor)
-  
+
+  const n1 = getAnchorNormal(elements.find((e) => e.id === el.fromId)!, el.fromAnchor)
+  const n2 = getAnchorNormal(elements.find((e) => e.id === el.toId)!, el.toAnchor)
+
   if (el.style === 'curved') {
     const dist = Math.max(40, Math.hypot(p2.x - p1.x, p2.y - p1.y) * 0.35)
     const cx1 = p1.x + n1.x * dist
@@ -1108,16 +1158,40 @@ function getConnectorPath(el: ConnectorElement, elements: DiagramElement[]): str
     const cy2 = p2.y + n2.y * dist
     return `M ${p1.x} ${p1.y} C ${cx1} ${cy1}, ${cx2} ${cy2}, ${p2.x} ${p2.y}`
   }
-  
-  // Orthogonal (elbow)
+
+  // Orthogonal (auto single elbow). The mid-segment is draggable: `el.mid`
+  // overrides the auto-centred position like in Visio/Lucid.
   const isHorizontal = Math.abs(n1.x) > Math.abs(n1.y)
   if (isHorizontal) {
-    const mx = (p1.x + p2.x) / 2
+    const mx = el.mid ?? (p1.x + p2.x) / 2
     return `M ${p1.x} ${p1.y} L ${mx} ${p1.y} L ${mx} ${p2.y} L ${p2.x} ${p2.y}`
   } else {
-    const my = (p1.y + p2.y) / 2
+    const my = el.mid ?? (p1.y + p2.y) / 2
     return `M ${p1.x} ${p1.y} L ${p1.x} ${my} L ${p2.x} ${my} L ${p2.x} ${p2.y}`
   }
+}
+
+/**
+ * Position of the draggable mid-segment ("elbow") of an auto-routed orthogonal
+ * connector (no manual waypoints), and which axis dragging it moves. Returns
+ * null otherwise.
+ */
+function getConnectorElbow(
+  el: ConnectorElement,
+  elements: DiagramElement[],
+): { x: number; y: number; axis: 'x' | 'y' } | null {
+  if (el.style !== 'orthogonal' || (el.waypoints?.length ?? 0) > 0) return null
+  const ends = getConnectorEnds(el, elements)
+  if (!ends) return null
+  const { p1, p2 } = ends
+  const n1 = getAnchorNormal(elements.find((e) => e.id === el.fromId)!, el.fromAnchor)
+  const isHorizontal = Math.abs(n1.x) > Math.abs(n1.y)
+  if (isHorizontal) {
+    const mx = el.mid ?? (p1.x + p2.x) / 2
+    return { x: mx, y: (p1.y + p2.y) / 2, axis: 'x' }
+  }
+  const my = el.mid ?? (p1.y + p2.y) / 2
+  return { x: (p1.x + p2.x) / 2, y: my, axis: 'y' }
 }
 
 function parseColor(color: string): { r: number; g: number; b: number } {
@@ -1875,6 +1949,11 @@ function SelectionHandles({
   onHandleDown,
   onEndpointDown,
   onRotateDown,
+  onElbowDown,
+  onElbowReset,
+  onWaypointDown,
+  onSegmentDown,
+  onWaypointDelete,
   elements = [],
 }: Readonly<{
   el: DiagramElement
@@ -1882,6 +1961,11 @@ function SelectionHandles({
   onHandleDown: (e: React.MouseEvent, handle: 'nw' | 'ne' | 'sw' | 'se') => void
   onEndpointDown: (e: React.MouseEvent, which: 1 | 2) => void
   onRotateDown: (e: React.MouseEvent) => void
+  onElbowDown: (e: React.MouseEvent, axis: 'x' | 'y') => void
+  onElbowReset: (id: string) => void
+  onWaypointDown: (e: React.MouseEvent, index: number) => void
+  onSegmentDown: (e: React.MouseEvent, segIndex: number, at: { x: number; y: number }) => void
+  onWaypointDelete: (id: string, index: number) => void
   elements?: DiagramElement[]
 }>) {
   const size = 8 / view.k
@@ -1890,20 +1974,70 @@ function SelectionHandles({
   const transform = el.rotation ? `rotate(${el.rotation} ${cx} ${cy})` : undefined
 
   if (el.kind === 'connector') {
-    const b = elementBounds(el, elements)
+    const elbow = getConnectorElbow(el, elements)
+    const verts = getConnectorVertices(el, elements) ?? []
+    const wps = el.waypoints ?? []
+    // Hollow "+" handles at each segment midpoint: drag one to insert a bend.
+    const segHandles = verts.slice(0, -1).map((a, i) => {
+      const bpt = verts[i + 1]
+      return { i, x: (a.x + bpt.x) / 2, y: (a.y + bpt.y) / 2 }
+    })
     return (
       <g>
-        <rect
-          x={b.x}
-          y={b.y}
-          width={b.w}
-          height={b.h}
-          fill="none"
-          stroke={color}
-          strokeWidth={1 / view.k}
-          strokeDasharray={`${4 / view.k} ${3 / view.k}`}
-          pointerEvents="none"
-        />
+        {/* Solid handles at each user waypoint: drag to move, dbl-click to delete. */}
+        {wps.map((w, i) => (
+          <circle
+            key={`wp-${i}`}
+            cx={w.x}
+            cy={w.y}
+            r={size * 0.8}
+            fill="#fff"
+            stroke={color}
+            strokeWidth={2 / view.k}
+            style={{ cursor: 'move' }}
+            onPointerDown={(e) => onWaypointDown(e, i)}
+            onDoubleClick={(e) => {
+              e.stopPropagation()
+              onWaypointDelete(el.id, i)
+            }}
+          />
+        ))}
+        {/* Add-a-bend handles on each segment (hidden once there are many). */}
+        {segHandles.map((s) => (
+          <g key={`seg-${s.i}`}>
+            <circle
+              cx={s.x}
+              cy={s.y}
+              r={size * 0.6}
+              fill={color}
+              opacity={0.35}
+              style={{ cursor: 'copy' }}
+              onPointerDown={(e) => onSegmentDown(e, s.i, { x: s.x, y: s.y })}
+            />
+            <path
+              d={`M ${s.x - size * 0.3} ${s.y} h ${size * 0.6} M ${s.x} ${s.y - size * 0.3} v ${size * 0.6}`}
+              stroke="#fff"
+              strokeWidth={1.2 / view.k}
+              pointerEvents="none"
+            />
+          </g>
+        ))}
+        {elbow && (
+          <circle
+            cx={elbow.x}
+            cy={elbow.y}
+            r={size * 0.8}
+            fill="#fff"
+            stroke={color}
+            strokeWidth={2 / view.k}
+            style={{ cursor: elbow.axis === 'x' ? 'ew-resize' : 'ns-resize' }}
+            onPointerDown={(e) => onElbowDown(e, elbow.axis)}
+            onDoubleClick={(e) => {
+              e.stopPropagation()
+              onElbowReset(el.id)
+            }}
+          />
+        )}
       </g>
     )
   }
@@ -3076,18 +3210,65 @@ function PropertiesPanel({
             value={el.style}
             onChange={(v) => set({ style: v as ConnectorElement['style'] })}
           />
-          <Select
-            label="Arrowheads"
-            size="xs"
-            data={[
-              { label: 'None', value: 'none' },
-              { label: 'Start (From)', value: 'from' },
-              { label: 'End (To)', value: 'to' },
-              { label: 'Both', value: 'both' },
-            ]}
-            value={el.arrow}
-            onChange={(v) => set({ arrow: v as ConnectorElement['arrow'] })}
-          />
+          <div>
+            <Text size="xs" fw={500} mb={4}>
+              Arrowheads
+            </Text>
+            <Group gap="sm">
+              {(() => {
+                const startOn = el.arrow === 'from' || el.arrow === 'both'
+                const endOn = el.arrow === 'to' || el.arrow === 'both'
+                const apply = (s: boolean, e2: boolean) =>
+                  set({ arrow: s && e2 ? 'both' : s ? 'from' : e2 ? 'to' : 'none' })
+                return (
+                  <>
+                    <Checkbox
+                      size="xs"
+                      label="Start"
+                      checked={startOn}
+                      onChange={(ev) => apply(ev.currentTarget.checked, endOn)}
+                    />
+                    <Checkbox
+                      size="xs"
+                      label="End"
+                      checked={endOn}
+                      onChange={(ev) => apply(startOn, ev.currentTarget.checked)}
+                    />
+                  </>
+                )
+              })()}
+            </Group>
+            <Group gap={6} mt={6}>
+              <Button
+                size="compact-xs"
+                variant="light"
+                onClick={() => set({ arrow: 'both' })}
+              >
+                Both ends
+              </Button>
+              <Button
+                size="compact-xs"
+                variant="default"
+                onClick={() => set({ arrow: 'none' })}
+              >
+                No arrows
+              </Button>
+            </Group>
+          </div>
+          {(el.waypoints?.length ?? 0) > 0 && (
+            <Button
+              size="compact-xs"
+              variant="light"
+              color="gray"
+              onClick={() => set({ waypoints: undefined })}
+            >
+              Clear bends ({el.waypoints?.length})
+            </Button>
+          )}
+          <Text size="10px" c="dimmed">
+            Select the connector, then drag the white dots to bend it; drag a “+”
+            on a segment to add a bend, or double-click a dot to remove it.
+          </Text>
         </>
       )}
 
@@ -4612,6 +4793,50 @@ export default function DiagramTab(props: Readonly<Props>) {
     setDrag({ type: 'endpoint', id: selected.id, which })
   }
 
+  const onElbowDown = (e: React.MouseEvent, axis: 'x' | 'y') => {
+    if (!selected) return
+    e.stopPropagation()
+    gestureBaseRef.current = stateRef.current
+    setDrag({ type: 'connector-mid', id: selected.id, axis })
+  }
+
+  // Double-click the elbow handle to clear the manual position and re-centre.
+  const resetConnectorMid = (id: string) => {
+    const el = stateRef.current.elements.find((e) => e.id === id)
+    if (!el || el.kind !== 'connector') return
+    const next = { ...el }
+    delete (next as { mid?: number }).mid
+    updateElement(id, next, `connmid:${id}`)
+  }
+
+  // Drag an existing waypoint (multi-bend routing).
+  const onWaypointDown = (e: React.MouseEvent, index: number) => {
+    if (!selected) return
+    e.stopPropagation()
+    gestureBaseRef.current = stateRef.current
+    setDrag({ type: 'waypoint', id: selected.id, index })
+  }
+
+  // Drag a segment's midpoint to insert a new waypoint there, then move it.
+  // `segIndex` is the index in the waypoints array at which to insert.
+  const onSegmentDown = (e: React.MouseEvent, segIndex: number, at: { x: number; y: number }) => {
+    if (!selected || selected.kind !== 'connector') return
+    e.stopPropagation()
+    gestureBaseRef.current = stateRef.current
+    const wps = [...(selected.waypoints ?? [])]
+    wps.splice(segIndex, 0, { x: snap(at.x), y: snap(at.y) })
+    updateElement(selected.id, { ...selected, waypoints: wps }, `waypoint:${selected.id}`)
+    setDrag({ type: 'waypoint', id: selected.id, index: segIndex })
+  }
+
+  // Double-click a waypoint to delete it (drops back toward a straighter route).
+  const deleteWaypoint = (id: string, index: number) => {
+    const el = stateRef.current.elements.find((e) => e.id === id)
+    if (!el || el.kind !== 'connector' || !el.waypoints) return
+    const wps = el.waypoints.filter((_, i) => i !== index)
+    updateElement(id, { ...el, waypoints: wps.length ? wps : undefined }, `waypoint:${id}`)
+  }
+
   const onRotateDown = (e: React.MouseEvent) => {
     if (!selected) return
     e.stopPropagation()
@@ -4741,6 +4966,28 @@ export default function DiagramTab(props: Readonly<Props>) {
     [snap, updateElementLive],
   )
 
+  const applyConnectorMid = useCallback(
+    (d: Extract<DragState, { type: 'connector-mid' }>, world: { x: number; y: number }) => {
+      const el = stateRef.current.elements.find((e) => e.id === d.id)
+      if (!el || el.kind !== 'connector') return
+      const mid = d.axis === 'x' ? snap(world.x) : snap(world.y)
+      updateElementLive(d.id, { ...el, mid })
+    },
+    [snap, updateElementLive],
+  )
+
+  const applyWaypoint = useCallback(
+    (d: Extract<DragState, { type: 'waypoint' }>, world: { x: number; y: number }) => {
+      const el = stateRef.current.elements.find((e) => e.id === d.id)
+      if (!el || el.kind !== 'connector' || !el.waypoints) return
+      const wps = el.waypoints.map((w, i) =>
+        i === d.index ? { x: snap(world.x), y: snap(world.y) } : w,
+      )
+      updateElementLive(d.id, { ...el, waypoints: wps })
+    },
+    [snap, updateElementLive],
+  )
+
   const applyMarquee = useCallback(
     (d: Extract<DragState, { type: 'marquee' }>, world: { x: number; y: number }) => {
       setMarquee({
@@ -4810,6 +5057,8 @@ export default function DiagramTab(props: Readonly<Props>) {
       else if (drag.type === 'resize') applyResize(drag, world, shift)
       else if (drag.type === 'groupResize') applyGroupResize(drag, world, shift)
       else if (drag.type === 'endpoint') applyEndpoint(drag, world)
+      else if (drag.type === 'connector-mid') applyConnectorMid(drag, world)
+      else if (drag.type === 'waypoint') applyWaypoint(drag, world)
       else if (drag.type === 'rotate') applyRotate(drag, world, shift)
       else if (drag.type === 'marquee') applyMarquee(drag, world)
       else if (drag.type === 'create-connector') applyCreateConnector(drag, world)
@@ -4839,6 +5088,8 @@ export default function DiagramTab(props: Readonly<Props>) {
         drag.type === 'resize' ||
         drag.type === 'groupResize' ||
         drag.type === 'endpoint' ||
+        drag.type === 'connector-mid' ||
+        drag.type === 'waypoint' ||
         drag.type === 'rotate'
       ) {
         endGesture()
@@ -4910,6 +5161,8 @@ export default function DiagramTab(props: Readonly<Props>) {
     applyResize,
     applyGroupResize,
     applyEndpoint,
+    applyConnectorMid,
+    applyWaypoint,
     applyRotate,
     applyMarquee,
     applyCreateConnector,
@@ -5828,6 +6081,11 @@ export default function DiagramTab(props: Readonly<Props>) {
                   onHandleDown={onHandleDown}
                   onEndpointDown={onEndpointDown}
                   onRotateDown={onRotateDown}
+                  onElbowDown={onElbowDown}
+                  onElbowReset={resetConnectorMid}
+                  onWaypointDown={onWaypointDown}
+                  onSegmentDown={onSegmentDown}
+                  onWaypointDelete={deleteWaypoint}
                   elements={state.elements}
                 />
               )}
