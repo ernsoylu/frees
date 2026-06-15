@@ -50,7 +50,7 @@ function tokenize(src: string): Token[] {
       if (j < src.length && (src[j] === 'e' || src[j] === 'E')) {
         j++
         if (j < src.length && (src[j] === '+' || src[j] === '-')) j++
-        while (j < src.length && /[0-9]/.test(src[j])) j++
+        while (j < src.length && /\d/.test(src[j])) j++
       }
       tokens.push({ t: 'num', v: Number(src.slice(i, j)) })
       i = j

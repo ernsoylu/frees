@@ -341,7 +341,7 @@ public final class UnitRegistry {
                 continue;
             }
             StringBuilder target = e > 0 ? numerator : denominator;
-            if (target.length() > 0) {
+            if (!target.isEmpty()) {
                 target.append(e > 0 ? ' ' : '-');
             }
             target.append(BASE_SYMBOLS[i]);
@@ -351,10 +351,10 @@ public final class UnitRegistry {
                         ? String.valueOf((long) abs) : String.valueOf(abs));
             }
         }
-        if (denominator.length() == 0) {
+        if (denominator.isEmpty()) {
             return numerator.toString();
         }
-        return (numerator.length() == 0 ? "1" : numerator.toString()) + "/" + denominator;
+        return (numerator.isEmpty() ? "1" : numerator.toString()) + "/" + denominator;
     }
 
     /** Angular-rate units (s⁻¹) that engineers expect displayed as rad/s, not Hz. */

@@ -16,10 +16,13 @@ import {
   Alert,
   Card,
   Button,
-  SimpleGrid
+  SimpleGrid,
+  TextInput,
+  CloseButton,
+  Accordion as MantineAccordion
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 
 function CopyButton({ code }: Readonly<{ code: string }>) {
   const [copied, setCopied] = useState(false);
@@ -1123,8 +1126,6 @@ const EXAMPLE_CATEGORIES: [string, typeof CYCLE_EXAMPLES][] = (() => {
 })();
 
 
-import { ReactNode } from 'react';
-import { TextInput, CloseButton, Accordion as MantineAccordion } from '@mantine/core';
 import {
   IconSearch,
   IconBook,

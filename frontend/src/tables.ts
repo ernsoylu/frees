@@ -130,7 +130,7 @@ function unscaleVal(v: number, log: boolean): number {
 }
 
 function fmtCell(v: number): string {
-  return parseFloat(v.toPrecision(6)).toString()
+  return Number.parseFloat(v.toPrecision(6)).toString()
 }
 
 /**
@@ -182,7 +182,7 @@ export function sortFunctionRows(table: FunctionTableSpec): FunctionTableSpec {
 }
 
 function fmt6(v: number): string {
-  return parseFloat(v.toPrecision(6)).toString()
+  return Number.parseFloat(v.toPrecision(6)).toString()
 }
 
 function identifier(raw: string, fallback: string): string {

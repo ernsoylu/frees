@@ -386,7 +386,7 @@ export function buildXYFigure(
       const s = series[0]
       traces.push({
         type: 'pie',
-        labels: s.x.map((val) => String(val)),
+        labels: s.x.map(String),
         values: s.y,
         name: s.name,
         textposition: 'inside',
