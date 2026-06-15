@@ -2402,6 +2402,7 @@ u$ = UnitsOf$(var)`}
               <List.Item><strong>Row Vector:</strong> Comma or space separated elements: <code>v = [1, 2, 3]</code> or <code>v = [1 2 3]</code> (1x3 matrix)</List.Item>
               <List.Item><strong>Column Vector:</strong> Semicolon separated elements: <code>v = [1; 2; 3]</code> (3x1 matrix)</List.Item>
               <List.Item><strong>2D Matrix:</strong> Rows separated by semicolons, elements separated by spaces/commas: <code>A = [1 2; 3 4]</code> (2x2 matrix)</List.Item>
+              <List.Item><strong>Units:</strong> a trailing unit after the bracket applies to every element: <code>c = [2 3 4 5 6] [kg]</code>, <code>A = [1 2; 3 4] [m]</code></List.Item>
             </List>
             <Text mt="xs">
               You can use <strong>bare names</strong> (MATLAB style) — <code>A = [3 4 5; 1 2 6; 7 8 1]</code> creates the matrix and <code>SolveLinear(A, b)</code>, <code>inv(A)</code>, <code>A * b</code> all accept it directly — or the explicit indexed form <code>A[1..3, 1..3] = …</code> when you want to address elements.
@@ -2461,8 +2462,22 @@ g = linspace(0, 10, 5)`}</Code>
                   <Table.Td>Backslash solver (solves $A \\\\cdot x = b$ for $x$)</Table.Td>
                   <Table.Td><Code>x = A \\\\ b</Code></Table.Td>
                 </Table.Tr>
+                <Table.Tr>
+                  <Table.Td><Code>.*</Code>, <Code>./</Code>, <Code>.\\\\</Code>, <Code>.^</Code></Table.Td>
+                  <Table.Td>MATLAB-style <strong>element-wise</strong> multiply, divide, left-divide, and power. A scalar on either side broadcasts to every element.</Table.Td>
+                  <Table.Td><Code>C = A .* B</Code>, <Code>C = A .^ 2</Code></Table.Td>
+                </Table.Tr>
               </Table.Tbody>
             </Table>
+            <Alert color="blue" variant="light" title="Element-wise vs. matrix operators">
+              <Text size="sm">
+                <Code>A * B</Code> is matrix multiplication (inner dimensions must
+                agree), while <Code>A .* B</Code> multiplies element-by-element
+                (shapes must match, or one side is a scalar). The same holds for{' '}
+                <Code>./</Code> and <Code>.^</Code>. Left-divide <Code>A .\\\\ B</Code>{' '}
+                is element-wise <Code>B ./ A</Code>.
+              </Text>
+            </Alert>
             <Alert color="blue" title="Transpose and Backslash Syntax Note">
               The suffix transpose is written as a single quote after a matrix: <code>A'</code>. Backslash is entered as double-backslash <code>\\\\</code> in the editor to resolve correctly.
             </Alert>

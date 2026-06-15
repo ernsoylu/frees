@@ -596,10 +596,21 @@ public class AstBuilder extends FreesBaseVisitor<Expr> {
     public Expr visitMulExpr(FreesParser.MulExprContext ctx) {
         Expr result = visit(ctx.unaryExpr(0));
         for (int i = 1; i < ctx.unaryExpr().size(); i++) {
-            char op = ctx.getChild(2 * i - 1).getText().charAt(0);
+            char op = mulOpChar(ctx.getChild(2 * i - 1).getText());
             result = new Expr.BinOp(op, result, visit(ctx.unaryExpr(i)));
         }
         return result;
+    }
+
+    /** Map a multiplicative operator's text to its op char, including the
+     * MATLAB-style element-wise operators (which are two characters). */
+    private static char mulOpChar(String text) {
+        return switch (text) {
+            case ".*" -> EquationParser.ELEMENT_MUL;
+            case "./" -> EquationParser.ELEMENT_DIV;
+            case ".\\" -> EquationParser.ELEMENT_LDIV;
+            default -> text.charAt(0);
+        };
     }
 
     @Override
@@ -618,7 +629,8 @@ public class AstBuilder extends FreesBaseVisitor<Expr> {
     public Expr visitPowExpr(FreesParser.PowExprContext ctx) {
         Expr base = visit(ctx.atom());
         if (ctx.unaryExpr() != null) {
-            base = new Expr.BinOp('^', base, visit(ctx.unaryExpr()));
+            char op = ctx.DOTCARET() != null ? EquationParser.ELEMENT_POW : '^';
+            base = new Expr.BinOp(op, base, visit(ctx.unaryExpr()));
         }
         if (ctx.TRANSPOSE() != null && !ctx.TRANSPOSE().isEmpty()) {
             for (int i = 0; i < ctx.TRANSPOSE().size(); i++) {
@@ -726,7 +738,38 @@ public class AstBuilder extends FreesBaseVisitor<Expr> {
             }
             rows.add(new Expr.ArrayLiteral(rowElements));
         }
-        return new Expr.ArrayLiteral(rows);
+        Expr literal = new Expr.ArrayLiteral(rows);
+        // A trailing unit (`[1 2 3] [kg]`) applies to every element.
+        if (ctx.unit() != null) {
+            String unit = extractUnit(ctx.unit());
+            if (unit != null) {
+                literal = applyUnitToElements(literal, unit);
+            }
+        }
+        return literal;
+    }
+
+    /** The text between the brackets of a unit annotation, or null if empty. */
+    private static String extractUnit(FreesParser.UnitContext unitCtx) {
+        int startIdx = unitCtx.start.getStartIndex();
+        int stopIdx = unitCtx.stop.getStopIndex();
+        String bracketed = unitCtx.start.getInputStream()
+                .getText(new org.antlr.v4.runtime.misc.Interval(startIdx, stopIdx));
+        String unit = bracketed.substring(1, bracketed.length() - 1).trim();
+        return unit.isEmpty() ? null : unit;
+    }
+
+    /** Attach a unit to every numeric leaf of a (possibly nested) bracket literal. */
+    private static Expr applyUnitToElements(Expr e, String unit) {
+        return switch (e) {
+            case Expr.ArrayLiteral(List<Expr> elements) ->
+                new Expr.ArrayLiteral(elements.stream().map(el -> applyUnitToElements(el, unit)).toList());
+            case Expr.Num(double v, String existing, boolean imag) ->
+                new Expr.Num(v, existing != null ? existing : unit, imag);
+            case Expr.Neg(Expr operand) -> new Expr.Neg(applyUnitToElements(operand, unit));
+            default -> throw new EquationParser.ParseException(
+                    "A trailing unit on a bracket literal (e.g. [1 2 3] [kg]) requires numeric elements.");
+        };
     }
 
     /** Positional argument expressions; named args are rejected here. */

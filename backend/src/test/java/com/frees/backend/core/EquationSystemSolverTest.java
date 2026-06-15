@@ -581,5 +581,89 @@ class EquationSystemSolverTest {
         assertEquals(1.0, result.uncertainties().get("y"), 1e-6);
         assertEquals(1.0, result.variables().get("u_y"), 1e-6);
     }
+
+    // ── Element-wise matrix operators (.*, ./, .\, .^) ───────────────────────
+
+    @Test
+    void elementwiseMultiplyAndDivide() {
+        EquationSystemSolver.Result m = solver.solve(
+                "A = [1 2; 3 4]\nB = [5 6; 7 8]\nC = A .* B");
+        assertEquals(5.0, m.variables().get("C[1,1]"), 1e-9);
+        assertEquals(12.0, m.variables().get("C[1,2]"), 1e-9);
+        assertEquals(21.0, m.variables().get("C[2,1]"), 1e-9);
+        assertEquals(32.0, m.variables().get("C[2,2]"), 1e-9);
+
+        EquationSystemSolver.Result d = solver.solve(
+                "A = [10 20]\nB = [2 5]\nC = A ./ B");
+        assertEquals(5.0, d.variables().get("C[1]"), 1e-9);
+        assertEquals(4.0, d.variables().get("C[2]"), 1e-9);
+    }
+
+    @Test
+    void elementwisePowerAndScalarBroadcast() {
+        EquationSystemSolver.Result p = solver.solve("A = [2 3 4]\nC = A .^ 2");
+        assertEquals(4.0, p.variables().get("C[1]"), 1e-9);
+        assertEquals(9.0, p.variables().get("C[2]"), 1e-9);
+        assertEquals(16.0, p.variables().get("C[3]"), 1e-9);
+
+        EquationSystemSolver.Result mul = solver.solve("A = [1 2 3]\nC = A .* 2");
+        assertEquals(2.0, mul.variables().get("C[1]"), 1e-9);
+        assertEquals(6.0, mul.variables().get("C[3]"), 1e-9);
+
+        EquationSystemSolver.Result div = solver.solve("A = [2 4 8]\nC = 8 ./ A");
+        assertEquals(4.0, div.variables().get("C[1]"), 1e-9);
+        assertEquals(1.0, div.variables().get("C[3]"), 1e-9);
+    }
+
+    @Test
+    void elementwiseLeftDivide() {
+        // A .\ B is element-wise B ./ A.
+        EquationSystemSolver.Result r = solver.solve("A = [2 4]\nB = [10 20]\nC = A .\\ B");
+        assertEquals(5.0, r.variables().get("C[1]"), 1e-9);
+        assertEquals(5.0, r.variables().get("C[2]"), 1e-9);
+    }
+
+    @Test
+    void elementwiseWorksWithGenerators() {
+        EquationSystemSolver.Result r = solver.solve("C = ones(2,2) .* 3");
+        assertEquals(3.0, r.variables().get("C[1,1]"), 1e-9);
+        assertEquals(3.0, r.variables().get("C[2,2]"), 1e-9);
+    }
+
+    @Test
+    void elementwiseShapeMismatchIsClear() {
+        var ex = assertThrows(
+                com.frees.backend.parser.EquationParser.ParseException.class,
+                () -> solver.solve("A = [1 2 3]\nB = [1 2]\nC = A .* B"));
+        assertTrue(ex.getMessage().toLowerCase().contains("dimensions must agree"),
+                "message was: " + ex.getMessage());
+    }
+
+    // ── Units on bracket array/matrix literals ───────────────────────────────
+
+    @Test
+    void unitOnVectorLiteralSolves() {
+        EquationSystemSolver.Result r = solver.solve("c = [2 3 4 5 6] [kg]");
+        assertEquals(2.0, r.variables().get("c[1]"), 1e-9);
+        assertEquals(6.0, r.variables().get("c[5]"), 1e-9);
+    }
+
+    @Test
+    void unitOnVectorLiteralIsDerived() {
+        var derived = solver.deriveUnits("c = [2 3 4] [kg]", Map.of());
+        assertEquals("kg", derived.get("c[1]"));
+        assertEquals("kg", derived.get("c[3]"));
+    }
+
+    @Test
+    void unitOnMatrixLiteralAndRangeAssign() {
+        var derived = solver.deriveUnits("A = [1 2; 3 4] [m]", Map.of());
+        assertEquals("m", derived.get("A[1,1]"));
+        assertEquals("m", derived.get("A[2,2]"));
+
+        EquationSystemSolver.Result r = solver.solve("c[1..3] = [2, 3, 4] [kg]");
+        assertEquals(2.0, r.variables().get("c[1]"), 1e-9);
+        assertEquals(4.0, r.variables().get("c[3]"), 1e-9);
+    }
 }
 

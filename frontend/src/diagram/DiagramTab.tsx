@@ -58,6 +58,7 @@ import {
   IconEyeOff,
   IconFolderMinus,
   IconFolderPlus,
+  IconSearch,
   IconForms,
   IconGripVertical,
   IconLock,
@@ -3242,6 +3243,9 @@ export default function DiagramTab(props: Readonly<Props>) {
     [onDiagramsChange],
   )
   const [tool, setTool] = useState<Tool>('select')
+  // Search query for the Component Library dropdown (32+ icons across 4
+  // categories, so a flat scrolling menu is hard to use without a filter).
+  const [libQuery, setLibQuery] = useState('')
   const [mode, setMode] = useState<'develop' | 'run'>('develop')
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [view, setView] = useState<ViewTransform>({ x: 60, y: 40, k: 1 })
@@ -4979,7 +4983,7 @@ export default function DiagramTab(props: Readonly<Props>) {
                     </ActionIcon>
                   </Tooltip>
                 ))}
-                <Menu shadow="md" position="bottom-start">
+                <Menu shadow="md" position="bottom-start" onClose={() => setLibQuery('')}>
                   <Menu.Target>
                     <Tooltip label="Component Library">
                       <ActionIcon
@@ -4997,100 +5001,96 @@ export default function DiagramTab(props: Readonly<Props>) {
                     >
                       Import Image / SVG...
                     </Menu.Item>
-                    
                     <Menu.Divider />
-                    <Menu.Label>Thermo-fluid</Menu.Label>
-                    {LIBRARY_ICONS.filter((i) => i.category === 'Thermo-fluid').map((icon) => (
-                      <Menu.Item
-                        key={icon.id}
-                        leftSection={
-                          <svg width="22" height="22" viewBox="0 0 100 100">
-                            {icon.render('#c1c2c5', 6, 'none')}
-                          </svg>
-                        }
-                        onClick={() => setTool(`icon:${icon.id}`)}
-                      >
-                        {icon.label}
-                      </Menu.Item>
-                    ))}
-                    
-                    <Menu.Label>Mechanical</Menu.Label>
-                    {LIBRARY_ICONS.filter((i) => i.category === 'Mechanical').map((icon) => (
-                      <Menu.Item
-                        key={icon.id}
-                        leftSection={
-                          <svg width="22" height="22" viewBox="0 0 100 100">
-                            {icon.render('#c1c2c5', 6, 'none')}
-                          </svg>
-                        }
-                        onClick={() => setTool(`icon:${icon.id}`)}
-                      >
-                        {icon.label}
-                      </Menu.Item>
-                    ))}
-
-                    <Menu.Label>Sensors & Gauges</Menu.Label>
-                    {LIBRARY_ICONS.filter((i) => i.category === 'Sensors & Gauges').map((icon) => (
-                      <Menu.Item
-                        key={icon.id}
-                        leftSection={
-                          <svg width="22" height="22" viewBox="0 0 100 100">
-                            {icon.render('#c1c2c5', 6, 'none')}
-                          </svg>
-                        }
-                        onClick={() => setTool(`icon:${icon.id}`)}
-                      >
-                        {icon.label}
-                      </Menu.Item>
-                    ))}
-
-                    <Menu.Label>Electrical</Menu.Label>
-                    {LIBRARY_ICONS.filter((i) => i.category === 'Electrical').map((icon) => (
-                      <Menu.Item
-                        key={icon.id}
-                        leftSection={
-                          <svg width="22" height="22" viewBox="0 0 100 100">
-                            {icon.render('#c1c2c5', 6, 'none')}
-                          </svg>
-                        }
-                        onClick={() => setTool(`icon:${icon.id}`)}
-                      >
-                        {icon.label}
-                      </Menu.Item>
-                    ))}
-
-                    {customComponents.length > 0 && (
-                      <>
-                        <Menu.Divider />
-                        <Menu.Label>Custom Components</Menu.Label>
-                        {customComponents.map((cc) => (
-                          <Menu.Item
-                            key={cc.id}
-                            leftSection={
-                              <svg width="22" height="22" viewBox="0 0 100 100">
-                                <rect x="20" y="20" width="60" height="60" rx="8" fill="none" stroke="#4dabf7" strokeWidth="6" />
-                              </svg>
-                            }
-                            rightSection={
-                              <ActionIcon
-                                variant="subtle"
-                                color="red"
-                                size="xs"
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  setCustomComponents((prev) => prev.filter((c) => c.id !== cc.id))
-                                }}
-                              >
-                                <IconTrash size={12} />
-                              </ActionIcon>
-                            }
-                            onClick={() => setTool(`custom:${cc.id}`)}
-                          >
-                            {cc.label}
-                          </Menu.Item>
-                        ))}
-                      </>
-                    )}
+                    {/* Filter box: type to narrow the 32+ components by name. */}
+                    <div style={{ padding: '0 8px 6px' }}>
+                      <TextInput
+                        size="xs"
+                        data-autofocus
+                        placeholder="Search components…"
+                        value={libQuery}
+                        leftSection={<IconSearch size={14} />}
+                        onChange={(e) => setLibQuery(e.currentTarget.value)}
+                        // Keep keystrokes (and Space/arrows) in the field instead
+                        // of triggering the Menu's type-ahead / item navigation.
+                        onKeyDown={(e) => e.stopPropagation()}
+                      />
+                    </div>
+                    <ScrollArea.Autosize mah={360} type="auto">
+                      {(() => {
+                        const q = libQuery.trim().toLowerCase()
+                        const cats = ['Thermo-fluid', 'Mechanical', 'Sensors & Gauges', 'Electrical'] as const
+                        const matchesCustom = customComponents.filter((cc) => cc.label.toLowerCase().includes(q))
+                        let anyMatch = matchesCustom.length > 0
+                        const sections = cats.map((cat) => {
+                          const items = LIBRARY_ICONS.filter(
+                            (i) => i.category === cat && i.label.toLowerCase().includes(q),
+                          )
+                          if (items.length === 0) return null
+                          anyMatch = true
+                          return (
+                            <div key={cat}>
+                              <Menu.Label>{cat}</Menu.Label>
+                              {items.map((icon) => (
+                                <Menu.Item
+                                  key={icon.id}
+                                  leftSection={
+                                    <svg width="22" height="22" viewBox="0 0 100 100">
+                                      {icon.render('#c1c2c5', 6, 'none')}
+                                    </svg>
+                                  }
+                                  onClick={() => setTool(`icon:${icon.id}`)}
+                                >
+                                  {icon.label}
+                                </Menu.Item>
+                              ))}
+                            </div>
+                          )
+                        })
+                        return (
+                          <>
+                            {sections}
+                            {matchesCustom.length > 0 && (
+                              <>
+                                <Menu.Divider />
+                                <Menu.Label>Custom Components</Menu.Label>
+                                {matchesCustom.map((cc) => (
+                                  <Menu.Item
+                                    key={cc.id}
+                                    leftSection={
+                                      <svg width="22" height="22" viewBox="0 0 100 100">
+                                        <rect x="20" y="20" width="60" height="60" rx="8" fill="none" stroke="#4dabf7" strokeWidth="6" />
+                                      </svg>
+                                    }
+                                    rightSection={
+                                      <ActionIcon
+                                        variant="subtle"
+                                        color="red"
+                                        size="xs"
+                                        onClick={(e) => {
+                                          e.stopPropagation()
+                                          setCustomComponents((prev) => prev.filter((c) => c.id !== cc.id))
+                                        }}
+                                      >
+                                        <IconTrash size={12} />
+                                      </ActionIcon>
+                                    }
+                                    onClick={() => setTool(`custom:${cc.id}`)}
+                                  >
+                                    {cc.label}
+                                  </Menu.Item>
+                                ))}
+                              </>
+                            )}
+                            {!anyMatch && (
+                              <Text size="xs" c="dimmed" ta="center" py="sm">
+                                No components match “{libQuery}”.
+                              </Text>
+                            )}
+                          </>
+                        )
+                      })()}
+                    </ScrollArea.Autosize>
                   </Menu.Dropdown>
                 </Menu>
                 <Menu shadow="md" position="bottom-start">

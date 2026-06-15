@@ -32,6 +32,44 @@ public final class EquationParser {
     static final int MAX_RANGE_SPAN = 1_000_000;
     static final int MAX_GENERATED_EQUATIONS = 500_000;
 
+    // Internal sentinel op chars for MATLAB-style element-wise operators. They
+    // only ever exist on a raw Expr inside matrix compilation; compileMatrixExpr
+    // expands them to per-element BinOps using the corresponding base op, so the
+    // sentinels never reach the scalar consumers (Evaluator, LatexConverter, …).
+    public static final char ELEMENT_MUL = '⊙';   // .*
+    public static final char ELEMENT_DIV = '⊘';   // ./
+    public static final char ELEMENT_LDIV = '∖';  // .\
+    public static final char ELEMENT_POW = '↑';   // .^
+
+    static boolean isElementwiseOp(char op) {
+        return op == ELEMENT_MUL || op == ELEMENT_DIV
+                || op == ELEMENT_LDIV || op == ELEMENT_POW;
+    }
+
+    /** The scalar operator an element-wise op applies to each pair of elements. */
+    static char elementwiseBaseOp(char op) {
+        return switch (op) {
+            case ELEMENT_MUL -> '*';
+            case ELEMENT_DIV -> '/';
+            case ELEMENT_LDIV -> '\\';
+            case ELEMENT_POW -> '^';
+            default -> op;
+        };
+    }
+
+    /** True if any node in the expression tree is an element-wise operator, so
+     * the equation must route through matrix compilation even when an enclosing
+     * operator wouldn't otherwise flag it as a matrix expression. */
+    static boolean containsElementwiseOp(Expr e) {
+        return switch (e) {
+            case Expr.BinOp(char op, Expr left, Expr right) ->
+                isElementwiseOp(op) || containsElementwiseOp(left) || containsElementwiseOp(right);
+            case Expr.Neg(Expr operand) -> containsElementwiseOp(operand);
+            case Expr.Call(String fn, List<Expr> args) -> args.stream().anyMatch(EquationParser::containsElementwiseOp);
+            default -> false;
+        };
+    }
+
     public static class ParseException extends RuntimeException {
         public ParseException(String message) {
             super(message);
@@ -304,12 +342,14 @@ public final class EquationParser {
         // MATLAB-style bare creation: A = [1 2; 3 4], v = [1 2 3], Z = zeros(2,2).
         if (lhs instanceof Expr.Var(String vname)
                 && (rhs instanceof Expr.ArrayLiteral
-                    || isMatrixExpr(rhs, ctx.loopVars(), ctx.constants(), ctx.defs()))) {
+                    || isMatrixExpr(rhs, ctx.loopVars(), ctx.constants(), ctx.defs())
+                    || containsElementwiseOp(rhs))) {
             flattenBareMatrixCreation(vname, rhs, sourceText, ctx);
             return;
         }
 
-        if (isMatrixExpr(lhs, ctx.loopVars(), ctx.constants(), ctx.defs()) || isMatrixExpr(rhs, ctx.loopVars(), ctx.constants(), ctx.defs())) {
+        if (isMatrixExpr(lhs, ctx.loopVars(), ctx.constants(), ctx.defs()) || isMatrixExpr(rhs, ctx.loopVars(), ctx.constants(), ctx.defs())
+                || containsElementwiseOp(lhs) || containsElementwiseOp(rhs)) {
             Expr[][] lhsMat = compileMatrixExpr(lhs, ctx);
             Expr[][] rhsMat = compileMatrixExpr(rhs, ctx);
             // Remember an explicitly-dimensioned LHS (A[1..r,1..c] = ...) so a
@@ -1071,9 +1111,10 @@ public final class EquationParser {
                 indices.stream().anyMatch(idx -> idx instanceof Expr.Range || isMatrixExpr(idx, loopVars, constants, defs));
             case Expr.ArrayLiteral(List<Expr> elements) -> 
                 elements.stream().anyMatch(elem -> elem instanceof Expr.ArrayLiteral || isMatrixExpr(elem, loopVars, constants, defs));
-            case Expr.BinOp(char op, Expr left, Expr right) -> 
-                (op == '*' || op == '+' || op == '-' || op == '\\') && 
-                (isMatrixExpr(left, loopVars, constants, defs) || isMatrixExpr(right, loopVars, constants, defs));
+            case Expr.BinOp(char op, Expr left, Expr right) ->
+                isElementwiseOp(op) ||
+                ((op == '*' || op == '+' || op == '-' || op == '\\') &&
+                (isMatrixExpr(left, loopVars, constants, defs) || isMatrixExpr(right, loopVars, constants, defs)));
             case Expr.Call(String function, List<Expr> args) -> isMatrixFunction(function);
             default -> false;
         };
@@ -1166,6 +1207,59 @@ public final class EquationParser {
                 return m;
             }
         }
+    }
+
+    /** The MATLAB spelling of an element-wise op, for error messages. */
+    private static String elementwiseSymbol(char op) {
+        return switch (op) {
+            case ELEMENT_MUL -> ".*";
+            case ELEMENT_DIV -> "./";
+            case ELEMENT_LDIV -> ".\\";
+            case ELEMENT_POW -> ".^";
+            default -> String.valueOf(op);
+        };
+    }
+
+    /** Element-wise op (.*, ./, .\, .^): apply the base scalar op to each pair of
+     * elements, with scalar broadcasting on either side (A .* 2, 2 ./ A). */
+    private Expr[][] compileElementwise(char op, Expr left, Expr right, FlattenContext ctx) {
+        char base = elementwiseBaseOp(op);
+        Expr[][] lMat = compileMatrixExpr(left, ctx);
+        Expr[][] rMat = compileMatrixExpr(right, ctx);
+        boolean lScalar = lMat.length == 1 && lMat[0].length == 1;
+        boolean rScalar = rMat.length == 1 && rMat[0].length == 1;
+
+        int rows;
+        int cols;
+        if (lScalar) {
+            rows = rMat.length;
+            cols = rMat[0].length;
+        } else if (rScalar) {
+            rows = lMat.length;
+            cols = lMat[0].length;
+        } else {
+            if (lMat.length != rMat.length || lMat[0].length != rMat[0].length) {
+                throw new ParseException("Matrix dimensions must agree for element-wise '"
+                        + elementwiseSymbol(op) + "': " + lMat.length + "x" + lMat[0].length
+                        + " vs " + rMat.length + "x" + rMat[0].length);
+            }
+            rows = lMat.length;
+            cols = lMat[0].length;
+        }
+
+        Expr[][] result = new Expr[rows][cols];
+        for (int i = 0; i < rows; i++) {
+            for (int j = 0; j < cols; j++) {
+                Expr a = lScalar ? lMat[0][0] : lMat[i][j];
+                Expr b = rScalar ? rMat[0][0] : rMat[i][j];
+                // Left divide A .\ B is element-wise B / A (the Evaluator has no
+                // scalar '\' op, so emit a normal division with swapped operands).
+                result[i][j] = op == ELEMENT_LDIV
+                        ? new Expr.BinOp('/', b, a)
+                        : new Expr.BinOp(base, a, b);
+            }
+        }
+        return result;
     }
 
     private Expr[][] compileMatrixExpr(Expr e, FlattenContext ctx) {
@@ -1330,6 +1424,8 @@ public final class EquationParser {
                     }
 
                     yield xMat;
+                } else if (isElementwiseOp(op)) {
+                    yield compileElementwise(op, left, right, ctx);
                 } else {
                     throw new ParseException("Unsupported binary matrix operator: " + op);
                 }

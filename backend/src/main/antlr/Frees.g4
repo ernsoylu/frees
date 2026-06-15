@@ -214,7 +214,7 @@ addExpr
     ;
 
 mulExpr
-    : unaryExpr ((TIMES | DIV | BACKSLASH) unaryExpr)*
+    : unaryExpr ((TIMES | DIV | BACKSLASH | DOTSTAR | DOTSLASH | DOTBACKSLASH) unaryExpr)*
     ;
 
 unaryExpr
@@ -224,7 +224,7 @@ unaryExpr
     ;
 
 powExpr
-    : atom (CARET unaryExpr)? TRANSPOSE*
+    : atom ((CARET | DOTCARET) unaryExpr)? TRANSPOSE*
     ;
 
 atom
@@ -235,7 +235,7 @@ atom
     | IF LPAREN argList RPAREN               # IfCallAtom
     | IDENT LBRACKET arrayIndexList RBRACKET # ArrayAtom
     | IDENT                                  # VarAtom
-    | LBRACKET matrixRow (SEMI matrixRow)* RBRACKET # MatrixLiteralAtom
+    | LBRACKET matrixRow (SEMI matrixRow)* RBRACKET unit? # MatrixLiteralAtom
     | LPAREN expr RPAREN                     # ParenAtom
     ;
 
@@ -288,6 +288,14 @@ DOTDOT  : '..' ;
 PIPE    : '|' ;
 BACKSLASH : '\\' ;
 TRANSPOSE : '\'' ;
+
+// MATLAB-style element-wise operators. Two chars starting with '.', so they
+// don't clash with '..' (DOTDOT) or decimal literals ('.5' is a NUMBER, since
+// these require an operator char — not a digit — after the dot).
+DOTSTAR      : '.*' ;
+DOTSLASH     : './' ;
+DOTBACKSLASH : '.\\' ;
+DOTCARET     : '.^' ;
 
 // ASSIGN must be defined before COLON so ':=' beats ':'
 ASSIGN  : ':=' ;
