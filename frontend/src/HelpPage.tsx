@@ -43,6 +43,36 @@ function CopyButton({ code }: Readonly<{ code: string }>) {
 
 const CYCLE_EXAMPLES = [
   {
+    value: "ideal-rankine",
+    title: "Power Cycles: Ideal Rankine Steam Power Cycle",
+    description: "Analyses an ideal Rankine cycle, computing state enthalpies, work, and efficiency.",
+    note: "",
+    code: `{ Ideal Rankine Steam Power Cycle }
+P_high = 8000 [kPa]
+P_low = 10 [kPa]
+T_boiler = 500 [C]
+eta_turb = 0.85
+eta_pump = 0.90
+W_dot_net = 10000 [kW]
+
+h1 = Enthalpy(Water, P=P_high, T=T_boiler)
+s1 = Entropy(Water, P=P_high, T=T_boiler)
+s_2s = s1
+h_2s = Enthalpy(Water, P=P_low, s=s_2s)
+h2 = h1 - eta_turb * (h1 - h_2s)
+h3 = Enthalpy(Water, P=P_low, x=0)
+v3 = Volume(Water, P=P_low, x=0)
+h_4s = Enthalpy(Water, P=P_high, s=Entropy(Water, P=P_low, x=0))
+h4 = h3 + (h_4s - h3) / eta_pump
+
+w_turb = h1 - h2
+w_pump = h4 - h3
+q_boiler = h1 - h4
+w_net = w_turb - w_pump
+eta_th = w_net / q_boiler * 100
+W_dot_net = m_dot * w_net`,
+  },
+  {
     value: "reheat-rankine",
     title: "Power Cycles: Reheat Rankine Cycle with Moisture Limit",
     description: "A reheat Rankine cycle where the condenser pressure is itself an unknown, fixed by the requirement that turbine-exit moisture not exceed 5%. frees finds it implicitly from the quality constraint.",
@@ -546,6 +576,46 @@ Fr2 = V2/sqrt(g*y2)
 dE = (y2 - yn)^3/(4*yn*y2)   { energy dissipated }`,
   },
   {
+    value: "pelton-turbine",
+    title: "Turbomachinery: Pelton Wheel (Impulse Turbine) Design",
+    description: "Designs a single-jet Pelton wheel for a high-head hydro site. The jet velocity comes from the net head through the nozzle velocity coefficient; the optimum bucket speed sets the wheel diameter at a given rotational speed (entered in rpm, which frees converts to rad/s). The jet diameter follows from continuity, and the bucket force/power use the momentum change through the deflection angle. Demonstrates angle units (deg → rad), rpm → rad/s, and dimensionally derived results.",
+    note: "Vj ≈ 75.2 m/s, bucket speed u ≈ 34.6 m/s, wheel diameter D ≈ 1.32 m, jet diameter d ≈ 92 mm (jet ratio D/d ≈ 14.4). Bucket power ≈ 1.28 MW from 1.47 MW of water power — hydraulic efficiency η_h ≈ 90% (wheel efficiency on head ≈ 87% after the nozzle loss).",
+    code: `{ Pelton Wheel (Impulse Turbine) Design — single jet }
+{ High-head hydro: given net head, flow and speed, size the wheel and
+  jet and find the power and efficiency. }
+rho = 1000 [kg/m^3]
+g = 9.81 [m/s^2]
+H = 300 [m]            { net head at the nozzle }
+Q = 0.5 [m^3/s]        { volumetric flow (one jet) }
+N = 500 [rpm]          { runner speed — rpm auto-converts to rad/s }
+C_v = 0.98             { nozzle velocity coefficient }
+phi = 0.46             { speed ratio  u / Vj  (optimum ~0.46) }
+beta = 165 [deg]       { bucket outlet angle }
+k = 0.85               { relative-velocity friction factor }
+
+{ Jet from the nozzle }
+Vj = C_v * sqrt(2 * g * H)
+
+{ Optimum bucket (peripheral) speed and the wheel diameter.
+  N is an angular velocity in rad/s, so u = N * D_wheel/2.
+  (D_wheel and d_jet must differ — names are case-insensitive in frees.) }
+u = phi * Vj
+u = N * (D_wheel / 2)
+
+{ Jet diameter from continuity, and the jet ratio (good design 11–14) }
+Q = (pi / 4) * d_jet^2 * Vj
+m_ratio = D_wheel / d_jet
+
+{ Force and power on the buckets (jet deflected through 180° − beta) }
+F = rho * Q * (Vj - u) * (1 + k * cos(180 [deg] - beta))
+P_bucket = F * u
+
+{ Water power available and the efficiencies }
+P_water = rho * g * Q * H
+eta_hydraulic = P_bucket / (0.5 * rho * Q * Vj^2) * 100
+eta_wheel = P_bucket / P_water * 100`,
+  },
+  {
     value: "truss-stiffness",
     title: "Structural Analysis: Plane Truss by the Direct Stiffness Method",
     description: "A three-bar truss with one free node, assembled and solved exactly as a finite-element code would: each member contributes its EA/L stiffness with direction cosines to a 2×2 global stiffness matrix, which SolveLinear inverts for the nodal displacements; member axial forces follow.",
@@ -1028,6 +1098,30 @@ y_test = siyavula_data(0)`,
   },
 ];
 
+// Examples are titled "Discipline: Specific title"; split on the first colon
+// so the library can group them by discipline and show a short label.
+function exampleCategory(title: string): string {
+  const idx = title.indexOf(':');
+  return idx >= 0 ? title.slice(0, idx).trim() : 'Other';
+}
+
+function exampleShortTitle(title: string): string {
+  const idx = title.indexOf(':');
+  return idx >= 0 ? title.slice(idx + 1).trim() : title;
+}
+
+// Grouped as [category, examples[]] in first-appearance order.
+const EXAMPLE_CATEGORIES: [string, typeof CYCLE_EXAMPLES][] = (() => {
+  const groups = new Map<string, typeof CYCLE_EXAMPLES>();
+  for (const ex of CYCLE_EXAMPLES) {
+    const category = exampleCategory(ex.title);
+    const bucket = groups.get(category) ?? [];
+    bucket.push(ex);
+    groups.set(category, bucket);
+  }
+  return Array.from(groups.entries());
+})();
+
 
 import { ReactNode } from 'react';
 import { TextInput, CloseButton, Accordion as MantineAccordion } from '@mantine/core';
@@ -1120,7 +1214,7 @@ const CATEGORIES = [
     title: 'Case Studies',
     icon: <IconFileText size={16} />,
     items: [
-      { id: 'examples', label: 'Engineering Examples Library', keywords: ['examples', 'rankine', 'brayton', 'combined cycle', 'pipe network', 'truss', 'radiation', 'cooling loop', 'reforming', 'pid', 'fatigue', 'nuclear', 'siyavula', 'nozzle', 'co2', 'compressible', 'throat', 'sonic'] },
+      { id: 'examples', label: 'Engineering Examples Library', keywords: ['examples', 'rankine', 'brayton', 'combined cycle', 'pipe network', 'truss', 'radiation', 'cooling loop', 'reforming', 'pid', 'fatigue', 'nuclear', 'siyavula', 'nozzle', 'co2', 'compressible', 'throat', 'sonic', 'pelton', 'turbine', 'turbomachinery', 'hydropower', 'impulse'] },
     ]
   }
 ];
@@ -2791,89 +2885,35 @@ sig = sigma_LJ(Material)`}
         return (
           <Stack gap="md">
             <Title order={2} c="blue.4">Engineering Examples Library</Title>
-            <Text>Select an example from the library below. Copy the code directly into the workspace using the copy button:</Text>
-            <MantineAccordion variant="separated">
-              <MantineAccordion.Item value="rankine">
-                <MantineAccordion.Control>
-                  <Text fw={600} c="blue.3">Ideal Rankine Steam Power Cycle</Text>
-                </MantineAccordion.Control>
-                <MantineAccordion.Panel>
-                  <Text size="sm" mb="xs">Analyses an ideal Rankine cycle, computing state enthalpies, work, and efficiency.</Text>
-                  <Paper withBorder p="xs" bg="dark.9" style={{ position: 'relative' }}>
-                    <CopyButton code={`{ Ideal Rankine Steam Power Cycle }\
-P_high = 8000 [kPa]\
-P_low = 10 [kPa]\
-T_boiler = 500 [C]\
-eta_turb = 0.85\
-eta_pump = 0.90\
-W_dot_net = 10000 [kW]\
-h1 = Enthalpy(Water, P=P_high, T=T_boiler)\
-s1 = Entropy(Water, P=P_high, T=T_boiler)\
-s_2s = s1\
-h_2s = Enthalpy(Water, P=P_low, s=s_2s)\
-h2 = h1 - eta_turb * (h1 - h_2s)\
-h3 = Enthalpy(Water, P=P_low, x=0)\
-v3 = Volume(Water, P=P_low, x=0)\
-h_4s = Enthalpy(Water, P=P_high, s=Entropy(Water, P=P_low, x=0))\
-h4 = h3 + (h_4s - h3) / eta_pump\
-w_turb = h1 - h2\
-w_pump = h4 - h3\
-q_boiler = h1 - h4\
-w_net = w_turb - w_pump\
-eta_th = w_net / q_boiler * 100\
-W_dot_net = m_dot * w_net`} />
-                    <Code block style={{ background: 'transparent', maxHeight: '250px', overflowY: 'auto' }}>
-                      {`{ Ideal Rankine Steam Power Cycle }
-P_high = 8000 [kPa]
-P_low = 10 [kPa]
-T_boiler = 500 [C]
-eta_turb = 0.85
-eta_pump = 0.90
-W_dot_net = 10000 [kW]
-
-h1 = Enthalpy(Water, P=P_high, T=T_boiler)
-s1 = Entropy(Water, P=P_high, T=T_boiler)
-s_2s = s1
-h_2s = Enthalpy(Water, P=P_low, s=s_2s)
-h2 = h1 - eta_turb * (h1 - h_2s)
-h3 = Enthalpy(Water, P=P_low, x=0)
-v3 = Volume(Water, P=P_low, x=0)
-h_4s = Enthalpy(Water, P=P_high, s=Entropy(Water, P=P_low, x=0))
-h4 = h3 + (h_4s - h3) / eta_pump
-
-w_turb = h1 - h2
-w_pump = h4 - h3
-q_boiler = h1 - h4
-w_net = w_turb - w_pump
-eta_th = w_net / q_boiler * 100
-W_dot_net = m_dot * w_net`}
-                    </Code>
-                  </Paper>
-                </MantineAccordion.Panel>
-              </MantineAccordion.Item>
-
-              {CYCLE_EXAMPLES.map((ex) => (
-                <MantineAccordion.Item value={ex.value} key={ex.value}>
-                  <MantineAccordion.Control>
-                    <Text fw={600} c="cyan.3">{ex.title}</Text>
-                  </MantineAccordion.Control>
-                  <MantineAccordion.Panel>
-                    <Text size="sm" mb="xs">{ex.description}</Text>
-                    {ex.note && (
-                      <Alert color="gray" py="xs" mb="sm">
-                        {ex.note}
-                      </Alert>
-                    )}
-                    <Paper withBorder p="xs" bg="dark.9" style={{ position: 'relative' }}>
-                      <CopyButton code={ex.code} />
-                      <Code block style={{ background: 'transparent', maxHeight: '250px', overflowY: 'auto' }}>
-                        {ex.code}
-                      </Code>
-                    </Paper>
-                  </MantineAccordion.Panel>
-                </MantineAccordion.Item>
-              ))}
-            </MantineAccordion>
+            <Text>Browse the examples by discipline below. Copy the code directly into the workspace using the copy button:</Text>
+            {EXAMPLE_CATEGORIES.map(([category, examples]) => (
+              <Stack gap="xs" key={category}>
+                <Title order={4} c="blue.3" mt="sm">{category}</Title>
+                <MantineAccordion variant="separated">
+                  {examples.map((ex) => (
+                    <MantineAccordion.Item value={ex.value} key={ex.value}>
+                      <MantineAccordion.Control>
+                        <Text fw={600} c="cyan.3">{exampleShortTitle(ex.title)}</Text>
+                      </MantineAccordion.Control>
+                      <MantineAccordion.Panel>
+                        <Text size="sm" mb="xs">{ex.description}</Text>
+                        {ex.note && (
+                          <Alert color="gray" py="xs" mb="sm">
+                            {ex.note}
+                          </Alert>
+                        )}
+                        <Paper withBorder p="xs" bg="dark.9" style={{ position: 'relative' }}>
+                          <CopyButton code={ex.code} />
+                          <Code block style={{ background: 'transparent', maxHeight: '250px', overflowY: 'auto' }}>
+                            {ex.code}
+                          </Code>
+                        </Paper>
+                      </MantineAccordion.Panel>
+                    </MantineAccordion.Item>
+                  ))}
+                </MantineAccordion>
+              </Stack>
+            ))}
           </Stack>
         );
       default:
