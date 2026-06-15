@@ -25,6 +25,21 @@ class MarkdownEquationExtractorTest {
     }
 
     @Test
+    void elementwiseOperatorsSurviveExtraction() {
+        // MATLAB-style element-wise operators (.*, ./, .\, .^) and the matrix
+        // backslash must be recognized so the equation isn't split and its tail
+        // dropped as prose (regression: "C = A .* B" became "C = A").
+        assertTrue(MarkdownEquationExtractor.isPureEquationLine("C = A .* B"));
+        assertTrue(MarkdownEquationExtractor.isPureEquationLine("C = A ./ B"));
+        assertTrue(MarkdownEquationExtractor.isPureEquationLine("C = A .^ 2"));
+        assertTrue(MarkdownEquationExtractor.isPureEquationLine("x = A \\ b"));
+
+        String clean = MarkdownEquationExtractor.extract(
+                "A = [1 2; 3 4]\nB = [5 6; 7 8]\nC = A .* B").cleanText;
+        assertTrue(clean.contains("C = A .* B"), clean);
+    }
+
+    @Test
     void stringLiteralLinesAreEquations() {
         // Lines with quoted string arguments are pure equations and must
         // survive extraction intact (Story 9.9).

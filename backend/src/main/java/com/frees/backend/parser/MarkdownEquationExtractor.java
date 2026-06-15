@@ -491,11 +491,23 @@ public final class MarkdownEquationExtractor {
             return new Token(TokenType.IDENTIFIER, line.substring(i, end), end);
         }
 
+        // Two-char operators starting with '.': MATLAB-style element-wise
+        // operators (.*, ./, .\, .^) and the range operator (..). Without these,
+        // a line like "C = A .* B" fails validation and the ".* B" tail is
+        // dropped as prose.
+        if (c == '.' && i + 1 < line.length()) {
+            char n = line.charAt(i + 1);
+            if (n == '*' || n == '/' || n == '\\' || n == '^' || n == '.') {
+                return new Token(TokenType.OPERATOR, line.substring(i, i + 2), i + 2);
+            }
+        }
+
         // ':' and '|' appear in MATLAB-style range assignments
-        // (speed = 0:10:100 | Linear); treat them as operators so the line is
-        // recognized as an equation rather than dropped as prose.
+        // (speed = 0:10:100 | Linear); '\' is the matrix backslash solver.
+        // Treat them as operators so the line is recognized as an equation
+        // rather than dropped as prose.
         if (c == '+' || c == '-' || c == '*' || c == '/' || c == '^' || c == '='
-                || c == ':' || c == '|') {
+                || c == ':' || c == '|' || c == '\\') {
             return new Token(TokenType.OPERATOR, String.valueOf(c), i + 1);
         }
 
