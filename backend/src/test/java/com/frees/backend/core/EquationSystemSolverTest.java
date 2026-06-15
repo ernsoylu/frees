@@ -412,11 +412,11 @@ class EquationSystemSolverTest {
         assertEquals(3.0, result.variables().get("lambda[2]"), 1e-8);
         // Column k holds the unit eigenvector of lambda[k]; sign fixed so the
         // largest-magnitude component is positive.
-        assertEquals(s, Math.abs(result.variables().get("V[1, 1]")), 1e-8);
-        assertEquals(s, Math.abs(result.variables().get("V[2, 1]")), 1e-8);
-        assertEquals(-1.0, result.variables().get("V[1, 1]") * result.variables().get("V[2, 1]") / 0.5, 1e-8);
-        assertEquals(s, result.variables().get("V[1, 2]"), 1e-8);
-        assertEquals(s, result.variables().get("V[2, 2]"), 1e-8);
+        assertEquals(s, Math.abs(result.variables().get("V[1,1]")), 1e-8);
+        assertEquals(s, Math.abs(result.variables().get("V[2,1]")), 1e-8);
+        assertEquals(-1.0, result.variables().get("V[1,1]") * result.variables().get("V[2,1]") / 0.5, 1e-8);
+        assertEquals(s, result.variables().get("V[1,2]"), 1e-8);
+        assertEquals(s, result.variables().get("V[2,2]"), 1e-8);
         assertEquals(4.0, result.variables().get("trace"), 1e-8);
     }
 

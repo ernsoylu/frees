@@ -801,7 +801,7 @@ public final class EquationParser {
                 StringBuilder dsb = new StringBuilder(baseDisplay);
                 dsb.append("[");
                 for (int i = 0; i < evalIndices.size(); i++) {
-                    if (i > 0) dsb.append(", ");
+                    if (i > 0) dsb.append(",");
                     dsb.append(evalIndices.get(i));
                 }
                 dsb.append("]");
@@ -866,7 +866,7 @@ public final class EquationParser {
             for (int i = 0; i < combo.size(); i++) {
                 if (i > 0) {
                     sb.append(",");
-                    dsb.append(", ");
+                    dsb.append(",");
                 }
                 sb.append(combo.get(i));
                 dsb.append(combo.get(i));
@@ -974,7 +974,7 @@ public final class EquationParser {
                 int colIdx = cStart + j * cDir;
                 String canonical = name + "[" + rowIdx + "," + colIdx + "]";
                 String baseDisplay = displayNames.getOrDefault(name, name);
-                displayNames.put(canonical, baseDisplay + "[" + rowIdx + ", " + colIdx + "]");
+                displayNames.put(canonical, baseDisplay + "[" + rowIdx + "," + colIdx + "]");
                 elements[i][j] = new Expr.Var(canonical);
             }
         }
