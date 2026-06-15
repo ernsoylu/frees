@@ -23,6 +23,7 @@ import {
   IconFilePlus,
   IconFolderOpen,
   IconHelp,
+  IconInfoCircle,
   IconMathFunction,
   IconPlayerPlayFilled,
   IconSchema,
@@ -64,6 +65,7 @@ interface RailProps {
   onMinMax: () => void
   onCurveFit: () => void
   onPreferences: () => void
+  onAbout: () => void
 }
 
 function RailIcon({
@@ -103,6 +105,7 @@ export function Rail({
   onMinMax,
   onCurveFit,
   onPreferences,
+  onAbout,
 }: Readonly<RailProps>) {
   return (
     <Stack
@@ -134,6 +137,9 @@ export function Rail({
         </RailIcon>
         <RailIcon label="Preferences" onClick={onPreferences}>
           <IconSettings size={22} stroke={1.6} />
+        </RailIcon>
+        <RailIcon label="About" onClick={onAbout}>
+          <IconInfoCircle size={22} stroke={1.6} />
         </RailIcon>
         <Tooltip label="Help" position="right" openDelay={300}>
           <ActionIcon
