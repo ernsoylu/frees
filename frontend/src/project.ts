@@ -7,6 +7,7 @@
 // localStorage keys: on save everything is collected into one object written to
 // `frees.project`; the legacy keys remain only as a one-time migration source.
 
+import { DEFAULT_STOP_CRITERIA } from './api'
 import type { StopCriteria, UnitSystem } from './api'
 import type { VariableDraft } from './VariableInfoModal'
 import type { TableSpec } from './tables'
@@ -84,9 +85,61 @@ export function writeBridgedKeys(project: FreesProject) {
   }
 }
 
-export function saveProjectLocal(project: FreesProject) {
+const ALLOWED_UNIT_SYSTEMS: readonly UnitSystem[] = ['SI', 'ENG_SI', 'ENGLISH']
+
+/** Deep-copy to plain JSON data, dropping anything non-serializable. */
+function plainJson<T>(value: T): T {
   try {
-    localStorage.setItem(PROJECT_KEY, JSON.stringify(project))
+    return JSON.parse(JSON.stringify(value ?? null)) as T
+  } catch {
+    return null as T
+  }
+}
+
+function finiteNumber(value: unknown, fallback: number): number {
+  return typeof value === 'number' && Number.isFinite(value) ? value : fallback
+}
+
+/**
+ * Validate and normalize a project into the plain, schema-shaped payload that is
+ * safe to persist. Every field is checked against its expected type — and the
+ * unit system against an allowlist — before it can reach browser storage, so a
+ * project can never poison localStorage with unvalidated, externally influenced
+ * values (tssecurity:S8475). Sanitizing here, at write time, keeps the trust
+ * boundary independent of whatever code later reads the value back. Returns
+ * null for non-object input.
+ */
+export function sanitizeProject(project: FreesProject): FreesProject | null {
+  if (project == null || typeof project !== 'object') return null
+  const sc = (project.stopCriteria ?? {}) as Partial<StopCriteria>
+  return {
+    version: PROJECT_VERSION,
+    savedAt: typeof project.savedAt === 'string' ? project.savedAt : new Date().toISOString(),
+    text: typeof project.text === 'string' ? project.text : '',
+    varDrafts: plainJson(project.varDrafts) ?? {},
+    stopCriteria: {
+      maxIterations: finiteNumber(sc.maxIterations, DEFAULT_STOP_CRITERIA.maxIterations),
+      relativeResiduals: finiteNumber(sc.relativeResiduals, DEFAULT_STOP_CRITERIA.relativeResiduals),
+      changeInVariables: finiteNumber(sc.changeInVariables, DEFAULT_STOP_CRITERIA.changeInVariables),
+      elapsedTimeSeconds: finiteNumber(sc.elapsedTimeSeconds, DEFAULT_STOP_CRITERIA.elapsedTimeSeconds),
+      ...(typeof sc.complexMode === 'boolean' ? { complexMode: sc.complexMode } : {}),
+    },
+    unitSystem: ALLOWED_UNIT_SYSTEMS.includes(project.unitSystem) ? project.unitSystem : 'SI',
+    fillMissing: Boolean(project.fillMissing),
+    stateUnitIds: plainJson(project.stateUnitIds) ?? {},
+    tables: Array.isArray(project.tables) ? plainJson(project.tables) : [],
+    plots: Array.isArray(project.plots) ? plainJson(project.plots) : [],
+    diagrams: Array.isArray(project.diagrams) ? plainJson(project.diagrams) : [],
+    customComponents: plainJson(project.customComponents),
+    digitizer: plainJson(project.digitizer),
+  }
+}
+
+export function saveProjectLocal(project: FreesProject) {
+  const safe = sanitizeProject(project)
+  if (safe == null) return
+  try {
+    localStorage.setItem(PROJECT_KEY, JSON.stringify(safe))
   } catch {
     // Autosave is best-effort; ignore quota errors.
   }

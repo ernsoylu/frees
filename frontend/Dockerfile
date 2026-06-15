@@ -24,6 +24,7 @@ COPY docker-entrypoint.d/40-build-info.sh /docker-entrypoint.d/40-build-info.sh
 USER root
 RUN chmod +x /docker-entrypoint.d/40-build-info.sh \
     && : > /usr/share/nginx/html/build-info.js \
-    && chmod 666 /usr/share/nginx/html/build-info.js
+    && chown 101:101 /usr/share/nginx/html/build-info.js \
+    && chmod 644 /usr/share/nginx/html/build-info.js
 USER 101
 EXPOSE 8080
