@@ -37,6 +37,7 @@ import {
 } from '@tabler/icons-react'
 import { CheckResponse, SolveResponse, TableRowResult } from './api'
 import { withStableKeys } from './format'
+import { FUNCTION_CATEGORIES } from './functionCatalog'
 
 // ---------------------------------------------------------------------------
 // Left icon rail: views on top, tool windows at the bottom (VS Code style).
@@ -323,6 +324,7 @@ interface TopBarProps {
   onMinMax: () => void
   onCurveFit: () => void
   onPreferences: () => void
+  onInsertFunction: (snippet: string) => void
 }
 
 function solveTooltipFor(canSolve: boolean, isTable: boolean): string {
@@ -454,6 +456,37 @@ export function TopBar(props: Readonly<TopBarProps>) {
             >
               Solve
             </Menu.Item>
+          </Menu.Dropdown>
+        </Menu>
+
+        <Menu position="bottom-start" shadow="md" width={250}>
+          <Menu.Target>
+            <Button
+              variant="subtle"
+              color="gray"
+              size="xs"
+              leftSection={<IconMathFunction size={14} />}
+              rightSection={<IconChevronDown size={12} />}
+            >
+              Functions
+            </Button>
+          </Menu.Target>
+          <Menu.Dropdown>
+            <div style={{ maxHeight: 420, overflowY: 'auto' }}>
+              {FUNCTION_CATEGORIES.map((cat) => (
+                <div key={cat.category}>
+                  <Menu.Label>{cat.category}</Menu.Label>
+                  {cat.items.map((item) => (
+                    <Menu.Item
+                      key={item.label}
+                      onClick={() => props.onInsertFunction(item.snippet)}
+                    >
+                      {item.label}
+                    </Menu.Item>
+                  ))}
+                </div>
+              ))}
+            </div>
           </Menu.Dropdown>
         </Menu>
 
