@@ -16,7 +16,7 @@ export default function AboutModal({ onClose }: Readonly<Props>) {
               frees
             </Text>
             <Text c="dimmed" size="sm">
-              free solver · v0.1.0
+              free solver · v0.0.1
             </Text>
           </Group>
           <Text size="sm">
@@ -24,6 +24,17 @@ export default function AboutModal({ onClose }: Readonly<Props>) {
             engineers. Solves systems of non-linear simultaneous equations with
             symbolic compiling, unit handling, and uncertainty propagation.
           </Text>
+          <Group gap="xs" wrap="nowrap" mt={4}>
+            <IconBrandGithub size={20} stroke={1.6} />
+            <Anchor
+              href="https://github.com/ernsoylu/frees"
+              target="_blank"
+              rel="noopener noreferrer"
+              size="sm"
+            >
+              github.com/ernsoylu/frees
+            </Anchor>
+          </Group>
         </Stack>
 
         <Text c="dimmed" size="xs">
