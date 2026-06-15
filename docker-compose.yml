@@ -22,6 +22,10 @@ services:
       args:
         # Set by frees.sh from `git rev-parse --short HEAD`; empty for ad-hoc builds.
         VITE_COMMIT_HASH: ${VITE_COMMIT_HASH:-}
+    # Runtime stamp: the entrypoint writes this into build-info.js. On Render the
+    # built-in RENDER_GIT_COMMIT takes precedence; locally frees.sh supplies it.
+    environment:
+      BUILD_COMMIT: ${VITE_COMMIT_HASH:-}
     container_name: frees-frontend
     ports:
       - "5173:8080"

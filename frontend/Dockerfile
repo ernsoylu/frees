@@ -17,4 +17,13 @@ RUN VITE_COMMIT_HASH="${VITE_COMMIT_HASH:-${RENDER_GIT_COMMIT:-dev}}" npm run bu
 FROM nginxinc/nginx-unprivileged:alpine
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /app/dist /usr/share/nginx/html
+# Runtime build-info: an entrypoint script stamps the live commit (see the
+# script and CLAUDE.md "Build stamping"). build-info.js must be writable by the
+# unprivileged runtime user; it starts empty so local builds fall back cleanly.
+COPY docker-entrypoint.d/40-build-info.sh /docker-entrypoint.d/40-build-info.sh
+USER root
+RUN chmod +x /docker-entrypoint.d/40-build-info.sh \
+    && : > /usr/share/nginx/html/build-info.js \
+    && chmod 666 /usr/share/nginx/html/build-info.js
+USER 101
 EXPOSE 8080

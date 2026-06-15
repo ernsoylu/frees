@@ -5,11 +5,21 @@ interface Props {
   onClose: () => void
 }
 
-// The git commit this bundle was built from, injected at build time (frees.sh
-// locally, RENDER_GIT_COMMIT on Render — see CLAUDE.md "Build stamping"). Lets
-// you confirm which revision a deployment is running. 'dev' for ad-hoc builds.
+// The git commit this deployment is running, so you can confirm the live
+// revision. Prefer the runtime stamp written by the nginx entrypoint
+// (window.__BUILD_COMMIT__, from RENDER_GIT_COMMIT on Render), then the
+// build-time stamp baked by Vite (frees.sh locally). See CLAUDE.md
+// "Build stamping". 'dev' when neither is present.
 const REPO_URL = 'https://github.com/ernsoylu/frees'
-const COMMIT_HASH = import.meta.env.VITE_COMMIT_HASH || 'dev'
+declare global {
+  interface Window {
+    __BUILD_COMMIT__?: string
+  }
+}
+const COMMIT_HASH =
+  (typeof window !== 'undefined' && window.__BUILD_COMMIT__) ||
+  import.meta.env.VITE_COMMIT_HASH ||
+  'dev'
 const COMMIT_SHORT = COMMIT_HASH.slice(0, 7)
 const COMMIT_IS_REAL = COMMIT_HASH !== 'dev'
 

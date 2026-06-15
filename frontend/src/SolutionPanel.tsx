@@ -178,7 +178,9 @@ function matrixLatex(group: ArrayMatrix): string {
       .join(rowSeparator)
   }
   const units = [...group.cells.values()][0]?.units || ''
-  const unitsStr = units ? String.raw` \,\left[\text{${units}}\right]` : ''
+  // Render the unit in math mode (\mathrm), not \text: a unit like "m^3/kg"
+  // puts a '^' inside \text{} which is invalid LaTeX and crashes KaTeX.
+  const unitsStr = units ? String.raw` \,\left[\mathrm{${units}}\right]` : ''
   return String.raw`${group.name} = \begin{pmatrix} ${bodyMath} \end{pmatrix}${unitsStr}`
 }
 
