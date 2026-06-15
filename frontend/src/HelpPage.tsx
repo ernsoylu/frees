@@ -808,6 +808,72 @@ P_fc = cons*V                   { continuous stack power at cruise [W] }
 cons_H2 = m_H2/Range            { hydrogen use [kg/m]; *1e5 for kg/100 km }`,
   },
   {
+    value: "ev-fast-charge",
+    title: "EV Powertrain: DC Fast Charging Time, C-rate & Grid Energy",
+    description: "DC fast-charge sizing over the usual 10→80% SOC window. From the charge current it finds the constant-current charge time, the charge C-rate, the DC power, the energy added, and the grid energy once the charger's efficiency is included. Battery quantities use conventional units (V, Ah, A, kWh) and are kept unitless. (Grounded in the EV fast-charging book in the linked notebook.)",
+    note: "175 Ah / 400 V pack, 10→80% at 350 A: ≈ 21 min on the CC phase, 2.0C, 140 kW DC, 49 kWh added, ≈ 52.7 kWh drawn from the grid at 93% charger efficiency. Real charges add a tapering CV phase past ~80%.",
+    code: `{ EV DC fast charge: time, C-rate, power and grid energy (engineering units) }
+V_pack = 400           { nominal pack voltage [V] }
+Q_pack = 175           { pack capacity [Ah] }
+E_pack = 70            { pack energy [kWh] }
+SOC_start = 10         { start state of charge [%] }
+SOC_end = 80           { end state of charge [%] }
+I_charge = 350         { DC charge current [A] }
+eta_charger = 0.93     { charger (grid->DC) efficiency }
+
+dSOC = (SOC_end - SOC_start)/100
+Ah_added = dSOC*Q_pack             { charge delivered [Ah] }
+t_charge_h = Ah_added/I_charge     { CC-phase time [h] }
+t_charge_min = t_charge_h*60
+C_rate = I_charge/Q_pack           { charge C-rate [1/h] }
+P_charge = V_pack*I_charge/1000    { DC charge power [kW] }
+E_added = dSOC*E_pack              { energy added to pack [kWh] }
+E_grid = E_added/eta_charger       { energy drawn from grid [kWh] }`,
+  },
+  {
+    value: "hev-power-split",
+    title: "EV Powertrain: Parallel Hybrid (HEV) Power Split",
+    description: "A parallel-hybrid power split at a peak demand point. The total wheel power for hard acceleration on the move is computed from the road load plus the inertial term; the engine is sized to cover about half of the peak, and the electric motor supplies the balance, drawing current from the battery. (Power-split relation and sizing rule from the hybrid-vehicle material in the linked notebook.)",
+    note: "At 120 km/h with 1.5 m/s² acceleration the wheels need ≈ 126 kW; sizing the engine at 50% leaves ≈ 63 kW for the motor, which pulls ≈ 228 A from a 300 V battery at 92% motor efficiency.",
+    code: `{ Parallel HEV power split: P_load = P_engine + P_motor }
+M = 1700 [kg]
+g = 9.81 [m/s^2]
+Crr = 0.011
+rho = 1.2 [kg/m^3]
+Cd = 0.30
+A_f = 2.3 [m^2]
+eta_dt = 0.88
+V_peak = 120 [km/h]    { speed at the peak-power point }
+a_peak = 1.5 [m/s^2]   { simultaneous acceleration }
+delta = 1.05
+
+F_peak = M*g*Crr + 0.5*rho*Cd*A_f*V_peak^2 + M*delta*a_peak
+P_load = F_peak*V_peak/eta_dt      { total wheel power demand }
+P_engine = 0.5*P_load              { ICE sized for ~half of peak }
+P_motor = P_load - P_engine        { motor supplies the rest }
+
+V_batt = 300 [V]
+eta_m = 0.92
+I_batt = P_motor/(V_batt*eta_m)    { battery current for the motor [A] }`,
+  },
+  {
+    value: "cell-to-pack-density",
+    title: "EV Powertrain: Cell-to-Pack Mass & Gravimetric Energy Density",
+    description: "Scales single-cell mass and energy up to a full pack, then compares cell- and pack-level specific energy. The pack mass adds structure, busbars, cooling and the BMS via a cell-mass fraction (cell-to-pack mass efficiency), which dilutes the gravimetric energy density from cell to pack level.",
+    note: "4700 × 21700 cells (70 g, 15.1 Wh each): cell-level ≈ 7.77e5 J/kg ≈ 216 Wh/kg, but at a 0.70 cell-mass fraction the 470 kg pack delivers ≈ 5.44e5 J/kg ≈ 151 Wh/kg (divide J/kg by 3600 for Wh/kg).",
+    code: `{ Cell-to-pack mass and gravimetric energy density }
+N_cells = 4700
+m_cell = 0.070 [kg]        { 21700 cell mass (~70 g) }
+E_cell = 54.4 [kJ]         { cell energy (~15.1 Wh) }
+pack_mass_factor = 0.70    { cell mass / pack mass (cell-to-pack efficiency) }
+
+m_cells = N_cells*m_cell
+m_pack = m_cells/pack_mass_factor      { pack mass incl. structure/cooling/BMS }
+E_pack = N_cells*E_cell
+e_cell_grav = E_cell/m_cell            { cell specific energy [J/kg]; /3600 = Wh/kg }
+e_pack_grav = E_pack/m_pack            { pack specific energy [J/kg]; /3600 = Wh/kg }`,
+  },
+  {
     value: "truss-stiffness",
     title: "Structural Analysis: Plane Truss by the Direct Stiffness Method",
     description: "A three-bar truss with one free node, assembled and solved exactly as a finite-element code would: each member contributes its EA/L stiffness with direction cosines to a 2×2 global stiffness matrix, which SolveLinear inverts for the nodal displacements; member axial forces follow.",
