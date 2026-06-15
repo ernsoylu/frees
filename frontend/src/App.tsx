@@ -30,6 +30,7 @@ import {
   VariableResult,
 } from './api'
 import PreferencesModal from './PreferencesModal'
+import AboutModal from './AboutModal'
 import VariableInfoModal, {
   DEFAULT_DRAFT,
   parseBound,
@@ -208,6 +209,7 @@ export default function App() {
   const [showVariableInfo, setShowVariableInfo] = useState(false)
   const [showMinMax, setShowMinMax] = useState(false)
   const [showCurveFit, setShowCurveFit] = useState(false)
+  const [showAbout, setShowAbout] = useState(false)
   const [activeTab, setActiveTab] = useState<string>('equations')
   const [eqView, setEqView] = useState<'editor' | 'formatted'>('editor')
 
@@ -918,7 +920,10 @@ export default function App() {
         onMinMax={() => setShowMinMax(true)}
         onCurveFit={() => setShowCurveFit(true)}
         onPreferences={() => setShowPreferences(true)}
+        onAbout={() => setShowAbout(true)}
       />
+
+      {showAbout && <AboutModal onClose={() => setShowAbout(false)} />}
 
       {showPreferences && (
         <PreferencesModal
