@@ -275,14 +275,8 @@ public final class EquationParser {
         lhs = resolveShapes(lhs, ctx);
         rhs = resolveShapes(rhs, ctx);
 
-        // MATLAB-style bare creation: A = [1 2; 3 4] or v = [1, 2, 3].
-        if (lhs instanceof Expr.Var(String vname)
-                && (rhs instanceof Expr.ArrayLiteral
-                    || isMatrixExpr(rhs, ctx.loopVars(), ctx.constants(), ctx.defs()))) {
-            flattenBareMatrixCreation(vname, rhs, sourceText, ctx);
-            return;
-        }
-
+        // Dedicated matrix-function handlers run first: they write the output
+        // directly (no helper temp variable leaks into the solution).
         if (rhs instanceof Expr.Call(String function, List<Expr> args)) {
             String func = switch (function.toLowerCase()) {
                 case "inv" -> "inverse";          // MATLAB aliases
@@ -305,6 +299,14 @@ public final class EquationParser {
                 flattenSolveLinear(lhs, args, sourceText, ctx);
                 return;
             }
+        }
+
+        // MATLAB-style bare creation: A = [1 2; 3 4], v = [1 2 3], Z = zeros(2,2).
+        if (lhs instanceof Expr.Var(String vname)
+                && (rhs instanceof Expr.ArrayLiteral
+                    || isMatrixExpr(rhs, ctx.loopVars(), ctx.constants(), ctx.defs()))) {
+            flattenBareMatrixCreation(vname, rhs, sourceText, ctx);
+            return;
         }
 
         if (isMatrixExpr(lhs, ctx.loopVars(), ctx.constants(), ctx.defs()) || isMatrixExpr(rhs, ctx.loopVars(), ctx.constants(), ctx.defs())) {
@@ -448,6 +450,7 @@ public final class EquationParser {
     }
 
     private void flattenCrossProduct(Expr lhs, List<Expr> args, String sourceText, FlattenContext ctx) {
+        lhs = explicitVectorOutput(lhs, 3, ctx); // allow a bare output: w = cross(u, v)
         VectorInfo w = parseVectorInfo(lhs, ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
         VectorInfo u = parseVectorInfo(args.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
         VectorInfo v = parseVectorInfo(args.get(1), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
