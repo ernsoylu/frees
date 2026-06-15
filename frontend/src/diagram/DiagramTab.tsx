@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   ActionIcon,
+  Alert,
   Autocomplete,
   Button,
   Center,
@@ -45,6 +46,10 @@ import {
   IconTarget,
   IconPlus,
   IconDownload,
+  IconFileImport,
+  IconFileExport,
+  IconSun,
+  IconMoon,
   IconVideo,
   IconClock,
   IconRefresh,
@@ -63,6 +68,8 @@ import {
   IconGripVertical,
   IconLock,
   IconLockOpen,
+  IconPin,
+  IconPinnedOff,
   IconStack3,
   IconLayoutAlignBottom,
   IconLayoutAlignCenter,
@@ -90,6 +97,8 @@ import {
   IconTrash,
   IconTypography,
   IconZoomScan,
+  IconZoomIn,
+  IconZoomOut,
 } from '@tabler/icons-react'
 import { TableRowResult, VariableResult } from '../api'
 import { formatValue } from '../format'
@@ -131,6 +140,7 @@ import {
 import { TEMPLATES, instantiateTemplate } from './templates'
 import {
   exportDiagram,
+  downloadTextFile,
   DiagramExportFormat,
   DiagramExportTheme,
 } from './exportDiagram'
@@ -175,10 +185,29 @@ export function loadDiagrams(): DiagramSpec[] {
   return initial
 }
 
-export function saveDiagrams(diagrams: DiagramSpec[]) {
+/** Broadcast name for save failures so the diagram window can warn the user. */
+export const DIAGRAM_SAVE_ERROR_EVENT = 'frees-diagram-save-error'
+
+/**
+ * Persist all diagrams. Returns false on failure (most commonly a
+ * localStorage quota overflow from large embedded images) and broadcasts an
+ * event so the UI can surface it — previously failures were swallowed
+ * silently, so the user could lose work without any warning.
+ */
+export function saveDiagrams(diagrams: DiagramSpec[]): boolean {
   try {
     localStorage.setItem(DIAGRAMS_STORAGE_KEY, JSON.stringify(diagrams))
-  } catch {}
+    return true
+  } catch (err) {
+    const message =
+      err instanceof DOMException && /quota/i.test(err.name + err.message)
+        ? 'Storage is full — the diagram could not be saved. Large embedded images are the usual cause; remove or shrink them, or export the diagram as JSON to keep a copy.'
+        : 'The diagram could not be saved to local storage.'
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent(DIAGRAM_SAVE_ERROR_EVENT, { detail: message }))
+    }
+    return false
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -1167,7 +1196,8 @@ function WidgetView({
   const maxVal = convertValue(maxValRaw, targetUnit).value
 
   let t = 0
-  if (maxVal > minVal) {
+  if (Number.isFinite(val) && maxVal > minVal) {
+    // Guard against a NaN/Inf solve producing broken gauge geometry.
     t = Math.max(0, Math.min(1, (val - minVal) / (maxVal - minVal)))
   }
 
@@ -1543,7 +1573,7 @@ function ElementView({
             stroke="transparent"
             strokeWidth={Math.max(12, el.strokeWidth + 8)}
             fill="none"
-            onMouseDown={handleDown}
+            onPointerDown={handleDown}
             style={{ cursor: runMode ? 'default' : 'pointer' }}
           />
         </>
@@ -1829,7 +1859,7 @@ function ElementView({
   return (
     <g
       transform={transform}
-      onMouseDown={handleDown}
+      onPointerDown={handleDown}
       onMouseMove={hoverable ? (e) => onHover(el.id, e.clientX, e.clientY) : undefined}
       onMouseLeave={hoverable ? () => onHover(null, 0, 0) : undefined}
       style={{ cursor: runMode ? 'default' : 'move' }}
@@ -1894,7 +1924,7 @@ function SelectionHandles({
               stroke="#1a1b1e"
               strokeWidth={1 / view.k}
               style={{ cursor: 'crosshair' }}
-              onMouseDown={(e) => onEndpointDown(e, which as 1 | 2)}
+              onPointerDown={(e) => onEndpointDown(e, which as 1 | 2)}
             />
           )
         })}
@@ -1934,7 +1964,7 @@ function SelectionHandles({
             stroke="#1a1b1e"
             strokeWidth={1 / view.k}
             style={{ cursor: h.cursor }}
-            onMouseDown={(e) => onHandleDown(e, h.id)}
+            onPointerDown={(e) => onHandleDown(e, h.id)}
           />
         ))}
       {/* Rotate handle above the top edge (Shift snaps to 15°). */}
@@ -1955,7 +1985,7 @@ function SelectionHandles({
         stroke={color}
         strokeWidth={1.5 / view.k}
         style={{ cursor: 'grab' }}
-        onMouseDown={onRotateDown}
+        onPointerDown={onRotateDown}
       />
     </g>
   )
@@ -2005,7 +2035,7 @@ function GroupHandles({
           stroke="#1a1b1e"
           strokeWidth={1 / view.k}
           style={{ cursor: h.cursor }}
-          onMouseDown={(e) => onHandleDown(e, h.id)}
+          onPointerDown={(e) => onHandleDown(e, h.id)}
         />
       ))}
     </>
@@ -2820,6 +2850,66 @@ function ValueDrivenFillFields({
   )
 }
 
+/**
+ * Precise numeric placement (X/Y/W/H, or line endpoints) for the selected
+ * element. Canvas dragging is fine for rough layout, but engineering diagrams
+ * need exact coordinates — this gives a typed alternative to the handles.
+ */
+function GeometryFields({
+  el,
+  set,
+}: Readonly<{
+  el: DiagramElement
+  set: (patch: Partial<DiagramElement>) => void
+}>) {
+  // Connectors are anchored to other elements — their geometry is derived.
+  if (el.kind === 'connector') return null
+
+  const field = (label: string, value: number, onSet: (v: number) => void) => (
+    <NumberInput
+      label={label}
+      size="xs"
+      value={Math.round(value)}
+      onChange={(v) => onSet(typeof v === 'number' ? v : value)}
+      styles={{ input: { fontFamily: 'monospace' } }}
+    />
+  )
+
+  if (el.kind === 'line') {
+    return (
+      <>
+        <Divider label="Endpoints" labelPosition="left" />
+        <Group grow gap="xs">
+          {field('X1', el.x1, (v) => set({ x1: v }))}
+          {field('Y1', el.y1, (v) => set({ y1: v }))}
+        </Group>
+        <Group grow gap="xs">
+          {field('X2', el.x2, (v) => set({ x2: v }))}
+          {field('Y2', el.y2, (v) => set({ y2: v }))}
+        </Group>
+      </>
+    )
+  }
+
+  const g = el as unknown as { x: number; y: number; w?: number; h?: number }
+  const hasSize = el.kind !== 'label'
+  return (
+    <>
+      <Divider label="Position & Size" labelPosition="left" />
+      <Group grow gap="xs">
+        {field('X', g.x, (v) => set({ x: v } as Partial<DiagramElement>))}
+        {field('Y', g.y, (v) => set({ y: v } as Partial<DiagramElement>))}
+      </Group>
+      {hasSize && (
+        <Group grow gap="xs">
+          {field('W', g.w ?? 0, (v) => set({ w: Math.max(1, v) } as Partial<DiagramElement>))}
+          {field('H', g.h ?? 0, (v) => set({ h: Math.max(1, v) } as Partial<DiagramElement>))}
+        </Group>
+      )}
+    </>
+  )
+}
+
 function PropertiesPanel({
   el,
   varNames,
@@ -2863,6 +2953,8 @@ function PropertiesPanel({
                   ? 'Connector'
                   : el.kind}
       </Text>
+
+      <GeometryFields el={el} set={set} />
 
       {isControl(el) && <ControlFields el={el} set={set} />}
 
@@ -3243,7 +3335,13 @@ export default function DiagramTab(props: Readonly<Props>) {
     [onDiagramsChange],
   )
   const [tool, setTool] = useState<Tool>('select')
-  // Search query for the Component Library dropdown (32+ icons across 4
+  // When locked, a drawing tool stays active after each placement so several
+  // elements can be dropped in a row (place-multiple). When off, the tool
+  // reverts to Select after one placement (the conventional single-shot mode).
+  const [lockTool, setLockTool] = useState(false)
+  const lockToolRef = useRef(lockTool)
+  lockToolRef.current = lockTool
+  // Search query for the Component Library dropdown (50+ icons across 4
   // categories, so a flat scrolling menu is hard to use without a filter).
   const [libQuery, setLibQuery] = useState('')
   const [mode, setMode] = useState<'develop' | 'run'>('develop')
@@ -3297,6 +3395,17 @@ export default function DiagramTab(props: Readonly<Props>) {
     setHoveredAnchor(null)
   }, [tool])
 
+  // Surface localStorage save failures (previously swallowed) so the user is
+  // warned before losing work — usually quota overflow from embedded images.
+  useEffect(() => {
+    const onSaveError = (e: Event) => {
+      const message = (e as CustomEvent<string>).detail
+      setNotice({ kind: 'error', message: message || 'The diagram could not be saved.' })
+    }
+    window.addEventListener(DIAGRAM_SAVE_ERROR_EVENT, onSaveError)
+    return () => window.removeEventListener(DIAGRAM_SAVE_ERROR_EVENT, onSaveError)
+  }, [])
+
   // ── Undo/redo history (Story 10.1) ───────────────────────────────────
   // Refs (not state) hold the stacks; every history change rides on a state
   // change that re-renders, so the buttons reflect the latest stack depth.
@@ -3324,6 +3433,12 @@ export default function DiagramTab(props: Readonly<Props>) {
   const [exportTheme, setExportTheme] = useState<DiagramExportTheme>('dark')
   const [exporting, setExporting] = useState<DiagramExportFormat | null>(null)
   const [exportError, setExportError] = useState<string | null>(null)
+  // Transient banner for save failures (quota) and import errors/warnings.
+  const [notice, setNotice] = useState<{ kind: 'error' | 'info'; message: string } | null>(null)
+  // Canvas surface theme — editing was previously locked to dark regardless of
+  // the app's color scheme; this lets the canvas match a light workspace.
+  const [canvasTheme, setCanvasTheme] = useState<'dark' | 'light'>('dark')
+  const diagramJsonInputRef = useRef<HTMLInputElement>(null)
 
   const runExport = async (format: DiagramExportFormat) => {
     if (!svgRef.current) return
@@ -3399,6 +3514,51 @@ export default function DiagramTab(props: Readonly<Props>) {
     onDiagramsChange(nextList)
   }
 
+  // Export the active diagram to a portable JSON file so it can be backed up,
+  // version-controlled, or moved to another browser/machine — localStorage is
+  // not durable enough on its own.
+  const exportDiagramJson = () => {
+    const payload = {
+      app: 'frees',
+      kind: 'diagram',
+      version: 1,
+      name: activeDiagram.name,
+      state: activeDiagram.state,
+    }
+    const base = activeDiagram.name.trim().replace(/[^\w.-]+/g, '_') || 'diagram'
+    downloadTextFile(JSON.stringify(payload, null, 2), `${base}.frees-diagram.json`)
+  }
+
+  // Import a diagram JSON (single spec, an exported payload, or an array of
+  // specs) as new tab(s). Validates the shape before touching the diagram list.
+  const importDiagramJson = (text: string): { ok: boolean; error?: string } => {
+    let parsed: unknown
+    try {
+      parsed = JSON.parse(text)
+    } catch {
+      return { ok: false, error: 'That file is not valid JSON.' }
+    }
+    const toSpec = (raw: any): DiagramSpec | null => {
+      const st = raw?.state ?? raw
+      if (!st || !Array.isArray(st.elements)) return null
+      const state: DiagramState = {
+        elements: st.elements,
+        gridSize: typeof st.gridSize === 'number' ? st.gridSize : 10,
+        snap: typeof st.snap === 'boolean' ? st.snap : true,
+        showGrid: typeof st.showGrid === 'boolean' ? st.showGrid : true,
+      }
+      return { id: crypto.randomUUID(), name: String(raw?.name ?? 'Imported Diagram'), state }
+    }
+    const candidates = Array.isArray(parsed) ? parsed : [parsed]
+    const specs = candidates.map(toSpec).filter((s): s is DiagramSpec => s !== null)
+    if (specs.length === 0) {
+      return { ok: false, error: 'No diagram could be read from that file.' }
+    }
+    onDiagramsChange([...diagrams, ...specs])
+    onActiveDiagramIdChange?.(specs[0].id)
+    return { ok: true }
+  }
+
   /** Commit a state change to history (with optional coalescing of rapid edits). */
   const commit = useCallback(
     (updater: DiagramState | ((s: DiagramState) => DiagramState), coalesceKey?: string) => {
@@ -3467,6 +3627,11 @@ export default function DiagramTab(props: Readonly<Props>) {
   const [recording, setRecording] = useState(false)
   const recorderRef = useRef<DiagramRecorder | null>(null)
   const svgRef = useRef<SVGSVGElement | null>(null)
+  // Active touch/pen pointers for two-finger pinch zoom. When two are down we
+  // suppress the single-pointer drag model and scale about the pinch midpoint.
+  const pointersRef = useRef<Map<number, { x: number; y: number }>>(new Map())
+  const pinchingRef = useRef(false)
+  const pinchDistRef = useRef<number | null>(null)
 
   const runMode = mode === 'run'
   const selectedSet = useMemo(() => new Set(selectedIds), [selectedIds])
@@ -3889,7 +4054,22 @@ export default function DiagramTab(props: Readonly<Props>) {
   const handleImageUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
-    
+
+    // Images are stored inline as base64 data-URLs inside the diagram, which
+    // counts against the small (~5 MB) localStorage budget shared by every
+    // diagram. Reject oversized files up front rather than silently failing to
+    // save later. SVGs are text and stay compact, so they get a higher ceiling.
+    const isSvg = file.type === 'image/svg+xml'
+    const limit = isSvg ? 1_000_000 : 1_500_000
+    if (file.size > limit) {
+      setNotice({
+        kind: 'error',
+        message: `That image is ${(file.size / 1_048_576).toFixed(1)} MB — too large to embed (limit ${(limit / 1_048_576).toFixed(1)} MB). Shrink it first; large images can exceed the browser storage quota and prevent the diagram from saving.`,
+      })
+      e.target.value = ''
+      return
+    }
+
     const reader = new FileReader()
     reader.onload = (event) => {
       const url = event.target?.result as string
@@ -4203,13 +4383,76 @@ export default function DiagramTab(props: Readonly<Props>) {
     [tool, snap],
   )
 
-  // ── mouse interactions ───────────────────────────────────────────────
+  // ── pointer interactions (mouse / touch / pen) ───────────────────────
 
-  const startPan = (e: React.MouseEvent) => {
+  // Track every active pointer so two simultaneous touches become a pinch.
+  const onCanvasPointerDown = (e: React.PointerEvent) => {
+    pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
+    if (pointersRef.current.size === 2) {
+      // Second finger down: cancel any single-pointer gesture and begin pinch.
+      pinchingRef.current = true
+      setDrag(null)
+      const pts = [...pointersRef.current.values()]
+      pinchDistRef.current = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y)
+      return
+    }
+    onBackgroundDown(e)
+  }
+
+  const onCanvasPointerMove = (e: React.PointerEvent) => {
+    if (pinchingRef.current) {
+      if (!pointersRef.current.has(e.pointerId)) return
+      pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
+      const pts = [...pointersRef.current.values()]
+      if (pts.length < 2 || pinchDistRef.current == null) return
+      const dist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y)
+      const rect = svgRef.current?.getBoundingClientRect()
+      if (!rect || dist === 0) return
+      const midX = (pts[0].x + pts[1].x) / 2 - rect.left
+      const midY = (pts[0].y + pts[1].y) / 2 - rect.top
+      const factor = dist / pinchDistRef.current
+      pinchDistRef.current = dist
+      setView((v) => {
+        const k = Math.min(5, Math.max(0.15, v.k * factor))
+        return { k, x: midX - ((midX - v.x) / v.k) * k, y: midY - ((midY - v.y) / v.k) * k }
+      })
+      return
+    }
+    onCanvasHoverMove(e)
+  }
+
+  const onCanvasPointerUp = (e: React.PointerEvent) => {
+    pointersRef.current.delete(e.pointerId)
+    if (pointersRef.current.size < 2) {
+      pinchingRef.current = false
+      pinchDistRef.current = null
+    }
+  }
+
+  // Highlight the nearest connection anchor while the connector tool is hovering.
+  const onCanvasHoverMove = (e: { clientX: number; clientY: number }) => {
+    if (runMode) return
+    if (tool === 'connector' && !drag) {
+      const world = toWorld(e.clientX, e.clientY)
+      let closest: ElementAnchorInfo | null = null
+      let minDistance = 12 // screen pixels
+      for (const anchor of allAnchors) {
+        const dist = Math.hypot(anchor.x - world.x, anchor.y - world.y) * view.k
+        if (dist < minDistance) {
+          minDistance = dist
+          closest = anchor
+        }
+      }
+      setHoveredAnchor(closest)
+    }
+  }
+
+  const startPan = (e: { clientX: number; clientY: number }) => {
     setDrag({ type: 'pan', startClientX: e.clientX, startClientY: e.clientY, startView: view })
   }
 
   const onBackgroundDown = (e: React.MouseEvent) => {
+    if (pinchingRef.current) return
     // Middle mouse pans regardless of tool/mode.
     if (e.button === 1) {
       e.preventDefault()
@@ -4322,6 +4565,7 @@ export default function DiagramTab(props: Readonly<Props>) {
   }
 
   const onElementDown = (e: React.MouseEvent, el: DiagramElement) => {
+    if (pinchingRef.current) return
     if (e.button !== 0 || tool !== 'select' || el.locked) return
     e.stopPropagation()
     const additive = e.shiftKey || e.ctrlKey || e.metaKey
@@ -4587,7 +4831,7 @@ export default function DiagramTab(props: Readonly<Props>) {
           }),
         }))
         endGesture()
-        setTool('select')
+        if (!lockToolRef.current) setTool('select')
       } else if (drag.type === 'move') {
         endGesture()
         if (tool !== 'select') setTool('select')
@@ -4623,7 +4867,7 @@ export default function DiagramTab(props: Readonly<Props>) {
         }
         setHoveredAnchor(null)
         gestureBaseRef.current = null
-        setTool('select')
+        if (!lockToolRef.current) setTool('select')
       } else if (drag.type === 'marquee') {
         const box = marqueeRef.current
         if (box && (box.w > 2 || box.h > 2)) {
@@ -4650,11 +4894,13 @@ export default function DiagramTab(props: Readonly<Props>) {
       setGuides(null)
       setDrag(null)
     }
-    window.addEventListener('mousemove', onMove)
-    window.addEventListener('mouseup', onUp)
+    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointerup', onUp)
+    window.addEventListener('pointercancel', onUp)
     return () => {
-      window.removeEventListener('mousemove', onMove)
-      window.removeEventListener('mouseup', onUp)
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerup', onUp)
+      window.removeEventListener('pointercancel', onUp)
     }
   }, [
     drag,
@@ -4716,6 +4962,33 @@ export default function DiagramTab(props: Readonly<Props>) {
     })
   }
 
+  // Zoom by a fixed factor about the canvas center, keeping that point fixed.
+  const zoomBy = (factor: number) => {
+    const rect = svgRef.current?.getBoundingClientRect()
+    const cx = rect ? rect.width / 2 : 0
+    const cy = rect ? rect.height / 2 : 0
+    setView((v) => {
+      const k = Math.min(5, Math.max(0.15, v.k * factor))
+      return {
+        k,
+        x: cx - ((cx - v.x) / v.k) * k,
+        y: cy - ((cy - v.y) / v.k) * k,
+      }
+    })
+  }
+
+  // Reset to 100% about the canvas center.
+  const resetZoom = () => {
+    const rect = svgRef.current?.getBoundingClientRect()
+    const cx = rect ? rect.width / 2 : 0
+    const cy = rect ? rect.height / 2 : 0
+    setView((v) => ({
+      k: 1,
+      x: cx - ((cx - v.x) / v.k) * 1,
+      y: cy - ((cy - v.y) / v.k) * 1,
+    }))
+  }
+
   // ── keyboard shortcuts ───────────────────────────────────────────────
 
   useEffect(() => {
@@ -4733,6 +5006,22 @@ export default function DiagramTab(props: Readonly<Props>) {
       if (mod && e.key.toLowerCase() === 'y') {
         e.preventDefault()
         redo()
+        return
+      }
+      // Zoom shortcuts (Ctrl/Cmd with +, -, 0) work in any mode.
+      if (mod && (e.key === '=' || e.key === '+')) {
+        e.preventDefault()
+        zoomBy(1.2)
+        return
+      }
+      if (mod && (e.key === '-' || e.key === '_')) {
+        e.preventDefault()
+        zoomBy(1 / 1.2)
+        return
+      }
+      if (mod && e.key === '0') {
+        e.preventDefault()
+        resetZoom()
         return
       }
       if (runMode) return
@@ -4772,6 +5061,7 @@ export default function DiagramTab(props: Readonly<Props>) {
       } else if (e.key === 'Escape') {
         setSelectedIds([])
         setTool('select')
+        setLockTool(false)
       } else if (e.key.startsWith('Arrow') && selectedElements.length > 0) {
         e.preventDefault()
         const step = e.shiftKey ? 1 : state.gridSize
@@ -4928,8 +5218,23 @@ export default function DiagramTab(props: Readonly<Props>) {
               <Menu.Item leftSection={<IconLayoutGrid size={14} />} onClick={() => setTemplateModalOpen(true)}>
                 From Template...
               </Menu.Item>
+              <Menu.Divider />
+              <Menu.Item leftSection={<IconFileImport size={14} />} onClick={() => diagramJsonInputRef.current?.click()}>
+                Import from JSON...
+              </Menu.Item>
             </Menu.Dropdown>
           </Menu>
+          <Tooltip label="Save this diagram as a portable JSON file (backup / share / move between machines)">
+            <Button
+              size="compact-xs"
+              variant="light"
+              color="gray"
+              leftSection={<IconFileExport size={13} />}
+              onClick={exportDiagramJson}
+            >
+              Save JSON
+            </Button>
+          </Tooltip>
           <Tooltip label="Export this diagram (SVG, PNG, PDF, EPS)">
             <Button
               size="compact-xs"
@@ -4945,6 +5250,18 @@ export default function DiagramTab(props: Readonly<Props>) {
             </Button>
           </Tooltip>
         </Group>
+
+        {notice && (
+          <Alert
+            color={notice.kind === 'error' ? 'red' : 'blue'}
+            variant="light"
+            withCloseButton
+            onClose={() => setNotice(null)}
+            py={6}
+          >
+            <Text size="xs">{notice.message}</Text>
+          </Alert>
+        )}
 
         {/* Canvas Toolbar Row */}
         <Group gap="xs" wrap="wrap">
@@ -4977,6 +5294,8 @@ export default function DiagramTab(props: Readonly<Props>) {
                     <ActionIcon
                       variant={tool === tb.tool ? 'filled' : 'default'}
                       size="lg"
+                      aria-label={tb.label}
+                      aria-pressed={tool === tb.tool}
                       onClick={() => setTool(tb.tool)}
                     >
                       {tb.icon}
@@ -4989,6 +5308,7 @@ export default function DiagramTab(props: Readonly<Props>) {
                       <ActionIcon
                         variant={tool.startsWith('icon:') ? 'filled' : 'default'}
                         size="lg"
+                        aria-label="Component Library"
                       >
                         <IconStack2 size={18} />
                       </ActionIcon>
@@ -5019,7 +5339,7 @@ export default function DiagramTab(props: Readonly<Props>) {
                     <ScrollArea.Autosize mah={360} type="auto">
                       {(() => {
                         const q = libQuery.trim().toLowerCase()
-                        const cats = ['Thermo-fluid', 'Mechanical', 'Sensors & Gauges', 'Electrical'] as const
+                        const cats = ['Basic Shapes', 'Thermo-fluid', 'Mechanical', 'Sensors & Gauges', 'Electrical'] as const
                         const matchesCustom = customComponents.filter((cc) => cc.label.toLowerCase().includes(q))
                         let anyMatch = matchesCustom.length > 0
                         const sections = cats.map((cat) => {
@@ -5099,6 +5419,7 @@ export default function DiagramTab(props: Readonly<Props>) {
                       <ActionIcon
                         variant={tool.startsWith('ctl-') ? 'filled' : 'default'}
                         size="lg"
+                        aria-label="Form Controls"
                       >
                         <IconForms size={18} />
                       </ActionIcon>
@@ -5123,6 +5444,7 @@ export default function DiagramTab(props: Readonly<Props>) {
                       <ActionIcon
                         variant={tool.startsWith('widget:') ? 'filled' : 'default'}
                         size="lg"
+                        aria-label="Indicator & Gauge Widgets"
                       >
                         <IconGauge size={18} />
                       </ActionIcon>
@@ -5141,6 +5463,17 @@ export default function DiagramTab(props: Readonly<Props>) {
                     ))}
                   </Menu.Dropdown>
                 </Menu>
+                <Tooltip label={lockTool ? 'Tool locked — stays active for placing several (click or Esc to unlock)' : 'Lock tool to place several in a row'}>
+                  <ActionIcon
+                    variant={lockTool ? 'filled' : 'default'}
+                    size="lg"
+                    aria-label="Keep tool active after placing"
+                    aria-pressed={lockTool}
+                    onClick={() => setLockTool((v) => !v)}
+                  >
+                    {lockTool ? <IconPin size={18} /> : <IconPinnedOff size={18} />}
+                  </ActionIcon>
+                </Tooltip>
               </Group>
               <Divider orientation="vertical" />
               <Checkbox
@@ -5174,6 +5507,7 @@ export default function DiagramTab(props: Readonly<Props>) {
                 <ActionIcon
                   variant="default"
                   size="lg"
+                  aria-label="Undo"
                   onClick={undo}
                   disabled={pastRef.current.length === 0}
                 >
@@ -5184,6 +5518,7 @@ export default function DiagramTab(props: Readonly<Props>) {
                 <ActionIcon
                   variant="default"
                   size="lg"
+                  aria-label="Redo"
                   onClick={redo}
                   disabled={futureRef.current.length === 0}
                 >
@@ -5192,9 +5527,36 @@ export default function DiagramTab(props: Readonly<Props>) {
               </Tooltip>
             </Group>
           )}
-          <Tooltip label="Zoom to fit">
-            <ActionIcon variant="default" size="lg" onClick={zoomToFit}>
-              <IconZoomScan size={18} />
+          <Group gap={2}>
+            <Tooltip label="Zoom out">
+              <ActionIcon variant="default" size="lg" aria-label="Zoom out" onClick={() => zoomBy(1 / 1.2)}>
+                <IconZoomOut size={18} />
+              </ActionIcon>
+            </Tooltip>
+            <Tooltip label="Reset to 100%">
+              <Button variant="default" size="compact-sm" w={52} px={4} onClick={resetZoom} aria-label="Zoom level, click to reset to 100%">
+                {Math.round(view.k * 100)}%
+              </Button>
+            </Tooltip>
+            <Tooltip label="Zoom in">
+              <ActionIcon variant="default" size="lg" aria-label="Zoom in" onClick={() => zoomBy(1.2)}>
+                <IconZoomIn size={18} />
+              </ActionIcon>
+            </Tooltip>
+            <Tooltip label="Zoom to fit">
+              <ActionIcon variant="default" size="lg" aria-label="Zoom to fit" onClick={zoomToFit}>
+                <IconZoomScan size={18} />
+              </ActionIcon>
+            </Tooltip>
+          </Group>
+          <Tooltip label={canvasTheme === 'dark' ? 'Canvas: dark (switch to light)' : 'Canvas: light (switch to dark)'}>
+            <ActionIcon
+              variant="default"
+              size="lg"
+              aria-label="Toggle canvas background light/dark"
+              onClick={() => setCanvasTheme((t) => (t === 'dark' ? 'light' : 'dark'))}
+            >
+              {canvasTheme === 'dark' ? <IconMoon size={18} /> : <IconSun size={18} />}
             </ActionIcon>
           </Tooltip>
           {runMode && runCount === 0 && (
@@ -5215,12 +5577,12 @@ export default function DiagramTab(props: Readonly<Props>) {
                 <Group gap="sm" wrap="nowrap">
                   <Group gap={2} wrap="nowrap">
                     <Tooltip label="Previous run">
-                      <ActionIcon variant="default" onClick={() => stepRun(-1)}>
+                      <ActionIcon variant="default" aria-label="Previous run" onClick={() => stepRun(-1)}>
                         <IconPlayerSkipBackFilled size={16} />
                       </ActionIcon>
                     </Tooltip>
                     <Tooltip label={playing ? 'Pause' : 'Play runs'}>
-                      <ActionIcon variant="filled" onClick={togglePlay} disabled={runCount <= 1}>
+                      <ActionIcon variant="filled" aria-label={playing ? 'Pause' : 'Play runs'} onClick={togglePlay} disabled={runCount <= 1}>
                         {playing ? (
                           <IconPlayerPauseFilled size={16} />
                         ) : (
@@ -5229,13 +5591,15 @@ export default function DiagramTab(props: Readonly<Props>) {
                       </ActionIcon>
                     </Tooltip>
                     <Tooltip label="Next run">
-                      <ActionIcon variant="default" onClick={() => stepRun(1)}>
+                      <ActionIcon variant="default" aria-label="Next run" onClick={() => stepRun(1)}>
                         <IconPlayerSkipForwardFilled size={16} />
                       </ActionIcon>
                     </Tooltip>
                     <Tooltip label={loop ? 'Looping' : 'Loop off'}>
                       <ActionIcon
                         variant={loop ? 'light' : 'default'}
+                        aria-label="Toggle loop playback"
+                        aria-pressed={loop}
                         onClick={() => setLoop((l) => !l)}
                       >
                         {loop ? <IconRepeat size={16} /> : <IconRepeatOff size={16} />}
@@ -5268,6 +5632,7 @@ export default function DiagramTab(props: Readonly<Props>) {
                   <Tooltip label="Show the live single solve">
                     <ActionIcon
                       variant={playPos === null ? 'light' : 'default'}
+                      aria-label="Show the live single solve"
                       onClick={goLive}
                     >
                       <IconBroadcast size={16} />
@@ -5361,37 +5726,25 @@ export default function DiagramTab(props: Readonly<Props>) {
           withBorder
           flex={1}
           mih={0}
-          style={{ overflow: 'hidden', background: '#141517', position: 'relative' }}
+          style={{ overflow: 'hidden', background: canvasTheme === 'light' ? '#ffffff' : '#141517', position: 'relative' }}
         >
           <style>{FLOW_KEYFRAMES}</style>
           <svg
             ref={svgRef}
             width="100%"
             height="100%"
-            onMouseDown={onBackgroundDown}
+            onPointerDown={onCanvasPointerDown}
+            onPointerMove={onCanvasPointerMove}
+            onPointerUp={onCanvasPointerUp}
+            onPointerCancel={onCanvasPointerUp}
             onWheel={onWheel}
-            onMouseMove={(e) => {
-              if (runMode) return
-              if (tool === 'connector' && !drag) {
-                const world = toWorld(e.clientX, e.clientY)
-                let closest: ElementAnchorInfo | null = null
-                let minDistance = 12 // screen pixels
-                for (const anchor of allAnchors) {
-                  const dist = Math.hypot(anchor.x - world.x, anchor.y - world.y) * view.k
-                  if (dist < minDistance) {
-                    minDistance = dist
-                    closest = anchor
-                  }
-                }
-                setHoveredAnchor(closest)
-              }
-            }}
             onMouseLeave={() => {
               if (tool === 'connector' && !drag) {
                 setHoveredAnchor(null)
               }
             }}
             style={{
+              touchAction: 'none',
               display: 'block',
               cursor:
                 drag?.type === 'pan'
@@ -5405,7 +5758,7 @@ export default function DiagramTab(props: Readonly<Props>) {
           >
             <g transform={`translate(${view.x} ${view.y}) scale(${view.k})`}>
               {state.showGrid && !runMode && gridStep > 4 && (
-                <GridPattern gridSize={state.gridSize} view={view} />
+                <GridPattern gridSize={state.gridSize} view={view} dotColor={canvasTheme === 'light' ? '#ced4da' : '#373A40'} />
               )}
               {/* Marked group captured by diagram export (Story 10.10); excludes
                   grid, smart guides, and selection chrome rendered as siblings. */}
@@ -5843,6 +6196,29 @@ export default function DiagramTab(props: Readonly<Props>) {
         style={{ display: 'none' }}
       />
 
+      <input
+        type="file"
+        ref={diagramJsonInputRef}
+        accept="application/json,.json"
+        onChange={(e) => {
+          const file = e.target.files?.[0]
+          e.target.value = ''
+          if (!file) return
+          file
+            .text()
+            .then((text) => {
+              const result = importDiagramJson(text)
+              if (!result.ok) {
+                setNotice({ kind: 'error', message: result.error ?? 'Import failed.' })
+              } else {
+                setNotice({ kind: 'info', message: `Imported “${file.name}”.` })
+              }
+            })
+            .catch(() => setNotice({ kind: 'error', message: 'Could not read that file.' }))
+        }}
+        style={{ display: 'none' }}
+      />
+
       <Modal
         opened={templateModalOpen}
         onClose={() => setTemplateModalOpen(false)}
@@ -5965,7 +6341,8 @@ export default function DiagramTab(props: Readonly<Props>) {
 function GridPattern({
   gridSize,
   view,
-}: Readonly<{ gridSize: number; view: ViewTransform }>) {
+  dotColor = '#373A40',
+}: Readonly<{ gridSize: number; view: ViewTransform; dotColor?: string }>) {
   // Visible world rect (with margin) derived from the inverse transform.
   const margin = 200
   const x0 = -view.x / view.k - margin
@@ -5985,7 +6362,7 @@ function GridPattern({
           height={gridSize}
           patternUnits="userSpaceOnUse"
         >
-          <circle cx={0.75} cy={0.75} r={0.75} fill="#373A40" />
+          <circle cx={0.75} cy={0.75} r={0.75} fill={dotColor} />
         </pattern>
       </defs>
       <rect

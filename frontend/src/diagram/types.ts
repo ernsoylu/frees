@@ -571,6 +571,98 @@ export const ANCHOR_DEFS: Record<string, Record<string, AnchorDefinition>> = {
   elec_ground: {
     port: { rx: 0.5, ry: 0.2, nx: 0, ny: -1 },
   },
+  diode: {
+    port1: { rx: 0.1, ry: 0.5, nx: -1, ny: 0 },
+    port2: { rx: 0.9, ry: 0.5, nx: 1, ny: 0 },
+  },
+  switch: {
+    port1: { rx: 0.1, ry: 0.5, nx: -1, ny: 0 },
+    port2: { rx: 0.9, ry: 0.5, nx: 1, ny: 0 },
+  },
+  battery: {
+    port1: { rx: 0.1, ry: 0.5, nx: -1, ny: 0 },
+    port2: { rx: 0.9, ry: 0.5, nx: 1, ny: 0 },
+  },
+  dc_motor: {
+    port1: { rx: 0.1, ry: 0.5, nx: -1, ny: 0 },
+    port2: { rx: 0.9, ry: 0.5, nx: 1, ny: 0 },
+  },
+  lamp: {
+    port1: { rx: 0.06, ry: 0.5, nx: -1, ny: 0 },
+    port2: { rx: 0.94, ry: 0.5, nx: 1, ny: 0 },
+  },
+  ac_source: {
+    port1: { rx: 0.1, ry: 0.5, nx: -1, ny: 0 },
+    port2: { rx: 0.9, ry: 0.5, nx: 1, ny: 0 },
+  },
+  transformer: {
+    'primary-top': { rx: 0.2, ry: 0.18, nx: -1, ny: 0 },
+    'primary-bottom': { rx: 0.2, ry: 0.82, nx: -1, ny: 0 },
+    'secondary-top': { rx: 0.8, ry: 0.18, nx: 1, ny: 0 },
+    'secondary-bottom': { rx: 0.8, ry: 0.82, nx: 1, ny: 0 },
+  },
+  transistor: {
+    base: { rx: 0.1, ry: 0.5, nx: -1, ny: 0 },
+    collector: { rx: 0.68, ry: 0.1, nx: 0, ny: -1 },
+    emitter: { rx: 0.68, ry: 0.9, nx: 0, ny: 1 },
+  },
+  level_sensor: {
+    port: { rx: 0.1, ry: 0.5, nx: -1, ny: 0 },
+  },
+  humidity_sensor: {
+    port: { rx: 0.1, ry: 0.5, nx: -1, ny: 0 },
+  },
+  indicator: {
+    port: { rx: 0.5, ry: 0.1, nx: 0, ny: -1 },
+  },
+  thermocouple: {
+    port: { rx: 0.9, ry: 0.5, nx: 1, ny: 0 },
+  },
+  spring: {
+    left: { rx: 0.08, ry: 0.5, nx: -1, ny: 0 },
+    right: { rx: 0.92, ry: 0.5, nx: 1, ny: 0 },
+  },
+  damper: {
+    left: { rx: 0.08, ry: 0.5, nx: -1, ny: 0 },
+    right: { rx: 0.92, ry: 0.5, nx: 1, ny: 0 },
+  },
+  fixed_support: {
+    face: { rx: 0.5, ry: 0.4, nx: 0, ny: -1 },
+  },
+  roller_support: {
+    top: { rx: 0.5, ry: 0.2, nx: 0, ny: -1 },
+  },
+  flywheel: {
+    center: { rx: 0.5, ry: 0.5, nx: 0, ny: 0 },
+    top: { rx: 0.5, ry: 0.16, nx: 0, ny: -1 },
+    bottom: { rx: 0.5, ry: 0.84, nx: 0, ny: 1 },
+  },
+  lever: {
+    end1: { rx: 0.1, ry: 0.47, nx: -1, ny: 0 },
+    end2: { rx: 0.9, ry: 0.47, nx: 1, ny: 0 },
+    pivot: { rx: 0.5, ry: 0.7, nx: 0, ny: 1 },
+  },
+  fan: {
+    inlet: { rx: 0.16, ry: 0.5, nx: -1, ny: 0 },
+    outlet: { rx: 0.84, ry: 0.5, nx: 1, ny: 0 },
+  },
+  check_valve: {
+    inlet: { rx: 0.06, ry: 0.5, nx: -1, ny: 0 },
+    outlet: { rx: 0.94, ry: 0.5, nx: 1, ny: 0 },
+  },
+  filter: {
+    inlet: { rx: 0.06, ry: 0.5, nx: -1, ny: 0 },
+    outlet: { rx: 0.94, ry: 0.5, nx: 1, ny: 0 },
+  },
+  three_way_valve: {
+    inlet: { rx: 0.1, ry: 0.5, nx: -1, ny: 0 },
+    outlet: { rx: 0.9, ry: 0.5, nx: 1, ny: 0 },
+    bottom: { rx: 0.5, ry: 0.9, nx: 0, ny: 1 },
+  },
+  cooling_tower: {
+    inlet: { rx: 0.05, ry: 0.8, nx: -1, ny: 0 },
+    outlet: { rx: 0.95, ry: 0.8, nx: 1, ny: 0 },
+  },
 }
 
 export function getElementAnchors(el: DiagramElement): Record<string, AnchorDefinition> {
