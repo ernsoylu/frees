@@ -5,7 +5,12 @@ COPY package.json package-lock.json ./
 RUN npm ci --ignore-scripts
 COPY tsconfig.json vite.config.ts postcss.config.cjs index.html ./
 COPY src ./src
-RUN npm run build
+# Build stamp: the git commit the bundle was built from, surfaced in the About
+# dialog (see CLAUDE.md "Build stamping"). Local builds pass VITE_COMMIT_HASH via
+# frees.sh; Render auto-provides RENDER_GIT_COMMIT as a build arg.
+ARG VITE_COMMIT_HASH=
+ARG RENDER_GIT_COMMIT=
+RUN VITE_COMMIT_HASH="${VITE_COMMIT_HASH:-${RENDER_GIT_COMMIT:-dev}}" npm run build
 
 # Runtime stage: unprivileged nginx (runs as uid 101, listens on 8080)
 # serves the static bundle and proxies /api to the backend.

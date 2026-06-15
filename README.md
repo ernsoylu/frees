@@ -49,6 +49,8 @@ The app is deployed on [Render](https://render.com) as two Docker web services b
 
 Cross-origin access to the API is restricted to `http://localhost:5173` and `https://*.onrender.com` by default; set `FREES_CORS_ALLOWED_ORIGINS` (comma-separated origin patterns) on the backend service to allow other origins.
 
+The frontend bundle is stamped with the git commit it was built from. The **About** dialog shows that commit and links to it on GitHub, so you can confirm which revision a deployment is running — on Render this comes from the built-in `RENDER_GIT_COMMIT`, and locally from `frees.sh` (`git rev-parse --short HEAD`). See `CLAUDE.md` → *Build stamping*.
+
 ## License
 
 MIT
