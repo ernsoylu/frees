@@ -5,6 +5,10 @@ set -euo pipefail
 
 cd "$(dirname "$0")"
 
+# Stamp the frontend build with the current commit so the About dialog can show
+# (and link to) the exact revision it was built from. See CLAUDE.md "Build stamping".
+export VITE_COMMIT_HASH="$(git rev-parse --short HEAD 2>/dev/null || echo dev)"
+
 usage() {
     echo "Usage: $0 {start|stop|restart|status|logs|build}"
     echo

@@ -17,7 +17,11 @@ services:
       start_period: 10s
 
   frontend:
-    build: ./frontend
+    build:
+      context: ./frontend
+      args:
+        # Set by frees.sh from `git rev-parse --short HEAD`; empty for ad-hoc builds.
+        VITE_COMMIT_HASH: ${VITE_COMMIT_HASH:-}
     container_name: frees-frontend
     ports:
       - "5173:8080"

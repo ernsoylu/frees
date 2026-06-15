@@ -23,6 +23,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 After start: frontend at http://localhost:5173 (nginx, proxies `/api` to the backend container), backend API at http://localhost:8080/api.
 
+### Build stamping (commit shown in the About dialog)
+
+The frontend bundle is stamped with the git commit it was built from, surfaced in the **About** dialog (with a link to that commit on GitHub) so you can confirm which revision a deployment — local or on Render — is actually running.
+
+- The commit flows in as the Vite env var `VITE_COMMIT_HASH` (read via `import.meta.env.VITE_COMMIT_HASH` in `AboutModal.tsx`).
+- **Local/Docker:** `frees.sh` exports `VITE_COMMIT_HASH=$(git rev-parse --short HEAD)`; `docker-compose.yml` passes it as a build arg to `frontend/Dockerfile`.
+- **Render:** the Dockerfile falls back to Render's built-in `RENDER_GIT_COMMIT` build arg, so the deployed About dialog tracks the live commit with no extra config. (If a Render plan doesn't expose it at build time, add a `VITE_COMMIT_HASH` env var in the service settings.)
+- Absent both, it falls back to `dev` and the About dialog shows "dev (local build)" with no link.
+
+**Rule:** keep this chain intact — any change to how the frontend is built (Dockerfile, compose, `frees.sh`, or the env-var name) must preserve the commit stamp so the About dialog always reflects the running revision.
+
 **Tests and local development** (run on the host, not in Docker):
 
 ```bash
