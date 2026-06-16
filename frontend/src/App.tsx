@@ -89,7 +89,7 @@ import { DEFAULT_EXAMPLE_TEXT, Example } from './examples'
 import EquationEditor, { EquationEditorHandle } from './EquationEditor'
 import { ConfirmModal, MessageModal, TextPromptModal } from './dialogs'
 import { Rail, TopBar } from './WorkspaceChrome'
-import { WorkspaceDock, type WorkspaceDockHandle } from './workspace/WorkspaceDock'
+import { WorkspaceDock, type WorkspaceDockHandle, type OpenWindow } from './workspace/WorkspaceDock'
 import { EXPORT_FORMATS } from './plots/exportPlot'
 import { detectStates } from './plots/stateTable'
 import PlotConfigModal from './plots/PlotConfigModal'
@@ -269,7 +269,9 @@ export default function App() {
   // Dockview workspace manager: imperative handle + set of currently-open
   // window kinds (drives the sidebar's open-state indicators).
   const dockRef = useRef<WorkspaceDockHandle | null>(null)
-  const [openKinds, setOpenKinds] = useState<string[]>([])
+  const [openWindows, setOpenWindows] = useState<OpenWindow[]>([])
+  const openKinds = useMemo(() => openWindows.map((w) => w.kind), [openWindows])
+  const openIds = useMemo(() => openWindows.map((w) => w.id), [openWindows])
   // Tables (Epic 8): any number of Parametric and Curve Tables; the active
   // parametric table is the one Check/Solve Table and the plots act on.
   const [tables, setTables] = useState<TableSpec[]>(() => {
@@ -288,7 +290,9 @@ export default function App() {
   const [diagrams, setDiagrams] = useState<DiagramSpec[]>(() =>
     boot?.diagrams?.length ? boot.diagrams : loadDiagrams(),
   )
-  const [activeDiagramId, setActiveDiagramId] = useState<string | null>(() => {
+  // Diagrams are addressed per-window now; we only need the setter (to track
+  // the most-recently-created/focused diagram for new-window opening).
+  const [, setActiveDiagramId] = useState<string | null>(() => {
     const list = boot?.diagrams?.length ? boot.diagrams : loadDiagrams()
     return list[0]?.id ?? null
   })
@@ -1339,31 +1343,6 @@ export default function App() {
         <DigitizerTab key={`digitizer-${workspaceEpoch}`} onSendToFunctionTable={sendDigitizedToFunctionTable} />
       </div>
     ),
-    diagram: (
-      <div style={{ height: '100%', minHeight: 0 }}>
-        <DiagramTab
-          key={`diagram-${workspaceEpoch}`}
-          variables={result?.variables ?? []}
-          runs={diagramRuns}
-          onBindingsChange={handleDiagramBindings}
-          plots={mergedPlots}
-          tableRows={paramRows}
-          tableResults={tableResults}
-          cyclePath={result?.cyclePath}
-          solving={solving}
-          onSolve={onSolve}
-          onCheck={async () => {
-            await onCheck()
-          }}
-          onNavigate={handleNavigate}
-          onVarDraftsChange={setVarDrafts}
-          diagrams={diagrams}
-          activeDiagramId={activeDiagramId}
-          onDiagramsChange={setDiagrams}
-          onActiveDiagramIdChange={setActiveDiagramId}
-        />
-      </div>
-    ),
     solution: (
       <div style={{ height: '100%', minHeight: 0, padding: 'var(--mantine-spacing-md)', overflow: 'auto' }}>
         <SolutionPanel
@@ -1384,8 +1363,40 @@ export default function App() {
     plots: 'Plots',
     thermo: 'Thermo',
     digitizer: 'Digitizer',
-    diagram: 'Diagram',
     solution: 'Solution',
+  }
+
+  // Per-instance Diagram windows: each diagram opens as its own dock window
+  // ("diagram:<id>"), so several diagrams can sit side by side as windows.
+  for (const d of diagrams) {
+    const winId = `diagram:${d.id}`
+    panelTitles[winId] = d.name
+    panelContent[winId] = (
+      <div style={{ height: '100%', minHeight: 0 }}>
+        <DiagramTab
+          key={`diagram-${d.id}-${workspaceEpoch}`}
+          singleDiagramId={d.id}
+          variables={result?.variables ?? []}
+          runs={diagramRuns}
+          onBindingsChange={handleDiagramBindings}
+          plots={mergedPlots}
+          tableRows={paramRows}
+          tableResults={tableResults}
+          cyclePath={result?.cyclePath}
+          solving={solving}
+          onSolve={onSolve}
+          onCheck={async () => {
+            await onCheck()
+          }}
+          onNavigate={handleNavigate}
+          onVarDraftsChange={setVarDrafts}
+          diagrams={diagrams}
+          activeDiagramId={d.id}
+          onDiagramsChange={setDiagrams}
+          onActiveDiagramIdChange={setActiveDiagramId}
+        />
+      </div>
+    )
   }
 
   return (
@@ -1393,8 +1404,26 @@ export default function App() {
       <Rail
         active={activeTab}
         openKinds={openKinds}
+        openIds={openIds}
+        diagrams={diagrams.map((d) => ({ id: d.id, name: d.name }))}
+        diagramCount={openWindows.filter((w) => w.kind === 'diagram').length}
         onSelect={(kind) => dockRef.current?.open(kind)}
         onClose={(kind) => dockRef.current?.close(kind)}
+        onOpenDiagram={(id) => {
+          const d = diagrams.find((x) => x.id === id)
+          if (d) dockRef.current?.openInstance(`diagram:${id}`, 'diagram', d.name)
+        }}
+        onNewDiagram={() => {
+          const id = crypto.randomUUID()
+          const name = `Diagram ${diagrams.length + 1}`
+          setDiagrams((prev) => [
+            ...prev,
+            { id, name, state: { elements: [], gridSize: 10, snap: true, showGrid: true } },
+          ])
+          setActiveDiagramId(id)
+          // Defer until the new diagram's content entry exists in the next render.
+          requestAnimationFrame(() => dockRef.current?.openInstance(`diagram:${id}`, 'diagram', name))
+        }}
         onResetLayout={() => dockRef.current?.reset()}
         onVariableInfo={() => setShowVariableInfo(true)}
         onMinMax={() => setShowMinMax(true)}
@@ -1602,7 +1631,7 @@ export default function App() {
             titles={panelTitles}
             defaultOpen={['equations', 'solution']}
             onActiveKindChange={setActiveTab}
-            onOpenKindsChange={setOpenKinds}
+            onOpenChange={setOpenWindows}
             handleRef={dockRef}
           />
         </div>

@@ -33,35 +33,45 @@ const PanelContentContext = createContext<Record<string, ReactNode>>({})
 
 function WorkspacePanel(props: IDockviewPanelProps) {
   const content = useContext(PanelContentContext)
-  const kind = (props.params?.kind as string) ?? props.api.id
+  // Content is keyed by panel id so multi-instance kinds (e.g. several diagram
+  // windows: "diagram:<id>") each show their own content.
   return (
     <div style={{ height: '100%', width: '100%', overflow: 'auto' }}>
-      {content[kind] ?? null}
+      {content[props.api.id] ?? null}
     </div>
   )
 }
 
 const components = { panel: WorkspacePanel }
 
+/** A window currently open in the dock. */
+export interface OpenWindow {
+  id: string
+  kind: string
+  title: string
+}
+
 export interface WorkspaceDockHandle {
-  /** Open the panel for a kind, or focus it if already open. */
+  /** Open (or focus) a singleton window whose id equals its kind. */
   open: (kind: string) => void
-  /** Close the panel for a kind if open. */
-  close: (kind: string) => void
-  isOpen: (kind: string) => boolean
+  /** Open (or focus) a specific window instance (multi-instance kinds). */
+  openInstance: (id: string, kind: string, title: string) => void
+  /** Close a window by id. */
+  close: (id: string) => void
+  isOpen: (id: string) => boolean
   /** Discard the saved layout and reopen the default set. */
   reset: () => void
 }
 
 interface Props {
-  /** Rendered content for each window kind (recomputed every App render). */
+  /** Rendered content for each window id (recomputed every App render). */
   content: Record<string, ReactNode>
-  /** Tab title for each kind. */
+  /** Tab title for each singleton kind / default window id. */
   titles: Record<string, string>
-  /** Kinds to open on first run / reset, in order (first becomes the anchor). */
+  /** Window ids to open on first run / reset, in order (first is the anchor). */
   defaultOpen: string[]
   onActiveKindChange?: (kind: string) => void
-  onOpenKindsChange?: (kinds: string[]) => void
+  onOpenChange?: (windows: OpenWindow[]) => void
   handleRef?: React.MutableRefObject<WorkspaceDockHandle | null>
 }
 
@@ -70,7 +80,7 @@ export function WorkspaceDock({
   titles,
   defaultOpen,
   onActiveKindChange,
-  onOpenKindsChange,
+  onOpenChange,
   handleRef,
 }: Readonly<Props>) {
   const apiRef = useRef<DockviewApi | null>(null)
@@ -82,39 +92,36 @@ export function WorkspaceDock({
   titlesRef.current = titles
   const defaultsRef = useRef(defaultOpen)
   defaultsRef.current = defaultOpen
-  const cbRef = useRef({ onActiveKindChange, onOpenKindsChange })
-  cbRef.current = { onActiveKindChange, onOpenKindsChange }
+  const cbRef = useRef({ onActiveKindChange, onOpenChange })
+  cbRef.current = { onActiveKindChange, onOpenChange }
 
   const kindOf = (panel: { id: string; params?: Record<string, unknown> }): string =>
     (panel.params?.kind as string) ?? panel.id
 
-  const emitOpenKinds = (api: DockviewApi) => {
-    cbRef.current.onOpenKindsChange?.(api.panels.map((p) => kindOf(p)))
+  const emitOpen = (api: DockviewApi) => {
+    cbRef.current.onOpenChange?.(
+      api.panels.map((p) => ({ id: p.id, kind: kindOf(p), title: p.title ?? p.id })),
+    )
   }
 
-  const openKind = (api: DockviewApi, kind: string) => {
-    const existing = api.getPanel(kind)
+  const openInstance = (api: DockviewApi, id: string, kind: string, title: string) => {
+    const existing = api.getPanel(id)
     if (existing) {
       existing.api.setActive()
       return
     }
-    api.addPanel({
-      id: kind,
-      component: 'panel',
-      title: titlesRef.current[kind] ?? kind,
-      params: { kind },
-    })
+    api.addPanel({ id, component: 'panel', title, params: { kind } })
   }
 
   const buildDefault = (api: DockviewApi) => {
     api.clear()
-    const kinds = defaultsRef.current
-    kinds.forEach((kind, i) => {
+    const ids = defaultsRef.current
+    ids.forEach((id, i) => {
       api.addPanel({
-        id: kind,
+        id,
         component: 'panel',
-        title: titlesRef.current[kind] ?? kind,
-        params: { kind },
+        title: titlesRef.current[id] ?? id,
+        params: { kind: id },
         // First panel anchors; the rest dock to the right so the default
         // layout shows them side by side rather than stacked as tabs.
         position: i === 0 ? undefined : { direction: 'right' },
@@ -127,12 +134,16 @@ export function WorkspaceDock({
   useEffect(() => {
     if (!handleRef) return
     handleRef.current = {
-      open: (kind) => apiRef.current && openKind(apiRef.current, kind),
-      close: (kind) => {
-        const p = apiRef.current?.getPanel(kind)
+      open: (kind) =>
+        apiRef.current &&
+        openInstance(apiRef.current, kind, kind, titlesRef.current[kind] ?? kind),
+      openInstance: (id, kind, title) =>
+        apiRef.current && openInstance(apiRef.current, id, kind, title),
+      close: (id) => {
+        const p = apiRef.current?.getPanel(id)
         if (p) apiRef.current?.removePanel(p)
       },
-      isOpen: (kind) => !!apiRef.current?.getPanel(kind),
+      isOpen: (id) => !!apiRef.current?.getPanel(id),
       reset: () => {
         if (!apiRef.current) return
         localStorage.removeItem(LAYOUT_KEY)
@@ -171,7 +182,7 @@ export function WorkspaceDock({
     api.onDidActivePanelChange((panel) => {
       if (panel) cbRef.current.onActiveKindChange?.(kindOf(panel))
     })
-    const sync = () => emitOpenKinds(api)
+    const sync = () => emitOpen(api)
     api.onDidAddPanel(sync)
     api.onDidRemovePanel(sync)
     sync()

@@ -36,6 +36,7 @@ import {
   IconMoon,
   IconSun,
   IconPencil,
+  IconPlus,
   IconPlayerPlayFilled,
   IconSchema,
   IconSettings,
@@ -83,14 +84,115 @@ interface RailProps {
   active: string
   /** Window kinds currently open in the dock (drives the open-state dot). */
   openKinds?: string[]
+  /** Specific window ids open (e.g. "diagram:<id>") for per-instance marks. */
+  openIds?: string[]
+  /** Diagrams available to open as individual windows. */
+  diagrams?: { id: string; name: string }[]
+  /** Number of diagram windows currently open (badge on the Diagram icon). */
+  diagramCount?: number
   onSelect: (view: string) => void
   onClose?: (view: string) => void
   onResetLayout?: () => void
+  onOpenDiagram?: (id: string) => void
+  onNewDiagram?: () => void
   onVariableInfo: () => void
   onMinMax: () => void
   onCurveFit: () => void
   onPreferences: () => void
   onAbout: () => void
+}
+
+// Sidebar launcher for the multi-instance Diagram kind: a menu listing every
+// diagram (open each as its own dock window) plus "New diagram". A badge shows
+// how many diagram windows are currently open.
+function DiagramLauncher({
+  expanded,
+  active,
+  count,
+  diagrams,
+  openIds,
+  onOpen,
+  onNew,
+  iconSize,
+}: Readonly<{
+  expanded: boolean
+  active: boolean
+  count: number
+  diagrams: { id: string; name: string }[]
+  openIds: Set<string>
+  onOpen?: (id: string) => void
+  onNew?: () => void
+  iconSize: number
+}>) {
+  const variant = active ? 'light' : 'subtle'
+  const color = active ? 'blue' : 'gray'
+  const badge =
+    count > 0 ? (
+      <Badge size="xs" variant="filled" circle>
+        {count}
+      </Badge>
+    ) : null
+  const target = expanded ? (
+    <Button
+      variant={variant}
+      color={color}
+      justify="flex-start"
+      fullWidth
+      size="sm"
+      radius="md"
+      leftSection={<IconSchema size={iconSize} stroke={1.6} />}
+      rightSection={badge}
+      aria-label="Diagram windows"
+    >
+      Diagram
+    </Button>
+  ) : (
+    <div style={{ position: 'relative', display: 'inline-flex' }}>
+      <ActionIcon variant={variant} color={color} size={40} radius="md" aria-label="Diagram windows">
+        <IconSchema size={iconSize} stroke={1.6} />
+      </ActionIcon>
+      {count > 0 && (
+        <Badge
+          size="xs"
+          variant="filled"
+          circle
+          style={{ position: 'absolute', top: -3, right: -3, pointerEvents: 'none' }}
+        >
+          {count}
+        </Badge>
+      )}
+    </div>
+  )
+  return (
+    <Menu position="right-start" shadow="md" width={230} withinPortal>
+      <Menu.Target>{target}</Menu.Target>
+      <Menu.Dropdown>
+        <Menu.Label>Diagram windows</Menu.Label>
+        {diagrams.length === 0 && (
+          <Menu.Item disabled>No diagrams yet</Menu.Item>
+        )}
+        {diagrams.map((d) => (
+          <Menu.Item
+            key={d.id}
+            onClick={() => onOpen?.(d.id)}
+            leftSection={
+              openIds.has(`diagram:${d.id}`) ? (
+                <IconPointFilled size={10} style={{ color: 'var(--mantine-color-blue-5)' }} />
+              ) : (
+                <span style={{ display: 'inline-block', width: 10 }} />
+              )
+            }
+          >
+            {d.name}
+          </Menu.Item>
+        ))}
+        <Menu.Divider />
+        <Menu.Item leftSection={<IconPlus size={14} />} onClick={onNew}>
+          New diagram
+        </Menu.Item>
+      </Menu.Dropdown>
+    </Menu>
+  )
 }
 
 // One rail entry. Collapsed → an icon button with a hover tooltip; expanded →
@@ -203,9 +305,14 @@ function RailEntry({
 export function Rail({
   active,
   openKinds = [],
+  openIds = [],
+  diagrams,
+  diagramCount = 0,
   onSelect,
   onClose,
   onResetLayout,
+  onOpenDiagram,
+  onNewDiagram,
   onVariableInfo,
   onMinMax,
   onCurveFit,
@@ -213,6 +320,7 @@ export function Rail({
   onAbout,
 }: Readonly<RailProps>) {
   const openSet = new Set(openKinds)
+  const openIdSet = new Set(openIds)
   const [expanded, setExpanded] = useState(
     () => localStorage.getItem(RAIL_EXPANDED_KEY) === 'true',
   )
@@ -261,19 +369,33 @@ export function Rail({
           expanded={expanded}
           onClick={toggle}
         />
-        {VIEWS.map((view) => (
-          <RailEntry
-            key={view.value}
-            icon={<view.icon size={iconSize} stroke={1.6} />}
-            label={view.label}
-            tip={view.tip}
-            active={active === view.value}
-            open={openSet.has(view.value)}
-            expanded={expanded}
-            onClick={() => onSelect(view.value)}
-            onClose={onClose ? () => onClose(view.value) : undefined}
-          />
-        ))}
+        {VIEWS.map((view) =>
+          view.value === 'diagram' && diagrams ? (
+            <DiagramLauncher
+              key={view.value}
+              expanded={expanded}
+              active={active === 'diagram'}
+              count={diagramCount}
+              diagrams={diagrams}
+              openIds={openIdSet}
+              onOpen={onOpenDiagram}
+              onNew={onNewDiagram}
+              iconSize={iconSize}
+            />
+          ) : (
+            <RailEntry
+              key={view.value}
+              icon={<view.icon size={iconSize} stroke={1.6} />}
+              label={view.label}
+              tip={view.tip}
+              active={active === view.value}
+              open={openSet.has(view.value)}
+              expanded={expanded}
+              onClick={() => onSelect(view.value)}
+              onClose={onClose ? () => onClose(view.value) : undefined}
+            />
+          ),
+        )}
       </Stack>
       <Stack gap={4}>
         {onResetLayout && (

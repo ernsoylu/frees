@@ -3443,6 +3443,11 @@ interface Props {
     update: DiagramSpec[] | ((prev: DiagramSpec[]) => DiagramSpec[]),
   ) => void
   onActiveDiagramIdChange?: (id: string | null) => void
+  /**
+   * When set, the component renders only this one diagram and hides the
+   * diagram-tab strip — used when each diagram is its own dock window.
+   */
+  singleDiagramId?: string
 }
 
 const PLAYBACK_SPEEDS: { label: string; value: string; ms: number }[] = [
@@ -3469,6 +3474,7 @@ export default function DiagramTab(props: Readonly<Props>) {
     activeDiagramId: propsActiveId,
     onDiagramsChange: propsOnDiagramsChange,
     onActiveDiagramIdChange: propsOnActiveIdChange,
+    singleDiagramId,
   } = props
 
   const [localDiagrams, setLocalDiagrams] = useState<DiagramSpec[]>(() => {
@@ -3481,7 +3487,8 @@ export default function DiagramTab(props: Readonly<Props>) {
   })
 
   const diagrams = propsDiagrams ?? localDiagrams
-  const activeDiagramId = propsActiveId ?? localActiveDiagramId
+  // In single-window mode the active diagram is fixed to this window's diagram.
+  const activeDiagramId = singleDiagramId ?? propsActiveId ?? localActiveDiagramId
   const onDiagramsChange = propsOnDiagramsChange ?? ((update) => {
     setLocalDiagrams((prev) => {
       const next = typeof update === 'function' ? update(prev) : update
@@ -5395,7 +5402,7 @@ export default function DiagramTab(props: Readonly<Props>) {
       <Stack gap="xs" flex={1} miw={0}>
         {/* Diagram Tabs Row */}
         <Group gap="xs" wrap="wrap" style={{ borderBottom: '1px solid var(--mantine-color-default-border)', paddingBottom: 8 }}>
-          {diagrams.map((d, index) => (
+          {!singleDiagramId && diagrams.map((d, index) => (
             <Menu key={d.id} position="bottom-start" shadow="md" trigger="hover" openDelay={200}>
               <Menu.Target>
                 <Paper
@@ -5460,6 +5467,7 @@ export default function DiagramTab(props: Readonly<Props>) {
               </Menu.Dropdown>
             </Menu>
           ))}
+          {!singleDiagramId && (
           <Menu position="bottom-start" shadow="md">
             <Menu.Target>
               <Button size="compact-xs" variant="light" leftSection={<IconPlus size={13} />}>
@@ -5479,6 +5487,7 @@ export default function DiagramTab(props: Readonly<Props>) {
               </Menu.Item>
             </Menu.Dropdown>
           </Menu>
+          )}
           <Tooltip label="Save this diagram as a portable JSON file (backup / share / move between machines)">
             <Button
               size="compact-xs"
