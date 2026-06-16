@@ -807,10 +807,11 @@ export default function App() {
     if (solvingTableId !== null || !tableId) return
     const tbl = tables.find((t) => t.id === tableId)
     if (!tbl || tbl.kind !== 'parametric' || tbl.vars.length === 0) return
-    const okCheck = checkOverride
-      ? checkOverride.solvable === true
-      : tbl.checkResult?.solvable === true
-    if (!okCheck) return
+    // When checkOverride is explicitly provided (from checkThenSolveTable), honour it.
+    // When called directly from a per-window "Run Table" button we skip the gate so
+    // independent-block equations (e.g. two separate circuits) still solve correctly
+    // even when the global underdetermination check fails.
+    if (checkOverride !== undefined && !checkOverride.solvable) return
     setSolvingTableId(tableId)
     try {
       // Non-empty cells become fixed inputs for that run; blank cells are
@@ -1637,7 +1638,7 @@ export default function App() {
               size="xs"
               variant="default"
               loading={checkingTableId === t.id}
-              disabled={(solvingTableId !== null && solvingTableId !== t.id) || (checkingTableId !== null && checkingTableId !== t.id)}
+              disabled={(solvingTableId !== null) || (checkingTableId !== null && checkingTableId !== t.id)}
               onClick={() => void onCheckTable(t.id)}
             >
               Check Table
@@ -1645,9 +1646,9 @@ export default function App() {
             <Button
               size="xs"
               color="teal"
-              loading={solvingTableId === t.id || (checkingTableId === t.id && solvingTableId === null)}
-              disabled={(solvingTableId !== null && solvingTableId !== t.id) || (checkingTableId !== null && checkingTableId !== t.id)}
-              onClick={() => void checkThenSolveTable(t.id)}
+              loading={solvingTableId === t.id}
+              disabled={solvingTableId !== null && solvingTableId !== t.id}
+              onClick={() => void onSolveTable(t.id)}
             >
               Run Table
             </Button>
