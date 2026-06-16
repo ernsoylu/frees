@@ -1,8 +1,10 @@
 // Curated, ready-to-solve example documents surfaced to new users (the File
 // menu "Open Example", the command palette, and the empty Solution-panel
-// shortcuts). Each `text` has been verified to solve with zero unit warnings
-// against the backend, so a first-time student can load one and press Solve
-// (F2) to see a complete result immediately.
+// shortcuts). Each `text` has been verified against the backend with zero unit
+// warnings. Algebraic and ODE (Integral) examples solve directly with Solve
+// (F2); the PARAMETRIC time-sweep examples are intentionally underspecified by
+// the swept column and are run from the Tables tab via "Solve Table" — each
+// example's own header comment says which.
 export interface Example {
   id: string
   title: string
@@ -121,6 +123,107 @@ h4 = Enthalpy(Water, P=P_cond, s=s3)
 q_in = h3 - h2
 w_turb = h3 - h4
 eta_th = (w_turb - w_pump) / q_in`,
+  },
+  {
+    id: 'tank-draining',
+    title: 'Tank Draining (ODE)',
+    description: 'First-order ODE via Integral — Torricelli draining of a tank.',
+    category: 'Fluids',
+    text: `# Tank Draining (Torricelli) — first-order ODE
+{ Water height h in a tank emptying through a small orifice obeys
+  dh/dt = -(a/A)*sqrt(2*g*h).  Press Solve (F2).
+
+  How the ODE is written: frees integrates an ODE only when the
+  integrand references the integral's OWN result, and that result
+  starts at 0. So we integrate the DROP from the initial level and
+  rebuild h = h0 - drop. Integration limits must be plain numbers
+  (here 0 to 60 seconds). }
+g = 9.81 [m/s^2]
+A_tank = 1.0 [m^2]        { tank cross-section }
+a_orifice = 0.0015 [m^2]  { orifice area }
+h0 = 2.0 [m]              { initial water height }
+
+drop = Integral((a_orifice/A_tank)*sqrt(2*g*(h0 - drop)), tau, 0, 60)
+h = h0 - drop            { water height after 60 s }`,
+  },
+  {
+    id: 'newton-cooling',
+    title: "Newton's Cooling (ODE)",
+    description: 'First-order ODE via Integral — a hot body cooling to ambient.',
+    category: 'Heat Transfer',
+    text: `# Newton's Law of Cooling — first-order ODE
+{ A hot object relaxing toward ambient obeys
+  dT/dt = -k*(T - T_inf).  Press Solve (F2).
+
+  The Integral ODE feedback only works when the integrand
+  references its own result (which starts at 0), so we integrate
+  the temperature DROP and rebuild T = T0 - drop. Limits must be
+  plain numbers (0 to 30 seconds). }
+k = 0.05 [1/s]           { cooling constant }
+T_inf = 20 [C]           { ambient temperature }
+T0 = 90 [C]              { initial temperature }
+
+drop = Integral(k*(T0 - drop - T_inf), tau, 0, 30)
+T = T0 - drop            { temperature after 30 s }`,
+  },
+  {
+    id: 'projectile-trajectory',
+    title: 'Projectile Trajectory (table)',
+    description: 'Parametric time sweep — full flight path sampled over time.',
+    category: 'Mechanics',
+    text: `# Projectile Trajectory (parametric time sweep)
+{ The whole flight path, sampled in time. This uses a PARAMETRIC
+  table, so do NOT use the main Solve — open the Tables tab and
+  click "Solve Table". The base system is underspecified by one on
+  purpose: t is the swept column the table fills in.
+
+  Variables listed in the header with no range (time, x, y, vx, vy,
+  v) become solved OUTPUT columns. Afterward, chart y vs x (the arc)
+  or y vs time in the Plots tab. }
+g  = 9.81 [m/s^2]
+v0 = 20 [m/s]
+theta = 35 * pi / 180
+
+vx0 = v0 * cos(theta)
+vy0 = v0 * sin(theta)
+
+time = t * 1 [s]                 { give the swept index t units of seconds }
+x  = vx0 * time                 { horizontal position }
+y  = vy0 * time - 0.5*g*time^2  { vertical position }
+vx = vx0                        { dx/dt }
+vy = vy0 - g*time               { dy/dt }
+v  = sqrt(vx^2 + vy^2)          { speed }
+
+PARAMETRIC trajectory (t, time, x, y, vx, vy, v)
+  t = 0:0.05:4
+END`,
+  },
+  {
+    id: 'damped-oscillator',
+    title: 'Damped Oscillator (table)',
+    description: 'Parametric time sweep — free vibration of a mass-spring-damper.',
+    category: 'Mechanics',
+    text: `# Damped Harmonic Oscillator (parametric time sweep)
+{ Free vibration of a mass-spring-damper, released from x0 at rest,
+  sampled in time. PARAMETRIC table: open the Tables tab and click
+  "Solve Table" (not the main Solve). Then chart x vs time, adding
+  env and -env to see the decay envelope. }
+m = 2 [kg]               { mass }
+k = 50 [N/m]             { stiffness }
+c = 4 [N-s/m]            { damping }
+x0 = 0.1 [m]             { initial displacement }
+
+wn = sqrt(k/m)                   { natural frequency }
+zeta = c / (2*sqrt(k*m))        { damping ratio (underdamped < 1) }
+wd = wn*sqrt(1 - zeta^2)        { damped frequency }
+
+time = t * 1 [s]
+env = x0*exp(-zeta*wn*time)     { decay envelope }
+x = env * (cos(wd*time) + (zeta*wn/wd)*sin(wd*time))
+
+PARAMETRIC vibration (t, time, x, env)
+  t = 0:0.05:6
+END`,
   },
 ]
 
