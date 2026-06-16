@@ -26,7 +26,7 @@ import {
 } from 'react'
 import { useComputedColorScheme } from '@mantine/core'
 
-const LAYOUT_KEY = 'frees-dock-layout-v1'
+const LAYOUT_KEY = 'frees-dock-layout-v2'
 
 /** Latest panel content, keyed by window kind, read by every dockview panel. */
 const PanelContentContext = createContext<Record<string, ReactNode>>({})
@@ -70,15 +70,21 @@ interface Props {
   titles: Record<string, string>
   /** Window ids to open on first run / reset, in order (first is the anchor). */
   defaultOpen: string[]
+  /** Kinds rendered in the collapsible right edge group (Solution, Inspector)
+   *  rather than as center tabs. */
+  edgeKinds?: string[]
   onActiveChange?: (active: OpenWindow | null) => void
   onOpenChange?: (windows: OpenWindow[]) => void
   handleRef?: React.MutableRefObject<WorkspaceDockHandle | null>
 }
 
+const RIGHT_EDGE_ID = 'edge-right'
+
 export function WorkspaceDock({
   content,
   titles,
   defaultOpen,
+  edgeKinds = [],
   onActiveChange,
   onOpenChange,
   handleRef,
@@ -92,11 +98,21 @@ export function WorkspaceDock({
   titlesRef.current = titles
   const defaultsRef = useRef(defaultOpen)
   defaultsRef.current = defaultOpen
+  const edgeKindsRef = useRef(edgeKinds)
+  edgeKindsRef.current = edgeKinds
   const cbRef = useRef({ onActiveChange, onOpenChange })
   cbRef.current = { onActiveChange, onOpenChange }
 
   const kindOf = (panel: { id: string; params?: Record<string, unknown> }): string =>
     (panel.params?.kind as string) ?? panel.id
+
+  // The collapsible right edge group hosts "chrome" panels (Solution, the
+  // diagram Inspector) — created on demand and reused thereafter.
+  const ensureRightEdge = (api: DockviewApi) => {
+    const existing = api.getEdgeGroup('right')
+    if (existing) return existing
+    return api.addEdgeGroup('right', { id: RIGHT_EDGE_ID, initialSize: 340, minimumSize: 240 })
+  }
 
   const emitOpen = (api: DockviewApi) => {
     cbRef.current.onOpenChange?.(
@@ -108,6 +124,19 @@ export function WorkspaceDock({
     const existing = api.getPanel(id)
     if (existing) {
       existing.api.setActive()
+      if (edgeKindsRef.current.includes(kind)) api.getEdgeGroup('right')?.expand()
+      return
+    }
+    if (edgeKindsRef.current.includes(kind)) {
+      ensureRightEdge(api)
+      api.addPanel({
+        id,
+        component: 'panel',
+        title,
+        params: { kind },
+        position: { referenceGroup: RIGHT_EDGE_ID },
+      })
+      api.getEdgeGroup('right')?.expand()
       return
     }
     api.addPanel({ id, component: 'panel', title, params: { kind } })
@@ -116,7 +145,9 @@ export function WorkspaceDock({
   const buildDefault = (api: DockviewApi) => {
     api.clear()
     const ids = defaultsRef.current
-    ids.forEach((id, i) => {
+    const centerIds = ids.filter((id) => !edgeKindsRef.current.includes(id))
+    const edgeIds = ids.filter((id) => edgeKindsRef.current.includes(id))
+    centerIds.forEach((id, i) => {
       api.addPanel({
         id,
         component: 'panel',
@@ -127,7 +158,19 @@ export function WorkspaceDock({
         position: i === 0 ? undefined : { direction: 'right' },
       })
     })
-    api.panels[0]?.api.setActive()
+    if (edgeIds.length > 0) {
+      ensureRightEdge(api)
+      edgeIds.forEach((id) =>
+        api.addPanel({
+          id,
+          component: 'panel',
+          title: titlesRef.current[id] ?? id,
+          params: { kind: id },
+          position: { referenceGroup: RIGHT_EDGE_ID },
+        }),
+      )
+    }
+    api.panels.find((p) => !edgeKindsRef.current.includes(kindOf(p)))?.api.setActive()
   }
 
   // Expose the imperative handle.
