@@ -23,6 +23,9 @@ interface Props {
   onActivePlotIdChange?: (id: string | null) => void
   hideHeader?: boolean
   exportTrigger?: { format: string; timestamp: number } | null
+  /** When set, render only this one plot and hide the plot-tab strip + Add
+   *  (used when each plot is its own dock window). */
+  singlePlotId?: string
 }
 
 /**
@@ -43,6 +46,7 @@ export default function PlotTab({
   onActivePlotIdChange,
   hideHeader = false,
   exportTrigger = null,
+  singlePlotId,
 }: Readonly<Props>) {
   const visible = plots.filter((p) => kinds.includes(p.kind))
   const [fluids, setFluids] = useState<string[]>([])
@@ -90,7 +94,9 @@ export default function PlotTab({
     }
   }
 
-  const current = visible.find((p) => p.id === activePlot) ?? visible[0] ?? null
+  const current = singlePlotId
+    ? (visible.find((p) => p.id === singlePlotId) ?? null)
+    : (visible.find((p) => p.id === activePlot) ?? visible[0] ?? null)
 
   return (
     <Stack gap="sm" style={{ flex: 1, minHeight: 0 }}>
@@ -135,25 +141,29 @@ export default function PlotTab({
           hideHeader={hideHeader}
           exportTrigger={exportTrigger}
           leftSection={
-            <Tabs
-              value={current.id}
-              onChange={(id) => id && setActivePlot(id)}
-              variant="pills"
-              styles={{ tab: { height: 26, fontSize: 12, padding: '0 8px' } }}
-            >
-              <Tabs.List>
-                {visible.map((p) => (
-                  <Tabs.Tab key={p.id} value={p.id}>
-                    {p.name}
-                  </Tabs.Tab>
-                ))}
-              </Tabs.List>
-            </Tabs>
+            singlePlotId ? undefined : (
+              <Tabs
+                value={current.id}
+                onChange={(id) => id && setActivePlot(id)}
+                variant="pills"
+                styles={{ tab: { height: 26, fontSize: 12, padding: '0 8px' } }}
+              >
+                <Tabs.List>
+                  {visible.map((p) => (
+                    <Tabs.Tab key={p.id} value={p.id}>
+                      {p.name}
+                    </Tabs.Tab>
+                  ))}
+                </Tabs.List>
+              </Tabs>
+            )
           }
           rightSection={
-            <Button size="xs" onClick={() => setAdding(true)}>
-              Add Plot
-            </Button>
+            singlePlotId ? undefined : (
+              <Button size="xs" onClick={() => setAdding(true)}>
+                Add Plot
+              </Button>
+            )
           }
         />
       )}

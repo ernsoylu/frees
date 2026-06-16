@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import {
   ActionIcon,
   Alert,
@@ -145,6 +146,7 @@ import {
   DiagramExportTheme,
 } from './exportDiagram'
 import { DiagramRecorder } from './recordDiagram'
+import { FormulaInput } from './FormulaInput'
 
 const DIAGRAMS_STORAGE_KEY = 'frees-diagrams'
 
@@ -1606,13 +1608,15 @@ function ElementView({
               <marker
                 id={`diagram-arrow-start-${el.id}`}
                 viewBox="0 0 10 10"
-                refX="9"
+                refX="1"
                 refY="5"
                 markerWidth="7"
                 markerHeight="7"
-                orient="auto-start-reverse"
+                orient="auto"
               >
-                <path d="M 0 0 L 10 5 L 0 10 z" fill={el.stroke} />
+                {/* Tip points back along the path (orient="auto", not the
+                    SVG2-only "auto-start-reverse" that Batik/FOP rejects). */}
+                <path d="M 10 0 L 0 5 L 10 10 z" fill={el.stroke} />
               </marker>
             </defs>
           )}
@@ -1625,7 +1629,7 @@ function ElementView({
                 refY="5"
                 markerWidth="7"
                 markerHeight="7"
-                orient="auto-start-reverse"
+                orient="auto"
               >
                 <path d="M 0 0 L 10 5 L 0 10 z" fill={el.stroke} />
               </marker>
@@ -1666,7 +1670,7 @@ function ElementView({
               refY="5"
               markerWidth="7"
               markerHeight="7"
-              orient="auto-start-reverse"
+              orient="auto"
             >
               <path d="M 0 0 L 10 5 L 0 10 z" fill={el.stroke} />
             </marker>
@@ -2381,10 +2385,12 @@ function BindingFields({
   el,
   set,
   pathOptions = [],
+  varNames = [],
 }: Readonly<{
   el: DiagramElement
   set: (patch: Partial<DiagramElement>) => void
   pathOptions?: { value: string; label: string }[]
+  varNames?: string[]
 }>) {
   const keys: (keyof AttributeBindings)[] =
     el.kind === 'line' || el.kind === 'label'
@@ -2415,14 +2421,13 @@ function BindingFields({
         Run mode (e.g. <code>{'30*sin(theta)'}</code>). Δx/Δy offset the position.
       </Text>
       {keys.map((key) => (
-        <TextInput
+        <FormulaInput
           key={key}
           label={BINDABLE_LABELS[key]}
-          size="xs"
           placeholder="(static)"
+          varNames={varNames}
           value={el.bind?.[key] ?? ''}
-          onChange={(e) => setBind(key, e.currentTarget.value)}
-          styles={{ input: { fontFamily: 'monospace' } }}
+          onChange={(v) => setBind(key, v)}
         />
       ))}
       {el.kind === 'line' && (
@@ -2436,13 +2441,12 @@ function BindingFields({
             }
           />
           {el.flow && (
-            <TextInput
+            <FormulaInput
               label="Flow speed (formula; sign = direction)"
-              size="xs"
               placeholder="e.g. m_dot or 2"
+              varNames={varNames}
               value={el.flow.speed}
-              onChange={(e) => set({ flow: { speed: e.currentTarget.value } })}
-              styles={{ input: { fontFamily: 'monospace' } }}
+              onChange={(v) => set({ flow: { speed: v } })}
             />
           )}
         </>
@@ -2478,13 +2482,12 @@ function BindingFields({
                 onChange={(v) => v && setMotion({ pathId: v })}
                 placeholder="Choose a line…"
               />
-              <TextInput
+              <FormulaInput
                 label="Progress 0→1 (formula; t = time clock)"
-                size="xs"
                 placeholder="e.g. t/5 or (T-300)/200"
+                varNames={varNames}
                 value={el.motion.progress}
-                onChange={(e) => setMotion({ progress: e.currentTarget.value })}
-                styles={{ input: { fontFamily: 'monospace' } }}
+                onChange={(v) => setMotion({ progress: v })}
               />
               <Checkbox
                 label="Orient to path direction"
@@ -2503,9 +2506,11 @@ function BindingFields({
 function ConditionalRulesFields({
   el,
   set,
+  varNames = [],
 }: Readonly<{
   el: DiagramElement
   set: (patch: Partial<DiagramElement>) => void
+  varNames?: string[]
 }>) {
   const rules = el.rules ?? []
   
@@ -2563,13 +2568,12 @@ function ConditionalRulesFields({
                 </ActionIcon>
               </Group>
               
-              <TextInput
+              <FormulaInput
                 label="Condition (formula)"
-                size="xs"
                 placeholder="e.g. T > 100"
+                varNames={varNames}
                 value={rule.formula}
-                onChange={(e) => updateRule(rule.id, { formula: e.currentTarget.value })}
-                styles={{ input: { fontFamily: 'monospace' } }}
+                onChange={(v) => updateRule(rule.id, { formula: v })}
               />
               
               {rule.property === 'stroke' || rule.property === 'fill' ? (
@@ -2865,49 +2869,49 @@ function WidgetFields({
         onChange={(e) => set({ units: e.currentTarget.value })}
       />
       <Group grow>
-        <TextInput
+        <FormulaInput
           label="Min Value/Formula"
-          size="xs"
+          varNames={varNames}
           value={el.minFormula}
-          onChange={(e) => set({ minFormula: e.currentTarget.value })}
+          onChange={(v) => set({ minFormula: v })}
         />
-        <TextInput
+        <FormulaInput
           label="Max Value/Formula"
-          size="xs"
+          varNames={varNames}
           value={el.maxFormula}
-          onChange={(e) => set({ maxFormula: e.currentTarget.value })}
+          onChange={(v) => set({ maxFormula: v })}
         />
       </Group>
       <Group grow>
-        <TextInput
+        <FormulaInput
           label="Low Warning Limit"
-          size="xs"
           placeholder="e.g. 20"
+          varNames={varNames}
           value={el.lowWarningFormula ?? ''}
-          onChange={(e) => set({ lowWarningFormula: e.currentTarget.value || undefined })}
+          onChange={(v) => set({ lowWarningFormula: v || undefined })}
         />
-        <TextInput
+        <FormulaInput
           label="High Warning Limit"
-          size="xs"
           placeholder="e.g. 80"
+          varNames={varNames}
           value={el.highWarningFormula ?? ''}
-          onChange={(e) => set({ highWarningFormula: e.currentTarget.value || undefined })}
+          onChange={(v) => set({ highWarningFormula: v || undefined })}
         />
       </Group>
       <Group grow>
-        <TextInput
+        <FormulaInput
           label="Low Danger Limit"
-          size="xs"
           placeholder="e.g. 10"
+          varNames={varNames}
           value={el.lowDangerFormula ?? ''}
-          onChange={(e) => set({ lowDangerFormula: e.currentTarget.value || undefined })}
+          onChange={(v) => set({ lowDangerFormula: v || undefined })}
         />
-        <TextInput
+        <FormulaInput
           label="High Danger Limit"
-          size="xs"
           placeholder="e.g. 90"
+          varNames={varNames}
           value={el.highDangerFormula ?? ''}
-          onChange={(e) => set({ highDangerFormula: e.currentTarget.value || undefined })}
+          onChange={(v) => set({ highDangerFormula: v || undefined })}
         />
       </Group>
     </>
@@ -2951,17 +2955,17 @@ function ValueDrivenFillFields({
             placeholder="e.g. T"
           />
           <Group grow>
-            <TextInput
+            <FormulaInput
               label="Min Formula"
-              size="xs"
+              varNames={varNames}
               value={vf.minFormula}
-              onChange={(e) => updateVf({ minFormula: e.currentTarget.value })}
+              onChange={(v) => updateVf({ minFormula: v })}
             />
-            <TextInput
+            <FormulaInput
               label="Max Formula"
-              size="xs"
+              varNames={varNames}
               value={vf.maxFormula}
-              onChange={(e) => updateVf({ maxFormula: e.currentTarget.value })}
+              onChange={(v) => updateVf({ maxFormula: v })}
             />
           </Group>
           <Group grow>
@@ -3346,8 +3350,8 @@ function PropertiesPanel({
           <ValueDrivenFillFields el={el} set={set} varNames={varNames} />
         </>
       )}
-      <BindingFields el={el} set={set} pathOptions={pathOptions} />
-      <ConditionalRulesFields el={el} set={set} />
+      <BindingFields el={el} set={set} pathOptions={pathOptions} varNames={varNames} />
+      <ConditionalRulesFields el={el} set={set} varNames={varNames} />
         </>
       )}
 
@@ -3441,6 +3445,15 @@ interface Props {
     update: DiagramSpec[] | ((prev: DiagramSpec[]) => DiagramSpec[]),
   ) => void
   onActiveDiagramIdChange?: (id: string | null) => void
+  /**
+   * When set, the component renders only this one diagram and hides the
+   * diagram-tab strip — used when each diagram is its own dock window.
+   */
+  singleDiagramId?: string
+  /** Shared Inspector edge-panel DOM node to portal Properties/Layers into. */
+  inspectorOutlet?: HTMLElement | null
+  /** Whether this is the focused diagram window (owns the shared Inspector). */
+  isActive?: boolean
 }
 
 const PLAYBACK_SPEEDS: { label: string; value: string; ms: number }[] = [
@@ -3467,6 +3480,9 @@ export default function DiagramTab(props: Readonly<Props>) {
     activeDiagramId: propsActiveId,
     onDiagramsChange: propsOnDiagramsChange,
     onActiveDiagramIdChange: propsOnActiveIdChange,
+    singleDiagramId,
+    inspectorOutlet,
+    isActive,
   } = props
 
   const [localDiagrams, setLocalDiagrams] = useState<DiagramSpec[]>(() => {
@@ -3479,7 +3495,8 @@ export default function DiagramTab(props: Readonly<Props>) {
   })
 
   const diagrams = propsDiagrams ?? localDiagrams
-  const activeDiagramId = propsActiveId ?? localActiveDiagramId
+  // In single-window mode the active diagram is fixed to this window's diagram.
+  const activeDiagramId = singleDiagramId ?? propsActiveId ?? localActiveDiagramId
   const onDiagramsChange = propsOnDiagramsChange ?? ((update) => {
     setLocalDiagrams((prev) => {
       const next = typeof update === 'function' ? update(prev) : update
@@ -5393,7 +5410,7 @@ export default function DiagramTab(props: Readonly<Props>) {
       <Stack gap="xs" flex={1} miw={0}>
         {/* Diagram Tabs Row */}
         <Group gap="xs" wrap="wrap" style={{ borderBottom: '1px solid var(--mantine-color-default-border)', paddingBottom: 8 }}>
-          {diagrams.map((d, index) => (
+          {!singleDiagramId && diagrams.map((d, index) => (
             <Menu key={d.id} position="bottom-start" shadow="md" trigger="hover" openDelay={200}>
               <Menu.Target>
                 <Paper
@@ -5458,6 +5475,7 @@ export default function DiagramTab(props: Readonly<Props>) {
               </Menu.Dropdown>
             </Menu>
           ))}
+          {!singleDiagramId && (
           <Menu position="bottom-start" shadow="md">
             <Menu.Target>
               <Button size="compact-xs" variant="light" leftSection={<IconPlus size={13} />}>
@@ -5477,6 +5495,7 @@ export default function DiagramTab(props: Readonly<Props>) {
               </Menu.Item>
             </Menu.Dropdown>
           </Menu>
+          )}
           <Tooltip label="Save this diagram as a portable JSON file (backup / share / move between machines)">
             <Button
               size="compact-xs"
@@ -6222,8 +6241,8 @@ export default function DiagramTab(props: Readonly<Props>) {
         </Paper>
       </Stack>
 
-      {!runMode && (
-        <Paper withBorder p="sm" w={250} style={{ flexShrink: 0 }}>
+      {!runMode && (() => {
+        const inspectorBody = (
           <ScrollArea h="100%" type="auto">
             {selected ? (
               <PropertiesPanel
@@ -6407,8 +6426,26 @@ export default function DiagramTab(props: Readonly<Props>) {
               </Stack>
             )}
           </ScrollArea>
-        </Paper>
-      )}
+        )
+        // Portal Properties/Layers into the shared Inspector edge panel when
+        // this is the focused diagram window; if the Inspector isn't open, fall
+        // back to an inline column so properties stay reachable.
+        if (inspectorOutlet) {
+          return isActive
+            ? createPortal(
+                <div style={{ height: '100%', padding: 'var(--mantine-spacing-sm)' }}>
+                  {inspectorBody}
+                </div>,
+                inspectorOutlet,
+              )
+            : null
+        }
+        return (
+          <Paper withBorder p="sm" w={250} style={{ flexShrink: 0 }}>
+            {inspectorBody}
+          </Paper>
+        )
+      })()}
 
       <Modal
         opened={saveCompModalOpen}

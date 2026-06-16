@@ -46,11 +46,16 @@ interface Props {
   onAlterColumn: (name: string) => void
   onColumnUnitsChange: (name: string, units: string) => void
   onCellChange: (rowIndex: number, name: string, value: string) => void
+  /** When set, render only this one table and hide the table-tab strip (used
+   *  when each table is its own dock window). */
+  singleTableId?: string
 }
 
 export default function TablesTab(props: Readonly<Props>) {
-  const { tables, activeTableId, onTablesChange, onActiveTableIdChange } = props
-  const active = tables.find((t) => t.id === activeTableId) ?? tables[0] ?? null
+  const { tables, activeTableId, onTablesChange, onActiveTableIdChange, singleTableId } = props
+  const active = singleTableId
+    ? (tables.find((t) => t.id === singleTableId) ?? null)
+    : (tables.find((t) => t.id === activeTableId) ?? tables[0] ?? null)
 
   const addTable = (kind: 'parametric' | 'function-1d' | 'function-2d') => {
     const table =
@@ -85,6 +90,7 @@ export default function TablesTab(props: Readonly<Props>) {
 
   return (
     <Stack gap="xs" style={{ flex: 1, minHeight: 0 }}>
+      {!singleTableId && (
       <Group gap="xs" wrap="wrap">
         {tables.map((t) => (
           <Paper
@@ -187,6 +193,7 @@ export default function TablesTab(props: Readonly<Props>) {
           </Tooltip>
         )}
       </Group>
+      )}
 
       {active === null && (
         <Text size="sm" c="dimmed" mt="md">
