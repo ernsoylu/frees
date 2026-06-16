@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Button, Stack, Tabs, Text } from '@mantine/core'
-import { TableRowResult, VariableResult, getFluids } from './api'
+import { StateTableDto, TableRowResult, VariableResult, getFluids } from './api'
 import { ParamRow } from './ParametricTableTab'
 import { PlotKind, PlotSpec } from './plots/types'
 import { detectStates } from './plots/stateTable'
@@ -15,6 +15,8 @@ interface Props {
   plots: PlotSpec[]
   onPlotsChange: (plots: PlotSpec[]) => void
   solvedVariables: VariableResult[]
+  /** Declared STATE TABLE blocks, for fluid-aware per-circuit state overlays. */
+  stateTableDefs?: StateTableDto[]
   cyclePath?: Record<string, number>[]
   tableVars: string[]
   rows: ParamRow[]
@@ -38,6 +40,7 @@ export default function PlotTab({
   plots,
   onPlotsChange,
   solvedVariables,
+  stateTableDefs,
   cyclePath,
   tableVars,
   rows,
@@ -108,6 +111,7 @@ export default function PlotTab({
           fluids={fluids}
           tableVars={tableVars}
           hasStates={states.indices.length > 0}
+          stateTables={stateTableDefs}
           onSave={editing ? updatePlot : addPlot}
           onClose={() => {
             setAdding(false)
@@ -136,6 +140,7 @@ export default function PlotTab({
           tableRows={rows}
           tableResults={results}
           variables={solvedVariables}
+          stateTableDefs={stateTableDefs}
           onConfigure={() => setEditing(current)}
           onRemove={() => removePlot(current.id)}
           hideHeader={hideHeader}

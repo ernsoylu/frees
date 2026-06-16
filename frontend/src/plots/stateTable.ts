@@ -1,4 +1,4 @@
-import { VariableResult } from '../api'
+import { StateTableDto, VariableResult } from '../api'
 
 /**
  * Thermodynamic state detection: solved variables named like h1, s[2] or
@@ -60,6 +60,84 @@ function matchStateVariable(name: string): { property: string; index: number } |
   const property = PROPERTY_ALIASES[base]
   if (!property) return null
   return { property, index: Number(m[2] ?? m[4]) }
+}
+
+/** Property symbols, longest first, for leading-prefix matching of declared
+ * state-table variables (so `rho…` beats `r…`). Mirrors the backend. */
+const PROPERTY_PREFIXES = Object.keys(PROPERTY_ALIASES).sort(
+  (a, b) => b.length - a.length,
+)
+
+/**
+ * Match a STATE TABLE block variable as `<prop><tag><index>`: the longest
+ * leading property symbol is the property, any middle characters are the
+ * circuit tag (the `w` in `Pw_1`), and the trailing digits are the state
+ * index. Unlike {@link matchStateVariable} this tolerates the circuit tag, so
+ * `Pw_1` / `Pref_1` from different circuits are recognised.
+ */
+function matchBlockStateVariable(
+  name: string,
+): { property: string; index: number } | null {
+  const lower = name.toLowerCase()
+  let prefix: string
+  let index: number
+  const br = /^([a-z][a-z_]*)\[(\d+)\]$/.exec(lower)
+  if (br) {
+    prefix = br[1]
+    index = Number(br[2])
+  } else {
+    const pl = /^([a-z][a-z_]*?)_?(\d+)$/.exec(lower)
+    if (!pl) return null
+    prefix = pl[1]
+    index = Number(pl[2])
+  }
+  for (const sym of PROPERTY_PREFIXES) {
+    if (prefix.startsWith(sym)) {
+      return { property: PROPERTY_ALIASES[sym], index }
+    }
+  }
+  return null
+}
+
+/** A state table tied to one declared STATE TABLE block: its name and fluid. */
+export interface NamedStateTable extends StateTable {
+  name: string
+  fluid: string | null
+}
+
+/**
+ * Build one fluid-aware state table per declared STATE TABLE block. Only the
+ * variables listed in each block are grouped (so circuits with colliding state
+ * indices stay separate), using the block's fluid. Returns an empty list when
+ * no blocks are declared — callers then fall back to {@link detectStates}.
+ */
+export function detectStateTables(
+  variables: VariableResult[],
+  defs: StateTableDto[] | undefined,
+): NamedStateTable[] {
+  if (!defs || defs.length === 0) return []
+  const valueOf = new Map<string, number>()
+  for (const v of variables) {
+    if (Number.isFinite(v.value)) valueOf.set(v.name.toLowerCase(), v.value)
+  }
+  return defs.map((def) => {
+    const values: Record<number, Record<string, number>> = {}
+    const columnSet = new Set<string>()
+    for (const varName of def.variables) {
+      const value = valueOf.get(varName.toLowerCase())
+      if (value === undefined) continue
+      const match = matchBlockStateVariable(varName)
+      if (!match) continue
+      values[match.index] = values[match.index] ?? {}
+      values[match.index][match.property] = value
+      columnSet.add(match.property)
+    }
+    const indices = Object.keys(values)
+      .map(Number)
+      .sort((a, b) => a - b)
+    const columns = STATE_PROPERTIES.filter((p) => columnSet.has(p))
+    return { name: def.name, fluid: def.fluid ?? null, indices, columns, values }
+  })
 }
 
 export function detectStates(variables: VariableResult[]): StateTable {

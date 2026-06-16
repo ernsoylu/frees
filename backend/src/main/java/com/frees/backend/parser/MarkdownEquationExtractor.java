@@ -127,7 +127,8 @@ public final class MarkdownEquationExtractor {
         if (upper.startsWith("FOR") || upper.startsWith("WHILE") || upper.startsWith("END") ||
             upper.startsWith("FUNCTION") || upper.startsWith("PROCEDURE") ||
             upper.startsWith("MODULE") || upper.startsWith("CALL") ||
-            upper.startsWith("PARAMETRIC") || opensTableBlock(upper) || opensPlotBlock(upper)) {
+            upper.startsWith("PARAMETRIC") || opensTableBlock(upper) || opensPlotBlock(upper) ||
+            opensStateTableBlock(upper)) {
             return true;
         }
         if (!clean.contains("=")) {
@@ -173,8 +174,18 @@ public final class MarkdownEquationExtractor {
         String upper = stripComments(line).trim().toUpperCase();
         return upper.startsWith("FUNCTION") || upper.startsWith("PROCEDURE")
                 || upper.startsWith("MODULE") || upper.startsWith("PARAMETRIC")
-                || opensTableBlock(upper) || opensPlotBlock(upper);
+                || opensTableBlock(upper) || opensPlotBlock(upper)
+                || opensStateTableBlock(upper);
     }
+
+    /** A STATE TABLE block opener: the two keywords (any whitespace between)
+     * followed by a word boundary, so the block body runs verbatim to END. */
+    private static boolean opensStateTableBlock(String upper) {
+        return STATE_TABLE_OPENER.matcher(upper).find();
+    }
+
+    private static final java.util.regex.Pattern STATE_TABLE_OPENER =
+            java.util.regex.Pattern.compile("^STATE\\s+TABLE(\\s|\\(|$)");
 
     /** A TABLE block opener: the keyword followed by a word boundary, so a
      * variable like {@code table_temp = 5} is not mistaken for a block. */

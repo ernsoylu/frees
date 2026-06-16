@@ -28,13 +28,15 @@ public class AstBuilder extends FreesBaseVisitor<Expr> {
             List<Statement> statements,
             java.util.Map<String, ProcDef> defs,
             List<com.frees.backend.ast.ParametricTable> parametricTables,
-            List<com.frees.backend.ast.PlotDef> plots) {}
+            List<com.frees.backend.ast.PlotDef> plots,
+            List<com.frees.backend.ast.StateTableDef> stateTables) {}
 
     public ProgramResult buildProgram(FreesParser.ProgramContext ctx) {
         List<Statement> statements = new ArrayList<>();
         java.util.Map<String, ProcDef> defs = new java.util.LinkedHashMap<>();
         List<com.frees.backend.ast.ParametricTable> parametricTables = new ArrayList<>();
         List<com.frees.backend.ast.PlotDef> plots = new ArrayList<>();
+        List<com.frees.backend.ast.StateTableDef> stateTables = new ArrayList<>();
 
         if (ctx.topLevel() != null) {
             for (FreesParser.TopLevelContext tl : ctx.topLevel()) {
@@ -52,6 +54,8 @@ public class AstBuilder extends FreesBaseVisitor<Expr> {
                     defs.put(td.name().toLowerCase(), td);
                 } else if (tl.parametricDef() != null) {
                     parametricTables.add(buildParametricDef(tl.parametricDef()));
+                } else if (tl.stateTableDef() != null) {
+                    stateTables.add(buildStateTableDef(tl.stateTableDef()));
                 } else if (tl.plotDef() != null) {
                     plots.add(buildPlotDef(tl.plotDef()));
                 } else if (tl.statement() != null) {
@@ -59,7 +63,25 @@ public class AstBuilder extends FreesBaseVisitor<Expr> {
                 }
             }
         }
-        return new ProgramResult(statements, defs, parametricTables, plots);
+        return new ProgramResult(statements, defs, parametricTables, plots, stateTables);
+    }
+
+    /** Builds a fluid state table: the declared state-point variables plus the
+     * fluid declared with a {@code FLUID = <name>} attribute line (if any). */
+    private com.frees.backend.ast.StateTableDef buildStateTableDef(FreesParser.StateTableDefContext ctx) {
+        String name = ctx.IDENT().getText();
+        List<String> vars = buildParamList(ctx.paramList());
+        String fluid = null;
+        for (FreesParser.StateTableAttrContext attr : ctx.stateTableAttr()) {
+            if (!"fluid".equals(attr.IDENT().getText().toLowerCase())) {
+                continue;
+            }
+            FreesParser.StateAttrValueContext v = attr.stateAttrValue();
+            fluid = v.STRING_LITERAL() != null
+                    ? unquote(v.STRING_LITERAL().getText())
+                    : v.IDENT().getText();
+        }
+        return new com.frees.backend.ast.StateTableDef(name, vars, fluid);
     }
 
     /** Builds a code-defined plot: a name and a raw {@code key -> values} map of

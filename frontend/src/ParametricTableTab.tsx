@@ -47,7 +47,7 @@ function ColumnHeader({
           size="sm"
           fw={600}
           ff="monospace"
-          c="blue.4"
+          c="teal.4"
           style={{ cursor: readOnly ? 'default' : 'pointer' }}
           onClick={readOnly ? undefined : onAlter}
         >

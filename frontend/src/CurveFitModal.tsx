@@ -677,7 +677,7 @@ export default function CurveFitModal({
               }
               return (
                 <Group gap="xs">
-                  <Badge color="blue" variant="light">
+                  <Badge color="teal" variant="light">
                     ✓ Extracted {parsed.x.length} data points
                   </Badge>
                   <Text size="xs" c="dimmed" style={{ maxWidth: '450px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
