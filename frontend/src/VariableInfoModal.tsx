@@ -185,7 +185,7 @@ export default function VariableInfoModal({ variables, drafts, solvedValues, onS
           <Table.Tbody>
             {variables.map((name) => (
               <Table.Tr key={name}>
-                <Table.Td ff="monospace" c="blue.4">
+                <Table.Td ff="monospace" c="teal.4">
                   {name}
                 </Table.Td>
                 {(['guess', 'lower', 'upper', 'units', 'uncertainty', 'relativeUncertainty'] as const).map((field) => (

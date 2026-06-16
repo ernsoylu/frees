@@ -175,7 +175,7 @@ export function MathWithBadges({
       {variables && allVars.length > 0 && (
         <Group gap="xs" justify="center" mt="xs" wrap="wrap">
           {lhsVar && (
-            <Badge variant="light" color="blue" size="sm">
+            <Badge variant="light" color="teal" size="sm">
               {lhsVar.name} = {formatValue(lhsVar.value)} {lhsVar.units ? `[${lhsVar.units}]` : ''}
             </Badge>
           )}
@@ -212,7 +212,7 @@ function renderInlineContent(text: string, variables?: VariableResult[]): React.
         if (tooltip) {
           return (
             <Tooltip key={key} label={tooltip} withArrow>
-              <span style={{ cursor: 'help', borderBottom: '1px dotted var(--mantine-color-blue-4)', display: 'inline-block' }}>
+              <span style={{ cursor: 'help', borderBottom: '1px dotted var(--mantine-color-teal-4)', display: 'inline-block' }}>
                 <Latex math={part.value} />
               </span>
             </Tooltip>
@@ -451,7 +451,7 @@ export default function FormattedReportView({
     if (heading) {
       flushList()
       elements.push(
-        <Title key={key} order={heading.order} mt={heading.order === 2 ? 'md' : 'sm'} mb="xs" c="blue.4">
+        <Title key={key} order={heading.order} mt={heading.order === 2 ? 'md' : 'sm'} mb="xs" c="teal.4">
           {renderInlineContent(heading.text, variables)}
         </Title>
       )

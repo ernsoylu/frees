@@ -2662,7 +2662,7 @@ function LayersPanel({
             borderRadius: 4,
             cursor: 'pointer',
             background: selectedSet.has(el.id)
-              ? 'var(--mantine-color-blue-light)'
+              ? 'var(--mantine-color-teal-light)'
               : undefined,
           }}
         >
@@ -3076,7 +3076,7 @@ function PropertiesPanel({
 
   return (
     <Stack gap="xs">
-      <Text fw={600} size="sm" c="blue.4">
+      <Text fw={600} size="sm" c="teal.4">
         {el.kind === 'icon'
           ? (libraryIcon(el.icon)?.label ?? 'Component')
           : isControl(el)
@@ -3371,7 +3371,7 @@ function PropertiesPanel({
           </ActionIcon>
         </Tooltip>
         <Tooltip label="Save as Custom Component">
-          <ActionIcon variant="default" color="blue" size="md" onClick={onSaveComponent}>
+          <ActionIcon variant="default" color="teal" size="md" onClick={onSaveComponent}>
             <IconFolderPlus size={16} />
           </ActionIcon>
         </Tooltip>
@@ -5405,7 +5405,7 @@ export default function DiagramTab(props: Readonly<Props>) {
                   py={4}
                   style={{
                     cursor: 'pointer',
-                    borderColor: activeDiagramId === d.id ? 'var(--mantine-color-blue-7)' : undefined,
+                    borderColor: activeDiagramId === d.id ? 'var(--mantine-color-teal-7)' : undefined,
                     backgroundColor: activeDiagramId === d.id
                       ? 'var(--mantine-color-default)'
                       : 'light-dark(var(--mantine-color-gray-1), var(--mantine-color-dark-8))',
@@ -5413,7 +5413,7 @@ export default function DiagramTab(props: Readonly<Props>) {
                   onClick={() => onActiveDiagramIdChange?.(d.id)}
                 >
                   <Group gap={6} wrap="nowrap">
-                    <IconSchema size={14} color="var(--mantine-color-blue-4)" />
+                    <IconSchema size={14} color="var(--mantine-color-teal-4)" />
                     {activeDiagramId === d.id ? (
                       <TextInput
                         size="xs"
@@ -6238,7 +6238,7 @@ export default function DiagramTab(props: Readonly<Props>) {
               />
             ) : selectedElements.length > 1 ? (
               <Stack gap="xs">
-                <Text fw={600} size="sm" c="blue.4">
+                <Text fw={600} size="sm" c="teal.4">
                   {selectedElements.length} elements selected
                 </Text>
                 <Text size="xs" c="dimmed" style={{ lineHeight: 1.6 }}>
@@ -6321,7 +6321,7 @@ export default function DiagramTab(props: Readonly<Props>) {
                     </ActionIcon>
                   </Tooltip>
                   <Tooltip label="Save as Custom Component">
-                    <ActionIcon variant="default" color="blue" size="md" onClick={() => setSaveCompModalOpen(true)}>
+                    <ActionIcon variant="default" color="teal" size="md" onClick={() => setSaveCompModalOpen(true)}>
                       <IconFolderPlus size={16} />
                     </ActionIcon>
                   </Tooltip>
@@ -6334,7 +6334,7 @@ export default function DiagramTab(props: Readonly<Props>) {
               </Stack>
             ) : (
               <Stack gap="xs">
-                <Text fw={600} size="sm" c="blue.4">
+                <Text fw={600} size="sm" c="teal.4">
                   Diagram
                 </Text>
                 <Text size="xs" c="dimmed" style={{ lineHeight: 1.6 }}>
@@ -6525,7 +6525,7 @@ export default function DiagramTab(props: Readonly<Props>) {
                 }}
               >
                 <div>
-                  <Text fw={600} size="sm" c="blue.4">
+                  <Text fw={600} size="sm" c="teal.4">
                     {tmpl.name}
                   </Text>
                   <Text size="xs" c="dimmed" style={{ marginTop: 4, lineHeight: 1.5 }}>
