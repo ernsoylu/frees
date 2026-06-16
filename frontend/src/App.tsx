@@ -1264,9 +1264,10 @@ export default function App() {
                 size="xs"
                 label="Diagram name"
                 value={d?.name ?? ''}
-                onChange={(e) =>
-                  d && setDiagrams((prev) => prev.map((x) => (x.id === d.id ? { ...x, name: e.currentTarget.value } : x)))
-                }
+                onChange={(e) => {
+                  const value = e.currentTarget.value
+                  if (d) setDiagrams((prev) => prev.map((x) => (x.id === d.id ? { ...x, name: value } : x)))
+                }}
               />
             </div>
             <div ref={setInspectorOutlet} style={{ flex: 1, minHeight: 0, overflow: 'auto' }} />
@@ -1287,9 +1288,10 @@ export default function App() {
                   label="Table name"
                   value={t?.name ?? ''}
                   disabled={!t || t.source === 'code'}
-                  onChange={(e) =>
-                    t && setTables((prev) => prev.map((x) => (x.id === t.id ? { ...x, name: e.currentTarget.value } : x)))
-                  }
+                  onChange={(e) => {
+                    const value = e.currentTarget.value
+                    if (t) setTables((prev) => prev.map((x) => (x.id === t.id ? { ...x, name: value } : x)))
+                  }}
                 />
                 {t?.kind === 'parametric' ? (
                   <>
@@ -1329,9 +1331,10 @@ export default function App() {
                 label="Plot name"
                 value={p?.name ?? ''}
                 disabled={!p || p.fromCode}
-                onChange={(e) =>
-                  p && handlePlotsChange(plots.map((x) => (x.id === p.id ? { ...x, name: e.currentTarget.value } : x)))
-                }
+                onChange={(e) => {
+                  const value = e.currentTarget.value
+                  if (p) handlePlotsChange(plots.map((x) => (x.id === p.id ? { ...x, name: value } : x)))
+                }}
               />
               <Text size="xs" c="dimmed">Configure and Export are on the plot's toolbar.</Text>
               {p && !p.fromCode && (
