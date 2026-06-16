@@ -94,6 +94,42 @@ export function ConfirmModal({
   )
 }
 
+/** "Save before closing?" — three-way choice: Save / Don't Save / Cancel. */
+export function SaveCheckModal({
+  opened,
+  projectName,
+  onSave,
+  onDiscard,
+  onCancel,
+}: Readonly<{
+  opened: boolean
+  projectName: string
+  onSave: () => void
+  onDiscard: () => void
+  onCancel: () => void
+}>) {
+  return (
+    <Modal opened={opened} onClose={onCancel} title="Unsaved Changes" centered>
+      <Stack gap="md">
+        <Text size="sm">
+          <strong>{projectName}</strong> has unsaved changes. Save before proceeding?
+        </Text>
+        <Group justify="flex-end" gap="xs">
+          <Button variant="default" size="xs" onClick={onCancel}>
+            Cancel
+          </Button>
+          <Button variant="default" size="xs" color="red" onClick={onDiscard}>
+            Don&apos;t Save
+          </Button>
+          <Button size="xs" color="teal" onClick={onSave}>
+            Save
+          </Button>
+        </Group>
+      </Stack>
+    </Modal>
+  )
+}
+
 export function MessageModal({
   opened,
   title,

@@ -88,7 +88,7 @@ import ShortcutsModal from './ShortcutsModal'
 import SyntaxHelp from './SyntaxHelp'
 import { DEFAULT_EXAMPLE_TEXT, Example } from './examples'
 import EquationEditor, { EquationEditorHandle } from './EquationEditor'
-import { ConfirmModal, MessageModal, TextPromptModal } from './dialogs'
+import { MessageModal, SaveCheckModal, TextPromptModal } from './dialogs'
 import { Rail, TopBar } from './WorkspaceChrome'
 import { WorkspaceDock, type WorkspaceDockHandle, type OpenWindow } from './workspace/WorkspaceDock'
 import { detectStates } from './plots/stateTable'
@@ -232,8 +232,14 @@ export default function App() {
   // Mantine-styled replacements for native prompt()/confirm()/alert().
   const [renameOpen, setRenameOpen] = useState(false)
   const [saveAsOpen, setSaveAsOpen] = useState(false)
-  const [confirmNewOpen, setConfirmNewOpen] = useState(false)
+  const [showSaveCheck, setShowSaveCheck] = useState(false)
   const [dialogError, setDialogError] = useState<string | null>(null)
+  // Tracks unsaved changes; suppressed for one render-cycle after a project
+  // load / new / save so the dirty-tracking effect doesn't fire falsely.
+  const isDirtyRef = useRef(false)
+  const suppressDirtyRef = useRef(false)
+  // Stores the action to run once the save-check dialog is resolved.
+  const pendingActionRef = useRef<(() => void) | null>(null)
   const [dismissedWarnings, setDismissedWarnings] = useState(false)
   const [showFirstRun, setShowFirstRun] = useState(
     () => localStorage.getItem(FIRST_RUN_KEY) !== 'true',
@@ -366,10 +372,24 @@ export default function App() {
     if (!solving) setFillMissingFor(null)
   }, [solving])
 
+  // Mark the project dirty whenever content changes, unless the change came from
+  // an explicit load/new/save (suppressDirtyRef lets those operations opt out).
+  useEffect(() => {
+    if (suppressDirtyRef.current) {
+      suppressDirtyRef.current = false
+      isDirtyRef.current = false
+      return
+    }
+    isDirtyRef.current = true
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [text, tables, plots, diagrams, varDrafts])
+
   // Apply an opened/loaded project to every workspace slice. Child-owned slices
   // are written back to their caches and the relevant tabs are remounted (epoch
   // bump) so they re-read the restored state.
   const applyProject = useCallback((p: FreesProject) => {
+    suppressDirtyRef.current = true
+    isDirtyRef.current = false
     setText(p.text ?? '')
     setVarDrafts(p.varDrafts ?? {})
     setStopCriteria(p.stopCriteria)
@@ -385,13 +405,42 @@ export default function App() {
     writeBridgedKeys(p)
     saveProjectLocal(p)
     setWorkspaceEpoch((e) => e + 1)
-    // Restore the dock layout after React has applied the state updates above.
-    // rAF ensures panelContent is rebuilt before dockview recreates the panels.
     requestAnimationFrame(() => dockRef.current?.restore(p.dockLayout))
+  }, [])
+
+  // If the project is dirty, show the save-check dialog; otherwise run immediately.
+  const guardedAction = useCallback((action: () => void) => {
+    if (isDirtyRef.current) {
+      pendingActionRef.current = action
+      setShowSaveCheck(true)
+    } else {
+      action()
+    }
+  }, [])
+
+  const onSaveCheckSave = useCallback(() => {
+    setShowSaveCheck(false)
+    downloadProject(buildProject(currentSlices()), projectName)
+    isDirtyRef.current = false
+    pendingActionRef.current?.()
+    pendingActionRef.current = null
+  }, [currentSlices, projectName])
+
+  const onSaveCheckDiscard = useCallback(() => {
+    setShowSaveCheck(false)
+    isDirtyRef.current = false
+    pendingActionRef.current?.()
+    pendingActionRef.current = null
+  }, [])
+
+  const onSaveCheckCancel = useCallback(() => {
+    setShowSaveCheck(false)
+    pendingActionRef.current = null
   }, [])
 
   const handleSaveProject = useCallback(() => {
     downloadProject(buildProject(currentSlices()), projectName)
+    isDirtyRef.current = false
   }, [currentSlices, projectName])
 
   const handleRenameProject = useCallback(() => setRenameOpen(true), [])
@@ -408,14 +457,15 @@ export default function App() {
       const clean = name.trim() || 'untitled'
       setProjectName(clean)
       downloadProject(buildProject(currentSlices()), clean)
+      isDirtyRef.current = false
       setSaveAsOpen(false)
     },
     [currentSlices],
   )
 
   const handleOpenProject = useCallback(() => {
-    projectFileRef.current?.click()
-  }, [])
+    guardedAction(() => projectFileRef.current?.click())
+  }, [guardedAction])
 
   const onProjectFileSelected = useCallback(
     async (e: ChangeEvent<HTMLInputElement>) => {
@@ -433,10 +483,9 @@ export default function App() {
     [applyProject],
   )
 
-  const handleNewProject = useCallback(() => setConfirmNewOpen(true), [])
-
   const performNewProject = useCallback(() => {
-    setConfirmNewOpen(false)
+    suppressDirtyRef.current = true
+    isDirtyRef.current = false
     clearProjectLocal()
     writeBridgedKeys({
       version: 1,
@@ -472,6 +521,8 @@ export default function App() {
     setWorkspaceEpoch((e) => e + 1)
     requestAnimationFrame(() => dockRef.current?.reset())
   }, [stopCriteria, unitSystem, fillMissing])
+
+  const handleNewProject = useCallback(() => guardedAction(performNewProject), [guardedAction, performNewProject])
 
   // The active table, defaulting to the first; the parametric-table solver
   // state below is derived from the active *parametric* table so all the
@@ -565,7 +616,9 @@ export default function App() {
 
   // Load a curated example into the editor, replacing the current document and
   // invalidating any stale check/solve so the user can immediately re-Solve.
-  function loadExample(example: Example) {
+  function actuallyLoadExample(example: Example) {
+    suppressDirtyRef.current = true
+    isDirtyRef.current = false
     setText(example.text)
     setVarDrafts({})
     setCheckResult(null)
@@ -574,7 +627,12 @@ export default function App() {
     invalidateTable()
     setActiveTab('equations')
     setEqView('editor')
+    requestAnimationFrame(() => dockRef.current?.reset())
+  }
+
+  function loadExample(example: Example) {
     setShowExamples(false)
+    guardedAction(() => actuallyLoadExample(example))
   }
 
   /** The equations actually solved: editor text plus diagram control bindings. */
@@ -1716,13 +1774,12 @@ export default function App() {
         onClose={() => setSaveAsOpen(false)}
       />
 
-      <ConfirmModal
-        opened={confirmNewOpen}
-        title="New Project"
-        message="Start a new project? Unsaved changes will be lost."
-        confirmLabel="New Project"
-        onConfirm={performNewProject}
-        onClose={() => setConfirmNewOpen(false)}
+      <SaveCheckModal
+        opened={showSaveCheck}
+        projectName={projectName}
+        onSave={onSaveCheckSave}
+        onDiscard={onSaveCheckDiscard}
+        onCancel={onSaveCheckCancel}
       />
 
       <MessageModal
