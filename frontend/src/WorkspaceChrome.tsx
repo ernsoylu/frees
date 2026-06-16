@@ -15,6 +15,7 @@ import {
   useMantineColorScheme,
 } from '@mantine/core'
 import {
+  IconAdjustments,
   IconChartGridDots,
   IconChartLine,
   IconChecks,
@@ -29,17 +30,21 @@ import {
   IconHelp,
   IconInfoCircle,
   IconLayoutGrid,
+  IconListDetails,
   IconMathFunction,
+  IconPointFilled,
+  IconX,
   IconMoon,
   IconSun,
   IconPencil,
+  IconPlus,
   IconPlayerPlayFilled,
   IconSchema,
   IconSettings,
   IconTable,
   IconTargetArrow,
+  IconTrash,
   IconSearch,
-  IconTemperature,
   IconVariable,
 } from '@tabler/icons-react'
 import { spotlight } from '@mantine/spotlight'
@@ -57,13 +62,7 @@ import { FUNCTION_CATEGORIES } from './functionCatalog'
 const VIEWS = [
   { value: 'equations', label: 'Editor', tip: 'Editor', icon: IconCode },
   { value: 'table', label: 'Tables', tip: 'Tables — parametric runs & curve functions', icon: IconTable },
-  { value: 'plots', label: 'Plots', tip: 'Plots (X-Y)', icon: IconChartLine },
-  {
-    value: 'thermo',
-    label: 'Thermo',
-    tip: 'Thermodynamics — property & psychrometric plots, state points',
-    icon: IconTemperature,
-  },
+  { value: 'plots', label: 'Plots', tip: 'Plots — X-Y, property & psychrometric', icon: IconChartLine },
   {
     value: 'digitizer',
     label: 'Digitizer',
@@ -71,18 +70,174 @@ const VIEWS = [
     icon: IconChartGridDots,
   },
   { value: 'diagram', label: 'Diagram', tip: 'Diagram — interactive schematic editor', icon: IconSchema },
+  { value: 'inspector', label: 'Inspector', tip: 'Inspector — focused diagram properties & layers', icon: IconAdjustments },
+  { value: 'solution', label: 'Solution', tip: 'Solution — solved variables & residuals', icon: IconListDetails },
 ]
 
 const RAIL_EXPANDED_KEY = 'frees.railExpanded'
 
 interface RailProps {
   active: string
+  /** Window kinds currently open in the dock (drives the open-state dot). */
+  openKinds?: string[]
+  /** Specific window ids open (e.g. "diagram:<id>") for per-instance marks. */
+  openIds?: string[]
+  /** Diagrams available to open as individual windows. */
+  diagrams?: { id: string; name: string; deletable?: boolean }[]
+  /** Number of diagram windows currently open (badge on the Diagram icon). */
+  diagramCount?: number
+  /** Plots (X-Y, property, psychrometric) available to open as windows. */
+  plots?: { id: string; name: string; tag?: string; deletable?: boolean }[]
+  /** Number of plot windows currently open (badge on the Plots icon). */
+  plotCount?: number
+  /** Tables available to open as individual windows. */
+  workspaceTables?: { id: string; name: string; deletable?: boolean }[]
+  /** Number of table windows currently open (badge on the Tables icon). */
+  tableCount?: number
   onSelect: (view: string) => void
+  onClose?: (view: string) => void
+  onResetLayout?: () => void
+  onOpenDiagram?: (id: string) => void
+  onNewDiagram?: () => void
+  onDeleteDiagram?: (id: string) => void
+  onOpenPlot?: (id: string) => void
+  onNewPlot?: (kind: 'xy' | 'property' | 'psychro') => void
+  onDeletePlot?: (id: string) => void
+  onOpenTable?: (id: string) => void
+  onNewTable?: (kind: 'parametric' | 'function-1d' | 'function-2d') => void
+  onDeleteTable?: (id: string) => void
+  /** Open the singleton Fluid State table window. */
+  onOpenStates?: () => void
   onVariableInfo: () => void
   onMinMax: () => void
   onCurveFit: () => void
   onPreferences: () => void
   onAbout: () => void
+}
+
+// Sidebar launcher for a multi-instance kind (Diagram, Plots): a menu listing
+// every instance (open each as its own dock window) plus a "New …" action. A
+// badge shows how many windows of that kind are currently open.
+function InstanceLauncher({
+  expanded,
+  active,
+  count,
+  idPrefix,
+  label,
+  newActions,
+  emptyLabel,
+  icon,
+  items,
+  openIds,
+  onOpen,
+  onDelete,
+}: Readonly<{
+  expanded: boolean
+  active: boolean
+  count: number
+  idPrefix: string
+  label: string
+  newActions: { label: string; onClick: () => void }[]
+  emptyLabel: string
+  icon: React.ReactNode
+  items: { id: string; name: string; tag?: string; deletable?: boolean }[]
+  openIds: Set<string>
+  onOpen?: (id: string) => void
+  onDelete?: (id: string) => void
+}>) {
+  const variant = active ? 'light' : 'subtle'
+  const color = active ? 'blue' : 'gray'
+  const target = expanded ? (
+    <Button
+      variant={variant}
+      color={color}
+      justify="flex-start"
+      fullWidth
+      size="sm"
+      radius="md"
+      leftSection={icon}
+      rightSection={
+        count > 0 ? (
+          <Badge size="xs" variant="filled" circle>
+            {count}
+          </Badge>
+        ) : null
+      }
+      aria-label={`${label} windows`}
+    >
+      {label}
+    </Button>
+  ) : (
+    <div style={{ position: 'relative', display: 'inline-flex' }}>
+      <ActionIcon variant={variant} color={color} size={40} radius="md" aria-label={`${label} windows`}>
+        {icon}
+      </ActionIcon>
+      {count > 0 && (
+        <Badge
+          size="xs"
+          variant="filled"
+          circle
+          style={{ position: 'absolute', top: -3, right: -3, pointerEvents: 'none' }}
+        >
+          {count}
+        </Badge>
+      )}
+    </div>
+  )
+  return (
+    <Menu position="right-start" shadow="md" width={230} withinPortal>
+      <Menu.Target>{target}</Menu.Target>
+      <Menu.Dropdown>
+        <Menu.Label>{label} windows</Menu.Label>
+        {items.length === 0 && <Menu.Item disabled>{emptyLabel}</Menu.Item>}
+        {items.map((it) => (
+          <Menu.Item
+            key={it.id}
+            onClick={() => onOpen?.(it.id)}
+            leftSection={
+              openIds.has(`${idPrefix}${it.id}`) ? (
+                <IconPointFilled size={10} style={{ color: 'var(--mantine-color-blue-5)' }} />
+              ) : (
+                <span style={{ display: 'inline-block', width: 10 }} />
+              )
+            }
+            rightSection={
+              <Group gap={4} wrap="nowrap" align="center">
+                {it.tag && (
+                  <Text size="9px" c="dimmed">
+                    {it.tag}
+                  </Text>
+                )}
+                {it.deletable && onDelete && (
+                  <ActionIcon
+                    component="span"
+                    size="xs"
+                    variant="subtle"
+                    color="red"
+                    aria-label={`Delete ${it.name}`}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onDelete(it.id)
+                    }}
+                  >
+                    <IconTrash size={12} />
+                  </ActionIcon>
+                )}
+              </Group>
+            }
+          >
+            {it.name}
+          </Menu.Item>
+        ))}
+        <Menu.Divider />
+        {newActions.map((a) => (
+          <Menu.Item key={a.label} leftSection={<IconPlus size={14} />} onClick={a.onClick}>
+            {a.label}
+          </Menu.Item>
+        ))}
+      </Menu.Dropdown>
+    </Menu>
+  )
 }
 
 // One rail entry. Collapsed → an icon button with a hover tooltip; expanded →
@@ -93,20 +248,34 @@ function RailEntry({
   label,
   tip,
   active,
+  open,
   expanded,
   onClick,
+  onClose,
   href,
 }: Readonly<{
   icon: React.ReactNode
   label: string
   tip: string
   active?: boolean
+  /** Whether the corresponding dock window is currently open. */
+  open?: boolean
   expanded: boolean
   onClick?: () => void
+  /** When provided and the window is open, shows a close affordance. */
+  onClose?: () => void
   href?: string
 }>) {
   const variant = active ? 'light' : 'subtle'
   const color = active ? 'blue' : 'gray'
+  // A small dot marks windows that are open in the dock (so the rail doubles
+  // as a window list); the focused window also gets the blue "active" styling.
+  const dot = open ? (
+    <IconPointFilled
+      size={10}
+      style={{ color: 'var(--mantine-color-blue-5)', flexShrink: 0 }}
+    />
+  ) : null
 
   if (expanded) {
     const shared = {
@@ -117,6 +286,19 @@ function RailEntry({
       size: 'sm' as const,
       radius: 'md' as const,
       leftSection: icon,
+      rightSection: open && onClose ? (
+        <UnstyledButton
+          component="span"
+          aria-label={`Close ${label}`}
+          onClick={(e) => {
+            e.stopPropagation()
+            onClose()
+          }}
+          style={{ display: 'inline-flex', color: 'var(--mantine-color-dimmed)' }}
+        >
+          <IconX size={14} />
+        </UnstyledButton>
+      ) : dot,
       'aria-label': tip,
     }
     return href ? (
@@ -131,7 +313,7 @@ function RailEntry({
   }
 
   const shared = { variant, color, size: 40, radius: 'md' as const, 'aria-label': tip }
-  const button = href ? (
+  const inner = href ? (
     <ActionIcon component="a" href={href} target="_blank" {...shared}>
       {icon}
     </ActionIcon>
@@ -139,6 +321,24 @@ function RailEntry({
     <ActionIcon onClick={onClick} {...shared}>
       {icon}
     </ActionIcon>
+  )
+  // Collapsed: overlay a tiny dot in the corner for open windows.
+  const button = (
+    <div style={{ position: 'relative', display: 'inline-flex' }}>
+      {inner}
+      {open && (
+        <IconPointFilled
+          size={9}
+          style={{
+            position: 'absolute',
+            top: 1,
+            right: 1,
+            color: 'var(--mantine-color-blue-5)',
+            pointerEvents: 'none',
+          }}
+        />
+      )}
+    </div>
   )
   return (
     <Tooltip label={tip} position="right" openDelay={300}>
@@ -149,13 +349,35 @@ function RailEntry({
 
 export function Rail({
   active,
+  openKinds = [],
+  openIds = [],
+  diagrams,
+  diagramCount = 0,
+  plots,
+  plotCount = 0,
+  workspaceTables,
+  tableCount = 0,
   onSelect,
+  onClose,
+  onResetLayout,
+  onOpenDiagram,
+  onNewDiagram,
+  onDeleteDiagram,
+  onOpenPlot,
+  onNewPlot,
+  onDeletePlot,
+  onOpenTable,
+  onNewTable,
+  onDeleteTable,
+  onOpenStates,
   onVariableInfo,
   onMinMax,
   onCurveFit,
   onPreferences,
   onAbout,
 }: Readonly<RailProps>) {
+  const openSet = new Set(openKinds)
+  const openIdSet = new Set(openIds)
   const [expanded, setExpanded] = useState(
     () => localStorage.getItem(RAIL_EXPANDED_KEY) === 'true',
   )
@@ -204,19 +426,89 @@ export function Rail({
           expanded={expanded}
           onClick={toggle}
         />
-        {VIEWS.map((view) => (
-          <RailEntry
-            key={view.value}
-            icon={<view.icon size={iconSize} stroke={1.6} />}
-            label={view.label}
-            tip={view.tip}
-            active={active === view.value}
-            expanded={expanded}
-            onClick={() => onSelect(view.value)}
-          />
-        ))}
+        {VIEWS.map((view) =>
+          view.value === 'diagram' && diagrams ? (
+            <InstanceLauncher
+              key={view.value}
+              expanded={expanded}
+              active={active === 'diagram'}
+              count={diagramCount}
+              idPrefix="diagram:"
+              label="Diagram"
+              newActions={[{ label: 'New diagram', onClick: () => onNewDiagram?.() }]}
+              emptyLabel="No diagrams yet"
+              icon={<IconSchema size={iconSize} stroke={1.6} />}
+              items={diagrams}
+              openIds={openIdSet}
+              onOpen={onOpenDiagram}
+              onDelete={onDeleteDiagram}
+            />
+          ) : view.value === 'plots' && plots ? (
+            <InstanceLauncher
+              key={view.value}
+              expanded={expanded}
+              active={active === 'plot'}
+              count={plotCount}
+              idPrefix="plot:"
+              label="Plots"
+              newActions={[
+                { label: 'New X-Y plot', onClick: () => onNewPlot?.('xy') },
+                { label: 'New property diagram', onClick: () => onNewPlot?.('property') },
+                { label: 'New psychrometric chart', onClick: () => onNewPlot?.('psychro') },
+              ]}
+              emptyLabel="No plots yet"
+              icon={<IconChartLine size={iconSize} stroke={1.6} />}
+              items={plots}
+              openIds={openIdSet}
+              onOpen={onOpenPlot}
+              onDelete={onDeletePlot}
+            />
+          ) : view.value === 'table' && workspaceTables ? (
+            <InstanceLauncher
+              key={view.value}
+              expanded={expanded}
+              active={active === 'table'}
+              count={tableCount}
+              idPrefix="table:"
+              label="Tables"
+              newActions={[
+                { label: 'New parametric table', onClick: () => onNewTable?.('parametric') },
+                { label: 'New function table (1-arg)', onClick: () => onNewTable?.('function-1d') },
+                { label: 'New function table (curve)', onClick: () => onNewTable?.('function-2d') },
+                { label: 'Add fluid state table', onClick: () => onOpenStates?.() },
+              ]}
+              emptyLabel="No tables yet"
+              icon={<IconTable size={iconSize} stroke={1.6} />}
+              items={workspaceTables}
+              openIds={openIdSet}
+              onOpen={onOpenTable}
+              onDelete={onDeleteTable}
+            />
+          ) : (
+            <RailEntry
+              key={view.value}
+              icon={<view.icon size={iconSize} stroke={1.6} />}
+              label={view.label}
+              tip={view.tip}
+              active={active === view.value}
+              open={openSet.has(view.value)}
+              expanded={expanded}
+              onClick={() => onSelect(view.value)}
+              onClose={onClose ? () => onClose(view.value) : undefined}
+            />
+          ),
+        )}
       </Stack>
       <Stack gap={4}>
+        {onResetLayout && (
+          <RailEntry
+            icon={<IconLayoutGrid size={iconSize} stroke={1.6} />}
+            label="Reset layout"
+            tip="Reset window layout"
+            expanded={expanded}
+            onClick={onResetLayout}
+          />
+        )}
         {tools.map((tool) => (
           <RailEntry
             key={tool.label}
