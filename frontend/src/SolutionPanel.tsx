@@ -469,11 +469,12 @@ export default function SolutionPanel({
     <Paper
       withBorder
       p="md"
-      w={{ base: '100%', md: 420 }}
+      w="100%"
+      h="100%"
       style={{ overflowY: 'auto' }}
     >
       <Group justify="space-between" mb="sm">
-        <Title order={4}>Solution</Title>
+        <Title order={4} c="blue.4">Solution</Title>
         <Group gap="xs">
           {!showTable && solveCount > 0 && (
             <Badge variant="light">run #{solveCount}</Badge>

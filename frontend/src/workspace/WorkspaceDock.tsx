@@ -139,7 +139,17 @@ export function WorkspaceDock({
       api.getEdgeGroup('right')?.expand()
       return
     }
-    api.addPanel({ id, component: 'panel', title, params: { kind } })
+    // Open center windows as a tab in the main (center) group, anchored to an
+    // existing center panel — never the active edge group — so plots/tables/
+    // diagrams land next to the Editor instead of beside the edge panels.
+    const centerRef = api.panels.find((p) => !edgeKindsRef.current.includes(kindOf(p)))
+    api.addPanel({
+      id,
+      component: 'panel',
+      title,
+      params: { kind },
+      position: centerRef ? { referencePanel: centerRef.id } : undefined,
+    })
   }
 
   const buildDefault = (api: DockviewApi) => {
@@ -237,6 +247,24 @@ export function WorkspaceDock({
 
   return (
     <PanelContentContext.Provider value={content}>
+      {/* Align dockview's surfaces with the app's Mantine color scale (these
+          vars are theme-aware, so one block serves both light and dark). */}
+      <style>{`
+        .dockview-theme-dark, .dockview-theme-light {
+          --dv-group-view-background-color: var(--mantine-color-body);
+          --dv-tabs-and-actions-container-background-color: var(--mantine-color-default);
+          --dv-activegroup-visiblepanel-tab-background-color: var(--mantine-color-body);
+          --dv-activegroup-visiblepanel-tab-color: var(--mantine-color-text);
+          --dv-inactivegroup-visiblepanel-tab-background-color: var(--mantine-color-default);
+          --dv-inactivegroup-visiblepanel-tab-color: var(--mantine-color-dimmed);
+          --dv-tabs-container-scrollbar-color: var(--mantine-color-default-border);
+          --dv-tab-divider-color: var(--mantine-color-default-border);
+          --dv-separator-border: var(--mantine-color-default-border);
+          --dv-paneview-active-outline-color: var(--mantine-color-blue-6);
+          --dv-active-sash-color: var(--mantine-color-blue-6);
+          --dv-icon-hover-background-color: var(--mantine-color-default-hover);
+        }
+      `}</style>
       <div style={{ width: '100%', height: '100%' }}>
         <DockviewReact
           className={scheme === 'light' ? 'dockview-theme-light' : 'dockview-theme-dark'}

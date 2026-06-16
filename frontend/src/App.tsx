@@ -1106,6 +1106,16 @@ export default function App() {
     padding: 'var(--mantine-spacing-md)',
     overflow: 'auto',
   }
+  // Plot windows must let the chart fill exactly (no scroll), so the wrapper is
+  // a non-scrolling flex column with a tight pad.
+  const plotPanelStyle: React.CSSProperties = {
+    height: '100%',
+    minHeight: 0,
+    display: 'flex',
+    flexDirection: 'column',
+    padding: 'var(--mantine-spacing-xs)',
+    overflow: 'hidden',
+  }
   const panelContent: Record<string, ReactNode> = {
     equations: (
       <div style={panelPad}>
@@ -1223,7 +1233,7 @@ export default function App() {
       </div>
     ),
     solution: (
-      <div style={{ height: '100%', minHeight: 0, padding: 'var(--mantine-spacing-md)', overflow: 'auto' }}>
+      <div style={{ height: '100%', minHeight: 0 }}>
         <SolutionPanel
           showTable={activeTab === 'table' && activeParam !== null}
           solveCount={solveCount}
@@ -1295,8 +1305,8 @@ export default function App() {
     const isThermo = pl.kind === 'property' || pl.kind === 'psychro'
     panelTitles[winId] = pl.name
     panelContent[winId] = (
-      <div style={panelPad}>
-        <Group justify="space-between" mb={6} wrap="nowrap" align="center">
+      <div style={plotPanelStyle}>
+        <Group justify="space-between" mb={4} wrap="nowrap" align="center" style={{ flexShrink: 0 }}>
           <Badge size="xs" variant="light" color={isThermo ? 'teal' : 'blue'}>
             {PLOT_KIND_LABEL[pl.kind]}
           </Badge>
@@ -1625,7 +1635,7 @@ export default function App() {
           <WorkspaceDock
             content={panelContent}
             titles={panelTitles}
-            defaultOpen={['equations', 'solution', 'inspector']}
+            defaultOpen={['equations', 'inspector', 'solution']}
             edgeKinds={['solution', 'inspector']}
             onActiveChange={(active) => {
               setActiveTab(active?.kind ?? '')
