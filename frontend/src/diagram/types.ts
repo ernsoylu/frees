@@ -96,6 +96,20 @@ export interface ConnectorElement extends ElementBase {
   style: 'straight' | 'orthogonal' | 'curved'
   arrow: 'none' | 'from' | 'to' | 'both'
   flow?: FlowAnimation
+  /**
+   * Manual elbow position for the orthogonal route (Visio/Lucid-style). Holds
+   * the world coordinate of the draggable mid-segment — an x when the route
+   * leaves its first anchor horizontally, a y when it leaves vertically. When
+   * undefined the elbow auto-centres between the two anchors. Ignored once
+   * `waypoints` are present.
+   */
+  mid?: number
+  /**
+   * Explicit user-placed bend points the route threads through, in order from
+   * the `from` anchor to the `to` anchor (Visio/Lucid multi-waypoint routing).
+   * Drag to move, double-click to delete; drag a segment to insert a new one.
+   */
+  waypoints?: { x: number; y: number }[]
 }
 
 export interface RectElement extends ElementBase {
@@ -571,6 +585,98 @@ export const ANCHOR_DEFS: Record<string, Record<string, AnchorDefinition>> = {
   elec_ground: {
     port: { rx: 0.5, ry: 0.2, nx: 0, ny: -1 },
   },
+  diode: {
+    port1: { rx: 0.1, ry: 0.5, nx: -1, ny: 0 },
+    port2: { rx: 0.9, ry: 0.5, nx: 1, ny: 0 },
+  },
+  switch: {
+    port1: { rx: 0.1, ry: 0.5, nx: -1, ny: 0 },
+    port2: { rx: 0.9, ry: 0.5, nx: 1, ny: 0 },
+  },
+  battery: {
+    port1: { rx: 0.1, ry: 0.5, nx: -1, ny: 0 },
+    port2: { rx: 0.9, ry: 0.5, nx: 1, ny: 0 },
+  },
+  dc_motor: {
+    port1: { rx: 0.1, ry: 0.5, nx: -1, ny: 0 },
+    port2: { rx: 0.9, ry: 0.5, nx: 1, ny: 0 },
+  },
+  lamp: {
+    port1: { rx: 0.06, ry: 0.5, nx: -1, ny: 0 },
+    port2: { rx: 0.94, ry: 0.5, nx: 1, ny: 0 },
+  },
+  ac_source: {
+    port1: { rx: 0.1, ry: 0.5, nx: -1, ny: 0 },
+    port2: { rx: 0.9, ry: 0.5, nx: 1, ny: 0 },
+  },
+  transformer: {
+    'primary-top': { rx: 0.2, ry: 0.18, nx: -1, ny: 0 },
+    'primary-bottom': { rx: 0.2, ry: 0.82, nx: -1, ny: 0 },
+    'secondary-top': { rx: 0.8, ry: 0.18, nx: 1, ny: 0 },
+    'secondary-bottom': { rx: 0.8, ry: 0.82, nx: 1, ny: 0 },
+  },
+  transistor: {
+    base: { rx: 0.1, ry: 0.5, nx: -1, ny: 0 },
+    collector: { rx: 0.68, ry: 0.1, nx: 0, ny: -1 },
+    emitter: { rx: 0.68, ry: 0.9, nx: 0, ny: 1 },
+  },
+  level_sensor: {
+    port: { rx: 0.1, ry: 0.5, nx: -1, ny: 0 },
+  },
+  humidity_sensor: {
+    port: { rx: 0.1, ry: 0.5, nx: -1, ny: 0 },
+  },
+  indicator: {
+    port: { rx: 0.5, ry: 0.1, nx: 0, ny: -1 },
+  },
+  thermocouple: {
+    port: { rx: 0.9, ry: 0.5, nx: 1, ny: 0 },
+  },
+  spring: {
+    left: { rx: 0.08, ry: 0.5, nx: -1, ny: 0 },
+    right: { rx: 0.92, ry: 0.5, nx: 1, ny: 0 },
+  },
+  damper: {
+    left: { rx: 0.08, ry: 0.5, nx: -1, ny: 0 },
+    right: { rx: 0.92, ry: 0.5, nx: 1, ny: 0 },
+  },
+  fixed_support: {
+    face: { rx: 0.5, ry: 0.4, nx: 0, ny: -1 },
+  },
+  roller_support: {
+    top: { rx: 0.5, ry: 0.2, nx: 0, ny: -1 },
+  },
+  flywheel: {
+    center: { rx: 0.5, ry: 0.5, nx: 0, ny: 0 },
+    top: { rx: 0.5, ry: 0.16, nx: 0, ny: -1 },
+    bottom: { rx: 0.5, ry: 0.84, nx: 0, ny: 1 },
+  },
+  lever: {
+    end1: { rx: 0.1, ry: 0.47, nx: -1, ny: 0 },
+    end2: { rx: 0.9, ry: 0.47, nx: 1, ny: 0 },
+    pivot: { rx: 0.5, ry: 0.7, nx: 0, ny: 1 },
+  },
+  fan: {
+    inlet: { rx: 0.16, ry: 0.5, nx: -1, ny: 0 },
+    outlet: { rx: 0.84, ry: 0.5, nx: 1, ny: 0 },
+  },
+  check_valve: {
+    inlet: { rx: 0.06, ry: 0.5, nx: -1, ny: 0 },
+    outlet: { rx: 0.94, ry: 0.5, nx: 1, ny: 0 },
+  },
+  filter: {
+    inlet: { rx: 0.06, ry: 0.5, nx: -1, ny: 0 },
+    outlet: { rx: 0.94, ry: 0.5, nx: 1, ny: 0 },
+  },
+  three_way_valve: {
+    inlet: { rx: 0.1, ry: 0.5, nx: -1, ny: 0 },
+    outlet: { rx: 0.9, ry: 0.5, nx: 1, ny: 0 },
+    bottom: { rx: 0.5, ry: 0.9, nx: 0, ny: 1 },
+  },
+  cooling_tower: {
+    inlet: { rx: 0.05, ry: 0.8, nx: -1, ny: 0 },
+    outlet: { rx: 0.95, ry: 0.8, nx: 1, ny: 0 },
+  },
 }
 
 export function getElementAnchors(el: DiagramElement): Record<string, AnchorDefinition> {
@@ -640,9 +746,14 @@ export function elementBounds(el: DiagramElement, elements: DiagramElement[] = [
     if (!fromEl || !toEl) return { x: 0, y: 0, w: 0, h: 0 }
     const p1 = getAnchorCoordinate(fromEl, el.fromAnchor)
     const p2 = getAnchorCoordinate(toEl, el.toAnchor)
-    const x = Math.min(p1.x, p2.x)
-    const y = Math.min(p1.y, p2.y)
-    return { x, y, w: Math.max(1, Math.abs(p2.x - p1.x)), h: Math.max(1, Math.abs(p2.y - p1.y)) }
+    // Include any manual waypoints so the box encloses the full bent route
+    // (matters for zoom-to-fit and export framing).
+    const pts = [p1, p2, ...(el.waypoints ?? [])]
+    const xs = pts.map((p) => p.x)
+    const ys = pts.map((p) => p.y)
+    const x = Math.min(...xs)
+    const y = Math.min(...ys)
+    return { x, y, w: Math.max(1, Math.max(...xs) - x), h: Math.max(1, Math.max(...ys) - y) }
   }
   if (el.kind === 'line') {
     const x = Math.min(el.x1, el.x2)

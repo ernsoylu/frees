@@ -76,6 +76,11 @@ export function buildExportSvg(
   return { markup, width: Math.round(w * opts.scale), height: Math.round(h * opts.scale) }
 }
 
+/** Download arbitrary text as a file (used for diagram JSON export/backup). */
+export function downloadTextFile(text: string, filename: string, mime = 'application/json') {
+  triggerDownload(new Blob([text], { type: `${mime};charset=utf-8` }), filename)
+}
+
 function triggerDownload(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
