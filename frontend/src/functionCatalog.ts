@@ -181,6 +181,7 @@ export const FUNCTION_CATEGORIES: FunctionCategory[] = [
       { label: 'TABLE (with units)', snippet: 'TABLE $0tname(x [unit]) [unit]\n  0   0\n  1   1\nEND\n', description: 'Define a lookup / interpolation table callable as a function.', usage: 'TABLE t(x [unit]) [unit] … END' },
       { label: 'PARAMETRIC table', snippet: 'PARAMETRIC $0sweep(x)\n  x = 0:1:10 | Linear\nEND\n', description: 'Declare a parametric sweep table in code.', usage: 'PARAMETRIC sweep(x) … END' },
       { label: 'PLOT block', snippet: "PLOT '$0'\n  kind = xy\n  x = \n  y = \nEND\n", description: 'Define a plot in code.', usage: "PLOT 'name' … END" },
+      { label: 'STATE TABLE block', snippet: 'STATE TABLE $0Circuit1(P1, T1, h2)\n  FLUID = Water\nEND\n', description: 'Declare a fluid-aware state table: list the circuit’s state-point variables and the fluid (FLUID = ...) every state uses. Multiple blocks support multi-fluid / multi-circuit plants.', usage: 'STATE TABLE WaterCircuit(Pw_1, Pw_2, Tw1)  FLUID = Water  END' },
       { label: 'FOR loop', snippet: 'FOR i = 1 TO $0\n  \nEND\n', description: 'Generate equations over an integer index range.', usage: 'FOR i = 1 TO N … END' },
       { label: 'IF / THEN / ELSE (in FUNCTION)', snippet: 'IF $0 THEN\n  \nELSE\n  \nEND\n', description: 'Conditional branch inside a FUNCTION / PROCEDURE body.', usage: 'IF cond THEN … ELSE … END' },
       { label: 'REPEAT / UNTIL (in FUNCTION)', snippet: 'REPEAT\n  $0\nUNTIL ', description: 'Loop until a condition holds (inside a FUNCTION / PROCEDURE).', usage: 'REPEAT … UNTIL cond' },
