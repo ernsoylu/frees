@@ -533,9 +533,17 @@ export default function App() {
     .map((r, i) => ({ ok: r.success, label: `Run ${i + 1}`, values: r.values }))
     .filter((r) => r.ok)
     .map(({ label, values }) => ({ label, values }))
-  const tableStats = activeParam?.stats ?? null
-  const tableCheckResult = activeParam?.checkResult ?? null
-  const tableCheckMessage = activeParam?.checkMessage ?? ''
+
+  // The parametric table window that is currently focused in the dock — the
+  // TopBar's Check Table / Run Table buttons and status pill track this table.
+  const focusedParam: ParamTableSpec | null = (() => {
+    if (focusedWindow?.kind !== 'table') return null
+    const t = tables.find((x) => `table:${x.id}` === focusedWindow.id)
+    return t?.kind === 'parametric' ? t : null
+  })()
+  const tableStats = focusedParam?.stats ?? null
+  const tableCheckResult = focusedParam?.checkResult ?? null
+  const tableCheckMessage = focusedParam?.checkMessage ?? ''
   const functionTableDtos = toFunctionTableDtos(tables)
 
   function updateParamTable(id: string, update: (t: ParamTableSpec) => ParamTableSpec) {
@@ -1504,7 +1512,7 @@ export default function App() {
     solution: (
       <div style={{ height: '100%', minHeight: 0 }}>
         <SolutionPanel
-          showTable={activeTab === 'table' && activeParam !== null}
+          showTable={focusedParam !== null}
           solveCount={solveCount}
           tableStats={tableStats}
           result={result}
@@ -1631,34 +1639,7 @@ export default function App() {
     const param = t.kind === 'parametric' ? t : null
     panelTitles[winId] = t.name
     panelContent[winId] = (
-      <div style={{ ...panelPad, display: 'flex', flexDirection: 'column', height: '100%' }}>
-        {param && (
-          <Group gap="xs" mb="xs" wrap="nowrap">
-            <Button
-              size="xs"
-              variant="default"
-              loading={checkingTableId === t.id}
-              disabled={(solvingTableId !== null) || (checkingTableId !== null && checkingTableId !== t.id)}
-              onClick={() => void onCheckTable(t.id)}
-            >
-              Check Table
-            </Button>
-            <Button
-              size="xs"
-              color="teal"
-              loading={solvingTableId === t.id}
-              disabled={solvingTableId !== null && solvingTableId !== t.id}
-              onClick={() => void onSolveTable(t.id)}
-            >
-              Run Table
-            </Button>
-            {param.checkMessage && (
-              <Text size="xs" c={param.checkResult?.solvable ? 'teal.4' : 'red.4'} style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {param.checkMessage}
-              </Text>
-            )}
-          </Group>
-        )}
+      <div style={panelPad}>
         <TablesTab
           tables={tables}
           singleTableId={t.id}
@@ -1906,7 +1887,7 @@ export default function App() {
 
       <Flex direction="column" flex={1} miw={0} p="sm" gap="sm">
         <TopBar
-          isTable={activeTab === 'table' && activeParam !== null}
+          isTable={focusedParam !== null}
           checking={checking}
           solving={solving}
           solvable={solvable}
@@ -1914,15 +1895,15 @@ export default function App() {
           complexMode={complexMode}
           checkResult={checkResult}
           result={result}
-          tableChecking={checkingTableId !== null}
-          tableSolving={solvingTableId !== null}
+          tableChecking={checkingTableId === focusedParam?.id}
+          tableSolving={solvingTableId === focusedParam?.id}
           tableCheckResult={tableCheckResult}
           tableCheckMessage={tableCheckMessage}
-          tableResults={tableResults}
+          tableResults={focusedParam?.results ?? []}
           onCheck={onCheck}
           onSolve={checkThenSolve}
-          onCheckTable={onCheckTable}
-          onSolveTable={checkThenSolveTable}
+          onCheckTable={() => { if (focusedParam) void onCheckTable(focusedParam.id) }}
+          onSolveTable={() => { if (focusedParam) void onSolveTable(focusedParam.id) }}
           onFindAllChange={(checked) => {
             setFindAll(checked)
             setResult(null)
