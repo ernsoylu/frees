@@ -124,6 +124,8 @@ export interface WorkspaceDockHandle {
   isOpen: (id: string) => boolean
   /** Discard the saved layout and reopen the default set. */
   reset: () => void
+  /** Restore a previously-serialised dockview layout (from a project file). */
+  restore: (layout: unknown) => void
 }
 
 interface Props {
@@ -276,6 +278,15 @@ export function WorkspaceDock({
         if (!apiRef.current) return
         localStorage.removeItem(LAYOUT_KEY)
         buildDefault(apiRef.current)
+      },
+      restore: (layout) => {
+        if (!apiRef.current || layout == null || typeof layout !== 'object') return
+        try {
+          apiRef.current.fromJSON(layout as Parameters<DockviewApi['fromJSON']>[0])
+        } catch {
+          // Corrupt or version-mismatched layout — fall back to default.
+          buildDefault(apiRef.current)
+        }
       },
     }
     return () => {
