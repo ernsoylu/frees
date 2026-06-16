@@ -90,11 +90,17 @@ interface RailProps {
   diagrams?: { id: string; name: string }[]
   /** Number of diagram windows currently open (badge on the Diagram icon). */
   diagramCount?: number
+  /** X-Y plots available to open as individual windows. */
+  plots?: { id: string; name: string }[]
+  /** Number of plot windows currently open (badge on the Plots icon). */
+  plotCount?: number
   onSelect: (view: string) => void
   onClose?: (view: string) => void
   onResetLayout?: () => void
   onOpenDiagram?: (id: string) => void
   onNewDiagram?: () => void
+  onOpenPlot?: (id: string) => void
+  onNewPlot?: () => void
   onVariableInfo: () => void
   onMinMax: () => void
   onCurveFit: () => void
@@ -102,36 +108,38 @@ interface RailProps {
   onAbout: () => void
 }
 
-// Sidebar launcher for the multi-instance Diagram kind: a menu listing every
-// diagram (open each as its own dock window) plus "New diagram". A badge shows
-// how many diagram windows are currently open.
-function DiagramLauncher({
+// Sidebar launcher for a multi-instance kind (Diagram, Plots): a menu listing
+// every instance (open each as its own dock window) plus a "New …" action. A
+// badge shows how many windows of that kind are currently open.
+function InstanceLauncher({
   expanded,
   active,
   count,
-  diagrams,
+  idPrefix,
+  label,
+  newLabel,
+  emptyLabel,
+  icon,
+  items,
   openIds,
   onOpen,
   onNew,
-  iconSize,
 }: Readonly<{
   expanded: boolean
   active: boolean
   count: number
-  diagrams: { id: string; name: string }[]
+  idPrefix: string
+  label: string
+  newLabel: string
+  emptyLabel: string
+  icon: React.ReactNode
+  items: { id: string; name: string }[]
   openIds: Set<string>
   onOpen?: (id: string) => void
   onNew?: () => void
-  iconSize: number
 }>) {
   const variant = active ? 'light' : 'subtle'
   const color = active ? 'blue' : 'gray'
-  const badge =
-    count > 0 ? (
-      <Badge size="xs" variant="filled" circle>
-        {count}
-      </Badge>
-    ) : null
   const target = expanded ? (
     <Button
       variant={variant}
@@ -140,16 +148,22 @@ function DiagramLauncher({
       fullWidth
       size="sm"
       radius="md"
-      leftSection={<IconSchema size={iconSize} stroke={1.6} />}
-      rightSection={badge}
-      aria-label="Diagram windows"
+      leftSection={icon}
+      rightSection={
+        count > 0 ? (
+          <Badge size="xs" variant="filled" circle>
+            {count}
+          </Badge>
+        ) : null
+      }
+      aria-label={`${label} windows`}
     >
-      Diagram
+      {label}
     </Button>
   ) : (
     <div style={{ position: 'relative', display: 'inline-flex' }}>
-      <ActionIcon variant={variant} color={color} size={40} radius="md" aria-label="Diagram windows">
-        <IconSchema size={iconSize} stroke={1.6} />
+      <ActionIcon variant={variant} color={color} size={40} radius="md" aria-label={`${label} windows`}>
+        {icon}
       </ActionIcon>
       {count > 0 && (
         <Badge
@@ -167,28 +181,26 @@ function DiagramLauncher({
     <Menu position="right-start" shadow="md" width={230} withinPortal>
       <Menu.Target>{target}</Menu.Target>
       <Menu.Dropdown>
-        <Menu.Label>Diagram windows</Menu.Label>
-        {diagrams.length === 0 && (
-          <Menu.Item disabled>No diagrams yet</Menu.Item>
-        )}
-        {diagrams.map((d) => (
+        <Menu.Label>{label} windows</Menu.Label>
+        {items.length === 0 && <Menu.Item disabled>{emptyLabel}</Menu.Item>}
+        {items.map((it) => (
           <Menu.Item
-            key={d.id}
-            onClick={() => onOpen?.(d.id)}
+            key={it.id}
+            onClick={() => onOpen?.(it.id)}
             leftSection={
-              openIds.has(`diagram:${d.id}`) ? (
+              openIds.has(`${idPrefix}${it.id}`) ? (
                 <IconPointFilled size={10} style={{ color: 'var(--mantine-color-blue-5)' }} />
               ) : (
                 <span style={{ display: 'inline-block', width: 10 }} />
               )
             }
           >
-            {d.name}
+            {it.name}
           </Menu.Item>
         ))}
         <Menu.Divider />
         <Menu.Item leftSection={<IconPlus size={14} />} onClick={onNew}>
-          New diagram
+          {newLabel}
         </Menu.Item>
       </Menu.Dropdown>
     </Menu>
@@ -308,11 +320,15 @@ export function Rail({
   openIds = [],
   diagrams,
   diagramCount = 0,
+  plots,
+  plotCount = 0,
   onSelect,
   onClose,
   onResetLayout,
   onOpenDiagram,
   onNewDiagram,
+  onOpenPlot,
+  onNewPlot,
   onVariableInfo,
   onMinMax,
   onCurveFit,
@@ -371,16 +387,36 @@ export function Rail({
         />
         {VIEWS.map((view) =>
           view.value === 'diagram' && diagrams ? (
-            <DiagramLauncher
+            <InstanceLauncher
               key={view.value}
               expanded={expanded}
               active={active === 'diagram'}
               count={diagramCount}
-              diagrams={diagrams}
+              idPrefix="diagram:"
+              label="Diagram"
+              newLabel="New diagram"
+              emptyLabel="No diagrams yet"
+              icon={<IconSchema size={iconSize} stroke={1.6} />}
+              items={diagrams}
               openIds={openIdSet}
               onOpen={onOpenDiagram}
               onNew={onNewDiagram}
-              iconSize={iconSize}
+            />
+          ) : view.value === 'plots' && plots ? (
+            <InstanceLauncher
+              key={view.value}
+              expanded={expanded}
+              active={active === 'plot'}
+              count={plotCount}
+              idPrefix="plot:"
+              label="Plots"
+              newLabel="New plot"
+              emptyLabel="No plots yet"
+              icon={<IconChartLine size={iconSize} stroke={1.6} />}
+              items={plots}
+              openIds={openIdSet}
+              onOpen={onOpenPlot}
+              onNew={onNewPlot}
             />
           ) : (
             <RailEntry
