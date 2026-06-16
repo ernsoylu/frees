@@ -326,11 +326,16 @@ export function WorkspaceDock({
           vars are theme-aware, so one block serves both light and dark). */}
       <style>{`
         .dockview-theme-dark, .dockview-theme-light {
+          /* One single surface colour everywhere — center groups, tab strips
+             and the right edge group (Solution/Inspector) — so the whole
+             workspace matches the app background instead of the edge bars
+             reading as a lighter blue-grey. Active vs inactive tabs are
+             distinguished by text colour and the teal active outline. */
           --dv-group-view-background-color: var(--mantine-color-body);
-          --dv-tabs-and-actions-container-background-color: var(--mantine-color-default);
+          --dv-tabs-and-actions-container-background-color: var(--mantine-color-body);
           --dv-activegroup-visiblepanel-tab-background-color: var(--mantine-color-body);
           --dv-activegroup-visiblepanel-tab-color: var(--mantine-color-text);
-          --dv-inactivegroup-visiblepanel-tab-background-color: var(--mantine-color-default);
+          --dv-inactivegroup-visiblepanel-tab-background-color: var(--mantine-color-body);
           --dv-inactivegroup-visiblepanel-tab-color: var(--mantine-color-dimmed);
           --dv-tabs-container-scrollbar-color: var(--mantine-color-default-border);
           --dv-tab-divider-color: var(--mantine-color-default-border);
@@ -338,6 +343,15 @@ export function WorkspaceDock({
           --dv-paneview-active-outline-color: var(--mantine-color-teal-6);
           --dv-active-sash-color: var(--mantine-color-teal-6);
           --dv-icon-hover-background-color: var(--mantine-color-default-hover);
+        }
+        /* The collapsed right edge group (rotated Solution/Inspector tabs) and
+           its expanded surface render in a separate container — pin them to the
+           app background too. */
+        .dockview-theme-dark .dv-groupview-edge,
+        .dockview-theme-light .dv-groupview-edge,
+        .dockview-theme-dark .dv-edge-collapsed,
+        .dockview-theme-light .dv-edge-collapsed {
+          background-color: var(--mantine-color-body);
         }
       `}</style>
       <div style={{ width: '100%', height: '100%' }}>

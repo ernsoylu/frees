@@ -78,6 +78,9 @@ export interface PropertyConfig {
   overlayStates: boolean
   connectStates: boolean
   closeCycle: boolean
+  /** Name of the declared STATE TABLE block whose states to overlay; null
+   * overlays every detected state. Selecting one also sets the fluid. */
+  stateTable?: string | null
 }
 
 export interface PsychroConfig {
@@ -89,6 +92,9 @@ export interface PsychroConfig {
   volume: boolean
   overlayStates: boolean
   connectStates: boolean
+  /** Name of the declared STATE TABLE block whose states to overlay; null
+   * overlays every detected state. */
+  stateTable?: string | null
 }
 
 export interface PlotSpec {
@@ -143,6 +149,7 @@ export function newPlotSpec(kind: PlotKind, name: string): PlotSpec {
       overlayStates: true,
       connectStates: true,
       closeCycle: false,
+      stateTable: null,
     },
     psychro: {
       pressureKPa: 101.325,
@@ -153,6 +160,7 @@ export function newPlotSpec(kind: PlotKind, name: string): PlotSpec {
       volume: false,
       overlayStates: true,
       connectStates: false,
+      stateTable: null,
     },
     format: defaultFormat(kind),
   }

@@ -34,7 +34,7 @@ function Stat({
 }: Readonly<{ label: string; value: string | number }>) {
   return (
     <Paper withBorder p="xs">
-      <Text size="sm" ff="monospace" c="blue.4" truncate>
+      <Text size="sm" ff="monospace" c="teal.4" truncate>
         {value}
       </Text>
       <Text size="10px" tt="uppercase" c="dimmed" lts="0.05em">
@@ -474,7 +474,7 @@ export default function SolutionPanel({
       style={{ overflowY: 'auto' }}
     >
       <Group justify="space-between" mb="sm">
-        <Title order={4} c="blue.4">Solution</Title>
+        <Title order={4} c="teal.4">Solution</Title>
         <Group gap="xs">
           {!showTable && solveCount > 0 && (
             <Badge variant="light">run #{solveCount}</Badge>

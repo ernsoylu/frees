@@ -43,8 +43,12 @@ export default function SyntaxHelp() {
               constant, <Code>name[]</Code> array.
             </List.Item>
             <List.Item>
-              Insert functions from the <strong>Functions</strong> menu or the
-              command palette (<Code>Ctrl/⌘ K</Code>).
+              Group fluid states per circuit:{' '}
+              <Code>{'STATE TABLE Loop(P1, T1) FLUID = Water END'}</Code>.
+            </List.Item>
+            <List.Item>
+              Insert functions and blocks from the <strong>Functions</strong>{' '}
+              menu or the command palette (<Code>Ctrl/⌘ K</Code>).
             </List.Item>
           </List>
           <Anchor href="/help" target="_blank" size="xs">

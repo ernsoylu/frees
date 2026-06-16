@@ -14,6 +14,7 @@ topLevel
     | moduleDef
     | tableDef
     | parametricDef
+    | stateTableDef
     | plotDef
     | statement
     ;
@@ -70,6 +71,29 @@ parametricDef
 paramColumn
     : IDENT EQ signedNumber COLON signedNumber (COLON signedNumber)? (PIPE IDENT)?   # ParamColRange
     | IDENT EQ LBRACKET numberList RBRACKET                                          # ParamColList
+    ;
+
+// ── Fluid state table ────────────────────────────────────────────────────────
+//   STATE TABLE WaterCircuit(Pw1, Pw_2, Tw1)
+//     FLUID = Water
+//   END
+// Declares the state-point variables that belong to one circuit/fluid. The
+// block is fluid-aware: every CoolProp-derived property of these states uses
+// the declared FLUID. Body lines are `key = value` attributes (currently just
+// FLUID); the variables themselves are captured automatically from the solve.
+stateTableDef
+    : STATETABLE IDENT LPAREN paramList RPAREN sep
+      (stateTableAttr (sep stateTableAttr)* sep?)?
+      END
+    ;
+
+stateTableAttr
+    : IDENT EQ stateAttrValue
+    ;
+
+stateAttrValue
+    : IDENT
+    | STRING_LITERAL
     ;
 
 // ── Code-defined plot ────────────────────────────────────────────────────────
@@ -318,6 +342,10 @@ END       : [eE][nN][dD] ;
 FUNCTION  : [fF][uU][nN][cC][tT][iI][oO][nN] ;
 PROCEDURE : [pP][rR][oO][cC][eE][dD][uU][rR][eE] ;
 MODULE    : [mM][oO][dD][uU][lL][eE] ;
+// "STATE TABLE" as one token (space/tab separated) so neither STATE nor TABLE
+// alone becomes a reserved word — a lone variable named `state` still lexes as
+// IDENT. Defined before TABLE; longest-match makes it win for "STATE TABLE".
+STATETABLE : [sS][tT][aA][tT][eE] [ \t]+ [tT][aA][bB][lL][eE] ;
 TABLE     : [tT][aA][bB][lL][eE] ;
 PARAMETRIC : [pP][aA][rR][aA][mM][eE][tT][rR][iI][cC] ;
 PLOT      : [pP][lL][oO][tT] ;
