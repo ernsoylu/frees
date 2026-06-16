@@ -94,6 +94,10 @@ interface RailProps {
   plots?: { id: string; name: string }[]
   /** Number of plot windows currently open (badge on the Plots icon). */
   plotCount?: number
+  /** Tables available to open as individual windows. */
+  workspaceTables?: { id: string; name: string }[]
+  /** Number of table windows currently open (badge on the Tables icon). */
+  tableCount?: number
   onSelect: (view: string) => void
   onClose?: (view: string) => void
   onResetLayout?: () => void
@@ -101,6 +105,8 @@ interface RailProps {
   onNewDiagram?: () => void
   onOpenPlot?: (id: string) => void
   onNewPlot?: () => void
+  onOpenTable?: (id: string) => void
+  onNewTable?: (kind: 'parametric' | 'function-1d' | 'function-2d') => void
   onVariableInfo: () => void
   onMinMax: () => void
   onCurveFit: () => void
@@ -117,26 +123,24 @@ function InstanceLauncher({
   count,
   idPrefix,
   label,
-  newLabel,
+  newActions,
   emptyLabel,
   icon,
   items,
   openIds,
   onOpen,
-  onNew,
 }: Readonly<{
   expanded: boolean
   active: boolean
   count: number
   idPrefix: string
   label: string
-  newLabel: string
+  newActions: { label: string; onClick: () => void }[]
   emptyLabel: string
   icon: React.ReactNode
   items: { id: string; name: string }[]
   openIds: Set<string>
   onOpen?: (id: string) => void
-  onNew?: () => void
 }>) {
   const variant = active ? 'light' : 'subtle'
   const color = active ? 'blue' : 'gray'
@@ -199,9 +203,11 @@ function InstanceLauncher({
           </Menu.Item>
         ))}
         <Menu.Divider />
-        <Menu.Item leftSection={<IconPlus size={14} />} onClick={onNew}>
-          {newLabel}
-        </Menu.Item>
+        {newActions.map((a) => (
+          <Menu.Item key={a.label} leftSection={<IconPlus size={14} />} onClick={a.onClick}>
+            {a.label}
+          </Menu.Item>
+        ))}
       </Menu.Dropdown>
     </Menu>
   )
@@ -322,6 +328,8 @@ export function Rail({
   diagramCount = 0,
   plots,
   plotCount = 0,
+  workspaceTables,
+  tableCount = 0,
   onSelect,
   onClose,
   onResetLayout,
@@ -329,6 +337,8 @@ export function Rail({
   onNewDiagram,
   onOpenPlot,
   onNewPlot,
+  onOpenTable,
+  onNewTable,
   onVariableInfo,
   onMinMax,
   onCurveFit,
@@ -394,13 +404,12 @@ export function Rail({
               count={diagramCount}
               idPrefix="diagram:"
               label="Diagram"
-              newLabel="New diagram"
+              newActions={[{ label: 'New diagram', onClick: () => onNewDiagram?.() }]}
               emptyLabel="No diagrams yet"
               icon={<IconSchema size={iconSize} stroke={1.6} />}
               items={diagrams}
               openIds={openIdSet}
               onOpen={onOpenDiagram}
-              onNew={onNewDiagram}
             />
           ) : view.value === 'plots' && plots ? (
             <InstanceLauncher
@@ -410,13 +419,31 @@ export function Rail({
               count={plotCount}
               idPrefix="plot:"
               label="Plots"
-              newLabel="New plot"
+              newActions={[{ label: 'New plot', onClick: () => onNewPlot?.() }]}
               emptyLabel="No plots yet"
               icon={<IconChartLine size={iconSize} stroke={1.6} />}
               items={plots}
               openIds={openIdSet}
               onOpen={onOpenPlot}
-              onNew={onNewPlot}
+            />
+          ) : view.value === 'table' && workspaceTables ? (
+            <InstanceLauncher
+              key={view.value}
+              expanded={expanded}
+              active={active === 'table'}
+              count={tableCount}
+              idPrefix="table:"
+              label="Tables"
+              newActions={[
+                { label: 'New parametric table', onClick: () => onNewTable?.('parametric') },
+                { label: 'New function table (1-arg)', onClick: () => onNewTable?.('function-1d') },
+                { label: 'New function table (curve)', onClick: () => onNewTable?.('function-2d') },
+              ]}
+              emptyLabel="No tables yet"
+              icon={<IconTable size={iconSize} stroke={1.6} />}
+              items={workspaceTables}
+              openIds={openIdSet}
+              onOpen={onOpenTable}
             />
           ) : (
             <RailEntry

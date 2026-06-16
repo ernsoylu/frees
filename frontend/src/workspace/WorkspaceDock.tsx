@@ -70,7 +70,7 @@ interface Props {
   titles: Record<string, string>
   /** Window ids to open on first run / reset, in order (first is the anchor). */
   defaultOpen: string[]
-  onActiveKindChange?: (kind: string) => void
+  onActiveChange?: (active: OpenWindow | null) => void
   onOpenChange?: (windows: OpenWindow[]) => void
   handleRef?: React.MutableRefObject<WorkspaceDockHandle | null>
 }
@@ -79,7 +79,7 @@ export function WorkspaceDock({
   content,
   titles,
   defaultOpen,
-  onActiveKindChange,
+  onActiveChange,
   onOpenChange,
   handleRef,
 }: Readonly<Props>) {
@@ -92,8 +92,8 @@ export function WorkspaceDock({
   titlesRef.current = titles
   const defaultsRef = useRef(defaultOpen)
   defaultsRef.current = defaultOpen
-  const cbRef = useRef({ onActiveKindChange, onOpenChange })
-  cbRef.current = { onActiveKindChange, onOpenChange }
+  const cbRef = useRef({ onActiveChange, onOpenChange })
+  cbRef.current = { onActiveChange, onOpenChange }
 
   const kindOf = (panel: { id: string; params?: Record<string, unknown> }): string =>
     (panel.params?.kind as string) ?? panel.id
@@ -179,15 +179,17 @@ export function WorkspaceDock({
         /* quota — non-fatal; layout just won't persist */
       }
     })
-    api.onDidActivePanelChange((panel) => {
-      if (panel) cbRef.current.onActiveKindChange?.(kindOf(panel))
-    })
+    const reportActive = (panel: { id: string; title?: string; params?: Record<string, unknown> } | undefined) => {
+      cbRef.current.onActiveChange?.(
+        panel ? { id: panel.id, kind: kindOf(panel), title: panel.title ?? panel.id } : null,
+      )
+    }
+    api.onDidActivePanelChange((panel) => reportActive(panel ?? undefined))
     const sync = () => emitOpen(api)
     api.onDidAddPanel(sync)
     api.onDidRemovePanel(sync)
     sync()
-    const active = api.activePanel
-    if (active) cbRef.current.onActiveKindChange?.(kindOf(active))
+    reportActive(api.activePanel ?? undefined)
   }
 
   return (

@@ -68,6 +68,7 @@ import {
   functionTableFromDigitizer,
   loadTables,
   mergeCodeTables,
+  newFunctionTable,
   newParamTable,
   ParamTableSpec,
   saveTables,
@@ -645,17 +646,6 @@ export default function App() {
     return { ...t, results: [], stats: null, checkResult: null, checkMessage: '' }
   }
 
-  function setTableCell(rowIndex: number, name: string, value: string) {
-    updateActiveParam((t) =>
-      invalidateActiveParam({
-        ...t,
-        rows: t.rows.map((row, i) =>
-          i === rowIndex ? { ...row, values: { ...row.values, [name]: value } } : row,
-        ),
-      }),
-    )
-  }
-
   function setColumnUnits(name: string, units: string) {
     setVarDrafts((drafts) => ({
       ...drafts,
@@ -1196,31 +1186,6 @@ export default function App() {
         )}
       </div>
     ),
-    table: (
-      <div style={panelPad}>
-        <TablesTab
-          tables={tables}
-          activeTableId={activeTable?.id ?? null}
-          onTablesChange={setTables}
-          onActiveTableIdChange={setActiveTableId}
-          tableVars={tableVars}
-          rows={paramRows}
-          results={tableResults}
-          varDrafts={varDrafts}
-          onConfigure={() => setShowConfigureTable(true)}
-          onAddRow={() =>
-            updateActiveParam((t) => invalidateActiveParam({ ...t, rows: [...t.rows, newParamRow()] }))
-          }
-          onRemoveRow={() =>
-            updateActiveParam((t) => invalidateActiveParam({ ...t, rows: t.rows.slice(0, -1) }))
-          }
-          onClearResults={() => updateActiveParam((t) => ({ ...t, results: [] }))}
-          onAlterColumn={setAlterColumn}
-          onColumnUnitsChange={setColumnUnits}
-          onCellChange={setTableCell}
-        />
-      </div>
-    ),
     thermo: (
       <div style={{ height: '100%', minHeight: 0, display: 'flex', gap: 'var(--mantine-spacing-sm)', padding: 'var(--mantine-spacing-md)' }}>
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
@@ -1412,6 +1377,56 @@ export default function App() {
     )
   }
 
+  // Per-instance Table windows: each table opens as its own dock window
+  // ("table:<id>"). Each window reads its own spec's rows/results and routes
+  // edits to that specific table id (decoupled from the "active" table).
+  for (const t of tables) {
+    const winId = `table:${t.id}`
+    const param = t.kind === 'parametric' ? t : null
+    panelTitles[winId] = t.name
+    panelContent[winId] = (
+      <div style={panelPad}>
+        <TablesTab
+          tables={tables}
+          singleTableId={t.id}
+          activeTableId={t.id}
+          onTablesChange={setTables}
+          onActiveTableIdChange={setActiveTableId}
+          tableVars={param?.vars ?? []}
+          rows={param?.rows ?? []}
+          results={param?.results ?? []}
+          varDrafts={varDrafts}
+          onConfigure={() => {
+            setActiveTableId(t.id)
+            setShowConfigureTable(true)
+          }}
+          onAddRow={() =>
+            updateParamTable(t.id, (pt) => invalidateActiveParam({ ...pt, rows: [...pt.rows, newParamRow()] }))
+          }
+          onRemoveRow={() =>
+            updateParamTable(t.id, (pt) => invalidateActiveParam({ ...pt, rows: pt.rows.slice(0, -1) }))
+          }
+          onClearResults={() => updateParamTable(t.id, (pt) => ({ ...pt, results: [] }))}
+          onAlterColumn={(name) => {
+            setActiveTableId(t.id)
+            setAlterColumn(name)
+          }}
+          onColumnUnitsChange={setColumnUnits}
+          onCellChange={(rowIndex, name, value) =>
+            updateParamTable(t.id, (pt) =>
+              invalidateActiveParam({
+                ...pt,
+                rows: pt.rows.map((row, i) =>
+                  i === rowIndex ? { ...row, values: { ...row.values, [name]: value } } : row,
+                ),
+              }),
+            )
+          }
+        />
+      </div>
+    )
+  }
+
   return (
     <Flex h="100vh" style={{ overflow: 'hidden' }}>
       <Rail
@@ -1427,6 +1442,21 @@ export default function App() {
         }}
         onNewPlot={() => setAddingXyPlot(true)}
         diagramCount={openWindows.filter((w) => w.kind === 'diagram').length}
+        workspaceTables={tables.map((t) => ({ id: t.id, name: t.name }))}
+        tableCount={openWindows.filter((w) => w.kind === 'table').length}
+        onOpenTable={(id) => {
+          const t = tables.find((x) => x.id === id)
+          if (t) dockRef.current?.openInstance(`table:${id}`, 'table', t.name)
+        }}
+        onNewTable={(kind) => {
+          const t =
+            kind === 'parametric'
+              ? newParamTable(tables)
+              : newFunctionTable(tables, kind === 'function-1d')
+          setTables((prev) => [...prev, t])
+          setActiveTableId(t.id)
+          requestAnimationFrame(() => dockRef.current?.openInstance(`table:${t.id}`, 'table', t.name))
+        }}
         onSelect={(kind) => dockRef.current?.open(kind)}
         onClose={(kind) => dockRef.current?.close(kind)}
         onOpenDiagram={(id) => {
@@ -1650,7 +1680,14 @@ export default function App() {
             content={panelContent}
             titles={panelTitles}
             defaultOpen={['equations', 'solution']}
-            onActiveKindChange={setActiveTab}
+            onActiveChange={(active) => {
+              setActiveTab(active?.kind ?? '')
+              // Focusing a table window makes it the "active" table so the
+              // shared Solve-Table / Configure / Alter actions target it.
+              if (active?.kind === 'table' && active.id.startsWith('table:')) {
+                setActiveTableId(active.id.slice('table:'.length))
+              }
+            }}
             onOpenChange={setOpenWindows}
             handleRef={dockRef}
           />

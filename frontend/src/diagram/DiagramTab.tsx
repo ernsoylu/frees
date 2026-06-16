@@ -145,6 +145,7 @@ import {
   DiagramExportTheme,
 } from './exportDiagram'
 import { DiagramRecorder } from './recordDiagram'
+import { FormulaInput } from './FormulaInput'
 
 const DIAGRAMS_STORAGE_KEY = 'frees-diagrams'
 
@@ -2383,10 +2384,12 @@ function BindingFields({
   el,
   set,
   pathOptions = [],
+  varNames = [],
 }: Readonly<{
   el: DiagramElement
   set: (patch: Partial<DiagramElement>) => void
   pathOptions?: { value: string; label: string }[]
+  varNames?: string[]
 }>) {
   const keys: (keyof AttributeBindings)[] =
     el.kind === 'line' || el.kind === 'label'
@@ -2417,14 +2420,13 @@ function BindingFields({
         Run mode (e.g. <code>{'30*sin(theta)'}</code>). Δx/Δy offset the position.
       </Text>
       {keys.map((key) => (
-        <TextInput
+        <FormulaInput
           key={key}
           label={BINDABLE_LABELS[key]}
-          size="xs"
           placeholder="(static)"
+          varNames={varNames}
           value={el.bind?.[key] ?? ''}
-          onChange={(e) => setBind(key, e.currentTarget.value)}
-          styles={{ input: { fontFamily: 'monospace' } }}
+          onChange={(v) => setBind(key, v)}
         />
       ))}
       {el.kind === 'line' && (
@@ -2438,13 +2440,12 @@ function BindingFields({
             }
           />
           {el.flow && (
-            <TextInput
+            <FormulaInput
               label="Flow speed (formula; sign = direction)"
-              size="xs"
               placeholder="e.g. m_dot or 2"
+              varNames={varNames}
               value={el.flow.speed}
-              onChange={(e) => set({ flow: { speed: e.currentTarget.value } })}
-              styles={{ input: { fontFamily: 'monospace' } }}
+              onChange={(v) => set({ flow: { speed: v } })}
             />
           )}
         </>
@@ -2480,13 +2481,12 @@ function BindingFields({
                 onChange={(v) => v && setMotion({ pathId: v })}
                 placeholder="Choose a line…"
               />
-              <TextInput
+              <FormulaInput
                 label="Progress 0→1 (formula; t = time clock)"
-                size="xs"
                 placeholder="e.g. t/5 or (T-300)/200"
+                varNames={varNames}
                 value={el.motion.progress}
-                onChange={(e) => setMotion({ progress: e.currentTarget.value })}
-                styles={{ input: { fontFamily: 'monospace' } }}
+                onChange={(v) => setMotion({ progress: v })}
               />
               <Checkbox
                 label="Orient to path direction"
@@ -2505,9 +2505,11 @@ function BindingFields({
 function ConditionalRulesFields({
   el,
   set,
+  varNames = [],
 }: Readonly<{
   el: DiagramElement
   set: (patch: Partial<DiagramElement>) => void
+  varNames?: string[]
 }>) {
   const rules = el.rules ?? []
   
@@ -2565,13 +2567,12 @@ function ConditionalRulesFields({
                 </ActionIcon>
               </Group>
               
-              <TextInput
+              <FormulaInput
                 label="Condition (formula)"
-                size="xs"
                 placeholder="e.g. T > 100"
+                varNames={varNames}
                 value={rule.formula}
-                onChange={(e) => updateRule(rule.id, { formula: e.currentTarget.value })}
-                styles={{ input: { fontFamily: 'monospace' } }}
+                onChange={(v) => updateRule(rule.id, { formula: v })}
               />
               
               {rule.property === 'stroke' || rule.property === 'fill' ? (
@@ -2867,49 +2868,49 @@ function WidgetFields({
         onChange={(e) => set({ units: e.currentTarget.value })}
       />
       <Group grow>
-        <TextInput
+        <FormulaInput
           label="Min Value/Formula"
-          size="xs"
+          varNames={varNames}
           value={el.minFormula}
-          onChange={(e) => set({ minFormula: e.currentTarget.value })}
+          onChange={(v) => set({ minFormula: v })}
         />
-        <TextInput
+        <FormulaInput
           label="Max Value/Formula"
-          size="xs"
+          varNames={varNames}
           value={el.maxFormula}
-          onChange={(e) => set({ maxFormula: e.currentTarget.value })}
+          onChange={(v) => set({ maxFormula: v })}
         />
       </Group>
       <Group grow>
-        <TextInput
+        <FormulaInput
           label="Low Warning Limit"
-          size="xs"
           placeholder="e.g. 20"
+          varNames={varNames}
           value={el.lowWarningFormula ?? ''}
-          onChange={(e) => set({ lowWarningFormula: e.currentTarget.value || undefined })}
+          onChange={(v) => set({ lowWarningFormula: v || undefined })}
         />
-        <TextInput
+        <FormulaInput
           label="High Warning Limit"
-          size="xs"
           placeholder="e.g. 80"
+          varNames={varNames}
           value={el.highWarningFormula ?? ''}
-          onChange={(e) => set({ highWarningFormula: e.currentTarget.value || undefined })}
+          onChange={(v) => set({ highWarningFormula: v || undefined })}
         />
       </Group>
       <Group grow>
-        <TextInput
+        <FormulaInput
           label="Low Danger Limit"
-          size="xs"
           placeholder="e.g. 10"
+          varNames={varNames}
           value={el.lowDangerFormula ?? ''}
-          onChange={(e) => set({ lowDangerFormula: e.currentTarget.value || undefined })}
+          onChange={(v) => set({ lowDangerFormula: v || undefined })}
         />
-        <TextInput
+        <FormulaInput
           label="High Danger Limit"
-          size="xs"
           placeholder="e.g. 90"
+          varNames={varNames}
           value={el.highDangerFormula ?? ''}
-          onChange={(e) => set({ highDangerFormula: e.currentTarget.value || undefined })}
+          onChange={(v) => set({ highDangerFormula: v || undefined })}
         />
       </Group>
     </>
@@ -2953,17 +2954,17 @@ function ValueDrivenFillFields({
             placeholder="e.g. T"
           />
           <Group grow>
-            <TextInput
+            <FormulaInput
               label="Min Formula"
-              size="xs"
+              varNames={varNames}
               value={vf.minFormula}
-              onChange={(e) => updateVf({ minFormula: e.currentTarget.value })}
+              onChange={(v) => updateVf({ minFormula: v })}
             />
-            <TextInput
+            <FormulaInput
               label="Max Formula"
-              size="xs"
+              varNames={varNames}
               value={vf.maxFormula}
-              onChange={(e) => updateVf({ maxFormula: e.currentTarget.value })}
+              onChange={(v) => updateVf({ maxFormula: v })}
             />
           </Group>
           <Group grow>
@@ -3348,8 +3349,8 @@ function PropertiesPanel({
           <ValueDrivenFillFields el={el} set={set} varNames={varNames} />
         </>
       )}
-      <BindingFields el={el} set={set} pathOptions={pathOptions} />
-      <ConditionalRulesFields el={el} set={set} />
+      <BindingFields el={el} set={set} pathOptions={pathOptions} varNames={varNames} />
+      <ConditionalRulesFields el={el} set={set} varNames={varNames} />
         </>
       )}
 
