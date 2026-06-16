@@ -295,10 +295,10 @@ export default function App() {
     return loaded.length > 0 ? loaded : [newParamTable([])]
   })
   const [activeTableId, setActiveTableId] = useState<string | null>(null)
-  const [tableSolving, setTableSolving] = useState(false)
+  const [solvingTableId, setSolvingTableId] = useState<string | null>(null)
   const [showConfigureTable, setShowConfigureTable] = useState(false)
   const [alterColumn, setAlterColumn] = useState<string | null>(null)
-  const [tableChecking, setTableChecking] = useState(false)
+  const [checkingTableId, setCheckingTableId] = useState<string | null>(null)
   const [plots, setPlots] = useState<PlotSpec[]>(() => boot?.plots ?? [])
   // Plots are addressed per-window now; only the setter is needed.
   const [, setActivePlotId] = useState<string | null>(null)
@@ -727,30 +727,28 @@ export default function App() {
     invalidateTable()
   }
 
-  /** Table columns that have at least one usable numeric input value. */
-  function filledTableColumns(): Map<string, number> {
-    const filled = new Map<string, number>()
-    for (const name of tableVars) {
-      for (const row of paramRows) {
-        const raw = (row.values[name] ?? '').trim()
-        if (raw !== '' && Number.isFinite(Number(raw))) {
-          filled.set(name, Number(raw))
-          break
-        }
-      }
-    }
-    return filled
-  }
-
-  async function onCheckTable(): Promise<CheckResponse | null> {
-    if (tableChecking || !activeParam) return null
-    const tableId = activeParam.id
-    setTableChecking(true)
+  async function onCheckTable(tableIdArg?: string): Promise<CheckResponse | null> {
+    const tableId = tableIdArg ?? activeParam?.id
+    if (checkingTableId !== null || !tableId) return null
+    const tbl = tables.find((t) => t.id === tableId)
+    if (!tbl || tbl.kind !== 'parametric') return null
+    const tVars = tbl.vars
+    const tRows = tbl.rows
+    setCheckingTableId(tableId)
     updateParamTable(tableId, (t) => ({ ...t, results: [] }))
     try {
       // Check the augmented system: the equations plus one representative
       // fixed value per table input column (table semantics).
-      const filled = filledTableColumns()
+      const filled = new Map<string, number>()
+      for (const name of tVars) {
+        for (const row of tRows) {
+          const raw = (row.values[name] ?? '').trim()
+          if (raw !== '' && Number.isFinite(Number(raw))) {
+            filled.set(name, Number(raw))
+            break
+          }
+        }
+      }
       let augmented = text
       for (const [name, value] of filled) {
         augmented += `\n${name} = ${value}`
@@ -784,7 +782,7 @@ export default function App() {
             `supplied by the table.`,
         }))
       } else {
-        const unfilledColumns = tableVars.filter((v) => !filled.has(v))
+        const unfilledColumns = tVars.filter((v) => !filled.has(v))
         const hint =
           unfilledColumns.length > 0
             ? ` Fill input values for: ${unfilledColumns.join(', ')} (or use the column fill).`
@@ -800,24 +798,26 @@ export default function App() {
       }))
       return null
     } finally {
-      setTableChecking(false)
+      setCheckingTableId(null)
     }
   }
 
-  async function onSolveTable(checkOverride?: CheckResponse) {
-    if (tableSolving || !activeParam || tableVars.length === 0) return
+  async function onSolveTable(tableIdArg?: string, checkOverride?: CheckResponse) {
+    const tableId = tableIdArg ?? activeParam?.id
+    if (solvingTableId !== null || !tableId) return
+    const tbl = tables.find((t) => t.id === tableId)
+    if (!tbl || tbl.kind !== 'parametric' || tbl.vars.length === 0) return
     const okCheck = checkOverride
       ? checkOverride.solvable === true
-      : tableCheckResult?.solvable === true
+      : tbl.checkResult?.solvable === true
     if (!okCheck) return
-    const tableId = activeParam.id
-    setTableSolving(true)
+    setSolvingTableId(tableId)
     try {
       // Non-empty cells become fixed inputs for that run; blank cells are
       // solved per row (Solve Table semantics).
-      const rows = paramRows.map((row) => {
+      const rows = tbl.rows.map((row) => {
         const fixed: Record<string, number> = {}
-        for (const name of tableVars) {
+        for (const name of tbl.vars) {
           const raw = (row.values[name] ?? '').trim()
           if (raw !== '') {
             const value = Number(raw)
@@ -831,7 +831,7 @@ export default function App() {
         { ...stopCriteria, complexMode },
         buildVariableInfo(),
         unitSystem,
-        tableVars,
+        tbl.vars,
         rows,
         functionTableDtos,
       )
@@ -851,7 +851,7 @@ export default function App() {
         })),
       }))
     } finally {
-      setTableSolving(false)
+      setSolvingTableId(null)
     }
   }
 
@@ -944,14 +944,17 @@ export default function App() {
     if (res?.solvable) void onSolve(false, undefined, res)
   }
 
-  async function checkThenSolveTable() {
-    if (tableSolving || tableChecking || !activeParam) return
-    if (tableCheckResult?.solvable === true) {
-      void onSolveTable()
+  async function checkThenSolveTable(tableIdArg?: string) {
+    const tableId = tableIdArg ?? activeParam?.id
+    if (solvingTableId !== null || checkingTableId !== null || !tableId) return
+    const tbl = tables.find((t) => t.id === tableId)
+    if (!tbl || tbl.kind !== 'parametric') return
+    if (tbl.checkResult?.solvable === true) {
+      void onSolveTable(tableId)
       return
     }
-    const res = await onCheckTable()
-    if (res?.solvable) void onSolveTable(res)
+    const res = await onCheckTable(tableId)
+    if (res?.solvable) void onSolveTable(tableId, res)
   }
 
   const handlePlotsChange = (nextPlots: PlotSpec[]) => {
@@ -1627,7 +1630,34 @@ export default function App() {
     const param = t.kind === 'parametric' ? t : null
     panelTitles[winId] = t.name
     panelContent[winId] = (
-      <div style={panelPad}>
+      <div style={{ ...panelPad, display: 'flex', flexDirection: 'column', height: '100%' }}>
+        {param && (
+          <Group gap="xs" mb="xs" wrap="nowrap">
+            <Button
+              size="xs"
+              variant="default"
+              loading={checkingTableId === t.id}
+              disabled={(solvingTableId !== null && solvingTableId !== t.id) || (checkingTableId !== null && checkingTableId !== t.id)}
+              onClick={() => void onCheckTable(t.id)}
+            >
+              Check Table
+            </Button>
+            <Button
+              size="xs"
+              color="teal"
+              loading={solvingTableId === t.id || (checkingTableId === t.id && solvingTableId === null)}
+              disabled={(solvingTableId !== null && solvingTableId !== t.id) || (checkingTableId !== null && checkingTableId !== t.id)}
+              onClick={() => void checkThenSolveTable(t.id)}
+            >
+              Run Table
+            </Button>
+            {param.checkMessage && (
+              <Text size="xs" c={param.checkResult?.solvable ? 'teal.4' : 'red.4'} style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {param.checkMessage}
+              </Text>
+            )}
+          </Group>
+        )}
         <TablesTab
           tables={tables}
           singleTableId={t.id}
@@ -1883,8 +1913,8 @@ export default function App() {
           complexMode={complexMode}
           checkResult={checkResult}
           result={result}
-          tableChecking={tableChecking}
-          tableSolving={tableSolving}
+          tableChecking={checkingTableId !== null}
+          tableSolving={solvingTableId !== null}
           tableCheckResult={tableCheckResult}
           tableCheckMessage={tableCheckMessage}
           tableResults={tableResults}
