@@ -79,6 +79,8 @@ export interface SolveResponse {
   parametricTables?: ParametricTableDto[]
   /** Plots declared in the editor text with PLOT 'name' ... END blocks. */
   definedPlots?: PlotDefDto[]
+  /** Fluid state tables declared with STATE TABLE ... END blocks. */
+  stateTableDefs?: StateTableDto[]
 }
 
 export interface CheckResponse {
@@ -99,6 +101,17 @@ export interface CheckResponse {
   parametricTables?: ParametricTableDto[]
   /** Plots declared in the editor text with PLOT 'name' ... END blocks. */
   definedPlots?: PlotDefDto[]
+  /** Fluid state tables declared with STATE TABLE ... END blocks. */
+  stateTableDefs?: StateTableDto[]
+}
+
+/** A fluid state table parsed from a STATE TABLE name(...) ... END block: the
+ * declared state-point variables and the fluid every state in the block uses
+ * (null when no FLUID = ... line was given). */
+export interface StateTableDto {
+  name: string
+  variables: string[]
+  fluid: string | null
 }
 
 /** A parametric run-table parsed from a PARAMETRIC ... END block: the declared
@@ -190,6 +203,7 @@ export async function check(
       codeTables: data.codeTables ?? [],
       parametricTables: data.parametricTables ?? [],
       definedPlots: data.definedPlots ?? [],
+      stateTableDefs: data.stateTableDefs ?? [],
     }
   } catch (e) {
     return {
@@ -271,6 +285,7 @@ export async function solve(
       codeTables: data.codeTables ?? [],
       parametricTables: data.parametricTables ?? [],
       definedPlots: data.definedPlots ?? [],
+      stateTableDefs: data.stateTableDefs ?? [],
     }
   } catch (e) {
     return {

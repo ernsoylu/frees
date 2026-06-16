@@ -1026,6 +1026,10 @@ export default function App() {
   const baseVariables =
     solutions.length > 0 ? solutions[0].variables : result?.variables ?? []
 
+  // Fluid state tables declared with STATE TABLE blocks: surfaced in the left
+  // Tables menu (tagged by fluid) and opened in the shared Fluid States window.
+  const declaredStateDefs = result?.stateTableDefs ?? checkResult?.stateTableDefs ?? []
+
   // Use the mode that was active when the result was solved, not the live checkbox
   const resultIsComplex = result !== null && solvedComplexMode
   const solutionRows = resultIsComplex
@@ -1285,6 +1289,7 @@ export default function App() {
         </Group>
         <StatesTab
           solvedVariables={result?.variables ?? []}
+          stateTableDefs={result?.stateTableDefs ?? checkResult?.stateTableDefs ?? []}
           unitIds={stateUnitIds}
           onUnitIdsChange={handleStateUnitIdsChange}
           onFillMissing={() => onSolve(true)}
@@ -1500,6 +1505,7 @@ export default function App() {
           plots={mergedPlots}
           onPlotsChange={handlePlotsChange}
           solvedVariables={result?.variables ?? []}
+          stateTableDefs={declaredStateDefs}
           cyclePath={result?.cyclePath}
           tableVars={tableVars}
           rows={paramRows}
@@ -1578,9 +1584,23 @@ export default function App() {
         onDeletePlot={(id) => handlePlotsChange(plots.filter((p) => p.id !== id))}
         diagramCount={diagrams.length}
         onDeleteDiagram={(id) => setDiagrams((prev) => prev.filter((d) => d.id !== id))}
-        workspaceTables={tables.map((t) => ({ id: t.id, name: t.name, deletable: t.source !== 'code' }))}
-        tableCount={tables.length}
+        workspaceTables={[
+          ...tables.map((t) => ({ id: t.id, name: t.name, deletable: t.source !== 'code' })),
+          // Declared STATE TABLE blocks appear as read-only entries that open
+          // the shared Fluid States window, tagged with their fluid.
+          ...declaredStateDefs.map((s) => ({
+            id: `state:${s.name}`,
+            name: s.name,
+            tag: s.fluid ?? 'States',
+            deletable: false,
+          })),
+        ]}
+        tableCount={tables.length + declaredStateDefs.length}
         onOpenTable={(id) => {
+          if (id.startsWith('state:')) {
+            dockRef.current?.open('states')
+            return
+          }
           const t = tables.find((x) => x.id === id)
           if (t) dockRef.current?.openInstance(`table:${id}`, 'table', t.name)
         }}
