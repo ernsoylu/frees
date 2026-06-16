@@ -1032,6 +1032,44 @@ export default function App() {
     ? buildComplexSolutionRows(baseVariables, solutions)
     : buildRealSolutionRows(baseVariables, solutions)
 
+  // Reusable window open/create handlers, shared by the left rail and the
+  // command palette so both open real dock windows (not just highlight a tab).
+  const createDiagram = () => {
+    const id = crypto.randomUUID()
+    const name = `Diagram ${diagrams.length + 1}`
+    setDiagrams((prev) => [
+      ...prev,
+      { id, name, state: { elements: [], gridSize: 10, snap: true, showGrid: true } },
+    ])
+    setActiveDiagramId(id)
+    // Defer until the new diagram's content entry exists in the next render.
+    requestAnimationFrame(() => dockRef.current?.openInstance(`diagram:${id}`, 'diagram', name))
+  }
+  const createTable = (kind: 'parametric' | 'function-1d' | 'function-2d') => {
+    const t =
+      kind === 'parametric'
+        ? newParamTable(tables)
+        : newFunctionTable(tables, kind === 'function-1d')
+    setTables((prev) => [...prev, t])
+    setActiveTableId(t.id)
+    requestAnimationFrame(() => dockRef.current?.openInstance(`table:${t.id}`, 'table', t.name))
+  }
+  const openLatestOrNewDiagram = () => {
+    const d = diagrams[diagrams.length - 1]
+    if (d) dockRef.current?.openInstance(`diagram:${d.id}`, 'diagram', d.name)
+    else createDiagram()
+  }
+  const openLatestOrNewTable = () => {
+    const t = tables[tables.length - 1]
+    if (t) dockRef.current?.openInstance(`table:${t.id}`, 'table', t.name)
+    else createTable('parametric')
+  }
+  const openLatestOrNewPlot = () => {
+    const p = mergedPlots[mergedPlots.length - 1]
+    if (p) dockRef.current?.openInstance(`plot:${p.id}`, 'plot', p.name)
+    else setNewPlotKind('xy')
+  }
+
   // Command palette (Ctrl/Cmd+K): jump to any view, open any tool window, run
   // Check/Solve, or manage the project — all from one searchable list.
   const spotlightActions: SpotlightActionGroupData[] = [
@@ -1063,12 +1101,24 @@ export default function App() {
     {
       group: 'Views',
       actions: [
-        { id: 'view-editor', label: 'Editor', leftSection: <IconCode size={18} />, onClick: () => setActiveTab('equations') },
-        { id: 'view-table', label: 'Tables', leftSection: <IconTable size={18} />, onClick: () => setActiveTab('table') },
-        { id: 'view-plots', label: 'Plots (X-Y)', leftSection: <IconChartLine size={18} />, onClick: () => setActiveTab('plots') },
-        { id: 'view-thermo', label: 'Thermodynamics', leftSection: <IconTemperature size={18} />, onClick: () => setActiveTab('thermo') },
-        { id: 'view-digitizer', label: 'Graph Digitizer', leftSection: <IconChartGridDots size={18} />, onClick: () => setActiveTab('digitizer') },
-        { id: 'view-diagram', label: 'Diagram', leftSection: <IconSchema size={18} />, onClick: () => setActiveTab('diagram') },
+        { id: 'view-editor', label: 'Editor', leftSection: <IconCode size={18} />, onClick: () => dockRef.current?.open('equations') },
+        { id: 'view-table', label: 'Tables', description: 'Open the latest table (or create one)', leftSection: <IconTable size={18} />, onClick: openLatestOrNewTable },
+        { id: 'view-plots', label: 'Plots', description: 'Open the latest plot (or create one)', leftSection: <IconChartLine size={18} />, onClick: openLatestOrNewPlot },
+        { id: 'view-states', label: 'Fluid States', leftSection: <IconTemperature size={18} />, onClick: () => dockRef.current?.open('states') },
+        { id: 'view-digitizer', label: 'Graph Digitizer', leftSection: <IconChartGridDots size={18} />, onClick: () => dockRef.current?.open('digitizer') },
+        { id: 'view-diagram', label: 'Diagram', description: 'Open the latest diagram (or create one)', leftSection: <IconSchema size={18} />, onClick: openLatestOrNewDiagram },
+        { id: 'view-solution', label: 'Solution', leftSection: <IconChecks size={18} />, onClick: () => dockRef.current?.open('solution') },
+        { id: 'view-inspector', label: 'Inspector', leftSection: <IconSettings size={18} />, onClick: () => dockRef.current?.open('inspector') },
+      ],
+    },
+    {
+      group: 'Create',
+      actions: [
+        { id: 'new-param-table', label: 'Add parametric table', leftSection: <IconTable size={18} />, onClick: () => createTable('parametric') },
+        { id: 'new-xy-plot', label: 'Add graph (X-Y)', leftSection: <IconChartLine size={18} />, onClick: () => setNewPlotKind('xy') },
+        { id: 'new-property-plot', label: 'Add property graph', leftSection: <IconTemperature size={18} />, onClick: () => setNewPlotKind('property') },
+        { id: 'new-psychro-plot', label: 'Add psychrometric graph', leftSection: <IconTemperature size={18} />, onClick: () => setNewPlotKind('psychro') },
+        { id: 'new-diagram', label: 'Add diagram', leftSection: <IconSchema size={18} />, onClick: createDiagram },
       ],
     },
     {
@@ -1154,7 +1204,7 @@ export default function App() {
           </Alert>
         )}
         {showFirstRun && (
-          <Alert color="blue" variant="light" p="xs" mb={6} withCloseButton onClose={dismissFirstRun} title="Welcome to frees">
+          <Alert color="teal" variant="light" p="xs" mb={6} withCloseButton onClose={dismissFirstRun} title="Welcome to frees">
             <Text size="xs">
               Write equations and markdown notes on the left — they can be
               entered in any order. Click <strong>Check</strong> (F4) to
@@ -1282,7 +1332,7 @@ export default function App() {
           <div style={{ height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
             <div style={{ ...bodyStyle }}>
               <Stack gap="xs">
-                <Text size="sm" fw={600} c="blue.4">Table</Text>
+                <Text size="sm" fw={600} c="teal.4">Table</Text>
                 <TextInput
                   size="xs"
                   label="Table name"
@@ -1325,7 +1375,7 @@ export default function App() {
         return (
           <div style={bodyStyle}>
             <Stack gap="xs">
-              <Text size="sm" fw={600} c="blue.4">{p ? PLOT_KIND_LABEL[p.kind] : 'Plot'}</Text>
+              <Text size="sm" fw={600} c="teal.4">{p ? PLOT_KIND_LABEL[p.kind] : 'Plot'}</Text>
               <TextInput
                 size="xs"
                 label="Plot name"
@@ -1352,7 +1402,7 @@ export default function App() {
         return (
           <div style={bodyStyle}>
             <Stack gap="xs">
-              <Text size="sm" fw={600} c="blue.4">Equations</Text>
+              <Text size="sm" fw={600} c="teal.4">Equations</Text>
               <Button size="xs" variant="default" onClick={() => setShowVariableInfo(true)}>Variable Information</Button>
               <Button size="xs" variant="default" onClick={() => setShowMinMax(true)}>Min / Max (optimize)</Button>
               <Button size="xs" variant="default" onClick={() => setShowCurveFit(true)}>Curve Fit</Button>
@@ -1519,49 +1569,31 @@ export default function App() {
         openIds={openIds}
         diagrams={diagrams.map((d) => ({ id: d.id, name: d.name, deletable: true }))}
         plots={mergedPlots.map((p) => ({ id: p.id, name: p.name, tag: PLOT_KIND_LABEL[p.kind], deletable: !p.fromCode }))}
-        plotCount={openWindows.filter((w) => w.kind === 'plot').length}
+        plotCount={mergedPlots.length}
         onOpenPlot={(id) => {
           const p = mergedPlots.find((x) => x.id === id)
           if (p) dockRef.current?.openInstance(`plot:${id}`, 'plot', p.name)
         }}
         onNewPlot={(kind) => setNewPlotKind(kind)}
         onDeletePlot={(id) => handlePlotsChange(plots.filter((p) => p.id !== id))}
-        diagramCount={openWindows.filter((w) => w.kind === 'diagram').length}
+        diagramCount={diagrams.length}
         onDeleteDiagram={(id) => setDiagrams((prev) => prev.filter((d) => d.id !== id))}
         workspaceTables={tables.map((t) => ({ id: t.id, name: t.name, deletable: t.source !== 'code' }))}
-        tableCount={openWindows.filter((w) => w.kind === 'table').length}
+        tableCount={tables.length}
         onOpenTable={(id) => {
           const t = tables.find((x) => x.id === id)
           if (t) dockRef.current?.openInstance(`table:${id}`, 'table', t.name)
         }}
         onDeleteTable={(id) => setTables((prev) => prev.filter((t) => t.id !== id))}
         onOpenStates={() => dockRef.current?.open('states')}
-        onNewTable={(kind) => {
-          const t =
-            kind === 'parametric'
-              ? newParamTable(tables)
-              : newFunctionTable(tables, kind === 'function-1d')
-          setTables((prev) => [...prev, t])
-          setActiveTableId(t.id)
-          requestAnimationFrame(() => dockRef.current?.openInstance(`table:${t.id}`, 'table', t.name))
-        }}
+        onNewTable={(kind) => createTable(kind)}
         onSelect={(kind) => dockRef.current?.open(kind)}
         onClose={(kind) => dockRef.current?.close(kind)}
         onOpenDiagram={(id) => {
           const d = diagrams.find((x) => x.id === id)
           if (d) dockRef.current?.openInstance(`diagram:${id}`, 'diagram', d.name)
         }}
-        onNewDiagram={() => {
-          const id = crypto.randomUUID()
-          const name = `Diagram ${diagrams.length + 1}`
-          setDiagrams((prev) => [
-            ...prev,
-            { id, name, state: { elements: [], gridSize: 10, snap: true, showGrid: true } },
-          ])
-          setActiveDiagramId(id)
-          // Defer until the new diagram's content entry exists in the next render.
-          requestAnimationFrame(() => dockRef.current?.openInstance(`diagram:${id}`, 'diagram', name))
-        }}
+        onNewDiagram={createDiagram}
         onResetLayout={() => dockRef.current?.reset()}
         onVariableInfo={() => setShowVariableInfo(true)}
         onMinMax={() => setShowMinMax(true)}

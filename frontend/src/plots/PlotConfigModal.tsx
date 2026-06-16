@@ -504,6 +504,14 @@ function FormatSection({
           checked={format.legend}
           onChange={(e) => onChange({ ...format, legend: e.currentTarget.checked })}
         />
+        {spec.kind === 'xy' && (
+          <Checkbox
+            label="Show units"
+            size="xs"
+            checked={format.showUnits !== false}
+            onChange={(e) => onChange({ ...format, showUnits: e.currentTarget.checked })}
+          />
+        )}
         <Select
           label="Legend alignment"
           size="xs"

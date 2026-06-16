@@ -214,11 +214,23 @@ export function buildFigure(spec: PlotSpec, inputs: FigureInputs): PlotlyFigure 
           : buildXYSeries(tableRows, tableResults, xVar, spec.xy.y2Vars, null, null, 'y2')),
       )
     }
+    // Append each axis variable's unit (from the solved variables — same unit a
+    // table column displays) to the default axis labels, unless disabled.
+    const showUnits = spec.format.showUnits !== false
+    const unitOf = (name: string): string => {
+      const v = variables.find((x) => x.name.toLowerCase() === name.toLowerCase())
+      return v?.units ?? ''
+    }
+    const withUnit = (label: string, unit: string) =>
+      showUnits && unit ? `${label} [${unit}]` : label
+    // For a single shared unit across all Y vars, label the axis with it.
+    const yUnits = new Set(spec.xy.yVars.map(unitOf).filter(Boolean))
+    const yUnit = yUnits.size === 1 ? [...yUnits][0] : ''
     return buildXYFigure(
       series,
       spec.format,
-      spec.xy.xVar,
-      spec.xy.yVars.join(', '),
+      withUnit(spec.xy.xVar, unitOf(spec.xy.xVar)),
+      withUnit(spec.xy.yVars.join(', '), yUnit),
       theme,
       spec.xy,
     )
@@ -347,7 +359,9 @@ export default function PlotCard({
       )}
       {figure !== null && (
         <div style={{ flex: 1, minHeight: 0 }}>
-          <PlotlyChart figure={figure} />
+          {/* Fill the tile exactly — no 380px floor that would overflow a short
+              window — and let the ResizeObserver in PlotlyChart keep it fitted. */}
+          <PlotlyChart figure={figure} minHeight={0} />
         </div>
       )}
     </>

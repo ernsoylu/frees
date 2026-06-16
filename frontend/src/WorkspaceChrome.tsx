@@ -144,7 +144,7 @@ function InstanceLauncher({
   onDelete?: (id: string) => void
 }>) {
   const variant = active ? 'light' : 'subtle'
-  const color = active ? 'blue' : 'gray'
+  const color = active ? 'teal' : 'gray'
   const target = expanded ? (
     <Button
       variant={variant}
@@ -194,7 +194,7 @@ function InstanceLauncher({
             onClick={() => onOpen?.(it.id)}
             leftSection={
               openIds.has(`${idPrefix}${it.id}`) ? (
-                <IconPointFilled size={10} style={{ color: 'var(--mantine-color-blue-5)' }} />
+                <IconPointFilled size={10} style={{ color: 'var(--mantine-color-teal-5)' }} />
               ) : (
                 <span style={{ display: 'inline-block', width: 10 }} />
               )
@@ -265,13 +265,13 @@ function RailEntry({
   href?: string
 }>) {
   const variant = active ? 'light' : 'subtle'
-  const color = active ? 'blue' : 'gray'
+  const color = active ? 'teal' : 'gray'
   // A small dot marks windows that are open in the dock (so the rail doubles
   // as a window list); the focused window also gets the blue "active" styling.
   const dot = open ? (
     <IconPointFilled
       size={10}
-      style={{ color: 'var(--mantine-color-blue-5)', flexShrink: 0 }}
+      style={{ color: 'var(--mantine-color-teal-5)', flexShrink: 0 }}
     />
   ) : null
 
@@ -331,7 +331,7 @@ function RailEntry({
             position: 'absolute',
             top: 1,
             right: 1,
-            color: 'var(--mantine-color-blue-5)',
+            color: 'var(--mantine-color-teal-5)',
             pointerEvents: 'none',
           }}
         />
@@ -724,7 +724,7 @@ export function TopBar(props: Readonly<TopBarProps>) {
     // trigger must always stay reachable.
     <Group justify="space-between" wrap="wrap" gap="sm">
       <Group gap="sm" wrap="nowrap" align="center">
-        <Title order={3} c="blue.4">
+        <Title order={3} c="teal.4">
           frees
         </Title>
         <Menu position="bottom-start" shadow="md" width={220}>

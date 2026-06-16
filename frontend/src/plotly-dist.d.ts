@@ -99,6 +99,8 @@ declare module 'plotly.js-dist-min' {
       config?: PlotlyConfig,
     ) => Promise<unknown>
     purge: (el: HTMLElement) => void
+    /** Re-layout a plot to fit its container's current size. */
+    Plots: { resize: (el: HTMLElement) => void }
     toImage: (
       figure: PlotlyFigure | HTMLElement,
       options: PlotlyImageOptions,

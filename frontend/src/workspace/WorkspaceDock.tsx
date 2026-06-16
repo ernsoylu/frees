@@ -15,6 +15,7 @@ import {
   type DockviewApi,
   type DockviewReadyEvent,
   type IDockviewPanelProps,
+  type IDockviewPanelHeaderProps,
 } from 'dockview-react'
 import 'dockview-react/dist/styles/dockview.css'
 import {
@@ -22,9 +23,23 @@ import {
   useContext,
   useEffect,
   useRef,
+  useState,
+  type FC,
   type ReactNode,
 } from 'react'
 import { useComputedColorScheme } from '@mantine/core'
+import {
+  IconChartGridDots,
+  IconChartLine,
+  IconChecks,
+  IconCode,
+  IconSchema,
+  IconSettings,
+  IconTable,
+  IconTemperature,
+  IconX,
+  type IconProps,
+} from '@tabler/icons-react'
 
 const LAYOUT_KEY = 'frees-dock-layout-v2'
 
@@ -43,6 +58,52 @@ function WorkspacePanel(props: IDockviewPanelProps) {
 }
 
 const components = { panel: WorkspacePanel }
+
+// Per-kind tab icon so each window's "application" is recognisable at a glance
+// even when the tab is narrow and its title is clipped.
+const KIND_ICONS: Record<string, FC<IconProps>> = {
+  equations: IconCode,
+  table: IconTable,
+  plots: IconChartLine,
+  plot: IconChartLine,
+  digitizer: IconChartGridDots,
+  diagram: IconSchema,
+  states: IconTemperature,
+  solution: IconChecks,
+  inspector: IconSettings,
+}
+
+/** Tab renderer: a per-kind icon, the live title, and a close button.
+ *  Mirrors dockview's default tab markup (so the bundled CSS applies) but
+ *  prefixes the icon — the default tab ignores children, hence the rebuild. */
+function WorkspaceTab(props: IDockviewPanelHeaderProps) {
+  const { api } = props
+  const kind = (props.params?.kind as string) ?? api.id
+  const Icon = KIND_ICONS[kind]
+  const [title, setTitle] = useState(api.title)
+  useEffect(() => {
+    const sub = api.onDidTitleChange((e) => setTitle(e.title))
+    if (title !== api.title) setTitle(api.title)
+    return () => sub.dispose()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [api])
+  return (
+    <div className="dv-default-tab" data-testid="dockview-dv-default-tab">
+      {Icon && <Icon size={13} style={{ flexShrink: 0, marginRight: 4 }} aria-hidden />}
+      <span className="dv-default-tab-content">{title}</span>
+      <div
+        className="dv-default-tab-action"
+        onPointerDown={(e) => e.preventDefault()}
+        onClick={(e) => {
+          e.preventDefault()
+          api.close()
+        }}
+      >
+        <IconX size={13} />
+      </div>
+    </div>
+  )
+}
 
 /** A window currently open in the dock. */
 export interface OpenWindow {
@@ -274,8 +335,8 @@ export function WorkspaceDock({
           --dv-tabs-container-scrollbar-color: var(--mantine-color-default-border);
           --dv-tab-divider-color: var(--mantine-color-default-border);
           --dv-separator-border: var(--mantine-color-default-border);
-          --dv-paneview-active-outline-color: var(--mantine-color-blue-6);
-          --dv-active-sash-color: var(--mantine-color-blue-6);
+          --dv-paneview-active-outline-color: var(--mantine-color-teal-6);
+          --dv-active-sash-color: var(--mantine-color-teal-6);
           --dv-icon-hover-background-color: var(--mantine-color-default-hover);
         }
       `}</style>
@@ -283,6 +344,7 @@ export function WorkspaceDock({
         <DockviewReact
           className={scheme === 'light' ? 'dockview-theme-light' : 'dockview-theme-dark'}
           components={components}
+          defaultTabComponent={WorkspaceTab}
           onReady={onReady}
         />
       </div>
