@@ -51,7 +51,7 @@ function WorkspacePanel(props: IDockviewPanelProps) {
   // Content is keyed by panel id so multi-instance kinds (e.g. several diagram
   // windows: "diagram:<id>") each show their own content.
   return (
-    <div style={{ height: '100%', width: '100%', overflow: 'auto' }}>
+    <div style={{ height: '100%', width: '100%', overflow: 'auto', backgroundColor: 'var(--mantine-color-body)' }}>
       {content[props.api.id] ?? null}
     </div>
   )

@@ -1108,7 +1108,11 @@ export default function App() {
         { id: 'view-editor', label: 'Editor', leftSection: <IconCode size={18} />, onClick: () => dockRef.current?.open('equations') },
         { id: 'view-table', label: 'Tables', description: 'Open the latest table (or create one)', leftSection: <IconTable size={18} />, onClick: openLatestOrNewTable },
         { id: 'view-plots', label: 'Plots', description: 'Open the latest plot (or create one)', leftSection: <IconChartLine size={18} />, onClick: openLatestOrNewPlot },
-        { id: 'view-states', label: 'Fluid States', leftSection: <IconTemperature size={18} />, onClick: () => dockRef.current?.open('states') },
+        { id: 'view-states', label: 'Fluid States', leftSection: <IconTemperature size={18} />, onClick: () => {
+          const first = declaredStateDefs[0]
+          if (first) dockRef.current?.openInstance(`state:${first.name}`, 'states', first.name)
+          else dockRef.current?.open('states')
+        } },
         { id: 'view-digitizer', label: 'Graph Digitizer', leftSection: <IconChartGridDots size={18} />, onClick: () => dockRef.current?.open('digitizer') },
         { id: 'view-diagram', label: 'Diagram', description: 'Open the latest diagram (or create one)', leftSection: <IconSchema size={18} />, onClick: openLatestOrNewDiagram },
         { id: 'view-solution', label: 'Solution', leftSection: <IconChecks size={18} />, onClick: () => dockRef.current?.open('solution') },
@@ -1518,6 +1522,32 @@ export default function App() {
     )
   }
 
+  // Per-instance STATE TABLE windows: each declared STATE TABLE block gets its
+  // own dock window ("state:<name>") so Water/R134a circuits sit side by side.
+  for (const s of declaredStateDefs) {
+    const winId = `state:${s.name}`
+    panelTitles[winId] = s.name
+    panelContent[winId] = (
+      <div style={panelPad}>
+        <Group justify="space-between" mb="xs" wrap="nowrap" align="center">
+          {s.fluid && (
+            <Badge size="xs" variant="light" color="teal">{s.fluid}</Badge>
+          )}
+          <Text size="xs" c="dimmed">Solved state points</Text>
+        </Group>
+        <StatesTab
+          solvedVariables={result?.variables ?? []}
+          stateTableDefs={[s]}
+          unitIds={stateUnitIds}
+          onUnitIdsChange={handleStateUnitIdsChange}
+          onFillMissing={() => onSolve(true)}
+          solving={solving}
+          solvable={solvable}
+        />
+      </div>
+    )
+  }
+
   // Per-instance Table windows: each table opens as its own dock window
   // ("table:<id>"). Each window reads its own spec's rows/results and routes
   // edits to that specific table id (decoupled from the "active" table).
@@ -1599,14 +1629,19 @@ export default function App() {
         tableCount={tables.length + declaredStateDefs.length}
         onOpenTable={(id) => {
           if (id.startsWith('state:')) {
-            dockRef.current?.open('states')
+            const name = id.slice('state:'.length)
+            dockRef.current?.openInstance(id, 'states', name)
             return
           }
           const t = tables.find((x) => x.id === id)
           if (t) dockRef.current?.openInstance(`table:${id}`, 'table', t.name)
         }}
         onDeleteTable={(id) => setTables((prev) => prev.filter((t) => t.id !== id))}
-        onOpenStates={() => dockRef.current?.open('states')}
+        onOpenStates={() => {
+          const first = declaredStateDefs[0]
+          if (first) dockRef.current?.openInstance(`state:${first.name}`, 'states', first.name)
+          else dockRef.current?.open('states')
+        }}
         onNewTable={(kind) => createTable(kind)}
         onSelect={(kind) => dockRef.current?.open(kind)}
         onClose={(kind) => dockRef.current?.close(kind)}
