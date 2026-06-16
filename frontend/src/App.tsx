@@ -286,7 +286,11 @@ export default function App() {
   const [tableChecking, setTableChecking] = useState(false)
   const [plots, setPlots] = useState<PlotSpec[]>(() => boot?.plots ?? [])
   const [activeThermoPlotId, setActiveThermoPlotId] = useState<string | null>(null)
-  const [activePlotId, setActivePlotId] = useState<string | null>(null)
+  // Plots are addressed per-window now; only the setter is needed.
+  const [, setActivePlotId] = useState<string | null>(null)
+  // New X-Y plot creation is lifted to App so the sidebar's "New plot" can open
+  // the config modal even though plots are now per-instance dock windows.
+  const [addingXyPlot, setAddingXyPlot] = useState(false)
   const [diagrams, setDiagrams] = useState<DiagramSpec[]>(() =>
     boot?.diagrams?.length ? boot.diagrams : loadDiagrams(),
   )
@@ -1217,23 +1221,6 @@ export default function App() {
         />
       </div>
     ),
-    plots: (
-      <div style={panelPad}>
-        <PlotTab
-          kinds={['xy']}
-          emptyHint='No plots yet. Click "Add Plot" to chart parametric table runs as X-Y series.'
-          plots={mergedPlots}
-          onPlotsChange={handlePlotsChange}
-          solvedVariables={result?.variables ?? []}
-          cyclePath={result?.cyclePath}
-          tableVars={tableVars}
-          rows={paramRows}
-          results={tableResults}
-          activePlotId={activePlotId}
-          onActivePlotIdChange={setActivePlotId}
-        />
-      </div>
-    ),
     thermo: (
       <div style={{ height: '100%', minHeight: 0, display: 'flex', gap: 'var(--mantine-spacing-sm)', padding: 'var(--mantine-spacing-md)' }}>
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
@@ -1399,6 +1386,32 @@ export default function App() {
     )
   }
 
+  // Per-instance Plot windows: each X-Y plot opens as its own dock window
+  // ("plot:<id>"). Plot data is global solve output, so these are self-contained.
+  const xyPlots = mergedPlots.filter((p) => p.kind === 'xy')
+  for (const pl of xyPlots) {
+    const winId = `plot:${pl.id}`
+    panelTitles[winId] = pl.name
+    panelContent[winId] = (
+      <div style={panelPad}>
+        <PlotTab
+          kinds={['xy']}
+          singlePlotId={pl.id}
+          emptyHint="This plot was removed."
+          plots={mergedPlots}
+          onPlotsChange={handlePlotsChange}
+          solvedVariables={result?.variables ?? []}
+          cyclePath={result?.cyclePath}
+          tableVars={tableVars}
+          rows={paramRows}
+          results={tableResults}
+          activePlotId={pl.id}
+          onActivePlotIdChange={setActivePlotId}
+        />
+      </div>
+    )
+  }
+
   return (
     <Flex h="100vh" style={{ overflow: 'hidden' }}>
       <Rail
@@ -1406,6 +1419,13 @@ export default function App() {
         openKinds={openKinds}
         openIds={openIds}
         diagrams={diagrams.map((d) => ({ id: d.id, name: d.name }))}
+        plots={xyPlots.map((p) => ({ id: p.id, name: p.name }))}
+        plotCount={openWindows.filter((w) => w.kind === 'plot').length}
+        onOpenPlot={(id) => {
+          const p = xyPlots.find((x) => x.id === id)
+          if (p) dockRef.current?.openInstance(`plot:${id}`, 'plot', p.name)
+        }}
+        onNewPlot={() => setAddingXyPlot(true)}
         diagramCount={openWindows.filter((w) => w.kind === 'diagram').length}
         onSelect={(kind) => dockRef.current?.open(kind)}
         onClose={(kind) => dockRef.current?.close(kind)}
@@ -1659,6 +1679,24 @@ export default function App() {
             setAddingThermoPlot(false)
             setEditingThermoPlot(null)
           }}
+        />
+      )}
+
+      {addingXyPlot && (
+        <PlotConfigModal
+          spec={null}
+          allowedKinds={['xy']}
+          defaultName={`Plot ${mergedPlots.filter((p) => p.kind === 'xy').length + 1}`}
+          fluids={fluids}
+          tableVars={tableVars}
+          hasStates={detectStates(result?.variables ?? []).indices.length > 0}
+          onSave={(spec) => {
+            handlePlotsChange([...plots, spec])
+            setActivePlotId(spec.id)
+            setAddingXyPlot(false)
+            requestAnimationFrame(() => dockRef.current?.openInstance(`plot:${spec.id}`, 'plot', spec.name))
+          }}
+          onClose={() => setAddingXyPlot(false)}
         />
       )}
     </Flex>
