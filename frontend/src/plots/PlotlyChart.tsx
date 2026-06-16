@@ -28,6 +28,31 @@ export default function PlotlyChart({
     }
   }, [figure])
 
+  // Plotly's `responsive` config only tracks the *window*; it does not react to
+  // the panel/tile being resized within the dockview workspace. Observe the
+  // container directly and resize the plot so it always fills its tile (no
+  // scrollbars when shrunk, no empty margins when grown).
+  useEffect(() => {
+    const el = containerRef.current
+    if (el === null) return
+    let plotly: typeof import('plotly.js-dist-min').default | null = null
+    let frame = 0
+    void import('plotly.js-dist-min').then(({ default: P }) => {
+      plotly = P
+    })
+    const observer = new ResizeObserver(() => {
+      cancelAnimationFrame(frame)
+      frame = requestAnimationFrame(() => {
+        if (plotly && containerRef.current) plotly.Plots.resize(containerRef.current)
+      })
+    })
+    observer.observe(el)
+    return () => {
+      observer.disconnect()
+      cancelAnimationFrame(frame)
+    }
+  }, [])
+
   useEffect(() => {
     const el = containerRef.current
     return () => {

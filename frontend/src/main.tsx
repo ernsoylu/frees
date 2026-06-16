@@ -10,7 +10,7 @@ import ErrorBoundary from './ErrorBoundary'
 import './index.css'
 
 const theme = createTheme({
-  primaryColor: 'blue',
+  primaryColor: 'teal',
   fontFamilyMonospace:
     "'Cascadia Code', 'Fira Code', ui-monospace, 'SF Mono', monospace",
   defaultRadius: 'md',

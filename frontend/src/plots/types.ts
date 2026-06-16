@@ -41,6 +41,9 @@ export interface PlotFormat {
   yLog: boolean | null
   grid: boolean
   legend: boolean
+  /** XY plots: append each axis variable's unit (e.g. "Vair [m^3/s]") to the
+   *  axis title, taken from the solved variable units. Defaults to on. */
+  showUnits?: boolean
   legendAlign?: 'left' | 'center' | 'right'
   /** Title of the secondary (right) Y axis used by XYConfig.y2Vars. */
   y2Label?: string
@@ -113,6 +116,7 @@ export function defaultFormat(kind: PlotKind): PlotFormat {
     yLog: null,
     grid: true,
     legend: true,
+    showUnits: true,
     fontSize: 13,
     celsius: kind === 'psychro',
     xMin: null,

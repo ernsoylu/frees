@@ -48,7 +48,6 @@ import {
   IconPlus,
   IconDownload,
   IconFileImport,
-  IconFileExport,
   IconSun,
   IconMoon,
   IconVideo,
@@ -141,7 +140,6 @@ import {
 import { TEMPLATES, instantiateTemplate } from './templates'
 import {
   exportDiagram,
-  downloadTextFile,
   DiagramExportFormat,
   DiagramExportTheme,
 } from './exportDiagram'
@@ -3715,18 +3713,6 @@ export default function DiagramTab(props: Readonly<Props>) {
   // Export the active diagram to a portable JSON file so it can be backed up,
   // version-controlled, or moved to another browser/machine — localStorage is
   // not durable enough on its own.
-  const exportDiagramJson = () => {
-    const payload = {
-      app: 'frees',
-      kind: 'diagram',
-      version: 1,
-      name: activeDiagram.name,
-      state: activeDiagram.state,
-    }
-    const base = activeDiagram.name.trim().replace(/[^\w.-]+/g, '_') || 'diagram'
-    downloadTextFile(JSON.stringify(payload, null, 2), `${base}.frees-diagram.json`)
-  }
-
   // Import a diagram JSON (single spec, an exported payload, or an array of
   // specs) as new tab(s). Validates the shape before touching the diagram list.
   const importDiagramJson = (text: string): { ok: boolean; error?: string } => {
@@ -5496,31 +5482,24 @@ export default function DiagramTab(props: Readonly<Props>) {
             </Menu.Dropdown>
           </Menu>
           )}
-          <Tooltip label="Save this diagram as a portable JSON file (backup / share / move between machines)">
-            <Button
-              size="compact-xs"
-              variant="light"
-              color="gray"
-              leftSection={<IconFileExport size={13} />}
-              onClick={exportDiagramJson}
-            >
-              Save JSON
-            </Button>
-          </Tooltip>
-          <Tooltip label="Export this diagram (SVG, PNG, PDF, EPS)">
-            <Button
-              size="compact-xs"
-              variant="light"
-              color="gray"
-              leftSection={<IconDownload size={13} />}
-              onClick={() => {
-                setExportError(null)
-                setExportModalOpen(true)
-              }}
-            >
-              Export
-            </Button>
-          </Tooltip>
+          {/* Export is a Run-mode action only; diagrams persist with the
+              workspace, so a separate "Save JSON" button is unnecessary. */}
+          {runMode && (
+            <Tooltip label="Export this diagram (SVG, PNG, PDF, EPS)">
+              <Button
+                size="compact-xs"
+                variant="light"
+                color="gray"
+                leftSection={<IconDownload size={13} />}
+                onClick={() => {
+                  setExportError(null)
+                  setExportModalOpen(true)
+                }}
+              >
+                Export
+              </Button>
+            </Tooltip>
+          )}
         </Group>
 
         {notice && (
