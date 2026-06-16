@@ -376,6 +376,9 @@ export default function App() {
     writeBridgedKeys(p)
     saveProjectLocal(p)
     setWorkspaceEpoch((e) => e + 1)
+    // Restore the dock layout after React has applied the state updates above.
+    // rAF ensures panelContent is rebuilt before dockview recreates the panels.
+    requestAnimationFrame(() => dockRef.current?.restore(p.dockLayout))
   }, [])
 
   const handleSaveProject = useCallback(() => {
@@ -440,6 +443,7 @@ export default function App() {
       diagrams: [],
       customComponents: null,
       digitizer: null,
+      dockLayout: null,
     })
     setText(EXAMPLE)
     setVarDrafts({})
@@ -457,6 +461,7 @@ export default function App() {
     setCheckResult(null)
     setProjectName('untitled')
     setWorkspaceEpoch((e) => e + 1)
+    requestAnimationFrame(() => dockRef.current?.reset())
   }, [stopCriteria, unitSystem, fillMissing])
 
   // The active table, defaulting to the first; the parametric-table solver

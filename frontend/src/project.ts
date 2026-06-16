@@ -18,10 +18,11 @@ export const PROJECT_VERSION = 1
 export const PROJECT_KEY = 'frees.project'
 
 // Child-owned localStorage keys bridged into the project file. These mirror the
-// literals used inside DiagramTab.tsx and DigitizerTab.tsx; the project file is
-// the source of truth, those keys act as the components' local cache.
+// literals used inside DiagramTab.tsx, DigitizerTab.tsx, and WorkspaceDock.tsx;
+// the project file is the source of truth, those keys act as local caches.
 const CUSTOM_COMPONENTS_KEY = 'frees-custom-components'
 const DIGITIZER_KEY = 'frees-digitizer'
+const DOCK_LAYOUT_KEY = 'frees-dock-layout-v2'
 
 /** The in-memory workspace slices owned by App.tsx that make up a project. */
 export interface ProjectSlices {
@@ -42,6 +43,7 @@ export interface FreesProject extends ProjectSlices {
   // Bridged from child-owned localStorage; opaque to App.
   customComponents: unknown
   digitizer: unknown
+  dockLayout: unknown
 }
 
 function readJson(key: string): unknown {
@@ -61,6 +63,7 @@ export function buildProject(slices: ProjectSlices): FreesProject {
     ...slices,
     customComponents: readJson(CUSTOM_COMPONENTS_KEY),
     digitizer: readJson(DIGITIZER_KEY),
+    dockLayout: readJson(DOCK_LAYOUT_KEY),
   }
 }
 
@@ -79,6 +82,11 @@ export function writeBridgedKeys(project: FreesProject) {
       localStorage.setItem(DIGITIZER_KEY, JSON.stringify(project.digitizer))
     } else {
       localStorage.removeItem(DIGITIZER_KEY)
+    }
+    if (project.dockLayout != null) {
+      localStorage.setItem(DOCK_LAYOUT_KEY, JSON.stringify(project.dockLayout))
+    } else {
+      localStorage.removeItem(DOCK_LAYOUT_KEY)
     }
   } catch {
     // Quota or serialization failures are non-fatal; the in-memory state still loads.
@@ -132,6 +140,7 @@ export function sanitizeProject(project: FreesProject): FreesProject | null {
     diagrams: Array.isArray(project.diagrams) ? plainJson(project.diagrams) : [],
     customComponents: plainJson(project.customComponents),
     digitizer: plainJson(project.digitizer),
+    dockLayout: plainJson(project.dockLayout),
   }
 }
 
@@ -174,6 +183,7 @@ function migrate(p: FreesProject): FreesProject {
     diagrams: p.diagrams ?? [],
     customComponents: p.customComponents ?? null,
     digitizer: p.digitizer ?? null,
+    dockLayout: p.dockLayout ?? null,
   }
 }
 
