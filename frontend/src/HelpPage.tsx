@@ -1450,6 +1450,7 @@ const CATEGORIES = [
       { id: 'thermo', label: 'Fluid Properties (CoolProp & Gas)', keywords: ['coolprop', 'fluids', 'water', 'steam', 'refrigerant', 'glycol', 'density', 'enthalpy', 'entropy', 'p_sat', 't_sat', 'molarmass', 'compressibilityfactor', 'prandtl', 'surfacetension', 'fugacity', 'enthalpy_fusion', 'dipole', 'p_crit', 't_crit', 'v_crit', 't_triple', 'isidealgas', 'phase$'] },
       { id: 'solid-materials', label: 'Solid & Material Properties', keywords: ['material', 'solid', 'c_', 'k_', 'rho_', 'mu_', 'pv_', 'e_', 'nu_', 'epsilon_', 'volexpcoef', 'freezingpt', 'deltal\\l_293', 'ek_lj', 'sigma_lj'] },
       { id: 'humidair', label: 'Psychrometrics (AirH2O)', keywords: ['psychrometric', 'humid air', 'airh2o', 'relative humidity', 'wet bulb', 'dew point'] },
+      { id: 'state-tables', label: 'Fluid State Tables (STATE TABLE)', keywords: ['state table', 'states', 'fluid states', 'circuit', 'multi-fluid', 'multi-circuit', 'fill missing', 'state points', 'overlay'] },
     ]
   },
   {
@@ -2223,6 +2224,39 @@ END
             </Paper>
             <Text size="sm" c="dimmed" style={{ lineHeight: 1.6 }}>
               Property attributes: <code>fluid</code>, <code>diagram</code> (<code>'T-s'</code>, <code>'P-h'</code>, <code>'P-v'</code>, <code>'T-v'</code>, <code>'h-s'</code>, <code>'P-T'</code>), and the booleans <code>quality</code>, <code>isolines</code>, <code>overlaystates</code>, <code>connectstates</code>, <code>closecycle</code>. Psychrometric charts use <code>kind = psychro</code> with <code>pressure</code>, <code>tmin</code>, <code>tmax</code>, <code>wetbulb</code>, <code>enthalpy</code>, <code>volume</code>. All kinds accept the shared <code>title</code>, <code>xlabel</code>, <code>ylabel</code>, <code>xlog</code>/<code>ylog</code>, <code>grid</code>, <code>legend</code>, <code>xmin</code>/<code>xmax</code>/<code>ymin</code>/<code>ymax</code> format options.
+            </Text>
+          </Stack>
+        );
+      case 'state-tables':
+        return (
+          <Stack gap="md">
+            <Title order={2} c="blue.4">Fluid State Tables (STATE TABLE)</Title>
+            <Text style={{ lineHeight: 1.6 }}>
+              A <code>STATE TABLE name(var1, var2, …) … END</code> block declares which state-point variables belong to one circuit and the fluid those states use. Like <code>PARAMETRIC</code> and <code>PLOT</code> blocks it adds no equations to the system — it only groups states for the <strong>Fluid States</strong> window, the "Fill Missing Values" step, and property/psychrometric overlays. Declare the fluid with a <code>FLUID = …</code> attribute line inside the block.
+            </Text>
+            <Paper withBorder p="md" bg="light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8))">
+              <Code block>{`STATE TABLE WaterLoop(Pw_1, Tw_1, hw_1, Pw_2, Tw_2, hw_2)
+  FLUID = Water
+END
+
+STATE TABLE RefrigerantLoop(Pref_1, xref_1, href_1, Pref_2, Tref_2)
+  FLUID = R134a
+END`}</Code>
+            </Paper>
+            <Title order={3}>Why declare them explicitly?</Title>
+            <Text style={{ lineHeight: 1.6 }}>
+              For a single fluid you can still just name variables <code>h1</code>, <code>s1</code>, <code>T[2]</code> and they are auto-detected. But a plant with several fluids (e.g. Water, R134a and Air) or two separate water circuits needs explicit blocks: each block is grouped <strong>independently and fluid-aware</strong>, so a Water circuit's <code>P1</code> and an R134a circuit's <code>P1</code> never collide, and missing properties are filled with the correct fluid per circuit.
+            </Text>
+            <Title order={3}>Variable naming</Title>
+            <Text style={{ lineHeight: 1.6 }}>
+              Inside a block, each variable is read as <code>&lt;property&gt;&lt;circuit-tag&gt;&lt;index&gt;</code>: a leading property symbol (<code>P</code>, <code>T</code>, <code>h</code>, <code>s</code>, <code>v</code>, <code>u</code>, <code>x</code>, <code>rho</code>), an optional circuit tag, then the state index. So <code>Pw_1</code> is pressure of water state&nbsp;1, <code>Tref2</code> is temperature of the refrigerant state&nbsp;2. The tag is preserved when "Fill Missing Values" writes back computed properties (e.g. <code>hw_1</code>, <code>sw_1</code>). Both <code>name_1</code> and <code>name[1]</code> index styles work.
+            </Text>
+            <Title order={3}>Filling and plotting</Title>
+            <Text style={{ lineHeight: 1.6 }}>
+              After Solve, the <strong>Fluid States</strong> window shows one labelled table per declared circuit (badged with its fluid) and they appear in the left <strong>Tables</strong> menu. Click <strong>Fill Missing Values</strong> to complete each state (s, v, x, …) from CoolProp using that circuit's fluid. In a property or psychrometric plot's configuration, the <strong>State table (circuit)</strong> selector overlays just that circuit's states — and for property diagrams it also adopts the circuit's fluid.
+            </Text>
+            <Text size="sm" c="dimmed" style={{ lineHeight: 1.6 }}>
+              See the <strong>Multi-Fluid State Tables</strong> example (File → Open Example) for a complete two-circuit model.
             </Text>
           </Stack>
         );
