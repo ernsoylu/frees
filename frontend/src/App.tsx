@@ -276,6 +276,9 @@ export default function App() {
   // Last-focused non-auxiliary window — drives the content-aware Inspector
   // (focusing the Inspector/Solution panels themselves doesn't change it).
   const [focusedWindow, setFocusedWindow] = useState<OpenWindow | null>(null)
+  // Tracks which state-table circuit triggered the last fill-missing solve so
+  // only that circuit's button shows the loading spinner.
+  const [fillMissingFor, setFillMissingFor] = useState<string | null>(null)
   const openKinds = useMemo(() => openWindows.map((w) => w.kind), [openWindows])
   const openIds = useMemo(() => openWindows.map((w) => w.id), [openWindows])
   // Tables (Epic 8): any number of Parametric and Curve Tables; the active
@@ -356,6 +359,12 @@ export default function App() {
     }, 800)
     return () => clearTimeout(id)
   }, [currentSlices])
+
+  // Clear the per-circuit fill-missing tracker once the solve finishes so the
+  // next click correctly identifies which circuit triggered the loading state.
+  useEffect(() => {
+    if (!solving) setFillMissingFor(null)
+  }, [solving])
 
   // Apply an opened/loaded project to every workspace slice. Child-owned slices
   // are written back to their caches and the relevant tabs are remounted (epoch
@@ -1546,8 +1555,11 @@ export default function App() {
           stateTableDefs={[s]}
           unitIds={stateUnitIds}
           onUnitIdsChange={handleStateUnitIdsChange}
-          onFillMissing={() => onSolve(true)}
-          solving={solving}
+          onFillMissing={() => {
+            setFillMissingFor(s.name)
+            onSolve(true)
+          }}
+          solving={solving && fillMissingFor === s.name}
           solvable={solvable}
         />
       </div>
