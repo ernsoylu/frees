@@ -3,12 +3,14 @@ import {
   Alert,
   Badge,
   Button,
+  Divider,
   Flex,
   Group,
   Paper,
   SegmentedControl,
   Stack,
   Text,
+  TextInput,
   Title,
 } from '@mantine/core'
 import { Spotlight, SpotlightActionGroupData } from '@mantine/spotlight'
@@ -271,7 +273,9 @@ export default function App() {
   // Shared Inspector edge panel: the focused diagram window portals its
   // Properties/Layers into this outlet so one inspector serves all diagrams.
   const [inspectorOutlet, setInspectorOutlet] = useState<HTMLDivElement | null>(null)
-  const [activeDiagramWindowId, setActiveDiagramWindowId] = useState<string | null>(null)
+  // Last-focused non-auxiliary window — drives the content-aware Inspector
+  // (focusing the Inspector/Solution panels themselves doesn't change it).
+  const [focusedWindow, setFocusedWindow] = useState<OpenWindow | null>(null)
   const openKinds = useMemo(() => openWindows.map((w) => w.kind), [openWindows])
   const openIds = useMemo(() => openWindows.map((w) => w.id), [openWindows])
   // Tables (Epic 8): any number of Parametric and Curve Tables; the active
@@ -811,6 +815,9 @@ export default function App() {
       )
       setSolvedComplexMode(complexMode)
       setResult(response)
+      // A successful equation solve auto-opens the Solution panel (the one
+      // place this happens). Table solves don't trigger it.
+      if (response.success) dockRef.current?.open('solution')
       setTables((all) => mergeCodeTables(all, response.codeTables, response.parametricTables))
       setLastSolvedWithFillMissing(shouldFillMissing && response.success)
       // Once the user has solved successfully, they've learned the core
@@ -1004,6 +1011,18 @@ export default function App() {
     }
   }, [diagrams, mergedPlots, tables, openWindows])
 
+  // Keep dock tab titles in sync with instance names (so renames in the
+  // Inspector show on the tabs). Deferred out of the commit cycle so dockview's
+  // own re-render can't re-enter React mid-update.
+  useEffect(() => {
+    const raf = requestAnimationFrame(() => {
+      for (const d of diagrams) dockRef.current?.setTitle(`diagram:${d.id}`, d.name)
+      for (const p of mergedPlots) dockRef.current?.setTitle(`plot:${p.id}`, p.name)
+      for (const t of tables) dockRef.current?.setTitle(`table:${t.id}`, t.name)
+    })
+    return () => cancelAnimationFrame(raf)
+  }, [diagrams, mergedPlots, tables])
+
   const baseVariables =
     solutions.length > 0 ? solutions[0].variables : result?.variables ?? []
 
@@ -1116,6 +1135,11 @@ export default function App() {
     padding: 'var(--mantine-spacing-xs)',
     overflow: 'hidden',
   }
+  const PLOT_KIND_LABEL: Record<PlotKind, string> = {
+    xy: 'X-Y',
+    property: 'Property',
+    psychro: 'Psychrometric',
+  }
   const panelContent: Record<string, ReactNode> = {
     equations: (
       <div style={panelPad}>
@@ -1224,14 +1248,124 @@ export default function App() {
         <DigitizerTab key={`digitizer-${workspaceEpoch}`} onSendToFunctionTable={sendDigitizedToFunctionTable} />
       </div>
     ),
-    inspector: (
-      <div style={{ height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-        <Text size="xs" c="dimmed" p={6}>
-          Properties of the focused diagram. Select an element on its canvas.
-        </Text>
-        <div ref={setInspectorOutlet} style={{ flex: 1, minHeight: 0, overflow: 'hidden' }} />
-      </div>
-    ),
+    inspector: (() => {
+      const fw = focusedWindow
+      const headerStyle: React.CSSProperties = { padding: '6px 10px' }
+      const bodyStyle: React.CSSProperties = { flex: 1, minHeight: 0, overflow: 'auto', padding: 10 }
+
+      // Diagram: render the portal outlet (DiagramTab pushes its Properties/
+      // Layers in) plus a rename field for the focused diagram.
+      if (fw?.kind === 'diagram') {
+        const d = diagrams.find((x) => `diagram:${x.id}` === fw.id)
+        return (
+          <div style={{ height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+            <div style={headerStyle}>
+              <TextInput
+                size="xs"
+                label="Diagram name"
+                value={d?.name ?? ''}
+                onChange={(e) =>
+                  d && setDiagrams((prev) => prev.map((x) => (x.id === d.id ? { ...x, name: e.currentTarget.value } : x)))
+                }
+              />
+            </div>
+            <div ref={setInspectorOutlet} style={{ flex: 1, minHeight: 0, overflow: 'auto' }} />
+          </div>
+        )
+      }
+
+      // Table: rename + the parametric table's quick actions.
+      if (fw?.kind === 'table') {
+        const t = tables.find((x) => `table:${x.id}` === fw.id)
+        return (
+          <div style={{ height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+            <div style={{ ...bodyStyle }}>
+              <Stack gap="xs">
+                <Text size="sm" fw={600} c="blue.4">Table</Text>
+                <TextInput
+                  size="xs"
+                  label="Table name"
+                  value={t?.name ?? ''}
+                  disabled={!t || t.source === 'code'}
+                  onChange={(e) =>
+                    t && setTables((prev) => prev.map((x) => (x.id === t.id ? { ...x, name: e.currentTarget.value } : x)))
+                  }
+                />
+                {t?.kind === 'parametric' ? (
+                  <>
+                    <Button size="xs" variant="default" onClick={() => { setActiveTableId(t.id); setShowConfigureTable(true) }}>
+                      Configure Columns
+                    </Button>
+                    <Group grow>
+                      <Button size="xs" variant="default" onClick={() => updateParamTable(t.id, (pt) => invalidateActiveParam({ ...pt, rows: [...pt.rows, newParamRow()] }))}>
+                        Add Row
+                      </Button>
+                      <Button size="xs" variant="default" onClick={() => updateParamTable(t.id, (pt) => invalidateActiveParam({ ...pt, rows: pt.rows.slice(0, -1) }))}>
+                        Remove Row
+                      </Button>
+                    </Group>
+                    <Button size="xs" variant="default" color="gray" onClick={() => updateParamTable(t.id, (pt) => ({ ...pt, results: [] }))}>
+                      Clear Results
+                    </Button>
+                  </>
+                ) : (
+                  <Text size="xs" c="dimmed">Function table — edit values in the table window.</Text>
+                )}
+              </Stack>
+            </div>
+          </div>
+        )
+      }
+
+      // Plot: rename (user plots) + delete; configure/export live on the card.
+      if (fw?.kind === 'plot') {
+        const p = mergedPlots.find((x) => `plot:${x.id}` === fw.id)
+        return (
+          <div style={bodyStyle}>
+            <Stack gap="xs">
+              <Text size="sm" fw={600} c="blue.4">{p ? PLOT_KIND_LABEL[p.kind] : 'Plot'}</Text>
+              <TextInput
+                size="xs"
+                label="Plot name"
+                value={p?.name ?? ''}
+                disabled={!p || p.fromCode}
+                onChange={(e) =>
+                  p && handlePlotsChange(plots.map((x) => (x.id === p.id ? { ...x, name: e.currentTarget.value } : x)))
+                }
+              />
+              <Text size="xs" c="dimmed">Configure and Export are on the plot's toolbar.</Text>
+              {p && !p.fromCode && (
+                <Button size="xs" variant="light" color="red" onClick={() => handlePlotsChange(plots.filter((x) => x.id !== p.id))}>
+                  Delete plot
+                </Button>
+              )}
+            </Stack>
+          </div>
+        )
+      }
+
+      // Equations: surface the equation tools.
+      if (fw?.kind === 'equations') {
+        return (
+          <div style={bodyStyle}>
+            <Stack gap="xs">
+              <Text size="sm" fw={600} c="blue.4">Equations</Text>
+              <Button size="xs" variant="default" onClick={() => setShowVariableInfo(true)}>Variable Information</Button>
+              <Button size="xs" variant="default" onClick={() => setShowMinMax(true)}>Min / Max (optimize)</Button>
+              <Button size="xs" variant="default" onClick={() => setShowCurveFit(true)}>Curve Fit</Button>
+              <Divider my="xs" />
+              <Text size="xs" c="dimmed">Edit equations in the Editor; press Solve (F2) to compute. Results appear in the Solution panel.</Text>
+            </Stack>
+          </div>
+        )
+      }
+
+      return (
+        <div style={bodyStyle}>
+          <Text size="xs" c="dimmed">Focus a window (Diagram, Table, Plot, Editor) to inspect it here.</Text>
+        </div>
+      )
+    })(),
     solution: (
       <div style={{ height: '100%', minHeight: 0 }}>
         <SolutionPanel
@@ -1254,11 +1388,6 @@ export default function App() {
     solution: 'Solution',
     states: 'Fluid States',
     inspector: 'Inspector',
-  }
-  const PLOT_KIND_LABEL: Record<PlotKind, string> = {
-    xy: 'X-Y',
-    property: 'Property',
-    psychro: 'Psychrometric',
   }
 
   // Per-instance Diagram windows: each diagram opens as its own dock window
@@ -1290,7 +1419,7 @@ export default function App() {
           onDiagramsChange={setDiagrams}
           onActiveDiagramIdChange={setActiveDiagramId}
           inspectorOutlet={inspectorOutlet}
-          isActive={activeDiagramWindowId === `diagram:${d.id}`}
+          isActive={focusedWindow?.id === `diagram:${d.id}`}
         />
       </div>
     )
@@ -1622,6 +1751,8 @@ export default function App() {
           onSaveProjectAs={handleSaveProjectAs}
           onInsertFunction={insertFunction}
           onOpenExamples={() => setShowExamples(true)}
+          onOpenInspector={() => dockRef.current?.open('inspector')}
+          onOpenSolution={() => dockRef.current?.open('solution')}
         />
         <input
           ref={projectFileRef}
@@ -1644,10 +1775,10 @@ export default function App() {
               if (active?.kind === 'table' && active.id.startsWith('table:')) {
                 setActiveTableId(active.id.slice('table:'.length))
               }
-              // The last-focused diagram window owns the shared Inspector;
-              // focusing the inspector/solution itself doesn't change it.
-              if (active?.kind === 'diagram') {
-                setActiveDiagramWindowId(active.id)
+              // The Inspector reflects the last-focused main window; focusing
+              // the auxiliary Inspector/Solution panels must not change it.
+              if (active && active.kind !== 'inspector' && active.kind !== 'solution') {
+                setFocusedWindow(active)
               }
             }}
             onOpenChange={setOpenWindows}

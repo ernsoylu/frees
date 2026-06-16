@@ -70,8 +70,6 @@ const VIEWS = [
     icon: IconChartGridDots,
   },
   { value: 'diagram', label: 'Diagram', tip: 'Diagram — interactive schematic editor', icon: IconSchema },
-  { value: 'inspector', label: 'Inspector', tip: 'Inspector — focused diagram properties & layers', icon: IconAdjustments },
-  { value: 'solution', label: 'Solution', tip: 'Solution — solved variables & residuals', icon: IconListDetails },
 ]
 
 const RAIL_EXPANDED_KEY = 'frees.railExpanded'
@@ -692,6 +690,9 @@ interface TopBarProps {
   onSaveProjectAs: () => void
   onInsertFunction: (snippet: string) => void
   onOpenExamples: () => void
+  /** Tools menu: open the auxiliary Inspector / Solution edge panels. */
+  onOpenInspector: () => void
+  onOpenSolution: () => void
 }
 
 function solveTooltipFor(canSolve: boolean, isTable: boolean): string {
@@ -809,6 +810,29 @@ export function TopBar(props: Readonly<TopBarProps>) {
                 </Menu.Sub.Dropdown>
               </Menu.Sub>
             ))}
+          </Menu.Dropdown>
+        </Menu>
+
+        <Menu position="bottom-start" shadow="md" width={200}>
+          <Menu.Target>
+            <Button
+              variant="subtle"
+              color="gray"
+              size="xs"
+              leftSection={<IconAdjustments size={14} />}
+              rightSection={<IconChevronDown size={12} />}
+            >
+              Tools
+            </Button>
+          </Menu.Target>
+          <Menu.Dropdown>
+            <Menu.Label>Auxiliary panels</Menu.Label>
+            <Menu.Item leftSection={<IconAdjustments size={14} />} onClick={props.onOpenInspector}>
+              Inspector
+            </Menu.Item>
+            <Menu.Item leftSection={<IconListDetails size={14} />} onClick={props.onOpenSolution}>
+              Solution
+            </Menu.Item>
           </Menu.Dropdown>
         </Menu>
 
