@@ -58,6 +58,8 @@ export interface WorkspaceDockHandle {
   openInstance: (id: string, kind: string, title: string) => void
   /** Close a window by id. */
   close: (id: string) => void
+  /** Update an open window's tab title (e.g. after a rename). */
+  setTitle: (id: string, title: string) => void
   isOpen: (id: string) => boolean
   /** Discard the saved layout and reopen the default set. */
   reset: () => void
@@ -193,8 +195,20 @@ export function WorkspaceDock({
       openInstance: (id, kind, title) =>
         apiRef.current && openInstance(apiRef.current, id, kind, title),
       close: (id) => {
-        const p = apiRef.current?.getPanel(id)
-        if (p) apiRef.current?.removePanel(p)
+        try {
+          const p = apiRef.current?.getPanel(id)
+          if (p) apiRef.current?.removePanel(p)
+        } catch {
+          /* ignore */
+        }
+      },
+      setTitle: (id, title) => {
+        try {
+          const p = apiRef.current?.getPanel(id)
+          if (p && p.title !== title) p.api.setTitle(title)
+        } catch {
+          /* never let a tab-title update crash the app */
+        }
       },
       isOpen: (id) => !!apiRef.current?.getPanel(id),
       reset: () => {

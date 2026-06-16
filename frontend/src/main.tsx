@@ -6,6 +6,7 @@ import 'katex/dist/katex.min.css'
 import { createTheme, MantineProvider } from '@mantine/core'
 import App from './App'
 import HelpPage from './HelpPage'
+import ErrorBoundary from './ErrorBoundary'
 import './index.css'
 
 const theme = createTheme({
@@ -20,7 +21,7 @@ const isHelpPage = globalThis.location.pathname === '/help';
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <MantineProvider theme={theme} defaultColorScheme="dark">
-      {isHelpPage ? <HelpPage /> : <App />}
+      <ErrorBoundary>{isHelpPage ? <HelpPage /> : <App />}</ErrorBoundary>
     </MantineProvider>
   </React.StrictMode>,
 )
