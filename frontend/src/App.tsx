@@ -506,15 +506,10 @@ export default function App() {
     setText(EXAMPLE)
     setVarDrafts({})
     setStateUnitIds({})
-    setTables([newParamTable([])])
+    setTables([])
     setPlots([])
-    const blank: DiagramSpec = {
-      id: crypto.randomUUID(),
-      name: 'Diagram 1',
-      state: { elements: [], gridSize: 10, snap: true, showGrid: true },
-    }
-    setDiagrams([blank])
-    setActiveDiagramId(blank.id)
+    setDiagrams([])
+    setActiveDiagramId(null)
     setResult(null)
     setCheckResult(null)
     setProjectName('untitled')
