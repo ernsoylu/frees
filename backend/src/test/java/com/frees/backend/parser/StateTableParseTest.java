@@ -76,6 +76,24 @@ class StateTableParseTest {
     }
 
     @Test
+    void survivesMarkdownExtraction() {
+        // The /api/check and /api/solve paths run the text through the markdown
+        // extractor first; it must keep the STATE TABLE block intact (regression
+        // for the block being split apart and failing to parse).
+        String text = """
+                P1 = 10
+                T1 = 45
+                STATE TABLE C(P1, T1)
+                  FLUID = Water
+                END
+                """;
+        String clean = MarkdownEquationExtractor.extract(text).cleanText;
+        var result = parser.parseResult(clean);
+        assertEquals(1, result.stateTables().size());
+        assertEquals("Water", result.stateTables().get(0).fluid());
+    }
+
+    @Test
     void variableNamedStateStillParsesAsIdentifier() {
         // "STATE TABLE" is a single token; a lone variable named `state` must
         // not be swallowed by it.

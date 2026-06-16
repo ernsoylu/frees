@@ -1205,7 +1205,7 @@ export function DigitizerTab({
                   p={4}
                   withBorder
                   style={{
-                    borderColor: ds.id === activeDatasetId ? 'var(--mantine-color-blue-7)' : undefined,
+                    borderColor: ds.id === activeDatasetId ? 'var(--mantine-color-teal-7)' : undefined,
                     cursor: 'pointer',
                   }}
                   onClick={() => setActiveDatasetId(ds.id)}

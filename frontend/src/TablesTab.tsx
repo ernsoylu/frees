@@ -101,13 +101,13 @@ export default function TablesTab(props: Readonly<Props>) {
             style={{
               cursor: 'pointer',
               borderColor:
-                active?.id === t.id ? 'var(--mantine-color-blue-7)' : undefined,
+                active?.id === t.id ? 'var(--mantine-color-teal-7)' : undefined,
             }}
             onClick={() => onActiveTableIdChange(t.id)}
           >
             <Group gap={6} wrap="nowrap">
               {t.kind === 'parametric' ? (
-                <IconTable size={13} color="var(--mantine-color-blue-4)" />
+                <IconTable size={13} color="var(--mantine-color-teal-4)" />
               ) : (
                 <IconChartGridDots size={13} color="var(--mantine-color-teal-4)" />
               )}
