@@ -1010,11 +1010,12 @@ export default function App() {
       ...diagrams.map((d) => `diagram:${d.id}`),
       ...mergedPlots.map((p) => `plot:${p.id}`),
       ...tables.map((t) => `table:${t.id}`),
+      ...(result?.stateTableDefs ?? checkResult?.stateTableDefs ?? []).map((s) => `state:${s.name}`),
     ])
     for (const w of openWindows) {
       if (!valid.has(w.id)) dockRef.current?.close(w.id)
     }
-  }, [diagrams, mergedPlots, tables, openWindows])
+  }, [diagrams, mergedPlots, tables, openWindows, result?.stateTableDefs, checkResult?.stateTableDefs])
 
   // Keep dock tab titles in sync with instance names (so renames in the
   // Inspector show on the tabs). Deferred out of the commit cycle so dockview's
