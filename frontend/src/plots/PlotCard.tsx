@@ -4,6 +4,7 @@ import type { PlotlyFigure } from 'plotly.js-dist-min'
 import {
   DiagramResponse,
   PsychartResponse,
+  StateTableDto,
   TableRowResult,
   VariableResult,
   getPropertyDiagram,
@@ -11,7 +12,7 @@ import {
 } from '../api'
 import { ParamRow } from '../ParametricTableTab'
 import { PlotSpec } from './types'
-import { StateTable } from './stateTable'
+import { StateTable, detectStateTables } from './stateTable'
 import {
   PlotTheme,
   XYSeries,
@@ -31,6 +32,8 @@ interface Props {
   /** Flat solved variables; the data source for XY plots that reference solved
    * arrays (e.g. x = speed[1..N]) rather than a parametric table. */
   variables?: VariableResult[]
+  /** Declared STATE TABLE blocks, for overlaying a single circuit's states. */
+  stateTableDefs?: StateTableDto[]
   onConfigure: () => void
   onRemove: () => void
   leftSection?: React.ReactNode
@@ -188,16 +191,24 @@ export interface FigureInputs {
   variables?: VariableResult[]
   diagram: DiagramResponse | null
   psychart: PsychartResponse | null
+  /** Declared STATE TABLE blocks, so a plot can overlay just one circuit. */
+  stateTableDefs?: StateTableDto[]
   theme: PlotTheme
 }
 
 export function buildFigure(spec: PlotSpec, inputs: FigureInputs): PlotlyFigure | null {
-  const { states, cyclePath, tableRows, tableResults, variables = [], diagram, psychart, theme } = inputs
+  const { states, cyclePath, tableRows, tableResults, variables = [], diagram, psychart, stateTableDefs, theme } = inputs
+  // When the plot targets one declared STATE TABLE circuit, overlay only that
+  // circuit's states (else all detected states).
+  const overlayStates = (name?: string | null): StateTable => {
+    if (!name || !stateTableDefs?.length) return states
+    return detectStateTables(variables, stateTableDefs).find((t) => t.name === name) ?? states
+  }
   if (spec.kind === 'property' && diagram) {
-    return buildPropertyFigure(diagram, spec.property, spec.format, states, theme, cyclePath)
+    return buildPropertyFigure(diagram, spec.property, spec.format, overlayStates(spec.property.stateTable), theme, cyclePath)
   }
   if (spec.kind === 'psychro' && psychart) {
-    return buildPsychroFigure(psychart, spec.psychro, spec.format, states, theme, cyclePath)
+    return buildPsychroFigure(psychart, spec.psychro, spec.format, overlayStates(spec.psychro.stateTable), theme, cyclePath)
   }
   if (spec.kind === 'xy' && spec.xy.xVar && spec.xy.yVars.length > 0) {
     // Prefer parametric-table rows; fall back to solved array variables so a
@@ -245,6 +256,7 @@ export default function PlotCard({
   tableRows,
   tableResults,
   variables = [],
+  stateTableDefs,
   onConfigure,
   onRemove,
   leftSection,
@@ -264,8 +276,8 @@ export default function PlotCard({
   }, [exportTrigger])
 
   const figure = useMemo(
-    () => buildFigure(spec, { states, cyclePath, tableRows, tableResults, variables, diagram, psychart, theme: 'dark' }),
-    [spec, states, cyclePath, tableRows, tableResults, variables, diagram, psychart],
+    () => buildFigure(spec, { states, cyclePath, tableRows, tableResults, variables, diagram, psychart, stateTableDefs, theme: 'dark' }),
+    [spec, states, cyclePath, tableRows, tableResults, variables, diagram, psychart, stateTableDefs],
   )
 
   async function onExport(format: (typeof EXPORT_FORMATS)[number]['value']) {
@@ -278,6 +290,7 @@ export default function PlotCard({
       variables,
       diagram,
       psychart,
+      stateTableDefs,
       theme,
     })
     if (!exportFigure) return

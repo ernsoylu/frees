@@ -184,7 +184,23 @@ public class SolveController {
                                 List<PlotDefDto> definedPlots,
                                 // 1-based editor line a syntax error points at, or
                                 // null for whole-system errors (no single line).
-                                Integer errorLine) {
+                                Integer errorLine,
+                                List<StateTableDto> stateTableDefs) {
+
+        /** Backward-compatible constructor for callers that predate state tables. */
+        public SolveResponse(boolean success, List<VariableDto> variables,
+                             List<BlockDto> blocks, List<ResidualDto> residuals,
+                             StatsDto stats, List<SolutionDto> solutions,
+                             List<String> unitWarnings, String error,
+                             List<String> formattedEquations,
+                             List<Map<String, Double>> cyclePath, String formattedReport,
+                             List<FunctionTableDto> codeTables,
+                             List<ParametricTableDto> parametricTables,
+                             List<PlotDefDto> definedPlots, Integer errorLine) {
+            this(success, variables, blocks, residuals, stats, solutions, unitWarnings,
+                    error, formattedEquations, cyclePath, formattedReport, codeTables,
+                    parametricTables, definedPlots, errorLine, List.of());
+        }
 
         /** Backward-compatible constructor for the common no-error-line case. */
         public SolveResponse(boolean success, List<VariableDto> variables,
@@ -198,7 +214,7 @@ public class SolveController {
                              List<PlotDefDto> definedPlots) {
             this(success, variables, blocks, residuals, stats, solutions, unitWarnings,
                     error, formattedEquations, cyclePath, formattedReport, codeTables,
-                    parametricTables, definedPlots, null);
+                    parametricTables, definedPlots, null, List.of());
         }
 
         static SolveResponse failure(String error) {
@@ -234,6 +250,18 @@ public class SolveController {
         List<PlotDefDto> out = new ArrayList<>();
         for (com.frees.backend.ast.PlotDef p : plots) {
             out.add(new PlotDefDto(p.name(), p.attributes()));
+        }
+        return out;
+    }
+
+    /** A fluid state table parsed from a STATE TABLE ... END block: its name,
+     * the declared state-point variables, and the fluid every state uses. */
+    public record StateTableDto(String name, List<String> variables, String fluid) {}
+
+    static List<StateTableDto> stateTablesOf(List<com.frees.backend.ast.StateTableDef> tables) {
+        List<StateTableDto> out = new ArrayList<>();
+        for (com.frees.backend.ast.StateTableDef t : tables) {
+            out.add(new StateTableDto(t.name(), t.variables(), t.fluid()));
         }
         return out;
     }
@@ -285,7 +313,21 @@ public class SolveController {
                                 List<PlotDefDto> definedPlots,
                                 // 1-based editor line a syntax error points at, or
                                 // null for whole-system errors (no single line).
-                                Integer errorLine) {
+                                Integer errorLine,
+                                List<StateTableDto> stateTableDefs) {
+
+        /** Backward-compatible constructor for callers that predate state tables. */
+        public CheckResponse(boolean solvable, int equations, int unknowns,
+                             List<String> variables, List<String> unitWarnings,
+                             Map<String, String> inferredUnits, String message,
+                             List<String> formattedEquations, String formattedReport,
+                             List<FunctionTableDto> codeTables,
+                             List<ParametricTableDto> parametricTables,
+                             List<PlotDefDto> definedPlots, Integer errorLine) {
+            this(solvable, equations, unknowns, variables, unitWarnings, inferredUnits,
+                    message, formattedEquations, formattedReport, codeTables,
+                    parametricTables, definedPlots, errorLine, List.of());
+        }
 
         /** Backward-compatible constructor for the common no-error-line case. */
         public CheckResponse(boolean solvable, int equations, int unknowns,
@@ -297,7 +339,7 @@ public class SolveController {
                              List<PlotDefDto> definedPlots) {
             this(solvable, equations, unknowns, variables, unitWarnings, inferredUnits,
                     message, formattedEquations, formattedReport, codeTables,
-                    parametricTables, definedPlots, null);
+                    parametricTables, definedPlots, null, List.of());
         }
     }
 
@@ -449,7 +491,9 @@ public class SolveController {
                     formattedReport,
                     codeTablesOf(parsed.defs()),
                     parametricTablesOf(parsed.parametricTables()),
-                    plotsOf(parsed.plots())));
+                    plotsOf(parsed.plots()),
+                    null,
+                    stateTablesOf(parsed.stateTables())));
         } catch (EquationParser.ParseException e) {
             String firstError = e.getMessage().lines().findFirst().orElse(e.getMessage());
             return ResponseEntity.badRequest().body(new CheckResponse(
@@ -559,7 +603,9 @@ public class SolveController {
                     formattedReport,
                     codeTablesOf(parsed.defs()),
                     parametricTablesOf(parsed.parametricTables()),
-                    plotsOf(parsed.plots())));
+                    plotsOf(parsed.plots()),
+                    null,
+                    stateTablesOf(parsed.stateTables())));
         } catch (EquationParser.ParseException e) {
             return ResponseEntity.badRequest()
                     .body(SolveResponse.failure("Syntax error:\n" + e.getMessage(),
@@ -993,6 +1039,17 @@ public class SolveController {
             Map.entry("density", "rho")
     );
 
+    /** Property symbols, longest first, for leading-prefix matching of declared
+     * state-table variables (so {@code rho...} beats {@code r...}, etc.). */
+    private static final List<String> PROPERTY_PREFIXES = PROPERTY_ALIASES.keySet().stream()
+            .sorted((a, b) -> Integer.compare(b.length(), a.length()))
+            .toList();
+
+    private static final java.util.regex.Pattern BLOCK_BRACKET_STATE =
+            java.util.regex.Pattern.compile("^([a-zA-Z][a-zA-Z_]*)\\[(\\d+)\\]$");
+    private static final java.util.regex.Pattern BLOCK_PLAIN_STATE =
+            java.util.regex.Pattern.compile("^([a-zA-Z][a-zA-Z_]*?)(_?)(\\d+)$");
+
     private static final List<PropPair> PREFERRED_PAIRS = List.of(
             new PropPair("P", "P", "h", HMASS),
             new PropPair("P", "P", "s", SMASS),
@@ -1025,20 +1082,29 @@ public class SolveController {
             fluid = "Water";
         }
 
+        // Explicit STATE TABLE blocks (if any) drive fluid-aware, per-circuit
+        // grouping; otherwise fall back to the legacy global index detection.
+        List<com.frees.backend.ast.StateTableDef> stateTables = List.of();
+        try {
+            stateTables = new EquationParser().parseResult(text).stateTables();
+        } catch (RuntimeException ignored) {
+            // text is still valid here (it solved); be defensive regardless.
+        }
+
         // 1. Resolve variables of the main result
         Map<String, Double> mutableVars = new java.util.TreeMap<>(String.CASE_INSENSITIVE_ORDER);
         mutableVars.putAll(result.variables());
 
         Map<String, String> mutableDisplayNames = new HashMap<>(result.displayNames());
 
-        resolveForVariables(mutableVars, mutableDisplayNames, fluid, targetVariables);
+        resolveStates(mutableVars, mutableDisplayNames, fluid, targetVariables, stateTables);
 
         // 2. Resolve variables of all solutions
         List<EquationSystemSolver.Solution> resolvedSolutions = new ArrayList<>();
         for (EquationSystemSolver.Solution sol : result.solutions()) {
             Map<String, Double> solVars = new java.util.TreeMap<>(String.CASE_INSENSITIVE_ORDER);
             solVars.putAll(sol.variables());
-            resolveForVariables(solVars, mutableDisplayNames, fluid, targetVariables);
+            resolveStates(solVars, mutableDisplayNames, fluid, targetVariables, stateTables);
             resolvedSolutions.add(new EquationSystemSolver.Solution(solVars, sol.residuals(), sol.maxResidual()));
         }
 
@@ -1209,6 +1275,88 @@ public class SolveController {
                 solveSingleState(knowns, template, variables, displayNames, fluid, targetVariables);
             }
         }
+    }
+
+    /** Dispatch missing-property resolution: when STATE TABLE blocks are
+     * declared, resolve each block's states with that block's fluid (so a
+     * Water circuit's P1 and a R134a circuit's P1 never collide); otherwise use
+     * the legacy global index-based detection. */
+    private void resolveStates(Map<String, Double> variables, Map<String, String> displayNames,
+                               String defaultFluid, java.util.Set<String> targetVariables,
+                               List<com.frees.backend.ast.StateTableDef> stateTables) {
+        if (stateTables.isEmpty()) {
+            resolveForVariables(variables, displayNames, defaultFluid, targetVariables);
+            return;
+        }
+        for (com.frees.backend.ast.StateTableDef st : stateTables) {
+            String fluid = (st.fluid() != null && !st.fluid().isBlank()) ? st.fluid() : defaultFluid;
+            resolveBlockStates(variables, displayNames, st.variables(), fluid, targetVariables);
+        }
+    }
+
+    /** Group only this block's declared variables by state index and fill the
+     * missing properties of each state with the block's fluid. */
+    private void resolveBlockStates(Map<String, Double> variables, Map<String, String> displayNames,
+                                    List<String> declaredVars, String fluid,
+                                    java.util.Set<String> targetVariables) {
+        StateData data = new StateData();
+        for (String var : declaredVars) {
+            Double val = variables.get(var); // case-insensitive map
+            if (val != null) {
+                parseBlockState(var, val, data);
+            }
+        }
+        for (Map.Entry<Integer, Map<String, Double>> entry : data.stateKnowns.entrySet()) {
+            Map<String, Double> knowns = entry.getValue();
+            if (knowns.size() < 2) {
+                continue;
+            }
+            String template = data.stateStyle.get(entry.getKey());
+            if (template != null) {
+                solveSingleState(knowns, template, variables, displayNames, fluid, targetVariables);
+            }
+        }
+    }
+
+    /** Parse a declared state-table variable as {@code <prop><tag><index>}: the
+     * longest leading property symbol (P, T, h, …) is the property, any middle
+     * characters are the circuit tag (e.g. the {@code w} in {@code Pw_1}), and
+     * the trailing digits are the state index. The tag is preserved in the
+     * write-back template so computed properties (e.g. {@code hw_1}) keep the
+     * same naming. */
+    private void parseBlockState(String name, Double value, StateData data) {
+        String lower = name.toLowerCase();
+        String prefix;
+        int index;
+        String tail;
+        java.util.regex.Matcher br = BLOCK_BRACKET_STATE.matcher(lower);
+        if (br.matches()) {
+            prefix = br.group(1);
+            index = Integer.parseInt(br.group(2));
+            tail = "[" + index + "]";
+        } else {
+            java.util.regex.Matcher pl = BLOCK_PLAIN_STATE.matcher(lower);
+            if (!pl.matches()) {
+                return;
+            }
+            prefix = pl.group(1);
+            index = Integer.parseInt(pl.group(3));
+            tail = pl.group(2) + index; // group(2) is "_" or ""
+        }
+        String canonicalProp = null;
+        String tag = "";
+        for (String sym : PROPERTY_PREFIXES) {
+            if (prefix.startsWith(sym)) {
+                canonicalProp = PROPERTY_ALIASES.get(sym);
+                tag = prefix.substring(sym.length());
+                break;
+            }
+        }
+        if (canonicalProp == null) {
+            return;
+        }
+        data.stateKnowns.computeIfAbsent(index, k -> new HashMap<>()).put(canonicalProp, value);
+        data.stateStyle.putIfAbsent(index, "%s" + tag + tail);
     }
 
     private static boolean containsIgnoreCase(java.util.Collection<String> list, String target) {

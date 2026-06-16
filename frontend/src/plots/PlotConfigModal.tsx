@@ -27,6 +27,7 @@ import {
   newPlotSpec,
 } from './types'
 import { defaultUnitId, unitIdsFor } from './units'
+import { StateTableDto } from '../api'
 
 interface Props {
   /** Existing spec to edit, or null to create a new plot. */
@@ -37,6 +38,9 @@ interface Props {
   fluids: string[]
   tableVars: string[]
   hasStates: boolean
+  /** Declared STATE TABLE blocks, so property/psychro plots can overlay one
+   * specific circuit's states (and adopt its fluid). */
+  stateTables?: StateTableDto[]
   onSave: (spec: PlotSpec) => void
   onClose: () => void
 }
@@ -143,11 +147,13 @@ function PropertySection({
   config,
   fluids,
   hasStates,
+  stateTables = [],
   onChange,
 }: Readonly<{
   config: PropertyConfig
   fluids: string[]
   hasStates: boolean
+  stateTables?: StateTableDto[]
   onChange: (config: PropertyConfig) => void
 }>) {
   return (
@@ -184,11 +190,36 @@ function PropertySection({
         />
       </Group>
       <Divider label="State points" labelPosition="left" />
-      {!hasStates && (
+      {!hasStates && stateTables.length === 0 && (
         <Text size="xs" c="dimmed">
-          No states detected. Solve a system with numbered properties (h1,
-          s1, T[2], ...) and they appear here and in the States tab.
+          No states detected. Declare a STATE TABLE block (with FLUID = ...) or
+          solve a system with numbered properties (h1, s1, T[2], ...); states
+          appear here and in the States tab.
         </Text>
+      )}
+      {stateTables.length > 0 && (
+        <Select
+          label="State table (circuit)"
+          description="Overlay one circuit's states; selecting it also sets the fluid."
+          size="xs"
+          data={[
+            { value: '', label: 'All detected states' },
+            ...stateTables.map((s) => ({
+              value: s.name,
+              label: s.fluid ? `${s.name} — ${s.fluid}` : s.name,
+            })),
+          ]}
+          value={config.stateTable ?? ''}
+          onChange={(name) => {
+            const picked = stateTables.find((s) => s.name === name)
+            onChange({
+              ...config,
+              stateTable: name ? name : null,
+              fluid: picked?.fluid ?? config.fluid,
+            })
+          }}
+          allowDeselect={false}
+        />
       )}
       <Group gap="md">
         <Checkbox
@@ -222,9 +253,11 @@ function PropertySection({
 
 function PsychroSection({
   config,
+  stateTables = [],
   onChange,
 }: Readonly<{
   config: PsychroConfig
+  stateTables?: StateTableDto[]
   onChange: (config: PsychroConfig) => void
 }>) {
   return (
@@ -281,6 +314,23 @@ function PsychroSection({
         States with a dry-bulb temperature and a humidity ratio (e.g. T1 and
         w1) are drawn on the chart.
       </Text>
+      {stateTables.length > 0 && (
+        <Select
+          label="State table (circuit)"
+          description="Overlay only this circuit's states."
+          size="xs"
+          data={[
+            { value: '', label: 'All detected states' },
+            ...stateTables.map((s) => ({
+              value: s.name,
+              label: s.fluid ? `${s.name} — ${s.fluid}` : s.name,
+            })),
+          ]}
+          value={config.stateTable ?? ''}
+          onChange={(name) => onChange({ ...config, stateTable: name ? name : null })}
+          allowDeselect={false}
+        />
+      )}
       <Group gap="md">
         <Checkbox
           label="Overlay states"
@@ -563,6 +613,7 @@ export default function PlotConfigModal({
   fluids,
   tableVars,
   hasStates,
+  stateTables = [],
   onSave,
   onClose,
 }: Readonly<Props>) {
@@ -615,6 +666,7 @@ export default function PlotConfigModal({
             config={draft.property}
             fluids={fluids}
             hasStates={hasStates}
+            stateTables={stateTables}
             onChange={(property) =>
               setDraft((d) => ({
                 ...d,
@@ -631,6 +683,7 @@ export default function PlotConfigModal({
         {draft.kind === 'psychro' && (
           <PsychroSection
             config={draft.psychro}
+            stateTables={stateTables}
             onChange={(psychro) => setDraft({ ...draft, psychro })}
           />
         )}

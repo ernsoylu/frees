@@ -1,6 +1,6 @@
-import { Button, Group, Select, Table, Text, Stack } from '@mantine/core'
-import { VariableResult } from './api'
-import { detectStates } from './plots/stateTable'
+import { Badge, Button, Group, Select, Table, Text, Stack } from '@mantine/core'
+import { StateTableDto, VariableResult } from './api'
+import { detectStates, detectStateTables, StateTable } from './plots/stateTable'
 import { PROPERTY_UNITS, resolveUnit, unitIdsFor } from './plots/units'
 import { formatValue } from './format'
 
@@ -57,8 +57,67 @@ function ColumnHeader({
  * (columns), with a display unit selector per column. These states can be
  * overlaid on property diagrams and psychrometric charts in the Plots tab.
  */
+/** One state table rendered as a grid: states are rows, properties columns. */
+function StateGrid({
+  state,
+  unitIds,
+  onUnitIdsChange,
+}: Readonly<{
+  state: StateTable
+  unitIds: Record<string, string>
+  onUnitIdsChange: (updater: (prev: Record<string, string>) => Record<string, string>) => void
+}>) {
+  const unitIdOf = (property: string): string =>
+    unitIds[property] ?? PROPERTY_UNITS[property]?.[0]?.id ?? '-'
+  return (
+    <Table striped highlightOnHover withTableBorder stickyHeader>
+      <Table.Thead>
+        <Table.Tr>
+          <Table.Th>State</Table.Th>
+          {state.columns.map((p) => (
+            <Table.Th key={p}>
+              <ColumnHeader
+                property={p}
+                unitId={unitIdOf(p)}
+                onUnitChange={(id) => onUnitIdsChange((u) => ({ ...u, [p]: id }))}
+              />
+            </Table.Th>
+          ))}
+        </Table.Tr>
+      </Table.Thead>
+      <Table.Tbody>
+        {state.indices.map((index) => (
+          <Table.Tr key={index}>
+            <Table.Td>{index}</Table.Td>
+            {state.columns.map((p) => {
+              const value = state.values[index][p]
+              const unit = resolveUnit(p, unitIdOf(p), false)
+              return (
+                <Table.Td
+                  key={p}
+                  style={{
+                    textAlign: 'right',
+                    fontFamily: 'var(--mantine-font-family-monospace)',
+                  }}
+                >
+                  {value === undefined
+                    ? '—'
+                    : formatValue(value * unit.scale + unit.offset)}
+                </Table.Td>
+              )
+            })}
+          </Table.Tr>
+        ))}
+      </Table.Tbody>
+    </Table>
+  )
+}
+
 interface StatesTabProps {
   solvedVariables: VariableResult[]
+  /** Explicit STATE TABLE blocks declared in the editor; when present, states
+   * are grouped and labelled per block (fluid-aware) instead of implicitly. */
+  stateTableDefs?: StateTableDto[]
   unitIds: Record<string, string>
   onUnitIdsChange: (unitIds: Record<string, string> | ((prev: Record<string, string>) => Record<string, string>)) => void
   onFillMissing?: () => void
@@ -68,27 +127,39 @@ interface StatesTabProps {
 
 export default function StatesTab({
   solvedVariables,
+  stateTableDefs,
   unitIds,
   onUnitIdsChange,
   onFillMissing,
   solving = false,
   solvable = false,
 }: Readonly<StatesTabProps>) {
-  const states = detectStates(solvedVariables)
+  const declared = detectStateTables(solvedVariables, stateTableDefs)
+  const implicit = declared.length === 0 ? detectStates(solvedVariables) : null
 
-  if (states.indices.length === 0) {
+  const fillButton = onFillMissing && (
+    <Button
+      size="xs"
+      variant="light"
+      color="teal"
+      onClick={onFillMissing}
+      loading={solving}
+      disabled={!solvable}
+    >
+      Fill Missing Values
+    </Button>
+  )
+
+  if (implicit && implicit.indices.length === 0) {
     return (
       <Text size="sm" c="dimmed">
-        No state points detected. Name variables with a property and a state
-        number — h1, s1, T[2], P_3, T_wb1, w1 — and solve; each numbered
-        state becomes a row here and can be drawn on the diagrams in the
-        Plots tab.
+        No state points detected. Declare a STATE TABLE block (e.g.
+        {' '}<code>STATE TABLE Cycle(P1, T1, h2) ... FLUID = Water ... END</code>),
+        or name variables with a property and a state number — h1, s1, T[2],
+        P_3, T_wb1, w1 — and solve; each numbered state becomes a row here and
+        can be drawn on the diagrams in the Plots tab.
       </Text>
     )
-  }
-
-  function unitIdOf(property: string): string {
-    return unitIds[property] ?? PROPERTY_UNITS[property]?.[0]?.id ?? '-'
   }
 
   return (
@@ -97,61 +168,31 @@ export default function StatesTab({
         <Text size="sm" c="dimmed">
           Each numbered state is displayed as a row. Missing variables can be solved using the button.
         </Text>
-        {onFillMissing && (
-          <Button
-            size="xs"
-            variant="light"
-            color="blue"
-            onClick={onFillMissing}
-            loading={solving}
-            disabled={!solvable}
-          >
-            Fill Missing Values
-          </Button>
-        )}
+        {fillButton}
       </Group>
 
       <div style={{ overflow: 'auto', flex: 1 }}>
-        <Table striped highlightOnHover withTableBorder stickyHeader>
-          <Table.Thead>
-            <Table.Tr>
-              <Table.Th>State</Table.Th>
-              {states.columns.map((p) => (
-                <Table.Th key={p}>
-                  <ColumnHeader
-                    property={p}
-                    unitId={unitIdOf(p)}
-                    onUnitChange={(id) => onUnitIdsChange((u) => ({ ...u, [p]: id }))}
-                  />
-                </Table.Th>
-              ))}
-            </Table.Tr>
-          </Table.Thead>
-          <Table.Tbody>
-            {states.indices.map((index) => (
-              <Table.Tr key={index}>
-                <Table.Td>{index}</Table.Td>
-                {states.columns.map((p) => {
-                  const value = states.values[index][p]
-                  const unit = resolveUnit(p, unitIdOf(p), false)
-                  return (
-                    <Table.Td
-                      key={p}
-                      style={{
-                        textAlign: 'right',
-                        fontFamily: 'var(--mantine-font-family-monospace)',
-                      }}
-                    >
-                      {value === undefined
-                        ? '—'
-                        : formatValue(value * unit.scale + unit.offset)}
-                    </Table.Td>
-                  )
-                })}
-              </Table.Tr>
+        {implicit ? (
+          <StateGrid state={implicit} unitIds={unitIds} onUnitIdsChange={onUnitIdsChange} />
+        ) : (
+          <Stack gap="lg">
+            {declared.map((st) => (
+              <Stack key={st.name} gap={6}>
+                <Group gap="xs" align="center" wrap="nowrap">
+                  <Text size="sm" fw={700}>{st.name}</Text>
+                  {st.fluid && (
+                    <Badge size="sm" variant="light" color="teal">{st.fluid}</Badge>
+                  )}
+                </Group>
+                {st.indices.length === 0 ? (
+                  <Text size="xs" c="dimmed">No solved states yet for this table.</Text>
+                ) : (
+                  <StateGrid state={st} unitIds={unitIds} onUnitIdsChange={onUnitIdsChange} />
+                )}
+              </Stack>
             ))}
-          </Table.Tbody>
-        </Table>
+          </Stack>
+        )}
       </div>
     </Stack>
   )
