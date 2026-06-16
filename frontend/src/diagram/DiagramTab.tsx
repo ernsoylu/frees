@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import {
   ActionIcon,
   Alert,
@@ -3449,6 +3450,10 @@ interface Props {
    * diagram-tab strip — used when each diagram is its own dock window.
    */
   singleDiagramId?: string
+  /** Shared Inspector edge-panel DOM node to portal Properties/Layers into. */
+  inspectorOutlet?: HTMLElement | null
+  /** Whether this is the focused diagram window (owns the shared Inspector). */
+  isActive?: boolean
 }
 
 const PLAYBACK_SPEEDS: { label: string; value: string; ms: number }[] = [
@@ -3476,6 +3481,8 @@ export default function DiagramTab(props: Readonly<Props>) {
     onDiagramsChange: propsOnDiagramsChange,
     onActiveDiagramIdChange: propsOnActiveIdChange,
     singleDiagramId,
+    inspectorOutlet,
+    isActive,
   } = props
 
   const [localDiagrams, setLocalDiagrams] = useState<DiagramSpec[]>(() => {
@@ -6234,8 +6241,8 @@ export default function DiagramTab(props: Readonly<Props>) {
         </Paper>
       </Stack>
 
-      {!runMode && (
-        <Paper withBorder p="sm" w={250} style={{ flexShrink: 0 }}>
+      {!runMode && (() => {
+        const inspectorBody = (
           <ScrollArea h="100%" type="auto">
             {selected ? (
               <PropertiesPanel
@@ -6419,8 +6426,26 @@ export default function DiagramTab(props: Readonly<Props>) {
               </Stack>
             )}
           </ScrollArea>
-        </Paper>
-      )}
+        )
+        // Portal Properties/Layers into the shared Inspector edge panel when
+        // this is the focused diagram window; if the Inspector isn't open, fall
+        // back to an inline column so properties stay reachable.
+        if (inspectorOutlet) {
+          return isActive
+            ? createPortal(
+                <div style={{ height: '100%', padding: 'var(--mantine-spacing-sm)' }}>
+                  {inspectorBody}
+                </div>,
+                inspectorOutlet,
+              )
+            : null
+        }
+        return (
+          <Paper withBorder p="sm" w={250} style={{ flexShrink: 0 }}>
+            {inspectorBody}
+          </Paper>
+        )
+      })()}
 
       <Modal
         opened={saveCompModalOpen}

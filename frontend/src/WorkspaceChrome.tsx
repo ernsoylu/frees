@@ -15,6 +15,7 @@ import {
   useMantineColorScheme,
 } from '@mantine/core'
 import {
+  IconAdjustments,
   IconChartGridDots,
   IconChartLine,
   IconChecks,
@@ -42,8 +43,8 @@ import {
   IconSettings,
   IconTable,
   IconTargetArrow,
+  IconTrash,
   IconSearch,
-  IconTemperature,
   IconVariable,
 } from '@tabler/icons-react'
 import { spotlight } from '@mantine/spotlight'
@@ -61,13 +62,7 @@ import { FUNCTION_CATEGORIES } from './functionCatalog'
 const VIEWS = [
   { value: 'equations', label: 'Editor', tip: 'Editor', icon: IconCode },
   { value: 'table', label: 'Tables', tip: 'Tables — parametric runs & curve functions', icon: IconTable },
-  { value: 'plots', label: 'Plots', tip: 'Plots (X-Y)', icon: IconChartLine },
-  {
-    value: 'thermo',
-    label: 'Thermo',
-    tip: 'Thermodynamics — property & psychrometric plots, state points',
-    icon: IconTemperature,
-  },
+  { value: 'plots', label: 'Plots', tip: 'Plots — X-Y, property & psychrometric', icon: IconChartLine },
   {
     value: 'digitizer',
     label: 'Digitizer',
@@ -75,6 +70,7 @@ const VIEWS = [
     icon: IconChartGridDots,
   },
   { value: 'diagram', label: 'Diagram', tip: 'Diagram — interactive schematic editor', icon: IconSchema },
+  { value: 'inspector', label: 'Inspector', tip: 'Inspector — focused diagram properties & layers', icon: IconAdjustments },
   { value: 'solution', label: 'Solution', tip: 'Solution — solved variables & residuals', icon: IconListDetails },
 ]
 
@@ -87,15 +83,15 @@ interface RailProps {
   /** Specific window ids open (e.g. "diagram:<id>") for per-instance marks. */
   openIds?: string[]
   /** Diagrams available to open as individual windows. */
-  diagrams?: { id: string; name: string }[]
+  diagrams?: { id: string; name: string; deletable?: boolean }[]
   /** Number of diagram windows currently open (badge on the Diagram icon). */
   diagramCount?: number
-  /** X-Y plots available to open as individual windows. */
-  plots?: { id: string; name: string }[]
+  /** Plots (X-Y, property, psychrometric) available to open as windows. */
+  plots?: { id: string; name: string; tag?: string; deletable?: boolean }[]
   /** Number of plot windows currently open (badge on the Plots icon). */
   plotCount?: number
   /** Tables available to open as individual windows. */
-  workspaceTables?: { id: string; name: string }[]
+  workspaceTables?: { id: string; name: string; deletable?: boolean }[]
   /** Number of table windows currently open (badge on the Tables icon). */
   tableCount?: number
   onSelect: (view: string) => void
@@ -103,10 +99,15 @@ interface RailProps {
   onResetLayout?: () => void
   onOpenDiagram?: (id: string) => void
   onNewDiagram?: () => void
+  onDeleteDiagram?: (id: string) => void
   onOpenPlot?: (id: string) => void
-  onNewPlot?: () => void
+  onNewPlot?: (kind: 'xy' | 'property' | 'psychro') => void
+  onDeletePlot?: (id: string) => void
   onOpenTable?: (id: string) => void
   onNewTable?: (kind: 'parametric' | 'function-1d' | 'function-2d') => void
+  onDeleteTable?: (id: string) => void
+  /** Open the singleton Fluid State table window. */
+  onOpenStates?: () => void
   onVariableInfo: () => void
   onMinMax: () => void
   onCurveFit: () => void
@@ -129,6 +130,7 @@ function InstanceLauncher({
   items,
   openIds,
   onOpen,
+  onDelete,
 }: Readonly<{
   expanded: boolean
   active: boolean
@@ -138,9 +140,10 @@ function InstanceLauncher({
   newActions: { label: string; onClick: () => void }[]
   emptyLabel: string
   icon: React.ReactNode
-  items: { id: string; name: string }[]
+  items: { id: string; name: string; tag?: string; deletable?: boolean }[]
   openIds: Set<string>
   onOpen?: (id: string) => void
+  onDelete?: (id: string) => void
 }>) {
   const variant = active ? 'light' : 'subtle'
   const color = active ? 'blue' : 'gray'
@@ -197,6 +200,30 @@ function InstanceLauncher({
               ) : (
                 <span style={{ display: 'inline-block', width: 10 }} />
               )
+            }
+            rightSection={
+              <Group gap={4} wrap="nowrap" align="center">
+                {it.tag && (
+                  <Text size="9px" c="dimmed">
+                    {it.tag}
+                  </Text>
+                )}
+                {it.deletable && onDelete && (
+                  <ActionIcon
+                    component="span"
+                    size="xs"
+                    variant="subtle"
+                    color="red"
+                    aria-label={`Delete ${it.name}`}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onDelete(it.id)
+                    }}
+                  >
+                    <IconTrash size={12} />
+                  </ActionIcon>
+                )}
+              </Group>
             }
           >
             {it.name}
@@ -335,10 +362,14 @@ export function Rail({
   onResetLayout,
   onOpenDiagram,
   onNewDiagram,
+  onDeleteDiagram,
   onOpenPlot,
   onNewPlot,
+  onDeletePlot,
   onOpenTable,
   onNewTable,
+  onDeleteTable,
+  onOpenStates,
   onVariableInfo,
   onMinMax,
   onCurveFit,
@@ -410,6 +441,7 @@ export function Rail({
               items={diagrams}
               openIds={openIdSet}
               onOpen={onOpenDiagram}
+              onDelete={onDeleteDiagram}
             />
           ) : view.value === 'plots' && plots ? (
             <InstanceLauncher
@@ -419,12 +451,17 @@ export function Rail({
               count={plotCount}
               idPrefix="plot:"
               label="Plots"
-              newActions={[{ label: 'New plot', onClick: () => onNewPlot?.() }]}
+              newActions={[
+                { label: 'New X-Y plot', onClick: () => onNewPlot?.('xy') },
+                { label: 'New property diagram', onClick: () => onNewPlot?.('property') },
+                { label: 'New psychrometric chart', onClick: () => onNewPlot?.('psychro') },
+              ]}
               emptyLabel="No plots yet"
               icon={<IconChartLine size={iconSize} stroke={1.6} />}
               items={plots}
               openIds={openIdSet}
               onOpen={onOpenPlot}
+              onDelete={onDeletePlot}
             />
           ) : view.value === 'table' && workspaceTables ? (
             <InstanceLauncher
@@ -438,12 +475,14 @@ export function Rail({
                 { label: 'New parametric table', onClick: () => onNewTable?.('parametric') },
                 { label: 'New function table (1-arg)', onClick: () => onNewTable?.('function-1d') },
                 { label: 'New function table (curve)', onClick: () => onNewTable?.('function-2d') },
+                { label: 'Add fluid state table', onClick: () => onOpenStates?.() },
               ]}
               emptyLabel="No tables yet"
               icon={<IconTable size={iconSize} stroke={1.6} />}
               items={workspaceTables}
               openIds={openIdSet}
               onOpen={onOpenTable}
+              onDelete={onDeleteTable}
             />
           ) : (
             <RailEntry

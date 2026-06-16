@@ -1,14 +1,12 @@
 import { ChangeEvent, useCallback, useEffect, useMemo, useState, useRef, type ReactNode } from 'react'
 import {
   Alert,
+  Badge,
   Button,
-  Divider,
   Flex,
   Group,
-  Menu,
   Paper,
   SegmentedControl,
-  Select,
   Stack,
   Text,
   Title,
@@ -80,7 +78,7 @@ import StatesTab from './StatesTab'
 import { DigitizerTab, DigitizedExport } from './DigitizerTab'
 import DiagramTab, { loadDiagrams, saveDiagrams } from './diagram/DiagramTab'
 import { DiagramSpec } from './diagram/types'
-import { PlotSpec } from './plots/types'
+import { PlotSpec, PlotKind } from './plots/types'
 import { plotDefToSpec } from './plots/fromCode'
 import SolutionPanel from './SolutionPanel'
 import ExamplesModal from './ExamplesModal'
@@ -91,7 +89,6 @@ import EquationEditor, { EquationEditorHandle } from './EquationEditor'
 import { ConfirmModal, MessageModal, TextPromptModal } from './dialogs'
 import { Rail, TopBar } from './WorkspaceChrome'
 import { WorkspaceDock, type WorkspaceDockHandle, type OpenWindow } from './workspace/WorkspaceDock'
-import { EXPORT_FORMATS } from './plots/exportPlot'
 import { detectStates } from './plots/stateTable'
 import PlotConfigModal from './plots/PlotConfigModal'
 import {
@@ -271,6 +268,10 @@ export default function App() {
   // window kinds (drives the sidebar's open-state indicators).
   const dockRef = useRef<WorkspaceDockHandle | null>(null)
   const [openWindows, setOpenWindows] = useState<OpenWindow[]>([])
+  // Shared Inspector edge panel: the focused diagram window portals its
+  // Properties/Layers into this outlet so one inspector serves all diagrams.
+  const [inspectorOutlet, setInspectorOutlet] = useState<HTMLDivElement | null>(null)
+  const [activeDiagramWindowId, setActiveDiagramWindowId] = useState<string | null>(null)
   const openKinds = useMemo(() => openWindows.map((w) => w.kind), [openWindows])
   const openIds = useMemo(() => openWindows.map((w) => w.id), [openWindows])
   // Tables (Epic 8): any number of Parametric and Curve Tables; the active
@@ -286,12 +287,12 @@ export default function App() {
   const [alterColumn, setAlterColumn] = useState<string | null>(null)
   const [tableChecking, setTableChecking] = useState(false)
   const [plots, setPlots] = useState<PlotSpec[]>(() => boot?.plots ?? [])
-  const [activeThermoPlotId, setActiveThermoPlotId] = useState<string | null>(null)
   // Plots are addressed per-window now; only the setter is needed.
   const [, setActivePlotId] = useState<string | null>(null)
-  // New X-Y plot creation is lifted to App so the sidebar's "New plot" can open
-  // the config modal even though plots are now per-instance dock windows.
-  const [addingXyPlot, setAddingXyPlot] = useState(false)
+  // New plot creation is lifted to App (the sidebar "New …" actions) so the
+  // config modal opens even though plots are now per-instance dock windows.
+  // The kind decides which plot type the modal creates: xy / property / psychro.
+  const [newPlotKind, setNewPlotKind] = useState<PlotKind | null>(null)
   const [diagrams, setDiagrams] = useState<DiagramSpec[]>(() =>
     boot?.diagrams?.length ? boot.diagrams : loadDiagrams(),
   )
@@ -301,9 +302,6 @@ export default function App() {
     const list = boot?.diagrams?.length ? boot.diagrams : loadDiagrams()
     return list[0]?.id ?? null
   })
-  const [editingThermoPlot, setEditingThermoPlot] = useState<PlotSpec | null>(null)
-  const [addingThermoPlot, setAddingThermoPlot] = useState(false)
-  const [thermoExportTrigger, setThermoExportTrigger] = useState<{ format: string; timestamp: number } | null>(null)
   const [fluids, setFluids] = useState<string[]>([])
   const [stateUnitIds, setStateUnitIds] = useState<Record<string, string>>(() => {
     if (boot) return boot.stateUnitIds ?? {}
@@ -896,22 +894,16 @@ export default function App() {
   const handleNavigate = useCallback(
     (action: { tab?: string; query?: string; plotId?: string; diagramId?: string }) => {
       if (action.tab) {
-        setActiveTab(action.tab)
+        dockRef.current?.open(action.tab)
       }
       if (action.diagramId) {
-        setActiveTab('diagram')
-        setActiveDiagramId(action.diagramId)
+        const d = diagrams.find((x) => x.id === action.diagramId)
+        if (d) dockRef.current?.openInstance(`diagram:${action.diagramId}`, 'diagram', d.name)
       }
       if (action.plotId) {
         const targetPlot = plots.find((p) => p.id === action.plotId)
         if (targetPlot) {
-          if (targetPlot.kind === 'property' || targetPlot.kind === 'psychro') {
-            setActiveTab('thermo')
-            setActiveThermoPlotId(action.plotId)
-          } else {
-            setActiveTab('plots')
-            setActivePlotId(action.plotId)
-          }
+          dockRef.current?.openInstance(`plot:${action.plotId}`, 'plot', targetPlot.name)
         }
       }
       if (action.query) {
@@ -996,6 +988,21 @@ export default function App() {
     const userNames = new Set(plots.map((p) => p.name.toLowerCase()))
     return [...plots, ...codePlots.filter((c) => !userNames.has(c.name.toLowerCase()))]
   }, [plots, codePlots])
+
+  // Auto-close dock windows whose backing instance no longer exists — e.g. a
+  // plot removed from its card, a deleted diagram/table, or a stale window
+  // restored from a saved layout. Without this they'd render as blank panels.
+  useEffect(() => {
+    const valid = new Set<string>([
+      'equations', 'table', 'plots', 'digitizer', 'solution', 'states', 'inspector',
+      ...diagrams.map((d) => `diagram:${d.id}`),
+      ...mergedPlots.map((p) => `plot:${p.id}`),
+      ...tables.map((t) => `table:${t.id}`),
+    ])
+    for (const w of openWindows) {
+      if (!valid.has(w.id)) dockRef.current?.close(w.id)
+    }
+  }, [diagrams, mergedPlots, tables, openWindows])
 
   const baseVariables =
     solutions.length > 0 ? solutions[0].variables : result?.variables ?? []
@@ -1186,113 +1193,33 @@ export default function App() {
         )}
       </div>
     ),
-    thermo: (
-      <div style={{ height: '100%', minHeight: 0, display: 'flex', gap: 'var(--mantine-spacing-sm)', padding: 'var(--mantine-spacing-md)' }}>
-        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-          <PlotTab
-            kinds={['property', 'psychro']}
-            emptyHint="No diagrams yet. Click 'Add Diagram' in the right-hand panel to create a property diagram (T-s, log P-h, P-v, …) or a psychrometric chart; solved state points can be overlaid on both."
-            plots={mergedPlots}
-            onPlotsChange={handlePlotsChange}
-            solvedVariables={result?.variables ?? []}
-            cyclePath={result?.cyclePath}
-            tableVars={tableVars}
-            rows={paramRows}
-            results={tableResults}
-            activePlotId={activeThermoPlotId}
-            onActivePlotIdChange={setActiveThermoPlotId}
-            hideHeader={true}
-            exportTrigger={thermoExportTrigger}
-          />
-        </div>
-        <Paper withBorder p="md" w={480} display="flex" style={{ flexDirection: 'column', minHeight: 0, flexShrink: 0, overflow: 'auto' }}>
-          <Group justify="space-between" mb={4} wrap="nowrap" align="center">
-            <Title order={4} c="blue.4">Thermodynamics</Title>
-            <Button size="xs" onClick={() => setAddingThermoPlot(true)}>
-              Add Diagram
-            </Button>
-          </Group>
-          <Text size="xs" c="dimmed" mb="xs">
-            Diagrams &amp; state points. Full variable solutions are on the
-            Solution panel.
-          </Text>
-          {plots.some((p) => p.kind === 'property' || p.kind === 'psychro') ? (
-            <Stack gap="xs" mb="md">
-              <Select
-                label="Active Diagram"
-                size="xs"
-                data={plots
-                  .filter((p) => p.kind === 'property' || p.kind === 'psychro')
-                  .map((p) => ({ value: p.id, label: p.name }))}
-                value={
-                  activeThermoPlotId ??
-                  plots.find((p) => p.kind === 'property' || p.kind === 'psychro')?.id ??
-                  ''
-                }
-                onChange={(val) => val && setActiveThermoPlotId(val)}
-              />
-              {(() => {
-                const current = plots.find((p) => p.id === activeThermoPlotId) || plots.find((p) => p.kind === 'property' || p.kind === 'psychro') || null
-                if (!current) return null
-                return (
-                  <Group gap="xs" wrap="nowrap">
-                    <Button variant="default" size="xs" flex={1} onClick={() => setEditingThermoPlot(current)}>
-                      Configure
-                    </Button>
-                    <Menu shadow="md">
-                      <Menu.Target>
-                        <Button variant="default" size="xs" flex={1}>
-                          Export
-                        </Button>
-                      </Menu.Target>
-                      <Menu.Dropdown>
-                        {EXPORT_FORMATS.map((f) => (
-                          <Menu.Item
-                            key={f.value}
-                            onClick={() => setThermoExportTrigger({ format: f.value, timestamp: Date.now() })}
-                          >
-                            {f.label}
-                          </Menu.Item>
-                        ))}
-                      </Menu.Dropdown>
-                    </Menu>
-                    <Button
-                      variant="subtle"
-                      color="red"
-                      size="xs"
-                      onClick={() => {
-                        const nextPlots = plots.filter((p) => p.id !== current.id)
-                        handlePlotsChange(nextPlots)
-                        const remaining = nextPlots.find((p) => p.kind === 'property' || p.kind === 'psychro')
-                        setActiveThermoPlotId(remaining?.id ?? null)
-                      }}
-                    >
-                      Remove
-                    </Button>
-                  </Group>
-                )
-              })()}
-            </Stack>
-          ) : (
-            <Text size="xs" c="dimmed" mb="md" style={{ fontStyle: 'italic' }}>
-              No diagrams added yet. Click "Add Diagram" above to start.
-            </Text>
-          )}
-          <Divider my="sm" label="State Points" labelPosition="left" />
-          <StatesTab
-            solvedVariables={result?.variables ?? []}
-            unitIds={stateUnitIds}
-            onUnitIdsChange={handleStateUnitIdsChange}
-            onFillMissing={() => onSolve(true)}
-            solving={solving}
-            solvable={solvable}
-          />
-        </Paper>
+    states: (
+      <div style={panelPad}>
+        <Group justify="space-between" mb="xs" wrap="nowrap" align="center">
+          <Title order={5} c="teal.4">Fluid State Table</Title>
+          <Text size="xs" c="dimmed">Solved state points</Text>
+        </Group>
+        <StatesTab
+          solvedVariables={result?.variables ?? []}
+          unitIds={stateUnitIds}
+          onUnitIdsChange={handleStateUnitIdsChange}
+          onFillMissing={() => onSolve(true)}
+          solving={solving}
+          solvable={solvable}
+        />
       </div>
     ),
     digitizer: (
       <div style={{ height: '100%', minHeight: 0 }}>
         <DigitizerTab key={`digitizer-${workspaceEpoch}`} onSendToFunctionTable={sendDigitizedToFunctionTable} />
+      </div>
+    ),
+    inspector: (
+      <div style={{ height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+        <Text size="xs" c="dimmed" p={6}>
+          Properties of the focused diagram. Select an element on its canvas.
+        </Text>
+        <div ref={setInspectorOutlet} style={{ flex: 1, minHeight: 0, overflow: 'hidden' }} />
       </div>
     ),
     solution: (
@@ -1313,9 +1240,15 @@ export default function App() {
     equations: 'Editor',
     table: 'Tables',
     plots: 'Plots',
-    thermo: 'Thermo',
     digitizer: 'Digitizer',
     solution: 'Solution',
+    states: 'Fluid States',
+    inspector: 'Inspector',
+  }
+  const PLOT_KIND_LABEL: Record<PlotKind, string> = {
+    xy: 'X-Y',
+    property: 'Property',
+    psychro: 'Psychrometric',
   }
 
   // Per-instance Diagram windows: each diagram opens as its own dock window
@@ -1346,21 +1279,30 @@ export default function App() {
           activeDiagramId={d.id}
           onDiagramsChange={setDiagrams}
           onActiveDiagramIdChange={setActiveDiagramId}
+          inspectorOutlet={inspectorOutlet}
+          isActive={activeDiagramWindowId === `diagram:${d.id}`}
         />
       </div>
     )
   }
 
-  // Per-instance Plot windows: each X-Y plot opens as its own dock window
-  // ("plot:<id>"). Plot data is global solve output, so these are self-contained.
-  const xyPlots = mergedPlots.filter((p) => p.kind === 'xy')
-  for (const pl of xyPlots) {
+  // Per-instance Plot windows: every plot (X-Y, property diagram, or
+  // psychrometric chart) opens as its own dock window ("plot:<id>"). Plot data
+  // is global solve output, so these are self-contained. A kind chip
+  // distinguishes thermo (property/psychro) windows from X-Y plots.
+  for (const pl of mergedPlots) {
     const winId = `plot:${pl.id}`
+    const isThermo = pl.kind === 'property' || pl.kind === 'psychro'
     panelTitles[winId] = pl.name
     panelContent[winId] = (
       <div style={panelPad}>
+        <Group justify="space-between" mb={6} wrap="nowrap" align="center">
+          <Badge size="xs" variant="light" color={isThermo ? 'teal' : 'blue'}>
+            {PLOT_KIND_LABEL[pl.kind]}
+          </Badge>
+        </Group>
         <PlotTab
-          kinds={['xy']}
+          kinds={[pl.kind]}
           singlePlotId={pl.id}
           emptyHint="This plot was removed."
           plots={mergedPlots}
@@ -1433,21 +1375,25 @@ export default function App() {
         active={activeTab}
         openKinds={openKinds}
         openIds={openIds}
-        diagrams={diagrams.map((d) => ({ id: d.id, name: d.name }))}
-        plots={xyPlots.map((p) => ({ id: p.id, name: p.name }))}
+        diagrams={diagrams.map((d) => ({ id: d.id, name: d.name, deletable: true }))}
+        plots={mergedPlots.map((p) => ({ id: p.id, name: p.name, tag: PLOT_KIND_LABEL[p.kind], deletable: !p.fromCode }))}
         plotCount={openWindows.filter((w) => w.kind === 'plot').length}
         onOpenPlot={(id) => {
-          const p = xyPlots.find((x) => x.id === id)
+          const p = mergedPlots.find((x) => x.id === id)
           if (p) dockRef.current?.openInstance(`plot:${id}`, 'plot', p.name)
         }}
-        onNewPlot={() => setAddingXyPlot(true)}
+        onNewPlot={(kind) => setNewPlotKind(kind)}
+        onDeletePlot={(id) => handlePlotsChange(plots.filter((p) => p.id !== id))}
         diagramCount={openWindows.filter((w) => w.kind === 'diagram').length}
-        workspaceTables={tables.map((t) => ({ id: t.id, name: t.name }))}
+        onDeleteDiagram={(id) => setDiagrams((prev) => prev.filter((d) => d.id !== id))}
+        workspaceTables={tables.map((t) => ({ id: t.id, name: t.name, deletable: t.source !== 'code' }))}
         tableCount={openWindows.filter((w) => w.kind === 'table').length}
         onOpenTable={(id) => {
           const t = tables.find((x) => x.id === id)
           if (t) dockRef.current?.openInstance(`table:${id}`, 'table', t.name)
         }}
+        onDeleteTable={(id) => setTables((prev) => prev.filter((t) => t.id !== id))}
+        onOpenStates={() => dockRef.current?.open('states')}
         onNewTable={(kind) => {
           const t =
             kind === 'parametric'
@@ -1679,13 +1625,19 @@ export default function App() {
           <WorkspaceDock
             content={panelContent}
             titles={panelTitles}
-            defaultOpen={['equations', 'solution']}
+            defaultOpen={['equations', 'solution', 'inspector']}
+            edgeKinds={['solution', 'inspector']}
             onActiveChange={(active) => {
               setActiveTab(active?.kind ?? '')
               // Focusing a table window makes it the "active" table so the
               // shared Solve-Table / Configure / Alter actions target it.
               if (active?.kind === 'table' && active.id.startsWith('table:')) {
                 setActiveTableId(active.id.slice('table:'.length))
+              }
+              // The last-focused diagram window owns the shared Inspector;
+              // focusing the inspector/solution itself doesn't change it.
+              if (active?.kind === 'diagram') {
+                setActiveDiagramWindowId(active.id)
               }
             }}
             onOpenChange={setOpenWindows}
@@ -1694,46 +1646,21 @@ export default function App() {
         </div>
       </Flex>
 
-      {(addingThermoPlot || editingThermoPlot) && (
-        <PlotConfigModal
-          spec={editingThermoPlot}
-          allowedKinds={['property', 'psychro']}
-          defaultName={editingThermoPlot ? editingThermoPlot.name : `Diagram ${plots.filter(p => p.kind === 'property' || p.kind === 'psychro').length + 1}`}
-          fluids={fluids}
-          tableVars={tableVars}
-          hasStates={detectStates(result?.variables ?? []).indices.length > 0}
-          onSave={(spec) => {
-            if (editingThermoPlot) {
-              handlePlotsChange(plots.map((p) => (p.id === spec.id ? spec : p)))
-              setEditingThermoPlot(null)
-            } else {
-              handlePlotsChange([...plots, spec])
-              setActiveThermoPlotId(spec.id)
-              setAddingThermoPlot(false)
-            }
-          }}
-          onClose={() => {
-            setAddingThermoPlot(false)
-            setEditingThermoPlot(null)
-          }}
-        />
-      )}
-
-      {addingXyPlot && (
+      {newPlotKind && (
         <PlotConfigModal
           spec={null}
-          allowedKinds={['xy']}
-          defaultName={`Plot ${mergedPlots.filter((p) => p.kind === 'xy').length + 1}`}
+          allowedKinds={[newPlotKind]}
+          defaultName={`${PLOT_KIND_LABEL[newPlotKind]} ${mergedPlots.filter((p) => p.kind === newPlotKind).length + 1}`}
           fluids={fluids}
           tableVars={tableVars}
           hasStates={detectStates(result?.variables ?? []).indices.length > 0}
           onSave={(spec) => {
             handlePlotsChange([...plots, spec])
             setActivePlotId(spec.id)
-            setAddingXyPlot(false)
+            setNewPlotKind(null)
             requestAnimationFrame(() => dockRef.current?.openInstance(`plot:${spec.id}`, 'plot', spec.name))
           }}
-          onClose={() => setAddingXyPlot(false)}
+          onClose={() => setNewPlotKind(null)}
         />
       )}
     </Flex>
