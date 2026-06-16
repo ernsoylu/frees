@@ -29,7 +29,10 @@ import {
   IconHelp,
   IconInfoCircle,
   IconLayoutGrid,
+  IconListDetails,
   IconMathFunction,
+  IconPointFilled,
+  IconX,
   IconMoon,
   IconSun,
   IconPencil,
@@ -71,13 +74,18 @@ const VIEWS = [
     icon: IconChartGridDots,
   },
   { value: 'diagram', label: 'Diagram', tip: 'Diagram — interactive schematic editor', icon: IconSchema },
+  { value: 'solution', label: 'Solution', tip: 'Solution — solved variables & residuals', icon: IconListDetails },
 ]
 
 const RAIL_EXPANDED_KEY = 'frees.railExpanded'
 
 interface RailProps {
   active: string
+  /** Window kinds currently open in the dock (drives the open-state dot). */
+  openKinds?: string[]
   onSelect: (view: string) => void
+  onClose?: (view: string) => void
+  onResetLayout?: () => void
   onVariableInfo: () => void
   onMinMax: () => void
   onCurveFit: () => void
@@ -93,20 +101,34 @@ function RailEntry({
   label,
   tip,
   active,
+  open,
   expanded,
   onClick,
+  onClose,
   href,
 }: Readonly<{
   icon: React.ReactNode
   label: string
   tip: string
   active?: boolean
+  /** Whether the corresponding dock window is currently open. */
+  open?: boolean
   expanded: boolean
   onClick?: () => void
+  /** When provided and the window is open, shows a close affordance. */
+  onClose?: () => void
   href?: string
 }>) {
   const variant = active ? 'light' : 'subtle'
   const color = active ? 'blue' : 'gray'
+  // A small dot marks windows that are open in the dock (so the rail doubles
+  // as a window list); the focused window also gets the blue "active" styling.
+  const dot = open ? (
+    <IconPointFilled
+      size={10}
+      style={{ color: 'var(--mantine-color-blue-5)', flexShrink: 0 }}
+    />
+  ) : null
 
   if (expanded) {
     const shared = {
@@ -117,6 +139,19 @@ function RailEntry({
       size: 'sm' as const,
       radius: 'md' as const,
       leftSection: icon,
+      rightSection: open && onClose ? (
+        <UnstyledButton
+          component="span"
+          aria-label={`Close ${label}`}
+          onClick={(e) => {
+            e.stopPropagation()
+            onClose()
+          }}
+          style={{ display: 'inline-flex', color: 'var(--mantine-color-dimmed)' }}
+        >
+          <IconX size={14} />
+        </UnstyledButton>
+      ) : dot,
       'aria-label': tip,
     }
     return href ? (
@@ -131,7 +166,7 @@ function RailEntry({
   }
 
   const shared = { variant, color, size: 40, radius: 'md' as const, 'aria-label': tip }
-  const button = href ? (
+  const inner = href ? (
     <ActionIcon component="a" href={href} target="_blank" {...shared}>
       {icon}
     </ActionIcon>
@@ -139,6 +174,24 @@ function RailEntry({
     <ActionIcon onClick={onClick} {...shared}>
       {icon}
     </ActionIcon>
+  )
+  // Collapsed: overlay a tiny dot in the corner for open windows.
+  const button = (
+    <div style={{ position: 'relative', display: 'inline-flex' }}>
+      {inner}
+      {open && (
+        <IconPointFilled
+          size={9}
+          style={{
+            position: 'absolute',
+            top: 1,
+            right: 1,
+            color: 'var(--mantine-color-blue-5)',
+            pointerEvents: 'none',
+          }}
+        />
+      )}
+    </div>
   )
   return (
     <Tooltip label={tip} position="right" openDelay={300}>
@@ -149,13 +202,17 @@ function RailEntry({
 
 export function Rail({
   active,
+  openKinds = [],
   onSelect,
+  onClose,
+  onResetLayout,
   onVariableInfo,
   onMinMax,
   onCurveFit,
   onPreferences,
   onAbout,
 }: Readonly<RailProps>) {
+  const openSet = new Set(openKinds)
   const [expanded, setExpanded] = useState(
     () => localStorage.getItem(RAIL_EXPANDED_KEY) === 'true',
   )
@@ -211,12 +268,23 @@ export function Rail({
             label={view.label}
             tip={view.tip}
             active={active === view.value}
+            open={openSet.has(view.value)}
             expanded={expanded}
             onClick={() => onSelect(view.value)}
+            onClose={onClose ? () => onClose(view.value) : undefined}
           />
         ))}
       </Stack>
       <Stack gap={4}>
+        {onResetLayout && (
+          <RailEntry
+            icon={<IconLayoutGrid size={iconSize} stroke={1.6} />}
+            label="Reset layout"
+            tip="Reset window layout"
+            expanded={expanded}
+            onClick={onResetLayout}
+          />
+        )}
         {tools.map((tool) => (
           <RailEntry
             key={tool.label}

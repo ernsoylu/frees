@@ -1606,13 +1606,15 @@ function ElementView({
               <marker
                 id={`diagram-arrow-start-${el.id}`}
                 viewBox="0 0 10 10"
-                refX="9"
+                refX="1"
                 refY="5"
                 markerWidth="7"
                 markerHeight="7"
-                orient="auto-start-reverse"
+                orient="auto"
               >
-                <path d="M 0 0 L 10 5 L 0 10 z" fill={el.stroke} />
+                {/* Tip points back along the path (orient="auto", not the
+                    SVG2-only "auto-start-reverse" that Batik/FOP rejects). */}
+                <path d="M 10 0 L 0 5 L 10 10 z" fill={el.stroke} />
               </marker>
             </defs>
           )}
@@ -1625,7 +1627,7 @@ function ElementView({
                 refY="5"
                 markerWidth="7"
                 markerHeight="7"
-                orient="auto-start-reverse"
+                orient="auto"
               >
                 <path d="M 0 0 L 10 5 L 0 10 z" fill={el.stroke} />
               </marker>
@@ -1666,7 +1668,7 @@ function ElementView({
               refY="5"
               markerWidth="7"
               markerHeight="7"
-              orient="auto-start-reverse"
+              orient="auto"
             >
               <path d="M 0 0 L 10 5 L 0 10 z" fill={el.stroke} />
             </marker>

@@ -1,6 +1,5 @@
-import { ChangeEvent, useCallback, useEffect, useMemo, useState, useRef } from 'react'
+import { ChangeEvent, useCallback, useEffect, useMemo, useState, useRef, type ReactNode } from 'react'
 import {
-  ActionIcon,
   Alert,
   Button,
   Divider,
@@ -13,7 +12,6 @@ import {
   Stack,
   Text,
   Title,
-  Tooltip,
 } from '@mantine/core'
 import { Spotlight, SpotlightActionGroupData } from '@mantine/spotlight'
 import {
@@ -28,7 +26,6 @@ import {
   IconInfoCircle,
   IconKeyboard,
   IconLayoutGrid,
-  IconLayoutSidebarRightExpand,
   IconMathFunction,
   IconPlayerPlayFilled,
   IconSchema,
@@ -92,6 +89,7 @@ import { DEFAULT_EXAMPLE_TEXT, Example } from './examples'
 import EquationEditor, { EquationEditorHandle } from './EquationEditor'
 import { ConfirmModal, MessageModal, TextPromptModal } from './dialogs'
 import { Rail, TopBar } from './WorkspaceChrome'
+import { WorkspaceDock, type WorkspaceDockHandle } from './workspace/WorkspaceDock'
 import { EXPORT_FORMATS } from './plots/exportPlot'
 import { detectStates } from './plots/stateTable'
 import PlotConfigModal from './plots/PlotConfigModal'
@@ -268,7 +266,10 @@ export default function App() {
     setEqView('editor')
     setTimeout(() => editorRef.current?.insertSnippet(snippet), 50)
   }, [])
-  const [solutionOpen, setSolutionOpen] = useState(true)
+  // Dockview workspace manager: imperative handle + set of currently-open
+  // window kinds (drives the sidebar's open-state indicators).
+  const dockRef = useRef<WorkspaceDockHandle | null>(null)
+  const [openKinds, setOpenKinds] = useState<string[]>([])
   // Tables (Epic 8): any number of Parametric and Curve Tables; the active
   // parametric table is the one Check/Solve Table and the plots act on.
   const [tables, setTables] = useState<TableSpec[]>(() => {
@@ -1090,36 +1091,311 @@ export default function App() {
     })),
   ]
 
-  const solutionSidePanel = solutionOpen ? (
-    <SolutionPanel
-      showTable={activeTab === 'table' && activeParam !== null}
-      solveCount={solveCount}
-      tableStats={tableStats}
-      result={result}
-      rows={solutionRows}
-      onCollapse={() => setSolutionOpen(false)}
-      onOpenExamples={() => setShowExamples(true)}
-    />
-  ) : (
-    <Paper withBorder p={4} visibleFrom="md">
-      <Tooltip label="Show solution panel" position="left">
-        <ActionIcon
-          variant="subtle"
-          color="gray"
-          onClick={() => setSolutionOpen(true)}
-          aria-label="Show solution panel"
-        >
-          <IconLayoutSidebarRightExpand size={18} />
-        </ActionIcon>
-      </Tooltip>
-    </Paper>
-  )
+  // Content for each dockview window kind. Recomputed every render and read by
+  // the dock through context; closed panels create the element but never mount.
+  const panelPad: React.CSSProperties = {
+    height: '100%',
+    minHeight: 0,
+    display: 'flex',
+    flexDirection: 'column',
+    padding: 'var(--mantine-spacing-md)',
+    overflow: 'auto',
+  }
+  const panelContent: Record<string, ReactNode> = {
+    equations: (
+      <div style={panelPad}>
+        {errorLine != null && (
+          <Alert color="red" variant="light" p="xs" mb={6} title="Syntax error">
+            <Group justify="space-between" wrap="nowrap" gap="xs">
+              <Text size="xs">Syntax error on line {errorLine}.</Text>
+              <Button size="compact-xs" variant="light" color="red" onClick={() => goToLine(errorLine)}>
+                Go to line {errorLine}
+              </Button>
+            </Group>
+          </Alert>
+        )}
+        {showFirstRun && (
+          <Alert color="blue" variant="light" p="xs" mb={6} withCloseButton onClose={dismissFirstRun} title="Welcome to frees">
+            <Text size="xs">
+              Write equations and markdown notes on the left — they can be
+              entered in any order. Click <strong>Check</strong> (F4) to
+              validate, then <strong>Solve</strong> (F2). Solve also runs
+              Check for you automatically.
+            </Text>
+          </Alert>
+        )}
+        <Group justify="space-between" mb={6} wrap="nowrap">
+          {eqView === 'editor' ? <SyntaxHelp /> : <span />}
+          <SegmentedControl
+            size="xs"
+            value={eqView}
+            onChange={(v) => setEqView(v as 'editor' | 'formatted')}
+            data={[
+              { label: 'Editor', value: 'editor' },
+              { label: 'Formatted', value: 'formatted' },
+            ]}
+          />
+        </Group>
+        {unitWarnings.length > 0 && !dismissedWarnings && (
+          <Alert
+            color="yellow"
+            variant="light"
+            p="xs"
+            mb={6}
+            withCloseButton
+            onClose={() => setDismissedWarnings(true)}
+            title={`${unitWarnings.length} unit consistency warning${unitWarnings.length === 1 ? '' : 's'}`}
+          >
+            <Stack gap={2} mah={120} style={{ overflowY: 'auto' }}>
+              {withStableKeys(unitWarnings).map((w) => (
+                <Text size="xs" key={w.key}>
+                  ⚠ {w.value}
+                </Text>
+              ))}
+            </Stack>
+          </Alert>
+        )}
+        {eqView === 'editor' ? (
+          <div
+            style={{
+              display: 'flex',
+              flex: 1,
+              minHeight: 260,
+              border: '1px solid var(--mantine-color-default-border)',
+              borderRadius: '4px',
+              overflow: 'hidden',
+            }}
+          >
+            <EquationEditor
+              ref={editorRef}
+              value={text}
+              onChange={onTextChange}
+              variables={variables}
+              errorLine={errorLine}
+              placeholder={'Enter equations and markdown notes, e.g.\n# Rankine Cycle\nT1 = 100 [C]\nP1 = 250 [kPa]'}
+            />
+          </div>
+        ) : (
+          <FormattedEquationsView
+            equations={formattedEqs}
+            report={result?.formattedReport ?? checkResult?.formattedReport}
+            variables={result?.variables}
+            plots={mergedPlots}
+            cyclePath={result?.cyclePath}
+            tableRows={paramRows}
+            tableResults={tableResults}
+          />
+        )}
+      </div>
+    ),
+    table: (
+      <div style={panelPad}>
+        <TablesTab
+          tables={tables}
+          activeTableId={activeTable?.id ?? null}
+          onTablesChange={setTables}
+          onActiveTableIdChange={setActiveTableId}
+          tableVars={tableVars}
+          rows={paramRows}
+          results={tableResults}
+          varDrafts={varDrafts}
+          onConfigure={() => setShowConfigureTable(true)}
+          onAddRow={() =>
+            updateActiveParam((t) => invalidateActiveParam({ ...t, rows: [...t.rows, newParamRow()] }))
+          }
+          onRemoveRow={() =>
+            updateActiveParam((t) => invalidateActiveParam({ ...t, rows: t.rows.slice(0, -1) }))
+          }
+          onClearResults={() => updateActiveParam((t) => ({ ...t, results: [] }))}
+          onAlterColumn={setAlterColumn}
+          onColumnUnitsChange={setColumnUnits}
+          onCellChange={setTableCell}
+        />
+      </div>
+    ),
+    plots: (
+      <div style={panelPad}>
+        <PlotTab
+          kinds={['xy']}
+          emptyHint='No plots yet. Click "Add Plot" to chart parametric table runs as X-Y series.'
+          plots={mergedPlots}
+          onPlotsChange={handlePlotsChange}
+          solvedVariables={result?.variables ?? []}
+          cyclePath={result?.cyclePath}
+          tableVars={tableVars}
+          rows={paramRows}
+          results={tableResults}
+          activePlotId={activePlotId}
+          onActivePlotIdChange={setActivePlotId}
+        />
+      </div>
+    ),
+    thermo: (
+      <div style={{ height: '100%', minHeight: 0, display: 'flex', gap: 'var(--mantine-spacing-sm)', padding: 'var(--mantine-spacing-md)' }}>
+        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+          <PlotTab
+            kinds={['property', 'psychro']}
+            emptyHint="No diagrams yet. Click 'Add Diagram' in the right-hand panel to create a property diagram (T-s, log P-h, P-v, …) or a psychrometric chart; solved state points can be overlaid on both."
+            plots={mergedPlots}
+            onPlotsChange={handlePlotsChange}
+            solvedVariables={result?.variables ?? []}
+            cyclePath={result?.cyclePath}
+            tableVars={tableVars}
+            rows={paramRows}
+            results={tableResults}
+            activePlotId={activeThermoPlotId}
+            onActivePlotIdChange={setActiveThermoPlotId}
+            hideHeader={true}
+            exportTrigger={thermoExportTrigger}
+          />
+        </div>
+        <Paper withBorder p="md" w={480} display="flex" style={{ flexDirection: 'column', minHeight: 0, flexShrink: 0, overflow: 'auto' }}>
+          <Group justify="space-between" mb={4} wrap="nowrap" align="center">
+            <Title order={4} c="blue.4">Thermodynamics</Title>
+            <Button size="xs" onClick={() => setAddingThermoPlot(true)}>
+              Add Diagram
+            </Button>
+          </Group>
+          <Text size="xs" c="dimmed" mb="xs">
+            Diagrams &amp; state points. Full variable solutions are on the
+            Solution panel.
+          </Text>
+          {plots.some((p) => p.kind === 'property' || p.kind === 'psychro') ? (
+            <Stack gap="xs" mb="md">
+              <Select
+                label="Active Diagram"
+                size="xs"
+                data={plots
+                  .filter((p) => p.kind === 'property' || p.kind === 'psychro')
+                  .map((p) => ({ value: p.id, label: p.name }))}
+                value={
+                  activeThermoPlotId ??
+                  plots.find((p) => p.kind === 'property' || p.kind === 'psychro')?.id ??
+                  ''
+                }
+                onChange={(val) => val && setActiveThermoPlotId(val)}
+              />
+              {(() => {
+                const current = plots.find((p) => p.id === activeThermoPlotId) || plots.find((p) => p.kind === 'property' || p.kind === 'psychro') || null
+                if (!current) return null
+                return (
+                  <Group gap="xs" wrap="nowrap">
+                    <Button variant="default" size="xs" flex={1} onClick={() => setEditingThermoPlot(current)}>
+                      Configure
+                    </Button>
+                    <Menu shadow="md">
+                      <Menu.Target>
+                        <Button variant="default" size="xs" flex={1}>
+                          Export
+                        </Button>
+                      </Menu.Target>
+                      <Menu.Dropdown>
+                        {EXPORT_FORMATS.map((f) => (
+                          <Menu.Item
+                            key={f.value}
+                            onClick={() => setThermoExportTrigger({ format: f.value, timestamp: Date.now() })}
+                          >
+                            {f.label}
+                          </Menu.Item>
+                        ))}
+                      </Menu.Dropdown>
+                    </Menu>
+                    <Button
+                      variant="subtle"
+                      color="red"
+                      size="xs"
+                      onClick={() => {
+                        const nextPlots = plots.filter((p) => p.id !== current.id)
+                        handlePlotsChange(nextPlots)
+                        const remaining = nextPlots.find((p) => p.kind === 'property' || p.kind === 'psychro')
+                        setActiveThermoPlotId(remaining?.id ?? null)
+                      }}
+                    >
+                      Remove
+                    </Button>
+                  </Group>
+                )
+              })()}
+            </Stack>
+          ) : (
+            <Text size="xs" c="dimmed" mb="md" style={{ fontStyle: 'italic' }}>
+              No diagrams added yet. Click "Add Diagram" above to start.
+            </Text>
+          )}
+          <Divider my="sm" label="State Points" labelPosition="left" />
+          <StatesTab
+            solvedVariables={result?.variables ?? []}
+            unitIds={stateUnitIds}
+            onUnitIdsChange={handleStateUnitIdsChange}
+            onFillMissing={() => onSolve(true)}
+            solving={solving}
+            solvable={solvable}
+          />
+        </Paper>
+      </div>
+    ),
+    digitizer: (
+      <div style={{ height: '100%', minHeight: 0 }}>
+        <DigitizerTab key={`digitizer-${workspaceEpoch}`} onSendToFunctionTable={sendDigitizedToFunctionTable} />
+      </div>
+    ),
+    diagram: (
+      <div style={{ height: '100%', minHeight: 0 }}>
+        <DiagramTab
+          key={`diagram-${workspaceEpoch}`}
+          variables={result?.variables ?? []}
+          runs={diagramRuns}
+          onBindingsChange={handleDiagramBindings}
+          plots={mergedPlots}
+          tableRows={paramRows}
+          tableResults={tableResults}
+          cyclePath={result?.cyclePath}
+          solving={solving}
+          onSolve={onSolve}
+          onCheck={async () => {
+            await onCheck()
+          }}
+          onNavigate={handleNavigate}
+          onVarDraftsChange={setVarDrafts}
+          diagrams={diagrams}
+          activeDiagramId={activeDiagramId}
+          onDiagramsChange={setDiagrams}
+          onActiveDiagramIdChange={setActiveDiagramId}
+        />
+      </div>
+    ),
+    solution: (
+      <div style={{ height: '100%', minHeight: 0, padding: 'var(--mantine-spacing-md)', overflow: 'auto' }}>
+        <SolutionPanel
+          showTable={activeTab === 'table' && activeParam !== null}
+          solveCount={solveCount}
+          tableStats={tableStats}
+          result={result}
+          rows={solutionRows}
+          onCollapse={() => dockRef.current?.close('solution')}
+          onOpenExamples={() => setShowExamples(true)}
+        />
+      </div>
+    ),
+  }
+  const panelTitles: Record<string, string> = {
+    equations: 'Editor',
+    table: 'Tables',
+    plots: 'Plots',
+    thermo: 'Thermo',
+    digitizer: 'Digitizer',
+    diagram: 'Diagram',
+    solution: 'Solution',
+  }
 
   return (
     <Flex h="100vh" style={{ overflow: 'hidden' }}>
       <Rail
         active={activeTab}
-        onSelect={setActiveTab}
+        openKinds={openKinds}
+        onSelect={(kind) => dockRef.current?.open(kind)}
+        onClose={(kind) => dockRef.current?.close(kind)}
+        onResetLayout={() => dockRef.current?.reset()}
         onVariableInfo={() => setShowVariableInfo(true)}
         onMinMax={() => setShowMinMax(true)}
         onCurveFit={() => setShowCurveFit(true)}
@@ -1320,328 +1596,16 @@ export default function App() {
           onChange={onProjectFileSelected}
         />
 
-        <Flex
-          flex={1}
-          gap="sm"
-          align="stretch"
-          direction={{ base: 'column', md: 'row' }}
-          style={{ minHeight: 0 }}
-        >
-          <Paper
-            withBorder
-            p="md"
-            flex={1}
-            miw={0}
-            display="flex"
-            style={{ flexDirection: 'column', minHeight: 0, overflow: 'auto' }}
-          >
-            {activeTab === 'equations' && (
-              <>
-                {errorLine != null && (
-                  <Alert color="red" variant="light" p="xs" mb={6} title="Syntax error">
-                    <Group justify="space-between" wrap="nowrap" gap="xs">
-                      <Text size="xs">Syntax error on line {errorLine}.</Text>
-                      <Button
-                        size="compact-xs"
-                        variant="light"
-                        color="red"
-                        onClick={() => goToLine(errorLine)}
-                      >
-                        Go to line {errorLine}
-                      </Button>
-                    </Group>
-                  </Alert>
-                )}
-                {showFirstRun && (
-                  <Alert
-                    color="blue"
-                    variant="light"
-                    p="xs"
-                    mb={6}
-                    withCloseButton
-                    onClose={dismissFirstRun}
-                    title="Welcome to frees"
-                  >
-                    <Text size="xs">
-                      Write equations and markdown notes on the left — they can be
-                      entered in any order. Click <strong>Check</strong> (F4) to
-                      validate, then <strong>Solve</strong> (F2). Solve also runs
-                      Check for you automatically.
-                    </Text>
-                  </Alert>
-                )}
-                <Group justify="space-between" mb={6} wrap="nowrap">
-                  {eqView === 'editor' ? <SyntaxHelp /> : <span />}
-                  <SegmentedControl
-                    size="xs"
-                    value={eqView}
-                    onChange={(v) => setEqView(v as 'editor' | 'formatted')}
-                    data={[
-                      { label: 'Editor', value: 'editor' },
-                      { label: 'Formatted', value: 'formatted' },
-                    ]}
-                  />
-                </Group>
-                {unitWarnings.length > 0 && !dismissedWarnings && (
-                  <Alert
-                    color="yellow"
-                    variant="light"
-                    p="xs"
-                    mb={6}
-                    withCloseButton
-                    onClose={() => setDismissedWarnings(true)}
-                    title={`${unitWarnings.length} unit consistency warning${
-                      unitWarnings.length === 1 ? '' : 's'
-                    }`}
-                  >
-                    <Stack gap={2} mah={120} style={{ overflowY: 'auto' }}>
-                      {withStableKeys(unitWarnings).map((w) => (
-                        <Text size="xs" key={w.key}>
-                          ⚠ {w.value}
-                        </Text>
-                      ))}
-                    </Stack>
-                  </Alert>
-                )}
-                {eqView === 'editor' ? (
-                  <div
-                    style={{
-                      display: 'flex',
-                      flex: 1,
-                      minHeight: 260,
-                      border: '1px solid var(--mantine-color-default-border)',
-                      borderRadius: '4px',
-                      overflow: 'hidden',
-                    }}
-                  >
-                    <EquationEditor
-                      ref={editorRef}
-                      value={text}
-                      onChange={onTextChange}
-                      variables={variables}
-                      errorLine={errorLine}
-                      placeholder={'Enter equations and markdown notes, e.g.\n# Rankine Cycle\nT1 = 100 [C]\nP1 = 250 [kPa]'}
-                    />
-                  </div>
-                ) : (
-                  <FormattedEquationsView
-                    equations={formattedEqs}
-                    report={result?.formattedReport ?? checkResult?.formattedReport}
-                    variables={result?.variables}
-                    plots={mergedPlots}
-                    cyclePath={result?.cyclePath}
-                    tableRows={paramRows}
-                    tableResults={tableResults}
-                  />
-                )}
-              </>
-            )}
-            {activeTab === 'table' && (
-              <TablesTab
-                tables={tables}
-                activeTableId={activeTable?.id ?? null}
-                onTablesChange={setTables}
-                onActiveTableIdChange={setActiveTableId}
-                tableVars={tableVars}
-                rows={paramRows}
-                results={tableResults}
-                varDrafts={varDrafts}
-                onConfigure={() => setShowConfigureTable(true)}
-                onAddRow={() =>
-                  updateActiveParam((t) =>
-                    invalidateActiveParam({ ...t, rows: [...t.rows, newParamRow()] }),
-                  )
-                }
-                onRemoveRow={() =>
-                  updateActiveParam((t) =>
-                    invalidateActiveParam({ ...t, rows: t.rows.slice(0, -1) }),
-                  )
-                }
-                onClearResults={() =>
-                  updateActiveParam((t) => ({ ...t, results: [] }))
-                }
-                onAlterColumn={setAlterColumn}
-                onColumnUnitsChange={setColumnUnits}
-                onCellChange={setTableCell}
-              />
-            )}
-            {activeTab === 'plots' && (
-              <PlotTab
-                kinds={['xy']}
-                emptyHint='No plots yet. Click "Add Plot" to chart parametric table runs as X-Y series.'
-                plots={mergedPlots}
-                onPlotsChange={handlePlotsChange}
-                solvedVariables={result?.variables ?? []}
-                cyclePath={result?.cyclePath}
-                tableVars={tableVars}
-                rows={paramRows}
-                results={tableResults}
-                activePlotId={activePlotId}
-                onActivePlotIdChange={setActivePlotId}
-              />
-            )}
-            {activeTab === 'thermo' && (
-              <PlotTab
-                kinds={['property', 'psychro']}
-                emptyHint="No diagrams yet. Click 'Add Diagram' in the right-hand panel to create a property diagram (T-s, log P-h, P-v, …) or a psychrometric chart; solved state points can be overlaid on both."
-                plots={mergedPlots}
-                onPlotsChange={handlePlotsChange}
-                solvedVariables={result?.variables ?? []}
-                cyclePath={result?.cyclePath}
-                tableVars={tableVars}
-                rows={paramRows}
-                results={tableResults}
-                activePlotId={activeThermoPlotId}
-                onActivePlotIdChange={setActiveThermoPlotId}
-                hideHeader={true}
-                exportTrigger={thermoExportTrigger}
-              />
-            )}
-            {activeTab === 'digitizer' && (
-              <DigitizerTab
-                key={`digitizer-${workspaceEpoch}`}
-                onSendToFunctionTable={sendDigitizedToFunctionTable}
-              />
-            )}
-            {activeTab === 'diagram' && (
-              <DiagramTab
-                key={`diagram-${workspaceEpoch}`}
-                variables={result?.variables ?? []}
-                runs={diagramRuns}
-                onBindingsChange={handleDiagramBindings}
-                plots={mergedPlots}
-                tableRows={paramRows}
-                tableResults={tableResults}
-                cyclePath={result?.cyclePath}
-                solving={solving}
-                onSolve={onSolve}
-                onCheck={async () => {
-                  await onCheck()
-                }}
-                onNavigate={handleNavigate}
-                onVarDraftsChange={setVarDrafts}
-                diagrams={diagrams}
-                activeDiagramId={activeDiagramId}
-                onDiagramsChange={setDiagrams}
-                onActiveDiagramIdChange={setActiveDiagramId}
-              />
-            )}
-          </Paper>
-
-          {activeTab === 'thermo' ? (
-            <Paper
-              withBorder
-              p="md"
-              w={{ base: '100%', md: 480 }}
-              display="flex"
-              style={{ flexDirection: 'column', minHeight: 0 }}
-            >
-              <Group justify="space-between" mb={4} wrap="nowrap" align="center">
-                <Title order={4} c="blue.4">Thermodynamics</Title>
-                <Button size="xs" onClick={() => setAddingThermoPlot(true)}>
-                  Add Diagram
-                </Button>
-              </Group>
-              {/* This panel replaces the Solution panel on the Thermo tab, so
-                  tell the user where the full variable solution lives. */}
-              <Text size="xs" c="dimmed" mb="xs">
-                Diagrams &amp; state points. Full variable solutions are on the
-                Solution panel — switch to the Editor tab.
-              </Text>
-
-              {plots.some((p) => p.kind === 'property' || p.kind === 'psychro') ? (
-                <Stack gap="xs" mb="md">
-                  <Select
-                    label="Active Diagram"
-                    size="xs"
-                    data={plots
-                      .filter((p) => p.kind === 'property' || p.kind === 'psychro')
-                      .map((p) => ({ value: p.id, label: p.name }))}
-                    value={
-                      activeThermoPlotId ??
-                      plots.find((p) => p.kind === 'property' || p.kind === 'psychro')?.id ??
-                      ''
-                    }
-                    onChange={(val) => val && setActiveThermoPlotId(val)}
-                  />
-                  {(() => {
-                    const current = plots.find((p) => p.id === activeThermoPlotId) || plots.find((p) => p.kind === 'property' || p.kind === 'psychro') || null;
-                    if (!current) return null;
-                    return (
-                      <Group gap="xs" wrap="nowrap">
-                        <Button
-                          variant="default"
-                          size="xs"
-                          flex={1}
-                          onClick={() => setEditingThermoPlot(current)}
-                        >
-                          Configure
-                        </Button>
-                        <Menu shadow="md">
-                          <Menu.Target>
-                            <Button variant="default" size="xs" flex={1}>
-                              Export
-                            </Button>
-                          </Menu.Target>
-                          <Menu.Dropdown>
-                            {EXPORT_FORMATS.map((f) => (
-                              <Menu.Item
-                                key={f.value}
-                                onClick={() =>
-                                  setThermoExportTrigger({
-                                    format: f.value,
-                                    timestamp: Date.now(),
-                                  })
-                                }
-                              >
-                                {f.label}
-                              </Menu.Item>
-                            ))}
-                          </Menu.Dropdown>
-                        </Menu>
-                        <Button
-                          variant="subtle"
-                          color="red"
-                          size="xs"
-                          onClick={() => {
-                            const nextPlots = plots.filter((p) => p.id !== current.id);
-                            handlePlotsChange(nextPlots);
-                            const remaining = nextPlots.find((p) => p.kind === 'property' || p.kind === 'psychro');
-                            setActiveThermoPlotId(remaining?.id ?? null);
-                          }}
-                        >
-                          Remove
-                        </Button>
-                      </Group>
-                    );
-                  })()}
-                </Stack>
-              ) : (
-                <Text size="xs" c="dimmed" mb="md" style={{ fontStyle: 'italic' }}>
-                  No diagrams added yet. Click "Add Diagram" above to start.
-                </Text>
-              )}
-
-              <Divider my="sm" label="State Points" labelPosition="left" />
-              <StatesTab
-                solvedVariables={result?.variables ?? []}
-                unitIds={stateUnitIds}
-                onUnitIdsChange={handleStateUnitIdsChange}
-                onFillMissing={() => onSolve(true)}
-                solving={solving}
-                solvable={solvable}
-              />
-            </Paper>
-          ) : (
-            // The digitizer, diagram, and tables views own the full width and
-            // hide the Solution panel — the solve summary stays in the top-bar
-            // status pill, and the panel returns on the Editor/Plots tabs.
-            activeTab !== 'digitizer' &&
-            activeTab !== 'diagram' &&
-            activeTab !== 'table' &&
-            solutionSidePanel
-          )}
-        </Flex>
+        <div style={{ flex: 1, minHeight: 0, display: 'flex' }}>
+          <WorkspaceDock
+            content={panelContent}
+            titles={panelTitles}
+            defaultOpen={['equations', 'solution']}
+            onActiveKindChange={setActiveTab}
+            onOpenKindsChange={setOpenKinds}
+            handleRef={dockRef}
+          />
+        </div>
       </Flex>
 
       {(addingThermoPlot || editingThermoPlot) && (
