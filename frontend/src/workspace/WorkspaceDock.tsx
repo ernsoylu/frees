@@ -374,6 +374,24 @@ export function WorkspaceDock({
         .dockview-theme-light .dv-edge-collapsed {
           background-color: var(--mantine-color-body);
         }
+        /* The focusable dock tabs/groups (tabindex=0) otherwise show the
+           browser's default blue focus ring on the active edge group. Retint
+           keyboard focus to teal and drop the ring for mouse focus. */
+        .dockview-theme-dark .dv-tab:focus-visible,
+        .dockview-theme-light .dv-tab:focus-visible,
+        .dockview-theme-dark .dv-groupview:focus-visible,
+        .dockview-theme-light .dv-groupview:focus-visible {
+          outline: 1px solid var(--mantine-color-teal-6);
+          outline-offset: -1px;
+        }
+        .dockview-theme-dark .dv-tab:focus:not(:focus-visible),
+        .dockview-theme-light .dv-tab:focus:not(:focus-visible),
+        .dockview-theme-dark .dv-groupview:focus:not(:focus-visible),
+        .dockview-theme-light .dv-groupview:focus:not(:focus-visible),
+        .dockview-theme-dark .dv-content-container:focus,
+        .dockview-theme-light .dv-content-container:focus {
+          outline: none;
+        }
       `}</style>
       <div style={{ width: '100%', height: '100%' }}>
         <DockviewReact
