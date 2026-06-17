@@ -1,4 +1,4 @@
-import { CheckResponse, FunctionTableDto, ParametricTableDto, TableRowResult, TableStats } from './api'
+import { CheckResponse, FunctionTableDto, OdeTableDto, ParametricTableDto, TableRowResult, TableStats } from './api'
 import { newParamRow, ParamRow } from './ParametricTableTab'
 
 // ---------------------------------------------------------------------------
@@ -290,17 +290,47 @@ export function paramTableFromDto(dto: ParametricTableDto): ParamTableSpec {
   }
 }
 
+/** Maps a solved ODE Table (from a DYNAMIC block) onto a read-only parametric
+ * table: the columns become the table variables and the sampled trajectory the
+ * rows, so it renders in the Tables window beside Parametric Tables and is a
+ * data source in the Plots window (x = time, y = a state/output) with no extra
+ * plot code. The data is solver-populated, so the rows are display-only. */
+export function odeTableFromDto(dto: OdeTableDto): ParamTableSpec {
+  const rows: ParamRow[] = dto.rows.map((row) => {
+    const values: Record<string, string> = {}
+    dto.vars.forEach((v, j) => {
+      const cell = row[j]
+      values[v] = cell == null ? '' : fmt6(cell)
+    })
+    return { id: crypto.randomUUID(), values }
+  })
+  return {
+    id: `code-ode-${dto.name.toLowerCase()}`,
+    kind: 'parametric',
+    name: dto.name,
+    vars: dto.vars,
+    rows: rows.length > 0 ? rows : [newParamRow()],
+    results: [],
+    stats: null,
+    checkResult: null,
+    checkMessage: '',
+    source: 'code',
+  }
+}
+
 /** Replaces the code-sourced tables in the list with the freshly parsed set
  * from the latest solve/check, leaving GUI tables untouched. */
 export function mergeCodeTables(
   existing: TableSpec[],
   functionDtos: FunctionTableDto[] | undefined,
   parametricDtos?: ParametricTableDto[] | undefined,
+  odeDtos?: OdeTableDto[] | undefined,
 ): TableSpec[] {
   const guiTables = existing.filter((t) => t.source !== 'code')
   const codeFunctionTables = (functionDtos ?? []).map(functionTableFromDto)
   const codeParamTables = (parametricDtos ?? []).map(paramTableFromDto)
-  return [...guiTables, ...codeFunctionTables, ...codeParamTables]
+  const codeOdeTables = (odeDtos ?? []).map(odeTableFromDto)
+  return [...guiTables, ...codeFunctionTables, ...codeParamTables, ...codeOdeTables]
 }
 
 /** Makes an independent, editable GUI copy of a code-defined table, decoupled

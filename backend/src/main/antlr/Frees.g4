@@ -16,6 +16,7 @@ topLevel
     | parametricDef
     | stateTableDef
     | plotDef
+    | dynamicDef
     | statement
     ;
 
@@ -122,6 +123,51 @@ plotValue
     : STRING_LITERAL                              # PlotValStr
     | signedNumber                                # PlotValNum
     | IDENT (LBRACKET arrayIndexList RBRACKET)?   # PlotValRef
+    ;
+
+// ── Transient / ODE system block ─────────────────────────────────────────────
+//   DYNAMIC cooling (method = ode45, t = 0 .. 600 [s], points = 200, rtol = 1e-6)
+//     der(T) = -k * (T - T_inf)        { first-order ODE; T is a state }
+//     T(0)   = 95 [C]                  { initial condition }
+//     Q_dot  = m * cp * der(T)         { algebraic auxiliary -> output column }
+//     EVENT cool: T = T_inf | falling -> stop
+//   END
+// A variable is a STATE iff a der(X) appears for it; each state needs exactly
+// one der(X)=... and one initial condition X(t0)=.... Array states der(T[i])
+// reuse the FOR / array machinery for method-of-lines PDEs. The header carries
+// solver config. The whole block is routed out of the analytic equation stream
+// by MarkdownEquationExtractor, so the analytic solver never sees der().
+dynamicDef
+    : DYNAMIC IDENT LPAREN dynamicHeader RPAREN sep
+      dynamicItem (sep dynamicItem)* sep?
+      END
+    ;
+
+dynamicHeader
+    : (dynamicOpt (COMMA dynamicOpt)*)?
+    ;
+
+dynamicOpt
+    : IDENT EQ dynamicOptVal
+    ;
+
+dynamicOptVal
+    : signedNumber DOTDOT signedNumber unit?   # DynOptRange
+    | signedNumber unit?                        # DynOptNum
+    | IDENT                                      # DynOptIdent
+    ;
+
+dynamicItem
+    : dynamicEvent                                                       # DynItemEvent
+    | IDENT (LBRACKET arrayIndexList RBRACKET)? LPAREN signedNumber RPAREN EQ expr  # DynItemInit
+    | forBlock                                                           # DynItemFor
+    | equation                                                          # DynItemEq
+    ;
+
+// EVENT name: g_lhs = g_rhs [| rising|falling] -> stop|record
+//   zero-crossing of (g_lhs - g_rhs); direction defaults to "any".
+dynamicEvent
+    : EVENT IDENT COLON equation (PIPE IDENT)? ARROW IDENT
     ;
 
 numberList
@@ -324,6 +370,7 @@ DOTCARET     : '.^' ;
 // ASSIGN must be defined before COLON so ':=' beats ':'
 ASSIGN  : ':=' ;
 COLON   : ':' ;
+ARROW   : '->' ;
 
 // Relational operators (LE/GE before LT/GT to avoid single-char match)
 LE      : '<=' ;
@@ -349,6 +396,8 @@ STATETABLE : [sS][tT][aA][tT][eE] [ \t]+ [tT][aA][bB][lL][eE] ;
 TABLE     : [tT][aA][bB][lL][eE] ;
 PARAMETRIC : [pP][aA][rR][aA][mM][eE][tT][rR][iI][cC] ;
 PLOT      : [pP][lL][oO][tT] ;
+DYNAMIC   : [dD][yY][nN][aA][mM][iI][cC] ;
+EVENT     : [eE][vV][eE][nN][tT] ;
 IF        : [iI][fF] ;
 THEN      : [tT][hH][eE][nN] ;
 ELSE      : [eE][lL][sS][eE] ;

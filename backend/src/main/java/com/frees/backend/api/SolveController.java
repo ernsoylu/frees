@@ -185,7 +185,24 @@ public class SolveController {
                                 // 1-based editor line a syntax error points at, or
                                 // null for whole-system errors (no single line).
                                 Integer errorLine,
-                                List<StateTableDto> stateTableDefs) {
+                                List<StateTableDto> stateTableDefs,
+                                List<OdeTableDto> odeTables) {
+
+        /** Backward-compatible constructor for callers that predate ODE tables. */
+        public SolveResponse(boolean success, List<VariableDto> variables,
+                             List<BlockDto> blocks, List<ResidualDto> residuals,
+                             StatsDto stats, List<SolutionDto> solutions,
+                             List<String> unitWarnings, String error,
+                             List<String> formattedEquations,
+                             List<Map<String, Double>> cyclePath, String formattedReport,
+                             List<FunctionTableDto> codeTables,
+                             List<ParametricTableDto> parametricTables,
+                             List<PlotDefDto> definedPlots, Integer errorLine,
+                             List<StateTableDto> stateTableDefs) {
+            this(success, variables, blocks, residuals, stats, solutions, unitWarnings,
+                    error, formattedEquations, cyclePath, formattedReport, codeTables,
+                    parametricTables, definedPlots, errorLine, stateTableDefs, List.of());
+        }
 
         /** Backward-compatible constructor for callers that predate state tables. */
         public SolveResponse(boolean success, List<VariableDto> variables,
@@ -199,7 +216,7 @@ public class SolveController {
                              List<PlotDefDto> definedPlots, Integer errorLine) {
             this(success, variables, blocks, residuals, stats, solutions, unitWarnings,
                     error, formattedEquations, cyclePath, formattedReport, codeTables,
-                    parametricTables, definedPlots, errorLine, List.of());
+                    parametricTables, definedPlots, errorLine, List.of(), List.of());
         }
 
         /** Backward-compatible constructor for the common no-error-line case. */
@@ -214,7 +231,7 @@ public class SolveController {
                              List<PlotDefDto> definedPlots) {
             this(success, variables, blocks, residuals, stats, solutions, unitWarnings,
                     error, formattedEquations, cyclePath, formattedReport, codeTables,
-                    parametricTables, definedPlots, null, List.of());
+                    parametricTables, definedPlots, null, List.of(), List.of());
         }
 
         static SolveResponse failure(String error) {
@@ -238,6 +255,30 @@ public class SolveController {
         List<ParametricTableDto> out = new ArrayList<>();
         for (com.frees.backend.ast.ParametricTable t : tables) {
             out.add(new ParametricTableDto(t.name(), t.vars(), t.rows()));
+        }
+        return out;
+    }
+
+    /** An ODE Table produced by a solved DYNAMIC block: columns
+     * {@code [time, states…, auxiliaries…]} and the sampled trajectory rows, plus
+     * any event firings. Shaped like {@link ParametricTableDto} so the frontend
+     * renders it in the Tables window and plots it through the parametric path. */
+    public record OdeTableDto(String name, List<String> vars, List<List<Double>> rows,
+                              List<OdeEventDto> events, String method, boolean stopped,
+                              double endTime) {}
+
+    public record OdeEventDto(String name, double time) {}
+
+    static List<OdeTableDto> odeTablesOf(
+            List<com.frees.backend.core.ode.OdeTableResult> tables) {
+        List<OdeTableDto> out = new ArrayList<>();
+        for (com.frees.backend.core.ode.OdeTableResult t : tables) {
+            List<OdeEventDto> events = new ArrayList<>();
+            for (com.frees.backend.core.ode.OdeTableResult.EventHit e : t.events()) {
+                events.add(new OdeEventDto(e.name(), e.time()));
+            }
+            out.add(new OdeTableDto(t.name(), t.columns(), t.rows(), events,
+                    t.method(), t.stopped(), t.endTime()));
         }
         return out;
     }
@@ -605,7 +646,8 @@ public class SolveController {
                     parametricTablesOf(parsed.parametricTables()),
                     plotsOf(parsed.plots()),
                     null,
-                    stateTablesOf(parsed.stateTables())));
+                    stateTablesOf(parsed.stateTables()),
+                    odeTablesOf(result.odeTables())));
         } catch (EquationParser.ParseException e) {
             return ResponseEntity.badRequest()
                     .body(SolveResponse.failure("Syntax error:\n" + e.getMessage(),
@@ -1115,7 +1157,8 @@ public class SolveController {
                 result.stats(),
                 resolvedSolutions,
                 mutableDisplayNames,
-                result.uncertainties()
+                result.uncertainties(),
+                result.odeTables()
         );
     }
 

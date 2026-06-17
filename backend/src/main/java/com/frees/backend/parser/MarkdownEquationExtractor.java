@@ -128,7 +128,7 @@ public final class MarkdownEquationExtractor {
             upper.startsWith("FUNCTION") || upper.startsWith("PROCEDURE") ||
             upper.startsWith("MODULE") || upper.startsWith("CALL") ||
             upper.startsWith("PARAMETRIC") || opensTableBlock(upper) || opensPlotBlock(upper) ||
-            opensStateTableBlock(upper)) {
+            opensStateTableBlock(upper) || opensDynamicBlock(upper)) {
             return true;
         }
         if (!clean.contains("=")) {
@@ -175,7 +175,17 @@ public final class MarkdownEquationExtractor {
         return upper.startsWith("FUNCTION") || upper.startsWith("PROCEDURE")
                 || upper.startsWith("MODULE") || upper.startsWith("PARAMETRIC")
                 || opensTableBlock(upper) || opensPlotBlock(upper)
-                || opensStateTableBlock(upper);
+                || opensStateTableBlock(upper) || opensDynamicBlock(upper);
+    }
+
+    /** A DYNAMIC block opener: the keyword followed by a word boundary, so a
+     * variable like {@code dynamic_p = 5} is not mistaken for a block. The body
+     * (der/INIT/EVENT/algebraic equations, possibly nested FOR loops) runs
+     * verbatim to END and never enters the analytic equation stream. */
+    private static boolean opensDynamicBlock(String upper) {
+        return upper.equals("DYNAMIC")
+                || (upper.startsWith("DYNAMIC") && upper.length() > 7
+                        && !isIdentChar(upper.charAt(7)));
     }
 
     /** A STATE TABLE block opener: the two keywords (any whitespace between)

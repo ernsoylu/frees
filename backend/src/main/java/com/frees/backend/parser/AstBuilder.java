@@ -29,7 +29,8 @@ public class AstBuilder extends FreesBaseVisitor<Expr> {
             java.util.Map<String, ProcDef> defs,
             List<com.frees.backend.ast.ParametricTable> parametricTables,
             List<com.frees.backend.ast.PlotDef> plots,
-            List<com.frees.backend.ast.StateTableDef> stateTables) {}
+            List<com.frees.backend.ast.StateTableDef> stateTables,
+            List<com.frees.backend.ast.DynamicSystem> dynamicSystems) {}
 
     public ProgramResult buildProgram(FreesParser.ProgramContext ctx) {
         List<Statement> statements = new ArrayList<>();
@@ -37,6 +38,7 @@ public class AstBuilder extends FreesBaseVisitor<Expr> {
         List<com.frees.backend.ast.ParametricTable> parametricTables = new ArrayList<>();
         List<com.frees.backend.ast.PlotDef> plots = new ArrayList<>();
         List<com.frees.backend.ast.StateTableDef> stateTables = new ArrayList<>();
+        List<com.frees.backend.ast.DynamicSystem> dynamicSystems = new ArrayList<>();
 
         if (ctx.topLevel() != null) {
             for (FreesParser.TopLevelContext tl : ctx.topLevel()) {
@@ -58,12 +60,169 @@ public class AstBuilder extends FreesBaseVisitor<Expr> {
                     stateTables.add(buildStateTableDef(tl.stateTableDef()));
                 } else if (tl.plotDef() != null) {
                     plots.add(buildPlotDef(tl.plotDef()));
+                } else if (tl.dynamicDef() != null) {
+                    dynamicSystems.add(buildDynamicDef(tl.dynamicDef()));
                 } else if (tl.statement() != null) {
                     statements.add(buildStatement(tl.statement()));
                 }
             }
         }
-        return new ProgramResult(statements, defs, parametricTables, plots, stateTables);
+        return new ProgramResult(statements, defs, parametricTables, plots, stateTables,
+                dynamicSystems);
+    }
+
+    // ── Transient / ODE system (DYNAMIC) ─────────────────────────────────────
+
+    /**
+     * Builds a {@code DYNAMIC … END} block into a {@link com.frees.backend.ast.DynamicSystem}.
+     * The header is parsed into solver {@link com.frees.backend.ast.DynamicSystem.Options};
+     * body items are sorted into equations (der/aux), method-of-lines FOR loops,
+     * initial conditions and events. Full state/derivative classification is
+     * deferred to solve time (after FOR loops expand against solved constants).
+     */
+    private com.frees.backend.ast.DynamicSystem buildDynamicDef(FreesParser.DynamicDefContext ctx) {
+        String name = ctx.IDENT().getText();
+        com.frees.backend.ast.DynamicSystem.Options options = buildDynamicOptions(name, ctx.dynamicHeader());
+
+        List<com.frees.backend.ast.Equation> bodyEquations = new ArrayList<>();
+        List<Statement.For> forBlocks = new ArrayList<>();
+        List<com.frees.backend.ast.DynamicSystem.InitialCondition> initials = new ArrayList<>();
+        List<com.frees.backend.ast.DynamicSystem.Event> events = new ArrayList<>();
+
+        for (FreesParser.DynamicItemContext item : ctx.dynamicItem()) {
+            if (item instanceof FreesParser.DynItemEventContext ev) {
+                events.add(buildDynamicEvent(ev.dynamicEvent()));
+            } else if (item instanceof FreesParser.DynItemInitContext init) {
+                initials.add(buildDynamicInit(init));
+            } else if (item instanceof FreesParser.DynItemForContext forItem) {
+                forBlocks.add(buildForBlock(forItem.forBlock()));
+            } else if (item instanceof FreesParser.DynItemEqContext eqItem) {
+                FreesParser.EquationContext eq = eqItem.equation();
+                bodyEquations.add(new com.frees.backend.ast.Equation(
+                        visit(eq.expr(0)), visit(eq.expr(1)), eq.getText()));
+            }
+        }
+        return new com.frees.backend.ast.DynamicSystem(name, options, bodyEquations,
+                forBlocks, initials, events, ctx.getText());
+    }
+
+    private com.frees.backend.ast.DynamicSystem.Options buildDynamicOptions(
+            String blockName, FreesParser.DynamicHeaderContext header) {
+        String method = com.frees.backend.ast.DynamicSystem.Options.DEFAULT_METHOD;
+        String timeVar = "t";
+        Double t0 = null;
+        Double tf = null;
+        Integer points = null;
+        Double step = null;
+        double rtol = com.frees.backend.ast.DynamicSystem.Options.DEFAULT_RTOL;
+        double atol = com.frees.backend.ast.DynamicSystem.Options.DEFAULT_ATOL;
+        Double maxStep = null;
+
+        if (header != null) {
+            for (FreesParser.DynamicOptContext opt : header.dynamicOpt()) {
+                String key = opt.IDENT().getText().toLowerCase();
+                FreesParser.DynamicOptValContext val = opt.dynamicOptVal();
+                switch (key) {
+                    case "t", "time", "tspan" -> {
+                        if (!(val instanceof FreesParser.DynOptRangeContext range)) {
+                            throw new EquationParser.ParseException("DYNAMIC " + blockName
+                                    + ": '" + key + "' must be a range, e.g. t = 0 .. 600 [s].");
+                        }
+                        double factor = unitFactor(range.unit());
+                        double offset = unitOffset(range.unit());
+                        timeVar = key.equals("tspan") ? "t" : key;
+                        t0 = signedNumberValue(range.signedNumber(0)) * factor + offset;
+                        tf = signedNumberValue(range.signedNumber(1)) * factor + offset;
+                    }
+                    case "method", "solver" -> method = optIdent(blockName, key, val).toLowerCase();
+                    case "points", "n" -> points = (int) Math.round(optNumber(blockName, key, val));
+                    case "step", "dt", "fixedstep" -> step = optNumber(blockName, key, val);
+                    case "rtol", "reltol" -> rtol = optNumber(blockName, key, val);
+                    case "atol", "abstol" -> atol = optNumber(blockName, key, val);
+                    case "maxstep" -> maxStep = optNumber(blockName, key, val);
+                    default -> throw new EquationParser.ParseException("DYNAMIC " + blockName
+                            + ": unknown option '" + key + "'. Supported: method, t, points, "
+                            + "step, rtol, atol, maxstep.");
+                }
+            }
+        }
+        if (t0 == null) {
+            throw new EquationParser.ParseException("DYNAMIC " + blockName
+                    + ": missing required time span 't = t0 .. tf'.");
+        }
+        return new com.frees.backend.ast.DynamicSystem.Options(
+                method, timeVar, t0, tf, points, step, rtol, atol, maxStep);
+    }
+
+    private double optNumber(String blockName, String key, FreesParser.DynamicOptValContext val) {
+        if (val instanceof FreesParser.DynOptNumContext num) {
+            return signedNumberValue(num.signedNumber())
+                    * unitFactor(num.unit()) + unitOffset(num.unit());
+        }
+        throw new EquationParser.ParseException("DYNAMIC " + blockName
+                + ": option '" + key + "' must be a number.");
+    }
+
+    private String optIdent(String blockName, String key, FreesParser.DynamicOptValContext val) {
+        if (val instanceof FreesParser.DynOptIdentContext id) {
+            return id.IDENT().getText();
+        }
+        throw new EquationParser.ParseException("DYNAMIC " + blockName
+                + ": option '" + key + "' must be a name (e.g. " + key + " = ode45).");
+    }
+
+    private double unitFactor(FreesParser.UnitContext unitCtx) {
+        if (unitCtx == null) {
+            return 1.0;
+        }
+        try {
+            return UnitRegistry.parseWithOffset(extractUnit(unitCtx)).factor();
+        } catch (UnitRegistry.UnknownUnitException ignored) {
+            return 1.0;
+        }
+    }
+
+    private double unitOffset(FreesParser.UnitContext unitCtx) {
+        if (unitCtx == null) {
+            return 0.0;
+        }
+        try {
+            return UnitRegistry.parseWithOffset(extractUnit(unitCtx)).offset();
+        } catch (UnitRegistry.UnknownUnitException ignored) {
+            return 0.0;
+        }
+    }
+
+    private com.frees.backend.ast.DynamicSystem.InitialCondition buildDynamicInit(
+            FreesParser.DynItemInitContext ctx) {
+        String state = ctx.IDENT().getText().toLowerCase();
+        List<Expr> indices = new ArrayList<>();
+        if (ctx.arrayIndexList() != null) {
+            for (FreesParser.ArrayIndexContext idx : ctx.arrayIndexList().arrayIndex()) {
+                indices.add(buildArrayIndex(idx));
+            }
+        }
+        Expr value = visit(ctx.expr());
+        return new com.frees.backend.ast.DynamicSystem.InitialCondition(state, indices, value);
+    }
+
+    private Expr buildArrayIndex(FreesParser.ArrayIndexContext idx) {
+        if (idx.DOTDOT() != null) {
+            return new Expr.Range(visit(idx.expr(0)), visit(idx.expr(1)));
+        }
+        return visit(idx.expr(0));
+    }
+
+    private com.frees.backend.ast.DynamicSystem.Event buildDynamicEvent(
+            FreesParser.DynamicEventContext ctx) {
+        String name = ctx.IDENT(0).getText();
+        String action = ctx.IDENT(ctx.IDENT().size() - 1).getText().toLowerCase();
+        String direction = ctx.PIPE() != null
+                ? ctx.IDENT(1).getText().toLowerCase()
+                : "any";
+        FreesParser.EquationContext eq = ctx.equation();
+        return new com.frees.backend.ast.DynamicSystem.Event(
+                name, visit(eq.expr(0)), visit(eq.expr(1)), direction, action);
     }
 
     /** Builds a fluid state table: the declared state-point variables plus the
