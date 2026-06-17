@@ -393,7 +393,7 @@ function resolveConditionalStyles(
       } else if (rule.property === 'fill') {
         fill = rule.value
       } else if (rule.property === 'opacity') {
-        const op = parseFloat(rule.value)
+        const op = Number.parseFloat(rule.value)
         if (Number.isFinite(op)) opacity = op
       } else if (rule.property === 'hidden') {
         hidden = rule.value === 'true' || rule.value === '1'
@@ -585,7 +585,7 @@ function formatExpressionValue(val: number, formatSpec: string): string {
     const numMatch = part.match(/^\.(\d+)([feg])$/)
     if (numMatch) {
       numberFormat = {
-        precision: parseInt(numMatch[1], 10),
+        precision: Number.parseInt(numMatch[1], 10),
         type: numMatch[2] as 'f' | 'e' | 'g'
       }
       continue
@@ -1199,7 +1199,7 @@ function parseColor(color: string): { r: number; g: number; b: number } {
   if (hex.length === 3) {
     hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2]
   }
-  const num = parseInt(hex, 16)
+  const num = Number.parseInt(hex, 16)
   if (Number.isNaN(num)) {
     return { r: 128, g: 128, b: 128 }
   }
@@ -2600,7 +2600,7 @@ function ConditionalRulesFields({
                   min={0}
                   max={1}
                   step={0.1}
-                  value={parseFloat(rule.value) || 0}
+                  value={Number.parseFloat(rule.value) || 0}
                   onChange={(v) => updateRule(rule.id, { value: String(v) })}
                 />
               ) : (

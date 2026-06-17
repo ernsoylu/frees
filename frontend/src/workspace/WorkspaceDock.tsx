@@ -91,8 +91,11 @@ function WorkspaceTab(props: IDockviewPanelHeaderProps) {
     <div className="dv-default-tab" data-testid="dockview-dv-default-tab">
       {Icon && <Icon size={13} style={{ flexShrink: 0, marginRight: 4 }} aria-hidden />}
       <span className="dv-default-tab-content">{title}</span>
-      <div
+      <button
+        type="button"
+        aria-label="Close"
         className="dv-default-tab-action"
+        style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', color: 'inherit' }}
         onPointerDown={(e) => e.preventDefault()}
         onClick={(e) => {
           e.preventDefault()
@@ -100,7 +103,7 @@ function WorkspaceTab(props: IDockviewPanelHeaderProps) {
         }}
       >
         <IconX size={13} />
-      </div>
+      </button>
     </div>
   )
 }
