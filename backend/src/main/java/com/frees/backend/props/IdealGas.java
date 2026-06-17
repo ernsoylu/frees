@@ -64,13 +64,52 @@ public final class IdealGas {
             Map.entry("no", new Species(30.006, 90_250.0, 210.76,
                     29.34, -0.09395e-2, 0.9747e-5, -4.187e-9)),
             Map.entry("no2", new Species(46.006, 33_180.0, 240.06,
-                    22.90, 5.715e-2, -3.52e-5, 7.87e-9)));
+                    22.90, 5.715e-2, -3.52e-5, 7.87e-9)),
+            Map.entry("n2o", new Species(44.013, 82_050.0, 219.96,
+                    24.11, 5.8632e-2, -3.562e-5, 10.58e-9)),
+            // Radicals/atoms for flame chemistry (cp ~ constant; cubic fit flat).
+            Map.entry("oh", new Species(17.007, 38_987.0, 183.70,
+                    29.10, -0.225e-2, 0.4e-5, -0.13e-9)),
+            Map.entry("h", new Species(1.008, 218_000.0, 114.72,
+                    20.786, 0.0, 0.0, 0.0)),
+            Map.entry("o", new Species(15.999, 249_190.0, 161.06,
+                    20.786, 0.0, 0.0, 0.0)),
+            Map.entry("n", new Species(14.007, 472_680.0, 153.30,
+                    20.786, 0.0, 0.0, 0.0)),
+            // Liquid and vapour fuels common in combustion and rocketry.
+            Map.entry("c8h18", new Species(114.231, -208_450.0, 466.73,
+                    -6.96, 77.17e-2, -42.84e-5, 91.13e-9)),
+            Map.entry("c12h26", new Species(170.34, -290_900.0, 622.83,
+                    -9.33, 113.7e-2, -64.0e-5, 137.0e-9)),
+            Map.entry("ch3oh", new Species(32.042, -201_300.0, 239.88,
+                    19.0, 9.152e-2, -1.22e-5, -8.039e-9)),
+            Map.entry("ch4o", new Species(32.042, -201_300.0, 239.88,
+                    19.0, 9.152e-2, -1.22e-5, -8.039e-9)),
+            Map.entry("c2h5oh", new Species(46.069, -235_310.0, 282.59,
+                    19.9, 20.96e-2, -10.38e-5, 20.05e-9)),
+            Map.entry("c2h6o", new Species(46.069, -235_310.0, 282.59,
+                    19.9, 20.96e-2, -10.38e-5, 20.05e-9)));
+
+    /** Standard formation enthalpy of liquid water [kJ/kmol] (HHV reference). */
+    public static final double HF_H2O_LIQUID = -285_830.0;
 
     private IdealGas() {}
 
     /** Whether the (lowercased) fluid spelling is an ideal-gas formula. */
     public static boolean isIdealGas(String fluid) {
         return SPECIES.containsKey(fluid);
+    }
+
+    /** Molar mass of a tabulated species [g/mol == kg/kmol], or NaN if unknown. */
+    public static double molarMassOf(String species) {
+        Species s = SPECIES.get(species.toLowerCase());
+        return s == null ? Double.NaN : s.molarMass();
+    }
+
+    /** Standard enthalpy of formation at 298.15 K [kJ/kmol], or NaN if unknown. */
+    public static double formationEnthalpyOf(String species) {
+        Species s = SPECIES.get(species.toLowerCase());
+        return s == null ? Double.NaN : s.hf();
     }
 
     /** Molar enthalpy with formation reference [kJ/kmol]. */

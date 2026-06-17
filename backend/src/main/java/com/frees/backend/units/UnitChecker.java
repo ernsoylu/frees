@@ -510,7 +510,9 @@ public final class UnitChecker {
             case "viscosity" -> "Pa-s";
             case "conductivity" -> "W/m-K";
             case "soundspeed" -> "m/s";
-            case "quality", "relhum", "humrat" -> "-";
+            case "molarmass" -> "kg/mol";
+            case "heatingvalue" -> "J/kg";
+            case "quality", "relhum", "humrat", "stoichafr" -> "-";
             default -> null;
         };
     }
