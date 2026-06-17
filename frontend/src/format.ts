@@ -1,10 +1,13 @@
 import { SolutionResult, VariableResult } from './api'
 
-export function formatValue(value: number | null | undefined): string {
+export function formatValue(value: number | null | undefined, decimals?: number): string {
   if (value === null || value === undefined || Number.isNaN(value)) return '—'
+  if (!Number.isFinite(value)) return String(value)
+  // An explicit decimal-place count (e.g. a Diagram output element's setting)
+  // overrides the adaptive formatter below.
+  if (decimals !== undefined && decimals >= 0) return value.toFixed(decimals)
   if (value === 0) return '0'
   const abs = Math.abs(value)
-  if (!Number.isFinite(value)) return String(value)
   if (abs >= 1e7 || abs < 1e-4) return value.toExponential(6)
   return Number(value.toPrecision(8)).toString()
 }

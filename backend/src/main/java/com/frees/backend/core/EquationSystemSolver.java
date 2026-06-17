@@ -269,6 +269,59 @@ public class EquationSystemSolver {
                 solved.iterations(), startNanos, parsed, uncertainties);
     }
 
+    /**
+     * Permissive variant of solve() for parametric-table row solves. Unlike
+     * solve(), this does NOT enforce global structural solvability: independent
+     * equation blocks that are not covered by the table's columns stay at their
+     * initial guesses instead of causing the whole row to fail. Only the blocks
+     * that include at least one variable matched by the bipartite assignment are
+     * solved by Newton's method.
+     */
+    public Result solvePermissive(String source, SolverSettings settings,
+                                  Map<String, VariableSpec> specs,
+                                  Map<String, ProcDef> extraDefs) {
+        long startNanos = System.nanoTime();
+        long deadlineNanos = startNanos + (long) (settings.elapsedTimeSeconds() * 1.0e9);
+        EquationParser.ParseResult parsed =
+                withExtraDefs(parser.parseResult(source), extraDefs);
+        requireComplexModeForImaginaryLiterals(parsed.equations(), settings.complexMode());
+        List<Equation> equations = IntegralSolver.hoistNested(parsed.equations());
+        ExtractedUncertainties ext = extractUncertaintyEquations(equations);
+        equations = ext.activeEquations();
+        if (settings.complexMode()) {
+            equations = com.frees.backend.parser.ComplexExpansion.expand(equations, parsed.displayNames());
+        }
+        InnerSolve solved = solveEquationListPermissive(equations, settings, specs, parsed.defs(), deadlineNanos);
+        return buildResult(equations, solved.blocks(), List.of(solved.values()),
+                solved.iterations(), startNanos, parsed, Map.of());
+    }
+
+    private InnerSolve solveEquationListPermissive(List<Equation> equations,
+                                                   SolverSettings settings,
+                                                   Map<String, VariableSpec> specs,
+                                                   Map<String, ProcDef> defs,
+                                                   long deadlineNanos) {
+        TreeSet<String> allVars = collectVariables(equations);
+        Map<String, VariableSpec> expandedSpecs = new HashMap<>(expandSpecs(allVars, specs, settings.complexMode()));
+        checkAndAdjustGuesses(equations, defs, expandedSpecs, null);
+        Map<String, Double> values = new HashMap<>();
+        for (String name : allVars) {
+            values.put(name, initialGuess(name, expandedSpecs, null));
+        }
+        NewtonSolver newtonSolver = new NewtonSolver(settings, defs);
+        NewtonSolver retrySolver = new NewtonSolver(retrySettings(settings), defs);
+        NewtonSolver polisher = new NewtonSolver(polishSettings(settings), defs);
+        SolveConfig config = new SolveConfig(deadlineNanos, expandedSpecs, null, newtonSolver, retrySolver, polisher);
+        List<Block> blocks = blocker.blockPermissive(equations);
+        int totalIterations = 0;
+        Set<Integer> skipIndices = new HashSet<>();
+        for (int bi = 0; bi < blocks.size(); bi++) {
+            if (skipIndices.contains(bi)) continue;
+            totalIterations += solveBlockWithFallback(bi, blocks, values, config, skipIndices);
+        }
+        return new InnerSolve(values, blocks, totalIterations);
+    }
+
     private record SolveConfig(
             long deadlineNanos,
             Map<String, VariableSpec> specs,

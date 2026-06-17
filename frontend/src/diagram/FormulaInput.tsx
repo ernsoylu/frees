@@ -12,7 +12,7 @@ import { Combobox, TextInput, useCombobox } from '@mantine/core'
 const MATH_FUNCS = [
   'sin', 'cos', 'tan', 'asin', 'acos', 'atan', 'atan2', 'sqrt', 'exp', 'ln',
   'log', 'log10', 'abs', 'min', 'max', 'floor', 'ceil', 'round', 'mod',
-  'sinh', 'cosh', 'tanh', 'sign', 'pi', 'e',
+  'sinh', 'cosh', 'tanh', 'sign', 'pi#', 'e#',
 ]
 
 interface Props {

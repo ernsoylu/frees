@@ -208,7 +208,7 @@ class NceesHvacExamplesTest {
                 t_wall = 0.375
 
                 ID = (OD - 2 * t_wall) / 12
-                V = (gpm * 0.1337 / 60) / (pi / 4 * ID^2)
+                V = (gpm * 0.1337 / 60) / (pi# / 4 * ID^2)
                 h_friction = f_factor * (L_eq / ID) * (V^2 / 64.4)
                 h_total = z_elev + h_friction
 

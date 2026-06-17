@@ -330,7 +330,7 @@ class EquationSystemSolverTest {
         String source = """
                 V_rms = 230 + 0i
                 f = 50 [Hz]
-                omega = 2 * pi * f
+                omega = 2 * pi# * f
                 
                 R_load = 15 [ohm]
                 L_load = 0.05 [H]

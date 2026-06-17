@@ -207,6 +207,44 @@ export function downloadProject(project: FreesProject, filename: string) {
   URL.revokeObjectURL(url)
 }
 
+/**
+ * Save the project, letting the user choose the destination via the File System
+ * Access API (showSaveFilePicker) where supported. Falls back to a plain browser
+ * download (fixed Downloads folder) on browsers without the API (e.g. Firefox).
+ *
+ * Returns true if the project was saved (or a download was triggered), false if
+ * the user cancelled the picker — so callers can keep the dirty flag set.
+ */
+export async function saveProject(project: FreesProject, filename: string): Promise<boolean> {
+  const json = JSON.stringify(project, null, 2)
+  const suggestedName = sanitizeFilename(filename)
+  const picker = (window as unknown as {
+    showSaveFilePicker?: (opts: unknown) => Promise<{
+      createWritable: () => Promise<{ write: (data: string) => Promise<void>; close: () => Promise<void> }>
+    }>
+  }).showSaveFilePicker
+
+  if (typeof picker === 'function') {
+    try {
+      const handle = await picker({
+        suggestedName,
+        types: [{ description: 'frees project', accept: { 'application/json': ['.frees'] } }],
+      })
+      const writable = await handle.createWritable()
+      await writable.write(json)
+      await writable.close()
+      return true
+    } catch (err) {
+      // The user dismissed the picker — leave the project unsaved (and dirty).
+      if (err instanceof DOMException && err.name === 'AbortError') return false
+      // Any other failure (permissions, unsupported) falls back to a download.
+    }
+  }
+
+  downloadProject(project, filename)
+  return true
+}
+
 /** Read and validate an opened `.frees` file. */
 export async function readProjectFile(file: File): Promise<FreesProject> {
   const raw = await file.text()

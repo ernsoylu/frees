@@ -73,12 +73,34 @@ public final class UnitRegistry {
         // Time
         define("s", 1.0, 0, 0, 1);
         define("sec", 1.0, 0, 0, 1);
+        define("secs", 1.0, 0, 0, 1);
+        define("second", 1.0, 0, 0, 1);
+        define("seconds", 1.0, 0, 0, 1);
+        define("ms", 1e-3, 0, 0, 1);
+        define("millisecond", 1e-3, 0, 0, 1);
+        define("milliseconds", 1e-3, 0, 0, 1);
+        define("us", 1e-6, 0, 0, 1);
+        define("microsecond", 1e-6, 0, 0, 1);
+        define("microseconds", 1e-6, 0, 0, 1);
+        define("ns", 1e-9, 0, 0, 1);
+        define("nanosecond", 1e-9, 0, 0, 1);
+        define("nanoseconds", 1e-9, 0, 0, 1);
         define("min", 60.0, 0, 0, 1);
+        define("mins", 60.0, 0, 0, 1);
+        define("minute", 60.0, 0, 0, 1);
+        define("minutes", 60.0, 0, 0, 1);
         define("hr", 3600.0, 0, 0, 1);
+        define("hrs", 3600.0, 0, 0, 1);
         define("hour", 3600.0, 0, 0, 1);
+        define("hours", 3600.0, 0, 0, 1);
         defineCaseSensitive("h", 3600.0, 0, 0, 1);
         define("day", 86400.0, 0, 0, 1);
+        define("days", 86400.0, 0, 0, 1);
+        define("week", 604800.0, 0, 0, 1);
+        define("weeks", 604800.0, 0, 0, 1);
         define("year", 3.1536e7, 0, 0, 1);
+        define("years", 3.1536e7, 0, 0, 1);
+        define("yr", 3.1536e7, 0, 0, 1);
 
         // Temperature (multiplicative scale only; Convert is multiplicative)
         define("k", 1.0, 0, 0, 0, 1);
@@ -508,6 +530,27 @@ public final class UnitRegistry {
             }
         }
         return null;
+    }
+
+    /** A registered unit for the Help reference: its symbol, the SI dimension it
+     * measures (e.g. "Pa", "m", "s", "-"), and its multiplicative factor to SI. */
+    public record UnitInfo(String symbol, String dimension, double siFactor) {}
+
+    /**
+     * All registered units (case-insensitive and case-sensitive tables) for the
+     * Help reference, sorted by dimension then symbol. Names are stored as the
+     * language sees them (case-insensitive units are lowercased).
+     */
+    public static List<UnitInfo> listUnits() {
+        List<UnitInfo> out = new java.util.ArrayList<>();
+        for (Map.Entry<String, Quantity> e : UNITS.entrySet()) {
+            out.add(new UnitInfo(e.getKey(), siName(e.getValue().dims()), e.getValue().factor()));
+        }
+        for (Map.Entry<String, Quantity> e : CASE_SENSITIVE_UNITS.entrySet()) {
+            out.add(new UnitInfo(e.getKey(), siName(e.getValue().dims()), e.getValue().factor()));
+        }
+        out.sort(java.util.Comparator.comparing(UnitInfo::dimension).thenComparing(UnitInfo::symbol));
+        return out;
     }
 
     /** Convert('From', 'To'): the multiplicative factor between two unit expressions. */

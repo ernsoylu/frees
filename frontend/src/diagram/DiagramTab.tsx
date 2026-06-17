@@ -743,7 +743,7 @@ function ControlWidget({
             fontFamily: 'monospace',
           }}
         >
-          {v ? `${formatValue(v.value)}${unit}` : '—'}
+          {v ? `${formatValue(v.value, el.decimals)}${unit}` : '—'}
         </div>
       </div>
     )
@@ -2366,6 +2366,18 @@ function ControlFields({
           onChange={(v) => set({ action: v as any })}
         />
       )}
+      {el.kind === 'ctl-output' && (
+        <NumberInput
+          label="Decimal places"
+          description="Leave blank for automatic formatting"
+          size="xs"
+          min={0}
+          max={12}
+          allowDecimal={false}
+          value={el.decimals ?? ''}
+          onChange={(v) => set({ decimals: typeof v === 'number' ? v : undefined })}
+        />
+      )}
       <NumberInput
         label="Opacity"
         size="xs"
@@ -3452,6 +3464,11 @@ interface Props {
   inspectorOutlet?: HTMLElement | null
   /** Whether this is the focused diagram window (owns the shared Inspector). */
   isActive?: boolean
+  /**
+   * Mode the diagram mounts in. Defaults to 'develop'. Opening a saved project
+   * that contains diagrams passes 'run' so the diagram shows in Run view first.
+   */
+  initialMode?: 'develop' | 'run'
 }
 
 const PLAYBACK_SPEEDS: { label: string; value: string; ms: number }[] = [
@@ -3481,6 +3498,7 @@ export default function DiagramTab(props: Readonly<Props>) {
     singleDiagramId,
     inspectorOutlet,
     isActive,
+    initialMode,
   } = props
 
   const [localDiagrams, setLocalDiagrams] = useState<DiagramSpec[]>(() => {
@@ -3540,7 +3558,7 @@ export default function DiagramTab(props: Readonly<Props>) {
   // Search query for the Component Library dropdown (50+ icons across 4
   // categories, so a flat scrolling menu is hard to use without a filter).
   const [libQuery, setLibQuery] = useState('')
-  const [mode, setMode] = useState<'develop' | 'run'>('develop')
+  const [mode, setMode] = useState<'develop' | 'run'>(initialMode ?? 'develop')
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [view, setView] = useState<ViewTransform>({ x: 60, y: 40, k: 1 })
   const [drag, setDrag] = useState<DragState | null>(null)
@@ -5392,7 +5410,7 @@ export default function DiagramTab(props: Readonly<Props>) {
   const gridStep = state.gridSize * view.k
 
   return (
-    <Group align="stretch" gap="sm" h="100%" wrap="nowrap">
+    <Group align="stretch" gap="sm" h="100%" wrap="nowrap" p={6}>
       <Stack gap="xs" flex={1} miw={0}>
         {/* Diagram Tabs Row */}
         <Group gap="xs" wrap="wrap" style={{ borderBottom: '1px solid var(--mantine-color-default-border)', paddingBottom: 8 }}>
@@ -6406,18 +6424,22 @@ export default function DiagramTab(props: Readonly<Props>) {
             )}
           </ScrollArea>
         )
-        // Portal Properties/Layers into the shared Inspector edge panel when
-        // this is the focused diagram window; if the Inspector isn't open, fall
-        // back to an inline column so properties stay reachable.
+        // Only the focused diagram window shows an inspector. A non-focused
+        // diagram renders nothing — otherwise, when focus leaves to another
+        // window the shared outlet unmounts (inspectorOutlet → null) and the
+        // inline fallback below would render a stray inspector beside the
+        // diagram (the duplicate-inspector bug).
+        if (!isActive) return null
+        // Focused: portal Properties/Layers into the shared Inspector edge
+        // panel when it's open; otherwise fall back to an inline column so
+        // properties stay reachable.
         if (inspectorOutlet) {
-          return isActive
-            ? createPortal(
-                <div style={{ height: '100%', padding: 'var(--mantine-spacing-sm)' }}>
-                  {inspectorBody}
-                </div>,
-                inspectorOutlet,
-              )
-            : null
+          return createPortal(
+            <div style={{ height: '100%', padding: 'var(--mantine-spacing-sm)' }}>
+              {inspectorBody}
+            </div>,
+            inspectorOutlet,
+          )
         }
         return (
           <Paper withBorder p="sm" w={250} style={{ flexShrink: 0 }}>
