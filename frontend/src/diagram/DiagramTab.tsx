@@ -5500,24 +5500,8 @@ export default function DiagramTab(props: Readonly<Props>) {
             </Menu.Dropdown>
           </Menu>
           )}
-          {/* Export is a Run-mode action only; diagrams persist with the
-              workspace, so a separate "Save JSON" button is unnecessary. */}
-          {runMode && (
-            <Tooltip label="Export this diagram (SVG, PNG, PDF, EPS)">
-              <Button
-                size="compact-xs"
-                variant="light"
-                color="gray"
-                leftSection={<IconDownload size={13} />}
-                onClick={() => {
-                  setExportError(null)
-                  setExportModalOpen(true)
-                }}
-              >
-                Export
-              </Button>
-            </Tooltip>
-          )}
+          {/* Export lives in the Inspector in Run mode (see inspectorBody);
+              diagrams persist with the workspace, so no "Save JSON" button. */}
         </Group>
 
         {notice && (
@@ -6241,6 +6225,24 @@ export default function DiagramTab(props: Readonly<Props>) {
       {!runMode && (() => {
         const inspectorBody = (
           <ScrollArea h="100%" type="auto">
+            {runMode && (
+              <Tooltip label="Export this diagram (SVG, PNG, PDF, EPS)">
+                <Button
+                  fullWidth
+                  size="xs"
+                  variant="light"
+                  color="gray"
+                  mb="sm"
+                  leftSection={<IconDownload size={14} />}
+                  onClick={() => {
+                    setExportError(null)
+                    setExportModalOpen(true)
+                  }}
+                >
+                  Export diagram
+                </Button>
+              </Tooltip>
+            )}
             {selected ? (
               <PropertiesPanel
                 el={selected}

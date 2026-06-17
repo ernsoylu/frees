@@ -3,7 +3,6 @@ import {
   Alert,
   Badge,
   Button,
-  Divider,
   Flex,
   Group,
   Paper,
@@ -1508,11 +1507,8 @@ export default function App() {
           <div style={bodyStyle}>
             <Stack gap="xs">
               <Text size="sm" fw={600} c="teal.4">Equations</Text>
-              <Button size="xs" variant="default" onClick={() => setShowVariableInfo(true)}>Variable Information</Button>
-              <Button size="xs" variant="default" onClick={() => setShowMinMax(true)}>Min / Max (optimize)</Button>
-              <Button size="xs" variant="default" onClick={() => setShowCurveFit(true)}>Curve Fit</Button>
-              <Divider my="xs" />
               <Text size="xs" c="dimmed">Edit equations in the Editor; press Solve (F2) to compute. Open the Solution panel (View menu) to see results.</Text>
+              <Text size="xs" c="dimmed">Variable Information, Min / Max and Curve Fit are on the left rail and in the Tools menu.</Text>
             </Stack>
           </div>
         )
@@ -1942,6 +1938,9 @@ export default function App() {
           onOpenExamples={() => setShowExamples(true)}
           onOpenInspector={() => dockRef.current?.open('inspector')}
           onOpenSolution={() => dockRef.current?.open('solution')}
+          onVariableInfo={() => setShowVariableInfo(true)}
+          onMinMax={() => setShowMinMax(true)}
+          onCurveFit={() => setShowCurveFit(true)}
         />
         <input
           ref={projectFileRef}
