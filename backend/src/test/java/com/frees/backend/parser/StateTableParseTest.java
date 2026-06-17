@@ -7,6 +7,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -91,6 +92,21 @@ class StateTableParseTest {
         var result = parser.parseResult(clean);
         assertEquals(1, result.stateTables().size());
         assertEquals("Water", result.stateTables().get(0).fluid());
+    }
+
+    @Test
+    void numberlessStateVariableIsRejected() {
+        // States are always numbered; a bare, indexless member (xrefg) is an error.
+        String text = """
+                STATE TABLE Refrig(T1, P1, xrefg)
+                  FLUID = R134a
+                END
+                """;
+        EquationParser.ParseException e = assertThrows(
+                EquationParser.ParseException.class,
+                () -> parser.parseResult(text));
+        assertTrue(e.getMessage().contains("xrefg"), e.getMessage());
+        assertTrue(e.getMessage().contains("no state number"), e.getMessage());
     }
 
     @Test

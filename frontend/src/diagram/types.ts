@@ -215,6 +215,8 @@ export interface InputControl extends ControlBase {
 
 export interface OutputControl extends ControlBase {
   kind: 'ctl-output'
+  /** Number of decimal places to display. Undefined uses the default formatter. */
+  decimals?: number
 }
 
 export interface DropdownControl extends ControlBase {

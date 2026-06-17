@@ -68,9 +68,23 @@ public class AstBuilder extends FreesBaseVisitor<Expr> {
 
     /** Builds a fluid state table: the declared state-point variables plus the
      * fluid declared with a {@code FLUID = <name>} attribute line (if any). */
+    // A state-table member must carry a state number (T1, P_2, h[3]); thermodynamic
+    // states are always numbered. A bare, numberless name (e.g. xrefg) is rejected.
+    private static final java.util.regex.Pattern STATE_INDEX_PATTERN =
+            java.util.regex.Pattern.compile("^[a-z][a-z_]*?(?:_?\\d+|\\[\\d+\\])$",
+                    java.util.regex.Pattern.CASE_INSENSITIVE);
+
     private com.frees.backend.ast.StateTableDef buildStateTableDef(FreesParser.StateTableDefContext ctx) {
         String name = ctx.IDENT().getText();
         List<String> vars = buildParamList(ctx.paramList());
+        for (String var : vars) {
+            if (!STATE_INDEX_PATTERN.matcher(var).matches()) {
+                throw new EquationParser.ParseException(String.format(
+                        "STATE TABLE '%s': variable '%s' has no state number. "
+                                + "State variables must be numbered (e.g. %s1 or %s[1]).",
+                        name, var, var, var));
+            }
+        }
         String fluid = null;
         for (FreesParser.StateTableAttrContext attr : ctx.stateTableAttr()) {
             if (!"fluid".equals(attr.IDENT().getText().toLowerCase())) {
@@ -724,8 +738,11 @@ public class AstBuilder extends FreesBaseVisitor<Expr> {
     @Override
     public Expr visitVarAtom(FreesParser.VarAtomContext ctx) {
         String original = ctx.IDENT().getText();
-        if ("pi".equalsIgnoreCase(original)) {
-            return new Expr.Num(Math.PI);
+        ConstantsRegistry.Constant constant = ConstantsRegistry.lookup(original);
+        if (constant != null) {
+            return constant.unit() == null
+                    ? new Expr.Num(constant.value())
+                    : new Expr.Num(constant.value(), constant.unit());
         }
         displayNames.putIfAbsent(original.toLowerCase(), original);
         return new Expr.Var(original);

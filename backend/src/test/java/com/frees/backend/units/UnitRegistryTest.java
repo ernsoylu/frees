@@ -39,6 +39,33 @@ class UnitRegistryTest {
     }
 
     @Test
+    void timeConversionsCoverSecondsToWeeks() {
+        assertEquals(60.0, UnitRegistry.convert("min", "s"), 1e-9);
+        assertEquals(60.0, UnitRegistry.convert("minute", "s"), 1e-9);
+        assertEquals(3600.0, UnitRegistry.convert("hr", "s"), 1e-9);
+        assertEquals(3600.0, UnitRegistry.convert("hour", "s"), 1e-9);
+        assertEquals(24.0, UnitRegistry.convert("day", "hr"), 1e-9);
+        assertEquals(7.0, UnitRegistry.convert("week", "day"), 1e-9);
+        assertEquals(604800.0, UnitRegistry.convert("week", "s"), 1e-9);
+    }
+
+    @Test
+    void subSecondTimeUnitsConvert() {
+        assertEquals(1e-3, UnitRegistry.convert("ms", "s"), 1e-15);
+        assertEquals(1e-6, UnitRegistry.convert("us", "s"), 1e-18);
+        assertEquals(1e-9, UnitRegistry.convert("ns", "s"), 1e-21);
+        assertEquals(1000.0, UnitRegistry.convert("s", "ms"), 1e-9);
+    }
+
+    @Test
+    void timeUnitPluralsAndAliasesAreEquivalent() {
+        assertEquals(UnitRegistry.convert("hr", "s"), UnitRegistry.convert("hours", "s"), 1e-9);
+        assertEquals(UnitRegistry.convert("day", "s"), UnitRegistry.convert("days", "s"), 1e-9);
+        assertEquals(UnitRegistry.convert("s", "s"), UnitRegistry.convert("second", "s"), 1e-9);
+        assertEquals(UnitRegistry.convert("year", "s"), UnitRegistry.convert("yr", "s"), 1e-9);
+    }
+
+    @Test
     void unitNamesAreCaseInsensitive() {
         assertEquals(UnitRegistry.convert("KPA", "PA"), UnitRegistry.convert("kPa", "Pa"), 1e-12);
     }
