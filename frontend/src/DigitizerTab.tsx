@@ -110,7 +110,7 @@ const STORAGE_KEY = 'frees-digitizer'
 function evalMathExpr(input: string): number {
   const tokens = input.toLowerCase().match(/\d+\.?\d*(?:e[+-]?\d+)?|pi|e|[+\-*/^()]/g)
   if (!tokens || tokens.join('') !== input.toLowerCase().replace(/\s+/g, '')) {
-    return NaN
+    return Number.NaN
   }
   let pos = 0
   const peek = () => tokens[pos]
@@ -119,7 +119,7 @@ function evalMathExpr(input: string): number {
     const t = next()
     if (t === '(') {
       const v = parseAddSub()
-      if (next() !== ')') return NaN
+      if (next() !== ')') return Number.NaN
       return v
     }
     if (t === '-') return -parsePrimary()
@@ -127,7 +127,7 @@ function evalMathExpr(input: string): number {
     if (t === 'pi') return Math.PI
     if (t === 'e') return Math.E
     const n = Number(t)
-    return Number.isFinite(n) ? n : NaN
+    return Number.isFinite(n) ? n : Number.NaN
   }
   function parsePower(): number {
     const base = parsePrimary()
@@ -152,7 +152,7 @@ function evalMathExpr(input: string): number {
     return v
   }
   const result = parseAddSub()
-  return pos === tokens.length ? result : NaN
+  return pos === tokens.length ? result : Number.NaN
 }
 
 // --- pixel <-> value mapping (general affine form supports tilted scans)
@@ -371,7 +371,7 @@ function fmt(v: number): string {
   if (!Number.isFinite(v)) return 'NaN'
   const abs = Math.abs(v)
   if (abs !== 0 && (abs >= 1e6 || abs < 1e-4)) return v.toExponential(5)
-  return parseFloat(v.toPrecision(6)).toString()
+  return Number.parseFloat(v.toPrecision(6)).toString()
 }
 
 const CAL_LABELS: Record<string, string> = {
@@ -406,9 +406,9 @@ function rgbToHex(rgb: [number, number, number]): string {
 
 function hexToRgb(hex: string): [number, number, number] {
   return [
-    parseInt(hex.slice(1, 3), 16),
-    parseInt(hex.slice(3, 5), 16),
-    parseInt(hex.slice(5, 7), 16),
+    Number.parseInt(hex.slice(1, 3), 16),
+    Number.parseInt(hex.slice(3, 5), 16),
+    Number.parseInt(hex.slice(5, 7), 16),
   ]
 }
 
