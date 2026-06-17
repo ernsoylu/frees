@@ -20,7 +20,7 @@ export interface EquationEditorHandle {
 const KEYWORDS = new Set([
   'FOR', 'TO', 'STEP', 'WHILE', 'DO', 'REPEAT', 'UNTIL', 'IF', 'THEN', 'ELSE',
   'END', 'FUNCTION', 'PROCEDURE', 'MODULE', 'CALL', 'PARAMETRIC', 'TABLE',
-  'PLOT', 'DUPLICATE', 'AND', 'OR', 'NOT',
+  'PLOT', 'DUPLICATE', 'AND', 'OR', 'NOT', 'DYNAMIC', 'STATE', 'EVENT',
 ])
 
 // Built-in function names pulled from the Functions-menu catalog: the leading

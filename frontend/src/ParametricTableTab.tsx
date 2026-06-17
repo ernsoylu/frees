@@ -29,6 +29,9 @@ interface ColumnHeaderProps {
   name: string
   units: string
   readOnly?: boolean
+  /** Units field stays editable even when the column itself is read-only —
+   * used for ODE tables, where the unit is a display label (the solver is SI). */
+  unitsEditable?: boolean
   onAlter: () => void
   onUnitsChange: (units: string) => void
 }
@@ -37,9 +40,11 @@ function ColumnHeader({
   name,
   units,
   readOnly,
+  unitsEditable,
   onAlter,
   onUnitsChange,
 }: Readonly<ColumnHeaderProps>) {
+  const unitsReadOnly = readOnly && !unitsEditable
   return (
     <Stack gap={4}>
       <Tooltip label={readOnly ? 'Defined in code' : 'Click to fill values (linear / logarithmic)'}>
@@ -60,7 +65,7 @@ function ColumnHeader({
         placeholder="units"
         value={units}
         onChange={(e) => onUnitsChange(e.currentTarget.value)}
-        readOnly={readOnly}
+        readOnly={unitsReadOnly}
         spellCheck={false}
         styles={{
           input: {
@@ -123,6 +128,8 @@ interface Props {
   results: TableRowResult[]
   varDrafts: Record<string, VariableDraft>
   readOnly?: boolean
+  /** True when this read-only table is the output of a DYNAMIC/ODE block. */
+  isOde?: boolean
   onConfigure: () => void
   onAddRow: () => void
   onRemoveRow: () => void
@@ -138,6 +145,7 @@ export default function ParametricTableTab({
   results,
   varDrafts,
   readOnly,
+  isOde,
   onConfigure,
   onAddRow,
   onRemoveRow,
@@ -151,8 +159,9 @@ export default function ParametricTableTab({
       <Group gap="xs">
         {readOnly ? (
           <Text size="xs" c="dimmed">
-            Defined in code (PARAMETRIC … END) — its columns and rows come from
-            the editor text. Run it with Solve Table.
+            {isOde
+              ? 'Solved trajectory from a DYNAMIC (ODE) block — columns are populated by the transient solver (which runs in SI), so the values are display-only. You can edit each column’s units as a display label.'
+              : 'Defined in code (PARAMETRIC … END) — its columns and rows come from the editor text. Run it with Solve Table.'}
           </Text>
         ) : (
           <>
@@ -197,6 +206,7 @@ export default function ParametricTableTab({
                       name={name}
                       units={varDrafts[name]?.units ?? ''}
                       readOnly={readOnly}
+                      unitsEditable={isOde}
                       onAlter={() => onAlterColumn(name)}
                       onUnitsChange={(units) => onColumnUnitsChange(name, units)}
                     />

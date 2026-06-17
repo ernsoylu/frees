@@ -374,6 +374,49 @@ export function WorkspaceDock({
         .dockview-theme-light .dv-edge-collapsed {
           background-color: var(--mantine-color-body);
         }
+        /* When the edge group is EXPANDED, dockview rips it into a floating
+           overlay (.dv-floating-overlay-host) with its own hardcoded dark
+           backgrounds, a left border/shadow, and a resize sash. Pin the whole
+           overlay tree to the app background. Note dockview's hyphenated
+           .dv-split-view-container (not .dv-splitview-container). */
+        .dockview-theme-dark .dv-floating-overlay-host,
+        .dockview-theme-light .dv-floating-overlay-host,
+        .dockview-theme-dark .dv-floating-overlay-host .dv-split-view-container,
+        .dockview-theme-light .dv-floating-overlay-host .dv-split-view-container,
+        .dockview-theme-dark .dv-floating-overlay-host .dv-view,
+        .dockview-theme-light .dv-floating-overlay-host .dv-view,
+        .dockview-theme-dark .dv-groupview.dv-groupview-edge,
+        .dockview-theme-light .dv-groupview.dv-groupview-edge,
+        .dockview-theme-dark .dv-groupview-edge > .dv-content-container,
+        .dockview-theme-light .dv-groupview-edge > .dv-content-container,
+        .dockview-theme-dark .dv-groupview-edge > .dv-tabs-and-actions-container,
+        .dockview-theme-light .dv-groupview-edge > .dv-tabs-and-actions-container {
+          background-color: var(--mantine-color-body) !important;
+        }
+        /* Kill the floating overlay's hardcoded border + shadow (the thin blue
+           line on the left). */
+        .dockview-theme-dark .dv-floating-overlay-host,
+        .dockview-theme-light .dv-floating-overlay-host {
+          border-left: 1px solid var(--mantine-color-default-border) !important;
+          box-shadow: none !important;
+        }
+        /* The resize sash (the other half of the "thin blue line") — transparent
+           until hovered/active, then teal to match the app's accents. */
+        .dockview-theme-dark .dv-sash,
+        .dockview-theme-light .dv-sash {
+          background-color: transparent !important;
+        }
+        .dockview-theme-dark .dv-sash:hover,
+        .dockview-theme-light .dv-sash:hover,
+        .dockview-theme-dark .dv-sash.active,
+        .dockview-theme-light .dv-sash.active {
+          background-color: var(--mantine-color-teal-6) !important;
+        }
+        /* Hide the stubborn blue active-tab indicator inside the edge header. */
+        .dockview-theme-dark .dv-groupview-edge .dv-tab-divider,
+        .dockview-theme-light .dv-groupview-edge .dv-tab-divider {
+          background-color: transparent !important;
+        }
         /* The focusable dock tabs/groups (tabindex=0) otherwise show the
            browser's default blue focus ring on the active edge group. Retint
            keyboard focus to teal and drop the ring for mouse focus. */

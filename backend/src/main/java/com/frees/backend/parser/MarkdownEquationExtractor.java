@@ -361,7 +361,7 @@ public final class MarkdownEquationExtractor {
             i--;
             while (i >= 0 && line.charAt(i) != '[') {
                 char c = line.charAt(i);
-                // Subscripts may be multi-dimensional or ranged: A[1,2], x[1..3]
+                // Subscripts may be multi-dimensional or ranged: A[1,2], x[1:3]
                 if (!Character.isLetterOrDigit(c) && c != '_' && c != ',' && c != '.' && !Character.isWhitespace(c)) {
                     return -1;
                 }

@@ -209,6 +209,7 @@ export default function TablesTab(props: Readonly<Props>) {
           results={props.results}
           varDrafts={props.varDrafts}
           readOnly={active.source === 'code'}
+          isOde={active.origin === 'ode'}
           onConfigure={props.onConfigure}
           onAddRow={props.onAddRow}
           onRemoveRow={props.onRemoveRow}

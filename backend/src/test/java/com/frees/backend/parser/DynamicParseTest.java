@@ -86,13 +86,13 @@ class DynamicParseTest {
 
     @Test
     void parsesArrayStateInitialCondition() {
-        // Method-of-lines vector initial: T[1..N](0) = T_init.
+        // Method-of-lines vector initial: T[1:N](0) = T_init.
         String text = """
                 DYNAMIC rod (t = 0 .. 60, points = 100)
                   FOR i = 1 TO 5
                     der(T[i]) = T[i]
                   END
-                  T[1..5](0) = 300
+                  T[1:5](0) = 300
                 END
                 """;
         DynamicSystem ds = parser.parseResult(text).dynamicSystems().get(0);

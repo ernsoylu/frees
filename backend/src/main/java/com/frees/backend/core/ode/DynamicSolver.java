@@ -217,7 +217,7 @@ public final class DynamicSolver {
         return Evaluator.eval(resolve(e, loopVars), env, defs);
     }
 
-    /** Expands one initial condition (scalar, single element, or a {@code 1..N}
+    /** Expands one initial condition (scalar, single element, or a {@code 1:N}
      *  range) into per-state initial values. */
     private void expandInitial(DynamicSystem.InitialCondition ic, Map<String, Double> initial) {
         if (ic.indices().isEmpty()) {

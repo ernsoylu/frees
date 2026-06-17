@@ -905,9 +905,11 @@ export default function App() {
       )
       setSolvedComplexMode(complexMode)
       setResult(response)
-      // The Solution panel is never auto-opened: it stays hidden until the user
-      // intentionally opens it (View menu / command palette). Solving updates its
-      // contents but does not surface the window.
+      // The Solution panel lives collapsed in the right edge group by default
+      // (a rotated tab, like the Inspector) so it is always available without the
+      // user opening it by hand. Solving updates its contents but does not
+      // force-expand it; the user expands it by clicking its edge tab (or the
+      // View menu) and removes it only by deliberately closing it.
       setTables((all) => mergeCodeTables(all, response.codeTables, response.parametricTables, response.odeTables))
       setLastSolvedWithFillMissing(shouldFillMissing && response.success)
       // Once the user has solved successfully, they've learned the core
@@ -1954,7 +1956,7 @@ export default function App() {
           <WorkspaceDock
             content={panelContent}
             titles={panelTitles}
-            defaultOpen={['equations', 'inspector']}
+            defaultOpen={['equations', 'inspector', 'solution']}
             edgeKinds={['solution', 'inspector']}
             onActiveChange={(active) => {
               setActiveTab(active?.kind ?? '')

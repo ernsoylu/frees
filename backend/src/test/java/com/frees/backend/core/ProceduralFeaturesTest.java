@@ -54,7 +54,7 @@ class ProceduralFeaturesTest {
 
     @Test
     void functionRepeatUntil() {
-        // Iterative sum: sum 1..n using REPEAT-UNTIL
+        // Iterative sum: sum 1:n using REPEAT-UNTIL
         String source = """
                 FUNCTION SumN(n)
                   i := 1
@@ -69,13 +69,13 @@ class ProceduralFeaturesTest {
                 result = SumN(10)
                 """;
         EquationSystemSolver.Result result = solver.solve(source);
-        // Sum 1..10 = 55
+        // Sum 1:10 = 55
         assertEquals(55.0, result.variables().get("result"), 1e-9);
     }
 
     @Test
     void functionWhileLoop() {
-        // Iterative sum: sum 1..n using WHILE-DO
+        // Iterative sum: sum 1:n using WHILE-DO
         String source = """
                 FUNCTION SumWhile(n)
                   i := 1
@@ -90,7 +90,7 @@ class ProceduralFeaturesTest {
                 result = SumWhile(10)
                 """;
         EquationSystemSolver.Result result = solver.solve(source);
-        // Sum 1..10 = 55
+        // Sum 1:10 = 55
         assertEquals(55.0, result.variables().get("result"), 1e-9);
     }
 
@@ -139,6 +139,45 @@ class ProceduralFeaturesTest {
                 END
 
                 CALL MinMax(8, 3 : small, large)
+                """;
+        EquationSystemSolver.Result result = solver.solve(source);
+        assertEquals(3.0, result.variables().get("small"), 1e-9);
+        assertEquals(8.0, result.variables().get("large"), 1e-9);
+    }
+
+    // ── MATLAB-style multi-output FUNCTION tests ────────────────────────────────
+
+    @Test
+    void multiOutputFunctionBasic() {
+        // FUNCTION [outs] = name(...) is a procedure consumed MATLAB-style with
+        // [a, b] = name(...). Outputs are assigned by name in the body via :=.
+        String source = """
+                FUNCTION [q, r] = DivMod(a, b)
+                  q := trunc(a / b)
+                  r := a - q * b
+                END
+
+                [whole, rem] = DivMod(17, 5)
+                """;
+        EquationSystemSolver.Result result = solver.solve(source);
+        assertEquals(3.0, result.variables().get("whole"), 1e-9);
+        assertEquals(2.0, result.variables().get("rem"), 1e-9);
+    }
+
+    @Test
+    void multiOutputFunctionWithConditional() {
+        String source = """
+                FUNCTION [lo, hi] = Order(a, b)
+                  IF a < b THEN
+                    lo := a
+                    hi := b
+                  ELSE
+                    lo := b
+                    hi := a
+                  END
+                END
+
+                [small, large] = Order(8, 3)
                 """;
         EquationSystemSolver.Result result = solver.solve(source);
         assertEquals(3.0, result.variables().get("small"), 1e-9);

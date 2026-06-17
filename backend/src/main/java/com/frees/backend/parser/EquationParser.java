@@ -25,7 +25,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public final class EquationParser {
 
-    /** Largest span a single FOR loop or array range (1..N) may expand to, and
+    /** Largest span a single FOR loop or array range (1:N) may expand to, and
      * the backstop on the total number of equations a program may generate.
      * These bound parse-time expansion so a tiny input (e.g. FOR i = 1 TO 1e9)
      * cannot exhaust memory/CPU — a denial-of-service guard. */
@@ -179,7 +179,7 @@ public final class EquationParser {
                                   AtomicInteger moduleCounter,
                                   // Declared shapes of matrix/vector variables ({rows, cols},
                                   // lowercased name) so a bare reference like SolveLinear(A, b)
-                                  // resolves to the explicit A[1..r,1..c] form.
+                                  // resolves to the explicit A[1:r,1:c] form.
                                   Map<String, int[]> shapes) {}
 
     private static void registerShape(String name, int rows, int cols, FlattenContext ctx) {
@@ -188,7 +188,7 @@ public final class EquationParser {
 
     private static Expr rangeAccess(String name, int[] shape) {
         List<Expr> idx = new ArrayList<>();
-        if (shape[0] == 1 || shape[1] == 1) { // vector: single 1..n index
+        if (shape[0] == 1 || shape[1] == 1) { // vector: single 1:n index
             int n = Math.max(shape[0], shape[1]);
             idx.add(new Expr.Range(new Expr.Num(1), new Expr.Num(n)));
         } else {
@@ -199,7 +199,7 @@ public final class EquationParser {
     }
 
     /** Rewrites bare references to a registered matrix/vector variable into the
-     * explicit A[1..r,1..c] form, so MATLAB-style bare names work in operations. */
+     * explicit A[1:r,1:c] form, so MATLAB-style bare names work in operations. */
     private Expr resolveShapes(Expr e, FlattenContext ctx) {
         return switch (e) {
             case Expr.Var(String name) -> {
@@ -221,7 +221,7 @@ public final class EquationParser {
     }
 
     /** If lhs is a bare name, register it as a vector of the given size and
-     * return the explicit v[1..size] form; otherwise return it unchanged. */
+     * return the explicit v[1:size] form; otherwise return it unchanged. */
     private Expr explicitVectorOutput(Expr lhs, int size, FlattenContext ctx) {
         if (lhs instanceof Expr.Var(String name)) {
             registerShape(name, size, 1, ctx);
@@ -326,7 +326,7 @@ public final class EquationParser {
 
     private void flattenEq(Expr lhs, Expr rhs, String sourceText, FlattenContext ctx) {
         // Rewrite bare references to known matrix/vector variables (e.g. the A, b
-        // in SolveLinear(A, b)) into their explicit A[1..r,1..c] form.
+        // in SolveLinear(A, b)) into their explicit A[1:r,1:c] form.
         lhs = resolveShapes(lhs, ctx);
         rhs = resolveShapes(rhs, ctx);
 
@@ -369,7 +369,7 @@ public final class EquationParser {
                 || containsElementwiseOp(lhs) || containsElementwiseOp(rhs)) {
             Expr[][] lhsMat = compileMatrixExpr(lhs, ctx);
             Expr[][] rhsMat = compileMatrixExpr(rhs, ctx);
-            // Remember an explicitly-dimensioned LHS (A[1..r,1..c] = ...) so a
+            // Remember an explicitly-dimensioned LHS (A[1:r,1:c] = ...) so a
             // later bare reference to it resolves.
             if (lhs instanceof Expr.ArrayAccess(String ln, List<Expr> li) && !li.isEmpty()) {
                 registerShape(ln, lhsMat.length, lhsMat[0].length, ctx);
@@ -576,8 +576,8 @@ public final class EquationParser {
         int expectedOutputs = wantVectors ? 2 : 1;
         if (inputs.size() != 1 || outputs.size() != expectedOutputs) {
             throw new ParseException(wantVectors
-                    ? "Eigen expects 1 input matrix and 2 outputs (eigenvalue vector, eigenvector matrix), e.g. CALL Eigen(A[1..3,1..3] : lambda[1..3], V[1..3,1..3])"
-                    : "Eigenvalues expects 1 input matrix and 1 output vector, e.g. CALL Eigenvalues(A[1..3,1..3] : lambda[1..3])");
+                    ? "Eigen expects 1 input matrix and 2 outputs (eigenvalue vector, eigenvector matrix), e.g. CALL Eigen(A[1:3,1:3] : lambda[1:3], V[1:3,1:3])"
+                    : "Eigenvalues expects 1 input matrix and 1 output vector, e.g. CALL Eigenvalues(A[1:3,1:3] : lambda[1:3])");
         }
         MatrixInfo a = parseMatrixInfo(inputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
         VectorInfo lambda = parseVectorInfo(outputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
@@ -610,7 +610,7 @@ public final class EquationParser {
     private void flattenDecomposeOrRotate(String defName, List<Expr> inputs, List<Expr> outputs, String sourceText, FlattenContext ctx) {
         if (defName.equals("ludecompose")) {
             if (inputs.size() != 1 || outputs.size() != 2) {
-                throw new ParseException("LUDecompose expects exactly 1 input matrix and 2 output matrices, e.g. CALL LUDecompose(A[1..3,1..3] : L[1..3,1..3], U[1..3,1..3])");
+                throw new ParseException("LUDecompose expects exactly 1 input matrix and 2 output matrices, e.g. CALL LUDecompose(A[1:3,1:3] : L[1:3,1:3], U[1:3,1:3])");
             }
             MatrixInfo a = parseMatrixInfo(inputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
             MatrixInfo l = parseMatrixInfo(outputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
@@ -641,7 +641,7 @@ public final class EquationParser {
         }
         if (defName.equals("eulerrotate")) {
             if (inputs.size() != 3 || outputs.size() != 1) {
-                throw new ParseException("EulerRotate expects 3 angles (phi, theta, psi) and 1 output matrix, e.g. CALL EulerRotate(phi, theta, psi : R[1..3,1..3])");
+                throw new ParseException("EulerRotate expects 3 angles (phi, theta, psi) and 1 output matrix, e.g. CALL EulerRotate(phi, theta, psi : R[1:3,1:3])");
             }
             Expr phi = expandExpr(inputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
             Expr theta = expandExpr(inputs.get(1), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
@@ -684,7 +684,7 @@ public final class EquationParser {
         }
         if (defName.equals("eulerdecompose")) {
             if (inputs.size() != 1 || outputs.size() != 3) {
-                throw new ParseException("EulerDecompose expects 1 input matrix and 3 output variables, e.g. CALL EulerDecompose(R[1..3,1..3] : phi, theta, psi)");
+                throw new ParseException("EulerDecompose expects 1 input matrix and 3 output variables, e.g. CALL EulerDecompose(R[1:3,1:3] : phi, theta, psi)");
             }
             MatrixInfo r = parseMatrixInfo(inputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
             if (r.rows != 3 || r.cols != 3) {
@@ -998,7 +998,7 @@ public final class EquationParser {
 
     private MatrixInfo parseMatrixInfo(Expr expr, Map<String, Double> loopVars, Map<String, Double> constants, Map<String, String> displayNames, Map<String, ProcDef> defs) {
         if (!(expr instanceof Expr.ArrayAccess(String name, List<Expr> indices))) {
-            throw new ParseException("Expected matrix array access: e.g. A[1..3, 1..3]");
+            throw new ParseException("Expected matrix array access: e.g. A[1:3, 1:3]");
         }
         if (indices.size() != 2) {
             throw new ParseException("Matrix must have exactly 2 dimensions: " + name);
@@ -1006,7 +1006,7 @@ public final class EquationParser {
         Expr r0 = expandExpr(indices.get(0), loopVars, constants, displayNames, defs);
         Expr r1 = expandExpr(indices.get(1), loopVars, constants, displayNames, defs);
         if (!(r0 instanceof Expr.Range(Expr start0, Expr end0)) || !(r1 instanceof Expr.Range(Expr start1, Expr end1))) {
-            throw new ParseException("Matrix indices must specify ranges: e.g. A[1..3, 1..3]");
+            throw new ParseException("Matrix indices must specify ranges: e.g. A[1:3, 1:3]");
         }
         int rStart = (int) Math.round(evalIndexExpr(start0, loopVars, constants, defs));
         int rEnd = (int) Math.round(evalIndexExpr(end0, loopVars, constants, defs));
@@ -1054,14 +1054,14 @@ public final class EquationParser {
 
     private VectorInfo parseVectorInfo(Expr expr, Map<String, Double> loopVars, Map<String, Double> constants, Map<String, String> displayNames, Map<String, ProcDef> defs) {
         if (!(expr instanceof Expr.ArrayAccess(String name, List<Expr> indices))) {
-            throw new ParseException("Expected vector array access: e.g. v[1..3]");
+            throw new ParseException("Expected vector array access: e.g. v[1:3]");
         }
         if (indices.size() != 1) {
             throw new ParseException("Vector must have exactly 1 dimension: " + name);
         }
         Expr r0 = expandExpr(indices.get(0), loopVars, constants, displayNames, defs);
         if (!(r0 instanceof Expr.Range(Expr start, Expr end))) {
-            throw new ParseException("Vector index must specify a range: e.g. v[1..3]");
+            throw new ParseException("Vector index must specify a range: e.g. v[1:3]");
         }
         int vStart = (int) Math.round(evalIndexExpr(start, loopVars, constants, defs));
         int vEnd = (int) Math.round(evalIndexExpr(end, loopVars, constants, defs));

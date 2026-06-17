@@ -307,7 +307,7 @@ class EquationSystemSolverTest {
                 "FOR i = 2 TO N\n" +
                 "   X[i] = X[i-1] + i\n" +
                 "End\n" +
-                "Total = Sum(X[1..N])"
+                "Total = Sum(X[1:N])"
         );
 
         double x1 = result.variables().get("x[1]");
@@ -392,7 +392,7 @@ class EquationSystemSolverTest {
         EquationSystemSolver.Result result = solver.solve(
                 "A[1,1] = 2; A[1,2] = 1\n" +
                 "A[2,1] = 1; A[2,2] = 2\n" +
-                "CALL Eigenvalues(A[1..2,1..2] : lambda[1..2])");
+                "CALL Eigenvalues(A[1:2,1:2] : lambda[1:2])");
 
         // Eigenvalues of [[2,1],[1,2]] are 1 and 3, reported in ascending order.
         assertEquals(1.0, result.variables().get("lambda[1]"), 1e-8);
@@ -404,7 +404,7 @@ class EquationSystemSolverTest {
         EquationSystemSolver.Result result = solver.solve(
                 "A[1,1] = 2; A[1,2] = 1\n" +
                 "A[2,1] = 1; A[2,2] = 2\n" +
-                "CALL Eigen(A[1..2,1..2] : lambda[1..2], V[1..2,1..2])\n" +
+                "CALL Eigen(A[1:2,1:2] : lambda[1:2], V[1:2,1:2])\n" +
                 "trace = lambda[1] + lambda[2]");
 
         double s = Math.sqrt(0.5);
@@ -429,7 +429,7 @@ class EquationSystemSolverTest {
                 "x - y = 1\n" +
                 "A[1,1] = x; A[1,2] = 0\n" +
                 "A[2,1] = 0; A[2,2] = y\n" +
-                "CALL Eigenvalues(A[1..2,1..2] : lambda[1..2])");
+                "CALL Eigenvalues(A[1:2,1:2] : lambda[1:2])");
 
         // x = 3, y = 2 -> diagonal matrix with eigenvalues 2 and 3 ascending.
         assertEquals(2.0, result.variables().get("lambda[1]"), 1e-8);
@@ -661,7 +661,7 @@ class EquationSystemSolverTest {
         assertEquals("m", derived.get("A[1,1]"));
         assertEquals("m", derived.get("A[2,2]"));
 
-        EquationSystemSolver.Result r = solver.solve("c[1..3] = [2, 3, 4] [kg]");
+        EquationSystemSolver.Result r = solver.solve("c[1:3] = [2, 3, 4] [kg]");
         assertEquals(2.0, r.variables().get("c[1]"), 1e-9);
         assertEquals(4.0, r.variables().get("c[3]"), 1e-9);
     }

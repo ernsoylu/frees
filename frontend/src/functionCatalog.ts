@@ -78,7 +78,7 @@ export const FUNCTION_CATEGORIES: FunctionCategory[] = [
       { label: 'average', snippet: 'average($0, )', description: 'Arithmetic mean of its arguments.', usage: 'y = average(2, 4, 9)' },
       { label: 'Sum', snippet: 'Sum(i, 1, N, $0)', description: 'Sum of a term over an integer index range.', usage: 'y = Sum(i, 1, 4, i^2)   { 30 }' },
       { label: 'Product', snippet: 'Product(i, 1, N, $0)', description: 'Product of a term over an integer index range.', usage: 'y = Product(i, 1, 4, i)   { 24 }' },
-      { label: 'Integral', snippet: 'Integral($0, t, a, b)', description: 'Numerical integral of an expression over a variable from a to b.', usage: 'y = Integral(x^2, x, 0, 1)   { 0.3333 }' },
+      { label: 'Integral', snippet: 'Integral($0, t, a, b)', description: 'Numerical integral over a variable from a to b. When the integrand references its own result (starting from 0), frees solves it as a single-state ODE — the feedback pattern for ODEs.', usage: 'y = Integral(x^2, x, 0, 1)   { 0.3333 }' },
       { label: 'if (inline)', snippet: 'if($0, , )', description: 'Conditional selector: If(a, b, lt, eq, gt) returns lt/eq/gt by comparing a to b.', usage: 'k = If(T, 300, 1.2, 1.5, 1.8)' },
     ],
   },
@@ -147,7 +147,7 @@ export const FUNCTION_CATEGORIES: FunctionCategory[] = [
   {
     category: 'Matrix & Vector',
     items: [
-      { label: 'SolveLinear', snippet: 'SolveLinear($0, b)', description: 'Solve the linear system A·x = b for the vector x.', usage: 'x[1..3] = SolveLinear(A[1..3,1..3], b[1..3])' },
+      { label: 'SolveLinear', snippet: 'SolveLinear($0, b)', description: 'Solve the linear system A·x = b for the vector x.', usage: 'x[1:3] = SolveLinear(A[1:3,1:3], b[1:3])' },
       { label: 'Inverse', snippet: 'Inverse($0)', description: 'Inverse of a square matrix.', usage: 'Ai = Inverse(A)' },
       { label: 'Transpose', snippet: 'Transpose($0)', description: 'Transpose of a matrix or vector.', usage: 'At = Transpose(A)' },
       { label: 'Determinant', snippet: 'Determinant($0)', description: 'Determinant of a square matrix.', usage: 'd = Determinant(A)' },
@@ -179,11 +179,31 @@ export const FUNCTION_CATEGORIES: FunctionCategory[] = [
     ],
   },
   {
+    // Transient / ODE solving via the DYNAMIC ... END block. der(X) marks a
+    // state; the accessor functions read solved columns back into the analytic
+    // solution. Names mirror OdeAccessors in the backend.
+    category: 'Dynamics (ODE)',
+    items: [
+      { label: 'der (state derivative)', snippet: 'der($0)', description: 'Mark a variable as an ODE state inside a DYNAMIC block: der(X) = rhs. Each state needs one initial condition X(0) = ….', usage: 'der(T) = -k * (T - T_inf)' },
+      { label: 'ODEValue', snippet: "ODEValue('$0', t)", description: 'Value of a solved ODE column interpolated at time t.', usage: "v_t = ODEValue('v', 5)" },
+      { label: 'FinalValue', snippet: "FinalValue('$0')", description: 'Last sampled value of a solved ODE column.', usage: "T_final = FinalValue('T')" },
+      { label: 'MaxValue', snippet: "MaxValue('$0')", description: 'Maximum of a solved ODE column over the run.', usage: "T_peak = MaxValue('T')" },
+      { label: 'MinValue', snippet: "MinValue('$0')", description: 'Minimum of a solved ODE column over the run.', usage: "y_min = MinValue('y')" },
+      { label: 'TimeAt', snippet: "TimeAt('$0', value)", description: 'First time a solved ODE column crosses a given value.', usage: "t_apogee = TimeAt('v', 0)" },
+      { label: 'ODEAvg', snippet: "ODEAvg('$0')", description: 'Time-series average of a solved ODE column.', usage: "T_avg = ODEAvg('T')" },
+      { label: 'ODESum', snippet: "ODESum('$0')", description: 'Sum of the samples of a solved ODE column.', usage: "s = ODESum('rate')" },
+      { label: 'ODEStdDev', snippet: "ODEStdDev('$0')", description: 'Standard deviation of a solved ODE column.', usage: "sigma = ODEStdDev('x')" },
+    ],
+  },
+  {
     // Multi-line scaffolds for the structural blocks, so users don't have to
     // re-check the Help docs for the exact syntax.
     category: 'Blocks & Control Flow',
     items: [
-      { label: 'FUNCTION block', snippet: 'FUNCTION $0fname(x)\n  fname := \nEND\n', description: 'Define a reusable function with a body of assignments (:=).', usage: 'FUNCTION f(x) … f := x^2 … END' },
+      { label: 'DYNAMIC (ODE) block', snippet: 'DYNAMIC $0sys (method = ode45, t = 0 .. 10, points = 200)\n  der(x) = \n  x(0) = \nEND\n', description: 'Integrate a system of ODEs over time. Mark states with der(X) = rhs, give each an initial condition X(0) = …, then read results back with FinalValue / MaxValue / ODEValue.', usage: 'DYNAMIC sys (method = ode45, t = 0 .. 10) … der(x) = … … x(0) = … END' },
+      { label: 'FUNCTION block', snippet: 'FUNCTION $0fname(x)\n  fname := \nEND\n', description: 'Define a reusable single-output function with a body of assignments (:=). Call it inline in any expression.', usage: 'FUNCTION f(x) … f := x^2 … END' },
+      { label: 'FUNCTION (multi-output)', snippet: 'FUNCTION [$0out1, out2] = fname(x)\n  out1 := \n  out2 := \nEND\n', description: 'MATLAB-style function returning several outputs. Assign each output by name with := in the body, then call it with [a, b] = fname(x).', usage: 'FUNCTION [q, r] = DivMod(a, b) … q := … … r := … END\n[whole, rem] = DivMod(17, 5)' },
+      { label: '[a, b] = f(x) (multi-call)', snippet: '[$0a, b] = fname(x)', description: 'Call a multi-output FUNCTION, binding each returned value to a variable (MATLAB-style destructuring).', usage: '[small, large] = Order(8, 3)' },
       { label: 'PROCEDURE block', snippet: 'PROCEDURE $0pname(x : y)\n  y := \nEND\n', description: 'Define a procedure with inputs : outputs.', usage: 'PROCEDURE p(x : y) … END' },
       { label: 'MODULE block', snippet: 'MODULE $0mname(x : y)\n  y = \nEND\n', description: 'Define a module (reusable system of equations) with inputs : outputs.', usage: 'MODULE m(x : y) … END' },
       { label: 'TABLE (with units)', snippet: 'TABLE $0tname(x [unit]) [unit]\n  0   0\n  1   1\nEND\n', description: 'Define a lookup / interpolation table callable as a function.', usage: 'TABLE t(x [unit]) [unit] … END' },

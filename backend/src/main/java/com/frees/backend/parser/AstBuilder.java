@@ -43,7 +43,7 @@ public class AstBuilder extends FreesBaseVisitor<Expr> {
         if (ctx.topLevel() != null) {
             for (FreesParser.TopLevelContext tl : ctx.topLevel()) {
                 if (tl.functionDef() != null) {
-                    ProcDef.FunctionDef fd = buildFunctionDef(tl.functionDef());
+                    ProcDef fd = buildFunctionDef(tl.functionDef());
                     defs.put(fd.name().toLowerCase(), fd);
                 } else if (tl.procedureDef() != null) {
                     ProcDef.ProcedureDef pd = buildProcedureDef(tl.procedureDef());
@@ -207,7 +207,7 @@ public class AstBuilder extends FreesBaseVisitor<Expr> {
     }
 
     private Expr buildArrayIndex(FreesParser.ArrayIndexContext idx) {
-        if (idx.DOTDOT() != null) {
+        if (idx.COLON() != null) {
             return new Expr.Range(visit(idx.expr(0)), visit(idx.expr(1)));
         }
         return visit(idx.expr(0));
@@ -333,10 +333,26 @@ public class AstBuilder extends FreesBaseVisitor<Expr> {
 
     // ── FUNCTION / PROCEDURE / MODULE definitions ────────────────────────────
 
-    private ProcDef.FunctionDef buildFunctionDef(FreesParser.FunctionDefContext ctx) {
+    /**
+     * Builds a FUNCTION block. The single-output form
+     * {@code FUNCTION f(x) ... f := ... END} becomes a {@link ProcDef.FunctionDef}
+     * (callable inline in expressions). The MATLAB-style multi-output form
+     * {@code FUNCTION [a, b] = f(x) ... END} is lowered to a
+     * {@link ProcDef.ProcedureDef} — its outputs are the bracketed names assigned
+     * in the body — so it reuses the procedure call/flatten machinery and is
+     * consumed with {@code [p, q] = f(x)} (see {@link #buildMultiAssign}).
+     */
+    private ProcDef buildFunctionDef(FreesParser.FunctionDefContext ctx) {
         String name = ctx.IDENT().getText().toLowerCase();
         List<String> params = buildParamList(ctx.paramList());
         List<ProcStatement> body = buildProcBody(ctx.procBody());
+        if (ctx.funcOutputs() != null) {
+            List<String> outputs = new ArrayList<>();
+            for (org.antlr.v4.runtime.tree.TerminalNode id : ctx.funcOutputs().IDENT()) {
+                outputs.add(id.getText().toLowerCase());
+            }
+            return new ProcDef.ProcedureDef(name, params, outputs, body);
+        }
         return new ProcDef.FunctionDef(name, params, body,
                 siUnitOf(ctx.unit()), paramUnits(ctx.paramList()));
     }
@@ -640,6 +656,8 @@ public class AstBuilder extends FreesBaseVisitor<Expr> {
             return buildForBlock(ctx.forBlock());
         } else if (ctx.callStatement() != null) {
             return buildCallStatement(ctx.callStatement());
+        } else if (ctx.multiAssign() != null) {
+            return buildMultiAssign(ctx.multiAssign());
         } else if (ctx.rangeAssign() != null) {
             return buildRangeAssign(ctx.rangeAssign());
         } else {
@@ -653,7 +671,7 @@ public class AstBuilder extends FreesBaseVisitor<Expr> {
 
     /**
      * MATLAB-style range that fills an array: {@code speed = 0:10:100 | Linear}.
-     * Lowered to the equivalent array assignment {@code speed[1..N] = [v1, ...]}
+     * Lowered to the equivalent array assignment {@code speed[1:N] = [v1, ...]}
      * so the existing array-literal expansion in EquationParser materializes the
      * element equations. Linear (default) uses an arithmetic step; Log treats
      * the middle number as a point count and spaces values geometrically.
@@ -732,6 +750,27 @@ public class AstBuilder extends FreesBaseVisitor<Expr> {
             values.add(k == count - 1 ? stop : start * Math.pow(ratio, k));
         }
         return values;
+    }
+
+    /**
+     * MATLAB-style destructuring call {@code [q, w] = split(x)} of a multi-output
+     * FUNCTION. Lowered to the same {@link Statement.CallProc} a
+     * {@code CALL split(x : q, w)} produces, so EquationParser's procedure
+     * flattening (proc$name$k binding equations) handles it unchanged.
+     */
+    private Statement.CallProc buildMultiAssign(FreesParser.MultiAssignContext ctx) {
+        List<Expr> outputs = new ArrayList<>();
+        for (org.antlr.v4.runtime.tree.TerminalNode id : ctx.funcOutputs().IDENT()) {
+            outputs.add(new Expr.Var(id.getText().toLowerCase()));
+        }
+        String name = ctx.IDENT().getText().toLowerCase();
+        List<Expr> inputs = new ArrayList<>();
+        if (ctx.callArgList() != null) {
+            for (FreesParser.ExprContext exprCtx : ctx.callArgList().expr()) {
+                inputs.add(visit(exprCtx));
+            }
+        }
+        return new Statement.CallProc(name, inputs, outputs, ctx.getText());
     }
 
     private Statement.CallProc buildCallStatement(FreesParser.CallStatementContext ctx) {
@@ -920,7 +959,7 @@ public class AstBuilder extends FreesBaseVisitor<Expr> {
 
     @Override
     public Expr visitArrayIndex(FreesParser.ArrayIndexContext ctx) {
-        if (ctx.DOTDOT() != null) {
+        if (ctx.COLON() != null) {
             return new Expr.Range(visit(ctx.expr(0)), visit(ctx.expr(1)));
         }
         return visit(ctx.expr(0));

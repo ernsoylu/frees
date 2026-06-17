@@ -58,7 +58,7 @@ class DynamicExamplesTest {
                   END
                   T[1] = T_left
                   T[6] = T_right
-                  T[2..N-1](0) = T_init
+                  T[2:N-1](0) = T_init
                 END
                 T_mid_final = FinalValue('t[4]')
                 """;

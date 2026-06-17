@@ -173,8 +173,8 @@ class MarkdownEquationExtractorTest {
     @Test
     void testExtractSemicolonSeparatedMatrixAssignments() {
         String source = "A[1,1] = 2;  A[1,2] = 1;  A[1,3] = -1\n" +
-                "b[1..3] = [8, -11, -3]\n" +
-                "x[1..3] = SolveLinear(A[1..3,1..3], b[1..3])";
+                "b[1:3] = [8, -11, -3]\n" +
+                "x[1:3] = SolveLinear(A[1:3,1:3], b[1:3])";
 
         MarkdownEquationExtractor.ExtractionResult result = MarkdownEquationExtractor.extract(source);
 
@@ -183,8 +183,8 @@ class MarkdownEquationExtractorTest {
         assertEquals("A[1,1] = 2", result.equations.get(0).originalText.trim());
         assertEquals("A[1,2] = 1", result.equations.get(1).originalText.trim());
         assertEquals("A[1,3] = -1", result.equations.get(2).originalText.trim());
-        assertEquals("b[1..3] = [8, -11, -3]", result.equations.get(3).originalText.trim());
-        assertEquals("x[1..3] = SolveLinear(A[1..3,1..3], b[1..3])", result.equations.get(4).originalText.trim());
+        assertEquals("b[1:3] = [8, -11, -3]", result.equations.get(3).originalText.trim());
+        assertEquals("x[1:3] = SolveLinear(A[1:3,1:3], b[1:3])", result.equations.get(4).originalText.trim());
     }
 
     @Test

@@ -173,8 +173,8 @@ class EquationParserTest {
                 "N = 3\n" +
                 "PLOT 'Speed vs Distance'\n" +
                 "  kind = xy\n" +
-                "  x = speed[1..N]\n" +
-                "  y = distance[1..N], time[1..N]\n" +
+                "  x = speed[1:N]\n" +
+                "  y = distance[1:N], time[1:N]\n" +
                 "  type = line\n" +
                 "  xlabel = 'Speed [m/s]'\n" +
                 "END");
@@ -221,7 +221,7 @@ class EquationParserTest {
     void rejectsOversizedArrayRange() {
         // DoS guard: an array slice range is bounded too.
         EquationParser.ParseException ex = assertThrows(EquationParser.ParseException.class,
-                () -> parser.parse("x[1..3000000] = 5"));
+                () -> parser.parse("x[1:3000000] = 5"));
         org.junit.jupiter.api.Assertions.assertTrue(ex.getMessage().toLowerCase().contains("too large"));
     }
 
@@ -249,7 +249,7 @@ class EquationParserTest {
 
     @Test
     void parsesArrayRangeAssignmentWithList() {
-        List<Equation> equations = parser.parse("X[1..3] = [10, 20, 30]");
+        List<Equation> equations = parser.parse("X[1:3] = [10, 20, 30]");
         assertEquals(3, equations.size());
         assertEquals("x[1]", ((com.frees.backend.ast.Expr.Var) equations.get(0).lhs()).name());
         assertEquals(10.0, Evaluator.eval(equations.get(0).rhs(), Map.of()), 1e-9);
@@ -259,7 +259,7 @@ class EquationParserTest {
 
     @Test
     void parsesArrayRangeAssignmentWithScalar() {
-        List<Equation> equations = parser.parse("Y[1..3] = 100");
+        List<Equation> equations = parser.parse("Y[1:3] = 100");
         assertEquals(3, equations.size());
         assertEquals("y[1]", ((com.frees.backend.ast.Expr.Var) equations.get(0).lhs()).name());
         assertEquals(100.0, Evaluator.eval(equations.get(0).rhs(), Map.of()), 1e-9);
@@ -270,9 +270,9 @@ class EquationParserTest {
     @Test
     void parsesFunctionCallWithArrayRange() {
         List<Equation> equations = parser.parse(
-                "X[1..3] = [10, 20, 30]\n" +
-                "Total = Sum(X[1..3])\n" +
-                "Avg = Average(X[1..3])"
+                "X[1:3] = [10, 20, 30]\n" +
+                "Total = Sum(X[1:3])\n" +
+                "Avg = Average(X[1:3])"
         );
         // 3 + 1 + 1 = 5 equations
         assertEquals(5, equations.size());
@@ -364,38 +364,38 @@ class EquationParserTest {
     void testMatrixVectorOperations() {
         // Transpose test
         List<Equation> transposeEqs = parser.parse(
-                "A[1..2, 1..3] = 1\n" +
-                "B[1..3, 1..2] = transpose(A[1..2, 1..3])"
+                "A[1:2, 1:3] = 1\n" +
+                "B[1:3, 1:2] = transpose(A[1:2, 1:3])"
         );
         assertEquals(12, transposeEqs.size());
 
         // Dot product test
         List<Equation> dotEqs = parser.parse(
-                "u[1..3] = [1, 2, 3]\n" +
-                "v[1..3] = [4, 5, 6]\n" +
-                "d = dot(u[1..3], v[1..3])"
+                "u[1:3] = [1, 2, 3]\n" +
+                "v[1:3] = [4, 5, 6]\n" +
+                "d = dot(u[1:3], v[1:3])"
         );
         assertEquals(7, dotEqs.size());
 
         // Determinant test
         List<Equation> detEqs = parser.parse(
-                "A[1..2,1..2] = 1\n" +
-                "det = determinant(A[1..2,1..2])"
+                "A[1:2,1:2] = 1\n" +
+                "det = determinant(A[1:2,1:2])"
         );
         assertEquals(5, detEqs.size());
 
         // Cross product test
         List<Equation> crossEqs = parser.parse(
-                "u[1..3] = [1, 0, 0]\n" +
-                "v[1..3] = [0, 1, 0]\n" +
-                "w[1..3] = cross(u[1..3], v[1..3])"
+                "u[1:3] = [1, 0, 0]\n" +
+                "v[1:3] = [0, 1, 0]\n" +
+                "w[1:3] = cross(u[1:3], v[1:3])"
         );
         assertEquals(9, crossEqs.size());
 
         // LUDecompose test
         List<Equation> luEqs = parser.parse(
-                "A[1..2, 1..2] = 1\n" +
-                "CALL LUDecompose(A[1..2, 1..2] : L[1..2, 1..2], U[1..2, 1..2])"
+                "A[1:2, 1:2] = 1\n" +
+                "CALL LUDecompose(A[1:2, 1:2] : L[1:2, 1:2], U[1:2, 1:2])"
         );
         assertEquals(12, luEqs.size());
 
@@ -404,15 +404,15 @@ class EquationParserTest {
                 "phi = 0\n" +
                 "theta = 0\n" +
                 "psi = 0\n" +
-                "CALL EulerRotate(phi, theta, psi : R[1..3, 1..3])"
+                "CALL EulerRotate(phi, theta, psi : R[1:3, 1:3])"
         );
         assertEquals(12, eulerEqs.size());
 
         // SolveLinear test
         List<Equation> solveEqs = parser.parse(
-                "A[1..2, 1..2] = 1\n" +
-                "b[1..2] = [2, 3]\n" +
-                "x[1..2] = SolveLinear(A[1..2, 1..2], b[1..2])"
+                "A[1:2, 1:2] = 1\n" +
+                "b[1:2] = [2, 3]\n" +
+                "x[1:2] = SolveLinear(A[1:2, 1:2], b[1:2])"
         );
         assertEquals(8, solveEqs.size());
     }
@@ -421,23 +421,23 @@ class EquationParserTest {
     void expandsInverseIntoProductEquations() {
         // A * B = I row by row: n^2 equations plus the 4 matrix entries.
         List<Equation> eqs = parser.parse(
-                "A[1..2,1..2] = 1\n"
-                        + "B[1..2,1..2] = Inverse(A[1..2,1..2])");
+                "A[1:2,1:2] = 1\n"
+                        + "B[1:2,1:2] = Inverse(A[1:2,1:2])");
         assertEquals(8, eqs.size());
     }
 
     @Test
     void expandsNormIntoSqrtOfSquares() {
         List<Equation> eqs = parser.parse(
-                "u[1..3] = [3, 0, 4]\n"
-                        + "n = Norm(u[1..3])");
+                "u[1:3] = [3, 0, 4]\n"
+                        + "n = Norm(u[1:3])");
         assertEquals(4, eqs.size());
         assertEquals(Set.of("n", "u[1]", "u[2]", "u[3]"), eqs.get(3).variables());
     }
 
     @Test
     void expandsRangeToRangeAssignment() {
-        List<Equation> eqs = parser.parse("a[1..3] = 1\nb[1..3] = a[1..3]");
+        List<Equation> eqs = parser.parse("a[1:3] = 1\nb[1:3] = a[1:3]");
         assertEquals(6, eqs.size());
         assertEquals(Set.of("a[2]", "b[2]"), eqs.get(4).variables());
     }
@@ -446,27 +446,27 @@ class EquationParserTest {
     void expandsEulerDecomposeIntoAngleEquations() {
         // 9 matrix entries + 3 decomposition equations.
         List<Equation> eqs = parser.parse(
-                "R[1..3,1..3] = 0.5\n"
-                        + "CALL EulerDecompose(R[1..3,1..3] : phi, theta, psi)");
+                "R[1:3,1:3] = 0.5\n"
+                        + "CALL EulerDecompose(R[1:3,1:3] : phi, theta, psi)");
         assertEquals(12, eqs.size());
     }
 
     @Test
     void rejectsMismatchedMatrixAndVectorDimensions() {
         assertThrows(EquationParser.ParseException.class, () ->
-                parser.parse("a[1..3] = 1\nb[1..2] = a[1..3]"));
+                parser.parse("a[1:3] = 1\nb[1:2] = a[1:3]"));
         assertThrows(EquationParser.ParseException.class, () ->
-                parser.parse("a[1..2] = [1, 2, 3]"));
+                parser.parse("a[1:2] = [1, 2, 3]"));
         assertThrows(EquationParser.ParseException.class, () ->
-                parser.parse("A[1..2,1..3] = 1\nB[1..2,1..3] = transpose(A[1..2,1..3])"));
+                parser.parse("A[1:2,1:3] = 1\nB[1:2,1:3] = transpose(A[1:2,1:3])"));
         assertThrows(EquationParser.ParseException.class, () ->
-                parser.parse("u[1..2] = [1, 2]\nv[1..3] = [1, 2, 3]\nd = dot(u[1..2], v[1..3])"));
+                parser.parse("u[1:2] = [1, 2]\nv[1:3] = [1, 2, 3]\nd = dot(u[1:2], v[1:3])"));
         assertThrows(EquationParser.ParseException.class, () ->
-                parser.parse("A[1..2,1..3] = 1\nd = determinant(A[1..2,1..3])"));
+                parser.parse("A[1:2,1:3] = 1\nd = determinant(A[1:2,1:3])"));
         assertThrows(EquationParser.ParseException.class, () ->
-                parser.parse("u[1..2] = [1, 2]\nv[1..2] = [3, 4]\nw[1..2] = cross(u[1..2], v[1..2])"));
+                parser.parse("u[1:2] = [1, 2]\nv[1:2] = [3, 4]\nw[1:2] = cross(u[1:2], v[1:2])"));
         assertThrows(EquationParser.ParseException.class, () ->
-                parser.parse("R[1..2,1..2] = 1\nCALL EulerDecompose(R[1..2,1..2] : phi, theta, psi)"));
+                parser.parse("R[1:2,1:2] = 1\nCALL EulerDecompose(R[1:2,1:2] : phi, theta, psi)"));
     }
 
     @Test
@@ -476,7 +476,7 @@ class EquationParserTest {
         List<Equation> valEqs = parser.parse(
                 "A[1,1] = 2; A[1,2] = 1\n" +
                 "A[2,1] = 1; A[2,2] = 2\n" +
-                "CALL Eigenvalues(A[1..2,1..2] : lambda[1..2])"
+                "CALL Eigenvalues(A[1:2,1:2] : lambda[1:2])"
         );
         assertEquals(6, valEqs.size());
 
@@ -484,7 +484,7 @@ class EquationParserTest {
         List<Equation> pairEqs = parser.parse(
                 "A[1,1] = 2; A[1,2] = 1\n" +
                 "A[2,1] = 1; A[2,2] = 2\n" +
-                "CALL Eigen(A[1..2,1..2] : lambda[1..2], V[1..2,1..2])\n" +
+                "CALL Eigen(A[1:2,1:2] : lambda[1:2], V[1:2,1:2])\n" +
                 "trace = lambda[1] + lambda[2]"
         );
         assertEquals(11, pairEqs.size());
@@ -496,10 +496,10 @@ class EquationParserTest {
         List<Equation> eqs = parser.parse(
                 "A[1,1] = 2; A[1,2] = 0\n" +
                 "A[2,1] = 0; A[2,2] = 2\n" +
-                "b[1..2] = [4, 6]\n" +
-                "x[1..2] = SolveLinear(A[1..2, 1..2], b[1..2])\n" +
+                "b[1:2] = [4, 6]\n" +
+                "x[1:2] = SolveLinear(A[1:2, 1:2], b[1:2])\n" +
                 "y = x[1] + 1\n" +
-                "d = Determinant(A[1..2, 1..2])\n" +
+                "d = Determinant(A[1:2, 1:2])\n" +
                 "z = y + d"
         );
         // 4 matrix entries + 2 b + 2 SolveLinear rows + y + d + z
@@ -512,59 +512,59 @@ class EquationParserTest {
         
         // Level 1: axpy, scal, copy, asum, nrm2
         List<Equation> axpyEqs = parser.parse(
-                "x[1..2] = [1, 2]\n" +
-                "y[1..2] = [3, 4]\n" +
-                "z[1..2] = axpy(2, x[1..2], y[1..2])"
+                "x[1:2] = [1, 2]\n" +
+                "y[1:2] = [3, 4]\n" +
+                "z[1:2] = axpy(2, x[1:2], y[1:2])"
         );
         assertEquals(6, axpyEqs.size()); // 2 + 2 + 2 = 6
 
         List<Equation> scalEqs = parser.parse(
-                "x[1..2] = [1, 2]\n" +
-                "y[1..2] = scal(3, x[1..2])"
+                "x[1:2] = [1, 2]\n" +
+                "y[1:2] = scal(3, x[1:2])"
         );
         assertEquals(4, scalEqs.size()); // 2 + 2 = 4
 
         List<Equation> copyEqs = parser.parse(
-                "x[1..2] = [1, 2]\n" +
-                "y[1..2] = copy(x[1..2])"
+                "x[1:2] = [1, 2]\n" +
+                "y[1:2] = copy(x[1:2])"
         );
         assertEquals(4, copyEqs.size()); // 2 + 2 = 4
 
         List<Equation> asumEq = parser.parse(
-                "x[1..2] = [1, -2]\n" +
-                "val = asum(x[1..2])"
+                "x[1:2] = [1, -2]\n" +
+                "val = asum(x[1:2])"
         );
         assertEquals(3, asumEq.size()); // 2 + 1 = 3
 
         List<Equation> nrm2Eq = parser.parse(
-                "x[1..2] = [3, 4]\n" +
-                "val = nrm2(x[1..2])"
+                "x[1:2] = [3, 4]\n" +
+                "val = nrm2(x[1:2])"
         );
         assertEquals(3, nrm2Eq.size()); // 2 + 1 = 3
 
         // Level 2: gemv, ger
         List<Equation> gemvEqs = parser.parse(
-                "A[1..2, 1..2] = 1\n" +
-                "x[1..2] = [2, 3]\n" +
-                "y[1..2] = [4, 5]\n" +
-                "z[1..2] = gemv(2, A[1..2, 1..2], x[1..2], 3, y[1..2])"
+                "A[1:2, 1:2] = 1\n" +
+                "x[1:2] = [2, 3]\n" +
+                "y[1:2] = [4, 5]\n" +
+                "z[1:2] = gemv(2, A[1:2, 1:2], x[1:2], 3, y[1:2])"
         );
         assertEquals(10, gemvEqs.size()); // 4 + 2 + 2 + 2 = 10
 
         List<Equation> gerEqs = parser.parse(
-                "x[1..2] = [2, 3]\n" +
-                "y[1..2] = [4, 5]\n" +
-                "A[1..2, 1..2] = 1\n" +
-                "B[1..2, 1..2] = ger(2, x[1..2], y[1..2], A[1..2, 1..2])"
+                "x[1:2] = [2, 3]\n" +
+                "y[1:2] = [4, 5]\n" +
+                "A[1:2, 1:2] = 1\n" +
+                "B[1:2, 1:2] = ger(2, x[1:2], y[1:2], A[1:2, 1:2])"
         );
         assertEquals(12, gerEqs.size()); // 2 + 2 + 4 + 4 = 12
 
         // Level 3: gemm
         List<Equation> gemmEqs = parser.parse(
-                "A[1..2, 1..2] = 1\n" +
-                "B[1..2, 1..2] = 2\n" +
-                "C[1..2, 1..2] = 3\n" +
-                "D[1..2, 1..2] = gemm(2, A[1..2, 1..2], B[1..2, 1..2], 3, C[1..2, 1..2])"
+                "A[1:2, 1:2] = 1\n" +
+                "B[1:2, 1:2] = 2\n" +
+                "C[1:2, 1:2] = 3\n" +
+                "D[1:2, 1:2] = gemm(2, A[1:2, 1:2], B[1:2, 1:2], 3, C[1:2, 1:2])"
         );
         assertEquals(16, gemmEqs.size()); // 4 + 4 + 4 + 4 = 16
     }
