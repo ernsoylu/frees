@@ -3163,14 +3163,28 @@ ts = T_sat(Fluid, P=pres)`}
             />
             <FunctionRef
               name="MolarMass / CompressibilityFactor / Prandtl"
-              desc="Molar mass (kg/kmol), Compressibility factor Z (dimensionless), and Prandtl number."
+              desc="Molar mass (kg/mol), Compressibility factor Z (dimensionless), and Prandtl number. MolarMass resolves a CoolProp fluid, an ideal-gas species (CO2, CH4, …), or any chemical formula (C8H18, 'Ca(OH)2') from the built-in periodic table — formulas are case-sensitive; quote ones with parentheses."
               syntax={`m = MolarMass(Fluid)
 z = CompressibilityFactor(Fluid, T=temp, P=pres)
 pr = Prandtl(Fluid, T=temp, P=pres)`}
-              inputs={[{ name: "Fluid", desc: "Fluid name" }]}
+              inputs={[{ name: "Fluid", desc: "Fluid name, ideal-gas species, or chemical formula" }]}
               outputs={[{ name: "m / z / pr", desc: "Property metrics" }]}
-              example={`M = MolarMass(CarbonDioxide)
-Z = CompressibilityFactor(Nitrogen, T=300, P=5e6)`}
+              example={`M = MolarMass(CarbonDioxide)   { 0.04401 kg/mol }
+M2 = MolarMass(C8H18)          { 0.11423 kg/mol }
+M3 = MolarMass('Al2(SO4)3')`}
+            />
+            <FunctionRef
+              name="HeatingValue / StoichAFR"
+              desc="Combustion analysis for a hydrocarbon/alcohol fuel CxHyOz. HeatingValue returns J/kg ('LHV' references water vapour, 'HHV' liquid water); StoichAFR returns the stoichiometric air-fuel ratio (mass basis). Built on the formation-enthalpy table and the periodic-table molar masses."
+              syntax={`hv = HeatingValue(Fuel, 'LHV')
+afr = StoichAFR(Fuel)`}
+              inputs={[
+                { name: "Fuel", desc: "Fuel formula or species: CH4, C8H18, C2H5OH, …" },
+                { name: "mode", desc: "'LHV' or 'HHV' (HeatingValue only)" },
+              ]}
+              outputs={[{ name: "hv / afr", desc: "J/kg / dimensionless" }]}
+              example={`LHV = HeatingValue(CH4, 'LHV')   { ~50 MJ/kg }
+AFR = StoichAFR(C8H18)            { ~15.0 }`}
             />
             <FunctionRef
               name="SurfaceTension / Fugacity / Enthalpy_fusion / Dipole"

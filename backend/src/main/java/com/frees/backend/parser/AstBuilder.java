@@ -861,6 +861,35 @@ public class AstBuilder extends FreesBaseVisitor<Expr> {
         return new Expr.Call(encoded.toString(), values);
     }
 
+    /**
+     * Chemistry call: MolarMass(C8H18) / HeatingValue(CH4, 'LHV') / StoichAFR(...).
+     * Encoded as prop$<fn>$<token>[$<mode>] with the tokens preserving their
+     * original case (chemical formulas are case-sensitive) and no value args.
+     */
+    private Expr buildChemCall(String fn, FreesParser.ArgListContext argList) {
+        // The fluid/formula/mode tokens are passed as string-literal arguments
+        // (not embedded in the function name) because Expr.Call lowercases its
+        // function name — which would corrupt case-sensitive chemical formulas
+        // like C8H18. Expr.Str preserves case.
+        List<Expr> tokens = new ArrayList<>();
+        for (FreesParser.ArgContext arg : argList.arg()) {
+            if (!(arg instanceof FreesParser.PositionalArgContext positional)) {
+                throw new EquationParser.ParseException(fn
+                        + " takes fluid/formula tokens, e.g. MolarMass(C8H18) or "
+                        + "HeatingValue(CH4, 'LHV').");
+            }
+            String tok = unquote(positional.expr().getText());
+            if (!tok.matches("[A-Za-z][A-Za-z0-9().]*")) {
+                throw new EquationParser.ParseException(
+                        "Invalid token '" + tok + "' in " + fn + "(...). Use a fluid name, "
+                                + "ideal-gas species, or chemical formula (quote formulas with "
+                                + "parentheses, e.g. 'Ca(OH)2').");
+            }
+            tokens.add(new Expr.Str(tok));
+        }
+        return new Expr.Call("prop$" + fn, tokens);
+    }
+
     @Override
     public Expr visitIfCallAtom(FreesParser.IfCallAtomContext ctx) {
         List<Expr> args = new ArrayList<>();
@@ -870,6 +899,12 @@ public class AstBuilder extends FreesBaseVisitor<Expr> {
         return new Expr.Call("if", args);
     }
 
+    /** Single-token chemistry functions whose arguments are fluid/formula/mode
+     * tokens (not variables): MolarMass(C8H18), HeatingValue(CH4, 'LHV'),
+     * StoichAFR(C8H18). Encoded as prop$ calls preserving token case. */
+    private static final java.util.Set<String> CHEM_FUNCS =
+            java.util.Set.of("molarmass", "heatingvalue", "stoichafr");
+
     @Override
     public Expr visitCallAtom(FreesParser.CallAtomContext ctx) {
         String name = ctx.IDENT().getText();
@@ -878,6 +913,10 @@ public class AstBuilder extends FreesBaseVisitor<Expr> {
                 .anyMatch(a -> a instanceof FreesParser.NamedArgContext);
         if (hasNamedArgs) {
             return buildPropertyCall(name, ctx.argList());
+        }
+
+        if (CHEM_FUNCS.contains(name.toLowerCase())) {
+            return buildChemCall(name.toLowerCase(), ctx.argList());
         }
 
         if (name.equalsIgnoreCase("convert")) {

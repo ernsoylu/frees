@@ -39,6 +39,14 @@ export const FUNCTION_CATEGORIES: FunctionCategory[] = [
     ],
   },
   {
+    category: 'Chemistry & Combustion',
+    items: [
+      { label: 'MolarMass', snippet: 'MolarMass($0)', description: 'Molar mass [kg/mol] of a fluid, ideal-gas species, or chemical formula. Formulas are case-sensitive; quote ones with parentheses.', usage: "M = MolarMass(C8H18)   { 0.11423 kg/mol }\nM = MolarMass('Ca(OH)2')" },
+      { label: 'HeatingValue', snippet: "HeatingValue($0, 'LHV')", description: "Heating value [J/kg] of a hydrocarbon/alcohol fuel. 'LHV' references water vapour, 'HHV' liquid water.", usage: "LHV = HeatingValue(CH4, 'LHV')   { ~50 MJ/kg }" },
+      { label: 'StoichAFR', snippet: 'StoichAFR($0)', description: 'Stoichiometric air-fuel ratio (mass basis) for CxHyOz combustion in air.', usage: 'AFR = StoichAFR(C8H18)   { ~15.0 }' },
+    ],
+  },
+  {
     category: 'Psychrometrics (AirH2O)',
     items: [
       { label: 'HumRat', snippet: 'HumRat(AirH2O, T=$0, P=, R=)', description: 'Humidity ratio of moist air (kg water / kg dry air).', usage: 'w = HumRat(AirH2O, T=25 [C], P=101.325 [kPa], R=0.5)' },
