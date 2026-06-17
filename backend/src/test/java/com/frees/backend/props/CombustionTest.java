@@ -51,6 +51,29 @@ class CombustionTest {
     }
 
     @Test
+    void heatingValueRejectsUntabulatedFuel() {
+        // Benzene is a valid formula but has no tabulated formation enthalpy.
+        ChemicalFormula.FormulaException e = assertThrows(
+                ChemicalFormula.FormulaException.class,
+                () -> Combustion.heatingValue("C6H6", "LHV"));
+        assertTrue(e.getMessage().contains("formation enthalpy"), e.getMessage());
+    }
+
+    @Test
+    void heatingValueRejectsSpeciesWithoutCarbonOrHydrogen() {
+        // N2 has a tabulated formation enthalpy (0) but nothing to burn.
+        assertThrows(ChemicalFormula.FormulaException.class,
+                () -> Combustion.heatingValue("N2", "LHV"));
+    }
+
+    @Test
+    void stoichAFRRejectsNonCombustible() {
+        // CO2 needs no oxidizer (O2 demand = 1 + 0 - 1 = 0).
+        assertThrows(ChemicalFormula.FormulaException.class,
+                () -> Combustion.stoichAFR("CO2"));
+    }
+
+    @Test
     void chemFunctionsPreserveCaseThroughTheParser() {
         // Regression: Expr.Call lowercases its function name, so the case-
         // sensitive formula token must travel as a string argument, not in the
@@ -62,6 +85,13 @@ class CombustionTest {
                 evalRhs(parser, "m = MolarMass('Ca(OH)2')"), 1e-4);
         assertEquals(15.0, evalRhs(parser, "afr = StoichAFR(C8H18)"), 0.2);
         assertEquals(50.0e6, evalRhs(parser, "lhv = HeatingValue(CH4, 'LHV')"), 0.5e6);
+
+        // The chemistry call also renders to LaTeX from its string args
+        // (covers the parts.length < 3 branch in LatexConverter).
+        var parsed = parser.parseResult("m = MolarMass(C8H18)");
+        String latex = com.frees.backend.parser.LatexConverter.toLatex(
+                parsed.equations().get(0), parsed.displayNames());
+        assertTrue(latex.contains("Molarmass") && latex.contains("C8H18"), latex);
     }
 
     private static double evalRhs(com.frees.backend.parser.EquationParser parser, String src) {

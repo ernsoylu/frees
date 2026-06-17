@@ -79,7 +79,7 @@ export function buildRealSolutionRows(
 ): SolutionRow[] {
   return variables.map((v) => {
     const unc = v.uncertainty
-    const formattedVals = valuesAcrossSolutions(v.name, v.value, solutions).map(formatValue)
+    const formattedVals = valuesAcrossSolutions(v.name, v.value, solutions).map((val) => formatValue(val))
     if (unc !== undefined && unc !== null && unc > 0) {
       const formattedUnc = formatValue(unc)
       return toRow(
@@ -187,7 +187,7 @@ export function buildComplexSolutionRows(
       )
     } else {
       const unc = v.uncertainty
-      const formattedVals = valuesAcrossSolutions(v.name, v.value, solutions).map(formatValue)
+      const formattedVals = valuesAcrossSolutions(v.name, v.value, solutions).map((val) => formatValue(val))
       if (unc !== undefined && unc !== null && unc > 0) {
         const formattedUnc = formatValue(unc)
         rows.push(
