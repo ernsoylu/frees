@@ -79,6 +79,14 @@ public class NewtonSolver {
             double candidateNorm = searchResult.candidateNorm;
 
             if (!Double.isFinite(candidateNorm) || candidateNorm >= norm) {
+                // The line search can make no further progress. If the residual is
+                // already within tolerance this is a converged solution sitting at
+                // its numerical floor (common when a residual depends on a
+                // finite-difference/ODE-coupled term) — accept it rather than fail.
+                if (withinResidualTolerance(ctx.equations, ctx.vars, x, residual, values)) {
+                    writeBack(ctx.vars, x, values);
+                    return iteration + 1;
+                }
                 throw new SolverException(
                         "Newton iteration stalled in block " + block.index()
                                 + " (residual " + norm + "). Try different guess values."

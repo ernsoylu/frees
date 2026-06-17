@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -59,7 +60,19 @@ public class EquationSystemSolver {
                          Stats stats,
                          List<Solution> solutions,
                          Map<String, String> displayNames,
-                         Map<String, Double> uncertainties) {
+                         Map<String, Double> uncertainties,
+                         List<com.frees.backend.core.ode.OdeTableResult> odeTables) {
+
+        public Result(Map<String, Double> variables,
+                      List<Block> blocks,
+                      List<EquationResidual> residuals,
+                      Stats stats,
+                      List<Solution> solutions,
+                      Map<String, String> displayNames,
+                      Map<String, Double> uncertainties) {
+            this(variables, blocks, residuals, stats, solutions, displayNames, uncertainties,
+                    List.of());
+        }
 
         public Result(Map<String, Double> variables,
                       List<Block> blocks,
@@ -67,7 +80,7 @@ public class EquationSystemSolver {
                       Stats stats,
                       List<Solution> solutions,
                       Map<String, String> displayNames) {
-            this(variables, blocks, residuals, stats, solutions, displayNames, Map.of());
+            this(variables, blocks, residuals, stats, solutions, displayNames, Map.of(), List.of());
         }
     }
 
@@ -141,7 +154,9 @@ public class EquationSystemSolver {
         Map<String, ProcDef> merged = new HashMap<>(extraDefs);
         merged.putAll(parsed.defs());
         return new EquationParser.ParseResult(
-                parsed.equations(), parsed.displayNames(), merged);
+                parsed.equations(), parsed.displayNames(), merged,
+                parsed.parametricTables(), parsed.plots(), parsed.stateTables(),
+                parsed.dynamicSystems());
     }
 
     /** Imaginary literals are meaningless in real mode; fail with guidance. */
@@ -222,7 +237,26 @@ public class EquationSystemSolver {
             equations = com.frees.backend.parser.ComplexExpansion.expand(equations, parsed.displayNames());
         }
 
-        InnerSolve solved = solveEquationList(equations, settings, specs,
+        // A document whose only content is DYNAMIC block(s) (all parameters inline)
+        // has no analytic equations to block/solve — run the ODE blocks directly.
+        if (equations.isEmpty() && !parsed.dynamicSystems().isEmpty()) {
+            List<com.frees.backend.core.ode.OdeTableResult> odeOnly =
+                    solveDynamicSystems(parsed, new HashMap<>(), settings, specs, deadlineNanos);
+            return buildResult(equations, List.of(), List.of(Map.of()), 0, startNanos,
+                    parsed, Map.of(), odeOnly);
+        }
+
+        boolean odeAccessors = !parsed.dynamicSystems().isEmpty()
+                && com.frees.backend.core.ode.OdeAccessors.containsAccessor(equations);
+        SolverSettings solveSettings = settings;
+        if (odeAccessors) {
+            equations = augmentAccessorDependencies(equations, parsed.dynamicSystems());
+            installAccessorContext(parsed, settings, specs, deadlineNanos);
+            // The accessor constraint residual rides on the ODE/FD noise floor.
+            solveSettings = relaxedOdeSettings(settings, 1e-4);
+        }
+        try {
+        InnerSolve solved = solveEquationList(equations, solveSettings, specs,
                 parsed.defs(), deadlineNanos, null);
         Map<String, VariableSpec> mutableSpecs = new HashMap<>(specs);
         for (Map.Entry<String, Expr> entry : ext.uncertaintyExprs().entrySet()) {
@@ -265,8 +299,117 @@ public class EquationSystemSolver {
                 solved.values().put("uncertaintyof$" + entry.getKey().toLowerCase(), entry.getValue());
             }
         }
+        List<com.frees.backend.core.ode.OdeTableResult> odeTables =
+                solveDynamicSystems(parsed, solved.values(), settings, specs, deadlineNanos);
         return buildResult(equations, solved.blocks(), List.of(solved.values()),
-                solved.iterations(), startNanos, parsed, uncertainties);
+                solved.iterations(), startNanos, parsed, uncertainties, odeTables);
+        } finally {
+            if (odeAccessors) {
+                com.frees.backend.core.ode.DynamicAccessorContext.clear();
+            }
+        }
+    }
+
+    /**
+     * Installs the thread-bound accessor context so ODE Table accessors evaluate
+     * live against the current Newton iterate during this solve.
+     */
+    private void installAccessorContext(EquationParser.ParseResult parsed, SolverSettings settings,
+                                        Map<String, VariableSpec> specs, long deadlineNanos) {
+        SolverSettings inner = relaxedOdeSettings(settings, 1e-7);
+        com.frees.backend.core.ode.DynamicAccessorContext.BlockRunner runner = (ds, values) -> {
+            com.frees.backend.core.ode.DynamicSolver.AlgebraicSolve algebraic =
+                    (ordinary, pinned, warmStart) -> solvePinned(ordinary, pinned, inner, specs,
+                            parsed.defs(), deadlineNanos, warmStart).values();
+            return new com.frees.backend.core.ode.DynamicSolver(
+                    ds, values, parsed.defs(), algebraic, deadlineNanos).solve();
+        };
+        com.frees.backend.core.ode.DynamicAccessorContext.install(parsed.dynamicSystems(), runner);
+    }
+
+    /**
+     * Looser tolerances for ODE-coupled solves. The per-step algebraic block and
+     * the analytic solve of an accessor constraint both sit on a finite-difference
+     * / integration noise floor, so the default {@code 1e-12} residual target is
+     * physically unreachable; the loosened target is still far tighter than any
+     * engineering tolerance.
+     */
+    private static SolverSettings relaxedOdeSettings(SolverSettings base, double relTol) {
+        return new SolverSettings(base.maxIterations(), relTol,
+                Math.max(base.changeInVariables(), 1e-9),
+                base.elapsedTimeSeconds(), base.complexMode());
+    }
+
+    /**
+     * Adds zero-valued terms {@code + 0·v} (for each input variable {@code v} of
+     * the DYNAMIC block an accessor reads) to every accessor-bearing equation, so
+     * Tarjan blocking and the Newton Jacobian see the coupling between the
+     * constraint and the analytic variables that feed the ODE. Only variables
+     * already present in the analytic system are linked (so no new unknowns are
+     * introduced); the added terms are identically zero and never change a
+     * residual.
+     */
+    private List<Equation> augmentAccessorDependencies(List<Equation> equations,
+                                                       List<com.frees.backend.ast.DynamicSystem> systems) {
+        TreeSet<String> analyticVars = collectVariables(equations);
+        List<Equation> out = new ArrayList<>(equations.size());
+        for (Equation eq : equations) {
+            java.util.LinkedHashSet<String> cols = new java.util.LinkedHashSet<>();
+            collectAccessorColumns(eq.lhs(), cols);
+            collectAccessorColumns(eq.rhs(), cols);
+            if (cols.isEmpty()) {
+                out.add(eq);
+                continue;
+            }
+            java.util.LinkedHashSet<String> deps = new java.util.LinkedHashSet<>();
+            for (String col : cols) {
+                for (String v : com.frees.backend.core.ode.DynamicAccessorContext
+                        .inputVarsForColumn(systems, col)) {
+                    if (analyticVars.contains(v)) {
+                        deps.add(v);
+                    }
+                }
+            }
+            Expr lhs = eq.lhs();
+            for (String v : deps) {
+                lhs = new Expr.BinOp('+', lhs,
+                        new Expr.BinOp('*', new Expr.Num(0.0), new Expr.Var(v)));
+            }
+            out.add(new Equation(lhs, eq.rhs(), eq.sourceText()));
+        }
+        return out;
+    }
+
+    private static void collectAccessorColumns(Expr e, java.util.Set<String> cols) {
+        switch (e) {
+            case Expr.Call(String fn, List<Expr> args) -> {
+                if (com.frees.backend.core.ode.OdeAccessors.isAccessor(fn) && !args.isEmpty()) {
+                    if (args.get(0) instanceof Expr.Str(String s)) {
+                        cols.add(s.toLowerCase());
+                    } else if (args.get(0) instanceof Expr.Var(String n)) {
+                        cols.add(n.toLowerCase());
+                    }
+                }
+                for (Expr a : args) {
+                    collectAccessorColumns(a, cols);
+                }
+            }
+            case Expr.BinOp(char op, Expr l, Expr r) -> {
+                collectAccessorColumns(l, cols);
+                collectAccessorColumns(r, cols);
+            }
+            case Expr.Neg(Expr o) -> collectAccessorColumns(o, cols);
+            case Expr.Compare(String op, Expr l, Expr r) -> {
+                collectAccessorColumns(l, cols);
+                collectAccessorColumns(r, cols);
+            }
+            case Expr.Logical(String op, Expr l, Expr r) -> {
+                collectAccessorColumns(l, cols);
+                collectAccessorColumns(r, cols);
+            }
+            case Expr.Not(Expr o) -> collectAccessorColumns(o, cols);
+            default -> { /* leaf */ }
+        }
     }
 
     /**
@@ -694,23 +837,23 @@ public class EquationSystemSolver {
                 solved.values().put("uncertaintyof$" + entry.getKey().toLowerCase(), entry.getValue());
             }
         }
+        List<com.frees.backend.core.ode.OdeTableResult> odeTables =
+                solveDynamicSystems(parsed, solved.values(), settings, specs, deadlineNanos);
         return buildResult(finalEquations, solved.blocks(), List.of(solved.values()),
-                state.iterations + solved.iterations(), startNanos, parsed, uncertainties);
+                state.iterations + solved.iterations(), startNanos, parsed, uncertainties, odeTables);
     }
 
     /** Integrand value at one quadrature point: solve the subsystem with the
      * integration variable and the running integral value pinned. */
     private double integrandAt(IntegralContext context, double t, double runningTotal) {
         IntegralSolver.IntegralEquation ie = context.equation();
-        List<Equation> subsystem = new ArrayList<>(context.ordinary());
-        subsystem.add(new Equation(new Expr.Var(ie.integrationVar()),
-                new Expr.Num(t), ie.integrationVar() + " = " + t));
-        subsystem.add(new Equation(new Expr.Var(ie.resultVar()),
-                new Expr.Num(runningTotal), ie.resultVar() + " = " + runningTotal));
+        Map<String, Double> pinned = new LinkedHashMap<>();
+        pinned.put(ie.integrationVar(), t);
+        pinned.put(ie.resultVar(), runningTotal);
         try {
-            InnerSolve solved = solveEquationList(subsystem, context.settings(),
-                    context.specs(), context.defs(), context.deadlineNanos(),
-                    context.state().warmStart);
+            InnerSolve solved = solvePinned(context.ordinary(), pinned,
+                    context.settings(), context.specs(), context.defs(),
+                    context.deadlineNanos(), context.state().warmStart);
             context.state().warmStart = solved.values();
             context.state().iterations += solved.iterations();
             return Evaluator.eval(ie.integrand(), solved.values(), context.defs());
@@ -718,6 +861,58 @@ public class EquationSystemSolver {
             throw new SolverException("While evaluating Integral at "
                     + ie.integrationVar() + " = " + t + ": " + e.getMessage());
         }
+    }
+
+    /**
+     * Runs every {@code DYNAMIC} block after the analytic solve, with the solved
+     * scalars supplied as parameters/initial conditions, and collects one ODE
+     * Table per block. The per-step algebraic coupling reuses {@link #solvePinned}
+     * (states + time pinned), so the dynamic path shares the analytic solver's
+     * Newton/Tarjan machinery.
+     */
+    private List<com.frees.backend.core.ode.OdeTableResult> solveDynamicSystems(
+            EquationParser.ParseResult parsed, Map<String, Double> baseValues,
+            SolverSettings settings, Map<String, VariableSpec> specs, long deadlineNanos) {
+        if (parsed.dynamicSystems().isEmpty()) {
+            return List.of();
+        }
+        SolverSettings inner = relaxedOdeSettings(settings, 1e-7);
+        com.frees.backend.core.ode.DynamicSolver.AlgebraicSolve algebraic =
+                (ordinary, pinned, warmStart) -> solvePinned(ordinary, pinned, inner, specs,
+                        parsed.defs(), deadlineNanos, warmStart).values();
+        List<com.frees.backend.core.ode.OdeTableResult> tables = new ArrayList<>();
+        for (com.frees.backend.ast.DynamicSystem ds : parsed.dynamicSystems()) {
+            tables.add(new com.frees.backend.core.ode.DynamicSolver(
+                    ds, baseValues, parsed.defs(), algebraic, deadlineNanos).solve());
+        }
+        return tables;
+    }
+
+    /**
+     * Solve an ordinary algebraic subsystem with a set of variables pinned to
+     * fixed values, seeded from {@code warmStart}. Each pinned variable is added
+     * as a {@code var = value} equation (insertion order preserved) so the
+     * existing Newton/Tarjan pipeline treats it as a constant for this solve.
+     *
+     * <p>Shared by the {@code Integral} quadrature (pins the integration variable
+     * and running total) and the ODE RHS closure (pins time {@code t} and the
+     * full state vector each step). This is the one place the per-step
+     * "solve-the-rest-with-the-integration-variable-fixed" behavior lives.
+     */
+    InnerSolve solvePinned(List<Equation> ordinary,
+                           Map<String, Double> pinned,
+                           SolverSettings settings,
+                           Map<String, VariableSpec> specs,
+                           Map<String, ProcDef> defs,
+                           long deadlineNanos,
+                           Map<String, Double> warmStart) {
+        List<Equation> subsystem = new ArrayList<>(ordinary);
+        for (Map.Entry<String, Double> e : pinned.entrySet()) {
+            subsystem.add(new Equation(new Expr.Var(e.getKey()),
+                    new Expr.Num(e.getValue()), e.getKey() + " = " + e.getValue()));
+        }
+        return solveEquationList(subsystem, settings, specs, defs,
+                deadlineNanos, warmStart);
     }
 
     /** Declared output units of TABLE/FUNCTION defs (lowercased name -> SI unit). */
@@ -926,6 +1121,16 @@ public class EquationSystemSolver {
                                int totalIterations, long startNanos,
                                EquationParser.ParseResult parsed,
                                Map<String, Double> uncertainties) {
+        return buildResult(equations, blocks, solutionMaps, totalIterations, startNanos,
+                parsed, uncertainties, List.of());
+    }
+
+    private Result buildResult(List<Equation> equations, List<Block> blocks,
+                               List<Map<String, Double>> solutionMaps,
+                               int totalIterations, long startNanos,
+                               EquationParser.ParseResult parsed,
+                               Map<String, Double> uncertainties,
+                               List<com.frees.backend.core.ode.OdeTableResult> odeTables) {
         Map<String, String> displayNames = parsed.displayNames();
         Map<String, ProcDef> defs = parsed.defs();
         TreeSet<String> allVars = collectVariables(equations);
@@ -959,7 +1164,7 @@ public class EquationSystemSolver {
 
         Solution first = solutions.get(0);
         return new Result(first.variables(), blocks, first.residuals(), stats, solutions,
-                displayNames, uncertainties);
+                displayNames, uncertainties, odeTables);
     }
 
     private Map<String, VariableSpec> expandSpecs(TreeSet<String> allVars,

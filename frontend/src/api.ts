@@ -81,6 +81,8 @@ export interface SolveResponse {
   definedPlots?: PlotDefDto[]
   /** Fluid state tables declared with STATE TABLE ... END blocks. */
   stateTableDefs?: StateTableDto[]
+  /** ODE Tables produced by solved DYNAMIC ... END blocks. */
+  odeTables?: OdeTableDto[]
 }
 
 export interface CheckResponse {
@@ -128,6 +130,20 @@ export interface ParametricTableDto {
 export interface PlotDefDto {
   name: string
   attributes: Record<string, string[]>
+}
+
+/** An ODE Table produced by a solved DYNAMIC ... END block: columns are
+ * [time, states…, auxiliaries…] and rows are the sampled trajectory. Shaped
+ * like a parametric table so it renders in the Tables window and feeds the
+ * Plots window through the same path. */
+export interface OdeTableDto {
+  name: string
+  vars: string[]
+  rows: (number | null)[][]
+  events: { name: string; time: number }[]
+  method: string
+  stopped: boolean
+  endTime: number
 }
 
 export interface VariableInfo {
@@ -286,6 +302,7 @@ export async function solve(
       parametricTables: data.parametricTables ?? [],
       definedPlots: data.definedPlots ?? [],
       stateTableDefs: data.stateTableDefs ?? [],
+      odeTables: data.odeTables ?? [],
     }
   } catch (e) {
     return {

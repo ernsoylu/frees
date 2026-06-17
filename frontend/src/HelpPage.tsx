@@ -1464,6 +1464,302 @@ END
 { A dummy equation using the table function to ensure it compiles }
 y_test = siyavula_data(0)`,
   },
+  // ── Differential Equations (ODE) — 20 worked DYNAMIC problems ──────────────
+  // Sourced from the EES Clone NotebookLM notebook (EES manual / Mastering EES /
+  // Chapra) and verified in the backend OdeProblemLibraryTest against closed-form
+  // answers. They span every solver: fixed ode1–ode5, adaptive ode45/ode23, and
+  // stiff ode23s/ode15s.
+  {
+    value: "ode-decay",
+    title: "Differential Equations (ODE): Radioactive Decay — ode1 (Euler)",
+    description: "First-order decay dc/dt = -k·c. Verify: c(20) = 100·e^(-0.175·20) ≈ 3.02.",
+    note: "Fixed-step Euler (ode1) — lowest order; many points keep it accurate.",
+    code: `{ Radioactive decay — verify c(20) = 100 e^(-0.175*20) = 3.02 }
+k = 0.175
+DYNAMIC decay (method = ode1, t = 0 .. 20, points = 800)
+  der(c) = -k * c
+  c(0) = 100
+END`,
+  },
+  {
+    value: "ode-rc",
+    title: "Differential Equations (ODE): RC Circuit Charging — ode2 (Heun)",
+    description: "Capacitor charging de/dt = (es-e)/(RC). Verify: e(0.006) = 10(1-e^(-6)) ≈ 9.975 V.",
+    note: "",
+    code: `{ RC charging — verify e -> es = 10 V; e(0.006) = 9.975 V }
+R = 1000
+C = 1e-6
+es = 10
+DYNAMIC rc (method = ode2, t = 0 .. 0.006, points = 400)
+  der(e) = (es - e) / (R * C)
+  e(0) = 0
+END`,
+  },
+  {
+    value: "ode-reaction",
+    title: "Differential Equations (ODE): First-Order Reaction A→B — ode3",
+    description: "cA = e^(-k·t), cB = 1 - e^(-k·t). Verify: cA(5) ≈ 0.030, cB(5) ≈ 0.970.",
+    note: "",
+    code: `{ Irreversible reaction A -> B; cA + cB is conserved = 1 }
+k = 0.7
+DYNAMIC reaction (method = ode3, t = 0 .. 5, points = 300)
+  der(cA) = -k * cA
+  der(cB) =  k * cA
+  cA(0) = 1
+  cB(0) = 0
+END`,
+  },
+  {
+    value: "ode-rl",
+    title: "Differential Equations (ODE): RL Circuit Decay — ode4 (RK4)",
+    description: "L·di/dt + R·i = 0 → i = 0.5·e^(-1.5·t). Verify: i(2) = 0.5·e^(-3) ≈ 0.0249 A.",
+    note: "Classic fourth-order Runge–Kutta.",
+    code: `{ RL natural response — verify i(2) = 0.5 e^(-3) = 0.0249 A }
+L = 1
+R = 1.5
+DYNAMIC rl (method = ode4, t = 0 .. 2, points = 200)
+  der(i) = -(R / L) * i
+  i(0) = 0.5
+END`,
+  },
+  {
+    value: "ode-cooling",
+    title: "Differential Equations (ODE): Newton Cooling — ode5",
+    description: "T = Ta + (T0-Ta)·e^(-k·t). Verify: T(30) = 20 + 70·e^(-3) ≈ 23.48 °C.",
+    note: "Time is named 'time' because a state T collides with a time variable t.",
+    code: `{ Newton cooling — verify T(30) = 20 + 70 e^(-3) = 23.48 }
+k = 0.1
+Ta = 20
+DYNAMIC cooling (method = ode5, time = 0 .. 30, points = 200)
+  der(T) = -k * (T - Ta)
+  T(0) = 90
+END`,
+  },
+  {
+    value: "ode-parachutist",
+    title: "Differential Equations (ODE): Falling Parachutist (linear drag) — ode45",
+    description: "dv/dt = g - (c/m)·v. Verify: terminal v = g·m/c = 53.44 m/s.",
+    note: "Adaptive Dormand–Prince 5(4) — the default method.",
+    code: `{ Falling parachutist — verify terminal velocity g*m/c = 53.44 m/s }
+g = 9.81
+m = 68.1
+c = 12.5
+DYNAMIC fall (method = ode45, t = 0 .. 30, points = 600, rtol = 1e-8)
+  der(v) = g - (c / m) * v
+  v(0) = 0
+END`,
+  },
+  {
+    value: "ode-tank",
+    title: "Differential Equations (ODE): Draining Tank (Torricelli) — ode23",
+    description: "dy/dt = -k·√y → y = (√3 - 0.03·t)². Verify: y(20) = (√3-0.6)² ≈ 1.281 m.",
+    note: "Adaptive Bogacki–Shampine 3(2).",
+    code: `{ Torricelli draining — verify y(20) = (sqrt(3) - 0.6)^2 = 1.281 m }
+k = 0.06
+DYNAMIC tank (method = ode23, t = 0 .. 20, points = 200, rtol = 1e-8)
+  der(y) = -k * sqrt(y)
+  y(0) = 3
+END`,
+  },
+  {
+    value: "ode-logistic",
+    title: "Differential Equations (ODE): Logistic Population Growth — ode45",
+    description: "dp/dt = r(1-p/K)p → p = K/(1+3.6967·e^(-r·t)). Verify: p(100) ≈ 9414 million.",
+    note: "",
+    code: `{ Logistic growth — verify p(100) = 12000/(1 + 3.6967 e^(-2.6)) = 9414 }
+r = 0.026
+K = 12000
+DYNAMIC logistic (method = ode45, t = 0 .. 100, points = 200, rtol = 1e-9)
+  der(p) = r * (1 - p / K) * p
+  p(0) = 2555
+END`,
+  },
+  {
+    value: "ode-quadratic-drag",
+    title: "Differential Equations (ODE): Terminal Velocity (quadratic drag) — ode45",
+    description: "dv/dt = g - (c/m)·v² → v = v_t·tanh(t·√(gc/m)), v_t = √(g·m/c) ≈ 52.41 m/s.",
+    note: "",
+    code: `{ Quadratic drag — verify terminal velocity sqrt(g*m/c) = 52.41 m/s }
+g = 9.81
+m = 70
+c = 0.25
+DYNAMIC fall2 (method = ode45, t = 0 .. 20, points = 300, rtol = 1e-9)
+  der(v) = g - (c / m) * v * v
+  v(0) = 0
+END`,
+  },
+  {
+    value: "ode-msd",
+    title: "Differential Equations (ODE): Mass-Spring-Damper (underdamped) — ode45",
+    description: "m·x'' + c·x' + k·x = 0 (two states). Verify: x(5) ≈ 0.066 m (decaying sinusoid).",
+    note: "A true two-state ODE; plot x vs time, or v vs x (phase portrait).",
+    code: `{ Underdamped vibration — m=20, c=5, k=20. Verify x(5) = 0.066 m }
+m = 20
+c = 5
+k = 20
+DYNAMIC vib (method = ode45, t = 0 .. 15, points = 600, rtol = 1e-9)
+  der(x) = v
+  der(v) = -(c/m) * v - (k/m) * x
+  x(0) = 1
+  v(0) = 0
+END`,
+  },
+  {
+    value: "ode-shm",
+    title: "Differential Equations (ODE): Undamped Oscillator (energy check) — ode4",
+    description: "x'' + ω²x = 0 → x = cos(ωt). Verify: x(2π) = 1 and energy E = 2 is conserved.",
+    note: "Energy E = ½v² + ½ω²x² is an algebraic auxiliary column you can plot.",
+    code: `{ Simple harmonic motion — verify x(2pi)=1 and E stays 2 }
+w = 2
+DYNAMIC shm (method = ode4, t = 0 .. 6.283185307, points = 400)
+  der(x) = v
+  der(v) = -w*w * x
+  E = 0.5 * v*v + 0.5 * w*w * x*x
+  x(0) = 1
+  v(0) = 0
+END`,
+  },
+  {
+    value: "ode-pendulum",
+    title: "Differential Equations (ODE): Simple Pendulum (small angle) — ode5",
+    description: "θ'' + (g/l)θ = 0 → θ = (π/4)cos(√(g/l)·t). Verify: θ(1) ≈ -0.506 rad.",
+    note: "",
+    code: `{ Small-angle pendulum — g=32.2 ft/s^2, l=2 ft. Verify theta(1) = -0.506 rad }
+g = 32.2
+l = 2
+DYNAMIC pend (method = ode5, t = 0 .. 3, points = 600)
+  der(theta) = omega
+  der(omega) = -(g/l) * theta
+  theta(0) = pi# / 4
+  omega(0) = 0
+END`,
+  },
+  {
+    value: "ode-rlc",
+    title: "Differential Equations (ODE): Series RLC Circuit (underdamped) — ode23",
+    description: "L·q'' + R·q' + q/C = 0. Verify: q(0.05) ≈ 0.153 C (decaying oscillation).",
+    note: "Capacitance is named Cap because C is conventionally a constant elsewhere.",
+    code: `{ Series RLC — L=5, R=280, C=1e-4. Verify q(0.05) = 0.153 C }
+L = 5
+R = 280
+Cap = 1e-4
+DYNAMIC rlc (method = ode23, t = 0 .. 0.2, points = 400, rtol = 1e-9)
+  der(q) = i
+  der(i) = -(R/L) * i - (1/(L*Cap)) * q
+  q(0) = 1
+  i(0) = 0
+END`,
+  },
+  {
+    value: "ode-lotka",
+    title: "Differential Equations (ODE): Lotka–Volterra Predator–Prey — ode45",
+    description: "Coupled nonlinear system; the invariant V = d·x - c·ln x + b·y - a·ln y stays constant.",
+    note: "No closed-form time solution — verified via the conserved invariant V (an aux column).",
+    code: `{ Predator-prey — V = d*x - c*ln(x) + b*y - a*ln(y) is conserved.
+  Plot y vs x for the closed phase-plane orbit. }
+a = 1.2
+b = 0.6
+cc = 0.8
+d = 0.3
+DYNAMIC lv (method = ode45, t = 0 .. 30, points = 600, rtol = 1e-9)
+  der(x) = a*x - b*x*y
+  der(y) = -cc*y + d*x*y
+  V = d*x - cc*ln(x) + b*y - a*ln(y)
+  x(0) = 2
+  y(0) = 1
+END`,
+  },
+  {
+    value: "ode-tanks",
+    title: "Differential Equations (ODE): Coupled Mixing Tanks — ode23",
+    description: "Two tanks exchanging fluid. Verify: both approach the mean (5), total stays 10.",
+    note: "",
+    code: `{ Coupled mixing — verify c1,c2 -> 5 and total = c1+c2 stays 10 }
+kk = 0.5
+DYNAMIC tanks (method = ode23, t = 0 .. 20, points = 200, rtol = 1e-8)
+  der(c1) = kk * (c2 - c1)
+  der(c2) = kk * (c1 - c2)
+  total = c1 + c2
+  c1(0) = 10
+  c2(0) = 0
+END`,
+  },
+  {
+    value: "ode-orbit",
+    title: "Differential Equations (ODE): Two-Body Circular Orbit — ode45",
+    description: "Four-state gravitational orbit (r=1, μ=1, v=1). Verify: returns to (1,0) at t=2π.",
+    note: "Plot y vs x for the circular trajectory; r is an aux column that stays 1.",
+    code: `{ Circular orbit — verify x(2pi)=1, y(2pi)=0, radius r stays 1 }
+mu = 1
+DYNAMIC orbit (method = ode45, t = 0 .. 6.283185307, points = 400, rtol = 1e-10)
+  r = sqrt(x*x + y*y)
+  der(x) = vx
+  der(y) = vy
+  der(vx) = -mu * x / r^3
+  der(vy) = -mu * y / r^3
+  x(0) = 1
+  y(0) = 0
+  vx(0) = 0
+  vy(0) = 1
+END`,
+  },
+  {
+    value: "ode-stiff-linear",
+    title: "Differential Equations (ODE): Classic Stiff Linear ODE — ode15s",
+    description: "y' = -1000y + 3000 - 2000·e^(-t) → y = 3 - 0.998·e^(-1000t) - 2.002·e^(-t). Verify: y(0.4) ≈ 1.658.",
+    note: "Stiff: explicit methods need tiny steps; ode15s (implicit BDF) handles it easily.",
+    code: `{ Stiff linear ODE — verify y(0.4) = 3 - 2.002 e^(-0.4) = 1.658 }
+DYNAMIC stiff (method = ode15s, t = 0 .. 0.4, points = 200, rtol = 1e-7)
+  der(y) = -1000*y + 3000 - 2000*exp(-t)
+  y(0) = 0
+END`,
+  },
+  {
+    value: "ode-vanderpol",
+    title: "Differential Equations (ODE): Van der Pol Oscillator (stiff) — ode23s",
+    description: "μ = 1000 relaxation oscillator. Verify: the slow manifold keeps y1 bounded (≈ 2).",
+    note: "Very stiff — needs the implicit Rosenbrock solver ode23s (or ode15s).",
+    code: `{ Van der Pol, mu = 1000 — extremely stiff. Verify |y1| stays near 2 }
+mu = 1000
+DYNAMIC vdp (method = ode23s, t = 0 .. 1, points = 100, rtol = 1e-4, atol = 1e-7)
+  der(y1) = y2
+  der(y2) = mu * (1 - y1*y1) * y2 - y1
+  y1(0) = 2
+  y2(0) = 0
+END`,
+  },
+  {
+    value: "ode-robertson",
+    title: "Differential Equations (ODE): Robertson Chemical Kinetics (stiff) — ode23s",
+    description: "Three-species stiff kinetics with rates 0.04 / 1e4 / 3e7. Verify: c1+c2+c3 = 1 (mass conserved).",
+    note: "A standard stiff benchmark; the fast transient dies quickly.",
+    code: `{ Robertson kinetics — verify total concentration c1+c2+c3 stays 1 }
+DYNAMIC rob (method = ode23s, t = 0 .. 40, points = 100, rtol = 1e-6, atol = 1e-10)
+  der(c1) = -0.04*c1 + 1e4*c2*c3
+  der(c2) = 0.04*c1 - 1e4*c2*c3 - 3e7*c2*c2
+  der(c3) = 3e7*c2*c2
+  c1(0) = 1
+  c2(0) = 0
+  c3(0) = 0
+END`,
+  },
+  {
+    value: "ode-chain",
+    title: "Differential Equations (ODE): Stiff Reaction Chain A→B→C — ode15s",
+    description: "Disparate rates (k1=1000 fast, k2=1 slow). Verify: A is consumed and a+b+c = 1.",
+    note: "",
+    code: `{ Stiff chain A->B->C — verify A -> 0 fast and total mass stays 1 }
+k1 = 1000
+k2 = 1
+DYNAMIC chain (method = ode15s, t = 0 .. 5, points = 150, rtol = 1e-7)
+  der(a) = -k1 * a
+  der(b) =  k1 * a - k2 * b
+  der(cc) = k2 * b
+  a(0) = 1
+  b(0) = 0
+  cc(0) = 0
+END`,
+  },
 ];
 
 // Examples are titled "Discipline: Specific title"; split on the first colon
@@ -1565,6 +1861,7 @@ const CATEGORIES = [
     icon: <IconAdjustments size={16} />,
     items: [
       { id: 'calculus', label: 'Numerical Integration (ODEs)', keywords: ['integral', 'ode', 'differential', 'calculus', 'runge-kutta'] },
+      { id: 'dynamic-ode', label: 'Transient / ODE Systems (DYNAMIC)', keywords: ['dynamic', 'transient', 'ode', 'der', 'state', 'event', 'ode45', 'ode23', 'ode23s', 'ode15s', 'rocket', 'odevalue', 'finalvalue', 'maxvalue', 'timeat', 'ode table', 'stiff', 'initial condition', 'apogee'] },
       { id: 'optimization', label: 'Optimization & sweeps', keywords: ['optimization', 'sweep', 'parametric', 'minimization', 'maximization'] },
       { id: 'api', label: 'Solver Reference & API', keywords: ['api', 'solver', 'newton', 'tarjan', 'residuals', 'jacobian'] },
     ]
@@ -1581,7 +1878,7 @@ const CATEGORIES = [
     title: 'Case Studies',
     icon: <IconFileText size={16} />,
     items: [
-      { id: 'examples', label: 'Engineering Examples Library', keywords: ['examples', 'rankine', 'brayton', 'combined cycle', 'pipe network', 'truss', 'radiation', 'cooling loop', 'reforming', 'pid', 'fatigue', 'nuclear', 'siyavula', 'nozzle', 'co2', 'compressible', 'throat', 'sonic', 'pelton', 'turbine', 'turbomachinery', 'hydropower', 'impulse', 'vehicle', 'ev', 'electric vehicle', 'longitudinal', 'lateral', 'bicycle model', 'understeer', 'road load', 'drag', 'battery', 'pack', 'cell', 'sizing', 'motor', 'range', 'batemo', 'c-rate'] },
+      { id: 'examples', label: 'Engineering Examples Library', keywords: ['examples', 'rankine', 'brayton', 'combined cycle', 'pipe network', 'truss', 'radiation', 'cooling loop', 'reforming', 'pid', 'fatigue', 'nuclear', 'siyavula', 'nozzle', 'co2', 'compressible', 'throat', 'sonic', 'pelton', 'turbine', 'turbomachinery', 'hydropower', 'impulse', 'vehicle', 'ev', 'electric vehicle', 'longitudinal', 'lateral', 'bicycle model', 'understeer', 'road load', 'drag', 'battery', 'pack', 'cell', 'sizing', 'motor', 'range', 'batemo', 'c-rate', 'ode', 'differential equations', 'runge-kutta', 'stiff', 'van der pol', 'robertson', 'lotka-volterra', 'predator-prey', 'pendulum', 'rlc', 'rc circuit', 'rl circuit', 'orbit', 'logistic', 'decay', 'cooling', 'mass-spring-damper', 'parachutist', 'torricelli'] },
     ]
   }
 ];
@@ -3314,6 +3611,38 @@ sig = sigma_LJ(Material)`}
             <Paper withBorder p="md" bg="light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8))">
               <Code block>{`y = Integral(3 * x^2, x, 0, 5)   { Definite integral of 3x^2 from 0 to 5 }`}</Code>
             </Paper>
+          </Stack>
+        );
+      case 'dynamic-ode':
+        return (
+          <Stack gap="md">
+            <Title order={2} c="blue.4">Transient / ODE Systems (DYNAMIC)</Title>
+            <Text style={{ lineHeight: 1.6 }}>
+              A <strong>DYNAMIC … END</strong> block is a multi-state, time-resolved ODE solver that runs <em>after</em> the analytic solve, consuming solved scalars as parameters and initial conditions. It is a parallel path to the analytic solver and to <Code>Integral()</Code> — use <Code>Integral()</Code> for a single definite integral / single-state end value, and <Code>DYNAMIC</Code> for coupled multi-state systems with a sampled trajectory you can plot. A variable is a <strong>state</strong> exactly when a <Code>der(X)</Code> appears for it; each state needs one <Code>der(X) = …</Code> and one initial condition <Code>X(t0) = …</Code>. Every other equation in the block is an algebraic auxiliary that becomes an output column.
+            </Text>
+            <Paper withBorder p="md" bg="light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8))">
+              <Code block>{`DYNAMIC cooling (method = ode45, time = 0 .. 300, points = 200, rtol = 1e-6)
+  der(T) = -k * (T - T_inf)     { first-order ODE; T is a state }
+  T(0)   = 90                   { initial condition }
+  rate   = -der(T)              { algebraic auxiliary -> output column }
+  EVENT cool: T = T_inf | falling -> stop   { optional zero-crossing event }
+END`}</Code>
+            </Paper>
+            <Text style={{ lineHeight: 1.6 }}>
+              Each solved block produces a first-class <strong>ODE Table</strong> (columns: <Code>time</Code>, the states, then the auxiliaries) that appears in the <strong>Tables</strong> window beside Parametric Tables and is selectable as a data source in the <strong>Plots</strong> window (e.g. x = <Code>time</Code>, y = a state). Because frees is case-insensitive, a temperature state <Code>T</Code> collides with a time variable <Code>t</Code> — name the time variable <Code>time</Code> in the header (the header key may be <Code>t</Code>, <Code>time</Code> or <Code>tspan</Code>).
+            </Text>
+            <Title order={3} mt="sm">Solver roster</Title>
+            <Text style={{ lineHeight: 1.6 }}>
+              Fixed-step (Simulink-style): <Code>ode1</Code> (Euler), <Code>ode2</Code> (Heun), <Code>ode3</Code>, <Code>ode4</Code> (classic RK4), <Code>ode5</Code> (Dormand–Prince). Adaptive: <Code>ode45</Code> (Dormand–Prince 5(4), the default) and <Code>ode23</Code> (Bogacki–Shampine 3(2)) with a PI step-size controller and dense-output sampling. Stiff (implicit, for Van der Pol / Robertson-type systems): <Code>ode23s</Code> (modified Rosenbrock) and <Code>ode15s</Code> (BDF). Header options mirror MATLAB <Code>odeset</Code>: <Code>method</Code>, <Code>t = t0 .. tf</Code>, <Code>points</Code> (sample count), <Code>step</Code> (fixed), <Code>rtol</Code>, <Code>atol</Code>, <Code>maxstep</Code>.
+            </Text>
+            <Title order={3} mt="sm">Events</Title>
+            <Text style={{ lineHeight: 1.6 }}>
+              <Code>EVENT name: g_lhs = g_rhs [| rising|falling] -&gt; stop|record</Code> detects a zero crossing of <Code>g_lhs − g_rhs</Code> (refined by bracketing): <Code>stop</Code> terminates the integration (e.g. apogee at <Code>v = 0</Code>), <Code>record</Code> just logs the crossing time.
+            </Text>
+            <Title order={3} mt="sm">ODE Table accessors</Title>
+            <Text style={{ lineHeight: 1.6 }}>
+              The analytic system reads transient results back out of an ODE Table (mirrors the Parametric / Integral table accessors): <Code>FinalValue('col')</Code>, <Code>MaxValue('col')</Code>, <Code>MinValue('col')</Code>, <Code>ODEValue('col', t)</Code>, <Code>TimeAt('col', value)</Code>, and the aggregates <Code>ODEAvg/ODESum/ODEStdDev('col')</Code>. These are evaluated live against the current solve, so the analytic solver can even <em>size</em> an ODE input to hit a transient target — e.g. add <Code>MaxValue('h') = 100000</Code> and frees solves for the burn time that reaches a 100 km apogee. See the <em>Sounding Rocket Trajectory</em> example.
+            </Text>
           </Stack>
         );
       case 'optimization':

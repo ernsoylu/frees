@@ -335,6 +335,141 @@ h_apogee = h_target                 { <-- the equation that sizes the rocket }
 m_fuel = f_fuel * m_prop
 m_oxidizer = OF * m_fuel`,
   },
+  {
+    id: 'newton-cooling-transient',
+    title: 'Newton Cooling (Transient)',
+    description: 'A DYNAMIC ODE block integrates a cooling curve and reports peak/final temperature.',
+    category: 'Heat Transfer',
+    text: `# Newton Cooling — Transient (DYNAMIC)
+{ A first-order ODE solved over time. The DYNAMIC ... END block is a parallel
+  path to the analytic solver: a variable is a STATE when a der(X) appears, with
+  one der(X) = ... and one initial condition X(0) = ...  The block produces an
+  ODE Table (see the Tables window) you can plot (Plots window: x = time, y = T).
+
+  Note: temperature is named T, which is case-insensitively the same as a time
+  variable t — so this block names time "time" in the header. }
+
+k     = 0.012     { cooling rate constant [1/s] }
+T_inf = 22        { ambient temperature }
+
+DYNAMIC cooling (method = ode45, time = 0 .. 300, points = 200, rtol = 1e-8)
+  der(T) = -k * (T - T_inf)      { Newton's law of cooling }
+  T(0)   = 90                    { initial temperature }
+  rate   = -der(T)               { algebraic auxiliary -> an output column }
+END
+
+## Read transient results back into the analytic solution
+T_final = FinalValue('T')        { temperature at the end of the run }
+T_peak  = MaxValue('T')          { hottest point (here, the start) }
+t_half  = TimeAt('T', 56)        { time to reach 56 degrees }`,
+  },
+  {
+    id: 'transient-heat-rod',
+    title: 'Transient Heat Rod (method of lines)',
+    description: 'A 1-D heat-conduction PDE discretized into N nodes, integrated as a stiff ODE system.',
+    category: 'Heat Transfer',
+    text: `# Transient 1-D Heat Conduction (method of lines)
+{ The heat equation dT/dt = alpha d2T/dx2 is discretized into N nodes; the FOR
+  loop generates one der(T[i]) per interior node and the array / FOR machinery
+  expands it into a coupled stiff ODE system. Use the stiff solver ode23s. The
+  ODE Table holds every node vs time — plot t[2], t[3], … against time to watch
+  the rod heat up toward the linear steady profile. }
+
+N = 6
+L = 1
+dx = L / (N - 1)
+alpha = 0.05       { thermal diffusivity }
+T_left  = 100      { boundary node 1 }
+T_right = 0        { boundary node N }
+T_init  = 0        { interior starts cold }
+
+DYNAMIC rod (method = ode23s, t = 0 .. 300, points = 150, rtol = 1e-6)
+  FOR i = 2 TO N-1
+    der(T[i]) = alpha / dx^2 * (T[i-1] - 2*T[i] + T[i+1])
+  END
+  T[1] = T_left            { Dirichlet boundary (auxiliary, held constant) }
+  T[6] = T_right
+  T[2..N-1](0) = T_init    { vector initial condition }
+END
+
+## Steady-state check (linear profile T[i] = 100 (N-i)/(N-1))
+T_mid_final = FinalValue('t[4]')`,
+  },
+  {
+    id: 'damped-oscillator-ode',
+    title: 'Damped Oscillator (2-state)',
+    description: 'A true two-state ODE (position + velocity) sharing one step cursor.',
+    category: 'Mechanics',
+    text: `# Damped Harmonic Oscillator (DYNAMIC)
+{ A mass-spring-damper as a coupled two-state ODE:
+    x' = v ,  v' = -(c/m) v - (k/m) x
+  Both states advance on one shared step cursor — the multi-state capability the
+  single-state Integral() lacks. Plot x vs time, or v vs x (phase portrait),
+  from the ODE Table in the Plots window. }
+
+m = 1.0       { mass }
+k = 20.0      { spring constant }
+c = 0.5       { damping coefficient }
+
+DYNAMIC oscillator (method = ode45, t = 0 .. 20, points = 400, rtol = 1e-9)
+  der(x) = v
+  der(v) = -(c/m) * v - (k/m) * x
+  energy = 0.5 * m * v*v + 0.5 * k * x*x   { total mechanical energy (decays) }
+  x(0) = 1.0
+  v(0) = 0.0
+END
+
+## Transient read-backs
+x_settled = FinalValue('x')        { residual displacement at t = 20 }
+E0        = ODEValue('energy', 0)  { initial energy }`,
+  },
+  {
+    id: 'sounding-rocket-trajectory',
+    title: 'Sounding Rocket Trajectory (loss-accurate)',
+    description: 'Coupled h/v/m ODE with drag, burnout and an apogee event; apogee read back via an accessor.',
+    category: 'Aerospace',
+    text: `# Loss-Accurate Sounding-Rocket Trajectory (DYNAMIC)
+{ The coupled multi-state system der(h)=v, der(v)=(F - D - m g)/m, der(m)=-mdot,
+  with aerodynamic drag against an exponential atmosphere computed every step as
+  an algebraic auxiliary, thrust gated off at burnout via If(), and an apogee
+  EVENT (v = 0, falling) that stops the integration. The ODE Table (Tables
+  window) plots altitude / velocity / mass vs time, or mass vs altitude.
+
+  The apogee altitude is read back into the analytic solution with MaxValue('h').
+  Change t_burn and re-solve to trade burn time for apogee — or, to SIZE the
+  rocket, open Variable Information, give t_burn a guess near 27 and bounds
+  [5, 55], add the equation  MaxValue('h') = h_target  and let frees solve for
+  the burn time that reaches 100 km. }
+
+g0     = 9.81
+m0     = 600        { lift-off mass }
+mdot   = 9          { propellant mass flow during burn }
+F0     = 28000      { motor thrust }
+Cd     = 0.3        { drag coefficient }
+A      = 0.03       { reference area }
+rho0   = 1.225      { sea-level air density }
+Hscale = 8000       { atmospheric scale height }
+t_burn = 27         { motor burn time }
+
+DYNAMIC ascent (method = ode45, time = 0 .. 600, points = 500, rtol = 1e-7, atol = 1e-3)
+  thrust = If(time, t_burn, F0, F0, 0)         { thrust on until burnout }
+  mflow  = If(time, t_burn, mdot, mdot, 0)     { mass flow on until burnout }
+  rho    = rho0 * exp(-h / Hscale)             { exponential atmosphere }
+  drag   = 0.5 * rho * v * v * Cd * A          { aerodynamic drag }
+  der(h) = v
+  der(v) = (thrust - drag - m * g0) / m
+  der(m) = -mflow
+  h(0) = 0
+  v(0) = 0
+  m(0) = m0
+  EVENT apogee: v = 0 | falling -> stop        { stop at the top of the arc }
+END
+
+## Read the trajectory back into the analytic solution
+apogee_km = MaxValue('h') / 1000     { peak altitude reached }
+v_burnout = ODEValue('v', t_burn)    { speed at burnout }
+m_final   = FinalValue('m')          { burnout / coasting mass }`,
+  },
 ]
 
 /** The document new/blank workspaces start from. */

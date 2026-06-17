@@ -372,6 +372,16 @@ public final class Evaluator {
             // Base conversion: BaseConvert('FF', 16, 10) -> 255
             case "baseconvert" -> evalBaseConvert(c, values, defs);
 
+            // ODE Table accessors — read cells/extrema/aggregates out of a solved
+            // DYNAMIC block; live against the current Newton iterate.
+            case "odevalue", "finalvalue", "maxvalue", "minvalue", "timeat",
+                 "odeavg", "odesum", "odestddev", "odemin", "odemax" -> {
+                String column = evalString(args.get(0));
+                Double arg = args.size() > 1 ? eval(args.get(1), values, defs) : null;
+                yield com.frees.backend.core.ode.DynamicAccessorContext.resolve(
+                        c.function(), column, arg, values);
+            }
+
             default -> throw new IllegalStateException("Unknown function: " + c.function());
         };
     }

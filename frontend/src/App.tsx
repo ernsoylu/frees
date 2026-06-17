@@ -908,7 +908,7 @@ export default function App() {
       // The Solution panel is never auto-opened: it stays hidden until the user
       // intentionally opens it (View menu / command palette). Solving updates its
       // contents but does not surface the window.
-      setTables((all) => mergeCodeTables(all, response.codeTables, response.parametricTables))
+      setTables((all) => mergeCodeTables(all, response.codeTables, response.parametricTables, response.odeTables))
       setLastSolvedWithFillMissing(shouldFillMissing && response.success)
       // Once the user has solved successfully, they've learned the core
       // workflow — retire the first-run welcome banner so it stops eating
