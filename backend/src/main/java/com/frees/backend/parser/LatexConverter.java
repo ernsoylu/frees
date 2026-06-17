@@ -134,6 +134,12 @@ public final class LatexConverter {
     private static String propertyCallLatex(String func, List<String> argLates) {
         String[] parts = func.split("\\$");
         String output = parts[1].substring(0, 1).toUpperCase() + parts[1].substring(1);
+        // Chemistry calls (prop$molarmass, prop$heatingvalue, prop$stoichafr)
+        // carry their fluid/formula/mode as string arguments rather than in the
+        // encoded name, so render them straight from the args.
+        if (parts.length < 3) {
+            return "\\text{" + output + "}\\left(" + String.join(", ", argLates) + RIGHT_PAREN;
+        }
         StringBuilder sb = new StringBuilder("\\text{").append(output)
                 .append("}\\left(\\mathrm{").append(parts[2]).append("}");
         for (int i = 0; i + 3 < parts.length && i < argLates.size(); i++) {

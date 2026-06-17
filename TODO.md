@@ -1,6 +1,16 @@
 # TODO
 
+* If I use any of the constants, formatted view shoukd show the notation of that constant instead of value itself
 * Sonar cloud gate have failed need to work on code  (investigate fresh report after this push)
+
+## Done — branch `chemistry-rocket-library`
+
+* [x] Periodic table (`PeriodicTable`) + chemical-formula parser (`ChemicalFormula`) — molar mass of any formula incl. parentheses (C8H18, Ca(OH)2, Al2(SO4)3).
+* [x] `MolarMass(token)` implemented (was documented but missing) — resolves an ideal-gas species, a CoolProp fluid, or a chemical formula → kg/mol. Case-preserving (formula tokens travel as string args because `Expr.Call` lowercases its name).
+* [x] Expanded `IdealGas` species: added OH, H, O, N, N2O and fuels C8H18, C12H26, CH3OH, C2H5OH (+ liquid-water formation enthalpy) with molar mass, formation enthalpy, entropy, cp(T).
+* [x] `HeatingValue(fuel, 'LHV'|'HHV')` [J/kg] and `StoichAFR(fuel)` [-] (`Combustion`), built on formation enthalpies + formula molar masses.
+* [x] Unit checker, Evaluator, LatexConverter and AstBuilder taught the new single-token chemistry calls; function catalog + Help reference updated.
+* [x] Example: **Sounding Rocket to the Kármán Line** — CH4/LOX vehicle sized to loft a 10 kg payload to 100 km via an implicit mass/Δv solve (uses g#, R#, MolarMass, HeatingValue, units).
 
 ## Done — branch `fix-per-table-solve`
 
