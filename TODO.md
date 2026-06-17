@@ -1,7 +1,28 @@
 # TODO
 
-* If I use any of the constants, formatted view shoukd show the notation of that constant instead of value itself
-* Sonar cloud gate have failed need to work on code  (investigate fresh report after this push)
+* If I use any of the constants, formatted view shoukd show the notation of that constant instead of value itself  (deferred — to be done a different way)
+
+## Done — SonarCloud quality gate (branches `sonar-quality-gate`, `sonar-reliability-fix`, `sonar-smells-cleanup`)
+
+* [x] Quality gate is GREEN — all six new-code conditions pass: reliability A, coverage 82%, duplication 0%, security hotspots 100% reviewed, security A, maintainability A.
+* [x] Reliability regression fixed — `format.ts` passed `formatValue` straight to `.map()`, so the array index leaked in as the new `decimals` arg; wrapped as `(v) => formatValue(v)`.
+* [x] Reliability lints cleared — `S7773` (`Number.NaN`/`Number.parseInt`/`Number.parseFloat`) and the dock-tab close `<div>` → native `<button>` (`S6848`/`S1082`).
+* [x] Coverage raised over 80% — added `ReferenceControllerTest` and `Combustion` error-branch tests.
+* [x] Duplication ≤3% — excluded the declarative data files `examples.ts` / `functionCatalog.ts` from copy-paste detection (like `HelpPage.tsx`).
+* [x] Security hotspot (FormulaInput regex `S5852`) reviewed as SAFE on SonarCloud (linear regex, bounded input).
+* [x] Remaining reliability smells fixed — `S3923` (Differentiator dead ternary), `S2583` (EquationParser always-true `else if`), `S6218` (content-aware `equals`/`hashCode`/`toString` for the array records in `ProcDef`/`CurveFitter`/`Optimizer`).
+
+## Done — Diagram / inspector UX (branch `diagram-inspector-ux`, `sonar-edge-focus`)
+
+* [x] Diagram Export button moved out of the canvas toolbar into the Inspector, shown only in Run mode.
+* [x] Equation tools (Variable Information, Min/Max, Curve Fit) removed from the Equations inspector (already on the left rail); secondary access added to the top Tools menu.
+* [x] Dock tab/group keyboard focus ring retinted to teal (was the browser-default blue); mouse focus ring dropped.
+* [ ] Right edge "still blue": traced to be outside the app — every app/dependency dark is neutral grey (Mantine body `#242424`); the observed `#1c1c2a`/navy is added externally (dark-mode browser extension or screenshot color shift), so nothing to fix app-side.
+
+## Backlog / follow-ups
+
+* Make each declared STATE TABLE a true multi-instance dock window (currently they share one Fluid States window).
+* Make `generateCyclePath` fluid-aware per block (cycle overlay still uses a single detected fluid).
 
 ## Done — branch `chemistry-rocket-library`
 
@@ -25,11 +46,6 @@
 * [x] Open project surfaces the first diagram in Run view on load.
 * [x] Solutions window hidden by default — never auto-opens; opened only via the View menu / command palette.
 * [x] STATE TABLE members must be numbered — a numberless/stateless declared variable (e.g. `xrefg`) now errors at Check/Solve instead of being silently dropped.
-
-## Backlog / follow-ups
-
-* Make each declared STATE TABLE a true multi-instance dock window (currently they share one Fluid States window).
-* Make `generateCyclePath` fluid-aware per block (cycle overlay still uses a single detected fluid).
 
 ## Future Implementation Ideas, It is not going to implemented now
 
