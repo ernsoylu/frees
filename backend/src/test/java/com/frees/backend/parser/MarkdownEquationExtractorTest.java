@@ -40,6 +40,19 @@ class MarkdownEquationExtractorTest {
     }
 
     @Test
+    void hashSuffixedConstantsSurviveExtraction() {
+        // Built-in constants carry a trailing '#' (pi#, R#). The extractor's
+        // tokenizer must accept '#' so the line stays a pure equation instead
+        // of being routed through prose extraction that drops the "# * r^2"
+        // tail (regression: "A = pi# * r^2" became "A = pi").
+        assertTrue(MarkdownEquationExtractor.isPureEquationLine("A = pi# * r^2"));
+        assertTrue(MarkdownEquationExtractor.isPureEquationLine("y = R#"));
+
+        String clean = MarkdownEquationExtractor.extract("A = pi# * r^2").cleanText;
+        assertTrue(clean.contains("pi# * r^2"), clean);
+    }
+
+    @Test
     void stringLiteralLinesAreEquations() {
         // Lines with quoted string arguments are pure equations and must
         // survive extraction intact (Story 9.9).

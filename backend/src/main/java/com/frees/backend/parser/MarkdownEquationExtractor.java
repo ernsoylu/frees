@@ -495,8 +495,9 @@ public final class MarkdownEquationExtractor {
             while (end < line.length() && (Character.isLetterOrDigit(line.charAt(end)) || line.charAt(end) == '_')) {
                 end++;
             }
-            // String variables carry a trailing '$': R$ = 'R134a'
-            if (end < line.length() && line.charAt(end) == '$') {
+            // String variables carry a trailing '$' (R$ = 'R134a'); built-in
+            // constants carry a trailing '#' (pi#, R#, g#).
+            if (end < line.length() && (line.charAt(end) == '$' || line.charAt(end) == '#')) {
                 end++;
             }
             return new Token(TokenType.IDENTIFIER, line.substring(i, end), end);
