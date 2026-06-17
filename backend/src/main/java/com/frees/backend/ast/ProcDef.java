@@ -58,5 +58,25 @@ public sealed interface ProcDef
 
     /** One tabulated curve: its family parameter value (null for a lone
      * curve) and sample arrays sorted ascending by x. */
-    record Curve(Double param, double[] xs, double[] ys) {}
+    record Curve(Double param, double[] xs, double[] ys) {
+        @Override
+        public boolean equals(Object o) {
+            return o instanceof Curve(Double p, double[] x, double[] y)
+                    && java.util.Objects.equals(param, p)
+                    && java.util.Arrays.equals(xs, x)
+                    && java.util.Arrays.equals(ys, y);
+        }
+
+        @Override
+        public int hashCode() {
+            return java.util.Objects.hash(param,
+                    java.util.Arrays.hashCode(xs), java.util.Arrays.hashCode(ys));
+        }
+
+        @Override
+        public String toString() {
+            return "Curve[param=" + param + ", xs=" + java.util.Arrays.toString(xs)
+                    + ", ys=" + java.util.Arrays.toString(ys) + "]";
+        }
+    }
 }

@@ -41,7 +41,38 @@ public final class CurveFitter {
             double rmse,
             int iterations,
             double[] residuals,
-            double[] fittedValues) {}
+            double[] fittedValues) {
+        @Override
+        public boolean equals(Object o) {
+            if (!(o instanceof FitResult other)) {
+                return false;
+            }
+            return Double.compare(rSquared, other.rSquared) == 0
+                    && Double.compare(rmse, other.rmse) == 0
+                    && iterations == other.iterations
+                    && java.util.Arrays.equals(fittedParameters, other.fittedParameters)
+                    && java.util.Arrays.equals(residuals, other.residuals)
+                    && java.util.Arrays.equals(fittedValues, other.fittedValues)
+                    && java.util.Objects.equals(parameterNames, other.parameterNames);
+        }
+
+        @Override
+        public int hashCode() {
+            return java.util.Objects.hash(parameterNames, rSquared, rmse, iterations,
+                    java.util.Arrays.hashCode(fittedParameters),
+                    java.util.Arrays.hashCode(residuals),
+                    java.util.Arrays.hashCode(fittedValues));
+        }
+
+        @Override
+        public String toString() {
+            return "FitResult[fittedParameters=" + java.util.Arrays.toString(fittedParameters)
+                    + ", parameterNames=" + parameterNames + ", rSquared=" + rSquared
+                    + ", rmse=" + rmse + ", iterations=" + iterations
+                    + ", residuals=" + java.util.Arrays.toString(residuals)
+                    + ", fittedValues=" + java.util.Arrays.toString(fittedValues) + "]";
+        }
+    }
 
     /**
      * Fits the model to the data.
