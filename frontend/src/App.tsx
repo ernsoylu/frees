@@ -102,11 +102,11 @@ import { FUNCTION_CATEGORIES } from './functionCatalog'
 import {
   buildProject,
   clearProjectLocal,
-  downloadProject,
   FreesProject,
   loadProjectLocal,
   ProjectSlices,
   readProjectFile,
+  saveProject,
   saveProjectLocal,
   writeBridgedKeys,
 } from './project'
@@ -275,6 +275,9 @@ export default function App() {
   // Dockview workspace manager: imperative handle + set of currently-open
   // window kinds (drives the sidebar's open-state indicators).
   const dockRef = useRef<WorkspaceDockHandle | null>(null)
+  // Diagram ids that should mount in Run view because they came from an opened
+  // project (consumed via the DiagramTab initialMode prop on the next mount).
+  const runOnLoadDiagramIdsRef = useRef<Set<string>>(new Set())
   const [openWindows, setOpenWindows] = useState<OpenWindow[]>([])
   // Shared Inspector edge panel: the focused diagram window portals its
   // Properties/Layers into this outlet so one inspector serves all diagrams.
@@ -295,10 +298,10 @@ export default function App() {
     return loaded.length > 0 ? loaded : [newParamTable([])]
   })
   const [activeTableId, setActiveTableId] = useState<string | null>(null)
-  const [tableSolving, setTableSolving] = useState(false)
+  const [solvingTableId, setSolvingTableId] = useState<string | null>(null)
   const [showConfigureTable, setShowConfigureTable] = useState(false)
   const [alterColumn, setAlterColumn] = useState<string | null>(null)
-  const [tableChecking, setTableChecking] = useState(false)
+  const [checkingTableId, setCheckingTableId] = useState<string | null>(null)
   const [plots, setPlots] = useState<PlotSpec[]>(() => boot?.plots ?? [])
   // Plots are addressed per-window now; only the setter is needed.
   const [, setActivePlotId] = useState<string | null>(null)
@@ -400,12 +403,21 @@ export default function App() {
     setPlots(p.plots ?? [])
     setDiagrams(p.diagrams ?? [])
     setActiveDiagramId(p.diagrams?.[0]?.id ?? null)
+    // Diagrams present at project-open mount in Run view (see initialMode prop).
+    runOnLoadDiagramIdsRef.current = new Set((p.diagrams ?? []).map((d) => d.id))
     setResult(null)
     setCheckResult(null)
     writeBridgedKeys(p)
     saveProjectLocal(p)
     setWorkspaceEpoch((e) => e + 1)
-    requestAnimationFrame(() => dockRef.current?.restore(p.dockLayout))
+    requestAnimationFrame(() => {
+      dockRef.current?.restore(p.dockLayout)
+      // Always surface the first diagram so an opened project shows its diagram.
+      const firstDiagram = p.diagrams?.[0]
+      if (firstDiagram) {
+        dockRef.current?.openInstance(`diagram:${firstDiagram.id}`, 'diagram', firstDiagram.name)
+      }
+    })
   }, [])
 
   // If the project is dirty, show the save-check dialog; otherwise run immediately.
@@ -418,9 +430,12 @@ export default function App() {
     }
   }, [])
 
-  const onSaveCheckSave = useCallback(() => {
+  const onSaveCheckSave = useCallback(async () => {
+    const saved = await saveProject(buildProject(currentSlices()), projectName)
+    // If the user cancelled the save picker, keep the project (and the pending
+    // destructive action, e.g. opening another project) on hold.
+    if (!saved) return
     setShowSaveCheck(false)
-    downloadProject(buildProject(currentSlices()), projectName)
     isDirtyRef.current = false
     pendingActionRef.current?.()
     pendingActionRef.current = null
@@ -438,9 +453,9 @@ export default function App() {
     pendingActionRef.current = null
   }, [])
 
-  const handleSaveProject = useCallback(() => {
-    downloadProject(buildProject(currentSlices()), projectName)
-    isDirtyRef.current = false
+  const handleSaveProject = useCallback(async () => {
+    const saved = await saveProject(buildProject(currentSlices()), projectName)
+    if (saved) isDirtyRef.current = false
   }, [currentSlices, projectName])
 
   const handleRenameProject = useCallback(() => setRenameOpen(true), [])
@@ -453,11 +468,11 @@ export default function App() {
   const handleSaveProjectAs = useCallback(() => setSaveAsOpen(true), [])
 
   const submitSaveAs = useCallback(
-    (name: string) => {
+    async (name: string) => {
       const clean = name.trim() || 'untitled'
       setProjectName(clean)
-      downloadProject(buildProject(currentSlices()), clean)
-      isDirtyRef.current = false
+      const saved = await saveProject(buildProject(currentSlices()), clean)
+      if (saved) isDirtyRef.current = false
       setSaveAsOpen(false)
     },
     [currentSlices],
@@ -533,9 +548,17 @@ export default function App() {
     .map((r, i) => ({ ok: r.success, label: `Run ${i + 1}`, values: r.values }))
     .filter((r) => r.ok)
     .map(({ label, values }) => ({ label, values }))
-  const tableStats = activeParam?.stats ?? null
-  const tableCheckResult = activeParam?.checkResult ?? null
-  const tableCheckMessage = activeParam?.checkMessage ?? ''
+
+  // The parametric table window that is currently focused in the dock — the
+  // TopBar's Check Table / Run Table buttons and status pill track this table.
+  const focusedParam: ParamTableSpec | null = (() => {
+    if (focusedWindow?.kind !== 'table') return null
+    const t = tables.find((x) => `table:${x.id}` === focusedWindow.id)
+    return t?.kind === 'parametric' ? t : null
+  })()
+  const tableStats = focusedParam?.stats ?? null
+  const tableCheckResult = focusedParam?.checkResult ?? null
+  const tableCheckMessage = focusedParam?.checkMessage ?? ''
   const functionTableDtos = toFunctionTableDtos(tables)
 
   function updateParamTable(id: string, update: (t: ParamTableSpec) => ParamTableSpec) {
@@ -727,30 +750,28 @@ export default function App() {
     invalidateTable()
   }
 
-  /** Table columns that have at least one usable numeric input value. */
-  function filledTableColumns(): Map<string, number> {
-    const filled = new Map<string, number>()
-    for (const name of tableVars) {
-      for (const row of paramRows) {
-        const raw = (row.values[name] ?? '').trim()
-        if (raw !== '' && Number.isFinite(Number(raw))) {
-          filled.set(name, Number(raw))
-          break
-        }
-      }
-    }
-    return filled
-  }
-
-  async function onCheckTable(): Promise<CheckResponse | null> {
-    if (tableChecking || !activeParam) return null
-    const tableId = activeParam.id
-    setTableChecking(true)
+  async function onCheckTable(tableIdArg?: string): Promise<CheckResponse | null> {
+    const tableId = tableIdArg ?? activeParam?.id
+    if (checkingTableId !== null || !tableId) return null
+    const tbl = tables.find((t) => t.id === tableId)
+    if (!tbl || tbl.kind !== 'parametric') return null
+    const tVars = tbl.vars
+    const tRows = tbl.rows
+    setCheckingTableId(tableId)
     updateParamTable(tableId, (t) => ({ ...t, results: [] }))
     try {
       // Check the augmented system: the equations plus one representative
       // fixed value per table input column (table semantics).
-      const filled = filledTableColumns()
+      const filled = new Map<string, number>()
+      for (const name of tVars) {
+        for (const row of tRows) {
+          const raw = (row.values[name] ?? '').trim()
+          if (raw !== '' && Number.isFinite(Number(raw))) {
+            filled.set(name, Number(raw))
+            break
+          }
+        }
+      }
       let augmented = text
       for (const [name, value] of filled) {
         augmented += `\n${name} = ${value}`
@@ -784,7 +805,7 @@ export default function App() {
             `supplied by the table.`,
         }))
       } else {
-        const unfilledColumns = tableVars.filter((v) => !filled.has(v))
+        const unfilledColumns = tVars.filter((v) => !filled.has(v))
         const hint =
           unfilledColumns.length > 0
             ? ` Fill input values for: ${unfilledColumns.join(', ')} (or use the column fill).`
@@ -800,24 +821,27 @@ export default function App() {
       }))
       return null
     } finally {
-      setTableChecking(false)
+      setCheckingTableId(null)
     }
   }
 
-  async function onSolveTable(checkOverride?: CheckResponse) {
-    if (tableSolving || !activeParam || tableVars.length === 0) return
-    const okCheck = checkOverride
-      ? checkOverride.solvable === true
-      : tableCheckResult?.solvable === true
-    if (!okCheck) return
-    const tableId = activeParam.id
-    setTableSolving(true)
+  async function onSolveTable(tableIdArg?: string, checkOverride?: CheckResponse) {
+    const tableId = tableIdArg ?? activeParam?.id
+    if (solvingTableId !== null || !tableId) return
+    const tbl = tables.find((t) => t.id === tableId)
+    if (!tbl || tbl.kind !== 'parametric' || tbl.vars.length === 0) return
+    // When checkOverride is explicitly provided (from checkThenSolveTable), honour it.
+    // When called directly from a per-window "Run Table" button we skip the gate so
+    // independent-block equations (e.g. two separate circuits) still solve correctly
+    // even when the global underdetermination check fails.
+    if (checkOverride !== undefined && !checkOverride.solvable) return
+    setSolvingTableId(tableId)
     try {
       // Non-empty cells become fixed inputs for that run; blank cells are
       // solved per row (Solve Table semantics).
-      const rows = paramRows.map((row) => {
+      const rows = tbl.rows.map((row) => {
         const fixed: Record<string, number> = {}
-        for (const name of tableVars) {
+        for (const name of tbl.vars) {
           const raw = (row.values[name] ?? '').trim()
           if (raw !== '') {
             const value = Number(raw)
@@ -831,7 +855,7 @@ export default function App() {
         { ...stopCriteria, complexMode },
         buildVariableInfo(),
         unitSystem,
-        tableVars,
+        tbl.vars,
         rows,
         functionTableDtos,
       )
@@ -851,7 +875,7 @@ export default function App() {
         })),
       }))
     } finally {
-      setTableSolving(false)
+      setSolvingTableId(null)
     }
   }
 
@@ -882,9 +906,9 @@ export default function App() {
       )
       setSolvedComplexMode(complexMode)
       setResult(response)
-      // A successful equation solve auto-opens the Solution panel (the one
-      // place this happens). Table solves don't trigger it.
-      if (response.success) dockRef.current?.open('solution')
+      // The Solution panel is never auto-opened: it stays hidden until the user
+      // intentionally opens it (View menu / command palette). Solving updates its
+      // contents but does not surface the window.
       setTables((all) => mergeCodeTables(all, response.codeTables, response.parametricTables))
       setLastSolvedWithFillMissing(shouldFillMissing && response.success)
       // Once the user has solved successfully, they've learned the core
@@ -944,14 +968,17 @@ export default function App() {
     if (res?.solvable) void onSolve(false, undefined, res)
   }
 
-  async function checkThenSolveTable() {
-    if (tableSolving || tableChecking || !activeParam) return
-    if (tableCheckResult?.solvable === true) {
-      void onSolveTable()
+  async function checkThenSolveTable(tableIdArg?: string) {
+    const tableId = tableIdArg ?? activeParam?.id
+    if (solvingTableId !== null || checkingTableId !== null || !tableId) return
+    const tbl = tables.find((t) => t.id === tableId)
+    if (!tbl || tbl.kind !== 'parametric') return
+    if (tbl.checkResult?.solvable === true) {
+      void onSolveTable(tableId)
       return
     }
-    const res = await onCheckTable()
-    if (res?.solvable) void onSolveTable(res)
+    const res = await onCheckTable(tableId)
+    if (res?.solvable) void onSolveTable(tableId, res)
   }
 
   const handlePlotsChange = (nextPlots: PlotSpec[]) => {
@@ -1485,7 +1512,7 @@ export default function App() {
               <Button size="xs" variant="default" onClick={() => setShowMinMax(true)}>Min / Max (optimize)</Button>
               <Button size="xs" variant="default" onClick={() => setShowCurveFit(true)}>Curve Fit</Button>
               <Divider my="xs" />
-              <Text size="xs" c="dimmed">Edit equations in the Editor; press Solve (F2) to compute. Results appear in the Solution panel.</Text>
+              <Text size="xs" c="dimmed">Edit equations in the Editor; press Solve (F2) to compute. Open the Solution panel (View menu) to see results.</Text>
             </Stack>
           </div>
         )
@@ -1500,7 +1527,7 @@ export default function App() {
     solution: (
       <div style={{ height: '100%', minHeight: 0 }}>
         <SolutionPanel
-          showTable={activeTab === 'table' && activeParam !== null}
+          showTable={focusedParam !== null}
           solveCount={solveCount}
           tableStats={tableStats}
           result={result}
@@ -1551,6 +1578,7 @@ export default function App() {
           onActiveDiagramIdChange={setActiveDiagramId}
           inspectorOutlet={inspectorOutlet}
           isActive={focusedWindow?.id === `diagram:${d.id}`}
+          initialMode={runOnLoadDiagramIdsRef.current.has(d.id) ? 'run' : 'develop'}
         />
       </div>
     )
@@ -1875,7 +1903,7 @@ export default function App() {
 
       <Flex direction="column" flex={1} miw={0} p="sm" gap="sm">
         <TopBar
-          isTable={activeTab === 'table' && activeParam !== null}
+          isTable={focusedParam !== null}
           checking={checking}
           solving={solving}
           solvable={solvable}
@@ -1883,15 +1911,15 @@ export default function App() {
           complexMode={complexMode}
           checkResult={checkResult}
           result={result}
-          tableChecking={tableChecking}
-          tableSolving={tableSolving}
+          tableChecking={checkingTableId === focusedParam?.id}
+          tableSolving={solvingTableId === focusedParam?.id}
           tableCheckResult={tableCheckResult}
           tableCheckMessage={tableCheckMessage}
-          tableResults={tableResults}
+          tableResults={focusedParam?.results ?? []}
           onCheck={onCheck}
           onSolve={checkThenSolve}
-          onCheckTable={onCheckTable}
-          onSolveTable={checkThenSolveTable}
+          onCheckTable={() => { if (focusedParam) void onCheckTable(focusedParam.id) }}
+          onSolveTable={() => { if (focusedParam) void onSolveTable(focusedParam.id) }}
           onFindAllChange={(checked) => {
             setFindAll(checked)
             setResult(null)
@@ -1927,7 +1955,7 @@ export default function App() {
           <WorkspaceDock
             content={panelContent}
             titles={panelTitles}
-            defaultOpen={['equations', 'inspector', 'solution']}
+            defaultOpen={['equations', 'inspector']}
             edgeKinds={['solution', 'inspector']}
             onActiveChange={(active) => {
               setActiveTab(active?.kind ?? '')

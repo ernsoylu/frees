@@ -35,6 +35,26 @@ public class Blocker {
     }
 
     /**
+     * Permissive variant used for parametric-table row solves: skips the
+     * global underdetermination check so independent equation blocks that
+     * are not covered by the table's columns (e.g. a second circuit whose
+     * variables are not table columns) are still blocked and solved. Unmatched
+     * variables (those with no equation assigned to them by the bipartite
+     * matching) are treated as constants fixed at their initial guess; the
+     * Tarjan blocks that contain equations referencing only matched variables
+     * are solved normally.
+     */
+    public List<Block> blockPermissive(List<Equation> equations) {
+        if (equations.isEmpty()) return List.of();
+        Set<String> allVars = new TreeSet<>();
+        for (Equation eq : equations) allVars.addAll(eq.variables());
+        // Run bipartite matching — for underdetermined systems every equation
+        // gets a match even though some variables remain unmatched.
+        Map<Integer, String> assignment = matchEquationsToVariables(equations, allVars);
+        return tarjanBlocks(equations, assignment);
+    }
+
+    /**
      * structural solvability check: zero degrees of freedom and a
      * complete equation-to-variable assignment. Throws SolverException with an
      * message if the system cannot be solved; returns the matching
@@ -117,8 +137,9 @@ public class Blocker {
         for (int i = 0; i < n; i++) {
             List<Integer> edges = new ArrayList<>();
             for (String varName : equations.get(i).variables()) {
-                int j = varToEq.get(varName);
-                if (j != i) {
+                Integer j = varToEq.get(varName);
+                // null means this variable is unmatched (free / external constant)
+                if (j != null && j != i) {
                     edges.add(j);
                 }
             }

@@ -139,7 +139,7 @@ class OptimizerTest {
         // equality penalty; the optimizer must degrade to its best iterate
         // instead of letting TooManyEvaluationsException escape.
         Optimizer.OptimizeResult result = optimizer.optimize(new Optimizer.Problem(
-                "V = pi * r^2 * h\nA = 2 * pi * r^2 + 2 * pi * r * h",
+                "V = pi# * r^2 * h\nA = 2 * pi# * r^2 + 2 * pi# * r * h",
                 SolverSettings.DEFAULTS,
                 Map.of(),
                 "A",
@@ -163,7 +163,7 @@ class OptimizerTest {
         // clamped to a point that violates V = 1000 (regression: it returned
         // r = 17.48 where V = 960 without any warning).
         Optimizer.OptimizeResult result = optimizer.optimize(new Optimizer.Problem(
-                "V = pi * r^2 * h\nA = 2 * pi * r^2 + 2 * pi * r * h",
+                "V = pi# * r^2 * h\nA = 2 * pi# * r^2 + 2 * pi# * r * h",
                 SolverSettings.DEFAULTS,
                 Map.of(),
                 "A",

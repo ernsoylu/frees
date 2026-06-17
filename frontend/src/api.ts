@@ -499,6 +499,31 @@ export async function getFluids(): Promise<string[]> {
   return body.available ? body.fluids : []
 }
 
+export interface UnitInfo {
+  symbol: string
+  dimension: string
+  siFactor: number
+}
+
+export interface ConstantInfo {
+  name: string
+  value: number
+  unit: string
+  description: string
+}
+
+export interface LanguageReference {
+  units: UnitInfo[]
+  constants: ConstantInfo[]
+}
+
+/** Supported units and built-in constants, sourced live from the backend. */
+export async function getReference(): Promise<LanguageReference> {
+  const response = await fetch(`${API_BASE}/api/reference`)
+  if (!response.ok) return { units: [], constants: [] }
+  return (await response.json()) as LanguageReference
+}
+
 export async function getPropertyDiagram(
   fluid: string,
   type: string,

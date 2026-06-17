@@ -760,7 +760,7 @@ public class SolveController {
             }
         }
         try {
-            EquationSystemSolver.Result result = solver.solve(sb.toString(),
+            EquationSystemSolver.Result result = solver.solvePermissive(sb.toString(),
                     context.settings(), context.specs(), context.functionDefs());
             java.util.Set<String> targetVars = new java.util.HashSet<>(context.tableVariables());
             result = resolveMissingProperties(result, sb.toString(), targetVars);
