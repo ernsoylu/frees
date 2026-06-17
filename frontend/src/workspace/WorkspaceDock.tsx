@@ -357,6 +357,13 @@ export function WorkspaceDock({
           --dv-paneview-active-outline-color: var(--mantine-color-teal-6);
           --dv-active-sash-color: var(--mantine-color-teal-6);
           --dv-icon-hover-background-color: var(--mantine-color-default-hover);
+          /* The decorative per-group accent line/chip defaults to blue
+             (#1a73e8). Retint the palette to the app's teal and hide the line
+             so the right edge group (Solution/Inspector) is not blue. */
+          --dv-tab-group-color-blue: var(--mantine-color-teal-6);
+          --dv-tab-group-color-cyan: var(--mantine-color-teal-6);
+          --dv-tab-group-line-opacity: 0;
+          --dv-tab-divider-color: var(--mantine-color-default-border);
         }
         /* The collapsed right edge group (rotated Solution/Inspector tabs) and
            its expanded surface render in a separate container — pin them to the
