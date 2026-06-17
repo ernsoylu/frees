@@ -73,10 +73,11 @@ sonar {
         property 'sonar.sources', 'backend/src/main/java,frontend/src,backend/Dockerfile,frontend/Dockerfile,docker-compose.yml,.github/workflows'
         property 'sonar.tests', 'backend/src/test/java'
         property 'sonar.exclusions', '**/node_modules/**,**/build/**,**/dist/**'
-        // HelpPage.tsx is documentation content: the duplication detector
-        // anonymizes string literals, so its distinct example listings
-        // register as false-positive duplicate blocks.
-        property 'sonar.cpd.exclusions', 'frontend/src/HelpPage.tsx'
+        // HelpPage.tsx, examples.ts and functionCatalog.ts are declarative
+        // content: the duplication detector anonymizes string literals, so their
+        // distinct example listings / catalog entries register as false-positive
+        // duplicate blocks.
+        property 'sonar.cpd.exclusions', 'frontend/src/HelpPage.tsx,frontend/src/examples.ts,frontend/src/functionCatalog.ts'
         property 'sonar.coverage.jacoco.xmlReportPaths',
                 "${layout.buildDirectory.get()}/reports/jacoco/test/jacocoTestReport.xml"
         property 'sonar.coverage.exclusions', 'frontend/**/*,frontend/src/**/*,**/frontend/**/*,backend/Dockerfile,frontend/Dockerfile,docker-compose.yml,.github/workflows/**/*'
