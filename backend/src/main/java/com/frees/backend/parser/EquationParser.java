@@ -437,7 +437,7 @@ public final class EquationParser {
                     ctx.out().add(new Equation(lhsMat.elements[i][j], rhsMat.elements[j][i], sourceText));
                 }
             }
-        } else if (func.equals("inverse")) {
+        } else { // func is "inverse" — the only other transform routed here
             if (lhsMat.rows != lhsMat.cols || rhsMat.rows != rhsMat.cols || lhsMat.rows != rhsMat.rows) {
                 throw new ParseException("Inverse requires square matrices of identical size.");
             }

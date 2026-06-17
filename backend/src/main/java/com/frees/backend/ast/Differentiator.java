@@ -266,8 +266,8 @@ public final class Differentiator {
                     simplifyDiv(num(1), simplifySub(num(1), simplifyMul(f, f))));
 
             // ── rounding and piecewise ─────────────────────────────────
-            case "floor", "ceil", "trunc", "sign", "step" ->
-                    args.stream().anyMatch(a -> a.variables().contains(var)) ? num(0) : num(0);
+            // Piecewise-constant: derivative is 0 wherever it is defined.
+            case "floor", "ceil", "trunc", "sign", "step" -> num(0);
             case "round" -> {
                 if (args.isEmpty() || args.size() > 2) yield null;
                 Expr f = args.get(0);
