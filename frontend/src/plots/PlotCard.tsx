@@ -30,7 +30,7 @@ interface Props {
   tableRows: ParamRow[]
   tableResults: TableRowResult[]
   /** Flat solved variables; the data source for XY plots that reference solved
-   * arrays (e.g. x = speed[1..N]) rather than a parametric table. */
+   * arrays (e.g. x = speed[1:N]) rather than a parametric table. */
   variables?: VariableResult[]
   /** Declared STATE TABLE blocks, for overlaying a single circuit's states. */
   stateTableDefs?: StateTableDto[]
@@ -212,7 +212,7 @@ export function buildFigure(spec: PlotSpec, inputs: FigureInputs): PlotlyFigure 
   }
   if (spec.kind === 'xy' && spec.xy.xVar && spec.xy.yVars.length > 0) {
     // Prefer parametric-table rows; fall back to solved array variables so a
-    // PLOT block referencing arrays (x = speed[1..N]) renders after a solve.
+    // PLOT block referencing arrays (x = speed[1:N]) renders after a solve.
     const useArrays = tableRows.length === 0
     const xVar = spec.xy.xVar
     const series = useArrays

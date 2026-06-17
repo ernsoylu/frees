@@ -76,7 +76,7 @@ class CodeRangeTest {
     void rangeArrayWorksWithSum() {
         var result = solver.solve("""
                 v = 1:1:10
-                total = Sum(v[1..10])
+                total = Sum(v[1:10])
                 """);
         assertEquals(55.0, result.variables().get("total"), 1e-9);
     }

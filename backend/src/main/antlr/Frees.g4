@@ -22,10 +22,17 @@ topLevel
 
 // ── FUNCTION / PROCEDURE / MODULE definitions ─────────────────────────────────
 
+// Single-output:  FUNCTION f(x) ... f := ... END   (callable inline in exprs)
+// Multi-output:    FUNCTION [a, b] = f(x) ... a := ... b := ... END
+//                  consumed industry-standard-style with [p, q] = f(x) (see multiAssign).
 functionDef
-    : FUNCTION IDENT LPAREN paramList RPAREN unit? sep
+    : FUNCTION (LBRACKET funcOutputs RBRACKET EQ)? IDENT LPAREN paramList RPAREN unit? sep
       procBody
       END
+    ;
+
+funcOutputs
+    : IDENT (COMMA IDENT)*
     ;
 
 procedureDef
@@ -100,8 +107,8 @@ stateAttrValue
 // ── Code-defined plot ────────────────────────────────────────────────────────
 //   PLOT 'Speed vs Distance'
 //     kind = xy
-//     x = speed[1..N]
-//     y = distance[1..N], time[1..N]
+//     x = speed[1:N]
+//     y = distance[1:N], time[1:N]
 //     type = line
 //     xlabel = 'Speed [m/s]'
 //   END
@@ -223,8 +230,17 @@ repeatStatement
 statement
     : forBlock
     | callStatement
+    | multiAssign
     | rangeAssign
     | equation
+    ;
+
+// industry-standard-style destructuring call of a multi-output FUNCTION:
+//   [q, w] = split(x)
+// Sugar for CALL split(x : q, w); listed before `equation` so it wins over a
+// matrix-literal equation with the same shape.
+multiAssign
+    : LBRACKET funcOutputs RBRACKET EQ IDENT LPAREN callArgList RPAREN
     ;
 
 // industry-standard-style range that fills an array variable:
@@ -328,8 +344,10 @@ arrayIndexList
     : arrayIndex (COMMA arrayIndex)*
     ;
 
+// Array index range uses industry-standard-style colons: A[1:3], speed[1:N].
+// (The DOTDOT token is retained only for DYNAMIC time spans: t = 0 .. 600.)
 arrayIndex
-    : expr (DOTDOT expr)?
+    : expr (COLON expr)?
     ;
 
 unit

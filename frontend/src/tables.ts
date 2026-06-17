@@ -22,6 +22,9 @@ export interface ParamTableSpec {
   checkResult: CheckResponse | null
   checkMessage: string
   source?: 'code' | 'gui'
+  /** Set when this "parametric" table was produced from a DYNAMIC/ODE block
+   * rather than a PARAMETRIC block, so the UI can describe it correctly. */
+  origin?: 'ode'
 }
 
 export interface CurveRow {
@@ -315,6 +318,7 @@ export function odeTableFromDto(dto: OdeTableDto): ParamTableSpec {
     checkResult: null,
     checkMessage: '',
     source: 'code',
+    origin: 'ode',
   }
 }
 

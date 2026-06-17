@@ -237,7 +237,7 @@ class UnitCheckerTest {
                 "K[2,1] = -k;   K[2,2] = 2*k\n" +
                 "D[1,1] = K[1,1]/m; D[1,2] = K[1,2]/m\n" +
                 "D[2,1] = K[2,1]/m; D[2,2] = K[2,2]/m\n" +
-                "CALL Eigen(D[1..2,1..2] : lambda[1..2], Phi[1..2,1..2])\n" +
+                "CALL Eigen(D[1:2,1:2] : lambda[1:2], Phi[1:2,1:2])\n" +
                 "omega[1] = sqrt(lambda[1]);  omega[2] = sqrt(lambda[2])",
                 Map.of());
         assertEquals(List.of(), warnings);
