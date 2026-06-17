@@ -136,6 +136,11 @@ public final class PropertyFunctions {
      * {@link #FLUIDS}, an aqueous glycol mixture (EG50, PG30, ...), or the
      * token unchanged so CoolProp can report an unknown fluid itself.
      */
+    /** Whether the (lowercased) token names a CoolProp fluid alias or glycol mix. */
+    public static boolean isKnownFluid(String token) {
+        return FLUIDS.containsKey(token) || GLYCOL_MIX.matcher(token).matches();
+    }
+
     static String resolveFluid(String token) {
         String alias = FLUIDS.get(token);
         if (alias != null) {
@@ -171,8 +176,27 @@ public final class PropertyFunctions {
 
     /** Evaluates an encoded property call against the indicator values. */
     public static double evaluate(String encoded, List<Double> values) {
+        return evaluate(encoded, values, List.of());
+    }
+
+    /**
+     * Evaluates an encoded property call. Real-fluid calls use {@code values}
+     * (the two state indicators); chemistry calls (MolarMass/HeatingValue/
+     * StoichAFR) use {@code tokens} (fluid/formula/mode strings, case-preserved).
+     */
+    public static double evaluate(String encoded, List<Double> values, List<String> tokens) {
         String[] parts = encoded.split("\\$");
         String output = parts[1];
+        switch (output) {
+            case "molarmass":
+                return Combustion.molarMass(tokens.get(0));
+            case "heatingvalue":
+                return Combustion.heatingValue(tokens.get(0), tokens.size() > 1 ? tokens.get(1) : "lhv");
+            case "stoichafr":
+                return Combustion.stoichAFR(tokens.get(0));
+            default:
+                break;
+        }
         if ("airh2o".equals(parts[2]) || "humidair".equals(parts[2])) {
             return evaluateHumidAir(output, parts, values);
         }
