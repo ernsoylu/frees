@@ -378,8 +378,9 @@ NUMBER
     ;
 
 // A trailing '$' marks a string variable (EES convention): R$ = 'R134a'.
+// A trailing '#' marks a built-in constant (EES convention): R#, g#, sigma#.
 IDENT
-    : [a-zA-Z] [a-zA-Z0-9_]* '$'?
+    : [a-zA-Z] [a-zA-Z0-9_]* ('$' | '#')?
     ;
 
 NEWLINE

@@ -6,10 +6,29 @@
  * are case-insensitive (frees convention). Supported syntax:
  *
  *   numbers (1, 2.5, 1e3) · identifiers · + - * / ^ · unary +/- ·
- *   parentheses · function calls · the constant `pi`
+ *   parentheses · function calls · built-in constants (pi#, g#, ...)
  *
  * Functions: sin cos tan asin acos atan sqrt abs exp ln log10 min max pow mod.
  */
+
+/**
+ * Built-in constants (EES convention: a trailing '#' marks a constant, e.g.
+ * pi#, g#). Values mirror the backend ConstantsRegistry; diagram formulas work
+ * on already-solved SI values, so only the numeric magnitude is needed here.
+ */
+const CONSTANTS: Record<string, number> = {
+  'pi#': Math.PI,
+  'e#': Math.E,
+  'r#': 8.314462618,
+  'g#': 9.80665,
+  'na#': 6.02214076e23,
+  'k#': 1.380649e-23,
+  'h#': 6.62607015e-34,
+  'c#': 299792458.0,
+  'sigma#': 5.670374419e-8,
+  'gc#': 6.6743e-11,
+  'qe#': 1.602176634e-19,
+}
 
 const FUNCTIONS: Record<string, (args: number[]) => number> = {
   sin: (a) => Math.sin(a[0]),
@@ -57,6 +76,8 @@ function tokenize(src: string): Token[] {
     } else if (/[a-zA-Z_]/.test(c)) {
       let j = i + 1
       while (j < src.length && /[a-zA-Z0-9_$]/.test(src[j])) j++
+      // A trailing '#' marks a built-in constant (pi#, g#, ...).
+      if (j < src.length && src[j] === '#') j++
       tokens.push({ t: 'id', v: src.slice(i, j) })
       i = j
     } else if ('+-*/^'.includes(c)) {
@@ -253,7 +274,7 @@ class Parser {
         return fn(args)
       }
       const name = tok.v.toLowerCase()
-      if (name === 'pi') return Math.PI
+      if (name in CONSTANTS) return CONSTANTS[name]
       const value = this.vars.get(name)
       if (value === undefined || !Number.isFinite(value)) {
         throw new Error(`Variable '${tok.v}' has no value`)
@@ -295,7 +316,7 @@ export function evalFormula(
   }
 }
 
-/** Lowercased variable names referenced by a formula (excludes functions and `pi`). */
+/** Lowercased variable names referenced by a formula (excludes functions and constants). */
 export function formulaVars(formula: string | undefined): string[] {
   if (!formula) return []
   let tokens: Token[]
@@ -309,7 +330,7 @@ export function formulaVars(formula: string | undefined): string[] {
     const tok = tokens[i]
     if (tok.t !== 'id') continue
     const name = tok.v.toLowerCase()
-    if (name === 'pi') continue
+    if (name in CONSTANTS) continue
     if (tokens[i + 1]?.t === 'lp') continue // function name
     out.add(name)
   }

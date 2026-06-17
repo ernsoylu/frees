@@ -77,7 +77,7 @@ const PROPERTY_PREFIXES = Object.keys(PROPERTY_ALIASES).sort(
  */
 function matchBlockStateVariable(
   name: string,
-): { property: string; index: number } | null {
+): { property: string; tag: string; index: number } | null {
   const lower = name.toLowerCase()
   let prefix: string
   let index: number
@@ -93,7 +93,9 @@ function matchBlockStateVariable(
   }
   for (const sym of PROPERTY_PREFIXES) {
     if (prefix.startsWith(sym)) {
-      return { property: PROPERTY_ALIASES[sym], index }
+      // Whatever follows the property symbol is the circuit tag (the `w` in
+      // `Pw_1`), used to keep colliding state indices in separate circuits.
+      return { property: PROPERTY_ALIASES[sym], tag: prefix.slice(sym.length).replace(/_/g, ''), index }
     }
   }
   return null
@@ -116,21 +118,31 @@ export function detectStateTables(
   defs: StateTableDto[] | undefined,
 ): NamedStateTable[] {
   if (!defs || defs.length === 0) return []
-  const valueOf = new Map<string, number>()
+  // Pre-match every solved variable once into (property, tag, index).
+  const matched: { property: string; tag: string; index: number; value: number }[] = []
   for (const v of variables) {
-    if (Number.isFinite(v.value)) valueOf.set(v.name.toLowerCase(), v.value)
+    if (!Number.isFinite(v.value)) continue
+    const m = matchBlockStateVariable(v.name)
+    if (m) matched.push({ ...m, value: v.value })
   }
   return defs.map((def) => {
+    // The declared members define the table's state points as (tag, index)
+    // signatures. Any solved variable sharing a signature — including
+    // properties computed by Fill Missing Values (hw_1, sw_1, …) that were not
+    // listed in the declaration — is pulled in, so computed values populate the
+    // table instead of only appearing in the Solution window.
+    const signatures = new Set<string>()
+    for (const varName of def.variables) {
+      const m = matchBlockStateVariable(varName)
+      if (m) signatures.add(`${m.tag}|${m.index}`)
+    }
     const values: Record<number, Record<string, number>> = {}
     const columnSet = new Set<string>()
-    for (const varName of def.variables) {
-      const value = valueOf.get(varName.toLowerCase())
-      if (value === undefined) continue
-      const match = matchBlockStateVariable(varName)
-      if (!match) continue
-      values[match.index] = values[match.index] ?? {}
-      values[match.index][match.property] = value
-      columnSet.add(match.property)
+    for (const m of matched) {
+      if (!signatures.has(`${m.tag}|${m.index}`)) continue
+      values[m.index] = values[m.index] ?? {}
+      values[m.index][m.property] = m.value
+      columnSet.add(m.property)
     }
     const indices = Object.keys(values)
       .map(Number)

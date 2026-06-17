@@ -77,9 +77,9 @@ export const FUNCTION_CATEGORIES: FunctionCategory[] = [
   {
     category: 'Trigonometry',
     items: [
-      { label: 'sin', snippet: 'sin($0)', description: 'Sine (argument in radians).', usage: 'y = sin(pi/6)   { 0.5 }' },
+      { label: 'sin', snippet: 'sin($0)', description: 'Sine (argument in radians).', usage: 'y = sin(pi#/6)   { 0.5 }' },
       { label: 'cos', snippet: 'cos($0)', description: 'Cosine (argument in radians).', usage: 'y = cos(0)   { 1 }' },
-      { label: 'tan', snippet: 'tan($0)', description: 'Tangent (argument in radians).', usage: 'y = tan(pi/4)   { 1 }' },
+      { label: 'tan', snippet: 'tan($0)', description: 'Tangent (argument in radians).', usage: 'y = tan(pi#/4)   { 1 }' },
       { label: 'arcsin', snippet: 'arcsin($0)', description: 'Inverse sine; returns radians.', usage: 'y = arcsin(0.5)' },
       { label: 'arccos', snippet: 'arccos($0)', description: 'Inverse cosine; returns radians.', usage: 'y = arccos(0.5)' },
       { label: 'arctan', snippet: 'arctan($0)', description: 'Inverse tangent; returns radians.', usage: 'y = arctan(1)' },
@@ -133,7 +133,7 @@ export const FUNCTION_CATEGORIES: FunctionCategory[] = [
       { label: 'Magnitude', snippet: 'Magnitude($0)', description: 'Magnitude (modulus) |z|.', usage: 'r = Magnitude(z)' },
       { label: 'Angle (rad)', snippet: 'Angle($0)', description: 'Argument (phase) of z in radians.', usage: 'phi = Angle(z)' },
       { label: 'AngleDeg', snippet: 'AngleDeg($0)', description: 'Argument (phase) of z in degrees.', usage: 'phi = AngleDeg(z)' },
-      { label: 'Cis', snippet: 'Cis($0)', description: 'Unit complex number cos θ + i·sin θ.', usage: 'z = Cis(pi/4)' },
+      { label: 'Cis', snippet: 'Cis($0)', description: 'Unit complex number cos θ + i·sin θ.', usage: 'z = Cis(pi#/4)' },
     ],
   },
   {

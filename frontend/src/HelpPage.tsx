@@ -22,7 +22,8 @@ import {
   Accordion as MantineAccordion
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
-import { useState, type ReactNode } from 'react';
+import { useState, useEffect, type ReactNode } from 'react';
+import { getReference, type UnitInfo, type ConstantInfo } from './api';
 
 function CopyButton({ code }: Readonly<{ code: string }>) {
   const [copied, setCopied] = useState(false);
@@ -41,6 +42,112 @@ function CopyButton({ code }: Readonly<{ code: string }>) {
     >
       {copied ? "Copied!" : "Copy Code"}
     </Button>
+  );
+}
+
+function formatSiFactor(factor: number): string {
+  if (factor === 1) return '1';
+  const abs = Math.abs(factor);
+  if (abs !== 0 && (abs >= 1e5 || abs < 1e-3)) return factor.toExponential(4);
+  return Number(factor.toPrecision(8)).toString();
+}
+
+/**
+ * Live reference of every unit the solver accepts and the built-in constants,
+ * fetched from /api/reference so it can never drift from the backend registry.
+ * Units are grouped by the SI dimension they measure; a filter matches unit
+ * symbol or dimension. Names are case-insensitive (shown lowercased).
+ */
+function UnitsReference() {
+  const [units, setUnits] = useState<UnitInfo[]>([]);
+  const [constants, setConstants] = useState<ConstantInfo[]>([]);
+  const [loaded, setLoaded] = useState(false);
+  const [query, setQuery] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    getReference()
+      .then((ref) => {
+        if (cancelled) return;
+        setUnits(ref.units);
+        setConstants(ref.constants);
+      })
+      .finally(() => !cancelled && setLoaded(true));
+    return () => { cancelled = true; };
+  }, []);
+
+  const q = query.trim().toLowerCase();
+  const filteredUnits = q
+    ? units.filter((u) => u.symbol.toLowerCase().includes(q) || u.dimension.toLowerCase().includes(q))
+    : units;
+
+  // Group by dimension, preserving the backend's dimension-then-symbol order.
+  const groups = new Map<string, UnitInfo[]>();
+  for (const u of filteredUnits) {
+    const list = groups.get(u.dimension) ?? [];
+    list.push(u);
+    groups.set(u.dimension, list);
+  }
+
+  return (
+    <Stack gap="md">
+      <Title order={3} mt="sm">Supported Units</Title>
+      <Text size="sm" c="dimmed">
+        Every unit below is accepted inside <code>[ ]</code> annotations and in <code>Convert()</code>.
+        Unit names are case-insensitive (shown lowercased). Units are grouped by the SI
+        dimension they measure; the factor is the multiplier to SI base units.
+      </Text>
+      <TextInput
+        placeholder="Filter units by symbol or dimension (e.g. pa, time, m/s)"
+        value={query}
+        onChange={(e) => setQuery(e.currentTarget.value)}
+        rightSection={query ? <CloseButton size="sm" onClick={() => setQuery('')} /> : null}
+        maw={420}
+      />
+      {!loaded && <Text size="sm" c="dimmed">Loading reference…</Text>}
+      {loaded && groups.size === 0 && <Text size="sm" c="dimmed">No units match “{query}”.</Text>}
+      {[...groups.entries()].map(([dimension, list]) => (
+        <Paper key={dimension} withBorder p="sm">
+          <Group gap="xs" mb="xs">
+            <Badge variant="light" color="blue">{dimension === '-' ? 'dimensionless' : dimension}</Badge>
+            <Text size="xs" c="dimmed">{list.length} unit{list.length === 1 ? '' : 's'}</Text>
+          </Group>
+          <Group gap={6}>
+            {list.map((u) => (
+              <Badge key={u.symbol} variant="default" style={{ fontFamily: 'monospace', textTransform: 'none' }}>
+                {u.symbol} = {formatSiFactor(u.siFactor)} {dimension === '-' ? '' : dimension}
+              </Badge>
+            ))}
+          </Group>
+        </Paper>
+      ))}
+
+      <Title order={3} mt="md">Built-in Constants</Title>
+      <Text size="sm" c="dimmed">
+        Use these anywhere in equations by their <code>#</code>-suffixed name (EES convention).
+        They are substituted at parse time with the SI value and unit shown.
+      </Text>
+      <Table striped withTableBorder>
+        <Table.Thead>
+          <Table.Tr>
+            <Table.Th>Name</Table.Th>
+            <Table.Th>Value (SI)</Table.Th>
+            <Table.Th>Unit</Table.Th>
+            <Table.Th>Description</Table.Th>
+          </Table.Tr>
+        </Table.Thead>
+        <Table.Tbody>
+          {constants.map((c) => (
+            <Table.Tr key={c.name}>
+              <Table.Td style={{ fontFamily: 'monospace' }}>{c.name}</Table.Td>
+              <Table.Td style={{ fontFamily: 'monospace' }}>{formatSiFactor(c.value)}</Table.Td>
+              <Table.Td style={{ fontFamily: 'monospace' }}>{c.unit}</Table.Td>
+              <Table.Td>{c.description}</Table.Td>
+            </Table.Tr>
+          ))}
+        </Table.Tbody>
+      </Table>
+    </Stack>
   );
 }
 
@@ -519,12 +626,12 @@ rp = Re + alt_p      { perigee radius }
 ra = Re + alt_a      { apogee radius }
 a = (rp + ra)/2
 ecc = (ra - rp)/(ra + rp)
-Tper = 2*pi*sqrt(a^3/mu)     { orbital period }
+Tper = 2*pi#*sqrt(a^3/mu)     { orbital period }
 tk = Tper/4                  { a quarter-period after perigee }
-M = 2*pi*tk/Tper             { mean anomaly }
+M = 2*pi#*tk/Tper             { mean anomaly }
 M = EA - ecc*sin(EA)         { Kepler's equation (guess EA = 2) }
 nu = 2*arctan( sqrt((1+ecc)/(1-ecc)) * tan(EA/2) )
-nu_deg = nu*180/pi
+nu_deg = nu*180/pi#
 r = a*(1 - ecc*cos(EA))
 v = sqrt(mu*(2/r - 1/a))`,
   },
@@ -545,7 +652,7 @@ Q_in = Q[1]
 Q[1] = Q[2] + Q[3]            { continuity at the split }
 hf[2] = hf[3]                 { parallel branches share head loss }
 FOR j = 1 TO 3
-  V[j] = Q[j]/(pi/4*D[j]^2)
+  V[j] = Q[j]/(pi#/4*D[j]^2)
   Re[j] = rho*V[j]*D[j]/mu
   1/sqrt(ff[j]) = -2*log10(eps/(3.7*D[j]) + 2.51/(Re[j]*sqrt(ff[j])))
   hf[j] = ff[j]*L[j]/D[j]*V[j]^2/(2*g)
@@ -606,7 +713,7 @@ u = phi * Vj
 u = N * (D_wheel / 2)
 
 { Jet diameter from continuity, and the jet ratio (good design 11–14) }
-Q = (pi / 4) * d_jet^2 * Vj
+Q = (pi# / 4) * d_jet^2 * Vj
 m_ratio = D_wheel / d_jet
 
 { Force and power on the buckets (jet deflected through 180° − beta) }
@@ -1036,7 +1143,7 @@ P2 = -0.5; Q2 = -0.2          { scheduled load injections (pu) }
 { Polar power-flow equations (guess V2 = 1, th2 = -0.1) }
 P2 = V2^2*G22 + V1*V2*(G21*cos(th2-th1) + B21*sin(th2-th1))
 Q2 = -V2^2*B22 + V1*V2*(G21*sin(th2-th1) - B21*cos(th2-th1))
-th2_deg = th2*180/pi`,
+th2_deg = th2*180/pi#`,
   },
   {
     value: "reforming-equilibrium",
@@ -1083,7 +1190,7 @@ p = 50 [rad/s]
 Kp_plant*Kc/tau       = wn^2 + 2*zeta*wn*p
 Kp_plant*Ki/tau       = p*wn^2
 ts = 4/(zeta*wn)                              { settling time }
-Mp = exp(-pi*zeta/sqrt(1-zeta^2))*100         { percent overshoot }`,
+Mp = exp(-pi#*zeta/sqrt(1-zeta^2))*100         { percent overshoot }`,
   },
   {
     value: "inhour-equation",
@@ -1115,9 +1222,9 @@ K_IC = 60                  { fracture toughness, MPa*sqrt(m) }
 sig_max = 300              { max stress, MPa }
 dsig = 200                 { stress range, MPa }
 a_i = 0.0005               { initial crack length, m }
-a_c = (K_IC/(sig_max*Y))^2/pi      { critical crack length }
-{ Cycles to failure = integral of da / (C (dsig Y sqrt(pi a))^m) }
-N_f = Integral(1/(C*(dsig*Y*sqrt(pi*a))^m), a, a_i, a_c)`,
+a_c = (K_IC/(sig_max*Y))^2/pi#      { critical crack length }
+{ Cycles to failure = integral of da / (C (dsig Y sqrt(pi# a))^m) }
+N_f = Integral(1/(C*(dsig*Y*sqrt(pi#*a))^m), a, a_i, a_c)`,
   },
   {
     value: "ammonia-refrigeration",
@@ -1282,7 +1389,7 @@ OD = 36 [in]
 t_wall = 0.375 [in]
 
 ID = (OD - 2 * t_wall) / 12 [ft]
-V = (gpm * 0.1337 / 60) / (pi / 4 * ID^2) [ft/s]
+V = (gpm * 0.1337 / 60) / (pi# / 4* ID^2) [ft/s]
 h_friction = f_factor * (L_eq / ID) * (V^2 / 64.4) [ft]
 h_total = z_elev + h_friction
 
@@ -1416,7 +1523,7 @@ const CATEGORIES = [
       { id: 'special-funcs', label: 'Special & Statistical Functions', keywords: ['bessel', 'besselk', 'bessely', 'bessel_i0', 'bessel_j0', 'chi_square', 'random', 'randg', 'probability', 'gamma', 'loggamma', 'digamma', 'beta', 'erf', 'erfc', 'erfinv'] },
       { id: 'variables', label: 'Variables, Guesses & Bounds', keywords: ['variables', 'guess', 'bounds', 'limits', 'variable info'] },
       { id: 'uncertainty', label: 'Uncertainty Propagation', keywords: ['uncertainty', 'propagation', 'error', 'uncertaintyof', 'svd'] },
-      { id: 'units', label: 'Units & Consistency', keywords: ['unit', 'si', 'convert', 'converttemp', 'temperature', 'dimension', 'annotation'] },
+      { id: 'units', label: 'Units & Consistency', keywords: ['unit', 'units', 'supported units', 'unit list', 'si', 'convert', 'converttemp', 'temperature', 'dimension', 'annotation', 'constants', 'pi', 'gas constant', 'gravity', 'boltzmann', 'avogadro', 'planck'] },
       { id: 'arrays', label: 'Arrays & For Loops', keywords: ['array', 'for', 'duplicate', 'loops', 'slice', 'index'] },
       { id: 'complex', label: 'Complex Numbers & Helpers', keywords: ['complex', 'imaginary', 'real', 'i', 'j', 'angle', 'polar', 'conj', 'magnitude', 'cis'] },
       { id: 'strings', label: 'String Variables & Functions', keywords: ['string', 'chr$', 'concat$', 'copy$', 'lowercase$', 'uppercase$', 'trim$', 'stringlen', 'stringpos', 'stringval', 'date$', 'time$', 'timestamp$', 'unitsystem$', 'unitsof$'] },
@@ -2174,6 +2281,7 @@ m = 120 [lb]     { Converted to 54.43 kg }`}</Code>
               example={`T_f = ConvertTemp(C, F, 100)   { 212 }
 T_k = ConvertTemp(F, K, 32)    { 273.15 }`}
             />
+            <UnitsReference />
           </Stack>
         );
       case 'plot-code':
@@ -2337,7 +2445,7 @@ phi = AngleDeg(z)   { phi = 45.0 }`}
               syntax={`z = mag * Cis(theta)`}
               inputs={[{ name: "theta", desc: "Angle in radians" }]}
               outputs={[{ name: "z", desc: "Unit complex phasor" }]}
-              example={`z = 5 * Cis(pi/4)`}
+              example={`z = 5 * Cis(pi#/4)`}
             />
           </Stack>
         );
@@ -2933,7 +3041,7 @@ max_temp = Max('T_boiler')`}
             </Text>
             <Paper withBorder p="md" bg="light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8))">
               <Code block>{`MODULE pipe_flow(D, Q : dP)
-  V = Q / (pi / 4 * D^2)
+  V = Q / (pi# / 4* D^2)
   dP = 0.02 * (100 / D) * (1000 * V^2 / 2)
 END
 

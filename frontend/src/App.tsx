@@ -102,11 +102,11 @@ import { FUNCTION_CATEGORIES } from './functionCatalog'
 import {
   buildProject,
   clearProjectLocal,
-  downloadProject,
   FreesProject,
   loadProjectLocal,
   ProjectSlices,
   readProjectFile,
+  saveProject,
   saveProjectLocal,
   writeBridgedKeys,
 } from './project'
@@ -275,6 +275,9 @@ export default function App() {
   // Dockview workspace manager: imperative handle + set of currently-open
   // window kinds (drives the sidebar's open-state indicators).
   const dockRef = useRef<WorkspaceDockHandle | null>(null)
+  // Diagram ids that should mount in Run view because they came from an opened
+  // project (consumed via the DiagramTab initialMode prop on the next mount).
+  const runOnLoadDiagramIdsRef = useRef<Set<string>>(new Set())
   const [openWindows, setOpenWindows] = useState<OpenWindow[]>([])
   // Shared Inspector edge panel: the focused diagram window portals its
   // Properties/Layers into this outlet so one inspector serves all diagrams.
@@ -400,12 +403,21 @@ export default function App() {
     setPlots(p.plots ?? [])
     setDiagrams(p.diagrams ?? [])
     setActiveDiagramId(p.diagrams?.[0]?.id ?? null)
+    // Diagrams present at project-open mount in Run view (see initialMode prop).
+    runOnLoadDiagramIdsRef.current = new Set((p.diagrams ?? []).map((d) => d.id))
     setResult(null)
     setCheckResult(null)
     writeBridgedKeys(p)
     saveProjectLocal(p)
     setWorkspaceEpoch((e) => e + 1)
-    requestAnimationFrame(() => dockRef.current?.restore(p.dockLayout))
+    requestAnimationFrame(() => {
+      dockRef.current?.restore(p.dockLayout)
+      // Always surface the first diagram so an opened project shows its diagram.
+      const firstDiagram = p.diagrams?.[0]
+      if (firstDiagram) {
+        dockRef.current?.openInstance(`diagram:${firstDiagram.id}`, 'diagram', firstDiagram.name)
+      }
+    })
   }, [])
 
   // If the project is dirty, show the save-check dialog; otherwise run immediately.
@@ -418,9 +430,12 @@ export default function App() {
     }
   }, [])
 
-  const onSaveCheckSave = useCallback(() => {
+  const onSaveCheckSave = useCallback(async () => {
+    const saved = await saveProject(buildProject(currentSlices()), projectName)
+    // If the user cancelled the save picker, keep the project (and the pending
+    // destructive action, e.g. opening another project) on hold.
+    if (!saved) return
     setShowSaveCheck(false)
-    downloadProject(buildProject(currentSlices()), projectName)
     isDirtyRef.current = false
     pendingActionRef.current?.()
     pendingActionRef.current = null
@@ -438,9 +453,9 @@ export default function App() {
     pendingActionRef.current = null
   }, [])
 
-  const handleSaveProject = useCallback(() => {
-    downloadProject(buildProject(currentSlices()), projectName)
-    isDirtyRef.current = false
+  const handleSaveProject = useCallback(async () => {
+    const saved = await saveProject(buildProject(currentSlices()), projectName)
+    if (saved) isDirtyRef.current = false
   }, [currentSlices, projectName])
 
   const handleRenameProject = useCallback(() => setRenameOpen(true), [])
@@ -453,11 +468,11 @@ export default function App() {
   const handleSaveProjectAs = useCallback(() => setSaveAsOpen(true), [])
 
   const submitSaveAs = useCallback(
-    (name: string) => {
+    async (name: string) => {
       const clean = name.trim() || 'untitled'
       setProjectName(clean)
-      downloadProject(buildProject(currentSlices()), clean)
-      isDirtyRef.current = false
+      const saved = await saveProject(buildProject(currentSlices()), clean)
+      if (saved) isDirtyRef.current = false
       setSaveAsOpen(false)
     },
     [currentSlices],
@@ -891,9 +906,9 @@ export default function App() {
       )
       setSolvedComplexMode(complexMode)
       setResult(response)
-      // A successful equation solve auto-opens the Solution panel (the one
-      // place this happens). Table solves don't trigger it.
-      if (response.success) dockRef.current?.open('solution')
+      // The Solution panel is never auto-opened: it stays hidden until the user
+      // intentionally opens it (View menu / command palette). Solving updates its
+      // contents but does not surface the window.
       setTables((all) => mergeCodeTables(all, response.codeTables, response.parametricTables))
       setLastSolvedWithFillMissing(shouldFillMissing && response.success)
       // Once the user has solved successfully, they've learned the core
@@ -1497,7 +1512,7 @@ export default function App() {
               <Button size="xs" variant="default" onClick={() => setShowMinMax(true)}>Min / Max (optimize)</Button>
               <Button size="xs" variant="default" onClick={() => setShowCurveFit(true)}>Curve Fit</Button>
               <Divider my="xs" />
-              <Text size="xs" c="dimmed">Edit equations in the Editor; press Solve (F2) to compute. Results appear in the Solution panel.</Text>
+              <Text size="xs" c="dimmed">Edit equations in the Editor; press Solve (F2) to compute. Open the Solution panel (View menu) to see results.</Text>
             </Stack>
           </div>
         )
@@ -1563,6 +1578,7 @@ export default function App() {
           onActiveDiagramIdChange={setActiveDiagramId}
           inspectorOutlet={inspectorOutlet}
           isActive={focusedWindow?.id === `diagram:${d.id}`}
+          initialMode={runOnLoadDiagramIdsRef.current.has(d.id) ? 'run' : 'develop'}
         />
       </div>
     )
@@ -1939,7 +1955,7 @@ export default function App() {
           <WorkspaceDock
             content={panelContent}
             titles={panelTitles}
-            defaultOpen={['equations', 'inspector', 'solution']}
+            defaultOpen={['equations', 'inspector']}
             edgeKinds={['solution', 'inspector']}
             onActiveChange={(active) => {
               setActiveTab(active?.kind ?? '')

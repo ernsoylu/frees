@@ -292,7 +292,7 @@ class EquationParserTest {
 
     @Test
     void parsesPredefinedConstantPi() {
-        Equation eq = parser.parse("omega = 2 * pi * 50").get(0);
+        Equation eq = parser.parse("omega = 2 * pi# * 50").get(0);
         Expr.BinOp mul = (Expr.BinOp) eq.rhs();
         Expr.BinOp leftMul = (Expr.BinOp) mul.left();
         Expr.Num piNum = (Expr.Num) leftMul.right();

@@ -47,7 +47,7 @@ P_shaft = P_hydraulic / eta          { required shaft power }`,
 g = 9.81 [m/s^2]
 v0 = 20 [m/s]            { launch speed }
 theta_deg = 35          { launch angle in degrees }
-theta = theta_deg * pi / 180
+theta = theta_deg * pi# / 180
 
 vx = v0 * cos(theta)
 vy = v0 * sin(theta)
@@ -222,7 +222,7 @@ T = T0 - drop            { temperature after 30 s }`,
   or y vs time in the Plots tab. }
 g  = 9.81 [m/s^2]
 v0 = 20 [m/s]
-theta = 35 * pi / 180
+theta = 35 * pi# / 180
 
 vx0 = v0 * cos(theta)
 vy0 = v0 * sin(theta)
