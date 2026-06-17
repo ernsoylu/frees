@@ -176,6 +176,31 @@ public final class Optimizer {
         public double decisionValue() {
             return decisionValues.length > 0 ? decisionValues[0] : 0.0;
         }
+
+        @Override
+        public boolean equals(Object o) {
+            if (!(o instanceof OptimizeResult other)) {
+                return false;
+            }
+            return Double.compare(objectiveValue, other.objectiveValue) == 0
+                    && evaluations == other.evaluations
+                    && java.util.Arrays.equals(decisionValues, other.decisionValues)
+                    && java.util.Objects.equals(solution, other.solution)
+                    && java.util.Objects.equals(warning, other.warning);
+        }
+
+        @Override
+        public int hashCode() {
+            return java.util.Objects.hash(objectiveValue, evaluations, solution, warning,
+                    java.util.Arrays.hashCode(decisionValues));
+        }
+
+        @Override
+        public String toString() {
+            return "OptimizeResult[decisionValues=" + java.util.Arrays.toString(decisionValues)
+                    + ", objectiveValue=" + objectiveValue + ", evaluations=" + evaluations
+                    + ", solution=" + solution + ", warning=" + warning + "]";
+        }
     }
 
     // ── Main entry point ────────────────────────────────────────────────
