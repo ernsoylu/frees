@@ -693,6 +693,10 @@ interface TopBarProps {
   /** Tools menu: open the auxiliary Inspector / Solution edge panels. */
   onOpenInspector: () => void
   onOpenSolution: () => void
+  /** Tools menu: equation tools (also reachable from the left rail). */
+  onVariableInfo: () => void
+  onMinMax: () => void
+  onCurveFit: () => void
 }
 
 function solveTooltipFor(canSolve: boolean, isTable: boolean): string {
@@ -826,6 +830,17 @@ export function TopBar(props: Readonly<TopBarProps>) {
             </Button>
           </Menu.Target>
           <Menu.Dropdown>
+            <Menu.Label>Equation tools</Menu.Label>
+            <Menu.Item leftSection={<IconVariable size={14} />} onClick={props.onVariableInfo}>
+              Variable Information
+            </Menu.Item>
+            <Menu.Item leftSection={<IconTargetArrow size={14} />} onClick={props.onMinMax}>
+              Min / Max (optimize)
+            </Menu.Item>
+            <Menu.Item leftSection={<IconMathFunction size={14} />} onClick={props.onCurveFit}>
+              Curve Fit
+            </Menu.Item>
+            <Menu.Divider />
             <Menu.Label>Auxiliary panels</Menu.Label>
             <Menu.Item leftSection={<IconAdjustments size={14} />} onClick={props.onOpenInspector}>
               Inspector
