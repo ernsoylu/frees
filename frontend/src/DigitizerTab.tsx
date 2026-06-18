@@ -287,55 +287,89 @@ function extractByColor(image: ImageData, opts: ExtractOptions): DigPoint[] {
   const { width, height, data } = image
   const visited = new Uint8Array(width * height)
   if (opts.mask) {
-    const { x0, y0, x1, y1 } = opts.mask
-    for (let h = 0; h < height; h++) {
-      for (let w = 0; w < width; w++) {
-        if (w < x0 || w > x1 || h < y0 || h > y1) visited[h * width + w] = 1
-      }
-    }
+    applyMask(visited, width, height, opts.mask)
   }
   const points: DigPoint[] = []
   for (let w = 0; w < width; w++) {
     for (let h = 0; h < height; h++) {
-      const i = h * width + w
-      if (visited[i]) continue
-      visited[i] = 1
-      if (!colorMatches(data, i * 4, opts.target, opts.threshold)) continue
-      // BFS over the connected matching cluster
-      const queue: number[] = [i]
-      let sumX = 0
-      let sumY = 0
-      let count = 0
-      while (queue.length > 0) {
-        const ci = queue.pop() as number
-        const cw = ci % width
-        const ch = (ci - cw) / width
-        sumX += cw
-        sumY += ch
-        count++
-        for (let nh = ch - 1; nh <= ch + 1; nh++) {
-          for (let nw = cw - 1; nw <= cw + 1; nw++) {
-            if (nh < 0 || nw < 0 || nh >= height || nw >= width) continue
-            // line mode: keep clusters local so one long curve becomes
-            // many column-wise centroids instead of a single blob
-            if (opts.kind === 'line' && (Math.abs(nw - w) > 10 || Math.abs(nh - h) > 10)) continue
-            const ni = nh * width + nw
-            if (visited[ni]) continue
-            visited[ni] = 1
-            if (colorMatches(data, ni * 4, opts.target, opts.threshold)) {
-              queue.push(ni)
-            }
-          }
-        }
-      }
-      if (opts.kind === 'symbol') {
-        const diameter = Math.sqrt(count / Math.PI) * 2
-        if (diameter < opts.minDiameterPx || diameter > opts.maxDiameterPx) continue
-      }
-      points.push({ x: sumX / count + 0.5, y: sumY / count + 0.5 })
+      const point = clusterPointAt(data, visited, width, height, w, h, opts)
+      if (point) points.push(point)
     }
   }
   return points
+}
+
+/** Marks every pixel outside the mask rectangle as visited so it is skipped. */
+function applyMask(visited: Uint8Array, width: number, height: number,
+                   mask: { x0: number; y0: number; x1: number; y1: number }): void {
+  const { x0, y0, x1, y1 } = mask
+  for (let h = 0; h < height; h++) {
+    for (let w = 0; w < width; w++) {
+      if (w < x0 || w > x1 || h < y0 || h > y1) visited[h * width + w] = 1
+    }
+  }
+}
+
+/** Visits the matching cluster seeded at (w, h) and returns its centroid, or null
+ *  when the seed is already visited / doesn't match / fails the symbol-size gate. */
+function clusterPointAt(data: Uint8ClampedArray, visited: Uint8Array, width: number, height: number,
+                        w: number, h: number, opts: ExtractOptions): DigPoint | null {
+  const i = h * width + w
+  if (visited[i]) return null
+  visited[i] = 1
+  if (!colorMatches(data, i * 4, opts.target, opts.threshold)) return null
+  const { sumX, sumY, count } = growCluster(data, visited, width, height, w, h, opts)
+  if (opts.kind === 'symbol') {
+    const diameter = Math.sqrt(count / Math.PI) * 2
+    if (diameter < opts.minDiameterPx || diameter > opts.maxDiameterPx) return null
+  }
+  return { x: sumX / count + 0.5, y: sumY / count + 0.5 }
+}
+
+/** BFS over the connected matching cluster seeded at (seedW, seedH); returns the
+ *  pixel-coordinate sums and count used to compute the centroid. */
+function growCluster(data: Uint8ClampedArray, visited: Uint8Array, width: number, height: number,
+                     seedW: number, seedH: number, opts: ExtractOptions): { sumX: number; sumY: number; count: number } {
+  const queue: number[] = [seedH * width + seedW]
+  let sumX = 0
+  let sumY = 0
+  let count = 0
+  while (queue.length > 0) {
+    const ci = queue.pop() as number
+    const cw = ci % width
+    const ch = (ci - cw) / width
+    sumX += cw
+    sumY += ch
+    count++
+    enqueueMatchingNeighbors(data, visited, width, height, cw, ch, seedW, seedH, opts, queue)
+  }
+  return { sumX, sumY, count }
+}
+
+/** Enqueues the unvisited, matching 8-connected neighbours of (cw, ch). */
+function enqueueMatchingNeighbors(data: Uint8ClampedArray, visited: Uint8Array, width: number, height: number,
+                                  cw: number, ch: number, seedW: number, seedH: number,
+                                  opts: ExtractOptions, queue: number[]): void {
+  for (let nh = ch - 1; nh <= ch + 1; nh++) {
+    for (let nw = cw - 1; nw <= cw + 1; nw++) {
+      tryEnqueueNeighbor(data, visited, width, height, nw, nh, seedW, seedH, opts, queue)
+    }
+  }
+}
+
+function tryEnqueueNeighbor(data: Uint8ClampedArray, visited: Uint8Array, width: number, height: number,
+                            nw: number, nh: number, seedW: number, seedH: number,
+                            opts: ExtractOptions, queue: number[]): void {
+  if (nh < 0 || nw < 0 || nh >= height || nw >= width) return
+  // line mode: keep clusters local so one long curve becomes many column-wise
+  // centroids instead of a single blob
+  if (opts.kind === 'line' && (Math.abs(nw - seedW) > 10 || Math.abs(nh - seedH) > 10)) return
+  const ni = nh * width + nw
+  if (visited[ni]) return
+  visited[ni] = 1
+  if (colorMatches(data, ni * 4, opts.target, opts.threshold)) {
+    queue.push(ni)
+  }
 }
 
 /** Evenly thin a curve to ~target points by bucket-averaging along X. */
@@ -420,6 +454,107 @@ function hexToRgb(hex: string): [number, number, number] {
     Number.parseInt(hex.slice(3, 5), 16),
     Number.parseInt(hex.slice(5, 7), 16),
   ]
+}
+
+/** Draws the four calibration crosshairs (X red, Y green) at their picked pixels. */
+function drawCalibrationMarks(ctx: CanvasRenderingContext2D, calibration: Calibration, scale: number): void {
+  const cross = (px: number, py: number, color: string, label: string) => {
+    const cx = px * scale
+    const cy = py * scale
+    ctx.strokeStyle = color
+    ctx.lineWidth = 1.5
+    ctx.beginPath()
+    ctx.moveTo(cx - 8, cy)
+    ctx.lineTo(cx + 8, cy)
+    ctx.moveTo(cx, cy - 8)
+    ctx.lineTo(cx, cy + 8)
+    ctx.stroke()
+    ctx.fillStyle = color
+    ctx.font = 'bold 11px sans-serif'
+    ctx.fillText(label, cx + 5, cy - 5)
+  }
+  for (const key of ['x1', 'x2', 'y1', 'y2'] as const) {
+    const cp = calibration[key]
+    if (cp) cross(cp.px, cp.py, key.startsWith('x') ? '#ff6b6b' : '#51cf66', CAL_LABELS[key])
+  }
+}
+
+/** Draws each in-view dataset point magnified into the loupe canvas. */
+function drawMagnifiedPoints(ctx: CanvasRenderingContext2D, datasets: Dataset[],
+                            toMag: (p: DigPoint) => { x: number; y: number },
+                            inView: (m: { x: number; y: number }) => boolean): void {
+  for (let di = 0; di < datasets.length; di++) {
+    const ds = datasets[di]
+    ctx.fillStyle = renderColor(ds, di)
+    for (const p of ds.points) {
+      const m = toMag(p)
+      if (!inView(m)) continue
+      ctx.beginPath()
+      ctx.arc(m.x, m.y, 4, 0, Math.PI * 2)
+      ctx.fill()
+    }
+  }
+}
+
+/** Draws the in-view calibration crosshairs magnified into the loupe canvas. */
+function drawMagnifiedCalibration(ctx: CanvasRenderingContext2D, calibration: Calibration,
+                                  toMag: (p: DigPoint) => { x: number; y: number },
+                                  inView: (m: { x: number; y: number }) => boolean): void {
+  for (const key of ['x1', 'x2', 'y1', 'y2'] as const) {
+    const cp = calibration[key]
+    if (!cp) continue
+    const m = toMag({ x: cp.px, y: cp.py })
+    if (!inView(m)) continue
+    ctx.strokeStyle = key.startsWith('x') ? '#ff6b6b' : '#51cf66'
+    ctx.lineWidth = 1.5
+    ctx.beginPath()
+    ctx.moveTo(m.x - 7, m.y)
+    ctx.lineTo(m.x + 7, m.y)
+    ctx.moveTo(m.x, m.y - 7)
+    ctx.lineTo(m.x, m.y + 7)
+    ctx.stroke()
+    ctx.fillStyle = ctx.strokeStyle
+    ctx.font = 'bold 10px sans-serif'
+    ctx.fillText(CAL_LABELS[key], m.x + 4, m.y - 4)
+  }
+}
+
+/** Draws every dataset's digitized points, highlighting the selected one. */
+function drawDatasetPoints(ctx: CanvasRenderingContext2D, datasets: Dataset[], scale: number,
+                           selected: { datasetId: number; index: number } | null, activeDatasetId: number | null): void {
+  for (let di = 0; di < datasets.length; di++) {
+    const ds = datasets[di]
+    for (let i = 0; i < ds.points.length; i++) {
+      const p = ds.points[i]
+      const isSel = selected?.datasetId === ds.id && selected.index === i
+      ctx.beginPath()
+      ctx.arc(p.x * scale, p.y * scale, isSel ? 6 : 4, 0, Math.PI * 2)
+      ctx.fillStyle = renderColor(ds, di)
+      ctx.globalAlpha = ds.id === activeDatasetId ? 0.95 : 0.55
+      ctx.fill()
+      ctx.globalAlpha = 1
+      if (isSel) {
+        ctx.strokeStyle = '#ffffff'
+        ctx.lineWidth = 1.5
+        ctx.stroke()
+      }
+    }
+  }
+}
+
+/** Draws the dashed mask rectangle, if one is set or being dragged. */
+function drawMaskRect(ctx: CanvasRenderingContext2D, rect: MaskRect | null, scale: number): void {
+  if (!rect) return
+  ctx.strokeStyle = '#fcc419'
+  ctx.setLineDash([6, 4])
+  ctx.lineWidth = 1.5
+  ctx.strokeRect(
+    rect.x0 * scale,
+    rect.y0 * scale,
+    (rect.x1 - rect.x0) * scale,
+    (rect.y1 - rect.y0) * scale,
+  )
+  ctx.setLineDash([])
 }
 
 export function DigitizerTab({
@@ -568,58 +703,9 @@ export function DigitizerTab({
       ctx.drawImage(previewCanvas, 0, 0, canvas.width, canvas.height)
     }
 
-    const cross = (px: number, py: number, color: string, label: string) => {
-      const cx = px * scale
-      const cy = py * scale
-      ctx.strokeStyle = color
-      ctx.lineWidth = 1.5
-      ctx.beginPath()
-      ctx.moveTo(cx - 8, cy)
-      ctx.lineTo(cx + 8, cy)
-      ctx.moveTo(cx, cy - 8)
-      ctx.lineTo(cx, cy + 8)
-      ctx.stroke()
-      ctx.fillStyle = color
-      ctx.font = 'bold 11px sans-serif'
-      ctx.fillText(label, cx + 5, cy - 5)
-    }
-    for (const key of ['x1', 'x2', 'y1', 'y2'] as const) {
-      const cp = calibration[key]
-      if (cp) cross(cp.px, cp.py, key.startsWith('x') ? '#ff6b6b' : '#51cf66', CAL_LABELS[key])
-    }
-
-    for (let di = 0; di < datasets.length; di++) {
-      const ds = datasets[di]
-      for (let i = 0; i < ds.points.length; i++) {
-        const p = ds.points[i]
-        const isSel = selected?.datasetId === ds.id && selected.index === i
-        ctx.beginPath()
-        ctx.arc(p.x * scale, p.y * scale, isSel ? 6 : 4, 0, Math.PI * 2)
-        ctx.fillStyle = renderColor(ds, di)
-        ctx.globalAlpha = ds.id === activeDatasetId ? 0.95 : 0.55
-        ctx.fill()
-        ctx.globalAlpha = 1
-        if (isSel) {
-          ctx.strokeStyle = '#ffffff'
-          ctx.lineWidth = 1.5
-          ctx.stroke()
-        }
-      }
-    }
-
-    const rect = maskDraft ?? maskRect
-    if (rect) {
-      ctx.strokeStyle = '#fcc419'
-      ctx.setLineDash([6, 4])
-      ctx.lineWidth = 1.5
-      ctx.strokeRect(
-        rect.x0 * scale,
-        rect.y0 * scale,
-        (rect.x1 - rect.x0) * scale,
-        (rect.y1 - rect.y0) * scale,
-      )
-      ctx.setLineDash([])
-    }
+    drawCalibrationMarks(ctx, calibration, scale)
+    drawDatasetPoints(ctx, datasets, scale, selected, activeDatasetId)
+    drawMaskRect(ctx, maskDraft ?? maskRect, scale)
   }, [image, scale, calibration, datasets, selected, activeDatasetId, maskRect, maskDraft, previewCanvas])
 
   useEffect(draw, [draw])
@@ -646,34 +732,8 @@ export function DigitizerTab({
       })
       const inView = (m: { x: number; y: number }) =>
         m.x >= -10 && m.x <= MAG_SIZE + 10 && m.y >= -10 && m.y <= MAG_SIZE + 10
-      for (let di = 0; di < datasets.length; di++) {
-        const ds = datasets[di]
-        ctx.fillStyle = renderColor(ds, di)
-        for (const p of ds.points) {
-          const m = toMag(p)
-          if (!inView(m)) continue
-          ctx.beginPath()
-          ctx.arc(m.x, m.y, 4, 0, Math.PI * 2)
-          ctx.fill()
-        }
-      }
-      for (const key of ['x1', 'x2', 'y1', 'y2'] as const) {
-        const cp = calibration[key]
-        if (!cp) continue
-        const m = toMag({ x: cp.px, y: cp.py })
-        if (!inView(m)) continue
-        ctx.strokeStyle = key.startsWith('x') ? '#ff6b6b' : '#51cf66'
-        ctx.lineWidth = 1.5
-        ctx.beginPath()
-        ctx.moveTo(m.x - 7, m.y)
-        ctx.lineTo(m.x + 7, m.y)
-        ctx.moveTo(m.x, m.y - 7)
-        ctx.lineTo(m.x, m.y + 7)
-        ctx.stroke()
-        ctx.fillStyle = ctx.strokeStyle
-        ctx.font = 'bold 10px sans-serif'
-        ctx.fillText(CAL_LABELS[key], m.x + 4, m.y - 4)
-      }
+      drawMagnifiedPoints(ctx, datasets, toMag, inView)
+      drawMagnifiedCalibration(ctx, calibration, toMag, inView)
 
       ctx.strokeStyle = 'rgba(255, 107, 107, 0.9)'
       ctx.lineWidth = 1
@@ -742,40 +802,46 @@ export function DigitizerTab({
     return [Math.round(r / 9), Math.round(g / 9), Math.round(b / 9)]
   }
 
+  const removePointAt = (pt: { x: number; y: number }) => {
+    const hit = nearestPoint(pt)
+    if (hit) {
+      updateDataset(hit.datasetId, (ds) => ({ ...ds, points: removeAt(ds.points, hit.index) }))
+      if (selected?.datasetId === hit.datasetId) setSelected(null)
+    }
+  }
+
+  const placeCalibration = (key: 'x1' | 'x2' | 'y1' | 'y2', pt: { x: number; y: number }) => {
+    setCalibration((c) => ({ ...c, [key]: { px: pt.x, py: pt.y, raw: c[key]?.raw ?? '' } }))
+    const order: Mode[] = ['x1', 'x2', 'y1', 'y2']
+    const idx = order.indexOf(key)
+    setMode(idx < 3 ? order[idx + 1] : 'add')
+  }
+
+  const pickColorAt = (pt: { x: number; y: number }) => {
+    const c = sampleColor(pt)
+    if (!c) return
+    if (activeDataset) {
+      updateDataset(activeDataset.id, (ds) => ({ ...ds, color: rgbToHex(c) }))
+    } else {
+      setNotice('Add a dataset first, then pick its curve color.')
+    }
+    setMode('add')
+  }
+
   const onCanvasMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const pt = eventToImagePx(e)
     // Ctrl+Click removes the point under the cursor in any mode — the
     // quick fix for stray auto-extracted points.
     if (e.ctrlKey || e.metaKey) {
-      const hit = nearestPoint(pt)
-      if (hit) {
-        updateDataset(hit.datasetId, (ds) => ({
-          ...ds,
-          points: ds.points.filter((_, i) => i !== hit.index),
-        }))
-        if (selected?.datasetId === hit.datasetId) setSelected(null)
-      }
+      removePointAt(pt)
       return
     }
     if (mode === 'x1' || mode === 'x2' || mode === 'y1' || mode === 'y2') {
-      const key = mode
-      setCalibration((c) => ({ ...c, [key]: { px: pt.x, py: pt.y, raw: c[key]?.raw ?? '' } }))
-      const order: Mode[] = ['x1', 'x2', 'y1', 'y2']
-      const idx = order.indexOf(key)
-      setMode(idx < 3 ? order[idx + 1] : 'add')
+      placeCalibration(mode, pt)
       return
     }
     if (mode === 'pick') {
-      const c = sampleColor(pt)
-      if (c) {
-        if (activeDataset) {
-          const hex = rgbToHex(c)
-          updateDataset(activeDataset.id, (ds) => ({ ...ds, color: hex }))
-        } else {
-          setNotice('Add a dataset first, then pick its curve color.')
-        }
-        setMode('add')
-      }
+      pickColorAt(pt)
       return
     }
     if (mode === 'mask') {
