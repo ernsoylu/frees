@@ -102,4 +102,29 @@ class DynamicSolveTest {
         assertTrue(result.odeTables().isEmpty());
         assertFalse(result.variables().isEmpty());
     }
+
+    @Test
+    void dynamicOnlyCheckPassesWithoutAnalyticEquations() {
+        String src = """
+                DYNAMIC cooling (method = ode45, time = 0 .. 100, points = 101)
+                  der(T) = -0.01 * (T - 25)
+                  T(0) = 95
+                END
+                """;
+        var checkResult = solver.check(src);
+        assertTrue(checkResult.solvable(), "DYNAMIC-only document should pass check");
+    }
+
+    @Test
+    void dynamicOnlySolveProducesOdeTable() {
+        String src = """
+                DYNAMIC cooling (method = ode45, time = 0 .. 100, points = 101, rtol = 1e-8)
+                  der(T) = -0.01 * (T - 25)
+                  T(0) = 95
+                END
+                """;
+        var result = solver.solve(src);
+        assertEquals(1, result.odeTables().size());
+        assertEquals("cooling", result.odeTables().get(0).name());
+    }
 }

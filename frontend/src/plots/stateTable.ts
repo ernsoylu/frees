@@ -102,7 +102,7 @@ function matchBlockStateVariable(
 }
 
 /** A state table tied to one declared STATE TABLE block: its name and fluid. */
-export interface NamedStateTable extends StateTable {
+interface NamedStateTable extends StateTable {
   name: string
   fluid: string | null
 }

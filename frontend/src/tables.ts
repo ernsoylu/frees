@@ -27,7 +27,7 @@ export interface ParamTableSpec {
   origin?: 'ode'
 }
 
-export interface CurveRow {
+interface CurveRow {
   x: string
   ys: string[]
 }
@@ -53,7 +53,7 @@ export type TableSpec = ParamTableSpec | FunctionTableSpec
 
 let tableCounter = 1
 
-export function newTableId(): string {
+function newTableId(): string {
   return `table-${Date.now()}-${tableCounter++}`
 }
 
@@ -239,7 +239,7 @@ export function functionTableFromDigitizer(input: {
 /** Builds a read-only Function Table spec from a solver-wire DTO (a TABLE
  * block the backend parsed out of the editor text). The x grid is the union of
  * every curve's x samples; each curve fills its own rows. */
-export function functionTableFromDto(dto: FunctionTableDto): FunctionTableSpec {
+function functionTableFromDto(dto: FunctionTableDto): FunctionTableSpec {
   const is1D = dto.curves.length <= 1 && (dto.curves[0]?.param == null)
   const xKeys = new Set<string>()
   for (const curve of dto.curves) {
@@ -270,7 +270,7 @@ export function functionTableFromDto(dto: FunctionTableDto): FunctionTableSpec {
 }
 
 /** Builds a read-only Parametric Table spec from a PARAMETRIC ... END block. */
-export function paramTableFromDto(dto: ParametricTableDto): ParamTableSpec {
+function paramTableFromDto(dto: ParametricTableDto): ParamTableSpec {
   const rows: ParamRow[] = dto.rows.map((row) => {
     const values: Record<string, string> = {}
     dto.vars.forEach((v, j) => {
@@ -298,7 +298,7 @@ export function paramTableFromDto(dto: ParametricTableDto): ParamTableSpec {
  * rows, so it renders in the Tables window beside Parametric Tables and is a
  * data source in the Plots window (x = time, y = a state/output) with no extra
  * plot code. The data is solver-populated, so the rows are display-only. */
-export function odeTableFromDto(dto: OdeTableDto): ParamTableSpec {
+function odeTableFromDto(dto: OdeTableDto): ParamTableSpec {
   const rows: ParamRow[] = dto.rows.map((row) => {
     const values: Record<string, string> = {}
     dto.vars.forEach((v, j) => {

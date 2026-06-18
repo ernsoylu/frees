@@ -131,6 +131,17 @@ public class EquationSystemSolver {
                     displayNamesOf(vars, parsed), e.getMessage());
         }
 
+        // A document whose only content is DYNAMIC block(s) has no analytic
+        // equations — the ODE system is self-contained and solvable directly.
+        if (equations.isEmpty() && !parsed.dynamicSystems().isEmpty()) {
+            int dynEqs = parsed.dynamicSystems().stream()
+                    .mapToInt(ds -> ds.bodyEquations().size() + ds.initials().size())
+                    .sum();
+            return new CheckResult(true, dynEqs, dynEqs, List.of(),
+                    String.format("No syntax errors were detected. DYNAMIC system with %d equation(s).",
+                            dynEqs));
+        }
+
         TreeSet<String> allVars = collectVariables(equations);
         List<String> variables = displayNamesOf(allVars, parsed);
         try {
