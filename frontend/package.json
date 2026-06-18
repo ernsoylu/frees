@@ -4,9 +4,10 @@
   "version": "0.0.1",
   "type": "module",
   "scripts": {
-    "start": "vite",
-    "dev": "vite",
-    "build": "tsc -b && vite build",
+    "start": "node scripts/compile-docs.js && vite",
+    "dev": "node scripts/compile-docs.js && vite",
+    "build": "node scripts/compile-docs.js && tsc -b && vite build",
+    "compile-docs": "node scripts/compile-docs.js",
     "preview": "vite preview"
   },
   "dependencies": {

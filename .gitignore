@@ -8,6 +8,9 @@ backend/bin/
 # Node
 frontend/node_modules/
 frontend/dist/
+# Generated from src/docs/*.md by scripts/compile-docs.js (run on every
+# build/dev/start and in the Docker build) — a build artifact, not source.
+frontend/src/docsCatalog.ts
 
 # IDE
 .idea/

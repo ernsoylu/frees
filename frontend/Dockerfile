@@ -5,6 +5,9 @@ COPY package.json package-lock.json ./
 RUN npm ci --ignore-scripts
 COPY tsconfig.json vite.config.ts postcss.config.cjs index.html ./
 COPY src ./src
+# scripts/compile-docs.js regenerates src/docsCatalog.ts from src/docs/*.md as
+# the first step of `npm run build`, so it must be in the image.
+COPY scripts ./scripts
 # Build stamp: the git commit the bundle was built from, surfaced in the About
 # dialog (see CLAUDE.md "Build stamping"). Local builds pass VITE_COMMIT_HASH via
 # frees.sh; Render auto-provides RENDER_GIT_COMMIT as a build arg.
