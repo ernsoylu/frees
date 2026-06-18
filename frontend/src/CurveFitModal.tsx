@@ -100,6 +100,28 @@ function parseValueAndUnit(str: string): { value: number; unit?: string } | null
   }
 }
 
+/** Parses (x, y) string pairs into numeric arrays plus the first unit seen on each
+ *  axis; rows that don't parse to numbers are skipped. */
+function collectXyPoints(
+  rawPairs: [string | undefined, string | undefined][],
+): { x: number[]; y: number[]; xUnit?: string; yUnit?: string } {
+  const x: number[] = []
+  const y: number[] = []
+  let xUnit: string | undefined
+  let yUnit: string | undefined
+  for (const [xValRaw, yValRaw] of rawPairs) {
+    if (xValRaw === undefined || yValRaw === undefined) continue
+    const parsedX = parseValueAndUnit(xValRaw)
+    const parsedY = parseValueAndUnit(yValRaw)
+    if (!parsedX || !parsedY) continue
+    x.push(parsedX.value)
+    y.push(parsedY.value)
+    if (xUnit === undefined && parsedX.unit) xUnit = parsedX.unit
+    if (yUnit === undefined && parsedY.unit) yUnit = parsedY.unit
+  }
+  return { x, y, xUnit, yUnit }
+}
+
 function getDefaultParameterUnit(
   paramName: string,
   template: string,
@@ -110,30 +132,40 @@ function getDefaultParameterUnit(
   const xu = xUnit || '1'
   const yu = yUnit || '1'
 
-  if (template.startsWith('Linear')) {
-    if (paramName === 'a') return xUnit ? `${yu}/${xu}` : yu
-    if (paramName === 'b') return yUnit
-  } else if (template.startsWith('Quadratic')) {
-    if (paramName === 'a') return xUnit ? `${yu}/${xu}^2` : yu
-    if (paramName === 'b') return xUnit ? `${yu}/${xu}` : yu
-    if (paramName === 'c') return yUnit
-  } else if (template.startsWith('Cubic')) {
-    if (paramName === 'a') return xUnit ? `${yu}/${xu}^3` : yu
-    if (paramName === 'b') return xUnit ? `${yu}/${xu}^2` : yu
-    if (paramName === 'c') return xUnit ? `${yu}/${xu}` : yu
-    if (paramName === 'd') return yUnit
-  } else if (template.startsWith('Exponential')) {
-    if (paramName === 'a') return yUnit
-    if (paramName === 'b') return xUnit ? `1/${xu}` : ''
-    if (paramName === 'c') return yUnit
-  } else if (template.startsWith('Logarithmic')) {
-    if (paramName === 'a') return yUnit
-    if (paramName === 'b') return yUnit
-  } else if (template.startsWith('Power')) {
-    if (paramName === 'a') return ''
-    if (paramName === 'b') return ''
-    if (paramName === 'c') return yUnit
-  }
+  if (template.startsWith('Linear')) return linearParamUnit(paramName, xUnit, xu, yu, yUnit)
+  if (template.startsWith('Quadratic')) return quadraticParamUnit(paramName, xUnit, xu, yu, yUnit)
+  if (template.startsWith('Cubic')) return cubicParamUnit(paramName, xUnit, xu, yu, yUnit)
+  if (template.startsWith('Exponential')) return exponentialParamUnit(paramName, xUnit, xu, yUnit)
+  if (template.startsWith('Logarithmic')) return paramName === 'a' || paramName === 'b' ? yUnit : ''
+  if (template.startsWith('Power')) return paramName === 'c' ? yUnit : ''
+  return ''
+}
+
+function linearParamUnit(paramName: string, xUnit: string, xu: string, yu: string, yUnit: string): string {
+  if (paramName === 'a') return xUnit ? `${yu}/${xu}` : yu
+  if (paramName === 'b') return yUnit
+  return ''
+}
+
+function quadraticParamUnit(paramName: string, xUnit: string, xu: string, yu: string, yUnit: string): string {
+  if (paramName === 'a') return xUnit ? `${yu}/${xu}^2` : yu
+  if (paramName === 'b') return xUnit ? `${yu}/${xu}` : yu
+  if (paramName === 'c') return yUnit
+  return ''
+}
+
+function cubicParamUnit(paramName: string, xUnit: string, xu: string, yu: string, yUnit: string): string {
+  if (paramName === 'a') return xUnit ? `${yu}/${xu}^3` : yu
+  if (paramName === 'b') return xUnit ? `${yu}/${xu}^2` : yu
+  if (paramName === 'c') return xUnit ? `${yu}/${xu}` : yu
+  if (paramName === 'd') return yUnit
+  return ''
+}
+
+function exponentialParamUnit(paramName: string, xUnit: string, xu: string, yUnit: string): string {
+  if (paramName === 'a') return yUnit
+  if (paramName === 'b') return xUnit ? `1/${xu}` : ''
+  if (paramName === 'c') return yUnit
   return ''
 }
 
@@ -327,51 +359,25 @@ export default function CurveFitModal({
     const table = tables.find((t) => t.id === selectedTableId)
     if (!table) return 'Selected table not found.'
 
-    const x: number[] = []
-    const y: number[] = []
-    let xUnit: string | undefined
-    let yUnit: string | undefined
-
+    let pairs: [string | undefined, string | undefined][]
     if (table.kind === 'parametric') {
       if (!xColumnName || !yColumnName) {
         return 'Please select both X and Y columns.'
       }
-      for (const row of table.rows) {
-        const xValRaw = row.values[xColumnName]
-        const yValRaw = row.values[yColumnName]
-        if (xValRaw === undefined || yValRaw === undefined) continue
-        const parsedX = parseValueAndUnit(xValRaw)
-        const parsedY = parseValueAndUnit(yValRaw)
-        if (!parsedX || !parsedY) continue
-        x.push(parsedX.value)
-        y.push(parsedY.value)
-        if (xUnit === undefined && parsedX.unit) xUnit = parsedX.unit
-        if (yUnit === undefined && parsedY.unit) yUnit = parsedY.unit
-      }
+      pairs = table.rows.map((row) => [row.values[xColumnName], row.values[yColumnName]])
     } else {
       const yColIndex = Number(yColumnName)
       if (Number.isNaN(yColIndex) || yColIndex < 0 || yColIndex >= table.columns.length) {
         return 'Please select a valid Y column.'
       }
-
-      for (const row of table.rows) {
-        const xValRaw = row.x
-        const yValRaw = row.ys[yColIndex]
-        if (xValRaw === undefined || yValRaw === undefined) continue
-        const parsedX = parseValueAndUnit(xValRaw)
-        const parsedY = parseValueAndUnit(yValRaw)
-        if (!parsedX || !parsedY) continue
-        x.push(parsedX.value)
-        y.push(parsedY.value)
-        if (xUnit === undefined && parsedX.unit) xUnit = parsedX.unit
-        if (yUnit === undefined && parsedY.unit) yUnit = parsedY.unit
-      }
+      pairs = table.rows.map((row) => [row.x, row.ys[yColIndex]])
     }
 
-    if (x.length < 2) {
+    const result = collectXyPoints(pairs)
+    if (result.x.length < 2) {
       return 'Selected table columns must contain at least two numeric data points.'
     }
-    return { x, y, xUnit, yUnit }
+    return result
   }
 
   // Reactive unit inference update
