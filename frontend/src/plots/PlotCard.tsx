@@ -197,7 +197,7 @@ export interface FigureInputs {
 }
 
 export function buildFigure(spec: PlotSpec, inputs: FigureInputs): PlotlyFigure | null {
-  const { states, cyclePath, tableRows, tableResults, variables = [], diagram, psychart, stateTableDefs, theme } = inputs
+  const { states, cyclePath, variables = [], diagram, psychart, stateTableDefs, theme } = inputs
   // When the plot targets one declared STATE TABLE circuit, overlay only that
   // circuit's states (else all detected states).
   const overlayStates = (name?: string | null): StateTable => {
@@ -211,42 +211,48 @@ export function buildFigure(spec: PlotSpec, inputs: FigureInputs): PlotlyFigure 
     return buildPsychroFigure(psychart, spec.psychro, spec.format, overlayStates(spec.psychro.stateTable), theme, cyclePath)
   }
   if (spec.kind === 'xy' && spec.xy.xVar && spec.xy.yVars.length > 0) {
-    // Prefer parametric-table rows; fall back to solved array variables so a
-    // PLOT block referencing arrays (x = speed[1:N]) renders after a solve.
-    const useArrays = tableRows.length === 0
-    const xVar = spec.xy.xVar
-    const series = useArrays
-      ? buildArrayXYSeries(variables, xVar, spec.xy.yVars)
-      : buildXYSeries(tableRows, tableResults, xVar, spec.xy.yVars, spec.xy.zVar, spec.xy.sizeVar)
-    if (spec.xy.y2Vars && spec.xy.y2Vars.length > 0) {
-      series.push(
-        ...(useArrays
-          ? buildArrayXYSeries(variables, xVar, spec.xy.y2Vars, 'y2')
-          : buildXYSeries(tableRows, tableResults, xVar, spec.xy.y2Vars, null, null, 'y2')),
-      )
-    }
-    // Append each axis variable's unit (from the solved variables — same unit a
-    // table column displays) to the default axis labels, unless disabled.
-    const showUnits = spec.format.showUnits !== false
-    const unitOf = (name: string): string => {
-      const v = variables.find((x) => x.name.toLowerCase() === name.toLowerCase())
-      return v?.units ?? ''
-    }
-    const withUnit = (label: string, unit: string) =>
-      showUnits && unit ? `${label} [${unit}]` : label
-    // For a single shared unit across all Y vars, label the axis with it.
-    const yUnits = new Set(spec.xy.yVars.map(unitOf).filter(Boolean))
-    const yUnit = yUnits.size === 1 ? [...yUnits][0] : ''
-    return buildXYFigure(
-      series,
-      spec.format,
-      withUnit(spec.xy.xVar, unitOf(spec.xy.xVar)),
-      withUnit(spec.xy.yVars.join(', '), yUnit),
-      theme,
-      spec.xy,
-    )
+    return buildXyFigureFromSpec(spec, inputs, spec.xy.xVar)
   }
   return null
+}
+
+/** Builds the XY figure: series from parametric-table rows (or solved arrays as a
+ *  fallback), with unit-annotated axis labels. */
+function buildXyFigureFromSpec(spec: PlotSpec, inputs: FigureInputs, xVar: string): PlotlyFigure {
+  const { tableRows, tableResults, variables = [], theme } = inputs
+  // Prefer parametric-table rows; fall back to solved array variables so a
+  // PLOT block referencing arrays (x = speed[1:N]) renders after a solve.
+  const useArrays = tableRows.length === 0
+  const series = useArrays
+    ? buildArrayXYSeries(variables, xVar, spec.xy.yVars)
+    : buildXYSeries(tableRows, tableResults, xVar, spec.xy.yVars, spec.xy.zVar, spec.xy.sizeVar)
+  if (spec.xy.y2Vars && spec.xy.y2Vars.length > 0) {
+    series.push(
+      ...(useArrays
+        ? buildArrayXYSeries(variables, xVar, spec.xy.y2Vars, 'y2')
+        : buildXYSeries(tableRows, tableResults, xVar, spec.xy.y2Vars, null, null, 'y2')),
+    )
+  }
+  // Append each axis variable's unit (from the solved variables — same unit a
+  // table column displays) to the default axis labels, unless disabled.
+  const showUnits = spec.format.showUnits !== false
+  const unitOf = (name: string): string => {
+    const v = variables.find((x) => x.name.toLowerCase() === name.toLowerCase())
+    return v?.units ?? ''
+  }
+  const withUnit = (label: string, unit: string) =>
+    showUnits && unit ? `${label} [${unit}]` : label
+  // For a single shared unit across all Y vars, label the axis with it.
+  const yUnits = new Set(spec.xy.yVars.map(unitOf).filter(Boolean))
+  const yUnit = yUnits.size === 1 ? [...yUnits][0] : ''
+  return buildXYFigure(
+    series,
+    spec.format,
+    withUnit(xVar, unitOf(xVar)),
+    withUnit(spec.xy.yVars.join(', '), yUnit),
+    theme,
+    spec.xy,
+  )
 }
 
 export default function PlotCard({

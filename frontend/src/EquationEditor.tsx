@@ -3,7 +3,7 @@ import { useComputedColorScheme } from '@mantine/core'
 import CodeMirror, { ReactCodeMirrorRef } from '@uiw/react-codemirror'
 import { Decoration, DecorationSet, EditorView } from '@codemirror/view'
 import { Extension, StateEffect, StateField } from '@codemirror/state'
-import { HighlightStyle, StreamLanguage, syntaxHighlighting } from '@codemirror/language'
+import { HighlightStyle, StreamLanguage, StringStream, syntaxHighlighting } from '@codemirror/language'
 import { CompletionContext, CompletionResult } from '@codemirror/autocomplete'
 import { tags } from '@lezer/highlight'
 import { FUNCTION_CATEGORIES } from './functionCatalog'
@@ -39,51 +39,63 @@ interface StreamState {
   inComment: boolean
 }
 
+/** Consumes the remainder of an open {comment}, clearing the flag at its '}'. */
+function continueComment(stream: StringStream, state: StreamState): string {
+  while (!stream.eol()) {
+    if (stream.next() === '}') {
+      state.inComment = false
+      break
+    }
+  }
+  return 'comment'
+}
+
+/** Starts a {comment}; sets the multi-line flag if it does not close on this line. */
+function startComment(stream: StringStream, state: StreamState): string {
+  stream.next()
+  while (!stream.eol()) {
+    if (stream.next() === '}') return 'comment'
+  }
+  state.inComment = true
+  return 'comment'
+}
+
+/** Consumes a quoted string literal up to its closing quote {@code ch}. */
+function scanString(stream: StringStream, ch: string): string {
+  stream.next()
+  while (!stream.eol()) {
+    if (stream.next() === ch) break
+  }
+  return 'string'
+}
+
+/** Classifies an identifier word as a keyword, known function, or unstyled variable. */
+function scanWord(stream: StringStream): string | null {
+  stream.match(/^[A-Za-z_][A-Za-z0-9_]*\$?/)
+  const word = stream.current()
+  if (KEYWORDS.has(word.toUpperCase())) return 'keyword'
+  if (FUNCTION_SET.has(word.toLowerCase())) return 'function'
+  return null
+}
+
 // A small line-oriented tokenizer for the frees language: {comments}, string
 // literals, numbers, keywords, and known built-in functions. Unknown
 // identifiers (user variables) are left unstyled.
 const freesLanguage = StreamLanguage.define<StreamState>({
   startState: () => ({ inComment: false }),
   token(stream, state) {
-    if (state.inComment) {
-      while (!stream.eol()) {
-        if (stream.next() === '}') {
-          state.inComment = false
-          break
-        }
-      }
-      return 'comment'
-    }
+    if (state.inComment) return continueComment(stream, state)
     if (stream.eatSpace()) return null
     if (stream.eol()) return null
 
     const ch = stream.peek() ?? ''
-    if (ch === '{') {
-      stream.next()
-      while (!stream.eol()) {
-        if (stream.next() === '}') return 'comment'
-      }
-      state.inComment = true
-      return 'comment'
-    }
-    if (ch === '"' || ch === "'") {
-      stream.next()
-      while (!stream.eol()) {
-        if (stream.next() === ch) break
-      }
-      return 'string'
-    }
+    if (ch === '{') return startComment(stream, state)
+    if (ch === '"' || ch === "'") return scanString(stream, ch)
     if (/\d/.test(ch) || (ch === '.' && /\d/.test(stream.string.charAt(stream.pos + 1)))) {
       if (!stream.match(/^\d*\.?\d+([eE][+-]?\d+)?[ij]?/)) stream.next()
       return 'number'
     }
-    if (/[A-Za-z_]/.test(ch)) {
-      stream.match(/^[A-Za-z_][A-Za-z0-9_]*\$?/)
-      const word = stream.current()
-      if (KEYWORDS.has(word.toUpperCase())) return 'keyword'
-      if (FUNCTION_SET.has(word.toLowerCase())) return 'function'
-      return null
-    }
+    if (/[A-Za-z_]/.test(ch)) return scanWord(stream)
     if (/[+\-*/^=<>:|,]/.test(ch)) {
       stream.next()
       return 'operator'
