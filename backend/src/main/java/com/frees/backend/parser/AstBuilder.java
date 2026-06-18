@@ -12,6 +12,8 @@ import java.util.List;
 /** Converts the ANTLR parse tree into the solver's AST. */
 public class AstBuilder extends FreesBaseVisitor<Expr> {
 
+    private static final String FN_LINEAR = "linear";
+
     /**
      * Variable case is unified to match their first appearance;
      * maps canonical (lowercase) name -> first-seen spelling.
@@ -300,9 +302,9 @@ public class AstBuilder extends FreesBaseVisitor<Expr> {
                 double start = signedNumberValue(nums.get(0));
                 double stop = signedNumberValue(nums.get(threeForm ? 2 : 1));
                 double middle = threeForm ? signedNumberValue(nums.get(1)) : 1.0;
-                String fill = range.PIPE() != null ? range.IDENT(1).getText().toLowerCase() : "linear";
+                String fill = range.PIPE() != null ? range.IDENT(1).getText().toLowerCase() : FN_LINEAR;
                 columns.put(col, switch (fill) {
-                    case "linear" -> linearRange(col, start, middle, stop);
+                    case FN_LINEAR -> linearRange(col, start, middle, stop);
                     case "log" -> logRange(col, start, middle, stop, threeForm);
                     default -> throw new EquationParser.ParseException(
                             "Unknown range spacing '" + range.IDENT(1).getText() + "' in PARAMETRIC "
@@ -685,9 +687,9 @@ public class AstBuilder extends FreesBaseVisitor<Expr> {
         // 2-number form (start:stop) implies step 1; 3-number form gives step/count.
         double middle = threeForm ? signedNumberValue(nums.get(1)) : 1.0;
 
-        String fill = ctx.PIPE() != null ? ctx.IDENT(1).getText().toLowerCase() : "linear";
+        String fill = ctx.PIPE() != null ? ctx.IDENT(1).getText().toLowerCase() : FN_LINEAR;
         List<Double> values = switch (fill) {
-            case "linear" -> linearRange(var, start, middle, stop);
+            case FN_LINEAR -> linearRange(var, start, middle, stop);
             case "log" -> logRange(var, start, middle, stop, threeForm);
             default -> throw new EquationParser.ParseException(
                     "Unknown range spacing '" + ctx.IDENT(1).getText() + "' in " + var

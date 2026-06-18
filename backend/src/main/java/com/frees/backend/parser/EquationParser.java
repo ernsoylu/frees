@@ -25,6 +25,14 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public final class EquationParser {
 
+    private static final String FN_INVERSE = "inverse";
+    private static final String FN_DETERMINANT = "determinant";
+    private static final String FN_TRANSPOSE = "transpose";
+    private static final String FN_SOLVELINEAR = "solvelinear";
+    private static final String FN_ZEROS = "zeros";
+    private static final String FN_IDENTITY = "identity";
+    private static final String FN_LINSPACE = "linspace";
+
     /** Largest span a single FOR loop or array range (1:N) may expand to, and
      * the backstop on the total number of equations a program may generate.
      * These bound parse-time expansion so a tiny input (e.g. FOR i = 1 TO 1e9)
@@ -334,15 +342,15 @@ public final class EquationParser {
         // directly (no helper temp variable leaks into the solution).
         if (rhs instanceof Expr.Call(String function, List<Expr> args)) {
             String func = switch (function.toLowerCase()) {
-                case "inv" -> "inverse";          // MATLAB aliases
-                case "det" -> "determinant";
+                case "inv" -> FN_INVERSE;          // MATLAB aliases
+                case "det" -> FN_DETERMINANT;
                 default -> function.toLowerCase();
             };
-            if (func.equals("inverse") || func.equals("transpose")) {
+            if (func.equals(FN_INVERSE) || func.equals(FN_TRANSPOSE)) {
                 flattenMatrixTransform(func, lhs, args.get(0), sourceText, ctx);
                 return;
             }
-            if (func.equals("dot") || func.equals("norm") || func.equals("nrm2") || func.equals("determinant") || func.equals("asum")) {
+            if (func.equals("dot") || func.equals("norm") || func.equals("nrm2") || func.equals(FN_DETERMINANT) || func.equals("asum")) {
                 flattenVectorOrDet(func, lhs, args, sourceText, ctx);
                 return;
             }
@@ -350,7 +358,7 @@ public final class EquationParser {
                 flattenCrossProduct(lhs, args, sourceText, ctx);
                 return;
             }
-            if (func.equals("solvelinear")) {
+            if (func.equals(FN_SOLVELINEAR)) {
                 flattenSolveLinear(lhs, args, sourceText, ctx);
                 return;
             }
@@ -433,11 +441,11 @@ public final class EquationParser {
     private void flattenMatrixTransform(String func, Expr lhs, Expr firstArg, String sourceText, FlattenContext ctx) {
         MatrixInfo rhsMat = parseMatrixInfo(firstArg, ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
         // Allow a bare output name (C = Inverse(A)): size it from the operation.
-        int outRows = func.equals("transpose") ? rhsMat.cols : rhsMat.rows;
-        int outCols = func.equals("transpose") ? rhsMat.rows : rhsMat.cols;
+        int outRows = func.equals(FN_TRANSPOSE) ? rhsMat.cols : rhsMat.rows;
+        int outCols = func.equals(FN_TRANSPOSE) ? rhsMat.rows : rhsMat.cols;
         lhs = explicitMatrixOutput(lhs, outRows, outCols, ctx);
         MatrixInfo lhsMat = parseMatrixInfo(lhs, ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
-        if (func.equals("transpose")) {
+        if (func.equals(FN_TRANSPOSE)) {
             if (lhsMat.rows != rhsMat.cols || lhsMat.cols != rhsMat.rows) {
                 throw new ParseException("Dimension mismatch for Transpose: LHS is " + lhsMat.rows + "x" + lhsMat.cols + ", RHS is " + rhsMat.cols + "x" + rhsMat.rows);
             }
@@ -446,7 +454,7 @@ public final class EquationParser {
                     ctx.out().add(new Equation(lhsMat.elements[i][j], rhsMat.elements[j][i], sourceText));
                 }
             }
-        } else { // func is "inverse" — the only other transform routed here
+        } else { // func is FN_INVERSE — the only other transform routed here
             if (lhsMat.rows != lhsMat.cols || rhsMat.rows != rhsMat.cols || lhsMat.rows != rhsMat.rows) {
                 throw new ParseException("Inverse requires square matrices of identical size.");
             }
@@ -501,7 +509,7 @@ public final class EquationParser {
                 sumAbs = sumAbs == null ? term : new Expr.BinOp('+', sumAbs, term);
             }
             ctx.out().add(new Equation(expandedLhs, sumAbs, sourceText));
-        } else if (func.equals("determinant")) {
+        } else if (func.equals(FN_DETERMINANT)) {
             MatrixInfo m = parseMatrixInfo(args.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
             if (m.rows != m.cols) {
                 throw new ParseException("Determinant requires a square matrix.");
@@ -1145,9 +1153,9 @@ public final class EquationParser {
     /** Functions whose result is a matrix/vector (so an equation using one is a
      * matrix equation). Scalar-valued ones (det, dot, norm) are excluded. */
     private static final java.util.Set<String> MATRIX_FUNCTIONS = java.util.Set.of(
-            "transpose", "inverse", "inv", "solvelinear",
+            FN_TRANSPOSE, FN_INVERSE, "inv", FN_SOLVELINEAR,
             "axpy", "scal", "gemv", "gemm", "ger", "copy",
-            "zeros", "ones", "eye", "identity", "diag", "linspace");
+            FN_ZEROS, "ones", "eye", FN_IDENTITY, "diag", FN_LINSPACE);
 
     private static boolean isMatrixFunction(String function) {
         return MATRIX_FUNCTIONS.contains(function.toLowerCase());
@@ -1172,7 +1180,7 @@ public final class EquationParser {
                 evalIndexExpr(expandExpr(a, loopVars, constants, displayNames, defs), loopVars, constants, defs);
 
         switch (fn) {
-            case "zeros", "ones" -> {
+            case FN_ZEROS, "ones" -> {
                 int r = (int) Math.round(num.applyAsDouble(args.get(0)));
                 int c = args.size() > 1 ? (int) Math.round(num.applyAsDouble(args.get(1))) : r;
                 checkGeneratorSize(r, c, fn);
@@ -1185,7 +1193,7 @@ public final class EquationParser {
                 }
                 return m;
             }
-            case "eye", "identity" -> {
+            case "eye", FN_IDENTITY -> {
                 int r = (int) Math.round(num.applyAsDouble(args.get(0)));
                 int c = args.size() > 1 ? (int) Math.round(num.applyAsDouble(args.get(1))) : r;
                 checkGeneratorSize(r, c, fn);
@@ -1197,7 +1205,7 @@ public final class EquationParser {
                 }
                 return m;
             }
-            case "linspace" -> {
+            case FN_LINSPACE -> {
                 double a = num.applyAsDouble(args.get(0));
                 double b = num.applyAsDouble(args.get(1));
                 int n = args.size() > 2 ? (int) Math.round(num.applyAsDouble(args.get(2))) : 100;
@@ -1454,11 +1462,11 @@ public final class EquationParser {
             }
             case Expr.Call(String function, List<Expr> args) -> {
                 String fn = function.toLowerCase();
-                if (fn.equals("zeros") || fn.equals("ones") || fn.equals("eye")
-                        || fn.equals("identity") || fn.equals("diag") || fn.equals("linspace")) {
+                if (fn.equals(FN_ZEROS) || fn.equals("ones") || fn.equals("eye")
+                        || fn.equals(FN_IDENTITY) || fn.equals("diag") || fn.equals(FN_LINSPACE)) {
                     yield compileMatrixGenerator(fn, args, ctx);
                 }
-                if (fn.equals("transpose")) {
+                if (fn.equals(FN_TRANSPOSE)) {
                     Expr[][] mat = compileMatrixExpr(args.get(0), ctx);
                     int rows = mat.length;
                     int cols = mat[0].length;
@@ -1469,7 +1477,7 @@ public final class EquationParser {
                         }
                     }
                     yield result;
-                } else if (fn.equals("inverse") || fn.equals("inv")) {
+                } else if (fn.equals(FN_INVERSE) || fn.equals("inv")) {
                     Expr[][] aMat = compileMatrixExpr(args.get(0), ctx);
                     if (aMat.length != aMat[0].length) {
                         throw new ParseException("Inverse requires a square matrix");
@@ -1632,7 +1640,7 @@ public final class EquationParser {
                         throw new ParseException("copy expects exactly 1 argument: copy(x)");
                     }
                     yield compileMatrixExpr(args.get(0), ctx);
-                } else if (fn.equals("solvelinear")) {
+                } else if (fn.equals(FN_SOLVELINEAR)) {
                     if (args.size() != 2) {
                         throw new ParseException("solvelinear expects exactly 2 arguments: solvelinear(A, b)");
                     }

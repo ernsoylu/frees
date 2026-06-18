@@ -25,13 +25,17 @@ import java.util.LinkedHashSet;
 public final class ComplexExpansion {
 
     private static final String ATAN2 = "atan2";
+    private static final String FN_MAGNITUDE = "magnitude";
+    private static final String FN_ANGLE = "angle";
+    private static final String FN_ANGLE_RAD = "anglerad";
+    private static final String FN_ANGLE_DEG = "angledeg";
 
     private ComplexExpansion() {}
 
     /** Functions with explicit complex-expansion rules below. */
     private static final java.util.Set<String> SUPPORTED_FUNCTIONS = java.util.Set.of(
             "real", "imag", "abs", "sin", "cos", "exp", "ln", "sqrt",
-            "conj", "magnitude", "angle", "anglerad", "angledeg", "cis");
+            "conj", FN_MAGNITUDE, FN_ANGLE, FN_ANGLE_RAD, FN_ANGLE_DEG, "cis");
 
     private static boolean isLiteralZero(Expr e) {
         return e instanceof Expr.Num n && n.value() == 0.0;
@@ -471,18 +475,18 @@ public final class ComplexExpansion {
                 if ("conj".equals(function)) {
                     yield realPart(args.get(0));
                 }
-                if ("magnitude".equals(function)) {
+                if (FN_MAGNITUDE.equals(function)) {
                     Expr x = realPart(args.get(0));
                     Expr y = imagPart(args.get(0));
                     Expr r2 = new Expr.BinOp('+', new Expr.BinOp('*', x, x), new Expr.BinOp('*', y, y));
                     yield new Expr.Call("sqrt", List.of(r2));
                 }
-                if ("angle".equals(function) || "anglerad".equals(function)) {
+                if (FN_ANGLE.equals(function) || FN_ANGLE_RAD.equals(function)) {
                     Expr x = realPart(args.get(0));
                     Expr y = imagPart(args.get(0));
                     yield new Expr.Call(ATAN2, List.of(y, x));
                 }
-                if ("angledeg".equals(function)) {
+                if (FN_ANGLE_DEG.equals(function)) {
                     Expr x = realPart(args.get(0));
                     Expr y = imagPart(args.get(0));
                     Expr rad = new Expr.Call(ATAN2, List.of(y, x));
@@ -583,8 +587,8 @@ public final class ComplexExpansion {
                 if ("conj".equals(function)) {
                     yield new Expr.Neg(imagPart(args.get(0)));
                 }
-                if ("magnitude".equals(function) || "angle".equals(function) 
-                        || "anglerad".equals(function) || "angledeg".equals(function)) {
+                if (FN_MAGNITUDE.equals(function) || FN_ANGLE.equals(function)
+                        || FN_ANGLE_RAD.equals(function) || FN_ANGLE_DEG.equals(function)) {
                     yield new Expr.Num(0.0);
                 }
                 if ("cis".equals(function)) {

@@ -330,6 +330,7 @@ public class SolveController {
     }
 
     private static final String NO_EQUATIONS_MESSAGE = "No equations entered.";
+    private static final String SYNTAX_ERROR_PREFIX = "Syntax error: ";
     private static final String HMASS = "Hmass";
     private static final String SMASS = "Smass";
     private static final String DMASS = "Dmass";
@@ -539,7 +540,7 @@ public class SolveController {
             String firstError = e.getMessage().lines().findFirst().orElse(e.getMessage());
             return ResponseEntity.badRequest().body(new CheckResponse(
                     false, 0, 0, List.of(), List.of(), Map.of(),
-                    "Syntax error: " + firstError, List.of(), null, List.of(), List.of(), List.of(),
+                    SYNTAX_ERROR_PREFIX + firstError, List.of(), null, List.of(), List.of(), List.of(),
                     parseErrorLine(e.getMessage())));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -941,7 +942,7 @@ public class SolveController {
                     objective, primaryDecision, decisionDtos, result.evaluations(), variables));
         } catch (EquationParser.ParseException e) {
             String firstError = e.getMessage().lines().findFirst().orElse(e.getMessage());
-            return ResponseEntity.badRequest().body(OptimizeResponse.failure("Syntax error: " + firstError));
+            return ResponseEntity.badRequest().body(OptimizeResponse.failure(SYNTAX_ERROR_PREFIX + firstError));
         } catch (SolverException e) {
             return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(OptimizeResponse.failure(e.getMessage()));
         }
@@ -1039,7 +1040,7 @@ public class SolveController {
         } catch (EquationParser.ParseException e) {
             String firstError = e.getMessage().lines().findFirst().orElse(e.getMessage());
             return ResponseEntity.badRequest()
-                    .body(CurveFitResponse.failure("Syntax error: " + firstError));
+                    .body(CurveFitResponse.failure(SYNTAX_ERROR_PREFIX + firstError));
         } catch (SolverException e) {
             return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
                     .body(CurveFitResponse.failure(e.getMessage()));
