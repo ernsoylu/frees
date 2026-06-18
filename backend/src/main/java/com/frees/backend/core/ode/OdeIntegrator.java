@@ -212,7 +212,7 @@ public final class OdeIntegrator {
 
     // ── Events ──────────────────────────────────────────────────────────────
 
-    private record EventHit(String name, double time, double[] y, boolean stop) {
+    record EventHit(String name, double time, double[] y, boolean stop) {
         @Override
         public boolean equals(Object o) {
             if (this == o) {
