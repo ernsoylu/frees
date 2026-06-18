@@ -52,6 +52,66 @@ interface Props {
 }
 
 /** Mirrors the Options > Variable Information window. */
+/** Relative (%) uncertainty derived from an absolute value, or '' when not derivable. */
+function relUncFromAbs(value: string, val: number | undefined): string {
+  if (val === undefined || val === 0 || value.trim() === '') return ''
+  const numVal = Number(value)
+  return Number.isFinite(numVal) ? String(Number(((numVal / Math.abs(val)) * 100).toPrecision(6))) : ''
+}
+
+/** Absolute uncertainty derived from a relative (%) value, or '' when not derivable. */
+function absUncFromRel(value: string, val: number | undefined): string {
+  if (val === undefined || value.trim() === '') return ''
+  const numVal = Number(value)
+  return Number.isFinite(numVal) ? String(Number(((numVal / 100) * Math.abs(val)).toPrecision(6))) : ''
+}
+
+/** Applies one edited field to a draft, keeping the absolute/relative uncertainty pair in sync. */
+function applyFieldUpdate(draft: VariableDraft, field: keyof VariableDraft, value: string, val: number | undefined): VariableDraft {
+  const updated = { ...draft, [field]: value }
+  if (field === 'uncertainty') {
+    updated.uncertaintyType = 'absolute'
+    updated.relativeUncertainty = relUncFromAbs(value, val)
+  } else if (field === 'relativeUncertainty') {
+    updated.uncertaintyType = 'relative'
+    updated.uncertainty = absUncFromRel(value, val)
+  }
+  return updated
+}
+
+/** Validates and normalizes one variable draft; returns the saved draft or an error message. */
+function processDraft(name: string, draft: VariableDraft): { error: string } | { saved: VariableDraft } {
+  const guessText = draft.guess.trim()
+  const guess = guessText === '' ? null : Number(draft.guess)
+  if (guess !== null && !Number.isFinite(guess)) {
+    return { error: `Guess value for ${name} must be a number (or empty for automatic).` }
+  }
+  const lower = parseBound(draft.lower)
+  const upper = parseBound(draft.upper)
+  if (lower === undefined) return { error: `Lower bound for ${name} must be a number or -infinity.` }
+  if (upper === undefined) return { error: `Upper bound for ${name} must be a number or infinity.` }
+  const lo = lower ?? Number.NEGATIVE_INFINITY
+  const hi = upper ?? Number.POSITIVE_INFINITY
+  if (lo > hi) return { error: `Lower bound exceeds upper bound for ${name}.` }
+  if (guess !== null && (guess < lo || guess > hi)) {
+    return { error: `Guess value for ${name} is outside its bounds.` }
+  }
+  const uncertaintyText = draft.uncertainty?.trim() ?? ''
+  const uncertainty = uncertaintyText === '' ? 0 : Number(uncertaintyText)
+  if (uncertaintyText !== '' && (!Number.isFinite(uncertainty) || uncertainty < 0)) {
+    return { error: `Uncertainty for ${name} must be a non-negative number.` }
+  }
+  return {
+    saved: {
+      ...draft,
+      uncertainty: uncertaintyText,
+      relativeUncertainty: draft.relativeUncertainty?.trim() ?? '',
+      uncertaintyType: draft.uncertaintyType ?? 'absolute',
+      isUnitsUserSet: draft.units.trim() !== '',
+    },
+  }
+}
+
 export default function VariableInfoModal({ variables, drafts, solvedValues, onSave, onClose }: Readonly<Props>) {
   const [local, setLocal] = useState<Record<string, VariableDraft>>(() => {
     const initial: Record<string, VariableDraft> = {}
@@ -65,35 +125,8 @@ export default function VariableInfoModal({ variables, drafts, solvedValues, onS
   function setField(name: string, field: keyof VariableDraft, value: string) {
     setLocal((d) => {
       const draft = d[name] ?? { ...DEFAULT_DRAFT }
-      const updated = { ...draft, [field]: value }
       const val = solvedValues[name.toLowerCase()]
-      
-      if (field === 'uncertainty') {
-        updated.uncertaintyType = 'absolute'
-        if (val !== undefined && val !== 0 && value.trim() !== '') {
-          const numVal = Number(value)
-          if (Number.isFinite(numVal)) {
-            updated.relativeUncertainty = String(Number(((numVal / Math.abs(val)) * 100).toPrecision(6)))
-          } else {
-            updated.relativeUncertainty = ''
-          }
-        } else {
-          updated.relativeUncertainty = ''
-        }
-      } else if (field === 'relativeUncertainty') {
-        updated.uncertaintyType = 'relative'
-        if (val !== undefined && value.trim() !== '') {
-          const numVal = Number(value)
-          if (Number.isFinite(numVal)) {
-            updated.uncertainty = String(Number(((numVal / 100) * Math.abs(val)).toPrecision(6)))
-          } else {
-            updated.uncertainty = ''
-          }
-        } else {
-          updated.uncertainty = ''
-        }
-      }
-      return { ...d, [name]: updated }
+      return { ...d, [name]: applyFieldUpdate(draft, field, value, val) }
     })
     setError(null)
   }
@@ -110,46 +143,12 @@ export default function VariableInfoModal({ variables, drafts, solvedValues, onS
   function save() {
     const saved: Record<string, VariableDraft> = {}
     for (const name of variables) {
-      const draft = local[name]
-      const guessText = draft.guess.trim()
-      const guess = guessText === '' ? null : Number(draft.guess)
-      if (guess !== null && !Number.isFinite(guess)) {
-        setError(`Guess value for ${name} must be a number (or empty for automatic).`)
+      const result = processDraft(name, local[name])
+      if ('error' in result) {
+        setError(result.error)
         return
       }
-      const lower = parseBound(draft.lower)
-      const upper = parseBound(draft.upper)
-      if (lower === undefined) {
-        setError(`Lower bound for ${name} must be a number or -infinity.`)
-        return
-      }
-      if (upper === undefined) {
-        setError(`Upper bound for ${name} must be a number or infinity.`)
-        return
-      }
-      const lo = lower ?? Number.NEGATIVE_INFINITY
-      const hi = upper ?? Number.POSITIVE_INFINITY
-      if (lo > hi) {
-        setError(`Lower bound exceeds upper bound for ${name}.`)
-        return
-      }
-      if (guess !== null && (guess < lo || guess > hi)) {
-        setError(`Guess value for ${name} is outside its bounds.`)
-        return
-      }
-      const uncertaintyText = draft.uncertainty?.trim() ?? ''
-      const uncertainty = uncertaintyText === '' ? 0 : Number(uncertaintyText)
-      if (uncertaintyText !== '' && (!Number.isFinite(uncertainty) || uncertainty < 0)) {
-        setError(`Uncertainty for ${name} must be a non-negative number.`)
-        return
-      }
-      saved[name] = {
-        ...draft,
-        uncertainty: uncertaintyText,
-        relativeUncertainty: draft.relativeUncertainty?.trim() ?? '',
-        uncertaintyType: draft.uncertaintyType ?? 'absolute',
-        isUnitsUserSet: draft.units.trim() !== '',
-      }
+      saved[name] = result.saved
     }
     onSave(saved)
   }
