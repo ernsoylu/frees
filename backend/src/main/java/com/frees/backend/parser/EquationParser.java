@@ -340,28 +340,8 @@ public final class EquationParser {
 
         // Dedicated matrix-function handlers run first: they write the output
         // directly (no helper temp variable leaks into the solution).
-        if (rhs instanceof Expr.Call(String function, List<Expr> args)) {
-            String func = switch (function.toLowerCase()) {
-                case "inv" -> FN_INVERSE;          // MATLAB aliases
-                case "det" -> FN_DETERMINANT;
-                default -> function.toLowerCase();
-            };
-            if (func.equals(FN_INVERSE) || func.equals(FN_TRANSPOSE)) {
-                flattenMatrixTransform(func, lhs, args.get(0), sourceText, ctx);
-                return;
-            }
-            if (func.equals("dot") || func.equals("norm") || func.equals("nrm2") || func.equals(FN_DETERMINANT) || func.equals("asum")) {
-                flattenVectorOrDet(func, lhs, args, sourceText, ctx);
-                return;
-            }
-            if (func.equals("cross")) {
-                flattenCrossProduct(lhs, args, sourceText, ctx);
-                return;
-            }
-            if (func.equals(FN_SOLVELINEAR)) {
-                flattenSolveLinear(lhs, args, sourceText, ctx);
-                return;
-            }
+        if (tryFlattenMatrixFunction(lhs, rhs, sourceText, ctx)) {
+            return;
         }
 
         // MATLAB-style bare creation: A = [1 2; 3 4], v = [1 2 3], Z = zeros(2,2).
@@ -375,46 +355,90 @@ public final class EquationParser {
 
         if (isMatrixExpr(lhs, ctx.loopVars(), ctx.constants(), ctx.defs()) || isMatrixExpr(rhs, ctx.loopVars(), ctx.constants(), ctx.defs())
                 || containsElementwiseOp(lhs) || containsElementwiseOp(rhs)) {
-            Expr[][] lhsMat = compileMatrixExpr(lhs, ctx);
-            Expr[][] rhsMat = compileMatrixExpr(rhs, ctx);
-            // Remember an explicitly-dimensioned LHS (A[1:r,1:c] = ...) so a
-            // later bare reference to it resolves.
-            if (lhs instanceof Expr.ArrayAccess(String ln, List<Expr> li) && !li.isEmpty()) {
-                registerShape(ln, lhsMat.length, lhsMat[0].length, ctx);
-            }
-            if (rhsMat.length == 1 && rhsMat[0].length == 1) {
-                Expr scalarVal = rhsMat[0][0];
-                rhsMat = new Expr[lhsMat.length][lhsMat[0].length];
-                for (int i = 0; i < lhsMat.length; i++) {
-                    for (int j = 0; j < lhsMat[0].length; j++) {
-                        rhsMat[i][j] = scalarVal;
-                    }
-                }
-            } else if (lhsMat.length != rhsMat.length || lhsMat[0].length != rhsMat[0].length) {
-                if (lhsMat.length == rhsMat[0].length && lhsMat[0].length == rhsMat.length && (lhsMat.length == 1 || lhsMat[0].length == 1)) {
-                    Expr[][] transposedRhs = new Expr[lhsMat.length][lhsMat[0].length];
-                    for (int i = 0; i < lhsMat.length; i++) {
-                        for (int j = 0; j < lhsMat[0].length; j++) {
-                            transposedRhs[i][j] = rhsMat[j][i];
-                        }
-                    }
-                    rhsMat = transposedRhs;
-                } else {
-                    throw new ParseException("Matrix assignment dimension mismatch: LHS is " +
-                            lhsMat.length + "x" + lhsMat[0].length + ", but RHS is " +
-                            rhsMat.length + "x" + rhsMat[0].length);
-                }
-            }
-            for (int i = 0; i < lhsMat.length; i++) {
-                for (int j = 0; j < lhsMat[0].length; j++) {
-                    ctx.out().add(new Equation(lhsMat[i][j], rhsMat[i][j], sourceText));
-                }
-            }
+            flattenMatrixAssignment(lhs, rhs, sourceText, ctx);
         } else {
             Expr expandedLhs = expandExpr(lhs, ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
             Expr expandedRhs = expandExpr(rhs, ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
             ctx.out().add(new Equation(expandedLhs, expandedRhs, sourceText));
         }
+    }
+
+    /** Routes {@code lhs = f(args)} to a dedicated matrix-function handler when
+     *  {@code f} is one (inverse/transpose/dot/norm/det/cross/solvelinear).
+     *  Returns true when handled. */
+    private boolean tryFlattenMatrixFunction(Expr lhs, Expr rhs, String sourceText, FlattenContext ctx) {
+        if (!(rhs instanceof Expr.Call(String function, List<Expr> args))) {
+            return false;
+        }
+        String func = switch (function.toLowerCase()) {
+            case "inv" -> FN_INVERSE;          // MATLAB aliases
+            case "det" -> FN_DETERMINANT;
+            default -> function.toLowerCase();
+        };
+        if (func.equals(FN_INVERSE) || func.equals(FN_TRANSPOSE)) {
+            flattenMatrixTransform(func, lhs, args.get(0), sourceText, ctx);
+            return true;
+        }
+        if (func.equals("dot") || func.equals("norm") || func.equals("nrm2") || func.equals(FN_DETERMINANT) || func.equals("asum")) {
+            flattenVectorOrDet(func, lhs, args, sourceText, ctx);
+            return true;
+        }
+        if (func.equals("cross")) {
+            flattenCrossProduct(lhs, args, sourceText, ctx);
+            return true;
+        }
+        if (func.equals(FN_SOLVELINEAR)) {
+            flattenSolveLinear(lhs, args, sourceText, ctx);
+            return true;
+        }
+        return false;
+    }
+
+    /** Compiles a general matrix/elementwise assignment into per-element equations. */
+    private void flattenMatrixAssignment(Expr lhs, Expr rhs, String sourceText, FlattenContext ctx) {
+        Expr[][] lhsMat = compileMatrixExpr(lhs, ctx);
+        Expr[][] rhsMat = compileMatrixExpr(rhs, ctx);
+        // Remember an explicitly-dimensioned LHS (A[1:r,1:c] = ...) so a
+        // later bare reference to it resolves.
+        if (lhs instanceof Expr.ArrayAccess(String ln, List<Expr> li) && !li.isEmpty()) {
+            registerShape(ln, lhsMat.length, lhsMat[0].length, ctx);
+        }
+        rhsMat = conformRhsToLhs(lhsMat, rhsMat);
+        for (int i = 0; i < lhsMat.length; i++) {
+            for (int j = 0; j < lhsMat[0].length; j++) {
+                ctx.out().add(new Equation(lhsMat[i][j], rhsMat[i][j], sourceText));
+            }
+        }
+    }
+
+    /** Broadcasts a scalar RHS to the LHS shape, transposes a flipped row/column
+     *  vector, or throws on a genuine dimension mismatch. */
+    private static Expr[][] conformRhsToLhs(Expr[][] lhsMat, Expr[][] rhsMat) {
+        if (rhsMat.length == 1 && rhsMat[0].length == 1) {
+            Expr scalarVal = rhsMat[0][0];
+            Expr[][] out = new Expr[lhsMat.length][lhsMat[0].length];
+            for (int i = 0; i < lhsMat.length; i++) {
+                for (int j = 0; j < lhsMat[0].length; j++) {
+                    out[i][j] = scalarVal;
+                }
+            }
+            return out;
+        }
+        if (lhsMat.length == rhsMat.length && lhsMat[0].length == rhsMat[0].length) {
+            return rhsMat;
+        }
+        if (lhsMat.length == rhsMat[0].length && lhsMat[0].length == rhsMat.length && (lhsMat.length == 1 || lhsMat[0].length == 1)) {
+            Expr[][] transposedRhs = new Expr[lhsMat.length][lhsMat[0].length];
+            for (int i = 0; i < lhsMat.length; i++) {
+                for (int j = 0; j < lhsMat[0].length; j++) {
+                    transposedRhs[i][j] = rhsMat[j][i];
+                }
+            }
+            return transposedRhs;
+        }
+        throw new ParseException("Matrix assignment dimension mismatch: LHS is " +
+                lhsMat.length + "x" + lhsMat[0].length + ", but RHS is " +
+                rhsMat.length + "x" + rhsMat[0].length);
     }
 
     /** MATLAB-style bare creation: A = [1 2; 3 4], v = [1, 2, 3] or v = [1; 2; 3].
