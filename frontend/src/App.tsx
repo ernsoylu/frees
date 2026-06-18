@@ -189,6 +189,11 @@ function FormattedEquationsView({
   )
 }
 
+/** Returns a copy of {@code items} with the matching id's name replaced. */
+function renameById<T extends { id: string; name: string }>(items: T[], id: string, name: string): T[] {
+  return items.map((x) => (x.id === id ? { ...x, name } : x))
+}
+
 export default function App() {
   // Story 10.10: restore the whole workspace from the unified `.frees` project
   // (autosaved to localStorage). Computed once before any state initializer so
@@ -1422,7 +1427,7 @@ export default function App() {
                 value={d?.name ?? ''}
                 onChange={(e) => {
                   const value = e.currentTarget.value
-                  if (d) setDiagrams((prev) => prev.map((x) => (x.id === d.id ? { ...x, name: value } : x)))
+                  if (d) setDiagrams((prev) => renameById(prev, d.id, value))
                 }}
               />
             </div>
@@ -1446,7 +1451,7 @@ export default function App() {
                   disabled={!t || t.source === 'code'}
                   onChange={(e) => {
                     const value = e.currentTarget.value
-                    if (t) setTables((prev) => prev.map((x) => (x.id === t.id ? { ...x, name: value } : x)))
+                    if (t) setTables((prev) => renameById(prev, t.id, value))
                   }}
                 />
                 {t?.kind === 'parametric' ? (

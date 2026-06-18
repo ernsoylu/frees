@@ -108,7 +108,7 @@ import { detectStates, StateTable } from '../plots/stateTable'
 import { ParamRow } from '../ParametricTableTab'
 import EmbeddedPlot, { EmbedInputs } from './EmbeddedPlot'
 import { evalFormula, formulaVars } from './formula'
-import { LIBRARY_ICONS, libraryIcon } from './library'
+import { LIBRARY_ICONS, libraryIcon, type LibraryIcon } from './library'
 import {
   AttributeBindings,
   ChartElement,
@@ -267,6 +267,49 @@ function translateElement(el: DiagramElement, dx: number, dy: number): DiagramEl
 }
 
 /** Combined bounding box of several elements. */
+/** Returns a copy of {@code items} with the matching id removed. */
+function removeById<T extends { id: string }>(items: T[], id: string): T[] {
+  return items.filter((x) => x.id !== id)
+}
+
+/** One entry in the component-library menu: its glyph preview plus a click that
+ *  selects the matching draw tool. */
+function LibraryIconItem({ icon, onSelect }: { icon: LibraryIcon; onSelect: (tool: Tool) => void }) {
+  return (
+    <Menu.Item
+      leftSection={
+        <svg width="22" height="22" viewBox="0 0 100 100">
+          {icon.render('#c1c2c5', 6, 'none')}
+        </svg>
+      }
+      onClick={() => onSelect(`icon:${icon.id}`)}
+    >
+      {icon.label}
+    </Menu.Item>
+  )
+}
+
+/** Translates every selected element by (dx, dy), leaving the rest unchanged. */
+function translateSelected(s: DiagramState, selectedSet: Set<string>, dx: number, dy: number): DiagramState {
+  return {
+    ...s,
+    elements: s.elements.map((el) => (selectedSet.has(el.id) ? translateElement(el, dx, dy) : el)),
+  }
+}
+
+/** Gives the just-created element {@code dragId} a sensible default size when a
+ *  click produced a degenerate (near-zero) shape; other elements pass through. */
+function withDefaultSizeIfTiny(el: DiagramElement, dragId: string): DiagramElement {
+  if (el.id !== dragId) return el
+  if (el.kind === 'line' && Math.hypot(el.x2 - el.x1, el.y2 - el.y1) < 4) {
+    return { ...el, x2: el.x1 + 80 }
+  }
+  if ((el.kind === 'rect' || el.kind === 'ellipse') && (el.w < 4 || el.h < 4)) {
+    return { ...el, w: 100, h: 60 }
+  }
+  return el
+}
+
 function combinedBounds(els: DiagramElement[], elements: DiagramElement[] = []): Box {
   let minX = Infinity
   let minY = Infinity
@@ -4066,7 +4109,9 @@ export default function DiagramTab(props: Readonly<Props>) {
   // Stop any in-progress recording if the component unmounts.
   useEffect(() => {
     return () => {
-      if (recorderRef.current) void recorderRef.current.stop(activeDiagram.name)
+      if (recorderRef.current) {
+        recorderRef.current.stop(activeDiagram.name).catch(() => {})
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -5089,16 +5134,7 @@ export default function DiagramTab(props: Readonly<Props>) {
         // A click without a drag: give the shape a sensible default size.
         setStateRaw((s) => ({
           ...s,
-          elements: s.elements.map((el) => {
-            if (el.id !== drag.id) return el
-            if (el.kind === 'line' && Math.hypot(el.x2 - el.x1, el.y2 - el.y1) < 4) {
-              return { ...el, x2: el.x1 + 80 }
-            }
-            if ((el.kind === 'rect' || el.kind === 'ellipse') && (el.w < 4 || el.h < 4)) {
-              return { ...el, w: 100, h: 60 }
-            }
-            return el
-          }),
+          elements: s.elements.map((el) => withDefaultSizeIfTiny(el, drag.id)),
         }))
         endGesture()
         if (!lockToolRef.current) setTool('select')
@@ -5341,15 +5377,7 @@ export default function DiagramTab(props: Readonly<Props>) {
         const step = e.shiftKey ? 1 : state.gridSize
         const dx = e.key === 'ArrowLeft' ? -step : e.key === 'ArrowRight' ? step : 0
         const dy = e.key === 'ArrowUp' ? -step : e.key === 'ArrowDown' ? step : 0
-        commit(
-          (s) => ({
-            ...s,
-            elements: s.elements.map((el) =>
-              selectedSet.has(el.id) ? translateElement(el, dx, dy) : el,
-            ),
-          }),
-          'nudge',
-        )
+        commit((s) => translateSelected(s, selectedSet, dx, dy), 'nudge')
       }
     }
     window.addEventListener('keydown', onKey)
@@ -5605,17 +5633,7 @@ export default function DiagramTab(props: Readonly<Props>) {
                             <div key={cat}>
                               <Menu.Label>{cat}</Menu.Label>
                               {items.map((icon) => (
-                                <Menu.Item
-                                  key={icon.id}
-                                  leftSection={
-                                    <svg width="22" height="22" viewBox="0 0 100 100">
-                                      {icon.render('#c1c2c5', 6, 'none')}
-                                    </svg>
-                                  }
-                                  onClick={() => setTool(`icon:${icon.id}`)}
-                                >
-                                  {icon.label}
-                                </Menu.Item>
+                                <LibraryIconItem key={icon.id} icon={icon} onSelect={setTool} />
                               ))}
                             </div>
                           )
@@ -5642,7 +5660,7 @@ export default function DiagramTab(props: Readonly<Props>) {
                                         size="xs"
                                         onClick={(e) => {
                                           e.stopPropagation()
-                                          setCustomComponents((prev) => prev.filter((c) => c.id !== cc.id))
+                                          setCustomComponents((prev) => removeById(prev, cc.id))
                                         }}
                                       >
                                         <IconTrash size={12} />
