@@ -119,25 +119,7 @@ public class SolveController {
                 continue;
             }
             String name = table.name().trim().toLowerCase();
-            List<ProcDef.Curve> curves = new ArrayList<>();
-            for (FunctionCurveDto curve : table.curves()) {
-                List<List<Double>> pts = curve.points() == null ? List.of() : curve.points();
-                List<List<Double>> valid = pts.stream()
-                        .filter(p -> p != null && p.size() >= 2
-                                && p.get(0) != null && p.get(1) != null)
-                        .sorted(java.util.Comparator.comparingDouble(p -> p.get(0)))
-                        .toList();
-                if (valid.isEmpty()) {
-                    continue;
-                }
-                double[] xs = new double[valid.size()];
-                double[] ys = new double[valid.size()];
-                for (int i = 0; i < valid.size(); i++) {
-                    xs[i] = valid.get(i).get(0);
-                    ys[i] = valid.get(i).get(1);
-                }
-                curves.add(new ProcDef.Curve(curve.param(), xs, ys));
-            }
+            List<ProcDef.Curve> curves = curvesOf(table);
             if (!curves.isEmpty()) {
                 defs.put(name, new ProcDef.FunctionTableDef(name,
                         table.argNames() == null ? List.of() : table.argNames(),
@@ -147,6 +129,31 @@ public class SolveController {
             }
         }
         return defs;
+    }
+
+    /** Builds the sorted, validated curves for one Function Table DTO (curves
+     *  needing fewer than two finite points are skipped). */
+    private static List<ProcDef.Curve> curvesOf(FunctionTableDto table) {
+        List<ProcDef.Curve> curves = new ArrayList<>();
+        for (FunctionCurveDto curve : table.curves()) {
+            List<List<Double>> pts = curve.points() == null ? List.of() : curve.points();
+            List<List<Double>> valid = pts.stream()
+                    .filter(p -> p != null && p.size() >= 2
+                            && p.get(0) != null && p.get(1) != null)
+                    .sorted(java.util.Comparator.comparingDouble(p -> p.get(0)))
+                    .toList();
+            if (valid.isEmpty()) {
+                continue;
+            }
+            double[] xs = new double[valid.size()];
+            double[] ys = new double[valid.size()];
+            for (int i = 0; i < valid.size(); i++) {
+                xs[i] = valid.get(i).get(0);
+                ys[i] = valid.get(i).get(1);
+            }
+            curves.add(new ProcDef.Curve(curve.param(), xs, ys));
+        }
+        return curves;
     }
 
     public record VariableDto(String name, double value, String units, Double uncertainty) {
@@ -442,38 +449,41 @@ public class SolveController {
     private static VariableDto toDisplay(String name, double siValue, Double siUnc, String unit,
                                          UnitRegistry.UnitSystem system,
                                          Map<String, String> explicitUnits) {
+        if (unit == null || unit.isBlank() || unit.equals("-")) {
+            return new VariableDto(name, siValue, unit == null ? "" : unit, siUnc);
+        }
+        return convertToDisplayUnit(name, siValue, siUnc, unit, system, explicitUnits);
+    }
+
+    /** Converts an SI value/uncertainty to the explicit or preferred display unit;
+     *  on an unknown unit it falls back to the SI value with the raw unit string. */
+    private static VariableDto convertToDisplayUnit(String name, double siValue, Double siUnc, String unit,
+                                                    UnitRegistry.UnitSystem system, Map<String, String> explicitUnits) {
         double displayVal;
         double displayUnc = siUnc != null ? siUnc : 0.0;
         String displayUnit;
-        
-        if (unit == null || unit.isBlank() || unit.equals("-")) {
-            displayVal = siValue;
-            displayUnit = unit == null ? "" : unit;
-        } else {
-            UnitRegistry.OffsetQuantity recorded;
-            try {
-                recorded = UnitRegistry.parseWithOffset(unit);
-                if (explicitUnits != null && explicitUnits.containsKey(name.toLowerCase())) {
+        try {
+            UnitRegistry.OffsetQuantity recorded = UnitRegistry.parseWithOffset(unit);
+            if (explicitUnits != null && explicitUnits.containsKey(name.toLowerCase())) {
+                displayVal = (siValue - recorded.offset()) / recorded.factor();
+                displayUnc = siUnc != null ? siUnc / recorded.factor() : 0.0;
+                displayUnit = unit;
+            } else {
+                UnitRegistry.DisplayUnit preferred =
+                        UnitRegistry.preferredDisplayUnit(recorded.dims(), system);
+                if (preferred != null) {
+                    displayVal = (siValue - preferred.offset()) / preferred.factor();
+                    displayUnc = siUnc != null ? siUnc / preferred.factor() : 0.0;
+                    displayUnit = preferred.name();
+                } else {
                     displayVal = (siValue - recorded.offset()) / recorded.factor();
                     displayUnc = siUnc != null ? siUnc / recorded.factor() : 0.0;
                     displayUnit = unit;
-                } else {
-                    UnitRegistry.DisplayUnit preferred =
-                            UnitRegistry.preferredDisplayUnit(recorded.dims(), system);
-                    if (preferred != null) {
-                        displayVal = (siValue - preferred.offset()) / preferred.factor();
-                        displayUnc = siUnc != null ? siUnc / preferred.factor() : 0.0;
-                        displayUnit = preferred.name();
-                    } else {
-                        displayVal = (siValue - recorded.offset()) / recorded.factor();
-                        displayUnc = siUnc != null ? siUnc / recorded.factor() : 0.0;
-                        displayUnit = unit;
-                    }
                 }
-            } catch (UnitRegistry.UnknownUnitException e) {
-                displayVal = siValue;
-                displayUnit = unit;
             }
+        } catch (UnitRegistry.UnknownUnitException e) {
+            displayVal = siValue;
+            displayUnit = unit;
         }
         return new VariableDto(name, displayVal, displayUnit, siUnc != null ? displayUnc : null);
     }
@@ -550,6 +560,31 @@ public class SolveController {
         }
     }
 
+    /** Display-converts one solved variable, attaching its uncertainty if present. */
+    private VariableDto toVariableDto(Map.Entry<String, Double> e, EquationSystemSolver.Result result,
+            Map<String, String> unitsByLowerName, UnitRegistry.UnitSystem system, Map<String, String> explicitUnits) {
+        String canonicalName = e.getKey().toLowerCase();
+        Double siUnc = result.uncertainties() != null ? result.uncertainties().get(canonicalName) : null;
+        return toDisplay(e.getKey(), e.getValue(), siUnc,
+                unitsByLowerName.getOrDefault(canonicalName, ""), system, explicitUnits);
+    }
+
+    private record CycleResolution(EquationSystemSolver.Result result, List<Map<String, Double>> cyclePath) {}
+
+    /** When fill-missing is requested, resolves missing fluid properties and builds
+     *  the cycle path (defaulting the fluid to Water); otherwise passes the raw result through. */
+    private CycleResolution resolveFillMissing(EquationSystemSolver.Result rawResult, String cleanText, boolean fillMissing) {
+        if (!fillMissing) {
+            return new CycleResolution(rawResult, List.of());
+        }
+        EquationSystemSolver.Result result = resolveMissingProperties(rawResult, cleanText, null);
+        String fluid = PropertyFunctions.detectFluid(cleanText);
+        if (fluid == null) {
+            fluid = "Water";
+        }
+        return new CycleResolution(result, generateCyclePath(result.variables(), fluid));
+    }
+
     @PostMapping("/solve")
     public ResponseEntity<SolveResponse> solve(@RequestBody SolveRequest request) {
         if (request.text() == null || request.text().isBlank()) {
@@ -570,18 +605,9 @@ public class SolveController {
             EquationSystemSolver.Result rawResult = findAll
                     ? solver.solveAll(cleanText, settings, specs, functionDefs)
                     : solver.solve(cleanText, settings, specs, functionDefs);
-            final EquationSystemSolver.Result result;
-            List<Map<String, Double>> cyclePath = List.of();
-            if (Boolean.TRUE.equals(request.fillMissing())) {
-                result = resolveMissingProperties(rawResult, cleanText, null);
-                String fluid = PropertyFunctions.detectFluid(cleanText);
-                if (fluid == null) {
-                    fluid = "Water";
-                }
-                cyclePath = generateCyclePath(result.variables(), fluid);
-            } else {
-                result = rawResult;
-            }
+            CycleResolution cr = resolveFillMissing(rawResult, cleanText, Boolean.TRUE.equals(request.fillMissing()));
+            final EquationSystemSolver.Result result = cr.result();
+            List<Map<String, Double>> cyclePath = cr.cyclePath();
 
             Map<String, String> explicitUnits = unitsByVariable(request.variableInfo());
             List<String> unitWarnings = solver.checkUnits(cleanText,
@@ -601,14 +627,7 @@ public class SolveController {
                     true,
                     result.variables().entrySet().stream()
                             .filter(e -> !isInternalTemp(e.getKey()))
-                            .map(e -> {
-                                String canonicalName = e.getKey().toLowerCase();
-                                Double siUnc = result.uncertainties() != null ? result.uncertainties().get(canonicalName) : null;
-                                return toDisplay(e.getKey(), e.getValue(), siUnc,
-                                        unitsByLowerName.getOrDefault(canonicalName, ""),
-                                        system,
-                                        explicitUnits);
-                            })
+                            .map(e -> toVariableDto(e, result, unitsByLowerName, system, explicitUnits))
                             .toList(),
                     result.blocks().stream()
                             .map(b -> toBlockDto(b, result.displayNames()))
@@ -627,14 +646,7 @@ public class SolveController {
                             .map(s -> new SolutionDto(
                                     s.variables().entrySet().stream()
                                             .filter(e -> !isInternalTemp(e.getKey()))
-                                            .map(e -> {
-                                                String canonicalName = e.getKey().toLowerCase();
-                                                Double siUnc = result.uncertainties() != null ? result.uncertainties().get(canonicalName) : null;
-                                                return toDisplay(e.getKey(), e.getValue(), siUnc,
-                                                        unitsByLowerName.getOrDefault(canonicalName, ""),
-                                                        system,
-                                                        explicitUnits);
-                                            })
+                                            .map(e -> toVariableDto(e, result, unitsByLowerName, system, explicitUnits))
                                             .toList(),
                                     s.maxResidual()))
                             .toList(),
@@ -908,44 +920,48 @@ public class SolveController {
                             Boolean.TRUE.equals(request.maximize()),
                             constraints));
 
-            Map<String, String> explicitUnits =
-                    unitsByVariable(request.variableInfo());
-            Map<String, String> unitsByLowerName =
-                    unitsByLowerName(cleanText, request.variableInfo());
-            UnitRegistry.UnitSystem system = unitSystem(request.displayUnitSystem());
-
-            List<VariableDto> variables = result.solution().variables().entrySet().stream()
-                    .map(e -> toDisplay(e.getKey(), e.getValue(),
-                            unitsByLowerName.getOrDefault(e.getKey().toLowerCase(), ""),
-                            system,
-                            explicitUnits))
-                    .toList();
-            VariableDto objective = toDisplay(request.objective(),
-                    result.objectiveValue(),
-                    unitsByLowerName.getOrDefault(request.objective().toLowerCase(), ""),
-                    system,
-                    explicitUnits);
-
-            List<VariableDto> decisionDtos = new ArrayList<>();
-            for (int i = 0; i < decisions.size(); i++) {
-                String dec = decisions.get(i);
-                decisionDtos.add(toDisplay(dec,
-                        result.decisionValues()[i],
-                        unitsByLowerName.getOrDefault(dec.toLowerCase(), ""),
-                        system,
-                        explicitUnits));
-            }
-
-            VariableDto primaryDecision = decisionDtos.get(0);
-
-            return ResponseEntity.ok(new OptimizeResponse(true, null, result.warning(),
-                    objective, primaryDecision, decisionDtos, result.evaluations(), variables));
+            return buildOptimizeResponse(result, request, cleanText, decisions);
         } catch (EquationParser.ParseException e) {
             String firstError = e.getMessage().lines().findFirst().orElse(e.getMessage());
             return ResponseEntity.badRequest().body(OptimizeResponse.failure(SYNTAX_ERROR_PREFIX + firstError));
         } catch (SolverException e) {
             return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(OptimizeResponse.failure(e.getMessage()));
         }
+    }
+
+    /** Assembles the optimize response: display-converted objective, decisions and all variables. */
+    private ResponseEntity<OptimizeResponse> buildOptimizeResponse(Optimizer.OptimizeResult result,
+            OptimizeRequest request, String cleanText, List<String> decisions) {
+        Map<String, String> explicitUnits = unitsByVariable(request.variableInfo());
+        Map<String, String> unitsByLowerName = unitsByLowerName(cleanText, request.variableInfo());
+        UnitRegistry.UnitSystem system = unitSystem(request.displayUnitSystem());
+
+        List<VariableDto> variables = result.solution().variables().entrySet().stream()
+                .map(e -> toDisplay(e.getKey(), e.getValue(),
+                        unitsByLowerName.getOrDefault(e.getKey().toLowerCase(), ""),
+                        system,
+                        explicitUnits))
+                .toList();
+        VariableDto objective = toDisplay(request.objective(),
+                result.objectiveValue(),
+                unitsByLowerName.getOrDefault(request.objective().toLowerCase(), ""),
+                system,
+                explicitUnits);
+
+        List<VariableDto> decisionDtos = new ArrayList<>();
+        for (int i = 0; i < decisions.size(); i++) {
+            String dec = decisions.get(i);
+            decisionDtos.add(toDisplay(dec,
+                    result.decisionValues()[i],
+                    unitsByLowerName.getOrDefault(dec.toLowerCase(), ""),
+                    system,
+                    explicitUnits));
+        }
+
+        VariableDto primaryDecision = decisionDtos.get(0);
+
+        return ResponseEntity.ok(new OptimizeResponse(true, null, result.warning(),
+                objective, primaryDecision, decisionDtos, result.evaluations(), variables));
     }
 
     // ── Curve Fit (Story 9.7) ────────────────────────────────────────────────
@@ -978,8 +994,9 @@ public class SolveController {
         }
     }
 
-    @PostMapping("/curve-fit")
-    public ResponseEntity<CurveFitResponse> curveFit(@RequestBody CurveFitRequest request) {
+    /** Validates a curve-fit request, returning a bad-request response on the first
+     *  problem or null when the request is well-formed. */
+    private ResponseEntity<CurveFitResponse> validateCurveFitRequest(CurveFitRequest request) {
         if (request.model() == null || request.model().isBlank()) {
             return ResponseEntity.badRequest()
                     .body(CurveFitResponse.failure("Model equation is required."));
@@ -1006,6 +1023,15 @@ public class SolveController {
                     .body(CurveFitResponse.failure(
                             "x and y data must have the same length (got "
                             + request.xData().size() + " and " + request.yData().size() + ")."));
+        }
+        return null;
+    }
+
+    @PostMapping("/curve-fit")
+    public ResponseEntity<CurveFitResponse> curveFit(@RequestBody CurveFitRequest request) {
+        ResponseEntity<CurveFitResponse> validationError = validateCurveFitRequest(request);
+        if (validationError != null) {
+            return validationError;
         }
 
         try {
@@ -1284,24 +1310,35 @@ public class SolveController {
             }
         }
 
-        // Specific volume v = 1 / Dmass
-        if (!knowns.containsKey("v") && !shouldSkipProp("v", template, targetVariables)) {
-            double resDmass = solvedProps.containsKey("rho") ? solvedProps.get("rho") :
-                    getPropOrNaN(DMASS, matchedPair.valKey1(), propVal1, matchedPair.valKey2(), propVal2, fluid);
-            if (Double.isFinite(resDmass) && resDmass != 0.0) {
-                solvedProps.put("v", 1.0 / resDmass);
-            }
-        }
-
-        // Quality x = Q
-        if (!knowns.containsKey("x") && !shouldSkipProp("x", template, targetVariables)) {
-            double resQ = getPropOrNaN("Q", matchedPair.valKey1(), propVal1, matchedPair.valKey2(), propVal2, fluid);
-            if (Double.isFinite(resQ)) {
-                solvedProps.put("x", resQ);
-            }
-        }
+        resolveSpecificVolume(solvedProps, knowns, template, targetVariables, matchedPair, propVal1, propVal2, fluid);
+        resolveQuality(solvedProps, knowns, template, targetVariables, matchedPair, propVal1, propVal2, fluid);
 
         populateSolvedProperties(solvedProps, template, variables, displayNames);
+    }
+
+    /** Resolves specific volume v = 1/ρ (reusing an already-solved density when present). */
+    private void resolveSpecificVolume(Map<String, Double> solvedProps, Map<String, Double> knowns, String template,
+            java.util.Set<String> targetVariables, PropPair matchedPair, double propVal1, double propVal2, String fluid) {
+        if (knowns.containsKey("v") || shouldSkipProp("v", template, targetVariables)) {
+            return;
+        }
+        double resDmass = solvedProps.containsKey("rho") ? solvedProps.get("rho") :
+                getPropOrNaN(DMASS, matchedPair.valKey1(), propVal1, matchedPair.valKey2(), propVal2, fluid);
+        if (Double.isFinite(resDmass) && resDmass != 0.0) {
+            solvedProps.put("v", 1.0 / resDmass);
+        }
+    }
+
+    /** Resolves vapor quality x = Q. */
+    private void resolveQuality(Map<String, Double> solvedProps, Map<String, Double> knowns, String template,
+            java.util.Set<String> targetVariables, PropPair matchedPair, double propVal1, double propVal2, String fluid) {
+        if (knowns.containsKey("x") || shouldSkipProp("x", template, targetVariables)) {
+            return;
+        }
+        double resQ = getPropOrNaN("Q", matchedPair.valKey1(), propVal1, matchedPair.valKey2(), propVal2, fluid);
+        if (Double.isFinite(resQ)) {
+            solvedProps.put("x", resQ);
+        }
     }
 
     private void resolveForVariables(Map<String, Double> variables, Map<String, String> displayNames, String fluid, java.util.Set<String> targetVariables) {
