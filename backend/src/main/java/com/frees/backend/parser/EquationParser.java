@@ -1293,388 +1293,391 @@ public final class EquationParser {
     }
 
     private Expr[][] compileMatrixExpr(Expr e, FlattenContext ctx) {
-        Map<String, Double> loopVars = ctx.loopVars();
-        Map<String, Double> constants = ctx.constants();
-        Map<String, String> displayNames = ctx.displayNames();
-        Map<String, ProcDef> defs = ctx.defs();
-
         return switch (e) {
-            case Expr.ArrayAccess(String name, List<Expr> indices) -> {
-                if (indices.size() == 2) {
-                    MatrixInfo m = parseMatrixInfo(e, loopVars, constants, displayNames, defs);
-                    Expr[][] mat = new Expr[m.rows][m.cols];
-                    for (int i = 0; i < m.rows; i++) {
-                        System.arraycopy(m.elements[i], 0, mat[i], 0, m.cols);
-                    }
-                    yield mat;
-                } else if (indices.size() == 1) {
-                    VectorInfo v = parseVectorInfo(e, loopVars, constants, displayNames, defs);
-                    Expr[][] mat = new Expr[v.size][1];
-                    for (int i = 0; i < v.size; i++) {
-                        mat[i][0] = v.elements[i];
-                    }
-                    yield mat;
-                } else {
-                    throw new ParseException("Matrix/vector must have 1 or 2 dimensions: " + name);
-                }
-            }
-            case Expr.ArrayLiteral(List<Expr> elements) -> {
-                if (!elements.isEmpty() && elements.get(0) instanceof Expr.ArrayLiteral) {
-                    int numRows = elements.size();
-                    int numCols = -1;
-                    Expr[][] mat = null;
-                    for (int i = 0; i < numRows; i++) {
-                        if (!(elements.get(i) instanceof Expr.ArrayLiteral rowLit)) {
-                            throw new ParseException("Heterogeneous matrix literal: row " + (i+1) + " is not a row literal.");
-                        }
-                        if (numCols == -1) {
-                            numCols = rowLit.elements().size();
-                            mat = new Expr[numRows][numCols];
-                        } else if (rowLit.elements().size() != numCols) {
-                            throw new ParseException("Matrix literal rows must have compatible column dimensions.");
-                        }
-                        for (int j = 0; j < numCols; j++) {
-                            mat[i][j] = expandExpr(rowLit.elements().get(j), loopVars, constants, displayNames, defs);
-                        }
-                    }
-                    yield mat;
-                } else {
-                    int size = elements.size();
-                    Expr[][] mat = new Expr[size][1];
-                    for (int i = 0; i < size; i++) {
-                        mat[i][0] = expandExpr(elements.get(i), loopVars, constants, displayNames, defs);
-                    }
-                    yield mat;
-                }
-            }
-            case Expr.BinOp(char op, Expr left, Expr right) -> {
-                if (op == '+' || op == '-') {
-                    Expr[][] lMat = compileMatrixExpr(left, ctx);
-                    Expr[][] rMat = compileMatrixExpr(right, ctx);
-                    
-                    if (lMat.length == 1 && lMat[0].length == 1) {
-                        Expr scalar = lMat[0][0];
-                        Expr[][] result = new Expr[rMat.length][rMat[0].length];
-                        for (int i = 0; i < rMat.length; i++) {
-                            for (int j = 0; j < rMat[0].length; j++) {
-                                result[i][j] = new Expr.BinOp(op, scalar, rMat[i][j]);
-                            }
-                        }
-                        yield result;
-                    } else if (rMat.length == 1 && rMat[0].length == 1) {
-                        Expr scalar = rMat[0][0];
-                        Expr[][] result = new Expr[lMat.length][lMat[0].length];
-                        for (int i = 0; i < lMat.length; i++) {
-                            for (int j = 0; j < lMat[0].length; j++) {
-                                result[i][j] = new Expr.BinOp(op, lMat[i][j], scalar);
-                            }
-                        }
-                        yield result;
-                    }
-
-                    if (lMat.length != rMat.length || lMat[0].length != rMat[0].length) {
-                        throw new ParseException("Matrix dimensions must agree for addition/subtraction: " +
-                                lMat.length + "x" + lMat[0].length + " vs " + rMat.length + "x" + rMat[0].length);
-                    }
-                    int rows = lMat.length;
-                    int cols = lMat[0].length;
-                    Expr[][] result = new Expr[rows][cols];
-                    for (int i = 0; i < rows; i++) {
-                        for (int j = 0; j < cols; j++) {
-                            result[i][j] = new Expr.BinOp(op, lMat[i][j], rMat[i][j]);
-                        }
-                    }
-                    yield result;
-                } else if (op == '*') {
-                    Expr[][] lMat = compileMatrixExpr(left, ctx);
-                    Expr[][] rMat = compileMatrixExpr(right, ctx);
-
-                    if (lMat.length == 1 && lMat[0].length == 1) {
-                        Expr scalar = lMat[0][0];
-                        Expr[][] result = new Expr[rMat.length][rMat[0].length];
-                        for (int i = 0; i < rMat.length; i++) {
-                            for (int j = 0; j < rMat[0].length; j++) {
-                                result[i][j] = new Expr.BinOp('*', scalar, rMat[i][j]);
-                            }
-                        }
-                        yield result;
-                    } else if (rMat.length == 1 && rMat[0].length == 1) {
-                        Expr scalar = rMat[0][0];
-                        Expr[][] result = new Expr[lMat.length][lMat[0].length];
-                        for (int i = 0; i < lMat.length; i++) {
-                            for (int j = 0; j < lMat[0].length; j++) {
-                                result[i][j] = new Expr.BinOp('*', lMat[i][j], scalar);
-                            }
-                        }
-                        yield result;
-                    }
-
-                    if (lMat[0].length != rMat.length) {
-                        throw new ParseException("Inner matrix dimensions must agree: " +
-                                lMat.length + "x" + lMat[0].length + " vs " + rMat.length + "x" + rMat[0].length);
-                    }
-                    int rows = lMat.length;
-                    int cols = rMat[0].length;
-                    int inner = lMat[0].length;
-                    Expr[][] result = new Expr[rows][cols];
-                    for (int i = 0; i < rows; i++) {
-                        for (int j = 0; j < cols; j++) {
-                            Expr term = new Expr.BinOp('*', lMat[i][0], rMat[0][j]);
-                            for (int k = 1; k < inner; k++) {
-                                term = new Expr.BinOp('+', term, new Expr.BinOp('*', lMat[i][k], rMat[k][j]));
-                            }
-                            result[i][j] = term;
-                        }
-                    }
-                    yield result;
-                } else if (op == '\\') {
-                    Expr[][] aMat = compileMatrixExpr(left, ctx);
-                    Expr[][] bMat = compileMatrixExpr(right, ctx);
-                    if (aMat.length != aMat[0].length) {
-                        throw new ParseException("Backslash solver requires square matrix A");
-                    }
-                    if (bMat.length != aMat.length || bMat[0].length != 1) {
-                        throw new ParseException("Backslash solver dimensions mismatch: A is " + aMat.length + "x" + aMat[0].length + ", b is " + bMat.length + "x" + bMat[0].length);
-                    }
-                    int M = aMat.length;
-
-                    String tempVecName = "backslash_temp_" + ctx.out().size();
-                    Expr[][] xMat = new Expr[M][1];
-                    for (int i = 0; i < M; i++) {
-                        String canonical = tempVecName + "[" + (i + 1) + "]";
-                        xMat[i][0] = new Expr.Var(canonical);
-                    }
-
-                    for (int i = 0; i < M; i++) {
-                        Expr term = new Expr.BinOp('*', aMat[i][0], xMat[0][0]);
-                        for (int k = 1; k < M; k++) {
-                            term = new Expr.BinOp('+', term, new Expr.BinOp('*', aMat[i][k], xMat[k][0]));
-                        }
-                        ctx.out().add(new Equation(term, bMat[i][0], "Backslash solve"));
-                    }
-
-                    yield xMat;
-                } else if (isElementwiseOp(op)) {
-                    yield compileElementwise(op, left, right, ctx);
-                } else {
-                    throw new ParseException("Unsupported binary matrix operator: " + op);
-                }
-            }
-            case Expr.Call(String function, List<Expr> args) -> {
-                String fn = function.toLowerCase();
-                if (fn.equals(FN_ZEROS) || fn.equals("ones") || fn.equals("eye")
-                        || fn.equals(FN_IDENTITY) || fn.equals("diag") || fn.equals(FN_LINSPACE)) {
-                    yield compileMatrixGenerator(fn, args, ctx);
-                }
-                if (fn.equals(FN_TRANSPOSE)) {
-                    Expr[][] mat = compileMatrixExpr(args.get(0), ctx);
-                    int rows = mat.length;
-                    int cols = mat[0].length;
-                    Expr[][] result = new Expr[cols][rows];
-                    for (int i = 0; i < rows; i++) {
-                        for (int j = 0; j < cols; j++) {
-                            result[j][i] = mat[i][j];
-                        }
-                    }
-                    yield result;
-                } else if (fn.equals(FN_INVERSE) || fn.equals("inv")) {
-                    Expr[][] aMat = compileMatrixExpr(args.get(0), ctx);
-                    if (aMat.length != aMat[0].length) {
-                        throw new ParseException("Inverse requires a square matrix");
-                    }
-                    int M = aMat.length;
-                    String tempMatName = "inverse_temp_" + ctx.out().size();
-                    Expr[][] invMat = new Expr[M][M];
-                    for (int i = 0; i < M; i++) {
-                        for (int j = 0; j < M; j++) {
-                            String canonical = tempMatName + "[" + (i+1) + "," + (j+1) + "]";
-                            invMat[i][j] = new Expr.Var(canonical);
-                        }
-                    }
-
-                    for (int i = 0; i < M; i++) {
-                        for (int j = 0; j < M; j++) {
-                            Expr term = new Expr.BinOp('*', aMat[i][0], invMat[0][j]);
-                            for (int k = 1; k < M; k++) {
-                                term = new Expr.BinOp('+', term, new Expr.BinOp('*', aMat[i][k], invMat[k][j]));
-                            }
-                            Expr identityVal = new Expr.Num(i == j ? 1.0 : 0.0);
-                            ctx.out().add(new Equation(term, identityVal, "Matrix inverse definition"));
-                        }
-                    }
-                    yield invMat;
-                } else if (fn.equals("axpy")) {
-                    if (args.size() != 3) {
-                        throw new ParseException("axpy expects exactly 3 arguments: axpy(alpha, x, y)");
-                    }
-                    Expr alpha = args.get(0);
-                    Expr[][] xMat = compileMatrixExpr(args.get(1), ctx);
-                    Expr[][] yMat = compileMatrixExpr(args.get(2), ctx);
-                    if (xMat.length != yMat.length || xMat[0].length != yMat[0].length) {
-                        throw new ParseException("axpy dimension mismatch: x is " + xMat.length + "x" + xMat[0].length +
-                                ", y is " + yMat.length + "x" + yMat[0].length);
-                    }
-                    int rows = xMat.length;
-                    int cols = xMat[0].length;
-                    Expr[][] result = new Expr[rows][cols];
-                    for (int i = 0; i < rows; i++) {
-                        for (int j = 0; j < cols; j++) {
-                            result[i][j] = new Expr.BinOp('+', new Expr.BinOp('*', alpha, xMat[i][j]), yMat[i][j]);
-                        }
-                    }
-                    yield result;
-                } else if (fn.equals("scal")) {
-                    if (args.size() != 2) {
-                        throw new ParseException("scal expects exactly 2 arguments: scal(alpha, x)");
-                    }
-                    Expr alpha = args.get(0);
-                    Expr[][] xMat = compileMatrixExpr(args.get(1), ctx);
-                    int rows = xMat.length;
-                    int cols = xMat[0].length;
-                    Expr[][] result = new Expr[rows][cols];
-                    for (int i = 0; i < rows; i++) {
-                        for (int j = 0; j < cols; j++) {
-                            result[i][j] = new Expr.BinOp('*', alpha, xMat[i][j]);
-                        }
-                    }
-                    yield result;
-                } else if (fn.equals("gemv")) {
-                    if (args.size() != 5) {
-                        throw new ParseException("gemv expects exactly 5 arguments: gemv(alpha, A, x, beta, y)");
-                    }
-                    Expr alpha = args.get(0);
-                    Expr[][] aMat = compileMatrixExpr(args.get(1), ctx);
-                    Expr[][] xMat = compileMatrixExpr(args.get(2), ctx);
-                    Expr beta = args.get(3);
-                    Expr[][] yMat = compileMatrixExpr(args.get(4), ctx);
-
-                    if (xMat[0].length != 1) {
-                        throw new ParseException("gemv: x must be a column vector (got " + xMat.length + "x" + xMat[0].length + ")");
-                    }
-                    if (yMat[0].length != 1) {
-                        throw new ParseException("gemv: y must be a column vector (got " + yMat.length + "x" + yMat[0].length + ")");
-                    }
-                    if (aMat[0].length != xMat.length) {
-                        throw new ParseException("gemv inner dimension mismatch: A is " + aMat.length + "x" + aMat[0].length +
-                                ", x is " + xMat.length + "x" + xMat[0].length);
-                    }
-                    if (aMat.length != yMat.length) {
-                        throw new ParseException("gemv outer dimension mismatch: A is " + aMat.length + "x" + aMat[0].length +
-                                ", y is " + yMat.length + "x" + yMat[0].length);
-                    }
-                    int M = aMat.length;
-                    int N = aMat[0].length;
-                    Expr[][] result = new Expr[M][1];
-                    for (int i = 0; i < M; i++) {
-                        Expr sum = new Expr.BinOp('*', aMat[i][0], xMat[0][0]);
-                        for (int k = 1; k < N; k++) {
-                            sum = new Expr.BinOp('+', sum, new Expr.BinOp('*', aMat[i][k], xMat[k][0]));
-                        }
-                        result[i][0] = new Expr.BinOp('+', new Expr.BinOp('*', alpha, sum), new Expr.BinOp('*', beta, yMat[i][0]));
-                    }
-                    yield result;
-                } else if (fn.equals("gemm")) {
-                    if (args.size() != 5) {
-                        throw new ParseException("gemm expects exactly 5 arguments: gemm(alpha, A, B, beta, C)");
-                    }
-                    Expr alpha = args.get(0);
-                    Expr[][] aMat = compileMatrixExpr(args.get(1), ctx);
-                    Expr[][] bMat = compileMatrixExpr(args.get(2), ctx);
-                    Expr beta = args.get(3);
-                    Expr[][] cMat = compileMatrixExpr(args.get(4), ctx);
-
-                    if (aMat[0].length != bMat.length) {
-                        throw new ParseException("gemm inner dimension mismatch: A is " + aMat.length + "x" + aMat[0].length +
-                                ", B is " + bMat.length + "x" + bMat[0].length);
-                    }
-                    if (aMat.length != cMat.length || bMat[0].length != cMat[0].length) {
-                        throw new ParseException("gemm output dimension mismatch: C must be " + aMat.length + "x" + bMat[0].length +
-                                " (got " + cMat.length + "x" + cMat[0].length + ")");
-                    }
-                    int M = aMat.length;
-                    int N = bMat[0].length;
-                    int K = aMat[0].length;
-                    Expr[][] result = new Expr[M][N];
-                    for (int i = 0; i < M; i++) {
-                        for (int j = 0; j < N; j++) {
-                            Expr sum = new Expr.BinOp('*', aMat[i][0], bMat[0][j]);
-                            for (int k = 1; k < K; k++) {
-                                sum = new Expr.BinOp('+', sum, new Expr.BinOp('*', aMat[i][k], bMat[k][j]));
-                            }
-                            result[i][j] = new Expr.BinOp('+', new Expr.BinOp('*', alpha, sum), new Expr.BinOp('*', beta, cMat[i][j]));
-                        }
-                    }
-                    yield result;
-                } else if (fn.equals("ger")) {
-                    if (args.size() != 4) {
-                        throw new ParseException("ger expects exactly 4 arguments: ger(alpha, x, y, A)");
-                    }
-                    Expr alpha = args.get(0);
-                    Expr[][] xMat = compileMatrixExpr(args.get(1), ctx);
-                    Expr[][] yMat = compileMatrixExpr(args.get(2), ctx);
-                    Expr[][] aMat = compileMatrixExpr(args.get(3), ctx);
-
-                    if (xMat[0].length != 1) {
-                        throw new ParseException("ger: x must be a column vector (got " + xMat.length + "x" + xMat[0].length + ")");
-                    }
-                    if (yMat[0].length != 1) {
-                        throw new ParseException("ger: y must be a column vector (got " + yMat.length + "x" + yMat[0].length + ")");
-                    }
-                    if (aMat.length != xMat.length || aMat[0].length != yMat.length) {
-                        throw new ParseException("ger dimension mismatch: A must be " + xMat.length + "x" + yMat.length +
-                                " (got " + aMat.length + "x" + aMat[0].length + ")");
-                    }
-                    int M = aMat.length;
-                    int N = aMat[0].length;
-                    Expr[][] result = new Expr[M][N];
-                    for (int i = 0; i < M; i++) {
-                        for (int j = 0; j < N; j++) {
-                            result[i][j] = new Expr.BinOp('+',
-                                    new Expr.BinOp('*', alpha, new Expr.BinOp('*', xMat[i][0], yMat[j][0])),
-                                    aMat[i][j]);
-                        }
-                    }
-                    yield result;
-                } else if (fn.equals("copy")) {
-                    if (args.size() != 1) {
-                        throw new ParseException("copy expects exactly 1 argument: copy(x)");
-                    }
-                    yield compileMatrixExpr(args.get(0), ctx);
-                } else if (fn.equals(FN_SOLVELINEAR)) {
-                    if (args.size() != 2) {
-                        throw new ParseException("solvelinear expects exactly 2 arguments: solvelinear(A, b)");
-                    }
-                    Expr[][] aMat = compileMatrixExpr(args.get(0), ctx);
-                    Expr[][] bMat = compileMatrixExpr(args.get(1), ctx);
-                    if (aMat.length != aMat[0].length) {
-                        throw new ParseException("solvelinear requires square matrix A");
-                    }
-                    if (bMat.length != aMat.length || bMat[0].length != 1) {
-                        throw new ParseException("solvelinear dimensions mismatch: A is " + aMat.length + "x" + aMat[0].length + ", b is " + bMat.length + "x" + bMat[0].length);
-                    }
-                    int M = aMat.length;
-
-                    String tempVecName = "solvelinear_temp_" + ctx.out().size();
-                    Expr[][] xMat = new Expr[M][1];
-                    for (int i = 0; i < M; i++) {
-                        String canonical = tempVecName + "[" + (i + 1) + "]";
-                        xMat[i][0] = new Expr.Var(canonical);
-                    }
-
-                    for (int i = 0; i < M; i++) {
-                        Expr term = new Expr.BinOp('*', aMat[i][0], xMat[0][0]);
-                        for (int k = 1; k < M; k++) {
-                            term = new Expr.BinOp('+', term, new Expr.BinOp('*', aMat[i][k], xMat[k][0]));
-                        }
-                        ctx.out().add(new Equation(term, bMat[i][0], "SolveLinear solve"));
-                    }
-
-                    yield xMat;
-                } else {
-                    throw new ParseException("Unsupported matrix function: " + function);
-                }
-            }
-            default -> new Expr[][] { { expandExpr(e, loopVars, constants, displayNames, defs) } };
+            case Expr.ArrayAccess(String name, List<Expr> indices) -> matrixFromArrayAccess(e, name, indices, ctx);
+            case Expr.ArrayLiteral(List<Expr> elements) -> matrixFromLiteral(elements, ctx);
+            case Expr.BinOp(char op, Expr left, Expr right) -> compileMatrixBinOp(op, left, right, ctx);
+            case Expr.Call(String function, List<Expr> args) -> compileMatrixCall(function, args, ctx);
+            default -> new Expr[][] { { expandExpr(e, ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs()) } };
         };
+    }
+
+    private Expr[][] matrixFromArrayAccess(Expr e, String name, List<Expr> indices, FlattenContext ctx) {
+        if (indices.size() == 2) {
+            MatrixInfo m = parseMatrixInfo(e, ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+            Expr[][] mat = new Expr[m.rows][m.cols];
+            for (int i = 0; i < m.rows; i++) {
+                System.arraycopy(m.elements[i], 0, mat[i], 0, m.cols);
+            }
+            return mat;
+        } else if (indices.size() == 1) {
+            VectorInfo v = parseVectorInfo(e, ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+            Expr[][] mat = new Expr[v.size][1];
+            for (int i = 0; i < v.size; i++) {
+                mat[i][0] = v.elements[i];
+            }
+            return mat;
+        } else {
+            throw new ParseException("Matrix/vector must have 1 or 2 dimensions: " + name);
+        }
+    }
+
+    private Expr[][] matrixFromLiteral(List<Expr> elements, FlattenContext ctx) {
+        if (!elements.isEmpty() && elements.get(0) instanceof Expr.ArrayLiteral) {
+            return matrixFromRowLiterals(elements, ctx);
+        }
+        int size = elements.size();
+        Expr[][] mat = new Expr[size][1];
+        for (int i = 0; i < size; i++) {
+            mat[i][0] = expandExpr(elements.get(i), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        }
+        return mat;
+    }
+
+    private Expr[][] matrixFromRowLiterals(List<Expr> elements, FlattenContext ctx) {
+        int numRows = elements.size();
+        int numCols = -1;
+        Expr[][] mat = null;
+        for (int i = 0; i < numRows; i++) {
+            if (!(elements.get(i) instanceof Expr.ArrayLiteral rowLit)) {
+                throw new ParseException("Heterogeneous matrix literal: row " + (i + 1) + " is not a row literal.");
+            }
+            if (numCols == -1) {
+                numCols = rowLit.elements().size();
+                mat = new Expr[numRows][numCols];
+            } else if (rowLit.elements().size() != numCols) {
+                throw new ParseException("Matrix literal rows must have compatible column dimensions.");
+            }
+            for (int j = 0; j < numCols; j++) {
+                mat[i][j] = expandExpr(rowLit.elements().get(j), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+            }
+        }
+        return mat;
+    }
+
+    // ── Matrix binary operators ───────────────────────────────────────────────
+
+    private Expr[][] compileMatrixBinOp(char op, Expr left, Expr right, FlattenContext ctx) {
+        if (op == '+' || op == '-') {
+            return matrixAddSub(op, left, right, ctx);
+        } else if (op == '*') {
+            return matrixMultiply(left, right, ctx);
+        } else if (op == '\\') {
+            return matrixBackslash(left, right, ctx);
+        } else if (isElementwiseOp(op)) {
+            return compileElementwise(op, left, right, ctx);
+        } else {
+            throw new ParseException("Unsupported binary matrix operator: " + op);
+        }
+    }
+
+    private static boolean is1x1(Expr[][] m) {
+        return m.length == 1 && m[0].length == 1;
+    }
+
+    /** {@code scalar op mat} (scalarOnLeft) or {@code mat op scalar}, broadcasting the scalar. */
+    private static Expr[][] broadcastScalar(char op, Expr scalar, Expr[][] mat, boolean scalarOnLeft) {
+        Expr[][] result = new Expr[mat.length][mat[0].length];
+        for (int i = 0; i < mat.length; i++) {
+            for (int j = 0; j < mat[0].length; j++) {
+                result[i][j] = scalarOnLeft
+                        ? new Expr.BinOp(op, scalar, mat[i][j])
+                        : new Expr.BinOp(op, mat[i][j], scalar);
+            }
+        }
+        return result;
+    }
+
+    private Expr[][] matrixAddSub(char op, Expr left, Expr right, FlattenContext ctx) {
+        Expr[][] lMat = compileMatrixExpr(left, ctx);
+        Expr[][] rMat = compileMatrixExpr(right, ctx);
+        if (is1x1(lMat)) {
+            return broadcastScalar(op, lMat[0][0], rMat, true);
+        }
+        if (is1x1(rMat)) {
+            return broadcastScalar(op, rMat[0][0], lMat, false);
+        }
+        if (lMat.length != rMat.length || lMat[0].length != rMat[0].length) {
+            throw new ParseException("Matrix dimensions must agree for addition/subtraction: " +
+                    lMat.length + "x" + lMat[0].length + " vs " + rMat.length + "x" + rMat[0].length);
+        }
+        Expr[][] result = new Expr[lMat.length][lMat[0].length];
+        for (int i = 0; i < lMat.length; i++) {
+            for (int j = 0; j < lMat[0].length; j++) {
+                result[i][j] = new Expr.BinOp(op, lMat[i][j], rMat[i][j]);
+            }
+        }
+        return result;
+    }
+
+    private Expr[][] matrixMultiply(Expr left, Expr right, FlattenContext ctx) {
+        Expr[][] lMat = compileMatrixExpr(left, ctx);
+        Expr[][] rMat = compileMatrixExpr(right, ctx);
+        if (is1x1(lMat)) {
+            return broadcastScalar('*', lMat[0][0], rMat, true);
+        }
+        if (is1x1(rMat)) {
+            return broadcastScalar('*', rMat[0][0], lMat, false);
+        }
+        if (lMat[0].length != rMat.length) {
+            throw new ParseException("Inner matrix dimensions must agree: " +
+                    lMat.length + "x" + lMat[0].length + " vs " + rMat.length + "x" + rMat[0].length);
+        }
+        return matMul(lMat, rMat);
+    }
+
+    private static Expr[][] matMul(Expr[][] lMat, Expr[][] rMat) {
+        int rows = lMat.length;
+        int cols = rMat[0].length;
+        int inner = lMat[0].length;
+        Expr[][] result = new Expr[rows][cols];
+        for (int i = 0; i < rows; i++) {
+            for (int j = 0; j < cols; j++) {
+                Expr term = new Expr.BinOp('*', lMat[i][0], rMat[0][j]);
+                for (int k = 1; k < inner; k++) {
+                    term = new Expr.BinOp('+', term, new Expr.BinOp('*', lMat[i][k], rMat[k][j]));
+                }
+                result[i][j] = term;
+            }
+        }
+        return result;
+    }
+
+    private Expr[][] matrixBackslash(Expr left, Expr right, FlattenContext ctx) {
+        Expr[][] aMat = compileMatrixExpr(left, ctx);
+        Expr[][] bMat = compileMatrixExpr(right, ctx);
+        if (aMat.length != aMat[0].length) {
+            throw new ParseException("Backslash solver requires square matrix A");
+        }
+        if (bMat.length != aMat.length || bMat[0].length != 1) {
+            throw new ParseException("Backslash solver dimensions mismatch: A is " + aMat.length + "x" + aMat[0].length + ", b is " + bMat.length + "x" + bMat[0].length);
+        }
+        return emitLinearSolve(aMat, bMat, "backslash_temp_", "Backslash solve", ctx);
+    }
+
+    /** Introduces a fresh unknown vector x and emits A·x = b row equations, returning x. */
+    private Expr[][] emitLinearSolve(Expr[][] aMat, Expr[][] bMat, String prefix, String label, FlattenContext ctx) {
+        int m = aMat.length;
+        String tempVecName = prefix + ctx.out().size();
+        Expr[][] xMat = new Expr[m][1];
+        for (int i = 0; i < m; i++) {
+            xMat[i][0] = new Expr.Var(tempVecName + "[" + (i + 1) + "]");
+        }
+        for (int i = 0; i < m; i++) {
+            Expr term = new Expr.BinOp('*', aMat[i][0], xMat[0][0]);
+            for (int k = 1; k < m; k++) {
+                term = new Expr.BinOp('+', term, new Expr.BinOp('*', aMat[i][k], xMat[k][0]));
+            }
+            ctx.out().add(new Equation(term, bMat[i][0], label));
+        }
+        return xMat;
+    }
+
+    // ── Matrix function calls ─────────────────────────────────────────────────
+
+    private Expr[][] compileMatrixCall(String function, List<Expr> args, FlattenContext ctx) {
+        String fn = function.toLowerCase();
+        return switch (fn) {
+            case FN_ZEROS, "ones", "eye", FN_IDENTITY, "diag", FN_LINSPACE -> compileMatrixGenerator(fn, args, ctx);
+            case FN_TRANSPOSE -> matrixTranspose(args, ctx);
+            case FN_INVERSE, "inv" -> matrixInverse(args, ctx);
+            case "axpy" -> matrixAxpy(args, ctx);
+            case "scal" -> matrixScal(args, ctx);
+            case "gemv" -> matrixGemv(args, ctx);
+            case "gemm" -> matrixGemm(args, ctx);
+            case "ger" -> matrixGer(args, ctx);
+            case "copy" -> matrixCopy(args, ctx);
+            case FN_SOLVELINEAR -> matrixSolveLinear(args, ctx);
+            default -> throw new ParseException("Unsupported matrix function: " + function);
+        };
+    }
+
+    private Expr[][] matrixTranspose(List<Expr> args, FlattenContext ctx) {
+        Expr[][] mat = compileMatrixExpr(args.get(0), ctx);
+        int rows = mat.length;
+        int cols = mat[0].length;
+        Expr[][] result = new Expr[cols][rows];
+        for (int i = 0; i < rows; i++) {
+            for (int j = 0; j < cols; j++) {
+                result[j][i] = mat[i][j];
+            }
+        }
+        return result;
+    }
+
+    private Expr[][] matrixInverse(List<Expr> args, FlattenContext ctx) {
+        Expr[][] aMat = compileMatrixExpr(args.get(0), ctx);
+        if (aMat.length != aMat[0].length) {
+            throw new ParseException("Inverse requires a square matrix");
+        }
+        int m = aMat.length;
+        String tempMatName = "inverse_temp_" + ctx.out().size();
+        Expr[][] invMat = new Expr[m][m];
+        for (int i = 0; i < m; i++) {
+            for (int j = 0; j < m; j++) {
+                invMat[i][j] = new Expr.Var(tempMatName + "[" + (i + 1) + "," + (j + 1) + "]");
+            }
+        }
+        for (int i = 0; i < m; i++) {
+            for (int j = 0; j < m; j++) {
+                Expr term = new Expr.BinOp('*', aMat[i][0], invMat[0][j]);
+                for (int k = 1; k < m; k++) {
+                    term = new Expr.BinOp('+', term, new Expr.BinOp('*', aMat[i][k], invMat[k][j]));
+                }
+                ctx.out().add(new Equation(term, new Expr.Num(kroneckerDelta(i, j)), "Matrix inverse definition"));
+            }
+        }
+        return invMat;
+    }
+
+    private Expr[][] matrixAxpy(List<Expr> args, FlattenContext ctx) {
+        if (args.size() != 3) {
+            throw new ParseException("axpy expects exactly 3 arguments: axpy(alpha, x, y)");
+        }
+        Expr alpha = args.get(0);
+        Expr[][] xMat = compileMatrixExpr(args.get(1), ctx);
+        Expr[][] yMat = compileMatrixExpr(args.get(2), ctx);
+        if (xMat.length != yMat.length || xMat[0].length != yMat[0].length) {
+            throw new ParseException("axpy dimension mismatch: x is " + xMat.length + "x" + xMat[0].length +
+                    ", y is " + yMat.length + "x" + yMat[0].length);
+        }
+        Expr[][] result = new Expr[xMat.length][xMat[0].length];
+        for (int i = 0; i < xMat.length; i++) {
+            for (int j = 0; j < xMat[0].length; j++) {
+                result[i][j] = new Expr.BinOp('+', new Expr.BinOp('*', alpha, xMat[i][j]), yMat[i][j]);
+            }
+        }
+        return result;
+    }
+
+    private Expr[][] matrixScal(List<Expr> args, FlattenContext ctx) {
+        if (args.size() != 2) {
+            throw new ParseException("scal expects exactly 2 arguments: scal(alpha, x)");
+        }
+        Expr alpha = args.get(0);
+        Expr[][] xMat = compileMatrixExpr(args.get(1), ctx);
+        return broadcastScalar('*', alpha, xMat, true);
+    }
+
+    private Expr[][] matrixGemv(List<Expr> args, FlattenContext ctx) {
+        if (args.size() != 5) {
+            throw new ParseException("gemv expects exactly 5 arguments: gemv(alpha, A, x, beta, y)");
+        }
+        Expr alpha = args.get(0);
+        Expr[][] aMat = compileMatrixExpr(args.get(1), ctx);
+        Expr[][] xMat = compileMatrixExpr(args.get(2), ctx);
+        Expr beta = args.get(3);
+        Expr[][] yMat = compileMatrixExpr(args.get(4), ctx);
+        if (xMat[0].length != 1) {
+            throw new ParseException("gemv: x must be a column vector (got " + xMat.length + "x" + xMat[0].length + ")");
+        }
+        if (yMat[0].length != 1) {
+            throw new ParseException("gemv: y must be a column vector (got " + yMat.length + "x" + yMat[0].length + ")");
+        }
+        if (aMat[0].length != xMat.length) {
+            throw new ParseException("gemv inner dimension mismatch: A is " + aMat.length + "x" + aMat[0].length +
+                    ", x is " + xMat.length + "x" + xMat[0].length);
+        }
+        if (aMat.length != yMat.length) {
+            throw new ParseException("gemv outer dimension mismatch: A is " + aMat.length + "x" + aMat[0].length +
+                    ", y is " + yMat.length + "x" + yMat[0].length);
+        }
+        int m = aMat.length;
+        int n = aMat[0].length;
+        Expr[][] result = new Expr[m][1];
+        for (int i = 0; i < m; i++) {
+            Expr sum = new Expr.BinOp('*', aMat[i][0], xMat[0][0]);
+            for (int k = 1; k < n; k++) {
+                sum = new Expr.BinOp('+', sum, new Expr.BinOp('*', aMat[i][k], xMat[k][0]));
+            }
+            result[i][0] = new Expr.BinOp('+', new Expr.BinOp('*', alpha, sum), new Expr.BinOp('*', beta, yMat[i][0]));
+        }
+        return result;
+    }
+
+    private Expr[][] matrixGemm(List<Expr> args, FlattenContext ctx) {
+        if (args.size() != 5) {
+            throw new ParseException("gemm expects exactly 5 arguments: gemm(alpha, A, B, beta, C)");
+        }
+        Expr alpha = args.get(0);
+        Expr[][] aMat = compileMatrixExpr(args.get(1), ctx);
+        Expr[][] bMat = compileMatrixExpr(args.get(2), ctx);
+        Expr beta = args.get(3);
+        Expr[][] cMat = compileMatrixExpr(args.get(4), ctx);
+        if (aMat[0].length != bMat.length) {
+            throw new ParseException("gemm inner dimension mismatch: A is " + aMat.length + "x" + aMat[0].length +
+                    ", B is " + bMat.length + "x" + bMat[0].length);
+        }
+        if (aMat.length != cMat.length || bMat[0].length != cMat[0].length) {
+            throw new ParseException("gemm output dimension mismatch: C must be " + aMat.length + "x" + bMat[0].length +
+                    " (got " + cMat.length + "x" + cMat[0].length + ")");
+        }
+        int m = aMat.length;
+        int n = bMat[0].length;
+        int k = aMat[0].length;
+        Expr[][] result = new Expr[m][n];
+        for (int i = 0; i < m; i++) {
+            for (int j = 0; j < n; j++) {
+                Expr sum = new Expr.BinOp('*', aMat[i][0], bMat[0][j]);
+                for (int p = 1; p < k; p++) {
+                    sum = new Expr.BinOp('+', sum, new Expr.BinOp('*', aMat[i][p], bMat[p][j]));
+                }
+                result[i][j] = new Expr.BinOp('+', new Expr.BinOp('*', alpha, sum), new Expr.BinOp('*', beta, cMat[i][j]));
+            }
+        }
+        return result;
+    }
+
+    private Expr[][] matrixGer(List<Expr> args, FlattenContext ctx) {
+        if (args.size() != 4) {
+            throw new ParseException("ger expects exactly 4 arguments: ger(alpha, x, y, A)");
+        }
+        Expr alpha = args.get(0);
+        Expr[][] xMat = compileMatrixExpr(args.get(1), ctx);
+        Expr[][] yMat = compileMatrixExpr(args.get(2), ctx);
+        Expr[][] aMat = compileMatrixExpr(args.get(3), ctx);
+        if (xMat[0].length != 1) {
+            throw new ParseException("ger: x must be a column vector (got " + xMat.length + "x" + xMat[0].length + ")");
+        }
+        if (yMat[0].length != 1) {
+            throw new ParseException("ger: y must be a column vector (got " + yMat.length + "x" + yMat[0].length + ")");
+        }
+        if (aMat.length != xMat.length || aMat[0].length != yMat.length) {
+            throw new ParseException("ger dimension mismatch: A must be " + xMat.length + "x" + yMat.length +
+                    " (got " + aMat.length + "x" + aMat[0].length + ")");
+        }
+        int m = aMat.length;
+        int n = aMat[0].length;
+        Expr[][] result = new Expr[m][n];
+        for (int i = 0; i < m; i++) {
+            for (int j = 0; j < n; j++) {
+                result[i][j] = new Expr.BinOp('+',
+                        new Expr.BinOp('*', alpha, new Expr.BinOp('*', xMat[i][0], yMat[j][0])),
+                        aMat[i][j]);
+            }
+        }
+        return result;
+    }
+
+    private Expr[][] matrixCopy(List<Expr> args, FlattenContext ctx) {
+        if (args.size() != 1) {
+            throw new ParseException("copy expects exactly 1 argument: copy(x)");
+        }
+        return compileMatrixExpr(args.get(0), ctx);
+    }
+
+    private Expr[][] matrixSolveLinear(List<Expr> args, FlattenContext ctx) {
+        if (args.size() != 2) {
+            throw new ParseException("solvelinear expects exactly 2 arguments: solvelinear(A, b)");
+        }
+        Expr[][] aMat = compileMatrixExpr(args.get(0), ctx);
+        Expr[][] bMat = compileMatrixExpr(args.get(1), ctx);
+        if (aMat.length != aMat[0].length) {
+            throw new ParseException("solvelinear requires square matrix A");
+        }
+        if (bMat.length != aMat.length || bMat[0].length != 1) {
+            throw new ParseException("solvelinear dimensions mismatch: A is " + aMat.length + "x" + aMat[0].length + ", b is " + bMat.length + "x" + bMat[0].length);
+        }
+        return emitLinearSolve(aMat, bMat, "solvelinear_temp_", "SolveLinear solve", ctx);
     }
 }
