@@ -14,8 +14,8 @@ import type { TableSpec } from './tables'
 import type { PlotSpec } from './plots/types'
 import type { DiagramSpec } from './diagram/types'
 
-export const PROJECT_VERSION = 1
-export const PROJECT_KEY = 'frees.project'
+const PROJECT_VERSION = 1
+const PROJECT_KEY = 'frees.project'
 
 // Child-owned localStorage keys bridged into the project file. These mirror the
 // literals used inside DiagramTab.tsx, DigitizerTab.tsx, and WorkspaceDock.tsx;
@@ -117,7 +117,7 @@ function finiteNumber(value: unknown, fallback: number): number {
  * boundary independent of whatever code later reads the value back. Returns
  * null for non-object input.
  */
-export function sanitizeProject(project: FreesProject): FreesProject | null {
+function sanitizeProject(project: FreesProject): FreesProject | null {
   if (project == null || typeof project !== 'object') return null
   const sc = (project.stopCriteria ?? {}) as Partial<StopCriteria>
   return {
@@ -193,7 +193,7 @@ function sanitizeFilename(name: string): string {
 }
 
 /** Trigger a browser download of the project as a `.frees` JSON file. */
-export function downloadProject(project: FreesProject, filename: string) {
+function downloadProject(project: FreesProject, filename: string) {
   const blob = new Blob([JSON.stringify(project, null, 2)], {
     type: 'application/json',
   })

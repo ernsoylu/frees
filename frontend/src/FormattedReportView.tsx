@@ -23,7 +23,7 @@ interface ParsedPart {
   value: string
 }
 
-export function getVariablesInMath(math: string, variables?: VariableResult[]): VariableResult[] {
+function getVariablesInMath(math: string, variables?: VariableResult[]): VariableResult[] {
   if (!variables || variables.length === 0) return []
   
   // Replace LaTeX commands with space
@@ -40,7 +40,7 @@ export function getVariablesInMath(math: string, variables?: VariableResult[]): 
   })
 }
 
-export function getLhsVariable(math: string, variables?: VariableResult[]): VariableResult | null {
+function getLhsVariable(math: string, variables?: VariableResult[]): VariableResult | null {
   if (!variables || variables.length === 0) return null
   const eqIdx = math.indexOf('=')
   if (eqIdx === -1) return null
@@ -59,7 +59,7 @@ export function getLhsVariable(math: string, variables?: VariableResult[]): Vari
   }) || null
 }
 
-export function getTooltipLabel(math: string, variables?: VariableResult[]): string {
+function getTooltipLabel(math: string, variables?: VariableResult[]): string {
   const allVars = getVariablesInMath(math, variables)
   if (allVars.length === 0) return ''
   const lhsVar = getLhsVariable(math, variables)

@@ -30,7 +30,7 @@ function imagSign(cleanReal: number, cleanImag: number): string {
   return cleanReal === 0 ? '-' : ' - '
 }
 
-export function formatComplex(real = 0, imag = 0): string {
+function formatComplex(real = 0, imag = 0): string {
   const cleanImag = suppressRoundoff(imag, real)
   const cleanReal = suppressRoundoff(real, cleanImag)
   if (cleanImag === 0) return formatValue(cleanReal)
