@@ -194,6 +194,39 @@ function renameById<T extends { id: string; name: string }>(items: T[], id: stri
   return items.map((x) => (x.id === id ? { ...x, name } : x))
 }
 
+/** First finite value supplied for each table input column (table-check semantics). */
+function firstFilledValues(tVars: string[], tRows: { values: Record<string, string> }[]): Map<string, number> {
+  const filled = new Map<string, number>()
+  for (const name of tVars) {
+    for (const row of tRows) {
+      const raw = (row.values[name] ?? '').trim()
+      if (raw !== '' && Number.isFinite(Number(raw))) {
+        filled.set(name, Number(raw))
+        break
+      }
+    }
+  }
+  return filled
+}
+
+/** Merges backend-inferred units into the variable drafts, never overriding a
+ *  unit the user set explicitly. */
+function mergeInferredUnits(
+  drafts: Record<string, VariableDraft>,
+  variables: string[],
+  inferredUnits: Record<string, string>,
+): Record<string, VariableDraft> {
+  const next: Record<string, VariableDraft> = { ...drafts }
+  for (const name of variables) {
+    const existing = next[name] ?? { ...DEFAULT_DRAFT }
+    next[name] = { ...existing }
+    if (!existing.isUnitsUserSet) {
+      next[name].units = inferredUnits[name] ?? existing.units ?? ''
+    }
+  }
+  return next
+}
+
 export default function App() {
   // Story 10.10: restore the whole workspace from the unified `.frees` project
   // (autosaved to localStorage). Computed once before any state initializer so
@@ -766,16 +799,7 @@ export default function App() {
     try {
       // Check the augmented system: the equations plus one representative
       // fixed value per table input column (table semantics).
-      const filled = new Map<string, number>()
-      for (const name of tVars) {
-        for (const row of tRows) {
-          const raw = (row.values[name] ?? '').trim()
-          if (raw !== '' && Number.isFinite(Number(raw))) {
-            filled.set(name, Number(raw))
-            break
-          }
-        }
-      }
+      const filled = firstFilledValues(tVars, tRows)
       let augmented = text
       for (const [name, value] of filled) {
         augmented += `\n${name} = ${value}`
@@ -787,17 +811,7 @@ export default function App() {
       // calculated variables too (inferred + dimensionally derived).
       if (response.variables.length > 0) {
         setVariables(response.variables)
-        setVarDrafts((drafts) => {
-          const next: Record<string, VariableDraft> = { ...drafts }
-          for (const name of response.variables) {
-            const existing = next[name] ?? { ...DEFAULT_DRAFT }
-            next[name] = { ...existing }
-            if (!existing.isUnitsUserSet) {
-              next[name].units = response.inferredUnits[name] ?? existing.units ?? ''
-            }
-          }
-          return next
-        })
+        setVarDrafts((drafts) => mergeInferredUnits(drafts, response.variables, response.inferredUnits))
       }
 
       if (response.solvable) {
