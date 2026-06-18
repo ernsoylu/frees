@@ -293,31 +293,42 @@ public final class MarkdownEquationExtractor {
                 clean.append(line).append("\n");
                 inComment = leavesCommentOpen(line);
                 if (stripped.contains("=")) {
-                    for (int[] seg : semicolonSegments(line)) {
-                        String segText = line.substring(seg[0], seg[1]);
-                        if (stripComments(segText).trim().contains("=")) {
-                            equations.add(new ExtractedEquation(segText, segText, seg[0], seg[1]));
-                        }
-                    }
+                    collectEquationSegments(line, equations);
                 }
             } else {
-                List<ExtractedEquation> lineEqs = extractFromLine(line);
-                if (lineEqs.isEmpty()) {
-                    clean.append("\n");
-                } else {
-                    StringBuilder cleanLine = new StringBuilder();
-                    for (int i = 0; i < lineEqs.size(); i++) {
-                        cleanLine.append(lineEqs.get(i).cleanEquation);
-                        if (i < lineEqs.size() - 1) {
-                            cleanLine.append(" ; ");
-                        }
-                    }
-                    clean.append(cleanLine).append("\n");
-                    equations.addAll(lineEqs);
-                }
+                appendExtractedLine(line, clean, equations);
             }
         }
         return new ExtractionResult(clean.toString(), equations);
+    }
+
+    /** Collects the {@code ;}-separated equation segments of a kept pure-equation line. */
+    private static void collectEquationSegments(String line, List<ExtractedEquation> equations) {
+        for (int[] seg : semicolonSegments(line)) {
+            String segText = line.substring(seg[0], seg[1]);
+            if (stripComments(segText).trim().contains("=")) {
+                equations.add(new ExtractedEquation(segText, segText, seg[0], seg[1]));
+            }
+        }
+    }
+
+    /** Extracts inline equations from a prose line, appending the rebuilt clean
+     *  text and any equations found. */
+    private static void appendExtractedLine(String line, StringBuilder clean, List<ExtractedEquation> equations) {
+        List<ExtractedEquation> lineEqs = extractFromLine(line);
+        if (lineEqs.isEmpty()) {
+            clean.append("\n");
+            return;
+        }
+        StringBuilder cleanLine = new StringBuilder();
+        for (int i = 0; i < lineEqs.size(); i++) {
+            cleanLine.append(lineEqs.get(i).cleanEquation);
+            if (i < lineEqs.size() - 1) {
+                cleanLine.append(" ; ");
+            }
+        }
+        clean.append(cleanLine).append("\n");
+        equations.addAll(lineEqs);
     }
 
     public static List<ExtractedEquation> extractFromLine(String line) {
@@ -358,21 +369,9 @@ public final class MarkdownEquationExtractor {
         }
 
         if (line.charAt(i) == ']') {
-            i--;
-            while (i >= 0 && line.charAt(i) != '[') {
-                char c = line.charAt(i);
-                // Subscripts may be multi-dimensional or ranged: A[1,2], x[1:3]
-                if (!Character.isLetterOrDigit(c) && c != '_' && c != ',' && c != '.' && !Character.isWhitespace(c)) {
-                    return -1;
-                }
-                i--;
-            }
+            i = skipBackwardSubscript(line, i);
             if (i < 0) {
                 return -1;
-            }
-            i--;
-            while (i >= 0 && Character.isWhitespace(line.charAt(i))) {
-                i--;
             }
         }
 
@@ -393,6 +392,29 @@ public final class MarkdownEquationExtractor {
             return -1;
         }
         return idStart;
+    }
+
+    /** Scans backward over a {@code [...]} subscript ending at {@code closeBracketIdx},
+     *  then over trailing whitespace; returns the index just before the subscript,
+     *  or -1 if the bracket content is not a valid subscript. */
+    private static int skipBackwardSubscript(String line, int closeBracketIdx) {
+        int i = closeBracketIdx - 1;
+        while (i >= 0 && line.charAt(i) != '[') {
+            char c = line.charAt(i);
+            // Subscripts may be multi-dimensional or ranged: A[1,2], x[1:3]
+            if (!Character.isLetterOrDigit(c) && c != '_' && c != ',' && c != '.' && !Character.isWhitespace(c)) {
+                return -1;
+            }
+            i--;
+        }
+        if (i < 0) {
+            return -1;
+        }
+        i--;
+        while (i >= 0 && Character.isWhitespace(line.charAt(i))) {
+            i--;
+        }
+        return i;
     }
 
     private static int scanRhsEnd(String line, int start) {
@@ -422,117 +444,135 @@ public final class MarkdownEquationExtractor {
     }
 
     private static Token nextToken(String line, int start) {
+        int i = skipWhitespace(line, start);
+        if (i >= line.length()) {
+            return null;
+        }
+        char c = line.charAt(i);
+        Token single = singleCharToken(c, i);
+        if (single != null) {
+            return single;
+        }
+        if (c == '[') {
+            return scanBracketToken(line, i);
+        }
+        if (c == '\'') { // string literal: 'R134a' — single quotes, no nesting
+            return scanStringToken(line, i);
+        }
+        if (Character.isDigit(c) || (c == '.' && i + 1 < line.length() && Character.isDigit(line.charAt(i + 1)))) {
+            return scanNumberToken(line, i);
+        }
+        if (Character.isLetter(c) || c == '_') {
+            return scanIdentifierToken(line, i);
+        }
+        return scanOperatorToken(line, i, c);
+    }
+
+    private static int skipWhitespace(String line, int start) {
         int i = start;
         while (i < line.length() && Character.isWhitespace(line.charAt(i))) {
             i++;
         }
-        if (i >= line.length()) {
-            return null;
-        }
+        return i;
+    }
 
-        char c = line.charAt(i);
+    /** Single-character punctuation tokens; null if {@code c} is not one of them. */
+    private static Token singleCharToken(char c, int i) {
+        return switch (c) {
+            case ']' -> new Token(TokenType.CLOSE_BRACKET, "]", i + 1);
+            case '(' -> new Token(TokenType.OPEN_PAREN, "(", i + 1);
+            case ')' -> new Token(TokenType.CLOSE_PAREN, ")", i + 1);
+            case ',' -> new Token(TokenType.COMMA, ",", i + 1);
+            default -> null;
+        };
+    }
 
-        if (c == '[') {
-            int prev = i - 1;
-            while (prev >= 0 && Character.isWhitespace(line.charAt(prev))) {
-                prev--;
+    /** A '[' starts either a {@code [unit]} annotation or an array-access bracket. */
+    private static Token scanBracketToken(String line, int i) {
+        int prev = i - 1;
+        while (prev >= 0 && Character.isWhitespace(line.charAt(prev))) {
+            prev--;
+        }
+        boolean isArrayAccess = false;
+        if (prev >= 0) {
+            char pc = line.charAt(prev);
+            if (Character.isLetterOrDigit(pc) || pc == '_' || pc == ']' || pc == ')') {
+                isArrayAccess = true;
             }
-            boolean isArrayAccess = false;
-            if (prev >= 0) {
-                char pc = line.charAt(prev);
-                if (Character.isLetterOrDigit(pc) || pc == '_' || pc == ']' || pc == ')') {
-                    isArrayAccess = true;
-                }
-            }
-            if (!isArrayAccess) {
-                int end = line.indexOf(']', i);
-                if (end != -1) {
-                    String unitText = line.substring(i, end + 1);
-                    return new Token(TokenType.UNIT, unitText, end + 1);
-                }
-            }
-            return new Token(TokenType.OPEN_BRACKET, "[", i + 1);
         }
-        if (c == ']') {
-            return new Token(TokenType.CLOSE_BRACKET, "]", i + 1);
-        }
-        if (c == '(') {
-            return new Token(TokenType.OPEN_PAREN, "(", i + 1);
-        }
-        if (c == ')') {
-            return new Token(TokenType.CLOSE_PAREN, ")", i + 1);
-        }
-        if (c == ',') {
-            return new Token(TokenType.COMMA, ",", i + 1);
-        }
-        // String literal: 'R134a' — single quotes, no nesting.
-        if (c == '\'') {
-            int end = line.indexOf('\'', i + 1);
+        if (!isArrayAccess) {
+            int end = line.indexOf(']', i);
             if (end != -1) {
-                return new Token(TokenType.STRING, line.substring(i, end + 1), end + 1);
+                return new Token(TokenType.UNIT, line.substring(i, end + 1), end + 1);
             }
-            return null;
         }
+        return new Token(TokenType.OPEN_BRACKET, "[", i + 1);
+    }
 
-        if (Character.isDigit(c) || (c == '.' && i + 1 < line.length() && Character.isDigit(line.charAt(i + 1)))) {
-            int end = i;
-            while (end < line.length() && (Character.isDigit(line.charAt(end)) || line.charAt(end) == '.')) {
-                end++;
-            }
-            if (end < line.length() && (line.charAt(end) == 'e' || line.charAt(end) == 'E')) {
-                int exp = end + 1;
-                if (exp < line.length() && (line.charAt(exp) == '+' || line.charAt(exp) == '-')) {
-                    exp++;
-                }
-                while (exp < line.length() && Character.isDigit(line.charAt(exp))) {
-                    exp++;
-                }
-                end = exp;
-            }
-            // Imaginary literal suffix: 0i, 1.5i — but not the start of an
-            // identifier (2items stays a number followed by an identifier).
-            if (end < line.length() && (line.charAt(end) == 'i' || line.charAt(end) == 'j')
-                    && (end + 1 >= line.length()
-                        || (!Character.isLetterOrDigit(line.charAt(end + 1))
-                            && line.charAt(end + 1) != '_'))) {
-                end++;
-            }
-            return new Token(TokenType.NUMBER, line.substring(i, end), end);
+    private static Token scanStringToken(String line, int i) {
+        int end = line.indexOf('\'', i + 1);
+        if (end != -1) {
+            return new Token(TokenType.STRING, line.substring(i, end + 1), end + 1);
         }
+        return null;
+    }
 
-        if (Character.isLetter(c) || c == '_') {
-            int end = i;
-            while (end < line.length() && (Character.isLetterOrDigit(line.charAt(end)) || line.charAt(end) == '_')) {
-                end++;
-            }
-            // String variables carry a trailing '$' (R$ = 'R134a'); built-in
-            // constants carry a trailing '#' (pi#, R#, g#).
-            if (end < line.length() && (line.charAt(end) == '$' || line.charAt(end) == '#')) {
-                end++;
-            }
-            return new Token(TokenType.IDENTIFIER, line.substring(i, end), end);
+    private static Token scanNumberToken(String line, int i) {
+        int end = i;
+        while (end < line.length() && (Character.isDigit(line.charAt(end)) || line.charAt(end) == '.')) {
+            end++;
         }
+        if (end < line.length() && (line.charAt(end) == 'e' || line.charAt(end) == 'E')) {
+            int exp = end + 1;
+            if (exp < line.length() && (line.charAt(exp) == '+' || line.charAt(exp) == '-')) {
+                exp++;
+            }
+            while (exp < line.length() && Character.isDigit(line.charAt(exp))) {
+                exp++;
+            }
+            end = exp;
+        }
+        // Imaginary literal suffix: 0i, 1.5i — but not the start of an
+        // identifier (2items stays a number followed by an identifier).
+        if (end < line.length() && (line.charAt(end) == 'i' || line.charAt(end) == 'j')
+                && (end + 1 >= line.length()
+                    || (!Character.isLetterOrDigit(line.charAt(end + 1))
+                        && line.charAt(end + 1) != '_'))) {
+            end++;
+        }
+        return new Token(TokenType.NUMBER, line.substring(i, end), end);
+    }
 
-        // Two-char operators starting with '.': MATLAB-style element-wise
-        // operators (.*, ./, .\, .^) and the range operator (..). Without these,
-        // a line like "C = A .* B" fails validation and the ".* B" tail is
-        // dropped as prose.
+    private static Token scanIdentifierToken(String line, int i) {
+        int end = i;
+        while (end < line.length() && (Character.isLetterOrDigit(line.charAt(end)) || line.charAt(end) == '_')) {
+            end++;
+        }
+        // String variables carry a trailing '$' (R$ = 'R134a'); built-in
+        // constants carry a trailing '#' (pi#, R#, g#).
+        if (end < line.length() && (line.charAt(end) == '$' || line.charAt(end) == '#')) {
+            end++;
+        }
+        return new Token(TokenType.IDENTIFIER, line.substring(i, end), end);
+    }
+
+    /**
+     * Two-char operators starting with '.': MATLAB-style element-wise operators
+     * (.*, ./, .\, .^) and the range operator (..); then single operators. ':' and
+     * '|' appear in range assignments (speed = 0:10:100 | Linear) and '\' is the
+     * matrix backslash solver, so they count as operators rather than prose.
+     */
+    private static Token scanOperatorToken(String line, int i, char c) {
         if (c == '.' && i + 1 < line.length()) {
             char n = line.charAt(i + 1);
             if (n == '*' || n == '/' || n == '\\' || n == '^' || n == '.') {
                 return new Token(TokenType.OPERATOR, line.substring(i, i + 2), i + 2);
             }
         }
-
-        // ':' and '|' appear in MATLAB-style range assignments
-        // (speed = 0:10:100 | Linear); '\' is the matrix backslash solver.
-        // Treat them as operators so the line is recognized as an equation
-        // rather than dropped as prose.
         if (c == '+' || c == '-' || c == '*' || c == '/' || c == '^' || c == '='
                 || c == ':' || c == '|' || c == '\\') {
             return new Token(TokenType.OPERATOR, String.valueOf(c), i + 1);
         }
-
         return null;
     }
 
@@ -565,44 +605,57 @@ public final class MarkdownEquationExtractor {
             }
             if (isPureEquationLine(line)) {
                 inComment = leavesCommentOpen(line);
-                String stripped = stripComments(line).trim();
-                if (stripped.contains("=")) {
-                    for (int[] seg : semicolonSegments(line)) {
-                        if (stripComments(line.substring(seg[0], seg[1])).trim().contains("=")) {
-                            String latex = formattedEquations.get(eqIndex++);
-                            report.append("[MATH_BLOCK:").append(latex).append("]").append("\n");
-                        }
-                    }
-                } else {
-                    report.append(line).append("\n");
-                }
+                eqIndex = appendPureEquationLine(line, formattedEquations, eqIndex, report);
             } else {
-                List<ExtractedEquation> lineEqs = extractFromLine(line);
-                if (lineEqs.isEmpty()) {
-                    report.append(line).append("\n");
-                } else {
-                    StringBuilder newLine = new StringBuilder();
-                    int currentPos = 0;
-                    for (ExtractedEquation eq : lineEqs) {
-                        newLine.append(line, currentPos, eq.startIndex);
-                        String latex = formattedEquations.get(eqIndex++);
-                        boolean isBlock = isEntireLineEquation(line, eq);
-                        if (isBlock) {
-                            newLine.append("[MATH_BLOCK:").append(latex).append("]");
-                        } else {
-                            newLine.append("[MATH_INLINE:").append(latex).append("]");
-                        }
-                        currentPos = eq.endIndex;
-                    }
-                    newLine.append(line.substring(currentPos));
-                    report.append(newLine).append("\n");
-                }
+                eqIndex = appendFormattedProseLine(line, formattedEquations, eqIndex, report);
             }
         }
         if (!originalText.endsWith("\n") && !report.isEmpty()) {
             report.setLength(report.length() - 1);
         }
         return report.toString();
+    }
+
+    /** Renders a pure-equation line as MATH_BLOCK placeholders (one per {@code ;}
+     *  segment containing '='); returns the advanced equation index. */
+    private static int appendPureEquationLine(String line, List<String> formattedEquations, int eqIndex, StringBuilder report) {
+        String stripped = stripComments(line).trim();
+        if (!stripped.contains("=")) {
+            report.append(line).append("\n");
+            return eqIndex;
+        }
+        for (int[] seg : semicolonSegments(line)) {
+            if (stripComments(line.substring(seg[0], seg[1])).trim().contains("=")) {
+                String latex = formattedEquations.get(eqIndex++);
+                report.append("[MATH_BLOCK:").append(latex).append("]").append("\n");
+            }
+        }
+        return eqIndex;
+    }
+
+    /** Rebuilds a prose line, replacing each inline equation with a MATH_BLOCK or
+     *  MATH_INLINE placeholder; returns the advanced equation index. */
+    private static int appendFormattedProseLine(String line, List<String> formattedEquations, int eqIndex, StringBuilder report) {
+        List<ExtractedEquation> lineEqs = extractFromLine(line);
+        if (lineEqs.isEmpty()) {
+            report.append(line).append("\n");
+            return eqIndex;
+        }
+        StringBuilder newLine = new StringBuilder();
+        int currentPos = 0;
+        for (ExtractedEquation eq : lineEqs) {
+            newLine.append(line, currentPos, eq.startIndex);
+            String latex = formattedEquations.get(eqIndex++);
+            if (isEntireLineEquation(line, eq)) {
+                newLine.append("[MATH_BLOCK:").append(latex).append("]");
+            } else {
+                newLine.append("[MATH_INLINE:").append(latex).append("]");
+            }
+            currentPos = eq.endIndex;
+        }
+        newLine.append(line.substring(currentPos));
+        report.append(newLine).append("\n");
+        return eqIndex;
     }
 
     private static boolean isEntireLineEquation(String line, ExtractedEquation eq) {

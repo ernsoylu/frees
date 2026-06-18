@@ -295,29 +295,7 @@ public class AstBuilder extends FreesBaseVisitor<Expr> {
 
         java.util.Map<String, List<Double>> columns = new java.util.LinkedHashMap<>();
         for (FreesParser.ParamColumnContext colCtx : ctx.paramColumn()) {
-            if (colCtx instanceof FreesParser.ParamColRangeContext range) {
-                String col = range.IDENT(0).getText().toLowerCase();
-                List<FreesParser.SignedNumberContext> nums = range.signedNumber();
-                boolean threeForm = nums.size() == 3;
-                double start = signedNumberValue(nums.get(0));
-                double stop = signedNumberValue(nums.get(threeForm ? 2 : 1));
-                double middle = threeForm ? signedNumberValue(nums.get(1)) : 1.0;
-                String fill = range.PIPE() != null ? range.IDENT(1).getText().toLowerCase() : FN_LINEAR;
-                columns.put(col, switch (fill) {
-                    case FN_LINEAR -> linearRange(col, start, middle, stop);
-                    case "log" -> logRange(col, start, middle, stop, threeForm);
-                    default -> throw new EquationParser.ParseException(
-                            "Unknown range spacing '" + range.IDENT(1).getText() + "' in PARAMETRIC "
-                                    + name + ". Supported: Linear, Log.");
-                });
-            } else if (colCtx instanceof FreesParser.ParamColListContext list) {
-                String col = list.IDENT().getText().toLowerCase();
-                List<Double> vals = new ArrayList<>();
-                for (FreesParser.SignedNumberContext sn : list.numberList().signedNumber()) {
-                    vals.add(signedNumberValue(sn));
-                }
-                columns.put(col, vals);
-            }
+            addParamColumn(colCtx, name, columns);
         }
 
         int numRows = columns.values().stream().mapToInt(List::size).max().orElse(0);
@@ -331,6 +309,34 @@ public class AstBuilder extends FreesBaseVisitor<Expr> {
             rows.add(row);
         }
         return new com.frees.backend.ast.ParametricTable(name, vars, rows);
+    }
+
+    /** Parses one PARAMETRIC column (range or explicit list) into {@code columns}. */
+    private void addParamColumn(FreesParser.ParamColumnContext colCtx, String name,
+                                java.util.Map<String, List<Double>> columns) {
+        if (colCtx instanceof FreesParser.ParamColRangeContext range) {
+            String col = range.IDENT(0).getText().toLowerCase();
+            List<FreesParser.SignedNumberContext> nums = range.signedNumber();
+            boolean threeForm = nums.size() == 3;
+            double start = signedNumberValue(nums.get(0));
+            double stop = signedNumberValue(nums.get(threeForm ? 2 : 1));
+            double middle = threeForm ? signedNumberValue(nums.get(1)) : 1.0;
+            String fill = range.PIPE() != null ? range.IDENT(1).getText().toLowerCase() : FN_LINEAR;
+            columns.put(col, switch (fill) {
+                case FN_LINEAR -> linearRange(col, start, middle, stop);
+                case "log" -> logRange(col, start, middle, stop, threeForm);
+                default -> throw new EquationParser.ParseException(
+                        "Unknown range spacing '" + range.IDENT(1).getText() + "' in PARAMETRIC "
+                                + name + ". Supported: Linear, Log.");
+            });
+        } else if (colCtx instanceof FreesParser.ParamColListContext list) {
+            String col = list.IDENT().getText().toLowerCase();
+            List<Double> vals = new ArrayList<>();
+            for (FreesParser.SignedNumberContext sn : list.numberList().signedNumber()) {
+                vals.add(signedNumberValue(sn));
+            }
+            columns.put(col, vals);
+        }
     }
 
     // ── FUNCTION / PROCEDURE / MODULE definitions ────────────────────────────
@@ -448,6 +454,40 @@ public class AstBuilder extends FreesBaseVisitor<Expr> {
             }
         }
 
+        boolean[] logFlags = parseTableFlags(ctx, name);
+
+        // Read every row as [x, y1, y2, ...]; ragged rows simply omit later columns.
+        List<double[]> rows = readTableRows(ctx);
+        int maxCols = rows.stream().mapToInt(r -> r.length).max().orElse(0);
+        int curveCount = Math.max(1, maxCols - 1);
+        if (family && paramValues.size() != curveCount) {
+            throw new EquationParser.ParseException(
+                    "TABLE " + name + ": header declares " + paramValues.size()
+                            + " curve parameter value(s) but the rows have " + curveCount
+                            + " value column(s).");
+        }
+
+        List<ProcDef.Curve> curves = buildCurves(rows, curveCount, family, paramValues);
+
+        List<String> argNames = new ArrayList<>();
+        argNames.add(argName);
+        if (family) {
+            argNames.add(ctx.IDENT(2).getText().toLowerCase());
+        }
+        // Two optional [unit]s: the argument unit (inside the parens, before
+        // RPAREN) and the output unit (after RPAREN). Split them by position.
+        FreesParser.UnitContext[] units = splitTableUnits(ctx);
+        List<String> argUnits = new ArrayList<>();
+        argUnits.add(siUnitOf(units[0]));
+        if (family) {
+            argUnits.add(null); // family-parameter units are not annotated yet
+        }
+        return new ProcDef.FunctionTableDef(name, argNames, logFlags[0], logFlags[1], curves,
+                siUnitOf(units[1]), argUnits);
+    }
+
+    /** Parses optional TABLE flags into {@code [xLog, yLog]}. */
+    private boolean[] parseTableFlags(FreesParser.TableDefContext ctx, String name) {
         boolean xLog = false;
         boolean yLog = false;
         if (ctx.tableFlags() != null) {
@@ -464,10 +504,11 @@ public class AstBuilder extends FreesBaseVisitor<Expr> {
                 }
             }
         }
+        return new boolean[]{xLog, yLog};
+    }
 
-        // Read every row as [x, y1, y2, ...]; ragged rows simply omit later columns.
+    private List<double[]> readTableRows(FreesParser.TableDefContext ctx) {
         List<double[]> rows = new ArrayList<>();
-        int maxCols = 0;
         for (FreesParser.TableRowContext rowCtx : ctx.tableRow()) {
             List<FreesParser.SignedNumberContext> nums = rowCtx.signedNumber();
             double[] row = new double[nums.size()];
@@ -475,16 +516,12 @@ public class AstBuilder extends FreesBaseVisitor<Expr> {
                 row[i] = signedNumberValue(nums.get(i));
             }
             rows.add(row);
-            maxCols = Math.max(maxCols, row.length);
         }
-        int curveCount = Math.max(1, maxCols - 1);
-        if (family && paramValues.size() != curveCount) {
-            throw new EquationParser.ParseException(
-                    "TABLE " + name + ": header declares " + paramValues.size()
-                            + " curve parameter value(s) but the rows have " + curveCount
-                            + " value column(s).");
-        }
+        return rows;
+    }
 
+    /** Builds one Curve per value column, each sorted by x. */
+    private List<ProcDef.Curve> buildCurves(List<double[]> rows, int curveCount, boolean family, List<Double> paramValues) {
         List<ProcDef.Curve> curves = new ArrayList<>();
         for (int j = 0; j < curveCount; j++) {
             List<double[]> pts = new ArrayList<>();
@@ -502,14 +539,11 @@ public class AstBuilder extends FreesBaseVisitor<Expr> {
             }
             curves.add(new ProcDef.Curve(family ? paramValues.get(j) : null, xs, ys));
         }
+        return curves;
+    }
 
-        List<String> argNames = new ArrayList<>();
-        argNames.add(argName);
-        if (family) {
-            argNames.add(ctx.IDENT(2).getText().toLowerCase());
-        }
-        // Two optional [unit]s: the argument unit (inside the parens, before
-        // RPAREN) and the output unit (after RPAREN). Split them by position.
+    /** Splits the TABLE's optional units into {@code [argUnit, outputUnit]} by token position. */
+    private FreesParser.UnitContext[] splitTableUnits(FreesParser.TableDefContext ctx) {
         FreesParser.UnitContext argUnitCtx = null;
         FreesParser.UnitContext outUnitCtx = null;
         int rparenIdx = ctx.RPAREN().getSymbol().getTokenIndex();
@@ -520,13 +554,7 @@ public class AstBuilder extends FreesBaseVisitor<Expr> {
                 outUnitCtx = u;
             }
         }
-        List<String> argUnits = new ArrayList<>();
-        argUnits.add(siUnitOf(argUnitCtx));
-        if (family) {
-            argUnits.add(null); // family-parameter units are not annotated yet
-        }
-        return new ProcDef.FunctionTableDef(name, argNames, xLog, yLog, curves,
-                siUnitOf(outUnitCtx), argUnits);
+        return new FreesParser.UnitContext[]{argUnitCtx, outUnitCtx};
     }
 
     private static double signedNumberValue(FreesParser.SignedNumberContext ctx) {

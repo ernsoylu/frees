@@ -215,46 +215,9 @@ public final class Differentiator {
             case "besselk1", "bessel_k1" -> chainRule(args, var, f -> simplifySub(simplifyNeg(call(function.substring(0, function.length() - 1) + "0", f)), simplifyDiv(call(function, f), f)));
 
             // Chi-Square distribution derivative: the PDF
-            case "chi_square" -> {
-                if (args.size() != 2) yield null;
-                Expr x = args.get(0);
-                Expr df = args.get(1);
-                if (!isConstant(df)) yield null;
-                Expr dx = diff(x, var);
-                if (dx == null) yield null;
-                Expr halfDf = simplifyDiv(df, num(2));
-                Expr numerator = simplifyMul(
-                        call("exp", simplifyNeg(simplifyDiv(x, num(2)))),
-                        simplifyPow(x, simplifySub(halfDf, num(1)))
-                );
-                Expr denominator = simplifyMul(
-                        simplifyPow(num(2), halfDf),
-                        call(GAMMA, halfDf)
-                );
-                yield simplifyMul(simplifyDiv(numerator, denominator), dx);
-            }
+            case "chi_square" -> diffChiSquare(args, var);
             case "random", "randg", "uncertaintyof" -> num(0.0);
-            case "probability" -> {
-                if (args.size() != 4) yield null;
-                Expr x1 = args.get(0);
-                Expr x2 = args.get(1);
-                Expr mean = args.get(2);
-                Expr stdDev = args.get(3);
-                if (!isConstant(mean) || !isConstant(stdDev)) yield null;
-                Expr dx1 = diff(x1, var);
-                Expr dx2 = diff(x2, var);
-                if (dx1 == null || dx2 == null) yield null;
-                Expr factor = simplifyMul(stdDev, num(Math.sqrt(2.0 * Math.PI)));
-                Expr pdf1 = simplifyDiv(
-                        call("exp", simplifyNeg(simplifyDiv(simplifyPow(simplifySub(x1, mean), num(2)), simplifyMul(num(2), simplifyPow(stdDev, num(2)))))),
-                        factor
-                );
-                Expr pdf2 = simplifyDiv(
-                        call("exp", simplifyNeg(simplifyDiv(simplifyPow(simplifySub(x2, mean), num(2)), simplifyMul(num(2), simplifyPow(stdDev, num(2)))))),
-                        factor
-                );
-                yield simplifySub(simplifyMul(pdf2, dx2), simplifyMul(pdf1, dx1));
-            }
+            case "probability" -> diffProbability(args, var);
 
             // ── hyperbolic functions ────────────────────────────────────
             case "sinh" -> chainRule(args, var, f -> call("cosh", f));
@@ -271,67 +234,13 @@ public final class Differentiator {
             // ── rounding and piecewise ─────────────────────────────────
             // Piecewise-constant: derivative is 0 wherever it is defined.
             case "floor", "ceil", "trunc", "sign", "step" -> num(0);
-            case "round" -> {
-                if (args.isEmpty() || args.size() > 2) yield null;
-                Expr f = args.get(0);
-                Expr df = diff(f, var);
-                yield df == null ? null : num(0);
-            }
-            case "factorial" -> {
-                if (args.size() != 1) yield null;
-                Expr f = args.get(0);
-                Expr df = diff(f, var);
-                if (df == null) yield null;
-                Expr fact = call("factorial", f);
-                Expr digamma = call(DIGAMMA, simplifyAdd(f, num(1)));
-                yield simplifyMul(simplifyMul(fact, digamma), df);
-            }
+            case "round" -> diffRound(args, var);
+            case "factorial" -> diffFactorial(args, var);
 
             // ── conditionals & series ───────────────────────────────────
-            case "if" -> {
-                if (args.size() != 5) yield null;
-                Expr a = args.get(0);
-                Expr b = args.get(1);
-                Expr x = args.get(2);
-                Expr y = args.get(3);
-                Expr z = args.get(4);
-                Expr dx = diff(x, var);
-                Expr dy = diff(y, var);
-                Expr dz = diff(z, var);
-                if (dx == null || dy == null || dz == null) yield null;
-                yield new Expr.Call("if", List.of(a, b, dx, dy, dz));
-            }
-            case "sum" -> {
-                if (args.size() == 4 && args.get(0) instanceof Expr.Var(String idxVar)) {
-                    Expr term = args.get(3);
-                    Expr dTerm = diff(term, var);
-                    if (dTerm == null) yield null;
-                    yield new Expr.Call("sum", List.of(args.get(0), args.get(1), args.get(2), dTerm));
-                } else {
-                    List<Expr> dArgs = new ArrayList<>();
-                    for (Expr arg : args) {
-                        Expr da = diff(arg, var);
-                        if (da == null) yield null;
-                        dArgs.add(da);
-                    }
-                    yield new Expr.Call("sum", dArgs);
-                }
-            }
-            case "product" -> {
-                if (args.size() == 4 && args.get(0) instanceof Expr.Var(String idxVar)) {
-                    Expr lower = args.get(1);
-                    Expr upper = args.get(2);
-                    Expr term = args.get(3);
-                    Expr dTerm = diff(term, var);
-                    if (dTerm == null) yield null;
-                    Expr prod = new Expr.Call("product", List.of(args.get(0), lower, upper, term));
-                    Expr sumTerm = simplifyDiv(dTerm, term);
-                    Expr sum = new Expr.Call("sum", List.of(args.get(0), lower, upper, sumTerm));
-                    yield simplifyMul(prod, sum);
-                } else {
-                    yield null;
-                }
-            }
+            case "if" -> diffIfCall(args, var);
+            case "sum" -> diffSum(args, var);
+            case "product" -> diffProduct(args, var);
 
             // ── complex helpers in real mode ────────────────────────────
             case "conj" -> {
@@ -357,6 +266,132 @@ public final class Differentiator {
             // Unknown function → cannot differentiate
             default -> null;
         };
+    }
+
+    private static Expr diffChiSquare(List<Expr> args, String var) {
+        if (args.size() != 2) {
+            return null;
+        }
+        Expr x = args.get(0);
+        Expr df = args.get(1);
+        if (!isConstant(df)) {
+            return null;
+        }
+        Expr dx = diff(x, var);
+        if (dx == null) {
+            return null;
+        }
+        Expr halfDf = simplifyDiv(df, num(2));
+        Expr numerator = simplifyMul(
+                call("exp", simplifyNeg(simplifyDiv(x, num(2)))),
+                simplifyPow(x, simplifySub(halfDf, num(1)))
+        );
+        Expr denominator = simplifyMul(
+                simplifyPow(num(2), halfDf),
+                call(GAMMA, halfDf)
+        );
+        return simplifyMul(simplifyDiv(numerator, denominator), dx);
+    }
+
+    private static Expr diffProbability(List<Expr> args, String var) {
+        if (args.size() != 4) {
+            return null;
+        }
+        Expr x1 = args.get(0);
+        Expr x2 = args.get(1);
+        Expr mean = args.get(2);
+        Expr stdDev = args.get(3);
+        if (!isConstant(mean) || !isConstant(stdDev)) {
+            return null;
+        }
+        Expr dx1 = diff(x1, var);
+        Expr dx2 = diff(x2, var);
+        if (dx1 == null || dx2 == null) {
+            return null;
+        }
+        Expr factor = simplifyMul(stdDev, num(Math.sqrt(2.0 * Math.PI)));
+        Expr pdf1 = simplifyDiv(
+                call("exp", simplifyNeg(simplifyDiv(simplifyPow(simplifySub(x1, mean), num(2)), simplifyMul(num(2), simplifyPow(stdDev, num(2)))))),
+                factor
+        );
+        Expr pdf2 = simplifyDiv(
+                call("exp", simplifyNeg(simplifyDiv(simplifyPow(simplifySub(x2, mean), num(2)), simplifyMul(num(2), simplifyPow(stdDev, num(2)))))),
+                factor
+        );
+        return simplifySub(simplifyMul(pdf2, dx2), simplifyMul(pdf1, dx1));
+    }
+
+    private static Expr diffRound(List<Expr> args, String var) {
+        if (args.isEmpty() || args.size() > 2) {
+            return null;
+        }
+        Expr df = diff(args.get(0), var);
+        return df == null ? null : num(0);
+    }
+
+    private static Expr diffFactorial(List<Expr> args, String var) {
+        if (args.size() != 1) {
+            return null;
+        }
+        Expr f = args.get(0);
+        Expr df = diff(f, var);
+        if (df == null) {
+            return null;
+        }
+        Expr fact = call("factorial", f);
+        Expr digamma = call(DIGAMMA, simplifyAdd(f, num(1)));
+        return simplifyMul(simplifyMul(fact, digamma), df);
+    }
+
+    private static Expr diffIfCall(List<Expr> args, String var) {
+        if (args.size() != 5) {
+            return null;
+        }
+        Expr a = args.get(0);
+        Expr b = args.get(1);
+        Expr dx = diff(args.get(2), var);
+        Expr dy = diff(args.get(3), var);
+        Expr dz = diff(args.get(4), var);
+        if (dx == null || dy == null || dz == null) {
+            return null;
+        }
+        return new Expr.Call("if", List.of(a, b, dx, dy, dz));
+    }
+
+    private static Expr diffSum(List<Expr> args, String var) {
+        if (args.size() == 4 && args.get(0) instanceof Expr.Var) {
+            Expr dTerm = diff(args.get(3), var);
+            if (dTerm == null) {
+                return null;
+            }
+            return new Expr.Call("sum", List.of(args.get(0), args.get(1), args.get(2), dTerm));
+        }
+        List<Expr> dArgs = new ArrayList<>();
+        for (Expr arg : args) {
+            Expr da = diff(arg, var);
+            if (da == null) {
+                return null;
+            }
+            dArgs.add(da);
+        }
+        return new Expr.Call("sum", dArgs);
+    }
+
+    private static Expr diffProduct(List<Expr> args, String var) {
+        if (!(args.size() == 4 && args.get(0) instanceof Expr.Var)) {
+            return null;
+        }
+        Expr lower = args.get(1);
+        Expr upper = args.get(2);
+        Expr term = args.get(3);
+        Expr dTerm = diff(term, var);
+        if (dTerm == null) {
+            return null;
+        }
+        Expr prod = new Expr.Call("product", List.of(args.get(0), lower, upper, term));
+        Expr sumTerm = simplifyDiv(dTerm, term);
+        Expr sum = new Expr.Call("sum", List.of(args.get(0), lower, upper, sumTerm));
+        return simplifyMul(prod, sum);
     }
 
     /**
