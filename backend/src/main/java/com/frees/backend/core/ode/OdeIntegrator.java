@@ -3,7 +3,9 @@ package com.frees.backend.core.ode;
 import com.frees.backend.core.SolverException;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * The ODE driver: it owns the time loop, step guards, dense-output sampling and
@@ -210,7 +212,30 @@ public final class OdeIntegrator {
 
     // ── Events ──────────────────────────────────────────────────────────────
 
-    private record EventHit(String name, double time, double[] y, boolean stop) {}
+    private record EventHit(String name, double time, double[] y, boolean stop) {
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) {
+                return true;
+            }
+            return o instanceof EventHit other
+                    && Double.compare(time, other.time) == 0
+                    && stop == other.stop
+                    && Objects.equals(name, other.name)
+                    && Arrays.equals(y, other.y);
+        }
+
+        @Override
+        public int hashCode() {
+            return 31 * Objects.hash(name, time, stop) + Arrays.hashCode(y);
+        }
+
+        @Override
+        public String toString() {
+            return "EventHit[name=" + name + ", time=" + time
+                    + ", y=" + Arrays.toString(y) + ", stop=" + stop + "]";
+        }
+    }
 
     private static double[] evalEvents(OdeProblem p, double t, double[] y) {
         if (p.events().isEmpty()) {
