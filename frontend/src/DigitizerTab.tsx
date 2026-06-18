@@ -107,6 +107,16 @@ const STORAGE_KEY = 'frees-digitizer'
 
 // --- tiny math-expression evaluator (PlotDigitizer-style inputs: 2*10^4, pi)
 
+/** Returns a copy of {@code items} with the matching id removed. */
+function removeById<I, T extends { id: I }>(items: T[], id: I): T[] {
+  return items.filter((x) => x.id !== id)
+}
+
+/** Returns a copy of {@code arr} with the element at {@code index} removed. */
+function removeAt<T>(arr: T[], index: number): T[] {
+  return arr.filter((_, i) => i !== index)
+}
+
 function evalMathExpr(input: string): number {
   const tokens = input.toLowerCase().match(/\d+\.?\d*(?:e[+-]?\d+)?|pi|e|[+\-*/^()]/g)
   if (!tokens || tokens.join('') !== input.toLowerCase().replace(/\s+/g, '')) {
@@ -826,7 +836,7 @@ export function DigitizerTab({
         if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return
         updateDataset(selected.datasetId, (ds) => ({
           ...ds,
-          points: ds.points.filter((_, i) => i !== selected.index),
+          points: removeAt(ds.points, selected.index),
         }))
         setSelected(null)
       }
@@ -1270,7 +1280,7 @@ export function DigitizerTab({
                       aria-label={`Delete ${ds.name}`}
                       onClick={(e) => {
                         e.stopPropagation()
-                        setDatasets((all) => all.filter((d) => d.id !== ds.id))
+                        setDatasets((all) => removeById(all, ds.id))
                         if (activeDatasetId === ds.id) setActiveDatasetId(null)
                       }}
                     >
@@ -1436,7 +1446,7 @@ export function DigitizerTab({
                             e.stopPropagation()
                             updateDataset(activeDataset.id, (ds) => ({
                               ...ds,
-                              points: ds.points.filter((_, i) => i !== v.index),
+                              points: removeAt(ds.points, v.index),
                             }))
                             setSelected(null)
                           }}
