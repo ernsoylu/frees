@@ -271,45 +271,13 @@ public class EquationSystemSolver {
         InnerSolve solved = solveEquationList(equations, solveSettings, specs,
                 parsed.defs(), deadlineNanos, null);
         Map<String, VariableSpec> mutableSpecs = new HashMap<>(specs);
-        for (Map.Entry<String, Expr> entry : ext.uncertaintyExprs().entrySet()) {
-            String varName = entry.getKey();
-            try {
-                double val = Evaluator.eval(entry.getValue(), solved.values(), parsed.defs());
-                VariableSpec old = mutableSpecs.get(varName);
-                mutableSpecs.put(varName, new VariableSpec(
-                        varName,
-                        old != null ? old.guess() : 1.0,
-                        old != null ? old.lower() : Double.NEGATIVE_INFINITY,
-                        old != null ? old.upper() : Double.POSITIVE_INFINITY,
-                        val
-                ));
-            } catch (Exception ignored) {}
-        }
+        applyUncertaintySpecs(ext.uncertaintyExprs(), solved.values(), mutableSpecs, parsed.defs());
         Map<String, Double> uncertainties = propagateUncertainty(equations, solved.values(), mutableSpecs, parsed.defs());
         if (mentionsUncertaintyOf(equations)) {
-            for (Map.Entry<String, Double> entry : uncertainties.entrySet()) {
-                solved.values().put(UNCERTAINTY_OF_FN + entry.getKey().toLowerCase(), entry.getValue());
-            }
-            solved = solveEquationList(equations, settings, mutableSpecs,
-                    parsed.defs(), deadlineNanos, solved.values());
-            for (Map.Entry<String, Expr> entry : ext.uncertaintyExprs().entrySet()) {
-                String varName = entry.getKey();
-                try {
-                    double val = Evaluator.eval(entry.getValue(), solved.values(), parsed.defs());
-                    VariableSpec old = mutableSpecs.get(varName);
-                    mutableSpecs.put(varName, new VariableSpec(
-                            varName,
-                            old != null ? old.guess() : 1.0,
-                            old != null ? old.lower() : Double.NEGATIVE_INFINITY,
-                            old != null ? old.upper() : Double.POSITIVE_INFINITY,
-                            val
-                    ));
-                } catch (Exception ignored) {}
-            }
-            uncertainties = propagateUncertainty(equations, solved.values(), mutableSpecs, parsed.defs());
-            for (Map.Entry<String, Double> entry : uncertainties.entrySet()) {
-                solved.values().put(UNCERTAINTY_OF_FN + entry.getKey().toLowerCase(), entry.getValue());
-            }
+            UncertaintyPass pass = resolveUncertaintySecondPass(equations, solved, uncertainties,
+                    ext.uncertaintyExprs(), mutableSpecs, parsed, settings, deadlineNanos);
+            solved = pass.solved();
+            uncertainties = pass.uncertainties();
         }
         List<com.frees.backend.core.ode.OdeTableResult> odeTables =
                 solveDynamicSystems(parsed, solved.values(), settings, specs, deadlineNanos);
@@ -320,6 +288,54 @@ public class EquationSystemSolver {
                 com.frees.backend.core.ode.DynamicAccessorContext.clear();
             }
         }
+    }
+
+    /** Evaluates each {@code UncertaintyOf(X) = expr} at the solved state and pins
+     *  the resulting uncertainty into that variable's spec (silently skipping any
+     *  expression that cannot yet be evaluated). */
+    private void applyUncertaintySpecs(Map<String, Expr> uncertaintyExprs, Map<String, Double> values,
+                                       Map<String, VariableSpec> mutableSpecs, Map<String, ProcDef> defs) {
+        for (Map.Entry<String, Expr> entry : uncertaintyExprs.entrySet()) {
+            String varName = entry.getKey();
+            try {
+                double val = Evaluator.eval(entry.getValue(), values, defs);
+                VariableSpec old = mutableSpecs.get(varName);
+                mutableSpecs.put(varName, new VariableSpec(
+                        varName,
+                        old != null ? old.guess() : 1.0,
+                        old != null ? old.lower() : Double.NEGATIVE_INFINITY,
+                        old != null ? old.upper() : Double.POSITIVE_INFINITY,
+                        val
+                ));
+            } catch (Exception ignored) {
+                // Expression not yet resolvable at this state; leave the spec as-is.
+            }
+        }
+    }
+
+    /** Publishes computed uncertainties into the value map as {@code uncertaintyof$<var>}
+     *  so {@code UncertaintyOf(X)} queries in active equations can read them. */
+    private void injectUncertaintyValues(Map<String, Double> values, Map<String, Double> uncertainties) {
+        for (Map.Entry<String, Double> entry : uncertainties.entrySet()) {
+            values.put(UNCERTAINTY_OF_FN + entry.getKey().toLowerCase(), entry.getValue());
+        }
+    }
+
+    private record UncertaintyPass(InnerSolve solved, Map<String, Double> uncertainties) {}
+
+    /** Second solve pass when active equations query {@code UncertaintyOf(X)}: feed
+     *  the first-pass uncertainties back in, re-solve, then re-propagate. */
+    private UncertaintyPass resolveUncertaintySecondPass(List<Equation> equations, InnerSolve solved,
+            Map<String, Double> uncertainties, Map<String, Expr> uncertaintyExprs,
+            Map<String, VariableSpec> mutableSpecs, EquationParser.ParseResult parsed,
+            SolverSettings settings, long deadlineNanos) {
+        injectUncertaintyValues(solved.values(), uncertainties);
+        InnerSolve resolved = solveEquationList(equations, settings, mutableSpecs,
+                parsed.defs(), deadlineNanos, solved.values());
+        applyUncertaintySpecs(uncertaintyExprs, resolved.values(), mutableSpecs, parsed.defs());
+        Map<String, Double> newUncertainties = propagateUncertainty(equations, resolved.values(), mutableSpecs, parsed.defs());
+        injectUncertaintyValues(resolved.values(), newUncertainties);
+        return new UncertaintyPass(resolved, newUncertainties);
     }
 
     /**
@@ -778,81 +794,58 @@ public class EquationSystemSolver {
         List<Equation> finalEquations = new ArrayList<>(ordinary);
         TreeSet<String> fixedIntegrationVars = new TreeSet<>();
         for (IntegralSolver.IntegralEquation ie : integrals) {
-            if (!ie.constantLimits()) {
-                // A variable limit (e.g. T_flame) is an unknown of the
-                // system: the integral becomes an ordinary equation that the
-                // Evaluator computes by quadrature on each residual
-                // evaluation, and the integration variable lands on the
-                // upper limit.
-                finalEquations.add(IntegralSolver.inlinedEquation(ie, ordinary));
-                if (fixedIntegrationVars.add(ie.integrationVar())) {
-                    finalEquations.add(new Equation(new Expr.Var(ie.integrationVar()),
-                            ie.upperExpr(),
-                            ie.integrationVar() + " = upper limit of "
-                                    + ie.original().sourceText()));
-                }
-                continue;
-            }
-            IntegralContext context = new IntegralContext(ie, ordinary, settings,
-                    specs, parsed.defs(), deadlineNanos, state);
-            double value = IntegralSolver.integrate(
-                    (t, runningTotal) -> integrandAt(context, t, runningTotal),
-                    ie.lower(), ie.upper(), ie.fixedStep(), deadlineNanos);
-            if (fixedIntegrationVars.add(ie.integrationVar())) {
-                finalEquations.add(new Equation(new Expr.Var(ie.integrationVar()),
-                        new Expr.Num(ie.upper()),
-                        ie.integrationVar() + " = " + ie.upper()));
-            }
-            finalEquations.add(new Equation(new Expr.Var(ie.resultVar()),
-                    new Expr.Num(value), ie.original().sourceText()));
+            appendIntegralEquations(ie, ordinary, finalEquations, fixedIntegrationVars,
+                    settings, specs, parsed, deadlineNanos, state);
         }
         InnerSolve solved = solveEquationList(finalEquations, settings, specs,
                 parsed.defs(), deadlineNanos, null);
         Map<String, VariableSpec> mutableSpecs = new HashMap<>(specs);
-        for (Map.Entry<String, Expr> entry : uncertaintyExprs.entrySet()) {
-            String varName = entry.getKey();
-            try {
-                double val = Evaluator.eval(entry.getValue(), solved.values(), parsed.defs());
-                VariableSpec old = mutableSpecs.get(varName);
-                mutableSpecs.put(varName, new VariableSpec(
-                        varName,
-                        old != null ? old.guess() : 1.0,
-                        old != null ? old.lower() : Double.NEGATIVE_INFINITY,
-                        old != null ? old.upper() : Double.POSITIVE_INFINITY,
-                        val
-                ));
-            } catch (Exception ignored) {}
-        }
+        applyUncertaintySpecs(uncertaintyExprs, solved.values(), mutableSpecs, parsed.defs());
         Map<String, Double> uncertainties = propagateUncertainty(finalEquations, solved.values(), mutableSpecs, parsed.defs());
         if (mentionsUncertaintyOf(finalEquations)) {
-            for (Map.Entry<String, Double> entry : uncertainties.entrySet()) {
-                solved.values().put(UNCERTAINTY_OF_FN + entry.getKey().toLowerCase(), entry.getValue());
-            }
-            solved = solveEquationList(finalEquations, settings, mutableSpecs,
-                    parsed.defs(), deadlineNanos, solved.values());
-            for (Map.Entry<String, Expr> entry : uncertaintyExprs.entrySet()) {
-                String varName = entry.getKey();
-                try {
-                    double val = Evaluator.eval(entry.getValue(), solved.values(), parsed.defs());
-                    VariableSpec old = mutableSpecs.get(varName);
-                    mutableSpecs.put(varName, new VariableSpec(
-                            varName,
-                            old != null ? old.guess() : 1.0,
-                            old != null ? old.lower() : Double.NEGATIVE_INFINITY,
-                            old != null ? old.upper() : Double.POSITIVE_INFINITY,
-                            val
-                    ));
-                } catch (Exception ignored) {}
-            }
-            uncertainties = propagateUncertainty(finalEquations, solved.values(), mutableSpecs, parsed.defs());
-            for (Map.Entry<String, Double> entry : uncertainties.entrySet()) {
-                solved.values().put(UNCERTAINTY_OF_FN + entry.getKey().toLowerCase(), entry.getValue());
-            }
+            UncertaintyPass pass = resolveUncertaintySecondPass(finalEquations, solved, uncertainties,
+                    uncertaintyExprs, mutableSpecs, parsed, settings, deadlineNanos);
+            solved = pass.solved();
+            uncertainties = pass.uncertainties();
         }
         List<com.frees.backend.core.ode.OdeTableResult> odeTables =
                 solveDynamicSystems(parsed, solved.values(), settings, specs, deadlineNanos);
         return buildResult(finalEquations, solved.blocks(), List.of(solved.values()),
                 state.iterations + solved.iterations(), startNanos, parsed, uncertainties, odeTables);
+    }
+
+    /** Lowers one integral into the final equation set: a variable-limit integral
+     *  becomes an inlined quadrature equation pinned to its upper limit; a
+     *  constant-limit integral is evaluated now and added as a numeric result. */
+    private void appendIntegralEquations(IntegralSolver.IntegralEquation ie, List<Equation> ordinary,
+            List<Equation> finalEquations, TreeSet<String> fixedIntegrationVars, SolverSettings settings,
+            Map<String, VariableSpec> specs, EquationParser.ParseResult parsed, long deadlineNanos, IntegrationState state) {
+        if (!ie.constantLimits()) {
+            // A variable limit (e.g. T_flame) is an unknown of the system: the
+            // integral becomes an ordinary equation the Evaluator computes by
+            // quadrature on each residual evaluation, and the integration variable
+            // lands on the upper limit.
+            finalEquations.add(IntegralSolver.inlinedEquation(ie, ordinary));
+            if (fixedIntegrationVars.add(ie.integrationVar())) {
+                finalEquations.add(new Equation(new Expr.Var(ie.integrationVar()),
+                        ie.upperExpr(),
+                        ie.integrationVar() + " = upper limit of "
+                                + ie.original().sourceText()));
+            }
+            return;
+        }
+        IntegralContext context = new IntegralContext(ie, ordinary, settings,
+                specs, parsed.defs(), deadlineNanos, state);
+        double value = IntegralSolver.integrate(
+                (t, runningTotal) -> integrandAt(context, t, runningTotal),
+                ie.lower(), ie.upper(), ie.fixedStep(), deadlineNanos);
+        if (fixedIntegrationVars.add(ie.integrationVar())) {
+            finalEquations.add(new Equation(new Expr.Var(ie.integrationVar()),
+                    new Expr.Num(ie.upper()),
+                    ie.integrationVar() + " = " + ie.upper()));
+        }
+        finalEquations.add(new Equation(new Expr.Var(ie.resultVar()),
+                new Expr.Num(value), ie.original().sourceText()));
     }
 
     /** Integrand value at one quadrature point: solve the subsystem with the
@@ -1000,20 +993,7 @@ public class EquationSystemSolver {
                 checkNonSmoothExpr(right, blockVars, sourceText, warnings);
             }
             case Expr.Call(String function, List<Expr> args) -> {
-                String lowerFunc = function.toLowerCase();
-                if (Set.of("round", "floor", "ceil", "trunc", "sign", "step").contains(lowerFunc)) {
-                    for (Expr arg : args) {
-                        Set<String> argVars = arg.variables();
-                        boolean dependsOnBlockVar = argVars.stream().anyMatch(blockVars::contains);
-                        if (dependsOnBlockVar) {
-                            warnings.add("Equation '" + sourceText + "' depends on non-smooth function '" + function 
-                                    + "' whose argument contains simultaneous block variable(s). "
-                                    + "Newton simultaneous solvers may stall or fail to converge; "
-                                    + "consider moving this variable to a sequential block.");
-                            break;
-                        }
-                    }
-                }
+                warnIfNonSmoothCall(function, args, blockVars, sourceText, warnings);
                 for (Expr arg : args) {
                     checkNonSmoothExpr(arg, blockVars, sourceText, warnings);
                 }
@@ -1041,6 +1021,25 @@ public class EquationSystemSolver {
                 checkNonSmoothExpr(right, blockVars, sourceText, warnings);
             }
             case Expr.Not(Expr operand) -> checkNonSmoothExpr(operand, blockVars, sourceText, warnings);
+        }
+    }
+
+    /** Warns when a non-smooth function (round/floor/ceil/trunc/sign/step) is applied
+     *  to an argument that depends on a simultaneous block variable — a common cause
+     *  of Newton non-convergence. */
+    private void warnIfNonSmoothCall(String function, List<Expr> args, Set<String> blockVars,
+                                     String sourceText, List<String> warnings) {
+        if (!Set.of("round", "floor", "ceil", "trunc", "sign", "step").contains(function.toLowerCase())) {
+            return;
+        }
+        for (Expr arg : args) {
+            if (arg.variables().stream().anyMatch(blockVars::contains)) {
+                warnings.add("Equation '" + sourceText + "' depends on non-smooth function '" + function
+                        + "' whose argument contains simultaneous block variable(s). "
+                        + "Newton simultaneous solvers may stall or fail to converge; "
+                        + "consider moving this variable to a sequential block.");
+                break;
+            }
         }
     }
 
@@ -1290,46 +1289,51 @@ public class EquationSystemSolver {
             return;
         }
 
-        // Check 1st argument (X)
-        Expr arg1 = args.get(0);
-        if (arg1 instanceof Expr.Var varExpr) {
-            String varName = varExpr.name();
-            double minX = Double.POSITIVE_INFINITY;
-            double maxX = Double.NEGATIVE_INFINITY;
-            for (ProcDef.Curve curve : cd.curves()) {
-                double[] xs = curve.xs();
-                if (xs != null && xs.length > 0) {
-                    if (xs[0] < minX) minX = xs[0];
-                    if (xs[xs.length - 1] > maxX) maxX = xs[xs.length - 1];
-                }
-            }
-            if (minX <= maxX && !Double.isInfinite(minX) && !Double.isInfinite(maxX)) {
-                adjustVarGuess(varName, minX, maxX, expandedSpecs, warmStart);
-                adjustVarGuess(varName + "_r", minX, maxX, expandedSpecs, warmStart);
+        adjustArgFromXRange(args.get(0), cd, expandedSpecs, warmStart);
+        adjustArgFromParamRange(args, cd, expandedSpecs, warmStart);
+    }
+
+    /** Nudges the X argument's guess into the table's x-range when it falls outside. */
+    private static void adjustArgFromXRange(Expr arg, ProcDef.FunctionTableDef cd,
+            Map<String, VariableSpec> expandedSpecs, Map<String, Double> warmStart) {
+        if (!(arg instanceof Expr.Var varExpr)) {
+            return;
+        }
+        double minX = Double.POSITIVE_INFINITY;
+        double maxX = Double.NEGATIVE_INFINITY;
+        for (ProcDef.Curve curve : cd.curves()) {
+            double[] xs = curve.xs();
+            if (xs != null && xs.length > 0) {
+                if (xs[0] < minX) minX = xs[0];
+                if (xs[xs.length - 1] > maxX) maxX = xs[xs.length - 1];
             }
         }
+        if (minX <= maxX && !Double.isInfinite(minX) && !Double.isInfinite(maxX)) {
+            adjustVarGuess(varExpr.name(), minX, maxX, expandedSpecs, warmStart);
+            adjustVarGuess(varExpr.name() + "_r", minX, maxX, expandedSpecs, warmStart);
+        }
+    }
 
-        // Check 2nd argument (Parameter) if it exists
-        if (args.size() > 1) {
-            Expr arg2 = args.get(1);
-            if (arg2 instanceof Expr.Var varExpr) {
-                String varName = varExpr.name();
-                double minParam = Double.POSITIVE_INFINITY;
-                double maxParam = Double.NEGATIVE_INFINITY;
-                int paramCount = 0;
-                for (ProcDef.Curve curve : cd.curves()) {
-                    if (curve.param() != null) {
-                        double p = curve.param();
-                        if (p < minParam) minParam = p;
-                        if (p > maxParam) maxParam = p;
-                        paramCount++;
-                    }
-                }
-                if (paramCount > 0 && minParam <= maxParam && !Double.isInfinite(minParam) && !Double.isInfinite(maxParam)) {
-                    adjustVarGuess(varName, minParam, maxParam, expandedSpecs, warmStart);
-                    adjustVarGuess(varName + "_r", minParam, maxParam, expandedSpecs, warmStart);
-                }
+    /** Nudges the family-parameter argument's guess into the table's parameter range. */
+    private static void adjustArgFromParamRange(List<Expr> args, ProcDef.FunctionTableDef cd,
+            Map<String, VariableSpec> expandedSpecs, Map<String, Double> warmStart) {
+        if (args.size() <= 1 || !(args.get(1) instanceof Expr.Var varExpr)) {
+            return;
+        }
+        double minParam = Double.POSITIVE_INFINITY;
+        double maxParam = Double.NEGATIVE_INFINITY;
+        int paramCount = 0;
+        for (ProcDef.Curve curve : cd.curves()) {
+            if (curve.param() != null) {
+                double p = curve.param();
+                if (p < minParam) minParam = p;
+                if (p > maxParam) maxParam = p;
+                paramCount++;
             }
+        }
+        if (paramCount > 0 && minParam <= maxParam && !Double.isInfinite(minParam) && !Double.isInfinite(maxParam)) {
+            adjustVarGuess(varExpr.name(), minParam, maxParam, expandedSpecs, warmStart);
+            adjustVarGuess(varExpr.name() + "_r", minParam, maxParam, expandedSpecs, warmStart);
         }
     }
 
@@ -1365,13 +1369,26 @@ public class EquationSystemSolver {
                                                     Map<String, Double> values,
                                                     Map<String, VariableSpec> specs,
                                                     Map<String, ProcDef> defs) {
-        TreeSet<String> allVars = collectVariables(equations);
-        List<String> varList = new ArrayList<>(allVars);
-        int N = varList.size();
-        
+        List<String> varList = new ArrayList<>(collectVariables(equations));
+        UncPartition part = partitionVariables(varList, specs);
+        if (part.uncVars().isEmpty()) {
+            return part.uncertainties();
+        }
+        double[][] jacobian = computeNumericalJacobian(equations, values, defs, varList,
+                equations.size(), varList.size());
+        return solveRssUncertainties(jacobian, varList, part, specs);
+    }
+
+    /** Variables split into those carrying a stated uncertainty (the sources) and
+     *  the dependent ones, plus a zero-initialized uncertainty map for every variable. */
+    private record UncPartition(List<String> uncVars, List<String> depVars, Map<String, Double> uncertainties) {}
+
+    private UncPartition partitionVariables(List<String> varList, Map<String, VariableSpec> specs) {
         List<String> uncVars = new ArrayList<>();
         List<String> depVars = new ArrayList<>();
+        Map<String, Double> uncertainties = new HashMap<>();
         for (String v : varList) {
+            uncertainties.put(v, 0.0);
             VariableSpec spec = specs.get(v);
             if (spec != null && spec.uncertainty() > 0.0) {
                 uncVars.add(v);
@@ -1379,71 +1396,101 @@ public class EquationSystemSolver {
                 depVars.add(v);
             }
         }
-        
-        Map<String, Double> uncertainties = new HashMap<>();
-        for (String v : varList) {
-            uncertainties.put(v, 0.0);
-        }
-        
-        if (uncVars.isEmpty()) {
-            return uncertainties;
-        }
-        
-        int M = equations.size();
-        double[][] J = new double[M][N];
+        return new UncPartition(uncVars, depVars, uncertainties);
+    }
+
+    /** Forward-difference Jacobian of the residual system w.r.t. every variable. */
+    private double[][] computeNumericalJacobian(List<Equation> equations, Map<String, Double> values,
+            Map<String, ProcDef> defs, List<String> varList, int m, int n) {
+        double[][] jacobian = new double[m][n];
         double[] baseResidual = evaluateSystemResiduals(equations, values, defs);
         Map<String, Double> perturbedValues = new HashMap<>(values);
         double eps = Math.sqrt(Math.ulp(1.0));
-        
-        for (int j = 0; j < N; j++) {
+        for (int j = 0; j < n; j++) {
             String varName = varList.get(j);
             double x = values.getOrDefault(varName, 1.0);
             double h = eps * Math.max(Math.abs(x), 1.0);
             perturbedValues.put(varName, x + h);
             try {
                 double[] perturbedResidual = evaluateSystemResiduals(equations, perturbedValues, defs);
-                for (int i = 0; i < M; i++) {
-                    J[i][j] = (perturbedResidual[i] - baseResidual[i]) / h;
+                for (int i = 0; i < m; i++) {
+                    jacobian[i][j] = (perturbedResidual[i] - baseResidual[i]) / h;
                 }
             } catch (Exception ignored) {
-                // Keep J[i][j] as 0.0
+                // Keep jacobian[i][j] as 0.0
             }
             perturbedValues.put(varName, x);
         }
-        
+        return jacobian;
+    }
+
+    /** Solves J_y·dy = −J_x·u for each uncertainty source via SVD and combines the
+     *  dependent-variable contributions in root-sum-square. */
+    private Map<String, Double> solveRssUncertainties(double[][] jacobian, List<String> varList,
+            UncPartition part, Map<String, VariableSpec> specs) {
+        List<String> uncVars = part.uncVars();
+        List<String> depVars = part.depVars();
+        Map<String, Double> uncertainties = part.uncertainties();
+        int m = jacobian.length;
         int p = uncVars.size();
         int q = depVars.size();
-        
+
+        double[][][] split = splitJacobianColumns(jacobian, varList, depVars, uncVars, m);
+        double[][] jy = split[0];
+        double[][] jx = split[1];
+
+        List<Integer> nonZeroRows = selectNonZeroRows(jy, m, q);
+        if (nonZeroRows.isEmpty()) {
+            setSourceUncertainties(uncertainties, uncVars, specs);
+            return uncertainties;
+        }
+
+        int mPrime = nonZeroRows.size();
+        double[][] jyPrime = new double[mPrime][q];
+        double[][] jxPrime = new double[mPrime][p];
+        for (int k = 0; k < mPrime; k++) {
+            int i = nonZeroRows.get(k);
+            System.arraycopy(jy[i], 0, jyPrime[k], 0, q);
+            System.arraycopy(jx[i], 0, jxPrime[k], 0, p);
+        }
+
+        double[] sumSq = computeDependentVariances(jyPrime, jxPrime, uncVars, specs, q, p, mPrime);
+        for (int j = 0; j < q; j++) {
+            uncertainties.put(depVars.get(j), Math.sqrt(sumSq[j]));
+        }
+        setSourceUncertainties(uncertainties, uncVars, specs);
+        return uncertainties;
+    }
+
+    /** Splits the full Jacobian into dependent-variable (Jy) and uncertainty-source (Jx) columns. */
+    private double[][][] splitJacobianColumns(double[][] jacobian, List<String> varList,
+            List<String> depVars, List<String> uncVars, int m) {
         Map<String, Integer> varIndices = new HashMap<>();
-        for (int j = 0; j < N; j++) {
+        for (int j = 0; j < varList.size(); j++) {
             varIndices.put(varList.get(j), j);
         }
-        
-        int[] depIndices = new int[q];
-        for (int j = 0; j < q; j++) {
-            depIndices[j] = varIndices.get(depVars.get(j));
-        }
-        int[] uncIndices = new int[p];
-        for (int j = 0; j < p; j++) {
-            uncIndices[j] = varIndices.get(uncVars.get(j));
-        }
-        
-        double[][] Jy = new double[M][q];
-        double[][] Jx = new double[M][p];
-        for (int i = 0; i < M; i++) {
+        int q = depVars.size();
+        int p = uncVars.size();
+        double[][] jy = new double[m][q];
+        double[][] jx = new double[m][p];
+        for (int i = 0; i < m; i++) {
             for (int j = 0; j < q; j++) {
-                Jy[i][j] = J[i][depIndices[j]];
+                jy[i][j] = jacobian[i][varIndices.get(depVars.get(j))];
             }
             for (int j = 0; j < p; j++) {
-                Jx[i][j] = J[i][uncIndices[j]];
+                jx[i][j] = jacobian[i][varIndices.get(uncVars.get(j))];
             }
         }
-        
+        return new double[][][] { jy, jx };
+    }
+
+    /** Indices of residual rows that actually depend on a dependent variable. */
+    private List<Integer> selectNonZeroRows(double[][] jy, int m, int q) {
         List<Integer> nonZeroRows = new ArrayList<>();
-        for (int i = 0; i < M; i++) {
+        for (int i = 0; i < m; i++) {
             boolean isZero = true;
             for (int j = 0; j < q; j++) {
-                if (Math.abs(Jy[i][j]) >= 1e-12) {
+                if (Math.abs(jy[i][j]) >= 1e-12) {
                     isZero = false;
                     break;
                 }
@@ -1452,39 +1499,23 @@ public class EquationSystemSolver {
                 nonZeroRows.add(i);
             }
         }
-        
-        if (nonZeroRows.isEmpty()) {
-            for (int i = 0; i < p; i++) {
-                String name = uncVars.get(i);
-                uncertainties.put(name, specs.get(name).uncertainty());
-            }
-            return uncertainties;
-        }
-        
-        int Mprime = nonZeroRows.size();
-        double[][] JyPrime = new double[Mprime][q];
-        double[][] JxPrime = new double[Mprime][p];
-        for (int k = 0; k < Mprime; k++) {
-            int i = nonZeroRows.get(k);
-            System.arraycopy(Jy[i], 0, JyPrime[k], 0, q);
-            System.arraycopy(Jx[i], 0, JxPrime[k], 0, p);
-        }
-        
-        Array2DRowRealMatrix jyMat = new Array2DRowRealMatrix(JyPrime, false);
-        SingularValueDecomposition svd = new SingularValueDecomposition(jyMat);
-        DecompositionSolver solver = svd.getSolver();
-        
+        return nonZeroRows;
+    }
+
+    /** Per-dependent-variable variance summed over each uncertainty source's propagated effect. */
+    private double[] computeDependentVariances(double[][] jyPrime, double[][] jxPrime,
+            List<String> uncVars, Map<String, VariableSpec> specs, int q, int p, int mPrime) {
+        DecompositionSolver solver =
+                new SingularValueDecomposition(new Array2DRowRealMatrix(jyPrime, false)).getSolver();
         double[] sumSq = new double[q];
         for (int i = 0; i < p; i++) {
             double u = specs.get(uncVars.get(i)).uncertainty();
-            double[] b = new double[Mprime];
-            for (int k = 0; k < Mprime; k++) {
-                b[k] = -JxPrime[k][i] * u;
+            double[] b = new double[mPrime];
+            for (int k = 0; k < mPrime; k++) {
+                b[k] = -jxPrime[k][i] * u;
             }
-            RealVector bVec = new ArrayRealVector(b, false);
             try {
-                RealVector dyVec = solver.solve(bVec);
-                double[] dy = dyVec.toArray();
+                double[] dy = solver.solve(new ArrayRealVector(b, false)).toArray();
                 for (int j = 0; j < q; j++) {
                     sumSq[j] += dy[j] * dy[j];
                 }
@@ -1492,16 +1523,14 @@ public class EquationSystemSolver {
                 // Keep contributions as 0
             }
         }
-        
-        for (int j = 0; j < q; j++) {
-            uncertainties.put(depVars.get(j), Math.sqrt(sumSq[j]));
-        }
-        for (int i = 0; i < p; i++) {
-            String name = uncVars.get(i);
+        return sumSq;
+    }
+
+    private void setSourceUncertainties(Map<String, Double> uncertainties, List<String> uncVars,
+                                        Map<String, VariableSpec> specs) {
+        for (String name : uncVars) {
             uncertainties.put(name, specs.get(name).uncertainty());
         }
-        
-        return uncertainties;
     }
 
     private double[] evaluateSystemResiduals(List<Equation> equations,
@@ -1525,47 +1554,37 @@ public class EquationSystemSolver {
     }
 
     private boolean mentionsUncertaintyOfExpr(Expr expr) {
-        if (expr == null) return false;
-        switch (expr) {
-            case Expr.Num n -> { return false; }
-            case Expr.Str s -> { return false; }
-            case Expr.Var v -> { return false; }
-            case Expr.Neg(Expr operand) -> { return mentionsUncertaintyOfExpr(operand); }
-            case Expr.BinOp(char op, Expr left, Expr right) -> {
-                return mentionsUncertaintyOfExpr(left) || mentionsUncertaintyOfExpr(right);
-            }
-            case Expr.Call(String function, List<Expr> args) -> {
-                if (function.equalsIgnoreCase("uncertaintyof")) {
-                    return true;
-                }
-                for (Expr arg : args) {
-                    if (mentionsUncertaintyOfExpr(arg)) return true;
-                }
-                return false;
-            }
-            case Expr.ArrayAccess(String name, List<Expr> indices) -> {
-                for (Expr idx : indices) {
-                    if (mentionsUncertaintyOfExpr(idx)) return true;
-                }
-                return false;
-            }
-            case Expr.Range(Expr start, Expr end) -> {
-                return mentionsUncertaintyOfExpr(start) || mentionsUncertaintyOfExpr(end);
-            }
-            case Expr.ArrayLiteral(List<Expr> elements) -> {
-                for (Expr el : elements) {
-                    if (mentionsUncertaintyOfExpr(el)) return true;
-                }
-                return false;
-            }
-            case Expr.Compare(String op, Expr left, Expr right) -> {
-                return mentionsUncertaintyOfExpr(left) || mentionsUncertaintyOfExpr(right);
-            }
-            case Expr.Logical(String op, Expr left, Expr right) -> {
-                return mentionsUncertaintyOfExpr(left) || mentionsUncertaintyOfExpr(right);
-            }
-            case Expr.Not(Expr operand) -> { return mentionsUncertaintyOfExpr(operand); }
+        if (expr == null) {
+            return false;
         }
+        return switch (expr) {
+            case Expr.Num n -> false;
+            case Expr.Str s -> false;
+            case Expr.Var v -> false;
+            case Expr.Neg(Expr operand) -> mentionsUncertaintyOfExpr(operand);
+            case Expr.BinOp(char op, Expr left, Expr right) ->
+                    mentionsUncertaintyOfExpr(left) || mentionsUncertaintyOfExpr(right);
+            case Expr.Call(String function, List<Expr> args) ->
+                    function.equalsIgnoreCase("uncertaintyof") || anyChildMentionsUncertaintyOf(args);
+            case Expr.ArrayAccess(String name, List<Expr> indices) -> anyChildMentionsUncertaintyOf(indices);
+            case Expr.Range(Expr start, Expr end) ->
+                    mentionsUncertaintyOfExpr(start) || mentionsUncertaintyOfExpr(end);
+            case Expr.ArrayLiteral(List<Expr> elements) -> anyChildMentionsUncertaintyOf(elements);
+            case Expr.Compare(String op, Expr left, Expr right) ->
+                    mentionsUncertaintyOfExpr(left) || mentionsUncertaintyOfExpr(right);
+            case Expr.Logical(String op, Expr left, Expr right) ->
+                    mentionsUncertaintyOfExpr(left) || mentionsUncertaintyOfExpr(right);
+            case Expr.Not(Expr operand) -> mentionsUncertaintyOfExpr(operand);
+        };
+    }
+
+    private boolean anyChildMentionsUncertaintyOf(List<Expr> children) {
+        for (Expr child : children) {
+            if (mentionsUncertaintyOfExpr(child)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private record ExtractedUncertainties(List<Equation> activeEquations,
