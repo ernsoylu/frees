@@ -145,32 +145,46 @@ function fmtCell(v: number): string {
 export function fillMissingCells(table: FunctionTableSpec): FunctionTableSpec {
   const rows = table.rows.map((r) => ({ x: r.x, ys: [...r.ys] }))
   for (let j = 0; j < table.columns.length; j++) {
-    const known: { x: number; y: number }[] = []
-    for (const row of rows) {
-      const x = Number(row.x)
-      const y = Number(row.ys[j])
-      if (row.x.trim() !== '' && (row.ys[j] ?? '').trim() !== '' && Number.isFinite(x) && Number.isFinite(y)) {
-        known.push({ x, y })
-      }
-    }
-    known.sort((p, q) => p.x - q.x)
+    const known = collectKnownPoints(rows, j)
     if (known.length < 2) continue
-    for (const row of rows) {
-      const x = Number(row.x)
-      if (row.x.trim() === '' || !Number.isFinite(x)) continue
-      if ((row.ys[j] ?? '').trim() !== '') continue
-      if (x < known[0].x || x > known[known.length - 1].x) continue
-      let hi = 1
-      while (known[hi].x < x) hi++
-      const x0 = scaleVal(known[hi - 1].x, table.xLog)
-      const x1 = scaleVal(known[hi].x, table.xLog)
-      const y0 = scaleVal(known[hi - 1].y, table.yLog)
-      const y1 = scaleVal(known[hi].y, table.yLog)
-      const t = x1 === x0 ? 0 : (scaleVal(x, table.xLog) - x0) / (x1 - x0)
-      row.ys[j] = fmtCell(unscaleVal(y0 + t * (y1 - y0), table.yLog))
-    }
+    interpolateColumn(rows, j, known, table)
   }
   return { ...table, rows }
+}
+
+type FillRow = { x: string; ys: string[] }
+
+/** The finite (x, y) samples present in column {@code j}, sorted ascending by x. */
+function collectKnownPoints(rows: FillRow[], j: number): { x: number; y: number }[] {
+  const known: { x: number; y: number }[] = []
+  for (const row of rows) {
+    const x = Number(row.x)
+    const y = Number(row.ys[j])
+    if (row.x.trim() !== '' && (row.ys[j] ?? '').trim() !== '' && Number.isFinite(x) && Number.isFinite(y)) {
+      known.push({ x, y })
+    }
+  }
+  known.sort((p, q) => p.x - q.x)
+  return known
+}
+
+/** Fills blank cells in column {@code j} by (log-aware) linear interpolation
+ *  between the bracketing known samples; out-of-range rows are left blank. */
+function interpolateColumn(rows: FillRow[], j: number, known: { x: number; y: number }[], table: FunctionTableSpec): void {
+  for (const row of rows) {
+    const x = Number(row.x)
+    if (row.x.trim() === '' || !Number.isFinite(x)) continue
+    if ((row.ys[j] ?? '').trim() !== '') continue
+    if (x < known[0].x || x > known[known.length - 1].x) continue
+    let hi = 1
+    while (known[hi].x < x) hi++
+    const x0 = scaleVal(known[hi - 1].x, table.xLog)
+    const x1 = scaleVal(known[hi].x, table.xLog)
+    const y0 = scaleVal(known[hi - 1].y, table.yLog)
+    const y1 = scaleVal(known[hi].y, table.yLog)
+    const t = x1 === x0 ? 0 : (scaleVal(x, table.xLog) - x0) / (x1 - x0)
+    row.ys[j] = fmtCell(unscaleVal(y0 + t * (y1 - y0), table.yLog))
+  }
 }
 
 /** Rows sorted ascending by numeric x (blank x rows sink to the bottom). */

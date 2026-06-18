@@ -56,74 +56,91 @@ type Token =
   | { t: 'rp' }
   | { t: 'comma' }
 
+function isSpace(c: string): boolean {
+  return c === ' ' || c === '\t' || c === '\n' || c === '\r'
+}
+
+/** Scans a numeric literal (with optional exponent) starting at {@code i}; pushes
+ *  the token and returns the index past it. */
+function scanNumber(src: string, i: number, tokens: Token[]): number {
+  let j = i + 1
+  while (j < src.length && /[0-9.]/.test(src[j])) j++
+  if (j < src.length && (src[j] === 'e' || src[j] === 'E')) {
+    j++
+    if (j < src.length && (src[j] === '+' || src[j] === '-')) j++
+    while (j < src.length && /\d/.test(src[j])) j++
+  }
+  tokens.push({ t: 'num', v: Number(src.slice(i, j)) })
+  return j
+}
+
+/** Scans an identifier (with optional trailing '#' for a built-in constant). */
+function scanIdentifier(src: string, i: number, tokens: Token[]): number {
+  let j = i + 1
+  while (j < src.length && /[a-zA-Z0-9_$]/.test(src[j])) j++
+  if (j < src.length && src[j] === '#') j++
+  tokens.push({ t: 'id', v: src.slice(i, j) })
+  return j
+}
+
+/** Scans a relational/equality operator (<, >, =, ! optionally followed by '='). */
+function scanRelational(src: string, i: number, tokens: Token[]): number {
+  let v = src[i]
+  let next = i + 1
+  if (src[i + 1] === '=') {
+    v += '='
+    next++
+  }
+  tokens.push({ t: 'op', v })
+  return next
+}
+
+/** Scans arithmetic/logical operators, parentheses and commas; throws on any
+ *  unexpected character. */
+function scanPunctuation(src: string, i: number, tokens: Token[]): number {
+  const c = src[i]
+  if ('+-*/^'.includes(c)) {
+    tokens.push({ t: 'op', v: c })
+    return i + 1
+  }
+  if (c === '&' && src[i + 1] === '&') {
+    tokens.push({ t: 'op', v: '&&' })
+    return i + 2
+  }
+  if (c === '|' && src[i + 1] === '|') {
+    tokens.push({ t: 'op', v: '||' })
+    return i + 2
+  }
+  if (c === '(') {
+    tokens.push({ t: 'lp' })
+    return i + 1
+  }
+  if (c === ')') {
+    tokens.push({ t: 'rp' })
+    return i + 1
+  }
+  if (c === ',') {
+    tokens.push({ t: 'comma' })
+    return i + 1
+  }
+  throw new Error(`Unexpected character '${c}'`)
+}
+
 function tokenize(src: string): Token[] {
   const tokens: Token[] = []
   let i = 0
   while (i < src.length) {
     const c = src[i]
-    if (c === ' ' || c === '\t' || c === '\n' || c === '\r') {
+    if (isSpace(c)) {
       i++
     } else if (c >= '0' && c <= '9') {
-      let j = i + 1
-      while (j < src.length && /[0-9.]/.test(src[j])) j++
-      if (j < src.length && (src[j] === 'e' || src[j] === 'E')) {
-        j++
-        if (j < src.length && (src[j] === '+' || src[j] === '-')) j++
-        while (j < src.length && /\d/.test(src[j])) j++
-      }
-      tokens.push({ t: 'num', v: Number(src.slice(i, j)) })
-      i = j
+      i = scanNumber(src, i, tokens)
     } else if (/[a-zA-Z_]/.test(c)) {
-      let j = i + 1
-      while (j < src.length && /[a-zA-Z0-9_$]/.test(src[j])) j++
-      // A trailing '#' marks a built-in constant (pi#, g#, ...).
-      if (j < src.length && src[j] === '#') j++
-      tokens.push({ t: 'id', v: src.slice(i, j) })
-      i = j
-    } else if ('+-*/^'.includes(c)) {
-      tokens.push({ t: 'op', v: c })
-      i++
-    } else if (c === '<' || c === '>') {
-      let v = c
-      if (src[i + 1] === '=') {
-        v += '='
-        i++
-      }
-      tokens.push({ t: 'op', v })
-      i++
-    } else if (c === '=') {
-      let v = c
-      if (src[i + 1] === '=') {
-        v += '='
-        i++
-      }
-      tokens.push({ t: 'op', v })
-      i++
-    } else if (c === '!') {
-      let v = c
-      if (src[i + 1] === '=') {
-        v += '='
-        i++
-      }
-      tokens.push({ t: 'op', v })
-      i++
-    } else if (c === '&' && src[i + 1] === '&') {
-      tokens.push({ t: 'op', v: '&&' })
-      i += 2
-    } else if (c === '|' && src[i + 1] === '|') {
-      tokens.push({ t: 'op', v: '||' })
-      i += 2
-    } else if (c === '(') {
-      tokens.push({ t: 'lp' })
-      i++
-    } else if (c === ')') {
-      tokens.push({ t: 'rp' })
-      i++
-    } else if (c === ',') {
-      tokens.push({ t: 'comma' })
-      i++
+      i = scanIdentifier(src, i, tokens)
+    } else if (c === '<' || c === '>' || c === '=' || c === '!') {
+      i = scanRelational(src, i, tokens)
     } else {
-      throw new Error(`Unexpected character '${c}'`)
+      i = scanPunctuation(src, i, tokens)
     }
   }
   return tokens
@@ -263,25 +280,31 @@ class Parser {
       return v
     }
     if (tok.t === 'id') {
-      this.pos++
-      const next = this.peek()
-      if (next && next.t === 'lp') {
-        const fn = FUNCTIONS[tok.v.toLowerCase()]
-        if (!fn) throw new Error(`Unknown function '${tok.v}'`)
-        this.pos++
-        const args = this.argList()
-        this.expect('rp')
-        return fn(args)
-      }
-      const name = tok.v.toLowerCase()
-      if (name in CONSTANTS) return CONSTANTS[name]
-      const value = this.vars.get(name)
-      if (value === undefined || !Number.isFinite(value)) {
-        throw new Error(`Variable '${tok.v}' has no value`)
-      }
-      return value
+      return this.primaryIdentifier(tok)
     }
     throw new Error('Unexpected token')
+  }
+
+  /** Resolves an identifier primary: a function call f(...), a built-in constant,
+   *  or a bound variable value. */
+  private primaryIdentifier(tok: { t: 'id'; v: string }): number {
+    this.pos++
+    const next = this.peek()
+    if (next && next.t === 'lp') {
+      const fn = FUNCTIONS[tok.v.toLowerCase()]
+      if (!fn) throw new Error(`Unknown function '${tok.v}'`)
+      this.pos++
+      const args = this.argList()
+      this.expect('rp')
+      return fn(args)
+    }
+    const name = tok.v.toLowerCase()
+    if (name in CONSTANTS) return CONSTANTS[name]
+    const value = this.vars.get(name)
+    if (value === undefined || !Number.isFinite(value)) {
+      throw new Error(`Variable '${tok.v}' has no value`)
+    }
+    return value
   }
 
   private argList(): number[] {

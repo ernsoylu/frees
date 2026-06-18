@@ -124,46 +124,54 @@ function formatComplexPerSolution(
   const iName = `${baseName}_i`
   const sources =
     solutions.length > 1 ? solutions.map((s) => s.variables) : [variables]
-  return sources.map((vars) => {
-    const rVar = vars.find((x) => x.name === rName)
-    const iVar = vars.find((x) => x.name === iName)
-    const rVal = rVar?.value ?? 0
-    const iVal = iVar?.value ?? 0
-    const rUnc = rVar?.uncertainty
-    const iUnc = iVar?.uncertainty
+  return sources.map((vars) => formatComplexEntry(vars, rName, iName))
+}
 
-    if (
-      (rUnc === undefined || rUnc === null || rUnc === 0) &&
-      (iUnc === undefined || iUnc === null || iUnc === 0)
-    ) {
-      return formatComplex(rVal, iVal)
-    }
+function isZeroUnc(u: number | null | undefined): boolean {
+  return u === undefined || u === null || u === 0
+}
 
-    const cleanImag = suppressRoundoff(iVal, rVal)
-    const cleanReal = suppressRoundoff(rVal, cleanImag)
+/** Formats one complex value (a_r + a_i·i) for one solution, with optional
+ *  per-component uncertainties. */
+function formatComplexEntry(vars: VariableResult[], rName: string, iName: string): string {
+  const rVar = vars.find((x) => x.name === rName)
+  const iVar = vars.find((x) => x.name === iName)
+  const rVal = rVar?.value ?? 0
+  const iVal = iVar?.value ?? 0
+  const rUnc = rVar?.uncertainty
+  const iUnc = iVar?.uncertainty
+  if (isZeroUnc(rUnc) && isZeroUnc(iUnc)) {
+    return formatComplex(rVal, iVal)
+  }
+  const cleanImag = suppressRoundoff(iVal, rVal)
+  const cleanReal = suppressRoundoff(rVal, cleanImag)
+  const real = formatRealWithUnc(cleanReal, cleanImag, rUnc)
+  return appendImagWithUnc(real, cleanImag, iUnc)
+}
 
-    let out = ''
-    if (cleanReal !== 0 || cleanImag === 0) {
-      out = formatValue(cleanReal)
-      if (rUnc !== undefined && rUnc !== null && rUnc > 0) {
-        out = `(${out} ± ${formatValue(rUnc)})`
-      }
-    }
+/** The real part string (empty when the value is purely imaginary), with optional uncertainty. */
+function formatRealWithUnc(cleanReal: number, cleanImag: number, rUnc: number | null | undefined): string {
+  if (cleanReal === 0 && cleanImag !== 0) {
+    return ''
+  }
+  const out = formatValue(cleanReal)
+  return rUnc !== undefined && rUnc !== null && rUnc > 0 ? `(${out} ± ${formatValue(rUnc)})` : out
+}
 
-    if (cleanImag !== 0) {
-      const formattedImag = Math.abs(cleanImag) === 1 ? '' : formatValue(Math.abs(cleanImag))
-      let imagPart = `${formattedImag}i`
-      if (iUnc !== undefined && iUnc !== null && iUnc > 0) {
-        imagPart = `(${formatValue(Math.abs(cleanImag))} ± ${formatValue(iUnc)})i`
-      }
-      if (out !== '') {
-        out += cleanImag > 0 ? ` + ${imagPart}` : ` - ${imagPart}`
-      } else {
-        out = cleanImag > 0 ? imagPart : `-${imagPart}`
-      }
-    }
-    return out
-  })
+/** Appends the imaginary part (with optional uncertainty and the correct sign) to {@code real}. */
+function appendImagWithUnc(real: string, cleanImag: number, iUnc: number | null | undefined): string {
+  if (cleanImag === 0) {
+    return real
+  }
+  const formattedImag = Math.abs(cleanImag) === 1 ? '' : formatValue(Math.abs(cleanImag))
+  let imagPart = `${formattedImag}i`
+  if (iUnc !== undefined && iUnc !== null && iUnc > 0) {
+    imagPart = `(${formatValue(Math.abs(cleanImag))} ± ${formatValue(iUnc)})i`
+  }
+  if (real !== '') {
+    return real + (cleanImag > 0 ? ` + ${imagPart}` : ` - ${imagPart}`)
+  }
+  return cleanImag > 0 ? imagPart : `-${imagPart}`
 }
 
 export function buildComplexSolutionRows(
