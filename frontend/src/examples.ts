@@ -389,7 +389,10 @@ DYNAMIC rod (method = ode23s, t = 0 .. 300, points = 150, rtol = 1e-6)
   END
   T[1] = T_left            { Dirichlet boundary (auxiliary, held constant) }
   T[6] = T_right
-  T[2:N-1](0) = T_init    { vector initial condition }
+  T[2](0) = T_init         { vector initial condition — nodes 2..5 start cold }
+  T[3](0) = T_init
+  T[4](0) = T_init
+  T[5](0) = T_init
 END
 
 ## Steady-state check (linear profile T[i] = 100 (N-i)/(N-1))

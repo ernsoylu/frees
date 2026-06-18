@@ -1276,39 +1276,6 @@ Q_dot_coil_btu = m_dot_supply * (h_mix - h_supply)
 Q_dot_coil_tons = Q_dot_coil_btu / 12000`,
   },
   {
-    value: "psychrometric-balancing",
-    title: "HVAC & Refrigeration: Psychrometric Room Balancing",
-    description: "Calculates entering and leaving air conditions for a cooling coil serving a space with both sensible and latent heat gains under outdoor ventilation requirements.",
-    note: "Results: Mixed Air Temp = 80.7°F db / 66.2°F wb, Leaving Air Temp = 55.0°F db / 51.1°F wb. (NCEES Problem 3)",
-    code: `{ Problem 3: Psychrometric Room Balancing }
-Q_sensible = 90000 [Btu/hr]
-Q_latent = 40000 [Btu/hr]
-V_dot_supply = 3600 [cfm]
-T_supply_db = 55 [F]
-T_room_db = 78 [F]
-rh_room = 0.45
-T_oa_db = 92 [F]
-T_oa_wb = 76 [F]
-V_dot_oa = 700 [cfm]
-P_atm = 14.696 [psia]
-
-V_dot_return = V_dot_supply - V_dot_oa
-f_oa = V_dot_oa / V_dot_supply
-f_return = V_dot_return / V_dot_supply
-
-{ Mixed air condition (MAT) }
-T_entering_db = f_oa * T_oa_db + f_return * T_room_db
-h_room = Enthalpy(AirH2O, T=T_room_db, R=rh_room, P=P_atm)
-h_oa = Enthalpy(AirH2O, T=T_oa_db, B=T_oa_wb, P=P_atm)
-h_mix = f_oa * h_oa + f_return * h_room
-T_entering_wb = WetBulb(AirH2O, T=T_entering_db, H=h_mix, P=P_atm)
-
-{ Room total load: sensible + latent + ventilation load }
-Q_total = Q_sensible + Q_latent + V_dot_oa * 4.5 * (h_oa - h_room)
-h_leaving = h_mix - Q_total / (4.5 * V_dot_supply)
-T_leaving_wb = WetBulb(AirH2O, T=T_supply_db, H=h_leaving, P=P_atm)`,
-  },
-  {
     value: "solar-heat-gain",
     title: "HVAC & Refrigeration: Solar Heat Gain Through Windows",
     description: "Calculates total heat gain through windows on North, East, and West faces of a building using U-value, Cooling Load Temperature Differences (CLTD), and Solar Heat Gain Factors (SHGF).",
@@ -1373,27 +1340,78 @@ Cp_below = 0.37 [Btu/lb-F]
 
 Q_required = mass * Cp_below * (T_freeze - T_storage)`,
   },
+
+
+  {
+    value: "psychrometric-balancing",
+    title: "HVAC & Refrigeration: Psychrometric Room Balancing",
+    description: "Calculates entering and leaving air conditions for a cooling coil serving a space with both sensible and latent heat gains under outdoor ventilation requirements.",
+    note: "Results: Mixed Air Temp = 80.7°F db / 66.2°F wb, Leaving Air Temp = 55.0°F db / 51.1°F wb. (NCEES Problem 3)",
+    code: `{ Problem 3: Psychrometric Room Balancing }
+{ AirH2O properties use SI internally: convert °F→K and psia→Pa,
+  then divide enthalpy by 2326 to work in Btu/lb throughout. }
+Q_sensible = 90000 [Btu/hr]
+Q_latent = 40000 [Btu/hr]
+V_dot_supply = 3600 [cfm]
+T_supply_db = 55           { °F }
+T_room_db = 78             { °F }
+rh_room = 0.45
+T_oa_db = 92               { °F }
+T_oa_wb = 76               { °F }
+V_dot_oa = 700 [cfm]
+P_atm = 14.696 * 6894.76   { psia → Pa }
+
+V_dot_return = V_dot_supply - V_dot_oa
+f_oa = V_dot_oa / V_dot_supply
+f_return = V_dot_return / V_dot_supply
+
+{ Convert to Kelvin for CoolProp }
+T_room_K = (T_room_db - 32) * 5/9 + 273.15
+T_oa_K   = (T_oa_db   - 32) * 5/9 + 273.15
+T_oa_wb_K = (T_oa_wb  - 32) * 5/9 + 273.15
+
+{ Mixed air condition (MAT) }
+T_entering_db = f_oa * T_oa_db + f_return * T_room_db
+T_entering_K  = (T_entering_db - 32) * 5/9 + 273.15
+
+h_room = Enthalpy(AirH2O, T=T_room_K, R=rh_room,  P=P_atm) / 2326
+h_oa   = Enthalpy(AirH2O, T=T_oa_K,   B=T_oa_wb_K, P=P_atm) / 2326
+h_mix  = f_oa * h_oa + f_return * h_room
+
+T_entering_wb_K = WetBulb(AirH2O, T=T_entering_K, H=h_mix * 2326, P=P_atm)
+T_entering_wb   = (T_entering_wb_K - 273.15) * 9/5 + 32
+
+{ Room total load: sensible + latent + ventilation load }
+Q_total = Q_sensible + Q_latent + V_dot_oa * 4.5 * (h_oa - h_room)
+h_leaving = h_mix - Q_total / (4.5 * V_dot_supply)
+
+T_supply_K    = (T_supply_db - 32) * 5/9 + 273.15
+T_leaving_wb_K = WetBulb(AirH2O, T=T_supply_K, H=h_leaving * 2326, P=P_atm)
+T_leaving_wb   = (T_leaving_wb_K - 273.15) * 9/5 + 32`,
+  },
   {
     value: "pumping-friction-head",
     title: "HVAC & Refrigeration: Pumping and Friction Head",
     description: "Computes the operating head of a water pump overcoming static elevation and pipe friction (Darcy-Weisbach friction equation) under pressurized inlet conditions.",
     note: "Results: velocity = 8.54 ft/s, friction head = 9.3 ft, total head required = 169.3 ft, inlet head = 46.2 ft, pump head = 123.1 ft. (NCEES Problem 8)",
     code: `{ Problem 8: Pumping and Friction Head }
-T_water = 90 [F]
-gpm = 26000 [gpm]
+{ All quantities are in English units (ft, gpm, fps) but kept unitless
+  to avoid placing unit annotations on computed expressions. }
+T_water = 90
+gpm = 26000
 f_factor = 0.01
-L_eq = 2425 [ft]
-z_elev = 160 [ft]
-P_inlet = 20 [psig]
-OD = 36 [in]
-t_wall = 0.375 [in]
+L_eq = 2425
+z_elev = 160
+P_inlet = 20
+OD = 36
+t_wall = 0.375
 
-ID = (OD - 2 * t_wall) / 12 [ft]
-V = (gpm * 0.1337 / 60) / (pi# / 4* ID^2) [ft/s]
-h_friction = f_factor * (L_eq / ID) * (V^2 / 64.4) [ft]
+ID = (OD - 2 * t_wall) / 12
+V = (gpm * 0.1337 / 60) / (pi# / 4 * ID^2)
+h_friction = f_factor * (L_eq / ID) * (V^2 / 64.4)
 h_total = z_elev + h_friction
 
-h_inlet = P_inlet * 2.31 [ft]
+h_inlet = P_inlet * 2.31
 h_pump = h_total - h_inlet`,
   },
   {
@@ -1402,20 +1420,27 @@ h_pump = h_total - h_inlet`,
     description: "Finds the wet-bulb temperature of the supply air to maintain a room at 75°F db/63°F wb under sensible load and Sensible Heat Factor.",
     note: "Results: total heat load = 250,000 Btu/hr, supply enthalpy = 20.25 Btu/lb, supply wet-bulb temperature = 55.0°F. (NCEES Problem 9)",
     code: `{ Problem 9: Air Supply Wet-Bulb Determination }
-T_room_db = 75 [F]
-T_room_wb = 63 [F]
-T_supply_db = 58 [F]
+{ AirH2O needs SI: convert °F→K and psia→Pa; Enthalpy returns J/kg,
+  divide by 2326 to get Btu/lb; multiply back by 2326 for H= input. }
+T_room_db = 75             { °F }
+T_room_wb = 63             { °F }
+T_supply_db = 58           { °F }
 Q_sensible = 200000 [Btu/hr]
 SHF = 0.80
 V_dot_supply = 10700 [cfm]
-P_atm = 14.696 [psia]
+P_atm = 14.696 * 6894.76   { psia → Pa }
 
-h_room = Enthalpy(AirH2O, T=T_room_db, B=T_room_wb, P=P_atm)
+T_room_db_K   = (T_room_db   - 32) * 5/9 + 273.15
+T_room_wb_K   = (T_room_wb   - 32) * 5/9 + 273.15
+T_supply_db_K = (T_supply_db - 32) * 5/9 + 273.15
+
+h_room = Enthalpy(AirH2O, T=T_room_db_K, B=T_room_wb_K, P=P_atm) / 2326
 Q_total = Q_sensible / SHF
 
-{ Total heat equation: Q_total = 4.5 * cfm * (h_room - h_supply) }
+{ Total heat equation — h_supply solved implicitly }
 Q_total = 4.5 * V_dot_supply * (h_room - h_supply)
-T_supply_wb = WetBulb(AirH2O, T=T_supply_db, H=h_supply, P=P_atm)`,
+T_supply_wb_K = WetBulb(AirH2O, T=T_supply_db_K, H=h_supply * 2326, P=P_atm)
+T_supply_wb   = (T_supply_wb_K - 273.15) * 9/5 + 32`,
   },
   {
     value: "multistage-food-freezing",
