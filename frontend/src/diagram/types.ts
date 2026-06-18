@@ -354,6 +354,11 @@ export function elementLabel(el: DiagramElement): string {
   if (el.kind === 'icon') return el.icon
   if (el.kind === 'chart') return el.xVar ? `Chart: ${el.xVar}` : 'Chart'
   if (el.kind === 'widget') return `Widget: ${el.widgetType}${el.varName ? ` · ${el.varName}` : ''}`
+  return controlElementLabel(el)
+}
+
+/** Label for hotspot/button/control elements, falling back to the kind name. */
+function controlElementLabel(el: DiagramElement): string {
   if (el.kind === 'hotspot') return `Hotspot ➔ ${el.targetType}`
   if (el.kind === 'ctl-button') return `Button · ${el.action}`
   if (isControl(el)) return `${KIND_LABELS[el.kind]}${el.varName ? ` · ${el.varName}` : ''}`
@@ -382,28 +387,28 @@ export function expandGroups(ids: Iterable<string>, elements: DiagramElement[]):
 export function controlBindings(elements: DiagramElement[]): string[] {
   const lines: string[] = []
   for (const el of elements) {
-    if (!isControl(el) || el.kind === 'ctl-button' || el.varName.trim() === '') continue
-    if (el.target && el.target !== 'equation') continue
-    const name = el.varName.trim()
-    if (el.kind === 'ctl-input') {
-      const value = Number(el.value)
-      if (el.value.trim() !== '' && Number.isFinite(value)) {
-        lines.push(`${name} = ${el.value.trim()}`)
-      }
-    } else if (el.kind === 'ctl-dropdown' || el.kind === 'ctl-radio') {
-      if (el.value === '') continue
-      if (name.endsWith('$')) {
-        lines.push(`${name} = '${el.value}'`)
-      } else if (Number.isFinite(Number(el.value))) {
-        lines.push(`${name} = ${el.value}`)
-      }
-    } else if (el.kind === 'ctl-checkbox') {
-      lines.push(`${name} = ${el.checked ? 1 : 0}`)
-    } else if (el.kind === 'ctl-slider' || el.kind === 'ctl-stepper') {
-      lines.push(`${name} = ${el.value}`)
-    }
+    lines.push(...controlBindingLines(el))
   }
   return lines
+}
+
+/** The equation line(s) one control contributes (empty if it binds nothing). */
+function controlBindingLines(el: DiagramElement): string[] {
+  if (!isControl(el) || el.kind === 'ctl-button' || el.varName.trim() === '') return []
+  if (el.target && el.target !== 'equation') return []
+  const name = el.varName.trim()
+  if (el.kind === 'ctl-input') {
+    const value = Number(el.value)
+    return el.value.trim() !== '' && Number.isFinite(value) ? [`${name} = ${el.value.trim()}`] : []
+  }
+  if (el.kind === 'ctl-dropdown' || el.kind === 'ctl-radio') {
+    if (el.value === '') return []
+    if (name.endsWith('$')) return [`${name} = '${el.value}'`]
+    return Number.isFinite(Number(el.value)) ? [`${name} = ${el.value}`] : []
+  }
+  if (el.kind === 'ctl-checkbox') return [`${name} = ${el.checked ? 1 : 0}`]
+  if (el.kind === 'ctl-slider' || el.kind === 'ctl-stepper') return [`${name} = ${el.value}`]
+  return []
 }
 
 export interface DiagramState {

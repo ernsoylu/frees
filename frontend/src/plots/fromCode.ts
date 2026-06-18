@@ -28,38 +28,59 @@ export function plotDefToSpec(dto: PlotDefDto): PlotSpec {
   spec.fromCode = true
 
   if (kind === 'xy') {
-    const xVar = first('x') ?? first('xvar')
-    if (xVar) spec.xy.xVar = xVar
-    const yVars = all('y').length ? all('y') : all('yvars')
-    if (yVars.length) spec.xy.yVars = yVars
-    const y2 = all('y2').length ? all('y2') : all('y2vars')
-    if (y2.length) spec.xy.y2Vars = y2
-    const type = first('type') ?? first('charttype')
-    if (type) spec.xy.chartType = parseChartType(type)
-    const z = first('z') ?? first('zvar')
-    if (z) spec.xy.zVar = z
-    const size = first('size') ?? first('sizevar')
-    if (size) spec.xy.sizeVar = size
+    applyXyAttrs(spec, first, all)
   } else if (kind === 'property') {
-    if (first('fluid')) spec.property.fluid = first('fluid')!
-    if (first('diagram')) spec.property.diagram = first('diagram')!
-    assignBool(bool('quality'), (v) => (spec.property.quality = v))
-    assignBool(bool('isolines'), (v) => (spec.property.isolines = v))
-    assignBool(bool('overlaystates'), (v) => (spec.property.overlayStates = v))
-    assignBool(bool('connectstates'), (v) => (spec.property.connectStates = v))
-    assignBool(bool('closecycle'), (v) => (spec.property.closeCycle = v))
+    applyPropertyAttrs(spec, first, bool)
   } else {
-    assignNum(num('pressure') ?? num('pressurekpa'), (v) => (spec.psychro.pressureKPa = v))
-    assignNum(num('tmin') ?? num('tminc'), (v) => (spec.psychro.tMinC = v))
-    assignNum(num('tmax') ?? num('tmaxc'), (v) => (spec.psychro.tMaxC = v))
-    assignBool(bool('wetbulb'), (v) => (spec.psychro.wetBulb = v))
-    assignBool(bool('enthalpy'), (v) => (spec.psychro.enthalpy = v))
-    assignBool(bool('volume'), (v) => (spec.psychro.volume = v))
-    assignBool(bool('overlaystates'), (v) => (spec.psychro.overlayStates = v))
-    assignBool(bool('connectstates'), (v) => (spec.psychro.connectStates = v))
+    applyPsychroAttrs(spec, num, bool)
   }
+  applyFormatAttrs(spec, first, bool, num)
 
-  // Shared presentation options.
+  return spec
+}
+
+type StrGet = (key: string) => string | undefined
+type StrAll = (key: string) => string[]
+type BoolGet = (key: string) => boolean | undefined
+type NumGet = (key: string) => number | undefined
+
+function applyXyAttrs(spec: PlotSpec, first: StrGet, all: StrAll): void {
+  const xVar = first('x') ?? first('xvar')
+  if (xVar) spec.xy.xVar = xVar
+  const yVars = all('y').length ? all('y') : all('yvars')
+  if (yVars.length) spec.xy.yVars = yVars
+  const y2 = all('y2').length ? all('y2') : all('y2vars')
+  if (y2.length) spec.xy.y2Vars = y2
+  const type = first('type') ?? first('charttype')
+  if (type) spec.xy.chartType = parseChartType(type)
+  const z = first('z') ?? first('zvar')
+  if (z) spec.xy.zVar = z
+  const size = first('size') ?? first('sizevar')
+  if (size) spec.xy.sizeVar = size
+}
+
+function applyPropertyAttrs(spec: PlotSpec, first: StrGet, bool: BoolGet): void {
+  if (first('fluid')) spec.property.fluid = first('fluid')!
+  if (first('diagram')) spec.property.diagram = first('diagram')!
+  assignBool(bool('quality'), (v) => (spec.property.quality = v))
+  assignBool(bool('isolines'), (v) => (spec.property.isolines = v))
+  assignBool(bool('overlaystates'), (v) => (spec.property.overlayStates = v))
+  assignBool(bool('connectstates'), (v) => (spec.property.connectStates = v))
+  assignBool(bool('closecycle'), (v) => (spec.property.closeCycle = v))
+}
+
+function applyPsychroAttrs(spec: PlotSpec, num: NumGet, bool: BoolGet): void {
+  assignNum(num('pressure') ?? num('pressurekpa'), (v) => (spec.psychro.pressureKPa = v))
+  assignNum(num('tmin') ?? num('tminc'), (v) => (spec.psychro.tMinC = v))
+  assignNum(num('tmax') ?? num('tmaxc'), (v) => (spec.psychro.tMaxC = v))
+  assignBool(bool('wetbulb'), (v) => (spec.psychro.wetBulb = v))
+  assignBool(bool('enthalpy'), (v) => (spec.psychro.enthalpy = v))
+  assignBool(bool('volume'), (v) => (spec.psychro.volume = v))
+  assignBool(bool('overlaystates'), (v) => (spec.psychro.overlayStates = v))
+  assignBool(bool('connectstates'), (v) => (spec.psychro.connectStates = v))
+}
+
+function applyFormatAttrs(spec: PlotSpec, first: StrGet, bool: BoolGet, num: NumGet): void {
   if (first('title')) spec.format.title = first('title')!
   if (first('xlabel')) spec.format.xLabel = first('xlabel')!
   if (first('ylabel')) spec.format.yLabel = first('ylabel')!
@@ -72,8 +93,6 @@ export function plotDefToSpec(dto: PlotDefDto): PlotSpec {
   assignNum(num('xmax'), (v) => (spec.format.xMax = v))
   assignNum(num('ymin'), (v) => (spec.format.yMin = v))
   assignNum(num('ymax'), (v) => (spec.format.yMax = v))
-
-  return spec
 }
 
 function assignBool(value: boolean | undefined, set: (v: boolean) => void): void {
