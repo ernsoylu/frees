@@ -14,16 +14,21 @@ import {
   Table,
   Badge,
   Alert,
-  Card,
   Button,
-  SimpleGrid,
   TextInput,
   CloseButton,
   Accordion as MantineAccordion
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
-import { useState, useEffect, type ReactNode } from 'react';
+import { useState, useEffect } from 'react';
 import { getReference, type UnitInfo, type ConstantInfo } from './api';
+import { DOCS_CATALOG } from './docsCatalog';
+import {
+  SolverPipelineDiagram,
+  DegreesOfFreedomDiagram,
+  DependentPropertiesDiagram,
+  GuessConvergenceDiagram
+} from './docs/DocDiagrams';
 
 function CopyButton({ code }: Readonly<{ code: string }>) {
   const [copied, setCopied] = useState(false);
@@ -1909,152 +1914,264 @@ const CATEGORIES = [
   }
 ];
 
-function FunctionRef({ name, syntax, desc, inputs, outputs, example }: {
-  name: string;
-  syntax: string;
-  desc: string | ReactNode;
-  inputs: { name: string; desc: string }[];
-  outputs: { name: string; desc: string }[];
-  example: string;
-}) {
-  return (
-    <Card withBorder radius="md" p="md" bg="light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8))" mb="md" style={{ borderLeft: '4px solid var(--mantine-color-blue-5)' }}>
-      <Group justify="space-between" mb="xs">
-        <Title order={4} c="blue.3" style={{ fontFamily: 'monospace' }}>{name}</Title>
-        <Badge variant="light" color="blue">Function Reference</Badge>
-      </Group>
-      <Text size="sm" mb="md" style={{ lineHeight: 1.5 }}>{desc}</Text>
-      
-      <Text fw={600} size="sm" mb="xs">Syntax</Text>
-      <Paper withBorder p="xs" bg="light-dark(var(--mantine-color-gray-1), var(--mantine-color-dark-9))" mb="md" radius="sm">
-        <Code block style={{ background: 'transparent', color: 'light-dark(#5c940d, #82c91e)' }}>{syntax}</Code>
-      </Paper>
+function renderInlineContent(text: string): React.ReactNode[] {
+  const result: React.ReactNode[] = [];
+  let i = 0;
+  
+  const spanMarkers = [
+    { delim: '**', type: 'bold' },
+    { delim: '*', type: 'italic' },
+    { delim: '`', type: 'code' },
+  ] as const;
 
-      {inputs.length > 0 && (
-        <>
-          <Text fw={600} size="sm" mb="xs">Input Arguments</Text>
-          <Table striped withTableBorder withColumnBorders mb="md">
-            <Table.Thead>
-              <Table.Tr>
-                <Table.Th style={{ width: '150px' }}>Argument</Table.Th>
-                <Table.Th>Description</Table.Th>
-              </Table.Tr>
-            </Table.Thead>
-            <Table.Tbody>
-              {inputs.map(i => (
-                <Table.Tr key={i.name}>
-                  <Table.Td><Code>{i.name}</Code></Table.Td>
-                  <Table.Td>{i.desc}</Table.Td>
-                </Table.Tr>
-              ))}
-            </Table.Tbody>
-          </Table>
-        </>
-      )}
-
-      {outputs.length > 0 && (
-        <>
-          <Text fw={600} size="sm" mb="xs">Output Arguments</Text>
-          <Table striped withTableBorder withColumnBorders mb="md">
-            <Table.Thead>
-              <Table.Tr>
-                <Table.Th style={{ width: '150px' }}>Argument</Table.Th>
-                <Table.Th>Description</Table.Th>
-              </Table.Tr>
-            </Table.Thead>
-            <Table.Tbody>
-              {outputs.map(o => (
-                <Table.Tr key={o.name}>
-                  <Table.Td><Code>{o.name}</Code></Table.Td>
-                  <Table.Td>{o.desc}</Table.Td>
-                </Table.Tr>
-              ))}
-            </Table.Tbody>
-          </Table>
-        </>
-      )}
-
-      <Text fw={600} size="sm" mb="xs">Example</Text>
-      <Paper withBorder p="xs" bg="light-dark(var(--mantine-color-gray-1), var(--mantine-color-dark-9))" radius="sm" style={{ position: 'relative' }}>
-        <CopyButton code={example} />
-        <Code block style={{ background: 'transparent' }}>{example}</Code>
-      </Paper>
-    </Card>
-  );
+  while (i < text.length) {
+    const span = spanMarkers.find((m) => text.startsWith(m.delim, i));
+    if (span) {
+      const endIdx = text.indexOf(span.delim, i + span.delim.length);
+      if (endIdx !== -1) {
+        const val = text.substring(i + span.delim.length, endIdx);
+        const key = `inline-${span.type}-${i}`;
+        if (span.type === 'bold') {
+          result.push(<strong key={key}>{val}</strong>);
+        } else if (span.type === 'italic') {
+          result.push(<em key={key}>{val}</em>);
+        } else if (span.type === 'code') {
+          result.push(<Code key={key}>{val}</Code>);
+        }
+        i = endIdx + span.delim.length;
+        continue;
+      }
+    }
+    
+    let nextIdx = text.length;
+    for (const m of spanMarkers) {
+      const idx = text.indexOf(m.delim, i);
+      if (idx !== -1 && idx < nextIdx) {
+        nextIdx = idx;
+      }
+    }
+    result.push(text.substring(i, nextIdx));
+    i = nextIdx;
+  }
+  return result;
 }
 
-function ProcedureRef({ name, syntax, desc, inputs, outputs, example }: {
-  name: string;
-  syntax: string;
-  desc: string | ReactNode;
-  inputs: { name: string; desc: string }[];
-  outputs: { name: string; desc: string }[];
-  example: string;
-}) {
-  return (
-    <Card withBorder radius="md" p="md" bg="light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8))" mb="md" style={{ borderLeft: '4px solid var(--mantine-color-indigo-5)' }}>
-      <Group justify="space-between" mb="xs">
-        <Title order={4} c="indigo.3" style={{ fontFamily: 'monospace' }}>{name}</Title>
-        <Badge variant="light" color="indigo">Procedure Reference</Badge>
-      </Group>
-      <Text size="sm" mb="md" style={{ lineHeight: 1.5 }}>{desc}</Text>
+interface MarkdownRendererProps {
+  content: string;
+}
+
+function MarkdownRenderer({ content }: MarkdownRendererProps) {
+  if (!content) return null;
+  const lines = content.split('\n');
+  const elements: React.ReactNode[] = [];
+  
+  let i = 0;
+  while (i < lines.length) {
+    const line = lines[i];
+    const trimmed = line.trim();
+    
+    // 1. Fenced Code Block
+    if (trimmed.startsWith('```')) {
+      let codeLines: string[] = [];
+      i++;
+      while (i < lines.length && !lines[i].trim().startsWith('```')) {
+        codeLines.push(lines[i]);
+        i++;
+      }
+      const code = codeLines.join('\n');
+      const key = `code-${i}`;
+      elements.push(
+        <Paper key={key} withBorder p="md" bg="light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8))" mb="md" style={{ position: 'relative' }}>
+          <CopyButton code={code} />
+          <Code block style={{ background: 'transparent' }}>{code}</Code>
+        </Paper>
+      );
+      i++;
+      continue;
+    }
+    
+    // 2. Table Block
+    if (trimmed.startsWith('|')) {
+      // Parse header row
+      const headers = trimmed.split('|').map(h => h.trim()).filter((_, idx, arr) => idx > 0 && idx < arr.length - 1);
+      i++;
       
-      <Text fw={600} size="sm" mb="xs">Syntax</Text>
-      <Paper withBorder p="xs" bg="light-dark(var(--mantine-color-gray-1), var(--mantine-color-dark-9))" mb="md" radius="sm">
-        <Code block style={{ background: 'transparent', color: 'light-dark(#d9480f, #ffc078)' }}>{syntax}</Code>
-      </Paper>
-
-      {inputs.length > 0 && (
-        <>
-          <Text fw={600} size="sm" mb="xs">Input Variables</Text>
-          <Table striped withTableBorder withColumnBorders mb="md">
-            <Table.Thead>
-              <Table.Tr>
-                <Table.Th style={{ width: '150px' }}>Variable</Table.Th>
-                <Table.Th>Description</Table.Th>
-              </Table.Tr>
-            </Table.Thead>
-            <Table.Tbody>
-              {inputs.map(i => (
-                <Table.Tr key={i.name}>
-                  <Table.Td><Code>{i.name}</Code></Table.Td>
-                  <Table.Td>{i.desc}</Table.Td>
-                </Table.Tr>
+      // Check for separator row (e.g. | --- | --- |)
+      if (i < lines.length && lines[i].trim().startsWith('|')) {
+        const sepRow = lines[i].trim();
+        const sepCols = sepRow.split('|').map(s => s.trim()).filter((_, idx, arr) => idx > 0 && idx < arr.length - 1);
+        if (sepCols.every(col => col.startsWith('-') || col.endsWith('-'))) {
+          i++;
+        }
+      }
+      
+      let rows: string[][] = [];
+      while (i < lines.length && lines[i].trim().startsWith('|')) {
+        const rowCols = lines[i].trim().split('|').map(c => c.trim()).filter((_, idx, arr) => idx > 0 && idx < arr.length - 1);
+        rows.push(rowCols);
+        i++;
+      }
+      
+      const key = `table-${i}`;
+      elements.push(
+        <Table key={key} striped withTableBorder withColumnBorders mb="md">
+          <Table.Thead>
+            <Table.Tr>
+              {headers.map((h, idx) => (
+                <Table.Th key={idx}>{renderInlineContent(h)}</Table.Th>
               ))}
-            </Table.Tbody>
-          </Table>
-        </>
-      )}
-
-      {outputs.length > 0 && (
-        <>
-          <Text fw={600} size="sm" mb="xs">Output Variables</Text>
-          <Table striped withTableBorder withColumnBorders mb="md">
-            <Table.Thead>
-              <Table.Tr>
-                <Table.Th style={{ width: '150px' }}>Variable</Table.Th>
-                <Table.Th>Description</Table.Th>
+            </Table.Tr>
+          </Table.Thead>
+          <Table.Tbody>
+            {rows.map((row, rIdx) => (
+              <Table.Tr key={rIdx}>
+                {row.map((cell, cIdx) => (
+                  <Table.Td key={cIdx}>{renderInlineContent(cell)}</Table.Td>
+                ))}
               </Table.Tr>
-            </Table.Thead>
-            <Table.Tbody>
-              {outputs.map(o => (
-                <Table.Tr key={o.name}>
-                  <Table.Td><Code>{o.name}</Code></Table.Td>
-                  <Table.Td>{o.desc}</Table.Td>
-                </Table.Tr>
-              ))}
-            </Table.Tbody>
-          </Table>
-        </>
-      )}
-
-      <Text fw={600} size="sm" mb="xs">Example</Text>
-      <Paper withBorder p="xs" bg="light-dark(var(--mantine-color-gray-1), var(--mantine-color-dark-9))" radius="sm" style={{ position: 'relative' }}>
-        <CopyButton code={example} />
-        <Code block style={{ background: 'transparent' }}>{example}</Code>
-      </Paper>
-    </Card>
-  );
+            ))}
+          </Table.Tbody>
+        </Table>
+      );
+      continue;
+    }
+    
+    // 3. Lists
+    if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
+      let listItems: string[] = [];
+      while (i < lines.length && (lines[i].trim().startsWith('- ') || lines[i].trim().startsWith('* '))) {
+        listItems.push(lines[i].trim().substring(2));
+        i++;
+      }
+      const key = `list-${i}`;
+      elements.push(
+        <List key={key} spacing="xs" size="sm" mb="md" style={{ lineHeight: 1.6 }}>
+          {listItems.map((item, idx) => (
+            <List.Item key={idx}>{renderInlineContent(item)}</List.Item>
+          ))}
+        </List>
+      );
+      continue;
+    }
+    
+    // 4. Blockquotes / Alerts
+    if (trimmed.startsWith('>')) {
+      let alertLines: string[] = [];
+      let color = 'blue';
+      let title = 'Note';
+      
+      let firstLine = trimmed.substring(1).trim();
+      if (firstLine.startsWith('[!NOTE]')) {
+        color = 'blue';
+        title = 'Note';
+        firstLine = firstLine.substring(7).trim();
+      } else if (firstLine.startsWith('[!WARNING]')) {
+        color = 'orange';
+        title = 'Warning';
+        firstLine = firstLine.substring(10).trim();
+      } else if (firstLine.startsWith('[!IMPORTANT]')) {
+        color = 'indigo';
+        title = 'Important';
+        firstLine = firstLine.substring(12).trim();
+      } else if (firstLine.startsWith('[!CAUTION]')) {
+        color = 'red';
+        title = 'Caution';
+        firstLine = firstLine.substring(10).trim();
+      } else if (firstLine.startsWith('[!TIP]')) {
+        color = 'teal';
+        title = 'Tip';
+        firstLine = firstLine.substring(6).trim();
+      }
+      
+      if (firstLine) {
+        alertLines.push(firstLine);
+      }
+      i++;
+      
+      while (i < lines.length && lines[i].trim().startsWith('>')) {
+        alertLines.push(lines[i].trim().substring(1).trim());
+        i++;
+      }
+      
+      const key = `alert-${i}`;
+      elements.push(
+        <Alert key={key} color={color} title={title} mb="md">
+          {alertLines.map((l, idx) => (
+            <Text key={idx} size="sm">{renderInlineContent(l)}</Text>
+          ))}
+        </Alert>
+      );
+      continue;
+    }
+    
+    // 5. Headings
+    if (trimmed.startsWith('#')) {
+      let order: 2 | 3 | 4 = 2;
+      let titleText = '';
+      if (trimmed.startsWith('### ')) {
+        order = 4;
+        titleText = trimmed.substring(4);
+      } else if (trimmed.startsWith('## ')) {
+        order = 3;
+        titleText = trimmed.substring(3);
+      } else if (trimmed.startsWith('# ')) {
+        order = 2;
+        titleText = trimmed.substring(2);
+      }
+      
+      if (titleText) {
+        const key = `heading-${i}`;
+        elements.push(
+          <Title key={key} order={order} mt={order === 2 ? 'md' : 'sm'} mb="xs" c="blue.4">
+            {renderInlineContent(titleText)}
+          </Title>
+        );
+      }
+      i++;
+      continue;
+    }
+    
+    // 6. Custom Diagrams & Components
+    if (trimmed.startsWith('[Diagram:') && trimmed.endsWith(']')) {
+      const diagName = trimmed.substring(9, trimmed.length - 1).trim();
+      const key = `diagram-${i}`;
+      if (diagName === 'SolverPipeline') {
+        elements.push(<SolverPipelineDiagram key={key} />);
+      } else if (diagName === 'DoF') {
+        elements.push(<DegreesOfFreedomDiagram key={key} />);
+      } else if (diagName === 'DependentProperties') {
+        elements.push(<DependentPropertiesDiagram key={key} />);
+      } else if (diagName === 'GuessConvergence') {
+        elements.push(<GuessConvergenceDiagram key={key} />);
+      }
+      i++;
+      continue;
+    }
+    
+    if (trimmed.startsWith('[Component:') && trimmed.endsWith(']')) {
+      const compName = trimmed.substring(11, trimmed.length - 1).trim();
+      const key = `component-${i}`;
+      if (compName === 'UnitsReference') {
+        elements.push(<UnitsReference key={key} />);
+      }
+      i++;
+      continue;
+    }
+    
+    // 7. Regular Paragraph or spacer
+    if (trimmed === '') {
+      elements.push(<div key={`spacer-${i}`} style={{ height: '0.8em' }} />);
+    } else {
+      elements.push(
+        <Text key={`p-${i}`} size="md" style={{ lineHeight: 1.6 }} mb="sm">
+          {renderInlineContent(line)}
+        </Text>
+      );
+    }
+    i++;
+  }
+  
+  return <>{elements}</>;
 }
 
 export default function HelpPage() {
@@ -2073,2175 +2190,49 @@ export default function HelpPage() {
   }).filter(category => category.items.length > 0);
 
   const renderContent = () => {
-    switch (active) {
-      case 'started':
-        return (
-          <Stack gap="md">
-            <Title order={2} c="blue.4">Introduction & Solver Philosophy</Title>
-            <Text size="md" style={{ lineHeight: 1.6 }}>
-              Welcome to the <strong>frees</strong> (free solver) documentation. frees is a next-generation, declarative equation-solving environment designed for engineering problems, thermodynamics, and multi-domain simulation.
-            </Text>
-            <Text size="md" style={{ lineHeight: 1.6 }}>
-              Unlike traditional programming environments (like MATLAB scripts, Python, or C++), where you must explicitly isolate and rearrange equations to calculate unknowns (e.g. writing <code>x = f(y)</code>), frees is <strong>declarative</strong>. You input your equations exactly as they are written in engineering textbooks (e.g. <code>P * V = n * R * T</code>), and the compiler automatically identifies the unknowns, constructs the dependency graphs, groups them using Tarjan's strongly connected components algorithm, and solves them simultaneously.
-            </Text>
-
-            <Alert color="blue" title="Declarative Equations vs Sequential Code" mt="xs">
-              In frees, the order of equations does not matter. The equations <code>x + y = 5</code> and <code>y = 5 - x</code> are mathematically equivalent and parsed identically. The solver handles the symbolic and numerical heavy lifting.
-            </Alert>
-
-            <Title order={3} mt="sm">The frees Engineering Workflow</Title>
-            <SimpleGrid cols={{ base: 1, sm: 3 }} spacing="md">
-              <Card shadow="sm" padding="md" radius="md" withBorder bg="light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8))">
-                <Text fw={600} size="sm" c="blue.3">1. Describe System</Text>
-                <Text size="xs" c="dimmed" mt="xs">
-                  Write the governing algebraic, matrix, or differential equations in the code editor. Supply comments in curly braces.
-                </Text>
-              </Card>
-              <Card shadow="sm" padding="md" radius="md" withBorder bg="light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8))">
-                <Text fw={600} size="sm" c="indigo.3">2. Compile & Bound (F4)</Text>
-                <Text size="xs" c="dimmed" mt="xs">
-                  Validate degrees of freedom. Set physical lower/upper bounds and initial guesses in the <strong>Variable Info</strong> panel.
-                </Text>
-              </Card>
-              <Card shadow="sm" padding="md" radius="md" withBorder bg="light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8))">
-                <Text fw={600} size="sm" c="cyan.3">3. Solve & Sweeps (F2)</Text>
-                <Text size="xs" c="dimmed" mt="xs">
-                  Run iterations to convergence. Build a <strong>Parametric Table</strong> to sweep variables and output results in live plots.
-                </Text>
-              </Card>
-            </SimpleGrid>
-          </Stack>
-        );
-      case 'shortcuts':
-        return (
-          <Stack gap="md">
-            <Title order={2} c="blue.4">Keyboard Shortcuts (Hotkeys)</Title>
-            <Text>Use these keyboard shortcuts within the editor to accelerate your solving workflow:</Text>
-            <Table striped highlightOnHover withTableBorder>
-              <Table.Thead>
-                <Table.Tr>
-                  <Table.Th style={{ width: '180px' }}>Hotkey</Table.Th>
-                  <Table.Th>Action</Table.Th>
-                </Table.Tr>
-              </Table.Thead>
-              <Table.Tbody>
-                <Table.Tr>
-                  <Table.Td><Code>F2</Code> or <Code>Ctrl + Enter</Code></Table.Td>
-                  <Table.Td>Solve System (Run Newton-Raphson solver)</Table.Td>
-                </Table.Tr>
-                <Table.Tr>
-                  <Table.Td><Code>F4</Code> or <Code>Ctrl + K</Code></Table.Td>
-                  <Table.Td>Check Syntax (Verifies degrees of freedom and equation balance)</Table.Td>
-                </Table.Tr>
-                <Table.Tr>
-                  <Table.Td><Code>Ctrl + I</Code></Table.Td>
-                  <Table.Td>Open <strong>Variable Information</strong> panel</Table.Td>
-                </Table.Tr>
-                <Table.Tr>
-                  <Table.Td><Code>Ctrl + T</Code></Table.Td>
-                  <Table.Td>Open <strong>Parametric Table</strong> panel</Table.Td>
-                </Table.Tr>
-                <Table.Tr>
-                  <Table.Td><Code>F9</Code></Table.Td>
-                  <Table.Td>Solve selected block only (ignoring other lines)</Table.Td>
-                </Table.Tr>
-              </Table.Tbody>
-            </Table>
-          </Stack>
-        );
-      case 'reports':
-        return (
-          <Stack gap="md">
-            <Title order={2} c="blue.4">Markdown Reports & Inline Equations</Title>
-            <Text style={{ lineHeight: 1.6 }}>
-              frees supports mixing normal rich text with solver equations to build real-time engineering reports. The text editor acts as a markdown editor:
-            </Text>
-            <List spacing="xs">
-              <List.Item>Lines beginning with <code>{'//'}</code> or comments inside double quotes/braces are treated as narrative text.</List.Item>
-              <List.Item>All normal markdown headers (<code># Header</code>), bold, and italics are supported.</List.Item>
-              <List.Item>You can embed resolved variables directly in your report using inline syntax: <code>[varName]</code> or <code>[varName [units]]</code>. When solved, these are replaced by the computed numerical values accompanied by units.</List.Item>
-            </List>
-            <Paper withBorder p="md" bg="light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8))">
-              <Code block>{`// # Thermodynamic Heat Engine Analysis
-// The boiler operating pressure is P[1] = 8000 [kPa].
-// The computed thermal efficiency is [eta_th] %.`}</Code>
-            </Paper>
-          </Stack>
-        );
-      case 'digitizer-fit':
-        return (
-          <Stack gap="md">
-            <Title order={2} c="blue.4">Graph Digitizer & Curve Fitting Guide</Title>
-            <Text style={{ lineHeight: 1.6 }}>
-              frees includes an integrated <strong>Graph Digitizer</strong> and a <strong>Curve Fit Engine</strong> to allow working with digitized graph curves or internal tables directly in equations.
-            </Text>
-            <Title order={3}>Step-by-Step Digitization & Modeling Workflow</Title>
-            <List type="ordered" spacing="xs">
-              <List.Item>
-                <strong>Open the Graph Digitizer:</strong> Click the Graph Digitizer icon in the left toolbar. Upload your image (graph or chart).
-              </List.Item>
-              <List.Item>
-                <strong>Calibrate the Coordinate Axes:</strong> Define the X and Y axes by placing calibration marks on known grid lines (two on X-axis, two on Y-axis) and inputting their numerical values.
-              </List.Item>
-              <List.Item>
-                <strong>Digitize Points:</strong> Click points along the curve. The tool registers their coordinates automatically.
-              </List.Item>
-              <List.Item>
-                <strong>Save to Table:</strong> Export or save your digitized points to a table named e.g., <code>digitized_curve</code>.
-              </List.Item>
-              <List.Item>
-                <strong>Fit the Curve:</strong> Open the <strong>Curve Fit</strong> panel from the left toolbar. Select <code>digitized_curve</code>, specify the X and Y columns, choose a template (such as <code>Linear</code>, <code>Polynomial</code>, <code>Exponential</code>, or <code>Power</code>), and click <strong>Fit</strong>.
-              </List.Item>
-              <List.Item>
-                <strong>Use Equation in Editor:</strong> Copy the generated regression equation and paste it directly into your code. The compiler resolves the equation in the Newton solver loop.
-              </List.Item>
-            </List>
-
-            <Alert color="indigo" title="Unit Support in Curve Fit Equations">
-              You can append unit annotations directly to fitted equations in the editor to ensure unit consistency. E.g., <code>y [m] = 0.054 * x^2 + 1.2 * x + 0.35 [m]</code>.
-            </Alert>
-
-            <Text fw={600} size="sm">Example of Curve-Fitted Equation Usage:</Text>
-            <Paper withBorder p="xs" bg="light-dark(var(--mantine-color-gray-1), var(--mantine-color-dark-9))" radius="sm" style={{ position: 'relative' }}>
-              <CopyButton code={`{ Using a fitted curve in solver equations }
-flow_rate = 1.25 [m^3/s]
-head_loss [m] = -0.084 * flow_rate^2 + 1.54 * flow_rate + 0.12 [m]`} />
-              <Code block style={{ background: 'transparent' }}>
-                {`{ Using a fitted curve in solver equations }
-flow_rate = 1.25 [m^3/s]
-head_loss [m] = -0.084 * flow_rate^2 + 1.54 * flow_rate + 0.12 [m]`}
-              </Code>
-            </Paper>
-          </Stack>
-        );
-      case 'syntax':
-        return (
-          <Stack gap="md">
-            <Title order={2} c="blue.4">Equation Syntax & Rules</Title>
-            <Text>The frees compiler parses your code using the following rules:</Text>
-            <List spacing="xs" mb="sm">
-              <List.Item><strong>Equality:</strong> Use a single equal sign <Code>=</Code> for equations (e.g. <code>P * V = n * R * T</code>).</List.Item>
-              <List.Item><strong>Case Insensitivity:</strong> Variable names are case-insensitive. <code>Temp</code>, <code>TEMP</code>, and <code>temp</code> are the same variable.</List.Item>
-              <List.Item><strong>Comments:</strong> Use curly braces <code>{`{ comment }`}</code> or double quotes <code>"comment"</code> for inline comments. Standard double-slash <code>{'//'}</code> comments at the start of a line format the line as markdown text.</List.Item>
-              <List.Item><strong>Multiplication:</strong> Implicit multiplication is not allowed. Write <code>2 * x</code> instead of <code>2x</code>.</List.Item>
-              <List.Item><strong>Operators:</strong> Standard arithmetic operators <code>+</code>, <code>-</code>, <code>*</code>, <code>/</code>, and <code>^</code> (exponentiation) are fully supported.</List.Item>
-            </List>
-          </Stack>
-        );
-      case 'math-funcs':
-        return (
-          <Stack gap="md">
-            <Title order={2} c="blue.4">Built-in Mathematical Functions</Title>
-            <Text>frees supports a comprehensive set of scalar math functions. Standard and hyperbolic functions are fully differentiable:</Text>
-
-            <Title order={3}>Hyperbolic Functions</Title>
-            <FunctionRef
-              name="sinh / cosh / tanh"
-              desc="Evaluates hyperbolic sine, cosine, or tangent of an expression."
-              syntax={`y = sinh(x)
-y = cosh(x)
-y = tanh(x)`}
-              inputs={[{ name: "x", desc: "Angle in radians or dimensionless value" }]}
-              outputs={[{ name: "y", desc: "Resulting value" }]}
-              example={`x = 1.25
-y = sinh(x) + cosh(x)   { Equals exp(1.25) }`}
-            />
-            <FunctionRef
-              name="arcsinh / arccosh / arctanh"
-              desc="Evaluates inverse hyperbolic sine, cosine, or tangent of an expression."
-              syntax={`y = arcsinh(x)
-y = arccosh(x)
-y = arctanh(x)`}
-              inputs={[{ name: "x", desc: "Input scalar value (restrictions apply to domain of arccosh and arctanh)" }]}
-              outputs={[{ name: "y", desc: "Inverse hyperbolic value in radians" }]}
-              example={`x = 1.5
-y = arccosh(x)`}
-            />
-
-            <Title order={3}>Rounding & Integer Functions</Title>
-            <FunctionRef
-              name="round"
-              desc="Rounds a value to a specified number of decimal places."
-              syntax={`y = round(x, decimals)`}
-              inputs={[
-                { name: "x", desc: "Value to round" },
-                { name: "decimals", desc: "Integer number of decimal places to round to" }
-              ]}
-              outputs={[{ name: "y", desc: "Rounded value" }]}
-              example={`val = round(3.14159, 3)   { val = 3.142 }`}
-            />
-            <FunctionRef
-              name="floor / ceil / trunc / sign / step"
-              desc="Non-smooth arithmetic functions for discretization and stepping."
-              syntax={`y = floor(x)
-y = ceil(x)
-y = trunc(x)
-y = sign(x)
-y = step(x)`}
-              inputs={[{ name: "x", desc: "Scalar input expression" }]}
-              outputs={[{ name: "y", desc: "floor/ceil (rounded integer), trunc (discard decimals), sign (-1/0/1 depending on sign), step (1 if x >= 0, else 0)" }]}
-              example={`val1 = floor(2.7)   { 2 }
-val2 = ceil(2.1)    { 3 }
-val3 = step(0.5)    { 1 }
-val4 = sign(-15)    { -1 }`}
-            />
-
-            <Title order={3}>Conditional Selection & Series</Title>
-            <FunctionRef
-              name="If"
-              desc="Conditional expression evaluator. Selects a value depending on comparison."
-              syntax={`val = If(a, b, val_lt, val_eq, val_gt)`}
-              inputs={[
-                { name: "a", desc: "First expression to compare" },
-                { name: "b", desc: "Second expression to compare" },
-                { name: "val_lt", desc: "Returned value if a < b" },
-                { name: "val_eq", desc: "Returned value if a = b" },
-                { name: "val_gt", desc: "Returned value if a > b" }
-              ]}
-              outputs={[{ name: "val", desc: "The selected conditional value" }]}
-              example={`temp = 350 [K]
-k = If(temp, 300, 1.2, 1.5, 1.8)`}
-            />
-            <FunctionRef
-              name="Product"
-              desc="Evaluates product of a term series over an index range."
-              syntax={`y = Product(i, lower, upper, term)`}
-              inputs={[
-                { name: "i", desc: "Loop index variable name (e.g. i)" },
-                { name: "lower", desc: "Lower bound of loop (integer)" },
-                { name: "upper", desc: "Upper bound of loop (integer)" },
-                { name: "term", desc: "Expression containing the loop index i" }
-              ]}
-              outputs={[{ name: "y", desc: "Computed product" }]}
-              example={`val = Product(i, 1, 4, i^2)   { val = 1 * 4 * 9 * 16 = 576 }`}
-            />
-            <FunctionRef
-              name="Sum"
-              desc={
-                <>
-                  Evaluates the sum of a term over an integer index range: Σᵢ₌ₗₒwₑᵣᵘᵖᵖᵉʳ term(i).
-                  <br />
-                  For array aggregates you can also use the built-in <Code>sum(arr[1:N])</Code> slice syntax instead.
-                </>
-              }
-              syntax={`y = Sum(i, lower, upper, term)`}
-              inputs={[
-                { name: "i", desc: "Index variable name (e.g. i, k)" },
-                { name: "lower", desc: "Lower bound of summation (integer)" },
-                { name: "upper", desc: "Upper bound of summation (integer)" },
-                { name: "term", desc: "Expression to sum, typically referencing i" },
-              ]}
-              outputs={[{ name: "y", desc: "Scalar sum" }]}
-              example={`{ Sum of squares 1² + 2² + 3² + 4² = 30 }
-s = Sum(i, 1, 4, i^2)   { s = 30 }
-
-{ Array aggregate form }
-FOR k = 1 TO 5
-  v[k] = k * 2
-END
-total = sum(v[1:5])   { total = 30 }`}
-            />
-            <FunctionRef
-              name="average"
-              desc="Computes the arithmetic mean of two or more arguments. Pass individual scalars or use an array slice."
-              syntax={`m = average(a, b, c, …)`}
-              inputs={[
-                { name: "a, b, c, …", desc: "Two or more scalar values to average" },
-              ]}
-              outputs={[{ name: "m", desc: "Arithmetic mean of the arguments" }]}
-              example={`m = average(2, 4, 9)   { m = 5 }
-
-{ Array form }
-FOR i = 1 TO 4
-  x[i] = i^2
-END
-m2 = average(x[1], x[2], x[3], x[4])   { m2 = 7.5 }`}
-            />
-
-            <Title order={3}>Trigonometric & Inverse Trig</Title>
-            <Text size="sm" c="dimmed">
-              <code>sin</code>, <code>cos</code>, <code>tan</code> and inverses <code>arcsin</code>, <code>arccos</code>, <code>arctan</code> work in radians. <code>angledeg</code>/<code>angle</code> and the unit annotations help with degrees.
-            </Text>
-            <FunctionRef
-              name="atan2"
-              desc="Two-argument arctangent that returns the angle of the point (x, y) in the correct quadrant."
-              syntax={`theta = atan2(y, x)`}
-              inputs={[
-                { name: "y", desc: "Ordinate (numerator)" },
-                { name: "x", desc: "Abscissa (denominator)" }
-              ]}
-              outputs={[{ name: "theta", desc: "Angle in radians in (-pi, pi]" }]}
-              example={`theta = atan2(1, -1)   { = 2.356 rad (135 deg) }`}
-            />
-
-            <Title order={3}>Number Theory</Title>
-            <FunctionRef
-              name="gcd / lcm"
-              desc="Greatest common divisor and least common multiple of two integers (operands are truncated to whole numbers)."
-              syntax={`g = gcd(a, b)
-l = lcm(a, b)`}
-              inputs={[
-                { name: "a", desc: "First integer" },
-                { name: "b", desc: "Second integer" }
-              ]}
-              outputs={[{ name: "g / l", desc: "Greatest common divisor / least common multiple" }]}
-              example={`g = gcd(48, 36)   { 12 }
-l = lcm(4, 6)     { 12 }`}
-            />
-
-            <Title order={3}>Bitwise Operations</Title>
-            <Text size="sm" c="dimmed">
-              Operands are truncated to 64-bit integers before the operation; the result is returned as a number.
-            </Text>
-            <FunctionRef
-              name="BitAnd / BitOr / BitXor / BitNot"
-              desc="Bitwise AND, OR, XOR (two operands) and NOT (one operand)."
-              syntax={`y = BitAnd(a, b)
-y = BitOr(a, b)
-y = BitXor(a, b)
-y = BitNot(a)`}
-              inputs={[
-                { name: "a", desc: "First integer operand" },
-                { name: "b", desc: "Second integer operand (not used by BitNot)" }
-              ]}
-              outputs={[{ name: "y", desc: "Result of the bitwise operation" }]}
-              example={`y1 = BitAnd(12, 10)   { 8 }
-y2 = BitOr(12, 10)    { 14 }
-y3 = BitXor(12, 10)   { 6 }`}
-            />
-            <FunctionRef
-              name="BitShiftL / BitShiftR"
-              desc="Left and (arithmetic) right bit-shift of an integer by n bit positions."
-              syntax={`y = BitShiftL(a, n)
-y = BitShiftR(a, n)`}
-              inputs={[
-                { name: "a", desc: "Integer value to shift" },
-                { name: "n", desc: "Number of bit positions to shift" }
-              ]}
-              outputs={[{ name: "y", desc: "Shifted value (a << n or a >> n)" }]}
-              example={`y1 = BitShiftL(3, 4)    { 48 }
-y2 = BitShiftR(48, 2)   { 12 }`}
-            />
-
-            <Title order={3}>Base Conversion</Title>
-            <FunctionRef
-              name="BaseConvert"
-              desc="Converts a number written as a string in one base into its value in another base."
-              syntax={`y = BaseConvert(value$, fromBase, toBase)`}
-              inputs={[
-                { name: "value$", desc: "The number as a quoted string (e.g. 'FF')" },
-                { name: "fromBase", desc: "Base the string is written in (2–36)" },
-                { name: "toBase", desc: "Base to convert to (2–36)" }
-              ]}
-              outputs={[{ name: "y", desc: "The converted value" }]}
-              example={`y = BaseConvert('FF', 16, 10)   { 255 }`}
-            />
-          </Stack>
-        );
-      case 'special-funcs':
-        return (
-          <Stack gap="md">
-            <Title order={2} c="blue.4">Special & Statistical Functions</Title>
-            <Text>frees supports high-order Bessel functions and cumulative statistical distributions:</Text>
-
-            <Title order={3}>Bessel Functions</Title>
-            <FunctionRef
-              name="BesselK / BesselY"
-              desc="Modified Bessel function of the second kind (K_n(x)), and Bessel function of the second kind (Y_n(x))."
-              syntax={`y = BesselK(n, x)
-y = BesselY(n, x)`}
-              inputs={[
-                { name: "n", desc: "Order of the Bessel function (integer)" },
-                { name: "x", desc: "Evaluated variable coordinate (must be positive)" }
-              ]}
-              outputs={[{ name: "y", desc: "Bessel function value" }]}
-              example={`val = BesselK(1, 2.5)`}
-            />
-            <FunctionRef
-              name="Bessel Shortcuts (i0, j0, k0, y0, i1, j1, k1, y1)"
-              desc="Direct shortcut functions for Bessel functions of order 0 and 1."
-              syntax={`y = Bessel_j0(x)
-y = Bessel_k1(x)`}
-              inputs={[{ name: "x", desc: "Variable coordinate" }]}
-              outputs={[{ name: "y", desc: "Bessel function value" }]}
-              example={`y1 = Bessel_j0(1.5)
-y2 = Bessel_k0(2.0)`}
-            />
-
-            <Title order={3}>Gamma Functions</Title>
-            <FunctionRef
-              name="Gamma / LogGamma / Digamma"
-              desc="The gamma function Γ(x), its natural logarithm ln Γ(x), and the digamma function ψ(x) = d/dx ln Γ(x)."
-              syntax={`y = Gamma(x)
-y = LogGamma(x)
-y = Digamma(x)`}
-              inputs={[{ name: "x", desc: "Real argument" }]}
-              outputs={[{ name: "y", desc: "Function value" }]}
-              example={`g = Gamma(5)       { = 24 = 4! }
-lg = LogGamma(10)`}
-            />
-            <FunctionRef
-              name="Beta"
-              desc="The beta function B(a, b) = Γ(a)·Γ(b) / Γ(a+b)."
-              syntax={`y = Beta(a, b)`}
-              inputs={[
-                { name: "a", desc: "First shape parameter (> 0)" },
-                { name: "b", desc: "Second shape parameter (> 0)" }
-              ]}
-              outputs={[{ name: "y", desc: "Beta function value" }]}
-              example={`y = Beta(2, 3)   { = 1/12 }`}
-            />
-
-            <Title order={3}>Error Functions</Title>
-            <FunctionRef
-              name="Erf / Erfc / ErfInv"
-              desc="The error function erf(x), the complementary error function erfc(x) = 1 − erf(x), and the inverse error function."
-              syntax={`y = Erf(x)
-y = Erfc(x)
-x = ErfInv(y)`}
-              inputs={[{ name: "x / y", desc: "Argument (ErfInv expects a value in (-1, 1))" }]}
-              outputs={[{ name: "y / x", desc: "Function value" }]}
-              example={`a = Erf(1)        { 0.8427 }
-b = Erfc(1)       { 0.1573 }
-c = ErfInv(0.8427) { ≈ 1 }`}
-            />
-
-            <Title order={3}>Statistical & Probability Distributions</Title>
-            <FunctionRef
-              name="Chi_Square"
-              desc="Cumulative Chi-Square distribution function."
-              syntax={`y = Chi_Square(x, dof)`}
-              inputs={[
-                { name: "x", desc: "Chi-square statistic" },
-                { name: "dof", desc: "Degrees of freedom" }
-              ]}
-              outputs={[{ name: "y", desc: "Cumulative probability" }]}
-              example={`prob = Chi_Square(5.99, 2)`}
-            />
-            <FunctionRef
-              name="Probability"
-              desc="Normal cumulative distribution function."
-              syntax={`y = Probability(x, mean, stddev)`}
-              inputs={[
-                { name: "x", desc: "Evaluated point" },
-                { name: "mean", desc: "Mean of the normal distribution" },
-                { name: "stddev", desc: "Standard deviation of the distribution" }
-              ]}
-              outputs={[{ name: "y", desc: "Cumulative probability" }]}
-              example={`prob = Probability(85, 80, 5)   { prob = 0.8413 }`}
-            />
-            <FunctionRef
-              name="Random"
-              desc="Uniformly distributed pseudo-random number in the range [a, b]. An optional third argument fixes the seed for reproducible runs."
-              syntax={`y = Random(a, b)
-y = Random(a, b, seed)`}
-              inputs={[
-                { name: "a", desc: "Lower bound of the range" },
-                { name: "b", desc: "Upper bound of the range" },
-                { name: "seed", desc: "Optional integer seed for repeatable sequences" }
-              ]}
-              outputs={[{ name: "y", desc: "Random value uniformly distributed in [a, b]" }]}
-              example={`val = Random(0, 1)
-fixed = Random(10, 20, 42)`}
-            />
-            <FunctionRef
-              name="RandG"
-              desc="Gaussian (normally distributed) pseudo-random number with the given mean and standard deviation. An optional third argument fixes the seed."
-              syntax={`y = RandG(mean, stddev)
-y = RandG(mean, stddev, seed)`}
-              inputs={[
-                { name: "mean", desc: "Mean of the normal distribution" },
-                { name: "stddev", desc: "Standard deviation of the distribution" },
-                { name: "seed", desc: "Optional integer seed for repeatable sequences" }
-              ]}
-              outputs={[{ name: "y", desc: "Normally distributed random value" }]}
-              example={`noise = RandG(0, 0.5)`}
-            />
-          </Stack>
-        );
-      case 'variables':
-        return (
-          <Stack gap="md">
-            <Title order={2} c="blue.4">Variables, Guesses & Bounds</Title>
-            <Text style={{ lineHeight: 1.6 }}>
-              Because frees resolves equations using iterative numerical methods (such as the Newton-Raphson algorithm with step-halving), configuring initial guess values and bounds is key to achieving stable convergence in complex systems.
-            </Text>
-            <Title order={3}>Variable Information Grid</Title>
-            <Text>
-              Access the <strong>Variable Info</strong> window (F4 then Ctrl+I) to set:
-            </Text>
-            <List spacing="xs">
-              <List.Item><strong>Initial Guess:</strong> The starting value for solver iteration. Supply physical estimations (e.g. 300 K for room temp, 101325 Pa for atmospheric pressure) rather than leaving the default 1.0.</List.Item>
-              <List.Item><strong>Bounds:</strong> Clamps the solver steps. Always set lower bounds to 0 for variables that must remain positive (such as mass flows, absolute pressures, and Kelvin temperatures) to prevent unphysical solver states.</List.Item>
-              <List.Item><strong>Units:</strong> Annotate display units for formatted reports.</List.Item>
-            </List>
-          </Stack>
-        );
-      case 'uncertainty':
-        return (
-          <Stack gap="md">
-            <Title order={2} c="blue.4">Uncertainty Propagation Engine</Title>
-            <Text style={{ lineHeight: 1.6 }}>
-              frees incorporates a first-order uncertainty-propagation engine. When uncertainties are supplied for independent variables, the solver automatically computes the propagated uncertainties of all dependent variables using numerical Jacobians and SVD linear algebra.
-            </Text>
-            <Title order={3}>Specifying Uncertainties</Title>
-            <Text>You can specify uncertainties in two ways:</Text>
-            <List spacing="xs">
-              <List.Item>
-                <strong>Variable Information Window:</strong> Input absolute or relative percentages (e.g. <code>±0.05</code> or <code>±2%</code>) in the Uncertainty column of the variable grid.
-              </List.Item>
-              <List.Item>
-                <strong>Code Declaration:</strong> Declare uncertainties directly using the <code>UncertaintyOf()</code> accessor function:
-              </List.Item>
-            </List>
-            <Paper withBorder p="md" bg="light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8))" mb="md">
-              <Code block>{`P = 100000 [Pa]
-T = 300 [K]
-
-{ Explicit uncertainties in code }
-UncertaintyOf(P) = 500 [Pa]
-UncertaintyOf(T) = 2.0 [K]`}</Code>
-            </Paper>
-
-            <Title order={3}>Uncertainty Propagation Function</Title>
-            <FunctionRef
-              name="UncertaintyOf"
-              desc="Queries the computed uncertainty value of a solved variable."
-              syntax={`u = UncertaintyOf(x)`}
-              inputs={[{ name: "x", desc: "Target solved variable" }]}
-              outputs={[{ name: "u", desc: "Computed absolute uncertainty value of the variable" }]}
-              example={`unc_P = UncertaintyOf(P)`}
-            />
-          </Stack>
-        );
-      case 'units':
-        return (
-          <Stack gap="md">
-            <Title order={2} c="blue.4">Units & Dimensional Consistency</Title>
-            <Text style={{ lineHeight: 1.6 }}>
-              frees automatically checks equations for dimensional consistency. All calculations run strictly in SI base units. Annotated values are converted at compile-time:
-            </Text>
-            <Paper withBorder p="md" bg="light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8))">
-              <Code block>{`P = 140 [kPa]    { Converted to 140000 Pa }
-m = 120 [lb]     { Converted to 54.43 kg }`}</Code>
-            </Paper>
-            <Title order={3} mt="sm">The Convert() Function</Title>
-            <Text>Multiply variables by <code>Convert(From, To)</code> to apply factor conversion:</Text>
-            <Code block>{`area_in2 = area_ft2 * Convert(ft^2, in^2)`}</Code>
-
-            <Title order={3} mt="sm">Temperature Conversion</Title>
-            <Text>
-              Because temperature scales differ by an offset (not just a factor), use <code>ConvertTemp(From, To, value)</code> instead of <code>Convert</code>. Scales are <code>C</code>, <code>K</code>, <code>F</code>, and <code>R</code> (Rankine).
-            </Text>
-            <FunctionRef
-              name="ConvertTemp"
-              desc="Converts a temperature value between scales, accounting for both scale factor and offset."
-              syntax={`T_out = ConvertTemp(From, To, value)`}
-              inputs={[
-                { name: "From", desc: "Source scale: C, K, F, or R" },
-                { name: "To", desc: "Target scale: C, K, F, or R" },
-                { name: "value", desc: "Temperature value in the source scale" }
-              ]}
-              outputs={[{ name: "T_out", desc: "Temperature in the target scale" }]}
-              example={`T_f = ConvertTemp(C, F, 100)   { 212 }
-T_k = ConvertTemp(F, K, 32)    { 273.15 }`}
-            />
-            <UnitsReference />
-          </Stack>
-        );
-      case 'plot-code':
-        return (
-          <Stack gap="md">
-            <Title order={2} c="blue.4">Plots in Code (PLOT)</Title>
-            <Text style={{ lineHeight: 1.6 }}>
-              Besides building plots in the Plots / Thermodynamics windows, you can declare a graph directly in the equation text with a <code>PLOT 'name' … END</code> block. Each line is a <code>key = value</code> attribute. The plot is created automatically on every Check / Solve, appears in the matching plot window, and is resolved by a <code>[Graph="name"]</code> tag in the formatted report. Code-defined plots are regenerated from the text each solve and are <em>not</em> saved with the project (edit them in code, not the GUI).
-            </Text>
-            <Text style={{ lineHeight: 1.6 }}>
-              Mind the quotes: inside the <code>PLOT</code> block, strings use <strong>single quotes</strong> (<code>'T-s'</code>) — the equation grammar treats double quotes as comments. The <code>[Graph="name"]</code> report tag, however, uses <strong>double quotes</strong> so the line stays prose rather than being parsed as an equation. The leading string is the plot name; <code>kind</code> is <code>xy</code> (default), <code>property</code>, or <code>psychro</code>.
-            </Text>
-
-            <Title order={3}>X-Y plot of solved arrays</Title>
-            <Paper withBorder p="md" bg="light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8))">
-              <Code block>{`N = 5
-FOR i = 1 TO N
-  speed[i] = 10*i
-  distance[i] = 0.5*speed[i]^2
-END
-
-PLOT 'Speed vs Distance'
-  kind = xy
-  x = speed[1:N]
-  y = distance[1:N]
-  type = line
-  xlabel = 'Speed [m/s]'
-  ylabel = 'Distance [m]'
-END
-
-[Graph="Speed vs Distance"] Stopping distance versus speed [/Graph]`}</Code>
-            </Paper>
-            <Text size="sm" c="dimmed" style={{ lineHeight: 1.6 }}>
-              XY attributes: <code>x</code>, <code>y</code> (comma-separated for multiple series), <code>y2</code> (secondary axis), <code>type</code> (<code>line</code>, <code>bar</code>, <code>scatter</code>, <code>pie</code>, <code>histogram</code>), <code>z</code>, <code>size</code>. Data comes from the parametric table when present, otherwise from solved array variables.
-            </Text>
-
-            <Title order={3}>Property diagram with state overlay</Title>
-            <Paper withBorder p="md" bg="light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8))">
-              <Code block>{`PLOT 'Rankine T-s'
-  kind = property
-  fluid = Water
-  diagram = 'T-s'
-  overlaystates = true
-  connectstates = true
-END
-
-[Graph="Rankine T-s"] Rankine cycle on a T-s diagram [/Graph]`}</Code>
-            </Paper>
-            <Text size="sm" c="dimmed" style={{ lineHeight: 1.6 }}>
-              Property attributes: <code>fluid</code>, <code>diagram</code> (<code>'T-s'</code>, <code>'P-h'</code>, <code>'P-v'</code>, <code>'T-v'</code>, <code>'h-s'</code>, <code>'P-T'</code>), and the booleans <code>quality</code>, <code>isolines</code>, <code>overlaystates</code>, <code>connectstates</code>, <code>closecycle</code>. Psychrometric charts use <code>kind = psychro</code> with <code>pressure</code>, <code>tmin</code>, <code>tmax</code>, <code>wetbulb</code>, <code>enthalpy</code>, <code>volume</code>. All kinds accept the shared <code>title</code>, <code>xlabel</code>, <code>ylabel</code>, <code>xlog</code>/<code>ylog</code>, <code>grid</code>, <code>legend</code>, <code>xmin</code>/<code>xmax</code>/<code>ymin</code>/<code>ymax</code> format options.
-            </Text>
-          </Stack>
-        );
-      case 'state-tables':
-        return (
-          <Stack gap="md">
-            <Title order={2} c="blue.4">Fluid State Tables (STATE TABLE)</Title>
-            <Text style={{ lineHeight: 1.6 }}>
-              A <code>STATE TABLE name(var1, var2, …) … END</code> block declares which state-point variables belong to one circuit and the fluid those states use. Like <code>PARAMETRIC</code> and <code>PLOT</code> blocks it adds no equations to the system — it only groups states for the <strong>Fluid States</strong> window, the "Fill Missing Values" step, and property/psychrometric overlays. Declare the fluid with a <code>FLUID = …</code> attribute line inside the block.
-            </Text>
-            <Paper withBorder p="md" bg="light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8))">
-              <Code block>{`STATE TABLE WaterLoop(Pw_1, Tw_1, hw_1, Pw_2, Tw_2, hw_2)
-  FLUID = Water
-END
-
-STATE TABLE RefrigerantLoop(Pref_1, xref_1, href_1, Pref_2, Tref_2)
-  FLUID = R134a
-END`}</Code>
-            </Paper>
-            <Title order={3}>Why declare them explicitly?</Title>
-            <Text style={{ lineHeight: 1.6 }}>
-              For a single fluid you can still just name variables <code>h1</code>, <code>s1</code>, <code>T[2]</code> and they are auto-detected. But a plant with several fluids (e.g. Water, R134a and Air) or two separate water circuits needs explicit blocks: each block is grouped <strong>independently and fluid-aware</strong>, so a Water circuit's <code>P1</code> and an R134a circuit's <code>P1</code> never collide, and missing properties are filled with the correct fluid per circuit.
-            </Text>
-            <Title order={3}>Variable naming</Title>
-            <Text style={{ lineHeight: 1.6 }}>
-              Inside a block, each variable is read as <code>&lt;property&gt;&lt;circuit-tag&gt;&lt;index&gt;</code>: a leading property symbol (<code>P</code>, <code>T</code>, <code>h</code>, <code>s</code>, <code>v</code>, <code>u</code>, <code>x</code>, <code>rho</code>), an optional circuit tag, then the state index. So <code>Pw_1</code> is pressure of water state&nbsp;1, <code>Tref2</code> is temperature of the refrigerant state&nbsp;2. The tag is preserved when "Fill Missing Values" writes back computed properties (e.g. <code>hw_1</code>, <code>sw_1</code>). Both <code>name_1</code> and <code>name[1]</code> index styles work.
-            </Text>
-            <Title order={3}>Filling and plotting</Title>
-            <Text style={{ lineHeight: 1.6 }}>
-              After Solve, the <strong>Fluid States</strong> window shows one labelled table per declared circuit (badged with its fluid) and they appear in the left <strong>Tables</strong> menu. Click <strong>Fill Missing Values</strong> to complete each state (s, v, x, …) from CoolProp using that circuit's fluid. In a property or psychrometric plot's configuration, the <strong>State table (circuit)</strong> selector overlays just that circuit's states — and for property diagrams it also adopts the circuit's fluid.
-            </Text>
-            <Text size="sm" c="dimmed" style={{ lineHeight: 1.6 }}>
-              See the <strong>Multi-Fluid State Tables</strong> example (File → Open Example) for a complete two-circuit model.
-            </Text>
-          </Stack>
-        );
-      case 'arrays':
-        return (
-          <Stack gap="md">
-            <Title order={2} c="blue.4">Arrays & For Loops</Title>
-            <Text style={{ lineHeight: 1.6 }}>
-              Arrays are represented using indices inside square brackets (e.g. <code>T[1]</code>, <code>P[5]</code>). You can generate repetitive equations using the <code>FOR</code> loop block:
-            </Text>
-            <Paper withBorder p="md" bg="light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8))">
-              <Code block>{`FOR i = 1 TO 3
-  h[i] = Enthalpy(Water, T=T[i], P=P[i])
-END`}</Code>
-            </Paper>
-            
-            <Title order={3}>Array Helper Functions</Title>
-            <FunctionRef
-              name="ArrayElmt"
-              desc="Retrieves the value of an array element at a dynamic index."
-              syntax={`val = ArrayElmt(array[1:N], index)`}
-              inputs={[
-                { name: "array[1:N]", desc: "Reference to the array name" },
-                { name: "index", desc: "Dynamic index expression to extract" }
-              ]}
-              outputs={[{ name: "val", desc: "Value at the selected index" }]}
-              example={`idx = 3
-val = ArrayElmt(T[1:10], idx)   { Equals T[3] }`}
-            />
-          </Stack>
-        );
-      case 'chemistry':
-        return (
-          <Stack gap="md">
-            <Title order={2} c="blue.4">Chemistry & Combustion</Title>
-            <Text style={{ lineHeight: 1.6 }}>
-              frees provides three built-in functions for chemical species analysis: molar mass from the periodic table, heating values from formation enthalpies, and stoichiometric air-fuel ratios for hydrocarbon combustion. These are backed by the same tables used by the thermophysical property engine.
-            </Text>
-
-            <FunctionRef
-              name="MolarMass"
-              syntax={`M = MolarMass(species)`}
-              desc={
-                <>
-                  Returns the molar mass (kg/mol) of a substance. Accepts three kinds of input:
-                  <List spacing={4} size="sm" mt="xs">
-                    <List.Item><strong>CoolProp fluid names</strong> — e.g. <Code>Water</Code>, <Code>CarbonDioxide</Code>, <Code>Nitrogen</Code></List.Item>
-                    <List.Item><strong>NASA ideal-gas species</strong> — e.g. <Code>CO2</Code>, <Code>N2</Code>, <Code>O2</Code>, <Code>CH4</Code></List.Item>
-                    <List.Item><strong>Arbitrary chemical formulas</strong> — e.g. <Code>C8H18</Code>, <Code>C2H5OH</Code>. Formulas are <em>case-sensitive</em> (element symbols must be correctly capitalised). Quote formulas that contain parentheses: <Code>{'\'Ca(OH)2\''}</Code></List.Item>
-                  </List>
-                </>
-              }
-              inputs={[
-                { name: "species", desc: "Fluid name, ideal-gas species symbol, or chemical formula (case-sensitive; quote ones with parentheses)" },
-              ]}
-              outputs={[{ name: "M", desc: "Molar mass in kg/mol" }]}
-              example={`M_water  = MolarMass(Water)        { 0.018015 kg/mol }
-M_co2    = MolarMass(CO2)           { 0.044010 kg/mol }
-M_octane = MolarMass(C8H18)         { 0.11423  kg/mol }
-M_CaOH2  = MolarMass('Ca(OH)2')    { 0.07409  kg/mol }`}
-            />
-
-            <FunctionRef
-              name="HeatingValue"
-              syntax={`hv = HeatingValue(fuel, 'LHV')`}
-              desc={
-                <>
-                  Returns the heating value (J/kg) of a hydrocarbon or alcohol fuel formula.
-                  <List spacing={4} size="sm" mt="xs">
-                    <List.Item><Code>'LHV'</Code> — lower heating value; product water leaves as vapour</List.Item>
-                    <List.Item><Code>'HHV'</Code> — higher heating value; product water condenses to liquid</List.Item>
-                  </List>
-                  Computed from tabulated formation enthalpies and the stoichiometric combustion reaction CₓHᵧOᵤ + O₂ → CO₂ + H₂O.
-                </>
-              }
-              inputs={[
-                { name: "fuel", desc: "Fuel formula: CH4, C3H8, C8H18, C2H5OH, …" },
-                { name: "'LHV' or 'HHV'", desc: "Heating value convention (string literal)" },
-              ]}
-              outputs={[{ name: "hv", desc: "Heating value in J/kg" }]}
-              example={`LHV_methane  = HeatingValue(CH4,   'LHV')   { ~50.0 MJ/kg }
-HHV_methane  = HeatingValue(CH4,   'HHV')   { ~55.5 MJ/kg }
-LHV_octane   = HeatingValue(C8H18, 'LHV')   { ~44.4 MJ/kg }
-LHV_ethanol  = HeatingValue(C2H5OH,'LHV')   { ~26.8 MJ/kg }`}
-            />
-
-            <FunctionRef
-              name="StoichAFR"
-              syntax={`afr = StoichAFR(fuel)`}
-              desc="Returns the stoichiometric air-fuel ratio (mass of air / mass of fuel) for complete combustion of a CₓHᵧOᵤ fuel in air. Useful for equivalence-ratio calculations and emissions analysis."
-              inputs={[
-                { name: "fuel", desc: "Fuel formula: CH4, C8H18, C2H5OH, C3H8, …" },
-              ]}
-              outputs={[{ name: "afr", desc: "Stoichiometric air-fuel ratio (dimensionless, mass basis)" }]}
-              example={`AFR_ch4   = StoichAFR(CH4)     { ~17.2 }
-AFR_c8h18 = StoichAFR(C8H18)   { ~15.0 }
-phi = 0.85   { equivalence ratio }
-actual_AFR = AFR_c8h18 / phi`}
-            />
-
-            <Alert color="blue" title="Also in Fluid Properties" mt="xs">
-              <Code>MolarMass</Code>, <Code>HeatingValue</Code>, and <Code>StoichAFR</Code> are also documented in the <strong>Fluid Properties (CoolProp & Gas)</strong> section, since <Code>MolarMass</Code> accepts CoolProp fluid names as well as chemical formulas.
-            </Alert>
-
-            <Title order={3} mt="md">Related Examples</Title>
-            <Group gap="xs" mt="xs">
-              <Badge variant="light" color="teal">Sounding Rocket to the Kármán Line</Badge>
-              <Badge variant="light" color="teal">Chemical: Coupled Reforming + WGS</Badge>
-            </Group>
-            <Text size="sm" c="dimmed">Open the <strong>Engineering Examples Library</strong> (Case Studies section) and search for these titles.</Text>
-          </Stack>
-        );
-      case 'complex':
-        return (
-          <Stack gap="md">
-            <Title order={2} c="blue.4">Complex Numbers & Helpers</Title>
-            <Text style={{ lineHeight: 1.6 }}>
-              frees supports complex arithmetic. Complex variables are declared by matching components ending in <code>_r</code> (real) and <code>_i</code> (imaginary), or using imaginary literals ending in <code>i</code> or <code>j</code>:
-            </Text>
-            <Paper withBorder p="md" bg="light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8))" mb="md">
-              <Code block>{`z1 = 3 + 4i
-z2 = 5 - 2j
-z3 = z1 * z2`}</Code>
-            </Paper>
-
-            <Title order={3}>Complex Numbers Helper Functions</Title>
-            <FunctionRef
-              name="Conj"
-              desc="Computes the complex conjugate of a complex number."
-              syntax={`z_conj = Conj(z)`}
-              inputs={[{ name: "z", desc: "Complex number variable or expression" }]}
-              outputs={[{ name: "z_conj", desc: "Conjugate complex number" }]}
-              example={`z = 3 + 4i
-z_c = Conj(z)   { z_c = 3 - 4i }`}
-            />
-            <FunctionRef
-              name="Magnitude"
-              desc="Computes the absolute value/magnitude of a complex number or phasor."
-              syntax={`mag = Magnitude(z)`}
-              inputs={[{ name: "z", desc: "Complex expression" }]}
-              outputs={[{ name: "mag", desc: "Scalar magnitude value" }]}
-              example={`z = 3 + 4i
-r = Magnitude(z)   { r = 5.0 }`}
-            />
-            <FunctionRef
-              name="Angle / AngleRad / AngleDeg"
-              desc="Computes phasor angle of a complex number in radians or degrees."
-              syntax={`theta = Angle(z)
-theta_rad = AngleRad(z)
-theta_deg = AngleDeg(z)`}
-              inputs={[{ name: "z", desc: "Complex expression" }]}
-              outputs={[{ name: "theta", desc: "Phasor angle" }]}
-              example={`z = 1 + 1i
-phi = AngleDeg(z)   { phi = 45.0 }`}
-            />
-            <FunctionRef
-              name="Cis"
-              desc="Helper to declare polar phasor using Euler's formula: cos(theta) + i*sin(theta)."
-              syntax={`z = mag * Cis(theta)`}
-              inputs={[{ name: "theta", desc: "Angle in radians" }]}
-              outputs={[{ name: "z", desc: "Unit complex phasor" }]}
-              example={`z = 5 * Cis(pi#/4)`}
-            />
-          </Stack>
-        );
-      case 'strings':
-        return (
-          <Stack gap="md">
-            <Title order={2} c="blue.4">String Variables & Functions</Title>
-            <Text style={{ lineHeight: 1.6 }}>
-              String variables are declared with a trailing dollar sign (e.g. <code>fluidName$</code>, <code>msg$</code>). String constants can be enclosed in single quotes.
-            </Text>
-
-            <Title order={3}>String Manipulation Functions</Title>
-            <FunctionRef
-              name="Concat$"
-              desc="Concatenates two strings together."
-              syntax={`out$ = Concat$(str1$, str2$)`}
-              inputs={[
-                { name: "str1$", desc: "First string" },
-                { name: "str2$", desc: "Second string" }
-              ]}
-              outputs={[{ name: "out$", desc: "Combined string" }]}
-              example={`msg$ = Concat$('Fluid is ', 'Water')`}
-            />
-            <FunctionRef
-              name="Copy$"
-              desc="Extracts a substring from a string."
-              syntax={`out$ = Copy$(str$, start, len)`}
-              inputs={[
-                { name: "str$", desc: "Source string" },
-                { name: "start", desc: "1-based starting character index" },
-                { name: "len", desc: "Length of substring to copy" }
-              ]}
-              outputs={[{ name: "out$", desc: "Copied substring" }]}
-              example={`s$ = Copy$('R134a', 2, 3)   { s$ = '134' }`}
-            />
-            <FunctionRef
-              name="Lowercase$ / Uppercase$ / Trim$"
-              desc="Modifies string case and trims whitespaces."
-              syntax={`out$ = Lowercase$(str$)
-out$ = Uppercase$(str$)
-out$ = Trim$(str$)`}
-              inputs={[{ name: "str$", desc: "Input string" }]}
-              outputs={[{ name: "out$", desc: "Transformed string" }]}
-              example={`s$ = Lowercase$('Water')   { s$ = 'water' }`}
-            />
-            <FunctionRef
-              name="StringLen / StringPos / StringVal / String$"
-              desc="Length, find substring index, convert string to value, and convert value to string."
-              syntax={`len = StringLen(str$)
-pos = StringPos(str$, sub$)
-val = StringVal(str$)
-out$ = String$(val)`}
-              inputs={[
-                { name: "str$", desc: "Target string or variable" },
-                { name: "sub$", desc: "Substring to search for in StringPos" }
-              ]}
-              outputs={[{ name: "len/pos/val/out$", desc: "Resulting metric or value" }]}
-              example={`len = StringLen('Ammonia')       { 7 }
-pos = StringPos('R134a', '134')     { 2 }
-v = StringVal('101.3')             { 101.3 }
-s$ = String$(15.5)                 { '15.5' }`}
-            />
-
-            <Title order={3}>Environment & Environment Info Functions</Title>
-            <FunctionRef
-              name="Date$ / Time$ / TimeStamp$"
-              desc="Retrieves the current system date, time, or timestamp."
-              syntax={`d$ = Date$()
-t$ = Time$()
-ts$ = TimeStamp$()`}
-              inputs={[]}
-              outputs={[{ name: "d$/t$/ts$", desc: "Date, Time or Timestamp string" }]}
-              example={`current_date$ = Date$()`}
-            />
-            <FunctionRef
-              name="UnitSystem$ / UnitsOf$"
-              desc="Queries active solver unit system settings or the units of a specific variable."
-              syntax={`us$ = UnitSystem$()
-u$ = UnitsOf$(var)`}
-              inputs={[{ name: "var", desc: "Variable name to query units of" }]}
-              outputs={[{ name: "us$/u$", desc: "Unit system settings description or variable unit string" }]}
-              example={`p_unit$ = UnitsOf$(P)`}
-            />
-          </Stack>
-        );
-      case 'matrices-decl':
-        return (
-          <Stack gap="md">
-            <Title order={2} c="blue.4">Declaring Matrices & Vectors</Title>
-            <Text style={{ lineHeight: 1.6 }}>
-              Matrix and vector objects are fully supported. Since the solver flattens matrix equations to element-wise scalar equations, they run fast and support full automatic differentiation.
-            </Text>
-            <Title order={3}>MATLAB-Style Matrix Literals</Title>
-            <Text>Use brackets to declare row vectors, column vectors, and 2D matrices:</Text>
-            <List spacing="xs" mb="sm">
-              <List.Item><strong>Row Vector:</strong> Comma or space separated elements: <code>v = [1, 2, 3]</code> or <code>v = [1 2 3]</code> (1x3 matrix)</List.Item>
-              <List.Item><strong>Column Vector:</strong> Semicolon separated elements: <code>v = [1; 2; 3]</code> (3x1 matrix)</List.Item>
-              <List.Item><strong>2D Matrix:</strong> Rows separated by semicolons, elements separated by spaces/commas: <code>A = [1 2; 3 4]</code> (2x2 matrix)</List.Item>
-              <List.Item><strong>Units:</strong> a trailing unit after the bracket applies to every element: <code>c = [2 3 4 5 6] [kg]</code>, <code>A = [1 2; 3 4] [m]</code></List.Item>
-            </List>
-            <Text mt="xs">
-              You can use <strong>bare names</strong> (MATLAB style) — <code>A = [3 4 5; 1 2 6; 7 8 1]</code> creates the matrix and <code>SolveLinear(A, b)</code>, <code>inv(A)</code>, <code>A * b</code> all accept it directly — or the explicit indexed form <code>A[1:3, 1:3] = …</code> when you want to address elements.
-            </Text>
-            <Text mt="xs"><strong>Generators &amp; aliases:</strong></Text>
-            <List size="sm" withPadding>
-              <List.Item><code>zeros(m, n)</code>, <code>ones(m, n)</code> — m×n of 0 / 1 (one arg ⇒ square)</List.Item>
-              <List.Item><code>eye(n)</code> / <code>identity(n)</code> — n×n identity</List.Item>
-              <List.Item><code>diag([a; b; c])</code> — diagonal matrix; <code>diag(A)</code> — extract diagonal</List.Item>
-              <List.Item><code>linspace(a, b, n)</code> — n linearly spaced values from a to b</List.Item>
-              <List.Item><code>inv(A)</code> = Inverse, <code>det(A)</code> = Determinant (MATLAB aliases)</List.Item>
-            </List>
-            <Paper withBorder p="md" bg="light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8))">
-              <Code block>{`A = [3 4 5; 1 2 6; 7 8 1]
-b = [2; 3; 1]
-x = SolveLinear(A, b)      { bare names — no [1:3] needed }
-Ai = inv(A)
-I = eye(3)
-g = linspace(0, 10, 5)`}</Code>
-            </Paper>
-            <Text size="xs" c="dimmed" mt="xs">
-              Note: frees is a declarative solver, so it uses bracket indexing with ranges (<code>A[i, j]</code>, <code>A[1:n]</code>) rather than MATLAB's parenthesis indexing and <code>A(:, 2)</code> / <code>end</code> slicing.
-            </Text>
-          </Stack>
-        );
-      case 'matrices-ops':
-        return (
-          <Stack gap="md">
-            <Title order={2} c="blue.4">Matrix Operators</Title>
-            <Text>frees compiles standard algebraic operators for matrices:</Text>
-            <Table striped highlightOnHover withTableBorder mb="md">
-              <Table.Thead>
-                <Table.Tr>
-                  <Table.Th style={{ width: '150px' }}>Operator</Table.Th>
-                  <Table.Th>Description</Table.Th>
-                  <Table.Th>Example</Table.Th>
-                </Table.Tr>
-              </Table.Thead>
-              <Table.Tbody>
-                <Table.Tr>
-                  <Table.Td><Code>+</Code>, <Code>-</Code></Table.Td>
-                  <Table.Td>Element-wise addition/subtraction or scalar shift</Table.Td>
-                  <Table.Td><Code>C = A + B</Code></Table.Td>
-                </Table.Tr>
-                <Table.Tr>
-                  <Table.Td><Code>*</Code></Table.Td>
-                  <Table.Td>Standard matrix multiplication or scalar product</Table.Td>
-                  <Table.Td><Code>y[1:2] = A[1:2, 1:2] * x[1:2]</Code></Table.Td>
-                </Table.Tr>
-                <Table.Tr>
-                  <Table.Td><Code>'</Code> (single quote)</Table.Td>
-                  <Table.Td>Suffix transpose operator (transposes matrix/vector)</Table.Td>
-                  <Table.Td><Code>B = A'</Code></Table.Td>
-                </Table.Tr>
-                <Table.Tr>
-                  <Table.Td><Code>\\\\</Code> (backslash)</Table.Td>
-                  <Table.Td>Backslash solver (solves $A \\\\cdot x = b$ for $x$)</Table.Td>
-                  <Table.Td><Code>x = A \\\\ b</Code></Table.Td>
-                </Table.Tr>
-                <Table.Tr>
-                  <Table.Td><Code>.*</Code>, <Code>./</Code>, <Code>.\\\\</Code>, <Code>.^</Code></Table.Td>
-                  <Table.Td>MATLAB-style <strong>element-wise</strong> multiply, divide, left-divide, and power. A scalar on either side broadcasts to every element.</Table.Td>
-                  <Table.Td><Code>C = A .* B</Code>, <Code>C = A .^ 2</Code></Table.Td>
-                </Table.Tr>
-              </Table.Tbody>
-            </Table>
-            <Alert color="blue" variant="light" title="Element-wise vs. matrix operators">
-              <Text size="sm">
-                <Code>A * B</Code> is matrix multiplication (inner dimensions must
-                agree), while <Code>A .* B</Code> multiplies element-by-element
-                (shapes must match, or one side is a scalar). The same holds for{' '}
-                <Code>./</Code> and <Code>.^</Code>. Left-divide <Code>A .\\\\ B</Code>{' '}
-                is element-wise <Code>B ./ A</Code>.
-              </Text>
-            </Alert>
-            <Alert color="blue" title="Transpose and Backslash Syntax Note">
-              The suffix transpose is written as a single quote after a matrix: <code>A'</code>. Backslash is entered as double-backslash <code>\\\\</code> in the editor to resolve correctly.
-            </Alert>
-          </Stack>
-        );
-      case 'matrices-blas':
-        return (
-          <Stack gap="md">
-            <Title order={2} c="blue.4">OpenBLAS Algebra Functions Reference</Title>
-            <Text style={{ lineHeight: 1.5 }}>
-              frees supports native Basic Linear Algebra Subprograms (BLAS) Level 1, 2, and 3 routines. These are compiled symbolically, allowing constraints to propagate through linear algebra systems seamlessly.
-            </Text>
-
-            <Title order={3} mt="sm">Level 1 BLAS (Vector-Vector)</Title>
-            <FunctionRef
-              name="axpy"
-              desc="Constant times vector/matrix plus vector/matrix: alpha * x + y"
-              syntax={`result = axpy(alpha, x, y)`}
-              inputs={[
-                { name: "alpha", desc: "Scalar coefficient expression" },
-                { name: "x", desc: "First vector or matrix of size M x N" },
-                { name: "y", desc: "Second vector or matrix of size M x N" }
-              ]}
-              outputs={[{ name: "result", desc: "Resulting M x N matrix or vector" }]}
-              example={`x[1:2] = [1, 2]
-y[1:2] = [3, 4]
-z[1:2] = axpy(2, x[1:2], y[1:2])   { z = [5; 8] }`}
-            />
-
-            <FunctionRef
-              name="scal"
-              desc="Scale a vector or matrix by a constant factor: alpha * x"
-              syntax={`result = scal(alpha, x)`}
-              inputs={[
-                { name: "alpha", desc: "Scalar scale factor" },
-                { name: "x", desc: "Matrix or vector to scale" }
-              ]}
-              outputs={[{ name: "result", desc: "Scaled matrix or vector" }]}
-              example={`x[1:2] = [1, 2]
-y[1:2] = scal(3, x[1:2])   { y = [3; 6] }`}
-            />
-
-            <FunctionRef
-              name="asum"
-              desc="L1 norm (sum of absolute values) of a vector: sum(|x_i|)"
-              syntax={`result = asum(x)`}
-              inputs={[{ name: "x", desc: "Vector of size N" }]}
-              outputs={[{ name: "result", desc: "Scalar sum of absolute values" }]}
-              example={`x[1:2] = [1, -2]
-val = asum(x[1:2])   { val = 3 }`}
-            />
-
-            <FunctionRef
-              name="nrm2"
-              desc="L2 Euclidean norm (root-sum-square) of a vector: sqrt(sum(x_i^2))"
-              syntax={`result = nrm2(x)`}
-              inputs={[{ name: "x", desc: "Vector of size N" }]}
-              outputs={[{ name: "result", desc: "Scalar L2 norm value" }]}
-              example={`x[1:2] = [3, 4]
-val = nrm2(x[1:2])   { val = 5 }`}
-            />
-
-            <FunctionRef
-              name="copy"
-              desc="Returns a symbolic copy of the vector or matrix"
-              syntax={`result = copy(x)`}
-              inputs={[{ name: "x", desc: "Matrix or vector" }]}
-              outputs={[{ name: "result", desc: "Identical copy" }]}
-              example={`x[1:2] = [1, 2]
-y[1:2] = copy(x[1:2])`}
-            />
-
-            <Title order={3} mt="md">Level 2 BLAS (Matrix-Vector)</Title>
-            <FunctionRef
-              name="gemv"
-              desc="General matrix-vector product: alpha * A * x + beta * y"
-              syntax={`result = gemv(alpha, A, x, beta, y)`}
-              inputs={[
-                { name: "alpha", desc: "Scalar multiplier for product" },
-                { name: "A", desc: "Matrix of size M x N" },
-                { name: "x", desc: "Column vector of size N x 1" },
-                { name: "beta", desc: "Scalar multiplier for y" },
-                { name: "y", desc: "Column vector of size M x 1" }
-              ]}
-              outputs={[{ name: "result", desc: "Resulting column vector of size M x 1" }]}
-              example={`A[1:2, 1:2] = 1
-x[1:2] = [2, 3]
-y[1:2] = [4, 5]
-z[1:2] = gemv(2, A[1:2, 1:2], x[1:2], 3, y[1:2])`}
-            />
-
-            <FunctionRef
-              name="ger"
-              desc="Vector outer product (Rank-1 update): alpha * x * y' + A"
-              syntax={`result = ger(alpha, x, y, A)`}
-              inputs={[
-                { name: "alpha", desc: "Scalar multiplier" },
-                { name: "x", desc: "Column vector of size M x 1" },
-                { name: "y", desc: "Column vector of size N x 1" },
-                { name: "A", desc: "Matrix of size M x N" }
-              ]}
-              outputs={[{ name: "result", desc: "Resulting M x N matrix" }]}
-              example={`x[1:2] = [2, 3]
-y[1:2] = [4, 5]
-A[1:2, 1:2] = 1
-B[1:2, 1:2] = ger(2, x[1:2], y[1:2], A[1:2, 1:2])`}
-            />
-
-            <Title order={3} mt="md">Level 3 BLAS (Matrix-Matrix)</Title>
-            <FunctionRef
-              name="gemm"
-              desc="General matrix-matrix product: alpha * A * B + beta * C"
-              syntax={`result = gemm(alpha, A, B, beta, C)`}
-              inputs={[
-                { name: "alpha", desc: "Scalar multiplier" },
-                { name: "A", desc: "Matrix of size M x K" },
-                { name: "B", desc: "Matrix of size K x N" },
-                { name: "beta", desc: "Scalar multiplier" },
-                { name: "C", desc: "Matrix of size M x N" }
-              ]}
-              outputs={[{ name: "result", desc: "Resulting M x N matrix" }]}
-              example={`A[1:2, 1:2] = 1
-B[1:2, 1:2] = 2
-C[1:2, 1:2] = 3
-D[1:2, 1:2] = gemm(2, A[1:2, 1:2], B[1:2, 1:2], 3, C[1:2, 1:2])`}
-            />
-          </Stack>
-        );
-      case 'matrices-sys':
-        return (
-          <Stack gap="md">
-            <Title order={2} c="blue.4">Linear Systems & Decompositions Reference</Title>
-            <Text>Detailed documentation for solvers and factorizations:</Text>
-
-            <FunctionRef
-              name="SolveLinear"
-              desc="Solves a square linear system: A * x = b"
-              syntax={`x = SolveLinear(A, b)`}
-              inputs={[
-                { name: "A", desc: "Square coefficient matrix of size N x N" },
-                { name: "b", desc: "Right-hand side vector of size N x 1" }
-              ]}
-              outputs={[{ name: "x", desc: "Solution vector of size N x 1" }]}
-              example={`A[1,1]=2; A[1,2]=1
-A[2,1]=-3; A[2,2]=-1
-b[1:2] = [8, -11]
-x[1:2] = SolveLinear(A[1:2, 1:2], b[1:2])`}
-            />
-
-            <FunctionRef
-              name="Determinant"
-              desc="Computes the determinant of a square matrix."
-              syntax={`d = Determinant(A)`}
-              inputs={[{ name: "A", desc: "Square matrix of size N x N" }]}
-              outputs={[{ name: "d", desc: "Scalar determinant of A" }]}
-              example={`A[1,1]=2; A[1,2]=1
-A[2,1]=-3; A[2,2]=-1
-d = Determinant(A[1:2, 1:2])   { = 1 }`}
-            />
-
-            <ProcedureRef
-              name="LUDecompose"
-              desc="Performs LU decomposition on a square matrix A: A = L * U"
-              syntax={`CALL LUDecompose(A : L, U)`}
-              inputs={[{ name: "A", desc: "Square matrix of size N x N to decompose" }]}
-              outputs={[
-                { name: "L", desc: "Lower triangular matrix of size N x N (unit diagonal)" },
-                { name: "U", desc: "Upper triangular matrix of size N x N" }
-              ]}
-              example={`A[1:2, 1:2] = 1
-CALL LUDecompose(A[1:2, 1:2] : L[1:2, 1:2], U[1:2, 1:2])`}
-            />
-
-            <ProcedureRef
-              name="Eigen"
-              desc="Computes eigenvalues and Unit eigenvectors of a symmetric matrix A"
-              syntax={`CALL Eigen(A : lambda, V)`}
-              inputs={[{ name: "A", desc: "Symmetric square matrix of size N x N" }]}
-              outputs={[
-                { name: "lambda", desc: "Vector of eigenvalues of size N x 1 (sorted ascending)" },
-                { name: "V", desc: "Orthonormal eigenvector matrix of size N x N (columns are eigenvectors)" }
-              ]}
-              example={`A[1,1]=2; A[1,2]=1
-A[2,1]=1; A[2,2]=2
-CALL Eigen(A[1:2, 1:2] : lambda[1:2], V[1:2, 1:2])`}
-            />
-
-            <ProcedureRef
-              name="EulerRotate"
-              desc="Assembles a 3D ZXZ rotation matrix from Euler angles"
-              syntax={`CALL EulerRotate(phi, theta, psi : R)`}
-              inputs={[
-                { name: "phi", desc: "Precession angle (radians)" },
-                { name: "theta", desc: "Nutation angle (radians)" },
-                { name: "psi", desc: "Spin angle (radians)" }
-              ]}
-              outputs={[{ name: "R", desc: "3x3 orthogonal rotation matrix" }]}
-              example={`CALL EulerRotate(0.1, 0.2, 0.3 : R[1:3, 1:3])`}
-            />
-          </Stack>
-        );
-      case 'functions':
-        return (
-          <Stack gap="md">
-            <Title order={2} c="blue.4">Custom Functions & Procedures</Title>
-            <Text style={{ lineHeight: 1.6 }}>
-              You can declare custom functions (single output value) and procedures (multiple output variables) using imperative logic (IF-THEN-ELSE, REPEAT-UNTIL, WHILE-DO, assignments):
-            </Text>
-            <Title order={3}>Custom Functions</Title>
-            <Paper withBorder p="md" bg="light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8))">
-              <Code block>{`FUNCTION my_func(x, y)
-  IF x > y THEN
-    my_func := x * y
-  ELSE
-    my_func := x + y
-  END
-END`}</Code>
-            </Paper>
-            <Title order={3} mt="sm">Multi-output functions (MATLAB-style)</Title>
-            <Text style={{ lineHeight: 1.6 }}>
-              A function can return several values. List the outputs in brackets before the name,
-              assign each one by name with <Code>:=</Code> in the body, and call it by destructuring
-              the results into variables with <Code>[a, b] = name(…)</Code>:
-            </Text>
-            <Paper withBorder p="md" bg="light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8))">
-              <Code block>{`FUNCTION [q, r] = DivMod(a, b)
-  q := trunc(a / b)
-  r := a - q * b
-END
-
-[whole, rem] = DivMod(17, 5)   { whole = 3, rem = 2 }`}</Code>
-            </Paper>
-            <Title order={3} mt="sm">Custom Procedures</Title>
-            <Paper withBorder p="md" bg="light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8))">
-              <Code block>{`PROCEDURE my_proc(x, y : a, b)
-  a := x * 10
-  b := y * 100
-END`}</Code>
-            </Paper>
-
-            <Title order={3} mt="sm">Loops inside Functions & Procedures</Title>
-            <Text style={{ lineHeight: 1.6 }}>
-              Function and procedure bodies support <code>REPEAT … UNTIL cond</code> (runs at least once) and <code>WHILE cond DO … END</code> (checks the condition first). Both are guarded against runaway iteration.
-            </Text>
-            <Paper withBorder p="md" bg="light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8))">
-              <Code block>{`FUNCTION SumTo(n)
-  i := 1
-  s := 0
-  WHILE i <= n DO
-    s := s + i
-    i := i + 1
-  END
-  SumTo := s
-END
-
-total = SumTo(10)   { 55 }`}</Code>
-            </Paper>
-          </Stack>
-        );
-      case 'tables-code':
-        return (
-          <Stack gap="md">
-            <Title order={2} c="blue.4">Custom Tabulated Functions (TABLE)</Title>
-            <Text style={{ lineHeight: 1.6 }}>
-              You can define lookup tables inside your code. frees parses these and registers them as tabulated functions that can be queried like standard functions:
-            </Text>
-            <Paper withBorder p="md" bg="light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8))">
-              <Code block>{`TABLE thermal_conductivity(temp)
-  200   1.2
-  300   1.6
-  400   1.9
-  500   2.1
-END
-
-k_val = thermal_conductivity(350)`}</Code>
-            </Paper>
-            <Text style={{ lineHeight: 1.6 }}>
-              Declare <b>units</b> on the argument and/or the output so values
-              computed from a lookup inherit dimensions instead of showing
-              <Code>-</Code>. The same syntax works on <Code>FUNCTION</Code>{' '}
-              (e.g. <Code>FUNCTION f(x [m], y [s]) [m/s]</Code>):
-            </Text>
-            <Paper withBorder p="md" bg="light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8))">
-              <Code block>{`TABLE fanCurve(Vair [m^3/s]) [Pa]
-  0.0    250
-  0.6    195
-  1.18   0
-END
-
-dP = fanCurve(Vair)   { dP now derives in Pa, Vair in m^3/s }`}</Code>
-            </Paper>
-          </Stack>
-        );
-      case 'lookup-tables':
-        return (
-          <Stack gap="md">
-            <Title order={2} c="blue.4">Lookup Tables & Interpolation</Title>
-            <Text style={{ lineHeight: 1.6 }}>
-              Lookup Tables are registered in the Tables window or defined via table blocks. You can retrieve, interpolate, or differentiate tabular values directly inside equation definitions:
-            </Text>
-
-            <Title order={3}>Lookup Data Retrieving</Title>
-            <FunctionRef
-              name="Lookup"
-              desc="Retrieves the value of a cell in a lookup table."
-              syntax={`val = Lookup('TableName', row, col)`}
-              inputs={[
-                { name: "TableName", desc: "String literal naming the table" },
-                { name: "row", desc: "1-based row index (integer)" },
-                { name: "col", desc: "1-based column index or string column name" }
-              ]}
-              outputs={[{ name: "val", desc: "The numeric cell value" }]}
-              example={`x = Lookup('thermo_data', 5, 'Temperature')`}
-            />
-            <FunctionRef
-              name="LookupRow / Lookup$Row / NLookupRows"
-              desc="Search for matching rows and query table size."
-              syntax={`row_idx = LookupRow('TableName', col, val)
-row_idx = Lookup$Row('TableName', col, val$)
-num_rows = NLookupRows('TableName')`}
-              inputs={[
-                { name: "TableName", desc: "Name of target table" },
-                { name: "col", desc: "Target column index or name" },
-                { name: "val / val$", desc: "Value to search for" }
-              ]}
-              outputs={[{ name: "row_idx / num_rows", desc: "Row index or size count" }]}
-              example={`idx = Lookup$Row('fluid_table', 'FluidName', 'Water')
-count = NLookupRows('fluid_table')`}
-            />
-
-            <Title order={3}>Spline & Linear Interpolation</Title>
-            <FunctionRef
-              name="Interpolate"
-              desc="Performs 1D linear interpolation to find a dependent variable value."
-              syntax={`y = Interpolate('TableName', y_col, x_col, x_val)`}
-              inputs={[
-                { name: "TableName", desc: "Name of the table" },
-                { name: "y_col", desc: "Name of the dependent output column" },
-                { name: "x_col", desc: "Name of the independent input column" },
-                { name: "x_val", desc: "Independent coordinate value to interpolate" }
-              ]}
-              outputs={[{ name: "y", desc: "Interpolated value" }]}
-              example={`cond = Interpolate('copper_conductivity', 'k', 'temp', 325)`}
-            />
-            <FunctionRef
-              name="Interpolate1 / Interpolate2 / Interpolate2D"
-              desc="Advanced 1D cubic spline and 2D bilinear/bicubic interpolation."
-              syntax={`y = Interpolate1('TableName', y_col, x_col, x_val)
-z = Interpolate2D('TableName', z_col, x_col, x_val, y_col, y_val)`}
-              inputs={[
-                { name: "TableName", desc: "Table name" },
-                { name: "x_val, y_val", desc: "Coordinates for interpolation" }
-              ]}
-              outputs={[{ name: "y / z", desc: "Interpolated value" }]}
-              example={`cp_val = Interpolate1('gas_properties', 'Cp', 'Temperature', 450)`}
-            />
-
-            <Title order={3}>Tabular Numerical Differentiation</Title>
-            <FunctionRef
-              name="Differentiate / Differentiate1 / Differentiate2"
-              desc="Estimates derivative dy/dx from tabulated values at a specified coordinate point."
-              syntax={`slope = Differentiate('TableName', y_col, x_col, x_val)`}
-              inputs={[
-                { name: "TableName", desc: "Table name" },
-                { name: "y_col, x_col", desc: "Output/Input columns" },
-                { name: "x_val", desc: "Evaluation point" }
-              ]}
-              outputs={[{ name: "slope", desc: "Computed numerical derivative dy/dx" }]}
-              example={`dslope = Differentiate('pressure_drop', 'dP', 'Velocity', 2.5)`}
-            />
-          </Stack>
-        );
-      case 'table-accessors':
-        return (
-          <Stack gap="md">
-            <Title order={2} c="blue.4">Table Accessors & Aggregates</Title>
-            <Text style={{ lineHeight: 1.6 }}>
-              These functions query status, specific values, or aggregates of columns inside Parametric Sweeps, Parametric Tables, or Numerical Integration runs.
-            </Text>
-
-            <Title order={3}>Parametric Run Info</Title>
-            <FunctionRef
-              name="TableValue"
-              desc="Reads a cell in the active Parametric Table."
-              syntax={`val = TableValue(row, col)`}
-              inputs={[
-                { name: "row", desc: "Row index" },
-                { name: "col", desc: "Column index or name string" }
-              ]}
-              outputs={[{ name: "val", desc: "Numeric value at the cell" }]}
-              example={`initial_P = TableValue(1, 'Pressure')`}
-            />
-            <FunctionRef
-              name="TableRun# / NParametricRuns"
-              desc="Queries current sweep run index and total sweep size."
-              syntax={`run_idx = TableRun#()
-total_runs = NParametricRuns()`}
-              inputs={[]}
-              outputs={[{ name: "run_idx / total_runs", desc: "Run indices and count statistics" }]}
-              example={`current_sweep = TableRun#()`}
-            />
-
-            <Title order={3}>Column Aggregate Functions</Title>
-            <FunctionRef
-              name="Sum / Avg / Min / Max / StdDev (Table columns)"
-              desc="Calculates mathematical aggregate of all populated values in a Parametric Table column."
-              syntax={`total = Sum('ColName')
-average = Avg('ColName')
-minimum = Min('ColName')`}
-              inputs={[{ name: "ColName", desc: "String name of the column in the Parametric Table" }]}
-              outputs={[{ name: "total/average/minimum", desc: "Computed scalar value" }]}
-              example={`mean_eff = Avg('efficiency')
-max_temp = Max('T_boiler')`}
-            />
-
-            <Title order={3}>Integral Table Accessors</Title>
-            <FunctionRef
-              name="IntegralValue"
-              desc="Reads computed value from the ODE Integral Table at the end of the solve."
-              syntax={`val = IntegralValue('VarName')`}
-              inputs={[{ name: "VarName", desc: "String name of the integrated variable" }]}
-              outputs={[{ name: "val", desc: "Integrated ODE step value" }]}
-              example={`net_heat = IntegralValue('Q_dot')`}
-            />
-          </Stack>
-        );
-      case 'modules':
-        return (
-          <Stack gap="md">
-            <Title order={2} c="blue.4">Modular Submodels (MODULE)</Title>
-            <Text style={{ lineHeight: 1.6 }}>
-              Modules allow you to encapsulate a sub-system of equations and call it repeatedly. Unlike procedures, modules contain declarative equations, which can be solved in any direction:
-            </Text>
-            <Paper withBorder p="md" bg="light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8))">
-              <Code block>{`MODULE pipe_flow(D, Q : dP)
-  V = Q / (pi# / 4* D^2)
-  dP = 0.02 * (100 / D) * (1000 * V^2 / 2)
-END
-
-CALL pipe_flow(D1, Q1 : dP1)`}</Code>
-            </Paper>
-          </Stack>
-        );
-      case 'thermo':
-        return (
-          <Stack gap="md">
-            <Title order={2} c="blue.4">Thermophysical Properties Reference (CoolProp & Gas)</Title>
-            <Text style={{ lineHeight: 1.6 }}>
-              frees supports thermophysical properties database queries for three distinct material classes:
-            </Text>
-            <List spacing="xs" mb="md">
-              <List.Item><strong>CoolProp Real Fluids:</strong> High-precision multiphase real fluids (e.g. <code>Water</code>, <code>R134a</code>, <code>Ammonia</code>) requiring exactly 2 state variables.</List.Item>
-              <List.Item><strong>Ideal Gases:</strong> Spelled chemical formulas (e.g. <code>CO2</code>, <code>N2</code>, <code>CH4</code>, <code>O2</code>) evaluated using NASA thermodynamic polynomials.</List.Item>
-              <List.Item><strong>Aqueous Glycols:</strong> Incompressible coolants represented by base + mass fraction (e.g. <code>EG50</code> for 50% Ethylene Glycol, <code>PG30</code> for 30% Propylene Glycol), evaluated using Temperature (T) and Pressure (P).</List.Item>
-            </List>
-
-            <Title order={3}>Standard Property Functions</Title>
-            <Table striped withTableBorder mb="md">
-              <Table.Thead>
-                <Table.Tr>
-                  <Table.Th>Function Name</Table.Th>
-                  <Table.Th>Property</Table.Th>
-                  <Table.Th>SI Unit</Table.Th>
-                  <Table.Th>Syntax Example</Table.Th>
-                </Table.Tr>
-              </Table.Thead>
-              <Table.Tbody>
-                <Table.Tr>
-                  <Table.Td><Code>Temperature</Code></Table.Td>
-                  <Table.Td>Absolute Temperature</Table.Td>
-                  <Table.Td>K</Table.Td>
-                  <Table.Td><Code>T = Temperature(Water, P=P1, h=h1)</Code></Table.Td>
-                </Table.Tr>
-                <Table.Tr>
-                  <Table.Td><Code>Pressure</Code></Table.Td>
-                  <Table.Td>Absolute Pressure</Table.Td>
-                  <Table.Td>Pa</Table.Td>
-                  <Table.Td><Code>P = Pressure(R134a, T=T1, x=1)</Code></Table.Td>
-                </Table.Tr>
-                <Table.Tr>
-                  <Table.Td><Code>Enthalpy</Code></Table.Td>
-                  <Table.Td>Specific Enthalpy</Table.Td>
-                  <Table.Td>J/kg</Table.Td>
-                  <Table.Td><Code>h = Enthalpy(Steam, T=T1, P=P1)</Code></Table.Td>
-                </Table.Tr>
-                <Table.Tr>
-                  <Table.Td><Code>Entropy</Code></Table.Td>
-                  <Table.Td>Specific Entropy</Table.Td>
-                  <Table.Td>J/kg-K</Table.Td>
-                  <Table.Td><Code>s = Entropy(Nitrogen, T=T1, P=P1)</Code></Table.Td>
-                </Table.Tr>
-                <Table.Tr>
-                  <Table.Td><Code>Density</Code></Table.Td>
-                  <Table.Td>Mass Density</Table.Td>
-                  <Table.Td>kg/m³</Table.Td>
-                  <Table.Td><Code>rho = Density(EG50, T=T1, P=P1)</Code></Table.Td>
-                </Table.Tr>
-                <Table.Tr>
-                  <Table.Td><Code>Volume</Code></Table.Td>
-                  <Table.Td>Specific Volume</Table.Td>
-                  <Table.Td>m³/kg</Table.Td>
-                  <Table.Td><Code>v = Volume(Water, P=P1, x=0)</Code></Table.Td>
-                </Table.Tr>
-                <Table.Tr>
-                  <Table.Td><Code>IntEnergy</Code></Table.Td>
-                  <Table.Td>Specific Internal Energy</Table.Td>
-                  <Table.Td>J/kg</Table.Td>
-                  <Table.Td><Code>u = IntEnergy(Water, T=T1, P=P1)</Code></Table.Td>
-                </Table.Tr>
-                <Table.Tr>
-                  <Table.Td><Code>Cp / Specheat</Code></Table.Td>
-                  <Table.Td>Constant-pressure Specific Heat</Table.Td>
-                  <Table.Td>J/kg-K</Table.Td>
-                  <Table.Td><Code>c = Cp(Air, T=T1, P=P1)</Code></Table.Td>
-                </Table.Tr>
-                <Table.Tr>
-                  <Table.Td><Code>Cv</Code></Table.Td>
-                  <Table.Td>Constant-volume Specific Heat</Table.Td>
-                  <Table.Td>J/kg-K</Table.Td>
-                  <Table.Td><Code>c_v = Cv(Air, T=T1, P=P1)</Code></Table.Td>
-                </Table.Tr>
-                <Table.Tr>
-                  <Table.Td><Code>Viscosity</Code></Table.Td>
-                  <Table.Td>Dynamic Viscosity</Table.Td>
-                  <Table.Td>Pa-s</Table.Td>
-                  <Table.Td><Code>mu = Viscosity(Water, T=T1, P=P1)</Code></Table.Td>
-                </Table.Tr>
-                <Table.Tr>
-                  <Table.Td><Code>Conductivity</Code></Table.Td>
-                  <Table.Td>Thermal Conductivity</Table.Td>
-                  <Table.Td>W/m-K</Table.Td>
-                  <Table.Td><Code>k = Conductivity(Water, T=T1, P=P1)</Code></Table.Td>
-                </Table.Tr>
-                <Table.Tr>
-                  <Table.Td><Code>SoundSpeed</Code></Table.Td>
-                  <Table.Td>Speed of Sound</Table.Td>
-                  <Table.Td>m/s</Table.Td>
-                  <Table.Td><Code>c = SoundSpeed(Air, T=T1, P=P1)</Code></Table.Td>
-                </Table.Tr>
-              </Table.Tbody>
-            </Table>
-
-            <Title order={3} mt="sm">Thermophysical Completion Functions</Title>
-            <FunctionRef
-              name="P_sat / T_sat"
-              desc="Evaluates saturation pressure or temperature for a fluid."
-              syntax={`ps = P_sat(Fluid, T=temp)
-ts = T_sat(Fluid, P=pres)`}
-              inputs={[
-                { name: "Fluid", desc: "Fluid name" },
-                { name: "T / P", desc: "Saturation state coordinate" }
-              ]}
-              outputs={[{ name: "ps / ts", desc: "Saturation pressure (Pa) / temperature (K)" }]}
-              example={`P_sat_water = P_sat(Water, T=373.15)   { ~101325 Pa }`}
-            />
-            <FunctionRef
-              name="MolarMass / CompressibilityFactor / Prandtl"
-              desc="Molar mass (kg/mol), Compressibility factor Z (dimensionless), and Prandtl number. MolarMass resolves a CoolProp fluid, an ideal-gas species (CO2, CH4, …), or any chemical formula (C8H18, 'Ca(OH)2') from the built-in periodic table — formulas are case-sensitive; quote ones with parentheses."
-              syntax={`m = MolarMass(Fluid)
-z = CompressibilityFactor(Fluid, T=temp, P=pres)
-pr = Prandtl(Fluid, T=temp, P=pres)`}
-              inputs={[{ name: "Fluid", desc: "Fluid name, ideal-gas species, or chemical formula" }]}
-              outputs={[{ name: "m / z / pr", desc: "Property metrics" }]}
-              example={`M = MolarMass(CarbonDioxide)   { 0.04401 kg/mol }
-M2 = MolarMass(C8H18)          { 0.11423 kg/mol }
-M3 = MolarMass('Al2(SO4)3')`}
-            />
-            <FunctionRef
-              name="HeatingValue / StoichAFR"
-              desc="Combustion analysis for a hydrocarbon/alcohol fuel CxHyOz. HeatingValue returns J/kg ('LHV' references water vapour, 'HHV' liquid water); StoichAFR returns the stoichiometric air-fuel ratio (mass basis). Built on the formation-enthalpy table and the periodic-table molar masses."
-              syntax={`hv = HeatingValue(Fuel, 'LHV')
-afr = StoichAFR(Fuel)`}
-              inputs={[
-                { name: "Fuel", desc: "Fuel formula or species: CH4, C8H18, C2H5OH, …" },
-                { name: "mode", desc: "'LHV' or 'HHV' (HeatingValue only)" },
-              ]}
-              outputs={[{ name: "hv / afr", desc: "J/kg / dimensionless" }]}
-              example={`LHV = HeatingValue(CH4, 'LHV')   { ~50 MJ/kg }
-AFR = StoichAFR(C8H18)            { ~15.0 }`}
-            />
-            <FunctionRef
-              name="SurfaceTension / Fugacity / Enthalpy_fusion / Dipole"
-              desc="Queries surface tension (N/m), fugacity coefficient (dimensionless), enthalpy of fusion (J/kg), and dipole moment."
-              syntax={`st = SurfaceTension(Fluid, T=temp)
-fc = Fugacity(Fluid, T=temp, P=pres)
-hf = Enthalpy_fusion(Fluid)
-dp = Dipole(Fluid)`}
-              inputs={[{ name: "Fluid", desc: "Fluid name" }]}
-              outputs={[{ name: "st / fc / hf / dp", desc: "Special properties" }]}
-              example={`sigma_st = SurfaceTension(Water, T=300)`}
-            />
-            <FunctionRef
-              name="P_crit / T_crit / v_crit / T_triple"
-              desc="Critical pressure, critical temperature, critical specific volume, and triple point temperature."
-              syntax={`pc = P_crit(Fluid)
-tc = T_crit(Fluid)
-vc = v_crit(Fluid)
-tt = T_triple(Fluid)`}
-              inputs={[{ name: "Fluid", desc: "Fluid name" }]}
-              outputs={[{ name: "pc / tc / vc / tt", desc: "State constant parameters" }]}
-              example={`P_crit_co2 = P_crit(CO2)`}
-            />
-            <FunctionRef
-              name="IsIdealGas / Phase$"
-              desc="Checks if fluid behaves ideally, and queries string phase."
-              syntax={`chk = IsIdealGas(Fluid)
-ph$ = Phase$(Fluid, T=temp, P=pres)`}
-              inputs={[
-                { name: "Fluid", desc: "Fluid name" },
-                { name: "T, P", desc: "Coordinate points for phase evaluation" }
-              ]}
-              outputs={[{ name: "chk / ph$", desc: "1 or 0 flag, or Phase description string (e.g. 'twophase', 'liquid', 'gas', 'supercritical')" }]}
-              example={`is_ideal = IsIdealGas(Air)
-state$ = Phase$(R134a, T=25 [C], P=100 [kPa])`}
-            />
-
-            <Title order={3} mt="md">Related Examples</Title>
-            <Group gap="xs" mt="xs">
-              <Badge variant="light" color="teal">Rankine Cycle (ideal & reheat)</Badge>
-              <Badge variant="light" color="teal">Brayton: Regeneration (Variable Cp)</Badge>
-              <Badge variant="light" color="teal">Automotive Cooling Loop (EG50)</Badge>
-              <Badge variant="light" color="teal">Combined Brayton-Rankine</Badge>
-            </Group>
-            <Text size="sm" c="dimmed">Open the <strong>Engineering Examples Library</strong> (Case Studies section) and search for these titles.</Text>
-          </Stack>
-        );
-      case 'solid-materials':
-        return (
-          <Stack gap="md">
-            <Title order={2} c="blue.4">Solid & Incompressible Material Properties Reference</Title>
-            <Text style={{ lineHeight: 1.6 }}>
-              frees supports querying properties of solid materials (e.g. <code>Copper</code>, <code>Iron</code>, <code>Aluminum</code>, <code>Concrete</code>, <code>Glass</code>) and incompressible liquids (e.g. <code>EngineOil</code>) using underscore-suffixed functions:
-            </Text>
-
-            <Title order={3}>Material Property Functions</Title>
-            <FunctionRef
-              name="c_ / k_ / rho_ / mu_ / Pv_"
-              desc="Evaluates material specific heat (J/kg-K), thermal conductivity (W/m-K), density (kg/m³), dynamic viscosity (Pa-s), and vapor pressure (Pa)."
-              syntax={`cp = c_(Material, T=temp)
-cond = k_(Material, T=temp)
-dens = rho_(Material)
-visc = mu_(Material, T=temp)
-vap_p = Pv_(Material, T=temp)`}
-              inputs={[
-                { name: "Material", desc: "Solid or incompressible material name" },
-                { name: "T", desc: "Evaluation temperature coordinate" }
-              ]}
-              outputs={[{ name: "cp/cond/dens/visc/vap_p", desc: "Material properties" }]}
-              example={`k_copper = k_(Copper, T=300 [K])
-cp_iron = c_(Iron, T=400 [K])`}
-            />
-            <FunctionRef
-              name="E_ / nu_ / epsilon_ / VolExpCoef / FreezingPt"
-              desc="Young's modulus (Pa), Poisson's ratio (dimensionless), Surface emissivity, Volumetric thermal expansion (1/K), and Freezing point temperature (K)."
-              syntax={`mod = E_(Material)
-pr = nu_(Material)
-em = epsilon_(Material)
-b = VolExpCoef(Material)
-tf = FreezingPt(Material)`}
-              inputs={[{ name: "Material", desc: "Material name" }]}
-              outputs={[{ name: "mod / pr / em / b / tf", desc: "Solid state variables" }]}
-              example={`mod_steel = E_(Steel)
-em_glass = epsilon_(Glass)`}
-            />
-            <FunctionRef
-              name="DELTAL\L_293"
-              desc="Linear thermal expansion coefficient relative to reference 293 K."
-              syntax={`exp_ratio = DELTAL\\L_293(Material, T=temp)`}
-              inputs={[
-                { name: "Material", desc: "Material name" },
-                { name: "T", desc: "Evaluated temperature" }
-              ]}
-              outputs={[{ name: "exp_ratio", desc: "Expansion ratio delta L / L_293" }]}
-              example={`dl_ratio = DELTAL\\L_293(Aluminum, T=500 [K])`}
-            />
-            <FunctionRef
-              name="ek_LJ / sigma_LJ"
-              desc="Lennard-Jones potential energy parameter epsilon/k (K) and collision diameter sigma (m)."
-              syntax={`eps_k = ek_LJ(Material)
-sig = sigma_LJ(Material)`}
-              inputs={[{ name: "Material", desc: "Gas/Solid name" }]}
-              outputs={[{ name: "eps_k / sig", desc: "Lennard-Jones parameter values" }]}
-              example={`ek_val = ek_LJ(Argon)`}
-            />
-          </Stack>
-        );
-      case 'humidair':
-        return (
-          <Stack gap="md">
-            <Title order={2} c="blue.4">Psychrometrics (AirH2O / Humid Air)</Title>
-            <Text style={{ lineHeight: 1.6 }}>
-              Humid air calculations are performed using the special fluid name <Code>AirH2O</Code>. Every call requires exactly <strong>three</strong> independent state indicators. Pass them as keyword arguments:
-            </Text>
-            <Paper withBorder p="sm" bg="light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8))">
-              <Code block>{`h = Enthalpy(AirH2O, T=25 [C], R=0.50, P=101325 [Pa])`}</Code>
-            </Paper>
-
-            <Title order={3} mt="sm">State-Variable Indicators</Title>
-            <Table striped withTableBorder withColumnBorders mb="md">
-              <Table.Thead>
-                <Table.Tr>
-                  <Table.Th style={{ width: '60px' }}>Key</Table.Th>
-                  <Table.Th>Meaning</Table.Th>
-                  <Table.Th>SI Unit</Table.Th>
-                </Table.Tr>
-              </Table.Thead>
-              <Table.Tbody>
-                <Table.Tr><Table.Td><Code>T</Code></Table.Td><Table.Td>Dry-bulb temperature</Table.Td><Table.Td>K</Table.Td></Table.Tr>
-                <Table.Tr><Table.Td><Code>P</Code></Table.Td><Table.Td>Total (atmospheric) pressure</Table.Td><Table.Td>Pa</Table.Td></Table.Tr>
-                <Table.Tr><Table.Td><Code>R</Code></Table.Td><Table.Td>Relative humidity (0–1)</Table.Td><Table.Td>—</Table.Td></Table.Tr>
-                <Table.Tr><Table.Td><Code>W</Code></Table.Td><Table.Td>Humidity ratio (kg water / kg dry air)</Table.Td><Table.Td>kg/kg</Table.Td></Table.Tr>
-                <Table.Tr><Table.Td><Code>D</Code></Table.Td><Table.Td>Dew-point temperature</Table.Td><Table.Td>K</Table.Td></Table.Tr>
-                <Table.Tr><Table.Td><Code>B</Code></Table.Td><Table.Td>Wet-bulb temperature</Table.Td><Table.Td>K</Table.Td></Table.Tr>
-                <Table.Tr><Table.Td><Code>H</Code></Table.Td><Table.Td>Specific enthalpy of moist air (per kg dry air)</Table.Td><Table.Td>J/kg</Table.Td></Table.Tr>
-              </Table.Tbody>
-            </Table>
-
-            <FunctionRef
-              name="HumRat"
-              syntax={`w = HumRat(AirH2O, T=Tdb, P=P_atm, R=phi)`}
-              desc="Returns the humidity ratio ω (kg water / kg dry air) of moist air from any two independent state indicators plus pressure."
-              inputs={[
-                { name: "AirH2O", desc: "Fluid identifier — must be the literal 'AirH2O'" },
-                { name: "state pair", desc: "Any two of T, R, W, D, B, H combined with P (e.g. T= and R=)" },
-                { name: "P", desc: "Total pressure (Pa)" },
-              ]}
-              outputs={[{ name: "w", desc: "Humidity ratio in kg water / kg dry air" }]}
-              example={`T_db = 25 [C]
-P_atm = 101.325 [kPa]
-phi = 0.60
-w = HumRat(AirH2O, T=T_db, P=P_atm, R=phi)`}
-            />
-            <FunctionRef
-              name="RelHum"
-              syntax={`phi = RelHum(AirH2O, T=Tdb, P=P_atm, w=omega)`}
-              desc="Returns the relative humidity φ (0–1) from dry-bulb temperature plus one other state indicator."
-              inputs={[
-                { name: "AirH2O", desc: "Fluid identifier" },
-                { name: "state pair + P", desc: "T (or B/D) + W (or H) + P" },
-              ]}
-              outputs={[{ name: "phi", desc: "Relative humidity, dimensionless (0–1)" }]}
-              example={`phi = RelHum(AirH2O, T=25 [C], P=101.325 [kPa], W=0.012)`}
-            />
-            <FunctionRef
-              name="WetBulb"
-              syntax={`Twb = WetBulb(AirH2O, T=Tdb, P=P_atm, R=phi)`}
-              desc="Returns the wet-bulb temperature from dry-bulb temperature, pressure, and one other state variable. Can also take H= for the enthalpy indicator (useful in mixing-stream problems)."
-              inputs={[
-                { name: "AirH2O", desc: "Fluid identifier" },
-                { name: "T or H", desc: "Dry-bulb temperature (K) or specific enthalpy H= (J/kg dry air)" },
-                { name: "P", desc: "Total pressure (Pa)" },
-                { name: "R or W", desc: "Relative humidity or humidity ratio" },
-              ]}
-              outputs={[{ name: "Twb", desc: "Wet-bulb temperature (K)" }]}
-              example={`T_wb = WetBulb(AirH2O, T=30 [C], P=101.325 [kPa], R=0.40)
-
-{ Using enthalpy indicator for a mixed-stream }
-h_mix = 50000  { J/kg dry air }
-T_wb2 = WetBulb(AirH2O, T=T_entering_db, H=h_mix, P=P_atm)`}
-            />
-            <FunctionRef
-              name="DewPoint"
-              syntax={`Tdp = DewPoint(AirH2O, T=Tdb, P=P_atm, R=phi)`}
-              desc="Returns the dew-point temperature — the temperature at which the air becomes saturated as it cools at constant pressure and humidity ratio."
-              inputs={[
-                { name: "AirH2O", desc: "Fluid identifier" },
-                { name: "T", desc: "Dry-bulb temperature (K)" },
-                { name: "P", desc: "Total pressure (Pa)" },
-                { name: "R or W", desc: "Relative humidity or humidity ratio" },
-              ]}
-              outputs={[{ name: "Tdp", desc: "Dew-point temperature (K)" }]}
-              example={`T_dp = DewPoint(AirH2O, T=25 [C], P=101.325 [kPa], R=0.65)`}
-            />
-
-            <Title order={3} mt="md">Related Examples</Title>
-            <Group gap="xs" mt="xs">
-              <Badge variant="light" color="teal">Face & Bypass Control</Badge>
-              <Badge variant="light" color="teal">Psychrometric Room Balancing</Badge>
-              <Badge variant="light" color="teal">Air Supply Wet-Bulb</Badge>
-            </Group>
-            <Text size="sm" c="dimmed">Open the <strong>Engineering Examples Library</strong> (Case Studies section) and search for these titles.</Text>
-          </Stack>
-        );
-      case 'calculus':
-        return (
-          <Stack gap="md">
-            <Title order={2} c="blue.4">Numerical Integration (ODEs & Calculus)</Title>
-            <Text style={{ lineHeight: 1.6 }}>
-              frees supports definite integrals and single-state ODEs through <Code>Integral()</Code>, and fully coupled multi-state ODE systems through the <Code>DYNAMIC … END</Code> block. Both are backed by Runge-Kutta numerical integration.
-            </Text>
-
-            <FunctionRef
-              name="Integral"
-              syntax={`y = Integral(expr, var, lower, upper)`}
-              desc={
-                <>
-                  Numerically integrates <Code>expr</Code> with respect to <Code>var</Code> from <Code>lower</Code> to <Code>upper</Code> using an adaptive Runge-Kutta stepper.
-                  <br /><br />
-                  <strong>ODE feedback pattern:</strong> when <Code>expr</Code> contains <Code>y</Code> itself (the result variable), frees detects the self-reference and solves the resulting initial-value ODE starting from 0 at the lower bound. This lets you express systems like <Code>dT/dt = −k·(T − T∞)</Code> inline as a single equation — no DYNAMIC block required. Use DYNAMIC when you need coupled states, event detection, or a full time-series trajectory.
-                </>
-              }
-              inputs={[
-                { name: "expr", desc: "Integrand expression; may reference var and (for the ODE pattern) the result variable itself" },
-                { name: "var", desc: "Integration variable name (e.g. x, t)" },
-                { name: "lower", desc: "Lower bound of integration (start time for the ODE pattern)" },
-                { name: "upper", desc: "Upper bound of integration (end time for the ODE pattern)" },
-              ]}
-              outputs={[{ name: "y", desc: "Scalar result — the definite integral value (or the state value at the upper bound for the ODE pattern)" }]}
-              example={`{ Plain definite integral: ∫₀¹ 3x² dx = 1 }
-area = Integral(3 * x^2, x, 0, 1)
-
-{ ODE feedback pattern: tank draining (Torricelli's law) }
-{ dV/dt = -C * sqrt(V),  V(0) = V0 }
-V0  = 1.0          { initial volume (m³) }
-C   = 0.02         { discharge coefficient }
-V_t = Integral(-C * sqrt(V_t), t, 0, 60)   { V at t = 60 s }
-
-{ Newton's cooling: T(t) = T_inf + (T0 - T_inf)*exp(-k*t) }
-T_inf = 20; T0 = 90; k_cool = 0.01
-T_60  = Integral(-k_cool * (T_60 - T_inf), t, 0, 60)`}
-            />
-
-            <Alert color="cyan" title="Integral() vs DYNAMIC — when to use which" mt="xs">
-              Use <Code>Integral()</Code> for a <strong>single-state, end-value result</strong> that feeds back into the analytic system (e.g. final temperature, drained volume). Use <Code>DYNAMIC … END</Code> when you need <strong>coupled states</strong>, event detection, or a <strong>sampled time-series trajectory</strong> to plot. Both are solved after the analytic Newton pass.
-            </Alert>
-
-            <Title order={3} mt="md">Related Examples</Title>
-            <Group gap="xs" mt="xs">
-              <Badge variant="light" color="cyan">Tank Draining (Torricelli)</Badge>
-              <Badge variant="light" color="cyan">Newton's Cooling (ODE Feedback)</Badge>
-              <Badge variant="light" color="cyan">Fatigue Life Integral</Badge>
-            </Group>
-            <Text size="sm" c="dimmed">Open the <strong>Engineering Examples Library</strong> (Case Studies section) and search for these titles to load the full worked examples.</Text>
-          </Stack>
-        );
-      case 'dynamic-ode':
-        return (
-          <Stack gap="md">
-            <Title order={2} c="blue.4">Transient / ODE Systems (DYNAMIC)</Title>
-            <Text style={{ lineHeight: 1.6 }}>
-              A <strong>DYNAMIC … END</strong> block is a multi-state, time-resolved ODE solver that runs <em>after</em> the analytic solve, consuming solved scalars as parameters and initial conditions. It is a parallel path to the analytic solver and to <Code>Integral()</Code> — use <Code>Integral()</Code> for a single definite integral / single-state end value, and <Code>DYNAMIC</Code> for coupled multi-state systems with a sampled trajectory you can plot. A variable is a <strong>state</strong> exactly when a <Code>der(X)</Code> appears for it; each state needs one <Code>der(X) = …</Code> and one initial condition <Code>X(t0) = …</Code>. Every other equation in the block is an algebraic auxiliary that becomes an output column.
-            </Text>
-            <Paper withBorder p="md" bg="light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8))">
-              <Code block>{`DYNAMIC cooling (method = ode45, time = 0 .. 300, points = 200, rtol = 1e-6)
-  der(T) = -k * (T - T_inf)     { first-order ODE; T is a state }
-  T(0)   = 90                   { initial condition }
-  rate   = -der(T)              { algebraic auxiliary -> output column }
-  EVENT cool: T = T_inf | falling -> stop   { optional zero-crossing event }
-END`}</Code>
-            </Paper>
-            <Text style={{ lineHeight: 1.6 }}>
-              Each solved block produces a first-class <strong>ODE Table</strong> (columns: <Code>time</Code>, the states, then the auxiliaries) that appears in the <strong>Tables</strong> window beside Parametric Tables and is selectable as a data source in the <strong>Plots</strong> window (e.g. x = <Code>time</Code>, y = a state). Because frees is case-insensitive, a temperature state <Code>T</Code> collides with a time variable <Code>t</Code> — name the time variable <Code>time</Code> in the header (the header key may be <Code>t</Code>, <Code>time</Code> or <Code>tspan</Code>).
-            </Text>
-            <Title order={3} mt="sm">The exact form of an ODE</Title>
-            <Text style={{ lineHeight: 1.6 }}>
-              A solvable ODE system is an <strong>initial-value problem</strong> written in
-              first-order state-space form — every equation gives the time derivative of one
-              state, and every state has a value at the start time:
-            </Text>
-            <Paper withBorder p="md" bg="light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8))">
-              <Code block>{`dy/dt = f(t, y),     y(t0) = y0          ( single state )
-
-y  = [ y1, y2, ..., yn ]                  ( state vector )
-dy1/dt = f1(t, y1:yn)                    ( one equation per state )
-dy2/dt = f2(t, y1:yn)
-   ...                  with   y(t0) = y0`}</Code>
-            </Paper>
-            <Text style={{ lineHeight: 1.6 }}>
-              A <strong>higher-order</strong> ODE is reduced to this form by naming each lower
-              derivative as its own state. For example the second-order equation
-              {' '}<Code>m·x'' + c·x' + k·x = F(t)</Code> becomes the two-state system
-              {' '}<Code>x' = v</Code> and <Code>v' = (F(t) − c·v − k·x) / m</Code>.
-            </Text>
-
-            <Title order={3} mt="md">Solving an ODE with frees — step by step</Title>
-            <Text style={{ lineHeight: 1.6 }}>
-              Take the RC-circuit charging ODE
-              {' '}<Code>dVc/dt = (Vs − Vc) / (R·C)</Code> with <Code>Vc(0) = 0</Code>. Translate
-              it into a DYNAMIC block like this:
-            </Text>
-            <List type="ordered" spacing="xs" size="sm" style={{ lineHeight: 1.6 }}>
-              <List.Item><strong>Identify the state(s) and the time variable.</strong> Here the state is <Code>Vc</Code> and time is <Code>t</Code>. (If a state name collides with <Code>t</Code> — e.g. a temperature <Code>T</Code> — name the time variable <Code>time</Code> in the header instead.)</List.Item>
-              <List.Item><strong>Define the parameters</strong> as ordinary equations outside the block: <Code>R = 1000</Code>, <Code>C = 1e-6</Code>, <Code>Vs = 5</Code>.</List.Item>
-              <List.Item><strong>Open the block and choose the solver</strong> in the header: method, time span, and how many output samples — <Code>DYNAMIC rc (method = ode45, t = 0 .. 0.02, points = 200)</Code>.</List.Item>
-              <List.Item><strong>Write each state's derivative</strong> as <Code>der(state) = …</Code>: <Code>der(Vc) = (Vs − Vc) / (R*C)</Code>. The right side may use <Code>t</Code>, other states, parameters, and auxiliaries.</List.Item>
-              <List.Item><strong>Give every state one initial condition</strong> <Code>state(0) = value</Code>: <Code>Vc(0) = 0</Code>.</List.Item>
-              <List.Item><strong>(Optional) add algebraic auxiliaries</strong> (each becomes an output column) and <Code>EVENT</Code> lines for zero-crossings, e.g. <Code>charge = C * Vc</Code>.</List.Item>
-              <List.Item><strong>Close the block with <Code>END</Code>, then press Solve (F2).</strong> frees integrates the block after the analytic solve and produces an <strong>ODE Table</strong>.</List.Item>
-              <List.Item><strong>View the trajectory:</strong> open the <strong>Tables</strong> window for the sampled rows, and the <strong>Plots</strong> window to graph a column against time (x = <Code>t</Code>, y = <Code>Vc</Code>).</List.Item>
-              <List.Item><strong>(Optional) read results back</strong> into the analytic solution with accessors: <Code>Vc_final = FinalValue('Vc')</Code> or <Code>t_63 = TimeAt('Vc', 0.63*Vs)</Code>.</List.Item>
-            </List>
-            <Paper withBorder p="md" bg="light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8))">
-              <Code block>{`R  = 1000
-C  = 1e-6
-Vs = 5
-
-DYNAMIC rc (method = ode45, t = 0 .. 0.02, points = 200, rtol = 1e-8)
-  der(Vc) = (Vs - Vc) / (R * C)   { the ODE: dVc/dt = (Vs - Vc)/(RC) }
-  Vc(0)   = 0                     { initial condition }
-  charge  = C * Vc                { auxiliary -> extra output column }
-END
-
-Vc_final = FinalValue('Vc')       { read the end value back: 5 V }`}</Code>
-            </Paper>
-
-            <Title order={3} mt="sm">Solver roster</Title>
-            <Text style={{ lineHeight: 1.6 }}>
-              Fixed-step (Simulink-style): <Code>ode1</Code> (Euler), <Code>ode2</Code> (Heun), <Code>ode3</Code>, <Code>ode4</Code> (classic RK4), <Code>ode5</Code> (Dormand–Prince). Adaptive: <Code>ode45</Code> (Dormand–Prince 5(4), the default) and <Code>ode23</Code> (Bogacki–Shampine 3(2)) with a PI step-size controller and dense-output sampling. Stiff (implicit, for Van der Pol / Robertson-type systems): <Code>ode23s</Code> (modified Rosenbrock) and <Code>ode15s</Code> (BDF). Header options mirror MATLAB <Code>odeset</Code>: <Code>method</Code>, <Code>t = t0 .. tf</Code>, <Code>points</Code> (sample count), <Code>step</Code> (fixed), <Code>rtol</Code>, <Code>atol</Code>, <Code>maxstep</Code>.
-            </Text>
-            <Title order={3} mt="sm">Events</Title>
-            <Text style={{ lineHeight: 1.6 }}>
-              <Code>EVENT name: g_lhs = g_rhs [| rising|falling] -&gt; stop|record</Code> detects a zero crossing of <Code>g_lhs − g_rhs</Code> (refined by bracketing): <Code>stop</Code> terminates the integration (e.g. apogee at <Code>v = 0</Code>), <Code>record</Code> just logs the crossing time.
-            </Text>
-            <Title order={3} mt="sm">ODE Table accessors</Title>
-            <Text style={{ lineHeight: 1.6 }}>
-              The analytic system reads transient results back out of an ODE Table (mirrors the Parametric / Integral table accessors): <Code>FinalValue('col')</Code>, <Code>MaxValue('col')</Code>, <Code>MinValue('col')</Code>, <Code>ODEValue('col', t)</Code>, <Code>TimeAt('col', value)</Code>, and the aggregates <Code>ODEAvg/ODESum/ODEStdDev('col')</Code>. These are evaluated live against the current solve, so the analytic solver can even <em>size</em> an ODE input to hit a transient target — e.g. add <Code>MaxValue('h') = 100000</Code> and frees solves for the burn time that reaches a 100 km apogee. See the <em>Sounding Rocket Trajectory</em> example.
-            </Text>
-
-            <Title order={3} mt="md">Related Examples</Title>
-            <Group gap="xs" mt="xs">
-              <Badge variant="light" color="cyan">Newton Cooling (Transient)</Badge>
-              <Badge variant="light" color="cyan">Transient Heat Rod</Badge>
-              <Badge variant="light" color="cyan">Damped Oscillator (2-state)</Badge>
-              <Badge variant="light" color="cyan">Sounding Rocket Trajectory</Badge>
-              <Badge variant="light" color="cyan">All ODE Examples (Case Studies)</Badge>
-            </Group>
-            <Text size="sm" c="dimmed">Open the <strong>Engineering Examples Library</strong> (Case Studies section) and search for these titles. The Case Studies library contains 20+ verified ODE problems.</Text>
-          </Stack>
-        );
-      case 'optimization':
-        return (
-          <Stack gap="md">
-            <Title order={2} c="blue.4">Optimization & Parametric Sweeps</Title>
-            <Text style={{ lineHeight: 1.6 }}>
-              frees supports two approaches to exploring design spaces: the interactive <strong>Parametric Table</strong> (GUI or code) for systematic sweeps, and the built-in <strong>Minimize / Maximize</strong> solver for gradient-based optimization.
-            </Text>
-
-            <Title order={3} mt="sm">Parametric Table — declaring sweeps in code</Title>
-            <Text style={{ lineHeight: 1.6 }}>
-              A <Code>PARAMETRIC … END</Code> block declares one or more sweep columns directly in your equation file. Each column row drives the full solve and produces one output row. The block appears as a named table in the <strong>Tables</strong> window and can be plotted directly.
-            </Text>
-            <Paper withBorder p="md" bg="light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8))" mb="md">
-              <Code block>{`PARAMETRIC trajectory(theta_deg)
-  theta_deg = 15 : 5 : 75 | Linear   { sweep from 15° to 75° in 5° steps }
-END`}</Code>
-            </Paper>
-
-            <Title order={3} mt="sm">Range Syntax</Title>
-            <Table striped withTableBorder withColumnBorders mb="md">
-              <Table.Thead>
-                <Table.Tr>
-                  <Table.Th>Syntax</Table.Th>
-                  <Table.Th>Meaning</Table.Th>
-                  <Table.Th>Example</Table.Th>
-                </Table.Tr>
-              </Table.Thead>
-              <Table.Tbody>
-                <Table.Tr>
-                  <Table.Td><Code>a : step : b</Code></Table.Td>
-                  <Table.Td>From a to b with fixed step size</Table.Td>
-                  <Table.Td><Code>0 : 0.1 : 1.0</Code></Table.Td>
-                </Table.Tr>
-                <Table.Tr>
-                  <Table.Td><Code>a : b | N</Code></Table.Td>
-                  <Table.Td>N evenly spaced points from a to b</Table.Td>
-                  <Table.Td><Code>0 : 90 | 10</Code></Table.Td>
-                </Table.Tr>
-                <Table.Tr>
-                  <Table.Td><Code>a : b | Linear</Code></Table.Td>
-                  <Table.Td>Linearly spaced (same as | N when step inferred)</Table.Td>
-                  <Table.Td><Code>15 : 5 : 75 | Linear</Code></Table.Td>
-                </Table.Tr>
-              </Table.Tbody>
-            </Table>
-
-            <Text style={{ lineHeight: 1.6 }}>
-              <strong>Swept columns</strong>: any variable listed inside the block header becomes a <em>driven</em> (swept) column — frees overrides its equation with the table value for each row. All other solved quantities are <em>computed</em> columns. Add computed variables to the header to include them in the table output:
-            </Text>
-            <Paper withBorder p="md" bg="light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8))" mb="md">
-              <Code block>{`{ Projectile range sweep: drive launch angle, read range and apogee }
-v0 = 50 [m/s]
-g  = 9.81 [m/s^2]
-theta = theta_deg * pi# / 180
-range_m  = v0^2 * sin(2 * theta) / g
-apogee_m = (v0 * sin(theta))^2 / (2 * g)
-
-PARAMETRIC trajectory(theta_deg, range_m, apogee_m)
-  theta_deg = 15 : 5 : 75 | Linear
-END`}</Code>
-            </Paper>
-
-            <Title order={3} mt="sm">Minimize / Maximize</Title>
-            <Text style={{ lineHeight: 1.6 }}>
-              Use the <strong>Tools → Minimize</strong> or <strong>Maximize</strong> menu items (or the Optimization panel) to find the variable value that extremizes an objective. The solver adjusts the decision variable until the objective is optimal while satisfying all other equations simultaneously.
-            </Text>
-
-            <Alert color="blue" title="Tip: combine sweeps with plots" mt="xs">
-              After a parametric solve, open the <strong>Plots</strong> window and choose the PARAMETRIC table as the data source to visualize any swept result (e.g. range vs. launch angle). The plot updates live when you re-run.
-            </Alert>
-
-            <Title order={3} mt="md">Related Examples</Title>
-            <Group gap="xs" mt="xs">
-              <Badge variant="light" color="cyan">Projectile Trajectory (parametric table)</Badge>
-              <Badge variant="light" color="cyan">Damped Oscillator (parametric sweep)</Badge>
-            </Group>
-            <Text size="sm" c="dimmed">Open the <strong>Engineering Examples Library</strong> (Case Studies section) and search for these titles.</Text>
-          </Stack>
-        );
-      case 'api':
-        return (
-          <Stack gap="md">
-            <Title order={2} c="blue.4">Solver Reference & API</Title>
-            <Text style={{ lineHeight: 1.6 }}>
-              Understanding the frees pipeline helps you interpret error messages, diagnose stalled solves, and write equations that converge efficiently.
-            </Text>
-
-            <Title order={3} mt="sm">Parse → Compile → Solve Pipeline</Title>
-            <List type="ordered" spacing="xs" size="sm" style={{ lineHeight: 1.7 }}>
-              <List.Item>
-                <strong>Lexing (ANTLR4).</strong> The equation text is tokenised by an ANTLR4 lexer into numbers, identifiers, operators, keywords (<Code>FOR</Code>, <Code>DYNAMIC</Code>, <Code>FUNCTION</Code>, …) and unit annotations (<Code>[kPa]</Code>). Comments in <Code>{`{ }`}`</Code> are stripped.
-              </List.Item>
-              <List.Item>
-                <strong>AST construction.</strong> The parser builds an Abstract Syntax Tree. Unit annotations are converted to SI multipliers at this stage; arrays, matrix literals, and <Code>FOR</Code> loops are expanded into scalar equations. <Code>FUNCTION</Code> / <Code>PROCEDURE</Code> / <Code>MODULE</Code> bodies are stored as templates and inlined at each call site.
-              </List.Item>
-              <List.Item>
-                <strong>Tarjan SCC decomposition.</strong> frees builds a bipartite variable–equation dependency graph and applies Tarjan's strongly-connected-components algorithm to identify the minimal <em>blocks</em> of coupled equations. Blocks are solved in topological order; singleton blocks with one equation and one unknown are solved directly without Newton iteration.
-              </List.Item>
-              <List.Item>
-                <strong>Newton-Raphson solve.</strong> Each multi-equation SCC block is solved with a multivariate Newton-Raphson iterator. The numerical Jacobian is computed by finite-difference perturbation; each step is followed by step-halving (backtracking line search) to prevent divergence. Convergence uses a relative residual tolerance of ~1 × 10⁻⁸.
-              </List.Item>
-              <List.Item>
-                <strong>DYNAMIC ODE pass (second pass).</strong> After the analytic solve converges, any <Code>DYNAMIC … END</Code> blocks are integrated in declaration order. Each block receives the solved scalar values as parameters and initial conditions, runs the chosen ODE solver (ode45 by default), and writes its results to an ODE Table. ODE table accessor functions (<Code>FinalValue</Code>, <Code>MaxValue</Code>, etc.) that appear in the analytic system create implicit couplings — frees iterates the analytic+ODE passes until they are mutually consistent.
-              </List.Item>
-            </List>
-
-            <Title order={3} mt="md">Degrees of Freedom (DoF)</Title>
-            <Text style={{ lineHeight: 1.6 }}>
-              A system is <strong>well-determined</strong> when the number of independent equations exactly equals the number of unknowns: DoF = equations − unknowns = 0. frees checks this at compile time (F4 / Check). Common DoF errors:
-            </Text>
-            <Table striped withTableBorder withColumnBorders mb="md">
-              <Table.Thead>
-                <Table.Tr>
-                  <Table.Th>Situation</Table.Th>
-                  <Table.Th>DoF</Table.Th>
-                  <Table.Th>Symptom</Table.Th>
-                </Table.Tr>
-              </Table.Thead>
-              <Table.Tbody>
-                <Table.Tr>
-                  <Table.Td>Exactly determined</Table.Td>
-                  <Table.Td>= 0</Table.Td>
-                  <Table.Td>Check passes; solver runs</Table.Td>
-                </Table.Tr>
-                <Table.Tr>
-                  <Table.Td>Under-constrained</Table.Td>
-                  <Table.Td>&gt; 0</Table.Td>
-                  <Table.Td>"N equations, M unknowns — system has N degrees of freedom" error; add equations or fix variables</Table.Td>
-                </Table.Tr>
-                <Table.Tr>
-                  <Table.Td>Over-constrained</Table.Td>
-                  <Table.Td>&lt; 0</Table.Td>
-                  <Table.Td>"Overdetermined" error; remove a redundant equation</Table.Td>
-                </Table.Tr>
-              </Table.Tbody>
-            </Table>
-
-            <Title order={3} mt="md">Check vs Solve</Title>
-            <Table striped withTableBorder withColumnBorders mb="md">
-              <Table.Thead>
-                <Table.Tr>
-                  <Table.Th style={{ width: '120px' }}>Action</Table.Th>
-                  <Table.Th style={{ width: '80px' }}>Hotkey</Table.Th>
-                  <Table.Th>What it does</Table.Th>
-                </Table.Tr>
-              </Table.Thead>
-              <Table.Tbody>
-                <Table.Tr>
-                  <Table.Td><strong>Check / Format</strong></Table.Td>
-                  <Table.Td><Code>F4</Code></Table.Td>
-                  <Table.Td>Lexes, parses, expands, counts DoF, and verifies equation↔variable matching — without executing the numerical solver. Fast; gates the Solve button.</Table.Td>
-                </Table.Tr>
-                <Table.Tr>
-                  <Table.Td><strong>Solve</strong></Table.Td>
-                  <Table.Td><Code>F2</Code></Table.Td>
-                  <Table.Td>Runs the full pipeline: Check → Tarjan SCC → Newton-Raphson → (DYNAMIC ODE pass if present). Returns solutions, residuals, unit-derived dimensions, and the formatted report.</Table.Td>
-                </Table.Tr>
-              </Table.Tbody>
-            </Table>
-
-            <Alert color="blue" title="Residuals & convergence" mt="xs">
-              The <strong>Solution</strong> window shows the residual for each equation after convergence. A residual near 1 × 10⁻⁸ or smaller is converged. Large residuals indicate a block that Newton could not fully solve — try improving initial guesses in the <strong>Variable Info</strong> panel (Ctrl + I), or adding bounds.
-            </Alert>
-          </Stack>
-        );
-      case 'diagram':
-        return (
-          <Stack gap="md">
-            <Title order={2} c="blue.4">Diagram Canvas & Property Diagrams</Title>
-            <Text style={{ lineHeight: 1.6 }}>
-              The <strong>Diagram</strong> window provides two complementary views: an interactive <strong>component canvas</strong> for engineering schematics, and <strong>property diagram overlays</strong> driven by solved state points.
-            </Text>
-
-            <Title order={3} mt="sm">Canvas Controls</Title>
-            <List spacing="xs" size="sm" style={{ lineHeight: 1.7 }}>
-              <List.Item><strong>Add components.</strong> Click the component palette on the left toolbar to drag pumps, turbines, heat exchangers, pipes, and generic nodes onto the canvas.</List.Item>
-              <List.Item><strong>Wire connections.</strong> Hover over a port (filled circle) until it highlights, then drag to another port to draw a flow connection. Wires carry a fluid stream label.</List.Item>
-              <List.Item><strong>Edit labels.</strong> Double-click any component or wire to open its property sheet. Bind the displayed value to a solved variable name (e.g. <Code>T[3]</Code>, <Code>P_high</Code>) so the diagram shows live values after each solve.</List.Item>
-              <List.Item><strong>Zoom / pan.</strong> Scroll to zoom; click-and-drag the canvas background to pan. <Code>Ctrl + Shift + H</Code> fits the diagram to the window.</List.Item>
-              <List.Item><strong>Export.</strong> Use the <strong>Export</strong> button (top-right) to download the diagram as an SVG or PNG, or copy it to the clipboard.</List.Item>
-            </List>
-
-            <Title order={3} mt="md">Property Diagram Overlays</Title>
-            <Text style={{ lineHeight: 1.6 }}>
-              A <Code>PLOT</Code> block with <Code>kind = property</Code> renders a thermodynamic phase diagram (T-s, P-h, or P-v) and overlays the solved state points. Two options control the overlay:
-            </Text>
-            <Paper withBorder p="md" bg="light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8))" mb="md">
-              <Code block>{`PLOT 'Rankine T-s'
-  kind          = property
-  fluid         = Water
-  diagram       = 'T-s'        { T-s | P-h | P-v }
-  overlaystates = true         { plot solved state variables as points }
-  connectstates = true         { draw lines between consecutive state points }
-END`}</Code>
-            </Paper>
-            <List spacing="xs" size="sm" style={{ lineHeight: 1.7 }}>
-              <List.Item><Code>overlaystates = true</Code> — frees scans all solved variables for pairs like <Code>(T[1], s[1])</Code>, <Code>(T[2], s[2])</Code> and overlays them as labelled points on the diagram.</List.Item>
-              <List.Item><Code>connectstates = true</Code> — draws line segments between consecutive numbered state points, tracing the thermodynamic cycle path.</List.Item>
-            </List>
-
-            <Alert color="blue" title="Supported fluids for property diagrams" mt="xs">
-              Property diagrams are drawn using CoolProp's saturation and isoline data. Any CoolProp real fluid works (Water, R134a, CO2, Ammonia, …). Ideal-gas mixtures (Air, N2, …) produce the gas-phase region only — no two-phase dome.
-            </Alert>
-
-            <Text mt="sm" style={{ lineHeight: 1.6 }}>
-              After defining a PLOT block, embed the chart in the <strong>Formatted</strong> report using the <Code>[Graph="name"] … [/Graph]</Code> tag, where <Code>name</Code> matches the plot title. The chart renders inline as a live, interactive Plotly figure.
-            </Text>
-          </Stack>
-        );
-      case 'examples':
-        return (
-          <Stack gap="md">
-            <Title order={2} c="blue.4">Engineering Examples Library</Title>
-            <Text>Browse the examples by discipline below. Copy the code directly into the workspace using the copy button:</Text>
-            {EXAMPLE_CATEGORIES.map(([category, examples]) => (
-              <Stack gap="xs" key={category}>
-                <Title order={4} c="blue.3" mt="sm">{category}</Title>
-                <MantineAccordion variant="separated">
-                  {examples.map((ex) => (
-                    <MantineAccordion.Item value={ex.value} key={ex.value}>
-                      <MantineAccordion.Control>
-                        <Text fw={600} c="cyan.3">{exampleShortTitle(ex.title)}</Text>
-                      </MantineAccordion.Control>
-                      <MantineAccordion.Panel>
-                        <Text size="sm" mb="xs">{ex.description}</Text>
-                        {ex.note && (
-                          <Alert color="gray" py="xs" mb="sm">
-                            {ex.note}
-                          </Alert>
-                        )}
-                        <Paper withBorder p="xs" bg="light-dark(var(--mantine-color-gray-1), var(--mantine-color-dark-9))" style={{ position: 'relative' }}>
-                          <CopyButton code={ex.code} />
-                          <Code block style={{ background: 'transparent', maxHeight: '250px', overflowY: 'auto' }}>
-                            {ex.code}
-                          </Code>
-                        </Paper>
-                      </MantineAccordion.Panel>
-                    </MantineAccordion.Item>
-                  ))}
-                </MantineAccordion>
-              </Stack>
-            ))}
-          </Stack>
-        );
-      default:
-        return null;
+    if (active === 'examples') {
+      return (
+        <Stack gap="md">
+          <Title order={2} c="blue.4">Engineering Examples Library</Title>
+          <Text>Browse the examples by discipline below. Copy the code directly into the workspace using the copy button:</Text>
+          {EXAMPLE_CATEGORIES.map(([category, examples]) => (
+            <Stack gap="xs" key={category}>
+              <Title order={4} c="blue.3" mt="sm">{category}</Title>
+              <MantineAccordion variant="separated">
+                {examples.map((ex) => (
+                  <MantineAccordion.Item value={ex.value} key={ex.value}>
+                    <MantineAccordion.Control>
+                      <Text fw={600} c="cyan.3">{exampleShortTitle(ex.title)}</Text>
+                    </MantineAccordion.Control>
+                    <MantineAccordion.Panel>
+                      <Text size="sm" mb="xs">{ex.description}</Text>
+                      {ex.note && (
+                        <Alert color="gray" py="xs" mb="sm">
+                          {ex.note}
+                        </Alert>
+                      )}
+                      <Paper withBorder p="xs" bg="light-dark(var(--mantine-color-gray-1), var(--mantine-color-dark-9))" style={{ position: 'relative' }}>
+                        <CopyButton code={ex.code} />
+                        <Code block style={{ background: 'transparent', maxHeight: '250px', overflowY: 'auto' }}>
+                          {ex.code}
+                        </Code>
+                      </Paper>
+                    </MantineAccordion.Panel>
+                  </MantineAccordion.Item>
+                ))}
+              </MantineAccordion>
+            </Stack>
+          ))}
+        </Stack>
+      );
     }
+
+    const docContent = DOCS_CATALOG[active];
+    if (docContent) {
+      return <MarkdownRenderer content={docContent} />;
+    }
+
+    return null;
   };
 
   return (
