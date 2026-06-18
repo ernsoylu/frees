@@ -31,6 +31,7 @@ import org.apache.commons.math3.linear.SingularValueDecomposition;
 public class EquationSystemSolver {
 
     public static final double DEFAULT_GUESS = 1.0;
+    private static final String UNCERTAINTY_OF_FN = "uncertaintyof$";
 
     private final EquationParser parser = new EquationParser();
     private final Blocker blocker = new Blocker();
@@ -287,7 +288,7 @@ public class EquationSystemSolver {
         Map<String, Double> uncertainties = propagateUncertainty(equations, solved.values(), mutableSpecs, parsed.defs());
         if (mentionsUncertaintyOf(equations)) {
             for (Map.Entry<String, Double> entry : uncertainties.entrySet()) {
-                solved.values().put("uncertaintyof$" + entry.getKey().toLowerCase(), entry.getValue());
+                solved.values().put(UNCERTAINTY_OF_FN + entry.getKey().toLowerCase(), entry.getValue());
             }
             solved = solveEquationList(equations, settings, mutableSpecs,
                     parsed.defs(), deadlineNanos, solved.values());
@@ -307,7 +308,7 @@ public class EquationSystemSolver {
             }
             uncertainties = propagateUncertainty(equations, solved.values(), mutableSpecs, parsed.defs());
             for (Map.Entry<String, Double> entry : uncertainties.entrySet()) {
-                solved.values().put("uncertaintyof$" + entry.getKey().toLowerCase(), entry.getValue());
+                solved.values().put(UNCERTAINTY_OF_FN + entry.getKey().toLowerCase(), entry.getValue());
             }
         }
         List<com.frees.backend.core.ode.OdeTableResult> odeTables =
@@ -526,7 +527,7 @@ public class EquationSystemSolver {
         }
         if (mutableWarmStart != null) {
             for (Map.Entry<String, Double> entry : mutableWarmStart.entrySet()) {
-                if (entry.getKey().startsWith("uncertaintyof$")) {
+                if (entry.getKey().startsWith(UNCERTAINTY_OF_FN)) {
                     values.put(entry.getKey(), entry.getValue());
                 }
             }
@@ -825,7 +826,7 @@ public class EquationSystemSolver {
         Map<String, Double> uncertainties = propagateUncertainty(finalEquations, solved.values(), mutableSpecs, parsed.defs());
         if (mentionsUncertaintyOf(finalEquations)) {
             for (Map.Entry<String, Double> entry : uncertainties.entrySet()) {
-                solved.values().put("uncertaintyof$" + entry.getKey().toLowerCase(), entry.getValue());
+                solved.values().put(UNCERTAINTY_OF_FN + entry.getKey().toLowerCase(), entry.getValue());
             }
             solved = solveEquationList(finalEquations, settings, mutableSpecs,
                     parsed.defs(), deadlineNanos, solved.values());
@@ -845,7 +846,7 @@ public class EquationSystemSolver {
             }
             uncertainties = propagateUncertainty(finalEquations, solved.values(), mutableSpecs, parsed.defs());
             for (Map.Entry<String, Double> entry : uncertainties.entrySet()) {
-                solved.values().put("uncertaintyof$" + entry.getKey().toLowerCase(), entry.getValue());
+                solved.values().put(UNCERTAINTY_OF_FN + entry.getKey().toLowerCase(), entry.getValue());
             }
         }
         List<com.frees.backend.core.ode.OdeTableResult> odeTables =

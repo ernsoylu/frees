@@ -12,6 +12,8 @@ import java.util.Map;
 public final class LatexConverter {
 
     private static final String RIGHT_PAREN = "\\right)";
+    private static final String TEXT_OPEN = "\\text{";
+    private static final String CLOSE_LEFT_PAREN = "}\\left(";
 
     private LatexConverter() {}
 
@@ -97,10 +99,10 @@ public final class LatexConverter {
                     case "exp" -> "e^{" + argLates.get(0) + "}";
                     case "abs" -> "\\left|" + argLates.get(0) + "\\right|";
                     case "convert" -> "\\text{Convert}\\left(" + argsStr + RIGHT_PAREN;
-                    case "besselj", "bessel_j" -> "J_{" + argLates.get(1) + "}\\left(" + argLates.get(0) + RIGHT_PAREN;
-                    case "besseli", "bessel_i" -> "I_{" + argLates.get(1) + "}\\left(" + argLates.get(0) + RIGHT_PAREN;
-                    case "bessely", "bessel_y" -> "Y_{" + argLates.get(1) + "}\\left(" + argLates.get(0) + RIGHT_PAREN;
-                    case "besselk", "bessel_k" -> "K_{" + argLates.get(1) + "}\\left(" + argLates.get(0) + RIGHT_PAREN;
+                    case "besselj", "bessel_j" -> "J_{" + argLates.get(1) + CLOSE_LEFT_PAREN + argLates.get(0) + RIGHT_PAREN;
+                    case "besseli", "bessel_i" -> "I_{" + argLates.get(1) + CLOSE_LEFT_PAREN + argLates.get(0) + RIGHT_PAREN;
+                    case "bessely", "bessel_y" -> "Y_{" + argLates.get(1) + CLOSE_LEFT_PAREN + argLates.get(0) + RIGHT_PAREN;
+                    case "besselk", "bessel_k" -> "K_{" + argLates.get(1) + CLOSE_LEFT_PAREN + argLates.get(0) + RIGHT_PAREN;
                     case "besselj0", "bessel_j0" -> "J_0\\left(" + argLates.get(0) + RIGHT_PAREN;
                     case "besselj1", "bessel_j1" -> "J_1\\left(" + argLates.get(0) + RIGHT_PAREN;
                     case "besseli0", "bessel_i0" -> "I_0\\left(" + argLates.get(0) + RIGHT_PAREN;
@@ -110,7 +112,7 @@ public final class LatexConverter {
                     case "besselk0", "bessel_k0" -> "K_0\\left(" + argLates.get(0) + RIGHT_PAREN;
                     case "besselk1", "bessel_k1" -> "K_1\\left(" + argLates.get(0) + RIGHT_PAREN;
                     case "chi_square" -> "\\chi^2\\left(" + argsStr + RIGHT_PAREN;
-                    default -> "\\text{" + function + "}\\left(" + argsStr + RIGHT_PAREN;
+                    default -> TEXT_OPEN + function + CLOSE_LEFT_PAREN + argsStr + RIGHT_PAREN;
                 };
             }
             case Expr.ArrayAccess(String name, List<Expr> indices) -> {
@@ -138,9 +140,9 @@ public final class LatexConverter {
         // carry their fluid/formula/mode as string arguments rather than in the
         // encoded name, so render them straight from the args.
         if (parts.length < 3) {
-            return "\\text{" + output + "}\\left(" + String.join(", ", argLates) + RIGHT_PAREN;
+            return TEXT_OPEN + output + CLOSE_LEFT_PAREN + String.join(", ", argLates) + RIGHT_PAREN;
         }
-        StringBuilder sb = new StringBuilder("\\text{").append(output)
+        StringBuilder sb = new StringBuilder(TEXT_OPEN).append(output)
                 .append("}\\left(\\mathrm{").append(parts[2]).append("}");
         for (int i = 0; i + 3 < parts.length && i < argLates.size(); i++) {
             sb.append(", ").append(parts[i + 3]).append("=").append(argLates.get(i));

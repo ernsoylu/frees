@@ -17,6 +17,9 @@ import java.util.List;
  */
 public final class Differentiator {
 
+    private static final String GAMMA = "gamma";
+    private static final String DIGAMMA = "digamma";
+
     private Differentiator() {}
 
     /**
@@ -173,10 +176,10 @@ public final class Differentiator {
 
             // ── gamma ───────────────────────────────────────────────────
             // d/dx Γ(f) = Γ(f) * ψ(f) * f'   (ψ = digamma)
-            case "gamma" -> chainRule(args, var, f ->
-                    simplifyMul(call("gamma", f), call("digamma", f)));
+            case GAMMA -> chainRule(args, var, f ->
+                    simplifyMul(call(GAMMA, f), call(DIGAMMA, f)));
             // d/dx lnΓ(f) = ψ(f) * f'
-            case "loggamma" -> chainRule(args, var, f -> call("digamma", f));
+            case "loggamma" -> chainRule(args, var, f -> call(DIGAMMA, f));
             // digamma itself is evaluated numerically at runtime; it only
             // appears as an intermediate inside a Jacobian expression.
 
@@ -226,7 +229,7 @@ public final class Differentiator {
                 );
                 Expr denominator = simplifyMul(
                         simplifyPow(num(2), halfDf),
-                        call("gamma", halfDf)
+                        call(GAMMA, halfDf)
                 );
                 yield simplifyMul(simplifyDiv(numerator, denominator), dx);
             }
@@ -280,7 +283,7 @@ public final class Differentiator {
                 Expr df = diff(f, var);
                 if (df == null) yield null;
                 Expr fact = call("factorial", f);
-                Expr digamma = call("digamma", simplifyAdd(f, num(1)));
+                Expr digamma = call(DIGAMMA, simplifyAdd(f, num(1)));
                 yield simplifyMul(simplifyMul(fact, digamma), df);
             }
 
@@ -348,7 +351,7 @@ public final class Differentiator {
             case "integral", "min", "max", "average", "avg",
                  "atan2", "mod", "gcd", "lcm",
                  "bitand", "bitor", "bitxor", "bitnot", "bitshiftl", "bitshiftr",
-                 "baseconvert", "digamma",
+                 "baseconvert", DIGAMMA,
                  "real", "imag" -> null;
 
             // Unknown function → cannot differentiate
@@ -375,9 +378,9 @@ public final class Differentiator {
         Expr da = diff(a, var);
         Expr db = diff(b, var);
         if (da == null || db == null) return null;
-        Expr psiSum = call("digamma", simplifyAdd(a, b));
-        Expr termA = simplifyMul(simplifySub(call("digamma", a), psiSum), da);
-        Expr termB = simplifyMul(simplifySub(call("digamma", b), psiSum), db);
+        Expr psiSum = call(DIGAMMA, simplifyAdd(a, b));
+        Expr termA = simplifyMul(simplifySub(call(DIGAMMA, a), psiSum), da);
+        Expr termB = simplifyMul(simplifySub(call(DIGAMMA, b), psiSum), db);
         return simplifyMul(new Expr.Call("beta", List.of(a, b)),
                 simplifyAdd(termA, termB));
     }
