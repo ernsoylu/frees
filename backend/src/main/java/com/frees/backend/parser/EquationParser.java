@@ -470,29 +470,37 @@ public final class EquationParser {
         lhs = explicitMatrixOutput(lhs, outRows, outCols, ctx);
         MatrixInfo lhsMat = parseMatrixInfo(lhs, ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
         if (func.equals(FN_TRANSPOSE)) {
-            if (lhsMat.rows != rhsMat.cols || lhsMat.cols != rhsMat.rows) {
-                throw new ParseException("Dimension mismatch for Transpose: LHS is " + lhsMat.rows + "x" + lhsMat.cols + ", RHS is " + rhsMat.cols + "x" + rhsMat.rows);
-            }
-            for (int i = 0; i < lhsMat.rows; i++) {
-                for (int j = 0; j < lhsMat.cols; j++) {
-                    ctx.out().add(new Equation(lhsMat.elements[i][j], rhsMat.elements[j][i], sourceText));
-                }
-            }
+            emitTransposeEquations(lhsMat, rhsMat, sourceText, ctx);
         } else { // func is FN_INVERSE — the only other transform routed here
-            if (lhsMat.rows != lhsMat.cols || rhsMat.rows != rhsMat.cols || lhsMat.rows != rhsMat.rows) {
-                throw new ParseException("Inverse requires square matrices of identical size.");
+            emitInverseEquations(lhsMat, rhsMat, sourceText, ctx);
+        }
+    }
+
+    private void emitTransposeEquations(MatrixInfo lhsMat, MatrixInfo rhsMat, String sourceText, FlattenContext ctx) {
+        if (lhsMat.rows != rhsMat.cols || lhsMat.cols != rhsMat.rows) {
+            throw new ParseException("Dimension mismatch for Transpose: LHS is " + lhsMat.rows + "x" + lhsMat.cols + ", RHS is " + rhsMat.cols + "x" + rhsMat.rows);
+        }
+        for (int i = 0; i < lhsMat.rows; i++) {
+            for (int j = 0; j < lhsMat.cols; j++) {
+                ctx.out().add(new Equation(lhsMat.elements[i][j], rhsMat.elements[j][i], sourceText));
             }
-            int n = lhsMat.rows;
-            for (int i = 0; i < n; i++) {
-                for (int j = 0; j < n; j++) {
-                    Expr sum = null;
-                    for (int k = 0; k < n; k++) {
-                        Expr term = new Expr.BinOp('*', rhsMat.elements[i][k], lhsMat.elements[k][j]);
-                        sum = sum == null ? term : new Expr.BinOp('+', sum, term);
-                    }
-                    double expected = kroneckerDelta(i, j);
-                    ctx.out().add(new Equation(sum, new Expr.Num(expected), sourceText));
+        }
+    }
+
+    /** Emits the defining equations of an inverse: (RHS · LHS)[i,j] = δ(i,j). */
+    private void emitInverseEquations(MatrixInfo lhsMat, MatrixInfo rhsMat, String sourceText, FlattenContext ctx) {
+        if (lhsMat.rows != lhsMat.cols || rhsMat.rows != rhsMat.cols || lhsMat.rows != rhsMat.rows) {
+            throw new ParseException("Inverse requires square matrices of identical size.");
+        }
+        int n = lhsMat.rows;
+        for (int i = 0; i < n; i++) {
+            for (int j = 0; j < n; j++) {
+                Expr sum = null;
+                for (int k = 0; k < n; k++) {
+                    Expr term = new Expr.BinOp('*', rhsMat.elements[i][k], lhsMat.elements[k][j]);
+                    sum = sum == null ? term : new Expr.BinOp('+', sum, term);
                 }
+                ctx.out().add(new Equation(sum, new Expr.Num(kroneckerDelta(i, j)), sourceText));
             }
         }
     }
@@ -504,43 +512,56 @@ public final class EquationParser {
 
     private void flattenVectorOrDet(String func, Expr lhs, List<Expr> args, String sourceText, FlattenContext ctx) {
         Expr expandedLhs = expandExpr(lhs, ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
-        if (func.equals("dot")) {
-            VectorInfo u = parseVectorInfo(args.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
-            VectorInfo v = parseVectorInfo(args.get(1), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
-            if (u.size != v.size) {
-                throw new ParseException("Dot product requires vectors of identical size.");
-            }
-            Expr sum = null;
-            for (int i = 0; i < u.size; i++) {
-                Expr term = new Expr.BinOp('*', u.elements[i], v.elements[i]);
-                sum = sum == null ? term : new Expr.BinOp('+', sum, term);
-            }
-            ctx.out().add(new Equation(expandedLhs, sum, sourceText));
-        } else if (func.equals("norm") || func.equals("nrm2")) {
-            VectorInfo v = parseVectorInfo(args.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
-            Expr sumSq = null;
-            for (int i = 0; i < v.size; i++) {
-                Expr term = new Expr.BinOp('*', v.elements[i], v.elements[i]);
-                sumSq = sumSq == null ? term : new Expr.BinOp('+', sumSq, term);
-            }
-            Expr normExpr = new Expr.Call("sqrt", List.of(sumSq));
-            ctx.out().add(new Equation(expandedLhs, normExpr, sourceText));
-        } else if (func.equals("asum")) {
-            VectorInfo v = parseVectorInfo(args.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
-            Expr sumAbs = null;
-            for (int i = 0; i < v.size; i++) {
-                Expr term = new Expr.Call("abs", List.of(v.elements[i]));
-                sumAbs = sumAbs == null ? term : new Expr.BinOp('+', sumAbs, term);
-            }
-            ctx.out().add(new Equation(expandedLhs, sumAbs, sourceText));
-        } else if (func.equals(FN_DETERMINANT)) {
-            MatrixInfo m = parseMatrixInfo(args.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
-            if (m.rows != m.cols) {
-                throw new ParseException("Determinant requires a square matrix.");
-            }
-            Expr detExpr = expandDeterminant(m.elements);
-            ctx.out().add(new Equation(expandedLhs, detExpr, sourceText));
+        Expr rhs = switch (func) {
+            case "dot" -> dotProduct(args, ctx);
+            case "norm", "nrm2" -> vectorNorm(args, ctx);
+            case "asum" -> vectorAbsSum(args, ctx);
+            case FN_DETERMINANT -> matrixDeterminant(args, ctx);
+            default -> throw new ParseException("Unsupported vector/scalar function: " + func);
+        };
+        ctx.out().add(new Equation(expandedLhs, rhs, sourceText));
+    }
+
+    private Expr dotProduct(List<Expr> args, FlattenContext ctx) {
+        VectorInfo u = parseVectorInfo(args.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        VectorInfo v = parseVectorInfo(args.get(1), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        if (u.size != v.size) {
+            throw new ParseException("Dot product requires vectors of identical size.");
         }
+        Expr sum = null;
+        for (int i = 0; i < u.size; i++) {
+            Expr term = new Expr.BinOp('*', u.elements[i], v.elements[i]);
+            sum = sum == null ? term : new Expr.BinOp('+', sum, term);
+        }
+        return sum;
+    }
+
+    private Expr vectorNorm(List<Expr> args, FlattenContext ctx) {
+        VectorInfo v = parseVectorInfo(args.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        Expr sumSq = null;
+        for (int i = 0; i < v.size; i++) {
+            Expr term = new Expr.BinOp('*', v.elements[i], v.elements[i]);
+            sumSq = sumSq == null ? term : new Expr.BinOp('+', sumSq, term);
+        }
+        return new Expr.Call("sqrt", List.of(sumSq));
+    }
+
+    private Expr vectorAbsSum(List<Expr> args, FlattenContext ctx) {
+        VectorInfo v = parseVectorInfo(args.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        Expr sumAbs = null;
+        for (int i = 0; i < v.size; i++) {
+            Expr term = new Expr.Call("abs", List.of(v.elements[i]));
+            sumAbs = sumAbs == null ? term : new Expr.BinOp('+', sumAbs, term);
+        }
+        return sumAbs;
+    }
+
+    private Expr matrixDeterminant(List<Expr> args, FlattenContext ctx) {
+        MatrixInfo m = parseMatrixInfo(args.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        if (m.rows != m.cols) {
+            throw new ParseException("Determinant requires a square matrix.");
+        }
+        return expandDeterminant(m.elements);
     }
 
     private void flattenCrossProduct(Expr lhs, List<Expr> args, String sourceText, FlattenContext ctx) {
@@ -631,110 +652,127 @@ public final class EquationParser {
                     new Expr.Call("eigen$val$" + k + "$" + n, entries), sourceText));
         }
         if (wantVectors) {
-            MatrixInfo v = parseMatrixInfo(outputs.get(1), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
-            if (v.rows != n || v.cols != n) {
-                throw new ParseException("Eigen requires an n x n eigenvector matrix (eigenvectors as columns).");
-            }
-            for (int i = 0; i < n; i++) {
-                for (int k = 0; k < n; k++) {
-                    ctx.out().add(new Equation(v.elements[i][k],
-                            new Expr.Call("eigen$vec$" + i + "$" + k + "$" + n, entries), sourceText));
-                }
+            emitEigenvectors(outputs, n, entries, sourceText, ctx);
+        }
+    }
+
+    private void emitEigenvectors(List<Expr> outputs, int n, List<Expr> entries, String sourceText, FlattenContext ctx) {
+        MatrixInfo v = parseMatrixInfo(outputs.get(1), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        if (v.rows != n || v.cols != n) {
+            throw new ParseException("Eigen requires an n x n eigenvector matrix (eigenvectors as columns).");
+        }
+        for (int i = 0; i < n; i++) {
+            for (int k = 0; k < n; k++) {
+                ctx.out().add(new Equation(v.elements[i][k],
+                        new Expr.Call("eigen$vec$" + i + "$" + k + "$" + n, entries), sourceText));
             }
         }
     }
 
     private void flattenDecomposeOrRotate(String defName, List<Expr> inputs, List<Expr> outputs, String sourceText, FlattenContext ctx) {
-        if (defName.equals("ludecompose")) {
-            if (inputs.size() != 1 || outputs.size() != 2) {
-                throw new ParseException("LUDecompose expects exactly 1 input matrix and 2 output matrices, e.g. CALL LUDecompose(A[1:3,1:3] : L[1:3,1:3], U[1:3,1:3])");
-            }
-            MatrixInfo a = parseMatrixInfo(inputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
-            MatrixInfo l = parseMatrixInfo(outputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
-            MatrixInfo u = parseMatrixInfo(outputs.get(1), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
-            if (a.rows != a.cols || l.rows != l.cols || u.rows != u.cols || a.rows != l.rows) {
-                throw new ParseException("LUDecompose requires all matrices to be square and of identical size.");
-            }
-            int n = a.rows;
-            for (int i = 0; i < n; i++) {
-                for (int j = 0; j < n; j++) {
-                    if (i < j) {
-                        ctx.out().add(new Equation(l.elements[i][j], new Expr.Num(0.0), sourceText));
-                    } else if (i == j) {
-                        ctx.out().add(new Equation(l.elements[i][j], new Expr.Num(1.0), sourceText));
-                    }
-                    if (i > j) {
-                        ctx.out().add(new Equation(u.elements[i][j], new Expr.Num(0.0), sourceText));
-                    }
-                    Expr sum = null;
-                    for (int k = 0; k < n; k++) {
-                        Expr term = new Expr.BinOp('*', l.elements[i][k], u.elements[k][j]);
-                        sum = sum == null ? term : new Expr.BinOp('+', sum, term);
-                    }
-                    ctx.out().add(new Equation(sum, a.elements[i][j], sourceText));
+        switch (defName) {
+            case "ludecompose" -> flattenLuDecompose(inputs, outputs, sourceText, ctx);
+            case "eulerrotate" -> flattenEulerRotate(inputs, outputs, sourceText, ctx);
+            case "eulerdecompose" -> flattenEulerDecompose(inputs, outputs, sourceText, ctx);
+            default -> { /* not a decompose/rotate intrinsic */ }
+        }
+    }
+
+    private void flattenLuDecompose(List<Expr> inputs, List<Expr> outputs, String sourceText, FlattenContext ctx) {
+        if (inputs.size() != 1 || outputs.size() != 2) {
+            throw new ParseException("LUDecompose expects exactly 1 input matrix and 2 output matrices, e.g. CALL LUDecompose(A[1:3,1:3] : L[1:3,1:3], U[1:3,1:3])");
+        }
+        MatrixInfo a = parseMatrixInfo(inputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        MatrixInfo l = parseMatrixInfo(outputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        MatrixInfo u = parseMatrixInfo(outputs.get(1), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        if (a.rows != a.cols || l.rows != l.cols || u.rows != u.cols || a.rows != l.rows) {
+            throw new ParseException("LUDecompose requires all matrices to be square and of identical size.");
+        }
+        int n = a.rows;
+        for (int i = 0; i < n; i++) {
+            for (int j = 0; j < n; j++) {
+                emitLuTriangularEntry(l, u, i, j, sourceText, ctx);
+                Expr sum = null;
+                for (int k = 0; k < n; k++) {
+                    Expr term = new Expr.BinOp('*', l.elements[i][k], u.elements[k][j]);
+                    sum = sum == null ? term : new Expr.BinOp('+', sum, term);
                 }
+                ctx.out().add(new Equation(sum, a.elements[i][j], sourceText));
             }
-            return;
         }
-        if (defName.equals("eulerrotate")) {
-            if (inputs.size() != 3 || outputs.size() != 1) {
-                throw new ParseException("EulerRotate expects 3 angles (phi, theta, psi) and 1 output matrix, e.g. CALL EulerRotate(phi, theta, psi : R[1:3,1:3])");
-            }
-            Expr phi = expandExpr(inputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
-            Expr theta = expandExpr(inputs.get(1), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
-            Expr psi = expandExpr(inputs.get(2), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
-            MatrixInfo r = parseMatrixInfo(outputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
-            if (r.rows != 3 || r.cols != 3) {
-                throw new ParseException("EulerRotate output matrix must be 3x3.");
-            }
-            Expr cosPhi = new Expr.Call("cos", List.of(phi));
-            Expr sinPhi = new Expr.Call("sin", List.of(phi));
-            Expr cosTheta = new Expr.Call("cos", List.of(theta));
-            Expr sinTheta = new Expr.Call("sin", List.of(theta));
-            Expr cosPsi = new Expr.Call("cos", List.of(psi));
-            Expr sinPsi = new Expr.Call("sin", List.of(psi));
+    }
 
-            ctx.out().add(new Equation(r.elements[0][0], new Expr.BinOp('-',
-                    new Expr.BinOp('*', cosPhi, cosPsi),
-                    new Expr.BinOp('*', new Expr.BinOp('*', sinPhi, cosTheta), sinPsi)), sourceText));
-
-            ctx.out().add(new Equation(r.elements[0][1], new Expr.BinOp('-',
-                    new Expr.Neg(new Expr.BinOp('*', cosPhi, sinPsi)),
-                    new Expr.BinOp('*', new Expr.BinOp('*', sinPhi, cosTheta), cosPsi)), sourceText));
-
-            ctx.out().add(new Equation(r.elements[0][2], new Expr.BinOp('*', sinPhi, sinTheta), sourceText));
-
-            ctx.out().add(new Equation(r.elements[1][0], new Expr.BinOp('+',
-                    new Expr.BinOp('*', sinPhi, cosPsi),
-                    new Expr.BinOp('*', new Expr.BinOp('*', cosPhi, cosTheta), sinPsi)), sourceText));
-
-            ctx.out().add(new Equation(r.elements[1][1], new Expr.BinOp('+',
-                    new Expr.Neg(new Expr.BinOp('*', sinPhi, sinPsi)),
-                    new Expr.BinOp('*', new Expr.BinOp('*', cosPhi, cosTheta), cosPsi)), sourceText));
-
-            ctx.out().add(new Equation(r.elements[1][2], new Expr.Neg(new Expr.BinOp('*', cosPhi, sinTheta)), sourceText));
-
-            ctx.out().add(new Equation(r.elements[2][0], new Expr.BinOp('*', sinTheta, sinPsi), sourceText));
-            ctx.out().add(new Equation(r.elements[2][1], new Expr.BinOp('*', sinTheta, cosPsi), sourceText));
-            ctx.out().add(new Equation(r.elements[2][2], cosTheta, sourceText));
-            return;
+    /** Pins the fixed triangular structure of an LU factorization: L is unit
+     *  lower-triangular (0 above, 1 on the diagonal) and U is upper-triangular (0 below). */
+    private void emitLuTriangularEntry(MatrixInfo l, MatrixInfo u, int i, int j, String sourceText, FlattenContext ctx) {
+        if (i < j) {
+            ctx.out().add(new Equation(l.elements[i][j], new Expr.Num(0.0), sourceText));
+        } else if (i == j) {
+            ctx.out().add(new Equation(l.elements[i][j], new Expr.Num(1.0), sourceText));
         }
-        if (defName.equals("eulerdecompose")) {
-            if (inputs.size() != 1 || outputs.size() != 3) {
-                throw new ParseException("EulerDecompose expects 1 input matrix and 3 output variables, e.g. CALL EulerDecompose(R[1:3,1:3] : phi, theta, psi)");
-            }
-            MatrixInfo r = parseMatrixInfo(inputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
-            if (r.rows != 3 || r.cols != 3) {
-                throw new ParseException("EulerDecompose input matrix must be 3x3.");
-            }
-            Expr phi = expandExpr(outputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
-            Expr theta = expandExpr(outputs.get(1), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
-            Expr psi = expandExpr(outputs.get(2), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
-
-            ctx.out().add(new Equation(new Expr.Call("cos", List.of(theta)), r.elements[2][2], sourceText));
-            ctx.out().add(new Equation(new Expr.BinOp('*', new Expr.Call("sin", List.of(phi)), new Expr.Call("sin", List.of(theta))), r.elements[0][2], sourceText));
-            ctx.out().add(new Equation(new Expr.BinOp('*', new Expr.Call("sin", List.of(theta)), new Expr.Call("sin", List.of(psi))), r.elements[2][0], sourceText));
+        if (i > j) {
+            ctx.out().add(new Equation(u.elements[i][j], new Expr.Num(0.0), sourceText));
         }
+    }
+
+    private void flattenEulerRotate(List<Expr> inputs, List<Expr> outputs, String sourceText, FlattenContext ctx) {
+        if (inputs.size() != 3 || outputs.size() != 1) {
+            throw new ParseException("EulerRotate expects 3 angles (phi, theta, psi) and 1 output matrix, e.g. CALL EulerRotate(phi, theta, psi : R[1:3,1:3])");
+        }
+        Expr phi = expandExpr(inputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        Expr theta = expandExpr(inputs.get(1), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        Expr psi = expandExpr(inputs.get(2), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        MatrixInfo r = parseMatrixInfo(outputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        if (r.rows != 3 || r.cols != 3) {
+            throw new ParseException("EulerRotate output matrix must be 3x3.");
+        }
+        Expr cosPhi = new Expr.Call("cos", List.of(phi));
+        Expr sinPhi = new Expr.Call("sin", List.of(phi));
+        Expr cosTheta = new Expr.Call("cos", List.of(theta));
+        Expr sinTheta = new Expr.Call("sin", List.of(theta));
+        Expr cosPsi = new Expr.Call("cos", List.of(psi));
+        Expr sinPsi = new Expr.Call("sin", List.of(psi));
+
+        ctx.out().add(new Equation(r.elements[0][0], new Expr.BinOp('-',
+                new Expr.BinOp('*', cosPhi, cosPsi),
+                new Expr.BinOp('*', new Expr.BinOp('*', sinPhi, cosTheta), sinPsi)), sourceText));
+
+        ctx.out().add(new Equation(r.elements[0][1], new Expr.BinOp('-',
+                new Expr.Neg(new Expr.BinOp('*', cosPhi, sinPsi)),
+                new Expr.BinOp('*', new Expr.BinOp('*', sinPhi, cosTheta), cosPsi)), sourceText));
+
+        ctx.out().add(new Equation(r.elements[0][2], new Expr.BinOp('*', sinPhi, sinTheta), sourceText));
+
+        ctx.out().add(new Equation(r.elements[1][0], new Expr.BinOp('+',
+                new Expr.BinOp('*', sinPhi, cosPsi),
+                new Expr.BinOp('*', new Expr.BinOp('*', cosPhi, cosTheta), sinPsi)), sourceText));
+
+        ctx.out().add(new Equation(r.elements[1][1], new Expr.BinOp('+',
+                new Expr.Neg(new Expr.BinOp('*', sinPhi, sinPsi)),
+                new Expr.BinOp('*', new Expr.BinOp('*', cosPhi, cosTheta), cosPsi)), sourceText));
+
+        ctx.out().add(new Equation(r.elements[1][2], new Expr.Neg(new Expr.BinOp('*', cosPhi, sinTheta)), sourceText));
+
+        ctx.out().add(new Equation(r.elements[2][0], new Expr.BinOp('*', sinTheta, sinPsi), sourceText));
+        ctx.out().add(new Equation(r.elements[2][1], new Expr.BinOp('*', sinTheta, cosPsi), sourceText));
+        ctx.out().add(new Equation(r.elements[2][2], cosTheta, sourceText));
+    }
+
+    private void flattenEulerDecompose(List<Expr> inputs, List<Expr> outputs, String sourceText, FlattenContext ctx) {
+        if (inputs.size() != 1 || outputs.size() != 3) {
+            throw new ParseException("EulerDecompose expects 1 input matrix and 3 output variables, e.g. CALL EulerDecompose(R[1:3,1:3] : phi, theta, psi)");
+        }
+        MatrixInfo r = parseMatrixInfo(inputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        if (r.rows != 3 || r.cols != 3) {
+            throw new ParseException("EulerDecompose input matrix must be 3x3.");
+        }
+        Expr phi = expandExpr(outputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        Expr theta = expandExpr(outputs.get(1), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        Expr psi = expandExpr(outputs.get(2), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+
+        ctx.out().add(new Equation(new Expr.Call("cos", List.of(theta)), r.elements[2][2], sourceText));
+        ctx.out().add(new Equation(new Expr.BinOp('*', new Expr.Call("sin", List.of(phi)), new Expr.Call("sin", List.of(theta))), r.elements[0][2], sourceText));
+        ctx.out().add(new Equation(new Expr.BinOp('*', new Expr.Call("sin", List.of(theta)), new Expr.Call("sin", List.of(psi))), r.elements[2][0], sourceText));
     }
 
     private void flattenProcedureCall(ProcDef.ProcedureDef pd, List<Expr> inputs, List<Expr> outputs, FlattenContext ctx) {
@@ -929,27 +967,32 @@ public final class EquationParser {
         for (Expr idx : indices) {
             Expr expandedIdx = expandExpr(idx, loopVars, constants, displayNames, defs);
             if (expandedIdx instanceof Expr.Range(Expr startExpr, Expr endExpr)) {
-                double startVal = evalIndexExpr(startExpr, loopVars, constants, defs);
-                double endVal = evalIndexExpr(endExpr, loopVars, constants, defs);
-                int start = (int) Math.round(startVal);
-                int end = (int) Math.round(endVal);
-                long count = Math.abs((long) end - start) + 1;
-                if (count > MAX_RANGE_SPAN) {
-                    throw new ParseException("Array range is too large (" + count
-                            + " elements; limit " + MAX_RANGE_SPAN + "). Reduce the index range.");
-                }
-                List<Integer> rangeVals = new ArrayList<>();
-                int dir = start <= end ? 1 : -1;
-                for (int v = start; start <= end ? v <= end : v >= end; v += dir) {
-                    rangeVals.add(v);
-                }
-                indexPossibilities.add(rangeVals);
+                indexPossibilities.add(expandRangeIndex(startExpr, endExpr, loopVars, constants, defs));
             } else {
                 double val = evalIndexExpr(expandedIdx, loopVars, constants, defs);
                 indexPossibilities.add(List.of((int) Math.round(val)));
             }
         }
         return indexPossibilities;
+    }
+
+    /** Materializes a {@code start:end} index range into the explicit list of
+     *  indices it covers (ascending or descending), bounded by MAX_RANGE_SPAN. */
+    private List<Integer> expandRangeIndex(Expr startExpr, Expr endExpr, Map<String, Double> loopVars,
+                                           Map<String, Double> constants, Map<String, ProcDef> defs) {
+        int start = (int) Math.round(evalIndexExpr(startExpr, loopVars, constants, defs));
+        int end = (int) Math.round(evalIndexExpr(endExpr, loopVars, constants, defs));
+        long count = Math.abs((long) end - start) + 1;
+        if (count > MAX_RANGE_SPAN) {
+            throw new ParseException("Array range is too large (" + count
+                    + " elements; limit " + MAX_RANGE_SPAN + "). Reduce the index range.");
+        }
+        List<Integer> rangeVals = new ArrayList<>();
+        int dir = start <= end ? 1 : -1;
+        for (int v = start; start <= end ? v <= end : v >= end; v += dir) {
+            rangeVals.add(v);
+        }
+        return rangeVals;
     }
 
     private List<Expr> buildElementVars(String name, List<List<Integer>> combinations, Map<String, String> displayNames) {
@@ -1196,71 +1239,75 @@ public final class EquationParser {
 
     /** MATLAB-style matrix generators: zeros, ones, eye/identity, diag, linspace. */
     private Expr[][] compileMatrixGenerator(String fn, List<Expr> args, FlattenContext ctx) {
-        Map<String, Double> loopVars = ctx.loopVars();
-        Map<String, Double> constants = ctx.constants();
-        Map<String, String> displayNames = ctx.displayNames();
-        Map<String, ProcDef> defs = ctx.defs();
         java.util.function.ToDoubleFunction<Expr> num = a ->
-                evalIndexExpr(expandExpr(a, loopVars, constants, displayNames, defs), loopVars, constants, defs);
+                evalIndexExpr(expandExpr(a, ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs()),
+                        ctx.loopVars(), ctx.constants(), ctx.defs());
+        return switch (fn) {
+            case FN_ZEROS, "ones" -> genConstant(fn, args, num);
+            case "eye", FN_IDENTITY -> genIdentity(fn, args, num);
+            case FN_LINSPACE -> genLinspace(fn, args, num);
+            default -> genDiag(args, ctx); // diag
+        };
+    }
 
-        switch (fn) {
-            case FN_ZEROS, "ones" -> {
-                int r = (int) Math.round(num.applyAsDouble(args.get(0)));
-                int c = args.size() > 1 ? (int) Math.round(num.applyAsDouble(args.get(1))) : r;
-                checkGeneratorSize(r, c, fn);
-                double fill = fn.equals("ones") ? 1.0 : 0.0;
-                Expr[][] m = new Expr[r][c];
-                for (int i = 0; i < r; i++) {
-                    for (int j = 0; j < c; j++) {
-                        m[i][j] = new Expr.Num(fill);
-                    }
-                }
-                return m;
-            }
-            case "eye", FN_IDENTITY -> {
-                int r = (int) Math.round(num.applyAsDouble(args.get(0)));
-                int c = args.size() > 1 ? (int) Math.round(num.applyAsDouble(args.get(1))) : r;
-                checkGeneratorSize(r, c, fn);
-                Expr[][] m = new Expr[r][c];
-                for (int i = 0; i < r; i++) {
-                    for (int j = 0; j < c; j++) {
-                        m[i][j] = new Expr.Num(i == j ? 1.0 : 0.0);
-                    }
-                }
-                return m;
-            }
-            case FN_LINSPACE -> {
-                double a = num.applyAsDouble(args.get(0));
-                double b = num.applyAsDouble(args.get(1));
-                int n = args.size() > 2 ? (int) Math.round(num.applyAsDouble(args.get(2))) : 100;
-                checkGeneratorSize(n, 1, fn);
-                Expr[][] m = new Expr[n][1];
-                for (int k = 0; k < n; k++) {
-                    double t = n == 1 ? b : a + (b - a) * k / (n - 1);
-                    m[k][0] = new Expr.Num(t);
-                }
-                return m;
-            }
-            default -> { // diag
-                Expr[][] v = compileMatrixExpr(args.get(0), ctx);
-                if (v.length == 1 || v[0].length == 1) { // vector -> diagonal matrix
-                    int n = Math.max(v.length, v[0].length);
-                    Expr[][] m = new Expr[n][n];
-                    for (int i = 0; i < n; i++) {
-                        for (int j = 0; j < n; j++) {
-                            m[i][j] = i == j ? (v.length == 1 ? v[0][i] : v[i][0]) : new Expr.Num(0.0);
-                        }
-                    }
-                    return m;
-                }
-                int n = Math.min(v.length, v[0].length); // matrix -> extract diagonal
-                Expr[][] m = new Expr[n][1];
-                for (int i = 0; i < n; i++) {
-                    m[i][0] = v[i][i];
-                }
-                return m;
+    private Expr[][] genConstant(String fn, List<Expr> args, java.util.function.ToDoubleFunction<Expr> num) {
+        int r = (int) Math.round(num.applyAsDouble(args.get(0)));
+        int c = args.size() > 1 ? (int) Math.round(num.applyAsDouble(args.get(1))) : r;
+        checkGeneratorSize(r, c, fn);
+        double fill = fn.equals("ones") ? 1.0 : 0.0;
+        Expr[][] m = new Expr[r][c];
+        for (int i = 0; i < r; i++) {
+            for (int j = 0; j < c; j++) {
+                m[i][j] = new Expr.Num(fill);
             }
         }
+        return m;
+    }
+
+    private Expr[][] genIdentity(String fn, List<Expr> args, java.util.function.ToDoubleFunction<Expr> num) {
+        int r = (int) Math.round(num.applyAsDouble(args.get(0)));
+        int c = args.size() > 1 ? (int) Math.round(num.applyAsDouble(args.get(1))) : r;
+        checkGeneratorSize(r, c, fn);
+        Expr[][] m = new Expr[r][c];
+        for (int i = 0; i < r; i++) {
+            for (int j = 0; j < c; j++) {
+                m[i][j] = new Expr.Num(kroneckerDelta(i, j));
+            }
+        }
+        return m;
+    }
+
+    private Expr[][] genLinspace(String fn, List<Expr> args, java.util.function.ToDoubleFunction<Expr> num) {
+        double a = num.applyAsDouble(args.get(0));
+        double b = num.applyAsDouble(args.get(1));
+        int n = args.size() > 2 ? (int) Math.round(num.applyAsDouble(args.get(2))) : 100;
+        checkGeneratorSize(n, 1, fn);
+        Expr[][] m = new Expr[n][1];
+        for (int k = 0; k < n; k++) {
+            double t = n == 1 ? b : a + (b - a) * k / (n - 1);
+            m[k][0] = new Expr.Num(t);
+        }
+        return m;
+    }
+
+    private Expr[][] genDiag(List<Expr> args, FlattenContext ctx) {
+        Expr[][] v = compileMatrixExpr(args.get(0), ctx);
+        if (v.length == 1 || v[0].length == 1) { // vector -> diagonal matrix
+            int n = Math.max(v.length, v[0].length);
+            Expr[][] m = new Expr[n][n];
+            for (int i = 0; i < n; i++) {
+                for (int j = 0; j < n; j++) {
+                    m[i][j] = i == j ? (v.length == 1 ? v[0][i] : v[i][0]) : new Expr.Num(0.0);
+                }
+            }
+            return m;
+        }
+        int n = Math.min(v.length, v[0].length); // matrix -> extract diagonal
+        Expr[][] m = new Expr[n][1];
+        for (int i = 0; i < n; i++) {
+            m[i][0] = v[i][i];
+        }
+        return m;
     }
 
     /** The MATLAB spelling of an element-wise op, for error messages. */
@@ -1282,24 +1329,9 @@ public final class EquationParser {
         Expr[][] rMat = compileMatrixExpr(right, ctx);
         boolean lScalar = lMat.length == 1 && lMat[0].length == 1;
         boolean rScalar = rMat.length == 1 && rMat[0].length == 1;
-
-        int rows;
-        int cols;
-        if (lScalar) {
-            rows = rMat.length;
-            cols = rMat[0].length;
-        } else if (rScalar) {
-            rows = lMat.length;
-            cols = lMat[0].length;
-        } else {
-            if (lMat.length != rMat.length || lMat[0].length != rMat[0].length) {
-                throw new ParseException("Matrix dimensions must agree for element-wise '"
-                        + elementwiseSymbol(op) + "': " + lMat.length + "x" + lMat[0].length
-                        + " vs " + rMat.length + "x" + rMat[0].length);
-            }
-            rows = lMat.length;
-            cols = lMat[0].length;
-        }
+        int[] dims = elementwiseDims(op, lMat, rMat, lScalar, rScalar);
+        int rows = dims[0];
+        int cols = dims[1];
 
         Expr[][] result = new Expr[rows][cols];
         for (int i = 0; i < rows; i++) {
@@ -1314,6 +1346,23 @@ public final class EquationParser {
             }
         }
         return result;
+    }
+
+    /** Resolves the result shape of an element-wise op, broadcasting a scalar side
+     *  or requiring identical dimensions; returns {@code [rows, cols]}. */
+    private int[] elementwiseDims(char op, Expr[][] lMat, Expr[][] rMat, boolean lScalar, boolean rScalar) {
+        if (lScalar) {
+            return new int[] { rMat.length, rMat[0].length };
+        }
+        if (rScalar) {
+            return new int[] { lMat.length, lMat[0].length };
+        }
+        if (lMat.length != rMat.length || lMat[0].length != rMat[0].length) {
+            throw new ParseException("Matrix dimensions must agree for element-wise '"
+                    + elementwiseSymbol(op) + "': " + lMat.length + "x" + lMat[0].length
+                    + " vs " + rMat.length + "x" + rMat[0].length);
+        }
+        return new int[] { lMat.length, lMat[0].length };
     }
 
     private Expr[][] compileMatrixExpr(Expr e, FlattenContext ctx) {
