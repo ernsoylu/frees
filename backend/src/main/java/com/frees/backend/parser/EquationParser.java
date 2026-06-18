@@ -458,11 +458,16 @@ public final class EquationParser {
                         Expr term = new Expr.BinOp('*', rhsMat.elements[i][k], lhsMat.elements[k][j]);
                         sum = sum == null ? term : new Expr.BinOp('+', sum, term);
                     }
-                    double expected = (i == j) ? 1.0 : 0.0;
+                    double expected = kroneckerDelta(i, j);
                     ctx.out().add(new Equation(sum, new Expr.Num(expected), sourceText));
                 }
             }
         }
+    }
+
+    /** Kronecker delta: 1 on the diagonal (matching indices), 0 off it — the entries of the identity matrix. */
+    private static double kroneckerDelta(int a, int b) {
+        return a == b ? 1.0 : 0.0;
     }
 
     private void flattenVectorOrDet(String func, Expr lhs, List<Expr> args, String sourceText, FlattenContext ctx) {

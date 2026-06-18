@@ -2132,7 +2132,7 @@ export default function HelpPage() {
               frees supports mixing normal rich text with solver equations to build real-time engineering reports. The text editor acts as a markdown editor:
             </Text>
             <List spacing="xs">
-              <List.Item>Lines beginning with <code>//</code> or comments inside double quotes/braces are treated as narrative text.</List.Item>
+              <List.Item>Lines beginning with <code>{'//'}</code> or comments inside double quotes/braces are treated as narrative text.</List.Item>
               <List.Item>All normal markdown headers (<code># Header</code>), bold, and italics are supported.</List.Item>
               <List.Item>You can embed resolved variables directly in your report using inline syntax: <code>[varName]</code> or <code>[varName [units]]</code>. When solved, these are replaced by the computed numerical values accompanied by units.</List.Item>
             </List>
@@ -2197,7 +2197,7 @@ head_loss [m] = -0.084 * flow_rate^2 + 1.54 * flow_rate + 0.12 [m]`}
             <List spacing="xs" mb="sm">
               <List.Item><strong>Equality:</strong> Use a single equal sign <Code>=</Code> for equations (e.g. <code>P * V = n * R * T</code>).</List.Item>
               <List.Item><strong>Case Insensitivity:</strong> Variable names are case-insensitive. <code>Temp</code>, <code>TEMP</code>, and <code>temp</code> are the same variable.</List.Item>
-              <List.Item><strong>Comments:</strong> Use curly braces <code>{`{ comment }`}</code> or double quotes <code>"comment"</code> for inline comments. Standard double-slash <code>//</code> comments at the start of a line format the line as markdown text.</List.Item>
+              <List.Item><strong>Comments:</strong> Use curly braces <code>{`{ comment }`}</code> or double quotes <code>"comment"</code> for inline comments. Standard double-slash <code>{'//'}</code> comments at the start of a line format the line as markdown text.</List.Item>
               <List.Item><strong>Multiplication:</strong> Implicit multiplication is not allowed. Write <code>2 * x</code> instead of <code>2x</code>.</List.Item>
               <List.Item><strong>Operators:</strong> Standard arithmetic operators <code>+</code>, <code>-</code>, <code>*</code>, <code>/</code>, and <code>^</code> (exponentiation) are fully supported.</List.Item>
             </List>

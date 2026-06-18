@@ -1,6 +1,8 @@
 package com.frees.backend.core.ode;
 
+import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * A fully specified initial-value problem handed to {@link OdeIntegrator}:
@@ -40,5 +42,40 @@ public record OdeProblem(
 
     public int dimension() {
         return y0.length;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        return o instanceof OdeProblem other
+                && Double.compare(t0, other.t0) == 0
+                && Double.compare(tf, other.tf) == 0
+                && Double.compare(rtol, other.rtol) == 0
+                && Double.compare(atol, other.atol) == 0
+                && deadlineNanos == other.deadlineNanos
+                && Arrays.equals(y0, other.y0)
+                && Objects.equals(method, other.method)
+                && Objects.equals(rhs, other.rhs)
+                && Objects.equals(points, other.points)
+                && Objects.equals(fixedStep, other.fixedStep)
+                && Objects.equals(maxStep, other.maxStep)
+                && Objects.equals(events, other.events);
+    }
+
+    @Override
+    public int hashCode() {
+        return 31 * Objects.hash(method, t0, tf, rhs, points, fixedStep, rtol, atol, maxStep, events, deadlineNanos)
+                + Arrays.hashCode(y0);
+    }
+
+    @Override
+    public String toString() {
+        return "OdeProblem[method=" + method + ", t0=" + t0 + ", tf=" + tf
+                + ", y0=" + Arrays.toString(y0) + ", rhs=" + rhs + ", points=" + points
+                + ", fixedStep=" + fixedStep + ", rtol=" + rtol + ", atol=" + atol
+                + ", maxStep=" + maxStep + ", events=" + events
+                + ", deadlineNanos=" + deadlineNanos + "]";
     }
 }
