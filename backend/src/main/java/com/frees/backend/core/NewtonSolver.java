@@ -79,18 +79,7 @@ public class NewtonSolver {
             double candidateNorm = searchResult.candidateNorm;
 
             if (!Double.isFinite(candidateNorm) || candidateNorm >= norm) {
-                // The line search can make no further progress. If the residual is
-                // already within tolerance this is a converged solution sitting at
-                // its numerical floor (common when a residual depends on a
-                // finite-difference/ODE-coupled term) — accept it rather than fail.
-                if (withinResidualTolerance(ctx.equations, ctx.vars, x, residual, values)) {
-                    writeBack(ctx.vars, x, values);
-                    return iteration + 1;
-                }
-                throw new SolverException(
-                        "Newton iteration stalled in block " + block.index()
-                                + " (residual " + norm + "). Try different guess values."
-                                + propertyErrorSuffix());
+                return acceptStalledOrThrow(ctx, x, residual, values, block, iteration, norm);
             }
 
             double maxChange = 0.0;
@@ -115,6 +104,24 @@ public class NewtonSolver {
                 "Block %d did not converge within %d iterations (residual norm %g). "
                         + "Increase the iteration limit in Preferences or adjust guess values.",
                 block.index(), settings.maxIterations(), norm) + propertyErrorSuffix());
+    }
+
+    /**
+     * The line search can make no further progress. If the residual is already
+     * within tolerance this is a converged solution sitting at its numerical
+     * floor (common when a residual depends on a finite-difference/ODE-coupled
+     * term) — accept it rather than fail.
+     */
+    private int acceptStalledOrThrow(IterationContext ctx, double[] x, double[] residual,
+                                     Map<String, Double> values, Block block, int iteration, double norm) {
+        if (withinResidualTolerance(ctx.equations, ctx.vars, x, residual, values)) {
+            writeBack(ctx.vars, x, values);
+            return iteration + 1;
+        }
+        throw new SolverException(
+                "Newton iteration stalled in block " + block.index()
+                        + " (residual " + norm + "). Try different guess values."
+                        + propertyErrorSuffix());
     }
 
     private int handleConvergenceOrPinning(IterationContext ctx, double[] x, double[] residual, int iteration) {
