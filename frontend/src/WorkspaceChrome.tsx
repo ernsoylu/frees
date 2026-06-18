@@ -878,7 +878,7 @@ export function TopBar(props: Readonly<TopBarProps>) {
               gap: 6,
             }}
           >
-            <Text size="xs" c="dimmed" style={{ fontFamily: 'monospace' }}>
+            <Text size="xs" c="gray.5" style={{ fontFamily: 'monospace' }}>
               {props.projectName}.frees
             </Text>
             {/* Edit affordance: signals the pill opens the rename dialog rather

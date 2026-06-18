@@ -295,6 +295,12 @@ public final class MarkdownEquationExtractor {
                 if (stripped.contains("=")) {
                     collectEquationSegments(line, equations);
                 }
+            } else if (stripped.startsWith("#")) {
+                // Markdown headings are document titles, not computations: never
+                // scan them for inline equations. Otherwise descriptive text such
+                // as "## profile T[i] = 100 (N-i)/(N-1)" would be harvested as a
+                // bogus top-level equation (here with an unbound loop variable i).
+                clean.append("\n");
             } else {
                 appendExtractedLine(line, clean, equations);
             }
@@ -606,6 +612,13 @@ public final class MarkdownEquationExtractor {
             if (isPureEquationLine(line)) {
                 inComment = leavesCommentOpen(line);
                 eqIndex = appendPureEquationLine(line, formattedEquations, eqIndex, report);
+            } else if (stripComments(line).trim().startsWith("#")) {
+                // Headings are titles, not equations — render verbatim and never
+                // consume an equation slot. Must mirror extract(), which also
+                // skips inline-equation harvesting on headings; otherwise the two
+                // disagree on the equation count and eqIndex overruns
+                // formattedEquations (e.g. "## ... T[i] = 100 ...").
+                report.append(line).append("\n");
             } else {
                 eqIndex = appendFormattedProseLine(line, formattedEquations, eqIndex, report);
             }

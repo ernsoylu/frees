@@ -120,6 +120,38 @@ class MarkdownEquationExtractorTest {
     }
 
     @Test
+    void headingsAreNotScannedForInlineEquations() {
+        // A heading describing a formula must not have an equation harvested out
+        // of it. Here "T[i] = 100 ..." is documentation; extracting it as a
+        // top-level equation crashes the solve on the unbound loop variable i.
+        String source = "## Steady-state check (linear profile T[i] = 100 (N-i)/(N-1))\n"
+                + "T_mid = 5";
+        MarkdownEquationExtractor.ExtractionResult result = MarkdownEquationExtractor.extract(source);
+        assertEquals(1, result.equations.size(), result.equations.toString());
+        assertEquals("T_mid = 5", result.equations.get(0).originalText);
+        assertFalse(result.cleanText.contains("T[i]"), result.cleanText);
+    }
+
+    @Test
+    void formattedReportSkipsEquationsInHeadings() {
+        // generateFormattedReport must agree with extract() on which lines yield
+        // equations. A heading containing equation-like text must NOT consume a
+        // formattedEquations slot, or eqIndex overruns the list (previously threw
+        // "Index N out of bounds for length N").
+        String source = "x = 2\n"
+                + "## Profile T[i] = 100 (N-i)/(N-1)\n"
+                + "y = 3";
+        MarkdownEquationExtractor.ExtractionResult result = MarkdownEquationExtractor.extract(source);
+        assertEquals(2, result.equations.size(), result.equations.toString());
+        // Two equations -> two LaTeX strings; the heading must not demand a third.
+        List<String> formatted = List.of("x = 2", "y = 3");
+        String report = MarkdownEquationExtractor.generateFormattedReport(source, result.equations, formatted);
+        assertTrue(report.contains("## Profile T[i] = 100 (N-i)/(N-1)"), report);
+        assertTrue(report.contains("[MATH_BLOCK:x = 2]"), report);
+        assertTrue(report.contains("[MATH_BLOCK:y = 3]"), report);
+    }
+
+    @Test
     void testExtractFromLine() {
         String line = "The initial temperature T1 = 100 [C] and initial pressure P1 = 250 [kPa].";
         List<MarkdownEquationExtractor.ExtractedEquation> eqList = MarkdownEquationExtractor.extractFromLine(line);

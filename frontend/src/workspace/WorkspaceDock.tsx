@@ -339,7 +339,7 @@ export function WorkspaceDock({
       {/* Align dockview's surfaces with the app's Mantine color scale (these
           vars are theme-aware, so one block serves both light and dark). */}
       <style>{`
-        .dockview-theme-dark, .dockview-theme-light {
+        .dockview-theme-dark, .dockview-theme-light, .dockview-theme-abyss {
           /* One single surface colour everywhere — center groups, tab strips
              and the right edge group (Solution/Inspector) — so the whole
              workspace matches the app background instead of the edge bars
@@ -370,51 +370,69 @@ export function WorkspaceDock({
            app background too. */
         .dockview-theme-dark .dv-groupview-edge,
         .dockview-theme-light .dv-groupview-edge,
+        .dockview-theme-abyss .dv-groupview-edge,
         .dockview-theme-dark .dv-edge-collapsed,
-        .dockview-theme-light .dv-edge-collapsed {
+        .dockview-theme-light .dv-edge-collapsed,
+        .dockview-theme-abyss .dv-edge-collapsed {
           background-color: var(--mantine-color-body);
         }
         /* When the edge group is EXPANDED, dockview rips it into a floating
-           overlay (.dv-floating-overlay-host) with its own hardcoded dark
-           backgrounds, a left border/shadow, and a resize sash. Pin the whole
-           overlay tree to the app background. Note dockview's hyphenated
+           panel (.dv-resize-container) inside the overlay host. Pin that panel
+           and its inner tree to the app background. Do NOT colour the
+           .dv-floating-overlay-host itself: it is an absolutely-positioned
+           sibling sized to the FULL grid rect (it mirrors the gridview so saved
+           positions stay valid) and stacks above the panel-content render
+           container — an opaque background on it paints over the entire grid and
+           the whole workspace goes blank. Note dockview's hyphenated
            .dv-split-view-container (not .dv-splitview-container). */
-        .dockview-theme-dark .dv-floating-overlay-host,
-        .dockview-theme-light .dv-floating-overlay-host,
+        .dockview-theme-dark .dv-floating-overlay-host .dv-resize-container,
+        .dockview-theme-light .dv-floating-overlay-host .dv-resize-container,
+        .dockview-theme-abyss .dv-floating-overlay-host .dv-resize-container,
         .dockview-theme-dark .dv-floating-overlay-host .dv-split-view-container,
         .dockview-theme-light .dv-floating-overlay-host .dv-split-view-container,
+        .dockview-theme-abyss .dv-floating-overlay-host .dv-split-view-container,
         .dockview-theme-dark .dv-floating-overlay-host .dv-view,
         .dockview-theme-light .dv-floating-overlay-host .dv-view,
+        .dockview-theme-abyss .dv-floating-overlay-host .dv-view,
         .dockview-theme-dark .dv-groupview.dv-groupview-edge,
         .dockview-theme-light .dv-groupview.dv-groupview-edge,
+        .dockview-theme-abyss .dv-groupview.dv-groupview-edge,
         .dockview-theme-dark .dv-groupview-edge > .dv-content-container,
         .dockview-theme-light .dv-groupview-edge > .dv-content-container,
+        .dockview-theme-abyss .dv-groupview-edge > .dv-content-container,
         .dockview-theme-dark .dv-groupview-edge > .dv-tabs-and-actions-container,
-        .dockview-theme-light .dv-groupview-edge > .dv-tabs-and-actions-container {
+        .dockview-theme-light .dv-groupview-edge > .dv-tabs-and-actions-container,
+        .dockview-theme-abyss .dv-groupview-edge > .dv-tabs-and-actions-container {
           background-color: var(--mantine-color-body) !important;
         }
-        /* Kill the floating overlay's hardcoded border + shadow (the thin blue
-           line on the left). */
-        .dockview-theme-dark .dv-floating-overlay-host,
-        .dockview-theme-light .dv-floating-overlay-host {
+        /* Kill the floating panel's hardcoded border + shadow (the thin blue
+           line on the left). Target the resize-container, not the full-grid
+           overlay host (see note above). */
+        .dockview-theme-dark .dv-floating-overlay-host .dv-resize-container,
+        .dockview-theme-light .dv-floating-overlay-host .dv-resize-container,
+        .dockview-theme-abyss .dv-floating-overlay-host .dv-resize-container {
           border-left: 1px solid var(--mantine-color-default-border) !important;
           box-shadow: none !important;
         }
         /* The resize sash (the other half of the "thin blue line") — transparent
            until hovered/active, then teal to match the app's accents. */
         .dockview-theme-dark .dv-sash,
-        .dockview-theme-light .dv-sash {
+        .dockview-theme-light .dv-sash,
+        .dockview-theme-abyss .dv-sash {
           background-color: transparent !important;
         }
         .dockview-theme-dark .dv-sash:hover,
         .dockview-theme-light .dv-sash:hover,
+        .dockview-theme-abyss .dv-sash:hover,
         .dockview-theme-dark .dv-sash.active,
-        .dockview-theme-light .dv-sash.active {
+        .dockview-theme-light .dv-sash.active,
+        .dockview-theme-abyss .dv-sash.active {
           background-color: var(--mantine-color-teal-6) !important;
         }
         /* Hide the stubborn blue active-tab indicator inside the edge header. */
         .dockview-theme-dark .dv-groupview-edge .dv-tab-divider,
-        .dockview-theme-light .dv-groupview-edge .dv-tab-divider {
+        .dockview-theme-light .dv-groupview-edge .dv-tab-divider,
+        .dockview-theme-abyss .dv-groupview-edge .dv-tab-divider {
           background-color: transparent !important;
         }
         /* The focusable dock tabs/groups (tabindex=0) otherwise show the
@@ -422,18 +440,39 @@ export function WorkspaceDock({
            keyboard focus to teal and drop the ring for mouse focus. */
         .dockview-theme-dark .dv-tab:focus-visible,
         .dockview-theme-light .dv-tab:focus-visible,
+        .dockview-theme-abyss .dv-tab:focus-visible,
         .dockview-theme-dark .dv-groupview:focus-visible,
-        .dockview-theme-light .dv-groupview:focus-visible {
+        .dockview-theme-light .dv-groupview:focus-visible,
+        .dockview-theme-abyss .dv-groupview:focus-visible {
           outline: 1px solid var(--mantine-color-teal-6);
           outline-offset: -1px;
         }
         .dockview-theme-dark .dv-tab:focus:not(:focus-visible),
         .dockview-theme-light .dv-tab:focus:not(:focus-visible),
+        .dockview-theme-abyss .dv-tab:focus:not(:focus-visible),
         .dockview-theme-dark .dv-groupview:focus:not(:focus-visible),
         .dockview-theme-light .dv-groupview:focus:not(:focus-visible),
+        .dockview-theme-abyss .dv-groupview:focus:not(:focus-visible),
         .dockview-theme-dark .dv-content-container:focus,
-        .dockview-theme-light .dv-content-container:focus {
+        .dockview-theme-light .dv-content-container:focus,
+        .dockview-theme-abyss .dv-content-container:focus {
           outline: none;
+        }
+        /* Force the collapsed right/left edge tabs and containers to match
+           the main app background and remove the default blue/grey color. */
+        .dockview-theme-dark .dv-edge-collapsed,
+        .dockview-theme-light .dv-edge-collapsed,
+        .dockview-theme-abyss .dv-edge-collapsed,
+        .dockview-theme-dark .dv-edge-collapsed .dv-tabs-and-actions-container,
+        .dockview-theme-light .dv-edge-collapsed .dv-tabs-and-actions-container,
+        .dockview-theme-abyss .dv-edge-collapsed .dv-tabs-and-actions-container,
+        .dockview-theme-dark .dv-edge-collapsed .dv-tab,
+        .dockview-theme-light .dv-edge-collapsed .dv-tab,
+        .dockview-theme-abyss .dv-edge-collapsed .dv-tab,
+        .dockview-theme-dark .dv-groupview-edge .dv-tab,
+        .dockview-theme-light .dv-groupview-edge .dv-tab,
+        .dockview-theme-abyss .dv-groupview-edge .dv-tab {
+          background-color: var(--mantine-color-body) !important;
         }
       `}</style>
       <div style={{ width: '100%', height: '100%' }}>
