@@ -87,8 +87,32 @@ public final class DynamicSolver {
         // constants (e.g. N), turning der(T[i]) into concrete scalar states
         // der(T[1]), der(T[2]), … keyed as "t[1]", "t[2]", … — the same naming
         // the analytic array/FOR machinery uses.
-        Map<String, Expr> derRhs = new LinkedHashMap<>();
         List<Equation> auxEquations = new ArrayList<>();
+        Map<String, Expr> derRhs = collectStateRhs(auxEquations);
+        if (derRhs.isEmpty()) {
+            throw new SolverException("DYNAMIC " + system.name()
+                    + ": no der(X) equation found — a DYNAMIC block needs at least one state.");
+        }
+        states.addAll(derRhs.keySet());
+        initializeStateVector();
+
+        // Reify derivatives: der(X) -> der$X; build the combined algebraic block.
+        for (String s : states) {
+            algebraicTemplate.add(new Equation(new Expr.Var(derVar(s)),
+                    substituteDer(derRhs.get(s)), "der$" + s));
+        }
+        for (Equation aux : auxEquations) {
+            algebraicTemplate.add(new Equation(substituteDer(aux.lhs()),
+                    substituteDer(aux.rhs()), aux.sourceText()));
+        }
+        validateReferences();
+    }
+
+    /** Splits the expanded body into state RHS (der equations) and auxiliary
+     *  equations; aux equations are appended to {@code auxOut} and their names
+     *  recorded. Returns the per-state der() right-hand sides. */
+    private Map<String, Expr> collectStateRhs(List<Equation> auxOut) {
+        Map<String, Expr> derRhs = new LinkedHashMap<>();
         for (Equation eq : expandBody()) {
             String state = derStateName(eq.lhs());
             if (state != null) {
@@ -98,20 +122,19 @@ public final class DynamicSolver {
                 }
                 derRhs.put(state, eq.rhs());
             } else {
-                auxEquations.add(eq);
+                auxOut.add(eq);
                 String auxName = simpleVarName(eq.lhs());
                 if (auxName != null && !auxNames.contains(auxName)) {
                     auxNames.add(auxName);
                 }
             }
         }
-        if (derRhs.isEmpty()) {
-            throw new SolverException("DYNAMIC " + system.name()
-                    + ": no der(X) equation found — a DYNAMIC block needs at least one state.");
-        }
-        states.addAll(derRhs.keySet());
+        return derRhs;
+    }
 
-        // Initial conditions, one per state (array initials expand over their range).
+    /** Resolves one initial condition per state (array initials expand over
+     *  their range) and populates the {@code y0} initial-state vector. */
+    private void initializeStateVector() {
         Map<String, Double> initial = new LinkedHashMap<>();
         for (DynamicSystem.InitialCondition ic : system.initials()) {
             expandInitial(ic, initial);
@@ -126,17 +149,6 @@ public final class DynamicSolver {
         for (int k = 0; k < states.size(); k++) {
             y0[k] = initial.get(states.get(k));
         }
-
-        // Reify derivatives: der(X) -> der$X; build the combined algebraic block.
-        for (String s : states) {
-            algebraicTemplate.add(new Equation(new Expr.Var(derVar(s)),
-                    substituteDer(derRhs.get(s)), "der$" + s));
-        }
-        for (Equation aux : auxEquations) {
-            algebraicTemplate.add(new Equation(substituteDer(aux.lhs()),
-                    substituteDer(aux.rhs()), aux.sourceText()));
-        }
-        validateReferences();
     }
 
     // ── Method-of-lines expansion ────────────────────────────────────────────

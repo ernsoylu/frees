@@ -41,30 +41,12 @@ public final class RungeKuttaMethod implements OdeMethod {
         double[][] k = new double[s][];
         k[0] = f0;
         for (int i = 1; i < s; i++) {
-            double[] yi = y.clone();
-            double[] ai = t.a[i];
-            for (int j = 0; j < ai.length; j++) {
-                double aij = ai[j];
-                if (aij == 0.0) {
-                    continue;
-                }
-                for (int d = 0; d < n; d++) {
-                    yi[d] += h * aij * k[j][d];
-                }
-            }
+            double[] yi = stageState(y, t.a[i], k, h, n);
             k[i] = f.eval(time + t.c[i] * h, yi);
         }
 
         double[] yNew = y.clone();
-        for (int i = 0; i < s; i++) {
-            double bi = t.b[i];
-            if (bi == 0.0) {
-                continue;
-            }
-            for (int d = 0; d < n; d++) {
-                yNew[d] += h * bi * k[i][d];
-            }
-        }
+        accumulateWeighted(yNew, t.b, k, h, s, n);
 
         if (!t.adaptive()) {
             double[] fNew = f.eval(time + h, yNew);
@@ -73,15 +55,7 @@ public final class RungeKuttaMethod implements OdeMethod {
 
         // Embedded error estimate.
         double[] errVec = new double[n];
-        for (int i = 0; i < s; i++) {
-            double be = t.bErr[i];
-            if (be == 0.0) {
-                continue;
-            }
-            for (int d = 0; d < n; d++) {
-                errVec[d] += h * be * k[i][d];
-            }
-        }
+        accumulateWeighted(errVec, t.bErr, k, h, s, n);
         double err = errorNorm(errVec, y, yNew, problem.rtol(), problem.atol());
         double exponent = 1.0 / (t.errorOrder + 1);
         if (!Double.isFinite(err) || !allFinite(yNew)) {
@@ -96,6 +70,34 @@ public final class RungeKuttaMethod implements OdeMethod {
         }
         double scale = Math.max(MIN_SCALE, SAFETY * Math.pow(err, -exponent));
         return new StepResult(false, null, null, h * scale);
+    }
+
+    /** Intermediate stage state {@code yi = y + h·Σ_j a[j]·k[j]} (zero coefficients skipped). */
+    private static double[] stageState(double[] y, double[] ai, double[][] k, double h, int n) {
+        double[] yi = y.clone();
+        for (int j = 0; j < ai.length; j++) {
+            double aij = ai[j];
+            if (aij == 0.0) {
+                continue;
+            }
+            for (int d = 0; d < n; d++) {
+                yi[d] += h * aij * k[j][d];
+            }
+        }
+        return yi;
+    }
+
+    /** Adds {@code h·Σ_i coeff[i]·k[i]} into {@code out} (zero coefficients skipped). */
+    private static void accumulateWeighted(double[] out, double[] coeff, double[][] k, double h, int s, int n) {
+        for (int i = 0; i < s; i++) {
+            double ci = coeff[i];
+            if (ci == 0.0) {
+                continue;
+            }
+            for (int d = 0; d < n; d++) {
+                out[d] += h * ci * k[i][d];
+            }
+        }
     }
 
     /** RMS norm of the error vector scaled by atol + rtol·max(|y|,|yNew|). */

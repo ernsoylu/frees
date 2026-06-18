@@ -46,12 +46,7 @@ public final class OdeIntegrator {
 
         boolean fixed = !method.adaptive();
         double hFixed = p.fixedStep() != null ? p.fixedStep() : span / (p.sampleCount() - 1);
-        double h = fixed ? hFixed
-                : (p.fixedStep() != null ? p.fixedStep()
-                        : initialStep(p, method, y, f, span));
-        if (p.maxStep() != null) {
-            h = Math.min(h, p.maxStep());
-        }
+        double h = computeInitialStep(p, method, y, f, span, fixed, hFixed);
 
         List<OdeResult.EventRecord> recorded = new ArrayList<>();
         double[] gPrev = evalEvents(p, t, y);
@@ -62,21 +57,11 @@ public final class OdeIntegrator {
         double endTime = p.tf();
 
         while (t < p.tf() - minStep) {
-            guard(++steps, p);
-            double hUse = Math.min(h, p.tf() - t);
-            OdeMethod.StepResult sr = method.step(p.rhs(), t, y, f, hUse, p);
-            while (!sr.accepted()) {
-                rejected++;
-                hUse = Math.min(sr.hNext(), p.tf() - t);
-                if (hUse < minStep) {
-                    throw new SolverException("DYNAMIC: step size underflow near t = " + t
-                            + " — the system may be too stiff for method '" + p.method()
-                            + "' (try ode23s or ode15s).");
-                }
-                guard(++steps, p);
-                sr = method.step(p.rhs(), t, y, f, hUse, p);
-            }
-            double tNew = t + hUse;
+            StepOutcome out = stepWithRetries(method, p, t, y, f, h, minStep, steps);
+            steps += out.extraSteps();
+            rejected += out.rejections();
+            OdeMethod.StepResult sr = out.sr();
+            double tNew = t + out.hUse();
             double[] yNew = sr.yNew();
             double[] fNew = sr.fNew();
             checkFinite(yNew, tNew, "state");
@@ -84,16 +69,10 @@ public final class OdeIntegrator {
 
             double[] gNew = evalEvents(p, tNew, yNew);
             EventHit hit = earliestEvent(p, t, y, f, tNew, yNew, fNew, gPrev, gNew);
-            if (hit != null) {
-                recorded.add(new OdeResult.EventRecord(hit.name, hit.time, hit.y.clone()));
-                if (hit.stop) {
-                    knotT.add(hit.time);
-                    knotY.add(hit.y.clone());
-                    knotF.add(p.rhs().eval(hit.time, hit.y));
-                    endTime = hit.time;
-                    stopped = true;
-                    break;
-                }
+            if (recordEvents(p, hit, recorded, knotT, knotY, knotF)) {
+                endTime = hit.time;
+                stopped = true;
+                break;
             }
 
             accepted++;
@@ -120,6 +99,67 @@ public final class OdeIntegrator {
             System.arraycopy(sampled[i], 1, states[i], 0, n);
         }
         return new OdeResult(times, states, recorded, stopped, endTime, accepted, rejected);
+    }
+
+    // ── Step driving ─────────────────────────────────────────────────────────
+
+    /** One accepted step plus the bookkeeping accrued reaching it. */
+    private record StepOutcome(OdeMethod.StepResult sr, double hUse, int extraSteps, int rejections) {}
+
+    /** First-step size: fixed methods use {@code hFixed}; adaptive methods honour
+     *  an explicit fixed step or fall back to Hairer's estimate, clamped to maxStep. */
+    private static double computeInitialStep(OdeProblem p, OdeMethod method, double[] y, double[] f,
+                                             double span, boolean fixed, double hFixed) {
+        double h = fixed ? hFixed
+                : (p.fixedStep() != null ? p.fixedStep()
+                        : initialStep(p, method, y, f, span));
+        if (p.maxStep() != null) {
+            h = Math.min(h, p.maxStep());
+        }
+        return h;
+    }
+
+    /** Attempts a step from {@code (t, y)}, shrinking and retrying on rejection
+     *  until accepted or the step size underflows. {@code stepsSoFar} seeds the
+     *  guard counter; the returned outcome reports how many guard ticks and
+     *  rejections it consumed. */
+    private StepOutcome stepWithRetries(OdeMethod method, OdeProblem p, double t, double[] y,
+                                        double[] f, double h, double minStep, int stepsSoFar) {
+        int steps = stepsSoFar;
+        int rejected = 0;
+        guard(++steps, p);
+        double hUse = Math.min(h, p.tf() - t);
+        OdeMethod.StepResult sr = method.step(p.rhs(), t, y, f, hUse, p);
+        while (!sr.accepted()) {
+            rejected++;
+            hUse = Math.min(sr.hNext(), p.tf() - t);
+            if (hUse < minStep) {
+                throw new SolverException("DYNAMIC: step size underflow near t = " + t
+                        + " — the system may be too stiff for method '" + p.method()
+                        + "' (try ode23s or ode15s).");
+            }
+            guard(++steps, p);
+            sr = method.step(p.rhs(), t, y, f, hUse, p);
+        }
+        return new StepOutcome(sr, hUse, steps - stepsSoFar, rejected);
+    }
+
+    /** Records an event hit (if any) and returns true when it is a stop event,
+     *  in which case the crossing knot has been appended and the caller should
+     *  terminate the integration. */
+    private static boolean recordEvents(OdeProblem p, EventHit hit, List<OdeResult.EventRecord> recorded,
+                                        List<Double> knotT, List<double[]> knotY, List<double[]> knotF) {
+        if (hit == null) {
+            return false;
+        }
+        recorded.add(new OdeResult.EventRecord(hit.name, hit.time, hit.y.clone()));
+        if (hit.stop) {
+            knotT.add(hit.time);
+            knotY.add(hit.y.clone());
+            knotF.add(p.rhs().eval(hit.time, hit.y));
+            return true;
+        }
+        return false;
     }
 
     // ── Method resolution ───────────────────────────────────────────────────
