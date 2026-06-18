@@ -98,21 +98,7 @@ public final class CurveFitter {
                          List<Double> lowerBounds,
                          List<Double> upperBounds) {
 
-        // ── Validate inputs ──────────────────────────────────────────────
-        if (model == null || model.isBlank()) {
-            throw new SolverException("Model equation is required.");
-        }
-        if (xData == null || yData == null || xData.isEmpty()) {
-            throw new SolverException("Data points are required.");
-        }
-        if (xData.size() != yData.size()) {
-            throw new SolverException(
-                    "x and y data must have the same length (got "
-                    + xData.size() + " and " + yData.size() + ").");
-        }
-        if (parameters == null || parameters.isEmpty()) {
-            throw new SolverException("At least one parameter to fit is required.");
-        }
+        validateFitInputs(model, xData, yData, parameters);
 
         int n = xData.size();   // number of data points
         int p = parameters.size(); // number of parameters
@@ -141,31 +127,8 @@ public final class CurveFitter {
         }
 
         // ── Model + Jacobian function ────────────────────────────────────
-        MultivariateJacobianFunction modelFunction = point -> {
-            double[] params = point.toArray();
-            double[] values = new double[n];
-            double[][] jacobian = new double[n][p];
-
-            for (int i = 0; i < n; i++) {
-                double xi = xData.get(i);
-                values[i] = evaluate(modelExpr, xVarLower, xi, paramLower, params);
-
-                // Numerical Jacobian via central finite differences
-                for (int j = 0; j < p; j++) {
-                    double h = Math.max(FD_STEP, Math.abs(params[j]) * FD_STEP);
-                    double[] paramsPlus  = params.clone();
-                    double[] paramsMinus = params.clone();
-                    paramsPlus[j]  += h;
-                    paramsMinus[j] -= h;
-                    double fPlus  = evaluate(modelExpr, xVarLower, xi, paramLower, paramsPlus);
-                    double fMinus = evaluate(modelExpr, xVarLower, xi, paramLower, paramsMinus);
-                    jacobian[i][j] = (fPlus - fMinus) / (2.0 * h);
-                }
-            }
-
-            return new Pair<>(new ArrayRealVector(values, false),
-                              new Array2DRowRealMatrix(jacobian, false));
-        };
+        MultivariateJacobianFunction modelFunction =
+                buildModelFunction(modelExpr, xVarLower, paramLower, xData, n, p);
 
         // ── Build and solve the least-squares problem ────────────────────
         LeastSquaresBuilder builder = new LeastSquaresBuilder()
@@ -220,6 +183,50 @@ public final class CurveFitter {
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────
+
+    private void validateFitInputs(String model, List<Double> xData, List<Double> yData, List<String> parameters) {
+        if (model == null || model.isBlank()) {
+            throw new SolverException("Model equation is required.");
+        }
+        if (xData == null || yData == null || xData.isEmpty()) {
+            throw new SolverException("Data points are required.");
+        }
+        if (xData.size() != yData.size()) {
+            throw new SolverException(
+                    "x and y data must have the same length (got "
+                    + xData.size() + " and " + yData.size() + ").");
+        }
+        if (parameters == null || parameters.isEmpty()) {
+            throw new SolverException("At least one parameter to fit is required.");
+        }
+    }
+
+    /** Builds the least-squares model function: model values plus a central
+     *  finite-difference Jacobian, evaluated at each fit-parameter point. */
+    private MultivariateJacobianFunction buildModelFunction(Expr modelExpr, String xVarLower,
+            List<String> paramLower, List<Double> xData, int n, int p) {
+        return point -> {
+            double[] params = point.toArray();
+            double[] values = new double[n];
+            double[][] jacobian = new double[n][p];
+            for (int i = 0; i < n; i++) {
+                double xi = xData.get(i);
+                values[i] = evaluate(modelExpr, xVarLower, xi, paramLower, params);
+                for (int j = 0; j < p; j++) {
+                    double h = Math.max(FD_STEP, Math.abs(params[j]) * FD_STEP);
+                    double[] paramsPlus  = params.clone();
+                    double[] paramsMinus = params.clone();
+                    paramsPlus[j]  += h;
+                    paramsMinus[j] -= h;
+                    double fPlus  = evaluate(modelExpr, xVarLower, xi, paramLower, paramsPlus);
+                    double fMinus = evaluate(modelExpr, xVarLower, xi, paramLower, paramsMinus);
+                    jacobian[i][j] = (fPlus - fMinus) / (2.0 * h);
+                }
+            }
+            return new Pair<>(new ArrayRealVector(values, false),
+                              new Array2DRowRealMatrix(jacobian, false));
+        };
+    }
 
     /**
      * Parses the model equation and returns the RHS expression.

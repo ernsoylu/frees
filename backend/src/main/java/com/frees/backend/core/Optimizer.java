@@ -278,30 +278,7 @@ public final class Optimizer {
             bestPoint = inner.decisionValues();
             totalEvaluations += inner.evaluations();
 
-            boolean allSatisfied = true;
-
-            // Check inequality constraints
-            for (ParsedConstraint c : inequalities) {
-                double lhsVal = evaluateConstraintExpression(c.lhsExpr(), problem, bestPoint);
-                double g = c.normalised(lhsVal);
-                if (g > tolerance(c)) {
-                    allSatisfied = false;
-                    break;
-                }
-            }
-
-            // Check & update equality constraints
-            for (int j = 0; j < equalities.size(); j++) {
-                ParsedConstraint c = equalities.get(j);
-                double lhsVal = evaluateConstraintExpression(c.lhsExpr(), problem, bestPoint);
-                double h = c.normalised(lhsVal);
-                if (Math.abs(h) > tolerance(c)) {
-                    allSatisfied = false;
-                }
-                // Update Lagrange multiplier: λ_j += ρ * h_j(x)
-                lambda[j] += rho * h;
-            }
-
+            boolean allSatisfied = updateAndCheckConstraints(inequalities, equalities, problem, bestPoint, lambda, rho);
             if (allSatisfied) break;
 
             // Tighten parameters
@@ -323,6 +300,37 @@ public final class Optimizer {
 
         // Report any remaining constraint violation honestly instead of
         // presenting a point that silently breaks a constraint as the optimum.
+        String warning = buildConstraintWarning(allConstraints, problem, bestPoint);
+
+        return new OptimizeResult(bestPoint, objectiveValue, totalEvaluations, solution, warning);
+    }
+
+    /** Checks all constraints at {@code bestPoint}, updating the Lagrange
+     *  multipliers for equalities; returns true when every constraint holds. */
+    private boolean updateAndCheckConstraints(List<ParsedConstraint> inequalities, List<ParsedConstraint> equalities,
+                                              Problem problem, double[] bestPoint, double[] lambda, double rho) {
+        boolean allSatisfied = true;
+        for (ParsedConstraint c : inequalities) {
+            double g = c.normalised(evaluateConstraintExpression(c.lhsExpr(), problem, bestPoint));
+            if (g > tolerance(c)) {
+                allSatisfied = false;
+                break;
+            }
+        }
+        for (int j = 0; j < equalities.size(); j++) {
+            ParsedConstraint c = equalities.get(j);
+            double h = c.normalised(evaluateConstraintExpression(c.lhsExpr(), problem, bestPoint));
+            if (Math.abs(h) > tolerance(c)) {
+                allSatisfied = false;
+            }
+            lambda[j] += rho * h; // λ_j += ρ * h_j(x)
+        }
+        return allSatisfied;
+    }
+
+    /** Builds a human-readable warning listing any constraints still violated at
+     *  {@code bestPoint}, or null when all are satisfied. */
+    private String buildConstraintWarning(List<ParsedConstraint> allConstraints, Problem problem, double[] bestPoint) {
         StringBuilder warning = null;
         for (ParsedConstraint c : allConstraints) {
             double lhsVal = evaluateConstraintExpression(c.lhsExpr(), problem, bestPoint);
@@ -340,9 +348,7 @@ public final class Optimizer {
                         .append(String.format("%.4g", v));
             }
         }
-
-        return new OptimizeResult(bestPoint, objectiveValue, totalEvaluations, solution,
-                warning == null ? null : warning.toString());
+        return warning == null ? null : warning.toString();
     }
 
     /** Constraint tolerance relative to the magnitude of the RHS constant. */
@@ -409,25 +415,7 @@ public final class Optimizer {
         // bounds (no cliffs to stagnate on) while never rewarding points
         // outside the box. BOBYQA enforces bounds natively and skips this.
         if (problem.method() == null || !problem.method().equalsIgnoreCase("bobyqa")) {
-            final MultivariateFunction unbounded = fn;
-            final double penaltySign = problem.maximize() ? -1.0 : 1.0;
-            fn = point -> {
-                double violation = 0;
-                double[] projected = point.clone();
-                for (int i = 0; i < point.length; i++) {
-                    if (point[i] < lowerBounds[i]) {
-                        double d = lowerBounds[i] - point[i];
-                        violation += d * d;
-                        projected[i] = lowerBounds[i];
-                    } else if (point[i] > upperBounds[i]) {
-                        double d = point[i] - upperBounds[i];
-                        violation += d * d;
-                        projected[i] = upperBounds[i];
-                    }
-                }
-                double value = unbounded.value(projected);
-                return value + penaltySign * BOUNDS_PENALTY_WEIGHT * violation;
-            };
+            fn = wrapWithBoundsPenalty(fn, problem, lowerBounds, upperBounds);
         }
 
         // Track the best point seen so far: when the evaluation budget runs
@@ -449,34 +437,7 @@ public final class Optimizer {
             return value;
         };
 
-        double[] bestPoints;
-        try {
-            if (problem.method() != null && problem.method().equalsIgnoreCase("bobyqa")) {
-                int numInterpolationPoints = 2 * n + 1;
-                BOBYQAOptimizer bobyqa = new BOBYQAOptimizer(numInterpolationPoints);
-                PointValuePair best = bobyqa.optimize(
-                        new MaxEval(MULTIVARIATE_MAX_EVALUATIONS),
-                        new ObjectiveFunction(trackedFn),
-                        problem.maximize() ? GoalType.MAXIMIZE : GoalType.MINIMIZE,
-                        new SimpleBounds(lowerBounds, upperBounds),
-                        new InitialGuess(initialGuess)
-                );
-                bestPoints = best.getPoint();
-            } else {
-                // Nelder-Mead Simplex (default for multivariate)
-                SimplexOptimizer simplex = new SimplexOptimizer(1e-10, 1e-12);
-                PointValuePair best = simplex.optimize(
-                        new MaxEval(MULTIVARIATE_MAX_EVALUATIONS),
-                        new ObjectiveFunction(trackedFn),
-                        problem.maximize() ? GoalType.MAXIMIZE : GoalType.MINIMIZE,
-                        new NelderMeadSimplex(n),
-                        new InitialGuess(initialGuess)
-                );
-                bestPoints = best.getPoint();
-            }
-        } catch (org.apache.commons.math3.exception.TooManyEvaluationsException e) {
-            bestPoints = trackedPoint.clone();
-        }
+        double[] bestPoints = runSimplexOrBobyqa(problem, trackedFn, n, lowerBounds, upperBounds, initialGuess, trackedPoint);
         // The simplex is unaware of bounds and the tracked point may stem
         // from an out-of-bounds probe: clamp before the final solve.
         for (int i = 0; i < n; i++) {
@@ -492,6 +453,63 @@ public final class Optimizer {
         return new OptimizeResult(bestPoints, objectiveValue, evaluations.get(), solution);
     }
 
+    /**
+     * Wraps an objective so the bounds-unaware Nelder-Mead simplex evaluates
+     * out-of-box points at their projection onto the box plus a smooth quadratic
+     * distance penalty — keeping the landscape continuous without rewarding
+     * infeasible points. (BOBYQA enforces bounds natively and skips this.)
+     */
+    private MultivariateFunction wrapWithBoundsPenalty(MultivariateFunction unbounded, Problem problem,
+                                                       double[] lowerBounds, double[] upperBounds) {
+        final double penaltySign = problem.maximize() ? -1.0 : 1.0;
+        return point -> {
+            double violation = 0;
+            double[] projected = point.clone();
+            for (int i = 0; i < point.length; i++) {
+                if (point[i] < lowerBounds[i]) {
+                    double d = lowerBounds[i] - point[i];
+                    violation += d * d;
+                    projected[i] = lowerBounds[i];
+                } else if (point[i] > upperBounds[i]) {
+                    double d = point[i] - upperBounds[i];
+                    violation += d * d;
+                    projected[i] = upperBounds[i];
+                }
+            }
+            return unbounded.value(projected) + penaltySign * BOUNDS_PENALTY_WEIGHT * violation;
+        };
+    }
+
+    /** Runs the chosen optimizer (BOBYQA or Nelder-Mead simplex), degrading to the
+     *  tracked best iterate if the evaluation budget is exhausted. */
+    private double[] runSimplexOrBobyqa(Problem problem, MultivariateFunction trackedFn, int n,
+                                        double[] lowerBounds, double[] upperBounds,
+                                        double[] initialGuess, double[] trackedPoint) {
+        try {
+            if (problem.method() != null && problem.method().equalsIgnoreCase("bobyqa")) {
+                BOBYQAOptimizer bobyqa = new BOBYQAOptimizer(2 * n + 1);
+                return bobyqa.optimize(
+                        new MaxEval(MULTIVARIATE_MAX_EVALUATIONS),
+                        new ObjectiveFunction(trackedFn),
+                        problem.maximize() ? GoalType.MAXIMIZE : GoalType.MINIMIZE,
+                        new SimpleBounds(lowerBounds, upperBounds),
+                        new InitialGuess(initialGuess)
+                ).getPoint();
+            }
+            // Nelder-Mead Simplex (default for multivariate)
+            SimplexOptimizer simplex = new SimplexOptimizer(1e-10, 1e-12);
+            return simplex.optimize(
+                    new MaxEval(MULTIVARIATE_MAX_EVALUATIONS),
+                    new ObjectiveFunction(trackedFn),
+                    problem.maximize() ? GoalType.MAXIMIZE : GoalType.MINIMIZE,
+                    new NelderMeadSimplex(n),
+                    new InitialGuess(initialGuess)
+            ).getPoint();
+        } catch (org.apache.commons.math3.exception.TooManyEvaluationsException e) {
+            return trackedPoint.clone();
+        }
+    }
+
     // ── Penalty-augmented objective evaluation ──────────────────────────
 
     /**
@@ -504,19 +522,34 @@ public final class Optimizer {
                                        double[] lambda, double rho,
                                        AtomicInteger evals) {
         double obj = evaluateObjectiveMultivariate(problem, point, evals);
-        if (obj == PENALTY || obj == -PENALTY) return obj;
-
+        if (obj == PENALTY || obj == -PENALTY) {
+            return obj;
+        }
         double sign = problem.maximize() ? 1.0 : -1.0;
+        obj = applyInequalityPenalties(obj, sign, inequalities, problem, point, mu);
+        if (Double.isNaN(obj)) {
+            return problem.maximize() ? -PENALTY : PENALTY;
+        }
+        obj = applyEqualityPenalties(obj, sign, equalities, problem, point, lambda, rho);
+        if (Double.isNaN(obj)) {
+            return problem.maximize() ? -PENALTY : PENALTY;
+        }
+        return obj;
+    }
 
-        // Inequality constraints, normalised to g(x) <= 0.
-        // Feasible: log-barrier  ∓μ·ln(−g)  repels the iterate from the
-        // boundary (cost → ∞ as g → 0⁻ when minimising).
-        // Infeasible: smooth exterior quadratic penalty with weight 1/μ, so
-        // the inner optimizer still sees a gradient pointing back into the
-        // feasible region (a flat penalty would strand an infeasible start).
+    /**
+     * Adds inequality-constraint penalties (normalised to g(x) ≤ 0). Feasible:
+     * log-barrier ∓μ·ln(−g) repels the iterate from the boundary. Infeasible: a
+     * smooth exterior quadratic penalty (weight 1/μ) keeps a gradient pointing
+     * back into the feasible region. Returns NaN if a constraint LHS is NaN.
+     */
+    private double applyInequalityPenalties(double obj, double sign, List<ParsedConstraint> inequalities,
+                                            Problem problem, double[] point, double mu) {
         for (ParsedConstraint c : inequalities) {
             double lhsVal = evaluateConstraintExpressionSafe(c.lhsExpr(), problem, point);
-            if (Double.isNaN(lhsVal)) return problem.maximize() ? -PENALTY : PENALTY;
+            if (Double.isNaN(lhsVal)) {
+                return Double.NaN;
+            }
             double g = c.normalised(lhsVal);
             if (g >= 0) {
                 double weight = 1.0 / Math.max(mu, BARRIER_MU_MIN);
@@ -525,18 +558,22 @@ public final class Optimizer {
                 obj += sign * mu * Math.log(-g);
             }
         }
+        return obj;
+    }
 
-        // Augmented Lagrangian for equality constraints: λᵀh(x) + (ρ/2)||h(x)||²
+    /** Adds augmented-Lagrangian penalties for equality constraints:
+     *  {@code λᵀh(x) + (ρ/2)‖h(x)‖²}. Returns NaN if a constraint LHS is NaN. */
+    private double applyEqualityPenalties(double obj, double sign, List<ParsedConstraint> equalities,
+                                          Problem problem, double[] point, double[] lambda, double rho) {
         for (int j = 0; j < equalities.size(); j++) {
             ParsedConstraint c = equalities.get(j);
             double lhsVal = evaluateConstraintExpressionSafe(c.lhsExpr(), problem, point);
-            if (Double.isNaN(lhsVal)) return problem.maximize() ? -PENALTY : PENALTY;
+            if (Double.isNaN(lhsVal)) {
+                return Double.NaN;
+            }
             double h = c.normalised(lhsVal);
-            // For minimisation: add  λ*h + (ρ/2)*h²  (increases cost when h ≠ 0)
-            // For maximisation: subtract the same (decreases value when h ≠ 0)
             obj -= sign * (lambda[j] * h + (rho / 2.0) * h * h);
         }
-
         return obj;
     }
 
