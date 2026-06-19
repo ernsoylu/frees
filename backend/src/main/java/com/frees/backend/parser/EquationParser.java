@@ -11,11 +11,17 @@ import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.RecognitionException;
 import org.antlr.v4.runtime.Recognizer;
 
+import com.frees.backend.cas.CasEngine;
+import com.frees.backend.cas.CasIdentity;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicInteger;
 
 
@@ -165,7 +171,8 @@ public final class EquationParser {
         AtomicInteger moduleCounter = new AtomicInteger(0);
 
         List<Equation> equations = new ArrayList<>();
-        flatten(statements, new HashMap<>(), constants, displayNames, equations, defs, moduleCounter);
+        Set<String> symbolicVars = collectSymbolic(statements);
+        flatten(statements, new HashMap<>(), constants, displayNames, equations, defs, moduleCounter, symbolicVars);
 
         // String variables (R$ = 'R134a') are compile-time constants:
         // substitute their values and drop the definition equations.
@@ -188,7 +195,10 @@ public final class EquationParser {
                                   // Declared shapes of matrix/vector variables ({rows, cols},
                                   // lowercased name) so a bare reference like SolveLinear(A, b)
                                   // resolves to the explicit A[1:r,1:c] form.
-                                  Map<String, int[]> shapes) {}
+                                  Map<String, int[]> shapes,
+                                  // Independent symbolic variables declared with SYMBOLIC;
+                                  // equations involving one are treated as CAS identities.
+                                  Set<String> symbolicVars) {}
 
     private static void registerShape(String name, int rows, int cols, FlattenContext ctx) {
         ctx.shapes().put(name.toLowerCase(), new int[]{rows, cols});
@@ -289,8 +299,9 @@ public final class EquationParser {
     private void flatten(List<Statement> statements, Map<String, Double> loopVars,
                          Map<String, Double> constants, Map<String, String> displayNames,
                          List<Equation> out, Map<String, ProcDef> defs,
-                         AtomicInteger moduleCounter) {
-        FlattenContext ctx = new FlattenContext(loopVars, constants, displayNames, out, defs, moduleCounter, new HashMap<>());
+                         AtomicInteger moduleCounter, Set<String> symbolicVars) {
+        FlattenContext ctx = new FlattenContext(loopVars, constants, displayNames, out, defs, moduleCounter,
+                new HashMap<>(), symbolicVars);
         for (Statement stmt : statements) {
             switch (stmt) {
                 case Statement.For(String varName, Expr start, Expr end, List<Statement> body) ->
@@ -299,8 +310,24 @@ public final class EquationParser {
                     flattenEq(lhs, rhs, sourceText, ctx);
                 case Statement.CallProc(String name, List<Expr> inputs, List<Expr> outputs, String sourceText) ->
                     flattenCallProc(name, inputs, outputs, sourceText, ctx);
+                case Statement.Symbolic ignored -> {
+                    // Declaration only; the names are pre-collected into symbolicVars.
+                }
             }
         }
+    }
+
+    /** Recursively gathers all SYMBOLIC-declared variable names (lowercased). */
+    private static Set<String> collectSymbolic(List<Statement> statements) {
+        Set<String> names = new HashSet<>();
+        for (Statement s : statements) {
+            if (s instanceof Statement.Symbolic sym) {
+                names.addAll(sym.names());
+            } else if (s instanceof Statement.For f) {
+                names.addAll(collectSymbolic(f.body()));
+            }
+        }
+        return names;
     }
 
     private void flattenFor(String varName, Expr start, Expr end, List<Statement> body,
@@ -318,7 +345,7 @@ public final class EquationParser {
         for (int i = startInt; startInt <= endInt ? i <= endInt : i >= endInt; i += step) {
             Map<String, Double> newLoopVars = new HashMap<>(ctx.loopVars());
             newLoopVars.put(varName, (double) i);
-            flatten(body, newLoopVars, ctx.constants(), ctx.displayNames(), ctx.out(), ctx.defs(), ctx.moduleCounter());
+            flatten(body, newLoopVars, ctx.constants(), ctx.displayNames(), ctx.out(), ctx.defs(), ctx.moduleCounter(), ctx.symbolicVars());
             checkEquationBudget(ctx.out());
         }
     }
@@ -333,6 +360,15 @@ public final class EquationParser {
     }
 
     private void flattenEq(Expr lhs, Expr rhs, String sourceText, FlattenContext ctx) {
+        // An equation that involves a SYMBOLIC variable is a CAS identity: solve
+        // it for the remaining coefficients (e.g. partial-fraction residues)
+        // rather than treating the symbolic variable as a numeric unknown.
+        String symbolicVar = identityVariable(lhs, rhs, ctx);
+        if (symbolicVar != null) {
+            flattenIdentity(lhs, rhs, symbolicVar, sourceText, ctx);
+            return;
+        }
+
         // Rewrite bare references to known matrix/vector variables (e.g. the A, b
         // in SolveLinear(A, b)) into their explicit A[1:r,1:c] form.
         lhs = resolveShapes(lhs, ctx);
@@ -360,6 +396,46 @@ public final class EquationParser {
             Expr expandedLhs = expandExpr(lhs, ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
             Expr expandedRhs = expandExpr(rhs, ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
             ctx.out().add(new Equation(expandedLhs, expandedRhs, sourceText));
+        }
+    }
+
+    /**
+     * Returns the single SYMBOLIC variable appearing in this equation, or null
+     * if none do. Throws if more than one symbolic variable is present, since an
+     * identity is solved with respect to one independent variable.
+     */
+    private String identityVariable(Expr lhs, Expr rhs, FlattenContext ctx) {
+        if (ctx.symbolicVars().isEmpty()) {
+            return null;
+        }
+        Set<String> present = new TreeSet<>(lhs.variables());
+        present.addAll(rhs.variables());
+        present.retainAll(ctx.symbolicVars());
+        if (present.isEmpty()) {
+            return null;
+        }
+        if (present.size() > 1) {
+            throw new ParseException(
+                    "An identity may involve only one SYMBOLIC variable, but found: " + present);
+        }
+        return present.iterator().next();
+    }
+
+    /**
+     * Solves a CAS identity (an equation that must hold for all values of the
+     * symbolic variable) for its coefficients and emits each as a concrete
+     * {@code name = value} equation so the regular solver reports it.
+     */
+    private void flattenIdentity(Expr lhs, Expr rhs, String symbolicVar, String sourceText, FlattenContext ctx) {
+        Map<String, Double> coeffs;
+        try {
+            coeffs = CasIdentity.solveCoefficients(lhs, rhs, symbolicVar);
+        } catch (CasEngine.CasException e) {
+            throw new ParseException(e.getMessage());
+        }
+        for (Map.Entry<String, Double> entry : coeffs.entrySet()) {
+            ctx.out().add(new Equation(new Expr.Var(entry.getKey()),
+                    new Expr.Num(entry.getValue()), sourceText));
         }
     }
 
