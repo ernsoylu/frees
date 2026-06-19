@@ -39,6 +39,38 @@ PLOT 'Boiler Cycle'
 END
 ```
 
+## Control-System Plot Kinds
+Dedicated kinds for the control-systems analysis functions (see *Control Systems & Symbolic CAS*). Feed them the arrays produced by `bode`, `nyquist`, `pole`/`zero`:
+- **Bode diagram** (stacked magnitude-dB and phase-deg axes versus frequency):
+```
+PLOT 'Bode Diagram'
+  kind = bode
+  omega = omega
+  mag = mag
+  phase = phase
+END
+```
+- **Nyquist diagram** (real vs. imaginary, with the `-1 + j0` critical point marked):
+```
+PLOT 'Nyquist Diagram'
+  kind = nyquist
+  real = re
+  imag = im
+END
+```
+- **Pole-Zero map** (s-plane scatter; poles as `x`, zeros as `o`):
+```
+PLOT 'Pole-Zero Map'
+  kind = polezero
+  pr = pr
+  pi = pi
+  zr = zr
+  zi = zi
+END
+```
+
+Time responses (`step`, `impulse`, `lsim`) reuse the standard **xy** kind with the time vector on `x`.
+
 ## Embedding in Reports
 Include code-defined plots directly in your rich text report with the graph tag:
 ```

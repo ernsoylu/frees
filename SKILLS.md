@@ -9,7 +9,8 @@
 | Build tool | Gradle |
 | Compiler / Lexer | ANTLR — generates AST from equation strings |
 | Graph theory | JGraphT — Tarjan's DFS blocking algorithm |
-| Numerical math | Apache Commons Math — Jacobian matrix, Newton-Raphson, Brent's optimization, Predictor-Corrector integration |
+| Numerical math | Apache Commons Math — Jacobian matrix, Newton-Raphson, Brent's optimization, Predictor-Corrector integration, eigen-decomposition & matrix algebra (control-systems poles/zeros, LQR Riccati) |
+| Symbolic algebra (CAS) | Symja (`matheclipse-core`) — symbolic identities, Laplace partial fractions, transfer-function algebra, symbolic `ss↔tf` |
 | Thermodynamics | CoolProp (via JNI/JNA) for real fluids; JANAF table equivalents for ideal gases |
 
 ## Frontend Architecture (React + TypeScript)

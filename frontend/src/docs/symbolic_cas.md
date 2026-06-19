@@ -1,7 +1,13 @@
 [Topic: symbolic-cas]
-# Symbolic Identities & Partial Fractions (CAS)
+# Control Systems & Symbolic CAS
 
-frees can solve **symbolic identities** — equations that must hold for *all* values of an independent variable — using an embedded computer-algebra system (CAS). The classic use is decomposing a Laplace transfer function into partial fractions and reading off the residues, which then appear in the Solution window like any other variable.
+frees brings MATLAB-Control-Toolbox-style workflows in as native, order-independent equations: LTI modeling and conversions, system interconnection, poles/zeros and stability margins, Bode/Nyquist frequency response, step/impulse/forced time response, and state-feedback/PID controller design. Underneath, two engines meet at the `num`/`den` coefficient arrays — an embedded **Symja** computer-algebra system (CAS) for symbolic work, and Apache Commons Math for numeric analysis (companion-matrix eigenvalues, Riccati via the matrix sign function) that stays robust on high-order, floating-point systems.
+
+This page starts with the symbolic CAS layer (symbolic identities and Laplace partial fractions), then covers the LTI model representations and every control-systems `CALL` function.
+
+## Symbolic identities
+
+frees can solve **symbolic identities** — equations that must hold for *all* values of an independent variable — using the embedded CAS. The classic use is decomposing a Laplace transfer function into partial fractions and reading off the residues, which then appear in the Solution window like any other variable.
 
 ## Declaring a symbolic variable
 

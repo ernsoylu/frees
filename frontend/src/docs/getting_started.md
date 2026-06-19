@@ -1,7 +1,7 @@
 [Topic: started]
 # Introduction & Solver Philosophy
 
-Welcome to the **frees** (free solver) documentation. frees is a next-generation, declarative equation-solving environment designed for engineering problems, thermodynamics, and multi-domain simulation.
+Welcome to the **frees** (free solver) documentation. frees is a next-generation, declarative equation-solving environment designed for engineering problems, thermodynamics, multi-domain simulation, and control-systems design (LTI modeling, frequency/time analysis, and LQR/pole-placement/PID synthesis — see *Control Systems & Symbolic CAS*).
 
 ## The Declarative Difference
 Unlike traditional programming languages (like Python, MATLAB scripts, or C++), where you must explicitly write equations in assignment form (e.g., `x = y + 2` to calculate `x`), frees is **declarative**. You write equations exactly as they appear in engineering textbooks:
