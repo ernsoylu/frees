@@ -571,7 +571,10 @@ public final class UnitChecker {
             c.function().startsWith("margin$") ||
             c.function().startsWith("step$") ||
             c.function().startsWith("impulse$") ||
-            c.function().startsWith("lsim$")) {
+            c.function().startsWith("lsim$") ||
+            c.function().startsWith("lqr$") ||
+            c.function().startsWith("place$") ||
+            c.function().startsWith("pidtune$")) {
             return Dim.of(Quantity.dimensionless(1.0));
         }
         List<Expr> args = c.args();
