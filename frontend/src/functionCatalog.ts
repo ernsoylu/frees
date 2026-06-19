@@ -297,4 +297,15 @@ export const FUNCTION_CATEGORIES: FunctionCategory[] = [
       { label: 'WHILE / DO (in FUNCTION)', snippet: 'WHILE $0 DO\n  \nEND\n', description: 'While-loop (inside a FUNCTION / PROCEDURE).', usage: 'WHILE cond DO … END' },
     ],
   },
+  {
+    // Symbolic / CAS workflow: a SYMBOLIC variable turns an equation into an
+    // identity (must hold for all values of that variable) that the CAS solves
+    // for the remaining coefficients — e.g. Laplace partial-fraction residues.
+    category: 'Control Systems (CAS)',
+    items: [
+      { label: 'SYMBOLIC (declare Laplace/symbolic var)', snippet: 'SYMBOLIC $0s', description: 'Declare an independent symbolic variable (e.g. the Laplace s). Any equation that contains it becomes an identity solved for the remaining coefficients, instead of solving for the symbolic variable itself.', usage: 'SYMBOLIC s' },
+      { label: 'tf (transfer function)', snippet: 'tf([$0], [])', description: 'Transfer function num(s)/den(s) from coefficient arrays in descending powers ([1, 3, 2] = s^2 + 3s + 2). Use it on the left of a SYMBOLIC identity to decompose into partial fractions.', usage: 'tf([1, 3], [1, 3, 2])' },
+      { label: 'Partial fractions (identity)', snippet: 'SYMBOLIC s\ntf([$0], []) = A/(s+1) + B/(s+2)', description: 'Decompose a transfer function into partial fractions: write the identity with named residues and frees solves for them (A, B appear in the Solution window).', usage: 'SYMBOLIC s\ntf([1, 3], [1, 3, 2]) = A/(s+1) + B/(s+2)' },
+    ],
+  },
 ]
