@@ -89,4 +89,54 @@ public final class StateSpace {
         }
         return Double.toString(value);
     }
+
+    public record StateSpaceMatrices(double[][] a, double[] b, double[] c, double d) {
+    }
+
+    /**
+     * Converts a transfer function (num, den coefficients in descending powers)
+     * to controllable canonical state-space form matrices.
+     */
+    public static StateSpaceMatrices tf2ss(double[] num, double[] den) {
+        int n = den.length - 1;
+        if (n < 0) {
+            throw new CasEngine.CasException("tf2ss: denominator cannot be empty");
+        }
+        if (num.length != den.length) {
+            throw new CasEngine.CasException("tf2ss: num and den must have the same length (n+1)");
+        }
+        double d0 = den[0];
+        if (Math.abs(d0) < 1e-15) {
+            throw new CasEngine.CasException("tf2ss: leading denominator coefficient cannot be zero");
+        }
+        double[] aCoeffs = new double[n + 1];
+        double[] bCoeffs = new double[n + 1];
+        for (int i = 0; i <= n; i++) {
+            aCoeffs[i] = den[i] / d0;
+            bCoeffs[i] = num[i] / d0;
+        }
+
+        double d = bCoeffs[0];
+        double[] bBar = new double[n];
+        for (int i = 1; i <= n; i++) {
+            bBar[i - 1] = bCoeffs[i] - d * aCoeffs[i];
+        }
+
+        double[][] a = new double[n][n];
+        double[] b = new double[n];
+        double[] c = new double[n];
+        if (n > 0) {
+            for (int j = 0; j < n; j++) {
+                a[0][j] = -aCoeffs[j + 1];
+            }
+            for (int i = 1; i < n; i++) {
+                a[i][i - 1] = 1.0;
+            }
+            b[0] = 1.0;
+            for (int i = 0; i < n; i++) {
+                c[i] = bBar[i];
+            }
+        }
+        return new StateSpaceMatrices(a, b, c, d);
+    }
 }

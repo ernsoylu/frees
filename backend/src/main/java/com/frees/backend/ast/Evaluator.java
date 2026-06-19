@@ -112,11 +112,17 @@ public final class Evaluator {
             return evalEigen(c, values, defs);
         }
 
-        // Synthetic state-space->transfer-function call: ss2tf$num$<k>$<n> or
-        // ss2tf$den$<k>$<n>, with A (n*n, row-major), B (n*1), C (1*n) and D
-        // entries as arguments. Generated when flattening CALL ss2tf.
         if (c.function().startsWith("ss2tf$")) {
             return evalSs2tf(c, values, defs);
+        }
+        if (c.function().startsWith("tf2ss$")) {
+            return evalTf2ss(c, values, defs);
+        }
+        if (c.function().startsWith("zp2tf$")) {
+            return evalZp2tf(c, values, defs);
+        }
+        if (c.function().startsWith("tf2zp$")) {
+            return evalTf2zp(c, values, defs);
         }
 
         return evalBuiltin(c, values, defs);
@@ -466,6 +472,101 @@ public final class Evaluator {
                 com.frees.backend.cas.StateSpace.ss2tf(a, b, cm, d);
         double[] coeffs = wantNum ? tc.num() : tc.den();
         return coeffs[k];
+    }
+
+    private static double evalTf2ss(Expr.Call c, Map<String, Double> values, Map<String, ProcDef> defs) {
+        String[] parts = c.function().split("\\$");
+        String matrix = parts[1]; // "a", "b", "c", "d"
+        int n = Integer.parseInt(parts[parts.length - 1]);
+        int np = n + 1;
+        List<Expr> args = c.args();
+        double[] num = new double[np];
+        double[] den = new double[np];
+        for (int i = 0; i < np; i++) {
+            num[i] = eval(args.get(i), values, defs);
+            den[i] = eval(args.get(np + i), values, defs);
+        }
+        com.frees.backend.cas.StateSpace.StateSpaceMatrices ssm =
+                com.frees.backend.cas.StateSpace.tf2ss(num, den);
+        if (matrix.equals("a")) {
+            int row = Integer.parseInt(parts[2]);
+            int col = Integer.parseInt(parts[3]);
+            return ssm.a()[row][col];
+        } else if (matrix.equals("b")) {
+            int row = Integer.parseInt(parts[2]);
+            return ssm.b()[row];
+        } else if (matrix.equals("c")) {
+            int col = Integer.parseInt(parts[2]);
+            return ssm.c()[col];
+        } else {
+            return ssm.d();
+        }
+    }
+
+    private static double evalZp2tf(Expr.Call c, Map<String, Double> values, Map<String, ProcDef> defs) {
+        String[] parts = c.function().split("\\$");
+        boolean wantNum = parts[1].equals("num");
+        int k = Integer.parseInt(parts[2]);
+        int nz = Integer.parseInt(parts[3]);
+        int np = Integer.parseInt(parts[4]);
+
+        List<Expr> args = c.args();
+        double[] z_r = new double[nz];
+        double[] z_i = new double[nz];
+        double[] p_r = new double[np];
+        double[] p_i = new double[np];
+
+        int idx = 0;
+        for (int i = 0; i < nz; i++) z_r[i] = eval(args.get(idx++), values, defs);
+        for (int i = 0; i < nz; i++) z_i[i] = eval(args.get(idx++), values, defs);
+        for (int i = 0; i < np; i++) p_r[i] = eval(args.get(idx++), values, defs);
+        for (int i = 0; i < np; i++) p_i[i] = eval(args.get(idx++), values, defs);
+        double gain = eval(args.get(idx), values, defs);
+
+        double[][] tfCoeffs = com.frees.backend.cas.PolynomialHelpers.zp2tf(z_r, z_i, p_r, p_i, gain);
+        double[] coeffs = wantNum ? tfCoeffs[0] : tfCoeffs[1];
+        return coeffs[k];
+    }
+
+    private static double evalTf2zp(Expr.Call c, Map<String, Double> values, Map<String, ProcDef> defs) {
+        String[] parts = c.function().split("\\$");
+        String output = parts[1]; // "zr", "zi", "pr", "pi", "k"
+        int nz, np;
+        if (output.equals("k")) {
+            nz = Integer.parseInt(parts[2]);
+            np = Integer.parseInt(parts[3]);
+        } else {
+            nz = Integer.parseInt(parts[3]);
+            np = Integer.parseInt(parts[4]);
+        }
+        int numLen = np + 1;
+
+        List<Expr> args = c.args();
+        double[] num = new double[numLen];
+        double[] den = new double[numLen];
+        for (int i = 0; i < numLen; i++) {
+            num[i] = eval(args.get(i), values, defs);
+            den[i] = eval(args.get(numLen + i), values, defs);
+        }
+
+        com.frees.backend.cas.PolynomialHelpers.ZpkResult zpk =
+                com.frees.backend.cas.PolynomialHelpers.tf2zp(num, den);
+
+        if (output.equals("zr")) {
+            int k = Integer.parseInt(parts[2]);
+            return k < zpk.zeros().length ? zpk.zeros()[k][0] : 0.0;
+        } else if (output.equals("zi")) {
+            int k = Integer.parseInt(parts[2]);
+            return k < zpk.zeros().length ? zpk.zeros()[k][1] : 0.0;
+        } else if (output.equals("pr")) {
+            int k = Integer.parseInt(parts[2]);
+            return k < zpk.poles().length ? zpk.poles()[k][0] : 0.0;
+        } else if (output.equals("pi")) {
+            int k = Integer.parseInt(parts[2]);
+            return k < zpk.poles().length ? zpk.poles()[k][1] : 0.0;
+        } else {
+            return zpk.k();
+        }
     }
 
     /**

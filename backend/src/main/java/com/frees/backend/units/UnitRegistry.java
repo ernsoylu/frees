@@ -48,6 +48,7 @@ public final class UnitRegistry {
         define("1", 1.0);
         define("rad", 1.0);
         define("deg", Math.PI / 180.0);
+        define("db", 1.0);
 
         // Mass
         define("kg", 1.0, 1);
