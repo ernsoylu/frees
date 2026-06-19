@@ -803,6 +803,12 @@ public final class EquationParser {
             throw new ParseException("ss2tf: num and den outputs must each have length n+1 = " + (n + 1)
                     + " (e.g. num[1:" + (n + 1) + "], den[1:" + (n + 1) + "])");
         }
+        if (outputs.get(0) instanceof Expr.ArrayAccess aa) {
+            registerShape(aa.name(), n + 1, 1, ctx);
+        }
+        if (outputs.get(1) instanceof Expr.ArrayAccess aa) {
+            registerShape(aa.name(), n + 1, 1, ctx);
+        }
         for (int k = 0; k < n + 1; k++) {
             ctx.out().add(new Equation(num.elements[k],
                     new Expr.Call("ss2tf$num$" + k + "$" + n, entries), sourceText));

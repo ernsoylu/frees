@@ -497,6 +497,42 @@ tf([1, 3], [1, 3, 2]) = A/(s+1) + B/(s+2)
   inverse Laplace transform y(t) = A*e^(-t) + B*e^(-2t): }
 y_initial = A + B        { y(0) }`,
   },
+  {
+    id: 'cruise-control',
+    title: 'Cruise Control System Design',
+    description: 'Models a 1000 kg car with drag, converts to transfer function, and tunes a PI controller.',
+    category: 'Control Systems',
+    text: `# Car Dynamics & Cruise Control
+{ This example models a 1000 kg car under viscous drag, converts the state-space model to a transfer function, and designs a proportional-integral (PI) controller for a feedback loop.
+
+  Press Solve (F2). }
+
+m = 1000 [kg]           { car mass }
+c = 50 [N-s/m]          { viscous drag coefficient }
+
+{ State Space Model: states are [position; velocity], input is traction force. }
+A = [0, 1; 0, -c/m]
+B = [0; 1/m]
+C = [0, 1]              { output is velocity }
+D = [0]
+
+{ 1. Convert State Space to Transfer Function }
+CALL ss2tf(A, B, C, D : num_car[1:3], den_car[1:3])
+
+{ 2. Design PI Controller: C(s) = Kp + Ki/s = (Kp*s + Ki)/s }
+Kp = 800 [N-s/m]
+Ki = 40 [N/m]
+num_pi = [Kp, Ki]
+den_pi = [1, 0]
+
+{ 3. Open-Loop System: L(s) = C(s) * G(s) }
+CALL series(num_pi, den_pi, num_car, den_car : num_ol[1:4], den_ol[1:4])
+
+{ 4. Closed-Loop System: T(s) = L(s) / (1 + L(s)) }
+num_h = [1]
+den_h = [1]
+CALL feedback(num_ol, den_ol, num_h, den_h : num_cl[1:4], den_cl[1:4])`,
+  },
 ]
 
 /** The document new/blank workspaces start from. */
