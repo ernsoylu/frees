@@ -1893,6 +1893,7 @@ const CATEGORIES = [
     items: [
       { id: 'calculus', label: 'Numerical Integration (ODEs)', keywords: ['integral', 'ode', 'differential', 'calculus', 'runge-kutta'] },
       { id: 'dynamic-ode', label: 'Transient / ODE Systems (DYNAMIC)', keywords: ['dynamic', 'transient', 'ode', 'der', 'state', 'event', 'ode45', 'ode23', 'ode23s', 'ode15s', 'rocket', 'odevalue', 'finalvalue', 'maxvalue', 'timeat', 'ode table', 'stiff', 'initial condition', 'apogee'] },
+      { id: 'symbolic-cas', label: 'Symbolic Identities & Partial Fractions (CAS)', keywords: ['symbolic', 'cas', 'laplace', 's', 'partial fractions', 'residue', 'transfer function', 'tf', 'identity', 'control', 'decompose', 'apart', 'numerator', 'denominator'] },
       { id: 'optimization', label: 'Optimization & sweeps', keywords: ['optimization', 'sweep', 'parametric', 'minimization', 'maximization'] },
       { id: 'api', label: 'Solver Reference & API', keywords: ['api', 'solver', 'newton', 'tarjan', 'residuals', 'jacobian'] },
     ]
