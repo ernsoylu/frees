@@ -40,4 +40,15 @@ class TransferFunctionTest {
             assertEquals(expected, at(tf, s), 1e-12, "at s=" + s);
         }
     }
+
+    @Test
+    void expandCallsRewritesTfShorthand() {
+        // tf([1,3],[1,3,2]) inside a larger expression -> the fraction.
+        Expr e = CasExpressions.parse("tf([1, 3], [1, 3, 2]) + 5");
+        Expr expanded = TransferFunction.expandCalls(e, "s");
+        for (double s : new double[]{-5, 0, 2.5}) {
+            double expected = (s + 3) / (s * s + 3 * s + 2) + 5;
+            assertEquals(expected, at(expanded, s), 1e-12, "at s=" + s);
+        }
+    }
 }

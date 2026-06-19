@@ -41,6 +41,15 @@ public final class CasIdentity {
     public static Map<String, Double> solveCoefficients(Expr lhs, Expr rhs, String variable) {
         String var = variable.toLowerCase();
 
+        // Expand any tf(num, den) shorthand into an explicit fraction in var so
+        // the identity can be written tf([1,3],[1,3,2]) = A/(s+1) + B/(s+2).
+        try {
+            lhs = TransferFunction.expandCalls(lhs, var);
+            rhs = TransferFunction.expandCalls(rhs, var);
+        } catch (IllegalArgumentException e) {
+            throw new CasEngine.CasException(e.getMessage(), e);
+        }
+
         TreeSet<String> unknowns = new TreeSet<>();
         unknowns.addAll(lhs.variables());
         unknowns.addAll(rhs.variables());
