@@ -26,6 +26,8 @@
   → Documented the array/matrix conventions for TF, SS, and ZPK models in `symbolic_cas.md`. Written the `PolynomialHelpers` utility class (add, multiply, companion-matrix roots, expandRoots). Implemented the conversions (`tf2ss`, `ss2tf` round-trip, `zp2tf`, `tf2zp`) via `CALL` dispatch in `EquationParser.java` and `Evaluator.java` (with automatic output shape registration). Registered `db` as a dimensionless unit in `UnitRegistry` and updated `UnitChecker` to ground synthetic LTI conversion calls as dimensionless. Verified all tests pass.
 * ~~Phase 2 — Interconnection (backend).~~
   → Implemented raw polynomial math (`multiplyRaw`, `addRaw`) to preserve array/vector lengths matching output shape requirements. Built connection methods (`series`, `parallel`, `feedback`) in `PolynomialHelpers.java` and wired them as `CALL` dispatches in `EquationParser.java` and `Evaluator.java`. Configured unit routing to support connection results as dimensionless in `UnitChecker.java`. Wrote unit tests in `PolynomialHelpersTest.java` and integration solver tests in `ControlSystemInterconnectionTest.java`. Registered functions in the frontend `functionCatalog.ts` and documented usage in `symbolic_cas.md`. Passed all Gradle tests and verified clean frontend builds.
+* ~~Phase 3 — Frequency analysis + Bode/Nyquist/pole-zero plots (backend + UI).~~
+  → Implemented frequency response solvers (`bode`, `nyquist`, `margin`) and pole/zero solvers (`pole`, `zero`) for both Transfer Function (TF) and State Space (SS) models. Enforced input dimension homogeneity on numerator and denominator arrays. Extended the unit checker to handle synthetic dispatches. Wired up React front-end `PlotSpec` kinds (`bode` stacked dual-axes plot, `nyquist` real-vs-imag plot with critical point `-1+j0` marked, and `polezero` s-plane scatter plot). Added detailed unit/integration tests in `PolynomialHelpersTest.java` and `ControlSystemFrequencyTest.java` (all backend tests green). Registered functions in the catalog, added documentation in `symbolic_cas.md`, and updated the `cruise-control` example to showcase the full analysis loop. Completed a successful full project compilation check.
 
 
 ## Open
@@ -88,19 +90,7 @@ shippable vertical slice.
 
 
 
-#### Phase 3 — Frequency analysis + Bode/Nyquist/pole-zero plots (backend + first UI)
 
-First user-visible graphical payoff; backend-first then plotting (Agile rule #2).
-
-- Backend solvers: `bode`/`bode_tf` (magnitude `20·log10|G(jω)|` dB, phase in degrees with
-  unwrapping), `nyquist` (real/imag parts), `margin`/`margin_tf` (GM/PM and crossover
-  frequencies `ω_cg`, `ω_cp`), `pole`/`zero` (via `EigenDecomposition`).
-- Frontend: new `PlotSpec.kind`s in `PlotCard.tsx`/`PlotlyChart.tsx`:
-  - **Bode** — stacked dual-axes (log ω vs. magnitude dB / phase deg).
-  - **Nyquist** — real vs. imaginary, with the critical point `−1 + j0` marked.
-  - **Pole-Zero map** — s-plane scatter (poles `×`, zeros `○`).
-- Tests: magnitude/phase at known frequencies; pole/zero locations for a reference plant.
-- Examples + catalog registration.
 
 #### Phase 4 — Time-domain responses (backend, reuses xy plotting)
 
