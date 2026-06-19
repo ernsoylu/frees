@@ -112,6 +112,13 @@ public final class Evaluator {
             return evalEigen(c, values, defs);
         }
 
+        // Synthetic state-space->transfer-function call: ss2tf$num$<k>$<n> or
+        // ss2tf$den$<k>$<n>, with A (n*n, row-major), B (n*1), C (1*n) and D
+        // entries as arguments. Generated when flattening CALL ss2tf.
+        if (c.function().startsWith("ss2tf$")) {
+            return evalSs2tf(c, values, defs);
+        }
+
         return evalBuiltin(c, values, defs);
     }
 
@@ -425,6 +432,40 @@ public final class Evaluator {
             v = v.mapMultiply(-1.0);
         }
         return v.getEntry(component);
+    }
+
+    /**
+     * Evaluates a synthetic ss2tf$num$<k>$<n> or ss2tf$den$<k>$<n> call: rebuilds
+     * the state-space matrices from the argument list and returns the k-th
+     * transfer-function coefficient (descending powers) via the symbolic
+     * conversion in {@link com.frees.backend.cas.StateSpace}.
+     */
+    private static double evalSs2tf(Expr.Call c, Map<String, Double> values, Map<String, ProcDef> defs) {
+        String[] parts = c.function().split("\\$");
+        boolean wantNum = parts[1].equals("num");
+        int k = Integer.parseInt(parts[2]);
+        int n = Integer.parseInt(parts[3]);
+        List<Expr> args = c.args();
+        int idx = 0;
+        double[][] a = new double[n][n];
+        for (int i = 0; i < n; i++) {
+            for (int j = 0; j < n; j++) {
+                a[i][j] = eval(args.get(idx++), values, defs);
+            }
+        }
+        double[][] b = new double[n][1];
+        for (int i = 0; i < n; i++) {
+            b[i][0] = eval(args.get(idx++), values, defs);
+        }
+        double[][] cm = new double[1][n];
+        for (int j = 0; j < n; j++) {
+            cm[0][j] = eval(args.get(idx++), values, defs);
+        }
+        double d = eval(args.get(idx), values, defs);
+        com.frees.backend.cas.StateSpace.TransferCoefficients tc =
+                com.frees.backend.cas.StateSpace.ss2tf(a, b, cm, d);
+        double[] coeffs = wantNum ? tc.num() : tc.den();
+        return coeffs[k];
     }
 
     /**

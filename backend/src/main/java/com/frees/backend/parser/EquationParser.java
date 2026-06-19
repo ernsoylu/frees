@@ -685,12 +685,27 @@ public final class EquationParser {
 
     private void flattenCallProc(String name, List<Expr> inputs, List<Expr> outputs, String sourceText, FlattenContext ctx) {
         String defName = name.toLowerCase();
+        List<Expr> resolvedInputs = new ArrayList<>();
+        for (Expr input : inputs) {
+            resolvedInputs.add(resolveShapes(input, ctx));
+        }
+        List<Expr> resolvedOutputs = new ArrayList<>();
+        for (Expr output : outputs) {
+            resolvedOutputs.add(resolveShapes(output, ctx));
+        }
+        inputs = resolvedInputs;
+        outputs = resolvedOutputs;
+
         if (defName.equals("eigenvalues") || defName.equals("eigen")) {
             flattenEigen(defName, inputs, outputs, sourceText, ctx);
             return;
         }
         if (defName.equals("ludecompose") || defName.equals("eulerdecompose") || defName.equals("eulerrotate")) {
             flattenDecomposeOrRotate(defName, inputs, outputs, sourceText, ctx);
+            return;
+        }
+        if (defName.equals("ss2tf")) {
+            flattenSs2tf(inputs, outputs, sourceText, ctx);
             return;
         }
 
@@ -703,6 +718,109 @@ public final class EquationParser {
             case ProcDef.ModuleDef md -> flattenModuleCall(md, inputs, outputs, ctx);
             default -> throw new ParseException("'" + defName + "' is a FUNCTION, not callable with CALL (use it directly in an expression)");
         }
+    }
+
+    private void flattenSs2tf(List<Expr> inputs, List<Expr> outputs, String sourceText, FlattenContext ctx) {
+        if (inputs.size() != 4 || outputs.size() != 2) {
+            throw new ParseException("ss2tf expects 4 inputs (A, B, C, D) and 2 outputs (num, den), "
+                    + "e.g. CALL ss2tf(A[1:2,1:2], B[1:2], C[1:2], D : num[1:3], den[1:3])");
+        }
+        MatrixInfo a = parseMatrixInfo(inputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        int n = a.rows;
+        if (a.cols != n) {
+            throw new ParseException("ss2tf: A must be square (got " + a.rows + "x" + a.cols + ")");
+        }
+
+        List<Expr> bElements = getVectorElements(inputs.get(1), n, ctx);
+        List<Expr> cElements = getRowVectorElements(inputs.get(2), n, ctx);
+        Expr dElement = getScalarElement(inputs.get(3), ctx);
+
+        // Serialize entries in the order the Evaluator reconstructs them:
+        // A row-major, then B, then C, then D.
+        List<Expr> entries = new ArrayList<>();
+        for (int i = 0; i < n; i++) {
+            entries.addAll(Arrays.asList(a.elements[i]));
+        }
+        entries.addAll(bElements);
+        entries.addAll(cElements);
+        entries.add(dElement);
+
+        VectorInfo num = parseVectorInfo(outputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        VectorInfo den = parseVectorInfo(outputs.get(1), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        if (num.size != n + 1 || den.size != n + 1) {
+            throw new ParseException("ss2tf: num and den outputs must each have length n+1 = " + (n + 1)
+                    + " (e.g. num[1:" + (n + 1) + "], den[1:" + (n + 1) + "])");
+        }
+        for (int k = 0; k < n + 1; k++) {
+            ctx.out().add(new Equation(num.elements[k],
+                    new Expr.Call("ss2tf$num$" + k + "$" + n, entries), sourceText));
+            ctx.out().add(new Equation(den.elements[k],
+                    new Expr.Call("ss2tf$den$" + k + "$" + n, entries), sourceText));
+        }
+    }
+
+    private List<Expr> getVectorElements(Expr e, int expectedSize, FlattenContext ctx) {
+        if (e instanceof Expr.ArrayAccess aa && aa.indices().size() == 2) {
+            MatrixInfo m = parseMatrixInfo(e, ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+            if (m.rows != expectedSize || m.cols != 1) {
+                throw new ParseException("ss2tf: B must be a vector of size " + expectedSize + "x1 (got " + m.rows + "x" + m.cols + ")");
+            }
+            List<Expr> res = new ArrayList<>();
+            for (int i = 0; i < expectedSize; i++) {
+                res.add(m.elements[i][0]);
+            }
+            return res;
+        } else {
+            VectorInfo v = parseVectorInfo(e, ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+            if (v.size != expectedSize) {
+                throw new ParseException("ss2tf: B must be a vector of size " + expectedSize + " (got size " + v.size + ")");
+            }
+            return Arrays.asList(v.elements);
+        }
+    }
+
+    private List<Expr> getRowVectorElements(Expr e, int expectedSize, FlattenContext ctx) {
+        if (e instanceof Expr.ArrayAccess aa && aa.indices().size() == 2) {
+            MatrixInfo m = parseMatrixInfo(e, ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+            if (m.rows != 1 || m.cols != expectedSize) {
+                throw new ParseException("ss2tf: C must be a row vector of size 1x" + expectedSize + " (got " + m.rows + "x" + m.cols + ")");
+            }
+            List<Expr> res = new ArrayList<>();
+            for (int j = 0; j < expectedSize; j++) {
+                res.add(m.elements[0][j]);
+            }
+            return res;
+        } else {
+            VectorInfo v = parseVectorInfo(e, ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+            if (v.size != expectedSize) {
+                throw new ParseException("ss2tf: C must be a vector of size " + expectedSize + " (got size " + v.size + ")");
+            }
+            return Arrays.asList(v.elements);
+        }
+    }
+
+    private Expr getScalarElement(Expr e, FlattenContext ctx) {
+        if (e instanceof Expr.ArrayAccess aa) {
+            if (aa.indices().size() == 2) {
+                MatrixInfo m = parseMatrixInfo(e, ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+                if (m.rows != 1 || m.cols != 1) {
+                    throw new ParseException("ss2tf: D must be a 1x1 matrix (got " + m.rows + "x" + m.cols + ")");
+                }
+                return m.elements[0][0];
+            } else {
+                Expr idxExpr = expandExpr(aa.indices().get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+                if (idxExpr instanceof Expr.Range) {
+                    VectorInfo v = parseVectorInfo(e, ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+                    if (v.size != 1) {
+                        throw new ParseException("ss2tf: D must be a size-1 vector (got size " + v.size + ")");
+                    }
+                    return v.elements[0];
+                } else {
+                    return expandExpr(e, ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+                }
+            }
+        }
+        return expandExpr(e, ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
     }
 
     private void flattenEigen(String defName, List<Expr> inputs, List<Expr> outputs, String sourceText, FlattenContext ctx) {
