@@ -133,6 +133,21 @@ public final class Evaluator {
         if (c.function().startsWith("feedback$")) {
             return evalFeedback(c, values, defs);
         }
+        if (c.function().startsWith("pole$")) {
+            return evalPole(c, values, defs);
+        }
+        if (c.function().startsWith("zero$")) {
+            return evalZero(c, values, defs);
+        }
+        if (c.function().startsWith("bode$")) {
+            return evalBode(c, values, defs);
+        }
+        if (c.function().startsWith("nyquist$")) {
+            return evalNyquist(c, values, defs);
+        }
+        if (c.function().startsWith("margin$")) {
+            return evalMargin(c, values, defs);
+        }
 
         return evalBuiltin(c, values, defs);
     }
@@ -649,6 +664,254 @@ public final class Evaluator {
         double[][] result = com.frees.backend.cas.PolynomialHelpers.feedback(num1, den1, num2, den2, sign);
         double[] coeffs = wantNum ? result[0] : result[1];
         return coeffs[index];
+    }
+
+    private static double evalPole(Expr.Call c, Map<String, Double> values, Map<String, ProcDef> defs) {
+        String[] parts = c.function().split("\\$");
+        boolean wantReal = parts[1].equals("pr");
+        int index = Integer.parseInt(parts[2]);
+        int numInputs = Integer.parseInt(parts[3]);
+        int n = Integer.parseInt(parts[4]);
+
+        List<Expr> args = c.args();
+        double[][] result;
+        if (numInputs == 1) {
+            double[][] a = new double[n][n];
+            int idx = 0;
+            for (int i = 0; i < n; i++) {
+                for (int j = 0; j < n; j++) {
+                    a[i][j] = eval(args.get(idx++), values, defs);
+                }
+            }
+            result = com.frees.backend.cas.PolynomialHelpers.poleSS(a);
+        } else {
+            int len = n + 1;
+            double[] den = new double[len];
+            for (int i = 0; i < len; i++) {
+                den[i] = eval(args.get(len + i), values, defs);
+            }
+            result = com.frees.backend.cas.PolynomialHelpers.roots(den);
+        }
+
+        java.util.Arrays.sort(result, (a, b) -> {
+            int cmp = Double.compare(a[0], b[0]);
+            if (cmp != 0) return cmp;
+            return Double.compare(a[1], b[1]);
+        });
+
+        return wantReal ? result[index][0] : result[index][1];
+    }
+
+    private static double evalZero(Expr.Call c, Map<String, Double> values, Map<String, ProcDef> defs) {
+        String[] parts = c.function().split("\\$");
+        boolean wantReal = parts[1].equals("zr");
+        int index = Integer.parseInt(parts[2]);
+        int numInputs = Integer.parseInt(parts[3]);
+        int nz = Integer.parseInt(parts[4]);
+
+        List<Expr> args = c.args();
+        double[] num;
+        if (numInputs == 2) {
+            int len = args.size() / 2;
+            num = new double[len];
+            for (int i = 0; i < len; i++) {
+                num[i] = eval(args.get(i), values, defs);
+            }
+        } else {
+            int total = args.size();
+            int n = (int) Math.round(Math.sqrt(total)) - 1;
+            double[][] a = new double[n][n];
+            double[][] b = new double[n][1];
+            double[][] cm = new double[1][n];
+            int idx = 0;
+            for (int i = 0; i < n; i++) {
+                for (int j = 0; j < n; j++) {
+                    a[i][j] = eval(args.get(idx++), values, defs);
+                }
+            }
+            for (int i = 0; i < n; i++) {
+                b[i][0] = eval(args.get(idx++), values, defs);
+            }
+            for (int j = 0; j < n; j++) {
+                cm[0][j] = eval(args.get(idx++), values, defs);
+            }
+            double d = eval(args.get(idx), values, defs);
+            com.frees.backend.cas.StateSpace.TransferCoefficients tc =
+                    com.frees.backend.cas.StateSpace.ss2tf(a, b, cm, d);
+            num = tc.num();
+        }
+
+        double[][] result = com.frees.backend.cas.PolynomialHelpers.roots(num);
+        if (result.length == 0) {
+            return 0.0;
+        }
+
+        java.util.Arrays.sort(result, (a, b) -> {
+            int cmp = Double.compare(a[0], b[0]);
+            if (cmp != 0) return cmp;
+            return Double.compare(a[1], b[1]);
+        });
+
+        if (index < result.length) {
+            return wantReal ? result[index][0] : result[index][1];
+        }
+        return 0.0;
+    }
+
+    private static double evalBode(Expr.Call c, Map<String, Double> values, Map<String, ProcDef> defs) {
+        String[] parts = c.function().split("\\$");
+        boolean wantMag = parts[1].equals("mag");
+        int index = Integer.parseInt(parts[2]);
+        int numInputs = Integer.parseInt(parts[3]);
+        int N = Integer.parseInt(parts[4]);
+
+        List<Expr> args = c.args();
+        double[] num, den;
+        double[] omega = new double[N];
+        if (numInputs == 3) {
+            int len = (args.size() - N) / 2;
+            num = new double[len];
+            den = new double[len];
+            for (int i = 0; i < len; i++) {
+                num[i] = eval(args.get(i), values, defs);
+                den[i] = eval(args.get(len + i), values, defs);
+            }
+            for (int i = 0; i < N; i++) {
+                omega[i] = eval(args.get(2 * len + i), values, defs);
+            }
+        } else {
+            int total = args.size();
+            int n = (int) Math.round(Math.sqrt(total - N)) - 1;
+            double[][] a = new double[n][n];
+            double[][] b = new double[n][1];
+            double[][] cm = new double[1][n];
+            int idx = 0;
+            for (int i = 0; i < n; i++) {
+                for (int j = 0; j < n; j++) {
+                    a[i][j] = eval(args.get(idx++), values, defs);
+                }
+            }
+            for (int i = 0; i < n; i++) {
+                b[i][0] = eval(args.get(idx++), values, defs);
+            }
+            for (int j = 0; j < n; j++) {
+                cm[0][j] = eval(args.get(idx++), values, defs);
+            }
+            double d = eval(args.get(idx++), values, defs);
+            for (int i = 0; i < N; i++) {
+                omega[i] = eval(args.get(idx++), values, defs);
+            }
+            com.frees.backend.cas.StateSpace.TransferCoefficients tc =
+                    com.frees.backend.cas.StateSpace.ss2tf(a, b, cm, d);
+            num = tc.num();
+            den = tc.den();
+        }
+
+        double[][] result = com.frees.backend.cas.PolynomialHelpers.bode(num, den, omega);
+        return wantMag ? result[0][index] : result[1][index];
+    }
+
+    private static double evalNyquist(Expr.Call c, Map<String, Double> values, Map<String, ProcDef> defs) {
+        String[] parts = c.function().split("\\$");
+        boolean wantReal = parts[1].equals("real");
+        int index = Integer.parseInt(parts[2]);
+        int numInputs = Integer.parseInt(parts[3]);
+        int N = Integer.parseInt(parts[4]);
+
+        List<Expr> args = c.args();
+        double[] num, den;
+        double[] omega = new double[N];
+        if (numInputs == 3) {
+            int len = (args.size() - N) / 2;
+            num = new double[len];
+            den = new double[len];
+            for (int i = 0; i < len; i++) {
+                num[i] = eval(args.get(i), values, defs);
+                den[i] = eval(args.get(len + i), values, defs);
+            }
+            for (int i = 0; i < N; i++) {
+                omega[i] = eval(args.get(2 * len + i), values, defs);
+            }
+        } else {
+            int total = args.size();
+            int n = (int) Math.round(Math.sqrt(total - N)) - 1;
+            double[][] a = new double[n][n];
+            double[][] b = new double[n][1];
+            double[][] cm = new double[1][n];
+            int idx = 0;
+            for (int i = 0; i < n; i++) {
+                for (int j = 0; j < n; j++) {
+                    a[i][j] = eval(args.get(idx++), values, defs);
+                }
+            }
+            for (int i = 0; i < n; i++) {
+                b[i][0] = eval(args.get(idx++), values, defs);
+            }
+            for (int j = 0; j < n; j++) {
+                cm[0][j] = eval(args.get(idx++), values, defs);
+            }
+            double d = eval(args.get(idx++), values, defs);
+            for (int i = 0; i < N; i++) {
+                omega[i] = eval(args.get(idx++), values, defs);
+            }
+            com.frees.backend.cas.StateSpace.TransferCoefficients tc =
+                    com.frees.backend.cas.StateSpace.ss2tf(a, b, cm, d);
+            num = tc.num();
+            den = tc.den();
+        }
+
+        double[][] result = com.frees.backend.cas.PolynomialHelpers.nyquist(num, den, omega);
+        return wantReal ? result[0][index] : result[1][index];
+    }
+
+    private static double evalMargin(Expr.Call c, Map<String, Double> values, Map<String, ProcDef> defs) {
+        String[] parts = c.function().split("\\$");
+        String output = parts[1]; // "gm", "pm", "wcg", "wcp"
+        int numInputs = Integer.parseInt(parts[2]);
+
+        List<Expr> args = c.args();
+        double[] num, den;
+        if (numInputs == 2) {
+            int len = args.size() / 2;
+            num = new double[len];
+            den = new double[len];
+            for (int i = 0; i < len; i++) {
+                num[i] = eval(args.get(i), values, defs);
+                den[i] = eval(args.get(len + i), values, defs);
+            }
+        } else {
+            int total = args.size();
+            int n = (int) Math.round(Math.sqrt(total)) - 1;
+            double[][] a = new double[n][n];
+            double[][] b = new double[n][1];
+            double[][] cm = new double[1][n];
+            int idx = 0;
+            for (int i = 0; i < n; i++) {
+                for (int j = 0; j < n; j++) {
+                    a[i][j] = eval(args.get(idx++), values, defs);
+                }
+            }
+            for (int i = 0; i < n; i++) {
+                b[i][0] = eval(args.get(idx++), values, defs);
+            }
+            for (int j = 0; j < n; j++) {
+                cm[0][j] = eval(args.get(idx++), values, defs);
+            }
+            double d = eval(args.get(idx), values, defs);
+            com.frees.backend.cas.StateSpace.TransferCoefficients tc =
+                    com.frees.backend.cas.StateSpace.ss2tf(a, b, cm, d);
+            num = tc.num();
+            den = tc.den();
+        }
+
+        double[] result = com.frees.backend.cas.PolynomialHelpers.margin(num, den);
+        return switch (output) {
+            case "gm" -> result[0];
+            case "pm" -> result[1];
+            case "wcg" -> result[2];
+            case "wcp" -> result[3];
+            default -> 0.0;
+        };
     }
 
     /**

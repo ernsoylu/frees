@@ -257,6 +257,149 @@ public final class PolynomialHelpers {
         return new double[][]{num, den};
     }
 
+    public static double[][] poleSS(double[][] a) {
+        try {
+            RealMatrix realMatrix = new Array2DRowRealMatrix(a);
+            EigenDecomposition decomp = new EigenDecomposition(realMatrix);
+            double[] realParts = decomp.getRealEigenvalues();
+            double[] imagParts = decomp.getImagEigenvalues();
+            double[][] result = new double[realParts.length][2];
+            for (int i = 0; i < realParts.length; i++) {
+                result[i][0] = realParts[i];
+                result[i][1] = imagParts[i];
+            }
+            return result;
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Failed to calculate eigenvalues of A: " + e.getMessage(), e);
+        }
+    }
+
+    public static Complex evalPoly(double[] coeffs, Complex s) {
+        Complex val = new Complex(0.0, 0.0);
+        for (double c : coeffs) {
+            val = val.multiply(s).add(new Complex(c, 0.0));
+        }
+        return val;
+    }
+
+    public static double[] unwrap(double[] phaseRad) {
+        int n = phaseRad.length;
+        double[] unwrapped = new double[n];
+        if (n == 0) return unwrapped;
+        unwrapped[0] = phaseRad[0];
+        double offset = 0;
+        for (int i = 1; i < n; i++) {
+            double diff = phaseRad[i] - phaseRad[i - 1];
+            if (diff > Math.PI) {
+                offset -= 2.0 * Math.PI;
+            } else if (diff < -Math.PI) {
+                offset += 2.0 * Math.PI;
+            }
+            unwrapped[i] = phaseRad[i] + offset;
+        }
+        return unwrapped;
+    }
+
+    public static double[][] bode(double[] num, double[] den, double[] omega) {
+        int n = omega.length;
+        double[] mag = new double[n];
+        double[] phase = new double[n];
+        double[] phaseRad = new double[n];
+        for (int i = 0; i < n; i++) {
+            Complex s = new Complex(0.0, omega[i]);
+            Complex nVal = evalPoly(num, s);
+            Complex dVal = evalPoly(den, s);
+            Complex resp = nVal.divide(dVal);
+            mag[i] = 20.0 * Math.log10(Math.max(resp.magnitude(), 1e-30));
+            phaseRad[i] = Math.atan2(resp.i, resp.r);
+        }
+        double[] phaseUnwrapped = unwrap(phaseRad);
+        for (int i = 0; i < n; i++) {
+            phase[i] = phaseUnwrapped[i] * (180.0 / Math.PI);
+        }
+        return new double[][]{mag, phase};
+    }
+
+    public static double[][] nyquist(double[] num, double[] den, double[] omega) {
+        int n = omega.length;
+        double[] real = new double[n];
+        double[] imag = new double[n];
+        for (int i = 0; i < n; i++) {
+            Complex s = new Complex(0.0, omega[i]);
+            Complex nVal = evalPoly(num, s);
+            Complex dVal = evalPoly(den, s);
+            Complex resp = nVal.divide(dVal);
+            real[i] = resp.r;
+            imag[i] = resp.i;
+        }
+        return new double[][]{real, imag};
+    }
+
+    public static double[] margin(double[] num, double[] den) {
+        int numPoints = 2000;
+        double wMin = 1e-5;
+        double wMax = 1e5;
+        double logMin = Math.log(wMin);
+        double logMax = Math.log(wMax);
+        double step = (logMax - logMin) / (numPoints - 1);
+        
+        double[] w = new double[numPoints];
+        double[] mag = new double[numPoints];
+        double[] phase = new double[numPoints];
+        
+        for (int i = 0; i < numPoints; i++) {
+            w[i] = Math.exp(logMin + i * step);
+            Complex s = new Complex(0.0, w[i]);
+            Complex nVal = evalPoly(num, s);
+            Complex dVal = evalPoly(den, s);
+            Complex resp = nVal.divide(dVal);
+            mag[i] = resp.magnitude();
+            phase[i] = Math.atan2(resp.i, resp.r);
+        }
+        
+        double[] phaseUnwrapped = unwrap(phase);
+        
+        double w_cg = 0.0;
+        double pm = 1e9;
+        boolean hasWcg = false;
+        
+        double w_cp = 0.0;
+        double gm_db = 1e9;
+        boolean hasWcp = false;
+        
+        for (int i = 1; i < numPoints; i++) {
+            if (!hasWcg && ((mag[i-1] >= 1.0 && mag[i] < 1.0) || (mag[i-1] < 1.0 && mag[i] >= 1.0))) {
+                double r = (1.0 - mag[i-1]) / (mag[i] - mag[i-1]);
+                double logWcg = Math.log(w[i-1]) + r * (Math.log(w[i]) - Math.log(w[i-1]));
+                w_cg = Math.exp(logWcg);
+                
+                double phaseCg = phaseUnwrapped[i-1] + r * (phaseUnwrapped[i] - phaseUnwrapped[i-1]);
+                double phaseCgDeg = phaseCg * (180.0 / Math.PI);
+                pm = 180.0 + phaseCgDeg;
+                while (pm <= -180.0) pm += 360.0;
+                while (pm > 180.0) pm -= 360.0;
+                hasWcg = true;
+            }
+            
+            double target = -Math.PI;
+            if (!hasWcp && ((phaseUnwrapped[i-1] >= target && phaseUnwrapped[i] < target) || (phaseUnwrapped[i-1] < target && phaseUnwrapped[i] >= target))) {
+                double r = (target - phaseUnwrapped[i-1]) / (phaseUnwrapped[i] - phaseUnwrapped[i-1]);
+                double logWcp = Math.log(w[i-1]) + r * (Math.log(w[i]) - Math.log(w[i-1]));
+                w_cp = Math.exp(logWcp);
+                
+                double magCp = mag[i-1] + r * (mag[i] - mag[i-1]);
+                if (magCp > 1e-30) {
+                    gm_db = -20.0 * Math.log10(magCp);
+                } else {
+                    gm_db = 1e9;
+                }
+                hasWcp = true;
+            }
+        }
+        
+        return new double[]{gm_db, pm, w_cg, w_cp};
+    }
+
     private static record Complex(double r, double i) {
         public Complex multiply(Complex o) {
             return new Complex(this.r * o.r - this.i * o.i, this.r * o.i + this.i * o.r);
@@ -268,6 +411,22 @@ public final class PolynomialHelpers {
 
         public Complex negate() {
             return new Complex(-this.r, -this.i);
+        }
+
+        public Complex add(Complex o) {
+            return new Complex(this.r + o.r, this.i + o.i);
+        }
+
+        public Complex divide(Complex o) {
+            double denom = o.r * o.r + o.i * o.i;
+            if (Math.abs(denom) < 1e-30) {
+                return new Complex(0.0, 0.0);
+            }
+            return new Complex((this.r * o.r + this.i * o.i) / denom, (this.i * o.r - this.r * o.i) / denom);
+        }
+
+        public double magnitude() {
+            return Math.sqrt(this.r * this.r + this.i * this.i);
         }
     }
 }

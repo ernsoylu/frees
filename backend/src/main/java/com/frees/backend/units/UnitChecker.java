@@ -563,7 +563,12 @@ public final class UnitChecker {
             c.function().startsWith("tf2zp$") ||
             c.function().startsWith("series$") ||
             c.function().startsWith("parallel$") ||
-            c.function().startsWith("feedback$")) {
+            c.function().startsWith("feedback$") ||
+            c.function().startsWith("pole$") ||
+            c.function().startsWith("zero$") ||
+            c.function().startsWith("bode$") ||
+            c.function().startsWith("nyquist$") ||
+            c.function().startsWith("margin$")) {
             return Dim.of(Quantity.dimensionless(1.0));
         }
         List<Expr> args = c.args();

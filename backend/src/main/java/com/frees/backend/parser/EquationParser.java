@@ -760,6 +760,26 @@ public final class EquationParser {
             flattenFeedback(inputs, outputs, sourceText, ctx);
             return;
         }
+        if (defName.equals("pole")) {
+            flattenPole(inputs, outputs, sourceText, ctx);
+            return;
+        }
+        if (defName.equals("zero")) {
+            flattenZero(inputs, outputs, sourceText, ctx);
+            return;
+        }
+        if (defName.equals("bode")) {
+            flattenBode(inputs, outputs, sourceText, ctx);
+            return;
+        }
+        if (defName.equals("nyquist")) {
+            flattenNyquist(inputs, outputs, sourceText, ctx);
+            return;
+        }
+        if (defName.equals("margin")) {
+            flattenMargin(inputs, outputs, sourceText, ctx);
+            return;
+        }
 
         ProcDef def = ctx.defs().get(defName);
         if (def == null) {
@@ -1123,6 +1143,256 @@ public final class EquationParser {
             ctx.out().add(new Equation(den.elements[i],
                     new Expr.Call("feedback$den$" + i + "$" + L1 + "$" + L2, entries), sourceText));
         }
+    }
+
+    private void flattenPole(List<Expr> inputs, List<Expr> outputs, String sourceText, FlattenContext ctx) {
+        if ((inputs.size() != 1 && inputs.size() != 2) || outputs.size() != 2) {
+            throw new ParseException("pole expects 1 input (A) or 2 inputs (num, den) and 2 outputs (pr, pi), "
+                    + "e.g. CALL pole(num, den : pr[1:3], pi[1:3])");
+        }
+        int n;
+        List<Expr> entries = new ArrayList<>();
+        if (inputs.size() == 1) {
+            MatrixInfo a = parseMatrixInfo(inputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+            if (a.rows != a.cols) {
+                throw new ParseException("pole: A must be square");
+            }
+            n = a.rows;
+            for (int i = 0; i < n; i++) {
+                entries.addAll(Arrays.asList(a.elements[i]));
+            }
+        } else {
+            VectorInfo num = parseVectorInfo(inputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+            VectorInfo den = parseVectorInfo(inputs.get(1), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+            if (num.size != den.size) {
+                throw new ParseException("pole: num and den must have the same length");
+            }
+            n = den.size - 1; // degree
+            entries.addAll(Arrays.asList(num.elements));
+            entries.addAll(Arrays.asList(den.elements));
+        }
+
+        VectorInfo pr = parseVectorInfo(outputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        VectorInfo pi = parseVectorInfo(outputs.get(1), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        if (pr.size != n || pi.size != n) {
+            throw new ParseException("pole: output vectors pr and pi must have length n = " + n);
+        }
+
+        if (outputs.get(0) instanceof Expr.ArrayAccess aa) {
+            registerShape(aa.name(), n, 1, ctx);
+        }
+        if (outputs.get(1) instanceof Expr.ArrayAccess aa) {
+            registerShape(aa.name(), n, 1, ctx);
+        }
+
+        for (int i = 0; i < n; i++) {
+            ctx.out().add(new Equation(pr.elements[i],
+                    new Expr.Call("pole$pr$" + i + "$" + inputs.size() + "$" + n, entries), sourceText));
+            ctx.out().add(new Equation(pi.elements[i],
+                    new Expr.Call("pole$pi$" + i + "$" + inputs.size() + "$" + n, entries), sourceText));
+        }
+    }
+
+    private void flattenZero(List<Expr> inputs, List<Expr> outputs, String sourceText, FlattenContext ctx) {
+        if ((inputs.size() != 2 && inputs.size() != 4) || outputs.size() != 2) {
+            throw new ParseException("zero expects 2 inputs (num, den) or 4 inputs (A, B, C, D) and 2 outputs (zr, zi), "
+                    + "e.g. CALL zero(num, den : zr[1:2], zi[1:2])");
+        }
+        VectorInfo zr = parseVectorInfo(outputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        VectorInfo zi = parseVectorInfo(outputs.get(1), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        if (zr.size != zi.size) {
+            throw new ParseException("zero: zr and zi outputs must have the same length");
+        }
+        int nz = zr.size;
+
+        List<Expr> entries = new ArrayList<>();
+        if (inputs.size() == 2) {
+            VectorInfo num = parseVectorInfo(inputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+            VectorInfo den = parseVectorInfo(inputs.get(1), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+            if (num.size != den.size) {
+                throw new ParseException("zero: num and den must have the same length");
+            }
+            entries.addAll(Arrays.asList(num.elements));
+            entries.addAll(Arrays.asList(den.elements));
+        } else {
+            MatrixInfo a = parseMatrixInfo(inputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+            int n = a.rows;
+            if (a.cols != n) throw new ParseException("zero: A must be square");
+            List<Expr> bElements = getVectorElements(inputs.get(1), n, ctx);
+            List<Expr> cElements = getRowVectorElements(inputs.get(2), n, ctx);
+            Expr dElement = getScalarElement(inputs.get(3), ctx);
+
+            for (int i = 0; i < n; i++) {
+                entries.addAll(Arrays.asList(a.elements[i]));
+            }
+            entries.addAll(bElements);
+            entries.addAll(cElements);
+            entries.add(dElement);
+        }
+
+        if (outputs.get(0) instanceof Expr.ArrayAccess aa) {
+            registerShape(aa.name(), nz, 1, ctx);
+        }
+        if (outputs.get(1) instanceof Expr.ArrayAccess aa) {
+            registerShape(aa.name(), nz, 1, ctx);
+        }
+
+        for (int i = 0; i < nz; i++) {
+            ctx.out().add(new Equation(zr.elements[i],
+                    new Expr.Call("zero$zr$" + i + "$" + inputs.size() + "$" + nz, entries), sourceText));
+            ctx.out().add(new Equation(zi.elements[i],
+                    new Expr.Call("zero$zi$" + i + "$" + inputs.size() + "$" + nz, entries), sourceText));
+        }
+    }
+
+    private void flattenBode(List<Expr> inputs, List<Expr> outputs, String sourceText, FlattenContext ctx) {
+        if ((inputs.size() != 3 && inputs.size() != 5) || outputs.size() != 2) {
+            throw new ParseException("bode expects 3 inputs (num, den, omega) or 5 inputs (A, B, C, D, omega) and 2 outputs (mag, phase), "
+                    + "e.g. CALL bode(num, den, omega : mag[1:50], phase[1:50])");
+        }
+        VectorInfo omega = parseVectorInfo(inputs.get(inputs.size() - 1), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        int N = omega.size;
+
+        VectorInfo mag = parseVectorInfo(outputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        VectorInfo phase = parseVectorInfo(outputs.get(1), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        if (mag.size != N || phase.size != N) {
+            throw new ParseException("bode: outputs mag and phase must have the same size N as omega = " + N);
+        }
+
+        List<Expr> entries = new ArrayList<>();
+        if (inputs.size() == 3) {
+            VectorInfo num = parseVectorInfo(inputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+            VectorInfo den = parseVectorInfo(inputs.get(1), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+            if (num.size != den.size) {
+                throw new ParseException("bode: num and den must have the same length");
+            }
+            entries.addAll(Arrays.asList(num.elements));
+            entries.addAll(Arrays.asList(den.elements));
+        } else {
+            MatrixInfo a = parseMatrixInfo(inputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+            int n = a.rows;
+            if (a.cols != n) throw new ParseException("bode: A must be square");
+            List<Expr> bElements = getVectorElements(inputs.get(1), n, ctx);
+            List<Expr> cElements = getRowVectorElements(inputs.get(2), n, ctx);
+            Expr dElement = getScalarElement(inputs.get(3), ctx);
+
+            for (int i = 0; i < n; i++) {
+                entries.addAll(Arrays.asList(a.elements[i]));
+            }
+            entries.addAll(bElements);
+            entries.addAll(cElements);
+            entries.add(dElement);
+        }
+        entries.addAll(Arrays.asList(omega.elements));
+
+        if (outputs.get(0) instanceof Expr.ArrayAccess aa) {
+            registerShape(aa.name(), N, 1, ctx);
+        }
+        if (outputs.get(1) instanceof Expr.ArrayAccess aa) {
+            registerShape(aa.name(), N, 1, ctx);
+        }
+
+        for (int i = 0; i < N; i++) {
+            ctx.out().add(new Equation(mag.elements[i],
+                    new Expr.Call("bode$mag$" + i + "$" + inputs.size() + "$" + N, entries), sourceText));
+            ctx.out().add(new Equation(phase.elements[i],
+                    new Expr.Call("bode$phase$" + i + "$" + inputs.size() + "$" + N, entries), sourceText));
+        }
+    }
+
+    private void flattenNyquist(List<Expr> inputs, List<Expr> outputs, String sourceText, FlattenContext ctx) {
+        if ((inputs.size() != 3 && inputs.size() != 5) || outputs.size() != 2) {
+            throw new ParseException("nyquist expects 3 inputs (num, den, omega) or 5 inputs (A, B, C, D, omega) and 2 outputs (real, imag), "
+                    + "e.g. CALL nyquist(num, den, omega : real[1:50], imag[1:50])");
+        }
+        VectorInfo omega = parseVectorInfo(inputs.get(inputs.size() - 1), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        int N = omega.size;
+
+        VectorInfo real = parseVectorInfo(outputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        VectorInfo imag = parseVectorInfo(outputs.get(1), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        if (real.size != N || imag.size != N) {
+            throw new ParseException("nyquist: outputs real and imag must have the same size N as omega = " + N);
+        }
+
+        List<Expr> entries = new ArrayList<>();
+        if (inputs.size() == 3) {
+            VectorInfo num = parseVectorInfo(inputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+            VectorInfo den = parseVectorInfo(inputs.get(1), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+            if (num.size != den.size) {
+                throw new ParseException("nyquist: num and den must have the same length");
+            }
+            entries.addAll(Arrays.asList(num.elements));
+            entries.addAll(Arrays.asList(den.elements));
+        } else {
+            MatrixInfo a = parseMatrixInfo(inputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+            int n = a.rows;
+            if (a.cols != n) throw new ParseException("nyquist: A must be square");
+            List<Expr> bElements = getVectorElements(inputs.get(1), n, ctx);
+            List<Expr> cElements = getRowVectorElements(inputs.get(2), n, ctx);
+            Expr dElement = getScalarElement(inputs.get(3), ctx);
+
+            for (int i = 0; i < n; i++) {
+                entries.addAll(Arrays.asList(a.elements[i]));
+            }
+            entries.addAll(bElements);
+            entries.addAll(cElements);
+            entries.add(dElement);
+        }
+        entries.addAll(Arrays.asList(omega.elements));
+
+        if (outputs.get(0) instanceof Expr.ArrayAccess aa) {
+            registerShape(aa.name(), N, 1, ctx);
+        }
+        if (outputs.get(1) instanceof Expr.ArrayAccess aa) {
+            registerShape(aa.name(), N, 1, ctx);
+        }
+
+        for (int i = 0; i < N; i++) {
+            ctx.out().add(new Equation(real.elements[i],
+                    new Expr.Call("nyquist$real$" + i + "$" + inputs.size() + "$" + N, entries), sourceText));
+            ctx.out().add(new Equation(imag.elements[i],
+                    new Expr.Call("nyquist$imag$" + i + "$" + inputs.size() + "$" + N, entries), sourceText));
+        }
+    }
+
+    private void flattenMargin(List<Expr> inputs, List<Expr> outputs, String sourceText, FlattenContext ctx) {
+        if ((inputs.size() != 2 && inputs.size() != 4) || outputs.size() != 4) {
+            throw new ParseException("margin expects 2 inputs (num, den) or 4 inputs (A, B, C, D) and 4 scalar outputs (gm, pm, w_cg, w_cp), "
+                    + "e.g. CALL margin(num, den : gm, pm, w_cg, w_cp)");
+        }
+        List<Expr> entries = new ArrayList<>();
+        if (inputs.size() == 2) {
+            VectorInfo num = parseVectorInfo(inputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+            VectorInfo den = parseVectorInfo(inputs.get(1), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+            if (num.size != den.size) {
+                throw new ParseException("margin: num and den must have the same length");
+            }
+            entries.addAll(Arrays.asList(num.elements));
+            entries.addAll(Arrays.asList(den.elements));
+        } else {
+            MatrixInfo a = parseMatrixInfo(inputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+            int n = a.rows;
+            if (a.cols != n) throw new ParseException("margin: A must be square");
+            List<Expr> bElements = getVectorElements(inputs.get(1), n, ctx);
+            List<Expr> cElements = getRowVectorElements(inputs.get(2), n, ctx);
+            Expr dElement = getScalarElement(inputs.get(3), ctx);
+
+            for (int i = 0; i < n; i++) {
+                entries.addAll(Arrays.asList(a.elements[i]));
+            }
+            entries.addAll(bElements);
+            entries.addAll(cElements);
+            entries.add(dElement);
+        }
+
+        ctx.out().add(new Equation(outputs.get(0),
+                new Expr.Call("margin$gm$" + inputs.size(), entries), sourceText));
+        ctx.out().add(new Equation(outputs.get(1),
+                new Expr.Call("margin$pm$" + inputs.size(), entries), sourceText));
+        ctx.out().add(new Equation(outputs.get(2),
+                new Expr.Call("margin$wcg$" + inputs.size(), entries), sourceText));
+        ctx.out().add(new Equation(outputs.get(3),
+                new Expr.Call("margin$wcp$" + inputs.size(), entries), sourceText));
     }
 
     private List<Expr> getVectorElements(Expr e, int expectedSize, FlattenContext ctx) {
