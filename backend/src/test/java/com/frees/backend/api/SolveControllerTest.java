@@ -612,5 +612,17 @@ class SolveControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.errorLine").value(org.hamcrest.Matchers.nullValue()));
     }
+
+    @Test
+    void formattedReportRendersLaplaceFractionsForSymbolicIdentities() throws Exception {
+        String text = "SYMBOLIC s\\ntf([1, 3], [1, 3, 2]) = A/(s+1) + B/(s+2)";
+        mockMvc.perform(post("/api/solve")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"text\": \"" + text + "\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.formattedReport").value(
+                        org.hamcrest.Matchers.containsString("[MATH_BLOCK:\\frac{s + 3}{s^{2} + 3\\,s + 2} = \\frac{A}{s + 1} + \\frac{B}{s + 2}]")));
+    }
 }
 

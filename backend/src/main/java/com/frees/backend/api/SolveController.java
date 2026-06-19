@@ -525,8 +525,8 @@ public class SolveController {
             List<String> unitWarnings = solver.checkUnits(cleanText, effective);
 
             EquationParser.ParseResult parsed = new EquationParser().parseResult(cleanText);
-            List<String> formattedEquations = parsed.equations().stream()
-                    .map(eq -> com.frees.backend.parser.LatexConverter.toLatex(eq, parsed.displayNames()))
+            List<String> formattedEquations = extraction.equations.stream()
+                    .map(eq -> com.frees.backend.parser.EquationParser.toLatexEquation(eq.cleanEquation, parsed.displayNames()))
                     .toList();
 
             String formattedReport = MarkdownEquationExtractor.generateFormattedReport(request.text(), extraction.equations, formattedEquations);
@@ -617,8 +617,8 @@ public class SolveController {
             UnitRegistry.UnitSystem system = unitSystem(request.displayUnitSystem());
 
             EquationParser.ParseResult parsed = new EquationParser().parseResult(cleanText);
-            List<String> formattedEquations = parsed.equations().stream()
-                    .map(eq -> com.frees.backend.parser.LatexConverter.toLatex(eq, parsed.displayNames()))
+            List<String> formattedEquations = extraction.equations.stream()
+                    .map(eq -> com.frees.backend.parser.EquationParser.toLatexEquation(eq.cleanEquation, parsed.displayNames()))
                     .toList();
 
             String formattedReport = MarkdownEquationExtractor.generateFormattedReport(request.text(), extraction.equations, formattedEquations);
