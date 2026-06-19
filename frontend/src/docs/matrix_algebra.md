@@ -85,6 +85,8 @@ frees provides dedicated routines for solving linear equations and performing ma
 - **`LUDecompose(A):`** Computes LU decomposition.
 - **`EulerRotate(phi, theta, psi : R):`** Generates a $3 \times 3$ 3D rotation matrix `R` from Euler angles (radians, ZYX convention) inside a `CALL` statement.
 
+> **Control systems:** state-space models build directly on these matrix variables. LTI conversions (`tf2ss`, `ss2tf`), interconnection (`series`, `parallel`, `feedback`), analysis (`pole`, `zero`, `bode`, `nyquist`, `margin`, `step`, `impulse`, `lsim`), and controller design (`lqr`, `place`, `pidtune`) are documented under *Control Systems & Symbolic CAS*.
+
 ### Linear Algebra Example
 ```
 A[1:3, 1:3] = [2, 1, -1; -3, -1, 2; -2, 1, 2]
