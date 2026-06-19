@@ -34,7 +34,10 @@ public final class PropertyFunctions {
             Map.entry("cv", "Cvmass"),
             Map.entry("viscosity", "viscosity"),
             Map.entry("conductivity", "conductivity"),
-            Map.entry("soundspeed", "speed_of_sound"));
+            Map.entry("soundspeed", "speed_of_sound"),
+            Map.entry("compressibility", "Z"),
+            Map.entry("compressibilityfactor", "Z"),
+            Map.entry("gibbs", "Gmass"));
 
     /** Indicator letter -> CoolProp PropsSI input key. */
     private static final Map<String, String> INPUTS = Map.ofEntries(
@@ -86,7 +89,18 @@ public final class PropertyFunctions {
             Map.entry("isobutane", "IsoButane"),
             Map.entry("r600a", "IsoButane"),
             Map.entry("butane", "n-Butane"),
-            Map.entry("r600", "n-Butane"));
+            Map.entry("r600", "n-Butane"),
+            // Chemical formula aliases for real fluid properties/constants lookups
+            Map.entry("n2", "Nitrogen"),
+            Map.entry("o2", "Oxygen"),
+            Map.entry("co2", CO2),
+            Map.entry("co", "CarbonMonoxide"),
+            Map.entry("h2o", WATER),
+            Map.entry("h2", "Hydrogen"),
+            Map.entry("ch4", "Methane"),
+            Map.entry("c2h6", "Ethane"),
+            Map.entry("c3h8", "Propane"),
+            Map.entry("c4h10", "n-Butane"));
 
     /** Humid-air output function name -> HAPropsSI output key. */
     private static final Map<String, String> HA_OUTPUTS = Map.ofEntries(
@@ -99,7 +113,8 @@ public final class PropertyFunctions {
             Map.entry("wetbulb", "B"),
             Map.entry("dewpoint", "D"),
             Map.entry("cp", "C"),
-            Map.entry("specheat", "C"));
+            Map.entry("specheat", "C"),
+            Map.entry("gibbs", "G"));
 
     /** Humid-air indicator -> HAPropsSI input key. */
     private static final Map<String, String> HA_INPUTS = Map.ofEntries(
@@ -194,6 +209,10 @@ public final class PropertyFunctions {
                 return Combustion.heatingValue(tokens.get(0), tokens.size() > 1 ? tokens.get(1) : "lhv");
             case "stoichafr":
                 return Combustion.stoichAFR(tokens.get(0));
+            case "t_crit":
+                return CoolProp.props1SI(resolveFluid(tokens.get(0)), "Tcrit");
+            case "p_crit":
+                return CoolProp.props1SI(resolveFluid(tokens.get(0)), "Pcrit");
             default:
                 break;
         }

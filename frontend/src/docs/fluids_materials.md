@@ -20,6 +20,7 @@ Every property function accepts the fluid name as the first argument, followed b
 | `Density` | Mass Density | kg/m³ | `rho = Density(EG50, T=T1, P=P1)` |
 | `Volume` | Specific Volume | m³/kg | `v = Volume(Water, P=P1, x=0)` |
 | `IntEnergy` | Specific Internal Energy | J/kg | `u = IntEnergy(Water, T=T1, P=P1)` |
+| `Gibbs` | Specific Gibbs Free Energy | J/kg | `g = Gibbs(Water, T=T1, P=P1)` |
 | `Cp` or `Specheat` | Specific heat ($C_p$) | J/kg-K | `c = Cp(Air, T=T1, P=P1)` |
 | `Cv` | Specific heat ($C_v$) | J/kg-K | `c_v = Cv(Air, T=T1, P=P1)` |
 | `Viscosity` | Dynamic Viscosity | Pa-s | `mu = Viscosity(Water, T=T1, P=P1)` |
@@ -37,6 +38,9 @@ Every property function accepts the fluid name as the first argument, followed b
 - **`IsIdealGas(Fluid):`** Returns 1 if treated as ideal, 0 otherwise.
 - **`Phase$(Fluid, T=t, P=p):`** Returns phase state as a string (e.g., `'liquid'`, `'gas'`, `'twophase'`, `'supercritical'`).
 - **`P_crit(Fluid) / T_crit(Fluid) / v_crit(Fluid) / T_triple(Fluid):`** Fluid critical and triple points constants.
+- **`CompressibilityFactor(Fluid, T=t, P=p):`** Returns compressibility factor $Z = Pv/(RT)$ (dimensionless).
+- **`StagnationTemp(T, V, cp):`** Stagnation temperature $T_0 = T + V^2 / (2 c_p)$ (K).
+- **`StagnationPres(P, T, T0, k):`** Stagnation pressure $P_0 = P (T_0/T)^{k/(k-1)}$ (Pa).
 - **`SurfaceTension(Fluid, T=t):`** Surface tension (N/m).
 - **`Fugacity(Fluid, T=t, P=p):`** Fugacity coefficient.
 - **`Enthalpy_fusion(Fluid):`** Latent heat of melting (J/kg).
