@@ -2,11 +2,13 @@ package com.frees.backend.cas;
 
 import com.frees.backend.ast.Evaluator;
 import com.frees.backend.ast.Expr;
+import com.frees.backend.parser.LatexConverter;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TransferFunctionTest {
 
@@ -39,6 +41,15 @@ class TransferFunctionTest {
             double expected = (s + 3) / (s * s + 3 * s + 2);
             assertEquals(expected, at(tf, s), 1e-12, "at s=" + s);
         }
+    }
+
+    @Test
+    void latexRendersTfAsFraction() {
+        Expr e = CasExpressions.parse("tf([1, 3], [1, 3, 2])");
+        String latex = LatexConverter.toLatex(e, Map.of());
+        assertTrue(latex.startsWith("\\frac{"), "should render as a fraction: " + latex);
+        assertTrue(latex.contains("s"), "should be in terms of s: " + latex);
+        assertTrue(latex.contains("s^{2}"), "denominator should have s^2: " + latex);
     }
 
     @Test

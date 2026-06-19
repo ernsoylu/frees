@@ -112,6 +112,16 @@ public final class LatexConverter {
                     case "besselk0", "bessel_k0" -> "K_0\\left(" + argLates.get(0) + RIGHT_PAREN;
                     case "besselk1", "bessel_k1" -> "K_1\\left(" + argLates.get(0) + RIGHT_PAREN;
                     case "chi_square" -> "\\chi^2\\left(" + argsStr + RIGHT_PAREN;
+                    case "tf" -> {
+                        // Render a transfer function tf(num, den) as the Laplace
+                        // fraction num(s)/den(s). Falls back to a plain call if the
+                        // coefficients are not constant array literals.
+                        try {
+                            yield toLatex(com.frees.backend.cas.TransferFunction.expandCalls(e, "s"), displayNames);
+                        } catch (RuntimeException ex) {
+                            yield TEXT_OPEN + function + CLOSE_LEFT_PAREN + argsStr + RIGHT_PAREN;
+                        }
+                    }
                     default -> TEXT_OPEN + function + CLOSE_LEFT_PAREN + argsStr + RIGHT_PAREN;
                 };
             }
