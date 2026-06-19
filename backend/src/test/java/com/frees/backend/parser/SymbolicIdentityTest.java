@@ -55,6 +55,17 @@ class SymbolicIdentityTest {
     }
 
     @Test
+    void transferFunctionShorthandInIdentity() {
+        // tf(num, den) shorthand expands to the fraction before the CAS solves it.
+        List<Equation> equations = parser.parse(
+                "SYMBOLIC s\ntf([1, 3], [1, 3, 2]) = A/(s+1) + B/(s+2)");
+
+        Map<String, Double> v = values(equations);
+        assertEquals(2.0, v.get("a"), 1e-9);
+        assertEquals(-1.0, v.get("b"), 1e-9);
+    }
+
+    @Test
     void rejectsInconsistentIdentity() {
         assertThrows(EquationParser.ParseException.class,
                 () -> parser.parse("SYMBOLIC s\n1/(s+1) = A/(s+2)"));
