@@ -21,7 +21,9 @@
   Solution window**. Example: `SYMBOLIC s` / `tf([1,3],[1,3,2]) = A/(s+1) + B/(s+2)` → `A=2`,
   `B=-1`. Catalog ("Control Systems (CAS)" category), `examples.ts` ("Partial Fractions
   (Laplace)"), Help topic (`symbolic-cas`), and tests at every layer; full backend suite green,
-  `npm run build` clean. **Not yet merged to `main`.**
+  `npm run build` clean. Merged to `main` (along with fixed LaTeX fraction report rendering).
+* ~~Phase 1 — LTI foundation: models, conversions, units (backend).~~
+  → Documented the array/matrix conventions for TF, SS, and ZPK models in `symbolic_cas.md`. Written the `PolynomialHelpers` utility class (add, multiply, companion-matrix roots, expandRoots). Implemented the conversions (`tf2ss`, `ss2tf` round-trip, `zp2tf`, `tf2zp`) via `CALL` dispatch in `EquationParser.java` and `Evaluator.java` (with automatic output shape registration). Registered `db` as a dimensionless unit in `UnitRegistry` and updated `UnitChecker` to ground synthetic LTI conversion calls as dimensionless. Verified all tests pass.
 
 ## Open
 
@@ -82,52 +84,6 @@ instead of inventing parallel paths.
 shippable vertical slice.
 
 ---
-
-#### Phase 0 (LANDED) — Symbolic CAS layer + Laplace partial fractions
-
-Shipped on `cas-symja-integration` (see the Done list above). Provides the symbolic half of
-the two-engine plan: `CasEngine` (factor/expand/simplify/apart), `TransferFunction`
-(coeff-array → fraction, `tf(num,den)` shorthand), `CasIdentity` (coefficient matching), and
-the `SYMBOLIC s` keyword that turns an identity into solved residue variables.
-
-**Missing / next, to finish this slice and connect it to the phases below:**
-
-- **Formatted-view rendering of the TF as a Laplace fraction (and the decomposition).** Blocked
-  by `MarkdownEquationExtractor.generateFormattedReport`'s strict 1-source-line ↔ 1-equation
-  mapping: a `SYMBOLIC` identity consumes one source line but emits N residue equations, so such
-  documents fall back to plain text in the Formatted window (same limitation array/matrix
-  documents already have). Needs either a *display-equations vs. solve-equations* split in
-  `ParseResult`, or a separate "symbolic results" response channel (like `definedPlots`/
-  `codeTables`) rendered by the frontend. The Solution-window residues are unaffected and work
-  today.
-- **`tf(num,den)` outside an identity / with non-literal coefficients.** Today `tf` only resolves
-  inside a `SYMBOLIC` identity and requires constant array literals. Standalone display and
-  variable/solver-computed coefficients are not handled yet.
-- **`LatexConverter` rendering of `tf(...)`** as `\frac{num}{den}` (preparation for the
-  Formatted-view work above).
-- **Repeated and complex poles** in the partial-fraction workflow: the named-residue identity
-  handles them if the user writes the right template (`A/(s+1)^2`, complex residues), but there
-  is no helper that auto-builds the template or auto-names residues.
-- **More CAS verbs as first-class language directives** (`factor`/`expand`/`simplify`/`apart`,
-  `solve`, `integrate`, `limit`, `series`): the engine exists but is not yet reachable from
-  editor syntax — needs the same "render result into the report" channel as the first bullet.
-- **`SolveAlways`-style symbolic `ss2tf`** (`C(sI−A)^{-1}B + D` via Symja symbolic `Inverse`/
-  `CharacteristicPolynomial`) — the symbolic counterpart to the numeric Phase 1 conversion.
-- **Merge `cas-symja-integration` to `main`.**
-
-#### Phase 1 — LTI foundation: models, conversions, units (backend)
-
-Establishes the representation and the math primitives every later phase depends on.
-
-- Document the array/matrix conventions for TF (`num`/`den`), SS (`A`,`B`,`C`,`D`), and ZPK
-  (`z`,`p`,`k`) models.
-- Polynomial helpers (multiply, add, roots-from-coeffs via companion-matrix
-  `EigenDecomposition`, coeffs-from-roots expansion) as a reusable backend utility class.
-- Conversions via `CALL` dispatch: `tf2ss`, `ss2tf`, `zp2tf`, `tf2zp` — wired into
-  `EquationParser.flattenCallProc` alongside `flattenEigen` et al.
-- Units: add `rad/s`, `Hz`, `dB`, `deg` to `UnitRegistry` and teach `UnitChecker` to ground
-  control variables (frequency vectors, margins). Unit warnings never block solving.
-- Tests: round-trip conversions (`tf2ss`→`ss2tf`), known-system pole/root checks.
 
 #### Phase 2 — Interconnection (backend)
 
