@@ -230,9 +230,15 @@ repeatStatement
 statement
     : forBlock
     | callStatement
+    | symbolicDecl
     | multiAssign
     | rangeAssign
     | equation
+    ;
+
+// SYMBOLIC s, t — declare independent symbolic variables (e.g. the Laplace s).
+symbolicDecl
+    : SYMBOLIC IDENT (COMMA IDENT)*
     ;
 
 // MATLAB-style destructuring call of a multi-output FUNCTION:
@@ -422,6 +428,7 @@ ELSE      : [eE][lL][sS][eE] ;
 REPEAT    : [rR][eE][pP][eE][aA][tT] ;
 UNTIL     : [uU][nN][tT][iI][lL] ;
 CALL      : [cC][aA][lL][lL] ;
+SYMBOLIC  : [sS][yY][mM][bB][oO][lL][iI][cC] ;
 AND       : [aA][nN][dD] ;
 OR        : [oO][rR] ;
 NOT       : [nN][oO][tT] ;

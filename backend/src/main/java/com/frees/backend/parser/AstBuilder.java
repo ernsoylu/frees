@@ -686,6 +686,8 @@ public class AstBuilder extends FreesBaseVisitor<Expr> {
             return buildForBlock(ctx.forBlock());
         } else if (ctx.callStatement() != null) {
             return buildCallStatement(ctx.callStatement());
+        } else if (ctx.symbolicDecl() != null) {
+            return buildSymbolicDecl(ctx.symbolicDecl());
         } else if (ctx.multiAssign() != null) {
             return buildMultiAssign(ctx.multiAssign());
         } else if (ctx.rangeAssign() != null) {
@@ -831,6 +833,14 @@ public class AstBuilder extends FreesBaseVisitor<Expr> {
             }
         }
         return new Statement.For(varName, start, end, body);
+    }
+
+    private Statement.Symbolic buildSymbolicDecl(FreesParser.SymbolicDeclContext ctx) {
+        List<String> names = new ArrayList<>();
+        for (var id : ctx.IDENT()) {
+            names.add(id.getText().toLowerCase());
+        }
+        return new Statement.Symbolic(names);
     }
 
     public Statement.Eq buildEquation(FreesParser.EquationContext ctx) {
