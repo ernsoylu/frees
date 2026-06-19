@@ -557,6 +557,12 @@ public final class UnitChecker {
             }
             return Dim.UNKNOWN;
         }
+        if (c.function().startsWith("ss2tf$") ||
+            c.function().startsWith("tf2ss$") ||
+            c.function().startsWith("zp2tf$") ||
+            c.function().startsWith("tf2zp$")) {
+            return Dim.of(Quantity.dimensionless(1.0));
+        }
         List<Expr> args = c.args();
         return switch (c.function()) {
             case "abs", "real", "imag" -> dimOf(args.get(0));

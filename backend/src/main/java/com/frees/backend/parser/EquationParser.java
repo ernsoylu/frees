@@ -736,6 +736,18 @@ public final class EquationParser {
             flattenSs2tf(inputs, outputs, sourceText, ctx);
             return;
         }
+        if (defName.equals("tf2ss")) {
+            flattenTf2ss(inputs, outputs, sourceText, ctx);
+            return;
+        }
+        if (defName.equals("zp2tf")) {
+            flattenZp2tf(inputs, outputs, sourceText, ctx);
+            return;
+        }
+        if (defName.equals("tf2zp")) {
+            flattenTf2zp(inputs, outputs, sourceText, ctx);
+            return;
+        }
 
         ProcDef def = ctx.defs().get(defName);
         if (def == null) {
@@ -785,6 +797,164 @@ public final class EquationParser {
             ctx.out().add(new Equation(den.elements[k],
                     new Expr.Call("ss2tf$den$" + k + "$" + n, entries), sourceText));
         }
+    }
+
+    private void flattenTf2ss(List<Expr> inputs, List<Expr> outputs, String sourceText, FlattenContext ctx) {
+        if (inputs.size() != 2 || outputs.size() != 4) {
+            throw new ParseException("tf2ss expects 2 inputs (num, den) and 4 outputs (A, B, C, D), "
+                    + "e.g. CALL tf2ss(num[1:3], den[1:3] : A[1:2,1:2], B[1:2], C[1:2], D)");
+        }
+        VectorInfo num = parseVectorInfo(inputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        VectorInfo den = parseVectorInfo(inputs.get(1), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        if (num.size != den.size) {
+            throw new ParseException("tf2ss: num and den must have the same length");
+        }
+        int np = den.size;
+        int n = np - 1;
+
+        MatrixInfo a = parseMatrixInfo(outputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        if (a.rows != n || a.cols != n) {
+            throw new ParseException("tf2ss: A must be n x n = " + n + "x" + n);
+        }
+        List<Expr> bElements = getVectorElements(outputs.get(1), n, ctx);
+        List<Expr> cElements = getRowVectorElements(outputs.get(2), n, ctx);
+        Expr dElement = getScalarElement(outputs.get(3), ctx);
+
+        registerShape(a.name, a.rows, a.cols, ctx);
+        if (outputs.get(1) instanceof Expr.ArrayAccess aa) {
+            registerShape(aa.name(), n, 1, ctx);
+        }
+        if (outputs.get(2) instanceof Expr.ArrayAccess aa) {
+            registerShape(aa.name(), 1, n, ctx);
+        }
+
+        List<Expr> entries = new ArrayList<>();
+        entries.addAll(Arrays.asList(num.elements));
+        entries.addAll(Arrays.asList(den.elements));
+
+        for (int i = 0; i < n; i++) {
+            for (int j = 0; j < n; j++) {
+                ctx.out().add(new Equation(a.elements[i][j],
+                        new Expr.Call("tf2ss$a$" + i + "$" + j + "$" + n, entries), sourceText));
+            }
+            ctx.out().add(new Equation(bElements.get(i),
+                    new Expr.Call("tf2ss$b$" + i + "$" + n, entries), sourceText));
+            ctx.out().add(new Equation(cElements.get(i),
+                    new Expr.Call("tf2ss$c$" + i + "$" + n, entries), sourceText));
+        }
+        ctx.out().add(new Equation(dElement,
+                new Expr.Call("tf2ss$d$" + n, entries), sourceText));
+    }
+
+    private void flattenZp2tf(List<Expr> inputs, List<Expr> outputs, String sourceText, FlattenContext ctx) {
+        if (inputs.size() != 5 || outputs.size() != 2) {
+            throw new ParseException("zp2tf expects 5 inputs (z_r, z_i, p_r, p_i, k) and 2 outputs (num, den), "
+                    + "e.g. CALL zp2tf(z_r[1:2], z_i[1:2], p_r[1:2], p_i[1:2], k : num[1:3], den[1:3])");
+        }
+        VectorInfo zr = parseVectorInfo(inputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        VectorInfo zi = parseVectorInfo(inputs.get(1), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        VectorInfo pr = parseVectorInfo(inputs.get(2), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        VectorInfo pi = parseVectorInfo(inputs.get(3), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        Expr kExpr = getScalarElement(inputs.get(4), ctx);
+
+        if (zr.size != zi.size) {
+            throw new ParseException("zp2tf: z_r and z_i must have the same length");
+        }
+        if (pr.size != pi.size) {
+            throw new ParseException("zp2tf: p_r and p_i must have the same length");
+        }
+
+        int nz = zr.size;
+        int np = pr.size;
+
+        VectorInfo num = parseVectorInfo(outputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        VectorInfo den = parseVectorInfo(outputs.get(1), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+
+        if (num.size != np + 1 || den.size != np + 1) {
+            throw new ParseException("zp2tf: num and den must have length np + 1 = " + (np + 1));
+        }
+
+        if (outputs.get(0) instanceof Expr.ArrayAccess aa) {
+            registerShape(aa.name(), np + 1, 1, ctx);
+        }
+        if (outputs.get(1) instanceof Expr.ArrayAccess aa) {
+            registerShape(aa.name(), np + 1, 1, ctx);
+        }
+
+        List<Expr> entries = new ArrayList<>();
+        entries.addAll(Arrays.asList(zr.elements));
+        entries.addAll(Arrays.asList(zi.elements));
+        entries.addAll(Arrays.asList(pr.elements));
+        entries.addAll(Arrays.asList(pi.elements));
+        entries.add(kExpr);
+
+        for (int i = 0; i <= np; i++) {
+            ctx.out().add(new Equation(num.elements[i],
+                    new Expr.Call("zp2tf$num$" + i + "$" + nz + "$" + np, entries), sourceText));
+            ctx.out().add(new Equation(den.elements[i],
+                    new Expr.Call("zp2tf$den$" + i + "$" + nz + "$" + np, entries), sourceText));
+        }
+    }
+
+    private void flattenTf2zp(List<Expr> inputs, List<Expr> outputs, String sourceText, FlattenContext ctx) {
+        if (inputs.size() != 2 || outputs.size() != 5) {
+            throw new ParseException("tf2zp expects 2 inputs (num, den) and 5 outputs (z_r, z_i, p_r, p_i, k), "
+                    + "e.g. CALL tf2zp(num[1:3], den[1:3] : z_r[1:2], z_i[1:2], p_r[1:2], p_i[1:2], k)");
+        }
+        VectorInfo num = parseVectorInfo(inputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        VectorInfo den = parseVectorInfo(inputs.get(1), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+
+        int np = den.size - 1; // denominator degree
+
+        VectorInfo zr = parseVectorInfo(outputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        VectorInfo zi = parseVectorInfo(outputs.get(1), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        VectorInfo pr = parseVectorInfo(outputs.get(2), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        VectorInfo pi = parseVectorInfo(outputs.get(3), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        Expr kExpr = getScalarElement(outputs.get(4), ctx);
+
+        if (zr.size != zi.size) {
+            throw new ParseException("tf2zp: z_r and z_i outputs must have the same length");
+        }
+        if (pr.size != pi.size) {
+            throw new ParseException("tf2zp: p_r and p_i outputs must have the same length");
+        }
+
+        int nz = zr.size;
+        if (pr.size != np) {
+            throw new ParseException("tf2zp: p_r/p_i length must match denominator degree np = " + np);
+        }
+
+        if (outputs.get(0) instanceof Expr.ArrayAccess aa) {
+            registerShape(aa.name(), nz, 1, ctx);
+        }
+        if (outputs.get(1) instanceof Expr.ArrayAccess aa) {
+            registerShape(aa.name(), nz, 1, ctx);
+        }
+        if (outputs.get(2) instanceof Expr.ArrayAccess aa) {
+            registerShape(aa.name(), np, 1, ctx);
+        }
+        if (outputs.get(3) instanceof Expr.ArrayAccess aa) {
+            registerShape(aa.name(), np, 1, ctx);
+        }
+
+        List<Expr> entries = new ArrayList<>();
+        entries.addAll(Arrays.asList(num.elements));
+        entries.addAll(Arrays.asList(den.elements));
+
+        for (int i = 0; i < nz; i++) {
+            ctx.out().add(new Equation(zr.elements[i],
+                    new Expr.Call("tf2zp$zr$" + i + "$" + nz + "$" + np, entries), sourceText));
+            ctx.out().add(new Equation(zi.elements[i],
+                    new Expr.Call("tf2zp$zi$" + i + "$" + nz + "$" + np, entries), sourceText));
+        }
+        for (int i = 0; i < np; i++) {
+            ctx.out().add(new Equation(pr.elements[i],
+                    new Expr.Call("tf2zp$pr$" + i + "$" + nz + "$" + np, entries), sourceText));
+            ctx.out().add(new Equation(pi.elements[i],
+                    new Expr.Call("tf2zp$pi$" + i + "$" + nz + "$" + np, entries), sourceText));
+        }
+        ctx.out().add(new Equation(kExpr,
+                new Expr.Call("tf2zp$k$" + nz + "$" + np, entries), sourceText));
     }
 
     private List<Expr> getVectorElements(Expr e, int expectedSize, FlattenContext ctx) {
