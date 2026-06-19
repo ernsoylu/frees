@@ -500,10 +500,10 @@ y_initial = A + B        { y(0) }`,
   {
     id: 'cruise-control',
     title: 'Cruise Control System Design',
-    description: 'Models a 1000 kg car with drag, converts to transfer function, and tunes a PI controller.',
+    description: 'Models a 1000 kg car with drag, tunes a PI controller, and performs frequency & stability analysis.',
     category: 'Control Systems',
     text: `# Car Dynamics & Cruise Control
-{ This example models a 1000 kg car under viscous drag, converts the state-space model to a transfer function, and designs a proportional-integral (PI) controller for a feedback loop.
+{ This example models a 1000 kg car under viscous drag, converts the state-space model to a transfer function, designs a proportional-integral (PI) controller for a feedback loop, and performs frequency & stability analysis.
 
   Press Solve (F2). }
 
@@ -511,27 +511,62 @@ m = 1000 [kg]           { car mass }
 c = 50 [N-s/m]          { viscous drag coefficient }
 
 { State Space Model: states are [position; velocity], input is traction force. }
-A = [0, 1; 0, -c/m]
-B = [0; 1/m]
-C = [0, 1]              { output is velocity }
-D = [0]
+A[1,1] = 0; A[1,2] = 1
+A[2,1] = 0; A[2,2] = -c/m
+B[1] = 0
+B[2] = 1/m
+C[1] = 0; C[2] = 1      { output is velocity }
+D = 0.0
 
 { 1. Convert State Space to Transfer Function }
-CALL ss2tf(A, B, C, D : num_car[1:3], den_car[1:3])
+CALL ss2tf(A[1:2,1:2], B[1:2], C[1:2], D : num_car[1:3], den_car[1:3])
 
 { 2. Design PI Controller: C(s) = Kp + Ki/s = (Kp*s + Ki)/s }
 Kp = 800 [N-s/m]
 Ki = 40 [N/m]
-num_pi = [Kp, Ki]
-den_pi = [1, 0]
+num_pi = [0.0, Kp, Ki]
+den_pi = [0.0, 1.0, 0.0]
 
 { 3. Open-Loop System: L(s) = C(s) * G(s) }
-CALL series(num_pi, den_pi, num_car, den_car : num_ol[1:4], den_ol[1:4])
+CALL series(num_pi[1:3], den_pi[1:3], num_car[1:3], den_car[1:3] : num_ol[1:5], den_ol[1:5])
 
 { 4. Closed-Loop System: T(s) = L(s) / (1 + L(s)) }
-num_h = [1]
-den_h = [1]
-CALL feedback(num_ol, den_ol, num_h, den_h : num_cl[1:4], den_cl[1:4])`,
+num_h = [0.0, 0.0, 0.0, 0.0, 1.0]
+den_h = [0.0, 0.0, 0.0, 0.0, 1.0]
+CALL feedback(num_ol[1:5], den_ol[1:5], num_h[1:5], den_h[1:5] : num_cl[1:5], den_cl[1:5])
+
+{ 5. Stability & Frequency Margin Analysis }
+CALL margin(num_ol[1:5], den_ol[1:5] : gm, pm, w_cg, w_cp)
+
+{ 6. Closed-Loop Poles and Zeros }
+CALL pole(num_cl[1:5], den_cl[1:5] : cl_pr[1:4], cl_pi[1:4])
+CALL zero(num_cl[1:5], den_cl[1:5] : cl_zr[1:4], cl_zi[1:4])
+
+{ 7. Frequency sweeps for Bode and Nyquist plots }
+omega = [0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1.0, 5.0, 10.0]
+CALL bode(num_ol[1:5], den_ol[1:5], omega[1:9] : mag_ol[1:9], phase_ol[1:9])
+CALL nyquist(num_ol[1:5], den_ol[1:5], omega[1:9] : real_ol[1:9], imag_ol[1:9])
+
+PLOT 'Bode Diagram'
+  kind = bode
+  omega = omega
+  mag = mag_ol
+  phase = phase_ol
+END
+
+PLOT 'Nyquist Diagram'
+  kind = nyquist
+  real = real_ol
+  imag = imag_ol
+END
+
+PLOT 'Pole-Zero Map'
+  kind = polezero
+  pr = cl_pr
+  pi = cl_pi
+  zr = cl_zr
+  zi = cl_zi
+END`,
   },
 ]
 

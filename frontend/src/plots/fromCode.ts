@@ -31,8 +31,10 @@ export function plotDefToSpec(dto: PlotDefDto): PlotSpec {
     applyXyAttrs(spec, first, all)
   } else if (kind === 'property') {
     applyPropertyAttrs(spec, first, bool)
-  } else {
+  } else if (kind === 'psychro') {
     applyPsychroAttrs(spec, num, bool)
+  } else {
+    applyControlAttrs(spec, first)
   }
   applyFormatAttrs(spec, first, bool, num)
 
@@ -107,7 +109,31 @@ function parseKind(raw: string | undefined): PlotKind {
   const v = (raw ?? '').toLowerCase()
   if (v === 'property') return 'property'
   if (v === 'psychro' || v === 'psychrometric') return 'psychro'
+  if (v === 'bode') return 'bode'
+  if (v === 'nyquist') return 'nyquist'
+  if (v === 'polezero' || v === 'pzmap') return 'polezero'
   return 'xy'
+}
+
+function applyControlAttrs(spec: PlotSpec, first: StrGet): void {
+  const omega = first('omega')
+  if (omega) spec.control.omega = omega
+  const mag = first('mag') ?? first('magnitude')
+  if (mag) spec.control.mag = mag
+  const phase = first('phase')
+  if (phase) spec.control.phase = phase
+  const real = first('real')
+  if (real) spec.control.real = real
+  const imag = first('imag') ?? first('imaginary')
+  if (imag) spec.control.imag = imag
+  const pr = first('pr') ?? first('pole_real') ?? first('poles_real')
+  if (pr) spec.control.pr = pr
+  const pi = first('pi') ?? first('pole_imag') ?? first('poles_imag')
+  if (pi) spec.control.pi = pi
+  const zr = first('zr') ?? first('zero_real') ?? first('zeros_real')
+  if (zr) spec.control.zr = zr
+  const zi = first('zi') ?? first('zero_imag') ?? first('zeros_imag')
+  if (zi) spec.control.zi = zi
 }
 
 function parseChartType(raw: string): ChartType {

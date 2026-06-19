@@ -133,6 +133,47 @@ class PolynomialHelpersTest {
         assertArrayEquals(expectedDen, result[1], 1e-15);
     }
 
+    @Test
+    void bodeCalculatesCorrectlyForFirstOrder() {
+        // G(s) = 1 / (s + 1)
+        double[] num = {1.0};
+        double[] den = {1.0, 1.0};
+        double[] omega = {1.0};
+        double[][] res = PolynomialHelpers.bode(num, den, omega);
+        // At w = 1, magnitude = 20 * log10(1/sqrt(2)) = -3.0102999566 dB
+        // phase = -45 degrees
+        assertEquals(-3.0102999566, res[0][0], 1e-6);
+        assertEquals(-45.0, res[1][0], 1e-6);
+    }
+
+    @Test
+    void nyquistCalculatesCorrectlyForFirstOrder() {
+        // G(s) = 1 / (s + 1)
+        double[] num = {1.0};
+        double[] den = {1.0, 1.0};
+        double[] omega = {1.0};
+        double[][] res = PolynomialHelpers.nyquist(num, den, omega);
+        // At w = 1, G(j) = 1/(j+1) = 0.5 - 0.5j
+        assertEquals(0.5, res[0][0], 1e-6);
+        assertEquals(-0.5, res[1][0], 1e-6);
+    }
+
+    @Test
+    void marginCalculatesCorrectlyForThirdOrderSystem() {
+        // G(s) = 2 / (s^3 + 3s^2 + 2s)
+        double[] num = {2.0};
+        double[] den = {1.0, 3.0, 2.0, 0.0};
+        double[] res = PolynomialHelpers.margin(num, den);
+        
+        // gm_db should be ~20*log10(3) = 9.542425 dB
+        // w_cp (phase crossover frequency) should be sqrt(2) = 1.41421356 rad/s
+        assertEquals(20.0 * Math.log10(3.0), res[0], 1e-2);
+        assertEquals(Math.sqrt(2.0), res[3], 1e-2);
+        
+        // w_cg (gain crossover frequency) should be ~0.75
+        assertEquals(0.75, res[2], 1e-2);
+    }
+
     private void sortRoots(double[][] roots) {
         java.util.Arrays.sort(roots, (a, b) -> {
             int cmp = Double.compare(a[0], b[0]);

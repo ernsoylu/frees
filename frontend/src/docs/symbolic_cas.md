@@ -102,4 +102,47 @@ Connects $G_1(s)$ (forward path) and $G_2(s)$ (feedback path) in a closed loop.
 CALL feedback(num1, den1, num2, den2, sign : num[1:3], den[1:3])
 ```
 - `sign` is optional and defaults to `1.0` (negative feedback, i.e., $T(s) = \frac{G_1}{1 + G_1 G_2}$). Use `-1.0` for positive feedback.
+
+## Frequency Analysis & Poles/Zeros
+
+Use the following `CALL` dispatches to analyze system poles, zeros, Bode/Nyquist responses, and gain/phase margins.
+
+### 1. Poles: pole
+Computes system poles (real part `pr`, imaginary part `pi`) for a transfer function or a state-space matrix `A`.
+```
+CALL pole(num, den : pr[1:2], pi[1:2])
+# OR
+CALL pole(A : pr[1:2], pi[1:2])
+```
+
+### 2. Zeros: zero
+Computes system zeros (real part `zr`, imaginary part `zi`) for a transfer function or a state-space system `(A, B, C, D)`.
+```
+CALL zero(num, den : zr[1:1], zi[1:1])
+# OR
+CALL zero(A, B, C, D : zr[1:1], zi[1:1])
+```
+
+### 3. Bode Frequency Response: bode
+Computes magnitude (in dB) and unwrapped phase (in degrees) at a vector of frequencies `omega`.
+```
+CALL bode(num, den, omega : mag[1:50], phase[1:50])
+# OR
+CALL bode(A, B, C, D, omega : mag[1:50], phase[1:50])
+```
+
+### 4. Nyquist Frequency Response: nyquist
+Computes real and imaginary parts at a vector of frequencies `omega`.
+```
+CALL nyquist(num, den, omega : real[1:50], imag[1:50])
+# OR
+CALL nyquist(A, B, C, D, omega : real[1:50], imag[1:50])
+```
+
+### 5. Gain and Phase Margins: margin
+Computes gain margin `gm` (in dB), phase margin `pm` (in degrees), gain crossover frequency `w_cg`, and phase crossover frequency `w_cp`.
+```
+CALL margin(num, den : gm, pm, w_cg, w_cp)
+# OR
+CALL margin(A, B, C, D : gm, pm, w_cg, w_cp)
 ```

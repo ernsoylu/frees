@@ -499,3 +499,197 @@ export function buildXYFigure(
 
   return { data: traces, layout }
 }
+
+export function buildBodeFigure(
+  omega: number[],
+  mag: number[],
+  phase: number[],
+  format: PlotFormat,
+  theme: PlotTheme,
+): PlotlyFigure {
+  const colors = THEMES[theme]
+  const background = theme === 'dark' ? 'rgba(0,0,0,0)' : '#ffffff'
+  const traces: PlotlyTrace[] = [
+    {
+      type: 'scatter',
+      mode: 'lines',
+      name: 'Magnitude',
+      x: omega,
+      y: mag,
+      yaxis: 'y2',
+      line: { color: '#4dabf7', width: 2 },
+      showlegend: false,
+    },
+    {
+      type: 'scatter',
+      mode: 'lines',
+      name: 'Phase',
+      x: omega,
+      y: phase,
+      yaxis: 'y',
+      line: { color: '#ff6b6b', width: 2 },
+      showlegend: false,
+    },
+  ]
+
+  const layout: PlotlyLayout = {
+    title: format.title ? { text: format.title } : undefined,
+    paper_bgcolor: background,
+    plot_bgcolor: background,
+    font: { color: colors.font, size: format.fontSize },
+    margin: { t: format.title ? 48 : 24, r: 24, b: 56, l: 64 },
+    xaxis: {
+      title: format.xLabel || 'Frequency [rad/s]',
+      type: 'log',
+      color: colors.font,
+      gridcolor: colors.grid,
+      zerolinecolor: colors.zero,
+      showgrid: format.grid,
+    },
+    yaxis: {
+      title: 'Phase [deg]',
+      domain: [0.0, 0.45],
+      color: colors.font,
+      gridcolor: colors.grid,
+      zerolinecolor: colors.zero,
+      showgrid: format.grid,
+    },
+    yaxis2: {
+      title: 'Magnitude [dB]',
+      domain: [0.55, 1.0],
+      color: colors.font,
+      gridcolor: colors.grid,
+      zerolinecolor: colors.zero,
+      showgrid: format.grid,
+    },
+    showlegend: false,
+  }
+
+  return { data: traces, layout }
+}
+
+export function buildNyquistFigure(
+  real: number[],
+  imag: number[],
+  format: PlotFormat,
+  theme: PlotTheme,
+): PlotlyFigure {
+  const colors = THEMES[theme]
+  const background = theme === 'dark' ? 'rgba(0,0,0,0)' : '#ffffff'
+  const traces: PlotlyTrace[] = [
+    {
+      type: 'scatter',
+      mode: 'lines',
+      name: 'Nyquist Curve',
+      x: real,
+      y: imag,
+      line: { color: '#38d9a9', width: 2 },
+      hoverinfo: 'x+y',
+    },
+    {
+      type: 'scatter',
+      mode: 'markers',
+      name: 'Critical Point (-1+j0)',
+      x: [-1.0],
+      y: [0.0],
+      marker: { symbol: 'x', color: '#ff6b6b', size: 12 },
+      hoverinfo: 'name',
+    },
+  ]
+
+  const layout: PlotlyLayout = {
+    title: format.title ? { text: format.title } : undefined,
+    paper_bgcolor: background,
+    plot_bgcolor: background,
+    font: { color: colors.font, size: format.fontSize },
+    margin: { t: format.title ? 48 : 24, r: 24, b: 56, l: 64 },
+    xaxis: {
+      title: format.xLabel || 'Real Axis',
+      color: colors.font,
+      gridcolor: colors.grid,
+      zerolinecolor: colors.zero,
+      showgrid: format.grid,
+    },
+    yaxis: {
+      title: format.yLabel || 'Imaginary Axis',
+      scaleanchor: 'x',
+      color: colors.font,
+      gridcolor: colors.grid,
+      zerolinecolor: colors.zero,
+      showgrid: format.grid,
+    },
+    showlegend: format.legend,
+    legend: legendLayout(format.legendAlign),
+  }
+
+  return { data: traces, layout }
+}
+
+export function buildPoleZeroFigure(
+  pr: number[],
+  pi: number[],
+  zr: number[],
+  zi: number[],
+  format: PlotFormat,
+  theme: PlotTheme,
+): PlotlyFigure {
+  const colors = THEMES[theme]
+  const background = theme === 'dark' ? 'rgba(0,0,0,0)' : '#ffffff'
+  const traces: PlotlyTrace[] = []
+
+  if (pr.length > 0) {
+    traces.push({
+      type: 'scatter',
+      mode: 'markers',
+      name: 'Poles',
+      x: pr,
+      y: pi,
+      marker: { symbol: 'x', size: 10, color: '#ff6b6b' },
+      hoverinfo: 'name+x+y',
+    })
+  }
+
+  if (zr.length > 0) {
+    traces.push({
+      type: 'scatter',
+      mode: 'markers',
+      name: 'Zeros',
+      x: zr,
+      y: zi,
+      marker: {
+        symbol: 'circle',
+        size: 10,
+        color: background,
+        line: { width: 2, color: '#4dabf7' },
+      },
+      hoverinfo: 'name+x+y',
+    })
+  }
+
+  const layout: PlotlyLayout = {
+    title: format.title ? { text: format.title } : undefined,
+    paper_bgcolor: background,
+    plot_bgcolor: background,
+    font: { color: colors.font, size: format.fontSize },
+    margin: { t: format.title ? 48 : 24, r: 24, b: 56, l: 64 },
+    xaxis: {
+      title: format.xLabel || 'Real Axis [1/s]',
+      color: colors.font,
+      gridcolor: colors.grid,
+      zerolinecolor: colors.zero,
+      showgrid: format.grid,
+    },
+    yaxis: {
+      title: format.yLabel || 'Imaginary Axis [rad/s]',
+      scaleanchor: 'x',
+      color: colors.font,
+      gridcolor: colors.grid,
+      zerolinecolor: colors.zero,
+      showgrid: format.grid,
+    },
+    showlegend: format.legend,
+    legend: legendLayout(format.legendAlign),
+  }
+
+  return { data: traces, layout }
+}

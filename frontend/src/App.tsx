@@ -1313,6 +1313,9 @@ export default function App() {
     xy: 'X-Y',
     property: 'Property',
     psychro: 'Psychrometric',
+    bode: 'Bode',
+    nyquist: 'Nyquist',
+    polezero: 'Pole-Zero',
   }
   const panelContent: Record<string, ReactNode> = {
     equations: (

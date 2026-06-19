@@ -1,6 +1,6 @@
 /** Plot model shared by the Plots tab, the config modal and exports. */
 
-export type PlotKind = 'xy' | 'property' | 'psychro'
+export type PlotKind = 'xy' | 'property' | 'psychro' | 'bode' | 'nyquist' | 'polezero'
 
 export const DIAGRAM_TYPES = [
   { value: 'T-s', label: 'T-s (temperature–entropy)' },
@@ -97,6 +97,18 @@ export interface PsychroConfig {
   stateTable?: string | null
 }
 
+export interface ControlConfig {
+  omega: string | null
+  mag: string | null
+  phase: string | null
+  real: string | null
+  imag: string | null
+  pr: string | null
+  pi: string | null
+  zr: string | null
+  zi: string | null
+}
+
 export interface PlotSpec {
   id: string
   name: string
@@ -104,6 +116,7 @@ export interface PlotSpec {
   xy: XYConfig
   property: PropertyConfig
   psychro: PsychroConfig
+  control: ControlConfig
   format: PlotFormat
   /** True when the plot was declared in the editor text with a PLOT ... END
    * block rather than created in the GUI. Code plots are regenerated on every
@@ -161,6 +174,17 @@ export function newPlotSpec(kind: PlotKind, name: string): PlotSpec {
       overlayStates: true,
       connectStates: false,
       stateTable: null,
+    },
+    control: {
+      omega: null,
+      mag: null,
+      phase: null,
+      real: null,
+      imag: null,
+      pr: null,
+      pi: null,
+      zr: null,
+      zi: null,
     },
     format: defaultFormat(kind),
   }

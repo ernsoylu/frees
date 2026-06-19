@@ -19,6 +19,9 @@ import {
   buildPropertyFigure,
   buildPsychroFigure,
   buildXYFigure,
+  buildBodeFigure,
+  buildNyquistFigure,
+  buildPoleZeroFigure,
 } from './figure'
 import { EXPORT_FORMATS, exportPlot } from './exportPlot'
 import PlotlyChart from './PlotlyChart'
@@ -196,6 +199,13 @@ export interface FigureInputs {
   theme: PlotTheme
 }
 
+function getArrayValues(variables: VariableResult[], base: string | null): number[] {
+  if (!base) return []
+  const map = arrayValues(variables, base)
+  const indices = [...map.keys()].sort((a, b) => a - b)
+  return indices.map((i) => map.get(i) as number)
+}
+
 export function buildFigure(spec: PlotSpec, inputs: FigureInputs): PlotlyFigure | null {
   const { states, cyclePath, variables = [], diagram, psychart, stateTableDefs, theme } = inputs
   // When the plot targets one declared STATE TABLE circuit, overlay only that
@@ -212,6 +222,24 @@ export function buildFigure(spec: PlotSpec, inputs: FigureInputs): PlotlyFigure 
   }
   if (spec.kind === 'xy' && spec.xy.xVar && spec.xy.yVars.length > 0) {
     return buildXyFigureFromSpec(spec, inputs, spec.xy.xVar)
+  }
+  if (spec.kind === 'bode' && spec.control.omega && spec.control.mag && spec.control.phase) {
+    const omega = getArrayValues(variables, spec.control.omega)
+    const mag = getArrayValues(variables, spec.control.mag)
+    const phase = getArrayValues(variables, spec.control.phase)
+    return buildBodeFigure(omega, mag, phase, spec.format, theme)
+  }
+  if (spec.kind === 'nyquist' && spec.control.real && spec.control.imag) {
+    const real = getArrayValues(variables, spec.control.real)
+    const imag = getArrayValues(variables, spec.control.imag)
+    return buildNyquistFigure(real, imag, spec.format, theme)
+  }
+  if (spec.kind === 'polezero' && spec.control.pr && spec.control.pi) {
+    const pr = getArrayValues(variables, spec.control.pr)
+    const pi = getArrayValues(variables, spec.control.pi)
+    const zr = getArrayValues(variables, spec.control.zr)
+    const zi = getArrayValues(variables, spec.control.zi)
+    return buildPoleZeroFigure(pr, pi, zr, zi, spec.format, theme)
   }
   return null
 }

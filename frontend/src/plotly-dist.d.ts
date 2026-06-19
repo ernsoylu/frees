@@ -13,6 +13,7 @@ declare module 'plotly.js-dist-min' {
     color?: string
     size?: number | number[]
     symbol?: string
+    line?: { width?: number; color?: string }
   }
 
   export interface PlotlyTrace {
@@ -35,6 +36,7 @@ declare module 'plotly.js-dist-min' {
     showlegend?: boolean
     hoverinfo?: string
     connectgaps?: boolean
+    yaxis?: string
   }
 
   export interface PlotlyAxisLayout {
@@ -48,6 +50,8 @@ declare module 'plotly.js-dist-min' {
     mirror?: boolean
     ticks?: 'outside' | 'inside' | ''
     exponentformat?: 'power' | 'e' | 'none'
+    domain?: number[]
+    scaleanchor?: string
   }
 
   export interface PlotlyLayout {
@@ -58,6 +62,7 @@ declare module 'plotly.js-dist-min' {
     margin?: { t?: number; r?: number; b?: number; l?: number }
     xaxis?: PlotlyAxisLayout
     yaxis?: PlotlyAxisLayout
+    yaxis2?: PlotlyAxisLayout
     showlegend?: boolean
     legend?: {
       orientation?: 'h' | 'v'
