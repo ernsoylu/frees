@@ -559,6 +559,16 @@ public final class UnitChecker {
         }
         if (c.function().startsWith("ss2tf$") ||
             c.function().startsWith("tf2ss$") ||
+            c.function().startsWith("ctrb$") ||
+            c.function().startsWith("obsv$") ||
+            c.function().startsWith("rank$") ||
+            c.function().startsWith("ss2ss$") ||
+            c.function().startsWith("ss_series$") ||
+            c.function().startsWith("ss_parallel$") ||
+            c.function().startsWith("ss_feedback$") ||
+            c.function().startsWith("stepinfo$") ||
+            c.function().startsWith("pade$") ||
+            c.function().startsWith("rlocus$") ||
             c.function().startsWith("zp2tf$") ||
             c.function().startsWith("tf2zp$") ||
             c.function().startsWith("series$") ||

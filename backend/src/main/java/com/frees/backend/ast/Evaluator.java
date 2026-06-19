@@ -166,6 +166,36 @@ public final class Evaluator {
         if (c.function().startsWith("pidtune$")) {
             return evalPidtune(c, values, defs);
         }
+        if (c.function().startsWith("rank$")) {
+            return evalRank(c, values, defs);
+        }
+        if (c.function().startsWith("ctrb$")) {
+            return evalCtrb(c, values, defs);
+        }
+        if (c.function().startsWith("obsv$")) {
+            return evalObsv(c, values, defs);
+        }
+        if (c.function().startsWith("ss2ss$")) {
+            return evalSs2ss(c, values, defs);
+        }
+        if (c.function().startsWith("ss_series$")) {
+            return evalSsSeries(c, values, defs);
+        }
+        if (c.function().startsWith("ss_parallel$")) {
+            return evalSsParallel(c, values, defs);
+        }
+        if (c.function().startsWith("ss_feedback$")) {
+            return evalSsFeedback(c, values, defs);
+        }
+        if (c.function().startsWith("stepinfo$")) {
+            return evalStepInfo(c, values, defs);
+        }
+        if (c.function().startsWith("pade$")) {
+            return evalPade(c, values, defs);
+        }
+        if (c.function().startsWith("rlocus$")) {
+            return evalRlocus(c, values, defs);
+        }
 
         return evalBuiltin(c, values, defs);
     }
@@ -1127,6 +1157,401 @@ public final class Evaluator {
             case "kd" -> gains[2];
             default -> 0.0;
         };
+    }
+
+    private static double evalRank(Expr.Call c, Map<String, Double> values, Map<String, ProcDef> defs) {
+        String[] parts = c.function().split("\\$");
+        int rows = Integer.parseInt(parts[1]);
+        int cols = Integer.parseInt(parts[2]);
+        List<Expr> args = c.args();
+        double[][] m = new double[rows][cols];
+        int idx = 0;
+        for (int i = 0; i < rows; i++) {
+            for (int j = 0; j < cols; j++) {
+                m[i][j] = eval(args.get(idx++), values, defs);
+            }
+        }
+        return com.frees.backend.cas.ControllerDesign.rank(m);
+    }
+
+    private static double evalCtrb(Expr.Call c, Map<String, Double> values, Map<String, ProcDef> defs) {
+        String[] parts = c.function().split("\\$");
+        int iOut = Integer.parseInt(parts[1]);
+        int jOut = Integer.parseInt(parts[2]);
+        int n = Integer.parseInt(parts[3]);
+        int m = Integer.parseInt(parts[4]);
+        List<Expr> args = c.args();
+        int idx = 0;
+        double[][] a = new double[n][n];
+        for (int i = 0; i < n; i++) {
+            for (int j = 0; j < n; j++) {
+                a[i][j] = eval(args.get(idx++), values, defs);
+            }
+        }
+        double[][] b = new double[n][m];
+        for (int i = 0; i < n; i++) {
+            for (int j = 0; j < m; j++) {
+                b[i][j] = eval(args.get(idx++), values, defs);
+            }
+        }
+        double[][] ctrb = com.frees.backend.cas.ControllerDesign.ctrb(a, b);
+        return ctrb[iOut][jOut];
+    }
+
+    private static double evalObsv(Expr.Call c, Map<String, Double> values, Map<String, ProcDef> defs) {
+        String[] parts = c.function().split("\\$");
+        int iOut = Integer.parseInt(parts[1]);
+        int jOut = Integer.parseInt(parts[2]);
+        int n = Integer.parseInt(parts[3]);
+        int p = Integer.parseInt(parts[4]);
+        List<Expr> args = c.args();
+        int idx = 0;
+        double[][] a = new double[n][n];
+        for (int i = 0; i < n; i++) {
+            for (int j = 0; j < n; j++) {
+                a[i][j] = eval(args.get(idx++), values, defs);
+            }
+        }
+        double[][] cv = new double[p][n];
+        for (int i = 0; i < p; i++) {
+            for (int j = 0; j < n; j++) {
+                cv[i][j] = eval(args.get(idx++), values, defs);
+            }
+        }
+        double[][] obsv = com.frees.backend.cas.ControllerDesign.obsv(a, cv);
+        return obsv[iOut][jOut];
+    }
+
+    private static double evalSs2ss(Expr.Call c, Map<String, Double> values, Map<String, ProcDef> defs) {
+        String[] parts = c.function().split("\\$");
+        String varType = parts[1];
+        int idx1 = -1, idx2 = -1;
+        int n, m, p;
+        if (varType.equals("d")) {
+            n = Integer.parseInt(parts[2]);
+            m = Integer.parseInt(parts[3]);
+            p = Integer.parseInt(parts[4]);
+        } else {
+            idx1 = Integer.parseInt(parts[2]);
+            idx2 = Integer.parseInt(parts[3]);
+            n = Integer.parseInt(parts[4]);
+            m = Integer.parseInt(parts[5]);
+            p = Integer.parseInt(parts[6]);
+        }
+        List<Expr> args = c.args();
+        int idx = 0;
+        double[][] a = new double[n][n];
+        for (int i = 0; i < n; i++) {
+            for (int j = 0; j < n; j++) {
+                a[i][j] = eval(args.get(idx++), values, defs);
+            }
+        }
+        double[] b = new double[n];
+        for (int i = 0; i < n; i++) {
+            b[i] = eval(args.get(idx++), values, defs);
+        }
+        double[] cv = new double[n];
+        for (int i = 0; i < n; i++) {
+            cv[i] = eval(args.get(idx++), values, defs);
+        }
+        double d = eval(args.get(idx++), values, defs);
+        double[][] transform = new double[n][n];
+        for (int i = 0; i < n; i++) {
+            for (int j = 0; j < n; j++) {
+                transform[i][j] = eval(args.get(idx++), values, defs);
+            }
+        }
+        
+        com.frees.backend.cas.StateSpace.StateSpaceMatrices res =
+                com.frees.backend.cas.ControllerDesign.ss2ss(a, b, cv, d, transform);
+        if (varType.equals("a")) {
+            return res.a()[idx1][idx2];
+        } else if (varType.equals("b")) {
+            return res.b()[idx1];
+        } else if (varType.equals("c")) {
+            return res.c()[idx1];
+        } else {
+            return res.d();
+        }
+    }
+
+    private static double evalSsSeries(Expr.Call c, Map<String, Double> values, Map<String, ProcDef> defs) {
+        String[] parts = c.function().split("\\$");
+        String varType = parts[1];
+        int idx1 = -1, idx2 = -1;
+        int n1, n2;
+        if (varType.equals("d")) {
+            n1 = Integer.parseInt(parts[2]);
+            n2 = Integer.parseInt(parts[3]);
+        } else {
+            idx1 = Integer.parseInt(parts[2]);
+            idx2 = Integer.parseInt(parts[3]);
+            n1 = Integer.parseInt(parts[4]);
+            n2 = Integer.parseInt(parts[5]);
+        }
+        List<Expr> args = c.args();
+        int idx = 0;
+        
+        // System 1
+        double[][] a1 = new double[n1][n1];
+        for (int i = 0; i < n1; i++) {
+            for (int j = 0; j < n1; j++) {
+                a1[i][j] = eval(args.get(idx++), values, defs);
+            }
+        }
+        double[] b1 = new double[n1];
+        for (int i = 0; i < n1; i++) {
+            b1[i] = eval(args.get(idx++), values, defs);
+        }
+        double[] c1 = new double[n1];
+        for (int i = 0; i < n1; i++) {
+            c1[i] = eval(args.get(idx++), values, defs);
+        }
+        double d1 = eval(args.get(idx++), values, defs);
+        
+        // System 2
+        double[][] a2 = new double[n2][n2];
+        for (int i = 0; i < n2; i++) {
+            for (int j = 0; j < n2; j++) {
+                a2[i][j] = eval(args.get(idx++), values, defs);
+            }
+        }
+        double[] b2 = new double[n2];
+        for (int i = 0; i < n2; i++) {
+            b2[i] = eval(args.get(idx++), values, defs);
+        }
+        double[] c2 = new double[n2];
+        for (int i = 0; i < n2; i++) {
+            c2[i] = eval(args.get(idx++), values, defs);
+        }
+        double d2 = eval(args.get(idx++), values, defs);
+        
+        com.frees.backend.cas.StateSpace.StateSpaceMatrices res =
+                com.frees.backend.cas.ControllerDesign.ssSeries(a1, b1, c1, d1, a2, b2, c2, d2);
+        
+        if (varType.equals("a")) {
+            return res.a()[idx1][idx2];
+        } else if (varType.equals("b")) {
+            return res.b()[idx1];
+        } else if (varType.equals("c")) {
+            return res.c()[idx1];
+        } else {
+            return res.d();
+        }
+    }
+
+    private static double evalSsParallel(Expr.Call c, Map<String, Double> values, Map<String, ProcDef> defs) {
+        String[] parts = c.function().split("\\$");
+        String varType = parts[1];
+        int idx1 = -1, idx2 = -1;
+        int n1, n2;
+        if (varType.equals("d")) {
+            n1 = Integer.parseInt(parts[2]);
+            n2 = Integer.parseInt(parts[3]);
+        } else {
+            idx1 = Integer.parseInt(parts[2]);
+            idx2 = Integer.parseInt(parts[3]);
+            n1 = Integer.parseInt(parts[4]);
+            n2 = Integer.parseInt(parts[5]);
+        }
+        List<Expr> args = c.args();
+        int idx = 0;
+        
+        // System 1
+        double[][] a1 = new double[n1][n1];
+        for (int i = 0; i < n1; i++) {
+            for (int j = 0; j < n1; j++) {
+                a1[i][j] = eval(args.get(idx++), values, defs);
+            }
+        }
+        double[] b1 = new double[n1];
+        for (int i = 0; i < n1; i++) {
+            b1[i] = eval(args.get(idx++), values, defs);
+        }
+        double[] c1 = new double[n1];
+        for (int i = 0; i < n1; i++) {
+            c1[i] = eval(args.get(idx++), values, defs);
+        }
+        double d1 = eval(args.get(idx++), values, defs);
+        
+        // System 2
+        double[][] a2 = new double[n2][n2];
+        for (int i = 0; i < n2; i++) {
+            for (int j = 0; j < n2; j++) {
+                a2[i][j] = eval(args.get(idx++), values, defs);
+            }
+        }
+        double[] b2 = new double[n2];
+        for (int i = 0; i < n2; i++) {
+            b2[i] = eval(args.get(idx++), values, defs);
+        }
+        double[] c2 = new double[n2];
+        for (int i = 0; i < n2; i++) {
+            c2[i] = eval(args.get(idx++), values, defs);
+        }
+        double d2 = eval(args.get(idx++), values, defs);
+        
+        com.frees.backend.cas.StateSpace.StateSpaceMatrices res =
+                com.frees.backend.cas.ControllerDesign.ssParallel(a1, b1, c1, d1, a2, b2, c2, d2);
+        
+        if (varType.equals("a")) {
+            return res.a()[idx1][idx2];
+        } else if (varType.equals("b")) {
+            return res.b()[idx1];
+        } else if (varType.equals("c")) {
+            return res.c()[idx1];
+        } else {
+            return res.d();
+        }
+    }
+
+    private static double evalSsFeedback(Expr.Call c, Map<String, Double> values, Map<String, ProcDef> defs) {
+        String[] parts = c.function().split("\\$");
+        String varType = parts[1];
+        int idx1 = -1, idx2 = -1;
+        int n1, n2;
+        if (varType.equals("d")) {
+            n1 = Integer.parseInt(parts[2]);
+            n2 = Integer.parseInt(parts[3]);
+        } else {
+            idx1 = Integer.parseInt(parts[2]);
+            idx2 = Integer.parseInt(parts[3]);
+            n1 = Integer.parseInt(parts[4]);
+            n2 = Integer.parseInt(parts[5]);
+        }
+        List<Expr> args = c.args();
+        int idx = 0;
+        
+        // System 1
+        double[][] a1 = new double[n1][n1];
+        for (int i = 0; i < n1; i++) {
+            for (int j = 0; j < n1; j++) {
+                a1[i][j] = eval(args.get(idx++), values, defs);
+            }
+        }
+        double[] b1 = new double[n1];
+        for (int i = 0; i < n1; i++) {
+            b1[i] = eval(args.get(idx++), values, defs);
+        }
+        double[] c1 = new double[n1];
+        for (int i = 0; i < n1; i++) {
+            c1[i] = eval(args.get(idx++), values, defs);
+        }
+        double d1 = eval(args.get(idx++), values, defs);
+        
+        // System 2
+        double[][] a2 = new double[n2][n2];
+        for (int i = 0; i < n2; i++) {
+            for (int j = 0; j < n2; j++) {
+                a2[i][j] = eval(args.get(idx++), values, defs);
+            }
+        }
+        double[] b2 = new double[n2];
+        for (int i = 0; i < n2; i++) {
+            b2[i] = eval(args.get(idx++), values, defs);
+        }
+        double[] c2 = new double[n2];
+        for (int i = 0; i < n2; i++) {
+            c2[i] = eval(args.get(idx++), values, defs);
+        }
+        double d2 = eval(args.get(idx++), values, defs);
+        
+        double sign = 1.0;
+        if (idx < args.size()) {
+            sign = eval(args.get(idx), values, defs);
+        }
+        
+        com.frees.backend.cas.StateSpace.StateSpaceMatrices res =
+                com.frees.backend.cas.ControllerDesign.ssFeedback(a1, b1, c1, d1, a2, b2, c2, d2, sign);
+        
+        if (varType.equals("a")) {
+            return res.a()[idx1][idx2];
+        } else if (varType.equals("b")) {
+            return res.b()[idx1];
+        } else if (varType.equals("c")) {
+            return res.c()[idx1];
+        } else {
+            return res.d();
+        }
+    }
+
+    private static double evalStepInfo(Expr.Call c, Map<String, Double> values, Map<String, ProcDef> defs) {
+        String[] parts = c.function().split("\\$");
+        String varType = parts[1];
+        int N = Integer.parseInt(parts[2]);
+        List<Expr> args = c.args();
+        double[] t = new double[N];
+        double[] y = new double[N];
+        for (int i = 0; i < N; i++) {
+            t[i] = eval(args.get(i), values, defs);
+        }
+        for (int i = 0; i < N; i++) {
+            y[i] = eval(args.get(N + i), values, defs);
+        }
+        double[] res = com.frees.backend.cas.ControllerDesign.stepinfo(t, y);
+        return switch (varType) {
+            case "tr" -> res[0];
+            case "tp" -> res[1];
+            case "ts" -> res[2];
+            default -> res[3];
+        };
+    }
+
+    private static double evalPade(Expr.Call c, Map<String, Double> values, Map<String, ProcDef> defs) {
+        String[] parts = c.function().split("\\$");
+        String varType = parts[1];
+        int idx = Integer.parseInt(parts[2]);
+        int order = Integer.parseInt(parts[3]);
+        List<Expr> args = c.args();
+        double Td = eval(args.get(0), values, defs);
+        double[][] res = com.frees.backend.cas.ControllerDesign.pade(Td, order);
+        if (varType.equals("num")) {
+            return res[0][idx];
+        } else {
+            return res[1][idx];
+        }
+    }
+
+    private static double evalRlocus(Expr.Call c, Map<String, Double> values, Map<String, ProcDef> defs) {
+        String[] parts = c.function().split("\\$");
+        String varType = parts[1];
+        int idx1 = Integer.parseInt(parts[2]);
+        int idx2 = -1;
+        int numSize, denSize, M, N;
+        if (varType.equals("k")) {
+            numSize = Integer.parseInt(parts[3]);
+            denSize = Integer.parseInt(parts[4]);
+            M = Integer.parseInt(parts[5]);
+            N = Integer.parseInt(parts[6]);
+        } else {
+            idx2 = Integer.parseInt(parts[3]);
+            numSize = Integer.parseInt(parts[4]);
+            denSize = Integer.parseInt(parts[5]);
+            M = Integer.parseInt(parts[6]);
+            N = Integer.parseInt(parts[7]);
+        }
+
+        List<Expr> args = c.args();
+        int idx = 0;
+        double[] num = new double[numSize];
+        for (int i = 0; i < numSize; i++) {
+            num[i] = eval(args.get(idx++), values, defs);
+        }
+        double[] den = new double[denSize];
+        for (int i = 0; i < denSize; i++) {
+            den[i] = eval(args.get(idx++), values, defs);
+        }
+
+        com.frees.backend.cas.ControllerDesign.RlocusResult res =
+                com.frees.backend.cas.ControllerDesign.rlocus(num, den, M);
+
+        if (varType.equals("k")) {
+            return res.k[idx1];
+        } else if (varType.equals("cpr")) {
+            return res.cpr[idx1][idx2];
+        } else {
+            return res.cpi[idx1][idx2];
+        }
     }
 
     /**
