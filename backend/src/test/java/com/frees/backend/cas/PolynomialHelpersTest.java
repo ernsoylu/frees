@@ -71,6 +71,68 @@ class PolynomialHelpersTest {
         assertArrayEquals(expectedComplex, PolynomialHelpers.expandRoots(complexRoots), 1e-8);
     }
 
+    @Test
+    void multiplyRawDoesNotTrimLeadingZeros() {
+        double[] p1 = {0.0, 1.0, 2.0};
+        double[] p2 = {0.0, 1.0, 3.0};
+        // Raw multiplication output size: 3 + 3 - 1 = 5
+        double[] expected = {0.0, 0.0, 1.0, 5.0, 6.0};
+        assertArrayEquals(expected, PolynomialHelpers.multiplyRaw(p1, p2), 1e-15);
+    }
+
+    @Test
+    void addRawDoesNotTrimLeadingZeros() {
+        double[] p1 = {0.0, 1.0, 2.0};
+        double[] p2 = {0.0, 4.0, 5.0};
+        double[] expected = {0.0, 5.0, 7.0};
+        assertArrayEquals(expected, PolynomialHelpers.addRaw(p1, p2), 1e-15);
+    }
+
+    @Test
+    void seriesReturnsExpectedCoefficients() {
+        double[] num1 = {0.0, 1.0};
+        double[] den1 = {1.0, 1.0};
+        double[] num2 = {0.0, 2.0};
+        double[] den2 = {1.0, 3.0};
+
+        double[][] result = PolynomialHelpers.series(num1, den1, num2, den2);
+        double[] expectedNum = {0.0, 0.0, 2.0};
+        double[] expectedDen = {1.0, 4.0, 3.0};
+
+        assertArrayEquals(expectedNum, result[0], 1e-15);
+        assertArrayEquals(expectedDen, result[1], 1e-15);
+    }
+
+    @Test
+    void parallelReturnsExpectedCoefficients() {
+        double[] num1 = {0.0, 1.0};
+        double[] den1 = {1.0, 1.0};
+        double[] num2 = {0.0, 2.0};
+        double[] den2 = {1.0, 3.0};
+
+        double[][] result = PolynomialHelpers.parallel(num1, den1, num2, den2);
+        double[] expectedNum = {0.0, 3.0, 5.0};
+        double[] expectedDen = {1.0, 4.0, 3.0};
+
+        assertArrayEquals(expectedNum, result[0], 1e-15);
+        assertArrayEquals(expectedDen, result[1], 1e-15);
+    }
+
+    @Test
+    void feedbackReturnsExpectedCoefficients() {
+        double[] num1 = {0.0, 1.0};
+        double[] den1 = {1.0, 1.0};
+        double[] num2 = {1.0};
+        double[] den2 = {1.0};
+
+        double[][] result = PolynomialHelpers.feedback(num1, den1, num2, den2, 1.0); // negative feedback
+        double[] expectedNum = {0.0, 1.0};
+        double[] expectedDen = {1.0, 2.0};
+
+        assertArrayEquals(expectedNum, result[0], 1e-15);
+        assertArrayEquals(expectedDen, result[1], 1e-15);
+    }
+
     private void sortRoots(double[][] roots) {
         java.util.Arrays.sort(roots, (a, b) -> {
             int cmp = Double.compare(a[0], b[0]);

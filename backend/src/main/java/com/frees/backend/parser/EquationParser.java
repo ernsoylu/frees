@@ -748,6 +748,18 @@ public final class EquationParser {
             flattenTf2zp(inputs, outputs, sourceText, ctx);
             return;
         }
+        if (defName.equals("series")) {
+            flattenSeries(inputs, outputs, sourceText, ctx);
+            return;
+        }
+        if (defName.equals("parallel")) {
+            flattenParallel(inputs, outputs, sourceText, ctx);
+            return;
+        }
+        if (defName.equals("feedback")) {
+            flattenFeedback(inputs, outputs, sourceText, ctx);
+            return;
+        }
 
         ProcDef def = ctx.defs().get(defName);
         if (def == null) {
@@ -955,6 +967,156 @@ public final class EquationParser {
         }
         ctx.out().add(new Equation(kExpr,
                 new Expr.Call("tf2zp$k$" + nz + "$" + np, entries), sourceText));
+    }
+
+    private void flattenSeries(List<Expr> inputs, List<Expr> outputs, String sourceText, FlattenContext ctx) {
+        if (inputs.size() != 4 || outputs.size() != 2) {
+            throw new ParseException("series expects 4 inputs (num1, den1, num2, den2) and 2 outputs (num, den), "
+                    + "e.g. CALL series(num1[1:2], den1[1:2], num2[1:2], den2[1:2] : num[1:3], den[1:3])");
+        }
+        VectorInfo num1 = parseVectorInfo(inputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        VectorInfo den1 = parseVectorInfo(inputs.get(1), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        VectorInfo num2 = parseVectorInfo(inputs.get(2), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        VectorInfo den2 = parseVectorInfo(inputs.get(3), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+
+        if (num1.size != den1.size) {
+            throw new ParseException("series: num1 and den1 must have the same length");
+        }
+        if (num2.size != den2.size) {
+            throw new ParseException("series: num2 and den2 must have the same length");
+        }
+
+        int L1 = num1.size;
+        int L2 = num2.size;
+        int expectedLen = L1 + L2 - 1;
+
+        VectorInfo num = parseVectorInfo(outputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        VectorInfo den = parseVectorInfo(outputs.get(1), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+
+        if (num.size != expectedLen || den.size != expectedLen) {
+            throw new ParseException("series: outputs num and den must have length L1 + L2 - 1 = " + expectedLen);
+        }
+
+        if (outputs.get(0) instanceof Expr.ArrayAccess aa) {
+            registerShape(aa.name(), expectedLen, 1, ctx);
+        }
+        if (outputs.get(1) instanceof Expr.ArrayAccess aa) {
+            registerShape(aa.name(), expectedLen, 1, ctx);
+        }
+
+        List<Expr> entries = new ArrayList<>();
+        entries.addAll(Arrays.asList(num1.elements));
+        entries.addAll(Arrays.asList(den1.elements));
+        entries.addAll(Arrays.asList(num2.elements));
+        entries.addAll(Arrays.asList(den2.elements));
+
+        for (int i = 0; i < expectedLen; i++) {
+            ctx.out().add(new Equation(num.elements[i],
+                    new Expr.Call("series$num$" + i + "$" + L1 + "$" + L2, entries), sourceText));
+            ctx.out().add(new Equation(den.elements[i],
+                    new Expr.Call("series$den$" + i + "$" + L1 + "$" + L2, entries), sourceText));
+        }
+    }
+
+    private void flattenParallel(List<Expr> inputs, List<Expr> outputs, String sourceText, FlattenContext ctx) {
+        if (inputs.size() != 4 || outputs.size() != 2) {
+            throw new ParseException("parallel expects 4 inputs (num1, den1, num2, den2) and 2 outputs (num, den), "
+                    + "e.g. CALL parallel(num1[1:2], den1[1:2], num2[1:2], den2[1:2] : num[1:3], den[1:3])");
+        }
+        VectorInfo num1 = parseVectorInfo(inputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        VectorInfo den1 = parseVectorInfo(inputs.get(1), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        VectorInfo num2 = parseVectorInfo(inputs.get(2), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        VectorInfo den2 = parseVectorInfo(inputs.get(3), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+
+        if (num1.size != den1.size) {
+            throw new ParseException("parallel: num1 and den1 must have the same length");
+        }
+        if (num2.size != den2.size) {
+            throw new ParseException("parallel: num2 and den2 must have the same length");
+        }
+
+        int L1 = num1.size;
+        int L2 = num2.size;
+        int expectedLen = L1 + L2 - 1;
+
+        VectorInfo num = parseVectorInfo(outputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        VectorInfo den = parseVectorInfo(outputs.get(1), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+
+        if (num.size != expectedLen || den.size != expectedLen) {
+            throw new ParseException("parallel: outputs num and den must have length L1 + L2 - 1 = " + expectedLen);
+        }
+
+        if (outputs.get(0) instanceof Expr.ArrayAccess aa) {
+            registerShape(aa.name(), expectedLen, 1, ctx);
+        }
+        if (outputs.get(1) instanceof Expr.ArrayAccess aa) {
+            registerShape(aa.name(), expectedLen, 1, ctx);
+        }
+
+        List<Expr> entries = new ArrayList<>();
+        entries.addAll(Arrays.asList(num1.elements));
+        entries.addAll(Arrays.asList(den1.elements));
+        entries.addAll(Arrays.asList(num2.elements));
+        entries.addAll(Arrays.asList(den2.elements));
+
+        for (int i = 0; i < expectedLen; i++) {
+            ctx.out().add(new Equation(num.elements[i],
+                    new Expr.Call("parallel$num$" + i + "$" + L1 + "$" + L2, entries), sourceText));
+            ctx.out().add(new Equation(den.elements[i],
+                    new Expr.Call("parallel$den$" + i + "$" + L1 + "$" + L2, entries), sourceText));
+        }
+    }
+
+    private void flattenFeedback(List<Expr> inputs, List<Expr> outputs, String sourceText, FlattenContext ctx) {
+        if ((inputs.size() != 4 && inputs.size() != 5) || outputs.size() != 2) {
+            throw new ParseException("feedback expects 4 or 5 inputs (num1, den1, num2, den2, [sign]) and 2 outputs (num, den), "
+                    + "e.g. CALL feedback(num1[1:2], den1[1:2], num2[1:2], den2[1:2] : num[1:3], den[1:3])");
+        }
+        VectorInfo num1 = parseVectorInfo(inputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        VectorInfo den1 = parseVectorInfo(inputs.get(1), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        VectorInfo num2 = parseVectorInfo(inputs.get(2), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        VectorInfo den2 = parseVectorInfo(inputs.get(3), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+
+        Expr signExpr = (inputs.size() == 5) ? getScalarElement(inputs.get(4), ctx) : new Expr.Num(1.0);
+
+        if (num1.size != den1.size) {
+            throw new ParseException("feedback: num1 and den1 must have the same length");
+        }
+        if (num2.size != den2.size) {
+            throw new ParseException("feedback: num2 and den2 must have the same length");
+        }
+
+        int L1 = num1.size;
+        int L2 = num2.size;
+        int expectedLen = L1 + L2 - 1;
+
+        VectorInfo num = parseVectorInfo(outputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        VectorInfo den = parseVectorInfo(outputs.get(1), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+
+        if (num.size != expectedLen || den.size != expectedLen) {
+            throw new ParseException("feedback: outputs num and den must have length L1 + L2 - 1 = " + expectedLen);
+        }
+
+        if (outputs.get(0) instanceof Expr.ArrayAccess aa) {
+            registerShape(aa.name(), expectedLen, 1, ctx);
+        }
+        if (outputs.get(1) instanceof Expr.ArrayAccess aa) {
+            registerShape(aa.name(), expectedLen, 1, ctx);
+        }
+
+        List<Expr> entries = new ArrayList<>();
+        entries.addAll(Arrays.asList(num1.elements));
+        entries.addAll(Arrays.asList(den1.elements));
+        entries.addAll(Arrays.asList(num2.elements));
+        entries.addAll(Arrays.asList(den2.elements));
+        entries.add(signExpr);
+
+        for (int i = 0; i < expectedLen; i++) {
+            ctx.out().add(new Equation(num.elements[i],
+                    new Expr.Call("feedback$num$" + i + "$" + L1 + "$" + L2, entries), sourceText));
+            ctx.out().add(new Equation(den.elements[i],
+                    new Expr.Call("feedback$den$" + i + "$" + L1 + "$" + L2, entries), sourceText));
+        }
     }
 
     private List<Expr> getVectorElements(Expr e, int expectedSize, FlattenContext ctx) {

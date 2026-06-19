@@ -77,3 +77,29 @@ CALL zp2tf(zr, zi, pr, pi, k : num[1:3], den[1:3])
 ```
 CALL tf2zp(num, den : zr[1:1], zi[1:1], pr[1:2], pi[1:2], k)
 ```
+
+## Model Interconnection
+
+Use `CALL` dispatches to connect multiple systems in series, parallel, or feedback. Input and output transfer functions are represented by their numerator and denominator coefficient arrays.
+
+For two systems $G_1(s) = \frac{N_1(s)}{D_1(s)}$ (of length $L_1$) and $G_2(s) = \frac{N_2(s)}{D_2(s)}$ (of length $L_2$), the connected system has length $L_1 + L_2 - 1$.
+
+### 1. Series Connection: series
+Connects $G_1(s)$ and $G_2(s)$ in series: $G(s) = G_1(s) \cdot G_2(s)$.
+```
+CALL series(num1, den1, num2, den2 : num[1:3], den[1:3])
+```
+
+### 2. Parallel Connection: parallel
+Connects $G_1(s)$ and $G_2(s)$ in parallel: $G(s) = G_1(s) + G_2(s)$.
+```
+CALL parallel(num1, den1, num2, den2 : num[1:3], den[1:3])
+```
+
+### 3. Feedback Connection: feedback
+Connects $G_1(s)$ (forward path) and $G_2(s)$ (feedback path) in a closed loop.
+```
+CALL feedback(num1, den1, num2, den2, sign : num[1:3], den[1:3])
+```
+- `sign` is optional and defaults to `1.0` (negative feedback, i.e., $T(s) = \frac{G_1}{1 + G_1 G_2}$). Use `-1.0` for positive feedback.
+```
