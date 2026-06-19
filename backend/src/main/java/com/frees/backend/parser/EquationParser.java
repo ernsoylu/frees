@@ -780,6 +780,14 @@ public final class EquationParser {
             flattenMargin(inputs, outputs, sourceText, ctx);
             return;
         }
+        if (defName.equals("step") || defName.equals("impulse")) {
+            flattenTimeResponse(defName, inputs, outputs, sourceText, ctx);
+            return;
+        }
+        if (defName.equals("lsim")) {
+            flattenLsim(inputs, outputs, sourceText, ctx);
+            return;
+        }
 
         ProcDef def = ctx.defs().get(defName);
         if (def == null) {
@@ -1393,6 +1401,121 @@ public final class EquationParser {
                 new Expr.Call("margin$wcg$" + inputs.size(), entries), sourceText));
         ctx.out().add(new Equation(outputs.get(3),
                 new Expr.Call("margin$wcp$" + inputs.size(), entries), sourceText));
+    }
+
+    /**
+     * Flattens {@code step} / {@code impulse}: 3 inputs (num, den, t) or 5 inputs
+     * (A, B, C, D, t), and one output vector y the same length as t. Each y[i] is
+     * emitted as a synthetic call {@code <name>$<i>$<numInputs>$<N>} whose
+     * arguments are the serialized model entries followed by the time samples.
+     */
+    private void flattenTimeResponse(String name, List<Expr> inputs, List<Expr> outputs, String sourceText, FlattenContext ctx) {
+        if ((inputs.size() != 3 && inputs.size() != 5) || outputs.size() != 1) {
+            throw new ParseException(name + " expects 3 inputs (num, den, t) or 5 inputs (A, B, C, D, t) and 1 output (y), "
+                    + "e.g. CALL " + name + "(num, den, t : y[1:50])");
+        }
+        VectorInfo time = parseVectorInfo(inputs.get(inputs.size() - 1), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        int N = time.size;
+
+        VectorInfo y = parseVectorInfo(outputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        if (y.size != N) {
+            throw new ParseException(name + ": output y must have the same size N as t = " + N);
+        }
+
+        List<Expr> entries = new ArrayList<>();
+        if (inputs.size() == 3) {
+            VectorInfo num = parseVectorInfo(inputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+            VectorInfo den = parseVectorInfo(inputs.get(1), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+            if (num.size != den.size) {
+                throw new ParseException(name + ": num and den must have the same length");
+            }
+            entries.addAll(Arrays.asList(num.elements));
+            entries.addAll(Arrays.asList(den.elements));
+        } else {
+            MatrixInfo a = parseMatrixInfo(inputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+            int n = a.rows;
+            if (a.cols != n) throw new ParseException(name + ": A must be square");
+            List<Expr> bElements = getVectorElements(inputs.get(1), n, ctx);
+            List<Expr> cElements = getRowVectorElements(inputs.get(2), n, ctx);
+            Expr dElement = getScalarElement(inputs.get(3), ctx);
+
+            for (int i = 0; i < n; i++) {
+                entries.addAll(Arrays.asList(a.elements[i]));
+            }
+            entries.addAll(bElements);
+            entries.addAll(cElements);
+            entries.add(dElement);
+        }
+        entries.addAll(Arrays.asList(time.elements));
+
+        if (outputs.get(0) instanceof Expr.ArrayAccess aa) {
+            registerShape(aa.name(), N, 1, ctx);
+        }
+
+        for (int i = 0; i < N; i++) {
+            ctx.out().add(new Equation(y.elements[i],
+                    new Expr.Call(name + "$" + i + "$" + inputs.size() + "$" + N, entries), sourceText));
+        }
+    }
+
+    /**
+     * Flattens {@code lsim}: 4 inputs (num, den, u, t) or 6 inputs (A, B, C, D, u, t)
+     * and one output vector y the same length as t. The input signal u and time
+     * vector t must both have length N. Serialized arguments are the model entries
+     * followed by the u samples then the t samples.
+     */
+    private void flattenLsim(List<Expr> inputs, List<Expr> outputs, String sourceText, FlattenContext ctx) {
+        if ((inputs.size() != 4 && inputs.size() != 6) || outputs.size() != 1) {
+            throw new ParseException("lsim expects 4 inputs (num, den, u, t) or 6 inputs (A, B, C, D, u, t) and 1 output (y), "
+                    + "e.g. CALL lsim(num, den, u, t : y[1:50])");
+        }
+        VectorInfo input = parseVectorInfo(inputs.get(inputs.size() - 2), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        VectorInfo time = parseVectorInfo(inputs.get(inputs.size() - 1), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        int N = time.size;
+        if (input.size != N) {
+            throw new ParseException("lsim: input u and time t must have the same size N = " + N);
+        }
+
+        VectorInfo y = parseVectorInfo(outputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        if (y.size != N) {
+            throw new ParseException("lsim: output y must have the same size N as t = " + N);
+        }
+
+        List<Expr> entries = new ArrayList<>();
+        if (inputs.size() == 4) {
+            VectorInfo num = parseVectorInfo(inputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+            VectorInfo den = parseVectorInfo(inputs.get(1), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+            if (num.size != den.size) {
+                throw new ParseException("lsim: num and den must have the same length");
+            }
+            entries.addAll(Arrays.asList(num.elements));
+            entries.addAll(Arrays.asList(den.elements));
+        } else {
+            MatrixInfo a = parseMatrixInfo(inputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+            int n = a.rows;
+            if (a.cols != n) throw new ParseException("lsim: A must be square");
+            List<Expr> bElements = getVectorElements(inputs.get(1), n, ctx);
+            List<Expr> cElements = getRowVectorElements(inputs.get(2), n, ctx);
+            Expr dElement = getScalarElement(inputs.get(3), ctx);
+
+            for (int i = 0; i < n; i++) {
+                entries.addAll(Arrays.asList(a.elements[i]));
+            }
+            entries.addAll(bElements);
+            entries.addAll(cElements);
+            entries.add(dElement);
+        }
+        entries.addAll(Arrays.asList(input.elements));
+        entries.addAll(Arrays.asList(time.elements));
+
+        if (outputs.get(0) instanceof Expr.ArrayAccess aa) {
+            registerShape(aa.name(), N, 1, ctx);
+        }
+
+        for (int i = 0; i < N; i++) {
+            ctx.out().add(new Equation(y.elements[i],
+                    new Expr.Call("lsim$" + i + "$" + inputs.size() + "$" + N, entries), sourceText));
+        }
     }
 
     private List<Expr> getVectorElements(Expr e, int expectedSize, FlattenContext ctx) {
