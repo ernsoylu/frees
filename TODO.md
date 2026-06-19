@@ -32,74 +32,10 @@
   → Added `step`, `impulse`, and `lsim` (both TF `num/den` and SS `A,B,C,D` forms). Per the architecture, responses route through the tested `OdeIntegrator`: a new `OdeIntegrator.integrateAndSampleAt` integrates the IVP once and samples at the requested time vector via Hermite dense output, and a new `com.frees.backend.cas.TimeResponse` helper converts a TF to controllable canonical state space (`StateSpace.tf2ss`) and integrates `x' = Ax + Bu`, `y = Cx + Du` (step: u=1, x0=0; impulse: x0=B, u=0; lsim: x0=0 with linearly-interpolated u). Dispatched as `CALL` cases in `EquationParser` (`flattenTimeResponse`/`flattenLsim`) and `Evaluator` (`evalTimeResponse`/`evalLsim`) using the established `name$index$numInputs$N` synthetic-call pattern; grounded dimensionless in `UnitChecker`. Pure-gain (n=0) and degenerate-window cases handled. Registered `step`/`impulse`/`lsim` in `functionCatalog.ts`, added the **Step & Impulse Response** example (`examples.ts`) plotting all three via the xy kind, and documented them in `symbolic_cas.md`. New integration tests in `ControlSystemTimeResponseTest` check first/second-order step, impulse, SS-equals-TF, pure gain, and lsim (constant + ramp) against closed-form responses; full backend suite green and `npm run build` clean.
 * ~~Phase 5 — Controller design solvers (backend).~~
   → Added `lqr`, `place`, and `pidtune` in a new `com.frees.backend.cas.ControllerDesign`. **lqr** (single-input) solves the continuous-time ARE via the **matrix sign function** of the Hamiltonian (Newton iteration with determinant scaling, real LU inverses only — robust without an ordered Schur form) → `K = R⁻¹B'P`. **place** uses **Ackermann's formula** (controllability matrix + desired characteristic polynomial from `PolynomialHelpers.expandRoots`, supporting complex-conjugate poles via `pr`/`pi` arrays). **pidtune** is closed-form loop-shaping: at the target crossover `wc` it sets `|C·G|=1` and the loop phase for a 60° margin, solving P/PI/PID gains (PID via the standard `Ti = 4·Td` relation). Dispatched as `CALL` cases in `EquationParser` (`flattenLqr`/`flattenPlace`/`flattenPidtune`, the last reading a quoted `'P'`/`'PI'`/`'PID'` `Expr.Str`) and `Evaluator` (`evalLqr`/`evalPlace`/`evalPidtune`); grounded dimensionless in `UnitChecker`. Registered in `functionCatalog.ts`, added the **Controller Design (LQR & PID)** example (`examples.ts`, LQR with a closed-loop pole check + PID tuning) and documented in `symbolic_cas.md`. Tests: `ControllerDesignTest` checks lqr (scalar + double integrator vs. analytic `K=[1,√3]`), place (real + complex poles), and pidtune (achieved phase margin ≈ 60° via `margin` on `C·G`); `ControlSystemDesignTest` exercises the full `CALL` path. Full backend suite green; `npm run build` clean.
+* ~~Phase 6 — Polish, docs, presets.~~
+  → **Catalog/highlighting/autocomplete** were already rounded out: `EquationEditor` derives `FUNCTION_NAMES` (highlighting + autocomplete) from `functionCatalog.ts`, so every control function registered in Phases 1–5 (snippet + usage + description) is automatically discoverable and highlighted. **Help docs**: the `symbolic_cas.md` topic (compiled into the generated `docsCatalog.ts` by `compile-docs` at build time) now spans LTI models, conversions, interconnection, frequency analysis, time response, and controller design; relabeled the Help nav entry to **"Control Systems & Symbolic CAS"** and broadened its search keywords (bode, lqr, place, pidtune, step, pole placement, riccati, …). **Presets**: `examples.ts` now spans all phases — Partial Fractions (CAS), Cruise Control (1–3), Step & Impulse Response (4), Controller Design LQR & PID (5), and a new end-to-end **Control Analysis Report (Formatted)** that narrates poles/zeros, margins, Bode, Nyquist, and step response with the plots embedded inline via `[Graph='…']` tags in the Formatted view. Verified the report solves through the real `MarkdownEquationExtractor` path (and that the `=`-containing prose line is not mis-parsed as an equation); `tsc -b` and `npm run build` clean. **Control Systems epic complete.**
 
 
 ## Open
 
-### Control System Design and Calculations Capability
-
-Implement LTI modeling, system interconnection, linear time/frequency analysis, and
-state-feedback controller design in the `frees` equation solver.
-
-**Goal:** Bring MATLAB-Control-Toolbox-style workflows (TF/SS/ZPK models, interconnection,
-Bode/Nyquist/step analysis, LQR/pole-placement/PID design) into frees as native,
-order-independent equations with interactive plots.
-
-#### Architectural decisions (grounding for all phases)
-
-These keep the work aligned with how frees already does matrix math, so we reuse machinery
-instead of inventing parallel paths.
-
-- **Model representation = named array/matrix variables, no new data type.** A TF is a pair
-  of coefficient arrays (`num[]`, `den[]`); a SS model is matrices `A`, `B`, `C`, `D`; a ZPK
-  model is `z[]`, `p[]`, `k`. This piggybacks on the existing array/complex-number variable
-  types and SI-unit handling — no changes to the type system.
-- **Multi-output functions go through the existing `CALL Name(inputs : outputs)` path.**
-  `EquationParser.flattenCallProc` already dispatches by name to `flatten*`/`emit*` helpers
-  that expand matrix ops into scalar equations — this is exactly how `SolveLinear`, `Inverse`,
-  `Transpose`, and `Eigen`/`Eigenvalues` work today. New control functions are added as
-  additional dispatch cases there. **No new grammar is required for multiple outputs**;
-  MATLAB-style bracket destructuring (`[mag, phase] = bode(...)`) is a later ergonomics layer
-  only if `CALL` form proves awkward (the `FUNCTION [a,b]=f(x)` destructuring landed
-  previously and can be reused).
-- **Two complementary engines, meeting at the `num[]`/`den[]` coefficient arrays.**
-  *Numeric analysis* (frequency/time response, high-order roots, controller synthesis) uses
-  **Apache Commons Math `EigenDecomposition`** (commons-math3 3.6.1, already a dependency, used
-  by `Optimizer.java`) on companion matrices — symbolic methods explode on big/floating-point
-  systems. *Symbolic work* (display as a Laplace fraction, partial fractions / residues,
-  factoring, symbolic `ss↔tf`, interconnection algebra) uses the embedded **Symja** CAS
-  (`matheclipse-core:3.0.0`, **landed** — this amends the original "no new dependencies"
-  note). `Together`/`CoefficientList` bridge the symbolic expression and the coefficient
-  arrays, so both engines operate on the same representation.
-- **A TF also has a symbolic view.** Besides the `num[]`/`den[]` arrays, a transfer function is
-  a rational expression in a declared `SYMBOLIC` variable (`s`) — the form the CAS manipulates.
-  `tf(num,den)` constructs it; `Apart`/coefficient-matching decompose it.
-- **Time responses route through `OdeIntegrator.java`** (RK/BDF/Rosenbrock already exist).
-  Commons Math3 has no matrix exponential, so state-space propagation uses either
-  eigendecomposition of `A` or direct ODE integration — prefer the ODE route to reuse a
-  tested solver.
-- **Plots:** backend `PlotDef` is a generic `key→values` map (decoupled from presentation),
-  so new diagram types are added purely in the frontend by introducing new `PlotSpec.kind`s
-  (`bode`, `nyquist`, `polezero`) in `PlotCard.tsx`/`PlotlyChart.tsx`. `[Graph='name']` report
-  tags resolve against `PlotDef` unchanged.
-- **Catalog is the single source** for spotlight, Functions menu, autocomplete and
-  highlighting (per the ODE work). Each phase registers its functions in
-  `functionCatalog.ts` under a new **Control Systems** category as it ships, so capabilities
-  are discoverable the moment they land.
-
-**Definition of Done (every phase):** backend solver + unit tests green first
-(Agile rule #2/#3), functions registered in the catalog, at least one runnable example in
-`examples.ts`, and `npm run build` + `./gradlew test` clean. Each phase is an independently
-shippable vertical slice.
-
-
-
-
-
-#### Phase 6 — Polish, docs, presets
-
-- Round out the **Control Systems** catalog category: snippet shortcuts, usage examples,
-  highlighting, Help docs.
-- Curated preset templates in `examples.ts` spanning all phases.
-- End-to-end report examples combining equations + `[Graph='…']` Bode/Nyquist/PZ tags in the
-  Formatted view.
+_Control Systems epic complete (Phases 0–6). See the Done section above._
