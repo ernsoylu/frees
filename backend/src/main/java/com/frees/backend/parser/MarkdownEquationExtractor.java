@@ -127,7 +127,7 @@ public final class MarkdownEquationExtractor {
         if (upper.startsWith("FOR") || upper.startsWith("WHILE") || upper.startsWith("END") ||
             upper.startsWith("FUNCTION") || upper.startsWith("PROCEDURE") ||
             upper.startsWith("MODULE") || upper.startsWith("CALL") ||
-            upper.startsWith("PARAMETRIC") || opensTableBlock(upper) || opensPlotBlock(upper) ||
+            upper.startsWith("PARAMETRIC") || upper.startsWith("SYMBOLIC") || opensTableBlock(upper) || opensPlotBlock(upper) ||
             opensStateTableBlock(upper) || opensDynamicBlock(upper)) {
             return true;
         }

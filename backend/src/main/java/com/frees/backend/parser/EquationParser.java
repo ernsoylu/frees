@@ -182,6 +182,34 @@ public final class EquationParser {
                 programResult.plots(), programResult.stateTables(), programResult.dynamicSystems());
     }
 
+    public static String toLatexEquation(String eqStr, Map<String, String> displayNames) {
+        try {
+            CollectingErrorListener errorListener = new CollectingErrorListener();
+            FreesLexer lexer = new FreesLexer(CharStreams.fromString(eqStr));
+            lexer.removeErrorListeners();
+            lexer.addErrorListener(errorListener);
+
+            FreesParser parser = new FreesParser(new CommonTokenStream(lexer));
+            parser.removeErrorListeners();
+            parser.addErrorListener(errorListener);
+
+            FreesParser.EquationContext eqCtx = parser.equation();
+            if (!errorListener.errors.isEmpty()) {
+                return eqStr;
+            }
+
+            AstBuilder builder = new AstBuilder();
+            Statement.Eq eq = builder.buildEquation(eqCtx);
+
+            Expr lhs = com.frees.backend.cas.TransferFunction.expandCalls(eq.lhs(), "s");
+            Expr rhs = com.frees.backend.cas.TransferFunction.expandCalls(eq.rhs(), "s");
+
+            return LatexConverter.toLatex(lhs, displayNames) + " = " + LatexConverter.toLatex(rhs, displayNames);
+        } catch (Exception ex) {
+            return eqStr;
+        }
+    }
+
     public List<Equation> parse(String source) {
         return parseResult(source).equations();
     }
