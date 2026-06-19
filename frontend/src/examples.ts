@@ -746,6 +746,37 @@ PLOT 'Step Response'
   ylabel = Amplitude
 END`,
   },
+  {
+    id: 'root-locus-analysis',
+    title: 'Root Locus Analysis',
+    description: 'Calculate and plot root locus trajectories for a closed-loop system, finding crossover points matching Norman Nise examples.',
+    category: 'Control Systems',
+    text: `{ Root Locus Analysis }
+{ Open-loop plant G(s) = K*(s + 3) / (s*(s + 1)*(s + 2)*(s + 4)) }
+{ Expanded open-loop denominator coefficients: }
+{ s*(s + 1)*(s + 2)*(s + 4) = s^4 + 7*s^3 + 14*s^2 + 8*s }
+num_ol = [0, 0, 0, 1, 3]
+den_ol = [1, 7, 14, 8, 0]
+
+{ M gain values, system order N = 4 }
+M = 200
+N_poles = 4
+
+{ Calculate closed-loop root locus trajectories }
+CALL rlocus(num_ol[1:5], den_ol[1:5] : K[1:M], cpr[1:M, 1:N_poles], cpi[1:M, 1:N_poles])
+
+{ Extract open-loop poles and zeros for plotting }
+CALL pole(num_ol[1:5], den_ol[1:5] : pr[1:N_poles], pi[1:N_poles])
+CALL zero(num_ol[1:5], den_ol[1:5] : zr[1:1], zi[1:1])
+
+PLOT 'Root Locus'
+  kind = rootlocus
+  pr = cpr
+  pi = cpi
+  zr = zr
+  zi = zi
+END`,
+  },
 ]
 
 /** The document new/blank workspaces start from. */

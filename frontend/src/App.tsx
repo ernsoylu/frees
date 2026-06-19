@@ -1316,6 +1316,7 @@ export default function App() {
     bode: 'Bode',
     nyquist: 'Nyquist',
     polezero: 'Pole-Zero',
+    rootlocus: 'Root Locus',
   }
   const panelContent: Record<string, ReactNode> = {
     equations: (

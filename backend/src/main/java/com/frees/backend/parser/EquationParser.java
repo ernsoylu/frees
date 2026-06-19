@@ -749,15 +749,27 @@ public final class EquationParser {
             return;
         }
         if (defName.equals("series")) {
-            flattenSeries(inputs, outputs, sourceText, ctx);
+            if (inputs.size() == 8) {
+                flattenSsSeries(inputs, outputs, sourceText, ctx);
+            } else {
+                flattenSeries(inputs, outputs, sourceText, ctx);
+            }
             return;
         }
         if (defName.equals("parallel")) {
-            flattenParallel(inputs, outputs, sourceText, ctx);
+            if (inputs.size() == 8) {
+                flattenSsParallel(inputs, outputs, sourceText, ctx);
+            } else {
+                flattenParallel(inputs, outputs, sourceText, ctx);
+            }
             return;
         }
         if (defName.equals("feedback")) {
-            flattenFeedback(inputs, outputs, sourceText, ctx);
+            if (inputs.size() == 8 || inputs.size() == 9) {
+                flattenSsFeedback(inputs, outputs, sourceText, ctx);
+            } else {
+                flattenFeedback(inputs, outputs, sourceText, ctx);
+            }
             return;
         }
         if (defName.equals("pole")) {
@@ -800,6 +812,34 @@ public final class EquationParser {
             flattenPidtune(inputs, outputs, sourceText, ctx);
             return;
         }
+        if (defName.equals("rank")) {
+            flattenRank(inputs, outputs, sourceText, ctx);
+            return;
+        }
+        if (defName.equals("ctrb")) {
+            flattenCtrb(inputs, outputs, sourceText, ctx);
+            return;
+        }
+        if (defName.equals("obsv")) {
+            flattenObsv(inputs, outputs, sourceText, ctx);
+            return;
+        }
+        if (defName.equals("ss2ss")) {
+            flattenSs2ss(inputs, outputs, sourceText, ctx);
+            return;
+        }
+        if (defName.equals("stepinfo")) {
+            flattenStepInfo(inputs, outputs, sourceText, ctx);
+            return;
+        }
+        if (defName.equals("pade")) {
+            flattenPade(inputs, outputs, sourceText, ctx);
+            return;
+        }
+        if (defName.equals("rlocus")) {
+            flattenRlocus(inputs, outputs, sourceText, ctx);
+            return;
+        }
 
         ProcDef def = ctx.defs().get(defName);
         if (def == null) {
@@ -810,6 +850,131 @@ public final class EquationParser {
             case ProcDef.ModuleDef md -> flattenModuleCall(md, inputs, outputs, ctx);
             default -> throw new ParseException("'" + defName + "' is a FUNCTION, not callable with CALL (use it directly in an expression)");
         }
+    }
+
+    private void flattenRank(List<Expr> inputs, List<Expr> outputs, String sourceText, FlattenContext ctx) {
+        if (inputs.size() != 1 || outputs.size() != 1) {
+            throw new ParseException("rank expects 1 input (M) and 1 output (r), e.g. CALL rank(M[1:3,1:3] : r)");
+        }
+        MatrixInfo m = parseMatrixInfo(inputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        int rows = m.rows;
+        int cols = m.cols;
+        List<Expr> entries = new ArrayList<>();
+        for (int i = 0; i < rows; i++) {
+            entries.addAll(Arrays.asList(m.elements[i]));
+        }
+        ctx.out().add(new Equation(outputs.get(0),
+                new Expr.Call("rank$" + rows + "$" + cols, entries), sourceText));
+    }
+
+    private void flattenCtrb(List<Expr> inputs, List<Expr> outputs, String sourceText, FlattenContext ctx) {
+        if (inputs.size() != 2 || outputs.size() != 1) {
+            throw new ParseException("ctrb expects 2 inputs (A, B) and 1 output (Ctrb), e.g. CALL ctrb(A, B : Ctrb)");
+        }
+        MatrixInfo a = parseMatrixInfo(inputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        int n = a.rows;
+        if (a.cols != n) {
+            throw new ParseException("ctrb: A must be square");
+        }
+        List<Expr> bElements = getVectorElements(inputs.get(1), n, ctx);
+        MatrixInfo ctrb = parseMatrixInfo(outputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        if (ctrb.rows != n || ctrb.cols != n) {
+            throw new ParseException("ctrb: Output Ctrb must be " + n + "x" + n);
+        }
+        registerShape(ctrb.name, n, n, ctx);
+        List<Expr> entries = new ArrayList<>();
+        for (int i = 0; i < n; i++) {
+            entries.addAll(Arrays.asList(a.elements[i]));
+        }
+        entries.addAll(bElements);
+        for (int i = 0; i < n; i++) {
+            for (int j = 0; j < n; j++) {
+                ctx.out().add(new Equation(ctrb.elements[i][j],
+                        new Expr.Call("ctrb$" + i + "$" + j + "$" + n + "$1", entries), sourceText));
+            }
+        }
+    }
+
+    private void flattenObsv(List<Expr> inputs, List<Expr> outputs, String sourceText, FlattenContext ctx) {
+        if (inputs.size() != 2 || outputs.size() != 1) {
+            throw new ParseException("obsv expects 2 inputs (A, C) and 1 output (Obsv), e.g. CALL obsv(A, C : Obsv)");
+        }
+        MatrixInfo a = parseMatrixInfo(inputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        int n = a.rows;
+        if (a.cols != n) {
+            throw new ParseException("obsv: A must be square");
+        }
+        List<Expr> cElements = getVectorElements(inputs.get(1), n, ctx);
+        MatrixInfo obsv = parseMatrixInfo(outputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        if (obsv.rows != n || obsv.cols != n) {
+            throw new ParseException("obsv: Output Obsv must be " + n + "x" + n);
+        }
+        registerShape(obsv.name, n, n, ctx);
+        List<Expr> entries = new ArrayList<>();
+        for (int i = 0; i < n; i++) {
+            entries.addAll(Arrays.asList(a.elements[i]));
+        }
+        entries.addAll(cElements);
+        for (int i = 0; i < n; i++) {
+            for (int j = 0; j < n; j++) {
+                ctx.out().add(new Equation(obsv.elements[i][j],
+                        new Expr.Call("obsv$" + i + "$" + j + "$" + n + "$1", entries), sourceText));
+            }
+        }
+    }
+
+    private void flattenSs2ss(List<Expr> inputs, List<Expr> outputs, String sourceText, FlattenContext ctx) {
+        if (inputs.size() != 5 || outputs.size() != 4) {
+            throw new ParseException("ss2ss expects 5 inputs (A, B, C, D, P) and 4 outputs (An, Bn, Cn, Dn), "
+                    + "e.g. CALL ss2ss(A, B, C, D, P : An, Bn, Cn, Dn)");
+        }
+        MatrixInfo a = parseMatrixInfo(inputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        int n = a.rows;
+        if (a.cols != n) throw new ParseException("ss2ss: A must be square");
+        List<Expr> bElements = getVectorElements(inputs.get(1), n, ctx);
+        List<Expr> cElements = getVectorElements(inputs.get(2), n, ctx);
+        Expr d = getScalarElement(inputs.get(3), ctx);
+        MatrixInfo transform = parseMatrixInfo(inputs.get(4), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        if (transform.rows != n || transform.cols != n) {
+            throw new ParseException("ss2ss: transform matrix P must be " + n + "x" + n);
+        }
+        MatrixInfo an = parseMatrixInfo(outputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        if (an.rows != n || an.cols != n) throw new ParseException("ss2ss: An must be " + n + "x" + n);
+        List<Expr> bnElements = getVectorElements(outputs.get(1), n, ctx);
+        List<Expr> cnElements = getVectorElements(outputs.get(2), n, ctx);
+        Expr dn = getScalarElement(outputs.get(3), ctx);
+
+        registerShape(an.name, n, n, ctx);
+        if (outputs.get(1) instanceof Expr.ArrayAccess aa) {
+            registerShape(aa.name(), n, 1, ctx);
+        }
+        if (outputs.get(2) instanceof Expr.ArrayAccess aa) {
+            registerShape(aa.name(), 1, n, ctx);
+        }
+
+        List<Expr> entries = new ArrayList<>();
+        for (int i = 0; i < n; i++) entries.addAll(Arrays.asList(a.elements[i]));
+        entries.addAll(bElements);
+        entries.addAll(cElements);
+        entries.add(d);
+        for (int i = 0; i < n; i++) entries.addAll(Arrays.asList(transform.elements[i]));
+
+        String suffix = "$" + n + "$1$1"; // m=1, p=1
+        for (int i = 0; i < n; i++) {
+            for (int j = 0; j < n; j++) {
+                ctx.out().add(new Equation(an.elements[i][j],
+                        new Expr.Call("ss2ss$a$" + i + "$" + j + suffix, entries), sourceText));
+            }
+        }
+        for (int i = 0; i < n; i++) {
+            ctx.out().add(new Equation(bnElements.get(i),
+                    new Expr.Call("ss2ss$b$" + i + "$0" + suffix, entries), sourceText));
+        }
+        for (int i = 0; i < n; i++) {
+            ctx.out().add(new Equation(cnElements.get(i),
+                    new Expr.Call("ss2ss$c$" + i + "$0" + suffix, entries), sourceText));
+        }
+        ctx.out().add(new Equation(dn, new Expr.Call("ss2ss$d" + suffix, entries), sourceText));
     }
 
     private void flattenSs2tf(List<Expr> inputs, List<Expr> outputs, String sourceText, FlattenContext ctx) {
@@ -1163,6 +1328,192 @@ public final class EquationParser {
             ctx.out().add(new Equation(den.elements[i],
                     new Expr.Call("feedback$den$" + i + "$" + L1 + "$" + L2, entries), sourceText));
         }
+    }
+
+    private void flattenSsSeries(List<Expr> inputs, List<Expr> outputs, String sourceText, FlattenContext ctx) {
+        if (inputs.size() != 8 || outputs.size() != 4) {
+            throw new ParseException("series for state-space expects 8 inputs (A1, B1, C1, D1, A2, B2, C2, D2) and 4 outputs (A, B, C, D)");
+        }
+        MatrixInfo a1 = parseMatrixInfo(inputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        int n1 = a1.rows;
+        if (a1.cols != n1) throw new ParseException("series: A1 must be square");
+        List<Expr> b1Elements = getVectorElements(inputs.get(1), n1, ctx);
+        List<Expr> c1Elements = getVectorElements(inputs.get(2), n1, ctx);
+        Expr d1 = getScalarElement(inputs.get(3), ctx);
+
+        MatrixInfo a2 = parseMatrixInfo(inputs.get(4), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        int n2 = a2.rows;
+        if (a2.cols != n2) throw new ParseException("series: A2 must be square");
+        List<Expr> b2Elements = getVectorElements(inputs.get(5), n2, ctx);
+        List<Expr> c2Elements = getVectorElements(inputs.get(6), n2, ctx);
+        Expr d2 = getScalarElement(inputs.get(7), ctx);
+
+        int n = n1 + n2;
+        MatrixInfo an = parseMatrixInfo(outputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        if (an.rows != n || an.cols != n) throw new ParseException("series: Output A must be " + n + "x" + n);
+        List<Expr> bnElements = getVectorElements(outputs.get(1), n, ctx);
+        List<Expr> cnElements = getVectorElements(outputs.get(2), n, ctx);
+        Expr dn = getScalarElement(outputs.get(3), ctx);
+
+        registerShape(an.name, n, n, ctx);
+        if (outputs.get(1) instanceof Expr.ArrayAccess aa) {
+            registerShape(aa.name(), n, 1, ctx);
+        }
+        if (outputs.get(2) instanceof Expr.ArrayAccess aa) {
+            registerShape(aa.name(), 1, n, ctx);
+        }
+
+        List<Expr> entries = new ArrayList<>();
+        for (int i = 0; i < n1; i++) entries.addAll(Arrays.asList(a1.elements[i]));
+        entries.addAll(b1Elements);
+        entries.addAll(c1Elements);
+        entries.add(d1);
+        for (int i = 0; i < n2; i++) entries.addAll(Arrays.asList(a2.elements[i]));
+        entries.addAll(b2Elements);
+        entries.addAll(c2Elements);
+        entries.add(d2);
+
+        String suffix = "$" + n1 + "$" + n2;
+        for (int i = 0; i < n; i++) {
+            for (int j = 0; j < n; j++) {
+                ctx.out().add(new Equation(an.elements[i][j],
+                        new Expr.Call("ss_series$a$" + i + "$" + j + suffix, entries), sourceText));
+            }
+        }
+        for (int i = 0; i < n; i++) {
+            ctx.out().add(new Equation(bnElements.get(i),
+                    new Expr.Call("ss_series$b$" + i + "$0" + suffix, entries), sourceText));
+        }
+        for (int i = 0; i < n; i++) {
+            ctx.out().add(new Equation(cnElements.get(i),
+                    new Expr.Call("ss_series$c$" + i + "$0" + suffix, entries), sourceText));
+        }
+        ctx.out().add(new Equation(dn, new Expr.Call("ss_series$d" + suffix, entries), sourceText));
+    }
+
+    private void flattenSsParallel(List<Expr> inputs, List<Expr> outputs, String sourceText, FlattenContext ctx) {
+        if (inputs.size() != 8 || outputs.size() != 4) {
+            throw new ParseException("parallel for state-space expects 8 inputs (A1, B1, C1, D1, A2, B2, C2, D2) and 4 outputs (A, B, C, D)");
+        }
+        MatrixInfo a1 = parseMatrixInfo(inputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        int n1 = a1.rows;
+        if (a1.cols != n1) throw new ParseException("parallel: A1 must be square");
+        List<Expr> b1Elements = getVectorElements(inputs.get(1), n1, ctx);
+        List<Expr> c1Elements = getVectorElements(inputs.get(2), n1, ctx);
+        Expr d1 = getScalarElement(inputs.get(3), ctx);
+
+        MatrixInfo a2 = parseMatrixInfo(inputs.get(4), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        int n2 = a2.rows;
+        if (a2.cols != n2) throw new ParseException("parallel: A2 must be square");
+        List<Expr> b2Elements = getVectorElements(inputs.get(5), n2, ctx);
+        List<Expr> c2Elements = getVectorElements(inputs.get(6), n2, ctx);
+        Expr d2 = getScalarElement(inputs.get(7), ctx);
+
+        int n = n1 + n2;
+        MatrixInfo an = parseMatrixInfo(outputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        if (an.rows != n || an.cols != n) throw new ParseException("parallel: Output A must be " + n + "x" + n);
+        List<Expr> bnElements = getVectorElements(outputs.get(1), n, ctx);
+        List<Expr> cnElements = getVectorElements(outputs.get(2), n, ctx);
+        Expr dn = getScalarElement(outputs.get(3), ctx);
+
+        registerShape(an.name, n, n, ctx);
+        if (outputs.get(1) instanceof Expr.ArrayAccess aa) {
+            registerShape(aa.name(), n, 1, ctx);
+        }
+        if (outputs.get(2) instanceof Expr.ArrayAccess aa) {
+            registerShape(aa.name(), 1, n, ctx);
+        }
+
+        List<Expr> entries = new ArrayList<>();
+        for (int i = 0; i < n1; i++) entries.addAll(Arrays.asList(a1.elements[i]));
+        entries.addAll(b1Elements);
+        entries.addAll(c1Elements);
+        entries.add(d1);
+        for (int i = 0; i < n2; i++) entries.addAll(Arrays.asList(a2.elements[i]));
+        entries.addAll(b2Elements);
+        entries.addAll(c2Elements);
+        entries.add(d2);
+
+        String suffix = "$" + n1 + "$" + n2;
+        for (int i = 0; i < n; i++) {
+            for (int j = 0; j < n; j++) {
+                ctx.out().add(new Equation(an.elements[i][j],
+                        new Expr.Call("ss_parallel$a$" + i + "$" + j + suffix, entries), sourceText));
+            }
+        }
+        for (int i = 0; i < n; i++) {
+            ctx.out().add(new Equation(bnElements.get(i),
+                    new Expr.Call("ss_parallel$b$" + i + "$0" + suffix, entries), sourceText));
+        }
+        for (int i = 0; i < n; i++) {
+            ctx.out().add(new Equation(cnElements.get(i),
+                    new Expr.Call("ss_parallel$c$" + i + "$0" + suffix, entries), sourceText));
+        }
+        ctx.out().add(new Equation(dn, new Expr.Call("ss_parallel$d" + suffix, entries), sourceText));
+    }
+
+    private void flattenSsFeedback(List<Expr> inputs, List<Expr> outputs, String sourceText, FlattenContext ctx) {
+        if ((inputs.size() != 8 && inputs.size() != 9) || outputs.size() != 4) {
+            throw new ParseException("feedback for state-space expects 8 or 9 inputs (A1, B1, C1, D1, A2, B2, C2, D2 [, sign]) and 4 outputs (A, B, C, D)");
+        }
+        MatrixInfo a1 = parseMatrixInfo(inputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        int n1 = a1.rows;
+        if (a1.cols != n1) throw new ParseException("feedback: A1 must be square");
+        List<Expr> b1Elements = getVectorElements(inputs.get(1), n1, ctx);
+        List<Expr> c1Elements = getVectorElements(inputs.get(2), n1, ctx);
+        Expr d1 = getScalarElement(inputs.get(3), ctx);
+
+        MatrixInfo a2 = parseMatrixInfo(inputs.get(4), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        int n2 = a2.rows;
+        if (a2.cols != n2) throw new ParseException("feedback: A2 must be square");
+        List<Expr> b2Elements = getVectorElements(inputs.get(5), n2, ctx);
+        List<Expr> c2Elements = getVectorElements(inputs.get(6), n2, ctx);
+        Expr d2 = getScalarElement(inputs.get(7), ctx);
+
+        Expr signExpr = inputs.size() == 9 ? inputs.get(8) : new Expr.Num(1.0);
+
+        int n = n1 + n2;
+        MatrixInfo an = parseMatrixInfo(outputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        if (an.rows != n || an.cols != n) throw new ParseException("feedback: Output A must be " + n + "x" + n);
+        List<Expr> bnElements = getVectorElements(outputs.get(1), n, ctx);
+        List<Expr> cnElements = getVectorElements(outputs.get(2), n, ctx);
+        Expr dn = getScalarElement(outputs.get(3), ctx);
+
+        registerShape(an.name, n, n, ctx);
+        if (outputs.get(1) instanceof Expr.ArrayAccess aa) {
+            registerShape(aa.name(), n, 1, ctx);
+        }
+        if (outputs.get(2) instanceof Expr.ArrayAccess aa) {
+            registerShape(aa.name(), 1, n, ctx);
+        }
+
+        List<Expr> entries = new ArrayList<>();
+        for (int i = 0; i < n1; i++) entries.addAll(Arrays.asList(a1.elements[i]));
+        entries.addAll(b1Elements);
+        entries.addAll(c1Elements);
+        entries.add(d1);
+        for (int i = 0; i < n2; i++) entries.addAll(Arrays.asList(a2.elements[i]));
+        entries.addAll(b2Elements);
+        entries.addAll(c2Elements);
+        entries.add(d2);
+        entries.add(signExpr);
+
+        String suffix = "$" + n1 + "$" + n2;
+        for (int i = 0; i < n; i++) {
+            for (int j = 0; j < n; j++) {
+                ctx.out().add(new Equation(an.elements[i][j],
+                        new Expr.Call("ss_feedback$a$" + i + "$" + j + suffix, entries), sourceText));
+            }
+        }
+        for (int i = 0; i < n; i++) {
+            ctx.out().add(new Equation(bnElements.get(i),
+                    new Expr.Call("ss_feedback$b$" + i + "$0" + suffix, entries), sourceText));
+        }
+        for (int i = 0; i < n; i++) {
+            ctx.out().add(new Equation(cnElements.get(i),
+                    new Expr.Call("ss_feedback$c$" + i + "$0" + suffix, entries), sourceText));
+        }
+        ctx.out().add(new Equation(dn, new Expr.Call("ss_feedback$d" + suffix, entries), sourceText));
     }
 
     private void flattenPole(List<Expr> inputs, List<Expr> outputs, String sourceText, FlattenContext ctx) {
@@ -1660,6 +2011,118 @@ public final class EquationParser {
                 new Expr.Call("pidtune$ki$" + type, entries), sourceText));
         ctx.out().add(new Equation(outputs.get(2),
                 new Expr.Call("pidtune$kd$" + type, entries), sourceText));
+    }
+
+    private void flattenStepInfo(List<Expr> inputs, List<Expr> outputs, String sourceText, FlattenContext ctx) {
+        if (inputs.size() != 2 || outputs.size() != 4) {
+            throw new ParseException("stepinfo expects 2 inputs (t, y) and 4 scalar outputs (Tr, Tp, Ts, OS), "
+                    + "e.g. CALL stepinfo(t[1:50], y[1:50] : Tr, Tp, Ts, OS)");
+        }
+        VectorInfo t = parseVectorInfo(inputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        int N = t.size;
+        VectorInfo y = parseVectorInfo(inputs.get(1), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        if (y.size != N) {
+            throw new ParseException("stepinfo: inputs t and y must have the same length (got t: " + N + ", y: " + y.size + ")");
+        }
+
+        List<Expr> entries = new ArrayList<>();
+        entries.addAll(Arrays.asList(t.elements));
+        entries.addAll(Arrays.asList(y.elements));
+
+        ctx.out().add(new Equation(outputs.get(0),
+                new Expr.Call("stepinfo$tr$" + N, entries), sourceText));
+        ctx.out().add(new Equation(outputs.get(1),
+                new Expr.Call("stepinfo$tp$" + N, entries), sourceText));
+        ctx.out().add(new Equation(outputs.get(2),
+                new Expr.Call("stepinfo$ts$" + N, entries), sourceText));
+        ctx.out().add(new Equation(outputs.get(3),
+                new Expr.Call("stepinfo$os$" + N, entries), sourceText));
+    }
+
+    private void flattenPade(List<Expr> inputs, List<Expr> outputs, String sourceText, FlattenContext ctx) {
+        if (inputs.size() != 2 || outputs.size() != 2) {
+            throw new ParseException("pade expects 2 inputs (Td, order) and 2 vector outputs (num_delay, den_delay), "
+                    + "e.g. CALL pade(Td, order : num_delay[1:3], den_delay[1:3])");
+        }
+        Expr expandedOrder = expandExpr(inputs.get(1), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        int order = (int) Math.round(evalIndexExpr(expandedOrder, ctx.loopVars(), ctx.constants(), ctx.defs()));
+        if (order < 1) {
+            throw new ParseException("pade: order must be >= 1");
+        }
+        int M = order + 1;
+        VectorInfo num = parseVectorInfo(outputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        VectorInfo den = parseVectorInfo(outputs.get(1), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        if (num.size != M || den.size != M) {
+            throw new ParseException("pade: outputs num_delay and den_delay must have size " + M + " (order + 1) for a Padé approximation of order " + order);
+        }
+
+        if (outputs.get(0) instanceof Expr.ArrayAccess aa) {
+            registerShape(aa.name(), M, 1, ctx);
+        }
+        if (outputs.get(1) instanceof Expr.ArrayAccess aa) {
+            registerShape(aa.name(), M, 1, ctx);
+        }
+
+        List<Expr> entries = new ArrayList<>();
+        entries.add(inputs.get(0));
+        entries.add(inputs.get(1));
+
+        for (int i = 0; i < M; i++) {
+            ctx.out().add(new Equation(num.elements[i],
+                    new Expr.Call("pade$num$" + i + "$" + order, entries), sourceText));
+            ctx.out().add(new Equation(den.elements[i],
+                    new Expr.Call("pade$den$" + i + "$" + order, entries), sourceText));
+        }
+    }
+
+    private void flattenRlocus(List<Expr> inputs, List<Expr> outputs, String sourceText, FlattenContext ctx) {
+        if (inputs.size() != 2 || outputs.size() != 3) {
+            throw new ParseException("rlocus expects 2 inputs (num, den) and 3 outputs (K[1:M], cpr[1:M, 1:N], cpi[1:M, 1:N]), "
+                    + "e.g. CALL rlocus(num, den : K[1:100], cpr[1:100, 1:4], cpi[1:100, 1:4])");
+        }
+        VectorInfo num = parseVectorInfo(inputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        VectorInfo den = parseVectorInfo(inputs.get(1), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        if (num.size > den.size) {
+            throw new ParseException("rlocus: system must be proper (numerator order <= denominator order)");
+        }
+
+        VectorInfo kOut = parseVectorInfo(outputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        int M = kOut.size;
+
+        MatrixInfo cpr = parseMatrixInfo(outputs.get(1), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        MatrixInfo cpi = parseMatrixInfo(outputs.get(2), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+
+        int N = den.size - 1; // system order
+        if (cpr.rows != M || cpr.cols != N) {
+            throw new ParseException("rlocus: cpr must be a matrix of size " + M + "x" + N + " (got " + cpr.rows + "x" + cpr.cols + ")");
+        }
+        if (cpi.rows != M || cpi.cols != N) {
+            throw new ParseException("rlocus: cpi must be a matrix of size " + M + "x" + N + " (got " + cpi.rows + "x" + cpi.cols + ")");
+        }
+
+        registerShape(kOut.name, M, 1, ctx);
+        registerShape(cpr.name, M, N, ctx);
+        registerShape(cpi.name, M, N, ctx);
+
+        List<Expr> entries = new ArrayList<>();
+        entries.addAll(Arrays.asList(num.elements));
+        entries.addAll(Arrays.asList(den.elements));
+
+        String suffix = "$" + num.size + "$" + den.size + "$" + M + "$" + N;
+
+        for (int i = 0; i < M; i++) {
+            ctx.out().add(new Equation(kOut.elements[i],
+                    new Expr.Call("rlocus$k$" + i + suffix, entries), sourceText));
+        }
+
+        for (int i = 0; i < M; i++) {
+            for (int j = 0; j < N; j++) {
+                ctx.out().add(new Equation(cpr.elements[i][j],
+                        new Expr.Call("rlocus$cpr$" + i + "$" + j + suffix, entries), sourceText));
+                ctx.out().add(new Equation(cpi.elements[i][j],
+                        new Expr.Call("rlocus$cpi$" + i + "$" + j + suffix, entries), sourceText));
+            }
+        }
     }
 
     private List<Expr> getVectorElements(Expr e, int expectedSize, FlattenContext ctx) {

@@ -86,28 +86,76 @@ CALL tf2zp(num, den : zr[1:1], zi[1:1], pr[1:2], pi[1:2], k)
 
 ## Model Interconnection
 
-Use `CALL` dispatches to connect multiple systems in series, parallel, or feedback. Input and output transfer functions are represented by their numerator and denominator coefficient arrays.
+Use `CALL` dispatches to connect multiple systems in series, parallel, or feedback. Systems can be represented either as transfer functions (numerator and denominator arrays) or as state-space systems (matrices A, B, C, D).
 
-For two systems $G_1(s) = \frac{N_1(s)}{D_1(s)}$ (of length $L_1$) and $G_2(s) = \frac{N_2(s)}{D_2(s)}$ (of length $L_2$), the connected system has length $L_1 + L_2 - 1$.
+For two systems $G_1(s)$ (of order $n_1$) and $G_2(s)$ (of order $n_2$), the connected system has order $n_1 + n_2$.
 
 ### 1. Series Connection: series
 Connects $G_1(s)$ and $G_2(s)$ in series: $G(s) = G_1(s) \cdot G_2(s)$.
 ```
+# Transfer Function series:
 CALL series(num1, den1, num2, den2 : num[1:3], den[1:3])
+
+# State Space series:
+CALL series(A1, B1, C1, D1, A2, B2, C2, D2 : A[1:3,1:3], B[1:3], C[1:3], D)
 ```
 
 ### 2. Parallel Connection: parallel
 Connects $G_1(s)$ and $G_2(s)$ in parallel: $G(s) = G_1(s) + G_2(s)$.
 ```
+# Transfer Function parallel:
 CALL parallel(num1, den1, num2, den2 : num[1:3], den[1:3])
+
+# State Space parallel:
+CALL parallel(A1, B1, C1, D1, A2, B2, C2, D2 : A[1:3,1:3], B[1:3], C[1:3], D)
 ```
 
 ### 3. Feedback Connection: feedback
 Connects $G_1(s)$ (forward path) and $G_2(s)$ (feedback path) in a closed loop.
 ```
+# Transfer Function feedback:
 CALL feedback(num1, den1, num2, den2, sign : num[1:3], den[1:3])
+
+# State Space feedback:
+CALL feedback(A1, B1, C1, D1, A2, B2, C2, D2, sign : A[1:3,1:3], B[1:3], C[1:3], D)
 ```
 - `sign` is optional and defaults to `1.0` (negative feedback, i.e., $T(s) = \frac{G_1}{1 + G_1 G_2}$). Use `-1.0` for positive feedback.
+
+## Time Delay Modeling
+
+### 1. Padé Approximation: pade
+Generates the numerator and denominator polynomials of a Padé rational approximation of a dead time delay $T_d$ of a given `order`. For a Padé approximation of order $m$, the output polynomials have $m+1$ coefficients (descending powers of $s$).
+```
+CALL pade(Td, order : num_delay[1:3], den_delay[1:3])
+```
+
+## State-Space Analysis & Transformations
+
+Use the following dispatches to compute controllability and observability, verify system rank, and apply similarity transformations.
+
+### 1. Controllability Matrix: ctrb
+Computes the controllability matrix $C_{trb} = [B, A B, A^2 B, \ldots, A^{n-1} B]$ for state-space matrices A ($n \times n$) and B ($n \times 1$).
+```
+CALL ctrb(A, B : Co[1:3,1:3])
+```
+
+### 2. Observability Matrix: obsv
+Computes the observability matrix $O_{bsv} = [C; C A; C A^2; \ldots; C A^{n-1}]$ for state-space matrices A ($n \times n$) and C ($1 \times n$).
+```
+CALL obsv(A, C : Ob[1:3,1:3])
+```
+
+### 3. Matrix Rank: rank
+Computes the numerical rank of a matrix $M$ using Singular Value Decomposition (SVD) tolerance comparisons.
+```
+CALL rank(M : r)
+```
+
+### 4. Similarity Transformation: ss2ss
+Applies similarity transformation matrix $P$ to a state-space system (A, B, C, D) such that $x = P z$, yielding transformed matrices $A_n = P^{-1} A P, B_n = P^{-1} B, C_n = C P, D_n = D$.
+```
+CALL ss2ss(A, B, C, D, P : An[1:3,1:3], Bn[1:3], Cn[1:3], Dn)
+```
 
 ## Frequency Analysis & Poles/Zeros
 
@@ -153,13 +201,25 @@ CALL margin(num, den : gm, pm, w_cg, w_cp)
 CALL margin(A, B, C, D : gm, pm, w_cg, w_cp)
 ```
 
+### 6. Root Locus Trajectories: rlocus
+Computes closed-loop s-plane poles over a swept range of $M$ gain values `K`. Outputs are the gain values `K` (length `M`), and the closed-loop pole real parts `cpr` and imaginary parts `cpi` (matrices of size `M x N` where `N` is the order of the open-loop denominator).
+```
+CALL rlocus(num, den : K[1:100], cpr[1:100, 1:4], cpi[1:100, 1:4])
+```
+To plot the root locus s-plane trajectories along with open-loop poles and zeros, use the `rootlocus` plot kind:
+```
+PLOT 'Root Locus'
+  kind = rootlocus
+  pr = cpr
+  pi = cpi
+  zr = zr  # optional: open-loop zeros real parts
+  zi = zi  # optional: open-loop zeros imaginary parts
+END
+```
+
 ## Time-Domain Responses
 
-Time responses are integrated through the same tested ODE solver used by `DYNAMIC`
-blocks: a transfer function is converted to controllable canonical state space, the
-state equation `x' = A x + B u(t)` is integrated, and the output `y = C x + D u` is
-sampled at the supplied time vector `t`. Each output `y` is the same length as `t`,
-so it plots directly with the **xy** plot kind.
+Time responses are integrated through the same tested ODE solver used by `DYNAMIC` blocks: a transfer function is converted to controllable canonical state space, the state equation `x' = A x + B u(t)` is integrated, and the output `y = C x + D u` is sampled at the supplied time vector `t`. Each output `y` is the same length as `t`, so it plots directly with the **xy** plot kind.
 
 ### 1. Step Response: step
 Unit step response `y(t)` (input `u(t) = 1`, zero initial state).
@@ -170,8 +230,7 @@ CALL step(A, B, C, D, t : y[1:N])
 ```
 
 ### 2. Impulse Response: impulse
-Impulse response `y(t) = C e^{At} B` (the direct-feedthrough delta term from a
-non-zero `D` is omitted, as it cannot be represented on a sampled grid).
+Impulse response `y(t) = C e^{At} B` (the direct-feedthrough delta term from a non-zero `D` is omitted, as it cannot be represented on a sampled grid).
 ```
 CALL impulse(num, den, t : y[1:N])
 # OR
@@ -179,43 +238,37 @@ CALL impulse(A, B, C, D, t : y[1:N])
 ```
 
 ### 3. Forced Response: lsim
-Response to an arbitrary input signal `u`, linearly interpolated between samples.
-The input `u` and time `t` must have the same length `N`.
+Response to an arbitrary input signal `u`, linearly interpolated between samples. The input `u` and time `t` must have the same length `N`.
 ```
 CALL lsim(num, den, u, t : y[1:N])
 # OR
 CALL lsim(A, B, C, D, u, t : y[1:N])
 ```
 
+### 4. Transient Response Metrics: stepinfo
+Extracts transient response metrics (Rise Time `Tr` from 10% to 90%, Peak Time `Tp`, Settling Time `Ts` using the 2% criterion, and Percent Overshoot `OS`) from numerical step response outputs `y` at time points `t`.
+```
+CALL stepinfo(t, y : Tr, Tp, Ts, OS)
+```
+
 ## Controller Design
 
-State-feedback and PID design solvers. Numeric methods (Riccati / eigenvalues)
-keep these robust on floating-point, high-order systems.
+State-feedback and PID design solvers. Numeric methods (Riccati / eigenvalues) keep these robust on floating-point, high-order systems.
 
 ### 1. LQR Optimal Gain: lqr
-Continuous-time linear-quadratic regulator. Returns the optimal state-feedback
-gain `K` that minimizes `∫ (x'Qx + u'Ru) dt`, computed by solving the algebraic
-Riccati equation via the matrix sign function of the Hamiltonian. Single-input
-form: `A` and `Q` are `n×n`, `B` is an `n`-vector, `R` is a scalar, and `K` is an
-`n`-vector. The closed-loop `A - B K` is stable.
+Continuous-time linear-quadratic regulator. Returns the optimal state-feedback gain `K` that minimizes `∫ (x'Qx + u'Ru) dt`, computed by solving the algebraic Riccati equation via the matrix sign function of the Hamiltonian. Single-input form: `A` and `Q` are `n×n`, `B` is an `n`-vector, `R` is a scalar, and `K` is an `n`-vector. The closed-loop `A - B K` is stable.
 ```
 CALL lqr(A, B, Q, R : K[1:n])
 ```
 
 ### 2. Pole Placement: place
-SISO pole placement by Ackermann's formula. Returns the gain `K` that relocates
-the poles of `A - B K` to the requested locations, supplied as real/imaginary
-arrays `pr`, `pi` (each length `n`, complex poles in conjugate pairs).
+SISO pole placement by Ackermann's formula. Returns the gain `K` that relocates the poles of `A - B K` to the requested locations, supplied as real/imaginary arrays `pr`, `pi` (each length `n`, complex poles in conjugate pairs).
 ```
 CALL place(A, B, pr, pi : K[1:n])
 ```
 
 ### 3. PID Auto-Tuning: pidtune
-Loop-shaping tuning of a P/PI/PID controller for a SISO plant `num/den`. The
-controller is designed so the open loop crosses over (gain = 1) at frequency `wc`
-with a 60° phase-margin target (the same default MATLAB uses). The type is a
-quoted `'P'`, `'PI'`, or `'PID'`; unused gains are returned as `0`. A pure `P`
-controller only sets the crossover — it cannot reshape phase.
+Loop-shaping tuning of a P/PI/PID controller for a SISO plant `num/den`. The controller is designed so the open loop crosses over (gain = 1) at frequency `wc` with a 60° phase-margin target (the same default MATLAB uses). The type is a quoted `'P'`, `'PI'`, or `'PID'`; unused gains are returned as `0`. A pure `P` controller only sets the crossover — it cannot reshape phase.
 ```
 CALL pidtune(num, den, 'PID', wc : Kp, Ki, Kd)
 ```

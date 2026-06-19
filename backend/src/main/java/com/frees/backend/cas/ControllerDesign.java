@@ -5,6 +5,7 @@ import org.apache.commons.math3.linear.Array2DRowRealMatrix;
 import org.apache.commons.math3.linear.LUDecomposition;
 import org.apache.commons.math3.linear.MatrixUtils;
 import org.apache.commons.math3.linear.RealMatrix;
+import org.apache.commons.math3.linear.SingularValueDecomposition;
 
 /**
  * State-feedback controller-design solvers: continuous-time LQR (via the
@@ -21,6 +22,87 @@ public final class ControllerDesign {
 
     private static final int SIGN_MAX_ITERS = 100;
     private static final double SIGN_TOL = 1e-12;
+
+    /**
+     * Compute numerical rank of matrix using Singular Value Decomposition.
+     */
+    public static int rank(double[][] matrix) {
+        RealMatrix m = new Array2DRowRealMatrix(matrix, false);
+        SingularValueDecomposition svd = new SingularValueDecomposition(m);
+        double[] s = svd.getSingularValues();
+        if (s.length == 0) {
+            return 0;
+        }
+        double maxDim = Math.max(m.getRowDimension(), m.getColumnDimension());
+        double tol = maxDim * s[0] * 2.220446049250313e-16;
+        if (tol < 1e-14) {
+            tol = 1e-14;
+        }
+        int rank = 0;
+        for (double val : s) {
+            if (val > tol) {
+                rank++;
+            }
+        }
+        return rank;
+    }
+
+    /**
+     * Compute controllability matrix [B, AB, ..., A^(n-1)B].
+     */
+    public static double[][] ctrb(double[][] aArr, double[][] bArr) {
+        int n = aArr.length;
+        RealMatrix a = new Array2DRowRealMatrix(aArr, false);
+        RealMatrix b = new Array2DRowRealMatrix(bArr, false);
+        int m = b.getColumnDimension();
+        RealMatrix ctrb = new Array2DRowRealMatrix(n, n * m);
+        RealMatrix colBlock = b;
+        for (int i = 0; i < n; i++) {
+            ctrb.setSubMatrix(colBlock.getData(), 0, i * m);
+            colBlock = a.multiply(colBlock);
+        }
+        return ctrb.getData();
+    }
+
+    /**
+     * Compute observability matrix [C; CA; ...; CA^(n-1)].
+     */
+    public static double[][] obsv(double[][] aArr, double[][] cArr) {
+        int n = aArr.length;
+        RealMatrix a = new Array2DRowRealMatrix(aArr, false);
+        RealMatrix c = new Array2DRowRealMatrix(cArr, false);
+        int p = c.getRowDimension();
+        RealMatrix obsv = new Array2DRowRealMatrix(n * p, n);
+        RealMatrix rowBlock = c;
+        for (int i = 0; i < n; i++) {
+            obsv.setSubMatrix(rowBlock.getData(), i * p, 0);
+            rowBlock = rowBlock.multiply(a);
+        }
+        return obsv.getData();
+    }
+
+    /**
+     * Apply state similarity transformation matrix P (x = P z).
+     */
+    public static StateSpace.StateSpaceMatrices ss2ss(double[][] aArr, double[] bArr, double[] cArr, double d, double[][] pArr) {
+        RealMatrix a = new Array2DRowRealMatrix(aArr, false);
+        RealMatrix b = new Array2DRowRealMatrix(bArr.length, 1);
+        for (int i = 0; i < bArr.length; i++) {
+            b.setEntry(i, 0, bArr[i]);
+        }
+        RealMatrix c = new Array2DRowRealMatrix(1, cArr.length);
+        for (int i = 0; i < cArr.length; i++) {
+            c.setEntry(0, i, cArr[i]);
+        }
+        RealMatrix p = new Array2DRowRealMatrix(pArr, false);
+        RealMatrix pInv = MatrixUtils.inverse(p);
+        
+        RealMatrix an = pInv.multiply(a).multiply(p);
+        RealMatrix bn = pInv.multiply(b);
+        RealMatrix cn = c.multiply(p);
+        
+        return new StateSpace.StateSpaceMatrices(an.getData(), bn.getColumn(0), cn.getRow(0), d);
+    }
 
     private ControllerDesign() {
     }
@@ -224,5 +306,300 @@ public final class ControllerDesign {
             v = v.multiply(s).add(c);
         }
         return v;
+    }
+
+    public static StateSpace.StateSpaceMatrices ssSeries(
+            double[][] a1, double[] b1, double[] c1, double d1,
+            double[][] a2, double[] b2, double[] c2, double d2) {
+        int n1 = a1.length;
+        int n2 = a2.length;
+        int n = n1 + n2;
+        
+        double[][] a = new double[n][n];
+        for (int i = 0; i < n1; i++) {
+            System.arraycopy(a1[i], 0, a[i], 0, n1);
+        }
+        for (int i = 0; i < n2; i++) {
+            for (int j = 0; j < n1; j++) {
+                a[n1 + i][j] = b2[i] * c1[j];
+            }
+            System.arraycopy(a2[i], 0, a[n1 + i], n1, n2);
+        }
+        
+        double[] b = new double[n];
+        System.arraycopy(b1, 0, b, 0, n1);
+        for (int i = 0; i < n2; i++) {
+            b[n1 + i] = b2[i] * d1;
+        }
+        
+        double[] c = new double[n];
+        for (int j = 0; j < n1; j++) {
+            c[j] = d2 * c1[j];
+        }
+        System.arraycopy(c2, 0, c, n1, n2);
+        
+        double d = d2 * d1;
+        return new StateSpace.StateSpaceMatrices(a, b, c, d);
+    }
+
+    public static StateSpace.StateSpaceMatrices ssParallel(
+            double[][] a1, double[] b1, double[] c1, double d1,
+            double[][] a2, double[] b2, double[] c2, double d2) {
+        int n1 = a1.length;
+        int n2 = a2.length;
+        int n = n1 + n2;
+        
+        double[][] a = new double[n][n];
+        for (int i = 0; i < n1; i++) {
+            System.arraycopy(a1[i], 0, a[i], 0, n1);
+        }
+        for (int i = 0; i < n2; i++) {
+            System.arraycopy(a2[i], 0, a[n1 + i], n1, n2);
+        }
+        
+        double[] b = new double[n];
+        System.arraycopy(b1, 0, b, 0, n1);
+        System.arraycopy(b2, 0, b, n1, n2);
+        
+        double[] c = new double[n];
+        System.arraycopy(c1, 0, c, 0, n1);
+        System.arraycopy(c2, 0, c, n1, n2);
+        
+        double d = d1 + d2;
+        return new StateSpace.StateSpaceMatrices(a, b, c, d);
+    }
+
+    public static StateSpace.StateSpaceMatrices ssFeedback(
+            double[][] a1, double[] b1, double[] c1, double d1,
+            double[][] a2, double[] b2, double[] c2, double d2, double sign) {
+        int n1 = a1.length;
+        int n2 = a2.length;
+        int n = n1 + n2;
+        
+        double gamma = 1.0 / (1.0 + sign * d1 * d2);
+        
+        double[][] a = new double[n][n];
+        for (int i = 0; i < n1; i++) {
+            for (int j = 0; j < n1; j++) {
+                a[i][j] = a1[i][j] - gamma * sign * d2 * b1[i] * c1[j];
+            }
+            for (int j = 0; j < n2; j++) {
+                a[i][n1 + j] = -gamma * sign * b1[i] * c2[j];
+            }
+        }
+        for (int i = 0; i < n2; i++) {
+            for (int j = 0; j < n1; j++) {
+                a[n1 + i][j] = gamma * b2[i] * c1[j];
+            }
+            for (int j = 0; j < n2; j++) {
+                a[n1 + i][n1 + j] = a2[i][j] - gamma * sign * d1 * b2[i] * c2[j];
+            }
+        }
+        
+        double[] b = new double[n];
+        for (int i = 0; i < n1; i++) {
+            b[i] = gamma * b1[i];
+        }
+        for (int i = 0; i < n2; i++) {
+            b[n1 + i] = gamma * d1 * b2[i];
+        }
+        
+        double[] c = new double[n];
+        for (int j = 0; j < n1; j++) {
+            c[j] = gamma * c1[j];
+        }
+        for (int j = 0; j < n2; j++) {
+            c[n1 + j] = -gamma * sign * d1 * c2[j];
+        }
+        
+        double d = gamma * d1;
+        return new StateSpace.StateSpaceMatrices(a, b, c, d);
+    }
+
+    public static double[][] pade(double Td, int order) {
+        double[] num = new double[order + 1];
+        double[] den = new double[order + 1];
+        for (int i = 0; i <= order; i++) {
+            int k = order - i;
+            double coeff = factorial(2 * order - k) / (factorial(k) * factorial(order - k));
+            double val = coeff * Math.pow(Td, k);
+            den[i] = val;
+            num[i] = (k % 2 == 0) ? val : -val;
+        }
+        return new double[][]{num, den};
+    }
+
+    private static double factorial(int n) {
+        double res = 1.0;
+        for (int i = 2; i <= n; i++) {
+            res *= i;
+        }
+        return res;
+    }
+
+    public static double[] stepinfo(double[] t, double[] y) {
+        int N = t.length;
+        if (N == 0) {
+            return new double[]{0, 0, 0, 0};
+        }
+        double yfinal = y[N - 1];
+        
+        // Find ypeak and ipeak
+        double ypeak = y[0];
+        int ipeak = 0;
+        if (yfinal >= 0) {
+            for (int i = 1; i < N; i++) {
+                if (y[i] > ypeak) {
+                    ypeak = y[i];
+                    ipeak = i;
+                }
+            }
+        } else {
+            for (int i = 1; i < N; i++) {
+                if (y[i] < ypeak) {
+                    ypeak = y[i];
+                    ipeak = i;
+                }
+            }
+        }
+        
+        double tp = t[ipeak];
+        
+        // OS
+        double os = 0.0;
+        if (Math.abs(yfinal) > 1e-12) {
+            os = 100.0 * (Math.abs(ypeak) - Math.abs(yfinal)) / Math.abs(yfinal);
+            if (os < 0.0) {
+                os = 0.0;
+            }
+        }
+        
+        // Tr
+        double y10 = 0.1 * yfinal;
+        double y90 = 0.9 * yfinal;
+        double t10 = findTimeOfValue(t, y, y10);
+        double t90 = findTimeOfValue(t, y, y90);
+        double tr = t90 - t10;
+        
+        // Ts (2% criterion)
+        double limit = 0.02 * Math.abs(yfinal);
+        int lastOutsideIdx = -1;
+        for (int i = N - 1; i >= 0; i--) {
+            if (Math.abs(y[i] - yfinal) > limit) {
+                lastOutsideIdx = i;
+                break;
+            }
+        }
+        double ts;
+        if (lastOutsideIdx == -1) {
+            ts = t[0];
+        } else if (lastOutsideIdx == N - 1) {
+            ts = t[N - 1];
+        } else {
+            double t0 = t[lastOutsideIdx];
+            double t1 = t[lastOutsideIdx + 1];
+            double y0 = Math.abs(y[lastOutsideIdx] - yfinal);
+            double y1 = Math.abs(y[lastOutsideIdx + 1] - yfinal);
+            if (Math.abs(y1 - y0) < 1e-12) {
+                ts = t1;
+            } else {
+                ts = t0 + (t1 - t0) * (limit - y0) / (y1 - y0);
+            }
+        }
+        
+        return new double[]{tr, tp, ts, os};
+    }
+
+    private static double findTimeOfValue(double[] t, double[] y, double targetVal) {
+        int N = t.length;
+        if (y[N - 1] >= 0) {
+            for (int i = 0; i < N; i++) {
+                if (y[i] >= targetVal) {
+                    if (i == 0) return t[0];
+                    double t0 = t[i - 1];
+                    double t1 = t[i];
+                    double y0 = y[i - 1];
+                    double y1 = y[i];
+                    if (Math.abs(y1 - y0) < 1e-12) return t0;
+                    return t0 + (t1 - t0) * (targetVal - y0) / (y1 - y0);
+                }
+            }
+        } else {
+            for (int i = 0; i < N; i++) {
+                if (y[i] <= targetVal) {
+                    if (i == 0) return t[0];
+                    double t0 = t[i - 1];
+                    double t1 = t[i];
+                    double y0 = y[i - 1];
+                    double y1 = y[i];
+                    if (Math.abs(y1 - y0) < 1e-12) return t0;
+                    return t0 + (t1 - t0) * (targetVal - y0) / (y1 - y0);
+                }
+            }
+        }
+        return t[N - 1];
+    }
+
+    public static class RlocusResult {
+        public double[] k;
+        public double[][] cpr;
+        public double[][] cpi;
+        public RlocusResult(double[] k, double[][] cpr, double[][] cpi) {
+            this.k = k;
+            this.cpr = cpr;
+            this.cpi = cpi;
+        }
+    }
+
+    public static RlocusResult rlocus(double[] num, double[] den, int M) {
+        double maxDen = 0.0;
+        for (double d : den) {
+            maxDen = Math.max(maxDen, Math.abs(d));
+        }
+        double maxNum = 0.0;
+        for (double n : num) {
+            maxNum = Math.max(maxNum, Math.abs(n));
+        }
+        double kBase = (maxNum > 1e-12) ? (maxDen / maxNum) : 1.0;
+
+        double[] k = new double[M];
+        k[0] = 0.0;
+        if (M > 1) {
+            double kMin = 1e-4 * kBase;
+            double kMax = 100.0 * kBase;
+            for (int i = 1; i < M; i++) {
+                double fraction = (double)(i - 1) / (M - 2);
+                k[i] = kMin * Math.pow(kMax / kMin, fraction);
+            }
+        }
+
+        int N = den.length - 1;
+        double[][] cpr = new double[M][N];
+        double[][] cpi = new double[M][N];
+
+        for (int i = 0; i < M; i++) {
+            double Ki = k[i];
+            int maxDegree = Math.max(den.length - 1, num.length - 1);
+            double[] coeffs = new double[maxDegree + 1];
+            for (int j = 0; j < den.length; j++) {
+                coeffs[maxDegree - (den.length - 1) + j] += den[j];
+            }
+            for (int j = 0; j < num.length; j++) {
+                coeffs[maxDegree - (num.length - 1) + j] += Ki * num[j];
+            }
+
+            double[][] r = PolynomialHelpers.roots(coeffs);
+            for (int j = 0; j < N; j++) {
+                if (j < r.length) {
+                    cpr[i][j] = r[j][0];
+                    cpi[i][j] = r[j][1];
+                } else {
+                    cpr[i][j] = 0.0;
+                    cpi[i][j] = 0.0;
+                }
+            }
+        }
+
+        return new RlocusResult(k, cpr, cpi);
     }
 }

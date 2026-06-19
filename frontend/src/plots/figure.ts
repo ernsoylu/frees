@@ -693,3 +693,104 @@ export function buildPoleZeroFigure(
 
   return { data: traces, layout }
 }
+
+export function buildRootLocusFigure(
+  cpr: number[][],
+  cpi: number[][],
+  zr: number[],
+  zi: number[],
+  format: PlotFormat,
+  theme: PlotTheme,
+): PlotlyFigure {
+  const colors = THEMES[theme]
+  const background = theme === 'dark' ? 'rgba(0,0,0,0)' : '#ffffff'
+  const traces: PlotlyTrace[] = []
+
+  const M = cpr.length
+  const N = M > 0 ? cpr[0].length : 0
+
+  // 1. Draw trajectories for each branch
+  for (let j = 0; j < N; j++) {
+    const bx: number[] = []
+    const by: number[] = []
+    for (let i = 0; i < M; i++) {
+      bx.push(cpr[i][j])
+      by.push(cpi[i][j])
+    }
+    traces.push({
+      type: 'scatter',
+      mode: 'lines',
+      name: `Branch ${j + 1}`,
+      x: bx,
+      y: by,
+      line: { width: 2 },
+      hoverinfo: 'name+x+y',
+      showlegend: false,
+    })
+  }
+
+  // 2. Draw open-loop poles (K=0) as 'x'
+  if (N > 0) {
+    const px: number[] = []
+    const py: number[] = []
+    for (let j = 0; j < N; j++) {
+      px.push(cpr[0][j])
+      py.push(cpi[0][j])
+    }
+    traces.push({
+      type: 'scatter',
+      mode: 'markers',
+      name: 'Open-loop Poles',
+      x: px,
+      y: py,
+      marker: { symbol: 'x', size: 10, color: '#ff6b6b' },
+      hoverinfo: 'name+x+y',
+    })
+  }
+
+  // 3. Draw open-loop zeros as 'o'
+  if (zr.length > 0) {
+    traces.push({
+      type: 'scatter',
+      mode: 'markers',
+      name: 'Open-loop Zeros',
+      x: zr,
+      y: zi,
+      marker: {
+        symbol: 'circle',
+        size: 10,
+        color: background,
+        line: { width: 2, color: '#4dabf7' },
+      },
+      hoverinfo: 'name+x+y',
+    })
+  }
+
+  const layout: PlotlyLayout = {
+    title: format.title ? { text: format.title } : undefined,
+    paper_bgcolor: background,
+    plot_bgcolor: background,
+    font: { color: colors.font, size: format.fontSize },
+    margin: { t: format.title ? 48 : 24, r: 24, b: 56, l: 64 },
+    xaxis: {
+      title: format.xLabel || 'Real Axis [1/s]',
+      color: colors.font,
+      gridcolor: colors.grid,
+      zerolinecolor: colors.zero,
+      showgrid: format.grid,
+    },
+    yaxis: {
+      title: format.yLabel || 'Imaginary Axis [rad/s]',
+      scaleanchor: 'x',
+      color: colors.font,
+      gridcolor: colors.grid,
+      zerolinecolor: colors.zero,
+      showgrid: format.grid,
+    },
+    showlegend: format.legend,
+    legend: legendLayout(format.legendAlign),
+  }
+
+  return { data: traces, layout }
+}
+

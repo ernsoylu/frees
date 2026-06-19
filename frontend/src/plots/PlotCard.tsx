@@ -22,6 +22,7 @@ import {
   buildBodeFigure,
   buildNyquistFigure,
   buildPoleZeroFigure,
+  buildRootLocusFigure,
 } from './figure'
 import { EXPORT_FORMATS, exportPlot } from './exportPlot'
 import PlotlyChart from './PlotlyChart'
@@ -206,6 +207,35 @@ function getArrayValues(variables: VariableResult[], base: string | null): numbe
   return indices.map((i) => map.get(i) as number)
 }
 
+function getMatrixValues(variables: VariableResult[], base: string | null): number[][] {
+  if (!base) return []
+  const prefix = `${base.toLowerCase()}[`
+  const cells: { i: number; j: number; val: number }[] = []
+  let maxI = 0
+  let maxJ = 0
+  for (const v of variables) {
+    const name = v.name.toLowerCase()
+    if (!name.startsWith(prefix) || !name.endsWith(']')) continue
+    const inner = v.name.substring(prefix.length, v.name.length - 1)
+    const parts = inner.split(',')
+    if (parts.length === 2) {
+      const i = Number(parts[0])
+      const j = Number(parts[1])
+      if (Number.isInteger(i) && Number.isInteger(j)) {
+        cells.push({ i, j, val: v.value })
+        if (i > maxI) maxI = i
+        if (j > maxJ) maxJ = j
+      }
+    }
+  }
+  if (maxI === 0 || maxJ === 0) return []
+  const res: number[][] = Array.from({ length: maxI }, () => Array(maxJ).fill(0))
+  for (const cell of cells) {
+    res[cell.i - 1][cell.j - 1] = cell.val
+  }
+  return res
+}
+
 export function buildFigure(spec: PlotSpec, inputs: FigureInputs): PlotlyFigure | null {
   const { states, cyclePath, variables = [], diagram, psychart, stateTableDefs, theme } = inputs
   // When the plot targets one declared STATE TABLE circuit, overlay only that
@@ -240,6 +270,13 @@ export function buildFigure(spec: PlotSpec, inputs: FigureInputs): PlotlyFigure 
     const zr = getArrayValues(variables, spec.control.zr)
     const zi = getArrayValues(variables, spec.control.zi)
     return buildPoleZeroFigure(pr, pi, zr, zi, spec.format, theme)
+  }
+  if (spec.kind === 'rootlocus' && spec.control.pr && spec.control.pi) {
+    const cpr = getMatrixValues(variables, spec.control.pr)
+    const cpi = getMatrixValues(variables, spec.control.pi)
+    const zr = getArrayValues(variables, spec.control.zr)
+    const zi = getArrayValues(variables, spec.control.zi)
+    return buildRootLocusFigure(cpr, cpi, zr, zi, spec.format, theme)
   }
   return null
 }
