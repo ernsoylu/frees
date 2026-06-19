@@ -788,6 +788,18 @@ public final class EquationParser {
             flattenLsim(inputs, outputs, sourceText, ctx);
             return;
         }
+        if (defName.equals("lqr")) {
+            flattenLqr(inputs, outputs, sourceText, ctx);
+            return;
+        }
+        if (defName.equals("place")) {
+            flattenPlace(inputs, outputs, sourceText, ctx);
+            return;
+        }
+        if (defName.equals("pidtune")) {
+            flattenPidtune(inputs, outputs, sourceText, ctx);
+            return;
+        }
 
         ProcDef def = ctx.defs().get(defName);
         if (def == null) {
@@ -1516,6 +1528,138 @@ public final class EquationParser {
             ctx.out().add(new Equation(y.elements[i],
                     new Expr.Call("lsim$" + i + "$" + inputs.size() + "$" + N, entries), sourceText));
         }
+    }
+
+    /**
+     * Flattens {@code lqr(A, B, Q, R : K)}: single-input continuous-time LQR.
+     * A and Q are n×n, B is an n-vector, R is a scalar, and the gain K is an
+     * n-element row vector. Serialized arguments: A row-major, then B, then Q
+     * row-major, then R.
+     */
+    private void flattenLqr(List<Expr> inputs, List<Expr> outputs, String sourceText, FlattenContext ctx) {
+        if (inputs.size() != 4 || outputs.size() != 1) {
+            throw new ParseException("lqr expects 4 inputs (A, B, Q, R) and 1 output (K), "
+                    + "e.g. CALL lqr(A[1:2,1:2], B[1:2], Q[1:2,1:2], R : K[1:2])");
+        }
+        MatrixInfo a = parseMatrixInfo(inputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        int n = a.rows;
+        if (a.cols != n) {
+            throw new ParseException("lqr: A must be square (got " + a.rows + "x" + a.cols + ")");
+        }
+        List<Expr> bElements = getVectorElements(inputs.get(1), n, ctx);
+        MatrixInfo q = parseMatrixInfo(inputs.get(2), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        if (q.rows != n || q.cols != n) {
+            throw new ParseException("lqr: Q must be n x n = " + n + "x" + n);
+        }
+        Expr rElement = getScalarElement(inputs.get(3), ctx);
+
+        VectorInfo k = parseVectorInfo(outputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        if (k.size != n) {
+            throw new ParseException("lqr: output K must have length n = " + n);
+        }
+
+        List<Expr> entries = new ArrayList<>();
+        for (int i = 0; i < n; i++) {
+            entries.addAll(Arrays.asList(a.elements[i]));
+        }
+        entries.addAll(bElements);
+        for (int i = 0; i < n; i++) {
+            entries.addAll(Arrays.asList(q.elements[i]));
+        }
+        entries.add(rElement);
+
+        if (outputs.get(0) instanceof Expr.ArrayAccess aa) {
+            registerShape(aa.name(), n, 1, ctx);
+        }
+        for (int j = 0; j < n; j++) {
+            ctx.out().add(new Equation(k.elements[j],
+                    new Expr.Call("lqr$" + j + "$" + n, entries), sourceText));
+        }
+    }
+
+    /**
+     * Flattens {@code place(A, B, pr, pi : K)}: SISO Ackermann pole placement.
+     * A is n×n, B is an n-vector, and the desired closed-loop poles are given as
+     * real/imag arrays pr, pi (each length n). The gain K is an n-element row
+     * vector. Serialized arguments: A row-major, then B, then pr, then pi.
+     */
+    private void flattenPlace(List<Expr> inputs, List<Expr> outputs, String sourceText, FlattenContext ctx) {
+        if (inputs.size() != 4 || outputs.size() != 1) {
+            throw new ParseException("place expects 4 inputs (A, B, pr, pi) and 1 output (K), "
+                    + "e.g. CALL place(A[1:2,1:2], B[1:2], pr[1:2], pi[1:2] : K[1:2])");
+        }
+        MatrixInfo a = parseMatrixInfo(inputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        int n = a.rows;
+        if (a.cols != n) {
+            throw new ParseException("place: A must be square (got " + a.rows + "x" + a.cols + ")");
+        }
+        List<Expr> bElements = getVectorElements(inputs.get(1), n, ctx);
+        VectorInfo pr = parseVectorInfo(inputs.get(2), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        VectorInfo pi = parseVectorInfo(inputs.get(3), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        if (pr.size != n || pi.size != n) {
+            throw new ParseException("place: desired pole arrays pr and pi must each have length n = " + n);
+        }
+
+        VectorInfo k = parseVectorInfo(outputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        if (k.size != n) {
+            throw new ParseException("place: output K must have length n = " + n);
+        }
+
+        List<Expr> entries = new ArrayList<>();
+        for (int i = 0; i < n; i++) {
+            entries.addAll(Arrays.asList(a.elements[i]));
+        }
+        entries.addAll(bElements);
+        entries.addAll(Arrays.asList(pr.elements));
+        entries.addAll(Arrays.asList(pi.elements));
+
+        if (outputs.get(0) instanceof Expr.ArrayAccess aa) {
+            registerShape(aa.name(), n, 1, ctx);
+        }
+        for (int j = 0; j < n; j++) {
+            ctx.out().add(new Equation(k.elements[j],
+                    new Expr.Call("place$" + j + "$" + n, entries), sourceText));
+        }
+    }
+
+    /**
+     * Flattens {@code pidtune(num, den, type$, wc : Kp, Ki, Kd)}: loop-shaping
+     * PID design for a SISO plant {@code num/den} with a gain crossover at wc and
+     * a 60° target phase margin. {@code type$} is a quoted 'P' / 'PI' / 'PID'.
+     * The controller type is encoded into the synthetic call name; serialized
+     * arguments are num, then den, then wc.
+     */
+    private void flattenPidtune(List<Expr> inputs, List<Expr> outputs, String sourceText, FlattenContext ctx) {
+        if (inputs.size() != 4 || outputs.size() != 3) {
+            throw new ParseException("pidtune expects 4 inputs (num, den, type$, wc) and 3 outputs (Kp, Ki, Kd), "
+                    + "e.g. CALL pidtune(num, den, 'PID', wc : Kp, Ki, Kd)");
+        }
+        if (!(inputs.get(2) instanceof Expr.Str(String typeRaw))) {
+            throw new ParseException("pidtune: the third argument must be a quoted controller type, "
+                    + "one of 'P', 'PI', or 'PID'");
+        }
+        String type = typeRaw.toLowerCase();
+        if (!type.equals("p") && !type.equals("pi") && !type.equals("pid")) {
+            throw new ParseException("pidtune: controller type must be 'P', 'PI', or 'PID' (got '" + typeRaw + "')");
+        }
+        VectorInfo num = parseVectorInfo(inputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        VectorInfo den = parseVectorInfo(inputs.get(1), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        if (num.size != den.size) {
+            throw new ParseException("pidtune: num and den must have the same length");
+        }
+        Expr wc = getScalarElement(inputs.get(3), ctx);
+
+        List<Expr> entries = new ArrayList<>();
+        entries.addAll(Arrays.asList(num.elements));
+        entries.addAll(Arrays.asList(den.elements));
+        entries.add(wc);
+
+        ctx.out().add(new Equation(outputs.get(0),
+                new Expr.Call("pidtune$kp$" + type, entries), sourceText));
+        ctx.out().add(new Equation(outputs.get(1),
+                new Expr.Call("pidtune$ki$" + type, entries), sourceText));
+        ctx.out().add(new Equation(outputs.get(2),
+                new Expr.Call("pidtune$kd$" + type, entries), sourceText));
     }
 
     private List<Expr> getVectorElements(Expr e, int expectedSize, FlattenContext ctx) {

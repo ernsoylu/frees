@@ -628,6 +628,41 @@ PLOT 'Ramp Response (lsim)'
   title = Ramp Response via lsim
 END`,
   },
+  {
+    id: 'controller-design-lqr-pid',
+    title: 'Controller Design (LQR & PID)',
+    description: 'LQR optimal state-feedback for a double integrator (with closed-loop pole check) and loop-shaping PID auto-tuning of a SISO plant.',
+    category: 'Control Systems',
+    text: `# Controller Design: LQR + PID
+
+{ ---- LQR state feedback for a double integrator (unit mass) ---- }
+{ x1' = x2 , x2' = u  ->  A = [0 1; 0 0],  B = [0; 1] }
+A[1,1] = 0; A[1,2] = 1
+A[2,1] = 0; A[2,2] = 0
+B[1] = 0; B[2] = 1
+
+{ State weight Q and input weight R }
+Q[1,1] = 1; Q[1,2] = 0
+Q[2,1] = 0; Q[2,2] = 1
+R = 1
+
+{ Optimal gain K minimizing the quadratic cost }
+CALL lqr(A[1:2,1:2], B[1:2], Q[1:2,1:2], R : K[1:2])
+
+{ Closed-loop matrix Acl = A - B K, then verify the poles are stable }
+Acl[1,1] = A[1,1] - B[1]*K[1]
+Acl[1,2] = A[1,2] - B[1]*K[2]
+Acl[2,1] = A[2,1] - B[2]*K[1]
+Acl[2,2] = A[2,2] - B[2]*K[2]
+CALL pole(Acl[1:2,1:2] : pcl_r[1:2], pcl_i[1:2])
+
+{ ---- PID auto-tuning for plant G(s) = 1 / (s^2 + s) ---- }
+{ Target gain crossover at wc with a 60 deg phase margin }
+num = [0, 0, 1]
+den = [1, 1, 0]
+wc = 1 [rad/s]
+CALL pidtune(num[1:3], den[1:3], 'PID', wc : Kp, Ki, Kd)`,
+  },
 ]
 
 /** The document new/blank workspaces start from. */

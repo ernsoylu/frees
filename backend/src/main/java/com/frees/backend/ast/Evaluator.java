@@ -157,6 +157,15 @@ public final class Evaluator {
         if (c.function().startsWith("lsim$")) {
             return evalLsim(c, values, defs);
         }
+        if (c.function().startsWith("lqr$")) {
+            return evalLqr(c, values, defs);
+        }
+        if (c.function().startsWith("place$")) {
+            return evalPlace(c, values, defs);
+        }
+        if (c.function().startsWith("pidtune$")) {
+            return evalPidtune(c, values, defs);
+        }
 
         return evalBuiltin(c, values, defs);
     }
@@ -1030,6 +1039,94 @@ public final class Evaluator {
                     com.frees.backend.cas.TimeResponse.Kind.LSIM, a, b, cm, d, u, t);
         }
         return y[index];
+    }
+
+    // Synthetic LQR call: lqr$<index>$<n>, with arguments A (row-major, n*n),
+    // then B (n), then Q (row-major, n*n), then R (scalar). Returns gain K[index].
+    private static double evalLqr(Expr.Call c, Map<String, Double> values, Map<String, ProcDef> defs) {
+        String[] parts = c.function().split("\\$");
+        int index = Integer.parseInt(parts[1]);
+        int n = Integer.parseInt(parts[2]);
+
+        List<Expr> args = c.args();
+        int idx = 0;
+        double[][] a = new double[n][n];
+        for (int i = 0; i < n; i++) {
+            for (int j = 0; j < n; j++) {
+                a[i][j] = eval(args.get(idx++), values, defs);
+            }
+        }
+        double[][] b = new double[n][1];
+        for (int i = 0; i < n; i++) {
+            b[i][0] = eval(args.get(idx++), values, defs);
+        }
+        double[][] q = new double[n][n];
+        for (int i = 0; i < n; i++) {
+            for (int j = 0; j < n; j++) {
+                q[i][j] = eval(args.get(idx++), values, defs);
+            }
+        }
+        double[][] r = {{eval(args.get(idx), values, defs)}};
+
+        double[][] k = com.frees.backend.cas.ControllerDesign.lqr(a, b, q, r);
+        return k[0][index];
+    }
+
+    // Synthetic pole-placement call: place$<index>$<n>, with arguments A
+    // (row-major, n*n), then B (n), then pr (n), then pi (n). Returns K[index].
+    private static double evalPlace(Expr.Call c, Map<String, Double> values, Map<String, ProcDef> defs) {
+        String[] parts = c.function().split("\\$");
+        int index = Integer.parseInt(parts[1]);
+        int n = Integer.parseInt(parts[2]);
+
+        List<Expr> args = c.args();
+        int idx = 0;
+        double[][] a = new double[n][n];
+        for (int i = 0; i < n; i++) {
+            for (int j = 0; j < n; j++) {
+                a[i][j] = eval(args.get(idx++), values, defs);
+            }
+        }
+        double[] b = new double[n];
+        for (int i = 0; i < n; i++) {
+            b[i] = eval(args.get(idx++), values, defs);
+        }
+        double[][] roots = new double[n][2];
+        for (int i = 0; i < n; i++) {
+            roots[i][0] = eval(args.get(idx++), values, defs);
+        }
+        for (int i = 0; i < n; i++) {
+            roots[i][1] = eval(args.get(idx++), values, defs);
+        }
+
+        double[] k = com.frees.backend.cas.ControllerDesign.place(a, b, roots);
+        return k[index];
+    }
+
+    // Synthetic PID-tuning call: pidtune$<kp|ki|kd>$<type>, with arguments num
+    // (L), then den (L), then wc (scalar). Returns the requested gain.
+    private static double evalPidtune(Expr.Call c, Map<String, Double> values, Map<String, ProcDef> defs) {
+        String[] parts = c.function().split("\\$");
+        String output = parts[1]; // "kp", "ki", "kd"
+        String type = parts[2];   // "p", "pi", "pid"
+
+        List<Expr> args = c.args();
+        int len = (args.size() - 1) / 2;
+        double[] num = new double[len];
+        double[] den = new double[len];
+        for (int i = 0; i < len; i++) {
+            num[i] = eval(args.get(i), values, defs);
+            den[i] = eval(args.get(len + i), values, defs);
+        }
+        double wc = eval(args.get(2 * len), values, defs);
+
+        double[] gains = com.frees.backend.cas.ControllerDesign.pidtune(num, den, type, wc);
+        return switch (output) {
+            case "kp" -> gains[0];
+            case "ki" -> gains[1];
+            case "kd" -> gains[2];
+            default -> 0.0;
+        };
     }
 
     /**

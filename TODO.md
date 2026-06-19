@@ -30,6 +30,8 @@
   → Implemented frequency response solvers (`bode`, `nyquist`, `margin`) and pole/zero solvers (`pole`, `zero`) for both Transfer Function (TF) and State Space (SS) models. Enforced input dimension homogeneity on numerator and denominator arrays. Extended the unit checker to handle synthetic dispatches. Wired up React front-end `PlotSpec` kinds (`bode` stacked dual-axes plot, `nyquist` real-vs-imag plot with critical point `-1+j0` marked, and `polezero` s-plane scatter plot). Added detailed unit/integration tests in `PolynomialHelpersTest.java` and `ControlSystemFrequencyTest.java` (all backend tests green). Registered functions in the catalog, added documentation in `symbolic_cas.md`, and updated the `cruise-control` example to showcase the full analysis loop. Completed a successful full project compilation check.
 * ~~Phase 4 — Time-domain responses (backend, reuses xy plotting).~~
   → Added `step`, `impulse`, and `lsim` (both TF `num/den` and SS `A,B,C,D` forms). Per the architecture, responses route through the tested `OdeIntegrator`: a new `OdeIntegrator.integrateAndSampleAt` integrates the IVP once and samples at the requested time vector via Hermite dense output, and a new `com.frees.backend.cas.TimeResponse` helper converts a TF to controllable canonical state space (`StateSpace.tf2ss`) and integrates `x' = Ax + Bu`, `y = Cx + Du` (step: u=1, x0=0; impulse: x0=B, u=0; lsim: x0=0 with linearly-interpolated u). Dispatched as `CALL` cases in `EquationParser` (`flattenTimeResponse`/`flattenLsim`) and `Evaluator` (`evalTimeResponse`/`evalLsim`) using the established `name$index$numInputs$N` synthetic-call pattern; grounded dimensionless in `UnitChecker`. Pure-gain (n=0) and degenerate-window cases handled. Registered `step`/`impulse`/`lsim` in `functionCatalog.ts`, added the **Step & Impulse Response** example (`examples.ts`) plotting all three via the xy kind, and documented them in `symbolic_cas.md`. New integration tests in `ControlSystemTimeResponseTest` check first/second-order step, impulse, SS-equals-TF, pure gain, and lsim (constant + ramp) against closed-form responses; full backend suite green and `npm run build` clean.
+* ~~Phase 5 — Controller design solvers (backend).~~
+  → Added `lqr`, `place`, and `pidtune` in a new `com.frees.backend.cas.ControllerDesign`. **lqr** (single-input) solves the continuous-time ARE via the **matrix sign function** of the Hamiltonian (Newton iteration with determinant scaling, real LU inverses only — robust without an ordered Schur form) → `K = R⁻¹B'P`. **place** uses **Ackermann's formula** (controllability matrix + desired characteristic polynomial from `PolynomialHelpers.expandRoots`, supporting complex-conjugate poles via `pr`/`pi` arrays). **pidtune** is closed-form loop-shaping: at the target crossover `wc` it sets `|C·G|=1` and the loop phase for a 60° margin, solving P/PI/PID gains (PID via the standard `Ti = 4·Td` relation). Dispatched as `CALL` cases in `EquationParser` (`flattenLqr`/`flattenPlace`/`flattenPidtune`, the last reading a quoted `'P'`/`'PI'`/`'PID'` `Expr.Str`) and `Evaluator` (`evalLqr`/`evalPlace`/`evalPidtune`); grounded dimensionless in `UnitChecker`. Registered in `functionCatalog.ts`, added the **Controller Design (LQR & PID)** example (`examples.ts`, LQR with a closed-loop pole check + PID tuning) and documented in `symbolic_cas.md`. Tests: `ControllerDesignTest` checks lqr (scalar + double integrator vs. analytic `K=[1,√3]`), place (real + complex poles), and pidtune (achieved phase margin ≈ 60° via `margin` on `C·G`); `ControlSystemDesignTest` exercises the full `CALL` path. Full backend suite green; `npm run build` clean.
 
 
 ## Open
@@ -93,19 +95,6 @@ shippable vertical slice.
 
 
 
-
-#### Phase 5 — Controller design solvers (backend)
-
-The most numerically involved phase; deliberately last so it builds on validated analysis.
-
-- `lqr(A, B, Q, R)` — continuous-time ARE via Hamiltonian-matrix eigen/Schur decomposition →
-  optimal gain `K`.
-- `place(A, B, poles)` — pole placement (SISO Ackermann; robust multi-input as a stretch).
-- `pidtune(plant, type$)` — auto-tune `Kp`/`Ki`/`Kd` balancing target bandwidth and phase
-  margin (reuses Phase 3 `margin`).
-- Tests: `lqr`/`place` closed-loop poles match requested specs; `pidtune` stabilizes a
-  reference plant with the requested margin.
-- Examples (mass-spring-damper PID tuning, LQR state-space regulation) + catalog registration.
 
 #### Phase 6 — Polish, docs, presets
 

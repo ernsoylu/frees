@@ -180,3 +180,36 @@ CALL lsim(num, den, u, t : y[1:N])
 # OR
 CALL lsim(A, B, C, D, u, t : y[1:N])
 ```
+
+## Controller Design
+
+State-feedback and PID design solvers. Numeric methods (Riccati / eigenvalues)
+keep these robust on floating-point, high-order systems.
+
+### 1. LQR Optimal Gain: lqr
+Continuous-time linear-quadratic regulator. Returns the optimal state-feedback
+gain `K` that minimizes `∫ (x'Qx + u'Ru) dt`, computed by solving the algebraic
+Riccati equation via the matrix sign function of the Hamiltonian. Single-input
+form: `A` and `Q` are `n×n`, `B` is an `n`-vector, `R` is a scalar, and `K` is an
+`n`-vector. The closed-loop `A - B K` is stable.
+```
+CALL lqr(A, B, Q, R : K[1:n])
+```
+
+### 2. Pole Placement: place
+SISO pole placement by Ackermann's formula. Returns the gain `K` that relocates
+the poles of `A - B K` to the requested locations, supplied as real/imaginary
+arrays `pr`, `pi` (each length `n`, complex poles in conjugate pairs).
+```
+CALL place(A, B, pr, pi : K[1:n])
+```
+
+### 3. PID Auto-Tuning: pidtune
+Loop-shaping tuning of a P/PI/PID controller for a SISO plant `num/den`. The
+controller is designed so the open loop crosses over (gain = 1) at frequency `wc`
+with a 60° phase-margin target (the same default MATLAB uses). The type is a
+quoted `'P'`, `'PI'`, or `'PID'`; unused gains are returned as `0`. A pure `P`
+controller only sets the crossover — it cannot reshape phase.
+```
+CALL pidtune(num, den, 'PID', wc : Kp, Ki, Kd)
+```
