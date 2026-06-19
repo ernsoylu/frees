@@ -22,6 +22,90 @@ public final class OdeIntegrator {
     private static final int MAX_STEPS = 1_000_000;
     private static final int BISECTION_ITERS = 60;
 
+    public double[][] integrateAndSampleAt(OdeProblem p, double[] targetTimes) {
+        OdeMethod method = resolveMethod(p.method());
+        int n = p.dimension();
+        if (p.tf() <= p.t0()) {
+            throw new SolverException("DYNAMIC: the time span must satisfy t0 < tf (got "
+                    + p.t0() + " .. " + p.tf() + ").");
+        }
+        double span = p.tf() - p.t0();
+        double minStep = span * 1e-12;
+
+        List<Double> knotT = new ArrayList<>();
+        List<double[]> knotY = new ArrayList<>();
+        List<double[]> knotF = new ArrayList<>();
+
+        double t = p.t0();
+        double[] y = p.y0().clone();
+        double[] f = p.rhs().eval(t, y);
+        checkFinite(f, t, "initial derivative");
+        knotT.add(t);
+        knotY.add(y.clone());
+        knotF.add(f.clone());
+
+        boolean fixed = !method.adaptive();
+        double hFixed = p.fixedStep() != null ? p.fixedStep() : span / (p.sampleCount() - 1);
+        double h = computeInitialStep(p, method, y, f, span, fixed, hFixed);
+
+        List<OdeResult.EventRecord> recorded = new ArrayList<>();
+        double[] gPrev = evalEvents(p, t, y);
+        int accepted = 0;
+        int rejected = 0;
+        int steps = 0;
+        double endTime = p.tf();
+
+        while (t < p.tf() - minStep) {
+            StepOutcome out = stepWithRetries(method, p, t, y, f, h, minStep, steps);
+            steps += out.extraSteps();
+            rejected += out.rejections();
+            OdeMethod.StepResult sr = out.sr();
+            double tNew = t + out.hUse();
+            double[] yNew = sr.yNew();
+            double[] fNew = sr.fNew();
+            checkFinite(yNew, tNew, "state");
+            checkFinite(fNew, tNew, "derivative");
+
+            double[] gNew = evalEvents(p, tNew, yNew);
+            EventHit hit = earliestEvent(p, t, y, f, tNew, yNew, fNew, gPrev, gNew);
+            if (recordEvents(p, hit, recorded, knotT, knotY, knotF)) {
+                endTime = hit.time;
+                break;
+            }
+
+            accepted++;
+            t = tNew;
+            y = yNew;
+            f = fNew;
+            gPrev = gNew;
+            knotT.add(t);
+            knotY.add(y.clone());
+            knotF.add(f.clone());
+
+            h = fixed ? hFixed : sr.hNext();
+            if (p.maxStep() != null) {
+                h = Math.min(h, p.maxStep());
+            }
+        }
+
+        int count = targetTimes.length;
+        double[][] outStates = new double[count][n];
+        int knot = 0;
+        int knots = knotT.size();
+        for (int i = 0; i < count; i++) {
+            double tau = targetTimes[i];
+            while (knot < knots - 2 && knotT.get(knot + 1) < tau) {
+                knot++;
+            }
+            int lo = Math.min(knot, knots - 2);
+            int hi = lo + 1;
+            double[] yi = hermite(knotT.get(lo), knotY.get(lo), knotF.get(lo),
+                    knotT.get(hi), knotY.get(hi), knotF.get(hi), tau);
+            System.arraycopy(yi, 0, outStates[i], 0, n);
+        }
+        return outStates;
+    }
+
     public OdeResult integrate(OdeProblem p) {
         OdeMethod method = resolveMethod(p.method());
         int n = p.dimension();

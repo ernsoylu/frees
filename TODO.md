@@ -28,6 +28,8 @@
   → Implemented raw polynomial math (`multiplyRaw`, `addRaw`) to preserve array/vector lengths matching output shape requirements. Built connection methods (`series`, `parallel`, `feedback`) in `PolynomialHelpers.java` and wired them as `CALL` dispatches in `EquationParser.java` and `Evaluator.java`. Configured unit routing to support connection results as dimensionless in `UnitChecker.java`. Wrote unit tests in `PolynomialHelpersTest.java` and integration solver tests in `ControlSystemInterconnectionTest.java`. Registered functions in the frontend `functionCatalog.ts` and documented usage in `symbolic_cas.md`. Passed all Gradle tests and verified clean frontend builds.
 * ~~Phase 3 — Frequency analysis + Bode/Nyquist/pole-zero plots (backend + UI).~~
   → Implemented frequency response solvers (`bode`, `nyquist`, `margin`) and pole/zero solvers (`pole`, `zero`) for both Transfer Function (TF) and State Space (SS) models. Enforced input dimension homogeneity on numerator and denominator arrays. Extended the unit checker to handle synthetic dispatches. Wired up React front-end `PlotSpec` kinds (`bode` stacked dual-axes plot, `nyquist` real-vs-imag plot with critical point `-1+j0` marked, and `polezero` s-plane scatter plot). Added detailed unit/integration tests in `PolynomialHelpersTest.java` and `ControlSystemFrequencyTest.java` (all backend tests green). Registered functions in the catalog, added documentation in `symbolic_cas.md`, and updated the `cruise-control` example to showcase the full analysis loop. Completed a successful full project compilation check.
+* ~~Phase 4 — Time-domain responses (backend, reuses xy plotting).~~
+  → Added `step`, `impulse`, and `lsim` (both TF `num/den` and SS `A,B,C,D` forms). Per the architecture, responses route through the tested `OdeIntegrator`: a new `OdeIntegrator.integrateAndSampleAt` integrates the IVP once and samples at the requested time vector via Hermite dense output, and a new `com.frees.backend.cas.TimeResponse` helper converts a TF to controllable canonical state space (`StateSpace.tf2ss`) and integrates `x' = Ax + Bu`, `y = Cx + Du` (step: u=1, x0=0; impulse: x0=B, u=0; lsim: x0=0 with linearly-interpolated u). Dispatched as `CALL` cases in `EquationParser` (`flattenTimeResponse`/`flattenLsim`) and `Evaluator` (`evalTimeResponse`/`evalLsim`) using the established `name$index$numInputs$N` synthetic-call pattern; grounded dimensionless in `UnitChecker`. Pure-gain (n=0) and degenerate-window cases handled. Registered `step`/`impulse`/`lsim` in `functionCatalog.ts`, added the **Step & Impulse Response** example (`examples.ts`) plotting all three via the xy kind, and documented them in `symbolic_cas.md`. New integration tests in `ControlSystemTimeResponseTest` check first/second-order step, impulse, SS-equals-TF, pure gain, and lsim (constant + ramp) against closed-form responses; full backend suite green and `npm run build` clean.
 
 
 ## Open
@@ -91,14 +93,6 @@ shippable vertical slice.
 
 
 
-
-#### Phase 4 — Time-domain responses (backend, reuses xy plotting)
-
-- `step`/`step_tf`, `impulse`, `lsim(sys, u, t)` — state-space propagation via
-  `OdeIntegrator` (preferred) or eigendecomposition; outputs are time/value arrays.
-- Plots reuse the existing **xy** plot kind (minimal new UI).
-- Tests: first/second-order step response vs. analytic settling/overshoot.
-- Examples + catalog registration.
 
 #### Phase 5 — Controller design solvers (backend)
 

@@ -146,3 +146,37 @@ CALL margin(num, den : gm, pm, w_cg, w_cp)
 # OR
 CALL margin(A, B, C, D : gm, pm, w_cg, w_cp)
 ```
+
+## Time-Domain Responses
+
+Time responses are integrated through the same tested ODE solver used by `DYNAMIC`
+blocks: a transfer function is converted to controllable canonical state space, the
+state equation `x' = A x + B u(t)` is integrated, and the output `y = C x + D u` is
+sampled at the supplied time vector `t`. Each output `y` is the same length as `t`,
+so it plots directly with the **xy** plot kind.
+
+### 1. Step Response: step
+Unit step response `y(t)` (input `u(t) = 1`, zero initial state).
+```
+CALL step(num, den, t : y[1:N])
+# OR
+CALL step(A, B, C, D, t : y[1:N])
+```
+
+### 2. Impulse Response: impulse
+Impulse response `y(t) = C e^{At} B` (the direct-feedthrough delta term from a
+non-zero `D` is omitted, as it cannot be represented on a sampled grid).
+```
+CALL impulse(num, den, t : y[1:N])
+# OR
+CALL impulse(A, B, C, D, t : y[1:N])
+```
+
+### 3. Forced Response: lsim
+Response to an arbitrary input signal `u`, linearly interpolated between samples.
+The input `u` and time `t` must have the same length `N`.
+```
+CALL lsim(num, den, u, t : y[1:N])
+# OR
+CALL lsim(A, B, C, D, u, t : y[1:N])
+```

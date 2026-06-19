@@ -568,6 +568,66 @@ PLOT 'Pole-Zero Map'
   zi = cl_zi
 END`,
   },
+  {
+    id: 'step-impulse-response',
+    title: 'Step & Impulse Response',
+    description: 'Time-domain analysis of a second-order system: step response, impulse response, and forced response (lsim).',
+    category: 'Control Systems',
+    text: `{ Step & Impulse Response Analysis }
+{ Second-order system: G(s) = wn^2 / (s^2 + 2*zeta*wn*s + wn^2) }
+{ Natural frequency and damping ratio }
+wn = 2 [rad/s]
+zeta = 0.3
+
+{ Transfer function coefficients (descending powers of s) }
+{ num(s) = wn^2,  den(s) = s^2 + 2*zeta*wn*s + wn^2 }
+num = [0, 0, wn^2]
+den = [1, 2*zeta*wn, wn^2]
+
+{ Time vector: 0 to 10 s in 0.2 s steps -> 51 samples }
+t = 0:0.2:10
+N = 51
+
+{ 1. Unit Step Response }
+CALL step(num[1:3], den[1:3], t[1:N] : y_step[1:N])
+
+{ 2. Impulse Response }
+CALL impulse(num[1:3], den[1:3], t[1:N] : y_imp[1:N])
+
+{ 3. Forced Response: ramp input u(t) = t (same grid as t) }
+u = 0:0.2:10
+CALL lsim(num[1:3], den[1:3], u[1:N], t[1:N] : y_ramp[1:N])
+
+{ 4. Stability check: poles of the system }
+CALL pole(num[1:3], den[1:3] : pr[1:2], pi[1:2])
+
+PLOT 'Step Response'
+  kind = xy
+  x = t
+  y = y_step
+  xlabel = Time [s]
+  ylabel = Amplitude
+  title = Unit Step Response
+END
+
+PLOT 'Impulse Response'
+  kind = xy
+  x = t
+  y = y_imp
+  xlabel = Time [s]
+  ylabel = Amplitude
+  title = Impulse Response
+END
+
+PLOT 'Ramp Response (lsim)'
+  kind = xy
+  x = t
+  y = y_ramp
+  xlabel = Time [s]
+  ylabel = Amplitude
+  title = Ramp Response via lsim
+END`,
+  },
 ]
 
 /** The document new/blank workspaces start from. */

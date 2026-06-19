@@ -148,6 +148,15 @@ public final class Evaluator {
         if (c.function().startsWith("margin$")) {
             return evalMargin(c, values, defs);
         }
+        if (c.function().startsWith("step$")) {
+            return evalTimeResponse(com.frees.backend.cas.TimeResponse.Kind.STEP, c, values, defs);
+        }
+        if (c.function().startsWith("impulse$")) {
+            return evalTimeResponse(com.frees.backend.cas.TimeResponse.Kind.IMPULSE, c, values, defs);
+        }
+        if (c.function().startsWith("lsim$")) {
+            return evalLsim(c, values, defs);
+        }
 
         return evalBuiltin(c, values, defs);
     }
@@ -912,6 +921,115 @@ public final class Evaluator {
             case "wcp" -> result[3];
             default -> 0.0;
         };
+    }
+
+    // Synthetic time-response call: <step|impulse>$<index>$<numInputs>$<N>, with
+    // the serialized model entries (num,den or A,B,C,D) followed by the N time
+    // samples. The full response is computed and one sample returned (mirroring
+    // the bode/nyquist pattern).
+    private static double evalTimeResponse(com.frees.backend.cas.TimeResponse.Kind kind,
+                                           Expr.Call c, Map<String, Double> values, Map<String, ProcDef> defs) {
+        String[] parts = c.function().split("\\$");
+        int index = Integer.parseInt(parts[1]);
+        int numInputs = Integer.parseInt(parts[2]);
+        int N = Integer.parseInt(parts[3]);
+
+        List<Expr> args = c.args();
+        double[] t = new double[N];
+        double[] y;
+        if (numInputs == 3) {
+            int len = (args.size() - N) / 2;
+            double[] num = new double[len];
+            double[] den = new double[len];
+            for (int i = 0; i < len; i++) {
+                num[i] = eval(args.get(i), values, defs);
+                den[i] = eval(args.get(len + i), values, defs);
+            }
+            for (int i = 0; i < N; i++) {
+                t[i] = eval(args.get(2 * len + i), values, defs);
+            }
+            y = com.frees.backend.cas.TimeResponse.response(kind, num, den, null, t);
+        } else {
+            int n = (int) Math.round(Math.sqrt(args.size() - N)) - 1;
+            double[][] a = new double[n][n];
+            double[] b = new double[n];
+            double[] cm = new double[n];
+            int idx = 0;
+            for (int i = 0; i < n; i++) {
+                for (int j = 0; j < n; j++) {
+                    a[i][j] = eval(args.get(idx++), values, defs);
+                }
+            }
+            for (int i = 0; i < n; i++) {
+                b[i] = eval(args.get(idx++), values, defs);
+            }
+            for (int j = 0; j < n; j++) {
+                cm[j] = eval(args.get(idx++), values, defs);
+            }
+            double d = eval(args.get(idx++), values, defs);
+            for (int i = 0; i < N; i++) {
+                t[i] = eval(args.get(idx++), values, defs);
+            }
+            y = com.frees.backend.cas.TimeResponse.responseSS(kind, a, b, cm, d, null, t);
+        }
+        return y[index];
+    }
+
+    // Synthetic forced-response call: lsim$<index>$<numInputs>$<N>, with the
+    // serialized model entries followed by the N input samples u then the N time
+    // samples t.
+    private static double evalLsim(Expr.Call c, Map<String, Double> values, Map<String, ProcDef> defs) {
+        String[] parts = c.function().split("\\$");
+        int index = Integer.parseInt(parts[1]);
+        int numInputs = Integer.parseInt(parts[2]);
+        int N = Integer.parseInt(parts[3]);
+
+        List<Expr> args = c.args();
+        double[] u = new double[N];
+        double[] t = new double[N];
+        double[] y;
+        if (numInputs == 4) {
+            int len = (args.size() - 2 * N) / 2;
+            double[] num = new double[len];
+            double[] den = new double[len];
+            for (int i = 0; i < len; i++) {
+                num[i] = eval(args.get(i), values, defs);
+                den[i] = eval(args.get(len + i), values, defs);
+            }
+            for (int i = 0; i < N; i++) {
+                u[i] = eval(args.get(2 * len + i), values, defs);
+                t[i] = eval(args.get(2 * len + N + i), values, defs);
+            }
+            y = com.frees.backend.cas.TimeResponse.response(
+                    com.frees.backend.cas.TimeResponse.Kind.LSIM, num, den, u, t);
+        } else {
+            int n = (int) Math.round(Math.sqrt(args.size() - 2 * N)) - 1;
+            double[][] a = new double[n][n];
+            double[] b = new double[n];
+            double[] cm = new double[n];
+            int idx = 0;
+            for (int i = 0; i < n; i++) {
+                for (int j = 0; j < n; j++) {
+                    a[i][j] = eval(args.get(idx++), values, defs);
+                }
+            }
+            for (int i = 0; i < n; i++) {
+                b[i] = eval(args.get(idx++), values, defs);
+            }
+            for (int j = 0; j < n; j++) {
+                cm[j] = eval(args.get(idx++), values, defs);
+            }
+            double d = eval(args.get(idx++), values, defs);
+            for (int i = 0; i < N; i++) {
+                u[i] = eval(args.get(idx++), values, defs);
+            }
+            for (int i = 0; i < N; i++) {
+                t[i] = eval(args.get(idx++), values, defs);
+            }
+            y = com.frees.backend.cas.TimeResponse.responseSS(
+                    com.frees.backend.cas.TimeResponse.Kind.LSIM, a, b, cm, d, u, t);
+        }
+        return y[index];
     }
 
     /**
