@@ -1141,7 +1141,7 @@ public class AstBuilder extends FreesBaseVisitor<Expr> {
      * tokens (not variables): MolarMass(C8H18), HeatingValue(CH4, 'LHV'),
      * StoichAFR(C8H18). Encoded as prop$ calls preserving token case. */
     private static final java.util.Set<String> CHEM_FUNCS =
-            java.util.Set.of("molarmass", "heatingvalue", "stoichafr");
+            java.util.Set.of("molarmass", "heatingvalue", "stoichafr", "t_crit", "p_crit");
 
     @Override
     public Expr visitCallAtom(FreesParser.CallAtomContext ctx) {

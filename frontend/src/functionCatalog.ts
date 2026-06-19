@@ -50,6 +50,9 @@ export const FUNCTION_CATEGORIES: FunctionCategory[] = [
       { label: 'IsIdealGas', snippet: 'IsIdealGas($0)', description: 'Returns 1 if the fluid is treated as an ideal gas, 0 otherwise.', usage: 'chk = IsIdealGas(Air)   { 1 }' },
       { label: 'Phase$', snippet: 'Phase$($0, T=, P=)', description: "Phase of a fluid as a string: 'liquid', 'gas', 'twophase', 'supercritical'.", usage: "ph$ = Phase$(R134a, T=25 [C], P=100 [kPa])" },
       { label: 'Dipole', snippet: 'Dipole($0)', description: 'Dipole moment of a fluid [debye].', usage: 'dp = Dipole(Water)' },
+      { label: 'Gibbs', snippet: 'Gibbs(Water, T=$0, P=)', description: 'Specific Gibbs free energy of a fluid.', usage: 'g = Gibbs(Water, T=300 [K], P=100 [kPa])' },
+      { label: 'StagnationTemp', snippet: 'StagnationTemp(T=$0, V=, cp=)', description: 'Stagnation temperature T0 = T + V²/(2*cp) for compressible flow.', usage: 'T0 = StagnationTemp(300 [K], 200 [m/s], 1005 [J/kg-K])' },
+      { label: 'StagnationPres', snippet: 'StagnationPres(P=$0, T=, T0=, k=)', description: 'Stagnation pressure P0 = P*(T0/T)^(k/(k-1)) for compressible flow.', usage: 'P0 = StagnationPres(100 [kPa], 300 [K], 319.9 [K], 1.4)' },
     ],
   },
   {

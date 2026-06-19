@@ -249,6 +249,21 @@ public final class Evaluator {
                 yield 0.5 * Math.log((1.0 + val) / (1.0 - val));
             }
 
+            // Compressible Flow Stagnation Properties
+            case "stagnationtemp" -> {
+                double t = arg(c, args, 0, values, defs);
+                double v = arg(c, args, 1, values, defs);
+                double cp = arg(c, args, 2, values, defs);
+                yield t + (v * v) / (2.0 * cp);
+            }
+            case "stagnationpres" -> {
+                double p = arg(c, args, 0, values, defs);
+                double t = arg(c, args, 1, values, defs);
+                double t0 = arg(c, args, 2, values, defs);
+                double k = arg(c, args, 3, values, defs);
+                yield p * Math.pow(t0 / t, k / (k - 1.0));
+            }
+
             // Elementary rounding & integer functions
             case "round" -> {
                 double val = arg(c, args, 0, values, defs);

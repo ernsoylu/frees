@@ -501,9 +501,9 @@ public final class UnitChecker {
     /** SI unit expression of each property function output. */
     private static String propertyUnit(String output) {
         return switch (output) {
-            case "temperature", "wetbulb", "dewpoint" -> "K";
-            case "pressure" -> "Pa";
-            case "enthalpy", "intenergy" -> "J/kg";
+            case "temperature", "wetbulb", "dewpoint", "t_crit" -> "K";
+            case "pressure", "p_crit" -> "Pa";
+            case "enthalpy", "intenergy", "gibbs" -> "J/kg";
             case "entropy", "cp", "cv", "specheat" -> "J/kg-K";
             case "density" -> "kg/m^3";
             case "volume" -> "m^3/kg";
@@ -512,7 +512,7 @@ public final class UnitChecker {
             case "soundspeed" -> "m/s";
             case "molarmass" -> "kg/mol";
             case "heatingvalue" -> "J/kg";
-            case "quality", "relhum", "humrat", "stoichafr" -> "-";
+            case "quality", "relhum", "humrat", "stoichafr", "compressibility", "compressibilityfactor" -> "-";
             default -> null;
         };
     }
@@ -590,6 +590,30 @@ public final class UnitChecker {
         List<Expr> args = c.args();
         return switch (c.function()) {
             case "abs", "real", "imag" -> dimOf(args.get(0));
+            case "stagnationtemp" -> {
+                Dim tDim = dimOf(args.get(0));
+                try {
+                    if (tDim.known() && !tDim.quantity().sameDimensionsAs(UnitRegistry.parse("K"))) {
+                        warn(String.format("%s: stagnationtemp temperature argument must have temperature units (e.g. K, C), got [%s].",
+                                currentEquation, tDim.quantity().dimensionString()));
+                    }
+                    yield Dim.of(UnitRegistry.parse("K"));
+                } catch (UnitRegistry.UnknownUnitException e) {
+                    yield Dim.UNKNOWN;
+                }
+            }
+            case "stagnationpres" -> {
+                Dim pDim = dimOf(args.get(0));
+                try {
+                    if (pDim.known() && !pDim.quantity().sameDimensionsAs(UnitRegistry.parse("Pa"))) {
+                        warn(String.format("%s: stagnationpres pressure argument must have pressure units (e.g. Pa, kPa), got [%s].",
+                                currentEquation, pDim.quantity().dimensionString()));
+                    }
+                    yield Dim.of(UnitRegistry.parse("Pa"));
+                } catch (UnitRegistry.UnknownUnitException e) {
+                    yield Dim.UNKNOWN;
+                }
+            }
             case "min", "max" -> {
                 Dim first = dimOf(args.get(0));
                 Dim second = args.size() > 1 ? dimOf(args.get(1)) : first;

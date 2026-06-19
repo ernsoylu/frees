@@ -109,4 +109,71 @@ class IdealGasTest {
         double tFlame = result.variables().get("T_flame");
         assertTrue(tFlame > 2200 && tFlame < 2800, "T_flame = " + tFlame);
     }
+
+    @Test
+    void idealGasGibbsFreeEnergy() {
+        // g = h - T * s
+        double t = 298.15;
+        double p = 101_325.0;
+        double h = eval("prop$enthalpy$n2$t", t);
+        double s = eval("prop$entropy$n2$t$p", t, p);
+        double gExpected = h - t * s;
+        double gActual = eval("prop$gibbs$n2$t$p", t, p);
+        assertEquals(gExpected, gActual, 1e-5);
+    }
+
+    @Test
+    void realFluidGibbsAndCompressibility() {
+        if (!CoolProp.isAvailable()) {
+            return;
+        }
+        // Compressibility of R134a at 1 MPa and 50 C (323.15 K)
+        double z = eval("prop$compressibility$r134a$t$p", 323.15, 1_000_000.0);
+        // From Cengel Example 3-12: Z should be around 0.84
+        assertEquals(0.84, z, 0.02);
+
+        // Gibbs energy of Water at 300 K, 100 kPa
+        double g = eval("prop$gibbs$water$t$p", 300.0, 100_000.0);
+        double h = eval("prop$enthalpy$water$t$p", 300.0, 100_000.0);
+        double s = eval("prop$entropy$water$t$p", 300.0, 100_000.0);
+        assertEquals(h - 300.0 * s, g, 1.0);
+    }
+
+    @Test
+    void criticalProperties() {
+        if (!CoolProp.isAvailable()) {
+            return;
+        }
+        // Critical Temperature of Water is 647.096 K
+        double tc = PropertyFunctions.evaluate("prop$t_crit", java.util.List.of(), java.util.List.of("Water"));
+        assertEquals(647.096, tc, 0.1);
+
+        // Critical Pressure of Water is 22.064 MPa
+        double pc = PropertyFunctions.evaluate("prop$p_crit", java.util.List.of(), java.util.List.of("Water"));
+        assertEquals(22.064e6, pc, 10_000.0);
+
+        // Critical Temperature of N2 (resolved to Nitrogen) is 126.19 K
+        double tcN2 = PropertyFunctions.evaluate("prop$t_crit", java.util.List.of(), java.util.List.of("N2"));
+        assertEquals(126.19, tcN2, 0.1);
+    }
+
+    @Test
+    void stagnationProperties() {
+        // Cengel Example 17-1: Air entering diffuser at T = 300 K, P = 100 kPa with V = 200 m/s.
+        // cp = 1005 J/kg-K. stagnation temperature should be around 319.9 K.
+        String source = """
+                T = 300 [K]
+                V = 200 [m/s]
+                cp = 1005 [J/kg-K]
+                T0 = stagnationTemp(T, V, cp)
+                
+                P = 100000 [Pa]
+                k = 1.4
+                P0 = stagnationPres(P, T, T0, k)
+                """;
+        EquationSystemSolver.Result result = new EquationSystemSolver().solve(source);
+        assertEquals(319.9, result.variables().get("T0"), 0.1);
+        // Stagnation pressure P0 = 100 kPa * (319.9 / 300)^(1.4/0.4) = 124.6 kPa (textbook rounded / math typo, exact is ~125.2 kPa)
+        assertEquals(125.2e3, result.variables().get("P0"), 200.0);
+    }
 }

@@ -177,10 +177,16 @@ public final class IdealGas {
                     default -> perMass(gas, cpMolar(gas, t));
                 };
             }
-            case "entropy" -> {
+            case "entropy", "gibbs" -> {
                 double[] tp = temperaturePressure(output, parts[2], indicators, values);
                 requirePositiveTemperature(tp[0], parts[2]);
-                return perMass(gas, sMolar(gas, tp[0], tp[1]));
+                if ("entropy".equals(output)) {
+                    return perMass(gas, sMolar(gas, tp[0], tp[1]));
+                } else {
+                    double h = hMolar(gas, tp[0]);
+                    double s = sMolar(gas, tp[0], tp[1]);
+                    return perMass(gas, h - tp[0] * s);
+                }
             }
             case "volume", "density" -> {
                 double[] tp = temperaturePressure(output, parts[2], indicators, values);
@@ -202,6 +208,9 @@ public final class IdealGas {
                 }
                 throw new IllegalStateException("Temperature(" + parts[2].toUpperCase()
                         + ", ...) takes h=... or s=..., P=... for an ideal gas.");
+            }
+            case "compressibility", "compressibilityfactor" -> {
+                return 1.0;
             }
             default -> throw new IllegalStateException("Function '" + output
                     + "' is not available for the ideal gas " + parts[2].toUpperCase()

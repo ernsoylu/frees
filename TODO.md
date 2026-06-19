@@ -49,3 +49,21 @@ To make every analysis and design problem in the textbook solvable, implement th
    - **Verification/Test Problem**: *Nise Chapter 13, Example 13.6*: Discretize a continuous plant $G(s) = \frac{10}{s(s+1)}$ with sampling interval $T = 0.5$ seconds using ZOH. Verify the resulting discrete transfer function is $G(z) = \frac{0.9348 z + 0.812}{z^2 - 1.6065 z + 0.6065}$ and plot its discrete step response.
 
 
+### Epic 14: Full Textbook Compliance (Çengel *Thermodynamics*)
+To make every analysis and design problem in the textbook solvable, implement the following missing capabilities:
+
+1. **Compressibility Factor (`compressibility`/`Z`)**
+   - **Task**: Expose CoolProp's native compressibility factor output (`Z`) in property functions.
+   - **Verification/Test Problem**: *Çengel Chapter 3, Example 3-12*: Determine specific volume of R-134a at 1 MPa and 50°C using Nelson-Obert compressibility factor.
+2. **Critical point properties (`criticalTemperature`, `criticalPressure`)**
+   - **Task**: Implement critical temperature and critical pressure property retrieval functions for real fluids.
+   - **Verification/Test Problem**: *Çengel Chapter 3, Example 3-13*: Retrieve critical parameters of water to calculate reduced variables.
+3. **Gibbs Free Energy (`gibbs`/`g`)**
+   - **Task**: Expose Gibbs free energy (`Gmass`) from CoolProp for real fluids, and implement $g = h - Ts$ in the `IdealGas` engine.
+   - **Verification/Test Problem**: *Çengel Chapter 16, Example 16-1*: Evaluate the dissociation reaction $N_2O_4 \rightleftharpoons 2NO_2$ at 25°C using Gibbs functions.
+4. **Stagnation Properties (`stagnationTemp`, `stagnationPres`)**
+   - **Task**: Implement stagnation temperature $T_0 = T + V^2 / (2 c_p)$ and stagnation pressure $P_0 = P (T_0 / T)^{k/(k-1)}$ functions.
+   - **Verification/Test Problem**: *Çengel Chapter 17, Example 17-1*: Determine stagnation temperature and pressure of air entering a diffuser at 100 kPa and 300 K at 200 m/s.
+
+
+
