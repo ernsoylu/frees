@@ -52,24 +52,57 @@ public final class CasEngine {
         return apply("Simplify", expression);
     }
 
+    /**
+     * Partial-fraction decomposition of a rational expression with respect to
+     * {@code variable} — e.g. {@code apart("(s+3)/(s^2+3*s+2)", "s")} yields
+     * {@code 2/(s+1) - 1/(s+2)}. This is the Laplace residue workflow.
+     */
+    public CasResult apart(String expression, String variable) {
+        return applyWithVariable("Apart", expression, variable);
+    }
+
+    /** Partial-fraction decomposition of an already-built expression tree. */
+    public CasResult apart(Expr expression, String variable) {
+        String var = requireIdentifier(variable);
+        String symjaInput = toSymja(expression);
+        String symjaOutput = evaluate("Apart(" + symjaInput + "," + var + ")");
+        return buildResult(symjaInput, symjaOutput);
+    }
+
     /** Runs a single-argument Symja function over a frees expression. */
     public CasResult apply(String symjaFunction, String expression) {
+        String symjaInput = toSymja(expression);
+        String symjaOutput = evaluate(symjaFunction + "(" + symjaInput + ")");
+        return buildResult(symjaInput, symjaOutput);
+    }
+
+    /** Runs a Symja function that takes the expression plus a variable argument. */
+    public CasResult applyWithVariable(String symjaFunction, String expression, String variable) {
+        String var = requireIdentifier(variable);
+        String symjaInput = toSymja(expression);
+        String symjaOutput = evaluate(symjaFunction + "(" + symjaInput + "," + var + ")");
+        return buildResult(symjaInput, symjaOutput);
+    }
+
+    private String toSymja(String expression) {
         Expr input;
         try {
             input = CasExpressions.parse(expression);
         } catch (CasExpressions.ParseFailure e) {
             throw new CasException("could not parse expression: " + e.getMessage(), e);
         }
+        return toSymja(input);
+    }
 
-        String symjaInput;
+    private String toSymja(Expr input) {
         try {
-            symjaInput = ExprToSymja.convert(input);
+            return ExprToSymja.convert(input);
         } catch (ExprToSymja.UnsupportedExpression e) {
             throw new CasException(e.getMessage(), e);
         }
+    }
 
-        String symjaOutput = evaluate(symjaFunction + "(" + symjaInput + ")");
-
+    private CasResult buildResult(String symjaInput, String symjaOutput) {
         Expr result;
         try {
             result = CasExpressions.parse(SymjaOutputNormalizer.normalize(symjaOutput));
@@ -77,9 +110,16 @@ public final class CasEngine {
             throw new CasException(
                     "could not read CAS result '" + symjaOutput + "': " + e.getMessage(), e);
         }
-
         String latex = LatexConverter.toLatex(result, Map.of());
         return new CasResult(result, latex, symjaInput, symjaOutput);
+    }
+
+    /** Variable names handed to Symja must be plain identifiers (frees lowercases them). */
+    private static String requireIdentifier(String variable) {
+        if (variable == null || !variable.matches("[A-Za-z][A-Za-z0-9_]*")) {
+            throw new CasException("invalid variable name: '" + variable + "'");
+        }
+        return variable.toLowerCase();
     }
 
     private String evaluate(String command) {

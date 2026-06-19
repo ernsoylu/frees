@@ -61,6 +61,30 @@ class CasEngineTest {
     }
 
     @Test
+    void partialFractionResiduesMatchOriginal() {
+        // (s+3)/((s+1)(s+2)) = 2/(s+1) - 1/(s+2): the Laplace residue workflow.
+        CasEngine.CasResult r = cas.apart("(s + 3)/(s^2 + 3*s + 2)", "s");
+
+        for (double s : new double[]{-5, -3, 0, 1.5, 4}) {
+            double expected = (s + 3) / (s * s + 3 * s + 2);
+            assertEquals(expected, at(r.expr(), "s", s), 1e-9, "partial fractions changed value at s=" + s);
+        }
+        // Decomposed form should be a sum of two simple fractions, not the original quadratic.
+        assertFalse(r.symjaOutput().contains("^2"), "expected simple fractions: " + r.symjaOutput());
+    }
+
+    @Test
+    void apartAcceptsBuiltTransferFunction() {
+        var tf = TransferFunction.fraction(new double[]{1, 3}, new double[]{1, 3, 2}, "s");
+        CasEngine.CasResult r = cas.apart(tf, "s");
+
+        for (double s : new double[]{-5, 0, 2.25}) {
+            double expected = (s + 3) / (s * s + 3 * s + 2);
+            assertEquals(expected, at(r.expr(), "s", s), 1e-9);
+        }
+    }
+
+    @Test
     void rejectsArrayExpressions() {
         assertThrows(CasEngine.CasException.class, () -> cas.factor("[1, 2, 3]"));
     }
