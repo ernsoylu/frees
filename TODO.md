@@ -24,6 +24,9 @@
   `npm run build` clean. Merged to `main` (along with fixed LaTeX fraction report rendering).
 * ~~Phase 1 — LTI foundation: models, conversions, units (backend).~~
   → Documented the array/matrix conventions for TF, SS, and ZPK models in `symbolic_cas.md`. Written the `PolynomialHelpers` utility class (add, multiply, companion-matrix roots, expandRoots). Implemented the conversions (`tf2ss`, `ss2tf` round-trip, `zp2tf`, `tf2zp`) via `CALL` dispatch in `EquationParser.java` and `Evaluator.java` (with automatic output shape registration). Registered `db` as a dimensionless unit in `UnitRegistry` and updated `UnitChecker` to ground synthetic LTI conversion calls as dimensionless. Verified all tests pass.
+* ~~Phase 2 — Interconnection (backend).~~
+  → Implemented raw polynomial math (`multiplyRaw`, `addRaw`) to preserve array/vector lengths matching output shape requirements. Built connection methods (`series`, `parallel`, `feedback`) in `PolynomialHelpers.java` and wired them as `CALL` dispatches in `EquationParser.java` and `Evaluator.java`. Configured unit routing to support connection results as dimensionless in `UnitChecker.java`. Wrote unit tests in `PolynomialHelpersTest.java` and integration solver tests in `ControlSystemInterconnectionTest.java`. Registered functions in the frontend `functionCatalog.ts` and documented usage in `symbolic_cas.md`. Passed all Gradle tests and verified clean frontend builds.
+
 
 ## Open
 
@@ -83,17 +86,7 @@ instead of inventing parallel paths.
 `examples.ts`, and `npm run build` + `./gradlew test` clean. Each phase is an independently
 shippable vertical slice.
 
----
 
-#### Phase 2 — Interconnection (backend)
-
-Composing models, the smallest useful end-to-end win on top of Phase 1.
-
-- `series(sys1, sys2)` / `parallel(sys1, sys2)` / `feedback(sys1, sys2)` (and explicit
-  `*_tf(num1,den1,num2,den2)` forms) producing TF coefficient arrays via the polynomial
-  helpers.
-- Tests: unity and non-unity feedback against hand-computed closed-loop TFs.
-- Catalog: register interconnection functions.
 
 #### Phase 3 — Frequency analysis + Bode/Nyquist/pole-zero plots (backend + first UI)
 
