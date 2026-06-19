@@ -560,7 +560,10 @@ public final class UnitChecker {
         if (c.function().startsWith("ss2tf$") ||
             c.function().startsWith("tf2ss$") ||
             c.function().startsWith("zp2tf$") ||
-            c.function().startsWith("tf2zp$")) {
+            c.function().startsWith("tf2zp$") ||
+            c.function().startsWith("series$") ||
+            c.function().startsWith("parallel$") ||
+            c.function().startsWith("feedback$")) {
             return Dim.of(Quantity.dimensionless(1.0));
         }
         List<Expr> args = c.args();

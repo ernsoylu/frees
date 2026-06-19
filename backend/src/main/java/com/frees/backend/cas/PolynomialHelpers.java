@@ -207,6 +207,56 @@ public final class PolynomialHelpers {
         return Arrays.copyOfRange(p, firstNonZero, p.length);
     }
 
+    public static double[] multiplyRaw(double[] p1, double[] p2) {
+        int n1 = p1.length;
+        int n2 = p2.length;
+        if (n1 == 0 || n2 == 0) {
+            return new double[0];
+        }
+        double[] result = new double[n1 + n2 - 1];
+        for (int i = 0; i < n1; i++) {
+            for (int j = 0; j < n2; j++) {
+                result[i + j] += p1[i] * p2[j];
+            }
+        }
+        return result;
+    }
+
+    public static double[] addRaw(double[] p1, double[] p2) {
+        int n1 = p1.length;
+        int n2 = p2.length;
+        int maxLen = Math.max(n1, n2);
+        double[] result = new double[maxLen];
+        for (int i = 0; i < maxLen; i++) {
+            double c1 = (i < maxLen - n1) ? 0.0 : p1[i - (maxLen - n1)];
+            double c2 = (i < maxLen - n2) ? 0.0 : p2[i - (maxLen - n2)];
+            result[i] = c1 + c2;
+        }
+        return result;
+    }
+
+    public static double[][] series(double[] num1, double[] den1, double[] num2, double[] den2) {
+        double[] num = multiplyRaw(num1, num2);
+        double[] den = multiplyRaw(den1, den2);
+        return new double[][]{num, den};
+    }
+
+    public static double[][] parallel(double[] num1, double[] den1, double[] num2, double[] den2) {
+        double[] num = addRaw(multiplyRaw(num1, den2), multiplyRaw(num2, den1));
+        double[] den = multiplyRaw(den1, den2);
+        return new double[][]{num, den};
+    }
+
+    public static double[][] feedback(double[] num1, double[] den1, double[] num2, double[] den2, double sign) {
+        double[] num = multiplyRaw(num1, den2);
+        double[] term2 = multiplyRaw(num1, num2);
+        for (int i = 0; i < term2.length; i++) {
+            term2[i] *= sign;
+        }
+        double[] den = addRaw(multiplyRaw(den1, den2), term2);
+        return new double[][]{num, den};
+    }
+
     private static record Complex(double r, double i) {
         public Complex multiply(Complex o) {
             return new Complex(this.r * o.r - this.i * o.i, this.r * o.i + this.i * o.r);

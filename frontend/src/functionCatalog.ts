@@ -310,6 +310,9 @@ export const FUNCTION_CATEGORIES: FunctionCategory[] = [
       { label: 'tf2ss (transfer function to state-space)', snippet: 'CALL tf2ss(num, den : A[1:$0,1:], B[1:], C[1:], D)', description: 'Convert transfer function coefficients num and den to controllable canonical state-space matrices A, B, C, D.', usage: 'CALL tf2ss(num, den : A[1:2,1:2], B[1:2], C[1:2], D)' },
       { label: 'zp2tf (zero-pole-gain to transfer function)', snippet: 'CALL zp2tf(zr, zi, pr, pi, k : num[1:$0], den[1:])', description: 'Convert zero-pole-gain (zeros zr + j*zi, poles pr + j*pi, gain k) to transfer function coefficients num and den.', usage: 'CALL zp2tf(zr, zi, pr, pi, k : num[1:3], den[1:3])' },
       { label: 'tf2zp (transfer function to zero-pole-gain)', snippet: 'CALL tf2zp(num, den : zr[1:$0], zi[1:], pr[1:], pi[1:], k)', description: 'Convert transfer function coefficients num and den to zeros zr + j*zi, poles pr + j*pi, and gain k.', usage: 'CALL tf2zp(num, den : zr[1:1], zi[1:1], pr[1:2], pi[1:2], k)' },
+      { label: 'series (series connection of systems)', snippet: 'CALL series(num1, den1, num2, den2 : num[1:$0], den[1:])', description: 'Connect two transfer functions in series (multiplies their transfer functions).', usage: 'CALL series(num1, den1, num2, den2 : num[1:3], den[1:3])' },
+      { label: 'parallel (parallel connection of systems)', snippet: 'CALL parallel(num1, den1, num2, den2 : num[1:$0], den[1:])', description: 'Connect two transfer functions in parallel (adds their transfer functions).', usage: 'CALL parallel(num1, den1, num2, den2 : num[1:3], den[1:3])' },
+      { label: 'feedback (feedback connection of systems)', snippet: 'CALL feedback(num1, den1, num2, den2, sign : num[1:$0], den[1:])', description: 'Connect two transfer functions in a feedback loop. sign is optional: 1.0 (default) for negative feedback, -1.0 for positive feedback.', usage: 'CALL feedback(num1, den1, num2, den2 : num[1:2], den[1:2])' },
     ],
   },
 ]

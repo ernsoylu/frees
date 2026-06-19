@@ -124,6 +124,15 @@ public final class Evaluator {
         if (c.function().startsWith("tf2zp$")) {
             return evalTf2zp(c, values, defs);
         }
+        if (c.function().startsWith("series$")) {
+            return evalSeries(c, values, defs);
+        }
+        if (c.function().startsWith("parallel$")) {
+            return evalParallel(c, values, defs);
+        }
+        if (c.function().startsWith("feedback$")) {
+            return evalFeedback(c, values, defs);
+        }
 
         return evalBuiltin(c, values, defs);
     }
@@ -567,6 +576,79 @@ public final class Evaluator {
         } else {
             return zpk.k();
         }
+    }
+
+    private static double evalSeries(Expr.Call c, Map<String, Double> values, Map<String, ProcDef> defs) {
+        String[] parts = c.function().split("\\$");
+        boolean wantNum = parts[1].equals("num");
+        int index = Integer.parseInt(parts[2]);
+        int L1 = Integer.parseInt(parts[3]);
+        int L2 = Integer.parseInt(parts[4]);
+
+        List<Expr> args = c.args();
+        double[] num1 = new double[L1];
+        double[] den1 = new double[L1];
+        double[] num2 = new double[L2];
+        double[] den2 = new double[L2];
+
+        int idx = 0;
+        for (int i = 0; i < L1; i++) num1[i] = eval(args.get(idx++), values, defs);
+        for (int i = 0; i < L1; i++) den1[i] = eval(args.get(idx++), values, defs);
+        for (int i = 0; i < L2; i++) num2[i] = eval(args.get(idx++), values, defs);
+        for (int i = 0; i < L2; i++) den2[i] = eval(args.get(idx++), values, defs);
+
+        double[][] result = com.frees.backend.cas.PolynomialHelpers.series(num1, den1, num2, den2);
+        double[] coeffs = wantNum ? result[0] : result[1];
+        return coeffs[index];
+    }
+
+    private static double evalParallel(Expr.Call c, Map<String, Double> values, Map<String, ProcDef> defs) {
+        String[] parts = c.function().split("\\$");
+        boolean wantNum = parts[1].equals("num");
+        int index = Integer.parseInt(parts[2]);
+        int L1 = Integer.parseInt(parts[3]);
+        int L2 = Integer.parseInt(parts[4]);
+
+        List<Expr> args = c.args();
+        double[] num1 = new double[L1];
+        double[] den1 = new double[L1];
+        double[] num2 = new double[L2];
+        double[] den2 = new double[L2];
+
+        int idx = 0;
+        for (int i = 0; i < L1; i++) num1[i] = eval(args.get(idx++), values, defs);
+        for (int i = 0; i < L1; i++) den1[i] = eval(args.get(idx++), values, defs);
+        for (int i = 0; i < L2; i++) num2[i] = eval(args.get(idx++), values, defs);
+        for (int i = 0; i < L2; i++) den2[i] = eval(args.get(idx++), values, defs);
+
+        double[][] result = com.frees.backend.cas.PolynomialHelpers.parallel(num1, den1, num2, den2);
+        double[] coeffs = wantNum ? result[0] : result[1];
+        return coeffs[index];
+    }
+
+    private static double evalFeedback(Expr.Call c, Map<String, Double> values, Map<String, ProcDef> defs) {
+        String[] parts = c.function().split("\\$");
+        boolean wantNum = parts[1].equals("num");
+        int index = Integer.parseInt(parts[2]);
+        int L1 = Integer.parseInt(parts[3]);
+        int L2 = Integer.parseInt(parts[4]);
+
+        List<Expr> args = c.args();
+        double[] num1 = new double[L1];
+        double[] den1 = new double[L1];
+        double[] num2 = new double[L2];
+        double[] den2 = new double[L2];
+
+        int idx = 0;
+        for (int i = 0; i < L1; i++) num1[i] = eval(args.get(idx++), values, defs);
+        for (int i = 0; i < L1; i++) den1[i] = eval(args.get(idx++), values, defs);
+        for (int i = 0; i < L2; i++) num2[i] = eval(args.get(idx++), values, defs);
+        for (int i = 0; i < L2; i++) den2[i] = eval(args.get(idx++), values, defs);
+        double sign = eval(args.get(idx), values, defs);
+
+        double[][] result = com.frees.backend.cas.PolynomialHelpers.feedback(num1, den1, num2, den2, sign);
+        double[] coeffs = wantNum ? result[0] : result[1];
+        return coeffs[index];
     }
 
     /**
