@@ -37,6 +37,8 @@ public final class PropertyFunctions {
             Map.entry("soundspeed", "speed_of_sound"),
             Map.entry("compressibility", "Z"),
             Map.entry("compressibilityfactor", "Z"),
+            Map.entry("prandtl", "Prandtl"),
+            Map.entry("volexpcoef", "isobaric_expansion_coefficient"),
             Map.entry("gibbs", "Gmass"));
 
     /** Indicator letter -> CoolProp PropsSI input key. */

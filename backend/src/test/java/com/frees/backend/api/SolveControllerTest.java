@@ -272,6 +272,32 @@ class SolveControllerTest {
     }
 
     @Test
+    void parametricAccessorsResolveAcrossRows() throws Exception {
+        // A driving-cycle style table: P computed per row, total energy E is the
+        // trapezoid integral of P over t — an aggregate of every row, resolved by
+        // the table-wide fixed-point pass. E = 0.5*(0+10) + 0.5*(10+20) = 20.
+        mockMvc.perform(post("/api/solve/table")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{"
+                                + "\"text\": \"P = v\\nE = IntegralValue('P', 't')\\nS = TableSum('P')\","
+                                + "\"table\": {"
+                                + "  \"variables\": [\"t\", \"v\", \"P\", \"E\", \"S\"],"
+                                + "  \"rows\": ["
+                                + "    {\"t\": 0.0, \"v\": 0.0},"
+                                + "    {\"t\": 1.0, \"v\": 10.0},"
+                                + "    {\"t\": 2.0, \"v\": 20.0}"
+                                + "  ]"
+                                + "}"
+                                + "}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.results[0].success").value(true))
+                .andExpect(jsonPath("$.results[0].values.E").value(20.0))
+                .andExpect(jsonPath("$.results[0].values.S").value(30.0))
+                .andExpect(jsonPath("$.results[2].values.E").value(20.0))
+                .andExpect(jsonPath("$.results[2].values.P").value(20.0));
+    }
+
+    @Test
     void automaticallyResolvesMissingStatePropertiesFromBackground() throws Exception {
         mockMvc.perform(post("/api/solve")
                         .contentType(MediaType.APPLICATION_JSON)
