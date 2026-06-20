@@ -1163,7 +1163,8 @@ public class AstBuilder extends FreesBaseVisitor<Expr> {
      * StoichAFR(C8H18). Encoded as prop$ calls preserving token case. */
     private static final java.util.Set<String> CHEM_FUNCS =
             java.util.Set.of("molarmass", "heatingvalue", "stoichafr", "t_crit", "p_crit",
-                    "t_triple", "v_crit");
+                    "t_triple", "v_crit",
+                    "k_", "rho_", "c_", "e_", "nu_"); // bulk solid-material properties
 
     @Override
     public Expr visitCallAtom(FreesParser.CallAtomContext ctx) {
