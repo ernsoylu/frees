@@ -98,6 +98,83 @@ class CodeTableTest {
     }
 
     @Test
+    void interpolateNameLinearMatchesDirectCall() {
+        // EES-compatible Interpolate('table', x) == direct call table(x)
+        String text = """
+                TABLE flow(re)
+                  0     0
+                  100   100
+                END
+                y = Interpolate('flow', 50)
+                """;
+        var result = solver.solve(text);
+        assertEquals(50.0, result.variables().get("y"), 1e-9);
+    }
+
+    @Test
+    void interpolate2DNameMatchesCurveFamily() {
+        // Interpolate2D('table', x, y) == table(x, y) curve-family bilinear
+        String text = """
+                TABLE htc(re : t = 100, 200)
+                  0    0    0
+                  10   10   30
+                END
+                U = Interpolate2D('htc', 5, 150)
+                """;
+        var result = solver.solve(text);
+        assertEquals(10.0, result.variables().get("U"), 1e-9);
+    }
+
+    @Test
+    void interpolate1CubicSplineThroughCollinearPointsIsLinear() {
+        // A natural cubic spline through collinear points reproduces the line.
+        String text = """
+                TABLE lin(x)
+                  0   0
+                  1   2
+                  2   4
+                  3   6
+                END
+                y = Interpolate1('lin', 1.5)
+                """;
+        var result = solver.solve(text);
+        assertEquals(3.0, result.variables().get("y"), 1e-9);
+    }
+
+    @Test
+    void lookupCellAndRowCountAndRow() {
+        String text = """
+                TABLE g(x)
+                  10   100
+                  20   400
+                  30   900
+                END
+                n = NLookupRows('g')
+                c = Lookup('g', 2, 2)
+                r = LookupRow('g', 1, 25)
+                """;
+        var result = solver.solve(text);
+        assertEquals(3.0, result.variables().get("n"), 1e-9);   // 3 rows
+        assertEquals(400.0, result.variables().get("c"), 1e-9); // row 2, col 2
+        assertEquals(2.5, result.variables().get("r"), 1e-9);   // x=25 is halfway between rows 2 and 3
+    }
+
+    @Test
+    void differentiateTableColumn() {
+        // y = x^2 sampled; finite-difference slope between x=20 and x=30 is (900-400)/10 = 50
+        String text = """
+                TABLE g(x)
+                  10   100
+                  20   400
+                  30   900
+                END
+                d = Differentiate('g', 2, 1, 25)
+                """;
+        var result = solver.solve(text);
+        assertEquals(50.0, result.variables().get("d"), 1e-9);
+    }
+
+    @Test
     void tableFunctionParticipatesInNewtonSolve() {
         String text = """
                 TABLE htc(re)

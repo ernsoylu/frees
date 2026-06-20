@@ -69,23 +69,30 @@ dP = pump_curve(0.0015)
 [Topic: lookup-tables]
 # Lookup Tables & Interpolation
 
-frees provides functions to query, search, and interpolate tabular data from internal tables.
+frees provides functions to query, search, and interpolate data from a named `TABLE` block. In a TABLE, **column 1 is the x axis** and each further column is a y/curve column. The simplest way to interpolate is to call the table like a function — `tname(x)` (1-D) or `tname(x, y)` (bilinear across a curve family, e.g. an engine/efficiency map). The functions below are EES-compatible equivalents.
 
 ## Interpolation Functions
-- **`Lookup('tname', row, col):`** Returns a cell value by 1-based row and column indexes.
-- **`LookupRow('tname', col, val):`** Finds the row index where the column value matches `val`.
-- **`Lookup$Row('tname', col$, val$):`** Finds the row index where string column `col$` matches `val$`.
-- **`NLookupRows('tname'):`** Returns total rows in the table.
-- **`Interpolate('tname', y_col, x_col, x_val):`** Performs linear interpolation.
-- **`Interpolate1('tname', y_col, x_col, x_val):`** Performs cubic-spline interpolation.
-- **`Interpolate2D('tname', z_col, x_col, x_val, y_col, y_val):`** Performs bi-linear (2D) grid interpolation.
-- **`Differentiate('tname', y_col, x_col, x_val):`** Computes numerical derivative $dy/dx$ at $x_{val}$.
-- **`Differentiate1('tname', y_col, x_col, x_val):`** Computes cubic-spline numerical derivative.
+- **`Interpolate('tname', x):`** Piecewise-linear interpolation at `x` (same as `tname(x)`).
+- **`Interpolate1('tname', x):`** Cubic-spline interpolation at `x` (falls back to linear for fewer than 3 points).
+- **`Interpolate2D('tname', x, y):`** Bi-linear (2-D) interpolation over a curve family — `tname(x)` blended across the family parameter `y` (same as `tname(x, y)`).
+- **`Differentiate('tname', y_col, x_col, x_val):`** Numerical derivative $dy/dx$ at $x_{val}$ (finite difference).
+- **`Differentiate1('tname', y_col, x_col, x_val):`** Cubic-spline numerical derivative.
+
+## Lookup Functions
+- **`Lookup('tname', row, col):`** Cell value by 1-based row and column indices.
+- **`LookupRow('tname', col, val):`** Fractional 1-based row index where column `col` crosses `val` (linear).
+- **`NLookupRows('tname'):`** Number of data rows in the table.
 
 ### Interpolation Example
 ```
-{ Linear interpolation from a custom table }
-T_boil = Interpolate('steam_table', 'Temp', 'Pressure', 101325)
+{ A 2-D engine map: BSFC as a function of speed, parameterised by load }
+TABLE bsfc(rpm : load = 0.25, 0.50, 1.0)
+  1000   320   300   290
+  3000   280   260   250
+  5000   300   270   255
+END
+
+g_per_kWh = Interpolate2D('bsfc', 2500, 0.6)   { same as bsfc(2500, 0.6) }
 ```
 
 [Topic: table-accessors]
