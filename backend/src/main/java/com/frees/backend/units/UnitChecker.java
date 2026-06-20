@@ -607,6 +607,11 @@ public final class UnitChecker {
             case "interpolate", "interpolate1", "interpolate2d",
                  "lookup", "lookuprow", "nlookuprows",
                  "differentiate", "differentiate1" -> Dim.UNKNOWN;
+            // Parametric-table accessors carry the referenced column's units,
+            // which the checker does not track — stay agnostic.
+            case "tablerun#", "tablerun", "nparametricruns", "tablevalue",
+                 "tablesum", "tableavg", "tablemin", "tablemax",
+                 "tablestddev", "integralvalue" -> Dim.UNKNOWN;
             case "stagnationtemp" -> {
                 Dim tDim = dimOf(args.get(0));
                 try {
