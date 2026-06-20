@@ -40,7 +40,15 @@ num = [1, 3]          # s + 3
 den = [1, 3, 2]       # s^2 + 3s + 2
 CALL residue(num[1:2], den[1:3] : r_r[1:2], r_i[1:2], p_r[1:2], p_i[1:2], k)
 ```
-This yields poles `p = -2, -1` with residues `r = -1, 2` (and `k = 0`), so the inverse Laplace transform is `y(t) = r_r[1]*exp(p_r[1]*t) + r_r[2]*exp(p_r[2]*t)`. Residues and poles are complex (real/imag pairs) and sorted together, so `r_r[i]`/`r_i[i]` always pairs with `p_r[i]`/`p_i[i]`. Distinct poles only; a bi-proper `num/den` (equal degree) puts its constant term in `k`.
+This yields poles `p = -2, -1` with residues `r = -1, 2` (and `k = 0`), so the inverse Laplace transform is `y(t) = r_r[1]*exp(p_r[1]*t) + r_r[2]*exp(p_r[2]*t)`. Residues and poles are complex (real/imag pairs) and sorted together, so `r_r[i]`/`r_i[i]` always pairs with `p_r[i]`/`p_i[i]`. A bi-proper `num/den` (equal degree) puts its constant term in `k`.
+
+**Repeated poles.** Add a sixth output `ord` to handle repeated poles — it carries the power `k` of each `A/(s-p)^k` term:
+```
+num = [1]
+den = [1, 2, 1, 0]   # 1 / (s (s+1)^2)
+CALL residue(num[1:1], den[1:4] : r_r[1:3], r_i[1:3], p_r[1:3], p_i[1:3], ord[1:3], k)
+```
+gives `1/s - 1/(s+1) - 1/(s+1)^2`, i.e. the terms `(p=-1, ord=1, r=-1)`, `(p=-1, ord=2, r=-1)`, `(p=0, ord=1, r=1)`. The time-domain term for order `k` is `r · t^(k-1)/(k-1)! · exp(p·t)`. The 5-output form raises an error if the system has repeated poles, since they cannot be disambiguated without `ord`.
 
 ## Transfer functions: tf(num, den)
 
@@ -236,6 +244,30 @@ den = [1, 1, 2, 8]
 CALL routh(den[1:4] : nRHP, stable)   # nRHP = 2, stable = 0
 ```
 To find the range of a free gain `K` for stability, sweep `K` over a `PARAMETRIC` table and read where `nRHP` drops to `0`.
+
+### 8. Nichols Chart Data: nichols
+Computes the open-loop magnitude (dB) and unwrapped phase (deg) at a vector of frequencies `omega` — the same data as `bode`, intended to be plotted as magnitude versus phase to form a Nichols chart.
+```
+CALL nichols(num, den, omega : mag[1:50], phase[1:50])
+# OR
+CALL nichols(A, B, C, D, omega : mag[1:50], phase[1:50])
+```
+
+### 9. Static Error Constants: errorconst
+Computes the steady-state (static) error constants for an open-loop `G(s) = num/den` given in lowest terms: position `Kp = lim G(s)`, velocity `Kv = lim s·G(s)`, and acceleration `Ka = lim s²·G(s)` as `s → 0`. Constants that are infinite for the system type are returned as `Infinity`.
+```
+num = [0, 0, 20]
+den = [1, 6, 5]            # type 0 system
+CALL errorconst(num[1:3], den[1:3] : Kp, Kv, Ka)   # Kp = 4, Kv = 0, Ka = 0
+```
+
+### 10. Signal-Flow Graphs: mason
+Computes the overall transmittance of a scalar signal-flow graph by **Mason's gain formula**. `G` is a square node-gain matrix where `G[i,j]` is the branch gain from node `i` to node `j` (`0` means no branch); `source` and `sink` are 1-based node numbers. The solver enumerates the forward paths and loops, builds the graph determinant from the non-touching loop combinations, and returns `T = Y(sink)/X(source)`.
+```
+G = [0, 2, 0; 0, 0, 3; 0, 0.5, 0]   # 1->2 (2), 2->3 (3), feedback 3->2 (0.5)
+CALL mason(G[1:3,1:3], 1, 3 : T)    # T = 6/(1 - 1.5) = -12
+```
+For transfer-function-valued block diagrams, use the `series`/`parallel`/`feedback` interconnection functions instead, which carry full `num/den` polynomials.
 
 ## Digital Control (z-domain)
 
