@@ -215,8 +215,15 @@ public final class PropertyFunctions {
                 return CoolProp.props1SI(resolveFluid(tokens.get(0)), "Tcrit");
             case "p_crit":
                 return CoolProp.props1SI(resolveFluid(tokens.get(0)), "Pcrit");
+            case "t_triple":
+                return CoolProp.props1SI(resolveFluid(tokens.get(0)), "Ttriple");
+            case "v_crit":
+                return 1.0 / CoolProp.props1SI(resolveFluid(tokens.get(0)), "rhocrit");
             default:
                 break;
+        }
+        if (output.equals("p_sat") || output.equals("t_sat") || output.equals("surfacetension")) {
+            return evaluateSaturation(output, parts, values);
         }
         if ("airh2o".equals(parts[2]) || "humidair".equals(parts[2])) {
             return evaluateHumidAir(output, parts, values);
@@ -241,6 +248,27 @@ public final class PropertyFunctions {
                 second.key(), second.value(), fluid);
         // Volume is reported as specific volume = 1/density.
         return VOLUME.equals(output) ? 1.0 / raw : raw;
+    }
+
+    /**
+     * Saturation-line properties that take a single indicator and an implied
+     * quality: P_sat(fluid, T=...), T_sat(fluid, P=...), and SurfaceTension
+     * (defined only along the saturation curve).
+     */
+    private static double evaluateSaturation(String output, String[] parts, List<Double> values) {
+        if (parts.length != 4 || values.size() != 1) {
+            throw new IllegalStateException(capitalize(output)
+                    + " takes a fluid and one indicator, e.g. P_sat(Water, T=373.15), "
+                    + "T_sat(Water, P=101325), SurfaceTension(Water, T=300)");
+        }
+        String fluid = resolveFluid(parts[2]);
+        Input in = toInput(parts[3], values.get(0), output);
+        return switch (output) {
+            case "p_sat" -> CoolProp.propsSI("P", in.key(), in.value(), "Q", 0.0, fluid);
+            case "t_sat" -> CoolProp.propsSI("T", in.key(), in.value(), "Q", 0.0, fluid);
+            case "surfacetension" -> CoolProp.propsSI("surface_tension", in.key(), in.value(), "Q", 0.0, fluid);
+            default -> 0.0;
+        };
     }
 
     /** AirH2O calls map to HAPropsSI and need three indicators (e.g. T, P, R). */

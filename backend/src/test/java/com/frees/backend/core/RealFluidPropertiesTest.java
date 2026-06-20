@@ -62,6 +62,34 @@ class RealFluidPropertiesTest {
     }
 
     @Test
+    void saturationPressureAndTemperature() {
+        EquationSystemSolver.Result ps =
+                solver.solve("P = P_sat(Water, T=373.15)");
+        assertEquals(101325.0, ps.variables().get("P"), 1500.0);
+        EquationSystemSolver.Result ts =
+                solver.solve("T = T_sat(Water, P=101325)");
+        assertEquals(373.12, ts.variables().get("T"), 0.5);
+    }
+
+    @Test
+    void surfaceTensionOfWater() {
+        // Water at 300 K: sigma ~ 0.0717 N/m
+        EquationSystemSolver.Result result =
+                solver.solve("sigma = SurfaceTension(Water, T=300)");
+        assertEquals(0.0717, result.variables().get("sigma"), 0.005);
+    }
+
+    @Test
+    void triplePointAndCriticalVolume() {
+        EquationSystemSolver.Result tt = solver.solve("Tt = T_triple(Water)");
+        assertEquals(273.16, tt.variables().get("Tt"), 0.5);
+
+        EquationSystemSolver.Result vc = solver.solve("vc = v_crit(Water)");
+        // critical density of water ~ 322 kg/m^3 -> v_crit ~ 0.0031 m^3/kg
+        assertEquals(0.0031, vc.variables().get("vc"), 0.0005);
+    }
+
+    @Test
     void specificVolumeIsInverseDensity() {
         EquationSystemSolver.Result result = solver.solve(
                 "v1 = Volume(Air, T=300, P=100000)\nrho1 = Density(Air, T=300, P=100000)");
