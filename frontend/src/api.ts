@@ -411,6 +411,74 @@ export async function optimize(
   }
 }
 
+export interface MultiObjectiveParams {
+  objectives: string[]
+  maximize: boolean[]
+  decisions: string[]
+  lowers: number[]
+  uppers: number[]
+  populationSize?: number
+  generations?: number
+}
+
+export interface ParetoPoint {
+  decisions: number[]
+  objectives: number[]
+}
+
+export interface ParetoResponse {
+  success: boolean
+  error: string | null
+  decisionNames: string[]
+  objectiveNames: string[]
+  front: ParetoPoint[]
+  evaluations: number
+}
+
+export async function optimizeMulti(
+  text: string,
+  stopCriteria: StopCriteria,
+  variableInfo: VariableInfo[],
+  params: MultiObjectiveParams,
+): Promise<ParetoResponse> {
+  const empty = (error: string): ParetoResponse => ({
+    success: false,
+    error,
+    decisionNames: [],
+    objectiveNames: [],
+    front: [],
+    evaluations: 0,
+  })
+  try {
+    const response = await fetch(`${API_BASE}/api/optimize/multi`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text, stopCriteria, variableInfo, ...params }),
+    })
+    if (!response.ok) {
+      let message = `Server error (${response.status})`
+      try {
+        const errJson = await response.json()
+        if (errJson && typeof errJson === 'object') {
+          message = errJson.error || errJson.message || message
+        }
+      } catch {}
+      return empty(message)
+    }
+    const data = await response.json()
+    return {
+      success: data.success ?? false,
+      error: data.error ?? null,
+      decisionNames: data.decisionNames ?? [],
+      objectiveNames: data.objectiveNames ?? [],
+      front: data.front ?? [],
+      evaluations: data.evaluations ?? 0,
+    }
+  } catch (e) {
+    return empty(`Could not reach the solver backend: ${String(e)}`)
+  }
+}
+
 export interface CurveFitParams {
   model: string
   yVariable: string
