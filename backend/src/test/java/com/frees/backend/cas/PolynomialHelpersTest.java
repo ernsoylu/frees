@@ -4,7 +4,6 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.fail;
 
 class PolynomialHelpersTest {
@@ -326,10 +325,54 @@ class PolynomialHelpersTest {
     }
 
     @Test
-    void residueRejectsRepeatedPoles() {
-        // 1/(s+1)^2 = 1/(s^2+2s+1) has a repeated pole
-        assertThrows(IllegalArgumentException.class,
-                () -> PolynomialHelpers.residue(new double[]{1}, new double[]{1, 2, 1}));
+    void residueHandlesRepeatedPole() {
+        // 1/(s+1)^2 = 1/(s+1)^2 + 0/(s+1): A_2 = 1, A_1 = 0 at the double pole -1
+        PolynomialHelpers.ResidueResult res =
+                PolynomialHelpers.residue(new double[]{1}, new double[]{1, 2, 1});
+        assertEquals(2, res.poles().length);
+        assertEquals(0.0, res.k(), 1e-12);
+        for (int i = 0; i < 2; i++) {
+            assertEquals(-1.0, res.poles()[i][0], 1e-6);
+            if (res.orders()[i] == 2) {
+                assertEquals(1.0, res.residues()[i][0], 1e-9);
+            } else {
+                assertEquals(0.0, res.residues()[i][0], 1e-9);
+            }
+        }
+    }
+
+    @Test
+    void residueRepeatedPoleWithNonzeroFirstOrderTerm() {
+        // s/(s+1)^2 = -1/(s+1)^2 + 1/(s+1): A_2 = -1, A_1 = 1
+        PolynomialHelpers.ResidueResult res =
+                PolynomialHelpers.residue(new double[]{1, 0}, new double[]{1, 2, 1});
+        for (int i = 0; i < 2; i++) {
+            if (res.orders()[i] == 2) {
+                assertEquals(-1.0, res.residues()[i][0], 1e-9);
+            } else {
+                assertEquals(1.0, res.residues()[i][0], 1e-9);
+            }
+        }
+    }
+
+    @Test
+    void residueRepeatedPoleMixedWithSimplePole() {
+        // 1/(s(s+1)^2) = 1/s - 1/(s+1) - 1/(s+1)^2
+        PolynomialHelpers.ResidueResult res =
+                PolynomialHelpers.residue(new double[]{1}, new double[]{1, 2, 1, 0});
+        assertEquals(3, res.poles().length);
+        for (int i = 0; i < 3; i++) {
+            double p = res.poles()[i][0];
+            int ord = res.orders()[i];
+            double r = res.residues()[i][0];
+            if (Math.abs(p) < 1e-6) {
+                assertEquals(1.0, r, 1e-9);          // 1/s
+            } else if (ord == 1) {
+                assertEquals(-1.0, r, 1e-9);         // -1/(s+1)
+            } else {
+                assertEquals(-1.0, r, 1e-9);         // -1/(s+1)^2
+            }
+        }
     }
 
     private void sortRoots(double[][] roots) {

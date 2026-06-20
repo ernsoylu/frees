@@ -1811,20 +1811,24 @@ public final class EquationParser {
     }
 
     /**
-     * Flattens {@code residue}: 2 inputs (num, den) and 5 outputs
-     * (r_r, r_i, p_r, p_i, k) — the partial-fraction residues (real/imag),
-     * the matching poles (real/imag), and the scalar direct term. This is the
-     * numeric inverse-Laplace path: the residues appear in the Solution window
-     * as ordinary variables.
+     * Flattens {@code residue}: 2 inputs (num, den) and either 5 outputs
+     * (r_r, r_i, p_r, p_i, k) or 6 outputs (r_r, r_i, p_r, p_i, ord, k). The
+     * residues (real/imag), matching poles (real/imag), per-term order, and the
+     * scalar direct term are the numeric inverse-Laplace path: they appear in the
+     * Solution window as ordinary variables. The 6-output form (with the {@code
+     * ord} array) is required for repeated poles, where {@code ord} carries the
+     * power k of each {@code A/(s-p)^k} term.
      */
     private void flattenResidue(List<Expr> inputs, List<Expr> outputs, String sourceText, FlattenContext ctx) {
-        if (inputs.size() != 2 || outputs.size() != 5) {
-            throw new ParseException("residue expects 2 inputs (num, den) and 5 outputs (r_r, r_i, p_r, p_i, k), "
+        boolean withOrder = outputs.size() == 6;
+        if (inputs.size() != 2 || (outputs.size() != 5 && !withOrder)) {
+            throw new ParseException("residue expects 2 inputs (num, den) and 5 outputs (r_r, r_i, p_r, p_i, k) "
+                    + "or 6 outputs (r_r, r_i, p_r, p_i, ord, k) for repeated poles, "
                     + "e.g. CALL residue(num[1:1], den[1:3] : r_r[1:2], r_i[1:2], p_r[1:2], p_i[1:2], k)");
         }
         VectorInfo num = parseVectorInfo(inputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
         VectorInfo den = parseVectorInfo(inputs.get(1), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
-        int n = den.size - 1; // number of poles = denominator degree
+        int n = den.size - 1; // number of residue terms = denominator degree
 
         VectorInfo rr = parseVectorInfo(outputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
         VectorInfo ri = parseVectorInfo(outputs.get(1), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
@@ -1833,30 +1837,45 @@ public final class EquationParser {
         if (rr.size != n || ri.size != n || pr.size != n || pi.size != n) {
             throw new ParseException("residue: output vectors r_r, r_i, p_r, p_i must have length n = " + n);
         }
+        int arrayOutputs = 4;
+        VectorInfo ord = null;
+        if (withOrder) {
+            ord = parseVectorInfo(outputs.get(4), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+            if (ord.size != n) {
+                throw new ParseException("residue: output vector ord must have length n = " + n);
+            }
+            arrayOutputs = 5;
+        }
 
         List<Expr> entries = new ArrayList<>();
         entries.addAll(Arrays.asList(num.elements));
         entries.addAll(Arrays.asList(den.elements));
 
-        for (Expr out : new Expr[]{outputs.get(0), outputs.get(1), outputs.get(2), outputs.get(3)}) {
-            if (out instanceof Expr.ArrayAccess aa) {
+        for (int o = 0; o < arrayOutputs; o++) {
+            if (outputs.get(o) instanceof Expr.ArrayAccess aa) {
                 registerShape(aa.name(), n, 1, ctx);
             }
         }
 
+        String form = withOrder ? "o" : "s";
         int numLen = num.size;
+        String suffix = "$" + form + "$";
         for (int i = 0; i < n; i++) {
             ctx.out().add(new Equation(rr.elements[i],
-                    new Expr.Call("residue$rr$" + i + "$" + numLen + "$" + n, entries), sourceText));
+                    new Expr.Call("residue$rr" + suffix + i + "$" + numLen + "$" + n, entries), sourceText));
             ctx.out().add(new Equation(ri.elements[i],
-                    new Expr.Call("residue$ri$" + i + "$" + numLen + "$" + n, entries), sourceText));
+                    new Expr.Call("residue$ri" + suffix + i + "$" + numLen + "$" + n, entries), sourceText));
             ctx.out().add(new Equation(pr.elements[i],
-                    new Expr.Call("residue$pr$" + i + "$" + numLen + "$" + n, entries), sourceText));
+                    new Expr.Call("residue$pr" + suffix + i + "$" + numLen + "$" + n, entries), sourceText));
             ctx.out().add(new Equation(pi.elements[i],
-                    new Expr.Call("residue$pi$" + i + "$" + numLen + "$" + n, entries), sourceText));
+                    new Expr.Call("residue$pi" + suffix + i + "$" + numLen + "$" + n, entries), sourceText));
+            if (withOrder) {
+                ctx.out().add(new Equation(ord.elements[i],
+                        new Expr.Call("residue$ord" + suffix + i + "$" + numLen + "$" + n, entries), sourceText));
+            }
         }
-        ctx.out().add(new Equation(outputs.get(4),
-                new Expr.Call("residue$k$" + numLen + "$" + n, entries), sourceText));
+        ctx.out().add(new Equation(outputs.get(arrayOutputs),
+                new Expr.Call("residue$k" + suffix + numLen + "$" + n, entries), sourceText));
     }
 
     /**
