@@ -66,14 +66,11 @@ export const FUNCTION_CATEGORIES: FunctionCategory[] = [
   {
     category: 'Solid & Material Properties',
     items: [
-      { label: 'c_', snippet: 'c_($0, T=)', description: 'Specific heat capacity [J/(kg·K)] of a solid or liquid material at temperature T.', usage: 'c = c_(Steel, T=300 [K])' },
-      { label: 'k_', snippet: 'k_($0, T=)', description: 'Thermal conductivity [W/(m·K)] of a solid or liquid material at temperature T.', usage: 'k = k_(Aluminum, T=300 [K])' },
+      { label: 'c_', snippet: 'c_($0)', description: 'Specific heat capacity [J/(kg·K)] of a common solid material (room-temperature value).', usage: 'c = c_(Steel)   { ~434 J/kg-K }' },
+      { label: 'k_', snippet: 'k_($0)', description: 'Thermal conductivity [W/(m·K)] of a common solid material (room-temperature value).', usage: 'k = k_(Aluminum)   { ~237 W/m-K }' },
       { label: 'rho_', snippet: 'rho_($0)', description: 'Density [kg/m³] of a solid or liquid material.', usage: 'rho = rho_(Steel)   { ~7800 kg/m³ }' },
-      { label: 'mu_', snippet: 'mu_($0, T=)', description: 'Dynamic viscosity [Pa·s] of a material at temperature T.', usage: 'mu = mu_(Glycol, T=25 [C])' },
-      { label: 'Pv_', snippet: 'Pv_($0, T=)', description: 'Vapor pressure [Pa] of a material at temperature T.', usage: 'Pv = Pv_(Ethanol, T=20 [C])' },
       { label: 'E_', snippet: 'E_($0)', description: "Young's modulus [Pa] of a structural material.", usage: "E = E_(Steel)   { ~200 GPa }" },
       { label: 'nu_', snippet: 'nu_($0)', description: "Poisson's ratio (dimensionless) of a structural material.", usage: 'nu = nu_(Steel)   { ~0.3 }' },
-      { label: 'epsilon_', snippet: 'epsilon_($0)', description: 'Emissivity (0–1) of a surface material for radiation calculations.', usage: 'eps = epsilon_(BlackPaint)   { ~0.95 }' },
       { label: 'VolExpCoef', snippet: 'VolExpCoef($0)', description: 'Volumetric expansion coefficient [1/K] of a material.', usage: 'beta = VolExpCoef(Steel)' },
     ],
   },
@@ -209,20 +206,9 @@ export const FUNCTION_CATEGORIES: FunctionCategory[] = [
   {
     category: 'Strings',
     items: [
-      { label: 'Concat$', snippet: 'Concat$($0, )', description: 'Concatenate two strings.', usage: "s$ = Concat$('a', 'b')   { 'ab' }" },
-      { label: 'Copy$', snippet: 'Copy$($0, , )', description: 'Substring of a given length starting at a position.', usage: "s$ = Copy$('frees', 1, 3)   { 'fre' }" },
-      { label: 'Lowercase$', snippet: 'Lowercase$($0)', description: 'Lowercase a string.', usage: "s$ = Lowercase$('ABC')   { 'abc' }" },
-      { label: 'Uppercase$', snippet: 'Uppercase$($0)', description: 'Uppercase a string.', usage: "s$ = Uppercase$('abc')   { 'ABC' }" },
-      { label: 'Trim$', snippet: 'Trim$($0)', description: 'Remove leading and trailing whitespace from a string.', usage: "s$ = Trim$('  hello  ')   { 'hello' }" },
       { label: 'StringLen', snippet: 'StringLen($0)', description: 'Number of characters in a string.', usage: "n = StringLen('frees')   { 5 }" },
       { label: 'StringPos', snippet: 'StringPos($0, sub$)', description: 'Index of the first occurrence of sub$ in str$; 0 if not found.', usage: "i = StringPos('hello world', 'world')   { 7 }" },
       { label: 'StringVal', snippet: 'StringVal($0)', description: 'Convert a numeric string to a number.', usage: "v = StringVal('3.14')   { 3.14 }" },
-      { label: 'String$', snippet: 'String$($0)', description: 'Convert a number to its string representation.', usage: "s$ = String$(3.14)   { '3.14' }" },
-      { label: 'UnitsOf$', snippet: 'UnitsOf$($0)', description: "A variable's units, as a string.", usage: 'u$ = UnitsOf$(P)' },
-      { label: 'UnitSystem$', snippet: 'UnitSystem$()', description: 'Description of the active unit system as a string.', usage: "sys$ = UnitSystem$()   { 'SI' }" },
-      { label: 'Date$', snippet: 'Date$()', description: 'Current date as a string.', usage: 'd$ = Date$()' },
-      { label: 'Time$', snippet: 'Time$()', description: 'Current time as a string (HH:MM:SS).', usage: "t$ = Time$()" },
-      { label: 'TimeStamp$', snippet: 'TimeStamp$()', description: 'Current date and time as a combined timestamp string.', usage: "ts$ = TimeStamp$()" },
     ],
   },
   {

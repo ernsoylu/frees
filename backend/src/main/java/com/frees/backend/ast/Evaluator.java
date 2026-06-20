@@ -386,6 +386,14 @@ public final class Evaluator {
             // Base conversion: BaseConvert('FF', 16, 10) -> 255
             case "baseconvert" -> evalBaseConvert(c, values, defs);
 
+            // Numeric string functions (operate on string-literal arguments).
+            case "stringlen" -> evalString(args.get(0)).length();
+            case "stringval" -> Double.parseDouble(evalString(args.get(0)).trim());
+            case "stringpos" -> {
+                int idx = evalString(args.get(0)).indexOf(evalString(args.get(1)));
+                yield idx < 0 ? 0 : idx + 1; // 1-based; 0 when not found
+            }
+
             // ODE Table accessors — read cells/extrema/aggregates out of a solved
             // DYNAMIC block; live against the current Newton iterate.
             case "odevalue", "finalvalue", "maxvalue", "minvalue", "timeat",

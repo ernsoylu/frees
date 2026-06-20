@@ -219,6 +219,8 @@ public final class PropertyFunctions {
                 return CoolProp.props1SI(resolveFluid(tokens.get(0)), "Ttriple");
             case "v_crit":
                 return 1.0 / CoolProp.props1SI(resolveFluid(tokens.get(0)), "rhocrit");
+            case "k_", "rho_", "c_", "e_", "nu_":
+                return SolidProperties.lookup(tokens.get(0), output);
             default:
                 break;
         }
