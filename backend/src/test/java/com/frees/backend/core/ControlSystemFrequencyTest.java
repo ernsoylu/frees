@@ -106,4 +106,71 @@ class ControlSystemFrequencyTest {
         assertEquals(Math.sqrt(2.0), result.variables().get("w_cp"), 1e-2);
         assertEquals(0.75, result.variables().get("w_cg"), 1e-2);
     }
+
+    @Test
+    void routhReportsStableSystem() {
+        // (s+1)(s+2)(s+3) = s^3 + 6s^2 + 11s + 6 -> stable, 0 RHP poles
+        EquationSystemSolver.Result result = solver.solve(
+                "den = [1, 6, 11, 6]\n"
+                        + "CALL routh(den[1:4] : nRHP, stable)");
+
+        assertEquals(0.0, result.variables().get("nRHP"), 1e-9);
+        assertEquals(1.0, result.variables().get("stable"), 1e-9);
+    }
+
+    @Test
+    void routhCountsUnstableRightHalfPlanePoles() {
+        // s^3 + s^2 + 2s + 8 -> 2 RHP poles (unstable)
+        EquationSystemSolver.Result result = solver.solve(
+                "den = [1, 1, 2, 8]\n"
+                        + "CALL routh(den[1:4] : nRHP, stable)");
+
+        assertEquals(2.0, result.variables().get("nRHP"), 1e-9);
+        assertEquals(0.0, result.variables().get("stable"), 1e-9);
+    }
+
+    @Test
+    void c2dTustinDiscretizesIntegrator() {
+        // 1/s with Tustin at Ts = 0.1 -> (0.05 z + 0.05) / (z - 1)
+        EquationSystemSolver.Result result = solver.solve(
+                "num = [0, 1]\n"
+                        + "den = [1, 0]\n"
+                        + "Ts = 0.1\n"
+                        + "CALL c2d(num[1:2], den[1:2], Ts, 'tustin' : numz[1:2], denz[1:2])");
+
+        assertEquals(0.05, result.variables().get("numz[1]"), 1e-9);
+        assertEquals(0.05, result.variables().get("numz[2]"), 1e-9);
+        assertEquals(1.0, result.variables().get("denz[1]"), 1e-9);
+        assertEquals(-1.0, result.variables().get("denz[2]"), 1e-9);
+    }
+
+    @Test
+    void c2dZohDiscretizesFirstOrderPlant() {
+        // 2/(s+2) with ZOH at Ts = 0.1: pole maps to e^{-0.2}, dc gain preserved
+        EquationSystemSolver.Result result = solver.solve(
+                "num = [0, 2]\n"
+                        + "den = [1, 2]\n"
+                        + "Ts = 0.1\n"
+                        + "CALL c2d(num[1:2], den[1:2], Ts, 'zoh' : numz[1:2], denz[1:2])");
+
+        double pole = Math.exp(-0.2);
+        assertEquals(1.0, result.variables().get("denz[1]"), 1e-6);
+        assertEquals(-pole, result.variables().get("denz[2]"), 1e-6);
+        assertEquals(1.0 - pole, result.variables().get("numz[2]"), 1e-6);
+    }
+
+    @Test
+    void residueComputesInverseLaplaceResidues() {
+        // (s+3)/(s^2+3s+2) = 2/(s+1) - 1/(s+2); poles sorted ascending: -2, -1
+        EquationSystemSolver.Result result = solver.solve(
+                "num = [1, 3]\n"
+                        + "den = [1, 3, 2]\n"
+                        + "CALL residue(num[1:2], den[1:3] : r_r[1:2], r_i[1:2], p_r[1:2], p_i[1:2], k)");
+
+        assertEquals(-2.0, result.variables().get("p_r[1]"), 1e-6);
+        assertEquals(-1.0, result.variables().get("r_r[1]"), 1e-6);
+        assertEquals(-1.0, result.variables().get("p_r[2]"), 1e-6);
+        assertEquals(2.0, result.variables().get("r_r[2]"), 1e-6);
+        assertEquals(0.0, result.variables().get("k"), 1e-9);
+    }
 }

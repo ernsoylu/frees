@@ -4,6 +4,8 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.fail;
 
 class PolynomialHelpersTest {
 
@@ -172,6 +174,111 @@ class PolynomialHelpersTest {
         
         // w_cg (gain crossover frequency) should be ~0.75
         assertEquals(0.75, res[2], 1e-2);
+    }
+
+    @Test
+    void routhReportsStableSystem() {
+        // (s+1)(s+2)(s+3) = s^3 + 6s^2 + 11s + 6, all roots in LHP
+        double[] den = {1.0, 6.0, 11.0, 6.0};
+        assertEquals(0, PolynomialHelpers.routh(den));
+    }
+
+    @Test
+    void routhCountsRightHalfPlanePoles() {
+        // s^3 + s^2 + 2s + 8 has two right-half-plane roots (classic Nise example)
+        double[] den = {1.0, 1.0, 2.0, 8.0};
+        assertEquals(2, PolynomialHelpers.routh(den));
+    }
+
+    @Test
+    void routhHandlesRowOfZeros() {
+        // s^3 + 2s^2 + 3s + 6 = (s+2)(s^2+3): jw-axis roots, no RHP poles
+        double[] den = {1.0, 2.0, 3.0, 6.0};
+        assertEquals(0, PolynomialHelpers.routh(den));
+    }
+
+    @Test
+    void c2dTustinMatchesKnownIntegratorMapping() {
+        // 1/s with Tustin -> (Ts/2)(z+1)/(z-1)
+        double ts = 0.1;
+        double[][] hz = PolynomialHelpers.c2d(new double[]{1.0}, new double[]{1.0, 0.0}, ts, "tustin");
+        assertArrayEquals(new double[]{ts / 2.0, ts / 2.0}, hz[0], 1e-12);
+        assertArrayEquals(new double[]{1.0, -1.0}, hz[1], 1e-12);
+    }
+
+    @Test
+    void d2cInvertsC2dTustin() {
+        // Round-trip a first-order plant through c2d then d2c recovers it
+        double ts = 0.05;
+        double[] num = {2.0};
+        double[] den = {1.0, 3.0}; // 2/(s+3)
+        double[][] hz = PolynomialHelpers.c2d(num, den, ts, "tustin");
+        double[][] back = PolynomialHelpers.d2c(hz[0], hz[1], ts, "tustin");
+        // Normalise both to monic denominator for comparison
+        assertEquals(num[0] / den[0], back[0][back[0].length - 1] / back[1][0], 1e-9);
+        assertEquals(den[1] / den[0], back[1][1] / back[1][0], 1e-9);
+    }
+
+    @Test
+    void c2dZohMatchesFirstOrderExact() {
+        // a/(s+a) with ZOH -> (1 - e^{-aT}) z^-... : denominator pole at e^{-aT}
+        double a = 2.0;
+        double ts = 0.1;
+        double[][] hz = PolynomialHelpers.c2d(new double[]{a}, new double[]{1.0, a}, ts, "zoh");
+        double pole = Math.exp(-a * ts);
+        // denominator z - e^{-aT}
+        assertEquals(1.0, hz[1][0], 1e-9);
+        assertEquals(-pole, hz[1][1], 1e-6);
+        // numerator gain 1 - e^{-aT} on z^0 term
+        assertEquals(1.0 - pole, hz[0][hz[0].length - 1], 1e-6);
+    }
+
+    @Test
+    void residueComputesPartialFractions() {
+        // (s+3)/(s^2+3s+2) = 2/(s+1) - 1/(s+2)
+        PolynomialHelpers.ResidueResult res =
+                PolynomialHelpers.residue(new double[]{1, 3}, new double[]{1, 3, 2});
+        assertEquals(0.0, res.k(), 1e-12);
+        assertEquals(2, res.poles().length);
+        for (int i = 0; i < 2; i++) {
+            double p = res.poles()[i][0];
+            double r = res.residues()[i][0];
+            assertEquals(0.0, res.poles()[i][1], 1e-9);
+            assertEquals(0.0, res.residues()[i][1], 1e-9);
+            if (Math.abs(p + 1.0) < 1e-6) {
+                assertEquals(2.0, r, 1e-9);
+            } else if (Math.abs(p + 2.0) < 1e-6) {
+                assertEquals(-1.0, r, 1e-9);
+            } else {
+                fail("unexpected pole " + p);
+            }
+        }
+    }
+
+    @Test
+    void residueSplitsDirectTermWhenBiproper() {
+        // (s^2+3s+5)/(s^2+3s+2) = 1 + 3/(s+1) - 3/(s+2)
+        PolynomialHelpers.ResidueResult res =
+                PolynomialHelpers.residue(new double[]{1, 3, 5}, new double[]{1, 3, 2});
+        assertEquals(1.0, res.k(), 1e-9);
+        for (int i = 0; i < 2; i++) {
+            double p = res.poles()[i][0];
+            double r = res.residues()[i][0];
+            if (Math.abs(p + 1.0) < 1e-6) {
+                assertEquals(3.0, r, 1e-9);
+            } else if (Math.abs(p + 2.0) < 1e-6) {
+                assertEquals(-3.0, r, 1e-9);
+            } else {
+                fail("unexpected pole " + p);
+            }
+        }
+    }
+
+    @Test
+    void residueRejectsRepeatedPoles() {
+        // 1/(s+1)^2 = 1/(s^2+2s+1) has a repeated pole
+        assertThrows(IllegalArgumentException.class,
+                () -> PolynomialHelpers.residue(new double[]{1}, new double[]{1, 2, 1}));
     }
 
     private void sortRoots(double[][] roots) {

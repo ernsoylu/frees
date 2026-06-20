@@ -69,6 +69,34 @@ public final class CasEngine {
         return buildResult(symjaInput, symjaOutput);
     }
 
+    /**
+     * Laplace transform of a time-domain expression {@code f(t)} into the
+     * {@code s} domain — e.g. {@code laplace("exp(-a*t)", "t", "s")} yields
+     * {@code 1/(a+s)}. Covers the forward-transform problems in Nise Ch. 2.
+     */
+    public CasResult laplace(String expression, String timeVar, String freqVar) {
+        return applyWithTwoVariables("LaplaceTransform", expression, timeVar, freqVar);
+    }
+
+    /**
+     * Inverse Laplace transform of an {@code s}-domain expression back to the
+     * time domain — e.g. {@code inverseLaplace("1/(s^2+1)", "s", "t")} yields
+     * {@code Sin(t)}. This is the partner of {@link #apart} for completing the
+     * inverse-Laplace workflow symbolically rather than by table lookup.
+     */
+    public CasResult inverseLaplace(String expression, String freqVar, String timeVar) {
+        return applyWithTwoVariables("InverseLaplaceTransform", expression, freqVar, timeVar);
+    }
+
+    /** Runs a Symja function that takes the expression plus two variable arguments. */
+    public CasResult applyWithTwoVariables(String symjaFunction, String expression, String var1, String var2) {
+        String v1 = requireIdentifier(var1);
+        String v2 = requireIdentifier(var2);
+        String symjaInput = toSymja(expression);
+        String symjaOutput = evaluate(symjaFunction + "(" + symjaInput + "," + v1 + "," + v2 + ")");
+        return buildResult(symjaInput, symjaOutput);
+    }
+
     /** Runs a single-argument Symja function over a frees expression. */
     public CasResult apply(String symjaFunction, String expression) {
         String symjaInput = toSymja(expression);

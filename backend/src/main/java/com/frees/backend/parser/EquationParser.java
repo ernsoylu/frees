@@ -840,6 +840,18 @@ public final class EquationParser {
             flattenRlocus(inputs, outputs, sourceText, ctx);
             return;
         }
+        if (defName.equals("routh")) {
+            flattenRouth(inputs, outputs, sourceText, ctx);
+            return;
+        }
+        if (defName.equals("c2d") || defName.equals("d2c")) {
+            flattenDiscretize(defName, inputs, outputs, sourceText, ctx);
+            return;
+        }
+        if (defName.equals("residue")) {
+            flattenResidue(inputs, outputs, sourceText, ctx);
+            return;
+        }
 
         ProcDef def = ctx.defs().get(defName);
         if (def == null) {
@@ -1764,6 +1776,133 @@ public final class EquationParser {
                 new Expr.Call("margin$wcg$" + inputs.size(), entries), sourceText));
         ctx.out().add(new Equation(outputs.get(3),
                 new Expr.Call("margin$wcp$" + inputs.size(), entries), sourceText));
+    }
+
+    /**
+     * Flattens the Routh-Hurwitz test: 1 input (the characteristic polynomial
+     * coefficients, descending powers) and 2 scalar outputs (nRHP = number of
+     * right-half-plane poles, stable = 1 if stable else 0). The polynomial
+     * coefficients are serialized as the synthetic call's arguments.
+     */
+    private void flattenRouth(List<Expr> inputs, List<Expr> outputs, String sourceText, FlattenContext ctx) {
+        if (inputs.size() != 1 || outputs.size() != 2) {
+            throw new ParseException("routh expects 1 input (den) and 2 scalar outputs (nRHP, stable), "
+                    + "e.g. CALL routh(den[1:4] : nRHP, stable)");
+        }
+        VectorInfo den = parseVectorInfo(inputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        List<Expr> entries = new ArrayList<>(Arrays.asList(den.elements));
+
+        ctx.out().add(new Equation(outputs.get(0),
+                new Expr.Call("routh$nrhp$" + den.size, entries), sourceText));
+        ctx.out().add(new Equation(outputs.get(1),
+                new Expr.Call("routh$stable$" + den.size, entries), sourceText));
+    }
+
+    /**
+     * Flattens {@code residue}: 2 inputs (num, den) and 5 outputs
+     * (r_r, r_i, p_r, p_i, k) — the partial-fraction residues (real/imag),
+     * the matching poles (real/imag), and the scalar direct term. This is the
+     * numeric inverse-Laplace path: the residues appear in the Solution window
+     * as ordinary variables.
+     */
+    private void flattenResidue(List<Expr> inputs, List<Expr> outputs, String sourceText, FlattenContext ctx) {
+        if (inputs.size() != 2 || outputs.size() != 5) {
+            throw new ParseException("residue expects 2 inputs (num, den) and 5 outputs (r_r, r_i, p_r, p_i, k), "
+                    + "e.g. CALL residue(num[1:1], den[1:3] : r_r[1:2], r_i[1:2], p_r[1:2], p_i[1:2], k)");
+        }
+        VectorInfo num = parseVectorInfo(inputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        VectorInfo den = parseVectorInfo(inputs.get(1), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        int n = den.size - 1; // number of poles = denominator degree
+
+        VectorInfo rr = parseVectorInfo(outputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        VectorInfo ri = parseVectorInfo(outputs.get(1), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        VectorInfo pr = parseVectorInfo(outputs.get(2), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        VectorInfo pi = parseVectorInfo(outputs.get(3), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        if (rr.size != n || ri.size != n || pr.size != n || pi.size != n) {
+            throw new ParseException("residue: output vectors r_r, r_i, p_r, p_i must have length n = " + n);
+        }
+
+        List<Expr> entries = new ArrayList<>();
+        entries.addAll(Arrays.asList(num.elements));
+        entries.addAll(Arrays.asList(den.elements));
+
+        for (Expr out : new Expr[]{outputs.get(0), outputs.get(1), outputs.get(2), outputs.get(3)}) {
+            if (out instanceof Expr.ArrayAccess aa) {
+                registerShape(aa.name(), n, 1, ctx);
+            }
+        }
+
+        int numLen = num.size;
+        for (int i = 0; i < n; i++) {
+            ctx.out().add(new Equation(rr.elements[i],
+                    new Expr.Call("residue$rr$" + i + "$" + numLen + "$" + n, entries), sourceText));
+            ctx.out().add(new Equation(ri.elements[i],
+                    new Expr.Call("residue$ri$" + i + "$" + numLen + "$" + n, entries), sourceText));
+            ctx.out().add(new Equation(pr.elements[i],
+                    new Expr.Call("residue$pr$" + i + "$" + numLen + "$" + n, entries), sourceText));
+            ctx.out().add(new Equation(pi.elements[i],
+                    new Expr.Call("residue$pi$" + i + "$" + numLen + "$" + n, entries), sourceText));
+        }
+        ctx.out().add(new Equation(outputs.get(4),
+                new Expr.Call("residue$k$" + numLen + "$" + n, entries), sourceText));
+    }
+
+    /**
+     * Flattens {@code c2d}/{@code d2c}: 4 inputs (num, den, Ts, method$) and 2
+     * output vectors (numz, denz) of the same length as den. The conversion
+     * method is encoded into the synthetic call name; the model coefficients and
+     * Ts are serialized as arguments.
+     */
+    private void flattenDiscretize(String name, List<Expr> inputs, List<Expr> outputs, String sourceText, FlattenContext ctx) {
+        if ((inputs.size() != 3 && inputs.size() != 4) || outputs.size() != 2) {
+            throw new ParseException(name + " expects 3 inputs (num, den, Ts) or 4 inputs (num, den, Ts, method$) "
+                    + "and 2 outputs (numz, denz), e.g. CALL " + name + "(num[1:2], den[1:2], Ts, 'tustin' : numz[1:2], denz[1:2])");
+        }
+        String method = "tustin";
+        if (inputs.size() == 4) {
+            if (!(inputs.get(3) instanceof Expr.Str(String methodRaw))) {
+                throw new ParseException(name + ": the fourth argument must be a quoted method, 'tustin' or 'zoh'");
+            }
+            method = methodRaw.toLowerCase();
+            if (!method.equals("tustin") && !method.equals("bilinear") && !method.equals("zoh")) {
+                throw new ParseException(name + ": method must be 'tustin' or 'zoh' (got '" + methodRaw + "')");
+            }
+            if (name.equals("d2c") && method.equals("zoh")) {
+                throw new ParseException("d2c: only the 'tustin' method is supported");
+            }
+        }
+        VectorInfo num = parseVectorInfo(inputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        VectorInfo den = parseVectorInfo(inputs.get(1), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        if (num.size != den.size) {
+            throw new ParseException(name + ": num and den must have the same length (pad the numerator with leading zeros)");
+        }
+        Expr ts = getScalarElement(inputs.get(2), ctx);
+
+        int outLen = den.size;
+        VectorInfo numz = parseVectorInfo(outputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        VectorInfo denz = parseVectorInfo(outputs.get(1), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        if (numz.size != outLen || denz.size != outLen) {
+            throw new ParseException(name + ": outputs numz and denz must have the same length as den = " + outLen);
+        }
+        if (outputs.get(0) instanceof Expr.ArrayAccess aa) {
+            registerShape(aa.name(), outLen, 1, ctx);
+        }
+        if (outputs.get(1) instanceof Expr.ArrayAccess aa) {
+            registerShape(aa.name(), outLen, 1, ctx);
+        }
+
+        List<Expr> entries = new ArrayList<>();
+        entries.addAll(Arrays.asList(num.elements));
+        entries.addAll(Arrays.asList(den.elements));
+        entries.add(ts);
+
+        int L = den.size;
+        for (int i = 0; i < outLen; i++) {
+            ctx.out().add(new Equation(numz.elements[i],
+                    new Expr.Call(name + "$num$" + method + "$" + i + "$" + L, entries), sourceText));
+            ctx.out().add(new Equation(denz.elements[i],
+                    new Expr.Call(name + "$den$" + method + "$" + i + "$" + L, entries), sourceText));
+        }
     }
 
     /**

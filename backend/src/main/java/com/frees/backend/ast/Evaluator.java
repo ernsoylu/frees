@@ -196,6 +196,15 @@ public final class Evaluator {
         if (c.function().startsWith("rlocus$")) {
             return evalRlocus(c, values, defs);
         }
+        if (c.function().startsWith("routh$")) {
+            return evalRouth(c, values, defs);
+        }
+        if (c.function().startsWith("c2d$") || c.function().startsWith("d2c$")) {
+            return evalDiscretize(c, values, defs);
+        }
+        if (c.function().startsWith("residue$")) {
+            return evalResidue(c, values, defs);
+        }
 
         return evalBuiltin(c, values, defs);
     }
@@ -248,6 +257,15 @@ public final class Evaluator {
                 }
                 yield 0.5 * Math.log((1.0 + val) / (1.0 - val));
             }
+
+            // Radiation view factors (closed-form, Howell catalog). Arguments are
+            // lengths in consistent units; the result is the dimensionless F_12.
+            case "viewfactor_perp" -> viewFactorPerpendicular(
+                    arg(c, args, 0, values, defs), arg(c, args, 1, values, defs), arg(c, args, 2, values, defs));
+            case "viewfactor_plates" -> viewFactorParallelPlates(
+                    arg(c, args, 0, values, defs), arg(c, args, 1, values, defs), arg(c, args, 2, values, defs));
+            case "viewfactor_disks" -> viewFactorCoaxialDisks(
+                    arg(c, args, 0, values, defs), arg(c, args, 1, values, defs), arg(c, args, 2, values, defs));
 
             // Compressible Flow Stagnation Properties
             case "stagnationtemp" -> {
@@ -975,6 +993,113 @@ public final class Evaluator {
             case "wcp" -> result[3];
             default -> 0.0;
         };
+    }
+
+    // Synthetic Routh-Hurwitz call: routh$<nrhp|stable>$<L>, with the L
+    // characteristic-polynomial coefficients (descending powers) as arguments.
+    private static double evalRouth(Expr.Call c, Map<String, Double> values, Map<String, ProcDef> defs) {
+        String[] parts = c.function().split("\\$");
+        String output = parts[1]; // "nrhp" or "stable"
+        int len = Integer.parseInt(parts[2]);
+
+        List<Expr> args = c.args();
+        double[] den = new double[len];
+        for (int i = 0; i < len; i++) {
+            den[i] = eval(args.get(i), values, defs);
+        }
+        int nRhp = com.frees.backend.cas.PolynomialHelpers.routh(den);
+        if (output.equals("stable")) {
+            return nRhp == 0 ? 1.0 : 0.0;
+        }
+        return nRhp;
+    }
+
+    // Synthetic partial-fraction call: residue$<rr|ri|pr|pi>$<index>$<numLen>$<n>
+    // or residue$k$<numLen>$<n>, with the numerator then denominator
+    // coefficients as arguments. Poles and residues are sorted together so the
+    // i-th residue always matches the i-th pole.
+    private static double evalResidue(Expr.Call c, Map<String, Double> values, Map<String, ProcDef> defs) {
+        String[] parts = c.function().split("\\$");
+        String which = parts[1]; // rr, ri, pr, pi, or k
+        boolean isK = which.equals("k");
+        int numLen = Integer.parseInt(parts[isK ? 2 : 3]);
+        int n = Integer.parseInt(parts[isK ? 3 : 4]);
+
+        List<Expr> args = c.args();
+        double[] num = new double[numLen];
+        double[] den = new double[n + 1];
+        int idx = 0;
+        for (int i = 0; i < numLen; i++) {
+            num[i] = eval(args.get(idx++), values, defs);
+        }
+        for (int i = 0; i < den.length; i++) {
+            den[i] = eval(args.get(idx++), values, defs);
+        }
+
+        com.frees.backend.cas.PolynomialHelpers.ResidueResult res =
+                com.frees.backend.cas.PolynomialHelpers.residue(num, den);
+        if (isK) {
+            return res.k();
+        }
+
+        double[][] poles = res.poles();
+        double[][] residues = res.residues();
+        Integer[] order = new Integer[poles.length];
+        for (int i = 0; i < order.length; i++) {
+            order[i] = i;
+        }
+        java.util.Arrays.sort(order, (i, j) -> {
+            int cmp = Double.compare(poles[i][0], poles[j][0]);
+            if (cmp != 0) {
+                return cmp;
+            }
+            return Double.compare(poles[i][1], poles[j][1]);
+        });
+
+        int index = Integer.parseInt(parts[2]);
+        int src = order[index];
+        return switch (which) {
+            case "rr" -> residues[src][0];
+            case "ri" -> residues[src][1];
+            case "pr" -> poles[src][0];
+            case "pi" -> poles[src][1];
+            default -> 0.0;
+        };
+    }
+
+    // Synthetic discretisation call: <c2d|d2c>$<num|den>$<method>$<index>$<L>,
+    // with the L numerator coefficients, L denominator coefficients, and Ts as
+    // arguments. The full conversion runs and one coefficient is returned
+    // (mirroring the series/parallel pattern).
+    private static double evalDiscretize(Expr.Call c, Map<String, Double> values, Map<String, ProcDef> defs) {
+        String[] parts = c.function().split("\\$");
+        String op = parts[0];            // "c2d" or "d2c"
+        boolean wantNum = parts[1].equals("num");
+        String method = parts[2];
+        int index = Integer.parseInt(parts[3]);
+        int len = Integer.parseInt(parts[4]);
+
+        List<Expr> args = c.args();
+        double[] num = new double[len];
+        double[] den = new double[len];
+        int idx = 0;
+        for (int i = 0; i < len; i++) {
+            num[i] = eval(args.get(idx++), values, defs);
+        }
+        for (int i = 0; i < len; i++) {
+            den[i] = eval(args.get(idx++), values, defs);
+        }
+        double ts = eval(args.get(idx), values, defs);
+
+        double[][] result = op.equals("c2d")
+                ? com.frees.backend.cas.PolynomialHelpers.c2d(num, den, ts, method)
+                : com.frees.backend.cas.PolynomialHelpers.d2c(num, den, ts, method);
+        double[] coeffs = wantNum ? result[0] : result[1];
+        // Right-align the coefficients into the requested length, padding any
+        // missing high-power terms with leading zeros (ZOH numerators may be
+        // shorter than the denominator).
+        int off = coeffs.length - len + index;
+        return off >= 0 && off < coeffs.length ? coeffs[off] : 0.0;
     }
 
     // Synthetic time-response call: <step|impulse>$<index>$<numInputs>$<N>, with
@@ -2014,5 +2139,64 @@ public final class Evaluator {
         if (e instanceof Expr.Str s) return s.value();
         if (e instanceof Expr.Var v) return v.name();  // backward compat: bare idents as strings
         throw new IllegalStateException("Expected a string argument, got: " + e);
+    }
+
+    /**
+     * View factor between two perpendicular rectangles sharing a common edge of
+     * length {@code l}. Rectangle 1 (the emitter) extends {@code w1} from the
+     * edge; rectangle 2 extends {@code w2}. Howell catalog C-14.
+     */
+    private static double viewFactorPerpendicular(double w1, double w2, double l) {
+        if (l <= 0.0 || w1 <= 0.0 || w2 <= 0.0) {
+            throw new IllegalStateException("viewfactor_perp: all dimensions must be positive");
+        }
+        double w = w1 / l;
+        double h = w2 / l;
+        double w2s = w * w;
+        double h2s = h * h;
+        double sum = w2s + h2s;
+        double term = w * Math.atan(1.0 / w)
+                + h * Math.atan(1.0 / h)
+                - Math.sqrt(sum) * Math.atan(1.0 / Math.sqrt(sum));
+        double logArg = ((1.0 + w2s) * (1.0 + h2s) / (1.0 + sum))
+                * Math.pow(w2s * (1.0 + sum) / ((1.0 + w2s) * sum), w2s)
+                * Math.pow(h2s * (1.0 + sum) / ((1.0 + h2s) * sum), h2s);
+        return (term + 0.25 * Math.log(logArg)) / (Math.PI * w);
+    }
+
+    /**
+     * View factor between two identical, directly opposed, aligned parallel
+     * rectangles of sides {@code a} by {@code b} separated by distance
+     * {@code l}. Howell catalog C-11.
+     */
+    private static double viewFactorParallelPlates(double a, double b, double l) {
+        if (l <= 0.0 || a <= 0.0 || b <= 0.0) {
+            throw new IllegalStateException("viewfactor_plates: all dimensions must be positive");
+        }
+        double x = a / l;
+        double y = b / l;
+        double x2 = x * x;
+        double y2 = y * y;
+        double term = Math.log(Math.sqrt((1.0 + x2) * (1.0 + y2) / (1.0 + x2 + y2)))
+                + x * Math.sqrt(1.0 + y2) * Math.atan(x / Math.sqrt(1.0 + y2))
+                + y * Math.sqrt(1.0 + x2) * Math.atan(y / Math.sqrt(1.0 + x2))
+                - x * Math.atan(x)
+                - y * Math.atan(y);
+        return (2.0 / (Math.PI * x * y)) * term;
+    }
+
+    /**
+     * View factor from coaxial parallel disk 1 (radius {@code r1}) to disk 2
+     * (radius {@code r2}) separated by distance {@code l}. Howell catalog C-41.
+     */
+    private static double viewFactorCoaxialDisks(double r1, double r2, double l) {
+        if (l <= 0.0 || r1 <= 0.0 || r2 <= 0.0) {
+            throw new IllegalStateException("viewfactor_disks: all dimensions must be positive");
+        }
+        double bigR1 = r1 / l;
+        double bigR2 = r2 / l;
+        double s = 1.0 + (1.0 + bigR2 * bigR2) / (bigR1 * bigR1);
+        double ratio = bigR2 / bigR1;
+        return 0.5 * (s - Math.sqrt(s * s - 4.0 * ratio * ratio));
     }
 }
