@@ -568,6 +568,131 @@ export function buildBodeFigure(
   return { data: traces, layout }
 }
 
+/** Open-loop gain (dB) along a constant closed-loop magnitude (M) contour. */
+function nicholsMLocus(mDb: number): { x: (number | null)[]; y: (number | null)[] } {
+  const m = Math.pow(10, mDb / 20)
+  const x: (number | null)[] = []
+  const y: (number | null)[] = []
+  for (let deg = -359.5; deg <= -0.5; deg += 0.5) {
+    const th = (deg * Math.PI) / 180
+    const cos = Math.cos(th)
+    let a: number | null = null
+    if (Math.abs(1 - m * m) < 1e-9) {
+      if (cos < -1e-6) a = -1 / (2 * cos)
+    } else {
+      const disc = 1 - m * m * Math.sin(th) * Math.sin(th)
+      if (disc >= 0) {
+        const sq = m * Math.sqrt(disc)
+        const denom = 1 - m * m
+        const a1 = (m * m * cos + sq) / denom
+        const a2 = (m * m * cos - sq) / denom
+        a = a1 > 0 ? a1 : a2 > 0 ? a2 : null
+      }
+    }
+    pushNichols(x, y, deg, a)
+  }
+  return { x, y }
+}
+
+/** Open-loop gain (dB) along a constant closed-loop phase (N) contour. */
+function nicholsNLocus(alphaDeg: number): { x: (number | null)[]; y: (number | null)[] } {
+  const x: (number | null)[] = []
+  const y: (number | null)[] = []
+  for (let deg = -359.5; deg <= -0.5; deg += 0.5) {
+    const th = (deg * Math.PI) / 180
+    const tanPhi = Math.tan(th - (alphaDeg * Math.PI) / 180)
+    const denom = Math.sin(th) - tanPhi * Math.cos(th)
+    const a = Math.abs(denom) > 1e-9 ? tanPhi / denom : null
+    pushNichols(x, y, deg, a && a > 0 ? a : null)
+  }
+  return { x, y }
+}
+
+function pushNichols(x: (number | null)[], y: (number | null)[], deg: number, a: number | null) {
+  if (a !== null && a > 0 && Number.isFinite(a)) {
+    const db = 20 * Math.log10(a)
+    if (db >= -40 && db <= 40) {
+      x.push(deg)
+      y.push(db)
+      return
+    }
+  }
+  x.push(null)
+  y.push(null)
+}
+
+const NICHOLS_M_DB = [6, 3, 1, 0.5, 0, -1, -3, -6, -12, -20]
+const NICHOLS_N_DEG = [-5, -30, -60, -90, -120, -150, -180, -210, -240, -270, -300, -330, -355]
+
+/**
+ * Nichols chart: open-loop magnitude (dB) versus phase (deg), parametric in
+ * frequency, overlaid on the standard M (closed-loop magnitude) and N
+ * (closed-loop phase) grid.
+ */
+export function buildNicholsFigure(
+  mag: number[],
+  phase: number[],
+  format: PlotFormat,
+  theme: PlotTheme,
+): PlotlyFigure {
+  const colors = THEMES[theme]
+  const background = theme === 'dark' ? 'rgba(0,0,0,0)' : '#ffffff'
+  const gridColor = theme === 'dark' ? 'rgba(255,255,255,0.18)' : 'rgba(0,0,0,0.15)'
+
+  const traces: PlotlyTrace[] = []
+  for (const mDb of NICHOLS_M_DB) {
+    const locus = nicholsMLocus(mDb)
+    traces.push({
+      type: 'scatter', mode: 'lines', name: `M ${mDb} dB`, x: locus.x, y: locus.y,
+      line: { color: gridColor, width: 1 }, hoverinfo: 'skip', showlegend: false,
+    })
+  }
+  for (const aDeg of NICHOLS_N_DEG) {
+    const locus = nicholsNLocus(aDeg)
+    traces.push({
+      type: 'scatter', mode: 'lines', name: `N ${aDeg}°`, x: locus.x, y: locus.y,
+      line: { color: gridColor, width: 1, dash: 'dot' }, hoverinfo: 'skip', showlegend: false,
+    })
+  }
+  // The −1 critical point sits at (−180 deg, 0 dB).
+  traces.push({
+    type: 'scatter', mode: 'markers', name: 'Critical point', x: [-180], y: [0],
+    marker: { color: '#ff6b6b', size: 9, symbol: 'x' }, hoverinfo: 'skip', showlegend: false,
+  })
+  // The open-loop locus.
+  traces.push({
+    type: 'scatter', mode: 'lines+markers', name: 'Open loop',
+    x: phase, y: mag,
+    line: { color: '#4dabf7', width: 2 }, marker: { color: '#4dabf7', size: 4 },
+    showlegend: false,
+  })
+
+  const layout: PlotlyLayout = {
+    title: format.title ? { text: format.title } : undefined,
+    paper_bgcolor: background,
+    plot_bgcolor: background,
+    font: { color: colors.font, size: format.fontSize },
+    margin: { t: format.title ? 48 : 24, r: 24, b: 56, l: 64 },
+    xaxis: {
+      title: format.xLabel || 'Open-loop phase [deg]',
+      color: colors.font,
+      gridcolor: colors.grid,
+      zerolinecolor: colors.zero,
+      showgrid: format.grid,
+    },
+    yaxis: {
+      title: format.yLabel || 'Open-loop gain [dB]',
+      color: colors.font,
+      gridcolor: colors.grid,
+      zerolinecolor: colors.zero,
+      showgrid: format.grid,
+    },
+    showlegend: false,
+  }
+
+  return { data: traces, layout }
+}
+
 export function buildNyquistFigure(
   real: number[],
   imag: number[],

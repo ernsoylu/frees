@@ -1,6 +1,6 @@
 /** Plot model shared by the Plots tab, the config modal and exports. */
 
-export type PlotKind = 'xy' | 'property' | 'psychro' | 'bode' | 'nyquist' | 'polezero' | 'rootlocus'
+export type PlotKind = 'xy' | 'property' | 'psychro' | 'bode' | 'nyquist' | 'nichols' | 'polezero' | 'rootlocus'
 
 export const DIAGRAM_TYPES = [
   { value: 'T-s', label: 'T-s (temperature–entropy)' },

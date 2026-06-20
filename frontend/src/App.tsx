@@ -1315,6 +1315,7 @@ export default function App() {
     psychro: 'Psychrometric',
     bode: 'Bode',
     nyquist: 'Nyquist',
+    nichols: 'Nichols',
     polezero: 'Pole-Zero',
     rootlocus: 'Root Locus',
   }
