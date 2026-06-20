@@ -767,9 +767,15 @@ public class SolveController {
                 functionDefsOf(request.functionTables())
         );
 
+        List<Map<String, Double>> rows = request.table().rows();
+        List<String> varOrder = request.table().variables() != null
+                ? request.table().variables() : List.of();
+        List<RowOutcome> outcomes = mentionsParametricAccessor(cleanText)
+                ? solveTableWithAccessors(rows, varOrder, context)
+                : solveTableRows(rows, context);
+
         List<TableRowResult> results = new ArrayList<>();
-        for (Map<String, Double> row : request.table().rows()) {
-            RowOutcome outcome = solveTableRow(row, context);
+        for (RowOutcome outcome : outcomes) {
             results.add(outcome.row());
             if (outcome.stats() != null) {
                 totalIterations += outcome.stats().iterations();
@@ -793,7 +799,8 @@ public class SolveController {
         return ResponseEntity.ok(new SolveTableResponse(results, stats));
     }
 
-    private record RowOutcome(TableRowResult row, EquationSystemSolver.Stats stats) {}
+    private record RowOutcome(TableRowResult row, EquationSystemSolver.Stats stats,
+                              Map<String, Double> siValues) {}
 
     private record TableRowContext(
             String text,
@@ -805,6 +812,95 @@ public class SolveController {
             Map<String, String> explicitUnits,
             Map<String, ProcDef> functionDefs
     ) {}
+
+    /** Solves every parametric row independently (the common, accessor-free case). */
+    private List<RowOutcome> solveTableRows(List<Map<String, Double>> rows, TableRowContext context) {
+        List<RowOutcome> outcomes = new ArrayList<>();
+        for (Map<String, Double> row : rows) {
+            outcomes.add(solveTableRow(row, context));
+        }
+        return outcomes;
+    }
+
+    /** Maximum table-wide fixed-point passes when accessors are present. */
+    private static final int MAX_PARAMETRIC_PASSES = 12;
+
+    /**
+     * Solves a parametric table whose equations use accessor functions
+     * ({@code TableSum}, {@code IntegralValue}, …). Because a row may depend on an
+     * aggregate of every row, the whole table is re-solved as a Gauss–Seidel fixed
+     * point: pass 0 runs with no table data installed (accessors return 0), each
+     * later pass installs the columns collected from the previous pass, until the
+     * columns stop changing.
+     */
+    private List<RowOutcome> solveTableWithAccessors(List<Map<String, Double>> rows,
+                                                     List<String> varOrder, TableRowContext context) {
+        Map<String, double[]> columns = new HashMap<>();
+        List<RowOutcome> outcomes = new ArrayList<>();
+        for (int pass = 0; pass < MAX_PARAMETRIC_PASSES; pass++) {
+            outcomes = new ArrayList<>();
+            for (int i = 0; i < rows.size(); i++) {
+                com.frees.backend.core.ParametricAccessorContext.install(i + 1, rows.size(), columns, varOrder);
+                try {
+                    outcomes.add(solveTableRow(rows.get(i), context));
+                } finally {
+                    com.frees.backend.core.ParametricAccessorContext.clear();
+                }
+            }
+            Map<String, double[]> next = buildColumns(outcomes, rows.size());
+            boolean converged = columnsConverged(columns, next);
+            columns = next;
+            if (converged) {
+                break;
+            }
+        }
+        return outcomes;
+    }
+
+    /** Collects each solved variable's SI value across all runs into a column array. */
+    private static Map<String, double[]> buildColumns(List<RowOutcome> outcomes, int runCount) {
+        Map<String, double[]> columns = new HashMap<>();
+        for (int i = 0; i < outcomes.size(); i++) {
+            for (Map.Entry<String, Double> e : outcomes.get(i).siValues().entrySet()) {
+                columns.computeIfAbsent(e.getKey(), k -> {
+                    double[] a = new double[runCount];
+                    java.util.Arrays.fill(a, Double.NaN);
+                    return a;
+                })[i] = e.getValue();
+            }
+        }
+        return columns;
+    }
+
+    private static boolean columnsConverged(Map<String, double[]> a, Map<String, double[]> b) {
+        if (!a.keySet().equals(b.keySet())) {
+            return false;
+        }
+        for (Map.Entry<String, double[]> e : a.entrySet()) {
+            double[] av = e.getValue();
+            double[] bv = b.get(e.getKey());
+            for (int i = 0; i < av.length; i++) {
+                double x = av[i];
+                double y = bv[i];
+                if (Double.isNaN(x) != Double.isNaN(y)) {
+                    return false;
+                }
+                if (!Double.isNaN(x) && Math.abs(x - y) > 1e-9 * (1.0 + Math.abs(y))) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    private static final java.util.regex.Pattern PARAMETRIC_ACCESSOR_PATTERN =
+            java.util.regex.Pattern.compile(
+                    "(?i)\\b(TableRun#|TableRun|NParametricRuns|TableValue|TableSum|TableAvg|"
+                            + "TableMin|TableMax|TableStdDev|IntegralValue)\\s*\\(");
+
+    private static boolean mentionsParametricAccessor(String text) {
+        return PARAMETRIC_ACCESSOR_PATTERN.matcher(text).find();
+    }
 
     /** One parametric-table run: non-null cells are fixed, the rest solved. */
     private RowOutcome solveTableRow(Map<String, Double> row, TableRowContext context) {
@@ -825,9 +921,13 @@ public class SolveController {
                 String unit = context.unitsByLowerName().getOrDefault(name.toLowerCase(), "");
                 rowValues.put(name, toDisplay(name, e.getValue(), unit, context.system(), context.explicitUnits()).value());
             }
-            return new RowOutcome(new TableRowResult(true, rowValues, null), result.stats());
+            Map<String, Double> siValues = new HashMap<>();
+            for (Map.Entry<String, Double> e : result.variables().entrySet()) {
+                siValues.put(e.getKey().toLowerCase(), e.getValue());
+            }
+            return new RowOutcome(new TableRowResult(true, rowValues, null), result.stats(), siValues);
         } catch (Exception e) {
-            return new RowOutcome(new TableRowResult(false, Map.of(), e.getMessage()), null);
+            return new RowOutcome(new TableRowResult(false, Map.of(), e.getMessage()), null, Map.of());
         }
     }
 
