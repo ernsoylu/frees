@@ -237,6 +237,30 @@ CALL routh(den[1:4] : nRHP, stable)   # nRHP = 2, stable = 0
 ```
 To find the range of a free gain `K` for stability, sweep `K` over a `PARAMETRIC` table and read where `nRHP` drops to `0`.
 
+### 8. Nichols Chart Data: nichols
+Computes the open-loop magnitude (dB) and unwrapped phase (deg) at a vector of frequencies `omega` — the same data as `bode`, intended to be plotted as magnitude versus phase to form a Nichols chart.
+```
+CALL nichols(num, den, omega : mag[1:50], phase[1:50])
+# OR
+CALL nichols(A, B, C, D, omega : mag[1:50], phase[1:50])
+```
+
+### 9. Static Error Constants: errorconst
+Computes the steady-state (static) error constants for an open-loop `G(s) = num/den` given in lowest terms: position `Kp = lim G(s)`, velocity `Kv = lim s·G(s)`, and acceleration `Ka = lim s²·G(s)` as `s → 0`. Constants that are infinite for the system type are returned as `Infinity`.
+```
+num = [0, 0, 20]
+den = [1, 6, 5]            # type 0 system
+CALL errorconst(num[1:3], den[1:3] : Kp, Kv, Ka)   # Kp = 4, Kv = 0, Ka = 0
+```
+
+### 10. Signal-Flow Graphs: mason
+Computes the overall transmittance of a scalar signal-flow graph by **Mason's gain formula**. `G` is a square node-gain matrix where `G[i,j]` is the branch gain from node `i` to node `j` (`0` means no branch); `source` and `sink` are 1-based node numbers. The solver enumerates the forward paths and loops, builds the graph determinant from the non-touching loop combinations, and returns `T = Y(sink)/X(source)`.
+```
+G = [0, 2, 0; 0, 0, 3; 0, 0.5, 0]   # 1->2 (2), 2->3 (3), feedback 3->2 (0.5)
+CALL mason(G[1:3,1:3], 1, 3 : T)    # T = 6/(1 - 1.5) = -12
+```
+For transfer-function-valued block diagrams, use the `series`/`parallel`/`feedback` interconnection functions instead, which carry full `num/den` polynomials.
+
 ## Digital Control (z-domain)
 
 Convert between continuous (s-domain) and discrete (z-domain) transfer functions. Coefficient arrays are in descending powers; outputs are normalized to a monic denominator.

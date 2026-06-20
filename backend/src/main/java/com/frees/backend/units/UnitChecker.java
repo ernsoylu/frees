@@ -588,7 +588,10 @@ public final class UnitChecker {
             c.function().startsWith("routh$") ||
             c.function().startsWith("c2d$") ||
             c.function().startsWith("d2c$") ||
-            c.function().startsWith("residue$")) {
+            c.function().startsWith("residue$") ||
+            c.function().startsWith("nichols$") ||
+            c.function().startsWith("errorconst$") ||
+            c.function().startsWith("mason$")) {
             return Dim.of(Quantity.dimensionless(1.0));
         }
         List<Expr> args = c.args();
