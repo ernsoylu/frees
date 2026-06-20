@@ -141,3 +141,19 @@ Formulas are case-sensitive. Quote ones with parentheses.
 LHV = HeatingValue(C8H18, 'LHV')   { ~44.4 MJ/kg }
 afr = StoichAFR(C8H18)            { ~15.0 }
 ```
+
+## Radiation View Factors
+Closed-form diffuse view factors for the three configurations that textbooks usually read off charts (Howell catalog). Arguments are lengths in consistent units; the result is the dimensionless view factor `F_12`.
+
+- **`viewfactor_perp(w1, w2, L):`** Two perpendicular rectangles sharing a common edge of length `L`; plate 1 extends `w1` from the edge, plate 2 extends `w2` (Howell C-14).
+- **`viewfactor_plates(a, b, L):`** Two identical, directly opposed, aligned parallel rectangles of sides `a` by `b` separated by distance `L` (Howell C-11).
+- **`viewfactor_disks(r1, r2, L):`** Coaxial parallel disks — from disk 1 (radius `r1`) to disk 2 (radius `r2`) separated by distance `L` (Howell C-41).
+
+### View Factor Example
+```
+{ Two equal perpendicular squares sharing an edge }
+F_12 = viewfactor_perp(1 [m], 1 [m], 1 [m])   { ~0.2000 }
+
+{ Reciprocity gives the factor back to a larger surface }
+F_21 = viewfactor_disks(1 [m], 0.5 [m], 0.4 [m])
+```
