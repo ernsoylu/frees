@@ -85,6 +85,27 @@ class CasEngineTest {
     }
 
     @Test
+    void laplaceTransformsDecayingExponential() {
+        // L{e^{-a t}} = 1/(s + a)
+        CasEngine.CasResult r = cas.laplace("exp(-a*t)", "t", "s");
+        for (double s : new double[]{0.5, 1.0, 3.0}) {
+            double expected = 1.0 / (s + 2.0);
+            assertEquals(expected, Evaluator.eval(r.expr(), Map.of("s", s, "a", 2.0)), 1e-9,
+                    "Laplace transform value wrong at s=" + s);
+        }
+    }
+
+    @Test
+    void inverseLaplaceRecoversSine() {
+        // L^{-1}{1/(s^2 + 1)} = sin(t)
+        CasEngine.CasResult r = cas.inverseLaplace("1/(s^2 + 1)", "s", "t");
+        for (double t : new double[]{0.3, 0.7, 1.5}) {
+            assertEquals(Math.sin(t), at(r.expr(), "t", t), 1e-9,
+                    "inverse Laplace value wrong at t=" + t);
+        }
+    }
+
+    @Test
     void rejectsArrayExpressions() {
         assertThrows(CasEngine.CasException.class, () -> cas.factor("[1, 2, 3]"));
     }

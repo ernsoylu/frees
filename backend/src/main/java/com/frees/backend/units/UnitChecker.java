@@ -584,12 +584,20 @@ public final class UnitChecker {
             c.function().startsWith("lsim$") ||
             c.function().startsWith("lqr$") ||
             c.function().startsWith("place$") ||
-            c.function().startsWith("pidtune$")) {
+            c.function().startsWith("pidtune$") ||
+            c.function().startsWith("routh$") ||
+            c.function().startsWith("c2d$") ||
+            c.function().startsWith("d2c$") ||
+            c.function().startsWith("residue$")) {
             return Dim.of(Quantity.dimensionless(1.0));
         }
         List<Expr> args = c.args();
         return switch (c.function()) {
             case "abs", "real", "imag" -> dimOf(args.get(0));
+            // Radiation view factors take length arguments and return a
+            // dimensionless ratio; do not warn on the length-valued arguments.
+            case "viewfactor_perp", "viewfactor_plates", "viewfactor_disks" ->
+                    Dim.of(Quantity.dimensionless(1.0));
             case "stagnationtemp" -> {
                 Dim tDim = dimOf(args.get(0));
                 try {
