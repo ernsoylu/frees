@@ -633,15 +633,36 @@ public class AstBuilder extends FreesBaseVisitor<Expr> {
         List<ProcStatement> body = new ArrayList<>();
         if (ctx.statementList() != null) {
             for (FreesParser.StatementContext stmtCtx : ctx.statementList().statement()) {
-                Statement s = buildStatement(stmtCtx);
-                // Convert Statement.Eq to ProcStatement.Eq for procedural context
-                if (s instanceof Statement.Eq(Expr lhs, Expr rhs, String sourceText)) {
-                    body.add(new ProcStatement.Eq(lhs, rhs, sourceText));
-                }
-                // FOR inside FOR inside PROC is not supported; skip silently
+                body.add(toProcStatement(buildStatement(stmtCtx)));
             }
         }
         return new ProcStatement.For(varName, start, end, body);
+    }
+
+    /**
+     * Converts a top-level {@link Statement} (as parsed inside a {@code FOR}
+     * body) into the equivalent {@link ProcStatement} for execution inside a
+     * PROCEDURE/FUNCTION. Equations and nested {@code FOR} loops are supported
+     * recursively; constructs that have no procedural meaning are rejected with
+     * a clear error rather than being silently dropped.
+     */
+    private ProcStatement toProcStatement(Statement s) {
+        return switch (s) {
+            case Statement.Eq(Expr lhs, Expr rhs, String sourceText) ->
+                    new ProcStatement.Eq(lhs, rhs, sourceText);
+            case Statement.For(String var, Expr start, Expr end, List<Statement> innerBody) -> {
+                List<ProcStatement> converted = new ArrayList<>();
+                for (Statement inner : innerBody) {
+                    converted.add(toProcStatement(inner));
+                }
+                yield new ProcStatement.For(var, start, end, converted);
+            }
+            case Statement.CallProc cp -> throw new EquationParser.ParseException(
+                    "CALL is not supported inside a FOR loop within a PROCEDURE or FUNCTION (offending call: '"
+                            + cp.name() + "').");
+            case Statement.Symbolic sym -> throw new EquationParser.ParseException(
+                    "SYMBOLIC declarations are not allowed inside a PROCEDURE or FUNCTION.");
+        };
     }
 
     private ProcStatement.While buildWhileStatement(FreesParser.WhileStatementContext ctx) {

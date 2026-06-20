@@ -259,4 +259,44 @@ class ProceduralFeaturesTest {
         assertEquals(24.0,  result.variables().get("f[4]"), 1e-9, "4! = 24");
         assertEquals(120.0, result.variables().get("f[5]"), 1e-9, "5! = 120");
     }
+
+    @Test
+    void nestedForInsideFunctionAccumulatesCorrectly() {
+        // Nested FOR inside a FUNCTION body must execute (previously the inner
+        // loop was silently dropped). DoubleSum(3) = sum_{i,j=1..3} i*j = 36.
+        String source = """
+                FUNCTION DoubleSum(n)
+                  s := 0
+                  FOR i = 1 TO n
+                    FOR j = 1 TO n
+                      s = s + i * j
+                    END
+                  END
+                  DoubleSum := s
+                END
+
+                x = DoubleSum(3)
+                """;
+        EquationSystemSolver.Result result = solver.solve(source);
+        assertEquals(36.0, result.variables().get("x"), 1e-9);
+    }
+
+    @Test
+    void callInsideProcedureForIsRejectedNotSilentlyDropped() {
+        // A CALL inside a FOR within a FUNCTION has no procedural meaning; it must
+        // raise a clear error rather than being silently skipped.
+        String source = """
+                FUNCTION Bad(n)
+                  FOR i = 1 TO n
+                    CALL pole(i, i : a, b)
+                  END
+                  Bad := 1
+                END
+
+                y = Bad(2)
+                """;
+        Exception ex = assertThrows(Exception.class, () -> solver.solve(source));
+        assertTrue(ex.getMessage() != null && ex.getMessage().contains("CALL"),
+                "expected a clear 'CALL not supported' error, got: " + ex.getMessage());
+    }
 }

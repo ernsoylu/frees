@@ -852,6 +852,18 @@ public final class EquationParser {
             flattenResidue(inputs, outputs, sourceText, ctx);
             return;
         }
+        if (defName.equals("nichols")) {
+            flattenNichols(inputs, outputs, sourceText, ctx);
+            return;
+        }
+        if (defName.equals("errorconst")) {
+            flattenErrorConst(inputs, outputs, sourceText, ctx);
+            return;
+        }
+        if (defName.equals("mason")) {
+            flattenMason(inputs, outputs, sourceText, ctx);
+            return;
+        }
 
         ProcDef def = ctx.defs().get(defName);
         if (def == null) {
@@ -1799,20 +1811,24 @@ public final class EquationParser {
     }
 
     /**
-     * Flattens {@code residue}: 2 inputs (num, den) and 5 outputs
-     * (r_r, r_i, p_r, p_i, k) — the partial-fraction residues (real/imag),
-     * the matching poles (real/imag), and the scalar direct term. This is the
-     * numeric inverse-Laplace path: the residues appear in the Solution window
-     * as ordinary variables.
+     * Flattens {@code residue}: 2 inputs (num, den) and either 5 outputs
+     * (r_r, r_i, p_r, p_i, k) or 6 outputs (r_r, r_i, p_r, p_i, ord, k). The
+     * residues (real/imag), matching poles (real/imag), per-term order, and the
+     * scalar direct term are the numeric inverse-Laplace path: they appear in the
+     * Solution window as ordinary variables. The 6-output form (with the {@code
+     * ord} array) is required for repeated poles, where {@code ord} carries the
+     * power k of each {@code A/(s-p)^k} term.
      */
     private void flattenResidue(List<Expr> inputs, List<Expr> outputs, String sourceText, FlattenContext ctx) {
-        if (inputs.size() != 2 || outputs.size() != 5) {
-            throw new ParseException("residue expects 2 inputs (num, den) and 5 outputs (r_r, r_i, p_r, p_i, k), "
+        boolean withOrder = outputs.size() == 6;
+        if (inputs.size() != 2 || (outputs.size() != 5 && !withOrder)) {
+            throw new ParseException("residue expects 2 inputs (num, den) and 5 outputs (r_r, r_i, p_r, p_i, k) "
+                    + "or 6 outputs (r_r, r_i, p_r, p_i, ord, k) for repeated poles, "
                     + "e.g. CALL residue(num[1:1], den[1:3] : r_r[1:2], r_i[1:2], p_r[1:2], p_i[1:2], k)");
         }
         VectorInfo num = parseVectorInfo(inputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
         VectorInfo den = parseVectorInfo(inputs.get(1), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
-        int n = den.size - 1; // number of poles = denominator degree
+        int n = den.size - 1; // number of residue terms = denominator degree
 
         VectorInfo rr = parseVectorInfo(outputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
         VectorInfo ri = parseVectorInfo(outputs.get(1), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
@@ -1821,30 +1837,157 @@ public final class EquationParser {
         if (rr.size != n || ri.size != n || pr.size != n || pi.size != n) {
             throw new ParseException("residue: output vectors r_r, r_i, p_r, p_i must have length n = " + n);
         }
+        int arrayOutputs = 4;
+        VectorInfo ord = null;
+        if (withOrder) {
+            ord = parseVectorInfo(outputs.get(4), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+            if (ord.size != n) {
+                throw new ParseException("residue: output vector ord must have length n = " + n);
+            }
+            arrayOutputs = 5;
+        }
 
         List<Expr> entries = new ArrayList<>();
         entries.addAll(Arrays.asList(num.elements));
         entries.addAll(Arrays.asList(den.elements));
 
-        for (Expr out : new Expr[]{outputs.get(0), outputs.get(1), outputs.get(2), outputs.get(3)}) {
-            if (out instanceof Expr.ArrayAccess aa) {
+        for (int o = 0; o < arrayOutputs; o++) {
+            if (outputs.get(o) instanceof Expr.ArrayAccess aa) {
                 registerShape(aa.name(), n, 1, ctx);
             }
         }
 
+        String form = withOrder ? "o" : "s";
         int numLen = num.size;
+        String suffix = "$" + form + "$";
         for (int i = 0; i < n; i++) {
             ctx.out().add(new Equation(rr.elements[i],
-                    new Expr.Call("residue$rr$" + i + "$" + numLen + "$" + n, entries), sourceText));
+                    new Expr.Call("residue$rr" + suffix + i + "$" + numLen + "$" + n, entries), sourceText));
             ctx.out().add(new Equation(ri.elements[i],
-                    new Expr.Call("residue$ri$" + i + "$" + numLen + "$" + n, entries), sourceText));
+                    new Expr.Call("residue$ri" + suffix + i + "$" + numLen + "$" + n, entries), sourceText));
             ctx.out().add(new Equation(pr.elements[i],
-                    new Expr.Call("residue$pr$" + i + "$" + numLen + "$" + n, entries), sourceText));
+                    new Expr.Call("residue$pr" + suffix + i + "$" + numLen + "$" + n, entries), sourceText));
             ctx.out().add(new Equation(pi.elements[i],
-                    new Expr.Call("residue$pi$" + i + "$" + numLen + "$" + n, entries), sourceText));
+                    new Expr.Call("residue$pi" + suffix + i + "$" + numLen + "$" + n, entries), sourceText));
+            if (withOrder) {
+                ctx.out().add(new Equation(ord.elements[i],
+                        new Expr.Call("residue$ord" + suffix + i + "$" + numLen + "$" + n, entries), sourceText));
+            }
         }
-        ctx.out().add(new Equation(outputs.get(4),
-                new Expr.Call("residue$k$" + numLen + "$" + n, entries), sourceText));
+        ctx.out().add(new Equation(outputs.get(arrayOutputs),
+                new Expr.Call("residue$k" + suffix + numLen + "$" + n, entries), sourceText));
+    }
+
+    /**
+     * Flattens {@code nichols}: same inputs as {@code bode} (num, den, omega or
+     * A, B, C, D, omega) and 2 outputs (mag in dB, phase in deg). The pair plots
+     * as a Nichols chart (magnitude vs phase, parametric in omega).
+     */
+    private void flattenNichols(List<Expr> inputs, List<Expr> outputs, String sourceText, FlattenContext ctx) {
+        if ((inputs.size() != 3 && inputs.size() != 5) || outputs.size() != 2) {
+            throw new ParseException("nichols expects 3 inputs (num, den, omega) or 5 inputs (A, B, C, D, omega) and 2 outputs (mag, phase), "
+                    + "e.g. CALL nichols(num, den, omega : mag[1:50], phase[1:50])");
+        }
+        VectorInfo omega = parseVectorInfo(inputs.get(inputs.size() - 1), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        int N = omega.size;
+
+        VectorInfo mag = parseVectorInfo(outputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        VectorInfo phase = parseVectorInfo(outputs.get(1), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        if (mag.size != N || phase.size != N) {
+            throw new ParseException("nichols: outputs mag and phase must have the same size N as omega = " + N);
+        }
+
+        List<Expr> entries = new ArrayList<>();
+        if (inputs.size() == 3) {
+            VectorInfo num = parseVectorInfo(inputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+            VectorInfo den = parseVectorInfo(inputs.get(1), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+            if (num.size != den.size) {
+                throw new ParseException("nichols: num and den must have the same length");
+            }
+            entries.addAll(Arrays.asList(num.elements));
+            entries.addAll(Arrays.asList(den.elements));
+        } else {
+            MatrixInfo a = parseMatrixInfo(inputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+            int n = a.rows;
+            if (a.cols != n) throw new ParseException("nichols: A must be square");
+            List<Expr> bElements = getVectorElements(inputs.get(1), n, ctx);
+            List<Expr> cElements = getRowVectorElements(inputs.get(2), n, ctx);
+            Expr dElement = getScalarElement(inputs.get(3), ctx);
+            for (int i = 0; i < n; i++) {
+                entries.addAll(Arrays.asList(a.elements[i]));
+            }
+            entries.addAll(bElements);
+            entries.addAll(cElements);
+            entries.add(dElement);
+        }
+        entries.addAll(Arrays.asList(omega.elements));
+
+        if (outputs.get(0) instanceof Expr.ArrayAccess aa) {
+            registerShape(aa.name(), N, 1, ctx);
+        }
+        if (outputs.get(1) instanceof Expr.ArrayAccess aa) {
+            registerShape(aa.name(), N, 1, ctx);
+        }
+
+        for (int i = 0; i < N; i++) {
+            ctx.out().add(new Equation(mag.elements[i],
+                    new Expr.Call("nichols$mag$" + i + "$" + inputs.size() + "$" + N, entries), sourceText));
+            ctx.out().add(new Equation(phase.elements[i],
+                    new Expr.Call("nichols$phase$" + i + "$" + inputs.size() + "$" + N, entries), sourceText));
+        }
+    }
+
+    /**
+     * Flattens {@code errorconst}: 2 inputs (open-loop num, den) and 3 scalar
+     * outputs (position Kp, velocity Kv, acceleration Ka static error constants).
+     */
+    private void flattenErrorConst(List<Expr> inputs, List<Expr> outputs, String sourceText, FlattenContext ctx) {
+        if (inputs.size() != 2 || outputs.size() != 3) {
+            throw new ParseException("errorconst expects 2 inputs (num, den) and 3 scalar outputs (Kp, Kv, Ka), "
+                    + "e.g. CALL errorconst(num[1:2], den[1:3] : Kp, Kv, Ka)");
+        }
+        VectorInfo num = parseVectorInfo(inputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        VectorInfo den = parseVectorInfo(inputs.get(1), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+
+        List<Expr> entries = new ArrayList<>();
+        entries.addAll(Arrays.asList(num.elements));
+        entries.addAll(Arrays.asList(den.elements));
+
+        ctx.out().add(new Equation(outputs.get(0),
+                new Expr.Call("errorconst$kp$" + num.size + "$" + den.size, entries), sourceText));
+        ctx.out().add(new Equation(outputs.get(1),
+                new Expr.Call("errorconst$kv$" + num.size + "$" + den.size, entries), sourceText));
+        ctx.out().add(new Equation(outputs.get(2),
+                new Expr.Call("errorconst$ka$" + num.size + "$" + den.size, entries), sourceText));
+    }
+
+    /**
+     * Flattens {@code mason}: a square node-gain adjacency matrix G plus the
+     * source and sink node numbers (1-based), and 1 scalar output T — the
+     * overall transmittance of the signal-flow graph by Mason's gain formula.
+     */
+    private void flattenMason(List<Expr> inputs, List<Expr> outputs, String sourceText, FlattenContext ctx) {
+        if (inputs.size() != 3 || outputs.size() != 1) {
+            throw new ParseException("mason expects 3 inputs (G, source, sink) and 1 output (T), "
+                    + "e.g. CALL mason(G[1:4,1:4], 1, 4 : T)");
+        }
+        MatrixInfo g = parseMatrixInfo(inputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        if (g.rows != g.cols) {
+            throw new ParseException("mason: G must be a square node-gain matrix");
+        }
+        int n = g.rows;
+        Expr source = getScalarElement(inputs.get(1), ctx);
+        Expr sink = getScalarElement(inputs.get(2), ctx);
+
+        List<Expr> entries = new ArrayList<>();
+        for (int i = 0; i < n; i++) {
+            entries.addAll(Arrays.asList(g.elements[i]));
+        }
+        entries.add(source);
+        entries.add(sink);
+
+        ctx.out().add(new Equation(outputs.get(0),
+                new Expr.Call("mason$" + n, entries), sourceText));
     }
 
     /**

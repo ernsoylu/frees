@@ -5,7 +5,9 @@ import org.apache.commons.math3.linear.EigenDecomposition;
 import org.apache.commons.math3.linear.MatrixUtils;
 import org.apache.commons.math3.linear.RealMatrix;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 /**
  * Utility helper class for polynomial calculations.
@@ -610,7 +612,7 @@ public final class PolynomialHelpers {
     }
 
     /** Partial-fraction residues, poles, and direct term (MATLAB residue order). */
-    public record ResidueResult(double[][] residues, double[][] poles, double k) {
+    public record ResidueResult(double[][] residues, double[][] poles, int[] orders, double k) {
     }
 
     /**
@@ -621,9 +623,9 @@ public final class PolynomialHelpers {
      * {@code num/den = sum_i r_i/(s - p_i) + k}. The time-domain inverse
      * Laplace transform is then {@code y(t) = sum_i r_i e^{p_i t} (+ k*delta(t))}.
      *
-     * <p>Distinct poles only; repeated poles are reported as an error (their
-     * residue formula needs polynomial derivatives and rarely appears in
-     * textbook exercises). Inputs must be proper or bi-proper
+     * <p>Repeated poles are supported: a pole {@code p} of multiplicity {@code m}
+     * contributes terms {@code A_k/(s - p)^k} for {@code k = 1..m}, each reported
+     * with its {@code order} k. Inputs must be proper or bi-proper
      * ({@code deg(num) <= deg(den)}).
      */
     public static ResidueResult residue(double[] num, double[] den) {
@@ -640,7 +642,6 @@ public final class PolynomialHelpers {
         double k = 0.0;
         double[] bReduced = b;
         if (b.length - 1 == degDen) {
-            // Bi-proper: deg(num) == deg(den), so b and a are the same length.
             k = b[0] / a[0];
             bReduced = new double[a.length];
             for (int i = 0; i < a.length; i++) {
@@ -648,44 +649,235 @@ public final class PolynomialHelpers {
             }
             bReduced = trimLeadingZeros(bReduced);
         }
-        double[][] poles = roots(a);
-        if (poles.length != degDen) {
+        double[][] rootList = roots(a);
+        if (rootList.length != degDen) {
             throw new IllegalArgumentException("residue: could not resolve all poles");
         }
-        // Reject repeated poles (clustered within tolerance).
-        for (int i = 0; i < poles.length; i++) {
-            for (int j = i + 1; j < poles.length; j++) {
-                double dr = poles[i][0] - poles[j][0];
-                double di = poles[i][1] - poles[j][1];
-                if (Math.hypot(dr, di) < 1e-6) {
-                    throw new IllegalArgumentException("residue: repeated poles are not supported");
-                }
+        List<double[]> groups = clusterPoles(rootList); // each {re, im, multiplicity}
+        Complex[] numC = toComplexDescending(bReduced);
+        Complex[] denC = toComplexDescending(a);
+
+        double[][] residues = new double[degDen][2];
+        double[][] poles = new double[degDen][2];
+        int[] orders = new int[degDen];
+        int out = 0;
+        for (double[] grp : groups) {
+            Complex p = new Complex(grp[0], grp[1]);
+            int m = (int) grp[2];
+            // qRest(s) = den(s) / (s - p)^m, obtained by m exact synthetic divisions.
+            Complex[] qRest = denC;
+            for (int t = 0; t < m; t++) {
+                qRest = deflate(qRest, p);
+            }
+            // G(s) = num(s)/qRest(s) = (s - p)^m F(s); its Taylor coeffs g_j about
+            // p give A_{m-j} = g_j (the order-(m-j) residue).
+            Complex[] nTay = taylorCoeffs(numC, p, m);
+            Complex[] qTay = taylorCoeffs(qRest, p, m);
+            Complex[] g = seriesDivide(nTay, qTay, m);
+            for (int j = 0; j < m; j++) {
+                residues[out][0] = g[j].r;
+                residues[out][1] = g[j].i;
+                poles[out][0] = p.r;
+                poles[out][1] = p.i;
+                orders[out] = m - j;
+                out++;
             }
         }
-        double[] dDen = derivative(a);
-        double[][] residues = new double[degDen][2];
-        for (int i = 0; i < degDen; i++) {
-            Complex p = new Complex(poles[i][0], poles[i][1]);
-            Complex nVal = evalPoly(bReduced, p);
-            Complex dVal = evalPoly(dDen, p);
-            Complex r = nVal.divide(dVal);
-            residues[i][0] = r.r;
-            residues[i][1] = r.i;
-        }
-        return new ResidueResult(residues, poles, k);
+        return new ResidueResult(residues, poles, orders, k);
     }
 
-    /** Derivative of a polynomial in descending powers. */
-    private static double[] derivative(double[] coeffs) {
-        int n = coeffs.length - 1;
-        if (n <= 0) {
-            return new double[]{0.0};
+    /** Groups complex roots into distinct poles, returning {re, im, multiplicity}. */
+    private static List<double[]> clusterPoles(double[][] roots) {
+        List<double[]> groups = new ArrayList<>();
+        boolean[] used = new boolean[roots.length];
+        for (int i = 0; i < roots.length; i++) {
+            if (used[i]) {
+                continue;
+            }
+            double sumR = roots[i][0];
+            double sumI = roots[i][1];
+            int count = 1;
+            for (int j = i + 1; j < roots.length; j++) {
+                if (!used[j] && Math.hypot(roots[i][0] - roots[j][0], roots[i][1] - roots[j][1]) < 1e-6) {
+                    used[j] = true;
+                    sumR += roots[j][0];
+                    sumI += roots[j][1];
+                    count++;
+                }
+            }
+            groups.add(new double[]{sumR / count, sumI / count, count});
         }
-        double[] d = new double[n];
-        for (int i = 0; i < n; i++) {
-            d[i] = coeffs[i] * (n - i);
+        return groups;
+    }
+
+    private static Complex[] toComplexDescending(double[] coeffs) {
+        Complex[] c = new Complex[coeffs.length];
+        for (int i = 0; i < coeffs.length; i++) {
+            c[i] = new Complex(coeffs[i], 0.0);
         }
-        return d;
+        return c;
+    }
+
+    /** Divides a (descending) complex polynomial by (s - p), dropping the remainder. */
+    private static Complex[] deflate(Complex[] descending, Complex p) {
+        int n = descending.length;
+        Complex[] q = new Complex[n - 1];
+        q[0] = descending[0];
+        for (int i = 1; i < n - 1; i++) {
+            q[i] = descending[i].add(p.multiply(q[i - 1]));
+        }
+        return q;
+    }
+
+    /** First {@code count} Taylor coefficients (ascending) of a polynomial about p. */
+    private static Complex[] taylorCoeffs(Complex[] descending, Complex p, int count) {
+        Complex[] work = descending.clone();
+        Complex[] tay = new Complex[count];
+        for (int j = 0; j < count; j++) {
+            if (work.length == 0) {
+                tay[j] = new Complex(0.0, 0.0);
+                continue;
+            }
+            // Synthetic division by (s - p): last accumulated value is the remainder.
+            Complex[] q = new Complex[work.length - 1];
+            Complex acc = work[0];
+            for (int i = 1; i < work.length; i++) {
+                q[i - 1] = acc;
+                acc = work[i].add(p.multiply(acc));
+            }
+            tay[j] = acc; // remainder = P(p) derivative term
+            work = q;
+        }
+        return tay;
+    }
+
+    /** Power-series quotient nTay/qTay (ascending) to {@code count} terms; qTay[0] != 0. */
+    private static Complex[] seriesDivide(Complex[] nTay, Complex[] qTay, int count) {
+        Complex[] g = new Complex[count];
+        for (int j = 0; j < count; j++) {
+            Complex acc = j < nTay.length ? nTay[j] : new Complex(0.0, 0.0);
+            for (int i = 1; i <= j; i++) {
+                acc = acc.subtract(qTay[i].multiply(g[j - i]));
+            }
+            g[j] = acc.divide(qTay[0]);
+        }
+        return g;
+    }
+
+    /**
+     * Static (steady-state) error constants {@code {Kp, Kv, Ka}} for an open-loop
+     * transfer function {@code G(s) = num/den} given in lowest terms. The system
+     * type is the number of pure integrators (poles at the origin). Constants
+     * that are infinite for the system type are returned as
+     * {@link Double#POSITIVE_INFINITY}.
+     */
+    public static double[] errorConstants(double[] num, double[] den) {
+        double[] b = trimLeadingZeros(num);
+        double[] a = trimLeadingZeros(den);
+        int type = 0;
+        for (int i = a.length - 1; i >= 0 && Math.abs(a[i]) < 1e-12; i--) {
+            type++;
+        }
+        double[] aBar = Arrays.copyOfRange(a, 0, a.length - type);
+        double g0 = b[b.length - 1] / aBar[aBar.length - 1]; // lim s^type G(s)
+
+        double kp = Double.POSITIVE_INFINITY;
+        double kv = Double.POSITIVE_INFINITY;
+        double ka = Double.POSITIVE_INFINITY;
+        if (type == 0) {
+            kp = g0;
+            kv = 0.0;
+            ka = 0.0;
+        } else if (type == 1) {
+            kv = g0;
+            ka = 0.0;
+        } else if (type == 2) {
+            ka = g0;
+        }
+        return new double[]{kp, kv, ka};
+    }
+
+    /**
+     * Overall transmittance of a scalar signal-flow graph by Mason's gain
+     * formula. {@code g[i][j]} is the branch gain from node {@code i} to node
+     * {@code j} (0 means no branch); {@code source} and {@code sink} are 0-based
+     * node indices. Returns {@code T = Y(sink)/X(source)}.
+     */
+    public static double mason(double[][] g, int source, int sink) {
+        int n = g.length;
+        if (n > 62) {
+            throw new IllegalArgumentException("mason: too many nodes (max 62)");
+        }
+        List<PathTerm> paths = new ArrayList<>();
+        findForwardPaths(g, source, sink, 1L << source, 1.0, paths);
+        List<PathTerm> loops = new ArrayList<>();
+        for (int s = 0; s < n; s++) {
+            dfsLoop(g, s, s, 1L << s, 1.0, loops);
+        }
+        double delta = graphDeterminant(loops, 0L);
+        if (Math.abs(delta) < 1e-15) {
+            throw new IllegalArgumentException("mason: graph determinant is zero (singular signal-flow graph)");
+        }
+        double numerator = 0.0;
+        for (PathTerm p : paths) {
+            numerator += p.gain() * graphDeterminant(loops, p.mask());
+        }
+        return numerator / delta;
+    }
+
+    /** A forward path or loop: its accumulated gain and the bitmask of its nodes. */
+    private record PathTerm(double gain, long mask) {
+    }
+
+    private static void findForwardPaths(double[][] g, int current, int sink, long mask, double gain, List<PathTerm> out) {
+        if (current == sink) {
+            out.add(new PathTerm(gain, mask));
+            return;
+        }
+        for (int next = 0; next < g.length; next++) {
+            if (g[current][next] != 0.0 && (mask & (1L << next)) == 0) {
+                findForwardPaths(g, next, sink, mask | (1L << next), gain * g[current][next], out);
+            }
+        }
+    }
+
+    private static void dfsLoop(double[][] g, int start, int current, long mask, double gain, List<PathTerm> out) {
+        for (int next = 0; next < g.length; next++) {
+            double branch = g[current][next];
+            if (branch == 0.0) {
+                continue;
+            }
+            if (next == start) {
+                out.add(new PathTerm(gain * branch, mask));
+            } else if (next > start && (mask & (1L << next)) == 0) {
+                dfsLoop(g, start, next, mask | (1L << next), gain * branch, out);
+            }
+        }
+    }
+
+    /**
+     * Mason's graph determinant over the loops that do not touch
+     * {@code excludeMask}: {@code 1 - sum(L) + sum(non-touching pairs) - ...}.
+     */
+    private static double graphDeterminant(List<PathTerm> loops, long excludeMask) {
+        List<PathTerm> avail = new ArrayList<>();
+        for (PathTerm loop : loops) {
+            if ((loop.mask() & excludeMask) == 0) {
+                avail.add(loop);
+            }
+        }
+        return deltaRec(avail, 0, 0L, 1.0);
+    }
+
+    private static double deltaRec(List<PathTerm> avail, int pos, long used, double signedProduct) {
+        double total = signedProduct;
+        for (int k = pos; k < avail.size(); k++) {
+            PathTerm loop = avail.get(k);
+            if ((loop.mask() & used) == 0) {
+                total += deltaRec(avail, k + 1, used | loop.mask(), signedProduct * (-loop.gain()));
+            }
+        }
+        return total;
     }
 
     /**
