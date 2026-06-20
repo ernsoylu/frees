@@ -2,6 +2,7 @@ package com.frees.backend.cas;
 
 import org.apache.commons.math3.linear.Array2DRowRealMatrix;
 import org.apache.commons.math3.linear.EigenDecomposition;
+import org.apache.commons.math3.linear.MatrixUtils;
 import org.apache.commons.math3.linear.RealMatrix;
 
 import java.util.Arrays;
@@ -398,6 +399,321 @@ public final class PolynomialHelpers {
         }
         
         return new double[]{gm_db, pm, w_cg, w_cp};
+    }
+
+    /** Numerical tolerance used by the Routh-Hurwitz array. */
+    private static final double ROUTH_EPS = 1e-12;
+
+    /** Discretisation method names for {@link #c2d} / {@link #d2c}. */
+    private static final String METHOD_TUSTIN = "tustin";
+    private static final String METHOD_BILINEAR = "bilinear";
+    private static final String METHOD_ZOH = "zoh";
+
+    /**
+     * Routh-Hurwitz stability test. Builds the Routh array for a characteristic
+     * polynomial given in descending powers and returns the number of
+     * closed-loop poles in the right half-plane, i.e. the number of sign changes
+     * in the first column. A return of {@code 0} means the system is stable.
+     *
+     * <p>The two textbook special cases are handled: a zero in the first column
+     * is replaced by a small positive {@code epsilon} (epsilon method), and an
+     * entire row of zeros is replaced by the coefficients of the derivative of
+     * the auxiliary polynomial formed from the row above it.
+     */
+    public static int routh(double[] den) {
+        double[] c = trimLeadingZeros(den);
+        int n = c.length - 1;
+        if (n < 1) {
+            return 0;
+        }
+        int cols = n / 2 + 1;
+        double[][] r = new double[n + 1][cols];
+        for (int i = 0; i <= n; i++) {
+            r[i % 2][i / 2] = c[i];
+        }
+        for (int k = 2; k <= n; k++) {
+            if (isZeroRow(r[k - 1])) {
+                // Auxiliary polynomial is row k-2, whose highest power is s^(n-(k-2)).
+                int power = n - (k - 2);
+                for (int col = 0; col < cols; col++) {
+                    r[k - 1][col] = r[k - 2][col] * (power - 2 * col);
+                }
+            }
+            double pivot = r[k - 1][0];
+            if (Math.abs(pivot) < ROUTH_EPS) {
+                pivot = ROUTH_EPS;
+                r[k - 1][0] = pivot;
+            }
+            for (int col = 0; col < cols - 1; col++) {
+                double aboveFirst = r[k - 2][0];
+                double above = r[k - 2][col + 1];
+                double belowNext = r[k - 1][col + 1];
+                r[k][col] = (pivot * above - aboveFirst * belowNext) / pivot;
+            }
+        }
+        int signChanges = 0;
+        double prev = routhSign(r[0][0]);
+        for (int k = 1; k <= n; k++) {
+            double s = routhSign(r[k][0]);
+            if (s != prev) {
+                signChanges++;
+            }
+            prev = s;
+        }
+        return signChanges;
+    }
+
+    private static boolean isZeroRow(double[] row) {
+        for (double v : row) {
+            if (Math.abs(v) > ROUTH_EPS) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /** Sign for Routh first-column counting; a (near-)zero is treated as +epsilon. */
+    private static double routhSign(double x) {
+        return x < -ROUTH_EPS ? -1.0 : 1.0;
+    }
+
+    /**
+     * Continuous-to-discrete transfer-function conversion. {@code method} is
+     * {@code "tustin"} (a.k.a. {@code "bilinear"}) or {@code "zoh"}. Returns
+     * {@code {numz, denz}} in descending powers of z, normalised so the leading
+     * denominator coefficient is 1.
+     */
+    public static double[][] c2d(double[] num, double[] den, double ts, String method) {
+        if (ts <= 0.0) {
+            throw new IllegalArgumentException("c2d: sample time Ts must be positive");
+        }
+        double[] nd = trimLeadingZeros(den);
+        double[] nn = trimLeadingZeros(num);
+        int n = nd.length - 1;
+        if (nn.length - 1 > n) {
+            throw new IllegalArgumentException("c2d: improper transfer function (numerator degree > denominator degree)");
+        }
+        String m = method == null ? METHOD_TUSTIN : method.toLowerCase();
+        return switch (m) {
+            case METHOD_TUSTIN, METHOD_BILINEAR -> {
+                double cc = 2.0 / ts;
+                double[] top = {cc, -cc};  // c*(z - 1)
+                double[] bot = {1.0, 1.0}; // (z + 1)
+                yield normalizePair(substituteLinearFraction(nn, n, top, bot),
+                        substituteLinearFraction(nd, n, top, bot));
+            }
+            case METHOD_ZOH -> c2dZoh(nn, nd, ts);
+            default -> throw new IllegalArgumentException("c2d: unknown method '" + method + "' (use 'tustin' or 'zoh')");
+        };
+    }
+
+    /**
+     * Discrete-to-continuous transfer-function conversion using the (inverse)
+     * Tustin / bilinear transform. Returns {@code {num, den}} in descending
+     * powers of s, normalised so the leading denominator coefficient is 1.
+     */
+    public static double[][] d2c(double[] numz, double[] denz, double ts, String method) {
+        if (ts <= 0.0) {
+            throw new IllegalArgumentException("d2c: sample time Ts must be positive");
+        }
+        String m = method == null ? METHOD_TUSTIN : method.toLowerCase();
+        if (!m.equals(METHOD_TUSTIN) && !m.equals(METHOD_BILINEAR)) {
+            throw new IllegalArgumentException("d2c: only the 'tustin' method is supported");
+        }
+        double[] nd = trimLeadingZeros(denz);
+        double[] nn = trimLeadingZeros(numz);
+        int n = nd.length - 1;
+        double cc = 2.0 / ts;
+        double[] top = {1.0, cc};   // (s + c)
+        double[] bot = {-1.0, cc};  // (c - s)
+        return normalizePair(substituteLinearFraction(nn, n, top, bot),
+                substituteLinearFraction(nd, n, top, bot));
+    }
+
+    /**
+     * Substitutes the variable of {@code coeffs} (descending powers) by the
+     * linear fraction {@code top/bot} (each a degree-1 polynomial) and clears the
+     * denominator by multiplying through by {@code bot^refDegree}, returning the
+     * resulting degree-{@code refDegree} polynomial.
+     */
+    public static double[] substituteLinearFraction(double[] coeffs, int refDegree, double[] top, double[] bot) {
+        double[] result = new double[refDegree + 1];
+        int len = coeffs.length;
+        for (int i = 0; i < len; i++) {
+            int deg = len - 1 - i;
+            if (deg > refDegree) {
+                throw new IllegalArgumentException("substituteLinearFraction: term degree exceeds reference degree");
+            }
+            double coeff = coeffs[i];
+            if (coeff == 0.0) {
+                continue;
+            }
+            double[] term = multiplyRaw(polyPow(top, deg), polyPow(bot, refDegree - deg));
+            int offset = result.length - term.length;
+            for (int j = 0; j < term.length; j++) {
+                result[offset + j] += coeff * term[j];
+            }
+        }
+        return result;
+    }
+
+    private static double[] polyPow(double[] base, int exp) {
+        double[] r = {1.0};
+        for (int i = 0; i < exp; i++) {
+            r = multiplyRaw(r, base);
+        }
+        return r;
+    }
+
+    private static double[][] normalizePair(double[] num, double[] den) {
+        double lead = den.length > 0 ? den[0] : 0.0;
+        if (Math.abs(lead) > 1e-15) {
+            for (int i = 0; i < num.length; i++) {
+                num[i] /= lead;
+            }
+            for (int i = 0; i < den.length; i++) {
+                den[i] /= lead;
+            }
+        }
+        return new double[][]{num, den};
+    }
+
+    private static double[][] c2dZoh(double[] num, double[] den, double ts) {
+        // tf2ss expects num and den of equal length (n+1); left-pad the numerator.
+        double[] numPadded = num;
+        if (num.length < den.length) {
+            numPadded = new double[den.length];
+            System.arraycopy(num, 0, numPadded, den.length - num.length, num.length);
+        }
+        StateSpace.StateSpaceMatrices ss = StateSpace.tf2ss(numPadded, den);
+        double[][] a = ss.a();
+        double[] b = ss.b();
+        double[] cvec = ss.c();
+        double d = ss.d();
+        int n = a.length;
+        // Augmented matrix M = [[A, B], [0, 0]]; expm(M*Ts) = [[Ad, Bd], [0, 1]].
+        double[][] m = new double[n + 1][n + 1];
+        for (int i = 0; i < n; i++) {
+            System.arraycopy(a[i], 0, m[i], 0, n);
+            m[i][n] = b[i];
+        }
+        double[][] em = expm(new Array2DRowRealMatrix(m).scalarMultiply(ts).getData());
+        double[][] ad = new double[n][n];
+        double[][] bd = new double[n][1];
+        for (int i = 0; i < n; i++) {
+            System.arraycopy(em[i], 0, ad[i], 0, n);
+            bd[i][0] = em[i][n];
+        }
+        double[][] cmat = {cvec.clone()};
+        StateSpace.TransferCoefficients tc = StateSpace.ss2tf(ad, bd, cmat, d);
+        return normalizePair(tc.num(), tc.den());
+    }
+
+    /** Partial-fraction residues, poles, and direct term (MATLAB residue order). */
+    public record ResidueResult(double[][] residues, double[][] poles, double k) {
+    }
+
+    /**
+     * Partial-fraction (Heaviside) expansion of {@code num/den} — the numeric
+     * inverse-Laplace workflow. Returns residues {@code r_i}, poles {@code p_i}
+     * (aligned, each as {@code [re, im]}), and the constant direct term
+     * {@code k}, such that
+     * {@code num/den = sum_i r_i/(s - p_i) + k}. The time-domain inverse
+     * Laplace transform is then {@code y(t) = sum_i r_i e^{p_i t} (+ k*delta(t))}.
+     *
+     * <p>Distinct poles only; repeated poles are reported as an error (their
+     * residue formula needs polynomial derivatives and rarely appears in
+     * textbook exercises). Inputs must be proper or bi-proper
+     * ({@code deg(num) <= deg(den)}).
+     */
+    public static ResidueResult residue(double[] num, double[] den) {
+        double[] b = trimLeadingZeros(num);
+        double[] a = trimLeadingZeros(den);
+        int degDen = a.length - 1;
+        if (degDen < 1) {
+            throw new IllegalArgumentException("residue: denominator must have degree >= 1");
+        }
+        if (b.length - 1 > degDen) {
+            throw new IllegalArgumentException("residue: improper transfer function (numerator degree > denominator degree)");
+        }
+        // Split off a constant direct term when bi-proper (deg num == deg den).
+        double k = 0.0;
+        double[] bReduced = b;
+        if (b.length - 1 == degDen) {
+            // Bi-proper: deg(num) == deg(den), so b and a are the same length.
+            k = b[0] / a[0];
+            bReduced = new double[a.length];
+            for (int i = 0; i < a.length; i++) {
+                bReduced[i] = b[i] - k * a[i];
+            }
+            bReduced = trimLeadingZeros(bReduced);
+        }
+        double[][] poles = roots(a);
+        if (poles.length != degDen) {
+            throw new IllegalArgumentException("residue: could not resolve all poles");
+        }
+        // Reject repeated poles (clustered within tolerance).
+        for (int i = 0; i < poles.length; i++) {
+            for (int j = i + 1; j < poles.length; j++) {
+                double dr = poles[i][0] - poles[j][0];
+                double di = poles[i][1] - poles[j][1];
+                if (Math.hypot(dr, di) < 1e-6) {
+                    throw new IllegalArgumentException("residue: repeated poles are not supported");
+                }
+            }
+        }
+        double[] dDen = derivative(a);
+        double[][] residues = new double[degDen][2];
+        for (int i = 0; i < degDen; i++) {
+            Complex p = new Complex(poles[i][0], poles[i][1]);
+            Complex nVal = evalPoly(bReduced, p);
+            Complex dVal = evalPoly(dDen, p);
+            Complex r = nVal.divide(dVal);
+            residues[i][0] = r.r;
+            residues[i][1] = r.i;
+        }
+        return new ResidueResult(residues, poles, k);
+    }
+
+    /** Derivative of a polynomial in descending powers. */
+    private static double[] derivative(double[] coeffs) {
+        int n = coeffs.length - 1;
+        if (n <= 0) {
+            return new double[]{0.0};
+        }
+        double[] d = new double[n];
+        for (int i = 0; i < n; i++) {
+            d[i] = coeffs[i] * (n - i);
+        }
+        return d;
+    }
+
+    /**
+     * Matrix exponential via the scaling-and-squaring method with a truncated
+     * Taylor series. Sufficient for the small companion matrices used by the
+     * ZOH discretisation.
+     */
+    public static double[][] expm(double[][] matrix) {
+        int n = matrix.length;
+        double norm = 0.0;
+        for (double[] row : matrix) {
+            for (double v : row) {
+                norm = Math.max(norm, Math.abs(v));
+            }
+        }
+        int s = Math.max(0, (int) Math.ceil(Math.log(Math.max(norm, 1e-12)) / Math.log(2.0)) + 1);
+        double sc = Math.pow(2.0, s);
+        RealMatrix as = new Array2DRowRealMatrix(matrix).scalarMultiply(1.0 / sc);
+        RealMatrix result = MatrixUtils.createRealIdentityMatrix(n);
+        RealMatrix term = MatrixUtils.createRealIdentityMatrix(n);
+        for (int k = 1; k <= 20; k++) {
+            term = term.multiply(as).scalarMultiply(1.0 / k);
+            result = result.add(term);
+        }
+        for (int i = 0; i < s; i++) {
+            result = result.multiply(result);
+        }
+        return result.getData();
     }
 
     private static record Complex(double r, double i) {

@@ -30,6 +30,18 @@ SYMBOLIC s
 
 frees solves this for **A = 2** and **B = -1**. Because you name the residues against the poles you chose, there is never any ambiguity about which residue is which. `A` and `B` are now ordinary variables — use them in downstream equations (for example, the inverse Laplace transform `y(t) = A*exp(-t) + B*exp(-2*t)`).
 
+This partial-fraction route is the recommended way to take an inverse Laplace transform in frees: the residues land in the Solution window as numeric variables, and you write the time-domain reconstruction yourself. (The underlying CAS engine also exposes forward and inverse Laplace transforms directly, used internally to ground these workflows.)
+
+### Automatic residues: residue
+
+When you don't want to write the decomposition template by hand — or the poles aren't obvious — use the numeric `residue` dispatch. It factors `num/den` automatically and returns the residues, the matching poles, and the scalar direct term as ordinary solved variables:
+```
+num = [1, 3]          # s + 3
+den = [1, 3, 2]       # s^2 + 3s + 2
+CALL residue(num[1:2], den[1:3] : r_r[1:2], r_i[1:2], p_r[1:2], p_i[1:2], k)
+```
+This yields poles `p = -2, -1` with residues `r = -1, 2` (and `k = 0`), so the inverse Laplace transform is `y(t) = r_r[1]*exp(p_r[1]*t) + r_r[2]*exp(p_r[2]*t)`. Residues and poles are complex (real/imag pairs) and sorted together, so `r_r[i]`/`r_i[i]` always pairs with `p_r[i]`/`p_i[i]`. Distinct poles only; a bi-proper `num/den` (equal degree) puts its constant term in `k`.
+
 ## Transfer functions: tf(num, den)
 
 `tf(num, den)` builds a transfer function `num(s)/den(s)` from coefficient arrays in **descending powers** (MATLAB-style): `[1, 3]` is `s + 3` and `[1, 3, 2]` is `s^2 + 3*s + 2`. Use it on the left of an identity instead of writing the fraction out:
@@ -215,6 +227,33 @@ PLOT 'Root Locus'
   zr = zr  # optional: open-loop zeros real parts
   zi = zi  # optional: open-loop zeros imaginary parts
 END
+```
+
+### 7. Routh-Hurwitz Stability: routh
+Runs the Routh-Hurwitz test on a characteristic polynomial `den` (descending powers) and reports `nRHP`, the number of closed-loop poles in the right half-plane (sign changes in the first column of the Routh array), and `stable` (`1` when `nRHP = 0`, else `0`). The two textbook special cases are handled automatically: a zero in the first column is resolved with the epsilon method, and an entire row of zeros is replaced by the derivative of the auxiliary polynomial.
+```
+den = [1, 1, 2, 8]
+CALL routh(den[1:4] : nRHP, stable)   # nRHP = 2, stable = 0
+```
+To find the range of a free gain `K` for stability, sweep `K` over a `PARAMETRIC` table and read where `nRHP` drops to `0`.
+
+## Digital Control (z-domain)
+
+Convert between continuous (s-domain) and discrete (z-domain) transfer functions. Coefficient arrays are in descending powers; outputs are normalized to a monic denominator.
+
+### 1. Continuous to Discrete: c2d
+Discretizes `num/den` at sample time `Ts`. The method is a quoted `'tustin'` (bilinear, the default) or `'zoh'` (zero-order hold, exact for a piecewise-constant input via the state-space matrix exponential). `num` and `den` must be the same length (pad the numerator with leading zeros); `numz`/`denz` share that length.
+```
+num = [0, 2]
+den = [1, 2]
+Ts = 0.1
+CALL c2d(num[1:2], den[1:2], Ts, 'zoh' : numz[1:2], denz[1:2])
+```
+
+### 2. Discrete to Continuous: d2c
+Inverts the bilinear mapping back to continuous time using the inverse Tustin transform (`'tustin'`).
+```
+CALL d2c(numz[1:2], denz[1:2], Ts, 'tustin' : num[1:2], den[1:2])
 ```
 
 ## Time-Domain Responses
