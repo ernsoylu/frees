@@ -40,7 +40,15 @@ num = [1, 3]          # s + 3
 den = [1, 3, 2]       # s^2 + 3s + 2
 CALL residue(num[1:2], den[1:3] : r_r[1:2], r_i[1:2], p_r[1:2], p_i[1:2], k)
 ```
-This yields poles `p = -2, -1` with residues `r = -1, 2` (and `k = 0`), so the inverse Laplace transform is `y(t) = r_r[1]*exp(p_r[1]*t) + r_r[2]*exp(p_r[2]*t)`. Residues and poles are complex (real/imag pairs) and sorted together, so `r_r[i]`/`r_i[i]` always pairs with `p_r[i]`/`p_i[i]`. Distinct poles only; a bi-proper `num/den` (equal degree) puts its constant term in `k`.
+This yields poles `p = -2, -1` with residues `r = -1, 2` (and `k = 0`), so the inverse Laplace transform is `y(t) = r_r[1]*exp(p_r[1]*t) + r_r[2]*exp(p_r[2]*t)`. Residues and poles are complex (real/imag pairs) and sorted together, so `r_r[i]`/`r_i[i]` always pairs with `p_r[i]`/`p_i[i]`. A bi-proper `num/den` (equal degree) puts its constant term in `k`.
+
+**Repeated poles.** Add a sixth output `ord` to handle repeated poles — it carries the power `k` of each `A/(s-p)^k` term:
+```
+num = [1]
+den = [1, 2, 1, 0]   # 1 / (s (s+1)^2)
+CALL residue(num[1:1], den[1:4] : r_r[1:3], r_i[1:3], p_r[1:3], p_i[1:3], ord[1:3], k)
+```
+gives `1/s - 1/(s+1) - 1/(s+1)^2`, i.e. the terms `(p=-1, ord=1, r=-1)`, `(p=-1, ord=2, r=-1)`, `(p=0, ord=1, r=1)`. The time-domain term for order `k` is `r · t^(k-1)/(k-1)! · exp(p·t)`. The 5-output form raises an error if the system has repeated poles, since they cannot be disambiguated without `ord`.
 
 ## Transfer functions: tf(num, den)
 

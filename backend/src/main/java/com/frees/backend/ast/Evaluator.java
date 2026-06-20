@@ -1023,16 +1023,19 @@ public final class Evaluator {
         return nRhp;
     }
 
-    // Synthetic partial-fraction call: residue$<rr|ri|pr|pi>$<index>$<numLen>$<n>
-    // or residue$k$<numLen>$<n>, with the numerator then denominator
-    // coefficients as arguments. Poles and residues are sorted together so the
-    // i-th residue always matches the i-th pole.
+    // Synthetic partial-fraction call:
+    //   residue$<rr|ri|pr|pi|ord>$<form>$<index>$<numLen>$<n>  or
+    //   residue$k$<form>$<numLen>$<n>
+    // where <form> is "s" (5-output simple) or "o" (6-output, with the order
+    // array). The numerator then denominator coefficients are the arguments.
+    // Residue terms are sorted by (pole, order) so the i-th outputs stay aligned.
     private static double evalResidue(Expr.Call c, Map<String, Double> values, Map<String, ProcDef> defs) {
         String[] parts = c.function().split("\\$");
-        String which = parts[1]; // rr, ri, pr, pi, or k
+        String which = parts[1]; // rr, ri, pr, pi, ord, or k
         boolean isK = which.equals("k");
-        int numLen = Integer.parseInt(parts[isK ? 2 : 3]);
-        int n = Integer.parseInt(parts[isK ? 3 : 4]);
+        String form = parts[2];
+        int numLen = Integer.parseInt(parts[isK ? 3 : 4]);
+        int n = Integer.parseInt(parts[isK ? 4 : 5]);
 
         List<Expr> args = c.args();
         double[] num = new double[numLen];
@@ -1047,33 +1050,55 @@ public final class Evaluator {
 
         com.frees.backend.cas.PolynomialHelpers.ResidueResult res =
                 com.frees.backend.cas.PolynomialHelpers.residue(num, den);
+        int[] orders = res.orders();
+        if (form.equals("s") && hasRepeatedPole(orders)) {
+            throw new IllegalStateException("residue: repeated poles require the 6-output form with an "
+                    + "order array, e.g. CALL residue(num, den : r_r, r_i, p_r, p_i, ord, k)");
+        }
         if (isK) {
             return res.k();
         }
 
         double[][] poles = res.poles();
         double[][] residues = res.residues();
-        Integer[] order = new Integer[poles.length];
-        for (int i = 0; i < order.length; i++) {
-            order[i] = i;
-        }
-        java.util.Arrays.sort(order, (i, j) -> {
-            int cmp = Double.compare(poles[i][0], poles[j][0]);
-            if (cmp != 0) {
-                return cmp;
-            }
-            return Double.compare(poles[i][1], poles[j][1]);
-        });
-
-        int index = Integer.parseInt(parts[2]);
-        int src = order[index];
+        int src = sortedResidueIndex(poles, orders, Integer.parseInt(parts[3]));
         return switch (which) {
             case "rr" -> residues[src][0];
             case "ri" -> residues[src][1];
             case "pr" -> poles[src][0];
             case "pi" -> poles[src][1];
+            case "ord" -> orders[src];
             default -> 0.0;
         };
+    }
+
+    private static boolean hasRepeatedPole(int[] orders) {
+        for (int o : orders) {
+            if (o > 1) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** Source index of the rank-th residue term, sorted by (pole real, imag, order). */
+    private static int sortedResidueIndex(double[][] poles, int[] orders, int rank) {
+        Integer[] perm = new Integer[poles.length];
+        for (int i = 0; i < perm.length; i++) {
+            perm[i] = i;
+        }
+        java.util.Arrays.sort(perm, (i, j) -> {
+            int cmp = Double.compare(poles[i][0], poles[j][0]);
+            if (cmp != 0) {
+                return cmp;
+            }
+            cmp = Double.compare(poles[i][1], poles[j][1]);
+            if (cmp != 0) {
+                return cmp;
+            }
+            return Integer.compare(orders[i], orders[j]);
+        });
+        return perm[rank];
     }
 
     // Synthetic Nichols call: nichols$<mag|phase>$<index>$<numInputs>$<N>.

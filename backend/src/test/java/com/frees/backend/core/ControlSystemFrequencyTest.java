@@ -2,6 +2,8 @@ package com.frees.backend.core;
 
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * End-to-end integration tests for pole, zero, bode, nyquist, and margin solvers.
@@ -172,6 +174,38 @@ class ControlSystemFrequencyTest {
         assertEquals(-1.0, result.variables().get("p_r[2]"), 1e-6);
         assertEquals(2.0, result.variables().get("r_r[2]"), 1e-6);
         assertEquals(0.0, result.variables().get("k"), 1e-9);
+    }
+
+    @Test
+    void residueRepeatedPolesWithOrderOutput() {
+        // 1/(s(s+1)^2) = 1/s - 1/(s+1) - 1/(s+1)^2; sorted by (pole, order):
+        // (-1, order 1, res -1), (-1, order 2, res -1), (0, order 1, res 1)
+        EquationSystemSolver.Result result = solver.solve(
+                "num = [1]\n"
+                        + "den = [1, 2, 1, 0]\n"
+                        + "CALL residue(num[1:1], den[1:4] : r_r[1:3], r_i[1:3], p_r[1:3], p_i[1:3], ord[1:3], k)");
+
+        assertEquals(-1.0, result.variables().get("p_r[1]"), 1e-6);
+        assertEquals(1.0, result.variables().get("ord[1]"), 1e-9);
+        assertEquals(-1.0, result.variables().get("r_r[1]"), 1e-6);
+        assertEquals(-1.0, result.variables().get("p_r[2]"), 1e-6);
+        assertEquals(2.0, result.variables().get("ord[2]"), 1e-9);
+        assertEquals(-1.0, result.variables().get("r_r[2]"), 1e-6);
+        assertEquals(0.0, result.variables().get("p_r[3]"), 1e-6);
+        assertEquals(1.0, result.variables().get("ord[3]"), 1e-9);
+        assertEquals(1.0, result.variables().get("r_r[3]"), 1e-6);
+        assertEquals(0.0, result.variables().get("k"), 1e-9);
+    }
+
+    @Test
+    void residueSimpleFormRejectsRepeatedPoles() {
+        // The 5-output form cannot disambiguate repeated poles; it must error.
+        Exception ex = assertThrows(Exception.class, () -> solver.solve(
+                "num = [1]\n"
+                        + "den = [1, 2, 1]\n"
+                        + "CALL residue(num[1:1], den[1:3] : r_r[1:2], r_i[1:2], p_r[1:2], p_i[1:2], k)"));
+        assertTrue(ex.getMessage() != null && ex.getMessage().contains("repeated poles"),
+                "expected a repeated-poles error, got: " + ex.getMessage());
     }
 
     @Test
