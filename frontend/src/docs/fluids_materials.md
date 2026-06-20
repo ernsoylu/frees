@@ -47,28 +47,25 @@ Every property function accepts the fluid name as the first argument, followed b
 - **`Dipole(Fluid):`** Dipole moment.
 
 [Topic: solid-materials]
-# Solid & Incompressible Material Properties Reference
+# Solid Material Properties Reference
 
-frees supports property lookups for solid materials (e.g., `Copper`, `Iron`, `Aluminum`, `Concrete`, `Glass`) and incompressible liquids (e.g., `EngineOil`).
+frees provides bulk (room-temperature) physical properties for common engineering solids: `Aluminum`, `Copper`, `Steel`, `StainlessSteel`, `Iron`, `Brass`, `Bronze`, `Gold`, `Silver`, `Lead`, `Nickel`, `Titanium`, `Tungsten`, `Zinc`, `Magnesium`, `Concrete`, `Glass`, `Brick`, `Wood`, `Ice`. Values are representative constants (temperature-dependence is not modelled).
 
 ## Material Property Functions
-- **`c_(Material, T=t):`** Specific heat capacity (J/kg-K).
-- **`k_(Material, T=t):`** Thermal conductivity (W/m-K).
-- **`rho_(Material):`** Solid density (kg/m³).
-- **`mu_(Material, T=t):`** Dynamic viscosity (Pa-s) for liquids.
-- **`Pv_(Material, T=t):`** Vapor pressure (Pa).
+- **`k_(Material):`** Thermal conductivity (W/m-K).
+- **`rho_(Material):`** Density (kg/m³).
+- **`c_(Material):`** Specific heat capacity (J/kg-K).
 - **`E_(Material):`** Young's modulus (Pa).
-- **`nu_(Material):`** Poisson's ratio.
-- **`epsilon_(Material):`** Surface emissivity (0–1).
-- **`VolExpCoef(Material):`** Volumetric expansion coefficient (1/K).
-- **`FreezingPt(Material):`** Freezing point temperature (K).
-- **`DELTAL\L_293(Material, T=t):`** Linear thermal expansion ratio relative to 293 K.
-- **`ek_LJ(Material) / sigma_LJ(Material):`** Lennard-Jones parameters.
+- **`nu_(Material):`** Poisson's ratio (dimensionless).
+
+A material that does not carry a requested property (e.g. `E_(Ice)` is provided but `nu_(Brick)` is not) raises a clear error.
 
 ### Material Lookup Example
 ```
-k_copper = k_(Copper, T=300 [K])
-mod_steel = E_(Steel)
+{ Steady conduction through an aluminum slab }
+k = k_(Aluminum)          { ~237 W/m-K }
+q = k * A * dT / L
+A = 2;  dT = 50;  L = 0.1
 ```
 
 [Topic: humidair]

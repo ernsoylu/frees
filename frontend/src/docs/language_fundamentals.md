@@ -210,17 +210,10 @@ A complex variable is represented by suffixing `_r` (real) and `_i` (imaginary) 
 [Topic: strings]
 # String Variables & Functions
 
-String variables are identified by a trailing `$` symbol.
+String variables are identified by a trailing `$` symbol, and string literals use single quotes (e.g. `'R134a'`). They are resolved at compile time — for example as a fluid name in a property call.
 
 ## String Functions
-- **`Concat$(s1, s2):`** Concatenates two strings.
-- **`Copy$(s, start, len):`** Returns substring.
-- **`Lowercase$(s) / Uppercase$(s):`** Adjusts casing.
-- **`Trim$(s):`** Trims whitespace.
-- **`StringLen(s):`** Length of string.
-- **`StringPos(s, sub):`** Finds index of substring (0 if not found).
-- **`StringVal(s):`** Converts numeric string to scalar.
-- **`String$(x):`** Converts scalar to string.
-- **`UnitsOf$(x):`** Returns the unit annotation of a variable as a string.
-- **`UnitSystem$():`** Returns description of the active unit system (e.g., `'SI'`).
-- **`Date$() / Time$() / TimeStamp$():`** Time utility strings.
+These functions take string-literal arguments and return a number:
+- **`StringLen(s):`** Number of characters in a string.
+- **`StringPos(s, sub):`** 1-based index of the first occurrence of `sub` in `s` (0 if not found).
+- **`StringVal(s):`** Converts a numeric string to a scalar (e.g. `StringVal('3.14')` → `3.14`).
