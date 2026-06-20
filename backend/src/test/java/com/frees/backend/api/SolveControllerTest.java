@@ -272,6 +272,38 @@ class SolveControllerTest {
     }
 
     @Test
+    void multiObjectiveOptimizationReturnsParetoFront() throws Exception {
+        mockMvc.perform(post("/api/optimize/multi")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{"
+                                + "\"text\": \"f1 = x^2\\nf2 = (x - 2)^2\","
+                                + "\"objectives\": [\"f1\", \"f2\"],"
+                                + "\"maximize\": [false, false],"
+                                + "\"decisions\": [\"x\"],"
+                                + "\"lowers\": [-1.0],"
+                                + "\"uppers\": [3.0],"
+                                + "\"populationSize\": 40,"
+                                + "\"generations\": 40"
+                                + "}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.objectiveNames[0]").value("f1"))
+                .andExpect(jsonPath("$.front").isNotEmpty())
+                .andExpect(jsonPath("$.front[0].decisions[0]").exists())
+                .andExpect(jsonPath("$.front[0].objectives[0]").exists());
+    }
+
+    @Test
+    void multiObjectiveRejectsSingleObjective() throws Exception {
+        mockMvc.perform(post("/api/optimize/multi")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"text\": \"f1 = x^2\", \"objectives\": [\"f1\"],"
+                                + " \"decisions\": [\"x\"], \"lowers\": [0.0], \"uppers\": [1.0]}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false));
+    }
+
+    @Test
     void parametricAccessorsResolveAcrossRows() throws Exception {
         // A driving-cycle style table: P computed per row, total energy E is the
         // trapezoid integral of P over t — an aggregate of every row, resolved by
