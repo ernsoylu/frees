@@ -20,6 +20,7 @@ import {
   buildPsychroFigure,
   buildXYFigure,
   buildBodeFigure,
+  buildNicholsFigure,
   buildNyquistFigure,
   buildPoleZeroFigure,
   buildRootLocusFigure,
@@ -263,6 +264,11 @@ export function buildFigure(spec: PlotSpec, inputs: FigureInputs): PlotlyFigure 
     const real = getArrayValues(variables, spec.control.real)
     const imag = getArrayValues(variables, spec.control.imag)
     return buildNyquistFigure(real, imag, spec.format, theme)
+  }
+  if (spec.kind === 'nichols' && spec.control.mag && spec.control.phase) {
+    const mag = getArrayValues(variables, spec.control.mag)
+    const phase = getArrayValues(variables, spec.control.phase)
+    return buildNicholsFigure(mag, phase, spec.format, theme)
   }
   if (spec.kind === 'polezero' && spec.control.pr && spec.control.pi) {
     const pr = getArrayValues(variables, spec.control.pr)

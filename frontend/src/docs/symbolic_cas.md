@@ -246,11 +246,19 @@ CALL routh(den[1:4] : nRHP, stable)   # nRHP = 2, stable = 0
 To find the range of a free gain `K` for stability, sweep `K` over a `PARAMETRIC` table and read where `nRHP` drops to `0`.
 
 ### 8. Nichols Chart Data: nichols
-Computes the open-loop magnitude (dB) and unwrapped phase (deg) at a vector of frequencies `omega` — the same data as `bode`, intended to be plotted as magnitude versus phase to form a Nichols chart.
+Computes the open-loop magnitude (dB) and unwrapped phase (deg) at a vector of frequencies `omega` — the same data as `bode`, arranged for a Nichols chart.
 ```
 CALL nichols(num, den, omega : mag[1:50], phase[1:50])
 # OR
 CALL nichols(A, B, C, D, omega : mag[1:50], phase[1:50])
+```
+Plot the result with the dedicated **`nichols`** plot kind, which draws the locus on the standard Nichols grid (constant closed-loop magnitude *M* and phase *N* contours) with the −1 critical point marked:
+```
+PLOT 'Nichols'
+  kind = nichols
+  mag = mag
+  phase = phase
+END
 ```
 
 ### 9. Static Error Constants: errorconst
