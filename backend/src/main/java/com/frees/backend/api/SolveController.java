@@ -3,6 +3,7 @@ package com.frees.backend.api;
 import com.frees.backend.core.Block;
 import com.frees.backend.core.EquationSystemSolver;
 import com.frees.backend.core.CurveFitter;
+import com.frees.backend.core.MultiObjectiveOptimizer;
 import com.frees.backend.core.Optimizer;
 import com.frees.backend.core.SolverException;
 import com.frees.backend.core.SolverSettings;
@@ -1027,6 +1028,83 @@ public class SolveController {
         } catch (SolverException e) {
             return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(OptimizeResponse.failure(e.getMessage()));
         }
+    }
+
+    public record MultiObjectiveRequest(String text,
+                                        StopCriteriaDto stopCriteria,
+                                        List<VariableInfoDto> variableInfo,
+                                        List<String> objectives,
+                                        List<Boolean> maximize,
+                                        List<String> decisions,
+                                        List<Double> lowers,
+                                        List<Double> uppers,
+                                        Integer populationSize,
+                                        Integer generations) {}
+
+    public record ParetoPointDto(List<Double> decisions, List<Double> objectives) {}
+
+    public record ParetoResponse(boolean success, String error,
+                                 List<String> decisionNames, List<String> objectiveNames,
+                                 List<ParetoPointDto> front, int evaluations) {
+        static ParetoResponse failure(String error) {
+            return new ParetoResponse(false, error, List.of(), List.of(), List.of(), 0);
+        }
+    }
+
+    @PostMapping("/optimize/multi")
+    public ResponseEntity<ParetoResponse> optimizeMulti(@RequestBody MultiObjectiveRequest request) {
+        if (request.text() == null || request.text().isBlank()) {
+            return ResponseEntity.badRequest().body(ParetoResponse.failure(NO_EQUATIONS_MESSAGE));
+        }
+        if (request.objectives() == null || request.objectives().size() < 2) {
+            return ResponseEntity.badRequest().body(ParetoResponse.failure(
+                    "Multi-objective optimization needs at least two objective variables."));
+        }
+        if (request.decisions() == null || request.decisions().isEmpty()
+                || request.lowers() == null || request.uppers() == null
+                || request.lowers().size() != request.decisions().size()
+                || request.uppers().size() != request.decisions().size()) {
+            return ResponseEntity.badRequest().body(ParetoResponse.failure(
+                    "Each decision variable requires matching lower and upper bounds."));
+        }
+        List<Boolean> maximize = request.maximize() != null && request.maximize().size() == request.objectives().size()
+                ? request.maximize()
+                : request.objectives().stream().map(o -> Boolean.FALSE).toList();
+
+        String cleanText = MarkdownEquationExtractor.extract(request.text()).cleanText;
+        SolverSettings settings = request.stopCriteria() != null
+                ? request.stopCriteria().toSettings() : cappedDefaults();
+        int population = clampPositive(request.populationSize(), 40, 200);
+        int generations = clampPositive(request.generations(), 40, 200);
+
+        try {
+            MultiObjectiveOptimizer.Result result = new MultiObjectiveOptimizer(solver).optimize(
+                    new MultiObjectiveOptimizer.Problem(cleanText, settings,
+                            specsOf(request.variableInfo()),
+                            request.objectives(), maximize,
+                            request.decisions(), request.lowers(), request.uppers(),
+                            population, generations, 42L));
+
+            List<ParetoPointDto> front = result.front().stream()
+                    .map(pt -> new ParetoPointDto(
+                            java.util.Arrays.stream(pt.decisions()).boxed().toList(),
+                            java.util.Arrays.stream(pt.objectives()).boxed().toList()))
+                    .toList();
+            return ResponseEntity.ok(new ParetoResponse(true, null,
+                    request.decisions(), request.objectives(), front, result.evaluations()));
+        } catch (EquationParser.ParseException e) {
+            String firstError = e.getMessage().lines().findFirst().orElse(e.getMessage());
+            return ResponseEntity.badRequest().body(ParetoResponse.failure(SYNTAX_ERROR_PREFIX + firstError));
+        } catch (SolverException e) {
+            return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(ParetoResponse.failure(e.getMessage()));
+        }
+    }
+
+    private static int clampPositive(Integer value, int fallback, int max) {
+        if (value == null || value <= 0) {
+            return fallback;
+        }
+        return Math.min(value, max);
     }
 
     /** Assembles the optimize response: display-converted objective, decisions and all variables. */

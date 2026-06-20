@@ -95,6 +95,9 @@ END
 ## Minimize / Maximize Optimization
 Use **Tools -> Minimize** or **Maximize** (or the sidebar optimization panel) to find optimal values for decision variables under constraints.
 
+## Multi-Objective Optimization (Pareto front)
+When two or more objectives conflict (for example minimising cost while maximising efficiency), there is no single optimum — instead a **Pareto front** of non-dominated trade-off points. frees finds it with **NSGA-II**, a genetic algorithm: supply two or more objective variables, each flagged minimise or maximise, plus the decision variables and their bounds. Each candidate is scored by solving the equation system with the decisions fixed and reading the objective variables; the algorithm returns the set of points where no objective can be improved without worsening another. The result is a list of `(decisions, objectives)` points suitable for plotting one objective against the other.
+
 [Topic: api]
 # Solver Reference & API
 
