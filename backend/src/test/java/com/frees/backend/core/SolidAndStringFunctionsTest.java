@@ -42,6 +42,18 @@ class SolidAndStringFunctionsTest {
     }
 
     @Test
+    void arrayElmtDynamicIndexing() {
+        EquationSystemSolver.Result r = solver.solve(
+                "data[1] = 10\n"
+                        + "data[2] = 20\n"
+                        + "data[3] = 30\n"
+                        + "data[4] = 40\n"
+                        + "k = 3\n"
+                        + "v = ArrayElmt(data[1:4], k)");
+        assertEquals(30.0, r.variables().get("v"), 1e-9);
+    }
+
+    @Test
     void numericStringFunctions() {
         EquationSystemSolver.Result r = solver.solve(
                 "n = StringLen('frees')\n"
