@@ -205,6 +205,15 @@ public final class Evaluator {
         if (c.function().startsWith("residue$")) {
             return evalResidue(c, values, defs);
         }
+        if (c.function().startsWith("nichols$")) {
+            return evalNichols(c, values, defs);
+        }
+        if (c.function().startsWith("errorconst$")) {
+            return evalErrorConst(c, values, defs);
+        }
+        if (c.function().startsWith("mason$")) {
+            return evalMason(c, values, defs);
+        }
 
         return evalBuiltin(c, values, defs);
     }
@@ -1065,6 +1074,122 @@ public final class Evaluator {
             case "pi" -> poles[src][1];
             default -> 0.0;
         };
+    }
+
+    // Synthetic Nichols call: nichols$<mag|phase>$<index>$<numInputs>$<N>.
+    // Same data as bode (magnitude in dB, unwrapped phase in deg); the pair is
+    // plotted as magnitude vs phase to form a Nichols chart.
+    private static double evalNichols(Expr.Call c, Map<String, Double> values, Map<String, ProcDef> defs) {
+        String[] parts = c.function().split("\\$");
+        boolean wantMag = parts[1].equals("mag");
+        int index = Integer.parseInt(parts[2]);
+        int numInputs = Integer.parseInt(parts[3]);
+        int N = Integer.parseInt(parts[4]);
+
+        double[][] model = freqResponseModel(c.args(), numInputs, N, values, defs);
+        double[][] result = com.frees.backend.cas.PolynomialHelpers.bode(model[0], model[1], model[2]);
+        return wantMag ? result[0][index] : result[1][index];
+    }
+
+    /** Reads {num, den, omega} from a flattened frequency-response call's args. */
+    private static double[][] freqResponseModel(List<Expr> args, int numInputs, int N,
+                                                Map<String, Double> values, Map<String, ProcDef> defs) {
+        if (numInputs == 3) {
+            int len = (args.size() - N) / 2;
+            double[] num = new double[len];
+            double[] den = new double[len];
+            for (int i = 0; i < len; i++) {
+                num[i] = eval(args.get(i), values, defs);
+                den[i] = eval(args.get(len + i), values, defs);
+            }
+            double[] omega = readTail(args, 2 * len, N, values, defs);
+            return new double[][]{num, den, omega};
+        }
+        int n = (int) Math.round(Math.sqrt(args.size() - (double) N)) - 1;
+        double[][] nd = ssArgsToNumDen(args, n, values, defs);
+        double[] omega = readTail(args, n * n + 2 * n + 1, N, values, defs);
+        return new double[][]{nd[0], nd[1], omega};
+    }
+
+    /** Reads {@code count} consecutive scalar args starting at {@code from}. */
+    private static double[] readTail(List<Expr> args, int from, int count,
+                                     Map<String, Double> values, Map<String, ProcDef> defs) {
+        double[] out = new double[count];
+        for (int i = 0; i < count; i++) {
+            out[i] = eval(args.get(from + i), values, defs);
+        }
+        return out;
+    }
+
+    /** Reads an n-state SS model (A, B, C, D) from the start of args and converts to {num, den}. */
+    private static double[][] ssArgsToNumDen(List<Expr> args, int n,
+                                             Map<String, Double> values, Map<String, ProcDef> defs) {
+        double[][] a = new double[n][n];
+        double[][] b = new double[n][1];
+        double[][] cm = new double[1][n];
+        int idx = 0;
+        for (int i = 0; i < n; i++) {
+            for (int j = 0; j < n; j++) {
+                a[i][j] = eval(args.get(idx++), values, defs);
+            }
+        }
+        for (int i = 0; i < n; i++) {
+            b[i][0] = eval(args.get(idx++), values, defs);
+        }
+        for (int j = 0; j < n; j++) {
+            cm[0][j] = eval(args.get(idx++), values, defs);
+        }
+        double d = eval(args.get(idx), values, defs);
+        com.frees.backend.cas.StateSpace.TransferCoefficients tc =
+                com.frees.backend.cas.StateSpace.ss2tf(a, b, cm, d);
+        return new double[][]{tc.num(), tc.den()};
+    }
+
+    // Synthetic error-constant call: errorconst$<kp|kv|ka>$<numLen>$<denLen>,
+    // with the open-loop numerator then denominator coefficients as arguments.
+    private static double evalErrorConst(Expr.Call c, Map<String, Double> values, Map<String, ProcDef> defs) {
+        String[] parts = c.function().split("\\$");
+        String which = parts[1];
+        int numLen = Integer.parseInt(parts[2]);
+        int denLen = Integer.parseInt(parts[3]);
+
+        List<Expr> args = c.args();
+        double[] num = new double[numLen];
+        double[] den = new double[denLen];
+        int idx = 0;
+        for (int i = 0; i < numLen; i++) {
+            num[i] = eval(args.get(idx++), values, defs);
+        }
+        for (int i = 0; i < denLen; i++) {
+            den[i] = eval(args.get(idx++), values, defs);
+        }
+        double[] k = com.frees.backend.cas.PolynomialHelpers.errorConstants(num, den);
+        return switch (which) {
+            case "kp" -> k[0];
+            case "kv" -> k[1];
+            case "ka" -> k[2];
+            default -> 0.0;
+        };
+    }
+
+    // Synthetic Mason call: mason$<n>, with the n*n node-gain matrix entries
+    // (row-major) followed by the 1-based source and sink node numbers.
+    private static double evalMason(Expr.Call c, Map<String, Double> values, Map<String, ProcDef> defs) {
+        int n = Integer.parseInt(c.function().substring("mason$".length()));
+        List<Expr> args = c.args();
+        double[][] g = new double[n][n];
+        int idx = 0;
+        for (int i = 0; i < n; i++) {
+            for (int j = 0; j < n; j++) {
+                g[i][j] = eval(args.get(idx++), values, defs);
+            }
+        }
+        int source = (int) Math.round(eval(args.get(idx++), values, defs)) - 1;
+        int sink = (int) Math.round(eval(args.get(idx), values, defs)) - 1;
+        if (source < 0 || source >= n || sink < 0 || sink >= n) {
+            throw new IllegalStateException("mason: source/sink node out of range 1.." + n);
+        }
+        return com.frees.backend.cas.PolynomialHelpers.mason(g, source, sink);
     }
 
     // Synthetic discretisation call: <c2d|d2c>$<num|den>$<method>$<index>$<L>,

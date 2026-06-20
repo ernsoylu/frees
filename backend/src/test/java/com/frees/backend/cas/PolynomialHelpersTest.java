@@ -275,6 +275,57 @@ class PolynomialHelpersTest {
     }
 
     @Test
+    void errorConstantsForType0System() {
+        // G = 5/(s+1): type 0 -> Kp = 5, Kv = 0, Ka = 0
+        double[] k = PolynomialHelpers.errorConstants(new double[]{5}, new double[]{1, 1});
+        assertEquals(5.0, k[0], 1e-9);
+        assertEquals(0.0, k[1], 1e-9);
+        assertEquals(0.0, k[2], 1e-9);
+    }
+
+    @Test
+    void errorConstantsForType1System() {
+        // G = 5/(s^2+s) = 5/(s(s+1)): type 1 -> Kp = inf, Kv = 5, Ka = 0
+        double[] k = PolynomialHelpers.errorConstants(new double[]{5}, new double[]{1, 1, 0});
+        assertEquals(Double.POSITIVE_INFINITY, k[0]);
+        assertEquals(5.0, k[1], 1e-9);
+        assertEquals(0.0, k[2], 1e-9);
+    }
+
+    @Test
+    void errorConstantsForType2System() {
+        // G = 5/(s^3+s^2) = 5/(s^2(s+1)): type 2 -> Kp = Kv = inf, Ka = 5
+        double[] k = PolynomialHelpers.errorConstants(new double[]{5}, new double[]{1, 1, 0, 0});
+        assertEquals(Double.POSITIVE_INFINITY, k[0]);
+        assertEquals(Double.POSITIVE_INFINITY, k[1]);
+        assertEquals(5.0, k[2], 1e-9);
+    }
+
+    @Test
+    void masonSingleFeedbackLoop() {
+        // 1 ->(2)-> 2 ->(3)-> 3, feedback 3 ->(0.5)-> 2: T = ab/(1 - bf) = 6/(1-1.5) = -12
+        double[][] g = {
+                {0, 2, 0},
+                {0, 0, 3},
+                {0, 0.5, 0}
+        };
+        assertEquals(-12.0, PolynomialHelpers.mason(g, 0, 2), 1e-9);
+    }
+
+    @Test
+    void masonTwoNonTouchingLoops() {
+        // path 1->2->3->4 (gain 1) with self-loops 0.5 at nodes 2 and 3 (non-touching):
+        // delta = 1 - (0.5+0.5) + (0.25) = 0.25; T = 1/0.25 = 4
+        double[][] g = {
+                {0, 1, 0, 0},
+                {0, 0.5, 1, 0},
+                {0, 0, 0.5, 1},
+                {0, 0, 0, 0}
+        };
+        assertEquals(4.0, PolynomialHelpers.mason(g, 0, 3), 1e-9);
+    }
+
+    @Test
     void residueRejectsRepeatedPoles() {
         // 1/(s+1)^2 = 1/(s^2+2s+1) has a repeated pole
         assertThrows(IllegalArgumentException.class,

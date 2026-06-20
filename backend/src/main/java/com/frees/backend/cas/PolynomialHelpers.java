@@ -5,7 +5,9 @@ import org.apache.commons.math3.linear.EigenDecomposition;
 import org.apache.commons.math3.linear.MatrixUtils;
 import org.apache.commons.math3.linear.RealMatrix;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 /**
  * Utility helper class for polynomial calculations.
@@ -673,6 +675,122 @@ public final class PolynomialHelpers {
             residues[i][1] = r.i;
         }
         return new ResidueResult(residues, poles, k);
+    }
+
+    /**
+     * Static (steady-state) error constants {@code {Kp, Kv, Ka}} for an open-loop
+     * transfer function {@code G(s) = num/den} given in lowest terms. The system
+     * type is the number of pure integrators (poles at the origin). Constants
+     * that are infinite for the system type are returned as
+     * {@link Double#POSITIVE_INFINITY}.
+     */
+    public static double[] errorConstants(double[] num, double[] den) {
+        double[] b = trimLeadingZeros(num);
+        double[] a = trimLeadingZeros(den);
+        int type = 0;
+        for (int i = a.length - 1; i >= 0 && Math.abs(a[i]) < 1e-12; i--) {
+            type++;
+        }
+        double[] aBar = Arrays.copyOfRange(a, 0, a.length - type);
+        double g0 = b[b.length - 1] / aBar[aBar.length - 1]; // lim s^type G(s)
+
+        double kp = Double.POSITIVE_INFINITY;
+        double kv = Double.POSITIVE_INFINITY;
+        double ka = Double.POSITIVE_INFINITY;
+        if (type == 0) {
+            kp = g0;
+            kv = 0.0;
+            ka = 0.0;
+        } else if (type == 1) {
+            kv = g0;
+            ka = 0.0;
+        } else if (type == 2) {
+            ka = g0;
+        }
+        return new double[]{kp, kv, ka};
+    }
+
+    /**
+     * Overall transmittance of a scalar signal-flow graph by Mason's gain
+     * formula. {@code g[i][j]} is the branch gain from node {@code i} to node
+     * {@code j} (0 means no branch); {@code source} and {@code sink} are 0-based
+     * node indices. Returns {@code T = Y(sink)/X(source)}.
+     */
+    public static double mason(double[][] g, int source, int sink) {
+        int n = g.length;
+        if (n > 62) {
+            throw new IllegalArgumentException("mason: too many nodes (max 62)");
+        }
+        List<PathTerm> paths = new ArrayList<>();
+        findForwardPaths(g, source, sink, 1L << source, 1.0, paths);
+        List<PathTerm> loops = new ArrayList<>();
+        for (int s = 0; s < n; s++) {
+            dfsLoop(g, s, s, 1L << s, 1.0, loops);
+        }
+        double delta = graphDeterminant(loops, 0L);
+        if (Math.abs(delta) < 1e-15) {
+            throw new IllegalArgumentException("mason: graph determinant is zero (singular signal-flow graph)");
+        }
+        double numerator = 0.0;
+        for (PathTerm p : paths) {
+            numerator += p.gain() * graphDeterminant(loops, p.mask());
+        }
+        return numerator / delta;
+    }
+
+    /** A forward path or loop: its accumulated gain and the bitmask of its nodes. */
+    private record PathTerm(double gain, long mask) {
+    }
+
+    private static void findForwardPaths(double[][] g, int current, int sink, long mask, double gain, List<PathTerm> out) {
+        if (current == sink) {
+            out.add(new PathTerm(gain, mask));
+            return;
+        }
+        for (int next = 0; next < g.length; next++) {
+            if (g[current][next] != 0.0 && (mask & (1L << next)) == 0) {
+                findForwardPaths(g, next, sink, mask | (1L << next), gain * g[current][next], out);
+            }
+        }
+    }
+
+    private static void dfsLoop(double[][] g, int start, int current, long mask, double gain, List<PathTerm> out) {
+        for (int next = 0; next < g.length; next++) {
+            double branch = g[current][next];
+            if (branch == 0.0) {
+                continue;
+            }
+            if (next == start) {
+                out.add(new PathTerm(gain * branch, mask));
+            } else if (next > start && (mask & (1L << next)) == 0) {
+                dfsLoop(g, start, next, mask | (1L << next), gain * branch, out);
+            }
+        }
+    }
+
+    /**
+     * Mason's graph determinant over the loops that do not touch
+     * {@code excludeMask}: {@code 1 - sum(L) + sum(non-touching pairs) - ...}.
+     */
+    private static double graphDeterminant(List<PathTerm> loops, long excludeMask) {
+        List<PathTerm> avail = new ArrayList<>();
+        for (PathTerm loop : loops) {
+            if ((loop.mask() & excludeMask) == 0) {
+                avail.add(loop);
+            }
+        }
+        return deltaRec(avail, 0, 0L, 1.0);
+    }
+
+    private static double deltaRec(List<PathTerm> avail, int pos, long used, double signedProduct) {
+        double total = signedProduct;
+        for (int k = pos; k < avail.size(); k++) {
+            PathTerm loop = avail.get(k);
+            if ((loop.mask() & used) == 0) {
+                total += deltaRec(avail, k + 1, used | loop.mask(), signedProduct * (-loop.gain()));
+            }
+        }
+        return total;
     }
 
     /** Derivative of a polynomial in descending powers. */
