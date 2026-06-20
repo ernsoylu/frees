@@ -386,6 +386,20 @@ public final class Evaluator {
             // Base conversion: BaseConvert('FF', 16, 10) -> 255
             case "baseconvert" -> evalBaseConvert(c, values, defs);
 
+            // Dynamic array indexing: ArrayElmt(data[1:N], k) -> data[round(k)].
+            // The range expands to N element args; the last arg is the index.
+            case "arrayelmt" -> {
+                int n = args.size() - 1;
+                if (n < 1) {
+                    throw new IllegalStateException("ArrayElmt expects an array range and an index, e.g. ArrayElmt(data[1:10], k).");
+                }
+                int i = (int) Math.round(eval(args.get(n), values, defs));
+                if (i < 1 || i > n) {
+                    throw new IllegalStateException("ArrayElmt: index " + i + " is out of range 1.." + n + ".");
+                }
+                yield eval(args.get(i - 1), values, defs);
+            }
+
             // Numeric string functions (operate on string-literal arguments).
             case "stringlen" -> evalString(args.get(0)).length();
             case "stringval" -> Double.parseDouble(evalString(args.get(0)).trim());

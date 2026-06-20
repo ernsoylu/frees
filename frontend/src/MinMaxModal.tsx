@@ -6,6 +6,7 @@ import {
   Group,
   Modal,
   MultiSelect,
+  NumberInput,
   SegmentedControl,
   Select,
   Stack,
@@ -16,13 +17,17 @@ import {
 } from '@mantine/core'
 import {
   optimize,
+  optimizeMulti,
+  MultiObjectiveParams,
   OptimizeMethod,
   OptimizeResponse,
+  ParetoResponse,
   StopCriteria,
   UnitSystem,
   VariableInfo,
   VariableResult,
 } from './api'
+import PlotlyChart from './plots/PlotlyChart'
 import { formatValue } from './format'
 
 const MONO_INPUT = {
@@ -34,6 +39,8 @@ const METHOD_OPTIONS = [
   { value: 'nelder-mead', label: 'Nelder-Mead Simplex' },
   { value: 'bobyqa', label: 'BOBYQA' },
 ]
+
+type Mode = 'single' | 'multi'
 
 interface Bounds {
   lower: string
@@ -117,6 +124,90 @@ function ResultView({ result }: Readonly<{ result: OptimizeResponse }>) {
   )
 }
 
+function ParetoView({ result }: Readonly<{ result: ParetoResponse }>) {
+  if (!result.success) {
+    return (
+      <Alert color="red" variant="light" p="xs">
+        <Text size="sm" style={{ whiteSpace: 'pre-wrap' }}>
+          {result.error}
+        </Text>
+      </Alert>
+    )
+  }
+  const { front, objectiveNames, decisionNames } = result
+  const twoObjectives = objectiveNames.length === 2
+  const figure = twoObjectives
+    ? {
+        data: [
+          {
+            x: front.map((p) => p.objectives[0]),
+            y: front.map((p) => p.objectives[1]),
+            type: 'scatter' as const,
+            mode: 'markers+lines' as const,
+            marker: { color: '#69db7c', size: 8 },
+            line: { color: '#2f9e44', width: 1 },
+            name: 'Pareto front',
+          },
+        ],
+        layout: {
+          xaxis: { title: { text: objectiveNames[0] }, gridcolor: '#373a40', zeroline: false },
+          yaxis: { title: { text: objectiveNames[1] }, gridcolor: '#373a40', zeroline: false },
+          paper_bgcolor: 'transparent',
+          plot_bgcolor: 'transparent',
+          font: { color: '#c1c2c5' },
+          margin: { t: 10, r: 10, b: 44, l: 56 },
+          showlegend: false,
+        },
+      }
+    : null
+  return (
+    <Stack gap="xs">
+      <Group gap="xs">
+        <Badge color="green" variant="light" leftSection="✓">
+          {front.length} Pareto-optimal points
+        </Badge>
+        <Text size="xs" c="dimmed">
+          {result.evaluations} evaluations
+        </Text>
+      </Group>
+      {figure && <PlotlyChart figure={figure} minHeight={280} />}
+      {!twoObjectives && (
+        <Text size="xs" c="dimmed">
+          Plotting is shown for exactly two objectives; the table below lists every point.
+        </Text>
+      )}
+      <Table striped highlightOnHover withTableBorder>
+        <Table.Thead>
+          <Table.Tr>
+            {objectiveNames.map((name) => (
+              <Table.Th key={`o-${name}`}>{name}</Table.Th>
+            ))}
+            {decisionNames.map((name) => (
+              <Table.Th key={`d-${name}`}>{name}</Table.Th>
+            ))}
+          </Table.Tr>
+        </Table.Thead>
+        <Table.Tbody>
+          {front.map((p, i) => (
+            <Table.Tr key={i}>
+              {p.objectives.map((v, j) => (
+                <Table.Td key={`o${j}`} ff="monospace" c="green.4">
+                  {formatValue(v)}
+                </Table.Td>
+              ))}
+              {p.decisions.map((v, j) => (
+                <Table.Td key={`d${j}`} ff="monospace" c="dimmed">
+                  {formatValue(v)}
+                </Table.Td>
+              ))}
+            </Table.Tr>
+          ))}
+        </Table.Tbody>
+      </Table>
+    </Stack>
+  )
+}
+
 interface Props {
   variables: string[]
   text: string
@@ -128,9 +219,9 @@ interface Props {
 }
 
 /**
- * Calculate > Min/Max: optimization of an objective variable over one or more
- * independent variables. Brent's method for 1-D, Nelder-Mead Simplex or BOBYQA
- * for multi-variable, with optional barrier/Lagrangian constraints.
+ * Calculate > Min/Max: optimization of an objective over independent variables.
+ * Single-objective uses Brent / Nelder-Mead / BOBYQA; the Multi-objective tab
+ * runs NSGA-II and returns the Pareto front.
  */
 export default function MinMaxModal({
   variables,
@@ -141,8 +232,13 @@ export default function MinMaxModal({
   unitSystem,
   onClose,
 }: Readonly<Props>) {
+  const [mode, setMode] = useState<Mode>('single')
   const [goal, setGoal] = useState<'minimize' | 'maximize'>('minimize')
   const [objective, setObjective] = useState<string | null>(null)
+  const [objectives, setObjectives] = useState<string[]>([])
+  const [objGoals, setObjGoals] = useState<Record<string, 'min' | 'max'>>({})
+  const [population, setPopulation] = useState<number>(40)
+  const [generations, setGenerations] = useState<number>(40)
   const [decisions, setDecisions] = useState<string[]>([])
   const [bounds, setBounds] = useState<Record<string, Bounds>>({})
   const [method, setMethod] = useState<OptimizeMethod>('brent')
@@ -150,6 +246,7 @@ export default function MinMaxModal({
   const [running, setRunning] = useState(false)
   const [validation, setValidation] = useState<string | null>(null)
   const [result, setResult] = useState<OptimizeResponse | null>(null)
+  const [pareto, setPareto] = useState<ParetoResponse | null>(null)
 
   function onDecisionsChange(selected: string[]) {
     setDecisions(selected)
@@ -160,13 +257,17 @@ export default function MinMaxModal({
       }
       return next
     })
-    // Brent is 1-D only; switch to Simplex when a second variable is added.
-    if (selected.length > 1 && method === 'brent') {
-      setMethod('nelder-mead')
-    }
-    if (selected.length === 1) {
-      setMethod('brent')
-    }
+    if (selected.length > 1 && method === 'brent') setMethod('nelder-mead')
+    if (selected.length === 1) setMethod('brent')
+  }
+
+  function onObjectivesChange(selected: string[]) {
+    setObjectives(selected)
+    setObjGoals((prev) => {
+      const next: Record<string, 'min' | 'max'> = {}
+      for (const name of selected) next[name] = prev[name] ?? 'min'
+      return next
+    })
   }
 
   function setBound(name: string, key: keyof Bounds, value: string) {
@@ -174,63 +275,55 @@ export default function MinMaxModal({
   }
 
   function constraintLines(): string[] {
-    return constraints
-      .split('\n')
-      .map((line) => line.trim())
-      .filter((line) => line !== '')
+    return constraints.split('\n').map((l) => l.trim()).filter((l) => l !== '')
   }
 
-  function validate(): string | null {
-    if (objective === null) {
-      return 'Choose an objective variable.'
-    }
-    if (decisions.length === 0) {
-      return 'Choose at least one independent variable.'
-    }
-    if (decisions.includes(objective)) {
-      return 'The objective cannot also be an independent variable.'
-    }
+  function validateBounds(): string | null {
+    if (decisions.length === 0) return 'Choose at least one independent variable.'
     for (const name of decisions) {
       const b = bounds[name]
       const lo = Number(b?.lower)
       const hi = Number(b?.upper)
-      if (
-        !b ||
-        b.lower.trim() === '' ||
-        b.upper.trim() === '' ||
-        !Number.isFinite(lo) ||
-        !Number.isFinite(hi)
-      ) {
+      if (!b || b.lower.trim() === '' || b.upper.trim() === '' || !Number.isFinite(lo) || !Number.isFinite(hi)) {
         return `Both bounds of ${name} must be numbers.`
       }
-      if (lo >= hi) {
-        return `The lower bound of ${name} must be less than the upper bound.`
-      }
-    }
-    if (method === 'brent' && decisions.length > 1) {
-      return "Brent's method is 1-D only; pick Nelder-Mead or BOBYQA."
-    }
-    for (const line of constraintLines()) {
-      if (!/(<=|>=|=)/.test(line)) {
-        return `Constraint "${line}" needs <=, >= or = followed by a number.`
-      }
+      if (lo >= hi) return `The lower bound of ${name} must be less than the upper bound.`
     }
     return null
   }
 
+  function validateSingle(): string | null {
+    if (objective === null) return 'Choose an objective variable.'
+    if (decisions.includes(objective)) return 'The objective cannot also be an independent variable.'
+    const boundsError = validateBounds()
+    if (boundsError) return boundsError
+    if (method === 'brent' && decisions.length > 1) {
+      return "Brent's method is 1-D only; pick Nelder-Mead or BOBYQA."
+    }
+    for (const line of constraintLines()) {
+      if (!/(<=|>=|=)/.test(line)) return `Constraint "${line}" needs <=, >= or = followed by a number.`
+    }
+    return null
+  }
+
+  function validateMulti(): string | null {
+    if (objectives.length < 2) return 'Choose at least two objective variables.'
+    for (const name of objectives) {
+      if (decisions.includes(name)) return `${name} cannot be both an objective and an independent variable.`
+    }
+    return validateBounds()
+  }
+
   async function run() {
-    const problem = validate()
+    const problem = mode === 'single' ? validateSingle() : validateMulti()
     setValidation(problem)
     setResult(null)
+    setPareto(null)
     if (problem !== null || running) return
     setRunning(true)
     try {
-      const response = await optimize(
-        text,
-        { ...stopCriteria, complexMode },
-        variableInfo,
-        unitSystem,
-        {
+      if (mode === 'single') {
+        const response = await optimize(text, { ...stopCriteria, complexMode }, variableInfo, unitSystem, {
           objective: objective ?? '',
           decisions,
           lowers: decisions.map((name) => Number(bounds[name].lower)),
@@ -238,54 +331,133 @@ export default function MinMaxModal({
           method,
           maximize: goal === 'maximize',
           constraints: constraintLines(),
-        },
-      )
-      setResult(response)
+        })
+        setResult(response)
+      } else {
+        const params: MultiObjectiveParams = {
+          objectives,
+          maximize: objectives.map((name) => objGoals[name] === 'max'),
+          decisions,
+          lowers: decisions.map((name) => Number(bounds[name].lower)),
+          uppers: decisions.map((name) => Number(bounds[name].upper)),
+          populationSize: population,
+          generations,
+        }
+        setPareto(await optimizeMulti(text, { ...stopCriteria, complexMode }, variableInfo, params))
+      }
     } catch (e) {
-      setResult({
-        success: false,
-        error: `Could not reach the solver backend: ${String(e)}`,
-        warning: null,
-        objective: null,
-        decision: null,
-        decisions: [],
-        evaluations: 0,
-        variables: [],
-      })
+      const message = `Could not reach the solver backend: ${String(e)}`
+      if (mode === 'single') {
+        setResult({ success: false, error: message, warning: null, objective: null, decision: null, decisions: [], evaluations: 0, variables: [] })
+      } else {
+        setPareto({ success: false, error: message, decisionNames: [], objectiveNames: [], front: [], evaluations: 0 })
+      }
     } finally {
       setRunning(false)
     }
   }
 
+  const decisionTable = decisions.length > 0 && (
+    <Table withRowBorders={false} verticalSpacing={4}>
+      <Table.Thead>
+        <Table.Tr>
+          <Table.Th>Variable</Table.Th>
+          <Table.Th>Lower bound</Table.Th>
+          <Table.Th>Upper bound</Table.Th>
+        </Table.Tr>
+      </Table.Thead>
+      <Table.Tbody>
+        {decisions.map((name) => (
+          <Table.Tr key={name}>
+            <Table.Td ff="monospace">{name}</Table.Td>
+            <Table.Td>
+              <TextInput
+                value={bounds[name]?.lower ?? ''}
+                onChange={(e) => setBound(name, 'lower', e.currentTarget.value)}
+                spellCheck={false}
+                size="xs"
+                styles={MONO_INPUT}
+                aria-label={`Lower bound of ${name}`}
+              />
+            </Table.Td>
+            <Table.Td>
+              <TextInput
+                value={bounds[name]?.upper ?? ''}
+                onChange={(e) => setBound(name, 'upper', e.currentTarget.value)}
+                spellCheck={false}
+                size="xs"
+                styles={MONO_INPUT}
+                aria-label={`Upper bound of ${name}`}
+              />
+            </Table.Td>
+          </Table.Tr>
+        ))}
+      </Table.Tbody>
+    </Table>
+  )
+
   return (
     <Modal opened onClose={onClose} title="Min/Max — Optimization" centered size="xl">
-      <Text size="sm" c="dimmed" mb="md">
-        Finds the values of the independent variables inside their bounds that
-        minimize or maximize the objective. The system is solved for every
-        candidate point, so it must have one degree of freedom per independent
-        variable before they are fixed.
-      </Text>
-
       <Stack gap="sm">
         <SegmentedControl
-          value={goal}
-          onChange={(value) => setGoal(value as 'minimize' | 'maximize')}
+          value={mode}
+          onChange={(value) => setMode(value as Mode)}
           data={[
-            { label: 'Minimize', value: 'minimize' },
-            { label: 'Maximize', value: 'maximize' },
+            { label: 'Single objective', value: 'single' },
+            { label: 'Multi-objective (Pareto)', value: 'multi' },
           ]}
         />
-        <Select
-          label="Objective variable"
-          data={variables}
-          value={objective}
-          onChange={setObjective}
-          placeholder="variable to optimize"
-          searchable
-        />
+
+        {mode === 'single' ? (
+          <>
+            <SegmentedControl
+              value={goal}
+              onChange={(value) => setGoal(value as 'minimize' | 'maximize')}
+              data={[
+                { label: 'Minimize', value: 'minimize' },
+                { label: 'Maximize', value: 'maximize' },
+              ]}
+            />
+            <Select
+              label="Objective variable"
+              data={variables}
+              value={objective}
+              onChange={setObjective}
+              placeholder="variable to optimize"
+              searchable
+            />
+          </>
+        ) : (
+          <>
+            <MultiSelect
+              label="Objective variables (2 or more)"
+              data={variables.filter((v) => !decisions.includes(v))}
+              value={objectives}
+              onChange={onObjectivesChange}
+              placeholder={objectives.length === 0 ? 'conflicting objectives to trade off' : undefined}
+              searchable
+              clearable
+            />
+            {objectives.map((name) => (
+              <Group key={name} gap="sm" justify="space-between">
+                <Text size="sm" ff="monospace">{name}</Text>
+                <SegmentedControl
+                  size="xs"
+                  value={objGoals[name] ?? 'min'}
+                  onChange={(value) => setObjGoals((prev) => ({ ...prev, [name]: value as 'min' | 'max' }))}
+                  data={[
+                    { label: 'Minimize', value: 'min' },
+                    { label: 'Maximize', value: 'max' },
+                  ]}
+                />
+              </Group>
+            ))}
+          </>
+        )}
+
         <MultiSelect
           label="Independent (varied) variables"
-          data={variables.filter((v) => v !== objective)}
+          data={variables.filter((v) => (mode === 'single' ? v !== objective : !objectives.includes(v)))}
           value={decisions}
           onChange={onDecisionsChange}
           placeholder={decisions.length === 0 ? 'variables to vary' : undefined}
@@ -293,73 +465,54 @@ export default function MinMaxModal({
           clearable
         />
 
-        {decisions.length > 0 && (
-          <Table withRowBorders={false} verticalSpacing={4}>
-            <Table.Thead>
-              <Table.Tr>
-                <Table.Th>Variable</Table.Th>
-                <Table.Th>Lower bound</Table.Th>
-                <Table.Th>Upper bound</Table.Th>
-              </Table.Tr>
-            </Table.Thead>
-            <Table.Tbody>
-              {decisions.map((name) => (
-                <Table.Tr key={name}>
-                  <Table.Td ff="monospace">{name}</Table.Td>
-                  <Table.Td>
-                    <TextInput
-                      value={bounds[name]?.lower ?? ''}
-                      onChange={(e) => setBound(name, 'lower', e.currentTarget.value)}
-                      spellCheck={false}
-                      size="xs"
-                      styles={MONO_INPUT}
-                      aria-label={`Lower bound of ${name}`}
-                    />
-                  </Table.Td>
-                  <Table.Td>
-                    <TextInput
-                      value={bounds[name]?.upper ?? ''}
-                      onChange={(e) => setBound(name, 'upper', e.currentTarget.value)}
-                      spellCheck={false}
-                      size="xs"
-                      styles={MONO_INPUT}
-                      aria-label={`Upper bound of ${name}`}
-                    />
-                  </Table.Td>
-                </Table.Tr>
-              ))}
-            </Table.Tbody>
-          </Table>
+        {decisionTable}
+
+        {mode === 'single' ? (
+          <>
+            <Select
+              label="Method"
+              description={decisions.length > 1 ? "Brent's method only works with a single independent variable." : undefined}
+              data={METHOD_OPTIONS.map((option) => ({
+                ...option,
+                disabled: option.value === 'brent' && decisions.length > 1,
+              }))}
+              value={method}
+              onChange={(value) => setMethod((value as OptimizeMethod) ?? 'brent')}
+              allowDeselect={false}
+            />
+            <Textarea
+              label="Constraints (optional)"
+              description="One per line: expr <= value, expr >= value, or expr = value."
+              placeholder={'r + h <= 20'}
+              value={constraints}
+              onChange={(e) => setConstraints(e.currentTarget.value)}
+              autosize
+              minRows={2}
+              maxRows={6}
+              spellCheck={false}
+              styles={MONO_INPUT}
+            />
+          </>
+        ) : (
+          <Group grow>
+            <NumberInput
+              label="Population size"
+              value={population}
+              onChange={(v) => setPopulation(typeof v === 'number' ? v : 40)}
+              min={8}
+              max={200}
+              step={8}
+            />
+            <NumberInput
+              label="Generations"
+              value={generations}
+              onChange={(v) => setGenerations(typeof v === 'number' ? v : 40)}
+              min={1}
+              max={200}
+              step={10}
+            />
+          </Group>
         )}
-
-        <Select
-          label="Method"
-          description={
-            decisions.length > 1
-              ? "Brent's method only works with a single independent variable."
-              : undefined
-          }
-          data={METHOD_OPTIONS.map((option) => ({
-            ...option,
-            disabled: option.value === 'brent' && decisions.length > 1,
-          }))}
-          value={method}
-          onChange={(value) => setMethod((value as OptimizeMethod) ?? 'brent')}
-          allowDeselect={false}
-        />
-
-        <Textarea
-          label="Constraints (optional)"
-          description="One per line: expr <= value, expr >= value, or expr = value. Inequalities use a log-barrier, equalities an augmented Lagrangian."
-          placeholder={'r + h <= 20'}
-          value={constraints}
-          onChange={(e) => setConstraints(e.currentTarget.value)}
-          autosize
-          minRows={2}
-          maxRows={6}
-          spellCheck={false}
-          styles={MONO_INPUT}
-        />
 
         {validation && (
           <Text c="red" size="sm">
@@ -367,14 +520,15 @@ export default function MinMaxModal({
           </Text>
         )}
 
-        {result && <ResultView result={result} />}
+        {mode === 'single' && result && <ResultView result={result} />}
+        {mode === 'multi' && pareto && <ParetoView result={pareto} />}
 
         <Group justify="flex-end" mt="xs">
           <Button variant="default" onClick={onClose}>
             Close
           </Button>
           <Button onClick={run} loading={running}>
-            {goal === 'maximize' ? 'Maximize' : 'Minimize'}
+            {mode === 'multi' ? 'Find Pareto front' : goal === 'maximize' ? 'Maximize' : 'Minimize'}
           </Button>
         </Group>
       </Stack>

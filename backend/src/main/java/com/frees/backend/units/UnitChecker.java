@@ -597,6 +597,8 @@ public final class UnitChecker {
         List<Expr> args = c.args();
         return switch (c.function()) {
             case "abs", "real", "imag" -> dimOf(args.get(0));
+            // ArrayElmt returns one element, so it carries the array's units.
+            case "arrayelmt" -> dimOf(args.get(0));
             // Radiation view factors take length arguments and return a
             // dimensionless ratio; do not warn on the length-valued arguments.
             case "viewfactor_perp", "viewfactor_plates", "viewfactor_disks" ->
