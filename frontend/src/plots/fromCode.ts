@@ -111,6 +111,7 @@ function parseKind(raw: string | undefined): PlotKind {
   if (v === 'psychro' || v === 'psychrometric') return 'psychro'
   if (v === 'bode') return 'bode'
   if (v === 'nyquist') return 'nyquist'
+  if (v === 'nichols') return 'nichols'
   if (v === 'polezero' || v === 'pzmap') return 'polezero'
   if (v === 'rootlocus' || v === 'rlocus') return 'rootlocus'
   return 'xy'
