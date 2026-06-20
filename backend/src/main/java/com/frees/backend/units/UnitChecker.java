@@ -601,6 +601,12 @@ public final class UnitChecker {
             // dimensionless ratio; do not warn on the length-valued arguments.
             case "viewfactor_perp", "viewfactor_plates", "viewfactor_disks" ->
                     Dim.of(Quantity.dimensionless(1.0));
+            // TABLE lookup/interpolation: the table name is a string and the
+            // arguments/result carry the table's own units, which the checker
+            // does not track — stay agnostic rather than warn.
+            case "interpolate", "interpolate1", "interpolate2d",
+                 "lookup", "lookuprow", "nlookuprows",
+                 "differentiate", "differentiate1" -> Dim.UNKNOWN;
             case "stagnationtemp" -> {
                 Dim tDim = dimOf(args.get(0));
                 try {
