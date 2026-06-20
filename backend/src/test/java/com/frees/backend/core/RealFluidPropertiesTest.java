@@ -44,6 +44,24 @@ class RealFluidPropertiesTest {
     }
 
     @Test
+    void prandtlNumberOfAir() {
+        // Air at 300 K, 1 atm has Pr ~ 0.71
+        EquationSystemSolver.Result result =
+                solver.solve("Pr = Prandtl(Air, T=300, P=101325)");
+        assertEquals(0.71, result.variables().get("Pr"), 0.03);
+    }
+
+    @Test
+    void volumetricExpansionCoefficientOfWater() {
+        // Liquid water at 300 K, 1 atm: beta ~ 2.7e-4 1/K (positive, small)
+        EquationSystemSolver.Result result =
+                solver.solve("beta = VolExpCoef(Water, T=300, P=101325)");
+        assertTrue(result.variables().get("beta") > 0.0
+                && result.variables().get("beta") < 1e-3,
+                "expected a small positive expansion coefficient");
+    }
+
+    @Test
     void specificVolumeIsInverseDensity() {
         EquationSystemSolver.Result result = solver.solve(
                 "v1 = Volume(Air, T=300, P=100000)\nrho1 = Density(Air, T=300, P=100000)");
