@@ -4,6 +4,7 @@ import {
   ActionIcon,
   Alert,
   Autocomplete,
+  Box,
   Button,
   Center,
   Checkbox,
@@ -3286,6 +3287,28 @@ type Tool =
   | `custom:${string}`
   | `widget:${WidgetElement['widgetType']}`
 
+/** Single-key shortcuts for the primary toolbar tools. Active only when the
+ *  diagram window is focused and the user is not typing in a field; a press
+ *  mirrors a toolbar click (selects the tool for the next draw). */
+const TOOL_SHORTCUTS: Partial<Record<string, Tool>> = {
+  v: 'select',
+  h: 'pan',
+  l: 'line',
+  a: 'arrow',
+  r: 'rect',
+  c: 'ellipse',
+  t: 'label',
+  g: 'chart',
+  k: 'connector',
+  o: 'hotspot',
+}
+
+/** Reverse lookup (tool → uppercase letter) so a tool's tooltip can advertise
+ *  its shortcut from the single source of truth above. */
+const SHORTCUT_LABEL = Object.fromEntries(
+  Object.entries(TOOL_SHORTCUTS).map(([key, t]) => [t, key.toUpperCase()]),
+) as Partial<Record<Tool, string>>
+
 interface ElementAnchorInfo {
   elId: string
   name: string
@@ -4957,7 +4980,7 @@ export default function DiagramTab(props: Readonly<Props>) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement
-      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return
       const mod = e.ctrlKey || e.metaKey
       // Undo/redo and clipboard work regardless of mode.
       if (mod && e.key.toLowerCase() === 'z') {
@@ -5018,6 +5041,18 @@ export default function DiagramTab(props: Readonly<Props>) {
         else groupSelection()
         return
       }
+      // Single-key tool shortcuts (e.g. R = rectangle, C = circle). Only when
+      // this diagram window is focused, no modifier is held, and the input
+      // guard above has already excluded typing in a field.
+      if (!mod && !e.altKey && isActive !== false) {
+        const shortcutTool = TOOL_SHORTCUTS[e.key.toLowerCase()]
+        if (shortcutTool) {
+          e.preventDefault()
+          setTool(shortcutTool)
+          setLockTool(false)
+          return
+        }
+      }
       if ((e.key === 'Delete' || e.key === 'Backspace') && selectedIds.length > 0) {
         e.preventDefault()
         deleteSelected()
@@ -5037,6 +5072,7 @@ export default function DiagramTab(props: Readonly<Props>) {
     return () => window.removeEventListener('keydown', onKey)
   }, [
     runMode,
+    isActive,
     selectedIds,
     selectedSet,
     selectedElements.length,
@@ -5223,19 +5259,23 @@ export default function DiagramTab(props: Readonly<Props>) {
           {!runMode && (
             <>
               <Group gap={4}>
-                {TOOL_BUTTONS.map((tb) => (
-                  <Tooltip key={tb.tool} label={tb.label}>
-                    <ActionIcon
-                      variant={tool === tb.tool ? 'filled' : 'default'}
-                      size="lg"
-                      aria-label={tb.label}
-                      aria-pressed={tool === tb.tool}
-                      onClick={() => setTool(tb.tool)}
-                    >
-                      {tb.icon}
-                    </ActionIcon>
-                  </Tooltip>
-                ))}
+                {TOOL_BUTTONS.map((tb) => {
+                  const key = SHORTCUT_LABEL[tb.tool]
+                  const tipLabel = key ? `${tb.label} (${key})` : tb.label
+                  return (
+                    <Tooltip key={tb.tool} label={tipLabel}>
+                      <ActionIcon
+                        variant={tool === tb.tool ? 'filled' : 'default'}
+                        size="lg"
+                        aria-label={tipLabel}
+                        aria-pressed={tool === tb.tool}
+                        onClick={() => setTool(tb.tool)}
+                      >
+                        {tb.icon}
+                      </ActionIcon>
+                    </Tooltip>
+                  )
+                })}
                 <Menu shadow="md" position="bottom-start" onClose={() => setLibQuery('')}>
                   <Menu.Target>
                     <Tooltip label="Component Library">
@@ -5742,8 +5782,8 @@ export default function DiagramTab(props: Readonly<Props>) {
       </Stack>
 
       {!runMode && (() => {
-        const inspectorBody = (
-          <ScrollArea h="100%" type="auto">
+        const inspectorContent = (
+          <>
             {runMode && (
               <Tooltip label="Export this diagram (SVG, PNG, PDF, EPS)">
                 <Button
@@ -5942,6 +5982,15 @@ export default function DiagramTab(props: Readonly<Props>) {
                 />
               </Stack>
             )}
+          </>
+        )
+        // The scrollable shell: a vertical scrollbar with its own reserved
+        // gutter (offsetScrollbars) so it never overlays the inputs/steppers.
+        // Content padding lives on an inner Box (not the viewport) so it can't
+        // override the offset padding the scrollbar lane depends on.
+        const inspectorBody = (
+          <ScrollArea h="100%" type="auto" scrollbarSize={8} offsetScrollbars="y">
+            <Box p="sm">{inspectorContent}</Box>
           </ScrollArea>
         )
         // Only the focused diagram window shows an inspector. A non-focused
@@ -5955,14 +6004,12 @@ export default function DiagramTab(props: Readonly<Props>) {
         // properties stay reachable.
         if (inspectorOutlet) {
           return createPortal(
-            <div style={{ height: '100%', padding: 'var(--mantine-spacing-sm)' }}>
-              {inspectorBody}
-            </div>,
+            <Box h="100%">{inspectorBody}</Box>,
             inspectorOutlet,
           )
         }
         return (
-          <Paper withBorder p="sm" w={250} style={{ flexShrink: 0 }}>
+          <Paper withBorder w={250} style={{ flexShrink: 0, overflow: 'hidden' }}>
             {inspectorBody}
           </Paper>
         )
