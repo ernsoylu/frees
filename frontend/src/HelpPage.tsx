@@ -23,6 +23,7 @@ import { useDisclosure } from '@mantine/hooks';
 import { useState, useEffect } from 'react';
 import { getReference, type UnitInfo, type ConstantInfo } from './api';
 import { DOCS_CATALOG } from './docsCatalog';
+import { EXAMPLES } from './examples';
 import {
   SolverPipelineDiagram,
   DegreesOfFreedomDiagram,
@@ -2224,6 +2225,19 @@ const EXAMPLE_CATEGORIES: [string, typeof CYCLE_EXAMPLES][] = (() => {
   return Array.from(groups.entries());
 })();
 
+// Workspace examples (from examples.ts) that are NOT featured in the "Open an
+// Example" picker are surfaced here instead, grouped by their own category.
+const WORKSPACE_EXAMPLE_CATEGORIES: [string, typeof EXAMPLES][] = (() => {
+  const groups = new Map<string, typeof EXAMPLES>();
+  for (const ex of EXAMPLES) {
+    if (ex.featured) continue;
+    const bucket = groups.get(ex.category) ?? [];
+    bucket.push(ex);
+    groups.set(ex.category, bucket);
+  }
+  return Array.from(groups.entries());
+})();
+
 
 import {
   IconSearch,
@@ -2604,6 +2618,38 @@ export default function HelpPage() {
         <Stack gap="md">
           <Title order={2} c="blue.4">Engineering Examples Library</Title>
           <Text>Browse the examples by discipline below. Copy the code directly into the workspace using the copy button:</Text>
+          {WORKSPACE_EXAMPLE_CATEGORIES.length > 0 && (
+            <Stack gap="xs">
+              <Title order={3} c="cyan.4" mt="sm">Quick Workspace Examples</Title>
+              <Text size="sm" c="dimmed">
+                Additional ready-to-run documents (the rest are in the File →
+                Open Example picker). Copy one into the editor and press Solve.
+              </Text>
+              {WORKSPACE_EXAMPLE_CATEGORIES.map(([category, examples]) => (
+                <Stack gap="xs" key={`ws-${category}`}>
+                  <Title order={4} c="blue.3" mt="sm">{category}</Title>
+                  <MantineAccordion variant="separated">
+                    {examples.map((ex) => (
+                      <MantineAccordion.Item value={ex.id} key={ex.id}>
+                        <MantineAccordion.Control>
+                          <Text fw={600} c="cyan.3">{ex.title}</Text>
+                        </MantineAccordion.Control>
+                        <MantineAccordion.Panel>
+                          <Text size="sm" mb="xs">{ex.description}</Text>
+                          <Paper withBorder p="xs" bg="light-dark(var(--mantine-color-gray-1), var(--mantine-color-dark-9))" style={{ position: 'relative' }}>
+                            <CopyButton code={ex.text} />
+                            <Code block style={{ background: 'transparent', maxHeight: '250px', overflowY: 'auto' }}>
+                              {ex.text}
+                            </Code>
+                          </Paper>
+                        </MantineAccordion.Panel>
+                      </MantineAccordion.Item>
+                    ))}
+                  </MantineAccordion>
+                </Stack>
+              ))}
+            </Stack>
+          )}
           {EXAMPLE_CATEGORIES.map(([category, examples]) => (
             <Stack gap="xs" key={category}>
               <Title order={4} c="blue.3" mt="sm">{category}</Title>
