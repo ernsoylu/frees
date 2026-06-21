@@ -52,11 +52,13 @@ Every property function accepts the fluid name as the first argument, followed b
 frees provides bulk (room-temperature) physical properties for common engineering solids: `Aluminum`, `Copper`, `Steel`, `StainlessSteel`, `Iron`, `Brass`, `Bronze`, `Gold`, `Silver`, `Lead`, `Nickel`, `Titanium`, `Tungsten`, `Zinc`, `Magnesium`, `Concrete`, `Glass`, `Brick`, `Wood`, `Ice`. Values are representative constants (temperature-dependence is not modelled).
 
 ## Material Property Functions
-- **`k_(Material):`** Thermal conductivity (W/m-K).
+- **`k_(Material)` / `k_(Material, T=t):`** Thermal conductivity (W/m-K).
+- **`c_(Material)` / `c_(Material, T=t):`** Specific heat capacity (J/kg-K).
 - **`rho_(Material):`** Density (kg/m³).
-- **`c_(Material):`** Specific heat capacity (J/kg-K).
 - **`E_(Material):`** Young's modulus (Pa).
 - **`nu_(Material):`** Poisson's ratio (dimensionless).
+
+`k_` and `c_` accept an optional temperature `T` (in kelvin). For the well-characterised metals (aluminum, copper, steel, iron, nickel, titanium, tungsten) a linear correction about the 300 K reference is applied; for other materials, or when `T` is omitted, the room-temperature value is returned. `rho_`, `E_`, and `nu_` are treated as constants.
 
 A material that does not carry a requested property (e.g. `E_(Ice)` is provided but `nu_(Brick)` is not) raises a clear error.
 

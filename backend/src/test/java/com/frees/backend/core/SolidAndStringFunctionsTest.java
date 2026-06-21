@@ -26,6 +26,21 @@ class SolidAndStringFunctionsTest {
     }
 
     @Test
+    void temperatureDependentSolidProperties() {
+        EquationSystemSolver.Result r = solver.solve(
+                "k_ref = k_(Aluminum)\n"
+                        + "k_hot = k_(Aluminum, T=500)\n"   // 237 + (-0.02)(500-300) = 233
+                        + "c_iron = c_(Iron, T=400)\n"      // 447 + 0.42(400-300) = 489
+                        + "rho_hot = rho_(Steel, T=500)\n"  // density is constant
+                        + "k_gold = k_(Gold, T=500)");      // no slope data -> constant
+        assertEquals(237.0, r.variables().get("k_ref"), 1e-6);
+        assertEquals(233.0, r.variables().get("k_hot"), 1e-6);
+        assertEquals(489.0, r.variables().get("c_iron"), 1e-6);
+        assertEquals(7854.0, r.variables().get("rho_hot"), 1e-6);
+        assertEquals(317.0, r.variables().get("k_gold"), 1e-6);
+    }
+
+    @Test
     void solidPropertyParticipatesInHeatTransferCalc() {
         // Fourier conduction through an aluminum slab using the material DB.
         EquationSystemSolver.Result r = solver.solve(
