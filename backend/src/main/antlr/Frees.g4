@@ -129,6 +129,7 @@ plotAttr
 plotValue
     : STRING_LITERAL                              # PlotValStr
     | signedNumber                                # PlotValNum
+    | IDENT MINUS IDENT                          # PlotValHyphen
     | IDENT (LBRACKET arrayIndexList RBRACKET)?   # PlotValRef
     ;
 
