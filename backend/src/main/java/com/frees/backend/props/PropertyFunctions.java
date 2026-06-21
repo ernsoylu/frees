@@ -219,10 +219,12 @@ public final class PropertyFunctions {
                 return CoolProp.props1SI(resolveFluid(tokens.get(0)), "Ttriple");
             case "v_crit":
                 return 1.0 / CoolProp.props1SI(resolveFluid(tokens.get(0)), "rhocrit");
-            case "k_", "rho_", "c_", "e_", "nu_":
-                return SolidProperties.lookup(tokens.get(0), output);
             default:
                 break;
+        }
+        if (output.equals("k_") || output.equals("rho_") || output.equals("c_")
+                || output.equals("e_") || output.equals("nu_")) {
+            return evaluateSolid(output, parts, values, tokens);
         }
         if (output.equals("p_sat") || output.equals("t_sat") || output.equals("surfacetension")) {
             return evaluateSaturation(output, parts, values);
@@ -250,6 +252,29 @@ public final class PropertyFunctions {
                 second.key(), second.value(), fluid);
         // Volume is reported as specific volume = 1/density.
         return VOLUME.equals(output) ? 1.0 / raw : raw;
+    }
+
+    /**
+     * Bulk solid-material properties. Accepts both the no-argument form
+     * {@code k_(Steel)} (material in {@code tokens}) and the temperature form
+     * {@code k_(Steel, T=400)} (material in {@code parts[2]}, T in {@code values}).
+     */
+    private static double evaluateSolid(String output, String[] parts, List<Double> values, List<String> tokens) {
+        String material;
+        Double tempK = null;
+        if (tokens != null && !tokens.isEmpty()) {
+            material = tokens.get(0);
+        } else {
+            material = parts[2];
+            if (parts.length > 3 && !"t".equals(parts[3])) {
+                throw new PropertyEvaluationException(capitalize(output)
+                        + " accepts only a temperature indicator T, got '" + parts[3] + "'.");
+            }
+            if (values != null && !values.isEmpty()) {
+                tempK = values.get(0);
+            }
+        }
+        return SolidProperties.lookup(material, output, tempK);
     }
 
     /**
