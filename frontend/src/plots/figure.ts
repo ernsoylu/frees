@@ -160,6 +160,46 @@ function legendLayout(align: 'left' | 'center' | 'right' | undefined) {
   return { orientation: 'h' as const, bgcolor: 'rgba(0,0,0,0)', x, xanchor }
 }
 
+/** Shared layout chrome for the control-system figures (Nyquist, pole-zero,
+ *  Nichols, root locus). They differ only in their axis-title defaults, whether
+ *  the Y axis is locked to the X scale (`squareAspect`), and whether a legend is
+ *  shown at all (`legend: false` ⇒ no legend; otherwise gated on format.legend). */
+function controlAxesLayout(
+  format: PlotFormat,
+  theme: PlotTheme,
+  opts: { xLabel: string; yLabel: string; squareAspect?: boolean; legend?: boolean },
+): PlotlyLayout {
+  const colors = THEMES[theme]
+  const background = theme === 'dark' ? 'rgba(0,0,0,0)' : '#ffffff'
+  const layout: PlotlyLayout = {
+    title: format.title ? { text: format.title } : undefined,
+    paper_bgcolor: background,
+    plot_bgcolor: background,
+    font: { color: colors.font, size: format.fontSize },
+    margin: { t: format.title ? 48 : 24, r: 24, b: 56, l: 64 },
+    xaxis: {
+      title: format.xLabel || opts.xLabel,
+      color: colors.font,
+      gridcolor: colors.grid,
+      zerolinecolor: colors.zero,
+      showgrid: format.grid,
+    },
+    yaxis: {
+      title: format.yLabel || opts.yLabel,
+      ...(opts.squareAspect ? { scaleanchor: 'x' as const } : {}),
+      color: colors.font,
+      gridcolor: colors.grid,
+      zerolinecolor: colors.zero,
+      showgrid: format.grid,
+    },
+    showlegend: opts.legend === false ? false : format.legend,
+  }
+  if (opts.legend !== false) {
+    layout.legend = legendLayout(format.legendAlign)
+  }
+  return layout
+}
+
 interface StateOverlay {
   xProperty: string
   yProperty: string
@@ -635,8 +675,6 @@ export function buildNicholsFigure(
   format: PlotFormat,
   theme: PlotTheme,
 ): PlotlyFigure {
-  const colors = THEMES[theme]
-  const background = theme === 'dark' ? 'rgba(0,0,0,0)' : '#ffffff'
   const gridColor = theme === 'dark' ? 'rgba(255,255,255,0.18)' : 'rgba(0,0,0,0.15)'
 
   const traces: PlotlyTrace[] = []
@@ -667,28 +705,11 @@ export function buildNicholsFigure(
     showlegend: false,
   })
 
-  const layout: PlotlyLayout = {
-    title: format.title ? { text: format.title } : undefined,
-    paper_bgcolor: background,
-    plot_bgcolor: background,
-    font: { color: colors.font, size: format.fontSize },
-    margin: { t: format.title ? 48 : 24, r: 24, b: 56, l: 64 },
-    xaxis: {
-      title: format.xLabel || 'Open-loop phase [deg]',
-      color: colors.font,
-      gridcolor: colors.grid,
-      zerolinecolor: colors.zero,
-      showgrid: format.grid,
-    },
-    yaxis: {
-      title: format.yLabel || 'Open-loop gain [dB]',
-      color: colors.font,
-      gridcolor: colors.grid,
-      zerolinecolor: colors.zero,
-      showgrid: format.grid,
-    },
-    showlegend: false,
-  }
+  const layout = controlAxesLayout(format, theme, {
+    xLabel: 'Open-loop phase [deg]',
+    yLabel: 'Open-loop gain [dB]',
+    legend: false,
+  })
 
   return { data: traces, layout }
 }
@@ -699,8 +720,6 @@ export function buildNyquistFigure(
   format: PlotFormat,
   theme: PlotTheme,
 ): PlotlyFigure {
-  const colors = THEMES[theme]
-  const background = theme === 'dark' ? 'rgba(0,0,0,0)' : '#ffffff'
   const traces: PlotlyTrace[] = [
     {
       type: 'scatter',
@@ -722,30 +741,11 @@ export function buildNyquistFigure(
     },
   ]
 
-  const layout: PlotlyLayout = {
-    title: format.title ? { text: format.title } : undefined,
-    paper_bgcolor: background,
-    plot_bgcolor: background,
-    font: { color: colors.font, size: format.fontSize },
-    margin: { t: format.title ? 48 : 24, r: 24, b: 56, l: 64 },
-    xaxis: {
-      title: format.xLabel || 'Real Axis',
-      color: colors.font,
-      gridcolor: colors.grid,
-      zerolinecolor: colors.zero,
-      showgrid: format.grid,
-    },
-    yaxis: {
-      title: format.yLabel || 'Imaginary Axis',
-      scaleanchor: 'x',
-      color: colors.font,
-      gridcolor: colors.grid,
-      zerolinecolor: colors.zero,
-      showgrid: format.grid,
-    },
-    showlegend: format.legend,
-    legend: legendLayout(format.legendAlign),
-  }
+  const layout = controlAxesLayout(format, theme, {
+    xLabel: 'Real Axis',
+    yLabel: 'Imaginary Axis',
+    squareAspect: true,
+  })
 
   return { data: traces, layout }
 }
@@ -758,7 +758,6 @@ export function buildPoleZeroFigure(
   format: PlotFormat,
   theme: PlotTheme,
 ): PlotlyFigure {
-  const colors = THEMES[theme]
   const background = theme === 'dark' ? 'rgba(0,0,0,0)' : '#ffffff'
   const traces: PlotlyTrace[] = []
 
@@ -791,30 +790,11 @@ export function buildPoleZeroFigure(
     })
   }
 
-  const layout: PlotlyLayout = {
-    title: format.title ? { text: format.title } : undefined,
-    paper_bgcolor: background,
-    plot_bgcolor: background,
-    font: { color: colors.font, size: format.fontSize },
-    margin: { t: format.title ? 48 : 24, r: 24, b: 56, l: 64 },
-    xaxis: {
-      title: format.xLabel || 'Real Axis [1/s]',
-      color: colors.font,
-      gridcolor: colors.grid,
-      zerolinecolor: colors.zero,
-      showgrid: format.grid,
-    },
-    yaxis: {
-      title: format.yLabel || 'Imaginary Axis [rad/s]',
-      scaleanchor: 'x',
-      color: colors.font,
-      gridcolor: colors.grid,
-      zerolinecolor: colors.zero,
-      showgrid: format.grid,
-    },
-    showlegend: format.legend,
-    legend: legendLayout(format.legendAlign),
-  }
+  const layout = controlAxesLayout(format, theme, {
+    xLabel: 'Real Axis [1/s]',
+    yLabel: 'Imaginary Axis [rad/s]',
+    squareAspect: true,
+  })
 
   return { data: traces, layout }
 }
@@ -827,7 +807,6 @@ export function buildRootLocusFigure(
   format: PlotFormat,
   theme: PlotTheme,
 ): PlotlyFigure {
-  const colors = THEMES[theme]
   const background = theme === 'dark' ? 'rgba(0,0,0,0)' : '#ffffff'
   const traces: PlotlyTrace[] = []
 
@@ -891,30 +870,11 @@ export function buildRootLocusFigure(
     })
   }
 
-  const layout: PlotlyLayout = {
-    title: format.title ? { text: format.title } : undefined,
-    paper_bgcolor: background,
-    plot_bgcolor: background,
-    font: { color: colors.font, size: format.fontSize },
-    margin: { t: format.title ? 48 : 24, r: 24, b: 56, l: 64 },
-    xaxis: {
-      title: format.xLabel || 'Real Axis [1/s]',
-      color: colors.font,
-      gridcolor: colors.grid,
-      zerolinecolor: colors.zero,
-      showgrid: format.grid,
-    },
-    yaxis: {
-      title: format.yLabel || 'Imaginary Axis [rad/s]',
-      scaleanchor: 'x',
-      color: colors.font,
-      gridcolor: colors.grid,
-      zerolinecolor: colors.zero,
-      showgrid: format.grid,
-    },
-    showlegend: format.legend,
-    legend: legendLayout(format.legendAlign),
-  }
+  const layout = controlAxesLayout(format, theme, {
+    xLabel: 'Real Axis [1/s]',
+    yLabel: 'Imaginary Axis [rad/s]',
+    squareAspect: true,
+  })
 
   return { data: traces, layout }
 }
