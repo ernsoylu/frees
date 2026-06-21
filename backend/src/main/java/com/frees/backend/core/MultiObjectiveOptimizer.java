@@ -45,7 +45,12 @@ public final class MultiObjectiveOptimizer {
                           List<Double> uppers,
                           int populationSize,
                           int generations,
-                          long seed) {
+                          long seed,
+                          List<String> constraints) {
+    }
+
+    /** A parsed inequality/equality constraint {@code lhsExpr <op> rhs}. */
+    private record Constraint(String lhsExpr, String operator, double rhs) {
     }
 
     /** One Pareto point: the decision vector and the raw (user-facing) objectives. */
@@ -59,6 +64,7 @@ public final class MultiObjectiveOptimizer {
         final double[] x;        // decisions
         double[] objRaw;         // objectives as the user reads them
         double[] objMin;         // objectives in minimisation form
+        double violation;        // total constraint violation (0 = feasible)
         int rank;
         double crowding;
 
@@ -72,10 +78,11 @@ public final class MultiObjectiveOptimizer {
         int popSize = Math.max(8, p.populationSize());
         Random rng = new Random(p.seed());
         int[] evaluations = {0};
+        List<Constraint> constraints = parseConstraints(p.constraints());
 
         List<Individual> population = new ArrayList<>();
         for (int i = 0; i < popSize; i++) {
-            population.add(evaluate(randomIndividual(p, n, rng), p, evaluations));
+            population.add(evaluate(randomIndividual(p, n, rng), p, constraints, evaluations));
         }
 
         for (int gen = 0; gen < p.generations(); gen++) {
@@ -85,9 +92,9 @@ public final class MultiObjectiveOptimizer {
                 Individual parentA = tournament(population, rng);
                 Individual parentB = tournament(population, rng);
                 double[][] children = sbxCrossover(parentA.x, parentB.x, p, rng);
-                offspring.add(evaluate(new Individual(mutate(children[0], p, rng)), p, evaluations));
+                offspring.add(evaluate(new Individual(mutate(children[0], p, rng)), p, constraints, evaluations));
                 if (offspring.size() < popSize) {
-                    offspring.add(evaluate(new Individual(mutate(children[1], p, rng)), p, evaluations));
+                    offspring.add(evaluate(new Individual(mutate(children[1], p, rng)), p, constraints, evaluations));
                 }
             }
             List<Individual> combined = new ArrayList<>(population);
@@ -108,18 +115,22 @@ public final class MultiObjectiveOptimizer {
 
     // ── Evaluation ────────────────────────────────────────────────────────
 
-    private Individual evaluate(Individual ind, Problem p, int[] evaluations) {
+    /** Solved-variable name prefix for serialised constraint left-hand sides. */
+    private static final String CON_VAR_PREFIX = "zz_mo_con_";
+
+    private Individual evaluate(Individual ind, Problem p, List<Constraint> constraints, int[] evaluations) {
         evaluations[0]++;
         int m = p.objectives().size();
         ind.objRaw = new double[m];
         ind.objMin = new double[m];
-        Map<String, Double> solved = solveWithDecisions(p, ind.x);
+        Map<String, Double> solved = solveWithDecisions(p, ind.x, constraints);
         for (int j = 0; j < m; j++) {
             Double v = solved.get(p.objectives().get(j));
             double raw = v != null && isFinite(v) ? v : Double.NaN;
             ind.objRaw[j] = raw;
             ind.objMin[j] = minimisationValue(raw, Boolean.TRUE.equals(p.maximize().get(j)));
         }
+        ind.violation = totalViolation(constraints, solved);
         return ind;
     }
 
@@ -130,11 +141,14 @@ public final class MultiObjectiveOptimizer {
         return maximize ? -raw : raw;
     }
 
-    private Map<String, Double> solveWithDecisions(Problem p, double[] x) {
+    private Map<String, Double> solveWithDecisions(Problem p, double[] x, List<Constraint> constraints) {
         StringBuilder sb = new StringBuilder(p.text());
         for (int i = 0; i < p.decisions().size(); i++) {
             sb.append('\n').append(p.decisions().get(i)).append(" = ")
                     .append(BigDecimal.valueOf(x[i]).toPlainString());
+        }
+        for (int i = 0; i < constraints.size(); i++) {
+            sb.append('\n').append(CON_VAR_PREFIX).append(i).append(" = ").append(constraints.get(i).lhsExpr());
         }
         try {
             return solver.solve(sb.toString(), p.settings(), p.specs()).variables();
@@ -143,9 +157,77 @@ public final class MultiObjectiveOptimizer {
         }
     }
 
+    /** Sum of normalised constraint violations; 0 means feasible. */
+    private static double totalViolation(List<Constraint> constraints, Map<String, Double> solved) {
+        double total = 0.0;
+        for (int i = 0; i < constraints.size(); i++) {
+            Constraint c = constraints.get(i);
+            Double lhs = solved.get(CON_VAR_PREFIX + i);
+            if (lhs == null || !isFinite(lhs)) {
+                total += PENALTY;
+                continue;
+            }
+            double g;
+            if (c.operator().equals("<=")) {
+                g = Math.max(0.0, lhs - c.rhs());
+            } else if (c.operator().equals(">=")) {
+                g = Math.max(0.0, c.rhs() - lhs);
+            } else {
+                g = Math.abs(lhs - c.rhs());
+            }
+            total += g / (1.0 + Math.abs(c.rhs()));
+        }
+        return total;
+    }
+
+    private static List<Constraint> parseConstraints(List<String> raw) {
+        List<Constraint> out = new ArrayList<>();
+        if (raw == null) {
+            return out;
+        }
+        for (String line : raw) {
+            String s = line.trim();
+            if (!s.isEmpty()) {
+                out.add(parseConstraint(line, s));
+            }
+        }
+        return out;
+    }
+
+    private static Constraint parseConstraint(String original, String s) {
+        String op = "<=";
+        if (!s.contains("<=")) {
+            if (s.contains(">=")) {
+                op = ">=";
+            } else if (s.contains("=")) {
+                op = "=";
+            } else {
+                throw new IllegalArgumentException("Constraint '" + original + "' needs <=, >= or =.");
+            }
+        }
+        int idx = s.indexOf(op);
+        String lhs = s.substring(0, idx).trim();
+        String rhsText = s.substring(idx + op.length()).trim();
+        try {
+            return new Constraint(lhs, op, Double.parseDouble(rhsText));
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Constraint '" + original + "' must end with a number.");
+        }
+    }
+
     // ── NSGA-II core ──────────────────────────────────────────────────────
 
+    /** Deb's constraint-domination: feasible beats infeasible; among infeasible,
+     *  lower violation wins; among feasible, standard Pareto dominance applies. */
     private static boolean dominates(Individual a, Individual b) {
+        boolean aFeasible = a.violation <= 1e-9;
+        boolean bFeasible = b.violation <= 1e-9;
+        if (aFeasible != bFeasible) {
+            return aFeasible;
+        }
+        if (!aFeasible) {
+            return a.violation < b.violation;
+        }
         boolean strictlyBetter = false;
         for (int i = 0; i < a.objMin.length; i++) {
             if (a.objMin[i] > b.objMin[i]) {
