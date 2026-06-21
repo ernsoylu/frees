@@ -283,6 +283,11 @@ public class AstBuilder extends FreesBaseVisitor<Expr> {
         if (value instanceof FreesParser.PlotValRefContext ref) {
             return ref.IDENT().getText();
         }
+        if (value instanceof FreesParser.PlotValHyphenContext hyph) {
+            // Reconstruct "T-s" / "h-s" / "P-h" from IDENT MINUS IDENT tokens.
+            var idents = hyph.IDENT();
+            return idents.get(0).getText() + "-" + idents.get(1).getText();
+        }
         // PlotValNum (and any fallback): the literal source text.
         return value.getText();
     }

@@ -301,6 +301,8 @@ export function WorkspaceDock({
   const onReady = (event: DockviewReadyEvent) => {
     const api = event.api
     apiRef.current = api
+    // Expose the dockview API for Playwright e2e tests
+    ;(window as unknown as Record<string, unknown>).__freesTest = { dockviewApi: api }
 
     let restored = false
     const saved = localStorage.getItem(LAYOUT_KEY)
