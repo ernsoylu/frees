@@ -603,6 +603,9 @@ public final class UnitChecker {
             // dimensionless ratio; do not warn on the length-valued arguments.
             case "viewfactor_perp", "viewfactor_plates", "viewfactor_disks" ->
                     Dim.of(Quantity.dimensionless(1.0));
+            // Heisler transient-conduction results are dimensionless ratios; the
+            // geometry string and Bi/Fo/x* arguments carry no units to check.
+            case "heisler_temp", "heisler_q" -> Dim.of(Quantity.dimensionless(1.0));
             // TABLE lookup/interpolation: the table name is a string and the
             // arguments/result carry the table's own units, which the checker
             // does not track — stay agnostic rather than warn.
