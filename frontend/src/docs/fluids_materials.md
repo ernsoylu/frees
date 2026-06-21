@@ -156,3 +156,27 @@ F_12 = viewfactor_perp(1 [m], 1 [m], 1 [m])   { ~0.2000 }
 { Reciprocity gives the factor back to a larger surface }
 F_21 = viewfactor_disks(1 [m], 0.5 [m], 0.4 [m])
 ```
+
+## Transient Conduction (Heisler Charts)
+When a solid is suddenly exposed to convection and the Biot number is large enough that internal temperature gradients matter (`Bi > 0.1`, where lumped capacitance fails), frees gives the one-term-approximation solution — the computational replacement for reading Heisler/Gröber charts. It is accurate for Fourier number `Fo >= 0.2`.
+
+- **`heisler_temp(geometry$, Bi, Fo, xstar):`** Dimensionless temperature `theta* = (T - Tinf)/(Ti - Tinf)` at position `xstar` (0 at the centre, 1 at the surface).
+- **`heisler_q(geometry$, Bi, Fo):`** Fraction of the maximum possible heat transfer, `Q/Q0`.
+
+`geometry$` is `'wall'` (plane wall of half-thickness L), `'cylinder'` (infinite cylinder, radius r0), or `'sphere'` (radius r0). The characteristic length `Lc` is `L` for the wall and `r0` for the cylinder/sphere, so `Bi = h*Lc/k` and `Fo = alpha*t/Lc^2`.
+
+### Heisler Example
+```
+{ Cooling the centre of a thick plate by convection }
+h = 100 [W/m^2-K]
+k = 0.6 [W/m-K]
+alpha = 0.15e-6 [m^2/s]
+L = 0.02 [m]           { half-thickness }
+t = 600 [s]
+
+Bi = h * L / k
+Fo = alpha * t / L^2
+theta_centre = heisler_temp('wall', Bi, Fo, 0)   { centre temperature ratio }
+theta_surface = heisler_temp('wall', Bi, Fo, 1)  { surface temperature ratio }
+Q_ratio = heisler_q('wall', Bi, Fo)              { fraction of heat removed }
+```
