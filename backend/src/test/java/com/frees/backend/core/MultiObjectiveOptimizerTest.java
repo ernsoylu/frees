@@ -26,7 +26,7 @@ class MultiObjectiveOptimizerTest {
                 List.of("x"),
                 List.of(-1.0),
                 List.of(3.0),
-                40, 40, 42L);
+                40, 40, 42L, java.util.List.of());
 
         MultiObjectiveOptimizer.Result result = optimizer.optimize(problem);
         List<MultiObjectiveOptimizer.ParetoPoint> front = result.front();
@@ -73,13 +73,39 @@ class MultiObjectiveOptimizerTest {
                 List.of("x"),
                 List.of(0.0),
                 List.of(4.0),
-                40, 40, 7L);
+                40, 40, 7L, java.util.List.of());
 
         MultiObjectiveOptimizer.Result result = optimizer.optimize(problem);
         assertFalse(result.front().isEmpty());
         for (MultiObjectiveOptimizer.ParetoPoint pt : result.front()) {
             double x = pt.decisions()[0];
             assertTrue(x > 1.9 && x < 4.05, "trade-off region is x in [2, 4], got " + x);
+        }
+    }
+
+    @Test
+    void respectsConstraint() {
+        // Schaffer N.1 with the constraint f2 <= 1, i.e. (x-2)^2 <= 1, restricts
+        // the feasible region to x in [1, 3]; the Pareto-optimal part is x in [1, 2].
+        MultiObjectiveOptimizer.Problem problem = new MultiObjectiveOptimizer.Problem(
+                "f1 = x^2\nf2 = (x - 2)^2",
+                SolverSettings.DEFAULTS,
+                Map.of(),
+                List.of("f1", "f2"),
+                List.of(false, false),
+                List.of("x"),
+                List.of(-1.0),
+                List.of(3.0),
+                50, 50, 11L,
+                List.of("f2 <= 1.0"));
+
+        MultiObjectiveOptimizer.Result result = optimizer.optimize(problem);
+        assertFalse(result.front().isEmpty(), "a feasible front should exist");
+        for (MultiObjectiveOptimizer.ParetoPoint pt : result.front()) {
+            double x = pt.decisions()[0];
+            double f2 = pt.objectives()[1];
+            assertTrue(f2 <= 1.03, "constraint f2 <= 1 must hold (within tolerance), got f2 = " + f2);
+            assertTrue(x > 0.95 && x < 2.05, "feasible Pareto region is x in [1, 2], got x = " + x);
         }
     }
 }
