@@ -1205,58 +1205,21 @@ public final class EquationParser {
     }
 
     private void flattenSeries(List<Expr> inputs, List<Expr> outputs, String sourceText, FlattenContext ctx) {
-        if (inputs.size() != 4 || outputs.size() != 2) {
-            throw new ParseException("series expects 4 inputs (num1, den1, num2, den2) and 2 outputs (num, den), "
-                    + "e.g. CALL series(num1[1:2], den1[1:2], num2[1:2], den2[1:2] : num[1:3], den[1:3])");
-        }
-        VectorInfo num1 = parseVectorInfo(inputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
-        VectorInfo den1 = parseVectorInfo(inputs.get(1), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
-        VectorInfo num2 = parseVectorInfo(inputs.get(2), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
-        VectorInfo den2 = parseVectorInfo(inputs.get(3), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
-
-        if (num1.size != den1.size) {
-            throw new ParseException("series: num1 and den1 must have the same length");
-        }
-        if (num2.size != den2.size) {
-            throw new ParseException("series: num2 and den2 must have the same length");
-        }
-
-        int L1 = num1.size;
-        int L2 = num2.size;
-        int expectedLen = L1 + L2 - 1;
-
-        VectorInfo num = parseVectorInfo(outputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
-        VectorInfo den = parseVectorInfo(outputs.get(1), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
-
-        if (num.size != expectedLen || den.size != expectedLen) {
-            throw new ParseException("series: outputs num and den must have length L1 + L2 - 1 = " + expectedLen);
-        }
-
-        if (outputs.get(0) instanceof Expr.ArrayAccess aa) {
-            registerShape(aa.name(), expectedLen, 1, ctx);
-        }
-        if (outputs.get(1) instanceof Expr.ArrayAccess aa) {
-            registerShape(aa.name(), expectedLen, 1, ctx);
-        }
-
-        List<Expr> entries = new ArrayList<>();
-        entries.addAll(Arrays.asList(num1.elements));
-        entries.addAll(Arrays.asList(den1.elements));
-        entries.addAll(Arrays.asList(num2.elements));
-        entries.addAll(Arrays.asList(den2.elements));
-
-        for (int i = 0; i < expectedLen; i++) {
-            ctx.out().add(new Equation(num.elements[i],
-                    new Expr.Call("series$num$" + i + "$" + L1 + "$" + L2, entries), sourceText));
-            ctx.out().add(new Equation(den.elements[i],
-                    new Expr.Call("series$den$" + i + "$" + L1 + "$" + L2, entries), sourceText));
-        }
+        flattenTfCombine("series", inputs, outputs, sourceText, ctx);
     }
 
     private void flattenParallel(List<Expr> inputs, List<Expr> outputs, String sourceText, FlattenContext ctx) {
+        flattenTfCombine("parallel", inputs, outputs, sourceText, ctx);
+    }
+
+    /** Shared expansion for the two-system transfer-function interconnections
+     *  (series, parallel): both consume (num1, den1, num2, den2), produce a
+     *  length L1+L2-1 (num, den), and differ only in the per-coefficient backing
+     *  function ({@code <op>$num$…} / {@code <op>$den$…}) the solver evaluates. */
+    private void flattenTfCombine(String op, List<Expr> inputs, List<Expr> outputs, String sourceText, FlattenContext ctx) {
         if (inputs.size() != 4 || outputs.size() != 2) {
-            throw new ParseException("parallel expects 4 inputs (num1, den1, num2, den2) and 2 outputs (num, den), "
-                    + "e.g. CALL parallel(num1[1:2], den1[1:2], num2[1:2], den2[1:2] : num[1:3], den[1:3])");
+            throw new ParseException(op + " expects 4 inputs (num1, den1, num2, den2) and 2 outputs (num, den), "
+                    + "e.g. CALL " + op + "(num1[1:2], den1[1:2], num2[1:2], den2[1:2] : num[1:3], den[1:3])");
         }
         VectorInfo num1 = parseVectorInfo(inputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
         VectorInfo den1 = parseVectorInfo(inputs.get(1), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
@@ -1264,10 +1227,10 @@ public final class EquationParser {
         VectorInfo den2 = parseVectorInfo(inputs.get(3), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
 
         if (num1.size != den1.size) {
-            throw new ParseException("parallel: num1 and den1 must have the same length");
+            throw new ParseException(op + ": num1 and den1 must have the same length");
         }
         if (num2.size != den2.size) {
-            throw new ParseException("parallel: num2 and den2 must have the same length");
+            throw new ParseException(op + ": num2 and den2 must have the same length");
         }
 
         int L1 = num1.size;
@@ -1278,7 +1241,7 @@ public final class EquationParser {
         VectorInfo den = parseVectorInfo(outputs.get(1), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
 
         if (num.size != expectedLen || den.size != expectedLen) {
-            throw new ParseException("parallel: outputs num and den must have length L1 + L2 - 1 = " + expectedLen);
+            throw new ParseException(op + ": outputs num and den must have length L1 + L2 - 1 = " + expectedLen);
         }
 
         if (outputs.get(0) instanceof Expr.ArrayAccess aa) {
@@ -1296,9 +1259,9 @@ public final class EquationParser {
 
         for (int i = 0; i < expectedLen; i++) {
             ctx.out().add(new Equation(num.elements[i],
-                    new Expr.Call("parallel$num$" + i + "$" + L1 + "$" + L2, entries), sourceText));
+                    new Expr.Call(op + "$num$" + i + "$" + L1 + "$" + L2, entries), sourceText));
             ctx.out().add(new Equation(den.elements[i],
-                    new Expr.Call("parallel$den$" + i + "$" + L1 + "$" + L2, entries), sourceText));
+                    new Expr.Call(op + "$den$" + i + "$" + L1 + "$" + L2, entries), sourceText));
         }
     }
 
@@ -1355,87 +1318,37 @@ public final class EquationParser {
     }
 
     private void flattenSsSeries(List<Expr> inputs, List<Expr> outputs, String sourceText, FlattenContext ctx) {
-        if (inputs.size() != 8 || outputs.size() != 4) {
-            throw new ParseException("series for state-space expects 8 inputs (A1, B1, C1, D1, A2, B2, C2, D2) and 4 outputs (A, B, C, D)");
-        }
-        MatrixInfo a1 = parseMatrixInfo(inputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
-        int n1 = a1.rows;
-        if (a1.cols != n1) throw new ParseException("series: A1 must be square");
-        List<Expr> b1Elements = getVectorElements(inputs.get(1), n1, ctx);
-        List<Expr> c1Elements = getVectorElements(inputs.get(2), n1, ctx);
-        Expr d1 = getScalarElement(inputs.get(3), ctx);
-
-        MatrixInfo a2 = parseMatrixInfo(inputs.get(4), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
-        int n2 = a2.rows;
-        if (a2.cols != n2) throw new ParseException("series: A2 must be square");
-        List<Expr> b2Elements = getVectorElements(inputs.get(5), n2, ctx);
-        List<Expr> c2Elements = getVectorElements(inputs.get(6), n2, ctx);
-        Expr d2 = getScalarElement(inputs.get(7), ctx);
-
-        int n = n1 + n2;
-        MatrixInfo an = parseMatrixInfo(outputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
-        if (an.rows != n || an.cols != n) throw new ParseException("series: Output A must be " + n + "x" + n);
-        List<Expr> bnElements = getVectorElements(outputs.get(1), n, ctx);
-        List<Expr> cnElements = getVectorElements(outputs.get(2), n, ctx);
-        Expr dn = getScalarElement(outputs.get(3), ctx);
-
-        registerShape(an.name, n, n, ctx);
-        if (outputs.get(1) instanceof Expr.ArrayAccess aa) {
-            registerShape(aa.name(), n, 1, ctx);
-        }
-        if (outputs.get(2) instanceof Expr.ArrayAccess aa) {
-            registerShape(aa.name(), 1, n, ctx);
-        }
-
-        List<Expr> entries = new ArrayList<>();
-        for (int i = 0; i < n1; i++) entries.addAll(Arrays.asList(a1.elements[i]));
-        entries.addAll(b1Elements);
-        entries.addAll(c1Elements);
-        entries.add(d1);
-        for (int i = 0; i < n2; i++) entries.addAll(Arrays.asList(a2.elements[i]));
-        entries.addAll(b2Elements);
-        entries.addAll(c2Elements);
-        entries.add(d2);
-
-        String suffix = "$" + n1 + "$" + n2;
-        for (int i = 0; i < n; i++) {
-            for (int j = 0; j < n; j++) {
-                ctx.out().add(new Equation(an.elements[i][j],
-                        new Expr.Call("ss_series$a$" + i + "$" + j + suffix, entries), sourceText));
-            }
-        }
-        for (int i = 0; i < n; i++) {
-            ctx.out().add(new Equation(bnElements.get(i),
-                    new Expr.Call("ss_series$b$" + i + "$0" + suffix, entries), sourceText));
-        }
-        for (int i = 0; i < n; i++) {
-            ctx.out().add(new Equation(cnElements.get(i),
-                    new Expr.Call("ss_series$c$" + i + "$0" + suffix, entries), sourceText));
-        }
-        ctx.out().add(new Equation(dn, new Expr.Call("ss_series$d" + suffix, entries), sourceText));
+        flattenSsCombine("series", inputs, outputs, sourceText, ctx);
     }
 
     private void flattenSsParallel(List<Expr> inputs, List<Expr> outputs, String sourceText, FlattenContext ctx) {
+        flattenSsCombine("parallel", inputs, outputs, sourceText, ctx);
+    }
+
+    /** Shared expansion for the two-system state-space interconnections (series,
+     *  parallel): both stack the two realizations identically and differ only in
+     *  the per-element backing function ({@code ss_<op>$…}) the solver evaluates. */
+    private void flattenSsCombine(String op, List<Expr> inputs, List<Expr> outputs, String sourceText, FlattenContext ctx) {
         if (inputs.size() != 8 || outputs.size() != 4) {
-            throw new ParseException("parallel for state-space expects 8 inputs (A1, B1, C1, D1, A2, B2, C2, D2) and 4 outputs (A, B, C, D)");
+            throw new ParseException(op + " for state-space expects 8 inputs (A1, B1, C1, D1, A2, B2, C2, D2) and 4 outputs (A, B, C, D)");
         }
         MatrixInfo a1 = parseMatrixInfo(inputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
         int n1 = a1.rows;
-        if (a1.cols != n1) throw new ParseException("parallel: A1 must be square");
+        if (a1.cols != n1) throw new ParseException(op + ": A1 must be square");
         List<Expr> b1Elements = getVectorElements(inputs.get(1), n1, ctx);
         List<Expr> c1Elements = getVectorElements(inputs.get(2), n1, ctx);
         Expr d1 = getScalarElement(inputs.get(3), ctx);
 
         MatrixInfo a2 = parseMatrixInfo(inputs.get(4), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
         int n2 = a2.rows;
-        if (a2.cols != n2) throw new ParseException("parallel: A2 must be square");
+        if (a2.cols != n2) throw new ParseException(op + ": A2 must be square");
         List<Expr> b2Elements = getVectorElements(inputs.get(5), n2, ctx);
         List<Expr> c2Elements = getVectorElements(inputs.get(6), n2, ctx);
         Expr d2 = getScalarElement(inputs.get(7), ctx);
 
         int n = n1 + n2;
         MatrixInfo an = parseMatrixInfo(outputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
-        if (an.rows != n || an.cols != n) throw new ParseException("parallel: Output A must be " + n + "x" + n);
+        if (an.rows != n || an.cols != n) throw new ParseException(op + ": Output A must be " + n + "x" + n);
         List<Expr> bnElements = getVectorElements(outputs.get(1), n, ctx);
         List<Expr> cnElements = getVectorElements(outputs.get(2), n, ctx);
         Expr dn = getScalarElement(outputs.get(3), ctx);
@@ -1458,22 +1371,23 @@ public final class EquationParser {
         entries.addAll(c2Elements);
         entries.add(d2);
 
+        String fn = "ss_" + op;
         String suffix = "$" + n1 + "$" + n2;
         for (int i = 0; i < n; i++) {
             for (int j = 0; j < n; j++) {
                 ctx.out().add(new Equation(an.elements[i][j],
-                        new Expr.Call("ss_parallel$a$" + i + "$" + j + suffix, entries), sourceText));
+                        new Expr.Call(fn + "$a$" + i + "$" + j + suffix, entries), sourceText));
             }
         }
         for (int i = 0; i < n; i++) {
             ctx.out().add(new Equation(bnElements.get(i),
-                    new Expr.Call("ss_parallel$b$" + i + "$0" + suffix, entries), sourceText));
+                    new Expr.Call(fn + "$b$" + i + "$0" + suffix, entries), sourceText));
         }
         for (int i = 0; i < n; i++) {
             ctx.out().add(new Equation(cnElements.get(i),
-                    new Expr.Call("ss_parallel$c$" + i + "$0" + suffix, entries), sourceText));
+                    new Expr.Call(fn + "$c$" + i + "$0" + suffix, entries), sourceText));
         }
-        ctx.out().add(new Equation(dn, new Expr.Call("ss_parallel$d" + suffix, entries), sourceText));
+        ctx.out().add(new Equation(dn, new Expr.Call(fn + "$d" + suffix, entries), sourceText));
     }
 
     private void flattenSsFeedback(List<Expr> inputs, List<Expr> outputs, String sourceText, FlattenContext ctx) {
