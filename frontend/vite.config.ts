@@ -20,6 +20,32 @@ function buildInfoPlugin() {
 
 export default defineConfig({
   plugins: [react(), buildInfoPlugin()],
+  build: {
+    // The editor core ("App" chunk) sits around ~260 kB gzipped after the
+    // feature tabs (Diagram, Digitizer, Plots, formatted report), modals, the
+    // Help page and Plotly are all code-split into their own lazily-loaded
+    // chunks. Bump the warning limit above the core so the build only flags a
+    // genuine regression there; the one chunk that still exceeds it is Plotly
+    // (~4.8 MB), which is intentionally isolated and dynamically imported in
+    // PlotlyChart, so it never blocks first paint.
+    chunkSizeWarningLimit: 1000,
+    // Split the big shared libraries into their own cached vendor chunks so the
+    // editor and Help-page chunks stay small.
+    rollupOptions: {
+      output: {
+        manualChunks(id: string) {
+          if (!id.includes('node_modules')) return undefined
+          if (id.includes('@mantine')) return 'mantine'
+          if (id.includes('katex')) return 'katex'
+          if (id.includes('ag-grid')) return 'ag-grid'
+          if (id.includes('/react-dom/') || id.includes('/react/') || id.includes('/scheduler/')) {
+            return 'react'
+          }
+          return undefined
+        },
+      },
+    },
+  },
   server: {
     port: 5173,
     proxy: {

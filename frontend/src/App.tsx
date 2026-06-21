@@ -1,10 +1,12 @@
-import { ChangeEvent, useCallback, useEffect, useMemo, useState, useRef, type ReactNode } from 'react'
+import { ChangeEvent, lazy, Suspense, useCallback, useEffect, useMemo, useState, useRef, type ReactNode } from 'react'
 import {
   Alert,
   Badge,
   Button,
+  Center,
   Flex,
   Group,
+  Loader,
   Paper,
   SegmentedControl,
   Stack,
@@ -56,9 +58,7 @@ import VariableInfoModal, {
   parseBound,
   VariableDraft,
 } from './VariableInfoModal'
-import MinMaxModal from './MinMaxModal'
-import CurveFitModal from './CurveFitModal'
-import FormattedReportView, { MathWithBadges } from './FormattedReportView'
+import { MathWithBadges } from './mathBadges'
 import ConfigureTableModal from './ConfigureTableModal'
 import AlterValuesModal from './AlterValuesModal'
 import { newParamRow, ParamRow } from './ParametricTableTab'
@@ -74,11 +74,35 @@ import {
   TableSpec,
   toFunctionTableDtos,
 } from './tables'
-import PlotTab from './PlotTab'
 import StatesTab from './StatesTab'
-import { DigitizerTab, DigitizedExport } from './DigitizerTab'
-import DiagramTab, { loadDiagrams, saveDiagrams } from './diagram/DiagramTab'
+import type { DigitizedExport } from './DigitizerTab'
+import { loadDiagrams, saveDiagrams } from './diagram/diagramStorage'
 import { DiagramSpec } from './diagram/types'
+
+// The Digitizer and Diagram tabs are large, self-contained editors that most
+// sessions never open, so they are code-split and only fetched when their tab
+// is first shown (wrapped in <Suspense> at their render sites below).
+const DigitizerTab = lazy(() =>
+  import('./DigitizerTab').then((m) => ({ default: m.DigitizerTab })),
+)
+const DiagramTab = lazy(() => import('./diagram/DiagramTab'))
+
+// The Plot tab (and its Plotly figure builders) plus the optimization and
+// plot-config modals are also code-split: the Plotly figure machinery is large
+// and only needed once a plot window is opened or a modal is invoked.
+const PlotTab = lazy(() => import('./PlotTab'))
+// FormattedReportView pulls in the inline-plot (figure/Plotly) machinery, so it
+// is code-split and only loaded when a compiled report is shown.
+const FormattedReportView = lazy(() => import('./FormattedReportView'))
+const MinMaxModal = lazy(() => import('./MinMaxModal'))
+const CurveFitModal = lazy(() => import('./CurveFitModal'))
+const PlotConfigModal = lazy(() => import('./plots/PlotConfigModal'))
+
+const lazyTabFallback = (
+  <Center h="100%">
+    <Loader color="teal" />
+  </Center>
+)
 import { PlotSpec, PlotKind } from './plots/types'
 import { plotDefToSpec } from './plots/fromCode'
 import SolutionPanel from './SolutionPanel'
@@ -91,7 +115,6 @@ import { MessageModal, SaveCheckModal, TextPromptModal } from './dialogs'
 import { Rail, TopBar } from './WorkspaceChrome'
 import { WorkspaceDock, type WorkspaceDockHandle, type OpenWindow } from './workspace/WorkspaceDock'
 import { detectStates } from './plots/stateTable'
-import PlotConfigModal from './plots/PlotConfigModal'
 import {
   buildComplexSolutionRows,
   buildRealSolutionRows,
@@ -153,14 +176,16 @@ function FormattedEquationsView({
 }>) {
   if (report) {
     return (
-      <FormattedReportView
-        report={report}
-        variables={variables}
-        plots={plots}
-        cyclePath={cyclePath}
-        tableRows={tableRows}
-        tableResults={tableResults}
-      />
+      <Suspense fallback={lazyTabFallback}>
+        <FormattedReportView
+          report={report}
+          variables={variables}
+          plots={plots}
+          cyclePath={cyclePath}
+          tableRows={tableRows}
+          tableResults={tableResults}
+        />
+      </Suspense>
     )
   }
 
@@ -1425,7 +1450,9 @@ export default function App() {
     ),
     digitizer: (
       <div style={{ height: '100%', minHeight: 0 }}>
-        <DigitizerTab key={`digitizer-${workspaceEpoch}`} onSendToFunctionTable={sendDigitizedToFunctionTable} />
+        <Suspense fallback={lazyTabFallback}>
+          <DigitizerTab key={`digitizer-${workspaceEpoch}`} onSendToFunctionTable={sendDigitizedToFunctionTable} />
+        </Suspense>
       </div>
     ),
     inspector: (() => {
@@ -1577,6 +1604,7 @@ export default function App() {
     panelTitles[winId] = d.name
     panelContent[winId] = (
       <div style={{ height: '100%', minHeight: 0 }}>
+        <Suspense fallback={lazyTabFallback}>
         <DiagramTab
           key={`diagram-${d.id}-${workspaceEpoch}`}
           singleDiagramId={d.id}
@@ -1602,6 +1630,7 @@ export default function App() {
           isActive={focusedWindow?.id === `diagram:${d.id}`}
           initialMode={runOnLoadDiagramIdsRef.current.has(d.id) ? 'run' : 'develop'}
         />
+        </Suspense>
       </div>
     )
   }
@@ -1621,6 +1650,7 @@ export default function App() {
             {PLOT_KIND_LABEL[pl.kind]}
           </Badge>
         </Group>
+        <Suspense fallback={lazyTabFallback}>
         <PlotTab
           kinds={[pl.kind]}
           singlePlotId={pl.id}
@@ -1636,6 +1666,7 @@ export default function App() {
           activePlotId={pl.id}
           onActivePlotIdChange={setActivePlotId}
         />
+        </Suspense>
       </div>
     )
   }
@@ -1900,26 +1931,30 @@ export default function App() {
       )}
 
       {showMinMax && (
-        <MinMaxModal
-          variables={variables}
-          text={text}
-          stopCriteria={stopCriteria}
-          complexMode={complexMode}
-          variableInfo={buildVariableInfo()}
-          unitSystem={unitSystem}
-          onClose={() => setShowMinMax(false)}
-        />
+        <Suspense fallback={null}>
+          <MinMaxModal
+            variables={variables}
+            text={text}
+            stopCriteria={stopCriteria}
+            complexMode={complexMode}
+            variableInfo={buildVariableInfo()}
+            unitSystem={unitSystem}
+            onClose={() => setShowMinMax(false)}
+          />
+        </Suspense>
       )}
 
       {showCurveFit && (
-        <CurveFitModal
-          tables={tables}
-          defaultTableId={activeTableId}
-          onClose={() => setShowCurveFit(false)}
-          onInsertEquation={(eq) => {
-            setText((prev) => prev.trim() + '\n\n' + eq)
-          }}
-        />
+        <Suspense fallback={null}>
+          <CurveFitModal
+            tables={tables}
+            defaultTableId={activeTableId}
+            onClose={() => setShowCurveFit(false)}
+            onInsertEquation={(eq) => {
+              setText((prev) => prev.trim() + '\n\n' + eq)
+            }}
+          />
+        </Suspense>
       )}
 
 
@@ -2002,21 +2037,23 @@ export default function App() {
       </Flex>
 
       {newPlotKind && (
-        <PlotConfigModal
-          spec={null}
-          allowedKinds={[newPlotKind]}
-          defaultName={`${PLOT_KIND_LABEL[newPlotKind]} ${mergedPlots.filter((p) => p.kind === newPlotKind).length + 1}`}
-          fluids={fluids}
-          tableVars={tableVars}
-          hasStates={detectStates(result?.variables ?? []).indices.length > 0}
-          onSave={(spec) => {
-            handlePlotsChange([...plots, spec])
-            setActivePlotId(spec.id)
-            setNewPlotKind(null)
-            requestAnimationFrame(() => dockRef.current?.openInstance(`plot:${spec.id}`, 'plot', spec.name))
-          }}
-          onClose={() => setNewPlotKind(null)}
-        />
+        <Suspense fallback={null}>
+          <PlotConfigModal
+            spec={null}
+            allowedKinds={[newPlotKind]}
+            defaultName={`${PLOT_KIND_LABEL[newPlotKind]} ${mergedPlots.filter((p) => p.kind === newPlotKind).length + 1}`}
+            fluids={fluids}
+            tableVars={tableVars}
+            hasStates={detectStates(result?.variables ?? []).indices.length > 0}
+            onSave={(spec) => {
+              handlePlotsChange([...plots, spec])
+              setActivePlotId(spec.id)
+              setNewPlotKind(null)
+              requestAnimationFrame(() => dockRef.current?.openInstance(`plot:${spec.id}`, 'plot', spec.name))
+            }}
+            onClose={() => setNewPlotKind(null)}
+          />
+        </Suspense>
       )}
     </Flex>
   )
