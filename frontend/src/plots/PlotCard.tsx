@@ -230,7 +230,7 @@ function getMatrixValues(variables: VariableResult[], base: string | null): numb
     }
   }
   if (maxI === 0 || maxJ === 0) return []
-  const res: number[][] = Array.from({ length: maxI }, () => Array(maxJ).fill(0))
+  const res: number[][] = Array.from({ length: maxI }, () => new Array(maxJ).fill(0))
   for (const cell of cells) {
     res[cell.i - 1][cell.j - 1] = cell.val
   }

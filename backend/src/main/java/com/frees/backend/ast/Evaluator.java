@@ -987,7 +987,7 @@ public final class Evaluator {
             }
         } else {
             int total = args.size();
-            int n = (int) Math.round(Math.sqrt(total - N)) - 1;
+            int n = (int) Math.round(Math.sqrt(total - (double) N)) - 1;
             double[][] a = new double[n][n];
             double[][] b = new double[n][1];
             double[][] cm = new double[1][n];
@@ -1040,7 +1040,7 @@ public final class Evaluator {
             }
         } else {
             int total = args.size();
-            int n = (int) Math.round(Math.sqrt(total - N)) - 1;
+            int n = (int) Math.round(Math.sqrt(total - (double) N)) - 1;
             double[][] a = new double[n][n];
             double[][] b = new double[n][1];
             double[][] cm = new double[1][n];
@@ -1395,7 +1395,7 @@ public final class Evaluator {
             }
             y = com.frees.backend.cas.TimeResponse.response(kind, num, den, null, t);
         } else {
-            int n = (int) Math.round(Math.sqrt(args.size() - N)) - 1;
+            int n = (int) Math.round(Math.sqrt(args.size() - (double) N)) - 1;
             double[][] a = new double[n][n];
             double[] b = new double[n];
             double[] cm = new double[n];
@@ -1448,7 +1448,7 @@ public final class Evaluator {
             y = com.frees.backend.cas.TimeResponse.response(
                     com.frees.backend.cas.TimeResponse.Kind.LSIM, num, den, u, t);
         } else {
-            int n = (int) Math.round(Math.sqrt(args.size() - 2 * N)) - 1;
+            int n = (int) Math.round(Math.sqrt(args.size() - 2.0 * N)) - 1;
             double[][] a = new double[n][n];
             double[] b = new double[n];
             double[] cm = new double[n];
