@@ -24,10 +24,11 @@ export default function ExamplesModal({ opened, onClose, onSelect }: Readonly<Pr
         <Text size="sm" c="dimmed">
           Pick a worked example to load into the editor, then press{' '}
           <strong>Solve</strong> (F2). Each one is ready to run — edit the inputs
-          to explore.
+          to explore. More examples live in{' '}
+          <strong>Help → Engineering Examples Library</strong>.
         </Text>
         <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="sm">
-          {EXAMPLES.map((ex) => (
+          {EXAMPLES.filter((ex) => ex.featured).map((ex) => (
             <Card
               key={ex.id}
               withBorder

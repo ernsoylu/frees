@@ -14,6 +14,9 @@ export interface Example {
   category: string
   /** The full editor document (markdown notes + equations). */
   text: string
+  /** Featured examples are shown in the "Open an Example" picker; the rest live
+   *  in Help → Engineering Examples Library to keep the picker focused. */
+  featured?: boolean
 }
 
 export const EXAMPLES: Example[] = [
@@ -22,6 +25,7 @@ export const EXAMPLES: Example[] = [
     title: 'Pump Sizing',
     description: 'Hydraulic and shaft power from flow rate, head, and efficiency.',
     category: 'Mechanical',
+    featured: true,
     text: `# Pump Sizing
 { A worked example — edit any value and press Solve (F2).
   Equations may be written in any order; frees figures out
@@ -41,6 +45,7 @@ P_shaft = P_hydraulic / eta          { required shaft power }`,
     title: 'Projectile Motion',
     description: 'Range, flight time, and peak height of a launched projectile.',
     category: 'Mechanics',
+    featured: true,
     text: `# Projectile Motion
 { A ball launched from the ground at an angle.
   Edit v0 or theta_deg and press Solve (F2). }
@@ -60,6 +65,7 @@ h_max = vy^2 / (2 * g)   { peak height }`,
     title: 'Heat Conduction',
     description: "Steady 1-D conduction through a wall (Fourier's law).",
     category: 'Heat Transfer',
+    featured: true,
     text: `# Heat Conduction Through a Wall
 { Steady 1-D conduction (Fourier's law). }
 k = 0.8 [W/m-K]        { thermal conductivity }
@@ -74,6 +80,7 @@ Q = k * A * (T_in - T_out) / L   { heat loss rate, watts }`,
     title: 'Ideal Gas Law',
     description: 'Mass of air in a rigid tank — note the implicit equation.',
     category: 'Thermodynamics',
+    featured: true,
     text: `# Ideal Gas Law
 { Mass of air in a rigid tank. Note the implicit equation:
   you do not have to write "m = ...". }
@@ -88,6 +95,7 @@ P * Vol = m * R * T    { ideal gas equation }`,
     title: 'DC Circuit',
     description: 'Current and power dissipation from Ohm’s law.',
     category: 'Electrical',
+    featured: true,
     text: `# DC Circuit — Power Dissipation
 V = 12 [V]
 R = 220 [ohm]
@@ -99,6 +107,7 @@ P = V * I       { power dissipated }`,
     title: 'Rankine Cycle',
     description: 'Ideal steam power cycle efficiency using CoolProp properties.',
     category: 'Thermodynamics',
+    featured: true,
     text: `# Rankine Cycle (Steam)
 { Ideal steam Rankine cycle using CoolProp water properties. }
 P_boiler = 8000 [kPa]
@@ -204,6 +213,7 @@ END`,
     title: 'Tank Draining (ODE)',
     description: 'First-order ODE via Integral — Torricelli draining of a tank.',
     category: 'Fluids',
+    featured: true,
     text: `# Tank Draining (Torricelli) — first-order ODE
 { Water height h in a tank emptying through a small orifice obeys
   dh/dt = -(a/A)*sqrt(2*g*h).  Press Solve (F2).
@@ -246,6 +256,7 @@ T = T0 - drop            { temperature after 30 s }`,
     title: 'Projectile Trajectory (table)',
     description: 'Parametric time sweep — full flight path sampled over time.',
     category: 'Mechanics',
+    featured: true,
     text: `# Projectile Trajectory (parametric time sweep)
 { The whole flight path, sampled in time. This uses a PARAMETRIC
   table, so do NOT use the main Solve — open the Tables tab and
@@ -537,6 +548,7 @@ y_initial = A + B        { y(0) }`,
     title: 'Cruise Control System Design',
     description: 'Models a 1000 kg car with drag, tunes a PI controller, and performs frequency & stability analysis.',
     category: 'Control Systems',
+    featured: true,
     text: `# Car Dynamics & Cruise Control
 { This example models a 1000 kg car under viscous drag, converts the state-space model to a transfer function, designs a proportional-integral (PI) controller for a feedback loop, and performs frequency & stability analysis.
 
@@ -883,6 +895,7 @@ CALL c2d(num[1:2], den[1:2], Ts, 'zoh'    : numz_z[1:2], denz_z[1:2])`,
     title: 'Radiation View Factors',
     description: 'Closed-form diffuse view factors for standard configurations.',
     category: 'Heat Transfer',
+    featured: true,
     text: `# Radiation View Factors
 { Analytic (Howell-catalog) diffuse view factors — no chart lookup
   needed. Each returns the dimensionless fraction of radiation that
@@ -912,6 +925,7 @@ q = k * A * (T_hot - T_cold) / L   { heat rate through the plate }`,
     title: 'Engine Map (2-D Interpolation)',
     description: 'Bilinear lookup of a brake-specific-fuel-consumption map.',
     category: 'Powertrain',
+    featured: true,
     text: `# Engine Map - 2-D Interpolation
 { A brake-specific fuel consumption map: rows are engine speed,
   columns are load. Call the table with two arguments to bilinearly
@@ -930,6 +944,7 @@ g_check   = Interpolate2D('bsfc', 2500, 0.6) { same value, EES name }`,
     title: 'Multi-Objective Beam Design (Pareto)',
     description: 'Trade off mass against deflection — run via Min/Max > Pareto.',
     category: 'Optimization',
+    featured: true,
     text: `# Multi-Objective Cantilever Beam
 { A steel cantilever with a tip load. Solve (F2) to evaluate one
   design, then open Tools > Min/Max, switch to 'Multi-objective
