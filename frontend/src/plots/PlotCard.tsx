@@ -291,9 +291,10 @@ export function buildFigure(spec: PlotSpec, inputs: FigureInputs): PlotlyFigure 
  *  fallback), with unit-annotated axis labels. */
 function buildXyFigureFromSpec(spec: PlotSpec, inputs: FigureInputs, xVar: string): PlotlyFigure {
   const { tableRows, tableResults, variables = [], theme } = inputs
-  // Prefer parametric-table rows; fall back to solved array variables so a
-  // PLOT block referencing arrays (x = speed[1:N]) renders after a solve.
-  const useArrays = tableRows.length === 0
+  // Use solved array variables when there is no parametric table, or when the
+  // table exists but has not been run yet (results empty). Fall back to
+  // parametric-table rows only when the table was actually executed.
+  const useArrays = tableRows.length === 0 || tableResults.length === 0
   const series = useArrays
     ? buildArrayXYSeries(variables, xVar, spec.xy.yVars)
     : buildXYSeries(tableRows, tableResults, xVar, spec.xy.yVars, spec.xy.zVar, spec.xy.sizeVar)
