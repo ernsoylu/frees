@@ -26,3 +26,7 @@ frontend/tsconfig.tsbuildinfo
 
 # CodeGraph local index
 .codegraph/
+
+# Playwright test screenshots and results
+screenshots/
+test-results/
