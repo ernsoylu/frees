@@ -48,7 +48,36 @@ public final class SolidProperties {
             Map.entry("oak", new Material(0.17, 700.0, 2310.0, 11e9, null)),
             Map.entry("ice", new Material(2.22, 920.0, 2040.0, 9e9, 0.33)));
 
+    /** Linear temperature slopes about the 300 K reference: dk/dT [W/m-K^2], dc/dT [J/kg-K^2]. */
+    private record TempSlope(double dkdT, double dcdT) {
+    }
+
+    private static final double T_REF = 300.0;
+
+    // Fits to standard tabulated data (Incropera) over roughly 250-600 K. Only
+    // the well-characterised metals carry a slope; everything else is constant.
+    private static final Map<String, TempSlope> SLOPES = Map.ofEntries(
+            Map.entry("aluminum", new TempSlope(-0.02, 0.46)),
+            Map.entry("aluminium", new TempSlope(-0.02, 0.46)),
+            Map.entry("copper", new TempSlope(-0.073, 0.107)),
+            Map.entry("steel", new TempSlope(-0.04, 0.42)),
+            Map.entry("carbonsteel", new TempSlope(-0.04, 0.42)),
+            Map.entry("iron", new TempSlope(-0.085, 0.42)),
+            Map.entry("nickel", new TempSlope(-0.10, 0.40)),
+            Map.entry("titanium", new TempSlope(-0.015, 0.29)),
+            Map.entry("tungsten", new TempSlope(-0.15, 0.05)));
+
     public static double lookup(String material, String property) {
+        return lookup(material, property, null);
+    }
+
+    /**
+     * Property of a solid material, optionally at temperature {@code tempK} (in
+     * kelvin). Thermal conductivity and specific heat receive a linear
+     * temperature correction about 300 K where reliable slope data exists; the
+     * other properties are treated as constants.
+     */
+    public static double lookup(String material, String property, Double tempK) {
         Material m = DB.get(material.toLowerCase());
         if (m == null) {
             throw new PropertyEvaluationException("Unknown material '" + material
@@ -66,7 +95,19 @@ public final class SolidProperties {
             throw new PropertyEvaluationException(propertyLabel(property)
                     + " is not available for material '" + material + "'.");
         }
-        return value;
+        return applyTemperature(value, property, material, tempK);
+    }
+
+    private static double applyTemperature(double value, String property, String material, Double tempK) {
+        if (tempK == null || !(property.equals("k_") || property.equals("c_"))) {
+            return value;
+        }
+        TempSlope slope = SLOPES.get(material.toLowerCase());
+        if (slope == null) {
+            return value;
+        }
+        double dvdt = property.equals("k_") ? slope.dkdT() : slope.dcdT();
+        return value + dvdt * (tempK - T_REF);
     }
 
     private static String propertyLabel(String property) {

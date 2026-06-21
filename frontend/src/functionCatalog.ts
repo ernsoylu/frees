@@ -66,8 +66,8 @@ export const FUNCTION_CATEGORIES: FunctionCategory[] = [
   {
     category: 'Solid & Material Properties',
     items: [
-      { label: 'c_', snippet: 'c_($0)', description: 'Specific heat capacity [J/(kg·K)] of a common solid material (room-temperature value).', usage: 'c = c_(Steel)   { ~434 J/kg-K }' },
-      { label: 'k_', snippet: 'k_($0)', description: 'Thermal conductivity [W/(m·K)] of a common solid material (room-temperature value).', usage: 'k = k_(Aluminum)   { ~237 W/m-K }' },
+      { label: 'c_', snippet: 'c_($0)', description: 'Specific heat capacity [J/(kg·K)] of a common solid material. Add T=value (K) for a linear temperature correction on the well-characterised metals.', usage: 'c = c_(Steel)   { ~434 J/kg-K }   or   c = c_(Iron, T=400)' },
+      { label: 'k_', snippet: 'k_($0)', description: 'Thermal conductivity [W/(m·K)] of a common solid material. Add T=value (K) for a linear temperature correction on the well-characterised metals.', usage: 'k = k_(Aluminum)   { ~237 W/m-K }   or   k = k_(Aluminum, T=500)' },
       { label: 'rho_', snippet: 'rho_($0)', description: 'Density [kg/m³] of a solid or liquid material.', usage: 'rho = rho_(Steel)   { ~7800 kg/m³ }' },
       { label: 'E_', snippet: 'E_($0)', description: "Young's modulus [Pa] of a structural material.", usage: "E = E_(Steel)   { ~200 GPa }" },
       { label: 'nu_', snippet: 'nu_($0)', description: "Poisson's ratio (dimensionless) of a structural material.", usage: 'nu = nu_(Steel)   { ~0.3 }' },
