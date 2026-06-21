@@ -169,6 +169,28 @@ public final class PolynomialHelpers {
     }
 
     public static record ZpkResult(double[][] zeros, double[][] poles, double k) {
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (!(o instanceof ZpkResult other)) return false;
+            return Arrays.deepEquals(zeros, other.zeros)
+                    && Arrays.deepEquals(poles, other.poles)
+                    && Double.compare(k, other.k) == 0;
+        }
+
+        @Override
+        public int hashCode() {
+            int result = Arrays.deepHashCode(zeros);
+            result = 31 * result + Arrays.deepHashCode(poles);
+            return 31 * result + Double.hashCode(k);
+        }
+
+        @Override
+        public String toString() {
+            return "ZpkResult[zeros=" + Arrays.deepToString(zeros)
+                    + ", poles=" + Arrays.deepToString(poles)
+                    + ", k=" + k + "]";
+        }
     }
 
     /**
@@ -613,6 +635,31 @@ public final class PolynomialHelpers {
 
     /** Partial-fraction residues, poles, and direct term (MATLAB residue order). */
     public record ResidueResult(double[][] residues, double[][] poles, int[] orders, double k) {
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (!(o instanceof ResidueResult other)) return false;
+            return Arrays.deepEquals(residues, other.residues)
+                    && Arrays.deepEquals(poles, other.poles)
+                    && Arrays.equals(orders, other.orders)
+                    && Double.compare(k, other.k) == 0;
+        }
+
+        @Override
+        public int hashCode() {
+            int result = Arrays.deepHashCode(residues);
+            result = 31 * result + Arrays.deepHashCode(poles);
+            result = 31 * result + Arrays.hashCode(orders);
+            return 31 * result + Double.hashCode(k);
+        }
+
+        @Override
+        public String toString() {
+            return "ResidueResult[residues=" + Arrays.deepToString(residues)
+                    + ", poles=" + Arrays.deepToString(poles)
+                    + ", orders=" + Arrays.toString(orders)
+                    + ", k=" + k + "]";
+        }
     }
 
     /**

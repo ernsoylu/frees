@@ -4,6 +4,7 @@ import com.frees.backend.parser.EquationParser;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -55,6 +56,24 @@ public final class MultiObjectiveOptimizer {
 
     /** One Pareto point: the decision vector and the raw (user-facing) objectives. */
     public record ParetoPoint(double[] decisions, double[] objectives) {
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (!(o instanceof ParetoPoint other)) return false;
+            return Arrays.equals(decisions, other.decisions)
+                    && Arrays.equals(objectives, other.objectives);
+        }
+
+        @Override
+        public int hashCode() {
+            return 31 * Arrays.hashCode(decisions) + Arrays.hashCode(objectives);
+        }
+
+        @Override
+        public String toString() {
+            return "ParetoPoint[decisions=" + Arrays.toString(decisions)
+                    + ", objectives=" + Arrays.toString(objectives) + "]";
+        }
     }
 
     public record Result(List<ParetoPoint> front, int evaluations) {

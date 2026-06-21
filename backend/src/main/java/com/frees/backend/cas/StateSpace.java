@@ -3,6 +3,8 @@ package com.frees.backend.cas;
 import org.matheclipse.core.eval.ExprEvaluator;
 import org.matheclipse.parser.client.math.MathException;
 
+import java.util.Arrays;
+
 /**
  * Symbolic state-space to transfer-function conversion.
  *
@@ -21,6 +23,23 @@ public final class StateSpace {
 
     /** num(s)/den(s) coefficient arrays, both in descending powers. */
     public record TransferCoefficients(double[] num, double[] den) {
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (!(o instanceof TransferCoefficients other)) return false;
+            return Arrays.equals(num, other.num) && Arrays.equals(den, other.den);
+        }
+
+        @Override
+        public int hashCode() {
+            return 31 * Arrays.hashCode(num) + Arrays.hashCode(den);
+        }
+
+        @Override
+        public String toString() {
+            return "TransferCoefficients[num=" + Arrays.toString(num)
+                    + ", den=" + Arrays.toString(den) + "]";
+        }
     }
 
     public static TransferCoefficients ss2tf(double[][] a, double[][] b, double[][] c, double d) {
@@ -91,6 +110,31 @@ public final class StateSpace {
     }
 
     public record StateSpaceMatrices(double[][] a, double[] b, double[] c, double d) {
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (!(o instanceof StateSpaceMatrices other)) return false;
+            return Arrays.deepEquals(a, other.a)
+                    && Arrays.equals(b, other.b)
+                    && Arrays.equals(c, other.c)
+                    && Double.compare(d, other.d) == 0;
+        }
+
+        @Override
+        public int hashCode() {
+            int result = Arrays.deepHashCode(a);
+            result = 31 * result + Arrays.hashCode(b);
+            result = 31 * result + Arrays.hashCode(c);
+            return 31 * result + Double.hashCode(d);
+        }
+
+        @Override
+        public String toString() {
+            return "StateSpaceMatrices[a=" + Arrays.deepToString(a)
+                    + ", b=" + Arrays.toString(b)
+                    + ", c=" + Arrays.toString(c)
+                    + ", d=" + d + "]";
+        }
     }
 
     /**

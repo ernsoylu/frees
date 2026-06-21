@@ -131,7 +131,7 @@ public final class Optimizer {
     }
 
     private static final Pattern CONSTRAINT_PATTERN =
-            Pattern.compile("^(.+?)\\s*(<=|>=|=)\\s*(.+)$");
+            Pattern.compile("^([^<>=]+)(<=|>=|=)(.+)$");
 
     static List<ParsedConstraint> parseConstraints(List<String> raw) {
         if (raw == null || raw.isEmpty()) return List.of();
