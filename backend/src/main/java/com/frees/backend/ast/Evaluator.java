@@ -288,6 +288,14 @@ public final class Evaluator {
             case "viewfactor_disks" -> viewFactorCoaxialDisks(
                     arg(c, args, 0, values, defs), arg(c, args, 1, values, defs), arg(c, args, 2, values, defs));
 
+            // Transient conduction (Heisler one-term approximation). The first
+            // argument is the geometry string 'wall' | 'cylinder' | 'sphere'.
+            case "heisler_temp" -> com.frees.backend.core.HeislerCharts.temperature(
+                    evalString(args.get(0)), arg(c, args, 1, values, defs),
+                    arg(c, args, 2, values, defs), arg(c, args, 3, values, defs));
+            case "heisler_q" -> com.frees.backend.core.HeislerCharts.heatRatio(
+                    evalString(args.get(0)), arg(c, args, 1, values, defs), arg(c, args, 2, values, defs));
+
             // Compressible Flow Stagnation Properties
             case "stagnationtemp" -> {
                 double t = arg(c, args, 0, values, defs);
