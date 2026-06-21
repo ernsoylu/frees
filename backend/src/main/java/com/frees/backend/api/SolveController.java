@@ -1039,7 +1039,8 @@ public class SolveController {
                                         List<Double> lowers,
                                         List<Double> uppers,
                                         Integer populationSize,
-                                        Integer generations) {}
+                                        Integer generations,
+                                        List<String> constraints) {}
 
     public record ParetoPointDto(List<Double> decisions, List<Double> objectives) {}
 
@@ -1083,7 +1084,8 @@ public class SolveController {
                             specsOf(request.variableInfo()),
                             request.objectives(), maximize,
                             request.decisions(), request.lowers(), request.uppers(),
-                            population, generations, 42L));
+                            population, generations, 42L,
+                            request.constraints() != null ? request.constraints() : List.of()));
 
             List<ParetoPointDto> front = result.front().stream()
                     .map(pt -> new ParetoPointDto(
@@ -1095,6 +1097,8 @@ public class SolveController {
         } catch (EquationParser.ParseException e) {
             String firstError = e.getMessage().lines().findFirst().orElse(e.getMessage());
             return ResponseEntity.badRequest().body(ParetoResponse.failure(SYNTAX_ERROR_PREFIX + firstError));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(ParetoResponse.failure(e.getMessage()));
         } catch (SolverException e) {
             return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(ParetoResponse.failure(e.getMessage()));
         }

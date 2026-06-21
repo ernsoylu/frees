@@ -311,7 +311,12 @@ export default function MinMaxModal({
     for (const name of objectives) {
       if (decisions.includes(name)) return `${name} cannot be both an objective and an independent variable.`
     }
-    return validateBounds()
+    const boundsError = validateBounds()
+    if (boundsError) return boundsError
+    for (const line of constraintLines()) {
+      if (!/(<=|>=|=)/.test(line)) return `Constraint "${line}" needs <=, >= or = followed by a number.`
+    }
+    return null
   }
 
   async function run() {
@@ -342,6 +347,7 @@ export default function MinMaxModal({
           uppers: decisions.map((name) => Number(bounds[name].upper)),
           populationSize: population,
           generations,
+          constraints: constraintLines(),
         }
         setPareto(await optimizeMulti(text, { ...stopCriteria, complexMode }, variableInfo, params))
       }
@@ -494,24 +500,38 @@ export default function MinMaxModal({
             />
           </>
         ) : (
-          <Group grow>
-            <NumberInput
-              label="Population size"
-              value={population}
-              onChange={(v) => setPopulation(typeof v === 'number' ? v : 40)}
-              min={8}
-              max={200}
-              step={8}
+          <>
+            <Group grow>
+              <NumberInput
+                label="Population size"
+                value={population}
+                onChange={(v) => setPopulation(typeof v === 'number' ? v : 40)}
+                min={8}
+                max={200}
+                step={8}
+              />
+              <NumberInput
+                label="Generations"
+                value={generations}
+                onChange={(v) => setGenerations(typeof v === 'number' ? v : 40)}
+                min={1}
+                max={200}
+                step={10}
+              />
+            </Group>
+            <Textarea
+              label="Constraints (optional)"
+              description="One per line: expr <= value, expr >= value, or expr = value. Infeasible points are dominated by feasible ones."
+              placeholder={'mass <= 50'}
+              value={constraints}
+              onChange={(e) => setConstraints(e.currentTarget.value)}
+              autosize
+              minRows={2}
+              maxRows={6}
+              spellCheck={false}
+              styles={MONO_INPUT}
             />
-            <NumberInput
-              label="Generations"
-              value={generations}
-              onChange={(v) => setGenerations(typeof v === 'number' ? v : 40)}
-              min={1}
-              max={200}
-              step={10}
-            />
-          </Group>
+          </>
         )}
 
         {validation && (

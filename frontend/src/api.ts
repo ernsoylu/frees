@@ -419,6 +419,7 @@ export interface MultiObjectiveParams {
   uppers: number[]
   populationSize?: number
   generations?: number
+  constraints?: string[]
 }
 
 export interface ParetoPoint {
