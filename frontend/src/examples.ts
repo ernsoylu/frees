@@ -812,6 +812,172 @@ PLOT 'Root Locus'
   zi = zi
 END`,
   },
+  {
+    id: 'nichols-chart',
+    title: 'Nichols Chart',
+    description: 'Open-loop frequency response on the Nichols grid (M/N contours).',
+    category: 'Control Systems',
+    text: `# Nichols Chart
+{ Open-loop magnitude vs phase for G(s) = 1 / ((s+1)(s+2)(s+3)).
+  Solve (F2), then open the 'Nichols' plot window from the Plots
+  menu — the locus is drawn on the standard Nichols grid with the
+  -1 critical point marked. }
+num = [0, 0, 0, 1]
+den = [1, 6, 11, 6]      { (s+1)(s+2)(s+3) }
+omega = [0.05, 0.1, 0.2, 0.5, 1, 2, 5, 10, 20]
+
+CALL nichols(num[1:4], den[1:4], omega[1:9] : mag[1:9], phase[1:9])
+
+PLOT 'Nichols'
+  kind = nichols
+  mag = mag
+  phase = phase
+END`,
+  },
+  {
+    id: 'routh-stability',
+    title: 'Routh-Hurwitz Stability',
+    description: 'Count right-half-plane poles of a characteristic polynomial.',
+    category: 'Control Systems',
+    text: `# Routh-Hurwitz Stability
+{ How many closed-loop poles sit in the right half-plane?
+  nRHP = 0 means the system is stable. For s^3 + s^2 + 2s + 8
+  the answer is 2 (unstable). }
+den = [1, 1, 2, 8]       { s^3 + s^2 + 2s + 8 }
+
+CALL routh(den[1:4] : nRHP, stable)`,
+  },
+  {
+    id: 'inverse-laplace-residue',
+    title: 'Inverse Laplace (Residues)',
+    description: 'Partial-fraction residues and poles of a transfer function.',
+    category: 'Control Systems',
+    text: `# Inverse Laplace via Residues
+{ Partial-fraction expansion of Y(s) = (s + 3)/(s^2 + 3s + 2).
+  residue() returns the residues r and matching poles p, so the
+  time response is y(t) = r_r[1] exp(p_r[1] t) + r_r[2] exp(p_r[2] t).
+  Here that is 2 exp(-t) - exp(-2 t). }
+num = [1, 3]             { s + 3 }
+den = [1, 3, 2]          { s^2 + 3s + 2 = (s+1)(s+2) }
+
+CALL residue(num[1:2], den[1:3] : r_r[1:2], r_i[1:2], p_r[1:2], p_i[1:2], k)`,
+  },
+  {
+    id: 'digital-control-c2d',
+    title: 'Digital Control: Discretization',
+    description: 'Convert a continuous plant to discrete time (Tustin and ZOH).',
+    category: 'Control Systems',
+    text: `# Digital Control: Discretization
+{ Sample a continuous plant G(s) = 2/(s+2) at Ts = 0.1 s using the
+  bilinear (Tustin) and zero-order-hold (ZOH) methods. The outputs
+  numz/denz are the discrete transfer function in powers of z. }
+num = [0, 2]
+den = [1, 2]             { 2 / (s + 2) }
+Ts = 0.1 [s]
+
+CALL c2d(num[1:2], den[1:2], Ts, 'tustin' : numz_t[1:2], denz_t[1:2])
+CALL c2d(num[1:2], den[1:2], Ts, 'zoh'    : numz_z[1:2], denz_z[1:2])`,
+  },
+  {
+    id: 'radiation-view-factors',
+    title: 'Radiation View Factors',
+    description: 'Closed-form diffuse view factors for standard configurations.',
+    category: 'Heat Transfer',
+    text: `# Radiation View Factors
+{ Analytic (Howell-catalog) diffuse view factors — no chart lookup
+  needed. Each returns the dimensionless fraction of radiation that
+  leaves surface 1 and reaches surface 2. }
+F_perp = viewfactor_perp(1 [m], 1 [m], 1 [m])       { perpendicular plates sharing an edge }
+F_par  = viewfactor_plates(2 [m], 2 [m], 1 [m])     { aligned parallel rectangles }
+F_disk = viewfactor_disks(0.5 [m], 1 [m], 0.4 [m])  { coaxial parallel disks }`,
+  },
+  {
+    id: 'material-conduction',
+    title: 'Conduction (Material Database)',
+    description: 'Fourier conduction using a built-in solid-material property.',
+    category: 'Heat Transfer',
+    text: `# Conduction Through an Aluminum Plate
+{ The thermal conductivity comes from the built-in solid-material
+  database via k_(Aluminum) — no need to look it up. }
+T_hot = 400 [K]
+T_cold = 300 [K]
+L = 0.02 [m]             { plate thickness }
+A = 0.25 [m^2]           { area }
+k = k_(Aluminum)         { ~237 W/m-K from the material DB }
+
+q = k * A * (T_hot - T_cold) / L   { heat rate through the plate }`,
+  },
+  {
+    id: 'engine-map-2d',
+    title: 'Engine Map (2-D Interpolation)',
+    description: 'Bilinear lookup of a brake-specific-fuel-consumption map.',
+    category: 'Powertrain',
+    text: `# Engine Map - 2-D Interpolation
+{ A brake-specific fuel consumption map: rows are engine speed,
+  columns are load. Call the table with two arguments to bilinearly
+  interpolate, bsfc(rpm, load), or use the EES-style Interpolate2D. }
+TABLE bsfc(rpm : load = 0.25, 0.5, 1.0)
+  1000   320   300   290
+  3000   280   260   250
+  5000   300   270   255
+END
+
+g_per_kWh = bsfc(2500, 0.6)                  { direct curve-family call }
+g_check   = Interpolate2D('bsfc', 2500, 0.6) { same value, EES name }`,
+  },
+  {
+    id: 'multi-objective-beam',
+    title: 'Multi-Objective Beam Design (Pareto)',
+    description: 'Trade off mass against deflection — run via Min/Max > Pareto.',
+    category: 'Optimization',
+    text: `# Multi-Objective Cantilever Beam
+{ A steel cantilever with a tip load. Solve (F2) to evaluate one
+  design, then open Tools > Min/Max, switch to 'Multi-objective
+  (Pareto)', and MINIMIZE both 'mass' and 'delta' over the decisions
+  b (0.01 .. 0.06) and h (0.02 .. 0.10) to trace the trade-off front.
+  Material properties come from the built-in solid database. }
+L = 1 [m]                { beam length }
+F = 500 [N]              { tip load }
+E = E_(Steel)            { Young's modulus }
+rho = rho_(Steel)        { density }
+
+b = 0.03 [m]             { cross-section width  (decision) }
+h = 0.05 [m]             { cross-section height (decision) }
+
+I = b * h^3 / 12         { second moment of area }
+mass = rho * L * b * h               { objective 1: minimize }
+delta = F * L^3 / (3 * E * I)        { objective 2: tip deflection, minimize }`,
+  },
+  {
+    id: 'driving-cycle-energy',
+    title: 'Driving-Cycle Energy (Parametric)',
+    description: 'Integrate tractive power over a speed profile with IntegralValue.',
+    category: 'Powertrain',
+    text: `# Driving-Cycle Energy
+{ Tractive power over a speed profile, integrated to total energy.
+  This uses a PARAMETRIC table, so do NOT use the main Solve — open
+  the Tables tab and click "Solve Table". E_total and P_avg are
+  whole-table aggregates (the same in every row), computed by the
+  parametric accessor pass. }
+m = 1500 [kg]
+Crr = 0.012
+g = 9.81 [m/s^2]
+rho_air = 1.2 [kg/m^3]
+Cd = 0.30
+Af = 2.2 [m^2]
+
+v = t * 1 [m/s]                       { swept speed }
+F_roll = Crr * m * g
+F_aero = 0.5 * rho_air * Cd * Af * v^2
+P = (F_roll + F_aero) * v             { instantaneous tractive power }
+
+E_total = IntegralValue('P', 't')     { trapezoid integral over the cycle }
+P_avg = TableAvg('P')                 { mean power across the runs }
+
+PARAMETRIC drive (t, v, P)
+  t = 0:2:30
+END`,
+  },
 ]
 
 /** The document new/blank workspaces start from. */
