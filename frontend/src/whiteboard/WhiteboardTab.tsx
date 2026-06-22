@@ -73,11 +73,13 @@ export default function WhiteboardTab(props: Readonly<Props>) {
 
   // Normalize the persisted opaque scene once via Excalidraw's restore() so a
   // scene saved by an older/newer Excalidraw release is migrated to the
-  // current schema before mount. Returns null for an empty whiteboard so
-  // Excalidraw starts with its own defaults.
+  // current schema before mount. Always returns an object (even for an empty
+  // whiteboard) with the app's current color scheme baked in, so Excalidraw
+  // mounts in the correct theme immediately — no light flash in dark mode.
+  // The live-toggle effect below handles subsequent scheme flips.
   const initialData = useMemo(() => {
     if (!wb || (wb.elements.length === 0 && Object.keys(wb.files).length === 0)) {
-      return null
+      return { elements: [], appState: { theme: excalTheme }, files: {} }
     }
     const restored = restore(
       {
@@ -98,6 +100,8 @@ export default function WhiteboardTab(props: Readonly<Props>) {
   }, [wb?.id])
 
   // Sync the app color scheme into Excalidraw whenever it flips (light/dark).
+  // updateScene sets appState.theme, which Excalidraw applies to its canvas
+  // AND UI chrome (toolbar, panels) via its internal theme class.
   useEffect(() => {
     if (!ready || !apiRef.current) return
     apiRef.current.updateScene({ appState: { theme: excalTheme } })
