@@ -17,14 +17,35 @@ import {
   Button,
   TextInput,
   CloseButton,
-  Accordion as MantineAccordion
+  Accordion as MantineAccordion,
+  Highlight,
+  Divider,
+  Box
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
-import { useState, useEffect } from 'react';
-import { getReference, type UnitInfo, type ConstantInfo } from './api';
+import { useState, useEffect, useMemo } from 'react';
+import { getReference, getFluids, type UnitInfo, type ConstantInfo } from './api';
 import { DOCS_CATALOG } from './docsCatalog';
 import Latex from './Latex';
 import { EXAMPLES } from './examples';
+import { buildSearchIndex, searchDocs, type SearchHit } from './searchIndex';
+import {
+  MATH_FUNCTIONS,
+  CALL_PROCEDURES,
+  MATRIX_FUNCTIONS,
+  FLUID_PROPERTY_OUTPUTS,
+  FLUID_INPUT_INDICATORS,
+  AIRH2O_OUTPUTS,
+  AIRH2O_INDICATORS,
+  MATERIAL_FUNCTIONS,
+  SOLID_MATERIALS,
+  TABLE_FUNCTIONS,
+  PARAMETRIC_ACCESSORS,
+  ODE_ACCESSORS,
+  UTILITY_PROPERTY_FUNCS,
+  type FuncEntry,
+  type CallEntry
+} from './helpReference';
 import {
   SolverPipelineDiagram,
   DegreesOfFreedomDiagram,
@@ -152,13 +173,319 @@ function UnitsReference() {
               <Table.Td>{c.description}</Table.Td>
             </Table.Tr>
           ))}
+         </Table.Tbody>
+      </Table>
+    </Stack>
+  );
+}
+
+/** Compact table of function entries (name + description + example/unit). */
+function FunctionTable({ rows }: Readonly<{ rows: FuncEntry[] }>) {
+  return (
+    <Table striped withTableBorder withColumnBorders>
+      <Table.Thead>
+        <Table.Tr>
+          <Table.Th style={{ width: '38%' }}>Name</Table.Th>
+          <Table.Th>Description</Table.Th>
+          <Table.Th style={{ width: '26%' }}>Example / Unit</Table.Th>
+        </Table.Tr>
+      </Table.Thead>
+      <Table.Tbody>
+        {rows.map((f) => (
+          <Table.Tr key={f.name}>
+            <Table.Td style={{ fontFamily: 'monospace' }}>{f.name}</Table.Td>
+            <Table.Td>{f.desc}</Table.Td>
+            <Table.Td style={{ fontFamily: 'monospace', fontSize: '12px' }}>
+              {f.example ? f.example : (f.unit ?? '')}
+            </Table.Td>
+          </Table.Tr>
+        ))}
+      </Table.Tbody>
+    </Table>
+  );
+}
+
+/**
+ * Catalog of every built-in scalar function, grouped by family. The list is
+ * transcribed from the backend evaluator's dispatch (no machine-readable
+ * registry exists server-side), so it is kept in helpReference.ts.
+ */
+function FunctionsReference() {
+  return (
+    <Stack gap="md">
+      <Title order={3} mt="sm">Built-in Functions</Title>
+      <Text size="sm" c="dimmed">
+        All names are case-insensitive. Functions are differentiable, so the
+        solver can build Jacobians for any equation that uses them.
+      </Text>
+      {MATH_FUNCTIONS.map((g) => (
+        <Stack key={g.title} gap="xs">
+          <Title order={4} c="blue.3" mt="sm">{g.title}</Title>
+          {g.blurb && <Text size="sm" c="dimmed">{g.blurb}</Text>}
+          <FunctionTable rows={g.functions} />
+        </Stack>
+      ))}
+
+      <Title order={3} mt="md">Matrix & Vector Functions</Title>
+      <Text size="sm" c="dimmed">
+        These return matrices/vectors — declare the output shape with a slice
+        suffix, or rely on automatic sizing.
+      </Text>
+      <FunctionTable rows={MATRIX_FUNCTIONS} />
+    </Stack>
+  );
+}
+
+/**
+ * The CALL procedure library — control-systems analysis, model conversions,
+ * and linear-algebra dispatches. Grouped by category. Output lengths are
+ * sized automatically from the inputs; only value-dependent counts (finite
+ * zeros, root-locus sweep) need an explicit slice.
+ */
+function ProceduresReference() {
+  const cats: { key: CallEntry['category']; label: string }[] = [
+    { key: 'Model', label: 'Model representations & interconnection' },
+    { key: 'Analysis', label: 'Analysis (poles, frequency, time response)' },
+    { key: 'Design', label: 'Controller design' },
+    { key: 'Digital', label: 'Digital control (z-domain)' },
+    { key: 'Linear', label: 'Linear algebra & decomposition' },
+  ];
+  return (
+    <Stack gap="md">
+      <Title order={3} mt="sm">CALL Procedure Library</Title>
+      <Text size="sm" c="dimmed">
+        Invoke with <Code>CALL</Code>. Outputs are written to the variables after
+        the colon; sizes are inferred from the inputs unless noted.
+      </Text>
+      {cats.map((c) => {
+        const rows = CALL_PROCEDURES.filter((p) => p.category === c.key);
+        if (rows.length === 0) return null;
+        return (
+          <Stack key={c.key} gap="xs">
+            <Title order={4} c="blue.3" mt="sm">{c.label}</Title>
+            <Table striped withTableBorder withColumnBorders>
+              <Table.Thead>
+                <Table.Tr>
+                  <Table.Th style={{ width: '20%' }}>Procedure</Table.Th>
+                  <Table.Th style={{ width: '34%' }}>Description</Table.Th>
+                  <Table.Th>Signature</Table.Th>
+                </Table.Tr>
+              </Table.Thead>
+              <Table.Tbody>
+                {rows.map((p) => (
+                  <Table.Tr key={p.name}>
+                    <Table.Td style={{ fontFamily: 'monospace' }}>{p.name}</Table.Td>
+                    <Table.Td>{p.desc}</Table.Td>
+                    <Table.Td style={{ fontFamily: 'monospace', fontSize: '12px' }}>{p.signature}</Table.Td>
+                  </Table.Tr>
+                ))}
+              </Table.Tbody>
+            </Table>
+          </Stack>
+        );
+      })}
+    </Stack>
+  );
+}
+
+/**
+ * Fluid property functions, supported fluids (live from /api/fluids), and the
+ * humid-air / glycol classes.
+ */
+function FluidsReference() {
+  const [fluids, setFluids] = useState<string[] | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    getFluids().then((f) => { if (!cancelled) setFluids(f); });
+    return () => { cancelled = true; };
+  }, []);
+
+  return (
+    <Stack gap="md">
+      <Title order={3} mt="sm">Fluid Property Functions</Title>
+      <Text size="sm" c="dimmed">
+        Every function takes the fluid name first, then exactly two named
+        coordinates (three for <Code>AirH2O</Code>, one of which must be{' '}
+        <Code>P</Code>). Results are returned in <b>SI base units</b>.
+      </Text>
+      <FunctionTable rows={FLUID_PROPERTY_OUTPUTS} />
+
+      <Title order={4} c="blue.3" mt="sm">State input indicators</Title>
+      <Table striped withTableBorder withColumnBorders>
+        <Table.Thead>
+          <Table.Tr><Table.Th style={{ width: '26%' }}>Key</Table.Th><Table.Th>Meaning</Table.Th></Table.Tr>
+        </Table.Thead>
+        <Table.Tbody>
+          {FLUID_INPUT_INDICATORS.map((i) => (
+            <Table.Tr key={i.key}>
+              <Table.Td style={{ fontFamily: 'monospace' }}>{i.key}</Table.Td>
+              <Table.Td>{i.meaning}</Table.Td>
+            </Table.Tr>
+          ))}
+        </Table.Tbody>
+      </Table>
+
+      <Title order={3} mt="md">Supported Fluids</Title>
+      <Text size="sm" c="dimmed">
+        Names are case-insensitive; several aliases map to the same CoolProp
+        fluid (e.g. <Code>steam</Code>, <Code>h2o</Code> → Water). Spelled
+        formulas (<Code>CO2</Code>, <Code>N2</Code>, <Code>CH4</Code>) are ideal
+        gases with NASA polynomials. CoolProp availability is reported live by the
+        backend.
+      </Text>
+      {fluids === null ? (
+        <Text size="sm" c="dimmed">Loading fluids…</Text>
+      ) : fluids.length === 0 ? (
+        <Alert color="orange" variant="light">
+          CoolProp is not available on this backend, so the live fluid list is
+          empty. The function syntax below still applies when it is.
+        </Alert>
+      ) : (
+        <Group gap={6}>
+          {fluids.map((f) => (
+            <Badge key={f} variant="default" style={{ fontFamily: 'monospace', textTransform: 'none' }}>{f}</Badge>
+          ))}
+        </Group>
+      )}
+
+      <Title order={3} mt="md">Humid Air (AirH2O)</Title>
+      <Text size="sm" c="dimmed">
+        Three coordinates required (one must be <Code>P</Code>). Works in SI
+        internally — convert °F/psia inputs.
+      </Text>
+      <FunctionTable rows={AIRH2O_OUTPUTS} />
+      <Table striped withTableBorder withColumnBorders>
+        <Table.Thead>
+          <Table.Tr><Table.Th style={{ width: '26%' }}>Key</Table.Th><Table.Th>Meaning</Table.Th></Table.Tr>
+        </Table.Thead>
+        <Table.Tbody>
+          {AIRH2O_INDICATORS.map((i) => (
+            <Table.Tr key={i.key}>
+              <Table.Td style={{ fontFamily: 'monospace' }}>{i.key}</Table.Td>
+              <Table.Td>{i.meaning}</Table.Td>
+            </Table.Tr>
+          ))}
+        </Table.Tbody>
+      </Table>
+
+      <Title order={3} mt="md">Aqueous Glycol Coolants</Title>
+      <Text size="sm" c="dimmed">
+        Incompressible mixtures written as base + mass percent:{' '}
+        <Code>EG50</Code> (50% ethylene glycol), <Code>PG30</Code> (30% propylene
+        glycol). Accepted bases: <Code>EG</Code>/<Code>MEG</Code>/
+        <Code>EthyleneGlycol</Code> and <Code>PG</Code>/<Code>MPG</Code>/
+        <Code>PropyleneGlycol</Code>. Single-phase — use <Code>T</Code> and{' '}
+        <Code>P</Code> as the two indicators.
+      </Text>
+
+      <Title order={3} mt="md">Utility & Combustion Functions</Title>
+      <FunctionTable rows={UTILITY_PROPERTY_FUNCS} />
+    </Stack>
+  );
+}
+
+/** Solid material property functions and the list of supported materials. */
+function MaterialsReference() {
+  return (
+    <Stack gap="md">
+      <Title order={3} mt="sm">Solid Material Properties</Title>
+      <Text size="sm" c="dimmed">
+        Bulk (room-temperature) properties from the built-in material database.
+        <Code>k_</Code> and <Code>c_</Code> accept an optional temperature{' '}
+        <Code>T</Code> (kelvin); well-characterised metals get a linear
+        correction about 300 K. <Code>rho_</Code>, <Code>E_</Code>,{' '}
+        <Code>nu_</Code> are constants.
+      </Text>
+      <FunctionTable rows={MATERIAL_FUNCTIONS} />
+
+      <Title order={4} c="blue.3" mt="sm">Supported materials</Title>
+      <Group gap={6}>
+        {SOLID_MATERIALS.map((m) => (
+          <Badge key={m} variant="default" style={{ fontFamily: 'monospace', textTransform: 'none' }}>{m}</Badge>
+        ))}
+      </Group>
+    </Stack>
+  );
+}
+
+/** Table lookup, parametric, and ODE accessor functions. */
+function AccessorsReference() {
+  return (
+    <Stack gap="md">
+      <Title order={3} mt="sm">Table Lookup & Interpolation</Title>
+      <Text size="sm" c="dimmed">
+        Query a named <Code>TABLE</Code> block. Column 1 is the x axis. The
+        simplest form is to call the table like a function: <Code>t(x)</Code>.
+      </Text>
+      <FunctionTable rows={TABLE_FUNCTIONS} />
+
+      <Title order={3} mt="md">Parametric Table Accessors</Title>
+      <Text size="sm" c="dimmed">
+        Query the active Parametric Table. Aggregates are computed once per
+        table solve and are identical in every row.
+      </Text>
+      <FunctionTable rows={PARAMETRIC_ACCESSORS} />
+
+      <Title order={3} mt="md">ODE / DYNAMIC Accessors</Title>
+      <Text size="sm" c="dimmed">
+        Read columns of a compiled ODE Table back into the analytic solve — e.g.
+        close a sizing loop with <Code>MaxValue('h') = h_target</Code>.
+      </Text>
+      <FunctionTable rows={ODE_ACCESSORS} />
+    </Stack>
+  );
+}
+
+/** Built-in constants — live from /api/reference, with a static fallback. */
+function ConstantsReference() {
+  const [constants, setConstants] = useState<ConstantInfo[] | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    getReference().then((ref) => { if (!cancelled) setConstants(ref.constants); });
+    return () => { cancelled = true; };
+  }, []);
+  const rows = constants ?? [];
+  return (
+    <Stack gap="md">
+      <Title order={3} mt="sm">Built-in Constants</Title>
+      <Text size="sm" c="dimmed">
+        Physical and mathematical constants, available with a trailing{' '}
+        <Code>#</Code> (EES convention). Substituted at parse time with their SI
+        value. The full unit list is on the <b>Units &amp; Constants</b> page.
+      </Text>
+      {constants === null && <Text size="sm" c="dimmed">Loading constants…</Text>}
+      {constants !== null && rows.length === 0 && (
+        <Alert color="orange" variant="light">
+          The live constant list is unavailable (backend not reachable). The
+          table below is the static fallback.
+        </Alert>
+      )}
+      <Table striped withTableBorder withColumnBorders>
+        <Table.Thead>
+          <Table.Tr>
+            <Table.Th>Name</Table.Th>
+            <Table.Th>Value (SI)</Table.Th>
+            <Table.Th>Unit</Table.Th>
+            <Table.Th>Description</Table.Th>
+          </Table.Tr>
+        </Table.Thead>
+        <Table.Tbody>
+          {(rows.length > 0 ? rows : []).map((c) => (
+            <Table.Tr key={c.name}>
+              <Table.Td style={{ fontFamily: 'monospace' }}>{c.name}</Table.Td>
+              <Table.Td style={{ fontFamily: 'monospace' }}>{formatSiFactor(c.value)}</Table.Td>
+              <Table.Td style={{ fontFamily: 'monospace' }}>{c.unit}</Table.Td>
+              <Table.Td>{c.description}</Table.Td>
+            </Table.Tr>
+          ))}
         </Table.Tbody>
       </Table>
     </Stack>
   );
 }
 
-const CYCLE_EXAMPLES = [
+ const CYCLE_EXAMPLES = [
   {
     value: "ideal-rankine",
     title: "Power Cycles: Ideal Rankine Steam Power Cycle",
@@ -2336,6 +2663,18 @@ const CATEGORIES = [
     items: [
       { id: 'examples', label: 'Engineering Examples Library', keywords: ['examples', 'rankine', 'brayton', 'combined cycle', 'pipe network', 'truss', 'radiation', 'cooling loop', 'reforming', 'pid', 'fatigue', 'nuclear', 'siyavula', 'nozzle', 'co2', 'compressible', 'throat', 'sonic', 'pelton', 'turbine', 'turbomachinery', 'hydropower', 'impulse', 'vehicle', 'ev', 'electric vehicle', 'longitudinal', 'lateral', 'bicycle model', 'understeer', 'road load', 'drag', 'battery', 'pack', 'cell', 'sizing', 'motor', 'range', 'batemo', 'c-rate', 'ode', 'differential equations', 'runge-kutta', 'stiff', 'van der pol', 'robertson', 'lotka-volterra', 'predator-prey', 'pendulum', 'rlc', 'rc circuit', 'rl circuit', 'orbit', 'logistic', 'decay', 'cooling', 'mass-spring-damper', 'parachutist', 'torricelli'] },
     ]
+  },
+  {
+    title: 'Quick Reference',
+    icon: <IconBook size={16} />,
+    items: [
+      { id: 'ref-functions', label: 'Built-in Functions', keywords: ['function', 'math', 'sin', 'cos', 'exp', 'ln', 'log10', 'sqrt', 'abs', 'min', 'max', 'sum', 'average', 'sinh', 'cosh', 'tanh', 'round', 'floor', 'ceil', 'sign', 'step', 'if', 'mod', 'gcd', 'lcm', 'gamma', 'erf', 'bessel', 'atan2', 'factorial', 'complex', 'conj', 'magnitude', 'angle', 'cis', 'matrix', 'solvelinear', 'inverse', 'determinant', 'transpose', 'zeros', 'ones', 'eye', 'linspace', 'blas'] },
+      { id: 'ref-procedures', label: 'CALL Procedure Library', keywords: ['call', 'procedure', 'ss2tf', 'tf2ss', 'zp2tf', 'tf2zp', 'series', 'parallel', 'feedback', 'pole', 'zero', 'bode', 'nyquist', 'nichols', 'margin', 'rlocus', 'routh', 'step', 'impulse', 'lsim', 'stepinfo', 'lqr', 'place', 'pidtune', 'c2d', 'd2c', 'residue', 'eigenvalues', 'eigen', 'ludecompose', 'eulerrotate', 'pade', 'mason', 'ctrb', 'obsv', 'rank', 'ss2ss', 'errorconst'] },
+      { id: 'ref-fluids', label: 'Fluids & Properties', keywords: ['fluid', 'water', 'steam', 'r134a', 'ammonia', 'air', 'airh2o', 'glycol', 'eg50', 'pg30', 'enthalpy', 'entropy', 'density', 'volume', 'intenergy', 'quality', 'cp', 'cv', 'viscosity', 'conductivity', 'soundspeed', 'compressibilityfactor', 'gibbs', 'humrat', 'relhum', 'wetbulb', 'dewpoint', 'p_sat', 't_sat', 'molarmass', 'heatingvalue', 'stoichafr', 'phase$', 'stagnation', 'surfacetension', 'viewfactor', 'heisler'] },
+      { id: 'ref-materials', label: 'Solid Materials', keywords: ['material', 'solid', 'aluminum', 'copper', 'steel', 'iron', 'glass', 'concrete', 'k_', 'c_', 'rho_', 'e_', 'nu_', 'young', 'modulus', 'poisson', 'thermal conductivity', 'density', 'specific heat'] },
+      { id: 'ref-accessors', label: 'Table & ODE Accessors', keywords: ['interpolate', 'lookup', 'lookuprow', 'tablevalue', 'tablerun', 'nparametricruns', 'tablesum', 'tableavg', 'tablemin', 'tablemax', 'tablestddev', 'integralvalue', 'finalvalue', 'maxvalue', 'minvalue', 'timeat', 'odevalue', 'accessor', 'parametric', 'ode'] },
+      { id: 'ref-constants', label: 'Constants & Units', keywords: ['constant', 'pi#', 'e#', 'r#', 'g#', 'na#', 'k#', 'h#', 'c#', 'sigma#', 'gc#', 'qe#', 'avogadro', 'boltzmann', 'planck', 'gravity', 'gas constant', 'unit', 'si', 'dimension', 'kpa', 'pa', 'c', 'f', 'k', 'deg', 'rad'] },
+    ]
   }
 ];
 
@@ -2637,16 +2976,53 @@ export default function HelpPage() {
   const [opened, { toggle }] = useDisclosure();
   const [active, setActive] = useState('started');
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchFocused, setSearchFocused] = useState(false);
 
-  // Filter Categories by Search Query
-  const filteredCategories = CATEGORIES.map(category => {
-    const filteredItems = category.items.filter(item => 
-      item.label.toLowerCase().includes(searchQuery.toLowerCase()) || 
-      item.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.keywords.some(kw => kw.toLowerCase().includes(searchQuery.toLowerCase()))
-    );
-    return { ...category, items: filteredItems };
-  }).filter(category => category.items.length > 0);
+  // Build the full-text search index once, seeding it with the nav keywords.
+  useMemo(() => {
+    const kw: Record<string, string[]> = {};
+    for (const cat of CATEGORIES) for (const it of cat.items) kw[it.id] = it.keywords;
+    buildSearchIndex(kw);
+  }, []);
+
+  // Intelligent full-text search across all docs, catalogs, and examples.
+  const searchResults = useMemo<SearchHit[]>(
+    () => (searchQuery.trim().length >= 2 ? searchDocs(searchQuery) : []),
+    [searchQuery]
+  );
+
+  // When not searching, the nav shows all topics. When searching with no
+  // content hits, fall back to the old label/keyword filter so the nav still
+  // narrows. When content hits exist, the dropdown takes over and the nav
+  // shows the matching topic ids only.
+  const showResults = searchFocused && searchQuery.trim().length >= 2 && searchResults.length > 0;
+
+  const navCategories = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (q.length < 2) return CATEGORIES;
+    // If the content search found hits, restrict the nav to those topics.
+    if (searchResults.length > 0) {
+      const hitIds = new Set(searchResults.map(h => h.id));
+      return CATEGORIES.map(c => ({ ...c, items: c.items.filter(i => hitIds.has(i.id)) }))
+        .filter(c => c.items.length > 0);
+    }
+    // Fallback: label/keyword filter.
+    return CATEGORIES.map(category => {
+      const filteredItems = category.items.filter(item =>
+        item.label.toLowerCase().includes(q) ||
+        item.id.toLowerCase().includes(q) ||
+        item.keywords.some(kw => kw.toLowerCase().includes(q))
+      );
+      return { ...category, items: filteredItems };
+    }).filter(category => category.items.length > 0);
+  }, [searchQuery, searchResults]);
+
+  const navigateTo = (id: string) => {
+    setActive(id);
+    setSearchQuery('');
+    setSearchFocused(false);
+    if (opened) toggle();
+  };
 
   const renderContent = () => {
     if (active === 'examples') {
@@ -2738,7 +3114,15 @@ export default function HelpPage() {
       return <MarkdownRenderer content={docContent} />;
     }
 
-    return null;
+    switch (active) {
+      case 'ref-functions': return <FunctionsReference />;
+      case 'ref-procedures': return <ProceduresReference />;
+      case 'ref-fluids': return <FluidsReference />;
+      case 'ref-materials': return <MaterialsReference />;
+      case 'ref-accessors': return <AccessorsReference />;
+      case 'ref-constants': return <ConstantsReference />;
+      default: return null;
+    }
   };
 
   return (
@@ -2775,22 +3159,68 @@ export default function HelpPage() {
       </AppShell.Header>
 
       <AppShell.Navbar p="md" bg="var(--mantine-color-body)" style={{ borderRight: '1px solid var(--mantine-color-default-border)' }}>
-        <TextInput
-          placeholder="Search documentation..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.currentTarget.value)}
-          leftSection={<IconSearch size={16} />}
-          rightSection={
-            searchQuery ? (
-              <CloseButton onClick={() => setSearchQuery('')} size="sm" />
-            ) : null
-          }
-          mb="md"
-        />
+        <Box style={{ position: 'relative', marginBottom: 'md' }}>
+          <TextInput
+            placeholder="Search docs, functions, examples…"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.currentTarget.value)}
+            onFocus={() => setSearchFocused(true)}
+            onBlur={() => setTimeout(() => setSearchFocused(false), 180)}
+            leftSection={<IconSearch size={16} />}
+            rightSection={
+              searchQuery ? (
+                <CloseButton onClick={() => setSearchQuery('')} size="sm" />
+              ) : null
+            }
+          />
+          {showResults && (
+            <Paper
+              shadow="md"
+              withBorder
+              p="xs"
+              style={{
+                position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 1000,
+                maxHeight: '60vh', overflowY: 'auto',
+              }}
+            >
+              <Text size="xs" c="dimmed" fw={700} px="xs" pb={4}>
+                {searchResults.length} result{searchResults.length === 1 ? '' : 's'}
+              </Text>
+              <Divider mb={4} />
+              {searchResults.map((hit, idx) => (
+                <Box
+                  key={`${hit.id}-${idx}`}
+                  onClick={() => navigateTo(hit.id)}
+                  px="xs"
+                  py={6}
+                  style={{ cursor: 'pointer', borderRadius: '4px' }}
+                  onMouseDown={(e) => e.preventDefault()}
+                  className="search-result-row"
+                >
+                  <Group gap="xs" justify="space-between" wrap="nowrap">
+                    <Text size="sm" fw={600} style={{ flexGrow: 1 }}>
+                      <Highlight highlight={searchQuery.trim()} component="span">
+                        {hit.label}
+                      </Highlight>
+                    </Text>
+                    <Badge size="xs" variant="light" color="gray">{hit.section}</Badge>
+                  </Group>
+                  {hit.snippet && (
+                    <Text size="xs" c="dimmed" lineClamp={2} mt={2}>
+                      <Highlight highlight={searchQuery.trim().split(/\s+/)} component="span">
+                        {hit.snippet}
+                      </Highlight>
+                    </Text>
+                  )}
+                </Box>
+              ))}
+            </Paper>
+          )}
+        </Box>
 
         <AppShell.Section grow component={ScrollArea} offsetScrollbars>
           <Stack gap="md">
-            {filteredCategories.map((category) => (
+            {navCategories.map((category) => (
               <div key={category.title}>
                 <Group gap="xs" px="xs" mb="xs">
                   {category.icon}
@@ -2803,10 +3233,7 @@ export default function HelpPage() {
                     key={item.id}
                     label={item.label}
                     active={active === item.id}
-                    onClick={() => {
-                      setActive(item.id);
-                      if (opened) toggle();
-                    }}
+                    onClick={() => navigateTo(item.id)}
                     variant="filled"
                     color="blue"
                     styles={{
@@ -2817,7 +3244,7 @@ export default function HelpPage() {
                 ))}
               </div>
             ))}
-            {filteredCategories.length === 0 && (
+            {navCategories.length === 0 && (
               <Text size="sm" c="dimmed" ta="center" mt="md">
                 No matching topics found.
               </Text>
