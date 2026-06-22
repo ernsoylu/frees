@@ -23,6 +23,7 @@ import { useDisclosure } from '@mantine/hooks';
 import { useState, useEffect } from 'react';
 import { getReference, type UnitInfo, type ConstantInfo } from './api';
 import { DOCS_CATALOG } from './docsCatalog';
+import Latex from './Latex';
 import { EXAMPLES } from './examples';
 import {
   SolverPipelineDiagram,
@@ -1337,7 +1338,7 @@ END`,
     value: "impulse-response",
     title: "Control Systems: Impulse & Step Response",
     description: "impulse returns the impulse response y(t) = C·e^(At)·B on the supplied time grid; here it is plotted next to the step response of the same plant for comparison.",
-    note: "450/[(s+5)(s+20)] = 450/(s²+25s+100) is overdamped — both responses settle smoothly with no overshoot.",
+    note: "450/[(s+5)(s+20)] = 450/(s²+25s+100) is overdamped — both responses settle smoothly with no overshoot. The step response saturates at the DC gain G(0) = 450/100 = 4.5, not 1.",
     code: `{ Impulse and step response of an overdamped second-order system }
 num = [0, 0, 450]
 den = [1, 25, 100]
@@ -1764,15 +1765,15 @@ Q_required = mass * Cp_below * (T_freeze - T_storage)`,
     code: `{ Problem 3: Psychrometric Room Balancing }
 { AirH2O properties use SI internally: convert °F→K and psia→Pa,
   then divide enthalpy by 2326 to work in Btu/lb throughout. }
-Q_sensible = 90000 [Btu/hr]
-Q_latent = 40000 [Btu/hr]
-V_dot_supply = 3600 [cfm]
+Q_sensible = 90000         { Btu/hr }
+Q_latent = 40000           { Btu/hr }
+V_dot_supply = 3600        { cfm }
 T_supply_db = 55           { °F }
 T_room_db = 78             { °F }
 rh_room = 0.45
 T_oa_db = 92               { °F }
 T_oa_wb = 76               { °F }
-V_dot_oa = 700 [cfm]
+V_dot_oa = 700             { cfm }
 P_atm = 14.696 * 6894.76   { psia → Pa }
 
 V_dot_return = V_dot_supply - V_dot_oa
@@ -1832,16 +1833,16 @@ h_pump = h_total - h_inlet`,
     value: "air-supply-wetbulb",
     title: "HVAC & Refrigeration: Air Supply Wet-Bulb Determination",
     description: "Finds the wet-bulb temperature of the supply air to maintain a room at 75°F db/63°F wb under sensible load and Sensible Heat Factor.",
-    note: "Results: total heat load = 250,000 Btu/hr, supply enthalpy = 20.25 Btu/lb, supply wet-bulb temperature = 55.0°F. (NCEES Problem 9)",
+    note: "Results: total heat load = 250,000 Btu/hr, supply wet-bulb temperature = 55.0°F. (NCEES Problem 9) — enthalpies are on CoolProp's datum, which differs from the ASHRAE chart by a constant that cancels in the load equation's difference.",
     code: `{ Problem 9: Air Supply Wet-Bulb Determination }
 { AirH2O needs SI: convert °F→K and psia→Pa; Enthalpy returns J/kg,
   divide by 2326 to get Btu/lb; multiply back by 2326 for H= input. }
 T_room_db = 75             { °F }
 T_room_wb = 63             { °F }
 T_supply_db = 58           { °F }
-Q_sensible = 200000 [Btu/hr]
+Q_sensible = 200000        { Btu/hr }
 SHF = 0.80
-V_dot_supply = 10700 [cfm]
+V_dot_supply = 10700       { cfm }
 P_atm = 14.696 * 6894.76   { psia → Pa }
 
 T_room_db_K   = (T_room_db   - 32) * 5/9 + 273.15
@@ -2341,11 +2342,13 @@ const CATEGORIES = [
 function renderInlineContent(text: string): React.ReactNode[] {
   const result: React.ReactNode[] = [];
   let i = 0;
-  
+
+  // Order matters only where delimiters share a first character (** before *).
   const spanMarkers = [
+    { delim: '$', type: 'math' },
+    { delim: '`', type: 'code' },
     { delim: '**', type: 'bold' },
     { delim: '*', type: 'italic' },
-    { delim: '`', type: 'code' },
   ] as const;
 
   while (i < text.length) {
@@ -2356,20 +2359,25 @@ function renderInlineContent(text: string): React.ReactNode[] {
         const val = text.substring(i + span.delim.length, endIdx);
         const key = `inline-${span.type}-${i}`;
         if (span.type === 'bold') {
-          result.push(<strong key={key}>{val}</strong>);
+          // Recurse so nested code/math inside bold (e.g. **`Gamma(x):`**) renders.
+          result.push(<strong key={key}>{renderInlineContent(val)}</strong>);
         } else if (span.type === 'italic') {
-          result.push(<em key={key}>{val}</em>);
+          result.push(<em key={key}>{renderInlineContent(val)}</em>);
         } else if (span.type === 'code') {
           result.push(<Code key={key}>{val}</Code>);
+        } else if (span.type === 'math') {
+          result.push(<Latex key={key} math={val} />);
         }
         i = endIdx + span.delim.length;
         continue;
       }
     }
-    
+
+    // No marker here, or an unterminated one: emit text up to the next possible
+    // marker. Scan from i+1 so an unterminated delimiter can't stall the loop.
     let nextIdx = text.length;
     for (const m of spanMarkers) {
-      const idx = text.indexOf(m.delim, i);
+      const idx = text.indexOf(m.delim, i + 1);
       if (idx !== -1 && idx < nextIdx) {
         nextIdx = idx;
       }
@@ -2414,6 +2422,33 @@ function MarkdownRenderer({ content }: MarkdownRendererProps) {
       continue;
     }
     
+    // 1b. Block math: $$ ... $$ (single- or multi-line)
+    if (trimmed.startsWith('$$')) {
+      let mathText: string;
+      if (trimmed.length > 4 && trimmed.endsWith('$$')) {
+        mathText = trimmed.slice(2, -2).trim();
+        i++;
+      } else {
+        const buf: string[] = [trimmed.substring(2)];
+        i++;
+        while (i < lines.length && !lines[i].includes('$$')) {
+          buf.push(lines[i]);
+          i++;
+        }
+        if (i < lines.length) {
+          buf.push(lines[i].substring(0, lines[i].indexOf('$$')));
+          i++;
+        }
+        mathText = buf.join('\n').trim();
+      }
+      elements.push(
+        <div key={`blockmath-${i}`} style={{ margin: '0.6em 0', overflowX: 'auto' }}>
+          <Latex math={mathText} block />
+        </div>
+      );
+      continue;
+    }
+
     // 2. Table Block
     if (trimmed.startsWith('|')) {
       // Parse header row
@@ -2618,7 +2653,22 @@ export default function HelpPage() {
       return (
         <Stack gap="md">
           <Title order={2} c="blue.4">Engineering Examples Library</Title>
-          <Text>Browse the examples by discipline below. Copy the code directly into the workspace using the copy button:</Text>
+          <Text>
+            Verified, ready-to-run problems grouped by discipline. Each lists the
+            result you should get, so you can confirm your solve. Use the{' '}
+            <b>Copy Code</b> button, paste into the editor, and press{' '}
+            <Code>F2</Code> (Solve).
+          </Text>
+          <Alert color="blue" variant="light" icon={<IconBook size={18} />}>
+            <Text size="sm">
+              Examples that solve an implicit or transcendental equation mention a{' '}
+              <b>guess</b> (e.g. “set a guess <Code>yn ≈ 0.6</Code>”). Open{' '}
+              <Code>Ctrl + I</Code> (Variable Info), enter it, then solve — a good
+              guess is usually what makes a nonlinear problem converge. Examples
+              built on a <Code>PARAMETRIC</Code> table are solved from the Tables
+              tab with <b>Solve Table</b>, not the main Solve.
+            </Text>
+          </Alert>
           {WORKSPACE_EXAMPLE_CATEGORIES.length > 0 && (
             <Stack gap="xs">
               <Title order={3} c="cyan.4" mt="sm">Quick Workspace Examples</Title>

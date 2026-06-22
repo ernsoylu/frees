@@ -1,219 +1,287 @@
 [Topic: syntax]
 # Equation Syntax & Rules
 
-The frees compiler parses your code using standard mathematical syntax with a few specific rules.
+frees parses standard mathematical notation with a few rules worth knowing up front.
 
-## Syntax Rules
-- **Equality (`=`):** A single equal sign `=` represents mathematical equality, not assignment. For example, `P * V = m * R * T` is a valid equation. The solver will automatically rearrange it to find any of the variables.
-- **Case Insensitivity:** Variable names are case-insensitive. `Temp`, `TEMP`, and `temp` represent the exact same variable.
-- **Comments:** Comments can be written inside curly braces `{ comment }` or double quotes `"comment"`. Double slashes `//` at the start of a line treat the entire line as markdown text.
-- **Multiplication:** Implicit multiplication is not allowed. You must write `2 * x` instead of `2x`.
-- **Operators:** Standard arithmetic operators `+`, `-`, `*`, `/`, and `^` (exponentiation) are fully supported.
+## Core rules
+- **Equality (`=`)** — a single `=` is mathematical equality, never assignment. `P * V = m * R * T` is valid; the solver rearranges it to find whichever variable is unknown. There is no `==` or `:=` at the top level (those are for `FUNCTION`/`PROCEDURE` bodies).
+- **Case insensitivity** — `Temp`, `TEMP`, and `temp` are one variable. Watch for accidental clashes: a state `T` and a time `t` are the same name (rename one).
+- **No implicit multiplication** — write `2 * x`, not `2x`. Likewise `a(b+c)` is a function call, not `a*(b+c)`.
+- **Operators** — `+`, `-`, `*`, `/`, `^` (exponentiation), and `%` (modulo). `^` is right-binding: `2^3^2 = 2^9`.
+- **Comments** — `{ … }` or `"…"` are inline comments; `//` at the start of a line makes the whole line narrative (markdown). Use comments to label states and document assumptions.
+
+## Built-in constants
+Physical constants are available with a trailing `#` (EES convention) and substituted at parse time:
+
+| Name | Meaning |
+| --- | --- |
+| `pi#` | $\pi$ |
+| `g#` | Standard gravity, $9.80665$ m/s² |
+| `R#` | Universal gas constant, $8.31446$ J/mol·K |
+| `N#a` | Avogadro's number |
+| `k#` | Boltzmann constant |
+| `h#` | Planck constant |
+| `c#` | Speed of light |
+| `sigma#` | Stefan–Boltzmann constant |
+| `epsilon0#` | Vacuum permittivity |
+
+```
+{ Free-fall distance in 3 s }
+d = 0.5 * g# * t^2
+```
 
 [Topic: math-funcs]
 # Mathematical Functions
 
-frees supports a comprehensive set of scalar mathematical functions. Standard functions are fully differentiable.
+frees provides a full set of scalar math functions. All are differentiable, so the solver can build Jacobians for any equation that uses them.
 
-## Hyperbolic Functions
-| Function | Description | Syntax |
-| --- | --- | --- |
-| `sinh(x)` | Hyperbolic sine | `y = sinh(x)` |
-| `cosh(x)` | Hyperbolic cosine | `y = cosh(x)` |
-| `tanh(x)` | Hyperbolic tangent | `y = tanh(x)` |
-| `arcsinh(x)` | Inverse hyperbolic sine | `y = arcsinh(x)` |
-| `arccosh(x)` | Inverse hyperbolic cosine (x >= 1) | `y = arccosh(x)` |
-| `arctanh(x)` | Inverse hyperbolic tangent (-1 < x < 1) | `y = arctanh(x)` |
-
-### Hyperbolic Example
+## Trigonometric (angles in radians)
+`sin`, `cos`, `tan` and their inverses `arcsin`, `arccos`, `arctan` take and return **radians**. Work in degrees with a unit annotation or `Convert`:
 ```
-x = 1.25
-y = sinh(x) + cosh(x)   { Equals exp(1.25) }
+theta = 30 [deg]          { stored as radians internally }
+y = sin(theta)            { 0.5 }
+deg = theta * Convert('rad', 'deg')
+```
+`atan2(y, x)` returns the quadrant-correct angle of the point `(x, y)`:
+```
+phi = atan2(1, -1)        { 2.356 rad = 135 deg }
 ```
 
-## Rounding & Integer Functions
-| Function | Description | Syntax |
-| --- | --- | --- |
-| `round(x, decimals)` | Rounds to decimal places | `y = round(x, 2)` |
-| `floor(x)` | Rounds down to nearest integer | `y = floor(x)` |
-| `ceil(x)` | Rounds up to nearest integer | `y = ceil(x)` |
-| `trunc(x)` | Discards fractional part | `y = trunc(x)` |
-| `sign(x)` | Returns sign (-1, 0, or 1) | `y = sign(x)` |
-| `step(x)` | Unit step (1 if x >= 0, else 0) | `y = step(x)` |
+## Logarithms, exponentials, powers
+| Function | Description |
+| --- | --- |
+| `exp(x)`, `ln(x)`, `log10(x)`, `log2(x)` | exponential and logs (natural / base-10 / base-2) |
+| `sqrt(x)`, `cbrt(x)` | square / cube root |
+| `abs(x)` | absolute value |
+| `min(a,b,…)`, `max(a,b,…)` | element selection |
+| `mod(a, b)`, `gcd(a, b)`, `lcm(a, b)` | modulo, greatest common divisor, least common multiple |
+| `factorial(n)` | $n!$ (integer) |
 
-### Rounding Example
+## Hyperbolic
+`sinh`, `cosh`, `tanh` and `arcsinh`, `arccosh` (x ≥ 1), `arctanh` (|x| < 1). Note `sinh(x) + cosh(x) = exp(x)`.
+
+## Rounding & integer
+| Function | Description |
+| --- | --- |
+| `round(x, decimals)` | round to `decimals` places |
+| `floor(x)` / `ceil(x)` / `trunc(x)` | round down / up / toward zero |
+| `sign(x)` | -1, 0, or 1 |
+| `step(x)` | unit step (1 if x ≥ 0, else 0) |
+
 ```
 val1 = round(3.14159, 3)   { 3.142 }
 val2 = floor(2.7)          { 2 }
 val3 = step(0.5)           { 1 }
 ```
 
-## Conditional Selection & Series
-| Function | Description | Syntax |
-| --- | --- | --- |
-| `If(a, b, lt, eq, gt)` | Inline conditional choice | `y = If(a, b, lt, eq, gt)` |
-| `Sum(i, start, end, term)`| Summation series | `y = Sum(i, 1, 4, i^2)` |
-| `Product(i, start, end, term)`| Product series | `y = Product(i, 1, 4, i)` |
-| `average(a, b, ...)` | Arithmetic mean | `y = average(a, b, c)` |
+## Conditional selection & series
+| Function | Description |
+| --- | --- |
+| `If(a, b, lt, eq, gt)` | returns `lt` if `a<b`, `eq` if `a=b`, `gt` if `a>b` |
+| `Sum(i, start, end, term)` | $\sum_{i=start}^{end} term$ |
+| `Product(i, start, end, term)` | $\prod_{i=start}^{end} term$ |
+| `average(a, b, …)` | arithmetic mean |
 
-### Conditional & Series Example
+`If` is the inline branch for the declarative top level (use `IF…THEN…ELSE` inside `FUNCTION`/`PROCEDURE` bodies):
 ```
-{ If temperature > 300 K, select 1.8, else 1.2 }
+{ Pick k = 1.8 above 300 K, else 1.2 }
 temp = 350 [K]
-k = If(temp, 300, 1.2, 1.5, 1.8)  { k = 1.8 }
+k = If(temp, 300, 1.2, 1.5, 1.8)   { k = 1.8 }
 
-{ Sum of squares: 1^2 + 2^2 + 3^2 + 4^2 = 30 }
+{ Sum of squares 1+4+9+16 = 30 }
 s = Sum(i, 1, 4, i^2)
-```
-
-## Trigonometric Functions
-Trigonometric functions `sin(x)`, `cos(x)`, `tan(x)` and their inverses `arcsin(x)`, `arccos(x)`, `arctan(x)` accept and return angles in **radians**. Use `Convert('deg', 'rad')` or unit annotations like `[deg]` to work in degrees.
-
-### Two-Argument Arctangent
-`atan2(y, x)` returns the quadrant-correct angle of the coordinate `(x, y)` in radians.
-```
-theta = atan2(1, -1)   { theta = 3/4 * pi = 2.356 rad (135 deg) }
 ```
 
 [Topic: special-funcs]
 # Special & Statistical Functions
 
-frees provides special transcendental functions and statistical distribution functions.
+Transcendental and statistical distribution functions for less common but important calculations.
 
-## Statistical Distributions
-- **`Probability(x, mean, stddev):`** Evaluates the cumulative normal distribution (CDF) at `x`.
-- **`Chi_Square(x, df):`** Evaluates the cumulative chi-square distribution at `x` with `df` degrees of freedom.
-- **`Random(a, b[, seed]):`** Uniform random number in `[a, b]`.
-- **`RandG(mean, stddev[, seed]):`** Gaussian random number.
+## Statistical distributions
+- **`Probability(x, mean, stddev)`** — cumulative normal CDF at `x`.
+- **`Chi_Square(x, df)`** — cumulative chi-square CDF at `x` with `df` degrees of freedom.
+- **`Random(a, b[, seed])`** — uniform random number in `[a, b]`.
+- **`RandG(mean, stddev[, seed])`** — Gaussian random number.
 
-## Special Mathematical Functions
-- **`Gamma(x):`** Gamma function $\Gamma(x)$ where $\Gamma(n+1) = n!$.
-- **`LogGamma(x):`** Natural log of the gamma function, $\ln \Gamma(x)$.
-- **`Digamma(x):`** Digamma function $\psi(x) = \frac{d}{dx} \ln \Gamma(x)$.
-- **`Beta(a, b):`** Beta function $B(a, b) = \frac{\Gamma(a)\Gamma(b)}{\Gamma(a+b)}$.
-- **`Erf(x) / Erfc(x) / ErfInv(x):`** Error function, complementary error function, and inverse error function.
-- **`BesselJ(n, x) / BesselY(n, x):`** Bessel functions of the first and second kinds of order $n$.
-- **`BesselI(n, x) / BesselK(n, x):`** Modified Bessel functions of the first and second kinds.
-
-### Statistical Example
 ```
-{ Normal CDF probability }
-prob = Probability(85, 80, 5)   { prob = 0.8413 }
+prob = Probability(85, 80, 5)   { 0.8413 }
 ```
+
+## Special mathematical functions
+- **`Gamma(x)`** — $\Gamma(x)$, with $\Gamma(n+1)=n!$.
+- **`LogGamma(x)`** — $\ln \Gamma(x)$ (avoids overflow for large x).
+- **`Digamma(x)`** — $\psi(x) = \frac{d}{dx}\ln\Gamma(x)$.
+- **`Beta(a, b)`** — $B(a,b) = \frac{\Gamma(a)\Gamma(b)}{\Gamma(a+b)}$.
+- **`Erf(x)` / `Erfc(x)` / `ErfInv(x)`** — error function, complementary, and inverse.
+- **`BesselJ(n, x)` / `BesselY(n, x)`** — Bessel functions of the first and second kind, order $n$.
+- **`BesselI(n, x)` / `BesselK(n, x)`** — modified Bessel functions of the first and second kind.
 
 [Topic: variables]
 # Variables, Guesses & Bounds
 
-When compiling and solving equations, managing variables and degrees of freedom is essential.
-
-## Degrees of Freedom (DoF)
-A system of equations is solvable only when the number of equations equals the number of variables ($DoF = 0$).
+A system is solvable only when the number of equations equals the number of unknowns — the **degrees of freedom (DoF)** are zero. Press **F4** (Check) to see the DoF and confirm the system is well-posed before solving.
 
 [Diagram: DoF]
 
-## Variable Information Panel
-Press `Ctrl + I` to open the **Variable Information** panel. Here, you can configure:
-- **Guess Value:** The starting point for the Newton-Raphson solver. Good guesses are critical for nonlinear equations.
-- **Lower/Upper Bounds:** Physical limits for the variable (e.g., set Lower Bound for absolute temperature $T \ge 0$). This prevents the solver from evaluating mathematically invalid domains (e.g., negative square roots or logs).
-- **Fixed:** Lock a variable to its guess value, turning it into a constant parameter for that run. This reduces the number of unknowns by 1.
+## The Variable Information panel
+Open it with `Ctrl + I`. For every variable you can set:
+
+- **Guess** — the starting point for the Newton-Raphson solver. Required for nonlinear equations; a poor guess is the most common cause of non-convergence.
+- **Lower / Upper bounds** — physical limits that keep the solver out of invalid domains (e.g. `T ≥ 0`, `0 ≤ x ≤ 1` for a quality or fraction, `P > 0`).
+- **Fixed** — locks the variable to its guess, removing it from the unknowns. Handy for "what if I hold this constant" studies.
+
+## Why guesses matter
+The Colebrook friction equation is transcendental — it has no closed form, so frees iterates from a guess. Without a guess it may diverge or land on the wrong branch:
+
+```
+Re = 1e5
+eps = 0.00015
+D = 0.25 [m]
+{ ff is unknown — set a guess of ~0.02 in Variable Info }
+1/sqrt(ff) = -2*log10(eps/(3.7*D) + 2.51/(Re*sqrt(ff)))
+```
+A guess near `0.02` converges in a few iterations; a guess of `0.5` may stall. As a rule of thumb, guess dimensionless ratios near `0.5`, temperatures/pressures near the expected magnitude, and flow rates near the order of magnitude you expect.
+
+> **Tip:** For implicit property lookups (e.g. `h = Enthalpy(Water, P=P, s=s)`), a guess on the unknown output variable also helps the solver pick the right two-phase region.
 
 [Topic: uncertainty]
 # Uncertainty Propagation
 
-frees includes automatic first-order uncertainty propagation. This allows you to evaluate how experimental tolerances or measurement errors propagate through your mathematical models.
+frees does automatic **first-order** uncertainty propagation: declare the tolerance of each measured input, and it propagates the uncertainty to every dependent result using the root-sum-of-squares (RSS) rule. You don't write the partial derivatives — the solver computes them from the numerical Jacobian.
 
-## How it Works
-1. **Declare Input Uncertainties:** Define the absolute uncertainty of your independent parameters using `UncertaintyOf(varName)`.
-2. **Propagate:** The solver automatically evaluates the sensitivity coefficients using numerical Jacobians and propagates the errors using Root-Sum-Square (RSS) combination:
-   $$u_y = \sqrt{\sum \left(\frac{\partial y}{\partial x_i} u_{x_i}\right)^2}$$
+## How to use it
+1. **Declare input uncertainties** with `UncertaintyOf(var) = value` on your independent (measured) variables.
+2. **Query output uncertainties** with `UncertaintyOf(var)` on any dependent variable — frees returns its propagated absolute uncertainty.
 
-### Uncertainty Example
+The combination rule is:
+$$u_y = \sqrt{\sum \left(\frac{\partial y}{\partial x_i} u_{x_i}\right)^2}$$
+
+## Worked example
 ```
-{ Define the nominal values }
+{ Nominal values }
 P = 100000 [Pa]
 T = 300 [K]
 R = 287 [J/kg-K]
-P = rho * R * T
+P = rho * R * T          { rho is the computed result }
 
-{ Declare the input uncertainties }
+{ Measured-input uncertainties }
 UncertaintyOf(P) = 500 [Pa]
 UncertaintyOf(T) = 2.0 [K]
 
-{ Query the propagated uncertainty of density }
+{ Propagated uncertainty in density }
 unc_rho = UncertaintyOf(rho)
 ```
+Only independent inputs should carry a declared uncertainty; assigning one to a computed output that you also query is redundant. Uncertainties are shown alongside each value in the Solution panel.
 
 [Topic: units]
 # Units & Dimensional Consistency
 
-frees automatically checks your equations for dimensional consistency. All calculations run strictly in SI base units under the hood.
+frees checks every equation for dimensional consistency and runs all calculations in SI base units internally. You annotate **inputs** for convenience; **results** come back in SI and you convert or label them as needed.
 
-## Unit Annotations
-Annotate numerical values in brackets. The compiler converts them to SI equivalents at compile time:
+## Annotating inputs
+Bracket a numeric literal to tag it with a unit; the compiler converts it to SI at parse time:
 ```
-P = 140 [kPa]    { Converted to 140000 Pa }
-m = 120 [lb]     { Converted to 54.43 kg }
+P = 140 [kPa]      { stored as 140000 Pa }
+m = 120 [lb]       { stored as 54.43 kg }
+T = 25 [C]         { stored as 298.15 K }
+```
+The full list of recognized units and built-in constants lives in the reference table below (`[Component: UnitsReference]`).
+
+## Results are SI
+A computed result has the SI unit of its expression — `P * Vol = m * R * T` gives `m` in kg, `q = k*A*dT/L` gives watts. To display in engineering units, either convert explicitly or annotate a derived variable:
+```
+P_kPa = P / 1000          { kPa, by division }
+P_kPa2 [kPa] = P          { annotated form }
 ```
 
-## The Convert() Function
-Use `Convert(From, To)` to apply multiplication scaling factors:
+## The Convert() function
+`Convert(From, To)` returns the pure scaling factor between two units of the **same dimension** (no offset):
 ```
-area_in2 = area_ft2 * Convert(ft^2, in^2)
+area_in2 = area_ft2 * Convert(ft^2, in^2)     { ×144 }
 ```
 
-## Temperature Conversions
-Since temperature scales use offsets as well as scaling, use `ConvertTemp(From, To, value)` instead of `Convert`:
+## Temperature conversions
+Temperature scales have offsets as well as scaling, so use `ConvertTemp(From, To, value)` instead of `Convert`:
 ```
 T_f = ConvertTemp(C, F, 100)   { 212 F }
 T_k = ConvertTemp(F, K, 32)    { 273.15 K }
 ```
+
+## Worked example
+```
+{ Pressure in psi, result wanted in kPa }
+P_psi = 100 [psi]
+P_Pa  = P_psi * Convert(psi, Pa)     { scaling only }
+P_kPa = P_Pa / 1000                  { 689.5 kPa }
+```
+
+> **Common pitfall:** `Convert` works for differences and ratios (kPa, ft², mph); it does **not** handle temperature offsets. Mixing them — e.g. `Convert(C, K)` — gives a wrong result. Always use `ConvertTemp` for absolute temperatures.
 
 [Component: UnitsReference]
 
 [Topic: arrays]
 # Arrays & For Loops
 
-Arrays are represented using indices inside square brackets: `T[1]`, `P[5]`.
+An array element is written with a 1-based index in square brackets: `T[1]`, `P[5]`. Declare the array's size with a slice suffix when you first use it (`T[1:5]`), so the compiler can allocate it; afterwards the bare name works.
 
-## Generating Repetitive Equations
-Use a `FOR` loop block to generate equations over index ranges:
+## The FOR loop = equation expansion
+A `FOR ... END` block isn't a runtime loop — the compiler **expands** it into one equation per index at compile time. This is the idiomatic way to generate a family of equations (one per state point, node, or time step):
 ```
+{ One enthalpy equation per state }
+P[1:3] = [8000, 2000, 10]      { kPa }
+T[1:3] = [480, 200, 45]        { C }
 FOR i = 1 TO 3
-  h[i] = Enthalpy(Water, T=T[i], P=P[i])
+  h[i] = Enthalpy(Water, P=P[i], T=T[i])
 END
 ```
+The loop variable (`i`) is local to the block and must not clash with a model variable (names are case-insensitive).
 
-## Array Helper Functions
-- **`ArrayElmt(array[1:N], index):`** Retrieves the value of an array element at a dynamically computed index:
+## Array helper functions
+- **`ArrayElmt(array[1:N], index)`** — element at a **dynamically computed** index. Use it when the index is itself a variable (a plain `T[idx]` only works with a literal index):
 ```
 idx = 3
-val = ArrayElmt(T[1:10], idx)   { Returns the value of T[3] }
+val = ArrayElmt(T[1:10], idx)   { the value of T[3] }
 ```
+
+> **Tip:** for matrices and vectors declared with literals, see *Declaring Matrices & Vectors*. For column-by-column access to solved tables, see *Table Accessors & Aggregates*.
 
 [Topic: complex]
 # Complex Numbers
 
-frees natively supports complex numbers.
+frees supports complex numbers natively. A complex variable is stored as two real scalars: append `_r` for the real part and `_i` for the imaginary part. So `Z_r = 10` and `Z_i = 5` together represent $Z = 10 + 5j$.
 
-## Naming Conventions
-A complex variable is represented by suffixing `_r` (real) and `_i` (imaginary) to the variable name components (e.g. `Z_r = 10`, `Z_i = 5` represent $Z = 10 + 5j$).
+Arithmetic operators (`+`, `-`, `*`, `/`, `^`) work on the paired `_r`/`_i` variables automatically — you write `Z = A * B` and frees keeps both components in step.
 
-## Helper Functions
-- **`Real(z):`** Extracts the real part.
-- **`Imag(z):`** Extracts the imaginary part.
-- **`Conj(z):`** Computes the complex conjugate.
-- **`Magnitude(z):`** Computes the modulus $|z|$.
-- **`Angle(z):`** Returns argument in radians.
-- **`AngleDeg(z):`** Returns argument in degrees.
-- **`Cis(theta):`** Computes $e^{j\theta} = \cos \theta + j\sin \theta$.
+## Helper functions
+| Function | Returns |
+| --- | --- |
+| `Real(z)` / `Imag(z)` | real / imaginary part |
+| `Conj(z)` | complex conjugate |
+| `Magnitude(z)` | modulus $\lvert z \rvert$ |
+| `Angle(z)` / `AngleDeg(z)` | argument in radians / degrees |
+| `Cis(theta)` | $e^{j\theta} = \cos\theta + j\sin\theta$ |
+
+```
+{ Build a phasor from magnitude and angle }
+Z_r = Magnitude_r      { reuse the real parts }
+Z_i = 0
+A = Cis(phi)           { unit phasor at angle phi }
+```
 
 [Topic: strings]
 # String Variables & Functions
 
-String variables are identified by a trailing `$` symbol, and string literals use single quotes (e.g. `'R134a'`). They are resolved at compile time — for example as a fluid name in a property call.
+A string variable ends with `$` (e.g. `fluid$`), and string literals use **single** quotes (`'R134a'`, `'wall'`). Strings are resolved at compile time — most often as a fluid name in a property call, or as a geometry label for the Heisler functions.
 
-## String Functions
-These functions take string-literal arguments and return a number:
-- **`StringLen(s):`** Number of characters in a string.
-- **`StringPos(s, sub):`** 1-based index of the first occurrence of `sub` in `s` (0 if not found).
-- **`StringVal(s):`** Converts a numeric string to a scalar (e.g. `StringVal('3.14')` → `3.14`).
+```
+fluid$ = 'R134a'
+h = Enthalpy(fluid$, P=P1, x=1)     { fluid name from a string variable }
+```
+
+## String functions
+These take string-literal (or string-variable) arguments and return a number:
+- **`StringLen(s)`** — number of characters.
+- **`StringPos(s, sub)`** — 1-based index of the first occurrence of `sub` in `s` (0 if not found).
+- **`StringVal(s)`** — convert a numeric string to a scalar (`StringVal('3.14')` → `3.14`).
+
+String-returning functions (also suffixed `$`) include `LowerCase$`, `UpperCase$`, `Trim$`, `Concat$`, `Copy$`, `Chr$`, `Date$`, `Time$`, `TimeStamp$`, `UnitSystem$`, and `UnitsOf$`.
