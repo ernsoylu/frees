@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { ActionIcon, Group, Tooltip } from '@mantine/core'
 import { IconTrash } from '@tabler/icons-react'
-import { replEvaluate, VariableResult } from './api'
+import { replEvaluate, VariableResult, type UnitSystem } from './api'
 import { REPL_BANNER } from './version'
 
 /**
@@ -33,6 +33,8 @@ interface Props {
   replNames?: Set<string>
   /** All callable function names (built-ins + property functions) for Tab-completion. */
   functions?: string[]
+  /** Current preferred display unit system — labels REPL results accordingly. */
+  unitSystem?: UnitSystem
   /** Called when a line defines/changes a variable, so the workspace can reflect it. */
   onAssign?: (v: VariableResult) => void
   /** Run Check (same as the toolbar Check button) when the user types `check`. */
@@ -67,7 +69,7 @@ function longestCommonPrefix(words: string[]): string {
 }
 
 export default function ReplTerminal({
-  sessionId, variables, replNames = new Set(), functions = [], onAssign, onCheck, onSolve, onClear, onClearVar,
+  sessionId, variables, replNames = new Set(), functions = [], unitSystem, onAssign, onCheck, onSolve, onClear, onClearVar,
 }: Readonly<Props>) {
   const [lines, setLines] = useState<Line[]>([{ kind: 'info', text: BANNER }])
   const [input, setInput] = useState('')
@@ -223,7 +225,7 @@ Symbolic CAS (Symja) — returns a transformed expression as text:
 
     setBusy(true)
     try {
-      const res = await replEvaluate(sessionId, expr)
+      const res = await replEvaluate(sessionId, expr, unitSystem)
       if (res.success) {
         append({ kind: 'result', text: res.text ?? String(res.value ?? '') })
         // An assignment (name set) updates the workspace so the Variable Explorer
@@ -243,7 +245,7 @@ Symbolic CAS (Symja) — returns a transformed expression as text:
       // Refocus after the async round-trip.
       requestAnimationFrame(() => inputRef.current?.focus())
     }
-  }, [input, busy, sessionId, append, variables, replNames, onAssign, onCheck, onSolve, onClear, onClearVar])
+  }, [input, busy, sessionId, unitSystem, append, variables, replNames, onAssign, onCheck, onSolve, onClear, onClearVar])
 
   const complete = useCallback(() => {
     // Complete the identifier token immediately left of the cursor against

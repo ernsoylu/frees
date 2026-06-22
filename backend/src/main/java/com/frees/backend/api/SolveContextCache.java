@@ -49,6 +49,13 @@ public class SolveContextCache {
         public Map<String, ProcDef> defs() { return defs; }
         public UnitRegistry.UnitSystem system() { return system; }
 
+        /** Sets the preferred display unit system. Applied on every REPL
+         *  evaluate so the terminal reflects the live preference even before a
+         *  re-solve (the solve snapshot otherwise pins a possibly-stale system). */
+        public void setSystem(UnitRegistry.UnitSystem system) {
+            this.system = system != null ? system : UnitRegistry.UnitSystem.SI;
+        }
+
         /** SI values visible to expression math: solve snapshot with REPL overlay on top. */
         public Map<String, Double> siValues() {
             if (overlaySi.isEmpty()) return siValues;

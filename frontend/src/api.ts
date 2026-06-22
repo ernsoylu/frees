@@ -346,12 +346,16 @@ export interface ReplResponse {
 }
 
 /** Evaluates a single REPL expression against the session's last solve. */
-export async function replEvaluate(sessionId: string, expression: string): Promise<ReplResponse> {
+export async function replEvaluate(
+  sessionId: string,
+  expression: string,
+  unitSystem?: UnitSystem,
+): Promise<ReplResponse> {
   try {
     const response = await fetch(`${API_BASE}/api/repl/evaluate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sessionId, expression }),
+      body: JSON.stringify({ sessionId, expression, unitSystem: unitSystem ?? null }),
     })
     if (!response.ok) {
       return { success: false, value: null, text: null, units: null, uncertainty: null, error: `Server error (${response.status})`, name: null }

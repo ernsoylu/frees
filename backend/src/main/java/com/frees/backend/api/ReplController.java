@@ -1,5 +1,6 @@
 package com.frees.backend.api;
 
+import com.frees.backend.units.UnitRegistry;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -30,7 +31,7 @@ public class ReplController {
         this.evaluator = evaluator;
     }
 
-    public record ReplRequest(String sessionId, String expression) {}
+    public record ReplRequest(String sessionId, String expression, String unitSystem) {}
 
     public record ReplVarDto(String name, double value, String units, Double uncertainty) {}
 
@@ -43,6 +44,16 @@ public class ReplController {
         // session() (not peek) so assignments and literal math work even before a
         // solve; references to unknown variables still fail naturally.
         SolveContextCache.Session session = cache.session(request.sessionId());
+        // Apply the caller's current preferred unit system on every call so the
+        // REPL labels results with the live preference (e.g. kPa under ENG_SI)
+        // rather than the system pinned by the last solve.
+        if (request.unitSystem() != null && !request.unitSystem().isBlank()) {
+            try {
+                session.setSystem(UnitRegistry.UnitSystem.valueOf(request.unitSystem().toUpperCase()));
+            } catch (IllegalArgumentException ignored) {
+                // Unknown system string — keep the session's current system.
+            }
+        }
         ReplEvaluator.Outcome o = evaluator.evaluate(request.expression(), session);
         return ResponseEntity.ok(new ReplResponse(
                 o.success(), o.value(), o.text(), o.unit(), o.uncertainty(), o.error(), o.assignedName(), o.assignedVariables()));
