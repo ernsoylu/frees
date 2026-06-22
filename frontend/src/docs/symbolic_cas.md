@@ -84,6 +84,8 @@ frees represents LTI systems using standard array/matrix variables rather than i
 
 Use `CALL` dispatches to convert between representations. The solver automatically registers output shapes so variables can be used as bare names downstream.
 
+> **Output sizes are inferred.** You may write `CALL` outputs as **bare names** — frees sizes each output array from the inputs (e.g. `num`/`den` get length `n+1`, a Bode `mag` matches `omega`). Explicit slices like `num[1:3]` still work and are shown in the examples for clarity. Only value-dependent counts need an explicit size: the finite-zero counts of `zero`/`tf2zp` (e.g. `zr[1:2]`) and the `rlocus` sweep length. The same control-systems `CALL` functions, and the symbolic transforms below, are also available in the **REPL terminal** (see *REPL Terminal & Workspace*), where `Factor`, `Expand`, `Apart`, `Laplace`, `InverseLaplace`, `Diff` and `Integrate` run interactively.
+
 ### 1. State Space to Transfer Function: ss2tf
 ```
 CALL ss2tf(A, B, C, D : num[1:3], den[1:3])
