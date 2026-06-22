@@ -16,6 +16,7 @@ import {
 } from '@mantine/core'
 import {
   IconAdjustments,
+  IconBrush,
   IconChartGridDots,
   IconChartLine,
   IconChecks,
@@ -70,6 +71,7 @@ const VIEWS = [
     icon: IconChartGridDots,
   },
   { value: 'diagram', label: 'Diagram', tip: 'Diagram — interactive schematic editor', icon: IconSchema },
+  { value: 'whiteboard', label: 'Whiteboard', tip: 'Whiteboard — Excalidraw freehand sketch canvas', icon: IconBrush },
   { value: 'workspace', label: 'Variables', tip: 'Variable Explorer — live solved state & variable info', icon: IconVariable },
   { value: 'terminal', label: 'Terminal', tip: 'Terminal — REPL evaluated against the workspace', icon: IconTerminal2 },
 ]
@@ -100,6 +102,13 @@ interface RailProps {
   onOpenDiagram?: (id: string) => void
   onNewDiagram?: () => void
   onDeleteDiagram?: (id: string) => void
+  /** Excalidraw whiteboards available to open as individual windows. */
+  whiteboards?: { id: string; name: string; deletable?: boolean }[]
+  /** Number of whiteboard windows currently open (badge on the Whiteboard icon). */
+  whiteboardCount?: number
+  onOpenWhiteboard?: (id: string) => void
+  onNewWhiteboard?: () => void
+  onDeleteWhiteboard?: (id: string) => void
   onOpenPlot?: (id: string) => void
   onNewPlot?: (kind: 'xy' | 'property' | 'psychro') => void
   onDeletePlot?: (id: string) => void
@@ -362,6 +371,11 @@ export function Rail({
   onOpenDiagram,
   onNewDiagram,
   onDeleteDiagram,
+  whiteboards,
+  whiteboardCount = 0,
+  onOpenWhiteboard,
+  onNewWhiteboard,
+  onDeleteWhiteboard,
   onOpenPlot,
   onNewPlot,
   onDeletePlot,
@@ -432,13 +446,32 @@ export function Rail({
               count={diagramCount}
               idPrefix="diagram:"
               label="Diagram"
-              newActions={[{ label: 'New diagram', onClick: () => onNewDiagram?.() }]}
+              newActions={[
+                { label: 'New diagram', onClick: () => onNewDiagram?.() },
+                { label: 'New whiteboard', onClick: () => onNewWhiteboard?.() },
+              ]}
               emptyLabel="No diagrams yet"
               icon={<IconSchema size={iconSize} stroke={1.6} />}
               items={diagrams}
               openIds={openIdSet}
               onOpen={onOpenDiagram}
               onDelete={onDeleteDiagram}
+            />
+          ) : view.value === 'whiteboard' && whiteboards ? (
+            <InstanceLauncher
+              key={view.value}
+              expanded={expanded}
+              active={active === 'whiteboard'}
+              count={whiteboardCount}
+              idPrefix="whiteboard:"
+              label="Whiteboard"
+              newActions={[{ label: 'New whiteboard', onClick: () => onNewWhiteboard?.() }]}
+              emptyLabel="No whiteboards yet"
+              icon={<IconBrush size={iconSize} stroke={1.6} />}
+              items={whiteboards}
+              openIds={openIdSet}
+              onOpen={onOpenWhiteboard}
+              onDelete={onDeleteWhiteboard}
             />
           ) : view.value === 'plots' && plots ? (
             <InstanceLauncher

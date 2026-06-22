@@ -21,6 +21,7 @@ import {
   IconChecks,
   IconCode,
   IconDeviceFloppy,
+  IconBrush,
   IconFilePlus,
   IconFolderOpen,
   IconHelp,
@@ -79,6 +80,8 @@ import StatesTab from './StatesTab'
 import type { DigitizedExport } from './DigitizerTab'
 import { loadDiagrams, saveDiagrams } from './diagram/diagramStorage'
 import { DiagramSpec } from './diagram/types'
+import { loadWhiteboards, newWhiteboard, saveWhiteboards } from './whiteboard/whiteboardStorage'
+import { WhiteboardSpec } from './whiteboard/types'
 
 // The Digitizer and Diagram tabs are large, self-contained editors that most
 // sessions never open, so they are code-split and only fetched when their tab
@@ -87,6 +90,9 @@ const DigitizerTab = lazy(() =>
   import('./DigitizerTab').then((m) => ({ default: m.DigitizerTab })),
 )
 const DiagramTab = lazy(() => import('./diagram/DiagramTab'))
+// The Excalidraw whiteboard editor is large and self-contained; code-split it
+// so the Excalidraw bundle is only fetched when a whiteboard window opens.
+const WhiteboardTab = lazy(() => import('./whiteboard/WhiteboardTab'))
 
 // The Plot tab (and its Plotly figure builders) plus the optimization and
 // plot-config modals are also code-split: the Plotly figure machinery is large
@@ -387,6 +393,13 @@ export default function App() {
   const [diagrams, setDiagrams] = useState<DiagramSpec[]>(() =>
     boot?.diagrams?.length ? boot.diagrams : loadDiagrams(),
   )
+  // Excalidraw whiteboards (Epic complement to the native Diagram window):
+  // managed as App-owned state so they round-trip with the .frees project,
+  // exactly like diagrams. The localStorage cache is a fallback when no
+  // unified project exists.
+  const [whiteboards, setWhiteboards] = useState<WhiteboardSpec[]>(() =>
+    boot?.whiteboards ?? loadWhiteboards(),
+  )
   // Diagrams are addressed per-window now; we only need the setter (to track
   // the most-recently-created/focused diagram for new-window opening).
   const [, setActiveDiagramId] = useState<string | null>(() => {
@@ -417,6 +430,13 @@ export default function App() {
     saveDiagrams(diagrams)
   }, [diagrams])
 
+  // Whiteboards can carry large embedded image data, so debounce the scratch-
+  // cache write (the unified project autosave at 800ms is the other path).
+  useEffect(() => {
+    const id = setTimeout(() => saveWhiteboards(whiteboards), 800)
+    return () => clearTimeout(id)
+  }, [whiteboards])
+
   // Story 10.10: the current App-owned slices of the unified project. Child-owned
   // slices (digitizer, custom components) are read from their localStorage caches
   // by buildProject(), so they are captured without lifting them into App.
@@ -431,8 +451,9 @@ export default function App() {
       tables,
       plots,
       diagrams,
+      whiteboards,
     }),
-    [text, varDrafts, stopCriteria, unitSystem, fillMissing, stateUnitIds, tables, plots, diagrams],
+    [text, varDrafts, stopCriteria, unitSystem, fillMissing, stateUnitIds, tables, plots, diagrams, whiteboards],
   )
 
   // Debounced autosave of the entire workspace to a single localStorage key,
@@ -460,7 +481,7 @@ export default function App() {
     }
     isDirtyRef.current = true
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [text, tables, plots, diagrams, varDrafts])
+  }, [text, tables, plots, diagrams, whiteboards, varDrafts])
 
   // Apply an opened/loaded project to every workspace slice. Child-owned slices
   // are written back to their caches and the relevant tabs are remounted (epoch
@@ -478,6 +499,7 @@ export default function App() {
     setPlots(p.plots ?? [])
     setDiagrams(p.diagrams ?? [])
     setActiveDiagramId(p.diagrams?.[0]?.id ?? null)
+    setWhiteboards(p.whiteboards ?? [])
     // Diagrams present at project-open mount in Run view (see initialMode prop).
     runOnLoadDiagramIdsRef.current = new Set((p.diagrams ?? []).map((d) => d.id))
     setResult(null)
@@ -491,6 +513,11 @@ export default function App() {
       const firstDiagram = p.diagrams?.[0]
       if (firstDiagram) {
         dockRef.current?.openInstance(`diagram:${firstDiagram.id}`, 'diagram', firstDiagram.name)
+      }
+      // Surface the first whiteboard too, if any.
+      const firstWhiteboard = p.whiteboards?.[0]
+      if (firstWhiteboard) {
+        dockRef.current?.openInstance(`whiteboard:${firstWhiteboard.id}`, 'whiteboard', firstWhiteboard.name)
       }
     })
   }, [])
@@ -589,6 +616,7 @@ export default function App() {
       tables: [],
       plots: [],
       diagrams: [],
+      whiteboards: [],
       customComponents: null,
       digitizer: null,
       dockLayout: null,
@@ -600,6 +628,7 @@ export default function App() {
     setPlots([])
     setDiagrams([])
     setActiveDiagramId(null)
+    setWhiteboards([])
     setResult(null)
     setCheckResult(null)
     setProjectName('untitled')
@@ -1179,12 +1208,13 @@ export default function App() {
       ...diagrams.map((d) => `diagram:${d.id}`),
       ...mergedPlots.map((p) => `plot:${p.id}`),
       ...tables.map((t) => `table:${t.id}`),
+      ...whiteboards.map((w) => `whiteboard:${w.id}`),
       ...(result?.stateTableDefs ?? checkResult?.stateTableDefs ?? []).map((s) => `state:${s.name}`),
     ])
     for (const w of openWindows) {
       if (!valid.has(w.id)) dockRef.current?.close(w.id)
     }
-  }, [diagrams, mergedPlots, tables, openWindows, result?.stateTableDefs, checkResult?.stateTableDefs])
+  }, [diagrams, mergedPlots, tables, whiteboards, openWindows, result?.stateTableDefs, checkResult?.stateTableDefs])
 
   // Keep dock tab titles in sync with instance names (so renames in the
   // Inspector show on the tabs). Deferred out of the commit cycle so dockview's
@@ -1194,9 +1224,10 @@ export default function App() {
       for (const d of diagrams) dockRef.current?.setTitle(`diagram:${d.id}`, d.name)
       for (const p of mergedPlots) dockRef.current?.setTitle(`plot:${p.id}`, p.name)
       for (const t of tables) dockRef.current?.setTitle(`table:${t.id}`, t.name)
+      for (const w of whiteboards) dockRef.current?.setTitle(`whiteboard:${w.id}`, w.name)
     })
     return () => cancelAnimationFrame(raf)
-  }, [diagrams, mergedPlots, tables])
+  }, [diagrams, mergedPlots, tables, whiteboards])
 
   const baseVariables =
     solutions.length > 0 ? solutions[0].variables : result?.variables ?? []
@@ -1248,6 +1279,16 @@ export default function App() {
     const d = diagrams[diagrams.length - 1]
     if (d) dockRef.current?.openInstance(`diagram:${d.id}`, 'diagram', d.name)
     else createDiagram()
+  }
+  const createWhiteboard = () => {
+    const wb = newWhiteboard(whiteboards.length)
+    setWhiteboards((prev) => [...prev, wb])
+    requestAnimationFrame(() => dockRef.current?.openInstance(`whiteboard:${wb.id}`, 'whiteboard', wb.name))
+  }
+  const openLatestOrNewWhiteboard = () => {
+    const wb = whiteboards[whiteboards.length - 1]
+    if (wb) dockRef.current?.openInstance(`whiteboard:${wb.id}`, 'whiteboard', wb.name)
+    else createWhiteboard()
   }
   const openLatestOrNewTable = () => {
     const t = tables[tables.length - 1]
@@ -1301,6 +1342,7 @@ export default function App() {
         } },
         { id: 'view-digitizer', label: 'Graph Digitizer', leftSection: <IconChartGridDots size={18} />, onClick: () => dockRef.current?.open('digitizer') },
         { id: 'view-diagram', label: 'Diagram', description: 'Open the latest diagram (or create one)', leftSection: <IconSchema size={18} />, onClick: openLatestOrNewDiagram },
+        { id: 'view-whiteboard', label: 'Whiteboard', description: 'Open the latest whiteboard (or create one)', leftSection: <IconBrush size={18} />, onClick: openLatestOrNewWhiteboard },
         { id: 'view-inspector', label: 'Inspector', leftSection: <IconSettings size={18} />, onClick: () => dockRef.current?.open('inspector') },
       ],
     },
@@ -1312,6 +1354,7 @@ export default function App() {
         { id: 'new-property-plot', label: 'Add property graph', leftSection: <IconTemperature size={18} />, onClick: () => setNewPlotKind('property') },
         { id: 'new-psychro-plot', label: 'Add psychrometric graph', leftSection: <IconTemperature size={18} />, onClick: () => setNewPlotKind('psychro') },
         { id: 'new-diagram', label: 'Add diagram', leftSection: <IconSchema size={18} />, onClick: createDiagram },
+        { id: 'new-whiteboard', label: 'Add whiteboard', description: 'New Excalidraw freehand sketch canvas', leftSection: <IconBrush size={18} />, onClick: createWhiteboard },
         { id: 'new-state-table', label: 'Add fluid state table', description: 'Insert a STATE TABLE block (fluid-aware circuit) at the caret', leftSection: <IconTemperature size={18} />, onClick: () => insertFunction('STATE TABLE Circuit1(P1, T1, h2)\n  FLUID = Water\nEND\n') },
       ],
     },
@@ -1599,6 +1642,34 @@ export default function App() {
         )
       }
 
+      // Whiteboard (Excalidraw): rename + delete; drawing tools live in the
+      // Excalidraw canvas itself.
+      if (fw?.kind === 'whiteboard') {
+        const wb = whiteboards.find((x) => `whiteboard:${x.id}` === fw.id)
+        return (
+          <div style={bodyStyle}>
+            <Stack gap="xs">
+              <Text size="sm" fw={600} c="teal.4">Whiteboard</Text>
+              <TextInput
+                size="xs"
+                label="Whiteboard name"
+                value={wb?.name ?? ''}
+                onChange={(e) => {
+                  const value = e.currentTarget.value
+                  if (wb) setWhiteboards((prev) => renameById(prev, wb.id, value))
+                }}
+              />
+              <Text size="xs" c="dimmed">Freehand sketch canvas (Excalidraw). Export to PNG/SVG from the toolbar above the canvas.</Text>
+              {wb && (
+                <Button size="xs" variant="light" color="red" onClick={() => setWhiteboards((prev) => prev.filter((x) => x.id !== wb.id))}>
+                  Delete whiteboard
+                </Button>
+              )}
+            </Stack>
+          </div>
+        )
+      }
+
       // Equations: surface the equation tools.
       if (fw?.kind === 'equations') {
         return (
@@ -1716,6 +1787,26 @@ export default function App() {
           isActive={focusedWindow?.id === `diagram:${d.id}`}
           initialMode={runOnLoadDiagramIdsRef.current.has(d.id) ? 'run' : 'develop'}
         />
+        </Suspense>
+      </div>
+    )
+  }
+
+  // Per-instance Whiteboard windows: each Excalidraw whiteboard opens as its
+  // own dock window ("whiteboard:<id>"), mirroring the diagram pattern. The
+  // scene is persisted through App-owned state → .frees file.
+  for (const w of whiteboards) {
+    const winId = `whiteboard:${w.id}`
+    panelTitles[winId] = w.name
+    panelContent[winId] = (
+      <div style={{ height: '100%', minHeight: 0 }}>
+        <Suspense fallback={lazyTabFallback}>
+          <WhiteboardTab
+            key={`whiteboard-${w.id}-${workspaceEpoch}`}
+            singleWhiteboardId={w.id}
+            whiteboards={whiteboards}
+            onWhiteboardsChange={setWhiteboards}
+          />
         </Suspense>
       </div>
     )
@@ -1888,6 +1979,14 @@ export default function App() {
           if (d) dockRef.current?.openInstance(`diagram:${id}`, 'diagram', d.name)
         }}
         onNewDiagram={createDiagram}
+        whiteboards={whiteboards.map((w) => ({ id: w.id, name: w.name, deletable: true }))}
+        whiteboardCount={whiteboards.length}
+        onOpenWhiteboard={(id) => {
+          const wb = whiteboards.find((x) => x.id === id)
+          if (wb) dockRef.current?.openInstance(`whiteboard:${id}`, 'whiteboard', wb.name)
+        }}
+        onNewWhiteboard={createWhiteboard}
+        onDeleteWhiteboard={(id) => setWhiteboards((prev) => prev.filter((w) => w.id !== id))}
         onResetLayout={() => dockRef.current?.reset()}
         onMinMax={() => setShowMinMax(true)}
         onCurveFit={() => setShowCurveFit(true)}
