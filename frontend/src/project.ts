@@ -13,6 +13,7 @@ import type { VariableDraft } from './VariableInfoModal'
 import type { TableSpec } from './tables'
 import type { PlotSpec } from './plots/types'
 import type { DiagramSpec } from './diagram/types'
+import type { WhiteboardSpec } from './whiteboard/types'
 
 const PROJECT_VERSION = 1
 const PROJECT_KEY = 'frees.project'
@@ -35,6 +36,7 @@ export interface ProjectSlices {
   tables: TableSpec[]
   plots: PlotSpec[]
   diagrams: DiagramSpec[]
+  whiteboards: WhiteboardSpec[]
 }
 
 export interface FreesProject extends ProjectSlices {
@@ -138,6 +140,7 @@ function sanitizeProject(project: FreesProject): FreesProject | null {
     tables: Array.isArray(project.tables) ? plainJson(project.tables) : [],
     plots: Array.isArray(project.plots) ? plainJson(project.plots) : [],
     diagrams: Array.isArray(project.diagrams) ? plainJson(project.diagrams) : [],
+    whiteboards: Array.isArray(project.whiteboards) ? plainJson(project.whiteboards) : [],
     customComponents: plainJson(project.customComponents),
     digitizer: plainJson(project.digitizer),
     dockLayout: plainJson(project.dockLayout),
@@ -181,6 +184,7 @@ function migrate(p: FreesProject): FreesProject {
     tables: p.tables ?? [],
     plots: p.plots ?? [],
     diagrams: p.diagrams ?? [],
+    whiteboards: p.whiteboards ?? [],
     customComponents: p.customComponents ?? null,
     digitizer: p.digitizer ?? null,
     dockLayout: p.dockLayout ?? null,
