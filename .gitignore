@@ -16,6 +16,9 @@ frontend/src/docsCatalog.ts
 .idea/
 *.iml
 .vscode/
+# Eclipse / Buildship (local Gradle/JDK paths leak into committed prefs)
+backend/.project
+backend/.settings/
 
 # OS
 .DS_Store
@@ -30,3 +33,4 @@ frontend/tsconfig.tsbuildinfo
 # Playwright test screenshots and results
 screenshots/
 test-results/
+.aider*

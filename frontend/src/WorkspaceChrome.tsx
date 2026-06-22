@@ -30,7 +30,6 @@ import {
   IconHelp,
   IconInfoCircle,
   IconLayoutGrid,
-  IconListDetails,
   IconMathFunction,
   IconPointFilled,
   IconX,
@@ -690,9 +689,8 @@ interface TopBarProps {
   onSaveProjectAs: () => void
   onInsertFunction: (snippet: string) => void
   onOpenExamples: () => void
-  /** Tools menu: open the auxiliary Inspector / Solution edge panels. */
+  /** Tools menu: open the auxiliary Inspector edge panel. */
   onOpenInspector: () => void
-  onOpenSolution: () => void
   /** Tools menu: open the Variable Explorer and the REPL Terminal dock windows. */
   onOpenWorkspace: () => void
   onOpenTerminal: () => void
@@ -853,9 +851,6 @@ export function TopBar(props: Readonly<TopBarProps>) {
             </Menu.Item>
             <Menu.Item leftSection={<IconAdjustments size={14} />} onClick={props.onOpenInspector}>
               Inspector
-            </Menu.Item>
-            <Menu.Item leftSection={<IconListDetails size={14} />} onClick={props.onOpenSolution}>
-              Solution
             </Menu.Item>
           </Menu.Dropdown>
         </Menu>

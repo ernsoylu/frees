@@ -43,7 +43,7 @@ import {
   type IconProps,
 } from '@tabler/icons-react'
 
-const LAYOUT_KEY = 'frees-dock-layout-v2'
+const LAYOUT_KEY = 'frees-dock-layout-v3'
 
 /** Latest panel content, keyed by window kind, read by every dockview panel. */
 const PanelContentContext = createContext<Record<string, ReactNode>>({})
@@ -183,7 +183,7 @@ export function WorkspaceDock({
   const ensureRightEdge = (api: DockviewApi) => {
     const existing = api.getEdgeGroup('right')
     if (existing) return existing
-    return api.addEdgeGroup('right', { id: RIGHT_EDGE_ID, initialSize: 340, minimumSize: 240 })
+    return api.addEdgeGroup('right', { id: RIGHT_EDGE_ID, initialSize: 400, minimumSize: 260 })
   }
 
   const emitOpen = (api: DockviewApi) => {
@@ -215,12 +215,26 @@ export function WorkspaceDock({
     // existing center panel — never the active edge group — so plots/tables/
     // diagrams land next to the Editor instead of beside the edge panels.
     const centerRef = api.panels.find((p) => !edgeKindsRef.current.includes(kindOf(p)))
+    let position: Parameters<DockviewApi['addPanel']>[0]['position']
+    if (centerRef) {
+      // Tab it next to an existing center panel (e.g. the Editor).
+      position = { referencePanel: centerRef.id }
+    } else if (api.getEdgeGroup('right')) {
+      // No center panels left (e.g. the Editor was closed): a bare `undefined`
+      // position would drop the panel into the active group, which is now the
+      // right edge group. Anchor a fresh center group to the LEFT of the edge
+      // group so the window lands in the main area, not beside the edge panels.
+      position = { direction: 'left' }
+    } else {
+      // Empty dock: this becomes the first/root group.
+      position = undefined
+    }
     api.addPanel({
       id,
       component: 'panel',
       title,
       params: { kind },
-      position: centerRef ? { referencePanel: centerRef.id } : undefined,
+      position,
     })
   }
 
@@ -251,6 +265,9 @@ export function WorkspaceDock({
           position: { referenceGroup: RIGHT_EDGE_ID },
         }),
       )
+      // Show the edge group (Variable Explorer) expanded by default rather than
+      // as a collapsed rotated tab, so solved variables are visible immediately.
+      api.getEdgeGroup('right')?.expand()
     }
     api.panels.find((p) => !edgeKindsRef.current.includes(kindOf(p)))?.api.setActive()
   }
@@ -463,6 +480,18 @@ export function WorkspaceDock({
         .dockview-theme-light .dv-content-container:focus,
         .dockview-theme-abyss .dv-content-container:focus {
           outline: none;
+        }
+        /* The expanded edge group lays its content + rotated tab strip out as a
+           row-reverse flex with overflow:hidden. Its content container defaults
+           to min-width:auto, so a panel whose content is wider than the slot
+           (e.g. the Variable Explorer's multi-column table) cannot shrink and
+           overflows — clipping the LEFT side (names, title) since the strip is
+           pinned right. min-width:0 lets the content shrink to the slot so inner
+           scroll containers (the table) handle their own overflow instead. */
+        .dockview-theme-dark .dv-groupview-edge .dv-content-container,
+        .dockview-theme-light .dv-groupview-edge .dv-content-container,
+        .dockview-theme-abyss .dv-groupview-edge .dv-content-container {
+          min-width: 0;
         }
         /* Force the collapsed right/left edge tabs and containers to match
            the main app background and remove the default blue/grey color. */
