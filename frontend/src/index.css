@@ -6,3 +6,7 @@ body,
 #root {
   height: 100%;
 }
+
+.search-result-row:hover {
+  background: light-dark(var(--mantine-color-blue-0), var(--mantine-color-dark-6));
+}
