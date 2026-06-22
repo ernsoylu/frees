@@ -43,6 +43,7 @@ import {
   DEFAULT_STOP_CRITERIA,
   getFluids,
   solve,
+  replClear,
   solveTable,
   SolveResponse,
   StopCriteria,
@@ -106,6 +107,8 @@ const lazyTabFallback = (
 import { PlotSpec, PlotKind } from './plots/types'
 import { plotDefToSpec } from './plots/fromCode'
 import SolutionPanel from './SolutionPanel'
+import Workspace from './Workspace'
+import ReplTerminal from './ReplTerminal'
 import ExamplesModal from './ExamplesModal'
 import ShortcutsModal from './ShortcutsModal'
 import SyntaxHelp from './SyntaxHelp'
@@ -252,6 +255,14 @@ function mergeInferredUnits(
   return next
 }
 
+/** A REPL-defined/changed variable as a frees equation string for the solve
+ *  override list, e.g. {@code {name:'eta',value:0.75,units:''}} → "eta = 0.75",
+ *  {@code {name:'P',value:250000,units:'Pa'}} → "P = 250000 [Pa]". */
+function replOverrideEquation(v: VariableResult): string {
+  const unit = v.units && v.units !== '-' ? ` [${v.units}]` : ''
+  return `${v.name} = ${v.value}${unit}`
+}
+
 export default function App() {
   // Story 10.10: restore the whole workspace from the unified `.frees` project
   // (autosaved to localStorage). Computed once before any state initializer so
@@ -275,6 +286,13 @@ export default function App() {
   const [checkResult, setCheckResult] = useState<CheckResponse | null>(null)
   const [checking, setChecking] = useState(false)
   const [result, setResult] = useState<SolveResponse | null>(null)
+  // Stable id for this document's solve session: tags solves so their result is
+  // cached server-side for the REPL/Workspace, and bottom-terminal visibility.
+  const [sessionId] = useState<string>(() => crypto.randomUUID())
+  // Variables defined or changed directly in the REPL (keyed by lowercased name),
+  // overlaid on the solved variables so the Variable Explorer / Solution reflect
+  // them. Cleared on every solve (the backend resets its session overlay too).
+  const [replVars, setReplVars] = useState<Record<string, VariableResult>>({})
   const [solving, setSolving] = useState(false)
   const [solveCount, setSolveCount] = useState(0)
   const [findAll, setFindAll] = useState(false)
@@ -747,7 +765,13 @@ export default function App() {
     setResult(null)
     setLastSolvedWithFillMissing(false)
     try {
-      const response = await check(effectiveText(), buildVariableInfo(), complexMode, functionTableDtos)
+      const response = await check(
+        effectiveText(),
+        buildVariableInfo(),
+        complexMode,
+        functionTableDtos,
+        Object.values(replVars).map(replOverrideEquation),
+      )
       setCheckResult(response)
       setTables((all) => mergeCodeTables(all, response.codeTables, response.parametricTables))
       // Sync the Variable Information table: keep edited rows for variables
@@ -946,9 +970,15 @@ export default function App() {
         unitSystem,
         shouldFillMissing,
         functionTableDtos,
+        sessionId,
+        // REPL-defined/changed variables take priority over the editor until the
+        // user runs `clear` in the terminal.
+        Object.values(replVars).map(replOverrideEquation),
       )
       setSolvedComplexMode(complexMode)
       setResult(response)
+      // REPL overrides persist across solves (the terminal keeps priority over the
+      // editor); they're dropped only by the `clear` command, not by solving.
       // The Solution panel lives collapsed in the right edge group by default
       // (a rotated tab, like the Inspector) so it is always available without the
       // user opening it by hand. Solving updates its contents but does not
@@ -961,6 +991,21 @@ export default function App() {
       // editor space.
       if (response.success && showFirstRun) dismissFirstRun()
       if (response.success && response.variables) {
+        setReplVars((prev) => {
+          const next = { ...prev }
+          for (const v of response.variables) {
+            const lower = v.name.toLowerCase()
+            if (next[lower]) {
+              next[lower] = {
+                ...next[lower],
+                value: v.value,
+                units: v.units || '',
+                uncertainty: v.uncertainty,
+              }
+            }
+          }
+          return next
+        })
         setVarDrafts((drafts) => {
           const next = { ...drafts }
           for (const v of response.variables) {
@@ -1140,7 +1185,7 @@ export default function App() {
   // restored from a saved layout. Without this they'd render as blank panels.
   useEffect(() => {
     const valid = new Set<string>([
-      'equations', 'table', 'plots', 'digitizer', 'solution', 'states', 'inspector',
+      'equations', 'table', 'plots', 'digitizer', 'workspace', 'terminal', 'solution', 'states', 'inspector',
       ...diagrams.map((d) => `diagram:${d.id}`),
       ...mergedPlots.map((p) => `plot:${p.id}`),
       ...tables.map((t) => `table:${t.id}`),
@@ -1166,6 +1211,23 @@ export default function App() {
   const baseVariables =
     solutions.length > 0 ? solutions[0].variables : result?.variables ?? []
 
+  // Solved variables with the REPL overlay applied: REPL-defined names are
+  // appended, and REPL-changed names override the solved value. Feeds the
+  // Variable Explorer, the Solution rows and the terminal's tab-completion.
+  const replOverlay = Object.values(replVars)
+  const workspaceVariables: VariableResult[] = replOverlay.length === 0
+    ? baseVariables
+    : [
+        ...baseVariables.map((v) => replVars[v.name.toLowerCase()] ?? v),
+        ...replOverlay.filter(
+          (v) => !baseVariables.some((b) => b.name.toLowerCase() === v.name.toLowerCase()),
+        ),
+      ]
+  const replNames = new Set(Object.keys(replVars))
+  // All callable function names (property functions + built-ins) for the
+  // terminal's Tab-completion.
+  const replFunctionNames = FUNCTION_CATEGORIES.flatMap((c) => c.items).map((i) => i.label)
+
   // Fluid state tables declared with STATE TABLE blocks: surfaced in the left
   // Tables menu (tagged by fluid) and opened in the shared Fluid States window.
   const declaredStateDefs = result?.stateTableDefs ?? checkResult?.stateTableDefs ?? []
@@ -1173,8 +1235,8 @@ export default function App() {
   // Use the mode that was active when the result was solved, not the live checkbox
   const resultIsComplex = result !== null && solvedComplexMode
   const solutionRows = resultIsComplex
-    ? buildComplexSolutionRows(baseVariables, solutions)
-    : buildRealSolutionRows(baseVariables, solutions)
+    ? buildComplexSolutionRows(workspaceVariables, solutions)
+    : buildRealSolutionRows(workspaceVariables, solutions)
 
   // Reusable window open/create handlers, shared by the left rail and the
   // command palette so both open real dock windows (not just highlight a tab).
@@ -1573,6 +1635,46 @@ export default function App() {
         </div>
       )
     })(),
+    workspace: (
+      <div style={{ height: '100%', minHeight: 0 }}>
+        <Workspace variables={workspaceVariables} replNames={replNames} onEdit={() => setShowVariableInfo(true)} />
+      </div>
+    ),
+    terminal: (
+      <div style={{ height: '100%', minHeight: 0 }}>
+        <ReplTerminal
+          sessionId={sessionId}
+          variables={workspaceVariables}
+          replNames={replNames}
+          functions={replFunctionNames}
+          onAssign={(v) => setReplVars((prev) => ({ ...prev, [v.name.toLowerCase()]: v }))}
+          onCheck={() => void onCheck()}
+          onSolve={() => void checkThenSolve()}
+          onClear={() => {
+            setReplVars({})
+            setResult(null)
+            setCheckResult(null)
+            setVariables([])
+            void replClear(sessionId)
+          }}
+          onClearVar={(name) => {
+            const lower = name.toLowerCase()
+            const prefix = lower + '['
+            setReplVars((prev) => {
+              const next = { ...prev }
+              delete next[lower]
+              for (const k of Object.keys(next)) {
+                if (k.startsWith(prefix)) {
+                  delete next[k]
+                }
+              }
+              return next
+            })
+            void replClear(sessionId, name)
+          }}
+        />
+      </div>
+    ),
     solution: (
       <div style={{ height: '100%', minHeight: 0 }}>
         <SolutionPanel
@@ -1592,6 +1694,8 @@ export default function App() {
     table: 'Tables',
     plots: 'Plots',
     digitizer: 'Digitizer',
+    workspace: 'Variable Explorer',
+    terminal: 'Terminal',
     solution: 'Solution',
     states: 'Fluid States',
     inspector: 'Inspector',
@@ -1803,7 +1907,6 @@ export default function App() {
         }}
         onNewDiagram={createDiagram}
         onResetLayout={() => dockRef.current?.reset()}
-        onVariableInfo={() => setShowVariableInfo(true)}
         onMinMax={() => setShowMinMax(true)}
         onCurveFit={() => setShowCurveFit(true)}
         onPreferences={() => setShowPreferences(true)}
@@ -1999,6 +2102,8 @@ export default function App() {
           onOpenExamples={() => setShowExamples(true)}
           onOpenInspector={() => dockRef.current?.open('inspector')}
           onOpenSolution={() => dockRef.current?.open('solution')}
+          onOpenWorkspace={() => dockRef.current?.open('workspace')}
+          onOpenTerminal={() => dockRef.current?.open('terminal')}
           onVariableInfo={() => setShowVariableInfo(true)}
           onMinMax={() => setShowMinMax(true)}
           onCurveFit={() => setShowCurveFit(true)}

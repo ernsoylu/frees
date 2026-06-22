@@ -1087,4 +1087,82 @@ beta_tot = sum(beta[1:6])`);
     await shot(page, '25b-inhour-tiled');
   });
 
+  // ── 26: REPL Terminal commands and overrides ──────────────────────────────
+  test('26 · REPL: terminal evaluation, help, vars, and individual clear', async ({ page }) => {
+    await openApp(page);
+    await setCode(page, `a = 10\nb = a * 3`);
+    await clickSolve(page);
+
+    // Open terminal dock from Tools menu
+    await page.locator('button', { hasText: 'Tools' }).first().click();
+    await page.locator('[role="menuitem"]', { hasText: 'Terminal' }).first().click();
+    await page.waitForTimeout(500);
+
+    const replInput = page.locator('input[placeholder*="Evaluate an expression"]').first();
+    await expect(replInput).toBeVisible();
+
+    // 1. Math calculation
+    await replInput.fill('5 + 5');
+    await page.keyboard.press('Enter');
+    await expect(page.locator('text== 10').first()).toBeVisible({ timeout: 5000 });
+
+    // 1b. Verify 'ans' holds the last evaluated value
+    await replInput.fill('ans * 3');
+    await page.keyboard.press('Enter');
+    await expect(page.locator('text== 30').first()).toBeVisible({ timeout: 5000 });
+
+    // 2. help command
+    await replInput.fill('help');
+    await page.keyboard.press('Enter');
+    await expect(page.locator('text=frees REPL Commands & Usage').first()).toBeVisible({ timeout: 5000 });
+
+    // 3. vars command
+    await replInput.fill('vars');
+    await page.keyboard.press('Enter');
+    await expect(page.locator('text=Workspace variables:').first()).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('text=a = 10').first()).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('text=b = 30').first()).toBeVisible({ timeout: 5000 });
+
+    // 4. Set override
+    await replInput.fill('a = 25');
+    await page.keyboard.press('Enter');
+    await expect(page.locator('text=a = 25').first()).toBeVisible({ timeout: 5000 });
+
+    // 5. check vars again for (repl)
+    await replInput.fill('vars');
+    await page.keyboard.press('Enter');
+    await expect(page.locator('text=a = 25 (repl)').first()).toBeVisible({ timeout: 5000 });
+
+    // 6. run solve and verify override
+    await replInput.fill('solve');
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(1000);
+
+    await replInput.fill('b');
+    await page.keyboard.press('Enter');
+    await expect(page.locator('text== 75').first()).toBeVisible({ timeout: 5000 });
+
+    // 7. clear individual variable overlay
+    await replInput.fill('clear a');
+    await page.keyboard.press('Enter');
+    await expect(page.locator('text=Cleared REPL variable overlay: a').first()).toBeVisible({ timeout: 5000 });
+
+    // 8. solve and verify original values restored
+    await replInput.fill('solve');
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(1000);
+
+    await replInput.fill('b');
+    await page.keyboard.press('Enter');
+    await expect(page.locator('text== 30').first()).toBeVisible({ timeout: 5000 });
+
+    // 9. clc clears screen
+    await replInput.fill('clc');
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(200);
+    await expect(page.locator('text== 30').first()).not.toBeVisible();
+
+    await shot(page, '26-repl-terminal-verified');
+  });
+
 });

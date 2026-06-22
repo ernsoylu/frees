@@ -173,12 +173,13 @@ export async function check(
   variableInfo: VariableInfo[],
   complexMode: boolean,
   functionTables: FunctionTableDto[] = [],
+  overrides: string[] = [],
 ): Promise<CheckResponse> {
   try {
     const response = await fetch(`${API_BASE}/api/check`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text, variableInfo, stopCriteria: { complexMode }, functionTables }),
+      body: JSON.stringify({ text, variableInfo, stopCriteria: { complexMode }, functionTables, overrides }),
     })
     if (!response.ok) {
       let errorMessage = `Server error (${response.status})`
@@ -244,11 +245,18 @@ export async function solve(
   displayUnitSystem: UnitSystem,
   fillMissing: boolean,
   functionTables: FunctionTableDto[] = [],
+  sessionId?: string,
+  overrides: string[] = [],
 ): Promise<SolveResponse> {
   try {
     const response = await fetch(`${API_BASE}/api/solve`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        // Tags this solve so its result is cached for the REPL/Workspace of
+        // this document. Omitted-id requests fall back to a shared "default".
+        ...(sessionId ? { 'X-Frees-Session': sessionId } : {}),
+      },
       body: JSON.stringify({
         text,
         stopCriteria,
@@ -257,6 +265,8 @@ export async function solve(
         displayUnitSystem,
         fillMissing,
         functionTables,
+        // REPL overrides ("eta = 0.75") take priority over the editor's value.
+        overrides,
       }),
     })
     if (!response.ok) {
@@ -317,6 +327,73 @@ export async function solve(
       formattedEquations: [],
       formattedReport: undefined,
     }
+  }
+}
+
+/** Result of evaluating one REPL line against the cached solved workspace. */
+export interface ReplResponse {
+  success: boolean
+  /** Numeric result (SI for compound expressions, display value for a bare variable). */
+  value: number | null
+  /** Print-ready rendering, e.g. "600" or "300 ± 0.5 [K]". */
+  text: string | null
+  units: string | null
+  uncertainty: number | null
+  error: string | null
+  /** Set (display spelling) when the line defined a variable, so the UI can reflect it. */
+  name: string | null
+  assignedVariables?: VariableResult[]
+}
+
+/** Evaluates a single REPL expression against the session's last solve. */
+export async function replEvaluate(sessionId: string, expression: string): Promise<ReplResponse> {
+  try {
+    const response = await fetch(`${API_BASE}/api/repl/evaluate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sessionId, expression }),
+    })
+    if (!response.ok) {
+      return { success: false, value: null, text: null, units: null, uncertainty: null, error: `Server error (${response.status})`, name: null }
+    }
+    const data = await response.json()
+    return {
+      success: data.success ?? false,
+      value: data.value ?? null,
+      text: data.text ?? null,
+      units: data.unit ?? null,
+      uncertainty: data.uncertainty ?? null,
+      error: data.error ?? null,
+      name: data.name ?? null,
+      assignedVariables: data.assignedVariables ?? null,
+    }
+  } catch (e) {
+    return { success: false, value: null, text: null, units: null, uncertainty: null, error: `Could not reach the solver backend: ${String(e)}`, name: null }
+  }
+}
+
+/** Clears all (or a specific) REPL-defined/overridden variables for the session. */
+export async function replClear(sessionId: string, variableName?: string): Promise<void> {
+  try {
+    await fetch(`${API_BASE}/api/repl/clear`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sessionId, expression: variableName ?? '' }),
+    })
+  } catch {
+    /* best-effort */
+  }
+}
+
+/** Variable names currently in the workspace, for REPL tab-completion. */
+export async function replVariables(sessionId: string): Promise<string[]> {
+  try {
+    const response = await fetch(`${API_BASE}/api/repl/variables?sessionId=${encodeURIComponent(sessionId)}`)
+    if (!response.ok) return []
+    const data = await response.json()
+    return Array.isArray(data) ? data : []
+  } catch {
+    return []
   }
 }
 

@@ -19,6 +19,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -93,7 +94,11 @@ public class SolveController {
                                Boolean findAllSolutions,
                                String displayUnitSystem,
                                Boolean fillMissing,
-                               List<FunctionTableDto> functionTables) {}
+                               List<FunctionTableDto> functionTables,
+                               /** REPL overrides as equation strings ("eta = 0.75"): they
+                                *  replace the editor's assignment of the same variable so the
+                                *  terminal takes priority over the editor until cleared. */
+                               List<String> overrides) {}
 
     /** One curve of a Function Table: family parameter value (null for a lone
      * curve) and [x, y] sample pairs. */
@@ -344,9 +349,11 @@ public class SolveController {
     private static final String DMASS = "Dmass";
 
     private final EquationSystemSolver solver;
+    private final SolveContextCache contextCache;
 
-    public SolveController(EquationSystemSolver solver) {
+    public SolveController(EquationSystemSolver solver, SolveContextCache contextCache) {
         this.solver = solver;
+        this.contextCache = contextCache;
     }
 
     public record CheckResponse(boolean solvable,
@@ -515,7 +522,7 @@ public class SolveController {
         try {
             boolean complexMode = request.stopCriteria() != null && Boolean.TRUE.equals(request.stopCriteria().complexMode());
             var extraction = MarkdownEquationExtractor.extract(request.text());
-            String cleanText = extraction.cleanText;
+            String cleanText = applyOverrides(extraction.cleanText, request.overrides());
 
             EquationSystemSolver.CheckResult result = solver.check(cleanText, complexMode,
                     functionDefsOf(request.functionTables()));
@@ -570,6 +577,96 @@ public class SolveController {
                 unitsByLowerName.getOrDefault(canonicalName, ""), system, explicitUnits);
     }
 
+    /** Snapshots the solved workspace into the REPL context cache: SI values for
+     *  expression math, display-converted values/units for bare-variable echoes,
+     *  the display spellings for tab-completion, and the in-scope function defs. */
+    private void cacheSolvedContext(String sessionId, EquationSystemSolver.Result result,
+            List<VariableDto> variableDtos, Map<String, ProcDef> defs, UnitRegistry.UnitSystem system) {
+        Map<String, Double> siValues = new HashMap<>();
+        result.variables().forEach((name, value) -> {
+            if (!isInternalTemp(name)) {
+                siValues.put(name.toLowerCase(), value);
+            }
+        });
+
+        Map<String, SolveContextCache.ReplVar> displayVars = new HashMap<>();
+        List<String> names = new ArrayList<>();
+        for (VariableDto dto : variableDtos) {
+            displayVars.put(dto.name().toLowerCase(),
+                    new SolveContextCache.ReplVar(dto.value(), dto.units(), dto.uncertainty()));
+            names.add(dto.name());
+        }
+
+        contextCache.put(sessionId, siValues, displayVars, names, defs, system);
+    }
+
+    /** Caches only the document's FUNCTION/TABLE definitions (no solved values),
+     *  so the REPL can call them even when the document isn't solvable. Best-effort:
+     *  any parse failure here is swallowed — the original solve error still stands. */
+    private void cacheDefsOnly(String sessionId, SolveRequest request) {
+        try {
+            String cleanText = MarkdownEquationExtractor.extract(request.text()).cleanText;
+            Map<String, ProcDef> defs = new HashMap<>(new EquationParser().parseResult(cleanText).defs());
+            defs.putAll(functionDefsOf(request.functionTables()));
+            if (defs.isEmpty()) {
+                return;
+            }
+            contextCache.put(sessionId, Map.of(), Map.of(), List.of(), defs,
+                    unitSystem(request.displayUnitSystem()));
+        } catch (RuntimeException ignored) {
+            // No usable definitions to cache; leave any prior session untouched.
+        }
+    }
+
+    /** Applies REPL overrides to the solve text: each override is an equation string
+     *  like {@code "eta = 0.75"}. The editor's own bare assignment of that variable
+     *  ({@code eta = …}) is removed and the override appended, so the terminal value
+     *  wins. Operates per {@code ;}-separated segment to preserve other equations on
+     *  the same line. New variables (no editor assignment) are simply appended. */
+    static String applyOverrides(String cleanText, List<String> overrides) {
+        if (overrides == null || overrides.isEmpty()) {
+            return cleanText;
+        }
+        java.util.Map<String, String> byName = new java.util.LinkedHashMap<>();
+        for (String ov : overrides) {
+            if (ov == null) {
+                continue;
+            }
+            int eq = ov.indexOf('=');
+            if (eq <= 0) {
+                continue;
+            }
+            String name = ov.substring(0, eq).trim().toLowerCase();
+            if (!name.isEmpty()) {
+                byName.put(name, ov.trim());
+            }
+        }
+        if (byName.isEmpty()) {
+            return cleanText;
+        }
+        java.util.List<java.util.regex.Pattern> assigns = byName.keySet().stream()
+                .map(n -> java.util.regex.Pattern.compile(
+                        "^\\s*" + java.util.regex.Pattern.quote(n) + "\\s*=.*",
+                        java.util.regex.Pattern.CASE_INSENSITIVE))
+                .toList();
+
+        StringBuilder sb = new StringBuilder();
+        for (String line : cleanText.split("\n", -1)) {
+            java.util.List<String> kept = new ArrayList<>();
+            for (String seg : line.split(";")) {
+                boolean overridden = assigns.stream().anyMatch(p -> p.matcher(seg).matches());
+                if (!overridden) {
+                    kept.add(seg);
+                }
+            }
+            sb.append(String.join(";", kept)).append('\n');
+        }
+        for (String ov : byName.values()) {
+            sb.append(ov).append('\n');
+        }
+        return sb.toString();
+    }
+
     private record CycleResolution(EquationSystemSolver.Result result, List<Map<String, Double>> cyclePath) {}
 
     /** When fill-missing is requested, resolves missing fluid properties and builds
@@ -587,7 +684,8 @@ public class SolveController {
     }
 
     @PostMapping("/solve")
-    public ResponseEntity<SolveResponse> solve(@RequestBody SolveRequest request) {
+    public ResponseEntity<SolveResponse> solve(@RequestBody SolveRequest request,
+            @RequestHeader(name = "X-Frees-Session", required = false) String sessionId) {
         if (request.text() == null || request.text().isBlank()) {
             return ResponseEntity.badRequest()
                     .body(SolveResponse.failure(NO_EQUATIONS_MESSAGE));
@@ -600,7 +698,9 @@ public class SolveController {
             boolean findAll = Boolean.TRUE.equals(request.findAllSolutions());
 
             var extraction = MarkdownEquationExtractor.extract(request.text());
-            String cleanText = extraction.cleanText;
+            // REPL overrides win over the editor: drop the editor's assignment of
+            // each overridden variable and append the override equation.
+            String cleanText = applyOverrides(extraction.cleanText, request.overrides());
 
             Map<String, ProcDef> functionDefs = functionDefsOf(request.functionTables());
             EquationSystemSolver.Result rawResult = findAll
@@ -624,12 +724,19 @@ public class SolveController {
 
             String formattedReport = MarkdownEquationExtractor.generateFormattedReport(request.text(), extraction.equations, formattedEquations);
 
+            List<VariableDto> variableDtos = result.variables().entrySet().stream()
+                    .filter(e -> !isInternalTemp(e.getKey()))
+                    .map(e -> toVariableDto(e, result, unitsByLowerName, system, explicitUnits))
+                    .toList();
+
+            // Cache the solved workspace so the REPL can evaluate against it without re-solving.
+            Map<String, ProcDef> replDefs = new HashMap<>(parsed.defs());
+            replDefs.putAll(functionDefs);
+            cacheSolvedContext(sessionId, result, variableDtos, replDefs, system);
+
             return ResponseEntity.ok(new SolveResponse(
                     true,
-                    result.variables().entrySet().stream()
-                            .filter(e -> !isInternalTemp(e.getKey()))
-                            .map(e -> toVariableDto(e, result, unitsByLowerName, system, explicitUnits))
-                            .toList(),
+                    variableDtos,
                     result.blocks().stream()
                             .map(b -> toBlockDto(b, result.displayNames()))
                             .toList(),
@@ -667,6 +774,10 @@ public class SolveController {
                     .body(SolveResponse.failure("Syntax error:\n" + e.getMessage(),
                             parseErrorLine(e.getMessage())));
         } catch (SolverException e) {
+            // Even when there's nothing to solve (e.g. a document that only defines
+            // FUNCTION/TABLE blocks), expose those definitions to the REPL so they
+            // can be called there.
+            cacheDefsOnly(sessionId, request);
             return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
                     .body(SolveResponse.failure(e.getMessage()));
         } catch (Exception e) {
