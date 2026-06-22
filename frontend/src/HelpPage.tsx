@@ -29,6 +29,7 @@ import { DOCS_CATALOG } from './docsCatalog';
 import Latex from './Latex';
 import { EXAMPLES } from './examples';
 import { buildSearchIndex, searchDocs, type SearchHit } from './searchIndex';
+import { VERSION_LABEL } from './version';
 import {
   MATH_FUNCTIONS,
   CALL_PROCEDURES,
@@ -3154,7 +3155,7 @@ export default function HelpPage() {
               </Text>
             </Title>
           </Group>
-          <Badge color="blue" variant="filled" size="lg">v0.0.1</Badge>
+          <Badge color="blue" variant="filled" size="lg">{VERSION_LABEL}</Badge>
         </Group>
       </AppShell.Header>
 

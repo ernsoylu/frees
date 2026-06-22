@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import { ActionIcon, Group, Tooltip } from '@mantine/core'
 import { IconTrash } from '@tabler/icons-react'
 import { replEvaluate, VariableResult } from './api'
+import { REPL_BANNER } from './version'
 
 /**
  * Integrated REPL terminal. Evaluates a single line against the session's
@@ -17,12 +18,7 @@ import { replEvaluate, VariableResult } from './api'
  * React gives clean Mantine theming plus trivial history/completion handling.
  */
 
-// The build commit is frees' de-facto version (same source the About dialog uses).
-const VERSION =
-  (typeof window !== 'undefined' && window.__BUILD_COMMIT__) ||
-  import.meta.env.VITE_COMMIT_HASH ||
-  'dev'
-const BANNER = `frees ${VERSION === 'dev' ? 'dev' : VERSION.slice(0, 7)}`
+const BANNER = REPL_BANNER
 
 interface Line {
   kind: 'input' | 'result' | 'error' | 'info'

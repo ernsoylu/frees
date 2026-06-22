@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import pkg from './package.json'
 
 // Inject the runtime build-info.js script into the production HTML.
 // This classic (non-module) script sets window.__BUILD_COMMIT__ and is written
@@ -20,6 +21,13 @@ function buildInfoPlugin() {
 
 export default defineConfig({
   plugins: [react(), buildInfoPlugin()],
+  define: {
+    // The app version from package.json, baked in at build time so the REPL
+    // banner and About dialog show "v0.1.0" without a runtime lookup. Paired
+    // with the commit hash (VITE_COMMIT_HASH / window.__BUILD_COMMIT__) it
+    // gives a full "frees v0.1.0 (abcdefg)" identity.
+    __APP_VERSION__: JSON.stringify(pkg.version),
+  },
   build: {
     // The editor core ("App" chunk) sits around ~260 kB gzipped after the
     // feature tabs (Diagram, Digitizer, Plots, formatted report), modals, the
