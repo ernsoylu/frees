@@ -43,6 +43,7 @@ import {
   IconSettings,
   IconTable,
   IconTargetArrow,
+  IconTerminal2,
   IconTrash,
   IconSearch,
   IconVariable,
@@ -70,6 +71,8 @@ const VIEWS = [
     icon: IconChartGridDots,
   },
   { value: 'diagram', label: 'Diagram', tip: 'Diagram — interactive schematic editor', icon: IconSchema },
+  { value: 'workspace', label: 'Variables', tip: 'Variable Explorer — live solved state & variable info', icon: IconVariable },
+  { value: 'terminal', label: 'Terminal', tip: 'Terminal — REPL evaluated against the workspace', icon: IconTerminal2 },
 ]
 
 const RAIL_EXPANDED_KEY = 'frees.railExpanded'
@@ -106,7 +109,6 @@ interface RailProps {
   onDeleteTable?: (id: string) => void
   /** Open the singleton Fluid State table window. */
   onOpenStates?: () => void
-  onVariableInfo: () => void
   onMinMax: () => void
   onCurveFit: () => void
   onPreferences: () => void
@@ -368,7 +370,6 @@ export function Rail({
   onNewTable,
   onDeleteTable,
   onOpenStates,
-  onVariableInfo,
   onMinMax,
   onCurveFit,
   onPreferences,
@@ -396,7 +397,6 @@ export function Rail({
 
   const iconSize = 22
   const tools = [
-    { label: 'Variables', tip: 'Variable Information', icon: IconVariable, onClick: onVariableInfo },
     { label: 'Min/Max', tip: 'Min/Max (optimization)', icon: IconTargetArrow, onClick: onMinMax },
     { label: 'Curve Fit', tip: 'Curve Fit (least squares)', icon: IconMathFunction, onClick: onCurveFit },
     { label: 'Preferences', tip: 'Preferences', icon: IconSettings, onClick: onPreferences },
@@ -693,6 +693,9 @@ interface TopBarProps {
   /** Tools menu: open the auxiliary Inspector / Solution edge panels. */
   onOpenInspector: () => void
   onOpenSolution: () => void
+  /** Tools menu: open the Variable Explorer and the REPL Terminal dock windows. */
+  onOpenWorkspace: () => void
+  onOpenTerminal: () => void
   /** Tools menu: equation tools (also reachable from the left rail). */
   onVariableInfo: () => void
   onMinMax: () => void
@@ -842,6 +845,12 @@ export function TopBar(props: Readonly<TopBarProps>) {
             </Menu.Item>
             <Menu.Divider />
             <Menu.Label>Auxiliary panels</Menu.Label>
+            <Menu.Item leftSection={<IconVariable size={14} />} onClick={props.onOpenWorkspace}>
+              Variable Explorer
+            </Menu.Item>
+            <Menu.Item leftSection={<IconTerminal2 size={14} />} onClick={props.onOpenTerminal}>
+              Terminal
+            </Menu.Item>
             <Menu.Item leftSection={<IconAdjustments size={14} />} onClick={props.onOpenInspector}>
               Inspector
             </Menu.Item>

@@ -37,6 +37,8 @@ import {
   IconSettings,
   IconTable,
   IconTemperature,
+  IconTerminal2,
+  IconVariable,
   IconX,
   type IconProps,
 } from '@tabler/icons-react'
@@ -67,6 +69,8 @@ const KIND_ICONS: Record<string, FC<IconProps>> = {
   plots: IconChartLine,
   plot: IconChartLine,
   digitizer: IconChartGridDots,
+  workspace: IconVariable,
+  terminal: IconTerminal2,
   diagram: IconSchema,
   states: IconTemperature,
   solution: IconChecks,

@@ -499,7 +499,7 @@ public final class UnitChecker {
     }
 
     /** SI unit expression of each property function output. */
-    private static String propertyUnit(String output) {
+    public static String propertyUnit(String output) {
         return switch (output) {
             case "temperature", "wetbulb", "dewpoint", "t_crit" -> "K";
             case "pressure", "p_crit" -> "Pa";
