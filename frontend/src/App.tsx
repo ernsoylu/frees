@@ -1630,6 +1630,7 @@ export default function App() {
           variables={workspaceVariables}
           replNames={replNames}
           functions={replFunctionNames}
+          unitSystem={unitSystem}
           onAssign={(v) => {
             setReplVars((prev) => ({ ...prev, [v.name.toLowerCase()]: v }))
             if (!v.name.includes('[')) {
