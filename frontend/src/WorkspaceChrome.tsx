@@ -448,7 +448,6 @@ export function Rail({
               label="Diagram"
               newActions={[
                 { label: 'New diagram', onClick: () => onNewDiagram?.() },
-                { label: 'New whiteboard', onClick: () => onNewWhiteboard?.() },
               ]}
               emptyLabel="No diagrams yet"
               icon={<IconSchema size={iconSize} stroke={1.6} />}
