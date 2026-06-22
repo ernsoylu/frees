@@ -711,6 +711,154 @@ public final class EquationParser {
         }
     }
 
+    /** Default root-locus gain-sweep resolution when {@code K} is given as a bare name. */
+    private static final int DEFAULT_RLOCUS_POINTS = 100;
+
+    /**
+     * Expand bare-name CALL outputs into full {@code 1..size} slices, sizing them from the
+     * inputs exactly as the corresponding flattener does, so callers (notably the REPL) don't
+     * have to restate a length the system already determines. Only acts when at least one output
+     * is a bare {@link Expr.Var}; explicit slices are left as written, as are outputs whose count
+     * is genuinely value-dependent (the finite-zero counts of {@code zero}/{@code tf2zp}). If the
+     * inputs aren't in a sliceable form yet, it silently does nothing and lets the flattener
+     * report the precise error.
+     */
+    private void autoSizeCallOutputs(String name, List<Expr> inputs, List<Expr> outputs, FlattenContext ctx) {
+        if (outputs.stream().noneMatch(o -> o instanceof Expr.Var)) {
+            return;
+        }
+        try {
+            switch (name) {
+                case "eigenvalues" -> setVec(outputs, 0, inMatRows(inputs, 0, ctx));
+                case "eigen" -> {
+                    int n = inMatRows(inputs, 0, ctx);
+                    setVec(outputs, 0, n);
+                    setMat(outputs, 1, n, n);
+                }
+                case "ludecompose" -> {
+                    int n = inMatRows(inputs, 0, ctx);
+                    setMat(outputs, 0, n, n);
+                    setMat(outputs, 1, n, n);
+                }
+                case "eulerrotate" -> setMat(outputs, 0, 3, 3);
+                case "ctrb", "obsv" -> {
+                    int n = inMatRows(inputs, 0, ctx);
+                    setMat(outputs, 0, n, n);
+                }
+                case "ss2ss" -> {
+                    int n = inMatRows(inputs, 0, ctx);
+                    setMat(outputs, 0, n, n);
+                    setVec(outputs, 1, n);
+                    setVec(outputs, 2, n);
+                }
+                case "ss2tf" -> {
+                    int n = inMatRows(inputs, 0, ctx);
+                    setVec(outputs, 0, n + 1);
+                    setVec(outputs, 1, n + 1);
+                }
+                case "tf2ss" -> {
+                    int n = inVecLen(inputs, 1, ctx) - 1;
+                    setMat(outputs, 0, n, n);
+                    setVec(outputs, 1, n);
+                    setVec(outputs, 2, n);
+                }
+                case "zp2tf" -> {
+                    int np = inVecLen(inputs, 2, ctx);
+                    setVec(outputs, 0, np + 1);
+                    setVec(outputs, 1, np + 1);
+                }
+                case "tf2zp" -> {
+                    // pr/pi follow the denominator degree; zr/zi (finite-zero count) stay explicit.
+                    int np = inVecLen(inputs, 1, ctx) - 1;
+                    setVec(outputs, 2, np);
+                    setVec(outputs, 3, np);
+                }
+                case "pole" -> {
+                    int n = inputs.size() == 1 ? inMatRows(inputs, 0, ctx) : inVecLen(inputs, 1, ctx) - 1;
+                    setVec(outputs, 0, n);
+                    setVec(outputs, 1, n);
+                }
+                case "series", "parallel", "feedback" -> {
+                    if (inputs.size() >= 8) { // state-space combination
+                        int n = inMatRows(inputs, 0, ctx) + inMatRows(inputs, 4, ctx);
+                        setMat(outputs, 0, n, n);
+                        setVec(outputs, 1, n);
+                        setVec(outputs, 2, n);
+                    } else { // transfer-function combination
+                        int len = inVecLen(inputs, 0, ctx) + inVecLen(inputs, 2, ctx) - 1;
+                        setVec(outputs, 0, len);
+                        setVec(outputs, 1, len);
+                    }
+                }
+                case "bode", "nyquist", "nichols" -> {
+                    int nf = inVecLen(inputs, inputs.size() - 1, ctx);
+                    setVec(outputs, 0, nf);
+                    setVec(outputs, 1, nf);
+                }
+                case "step", "impulse", "lsim" -> setVec(outputs, 0, inVecLen(inputs, inputs.size() - 1, ctx));
+                case "residue" -> {
+                    int n = inVecLen(inputs, 1, ctx) - 1;
+                    setVec(outputs, 0, n);
+                    setVec(outputs, 1, n);
+                    setVec(outputs, 2, n);
+                    setVec(outputs, 3, n);
+                    if (outputs.size() == 6) {
+                        setVec(outputs, 4, n); // repeated-pole order vector
+                    }
+                }
+                case "lqr", "place" -> setVec(outputs, 0, inMatRows(inputs, 0, ctx));
+                case "pade" -> {
+                    int m = inScalarInt(inputs, 1, ctx) + 1;
+                    setVec(outputs, 0, m);
+                    setVec(outputs, 1, m);
+                }
+                case "c2d", "d2c" -> {
+                    int len = inVecLen(inputs, 1, ctx);
+                    setVec(outputs, 0, len);
+                    setVec(outputs, 1, len);
+                }
+                case "rlocus" -> {
+                    int order = inVecLen(inputs, 1, ctx) - 1;
+                    setVec(outputs, 0, DEFAULT_RLOCUS_POINTS);
+                    setMat(outputs, 1, DEFAULT_RLOCUS_POINTS, order);
+                    setMat(outputs, 2, DEFAULT_RLOCUS_POINTS, order);
+                }
+                default -> { /* scalar-output or value-declared outputs: leave as written */ }
+            }
+        } catch (ParseException ignored) {
+            // Inputs not sliceable yet — defer to the flattener's own (more specific) error.
+        }
+    }
+
+    private static void setVec(List<Expr> outputs, int i, int size) {
+        if (i < outputs.size() && outputs.get(i) instanceof Expr.Var v && size > 0) {
+            outputs.set(i, new Expr.ArrayAccess(v.name(), List.of(rangeOneTo(size))));
+        }
+    }
+
+    private static void setMat(List<Expr> outputs, int i, int rows, int cols) {
+        if (i < outputs.size() && outputs.get(i) instanceof Expr.Var v && rows > 0 && cols > 0) {
+            outputs.set(i, new Expr.ArrayAccess(v.name(), List.of(rangeOneTo(rows), rangeOneTo(cols))));
+        }
+    }
+
+    private static Expr.Range rangeOneTo(int n) {
+        return new Expr.Range(new Expr.Num(1.0), new Expr.Num((double) n));
+    }
+
+    private int inVecLen(List<Expr> inputs, int idx, FlattenContext ctx) {
+        return parseVectorInfo(inputs.get(idx), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs()).size;
+    }
+
+    private int inMatRows(List<Expr> inputs, int idx, FlattenContext ctx) {
+        return parseMatrixInfo(inputs.get(idx), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs()).rows;
+    }
+
+    private int inScalarInt(List<Expr> inputs, int idx, FlattenContext ctx) {
+        Expr e = expandExpr(inputs.get(idx), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        return (int) Math.round(evalIndexExpr(e, ctx.loopVars(), ctx.constants(), ctx.defs()));
+    }
+
     private void flattenCallProc(String name, List<Expr> inputs, List<Expr> outputs, String sourceText, FlattenContext ctx) {
         String defName = name.toLowerCase();
         List<Expr> resolvedInputs = new ArrayList<>();
@@ -723,6 +871,11 @@ public final class EquationParser {
         }
         inputs = resolvedInputs;
         outputs = resolvedOutputs;
+
+        // Let callers write bare output names (CALL Eigenvalues(A : lambda)); size them from the
+        // inputs the same way each flattener does. Explicit slices and value-dependent counts
+        // (zero/tf2zp zeros) are left untouched.
+        autoSizeCallOutputs(defName, inputs, outputs, ctx);
 
         if (defName.equals("eigenvalues") || defName.equals("eigen")) {
             flattenEigen(defName, inputs, outputs, sourceText, ctx);

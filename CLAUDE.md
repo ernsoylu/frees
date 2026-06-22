@@ -75,6 +75,7 @@ See `ARCHITECTURE_AND_REQUIREMENTS.md` for the full system design and six-Epic A
    - **Editor**: Custom monospace text editor with a scroll-synchronized line numbers gutter on the left.
    - **Formatted**: Renders compiled Markdown report combining normal text with LaTeX/KaTeX equations, inline solutions, hover tooltips, and embedded interactive plots via `[Graph="..."]` tag resolution.
    - **Solution, Arrays, Plots, Diagram**: Grid, charts, and overlay layouts built from the JSON payload.
+   - **REPL Terminal & Workspace**: Dockable console window — movable like the Editor/Variable Explorer (`ReplTerminal.tsx` → `POST /api/repl/evaluate`, handled by `ReplEvaluator`) that evaluates one line against the cached solved session — expressions, variable query/assign, implicit single-unknown solve, the full `CALL` library (outputs auto-sized from inputs via `EquationParser.autoSizeCallOutputs`, so bare output names work in documents and the REPL), and Symja CAS transforms (`Factor`/`Apart`/`Laplace`/`InverseLaplace`/`Diff`/`Integrate`/…, REPL-only). Block constructs (`FUNCTION`/`DYNAMIC`/`TABLE`, `SYMBOLIC`) remain editor-only.
 
 **Check-before-Solve (Check/Format):** `POST /api/check` verifies syntax and structural solvability (zero degrees of freedom + complete equation↔variable matching) without solving. The frontend gates the Solve button on a successful check; any edit invalidates it.
 

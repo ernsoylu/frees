@@ -3,6 +3,9 @@ package com.frees.backend.api;
 import com.frees.backend.ast.Evaluator;
 import com.frees.backend.ast.Expr;
 import com.frees.backend.ast.ProcDef;
+import com.frees.backend.cas.CasEngine;
+import com.frees.backend.core.EquationSystemSolver;
+import com.frees.backend.core.SolverSettings;
 import com.frees.backend.parser.AstBuilder;
 import com.frees.backend.parser.FreesLexer;
 import com.frees.backend.parser.FreesParser;
@@ -45,6 +48,32 @@ public class ReplEvaluator {
     private static final Pattern ASSIGNMENT =
             Pattern.compile("^\\s*([A-Za-z_][A-Za-z0-9_$]*(?:\\s*\\[[^\\]]+\\])?)\\s*=\\s*(?!=)(.+)$", Pattern.DOTALL);
 
+    /** A {@code CALL name(inputs : outputs)} statement — the procedure/library form. */
+    private static final Pattern CALL_PREFIX = Pattern.compile("^\\s*CALL\\b", Pattern.CASE_INSENSITIVE);
+    private static final Pattern CALL_SIG =
+            Pattern.compile("^\\s*CALL\\s+([A-Za-z_][A-Za-z0-9_$]*)\\s*\\((.*)\\)\\s*$",
+                    Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
+    private static final Pattern IDENTIFIER = Pattern.compile("[A-Za-z_][A-Za-z0-9_$]*");
+
+    /** A symbolic CAS function call: {@code Factor(x^2-1)}, {@code Apart(expr, s)}, {@code Laplace(f, t, s)}. */
+    private static final Pattern CAS_CALL = Pattern.compile(
+            "^\\s*(factor|expand|simplify|together|cancel|apart|laplace|inverselaplace|ilaplace"
+                    + "|numerator|denominator|collect|diff|integrate)\\s*\\((.*)\\)\\s*$",
+            Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
+
+    /** Symja-backed computer algebra (symbolic factor/expand/simplify/partial-fractions/Laplace). */
+    private final CasEngine cas = new CasEngine();
+    /** A CALL output: a bare name, or a sized slice like {@code lambda[1:2]} / {@code V[1:2,1:2]}. */
+    private static final Pattern OUTPUT_TOKEN =
+            Pattern.compile("[A-Za-z_][A-Za-z0-9_$]*\\s*(?:\\[[^\\]]*\\])?");
+
+    /** Shares the singleton solver so CALL lines flatten/solve exactly as the document pipeline does. */
+    private final EquationSystemSolver solver;
+
+    public ReplEvaluator(EquationSystemSolver solver) {
+        this.solver = solver;
+    }
+
     /** Result of evaluating one REPL line. {@code text} is the formatted line to print.
      *  {@code assignedName} is set (display spelling) when the line defined a variable,
      *  so the frontend can reflect it in the Variable Explorer / Solution. */
@@ -77,6 +106,15 @@ public class ReplEvaluator {
         }
         if (session == null) {
             return Outcome.fail("No solved context for this session yet — solve the document first.");
+        }
+
+        Matcher casCall = CAS_CALL.matcher(input.trim());
+        if (casCall.matches()) {
+            return evaluateCas(casCall.group(1), casCall.group(2));
+        }
+
+        if (CALL_PREFIX.matcher(input).find()) {
+            return evaluateCall(input.trim(), session);
         }
 
         Matcher assign = ASSIGNMENT.matcher(input.trim());
@@ -245,6 +283,325 @@ public class ReplEvaluator {
     }
 
     /** Evaluates {@code name = rhs}, recording the result as a session variable. */
+    /**
+     * Evaluate a symbolic CAS call — {@code Factor(x^2-1)}, {@code Expand((x+1)^3)},
+     * {@code Simplify(...)}, {@code Together/Cancel(...)}, {@code Apart(expr, var)},
+     * {@code Laplace(f, t, s)}, {@code InverseLaplace(F, s, t)} — via the Symja engine. The
+     * argument is taken verbatim (any free variables stay symbolic, so no solved context is
+     * needed), and the transformed expression is returned as text.
+     */
+    private Outcome evaluateCas(String fnRaw, String argsText) {
+        String fn = fnRaw.toLowerCase();
+        List<String> args = splitTopLevelCommas(argsText);
+        if (args.isEmpty() || args.get(0).isBlank()) {
+            return Outcome.fail(fnRaw + " needs an expression, e.g. " + fnRaw + "(x^2 - 1)");
+        }
+        String expr = stripQuotes(args.get(0));
+        try {
+            CasEngine.CasResult r;
+            String head; // Symja head; used to detect an unevaluated (no-closed-form) result
+            switch (fn) {
+                case "factor" -> { r = cas.factor(expr); head = "Factor"; }
+                case "expand" -> { r = cas.expand(expr); head = "Expand"; }
+                case "simplify" -> { r = cas.simplify(expr); head = "Simplify"; }
+                case "together" -> { r = cas.apply("Together", expr); head = "Together"; }
+                case "cancel" -> { r = cas.apply("Cancel", expr); head = "Cancel"; }
+                case "numerator" -> { r = cas.apply("Numerator", expr); head = "Numerator"; }
+                case "denominator" -> { r = cas.apply("Denominator", expr); head = "Denominator"; }
+                case "apart" -> {
+                    if (args.size() < 2) {
+                        return Outcome.fail("apart needs a variable: apart(expr, var), "
+                                + "e.g. apart((s+3)/(s^2+3*s+2), s)");
+                    }
+                    r = cas.apart(expr, stripQuotes(args.get(1)));
+                    head = "Apart";
+                }
+                case "collect" -> {
+                    if (args.size() < 2) return Outcome.fail("collect needs a variable: collect(expr, var)");
+                    r = cas.applyWithVariable("Collect", expr, stripQuotes(args.get(1)));
+                    head = "Collect";
+                }
+                case "diff" -> {
+                    if (args.size() < 2) return Outcome.fail("diff needs a variable: diff(expr, var)");
+                    r = cas.applyWithVariable("D", expr, stripQuotes(args.get(1)));
+                    head = "D";
+                }
+                case "integrate" -> {
+                    if (args.size() < 2) return Outcome.fail("integrate needs a variable: integrate(expr, var)");
+                    r = cas.applyWithVariable("Integrate", expr, stripQuotes(args.get(1)));
+                    head = "Integrate";
+                }
+                case "laplace" -> {
+                    String t = args.size() > 1 ? stripQuotes(args.get(1)) : "t";
+                    String s = args.size() > 2 ? stripQuotes(args.get(2)) : "s";
+                    r = cas.laplace(expr, t, s);
+                    head = "LaplaceTransform";
+                }
+                case "inverselaplace", "ilaplace" -> {
+                    String s = args.size() > 1 ? stripQuotes(args.get(1)) : "s";
+                    String t = args.size() > 2 ? stripQuotes(args.get(2)) : "t";
+                    r = cas.inverseLaplace(expr, s, t);
+                    head = "InverseLaplaceTransform";
+                }
+                default -> { return Outcome.fail("Unknown CAS function: " + fnRaw); }
+            }
+            // Symja returns the call unchanged when it has no closed form — surface that plainly
+            // instead of echoing the unevaluated expression back to the user.
+            if (isUnevaluated(r, head)) {
+                return Outcome.fail(fnRaw + ": no closed form found for this input.");
+            }
+            return Outcome.ok(0.0, casDisplay(r), "", null);
+        } catch (CasEngine.CasException e) {
+            return Outcome.fail("CAS: " + e.getMessage());
+        }
+    }
+
+    /** True when Symja echoed the call back (same head) rather than transforming it. */
+    private static boolean isUnevaluated(CasEngine.CasResult r, String symjaHead) {
+        String out = r.symjaOutput().replaceAll("\\s", "");
+        return out.regionMatches(true, 0, symjaHead + "(", 0, symjaHead.length() + 1);
+    }
+
+    /** Plain-text form of a CAS result (Symja infix with frees-friendly log names). */
+    private static String casDisplay(CasEngine.CasResult r) {
+        return r.symjaOutput().replace("Log10(", "log10(").replace("Log(", "ln(");
+    }
+
+    /** Drop one layer of surrounding single/double quotes, if present. */
+    private static String stripQuotes(String s) {
+        String t = s.trim();
+        if (t.length() >= 2) {
+            char a = t.charAt(0);
+            char b = t.charAt(t.length() - 1);
+            if ((a == '\'' && b == '\'') || (a == '"' && b == '"')) {
+                return t.substring(1, t.length() - 1).trim();
+            }
+        }
+        return t;
+    }
+
+    /**
+     * Evaluate a {@code CALL name(inputs : outputs)} line — the procedure/control-systems
+     * library (Eigen, Bode, Routh, Residue, LQR, c2d, …) that the bare expression evaluator
+     * cannot reach because CALL is a statement, not an expression.
+     *
+     * <p>Strategy: synthesize a self-contained mini-document — seed the input variables the
+     * CALL references from the current session (scalars and array elements alike), append the
+     * CALL line verbatim, then run the real {@link EquationSystemSolver}. This reuses the exact
+     * flatten/solve path of the document pipeline, so every CALL function behaves identically
+     * here. The named outputs are read back from the solve and stored as REPL overlays.
+     */
+    private Outcome evaluateCall(String input, SolveContextCache.Session session) {
+        Matcher sig = CALL_SIG.matcher(input);
+        if (!sig.matches()) {
+            return Outcome.fail("Malformed CALL — expected: CALL name(inputs : outputs)");
+        }
+        String fnName = sig.group(1);
+        String argBody = sig.group(2);
+
+        int colon = topLevelColon(argBody);
+        if (colon < 0) {
+            return Outcome.fail("CALL " + fnName + " needs ':' separating inputs from outputs, e.g. "
+                    + "CALL " + fnName + "(in1, in2 : out1, out2)");
+        }
+        String inputPart = argBody.substring(0, colon);
+        // Outputs are kept verbatim (a bare name, or an explicitly sized slice such as
+        // lambda[1:2] that array-returning functions like Eigen require — same as a document).
+        List<String> outputTokens = splitTopLevelCommas(argBody.substring(colon + 1));
+        if (outputTokens.isEmpty()) {
+            return Outcome.fail("CALL " + fnName + " declares no output variables after ':'.");
+        }
+        List<String> outputBases = new ArrayList<>();
+        for (String out : outputTokens) {
+            if (!OUTPUT_TOKEN.matcher(out).matches()) {
+                return Outcome.fail("Invalid CALL output: '" + out + "' (expected name or name[1:n])");
+            }
+            outputBases.add(baseName(out).trim());
+        }
+
+        // Seed every session variable the input arguments reference (scalars + array elements).
+        Set<String> referenced = collectIdentifiers(inputPart);
+        StringBuilder doc = new StringBuilder();
+        for (Map.Entry<String, Double> e : session.siValues().entrySet()) {
+            String key = e.getKey();
+            double v = e.getValue();
+            if (referenced.contains(baseName(key)) && !Double.isNaN(v) && !Double.isInfinite(v)) {
+                doc.append(key).append(" = ").append(Double.toString(v)).append('\n');
+            }
+        }
+
+        // The control/CALL flatteners want explicit slice access (A[1:n,1:n], v[1:n]), not a
+        // bare array name, so rewrite any bare-identifier argument that names a session array.
+        List<String> rebuiltArgs = new ArrayList<>();
+        for (String arg : splitTopLevelCommas(inputPart)) {
+            String slice = IDENTIFIER.matcher(arg).matches() ? sliceFor(arg, session) : null;
+            rebuiltArgs.add(slice != null ? slice : arg);
+        }
+        String callLine = "CALL " + fnName + "(" + String.join(", ", rebuiltArgs)
+                + " : " + String.join(", ", outputTokens) + ")";
+        doc.append(callLine).append('\n');
+
+        final EquationSystemSolver.Result result;
+        try {
+            result = solver.solve(doc.toString(), SolverSettings.DEFAULTS, Map.of(), session.defs());
+        } catch (Exception ex) {
+            String msg = ex.getMessage();
+            return Outcome.fail("CALL " + fnName + " failed: " + (msg != null ? msg : ex.getClass().getSimpleName()));
+        }
+
+        List<ReplController.ReplVarDto> assigned = new ArrayList<>();
+        StringBuilder text = new StringBuilder();
+        boolean producedAny = false;
+        for (String out : outputBases) {
+            boolean ok = materializeOutput(out, result.variables(), session, assigned, text);
+            producedAny = producedAny || ok;
+        }
+        if (!producedAny) {
+            return Outcome.fail("CALL " + fnName + " produced no value for the requested outputs ("
+                    + String.join(", ", outputBases) + "). Check the argument count and shapes.");
+        }
+        // Strip the trailing newline so the printed block is tidy.
+        if (text.length() > 0 && text.charAt(text.length() - 1) == '\n') {
+            text.setLength(text.length() - 1);
+        }
+        return Outcome.ok(0.0, text.toString(), "", null).withVariables(assigned);
+    }
+
+    /** Reconstruct one named output (scalar or array) from the solved variable map and store it
+     *  as a REPL overlay; appends a printable "name = …" line. Returns false if nothing matched. */
+    private boolean materializeOutput(String outName, Map<String, Double> vars,
+                                      SolveContextCache.Session session,
+                                      List<ReplController.ReplVarDto> assigned, StringBuilder text) {
+        String lo = outName.toLowerCase();
+        if (vars.containsKey(lo)) {
+            double v = vars.get(lo);
+            session.clearVariable(lo);
+            session.define(lo, v, new SolveContextCache.ReplVar(v, "", null));
+            assigned.add(new ReplController.ReplVarDto(outName, v, "", null));
+            text.append(outName).append(" = ").append(number(v)).append('\n');
+            return true;
+        }
+
+        // Array output: gather lo[i] / lo[i,j] keys and infer the shape.
+        String prefix = lo + "[";
+        int maxR = 0;
+        int maxC = 0;
+        boolean twoD = false;
+        boolean found = false;
+        for (String k : vars.keySet()) {
+            if (!k.startsWith(prefix) || !k.endsWith("]")) continue;
+            String[] parts = k.substring(prefix.length(), k.length() - 1).split(",");
+            try {
+                if (parts.length == 2) {
+                    twoD = true;
+                    maxR = Math.max(maxR, Integer.parseInt(parts[0].trim()));
+                    maxC = Math.max(maxC, Integer.parseInt(parts[1].trim()));
+                } else if (parts.length == 1) {
+                    maxC = Math.max(maxC, Integer.parseInt(parts[0].trim()));
+                }
+                found = true;
+            } catch (NumberFormatException ignored) {
+                // non-numeric index — not part of this array output
+            }
+        }
+        if (!found) return false;
+
+        int rows = twoD ? maxR : 1;
+        int cols = maxC;
+        double[][] mat = new double[rows][cols];
+        session.clearVariable(lo);
+        for (int i = 0; i < rows; i++) {
+            for (int j = 0; j < cols; j++) {
+                String canonical = twoD ? lo + "[" + (i + 1) + "," + (j + 1) + "]" : lo + "[" + (j + 1) + "]";
+                Double v = vars.get(canonical);
+                double val = v != null ? v : 0.0;
+                mat[i][j] = val;
+                String display = twoD ? outName + "[" + (i + 1) + "," + (j + 1) + "]" : outName + "[" + (j + 1) + "]";
+                session.define(canonical, val, new SolveContextCache.ReplVar(val, "", null));
+                assigned.add(new ReplController.ReplVarDto(display, val, "", null));
+            }
+        }
+        text.append(outName).append(" = ").append(formatMatrix(mat)).append('\n');
+        return true;
+    }
+
+    /** Index of the first {@code ':'} at bracket/paren depth 0 (so range literals like
+     *  {@code [0.1:0.1:100]} inside the inputs are not mistaken for the input/output separator). */
+    private static int topLevelColon(String s) {
+        int depth = 0;
+        for (int i = 0; i < s.length(); i++) {
+            char c = s.charAt(i);
+            if (c == '[' || c == '(' || c == '{') depth++;
+            else if (c == ']' || c == ')' || c == '}') depth--;
+            else if (c == ':' && depth == 0) return i;
+        }
+        return -1;
+    }
+
+    /** Split on commas at bracket/paren depth 0, trimming and dropping blanks. */
+    private static List<String> splitTopLevelCommas(String s) {
+        List<String> out = new ArrayList<>();
+        int depth = 0;
+        int start = 0;
+        for (int i = 0; i < s.length(); i++) {
+            char c = s.charAt(i);
+            if (c == '[' || c == '(' || c == '{') depth++;
+            else if (c == ']' || c == ')' || c == '}') depth--;
+            else if (c == ',' && depth == 0) {
+                String tok = s.substring(start, i).trim();
+                if (!tok.isEmpty()) out.add(tok);
+                start = i + 1;
+            }
+        }
+        String tail = s.substring(start).trim();
+        if (!tail.isEmpty()) out.add(tail);
+        return out;
+    }
+
+    /** Lowercased identifier tokens appearing in a fragment (used to pick which session
+     *  variables to seed). Function names that aren't session variables match nothing and are
+     *  harmless. */
+    private static Set<String> collectIdentifiers(String s) {
+        Set<String> ids = new java.util.HashSet<>();
+        Matcher m = IDENTIFIER.matcher(s);
+        while (m.find()) ids.add(m.group().toLowerCase());
+        return ids;
+    }
+
+    /** Base name of a canonical key: {@code a[1,2] -> a}, {@code x -> x}. */
+    private static String baseName(String canonical) {
+        int b = canonical.indexOf('[');
+        return b > 0 ? canonical.substring(0, b) : canonical;
+    }
+
+    /** Full-range slice for a session array, e.g. {@code A[1:2,1:2]} or {@code den[1:4]};
+     *  {@code null} if {@code base} is not an array in the session. */
+    private static String sliceFor(String base, SolveContextCache.Session session) {
+        String prefix = base.toLowerCase() + "[";
+        int maxR = 0;
+        int maxC = 0;
+        boolean twoD = false;
+        boolean found = false;
+        for (String k : session.siValues().keySet()) {
+            if (!k.startsWith(prefix) || !k.endsWith("]")) continue;
+            String[] p = k.substring(prefix.length(), k.length() - 1).split(",");
+            try {
+                if (p.length == 2) {
+                    twoD = true;
+                    maxR = Math.max(maxR, Integer.parseInt(p[0].trim()));
+                    maxC = Math.max(maxC, Integer.parseInt(p[1].trim()));
+                } else if (p.length == 1) {
+                    maxC = Math.max(maxC, Integer.parseInt(p[0].trim()));
+                }
+                found = true;
+            } catch (NumberFormatException ignored) {
+                // non-numeric index — ignore
+            }
+        }
+        if (!found) return null;
+        return twoD ? base + "[1:" + maxR + ",1:" + maxC + "]" : base + "[1:" + maxC + "]";
+    }
+
     private Outcome assignment(String name, String rhs, SolveContextCache.Session session) {
         final String targetName;
         try {

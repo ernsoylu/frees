@@ -2257,6 +2257,7 @@ const CATEGORIES = [
     icon: <IconBook size={16} />,
     items: [
       { id: 'started', label: 'Introduction & Workflow', keywords: ['intro', 'philosophy', 'workflow', 'getting started'] },
+      { id: 'repl', label: 'REPL Terminal & Workspace', keywords: ['repl', 'terminal', 'workspace', 'console', 'vars', 'who', 'whos', 'calculator', 'cas', 'factor', 'expand', 'simplify', 'apart', 'laplace', 'diff', 'integrate', 'call', 'symbolic', 'interactive', 'ans'] },
       { id: 'shortcuts', label: 'Keyboard Shortcuts', keywords: ['hotkey', 'shortcuts', 'keyboard', 'f2', 'f4', 'f9', 'ctrl'] },
       { id: 'reports', label: 'Markdown & Reports', keywords: ['markdown', 'report', 'latex', 'katex', 'inline', 'equations'] },
       { id: 'digitizer-fit', label: 'Graph Digitizer & Curve Fit', keywords: ['digitizer', 'curve', 'fit', 'table', 'regression', 'equation', 'graph'] },

@@ -52,6 +52,12 @@ interface Props {
 /** Built-in REPL commands that drive the app rather than evaluate an expression. */
 const COMMANDS = ['check', 'solve', 'clear', 'clc', 'help', 'vars', 'who', 'whos']
 
+/** Symbolic CAS functions (Symja-backed) offered in Tab-completion. */
+const CAS_FUNCTIONS = [
+  'Factor', 'Expand', 'Simplify', 'Together', 'Cancel', 'Numerator', 'Denominator',
+  'Collect', 'Diff', 'Integrate', 'Apart', 'Laplace', 'InverseLaplace',
+]
+
 function longestCommonPrefix(words: string[]): string {
   if (words.length === 0) return ''
   let prefix = words[0]
@@ -169,7 +175,23 @@ Variable Queries & Assignments:
 Implicit Single-Unknown Solver:
   Solve equations implicitly by specifying a single unknown variable, e.g.:
   › P = 50000 * volume
-  = volume = 5 [m^3]`
+  = volume = 5 [m^3]
+
+CALL Library (eigen, control systems, partial fractions, …):
+  Run a CALL procedure against workspace arrays. Inputs and outputs may be
+  bare names — output lengths are sized automatically from the inputs:
+  › CALL Eigenvalues(A : lambda)
+  › CALL Routh(den : nRHP, stable)
+  › CALL Bode(num, den, w : mag, phase)
+  (Finite-zero counts for Zero/tf2zp still take an explicit size, e.g. zr[1:2].)
+
+Symbolic CAS (Symja) — returns a transformed expression as text:
+  › Factor(x^2 - 1)              = (-1+x)*(1+x)
+  › Expand((x+1)^3)              Simplify(...)
+  › Together(...)  Cancel(...)   Numerator(...)  Denominator(...)
+  › Collect(a*x^2+b*x^2+x, x)    Diff(x^3+x^2, x)    Integrate(x^2, x)
+  › Apart((s+3)/(s^2+3*s+2), s)  partial fractions in s
+  › Laplace(t, t, s)             InverseLaplace(1/(s+2), s, t)`
       })
       return
     }
@@ -232,8 +254,8 @@ Implicit Single-Unknown Solver:
     // variables, every callable function, and the built-in commands.
     const token = input.match(/[A-Za-z_][A-Za-z0-9_$]*$/)?.[0] ?? ''
     if (!token) return
-    const candidates = [...variables.map((v) => v.name), ...functions, ...COMMANDS]
-    const fnSet = new Set(functions.map((f) => f.toLowerCase()))
+    const candidates = [...variables.map((v) => v.name), ...functions, ...CAS_FUNCTIONS, ...COMMANDS]
+    const fnSet = new Set([...functions, ...CAS_FUNCTIONS].map((f) => f.toLowerCase()))
     const seen = new Set<string>()
     const matches = candidates.filter((c) => {
       const k = c.toLowerCase()
@@ -334,7 +356,6 @@ Implicit Single-Unknown Solver:
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={onKeyDown}
-          disabled={busy}
           spellCheck={false}
           autoComplete="off"
           placeholder="Evaluate an expression… (Up/Down history, Tab completes)"
