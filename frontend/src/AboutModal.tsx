@@ -1,27 +1,12 @@
 import { Anchor, Divider, Group, Modal, Stack, Text } from '@mantine/core'
 import { IconBrandGithub, IconBrandLinkedin } from '@tabler/icons-react'
+import { COMMIT_HASH, COMMIT_IS_REAL, COMMIT_SHORT, VERSION_LABEL } from './version'
 
 interface Props {
   onClose: () => void
 }
 
-// The git commit this deployment is running, so you can confirm the live
-// revision. Prefer the runtime stamp written by the nginx entrypoint
-// (window.__BUILD_COMMIT__, from RENDER_GIT_COMMIT on Render), then the
-// build-time stamp baked by Vite (frees.sh locally). See CLAUDE.md
-// "Build stamping". 'dev' when neither is present.
 const REPO_URL = 'https://github.com/ernsoylu/frees'
-declare global {
-  interface Window {
-    __BUILD_COMMIT__?: string
-  }
-}
-const COMMIT_HASH =
-  (typeof window !== 'undefined' && window.__BUILD_COMMIT__) ||
-  import.meta.env.VITE_COMMIT_HASH ||
-  'dev'
-const COMMIT_SHORT = COMMIT_HASH.slice(0, 7)
-const COMMIT_IS_REAL = COMMIT_HASH !== 'dev'
 
 // About card: software identity + license on top, author at the bottom.
 export default function AboutModal({ onClose }: Readonly<Props>) {
@@ -34,7 +19,7 @@ export default function AboutModal({ onClose }: Readonly<Props>) {
               frees
             </Text>
             <Text c="dimmed" size="sm">
-              free solver · v0.0.1
+              free solver · {VERSION_LABEL}
             </Text>
           </Group>
           <Text size="sm">
