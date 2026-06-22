@@ -1,87 +1,92 @@
 [Topic: calculus]
 # Numerical Integration (ODEs & Calculus)
 
-frees supports numerical integration of scalar equations using adaptive Runge-Kutta solvers.
+`Integral(expr, var, lower, upper)` integrates `expr` with respect to `var` from `lower` to `upper`. Use it both for plain definite integrals and — via the self-reference trick below — for scalar first-order ODEs.
 
-## The Integral() Function
-`Integral(expr, var, lower, upper)` integrates `expr` with respect to `var` from `lower` to `upper`.
-
-### Definite Integration
+## Definite integration
 ```
-{ Integrates 3 * x^2 from 0 to 1 -> returns 1.0 }
+{ Integrates 3*x^2 from 0 to 1 -> 1.0 }
 area = Integral(3 * x^2, x, 0, 1)
 ```
 
-### The ODE Feedback Pattern
-When `expr` contains the result variable itself, frees detects the self-reference and solves the corresponding initial-value ordinary differential equation (ODE) starting from `0` at the lower limit:
+## The ODE feedback pattern (scalar, first-order)
+When `expr` contains the result variable itself, frees detects the self-reference and integrates the corresponding initial-value ODE **starting from 0 at the lower limit**. Because the integral always starts at 0, you integrate the *change* and rebuild the quantity of interest:
+
 ```
-{ Tank draining: dV/dt = -C * sqrt(V), V(0) = V0 }
+{ Tank draining: dV/dt = -C*sqrt(V), V(0) = V0 }
 V0 = 1.0
 C = 0.02
-V_t = Integral(-C * sqrt(V_t), t, 0, 60)   { V at t = 60 s }
+{ integrate the DROP from 0..60 s, then rebuild V }
+drop = Integral(-C * sqrt(V0 - drop), t, 0, 60)
+V   = V0 - drop          { water volume at t = 60 s }
 ```
+
+> **When to use this vs. `DYNAMIC`:** `Integral()` handles a single first-order ODE. For coupled, multi-state, stiff, or event-driven systems, use the `DYNAMIC` block on the next page instead.
 
 [Topic: dynamic-ode]
 # Transient / ODE Systems (DYNAMIC)
 
-For coupled, multi-state ODE systems, frees provides the `DYNAMIC ... END` block.
+The `DYNAMIC ... END` block integrates coupled, multi-state ODE systems. A variable becomes a **state** the moment `der(X)` appears; each state needs one derivative equation and one initial condition. Algebraic auxiliaries (any equation without a `der`) are recomputed every step and become extra columns you can plot.
 
-## DYNAMIC Block Syntax
-A variable `X` is classified as a **state** when `der(X)` appears in the block. You must write one derivative equation and one initial condition:
 ```
-DYNAMIC system_name (method = solver, t = t0 .. tf, points = n_samples)
+DYNAMIC name (method = solver, t = t0 .. tf, points = n_samples)
   der(state) = rate_equation
-  state(0) = initial_value
-  algebraic_aux = calculation
-  EVENT event_name: condition -> stop|record
+  state(0)   = initial_value
+  auxiliary  = algebraic_calc      { an extra output column }
+  EVENT name: condition -> stop | record
 END
 ```
 
 [Diagram: GuessConvergence]
 
-## Solver Roster
-- **Fixed-Step:** `ode1` (Euler), `ode2` (Heun), `ode3`, `ode4` (RK4), `ode5` (Dormand-Prince).
-- **Adaptive:** `ode45` (default Dormand-Prince 5(4)), `ode23` (Bogacki-Shampine).
-- **Stiff Implicit:** `ode23s` (modified Rosenbrock), `ode15s` (implicit BDF).
+## Choosing a solver
+| Need | Method | Notes |
+| --- | --- | --- |
+| General, non-stiff | `ode45` (default) | Dormand–Prince 5(4) adaptive. Start here. |
+| Mildly stiff / cheaper | `ode23` | Bogacki–Shampine 3(2) adaptive. |
+| Fixed-step teaching | `ode1`–`ode5` | Euler, Heun, RK3, RK4, Dormand–Prince. Use many points. |
+| Stiff | `ode23s` / `ode15s` | Implicit Rosenbrock / BDF. Use when `ode45` needs tiny steps or stalls. |
 
-## Trajectory Accessors
-You can query columns from the compiled ODE Table inside your analytic equations:
-- **`FinalValue('col'):`** Last value of column `col`.
-- **`MaxValue('col') / MinValue('col'):`** Peak or minimum value.
-- **`TimeAt('col', val):`** Time when column `col` crosses `val`.
-- **`ODEValue('col', t):`** Value interpolated at time `t`.
+Stiffness shows up when rates differ by orders of magnitude (e.g. fast chemistry alongside slow dynamics). If `ode45` runs slowly or the trajectory looks jagged, switch to `ode15s`.
 
-### Coupled ODE Example
+## Trajectory accessors
+Query columns of the compiled ODE Table from your analytic equations:
+- **`FinalValue('col')`** — last value of column `col`.
+- **`MaxValue('col')` / `MinValue('col')`** — peak / minimum.
+- **`TimeAt('col', val)`** — time when `col` crosses `val`.
+- **`ODEValue('col', t)`** — value interpolated at time `t`.
+
+These let an ODE result feed back into the analytic solve — e.g. close a sizing loop with `MaxValue('h') = h_target`.
+
+## Coupled two-state example
 ```
-{ Coupled Mass-Spring-Damper }
 m = 1.0; k = 20.0; c = 0.5
 DYNAMIC mass_spring (method = ode45, t = 0 .. 20, points = 400)
   der(x) = v
   der(v) = -(c/m) * v - (k/m) * x
+  energy = 0.5*m*v^2 + 0.5*k*x^2      { auxiliary column, decays }
   x(0) = 1.0
   v(0) = 0.0
 END
 
-{ Read results back into main system }
-final_displacement = FinalValue('x')
+final_displacement = FinalValue('x')   { read back into the analytic solve }
 ```
+
+> **Name clash tip:** the time variable and a state named `T` are case-insensitively the same. Name the block's time axis `time` (or rename the state) to avoid the collision.
 
 [Topic: optimization]
 # Optimization & Parametric Sweeps
 
-frees provides systematic parameter sweeps and gradient-based optimization tools.
+## Parametric sweeps
+A `PARAMETRIC` block drives one or more variables across a range. Variables listed in the header with a range are **driven** (overridden each run); the rest are **computed** outputs. Open the **Tables** tab and click **Solve Table** (not the main Solve) to fill it in.
 
-## Parametric Sweeps in Code
-A `PARAMETRIC` block defines variable ranges to drive sweeps:
 ```
 PARAMETRIC sweep_name(var1, var2, ...)
   var1 = start : step : end | Linear
 END
 ```
-- **Driven Columns:** Listed variables are overridden with the table values during iteration.
-- **Computed Columns:** Other variables are evaluated at each step and filled in.
 
-### Sweep Example
+### Sweep example
 ```
 v0 = 50
 g = 9.81
@@ -91,21 +96,27 @@ PARAMETRIC trajectory(theta_deg, range_m)
   theta_deg = 15 : 5 : 75 | Linear
 END
 ```
+Use the `| Log` suffix instead of `| Linear` for logarithmic spacing (handy for Bode frequency sweeps). Whole-table aggregates like `TableAvg('range_m')` or `IntegralValue('P','t')` are computed once and are identical in every row.
 
-## Minimize / Maximize Optimization
-Use **Tools -> Minimize** or **Maximize** (or the sidebar optimization panel) to find optimal values for decision variables under constraints.
+## Single-objective optimization
+**Tools → Minimize / Maximize** (or the sidebar optimization panel) finds the value of one decision variable that minimizes or maximizes an objective, subject to your equation system. Set bounds on the decision variable in Variable Info (`Ctrl + I`) to keep the search in a physical region.
 
-## Multi-Objective Optimization (Pareto front)
-When two or more objectives conflict (for example minimising cost while maximising efficiency), there is no single optimum — instead a **Pareto front** of non-dominated trade-off points. frees finds it with **NSGA-II**, a genetic algorithm: supply two or more objective variables, each flagged minimise or maximise, plus the decision variables and their bounds. Each candidate is scored by solving the equation system with the decisions fixed and reading the objective variables; the algorithm returns the set of points where no objective can be improved without worsening another. The result is a list of `(decisions, objectives)` points suitable for plotting one objective against the other.
+## Multi-objective optimization (Pareto front)
+When objectives conflict (minimise mass *and* maximise efficiency, say) there is no single optimum — only a **Pareto front** of non-dominated trade-offs. frees traces it with **NSGA-II**: supply two or more objectives (each flagged minimise or maximise) plus the decision variables and their bounds. Each candidate solves the equation system with the decisions fixed; the result is a list of `(decisions, objectives)` points where no objective improves without worsening another. Plot one objective against the other to see the trade-off curve.
 
 [Topic: api]
 # Solver Reference & API
 
-Understanding the execution pipeline helps you interpret convergence logs and handle singularities.
+Knowing the execution pipeline helps you read convergence diagnostics and diagnose singular systems.
 
-## Compilation & Execution Pipeline
-1. **Lexing/Parsing (ANTLR4):** Tokenizes variables, symbols, constants, and bracketed units.
-2. **AST Construction:** Inlines functions/modules, expands array indices, compiles matrix slices, and converts units to SI base values.
-3. **Strongly Connected Components (Tarjan's SCC):** Analyzes the variable-equation graph and groups coupled systems into minimum blocks.
-4. **Newton-Raphson Solver:** Solves each coupled block in topological order using finite-difference Jacobians and backtracking line search.
-5. **DYNAMIC Pass:** Performs numerical integration of ODE blocks using solved analytic variables as parameters. Accessor values are fed back iteratively until the system converges globally.
+## Compilation & execution pipeline
+1. **Lex/parse (ANTLR4)** — tokenizes variables, symbols, constants, and `[unit]` annotations.
+2. **AST construction** — inlines functions/modules, expands array indices and matrix slices, and converts every unit to its SI base value.
+3. **Dependency analysis (Tarjan SCC)** — builds the variable↔equation graph and groups coupled variables into minimal strongly-connected blocks.
+4. **Newton–Raphson solve** — solves each block in topological order using finite-difference Jacobians and backtracking line search. Guesses (Variable Info) seed the iteration; bounds keep it physical.
+5. **DYNAMIC pass** — integrates ODE blocks using the solved analytic variables as parameters. Accessor values feed back and the system re-solves until it converges globally.
+
+## Reading convergence output
+- **"Singular Jacobian"** — two equations are effectively dependent, or a guess landed on a flat region. Check for duplicate/redundant equations and adjust guesses.
+- **"Max iterations"** — the solver didn't converge. Almost always a guess or bound problem; try a guess closer to the expected magnitude.
+- **DoF ≠ 0** — too few or too many equations. F4 (Check) reports the imbalance before you solve.
