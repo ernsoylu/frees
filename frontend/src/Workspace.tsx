@@ -98,7 +98,14 @@ function uncertaintyText(v: VariableResult): string {
 
 function ScalarTable({ scalars, replNames }: Readonly<{ scalars: VariableResult[]; replNames: Set<string> }>) {
   return (
-    <Table striped highlightOnHover stickyHeader>
+    // The variable names + 5 columns have an intrinsic min-width that exceeds a
+    // narrow dock/edge panel; scroll horizontally inside the panel rather than
+    // letting the table overflow and get clipped. `type="native"` is a plain
+    // overflow-x:auto block whose min-content collapses to 0 — so the table's
+    // min-width can't push the (row-reverse) edge group wider than its slot and
+    // clip the panel on the left.
+    <Table.ScrollContainer type="native" minWidth={380}>
+    <Table striped highlightOnHover>
       <Table.Thead>
         <Table.Tr>
           <Table.Th>Name</Table.Th>
@@ -127,6 +134,7 @@ function ScalarTable({ scalars, replNames }: Readonly<{ scalars: VariableResult[
         ))}
       </Table.Tbody>
     </Table>
+    </Table.ScrollContainer>
   )
 }
 
@@ -226,16 +234,18 @@ export default function Workspace({ variables, replNames, onEdit }: Readonly<Pro
 
   return (
     <Paper withBorder p="md" h="100%" style={{ overflowY: 'auto' }}>
-      <Group justify="space-between" mb="sm" wrap="nowrap">
-        <Group gap="xs">
+      {/* Wrap (not nowrap) so in a narrow dock/edge panel the filter + Edit drop
+          below the title instead of squeezing it into a clipped two-line wrap. */}
+      <Group justify="space-between" mb="sm" gap="xs" wrap="wrap">
+        <Group gap="xs" wrap="nowrap" style={{ flex: '1 1 auto', minWidth: 0 }}>
           <ThemeIcon variant="light" size="sm"><IconVariable size={14} /></ThemeIcon>
-          <Text fw={600} c="teal.4">Variable Explorer</Text>
-          {!empty && <Badge variant="light" size="sm">{variables.length} variables</Badge>}
+          <Text fw={600} c="teal.4" truncate>Variable Explorer</Text>
+          {!empty && <Badge variant="light" size="sm" style={{ flexShrink: 0 }}>{variables.length}</Badge>}
         </Group>
-        <Group gap="xs" wrap="nowrap">
+        <Group gap="xs" wrap="nowrap" style={{ flex: '1 1 auto' }}>
           <TextInput
             size="xs"
-            w={180}
+            style={{ flex: 1, minWidth: 0 }}
             placeholder="Filter variables…"
             leftSection={<IconSearch size={13} />}
             value={query}

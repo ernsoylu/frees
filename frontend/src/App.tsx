@@ -106,7 +106,6 @@ const lazyTabFallback = (
 )
 import { PlotSpec, PlotKind } from './plots/types'
 import { plotDefToSpec } from './plots/fromCode'
-import SolutionPanel from './SolutionPanel'
 import Workspace from './Workspace'
 import ReplTerminal from './ReplTerminal'
 import ExamplesModal from './ExamplesModal'
@@ -119,8 +118,6 @@ import { Rail, TopBar } from './WorkspaceChrome'
 import { WorkspaceDock, type WorkspaceDockHandle, type OpenWindow } from './workspace/WorkspaceDock'
 import { detectStates } from './plots/stateTable'
 import {
-  buildComplexSolutionRows,
-  buildRealSolutionRows,
   withStableKeys,
 } from './format'
 import { FUNCTION_CATEGORIES } from './functionCatalog'
@@ -294,10 +291,8 @@ export default function App() {
   // them. Cleared on every solve (the backend resets its session overlay too).
   const [replVars, setReplVars] = useState<Record<string, VariableResult>>({})
   const [solving, setSolving] = useState(false)
-  const [solveCount, setSolveCount] = useState(0)
   const [findAll, setFindAll] = useState(false)
   const [complexMode, setComplexMode] = useState(false)
-  const [solvedComplexMode, setSolvedComplexMode] = useState(false)
   const [stopCriteria, setStopCriteria] = useState<StopCriteria>(
     () => boot?.stopCriteria ?? loadStopCriteria(),
   )
@@ -636,7 +631,6 @@ export default function App() {
     const t = tables.find((x) => `table:${x.id}` === focusedWindow.id)
     return t?.kind === 'parametric' ? t : null
   })()
-  const tableStats = focusedParam?.stats ?? null
   const tableCheckResult = focusedParam?.checkResult ?? null
   const tableCheckMessage = focusedParam?.checkMessage ?? ''
   const functionTableDtos = toFunctionTableDtos(tables)
@@ -975,15 +969,12 @@ export default function App() {
         // user runs `clear` in the terminal.
         Object.values(replVars).map(replOverrideEquation),
       )
-      setSolvedComplexMode(complexMode)
       setResult(response)
       // REPL overrides persist across solves (the terminal keeps priority over the
       // editor); they're dropped only by the `clear` command, not by solving.
-      // The Solution panel lives collapsed in the right edge group by default
-      // (a rotated tab, like the Inspector) so it is always available without the
-      // user opening it by hand. Solving updates its contents but does not
-      // force-expand it; the user expands it by clicking its edge tab (or the
-      // View menu) and removes it only by deliberately closing it.
+      // The Variable Explorer lives in the right edge group (expanded by default)
+      // and shows the solved variables — it replaces the old Solution panel.
+      // Solving updates its contents; the user can collapse it via its edge tab.
       setTables((all) => mergeCodeTables(all, response.codeTables, response.parametricTables, response.odeTables))
       setLastSolvedWithFillMissing(shouldFillMissing && response.success)
       // Once the user has solved successfully, they've learned the core
@@ -1040,7 +1031,6 @@ export default function App() {
       })
       setLastSolvedWithFillMissing(false)
     } finally {
-      setSolveCount((n) => n + 1)
       setSolving(false)
     }
   }
@@ -1185,7 +1175,7 @@ export default function App() {
   // restored from a saved layout. Without this they'd render as blank panels.
   useEffect(() => {
     const valid = new Set<string>([
-      'equations', 'table', 'plots', 'digitizer', 'workspace', 'terminal', 'solution', 'states', 'inspector',
+      'equations', 'table', 'plots', 'digitizer', 'workspace', 'terminal', 'states', 'inspector',
       ...diagrams.map((d) => `diagram:${d.id}`),
       ...mergedPlots.map((p) => `plot:${p.id}`),
       ...tables.map((t) => `table:${t.id}`),
@@ -1231,12 +1221,6 @@ export default function App() {
   // Fluid state tables declared with STATE TABLE blocks: surfaced in the left
   // Tables menu (tagged by fluid) and opened in the shared Fluid States window.
   const declaredStateDefs = result?.stateTableDefs ?? checkResult?.stateTableDefs ?? []
-
-  // Use the mode that was active when the result was solved, not the live checkbox
-  const resultIsComplex = result !== null && solvedComplexMode
-  const solutionRows = resultIsComplex
-    ? buildComplexSolutionRows(workspaceVariables, solutions)
-    : buildRealSolutionRows(workspaceVariables, solutions)
 
   // Reusable window open/create handlers, shared by the left rail and the
   // command palette so both open real dock windows (not just highlight a tab).
@@ -1317,7 +1301,6 @@ export default function App() {
         } },
         { id: 'view-digitizer', label: 'Graph Digitizer', leftSection: <IconChartGridDots size={18} />, onClick: () => dockRef.current?.open('digitizer') },
         { id: 'view-diagram', label: 'Diagram', description: 'Open the latest diagram (or create one)', leftSection: <IconSchema size={18} />, onClick: openLatestOrNewDiagram },
-        { id: 'view-solution', label: 'Solution', leftSection: <IconChecks size={18} />, onClick: () => dockRef.current?.open('solution') },
         { id: 'view-inspector', label: 'Inspector', leftSection: <IconSettings size={18} />, onClick: () => dockRef.current?.open('inspector') },
       ],
     },
@@ -1622,7 +1605,7 @@ export default function App() {
           <div style={bodyStyle}>
             <Stack gap="xs">
               <Text size="sm" fw={600} c="teal.4">Equations</Text>
-              <Text size="xs" c="dimmed">Edit equations in the Editor; press Solve (F2) to compute. Open the Solution panel (View menu) to see results.</Text>
+              <Text size="xs" c="dimmed">Edit equations in the Editor; press Solve (F2) to compute. Results appear in the Variable Explorer on the right.</Text>
               <Text size="xs" c="dimmed">Variable Information, Min / Max and Curve Fit are on the left rail and in the Tools menu.</Text>
             </Stack>
           </div>
@@ -1647,7 +1630,19 @@ export default function App() {
           variables={workspaceVariables}
           replNames={replNames}
           functions={replFunctionNames}
-          onAssign={(v) => setReplVars((prev) => ({ ...prev, [v.name.toLowerCase()]: v }))}
+          onAssign={(v) => {
+            setReplVars((prev) => ({ ...prev, [v.name.toLowerCase()]: v }))
+            if (!v.name.includes('[')) {
+              setVarDrafts((prev) => {
+                const existing = prev[v.name]
+                if (existing?.isUnitsUserSet) return prev
+                return {
+                  ...prev,
+                  [v.name]: { ...(existing ?? DEFAULT_DRAFT), units: v.units || '' },
+                }
+              })
+            }
+          }}
           onCheck={() => void onCheck()}
           onSolve={() => void checkThenSolve()}
           onClear={() => {
@@ -1675,19 +1670,6 @@ export default function App() {
         />
       </div>
     ),
-    solution: (
-      <div style={{ height: '100%', minHeight: 0 }}>
-        <SolutionPanel
-          showTable={focusedParam !== null}
-          solveCount={solveCount}
-          tableStats={tableStats}
-          result={result}
-          rows={solutionRows}
-          onCollapse={() => dockRef.current?.close('solution')}
-          onOpenExamples={() => setShowExamples(true)}
-        />
-      </div>
-    ),
   }
   const panelTitles: Record<string, string> = {
     equations: 'Editor',
@@ -1696,7 +1678,6 @@ export default function App() {
     digitizer: 'Digitizer',
     workspace: 'Variable Explorer',
     terminal: 'Terminal',
-    solution: 'Solution',
     states: 'Fluid States',
     inspector: 'Inspector',
   }
@@ -2014,7 +1995,13 @@ export default function App() {
 
       {showVariableInfo && (
         <VariableInfoModal
-          variables={variables}
+          variables={(() => {
+            const replScalarNames = Object.values(replVars)
+              .map((v) => v.name)
+              .filter((n) => !n.includes('['))
+              .filter((n) => !variables.some((vn) => vn.toLowerCase() === n.toLowerCase()))
+            return [...variables, ...replScalarNames]
+          })()}
           drafts={varDrafts}
           solvedValues={(() => {
             const solvedValues: Record<string, number> = {}
@@ -2022,6 +2009,9 @@ export default function App() {
               for (const v of result.variables) {
                 solvedValues[v.name.toLowerCase()] = v.value
               }
+            }
+            for (const v of Object.values(replVars)) {
+              if (!v.name.includes('[')) solvedValues[v.name.toLowerCase()] = v.value
             }
             return solvedValues
           })()}
@@ -2101,7 +2091,6 @@ export default function App() {
           onInsertFunction={insertFunction}
           onOpenExamples={() => setShowExamples(true)}
           onOpenInspector={() => dockRef.current?.open('inspector')}
-          onOpenSolution={() => dockRef.current?.open('solution')}
           onOpenWorkspace={() => dockRef.current?.open('workspace')}
           onOpenTerminal={() => dockRef.current?.open('terminal')}
           onVariableInfo={() => setShowVariableInfo(true)}
@@ -2120,8 +2109,8 @@ export default function App() {
           <WorkspaceDock
             content={panelContent}
             titles={panelTitles}
-            defaultOpen={['equations', 'inspector', 'solution']}
-            edgeKinds={['solution', 'inspector']}
+            defaultOpen={['equations', 'inspector', 'workspace']}
+            edgeKinds={['workspace', 'inspector']}
             onActiveChange={(active) => {
               setActiveTab(active?.kind ?? '')
               // Focusing a table window makes it the "active" table so the
@@ -2130,8 +2119,8 @@ export default function App() {
                 setActiveTableId(active.id.slice('table:'.length))
               }
               // The Inspector reflects the last-focused main window; focusing
-              // the auxiliary Inspector/Solution panels must not change it.
-              if (active && active.kind !== 'inspector' && active.kind !== 'solution') {
+              // the auxiliary Inspector / Variable Explorer edge panels must not change it.
+              if (active && active.kind !== 'inspector' && active.kind !== 'workspace') {
                 setFocusedWindow(active)
               }
             }}
