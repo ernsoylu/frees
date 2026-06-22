@@ -51,7 +51,8 @@ import {
   SolverPipelineDiagram,
   DegreesOfFreedomDiagram,
   DependentPropertiesDiagram,
-  GuessConvergenceDiagram
+  GuessConvergenceDiagram,
+  BraytonCycleDiagram
 } from './docs/DocDiagrams';
 
 function CopyButton({ code }: Readonly<{ code: string }>) {
@@ -766,8 +767,53 @@ w_T = cp * (T[3] - T[4])
 w_net = w_T - w_C
 W_dot_net = m_dot * w_net
 bwr = w_C / w_T
-q_in = cp * (T[3] - T[2])
-eta_th = w_net / q_in * 100`,
+    q_in = cp * (T[3] - T[2])
+    eta_th = w_net / q_in * 100`,
+  },
+  {
+    value: "brayton-cold-air-standard",
+    title: "Gas Turbines: Simple Brayton Cycle, Cold-Air-Standard",
+    description: "An air-standard Brayton cycle with a pressure ratio of 8, compressor and turbine isentropic efficiencies of 80% and 85%, and a turbine inlet of 1300 K. The actual compressor and turbine exit temperatures (T2a, T4a) are recovered implicitly from the efficiency definitions rather than being computed by hand.",
+    note: "Verified against the textbook: T2a = 604.3 K, T4a = 805.0 K, net work 191.7 kJ/kg, back work ratio 0.615, thermal efficiency 27.4%, heat rate 12 450 Btu/kWh.",
+    diagram: "BraytonCycle",
+    code: `{ Simple Brayton Cycle, Cold-Air-Standard }
+{ Air enters the compressor at 300 K and 100 kPa, is compressed to 8 times
+  that pressure, then heated to 1300 K before expanding back to the inlet
+  pressure. Compressor and turbine isentropic efficiencies are 80% and 85%.
+  Find the state temperatures, works, back work ratio, thermal efficiency
+  and heat rate. Cold-air-standard: constant cp and k. }
+T1 = 300 [K]
+P1 = 100 [kPa]
+rp = 8
+T3 = 1300 [K]
+etaC = 0.80
+etaT = 0.85
+k = 1.4
+cp = 1.005 [kJ/kg-K]
+
+{ Pressures through the cycle }
+P2 = rp * P1
+P3 = P2
+P4 = P1
+
+{ Isentropic compressor exit and actual exit (T2a is the unknown) }
+T2s = T1 * rp^((k - 1) / k)
+etaC = (T2s - T1) / (T2a - T1)
+
+{ Isentropic turbine exit and actual exit (T4a is the unknown) }
+T4s = T3 / rp^((k - 1) / k)
+etaT = (T3 - T4a) / (T3 - T4s)
+
+{ Work and heat transfers }
+w_comp = cp * (T2a - T1)
+w_turb = cp * (T3 - T4a)
+w_net = w_turb - w_comp
+q_in = cp * (T3 - T2a)
+
+{ Performance metrics }
+r_bw = w_comp / w_turb
+eta_th = w_net / q_in * 100
+heat_rate = 3412 / (eta_th / 100)`,
   },
   {
     value: "auto-gas-turbine",
@@ -2662,7 +2708,7 @@ const CATEGORIES = [
     title: 'Case Studies',
     icon: <IconFileText size={16} />,
     items: [
-      { id: 'examples', label: 'Engineering Examples Library', keywords: ['examples', 'rankine', 'brayton', 'combined cycle', 'pipe network', 'truss', 'radiation', 'cooling loop', 'reforming', 'pid', 'fatigue', 'nuclear', 'siyavula', 'nozzle', 'co2', 'compressible', 'throat', 'sonic', 'pelton', 'turbine', 'turbomachinery', 'hydropower', 'impulse', 'vehicle', 'ev', 'electric vehicle', 'longitudinal', 'lateral', 'bicycle model', 'understeer', 'road load', 'drag', 'battery', 'pack', 'cell', 'sizing', 'motor', 'range', 'batemo', 'c-rate', 'ode', 'differential equations', 'runge-kutta', 'stiff', 'van der pol', 'robertson', 'lotka-volterra', 'predator-prey', 'pendulum', 'rlc', 'rc circuit', 'rl circuit', 'orbit', 'logistic', 'decay', 'cooling', 'mass-spring-damper', 'parachutist', 'torricelli'] },
+      { id: 'examples', label: 'Engineering Examples Library', keywords: ['examples', 'rankine', 'brayton', 'cold air standard', 'combined cycle', 'pipe network', 'truss', 'radiation', 'cooling loop', 'reforming', 'pid', 'fatigue', 'nuclear', 'siyavula', 'nozzle', 'co2', 'compressible', 'throat', 'sonic', 'pelton', 'turbine', 'turbomachinery', 'hydropower', 'impulse', 'vehicle', 'ev', 'electric vehicle', 'longitudinal', 'lateral', 'bicycle model', 'understeer', 'road load', 'drag', 'battery', 'pack', 'cell', 'sizing', 'motor', 'range', 'batemo', 'c-rate', 'ode', 'differential equations', 'runge-kutta', 'stiff', 'van der pol', 'robertson', 'lotka-volterra', 'predator-prey', 'pendulum', 'rlc', 'rc circuit', 'rl circuit', 'orbit', 'logistic', 'decay', 'cooling', 'mass-spring-damper', 'parachutist', 'torricelli'] },
     ]
   },
   {
@@ -3093,6 +3139,11 @@ export default function HelpPage() {
                         <Alert color="gray" py="xs" mb="sm">
                           {ex.note}
                         </Alert>
+                      )}
+                      {ex.diagram === 'BraytonCycle' && (
+                        <Paper withBorder p="sm" mb="sm" bg="light-dark(var(--mantine-color-gray-1), var(--mantine-color-dark-8))">
+                          <BraytonCycleDiagram />
+                        </Paper>
                       )}
                       <Paper withBorder p="xs" bg="light-dark(var(--mantine-color-gray-1), var(--mantine-color-dark-9))" style={{ position: 'relative' }}>
                         <CopyButton code={ex.code} />

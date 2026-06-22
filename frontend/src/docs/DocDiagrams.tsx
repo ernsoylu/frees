@@ -19,6 +19,44 @@ const THEME = {
   strokeWidth: 2,
 };
 
+// Arrow markers specific to the Brayton cycle diagram. The shared color
+// gradients (blueGrad/purpleGrad/tealGrad/orangeGrad/redGrad) are defined
+// inside SolverPipelineDiagram / DegreesOfFreedomDiagram and reused here via
+// their global SVG IDs — defining them again would collide and drift.
+function BraytonDefs() {
+  return (
+    <defs>
+      <marker id="bcArrow" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+        <path d="M 0 1.5 L 7 5 L 0 8.5 z" fill={THEME.textColor} />
+      </marker>
+      <marker id="bcHeatArrow" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+        <path d="M 0 1.5 L 7 5 L 0 8.5 z" fill={THEME.warning} />
+      </marker>
+      <marker id="bcWorkArrow" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+        <path d="M 0 1.5 L 7 5 L 0 8.5 z" fill={THEME.accent} />
+      </marker>
+    </defs>
+  );
+}
+
+// One state-point card (marker + name/temperature/pressure info box).
+function BraytonStateCard({ point, label, name, temp, pres }: {
+  point: { x: number; y: number }; label: string; name: string; temp: string; pres: string;
+}) {
+  return (
+    <g>
+      <circle cx={point.x} cy={point.y} r="11" fill={THEME.accentGrad} stroke="#63E6BE" strokeWidth="1.5" />
+      <text x={point.x} y={point.y + 4} fill="#FFF" fontWeight="700" fontSize="12" textAnchor="middle">{label}</text>
+      <g transform={`translate(${point.x - 52}, 300)`}>
+        <rect width="104" height="52" rx="5" fill="#25262B" stroke="#373A40" strokeWidth="1" />
+        <text x="52" y="15" fill={THEME.accent} fontSize="10" fontWeight="700" textAnchor="middle">{name}</text>
+        <text x="52" y="30" fill={THEME.textColor} fontSize="9.5" textAnchor="middle">{temp}</text>
+        <text x="52" y="44" fill={THEME.textDimmed} fontSize="9.5" textAnchor="middle">{pres}</text>
+      </g>
+    </g>
+  );
+}
+
 export function SolverPipelineDiagram() {
   return (
     <svg viewBox="0 0 800 240" width="100%" height="auto" style={{ background: THEME.bg, fontFamily: 'system-ui, sans-serif' }}>
@@ -283,6 +321,117 @@ export function GuessConvergenceDiagram() {
       <text x="245" y="96" fill={THEME.textColor} fontSize="10">1. Bounds (e.g. x &gt; 0) prevent search in invalid domains.</text>
       <text x="245" y="110" fill={THEME.textColor} fontSize="10">2. Good guesses keep solver away from flat divergence regions.</text>
       <text x="245" y="124" fill={THEME.textColor} fontSize="10">3. Halves iterations and speeds up solving.</text>
+    </svg>
+  );
+}
+
+/**
+ * Brayton cycle schematic for the "Simple Brayton Cycle, Cold-Air-Standard"
+ * help-page example. Shows the four state points (1 → compressor → 2 →
+ * combustor → 3 → turbine → 4 → exhaust/cool → 1), the five given inputs,
+ * and the heat/work arrows. Purely illustrative — values are the textbook
+ * reference numbers so the diagram doubles as a sanity check.
+ */
+export function BraytonCycleDiagram() {
+  // Box geometry for the four components, laid out in a rectangle.
+  const comp = { w: 130, h: 64 };
+  const compY = 130;
+  // State-point coordinates (centres of the connecting corners).
+  const S1 = { x: 70,  y: 162 };
+  const S2 = { x: 270, y: 162 };
+  const S3 = { x: 470, y: 162 };
+  const S4 = { x: 670, y: 162 };
+
+  return (
+    <svg viewBox="0 0 740 360" width="100%" height="auto"
+         style={{ background: THEME.bg, fontFamily: 'system-ui, sans-serif' }}>
+      <BraytonDefs />
+
+      {/* Title */}
+      <text x="370" y="26" fill={THEME.textColor} fontSize="14" fontWeight="700" textAnchor="middle">
+        Simple Brayton Cycle — Cold-Air-Standard (η_C = 80%, η_T = 85%)
+      </text>
+
+      {/* ---- Component boxes (top row) ---- */}
+      {/* Compressor: 1 -> 2 */}
+      <g transform={`translate(${S1.x + 35}, ${compY})`}>
+        <rect width={comp.w} height={comp.h} rx="8" fill={THEME.secondaryGrad} stroke="#9775FA" strokeWidth="1" />
+        <text x={comp.w / 2} y="26" fill="#FFF" fontWeight="700" fontSize="13" textAnchor="middle">Compressor</text>
+        <text x={comp.w / 2} y="44" fill="#FFF" fontSize="10" opacity="0.9" textAnchor="middle">η_C = 0.80</text>
+        <text x={comp.w / 2} y="56" fill="#FFF" fontSize="10" opacity="0.9" textAnchor="middle">P₁ → P₂ = r_p·P₁</text>
+      </g>
+
+      {/* Combustor: 2 -> 3 */}
+      <g transform={`translate(${S2.x + 35}, ${compY})`}>
+        <rect width={comp.w} height={comp.h} rx="8" fill={THEME.warningGrad} stroke="#FFA94D" strokeWidth="1" />
+        <text x={comp.w / 2} y="26" fill="#FFF" fontWeight="700" fontSize="13" textAnchor="middle">Combustor</text>
+        <text x={comp.w / 2} y="44" fill="#FFF" fontSize="10" opacity="0.9" textAnchor="middle">q_in (constant P)</text>
+        <text x={comp.w / 2} y="56" fill="#FFF" fontSize="10" opacity="0.9" textAnchor="middle">T₂ → T₃</text>
+      </g>
+
+      {/* Turbine: 3 -> 4 */}
+      <g transform={`translate(${S3.x + 35}, ${compY})`}>
+        <rect width={comp.w} height={comp.h} rx="8" fill={THEME.primaryGrad} stroke="#4DABF7" strokeWidth="1" />
+        <text x={comp.w / 2} y="26" fill="#FFF" fontWeight="700" fontSize="13" textAnchor="middle">Turbine</text>
+        <text x={comp.w / 2} y="44" fill="#FFF" fontSize="10" opacity="0.9" textAnchor="middle">η_T = 0.85</text>
+        <text x={comp.w / 2} y="56" fill="#FFF" fontSize="10" opacity="0.9" textAnchor="middle">P₃ → P₄ = P₁</text>
+      </g>
+
+      {/* ---- Connecting flow arrows (top row) ---- */}
+      <line x1={S2.x} y1={compY + comp.h / 2} x2={S2.x + 35} y2={compY + comp.h / 2}
+            stroke={THEME.textColor} strokeWidth={THEME.strokeWidth} markerEnd="url(#bcArrow)" />
+      <line x1={S3.x} y1={compY + comp.h / 2} x2={S3.x + 35} y2={compY + comp.h / 2}
+            stroke={THEME.textColor} strokeWidth={THEME.strokeWidth} markerEnd="url(#bcArrow)" />
+
+      {/* ---- Return path: 4 -> (exhaust/cool) -> 1 (bottom) ---- */}
+      {/* Down from turbine exit */}
+      <line x1={S4.x} y1={compY + comp.h} x2={S4.x} y2={250}
+            stroke={THEME.textColor} strokeWidth={THEME.strokeWidth} />
+      {/* Exhaust / heat rejection label box */}
+      <g transform={`translate(${S4.x - 90}, 250)`}>
+        <rect width="180" height="40" rx="6" fill="#1A1B1E" stroke={THEME.danger} strokeWidth="1" />
+        <text x="90" y="18" fill="#FF8787" fontSize="11" fontWeight="700" textAnchor="middle">q_out (exhaust)</text>
+        <text x="90" y="32" fill={THEME.textDimmed} fontSize="9.5" textAnchor="middle">T₄ → T₁  at  P₁</text>
+      </g>
+      {/* Across the bottom back to state 1 */}
+      <line x1={S4.x - 90} y1={270} x2={S1.x} y2={270}
+            stroke={THEME.textColor} strokeWidth={THEME.strokeWidth} />
+      {/* Up into state 1 */}
+      <line x1={S1.x} y1={270} x2={S1.x} y2={compY + comp.h}
+            stroke={THEME.textColor} strokeWidth={THEME.strokeWidth} markerEnd="url(#bcArrow)" />
+
+      {/* ---- State-point markers + labels ---- */}
+      <BraytonStateCard point={S1} label="1" name="Inlet"     temp="T₁ = 300 K"     pres="P₁ = 100 kPa" />
+      <BraytonStateCard point={S2} label="2" name="Comp. exit" temp="T₂a = 604.3 K" pres="P₂ = 800 kPa" />
+      <BraytonStateCard point={S3} label="3" name="Turb. inlet" temp="T₃ = 1300 K"  pres="P₃ = 800 kPa" />
+      <BraytonStateCard point={S4} label="4" name="Turb. exit"  temp="T₄a = 805.0 K" pres="P₄ = 100 kPa" />
+
+      {/* ---- Input legend (the five given inputs) ---- */}
+      <g transform="translate(20, 70)">
+        <text x="0" y="0" fill={THEME.textDimmed} fontSize="10.5" fontWeight="700">Given inputs:</text>
+        <text x="92"  y="0" fill={THEME.textColor} fontSize="10.5">rₚ = 8</text>
+        <text x="158" y="0" fill={THEME.textColor} fontSize="10.5">k = 1.4</text>
+        <text x="212" y="0" fill={THEME.textColor} fontSize="10.5">cₚ = 1.005 kJ/kg·K</text>
+        <text x="348" y="0" fill={THEME.warning}   fontSize="10.5">η_C = 0.80</text>
+        <text x="418" y="0" fill={THEME.primary}   fontSize="10.5">η_T = 0.85</text>
+        <text x="486" y="0" fill={THEME.textDimmed} fontSize="10.5" fontStyle="italic">(cold-air-standard)</text>
+      </g>
+
+      {/* ---- Work / heat arrows ---- */}
+      {/* Compressor work input (into compressor from above) */}
+      <line x1={S1.x + 100} y1={compY - 18} x2={S1.x + 100} y2={compY}
+            stroke={THEME.accent} strokeWidth="2.5" markerEnd="url(#bcWorkArrow)" />
+      <text x={S1.x + 100} y={compY - 24} fill={THEME.accent} fontSize="10" fontWeight="700" textAnchor="middle">w_comp,in</text>
+
+      {/* Turbine work output (out of turbine upward) */}
+      <line x1={S3.x + 100} y1={compY} x2={S3.x + 100} y2={compY - 18}
+            stroke={THEME.accent} strokeWidth="2.5" markerEnd="url(#bcWorkArrow)" />
+      <text x={S3.x + 100} y={compY - 24} fill={THEME.accent} fontSize="10" fontWeight="700" textAnchor="middle">w_turb,out</text>
+
+      {/* Heat-in arrow into combustor from above */}
+      <line x1={S2.x + 100} y1={compY - 18} x2={S2.x + 100} y2={compY}
+            stroke={THEME.warning} strokeWidth="2.5" markerEnd="url(#bcHeatArrow)" />
+      <text x={S2.x + 100} y={compY - 24} fill={THEME.warning} fontSize="10" fontWeight="700" textAnchor="middle">q_in</text>
     </svg>
   );
 }
