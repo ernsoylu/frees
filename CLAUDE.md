@@ -38,12 +38,12 @@ The frontend bundle is stamped with the git commit it was built from, surfaced i
 **Tests and local development** (run on the host, not in Docker):
 
 ```bash
-# Backend
+### Backend
 cd backend && ./gradlew test        # run all backend tests
 cd backend && ./gradlew test --tests "com.frees.backend.core.EquationSystemSolverTest"  # single class
 cd backend && ./gradlew bootRun     # dev-only: run backend on host
 
-# Frontend
+### Frontend
 cd frontend && npm install && npm run build   # type-check + production build
 cd frontend && npm start                      # dev-only: Vite dev server (proxies /api to :8080)
 ```
@@ -65,13 +65,14 @@ cd frontend && npm start                      # dev-only: Vite dev server (proxi
 
 ## Architecture Summary
 
-See `ARCHITECTURE_AND_REQUIREMENTS.md` for the full system design and six-Epic Agile plan.
+See `README.md` for the full system design and Agile plan.
 
-**Client-Server flow:**
-1. React frontend collects equation + markdown text → POST to Spring Boot backend on "Solve" / "Check"
-2. Backend: extracts equations from markdown lines (preserving text structure; multiple `;`-separated equations per line are supported), lexes/parses them (ANTLR), expands matrix/vector operations (`SolveLinear`, `Inverse`, `Dot`, …) into scalar equations, performs unit verification, blocks equations via Tarjan SCC, and solves via Newton's method.
-3. Backend returns JSON: variable solutions, residuals, array tables, compiled LaTeX strings, and the rebuilt formatted report.
-4. Frontend renders each window:
+**Client-Server flow (Asynchronous):**
+1. React frontend collects equation + markdown text → POST to Spring Boot API node (`api` profile).
+2. API Node syntax-checks equations. If valid, pushes a `ComputeTask` to RabbitMQ and returns a `202 Accepted` with a `jobId`.
+3. Compute Node (`compute` profile) picks up the task from RabbitMQ, extracts equations from markdown lines (preserving text structure; multiple `;`-separated equations per line are supported), lexes/parses them (ANTLR), expands matrix/vector operations (`SolveLinear`, `Inverse`, `Dot`, …) into scalar equations, performs unit verification, blocks equations via Tarjan SCC, solves via Newton's method, and writes the JSON payload result to Redis.
+4. Frontend polls the API node (`GET /api/jobs/{jobId}`) until the state is COMPLETED/FAILED.
+5. Frontend renders each window based on the JSON payload:
    - **Editor**: Custom monospace text editor with a scroll-synchronized line numbers gutter on the left.
    - **Formatted**: Renders compiled Markdown report combining normal text with LaTeX/KaTeX equations, inline solutions, hover tooltips, and embedded interactive plots via `[Graph="..."]` tag resolution.
    - **Solution, Arrays, Plots, Diagram**: Grid, charts, and overlay layouts built from the JSON payload.
@@ -81,3 +82,43 @@ See `ARCHITECTURE_AND_REQUIREMENTS.md` for the full system design and six-Epic A
 **Check-before-Solve (Check/Format):** `POST /api/check` verifies syntax and structural solvability (zero degrees of freedom + complete equation↔variable matching) without solving. The frontend gates the Solve button on a successful check; any edit invalidates it.
 
 **Deployment:** Both servers are containerized (`backend/Dockerfile` multi-stage Gradle build → JRE; `frontend/Dockerfile` Vite build → nginx with `/api` reverse proxy to the `backend` service). `docker-compose.yml` wires them with a TCP healthcheck so the frontend waits for a healthy backend.
+
+## Tech Stack and Required Skills
+
+## Backend Architecture (Java + Spring Boot)
+
+| Concern | Library / Tool |
+|---|---|
+| Language | Java JDK 17+ |
+| Framework | Spring Boot (REST + WebSocket API) |
+| Build tool | Gradle |
+| Compiler / Lexer | ANTLR — generates AST from equation strings |
+| Graph theory | JGraphT — Tarjan's DFS blocking algorithm |
+| Numerical math | Apache Commons Math — Jacobian matrix, Newton-Raphson, Brent's optimization, Predictor-Corrector integration, eigen-decomposition & matrix algebra (control-systems poles/zeros, LQR Riccati) |
+| Symbolic algebra (CAS) | Symja (`matheclipse-core`) — symbolic identities, Laplace partial fractions, transfer-function algebra, symbolic `ss↔tf` |
+| Thermodynamics | CoolProp (via JNI/JNA) for real fluids; JANAF table equivalents for ideal gases |
+| Asynchronous Compute | RabbitMQ (Message Broker) + Redis (State Cache & Job Store) |
+| Observability | OpenTelemetry + Jaeger (Distributed Tracing) |
+
+## Frontend Architecture (React + TypeScript)
+
+| Concern | Library / Tool |
+|---|---|
+| Framework | React 19 + TypeScript |
+| UI components | Mantine (https://mantine.dev / https://ui.mantine.dev) — dark theme, `MantineProvider defaultColorScheme="dark"` |
+| Equation rendering | KaTeX or MathJax — Formatted Equations window (`_dot`, `_hat`, subscripts) |
+| Data grids | ag-Grid or Handsontable — Parametric, Lookup, and Array tables |
+| Charting | Plotly.js — X-Y, contour, 3D surface, and thermodynamic property plots |
+| Diagram Window | react-konva or Fabric.js (HTML5 Canvas) + CSS absolute-positioned HTML overlays |
+| Whiteboard | Excalidraw (`@excalidraw/excalidraw`) — code-split freehand sketch canvas, complementing the solver-bound Diagram window |
+
+## Build & Deployment (Docker)
+
+| Concern | Tool |
+|---|---|
+| Containerization | Docker (multi-stage builds for both servers) |
+| Orchestration | Docker Compose (`docker-compose.yml` at repo root) |
+| Backend image | `eclipse-temurin:21-jdk` build stage (Gradle wrapper, `bootJar`) → `eclipse-temurin:21-jre` runtime |
+| Frontend image | `node:20-alpine` build stage (Vite) → `nginx:alpine` serving static bundle + `/api` reverse proxy |
+| Server lifecycle | `./frees.sh start \| stop \| restart \| status \| logs \| rebuild` |
+| CI/CD | GitHub Actions (`.github/workflows/ci.yml`): backend tests + frontend build on every push/PR; Docker images pushed to GHCR on main |

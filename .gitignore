@@ -34,3 +34,7 @@ frontend/tsconfig.tsbuildinfo
 screenshots/
 test-results/
 .aider*
+
+# Local development artifacts
+sources*
+parse_sources.py
