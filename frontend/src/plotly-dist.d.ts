@@ -52,6 +52,10 @@ declare module 'plotly.js-dist-min' {
     exponentformat?: 'power' | 'e' | 'none'
     domain?: number[]
     scaleanchor?: string
+    range?: (number | null)[]
+    dtick?: number
+    overlaying?: string
+    side?: 'left' | 'right' | 'top' | 'bottom'
   }
 
   export interface PlotlyLayout {

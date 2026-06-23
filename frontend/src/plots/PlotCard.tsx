@@ -349,7 +349,9 @@ export default function PlotCard({
 
   useEffect(() => {
     if (exportTrigger) {
-      void onExport(exportTrigger.format as any)
+      // Narrow the free-form trigger string to a known export format value.
+      const fmt = EXPORT_FORMATS.find((f) => f.value === exportTrigger.format)?.value
+      if (fmt) void onExport(fmt)
     }
   }, [exportTrigger])
 

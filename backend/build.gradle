@@ -7,7 +7,22 @@ plugins {
 }
 
 group = 'com.frees'
-version = '0.0.1'
+
+// Derive the version from git for traceability: a tag if one exists, otherwise
+// the short commit (with '-dirty' when the tree has local changes). Falls back
+// to a static version when git is unavailable — e.g. the Docker build context
+// excludes '.git' (see backend/Dockerfile), so the build must not depend on it.
+version = {
+    try {
+        def described = providers.exec {
+            commandLine 'git', 'describe', '--tags', '--always', '--dirty'
+            it.ignoreExitValue = true
+        }.standardOutput.asText.get().trim()
+        return described ? described : '0.0.1'
+    } catch (Exception ignored) {
+        return '0.0.1'
+    }
+}()
 
 java {
     toolchain {
@@ -62,6 +77,32 @@ jacocoTestReport {
     reports {
         xml.required = true
     }
+}
+
+// Coverage floor so the suite can't silently erode. Thresholds sit a few points
+// below the current numbers (instruction ~83%, branch ~69%) to absorb normal
+// churn while still failing on a real regression. Raise them as coverage grows.
+jacocoTestCoverageVerification {
+    dependsOn test
+    violationRules {
+        rule {
+            limit {
+                counter = 'INSTRUCTION'
+                value = 'COVEREDRATIO'
+                minimum = 0.78
+            }
+            limit {
+                counter = 'BRANCH'
+                value = 'COVEREDRATIO'
+                minimum = 0.62
+            }
+        }
+    }
+}
+
+// `gradle check` (and CI) now enforces the coverage floor.
+tasks.named('check') {
+    dependsOn jacocoTestCoverageVerification
 }
 
 // CI-based SonarCloud scan covering the whole repository in one project:

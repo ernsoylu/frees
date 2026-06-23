@@ -480,7 +480,7 @@ export default function App() {
       return
     }
     isDirtyRef.current = true
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [text, tables, plots, diagrams, whiteboards, varDrafts])
 
   // Apply an opened/loaded project to every workspace slice. Child-owned slices
