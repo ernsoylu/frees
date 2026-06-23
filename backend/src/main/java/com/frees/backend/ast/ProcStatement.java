@@ -6,7 +6,7 @@ import java.util.List;
  * AST node for a statement inside a FUNCTION or PROCEDURE body.
  * Unlike top-level Statement, these execute sequentially (not as equations).
  */
-public sealed interface ProcStatement permits
+public sealed interface ProcStatement extends java.io.Serializable permits
         ProcStatement.Assign,
         ProcStatement.IfElse,
         ProcStatement.RepeatUntil,
