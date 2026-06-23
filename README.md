@@ -79,6 +79,7 @@ When deploying to Railway, you must explicitly link the services by configuring 
 
 **`frees-api` & `frees-compute`**:
 - `REDIS_HOST=frees-redis.railway.internal`
+- `SPRING_DATA_REDIS_PASSWORD` (set this to the `REDISPASSWORD` from your `frees-redis` service)
 - `RABBITMQ_HOST=frees-rabbitmq.railway.internal`
 - `RABBITMQ_USER` and `RABBITMQ_PASSWORD` (matching your custom RabbitMQ credentials)
 
