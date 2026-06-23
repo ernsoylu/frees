@@ -956,6 +956,19 @@ export default function App() {
         results: response.results,
         stats: response.stats,
       }))
+      if (response.variables && response.variables.length > 0) {
+        setResult((prev) => ({
+          success: true,
+          variables: response.variables,
+          blocks: prev?.blocks ?? [],
+          residuals: prev?.residuals ?? [],
+          stats: prev?.stats ?? null,
+          solutions: [],
+          unitWarnings: prev?.unitWarnings ?? [],
+          error: null,
+          formattedEquations: prev?.formattedEquations ?? [],
+        }))
+      }
     } catch (e) {
       updateParamTable(tableId, (t) => ({
         ...t,

@@ -411,7 +411,8 @@ public class SolveController {
 
     public record SolveTableResponse(
             List<TableRowResult> results,
-            TableStatsDto stats
+            TableStatsDto stats,
+            List<SolveDtos.VariableDto> variables
     ) {}
 
     @PostMapping("/solve/table")
@@ -493,11 +494,18 @@ public class SolveController {
                 (System.nanoTime() - startNanos) / 1_000_000,
                 maxResidual);
 
-        return new SolveTableResponse(results, stats);
+        List<SolveDtos.VariableDto> variables = outcomes.stream()
+                .filter(o -> o.row().success())
+                .reduce((first, second) -> second) // get last
+                .map(RowOutcome::variables)
+                .orElse(List.of());
+
+        return new SolveTableResponse(results, stats, variables);
     }
 
     private record RowOutcome(TableRowResult row, EquationSystemSolver.Stats stats,
-                              Map<String, Double> siValues) {}
+                              Map<String, Double> siValues,
+                              List<SolveDtos.VariableDto> variables) {}
 
     private record TableRowContext(
             String text,
@@ -611,20 +619,23 @@ public class SolveController {
             EquationSystemSolver.Result result = solver.solvePermissive(sb.toString(),
                     context.settings(), context.specs(), context.functionDefs());
             Set<String> targetVars = new HashSet<>(context.tableVariables());
-            result = cyclePathResolver.resolveMissingProperties(result, sb.toString(), targetVars);
+            EquationSystemSolver.Result finalResult = cyclePathResolver.resolveMissingProperties(result, sb.toString(), targetVars);
             Map<String, Double> rowValues = new HashMap<>();
-            for (Map.Entry<String, Double> e : result.variables().entrySet()) {
+            for (Map.Entry<String, Double> e : finalResult.variables().entrySet()) {
                 String name = e.getKey();
                 String unit = context.unitsByLowerName().getOrDefault(name.toLowerCase(), "");
                 rowValues.put(name, toDisplay(name, e.getValue(), unit, context.system(), context.explicitUnits()).value());
             }
             Map<String, Double> siValues = new HashMap<>();
-            for (Map.Entry<String, Double> e : result.variables().entrySet()) {
+            for (Map.Entry<String, Double> e : finalResult.variables().entrySet()) {
                 siValues.put(e.getKey().toLowerCase(), e.getValue());
             }
-            return new RowOutcome(new TableRowResult(true, rowValues, null), result.stats(), siValues);
+            List<SolveDtos.VariableDto> variableDtos = finalResult.variables().entrySet().stream()
+                    .map(e -> toVariableDto(e, finalResult, context.unitsByLowerName(), context.system(), context.explicitUnits()))
+                    .toList();
+            return new RowOutcome(new TableRowResult(true, rowValues, null), finalResult.stats(), siValues, variableDtos);
         } catch (Exception e) {
-            return new RowOutcome(new TableRowResult(false, Map.of(), e.getMessage()), null, Map.of());
+            return new RowOutcome(new TableRowResult(false, Map.of(), e.getMessage()), null, Map.of(), List.of());
         }
     }
 }

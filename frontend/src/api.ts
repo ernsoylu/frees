@@ -949,6 +949,7 @@ export interface TableStats {
 export interface SolveTableResponse {
   results: TableRowResult[]
   stats: TableStats | null
+  variables: VariableResult[]
 }
 
 /** Maps a solve-table result DTO to the typed SolveTableResponse. */
@@ -956,6 +957,7 @@ function mapSolveTableData(data: any): SolveTableResponse {
   return {
     results: data?.results ?? [],
     stats: data?.stats ?? null,
+    variables: data?.variables ?? [],
   }
 }
 
