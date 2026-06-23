@@ -740,7 +740,6 @@ CALL margin(num[1:3], den[1:3] : gm, pm, w_cg, w_cp)
 Both poles sit in the left half-plane, so the system is stable. The s-plane map
 below shows the conjugate pole pair and the single real zero.
 
-[Graph="Pole-Zero Map"] Poles (x) and the zero (o) in the s-plane [/Graph]
 
 ## 3. Frequency response
 
@@ -751,9 +750,7 @@ omega = 0.1:50:100 | Log
 CALL bode(num[1:3], den[1:3], omega[1:Nw] : mag[1:Nw], phase[1:Nw])
 CALL nyquist(num[1:3], den[1:3], omega[1:Nw] : re[1:Nw], im[1:Nw])
 
-[Graph="Bode Diagram"] Magnitude (dB) and phase (deg) versus frequency [/Graph]
 
-[Graph="Nyquist Diagram"] Polar plot with the critical point marked at -1 + j0 [/Graph]
 
 ## 4. Time-domain step response
 
@@ -763,7 +760,6 @@ Nt = 81
 t = 0:0.05:4
 CALL step(num[1:3], den[1:3], t[1:Nt] : y[1:Nt])
 
-[Graph="Step Response"] Unit step response showing the overshoot [/Graph]
 
 PLOT 'Pole-Zero Map'
   kind = polezero
@@ -879,7 +875,6 @@ CALL nichols(num[1:4], den[1:4], omega[1:9] : mag[1:9], phase[1:9])
 
 The locus is drawn on the standard Nichols grid with the -1 critical point marked.
 
-[Graph="Nichols"] Nichols chart locus [/Graph]
 
 PLOT 'Nichols'
   kind = nichols
