@@ -103,6 +103,9 @@ services:
         value: none
 
   # ── Frontend (static SPA + nginx reverse proxy) ──────────────────────────
+  # Render passes any env var prefixed with BUILD_ as a Docker build arg, so
+  # BUILD_VITE_ASYNC_API=1 becomes the VITE_ASYNC_API build arg (bakes the
+  # async submit→poll client into the bundle to match the api profile).
   - type: web
     name: frees-frontend
     env: docker
@@ -117,10 +120,9 @@ services:
           type: web
           name: frees-api
           property: host
+      # Render injects BUILD_-prefixed env vars as Docker build args.
+      # VITE_ASYNC_API=1 bakes the async client into the frontend bundle.
+      - key: BUILD_VITE_ASYNC_API
+        value: "1"
       - key: BUILD_COMMIT
         value: ""
-    # Build args are passed to the Docker build. VITE_ASYNC_API=1 bakes the
-    # async submit→poll client into the bundle so it matches the api profile.
-    buildArgs:
-      - key: VITE_ASYNC_API
-        value: "1"
