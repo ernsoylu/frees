@@ -652,27 +652,27 @@ PLOT 'Step Response'
   kind = xy
   x = t
   y = y_step
-  xlabel = Time [s]
-  ylabel = Amplitude
-  title = Unit Step Response
+  xlabel = 'Time [s]'
+  ylabel = 'Amplitude'
+  title = 'Unit Step Response'
 END
 
 PLOT 'Impulse Response'
   kind = xy
   x = t
   y = y_imp
-  xlabel = Time [s]
-  ylabel = Amplitude
-  title = Impulse Response
+  xlabel = 'Time [s]'
+  ylabel = 'Amplitude'
+  title = 'Impulse Response'
 END
 
 PLOT 'Ramp Response (lsim)'
   kind = xy
   x = t
   y = y_ramp
-  xlabel = Time [s]
-  ylabel = Amplitude
-  title = Ramp Response via lsim
+  xlabel = 'Time [s]'
+  ylabel = 'Amplitude'
+  title = 'Ramp Response via lsim'
 END`,
   },
   {
@@ -789,8 +789,8 @@ PLOT 'Step Response'
   kind = xy
   x = t
   y = y
-  xlabel = Time [s]
-  ylabel = Amplitude
+  xlabel = 'Time [s]'
+  ylabel = 'Amplitude'
 END`,
   },
   {
