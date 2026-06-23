@@ -111,7 +111,7 @@ class SolveControllerTest {
                         .content("{\"text\": \"" + text + "\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.parametricTables[0].name").value("sweep1"))
-                .andExpect(jsonPath("$.parametricTables[0].vars[0]").value("t_in"))
+                .andExpect(jsonPath("$.parametricTables[0].vars[0]").value("T_in"))
                 .andExpect(jsonPath("$.parametricTables[0].rows.length()").value(3))
                 .andExpect(jsonPath("$.parametricTables[0].rows[2][0]").value(320.0));
     }

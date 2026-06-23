@@ -33,7 +33,7 @@ class CodeParametricTest {
         assertEquals(1, tables.size());
         ParametricTable t = tables.get(0);
         assertEquals("sweep1", t.name());
-        assertEquals(List.of("t_in", "mdot"), t.vars());
+        assertEquals(List.of("T_in", "mdot"), t.vars());
         // 3 rows: T_in {300,310,320}, mdot {0.1,0.2,0.4}
         assertEquals(3, t.rows().size());
         assertEquals(300.0, t.rows().get(0).get(0), 1e-9);
