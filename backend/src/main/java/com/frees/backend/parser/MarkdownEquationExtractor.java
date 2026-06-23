@@ -110,7 +110,7 @@ public final class MarkdownEquationExtractor {
         if (clean.isEmpty()) {
             return true;
         }
-        if (clean.startsWith("#") || clean.startsWith("-") || clean.startsWith("*") || clean.startsWith(">") || clean.startsWith("[document") || clean.startsWith("[/document]") || clean.startsWith("[page")) {
+        if (clean.startsWith("#") || clean.startsWith("-") || clean.startsWith("*") || clean.startsWith(">")) {
             return false;
         }
         List<int[]> segments = semicolonSegments(clean);
@@ -582,101 +582,4 @@ public final class MarkdownEquationExtractor {
         return null;
     }
 
-    public static String generateFormattedReport(String originalText, List<ExtractedEquation> extracted, List<String> formattedEquations) {
-        if (extracted.size() != formattedEquations.size()) {
-            return originalText;
-        }
-        String[] lines = originalText.split("\\r?\\n", -1);
-        StringBuilder report = new StringBuilder();
-        int eqIndex = 0;
-        int blockDepth = 0;
-        boolean inComment = false;
-        for (String line : lines) {
-            if (inComment) {
-                report.append(line).append("\n");
-                inComment = line.indexOf('}') == -1;
-                continue;
-            }
-            if (blockDepth > 0) {
-                blockDepth += nestedDepthDelta(line);
-                report.append(line).append("\n");
-                inComment = leavesCommentOpen(line);
-                continue;
-            }
-            if (opensCodeBlock(line)) {
-                blockDepth = 1;
-                report.append(line).append("\n");
-                inComment = leavesCommentOpen(line);
-                continue;
-            }
-            if (isPureEquationLine(line)) {
-                inComment = leavesCommentOpen(line);
-                eqIndex = appendPureEquationLine(line, formattedEquations, eqIndex, report);
-            } else if (stripComments(line).trim().startsWith("#") || stripComments(line).trim().startsWith("[document") || stripComments(line).trim().startsWith("[/document]") || stripComments(line).trim().startsWith("[page")) {
-                // Headings and document tags are titles/layout, not equations — render verbatim and never
-                // consume an equation slot. Must mirror extract(), which also
-                // skips inline-equation harvesting on headings; otherwise the two
-                // disagree on the equation count and eqIndex overruns
-                // formattedEquations (e.g. "## ... T[i] = 100 ...").
-                report.append(line).append("\n");
-            } else {
-                eqIndex = appendFormattedProseLine(line, formattedEquations, eqIndex, report);
-            }
-        }
-        if (!originalText.endsWith("\n") && !report.isEmpty()) {
-            report.setLength(report.length() - 1);
-        }
-        return report.toString();
-    }
-
-    /** Renders a pure-equation line as MATH_BLOCK placeholders (one per {@code ;}
-     *  segment containing '='); returns the advanced equation index. */
-    private static int appendPureEquationLine(String line, List<String> formattedEquations, int eqIndex, StringBuilder report) {
-        String stripped = stripComments(line).trim();
-        if (!stripped.contains("=")) {
-            report.append(line).append("\n");
-            return eqIndex;
-        }
-        for (int[] seg : semicolonSegments(line)) {
-            if (stripComments(line.substring(seg[0], seg[1])).trim().contains("=")) {
-                String latex = formattedEquations.get(eqIndex++);
-                report.append("[MATH_BLOCK:").append(latex).append("]").append("\n");
-            }
-        }
-        return eqIndex;
-    }
-
-    /** Rebuilds a prose line, replacing each inline equation with a MATH_BLOCK or
-     *  MATH_INLINE placeholder; returns the advanced equation index. */
-    private static int appendFormattedProseLine(String line, List<String> formattedEquations, int eqIndex, StringBuilder report) {
-        List<ExtractedEquation> lineEqs = extractFromLine(line);
-        if (lineEqs.isEmpty()) {
-            report.append(line).append("\n");
-            return eqIndex;
-        }
-        StringBuilder newLine = new StringBuilder();
-        int currentPos = 0;
-        for (ExtractedEquation eq : lineEqs) {
-            newLine.append(line, currentPos, eq.startIndex);
-            String latex = formattedEquations.get(eqIndex++);
-            if (isEntireLineEquation(line, eq)) {
-                newLine.append("[MATH_BLOCK:").append(latex).append("]");
-            } else {
-                newLine.append("[MATH_INLINE:").append(latex).append("]");
-            }
-            currentPos = eq.endIndex;
-        }
-        newLine.append(line.substring(currentPos));
-        report.append(newLine).append("\n");
-        return eqIndex;
-    }
-
-    private static boolean isEntireLineEquation(String line, ExtractedEquation eq) {
-        String before = line.substring(0, eq.startIndex).trim();
-        String after = line.substring(eq.endIndex).trim();
-        if (after.equals(".") || after.equals(",") || after.equals(";")) {
-            after = "";
-        }
-        return before.isEmpty() && after.isEmpty();
-    }
 }

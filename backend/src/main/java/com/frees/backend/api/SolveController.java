@@ -104,7 +104,6 @@ public class SolveController {
                                 String error,
                                 List<String> formattedEquations,
                                 List<Map<String, Double>> cyclePath,
-                                String formattedReport,
                                 List<SolveDtos.FunctionTableDto> codeTables,
                                 List<SolveDtos.ParametricTableDto> parametricTables,
                                 List<SolveDtos.PlotDefDto> definedPlots,
@@ -120,13 +119,13 @@ public class SolveController {
                              SolveDtos.StatsDto stats, List<SolveDtos.SolutionDto> solutions,
                              List<String> unitWarnings, String error,
                              List<String> formattedEquations,
-                             List<Map<String, Double>> cyclePath, String formattedReport,
+                             List<Map<String, Double>> cyclePath,
                              List<SolveDtos.FunctionTableDto> codeTables,
                              List<SolveDtos.ParametricTableDto> parametricTables,
                              List<SolveDtos.PlotDefDto> definedPlots, Integer errorLine,
                              List<SolveDtos.StateTableDto> stateTableDefs) {
             this(success, variables, blocks, residuals, stats, solutions, unitWarnings,
-                    error, formattedEquations, cyclePath, formattedReport, codeTables,
+                    error, formattedEquations, cyclePath, codeTables,
                     parametricTables, definedPlots, errorLine, stateTableDefs, List.of());
         }
 
@@ -136,12 +135,12 @@ public class SolveController {
                              SolveDtos.StatsDto stats, List<SolveDtos.SolutionDto> solutions,
                              List<String> unitWarnings, String error,
                              List<String> formattedEquations,
-                             List<Map<String, Double>> cyclePath, String formattedReport,
+                             List<Map<String, Double>> cyclePath,
                              List<SolveDtos.FunctionTableDto> codeTables,
                              List<SolveDtos.ParametricTableDto> parametricTables,
                              List<SolveDtos.PlotDefDto> definedPlots, Integer errorLine) {
             this(success, variables, blocks, residuals, stats, solutions, unitWarnings,
-                    error, formattedEquations, cyclePath, formattedReport, codeTables,
+                    error, formattedEquations, cyclePath, codeTables,
                     parametricTables, definedPlots, errorLine, List.of(), List.of());
         }
 
@@ -151,12 +150,12 @@ public class SolveController {
                              SolveDtos.StatsDto stats, List<SolveDtos.SolutionDto> solutions,
                              List<String> unitWarnings, String error,
                              List<String> formattedEquations,
-                             List<Map<String, Double>> cyclePath, String formattedReport,
+                             List<Map<String, Double>> cyclePath,
                              List<SolveDtos.FunctionTableDto> codeTables,
                              List<SolveDtos.ParametricTableDto> parametricTables,
                              List<SolveDtos.PlotDefDto> definedPlots) {
             this(success, variables, blocks, residuals, stats, solutions, unitWarnings,
-                    error, formattedEquations, cyclePath, formattedReport, codeTables,
+                    error, formattedEquations, cyclePath, codeTables,
                     parametricTables, definedPlots, null, List.of(), List.of());
         }
 
@@ -166,8 +165,8 @@ public class SolveController {
 
         static SolveResponse failure(String error, Integer errorLine) {
             return new SolveResponse(false, List.of(), List.of(), List.of(), null,
-                    List.of(), List.of(), error, List.of(), List.of(), null, List.of(),
-                    List.of(), List.of(), errorLine);
+                    List.of(), List.of(), error, List.of(), List.of(), List.of(), List.of(),
+                    List.of(), errorLine, List.of(), List.of());
         }
     }
 
@@ -269,8 +268,6 @@ public class SolveController {
                 .map(eq -> EquationParser.toLatexEquation(eq.cleanEquation, parsed.displayNames()))
                 .toList();
 
-        String formattedReport = MarkdownEquationExtractor.generateFormattedReport(request.text(), extraction.equations, formattedEquations);
-
         List<SolveDtos.VariableDto> variableDtos = result.variables().entrySet().stream()
                 .filter(e -> !isInternalTemp(e.getKey()))
                 .map(e -> toVariableDto(e, result, unitsByLower, system, explicitUnits))
@@ -309,7 +306,6 @@ public class SolveController {
                 null,
                 formattedEquations,
                 cyclePath,
-                formattedReport,
                 codeTablesOf(parsed.defs()),
                 parametricTablesOf(parsed.parametricTables()),
                 plotsOf(parsed.plots()),

@@ -57,7 +57,6 @@ public class CheckController {
                                 Map<String, String> inferredUnits,
                                 String message,
                                 List<String> formattedEquations,
-                                String formattedReport,
                                 List<SolveDtos.FunctionTableDto> codeTables,
                                 List<SolveDtos.ParametricTableDto> parametricTables,
                                 List<SolveDtos.PlotDefDto> definedPlots,
@@ -70,12 +69,12 @@ public class CheckController {
         public CheckResponse(boolean solvable, int equations, int unknowns,
                              List<String> variables, List<String> unitWarnings,
                              Map<String, String> inferredUnits, String message,
-                             List<String> formattedEquations, String formattedReport,
+                             List<String> formattedEquations,
                              List<SolveDtos.FunctionTableDto> codeTables,
                              List<SolveDtos.ParametricTableDto> parametricTables,
                              List<SolveDtos.PlotDefDto> definedPlots, Integer errorLine) {
             this(solvable, equations, unknowns, variables, unitWarnings, inferredUnits,
-                    message, formattedEquations, formattedReport, codeTables,
+                    message, formattedEquations, codeTables,
                     parametricTables, definedPlots, errorLine, List.of());
         }
 
@@ -83,12 +82,12 @@ public class CheckController {
         public CheckResponse(boolean solvable, int equations, int unknowns,
                              List<String> variables, List<String> unitWarnings,
                              Map<String, String> inferredUnits, String message,
-                             List<String> formattedEquations, String formattedReport,
+                             List<String> formattedEquations,
                              List<SolveDtos.FunctionTableDto> codeTables,
                              List<SolveDtos.ParametricTableDto> parametricTables,
                              List<SolveDtos.PlotDefDto> definedPlots) {
             this(solvable, equations, unknowns, variables, unitWarnings, inferredUnits,
-                    message, formattedEquations, formattedReport, codeTables,
+                    message, formattedEquations, codeTables,
                     parametricTables, definedPlots, null, List.of());
         }
     }
@@ -97,7 +96,7 @@ public class CheckController {
     public ResponseEntity<CheckResponse> check(@RequestBody SolveController.SolveRequest request) {
         if (request.text() == null || request.text().isBlank()) {
             return ResponseEntity.badRequest().body(new CheckResponse(false, 0, 0, List.of(), List.of(),
-                    Map.of(), NO_EQUATIONS_MESSAGE, List.of(), null, List.of(), List.of(), List.of()));
+                    Map.of(), NO_EQUATIONS_MESSAGE, List.of(), List.of(), List.of(), List.of()));
         }
         try {
             boolean complexMode = request.stopCriteria() != null && Boolean.TRUE.equals(request.stopCriteria().complexMode());
@@ -121,8 +120,6 @@ public class CheckController {
                     .map(eq -> EquationParser.toLatexEquation(eq.cleanEquation, parsed.displayNames()))
                     .toList();
 
-            String formattedReport = MarkdownEquationExtractor.generateFormattedReport(request.text(), extraction.equations, formattedEquations);
-
             return ResponseEntity.ok(new CheckResponse(
                     result.solvable(),
                     result.equationCount(),
@@ -132,7 +129,6 @@ public class CheckController {
                     inferredUnits,
                     result.message(),
                     formattedEquations,
-                    formattedReport,
                     codeTablesOf(parsed.defs()),
                     parametricTablesOf(parsed.parametricTables()),
                     plotsOf(parsed.plots()),
@@ -142,14 +138,14 @@ public class CheckController {
             String firstError = e.getMessage().lines().findFirst().orElse(e.getMessage());
             return ResponseEntity.badRequest().body(new CheckResponse(
                     false, 0, 0, List.of(), List.of(), Map.of(),
-                    SYNTAX_ERROR_PREFIX + firstError, List.of(), null, List.of(), List.of(), List.of(),
+                    SYNTAX_ERROR_PREFIX + firstError, List.of(), List.of(), List.of(), List.of(),
                     parseErrorLine(e.getMessage())));
         } catch (Exception e) {
             log.error("Unexpected error while checking equations", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(new CheckResponse(
                             false, 0, 0, List.of(), List.of(), Map.of(),
-                            e.getMessage() != null ? e.getMessage() : e.toString(), List.of(), null, List.of(), List.of(), List.of()));
+                            e.getMessage() != null ? e.getMessage() : e.toString(), List.of(), List.of(), List.of(), List.of()));
         }
     }
 }
