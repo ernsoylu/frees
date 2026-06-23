@@ -6,50 +6,7 @@
 Findings from the 2026-06-23 code-quality review, ranked by gain ÷ effort
 (S ≈ hours, M ≈ 1–3 days, L ≈ week+). Work top-down.
 
-1. ~~**[CRITICAL · M] `/check` and `/solve` re-parse identical source ~5× per request.**~~
-   → **Done.** Added `EquationSystemSolver.parse(source)` and `ParseResult`-accepting
-   overloads of `check`/`deriveUnits`/`inferUnits`/`checkUnits` (plus controller-side
-   `effectiveUnits`/`unitsByLowerName` overloads), keeping the old `String` signatures as
-   delegating wrappers for external callers. `SolveController.check` now parses **once**
-   (was 6×: check + effectiveUnits→inferUnits + deriveUnits + inferUnits + checkUnits +
-   a standalone `new EquationParser().parseResult`) and `/solve` parses once on the
-   controller side (was 5×). Full backend suite green; `compileJava` clean.
-
-2. ~~**[CRITICAL · M] Frontend has zero tests and zero lint config.**~~
-   → **Done.** Added ESLint 9 flat config (`eslint.config.mjs`: typescript-eslint +
-   react/react-hooks/react-refresh) and a Vitest + React Testing Library + jsdom setup
-   (`vitest.config.ts`, `src/test/setup.ts`). Added `lint`/`test`/`test:watch` scripts and
-   the dev dependencies. First suite `src/format.test.ts` (10 tests) covers the numeric
-   formatter and stable-key helper. Auto-fixed `prefer-const`; registered the react plugin
-   so existing inline disables resolve; `allowEmptyCatch` for the intentional fallback
-   catches. **Lint gate: 0 errors** (56 warnings surfaced for items 6 & 9). Wired `npm run
-   lint` + `npm test` into the `frontend-build` CI job ahead of the build. `npm run build`
-   still green.
-
-3. ~~**[HIGH · S–M] Broad exception handling with near-zero logging.**~~
-   → **Done.** Added SLF4J loggers to `SolveController`, `ReplEvaluator`, and
-   `EquationSystemSolver`. The two genuine server-fault catch-alls (`/check`, `/solve`,
-   which returned HTTP 500 with only `e.getMessage()`) now `log.error(…, e)` with the full
-   stack trace. Silent swallows that are legitimate fallbacks were given `log.debug(…, e)`
-   tracing instead of being invisible: the REPL casing-recovery `// ignore`, the REPL
-   expression-eval `RuntimeException` catch, the CoolProp out-of-range NaN fallback, and the
-   `checkUnits` non-smooth-block `catch (Exception ignored)`. Backend suite green.
-   - **Remaining (optional follow-up):** the three other intentional `catch (Exception
-     ignored)` control-flow swallows in `EquationSystemSolver` (already commented) could get
-     the same debug tracing if needed.
-
-4. ~~**[HIGH · S] Regex compiled per-call on parse paths.**~~
-   → **Done** (smaller than the headline suggested). On audit, almost all of the 21
-   `Pattern.compile` hits were already `static final` (multi-line field declarations whose
-   continuation line the grep miscounted). The only genuine *constant* per-call compiles
-   were two methods in `SolveController` that each rebuilt the identical state-variable-index
-   regex (`name_3` / `name[3]`) on every call — hoisted to a single shared
-   `STATE_VAR_INDEX` static field. The remaining per-call compiles (`SolveController:669`
-   assignment matchers, `ReplEvaluator` casing, `PropertyFunctions` substitution) are
-   inherently dynamic — built from `Pattern.quote(runtimeValue)` — so they can't be hoisted
-   to constants. Backend suite green.
-
-5. **[HIGH · L] God classes hurt maintainability.**
+1. **[HIGH · L] God classes hurt maintainability.**
    `DiagramTab.tsx` (6,241 LOC, 74 hooks), `EquationParser.java` (3,665),
    `Evaluator.java` (2,468), `SolveController.java` (1,944 / 32 endpoints).
    - **Task**: Decompose incrementally as files are touched — split `SolveController`
@@ -83,40 +40,9 @@ Findings from the 2026-06-23 code-quality review, ranked by gain ÷ effort
      symbol references were repointed to `SolverApiSupport`. Remaining:
      `DiagramTab.tsx` (item 8).
 
-6. ~~**[MEDIUM · S] TypeScript `any` escape hatches.**~~
-   → **Done.** Eliminated all 20 `no-explicit-any` sites (now **0**; total lint warnings
-   56 → 36, remainder are unrelated hook-deps/array-key/refresh rules). Approach per site:
-   extended the hand-rolled Plotly types (`plotly-dist.d.ts` gained `range`/`dtick`/
-   `overlaying`/`side`) to drop `(layout as any)` casts; removed redundant bar-trace `val as
-   any` maps; deleted move-handler `(el as any).x` casts that TypeScript already narrows past
-   the `connector`/`line` branches; typed the diagram-import deserializer as `unknown` +
-   record views; narrowed Mantine `Select` onChange to the real string-literal unions; typed
-   `onVarDraftsChange` as `Record<string, VariableDraft>` (completing the partial default
-   draft); and gave the SVG dash helper `React.SVGAttributes<SVGElement>`. `tsc -b`, lint
-   (exit 0), Vitest, and `npm run build` all green.
-
-7. ~~**[MEDIUM · S] No JaCoCo coverage gate.**~~
-   → **Done.** Added `jacocoTestCoverageVerification` with a floor of 78% instruction /
-   62% branch (current is ~83% / ~69%, so there's headroom for churn but a real regression
-   fails). Wired into `gradle check` and the CI test step (`./gradlew test jacocoTestReport
-   jacocoTestCoverageVerification`). Verification passes today.
-
-8. **[MEDIUM · M] `DiagramTab` state sprawl.**
+2. **[MEDIUM · M] `DiagramTab` state sprawl.**
    74 `useState/useEffect/useCallback` in one component — re-render and correctness risk.
    - **Task**: Consolidate into `useReducer` + extracted hooks (subset of item 5).
-
-9. ~~**[LOW · S] Stray `console.*` (2 sites).**~~
-   → **Done** (nothing to remove). The only two `console.*` calls are legitimate
-   `console.error` (KaTeX render failure in `Latex.tsx`, crash logging in `ErrorBoundary.tsx`).
-   The `no-console` ESLint rule (added in item 2) allows `error`/`warn` and now blocks any
-   future stray `console.log` — **0 `no-console` warnings** today.
-
-10. ~~**[LOW · S] Backend `version` hardcoded `0.0.1` in `build.gradle`.**~~
-    → **Done.** `version` now derives from `git describe --tags --always --dirty` via
-    Gradle's `providers.exec` (resolves to a tag when present, else the short commit, e.g.
-    `d46e243-dirty`). Guarded with a try/catch + empty-output check that falls back to
-    `0.0.1` when git is unavailable — the backend Docker build context excludes `.git`, so
-    the build must not depend on it.
 
 
 ### Epic 13: Full Textbook Compliance (Nise *Control Systems Engineering*)
@@ -142,3 +68,45 @@ To make every analysis and design problem in the textbook solvable, implement th
 4. **Stagnation Properties (`stagnationTemp`, `stagnationPres`)**
    - **Task**: Implement stagnation temperature $T_0 = T + V^2 / (2 c_p)$ and stagnation pressure $P_0 = P (T_0 / T)^{k/(k-1)}$ functions.
    - **Verification/Test Problem**: *Çengel Chapter 17, Example 17-1*: Determine stagnation temperature and pressure of air entering a diffuser at 100 kPa and 300 K at 200 m/s.
+
+### Epic 15: Asynchronous Compute Architecture (RabbitMQ & Redis)
+To decouple the heavy computational workloads from the main API thread and enable horizontal scaling of compute nodes, implement the following phases:
+
+> **Staging decision (2026-06-23):** the async path is gated behind the `api` and
+> `compute` Spring profiles. The default profile keeps the original synchronous
+> behaviour so local dev (`bootRun`/frontend) and the 730-test unit suite are
+> untouched; production runs `SPRING_PROFILES_ACTIVE=api`/`compute`. This lets the
+> backend land incrementally before the frontend is taught to poll.
+
+1. ~~**Define the Communication Contract (DTOs)**~~
+   - ~~Create `ComputeTask` (jobId, type, payload) for RabbitMQ messages.~~ → `compute/ComputeTask.java` (jobId, taskType, sessionId, requestJson) + queue name `frees.tasks`.
+   - ~~Create `JobState` (jobId, status, responseJson, error) for Redis tracking.~~ → `compute/JobState.java` (PENDING/COMPLETED/FAILED, error, result) + `JobTicket` for the 202 body.
+
+2. ~~**Architect the API Node (Producer)**~~
+   - ~~Refactor `SolveController` and `OptimizeController` to save `PENDING` state to Redis, push `ComputeTask` to `compute.queue`, and return `202 Accepted` with `jobId`.~~ → `SolveController.solve`, `OptimizeController.optimize`/`curveFit` branch on an injected `ComputeDispatcher` (api profile): synchronous syntax/shape validation (→400), then enqueue + 202. Computation extracted into public `computeSolve`/`computeOptimize`/`computeCurveFit` reused by the worker. `/solve/table` and `/optimize/multi` remain synchronous (see Remaining).
+   - ~~Add `JobController` with `GET /api/jobs/{jobId}` for result polling.~~ → `api/JobController.java` (200 JobState / 404).
+   - ~~Configure RabbitMQ and Redis connections in `application.properties`.~~ → RabbitMQ host/port/creds + `listener.simple.prefetch=1` + `default-requeue-rejected=false`; Redis host/port.
+
+3. ~~**Architect the Compute Node (Consumer)**~~
+   - ~~Create a new headless Spring Boot module (`compute-node`) for `EquationSystemSolver`, `Optimizer`, etc.~~ → Per ORIGINAL_REQUEST R1, kept as a **single Gradle project** split by Spring profiles (`api`/`compute`) rather than a separate module.
+   - ~~Add `ComputeTaskListener` (`@RabbitListener`) to process tasks, update Redis `JobState` to `RUNNING` then `COMPLETED`/`FAILED`.~~ → `compute/ComputeTaskListener.java` dispatches SOLVE/OPTIMIZE/CURVE_FIT to the controllers' compute methods; failures (parse/math/numerical) are captured as FAILED, never requeued. (`RUNNING` state omitted — PENDING→COMPLETED/FAILED is sufficient and avoids a race window.)
+   - ~~Configure fair load balancing (`spring.rabbitmq.listener.simple.prefetch=1`).~~ → `RabbitConfig` pins a `SimpleRabbitListenerContainerFactory` with `prefetch = 1`, also set in properties.
+
+4. ~~**Generate the Infrastructure (Docker)**~~
+   - ~~Write a multi-stage `Dockerfile` to build/run both `api-node` and `compute-node`.~~ → Single `backend/Dockerfile` image reused by both nodes; role selected via `SPRING_PROFILES_ACTIVE`.
+   - ~~Add `docker-compose.yml` to orchestrate `api-node`, `compute-node` (replicas: 3), `rabbitmq`, and `redis`.~~ → `docker-compose.yml` has `redis`, `rabbitmq` (with healthchecks), `api-node` (profile `api`), `compute-node` (`deploy.replicas: 3`, profile `compute`).
+
+5. ~~**Update Test Suite for Async Flow**~~
+   - ~~Refactor the existing backend test suite to mock RabbitMQ/Redis or use Testcontainers.~~ → Default `test` task excludes `integration/**` and stays broker-free; new `integrationTest` task runs the Testcontainers suite. Existing controller unit tests unchanged (synchronous default profile).
+   - ~~Adapt controller integration tests to poll for the `COMPLETED` state instead of expecting a synchronous HTTP response.~~ → `integration/AsynchronousComputeIntegrationTest` (9 cases: solve/optimize/curve-fit submit+poll, REPL, 404 polling, 400 invalid payload, FAILED singular system, concurrent jobs, Rankine cycle). **All 9 pass.** `./gradlew test jacocoTestReport jacocoTestCoverageVerification` green (no regressions).
+
+6. **Observability & Performance Testing (OpenTelemetry)** *(remaining)*
+   - `opentelemetry-spring-boot-starter` dependency is on the classpath (auto-instruments HTTP/RabbitMQ/Redis), but explicit trace-context injection/extraction over RabbitMQ headers and a `k6`/`JMeter` benchmark are not yet done.
+
+**Remaining to close Epic 15:**
+- ~~**Frontend async adaptation:** `frontend/src/api.ts` still expects synchronous 200 bodies from `/solve`/`/optimize`/`/curve-fit`.~~ → **Done (2026-06-23).** `solve`/`optimize`/`curveFit` now branch on `import.meta.env.VITE_ASYNC_API`: when set, they submit via `runCompute` (POST → 202 `{jobId}` → poll `GET /api/jobs/{id}` until COMPLETED/FAILED), mapping the `result`/`error` to the same response types the sync path returns. Synchronous 4xx validation rejections still surface immediately as failure responses. The sync path is unchanged when the flag is unset, so local dev and existing behaviour are untouched. Data→response mappers extracted (`mapSolveData`/`mapOptimizeData`/`mapCurveFitData`) so both paths share them. Added `src/api.async.test.ts` (4 cases: PENDING→COMPLETED polling, FAILED mapping, 4xx rejection, network failure) — vitest green; lint 0 errors; `tsc -b` + `npm run build` green.
+- ~~**Redis-backed REPL session store (PROJECT.md M2):** `SolveContextCache` is still in-memory.~~ → **Done (2026-06-23).** `SolveContextCache` now mirrors the solved snapshot to Redis under `session:<sessionId>` under the `api`/`compute` profiles (in-memory stays primary within a JVM); an api node hydrates a session from Redis when it isn't in memory, so the REPL sees the compute node's solve result across JVMs. The REPL overlay remains api-node-local (captured at solve time; mid-session overlay mutations are not written back) — a documented follow-up for multi-api-node deployments. AST types (`Expr`/`ProcDef`/`ProcStatement`/`Statement`/`Session`/`ReplVar`) marked `Serializable`. Full suite (730 + 9 integration) green.
+- ~~**Async the remaining endpoints:** `/api/solve/table` and `/api/optimize/multi` are still synchronous~~ → **Done (2026-06-23).** Both now branch on `ComputeDispatcher`: `SolveController.solveTable` → `computeSolveTable` (task `SOLVE_TABLE`), `OptimizeController.optimizeMulti` → `computeOptimizeMulti` (task `OPTIMIZE_MULTI`); `ComputeTaskListener` dispatches both. Frontend `solveTable`/`optimizeMulti` gained the `VITE_ASYNC_API` submit→poll branch (mappers extracted: `mapSolveTableData`/`mapParetoData`). Added 2 integration cases (`testSolveTableJob`, `testOptimizeMultiJob`) — integration suite now 11/11; default suite (730) + JaCoCo green; frontend lint/tsc/test green.
+- ~~**Headless compute node:** set `spring.main.web-application-type=none` for the compute profile (currently starts an idle web server).~~ → **Done (2026-06-23).** Applied as a per-container env var (`SPRING_MAIN_WEB_APPLICATION_TYPE=none`) on the `compute-node` service in `docker-compose.yml` rather than a profile property, so the integration test (which runs `api`+`compute` in one JVM and needs MockMvc) keeps the web server while production compute replicas start headless.
+- ~~**`docker-compose up --build` verification:**~~ → **Done (2026-06-23).** `docker compose config` validates (7 services resolve: redis, rabbitmq, otel-collector, jaeger, api-node, compute-node×3, frontend). Smoke-tested the infra tier (`docker compose up -d rabbitmq redis jaeger otel-collector`): all healthy, Jaeger UI (16686) + RabbitMQ mgmt (15672) + Redis (PONG) respond, OTel collector OTLP/gRPC (4317) reachable and ready. Full image build/run left as an environment-specific follow-up (needs the backend build context + CoolProp native lib).
+- ~~**OpenTelemetry Phase 6** as above.~~ → **Done (2026-06-23).** Added `config/TraceContextInjector` (producer `MessagePostProcessor`) + consumer-side `TextMapGetter` extraction in `ComputeTaskListener`, wrapping each task in a `compute-task` CONSUMER span that is a child of the API request span via the W3C `traceparent` header — so HTTP→RabbitMQ→compute joins into one trace (the auto-starter doesn't ship Spring-AMQP instrumentation, hence hand-wired). `otel-collector` + `jaeger` services added to compose; both nodes export OTLP/gRPC (`OTEL_SERVICE_NAME`/`OTEL_EXPORTER_OTLP_ENDPOINT`). Integration suite (11) + default suite (730) + JaCoCo green with OTel active. Added `observability/k6-async-benchmark.js` (ramping load, submit→poll, `job_latency_ms` p(95)<2s threshold) and `observability/README.md`.

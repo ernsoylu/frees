@@ -1,14 +1,77 @@
 services:
-  backend:
+  # ── Observability (OpenTelemetry) ────────────────────────────────────────
+  # The api-node and compute-node export OTLP traces to this collector, which
+  # forwards them to Jaeger for inspection. Distributed tracing spans the
+  # HTTP request, the RabbitMQ publish/consume, and the Redis job writes.
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.110.0
+    container_name: frees-otel-collector
+    command: ["--config=/etc/otelcol/config.yaml"]
+    volumes:
+      - ./observability/otel-collector-config.yaml:/etc/otelcol/config.yaml:ro
+    ports:
+      - "4317:4317"   # OTLP gRPC
+    depends_on:
+      jaeger:
+        condition: service_started
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.62.0
+    container_name: frees-jaeger
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+    ports:
+      - "16686:16686" # Jaeger UI
+
+  redis:
+    image: redis:7-alpine
+    container_name: frees-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: frees-rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  api-node:
     build: ./backend
-    container_name: frees-backend
+    container_name: frees-api-node
+    environment:
+      - SPRING_PROFILES_ACTIVE=api
+      - SPRING_RABBITMQ_HOST=rabbitmq
+      - SPRING_DATA_REDIS_HOST=redis
+      # OpenTelemetry: export traces to the OTel collector service below.
+      - OTEL_SERVICE_NAME=api-node
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+      - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+      - OTEL_TRACES_EXPORTER=otlp
+      - OTEL_METRICS_EXPORTER=none
+      - OTEL_LOGS_EXPORTER=none
     # Bind the API to the loopback interface only: local dev can still reach
     # http://localhost:8080/api, but remote/LAN hosts cannot hit the backend
-    # directly — they must go through the rate-limited nginx proxy (which also
-    # sees the real client IP). The frontend container reaches it over the
-    # compose network as backend:8080 regardless of this published binding.
+    # directly — they must go through the rate-limited nginx proxy.
     ports:
       - "127.0.0.1:8080:8080"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      otel-collector:
+        condition: service_started
     healthcheck:
       test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/localhost/8080' || exit 1"]
       interval: 5s
@@ -16,19 +79,48 @@ services:
       retries: 20
       start_period: 10s
 
+  compute-node:
+    build: ./backend
+    deploy:
+      replicas: 3
+    environment:
+      - SPRING_PROFILES_ACTIVE=compute
+      - SPRING_RABBITMQ_HOST=rabbitmq
+      - SPRING_DATA_REDIS_HOST=redis
+      # Headless: the compute node only consumes from RabbitMQ and writes
+      # results to Redis — it serves no HTTP, so it starts no web server.
+      # The integration test runs both profiles in one JVM (needs MockMvc) and
+      # does not set this var, so it keeps the web server.
+      - SPRING_MAIN_WEB_APPLICATION_TYPE=none
+      # OpenTelemetry: export traces to the OTel collector service below.
+      - OTEL_SERVICE_NAME=compute-node
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+      - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+      - OTEL_TRACES_EXPORTER=otlp
+      - OTEL_METRICS_EXPORTER=none
+      - OTEL_LOGS_EXPORTER=none
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      otel-collector:
+        condition: service_started
+
   frontend:
     build:
       context: ./frontend
       args:
-        # Set by frees.sh from `git rev-parse --short HEAD`; empty for ad-hoc builds.
         VITE_COMMIT_HASH: ${VITE_COMMIT_HASH:-}
-    # Runtime stamp: the entrypoint writes this into build-info.js. On Render the
-    # built-in RENDER_GIT_COMMIT takes precedence; locally frees.sh supplies it.
+        # The api-node runs the `api` profile (202 + job polling), so the
+        # frontend must use the async submit→poll path to match.
+        VITE_ASYNC_API: "1"
     environment:
       BUILD_COMMIT: ${VITE_COMMIT_HASH:-}
+      BACKEND_HOST: api-node
     container_name: frees-frontend
     ports:
       - "5173:8080"
     depends_on:
-      backend:
+      api-node:
         condition: service_healthy

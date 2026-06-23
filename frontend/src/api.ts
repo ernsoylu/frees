@@ -157,6 +157,119 @@ export interface VariableInfo {
 
 const API_BASE = import.meta.env.VITE_API_BASE || '';
 
+// ── Asynchronous compute client (Epic 15) ────────────────────────────────
+// When VITE_ASYNC_API is set, solve/optimize/curve-fit are submitted as jobs:
+// the POST returns 202 Accepted { jobId, status: "PENDING" } and the client
+// polls GET /api/jobs/{jobId} until the compute node reports COMPLETED (with
+// the response DTO in `result`) or FAILED (with `error`). Synchronous 4xx
+// validation rejections (e.g. syntax errors) still return an error body
+// immediately. When the flag is unset, the original synchronous 200 path runs.
+
+const ASYNC_API = Boolean(import.meta.env.VITE_ASYNC_API);
+
+interface JobState {
+  jobId: string
+  status: 'PENDING' | 'COMPLETED' | 'FAILED'
+  error: string | null
+  result: unknown
+}
+
+/** Normalized outcome of an async compute request: either the solver result
+ *  DTO (COMPLETED) or an error message (FAILED / rejected / unreachable). */
+type ComputeOutcome =
+  | { kind: 'completed'; result: any }
+  | { kind: 'failed'; error: string }
+
+/** Extracts a human-readable error message from a non-ok response body. */
+async function extractErrorMessage(response: Response, fallback: string): Promise<string> {
+  try {
+    const data = await response.json()
+    if (data && typeof data === 'object') {
+      const msg = (data as Record<string, unknown>).error ?? (data as Record<string, unknown>).message
+      if (typeof msg === 'string' && msg) return msg
+    }
+  } catch {
+    try {
+      const textBody = await response.text()
+      if (textBody) return textBody
+    } catch {}
+  }
+  return fallback
+}
+
+/** Polls GET /api/jobs/{jobId} until the job reaches a terminal state. */
+async function pollJob(jobId: string, timeoutMs = 120_000): Promise<JobState> {
+  const deadline = Date.now() + timeoutMs
+  const url = `${API_BASE}/api/jobs/${encodeURIComponent(jobId)}`
+  while (Date.now() < deadline) {
+    let response: Response
+    try {
+      response = await fetch(url)
+    } catch (e) {
+      throw new Error(`Could not reach the solver backend: ${String(e)}`)
+    }
+    if (response.status === 404) {
+      throw new Error('Job not found')
+    }
+    if (!response.ok) {
+      throw new Error(`Job poll failed (${response.status})`)
+    }
+    const state = await response.json() as JobState
+    if (state.status === 'COMPLETED' || state.status === 'FAILED') {
+      return state
+    }
+    await new Promise(resolve => setTimeout(resolve, 150))
+  }
+  throw new Error('Job timed out waiting for completion')
+}
+
+/** Submits a compute request and, in async mode, polls for its result.
+ *  Returns the terminal outcome (completed result DTO or failure message).
+ *  @param endpoint the POST URL (e.g. "/api/solve")
+ *  @param init the fetch init (method/body/headers) for the submit POST
+ */
+export async function runCompute(endpoint: string, init: RequestInit): Promise<ComputeOutcome> {
+  let response: Response
+  try {
+    response = await fetch(`${API_BASE}${endpoint}`, init)
+  } catch (e) {
+    return { kind: 'failed', error: `Could not reach the solver backend: ${String(e)}` }
+  }
+
+  // Synchronous validation rejection (4xx): the body carries the error.
+  if (!response.ok && response.status !== 202) {
+    return { kind: 'failed', error: await extractErrorMessage(response, `Server error (${response.status})`) }
+  }
+
+  // Asynchronous path: 202 + jobId, then poll.
+  if (response.status === 202) {
+    let ticket: { jobId?: string }
+    try {
+      ticket = await response.json()
+    } catch {
+      return { kind: 'failed', error: 'Malformed job submission response' }
+    }
+    const jobId = ticket?.jobId
+    if (!jobId) {
+      return { kind: 'failed', error: 'Job submission did not return a jobId' }
+    }
+    try {
+      const state = await pollJob(jobId)
+      if (state.status === 'COMPLETED') {
+        return { kind: 'completed', result: state.result }
+      }
+      return { kind: 'failed', error: state.error ?? 'Job failed' }
+    } catch (e) {
+      return { kind: 'failed', error: e instanceof Error ? e.message : String(e) }
+    }
+  }
+
+  // Defensive: a 200 in async mode (e.g. a backend not yet switched over) —
+  // treat the body as the completed result DTO.
+  const data = await response.json().catch(() => null)
+  return { kind: 'completed', result: data }
+}
+
 /** A Function Table in solver wire format (Epic 8): the table name is the
  * function name callable from equations; argNames lists the column names
  * (lookup argument first, then the family parameter, if any). */
@@ -237,6 +350,42 @@ export async function check(
   }
 }
 
+/** The empty solve response returned on any failure (network, server, FAILED job). */
+const SOLVE_FAILURE: Omit<SolveResponse, 'error'> = {
+  success: false,
+  variables: [],
+  blocks: [],
+  residuals: [],
+  stats: null,
+  solutions: [],
+  unitWarnings: [],
+  formattedEquations: [],
+  formattedReport: undefined,
+}
+
+/** Maps a solve result DTO (from a sync 200 body or an async COMPLETED `result`)
+ *  to the typed SolveResponse. */
+function mapSolveData(data: any): SolveResponse {
+  return {
+    success: data.success ?? false,
+    variables: data.variables ?? [],
+    blocks: data.blocks ?? [],
+    residuals: data.residuals ?? [],
+    stats: data.stats ?? null,
+    solutions: data.solutions ?? [],
+    unitWarnings: data.unitWarnings ?? [],
+    error: data.error ?? null,
+    formattedEquations: data.formattedEquations ?? [],
+    cyclePath: data.cyclePath ?? [],
+    formattedReport: data.formattedReport ?? undefined,
+    codeTables: data.codeTables ?? [],
+    parametricTables: data.parametricTables ?? [],
+    definedPlots: data.definedPlots ?? [],
+    stateTableDefs: data.stateTableDefs ?? [],
+    odeTables: data.odeTables ?? [],
+  }
+}
+
 export async function solve(
   text: string,
   stopCriteria: StopCriteria,
@@ -248,27 +397,37 @@ export async function solve(
   sessionId?: string,
   overrides: string[] = [],
 ): Promise<SolveResponse> {
+  const init: RequestInit = {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      // Tags this solve so its result is cached for the REPL/Workspace of
+      // this document. Omitted-id requests fall back to a shared "default".
+      ...(sessionId ? { 'X-Frees-Session': sessionId } : {}),
+    },
+    body: JSON.stringify({
+      text,
+      stopCriteria,
+      variableInfo,
+      findAllSolutions,
+      displayUnitSystem,
+      fillMissing,
+      functionTables,
+      // REPL overrides ("eta = 0.75") take priority over the editor's value.
+      overrides,
+    }),
+  }
+
+  if (ASYNC_API) {
+    const outcome = await runCompute('/api/solve', init)
+    if (outcome.kind === 'completed') {
+      return mapSolveData(outcome.result)
+    }
+    return { ...SOLVE_FAILURE, error: outcome.error }
+  }
+
   try {
-    const response = await fetch(`${API_BASE}/api/solve`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        // Tags this solve so its result is cached for the REPL/Workspace of
-        // this document. Omitted-id requests fall back to a shared "default".
-        ...(sessionId ? { 'X-Frees-Session': sessionId } : {}),
-      },
-      body: JSON.stringify({
-        text,
-        stopCriteria,
-        variableInfo,
-        findAllSolutions,
-        displayUnitSystem,
-        fillMissing,
-        functionTables,
-        // REPL overrides ("eta = 0.75") take priority over the editor's value.
-        overrides,
-      }),
-    })
+    const response = await fetch(`${API_BASE}/api/solve`, init)
     if (!response.ok) {
       let errorMessage = `Server error (${response.status})`
       try {
@@ -282,51 +441,12 @@ export async function solve(
           if (textBody) errorMessage = textBody
         } catch {}
       }
-      return {
-        success: false,
-        variables: [],
-        blocks: [],
-        residuals: [],
-        stats: null,
-        solutions: [],
-        unitWarnings: [],
-        error: errorMessage,
-        formattedEquations: [],
-        formattedReport: undefined,
-      }
+      return { ...SOLVE_FAILURE, error: errorMessage }
     }
     const data = await response.json()
-    return {
-      success: data.success ?? false,
-      variables: data.variables ?? [],
-      blocks: data.blocks ?? [],
-      residuals: data.residuals ?? [],
-      stats: data.stats ?? null,
-      solutions: data.solutions ?? [],
-      unitWarnings: data.unitWarnings ?? [],
-      error: data.error ?? null,
-      formattedEquations: data.formattedEquations ?? [],
-      cyclePath: data.cyclePath ?? [],
-      formattedReport: data.formattedReport ?? undefined,
-      codeTables: data.codeTables ?? [],
-      parametricTables: data.parametricTables ?? [],
-      definedPlots: data.definedPlots ?? [],
-      stateTableDefs: data.stateTableDefs ?? [],
-      odeTables: data.odeTables ?? [],
-    }
+    return mapSolveData(data)
   } catch (e) {
-    return {
-      success: false,
-      variables: [],
-      blocks: [],
-      residuals: [],
-      stats: null,
-      solutions: [],
-      unitWarnings: [],
-      error: `Could not reach the solver backend: ${String(e)}`,
-      formattedEquations: [],
-      formattedReport: undefined,
-    }
+    return { ...SOLVE_FAILURE, error: `Could not reach the solver backend: ${String(e)}` }
   }
 }
 
@@ -424,6 +544,31 @@ export interface OptimizeResponse {
   variables: VariableResult[]
 }
 
+/** The empty optimize response returned on any failure. */
+const OPTIMIZE_FAILURE: Omit<OptimizeResponse, 'error'> = {
+  success: false,
+  warning: null,
+  objective: null,
+  decision: null,
+  decisions: [],
+  evaluations: 0,
+  variables: [],
+}
+
+/** Maps an optimize result DTO to the typed OptimizeResponse. */
+function mapOptimizeData(data: any): OptimizeResponse {
+  return {
+    success: data.success ?? false,
+    error: data.error ?? null,
+    warning: data.warning ?? null,
+    objective: data.objective ?? null,
+    decision: data.decision ?? null,
+    decisions: data.decisions ?? [],
+    evaluations: data.evaluations ?? 0,
+    variables: data.variables ?? [],
+  }
+}
+
 export async function optimize(
   text: string,
   stopCriteria: StopCriteria,
@@ -431,18 +576,28 @@ export async function optimize(
   displayUnitSystem: UnitSystem,
   params: OptimizeParams,
 ): Promise<OptimizeResponse> {
+  const init: RequestInit = {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      text,
+      stopCriteria,
+      variableInfo,
+      displayUnitSystem,
+      ...params,
+    }),
+  }
+
+  if (ASYNC_API) {
+    const outcome = await runCompute('/api/optimize', init)
+    if (outcome.kind === 'completed') {
+      return mapOptimizeData(outcome.result)
+    }
+    return { ...OPTIMIZE_FAILURE, error: outcome.error }
+  }
+
   try {
-    const response = await fetch(`${API_BASE}/api/optimize`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        text,
-        stopCriteria,
-        variableInfo,
-        displayUnitSystem,
-        ...params,
-      }),
-    })
+    const response = await fetch(`${API_BASE}/api/optimize`, init)
     if (!response.ok) {
       let errorMessage = `Server error (${response.status})`
       try {
@@ -456,39 +611,12 @@ export async function optimize(
           if (textBody) errorMessage = textBody
         } catch {}
       }
-      return {
-        success: false,
-        error: errorMessage,
-        warning: null,
-        objective: null,
-        decision: null,
-        decisions: [],
-        evaluations: 0,
-        variables: [],
-      }
+      return { ...OPTIMIZE_FAILURE, error: errorMessage }
     }
     const data = await response.json()
-    return {
-      success: data.success ?? false,
-      error: data.error ?? null,
-      warning: data.warning ?? null,
-      objective: data.objective ?? null,
-      decision: data.decision ?? null,
-      decisions: data.decisions ?? [],
-      evaluations: data.evaluations ?? 0,
-      variables: data.variables ?? [],
-    }
+    return mapOptimizeData(data)
   } catch (e) {
-    return {
-      success: false,
-      error: `Could not reach the solver backend: ${String(e)}`,
-      warning: null,
-      objective: null,
-      decision: null,
-      decisions: [],
-      evaluations: 0,
-      variables: [],
-    }
+    return { ...OPTIMIZE_FAILURE, error: `Could not reach the solver backend: ${String(e)}` }
   }
 }
 
@@ -517,26 +645,50 @@ export interface ParetoResponse {
   evaluations: number
 }
 
+/** The empty Pareto response returned on any failure. */
+const PARETO_FAILURE: Omit<ParetoResponse, 'error'> = {
+  success: false,
+  decisionNames: [],
+  objectiveNames: [],
+  front: [],
+  evaluations: 0,
+}
+
+/** Maps a multi-objective result DTO to the typed ParetoResponse. */
+function mapParetoData(data: any): ParetoResponse {
+  return {
+    success: data.success ?? false,
+    error: data.error ?? null,
+    decisionNames: data.decisionNames ?? [],
+    objectiveNames: data.objectiveNames ?? [],
+    front: data.front ?? [],
+    evaluations: data.evaluations ?? 0,
+  }
+}
+
 export async function optimizeMulti(
   text: string,
   stopCriteria: StopCriteria,
   variableInfo: VariableInfo[],
   params: MultiObjectiveParams,
 ): Promise<ParetoResponse> {
-  const empty = (error: string): ParetoResponse => ({
-    success: false,
-    error,
-    decisionNames: [],
-    objectiveNames: [],
-    front: [],
-    evaluations: 0,
-  })
+  const init: RequestInit = {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text, stopCriteria, variableInfo, ...params }),
+  }
+
+  if (ASYNC_API) {
+    const outcome = await runCompute('/api/optimize/multi', init)
+    if (outcome.kind === 'completed') {
+      return mapParetoData(outcome.result)
+    }
+    return { ...PARETO_FAILURE, error: outcome.error }
+  }
+
+  const empty = (error: string): ParetoResponse => ({ ...PARETO_FAILURE, error })
   try {
-    const response = await fetch(`${API_BASE}/api/optimize/multi`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text, stopCriteria, variableInfo, ...params }),
-    })
+    const response = await fetch(`${API_BASE}/api/optimize/multi`, init)
     if (!response.ok) {
       let message = `Server error (${response.status})`
       try {
@@ -548,14 +700,7 @@ export async function optimizeMulti(
       return empty(message)
     }
     const data = await response.json()
-    return {
-      success: data.success ?? false,
-      error: data.error ?? null,
-      decisionNames: data.decisionNames ?? [],
-      objectiveNames: data.objectiveNames ?? [],
-      front: data.front ?? [],
-      evaluations: data.evaluations ?? 0,
-    }
+    return mapParetoData(data)
   } catch (e) {
     return empty(`Could not reach the solver backend: ${String(e)}`)
   }
@@ -594,13 +739,38 @@ const CURVE_FIT_FAILURE: Omit<CurveFitResponse, 'error'> = {
   fittedValues: [],
 }
 
+/** Maps a curve-fit result DTO to the typed CurveFitResponse. */
+function mapCurveFitData(data: any): CurveFitResponse {
+  return {
+    success: data?.success ?? false,
+    error: data?.error ?? null,
+    fittedParameters: data?.fittedParameters ?? [],
+    parameterNames: data?.parameterNames ?? [],
+    rSquared: data?.rSquared ?? 0,
+    rmse: data?.rmse ?? 0,
+    iterations: data?.iterations ?? 0,
+    residuals: data?.residuals ?? [],
+    fittedValues: data?.fittedValues ?? [],
+  }
+}
+
 export async function curveFit(params: CurveFitParams): Promise<CurveFitResponse> {
+  const init: RequestInit = {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(params),
+  }
+
+  if (ASYNC_API) {
+    const outcome = await runCompute('/api/curve-fit', init)
+    if (outcome.kind === 'completed') {
+      return mapCurveFitData(outcome.result)
+    }
+    return { ...CURVE_FIT_FAILURE, error: outcome.error }
+  }
+
   try {
-    const response = await fetch(`${API_BASE}/api/curve-fit`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(params),
-    })
+    const response = await fetch(`${API_BASE}/api/curve-fit`, init)
     const data = await response.json().catch(() => null)
     if (!response.ok) {
       return {
@@ -608,17 +778,7 @@ export async function curveFit(params: CurveFitParams): Promise<CurveFitResponse
         error: data?.error || data?.message || `Server error (${response.status})`,
       }
     }
-    return {
-      success: data?.success ?? false,
-      error: data?.error ?? null,
-      fittedParameters: data?.fittedParameters ?? [],
-      parameterNames: data?.parameterNames ?? [],
-      rSquared: data?.rSquared ?? 0,
-      rmse: data?.rmse ?? 0,
-      iterations: data?.iterations ?? 0,
-      residuals: data?.residuals ?? [],
-      fittedValues: data?.fittedValues ?? [],
-    }
+    return mapCurveFitData(data)
   } catch (e) {
     return {
       ...CURVE_FIT_FAILURE,
@@ -756,6 +916,14 @@ export interface SolveTableResponse {
   stats: TableStats | null
 }
 
+/** Maps a solve-table result DTO to the typed SolveTableResponse. */
+function mapSolveTableData(data: any): SolveTableResponse {
+  return {
+    results: data?.results ?? [],
+    stats: data?.stats ?? null,
+  }
+}
+
 export async function solveTable(
   text: string,
   stopCriteria: StopCriteria,
@@ -765,19 +933,29 @@ export async function solveTable(
   rows: Record<string, number>[],
   functionTables: FunctionTableDto[] = [],
 ): Promise<SolveTableResponse> {
+  const init: RequestInit = {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      text,
+      stopCriteria,
+      variableInfo,
+      displayUnitSystem,
+      table: { variables, rows },
+      functionTables,
+    }),
+  }
+
+  if (ASYNC_API) {
+    const outcome = await runCompute('/api/solve/table', init)
+    if (outcome.kind === 'completed') {
+      return mapSolveTableData(outcome.result)
+    }
+    throw new Error(outcome.error)
+  }
+
   try {
-    const response = await fetch(`${API_BASE}/api/solve/table`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        text,
-        stopCriteria,
-        variableInfo,
-        displayUnitSystem,
-        table: { variables, rows },
-        functionTables,
-      }),
-    })
+    const response = await fetch(`${API_BASE}/api/solve/table`, init)
     if (!response.ok) {
       let errorMessage = `Table solve failed with status ${response.status}`
       try {
@@ -794,10 +972,7 @@ export async function solveTable(
       throw new Error(errorMessage)
     }
     const data = await response.json()
-    return {
-      results: data.results ?? [],
-      stats: data.stats ?? null,
-    }
+    return mapSolveTableData(data)
   } catch (e) {
     throw e instanceof Error ? e : new Error(String(e))
   }
