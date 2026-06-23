@@ -1982,6 +1982,7 @@ export default function App() {
           onSolve={checkThenSolve}
           onSaveProject={handleSaveProject}
           onPreferences={() => setShowPreferences(true)}
+          onRenameProject={handleRenameProject}
         />
       ) : (
         <Flex h="100vh" style={{ overflow: 'hidden' }}>
@@ -2050,6 +2051,87 @@ export default function App() {
         onAbout={() => setShowAbout(true)}
       />
 
+      <Flex direction="column" flex={1} miw={0} p="sm" gap="sm">
+        <TopBar
+          isTable={focusedParam !== null}
+          checking={checking}
+          solving={solving}
+          solvable={solvable}
+          findAll={findAll}
+          complexMode={complexMode}
+          checkResult={checkResult}
+          result={result}
+          tableChecking={checkingTableId === focusedParam?.id}
+          tableSolving={solvingTableId === focusedParam?.id}
+          tableCheckResult={tableCheckResult}
+          tableCheckMessage={tableCheckMessage}
+          tableResults={focusedParam?.results ?? []}
+          onCheck={checkWithFallback}
+          onSolve={checkThenSolve}
+          onCheckTable={() => { if (focusedParam) void onCheckTable(focusedParam.id) }}
+          onSolveTable={() => { if (focusedParam) void onSolveTable(focusedParam.id) }}
+          onFindAllChange={(checked) => {
+            setFindAll(checked)
+            setResult(null)
+            setLastSolvedWithFillMissing(false)
+          }}
+          onComplexModeChange={(checked) => {
+            setComplexMode(checked)
+            setCheckResult(null)
+            setResult(null)
+            setLastSolvedWithFillMissing(false)
+            invalidateTable()
+          }}
+          projectName={projectName}
+          onRenameProject={handleRenameProject}
+          onNewProject={handleNewProject}
+          onOpenProject={handleOpenProject}
+          onSaveProject={handleSaveProject}
+          onSaveProjectAs={handleSaveProjectAs}
+          onInsertFunction={insertFunction}
+          onOpenExamples={() => setShowExamples(true)}
+          onOpenInspector={() => dockRef.current?.open('inspector')}
+          onOpenWorkspace={() => dockRef.current?.open('workspace')}
+          onOpenTerminal={() => dockRef.current?.open('terminal')}
+          onVariableInfo={() => setShowVariableInfo(true)}
+          onMinMax={() => setShowMinMax(true)}
+          onCurveFit={() => setShowCurveFit(true)}
+        />
+        <input
+          ref={projectFileRef}
+          type="file"
+          accept=".frees,application/json"
+          style={{ display: 'none' }}
+          onChange={onProjectFileSelected}
+        />
+
+        <div style={{ flex: 1, minHeight: 0, display: 'flex' }}>
+          <WorkspaceDock
+            content={panelContent}
+            titles={panelTitles}
+            defaultOpen={['equations', 'inspector', 'workspace']}
+            edgeKinds={['workspace', 'inspector']}
+            onActiveChange={(active) => {
+              setActiveTab(active?.kind ?? '')
+              // Focusing a table window makes it the "active" table so the
+              // shared Solve-Table / Configure / Alter actions target it.
+              if (active?.kind === 'table' && active.id.startsWith('table:')) {
+                setActiveTableId(active.id.slice('table:'.length))
+              }
+              // The Inspector reflects the last-focused main window; focusing
+              // the auxiliary Inspector / Variable Explorer edge panels must not change it.
+              if (active && active.kind !== 'inspector' && active.kind !== 'workspace') {
+                setFocusedWindow(active)
+              }
+            }}
+            onOpenChange={setOpenWindows}
+            handleRef={dockRef}
+          />
+        </div>
+      </Flex>
+
+        </Flex>
+      )}
       {showAbout && <AboutModal onClose={() => setShowAbout(false)} />}
 
       <ExamplesModal
@@ -2207,85 +2289,6 @@ export default function App() {
       )}
 
 
-      <Flex direction="column" flex={1} miw={0} p="sm" gap="sm">
-        <TopBar
-          isTable={focusedParam !== null}
-          checking={checking}
-          solving={solving}
-          solvable={solvable}
-          findAll={findAll}
-          complexMode={complexMode}
-          checkResult={checkResult}
-          result={result}
-          tableChecking={checkingTableId === focusedParam?.id}
-          tableSolving={solvingTableId === focusedParam?.id}
-          tableCheckResult={tableCheckResult}
-          tableCheckMessage={tableCheckMessage}
-          tableResults={focusedParam?.results ?? []}
-          onCheck={checkWithFallback}
-          onSolve={checkThenSolve}
-          onCheckTable={() => { if (focusedParam) void onCheckTable(focusedParam.id) }}
-          onSolveTable={() => { if (focusedParam) void onSolveTable(focusedParam.id) }}
-          onFindAllChange={(checked) => {
-            setFindAll(checked)
-            setResult(null)
-            setLastSolvedWithFillMissing(false)
-          }}
-          onComplexModeChange={(checked) => {
-            setComplexMode(checked)
-            setCheckResult(null)
-            setResult(null)
-            setLastSolvedWithFillMissing(false)
-            invalidateTable()
-          }}
-          projectName={projectName}
-          onRenameProject={handleRenameProject}
-          onNewProject={handleNewProject}
-          onOpenProject={handleOpenProject}
-          onSaveProject={handleSaveProject}
-          onSaveProjectAs={handleSaveProjectAs}
-          onInsertFunction={insertFunction}
-          onOpenExamples={() => setShowExamples(true)}
-          onOpenInspector={() => dockRef.current?.open('inspector')}
-          onOpenWorkspace={() => dockRef.current?.open('workspace')}
-          onOpenTerminal={() => dockRef.current?.open('terminal')}
-          onVariableInfo={() => setShowVariableInfo(true)}
-          onMinMax={() => setShowMinMax(true)}
-          onCurveFit={() => setShowCurveFit(true)}
-        />
-        <input
-          ref={projectFileRef}
-          type="file"
-          accept=".frees,application/json"
-          style={{ display: 'none' }}
-          onChange={onProjectFileSelected}
-        />
-
-        <div style={{ flex: 1, minHeight: 0, display: 'flex' }}>
-          <WorkspaceDock
-            content={panelContent}
-            titles={panelTitles}
-            defaultOpen={['equations', 'inspector', 'workspace']}
-            edgeKinds={['workspace', 'inspector']}
-            onActiveChange={(active) => {
-              setActiveTab(active?.kind ?? '')
-              // Focusing a table window makes it the "active" table so the
-              // shared Solve-Table / Configure / Alter actions target it.
-              if (active?.kind === 'table' && active.id.startsWith('table:')) {
-                setActiveTableId(active.id.slice('table:'.length))
-              }
-              // The Inspector reflects the last-focused main window; focusing
-              // the auxiliary Inspector / Variable Explorer edge panels must not change it.
-              if (active && active.kind !== 'inspector' && active.kind !== 'workspace') {
-                setFocusedWindow(active)
-              }
-            }}
-            onOpenChange={setOpenWindows}
-            handleRef={dockRef}
-          />
-        </div>
-      </Flex>
-
       {newPlotKind && (
         <Suspense fallback={null}>
           <PlotConfigModal
@@ -2304,8 +2307,6 @@ export default function App() {
             onClose={() => setNewPlotKind(null)}
           />
         </Suspense>
-      )}
-        </Flex>
       )}
     </>
   )

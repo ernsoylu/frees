@@ -23,6 +23,7 @@ interface MobileLayoutProps {
   onSolve: () => void
   onSaveProject: () => void
   onPreferences: () => void
+  onRenameProject: () => void
 }
 
 export default function MobileLayout({
@@ -36,6 +37,7 @@ export default function MobileLayout({
   onSolve,
   onSaveProject,
   onPreferences,
+  onRenameProject,
 }: MobileLayoutProps) {
   const [activeTab, setActiveTab] = useState<'equations' | 'workspace' | 'terminal' | 'table'>('equations')
   const [activeTableId, setActiveTableId] = useState<string | null>(tables.length > 0 ? tables[0].id : null)
@@ -75,9 +77,11 @@ export default function MobileLayout({
       >
         <Group justify="space-between" align="center">
           <div>
-            <Title order={5} c="teal" lineClamp={1}>
-              {projectName}
-            </Title>
+            <UnstyledButton onClick={onRenameProject}>
+              <Title order={5} c="teal" lineClamp={1}>
+                {projectName}
+              </Title>
+            </UnstyledButton>
             <Text size="xs" c="dimmed">
               {activeTab === 'table' ? 'Tables' : TABS.find((t) => t.id === activeTab)?.label}
             </Text>
