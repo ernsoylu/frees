@@ -23,6 +23,7 @@
 | Data grids | ag-Grid or Handsontable — Parametric, Lookup, and Array tables |
 | Charting | Plotly.js — X-Y, contour, 3D surface, and thermodynamic property plots |
 | Diagram Window | react-konva or Fabric.js (HTML5 Canvas) + CSS absolute-positioned HTML overlays |
+| Whiteboard | Excalidraw (`@excalidraw/excalidraw`) — code-split freehand sketch canvas, complementing the solver-bound Diagram window |
 
 ## Build & Deployment (Docker)
 

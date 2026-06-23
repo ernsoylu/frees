@@ -4,7 +4,7 @@
 
 The application operates on a **Client-Server model**.
 
-1. The **React Frontend** provides a multi-window dashboard representing the Editor, Formatted Report, Solution, Arrays, Residuals, Parametric Tables, Plot, and Diagram windows. The **Editor** is equipped with a vertical line-numbering gutter.
+1. The **React Frontend** provides a multi-window dashboard representing the Editor, Formatted Report, Solution, Arrays, Residuals, Parametric Tables, Plot, Diagram, and Whiteboard windows. The **Editor** is equipped with a vertical line-numbering gutter.
 2. The user inputs text containing equations and standard Markdown notes into the Editor Window. Upon pressing "Solve" or "Check", the frontend posts the text string to the **Spring Boot Backend**.
 3. The **Backend** extracts equations from markdown lines (preserving text structure), lexes/parses them, builds an Abstract Syntax Tree (AST), checks units, blocks equations via Tarjan's algorithm, and solves them using a numerical Jacobian matrix and Newton's method.
 4. The backend returns a JSON payload containing variable solutions, residuals, array tables, compiled LaTeX strings, and a reconstructed formatted report template back to the frontend.
@@ -80,6 +80,15 @@ The uncertainty engine implements a system-wide numerical first-order propagatio
 4. **`UncertaintyOf(X)` Accessor**: When equations contain the `UncertaintyOf` accessor function, the solver executes a second-solve pass. The calculated uncertainty values are stored under special keys (`uncertaintyof$variable_name`) inside the solver's values map. During the second pass, the evaluator resolves `UncertaintyOf(X)` calls to these values, enabling downstream equations to dynamically react to computed uncertainties.
 5. **Absolute vs. Relative Uncertainty GUI Inputs**: The Variable Information window allows inputting uncertainties as absolute values or relative percentages, automatically calculating one from the other if the solved variable value is known. When a solve successfully completes, relative uncertainties are dynamically re-evaluated and converted to absolute values for the propagation engine.
 6. **Code-Defined Uncertainty Assignment**: Users can assign uncertainties directly in code using equations of the form `UncertaintyOf(X) = <expr>`. The solver extracts these statements at the beginning of the solve, evaluates `<expr>` at the solved state, and injects the resulting absolute uncertainties into the propagation engine.
+
+### Whiteboard (Excalidraw Sketch Canvas)
+
+Complementing the solver-bound native Diagram editor (Epics 6/10), the **Whiteboard** is a pure freehand sketching surface — hand-drawn shapes, text, and pasted/imported images for quickly explaining a problem — with no variable binding. It embeds [Excalidraw](https://github.com/excalidraw/excalidraw) (`@excalidraw/excalidraw`) in `frontend/src/whiteboard/`:
+
+- **Multi-instance dock windows** — each whiteboard opens as its own dock window (`whiteboard:<id>`), mirroring the Diagram pattern: created/opened/renamed/deleted from the icon rail's `InstanceLauncher` and the Diagram menu, with titles and lifecycle managed by `App.tsx`.
+- **Persistence** — an Excalidraw scene serializes to a plain-JSON `{ elements, appState, files }` blob, persisted verbatim as opaque JSON (`WhiteboardSpec`, deliberately untyped against Excalidraw's evolving element union) through App-owned state into the unified `.frees` project file, so whiteboards round-trip alongside diagrams, tables, and plots. A `frees-whiteboards` localStorage cache (`whiteboardStorage.ts`) is the fallback when no unified project exists; the live scene is debounced (500 ms in-component, 800 ms to cache) and migrated through Excalidraw's `restore()` on mount.
+- **Code-splitting** — Excalidraw is a large dependency, so `WhiteboardTab` is `lazy`-loaded and its bundle is only fetched when a whiteboard window is first opened.
+- **Theme & export** — the Excalidraw canvas and UI chrome track the app's Mantine color scheme (light/dark) via `updateScene`; a toolbar above the canvas exports the scene to PNG (`exportToBlob`) and SVG (`exportToSvg`). localStorage save failures (typically quota overflow from large embedded images) are surfaced as a non-blocking warning prompting an export.
 
 ### Deployment (Docker)
 
