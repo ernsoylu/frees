@@ -211,7 +211,7 @@ function makeCompletionSource(
   namesRef: React.MutableRefObject<{ functions: string[]; variables: string[] }>,
 ) {
   return (context: CompletionContext): CompletionResult | null => {
-    const word = context.matchBefore(/[A-Za-z_][A-Za-z0-9_]*$/)
+    const word = context.matchBefore(/[A-Za-z_](?=([A-Za-z0-9_]*))\1$/)
     if (!word || (word.from === word.to && !context.explicit)) return null
     const { functions, variables } = namesRef.current
     const options = [

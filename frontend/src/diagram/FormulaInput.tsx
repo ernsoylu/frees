@@ -45,7 +45,7 @@ export function FormulaInput({
 
   // The identifier being typed immediately before the caret, if any.
   const token = (() => {
-    const m = value.slice(0, caret).match(/[A-Za-z_][A-Za-z0-9_$]*$/)
+    const m = value.slice(0, caret).match(/[A-Za-z_](?=([A-Za-z0-9_$]*))\1$/)
     return m ? { text: m[0], start: caret - m[0].length } : null
   })()
 

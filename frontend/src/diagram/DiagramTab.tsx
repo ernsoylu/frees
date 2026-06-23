@@ -449,7 +449,7 @@ function elementVars(el: DiagramElement): string[] {
   }
   if ((el.kind === 'line' || el.kind === 'connector') && el.flow) formulaVars(el.flow.speed).forEach((v) => out.add(v))
   if (el.kind === 'label') {
-    for (const m of el.text.matchAll(/\{([^}]+)\}/g)) {
+    for (const m of el.text.matchAll(/\{([^{}]+)\}/g)) {
       const expr = m[1].split(':')[0]
       formulaVars(expr).forEach((v) => out.add(v))
     }
@@ -561,7 +561,7 @@ function interpolateLabel(
   values: Map<string, VariableResult>,
   numValues: Map<string, number>,
 ): string {
-  return text.replace(/\{([^}]+)\}/g, (match, inner: string) => {
+  return text.replace(/\{([^{}]+)\}/g, (match, inner: string) => {
     const colonIndex = inner.indexOf(':')
     const exprStr = colonIndex === -1 ? inner : inner.slice(0, colonIndex)
     const formatSpec = colonIndex === -1 ? '' : inner.slice(colonIndex + 1)

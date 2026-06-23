@@ -250,7 +250,7 @@ Symbolic CAS (Symja) — returns a transformed expression as text:
   const complete = useCallback(() => {
     // Complete the identifier token immediately left of the cursor against
     // variables, every callable function, and the built-in commands.
-    const token = input.match(/[A-Za-z_][A-Za-z0-9_$]*$/)?.[0] ?? ''
+    const token = input.match(/[A-Za-z_](?=([A-Za-z0-9_$]*))\1$/)?.[0] ?? ''
     if (!token) return
     const candidates = [...variables.map((v) => v.name), ...functions, ...CAS_FUNCTIONS, ...COMMANDS]
     const fnSet = new Set([...functions, ...CAS_FUNCTIONS].map((f) => f.toLowerCase()))
