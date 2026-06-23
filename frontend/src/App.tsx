@@ -382,7 +382,7 @@ export default function App() {
     if (boot) return boot.tables
     const raw = localStorage.getItem('frees.tables')
     if (raw) return loadTables()
-    return [newParamTable([])]
+    return []
   })
   const [activeTableId, setActiveTableId] = useState<string | null>(null)
   const [solvingTableId, setSolvingTableId] = useState<string | null>(null)
