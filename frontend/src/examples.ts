@@ -26,7 +26,7 @@ export const EXAMPLES: Example[] = [
     description: 'Hydraulic and shaft power from flow rate, head, and efficiency.',
     category: 'Mechanical',
     featured: true,
-    text: `# Pump Sizing
+    text: `// Pump Sizing
 { A worked example — edit any value and press Solve (F2).
   Equations may be written in any order; frees figures out
   the calculation order for you. }
@@ -46,7 +46,7 @@ P_shaft = P_hydraulic / eta          { required shaft power }`,
     description: 'Range, flight time, and peak height of a launched projectile.',
     category: 'Mechanics',
     featured: true,
-    text: `# Projectile Motion
+    text: `// Projectile Motion
 { A ball launched from the ground at an angle.
   Edit v0 or theta_deg and press Solve (F2). }
 g = 9.81 [m/s^2]
@@ -66,7 +66,7 @@ h_max = vy^2 / (2 * g)   { peak height }`,
     description: "Steady 1-D conduction through a wall (Fourier's law).",
     category: 'Heat Transfer',
     featured: true,
-    text: `# Heat Conduction Through a Wall
+    text: `// Heat Conduction Through a Wall
 { Steady 1-D conduction (Fourier's law). }
 k = 0.8 [W/m-K]        { thermal conductivity }
 A = 12 [m^2]           { wall area }
@@ -81,7 +81,7 @@ Q = k * A * (T_in - T_out) / L   { heat loss rate, watts }`,
     description: 'Mass of air in a rigid tank — note the implicit equation.',
     category: 'Thermodynamics',
     featured: true,
-    text: `# Ideal Gas Law
+    text: `// Ideal Gas Law
 { Mass of air in a rigid tank. Note the implicit equation:
   you do not have to write "m = ...". }
 P = 500 [kPa]
@@ -96,7 +96,7 @@ P * Vol = m * R * T    { ideal gas equation }`,
     description: 'Current and power dissipation from Ohm’s law.',
     category: 'Electrical',
     featured: true,
-    text: `# DC Circuit — Power Dissipation
+    text: `// DC Circuit — Power Dissipation
 V = 12 [V]
 R = 220 [ohm]
 I = V / R       { current }
@@ -108,7 +108,7 @@ P = V * I       { power dissipated }`,
     description: 'Ideal steam power cycle efficiency using CoolProp properties.',
     category: 'Thermodynamics',
     featured: true,
-    text: `# Rankine Cycle (Steam)
+    text: `// Rankine Cycle (Steam)
 { Ideal steam Rankine cycle using CoolProp water properties. }
 P_boiler = 8000 [kPa]
 P_cond = 10 [kPa]
@@ -138,7 +138,7 @@ eta_th = (w_turb - w_pump) / q_in`,
     title: 'Çengel Thermodynamics Compliance',
     description: ' Nelson-Obert compressibility and diffuser stagnation properties from Çengel.',
     category: 'Thermodynamics',
-    text: `# Çengel Thermodynamics Compliance
+    text: `// Çengel Thermodynamics Compliance
 { Verification problems from Çengel's Thermodynamics: An Engineering Approach.
   This example demonstrates the compressibility factor (Z) of real fluids
   and stagnation properties for compressible flow. }
@@ -173,7 +173,7 @@ P0_air = StagnationPres(P_air, T_air, T0_air, k_air)`,
     title: 'Multi-Fluid State Tables',
     description: 'Two fluid circuits grouped with explicit, fluid-aware STATE TABLE blocks.',
     category: 'Thermodynamics',
-    text: `# Multi-Fluid State Tables
+    text: `// Multi-Fluid State Tables
 { Two circuits in one model: a steam loop and an R134a loop. Each
   STATE TABLE groups its own state points and declares its FLUID, so
   the Fluid States window shows one fluid-aware table per circuit and
@@ -214,7 +214,7 @@ END`,
     description: 'First-order ODE via Integral — Torricelli draining of a tank.',
     category: 'Fluids',
     featured: true,
-    text: `# Tank Draining (Torricelli) — first-order ODE
+    text: `// Tank Draining (Torricelli) — first-order ODE
 { Water height h in a tank emptying through a small orifice obeys
   dh/dt = -(a/A)*sqrt(2*g*h).  Press Solve (F2).
 
@@ -236,7 +236,7 @@ h = h0 - drop            { water height after 60 s }`,
     title: "Newton's Cooling (ODE)",
     description: 'First-order ODE via Integral — a hot body cooling to ambient.',
     category: 'Heat Transfer',
-    text: `# Newton's Law of Cooling — first-order ODE
+    text: `// Newton's Law of Cooling — first-order ODE
 { A hot object relaxing toward ambient obeys
   dT/dt = -k*(T - T_inf).  Press Solve (F2).
 
@@ -257,7 +257,7 @@ T = T0 - drop            { temperature after 30 s }`,
     description: 'Parametric time sweep — full flight path sampled over time.',
     category: 'Mechanics',
     featured: true,
-    text: `# Projectile Trajectory (parametric time sweep)
+    text: `// Projectile Trajectory (parametric time sweep)
 { The whole flight path, sampled in time. This uses a PARAMETRIC
   table, so do NOT use the main Solve — open the Tables tab and
   click "Solve Table". The base system is underspecified by one on
@@ -289,7 +289,7 @@ END`,
     title: 'Damped Oscillator (table)',
     description: 'Parametric time sweep — free vibration of a mass-spring-damper.',
     category: 'Mechanics',
-    text: `# Damped Harmonic Oscillator (parametric time sweep)
+    text: `// Damped Harmonic Oscillator (parametric time sweep)
 { Free vibration of a mass-spring-damper, released from x0 at rest,
   sampled in time. PARAMETRIC table: open the Tables tab and click
   "Solve Table" (not the main Solve). Then chart x vs time, adding
@@ -316,7 +316,7 @@ END`,
     title: 'Sounding Rocket to the Kármán Line',
     description: 'Sizes a CH4/LOX rocket to loft a 10 kg payload to 100 km — combustion, Isp, and an implicit mass/Δv solve.',
     category: 'Aerospace',
-    text: `# Sounding Rocket to the Kármán Line
+    text: `// Sounding Rocket to the Kármán Line
 { A single-stage methane / liquid-oxygen rocket sized to carry a 10 kg
   payload to the Karman line (100 km), then release it at apogee.
 
@@ -325,26 +325,26 @@ END`,
   *implicit* solve — the propellant mass is whatever makes the apogee come
   out to 100 km, and Newton's method finds it. Edit any input and Solve (F2). }
 
-## Mission
+{ Mission }
 g0 = g#                  { standard gravity }
 h_target = 100 [km]      { Karman line — the closing condition below }
 m_payload = 10 [kg]      { released at apogee }
 
-## Propellant: methane (CH4) + liquid oxygen (O2)
+{ Propellant: methane (CH4) + liquid oxygen (O2) }
 MM_fuel = MolarMass(CH4)            { kg/mol }
 MM_ox = MolarMass(O2)
 OF_stoich = 2 * MM_ox / MM_fuel     { CH4 + 2 O2 -> CO2 + 2 H2O, so O/F = 4.0 }
 OF = 3.4                            { run slightly fuel-rich, as real engines do }
 f_fuel = 1 / (1 + OF)               { fuel fraction of the propellant mass }
 
-## Combustion -> chamber temperature
+{ Combustion -> chamber temperature }
 LHV = HeatingValue(CH4, 'LHV')      { lower heating value of the fuel [J/kg] }
 eta_comb = 0.90                     { combustion efficiency (dissociation, losses) }
 cp_gas = 3000 [J/kg-K]              { mean specific heat of the hot products }
 T_ref = 298 [K]
 T_c = T_ref + eta_comb * LHV * f_fuel / cp_gas    { adiabatic-ish chamber temp }
 
-## Exhaust and specific impulse (ideal nozzle)
+{ Exhaust and specific impulse (ideal nozzle) }
 MM_exhaust = (MolarMass(CO2) + 2 * MolarMass('H2O')) / 3   { mean product molar mass }
 R_gas = R# / MM_exhaust             { specific gas constant of the exhaust }
 gamma = 1.20
@@ -353,31 +353,31 @@ P_e = 0.5 [bar]                     { nozzle exit pressure }
 v_e = sqrt( 2*gamma/(gamma - 1) * R_gas * T_c * (1 - (P_e/P_c)^((gamma - 1)/gamma)) )
 Isp = v_e / g0                      { specific impulse [s] }
 
-## Vehicle mass (m_prop is solved from the apogee condition)
+{ Vehicle mass (m_prop is solved from the apogee condition) }
 f_struct = 0.12                     { tank + structure, as a fraction of propellant }
 m_struct = f_struct * m_prop
 m0 = m_payload + m_struct + m_prop  { lift-off mass }
 m_burnout = m_payload + m_struct    { mass at burnout (payload still aboard) }
 MR = m0 / m_burnout                 { mass ratio }
 
-## Thrust and lift-off
+{ Thrust and lift-off }
 TWR = 2.0                           { thrust-to-weight at lift-off (> 1 to fly) }
 F_thrust = TWR * m0 * g0
 mdot = F_thrust / v_e               { propellant mass flow }
 t_burn = m_prop / mdot
 
-## Powered ascent (gravity + drag losses, decreasing mass)
+{ Powered ascent (gravity + drag losses, decreasing mass) }
 { Integrating v(t) = v_e ln(m0/m(t)) - g0 t over the burn gives, in closed form: }
 dv_losses = 500 [m/s]               { lumped aerodynamic drag + steering losses }
 v_burnout = v_e * ln(MR) - g0 * t_burn - dv_losses
 h_powered = v_e * t_burn - (v_e * m_burnout / mdot) * ln(MR) - 0.5 * g0 * t_burn^2
 
-## Coast to apogee and close the loop
+{ Coast to apogee and close the loop }
 h_coast = v_burnout^2 / (2 * g0)    { ballistic coast after burnout }
 h_apogee = h_powered + h_coast
 h_apogee = h_target                 { <-- the equation that sizes the rocket }
 
-## Propellant split (load this much into the tanks)
+{ Propellant split (load this much into the tanks) }
 m_fuel = f_fuel * m_prop
 m_oxidizer = OF * m_fuel`,
   },
@@ -386,7 +386,7 @@ m_oxidizer = OF * m_fuel`,
     title: 'Newton Cooling (Transient)',
     description: 'A DYNAMIC ODE block integrates a cooling curve and reports peak/final temperature.',
     category: 'Heat Transfer',
-    text: `# Newton Cooling — Transient (DYNAMIC)
+    text: `// Newton Cooling — Transient (DYNAMIC)
 { A first-order ODE solved over time. The DYNAMIC ... END block is a parallel
   path to the analytic solver: a variable is a STATE when a der(X) appears, with
   one der(X) = ... and one initial condition X(0) = ...  The block produces an
@@ -404,7 +404,7 @@ DYNAMIC cooling (method = ode45, time = 0 .. 300, points = 200, rtol = 1e-8)
   rate   = -der(T)               { algebraic auxiliary -> an output column }
 END
 
-## Read transient results back into the analytic solution
+{ Read transient results back into the analytic solution }
 T_final = FinalValue('T')        { temperature at the end of the run }
 T_peak  = MaxValue('T')          { hottest point (here, the start) }
 t_half  = TimeAt('T', 56)        { time to reach 56 degrees }`,
@@ -414,7 +414,7 @@ t_half  = TimeAt('T', 56)        { time to reach 56 degrees }`,
     title: 'Transient Heat Rod (method of lines)',
     description: 'A 1-D heat-conduction PDE discretized into N nodes, integrated as a stiff ODE system.',
     category: 'Heat Transfer',
-    text: `# Transient 1-D Heat Conduction (method of lines)
+    text: `// Transient 1-D Heat Conduction (method of lines)
 { The heat equation dT/dt = alpha d2T/dx2 is discretized into N nodes; the FOR
   loop generates one der(T[i]) per interior node and the array / FOR machinery
   expands it into a coupled stiff ODE system. Use the stiff solver ode23s. The
@@ -441,7 +441,7 @@ DYNAMIC rod (method = ode23s, t = 0 .. 300, points = 150, rtol = 1e-6)
   T[5](0) = T_init
 END
 
-## Steady-state check (linear profile T[i] = 100 (N-i)/(N-1))
+{ Steady-state check (linear profile T[i] = 100 (N-i)/(N-1)) }
 T_mid_final = FinalValue('t[4]')`,
   },
   {
@@ -449,7 +449,7 @@ T_mid_final = FinalValue('t[4]')`,
     title: 'Damped Oscillator (2-state)',
     description: 'A true two-state ODE (position + velocity) sharing one step cursor.',
     category: 'Mechanics',
-    text: `# Damped Harmonic Oscillator (DYNAMIC)
+    text: `// Damped Harmonic Oscillator (DYNAMIC)
 { A mass-spring-damper as a coupled two-state ODE:
     x' = v ,  v' = -(c/m) v - (k/m) x
   Both states advance on one shared step cursor — the multi-state capability the
@@ -468,7 +468,7 @@ DYNAMIC oscillator (method = ode45, t = 0 .. 20, points = 400, rtol = 1e-9)
   v(0) = 0.0
 END
 
-## Transient read-backs
+{ Transient read-backs }
 x_settled = FinalValue('x')        { residual displacement at t = 20 }
 E0        = ODEValue('energy', 0)  { initial energy }`,
   },
@@ -477,7 +477,7 @@ E0        = ODEValue('energy', 0)  { initial energy }`,
     title: 'Sounding Rocket Trajectory (loss-accurate)',
     description: 'Coupled h/v/m ODE with drag, burnout and an apogee event; apogee read back via an accessor.',
     category: 'Aerospace',
-    text: `# Loss-Accurate Sounding-Rocket Trajectory (DYNAMIC)
+    text: `// Loss-Accurate Sounding-Rocket Trajectory (DYNAMIC)
 { The coupled multi-state system der(h)=v, der(v)=(F - D - m g)/m, der(m)=-mdot,
   with aerodynamic drag against an exponential atmosphere computed every step as
   an algebraic auxiliary, thrust gated off at burnout via If(), and an apogee
@@ -514,7 +514,7 @@ DYNAMIC ascent (method = ode45, time = 0 .. 600, points = 500, rtol = 1e-7, atol
   EVENT apogee: v = 0 | falling -> stop        { stop at the top of the arc }
 END
 
-## Read the trajectory back into the analytic solution
+{ Read the trajectory back into the analytic solution }
 apogee_km = MaxValue('h') / 1000     { peak altitude reached }
 v_burnout = ODEValue('v', t_burn)    { speed at burnout }
 m_final   = FinalValue('m')          { burnout / coasting mass }`,
@@ -524,7 +524,7 @@ m_final   = FinalValue('m')          { burnout / coasting mass }`,
     title: 'Partial Fractions (Laplace)',
     description: 'Decompose a transfer function and read the residues A, B as solved variables.',
     category: 'Control Systems',
-    text: `# Partial Fractions (Laplace)
+    text: `// Partial Fractions (Laplace)
 { Decompose the transfer function G(s) = (s + 3) / (s^2 + 3s + 2)
   into A/(s+1) + B/(s+2) and read off the residues.
 
@@ -549,7 +549,7 @@ y_initial = A + B        { y(0) }`,
     description: 'Models a 1000 kg car with drag, tunes a PI controller, and performs frequency & stability analysis.',
     category: 'Control Systems',
     featured: true,
-    text: `# Car Dynamics & Cruise Control
+    text: `// Car Dynamics & Cruise Control
 { This example models a 1000 kg car under viscous drag, converts the state-space model to a transfer function, designs a proportional-integral (PI) controller for a feedback loop, and performs frequency & stability analysis.
 
   Press Solve (F2). }
@@ -680,7 +680,7 @@ END`,
     title: 'Controller Design (LQR & PID)',
     description: 'LQR optimal state-feedback for a double integrator (with closed-loop pole check) and loop-shaping PID auto-tuning of a SISO plant.',
     category: 'Control Systems',
-    text: `# Controller Design: LQR + PID
+    text: `// Controller Design: LQR + PID
 
 { ---- LQR state feedback for a double integrator (unit mass) ---- }
 { x1' = x2 , x2' = u  ->  A = [0 1; 0 0],  B = [0; 1] }
@@ -713,38 +713,36 @@ CALL pidtune(num[1:3], den[1:3], 'PID', wc : Kp, Ki, Kd)`,
   {
     id: 'control-analysis-report',
     title: 'Control Analysis Report (Formatted)',
-    description: 'End-to-end report: poles/zeros, stability margins, Bode, Nyquist, and step response with the plots embedded inline via [Graph] tags. Open the Formatted tab.',
+    description: 'End-to-end report: poles/zeros, stability margins, Bode, Nyquist, and step response ',
     category: 'Control Systems',
-    text: `[document type=report size=a4 margin=(20,20,20,20)]
-# Control System Analysis Report
+    text: `// Control System Analysis Report
 
-This report analyzes a second-order plant G(s) end to end: poles and zeros,
-gain and phase margins, frequency response (Bode and Nyquist), and the unit
-step response. Press Solve (F2), then open the **Formatted** tab to read the
-report with the plots embedded inline.
+{ This analyzes a second-order plant G(s) end to end: poles and zeros,
+  gain and phase margins, frequency response (Bode and Nyquist), and the unit
+  step response. Press Solve (F2). }
 
-## 1. Plant model
+{ 1. Plant model }
 
-The numerator and denominator coefficients below (descending powers of s) define
-G(s) = (s + 2) / (s^2 + 4s + 25) — an underdamped system with a natural
-frequency of 5 rad/s, a damping ratio near 0.4, and a single real zero.
+{ The numerator and denominator coefficients below (descending powers of s) define
+  G(s) = (s + 2) / (s^2 + 4s + 25) — an underdamped system with a natural
+  frequency of 5 rad/s, a damping ratio near 0.4, and a single real zero. }
 num = [0, 1, 2]
 den = [1, 4, 25]
 
-## 2. Poles, zeros and stability margins
+{ 2. Poles, zeros and stability margins }
 
 CALL pole(num[1:3], den[1:3] : pr[1:2], pi[1:2])
 CALL zero(num[1:3], den[1:3] : zr[1:1], zi[1:1])
 CALL margin(num[1:3], den[1:3] : gm, pm, w_cg, w_cp)
 
-Both poles sit in the left half-plane, so the system is stable. The s-plane map
-below shows the conjugate pole pair and the single real zero.
+{ Both poles sit in the left half-plane, so the system is stable. The s-plane map
+  below shows the conjugate pole pair and the single real zero. }
 
 
-## 3. Frequency response
+{ 3. Frequency response }
 
-Sweep 50 logarithmically spaced frequencies, then evaluate the Bode and Nyquist
-responses.
+{ Sweep 50 logarithmically spaced frequencies, then evaluate the Bode and Nyquist
+  responses. }
 Nw = 50
 omega = 0.1:50:100 | Log
 CALL bode(num[1:3], den[1:3], omega[1:Nw] : mag[1:Nw], phase[1:Nw])
@@ -752,10 +750,10 @@ CALL nyquist(num[1:3], den[1:3], omega[1:Nw] : re[1:Nw], im[1:Nw])
 
 
 
-## 4. Time-domain step response
+{ 4. Time-domain step response }
 
-Integrate the unit step response over 4 seconds; the underdamped poles produce
-the expected overshoot before settling.
+{ Integrate the unit step response over 4 seconds; the underdamped poles produce
+  the expected overshoot before settling. }
 Nt = 81
 t = 0:0.05:4
 CALL step(num[1:3], den[1:3], t[1:Nt] : y[1:Nt])
@@ -826,7 +824,7 @@ END`,
     title: 'Transient Conduction (Heisler)',
     description: 'Centre/surface temperature of a thick plate cooling by convection.',
     category: 'Heat Transfer',
-    text: `# Transient Conduction (Heisler)
+    text: `// Transient Conduction (Heisler)
 { A thick plate, initially at Ti, is suddenly exposed to convection.
   When the Biot number is large, internal gradients matter and lumped
   capacitance fails — frees gives the one-term (Heisler) solution.
@@ -856,24 +854,23 @@ Q_ratio = heisler_q(geom$, Bi, Fo)         { fraction of heat removed }`,
     title: 'Nichols Chart Presentation (Slide)',
     description: 'Open-loop frequency response on the Nichols grid, formatted as a slide presentation.',
     category: 'Control Systems',
-    text: `[document type=slide size=(1024,768) margin=(60,60,60,60)]
-# Nichols Chart Presentation
+    text: `// Nichols Chart Presentation
 
-Open-loop magnitude vs phase for G(s) = 1 / ((s+1)(s+2)(s+3)).
-Solve (F2), then open the **Formatted** tab to view the slides.
+{ Open-loop magnitude vs phase for G(s) = 1 / ((s+1)(s+2)(s+3)).
+  Solve (F2) to view the plots. }
 
-## System Definition
+{ System Definition }
 
-We define the numerator and denominator for the open-loop plant:
+{ We define the numerator and denominator for the open-loop plant: }
 num = [0, 0, 0, 1]
 den = [1, 6, 11, 6]      { (s+1)(s+2)(s+3) }
 omega = [0.05, 0.1, 0.2, 0.5, 1, 2, 5, 10, 20]
 
 CALL nichols(num[1:4], den[1:4], omega[1:9] : mag[1:9], phase[1:9])
 
-## Nichols Chart
+{ Nichols Chart }
 
-The locus is drawn on the standard Nichols grid with the -1 critical point marked.
+{ The locus is drawn on the standard Nichols grid with the -1 critical point marked. }
 
 
 PLOT 'Nichols'
@@ -887,7 +884,7 @@ END`,
     title: 'Routh-Hurwitz Stability',
     description: 'Count right-half-plane poles of a characteristic polynomial.',
     category: 'Control Systems',
-    text: `# Routh-Hurwitz Stability
+    text: `// Routh-Hurwitz Stability
 { How many closed-loop poles sit in the right half-plane?
   nRHP = 0 means the system is stable. For s^3 + s^2 + 2s + 8
   the answer is 2 (unstable). }
@@ -900,7 +897,7 @@ CALL routh(den[1:4] : nRHP, stable)`,
     title: 'Inverse Laplace (Residues)',
     description: 'Partial-fraction residues and poles of a transfer function.',
     category: 'Control Systems',
-    text: `# Inverse Laplace via Residues
+    text: `// Inverse Laplace via Residues
 { Partial-fraction expansion of Y(s) = (s + 3)/(s^2 + 3s + 2).
   residue() returns the residues r and matching poles p, so the
   time response is y(t) = r_r[1] exp(p_r[1] t) + r_r[2] exp(p_r[2] t).
@@ -915,7 +912,7 @@ CALL residue(num[1:2], den[1:3] : r_r[1:2], r_i[1:2], p_r[1:2], p_i[1:2], k)`,
     title: 'Digital Control: Discretization',
     description: 'Convert a continuous plant to discrete time (Tustin and ZOH).',
     category: 'Control Systems',
-    text: `# Digital Control: Discretization
+    text: `// Digital Control: Discretization
 { Sample a continuous plant G(s) = 2/(s+2) at Ts = 0.1 s using the
   bilinear (Tustin) and zero-order-hold (ZOH) methods. The outputs
   numz/denz are the discrete transfer function in powers of z. }
@@ -932,7 +929,7 @@ CALL c2d(num[1:2], den[1:2], Ts, 'zoh'    : numz_z[1:2], denz_z[1:2])`,
     description: 'Closed-form diffuse view factors for standard configurations.',
     category: 'Heat Transfer',
     featured: true,
-    text: `# Radiation View Factors
+    text: `// Radiation View Factors
 { Analytic (Howell-catalog) diffuse view factors — no chart lookup
   needed. Each returns the dimensionless fraction of radiation that
   leaves surface 1 and reaches surface 2. }
@@ -945,7 +942,7 @@ F_disk = viewfactor_disks(0.5 [m], 1 [m], 0.4 [m])  { coaxial parallel disks }`,
     title: 'Conduction (Material Database)',
     description: 'Fourier conduction using a built-in solid-material property.',
     category: 'Heat Transfer',
-    text: `# Conduction Through an Aluminum Plate
+    text: `// Conduction Through an Aluminum Plate
 { The thermal conductivity comes from the built-in solid-material
   database via k_(Aluminum) — no need to look it up. }
 T_hot = 400 [K]
@@ -962,7 +959,7 @@ q = k * A * (T_hot - T_cold) / L   { heat rate through the plate }`,
     description: 'Bilinear lookup of a brake-specific-fuel-consumption map.',
     category: 'Powertrain',
     featured: true,
-    text: `# Engine Map - 2-D Interpolation
+    text: `// Engine Map - 2-D Interpolation
 { A brake-specific fuel consumption map: rows are engine speed,
   columns are load. Call the table with two arguments to bilinearly
   interpolate, bsfc(rpm, load), or use the EES-style Interpolate2D. }
@@ -981,7 +978,7 @@ g_check   = Interpolate2D('bsfc', 2500, 0.6) { same value, EES name }`,
     description: 'Trade off mass against deflection — run via Min/Max > Pareto.',
     category: 'Optimization',
     featured: true,
-    text: `# Multi-Objective Cantilever Beam
+    text: `// Multi-Objective Cantilever Beam
 { A steel cantilever with a tip load. Solve (F2) to evaluate one
   design, then open Tools > Min/Max, switch to 'Multi-objective
   (Pareto)', and MINIMIZE both 'mass' and 'delta' over the decisions
@@ -1004,7 +1001,7 @@ delta = F * L^3 / (3 * E * I)        { objective 2: tip deflection, minimize }`,
     title: 'Driving-Cycle Energy (Parametric)',
     description: 'Integrate tractive power over a speed profile with IntegralValue.',
     category: 'Powertrain',
-    text: `# Driving-Cycle Energy
+    text: `// Driving-Cycle Energy
 { Tractive power over a speed profile, integrated to total energy.
   This uses a PARAMETRIC table, so do NOT use the main Solve — open
   the Tables tab and click "Solve Table". E_total and P_avg are
