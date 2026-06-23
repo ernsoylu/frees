@@ -296,7 +296,12 @@ public class AstBuilder extends FreesBaseVisitor<Expr> {
      * by a range or an explicit list; columns are aligned into row-major rows. */
     private com.frees.backend.ast.ParametricTable buildParametricDef(FreesParser.ParametricDefContext ctx) {
         String name = ctx.IDENT().getText();
-        List<String> vars = buildParamList(ctx.paramList());
+        List<String> vars = new ArrayList<>();
+        if (ctx.paramList() != null) {
+            for (var ident : ctx.paramList().IDENT()) {
+                vars.add(ident.getText());
+            }
+        }
 
         java.util.Map<String, List<Double>> columns = new java.util.LinkedHashMap<>();
         for (FreesParser.ParamColumnContext colCtx : ctx.paramColumn()) {
@@ -308,7 +313,7 @@ public class AstBuilder extends FreesBaseVisitor<Expr> {
         for (int i = 0; i < numRows; i++) {
             List<Double> row = new ArrayList<>();
             for (String var : vars) {
-                List<Double> col = columns.get(var);
+                List<Double> col = columns.get(var.toLowerCase());
                 row.add(col != null && i < col.size() ? col.get(i) : null);
             }
             rows.add(row);

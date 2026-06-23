@@ -75,6 +75,7 @@ import {
   saveTables,
   TableSpec,
   toFunctionTableDtos,
+  paramTableFromDto,
 } from './tables'
 import StatesTab from './StatesTab'
 import type { DigitizedExport } from './DigitizerTab'
@@ -860,10 +861,10 @@ export default function App() {
     invalidateTable()
   }
 
-  async function onCheckTable(tableIdArg?: string): Promise<CheckResponse | null> {
+  async function onCheckTable(tableIdArg?: string, overrideTbl?: ParamTableSpec): Promise<CheckResponse | null> {
     const tableId = tableIdArg ?? activeParam?.id
     if (checkingTableId !== null || !tableId) return null
-    const tbl = tables.find((t) => t.id === tableId)
+    const tbl = overrideTbl ?? tables.find((t) => t.id === tableId) as ParamTableSpec | undefined
     if (!tbl || tbl.kind !== 'parametric') return null
     const tVars = tbl.vars
     const tRows = tbl.rows
@@ -916,10 +917,10 @@ export default function App() {
     }
   }
 
-  async function onSolveTable(tableIdArg?: string, checkOverride?: CheckResponse) {
+  async function onSolveTable(tableIdArg?: string, checkOverride?: CheckResponse, overrideTbl?: ParamTableSpec) {
     const tableId = tableIdArg ?? activeParam?.id
     if (solvingTableId !== null || !tableId) return
-    const tbl = tables.find((t) => t.id === tableId)
+    const tbl = overrideTbl ?? tables.find((t) => t.id === tableId) as ParamTableSpec | undefined
     if (!tbl || tbl.kind !== 'parametric' || tbl.vars.length === 0) return
     // When checkOverride is explicitly provided (from checkThenSolveTable), honour it.
     // When called directly from a per-window "Run Table" button we skip the gate so
@@ -1075,20 +1076,29 @@ export default function App() {
       return
     }
     const res = await onCheck()
-    if (res?.solvable) void onSolve(false, undefined, res)
+    if (res?.solvable) {
+      void onSolve(false, undefined, res)
+    } else if (res && !res.solvable && res.parametricTables && res.parametricTables.length > 0) {
+      // Auto-fallback: if the main block is not fully determined but there is a parametric
+      // sweep defined, the user likely intended to just "Solve Table".
+      const dto = res.parametricTables[0]
+      const overrideTbl = paramTableFromDto(dto)
+      dockRef.current?.openInstance(`table:${dto.name}`, 'table', dto.name)
+      void checkThenSolveTable(dto.name, overrideTbl)
+    }
   }
 
-  async function checkThenSolveTable(tableIdArg?: string) {
+  async function checkThenSolveTable(tableIdArg?: string, overrideTbl?: ParamTableSpec) {
     const tableId = tableIdArg ?? activeParam?.id
     if (solvingTableId !== null || checkingTableId !== null || !tableId) return
-    const tbl = tables.find((t) => t.id === tableId)
+    const tbl = overrideTbl ?? tables.find((t) => t.id === tableId) as ParamTableSpec | undefined
     if (!tbl || tbl.kind !== 'parametric') return
     if (tbl.checkResult?.solvable === true) {
-      void onSolveTable(tableId)
+      void onSolveTable(tableId, undefined, overrideTbl)
       return
     }
-    const res = await onCheckTable(tableId)
-    if (res?.solvable) void onSolveTable(tableId, res)
+    const res = await onCheckTable(tableId, overrideTbl)
+    if (res?.solvable) void onSolveTable(tableId, res, overrideTbl)
   }
 
   const handlePlotsChange = (nextPlots: PlotSpec[]) => {
