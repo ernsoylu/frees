@@ -1990,6 +1990,9 @@ export default function App() {
           onCheck={checkWithFallback}
           onSolve={checkThenSolve}
           onSaveProject={handleSaveProject}
+          onSaveProjectAs={handleSaveProjectAs}
+          onNewProject={handleNewProject}
+          onOpenProject={handleOpenProject}
           onPreferences={() => setShowPreferences(true)}
           onRenameProject={handleRenameProject}
         />

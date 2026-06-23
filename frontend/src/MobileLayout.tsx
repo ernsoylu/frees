@@ -8,7 +8,9 @@ import {
   IconSettings,
   IconDeviceFloppy,
   IconTargetArrow,
-  IconChecks
+  IconChecks,
+  IconFolderOpen,
+  IconFilePlus
 } from '@tabler/icons-react'
 import { TableSpec } from './tables'
 
@@ -22,6 +24,9 @@ interface MobileLayoutProps {
   onCheck: () => void
   onSolve: () => Promise<'workspace' | 'table' | void> | void
   onSaveProject: () => void
+  onSaveProjectAs: () => void
+  onNewProject: () => void
+  onOpenProject: () => void
   onPreferences: () => void
   onRenameProject: () => void
 }
@@ -36,6 +41,9 @@ export default function MobileLayout({
   onCheck,
   onSolve,
   onSaveProject,
+  onSaveProjectAs,
+  onNewProject,
+  onOpenProject,
   onPreferences,
   onRenameProject,
 }: MobileLayoutProps) {
@@ -122,11 +130,30 @@ export default function MobileLayout({
               </Menu.Target>
               <Menu.Dropdown>
                 <Menu.Item
+                  leftSection={<IconFilePlus size={14} />}
+                  onClick={onNewProject}
+                >
+                  New Project
+                </Menu.Item>
+                <Menu.Item
+                  leftSection={<IconFolderOpen size={14} />}
+                  onClick={onOpenProject}
+                >
+                  Open Project
+                </Menu.Item>
+                <Menu.Item
                   leftSection={<IconDeviceFloppy size={14} />}
                   onClick={onSaveProject}
                 >
                   Save Project
                 </Menu.Item>
+                <Menu.Item
+                  leftSection={<IconDeviceFloppy size={14} />}
+                  onClick={onSaveProjectAs}
+                >
+                  Save Project As...
+                </Menu.Item>
+                <Menu.Divider />
                 <Menu.Item
                   leftSection={<IconSettings size={14} />}
                   onClick={onPreferences}
