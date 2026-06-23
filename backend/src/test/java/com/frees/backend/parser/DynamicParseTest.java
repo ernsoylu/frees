@@ -132,23 +132,5 @@ class DynamicParseTest {
         assertTrue(e.getMessage().contains("bogus"), e.getMessage());
     }
 
-    @Test
-    void survivesMarkdownExtraction() {
-        // The /api/check and /api/solve paths run the text through the markdown
-        // extractor first; it must keep the DYNAMIC block intact.
-        String text = """
-                # Newton cooling
-                k = 0.05
-                DYNAMIC cooling (time = 0 .. 600)
-                  der(T) = -k * T
-                  T(0) = 95
-                END
-                """;
-        String clean = MarkdownEquationExtractor.extract(text).cleanText;
-        var result = parser.parseResult(clean);
-        assertEquals(1, result.dynamicSystems().size());
-        assertEquals("cooling", result.dynamicSystems().get(0).name());
-        // Only k = 0.05 survives as an analytic equation.
-        assertEquals(1, result.equations().size());
-    }
+
 }

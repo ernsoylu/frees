@@ -10,7 +10,6 @@ import com.frees.backend.compute.ComputeDispatcher;
 import com.frees.backend.compute.ComputeTask;
 import com.frees.backend.compute.JobTicket;
 import com.frees.backend.parser.EquationParser;
-import com.frees.backend.parser.MarkdownEquationExtractor;
 import com.frees.backend.units.UnitRegistry;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -96,7 +95,7 @@ public class OptimizeController {
         }
         if (dispatcher != null) {
             try {
-                solver.parse(MarkdownEquationExtractor.extract(request.text()).cleanText);
+                solver.parse(request.text());
             } catch (EquationParser.ParseException e) {
                 String firstError = e.getMessage().lines().findFirst().orElse(e.getMessage());
                 return ResponseEntity.badRequest().body(OptimizeResponse.failure(SYNTAX_ERROR_PREFIX + firstError));
@@ -157,8 +156,7 @@ public class OptimizeController {
             uppers = List.of(request.upper());
         }
 
-        var extraction = MarkdownEquationExtractor.extract(request.text());
-        String cleanText = extraction.cleanText;
+        String cleanText = request.text();
 
         SolverSettings settings = request.stopCriteria() != null
                 ? request.stopCriteria().toSettings()
@@ -206,7 +204,7 @@ public class OptimizeController {
         }
         if (dispatcher != null) {
             try {
-                solver.parse(MarkdownEquationExtractor.extract(request.text()).cleanText);
+                solver.parse(request.text());
             } catch (EquationParser.ParseException e) {
                 String firstError = e.getMessage().lines().findFirst().orElse(e.getMessage());
                 return ResponseEntity.badRequest().body(ParetoResponse.failure(SYNTAX_ERROR_PREFIX + firstError));
@@ -254,7 +252,7 @@ public class OptimizeController {
                 ? request.maximize()
                 : request.objectives().stream().map(o -> Boolean.FALSE).toList();
 
-        String cleanText = MarkdownEquationExtractor.extract(request.text()).cleanText;
+        String cleanText = request.text();
         SolverSettings settings = request.stopCriteria() != null
                 ? request.stopCriteria().toSettings() : cappedDefaults();
         int population = clampPositive(request.populationSize(), 40, 200);

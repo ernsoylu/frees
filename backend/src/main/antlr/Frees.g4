@@ -144,7 +144,7 @@ plotValue
 // one der(X)=... and one initial condition X(t0)=.... Array states der(T[i])
 // reuse the FOR / array machinery for method-of-lines PDEs. The header carries
 // solver config. The whole block is routed out of the analytic equation stream
-// by MarkdownEquationExtractor, so the analytic solver never sees der().
+// by the grammar, so the analytic solver never sees der().
 dynamicDef
     : DYNAMIC IDENT LPAREN dynamicHeader RPAREN sep
       dynamicItem (sep dynamicItem)* sep?
