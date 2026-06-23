@@ -36,7 +36,6 @@ interface MobileLayoutProps {
   onPreferences: () => void
   onRenameProject: () => void
   onOpenExamples: () => void
-  onAbout: () => void
 }
 
 export default function MobileLayout({
@@ -59,7 +58,6 @@ export default function MobileLayout({
   onPreferences,
   onRenameProject,
   onOpenExamples,
-  onAbout,
 }: MobileLayoutProps) {
   const [activeTab, setActiveTab] = useState<'equations' | 'workspace' | 'terminal' | 'table'>('equations')
   const [activeTableId, setActiveTableId] = useState<string | null>(tables.length > 0 ? tables[0].id : null)
@@ -201,8 +199,10 @@ export default function MobileLayout({
                   Examples
                 </Menu.Item>
                 <Menu.Item
+                  component="a"
+                  href="/help"
+                  target="_blank"
                   leftSection={<IconHelp size={14} />}
-                  onClick={onAbout}
                 >
                   Help
                 </Menu.Item>

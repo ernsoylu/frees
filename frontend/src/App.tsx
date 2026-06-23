@@ -2000,7 +2000,6 @@ export default function App() {
           onPreferences={() => setShowPreferences(true)}
           onRenameProject={handleRenameProject}
           onOpenExamples={() => setShowExamples(true)}
-          onAbout={() => setShowAbout(true)}
         />
       ) : (
         <Flex h="100vh" style={{ overflow: 'hidden' }}>
