@@ -25,11 +25,11 @@ After start: frontend at http://localhost:5173 (nginx, proxies `/api` to the bac
 
 ### Build stamping (commit shown in the About dialog)
 
-The frontend bundle is stamped with the git commit it was built from, surfaced in the **About** dialog (with a link to that commit on GitHub) so you can confirm which revision a deployment — local or on Render — is actually running.
+The frontend bundle is stamped with the git commit it was built from, surfaced in the **About** dialog (with a link to that commit on GitHub) so you can confirm which revision a deployment — local or on Railway — is actually running.
 
 `AboutModal.tsx` resolves the commit in this order: **runtime** stamp `window.__BUILD_COMMIT__` → **build-time** `import.meta.env.VITE_COMMIT_HASH` → `dev`.
 
-- **Runtime (works on Render):** `frontend/docker-entrypoint.d/40-build-info.sh` runs on container start and writes `window.__BUILD_COMMIT__` into `build-info.js` from `RENDER_GIT_COMMIT` (Render's built-in, set at runtime) or `BUILD_COMMIT`. `index.html` loads `build-info.js` before the app. This is the reliable path because platforms expose the commit at runtime, not as a Docker build arg.
+- **Runtime (works on Railway):** `frontend/docker-entrypoint.d/40-build-info.sh` runs on container start and writes `window.__BUILD_COMMIT__` into `build-info.js` from `RAILWAY_GIT_COMMIT_SHA` (Railway's built-in, set at runtime) or `BUILD_COMMIT`. `index.html` loads `build-info.js` before the app. This is the reliable path because platforms expose the commit at runtime, not as a Docker build arg.
 - **Build-time (local fallback):** `frees.sh` exports `VITE_COMMIT_HASH=$(git rev-parse --short HEAD)`; `docker-compose.yml` passes it as a build arg (baked by Vite) and as the `BUILD_COMMIT` runtime env.
 - Absent all, the About dialog shows "dev (local build)" with no link.
 

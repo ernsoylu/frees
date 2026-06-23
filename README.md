@@ -45,14 +45,35 @@ See [CLAUDE.md](CLAUDE.md) for the development workflow and [ARCHITECTURE_AND_RE
 
 ## Deployment
 
-The app is deployed on [Render](https://render.com) as two Docker web services built from this repository's `main` branch:
+The app is deployed on [Railway](https://railway.app) as multiple services built from this repository's `main` branch.
 
-- **Frontend**: <https://frees.onrender.com> (`frontend/Dockerfile`), calling the backend API directly via `VITE_API_BASE`.
-- **Backend**: <https://frees-backend.onrender.com> (`backend/Dockerfile`, Spring Boot).
+### Architecture
+```mermaid
+graph TD
+    UI[frees-frontend<br/>frees.up.railway.app]
+    API[frees-api<br/>frees-api-production.up.railway.app]
+    Compute[frees-compute]
+    Redis[frees-redis]
+    RabbitMQ[frees-rabbitmq]
 
-Cross-origin access to the API is restricted to `http://localhost:5173` and `https://*.onrender.com` by default; set `FREES_CORS_ALLOWED_ORIGINS` (comma-separated origin patterns) on the backend service to allow other origins.
+    UI --> API
+    API -.-> Redis
+    API -.-> RabbitMQ
+    Compute -.-> Redis
+    Compute -.-> RabbitMQ
+```
 
-The frontend bundle is stamped with the git commit it was built from. The **About** dialog shows that commit and links to it on GitHub, so you can confirm which revision a deployment is running — on Render this comes from the built-in `RENDER_GIT_COMMIT`, and locally from `frees.sh` (`git rev-parse --short HEAD`). See `CLAUDE.md` → *Build stamping*.
+> **Note on RabbitMQ**: One exception in the Railway architecture is that we cannot use a custom Dockerfile for RabbitMQ. Therefore, the `frees-rabbitmq` service was deployed directly by specifying the image source by hand rather than building from our source.
+
+- **Frontend**: <https://frees.up.railway.app> (`frontend/Dockerfile`), calling the backend API directly via `VITE_API_BASE`.
+- **Backend API**: <https://frees-api-production.up.railway.app> (`backend/Dockerfile`, Spring Boot).
+- **Backend Compute**: Background worker node (`frees-compute`, `backend/Dockerfile`).
+- **Redis**: state store (`frees-redis`).
+- **RabbitMQ**: message broker (`frees-rabbitmq`).
+
+Cross-origin access to the API is restricted to `http://localhost:5173` and `https://*.up.railway.app` by default; set `FREES_CORS_ALLOWED_ORIGINS` (comma-separated origin patterns) on the backend service to allow other origins.
+
+The frontend bundle is stamped with the git commit it was built from. The **About** dialog shows that commit and links to it on GitHub, so you can confirm which revision a deployment is running — on Railway this comes from the built-in `RAILWAY_GIT_COMMIT_SHA`, and locally from `frees.sh` (`git rev-parse --short HEAD`). See `CLAUDE.md` → *Build stamping*.
 
 ## License
 
