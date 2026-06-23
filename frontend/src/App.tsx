@@ -374,9 +374,10 @@ export default function App() {
   // Tables (Epic 8): any number of Parametric and Curve Tables; the active
   // parametric table is the one Check/Solve Table and the plots act on.
   const [tables, setTables] = useState<TableSpec[]>(() => {
-    if (boot) return boot.tables.length > 0 ? boot.tables : [newParamTable([])]
-    const loaded = loadTables()
-    return loaded.length > 0 ? loaded : [newParamTable([])]
+    if (boot) return boot.tables
+    const raw = localStorage.getItem('frees.tables')
+    if (raw) return loadTables()
+    return [newParamTable([])]
   })
   const [activeTableId, setActiveTableId] = useState<string | null>(null)
   const [solvingTableId, setSolvingTableId] = useState<string | null>(null)
@@ -391,7 +392,7 @@ export default function App() {
   // The kind decides which plot type the modal creates: xy / property / psychro.
   const [newPlotKind, setNewPlotKind] = useState<PlotKind | null>(null)
   const [diagrams, setDiagrams] = useState<DiagramSpec[]>(() =>
-    boot?.diagrams?.length ? boot.diagrams : loadDiagrams(),
+    boot ? boot.diagrams : loadDiagrams(),
   )
   // Excalidraw whiteboards (Epic complement to the native Diagram window):
   // managed as App-owned state so they round-trip with the .frees project,
@@ -403,7 +404,7 @@ export default function App() {
   // Diagrams are addressed per-window now; we only need the setter (to track
   // the most-recently-created/focused diagram for new-window opening).
   const [, setActiveDiagramId] = useState<string | null>(() => {
-    const list = boot?.diagrams?.length ? boot.diagrams : loadDiagrams()
+    const list = boot ? boot.diagrams : loadDiagrams()
     return list[0]?.id ?? null
   })
   const [fluids, setFluids] = useState<string[]>([])
@@ -495,7 +496,7 @@ export default function App() {
     setUnitSystem(p.unitSystem ?? 'SI')
     setFillMissing(Boolean(p.fillMissing))
     setStateUnitIds(p.stateUnitIds ?? {})
-    setTables(p.tables.length > 0 ? p.tables : [newParamTable([])])
+    setTables(p.tables)
     setPlots(p.plots ?? [])
     setDiagrams(p.diagrams ?? [])
     setActiveDiagramId(p.diagrams?.[0]?.id ?? null)

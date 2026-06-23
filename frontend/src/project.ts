@@ -23,7 +23,7 @@ const PROJECT_KEY = 'frees.project'
 // the project file is the source of truth, those keys act as local caches.
 const CUSTOM_COMPONENTS_KEY = 'frees-custom-components'
 const DIGITIZER_KEY = 'frees-digitizer'
-const DOCK_LAYOUT_KEY = 'frees-dock-layout-v2'
+const DOCK_LAYOUT_KEY = 'frees-dock-layout-v3'
 
 /** The in-memory workspace slices owned by App.tsx that make up a project. */
 export interface ProjectSlices {
