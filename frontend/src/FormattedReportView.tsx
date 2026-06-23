@@ -10,8 +10,8 @@ import { detectStates } from './plots/stateTable'
 import { PlotSpec } from './plots/types'
 import { ParamRow } from './ParametricTableTab'
 import Reveal from 'reveal.js'
-import 'reveal.js/dist/reveal.css'
-import 'reveal.js/dist/theme/white.css'
+import 'reveal.js/reveal.css'
+import 'reveal.js/theme/white.css'
 
 function RevealPresentation({ pages, outOfDocElements, width, height }: { pages: any[], outOfDocElements: any[], width: number, height: number }) {
   const deckRef = useRef<HTMLDivElement>(null)
