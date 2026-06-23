@@ -7,10 +7,12 @@ import {
   IconTable,
   IconSettings,
   IconDeviceFloppy,
-  IconTargetArrow,
   IconChecks,
   IconFolderOpen,
-  IconFilePlus
+  IconFilePlus,
+  IconHelp,
+  IconBook,
+  IconTargetArrow
 } from '@tabler/icons-react'
 import { TableSpec } from './tables'
 
@@ -29,6 +31,8 @@ interface MobileLayoutProps {
   onOpenProject: () => void
   onPreferences: () => void
   onRenameProject: () => void
+  onOpenExamples: () => void
+  onAbout: () => void
 }
 
 export default function MobileLayout({
@@ -46,6 +50,8 @@ export default function MobileLayout({
   onOpenProject,
   onPreferences,
   onRenameProject,
+  onOpenExamples,
+  onAbout,
 }: MobileLayoutProps) {
   const [activeTab, setActiveTab] = useState<'equations' | 'workspace' | 'terminal' | 'table'>('equations')
   const [activeTableId, setActiveTableId] = useState<string | null>(tables.length > 0 ? tables[0].id : null)
@@ -159,6 +165,19 @@ export default function MobileLayout({
                   onClick={onPreferences}
                 >
                   Preferences
+                </Menu.Item>
+                <Menu.Divider />
+                <Menu.Item
+                  leftSection={<IconBook size={14} />}
+                  onClick={onOpenExamples}
+                >
+                  Examples
+                </Menu.Item>
+                <Menu.Item
+                  leftSection={<IconHelp size={14} />}
+                  onClick={onAbout}
+                >
+                  Help
                 </Menu.Item>
               </Menu.Dropdown>
             </Menu>
