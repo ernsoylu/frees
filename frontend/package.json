@@ -31,7 +31,8 @@
     "plotly.js-basic-dist-min": "^3.6.0",
     "plotly.js-dist-min": "^3.6.0",
     "react": "^19.2.7",
-    "react-dom": "^19.2.7"
+    "react-dom": "^19.2.7",
+    "reveal.js": "^6.0.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",
@@ -42,6 +43,7 @@
     "@types/katex": "^0.16.8",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
+    "@types/reveal.js": "^5.2.2",
     "@vitejs/plugin-react": "^4.3.4",
     "eslint": "^9.39.4",
     "eslint-plugin-react": "^7.37.5",
