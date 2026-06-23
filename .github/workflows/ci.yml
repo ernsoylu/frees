@@ -115,6 +115,9 @@ jobs:
         with:
           context: frontend
           push: true
+          build-args: |
+            VITE_ASYNC_API=1
+            VITE_COMMIT_HASH=${{ github.sha }}
           tags: |
             ghcr.io/${{ github.repository_owner }}/frees-frontend:latest
             ghcr.io/${{ github.repository_owner }}/frees-frontend:${{ github.sha }}

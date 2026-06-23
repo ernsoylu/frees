@@ -7,7 +7,7 @@ import java.util.TreeSet;
  * AST for a frees expression. Variable names are stored lowercase because
  * variable names are case-insensitive.
  */
-public sealed interface Expr permits Expr.Num, Expr.Str, Expr.Var, Expr.BinOp, Expr.Neg,
+public sealed interface Expr extends java.io.Serializable permits Expr.Num, Expr.Str, Expr.Var, Expr.BinOp, Expr.Neg,
         Expr.Call, Expr.ArrayAccess, Expr.Range, Expr.ArrayLiteral,
         Expr.Compare, Expr.Logical, Expr.Not {
 

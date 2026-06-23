@@ -6,7 +6,7 @@ import java.util.List;
  * Represents a parsed statement in frees, which can be an equation,
  * a FOR loop block, or a CALL to a PROCEDURE or MODULE.
  */
-public sealed interface Statement permits Statement.Eq, Statement.For, Statement.CallProc, Statement.Symbolic {
+public sealed interface Statement extends java.io.Serializable permits Statement.Eq, Statement.For, Statement.CallProc, Statement.Symbolic {
 
     record Eq(Expr lhs, Expr rhs, String sourceText) implements Statement {}
 
