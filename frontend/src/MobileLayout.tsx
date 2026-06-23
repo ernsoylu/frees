@@ -1,4 +1,4 @@
-import { useState, ReactNode } from 'react'
+import { useState, useEffect, ReactNode } from 'react'
 import { Flex, Group, Title, UnstyledButton, Text, Box, Paper, ActionIcon, Menu } from '@mantine/core'
 import {
   IconMathFunction,
@@ -61,6 +61,14 @@ export default function MobileLayout({
 }: MobileLayoutProps) {
   const [activeTab, setActiveTab] = useState<'equations' | 'workspace' | 'terminal' | 'table'>('equations')
   const [activeTableId, setActiveTableId] = useState<string | null>(tables.length > 0 ? tables[0].id : null)
+
+  useEffect(() => {
+    if (tables.length > 0 && (!activeTableId || !tables.find((t) => t.id === activeTableId))) {
+      setActiveTableId(tables[tables.length - 1].id)
+    } else if (tables.length === 0 && activeTableId !== null) {
+      setActiveTableId(null)
+    }
+  }, [tables, activeTableId])
 
   const TABS = [
     { id: 'equations', label: 'Equations', icon: IconMathFunction },
