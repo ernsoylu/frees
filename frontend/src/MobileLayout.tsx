@@ -72,7 +72,8 @@ export default function MobileLayout({
         style={{
           borderBottom: '1px solid var(--mantine-color-default-border)',
           backgroundColor: 'var(--mantine-color-body)',
-          zIndex: 10
+          zIndex: 10,
+          paddingTop: 'calc(env(safe-area-inset-top) + var(--mantine-spacing-sm))'
         }}
       >
         <Group justify="space-between" align="center">
@@ -161,6 +162,7 @@ export default function MobileLayout({
         style={{
           borderTop: '1px solid var(--mantine-color-default-border)',
           backgroundColor: 'var(--mantine-color-body)',
+          paddingBottom: 'env(safe-area-inset-bottom)',
         }}
       >
         <Group grow gap={0} align="center">
