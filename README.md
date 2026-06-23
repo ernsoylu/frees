@@ -71,6 +71,20 @@ graph TD
 - **Redis**: state store (`frees-redis`).
 - **RabbitMQ**: message broker (`frees-rabbitmq`).
 
+### Railway Environment Variables
+When deploying to Railway, you must explicitly link the services by configuring the following environment variables in your Railway dashboard:
+
+**`frees-frontend`**:
+- `VITE_API_BASE=https://frees-api-production.up.railway.app` (bypasses the internal nginx proxy and prevents 504 Gateway Timeouts caused by dynamic port bindings)
+
+**`frees-api` & `frees-compute`**:
+- `REDIS_HOST=frees-redis.railway.internal`
+- `RABBITMQ_HOST=frees-rabbitmq.railway.internal`
+- `RABBITMQ_USER` and `RABBITMQ_PASSWORD` (matching your custom RabbitMQ credentials)
+
+**`frees-rabbitmq`**:
+- `RABBITMQ_DEFAULT_USER` and `RABBITMQ_DEFAULT_PASS` (must be changed from `guest`/`guest` to allow connections from other containers within the Railway internal network)
+
 Cross-origin access to the API is restricted to `http://localhost:5173` and `https://*.up.railway.app` by default; set `FREES_CORS_ALLOWED_ORIGINS` (comma-separated origin patterns) on the backend service to allow other origins.
 
 The frontend bundle is stamped with the git commit it was built from. The **About** dialog shows that commit and links to it on GitHub, so you can confirm which revision a deployment is running — on Railway this comes from the built-in `RAILWAY_GIT_COMMIT_SHA`, and locally from `frees.sh` (`git rev-parse --short HEAD`). See `CLAUDE.md` → *Build stamping*.
