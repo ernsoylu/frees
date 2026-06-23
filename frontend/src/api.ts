@@ -327,7 +327,7 @@ export async function check(
     const response = await fetch(`${API_BASE}/api/check`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text, variableInfo, stopCriteria: { complexMode }, functionTables, overrides }),
+      body: JSON.stringify({ text: stripDocumentTags(text), variableInfo, stopCriteria: { complexMode }, functionTables, overrides }),
     })
     if (!response.ok) {
       let errorMessage = `Server error (${response.status})`
@@ -398,6 +398,14 @@ const SOLVE_FAILURE: Omit<SolveResponse, 'error'> = {
   formattedReport: undefined,
 }
 
+/** Strips document formatting tags that the backend parser doesn't understand. */
+function stripDocumentTags(code: string): string {
+  return code
+    .replace(/^\[document\b.*?\]/gm, '')
+    .replace(/^\[\/document\]/gm, '')
+    .replace(/^\[page\b.*?\]/gm, '')
+}
+
 /** Maps a solve result DTO (from a sync 200 body or an async COMPLETED `result`)
  *  to the typed SolveResponse. */
 function mapSolveData(data: any): SolveResponse {
@@ -441,7 +449,7 @@ export async function solve(
       ...(sessionId ? { 'X-Frees-Session': sessionId } : {}),
     },
     body: JSON.stringify({
-      text,
+      text: stripDocumentTags(text),
       stopCriteria,
       variableInfo,
       findAllSolutions,
@@ -615,7 +623,7 @@ export async function optimize(
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      text,
+      text: stripDocumentTags(text),
       stopCriteria,
       variableInfo,
       displayUnitSystem,
@@ -710,7 +718,7 @@ export async function optimizeMulti(
   const init: RequestInit = {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ text, stopCriteria, variableInfo, ...params }),
+    body: JSON.stringify({ text: stripDocumentTags(text), stopCriteria, variableInfo, ...params }),
   }
 
   if (ASYNC_API) {
@@ -974,7 +982,7 @@ export async function solveTable(
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      text,
+      text: stripDocumentTags(text),
       stopCriteria,
       variableInfo,
       displayUnitSystem,
