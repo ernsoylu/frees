@@ -1515,7 +1515,7 @@ function ElementView({
   onControlValue: (id: string, patch: Partial<ControlElement>) => void
   onHover: (id: string | null, clientX: number, clientY: number) => void
   elements?: DiagramElement[]
-  onSolve?: () => Promise<void>
+  onSolve?: () => Promise<boolean | void> | void
   onCheck?: () => Promise<void>
   solving?: boolean
   onNavigate?: (action: { tab?: string; query?: string; plotId?: string }) => void
@@ -3336,7 +3336,7 @@ interface Props {
   tableResults?: TableRowResult[]
   cyclePath?: Record<string, number>[]
   solving?: boolean
-  onSolve?: () => Promise<void>
+  onSolve?: () => Promise<boolean | void> | void
   onCheck?: () => Promise<void>
   onNavigate?: (action: { tab?: string; query?: string; plotId?: string; diagramId?: string }) => void
   onVarDraftsChange?: React.Dispatch<React.SetStateAction<Record<string, VariableDraft>>>

@@ -921,16 +921,16 @@ export default function App() {
     }
   }
 
-  async function onSolveTable(tableIdArg?: string, checkOverride?: CheckResponse, overrideTbl?: ParamTableSpec) {
+  async function onSolveTable(tableIdArg?: string, checkOverride?: CheckResponse, overrideTbl?: ParamTableSpec): Promise<boolean> {
     const tableId = tableIdArg ?? activeParam?.id
-    if (solvingTableId !== null || !tableId) return
+    if (solvingTableId !== null || !tableId) return false
     const tbl = overrideTbl ?? tables.find((t) => t.id === tableId) as ParamTableSpec | undefined
-    if (!tbl || tbl.kind !== 'parametric' || tbl.vars.length === 0) return
+    if (!tbl || tbl.kind !== 'parametric' || tbl.vars.length === 0) return false
     // When checkOverride is explicitly provided (from checkThenSolveTable), honour it.
     // When called directly from a per-window "Run Table" button we skip the gate so
     // independent-block equations (e.g. two separate circuits) still solve correctly
     // even when the global underdetermination check fails.
-    if (checkOverride !== undefined && !checkOverride.solvable) return
+    if (checkOverride !== undefined && !checkOverride.solvable) return false
     setSolvingTableId(tableId)
     try {
       // Non-empty cells become fixed inputs for that run; blank cells are
@@ -973,6 +973,7 @@ export default function App() {
           formattedEquations: prev?.formattedEquations ?? [],
         }))
       }
+      return true
     } catch (e) {
       updateParamTable(tableId, (t) => ({
         ...t,
@@ -983,6 +984,7 @@ export default function App() {
           error: `Could not reach the solver backend: ${String(e)}`,
         })),
       }))
+      return false
     } finally {
       setSolvingTableId(null)
     }
@@ -992,9 +994,9 @@ export default function App() {
     forceFill: unknown = false,
     overridePlots?: PlotSpec[],
     checkOverride?: CheckResponse,
-  ) {
+  ): Promise<boolean> {
     const canRun = checkOverride ? checkOverride.solvable === true : solvable
-    if (solving || !canRun) return
+    if (solving || !canRun) return false
     setSolving(true)
     try {
       const activePlots = overridePlots ?? plots
@@ -1065,6 +1067,7 @@ export default function App() {
           return next
         })
       }
+      return response.success
     } catch (e) {
       setResult({
         success: false,
@@ -1078,6 +1081,7 @@ export default function App() {
         formattedEquations: [],
       })
       setLastSolvedWithFillMissing(false)
+      return false
     } finally {
       setSolving(false)
     }
@@ -1086,15 +1090,17 @@ export default function App() {
   // "Just solve it": if the system is already checked, solve; otherwise run
   // Check first and chain into Solve when it passes. The fresh CheckResponse is
   // passed through so the solve guard doesn't read stale `solvable` state.
-  async function checkThenSolve() {
+  async function checkThenSolve(): Promise<'workspace' | 'table' | void> {
     if (solving || checking) return
     if (solvable) {
-      void onSolve()
+      const ok = await onSolve()
+      if (ok) return 'workspace'
       return
     }
     const res = await onCheck()
     if (res?.solvable) {
-      void onSolve(false, undefined, res)
+      const ok = await onSolve(false, undefined, res)
+      if (ok) return 'workspace'
     } else if (res && !res.solvable && res.parametricTables && res.parametricTables.length > 0) {
       // Auto-fallback: if the main block is not fully determined but there is a parametric
       // sweep defined, the user likely intended to just "Solve Table".
@@ -1102,7 +1108,8 @@ export default function App() {
       const overrideTbl = paramTableFromDto(dto)
       const tableId = overrideTbl.id
       dockRef.current?.openInstance(`table:${tableId}`, 'table', overrideTbl.name)
-      void checkThenSolveTable(tableId, overrideTbl)
+      const ok = await checkThenSolveTable(tableId, overrideTbl)
+      if (ok) return 'table'
     }
   }
 
@@ -1118,17 +1125,19 @@ export default function App() {
     }
   }
 
-  async function checkThenSolveTable(tableIdArg?: string, overrideTbl?: ParamTableSpec) {
+  async function checkThenSolveTable(tableIdArg?: string, overrideTbl?: ParamTableSpec): Promise<boolean> {
     const tableId = tableIdArg ?? activeParam?.id
-    if (solvingTableId !== null || checkingTableId !== null || !tableId) return
+    if (solvingTableId !== null || checkingTableId !== null || !tableId) return false
     const tbl = overrideTbl ?? tables.find((t) => t.id === tableId) as ParamTableSpec | undefined
-    if (!tbl || tbl.kind !== 'parametric') return
+    if (!tbl || tbl.kind !== 'parametric') return false
     if (tbl.checkResult?.solvable === true) {
-      void onSolveTable(tableId, undefined, overrideTbl)
-      return
+      return await onSolveTable(tableId, undefined, overrideTbl)
     }
     const res = await onCheckTable(tableId, overrideTbl)
-    if (res?.solvable) void onSolveTable(tableId, res, overrideTbl)
+    if (res?.solvable) {
+      return await onSolveTable(tableId, res, overrideTbl)
+    }
+    return false
   }
 
   const handlePlotsChange = (nextPlots: PlotSpec[]) => {
