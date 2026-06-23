@@ -715,7 +715,9 @@ CALL pidtune(num[1:3], den[1:3], 'PID', wc : Kp, Ki, Kd)`,
     title: 'Control Analysis Report (Formatted)',
     description: 'End-to-end report: poles/zeros, stability margins, Bode, Nyquist, and step response with the plots embedded inline via [Graph] tags. Open the Formatted tab.',
     category: 'Control Systems',
-    text: `# Control System Analysis Report
+    text: `[document type=report size=a4 margin=(20,20,20,20)]
+[page number=on]
+# Control System Analysis Report
 
 This report analyzes a second-order plant G(s) end to end: poles and zeros,
 gain and phase margins, frequency response (Bode and Nyquist), and the unit
@@ -730,6 +732,7 @@ frequency of 5 rad/s, a damping ratio near 0.4, and a single real zero.
 num = [0, 1, 2]
 den = [1, 4, 25]
 
+[page]
 ## 2. Poles, zeros and stability margins
 
 CALL pole(num[1:3], den[1:3] : pr[1:2], pi[1:2])
@@ -741,6 +744,7 @@ below shows the conjugate pole pair and the single real zero.
 
 [Graph="Pole-Zero Map"] Poles (x) and the zero (o) in the s-plane [/Graph]
 
+[page]
 ## 3. Frequency response
 
 Sweep 50 logarithmically spaced frequencies, then evaluate the Bode and Nyquist
@@ -754,6 +758,7 @@ CALL nyquist(num[1:3], den[1:3], omega[1:Nw] : re[1:Nw], im[1:Nw])
 
 [Graph="Nyquist Diagram"] Polar plot with the critical point marked at -1 + j0 [/Graph]
 
+[page]
 ## 4. Time-domain step response
 
 Integrate the unit step response over 4 seconds; the underdamped poles produce
@@ -763,6 +768,7 @@ t = 0:0.05:4
 CALL step(num[1:3], den[1:3], t[1:Nt] : y[1:Nt])
 
 [Graph="Step Response"] Unit step response showing the overshoot [/Graph]
+[/document]
 
 PLOT 'Pole-Zero Map'
   kind = polezero
@@ -856,19 +862,33 @@ Q_ratio = heisler_q(geom$, Bi, Fo)         { fraction of heat removed }`,
   },
   {
     id: 'nichols-chart',
-    title: 'Nichols Chart',
-    description: 'Open-loop frequency response on the Nichols grid (M/N contours).',
+    title: 'Nichols Chart Presentation (Slide)',
+    description: 'Open-loop frequency response on the Nichols grid, formatted as a slide presentation.',
     category: 'Control Systems',
-    text: `# Nichols Chart
-{ Open-loop magnitude vs phase for G(s) = 1 / ((s+1)(s+2)(s+3)).
-  Solve (F2), then open the 'Nichols' plot window from the Plots
-  menu — the locus is drawn on the standard Nichols grid with the
-  -1 critical point marked. }
+    text: `[document type=slide size=(1024,768) margin=(60,60,60,60)]
+[page number=on]
+# Nichols Chart Presentation
+
+Open-loop magnitude vs phase for G(s) = 1 / ((s+1)(s+2)(s+3)).
+Solve (F2), then open the **Formatted** tab to view the slides.
+
+[page]
+## System Definition
+
+We define the numerator and denominator for the open-loop plant:
 num = [0, 0, 0, 1]
 den = [1, 6, 11, 6]      { (s+1)(s+2)(s+3) }
 omega = [0.05, 0.1, 0.2, 0.5, 1, 2, 5, 10, 20]
 
 CALL nichols(num[1:4], den[1:4], omega[1:9] : mag[1:9], phase[1:9])
+
+[page]
+## Nichols Chart
+
+The locus is drawn on the standard Nichols grid with the -1 critical point marked.
+
+[Graph="Nichols"] Nichols chart locus [/Graph]
+[/document]
 
 PLOT 'Nichols'
   kind = nichols
