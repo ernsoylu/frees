@@ -110,7 +110,7 @@ public final class MarkdownEquationExtractor {
         if (clean.isEmpty()) {
             return true;
         }
-        if (clean.startsWith("#") || clean.startsWith("-") || clean.startsWith("*") || clean.startsWith(">")) {
+        if (clean.startsWith("#") || clean.startsWith("-") || clean.startsWith("*") || clean.startsWith(">") || clean.startsWith("[document") || clean.startsWith("[/document]") || clean.startsWith("[page")) {
             return false;
         }
         List<int[]> segments = semicolonSegments(clean);
@@ -295,8 +295,8 @@ public final class MarkdownEquationExtractor {
                 if (stripped.contains("=")) {
                     collectEquationSegments(line, equations);
                 }
-            } else if (stripped.startsWith("#")) {
-                // Markdown headings are document titles, not computations: never
+            } else if (stripped.startsWith("#") || stripped.startsWith("[document") || stripped.startsWith("[/document]") || stripped.startsWith("[page")) {
+                // Markdown headings and document tags are not computations: never
                 // scan them for inline equations. Otherwise descriptive text such
                 // as "## profile T[i] = 100 (N-i)/(N-1)" would be harvested as a
                 // bogus top-level equation (here with an unbound loop variable i).
@@ -612,8 +612,8 @@ public final class MarkdownEquationExtractor {
             if (isPureEquationLine(line)) {
                 inComment = leavesCommentOpen(line);
                 eqIndex = appendPureEquationLine(line, formattedEquations, eqIndex, report);
-            } else if (stripComments(line).trim().startsWith("#")) {
-                // Headings are titles, not equations — render verbatim and never
+            } else if (stripComments(line).trim().startsWith("#") || stripComments(line).trim().startsWith("[document") || stripComments(line).trim().startsWith("[/document]") || stripComments(line).trim().startsWith("[page")) {
+                // Headings and document tags are titles/layout, not equations — render verbatim and never
                 // consume an equation slot. Must mirror extract(), which also
                 // skips inline-equation harvesting on headings; otherwise the two
                 // disagree on the equation count and eqIndex overruns
