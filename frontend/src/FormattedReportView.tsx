@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect, useRef } from 'react'
 import { Group, List, Stack, Text, Title, Tooltip, Loader, Alert, Paper, Button } from '@mantine/core'
 import { IconDownload } from '@tabler/icons-react'
 import Latex from './Latex'
@@ -9,6 +9,61 @@ import PlotlyChart from './plots/PlotlyChart'
 import { detectStates } from './plots/stateTable'
 import { PlotSpec } from './plots/types'
 import { ParamRow } from './ParametricTableTab'
+import Reveal from 'reveal.js'
+import 'reveal.js/dist/reveal.css'
+import 'reveal.js/dist/theme/white.css'
+
+function RevealPresentation({ pages, outOfDocElements, width, height }: { pages: any[], outOfDocElements: any[], width: number, height: number }) {
+  const deckRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    let deck: any
+    if (deckRef.current) {
+      deck = new Reveal(deckRef.current, {
+        embedded: true,
+        hash: false,
+        slideNumber: true,
+        width,
+        height,
+        minScale: 0.2,
+        maxScale: 2.0,
+      })
+      deck.initialize()
+    }
+    return () => {
+      try {
+        if (deck) {
+          deck.destroy()
+        }
+      } catch (e) {
+         // ignore
+      }
+    }
+  }, [pages, outOfDocElements, width, height])
+
+  return (
+    <div data-mantine-color-scheme="light" style={{ width: '100%', height: 'calc(100vh - 150px)', background: '#f0f0f0' }}>
+       <div className="reveal" ref={deckRef} style={{ width: '100%', height: '100%' }}>
+          <div className="slides">
+             {pages.map((page, i) => (
+                <section key={i} style={{ textAlign: 'left', padding: '0 40px', height: '100%' }}>
+                   <Stack gap="xs">
+                     {page.elements}
+                   </Stack>
+                </section>
+             ))}
+             {outOfDocElements.length > 0 && (
+                <section style={{ textAlign: 'left', padding: '0 40px', height: '100%' }}>
+                   <Stack gap="xs">
+                     {outOfDocElements}
+                   </Stack>
+                </section>
+             )}
+          </div>
+       </div>
+    </div>
+  )
+}
 
 interface FormattedReportViewProps {
   report: string
@@ -540,6 +595,23 @@ export default function FormattedReportView({
       pageBreakAfter: 'always',
       overflow: 'hidden'
     }
+  }
+
+  if (docConfig?.type === 'slide') {
+    let width = 1024
+    let height = 768
+    if (docConfig.size !== 'a4') {
+      const match = docConfig.size.match(/\(([^,]+),([^)]+)\)/)
+      if (match) {
+        width = parseInt(match[1])
+        height = parseInt(match[2])
+      }
+    }
+    return (
+      <Stack gap="xs" style={{ flex: 1, height: '100%' }}>
+        <RevealPresentation pages={pages} outOfDocElements={outOfDocElements} width={width} height={height} />
+      </Stack>
+    )
   }
 
   return (
