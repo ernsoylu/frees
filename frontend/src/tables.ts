@@ -284,7 +284,7 @@ function functionTableFromDto(dto: FunctionTableDto): FunctionTableSpec {
 }
 
 /** Builds a read-only Parametric Table spec from a PARAMETRIC ... END block. */
-function paramTableFromDto(dto: ParametricTableDto): ParamTableSpec {
+export function paramTableFromDto(dto: ParametricTableDto): ParamTableSpec {
   const rows: ParamRow[] = dto.rows.map((row) => {
     const values: Record<string, string> = {}
     dto.vars.forEach((v, j) => {
