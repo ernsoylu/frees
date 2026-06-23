@@ -75,7 +75,8 @@ graph TD
 When deploying to Railway, you must explicitly link the services by configuring the following environment variables in your Railway dashboard:
 
 **`frees-frontend`**:
-- `VITE_API_BASE=https://frees-api-production.up.railway.app` (bypasses the internal nginx proxy and prevents 504 Gateway Timeouts caused by dynamic port bindings)
+- `VITE_API_BASE=https://frees-api-production.up.railway.app`
+- `VITE_ASYNC_API=true`
 
 **`frees-api` & `frees-compute`**:
 - `REDIS_HOST=frees-redis.railway.internal`
