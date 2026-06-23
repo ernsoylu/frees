@@ -18,7 +18,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ./frees.sh restart    # stop + start
 ./frees.sh status     # container status
 ./frees.sh logs       # follow logs
-./frees.sh rebuild    # force clean image rebuild
+./frees.sh build      # force clean image rebuild
 ```
 
 After start: frontend at http://localhost:5173 (nginx, proxies `/api` to the backend container), backend API at http://localhost:8080/api.
@@ -120,5 +120,5 @@ See `README.md` for the full system design and Agile plan.
 | Orchestration | Docker Compose (`docker-compose.yml` at repo root) |
 | Backend image | `eclipse-temurin:21-jdk` build stage (Gradle wrapper, `bootJar`) → `eclipse-temurin:21-jre` runtime |
 | Frontend image | `node:20-alpine` build stage (Vite) → `nginx:alpine` serving static bundle + `/api` reverse proxy |
-| Server lifecycle | `./frees.sh start \| stop \| restart \| status \| logs \| rebuild` |
+| Server lifecycle | `./frees.sh start \| stop \| restart \| status \| logs \| build` |
 | CI/CD | GitHub Actions (`.github/workflows/ci.yml`): backend tests + frontend build on every push/PR; Docker images pushed to GHCR on main |

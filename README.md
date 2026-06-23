@@ -134,7 +134,7 @@ Both servers run as Docker containers orchestrated by Docker Compose and managed
 
 - **backend** — multi-stage image: `eclipse-temurin:21-jdk` runs the Gradle wrapper `bootJar`, runtime is `eclipse-temurin:21-jre`. Exposes 8080 with a TCP healthcheck.
 - **frontend** — multi-stage image: `node:20-alpine` runs the Vite production build, runtime is `nginx:alpine` serving the bundle on port 5173 (host) and reverse-proxying `/api/` to the `backend` service. Starts only after the backend is healthy.
-- **Lifecycle** — `./frees.sh start|stop|restart|status|logs|rebuild`; no host processes to find or kill.
+- **Lifecycle** — `./frees.sh start|stop|restart|status|logs|build`; no host processes to find or kill.
 
 ---
 
