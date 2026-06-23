@@ -67,13 +67,15 @@ export default function MobileLayout({
       {/* Top Bar */}
       <Paper
         shadow="xs"
-        p="sm"
         radius={0}
         style={{
           borderBottom: '1px solid var(--mantine-color-default-border)',
           backgroundColor: 'var(--mantine-color-body)',
           zIndex: 10,
-          paddingTop: 'calc(env(safe-area-inset-top) + var(--mantine-spacing-sm))'
+          paddingTop: 'calc(env(safe-area-inset-top, 0px) + 16px)',
+          paddingBottom: '16px',
+          paddingLeft: '16px',
+          paddingRight: '16px'
         }}
       >
         <Group justify="space-between" align="center">
@@ -162,7 +164,8 @@ export default function MobileLayout({
         style={{
           borderTop: '1px solid var(--mantine-color-default-border)',
           backgroundColor: 'var(--mantine-color-body)',
-          paddingBottom: 'env(safe-area-inset-bottom)',
+          paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 8px)',
+          paddingTop: '8px'
         }}
       >
         <Group grow gap={0} align="center">
@@ -174,7 +177,6 @@ export default function MobileLayout({
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 style={{
-                  padding: '10px 0',
                   display: 'flex',
                   flexDirection: 'column',
                   alignItems: 'center',
