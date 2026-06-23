@@ -14,6 +14,7 @@ import {
   TextInput,
   Title,
 } from '@mantine/core'
+import { useMediaQuery } from '@mantine/hooks'
 import { Spotlight, SpotlightActionGroupData } from '@mantine/spotlight'
 import {
   IconChartGridDots,
@@ -115,6 +116,7 @@ import { PlotSpec, PlotKind } from './plots/types'
 import { plotDefToSpec } from './plots/fromCode'
 import Workspace from './Workspace'
 import ReplTerminal from './ReplTerminal'
+import MobileLayout from './MobileLayout'
 import ExamplesModal from './ExamplesModal'
 import ShortcutsModal from './ShortcutsModal'
 import SyntaxHelp from './SyntaxHelp'
@@ -268,6 +270,8 @@ function replOverrideEquation(v: VariableResult): string {
 }
 
 export default function App() {
+  const isMobile = useMediaQuery('(max-width: 768px)')
+
   // Story 10.10: restore the whole workspace from the unified `.frees` project
   // (autosaved to localStorage). Computed once before any state initializer so
   // every slice below can seed from it, falling back to the legacy per-feature
@@ -1965,7 +1969,22 @@ export default function App() {
   }
 
   return (
-    <Flex h="100vh" style={{ overflow: 'hidden' }}>
+    <>
+      {isMobile ? (
+        <MobileLayout
+          panelContent={panelContent}
+          tables={tables}
+          projectName={projectName}
+          checking={checking}
+          solving={solving}
+          solvable={solvable}
+          onCheck={checkWithFallback}
+          onSolve={checkThenSolve}
+          onSaveProject={handleSaveProject}
+          onPreferences={() => setShowPreferences(true)}
+        />
+      ) : (
+        <Flex h="100vh" style={{ overflow: 'hidden' }}>
       <Rail
         active={activeTab}
         openKinds={openKinds}
@@ -2286,6 +2305,8 @@ export default function App() {
           />
         </Suspense>
       )}
-    </Flex>
+        </Flex>
+      )}
+    </>
   )
 }
