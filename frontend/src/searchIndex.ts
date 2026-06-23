@@ -85,7 +85,7 @@ function buildIndex(): IndexEntry[] {
   for (const [id, md] of Object.entries(DOCS_CATALOG)) {
     const { headings, text } = parseMarkdown(md);
     // Derive a label from the first H1.
-    const h1 = md.match(/^#\s+(.+)$/m);
+    const h1 = md.match(/^#[ \t]+(.+)$/m);
     entries.push({
       id,
       label: h1 ? h1[1].trim() : id,
