@@ -88,7 +88,7 @@ class StateTableParseTest {
                   FLUID = Water
                 END
                 """;
-        String clean = MarkdownEquationExtractor.extract(text).cleanText;
+        String clean = text;
         var result = parser.parseResult(clean);
         assertEquals(1, result.stateTables().size());
         assertEquals("Water", result.stateTables().get(0).fluid());

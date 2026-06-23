@@ -8,7 +8,6 @@ import com.frees.backend.core.EquationSystemSolver;
 import com.frees.backend.core.SolverException;
 import com.frees.backend.core.SolverSettings;
 import com.frees.backend.parser.EquationParser;
-import com.frees.backend.parser.MarkdownEquationExtractor;
 import com.frees.backend.props.PropertyFunctions;
 import com.frees.backend.units.UnitRegistry;
 import org.slf4j.Logger;
@@ -102,7 +101,6 @@ public class SolveController {
                                 List<SolveDtos.SolutionDto> solutions,
                                 List<String> unitWarnings,
                                 String error,
-                                List<String> formattedEquations,
                                 List<Map<String, Double>> cyclePath,
                                 List<SolveDtos.FunctionTableDto> codeTables,
                                 List<SolveDtos.ParametricTableDto> parametricTables,
@@ -118,14 +116,13 @@ public class SolveController {
                              List<SolveDtos.BlockDto> blocks, List<SolveDtos.ResidualDto> residuals,
                              SolveDtos.StatsDto stats, List<SolveDtos.SolutionDto> solutions,
                              List<String> unitWarnings, String error,
-                             List<String> formattedEquations,
                              List<Map<String, Double>> cyclePath,
                              List<SolveDtos.FunctionTableDto> codeTables,
                              List<SolveDtos.ParametricTableDto> parametricTables,
                              List<SolveDtos.PlotDefDto> definedPlots, Integer errorLine,
                              List<SolveDtos.StateTableDto> stateTableDefs) {
             this(success, variables, blocks, residuals, stats, solutions, unitWarnings,
-                    error, formattedEquations, cyclePath, codeTables,
+                    error, cyclePath, codeTables,
                     parametricTables, definedPlots, errorLine, stateTableDefs, List.of());
         }
 
@@ -134,13 +131,12 @@ public class SolveController {
                              List<SolveDtos.BlockDto> blocks, List<SolveDtos.ResidualDto> residuals,
                              SolveDtos.StatsDto stats, List<SolveDtos.SolutionDto> solutions,
                              List<String> unitWarnings, String error,
-                             List<String> formattedEquations,
                              List<Map<String, Double>> cyclePath,
                              List<SolveDtos.FunctionTableDto> codeTables,
                              List<SolveDtos.ParametricTableDto> parametricTables,
                              List<SolveDtos.PlotDefDto> definedPlots, Integer errorLine) {
             this(success, variables, blocks, residuals, stats, solutions, unitWarnings,
-                    error, formattedEquations, cyclePath, codeTables,
+                    error, cyclePath, codeTables,
                     parametricTables, definedPlots, errorLine, List.of(), List.of());
         }
 
@@ -149,13 +145,12 @@ public class SolveController {
                              List<SolveDtos.BlockDto> blocks, List<SolveDtos.ResidualDto> residuals,
                              SolveDtos.StatsDto stats, List<SolveDtos.SolutionDto> solutions,
                              List<String> unitWarnings, String error,
-                             List<String> formattedEquations,
                              List<Map<String, Double>> cyclePath,
                              List<SolveDtos.FunctionTableDto> codeTables,
                              List<SolveDtos.ParametricTableDto> parametricTables,
                              List<SolveDtos.PlotDefDto> definedPlots) {
             this(success, variables, blocks, residuals, stats, solutions, unitWarnings,
-                    error, formattedEquations, cyclePath, codeTables,
+                    error, cyclePath, codeTables,
                     parametricTables, definedPlots, null, List.of(), List.of());
         }
 
@@ -165,7 +160,7 @@ public class SolveController {
 
         static SolveResponse failure(String error, Integer errorLine) {
             return new SolveResponse(false, List.of(), List.of(), List.of(), null,
-                    List.of(), List.of(), error, List.of(), List.of(), List.of(), List.of(),
+                    List.of(), List.of(), error, List.of(), List.of(), List.of(),
                     List.of(), errorLine, List.of(), List.of());
         }
     }
@@ -240,10 +235,9 @@ public class SolveController {
         Map<String, com.frees.backend.core.VariableSpec> specs = specsOf(request.variableInfo());
         boolean findAll = Boolean.TRUE.equals(request.findAllSolutions());
 
-        var extraction = MarkdownEquationExtractor.extract(request.text());
         // REPL overrides win over the editor: drop the editor's assignment of
         // each overridden variable and append the override equation.
-        String cleanText = applyOverrides(extraction.cleanText, request.overrides());
+        String cleanText = applyOverrides(request.text(), request.overrides());
 
         Map<String, ProcDef> functionDefs = SolveDtos.functionDefsOf(request.functionTables());
         EquationSystemSolver.Result rawResult = findAll
@@ -263,10 +257,6 @@ public class SolveController {
         Map<String, String> unitsByLower =
                 unitsByLowerName(parsed, request.variableInfo(), solver);
         UnitRegistry.UnitSystem system = unitSystem(request.displayUnitSystem());
-
-        List<String> formattedEquations = extraction.equations.stream()
-                .map(eq -> EquationParser.toLatexEquation(eq.cleanEquation, parsed.displayNames()))
-                .toList();
 
         List<SolveDtos.VariableDto> variableDtos = result.variables().entrySet().stream()
                 .filter(e -> !isInternalTemp(e.getKey()))
@@ -304,7 +294,6 @@ public class SolveController {
                         .toList(),
                 unitWarnings,
                 null,
-                formattedEquations,
                 cyclePath,
                 codeTablesOf(parsed.defs()),
                 parametricTablesOf(parsed.parametricTables()),
@@ -317,8 +306,7 @@ public class SolveController {
     /** Quick synchronous syntax check used by the asynchronous path to reject
      *  malformed requests with 400 before enqueueing them for a worker. */
     private void validateSyntax(SolveRequest request) throws EquationParser.ParseException {
-        var extraction = MarkdownEquationExtractor.extract(request.text());
-        String cleanText = applyOverrides(extraction.cleanText, request.overrides());
+        String cleanText = applyOverrides(request.text(), request.overrides());
         solver.parse(cleanText);
     }
 
@@ -359,7 +347,7 @@ public class SolveController {
      *  any parse failure here is swallowed — the original solve error still stands. */
     private void cacheDefsOnly(String sessionId, SolveRequest request) {
         try {
-            String cleanText = MarkdownEquationExtractor.extract(request.text()).cleanText;
+            String cleanText = request.text();
             Map<String, ProcDef> defs = new HashMap<>(new EquationParser().parseResult(cleanText).defs());
             defs.putAll(SolveDtos.functionDefsOf(request.functionTables()));
             if (defs.isEmpty()) {
@@ -421,7 +409,7 @@ public class SolveController {
         }
         if (dispatcher != null) {
             try {
-                solver.parse(MarkdownEquationExtractor.extract(request.text()).cleanText);
+                solver.parse(request.text());
             } catch (EquationParser.ParseException e) {
                 return ResponseEntity.badRequest().build();
             }
@@ -436,8 +424,7 @@ public class SolveController {
      * Used by the synchronous path and the asynchronous compute worker.
      */
     public SolveTableResponse computeSolveTable(SolveTableRequest request) {
-        var extraction = MarkdownEquationExtractor.extract(request.text());
-        String cleanText = extraction.cleanText;
+        String cleanText = request.text();
 
         SolverSettings settings = request.stopCriteria() != null
                 ? request.stopCriteria().toSettings()

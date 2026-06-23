@@ -5,7 +5,7 @@ import java.util.List;
 /**
  * A transient / ODE system declared by a {@code DYNAMIC … END} block. Parallel
  * to {@link ParametricTable} / {@link StateTableDef} / {@link PlotDef}: it is
- * routed out of the analytic equation stream by {@code MarkdownEquationExtractor}
+ * routed out of the analytic equation stream by the parser
  * so the analytic solver never sees a {@code der()} operator.
  *
  * <p>The body is carried structurally and only fully classified at solve time

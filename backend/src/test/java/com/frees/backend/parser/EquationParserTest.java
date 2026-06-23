@@ -299,66 +299,7 @@ class EquationParserTest {
         assertEquals(Math.PI, piNum.value(), 1e-12);
     }
 
-    @Test
-    void parsesFullRankineCycleMarkdownReport() {
-        String report = "# Ideal Rankine Steam Power Cycle\n" +
-                "\n" +
-                "This report analyzes an ideal Rankine steam power cycle with isentropic efficiency constraints.\n" +
-                "\n" +
-                "## Inputs and Parameters\n" +
-                "* Boiler Pressure: P_high = 8000 [kPa]\n" +
-                "* Condenser Pressure: P_low = 10 [kPa]\n" +
-                "* Boiler Temperature: T_boiler = 500 [C]\n" +
-                "* Turbine Isentropic Efficiency: eta_turb = 0.85\n" +
-                "* Pump Isentropic Efficiency: eta_pump = 0.90\n" +
-                "* Target Net Power Output: W_dot_net = 10000 [kW]\n" +
-                "\n" +
-                "## State 1: HP Turbine Inlet (Superheated Steam)\n" +
-                "We evaluate enthalpy and entropy at state 1:\n" +
-                "h[1] = Enthalpy(Water, P=P_high, T=T_boiler)\n" +
-                "s[1] = Entropy(Water, P=P_high, T=T_boiler)\n" +
-                "T[1] = T_boiler\n" +
-                "\n" +
-                "## State 2: Actual Turbine Exit\n" +
-                "First we compute the isentropic exit enthalpy:\n" +
-                "s_2s = s[1]\n" +
-                "h_2s = Enthalpy(Water, P=P_low, s=s_2s)\n" +
-                "\n" +
-                "Then actual exit conditions using isentropic efficiency:\n" +
-                "h[2] = h[1] - eta_turb * (h[1] - h_2s)\n" +
-                "s[2] = Entropy(Water, P=P_low, h=h[2])\n" +
-                "T[2] = Temperature(Water, P=P_low, h=h[2])\n" +
-                "\n" +
-                "## State 3: Condenser Exit (Saturated Liquid)\n" +
-                "h[3] = Enthalpy(Water, P=P_low, x=0)\n" +
-                "v[3] = Volume(Water, P=P_low, x=0)\n" +
-                "s[3] = Entropy(Water, P=P_low, x=0)\n" +
-                "T[3] = Temperature(Water, P=P_low, x=0)\n" +
-                "\n" +
-                "## State 4: Actual Pump Exit\n" +
-                "s_4s = s[3]\n" +
-                "h_4s = Enthalpy(Water, P=P_high, s=s_4s)\n" +
-                "h[4] = h[3] + (h_4s - h[3]) / eta_pump\n" +
-                "s[4] = Entropy(Water, P=P_high, h=h[4])\n" +
-                "T[4] = Temperature(Water, P=P_high, h=h[4])\n" +
-                "\n" +
-                "## Performance Analysis\n" +
-                "Let's compute the work and heat rates:\n" +
-                "w_turb = h[1] - h[2]\n" +
-                "w_pump = h[4] - h[3]\n" +
-                "q_boiler = h[1] - h[4]\n" +
-                "q_cond = h[2] - h[3]\n" +
-                "\n" +
-                "Net work output, thermal efficiency, and mass flow rate:\n" +
-                "w_net = w_turb - w_pump\n" +
-                "eta_th = w_net / q_boiler * 100\n" +
-                "W_dot_net = m_dot * w_net";
-        
-        String clean = MarkdownEquationExtractor.extract(report).cleanText;
-        // 30 equations survive extraction (including the six inline
-        // bullet-point assignments); headings and prose are dropped.
-        assertEquals(30, parser.parse(clean).size());
-    }
+
 
     @Test
     void testMatrixVectorOperations() {
