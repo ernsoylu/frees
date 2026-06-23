@@ -22,4 +22,21 @@ public class RedisConfig {
         template.afterPropertiesSet();
         return template;
     }
+
+    @Bean
+    @org.springframework.context.annotation.Profile("api")
+    public org.springframework.data.redis.listener.RedisMessageListenerContainer redisContainer(
+            RedisConnectionFactory connectionFactory,
+            org.springframework.data.redis.listener.adapter.MessageListenerAdapter listenerAdapter) {
+        org.springframework.data.redis.listener.RedisMessageListenerContainer container = new org.springframework.data.redis.listener.RedisMessageListenerContainer();
+        container.setConnectionFactory(connectionFactory);
+        container.addMessageListener(listenerAdapter, new org.springframework.data.redis.listener.ChannelTopic("job-events"));
+        return container;
+    }
+
+    @Bean
+    @org.springframework.context.annotation.Profile("api")
+    public org.springframework.data.redis.listener.adapter.MessageListenerAdapter listenerAdapter(com.frees.backend.api.JobController jobController) {
+        return new org.springframework.data.redis.listener.adapter.MessageListenerAdapter(jobController, "onMessage");
+    }
 }

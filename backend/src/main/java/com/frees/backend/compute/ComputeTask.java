@@ -18,4 +18,5 @@ public record ComputeTask(String jobId,
     public static final String OPTIMIZE = "OPTIMIZE";
     public static final String OPTIMIZE_MULTI = "OPTIMIZE_MULTI";
     public static final String CURVE_FIT = "CURVE_FIT";
+    public static final String WARMUP = "WARMUP";
 }

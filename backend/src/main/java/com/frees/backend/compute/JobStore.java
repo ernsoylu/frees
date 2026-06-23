@@ -58,6 +58,9 @@ public class JobStore {
         try {
             String json = objectMapper.writeValueAsString(state);
             redis.opsForValue().set(key(state.jobId()), json, java.time.Duration.ofSeconds(TTL_SECONDS));
+            if (!"PENDING".equals(state.status())) {
+                redis.convertAndSend("job-events", json);
+            }
         } catch (Exception e) {
             // Redis is the job store of record; if it is unavailable we cannot
             // honour the async contract. Fail loudly so the producer does not
