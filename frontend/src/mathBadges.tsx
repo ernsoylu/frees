@@ -3,10 +3,7 @@ import Latex from './Latex'
 import { VariableResult } from './api'
 import { formatValue } from './format'
 
-// Lightweight KaTeX + solved-value badge rendering, split out of
-// FormattedReportView so the editor shell can render equation badges without
-// pulling in the (heavy) Plotly figure machinery that the full report view
-// needs for inline [Graph=...] plots. FormattedReportView itself is code-split.
+// Lightweight KaTeX + solved-value badge rendering.
 
 export function getVariablesInMath(math: string, variables?: VariableResult[]): VariableResult[] {
   if (!variables || variables.length === 0) return []

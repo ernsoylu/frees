@@ -72,7 +72,6 @@ export interface SolveResponse {
   errorLine?: number | null
   formattedEquations: string[]
   cyclePath?: Record<string, number>[]
-  formattedReport?: string
   /** Function tables parsed from TABLE ... END blocks in the editor text. */
   codeTables?: FunctionTableDto[]
   /** Parametric run-tables parsed from PARAMETRIC ... END blocks. */
@@ -96,7 +95,6 @@ export interface CheckResponse {
   /** 1-based editor line a syntax error points at, or null for whole-system errors. */
   errorLine?: number | null
   formattedEquations: string[]
-  formattedReport?: string
   /** Function tables parsed from TABLE ... END blocks in the editor text. */
   codeTables?: FunctionTableDto[]
   /** Parametric run-tables parsed from PARAMETRIC ... END blocks. */
@@ -351,7 +349,6 @@ export async function check(
         inferredUnits: {},
         message: errorMessage,
         formattedEquations: [],
-        formattedReport: undefined,
       }
     }
     const data = await response.json()
@@ -364,7 +361,6 @@ export async function check(
       inferredUnits: data.inferredUnits ?? {},
       message: data.message ?? '',
       formattedEquations: data.formattedEquations ?? [],
-      formattedReport: data.formattedReport ?? undefined,
       codeTables: data.codeTables ?? [],
       parametricTables: data.parametricTables ?? [],
       definedPlots: data.definedPlots ?? [],
@@ -380,7 +376,6 @@ export async function check(
       inferredUnits: {},
       message: `Could not reach the solver backend: ${String(e)}`,
       formattedEquations: [],
-      formattedReport: undefined,
     }
   }
 }
@@ -395,7 +390,6 @@ const SOLVE_FAILURE: Omit<SolveResponse, 'error'> = {
   solutions: [],
   unitWarnings: [],
   formattedEquations: [],
-  formattedReport: undefined,
 }
 
 /** Maps a solve result DTO (from a sync 200 body or an async COMPLETED `result`)
@@ -412,7 +406,6 @@ function mapSolveData(data: any): SolveResponse {
     error: data.error ?? null,
     formattedEquations: data.formattedEquations ?? [],
     cyclePath: data.cyclePath ?? [],
-    formattedReport: data.formattedReport ?? undefined,
     codeTables: data.codeTables ?? [],
     parametricTables: data.parametricTables ?? [],
     definedPlots: data.definedPlots ?? [],

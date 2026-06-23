@@ -133,25 +133,6 @@ class MarkdownEquationExtractorTest {
     }
 
     @Test
-    void formattedReportSkipsEquationsInHeadings() {
-        // generateFormattedReport must agree with extract() on which lines yield
-        // equations. A heading containing equation-like text must NOT consume a
-        // formattedEquations slot, or eqIndex overruns the list (previously threw
-        // "Index N out of bounds for length N").
-        String source = "x = 2\n"
-                + "## Profile T[i] = 100 (N-i)/(N-1)\n"
-                + "y = 3";
-        MarkdownEquationExtractor.ExtractionResult result = MarkdownEquationExtractor.extract(source);
-        assertEquals(2, result.equations.size(), result.equations.toString());
-        // Two equations -> two LaTeX strings; the heading must not demand a third.
-        List<String> formatted = List.of("x = 2", "y = 3");
-        String report = MarkdownEquationExtractor.generateFormattedReport(source, result.equations, formatted);
-        assertTrue(report.contains("## Profile T[i] = 100 (N-i)/(N-1)"), report);
-        assertTrue(report.contains("[MATH_BLOCK:x = 2]"), report);
-        assertTrue(report.contains("[MATH_BLOCK:y = 3]"), report);
-    }
-
-    @Test
     void testExtractFromLine() {
         String line = "The initial temperature T1 = 100 [C] and initial pressure P1 = 250 [kPa].";
         List<MarkdownEquationExtractor.ExtractedEquation> eqList = MarkdownEquationExtractor.extractFromLine(line);
@@ -227,41 +208,4 @@ class MarkdownEquationExtractorTest {
         assertEquals("A[1,2] = 1", eqList.get(0).originalText);
     }
 
-    @Test
-    void testGenerateFormattedReportWithSemicolonLine() {
-        String source = "x = 1; y = 2";
-        List<MarkdownEquationExtractor.ExtractedEquation> extracted = List.of(
-                new MarkdownEquationExtractor.ExtractedEquation("x = 1", "x = 1", 0, 5),
-                new MarkdownEquationExtractor.ExtractedEquation(" y = 2", " y = 2", 6, 12)
-        );
-        List<String> formatted = List.of("x = 1", "y = 2");
-
-        String report = MarkdownEquationExtractor.generateFormattedReport(source, extracted, formatted);
-
-        assertEquals("[MATH_BLOCK:x = 1]\n[MATH_BLOCK:y = 2]", report);
-    }
-
-    @Test
-    void testGenerateFormattedReport() {
-        String source = "# Header\n" +
-                "Text T1 = 100 [C] text.\n" +
-                "x + y = 3";
-
-        // T1 = 100 [C] -> T_{1} = 100\ \left[\text{C}\right]
-        // x + y = 3 -> x + y = 3
-        List<MarkdownEquationExtractor.ExtractedEquation> extracted = List.of(
-                new MarkdownEquationExtractor.ExtractedEquation("T1 = 100 [C]", "T1 = 100 [C]", 5, 17),
-                new MarkdownEquationExtractor.ExtractedEquation("x + y = 3", "x + y = 3", 0, 9)
-        );
-
-        List<String> formatted = List.of("T_{1} = 100\\ \\left[\\text{C}\\right]", "x + y = 3");
-
-        String report = MarkdownEquationExtractor.generateFormattedReport(source, extracted, formatted);
-
-        String expectedReport = "# Header\n" +
-                "Text [MATH_INLINE:T_{1} = 100\\ \\left[\\text{C}\\right]] text.\n" +
-                "[MATH_BLOCK:x + y = 3]";
-
-        assertEquals(expectedReport, report);
-    }
 }

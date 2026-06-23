@@ -7,8 +7,6 @@ import {
   Flex,
   Group,
   Loader,
-  Paper,
-  SegmentedControl,
   Stack,
   Text,
   TextInput,
@@ -49,7 +47,6 @@ import {
   solveTable,
   SolveResponse,
   StopCriteria,
-  TableRowResult,
   UnitSystem,
   VariableInfo,
   VariableResult,
@@ -61,10 +58,10 @@ import VariableInfoModal, {
   parseBound,
   VariableDraft,
 } from './VariableInfoModal'
-import { MathWithBadges } from './mathBadges'
+
 import ConfigureTableModal from './ConfigureTableModal'
 import AlterValuesModal from './AlterValuesModal'
-import { newParamRow, ParamRow } from './ParametricTableTab'
+import { newParamRow } from './ParametricTableTab'
 import TablesTab from './TablesTab'
 import {
   functionTableFromDigitizer,
@@ -100,6 +97,8 @@ const WhiteboardTab = lazy(() => import('./whiteboard/WhiteboardTab'))
 // plot-config modals are also code-split: the Plotly figure machinery is large
 // and only needed once a plot window is opened or a modal is invoked.
 const PlotTab = lazy(() => import('./PlotTab'))
+// FormattedReportView pulls in the inline-plot (figure/Plotly) machinery, so it
+// is code-split and only loaded when a compiled report is shown.
 const MinMaxModal = lazy(() => import('./MinMaxModal'))
 const CurveFitModal = lazy(() => import('./CurveFitModal'))
 const PlotConfigModal = lazy(() => import('./plots/PlotConfigModal'))
@@ -162,6 +161,7 @@ function loadStopCriteria(): StopCriteria {
   }
   return DEFAULT_STOP_CRITERIA
 }
+
 
 /** Returns a copy of {@code items} with the matching id's name replaced. */
 function renameById<T extends { id: string; name: string }>(items: T[], id: string, name: string): T[] {
@@ -285,7 +285,7 @@ export default function App() {
   const [showAbout, setShowAbout] = useState(false)
   const [showExamples, setShowExamples] = useState(false)
   const [showShortcuts, setShowShortcuts] = useState(false)
-
+  const [activeTab, setActiveTab] = useState<string>('equations')
 
   const editorRef = useRef<EquationEditorHandle>(null)
 
@@ -293,6 +293,7 @@ export default function App() {
   // the snippet marks where the caret lands; selected text is replaced. The
   // editor must be visible first, so switch to it before inserting.
   const insertFunction = useCallback((snippet: string) => {
+    setActiveTab('equations')
     setTimeout(() => editorRef.current?.insertSnippet(snippet), 50)
   }, [])
   // Dockview workspace manager: imperative handle + set of currently-open
@@ -590,6 +591,11 @@ export default function App() {
   const tableVars = activeParam?.vars ?? []
   const paramRows = activeParam?.rows ?? []
   const tableResults = activeParam?.results ?? []
+  // Solved table runs fed to the Diagram window for animation playback (6.4).
+  const diagramRuns = tableResults
+    .map((r, i) => ({ ok: r.success, label: `Run ${i + 1}`, values: r.values }))
+    .filter((r) => r.ok)
+    .map(({ label, values }) => ({ label, values }))
 
   // The parametric table window that is currently focused in the dock — the
   // TopBar's Check Table / Run Table buttons and status pill track this table.
@@ -616,6 +622,7 @@ export default function App() {
     const table = functionTableFromDigitizer({ existing: tables, ...data })
     setTables((all) => [...all, table])
     setActiveTableId(table.id)
+    setActiveTab('table')
   }
 
   const handleStateUnitIdsChange = (
@@ -683,6 +690,7 @@ export default function App() {
     setResult(null)
     setLastSolvedWithFillMissing(false)
     invalidateTable()
+    setActiveTab('equations')
     requestAnimationFrame(() => dockRef.current?.reset())
   }
 
@@ -1080,9 +1088,40 @@ export default function App() {
     }
   }
 
+  const handleNavigate = useCallback(
+    (action: { tab?: string; query?: string; plotId?: string; diagramId?: string }) => {
+      if (action.tab) {
+        dockRef.current?.open(action.tab)
+      }
+      if (action.diagramId) {
+        const d = diagrams.find((x) => x.id === action.diagramId)
+        if (d) dockRef.current?.openInstance(`diagram:${action.diagramId}`, 'diagram', d.name)
+      }
+      if (action.plotId) {
+        const targetPlot = plots.find((p) => p.id === action.plotId)
+        if (targetPlot) {
+          dockRef.current?.openInstance(`plot:${action.plotId}`, 'plot', targetPlot.name)
+        }
+      }
+      if (action.query) {
+        const query = action.query.trim().toLowerCase()
+        if (query) {
+          const lines = text.split('\n')
+          const matchingIdx = lines.findIndex((l) => l.toLowerCase().includes(query))
+          if (matchingIdx !== -1) {
+            setActiveTab('equations')
+            setTimeout(() => editorRef.current?.goToLine(matchingIdx + 1), 50)
+          }
+        }
+      }
+    },
+    [plots, text],
+  )
+
   // Jump the editor to a 1-based line (selecting it) — used to reach the line a
   // syntax error points at. Ensures the editor is visible first.
   const goToLine = useCallback((lineNo: number) => {
+    setActiveTab('equations')
     setTimeout(() => editorRef.current?.goToLine(lineNo), 50)
   }, [])
 
@@ -1091,11 +1130,11 @@ export default function App() {
       // Shortcuts act on the active section: equations vs parametric table.
       if (e.key === 'F2') {
         e.preventDefault()
-        void (/* TODO activeTab check */ false ? checkThenSolveTable() : checkThenSolve())
+        void (activeTab === 'table' ? checkThenSolveTable() : checkThenSolve())
       }
       if (e.key === 'F4') {
         e.preventDefault()
-        void (/* TODO activeTab check */ false ? onCheckTable() : onCheck())
+        void (activeTab === 'table' ? onCheckTable() : onCheck())
       }
       // "?" opens the shortcuts overlay, but only when the user isn't typing
       // into the editor, an input, or any text field.
@@ -1258,6 +1297,7 @@ export default function App() {
           description: 'Validate the system (F4)',
           leftSection: <IconChecks size={18} />,
           onClick: () => {
+            setActiveTab('equations')
             void onCheck()
           },
         },
@@ -1267,6 +1307,7 @@ export default function App() {
           description: 'Check & solve the system (F2)',
           leftSection: <IconPlayerPlayFilled size={16} />,
           onClick: () => {
+            setActiveTab('equations')
             void checkThenSolve()
           },
         },
@@ -1355,6 +1396,26 @@ export default function App() {
     padding: 'var(--mantine-spacing-md)',
     overflow: 'auto',
   }
+  // Plot windows must let the chart fill exactly (no scroll), so the wrapper is
+  // a non-scrolling flex column with a tight pad.
+  const plotPanelStyle: React.CSSProperties = {
+    height: '100%',
+    minHeight: 0,
+    display: 'flex',
+    flexDirection: 'column',
+    padding: 'var(--mantine-spacing-xs)',
+    overflow: 'hidden',
+  }
+  const PLOT_KIND_LABEL: Record<PlotKind, string> = {
+    xy: 'X-Y',
+    property: 'Property',
+    psychro: 'Psychrometric',
+    bode: 'Bode',
+    nyquist: 'Nyquist',
+    nichols: 'Nichols',
+    polezero: 'Pole-Zero',
+    rootlocus: 'Root Locus',
+  }
   const panelContent: Record<string, ReactNode> = {
     equations: (
       <div style={panelPad}>
@@ -1400,26 +1461,24 @@ export default function App() {
             </Stack>
           </Alert>
         )}
-
-          <div
-            style={{
-              display: 'flex',
-              flex: 1,
-              minHeight: 260,
-              border: '1px solid var(--mantine-color-default-border)',
-              borderRadius: '4px',
-              overflow: 'hidden',
-            }}
-          >
-            <EquationEditor
-              ref={editorRef}
-              value={text}
-              onChange={onTextChange}
-              variables={variables}
-              errorLine={errorLine}
-              placeholder={'Enter equations and markdown notes, e.g.\n# Rankine Cycle\nT1 = 100 [C]\nP1 = 250 [kPa]'}
-            />
-          </div>
+        <div
+          style={{
+            display: 'flex',
+            flex: 1,
+            minHeight: 0,
+            border: '1px solid var(--mantine-color-default-border)',
+            borderRadius: 'var(--mantine-radius-sm)',
+          }}
+        >
+          <EquationEditor
+            ref={editorRef}
+            value={text}
+            onChange={onTextChange}
+            variables={variables}
+            errorLine={errorLine}
+            placeholder={'Enter equations and markdown notes, e.g.\n# Rankine Cycle\nT1 = 100 [C]\nP1 = 250 [kPa]'}
+          />
+        </div>
       </div>
     ),
     states: (
