@@ -1083,8 +1083,9 @@ export default function App() {
       // sweep defined, the user likely intended to just "Solve Table".
       const dto = res.parametricTables[0]
       const overrideTbl = paramTableFromDto(dto)
-      dockRef.current?.openInstance(`table:${dto.name}`, 'table', dto.name)
-      void checkThenSolveTable(dto.name, overrideTbl)
+      const tableId = overrideTbl.id
+      dockRef.current?.openInstance(`table:${tableId}`, 'table', overrideTbl.name)
+      void checkThenSolveTable(tableId, overrideTbl)
     }
   }
 
