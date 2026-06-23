@@ -6,6 +6,9 @@ import com.frees.backend.core.MultiObjectiveOptimizer;
 import com.frees.backend.core.Optimizer;
 import com.frees.backend.core.SolverException;
 import com.frees.backend.core.SolverSettings;
+import com.frees.backend.compute.ComputeDispatcher;
+import com.frees.backend.compute.ComputeTask;
+import com.frees.backend.compute.JobTicket;
 import com.frees.backend.parser.EquationParser;
 import com.frees.backend.parser.MarkdownEquationExtractor;
 import com.frees.backend.units.UnitRegistry;
@@ -45,9 +48,15 @@ import static com.frees.backend.api.SolverApiSupport.unitsByVariable;
 public class OptimizeController {
 
     private final EquationSystemSolver solver;
+    /** Present only under the {@code api} profile, where optimize/curve-fit
+     *  jobs are queued for a compute node. {@code null} on the synchronous
+     *  default-profile path. */
+    private final ComputeDispatcher dispatcher;
 
-    public OptimizeController(EquationSystemSolver solver) {
+    public OptimizeController(EquationSystemSolver solver,
+                              org.springframework.beans.factory.ObjectProvider<ComputeDispatcher> dispatcherProvider) {
         this.solver = solver;
+        this.dispatcher = dispatcherProvider.getIfAvailable();
     }
 
     public record OptimizeRequest(String text,
@@ -80,33 +89,72 @@ public class OptimizeController {
     }
 
     @PostMapping("/optimize")
-    public ResponseEntity<OptimizeResponse> optimize(@RequestBody OptimizeRequest request) {
-        if (request.text() == null || request.text().isBlank()) {
-            return ResponseEntity.badRequest().body(OptimizeResponse.failure(NO_EQUATIONS_MESSAGE));
+    public ResponseEntity<?> optimize(@RequestBody OptimizeRequest request) {
+        String validationError = validateOptimizeRequest(request);
+        if (validationError != null) {
+            return ResponseEntity.badRequest().body(OptimizeResponse.failure(validationError));
         }
+        if (dispatcher != null) {
+            try {
+                solver.parse(MarkdownEquationExtractor.extract(request.text()).cleanText);
+            } catch (EquationParser.ParseException e) {
+                String firstError = e.getMessage().lines().findFirst().orElse(e.getMessage());
+                return ResponseEntity.badRequest().body(OptimizeResponse.failure(SYNTAX_ERROR_PREFIX + firstError));
+            }
+            JobTicket ticket = dispatcher.dispatch(ComputeTask.OPTIMIZE, null, request);
+            return ResponseEntity.accepted().body(ticket);
+        }
+        try {
+            return ResponseEntity.ok(computeOptimize(request));
+        } catch (EquationParser.ParseException e) {
+            String firstError = e.getMessage().lines().findFirst().orElse(e.getMessage());
+            return ResponseEntity.badRequest().body(OptimizeResponse.failure(SYNTAX_ERROR_PREFIX + firstError));
+        } catch (SolverException e) {
+            return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(OptimizeResponse.failure(e.getMessage()));
+        }
+    }
 
+    /** Validates the decision-variable/bounds shape of an optimize request,
+     *  returning a 400 message or {@code null} when well-formed. */
+    private static String validateOptimizeRequest(OptimizeRequest request) {
+        if (request.text() == null || request.text().isBlank()) {
+            return NO_EQUATIONS_MESSAGE;
+        }
+        List<String> decisions = request.decisions();
+        if (decisions == null || decisions.isEmpty()) {
+            if (request.decision() == null) {
+                return "Independent variable name is required.";
+            }
+            if (request.lower() == null || request.upper() == null) {
+                return "Both bounds of the independent variable are required.";
+            }
+        } else {
+            List<Double> lowers = request.lowers();
+            List<Double> uppers = request.uppers();
+            if (lowers == null || uppers == null
+                    || lowers.size() != decisions.size() || uppers.size() != decisions.size()) {
+                return "Each independent variable requires lower and upper bounds.";
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Runs the optimization end-to-end and returns the response DTO. Used by
+     * the synchronous path and the asynchronous compute worker. Throws so each
+     * caller can map failures (400 parse / 422 solver inline, FAILED in Redis).
+     */
+    public OptimizeResponse computeOptimize(OptimizeRequest request)
+            throws EquationParser.ParseException, SolverException {
         List<String> decisions = request.decisions();
         List<Double> lowers = request.lowers();
         List<Double> uppers = request.uppers();
         String method = request.method() != null ? request.method() : "brent";
 
         if (decisions == null || decisions.isEmpty()) {
-            if (request.decision() == null) {
-                return ResponseEntity.badRequest().body(OptimizeResponse.failure(
-                        "Independent variable name is required."));
-            }
-            if (request.lower() == null || request.upper() == null) {
-                return ResponseEntity.badRequest().body(OptimizeResponse.failure(
-                        "Both bounds of the independent variable are required."));
-            }
             decisions = List.of(request.decision());
             lowers = List.of(request.lower());
             uppers = List.of(request.upper());
-        } else {
-            if (lowers == null || uppers == null || lowers.size() != decisions.size() || uppers.size() != decisions.size()) {
-                return ResponseEntity.badRequest().body(OptimizeResponse.failure(
-                        "Each independent variable requires lower and upper bounds."));
-            }
         }
 
         var extraction = MarkdownEquationExtractor.extract(request.text());
@@ -115,24 +163,17 @@ public class OptimizeController {
         SolverSettings settings = request.stopCriteria() != null
                 ? request.stopCriteria().toSettings()
                 : cappedDefaults();
-        try {
-            List<String> constraints = request.constraints() != null
-                    ? request.constraints() : List.of();
-            Optimizer.OptimizeResult result = new Optimizer(solver).optimize(
-                    new Optimizer.Problem(cleanText, settings,
-                            specsOf(request.variableInfo()),
-                            request.objective(), decisions,
-                            lowers, uppers, method,
-                            Boolean.TRUE.equals(request.maximize()),
-                            constraints));
+        List<String> constraints = request.constraints() != null
+                ? request.constraints() : List.of();
+        Optimizer.OptimizeResult result = new Optimizer(solver).optimize(
+                new Optimizer.Problem(cleanText, settings,
+                        specsOf(request.variableInfo()),
+                        request.objective(), decisions,
+                        lowers, uppers, method,
+                        Boolean.TRUE.equals(request.maximize()),
+                        constraints));
 
-            return buildOptimizeResponse(result, request, cleanText, decisions);
-        } catch (EquationParser.ParseException e) {
-            String firstError = e.getMessage().lines().findFirst().orElse(e.getMessage());
-            return ResponseEntity.badRequest().body(OptimizeResponse.failure(SYNTAX_ERROR_PREFIX + firstError));
-        } catch (SolverException e) {
-            return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(OptimizeResponse.failure(e.getMessage()));
-        }
+        return buildOptimizeResponse(result, request, cleanText, decisions);
     }
 
     public record MultiObjectiveRequest(String text,
@@ -158,47 +199,23 @@ public class OptimizeController {
     }
 
     @PostMapping("/optimize/multi")
-    public ResponseEntity<ParetoResponse> optimizeMulti(@RequestBody MultiObjectiveRequest request) {
-        if (request.text() == null || request.text().isBlank()) {
-            return ResponseEntity.badRequest().body(ParetoResponse.failure(NO_EQUATIONS_MESSAGE));
+    public ResponseEntity<?> optimizeMulti(@RequestBody MultiObjectiveRequest request) {
+        String validationError = validateMultiObjectiveRequest(request);
+        if (validationError != null) {
+            return ResponseEntity.badRequest().body(ParetoResponse.failure(validationError));
         }
-        if (request.objectives() == null || request.objectives().size() < 2) {
-            return ResponseEntity.badRequest().body(ParetoResponse.failure(
-                    "Multi-objective optimization needs at least two objective variables."));
+        if (dispatcher != null) {
+            try {
+                solver.parse(MarkdownEquationExtractor.extract(request.text()).cleanText);
+            } catch (EquationParser.ParseException e) {
+                String firstError = e.getMessage().lines().findFirst().orElse(e.getMessage());
+                return ResponseEntity.badRequest().body(ParetoResponse.failure(SYNTAX_ERROR_PREFIX + firstError));
+            }
+            JobTicket ticket = dispatcher.dispatch(ComputeTask.OPTIMIZE_MULTI, null, request);
+            return ResponseEntity.accepted().body(ticket);
         }
-        if (request.decisions() == null || request.decisions().isEmpty()
-                || request.lowers() == null || request.uppers() == null
-                || request.lowers().size() != request.decisions().size()
-                || request.uppers().size() != request.decisions().size()) {
-            return ResponseEntity.badRequest().body(ParetoResponse.failure(
-                    "Each decision variable requires matching lower and upper bounds."));
-        }
-        List<Boolean> maximize = request.maximize() != null && request.maximize().size() == request.objectives().size()
-                ? request.maximize()
-                : request.objectives().stream().map(o -> Boolean.FALSE).toList();
-
-        String cleanText = MarkdownEquationExtractor.extract(request.text()).cleanText;
-        SolverSettings settings = request.stopCriteria() != null
-                ? request.stopCriteria().toSettings() : cappedDefaults();
-        int population = clampPositive(request.populationSize(), 40, 200);
-        int generations = clampPositive(request.generations(), 40, 200);
-
         try {
-            MultiObjectiveOptimizer.Result result = new MultiObjectiveOptimizer(solver).optimize(
-                    new MultiObjectiveOptimizer.Problem(cleanText, settings,
-                            specsOf(request.variableInfo()),
-                            request.objectives(), maximize,
-                            request.decisions(), request.lowers(), request.uppers(),
-                            population, generations, 42L,
-                            request.constraints() != null ? request.constraints() : List.of()));
-
-            List<ParetoPointDto> front = result.front().stream()
-                    .map(pt -> new ParetoPointDto(
-                            java.util.Arrays.stream(pt.decisions()).boxed().toList(),
-                            java.util.Arrays.stream(pt.objectives()).boxed().toList()))
-                    .toList();
-            return ResponseEntity.ok(new ParetoResponse(true, null,
-                    request.decisions(), request.objectives(), front, result.evaluations()));
+            return ResponseEntity.ok(computeOptimizeMulti(request));
         } catch (EquationParser.ParseException e) {
             String firstError = e.getMessage().lines().findFirst().orElse(e.getMessage());
             return ResponseEntity.badRequest().body(ParetoResponse.failure(SYNTAX_ERROR_PREFIX + firstError));
@@ -209,6 +226,57 @@ public class OptimizeController {
         }
     }
 
+    /** Validates a multi-objective request's shape, returning a 400 message or
+     *  {@code null} when well-formed. */
+    private static String validateMultiObjectiveRequest(MultiObjectiveRequest request) {
+        if (request.text() == null || request.text().isBlank()) {
+            return NO_EQUATIONS_MESSAGE;
+        }
+        if (request.objectives() == null || request.objectives().size() < 2) {
+            return "Multi-objective optimization needs at least two objective variables.";
+        }
+        if (request.decisions() == null || request.decisions().isEmpty()
+                || request.lowers() == null || request.uppers() == null
+                || request.lowers().size() != request.decisions().size()
+                || request.uppers().size() != request.decisions().size()) {
+            return "Each decision variable requires matching lower and upper bounds.";
+        }
+        return null;
+    }
+
+    /**
+     * Runs the multi-objective optimization end-to-end and returns the response
+     * DTO. Used by the synchronous path and the asynchronous compute worker.
+     */
+    public ParetoResponse computeOptimizeMulti(MultiObjectiveRequest request)
+            throws EquationParser.ParseException, SolverException {
+        List<Boolean> maximize = request.maximize() != null && request.maximize().size() == request.objectives().size()
+                ? request.maximize()
+                : request.objectives().stream().map(o -> Boolean.FALSE).toList();
+
+        String cleanText = MarkdownEquationExtractor.extract(request.text()).cleanText;
+        SolverSettings settings = request.stopCriteria() != null
+                ? request.stopCriteria().toSettings() : cappedDefaults();
+        int population = clampPositive(request.populationSize(), 40, 200);
+        int generations = clampPositive(request.generations(), 40, 200);
+
+        MultiObjectiveOptimizer.Result result = new MultiObjectiveOptimizer(solver).optimize(
+                new MultiObjectiveOptimizer.Problem(cleanText, settings,
+                        specsOf(request.variableInfo()),
+                        request.objectives(), maximize,
+                        request.decisions(), request.lowers(), request.uppers(),
+                        population, generations, 42L,
+                        request.constraints() != null ? request.constraints() : List.of()));
+
+        List<ParetoPointDto> front = result.front().stream()
+                .map(pt -> new ParetoPointDto(
+                        java.util.Arrays.stream(pt.decisions()).boxed().toList(),
+                        java.util.Arrays.stream(pt.objectives()).boxed().toList()))
+                .toList();
+        return new ParetoResponse(true, null,
+                request.decisions(), request.objectives(), front, result.evaluations());
+    }
+
     private static int clampPositive(Integer value, int fallback, int max) {
         if (value == null || value <= 0) {
             return fallback;
@@ -217,7 +285,7 @@ public class OptimizeController {
     }
 
     /** Assembles the optimize response: display-converted objective, decisions and all variables. */
-    private ResponseEntity<OptimizeResponse> buildOptimizeResponse(Optimizer.OptimizeResult result,
+    private OptimizeResponse buildOptimizeResponse(Optimizer.OptimizeResult result,
             OptimizeRequest request, String cleanText, List<String> decisions) {
         Map<String, String> explicitUnits = unitsByVariable(request.variableInfo());
         Map<String, String> unitsByLower = unitsByLowerName(cleanText, request.variableInfo(), solver);
@@ -247,8 +315,8 @@ public class OptimizeController {
 
         SolveDtos.VariableDto primaryDecision = decisionDtos.get(0);
 
-        return ResponseEntity.ok(new OptimizeResponse(true, null, result.warning(),
-                objective, primaryDecision, decisionDtos, result.evaluations(), variables));
+        return new OptimizeResponse(true, null, result.warning(),
+                objective, primaryDecision, decisionDtos, result.evaluations(), variables);
     }
 
     // ── Curve Fit (Story 9.7) ────────────────────────────────────────────────
@@ -315,41 +383,17 @@ public class OptimizeController {
     }
 
     @PostMapping("/curve-fit")
-    public ResponseEntity<CurveFitResponse> curveFit(@RequestBody CurveFitRequest request) {
+    public ResponseEntity<?> curveFit(@RequestBody CurveFitRequest request) {
         ResponseEntity<CurveFitResponse> validationError = validateCurveFitRequest(request);
         if (validationError != null) {
             return validationError;
         }
-
+        if (dispatcher != null) {
+            JobTicket ticket = dispatcher.dispatch(ComputeTask.CURVE_FIT, null, request);
+            return ResponseEntity.accepted().body(ticket);
+        }
         try {
-            CurveFitter fitter = new CurveFitter();
-            CurveFitter.FitResult result = fitter.fit(
-                    request.model(),
-                    request.yVariable(),
-                    request.xVariable(),
-                    request.parameters(),
-                    request.xData(),
-                    request.yData(),
-                    request.initialGuess(),
-                    request.lowerBounds(),
-                    request.upperBounds());
-
-            List<Double> fittedParams = new ArrayList<>();
-            for (double v : result.fittedParameters()) fittedParams.add(v);
-            List<Double> residuals = new ArrayList<>();
-            for (double v : result.residuals()) residuals.add(v);
-            List<Double> fittedVals = new ArrayList<>();
-            for (double v : result.fittedValues()) fittedVals.add(v);
-
-            return ResponseEntity.ok(new CurveFitResponse(
-                    true, null,
-                    fittedParams,
-                    result.parameterNames(),
-                    result.rSquared(),
-                    result.rmse(),
-                    result.iterations(),
-                    residuals,
-                    fittedVals));
+            return ResponseEntity.ok(computeCurveFit(request));
         } catch (EquationParser.ParseException e) {
             String firstError = e.getMessage().lines().findFirst().orElse(e.getMessage());
             return ResponseEntity.badRequest()
@@ -362,5 +406,40 @@ public class OptimizeController {
                     .body(CurveFitResponse.failure(
                             "Curve fitting failed: " + e.getMessage()));
         }
+    }
+
+    /**
+     * Runs the least-squares fit end-to-end and returns the response DTO. Used
+     * by the synchronous path and the asynchronous compute worker.
+     */
+    public CurveFitResponse computeCurveFit(CurveFitRequest request) throws SolverException {
+        CurveFitter fitter = new CurveFitter();
+        CurveFitter.FitResult result = fitter.fit(
+                request.model(),
+                request.yVariable(),
+                request.xVariable(),
+                request.parameters(),
+                request.xData(),
+                request.yData(),
+                request.initialGuess(),
+                request.lowerBounds(),
+                request.upperBounds());
+
+        List<Double> fittedParams = new ArrayList<>();
+        for (double v : result.fittedParameters()) fittedParams.add(v);
+        List<Double> residuals = new ArrayList<>();
+        for (double v : result.residuals()) residuals.add(v);
+        List<Double> fittedVals = new ArrayList<>();
+        for (double v : result.fittedValues()) fittedVals.add(v);
+
+        return new CurveFitResponse(
+                true, null,
+                fittedParams,
+                result.parameterNames(),
+                result.rSquared(),
+                result.rmse(),
+                result.iterations(),
+                residuals,
+                fittedVals);
     }
 }

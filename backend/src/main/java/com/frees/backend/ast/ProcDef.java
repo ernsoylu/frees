@@ -5,7 +5,7 @@ import java.util.List;
 /**
  * Top-level definition: FUNCTION, PROCEDURE, MODULE, or a tabulated curve.
  */
-public sealed interface ProcDef
+public sealed interface ProcDef extends java.io.Serializable
         permits ProcDef.FunctionDef, ProcDef.ProcedureDef, ProcDef.ModuleDef, ProcDef.FunctionTableDef {
 
     String name();
@@ -58,7 +58,7 @@ public sealed interface ProcDef
 
     /** One tabulated curve: its family parameter value (null for a lone
      * curve) and sample arrays sorted ascending by x. */
-    record Curve(Double param, double[] xs, double[] ys) {
+    record Curve(Double param, double[] xs, double[] ys) implements java.io.Serializable {
         @Override
         public boolean equals(Object o) {
             return o instanceof Curve(Double p, double[] x, double[] y)

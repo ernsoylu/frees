@@ -12,12 +12,15 @@ export VITE_COMMIT_HASH="$(git rev-parse --short HEAD 2>/dev/null || echo dev)"
 usage() {
     echo "Usage: $0 {start|stop|restart|status|logs|build}"
     echo
-    echo "  start           Build (if needed) and start backend + frontend containers"
+    echo "  start           Build (if needed) and start the full distributed stack:"
+    echo "                  redis, rabbitmq, otel-collector, jaeger, api-node,"
+    echo "                  compute-node (x3), frontend"
     echo "  stop            Stop and remove the containers"
     echo "  restart         stop, then start"
     echo "  status          Show container status"
     echo "  logs            Follow container logs (Ctrl-C to detach)"
-    echo "  build [target]  Build docker images (target: backend, frontend, or all (default))"
+    echo "  build [target]  Build docker images (target: api, compute, frontend,"
+    echo "                  infra, or all (default))"
     exit 1
 }
 
@@ -26,8 +29,10 @@ case "${1:-}" in
         docker compose up -d --build
         echo
         echo "frees is starting:"
-        echo "  Frontend: http://localhost:5173"
-        echo "  Backend:  http://localhost:8080/api"
+        echo "  Frontend:      http://localhost:5173"
+        echo "  API node:      http://localhost:8080/api"
+        echo "  RabbitMQ mgmt: http://localhost:15672  (guest/guest)"
+        echo "  Jaeger UI:     http://localhost:16686"
         ;;
     stop)
         docker compose down
@@ -47,17 +52,23 @@ case "${1:-}" in
     build)
         target="${2:-all}"
         case "$target" in
-            backend)
-                docker compose build backend
+            api)
+                docker compose build api-node
+                ;;
+            compute)
+                docker compose build compute-node
                 ;;
             frontend)
                 docker compose build frontend
+                ;;
+            infra)
+                docker compose build api-node compute-node frontend
                 ;;
             all)
                 docker compose build
                 ;;
             *)
-                echo "Unknown build target: $target. Supported: backend, frontend, all"
+                echo "Unknown build target: $target. Supported: api, compute, frontend, infra, all"
                 exit 1
                 ;;
         esac

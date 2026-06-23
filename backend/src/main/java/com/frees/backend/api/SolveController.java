@@ -1,6 +1,9 @@
 package com.frees.backend.api;
 
 import com.frees.backend.ast.ProcDef;
+import com.frees.backend.compute.ComputeDispatcher;
+import com.frees.backend.compute.ComputeTask;
+import com.frees.backend.compute.JobTicket;
 import com.frees.backend.core.EquationSystemSolver;
 import com.frees.backend.core.SolverException;
 import com.frees.backend.core.SolverSettings;
@@ -65,12 +68,18 @@ public class SolveController {
     private final EquationSystemSolver solver;
     private final SolveContextCache contextCache;
     private final CyclePathResolver cyclePathResolver;
+    /** Present only under the {@code api} profile, where solves are queued for
+     *  a compute node instead of run inline. {@code null} on the synchronous
+     *  default-profile path (local dev and the legacy unit tests). */
+    private final ComputeDispatcher dispatcher;
 
     public SolveController(EquationSystemSolver solver, SolveContextCache contextCache,
-                           CyclePathResolver cyclePathResolver) {
+                           CyclePathResolver cyclePathResolver,
+                           org.springframework.beans.factory.ObjectProvider<ComputeDispatcher> dispatcherProvider) {
         this.solver = solver;
         this.contextCache = contextCache;
         this.cyclePathResolver = cyclePathResolver;
+        this.dispatcher = dispatcherProvider.getIfAvailable();
     }
 
     public record SolveRequest(String text,
@@ -179,94 +188,27 @@ public class SolveController {
     }
 
     @PostMapping("/solve")
-    public ResponseEntity<SolveResponse> solve(@RequestBody SolveRequest request,
+    public ResponseEntity<?> solve(@RequestBody SolveRequest request,
             @RequestHeader(name = "X-Frees-Session", required = false) String sessionId) {
         if (request.text() == null || request.text().isBlank()) {
             return ResponseEntity.badRequest()
                     .body(SolveResponse.failure(NO_EQUATIONS_MESSAGE));
         }
+        if (dispatcher != null) {
+            // Asynchronous path (api profile): reject syntax errors
+            // synchronously (400), otherwise enqueue and return 202 + jobId.
+            try {
+                validateSyntax(request);
+            } catch (EquationParser.ParseException e) {
+                return ResponseEntity.badRequest()
+                        .body(SolveResponse.failure("Syntax error:\n" + e.getMessage(),
+                                parseErrorLine(e.getMessage())));
+            }
+            JobTicket ticket = dispatcher.dispatch(ComputeTask.SOLVE, sessionId, request);
+            return ResponseEntity.accepted().body(ticket);
+        }
         try {
-            SolverSettings settings = request.stopCriteria() != null
-                    ? request.stopCriteria().toSettings()
-                    : cappedDefaults();
-            Map<String, com.frees.backend.core.VariableSpec> specs = specsOf(request.variableInfo());
-            boolean findAll = Boolean.TRUE.equals(request.findAllSolutions());
-
-            var extraction = MarkdownEquationExtractor.extract(request.text());
-            // REPL overrides win over the editor: drop the editor's assignment of
-            // each overridden variable and append the override equation.
-            String cleanText = applyOverrides(extraction.cleanText, request.overrides());
-
-            Map<String, ProcDef> functionDefs = SolveDtos.functionDefsOf(request.functionTables());
-            EquationSystemSolver.Result rawResult = findAll
-                    ? solver.solveAll(cleanText, settings, specs, functionDefs)
-                    : solver.solve(cleanText, settings, specs, functionDefs);
-            CycleResolution cr = resolveFillMissing(rawResult, cleanText, Boolean.TRUE.equals(request.fillMissing()));
-            final EquationSystemSolver.Result result = cr.result();
-            List<Map<String, Double>> cyclePath = cr.cyclePath();
-
-            // Parse once and reuse for unit checks, formatting and the REPL cache;
-            // checkUnits/effectiveUnits/unitsByLowerName otherwise each re-parse cleanText.
-            EquationParser.ParseResult parsed = solver.parse(cleanText);
-
-            Map<String, String> explicitUnits = unitsByVariable(request.variableInfo());
-            List<String> unitWarnings = solver.checkUnits(parsed,
-                    effectiveUnits(parsed, request.variableInfo(), solver));
-            Map<String, String> unitsByLower =
-                    unitsByLowerName(parsed, request.variableInfo(), solver);
-            UnitRegistry.UnitSystem system = unitSystem(request.displayUnitSystem());
-
-            List<String> formattedEquations = extraction.equations.stream()
-                    .map(eq -> EquationParser.toLatexEquation(eq.cleanEquation, parsed.displayNames()))
-                    .toList();
-
-            String formattedReport = MarkdownEquationExtractor.generateFormattedReport(request.text(), extraction.equations, formattedEquations);
-
-            List<SolveDtos.VariableDto> variableDtos = result.variables().entrySet().stream()
-                    .filter(e -> !isInternalTemp(e.getKey()))
-                    .map(e -> toVariableDto(e, result, unitsByLower, system, explicitUnits))
-                    .toList();
-
-            // Cache the solved workspace so the REPL can evaluate against it without re-solving.
-            Map<String, ProcDef> replDefs = new HashMap<>(parsed.defs());
-            replDefs.putAll(functionDefs);
-            cacheSolvedContext(sessionId, result, variableDtos, replDefs, system);
-
-            return ResponseEntity.ok(new SolveResponse(
-                    true,
-                    variableDtos,
-                    result.blocks().stream()
-                            .map(b -> toBlockDto(b, result.displayNames()))
-                            .toList(),
-                    result.residuals().stream()
-                            .map(r -> new SolveDtos.ResidualDto(r.equation(), r.residual()))
-                            .toList(),
-                    new SolveDtos.StatsDto(
-                            result.stats().equationCount(),
-                            result.stats().unknownCount(),
-                            result.stats().blockCount(),
-                            result.stats().iterations(),
-                            result.stats().elapsedMillis(),
-                            result.stats().maxResidual()),
-                    result.solutions().stream()
-                            .map(s -> new SolveDtos.SolutionDto(
-                                    s.variables().entrySet().stream()
-                                            .filter(e -> !isInternalTemp(e.getKey()))
-                                            .map(e -> toVariableDto(e, result, unitsByLower, system, explicitUnits))
-                                            .toList(),
-                                    s.maxResidual()))
-                            .toList(),
-                    unitWarnings,
-                    null,
-                    formattedEquations,
-                    cyclePath,
-                    formattedReport,
-                    codeTablesOf(parsed.defs()),
-                    parametricTablesOf(parsed.parametricTables()),
-                    plotsOf(parsed.plots()),
-                    null,
-                    stateTablesOf(parsed.stateTables()),
-                    odeTablesOf(result.odeTables())));
+            return ResponseEntity.ok(computeSolve(request, sessionId));
         } catch (EquationParser.ParseException e) {
             return ResponseEntity.badRequest()
                     .body(SolveResponse.failure("Syntax error:\n" + e.getMessage(),
@@ -283,6 +225,105 @@ public class SolveController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(SolveResponse.failure(e.getMessage() != null ? e.getMessage() : e.toString()));
         }
+    }
+
+    /**
+     * Runs the solve end-to-end and returns the response DTO. Used directly by
+     * the synchronous path and, via {@link com.frees.backend.compute.ComputeTaskListener},
+     * by the asynchronous compute worker. Throws so each caller can map
+     * failures to the right status (400/422/500 inline, FAILED in Redis).
+     */
+    public SolveResponse computeSolve(SolveRequest request, String sessionId)
+            throws EquationParser.ParseException, SolverException {
+        SolverSettings settings = request.stopCriteria() != null
+                ? request.stopCriteria().toSettings()
+                : cappedDefaults();
+        Map<String, com.frees.backend.core.VariableSpec> specs = specsOf(request.variableInfo());
+        boolean findAll = Boolean.TRUE.equals(request.findAllSolutions());
+
+        var extraction = MarkdownEquationExtractor.extract(request.text());
+        // REPL overrides win over the editor: drop the editor's assignment of
+        // each overridden variable and append the override equation.
+        String cleanText = applyOverrides(extraction.cleanText, request.overrides());
+
+        Map<String, ProcDef> functionDefs = SolveDtos.functionDefsOf(request.functionTables());
+        EquationSystemSolver.Result rawResult = findAll
+                ? solver.solveAll(cleanText, settings, specs, functionDefs)
+                : solver.solve(cleanText, settings, specs, functionDefs);
+        CycleResolution cr = resolveFillMissing(rawResult, cleanText, Boolean.TRUE.equals(request.fillMissing()));
+        final EquationSystemSolver.Result result = cr.result();
+        List<Map<String, Double>> cyclePath = cr.cyclePath();
+
+        // Parse once and reuse for unit checks, formatting and the REPL cache;
+        // checkUnits/effectiveUnits/unitsByLowerName otherwise each re-parse cleanText.
+        EquationParser.ParseResult parsed = solver.parse(cleanText);
+
+        Map<String, String> explicitUnits = unitsByVariable(request.variableInfo());
+        List<String> unitWarnings = solver.checkUnits(parsed,
+                effectiveUnits(parsed, request.variableInfo(), solver));
+        Map<String, String> unitsByLower =
+                unitsByLowerName(parsed, request.variableInfo(), solver);
+        UnitRegistry.UnitSystem system = unitSystem(request.displayUnitSystem());
+
+        List<String> formattedEquations = extraction.equations.stream()
+                .map(eq -> EquationParser.toLatexEquation(eq.cleanEquation, parsed.displayNames()))
+                .toList();
+
+        String formattedReport = MarkdownEquationExtractor.generateFormattedReport(request.text(), extraction.equations, formattedEquations);
+
+        List<SolveDtos.VariableDto> variableDtos = result.variables().entrySet().stream()
+                .filter(e -> !isInternalTemp(e.getKey()))
+                .map(e -> toVariableDto(e, result, unitsByLower, system, explicitUnits))
+                .toList();
+
+        // Cache the solved workspace so the REPL can evaluate against it without re-solving.
+        Map<String, ProcDef> replDefs = new HashMap<>(parsed.defs());
+        replDefs.putAll(functionDefs);
+        cacheSolvedContext(sessionId, result, variableDtos, replDefs, system);
+
+        return new SolveResponse(
+                true,
+                variableDtos,
+                result.blocks().stream()
+                        .map(b -> toBlockDto(b, result.displayNames()))
+                        .toList(),
+                result.residuals().stream()
+                        .map(r -> new SolveDtos.ResidualDto(r.equation(), r.residual()))
+                        .toList(),
+                new SolveDtos.StatsDto(
+                        result.stats().equationCount(),
+                        result.stats().unknownCount(),
+                        result.stats().blockCount(),
+                        result.stats().iterations(),
+                        result.stats().elapsedMillis(),
+                        result.stats().maxResidual()),
+                result.solutions().stream()
+                        .map(s -> new SolveDtos.SolutionDto(
+                                s.variables().entrySet().stream()
+                                        .filter(e -> !isInternalTemp(e.getKey()))
+                                        .map(e -> toVariableDto(e, result, unitsByLower, system, explicitUnits))
+                                        .toList(),
+                                s.maxResidual()))
+                        .toList(),
+                unitWarnings,
+                null,
+                formattedEquations,
+                cyclePath,
+                formattedReport,
+                codeTablesOf(parsed.defs()),
+                parametricTablesOf(parsed.parametricTables()),
+                plotsOf(parsed.plots()),
+                null,
+                stateTablesOf(parsed.stateTables()),
+                odeTablesOf(result.odeTables()));
+    }
+
+    /** Quick synchronous syntax check used by the asynchronous path to reject
+     *  malformed requests with 400 before enqueueing them for a worker. */
+    private void validateSyntax(SolveRequest request) throws EquationParser.ParseException {
+        var extraction = MarkdownEquationExtractor.extract(request.text());
+        String cleanText = applyOverrides(extraction.cleanText, request.overrides());
+        solver.parse(cleanText);
     }
 
     /** Display-converts one solved variable, attaching its uncertainty if present. */
@@ -374,14 +415,30 @@ public class SolveController {
     ) {}
 
     @PostMapping("/solve/table")
-    public ResponseEntity<SolveTableResponse> solveTable(@RequestBody SolveTableRequest request) {
+    public ResponseEntity<?> solveTable(@RequestBody SolveTableRequest request) {
         if (request.text() == null || request.text().isBlank()) {
             return ResponseEntity.badRequest().build();
         }
         if (request.table() == null || request.table().rows() == null) {
             return ResponseEntity.badRequest().build();
         }
+        if (dispatcher != null) {
+            try {
+                solver.parse(MarkdownEquationExtractor.extract(request.text()).cleanText);
+            } catch (EquationParser.ParseException e) {
+                return ResponseEntity.badRequest().build();
+            }
+            JobTicket ticket = dispatcher.dispatch(ComputeTask.SOLVE_TABLE, null, request);
+            return ResponseEntity.accepted().body(ticket);
+        }
+        return ResponseEntity.ok(computeSolveTable(request));
+    }
 
+    /**
+     * Runs the parametric solve table end-to-end and returns the response DTO.
+     * Used by the synchronous path and the asynchronous compute worker.
+     */
+    public SolveTableResponse computeSolveTable(SolveTableRequest request) {
         var extraction = MarkdownEquationExtractor.extract(request.text());
         String cleanText = extraction.cleanText;
 
@@ -436,7 +493,7 @@ public class SolveController {
                 (System.nanoTime() - startNanos) / 1_000_000,
                 maxResidual);
 
-        return ResponseEntity.ok(new SolveTableResponse(results, stats));
+        return new SolveTableResponse(results, stats);
     }
 
     private record RowOutcome(TableRowResult row, EquationSystemSolver.Stats stats,

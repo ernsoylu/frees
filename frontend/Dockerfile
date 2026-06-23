@@ -13,12 +13,18 @@ COPY scripts ./scripts
 # frees.sh; Render auto-provides RENDER_GIT_COMMIT as a build arg.
 ARG VITE_COMMIT_HASH=
 ARG RENDER_GIT_COMMIT=
-RUN VITE_COMMIT_HASH="${VITE_COMMIT_HASH:-${RENDER_GIT_COMMIT:-dev}}" npm run build
+ARG VITE_ASYNC_API=
+RUN VITE_COMMIT_HASH="${VITE_COMMIT_HASH:-${RENDER_GIT_COMMIT:-dev}}" \
+    VITE_ASYNC_API="${VITE_ASYNC_API}" \
+    npm run build
 
 # Runtime stage: unprivileged nginx (runs as uid 101, listens on 8080)
-# serves the static bundle and proxies /api to the backend.
+# serves the static bundle and proxies /api to the backend. The nginx config
+# is a template: the 20-envsubst-on-templates.sh entrypoint script expands
+# ${BACKEND_HOST} at container start, so the same image works in docker-compose
+# (BACKEND_HOST=api-node) and Render (BACKEND_HOST=frees-api).
 FROM nginxinc/nginx-unprivileged:alpine
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY nginx.conf.template /etc/nginx/templates/default.conf.template
 COPY --from=build /app/dist /usr/share/nginx/html
 # Runtime build-info: an entrypoint script stamps the live commit (see the
 # script and CLAUDE.md "Build stamping"). build-info.js must be writable by the
