@@ -1089,6 +1089,18 @@ export default function App() {
     }
   }
 
+  async function checkWithFallback() {
+    if (checking || solving) return
+    const res = await onCheck()
+    if (res && !res.solvable && res.parametricTables && res.parametricTables.length > 0) {
+      const dto = res.parametricTables[0]
+      const overrideTbl = paramTableFromDto(dto)
+      const tableId = overrideTbl.id
+      dockRef.current?.openInstance(`table:${tableId}`, 'table', overrideTbl.name)
+      void onCheckTable(tableId, overrideTbl)
+    }
+  }
+
   async function checkThenSolveTable(tableIdArg?: string, overrideTbl?: ParamTableSpec) {
     const tableId = tableIdArg ?? activeParam?.id
     if (solvingTableId !== null || checkingTableId !== null || !tableId) return
@@ -2178,7 +2190,7 @@ export default function App() {
           tableCheckResult={tableCheckResult}
           tableCheckMessage={tableCheckMessage}
           tableResults={focusedParam?.results ?? []}
-          onCheck={onCheck}
+          onCheck={checkWithFallback}
           onSolve={checkThenSolve}
           onCheckTable={() => { if (focusedParam) void onCheckTable(focusedParam.id) }}
           onSolveTable={() => { if (focusedParam) void onSolveTable(focusedParam.id) }}
