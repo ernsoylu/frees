@@ -201,6 +201,41 @@ async function extractErrorMessage(response: Response, fallback: string): Promis
 async function pollJob(jobId: string, timeoutMs = 120_000): Promise<JobState> {
   const deadline = Date.now() + timeoutMs
   const url = `${API_BASE}/api/jobs/${encodeURIComponent(jobId)}`
+
+  if (typeof EventSource !== 'undefined') {
+    try {
+      return await new Promise<JobState>((resolve, reject) => {
+        const sse = new EventSource(`${url}/stream`)
+        const timeout = setTimeout(() => {
+          sse.close()
+          reject(new Error('Job timed out waiting for completion via SSE'))
+        }, timeoutMs)
+
+        sse.onmessage = (event) => {
+          try {
+            const state = JSON.parse(event.data) as JobState
+            if (state.status === 'COMPLETED' || state.status === 'FAILED') {
+              clearTimeout(timeout)
+              sse.close()
+              resolve(state)
+            }
+          } catch (e) {
+            // ignore malformed
+          }
+        }
+
+        sse.onerror = () => {
+          clearTimeout(timeout)
+          sse.close()
+          reject(new Error('SSE connection failed'))
+        }
+      })
+    } catch (e) {
+      // Fall through to polling
+    }
+  }
+
+  // Fallback to polling
   while (Date.now() < deadline) {
     let response: Response
     try {
@@ -218,7 +253,7 @@ async function pollJob(jobId: string, timeoutMs = 120_000): Promise<JobState> {
     if (state.status === 'COMPLETED' || state.status === 'FAILED') {
       return state
     }
-    await new Promise(resolve => setTimeout(resolve, 150))
+    await new Promise(resolve => setTimeout(resolve, 50))
   }
   throw new Error('Job timed out waiting for completion')
 }

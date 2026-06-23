@@ -117,6 +117,7 @@ public class ComputeTaskListener {
                 case ComputeTask.OPTIMIZE -> handleOptimize(task);
                 case ComputeTask.OPTIMIZE_MULTI -> handleOptimizeMulti(task);
                 case ComputeTask.CURVE_FIT -> handleCurveFit(task);
+                case ComputeTask.WARMUP -> log.info("Received WARMUP task, acknowledging and dropping.");
                 default -> jobStore.saveFailed(task.jobId(),
                         "Unknown task type: " + task.taskType());
             }
