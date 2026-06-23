@@ -20,7 +20,7 @@ interface MobileLayoutProps {
   solving: boolean
   solvable: boolean
   onCheck: () => void
-  onSolve: () => void
+  onSolve: () => Promise<'workspace' | 'table' | void> | void
   onSaveProject: () => void
   onPreferences: () => void
   onRenameProject: () => void
@@ -104,7 +104,12 @@ export default function MobileLayout({
               color="teal"
               loading={solving}
               disabled={!solvable}
-              onClick={onSolve}
+              onClick={async () => {
+                const res = await onSolve()
+                if (res === 'workspace' || res === 'table') {
+                  setActiveTab(res)
+                }
+              }}
               title="Solve (F2)"
             >
               <IconTargetArrow size={18} />
