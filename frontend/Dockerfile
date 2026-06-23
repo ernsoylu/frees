@@ -10,19 +10,21 @@ COPY src ./src
 COPY scripts ./scripts
 # Build stamp: the git commit the bundle was built from, surfaced in the About
 # dialog (see CLAUDE.md "Build stamping"). Local builds pass VITE_COMMIT_HASH via
-# frees.sh; Render auto-provides RENDER_GIT_COMMIT as a build arg.
+# frees.sh; Railway auto-provides RAILWAY_GIT_COMMIT_SHA as a build arg.
 ARG VITE_COMMIT_HASH=
-ARG RENDER_GIT_COMMIT=
+ARG RAILWAY_GIT_COMMIT_SHA=
 ARG VITE_ASYNC_API=
-RUN VITE_COMMIT_HASH="${VITE_COMMIT_HASH:-${RENDER_GIT_COMMIT:-dev}}" \
+ARG VITE_API_BASE=
+RUN VITE_COMMIT_HASH="${VITE_COMMIT_HASH:-${RAILWAY_GIT_COMMIT_SHA:-dev}}" \
     VITE_ASYNC_API="${VITE_ASYNC_API}" \
+    VITE_API_BASE="${VITE_API_BASE}" \
     npm run build
 
 # Runtime stage: unprivileged nginx (runs as uid 101, listens on 8080)
 # serves the static bundle and proxies /api to the backend. The nginx config
 # is a template: the 20-envsubst-on-templates.sh entrypoint script expands
 # ${BACKEND_HOST} at container start, so the same image works in docker-compose
-# (BACKEND_HOST=api-node) and Render (BACKEND_HOST=frees-api).
+# (BACKEND_HOST=api-node) and Railway (BACKEND_HOST=frees-api.railway.internal).
 FROM nginxinc/nginx-unprivileged:alpine
 COPY nginx.conf.template /etc/nginx/templates/default.conf.template
 COPY --from=build /app/dist /usr/share/nginx/html

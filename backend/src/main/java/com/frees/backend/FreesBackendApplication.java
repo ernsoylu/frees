@@ -15,14 +15,14 @@ public class FreesBackendApplication {
     }
 
     /**
-     * Cross-origin access is limited to the dev server and the Render
+     * Cross-origin access is limited to the dev server and the Railway
      * deployment by default; override with FREES_CORS_ALLOWED_ORIGINS
      * (comma-separated origin patterns) for other deployments. The Docker
      * frontend reaches the API same-origin through the nginx proxy.
      */
     @Bean
     public WebMvcConfigurer corsConfigurer(
-            @Value("${frees.cors.allowed-origins:http://localhost:5173,https://*.onrender.com}")
+            @Value("${frees.cors.allowed-origins:http://localhost:5173,https://*.up.railway.app}")
             String allowedOrigins) {
         return new WebMvcConfigurer() {
             @Override
