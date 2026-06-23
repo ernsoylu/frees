@@ -1989,6 +1989,10 @@ export default function App() {
           solvable={solvable}
           onCheck={checkWithFallback}
           onSolve={checkThenSolve}
+          checkingTableId={checkingTableId}
+          solvingTableId={solvingTableId}
+          onCheckTable={onCheckTable}
+          onSolveTable={onSolveTable}
           onSaveProject={handleSaveProject}
           onSaveProjectAs={handleSaveProjectAs}
           onNewProject={handleNewProject}

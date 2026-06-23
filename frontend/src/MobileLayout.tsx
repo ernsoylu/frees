@@ -25,6 +25,10 @@ interface MobileLayoutProps {
   solvable: boolean
   onCheck: () => void
   onSolve: () => Promise<'workspace' | 'table' | void> | void
+  checkingTableId: string | null
+  solvingTableId: string | null
+  onCheckTable: (id: string) => void
+  onSolveTable: (id: string) => Promise<boolean> | void
   onSaveProject: () => void
   onSaveProjectAs: () => void
   onNewProject: () => void
@@ -44,6 +48,10 @@ export default function MobileLayout({
   solvable,
   onCheck,
   onSolve,
+  checkingTableId,
+  solvingTableId,
+  onCheckTable,
+  onSolveTable,
   onSaveProject,
   onSaveProjectAs,
   onNewProject,
@@ -76,8 +84,16 @@ export default function MobileLayout({
     }
   }
 
+  const isTableActive = activeTab === 'table' && activeTableId !== null && tables.length > 0
+  const currentTable = tables.find(t => t.id === activeTableId)
+  const isSolvable = isTableActive && currentTable?.kind === 'parametric'
+    ? currentTable.checkResult?.solvable === true
+    : solvable
+  const isChecking = isTableActive && activeTableId ? checkingTableId === activeTableId : checking
+  const isSolving = isTableActive && activeTableId ? solvingTableId === activeTableId : solving
+
   return (
-    <Flex direction="column" h="100vh" style={{ overflow: 'hidden' }}>
+    <Flex direction="column" h="100dvh" style={{ overflow: 'hidden' }}>
       {/* Top Bar */}
       <Paper
         shadow="xs"
@@ -107,8 +123,14 @@ export default function MobileLayout({
             <ActionIcon
               variant="light"
               color="teal"
-              loading={checking}
-              onClick={onCheck}
+              loading={isChecking}
+              onClick={() => {
+                if (isTableActive && activeTableId) {
+                  onCheckTable(activeTableId)
+                } else {
+                  onCheck()
+                }
+              }}
               title="Check (F4)"
             >
               <IconChecks size={18} />
@@ -116,10 +138,15 @@ export default function MobileLayout({
             <ActionIcon
               variant="filled"
               color="teal"
-              loading={solving}
-              disabled={!solvable}
+              loading={isSolving}
+              disabled={!isSolvable}
               onClick={async () => {
-                const res = await onSolve()
+                let res: 'workspace' | 'table' | void | boolean
+                if (isTableActive && activeTableId) {
+                  res = await onSolveTable(activeTableId)
+                } else {
+                  res = await onSolve()
+                }
                 if (res === 'workspace' || res === 'table') {
                   setActiveTab(res)
                 }
