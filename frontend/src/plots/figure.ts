@@ -120,11 +120,11 @@ function axisLayout(
   const rMin = rangeValue(min, log)
   const rMax = rangeValue(max, log)
   if (rMin !== null || rMax !== null) {
-    ;(layout as any).range = [rMin, rMax]
+    layout.range = [rMin, rMax]
   }
 
   if (tick !== null && tick !== undefined && tick > 0) {
-    ;(layout as any).dtick = tick
+    layout.dtick = tick
   }
 
   return layout
@@ -448,8 +448,8 @@ export function buildXYFigure(
       traces.push({
         type: 'bar',
         name: s.name,
-        x: s.x.map((val) => val as any),
-        y: s.y.map((val) => val as any),
+        x: s.x,
+        y: s.y,
         marker: { color: format.lineColors?.[s.name] || undefined },
         ...(s.axis === 'y2' ? { yaxis: 'y2' } : {}),
       } as PlotlyTrace)
@@ -514,10 +514,10 @@ export function buildXYFigure(
   }
 
   // Secondary right Y axis for the series tagged 'y2'.
-  if (traces.some((t) => (t as any).yaxis === 'y2')) {
+  if (traces.some((t) => t.yaxis === 'y2')) {
     const colors = THEMES[theme]
     const y2Names = series.filter((s) => s.axis === 'y2').map((s) => s.name)
-    ;(layout as any).yaxis2 = {
+    layout.yaxis2 = {
       title: { text: format.y2Label || y2Names.join(', ') },
       overlaying: 'y',
       side: 'right',

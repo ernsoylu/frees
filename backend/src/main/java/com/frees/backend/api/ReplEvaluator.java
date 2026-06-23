@@ -27,6 +27,9 @@ import java.util.TreeSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 /**
  * Evaluates a single REPL line against a cached solved workspace.
  *
@@ -43,6 +46,8 @@ import java.util.regex.Pattern;
  */
 @Service
 public class ReplEvaluator {
+
+    private static final Logger log = LoggerFactory.getLogger(ReplEvaluator.class);
 
     /** {@code name = expr} where the '=' isn't part of ==, <=, >=, <>. */
     private static final Pattern ASSIGNMENT =
@@ -1049,6 +1054,7 @@ public class ReplEvaluator {
         } catch (IllegalStateException e) {
             return Outcome.fail(e.getMessage());
         } catch (RuntimeException e) {
+            log.debug("REPL expression evaluation failed", e);
             return Outcome.fail(e.getMessage() != null ? e.getMessage() : "Could not evaluate expression.");
         }
         if (Double.isNaN(si)) {
@@ -1507,7 +1513,9 @@ public class ReplEvaluator {
                 return m.group();
             }
         } catch (Exception e) {
-            // ignore
+            // Cosmetic only: fall back to the lowercase spelling if the variable
+            // name can't be matched back to its original casing.
+            log.debug("Could not recover original casing for '{}'", lowercaseVar, e);
         }
         return lowercaseVar;
     }

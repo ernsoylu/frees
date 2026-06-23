@@ -17,6 +17,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.commons.math3.linear.Array2DRowRealMatrix;
 import org.apache.commons.math3.linear.ArrayRealVector;
 import org.apache.commons.math3.linear.DecompositionSolver;
@@ -29,6 +31,8 @@ import org.apache.commons.math3.linear.SingularValueDecomposition;
  */
 @Service
 public class EquationSystemSolver {
+
+    private static final Logger log = LoggerFactory.getLogger(EquationSystemSolver.class);
 
     public static final double DEFAULT_GUESS = 1.0;
     private static final String UNCERTAINTY_OF_FN = "uncertaintyof$";
@@ -97,6 +101,15 @@ public class EquationSystemSolver {
      * freedom and an independent equation-to-variable assignment). Does not
      * solve anything.
      */
+    /**
+     * Parse a source once so callers can thread the {@link EquationParser.ParseResult}
+     * into the {@code check}/{@code deriveUnits}/{@code inferUnits}/{@code checkUnits}
+     * overloads, instead of re-parsing the same text for each call.
+     */
+    public EquationParser.ParseResult parse(String source) {
+        return parser.parseResult(source);
+    }
+
     public CheckResult check(String source) {
         return check(source, false);
     }
@@ -109,8 +122,13 @@ public class EquationSystemSolver {
      * source-defined functions; source definitions win on name collision. */
     public CheckResult check(String source, boolean complexMode,
                              Map<String, ProcDef> extraDefs) {
-        EquationParser.ParseResult parsed =
-                withExtraDefs(parser.parseResult(source), extraDefs);
+        return check(parser.parseResult(source), complexMode, extraDefs);
+    }
+
+    /** Overload reusing an already-parsed source (avoids re-parsing on the check/solve path). */
+    public CheckResult check(EquationParser.ParseResult base, boolean complexMode,
+                             Map<String, ProcDef> extraDefs) {
+        EquationParser.ParseResult parsed = withExtraDefs(base, extraDefs);
         List<Equation> equations = IntegralSolver.hoistNested(parsed.equations());
         ExtractedUncertainties ext = extractUncertaintyEquations(equations);
         equations = ext.activeEquations();
@@ -957,7 +975,11 @@ public class EquationSystemSolver {
      * against declared variable units. Never blocks solving.
      */
     public List<String> checkUnits(String source, Map<String, String> variableUnits) {
-        EquationParser.ParseResult parsed = parser.parseResult(source);
+        return checkUnits(parser.parseResult(source), variableUnits);
+    }
+
+    /** Overload reusing an already-parsed source (avoids re-parsing on the check/solve path). */
+    public List<String> checkUnits(EquationParser.ParseResult parsed, Map<String, String> variableUnits) {
         List<Equation> equations = parsed.equations();
         List<String> warnings = new ArrayList<>(UnitChecker.check(
                 equations, variableUnits, functionOutputUnits(parsed.defs()),
@@ -969,8 +991,10 @@ public class EquationSystemSolver {
                     checkNonSmoothInBlock(eq, block.variables(), warnings);
                 }
             }
-        } catch (Exception ignored) {
-            // Ignored: blocking errors are handled elsewhere
+        } catch (Exception e) {
+            // Blocking errors here are non-fatal for unit checking — they surface
+            // through the main solve path; trace at debug for diagnosis.
+            log.debug("Skipping non-smooth block check (blocking failed)", e);
         }
         return warnings;
     }
@@ -1048,7 +1072,11 @@ public class EquationSystemSolver {
      * Pa when m, g, A are known). Keys are display-cased names.
      */
     public Map<String, String> deriveUnits(String source, Map<String, String> variableUnits) {
-        EquationParser.ParseResult parsed = parser.parseResult(source);
+        return deriveUnits(parser.parseResult(source), variableUnits);
+    }
+
+    /** Overload reusing an already-parsed source (avoids re-parsing on the check/solve path). */
+    public Map<String, String> deriveUnits(EquationParser.ParseResult parsed, Map<String, String> variableUnits) {
         Map<String, String> derived =
                 UnitChecker.check(parsed.equations(), variableUnits,
                         functionOutputUnits(parsed.defs()),
@@ -1066,7 +1094,11 @@ public class EquationSystemSolver {
      * precedence over these.
      */
     public Map<String, String> inferUnits(String source) {
-        EquationParser.ParseResult parsed = parser.parseResult(source);
+        return inferUnits(parser.parseResult(source));
+    }
+
+    /** Overload reusing an already-parsed source (avoids re-parsing on the check/solve path). */
+    public Map<String, String> inferUnits(EquationParser.ParseResult parsed) {
         Map<String, String> inferred = new HashMap<>();
         for (Equation eq : parsed.equations()) {
             if (eq.lhs() instanceof Expr.Var(String name) && eq.rhs() instanceof Expr.Num(double val, String unit, boolean isImaginary)

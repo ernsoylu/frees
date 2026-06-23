@@ -93,6 +93,7 @@ import {
 } from '@tabler/icons-react'
 import { TableRowResult, VariableResult } from '../api'
 import { formatValue } from '../format'
+import type { VariableDraft } from '../VariableInfoModal'
 import { PROPERTY_UNITS } from '../plots/units'
 import { PlotSpec, newPlotSpec } from '../plots/types'
 import { detectStates, StateTable } from '../plots/stateTable'
@@ -493,7 +494,7 @@ function flowDashProps(
   el: { flow?: FlowAnimation },
   runMode: boolean,
   numValues: Map<string, number>,
-): React.SVGProps<any> {
+): React.SVGAttributes<SVGElement> {
   if (!runMode || !el.flow) return {}
   const speed = evalFormula(el.flow.speed, numValues) ?? 0
   if (Math.abs(speed) < 1e-9) return { strokeDasharray: FLOW_DASH }
@@ -2211,7 +2212,7 @@ function ControlFields({
             { label: 'Write to solver upper bound', value: 'upper' },
           ]}
           value={el.target || 'equation'}
-          onChange={(v) => set({ target: v as any })}
+          onChange={(v) => set({ target: v as 'equation' | 'guess' | 'lower' | 'upper' })}
         />
       )}
       {el.kind === 'ctl-input' && (
@@ -2297,7 +2298,7 @@ function ControlFields({
             { label: 'Calculate / Solve equations', value: 'solve' },
           ]}
           value={el.action}
-          onChange={(v) => set({ action: v as any })}
+          onChange={(v) => set({ action: v as 'solve' | 'check' })}
         />
       )}
       {el.kind === 'ctl-output' && (
@@ -3338,7 +3339,7 @@ interface Props {
   onSolve?: () => Promise<void>
   onCheck?: () => Promise<void>
   onNavigate?: (action: { tab?: string; query?: string; plotId?: string; diagramId?: string }) => void
-  onVarDraftsChange?: React.Dispatch<React.SetStateAction<Record<string, any>>>
+  onVarDraftsChange?: React.Dispatch<React.SetStateAction<Record<string, VariableDraft>>>
   // Epic 10.9 props for multiple diagrams:
   diagrams?: DiagramSpec[]
   activeDiagramId?: string | null
@@ -3625,16 +3626,18 @@ export default function DiagramTab(props: Readonly<Props>) {
     } catch {
       return { ok: false, error: 'That file is not valid JSON.' }
     }
-    const toSpec = (raw: any): DiagramSpec | null => {
-      const st = raw?.state ?? raw
-      if (!st || !Array.isArray(st.elements)) return null
+    const toSpec = (raw: unknown): DiagramSpec | null => {
+      const obj = (raw ?? {}) as Record<string, unknown>
+      const st = (obj.state ?? obj) as Record<string, unknown>
+      if (!Array.isArray(st.elements)) return null
       const state: DiagramState = {
-        elements: st.elements,
+        // Deserialization boundary: trust the persisted element array shape.
+        elements: st.elements as DiagramState['elements'],
         gridSize: typeof st.gridSize === 'number' ? st.gridSize : 10,
         snap: typeof st.snap === 'boolean' ? st.snap : true,
         showGrid: typeof st.showGrid === 'boolean' ? st.showGrid : true,
       }
-      return { id: crypto.randomUUID(), name: String(raw?.name ?? 'Imported Diagram'), state }
+      return { id: crypto.randomUUID(), name: String(obj.name ?? 'Imported Diagram'), state }
     }
     const candidates = Array.isArray(parsed) ? parsed : [parsed]
     const specs = candidates.map(toSpec).filter((s): s is DiagramSpec => s !== null)
@@ -3830,12 +3833,15 @@ export default function DiagramTab(props: Readonly<Props>) {
 
           if (valStr.trim() !== '') {
             onVarDraftsChange?.((drafts) => {
-              const existing = drafts[varName] ?? {
+              const existing: VariableDraft = drafts[varName] ?? {
                 guess: '',
                 lower: '',
                 upper: '',
                 units: '',
                 isUnitsUserSet: false,
+                uncertainty: '',
+                relativeUncertainty: '',
+                uncertaintyType: 'absolute',
               }
               const nextDrafts = { ...drafts }
               if (control.target === 'guess') {
@@ -3960,9 +3966,9 @@ export default function DiagramTab(props: Readonly<Props>) {
       }
       return {
         ...el,
-        x: (el as any).x + dx,
-        y: (el as any).y + dy,
-      } as any
+        x: el.x + dx,
+        y: el.y + dy,
+      }
     })
     
     const newComp: CustomComponent = {
@@ -4459,9 +4465,9 @@ export default function DiagramTab(props: Readonly<Props>) {
           }
           return {
             ...base,
-            x: (base as any).x + dx,
-            y: (base as any).y + dy,
-          } as any
+            x: base.x + dx,
+            y: base.y + dy,
+          }
         })
 
         commit((s) => ({

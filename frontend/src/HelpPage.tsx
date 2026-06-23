@@ -2790,7 +2790,7 @@ function MarkdownRenderer({ content }: MarkdownRendererProps) {
     
     // 1. Fenced Code Block
     if (trimmed.startsWith('```')) {
-      let codeLines: string[] = [];
+      const codeLines: string[] = [];
       i++;
       while (i < lines.length && !lines[i].trim().startsWith('```')) {
         codeLines.push(lines[i]);
@@ -2850,7 +2850,7 @@ function MarkdownRenderer({ content }: MarkdownRendererProps) {
         }
       }
       
-      let rows: string[][] = [];
+      const rows: string[][] = [];
       while (i < lines.length && lines[i].trim().startsWith('|')) {
         const rowCols = lines[i].trim().split('|').map(c => c.trim()).filter((_, idx, arr) => idx > 0 && idx < arr.length - 1);
         rows.push(rowCols);
@@ -2883,7 +2883,7 @@ function MarkdownRenderer({ content }: MarkdownRendererProps) {
     
     // 3. Lists
     if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
-      let listItems: string[] = [];
+      const listItems: string[] = [];
       while (i < lines.length && (lines[i].trim().startsWith('- ') || lines[i].trim().startsWith('* '))) {
         listItems.push(lines[i].trim().substring(2));
         i++;
@@ -2901,7 +2901,7 @@ function MarkdownRenderer({ content }: MarkdownRendererProps) {
     
     // 4. Blockquotes / Alerts
     if (trimmed.startsWith('>')) {
-      let alertLines: string[] = [];
+      const alertLines: string[] = [];
       let color = 'blue';
       let title = 'Note';
       

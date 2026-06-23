@@ -12,7 +12,7 @@ export function instantiateTemplate(elements: DiagramElement[]): DiagramElement[
     idMap.set(el.id, crypto.randomUUID())
   })
   return elements.map((el) => {
-    const copy = structuredClone(el) as any
+    const copy = structuredClone(el)
     copy.id = idMap.get(el.id)!
     if (copy.groupId) {
       copy.groupId = idMap.get(copy.groupId) || copy.groupId

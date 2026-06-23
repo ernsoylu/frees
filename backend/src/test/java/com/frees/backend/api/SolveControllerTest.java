@@ -21,13 +21,13 @@ class SolveControllerTest {
     @Test
     void clampsClientSuppliedSolveBudget() {
         // DoS guard: a client cannot request an unbounded solve budget.
-        SolveController.StopCriteriaDto greedy =
-                new SolveController.StopCriteriaDto(10_000_000, null, null, 99_999.0, null);
+        SolverApiSupport.StopCriteriaDto greedy =
+                new SolverApiSupport.StopCriteriaDto(10_000_000, null, null, 99_999.0, null);
         var settings = greedy.toSettings();
         org.junit.jupiter.api.Assertions.assertEquals(
-                SolveController.MAX_ITERATIONS_CAP, settings.maxIterations());
+                SolverApiSupport.MAX_ITERATIONS_CAP, settings.maxIterations());
         org.junit.jupiter.api.Assertions.assertEquals(
-                SolveController.MAX_ELAPSED_SECONDS_CAP, settings.elapsedTimeSeconds(), 1e-9);
+                SolverApiSupport.MAX_ELAPSED_SECONDS_CAP, settings.elapsedTimeSeconds(), 1e-9);
     }
 
     @Test
@@ -632,12 +632,12 @@ class SolveControllerTest {
     @Test
     void parsesErrorLineFromAntlrMessage() {
         org.junit.jupiter.api.Assertions.assertEquals(
-                4, SolveController.parseErrorLine("line 4:6 mismatched input '+'"));
+                4, SolverApiSupport.parseErrorLine("line 4:6 mismatched input '+'"));
         org.junit.jupiter.api.Assertions.assertEquals(
-                2, SolveController.parseErrorLine("line 2:0 foo\nline 9:1 bar"));
+                2, SolverApiSupport.parseErrorLine("line 2:0 foo\nline 9:1 bar"));
         org.junit.jupiter.api.Assertions.assertNull(
-                SolveController.parseErrorLine("some non-positional error"));
-        org.junit.jupiter.api.Assertions.assertNull(SolveController.parseErrorLine(null));
+                SolverApiSupport.parseErrorLine("some non-positional error"));
+        org.junit.jupiter.api.Assertions.assertNull(SolverApiSupport.parseErrorLine(null));
     }
 
     @Test

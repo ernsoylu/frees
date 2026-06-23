@@ -385,7 +385,9 @@ export function loadTables(): TableSpec[] {
   try {
     const raw = localStorage.getItem(TABLES_KEY)
     if (!raw) return []
-    const tables = JSON.parse(raw) as any[]
+    // Persisted JSON of unknown shape; migrated below and cast back to TableSpec
+    // at this deserialization boundary.
+    const tables = JSON.parse(raw) as Array<Record<string, unknown>>
     // Migrate 'curve' kind to 'function' kind, and run results/check state are transient.
     return tables.map((t) => {
       let mapped = t
@@ -395,7 +397,7 @@ export function loadTables(): TableSpec[] {
       return mapped.kind === 'parametric'
         ? { ...mapped, results: [], stats: null, checkResult: null, checkMessage: '' }
         : mapped
-    })
+    }) as unknown as TableSpec[]
   } catch {
     return []
   }
