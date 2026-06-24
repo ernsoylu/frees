@@ -6,7 +6,12 @@ class BareInputProbeTest {
     private final EquationSystemSolver solver = new EquationSystemSolver();
     @Test
     void probe() throws Exception {
-        String src = Files.readString(Path.of("build/probe/p.frees"));
+        Path path = Path.of("build/probe/p.frees");
+        if (!Files.exists(path)) {
+            System.out.println("No probe file at build/probe/p.frees; skipping probe test.");
+            return;
+        }
+        String src = Files.readString(path);
         StringBuilder sb = new StringBuilder();
         try {
             solver.solve(src);
