@@ -823,8 +823,14 @@ public class AstBuilder extends FreesBaseVisitor<Expr> {
      */
     private Statement.CallProc buildMultiAssign(FreesParser.MultiAssignContext ctx) {
         List<Expr> outputs = new ArrayList<>();
-        for (org.antlr.v4.runtime.tree.TerminalNode id : ctx.funcOutputs().IDENT()) {
-            outputs.add(new Expr.Var(id.getText().toLowerCase()));
+        for (FreesParser.CallOutputContext out : ctx.callOutputs().callOutput()) {
+            if (out.TILDE() != null) {
+                // '~' discards this output slot: bind it to a hidden sink variable
+                // that the solver computes but never surfaces.
+                outputs.add(EquationParser.newIgnoredSink());
+            } else {
+                outputs.add(new Expr.Var(out.IDENT().getText().toLowerCase()));
+            }
         }
         String name = ctx.IDENT().getText().toLowerCase();
         List<Expr> inputs = new ArrayList<>();
