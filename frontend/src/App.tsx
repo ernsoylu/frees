@@ -113,7 +113,6 @@ import ReplTerminal from './ReplTerminal'
 import MobileLayout from './MobileLayout'
 import ExamplesModal from './ExamplesModal'
 import ShortcutsModal from './ShortcutsModal'
-import SyntaxHelp from './SyntaxHelp'
 import { DEFAULT_EXAMPLE_TEXT, Example } from './examples'
 import EquationEditor, { EquationEditorHandle } from './EquationEditor'
 import { MessageModal, SaveCheckModal, TextPromptModal } from './dialogs'
@@ -1391,6 +1390,11 @@ export default function App() {
     padding: 'var(--mantine-spacing-md)',
     overflow: 'auto',
   }
+  // On mobile the editor should fill the whole tab with only a hairline of
+  // padding for visibility; on desktop it keeps the standard panel padding.
+  const editorPanelPad: React.CSSProperties = isMobile
+    ? { ...panelPad, padding: 4 }
+    : panelPad
   // Plot windows must let the chart fill exactly (no scroll), so the wrapper is
   // a non-scrolling flex column with a tight pad.
   const plotPanelStyle: React.CSSProperties = {
@@ -1413,7 +1417,7 @@ export default function App() {
   }
   const panelContent: Record<string, ReactNode> = {
     equations: (
-      <div style={panelPad}>
+      <div style={editorPanelPad}>
         {errorLine != null && (
           <Alert color="red" variant="light" p="xs" mb={6} title="Syntax error">
             <Group justify="space-between" wrap="nowrap" gap="xs">
@@ -1434,9 +1438,6 @@ export default function App() {
             </Text>
           </Alert>
         )}
-        <Group justify="space-between" mb={6} wrap="nowrap">
-          <SyntaxHelp />
-        </Group>
         {unitWarnings.length > 0 && !dismissedWarnings && (
           <Alert
             color="yellow"

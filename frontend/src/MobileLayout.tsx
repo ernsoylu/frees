@@ -213,8 +213,9 @@ export default function MobileLayout({
         </Group>
       </Paper>
 
-      {/* Main Content Area */}
-      <Box style={{ flex: 1, minHeight: 0, overflowY: 'auto' }} p="xs">
+      {/* Main Content Area — the editor fills edge-to-edge (it carries its own
+          hairline padding); other tabs keep a comfortable inset. */}
+      <Box style={{ flex: 1, minHeight: 0, overflowY: 'auto' }} p={activeTab === 'equations' ? 0 : 'xs'}>
         {activeTab === 'table' && tables.length > 1 && (
           <Group gap="xs" mb="sm" style={{ overflowX: 'auto', flexWrap: 'nowrap' }}>
             {tables.map((t) => (
