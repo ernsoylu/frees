@@ -84,6 +84,7 @@ import { loadWhiteboards, newWhiteboard, saveWhiteboards } from './whiteboard/wh
 import { WhiteboardSpec } from './whiteboard/types'
 import { loadSpreadsheets, newSpreadsheet, saveSpreadsheets } from './spreadsheet/spreadsheetStorage'
 import { type SpreadsheetSpec } from './spreadsheet/types'
+import { substituteSsheetRefs } from './spreadsheet/ssheetResolver'
 
 // The Digitizer and Diagram tabs are large, self-contained editors that most
 // sessions never open, so they are code-split and only fetched when their tab
@@ -714,9 +715,10 @@ export default function App() {
 
   /** The equations actually solved: editor text plus diagram control bindings. */
   function effectiveText(): string {
-    return diagramBindings.length > 0
+    const raw = diagramBindings.length > 0
       ? `${text}\n${diagramBindings.join('\n')}`
       : text
+    return substituteSsheetRefs(raw, spreadsheets)
   }
 
   // Diagram input controls report their `var = value` lines here. Changing a
