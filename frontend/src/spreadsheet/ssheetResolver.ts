@@ -68,11 +68,13 @@ export function resolveSsheetValues(
       
       // If no workbook matched, maybe it was a Sheet name (e.g. ssheet('Sheet1', 'A1'))
       if (!spec) {
-        const foundSpecWithSheet = spreadsheets.find((s) => 
+        const matchingWorkbooks = spreadsheets.filter((s) => 
           (s.sheets as any[]).some(sh => sh.name && sh.name.toLowerCase() === spreadsheetName!.toLowerCase())
         )
-        if (foundSpecWithSheet) {
-          spec = foundSpecWithSheet
+        if (matchingWorkbooks.length > 1) {
+          throw new Error(`Ambiguous spreadsheet reference: Multiple workbooks contain a sheet named '${spreadsheetName}'. Please specify the workbook explicitly.`)
+        } else if (matchingWorkbooks.length === 1) {
+          spec = matchingWorkbooks[0]
           sheetName = spreadsheetName
           spreadsheetName = undefined
         }
