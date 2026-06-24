@@ -11,6 +11,8 @@ export interface SpreadsheetSpec {
   resultBindings?: Record<string, string>
   /** Whether to auto-sync resultBindings after a successful solve */
   autoSync?: boolean
+  /** ID of a parametric table this spreadsheet is linked to (if any) */
+  linkedTableId?: string
 }
 
 export function emptySpreadsheetData(): unknown[] {
