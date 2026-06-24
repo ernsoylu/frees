@@ -22,16 +22,44 @@ function parseCell(ref: string): { r: number; c: number } | null {
 
 export function parseSsheetReferences(text: string): SsheetReference[] {
   const refs: SsheetReference[] = []
-  // Match `ssheet(...)`
-  // Supports: ssheet(A1), ssheet('A1'), ssheet(Sheet1, A1), ssheet('Sheet1', 'A1'), ssheet('Spreadsheet', 'Sheet1!A1')
-  const regex = /ssheet\s*\(\s*(?:['"]?([^'",\s!]+)['"]?\s*,\s*)?(?:['"]?([^!'",\s]+)!\s*)?['"]?([A-Za-z0-9:]+)['"]?\s*\)/g
+  // Match `ssheet(...)` capturing everything between the parens, then parse the
+  // argument list ourselves. Doing it this way (rather than one mega-regex) lets
+  // quoted names contain spaces — e.g. ssheet('Spreadsheet 1', 'Sheet1!B2'),
+  // which is exactly what GUI bindings generate.
+  // Supports: ssheet(A1), ssheet('A1'), ssheet(Sheet1, A1), ssheet('Sheet1', 'A1'),
+  //           ssheet('Spreadsheet 1', 'Sheet1!A1:B2')
+  const regex = /ssheet\s*\(([^)]*)\)/g
   let match
   while ((match = regex.exec(text)) !== null) {
+    const args = match[1]
+      .split(',')
+      .map((a) => a.trim().replace(/^['"]|['"]$/g, '').trim())
+      .filter((a) => a.length > 0)
+    if (args.length === 0) continue
+
+    let spreadsheetName: string | undefined
+    let sheetName: string | undefined
+    let rangePart: string
+
+    if (args.length >= 2) {
+      // First arg is a workbook (or sheet) name; second is `[sheet!]range`.
+      spreadsheetName = args[0]
+      rangePart = args[1]
+    } else {
+      rangePart = args[0]
+    }
+
+    const bang = rangePart.indexOf('!')
+    if (bang >= 0) {
+      sheetName = rangePart.slice(0, bang).trim()
+      rangePart = rangePart.slice(bang + 1)
+    }
+
     refs.push({
       match: match[0],
-      spreadsheetName: match[1],
-      sheetName: match[2],
-      range: match[3],
+      spreadsheetName,
+      sheetName,
+      range: rangePart.trim(),
     })
   }
   return refs
