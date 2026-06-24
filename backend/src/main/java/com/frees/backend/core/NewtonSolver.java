@@ -209,12 +209,14 @@ public class NewtonSolver {
     private double[][] analyticalJacobian(IterationContext ctx, double[] x) {
         int n = ctx.vars.size();
         // Pre-compute all derivative expressions: derivs[i][j] = d(residual_i)/d(var_j)
+        // Only compute for equations that actually depend on the variable!
         Expr[][] derivExprs = new Expr[n][n];
-        for (int i = 0; i < n; i++) {
-            Equation eq = ctx.equations.get(i);
-            // residual = lhs − rhs
-            Expr residualExpr = new Expr.BinOp('-', eq.lhs(), eq.rhs());
-            for (int j = 0; j < n; j++) {
+        for (int j = 0; j < n; j++) {
+            List<Integer> deps = ctx.varToEquations.get(j);
+            for (int i : deps) {
+                Equation eq = ctx.equations.get(i);
+                // residual = lhs − rhs
+                Expr residualExpr = new Expr.BinOp('-', eq.lhs(), eq.rhs());
                 Expr d = Differentiator.differentiate(residualExpr, ctx.vars.get(j));
                 if (d == null) {
                     return null; // fallback to numerical
@@ -225,8 +227,8 @@ public class NewtonSolver {
         // Evaluate all derivative expressions at the current point.
         writeBack(ctx.vars, x, ctx.values);
         double[][] jacobian = new double[n][n];
-        for (int i = 0; i < n; i++) {
-            for (int j = 0; j < n; j++) {
+        for (int j = 0; j < n; j++) {
+            for (int i : ctx.varToEquations.get(j)) {
                 try {
                     jacobian[i][j] = Evaluator.eval(derivExprs[i][j], ctx.values, defs);
                 } catch (Exception e) {
@@ -252,25 +254,50 @@ public class NewtonSolver {
 
     private void computeJacobianColumn(IterationContext ctx, double[] x, double[] baseResidual,
                                        double[][] jacobian, double[] perturbed, int j) {
+        List<Integer> deps = ctx.varToEquations.get(j);
+        if (deps.isEmpty()) {
+            return; // Variable does not appear in any equation; its entire column is 0.
+        }
+
         int n = ctx.vars.size();
         double h = JACOBIAN_EPS * Math.max(Math.abs(x[j]), 1.0);
+        String varName = ctx.vars.get(j);
+        
         for (int attempt = 0; attempt < 5; attempt++) {
             perturbed[j] = x[j] + h;
-            double[] residual = residuals(ctx.equations, ctx.vars, perturbed, ctx.values);
             boolean columnClean = true;
             boolean anyChange = false;
-            for (int i = 0; i < n; i++) {
-                double change = Math.abs(residual[i] - baseResidual[i]);
-                jacobian[i][j] = (residual[i] - baseResidual[i]) / h;
-                if (change > 0.0) {
-                    anyChange = true;
-                    double ulpScale = Math.ulp(Math.max(Math.abs(residual[i]), Math.abs(baseResidual[i])));
-                    if (change < 1.0e5 * ulpScale) {
-                        columnClean = false;
+            
+            // Push the single perturbed value to values map (avoid writing all variables)
+            double originalVal = ctx.values.get(varName);
+            ctx.values.put(varName, perturbed[j]);
+            
+            try {
+                // Only evaluate equations that actually depend on this variable!
+                for (int i : deps) {
+                    Equation eq = ctx.equations.get(i);
+                    double r_perturbed;
+                    try {
+                        r_perturbed = Evaluator.eval(eq.lhs(), ctx.values, defs) - Evaluator.eval(eq.rhs(), ctx.values, defs);
+                    } catch (com.frees.backend.props.PropertyEvaluationException e) {
+                        r_perturbed = Double.NaN;
+                    }
+
+                    double change = Math.abs(r_perturbed - baseResidual[i]);
+                    jacobian[i][j] = (r_perturbed - baseResidual[i]) / h;
+                    if (change > 0.0) {
+                        anyChange = true;
+                        double ulpScale = Math.ulp(Math.max(Math.abs(r_perturbed), Math.abs(baseResidual[i])));
+                        if (change < 1.0e5 * ulpScale) {
+                            columnClean = false;
+                        }
                     }
                 }
+            } finally {
+                ctx.values.put(varName, originalVal);
+                perturbed[j] = x[j];
             }
-            perturbed[j] = x[j];
+
             if (anyChange && columnClean) {
                 break;
             }
@@ -327,6 +354,7 @@ public class NewtonSolver {
         final Map<String, Double> values;
         final double[] lo;
         final double[] hi;
+        final List<List<Integer>> varToEquations;
 
         IterationContext(Block block, Map<String, Double> values, Map<String, VariableSpec> specs) {
             this.blockIndex = block.index();
@@ -340,6 +368,23 @@ public class NewtonSolver {
                 VariableSpec spec = specs.get(vars.get(i));
                 lo[i] = spec != null ? spec.lower() : Double.NEGATIVE_INFINITY;
                 hi[i] = spec != null ? spec.upper() : Double.POSITIVE_INFINITY;
+            }
+
+            // Precompute sparse dependency matrix to avoid O(N^2) evaluations
+            varToEquations = new java.util.ArrayList<>(n);
+            List<java.util.Set<String>> eqVars = new java.util.ArrayList<>(equations.size());
+            for (Equation eq : equations) {
+                eqVars.add(eq.variables());
+            }
+            for (int j = 0; j < n; j++) {
+                String varName = vars.get(j);
+                List<Integer> deps = new java.util.ArrayList<>();
+                for (int i = 0; i < equations.size(); i++) {
+                    if (eqVars.get(i).contains(varName)) {
+                        deps.add(i);
+                    }
+                }
+                varToEquations.add(deps);
             }
         }
     }
