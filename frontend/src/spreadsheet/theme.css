@@ -7,9 +7,7 @@
 
 /* Hard overrides for fortune sheet core elements in dark mode */
 [data-mantine-color-scheme='dark'] .fortune-sheet-container,
-[data-mantine-color-scheme='dark'] .fortune-sheet-container .fortune-core-container,
-[data-mantine-color-scheme='dark'] .fortune-sheet-container .fortune-col-header,
-[data-mantine-color-scheme='dark'] .fortune-sheet-container .fortune-row-header {
+[data-mantine-color-scheme='dark'] .fortune-sheet-container .fortune-core-container {
   background-color: var(--mantine-color-dark-7) !important;
 }
 
@@ -26,16 +24,27 @@
 [data-mantine-color-scheme='dark'] .fortune-sheet-container .fortune-toolbar,
 [data-mantine-color-scheme='dark'] .fortune-sheet-container .fortune-toolbar-item,
 [data-mantine-color-scheme='dark'] .fortune-sheet-container .fortune-menu,
+[data-mantine-color-scheme='dark'] .fortune-sheet-container .fortune-context-menu,
 [data-mantine-color-scheme='dark'] .fortune-sheet-container .fortune-dialog,
 [data-mantine-color-scheme='dark'] .fortune-sheet-container .fortune-fx-editor,
 [data-mantine-color-scheme='dark'] .fortune-sheet-container .fortune-fx-icon,
 [data-mantine-color-scheme='dark'] .fortune-sheet-container .fortune-name-box-container,
 [data-mantine-color-scheme='dark'] .fortune-sheet-container .fortune-name-box,
+[data-mantine-color-scheme='dark'] .fortune-sheet-container .fortune-left-top,
 [data-mantine-color-scheme='dark'] .fortune-sheet-container .luckysheet-sheet-area,
 [data-mantine-color-scheme='dark'] .fortune-sheet-container .fortune-sheettab-container {
   background-color: var(--mantine-color-dark-6) !important;
   color: var(--mantine-color-dark-0) !important;
   border-color: var(--mantine-color-dark-4) !important;
+}
+
+[data-mantine-color-scheme='dark'] .fortune-sheet-container .luckysheet-cols-menuitem-content,
+[data-mantine-color-scheme='dark'] .fortune-sheet-container .luckysheet-cols-menuitem {
+  color: var(--mantine-color-dark-0) !important;
+}
+
+[data-mantine-color-scheme='dark'] .fortune-sheet-container .fortune-context-menu-divider {
+  border-bottom: 1px solid var(--mantine-color-dark-4) !important;
 }
 
 [data-mantine-color-scheme='dark'] .fortune-sheet-container .fortune-fx-input-container,
@@ -46,7 +55,8 @@
 }
 
 [data-mantine-color-scheme='dark'] .fortune-sheet-container .fortune-toolbar-item:hover,
-[data-mantine-color-scheme='dark'] .fortune-sheet-container .fortune-menu-item:hover {
+[data-mantine-color-scheme='dark'] .fortune-sheet-container .fortune-menu-item:hover,
+[data-mantine-color-scheme='dark'] .fortune-sheet-container .luckysheet-cols-menuitem:hover {
   background-color: var(--mantine-color-dark-5) !important;
 }
 
@@ -64,6 +74,6 @@
 }
 
 [data-mantine-color-scheme='dark'] .fortune-sheet-container .fortune-icon {
-  fill: var(--mantine-color-dark-1) !important;
-  color: var(--mantine-color-dark-1) !important;
+  fill: var(--mantine-color-dark-0) !important;
+  color: var(--mantine-color-dark-0) !important;
 }
