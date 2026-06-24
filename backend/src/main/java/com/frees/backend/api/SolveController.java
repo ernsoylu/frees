@@ -3,15 +3,19 @@ package com.frees.backend.api;
 import com.frees.backend.ast.ProcDef;
 import com.frees.backend.compute.ComputeDispatcher;
 import com.frees.backend.compute.ComputeTask;
+import com.frees.backend.compute.ComputeTaskListener;
 import com.frees.backend.compute.JobTicket;
 import com.frees.backend.core.EquationSystemSolver;
+import com.frees.backend.core.ParametricAccessorContext;
 import com.frees.backend.core.SolverException;
 import com.frees.backend.core.SolverSettings;
+import com.frees.backend.core.VariableSpec;
 import com.frees.backend.parser.EquationParser;
 import com.frees.backend.props.PropertyFunctions;
 import com.frees.backend.units.UnitRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -21,11 +25,13 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 import static com.frees.backend.api.SolverApiSupport.NO_EQUATIONS_MESSAGE;
 import static com.frees.backend.api.SolverApiSupport.applyOverrides;
@@ -74,7 +80,7 @@ public class SolveController {
 
     public SolveController(EquationSystemSolver solver, SolveContextCache contextCache,
                            CyclePathResolver cyclePathResolver,
-                           org.springframework.beans.factory.ObjectProvider<ComputeDispatcher> dispatcherProvider) {
+                           ObjectProvider<ComputeDispatcher> dispatcherProvider) {
         this.solver = solver;
         this.contextCache = contextCache;
         this.cyclePathResolver = cyclePathResolver;
@@ -110,49 +116,6 @@ public class SolveController {
                                 Integer errorLine,
                                 List<SolveDtos.StateTableDto> stateTableDefs,
                                 List<SolveDtos.OdeTableDto> odeTables) {
-
-        /** Backward-compatible constructor for callers that predate ODE tables. */
-        public SolveResponse(boolean success, List<SolveDtos.VariableDto> variables,
-                             List<SolveDtos.BlockDto> blocks, List<SolveDtos.ResidualDto> residuals,
-                             SolveDtos.StatsDto stats, List<SolveDtos.SolutionDto> solutions,
-                             List<String> unitWarnings, String error,
-                             List<Map<String, Double>> cyclePath,
-                             List<SolveDtos.FunctionTableDto> codeTables,
-                             List<SolveDtos.ParametricTableDto> parametricTables,
-                             List<SolveDtos.PlotDefDto> definedPlots, Integer errorLine,
-                             List<SolveDtos.StateTableDto> stateTableDefs) {
-            this(success, variables, blocks, residuals, stats, solutions, unitWarnings,
-                    error, cyclePath, codeTables,
-                    parametricTables, definedPlots, errorLine, stateTableDefs, List.of());
-        }
-
-        /** Backward-compatible constructor for callers that predate state tables. */
-        public SolveResponse(boolean success, List<SolveDtos.VariableDto> variables,
-                             List<SolveDtos.BlockDto> blocks, List<SolveDtos.ResidualDto> residuals,
-                             SolveDtos.StatsDto stats, List<SolveDtos.SolutionDto> solutions,
-                             List<String> unitWarnings, String error,
-                             List<Map<String, Double>> cyclePath,
-                             List<SolveDtos.FunctionTableDto> codeTables,
-                             List<SolveDtos.ParametricTableDto> parametricTables,
-                             List<SolveDtos.PlotDefDto> definedPlots, Integer errorLine) {
-            this(success, variables, blocks, residuals, stats, solutions, unitWarnings,
-                    error, cyclePath, codeTables,
-                    parametricTables, definedPlots, errorLine, List.of(), List.of());
-        }
-
-        /** Backward-compatible constructor for the common no-error-line case. */
-        public SolveResponse(boolean success, List<SolveDtos.VariableDto> variables,
-                             List<SolveDtos.BlockDto> blocks, List<SolveDtos.ResidualDto> residuals,
-                             SolveDtos.StatsDto stats, List<SolveDtos.SolutionDto> solutions,
-                             List<String> unitWarnings, String error,
-                             List<Map<String, Double>> cyclePath,
-                             List<SolveDtos.FunctionTableDto> codeTables,
-                             List<SolveDtos.ParametricTableDto> parametricTables,
-                             List<SolveDtos.PlotDefDto> definedPlots) {
-            this(success, variables, blocks, residuals, stats, solutions, unitWarnings,
-                    error, cyclePath, codeTables,
-                    parametricTables, definedPlots, null, List.of(), List.of());
-        }
 
         static SolveResponse failure(String error) {
             return failure(error, null);
@@ -223,7 +186,7 @@ public class SolveController {
 
     /**
      * Runs the solve end-to-end and returns the response DTO. Used directly by
-     * the synchronous path and, via {@link com.frees.backend.compute.ComputeTaskListener},
+     * the synchronous path and, via {@link ComputeTaskListener},
      * by the asynchronous compute worker. Throws so each caller can map
      * failures to the right status (400/422/500 inline, FAILED in Redis).
      */
@@ -232,7 +195,7 @@ public class SolveController {
         SolverSettings settings = request.stopCriteria() != null
                 ? request.stopCriteria().toSettings()
                 : cappedDefaults();
-        Map<String, com.frees.backend.core.VariableSpec> specs = specsOf(request.variableInfo());
+        Map<String, VariableSpec> specs = specsOf(request.variableInfo());
         boolean findAll = Boolean.TRUE.equals(request.findAllSolutions());
 
         // REPL overrides win over the editor: drop the editor's assignment of
@@ -429,7 +392,7 @@ public class SolveController {
         SolverSettings settings = request.stopCriteria() != null
                 ? request.stopCriteria().toSettings()
                 : cappedDefaults();
-        Map<String, com.frees.backend.core.VariableSpec> specs = specsOf(request.variableInfo());
+        Map<String, VariableSpec> specs = specsOf(request.variableInfo());
         Map<String, String> unitsByLower =
                 unitsByLowerName(cleanText, request.variableInfo(), solver);
         UnitRegistry.UnitSystem system = unitSystem(request.displayUnitSystem());
@@ -493,7 +456,7 @@ public class SolveController {
     private record TableRowContext(
             String text,
             SolverSettings settings,
-            Map<String, com.frees.backend.core.VariableSpec> specs,
+            Map<String, VariableSpec> specs,
             Map<String, String> unitsByLowerName,
             UnitRegistry.UnitSystem system,
             List<String> tableVariables,
@@ -528,11 +491,11 @@ public class SolveController {
         for (int pass = 0; pass < MAX_PARAMETRIC_PASSES; pass++) {
             outcomes = new ArrayList<>();
             for (int i = 0; i < rows.size(); i++) {
-                com.frees.backend.core.ParametricAccessorContext.install(i + 1, rows.size(), columns, varOrder);
+                ParametricAccessorContext.install(i + 1, rows.size(), columns, varOrder);
                 try {
                     outcomes.add(solveTableRow(rows.get(i), context));
                 } finally {
-                    com.frees.backend.core.ParametricAccessorContext.clear();
+                    ParametricAccessorContext.clear();
                 }
             }
             Map<String, double[]> next = buildColumns(outcomes, rows.size());
@@ -552,7 +515,7 @@ public class SolveController {
             for (Map.Entry<String, Double> e : outcomes.get(i).siValues().entrySet()) {
                 columns.computeIfAbsent(e.getKey(), k -> {
                     double[] a = new double[runCount];
-                    java.util.Arrays.fill(a, Double.NaN);
+                    Arrays.fill(a, Double.NaN);
                     return a;
                 })[i] = e.getValue();
             }
@@ -581,8 +544,8 @@ public class SolveController {
         return true;
     }
 
-    private static final java.util.regex.Pattern PARAMETRIC_ACCESSOR_PATTERN =
-            java.util.regex.Pattern.compile(
+    private static final Pattern PARAMETRIC_ACCESSOR_PATTERN =
+            Pattern.compile(
                     "(?i)\\b(TableRun#|TableRun|NParametricRuns|TableValue|TableSum|TableAvg|"
                             + "TableMin|TableMax|TableStdDev|IntegralValue)\\s*\\(");
 
