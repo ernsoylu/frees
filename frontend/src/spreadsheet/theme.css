@@ -56,21 +56,8 @@
   color: var(--mantine-color-dark-1);
 }
 
-/* Worksheet tabs */
-[data-mantine-color-scheme='dark'] .frees-jss .jtabs,
-[data-mantine-color-scheme='dark'] .frees-jss .jtabs-headers {
-  background-color: var(--mantine-color-dark-7);
-  border-color: var(--mantine-color-dark-4);
-}
-[data-mantine-color-scheme='dark'] .frees-jss .jtabs-headers > div {
-  background-color: var(--mantine-color-dark-6);
-  color: var(--mantine-color-dark-1);
-  border-color: var(--mantine-color-dark-4);
-}
-[data-mantine-color-scheme='dark'] .frees-jss .jtabs-headers > div.jtabs-selected {
-  background-color: var(--mantine-color-dark-5);
-  color: var(--mantine-color-dark-0);
-}
+/* Worksheet tabs are styled by the global .jtabs rules in the portal section
+   below (jtabs is jsuites-only, so the global scope is safe). */
 
 /* In-cell editor */
 [data-mantine-color-scheme='dark'] .frees-jss .jss_worksheet td .jss_editor,
@@ -128,15 +115,63 @@
   color: var(--mantine-color-dark-2);
 }
 
-/* Border picker & color picker */
+/* Border picker (cell border style) */
 [data-mantine-color-scheme='dark'] .jpicker,
 [data-mantine-color-scheme='dark'] .jpicker-content,
-[data-mantine-color-scheme='dark'] .jcolor,
-[data-mantine-color-scheme='dark'] .jcolor-content {
+[data-mantine-color-scheme='dark'] .jpicker-header {
   background-color: var(--mantine-color-dark-6);
   color: var(--mantine-color-dark-0);
   border-color: var(--mantine-color-dark-4);
 }
-[data-mantine-color-scheme='dark'] .jpicker-grid > div:hover {
+[data-mantine-color-scheme='dark'] .jpicker-grid > div:hover,
+[data-mantine-color-scheme='dark'] .jpicker-content > div:hover {
   background-color: var(--mantine-color-dark-5);
+}
+
+/* Color picker (font / fill color) — content is hard-coded #fff upstream. */
+[data-mantine-color-scheme='dark'] .jcolor-content {
+  background-color: var(--mantine-color-dark-6);
+  color: var(--mantine-color-dark-0);
+}
+[data-mantine-color-scheme='dark'] .jcolor-controls {
+  border-bottom-color: var(--mantine-color-dark-4);
+}
+
+/* jsuites tabs (jtabs) — used both for the worksheet tabs and the color
+   picker's Grid/Spectrum/Sliders switcher. The picker portals to <body>, so
+   these rules are global (jtabs is jsuites-only, no collision with app tabs).
+   Selectors mirror jsuites' own (which hard-code light greys at specificity
+   0,3,1) and add the color-scheme attribute so they win. */
+[data-mantine-color-scheme='dark'] .jtabs,
+[data-mantine-color-scheme='dark'] .jtabs .jtabs-headers,
+[data-mantine-color-scheme='dark'] .jtabs .jtabs-content {
+  background-color: var(--mantine-color-dark-6);
+  border-color: var(--mantine-color-dark-4);
+}
+[data-mantine-color-scheme='dark'] .jtabs .jtabs-headers > div:not(.jtabs-border) {
+  background-color: var(--mantine-color-dark-7);
+  color: var(--mantine-color-dark-1);
+  border-color: var(--mantine-color-dark-4);
+}
+[data-mantine-color-scheme='dark'] .jtabs .jtabs-headers > div.jtabs-selected {
+  background-color: var(--mantine-color-dark-5);
+  color: var(--mantine-color-dark-0);
+}
+/* Inner label wrapper jsuites colours #555 */
+[data-mantine-color-scheme='dark'] .jtabs .jtabs-headers > div > div {
+  color: var(--mantine-color-dark-1);
+}
+[data-mantine-color-scheme='dark'] .jtabs .jtabs-headers > div.jtabs-selected > div {
+  color: var(--mantine-color-dark-0);
+}
+
+/* Color picker — Sliders sub-tab inputs/swatches (hard-coded #fff / #fafafa) */
+[data-mantine-color-scheme='dark'] .jcolor-sliders-input-container > label,
+[data-mantine-color-scheme='dark'] .jcolor-sliders-final-color > div:nth-child(2) {
+  color: var(--mantine-color-dark-0);
+}
+[data-mantine-color-scheme='dark'] .jcolor-sliders-input-subcontainer > input {
+  background-color: var(--mantine-color-dark-7);
+  color: var(--mantine-color-dark-0);
+  border-color: var(--mantine-color-dark-4);
 }
