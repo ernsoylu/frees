@@ -89,6 +89,17 @@ public sealed interface Expr extends java.io.Serializable permits Expr.Num, Expr
                     collectVariables(args.get(3), temp);
                     temp.remove(varName.toLowerCase());
                     out.addAll(temp);
+                } else if (lowerFn.equals("gaussintegral")
+                        && args.size() >= 4 && args.get(1) instanceof Var(String dummy)) {
+                    // GaussIntegral(f, t, a, b[, points]): t is a bound integration
+                    // variable, not a system unknown — collect the rest, minus t.
+                    Set<String> temp = new TreeSet<>();
+                    collectVariables(args.get(0), temp);
+                    temp.remove(dummy.toLowerCase());
+                    out.addAll(temp);
+                    for (int i = 2; i < args.size(); i++) {
+                        collectVariables(args.get(i), out);
+                    }
                 } else {
                     args.forEach(a -> collectVariables(a, out));
                 }

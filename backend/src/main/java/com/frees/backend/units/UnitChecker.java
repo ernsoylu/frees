@@ -557,6 +557,21 @@ public final class UnitChecker {
             }
             return Dim.UNKNOWN;
         }
+        // Dense linear-algebra, signal-processing and regression intrinsics:
+        // their results' dimensions are not tracked, so stay agnostic rather
+        // than asserting (and warning about) dimensionless arguments.
+        if (c.function().startsWith("qr$") ||
+            c.function().startsWith("chol$") ||
+            c.function().startsWith("expm$") ||
+            c.function().startsWith("svd$") ||
+            c.function().startsWith("fft$") ||
+            c.function().startsWith("ifft$") ||
+            c.function().startsWith("conv$") ||
+            c.function().startsWith("linfit$") ||
+            c.function().startsWith("polyfit$") ||
+            c.function().startsWith("interp2$")) {
+            return Dim.UNKNOWN;
+        }
         if (c.function().startsWith("ss2tf$") ||
             c.function().startsWith("tf2ss$") ||
             c.function().startsWith("ctrb$") ||
@@ -660,7 +675,15 @@ public final class UnitChecker {
             }
             // Integral(f, t, a, b) has the dimensions of f*t; the checker
             // does not track them, so stay agnostic instead of warning.
-            case "integral" -> Dim.UNKNOWN;
+            case "integral", "gaussintegral" -> Dim.UNKNOWN;
+            // Descriptive statistics carry the data's units (the data are the
+            // arguments; for percentile the first argument is the percentile p).
+            case "mean", "median", "stdev", "stddev", "std",
+                 "variance", "var", "rms" -> dimOf(args.get(0));
+            case "percentile" -> dimOf(args.get(args.size() - 1));
+            // Distribution CDF/PDF/quantile: result is a dimensionless
+            // probability/quantile; do not constrain the (possibly dimensioned) inputs.
+            case "normalcdf", "normalpdf", "normalinvcdf" -> Dim.UNKNOWN;
             default -> {
                 // sin, cos, tan, exp, ln, log10, arc*: argument must be dimensionless.
                 Dim arg = dimOf(args.get(0));

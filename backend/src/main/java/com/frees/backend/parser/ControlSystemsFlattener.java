@@ -213,6 +213,76 @@ final class ControlSystemsFlattener {
         }
     }
 
+    /**
+     * MIMO ss2tf: the transfer function from input j to output i of a
+     * multivariable state space (A n×n, B n×p, C q×n, D q×p). Because that
+     * channel's transfer function is C_i·(sI−A)⁻¹·B_j + D_ij — the SISO formula
+     * on row i of C and column j of B — this reuses the SISO {@code ss2tf$}
+     * synthetic evaluator after selecting that row/column.
+     */
+    void flattenSs2tfMimo(List<Expr> inputs, List<Expr> outputs, String sourceText, EquationParser.FlattenContext ctx) {
+        if (inputs.size() != 6 || outputs.size() != 2) {
+            throw new EquationParser.ParseException("ss2tfij expects 6 inputs (A, B, C, D, i, j) and 2 outputs (num, den), "
+                    + "e.g. CALL ss2tfij(A[1:2,1:2], B[1:2,1:2], C[1:2,1:2], D[1:2,1:2], 1, 1 : num[1:3], den[1:3])");
+        }
+        EquationParser.MatrixInfo a = parser.parseMatrixInfo(inputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        int n = a.rows;
+        if (a.cols != n) {
+            throw new EquationParser.ParseException("ss2tfij: A must be square (got " + a.rows + "x" + a.cols + ")");
+        }
+        EquationParser.MatrixInfo b = parser.parseMatrixInfo(inputs.get(1), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        EquationParser.MatrixInfo cm = parser.parseMatrixInfo(inputs.get(2), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        EquationParser.MatrixInfo dm = parser.parseMatrixInfo(inputs.get(3), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        int iout = parser.constIndex(inputs.get(4), ctx); // 1-based output index
+        int jin = parser.constIndex(inputs.get(5), ctx);  // 1-based input index
+        if (b.rows != n) {
+            throw new EquationParser.ParseException("ss2tfij: B must have n=" + n + " rows (got " + b.rows + ").");
+        }
+        if (cm.cols != n) {
+            throw new EquationParser.ParseException("ss2tfij: C must have n=" + n + " columns (got " + cm.cols + ").");
+        }
+        if (iout < 1 || iout > cm.rows) {
+            throw new EquationParser.ParseException("ss2tfij: output index i=" + iout + " out of range 1.." + cm.rows + ".");
+        }
+        if (jin < 1 || jin > b.cols) {
+            throw new EquationParser.ParseException("ss2tfij: input index j=" + jin + " out of range 1.." + b.cols + ".");
+        }
+        if (dm.rows != cm.rows || dm.cols != b.cols) {
+            throw new EquationParser.ParseException("ss2tfij: D must be q×p (" + cm.rows + "x" + b.cols + ").");
+        }
+
+        // Entries in the order evalSs2tf reconstructs: A row-major, B column j, C row i, D_ij.
+        List<Expr> entries = new ArrayList<>();
+        for (int i = 0; i < n; i++) {
+            entries.addAll(Arrays.asList(a.elements[i]));
+        }
+        for (int r = 0; r < n; r++) {
+            entries.add(b.elements[r][jin - 1]);
+        }
+        for (int col = 0; col < n; col++) {
+            entries.add(cm.elements[iout - 1][col]);
+        }
+        entries.add(dm.elements[iout - 1][jin - 1]);
+
+        EquationParser.VectorInfo num = parser.parseVectorInfo(outputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        EquationParser.VectorInfo den = parser.parseVectorInfo(outputs.get(1), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        if (num.size != n + 1 || den.size != n + 1) {
+            throw new EquationParser.ParseException("ss2tfij: num and den outputs must each have length n+1 = " + (n + 1));
+        }
+        if (outputs.get(0) instanceof Expr.ArrayAccess aa) {
+            EquationParser.registerShape(aa.name(), n + 1, 1, ctx);
+        }
+        if (outputs.get(1) instanceof Expr.ArrayAccess aa) {
+            EquationParser.registerShape(aa.name(), n + 1, 1, ctx);
+        }
+        for (int k = 0; k < n + 1; k++) {
+            ctx.out().add(new Equation(num.elements[k],
+                    new Expr.Call("ss2tf$num$" + k + "$" + n, entries), sourceText));
+            ctx.out().add(new Equation(den.elements[k],
+                    new Expr.Call("ss2tf$den$" + k + "$" + n, entries), sourceText));
+        }
+    }
+
     void flattenTf2ss(List<Expr> inputs, List<Expr> outputs, String sourceText, EquationParser.FlattenContext ctx) {
         if (inputs.size() != 2 || outputs.size() != 4) {
             throw new EquationParser.ParseException("tf2ss expects 2 inputs (num, den) and 4 outputs (A, B, C, D), "

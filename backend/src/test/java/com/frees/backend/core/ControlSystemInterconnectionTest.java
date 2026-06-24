@@ -180,14 +180,14 @@ class ControlSystemInterconnectionTest {
         // den_cl = den_ol * den_h + num_ol * num_h = [0, 1, 0.05, 0] + [0, 0, 0.8, 0.04] = [0, 1, 0.85, 0.04]
         // Let's assert these:
         assertEquals(0.0, result.variables().get("num_cl[1]"), 1e-8);
-        assertEquals(0.0, result.variables().get("num_cl[2]"), 1e-8);
-        assertEquals(0.8, result.variables().get("num_cl[3]"), 1e-8);
-        assertEquals(0.04, result.variables().get("num_cl[4]"), 1e-8);
+        assertEquals(0.8, result.variables().get("num_cl[2]"), 1e-8);
+        assertEquals(0.04, result.variables().get("num_cl[3]"), 1e-8);
+        assertEquals(0.0, result.variables().get("num_cl[4]"), 1e-8);
 
-        assertEquals(0.0, result.variables().get("den_cl[1]"), 1e-8);
-        assertEquals(1.0, result.variables().get("den_cl[2]"), 1e-8);
-        assertEquals(0.85, result.variables().get("den_cl[3]"), 1e-8);
-        assertEquals(0.04, result.variables().get("den_cl[4]"), 1e-8);
+        assertEquals(1.0, result.variables().get("den_cl[1]"), 1e-8);
+        assertEquals(0.85, result.variables().get("den_cl[2]"), 1e-8);
+        assertEquals(0.04, result.variables().get("den_cl[3]"), 1e-8);
+        assertEquals(0.0, result.variables().get("den_cl[4]"), 1e-8);
 
         assertTrue(solver.checkUnits(src, java.util.Map.of()).isEmpty(), "expected zero unit warnings");
     }

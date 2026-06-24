@@ -123,6 +123,33 @@ public final class Evaluator {
         if (c.function().startsWith("eigen$")) {
             return evalEigen(c, values, defs);
         }
+        if (c.function().startsWith("qr$")) {
+            return evalQr(c, values, defs);
+        }
+        if (c.function().startsWith("chol$")) {
+            return evalCholesky(c, values, defs);
+        }
+        if (c.function().startsWith("expm$")) {
+            return evalMatExp(c, values, defs);
+        }
+        if (c.function().startsWith("svd$")) {
+            return evalSingularValues(c, values, defs);
+        }
+        if (c.function().startsWith("fft$") || c.function().startsWith("ifft$")) {
+            return evalFft(c, values, defs);
+        }
+        if (c.function().startsWith("conv$")) {
+            return evalConvolve(c, values, defs);
+        }
+        if (c.function().startsWith("linfit$")) {
+            return evalLinFit(c, values, defs);
+        }
+        if (c.function().startsWith("polyfit$")) {
+            return evalPolyFit(c, values, defs);
+        }
+        if (c.function().startsWith("interp2$")) {
+            return evalInterp2(c, values, defs);
+        }
 
         if (c.function().startsWith("ss2tf$")) {
             return evalSs2tf(c, values, defs);
@@ -255,6 +282,29 @@ public final class Evaluator {
             case "average", "avg" -> args.stream().mapToDouble(a -> eval(a, values, defs))
                     .average().orElse(0.0);
             case "integral" -> integralQuadrature(c, values, defs);
+            case "gaussintegral" -> gaussLegendreQuadrature(c, values, defs);
+
+            // Descriptive statistics over a list of values (array slices expand
+            // into individual arguments, so Mean(v[1:n]) works directly).
+            case "mean" -> mean(statValues(args, values, defs));
+            case "median" -> median(statValues(args, values, defs));
+            case "variance", "var" -> sampleVariance(statValues(args, values, defs));
+            case "stdev", "stddev", "std" -> Math.sqrt(sampleVariance(statValues(args, values, defs)));
+            case "rms" -> rootMeanSquare(statValues(args, values, defs));
+            // Percentile(p, x1, x2, ...): p in [0, 100] is the first argument.
+            case "percentile" -> percentile(c, args, values, defs);
+
+            // Normal distribution: optional (mu, sigma) default to the standard normal.
+            case "normalcdf" -> normal(c, args, values, defs).cumulativeProbability(arg(c, args, 0, values, defs));
+            case "normalpdf" -> normal(c, args, values, defs).density(arg(c, args, 0, values, defs));
+            case "normalinvcdf" -> normal(c, args, values, defs).inverseCumulativeProbability(arg(c, args, 0, values, defs));
+
+            // Orthogonal polynomials of order n at x, via their three-term recurrences.
+            case "legendrep" -> legendreP(orderArg(c, args, values, defs), arg(c, args, 1, values, defs));
+            case "chebyshevt" -> chebyshevT(orderArg(c, args, values, defs), arg(c, args, 1, values, defs));
+            case "chebyshevu" -> chebyshevU(orderArg(c, args, values, defs), arg(c, args, 1, values, defs));
+            case "hermiteh" -> hermiteH(orderArg(c, args, values, defs), arg(c, args, 1, values, defs));
+            case "laguerrel" -> laguerreL(orderArg(c, args, values, defs), arg(c, args, 1, values, defs));
 
             // Hyperbolic functions
             case "sinh" -> Math.sinh(arg(c, args, 0, values, defs));
@@ -670,6 +720,141 @@ public final class Evaluator {
         return v.getEntry(component);
     }
 
+    /** Reads {@code rows*cols} row-major entries starting at {@code offset} into a dense matrix. */
+    private static double[][] readMatrix(List<Expr> args, int offset, int rows, int cols,
+                                         Map<String, Double> values, Map<String, ProcDef> defs) {
+        double[][] m = new double[rows][cols];
+        for (int i = 0; i < rows; i++) {
+            for (int j = 0; j < cols; j++) {
+                m[i][j] = eval(args.get(offset + i * cols + j), values, defs);
+            }
+        }
+        return m;
+    }
+
+    /** Reads {@code len} entries starting at {@code offset} into a vector. */
+    private static double[] readVector(List<Expr> args, int offset, int len,
+                                       Map<String, Double> values, Map<String, ProcDef> defs) {
+        double[] v = new double[len];
+        for (int i = 0; i < len; i++) {
+            v[i] = eval(args.get(offset + i), values, defs);
+        }
+        return v;
+    }
+
+    // Synthetic qr$q$<i>$<j>$<m>$<n> / qr$r$<i>$<j>$<m>$<n>: reconstruct the m×n
+    // matrix from row-major entries and return the requested Q or R element.
+    private static double evalQr(Expr.Call c, Map<String, Double> values, Map<String, ProcDef> defs) {
+        String[] parts = c.function().split("\\$");
+        boolean wantQ = parts[1].equals("q");
+        int i = Integer.parseInt(parts[2]);
+        int j = Integer.parseInt(parts[3]);
+        int m = Integer.parseInt(parts[4]);
+        int n = Integer.parseInt(parts[5]);
+        double[][] a = readMatrix(c.args(), 0, m, n, values, defs);
+        double[][] factor = wantQ
+                ? com.frees.backend.core.LinearAlgebra.qrQ(a)
+                : com.frees.backend.core.LinearAlgebra.qrR(a);
+        return factor[i][j];
+    }
+
+    // Synthetic chol$l$<i>$<j>$<n>: lower-triangular Cholesky factor element.
+    private static double evalCholesky(Expr.Call c, Map<String, Double> values, Map<String, ProcDef> defs) {
+        String[] parts = c.function().split("\\$");
+        int i = Integer.parseInt(parts[2]);
+        int j = Integer.parseInt(parts[3]);
+        int n = Integer.parseInt(parts[4]);
+        double[][] a = readMatrix(c.args(), 0, n, n, values, defs);
+        return com.frees.backend.core.LinearAlgebra.choleskyL(a)[i][j];
+    }
+
+    // Synthetic expm$<i>$<j>$<n>: matrix-exponential element.
+    private static double evalMatExp(Expr.Call c, Map<String, Double> values, Map<String, ProcDef> defs) {
+        String[] parts = c.function().split("\\$");
+        int i = Integer.parseInt(parts[1]);
+        int j = Integer.parseInt(parts[2]);
+        int n = Integer.parseInt(parts[3]);
+        double[][] a = readMatrix(c.args(), 0, n, n, values, defs);
+        return com.frees.backend.core.LinearAlgebra.expm(a)[i][j];
+    }
+
+    // Synthetic svd$s$<k>$<m>$<n>: k-th singular value (non-increasing order).
+    private static double evalSingularValues(Expr.Call c, Map<String, Double> values, Map<String, ProcDef> defs) {
+        String[] parts = c.function().split("\\$");
+        int k = Integer.parseInt(parts[2]);
+        int m = Integer.parseInt(parts[3]);
+        int n = Integer.parseInt(parts[4]);
+        double[][] a = readMatrix(c.args(), 0, m, n, values, defs);
+        return com.frees.backend.core.LinearAlgebra.singularValues(a)[k];
+    }
+
+    // Synthetic fft$re|im$<k>$<n> / ifft$...: DFT (or inverse) of the complex
+    // sequence carried as the first n args (real) followed by n args (imag).
+    private static double evalFft(Expr.Call c, Map<String, Double> values, Map<String, ProcDef> defs) {
+        String[] parts = c.function().split("\\$");
+        boolean inverse = parts[0].equals("ifft");
+        boolean wantRe = parts[1].equals("re");
+        int k = Integer.parseInt(parts[2]);
+        int n = Integer.parseInt(parts[3]);
+        double[] re = readVector(c.args(), 0, n, values, defs);
+        double[] im = readVector(c.args(), n, n, values, defs);
+        double[][] out = com.frees.backend.core.SignalProcessing.dft(re, im, inverse);
+        return wantRe ? out[0][k] : out[1][k];
+    }
+
+    // Synthetic conv$<k>$<m>$<n>: k-th element of the linear convolution.
+    private static double evalConvolve(Expr.Call c, Map<String, Double> values, Map<String, ProcDef> defs) {
+        String[] parts = c.function().split("\\$");
+        int k = Integer.parseInt(parts[1]);
+        int m = Integer.parseInt(parts[2]);
+        int n = Integer.parseInt(parts[3]);
+        double[] a = readVector(c.args(), 0, m, values, defs);
+        double[] b = readVector(c.args(), m, n, values, defs);
+        return com.frees.backend.core.SignalProcessing.convolve(a, b)[k];
+    }
+
+    // Synthetic linfit$slope|intercept|r2$<n>: OLS line fit over (x, y).
+    private static double evalLinFit(Expr.Call c, Map<String, Double> values, Map<String, ProcDef> defs) {
+        String[] parts = c.function().split("\\$");
+        String which = parts[1];
+        int n = Integer.parseInt(parts[2]);
+        double[] x = readVector(c.args(), 0, n, values, defs);
+        double[] y = readVector(c.args(), n, n, values, defs);
+        double[] fit = com.frees.backend.core.Statistics.linFit(x, y);
+        return switch (which) {
+            case "slope" -> fit[0];
+            case "intercept" -> fit[1];
+            case "r2" -> fit[2];
+            default -> throw new IllegalStateException("Unknown LinFit output: " + which);
+        };
+    }
+
+    // Synthetic polyfit$<k>$<deg>$<n>: k-th (ascending-power) least-squares coefficient.
+    private static double evalPolyFit(Expr.Call c, Map<String, Double> values, Map<String, ProcDef> defs) {
+        String[] parts = c.function().split("\\$");
+        int k = Integer.parseInt(parts[1]);
+        int degree = Integer.parseInt(parts[2]);
+        int n = Integer.parseInt(parts[3]);
+        double[] x = readVector(c.args(), 0, n, values, defs);
+        double[] y = readVector(c.args(), n, n, values, defs);
+        return com.frees.backend.core.Statistics.polyFit(x, y, degree)[k];
+    }
+
+    // Synthetic interp2$<m>$<n>: regular-grid 2-D interpolation at (xq, yq).
+    // Args: x (m), y (n), Z (m×n row-major), xq, yq.
+    private static double evalInterp2(Expr.Call c, Map<String, Double> values, Map<String, ProcDef> defs) {
+        String[] parts = c.function().split("\\$");
+        int m = Integer.parseInt(parts[1]);
+        int n = Integer.parseInt(parts[2]);
+        List<Expr> args = c.args();
+        double[] x = readVector(args, 0, m, values, defs);
+        double[] y = readVector(args, m, n, values, defs);
+        double[][] z = readMatrix(args, m + n, m, n, values, defs);
+        double xq = eval(args.get(m + n + m * n), values, defs);
+        double yq = eval(args.get(m + n + m * n + 1), values, defs);
+        return com.frees.backend.core.Interpolation2D.interpolate(x, y, z, xq, yq);
+    }
+
     /**
      * Evaluates a synthetic ss2tf$num$<k>$<n> or ss2tf$den$<k>$<n> call: rebuilds
      * the state-space matrices from the argument list and returns the k-th
@@ -888,6 +1073,206 @@ public final class Evaluator {
                     "Function " + c.function() + " expects at least " + (i + 1) + " argument(s)");
         }
         return eval(args.get(i), values, defs);
+    }
+
+    /** Reads a non-negative polynomial order from argument 0. */
+    private static int orderArg(Expr.Call c, List<Expr> args, Map<String, Double> values, Map<String, ProcDef> defs) {
+        int n = (int) Math.round(arg(c, args, 0, values, defs));
+        if (n < 0) {
+            throw new IllegalStateException(c.function() + ": polynomial order must be >= 0, got " + n + ".");
+        }
+        return n;
+    }
+
+    /** Legendre polynomial Pₙ(x): P₀=1, P₁=x, (n+1)Pₙ₊₁=(2n+1)x·Pₙ − n·Pₙ₋₁. */
+    private static double legendreP(int n, double x) {
+        if (n == 0) {
+            return 1.0;
+        }
+        double pPrev = 1.0;
+        double pCurr = x;
+        for (int k = 1; k < n; k++) {
+            double pNext = ((2 * k + 1) * x * pCurr - k * pPrev) / (k + 1);
+            pPrev = pCurr;
+            pCurr = pNext;
+        }
+        return pCurr;
+    }
+
+    /** Chebyshev polynomial of the first kind Tₙ(x): T₀=1, T₁=x, Tₙ₊₁=2x·Tₙ − Tₙ₋₁. */
+    private static double chebyshevT(int n, double x) {
+        if (n == 0) {
+            return 1.0;
+        }
+        double tPrev = 1.0;
+        double tCurr = x;
+        for (int k = 1; k < n; k++) {
+            double tNext = 2 * x * tCurr - tPrev;
+            tPrev = tCurr;
+            tCurr = tNext;
+        }
+        return tCurr;
+    }
+
+    /** Chebyshev polynomial of the second kind Uₙ(x): U₀=1, U₁=2x, Uₙ₊₁=2x·Uₙ − Uₙ₋₁. */
+    private static double chebyshevU(int n, double x) {
+        if (n == 0) {
+            return 1.0;
+        }
+        double uPrev = 1.0;
+        double uCurr = 2 * x;
+        for (int k = 1; k < n; k++) {
+            double uNext = 2 * x * uCurr - uPrev;
+            uPrev = uCurr;
+            uCurr = uNext;
+        }
+        return uCurr;
+    }
+
+    /** Physicists' Hermite polynomial Hₙ(x): H₀=1, H₁=2x, Hₙ₊₁=2x·Hₙ − 2n·Hₙ₋₁. */
+    private static double hermiteH(int n, double x) {
+        if (n == 0) {
+            return 1.0;
+        }
+        double hPrev = 1.0;
+        double hCurr = 2 * x;
+        for (int k = 1; k < n; k++) {
+            double hNext = 2 * x * hCurr - 2 * k * hPrev;
+            hPrev = hCurr;
+            hCurr = hNext;
+        }
+        return hCurr;
+    }
+
+    /** Laguerre polynomial Lₙ(x): L₀=1, L₁=1−x, (n+1)Lₙ₊₁=(2n+1−x)Lₙ − n·Lₙ₋₁. */
+    private static double laguerreL(int n, double x) {
+        if (n == 0) {
+            return 1.0;
+        }
+        double lPrev = 1.0;
+        double lCurr = 1.0 - x;
+        for (int k = 1; k < n; k++) {
+            double lNext = ((2 * k + 1 - x) * lCurr - k * lPrev) / (k + 1);
+            lPrev = lCurr;
+            lCurr = lNext;
+        }
+        return lCurr;
+    }
+
+    /** Evaluates every argument into a flat array (used by the descriptive-statistics builtins). */
+    private static double[] statValues(List<Expr> args, Map<String, Double> values, Map<String, ProcDef> defs) {
+        return args.stream().mapToDouble(a -> eval(a, values, defs)).toArray();
+    }
+
+    private static double mean(double[] v) {
+        if (v.length == 0) {
+            throw new IllegalStateException("Mean requires at least one value.");
+        }
+        double s = 0.0;
+        for (double x : v) {
+            s += x;
+        }
+        return s / v.length;
+    }
+
+    private static double median(double[] v) {
+        if (v.length == 0) {
+            throw new IllegalStateException("Median requires at least one value.");
+        }
+        double[] sorted = v.clone();
+        java.util.Arrays.sort(sorted);
+        int n = sorted.length;
+        return (n % 2 == 1) ? sorted[n / 2] : 0.5 * (sorted[n / 2 - 1] + sorted[n / 2]);
+    }
+
+    /** Unbiased (n−1) sample variance; 0 for a single value. */
+    private static double sampleVariance(double[] v) {
+        if (v.length == 0) {
+            throw new IllegalStateException("Variance requires at least one value.");
+        }
+        if (v.length == 1) {
+            return 0.0;
+        }
+        double m = mean(v);
+        double ss = 0.0;
+        for (double x : v) {
+            double d = x - m;
+            ss += d * d;
+        }
+        return ss / (v.length - 1);
+    }
+
+    private static double rootMeanSquare(double[] v) {
+        if (v.length == 0) {
+            throw new IllegalStateException("RMS requires at least one value.");
+        }
+        double ss = 0.0;
+        for (double x : v) {
+            ss += x * x;
+        }
+        return Math.sqrt(ss / v.length);
+    }
+
+    /** Percentile(p, x1, x2, …): linear-interpolation percentile of the data, p in [0, 100]. */
+    private static double percentile(Expr.Call c, List<Expr> args, Map<String, Double> values, Map<String, ProcDef> defs) {
+        if (args.size() < 2) {
+            throw new IllegalStateException("Percentile expects Percentile(p, value1, value2, ...).");
+        }
+        double p = eval(args.get(0), values, defs);
+        double[] data = statValues(args.subList(1, args.size()), values, defs);
+        org.apache.commons.math3.stat.descriptive.rank.Percentile pct =
+                new org.apache.commons.math3.stat.descriptive.rank.Percentile();
+        pct.setData(data);
+        return pct.evaluate(Math.max(1.0e-9, Math.min(100.0, p)));
+    }
+
+    /** Builds a normal distribution from optional (mu, sigma) trailing arguments. */
+    private static org.apache.commons.math3.distribution.NormalDistribution normal(
+            Expr.Call c, List<Expr> args, Map<String, Double> values, Map<String, ProcDef> defs) {
+        double mu = args.size() > 1 ? eval(args.get(1), values, defs) : 0.0;
+        double sigma = args.size() > 2 ? eval(args.get(2), values, defs) : 1.0;
+        if (sigma <= 0.0) {
+            throw new IllegalStateException(c.function() + ": standard deviation must be positive, got " + sigma + ".");
+        }
+        return new org.apache.commons.math3.distribution.NormalDistribution(mu, sigma);
+    }
+
+    /**
+     * Adaptive Gauss–Legendre quadrature of {@code GaussIntegral(f, t, a, b[, points])}.
+     * Complements the adaptive-Simpson {@code Integral}: Gauss–Legendre converges
+     * faster on smooth integrands. {@code points} (per panel) defaults to 5.
+     */
+    private static double gaussLegendreQuadrature(Expr.Call c, Map<String, Double> values, Map<String, ProcDef> defs) {
+        List<Expr> args = c.args();
+        if (args.size() < 4 || !(args.get(1) instanceof Expr.Var(String varName))) {
+            throw new IllegalStateException("GaussIntegral expects GaussIntegral(f, t, lower, upper[, points]).");
+        }
+        double lower = eval(args.get(2), values, defs);
+        double upper = eval(args.get(3), values, defs);
+        if (lower == upper) {
+            return 0.0;
+        }
+        int points = args.size() > 4 ? (int) Math.round(eval(args.get(4), values, defs)) : 5;
+        points = Math.max(2, Math.min(64, points));
+        Expr f = args.get(0);
+        boolean had = values.containsKey(varName);
+        Double saved = had ? values.get(varName) : null;
+        try {
+            org.apache.commons.math3.analysis.UnivariateFunction fn = t -> {
+                values.put(varName, t);
+                return eval(f, values, defs);
+            };
+            org.apache.commons.math3.analysis.integration.IterativeLegendreGaussIntegrator integrator =
+                    new org.apache.commons.math3.analysis.integration.IterativeLegendreGaussIntegrator(
+                            points, 1.0e-10, 1.0e-10, 2, 64);
+            return integrator.integrate(Integer.MAX_VALUE, fn, lower, upper);
+        } finally {
+            if (had) {
+                values.put(varName, saved);
+            } else {
+                values.remove(varName);
+            }
+        }
     }
 
     /**
