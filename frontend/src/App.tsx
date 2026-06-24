@@ -427,6 +427,61 @@ export default function App() {
     if (!solving) setFillMissingFor(null)
   }, [solving])
 
+  // Phase 3.3 Auto-Sync Mode: Sync result bindings back to spreadsheets if autoSync is enabled
+  useEffect(() => {
+    if (!result?.success || !result.variables) return
+
+    setSpreadsheets((prev) => {
+      let changed = false
+      const next = prev.map((ss) => {
+        if (!ss.autoSync || !ss.resultBindings || Object.keys(ss.resultBindings).length === 0) return ss
+
+        let sheetChanged = false
+        const newSheets = [...(ss.sheets as any[])]
+        
+        for (const [varName, refStr] of Object.entries(ss.resultBindings)) {
+          const variable = result.variables.find((v) => v.name.toLowerCase() === varName.toLowerCase())
+          if (!variable || variable.value === undefined) continue
+
+          const refMatch = refStr.match(/^(?:([^!]+)!)?([A-Za-z]+)(\d+)$/)
+          if (!refMatch) continue
+          const sheetName = refMatch[1]
+          const colStr = refMatch[2]
+          const rowStr = refMatch[3]
+
+          let c = 0
+          for (let i = 0; i < colStr.length; i++) c = c * 26 + (colStr.charCodeAt(i) - 64)
+          c -= 1
+          const r = parseInt(rowStr, 10) - 1
+
+          const sheetIndex = newSheets.findIndex((sh) => sh.name && sh.name.toLowerCase() === sheetName.toLowerCase())
+          if (sheetIndex === -1) continue
+
+          const targetSheet = { ...newSheets[sheetIndex] }
+          targetSheet.celldata = [...(targetSheet.celldata || [])]
+
+          const cellIndex = targetSheet.celldata.findIndex((cd: any) => cd.r === r && cd.c === c)
+          if (cellIndex !== -1) {
+            targetSheet.celldata[cellIndex] = { ...targetSheet.celldata[cellIndex], v: { ...targetSheet.celldata[cellIndex].v, v: variable.value, m: String(variable.value) } }
+          } else {
+            targetSheet.celldata.push({ r, c, v: { v: variable.value, m: String(variable.value) } })
+          }
+          
+          newSheets[sheetIndex] = targetSheet
+          sheetChanged = true
+        }
+
+        if (sheetChanged) {
+          changed = true
+          return { ...ss, sheets: newSheets }
+        }
+        return ss
+      })
+
+      return changed ? next : prev
+    })
+  }, [result])
+
   // Mark the project dirty whenever content changes, unless the change came from
   // an explicit load/new/save (suppressDirtyRef lets those operations opt out).
   useEffect(() => {
