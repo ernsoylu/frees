@@ -97,8 +97,6 @@ const WhiteboardTab = lazy(() => import('./whiteboard/WhiteboardTab'))
 // plot-config modals are also code-split: the Plotly figure machinery is large
 // and only needed once a plot window is opened or a modal is invoked.
 const PlotTab = lazy(() => import('./PlotTab'))
-// FormattedReportView pulls in the inline-plot (figure/Plotly) machinery, so it
-// is code-split and only loaded when a compiled report is shown.
 const MinMaxModal = lazy(() => import('./MinMaxModal'))
 const CurveFitModal = lazy(() => import('./CurveFitModal'))
 const PlotConfigModal = lazy(() => import('./plots/PlotConfigModal'))
@@ -766,7 +764,6 @@ export default function App() {
         unitWarnings: [],
         inferredUnits: {},
         message: `Could not reach the solver backend: ${String(e)}`,
-        formattedEquations: [],
       }
       setCheckResult(errorResponse)
       return errorResponse
@@ -907,7 +904,6 @@ export default function App() {
           solutions: [],
           unitWarnings: prev?.unitWarnings ?? [],
           error: null,
-          formattedEquations: prev?.formattedEquations ?? [],
         }))
       }
       return true
@@ -1015,7 +1011,6 @@ export default function App() {
         solutions: [],
         unitWarnings: [],
         error: `Could not reach the solver backend: ${String(e)}`,
-        formattedEquations: [],
       })
       setLastSolvedWithFillMissing(false)
       return false
@@ -1898,7 +1893,6 @@ export default function App() {
           projectName={projectName}
           checking={checking}
           solving={solving}
-          solvable={solvable}
           onCheck={checkWithFallback}
           onSolve={checkThenSolve}
           checkingTableId={checkingTableId}

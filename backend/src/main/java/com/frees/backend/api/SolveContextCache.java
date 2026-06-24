@@ -14,8 +14,11 @@ import org.springframework.core.env.Profiles;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 
+import java.io.Serializable;
+import java.time.Duration;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -122,18 +125,18 @@ public class SolveContextCache {
         try {
             String json = objectMapper.writeValueAsString(session);
             redisTemplate.opsForValue().set(redisKey(sessionId), json,
-                    java.time.Duration.ofSeconds(REDIS_TTL_SECONDS));
+                    Duration.ofSeconds(REDIS_TTL_SECONDS));
         } catch (Exception e) {
             log.warn("Failed to mirror session {} to Redis", sessionId, e);
         }
     }
 
     /** One workspace variable as the user sees it: display value, unit, uncertainty. */
-    public record ReplVar(double value, String unit, Double uncertainty) implements java.io.Serializable {}
+    public record ReplVar(double value, String unit, Double uncertainty) implements Serializable {}
 
     /** Mutable per-document state: the last solve snapshot plus REPL-defined vars. */
     @JsonAutoDetect(fieldVisibility = Visibility.ANY, getterVisibility = Visibility.NONE)
-    public static final class Session implements java.io.Serializable {
+    public static final class Session implements Serializable {
         private static final long serialVersionUID = 1L;
         // --- solve snapshot (replaced wholesale on each solve) ---
         private volatile Map<String, Double> siValues = Map.of();      // lowercased name -> SI value
@@ -188,7 +191,7 @@ public class SolveContextCache {
         /** Variable names for tab-completion: solve snapshot names plus REPL-defined ones. */
         public List<String> completionNames() {
             if (overlayDisplay.isEmpty()) return names;
-            java.util.LinkedHashSet<String> all = new java.util.LinkedHashSet<>(names);
+            LinkedHashSet<String> all = new LinkedHashSet<>(names);
             all.addAll(overlayDisplay.keySet());
             return List.copyOf(all);
         }

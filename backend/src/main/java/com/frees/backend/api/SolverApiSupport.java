@@ -8,8 +8,11 @@ import com.frees.backend.units.UnitRegistry;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Stateless helpers and request-scoped DTOs shared across the solve-family
@@ -91,15 +94,15 @@ final class SolverApiSupport {
      * Because the extractor's cleanText is line-for-line aligned with the editor
      * text, that line number is also the editor line. Returns the 1-based line of
      * the first error, or null if none can be parsed. */
-    private static final java.util.regex.Pattern ERROR_LINE_PATTERN =
-            java.util.regex.Pattern.compile("^line (\\d+):");
+    private static final Pattern ERROR_LINE_PATTERN =
+            Pattern.compile("^line (\\d+):");
 
     static Integer parseErrorLine(String message) {
         if (message == null) {
             return null;
         }
         String first = message.lines().findFirst().orElse(message).trim();
-        java.util.regex.Matcher m = ERROR_LINE_PATTERN.matcher(first);
+        Matcher m = ERROR_LINE_PATTERN.matcher(first);
         if (m.find()) {
             try {
                 return Integer.parseInt(m.group(1));
@@ -262,7 +265,7 @@ final class SolverApiSupport {
         if (overrides == null || overrides.isEmpty()) {
             return cleanText;
         }
-        java.util.Map<String, String> byName = new java.util.LinkedHashMap<>();
+        Map<String, String> byName = new LinkedHashMap<>();
         for (String ov : overrides) {
             if (ov == null) {
                 continue;
@@ -279,15 +282,15 @@ final class SolverApiSupport {
         if (byName.isEmpty()) {
             return cleanText;
         }
-        java.util.List<java.util.regex.Pattern> assigns = byName.keySet().stream()
-                .map(n -> java.util.regex.Pattern.compile(
-                        "^\\s*" + java.util.regex.Pattern.quote(n) + "\\s*=.*",
-                        java.util.regex.Pattern.CASE_INSENSITIVE))
+        List<Pattern> assigns = byName.keySet().stream()
+                .map(n -> Pattern.compile(
+                        "^\\s*" + Pattern.quote(n) + "\\s*=.*",
+                        Pattern.CASE_INSENSITIVE))
                 .toList();
 
         StringBuilder sb = new StringBuilder();
         for (String line : cleanText.split("\n", -1)) {
-            java.util.List<String> kept = new ArrayList<>();
+            List<String> kept = new ArrayList<>();
             for (String seg : line.split(";")) {
                 boolean overridden = assigns.stream().anyMatch(p -> p.matcher(seg).matches());
                 if (!overridden) {

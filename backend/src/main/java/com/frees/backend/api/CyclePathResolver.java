@@ -10,12 +10,15 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Resolves thermodynamic state points and builds the cycle-path trace for the
@@ -71,14 +74,14 @@ public class CyclePathResolver {
             .sorted((a, b) -> Integer.compare(b.length(), a.length()))
             .toList();
 
-    private static final java.util.regex.Pattern BLOCK_BRACKET_STATE =
-            java.util.regex.Pattern.compile("^([a-zA-Z][a-zA-Z_]*)\\[(\\d+)\\]$");
-    private static final java.util.regex.Pattern BLOCK_PLAIN_STATE =
-            java.util.regex.Pattern.compile("^([a-zA-Z][a-zA-Z_]*?)(_?)(\\d+)$");
+    private static final Pattern BLOCK_BRACKET_STATE =
+            Pattern.compile("^([a-zA-Z][a-zA-Z_]*)\\[(\\d+)\\]$");
+    private static final Pattern BLOCK_PLAIN_STATE =
+            Pattern.compile("^([a-zA-Z][a-zA-Z_]*?)(_?)(\\d+)$");
 
     /** A state-indexed variable, either {@code name_3} or {@code name[3]}. */
-    private static final java.util.regex.Pattern STATE_VAR_INDEX =
-            java.util.regex.Pattern.compile(
+    private static final Pattern STATE_VAR_INDEX =
+            Pattern.compile(
                     "^([a-zA-Z][a-zA-Z_]*?)_?(\\d+)$|^([a-zA-Z][a-zA-Z_]*)\\[(\\d+)\\]$");
 
     private static final List<PropPair> PREFERRED_PAIRS = List.of(
@@ -197,8 +200,8 @@ public class CyclePathResolver {
         final Map<Integer, String> stateStyle = new HashMap<>();
     }
 
-    private void parseAndPopulateState(String name, Double value, StateData data, java.util.regex.Pattern pattern) {
-        java.util.regex.Matcher m = pattern.matcher(name);
+    private void parseAndPopulateState(String name, Double value, StateData data, Pattern pattern) {
+        Matcher m = pattern.matcher(name);
         if (!m.matches()) {
             return;
         }
@@ -228,7 +231,7 @@ public class CyclePathResolver {
 
     private StateData parseStateVariables(Map<String, Double> variables) {
         StateData data = new StateData();
-        java.util.regex.Pattern pattern = STATE_VAR_INDEX;
+        Pattern pattern = STATE_VAR_INDEX;
 
         for (Map.Entry<String, Double> entry : variables.entrySet()) {
             parseAndPopulateState(entry.getKey(), entry.getValue(), data, pattern);
@@ -412,13 +415,13 @@ public class CyclePathResolver {
         String prefix;
         int index;
         String tail;
-        java.util.regex.Matcher br = BLOCK_BRACKET_STATE.matcher(lower);
+        Matcher br = BLOCK_BRACKET_STATE.matcher(lower);
         if (br.matches()) {
             prefix = br.group(1);
             index = Integer.parseInt(br.group(2));
             tail = "[" + index + "]";
         } else {
-            java.util.regex.Matcher pl = BLOCK_PLAIN_STATE.matcher(lower);
+            Matcher pl = BLOCK_PLAIN_STATE.matcher(lower);
             if (!pl.matches()) {
                 return;
             }
@@ -442,7 +445,7 @@ public class CyclePathResolver {
         data.stateStyle.putIfAbsent(index, "%s" + tag + tail);
     }
 
-    private static boolean containsIgnoreCase(java.util.Collection<String> list, String target) {
+    private static boolean containsIgnoreCase(Collection<String> list, String target) {
         if (list == null || target == null) return false;
         for (String s : list) {
             if (target.equalsIgnoreCase(s)) return true;
@@ -452,10 +455,10 @@ public class CyclePathResolver {
 
     private Map<Integer, Map<String, Double>> groupStateKnowns(Map<String, Double> variables) {
         Map<Integer, Map<String, Double>> stateKnowns = new HashMap<>();
-        java.util.regex.Pattern pattern = STATE_VAR_INDEX;
+        Pattern pattern = STATE_VAR_INDEX;
 
         for (Map.Entry<String, Double> entry : variables.entrySet()) {
-            java.util.regex.Matcher m = pattern.matcher(entry.getKey());
+            Matcher m = pattern.matcher(entry.getKey());
             if (m.matches()) {
                 String propName = (m.group(1) != null) ? m.group(1) : m.group(3);
                 String idxStr = (m.group(2) != null) ? m.group(2) : m.group(4);

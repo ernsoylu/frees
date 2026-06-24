@@ -110,13 +110,19 @@ public class ComputeTaskListener {
                 }
             };
 
-    private void dispatch(ComputeTask task) {        try {
+    private void dispatch(ComputeTask task) {
+        try {
             switch (task.taskType()) {
-                case ComputeTask.SOLVE -> handleSolve(task);
-                case ComputeTask.SOLVE_TABLE -> handleSolveTable(task);
-                case ComputeTask.OPTIMIZE -> handleOptimize(task);
-                case ComputeTask.OPTIMIZE_MULTI -> handleOptimizeMulti(task);
-                case ComputeTask.CURVE_FIT -> handleCurveFit(task);
+                case ComputeTask.SOLVE -> handle(task, "Solve", SolveController.SolveRequest.class,
+                        req -> solveController.computeSolve(req, task.sessionId()));
+                case ComputeTask.SOLVE_TABLE -> handle(task, "Solve-table", SolveController.SolveTableRequest.class,
+                        solveController::computeSolveTable);
+                case ComputeTask.OPTIMIZE -> handle(task, "Optimize", OptimizeController.OptimizeRequest.class,
+                        optimizeController::computeOptimize);
+                case ComputeTask.OPTIMIZE_MULTI -> handle(task, "Multi-objective", OptimizeController.MultiObjectiveRequest.class,
+                        optimizeController::computeOptimizeMulti);
+                case ComputeTask.CURVE_FIT -> handle(task, "Curve-fit", OptimizeController.CurveFitRequest.class,
+                        optimizeController::computeCurveFit);
                 case ComputeTask.WARMUP -> log.info("Received WARMUP task, acknowledging and dropping.");
                 default -> jobStore.saveFailed(task.jobId(),
                         "Unknown task type: " + task.taskType());
@@ -128,69 +134,28 @@ public class ComputeTaskListener {
         }
     }
 
-    private void handleSolve(ComputeTask task) {
+    /**
+     * Deserialises {@code task.requestJson()} into {@code requestType}, runs the
+     * solver {@code computation}, and records the outcome in Redis: COMPLETED with
+     * the response, or FAILED with the error message. A solver that throws fails
+     * only its own job — it never propagates out to break the listener.
+     */
+    private <Q, R> void handle(ComputeTask task, String label, Class<Q> requestType,
+                               SolverCall<Q, R> computation) {
         try {
-            SolveController.SolveRequest request =
-                    objectMapper.readValue(task.requestJson(), SolveController.SolveRequest.class);
-            SolveController.SolveResponse response =
-                    solveController.computeSolve(request, task.sessionId());
+            Q request = objectMapper.readValue(task.requestJson(), requestType);
+            R response = computation.apply(request);
             jobStore.saveCompleted(task.jobId(), response);
         } catch (Exception e) {
-            log.warn("Solve job {} failed: {}", task.jobId(), e.getMessage());
+            log.warn("{} job {} failed: {}", label, task.jobId(), e.getMessage());
             jobStore.saveFailed(task.jobId(), errorMessage(e));
         }
     }
 
-    private void handleSolveTable(ComputeTask task) {
-        try {
-            SolveController.SolveTableRequest request =
-                    objectMapper.readValue(task.requestJson(), SolveController.SolveTableRequest.class);
-            SolveController.SolveTableResponse response =
-                    solveController.computeSolveTable(request);
-            jobStore.saveCompleted(task.jobId(), response);
-        } catch (Exception e) {
-            log.warn("Solve-table job {} failed: {}", task.jobId(), e.getMessage());
-            jobStore.saveFailed(task.jobId(), errorMessage(e));
-        }
-    }
-
-    private void handleOptimize(ComputeTask task) {
-        try {
-            OptimizeController.OptimizeRequest request =
-                    objectMapper.readValue(task.requestJson(), OptimizeController.OptimizeRequest.class);
-            OptimizeController.OptimizeResponse response =
-                    optimizeController.computeOptimize(request);
-            jobStore.saveCompleted(task.jobId(), response);
-        } catch (Exception e) {
-            log.warn("Optimize job {} failed: {}", task.jobId(), e.getMessage());
-            jobStore.saveFailed(task.jobId(), errorMessage(e));
-        }
-    }
-
-    private void handleOptimizeMulti(ComputeTask task) {
-        try {
-            OptimizeController.MultiObjectiveRequest request =
-                    objectMapper.readValue(task.requestJson(), OptimizeController.MultiObjectiveRequest.class);
-            OptimizeController.ParetoResponse response =
-                    optimizeController.computeOptimizeMulti(request);
-            jobStore.saveCompleted(task.jobId(), response);
-        } catch (Exception e) {
-            log.warn("Multi-objective job {} failed: {}", task.jobId(), e.getMessage());
-            jobStore.saveFailed(task.jobId(), errorMessage(e));
-        }
-    }
-
-    private void handleCurveFit(ComputeTask task) {
-        try {
-            OptimizeController.CurveFitRequest request =
-                    objectMapper.readValue(task.requestJson(), OptimizeController.CurveFitRequest.class);
-            OptimizeController.CurveFitResponse response =
-                    optimizeController.computeCurveFit(request);
-            jobStore.saveCompleted(task.jobId(), response);
-        } catch (Exception e) {
-            log.warn("Curve-fit job {} failed: {}", task.jobId(), e.getMessage());
-            jobStore.saveFailed(task.jobId(), errorMessage(e));
-        }
+    /** A solver invocation that may throw checked exceptions (parse/solver failures). */
+    @FunctionalInterface
+    private interface SolverCall<Q, R> {
+        R apply(Q request) throws Exception;
     }
 
     private static String errorMessage(Throwable e) {

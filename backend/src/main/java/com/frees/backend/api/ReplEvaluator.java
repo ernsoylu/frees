@@ -20,10 +20,12 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -567,7 +569,7 @@ public class ReplEvaluator {
      *  variables to seed). Function names that aren't session variables match nothing and are
      *  harmless. */
     private static Set<String> collectIdentifiers(String s) {
-        Set<String> ids = new java.util.HashSet<>();
+        Set<String> ids = new HashSet<>();
         Matcher m = IDENTIFIER.matcher(s);
         while (m.find()) ids.add(m.group().toLowerCase());
         return ids;
@@ -1341,7 +1343,7 @@ public class ReplEvaluator {
     }
 
     private Double solveForUnknown(Expr left, Expr right, String unknownVar, SolveContextCache.Session session) {
-        java.util.function.Function<Double, Double> f = (x) -> {
+        Function<Double, Double> f = (x) -> {
             try {
                 Map<String, Double> tempValues = new HashMap<>(session.siValues());
                 tempValues.put(unknownVar, x);
@@ -1436,7 +1438,7 @@ public class ReplEvaluator {
     }
 
     private Quantity findDimensionOfUnknown(Expr e, Quantity expectedDim, String unknownVar,
-                                            java.util.function.Function<String, String> unitOf,
+                                            Function<String, String> unitOf,
                                             Map<String, Double> values, Map<String, ProcDef> defs) {
         if (expectedDim == null) return null;
 
