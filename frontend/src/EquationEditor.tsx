@@ -28,7 +28,7 @@ const KEYWORDS = new Set([
 // snippet, e.g. `CALL lqr(...)` -> `lqr`, otherwise the leading identifier,
 // minus block scaffolds). Used for syntax highlighting and autocomplete — so
 // typing `CALL lq` completes `lqr`.
-const FUNCTION_NAMES = [...catalogFunctionNames(), 'ssheet']
+const FUNCTION_NAMES = [...catalogFunctionNames()]
 const FUNCTION_SET = new Set(FUNCTION_NAMES.map((n) => n.toLowerCase()))
 
 interface StreamState {
