@@ -840,7 +840,7 @@ export default function App() {
       // Check the augmented system: the equations plus one representative
       // fixed value per table input column (table semantics).
       const filled = firstFilledValues(tVars, tRows)
-      let augmented = text
+      let augmented = effectiveText()
       for (const [name, value] of filled) {
         augmented += `\n${name} = ${value}`
       }
@@ -909,7 +909,7 @@ export default function App() {
         return fixed
       })
       const response = await solveTable(
-        text,
+        effectiveText(),
         { ...stopCriteria, complexMode },
         buildVariableInfo(),
         unitSystem,
