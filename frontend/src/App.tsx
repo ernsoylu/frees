@@ -482,6 +482,122 @@ export default function App() {
     })
   }, [result])
 
+  // Phase 4.3: Linked Table View - Sync tables to spreadsheets
+  useEffect(() => {
+    setSpreadsheets((prev) => {
+      let changed = false
+      const next = prev.map((ss) => {
+        if (!ss.linkedTableId) return ss
+        const t = tables.find((x) => x.id === ss.linkedTableId)
+        if (!t) return ss
+
+        let sheetChanged = false
+        const newSheets = [...(ss.sheets as any[])]
+        const targetSheet = { ...newSheets[0] }
+        targetSheet.celldata = [...(targetSheet.celldata || [])]
+
+        const headerRow = targetSheet.celldata.filter((cd: any) => cd.r === 0)
+        const colMap: Record<string, number> = {}
+        for (const cell of headerRow) {
+          if (cell.v?.v && cell.v.v !== 'Run') {
+            colMap[String(cell.v.v)] = cell.c
+          }
+        }
+
+        for (let i = 0; i < t.rows.length; i++) {
+          const r = i + 1
+          for (const v of t.vars) {
+            const c = colMap[v]
+            if (c === undefined) continue
+
+            const draft = t.rows[i].values[v]
+            const computed = t.results[i]?.success ? t.results[i].values[v] : undefined
+            const val = draft && draft.trim() !== '' ? draft : (computed !== undefined ? String(computed) : '')
+
+            const cellIndex = targetSheet.celldata.findIndex((cd: any) => cd.r === r && cd.c === c)
+            if (cellIndex !== -1) {
+              if (String(targetSheet.celldata[cellIndex].v?.v) !== String(val)) {
+                targetSheet.celldata[cellIndex] = { ...targetSheet.celldata[cellIndex], v: { ...targetSheet.celldata[cellIndex].v, v: val, m: String(val) } }
+                sheetChanged = true
+              }
+            } else if (val !== '') {
+              targetSheet.celldata.push({ r, c, v: { v: val, m: String(val) } })
+              sheetChanged = true
+            }
+          }
+        }
+
+        if (sheetChanged) {
+          changed = true
+          newSheets[0] = targetSheet
+          return { ...ss, sheets: newSheets }
+        }
+        return ss
+      })
+      return changed ? next : prev
+    })
+  }, [tables])
+
+  // Phase 4.3: Linked Table View - Sync spreadsheets to tables
+  useEffect(() => {
+    setTables((prev) => {
+      let changed = false
+      const next = prev.map((t) => {
+        const ss = spreadsheets.find((x) => x.linkedTableId === t.id)
+        if (!ss || t.kind !== 'parametric') return t
+
+        let tableChanged = false
+        const targetSheet = (ss.sheets[0] as any)
+        const headerRow = targetSheet.celldata?.filter((cd: any) => cd.r === 0) || []
+        const colMap: Record<number, string> = {}
+        for (const cell of headerRow) {
+          if (cell.v?.v && cell.v.v !== 'Run') {
+            colMap[cell.c] = String(cell.v.v)
+          }
+        }
+
+        const newRows = [...t.rows]
+        let maxRow = 0
+        for (const cell of targetSheet.celldata || []) {
+          if (cell.r > maxRow) maxRow = cell.r
+        }
+        
+        while (newRows.length < maxRow) {
+          newRows.push({ id: crypto.randomUUID(), values: {} })
+          tableChanged = true
+        }
+
+        for (let i = 0; i < maxRow; i++) {
+          const r = i + 1
+          for (const [cStr, varName] of Object.entries(colMap)) {
+            if (!t.vars.includes(varName)) continue
+            const c = Number(cStr)
+            const cell = targetSheet.celldata.find((cd: any) => cd.r === r && cd.c === c)
+            const val = cell?.v?.v !== undefined && cell.v.v !== null ? String(cell.v.v) : ''
+            
+            const computed = t.results[i]?.success ? String(t.results[i].values[varName]) : undefined
+            if (val !== '' && val !== computed) {
+              if (newRows[i].values[varName] !== val) {
+                newRows[i] = { ...newRows[i], values: { ...newRows[i].values, [varName]: val } }
+                tableChanged = true
+              }
+            } else if (val === '' && newRows[i].values[varName] !== undefined && newRows[i].values[varName] !== '') {
+              newRows[i] = { ...newRows[i], values: { ...newRows[i].values, [varName]: '' } }
+              tableChanged = true
+            }
+          }
+        }
+
+        if (tableChanged) {
+          changed = true
+          return { ...t, rows: newRows }
+        }
+        return t
+      })
+      return changed ? next : prev
+    })
+  }, [spreadsheets])
+
   // Mark the project dirty whenever content changes, unless the change came from
   // an explicit load/new/save (suppressDirtyRef lets those operations opt out).
   useEffect(() => {
@@ -1452,6 +1568,7 @@ export default function App() {
 
     const ss = newSpreadsheet(spreadsheets.length)
     ss.name = `Export ${t.name}`
+    ss.linkedTableId = t.id
 
     const celldata: any[] = []
     let currentRow = 0

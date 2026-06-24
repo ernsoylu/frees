@@ -419,7 +419,7 @@ A toggle in the Inspector panel: **"Auto-sync with solver"**
 - [x] Array/matrix variables export as properly shaped grids
 - [x] Variable bindings can be set from spreadsheet cells
 - [x] Bound values integrate with the solver pipeline
-- [ ] Auto-sync toggle updates result cells after solve (if enabled)
+- [x] Auto-sync toggle updates result cells after solve (if enabled)
 
 ---
 
