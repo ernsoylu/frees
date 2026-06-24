@@ -26,6 +26,8 @@ frontend/tsconfig.tsbuildinfo
 
 # Claude Code
 .claude/
+# Multi-agent orchestration scratch (briefings, handoffs, progress notes)
+.agents/
 
 # CodeGraph local index
 .codegraph/

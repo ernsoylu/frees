@@ -70,7 +70,6 @@ export interface SolveResponse {
   error: string | null
   /** 1-based editor line a syntax error points at, or null for whole-system errors. */
   errorLine?: number | null
-  formattedEquations: string[]
   cyclePath?: Record<string, number>[]
   /** Function tables parsed from TABLE ... END blocks in the editor text. */
   codeTables?: FunctionTableDto[]
@@ -94,7 +93,6 @@ export interface CheckResponse {
   message: string
   /** 1-based editor line a syntax error points at, or null for whole-system errors. */
   errorLine?: number | null
-  formattedEquations: string[]
   /** Function tables parsed from TABLE ... END blocks in the editor text. */
   codeTables?: FunctionTableDto[]
   /** Parametric run-tables parsed from PARAMETRIC ... END blocks. */
@@ -178,21 +176,27 @@ type ComputeOutcome =
   | { kind: 'completed'; result: any }
   | { kind: 'failed'; error: string }
 
-/** Extracts a human-readable error message from a non-ok response body. */
+/** Extracts a human-readable error message from a non-ok response body. Reads the
+ *  body exactly once (a Response body is a single-use stream) and prefers a JSON
+ *  {@code error}/{@code message} field, falling back to the raw text, then {@code fallback}. */
 async function extractErrorMessage(response: Response, fallback: string): Promise<string> {
+  let body: string
   try {
-    const data = await response.json()
+    body = await response.text()
+  } catch {
+    return fallback
+  }
+  if (!body) return fallback
+  try {
+    const data = JSON.parse(body)
     if (data && typeof data === 'object') {
       const msg = (data as Record<string, unknown>).error ?? (data as Record<string, unknown>).message
       if (typeof msg === 'string' && msg) return msg
     }
   } catch {
-    try {
-      const textBody = await response.text()
-      if (textBody) return textBody
-    } catch {}
+    // Body is not JSON — fall through to the raw text.
   }
-  return fallback
+  return body
 }
 
 /** Polls GET /api/jobs/{jobId} until the job reaches a terminal state. */
@@ -251,7 +255,9 @@ async function pollJob(jobId: string, timeoutMs = 120_000): Promise<JobState> {
     if (state.status === 'COMPLETED' || state.status === 'FAILED') {
       return state
     }
-    await new Promise(resolve => setTimeout(resolve, 50))
+    // Only reached when SSE is unavailable/failed; 250 ms keeps latency low
+    // without hammering the API node (the SSE push is the primary path).
+    await new Promise(resolve => setTimeout(resolve, 250))
   }
   throw new Error('Job timed out waiting for completion')
 }
@@ -328,18 +334,6 @@ export async function check(
       body: JSON.stringify({ text, variableInfo, stopCriteria: { complexMode }, functionTables, overrides }),
     })
     if (!response.ok) {
-      let errorMessage = `Server error (${response.status})`
-      try {
-        const errJson = await response.json()
-        if (errJson && typeof errJson === 'object') {
-          errorMessage = errJson.message || errJson.error || errorMessage
-        }
-      } catch {
-        try {
-          const textBody = await response.text()
-          if (textBody) errorMessage = textBody
-        } catch {}
-      }
       return {
         solvable: false,
         equations: 0,
@@ -347,8 +341,7 @@ export async function check(
         variables: [],
         unitWarnings: [],
         inferredUnits: {},
-        message: errorMessage,
-        formattedEquations: [],
+        message: await extractErrorMessage(response, `Server error (${response.status})`),
       }
     }
     const data = await response.json()
@@ -360,7 +353,6 @@ export async function check(
       unitWarnings: data.unitWarnings ?? [],
       inferredUnits: data.inferredUnits ?? {},
       message: data.message ?? '',
-      formattedEquations: data.formattedEquations ?? [],
       codeTables: data.codeTables ?? [],
       parametricTables: data.parametricTables ?? [],
       definedPlots: data.definedPlots ?? [],
@@ -375,7 +367,6 @@ export async function check(
       unitWarnings: [],
       inferredUnits: {},
       message: `Could not reach the solver backend: ${String(e)}`,
-      formattedEquations: [],
     }
   }
 }
@@ -389,7 +380,6 @@ const SOLVE_FAILURE: Omit<SolveResponse, 'error'> = {
   stats: null,
   solutions: [],
   unitWarnings: [],
-  formattedEquations: [],
 }
 
 /** Maps a solve result DTO (from a sync 200 body or an async COMPLETED `result`)
@@ -404,7 +394,6 @@ function mapSolveData(data: any): SolveResponse {
     solutions: data.solutions ?? [],
     unitWarnings: data.unitWarnings ?? [],
     error: data.error ?? null,
-    formattedEquations: data.formattedEquations ?? [],
     cyclePath: data.cyclePath ?? [],
     codeTables: data.codeTables ?? [],
     parametricTables: data.parametricTables ?? [],
@@ -457,19 +446,7 @@ export async function solve(
   try {
     const response = await fetch(`${API_BASE}/api/solve`, init)
     if (!response.ok) {
-      let errorMessage = `Server error (${response.status})`
-      try {
-        const errJson = await response.json()
-        if (errJson && typeof errJson === 'object') {
-          errorMessage = errJson.message || errJson.error || errorMessage
-        }
-      } catch {
-        try {
-          const textBody = await response.text()
-          if (textBody) errorMessage = textBody
-        } catch {}
-      }
-      return { ...SOLVE_FAILURE, error: errorMessage }
+      return { ...SOLVE_FAILURE, error: await extractErrorMessage(response, `Server error (${response.status})`) }
     }
     const data = await response.json()
     return mapSolveData(data)
@@ -627,19 +604,7 @@ export async function optimize(
   try {
     const response = await fetch(`${API_BASE}/api/optimize`, init)
     if (!response.ok) {
-      let errorMessage = `Server error (${response.status})`
-      try {
-        const errJson = await response.json()
-        if (errJson && typeof errJson === 'object') {
-          errorMessage = errJson.message || errJson.error || errorMessage
-        }
-      } catch {
-        try {
-          const textBody = await response.text()
-          if (textBody) errorMessage = textBody
-        } catch {}
-      }
-      return { ...OPTIMIZE_FAILURE, error: errorMessage }
+      return { ...OPTIMIZE_FAILURE, error: await extractErrorMessage(response, `Server error (${response.status})`) }
     }
     const data = await response.json()
     return mapOptimizeData(data)
@@ -987,19 +952,7 @@ export async function solveTable(
   try {
     const response = await fetch(`${API_BASE}/api/solve/table`, init)
     if (!response.ok) {
-      let errorMessage = `Table solve failed with status ${response.status}`
-      try {
-        const errJson = await response.json()
-        if (errJson && typeof errJson === 'object') {
-          errorMessage = errJson.message || errJson.error || errorMessage
-        }
-      } catch {
-        try {
-          const textBody = await response.text()
-          if (textBody) errorMessage = textBody
-        } catch {}
-      }
-      throw new Error(errorMessage)
+      throw new Error(await extractErrorMessage(response, `Table solve failed with status ${response.status}`))
     }
     const data = await response.json()
     return mapSolveTableData(data)

@@ -11,6 +11,7 @@ import com.frees.backend.compute.ComputeTask;
 import com.frees.backend.compute.JobTicket;
 import com.frees.backend.parser.EquationParser;
 import com.frees.backend.units.UnitRegistry;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -19,6 +20,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -53,7 +55,7 @@ public class OptimizeController {
     private final ComputeDispatcher dispatcher;
 
     public OptimizeController(EquationSystemSolver solver,
-                              org.springframework.beans.factory.ObjectProvider<ComputeDispatcher> dispatcherProvider) {
+                              ObjectProvider<ComputeDispatcher> dispatcherProvider) {
         this.solver = solver;
         this.dispatcher = dispatcherProvider.getIfAvailable();
     }
@@ -268,8 +270,8 @@ public class OptimizeController {
 
         List<ParetoPointDto> front = result.front().stream()
                 .map(pt -> new ParetoPointDto(
-                        java.util.Arrays.stream(pt.decisions()).boxed().toList(),
-                        java.util.Arrays.stream(pt.objectives()).boxed().toList()))
+                        Arrays.stream(pt.decisions()).boxed().toList(),
+                        Arrays.stream(pt.objectives()).boxed().toList()))
                 .toList();
         return new ParetoResponse(true, null,
                 request.decisions(), request.objectives(), front, result.evaluations());

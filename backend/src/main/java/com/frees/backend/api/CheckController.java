@@ -29,8 +29,8 @@ import static com.frees.backend.api.SolveDtos.stateTablesOf;
  * The Check-before-Solve endpoint. {@code POST /api/check} verifies syntax and
  * structural solvability (degrees of freedom + complete equation↔variable
  * matching) without solving, and reports the unit warnings and parsed
- * formatted report so the frontend can render a preview before Solve is
- * enabled.
+ * block definitions (tables, plots, state tables) so the frontend can gate
+ * the Solve button before solving is allowed.
  *
  * <p>Split out of the monolithic {@code SolveController} so the check path —
  * which runs on every edit before solving is allowed — has its own focused

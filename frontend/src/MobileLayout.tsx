@@ -22,7 +22,6 @@ interface MobileLayoutProps {
   projectName: string
   checking: boolean
   solving: boolean
-  solvable: boolean
   onCheck: () => void
   onSolve: () => Promise<'workspace' | 'table' | void> | void
   checkingTableId: string | null
@@ -44,7 +43,6 @@ export default function MobileLayout({
   projectName,
   checking,
   solving,
-  solvable,
   onCheck,
   onSolve,
   checkingTableId,
@@ -91,10 +89,6 @@ export default function MobileLayout({
   }
 
   const isTableActive = activeTab === 'table' && activeTableId !== null && tables.length > 0
-  const currentTable = tables.find(t => t.id === activeTableId)
-  const isSolvable = isTableActive && currentTable?.kind === 'parametric'
-    ? currentTable.checkResult?.solvable === true
-    : solvable
   const isChecking = isTableActive && activeTableId ? checkingTableId === activeTableId : checking
   const isSolving = isTableActive && activeTableId ? solvingTableId === activeTableId : solving
 
@@ -145,7 +139,6 @@ export default function MobileLayout({
               variant="filled"
               color="teal"
               loading={isSolving}
-              disabled={!isSolvable}
               onClick={async () => {
                 let res: 'workspace' | 'table' | void | boolean
                 if (isTableActive && activeTableId) {

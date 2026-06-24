@@ -1,10 +1,15 @@
 package com.frees.backend.config;
 
+import com.frees.backend.api.JobController;
 import com.frees.backend.api.SolveContextCache.Session;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.listener.ChannelTopic;
+import org.springframework.data.redis.listener.RedisMessageListenerContainer;
+import org.springframework.data.redis.listener.adapter.MessageListenerAdapter;
 import org.springframework.data.redis.serializer.JdkSerializationRedisSerializer;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 
@@ -24,19 +29,19 @@ public class RedisConfig {
     }
 
     @Bean
-    @org.springframework.context.annotation.Profile("api")
-    public org.springframework.data.redis.listener.RedisMessageListenerContainer redisContainer(
+    @Profile("api")
+    public RedisMessageListenerContainer redisContainer(
             RedisConnectionFactory connectionFactory,
-            org.springframework.data.redis.listener.adapter.MessageListenerAdapter listenerAdapter) {
-        org.springframework.data.redis.listener.RedisMessageListenerContainer container = new org.springframework.data.redis.listener.RedisMessageListenerContainer();
+            MessageListenerAdapter listenerAdapter) {
+        RedisMessageListenerContainer container = new RedisMessageListenerContainer();
         container.setConnectionFactory(connectionFactory);
-        container.addMessageListener(listenerAdapter, new org.springframework.data.redis.listener.ChannelTopic("job-events"));
+        container.addMessageListener(listenerAdapter, new ChannelTopic("job-events"));
         return container;
     }
 
     @Bean
-    @org.springframework.context.annotation.Profile("api")
-    public org.springframework.data.redis.listener.adapter.MessageListenerAdapter listenerAdapter(com.frees.backend.api.JobController jobController) {
-        return new org.springframework.data.redis.listener.adapter.MessageListenerAdapter(jobController, "onMessage");
+    @Profile("api")
+    public MessageListenerAdapter listenerAdapter(JobController jobController) {
+        return new MessageListenerAdapter(jobController, "onMessage");
     }
 }
