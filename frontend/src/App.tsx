@@ -714,12 +714,22 @@ export default function App() {
     guardedAction(() => actuallyLoadExample(example))
   }
 
-  /** The equations actually solved: editor text plus diagram control bindings. */
+  /** The equations actually solved: editor text plus diagram control bindings and spreadsheet bindings. */
   function effectiveText(): string {
-    const raw = diagramBindings.length > 0
-      ? `${text}\n${diagramBindings.join('\n')}`
-      : text
-    return substituteSsheetRefs(raw, spreadsheets)
+    const lines = [text]
+    if (diagramBindings.length > 0) {
+      lines.push(...diagramBindings)
+    }
+    
+    for (const ss of spreadsheets) {
+      if (ss.bindings) {
+        for (const [varName, refStr] of Object.entries(ss.bindings)) {
+          lines.push(`${varName} = ssheet('${ss.name}', '${refStr}')`)
+        }
+      }
+    }
+
+    return substituteSsheetRefs(lines.join('\n'), spreadsheets)
   }
 
   // Diagram input controls report their `var = value` lines here. Changing a
@@ -1968,6 +1978,10 @@ export default function App() {
             singleSpreadsheetId={ss.id}
             spreadsheets={spreadsheets}
             onSpreadsheetsChange={setSpreadsheets}
+            onCreateTable={(newTable) => {
+              setTables((prev) => [...prev, newTable])
+              requestAnimationFrame(() => dockRef.current?.openInstance(`table:${newTable.id}`, 'table', newTable.name))
+            }}
           />
         </Suspense>
       </div>

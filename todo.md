@@ -417,8 +417,8 @@ A toggle in the Inspector panel: **"Auto-sync with solver"**
 - [x] "Export to Spreadsheet" button in Variable Explorer creates/populates a spreadsheet
 - [x] Scalar variables export as name/value/unit/uncertainty rows
 - [x] Array/matrix variables export as properly shaped grids
-- [ ] Variable bindings can be set from spreadsheet cells
-- [ ] Bound values integrate with the solver pipeline
+- [x] Variable bindings can be set from spreadsheet cells
+- [x] Bound values integrate with the solver pipeline
 - [ ] Auto-sync toggle updates result cells after solve (if enabled)
 
 ---
@@ -435,7 +435,7 @@ Add an action button to `TablesTab.tsx`: **"Open in Spreadsheet"**
   - **Function table:** headers = [x, y1, y2, ...], rows = data points
 - Cell formatting: bold headers, number formatting matching the table's unit display
 
-### 4.2 Import Spreadsheet Range into Table
+### [x] 4.2 Import Spreadsheet Range into Table
 
 Allow creating a **Parametric Table from a spreadsheet selection**:
 - User selects a cell range in the spreadsheet

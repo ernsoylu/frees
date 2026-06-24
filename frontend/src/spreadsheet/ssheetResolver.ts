@@ -24,7 +24,7 @@ export function parseSsheetReferences(text: string): SsheetReference[] {
   const refs: SsheetReference[] = []
   // Match `ssheet(...)`
   // Simple regex for string literal or just range
-  const regex = /ssheet\s*\(\s*(?:(?:'([^']+)'|"([^"]+)")\s*,\s*)?(?:([^!]+)!\s*)?([A-Za-z0-9:]+)\s*\)/g
+  const regex = /ssheet\s*\(\s*(?:(?:'([^']+)'|"([^"]+)")\s*,\s*)?(?:'|")?(?:([^!'"]+)!\s*)?([A-Za-z0-9:]+)(?:'|")?\s*\)/g
   let match
   while ((match = regex.exec(text)) !== null) {
     refs.push({
