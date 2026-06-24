@@ -1438,19 +1438,47 @@ public class EquationSystemSolver {
         double[] baseResidual = evaluateSystemResiduals(equations, values, defs);
         Map<String, Double> perturbedValues = new HashMap<>(values);
         double eps = Math.sqrt(Math.ulp(1.0));
+
+        // Precompute sparse dependency matrix: var_j -> list of dependent equation indices
+        List<Set<String>> eqVars = new ArrayList<>(m);
+        for (Equation eq : equations) {
+            eqVars.add(eq.variables());
+        }
+        List<List<Integer>> varToEqs = new ArrayList<>(n);
         for (int j = 0; j < n; j++) {
+            String varName = varList.get(j);
+            List<Integer> deps = new ArrayList<>();
+            for (int i = 0; i < m; i++) {
+                if (eqVars.get(i).contains(varName)) {
+                    deps.add(i);
+                }
+            }
+            varToEqs.add(deps);
+        }
+
+        for (int j = 0; j < n; j++) {
+            List<Integer> deps = varToEqs.get(j);
+            if (deps.isEmpty()) {
+                continue; // Variable does not appear in any equation; its column remains 0.0
+            }
+
             String varName = varList.get(j);
             double x = values.getOrDefault(varName, 1.0);
             double h = eps * Math.max(Math.abs(x), 1.0);
             perturbedValues.put(varName, x + h);
-            try {
-                double[] perturbedResidual = evaluateSystemResiduals(equations, perturbedValues, defs);
-                for (int i = 0; i < m; i++) {
-                    jacobian[i][j] = (perturbedResidual[i] - baseResidual[i]) / h;
+
+            // Only evaluate the specific dependent equations
+            for (int i : deps) {
+                Equation eq = equations.get(i);
+                try {
+                    double r_perturbed = Evaluator.eval(eq.lhs(), perturbedValues, defs)
+                                       - Evaluator.eval(eq.rhs(), perturbedValues, defs);
+                    jacobian[i][j] = (r_perturbed - baseResidual[i]) / h;
+                } catch (Exception ignored) {
+                    // Keep jacobian[i][j] as 0.0
                 }
-            } catch (Exception ignored) {
-                // Keep jacobian[i][j] as 0.0
             }
+
             perturbedValues.put(varName, x);
         }
         return jacobian;
