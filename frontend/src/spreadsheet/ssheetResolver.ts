@@ -23,15 +23,15 @@ function parseCell(ref: string): { r: number; c: number } | null {
 export function parseSsheetReferences(text: string): SsheetReference[] {
   const refs: SsheetReference[] = []
   // Match `ssheet(...)`
-  // Simple regex for string literal or just range
-  const regex = /ssheet\s*\(\s*(?:(?:'([^']+)'|"([^"]+)")\s*,\s*)?(?:'|")?(?:([^!'"]+)!\s*)?([A-Za-z0-9:]+)(?:'|")?\s*\)/g
+  // Supports: ssheet(A1), ssheet('A1'), ssheet(Sheet1, A1), ssheet('Sheet1', 'A1'), ssheet('Spreadsheet', 'Sheet1!A1')
+  const regex = /ssheet\s*\(\s*(?:['"]?([^'",\s!]+)['"]?\s*,\s*)?(?:['"]?([^!'",\s]+)!\s*)?['"]?([A-Za-z0-9:]+)['"]?\s*\)/g
   let match
   while ((match = regex.exec(text)) !== null) {
     refs.push({
       match: match[0],
-      spreadsheetName: match[1] || match[2],
-      sheetName: match[3],
-      range: match[4],
+      spreadsheetName: match[1],
+      sheetName: match[2],
+      range: match[3],
     })
   }
   return refs
@@ -59,9 +59,28 @@ export function resolveSsheetValues(
 
   for (const ref of refs) {
     let spec: SpreadsheetSpec | undefined
-    if (ref.spreadsheetName) {
-      spec = spreadsheets.find((s) => s.name.toLowerCase() === ref.spreadsheetName!.toLowerCase())
-    } else {
+    let sheetName = ref.sheetName
+    let spreadsheetName = ref.spreadsheetName
+
+    if (spreadsheetName) {
+      // First try to match by workbook (spreadsheet) name
+      spec = spreadsheets.find((s) => s.name.toLowerCase() === spreadsheetName!.toLowerCase())
+      
+      // If no workbook matched, maybe it was a Sheet name (e.g. ssheet('Sheet1', 'A1'))
+      if (!spec) {
+        const foundSpecWithSheet = spreadsheets.find((s) => 
+          (s.sheets as any[]).some(sh => sh.name && sh.name.toLowerCase() === spreadsheetName!.toLowerCase())
+        )
+        if (foundSpecWithSheet) {
+          spec = foundSpecWithSheet
+          sheetName = spreadsheetName
+          spreadsheetName = undefined
+        }
+      }
+    }
+
+    // Fallback to the first available spreadsheet if still not found
+    if (!spec) {
       spec = spreadsheets[0]
     }
 
@@ -71,9 +90,9 @@ export function resolveSsheetValues(
     }
 
     let sheet: any = spec.sheets[0]
-    if (ref.sheetName) {
+    if (sheetName) {
       const found = (spec.sheets as any[]).find(
-        (sh) => sh.name && sh.name.toLowerCase() === ref.sheetName!.toLowerCase()
+        (sh) => sh.name && sh.name.toLowerCase() === sheetName!.toLowerCase()
       )
       if (found) sheet = found
     }
