@@ -122,7 +122,7 @@ import { detectStates } from './plots/stateTable'
 import {
   withStableKeys,
 } from './format'
-import { FUNCTION_CATEGORIES } from './functionCatalog'
+import { FUNCTION_CATEGORIES, catalogFunctionNames } from './functionCatalog'
 import {
   buildProject,
   clearProjectLocal,
@@ -1223,9 +1223,10 @@ export default function App() {
         ),
       ]
   const replNames = new Set(Object.keys(replVars))
-  // All callable function names (property functions + built-ins) for the
-  // terminal's Tab-completion.
-  const replFunctionNames = FUNCTION_CATEGORIES.flatMap((c) => c.items).map((i) => i.label)
+  // All callable function names (property functions + built-ins, including CALL
+  // library callees) for the terminal's Tab-completion — bare names so a
+  // completion inserts `lqr(`, not the menu's descriptive label.
+  const replFunctionNames = catalogFunctionNames()
 
   // Fluid state tables declared with STATE TABLE blocks: surfaced in the left
   // Tables menu (tagged by fluid) and opened in the shared Fluid States window.

@@ -6,7 +6,7 @@ import { Extension, StateEffect, StateField } from '@codemirror/state'
 import { HighlightStyle, StreamLanguage, StringStream, syntaxHighlighting } from '@codemirror/language'
 import { CompletionContext, CompletionResult } from '@codemirror/autocomplete'
 import { tags } from '@lezer/highlight'
-import { FUNCTION_CATEGORIES } from './functionCatalog'
+import { catalogFunctionNames } from './functionCatalog'
 
 // Imperative handle the parent uses to drive the editor (insert at caret, jump
 // to a line) without reaching into the DOM, mirroring the old textareaRef ops.
@@ -24,16 +24,11 @@ const KEYWORDS = new Set([
   'SYMBOLIC',
 ])
 
-// Built-in function names pulled from the Functions-menu catalog: the leading
-// identifier of each snippet, minus the block scaffolds (which start with a
-// keyword). Used for syntax highlighting and autocomplete.
-const FUNCTION_NAMES = Array.from(
-  new Set(
-    FUNCTION_CATEGORIES.flatMap((c) => c.items)
-      .map((it) => /^([A-Za-z_][A-Za-z0-9_]*\$?)/.exec(it.snippet)?.[1] ?? '')
-      .filter((name) => name && !KEYWORDS.has(name.toUpperCase())),
-  ),
-)
+// Built-in function names from the Functions-menu catalog (callee of each CALL
+// snippet, e.g. `CALL lqr(...)` -> `lqr`, otherwise the leading identifier,
+// minus block scaffolds). Used for syntax highlighting and autocomplete — so
+// typing `CALL lq` completes `lqr`.
+const FUNCTION_NAMES = catalogFunctionNames()
 const FUNCTION_SET = new Set(FUNCTION_NAMES.map((n) => n.toLowerCase()))
 
 interface StreamState {

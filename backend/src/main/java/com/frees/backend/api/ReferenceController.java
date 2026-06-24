@@ -1,6 +1,7 @@
 package com.frees.backend.api;
 
 import com.frees.backend.parser.ConstantsRegistry;
+import com.frees.backend.parser.FunctionRegistry;
 import com.frees.backend.units.UnitRegistry;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -28,6 +29,7 @@ public class ReferenceController {
                 .map(c -> new ConstantInfo(c.name(), c.value(),
                         c.unit() == null ? "-" : c.unit(), c.description()))
                 .toList();
-        return Map.of("units", units, "constants", constants);
+        List<FunctionRegistry.FunctionInfo> functions = FunctionRegistry.listFunctions();
+        return Map.of("units", units, "constants", constants, "functions", functions);
     }
 }

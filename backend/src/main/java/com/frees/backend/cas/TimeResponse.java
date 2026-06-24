@@ -40,7 +40,10 @@ public final class TimeResponse {
     /** Time response for a transfer function {@code num/den} (descending powers). */
     public static double[] response(Kind kind, double[] num, double[] den, double[] u, double[] t) {
         StateSpace.StateSpaceMatrices ss = StateSpace.tf2ss(num, den);
-        return responseSS(kind, ss.a(), ss.b(), ss.c(), ss.d(), u, t);
+        double[] bVec = new double[ss.a().length];
+        if (ss.a().length > 0) { for(int i=0; i<ss.a().length; i++) bVec[i] = ss.b()[i][0]; }
+        double[] cVec = ss.a().length > 0 ? ss.c()[0] : new double[0];
+        return responseSS(kind, ss.a(), bVec, cVec, ss.d()[0][0], u, t);
     }
 
     /**

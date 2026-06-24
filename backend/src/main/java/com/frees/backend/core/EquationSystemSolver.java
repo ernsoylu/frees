@@ -66,7 +66,8 @@ public class EquationSystemSolver {
                          List<Solution> solutions,
                          Map<String, String> displayNames,
                          Map<String, Double> uncertainties,
-                         List<com.frees.backend.core.ode.OdeTableResult> odeTables) {
+                         List<com.frees.backend.core.ode.OdeTableResult> odeTables,
+                         List<com.frees.backend.api.SolveDtos.ResidueExpansionDto> residueExpansions) {
 
         public Result(Map<String, Double> variables,
                       List<Block> blocks,
@@ -74,9 +75,10 @@ public class EquationSystemSolver {
                       Stats stats,
                       List<Solution> solutions,
                       Map<String, String> displayNames,
-                      Map<String, Double> uncertainties) {
+                      Map<String, Double> uncertainties,
+                      List<com.frees.backend.core.ode.OdeTableResult> odeTables) {
             this(variables, blocks, residuals, stats, solutions, displayNames, uncertainties,
-                    List.of());
+                    odeTables, List.of());
         }
 
         public Result(Map<String, Double> variables,
@@ -1206,8 +1208,34 @@ public class EquationSystemSolver {
                 worstResidual);
 
         Solution first = solutions.get(0);
+
+        List<com.frees.backend.api.SolveDtos.ResidueExpansionDto> residueExpansions = new ArrayList<>();
+        java.util.Set<String> seenResidues = new java.util.HashSet<>();
+        for (Equation eq : equations) {
+            String txt = eq.sourceText();
+            if (txt != null && txt.startsWith("CALL residue(") && seenResidues.add(txt)) {
+                if (eq.rhs() instanceof com.frees.backend.ast.Expr.Call c && c.function().startsWith("residue$")) {
+                    try {
+                        int isK = c.function().contains("$k$") ? 1 : 0;
+                        int numLen = Integer.parseInt(c.function().split("\\$")[3 + isK]);
+                        int n = Integer.parseInt(c.function().split("\\$")[4 + isK]);
+                        double[] num = new double[numLen];
+                        double[] den = new double[n + 1];
+                        int idx = 0;
+                        for (int i = 0; i < numLen; i++) num[i] = Evaluator.eval(c.args().get(idx++), first.variables(), defs);
+                        for (int i = 0; i < den.length; i++) den[i] = Evaluator.eval(c.args().get(idx++), first.variables(), defs);
+                        var res = com.frees.backend.cas.PolynomialHelpers.residue(num, den);
+                        String latex = com.frees.backend.parser.LatexConverter.toLatex(res);
+                        residueExpansions.add(new com.frees.backend.api.SolveDtos.ResidueExpansionDto(txt, latex));
+                    } catch (Exception ignored) {
+                        // If residue evaluation fails for some reason, just omit it.
+                    }
+                }
+            }
+        }
+
         return new Result(first.variables(), blocks, first.residuals(), stats, solutions,
-                displayNames, uncertainties, odeTables);
+                displayNames, uncertainties, odeTables, residueExpansions);
     }
 
     private Map<String, VariableSpec> expandSpecs(TreeSet<String> allVars,

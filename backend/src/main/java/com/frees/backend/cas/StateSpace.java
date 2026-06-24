@@ -108,31 +108,31 @@ public final class StateSpace {
         return Double.toString(value);
     }
 
-    public record StateSpaceMatrices(double[][] a, double[] b, double[] c, double d) {
+    public record StateSpaceMatrices(double[][] a, double[][] b, double[][] c, double[][] d) {
         @Override
         public boolean equals(Object o) {
             if (this == o) return true;
             if (!(o instanceof StateSpaceMatrices other)) return false;
             return Arrays.deepEquals(a, other.a)
-                    && Arrays.equals(b, other.b)
-                    && Arrays.equals(c, other.c)
-                    && Double.compare(d, other.d) == 0;
+                    && Arrays.deepEquals(b, other.b)
+                    && Arrays.deepEquals(c, other.c)
+                    && Arrays.deepEquals(d, other.d);
         }
 
         @Override
         public int hashCode() {
             int result = Arrays.deepHashCode(a);
-            result = 31 * result + Arrays.hashCode(b);
-            result = 31 * result + Arrays.hashCode(c);
-            return 31 * result + Double.hashCode(d);
+            result = 31 * result + Arrays.deepHashCode(b);
+            result = 31 * result + Arrays.deepHashCode(c);
+            return 31 * result + Arrays.deepHashCode(d);
         }
 
         @Override
         public String toString() {
             return "StateSpaceMatrices[a=" + Arrays.deepToString(a)
-                    + ", b=" + Arrays.toString(b)
-                    + ", c=" + Arrays.toString(c)
-                    + ", d=" + d + "]";
+                    + ", b=" + Arrays.deepToString(b)
+                    + ", c=" + Arrays.deepToString(c)
+                    + ", d=" + Arrays.deepToString(d) + "]";
         }
     }
 
@@ -180,6 +180,15 @@ public final class StateSpace {
                 c[i] = bBar[i];
             }
         }
-        return new StateSpaceMatrices(a, b, c, d);
+        double[][] bMat = new double[n][1];
+        if (n > 0) {
+            for (int i = 0; i < n; i++) bMat[i][0] = b[i];
+        }
+        double[][] cMat = new double[1][n];
+        if (n > 0) {
+            System.arraycopy(c, 0, cMat[0], 0, n);
+        }
+        double[][] dMat = new double[][]{{d}};
+        return new StateSpaceMatrices(a, bMat, cMat, dMat);
     }
 }

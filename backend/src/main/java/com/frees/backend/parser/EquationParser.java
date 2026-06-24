@@ -749,10 +749,7 @@ public final class EquationParser {
                     setMat(outputs, 1, n, n);
                 }
                 case "eulerrotate" -> setMat(outputs, 0, 3, 3);
-                case "ctrb", "obsv" -> {
-                    int n = inMatRows(inputs, 0, ctx);
-                    setMat(outputs, 0, n, n);
-                }
+
                 case "ss2ss" -> {
                     int n = inMatRows(inputs, 0, ctx);
                     setMat(outputs, 0, n, n);
@@ -814,7 +811,38 @@ public final class EquationParser {
                         setVec(outputs, 4, n); // repeated-pole order vector
                     }
                 }
-                case "lqr", "place" -> setVec(outputs, 0, inMatRows(inputs, 0, ctx));
+                case "lqr", "dlqr", "place", "acker" -> {
+                    int n = inMatRows(inputs, 0, ctx);
+                    int m = inMatCols(inputs, 1, ctx);
+                    setMat(outputs, 0, m, n);
+                }
+                case "dare", "lyap", "dlyap", "gram" -> {
+                    int n = inMatRows(inputs, 0, ctx);
+                    setMat(outputs, 0, n, n);
+                }
+                case "lqe" -> {
+                    int n = inMatRows(inputs, 0, ctx);
+                    int p = inMatRows(inputs, 2, ctx); // C is p×n
+                    setMat(outputs, 0, n, p);
+                }
+                case "balreal" -> {
+                    int n = inMatRows(inputs, 0, ctx);
+                    int m = inMatCols(inputs, 1, ctx); // B is n×m
+                    int p = inMatRows(inputs, 2, ctx); // C is p×n
+                    setMat(outputs, 0, n, n);
+                    setMat(outputs, 1, n, m);
+                    setMat(outputs, 2, p, n);
+                }
+                case "ctrb" -> {
+                    int n = inMatRows(inputs, 0, ctx);
+                    int m = inMatCols(inputs, 1, ctx);
+                    setMat(outputs, 0, n, n * m);
+                }
+                case "obsv" -> {
+                    int n = inMatRows(inputs, 0, ctx);
+                    int p = inMatRows(inputs, 1, ctx);
+                    setMat(outputs, 0, n * p, n);
+                }
                 case "pade" -> {
                     int m = inScalarInt(inputs, 1, ctx) + 1;
                     setVec(outputs, 0, m);
@@ -886,11 +914,21 @@ public final class EquationParser {
     }
 
     private int inMatRows(List<Expr> inputs, int idx, FlattenContext ctx) {
-        return parseMatrixInfo(inputs.get(idx), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs()).rows;
+        Expr expr = inputs.get(idx);
+        if (expr instanceof Expr.ArrayAccess aa) {
+            if (aa.indices().size() == 2) return parseMatrixInfo(expr, ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs()).rows;
+            if (aa.indices().size() == 1) return parseVectorInfo(expr, ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs()).size;
+        }
+        return 1;
     }
 
     private int inMatCols(List<Expr> inputs, int idx, FlattenContext ctx) {
-        return parseMatrixInfo(inputs.get(idx), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs()).cols;
+        Expr expr = inputs.get(idx);
+        if (expr instanceof Expr.ArrayAccess aa) {
+            if (aa.indices().size() == 2) return parseMatrixInfo(expr, ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs()).cols;
+            if (aa.indices().size() == 1) return 1;
+        }
+        return 1;
     }
 
     private int inScalarInt(List<Expr> inputs, int idx, FlattenContext ctx) {
@@ -1009,8 +1047,36 @@ public final class EquationParser {
             csFlattener.flattenLqr(inputs, outputs, sourceText, ctx);
             return;
         }
-        if (defName.equals("place")) {
+        if (defName.equals("dlqr")) {
+            csFlattener.flattenDlqr(inputs, outputs, sourceText, ctx);
+            return;
+        }
+        if (defName.equals("dare")) {
+            csFlattener.flattenDare(inputs, outputs, sourceText, ctx);
+            return;
+        }
+        if (defName.equals("lyap")) {
+            csFlattener.flattenLyap(inputs, outputs, sourceText, ctx);
+            return;
+        }
+        if (defName.equals("dlyap")) {
+            csFlattener.flattenDlyap(inputs, outputs, sourceText, ctx);
+            return;
+        }
+        if (defName.equals("place") || defName.equals("acker")) {
             csFlattener.flattenPlace(inputs, outputs, sourceText, ctx);
+            return;
+        }
+        if (defName.equals("lqe")) {
+            csFlattener.flattenLqe(inputs, outputs, sourceText, ctx);
+            return;
+        }
+        if (defName.equals("gram")) {
+            csFlattener.flattenGram(inputs, outputs, sourceText, ctx);
+            return;
+        }
+        if (defName.equals("balreal")) {
+            csFlattener.flattenBalreal(inputs, outputs, sourceText, ctx);
             return;
         }
         if (defName.equals("pidtune")) {

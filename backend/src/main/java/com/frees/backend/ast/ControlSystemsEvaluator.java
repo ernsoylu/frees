@@ -704,41 +704,188 @@ final class ControlSystemsEvaluator {
 
     // Synthetic LQR call: lqr$<index>$<n>, with arguments A (row-major, n*n),
     // then B (n), then Q (row-major, n*n), then R (scalar). Returns gain K[index].
-    static double evalLqr(Expr.Call c, Map<String, Double> values, Map<String, ProcDef> defs) {
+    
+    static double evalLqrLike(String op, Expr.Call c, Map<String, Double> values, Map<String, ProcDef> defs) {
         String[] parts = c.function().split("\\$");
-        int index = Integer.parseInt(parts[1]);
-        int n = Integer.parseInt(parts[2]);
+        int idx1 = Integer.parseInt(parts[1]);
+        int idx2 = Integer.parseInt(parts[2]);
+        int n = Integer.parseInt(parts[3]);
+        int m = Integer.parseInt(parts[4]);
+
+        List<Expr> args = c.args();
+        int idx = 0;
+        
+        double[][] a = new double[n][n];
+        for (int i = 0; i < n; i++) for (int j = 0; j < n; j++) a[i][j] = Evaluator.eval(args.get(idx++), values, defs);
+        double[][] b = new double[n][m];
+        for (int i = 0; i < n; i++) for (int j = 0; j < m; j++) b[i][j] = Evaluator.eval(args.get(idx++), values, defs);
+        double[][] q = new double[n][n];
+        for (int i = 0; i < n; i++) for (int j = 0; j < n; j++) q[i][j] = Evaluator.eval(args.get(idx++), values, defs);
+        double[][] r = new double[m][m];
+        for (int i = 0; i < m; i++) for (int j = 0; j < m; j++) r[i][j] = Evaluator.eval(args.get(idx++), values, defs);
+
+        double[][] res;
+        if (op.equals("lqr")) res = com.frees.backend.cas.ControllerDesign.lqr(a, b, q, r);
+        else if (op.equals("dlqr")) res = com.frees.backend.cas.ControllerDesign.dlqr(a, b, q, r);
+        else res = com.frees.backend.cas.ControllerDesign.dare(a, b, q, r);
+        
+        return res[idx1][idx2];
+    }
+
+    static double evalLqr(Expr.Call c, Map<String, Double> values, Map<String, ProcDef> defs) {
+        return evalLqrLike("lqr", c, values, defs);
+    }
+    static double evalDlqr(Expr.Call c, Map<String, Double> values, Map<String, ProcDef> defs) {
+        return evalLqrLike("dlqr", c, values, defs);
+    }
+    static double evalDare(Expr.Call c, Map<String, Double> values, Map<String, ProcDef> defs) {
+        return evalLqrLike("dare", c, values, defs);
+    }
+
+    static double evalLyapLike(String op, Expr.Call c, Map<String, Double> values, Map<String, ProcDef> defs) {
+        String[] parts = c.function().split("\\$");
+        int idx1 = Integer.parseInt(parts[1]);
+        int idx2 = Integer.parseInt(parts[2]);
+        int n = Integer.parseInt(parts[3]);
+
+        List<Expr> args = c.args();
+        int idx = 0;
+        
+        double[][] a = new double[n][n];
+        for (int i = 0; i < n; i++) for (int j = 0; j < n; j++) a[i][j] = Evaluator.eval(args.get(idx++), values, defs);
+        double[][] q = new double[n][n];
+        for (int i = 0; i < n; i++) for (int j = 0; j < n; j++) q[i][j] = Evaluator.eval(args.get(idx++), values, defs);
+
+        double[][] res;
+        if (op.equals("lyap")) res = com.frees.backend.cas.ControllerDesign.lyap(a, q);
+        else res = com.frees.backend.cas.ControllerDesign.dlyap(a, q);
+        
+        return res[idx1][idx2];
+    }
+    
+    static double evalLyap(Expr.Call c, Map<String, Double> values, Map<String, ProcDef> defs) {
+        return evalLyapLike("lyap", c, values, defs);
+    }
+    static double evalDlyap(Expr.Call c, Map<String, Double> values, Map<String, ProcDef> defs) {
+        return evalLyapLike("dlyap", c, values, defs);
+    }
+
+    static double evalCtrbObsv(String op, Expr.Call c, Map<String, Double> values, Map<String, ProcDef> defs) {
+        String[] parts = c.function().split("\\$");
+        int idx1 = Integer.parseInt(parts[1]);
+        int idx2 = Integer.parseInt(parts[2]);
+        int n = Integer.parseInt(parts[3]);
+        int r = Integer.parseInt(parts[4]);
+        int cols = Integer.parseInt(parts[5]);
+
+        List<Expr> args = c.args();
+        int idx = 0;
+        
+        double[][] a = new double[n][n];
+        for (int i = 0; i < n; i++) for (int j = 0; j < n; j++) a[i][j] = Evaluator.eval(args.get(idx++), values, defs);
+        double[][] b_or_c = new double[r][cols];
+        for (int i = 0; i < r; i++) for (int j = 0; j < cols; j++) b_or_c[i][j] = Evaluator.eval(args.get(idx++), values, defs);
+
+        double[][] res;
+        if (op.equals("ctrb")) res = com.frees.backend.cas.ControllerDesign.ctrb(a, b_or_c);
+        else res = com.frees.backend.cas.ControllerDesign.obsv(a, b_or_c);
+        
+        return res[idx1][idx2];
+    }
+    
+    static double evalCtrb(Expr.Call c, Map<String, Double> values, Map<String, ProcDef> defs) {
+        return evalCtrbObsv("ctrb", c, values, defs);
+    }
+    static double evalObsv(Expr.Call c, Map<String, Double> values, Map<String, ProcDef> defs) {
+        return evalCtrbObsv("obsv", c, values, defs);
+    }
+
+    // Synthetic LQE call: lqe$<i>$<j>$<n>$<g>$<p>, with arguments A (n×n),
+    // G (n×g), C (p×n), Q (g×g), R (p×p), all row-major. Returns gain L[i][j].
+    static double evalLqe(Expr.Call c, Map<String, Double> values, Map<String, ProcDef> defs) {
+        String[] parts = c.function().split("\\$");
+        int idx1 = Integer.parseInt(parts[1]);
+        int idx2 = Integer.parseInt(parts[2]);
+        int n = Integer.parseInt(parts[3]);
+        int g = Integer.parseInt(parts[4]);
+        int p = Integer.parseInt(parts[5]);
 
         List<Expr> args = c.args();
         int idx = 0;
         double[][] a = new double[n][n];
-        for (int i = 0; i < n; i++) {
-            for (int j = 0; j < n; j++) {
-                a[i][j] = Evaluator.eval(args.get(idx++), values, defs);
-            }
-        }
-        double[][] b = new double[n][1];
-        for (int i = 0; i < n; i++) {
-            b[i][0] = Evaluator.eval(args.get(idx++), values, defs);
-        }
-        double[][] q = new double[n][n];
-        for (int i = 0; i < n; i++) {
-            for (int j = 0; j < n; j++) {
-                q[i][j] = Evaluator.eval(args.get(idx++), values, defs);
-            }
-        }
-        double[][] r = {{Evaluator.eval(args.get(idx), values, defs)}};
+        for (int i = 0; i < n; i++) for (int j = 0; j < n; j++) a[i][j] = Evaluator.eval(args.get(idx++), values, defs);
+        double[][] gMat = new double[n][g];
+        for (int i = 0; i < n; i++) for (int j = 0; j < g; j++) gMat[i][j] = Evaluator.eval(args.get(idx++), values, defs);
+        double[][] cMat = new double[p][n];
+        for (int i = 0; i < p; i++) for (int j = 0; j < n; j++) cMat[i][j] = Evaluator.eval(args.get(idx++), values, defs);
+        double[][] q = new double[g][g];
+        for (int i = 0; i < g; i++) for (int j = 0; j < g; j++) q[i][j] = Evaluator.eval(args.get(idx++), values, defs);
+        double[][] r = new double[p][p];
+        for (int i = 0; i < p; i++) for (int j = 0; j < p; j++) r[i][j] = Evaluator.eval(args.get(idx++), values, defs);
 
-        double[][] k = com.frees.backend.cas.ControllerDesign.lqr(a, b, q, r);
-        return k[0][index];
+        double[][] res = com.frees.backend.cas.ControllerDesign.lqe(a, gMat, cMat, q, r);
+        return res[idx1][idx2];
     }
+
+    // Synthetic gramian call: gram$<type>$<i>$<j>$<n>$<r>$<cols>, with arguments
+    // A (n×n) then M (r×cols), row-major. type is 'c' (controllability, M=B) or
+    // 'o' (observability, M=C). Returns the n×n gramian element [i][j].
+    static double evalGram(Expr.Call c, Map<String, Double> values, Map<String, ProcDef> defs) {
+        String[] parts = c.function().split("\\$");
+        char type = parts[1].charAt(0);
+        int idx1 = Integer.parseInt(parts[2]);
+        int idx2 = Integer.parseInt(parts[3]);
+        int n = Integer.parseInt(parts[4]);
+        int r = Integer.parseInt(parts[5]);
+        int cols = Integer.parseInt(parts[6]);
+
+        List<Expr> args = c.args();
+        int idx = 0;
+        double[][] a = new double[n][n];
+        for (int i = 0; i < n; i++) for (int j = 0; j < n; j++) a[i][j] = Evaluator.eval(args.get(idx++), values, defs);
+        double[][] m = new double[r][cols];
+        for (int i = 0; i < r; i++) for (int j = 0; j < cols; j++) m[i][j] = Evaluator.eval(args.get(idx++), values, defs);
+
+        double[][] res = com.frees.backend.cas.ControllerDesign.gramian(a, m, type);
+        return res[idx1][idx2];
+    }
+
+    // Synthetic balreal call: balreal$<tag>$<i>$<j>$<n>$<m>$<p>, with arguments
+    // A (n×n), B (n×m), C (p×n), row-major. tag selects the output matrix:
+    // 'a' -> Ab (n×n), 'b' -> Bb (n×m), 'c' -> Cb (p×n). Returns element [i][j].
+    static double evalBalreal(Expr.Call c, Map<String, Double> values, Map<String, ProcDef> defs) {
+        String[] parts = c.function().split("\\$");
+        String tag = parts[1];
+        int idx1 = Integer.parseInt(parts[2]);
+        int idx2 = Integer.parseInt(parts[3]);
+        int n = Integer.parseInt(parts[4]);
+        int m = Integer.parseInt(parts[5]);
+        int p = Integer.parseInt(parts[6]);
+
+        List<Expr> args = c.args();
+        int idx = 0;
+        double[][] a = new double[n][n];
+        for (int i = 0; i < n; i++) for (int j = 0; j < n; j++) a[i][j] = Evaluator.eval(args.get(idx++), values, defs);
+        double[][] b = new double[n][m];
+        for (int i = 0; i < n; i++) for (int j = 0; j < m; j++) b[i][j] = Evaluator.eval(args.get(idx++), values, defs);
+        double[][] cMat = new double[p][n];
+        for (int i = 0; i < p; i++) for (int j = 0; j < n; j++) cMat[i][j] = Evaluator.eval(args.get(idx++), values, defs);
+
+        com.frees.backend.cas.ControllerDesign.BalrealResult res =
+                com.frees.backend.cas.ControllerDesign.balreal(a, b, cMat);
+        double[][] out = tag.equals("a") ? res.a : (tag.equals("b") ? res.b : res.c);
+        return out[idx1][idx2];
+    }
+
 
     // Synthetic pole-placement call: place$<index>$<n>, with arguments A
     // (row-major, n*n), then B (n), then pr (n), then pi (n). Returns K[index].
     static double evalPlace(Expr.Call c, Map<String, Double> values, Map<String, ProcDef> defs) {
         String[] parts = c.function().split("\\$");
-        int index = Integer.parseInt(parts[1]);
-        int n = Integer.parseInt(parts[2]);
+        int row = Integer.parseInt(parts[1]);
+        int col = Integer.parseInt(parts[2]);
+        int n = Integer.parseInt(parts[3]);
+        int m = Integer.parseInt(parts[4]);
 
         List<Expr> args = c.args();
         int idx = 0;
@@ -748,9 +895,11 @@ final class ControlSystemsEvaluator {
                 a[i][j] = Evaluator.eval(args.get(idx++), values, defs);
             }
         }
-        double[] b = new double[n];
+        double[][] b = new double[n][m];
         for (int i = 0; i < n; i++) {
-            b[i] = Evaluator.eval(args.get(idx++), values, defs);
+            for (int j = 0; j < m; j++) {
+                b[i][j] = Evaluator.eval(args.get(idx++), values, defs);
+            }
         }
         double[][] roots = new double[n][2];
         for (int i = 0; i < n; i++) {
@@ -760,8 +909,14 @@ final class ControlSystemsEvaluator {
             roots[i][1] = Evaluator.eval(args.get(idx++), values, defs);
         }
 
-        double[] k = com.frees.backend.cas.ControllerDesign.place(a, b, roots);
-        return k[index];
+        if (m != 1) {
+            throw new UnsupportedOperationException("place currently only supports SISO systems (m=1)");
+        }
+        double[] bVector = new double[n];
+        for (int i = 0; i < n; i++) bVector[i] = b[i][0];
+        
+        double[] k = com.frees.backend.cas.ControllerDesign.place(a, bVector, roots);
+        return k[col];
     }
 
     // Synthetic PID-tuning call: pidtune$<kp|ki|kd>$<type>, with arguments num
@@ -805,305 +960,102 @@ final class ControlSystemsEvaluator {
         return com.frees.backend.cas.ControllerDesign.rank(m);
     }
 
-    static double evalCtrb(Expr.Call c, Map<String, Double> values, Map<String, ProcDef> defs) {
-        String[] parts = c.function().split("\\$");
-        int iOut = Integer.parseInt(parts[1]);
-        int jOut = Integer.parseInt(parts[2]);
-        int n = Integer.parseInt(parts[3]);
-        int m = Integer.parseInt(parts[4]);
-        List<Expr> args = c.args();
-        int idx = 0;
-        double[][] a = new double[n][n];
-        for (int i = 0; i < n; i++) {
-            for (int j = 0; j < n; j++) {
-                a[i][j] = Evaluator.eval(args.get(idx++), values, defs);
-            }
-        }
-        double[][] b = new double[n][m];
-        for (int i = 0; i < n; i++) {
-            for (int j = 0; j < m; j++) {
-                b[i][j] = Evaluator.eval(args.get(idx++), values, defs);
-            }
-        }
-        double[][] ctrb = com.frees.backend.cas.ControllerDesign.ctrb(a, b);
-        return ctrb[iOut][jOut];
-    }
-
-    static double evalObsv(Expr.Call c, Map<String, Double> values, Map<String, ProcDef> defs) {
-        String[] parts = c.function().split("\\$");
-        int iOut = Integer.parseInt(parts[1]);
-        int jOut = Integer.parseInt(parts[2]);
-        int n = Integer.parseInt(parts[3]);
-        int p = Integer.parseInt(parts[4]);
-        List<Expr> args = c.args();
-        int idx = 0;
-        double[][] a = new double[n][n];
-        for (int i = 0; i < n; i++) {
-            for (int j = 0; j < n; j++) {
-                a[i][j] = Evaluator.eval(args.get(idx++), values, defs);
-            }
-        }
-        double[][] cv = new double[p][n];
-        for (int i = 0; i < p; i++) {
-            for (int j = 0; j < n; j++) {
-                cv[i][j] = Evaluator.eval(args.get(idx++), values, defs);
-            }
-        }
-        double[][] obsv = com.frees.backend.cas.ControllerDesign.obsv(a, cv);
-        return obsv[iOut][jOut];
-    }
 
     static double evalSs2ss(Expr.Call c, Map<String, Double> values, Map<String, ProcDef> defs) {
         String[] parts = c.function().split("\\$");
         String varType = parts[1];
-        int idx1 = -1, idx2 = -1;
-        int n, m, p;
-        if (varType.equals("d")) {
-            n = Integer.parseInt(parts[2]);
-            m = Integer.parseInt(parts[3]);
-            p = Integer.parseInt(parts[4]);
-        } else {
-            idx1 = Integer.parseInt(parts[2]);
-            idx2 = Integer.parseInt(parts[3]);
-            n = Integer.parseInt(parts[4]);
-            m = Integer.parseInt(parts[5]);
-            p = Integer.parseInt(parts[6]);
-        }
+        int idx1 = Integer.parseInt(parts[2]);
+        int idx2 = Integer.parseInt(parts[3]);
+        int n = Integer.parseInt(parts[4]);
+        int m = Integer.parseInt(parts[5]);
+        int p = Integer.parseInt(parts[6]);
+        
         List<Expr> args = c.args();
         int idx = 0;
         double[][] a = new double[n][n];
-        for (int i = 0; i < n; i++) {
-            for (int j = 0; j < n; j++) {
-                a[i][j] = Evaluator.eval(args.get(idx++), values, defs);
-            }
-        }
-        double[] b = new double[n];
-        for (int i = 0; i < n; i++) {
-            b[i] = Evaluator.eval(args.get(idx++), values, defs);
-        }
-        double[] cv = new double[n];
-        for (int i = 0; i < n; i++) {
-            cv[i] = Evaluator.eval(args.get(idx++), values, defs);
-        }
-        double d = Evaluator.eval(args.get(idx++), values, defs);
+        for (int i = 0; i < n; i++) for (int j = 0; j < n; j++) a[i][j] = Evaluator.eval(args.get(idx++), values, defs);
+        
+        double[][] b = new double[n][m];
+        for (int i = 0; i < n; i++) for (int j = 0; j < m; j++) b[i][j] = Evaluator.eval(args.get(idx++), values, defs);
+        
+        double[][] cv = new double[p][n];
+        for (int i = 0; i < p; i++) for (int j = 0; j < n; j++) cv[i][j] = Evaluator.eval(args.get(idx++), values, defs);
+        
+        double[][] d = new double[p][m];
+        for (int i = 0; i < p; i++) for (int j = 0; j < m; j++) d[i][j] = Evaluator.eval(args.get(idx++), values, defs);
+        
         double[][] transform = new double[n][n];
-        for (int i = 0; i < n; i++) {
-            for (int j = 0; j < n; j++) {
-                transform[i][j] = Evaluator.eval(args.get(idx++), values, defs);
-            }
-        }
+        for (int i = 0; i < n; i++) for (int j = 0; j < n; j++) transform[i][j] = Evaluator.eval(args.get(idx++), values, defs);
         
         com.frees.backend.cas.StateSpace.StateSpaceMatrices res =
                 com.frees.backend.cas.ControllerDesign.ss2ss(a, b, cv, d, transform);
-        if (varType.equals("a")) {
-            return res.a()[idx1][idx2];
-        } else if (varType.equals("b")) {
-            return res.b()[idx1];
-        } else if (varType.equals("c")) {
-            return res.c()[idx1];
-        } else {
-            return res.d();
-        }
+        if (varType.equals("a")) return res.a()[idx1][idx2];
+        else if (varType.equals("b")) return res.b()[idx1][idx2];
+        else if (varType.equals("c")) return res.c()[idx1][idx2];
+        else return res.d()[idx1][idx2];
     }
 
-    static double evalSsSeries(Expr.Call c, Map<String, Double> values, Map<String, ProcDef> defs) {
+    static double evalSsCombine(String op, Expr.Call c, Map<String, Double> values, Map<String, ProcDef> defs) {
         String[] parts = c.function().split("\\$");
         String varType = parts[1];
-        int idx1 = -1, idx2 = -1;
-        int n1, n2;
-        if (varType.equals("d")) {
-            n1 = Integer.parseInt(parts[2]);
-            n2 = Integer.parseInt(parts[3]);
-        } else {
-            idx1 = Integer.parseInt(parts[2]);
-            idx2 = Integer.parseInt(parts[3]);
-            n1 = Integer.parseInt(parts[4]);
-            n2 = Integer.parseInt(parts[5]);
-        }
+        int idx1 = Integer.parseInt(parts[2]);
+        int idx2 = Integer.parseInt(parts[3]);
+        int n1 = Integer.parseInt(parts[4]);
+        int p1 = Integer.parseInt(parts[5]);
+        int q1 = Integer.parseInt(parts[6]);
+        int n2 = Integer.parseInt(parts[7]);
+        int p2 = Integer.parseInt(parts[8]);
+        int q2 = Integer.parseInt(parts[9]);
+
         List<Expr> args = c.args();
         int idx = 0;
         
-        // System 1
         double[][] a1 = new double[n1][n1];
-        for (int i = 0; i < n1; i++) {
-            for (int j = 0; j < n1; j++) {
-                a1[i][j] = Evaluator.eval(args.get(idx++), values, defs);
-            }
-        }
-        double[] b1 = new double[n1];
-        for (int i = 0; i < n1; i++) {
-            b1[i] = Evaluator.eval(args.get(idx++), values, defs);
-        }
-        double[] c1 = new double[n1];
-        for (int i = 0; i < n1; i++) {
-            c1[i] = Evaluator.eval(args.get(idx++), values, defs);
-        }
-        double d1 = Evaluator.eval(args.get(idx++), values, defs);
+        for (int i = 0; i < n1; i++) for (int j = 0; j < n1; j++) a1[i][j] = Evaluator.eval(args.get(idx++), values, defs);
+        double[][] b1 = new double[n1][p1];
+        for (int i = 0; i < n1; i++) for (int j = 0; j < p1; j++) b1[i][j] = Evaluator.eval(args.get(idx++), values, defs);
+        double[][] c1 = new double[q1][n1];
+        for (int i = 0; i < q1; i++) for (int j = 0; j < n1; j++) c1[i][j] = Evaluator.eval(args.get(idx++), values, defs);
+        double[][] d1 = new double[q1][p1];
+        for (int i = 0; i < q1; i++) for (int j = 0; j < p1; j++) d1[i][j] = Evaluator.eval(args.get(idx++), values, defs);
         
-        // System 2
         double[][] a2 = new double[n2][n2];
-        for (int i = 0; i < n2; i++) {
-            for (int j = 0; j < n2; j++) {
-                a2[i][j] = Evaluator.eval(args.get(idx++), values, defs);
-            }
+        for (int i = 0; i < n2; i++) for (int j = 0; j < n2; j++) a2[i][j] = Evaluator.eval(args.get(idx++), values, defs);
+        double[][] b2 = new double[n2][p2];
+        for (int i = 0; i < n2; i++) for (int j = 0; j < p2; j++) b2[i][j] = Evaluator.eval(args.get(idx++), values, defs);
+        double[][] c2 = new double[q2][n2];
+        for (int i = 0; i < q2; i++) for (int j = 0; j < n2; j++) c2[i][j] = Evaluator.eval(args.get(idx++), values, defs);
+        double[][] d2 = new double[q2][p2];
+        for (int i = 0; i < q2; i++) for (int j = 0; j < p2; j++) d2[i][j] = Evaluator.eval(args.get(idx++), values, defs);
+
+        com.frees.backend.cas.StateSpace.StateSpaceMatrices res;
+        if (op.equals("series")) res = com.frees.backend.cas.ControllerDesign.ssSeries(a1, b1, c1, d1, a2, b2, c2, d2);
+        else if (op.equals("parallel")) res = com.frees.backend.cas.ControllerDesign.ssParallel(a1, b1, c1, d1, a2, b2, c2, d2);
+        else {
+            double sign = Evaluator.eval(args.get(idx++), values, defs);
+            res = com.frees.backend.cas.ControllerDesign.ssFeedback(a1, b1, c1, d1, a2, b2, c2, d2, sign);
         }
-        double[] b2 = new double[n2];
-        for (int i = 0; i < n2; i++) {
-            b2[i] = Evaluator.eval(args.get(idx++), values, defs);
-        }
-        double[] c2 = new double[n2];
-        for (int i = 0; i < n2; i++) {
-            c2[i] = Evaluator.eval(args.get(idx++), values, defs);
-        }
-        double d2 = Evaluator.eval(args.get(idx++), values, defs);
         
-        com.frees.backend.cas.StateSpace.StateSpaceMatrices res =
-                com.frees.backend.cas.ControllerDesign.ssSeries(a1, b1, c1, d1, a2, b2, c2, d2);
-        
-        if (varType.equals("a")) {
-            return res.a()[idx1][idx2];
-        } else if (varType.equals("b")) {
-            return res.b()[idx1];
-        } else if (varType.equals("c")) {
-            return res.c()[idx1];
-        } else {
-            return res.d();
-        }
+        if (varType.equals("a")) return res.a()[idx1][idx2];
+        else if (varType.equals("b")) return res.b()[idx1][idx2];
+        else if (varType.equals("c")) return res.c()[idx1][idx2];
+        else return res.d()[idx1][idx2];
+    }
+
+
+
+
+
+    static double evalSsSeries(Expr.Call c, Map<String, Double> values, Map<String, ProcDef> defs) {
+        return evalSsCombine("series", c, values, defs);
     }
 
     static double evalSsParallel(Expr.Call c, Map<String, Double> values, Map<String, ProcDef> defs) {
-        String[] parts = c.function().split("\\$");
-        String varType = parts[1];
-        int idx1 = -1, idx2 = -1;
-        int n1, n2;
-        if (varType.equals("d")) {
-            n1 = Integer.parseInt(parts[2]);
-            n2 = Integer.parseInt(parts[3]);
-        } else {
-            idx1 = Integer.parseInt(parts[2]);
-            idx2 = Integer.parseInt(parts[3]);
-            n1 = Integer.parseInt(parts[4]);
-            n2 = Integer.parseInt(parts[5]);
-        }
-        List<Expr> args = c.args();
-        int idx = 0;
-        
-        // System 1
-        double[][] a1 = new double[n1][n1];
-        for (int i = 0; i < n1; i++) {
-            for (int j = 0; j < n1; j++) {
-                a1[i][j] = Evaluator.eval(args.get(idx++), values, defs);
-            }
-        }
-        double[] b1 = new double[n1];
-        for (int i = 0; i < n1; i++) {
-            b1[i] = Evaluator.eval(args.get(idx++), values, defs);
-        }
-        double[] c1 = new double[n1];
-        for (int i = 0; i < n1; i++) {
-            c1[i] = Evaluator.eval(args.get(idx++), values, defs);
-        }
-        double d1 = Evaluator.eval(args.get(idx++), values, defs);
-        
-        // System 2
-        double[][] a2 = new double[n2][n2];
-        for (int i = 0; i < n2; i++) {
-            for (int j = 0; j < n2; j++) {
-                a2[i][j] = Evaluator.eval(args.get(idx++), values, defs);
-            }
-        }
-        double[] b2 = new double[n2];
-        for (int i = 0; i < n2; i++) {
-            b2[i] = Evaluator.eval(args.get(idx++), values, defs);
-        }
-        double[] c2 = new double[n2];
-        for (int i = 0; i < n2; i++) {
-            c2[i] = Evaluator.eval(args.get(idx++), values, defs);
-        }
-        double d2 = Evaluator.eval(args.get(idx++), values, defs);
-        
-        com.frees.backend.cas.StateSpace.StateSpaceMatrices res =
-                com.frees.backend.cas.ControllerDesign.ssParallel(a1, b1, c1, d1, a2, b2, c2, d2);
-        
-        if (varType.equals("a")) {
-            return res.a()[idx1][idx2];
-        } else if (varType.equals("b")) {
-            return res.b()[idx1];
-        } else if (varType.equals("c")) {
-            return res.c()[idx1];
-        } else {
-            return res.d();
-        }
+        return evalSsCombine("parallel", c, values, defs);
     }
 
     static double evalSsFeedback(Expr.Call c, Map<String, Double> values, Map<String, ProcDef> defs) {
-        String[] parts = c.function().split("\\$");
-        String varType = parts[1];
-        int idx1 = -1, idx2 = -1;
-        int n1, n2;
-        if (varType.equals("d")) {
-            n1 = Integer.parseInt(parts[2]);
-            n2 = Integer.parseInt(parts[3]);
-        } else {
-            idx1 = Integer.parseInt(parts[2]);
-            idx2 = Integer.parseInt(parts[3]);
-            n1 = Integer.parseInt(parts[4]);
-            n2 = Integer.parseInt(parts[5]);
-        }
-        List<Expr> args = c.args();
-        int idx = 0;
-        
-        // System 1
-        double[][] a1 = new double[n1][n1];
-        for (int i = 0; i < n1; i++) {
-            for (int j = 0; j < n1; j++) {
-                a1[i][j] = Evaluator.eval(args.get(idx++), values, defs);
-            }
-        }
-        double[] b1 = new double[n1];
-        for (int i = 0; i < n1; i++) {
-            b1[i] = Evaluator.eval(args.get(idx++), values, defs);
-        }
-        double[] c1 = new double[n1];
-        for (int i = 0; i < n1; i++) {
-            c1[i] = Evaluator.eval(args.get(idx++), values, defs);
-        }
-        double d1 = Evaluator.eval(args.get(idx++), values, defs);
-        
-        // System 2
-        double[][] a2 = new double[n2][n2];
-        for (int i = 0; i < n2; i++) {
-            for (int j = 0; j < n2; j++) {
-                a2[i][j] = Evaluator.eval(args.get(idx++), values, defs);
-            }
-        }
-        double[] b2 = new double[n2];
-        for (int i = 0; i < n2; i++) {
-            b2[i] = Evaluator.eval(args.get(idx++), values, defs);
-        }
-        double[] c2 = new double[n2];
-        for (int i = 0; i < n2; i++) {
-            c2[i] = Evaluator.eval(args.get(idx++), values, defs);
-        }
-        double d2 = Evaluator.eval(args.get(idx++), values, defs);
-        
-        double sign = 1.0;
-        if (idx < args.size()) {
-            sign = Evaluator.eval(args.get(idx), values, defs);
-        }
-        
-        com.frees.backend.cas.StateSpace.StateSpaceMatrices res =
-                com.frees.backend.cas.ControllerDesign.ssFeedback(a1, b1, c1, d1, a2, b2, c2, d2, sign);
-        
-        if (varType.equals("a")) {
-            return res.a()[idx1][idx2];
-        } else if (varType.equals("b")) {
-            return res.b()[idx1];
-        } else if (varType.equals("c")) {
-            return res.c()[idx1];
-        } else {
-            return res.d();
-        }
+        return evalSsCombine("feedback", c, values, defs);
     }
 
     static double evalStepInfo(Expr.Call c, Map<String, Double> values, Map<String, ProcDef> defs) {

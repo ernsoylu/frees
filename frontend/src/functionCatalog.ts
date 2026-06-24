@@ -311,10 +311,18 @@ export const FUNCTION_CATEGORIES: FunctionCategory[] = [
       { label: 'impulse (impulse response)', snippet: 'CALL impulse(num, den, t : y[1:$0])', description: 'Compute the impulse response y(t) for a transfer function or state space system at given time points t. Outputs are time/value arrays suitable for xy plotting.', usage: 'CALL impulse(num[1:3], den[1:3], t[1:100] : y[1:100])' },
       { label: 'lsim (linear simulation)', snippet: 'CALL lsim(num, den, u, t : y[1:$0])', description: 'Simulate the output y(t) of a linear system driven by an arbitrary input signal u(t) at given time points t. Input u must be the same size as t.', usage: 'CALL lsim(num[1:3], den[1:3], u[1:100], t[1:100] : y[1:100])' },
       { label: 'lqr (LQR optimal gain)', snippet: 'CALL lqr(A, B, Q, R : K[1:$0])', description: 'Continuous-time LQR: optimal state-feedback gain K minimizing the quadratic cost with state weight Q and input weight R, solving the algebraic Riccati equation. Single-input: A and Q are n x n, B is an n-vector, R is a scalar, K is an n-vector.', usage: 'CALL lqr(A[1:2,1:2], B[1:2], Q[1:2,1:2], R : K[1:2])' },
+      { label: 'dlqr (discrete LQR gain)', snippet: 'CALL dlqr(A, B, Q, R : K[1:$0,1:])', description: 'Discrete-time LQR: optimal state-feedback gain K for a discrete system, solving the discrete algebraic Riccati equation (DARE). A and Q are n x n, B is n x m, R is m x m, and K is m x n.', usage: 'CALL dlqr(A[1:2,1:2], B[1:2,1:1], Q[1:2,1:2], R : K[1:1,1:2])' },
       { label: 'place (pole placement)', snippet: 'CALL place(A, B, pr, pi : K[1:$0])', description: 'SISO pole placement (Ackermann): state-feedback gain K that moves the closed-loop poles of (A - B K) to the requested locations, given as real/imag arrays pr, pi (each length n).', usage: 'CALL place(A[1:2,1:2], B[1:2], pr[1:2], pi[1:2] : K[1:2])' },
+      { label: 'acker (pole placement, Ackermann)', snippet: 'CALL acker(A, B, pr, pi : K[1:$0])', description: "SISO pole placement via Ackermann's formula (alias of place): state-feedback gain K placing the closed-loop poles of (A - B K) at the locations given by the real/imag arrays pr, pi (each length n).", usage: 'CALL acker(A[1:2,1:2], B[1:2], pr[1:2], pi[1:2] : K[1:2])' },
+      { label: 'lqe (Kalman estimator gain)', snippet: 'CALL lqe(A, G, C, Q, R : L[1:$0,1:])', description: "Continuous-time Kalman estimator (LQE) gain L for the plant x' = A x + B u + G w, y = C x + v, with process-noise covariance Q and measurement-noise covariance R. Solves the filter Riccati equation; A is n x n, G is n x g, C is p x n, and L is n x p.", usage: 'CALL lqe(A[1:2,1:2], G[1:2,1:2], C[1:1,1:2], Q[1:2,1:2], R : L[1:2,1:1])' },
       { label: 'pidtune (auto-tune PID)', snippet: "CALL pidtune(num, den, '$0', wc : Kp, Ki, Kd)", description: "Auto-tune a P/PI/PID controller for plant num/den with gain crossover at frequency wc and a 60-degree phase-margin target. Type is a quoted 'P', 'PI', or 'PID'. Unused gains are returned as 0.", usage: "CALL pidtune(num[1:3], den[1:3], 'PID', wc : Kp, Ki, Kd)" },
       { label: 'ctrb (controllability matrix)', snippet: 'CALL ctrb(A, B : Ctrb[1:$0,1:])', description: 'Compute the controllability matrix Ctrb = [B, A*B, A^2*B, ..., A^(n-1)*B] for state-space matrices A (n x n) and B (n x m). Output Ctrb is n x (n*m).', usage: 'CALL ctrb(A[1:3,1:3], B[1:3] : Ctrb[1:3,1:3])' },
       { label: 'obsv (observability matrix)', snippet: 'CALL obsv(A, C : Obsv[1:$0,1:])', description: 'Compute the observability matrix Obsv = [C; C*A; C*A^2; ...; C*A^(n-1)] for state-space matrices A (n x n) and C (p x n). Output Obsv is (n*p) x n.', usage: 'CALL obsv(A[1:3,1:3], C[1:3] : Obsv[1:3,1:3])' },
+      { label: 'gram (controllability/observability gramian)', snippet: "CALL gram(A, M, '$0' : W[1:,1:])", description: "System gramian via the Lyapunov equation. Type is a quoted 'c' (controllability gramian, with M = B) or 'o' (observability gramian, with M = C). Requires a stable A; the gramian W is n x n.", usage: "CALL gram(A[1:2,1:2], B[1:2,1:1], 'c' : W[1:2,1:2])" },
+      { label: 'balreal (balanced realization)', snippet: 'CALL balreal(A, B, C : Ab[1:$0,1:], Bb[1:,1:], Cb[1:,1:])', description: 'Internally-balanced realization of a stable, minimal system (A, B, C): returns transformed matrices Ab, Bb, Cb whose controllability and observability gramians are equal and diagonal (the Hankel singular values). Useful for model reduction.', usage: 'CALL balreal(A[1:2,1:2], B[1:2,1:1], C[1:1,1:2] : Ab[1:2,1:2], Bb[1:2,1:1], Cb[1:1,1:2])' },
+      { label: 'dare (discrete Riccati solution)', snippet: 'CALL dare(A, B, Q, R : X[1:$0,1:])', description: 'Solve the discrete-time algebraic Riccati equation (DARE), returning the stabilizing solution X (n x n). A and Q are n x n, B is n x m, R is m x m.', usage: 'CALL dare(A[1:2,1:2], B[1:2,1:1], Q[1:2,1:2], R : X[1:2,1:2])' },
+      { label: 'lyap (continuous Lyapunov solve)', snippet: 'CALL lyap(A, Q : X[1:$0,1:])', description: "Solve the continuous-time Lyapunov equation A X + X A' + Q = 0 for X (n x n). Used for stability analysis and gramians.", usage: 'CALL lyap(A[1:2,1:2], Q[1:2,1:2] : X[1:2,1:2])' },
+      { label: 'dlyap (discrete Lyapunov solve)', snippet: 'CALL dlyap(A, Q : X[1:$0,1:])', description: "Solve the discrete-time Lyapunov (Stein) equation A X A' - X + Q = 0 for X (n x n).", usage: 'CALL dlyap(A[1:2,1:2], Q[1:2,1:2] : X[1:2,1:2])' },
       { label: 'rank (matrix rank)', snippet: 'CALL rank(M : r)', description: 'Compute the numerical rank of matrix M using Singular Value Decomposition (SVD) tolerance comparison.', usage: 'CALL rank(M[1:3,1:3] : r)' },
       { label: 'ss2ss (state similarity transform)', snippet: 'CALL ss2ss(A, B, C, D, P : An[1:$0,1:], Bn[1:], Cn[1:], Dn)', description: 'Apply a similarity transformation matrix P to a state-space system (A, B, C, D) such that x = P * z, yielding transformed matrices An, Bn, Cn, Dn.', usage: 'CALL ss2ss(A[1:3,1:3], B[1:3], C[1:3], D, P[1:3,1:3] : An[1:3,1:3], Bn[1:3], Cn[1:3], Dn)' },
       { label: 'stepinfo (transient metrics)', snippet: 'CALL stepinfo(t, y : Tr, Tp, Ts, OS)', description: 'Extract transient response metrics (Rise Time Tr, Peak Time Tp, Settling Time Ts, and Percent Overshoot OS) from step response outputs y(t) at time points t.', usage: 'CALL stepinfo(t[1:100], y[1:100] : Tr, Tp, Ts, OS)' },
@@ -330,3 +338,29 @@ export const FUNCTION_CATEGORIES: FunctionCategory[] = [
     ],
   },
 ]
+
+// Block-construct keywords whose catalog snippets are scaffolds, not callable
+// functions (so they are excluded from the bare callable-name list below).
+const BLOCK_KEYWORDS = new Set([
+  'FOR', 'TO', 'STEP', 'WHILE', 'DO', 'REPEAT', 'UNTIL', 'IF', 'THEN', 'ELSE',
+  'END', 'FUNCTION', 'PROCEDURE', 'MODULE', 'CALL', 'PARAMETRIC', 'TABLE',
+  'PLOT', 'DUPLICATE', 'AND', 'OR', 'NOT', 'DYNAMIC', 'STATE', 'EVENT', 'SYMBOLIC',
+])
+
+/**
+ * Bare callable function names from the catalog: the callee of each CALL snippet
+ * (e.g. `CALL lqr(...)` -> `lqr`), otherwise the snippet's leading identifier,
+ * with block-construct scaffolds removed. Shared by the editor's autocomplete /
+ * syntax highlighting and the REPL's Tab-completion so both stay in sync with
+ * the Functions menu.
+ */
+export function catalogFunctionNames(): string[] {
+  const names = FUNCTION_CATEGORIES.flatMap((c) => c.items)
+    .map((it) => {
+      const call = /^CALL\s+([A-Za-z_][A-Za-z0-9_]*)/.exec(it.snippet)
+      if (call) return call[1]
+      return /^([A-Za-z_][A-Za-z0-9_]*\$?)/.exec(it.snippet)?.[1] ?? ''
+    })
+    .filter((name) => name && !BLOCK_KEYWORDS.has(name.toUpperCase()))
+  return Array.from(new Set(names))
+}

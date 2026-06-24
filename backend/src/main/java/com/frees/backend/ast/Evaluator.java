@@ -199,6 +199,27 @@ public final class Evaluator {
         if (c.function().startsWith("lqr$")) {
             return ControlSystemsEvaluator.evalLqr(c, values, defs);
         }
+        if (c.function().startsWith("dlqr$")) {
+            return ControlSystemsEvaluator.evalDlqr(c, values, defs);
+        }
+        if (c.function().startsWith("dare$")) {
+            return ControlSystemsEvaluator.evalDare(c, values, defs);
+        }
+        if (c.function().startsWith("lyap$")) {
+            return ControlSystemsEvaluator.evalLyap(c, values, defs);
+        }
+        if (c.function().startsWith("dlyap$")) {
+            return ControlSystemsEvaluator.evalDlyap(c, values, defs);
+        }
+        if (c.function().startsWith("lqe$")) {
+            return ControlSystemsEvaluator.evalLqe(c, values, defs);
+        }
+        if (c.function().startsWith("gram$")) {
+            return ControlSystemsEvaluator.evalGram(c, values, defs);
+        }
+        if (c.function().startsWith("balreal$")) {
+            return ControlSystemsEvaluator.evalBalreal(c, values, defs);
+        }
         if (c.function().startsWith("place$")) {
             return ControlSystemsEvaluator.evalPlace(c, values, defs);
         }
@@ -925,12 +946,12 @@ public final class Evaluator {
             return ssm.a()[row][col];
         } else if (matrix.equals("b")) {
             int row = Integer.parseInt(parts[2]);
-            return ssm.b()[row];
+            return ssm.b()[row][0];
         } else if (matrix.equals("c")) {
             int col = Integer.parseInt(parts[2]);
-            return ssm.c()[col];
+            return ssm.c()[0][col];
         } else {
-            return ssm.d();
+            return ssm.d()[0][0];
         }
     }
 

@@ -21,7 +21,7 @@ import java.util.Map;
  * and {@link OptimizeController} reuse the same response shapes without a
  * circular dependency on the solve controller.
  */
-final class SolveDtos {
+public final class SolveDtos {
 
     private SolveDtos() {}
 
@@ -80,10 +80,13 @@ final class SolveDtos {
      * the declared state-point variables, and the fluid every state uses. */
     public record StateTableDto(String name, List<String> variables, String fluid) {}
 
+    /** A formatted LaTeX expansion for a partial-fraction residue block. */
+    public record ResidueExpansionDto(String sourceText, String latex) {}
+
     static BlockDto toBlockDto(Block block, Map<String, String> displayNames) {
         return new BlockDto(
                 block.index(),
-                block.equations().stream().map(Equation::sourceText).toList(),
+                block.equations().stream().map(Equation::sourceText).distinct().toList(),
                 block.variables().stream()
                         .map(v -> displayNames.getOrDefault(v, v))
                         .toList());
