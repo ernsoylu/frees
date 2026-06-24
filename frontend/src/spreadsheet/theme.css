@@ -1,28 +1,80 @@
-/* react-datasheet-grid theming.
-   DSG renders real DOM (no canvas), so dark mode is just its documented CSS
-   variables mapped onto Mantine's palette — no invert/hue-rotate hacks. */
+/* jspreadsheet-ce theming.
+   jspreadsheet renders real DOM, so dark mode is plain CSS overrides scoped to
+   the container — no canvas invert/hue-rotate hacks. */
 
-.frees-dsg {
+.frees-jss {
   width: 100%;
   height: 100%;
 }
 
-[data-mantine-color-scheme='dark'] .frees-dsg {
-  --dsg-cell-background-color: var(--mantine-color-dark-7);
-  --dsg-cell-color: var(--mantine-color-dark-0);
-  --dsg-cell-disabled-background-color: var(--mantine-color-dark-6);
-  --dsg-border-color: var(--mantine-color-dark-4);
-  --dsg-header-text-color: var(--mantine-color-dark-2);
-  --dsg-header-active-text-color: var(--mantine-color-dark-0);
-  --dsg-selection-border-color: var(--mantine-color-blue-5);
-  --dsg-selection-background-color: rgba(51, 154, 240, 0.12);
-  --dsg-selection-disabled-border-color: var(--mantine-color-dark-3);
-  --dsg-selection-disabled-background-color: rgba(255, 255, 255, 0.04);
-  --dsg-scroll-shadow-color: rgba(0, 0, 0, 0.6);
+/* Let the worksheet size to content; the wrapper handles scrolling. */
+.frees-jss .jss_worksheet {
+  font-size: 13px;
 }
 
-/* The gutter (row-number) column shares the header palette in dark mode. */
-[data-mantine-color-scheme='dark'] .frees-dsg .dsg-cell-gutter {
+[data-mantine-color-scheme='dark'] .frees-jss {
+  background-color: var(--mantine-color-dark-7);
+  color: var(--mantine-color-dark-0);
+}
+
+/* Cells */
+[data-mantine-color-scheme='dark'] .frees-jss .jss_worksheet > tbody > tr > td {
+  background-color: var(--mantine-color-dark-7);
+  color: var(--mantine-color-dark-0);
+  border-color: var(--mantine-color-dark-4);
+}
+
+/* Column headers (thead) and the row-number / select-all column */
+[data-mantine-color-scheme='dark'] .frees-jss .jss_worksheet > thead > tr > td,
+[data-mantine-color-scheme='dark'] .frees-jss .jss_worksheet > tbody > tr > td.jss_row,
+[data-mantine-color-scheme='dark'] .frees-jss .jss_worksheet > tbody > tr > td:first-child {
   background-color: var(--mantine-color-dark-6);
-  color: var(--mantine-color-dark-2);
+  color: var(--mantine-color-dark-1);
+  border-color: var(--mantine-color-dark-4);
+}
+
+/* Selected cell / range highlight */
+[data-mantine-color-scheme='dark'] .frees-jss .jss_worksheet > tbody > tr > td.highlight {
+  background-color: rgba(51, 154, 240, 0.18) !important;
+}
+[data-mantine-color-scheme='dark'] .frees-jss .jss_worksheet > tbody > tr > td.highlight-selected {
+  background-color: rgba(51, 154, 240, 0.28) !important;
+}
+
+/* Formatting toolbar */
+[data-mantine-color-scheme='dark'] .frees-jss .jtoolbar,
+[data-mantine-color-scheme='dark'] .frees-jss .jss_toolbar {
+  background-color: var(--mantine-color-dark-6);
+  color: var(--mantine-color-dark-0);
+  border-color: var(--mantine-color-dark-4);
+}
+[data-mantine-color-scheme='dark'] .frees-jss .jtoolbar .jtoolbar-item:hover {
+  background-color: var(--mantine-color-dark-5);
+}
+[data-mantine-color-scheme='dark'] .frees-jss .jtoolbar i,
+[data-mantine-color-scheme='dark'] .frees-jss .jtoolbar .material-icons {
+  color: var(--mantine-color-dark-1);
+}
+
+/* Worksheet tabs */
+[data-mantine-color-scheme='dark'] .frees-jss .jtabs,
+[data-mantine-color-scheme='dark'] .frees-jss .jtabs-headers {
+  background-color: var(--mantine-color-dark-7);
+  border-color: var(--mantine-color-dark-4);
+}
+[data-mantine-color-scheme='dark'] .frees-jss .jtabs-headers > div {
+  background-color: var(--mantine-color-dark-6);
+  color: var(--mantine-color-dark-1);
+  border-color: var(--mantine-color-dark-4);
+}
+[data-mantine-color-scheme='dark'] .frees-jss .jtabs-headers > div.jtabs-selected {
+  background-color: var(--mantine-color-dark-5);
+  color: var(--mantine-color-dark-0);
+}
+
+/* In-cell editor */
+[data-mantine-color-scheme='dark'] .frees-jss .jss_worksheet td .jss_editor,
+[data-mantine-color-scheme='dark'] .frees-jss .jss_worksheet textarea {
+  background-color: var(--mantine-color-dark-7);
+  color: var(--mantine-color-dark-0);
 }

@@ -1,11 +1,12 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { DataSheetGrid, keyColumn, textColumn } from 'react-datasheet-grid'
-import type { Column } from 'react-datasheet-grid'
-import 'react-datasheet-grid/dist/style.css'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { Spreadsheet, Worksheet } from '@jspreadsheet-ce/react'
+import 'jsuites/dist/jsuites.css'
+import 'jspreadsheet-ce/dist/jspreadsheet.css'
+import 'material-icons/iconfont/material-icons.css' // toolbar glyphs (self-hosted, no CDN)
 import './theme.css'
 import { type SpreadsheetSpec, emptySpreadsheetData } from './types'
-import { Button, Group, Modal, TextInput, Switch, ActionIcon, Tooltip } from '@mantine/core'
-import { IconTablePlus, IconLink, IconDownload, IconPlus, IconX } from '@tabler/icons-react'
+import { Button, Group, Modal, TextInput, Switch } from '@mantine/core'
+import { IconTablePlus, IconLink, IconDownload } from '@tabler/icons-react'
 import { ParamTableSpec } from '../tables'
 import { newParamRow } from '../ParametricTableTab'
 
@@ -16,22 +17,15 @@ interface Props {
   onCreateTable?: (table: ParamTableSpec) => void
 }
 
-// react-datasheet-grid renders an array of plain row objects keyed by column id.
-// The rest of frees (App auto-sync, ssheetResolver, bindings, CSV export, linked
-// tables) speaks the legacy FortuneSheet `celldata` shape — `{ r, c, v: { v, m, …style } }`.
-// We keep `celldata` as the canonical *stored* format and convert it to/from DSG rows
-// here, so swapping the grid library touched only this file.
+// jspreadsheet speaks a 2D `data` array plus a separate `style` map (CSS strings
+// keyed by A1). The rest of frees (App auto-sync, ssheetResolver, bindings, CSV,
+// linked tables) speaks the legacy `celldata` shape `{ r, c, v: { v, m, f? } }`.
+// We keep `celldata` as the canonical *stored* format and convert here, so the
+// grid library stays isolated to this file. Formulas live in `v.f`, the computed
+// value in `v.v` (what the resolver/bindings read), the display string in `v.m`.
 
-type GridRow = Record<string, string | null>
-// DSG's Selection type isn't exported; mirror its shape (col/row are 0-based indices).
-type GridSelection = { min: { col: number; row: number }; max: { col: number; row: number } }
-
-// A free-form grid always shows at least this many rows/cols; it grows past the
-// furthest populated cell so there's room to type beyond existing data.
-const COL_MIN = 16
-const ROW_MIN = 200
-const COL_BUFFER = 4
-const ROW_BUFFER = 20
+const MIN_ROWS = 40
+const MIN_COLS = 12
 
 function colName(c: number): string {
   let s = ''
@@ -43,118 +37,157 @@ function colName(c: number): string {
   return s
 }
 
-function colIndex(name: string): number {
-  let c = 0
-  for (let i = 0; i < name.length; i++) c = c * 26 + (name.charCodeAt(i) - 64)
-  return c - 1
-}
-
-function sheetDims(cells: any[]): { rows: number; cols: number } {
-  let maxR = -1
-  let maxC = -1
+function celldataToMatrix(cells: any[], minRows: number, minCols: number): any[][] {
+  let maxR = minRows - 1
+  let maxC = minCols - 1
   for (const cd of cells) {
     if (cd.r > maxR) maxR = cd.r
     if (cd.c > maxC) maxC = cd.c
   }
-  return {
-    rows: Math.max(ROW_MIN, maxR + 1 + ROW_BUFFER),
-    cols: Math.max(COL_MIN, maxC + 1 + COL_BUFFER),
-  }
-}
-
-function celldataToRows(cells: any[], nRows: number): GridRow[] {
-  const rows: GridRow[] = Array.from({ length: nRows }, () => ({}))
+  const m: any[][] = Array.from({ length: maxR + 1 }, () => Array(maxC + 1).fill(''))
   for (const cd of cells) {
-    if (cd.r < 0 || cd.r >= nRows) continue
-    const disp = cd.v?.m ?? cd.v?.v ?? ''
-    rows[cd.r][colName(cd.c)] = disp === null || disp === undefined ? '' : String(disp)
+    const v = cd.v ?? {}
+    m[cd.r][cd.c] = v.f ?? v.m ?? v.v ?? ''
   }
-  return rows
+  return m
 }
 
-// Rebuild celldata from edited DSG rows, preserving any style metadata that lived on
-// the previous cell (bold headers from the Variable Inspector export, etc.).
-function rowsToCelldata(rows: GridRow[], prevCells: any[]): any[] {
-  const prev = new Map<string, any>()
-  for (const cd of prevCells) prev.set(`${cd.r}:${cd.c}`, cd)
+// jspreadsheet's getStyle() returns an entry for EVERY cell — most just the
+// per-cell default it stamps on the whole grid. Keep only cells with real
+// formatting so the persisted style map (and .frees file) stays lean.
+function pruneStyles(styles: Record<string, string>): Record<string, string> {
+  const out: Record<string, string> = {}
+  for (const k in styles) {
+    const meaningful = (styles[k] || '')
+      .replace(/text-align:\s*center;?/gi, '')
+      .replace(/overflow:\s*hidden;?/gi, '')
+      .replace(/[\s;]+/g, '')
+    if (meaningful.length > 0) out[k] = styles[k]
+  }
+  return out
+}
 
+// raw = getData(false) (formulas preserved); proc = getData(true) (computed values).
+function matrixToCelldata(raw: any[][], proc: any[][]): any[] {
   const out: any[] = []
-  rows.forEach((row, r) => {
-    for (const colKey of Object.keys(row)) {
-      const raw = row[colKey]
-      if (raw === '' || raw === null || raw === undefined) continue
-      const c = colIndex(colKey)
-      const trimmed = String(raw).trim()
-      const num = Number(trimmed)
-      const isNum = trimmed !== '' && !Number.isNaN(num)
-      const prevV = prev.get(`${r}:${c}`)?.v
-      const style = prevV && typeof prevV === 'object' ? { ...prevV } : {}
-      delete style.v
-      delete style.m
-      out.push({ r, c, v: { ...style, v: isNum ? num : String(raw), m: String(raw) } })
+  for (let r = 0; r < raw.length; r++) {
+    const row = raw[r]
+    if (!row) continue
+    for (let c = 0; c < row.length; c++) {
+      const rv = row[c]
+      if (rv === '' || rv === null || rv === undefined) continue
+      const rawStr = String(rv)
+      const isFormula = rawStr.startsWith('=')
+      const pv = proc[r]?.[c]
+      const procStr = pv === null || pv === undefined ? rawStr : String(pv)
+      const num = Number(procStr)
+      const computed = procStr.trim() !== '' && !Number.isNaN(num) ? num : procStr
+      const cell: any = { r, c, v: { v: computed, m: procStr } }
+      if (isFormula) cell.v.f = rawStr
+      out.push(cell)
     }
-  })
+  }
   return out
 }
 
 export default function SpreadsheetTab({ singleSpreadsheetId, spreadsheets, onSpreadsheetsChange, onCreateTable }: Props) {
   const spec = spreadsheets.find((s) => s.id === singleSpreadsheetId)
-  const [activeSheet, setActiveSheet] = useState(0)
-  const [selection, setSelection] = useState<GridSelection | null>(null)
+  const ssRef = useRef<any>(null)
   const [showBindModal, setShowBindModal] = useState(false)
   const [bindVarName, setBindVarName] = useState('')
   const [bindType, setBindType] = useState<'input' | 'result'>('input')
+  const [hasSelection, setHasSelection] = useState(false)
 
-  // DSG (react-window under the hood) needs an explicit pixel height.
-  const wrapRef = useRef<HTMLDivElement>(null)
-  const [gridHeight, setGridHeight] = useState(400)
+  // Last selection reported by jspreadsheet's onselection — kept in a ref so the
+  // Mantine toolbar buttons (which live outside the grid) can act on it even after
+  // the grid blurs.
+  const selRef = useRef<{ ws: number; x1: number; y1: number; x2: number; y2: number } | null>(null)
+  const activeWsRef = useRef(0)
+
+  // jspreadsheet is imperative: it initializes from these props once and is then
+  // driven through the ref. Capture the initial worksheet config a single time so
+  // React never re-mounts the grid out from under the user.
+  const initialRef = useRef<any[] | null>(null)
+  if (!initialRef.current) {
+    const sheets = (!spec || !spec.sheets || spec.sheets.length === 0
+      ? emptySpreadsheetData()
+      : spec.sheets) as any[]
+    initialRef.current = sheets.map((sh, i) => ({
+      worksheetName: sh.name || `Sheet${i + 1}`,
+      data: celldataToMatrix(sh.celldata ?? [], MIN_ROWS, MIN_COLS),
+      style: sh.styles ?? {},
+      minDimensions: [MIN_COLS, MIN_ROWS],
+    }))
+  }
+
+  // Reference to the exact sheets array we last wrote, so the external-update
+  // effect can tell our own writes apart from App's auto-sync / linked-table writes.
+  const selfWriteRef = useRef<unknown[] | null>(null)
+  const syncTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const syncOut = useCallback(() => {
+    const insts = ssRef.current
+    if (!insts || !insts.length) return
+    const prevSheets = (spec?.sheets ?? []) as any[]
+    const newSheets = insts.map((ws: any, i: number) => {
+      const raw = ws.getData(false)
+      const proc = ws.getData(true)
+      const styles = pruneStyles(ws.getStyle() || {})
+      const prev = prevSheets[i] ?? {}
+      return {
+        name: ws.options?.worksheetName || prev.name || `Sheet${i + 1}`,
+        id: prev.id ?? crypto.randomUUID(),
+        status: i === activeWsRef.current ? 1 : 0,
+        order: i,
+        celldata: matrixToCelldata(raw, proc),
+        styles,
+        config: prev.config ?? {},
+      }
+    })
+    selfWriteRef.current = newSheets
+    onSpreadsheetsChange(
+      spreadsheets.map((s) => (s.id === singleSpreadsheetId ? { ...s, sheets: newSheets } : s))
+    )
+  }, [spec, spreadsheets, singleSpreadsheetId, onSpreadsheetsChange])
+
+  const scheduleSync = useCallback(() => {
+    if (syncTimer.current) clearTimeout(syncTimer.current)
+    syncTimer.current = setTimeout(syncOut, 300)
+  }, [syncOut])
+
+  // Flush any pending edits when the window unmounts (dock close / tab switch).
   useEffect(() => {
-    const el = wrapRef.current
-    if (!el) return
-    const ro = new ResizeObserver(() => setGridHeight(el.clientHeight))
-    ro.observe(el)
-    setGridHeight(el.clientHeight)
-    return () => ro.disconnect()
+    return () => {
+      if (syncTimer.current) {
+        clearTimeout(syncTimer.current)
+        syncOut()
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const sheets = useMemo(
-    () => (!spec || !spec.sheets || spec.sheets.length === 0 ? emptySpreadsheetData() : spec.sheets) as any[],
-    [spec]
-  )
-  const activeIndex = Math.min(activeSheet, sheets.length - 1)
-  const activeCells: any[] = sheets[activeIndex]?.celldata ?? []
-
-  const { rows, columns } = useMemo(() => {
-    const { rows: nRows, cols: nCols } = sheetDims(activeCells)
-    const gridRows = celldataToRows(activeCells, nRows)
-    const cols: Column<GridRow, any, any>[] = Array.from({ length: nCols }, (_, c) => {
-      const id = colName(c)
-      return { ...keyColumn<GridRow, string>(id, textColumn), id, title: id, minWidth: 70, basis: 90 }
+  // Push external celldata changes (auto-sync results, linked-table sync) into the
+  // live grid. Skips our own writes by reference identity.
+  useEffect(() => {
+    const insts = ssRef.current
+    if (!insts || !spec) return
+    if (spec.sheets === selfWriteRef.current) return
+    ;(spec.sheets as any[]).forEach((sh, i) => {
+      const ws = insts[i]
+      if (!ws) return
+      const target = celldataToMatrix(sh.celldata ?? [], 0, 0)
+      const current = ws.getData(false)
+      for (let r = 0; r < target.length; r++) {
+        for (let c = 0; c < target[r].length; c++) {
+          const tv = target[r][c]
+          const cv = current[r]?.[c]
+          if (String(tv ?? '') !== String(cv ?? '')) {
+            ws.setValueFromCoords(c, r, tv, true)
+          }
+        }
+      }
     })
-    return { rows: gridRows, columns: cols }
-  }, [activeCells])
-
-  const writeSheetCells = useCallback(
-    (sheetIdx: number, newCells: any[]) => {
-      onSpreadsheetsChange(
-        spreadsheets.map((s) => {
-          if (s.id !== singleSpreadsheetId) return s
-          const newSheets = (s.sheets as any[]).map((sh, i) =>
-            i === sheetIdx ? { ...sh, celldata: newCells } : sh
-          )
-          return { ...s, sheets: newSheets }
-        })
-      )
-    },
-    [spreadsheets, singleSpreadsheetId, onSpreadsheetsChange]
-  )
-
-  const handleChange = useCallback(
-    (newRows: GridRow[]) => {
-      writeSheetCells(activeIndex, rowsToCelldata(newRows, activeCells))
-    },
-    [writeSheetCells, activeIndex, activeCells]
-  )
+  }, [spec])
 
   if (!spec) {
     return (
@@ -164,61 +197,44 @@ export default function SpreadsheetTab({ singleSpreadsheetId, spreadsheets, onSp
     )
   }
 
-  const cellAt = (r: number, c: number): string => rows[r]?.[colName(c)] ?? ''
-
-  const addSheet = () => {
-    const n = sheets.length
-    const newSheet = {
-      name: `Sheet${n + 1}`,
-      id: crypto.randomUUID(),
-      status: 0,
-      order: n,
-      celldata: [],
-      config: {},
-    }
-    onSpreadsheetsChange(
-      spreadsheets.map((s) =>
-        s.id === singleSpreadsheetId ? { ...s, sheets: [...(s.sheets as any[]), newSheet] } : s
-      )
-    )
-    setActiveSheet(n)
-    setSelection(null)
+  const onselection = (instance: any, x1: number, y1: number, x2: number, y2: number) => {
+    const insts = ssRef.current
+    const idx = insts ? insts.indexOf(instance) : 0
+    const ws = idx >= 0 ? idx : 0
+    activeWsRef.current = ws
+    selRef.current = { ws, x1, y1, x2, y2 }
+    setHasSelection(true)
+    scheduleSync() // capture any formatting applied just before moving the selection
   }
 
-  const deleteSheet = (idx: number) => {
-    if (sheets.length <= 1) return
-    onSpreadsheetsChange(
-      spreadsheets.map((s) =>
-        s.id === singleSpreadsheetId
-          ? { ...s, sheets: (s.sheets as any[]).filter((_, i) => i !== idx) }
-          : s
-      )
-    )
-    setActiveSheet((a) => Math.max(0, a >= idx ? a - 1 : a))
-    setSelection(null)
-  }
+  const sheetNameAt = (i: number): string =>
+    (spec.sheets as any[])[i]?.name || ssRef.current?.[i]?.options?.worksheetName || `Sheet${i + 1}`
 
   const handleCreateTable = () => {
-    if (!selection) return
-    const startRow = selection.min.row
-    const endRow = selection.max.row
-    const startCol = selection.min.col
-    const endCol = selection.max.col
-    if (startRow >= endRow) return // Need at least header + 1 row
+    const sel = selRef.current
+    const ws = ssRef.current?.[sel?.ws ?? 0]
+    if (!sel || !ws) return
+    const startRow = sel.y1
+    const endRow = sel.y2
+    const startCol = sel.x1
+    const endCol = sel.x2
+    if (startRow >= endRow) return // need header + at least one row
 
     const vars: string[] = []
     for (let c = startCol; c <= endCol; c++) {
-      vars.push(cellAt(startRow, c) || `Var${c - startCol + 1}`)
+      vars.push(String(ws.getValueFromCoords(c, startRow, true) || `Var${c - startCol + 1}`))
     }
 
-    const tableRows = []
+    const rows = []
     for (let r = startRow + 1; r <= endRow; r++) {
       const paramRow = newParamRow()
       for (let c = startCol; c <= endCol; c++) {
-        const val = cellAt(r, c)
-        if (val !== '') paramRow.values[vars[c - startCol]] = val
+        const val = ws.getValueFromCoords(c, r, true)
+        if (val !== '' && val !== null && val !== undefined) {
+          paramRow.values[vars[c - startCol]] = String(val)
+        }
       }
-      tableRows.push(paramRow)
+      rows.push(paramRow)
     }
 
     const newTable: ParamTableSpec = {
@@ -226,29 +242,26 @@ export default function SpreadsheetTab({ singleSpreadsheetId, spreadsheets, onSp
       kind: 'parametric',
       name: `Table from ${spec.name}`,
       vars,
-      rows: tableRows,
+      rows,
       results: [],
       stats: null,
       checkResult: null,
       checkMessage: '',
       source: 'gui'
     }
-
     onCreateTable?.(newTable)
   }
 
   const handleBindVariable = (type: 'input' | 'result') => {
-    if (!selection) return
+    if (!selRef.current) return
     setBindType(type)
     setShowBindModal(true)
   }
 
   const confirmBind = () => {
-    if (!selection) return
-    const name = sheets[activeIndex]?.name || 'Sheet1'
-    const a1 = `${colName(selection.min.col)}${selection.min.row + 1}`
-    const refStr = `${name}!${a1}`
-
+    const sel = selRef.current
+    if (!sel) return
+    const refStr = `${sheetNameAt(sel.ws)}!${colName(sel.x1)}${sel.y1 + 1}`
     const key = bindType === 'input' ? 'bindings' : 'resultBindings'
     onSpreadsheetsChange(
       spreadsheets.map((s) => (s.id === singleSpreadsheetId ? { ...s, [key]: { ...s[key], [bindVarName]: refStr } } : s))
@@ -258,28 +271,20 @@ export default function SpreadsheetTab({ singleSpreadsheetId, spreadsheets, onSp
   }
 
   const handleExportCSV = () => {
-    const sheet = sheets[activeIndex]
-    if (!sheet || !sheet.celldata) return
-
-    let maxR = 0
-    let maxC = 0
-    for (const cell of sheet.celldata) {
-      if (cell.r > maxR) maxR = cell.r
-      if (cell.c > maxC) maxC = cell.c
-    }
-
-    const csvRows: string[][] = Array.from({ length: maxR + 1 }, () => Array(maxC + 1).fill(''))
-    for (const cell of sheet.celldata) {
-      if (cell.v?.m !== undefined) {
-        let val = String(cell.v.m).replace(/"/g, '""')
-        if (val.includes(',') || val.includes('"') || val.includes('\n')) {
-          val = `"${val}"`
-        }
-        csvRows[cell.r][cell.c] = val
-      }
-    }
-
-    const csvStr = csvRows.map(r => r.join(',')).join('\n')
+    const ws = ssRef.current?.[activeWsRef.current]
+    if (!ws) return
+    const data: any[][] = ws.getData(true)
+    const csvStr = data
+      .map((row) =>
+        row
+          .map((cell) => {
+            let val = String(cell ?? '').replace(/"/g, '""')
+            if (val.includes(',') || val.includes('"') || val.includes('\n')) val = `"${val}"`
+            return val
+          })
+          .join(',')
+      )
+      .join('\n')
     const blob = new Blob([csvStr], { type: 'text/csv' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
@@ -294,13 +299,13 @@ export default function SpreadsheetTab({ singleSpreadsheetId, spreadsheets, onSp
   return (
     <div style={{ height: '100%', width: '100%', display: 'flex', flexDirection: 'column' }}>
       <Group p="xs" gap="xs" style={{ borderBottom: '1px solid var(--mantine-color-default-border)' }}>
-        <Button size="xs" variant="light" leftSection={<IconTablePlus size={14} />} onClick={handleCreateTable} disabled={!onCreateTable || !selection}>
+        <Button size="xs" variant="light" leftSection={<IconTablePlus size={14} />} onClick={handleCreateTable} disabled={!onCreateTable || !hasSelection}>
           Create Table from Selection
         </Button>
-        <Button size="xs" variant="light" leftSection={<IconLink size={14} />} color="orange" onClick={() => handleBindVariable('input')} disabled={!selection}>
+        <Button size="xs" variant="light" leftSection={<IconLink size={14} />} color="orange" onClick={() => handleBindVariable('input')} disabled={!hasSelection}>
           Bind as Input
         </Button>
-        <Button size="xs" variant="light" leftSection={<IconLink size={14} />} color="teal" onClick={() => handleBindVariable('result')} disabled={!selection}>
+        <Button size="xs" variant="light" leftSection={<IconLink size={14} />} color="teal" onClick={() => handleBindVariable('result')} disabled={!hasSelection}>
           Bind as Result
         </Button>
         <Button size="xs" variant="light" leftSection={<IconDownload size={14} />} color="blue" onClick={handleExportCSV}>
@@ -317,46 +322,19 @@ export default function SpreadsheetTab({ singleSpreadsheetId, spreadsheets, onSp
         />
       </Group>
 
-      <div ref={wrapRef} style={{ flex: 1, minHeight: 0 }} className="frees-dsg">
-        <DataSheetGrid<GridRow>
-          value={rows}
-          onChange={handleChange}
-          columns={columns}
-          height={gridHeight}
-          lockRows
-          onSelectionChange={({ selection: sel }) => setSelection(sel)}
-        />
+      <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }} className="frees-jss">
+        <Spreadsheet
+          ref={ssRef}
+          tabs
+          toolbar
+          onafterchanges={scheduleSync}
+          onselection={onselection}
+        >
+          {initialRef.current.map((cfg, i) => (
+            <Worksheet key={i} {...cfg} />
+          ))}
+        </Spreadsheet>
       </div>
-
-      <Group gap={2} px="xs" py={4} style={{ borderTop: '1px solid var(--mantine-color-default-border)' }}>
-        {sheets.map((sh, i) => (
-          <Group key={sh.id ?? i} gap={2} wrap="nowrap">
-            <Button
-              size="compact-xs"
-              variant={i === activeIndex ? 'filled' : 'subtle'}
-              color="gray"
-              onClick={() => {
-                setActiveSheet(i)
-                setSelection(null)
-              }}
-            >
-              {sh.name || `Sheet${i + 1}`}
-            </Button>
-            {i === activeIndex && sheets.length > 1 && (
-              <Tooltip label="Delete sheet" withArrow>
-                <ActionIcon size="xs" variant="subtle" color="red" onClick={() => deleteSheet(i)}>
-                  <IconX size={12} />
-                </ActionIcon>
-              </Tooltip>
-            )}
-          </Group>
-        ))}
-        <Tooltip label="Add sheet" withArrow>
-          <ActionIcon size="sm" variant="subtle" onClick={addSheet} ml={4}>
-            <IconPlus size={14} />
-          </ActionIcon>
-        </Tooltip>
-      </Group>
 
       <Modal opened={showBindModal} onClose={() => setShowBindModal(false)} title={`Bind Cell as ${bindType === 'input' ? 'Input' : 'Result'}`} size="sm">
         <TextInput

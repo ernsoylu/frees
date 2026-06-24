@@ -3,7 +3,9 @@
 export interface SpreadsheetSpec {
   id: string
   name: string
-  /** FortuneSheet sheet data array — opaque JSON for persistence. */
+  /** Sheet data array — opaque JSON for persistence. Each entry is
+   *  `{ name, id, celldata, styles, … }`; `celldata` keeps the legacy
+   *  `{ r, c, v: { v, m, f? } }` cell shape that App/resolver/bindings read. */
   sheets: unknown[]
   /** Bindings mapping variable names to cell references (e.g. "Sheet1!A1") for input */
   bindings?: Record<string, string>
@@ -22,6 +24,8 @@ export function emptySpreadsheetData(): unknown[] {
     status: 1,        // active
     order: 0,
     celldata: [],
+    /** jspreadsheet cell styles: CSS strings keyed by A1 ref (e.g. { A1: 'font-weight:bold;' }). */
+    styles: {},
     config: {},
   }]
 }
