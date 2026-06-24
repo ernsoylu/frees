@@ -711,6 +711,36 @@ wc = 1 [rad/s]
 CALL pidtune(num[1:3], den[1:3], 'PID', wc : Kp, Ki, Kd)`,
   },
   {
+    id: 'estimator-gramian-balreal',
+    title: 'Estimator, Gramians & Balanced Realization',
+    description: 'Kalman estimator (LQE) gain, controllability/observability gramians, and an internally-balanced realization for a stable state-space plant.',
+    category: 'Control Systems',
+    text: `// State Estimator, Gramians & Balanced Realization
+
+{ ---- Plant: x' = A x + B u + G w ,  y = C x + v  (stable, observable) ---- }
+A[1,1] = 0; A[1,2] = 1
+A[2,1] = -2; A[2,2] = -3
+B[1,1] = 0; B[2,1] = 1
+C[1,1] = 1; C[1,2] = 0
+
+{ Process-noise input matrix G and noise covariances Qn (process), Rn (measurement) }
+G[1,1] = 1; G[1,2] = 0
+G[2,1] = 0; G[2,2] = 1
+Qn[1,1] = 1; Qn[1,2] = 0
+Qn[2,1] = 0; Qn[2,2] = 1
+Rn = 0.1 [V^2]
+
+{ ---- Continuous Kalman estimator gain L (solves the filter Riccati equation) ---- }
+CALL lqe(A[1:2,1:2], G[1:2,1:2], C[1:1,1:2], Qn[1:2,1:2], Rn : L[1:2,1:1])
+
+{ ---- Controllability and observability gramians (Lyapunov; A must be stable) ---- }
+CALL gram(A[1:2,1:2], B[1:2,1:1], 'c' : Wc[1:2,1:2])
+CALL gram(A[1:2,1:2], C[1:1,1:2], 'o' : Wo[1:2,1:2])
+
+{ ---- Internally-balanced realization: Wc = Wo = diag(Hankel singular values) ---- }
+CALL balreal(A[1:2,1:2], B[1:2,1:1], C[1:1,1:2] : Ab[1:2,1:2], Bb[1:2,1:1], Cb[1:1,1:2])`,
+  },
+  {
     id: 'control-analysis-report',
     title: 'Control Analysis Report (Formatted)',
     description: 'End-to-end report: poles/zeros, stability margins, Bode, Nyquist, and step response ',

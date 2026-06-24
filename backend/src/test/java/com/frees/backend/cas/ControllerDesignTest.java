@@ -140,15 +140,14 @@ class ControllerDesignTest {
     }
 
     @Test
-    void ss2ssNiseExample() {
-        // Nise Chapter 5, Example 5.10 / 5.11
+    void ss2ss() {
         double[][] a = {
             {-3, 1},
             {1, -3}
         };
-        double[] b = {1, 2};
-        double[] c = {2, 3};
-        double d = 0;
+        double[][] b = {{1}, {2}};
+        double[][] c = {{2, 3}};
+        double[][] d = {{0}};
         double[][] p = {
             {1, 1},
             {1, -1}
@@ -158,30 +157,30 @@ class ControllerDesignTest {
             {-2, 0},
             {0, -4}
         };
-        double[] expectedBn = {1.5, -0.5};
-        double[] expectedCn = {5, -1};
+        double[][] expectedBn = {{1.5}, {-0.5}};
+        double[][] expectedCn = {{5, -1}};
 
         StateSpace.StateSpaceMatrices res = ControllerDesign.ss2ss(a, b, c, d, p);
         for (int i = 0; i < 2; i++) {
             for (int j = 0; j < 2; j++) {
                 assertEquals(expectedAn[i][j], res.a()[i][j], 1e-6);
             }
-            assertEquals(expectedBn[i], res.b()[i], 1e-6);
-            assertEquals(expectedCn[i], res.c()[i], 1e-6);
+            assertEquals(expectedBn[i][0], res.b()[i][0], 1e-6);
+            assertEquals(expectedCn[0][i], res.c()[0][i], 1e-6);
         }
     }
 
     @Test
     void ssConnections() {
         double[][] a1 = {{-2}};
-        double[] b1 = {1};
-        double[] c1 = {1};
-        double d1 = 1;
+        double[][] b1 = {{1}};
+        double[][] c1 = {{1}};
+        double[][] d1 = {{1}};
 
         double[][] a2 = {{-3}};
-        double[] b2 = {1};
-        double[] c2 = {2};
-        double d2 = 1;
+        double[][] b2 = {{1}};
+        double[][] c2 = {{2}};
+        double[][] d2 = {{1}};
 
         // Series
         StateSpace.StateSpaceMatrices ser = ControllerDesign.ssSeries(a1, b1, c1, d1, a2, b2, c2, d2);
@@ -189,11 +188,11 @@ class ControllerDesignTest {
         assertEquals(0.0, ser.a()[0][1], 1e-6);
         assertEquals(1.0, ser.a()[1][0], 1e-6);
         assertEquals(-3.0, ser.a()[1][1], 1e-6);
-        assertEquals(1.0, ser.b()[0], 1e-6);
-        assertEquals(1.0, ser.b()[1], 1e-6);
-        assertEquals(1.0, ser.c()[0], 1e-6);
-        assertEquals(2.0, ser.c()[1], 1e-6);
-        assertEquals(1.0, ser.d(), 1e-6);
+        assertEquals(1.0, ser.b()[0][0], 1e-6);
+        assertEquals(1.0, ser.b()[1][0], 1e-6);
+        assertEquals(1.0, ser.c()[0][0], 1e-6);
+        assertEquals(2.0, ser.c()[0][1], 1e-6);
+        assertEquals(1.0, ser.d()[0][0], 1e-6);
 
         // Parallel
         StateSpace.StateSpaceMatrices par = ControllerDesign.ssParallel(a1, b1, c1, d1, a2, b2, c2, d2);
@@ -201,11 +200,11 @@ class ControllerDesignTest {
         assertEquals(0.0, par.a()[0][1], 1e-6);
         assertEquals(0.0, par.a()[1][0], 1e-6);
         assertEquals(-3.0, par.a()[1][1], 1e-6);
-        assertEquals(1.0, par.b()[0], 1e-6);
-        assertEquals(1.0, par.b()[1], 1e-6);
-        assertEquals(1.0, par.c()[0], 1e-6);
-        assertEquals(2.0, par.c()[1], 1e-6);
-        assertEquals(2.0, par.d(), 1e-6);
+        assertEquals(1.0, par.b()[0][0], 1e-6);
+        assertEquals(1.0, par.b()[1][0], 1e-6);
+        assertEquals(1.0, par.c()[0][0], 1e-6);
+        assertEquals(2.0, par.c()[0][1], 1e-6);
+        assertEquals(2.0, par.d()[0][0], 1e-6);
 
         // Feedback (Negative feedback, sign = 1.0)
         StateSpace.StateSpaceMatrices fdb = ControllerDesign.ssFeedback(a1, b1, c1, d1, a2, b2, c2, d2, 1.0);
@@ -213,11 +212,11 @@ class ControllerDesignTest {
         assertEquals(-1.0, fdb.a()[0][1], 1e-6);
         assertEquals(0.5, fdb.a()[1][0], 1e-6);
         assertEquals(-4.0, fdb.a()[1][1], 1e-6);
-        assertEquals(0.5, fdb.b()[0], 1e-6);
-        assertEquals(0.5, fdb.b()[1], 1e-6);
-        assertEquals(0.5, fdb.c()[0], 1e-6);
-        assertEquals(-1.0, fdb.c()[1], 1e-6);
-        assertEquals(0.5, fdb.d(), 1e-6);
+        assertEquals(0.5, fdb.b()[0][0], 1e-6);
+        assertEquals(0.5, fdb.b()[1][0], 1e-6);
+        assertEquals(0.5, fdb.c()[0][0], 1e-6);
+        assertEquals(-1.0, fdb.c()[0][1], 1e-6);
+        assertEquals(0.5, fdb.d()[0][0], 1e-6);
     }
 
     @Test

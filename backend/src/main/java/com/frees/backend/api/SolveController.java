@@ -115,7 +115,8 @@ public class SolveController {
                                 // null for whole-system errors (no single line).
                                 Integer errorLine,
                                 List<SolveDtos.StateTableDto> stateTableDefs,
-                                List<SolveDtos.OdeTableDto> odeTables) {
+                                List<SolveDtos.OdeTableDto> odeTables,
+                                List<SolveDtos.ResidueExpansionDto> residueExpansions) {
 
         static SolveResponse failure(String error) {
             return failure(error, null);
@@ -124,7 +125,7 @@ public class SolveController {
         static SolveResponse failure(String error, Integer errorLine) {
             return new SolveResponse(false, List.of(), List.of(), List.of(), null,
                     List.of(), List.of(), error, List.of(), List.of(), List.of(),
-                    List.of(), errorLine, List.of(), List.of());
+                    List.of(), errorLine, List.of(), List.of(), List.of());
         }
     }
 
@@ -263,7 +264,8 @@ public class SolveController {
                 plotsOf(parsed.plots()),
                 null,
                 stateTablesOf(parsed.stateTables()),
-                odeTablesOf(result.odeTables()));
+                odeTablesOf(result.odeTables()),
+                result.residueExpansions());
     }
 
     /** Quick synchronous syntax check used by the asynchronous path to reject

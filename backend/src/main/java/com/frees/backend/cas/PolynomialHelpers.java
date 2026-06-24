@@ -611,9 +611,10 @@ public final class PolynomialHelpers {
         }
         StateSpace.StateSpaceMatrices ss = StateSpace.tf2ss(numPadded, den);
         double[][] a = ss.a();
-        double[] b = ss.b();
-        double[] cvec = ss.c();
-        double d = ss.d();
+        double[] b = new double[ss.a().length];
+        if (ss.a().length > 0) { for(int i=0; i<ss.a().length; i++) b[i] = ss.b()[i][0]; }
+        double[] cvec = ss.a().length > 0 ? ss.c()[0] : new double[0];
+        double d = ss.d()[0][0];
         int n = a.length;
         // Augmented matrix M = [[A, B], [0, 0]]; expm(M*Ts) = [[Ad, Bd], [0, 1]].
         double[][] m = new double[n + 1][n + 1];

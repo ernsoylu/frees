@@ -2,6 +2,7 @@ package com.frees.backend.parser;
 
 import com.frees.backend.ast.Equation;
 import com.frees.backend.ast.Expr;
+import com.frees.backend.cas.PolynomialHelpers.ResidueResult;
 
 import java.util.List;
 import java.util.Map;
@@ -19,6 +20,68 @@ public final class LatexConverter {
 
     public static String toLatex(Equation eq, Map<String, String> displayNames) {
         return toLatex(eq.lhs(), displayNames) + " = " + toLatex(eq.rhs(), displayNames);
+    }
+
+    public static String toLatex(ResidueResult res) {
+        StringBuilder sb = new StringBuilder();
+        int n = res.orders().length;
+        boolean first = true;
+        for (int i = 0; i < n; i++) {
+            double rRe = res.residues()[i][0];
+            double rIm = res.residues()[i][1];
+            double pRe = res.poles()[i][0];
+            double pIm = res.poles()[i][1];
+            int ord = res.orders()[i];
+
+            if (rRe == 0 && rIm == 0) continue;
+
+            String rLatex = formatComplex(rRe, rIm);
+            String pLatex = formatComplex(-pRe, -pIm); // s - p -> s + (-p)
+
+            if (!first) {
+                sb.append(" + ");
+            } else {
+                first = false;
+            }
+
+            sb.append("\\frac{").append(rLatex).append("}{");
+            String denomBase = "s";
+            if (pRe != 0 || pIm != 0) {
+                if (pRe > 0 && pIm == 0) {
+                    denomBase = "s - " + formatValue(pRe);
+                } else if (pRe < 0 && pIm == 0) {
+                    denomBase = "s + " + formatValue(-pRe);
+                } else {
+                    // complex pole
+                    denomBase = "s " + (pRe > 0 ? "- " : "+ ") + "\\left(" + formatComplex(Math.abs(pRe), pRe > 0 ? pIm : -pIm) + "\\right)";
+                }
+            }
+            if (ord > 1) {
+                sb.append("\\left(").append(denomBase).append("\\right)^{").append(ord).append("}");
+            } else {
+                sb.append(denomBase);
+            }
+            sb.append("}");
+        }
+
+        if (res.k() != 0 || first) {
+            if (!first) {
+                sb.append(res.k() > 0 ? " + " : " - ");
+                sb.append(formatValue(Math.abs(res.k())));
+            } else {
+                sb.append(formatValue(res.k()));
+            }
+        }
+        return sb.toString();
+    }
+
+    private static String formatComplex(double re, double im) {
+        if (im == 0) return formatValue(re);
+        if (re == 0) return (im == 1 ? "i" : (im == -1 ? "-i" : formatValue(im) + "i"));
+        String sign = im > 0 ? " + " : " - ";
+        double absIm = Math.abs(im);
+        String imPart = absIm == 1 ? "i" : formatValue(absIm) + "i";
+        return formatValue(re) + sign + imPart;
     }
 
     public static String toLatex(Expr e, Map<String, String> displayNames) {
