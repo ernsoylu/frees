@@ -28,6 +28,7 @@ interface Props {
   /** When set, render only this one plot and hide the plot-tab strip + Add
    *  (used when each plot is its own dock window). */
   singlePlotId?: string
+  spreadsheets?: any[]
 }
 
 /**
@@ -50,6 +51,7 @@ export default function PlotTab({
   hideHeader = false,
   exportTrigger = null,
   singlePlotId,
+  spreadsheets = [],
 }: Readonly<Props>) {
   const visible = plots.filter((p) => kinds.includes(p.kind))
   const [fluids, setFluids] = useState<string[]>([])
@@ -112,6 +114,7 @@ export default function PlotTab({
           tableVars={tableVars}
           hasStates={states.indices.length > 0}
           stateTables={stateTableDefs}
+          spreadsheets={spreadsheets}
           onSave={editing ? updatePlot : addPlot}
           onClose={() => {
             setAdding(false)
@@ -141,6 +144,7 @@ export default function PlotTab({
           tableResults={results}
           variables={solvedVariables}
           stateTableDefs={stateTableDefs}
+          spreadsheets={spreadsheets}
           onConfigure={() => setEditing(current)}
           onRemove={() => removePlot(current.id)}
           hideHeader={hideHeader}

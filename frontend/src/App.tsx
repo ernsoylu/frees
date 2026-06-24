@@ -488,8 +488,9 @@ export default function App() {
       let changed = false
       const next = prev.map((ss) => {
         if (!ss.linkedTableId) return ss
-        const t = tables.find((x) => x.id === ss.linkedTableId)
-        if (!t) return ss
+        const rawT = tables.find((x) => x.id === ss.linkedTableId)
+        if (!rawT || rawT.kind !== 'parametric') return ss
+        const t = rawT as import('./tables').ParamTableSpec
 
         let sheetChanged = false
         const newSheets = [...(ss.sheets as any[])]
@@ -542,9 +543,10 @@ export default function App() {
   useEffect(() => {
     setTables((prev) => {
       let changed = false
-      const next = prev.map((t) => {
-        const ss = spreadsheets.find((x) => x.linkedTableId === t.id)
-        if (!ss || t.kind !== 'parametric') return t
+      const next = prev.map((rawT) => {
+        const ss = spreadsheets.find((x) => x.linkedTableId === rawT.id)
+        if (!ss || rawT.kind !== 'parametric') return rawT
+        const t = rawT as import('./tables').ParamTableSpec
 
         let tableChanged = false
         const targetSheet = (ss.sheets[0] as any)
@@ -2109,6 +2111,7 @@ export default function App() {
           activeDiagramId={d.id}
           onDiagramsChange={setDiagrams}
           onActiveDiagramIdChange={setActiveDiagramId}
+          spreadsheets={spreadsheets}
           inspectorOutlet={inspectorOutlet}
           isActive={focusedWindow?.id === `diagram:${d.id}`}
           initialMode={runOnLoadDiagramIdsRef.current.has(d.id) ? 'run' : 'develop'}
@@ -2190,6 +2193,7 @@ export default function App() {
           results={tableResults}
           activePlotId={pl.id}
           onActivePlotIdChange={setActivePlotId}
+          spreadsheets={spreadsheets}
         />
         </Suspense>
       </div>
