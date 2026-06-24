@@ -47,6 +47,7 @@ import {
   IconTrash,
   IconSearch,
   IconVariable,
+  IconGrid4x4,
 } from '@tabler/icons-react'
 import { spotlight } from '@mantine/spotlight'
 import { useState } from 'react'
@@ -72,6 +73,7 @@ const VIEWS = [
   },
   { value: 'diagram', label: 'Diagram', tip: 'Diagram — interactive schematic editor', icon: IconSchema },
   { value: 'whiteboard', label: 'Whiteboard', tip: 'Whiteboard — Excalidraw freehand sketch canvas', icon: IconBrush },
+  { value: 'spreadsheet', label: 'Spreadsheet', tip: 'Spreadsheet — Excel-like workbook', icon: IconGrid4x4 },
   { value: 'workspace', label: 'Variables', tip: 'Variable Explorer — live solved state & variable info', icon: IconVariable },
   { value: 'terminal', label: 'Terminal', tip: 'Terminal — REPL evaluated against the workspace', icon: IconTerminal2 },
 ]
@@ -109,6 +111,13 @@ interface RailProps {
   onOpenWhiteboard?: (id: string) => void
   onNewWhiteboard?: () => void
   onDeleteWhiteboard?: (id: string) => void
+  /** Spreadsheets available to open as individual windows. */
+  spreadsheets?: { id: string; name: string; deletable?: boolean }[]
+  /** Number of spreadsheet windows currently open. */
+  spreadsheetCount?: number
+  onOpenSpreadsheet?: (id: string) => void
+  onNewSpreadsheet?: () => void
+  onDeleteSpreadsheet?: (id: string) => void
   onOpenPlot?: (id: string) => void
   onNewPlot?: (kind: 'xy' | 'property' | 'psychro') => void
   onDeletePlot?: (id: string) => void
@@ -376,6 +385,11 @@ export function Rail({
   onOpenWhiteboard,
   onNewWhiteboard,
   onDeleteWhiteboard,
+  spreadsheets,
+  spreadsheetCount = 0,
+  onOpenSpreadsheet,
+  onNewSpreadsheet,
+  onDeleteSpreadsheet,
   onOpenPlot,
   onNewPlot,
   onDeletePlot,
@@ -471,6 +485,22 @@ export function Rail({
               openIds={openIdSet}
               onOpen={onOpenWhiteboard}
               onDelete={onDeleteWhiteboard}
+            />
+          ) : view.value === 'spreadsheet' && spreadsheets ? (
+            <InstanceLauncher
+              key={view.value}
+              expanded={expanded}
+              active={active === 'spreadsheet'}
+              count={spreadsheetCount}
+              idPrefix="spreadsheet:"
+              label="Spreadsheet"
+              newActions={[{ label: 'New spreadsheet', onClick: () => onNewSpreadsheet?.() }]}
+              emptyLabel="No spreadsheets yet"
+              icon={<IconGrid4x4 size={iconSize} stroke={1.6} />}
+              items={spreadsheets}
+              openIds={openIdSet}
+              onOpen={onOpenSpreadsheet}
+              onDelete={onDeleteSpreadsheet}
             />
           ) : view.value === 'plots' && plots ? (
             <InstanceLauncher

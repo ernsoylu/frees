@@ -41,6 +41,7 @@ import {
   IconTerminal2,
   IconVariable,
   IconX,
+  IconGrid4x4,
   type IconProps,
 } from '@tabler/icons-react'
 
@@ -74,6 +75,7 @@ const KIND_ICONS: Record<string, FC<IconProps>> = {
   terminal: IconTerminal2,
   diagram: IconSchema,
   whiteboard: IconBrush,
+  spreadsheet: IconGrid4x4,
   states: IconTemperature,
   solution: IconChecks,
   inspector: IconSettings,
