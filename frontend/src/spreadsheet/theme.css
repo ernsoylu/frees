@@ -33,12 +33,47 @@
   border-color: var(--mantine-color-dark-4);
 }
 
-/* Selected cell / range highlight */
+/* Selection styling. jspreadsheet's defaults are built for a light theme — a
+   faint fill, BLACK 1px borders and a light #ccc box-shadow halo around the
+   selection, plus #dcdcdc selected row/column headers with dark text. On dark
+   mode those read as a washed-out light box that hides the cell text. Replace
+   them with a low-alpha Mantine-blue fill (so text stays readable) and a crisp
+   blue outline. */
 [data-mantine-color-scheme='dark'] .frees-jss .jss_worksheet > tbody > tr > td.highlight {
-  background-color: rgba(51, 154, 240, 0.18) !important;
+  background-color: rgba(51, 154, 240, 0.12) !important;
 }
 [data-mantine-color-scheme='dark'] .frees-jss .jss_worksheet > tbody > tr > td.highlight-selected {
-  background-color: rgba(51, 154, 240, 0.28) !important;
+  background-color: rgba(51, 154, 240, 0.18) !important;
+}
+/* Links inside highlighted cells are hard-coded blue=#00f upstream. */
+[data-mantine-color-scheme='dark'] .frees-jss .jss_worksheet > tbody > tr > td.highlight > a {
+  color: var(--mantine-color-blue-4);
+}
+
+/* Selection outline: jspreadsheet draws it with black borders + #ccc shadows. */
+[data-mantine-color-scheme='dark'] .frees-jss .jss_worksheet .highlight-top {
+  border-top-color: var(--mantine-color-blue-5) !important;
+  box-shadow: 0 -1px var(--mantine-color-blue-7) !important;
+}
+[data-mantine-color-scheme='dark'] .frees-jss .jss_worksheet .highlight-bottom {
+  border-bottom-color: var(--mantine-color-blue-5) !important;
+}
+[data-mantine-color-scheme='dark'] .frees-jss .jss_worksheet .highlight-left {
+  border-left-color: var(--mantine-color-blue-5) !important;
+  box-shadow: -1px 0 var(--mantine-color-blue-7) !important;
+}
+[data-mantine-color-scheme='dark'] .frees-jss .jss_worksheet .highlight-right {
+  border-right-color: var(--mantine-color-blue-5) !important;
+}
+[data-mantine-color-scheme='dark'] .frees-jss .jss_worksheet .highlight-top.highlight-left {
+  box-shadow: -1px -1px var(--mantine-color-blue-7) !important;
+}
+
+/* Selected row/column headers (default #dcdcdc bg + rgba(0,0,0,.3) text). */
+[data-mantine-color-scheme='dark'] .frees-jss .jss_worksheet > thead > tr > td.selected,
+[data-mantine-color-scheme='dark'] .frees-jss .jss_worksheet > tbody > tr.selected > td:first-child {
+  background-color: var(--mantine-color-dark-4) !important;
+  color: var(--mantine-color-dark-0) !important;
 }
 
 /* Formatting toolbar */
