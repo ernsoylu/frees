@@ -1,10 +1,16 @@
 package com.frees.backend.api;
 
 import com.frees.backend.ast.Equation;
+import com.frees.backend.ast.ParametricTable;
+import com.frees.backend.ast.PlotDef;
 import com.frees.backend.ast.ProcDef;
+import com.frees.backend.ast.StateTableDef;
 import com.frees.backend.core.Block;
+import com.frees.backend.core.ode.OdeTableResult;
 
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -89,7 +95,7 @@ final class SolveDtos {
         if (tables == null || tables.isEmpty()) {
             return Map.of();
         }
-        Map<String, ProcDef> defs = new java.util.HashMap<>();
+        Map<String, ProcDef> defs = new HashMap<>();
         for (FunctionTableDto table : tables) {
             if (table.name() == null || table.name().isBlank() || table.curves() == null) {
                 continue;
@@ -116,7 +122,7 @@ final class SolveDtos {
             List<List<Double>> valid = pts.stream()
                     .filter(p -> p != null && p.size() >= 2
                             && p.get(0) != null && p.get(1) != null)
-                    .sorted(java.util.Comparator.comparingDouble(p -> p.get(0)))
+                    .sorted(Comparator.comparingDouble(p -> p.get(0)))
                     .toList();
             if (valid.isEmpty()) {
                 continue;
@@ -133,20 +139,20 @@ final class SolveDtos {
     }
 
     static List<ParametricTableDto> parametricTablesOf(
-            List<com.frees.backend.ast.ParametricTable> tables) {
+            List<ParametricTable> tables) {
         List<ParametricTableDto> out = new ArrayList<>();
-        for (com.frees.backend.ast.ParametricTable t : tables) {
+        for (ParametricTable t : tables) {
             out.add(new ParametricTableDto(t.name(), t.vars(), t.rows()));
         }
         return out;
     }
 
     static List<OdeTableDto> odeTablesOf(
-            List<com.frees.backend.core.ode.OdeTableResult> tables) {
+            List<OdeTableResult> tables) {
         List<OdeTableDto> out = new ArrayList<>();
-        for (com.frees.backend.core.ode.OdeTableResult t : tables) {
+        for (OdeTableResult t : tables) {
             List<OdeEventDto> events = new ArrayList<>();
-            for (com.frees.backend.core.ode.OdeTableResult.EventHit e : t.events()) {
+            for (OdeTableResult.EventHit e : t.events()) {
                 events.add(new OdeEventDto(e.name(), e.time()));
             }
             out.add(new OdeTableDto(t.name(), t.columns(), t.rows(), events,
@@ -155,17 +161,17 @@ final class SolveDtos {
         return out;
     }
 
-    static List<PlotDefDto> plotsOf(List<com.frees.backend.ast.PlotDef> plots) {
+    static List<PlotDefDto> plotsOf(List<PlotDef> plots) {
         List<PlotDefDto> out = new ArrayList<>();
-        for (com.frees.backend.ast.PlotDef p : plots) {
+        for (PlotDef p : plots) {
             out.add(new PlotDefDto(p.name(), p.attributes()));
         }
         return out;
     }
 
-    static List<StateTableDto> stateTablesOf(List<com.frees.backend.ast.StateTableDef> tables) {
+    static List<StateTableDto> stateTablesOf(List<StateTableDef> tables) {
         List<StateTableDto> out = new ArrayList<>();
-        for (com.frees.backend.ast.StateTableDef t : tables) {
+        for (StateTableDef t : tables) {
             out.add(new StateTableDto(t.name(), t.variables(), t.fluid()));
         }
         return out;

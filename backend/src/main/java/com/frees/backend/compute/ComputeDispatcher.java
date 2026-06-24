@@ -47,16 +47,25 @@ public class ComputeDispatcher {
      */
     public JobTicket dispatch(String taskType, String sessionId, Object request) {
         String jobId = UUID.randomUUID().toString();
+        // WARMUP is a fire-and-forget primer that just opens the lazily-established
+        // RabbitMQ connection at startup; the listener drops it and nothing ever
+        // polls its jobId, so it skips the job store entirely rather than leaving
+        // an unresolved PENDING entry in Redis until its TTL.
+        boolean warmup = ComputeTask.WARMUP.equals(taskType);
         String requestJson;
         try {
             requestJson = objectMapper.writeValueAsString(request);
         } catch (JsonProcessingException e) {
             // The request could not be serialised — there is nothing to enqueue.
             log.error("Failed to serialise compute task request", e);
-            jobStore.saveFailed(jobId, "Failed to serialise request: " + e.getMessage());
+            if (!warmup) {
+                jobStore.saveFailed(jobId, "Failed to serialise request: " + e.getMessage());
+            }
             return JobTicket.pending(jobId);
         }
-        jobStore.savePending(jobId);
+        if (!warmup) {
+            jobStore.savePending(jobId);
+        }
         ComputeTask task = new ComputeTask(jobId, taskType, sessionId, requestJson);
         try {
             rabbitTemplate.convertAndSend(ComputeTask.QUEUE, task);
@@ -64,7 +73,9 @@ public class ComputeDispatcher {
             // The PENDING entry has already been persisted; mark the job failed
             // so the poller gets a terminal state rather than waiting forever.
             log.error("Failed to publish compute task {}", jobId, e);
-            jobStore.saveFailed(jobId, "Failed to enqueue job: " + e.getMessage());
+            if (!warmup) {
+                jobStore.saveFailed(jobId, "Failed to enqueue job: " + e.getMessage());
+            }
         }
         return JobTicket.pending(jobId);
     }
