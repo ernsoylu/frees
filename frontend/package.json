@@ -19,8 +19,6 @@
     "@codemirror/state": "^6.6.0",
     "@codemirror/view": "^6.43.1",
     "@excalidraw/excalidraw": "^0.18.1",
-    "@fortune-sheet/core": "^1.0.4",
-    "@fortune-sheet/react": "^1.0.4",
     "@lezer/highlight": "^1.2.3",
     "@mantine/core": "^9.3.1",
     "@mantine/hooks": "^9.3.1",
@@ -32,6 +30,7 @@
     "plotly.js-basic-dist-min": "^3.6.0",
     "plotly.js-dist-min": "^3.6.0",
     "react": "^19.2.7",
+    "react-datasheet-grid": "^4.11.4",
     "react-dom": "^19.2.7"
   },
   "devDependencies": {

@@ -1,85 +1,28 @@
-[data-mantine-color-scheme='dark'] .fortune-sheet-container {
-  /* Attempt to override standard fortune sheet CSS variables if they exist */
-  --fortune-sheet-bg: var(--mantine-color-dark-7);
-  --fortune-sheet-cell-bg: var(--mantine-color-dark-7);
-  --fortune-sheet-border-color: var(--mantine-color-dark-5);
+/* react-datasheet-grid theming.
+   DSG renders real DOM (no canvas), so dark mode is just its documented CSS
+   variables mapped onto Mantine's palette — no invert/hue-rotate hacks. */
+
+.frees-dsg {
+  width: 100%;
+  height: 100%;
 }
 
-/* Hard overrides for fortune sheet core elements in dark mode */
-[data-mantine-color-scheme='dark'] .fortune-sheet-container,
-[data-mantine-color-scheme='dark'] .fortune-sheet-container .fortune-container,
-[data-mantine-color-scheme='dark'] .fortune-sheet-container .fortune-core-container {
-  background-color: var(--mantine-color-dark-7) !important;
-  color: var(--mantine-color-dark-0) !important;
+[data-mantine-color-scheme='dark'] .frees-dsg {
+  --dsg-cell-background-color: var(--mantine-color-dark-7);
+  --dsg-cell-color: var(--mantine-color-dark-0);
+  --dsg-cell-disabled-background-color: var(--mantine-color-dark-6);
+  --dsg-border-color: var(--mantine-color-dark-4);
+  --dsg-header-text-color: var(--mantine-color-dark-2);
+  --dsg-header-active-text-color: var(--mantine-color-dark-0);
+  --dsg-selection-border-color: var(--mantine-color-blue-5);
+  --dsg-selection-background-color: rgba(51, 154, 240, 0.12);
+  --dsg-selection-disabled-border-color: var(--mantine-color-dark-3);
+  --dsg-selection-disabled-background-color: rgba(255, 255, 255, 0.04);
+  --dsg-scroll-shadow-color: rgba(0, 0, 0, 0.6);
 }
 
-
-[data-mantine-color-scheme='dark'] .fortune-sheet-container canvas {
-  /* FortuneSheet draws cells on a canvas! We cannot easily theme the canvas 
-     via CSS for cell backgrounds and borders unless FortuneSheet supports a dark theme via props. 
-     Using an invert filter as a fallback for the canvas layer to get a decent dark mode effect. 
-     invert(0.88) + brightness(0.85) exactly maps #ffffff -> #1A1B1E and #000000 -> #C1C2C5 */
-  filter: invert(0.88) hue-rotate(180deg) brightness(0.85);
-}
-
-/* UI Elements: Menus, Toolbars, dialogs */
-[data-mantine-color-scheme='dark'] .fortune-sheet-container .fortune-toolbar,
-[data-mantine-color-scheme='dark'] .fortune-sheet-container .fortune-toolbar-item,
-[data-mantine-color-scheme='dark'] .fortune-sheet-container .fortune-menu,
-[data-mantine-color-scheme='dark'] .fortune-sheet-container .fortune-context-menu,
-[data-mantine-color-scheme='dark'] .fortune-sheet-container .fortune-dialog,
-[data-mantine-color-scheme='dark'] .fortune-sheet-container .fortune-fx-editor,
-[data-mantine-color-scheme='dark'] .fortune-sheet-container .fortune-fx-icon,
-[data-mantine-color-scheme='dark'] .fortune-sheet-container .fortune-name-box-container,
-[data-mantine-color-scheme='dark'] .fortune-sheet-container .fortune-name-box,
-[data-mantine-color-scheme='dark'] .fortune-sheet-container .fortune-left-top,
-[data-mantine-color-scheme='dark'] .fortune-sheet-container .luckysheet-sheet-area,
-[data-mantine-color-scheme='dark'] .fortune-sheet-container .fortune-sheettab-container {
-  background-color: var(--mantine-color-dark-6) !important;
-  color: var(--mantine-color-dark-0) !important;
-  border-color: var(--mantine-color-dark-4) !important;
-}
-
-[data-mantine-color-scheme='dark'] .fortune-sheet-container .luckysheet-cols-menuitem-content,
-[data-mantine-color-scheme='dark'] .fortune-sheet-container .luckysheet-cols-menuitem {
-  color: var(--mantine-color-dark-0) !important;
-}
-
-[data-mantine-color-scheme='dark'] .fortune-sheet-container .fortune-context-menu-divider {
-  border-bottom: 1px solid var(--mantine-color-dark-4) !important;
-}
-
-[data-mantine-color-scheme='dark'] .fortune-sheet-container .fortune-fx-input-container,
-[data-mantine-color-scheme='dark'] .fortune-sheet-container .fortune-fx-input {
-  background-color: var(--mantine-color-dark-7) !important;
-  color: var(--mantine-color-dark-0) !important;
-  border: 1px solid var(--mantine-color-dark-4) !important;
-}
-
-[data-mantine-color-scheme='dark'] .fortune-sheet-container .fortune-toolbar-item:hover,
-[data-mantine-color-scheme='dark'] .fortune-sheet-container .fortune-menu-item:hover,
-[data-mantine-color-scheme='dark'] .fortune-sheet-container .luckysheet-cols-menuitem:hover {
-  background-color: var(--mantine-color-dark-5) !important;
-}
-
-[data-mantine-color-scheme='dark'] .fortune-sheet-container .fortune-sheettab-button,
-[data-mantine-color-scheme='dark'] .fortune-sheet-container .fortune-sheettab-container-c {
-  background-color: var(--mantine-color-dark-7) !important;
-  color: var(--mantine-color-dark-2) !important;
-  border-color: var(--mantine-color-dark-4) !important;
-}
-
-[data-mantine-color-scheme='dark'] .fortune-sheet-container .fortune-sheettab-button:hover,
-[data-mantine-color-scheme='dark'] .fortune-sheet-container .fortune-sheettab-button-active {
-  background-color: var(--mantine-color-dark-5) !important;
-  color: var(--mantine-color-dark-0) !important;
-}
-
-[data-mantine-color-scheme='dark'] .fortune-sheet-container .fortune-icon,
-[data-mantine-color-scheme='dark'] .fortune-sheet-container .fortune-toolbar-item svg,
-[data-mantine-color-scheme='dark'] .fortune-sheet-container .fortune-menu-item svg,
-[data-mantine-color-scheme='dark'] .fortune-sheet-container .luckysheet-cols-menuitem svg,
-[data-mantine-color-scheme='dark'] .fortune-sheet-container .fortune-fx-icon svg,
-[data-mantine-color-scheme='dark'] .fortune-sheet-container .fortune-stat-area svg {
-  filter: invert(1) grayscale(1) brightness(1.5);
+/* The gutter (row-number) column shares the header palette in dark mode. */
+[data-mantine-color-scheme='dark'] .frees-dsg .dsg-cell-gutter {
+  background-color: var(--mantine-color-dark-6);
+  color: var(--mantine-color-dark-2);
 }
