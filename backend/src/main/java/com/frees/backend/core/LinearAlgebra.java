@@ -41,6 +41,21 @@ public final class LinearAlgebra {
         return new SingularValueDecomposition(matrix(a)).getSingularValues();
     }
 
+    /** U factor (m×m, orthogonal) of the Singular Value Decomposition of {@code a}. */
+    public static double[][] svdU(double[][] a) {
+        return new SingularValueDecomposition(matrix(a)).getU().getData();
+    }
+
+    /** S factor (m×n, diagonal) of the Singular Value Decomposition of {@code a}. */
+    public static double[][] svdS(double[][] a) {
+        return new SingularValueDecomposition(matrix(a)).getS().getData();
+    }
+
+    /** V factor (n×n, orthogonal) of the Singular Value Decomposition of {@code a}. */
+    public static double[][] svdV(double[][] a) {
+        return new SingularValueDecomposition(matrix(a)).getV().getData();
+    }
+
     /**
      * Lower-triangular Cholesky factor L of a symmetric positive-definite matrix,
      * so that {@code A = L·Lᵀ}. Symmetry/positivity thresholds are relaxed

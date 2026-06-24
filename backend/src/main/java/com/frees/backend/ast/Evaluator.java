@@ -133,7 +133,7 @@ public final class Evaluator {
             return evalMatExp(c, values, defs);
         }
         if (c.function().startsWith("svd$")) {
-            return evalSingularValues(c, values, defs);
+            return evalSvd(c, values, defs);
         }
         if (c.function().startsWith("fft$") || c.function().startsWith("ifft$")) {
             return evalFft(c, values, defs);
@@ -778,14 +778,30 @@ public final class Evaluator {
         return com.frees.backend.core.LinearAlgebra.expm(a)[i][j];
     }
 
-    // Synthetic svd$s$<k>$<m>$<n>: k-th singular value (non-increasing order).
-    private static double evalSingularValues(Expr.Call c, Map<String, Double> values, Map<String, ProcDef> defs) {
+    // Synthetic svd$s$<k>$<m>$<n> or svd$u$<i>$<j>$<m>$<n> etc.
+    private static double evalSvd(Expr.Call c, Map<String, Double> values, Map<String, ProcDef> defs) {
         String[] parts = c.function().split("\\$");
-        int k = Integer.parseInt(parts[2]);
-        int m = Integer.parseInt(parts[3]);
-        int n = Integer.parseInt(parts[4]);
-        double[][] a = readMatrix(c.args(), 0, m, n, values, defs);
-        return com.frees.backend.core.LinearAlgebra.singularValues(a)[k];
+        String mat = parts[1];
+        if (mat.equals("s")) {
+            int k = Integer.parseInt(parts[2]);
+            int m = Integer.parseInt(parts[3]);
+            int n = Integer.parseInt(parts[4]);
+            double[][] a = readMatrix(c.args(), 0, m, n, values, defs);
+            return com.frees.backend.core.LinearAlgebra.singularValues(a)[k];
+        } else {
+            int i = Integer.parseInt(parts[2]);
+            int j = Integer.parseInt(parts[3]);
+            int m = Integer.parseInt(parts[4]);
+            int n = Integer.parseInt(parts[5]);
+            double[][] a = readMatrix(c.args(), 0, m, n, values, defs);
+            if (mat.equals("u")) {
+                return com.frees.backend.core.LinearAlgebra.svdU(a)[i][j];
+            } else if (mat.equals("smat")) {
+                return com.frees.backend.core.LinearAlgebra.svdS(a)[i][j];
+            } else {
+                return com.frees.backend.core.LinearAlgebra.svdV(a)[i][j];
+            }
+        }
     }
 
     // Synthetic fft$re|im$<k>$<n> / ifft$...: DFT (or inverse) of the complex

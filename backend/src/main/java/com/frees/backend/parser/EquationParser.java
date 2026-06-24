@@ -842,6 +842,14 @@ public final class EquationParser {
                 }
                 case "singularvalues" -> setVec(outputs, 0,
                         Math.min(inMatRows(inputs, 0, ctx), inMatCols(inputs, 0, ctx)));
+                case "svd" -> {
+                    int m = inMatRows(inputs, 0, ctx);
+                    int n = inMatCols(inputs, 0, ctx);
+                    int p = Math.min(m, n);
+                    setMat(outputs, 0, m, p);
+                    setMat(outputs, 1, p, p);
+                    setMat(outputs, 2, n, p);
+                }
                 case "fft", "ifft" -> {
                     int n = inVecLen(inputs, 0, ctx);
                     setVec(outputs, 0, n);
@@ -1223,7 +1231,7 @@ public final class EquationParser {
      *  whose results are computed numerically from resolved (known) entries —
      *  mirroring the eigendecomposition path. */
     static final java.util.Set<String> LIN_ALG_SIGNAL_STATS_CALLS = java.util.Set.of(
-            "qr", "cholesky", "matexp", "singularvalues",
+            "qr", "cholesky", "matexp", "singularvalues", "svd",
             "fft", "ifft", "convolve",
             "linfit", "polyfit", "interp2");
 
@@ -1233,6 +1241,7 @@ public final class EquationParser {
             case "cholesky" -> flattenCholesky(inputs, outputs, sourceText, ctx);
             case "matexp" -> flattenMatExp(inputs, outputs, sourceText, ctx);
             case "singularvalues" -> flattenSingularValues(inputs, outputs, sourceText, ctx);
+            case "svd" -> flattenSvd(inputs, outputs, sourceText, ctx);
             case "fft" -> flattenFft(false, inputs, outputs, sourceText, ctx);
             case "ifft" -> flattenFft(true, inputs, outputs, sourceText, ctx);
             case "convolve" -> flattenConvolve(inputs, outputs, sourceText, ctx);
@@ -1334,6 +1343,48 @@ public final class EquationParser {
         for (int k = 0; k < s.size; k++) {
             ctx.out().add(new Equation(s.elements[k],
                     new Expr.Call("svd$s$" + k + "$" + m + "$" + n, entries), sourceText));
+        }
+    }
+
+    private void flattenSvd(List<Expr> inputs, List<Expr> outputs, String sourceText, FlattenContext ctx) {
+        if (inputs.size() != 1 || outputs.size() != 3) {
+            throw new ParseException("SVD expects 1 input matrix and 3 output matrices, e.g. CALL SVD(A : U, S, V)");
+        }
+        MatrixInfo a = parseMatrixInfo(inputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        MatrixInfo u = parseMatrixInfo(outputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        MatrixInfo s = parseMatrixInfo(outputs.get(1), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        MatrixInfo v = parseMatrixInfo(outputs.get(2), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+
+        int m = a.rows;
+        int n = a.cols;
+        int p = Math.min(m, n);
+        if (u.rows != m || u.cols != p || s.rows != p || s.cols != p || v.rows != n || v.cols != p) {
+            throw new ParseException(String.format("SVD of a %dx%d matrix requires outputs U (%dx%d), S (%dx%d), and V (%dx%d).",
+                    m, n, m, p, p, p, n, p));
+        }
+
+        List<Expr> entries = matrixEntries(a);
+
+        // U matrix
+        for (int i = 0; i < m; i++) {
+            for (int j = 0; j < p; j++) {
+                ctx.out().add(new Equation(u.elements[i][j],
+                        new Expr.Call("svd$u$" + i + "$" + j + "$" + m + "$" + n, entries), sourceText));
+            }
+        }
+        // S matrix
+        for (int i = 0; i < p; i++) {
+            for (int j = 0; j < p; j++) {
+                ctx.out().add(new Equation(s.elements[i][j],
+                        new Expr.Call("svd$smat$" + i + "$" + j + "$" + m + "$" + n, entries), sourceText));
+            }
+        }
+        // V matrix
+        for (int i = 0; i < n; i++) {
+            for (int j = 0; j < p; j++) {
+                ctx.out().add(new Equation(v.elements[i][j],
+                        new Expr.Call("svd$v$" + i + "$" + j + "$" + m + "$" + n, entries), sourceText));
+            }
         }
     }
 

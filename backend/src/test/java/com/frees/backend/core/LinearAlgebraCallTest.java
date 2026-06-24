@@ -100,6 +100,19 @@ class LinearAlgebraCallTest {
         assertEquals(2.0, v(r, "s[2]"), 1e-9);
     }
 
+    /** Full SVD of a 2x3 matrix. */
+    @Test
+    void fullSvd() {
+        String src = "A = [3, 2, 2; 2, 3, -2]\nCALL SVD(A : U, S, V)\n";
+        EquationSystemSolver.Result r = solver.solve(src);
+        // S is compact, so dimensions are 2x2 for a 2x3 matrix
+        // Non-zero singular values for this matrix are 5 and 3
+        assertEquals(5.0, v(r, "s[1,1]"), 1e-9);
+        assertEquals(3.0, v(r, "s[2,2]"), 1e-9);
+        assertEquals(0.0, v(r, "s[1,2]"), 1e-9);
+        assertEquals(0.0, v(r, "s[2,1]"), 1e-9);
+    }
+
     /** Trace and Frobenius norm as scalar expression functions. */
     @Test
     void traceAndFrobeniusNorm() {
