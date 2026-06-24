@@ -2,9 +2,10 @@ import { useMemo, useRef, useState } from 'react'
 import { Workbook } from '@fortune-sheet/react'
 import type { WorkbookInstance } from '@fortune-sheet/react/dist/components/Workbook'
 import '@fortune-sheet/react/dist/index.css'
+import './theme.css'
 import { type SpreadsheetSpec, emptySpreadsheetData } from './types'
 import { Button, Group, Modal, TextInput, Switch } from '@mantine/core'
-import { IconTablePlus, IconLink } from '@tabler/icons-react'
+import { IconTablePlus, IconLink, IconDownload } from '@tabler/icons-react'
 import { ParamTableSpec } from '../tables'
 import { newParamRow } from '../ParametricTableTab'
 
@@ -130,6 +131,46 @@ export default function SpreadsheetTab({ singleSpreadsheetId, spreadsheets, onSp
     setBindVarName('')
   }
 
+  const handleExportCSV = () => {
+    const instance = workbookRef.current
+    if (!instance || !spec.sheets || spec.sheets.length === 0) return
+    
+    // Get active sheet or just the first one
+    const sheetIndex = instance.getAllSheets().findIndex((s: any) => s.status === 1)
+    const activeIndex = sheetIndex >= 0 ? sheetIndex : 0
+    const sheet = spec.sheets[activeIndex] as any
+    if (!sheet || !sheet.celldata) return
+
+    let maxR = 0
+    let maxC = 0
+    for (const cell of sheet.celldata) {
+      if (cell.r > maxR) maxR = cell.r
+      if (cell.c > maxC) maxC = cell.c
+    }
+
+    const rows: string[][] = Array.from({ length: maxR + 1 }, () => Array(maxC + 1).fill(''))
+    for (const cell of sheet.celldata) {
+      if (cell.v?.m !== undefined) {
+        let val = String(cell.v.m).replace(/"/g, '""')
+        if (val.includes(',') || val.includes('"') || val.includes('\n')) {
+          val = `"${val}"`
+        }
+        rows[cell.r][cell.c] = val
+      }
+    }
+
+    const csvStr = rows.map(r => r.join(',')).join('\n')
+    const blob = new Blob([csvStr], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${spec.name || 'spreadsheet'}.csv`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }
+
   return (
     <div style={{ height: '100%', width: '100%', display: 'flex', flexDirection: 'column' }}>
       <Group p="xs" style={{ borderBottom: '1px solid var(--mantine-color-gray-3)' }}>
@@ -141,6 +182,9 @@ export default function SpreadsheetTab({ singleSpreadsheetId, spreadsheets, onSp
         </Button>
         <Button size="xs" variant="light" leftSection={<IconLink size={14} />} color="teal" onClick={() => handleBindVariable('result')}>
           Bind as Result
+        </Button>
+        <Button size="xs" variant="light" leftSection={<IconDownload size={14} />} color="blue" onClick={handleExportCSV}>
+          Export CSV
         </Button>
         <Switch
           label="Auto-sync Results"

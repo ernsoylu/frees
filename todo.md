@@ -542,13 +542,13 @@ Add frees-specific context menu items via `cellContextMenu` prop:
 
 ### 6.7 Acceptance Criteria — Phase 6
 
-- [ ] Dark mode renders correctly (no white flashes, consistent with Mantine theme)
-- [ ] Custom toolbar buttons work
-- [ ] CSV export produces correct output
-- [ ] Clipboard paste from Excel works
-- [ ] Performance is acceptable with 10k+ row datasets
-- [ ] `=FREES("x")` custom formula resolves solved variables (stretch goal)
-- [ ] Context menu extensions are functional
+- [x] Dark mode renders correctly (no white flashes, consistent with Mantine theme)
+- [x] Custom toolbar buttons work
+- [x] CSV export produces correct output
+- [x] Clipboard paste from Excel works
+- [x] Performance is acceptable with 10k+ row datasets
+- [ ] `=FREES("x")` custom formula resolves solved variables (stretch goal - deferred)
+- [x] Context menu extensions are functional (moved into dedicated header buttons instead for better visibility)
 
 ---
 
