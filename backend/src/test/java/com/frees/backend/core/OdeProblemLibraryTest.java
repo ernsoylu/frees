@@ -64,6 +64,19 @@ class OdeProblemLibraryTest {
     }
 
     @Test
+    void p21_implicitDAE_ode15s() {
+        // Implicitly defined ODE: der(x) + x = 0, x(0) = 1.
+        // x = e^{-t}.
+        OdeTableResult t = solveTable("""
+                DYNAMIC dae (method = ode15s, t = 0 .. 1)
+                  x(0) = 1
+                  der(x) + x = 0
+                END
+                """);
+        assertEquals(Math.exp(-1), last(t, "x"), 1e-4);
+    }
+
+    @Test
     void p02_rcCharging_ode2() {
         // de/dt = (es - e)/(RC), e = 10 (1 - e^{-1000 t}).
         OdeTableResult t = solveTable("""
