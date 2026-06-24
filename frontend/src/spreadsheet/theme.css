@@ -17,6 +17,13 @@
   color: var(--mantine-color-dark-0);
 }
 
+/* The <table> itself defaults to white. Plain cells are opaque and cover it,
+   but a selected cell's background goes semi-transparent — so without this the
+   blue selection composites over white and turns into an unreadable light box. */
+[data-mantine-color-scheme='dark'] .frees-jss .jss_worksheet {
+  background-color: var(--mantine-color-dark-7);
+}
+
 /* Cells */
 [data-mantine-color-scheme='dark'] .frees-jss .jss_worksheet > tbody > tr > td {
   background-color: var(--mantine-color-dark-7);
