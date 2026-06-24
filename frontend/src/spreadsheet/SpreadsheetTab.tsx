@@ -36,7 +36,7 @@ export default function SpreadsheetTab({ singleSpreadsheetId, spreadsheets, onSp
   return (
     <div style={{ height: '100%', width: '100%' }} className="fortune-sheet-container">
       <Workbook
-        data={data}
+        data={data as any}
         onChange={handleChange as any}
         showToolbar={true}
         showFormulaBar={true}

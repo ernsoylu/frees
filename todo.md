@@ -90,7 +90,7 @@ Adding a new multi-instance app follows the established **Diagram/Whiteboard pat
 
 ---
 
-## Phase 1 — Foundational Scaffold (MVP)
+## [x] Phase 1 — Foundational Scaffold (MVP)
 
 **Goal:** A single spreadsheet opens in its own dock window. Editing cells works. Data round-trips through save/load.
 
