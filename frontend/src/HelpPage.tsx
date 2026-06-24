@@ -1633,7 +1633,7 @@ CALL ss2tf(A[1:3,1:3], B[1:3], C[1:3], D : num[1:4], den[1:4])`,
     code: `{ Poles, zeros and zero-pole-gain factoring of G(s) = (s+2)/(s+5) }
 num = [1, 2]
 den = [1, 5]
-CALL pole(num[1:2], den[1:2] : pr[1:1], pi[1:1])
+[pr, pi] = pole(num[1:2], den[1:2])
 CALL zero(num[1:2], den[1:2] : zr[1:1], zi[1:1])
 CALL tf2zp(num[1:2], den[1:2] : zzr[1:1], zzi[1:1], ppr[1:1], ppi[1:1], k)`,
   },
@@ -1656,7 +1656,7 @@ CALL pole(num[1:3], den[1:3] : pr[1:2], pi[1:2])`,
 { den = (s+3)(s^2+2s+2) = s^3 + 5 s^2 + 8 s + 6 }
 num = [0, 0, 1, 2]
 den = [1, 5, 8, 6]
-CALL pole(num[1:4], den[1:4] : pr[1:3], pi[1:3])
+[pr, pi] = pole(num[1:4], den[1:4])
 CALL zero(num[1:4], den[1:4] : zr[1:1], zi[1:1])`,
   },
   {
@@ -1670,10 +1670,10 @@ zi = [0, 0]
 pr = [-1, -2]
 pi = [0, 0]
 k = 1
-CALL zp2tf(zr[1:2], zi[1:2], pr[1:2], pi[1:2], k : numG[1:3], denG[1:3])
+[numG, denG] = zp2tf(zr[1:2], zi[1:2], pr[1:2], pi[1:2], k)
 numH = [1]
 denH = [1]
-CALL feedback(numG[1:3], denG[1:3], numH[1:1], denH[1:1] : numT[1:3], denT[1:3])
+[numT, denT] = feedback(numG[1:3], denG[1:3], numH[1:1], denH[1:1])
 CALL pole(numT[1:3], denT[1:3] : tpr[1:2], tpi[1:2])`,
   },
   {
@@ -1686,7 +1686,7 @@ n1 = [0, 1]
 d1 = [1, 0]
 n2 = [0, -2]
 d2 = [1, 4]
-CALL parallel(n1[1:2], d1[1:2], n2[1:2], d2[1:2] : n12[1:3], d12[1:3])
+[n12, d12] = parallel(n1[1:2], d1[1:2], n2[1:2], d2[1:2])
 n3 = [0, 1]
 d3 = [1, 8]
 CALL parallel(n12[1:3], d12[1:3], n3[1:2], d3[1:2] : nsum[1:4], dsum[1:4])`,
@@ -1706,7 +1706,7 @@ OS = 100 * exp(-zeta*pi#/sqrt(1 - zeta^2))
 Ts = 4 / (zeta*wn)
 t = 0:0.02:1
 N = 51
-CALL step(num[1:3], den[1:3], t[1:N] : y[1:N])
+[y] = step(num[1:3], den[1:3], t[1:N])
 
 PLOT 'Step Response'
   kind = xy
@@ -1726,8 +1726,8 @@ num = [0, 0, 450]
 den = [1, 25, 100]
 t = 0:0.02:1
 N = 51
-CALL impulse(num[1:3], den[1:3], t[1:N] : y_imp[1:N])
-CALL step(num[1:3], den[1:3], t[1:N] : y_step[1:N])
+[y_imp] = impulse(num[1:3], den[1:3], t[1:N])
+[y_step] = step(num[1:3], den[1:3], t[1:N])
 
 PLOT 'Impulse vs Step'
   kind = xy
@@ -1748,7 +1748,7 @@ den = [1, 15, 100]
 t = 0:0.02:1
 N = 51
 u = 0:0.02:1
-CALL lsim(num[1:3], den[1:3], u[1:N], t[1:N] : y[1:N])
+[y] = lsim(num[1:3], den[1:3], u[1:N], t[1:N])
 
 PLOT 'Ramp Response'
   kind = xy
@@ -1770,7 +1770,7 @@ G0 = 3/50
 dB0 = 20*log10(G0)        { low-frequency magnitude, dB }
 Nw = 50
 omega = 0.1:50:100 | Log
-CALL bode(num[1:4], den[1:4], omega[1:Nw] : mag[1:Nw], phase[1:Nw])
+[mag, phase] = bode(num[1:4], den[1:4], omega[1:Nw])
 
 PLOT 'Bode Diagram'
   kind = bode
@@ -1790,11 +1790,11 @@ num_pa = [0, 100*Kpre*0.2083]   { preamp * power amp * motor gain }
 den_pa = [1, 100]
 num_mo = [0, 0, 1]
 den_mo = [1, 1.71, 0]
-CALL series(num_pa[1:2], den_pa[1:2], num_mo[1:3], den_mo[1:3] : num_ol[1:4], den_ol[1:4])
-CALL margin(num_ol[1:4], den_ol[1:4] : gm, pm, w_cg, w_cp)
+[num_ol, den_ol] = series(num_pa[1:2], den_pa[1:2], num_mo[1:3], den_mo[1:3])
+[gm, pm, w_cg, w_cp] = margin(num_ol[1:4], den_ol[1:4])
 Nw = 50
 omega = 0.01:50:100 | Log
-CALL bode(num_ol[1:4], den_ol[1:4], omega[1:Nw] : mag[1:Nw], phase[1:Nw])
+[mag, phase] = bode(num_ol[1:4], den_ol[1:4], omega[1:Nw])
 
 PLOT 'Open-Loop Bode'
   kind = bode
@@ -1813,8 +1813,8 @@ num = [0, 0, 0, 50]
 den = [1, 9, 18, 0]
 Nw = 50
 omega = 0.1:50:100 | Log
-CALL nyquist(num[1:4], den[1:4], omega[1:Nw] : re[1:Nw], im[1:Nw])
-CALL margin(num[1:4], den[1:4] : gm, pm, w_cg, w_cp)
+[re, im] = nyquist(num[1:4], den[1:4], omega[1:Nw])
+[gm, pm, w_cg, w_cp] = margin(num[1:4], den[1:4])
 
 PLOT 'Nyquist Diagram'
   kind = nyquist
@@ -1833,14 +1833,14 @@ num_pa = [0, 100*Kpre]
 den_pa = [1, 100]
 num_mo = [0, 0, 0.2083]
 den_mo = [1, 1.71, 0]
-CALL series(num_pa[1:2], den_pa[1:2], num_mo[1:3], den_mo[1:3] : num_g[1:4], den_g[1:4])
+[num_g, den_g] = series(num_pa[1:2], den_pa[1:2], num_mo[1:3], den_mo[1:3])
 num_h = [1]
 den_h = [1]
-CALL feedback(num_g[1:4], den_g[1:4], num_h[1:1], den_h[1:1] : num_cl[1:4], den_cl[1:4])
-CALL pole(num_cl[1:4], den_cl[1:4] : cpr[1:3], cpi[1:3])
+[num_cl, den_cl] = feedback(num_g[1:4], den_g[1:4], num_h[1:1], den_h[1:1])
+[cpr, cpi] = pole(num_cl[1:4], den_cl[1:4])
 t = 0:0.05:3
 N = 61
-CALL step(num_cl[1:4], den_cl[1:4], t[1:N] : y[1:N])
+[y] = step(num_cl[1:4], den_cl[1:4], t[1:N])
 
 PLOT 'Closed-Loop Step'
   kind = xy
@@ -1859,11 +1859,11 @@ END`,
 num = [0, 0, 1, 8]
 den = [1, 19, 108, 180]
 wc = 5 [rad/s]
-CALL pidtune(num[1:4], den[1:4], 'PID', wc : Kp, Ki, Kd)
+[Kp, Ki, Kd] = pidtune(num[1:4], den[1:4], 'PID', wc)
 { Assemble C(s) = Kp + Ki/s + Kd s = (Kd s^2 + Kp s + Ki)/s and check the loop }
 num_c = [Kd, Kp, Ki]
 den_c = [0, 1, 0]
-CALL series(num_c[1:3], den_c[1:3], num[1:4], den[1:4] : num_ol[1:6], den_ol[1:6])
+[num_ol, den_ol] = series(num_c[1:3], den_c[1:3], num[1:4], den[1:4])
 CALL margin(num_ol[1:6], den_ol[1:6] : gm, pm, w_cg, w_cp)`,
   },
   {
@@ -1879,7 +1879,7 @@ B[1]=0; B[2]=0; B[3]=1
 { Desired closed-loop poles: -10 and -2 +/- j2 }
 des_pr = [-2, -2, -10]
 des_pi = [2, -2, 0]
-CALL place(A[1:3,1:3], B[1:3], des_pr[1:3], des_pi[1:3] : K[1:3])
+[K] = place(A[1:3,1:3], B[1:3], des_pr[1:3], des_pi[1:3])
 { Verify: rebuild Acl = A - B K and read its poles }
 Acl[1,1]=A[1,1]-B[1]*K[1]; Acl[1,2]=A[1,2]-B[1]*K[2]; Acl[1,3]=A[1,3]-B[1]*K[3]
 Acl[2,1]=A[2,1]-B[2]*K[1]; Acl[2,2]=A[2,2]-B[2]*K[2]; Acl[2,3]=A[2,3]-B[2]*K[3]
@@ -1900,7 +1900,7 @@ Q[1,1]=1; Q[1,2]=0; Q[1,3]=0
 Q[2,1]=0; Q[2,2]=1; Q[2,3]=0
 Q[3,1]=0; Q[3,2]=0; Q[3,3]=1
 R = 1
-CALL lqr(A[1:3,1:3], B[1:3], Q[1:3,1:3], R : K[1:3])
+[K] = lqr(A[1:3,1:3], B[1:3], Q[1:3,1:3], R)
 { Verify the closed-loop poles are stable }
 Acl[1,1]=A[1,1]-B[1]*K[1]; Acl[1,2]=A[1,2]-B[1]*K[2]; Acl[1,3]=A[1,3]-B[1]*K[3]
 Acl[2,1]=A[2,1]-B[2]*K[1]; Acl[2,2]=A[2,2]-B[2]*K[2]; Acl[2,3]=A[2,3]-B[2]*K[3]
@@ -1929,9 +1929,9 @@ den = [1, 4, 29, 50]
 
 ## 2. Poles, zeros and stability margins
 
-CALL pole(num[1:4], den[1:4] : pr[1:3], pi[1:3])
+[pr, pi] = pole(num[1:4], den[1:4])
 CALL zero(num[1:4], den[1:4] : zr[1:1], zi[1:1])
-CALL margin(num[1:4], den[1:4] : gm, pm, w_cg, w_cp)
+[gm, pm, w_cg, w_cp] = margin(num[1:4], den[1:4])
 
 All three poles lie in the left half-plane, so the open-loop plant is stable.
 
@@ -1943,8 +1943,8 @@ Sweep 50 logarithmically spaced frequencies, then evaluate the Bode and Nyquist
 responses.
 Nw = 50
 omega = 0.1:50:100 | Log
-CALL bode(num[1:4], den[1:4], omega[1:Nw] : mag[1:Nw], phase[1:Nw])
-CALL nyquist(num[1:4], den[1:4], omega[1:Nw] : re[1:Nw], im[1:Nw])
+[mag, phase] = bode(num[1:4], den[1:4], omega[1:Nw])
+[re, im] = nyquist(num[1:4], den[1:4], omega[1:Nw])
 
 [Graph="Bode Diagram"] Magnitude (dB) and phase (deg) versus frequency [/Graph]
 
@@ -1956,7 +1956,7 @@ Integrate the unit step response over 6 seconds; the lightly damped pole pair
 produces a pronounced, slowly decaying oscillation.
 Nt = 121
 t = 0:0.05:6
-CALL step(num[1:4], den[1:4], t[1:Nt] : y[1:Nt])
+[y] = step(num[1:4], den[1:4], t[1:Nt])
 
 [Graph="Step Response"] Unit step response of the plant [/Graph]
 

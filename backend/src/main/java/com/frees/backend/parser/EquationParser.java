@@ -885,7 +885,14 @@ public final class EquationParser {
                 case "lqr", "dlqr", "place", "acker" -> {
                     int n = inMatRows(inputs, 0, ctx);
                     int m = inMatCols(inputs, 1, ctx);
-                    setMat(outputs, 0, m, n);
+                    // Single-input systems take a 1×n gain; size it as a plain n-vector K[1:n]
+                    // (how SISO gains are written and used downstream, e.g. A - B*K) so bare/
+                    // destructured outputs [K] = lqr(...) match. MIMO keeps the m×n matrix.
+                    if (m == 1) {
+                        setVec(outputs, 0, n);
+                    } else {
+                        setMat(outputs, 0, m, n);
+                    }
                 }
                 case "dare", "lyap", "dlyap", "gram" -> {
                     int n = inMatRows(inputs, 0, ctx);

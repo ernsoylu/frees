@@ -566,33 +566,33 @@ C[1] = 0; C[2] = 1      { output is velocity }
 D = 0.0
 
 { 1. Convert State Space to Transfer Function }
-CALL ss2tf(A[1:2,1:2], B[1:2], C[1:2], D : num_car[1:3], den_car[1:3])
+[num_car, den_car] = ss2tf(A, B, C, D)
 
 { 2. Design PI Controller: C(s) = Kp + Ki/s = (Kp*s + Ki)/s }
 Kp = 800 [N-s/m]
 Ki = 40 [N/m]
-num_pi = [0.0, Kp, Ki]
-den_pi = [0.0, 1.0, 0.0]
+num_pi = [Kp, Ki]
+den_pi = [1.0, 0.0]
 
 { 3. Open-Loop System: L(s) = C(s) * G(s) }
-CALL series(num_pi[1:3], den_pi[1:3], num_car[1:3], den_car[1:3] : num_ol[1:5], den_ol[1:5])
+[num_ol, den_ol] = series(num_pi, den_pi, num_car, den_car)
 
-{ 4. Closed-Loop System: T(s) = L(s) / (1 + L(s)) }
-num_h = [0.0, 0.0, 0.0, 0.0, 1.0]
-den_h = [0.0, 0.0, 0.0, 0.0, 1.0]
-CALL feedback(num_ol[1:5], den_ol[1:5], num_h[1:5], den_h[1:5] : num_cl[1:5], den_cl[1:5])
+{ 4. Closed-Loop System: T(s) = L(s) / (1 + L(s)), unity feedback H(s) = 1 }
+num_h = [1]
+den_h = [1]
+[num_cl, den_cl] = feedback(num_ol, den_ol, num_h, den_h)
 
 { 5. Stability & Frequency Margin Analysis }
-CALL margin(num_ol[1:5], den_ol[1:5] : gm, pm, w_cg, w_cp)
+[gm, pm, w_cg, w_cp] = margin(num_ol, den_ol)
 
-{ 6. Closed-Loop Poles and Zeros }
-CALL pole(num_cl[1:5], den_cl[1:5] : cl_pr[1:4], cl_pi[1:4])
-CALL zero(num_cl[1:5], den_cl[1:5] : cl_zr[1:4], cl_zi[1:4])
+{ 6. Closed-Loop Poles and Zeros (unity-feedback loop has one finite zero) }
+[cl_pr, cl_pi] = pole(num_cl, den_cl)
+[cl_zr, cl_zi] = zero(num_cl, den_cl)
 
 { 7. Frequency sweeps for Bode and Nyquist plots }
 omega = [0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1.0, 5.0, 10.0]
-CALL bode(num_ol[1:5], den_ol[1:5], omega[1:9] : mag_ol[1:9], phase_ol[1:9])
-CALL nyquist(num_ol[1:5], den_ol[1:5], omega[1:9] : real_ol[1:9], imag_ol[1:9])
+[mag_ol, phase_ol] = bode(num_ol, den_ol, omega)
+[real_ol, imag_ol] = nyquist(num_ol, den_ol, omega)
 
 PLOT 'Bode Diagram'
   kind = bode
@@ -618,18 +618,18 @@ END`,
   {
     id: 'multi-output-destructuring',
     title: 'Multi-Output Functions (MATLAB-style)',
-    description: 'Bracket destructuring of CALL functions: [A,B,C,D] = tf2ss(...), discarding outputs with ~, and omitting trailing outputs.',
+    description: 'Bracket destructuring of functions: [A,B,C,D] = tf2ss(...), discarding outputs with ~, and omitting trailing outputs.',
     category: 'Control Systems',
     text: `// Multi-Output Functions
-{ Every multi-output CALL function can be used with MATLAB-style
+{ Every multi-output function can be used with MATLAB-style
   bracket destructuring:  [outs] = name(ins).
   Use ~ to discard an output, or omit trailing outputs you don't
   need. Press Solve (F2). }
 
-num = [0, 0, 1]      { G(s) = 1 / (s^2 + 3s + 2) }
+num = [1]            { G(s) = 1 / (s^2 + 3s + 2) }
 den = [1, 3, 2]
 
-{ 1. Full destructuring — identical to CALL tf2ss(num, den : A, B, C, D) }
+{ 1. Full destructuring }
 [A, B, C, D] = tf2ss(num, den)
 
 { 2. Round-trip back to a transfer function (recovers num, den) }
@@ -655,25 +655,21 @@ zeta = 0.3
 
 { Transfer function coefficients (descending powers of s) }
 { num(s) = wn^2,  den(s) = s^2 + 2*zeta*wn*s + wn^2 }
-num = [0, 0, wn^2]
+num = [wn^2]
 den = [1, 2*zeta*wn, wn^2]
 
-{ Time vector: 0 to 10 s in 0.2 s steps -> 51 samples }
-t = 0:0.2:10
-N = 51
+{ 1. Unit Step Response (uses default 10s time vector) }
+[y_step, t] = step(num, den)
 
-{ 1. Unit Step Response }
-CALL step(num[1:3], den[1:3], t[1:N] : y_step[1:N])
+{ 2. Impulse Response (uses default 10s time vector) }
+[y_imp] = impulse(num, den)
 
-{ 2. Impulse Response }
-CALL impulse(num[1:3], den[1:3], t[1:N] : y_imp[1:N])
-
-{ 3. Forced Response: ramp input u(t) = t (same grid as t) }
-u = 0:0.2:10
-CALL lsim(num[1:3], den[1:3], u[1:N], t[1:N] : y_ramp[1:N])
+{ 3. Forced Response: ramp input u(t) = t }
+u = t
+[y_ramp] = lsim(num, den, u, t)
 
 { 4. Stability check: poles of the system }
-CALL pole(num[1:3], den[1:3] : pr[1:2], pi[1:2])
+[pr, pi] = pole(num, den)
 
 PLOT 'Step Response'
   kind = xy
@@ -721,21 +717,21 @@ Q[2,1] = 0; Q[2,2] = 1
 R = 1
 
 { Optimal gain K minimizing the quadratic cost }
-CALL lqr(A[1:2,1:2], B[1:2], Q[1:2,1:2], R : K[1:2])
+[K] = lqr(A, B, Q, R)
 
 { Closed-loop matrix Acl = A - B K, then verify the poles are stable }
 Acl[1,1] = A[1,1] - B[1]*K[1]
 Acl[1,2] = A[1,2] - B[1]*K[2]
 Acl[2,1] = A[2,1] - B[2]*K[1]
 Acl[2,2] = A[2,2] - B[2]*K[2]
-CALL pole(Acl[1:2,1:2] : pcl_r[1:2], pcl_i[1:2])
+[pcl_r, pcl_i] = pole(Acl)
 
 { ---- PID auto-tuning for plant G(s) = 1 / (s^2 + s) ---- }
 { Target gain crossover at wc with a 60 deg phase margin }
-num = [0, 0, 1]
+num = [1]
 den = [1, 1, 0]
 wc = 1 [rad/s]
-CALL pidtune(num[1:3], den[1:3], 'PID', wc : Kp, Ki, Kd)`,
+[Kp, Ki, Kd] = pidtune(num, den, 'PID', wc)`,
   },
   {
     id: 'estimator-gramian-balreal',
@@ -758,14 +754,14 @@ Qn[2,1] = 0; Qn[2,2] = 1
 Rn = 0.1 [V^2]
 
 { ---- Continuous Kalman estimator gain L (solves the filter Riccati equation) ---- }
-CALL lqe(A[1:2,1:2], G[1:2,1:2], C[1:1,1:2], Qn[1:2,1:2], Rn : L[1:2,1:1])
+[L] = lqe(A, G, C, Qn, Rn)
 
 { ---- Controllability and observability gramians (Lyapunov; A must be stable) ---- }
-CALL gram(A[1:2,1:2], B[1:2,1:1], 'c' : Wc[1:2,1:2])
-CALL gram(A[1:2,1:2], C[1:1,1:2], 'o' : Wo[1:2,1:2])
+[Wc] = gram(A, B, 'c')
+[Wo] = gram(A, C, 'o')
 
 { ---- Internally-balanced realization: Wc = Wo = diag(Hankel singular values) ---- }
-CALL balreal(A[1:2,1:2], B[1:2,1:1], C[1:1,1:2] : Ab[1:2,1:2], Bb[1:2,1:1], Cb[1:1,1:2])`,
+[Ab, Bb, Cb] = balreal(A, B, C)`,
   },
   {
     id: 'control-analysis-report',
@@ -783,14 +779,14 @@ CALL balreal(A[1:2,1:2], B[1:2,1:1], C[1:1,1:2] : Ab[1:2,1:2], Bb[1:2,1:1], Cb[1
 { The numerator and denominator coefficients below (descending powers of s) define
   G(s) = (s + 2) / (s^2 + 4s + 25) — an underdamped system with a natural
   frequency of 5 rad/s, a damping ratio near 0.4, and a single real zero. }
-num = [0, 1, 2]
+num = [1, 2]
 den = [1, 4, 25]
 
 { 2. Poles, zeros and stability margins }
 
-CALL pole(num[1:3], den[1:3] : pr[1:2], pi[1:2])
-CALL zero(num[1:3], den[1:3] : zr[1:1], zi[1:1])
-CALL margin(num[1:3], den[1:3] : gm, pm, w_cg, w_cp)
+[pr, pi] = pole(num, den)
+[zr, zi] = zero(num, den)
+[gm, pm, w_cg, w_cp] = margin(num, den)
 
 { Both poles sit in the left half-plane, so the system is stable. The s-plane map
   below shows the conjugate pole pair and the single real zero. }
@@ -802,8 +798,8 @@ CALL margin(num[1:3], den[1:3] : gm, pm, w_cg, w_cp)
   responses. }
 Nw = 50
 omega = 0.1:50:100 | Log
-CALL bode(num[1:3], den[1:3], omega[1:Nw] : mag[1:Nw], phase[1:Nw])
-CALL nyquist(num[1:3], den[1:3], omega[1:Nw] : re[1:Nw], im[1:Nw])
+[mag, phase] = bode(num, den, omega)
+[re, im] = nyquist(num, den, omega)
 
 
 
@@ -813,7 +809,7 @@ CALL nyquist(num[1:3], den[1:3], omega[1:Nw] : re[1:Nw], im[1:Nw])
   the expected overshoot before settling. }
 Nt = 81
 t = 0:0.05:4
-CALL step(num[1:3], den[1:3], t[1:Nt] : y[1:Nt])
+[y] = step(num, den, t)
 
 
 PLOT 'Pole-Zero Map'
@@ -854,19 +850,15 @@ END`,
 { Open-loop plant G(s) = K*(s + 3) / (s*(s + 1)*(s + 2)*(s + 4)) }
 { Expanded open-loop denominator coefficients: }
 { s*(s + 1)*(s + 2)*(s + 4) = s^4 + 7*s^3 + 14*s^2 + 8*s }
-num_ol = [0, 0, 0, 1, 3]
+num_ol = [1, 3]
 den_ol = [1, 7, 14, 8, 0]
 
-{ M gain values, system order N = 4 }
-M = 200
-N_poles = 4
-
 { Calculate closed-loop root locus trajectories }
-CALL rlocus(num_ol[1:5], den_ol[1:5] : K[1:M], cpr[1:M, 1:N_poles], cpi[1:M, 1:N_poles])
+[K, cpr, cpi] = rlocus(num_ol, den_ol)
 
 { Extract open-loop poles and zeros for plotting }
-CALL pole(num_ol[1:5], den_ol[1:5] : pr[1:N_poles], pi[1:N_poles])
-CALL zero(num_ol[1:5], den_ol[1:5] : zr[1:1], zi[1:1])
+[pr, pi] = pole(num_ol, den_ol)
+[zr, zi] = zero(num_ol, den_ol)
 
 PLOT 'Root Locus'
   kind = rootlocus
@@ -919,11 +911,11 @@ Q_ratio = heisler_q(geom$, Bi, Fo)         { fraction of heat removed }`,
 { System Definition }
 
 { We define the numerator and denominator for the open-loop plant: }
-num = [0, 0, 0, 1]
+num = [1]
 den = [1, 6, 11, 6]      { (s+1)(s+2)(s+3) }
 omega = [0.05, 0.1, 0.2, 0.5, 1, 2, 5, 10, 20]
 
-CALL nichols(num[1:4], den[1:4], omega[1:9] : mag[1:9], phase[1:9])
+[mag, phase] = nichols(num, den, omega)
 
 { Nichols Chart }
 
@@ -947,7 +939,7 @@ END`,
   the answer is 2 (unstable). }
 den = [1, 1, 2, 8]       { s^3 + s^2 + 2s + 8 }
 
-CALL routh(den[1:4] : nRHP, stable)`,
+[nRHP, stable] = routh(den)`,
   },
   {
     id: 'inverse-laplace-residue',
@@ -962,7 +954,7 @@ CALL routh(den[1:4] : nRHP, stable)`,
 num = [1, 3]             { s + 3 }
 den = [1, 3, 2]          { s^2 + 3s + 2 = (s+1)(s+2) }
 
-CALL residue(num[1:2], den[1:3] : r_r[1:2], r_i[1:2], p_r[1:2], p_i[1:2], k)`,
+[r_r, r_i, p_r, p_i, k] = residue(num, den)`,
   },
   {
     id: 'digital-control-c2d',
@@ -973,12 +965,12 @@ CALL residue(num[1:2], den[1:3] : r_r[1:2], r_i[1:2], p_r[1:2], p_i[1:2], k)`,
 { Sample a continuous plant G(s) = 2/(s+2) at Ts = 0.1 s using the
   bilinear (Tustin) and zero-order-hold (ZOH) methods. The outputs
   numz/denz are the discrete transfer function in powers of z. }
-num = [0, 2]
+num = [2]
 den = [1, 2]             { 2 / (s + 2) }
 Ts = 0.1 [s]
 
-CALL c2d(num[1:2], den[1:2], Ts, 'tustin' : numz_t[1:2], denz_t[1:2])
-CALL c2d(num[1:2], den[1:2], Ts, 'zoh'    : numz_z[1:2], denz_z[1:2])`,
+[numz_t, denz_t] = c2d(num, den, Ts, 'tustin')
+[numz_z, denz_z] = c2d(num, den, Ts, 'zoh')`,
   },
   {
     id: 'radiation-view-factors',
