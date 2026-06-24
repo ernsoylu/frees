@@ -238,7 +238,7 @@ if (fw?.kind === 'spreadsheet') {
 
 ---
 
-## Phase 2 — Equation Editor ↔ Spreadsheet (`ssheet()` Function)
+## [x] Phase 2 — Equation Editor ↔ Spreadsheet (`ssheet()` Function)
 
 **Goal:** Equations can directly reference spreadsheet cell values via a `ssheet()` function, and solved results can flow back into spreadsheet cells. This is the core bidirectional link between the solver and the spreadsheet.
 
@@ -379,7 +379,7 @@ After a successful solve, optionally write solved variable values back into desi
 
 **Goal:** Solved variables flow into spreadsheet cells via UI actions; spreadsheet data can define input variable overrides.
 
-### 3.1 Push Solved Variables into a Spreadsheet (Read Direction)
+### [x] 3.1 Push Solved Variables into a Spreadsheet (Read Direction)
 
 Add an **"Export to Spreadsheet"** action to the Variable Explorer:
 - Button in `Workspace.tsx`: "Export to Spreadsheet" (or context menu per-variable row)
@@ -414,9 +414,9 @@ A toggle in the Inspector panel: **"Auto-sync with solver"**
 
 ### 3.4 Acceptance Criteria — Phase 3
 
-- [ ] "Export to Spreadsheet" button in Variable Explorer creates/populates a spreadsheet
-- [ ] Scalar variables export as name/value/unit/uncertainty rows
-- [ ] Array/matrix variables export as properly shaped grids
+- [x] "Export to Spreadsheet" button in Variable Explorer creates/populates a spreadsheet
+- [x] Scalar variables export as name/value/unit/uncertainty rows
+- [x] Array/matrix variables export as properly shaped grids
 - [ ] Variable bindings can be set from spreadsheet cells
 - [ ] Bound values integrate with the solver pipeline
 - [ ] Auto-sync toggle updates result cells after solve (if enabled)
@@ -427,7 +427,7 @@ A toggle in the Inspector panel: **"Auto-sync with solver"**
 
 **Goal:** Bidirectional data transfer between Parametric/Function Tables and Spreadsheets.
 
-### 4.1 Export Table to Spreadsheet
+### [x] 4.1 Export Table to Spreadsheet
 
 Add an action button to `TablesTab.tsx`: **"Open in Spreadsheet"**
 - Creates a new spreadsheet pre-populated with the table's data:

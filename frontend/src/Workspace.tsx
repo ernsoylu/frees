@@ -12,6 +12,7 @@ import {
 } from '@mantine/core'
 import {
   IconChevronRight,
+  IconFileExport,
   IconPencil,
   IconSearch,
   IconTable,
@@ -31,7 +32,7 @@ import { formatValue } from './format'
 
 const ARRAY_ELEMENT_REGEX = /^([^[]+)\[([\d,\s-]+)\]$/
 
-interface ArrayGroup {
+export interface ArrayGroup {
   name: string
   is2D: boolean
   rows: number[]
@@ -40,12 +41,12 @@ interface ArrayGroup {
   units: string
 }
 
-interface Grouped {
+export interface Grouped {
   scalars: VariableResult[]
   groups: ArrayGroup[]
 }
 
-function group(vars: VariableResult[]): Grouped {
+export function group(vars: VariableResult[]): Grouped {
   const scalars: VariableResult[] = []
   const groups = new Map<string, ArrayGroup>()
 
@@ -217,9 +218,10 @@ interface Props {
   replNames?: Set<string>
   /** Opens the Variable Information modal (guesses, bounds, units, uncertainty). */
   onEdit?: () => void
+  onExportSpreadsheet?: (vars: VariableResult[]) => void
 }
 
-export default function Workspace({ variables, replNames, onEdit }: Readonly<Props>) {
+export default function Workspace({ variables, replNames, onEdit, onExportSpreadsheet }: Readonly<Props>) {
   const [query, setQuery] = useState('')
   const repl = replNames ?? new Set<string>()
 
@@ -252,6 +254,16 @@ export default function Workspace({ variables, replNames, onEdit }: Readonly<Pro
             onChange={(e) => setQuery(e.currentTarget.value)}
             aria-label="Filter workspace variables"
           />
+          {onExportSpreadsheet && !empty && (
+            <Button
+              size="xs"
+              variant="default"
+              leftSection={<IconFileExport size={14} />}
+              onClick={() => onExportSpreadsheet(variables)}
+            >
+              Export to Spreadsheet
+            </Button>
+          )}
           {onEdit && (
             <Button
               size="xs"

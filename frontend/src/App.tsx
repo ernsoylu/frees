@@ -83,8 +83,9 @@ import { DiagramSpec } from './diagram/types'
 import { loadWhiteboards, newWhiteboard, saveWhiteboards } from './whiteboard/whiteboardStorage'
 import { WhiteboardSpec } from './whiteboard/types'
 import { loadSpreadsheets, newSpreadsheet, saveSpreadsheets } from './spreadsheet/spreadsheetStorage'
-import { type SpreadsheetSpec } from './spreadsheet/types'
+import { emptySpreadsheetData, type SpreadsheetSpec } from './spreadsheet/types'
 import { substituteSsheetRefs } from './spreadsheet/ssheetResolver'
+import { group } from './Workspace'
 
 // The Digitizer and Diagram tabs are large, self-contained editors that most
 // sessions never open, so they are code-split and only fetched when their tab
@@ -1299,6 +1300,123 @@ export default function App() {
     if (ss) dockRef.current?.openInstance(`spreadsheet:${ss.id}`, 'spreadsheet', ss.name)
     else createSpreadsheet()
   }
+  const exportToSpreadsheet = (vars: VariableResult[]) => {
+    const grouped = group(vars)
+    const ss = newSpreadsheet(spreadsheets.length)
+    ss.name = `Export ${new Date().toLocaleTimeString()}`
+
+    const celldata: any[] = []
+    let currentRow = 0
+
+    // Bold formatting for headers
+    const headerStyle = { bl: 1 }
+
+    if (grouped.scalars.length > 0) {
+      celldata.push({ r: currentRow, c: 0, v: { v: 'Variable', m: 'Variable', ...headerStyle } })
+      celldata.push({ r: currentRow, c: 1, v: { v: 'Value', m: 'Value', ...headerStyle } })
+      celldata.push({ r: currentRow, c: 2, v: { v: 'Units', m: 'Units', ...headerStyle } })
+      celldata.push({ r: currentRow, c: 3, v: { v: 'Uncertainty', m: 'Uncertainty', ...headerStyle } })
+      currentRow++
+
+      for (const s of grouped.scalars) {
+        celldata.push({ r: currentRow, c: 0, v: { v: s.name, m: s.name } })
+        celldata.push({ r: currentRow, c: 1, v: { v: String(s.value), m: String(s.value) } })
+        celldata.push({ r: currentRow, c: 2, v: { v: s.units, m: s.units } })
+        if (s.uncertainty != null) {
+          celldata.push({ r: currentRow, c: 3, v: { v: String(s.uncertainty), m: String(s.uncertainty) } })
+        }
+        currentRow++
+      }
+      currentRow++
+    }
+
+    for (const g of grouped.groups) {
+      celldata.push({ r: currentRow, c: 0, v: { v: g.name, m: g.name, ...headerStyle } })
+      if (g.units) {
+        celldata.push({ r: currentRow, c: 1, v: { v: `[${g.units}]`, m: `[${g.units}]` } })
+      }
+      currentRow++
+
+      if (g.is2D) {
+        // Col headers
+        for (let j = 0; j < g.cols.length; j++) {
+          celldata.push({ r: currentRow, c: j + 1, v: { v: String(g.cols[j]), m: String(g.cols[j]), ...headerStyle } })
+        }
+        currentRow++
+        // Row data
+        for (let i = 0; i < g.rows.length; i++) {
+          const rId = g.rows[i]
+          celldata.push({ r: currentRow, c: 0, v: { v: String(rId), m: String(rId), ...headerStyle } })
+          for (let j = 0; j < g.cols.length; j++) {
+            const cId = g.cols[j]
+            const cell = g.cells.get(`${rId},${cId}`)
+            if (cell) {
+              celldata.push({ r: currentRow, c: j + 1, v: { v: String(cell.value), m: String(cell.value) } })
+            }
+          }
+          currentRow++
+        }
+      } else {
+        // Index headers
+        celldata.push({ r: currentRow, c: 0, v: { v: 'Index', m: 'Index', ...headerStyle } })
+        celldata.push({ r: currentRow, c: 1, v: { v: 'Value', m: 'Value', ...headerStyle } })
+        currentRow++
+        for (let i = 0; i < g.rows.length; i++) {
+          const rId = g.rows[i]
+          celldata.push({ r: currentRow, c: 0, v: { v: String(rId), m: String(rId), ...headerStyle } })
+          const cell = g.cells.get(`${rId}`)
+          if (cell) {
+            celldata.push({ r: currentRow, c: 1, v: { v: String(cell.value), m: String(cell.value) } })
+          }
+          currentRow++
+        }
+      }
+      currentRow++
+    }
+
+    const sheetData = emptySpreadsheetData()
+    ;(sheetData[0] as any).celldata = celldata
+    ss.sheets = sheetData
+
+    setSpreadsheets((prev) => [...prev, ss])
+    requestAnimationFrame(() => dockRef.current?.openInstance(`spreadsheet:${ss.id}`, 'spreadsheet', ss.name))
+  }
+  const exportTableToSpreadsheet = (tableId: string) => {
+    const t = tables.find((tbl) => tbl.id === tableId)
+    if (!t || t.kind !== 'parametric') return
+
+    const ss = newSpreadsheet(spreadsheets.length)
+    ss.name = `Export ${t.name}`
+
+    const celldata: any[] = []
+    let currentRow = 0
+    const headerStyle = { bl: 1 }
+
+    celldata.push({ r: currentRow, c: 0, v: { v: 'Run', m: 'Run', ...headerStyle } })
+    for (let j = 0; j < t.vars.length; j++) {
+      celldata.push({ r: currentRow, c: j + 1, v: { v: t.vars[j], m: t.vars[j], ...headerStyle } })
+    }
+    currentRow++
+
+    for (let i = 0; i < t.rows.length; i++) {
+      celldata.push({ r: currentRow, c: 0, v: { v: String(i + 1), m: String(i + 1) } })
+      for (let j = 0; j < t.vars.length; j++) {
+        const v = t.vars[j]
+        const draft = t.rows[i].values[v]
+        const computed = t.results[i]?.success ? t.results[i].values[v] : undefined
+        const val = draft && draft.trim() !== '' ? draft : (computed !== undefined ? String(computed) : '')
+        celldata.push({ r: currentRow, c: j + 1, v: { v: val, m: val } })
+      }
+      currentRow++
+    }
+
+    const sheetData = emptySpreadsheetData()
+    ;(sheetData[0] as any).celldata = celldata
+    ss.sheets = sheetData
+
+    setSpreadsheets((prev) => [...prev, ss])
+    requestAnimationFrame(() => dockRef.current?.openInstance(`spreadsheet:${ss.id}`, 'spreadsheet', ss.name))
+  }
   const openLatestOrNewTable = () => {
     const t = tables[tables.length - 1]
     if (t) dockRef.current?.openInstance(`table:${t.id}`, 'table', t.name)
@@ -1595,6 +1713,9 @@ export default function App() {
                     <Button size="xs" variant="default" color="gray" onClick={() => updateParamTable(t.id, (pt) => ({ ...pt, results: [] }))}>
                       Clear Results
                     </Button>
+                    <Button size="xs" variant="default" onClick={() => exportTableToSpreadsheet(t.id)}>
+                      Export to Spreadsheet
+                    </Button>
                   </>
                 ) : (
                   <Text size="xs" c="dimmed">Function table — edit values in the table window.</Text>
@@ -1709,7 +1830,12 @@ export default function App() {
     })(),
     workspace: (
       <div style={{ height: '100%', minHeight: 0 }}>
-        <Workspace variables={workspaceVariables} replNames={replNames} onEdit={() => setShowVariableInfo(true)} />
+        <Workspace
+          variables={workspaceVariables}
+          replNames={replNames}
+          onEdit={() => setShowVariableInfo(true)}
+          onExportSpreadsheet={exportToSpreadsheet}
+        />
       </div>
     ),
     terminal: (
