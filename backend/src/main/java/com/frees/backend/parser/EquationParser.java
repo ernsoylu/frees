@@ -462,7 +462,8 @@ public final class EquationParser {
             flattenMatrixTransform(func, lhs, args.get(0), sourceText, ctx);
             return true;
         }
-        if (func.equals("dot") || func.equals("norm") || func.equals("nrm2") || func.equals(FN_DETERMINANT) || func.equals("asum")) {
+        if (func.equals("dot") || func.equals("norm") || func.equals("nrm2") || func.equals(FN_DETERMINANT) || func.equals("asum")
+                || func.equals("trace") || func.equals("matrixnorm") || func.equals("fronorm")) {
             flattenVectorOrDet(func, lhs, args, sourceText, ctx);
             return true;
         }
@@ -600,6 +601,8 @@ public final class EquationParser {
             case "norm", "nrm2" -> vectorNorm(args, ctx);
             case "asum" -> vectorAbsSum(args, ctx);
             case FN_DETERMINANT -> matrixDeterminant(args, ctx);
+            case "trace" -> matrixTrace(args, ctx);
+            case "matrixnorm", "fronorm" -> matrixFrobeniusNorm(args, ctx);
             default -> throw new ParseException("Unsupported vector/scalar function: " + func);
         };
         ctx.out().add(new Equation(expandedLhs, rhs, sourceText));
@@ -645,6 +648,32 @@ public final class EquationParser {
             throw new ParseException("Determinant requires a square matrix.");
         }
         return expandDeterminant(m.elements);
+    }
+
+    /** Trace: sum of the diagonal entries of a square matrix. */
+    private Expr matrixTrace(List<Expr> args, FlattenContext ctx) {
+        MatrixInfo m = parseMatrixInfo(args.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        if (m.rows != m.cols) {
+            throw new ParseException("Trace requires a square matrix.");
+        }
+        Expr sum = null;
+        for (int i = 0; i < m.rows; i++) {
+            sum = sum == null ? m.elements[i][i] : new Expr.BinOp('+', sum, m.elements[i][i]);
+        }
+        return sum;
+    }
+
+    /** Frobenius norm: sqrt of the sum of squares of all entries. */
+    private Expr matrixFrobeniusNorm(List<Expr> args, FlattenContext ctx) {
+        MatrixInfo m = parseMatrixInfo(args.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        Expr sumSq = null;
+        for (int i = 0; i < m.rows; i++) {
+            for (int j = 0; j < m.cols; j++) {
+                Expr term = new Expr.BinOp('*', m.elements[i][j], m.elements[i][j]);
+                sumSq = sumSq == null ? term : new Expr.BinOp('+', sumSq, term);
+            }
+        }
+        return new Expr.Call("sqrt", List.of(sumSq));
     }
 
     private void flattenCrossProduct(Expr lhs, List<Expr> args, String sourceText, FlattenContext ctx) {
@@ -730,7 +759,7 @@ public final class EquationParser {
                     setVec(outputs, 1, n);
                     setVec(outputs, 2, n);
                 }
-                case "ss2tf" -> {
+                case "ss2tf", "ss2tfij" -> {
                     int n = inMatRows(inputs, 0, ctx);
                     setVec(outputs, 0, n + 1);
                     setVec(outputs, 1, n + 1);
@@ -802,6 +831,25 @@ public final class EquationParser {
                     setMat(outputs, 1, DEFAULT_RLOCUS_POINTS, order);
                     setMat(outputs, 2, DEFAULT_RLOCUS_POINTS, order);
                 }
+                case "qr" -> {
+                    int m = inMatRows(inputs, 0, ctx);
+                    setMat(outputs, 0, m, m);
+                    setMat(outputs, 1, m, inMatCols(inputs, 0, ctx));
+                }
+                case "cholesky", "matexp" -> {
+                    int n = inMatRows(inputs, 0, ctx);
+                    setMat(outputs, 0, n, n);
+                }
+                case "singularvalues" -> setVec(outputs, 0,
+                        Math.min(inMatRows(inputs, 0, ctx), inMatCols(inputs, 0, ctx)));
+                case "fft", "ifft" -> {
+                    int n = inVecLen(inputs, 0, ctx);
+                    setVec(outputs, 0, n);
+                    setVec(outputs, 1, n);
+                }
+                case "convolve" -> setVec(outputs, 0,
+                        inVecLen(inputs, 0, ctx) + inVecLen(inputs, 1, ctx) - 1);
+                case "polyfit" -> setVec(outputs, 0, inScalarInt(inputs, 2, ctx) + 1);
                 default -> { /* scalar-output or value-declared outputs: leave as written */ }
             }
         } catch (ParseException ignored) {
@@ -833,9 +881,18 @@ public final class EquationParser {
         return parseMatrixInfo(inputs.get(idx), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs()).rows;
     }
 
+    private int inMatCols(List<Expr> inputs, int idx, FlattenContext ctx) {
+        return parseMatrixInfo(inputs.get(idx), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs()).cols;
+    }
+
     private int inScalarInt(List<Expr> inputs, int idx, FlattenContext ctx) {
-        Expr e = expandExpr(inputs.get(idx), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
-        return (int) Math.round(evalIndexExpr(e, ctx.loopVars(), ctx.constants(), ctx.defs()));
+        return constIndex(inputs.get(idx), ctx);
+    }
+
+    /** Evaluates a compile-time integer (e.g. a 1-based channel index for MIMO ss2tf). */
+    int constIndex(Expr e, FlattenContext ctx) {
+        Expr ex = expandExpr(e, ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        return (int) Math.round(evalIndexExpr(ex, ctx.loopVars(), ctx.constants(), ctx.defs()));
     }
 
     private void flattenCallProc(String name, List<Expr> inputs, List<Expr> outputs, String sourceText, FlattenContext ctx) {
@@ -864,8 +921,16 @@ public final class EquationParser {
             flattenDecomposeOrRotate(defName, inputs, outputs, sourceText, ctx);
             return;
         }
+        if (LIN_ALG_SIGNAL_STATS_CALLS.contains(defName)) {
+            flattenLinAlgSignalStats(defName, inputs, outputs, sourceText, ctx);
+            return;
+        }
         if (defName.equals("ss2tf")) {
             csFlattener.flattenSs2tf(inputs, outputs, sourceText, ctx);
+            return;
+        }
+        if (defName.equals("ss2tfij")) {
+            csFlattener.flattenSs2tfMimo(inputs, outputs, sourceText, ctx);
             return;
         }
         if (defName.equals("tf2ss")) {
@@ -1152,6 +1217,241 @@ public final class EquationParser {
         ctx.out().add(new Equation(new Expr.Call("cos", List.of(theta)), r.elements[2][2], sourceText));
         ctx.out().add(new Equation(new Expr.BinOp('*', new Expr.Call("sin", List.of(phi)), new Expr.Call("sin", List.of(theta))), r.elements[0][2], sourceText));
         ctx.out().add(new Equation(new Expr.BinOp('*', new Expr.Call("sin", List.of(theta)), new Expr.Call("sin", List.of(psi))), r.elements[2][0], sourceText));
+    }
+
+    /** CALL intrinsics for dense linear algebra, signal processing and regression
+     *  whose results are computed numerically from resolved (known) entries —
+     *  mirroring the eigendecomposition path. */
+    static final java.util.Set<String> LIN_ALG_SIGNAL_STATS_CALLS = java.util.Set.of(
+            "qr", "cholesky", "matexp", "singularvalues",
+            "fft", "ifft", "convolve",
+            "linfit", "polyfit", "interp2");
+
+    private void flattenLinAlgSignalStats(String defName, List<Expr> inputs, List<Expr> outputs, String sourceText, FlattenContext ctx) {
+        switch (defName) {
+            case "qr" -> flattenQr(inputs, outputs, sourceText, ctx);
+            case "cholesky" -> flattenCholesky(inputs, outputs, sourceText, ctx);
+            case "matexp" -> flattenMatExp(inputs, outputs, sourceText, ctx);
+            case "singularvalues" -> flattenSingularValues(inputs, outputs, sourceText, ctx);
+            case "fft" -> flattenFft(false, inputs, outputs, sourceText, ctx);
+            case "ifft" -> flattenFft(true, inputs, outputs, sourceText, ctx);
+            case "convolve" -> flattenConvolve(inputs, outputs, sourceText, ctx);
+            case "linfit" -> flattenLinFit(inputs, outputs, sourceText, ctx);
+            case "polyfit" -> flattenPolyFit(inputs, outputs, sourceText, ctx);
+            case "interp2" -> flattenInterp2(inputs, outputs, sourceText, ctx);
+            default -> throw new ParseException("Unsupported linear-algebra/signal/stats CALL: " + defName);
+        }
+    }
+
+    private static List<Expr> matrixEntries(MatrixInfo m) {
+        List<Expr> entries = new ArrayList<>(m.rows * m.cols);
+        for (int i = 0; i < m.rows; i++) {
+            entries.addAll(Arrays.asList(m.elements[i]));
+        }
+        return entries;
+    }
+
+    private void flattenQr(List<Expr> inputs, List<Expr> outputs, String sourceText, FlattenContext ctx) {
+        if (inputs.size() != 1 || outputs.size() != 2) {
+            throw new ParseException("QR expects 1 input matrix and 2 output matrices, e.g. CALL QR(A[1:3,1:3] : Q[1:3,1:3], R[1:3,1:3])");
+        }
+        MatrixInfo a = parseMatrixInfo(inputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        MatrixInfo q = parseMatrixInfo(outputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        MatrixInfo r = parseMatrixInfo(outputs.get(1), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        int m = a.rows;
+        int n = a.cols;
+        if (q.rows != m || q.cols != m) {
+            throw new ParseException("QR requires Q to be " + m + "x" + m + " (m x m for an m x n input).");
+        }
+        if (r.rows != m || r.cols != n) {
+            throw new ParseException("QR requires R to match the input shape (" + m + "x" + n + ").");
+        }
+        List<Expr> entries = matrixEntries(a);
+        for (int i = 0; i < m; i++) {
+            for (int j = 0; j < m; j++) {
+                ctx.out().add(new Equation(q.elements[i][j],
+                        new Expr.Call("qr$q$" + i + "$" + j + "$" + m + "$" + n, entries), sourceText));
+            }
+        }
+        for (int i = 0; i < m; i++) {
+            for (int j = 0; j < n; j++) {
+                ctx.out().add(new Equation(r.elements[i][j],
+                        new Expr.Call("qr$r$" + i + "$" + j + "$" + m + "$" + n, entries), sourceText));
+            }
+        }
+    }
+
+    private void flattenCholesky(List<Expr> inputs, List<Expr> outputs, String sourceText, FlattenContext ctx) {
+        if (inputs.size() != 1 || outputs.size() != 1) {
+            throw new ParseException("Cholesky expects 1 input matrix and 1 output matrix, e.g. CALL Cholesky(A[1:3,1:3] : L[1:3,1:3])");
+        }
+        MatrixInfo a = parseMatrixInfo(inputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        MatrixInfo l = parseMatrixInfo(outputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        if (a.rows != a.cols || l.rows != a.rows || l.cols != a.cols) {
+            throw new ParseException("Cholesky requires square matrices of identical size.");
+        }
+        int n = a.rows;
+        List<Expr> entries = matrixEntries(a);
+        for (int i = 0; i < n; i++) {
+            for (int j = 0; j < n; j++) {
+                ctx.out().add(new Equation(l.elements[i][j],
+                        new Expr.Call("chol$l$" + i + "$" + j + "$" + n, entries), sourceText));
+            }
+        }
+    }
+
+    private void flattenMatExp(List<Expr> inputs, List<Expr> outputs, String sourceText, FlattenContext ctx) {
+        if (inputs.size() != 1 || outputs.size() != 1) {
+            throw new ParseException("MatExp expects 1 input matrix and 1 output matrix, e.g. CALL MatExp(A[1:2,1:2] : E[1:2,1:2])");
+        }
+        MatrixInfo a = parseMatrixInfo(inputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        MatrixInfo e = parseMatrixInfo(outputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        if (a.rows != a.cols || e.rows != a.rows || e.cols != a.cols) {
+            throw new ParseException("MatExp requires square matrices of identical size.");
+        }
+        int n = a.rows;
+        List<Expr> entries = matrixEntries(a);
+        for (int i = 0; i < n; i++) {
+            for (int j = 0; j < n; j++) {
+                ctx.out().add(new Equation(e.elements[i][j],
+                        new Expr.Call("expm$" + i + "$" + j + "$" + n, entries), sourceText));
+            }
+        }
+    }
+
+    private void flattenSingularValues(List<Expr> inputs, List<Expr> outputs, String sourceText, FlattenContext ctx) {
+        if (inputs.size() != 1 || outputs.size() != 1) {
+            throw new ParseException("SingularValues expects 1 input matrix and 1 output vector, e.g. CALL SingularValues(A[1:3,1:2] : s[1:2])");
+        }
+        MatrixInfo a = parseMatrixInfo(inputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        VectorInfo s = parseVectorInfo(outputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        int m = a.rows;
+        int n = a.cols;
+        if (s.size != Math.min(m, n)) {
+            throw new ParseException("SingularValues requires an output vector of length min(rows, cols) = " + Math.min(m, n) + ".");
+        }
+        List<Expr> entries = matrixEntries(a);
+        for (int k = 0; k < s.size; k++) {
+            ctx.out().add(new Equation(s.elements[k],
+                    new Expr.Call("svd$s$" + k + "$" + m + "$" + n, entries), sourceText));
+        }
+    }
+
+    private void flattenFft(boolean inverse, List<Expr> inputs, List<Expr> outputs, String sourceText, FlattenContext ctx) {
+        String name = inverse ? "IFFT" : "FFT";
+        if (inputs.size() != 2 || outputs.size() != 2) {
+            throw new ParseException(name + " expects 2 input vectors (real, imag) and 2 output vectors, e.g. CALL " + name + "(re[1:n], im[1:n] : outRe[1:n], outIm[1:n])");
+        }
+        VectorInfo re = parseVectorInfo(inputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        VectorInfo im = parseVectorInfo(inputs.get(1), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        VectorInfo outRe = parseVectorInfo(outputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        VectorInfo outIm = parseVectorInfo(outputs.get(1), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        int n = re.size;
+        if (im.size != n || outRe.size != n || outIm.size != n) {
+            throw new ParseException(name + " requires all four vectors to have the same length.");
+        }
+        List<Expr> entries = new ArrayList<>(2 * n);
+        entries.addAll(Arrays.asList(re.elements));
+        entries.addAll(Arrays.asList(im.elements));
+        String prefix = inverse ? "ifft" : "fft";
+        for (int k = 0; k < n; k++) {
+            ctx.out().add(new Equation(outRe.elements[k],
+                    new Expr.Call(prefix + "$re$" + k + "$" + n, entries), sourceText));
+            ctx.out().add(new Equation(outIm.elements[k],
+                    new Expr.Call(prefix + "$im$" + k + "$" + n, entries), sourceText));
+        }
+    }
+
+    private void flattenConvolve(List<Expr> inputs, List<Expr> outputs, String sourceText, FlattenContext ctx) {
+        if (inputs.size() != 2 || outputs.size() != 1) {
+            throw new ParseException("Convolve expects 2 input vectors and 1 output vector, e.g. CALL Convolve(a[1:m], b[1:n] : c[1:m+n-1])");
+        }
+        VectorInfo a = parseVectorInfo(inputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        VectorInfo b = parseVectorInfo(inputs.get(1), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        VectorInfo c = parseVectorInfo(outputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        int m = a.size;
+        int n = b.size;
+        if (c.size != m + n - 1) {
+            throw new ParseException("Convolve requires the output length to be m + n - 1 = " + (m + n - 1) + ".");
+        }
+        List<Expr> entries = new ArrayList<>(m + n);
+        entries.addAll(Arrays.asList(a.elements));
+        entries.addAll(Arrays.asList(b.elements));
+        for (int k = 0; k < c.size; k++) {
+            ctx.out().add(new Equation(c.elements[k],
+                    new Expr.Call("conv$" + k + "$" + m + "$" + n, entries), sourceText));
+        }
+    }
+
+    private void flattenLinFit(List<Expr> inputs, List<Expr> outputs, String sourceText, FlattenContext ctx) {
+        if (inputs.size() != 2 || outputs.size() != 3) {
+            throw new ParseException("LinFit expects 2 input vectors and 3 outputs (slope, intercept, r2), e.g. CALL LinFit(x[1:n], y[1:n] : slope, intercept, r2)");
+        }
+        VectorInfo x = parseVectorInfo(inputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        VectorInfo y = parseVectorInfo(inputs.get(1), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        int n = x.size;
+        if (y.size != n) {
+            throw new ParseException("LinFit requires x and y of equal length.");
+        }
+        List<Expr> entries = new ArrayList<>(2 * n);
+        entries.addAll(Arrays.asList(x.elements));
+        entries.addAll(Arrays.asList(y.elements));
+        String[] parts = {"slope", "intercept", "r2"};
+        for (int k = 0; k < 3; k++) {
+            Expr out = expandExpr(outputs.get(k), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+            ctx.out().add(new Equation(out, new Expr.Call("linfit$" + parts[k] + "$" + n, entries), sourceText));
+        }
+    }
+
+    private void flattenPolyFit(List<Expr> inputs, List<Expr> outputs, String sourceText, FlattenContext ctx) {
+        if (inputs.size() != 3 || outputs.size() != 1) {
+            throw new ParseException("PolyFit expects 2 input vectors and a degree, plus 1 output coefficient vector, e.g. CALL PolyFit(x[1:n], y[1:n], 2 : c[1:3])");
+        }
+        VectorInfo x = parseVectorInfo(inputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        VectorInfo y = parseVectorInfo(inputs.get(1), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        int degree = inScalarInt(inputs, 2, ctx);
+        int n = x.size;
+        if (y.size != n) {
+            throw new ParseException("PolyFit requires x and y of equal length.");
+        }
+        if (degree < 0) {
+            throw new ParseException("PolyFit degree must be >= 0.");
+        }
+        VectorInfo c = parseVectorInfo(outputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        if (c.size != degree + 1) {
+            throw new ParseException("PolyFit requires a coefficient vector of length degree + 1 = " + (degree + 1) + ".");
+        }
+        List<Expr> entries = new ArrayList<>(2 * n);
+        entries.addAll(Arrays.asList(x.elements));
+        entries.addAll(Arrays.asList(y.elements));
+        for (int k = 0; k <= degree; k++) {
+            ctx.out().add(new Equation(c.elements[k],
+                    new Expr.Call("polyfit$" + k + "$" + degree + "$" + n, entries), sourceText));
+        }
+    }
+
+    private void flattenInterp2(List<Expr> inputs, List<Expr> outputs, String sourceText, FlattenContext ctx) {
+        if (inputs.size() != 5 || outputs.size() != 1) {
+            throw new ParseException("Interp2 expects (x[1:m], y[1:n], Z[1:m,1:n], xq, yq : zq), e.g. CALL Interp2(x, y, Z, 1.5, 2.5 : zq)");
+        }
+        VectorInfo x = parseVectorInfo(inputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        VectorInfo y = parseVectorInfo(inputs.get(1), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        MatrixInfo z = parseMatrixInfo(inputs.get(2), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        int m = x.size;
+        int n = y.size;
+        if (z.rows != m || z.cols != n) {
+            throw new ParseException("Interp2 requires Z to be m x n (" + m + "x" + n + ") matching x and y.");
+        }
+        Expr xq = expandExpr(inputs.get(3), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        Expr yq = expandExpr(inputs.get(4), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        List<Expr> entries = new ArrayList<>(m + n + m * n + 2);
+        entries.addAll(Arrays.asList(x.elements));
+        entries.addAll(Arrays.asList(y.elements));
+        entries.addAll(matrixEntries(z));
+        entries.add(xq);
+        entries.add(yq);
+        Expr out = expandExpr(outputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+        ctx.out().add(new Equation(out, new Expr.Call("interp2$" + m + "$" + n, entries), sourceText));
     }
 
     private void flattenProcedureCall(ProcDef.ProcedureDef pd, List<Expr> inputs, List<Expr> outputs, FlattenContext ctx) {

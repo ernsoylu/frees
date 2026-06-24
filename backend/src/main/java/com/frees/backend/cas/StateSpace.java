@@ -59,12 +59,11 @@ public final class StateSpace {
             util.eval("amat = " + matrix(a));
             util.eval("bmat = " + matrix(b));
             util.eval("cmat = " + matrix(c));
-            util.eval("g = (cmat . Inverse(s*IdentityMatrix(" + n + ") - amat) . bmat)[[1,1]] + (" + number(d) + ")");
-            util.eval("ng = Together(g)");
-            // Note: avoid the names numerator/denominator -- Symja case-folds them
-            // onto the protected built-ins Numerator/Denominator.
-            util.eval("tfn = Numerator(ng)");
-            util.eval("tfd = Denominator(ng)");
+            util.eval("sIminusA = s*IdentityMatrix(" + n + ") - amat");
+            util.eval("detA = Det(sIminusA)");
+            // Compute the uncancelled numerator: C * adj(sI-A) * B + D * det(sI-A)
+            util.eval("tfn = Expand(Cancel((cmat . (detA * Inverse(sIminusA)) . bmat)[[1,1]]) + (" + number(d) + ") * detA)");
+            util.eval("tfd = Expand(detA)");
 
             // The denominator is the degree-n characteristic polynomial; the
             // numerator has degree at most n. Read coefficients s^n .. s^0.
