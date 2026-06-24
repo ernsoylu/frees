@@ -3,7 +3,7 @@ import { Workbook } from '@fortune-sheet/react'
 import type { WorkbookInstance } from '@fortune-sheet/react/dist/components/Workbook'
 import '@fortune-sheet/react/dist/index.css'
 import { type SpreadsheetSpec, emptySpreadsheetData } from './types'
-import { Button, Group, Modal, TextInput } from '@mantine/core'
+import { Button, Group, Modal, TextInput, Switch } from '@mantine/core'
 import { IconTablePlus, IconLink } from '@tabler/icons-react'
 import { ParamTableSpec } from '../tables'
 import { newParamRow } from '../ParametricTableTab'
@@ -18,6 +18,9 @@ interface Props {
 export default function SpreadsheetTab({ singleSpreadsheetId, spreadsheets, onSpreadsheetsChange, onCreateTable }: Props) {
   const spec = spreadsheets.find((s) => s.id === singleSpreadsheetId)
   const workbookRef = useRef<WorkbookInstance>(null)
+  const [showBindModal, setShowBindModal] = useState(false)
+  const [bindVarName, setBindVarName] = useState('')
+  const [bindType, setBindType] = useState<'input' | 'result'>('input')
   
   const data = useMemo(() => {
     if (!spec || !spec.sheets || spec.sheets.length === 0) {
@@ -88,15 +91,13 @@ export default function SpreadsheetTab({ singleSpreadsheetId, spreadsheets, onSp
     onCreateTable?.(newTable)
   }
 
-  const [showBindModal, setShowBindModal] = useState(false)
-  const [bindVarName, setBindVarName] = useState('')
-
-  const handleBindVariable = () => {
+  const handleBindVariable = (type: 'input' | 'result') => {
     const instance = workbookRef.current
     if (!instance) return
     const selection = instance.getSelection()
     if (!selection || selection.length === 0) return
 
+    setBindType(type)
     setShowBindModal(true)
   }
 
@@ -105,7 +106,6 @@ export default function SpreadsheetTab({ singleSpreadsheetId, spreadsheets, onSp
     if (!instance) return
     const selection = instance.getSelection()
     if (!selection || selection.length === 0) return
-    const sheetId = instance.getSheet().id || '0'
     const name = instance.getSheet().name || 'Sheet1'
     const { row, column } = selection[0]
     
@@ -122,8 +122,9 @@ export default function SpreadsheetTab({ singleSpreadsheetId, spreadsheets, onSp
     
     const refStr = `${name}!${a1}`
 
+    const key = bindType === 'input' ? 'bindings' : 'resultBindings'
     onSpreadsheetsChange(
-      spreadsheets.map((s) => (s.id === singleSpreadsheetId ? { ...s, bindings: { ...s.bindings, [bindVarName]: refStr } } : s))
+      spreadsheets.map((s) => (s.id === singleSpreadsheetId ? { ...s, [key]: { ...s[key], [bindVarName]: refStr } } : s))
     )
     setShowBindModal(false)
     setBindVarName('')
@@ -135,9 +136,21 @@ export default function SpreadsheetTab({ singleSpreadsheetId, spreadsheets, onSp
         <Button size="xs" variant="light" leftSection={<IconTablePlus size={14} />} onClick={handleCreateTable} disabled={!onCreateTable}>
           Create Table from Selection
         </Button>
-        <Button size="xs" variant="light" leftSection={<IconLink size={14} />} color="orange" onClick={handleBindVariable}>
-          Bind Selection to Variable
+        <Button size="xs" variant="light" leftSection={<IconLink size={14} />} color="orange" onClick={() => handleBindVariable('input')}>
+          Bind as Input
         </Button>
+        <Button size="xs" variant="light" leftSection={<IconLink size={14} />} color="teal" onClick={() => handleBindVariable('result')}>
+          Bind as Result
+        </Button>
+        <Switch
+          label="Auto-sync Results"
+          size="sm"
+          checked={spec.autoSync || false}
+          onChange={(e) => {
+            const val = e.currentTarget.checked
+            onSpreadsheetsChange(spreadsheets.map((s) => (s.id === spec.id ? { ...s, autoSync: val } : s)))
+          }}
+        />
       </Group>
       <div style={{ flex: 1, minHeight: 0 }} className="fortune-sheet-container">
         <Workbook
@@ -151,7 +164,7 @@ export default function SpreadsheetTab({ singleSpreadsheetId, spreadsheets, onSp
         />
       </div>
 
-      <Modal opened={showBindModal} onClose={() => setShowBindModal(false)} title="Bind Cell to Variable" size="sm">
+      <Modal opened={showBindModal} onClose={() => setShowBindModal(false)} title={`Bind Cell as ${bindType === 'input' ? 'Input' : 'Result'}`} size="sm">
         <TextInput
           label="Variable Name"
           placeholder="e.g. T_in"
