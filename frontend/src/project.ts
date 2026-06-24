@@ -14,6 +14,7 @@ import type { TableSpec } from './tables'
 import type { PlotSpec } from './plots/types'
 import type { DiagramSpec } from './diagram/types'
 import type { WhiteboardSpec } from './whiteboard/types'
+import type { SpreadsheetSpec } from './spreadsheet/types'
 
 const PROJECT_VERSION = 1
 const PROJECT_KEY = 'frees.project'
@@ -37,6 +38,7 @@ export interface ProjectSlices {
   plots: PlotSpec[]
   diagrams: DiagramSpec[]
   whiteboards: WhiteboardSpec[]
+  spreadsheets: SpreadsheetSpec[]
 }
 
 export interface FreesProject extends ProjectSlices {
@@ -141,6 +143,7 @@ function sanitizeProject(project: FreesProject): FreesProject | null {
     plots: Array.isArray(project.plots) ? plainJson(project.plots) : [],
     diagrams: Array.isArray(project.diagrams) ? plainJson(project.diagrams) : [],
     whiteboards: Array.isArray(project.whiteboards) ? plainJson(project.whiteboards) : [],
+    spreadsheets: Array.isArray(project.spreadsheets) ? plainJson(project.spreadsheets) : [],
     customComponents: plainJson(project.customComponents),
     digitizer: plainJson(project.digitizer),
     dockLayout: plainJson(project.dockLayout),
@@ -185,6 +188,7 @@ function migrate(p: FreesProject): FreesProject {
     plots: p.plots ?? [],
     diagrams: p.diagrams ?? [],
     whiteboards: p.whiteboards ?? [],
+    spreadsheets: p.spreadsheets ?? [],
     customComponents: p.customComponents ?? null,
     digitizer: p.digitizer ?? null,
     dockLayout: p.dockLayout ?? null,
