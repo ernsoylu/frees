@@ -453,11 +453,11 @@ A spreadsheet can act as a **live view** of a parametric table:
 
 ### 4.4 Acceptance Criteria — Phase 4
 
-- [ ] "Open in Spreadsheet" action on Parametric and Function tables
-- [ ] Table data exports with proper headers, formatting, and units
-- [ ] Spreadsheet selection → "Create Parametric Table" works
-- [ ] Linked table mode auto-syncs between table results and spreadsheet cells
-- [ ] Editing linked spreadsheet input cells triggers table invalidation
+- [x] "Open in Spreadsheet" action on Parametric and Function tables
+- [x] Table data exports with proper headers, formatting, and units
+- [x] Spreadsheet selection → "Create Parametric Table" works
+- [x] Linked table mode auto-syncs between table results and spreadsheet cells
+- [x] Editing linked spreadsheet input cells triggers table invalidation
 
 ---
 

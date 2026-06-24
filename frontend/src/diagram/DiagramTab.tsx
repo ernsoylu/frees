@@ -3361,6 +3361,7 @@ interface Props {
    * that contains diagrams passes 'run' so the diagram shows in Run view first.
    */
   initialMode?: 'develop' | 'run'
+  spreadsheets?: any[]
 }
 
 export default function DiagramTab(props: Readonly<Props>) {
@@ -3385,6 +3386,7 @@ export default function DiagramTab(props: Readonly<Props>) {
     inspectorOutlet,
     isActive,
     initialMode,
+    spreadsheets = [],
   } = props
 
   const [localDiagrams, setLocalDiagrams] = useState<DiagramSpec[]>(() => {
@@ -3744,6 +3746,46 @@ export default function DiagramTab(props: Readonly<Props>) {
   const numValues = useMemo(() => {
     const map = new Map<string, number>()
     for (const v of variables) map.set(v.name.toLowerCase(), v.value)
+
+    const ssRefs = new Set<string>()
+    for (const el of state.elements) {
+      if (isControl(el) && 'varName' in el && el.varName) {
+        const matches = el.varName.match(/spreadsheet:([^!]+)!(?:([^!]+)!)?([A-Za-z]+[0-9]+)/gi)
+        if (matches) matches.forEach((m: string) => ssRefs.add(m.toLowerCase()))
+      }
+      if (el.kind === 'label' && 'text' in el && el.text) {
+        const matches = el.text.match(/spreadsheet:([^!]+)!(?:([^!]+)!)?([A-Za-z]+[0-9]+)/gi)
+        if (matches) matches.forEach((m: string) => ssRefs.add(m.toLowerCase()))
+      }
+    }
+
+    for (const ref of ssRefs) {
+      const parts = ref.substring(12).split('!')
+      const id = parts[0]
+      const ss = spreadsheets.find((s) => s.id === id)
+      if (!ss) continue
+      let sheetName = 'Sheet1'
+      let cellRef = parts[1]
+      if (parts.length > 2) {
+        sheetName = parts[1]
+        cellRef = parts[2]
+      }
+      const sheet = ss.sheets?.find((sh: any) => sh.name && sh.name.toLowerCase() === sheetName.toLowerCase())
+      if (!sheet) continue
+      const match = cellRef.match(/^([a-z]+)(\d+)$/i)
+      if (!match) continue
+      const colStr = match[1].toUpperCase()
+      let c = 0
+      for (let i = 0; i < colStr.length; i++) c = c * 26 + (colStr.charCodeAt(i) - 64)
+      c -= 1
+      const r = parseInt(match[2], 10) - 1
+      const cell = sheet.celldata?.find((cd: any) => cd.r === r && cd.c === c)
+      const num = Number(cell?.v?.v)
+      if (Number.isFinite(num)) {
+        map.set(ref, num)
+      }
+    }
+
     // Live input-control feedback (run-mode operator dashboard): a value-fixing
     // control's current value overrides the last solved value for the variable
     // it drives, so gauges, value-driven fill, and {var} labels track sliders /
@@ -3759,7 +3801,7 @@ export default function DiagramTab(props: Readonly<Props>) {
       }
     }
     return map
-  }, [variables, runMode, state.elements])
+  }, [variables, runMode, state.elements, spreadsheets])
 
   const valueMap = useMemo(() => {
     const map = new Map<string, VariableResult>()

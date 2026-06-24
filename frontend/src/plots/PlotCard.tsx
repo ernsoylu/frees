@@ -45,6 +45,7 @@ interface Props {
   rightSection?: React.ReactNode
   hideHeader?: boolean
   exportTrigger?: { format: string; timestamp: number } | null
+  spreadsheets?: any[]
 }
 
 /** Value of one variable in one run: solved value or the typed input. */
@@ -119,18 +120,78 @@ function arrayValues(variables: VariableResult[], base: string): Map<number, num
   return out
 }
 
+function getSpreadsheetValues(spreadsheets: any[], refStr: string): Map<number, number> {
+  const map = new Map<number, number>()
+  if (!refStr.startsWith('spreadsheet:')) return map
+  const parts = refStr.substring(12).split('!')
+  if (parts.length < 2) return map
+  
+  const id = parts[0]
+  const ss = spreadsheets.find(s => s.id === id)
+  if (!ss) return map
+
+  let sheetName = 'Sheet1'
+  let rangeStr = parts[1]
+  if (parts.length > 2) {
+    sheetName = parts[1]
+    rangeStr = parts[2]
+  }
+
+  const sheet = ss.sheets?.find((sh: any) => sh.name && sh.name.toLowerCase() === sheetName.toLowerCase())
+  if (!sheet) return map
+
+  const rangeParts = rangeStr.split(':')
+  if (rangeParts.length !== 2) return map
+
+  const parseA1 = (a1: string) => {
+    const match = a1.match(/^([A-Za-z]+)(\d+)$/)
+    if (!match) return { r: 0, c: 0 }
+    const colStr = match[1]
+    let c = 0
+    for (let i = 0; i < colStr.length; i++) c = c * 26 + (colStr.charCodeAt(i) - 64)
+    return { r: parseInt(match[2], 10) - 1, c: c - 1 }
+  }
+
+  const start = parseA1(rangeParts[0])
+  const end = parseA1(rangeParts[1])
+
+  const minR = Math.min(start.r, end.r)
+  const maxR = Math.max(start.r, end.r)
+  const minC = Math.min(start.c, end.c)
+  const maxC = Math.max(start.c, end.c)
+
+  let idx = 1
+  if (minR === maxR) {
+    for (let c = minC; c <= maxC; c++) {
+      const cell = sheet.celldata?.find((cd: any) => cd.r === minR && cd.c === c)
+      const num = Number(cell?.v?.v)
+      if (Number.isFinite(num)) map.set(idx++, num)
+    }
+  } else {
+    for (let r = minR; r <= maxR; r++) {
+      for (let c = minC; c <= maxC; c++) {
+        const cell = sheet.celldata?.find((cd: any) => cd.r === r && cd.c === c)
+        const num = Number(cell?.v?.v)
+        if (Number.isFinite(num)) map.set(idx++, num)
+      }
+    }
+  }
+  return map
+}
+
 /** Builds XY series from solved array variables: x = base[i] vs each y base.
  * Points are emitted only for indices present in both the x and y arrays. */
 function buildArrayXYSeries(
   variables: VariableResult[],
+  spreadsheets: any[],
   xVar: string,
   yVars: string[],
   axis: 'y' | 'y2' = 'y',
 ): XYSeries[] {
-  const xArr = arrayValues(variables, xVar)
+  const xArr = xVar.startsWith('spreadsheet:') ? getSpreadsheetValues(spreadsheets, xVar) : arrayValues(variables, xVar)
   const indices = [...xArr.keys()].sort((a, b) => a - b)
   return yVars.map((yVar) => {
-    const yArr = arrayValues(variables, yVar)
+    const yArr = yVar.startsWith('spreadsheet:') ? getSpreadsheetValues(spreadsheets, yVar) : arrayValues(variables, yVar)
     const x: number[] = []
     const y: number[] = []
     for (const i of indices) {
@@ -140,7 +201,12 @@ function buildArrayXYSeries(
         y.push(yValue)
       }
     }
-    return { name: yVar, x, y, axis }
+    let name = yVar
+    if (yVar.startsWith('spreadsheet:')) {
+      const parts = yVar.substring(12).split('!')
+      name = parts[parts.length - 1]
+    }
+    return { name, x, y, axis }
   })
 }
 
@@ -198,6 +264,8 @@ export interface FigureInputs {
   psychart: PsychartResponse | null
   /** Declared STATE TABLE blocks, so a plot can overlay just one circuit. */
   stateTableDefs?: StateTableDto[]
+  /** Spreadsheets for resolving 'spreadsheet:id!Range' data sources. */
+  spreadsheets?: any[]
   theme: PlotTheme
 }
 
@@ -296,12 +364,12 @@ function buildXyFigureFromSpec(spec: PlotSpec, inputs: FigureInputs, xVar: strin
   // parametric-table rows only when the table was actually executed.
   const useArrays = tableRows.length === 0 || tableResults.length === 0
   const series = useArrays
-    ? buildArrayXYSeries(variables, xVar, spec.xy.yVars)
+    ? buildArrayXYSeries(variables, inputs.spreadsheets || [], xVar, spec.xy.yVars)
     : buildXYSeries(tableRows, tableResults, xVar, spec.xy.yVars, spec.xy.zVar, spec.xy.sizeVar)
   if (spec.xy.y2Vars && spec.xy.y2Vars.length > 0) {
     series.push(
       ...(useArrays
-        ? buildArrayXYSeries(variables, xVar, spec.xy.y2Vars, 'y2')
+        ? buildArrayXYSeries(variables, inputs.spreadsheets || [], xVar, spec.xy.y2Vars, 'y2')
         : buildXYSeries(tableRows, tableResults, xVar, spec.xy.y2Vars, null, null, 'y2')),
     )
   }
@@ -341,6 +409,7 @@ export default function PlotCard({
   rightSection,
   hideHeader = false,
   exportTrigger = null,
+  spreadsheets = [],
 }: Readonly<Props>) {
   const { diagram, psychart, loading, error } = useDiagramData(spec)
   const [exporting, setExporting] = useState(false)
@@ -356,8 +425,8 @@ export default function PlotCard({
   }, [exportTrigger])
 
   const figure = useMemo(
-    () => buildFigure(spec, { states, cyclePath, tableRows, tableResults, variables, diagram, psychart, stateTableDefs, theme: 'dark' }),
-    [spec, states, cyclePath, tableRows, tableResults, variables, diagram, psychart, stateTableDefs],
+    () => buildFigure(spec, { states, cyclePath, tableRows, tableResults, variables, diagram, psychart, stateTableDefs, spreadsheets, theme: 'dark' }),
+    [spec, states, cyclePath, tableRows, tableResults, variables, diagram, psychart, stateTableDefs, spreadsheets],
   )
 
   async function onExport(format: (typeof EXPORT_FORMATS)[number]['value']) {
