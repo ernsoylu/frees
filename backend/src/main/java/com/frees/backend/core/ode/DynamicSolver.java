@@ -89,17 +89,33 @@ public final class DynamicSolver {
         // the analytic array/FOR machinery uses.
         List<Equation> auxEquations = new ArrayList<>();
         Map<String, Expr> derRhs = collectStateRhs(auxEquations);
-        if (derRhs.isEmpty()) {
+
+        java.util.Set<String> implicitStates = new java.util.LinkedHashSet<>();
+        for (Equation eq : auxEquations) {
+            collectAllDers(eq.lhs(), implicitStates);
+            collectAllDers(eq.rhs(), implicitStates);
+        }
+
+        if (derRhs.isEmpty() && implicitStates.isEmpty()) {
             throw new SolverException("DYNAMIC " + system.name()
                     + ": no der(X) equation found — a DYNAMIC block needs at least one state.");
         }
+        
         states.addAll(derRhs.keySet());
+        for (String is : implicitStates) {
+            if (!states.contains(is)) {
+                states.add(is);
+            }
+        }
+        auxNames.removeAll(states);
         initializeStateVector();
 
         // Reify derivatives: der(X) -> der$X; build the combined algebraic block.
         for (String s : states) {
-            algebraicTemplate.add(new Equation(new Expr.Var(derVar(s)),
-                    substituteDer(derRhs.get(s)), "der$" + s));
+            if (derRhs.containsKey(s)) {
+                algebraicTemplate.add(new Equation(new Expr.Var(derVar(s)),
+                        substituteDer(derRhs.get(s)), "der$" + s));
+            }
         }
         for (Equation aux : auxEquations) {
             algebraicTemplate.add(new Equation(substituteDer(aux.lhs()),
@@ -108,19 +124,49 @@ public final class DynamicSolver {
         validateReferences();
     }
 
+    private void collectAllDers(Expr e, java.util.Set<String> found) {
+        if (e instanceof Expr.Call c) {
+            if (c.function().equals("der") && c.args().size() == 1 && c.args().get(0) instanceof Expr.Var v) {
+                found.add(v.name());
+            }
+            for (Expr a : c.args()) {
+                collectAllDers(a, found);
+            }
+        } else if (e instanceof Expr.BinOp b) {
+            collectAllDers(b.left(), found);
+            collectAllDers(b.right(), found);
+        } else if (e instanceof Expr.Neg n) {
+            collectAllDers(n.operand(), found);
+        } else if (e instanceof Expr.Compare c) {
+            collectAllDers(c.left(), found);
+            collectAllDers(c.right(), found);
+        } else if (e instanceof Expr.Logical l) {
+            collectAllDers(l.left(), found);
+            collectAllDers(l.right(), found);
+        } else if (e instanceof Expr.Not n) {
+            collectAllDers(n.operand(), found);
+        } else if (e instanceof Expr.ArrayAccess a) {
+            for (Expr idx : a.indices()) {
+                collectAllDers(idx, found);
+            }
+        }
+    }
+
     /** Splits the expanded body into state RHS (der equations) and auxiliary
      *  equations; aux equations are appended to {@code auxOut} and their names
      *  recorded. Returns the per-state der() right-hand sides. */
     private Map<String, Expr> collectStateRhs(List<Equation> auxOut) {
         Map<String, Expr> derRhs = new LinkedHashMap<>();
         for (Equation eq : expandBody()) {
-            String state = derStateName(eq.lhs());
-            if (state != null) {
-                if (derRhs.containsKey(state)) {
-                    throw new SolverException("DYNAMIC " + system.name() + ": state '" + state
-                            + "' has more than one der() equation.");
+            String explicitState = derStateName(eq.lhs());
+            java.util.Set<String> rhsDers = new java.util.LinkedHashSet<>();
+            collectAllDers(eq.rhs(), rhsDers);
+            if (explicitState != null && rhsDers.isEmpty()) {
+                if (derRhs.containsKey(explicitState)) {
+                    throw new SolverException("DYNAMIC " + system.name() + ": state '" + explicitState
+                            + "' has more than one explicit der() equation.");
                 }
-                derRhs.put(state, eq.rhs());
+                derRhs.put(explicitState, eq.rhs());
             } else {
                 auxOut.add(eq);
                 String auxName = simpleVarName(eq.lhs());
