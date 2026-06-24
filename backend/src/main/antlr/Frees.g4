@@ -242,12 +242,25 @@ symbolicDecl
     : SYMBOLIC IDENT (COMMA IDENT)*
     ;
 
-// MATLAB-style destructuring call of a multi-output FUNCTION:
-//   [q, w] = split(x)
+// MATLAB-style destructuring call of a multi-output FUNCTION or CALL intrinsic:
+//   [q, w]        = split(x)
+//   [A, B, C, D]  = tf2ss(num, den)
+//   [~, ~, V]     = svd(A)        (use '~' to discard an output position)
+//   [A, B]        = tf2ss(num, den)   (omit trailing outputs you don't need)
 // Sugar for CALL split(x : q, w); listed before `equation` so it wins over a
 // matrix-literal equation with the same shape.
 multiAssign
-    : LBRACKET funcOutputs RBRACKET EQ IDENT LPAREN callArgList RPAREN
+    : LBRACKET callOutputs RBRACKET EQ IDENT LPAREN callArgList RPAREN
+    ;
+
+// Destructuring targets: a named variable, or '~' to ignore that output slot.
+callOutputs
+    : callOutput (COMMA callOutput)*
+    ;
+
+callOutput
+    : IDENT
+    | TILDE
     ;
 
 // MATLAB-style range that fills an array variable:
@@ -383,6 +396,7 @@ DOTDOT  : '..' ;
 PIPE    : '|' ;
 BACKSLASH : '\\' ;
 TRANSPOSE : '\'' ;
+TILDE   : '~' ;
 
 // MATLAB-style element-wise operators. Two chars starting with '.', so they
 // don't clash with '..' (DOTDOT) or decimal literals ('.5' is a NUMBER, since

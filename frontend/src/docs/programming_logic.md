@@ -22,6 +22,11 @@ END
 
 [quotient, remainder] = DivMod(17, 5)   { 3, 2 }
 ```
+Discard an output you don't need with `~`, or simply leave off trailing outputs:
+```
+[quotient, ~] = DivMod(17, 5)   { quotient only }
+```
+The same `[ … ] = name( … )` destructuring works for built-in multi-output `CALL` functions too — e.g. `[A, B, C, D] = tf2ss(num, den)`. See *Control Systems & Symbolic CAS → Multi-Output Functions*.
 
 ## Procedures
 A `PROCEDURE` is the same idea with inputs and outputs separated by a colon. Call it with `CALL`:
@@ -132,6 +137,8 @@ CALL pipe_flow(D1, Q1 : dP1)     { rating:  find dP1 from D1, Q1 }
 CALL pipe_flow(D2, Q2 : dP2)     { sizing:  find Q2  from D2, dP2 }
 ```
 Both calls use the *same* module — frees figures out which variable is unknown in each.
+
+> **Module vs. function:** a `MODULE` is essentially a multi-output `FUNCTION` whose body is **equations** (`=`, solved in any direction) instead of sequential assignments (`:=`, one-way). The bracket call form works here too: `[dP1] = pipe_flow(D1, Q1)`.
 FUNCTION poly_fit(x)
   poly_fit := 0.5 * x^2 + 2 * x + 1
 END

@@ -36,6 +36,29 @@ public final class EquationParser {
     private final ControlSystemsFlattener csFlattener = new ControlSystemsFlattener(this);
 
 
+    /**
+     * Canonical prefix for the throwaway "sink" variables that back ignored
+     * ({@code ~}) or omitted trailing outputs of a multi-output CALL/destructuring.
+     * A leading {@code ~} can never appear in a user identifier (lexer rule
+     * {@code IDENT : [a-zA-Z][a-zA-Z0-9_]*}), so these names are unforgeable and
+     * are filtered out of every surfaced result by {@code EquationSystemSolver}.
+     */
+    public static final String IGNORED_OUTPUT_PREFIX = "~ignored~";
+
+    /** Monotonic counter giving each ignored/omitted output slot a unique sink name. */
+    private static final java.util.concurrent.atomic.AtomicLong IGNORED_SINK_SEQ =
+            new java.util.concurrent.atomic.AtomicLong();
+
+    /** Mints a fresh, unique sink variable for an ignored or omitted output slot. */
+    public static Expr.Var newIgnoredSink() {
+        return new Expr.Var(IGNORED_OUTPUT_PREFIX + IGNORED_SINK_SEQ.getAndIncrement());
+    }
+
+    /** True if a canonical variable name is an internal ignored-output sink. */
+    public static boolean isIgnoredSink(String canonicalName) {
+        return canonicalName != null && canonicalName.startsWith(IGNORED_OUTPUT_PREFIX);
+    }
+
     private static final String FN_INVERSE = "inverse";
     private static final String FN_DETERMINANT = "determinant";
     private static final String FN_TRANSPOSE = "transpose";
@@ -723,6 +746,54 @@ public final class EquationParser {
     private static final int DEFAULT_RLOCUS_POINTS = 100;
 
     /**
+     * Pads a partial output list (fewer targets than the intrinsic produces) with hidden sink
+     * variables so MATLAB-style trailing omission — {@code [A, B] = tf2ss(num, den)} — works:
+     * the dropped outputs are still computed into sinks the solver determines but never surfaces.
+     * Only fixed-shape CALL intrinsics are padded (via {@link #expectedOutputCount}); user
+     * PROCEDURE/MODULE calls and unknown names return {@code -1} and keep their own arity checks.
+     */
+    private void padOmittedOutputs(String defName, List<Expr> inputs, List<Expr> outputs, FlattenContext ctx) {
+        if (outputs.isEmpty()) {
+            return; // nothing to destructure into
+        }
+        int expected = expectedOutputCount(defName, inputs);
+        while (expected > 0 && outputs.size() < expected) {
+            outputs.add(newIgnoredSink());
+        }
+    }
+
+    /**
+     * The number of outputs a fixed-shape CALL intrinsic produces, used to pad MATLAB-style
+     * trailing omission. Returns {@code -1} for user-defined PROCEDURE/MODULE calls and for
+     * intrinsics whose output count must be stated explicitly (so they are never auto-padded).
+     * Interconnection ops ({@code series}/{@code parallel}/{@code feedback}) yield 4 outputs in
+     * their state-space form (≥8 inputs) and 2 in their transfer-function form.
+     */
+    private int expectedOutputCount(String defName, List<Expr> inputs) {
+        return switch (defName) {
+            case "eigenvalues" -> 1;
+            case "eigen" -> 2;
+            case "ludecompose" -> 2;
+            case "eulerrotate" -> 1;
+            case "eulerdecompose" -> 3;
+            case "ss2ss" -> 3;
+            case "ss2tf", "ss2tfij", "zp2tf", "c2d", "d2c", "pade",
+                 "pole", "zero", "bode", "nyquist", "nichols" -> 2;
+            case "tf2ss" -> 4;
+            case "tf2zp" -> 5;
+            case "series", "parallel", "feedback" -> inputs.size() >= 8 ? 4 : 2;
+            case "margin", "stepinfo" -> 4;
+            case "rlocus", "errorconst", "pidtune", "balreal", "linfit" -> 3;
+            case "qr", "fft", "ifft" -> 2;
+            case "svd" -> 3;
+            // Single-output intrinsics need no padding (only one slot to fill).
+            // residue (5/6) is variadic; leave its count explicit so the optional
+            // repeated-pole order vector is never silently materialised.
+            default -> -1;
+        };
+    }
+
+    /**
      * Expand bare-name CALL outputs into full {@code 1..size} slices, sizing them from the
      * inputs exactly as the corresponding flattener does, so callers (notably the REPL) don't
      * have to restate a length the system already determines. Only acts when at least one output
@@ -953,6 +1024,12 @@ public final class EquationParser {
         }
         inputs = resolvedInputs;
         outputs = resolvedOutputs;
+
+        // MATLAB-style trailing-output omission: [A, B] = tf2ss(num, den) keeps only the
+        // first outputs and discards the rest. Pad the missing trailing slots with hidden
+        // sink variables up to the intrinsic's full arity so the flattener still computes
+        // (and the solver still determines) every output; the sinks are filtered from results.
+        padOmittedOutputs(defName, inputs, outputs, ctx);
 
         // Let callers write bare output names (CALL Eigenvalues(A : lambda)); size them from the
         // inputs the same way each flattener does. Explicit slices and value-dependent counts

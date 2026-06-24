@@ -165,17 +165,21 @@ public class EquationSystemSolver {
 
         TreeSet<String> allVars = collectVariables(equations);
         List<String> variables = displayNamesOf(allVars, parsed);
+        int surfacedVars = surfacedVarCount(allVars);
+        // Ignored/omitted output sinks add a matching equation per variable, so hide them
+        // from both reported counts to keep the displayed equation/variable balance honest.
+        int surfacedEqs = equations.size() - (allVars.size() - surfacedVars);
         try {
             blocker.verifyStructure(equations);
         } catch (SolverException e) {
-            return new CheckResult(false, equations.size(), allVars.size(), variables,
+            return new CheckResult(false, surfacedEqs, surfacedVars, variables,
                     e.getMessage());
         }
 
-        return new CheckResult(true, equations.size(), allVars.size(), variables,
+        return new CheckResult(true, surfacedEqs, surfacedVars, variables,
                 String.format(
                         "No syntax errors were detected. There are %d equations and %d variables.",
-                        equations.size(), allVars.size()));
+                        surfacedEqs, surfacedVars));
     }
 
     private static EquationParser.ParseResult withExtraDefs(
@@ -212,8 +216,14 @@ public class EquationSystemSolver {
     private static List<String> displayNamesOf(TreeSet<String> vars,
                                                EquationParser.ParseResult parsed) {
         return vars.stream()
+                .filter(v -> !EquationParser.isIgnoredSink(v))
                 .map(v -> parsed.displayNames().getOrDefault(v, v))
                 .toList();
+    }
+
+    /** Number of variables that surface to the user — excludes hidden ignored-output sinks. */
+    private static int surfacedVarCount(TreeSet<String> vars) {
+        return (int) vars.stream().filter(v -> !EquationParser.isIgnoredSink(v)).count();
     }
 
     /**
@@ -1193,15 +1203,20 @@ public class EquationSystemSolver {
             // Display variables with the spelling of their first appearance
             // (Check/Format behavior); lookups stay case-insensitive.
             TreeMap<String, Double> displayed = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
-            values.forEach((name, value) ->
-                    displayed.put(displayNames.getOrDefault(name, name), value));
+            values.forEach((name, value) -> {
+                if (EquationParser.isIgnoredSink(name)) {
+                    return; // discarded ('~') or omitted trailing output: never surfaced
+                }
+                displayed.put(displayNames.getOrDefault(name, name), value);
+            });
             solutions.add(new Solution(displayed, residuals, maxResidual));
             worstResidual = Math.max(worstResidual, maxResidual);
         }
 
+        int surfacedVars = surfacedVarCount(allVars);
         Stats stats = new Stats(
-                equations.size(),
-                allVars.size(),
+                equations.size() - (allVars.size() - surfacedVars),
+                surfacedVars,
                 blocks.size(),
                 totalIterations,
                 (System.nanoTime() - startNanos) / 1_000_000,

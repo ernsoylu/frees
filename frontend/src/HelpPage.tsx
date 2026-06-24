@@ -259,6 +259,14 @@ function ProceduresReference() {
         Invoke with <Code>CALL</Code>. Outputs are written to the variables after
         the colon; sizes are inferred from the inputs unless noted.
       </Text>
+      <Text size="sm" c="dimmed">
+        Every procedure also has a MATLAB-style destructuring form:{' '}
+        <Code>[A, B, C, D] = tf2ss(num, den)</Code> is identical to{' '}
+        <Code>CALL tf2ss(num, den : A, B, C, D)</Code>. Discard an output with{' '}
+        <Code>~</Code> (<Code>[~, ~, V] = svd(M)</Code>) or omit trailing outputs you
+        don't need (<Code>[A, B] = tf2ss(num, den)</Code>). Discarded values are still
+        computed; they're just not shown.
+      </Text>
       {cats.map((c) => {
         const rows = CALL_PROCEDURES.filter((p) => p.category === c.key);
         if (rows.length === 0) return null;

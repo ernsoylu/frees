@@ -92,7 +92,7 @@ const freesLanguage = StreamLanguage.define<StreamState>({
       return 'number'
     }
     if (/[A-Za-z_]/.test(ch)) return scanWord(stream)
-    if (/[+\-*/^=<>:|,]/.test(ch)) {
+    if (/[+\-*/^=<>:|,~]/.test(ch)) {
       stream.next()
       return 'operator'
     }

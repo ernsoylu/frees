@@ -86,6 +86,31 @@ Use `CALL` dispatches to convert between representations. The solver automatical
 
 > **Output sizes are inferred.** You may write `CALL` outputs as **bare names** — frees sizes each output array from the inputs (e.g. `num`/`den` get length `n+1`, a Bode `mag` matches `omega`). Explicit slices like `num[1:3]` still work and are shown in the examples for clarity. Only value-dependent counts need an explicit size: the finite-zero counts of `zero`/`tf2zp` (e.g. `zr[1:2]`) and the `rlocus` sweep length. The same control-systems `CALL` functions, and the symbolic transforms below, are also available in the **REPL terminal** (see *REPL Terminal & Workspace*), where `Factor`, `Expand`, `Apart`, `Laplace`, `InverseLaplace`, `Diff` and `Integrate` run interactively.
 
+## Multi-Output Functions (MATLAB-style)
+
+Every multi-output `CALL` function below also has a **destructuring** form — the same syntax MATLAB uses. Write the outputs in brackets on the left and call the function on the right; it is exactly equivalent to the `CALL name(inputs : outputs)` form, with output sizes still inferred:
+
+```
+{ These two lines are identical }
+[A, B, C, D] = tf2ss(num, den)
+CALL tf2ss(num, den : A, B, C, D)
+```
+
+**Discard outputs with `~`.** Use a tilde in any slot you don't need — that output is computed but never assigned to a variable, so it never appears in the Solution window:
+
+```
+[~, ~, V] = svd(M)        { keep only the right singular vectors }
+[mag, ~]  = bode(num, den, omega)   { magnitude only }
+```
+
+**Omit trailing outputs.** You can simply leave off outputs you don't want from the end of the list:
+
+```
+[A, B] = tf2ss(num, den)   { state and input matrices only — C, D dropped }
+```
+
+Both `~` and trailing omission work in the `CALL … : …` colon form too. The discarded values are still solved internally (so the result is identical), they are just hidden from the results. This destructuring form works for user-defined multi-output `FUNCTION`s as well — see *Custom Functions & Procedures*.
+
 ### 1. State Space to Transfer Function: ss2tf
 ```
 CALL ss2tf(A, B, C, D : num[1:3], den[1:3])

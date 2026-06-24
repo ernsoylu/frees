@@ -616,6 +616,33 @@ PLOT 'Pole-Zero Map'
 END`,
   },
   {
+    id: 'multi-output-destructuring',
+    title: 'Multi-Output Functions (MATLAB-style)',
+    description: 'Bracket destructuring of CALL functions: [A,B,C,D] = tf2ss(...), discarding outputs with ~, and omitting trailing outputs.',
+    category: 'Control Systems',
+    text: `// Multi-Output Functions
+{ Every multi-output CALL function can be used with MATLAB-style
+  bracket destructuring:  [outs] = name(ins).
+  Use ~ to discard an output, or omit trailing outputs you don't
+  need. Press Solve (F2). }
+
+num = [0, 0, 1]      { G(s) = 1 / (s^2 + 3s + 2) }
+den = [1, 3, 2]
+
+{ 1. Full destructuring — identical to CALL tf2ss(num, den : A, B, C, D) }
+[A, B, C, D] = tf2ss(num, den)
+
+{ 2. Round-trip back to a transfer function (recovers num, den) }
+[num2, den2] = ss2tf(A, B, C, D)
+
+{ 3. Discard an output with ~ : keep only the Bode magnitude }
+omega = [0.1, 1, 10]
+[mag, ~] = bode(num, den, omega)
+
+{ 4. Omit trailing outputs : state & input matrices only (C, D dropped) }
+[Ar, Br] = tf2ss(num, den)`,
+  },
+  {
     id: 'step-impulse-response',
     title: 'Step & Impulse Response',
     description: 'Time-domain analysis of a second-order system: step response, impulse response, and forced response (lsim).',
