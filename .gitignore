@@ -6,6 +6,7 @@ backend/bin/
 !backend/gradle/wrapper/gradle-wrapper.jar
 
 # Node
+node_modules/
 frontend/node_modules/
 frontend/dist/
 # Generated from src/docs/*.md by scripts/compile-docs.js (run on every
@@ -40,3 +41,7 @@ test-results/
 # Local development artifacts
 sources*
 parse_sources.py
+# Puppeteer scratch scripts (one-off page inspection) and their screenshots
+inspect.js
+inspect2.js
+local_screenshot.png
