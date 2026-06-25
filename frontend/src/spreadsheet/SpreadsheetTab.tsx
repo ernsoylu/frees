@@ -16,6 +16,7 @@ interface Props {
   onSpreadsheetsChange: (specs: SpreadsheetSpec[]) => void
   onCreateTable?: (table: ParamTableSpec) => void
   availableVariables?: string[]
+  onInsertText?: (text: string) => void
 }
 
 // jspreadsheet speaks a 2D `data` array plus a separate `style` map (CSS strings
@@ -91,7 +92,7 @@ function matrixToCelldata(raw: any[][], proc: any[][]): any[] {
   return out
 }
 
-export default function SpreadsheetTab({ singleSpreadsheetId, spreadsheets, onSpreadsheetsChange, onCreateTable, availableVariables = [] }: Props) {
+export default function SpreadsheetTab({ singleSpreadsheetId, spreadsheets, onSpreadsheetsChange, onCreateTable, availableVariables = [], onInsertText }: Props) {
   const spec = spreadsheets.find((s) => s.id === singleSpreadsheetId)
   const ssRef = useRef<any>(null)
   const [showBindModal, setShowBindModal] = useState(false)
@@ -263,12 +264,20 @@ export default function SpreadsheetTab({ singleSpreadsheetId, spreadsheets, onSp
 
   const confirmBind = () => {
     const sel = selRef.current
-    if (!sel) return
+    if (!sel || !spec) return
     const refStr = `${sheetNameAt(sel.ws)}!${colName(sel.x1)}${sel.y1 + 1}`
-    const key = bindType === 'input' ? 'bindings' : 'resultBindings'
-    onSpreadsheetsChange(
-      spreadsheets.map((s) => (s.id === singleSpreadsheetId ? { ...s, [key]: { ...s[key], [bindVarName]: refStr } } : s))
-    )
+    
+    if (bindType === 'input') {
+      // Input bindings: insert the ssheet equation directly into the editor text
+      onInsertText?.(`${bindVarName} = ssheet('${spec.name}', '${refStr}')`)
+    } else {
+      // Result bindings: save in spreadsheet metadata to drive post-solve writebacks
+      const key = 'resultBindings'
+      onSpreadsheetsChange(
+        spreadsheets.map((s) => (s.id === singleSpreadsheetId ? { ...s, [key]: { ...s[key], [bindVarName]: refStr } } : s))
+      )
+    }
+    
     setShowBindModal(false)
     setBindVarName('')
   }

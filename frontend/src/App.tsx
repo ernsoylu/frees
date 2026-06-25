@@ -2191,6 +2191,7 @@ export default function App() {
             spreadsheets={spreadsheets}
             onSpreadsheetsChange={setSpreadsheets}
             availableVariables={solvedVars}
+            onInsertText={insertFunction}
             onCreateTable={(newTable) => {
               setTables((prev) => [...prev, newTable])
               requestAnimationFrame(() => dockRef.current?.openInstance(`table:${newTable.id}`, 'table', newTable.name))
