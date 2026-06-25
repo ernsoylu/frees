@@ -278,7 +278,10 @@ export default function App() {
     setShowFirstRun(false)
     localStorage.setItem(FIRST_RUN_KEY, 'true')
   }, [])
-  const [variables, setVariables] = useState<string[]>([])
+  // Seed from a loaded project's configured drafts so buildVariableInfo() carries
+  // their units (display conversion, dimensional grounding) on the very first solve
+  // after load — Check/Solve then replaces this with the authoritative variable list.
+  const [variables, setVariables] = useState<string[]>(() => Object.keys(boot?.varDrafts ?? {}))
   const [varDrafts, setVarDrafts] = useState<Record<string, VariableDraft>>(
     () => boot?.varDrafts ?? {},
   )
@@ -936,7 +939,7 @@ export default function App() {
     if (diagramBindings.length > 0) {
       lines.push(...diagramBindings)
     }
-    
+
     for (const ss of spreadsheets) {
       if (ss.bindings) {
         for (const [varName, refStr] of Object.entries(ss.bindings)) {
@@ -945,7 +948,27 @@ export default function App() {
       }
     }
 
-    return substituteSsheetRefs(lines.join('\n'), spreadsheets)
+    // ssheet() pulls a bare number out of a cell, so an input binding like
+    // `T_1 = ssheet(...)` loses the variable's unit and the solver would read the
+    // value as SI base (150 -> 150 K instead of 150 [C]). Re-attach the unit the
+    // user declared in Variable Information, but ONLY for pure `VAR = ssheet(...)`
+    // bindings resolving to a scalar — hand-written assignments stay untouched.
+    const original = lines.join('\n').split('\n')
+    const substituted = substituteSsheetRefs(lines.join('\n'), spreadsheets).split('\n')
+    const draftFor = (name: string) =>
+      varDrafts[name] ?? varDrafts[Object.keys(varDrafts).find((k) => k.toLowerCase() === name.toLowerCase()) ?? '']
+    return substituted
+      .map((subLine, i) => {
+        const bind = (original[i] ?? '').match(/^\s*([A-Za-z_]\w*)\s*=\s*ssheet\s*\(/i)
+        if (!bind) return subLine
+        const draft = draftFor(bind[1])
+        const unit = draft?.isUnitsUserSet ? draft.units.trim() : ''
+        if (!unit) return subLine
+        // Only a scalar numeric substitution — never a vector/matrix like [1, 2; 3].
+        const scalar = subLine.match(/^(\s*[A-Za-z_]\w*\s*=\s*)(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*$/)
+        return scalar ? `${scalar[1]}${scalar[2]} [${unit}]` : subLine
+      })
+      .join('\n')
   }
 
   // Diagram input controls report their `var = value` lines here. Changing a
