@@ -27,6 +27,8 @@ RUN VITE_COMMIT_HASH="${VITE_COMMIT_HASH:-${RAILWAY_GIT_COMMIT_SHA:-dev}}" \
 # (BACKEND_HOST=api-node) and Railway (BACKEND_HOST=frees-api.railway.internal).
 FROM nginxinc/nginx-unprivileged:alpine
 COPY nginx.conf.template /etc/nginx/templates/default.conf.template
+# Security headers, included by every location block in the nginx config.
+COPY security-headers.conf /etc/nginx/security-headers.conf
 COPY --from=build /app/dist /usr/share/nginx/html
 # Runtime build-info: an entrypoint script stamps the live commit (see the
 # script and CLAUDE.md "Build stamping"). build-info.js must be writable by the
