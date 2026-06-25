@@ -66,6 +66,10 @@ jobs:
         working-directory: frontend
         run: npm ci --ignore-scripts
 
+      - name: Audit dependencies (fail on high/critical)
+        working-directory: frontend
+        run: npm audit --audit-level=high --omit=dev
+
       - name: Lint
         working-directory: frontend
         run: npm run lint
@@ -78,10 +82,35 @@ jobs:
         working-directory: frontend
         run: npm run build
 
+  dependency-scan:
+    name: Dependency scan (Trivy)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      # Trivy scans the repo filesystem for known CVEs in locked dependencies:
+      # backend/gradle.lockfile (Java) and frontend/package-lock.json (npm). It
+      # uses its own vulnerability DB (GitHub Advisories, OSV, distro feeds) and
+      # needs NO API key. Fails the build on any HIGH/CRITICAL with a fix.
+      - name: Run Trivy filesystem scan (fail on HIGH/CRITICAL)
+        uses: aquasecurity/trivy-action@dc5a429b52fcf669ce959baa2c2dd26090d2a6c4 # v0.32.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          scanners: vuln
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: '1'
+          format: table
+        env:
+          # Pull the DB from GHCR via the GITHUB_TOKEN to avoid anonymous
+          # Docker Hub rate limits on the public DB image.
+          TRIVY_DB_REPOSITORY: ghcr.io/aquasecurity/trivy-db
+
   docker-publish:
     name: Build and push Docker images
     runs-on: ubuntu-latest
-    needs: [backend-test, frontend-build]
+    needs: [backend-test, frontend-build, dependency-scan]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     permissions:
       contents: read
