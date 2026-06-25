@@ -74,7 +74,6 @@ const VIEWS = [
   { value: 'diagram', label: 'Diagram', tip: 'Diagram — interactive schematic editor', icon: IconSchema },
   { value: 'whiteboard', label: 'Whiteboard', tip: 'Whiteboard — Excalidraw freehand sketch canvas', icon: IconBrush },
   { value: 'spreadsheet', label: 'Spreadsheet', tip: 'Spreadsheet — Excel-like workbook', icon: IconGrid4x4 },
-  { value: 'workspace', label: 'Variables', tip: 'Variable Explorer — live solved state & variable info', icon: IconVariable },
   { value: 'terminal', label: 'Terminal', tip: 'Terminal — REPL evaluated against the workspace', icon: IconTerminal2 },
 ]
 
