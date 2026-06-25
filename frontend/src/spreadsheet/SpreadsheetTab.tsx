@@ -5,7 +5,7 @@ import 'jspreadsheet-ce/dist/jspreadsheet.css'
 import 'material-icons/iconfont/material-icons.css' // toolbar glyphs (self-hosted, no CDN)
 import './theme.css'
 import { type SpreadsheetSpec, emptySpreadsheetData } from './types'
-import { Button, Group, Modal, TextInput, Switch } from '@mantine/core'
+import { Button, Group, Modal, TextInput, Switch, Text, Select } from '@mantine/core'
 import { IconTablePlus, IconLink, IconDownload } from '@tabler/icons-react'
 import { ParamTableSpec } from '../tables'
 import { newParamRow } from '../ParametricTableTab'
@@ -15,6 +15,7 @@ interface Props {
   spreadsheets: SpreadsheetSpec[]
   onSpreadsheetsChange: (specs: SpreadsheetSpec[]) => void
   onCreateTable?: (table: ParamTableSpec) => void
+  availableVariables?: string[]
 }
 
 // jspreadsheet speaks a 2D `data` array plus a separate `style` map (CSS strings
@@ -90,13 +91,14 @@ function matrixToCelldata(raw: any[][], proc: any[][]): any[] {
   return out
 }
 
-export default function SpreadsheetTab({ singleSpreadsheetId, spreadsheets, onSpreadsheetsChange, onCreateTable }: Props) {
+export default function SpreadsheetTab({ singleSpreadsheetId, spreadsheets, onSpreadsheetsChange, onCreateTable, availableVariables = [] }: Props) {
   const spec = spreadsheets.find((s) => s.id === singleSpreadsheetId)
   const ssRef = useRef<any>(null)
   const [showBindModal, setShowBindModal] = useState(false)
   const [bindVarName, setBindVarName] = useState('')
   const [bindType, setBindType] = useState<'input' | 'result'>('input')
   const [hasSelection, setHasSelection] = useState(false)
+  const [selectedCell, setSelectedCell] = useState<string>('')
 
   // Last selection reported by jspreadsheet's onselection — kept in a ref so the
   // Mantine toolbar buttons (which live outside the grid) can act on it even after
@@ -204,6 +206,7 @@ export default function SpreadsheetTab({ singleSpreadsheetId, spreadsheets, onSp
     activeWsRef.current = ws
     selRef.current = { ws, x1, y1, x2, y2 }
     setHasSelection(true)
+    setSelectedCell(`${sheetNameAt(ws)}!${colName(x1)}${y1 + 1}`)
     scheduleSync() // capture any formatting applied just before moving the selection
   }
 
@@ -305,9 +308,11 @@ export default function SpreadsheetTab({ singleSpreadsheetId, spreadsheets, onSp
         <Button size="xs" variant="light" leftSection={<IconLink size={14} />} color="orange" onClick={() => handleBindVariable('input')} disabled={!hasSelection}>
           Bind as Input
         </Button>
-        <Button size="xs" variant="light" leftSection={<IconLink size={14} />} color="teal" onClick={() => handleBindVariable('result')} disabled={!hasSelection}>
-          Bind as Result
-        </Button>
+        {availableVariables.length > 0 && (
+          <Button size="xs" variant="light" leftSection={<IconLink size={14} />} color="teal" onClick={() => handleBindVariable('result')} disabled={!hasSelection}>
+            Bind as Result
+          </Button>
+        )}
         <Button size="xs" variant="light" leftSection={<IconDownload size={14} />} color="blue" onClick={handleExportCSV}>
           Export CSV
         </Button>
@@ -337,13 +342,29 @@ export default function SpreadsheetTab({ singleSpreadsheetId, spreadsheets, onSp
       </div>
 
       <Modal opened={showBindModal} onClose={() => setShowBindModal(false)} title={`Bind Cell as ${bindType === 'input' ? 'Input' : 'Result'}`} size="sm">
-        <TextInput
-          label="Variable Name"
-          placeholder="e.g. T_in"
-          value={bindVarName}
-          onChange={(e) => setBindVarName(e.currentTarget.value)}
-          data-autofocus
-        />
+        <Text size="sm" mb="xs" c="dimmed">
+          Selected Cell: <strong>{selectedCell}</strong>
+        </Text>
+        {bindType === 'input' ? (
+          <TextInput
+            label="Variable Name"
+            placeholder="e.g. T_in"
+            value={bindVarName}
+            onChange={(e) => setBindVarName(e.currentTarget.value)}
+            data-autofocus
+          />
+        ) : (
+          <Select
+            label="Variable Name"
+            placeholder="Select a variable"
+            data={availableVariables}
+            value={bindVarName}
+            onChange={(val) => setBindVarName(val ?? '')}
+            searchable
+            clearable
+            data-autofocus
+          />
+        )}
         <Group justify="flex-end" mt="md">
           <Button variant="default" onClick={() => setShowBindModal(false)}>Cancel</Button>
           <Button onClick={confirmBind} disabled={!bindVarName.trim()}>Bind</Button>

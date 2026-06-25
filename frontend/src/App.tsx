@@ -785,6 +785,17 @@ export default function App() {
     .filter((r) => r.ok)
     .map(({ label, values }) => ({ label, values }))
 
+  const solvedVars = useMemo(() => {
+    const names = new Set<string>()
+    if (result?.variables) {
+      for (const v of result.variables) names.add(v.name)
+    }
+    if (checkResult?.variables) {
+      for (const v of checkResult.variables) names.add(v)
+    }
+    return Array.from(names).sort((a, b) => a.localeCompare(b))
+  }, [result, checkResult])
+
   // The parametric table window that is currently focused in the dock — the
   // TopBar's Check Table / Run Table buttons and status pill track this table.
   const focusedParam: ParamTableSpec | null = (() => {
@@ -2179,6 +2190,7 @@ export default function App() {
             singleSpreadsheetId={ss.id}
             spreadsheets={spreadsheets}
             onSpreadsheetsChange={setSpreadsheets}
+            availableVariables={solvedVars}
             onCreateTable={(newTable) => {
               setTables((prev) => [...prev, newTable])
               requestAnimationFrame(() => dockRef.current?.openInstance(`table:${newTable.id}`, 'table', newTable.name))
