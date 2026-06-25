@@ -39,5 +39,6 @@ export function newSpreadsheet(count: number): SpreadsheetSpec {
     id: crypto.randomUUID(),
     name: `Spreadsheet ${count + 1}`,
     sheets: [], // The component will initialize it with emptySpreadsheetData() if needed
+    autoSync: true,
   }
 }

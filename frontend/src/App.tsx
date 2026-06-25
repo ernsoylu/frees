@@ -872,13 +872,39 @@ export default function App() {
   function actuallyLoadExample(example: Example) {
     suppressDirtyRef.current = true
     isDirtyRef.current = false
+    clearProjectLocal()
+    writeBridgedKeys({
+      version: 1,
+      savedAt: '',
+      text: example.text,
+      varDrafts: {},
+      stopCriteria,
+      unitSystem,
+      fillMissing,
+      stateUnitIds: {},
+      tables: [],
+      plots: [],
+      diagrams: [],
+      whiteboards: [],
+      spreadsheets: [],
+      customComponents: null,
+      digitizer: null,
+      dockLayout: null,
+    })
     setText(example.text)
     setVarDrafts({})
-    setCheckResult(null)
+    setStateUnitIds({})
+    setTables([])
+    setPlots([])
+    setDiagrams([])
+    setActiveDiagramId(null)
+    setWhiteboards([])
+    setSpreadsheets([])
     setResult(null)
+    setCheckResult(null)
     setLastSolvedWithFillMissing(false)
-    invalidateTable()
-    setActiveTab('equations')
+    setProjectName(example.title)
+    setWorkspaceEpoch((e) => e + 1)
     requestAnimationFrame(() => dockRef.current?.reset())
   }
 
