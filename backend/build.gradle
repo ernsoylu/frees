@@ -2,7 +2,7 @@ plugins {
     id 'java'
     id 'antlr'
     id 'jacoco'
-    id 'org.springframework.boot' version '3.5.6'
+    id 'org.springframework.boot' version '4.0.7'
     id 'io.spring.dependency-management' version '1.1.7'
     id 'org.sonarqube' version '7.3.1.8318'
 }
@@ -40,24 +40,22 @@ dependencyLocking {
     lockAllConfigurations()
 }
 
-dependencyManagement {
-    imports {
-        mavenBom "io.opentelemetry.instrumentation:opentelemetry-instrumentation-bom-alpha:2.2.0-alpha"
-    }
-}
-
 dependencies {
     antlr 'org.antlr:antlr4:4.13.2'
 
-    implementation platform('org.springframework.boot:spring-boot-dependencies:3.5.6')
+    implementation platform('org.springframework.boot:spring-boot-dependencies:4.0.7')
     implementation 'org.springframework.boot:spring-boot-starter-web'
-    
+
     // Asynchronous Compute Architecture
     implementation 'org.springframework.boot:spring-boot-starter-amqp'
     implementation 'org.springframework.boot:spring-boot-starter-data-redis'
-    
-    // OpenTelemetry
-    implementation 'io.opentelemetry.instrumentation:opentelemetry-spring-boot-starter'
+
+    // OpenTelemetry — Spring Boot's native starter (Boot 4+). Exports traces via
+    // OTLP through Micrometer and still registers an injectable
+    // io.opentelemetry.api.OpenTelemetry bean, which the manual RabbitMQ
+    // trace-context propagation (TraceContextInjector / ComputeTaskListener)
+    // uses. Replaces the former community opentelemetry-spring-boot-starter.
+    implementation 'org.springframework.boot:spring-boot-starter-opentelemetry'
 
     implementation 'org.antlr:antlr4-runtime:4.13.2'
     implementation 'org.jgrapht:jgrapht-core:1.5.2'
@@ -69,9 +67,16 @@ dependencies {
     implementation 'org.matheclipse:matheclipse-core:3.0.0'
 
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    // Boot 4 split the web-MVC test slice (MockMvc / @AutoConfigureMockMvc) out
+    // of spring-boot-test-autoconfigure into its own module; starter-test no
+    // longer pulls it transitively.
+    testImplementation 'org.springframework.boot:spring-boot-webmvc-test'
     testImplementation 'org.springframework.boot:spring-boot-testcontainers'
-    testImplementation 'org.testcontainers:junit-jupiter'
-    testImplementation 'org.testcontainers:rabbitmq'
+    // Testcontainers 2.x renamed every module with a `testcontainers-` prefix
+    // (org.testcontainers:junit-jupiter -> testcontainers-junit-jupiter, etc.)
+    // and relocated container classes into module-specific packages.
+    testImplementation 'org.testcontainers:testcontainers-junit-jupiter'
+    testImplementation 'org.testcontainers:testcontainers-rabbitmq'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
