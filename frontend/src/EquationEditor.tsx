@@ -12,6 +12,9 @@ import { catalogFunctionNames } from './functionCatalog'
 // to a line) without reaching into the DOM, mirroring the old textareaRef ops.
 export interface EquationEditorHandle {
   insertSnippet: (snippet: string) => void
+  /** Append `text` as its own line at the end of the document, guaranteeing a
+   *  line break before and after so repeated calls each land on a fresh line. */
+  insertStatement: (text: string) => void
   goToLine: (line: number) => void
   focus: () => void
 }
@@ -271,6 +274,23 @@ function EquationEditorInner(
         const caret = from + (caretMark >= 0 ? caretMark : clean.length)
         view.dispatch({
           changes: { from, to, insert: clean },
+          selection: { anchor: caret },
+        })
+        view.focus()
+      },
+      insertStatement(text: string) {
+        const view = viewRef.current
+        if (!view) return
+        const doc = view.state.doc
+        const end = doc.length
+        // Prefix a newline unless the doc is empty or already ends with one, so
+        // the statement never glues onto the previous line; suffix one so the
+        // next insert (or the user's typing) starts on its own line too.
+        const needsLeadingNL = end > 0 && doc.sliceString(end - 1, end) !== '\n'
+        const insert = `${needsLeadingNL ? '\n' : ''}${text}\n`
+        const caret = end + insert.length - 1
+        view.dispatch({
+          changes: { from: end, to: end, insert },
           selection: { anchor: caret },
         })
         view.focus()

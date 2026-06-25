@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react'
 import { Spreadsheet, Worksheet } from '@jspreadsheet-ce/react'
 import 'jsuites/dist/jsuites.css'
 import 'jspreadsheet-ce/dist/jspreadsheet.css'
@@ -13,7 +13,10 @@ import { newParamRow } from '../ParametricTableTab'
 interface Props {
   singleSpreadsheetId: string
   spreadsheets: SpreadsheetSpec[]
-  onSpreadsheetsChange: (specs: SpreadsheetSpec[]) => void
+  // Functional updater form: a debounced syncOut can fire with a stale
+  // `spreadsheets` snapshot and would otherwise clobber concurrent changes
+  // (e.g. a result binding added between the schedule and the flush).
+  onSpreadsheetsChange: Dispatch<SetStateAction<SpreadsheetSpec[]>>
   onCreateTable?: (table: ParamTableSpec) => void
   availableVariables?: string[]
   onInsertText?: (text: string) => void
@@ -154,10 +157,10 @@ export default function SpreadsheetTab({ singleSpreadsheetId, spreadsheets, onSp
       }
     })
     selfWriteRef.current = newSheets
-    onSpreadsheetsChange(
-      spreadsheets.map((s) => (s.id === singleSpreadsheetId ? { ...s, sheets: newSheets } : s))
+    onSpreadsheetsChange((prev) =>
+      prev.map((s) => (s.id === singleSpreadsheetId ? { ...s, sheets: newSheets } : s))
     )
-  }, [spec, spreadsheets, singleSpreadsheetId, onSpreadsheetsChange])
+  }, [spec, singleSpreadsheetId, onSpreadsheetsChange])
 
   const scheduleSync = useCallback(() => {
     if (syncTimer.current) clearTimeout(syncTimer.current)
@@ -279,8 +282,8 @@ export default function SpreadsheetTab({ singleSpreadsheetId, spreadsheets, onSp
     } else {
       // Result bindings: save in spreadsheet metadata to drive post-solve writebacks
       const key = 'resultBindings'
-      onSpreadsheetsChange(
-        spreadsheets.map((s) => (s.id === singleSpreadsheetId ? { ...s, [key]: { ...s[key], [bindVarName]: refStr } } : s))
+      onSpreadsheetsChange((prev) =>
+        prev.map((s) => (s.id === singleSpreadsheetId ? { ...s, [key]: { ...s[key], [bindVarName]: refStr } } : s))
       )
     }
     
@@ -340,7 +343,7 @@ export default function SpreadsheetTab({ singleSpreadsheetId, spreadsheets, onSp
           checked={spec.autoSync || false}
           onChange={(e) => {
             const val = e.currentTarget.checked
-            onSpreadsheetsChange(spreadsheets.map((s) => (s.id === spec.id ? { ...s, autoSync: val } : s)))
+            onSpreadsheetsChange((prev) => prev.map((s) => (s.id === spec.id ? { ...s, autoSync: val } : s)))
           }}
         />
       </Group>
