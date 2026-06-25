@@ -32,7 +32,13 @@ public final class CoolProp {
     private static final Lib LIB = load();
 
     private record CacheKey(String output, String name1, double prop1, String name2, double prop2, String fluid) {}
-    private static final java.util.Map<CacheKey, Double> PROPS_CACHE = new java.util.concurrent.ConcurrentHashMap<>();
+    private static final int MAX_CACHE_SIZE = 20000;
+    private static final java.util.Map<CacheKey, Double> PROPS_CACHE = new java.util.LinkedHashMap<>(16, 0.75f, true) {
+        @Override
+        protected boolean removeEldestEntry(java.util.Map.Entry<CacheKey, Double> eldest) {
+            return size() > MAX_CACHE_SIZE;
+        }
+    };
 
     private CoolProp() {}
 

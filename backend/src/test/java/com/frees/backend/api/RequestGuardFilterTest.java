@@ -17,6 +17,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
         "frees.security.max-body-bytes=200",
         "frees.security.rate-limit-requests=3",
         "frees.security.rate-limit-window-seconds=60",
+        "frees.security.rate-limit-repl-requests=2",
+        "frees.security.rate-limit-repl-window-seconds=60",
 })
 class RequestGuardFilterTest {
 
@@ -50,5 +52,22 @@ class RequestGuardFilterTest {
             }
         }
         assertTrue(throttled, "Rate limiter should return 429 within a short burst");
+    }
+
+    @Test
+    void throttlesExcessiveReplRequests() throws Exception {
+        // With a REPL limit of 2 per window, the 3rd request to /api/repl/evaluate must hit 429.
+        boolean throttled = false;
+        for (int i = 0; i < 4; i++) {
+            int status = mockMvc.perform(post("/api/repl/evaluate")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"sessionId\": \"test\", \"expression\": \"x+1\"}"))
+                    .andReturn().getResponse().getStatus();
+            if (status == 429) {
+                throttled = true;
+                break;
+            }
+        }
+        assertTrue(throttled, "REPL rate limiter should return 429 after 2 requests");
     }
 }
