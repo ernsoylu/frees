@@ -32,15 +32,21 @@ public class RequestGuardFilter extends OncePerRequestFilter {
     private final long maxBodyBytes;
     private final int maxRequests;
     private final long windowMillis;
+    private final int maxReplRequests;
+    private final long replWindowMillis;
     private final Map<String, Counter> counters = new ConcurrentHashMap<>();
 
     public RequestGuardFilter(
             @Value("${frees.security.max-body-bytes:1048576}") long maxBodyBytes,
             @Value("${frees.security.rate-limit-requests:120}") int maxRequests,
-            @Value("${frees.security.rate-limit-window-seconds:60}") long windowSeconds) {
+            @Value("${frees.security.rate-limit-window-seconds:60}") long windowSeconds,
+            @Value("${frees.security.rate-limit-repl-requests:15}") int maxReplRequests,
+            @Value("${frees.security.rate-limit-repl-window-seconds:60}") long replWindowSeconds) {
         this.maxBodyBytes = maxBodyBytes;
         this.maxRequests = maxRequests;
         this.windowMillis = windowSeconds * 1000L;
+        this.maxReplRequests = maxReplRequests;
+        this.replWindowMillis = replWindowSeconds * 1000L;
     }
 
     @Override
@@ -58,7 +64,21 @@ public class RequestGuardFilter extends OncePerRequestFilter {
             return;
         }
 
-        if (!allow(clientIp(request))) {
+        String ip = clientIp(request);
+        String uri = request.getRequestURI();
+
+        // Stricter rate limiting specifically for REPL CAS/solve evaluations
+        if ("/api/repl/evaluate".equals(uri)) {
+            if (!allow(ip + ":repl", maxReplRequests, replWindowMillis)) {
+                response.setStatus(429); // 429 Too Many Requests
+                response.setContentType("text/plain");
+                response.getWriter().write("Too many REPL requests. Please slow down and retry shortly.");
+                return;
+            }
+        }
+
+        // General rate limit for all API requests
+        if (!allow(ip, maxRequests, windowMillis)) {
             response.setStatus(429); // 429 Too Many Requests
             response.setContentType("text/plain");
             response.getWriter().write("Too many requests. Please slow down and retry shortly.");
@@ -70,19 +90,19 @@ public class RequestGuardFilter extends OncePerRequestFilter {
 
     /** Fixed-window per-IP counter; returns false once the window's quota is
      * exhausted. Stale windows are swept when the map grows large. */
-    private boolean allow(String ip) {
+    private boolean allow(String key, int limit, long window) {
         long now = System.currentTimeMillis();
         if (counters.size() > MAX_TRACKED_IPS) {
-            counters.entrySet().removeIf(e -> now - e.getValue().windowStart > windowMillis * 2);
+            counters.entrySet().removeIf(e -> now - e.getValue().windowStart > window * 2);
         }
-        Counter counter = counters.computeIfAbsent(ip, k -> new Counter(now));
+        Counter counter = counters.computeIfAbsent(key, k -> new Counter(now));
         synchronized (counter) {
-            if (now - counter.windowStart >= windowMillis) {
+            if (now - counter.windowStart >= window) {
                 counter.windowStart = now;
                 counter.count = 0;
             }
             counter.count++;
-            return counter.count <= maxRequests;
+            return counter.count <= limit;
         }
     }
 
