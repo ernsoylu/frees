@@ -37,6 +37,11 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 final class ControlSystemsFlattener {
 
+    /** Default step/impulse response horizon (seconds) and sample count when the
+     *  caller omits an explicit time vector. */
+    static final double DEFAULT_TIME_FINAL = 10.0;
+    static final int DEFAULT_TIME_POINTS = 50;
+
     private final EquationParser parser;
 
     ControlSystemsFlattener(EquationParser parser) {
@@ -240,6 +245,30 @@ final class ControlSystemsFlattener {
         }
     }
 
+    /**
+     * Zero-pads a transfer-function numerator with leading zeros up to the
+     * denominator length and returns its coefficients (high-order first). This
+     * lets users write a proper transfer function in natural form — {@code
+     * num=[1], den=[1,3,2]} instead of {@code num=[0,0,1]} — exactly as MATLAB
+     * and standard control theory accept it. Downstream synthetic evaluators
+     * assume {@code num} carries {@code den.size} coefficients, so the padding
+     * makes the shorter form correct. A numerator <em>longer</em> than the
+     * denominator is a genuinely improper (non-causal) transfer function and is
+     * still rejected.
+     */
+    static List<Expr> padNumerator(String fn, EquationParser.VectorInfo num, EquationParser.VectorInfo den) {
+        if (num.size > den.size) {
+            throw new EquationParser.ParseException(fn + ": numerator is longer than the denominator "
+                    + "(improper transfer function): num has " + num.size + " coefficients, den has " + den.size);
+        }
+        List<Expr> padded = new ArrayList<>(den.size);
+        for (int i = num.size; i < den.size; i++) {
+            padded.add(new Expr.Num(0.0));
+        }
+        padded.addAll(Arrays.asList(num.elements));
+        return padded;
+    }
+
     void flattenTf2ss(List<Expr> inputs, List<Expr> outputs, String sourceText, EquationParser.FlattenContext ctx) {
         if (inputs.size() != 2 || outputs.size() != 4) {
             throw new EquationParser.ParseException("tf2ss expects 2 inputs (num, den) and 4 outputs (A, B, C, D), "
@@ -247,9 +276,7 @@ final class ControlSystemsFlattener {
         }
         EquationParser.VectorInfo num = parser.parseVectorInfo(inputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
         EquationParser.VectorInfo den = parser.parseVectorInfo(inputs.get(1), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
-        if (num.size != den.size) {
-            throw new EquationParser.ParseException("tf2ss: num and den must have the same length");
-        }
+        List<Expr> numPadded = padNumerator("tf2ss", num, den);
         int np = den.size;
         int n = np - 1;
 
@@ -270,7 +297,7 @@ final class ControlSystemsFlattener {
         }
 
         List<Expr> entries = new ArrayList<>();
-        entries.addAll(Arrays.asList(num.elements));
+        entries.addAll(numPadded);
         entries.addAll(Arrays.asList(den.elements));
 
         for (int i = 0; i < n; i++) {
@@ -703,11 +730,8 @@ final class ControlSystemsFlattener {
         } else {
             EquationParser.VectorInfo num = parser.parseVectorInfo(inputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
             EquationParser.VectorInfo den = parser.parseVectorInfo(inputs.get(1), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
-            if (num.size != den.size) {
-                throw new EquationParser.ParseException("pole: num and den must have the same length");
-            }
             n = den.size - 1; // degree
-            entries.addAll(Arrays.asList(num.elements));
+            entries.addAll(padNumerator("pole", num, den));
             entries.addAll(Arrays.asList(den.elements));
         }
 
@@ -748,10 +772,7 @@ final class ControlSystemsFlattener {
         if (inputs.size() == 2) {
             EquationParser.VectorInfo num = parser.parseVectorInfo(inputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
             EquationParser.VectorInfo den = parser.parseVectorInfo(inputs.get(1), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
-            if (num.size != den.size) {
-                throw new EquationParser.ParseException("zero: num and den must have the same length");
-            }
-            entries.addAll(Arrays.asList(num.elements));
+            entries.addAll(padNumerator("zero", num, den));
             entries.addAll(Arrays.asList(den.elements));
         } else {
             EquationParser.MatrixInfo a = parser.parseMatrixInfo(inputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
@@ -802,10 +823,7 @@ final class ControlSystemsFlattener {
         if (inputs.size() == 3) {
             EquationParser.VectorInfo num = parser.parseVectorInfo(inputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
             EquationParser.VectorInfo den = parser.parseVectorInfo(inputs.get(1), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
-            if (num.size != den.size) {
-                throw new EquationParser.ParseException("bode: num and den must have the same length");
-            }
-            entries.addAll(Arrays.asList(num.elements));
+            entries.addAll(padNumerator("bode", num, den));
             entries.addAll(Arrays.asList(den.elements));
         } else {
             EquationParser.MatrixInfo a = parser.parseMatrixInfo(inputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
@@ -857,10 +875,7 @@ final class ControlSystemsFlattener {
         if (inputs.size() == 3) {
             EquationParser.VectorInfo num = parser.parseVectorInfo(inputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
             EquationParser.VectorInfo den = parser.parseVectorInfo(inputs.get(1), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
-            if (num.size != den.size) {
-                throw new EquationParser.ParseException("nyquist: num and den must have the same length");
-            }
-            entries.addAll(Arrays.asList(num.elements));
+            entries.addAll(padNumerator("nyquist", num, den));
             entries.addAll(Arrays.asList(den.elements));
         } else {
             EquationParser.MatrixInfo a = parser.parseMatrixInfo(inputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
@@ -903,10 +918,7 @@ final class ControlSystemsFlattener {
         if (inputs.size() == 2) {
             EquationParser.VectorInfo num = parser.parseVectorInfo(inputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
             EquationParser.VectorInfo den = parser.parseVectorInfo(inputs.get(1), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
-            if (num.size != den.size) {
-                throw new EquationParser.ParseException("margin: num and den must have the same length");
-            }
-            entries.addAll(Arrays.asList(num.elements));
+            entries.addAll(padNumerator("margin", num, den));
             entries.addAll(Arrays.asList(den.elements));
         } else {
             EquationParser.MatrixInfo a = parser.parseMatrixInfo(inputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
@@ -1045,10 +1057,7 @@ final class ControlSystemsFlattener {
         if (inputs.size() == 3) {
             EquationParser.VectorInfo num = parser.parseVectorInfo(inputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
             EquationParser.VectorInfo den = parser.parseVectorInfo(inputs.get(1), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
-            if (num.size != den.size) {
-                throw new EquationParser.ParseException("nichols: num and den must have the same length");
-            }
-            entries.addAll(Arrays.asList(num.elements));
+            entries.addAll(padNumerator("nichols", num, den));
             entries.addAll(Arrays.asList(den.elements));
         } else {
             EquationParser.MatrixInfo a = parser.parseMatrixInfo(inputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
@@ -1160,9 +1169,7 @@ final class ControlSystemsFlattener {
         }
         EquationParser.VectorInfo num = parser.parseVectorInfo(inputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
         EquationParser.VectorInfo den = parser.parseVectorInfo(inputs.get(1), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
-        if (num.size != den.size) {
-            throw new EquationParser.ParseException(name + ": num and den must have the same length (pad the numerator with leading zeros)");
-        }
+        List<Expr> numPadded = padNumerator(name, num, den);
         Expr ts = getScalarElement(inputs.get(2), ctx);
 
         int outLen = den.size;
@@ -1179,7 +1186,7 @@ final class ControlSystemsFlattener {
         }
 
         List<Expr> entries = new ArrayList<>();
-        entries.addAll(Arrays.asList(num.elements));
+        entries.addAll(numPadded);
         entries.addAll(Arrays.asList(den.elements));
         entries.add(ts);
 
@@ -1193,18 +1200,38 @@ final class ControlSystemsFlattener {
     }
 
     /**
-     * Flattens {@code step} / {@code impulse}: 3 inputs (num, den, t) or 5 inputs
-     * (A, B, C, D, t), and one output vector y the same length as t. Each y[i] is
-     * emitted as a synthetic call {@code <name>$<i>$<numInputs>$<N>} whose
-     * arguments are the serialized model entries followed by the time samples.
+     * Flattens {@code step} / {@code impulse}. The model is either a transfer
+     * function (num, den) or a state space (A, B, C, D), optionally followed by
+     * a time vector t. When t is omitted the response is sampled on a default
+     * {@value #DEFAULT_TIME_FINAL}s grid of {@value #DEFAULT_TIME_POINTS} points
+     * (so {@code [y] = step(num, den)} works, MATLAB-style); the generated grid
+     * can also be captured as an optional second output, {@code [y, t] =
+     * step(num, den)}. Each y[i] is emitted as a synthetic call {@code
+     * <name>$<i>$<numInputs>$<N>} over the serialized model entries followed by
+     * the time samples — so the auto-grid case reuses the with-time layout by
+     * always serializing N time samples and tagging numInputs as 3 (TF) or 5 (SS).
      */
     void flattenTimeResponse(String name, List<Expr> inputs, List<Expr> outputs, String sourceText, EquationParser.FlattenContext ctx) {
-        if ((inputs.size() != 3 && inputs.size() != 5) || outputs.size() != 1) {
-            throw new EquationParser.ParseException(name + " expects 3 inputs (num, den, t) or 5 inputs (A, B, C, D, t) and 1 output (y), "
-                    + "e.g. CALL " + name + "(num, den, t : y[1:50])");
+        boolean stateSpace = inputs.size() >= 4;
+        int modelInputs = stateSpace ? 4 : 2;
+        boolean hasTime = inputs.size() == modelInputs + 1;
+        if ((inputs.size() != modelInputs && !hasTime)
+                || outputs.size() < 1 || outputs.size() > 2
+                || (outputs.size() == 2 && hasTime)) {
+            throw new EquationParser.ParseException(name + " expects (num, den) or (A, B, C, D), "
+                    + "optionally followed by a time vector t, and 1 output y (or [y, t] to capture the "
+                    + "auto-generated time grid), e.g. CALL " + name + "(num, den : y[1:" + DEFAULT_TIME_POINTS + "])");
         }
-        EquationParser.VectorInfo time = parser.parseVectorInfo(inputs.get(inputs.size() - 1), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
-        int N = time.size;
+
+        // Time samples: explicit t input, or the default grid when omitted.
+        List<Expr> timeSamples;
+        if (hasTime) {
+            EquationParser.VectorInfo time = parser.parseVectorInfo(inputs.get(inputs.size() - 1), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+            timeSamples = Arrays.asList(time.elements);
+        } else {
+            timeSamples = defaultTimeGrid();
+        }
+        int N = timeSamples.size();
 
         EquationParser.VectorInfo y = parser.parseVectorInfo(outputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
         if (y.size != N) {
@@ -1212,13 +1239,10 @@ final class ControlSystemsFlattener {
         }
 
         List<Expr> entries = new ArrayList<>();
-        if (inputs.size() == 3) {
+        if (!stateSpace) {
             EquationParser.VectorInfo num = parser.parseVectorInfo(inputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
             EquationParser.VectorInfo den = parser.parseVectorInfo(inputs.get(1), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
-            if (num.size != den.size) {
-                throw new EquationParser.ParseException(name + ": num and den must have the same length");
-            }
-            entries.addAll(Arrays.asList(num.elements));
+            entries.addAll(padNumerator(name, num, den));
             entries.addAll(Arrays.asList(den.elements));
         } else {
             EquationParser.MatrixInfo a = parser.parseMatrixInfo(inputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
@@ -1235,16 +1259,42 @@ final class ControlSystemsFlattener {
             entries.addAll(cElements);
             entries.add(dElement);
         }
-        entries.addAll(Arrays.asList(time.elements));
+        entries.addAll(timeSamples);
 
         if (outputs.get(0) instanceof Expr.ArrayAccess aa) {
             EquationParser.registerShape(aa.name(), N, 1, ctx);
         }
 
+        int numInputsTag = modelInputs + 1; // reuse the with-time evaluator layout (3 = TF, 5 = SS)
         for (int i = 0; i < N; i++) {
             ctx.out().add(new Equation(y.elements[i],
-                    new Expr.Call(name + "$" + i + "$" + inputs.size() + "$" + N, entries), sourceText));
+                    new Expr.Call(name + "$" + i + "$" + numInputsTag + "$" + N, entries), sourceText));
         }
+
+        // Optional second output: emit the auto-generated time grid as t[i].
+        if (outputs.size() == 2) {
+            EquationParser.VectorInfo tout = parser.parseVectorInfo(outputs.get(1), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+            if (tout.size != N) {
+                throw new EquationParser.ParseException(name + ": time output must have length N = " + N);
+            }
+            if (outputs.get(1) instanceof Expr.ArrayAccess aa) {
+                EquationParser.registerShape(aa.name(), N, 1, ctx);
+            }
+            for (int i = 0; i < N; i++) {
+                ctx.out().add(new Equation(tout.elements[i], timeSamples.get(i), sourceText));
+            }
+        }
+    }
+
+    /** Default response time grid: {@value #DEFAULT_TIME_POINTS} points evenly
+     *  spaced over [0, {@value #DEFAULT_TIME_FINAL}] seconds. */
+    private static List<Expr> defaultTimeGrid() {
+        List<Expr> samples = new ArrayList<>(DEFAULT_TIME_POINTS);
+        double dt = DEFAULT_TIME_FINAL / (DEFAULT_TIME_POINTS - 1);
+        for (int i = 0; i < DEFAULT_TIME_POINTS; i++) {
+            samples.add(new Expr.Num(i * dt));
+        }
+        return samples;
     }
 
     /**
@@ -1274,10 +1324,7 @@ final class ControlSystemsFlattener {
         if (inputs.size() == 4) {
             EquationParser.VectorInfo num = parser.parseVectorInfo(inputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
             EquationParser.VectorInfo den = parser.parseVectorInfo(inputs.get(1), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
-            if (num.size != den.size) {
-                throw new EquationParser.ParseException("lsim: num and den must have the same length");
-            }
-            entries.addAll(Arrays.asList(num.elements));
+            entries.addAll(padNumerator("lsim", num, den));
             entries.addAll(Arrays.asList(den.elements));
         } else {
             EquationParser.MatrixInfo a = parser.parseMatrixInfo(inputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
@@ -1687,13 +1734,11 @@ final class ControlSystemsFlattener {
         }
         EquationParser.VectorInfo num = parser.parseVectorInfo(inputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
         EquationParser.VectorInfo den = parser.parseVectorInfo(inputs.get(1), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
-        if (num.size != den.size) {
-            throw new EquationParser.ParseException("pidtune: num and den must have the same length");
-        }
+        List<Expr> numPadded = padNumerator("pidtune", num, den);
         Expr wc = getScalarElement(inputs.get(3), ctx);
 
         List<Expr> entries = new ArrayList<>();
-        entries.addAll(Arrays.asList(num.elements));
+        entries.addAll(numPadded);
         entries.addAll(Arrays.asList(den.elements));
         entries.add(wc);
 
