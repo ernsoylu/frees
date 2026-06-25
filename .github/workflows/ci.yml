@@ -92,20 +92,20 @@ jobs:
       # backend/gradle.lockfile (Java) and frontend/package-lock.json (npm). It
       # uses its own vulnerability DB (GitHub Advisories, OSV, distro feeds) and
       # needs NO API key. Fails the build on any HIGH/CRITICAL with a fix.
+      #
+      # Run the official Trivy image directly (from AWS public ECR — no auth, no
+      # rate limit) rather than the trivy-action, whose install.sh downloads the
+      # binary from GitHub Releases and is prone to flaky/rate-limited failures.
       - name: Run Trivy filesystem scan (fail on HIGH/CRITICAL)
-        uses: aquasecurity/trivy-action@dc5a429b52fcf669ce959baa2c2dd26090d2a6c4 # v0.32.0
-        with:
-          scan-type: fs
-          scan-ref: .
-          scanners: vuln
-          severity: HIGH,CRITICAL
-          ignore-unfixed: true
-          exit-code: '1'
-          format: table
-        env:
-          # Pull the DB from GHCR via the GITHUB_TOKEN to avoid anonymous
-          # Docker Hub rate limits on the public DB image.
-          TRIVY_DB_REPOSITORY: ghcr.io/aquasecurity/trivy-db
+        run: |
+          docker run --rm -v "${{ github.workspace }}:/repo:ro" \
+            public.ecr.aws/aquasecurity/trivy:0.64.1 \
+            fs /repo \
+            --scanners vuln \
+            --severity HIGH,CRITICAL \
+            --ignore-unfixed \
+            --exit-code 1 \
+            --no-progress
 
   docker-publish:
     name: Build and push Docker images
