@@ -8,6 +8,12 @@ import org.matheclipse.parser.client.SyntaxError;
 import org.matheclipse.parser.client.math.MathException;
 
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 /**
  * Entry point for the symbolic CAS directives. Each operation takes a frees
@@ -150,17 +156,41 @@ public final class CasEngine {
         return variable.toLowerCase();
     }
 
+    private static final ExecutorService executor = Executors.newFixedThreadPool(
+            Math.max(2, Runtime.getRuntime().availableProcessors()),
+            r -> {
+                Thread t = new Thread(r, "cas-evaluator");
+                t.setDaemon(true);
+                return t;
+            }
+    );
+
     private String evaluate(String command) {
-        try {
+        Future<String> future = executor.submit(() -> {
             ExprEvaluator util = new ExprEvaluator(false, MAX_RECURSION);
             IExpr result = util.eval(command);
             return result.toString();
-        } catch (SyntaxError e) {
-            throw new CasException("CAS syntax error evaluating '" + command + "': " + e.getMessage(), e);
-        } catch (MathException e) {
-            throw new CasException("CAS math error evaluating '" + command + "': " + e.getMessage(), e);
-        } catch (StackOverflowError e) {
-            throw new CasException("CAS expression too deeply nested: " + command, e);
+        });
+
+        try {
+            return future.get(3, TimeUnit.SECONDS);
+        } catch (TimeoutException e) {
+            future.cancel(true);
+            throw new CasException("CAS evaluation timed out: " + command, e);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new CasException("CAS evaluation interrupted: " + command, e);
+        } catch (ExecutionException e) {
+            Throwable cause = e.getCause();
+            if (cause instanceof SyntaxError) {
+                throw new CasException("CAS syntax error evaluating '" + command + "': " + cause.getMessage(), cause);
+            } else if (cause instanceof MathException) {
+                throw new CasException("CAS math error evaluating '" + command + "': " + cause.getMessage(), cause);
+            } else if (cause instanceof StackOverflowError) {
+                throw new CasException("CAS expression too deeply nested: " + command, cause);
+            } else {
+                throw new CasException("CAS evaluation failed: " + (cause.getMessage() != null ? cause.getMessage() : cause.toString()), cause);
+            }
         }
     }
 }

@@ -1,5 +1,6 @@
 package com.frees.backend.props;
 
+import org.apache.batik.transcoder.SVGAbstractTranscoder;
 import org.apache.batik.transcoder.Transcoder;
 import org.apache.batik.transcoder.TranscoderException;
 import org.apache.batik.transcoder.TranscoderInput;
@@ -22,6 +23,8 @@ public final class VectorExport {
             default -> throw new IllegalArgumentException(
                     "Unknown export format '" + format + "'. Supported: pdf, eps");
         };
+        // Secure the transcoder by disabling external resource resolution (mitigates XXE & SSRF)
+        transcoder.addTranscodingHint(SVGAbstractTranscoder.KEY_ALLOW_EXTERNAL_RESOURCES, Boolean.FALSE);
         try {
             ByteArrayOutputStream out = new ByteArrayOutputStream();
             transcoder.transcode(new TranscoderInput(new StringReader(svg)),
