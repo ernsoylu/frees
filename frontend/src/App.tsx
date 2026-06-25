@@ -299,6 +299,12 @@ export default function App() {
     setActiveTab('equations')
     setTimeout(() => editorRef.current?.insertSnippet(snippet), 50)
   }, [])
+  // Bound-cell input equations (ssheet(...)) are full statements: append each on
+  // its own line so successive binds don't concatenate on one line.
+  const insertEquationLine = useCallback((text: string) => {
+    setActiveTab('equations')
+    setTimeout(() => editorRef.current?.insertStatement(text), 50)
+  }, [])
   // Dockview workspace manager: imperative handle + set of currently-open
   // window kinds (drives the sidebar's open-state indicators).
   const dockRef = useRef<WorkspaceDockHandle | null>(null)
@@ -2191,7 +2197,7 @@ export default function App() {
             spreadsheets={spreadsheets}
             onSpreadsheetsChange={setSpreadsheets}
             availableVariables={solvedVars}
-            onInsertText={insertFunction}
+            onInsertText={insertEquationLine}
             onCreateTable={(newTable) => {
               setTables((prev) => [...prev, newTable])
               requestAnimationFrame(() => dockRef.current?.openInstance(`table:${newTable.id}`, 'table', newTable.name))
