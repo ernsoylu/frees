@@ -22,7 +22,18 @@ server {
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     }
 
+    # Vite emits content-hashed filenames under /assets, so a new build always
+    # has new URLs — cache them forever and skip revalidation.
+    location /assets/ {
+        add_header Cache-Control "public, max-age=31536000, immutable";
+        try_files $uri =404;
+    }
+
     location / {
         try_files $uri $uri/ /index.html;
+        # The HTML shell and the runtime build-info stamp are NOT hashed, so they
+        # must revalidate on every load — otherwise a deploy isn't picked up until
+        # a hard refresh (the stale-index.html problem).
+        add_header Cache-Control "no-cache";
     }
 }
