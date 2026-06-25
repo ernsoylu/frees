@@ -343,6 +343,92 @@ class ControlSystemDesignTest {
         assertEquals(0.0, result.variables().get("Wc[1,2]"), 1e-6);
         assertEquals(0.0, result.variables().get("Wc[2,1]"), 1e-6);
     }
+
+    @Test
+    void bareMatrixNamesIntoControlCallsResolveShapes() {
+        // Matrices declared element-by-element and passed BARE (no [1:r,1:c]
+        // slice) into control CALLs must resolve to their full shape — both the
+        // [..] = f(..) destructuring and CALL forms. Regression for a document
+        // that reported "underspecified" because bare references to element-wise
+        // matrices were left scalar. A 1×n / n×1 matrix must stay 2-D, not
+        // collapse to a vector. Result must match the explicit-sliced form.
+        String inputs =
+                "A[1,1] = 0; A[1,2] = 1\n"
+              + "A[2,1] = -2; A[2,2] = -3\n"
+              + "B[1,1] = 0; B[2,1] = 1\n"
+              + "C[1,1] = 1; C[1,2] = 0\n"
+              + "G[1,1] = 1; G[1,2] = 0\n"
+              + "G[2,1] = 0; G[2,2] = 1\n"
+              + "Qn[1,1] = 1; Qn[1,2] = 0\n"
+              + "Qn[2,1] = 0; Qn[2,2] = 1\n"
+              + "Rn = 0.1\n";
+        EquationSystemSolver.Result bare = solver.solve(inputs
+                + "[L] = lqe(A, G, C, Qn, Rn)\n"
+                + "[Wc] = gram(A, B, 'c')\n"
+                + "[Ab, Bb, Cb] = balreal(A, B, C)\n");
+        EquationSystemSolver.Result sliced = solver.solve(inputs
+                + "CALL lqe(A[1:2,1:2], G[1:2,1:2], C[1:1,1:2], Qn[1:2,1:2], Rn : L[1:2,1:1])\n"
+                + "CALL gram(A[1:2,1:2], B[1:2,1:1], 'c' : Wc[1:2,1:2])\n"
+                + "CALL balreal(A[1:2,1:2], B[1:2,1:1], C[1:1,1:2] : Ab[1:2,1:2], Bb[1:2,1:1], Cb[1:1,1:2])\n");
+
+        // Bare-name form fully determines L (2×1), Wc (2×2) and the balreal triple.
+        for (String v : new String[]{"L[1,1]", "L[2,1]", "Wc[1,1]", "Wc[2,2]",
+                "Ab[1,1]", "Ab[2,2]", "Bb[1,1]", "Cb[1,1]", "Cb[1,2]"}) {
+            assertEquals(sliced.variables().get(v), bare.variables().get(v), 1e-9,
+                    "bare vs sliced mismatch for " + v);
+        }
+    }
+
+    @Test
+    void strictlyProperTransferFunctionNumeratorIsZeroPadded() {
+        // A proper transfer function written naturally — num shorter than den —
+        // must be accepted (numerator zero-padded with leading zeros), as in
+        // MATLAB. G(s) = 1/(s^2+3s+2) has poles at -1 and -2.
+        EquationSystemSolver.Result result = solver.solve(
+                "num = [1]\n"
+              + "den = [1, 3, 2]\n"
+              + "[pr, pi] = pole(num, den)\n");
+        double p1 = result.variables().get("pr[1]");
+        double p2 = result.variables().get("pr[2]");
+        assertEquals(-3.0, p1 + p2, 1e-6);   // sum of poles = -3
+        assertEquals(2.0, p1 * p2, 1e-6);    // product of poles = 2
+        assertEquals(0.0, result.variables().get("pi[1]"), 1e-6);
+
+        // A proper TF with one finite zero: G(s) = (s+5)/(s^2+3s+2). The bare
+        // [zr, zi] = zero(...) auto-sizes to the numerator degree (one zero).
+        EquationSystemSolver.Result withZero = solver.solve(
+                "num = [1, 5]\n"
+              + "den = [1, 3, 2]\n"
+              + "[zr, zi] = zero(num, den)\n");
+        assertEquals(-5.0, withZero.variables().get("zr[1]"), 1e-6);
+        assertEquals(0.0, withZero.variables().get("zi[1]"), 1e-6);
+    }
+
+    @Test
+    void improperTransferFunctionStillRejected() {
+        // Numerator longer than denominator is a genuinely improper TF -> error
+        // (a parse-time ParseException, which is an unchecked RuntimeException).
+        RuntimeException ex = org.junit.jupiter.api.Assertions.assertThrows(
+                RuntimeException.class,
+                () -> solver.solve("num = [1, 2, 3]\nden = [1, 1]\n[pr, pi] = pole(num, den)\n"));
+        assertTrue(ex.getMessage().toLowerCase().contains("improper"),
+                "expected an 'improper transfer function' message, got: " + ex.getMessage());
+    }
+
+    @Test
+    void stepResponseUsesDefaultTimeGridWhenTimeOmitted() {
+        // [y, t] = step(num, den) with no time vector samples the default
+        // 0..10s grid (50 points) and captures it as the second output.
+        // First-order G(s)=1/(s+1): step response 1 - e^{-t}, ~0.99995 at t=10.
+        EquationSystemSolver.Result result = solver.solve(
+                "num = [1]\n"
+              + "den = [1, 1]\n"
+              + "[y, t] = step(num, den)\n");
+        assertEquals(0.0, result.variables().get("t[1]"), 1e-9);
+        assertEquals(10.0, result.variables().get("t[50]"), 1e-9);
+        assertEquals(0.0, result.variables().get("y[1]"), 1e-6);
+        assertEquals(1.0 - Math.exp(-10.0), result.variables().get("y[50]"), 1e-3);
+    }
 }
 
 
