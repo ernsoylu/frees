@@ -69,8 +69,15 @@ function pruneStyles(styles: Record<string, string>): Record<string, string> {
   return out
 }
 
-// raw = getData(false) (formulas preserved); proc = getData(true) (computed values).
-function matrixToCelldata(raw: any[][], proc: any[][]): any[] {
+// raw = getData(false) (formulas preserved). The computed value of a formula
+// cell is fetched per-coordinate via `getProc(c, r)` — i.e. getValueFromCoords(.., true).
+// We deliberately do NOT consume getData(true) as a parallel matrix: in this
+// jspreadsheet build it can return `[]` or a matrix with text cells silently
+// dropped, which then misaligns against `raw` and corrupts/column-shifts every
+// cell (a "Power" label becomes the neighbouring number, etc.). The per-cell
+// accessor is shift-proof, so only formula cells need it; for a plain value the
+// raw entry IS the value.
+function matrixToCelldata(raw: any[][], getProc: (c: number, r: number) => any): any[] {
   const out: any[] = []
   for (let r = 0; r < raw.length; r++) {
     const row = raw[r]
@@ -80,7 +87,7 @@ function matrixToCelldata(raw: any[][], proc: any[][]): any[] {
       if (rv === '' || rv === null || rv === undefined) continue
       const rawStr = String(rv)
       const isFormula = rawStr.startsWith('=')
-      const pv = proc[r]?.[c]
+      const pv = isFormula ? getProc(c, r) : rv
       const procStr = pv === null || pv === undefined ? rawStr : String(pv)
       const num = Number(procStr)
       const computed = procStr.trim() !== '' && !Number.isNaN(num) ? num : procStr
@@ -134,7 +141,6 @@ export default function SpreadsheetTab({ singleSpreadsheetId, spreadsheets, onSp
     const prevSheets = (spec?.sheets ?? []) as any[]
     const newSheets = insts.map((ws: any, i: number) => {
       const raw = ws.getData(false)
-      const proc = ws.getData(true)
       const styles = pruneStyles(ws.getStyle() || {})
       const prev = prevSheets[i] ?? {}
       return {
@@ -142,7 +148,7 @@ export default function SpreadsheetTab({ singleSpreadsheetId, spreadsheets, onSp
         id: prev.id ?? crypto.randomUUID(),
         status: i === activeWsRef.current ? 1 : 0,
         order: i,
-        celldata: matrixToCelldata(raw, proc),
+        celldata: matrixToCelldata(raw, (c: number, r: number) => ws.getValueFromCoords(c, r, true)),
         styles,
         config: prev.config ?? {},
       }
@@ -285,12 +291,15 @@ export default function SpreadsheetTab({ singleSpreadsheetId, spreadsheets, onSp
   const handleExportCSV = () => {
     const ws = ssRef.current?.[activeWsRef.current]
     if (!ws) return
-    const data: any[][] = ws.getData(true)
-    const csvStr = data
-      .map((row) =>
+    // Read raw (shift-safe) and resolve each cell's displayed value per-coordinate;
+    // getData(true) is unreliable in this jspreadsheet build (see matrixToCelldata).
+    const raw: any[][] = ws.getData(false)
+    const csvStr = raw
+      .map((row, r) =>
         row
-          .map((cell) => {
-            let val = String(cell ?? '').replace(/"/g, '""')
+          .map((cell, c) => {
+            const resolved = String(cell ?? '').startsWith('=') ? ws.getValueFromCoords(c, r, true) : cell
+            let val = String(resolved ?? '').replace(/"/g, '""')
             if (val.includes(',') || val.includes('"') || val.includes('\n')) val = `"${val}"`
             return val
           })
