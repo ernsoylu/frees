@@ -93,19 +93,37 @@ jobs:
       # uses its own vulnerability DB (GitHub Advisories, OSV, distro feeds) and
       # needs NO API key. Fails the build on any HIGH/CRITICAL with a fix.
       #
-      # Run the official Trivy image directly (from AWS public ECR — no auth, no
-      # rate limit) rather than the trivy-action, whose install.sh downloads the
-      # binary from GitHub Releases and is prone to flaky/rate-limited failures.
+      # Run the official Trivy image directly (from AWS public ECR — no auth)
+      # rather than the trivy-action, whose install.sh downloads the binary from
+      # GitHub Releases and is prone to flaky/rate-limited failures.
+      #
+      # Anonymous ECR Public pulls are themselves rate-limited and intermittently
+      # return `toomanyrequests` — surfacing as Docker exit code 125 (the run
+      # never starts), distinct from Trivy's own codes (0 = clean, 1 = a real
+      # HIGH/CRITICAL finding). So we retry only on 125 with backoff and pass
+      # every other exit code straight through — a transient registry hiccup must
+      # never mask, nor be mistaken for, an actual vulnerability.
       - name: Run Trivy filesystem scan (fail on HIGH/CRITICAL)
         run: |
-          docker run --rm -v "${{ github.workspace }}:/repo:ro" \
-            public.ecr.aws/aquasecurity/trivy:0.64.1 \
-            fs /repo \
-            --scanners vuln \
-            --severity HIGH,CRITICAL \
-            --ignore-unfixed \
-            --exit-code 1 \
-            --no-progress
+          set +e
+          for attempt in 1 2 3 4; do
+            docker run --rm -v "${{ github.workspace }}:/repo:ro" \
+              public.ecr.aws/aquasecurity/trivy:0.64.1 \
+              fs /repo \
+              --scanners vuln \
+              --severity HIGH,CRITICAL \
+              --ignore-unfixed \
+              --exit-code 1 \
+              --no-progress
+            code=$?
+            if [ "$code" -ne 125 ]; then
+              exit "$code"
+            fi
+            echo "::warning::Trivy image pull failed (docker exit 125, attempt ${attempt}/4); retrying after backoff"
+            sleep $((attempt * 20))
+          done
+          echo "::error::Trivy image pull kept failing (exit 125) after 4 attempts — ECR Public rate limit"
+          exit 1
 
   docker-publish:
     name: Build and push Docker images
