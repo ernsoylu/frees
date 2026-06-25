@@ -1,0 +1,67 @@
+name: "CodeQL"
+
+# Advanced setup (replaces GitHub's CodeQL "Default setup").
+#
+# Pinned to exactly the languages frees actually ships: Java/Kotlin (backend),
+# JavaScript/TypeScript (frontend), and the Actions workflows themselves. This
+# deliberately drops the stale `python` analysis that default setup auto-added
+# from the single utility script `scripts/run_examples.py` — there is no Python
+# application code to scan, so that config only ever produced "No Python code
+# found" errors.
+#
+# IMPORTANT: turn OFF CodeQL Default setup in repo Settings → Code security →
+# CodeQL analysis before this runs, otherwise both setups race and conflict.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Weekly full scan so advisories surface even without a push.
+    - cron: '27 4 * * 1'
+
+jobs:
+  analyze:
+    name: Analyze (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      packages: read
+      actions: read
+      contents: read
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # build-mode: none extracts from source without invoking Gradle —
+          # this is a code-scanning pass, not a build, so we skip the slow
+          # (and Gradle-config-sensitive) compile step.
+          - language: java-kotlin
+            build-mode: none
+          - language: javascript-typescript
+            build-mode: none
+          - language: actions
+            build-mode: none
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@b0c4fd77f6c559021d78430ec4d0d169ae74a4eb # v3
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: ${{ matrix.build-mode }}
+          # node_modules is excluded by the JS extractor already; this is a
+          # belt-and-suspenders guard plus it keeps build artifacts out.
+          config: |
+            paths-ignore:
+              - '**/node_modules'
+              - frontend/dist
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@b0c4fd77f6c559021d78430ec4d0d169ae74a4eb # v3
+        with:
+          category: "/language:${{ matrix.language }}"

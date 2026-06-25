@@ -555,11 +555,12 @@ y_initial = A + B        { y(0) }`,
   Press Solve (F2). }
 
 m = 1000 [kg]           { car mass }
-c = 50 [N-s/m]          { viscous drag coefficient }
+c_drag = 50 [N-s/m]     { viscous drag coefficient (named c_drag, not c, since
+                          names are case-insensitive and C is the output matrix) }
 
 { State Space Model: states are [position; velocity], input is traction force. }
 A[1,1] = 0; A[1,2] = 1
-A[2,1] = 0; A[2,2] = -c/m
+A[2,1] = 0; A[2,2] = -c_drag/m
 B[1] = 0
 B[2] = 1/m
 C[1] = 0; C[2] = 1      { output is velocity }

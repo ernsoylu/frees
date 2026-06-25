@@ -234,9 +234,22 @@ public final class EquationParser {
         ctx.shapes().put(name.toLowerCase(), new int[]{rows, cols});
     }
 
+    /**
+     * As {@link #registerShape(String, int, int, FlattenContext)} but records the
+     * declared dimensionality ({@code dims}: 1 for a vector, 2 for a matrix) so a
+     * bare reference resolves to the form the author wrote — a 1×n or n×1 matrix
+     * declared with two subscripts stays 2-D instead of collapsing to a vector.
+     */
+    static void registerShape(String name, int rows, int cols, int dims, FlattenContext ctx) {
+        ctx.shapes().put(name.toLowerCase(), new int[]{rows, cols, dims});
+    }
+
     private static Expr rangeAccess(String name, int[] shape) {
         List<Expr> idx = new ArrayList<>();
-        if (shape[0] == 1 || shape[1] == 1) { // vector: single 1:n index
+        boolean vector = shape.length >= 3
+                ? shape[2] == 1                 // declared dimensionality wins when known
+                : (shape[0] == 1 || shape[1] == 1); // legacy heuristic for 2-element shapes
+        if (vector) {
             int n = Math.max(shape[0], shape[1]);
             idx.add(new Expr.Range(new Expr.Num(1), new Expr.Num(n)));
         } else {
@@ -332,6 +345,7 @@ public final class EquationParser {
                          AtomicInteger moduleCounter, Set<String> symbolicVars) {
         FlattenContext ctx = new FlattenContext(loopVars, constants, displayNames, out, defs, moduleCounter,
                 new HashMap<>(), symbolicVars);
+        inferElementwiseShapes(statements, ctx);
         for (Statement stmt : statements) {
             switch (stmt) {
                 case Statement.For(String varName, Expr start, Expr end, List<Statement> body) ->
@@ -344,6 +358,74 @@ public final class EquationParser {
                     // Declaration only; the names are pre-collected into symbolicVars.
                 }
             }
+        }
+    }
+
+    /**
+     * Pre-registers the shape of matrices/vectors declared element-by-element
+     * (e.g. {@code A[1,1]=..; A[2,2]=..}) by taking the maximum constant index
+     * seen per base name. Without this, a bare reference to such a matrix — e.g.
+     * passing {@code A} to a CALL like {@code [L] = lqe(A, ...)} — would not
+     * resolve to its explicit {@code A[1:r,1:c]} form (only wholesale literal
+     * assignments and CALL outputs register a shape), leaving control / linear-
+     * algebra intrinsics mis-sized and the system spuriously underspecified.
+     * Only constant-indexed, top-level subscript assignments are inferred; range
+     * slices and loop-variable indices are skipped, and an explicitly registered
+     * shape is never overridden.
+     */
+    private void inferElementwiseShapes(List<Statement> statements, FlattenContext ctx) {
+        // Names assigned as a bare scalar (e.g. k = 1000). Because names are
+        // case-insensitive, a scalar k and a matrix K[i,j] share one key; the
+        // scalar must keep its meaning, so such names are never matrix-resolved.
+        Set<String> scalarNames = new HashSet<>();
+        for (Statement stmt : statements) {
+            if (stmt instanceof Statement.Eq(Expr lhs, Expr ignoredR, String ignoredS)
+                    && lhs instanceof Expr.Var(String sname)) {
+                scalarNames.add(sname.toLowerCase());
+            }
+        }
+        Map<String, int[]> maxIdx = new HashMap<>(); // name -> {maxRow, maxCol, dims}
+        for (Statement stmt : statements) {
+            if (!(stmt instanceof Statement.Eq(Expr lhs, Expr ignoredRhs, String ignoredSrc))
+                    || !(lhs instanceof Expr.ArrayAccess(String name, List<Expr> indices))) {
+                continue;
+            }
+            if (scalarNames.contains(name.toLowerCase())) {
+                continue; // ambiguous: a scalar of the same name exists
+            }
+            if (indices.size() != 1 && indices.size() != 2) {
+                continue;
+            }
+            if (indices.stream().anyMatch(ix -> ix instanceof Expr.Range)) {
+                continue; // a range slice declares its own shape; not an element write
+            }
+            int row;
+            int col;
+            try {
+                row = constIndex(indices.get(0), ctx);
+                col = indices.size() == 2 ? constIndex(indices.get(1), ctx) : 1;
+            } catch (ParseException | ArithmeticException ignored) {
+                continue; // non-constant index (e.g. a loop variable) — skip
+            }
+            int[] cur = maxIdx.computeIfAbsent(name.toLowerCase(), k -> new int[]{0, 0, indices.size()});
+            cur[0] = Math.max(cur[0], row);
+            cur[1] = Math.max(cur[1], col);
+            cur[2] = Math.max(cur[2], indices.size()); // promote to 2-D if any access is 2-D
+        }
+        for (Map.Entry<String, int[]> e : maxIdx.entrySet()) {
+            if (ctx.shapes().containsKey(e.getKey())) {
+                continue; // explicit shape wins
+            }
+            int[] v = e.getValue();
+            if (v[0] <= 0) {
+                continue;
+            }
+            int dims = v[2];
+            int cols = dims == 2 ? v[1] : 1;
+            if (cols <= 0) {
+                continue;
+            }
+            registerShape(e.getKey(), v[0], cols, dims, ctx);
         }
     }
 
@@ -854,6 +936,16 @@ public final class EquationParser {
                     setVec(outputs, 0, n);
                     setVec(outputs, 1, n);
                 }
+                case "zero" -> {
+                    // Transfer-function form: the finite-zero count follows the
+                    // numerator degree (mirrors pole's denominator-degree sizing).
+                    // State-space (A,B,C,D) zero counts stay explicit.
+                    if (inputs.size() == 2) {
+                        int nz = inVecLen(inputs, 0, ctx) - 1;
+                        setVec(outputs, 0, nz);
+                        setVec(outputs, 1, nz);
+                    }
+                }
                 case "series", "parallel", "feedback" -> {
                     if (inputs.size() >= 8) { // state-space combination
                         int n = inMatRows(inputs, 0, ctx) + inMatRows(inputs, 4, ctx);
@@ -871,7 +963,18 @@ public final class EquationParser {
                     setVec(outputs, 0, nf);
                     setVec(outputs, 1, nf);
                 }
-                case "step", "impulse", "lsim" -> setVec(outputs, 0, inVecLen(inputs, inputs.size() - 1, ctx));
+                case "lsim" -> setVec(outputs, 0, inVecLen(inputs, inputs.size() - 1, ctx));
+                case "step", "impulse" -> {
+                    // (num,den)/(A,B,C,D) -> default grid; trailing t -> match t.
+                    int modelInputs = inputs.size() >= 4 ? 4 : 2;
+                    boolean hasTime = inputs.size() == modelInputs + 1;
+                    int n = hasTime ? inVecLen(inputs, inputs.size() - 1, ctx)
+                                    : ControlSystemsFlattener.DEFAULT_TIME_POINTS;
+                    setVec(outputs, 0, n);
+                    if (outputs.size() == 2) {
+                        setVec(outputs, 1, n); // [y, t] captures the auto-generated grid
+                    }
+                }
                 case "residue" -> {
                     int n = inVecLen(inputs, 1, ctx) - 1;
                     setVec(outputs, 0, n);
