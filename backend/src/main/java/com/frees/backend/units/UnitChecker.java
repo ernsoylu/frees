@@ -653,6 +653,9 @@ public final class UnitChecker {
             // Pneumatics: ISO 6358 returns a mass flow rate [kg/s]; the sonic
             // conductance / pressure-ratio arguments are not policed.
             case "iso6358" -> eosDim("kg/s");
+            // Two-phase flow: the Martinelli parameter and its multiplier are
+            // both dimensionless (quality / property-ratio arguments unpoliced).
+            case "lm_phi2", "lm_martinelli_tt" -> Dim.of(Quantity.dimensionless(1.0));
             // LMTD returns a temperature difference, inheriting the units of its
             // terminal-difference arguments (which the checker does not police).
             case "lmtd" -> dimOf(args.get(0));

@@ -469,6 +469,14 @@ public final class Evaluator {
                     arg(c, args, 2, values, defs), arg(c, args, 3, values, defs),
                     arg(c, args, 4, values, defs));
 
+            // Two-phase flow: Lockhart-Martinelli / Chisholm multiplier & parameter.
+            case "lm_phi2" -> com.frees.backend.props.TwoPhase.lmPhi2(
+                    arg(c, args, 0, values, defs), arg(c, args, 1, values, defs));
+            case "lm_martinelli_tt" -> com.frees.backend.props.TwoPhase.lmMartinelliTt(
+                    arg(c, args, 0, values, defs), arg(c, args, 1, values, defs),
+                    arg(c, args, 2, values, defs), arg(c, args, 3, values, defs),
+                    arg(c, args, 4, values, defs));
+
             // Cubic equation-of-state backend (SRK/PR), independent of CoolProp.
             // Signature: eos_*(fluid$, model$, T, P, phase$); pressure takes
             // (fluid$, model$, T, v) and psat takes (fluid$, model$, T).

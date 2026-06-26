@@ -81,7 +81,9 @@ Each phase is independent and shippable on its own; A–C carry the most benefit
 
 ---
 
-## Phase C — Two-phase / moving-boundary thermofluid depth  🟡 *deepen the flagship*
+## Phase C — Two-phase / moving-boundary thermofluid depth  ✅ **first slice shipped & green**
+
+**Status (2026-06-27).** Shipped: the Lockhart–Martinelli / Chisholm functions (`props/TwoPhase`: `lm_phi2(X, C)` two-phase multiplier, `lm_martinelli_tt(x, ρ_l, ρ_g, μ_l, μ_g)` turbulent-turbulent parameter, both wired across the 3-site pattern) and the components `TwoPhasePipe` (liquid-alone Darcy × `φ_l²`), `TXVSuperheat` (superheat-controlled expansion valve sensing the evaporator-outlet temperature via a heat-port bulb, `ṁ=Kv·(SH−SH_set)`, `T_sat` from `Temperature(fluid$, P, x=1)`), and `ThreeZoneHX` (3-cell counterflow ε-NTU subsystem, extending the shipped `TwoZoneHX` pattern). Validated by `ComponentTwoPhaseTest` (LM ΔP vs. backend correlations CoolProp-free; TXV metering with R134a saturation; 3-zone energy balance). **Remaining rungs:** true moving-boundary zone-length tracking (`der(L_zone)`), Friedel correlation, quality-split receiver/separator, micro-channel/plate-fin geometry `model$` rungs.
 
 **Why third.** This does not open a new domain — it makes frees's **existing** refrigeration / A-C / EV-thermal flagship *quantitative* instead of lumped ε-NTU. Pure constitutive adds on shipped CoolProp two-phase properties; lowest risk in the plan; directly serves frees's current users.
 
