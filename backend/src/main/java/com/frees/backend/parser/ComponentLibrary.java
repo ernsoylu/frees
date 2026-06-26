@@ -225,6 +225,34 @@ public final class ComponentLibrary {
               p.I + n.I = 0
               W = (p.V - n.V) * (0 - p.I)
             END
+
+            COMPONENT TorqueSource(a, b)
+              PARAM T
+              a.tau = -T
+              a.tau + b.tau = 0
+            END
+
+            COMPONENT SpeedSource(a, b)
+              PARAM w
+              a.w - b.w = w
+              a.tau + b.tau = 0
+            END
+
+            COMPONENT RotationalDamper(a, b)
+              PARAM c
+              a.tau = c * (a.w - b.w)
+              a.tau + b.tau = 0
+            END
+
+            COMPONENT MechGround(port)
+              port.w = 0
+            END
+
+            COMPONENT Gear(in, out)
+              PARAM ratio
+              in.w    = ratio * out.w
+              out.tau = -ratio * in.tau
+            END
             """;
 
     private static final List<ComponentDef> BUILTINS = parse(SOURCE);
