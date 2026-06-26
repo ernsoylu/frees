@@ -210,9 +210,18 @@ public final class EquationParser {
         // engine (the per-step algebraic solve resolves the network at each state).
         List<com.frees.backend.ast.DynamicSystem> dynamicSystems = programResult.dynamicSystems();
         if (components.hasStorage()) {
-            dynamicSystems = routeStorageIntoDynamic(
-                    componentEquations, components.componentInitials(), dynamicSystems);
-            componentEquations = List.of();
+            if (dynamicSystems.isEmpty()) {
+                // Steady/transient duality (§8.2): with no DYNAMIC block the same
+                // storage network solves its steady operating point — each
+                // der(X)=rhs becomes the equilibrium constraint rhs=0 (and the
+                // init(...) values are unused). The state X is then an ordinary
+                // unknown the network determines.
+                componentEquations = steadyStorageEquations(componentEquations);
+            } else {
+                dynamicSystems = routeStorageIntoDynamic(
+                        componentEquations, components.componentInitials(), dynamicSystems);
+                componentEquations = List.of();
+            }
         }
 
         Map<String, Double> constants = extractConstants(statements);
@@ -254,6 +263,25 @@ public final class EquationParser {
         inits.addAll(componentInitials);
         return List.of(new com.frees.backend.ast.DynamicSystem(
                 ds.name(), ds.options(), body, ds.forBlocks(), inits, ds.events(), ds.sourceText()));
+    }
+
+    /**
+     * Rewrites a storage network for a steady solve: each {@code der(X) = rhs}
+     * equation becomes the equilibrium constraint {@code rhs = 0} (the state no
+     * longer changes), so the same component model that runs transiently under a
+     * DYNAMIC block also yields its steady operating point with none.
+     */
+    private List<Equation> steadyStorageEquations(List<Equation> equations) {
+        List<Equation> out = new ArrayList<>(equations.size());
+        for (Equation eq : equations) {
+            if (eq.lhs() instanceof Expr.Call(String fn, List<Expr> args) && fn.equals("der")
+                    && args.size() == 1) {
+                out.add(new Equation(eq.rhs(), new Expr.Num(0), eq.sourceText() + " [steady: der=0]"));
+            } else {
+                out.add(eq);
+            }
+        }
+        return out;
     }
 
 
