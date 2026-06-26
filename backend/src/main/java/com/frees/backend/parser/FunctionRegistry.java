@@ -122,7 +122,16 @@ public class FunctionRegistry {
             new FunctionInfo("eos_pressure", "eos_pressure(fluid$, model$, T, v)", "Pressure [Pa] from (T, specific volume)", "Properties (EOS)"),
             new FunctionInfo("eos_enthalpy", "eos_enthalpy(fluid$, model$, T, P, phase$)", "Specific enthalpy [J/kg] (SRK/PR)", "Properties (EOS)"),
             new FunctionInfo("eos_entropy", "eos_entropy(fluid$, model$, T, P, phase$)", "Specific entropy [J/kg-K] (SRK/PR)", "Properties (EOS)"),
-            new FunctionInfo("eos_psat", "eos_psat(fluid$, model$, T)", "Saturation pressure [Pa] (SRK/PR)", "Properties (EOS)")
+            new FunctionInfo("eos_psat", "eos_psat(fluid$, model$, T)", "Saturation pressure [Pa] (SRK/PR)", "Properties (EOS)"),
+
+            // Combustion thermochemistry (NASA-7 / JANAF ideal-gas thermo)
+            new FunctionInfo("adiabaticflametemp", "AdiabaticFlameTemp(fuel$, phi, T_react)", "Constant-P adiabatic flame temperature [K]", "Combustion"),
+            new FunctionInfo("mix_mw", "mix_mw(comp$)", "Ideal-gas mixture molar mass [kg/mol], comp 'N2:0.79,O2:0.21'", "Combustion"),
+            new FunctionInfo("mix_cp", "mix_cp(comp$, T)", "Ideal-gas mixture cp [J/kg-K]", "Combustion"),
+            new FunctionInfo("mix_enthalpy", "mix_enthalpy(comp$, T)", "Ideal-gas mixture enthalpy [J/kg]", "Combustion"),
+            new FunctionInfo("mix_entropy", "mix_entropy(comp$, T, P)", "Ideal-gas mixture entropy [J/kg-K]", "Combustion"),
+            new FunctionInfo("wiebe", "wiebe(theta, theta0, dtheta, a, m)", "Wiebe burned mass fraction", "Combustion"),
+            new FunctionInfo("wiebe_rate", "wiebe_rate(theta, theta0, dtheta, a, m)", "Wiebe burn rate dxb/dtheta", "Combustion")
     );
 
     public static List<FunctionInfo> listFunctions() {

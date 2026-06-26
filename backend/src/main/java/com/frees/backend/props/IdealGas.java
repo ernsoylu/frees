@@ -112,6 +112,24 @@ public final class IdealGas {
         return s == null ? Double.NaN : s.hf();
     }
 
+    /** Absolute molar enthalpy [J/mol == kJ/kmol] (incl. formation), NaN if unknown. */
+    public static double molarEnthalpy(String species, double t) {
+        Species s = SPECIES.get(species.toLowerCase());
+        return s == null ? Double.NaN : hMolar(s, t);
+    }
+
+    /** Molar heat capacity [J/mol-K == kJ/kmol-K], NaN if unknown. */
+    public static double molarCp(String species, double t) {
+        Species s = SPECIES.get(species.toLowerCase());
+        return s == null ? Double.NaN : cpMolar(s, t);
+    }
+
+    /** Absolute molar entropy at (T, p) [J/mol-K == kJ/kmol-K], NaN if unknown. */
+    public static double molarEntropy(String species, double t, double p) {
+        Species s = SPECIES.get(species.toLowerCase());
+        return s == null ? Double.NaN : sMolar(s, t, p);
+    }
+
     /** Molar enthalpy with formation reference [kJ/kmol]. */
     private static double hMolar(Species gas, double t) {
         return gas.hf()
