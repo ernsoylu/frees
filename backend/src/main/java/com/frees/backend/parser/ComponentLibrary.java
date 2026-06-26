@@ -423,6 +423,17 @@ public final class ComponentLibrary {
               a.Qdot = Q
               b.Qdot = -Q
             END
+
+            COMPONENT CoolingCoil(in, out)
+              PARAM P, Tout
+              h_in       = Enthalpy(AirH2O, T=in.T, P=P, W=in.humrat)
+              out.humrat = HumRat(AirH2O, T=Tout, P=P, R=1)
+              h_out      = Enthalpy(AirH2O, T=Tout, P=P, W=out.humrat)
+              out.mdot   = in.mdot
+              out.T      = Tout
+              Q          = in.mdot * (h_in - h_out)
+              Q_lat      = in.mdot * 2.501e6 * (in.humrat - out.humrat)
+            END
             """;
 
     private static final List<ComponentDef> BUILTINS = parse(SOURCE);
