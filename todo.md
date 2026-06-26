@@ -3,7 +3,7 @@
 
 **Prepared for:** Advisory Board (Mechanical, Thermal, Fluids, HVAC, Control, Automotive/EV)
 **Scope of this report:** *Code/text-based* component modeling only. The graphical (Diagram-window) front end is **explicitly deferred** and is not covered here.
-**Status:** Design complete; **Phase 1 in progress** (core component layer + standard library + Rankine/Brayton/refrigeration shipping green — see §15 for live status & findings). This document is the agreed reference for Phase 0–6 delivery. Revision **R1** incorporates the advisory review (see §0).
+**Status:** Design complete; **Phase 0 done, Phase 1 mostly done** — flow-resistance functions, the full core component layer, standard library (13 components), Rankine/Brayton/refrigeration cycles, the fan-duct operating point, and branching (Splitter/Mixer/HX) are shipped and green; only the frontend-coupled §6 state-circuit binding remains in Phase 1 (see §15 for live status & findings). This document is the agreed reference for Phase 0–6 delivery. Revision **R1** incorporates the advisory review (see §0).
 
 ---
 
@@ -413,21 +413,21 @@ Not a sequential phase but a robustness spine, prioritized because everything el
 - **As needed:** homotopy/continuation mode (§8.7) for phase-change cycles.
 **Acceptance:** an ill-scaled multidomain network (P, ṁ, I together) converges with scaling on and fails without; a mis-specified component yields a component-named error (not a mangled scalar); a datasheet-fed fan-duct converges from a cold start; a reversing-flow loop integrates through `ṁ=0` without a discontinuity failure; a phase-change cycle that fails cold-start converges under homotopy.
 
-### Phase 0 — Constitutive function gaps (small scalar functions)
+### Phase 0 — Constitutive function gaps (small scalar functions) — ✅ **done** (see §15)
 Add via the established 3-site wiring (`Evaluator` eval + `UnitChecker` dims + `FunctionRegistry` metadata), each with unit tests cross-checked against the corpus:
-- `friction_factor(Re, rel_rough)` — Colebrook/Moody (laminar + turbulent), the gate for all flow networks.
-- `minor_loss(K, rho, V)` and a fitting-`K` table; `valve_cv(...)`.
-- `Re(rho, V, D, fluid$)` helper.
-**Deliverable:** flow-resistance vocabulary. **Acceptance:** Colebrook `f` matches Moody chart to chart accuracy; pipe ΔP matches a Darcy worked example.
+- ~~`friction_factor(Re, rel_rough)` — Colebrook/Moody (laminar + turbulent), the gate for all flow networks.~~ ✅ **done** (`props/FlowResistance`).
+- ~~`minor_loss(K, rho, V)`~~ ✅ **done**; ⏳ fitting-`K` table; `valve_cv(...)`.
+- ~~`Re(rho, V, D, …)` helper~~ ✅ **done** as `reynolds(rho, V, D, mu)`.
+**Deliverable:** ~~flow-resistance vocabulary.~~ ✅ **Acceptance:** ~~Colebrook `f` matches Moody chart to chart accuracy~~ ✅ (smooth/rough/fully-rough validated); ~~pipe ΔP matches a Darcy worked example~~ ✅ (fan-duct).
 
-### Phase 1 — Core component layer (fluid domain, steady) — *the milestone* — 🟡 **in progress** (see §15)
+### Phase 1 — Core component layer (fluid domain, steady) — *the milestone* — 🟡 **mostly done** (see §15)
 - ~~ANTLR grammar: `COMPONENT … END` definition + instantiation statement; dotted port-member references.~~ ✅ **done** (shared-name binding; `connect(...)` → Phase 1.5).
 - ~~`ComponentDef` AST record; component registry (alongside `ProcDef`).~~ ✅ **done** (`ComponentDef`/`ComponentInst`).
-- **Expansion pass**: ~~clone/substitute/mangle → scalar equations~~ ✅ **done** (`ComponentExpander`); node resolution (`connect`: `across=`, `Σṁ=0`) → Phase 1.5.
-- Standard library (fluid): ~~Pump, Turbine, Compressor, Boiler/Heater, Condenser/Cooler, Throttle~~ ✅ **done**; ⏳ Mixer, Splitter, Pipe (Phase 0), HX (4-port ε-NTU), Nozzle, Source/Sink boundary.
-- ⏳ **State-circuit binding** (§6): stream→state adapter; per-fluid `StateTableDef`; `CyclePathResolver` taught member-name states + per-edge process.
-**Deliverable:** ⏳ steady **fan-duct** (needs Phase 0 `friction_factor`) and ~~**Rankine/Brayton/refrigeration** flowsheets solve end-to-end~~ ✅ **done**; ⏳ auto cycle plots (needs §6 binding).
-**Acceptance:** ~~(i) a 4-component Rankine flowsheet reproduces the hand-written example's numbers~~ ✅; ⏳ (ii) the fan-duct operating point matches a manual curve-intersection; ~~(iii) zero unit warnings; (iv) full backend suite green~~ ✅.
+- **Expansion pass**: ~~clone/substitute/mangle → scalar equations~~ ✅ **done** (`ComponentExpander`); branching node resolution shipped via Splitter/Mixer; `connect(...)` surface syntax → Phase 1.5.
+- Standard library (fluid): ~~Pump, Turbine, Compressor, Boiler/Heater, Condenser/Cooler, Throttle, Mixer, Splitter, Pipe (Phase 0), HX (4-port ε-NTU)~~ ✅ **done** (+ incompressible Duct/FanCurve, Fan); ⏳ Nozzle, Source/Sink boundary.
+- ⏳ **State-circuit binding** (§6): stream→state adapter; per-fluid `StateTableDef`; `CyclePathResolver` taught member-name states + per-edge process. *(The one substantial Phase 1 item still open — frontend-coupled, see §15.2.6.)*
+**Deliverable:** ~~steady **fan-duct** and **Rankine/Brayton/refrigeration** flowsheets solve end-to-end~~ ✅ **done**; ⏳ auto cycle plots (needs §6 binding).
+**Acceptance:** ~~(i) a 4-component Rankine flowsheet reproduces the hand-written example's numbers~~ ✅; ~~(ii) the fan-duct operating point matches a manual curve-intersection~~ ✅; ~~(iii) zero unit warnings; (iv) full backend suite green~~ ✅.
 
 ### Phase 2 — Multi-domain ports & transducers
 - Heat port `(T, Q̇)`; two-stream HX with exposed wall; baked-in-duty components.
@@ -536,32 +536,39 @@ When the expander auto-classifies `C`/`I` storage states (§8.2), the user can *
 
 ---
 
-## 15. Implementation Status & Findings — Phase 1 (2026-06-26)
+## 15. Implementation Status & Findings — Phase 0 + Phase 1 (2026-06-26)
 
 > Live status of the build on branch `feat/component-system-modeling`. This
 > section is the source of truth for what is shipped vs pending and records the
-> findings that refine the plan above.
+> findings that refine the plan above. **Phase 0 complete; Phase 1 complete bar
+> the frontend-coupled §6 state-circuit binding.**
 
-### 15.1 Shipped & validated (Phase 1a–1b, full backend suite green)
+### 15.0 Phase 0 — flow-resistance vocabulary (shipped, green)
+`props/FlowResistance`: `friction_factor(Re, eps/D)` (Darcy — exact 64/Re laminar, iterated Colebrook–White turbulent, continuous transitional blend), `reynolds(rho, V, D, mu)`, `minor_loss(K, rho, V)`. Wired through the 3-site pattern under a new "Flow Networks" `FunctionRegistry` category; validated against the Moody chart (`props/FlowResistanceTest`). Pending (low priority): a fitting-`K` table and `valve_cv`.
+
+### 15.1 Shipped & validated (Phase 0 + Phase 1, full backend suite green)
+- **Flow networks:** real-fluid **Pipe** (Darcy–Colebrook + CoolProp ρ/μ) and **Fan** (drooping dP(Q)); incompressible **Duct/FanCurve** (constant ρ). The **fan-duct operating point** is found by the existing Newton solver (acceptance ii) — turbulent duct, fan rise within shut-off head, mass conserved (`core/ComponentNetworksTest`).
+- **Branching:** **Splitter** (common P/h, split ṁ), **Mixer** (flow-weighted enthalpy balance), and a 4-port **HeatExchanger** coupling two circuits through a shared ε-NTU duty (~200 kW, energy-balanced) — `core/ComponentBranchingTest`. This delivers the node-resolution capability without the `connect(...)` surface syntax (Phase 1.5). The expander now also substitutes a string PARAM used as a function argument (e.g. the HX arrangement) to its literal.
 - **Grammar:** `COMPONENT … END` (with `PARAM`), instantiation `Type inst(streamA, streamB, key=val)`, and the dotted port-member accessor (`in.P`, `out.h`, `HP.out.h`, `T1.W`) via a new `DOT` token + `MemberAtom`. `componentDef`/`componentInst` sit at **top level** (not inside `statement`) so the sealed `Statement` hierarchy is untouched.
 - **AST & expander:** `ComponentDef`/`ComponentInst` records; `ComponentExpander` clones each instance body with three rewrites — port `port.member`→`boundStream$member`, bare local/output→`inst$name` (per-instance namespacing, exactly like MODULE), parameter→value — emitting flat scalar equations the **existing Newton/Tarjan solver consumes unchanged**. String (fluid) parameters are baked into the encoded `prop$` property-call names, so two instances can carry different fluids.
 - **Connection model = shared-name** (see finding 15.2.1): ports bind to *stream* names; two instances naming the same stream are connected because they share the flat stream variables (`s$P, s$h, s$mdot`). A series chain conserves mass/energy with **no extra equations**.
-- **Standard library** (`ComponentLibrary`, authored in `COMPONENT` source, parsed once; a user definition of the same name overrides the built-in): **Pump, Turbine, Compressor, Boiler, Condenser, Throttle**.
-- **Validation** (CoolProp live): **Rankine** `eta_th=0.332` (matches the hand-written example), **Brayton** (real air), **R134a vapor-compression refrigeration** — all solve end-to-end with **zero unit warnings**. Tests: `parser/ComponentExpansionTest`, `core/ComponentCyclesTest`.
+- **Standard library** (`ComponentLibrary`, authored in `COMPONENT` source, parsed once; a user definition of the same name overrides the built-in): **Pump, Turbine, Compressor, Boiler, Condenser, Throttle, Pipe, Fan, Duct, FanCurve, Splitter, Mixer, HeatExchanger**.
+- **Validation** (CoolProp live where noted): **Rankine** `eta_th=0.332` (matches the hand-written example), **Brayton** (real air), **R134a refrigeration**, **fan-duct operating point**, **split/mix**, **two-stream HX** — all solve end-to-end with **zero unit warnings**. Tests: `parser/ComponentExpansionTest`, `core/ComponentCyclesTest`, `core/ComponentNetworksTest`, `core/ComponentBranchingTest`, `props/FlowResistanceTest`.
 
 ### 15.2 Findings (these refine the plan above)
 1. **Closed-loop mass-balance redundancy is a real structural obstacle (new robustness item, relates to §8.9).** Closing a cycle (condenser-out fed back to pump-in) makes the per-component mass-conservation equations linearly dependent — the loop's Σṁ is redundant — so the system is **over-determined by exactly one** even though it is consistent, and frEES's zero-DOF Check rejects it. *Mitigation shipped:* model cycles as **open chains** (the pump-inlet state is specified directly and equals the condenser-outlet state by the physics), exactly as the hand-written examples do. *Plan impact:* §8.9's structural guard should additionally **detect a redundant loop-conservation equation and relax/drop one**, or a first-class `LOOP`/closure construct should mark the redundancy as intentional. This is the single most important finding for robust closed-cycle support.
-2. **`connect(...)` and branching are deferred; shared-name shipped first.** Shared-name covers every *series* flowsheet (Rankine/Brayton/refrigeration), which is the bulk of the catalog. `connect(...)` plus explicit **Splitter/Mixer** (for extraction/regenerative FWH, headers, manifolds) is now an explicit **Phase 1.5** rather than part of the Phase 1 core.
+2. **Branching shipped via Splitter/Mixer; `connect(...)` surface syntax deferred to Phase 1.5.** Shared-name covers every *series* flowsheet; explicit **Splitter/Mixer** components (now shipped) cover branching (parallel paths, mixing, headers). The terse `connect(...)` syntax (which would let bare 3-way nodes fall out without a component) is the only branching item left — Phase 1.5.
 3. **`result.variables()` is keyed by display name** (dotted, e.g. `s1.mdot`, `h1.duty`), not the internal flat `$` name — relevant to the §14.1 source-mapped diagnostics (the user already never sees `s1$mdot`).
 4. **Derived-member access not yet rewritten.** A stream carries canonical members `(P, h, mdot)`; boundary *states* are currently specified with explicit property calls (`s1.h = Enthalpy(Water, P=P_lo, x=0)`). Ergonomic next step: rewrite derived members (`s1.T`, `s1.x`, `s1.s`) to the matching CoolProp call so users can write `s1.T = 480 [C]` directly. (Folds into §6 state binding.)
-5. **`fan-duct` is correctly gated on Phase 0.** It needs `friction_factor` (Colebrook/Moody); confirming Phase 0 is the true prerequisite for the entire flow-network class, not just a convenience.
+5. **Multiscale ill-conditioning confirms §8.5 is load-bearing.** The real-fluid fan-duct (P≈10⁵, ṁ≈1, h≈10⁵) stalls plain Newton from the default unit guesses (internal pressures start at 1.0 → CoolProp NaN); cycles only converge because their pressures constant-fold to good guesses. *Mitigation shipped:* incompressible Duct/FanCurve for the operating-point demo; GUI/`VariableSpec` seeding for the real-fluid path. *Plan impact:* the §8.5 automatic per-variable scaling / domain-aware nominal guesses (e.g. P~10⁵) is the true fix and should land early in Phase R.
+6. **§6 state-circuit binding is the one substantial Phase 1 item still open, and it is frontend-coupled.** `CyclePathResolver` resolves states by a property+index naming convention (`T1`, `P_2`) and the cycle diagram is rendered frontend-side; binding the component model means (a) emitting a per-fluid `StateTableDef` from the stream graph **with port-level fluid association** (a multi-fluid HX maps hot ports→`hot$`, cold ports→`cold$`), (b) teaching `CyclePathResolver` the `stream.member` naming + per-edge process type, and (c) frontend wiring. Best done as a focused unit with frontend validation rather than a blind backend slice.
 
 ### 15.3 Immediate next steps (revised ordering)
-- **Phase 0 `friction_factor`** (Colebrook/Moody) → the **fan-duct** operating point, closing Phase 1 acceptance (ii).
-- **State-circuit binding (§6)** → per-fluid `StateTableDef` + ordered process edges so `CyclePathResolver` draws exact T-s/P-h cycle diagrams.
-- **Phase 1.5 — `connect()` + Splitter/Mixer** (branching) and **loop-closure handling** (finding 15.2.1).
-- **Derived-member rewriting** (finding 15.2.4).
-- Remaining standard-library components: Mixer, Splitter, Pipe (post-Phase 0), 4-port HX (ε-NTU), Nozzle, Source/Sink.
+- **State-circuit binding (§6)** → per-fluid `StateTableDef` (with port-level fluid association) + ordered process edges so `CyclePathResolver` draws exact T-s/P-h cycle diagrams; frontend rendering. *(The remaining Phase 1 item — finding 15.2.6.)*
+- **Derived-member rewriting** (finding 15.2.4) — folds into §6.
+- **Phase R / §8.5 automatic variable scaling** (finding 15.2.5) — unblocks robust real-fluid networks.
+- **Phase 1.5 — `connect()` surface syntax** and **loop-closure handling** (finding 15.2.1).
+- Remaining standard-library components: Nozzle (needs stagnation stream riders, §5.4), Source/Sink boundary.
 
 ---
 
