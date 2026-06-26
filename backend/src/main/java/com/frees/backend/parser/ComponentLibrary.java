@@ -457,6 +457,13 @@ public final class ComponentLibrary {
               Wt         = Wc
             END
 
+            COMPONENT ExpansionValve(in, out)
+              PARAM CdA, rho_in
+              out.mdot = in.mdot
+              out.h    = in.h
+              in.mdot * abs(in.mdot) = CdA^2 * 2 * rho_in * (in.P - out.P)
+            END
+
             COMPONENT CoolingCoil(in, out)
               PARAM P, Tout
               h_in       = Enthalpy(AirH2O, T=in.T, P=P, W=in.humrat)
