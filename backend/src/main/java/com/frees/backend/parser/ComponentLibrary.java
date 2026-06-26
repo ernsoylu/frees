@@ -387,6 +387,42 @@ public final class ComponentLibrary {
               out.h    = in.h
               in.mdot * abs(in.mdot) = Cv^2 * rho * (in.P - out.P)
             END
+
+            COMPONENT ForceSource(a, b)
+              PARAM F
+              a.f = -F
+              a.f + b.f = 0
+            END
+
+            COMPONENT TransDamper(a, b)
+              PARAM c
+              a.f = c * (a.vel - b.vel)
+              a.f + b.f = 0
+            END
+
+            COMPONENT TransGround(port)
+              port.vel = 0
+            END
+
+            COMPONENT TransMass(port)
+              PARAM m, v0
+              der(port.vel)  = port.f / m
+              init(port.vel) = v0
+            END
+
+            COMPONENT Diode(p, n)
+              PARAM Gon, eps
+              vd  = p.V - n.V
+              p.I = Gon * vd * (0.5 + 0.5 * tanh(vd / eps))
+              p.I + n.I = 0
+            END
+
+            COMPONENT ContactResistance(a, b)
+              PARAM Rth
+              Q      = (a.T - b.T) / Rth
+              a.Qdot = Q
+              b.Qdot = -Q
+            END
             """;
 
     private static final List<ComponentDef> BUILTINS = parse(SOURCE);
