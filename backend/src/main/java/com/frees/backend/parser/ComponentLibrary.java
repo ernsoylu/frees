@@ -176,6 +176,32 @@ public final class ComponentLibrary {
               out.h    = in.h - V_exit^2 / 2
               thrust   = in.mdot * V_exit + (out.P - P_amb) * A_exit
             END
+
+            COMPONENT ThermalSource(port)
+              PARAM T
+              port.T = T
+            END
+
+            COMPONENT Conduction(a, b)
+              PARAM k, area, L
+              Q      = k * area / L * (a.T - b.T)
+              a.Qdot = Q
+              b.Qdot = -Q
+            END
+
+            COMPONENT Convection(a, b)
+              PARAM htc, area
+              Q      = htc * area * (a.T - b.T)
+              a.Qdot = Q
+              b.Qdot = -Q
+            END
+
+            COMPONENT Radiation(a, b)
+              PARAM emis, area
+              Q      = emis * 5.670374419e-8 * area * (a.T^4 - b.T^4)
+              a.Qdot = Q
+              b.Qdot = -Q
+            END
             """;
 
     private static final List<ComponentDef> BUILTINS = parse(SOURCE);

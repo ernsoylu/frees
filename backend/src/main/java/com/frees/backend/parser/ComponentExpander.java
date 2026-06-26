@@ -49,6 +49,10 @@ public final class ComponentExpander {
     /** Stream name → display prefix (a synthetic free-port stream {@code inst$port}
      *  shows as {@code inst.port} so member references read naturally). */
     private final Map<String, String> streamDisplay = new LinkedHashMap<>();
+    /** Stream name → the set of member names its components reference (e.g.
+     *  {@code {p, h, mdot}} for a fluid stream, {@code {t, qdot}} for a heat
+     *  stream). Used to give each {@code connect(...)} node its domain rule. */
+    private final Map<String, java.util.Set<String>> streamMembers = new LinkedHashMap<>();
     private final Map<String, String> displayNames;
 
     /**
@@ -118,8 +122,51 @@ public final class ComponentExpander {
             }
             instances.add(resolved);
         }
+        buildStreamMembers();
         buildStreamFluidMap();
         propagateFluidAcrossConnects();
+    }
+
+    /**
+     * Records, per stream, the member names its components reference in their
+     * bodies — so a {@code connect(...)} node can tell a fluid node ({@code mdot})
+     * from a heat node ({@code qdot}/{@code t}) and emit the right conservation
+     * rule. Walks each instance's effective (variant-selected) body.
+     */
+    private void buildStreamMembers() {
+        for (ResolvedInstance ri : instances) {
+            for (Equation eq : ri.effectiveBody()) {
+                collectMembers(eq.lhs(), ri);
+                collectMembers(eq.rhs(), ri);
+            }
+        }
+    }
+
+    private void collectMembers(Expr e, ResolvedInstance ri) {
+        switch (e) {
+            case Expr.Var(String name) -> {
+                int dot = name.indexOf('.');
+                if (dot >= 0) {
+                    String port = name.substring(0, dot);
+                    String member = name.substring(dot + 1);
+                    String stream = ri.portToStream().get(port);
+                    if (stream != null && member.indexOf('.') < 0) {
+                        streamMembers.computeIfAbsent(stream, k -> new java.util.HashSet<>()).add(member);
+                    }
+                }
+            }
+            case Expr.Neg(Expr o) -> collectMembers(o, ri);
+            case Expr.Not(Expr o) -> collectMembers(o, ri);
+            case Expr.BinOp(char op, Expr l, Expr r) -> { collectMembers(l, ri); collectMembers(r, ri); }
+            case Expr.Compare(String op, Expr l, Expr r) -> { collectMembers(l, ri); collectMembers(r, ri); }
+            case Expr.Logical(String op, Expr l, Expr r) -> { collectMembers(l, ri); collectMembers(r, ri); }
+            case Expr.Range(Expr a, Expr b) -> { collectMembers(a, ri); collectMembers(b, ri); }
+            case Expr.Call(String fn, List<Expr> args) -> { for (Expr a : args) collectMembers(a, ri); }
+            case Expr.ArrayAccess(String n, List<Expr> idx) -> { for (Expr i : idx) collectMembers(i, ri); }
+            case Expr.ArrayLiteral(List<Expr> els) -> { for (Expr el : els) collectMembers(el, ri); }
+            case Expr.Num n -> { }
+            case Expr.Str s -> { }
+        }
     }
 
     /**
@@ -420,6 +467,7 @@ public final class ComponentExpander {
                 sts.add(streamOf(ref, c));
             }
             String prefix = "CONNECT " + String.join(", ", refs) + ": ";
+            boolean heat = isHeatNode(sts);
 
             // Loop closure: do two endpoints already share a connection set?
             boolean loopClosing = false;
@@ -432,20 +480,29 @@ public final class ComponentExpander {
                 }
             }
 
-            // Pressure & enthalpy: spanning-tree equalities (skip cycle-closing edges).
+            // Across variables — equal across the node, emitted as spanning-tree
+            // equalities (cycle-closing edges are redundant): a fluid node equates
+            // pressure & enthalpy, a heat node equates temperature.
+            String[] across = heat ? new String[]{"t"} : new String[]{"p", "h"};
             String root = sts.get(0);
             for (int j = 1; j < sts.size(); j++) {
                 String st = sts.get(j);
                 if (!uf.find(root).equals(uf.find(st))) {
-                    out.add(equality(root, "p", st, prefix));
-                    out.add(equality(root, "h", st, prefix));
+                    for (String member : across) {
+                        out.add(equality(root, member, st, prefix));
+                    }
                     uf.union(root, st);
                 }
             }
 
-            // Mass conservation — skipped entirely when this connect closes a loop
-            // (the Σṁ is then cyclically dependent on the rest of the loop).
-            if (!loopClosing) {
+            // Flow conservation. Heat (like the electrical domain): Σ Q̇ = 0 over
+            // all ports, each Q̇ signed "into the component" — a Kirchhoff balance
+            // at every node. Fluid: ṁ passes through (2-way equality / signed
+            // Σ at a branch), skipped when this connect closes a loop (the loop ṁ
+            // balance is then cyclically dependent).
+            if (heat) {
+                out.add(heatBalance(sts, prefix));
+            } else if (!loopClosing) {
                 if (sts.size() == 2) {
                     out.add(equality(sts.get(0), "mdot", sts.get(1), prefix));
                 } else {
@@ -478,6 +535,16 @@ public final class ComponentExpander {
         return new Equation(outlets, inlets, prefix + "sum(mdot_out) = sum(mdot_in)");
     }
 
+    /** Σ Q̇ = 0 over all ports of a heat node (each Q̇ signed into its component). */
+    private Equation heatBalance(List<String> sts, String prefix) {
+        Expr sum = null;
+        for (String st : sts) {
+            Expr q = streamMember(st, "qdot");
+            sum = sum == null ? q : new Expr.BinOp('+', sum, q);
+        }
+        return new Equation(sum, new Expr.Num(0), prefix + "sum(Qdot) = 0");
+    }
+
     private enum Dir { IN, OUT, UNKNOWN }
 
     /** Inlet/outlet inferred from a port reference's port name ('in'/'out'). */
@@ -503,10 +570,41 @@ public final class ComponentExpander {
     private void seedComponentLinks(UnionFind uf) {
         for (ResolvedInstance ri : instances) {
             List<String> streams = new ArrayList<>(ri.portToStream().values());
-            if (streams.size() == 2) {
+            // Only a *fluid* 2-port component carries its members port→port (a
+            // series pass-through). A heat 2-port (conduction/convection) does NOT
+            // equate its ports — its two ends are at different temperatures — so it
+            // must not seed a loop link.
+            if (streams.size() == 2 && isFluidStream(streams.get(0)) && isFluidStream(streams.get(1))) {
                 uf.union(streams.get(0), streams.get(1));
             }
         }
+    }
+
+    /** Whether a stream is a fluid stream (its components reference {@code mdot}). */
+    private boolean isFluidStream(String stream) {
+        java.util.Set<String> m = streamMembers.get(stream);
+        return m != null && m.contains("mdot");
+    }
+
+    /** Whether a {@code connect} node is a heat node — no {@code mdot} anywhere on
+     *  it, but a heat member ({@code qdot}/{@code t}) present. Fluid is the default
+     *  (preserving every existing fluid connect). */
+    private boolean isHeatNode(List<String> streams) {
+        boolean hasFluid = false;
+        boolean hasHeat = false;
+        for (String st : streams) {
+            java.util.Set<String> m = streamMembers.get(st);
+            if (m == null) {
+                continue;
+            }
+            if (m.contains("mdot")) {
+                hasFluid = true;
+            }
+            if (m.contains("qdot") || m.contains("t")) {
+                hasHeat = true;
+            }
+        }
+        return !hasFluid && hasHeat;
     }
 
     /** Resolves a connect endpoint ({@code instance.port} or a bare stream name) to its stream. */
