@@ -365,12 +365,38 @@ public class NewtonSolver {
     }
 
     private double[] solveLinear(double[][] jacobian, double[] residual) {
-        Array2DRowRealMatrix jMat = new Array2DRowRealMatrix(jacobian, false);
+        int rows = jacobian.length;
+        int cols = rows > 0 ? jacobian[0].length : 0;
+
+        // Column equilibration (§8.5 automatic scaling): scale each unknown's
+        // Jacobian column to unit norm so a multidomain system mixing wildly
+        // different magnitudes (P~10⁵, ṁ~1, I~10⁻³, T~300) stays well-conditioned.
+        // This is the similarity scaling J·D with D = diag(1/‖col‖); the step is
+        // unscaled back (Δx = D·y), so it is a no-op at the root but keeps the LU
+        // factorization accurate where the raw Jacobian would be ill-conditioned.
+        double[] d = new double[cols];
+        for (int j = 0; j < cols; j++) {
+            double c = 0.0;
+            for (int i = 0; i < rows; i++) {
+                double val = jacobian[i][j];
+                c += val * val;
+            }
+            c = Math.sqrt(c);
+            d[j] = (c > 0.0 && Double.isFinite(c)) ? 1.0 / c : 1.0;
+        }
+        double[][] scaled = new double[rows][cols];
+        for (int i = 0; i < rows; i++) {
+            for (int j = 0; j < cols; j++) {
+                scaled[i][j] = jacobian[i][j] * d[j];
+            }
+        }
+
+        Array2DRowRealMatrix jMat = new Array2DRowRealMatrix(scaled, false);
         ArrayRealVector rVec = new ArrayRealVector(residual, false);
+        double[] y;
         try {
             DecompositionSolver solver = new LUDecomposition(jMat).getSolver();
-            RealVector step = solver.solve(rVec);
-            return step.toArray();
+            y = solver.solve(rVec).toArray();
         } catch (SingularMatrixException e) {
             // Fall back to SVD pseudoinverse for rank-deficient Jacobians.
             // This arises when complex expansion produces equations whose
@@ -378,9 +404,14 @@ public class NewtonSolver {
             // always zero (e.g., abs(V)^2 / abs(Z)).  Combined with block
             // merging, this handles underdetermined sub-systems.
             SingularValueDecomposition svd = new SingularValueDecomposition(jMat);
-            RealVector step = svd.getSolver().solve(rVec);
-            return step.toArray();
+            y = svd.getSolver().solve(rVec).toArray();
         }
+        // Unscale the step back into the original variable space.
+        double[] step = new double[cols];
+        for (int j = 0; j < cols; j++) {
+            step[j] = d[j] * y[j];
+        }
+        return step;
     }
 
     private static boolean atBound(double[] x, double[] lo, double[] hi) {
