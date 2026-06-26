@@ -203,6 +203,18 @@ public final class EquationParser {
         List<Equation> componentEquations = components.expand();
         statements = components.rewriteStatements(statements);
 
+        // A transient component network (any component declaring der(...) storage)
+        // is routed into the document's DYNAMIC block: the component equations
+        // become that block's algebraic+state body and the init(...) lines its
+        // initial conditions, so the same component layer runs under the ODE
+        // engine (the per-step algebraic solve resolves the network at each state).
+        List<com.frees.backend.ast.DynamicSystem> dynamicSystems = programResult.dynamicSystems();
+        if (components.hasStorage()) {
+            dynamicSystems = routeStorageIntoDynamic(
+                    componentEquations, components.componentInitials(), dynamicSystems);
+            componentEquations = List.of();
+        }
+
         Map<String, Double> constants = extractConstants(statements);
 
         // Counter for module instance namespacing
@@ -217,7 +229,31 @@ public final class EquationParser {
         equations = StringVariables.resolve(equations, displayNames);
 
         return new ParseResult(equations, displayNames, defs, programResult.parametricTables(),
-                programResult.plots(), programResult.stateTables(), programResult.dynamicSystems());
+                programResult.plots(), programResult.stateTables(), dynamicSystems);
+    }
+
+    /**
+     * Merges a transient component network into the document's single DYNAMIC
+     * block: the component equations (state {@code der(X)=…} + algebraic) extend
+     * the block body, and component {@code init(...)} lines extend its initial
+     * conditions. Exactly one DYNAMIC block must supply the time span / method.
+     */
+    private List<com.frees.backend.ast.DynamicSystem> routeStorageIntoDynamic(
+            List<Equation> componentEquations,
+            List<com.frees.backend.ast.DynamicSystem.InitialCondition> componentInitials,
+            List<com.frees.backend.ast.DynamicSystem> systems) {
+        if (systems.size() != 1) {
+            throw new ParseException("A transient component network (a component with der(...) storage) "
+                    + "needs exactly one DYNAMIC block to supply the time span and method; found "
+                    + systems.size() + ". Add a 'DYNAMIC name(time = 0 .. T) END' block.");
+        }
+        com.frees.backend.ast.DynamicSystem ds = systems.get(0);
+        List<Equation> body = new ArrayList<>(ds.bodyEquations());
+        body.addAll(componentEquations);
+        List<com.frees.backend.ast.DynamicSystem.InitialCondition> inits = new ArrayList<>(ds.initials());
+        inits.addAll(componentInitials);
+        return List.of(new com.frees.backend.ast.DynamicSystem(
+                ds.name(), ds.options(), body, ds.forBlocks(), inits, ds.events(), ds.sourceText()));
     }
 
 

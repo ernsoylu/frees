@@ -3,6 +3,7 @@ package com.frees.backend.parser;
 import com.frees.backend.ast.ComponentDef;
 import com.frees.backend.ast.ComponentInst;
 import com.frees.backend.ast.ConnectDecl;
+import com.frees.backend.ast.DynamicSystem;
 import com.frees.backend.ast.Equation;
 import com.frees.backend.ast.Expr;
 import com.frees.backend.ast.Statement;
@@ -422,8 +423,29 @@ public final class ComponentExpander {
         };
     }
 
+    /** Initial conditions declared by storage components via {@code init(member)=…}. */
+    private final List<DynamicSystem.InitialCondition> initials = new ArrayList<>();
+    /** Whether any component declares transient storage ({@code der(member)=…}). */
+    private boolean hasStorage;
+
+    /** Initial conditions collected from {@code init(member)=…} body lines (valid
+     *  after {@link #expand()}). */
+    public List<DynamicSystem.InitialCondition> componentInitials() {
+        return initials;
+    }
+
+    /** Whether any component body declares a transient state with {@code der(member)=…}
+     *  (valid after {@link #expand()}); such a network is routed into a {@code DYNAMIC}
+     *  block rather than the steady equation list. */
+    public boolean hasStorage() {
+        return hasStorage;
+    }
+
     /** Expands every instance body — and every {@code connect(...)} node — into
-     *  flat scalar equations. */
+     *  flat scalar equations. A component's {@code der(member)=…} line marks a
+     *  transient state and stays as a state-derivative equation; an
+     *  {@code init(member)=…} line declares that state's initial value and is
+     *  lifted out into {@link #componentInitials()} (it is not a solver equation). */
     public List<Equation> expand() {
         List<Equation> out = new ArrayList<>();
         for (ResolvedInstance ri : instances) {
@@ -431,6 +453,16 @@ public final class ComponentExpander {
             for (Equation eq : ri.effectiveBody()) {
                 Expr lhs = rewriteBody(eq.lhs(), ri);
                 Expr rhs = rewriteBody(eq.rhs(), ri);
+                if (lhs instanceof Expr.Call(String fn, List<Expr> args)) {
+                    if (fn.equals("init") && args.size() == 1
+                            && args.get(0) instanceof Expr.Var(String state)) {
+                        initials.add(new DynamicSystem.InitialCondition(state, List.of(), rhs));
+                        continue;   // an initial condition, not a solver equation
+                    }
+                    if (fn.equals("der")) {
+                        hasStorage = true;
+                    }
+                }
                 out.add(new Equation(lhs, rhs, prefix + eq.sourceText()));
             }
         }
