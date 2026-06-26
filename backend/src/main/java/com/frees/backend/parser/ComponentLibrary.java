@@ -159,6 +159,17 @@ public final class ComponentLibrary {
               P    = in.P
               h    = in.h
             END
+
+            COMPONENT Nozzle(in, out)
+              PARAM k, R, A_throat, A_exit, P_amb, T0
+              out.mdot = in.mdot
+              M_exit   = mach_A_Astar(A_exit / A_throat, k, 'supersonic')
+              out.P    = in.P / P0_P(M_exit, k)
+              T_exit   = T0 / T0_T(M_exit, k)
+              V_exit   = M_exit * sqrt(k * R * T_exit)
+              out.h    = in.h - V_exit^2 / 2
+              thrust   = in.mdot * V_exit + (out.P - P_amb) * A_exit
+            END
             """;
 
     private static final List<ComponentDef> BUILTINS = parse(SOURCE);
