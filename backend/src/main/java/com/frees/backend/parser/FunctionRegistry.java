@@ -131,7 +131,11 @@ public class FunctionRegistry {
             new FunctionInfo("mix_enthalpy", "mix_enthalpy(comp$, T)", "Ideal-gas mixture enthalpy [J/kg]", "Combustion"),
             new FunctionInfo("mix_entropy", "mix_entropy(comp$, T, P)", "Ideal-gas mixture entropy [J/kg-K]", "Combustion"),
             new FunctionInfo("wiebe", "wiebe(theta, theta0, dtheta, a, m)", "Wiebe burned mass fraction", "Combustion"),
-            new FunctionInfo("wiebe_rate", "wiebe_rate(theta, theta0, dtheta, a, m)", "Wiebe burn rate dxb/dtheta", "Combustion")
+            new FunctionInfo("wiebe_rate", "wiebe_rate(theta, theta0, dtheta, a, m)", "Wiebe burn rate dxb/dtheta", "Combustion"),
+            new FunctionInfo("mix_viscosity", "mix_viscosity(comp$, T)", "Ideal-gas mixture viscosity [Pa-s] (Chapman-Enskog/Wilke)", "Combustion"),
+            new FunctionInfo("mix_conductivity", "mix_conductivity(comp$, T)", "Ideal-gas mixture conductivity [W/m-K]", "Combustion"),
+            new FunctionInfo("eq_molefraction", "eq_molefraction(fuel$, phi, T, P, species$)", "Equilibrium product mole fraction (dissociation)", "Combustion"),
+            new FunctionInfo("adiabaticflametempeq", "AdiabaticFlameTempEq(fuel$, phi, T_react, P)", "Adiabatic flame temperature with dissociation [K]", "Combustion")
     );
 
     public static List<FunctionInfo> listFunctions() {

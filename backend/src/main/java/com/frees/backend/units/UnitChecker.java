@@ -663,6 +663,12 @@ public final class UnitChecker {
             case "mix_cp" -> eosDim("J/kg-K");
             case "mix_enthalpy" -> eosDim("J/kg");
             case "mix_entropy" -> eosDim("J/kg-K");
+            case "mix_viscosity" -> eosDim("Pa-s");
+            case "mix_conductivity" -> eosDim("W/m-K");
+            // Equilibrium mole fraction is dimensionless; the equilibrium flame
+            // temperature carries kelvin.
+            case "eq_molefraction" -> Dim.of(Quantity.dimensionless(1.0));
+            case "adiabaticflametempeq", "flametemp_eq" -> eosDim("K");
             // Wiebe burned-fraction and its rate are dimensionless.
             case "wiebe", "wiebe_rate" -> Dim.of(Quantity.dimensionless(1.0));
             // TABLE lookup/interpolation: the table name is a string and the
