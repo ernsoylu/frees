@@ -97,7 +97,9 @@ Each phase is independent and shippable on its own; A–C carry the most benefit
 
 ---
 
-## Phase D — Fuel cell (PEMFC)  🔶 *one high-value cross-domain component*
+## Phase D — Fuel cell (PEMFC)  ✅ **shipped & green**
+
+**Status (2026-06-27).** Shipped `FuelCellStack(p, n, heat)` — a cross-domain component reusing the electrical `(V,I)` + heat `(T,Q̇)` ports. The cell voltage is the standard polarization curve `V_cell = E0 − (RT/αF)·ln(i/i0) − i·R_ohm − (RT/2F)·ln(i_lim/(i_lim−i))` (reversible EMF − activation/Tafel − ohmic − concentration), the stack is `ncells·V_cell`, and the waste heat is `I·ncells·(E_th − V_cell)`. Pure component body over `ln` — no new backend function. Validated by `ComponentFuelCellTest` (polarization voltage + waste-heat at a fixed-current operating point; monotone V↓/Q↑ with current). **Remaining rungs:** dynamic double-layer `der(V)`, reactant-partial-pressure dependence (needs Phase E gas-mixture composition), Faraday reactant-consumption gas ports.
 
 **Why here.** A single, self-contained, high-visibility component that **reuses every domain frees already has** (electrical `(V,I)` + thermal `(T,Q̇)` + gas reactant streams) and complements the battery/EV story — the design-time "clean powertrain" piece. Feasible now; modest scope.
 
