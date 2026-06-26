@@ -35,12 +35,18 @@ public final class DynamicAccessorContext {
     private final List<DynamicSystem> systems;
     private final List<DynamicAnalysis.Shape> shapes;
     private final BlockRunner runner;
+    /** display→flat name map, so an accessor can address a component's transient
+     *  state by its dotted display name ({@code m.port.t}) while the table/shape
+     *  use flat names ({@code m$port$t}). */
+    private final Map<String, String> displayToFlat;
     private final Map<Integer, CacheEntry> cache = new HashMap<>();
 
     private record CacheEntry(List<Double> signature, OdeTableResult table) {}
 
-    private DynamicAccessorContext(List<DynamicSystem> systems, BlockRunner runner) {
+    private DynamicAccessorContext(List<DynamicSystem> systems, Map<String, String> displayToFlat,
+                                   BlockRunner runner) {
         this.systems = systems;
+        this.displayToFlat = displayToFlat;
         this.runner = runner;
         this.shapes = new ArrayList<>();
         for (DynamicSystem ds : systems) {
@@ -48,8 +54,9 @@ public final class DynamicAccessorContext {
         }
     }
 
-    public static DynamicAccessorContext install(List<DynamicSystem> systems, BlockRunner runner) {
-        DynamicAccessorContext ctx = new DynamicAccessorContext(systems, runner);
+    public static DynamicAccessorContext install(List<DynamicSystem> systems,
+                                                 Map<String, String> displayToFlat, BlockRunner runner) {
+        DynamicAccessorContext ctx = new DynamicAccessorContext(systems, displayToFlat, runner);
         CURRENT.set(ctx);
         return ctx;
     }
@@ -97,13 +104,16 @@ public final class DynamicAccessorContext {
     }
 
     private double doResolve(String function, String column, Double arg, Map<String, Double> values) {
-        int block = ownerBlock(column);
+        // Accept a component state's dotted display name (m.port.t) as well as its
+        // flat name (m$port$t) — the table/shape are keyed on the flat name.
+        String resolved = displayToFlat.getOrDefault(column.toLowerCase(), column);
+        int block = ownerBlock(resolved);
         if (block < 0) {
             throw new SolverException("ODE accessor: no DYNAMIC block has a column '" + column
                     + "'. Check the column name.");
         }
         OdeTableResult table = tableFor(block, values);
-        return OdeAccessors.compute(table, function, column, arg);
+        return OdeAccessors.compute(table, function, resolved, arg);
     }
 
     private int ownerBlock(String column) {
