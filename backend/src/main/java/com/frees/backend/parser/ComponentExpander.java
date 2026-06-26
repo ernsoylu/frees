@@ -467,7 +467,7 @@ public final class ComponentExpander {
                 sts.add(streamOf(ref, c));
             }
             String prefix = "CONNECT " + String.join(", ", refs) + ": ";
-            boolean heat = isHeatNode(sts);
+            Domain dom = nodeDomain(sts);
 
             // Loop closure: do two endpoints already share a connection set?
             boolean loopClosing = false;
@@ -481,32 +481,36 @@ public final class ComponentExpander {
             }
 
             // Across variables — equal across the node, emitted as spanning-tree
-            // equalities (cycle-closing edges are redundant): a fluid node equates
-            // pressure & enthalpy, a heat node equates temperature.
-            String[] across = heat ? new String[]{"t"} : new String[]{"p", "h"};
+            // equalities (cycle-closing edges are redundant): fluid equates
+            // pressure & enthalpy, heat equates temperature, electrical equates
+            // potential.
             String root = sts.get(0);
             for (int j = 1; j < sts.size(); j++) {
                 String st = sts.get(j);
                 if (!uf.find(root).equals(uf.find(st))) {
-                    for (String member : across) {
+                    for (String member : acrossMembers(dom)) {
                         out.add(equality(root, member, st, prefix));
                     }
                     uf.union(root, st);
                 }
             }
 
-            // Flow conservation. Heat (like the electrical domain): Σ Q̇ = 0 over
-            // all ports, each Q̇ signed "into the component" — a Kirchhoff balance
-            // at every node. Fluid: ṁ passes through (2-way equality / signed
-            // Σ at a branch), skipped when this connect closes a loop (the loop ṁ
-            // balance is then cyclically dependent).
-            if (heat) {
-                out.add(heatBalance(sts, prefix));
-            } else if (!loopClosing) {
-                if (sts.size() == 2) {
-                    out.add(equality(sts.get(0), "mdot", sts.get(1), prefix));
-                } else {
-                    out.add(massConservation(refs, sts, prefix, c));
+            // Flow conservation. Heat and electrical use a Kirchhoff balance —
+            // Σ(flow)=0 over all ports, each flow signed "into the component" — at
+            // every node. Fluid: ṁ passes through (2-way equality / signed Σ at a
+            // branch), skipped when this connect closes a loop (the loop ṁ balance
+            // is then cyclically dependent on the rest of the loop).
+            switch (dom) {
+                case HEAT -> out.add(kirchhoffBalance(sts, "qdot", prefix));
+                case ELECTRICAL -> out.add(kirchhoffBalance(sts, "i", prefix));
+                case FLUID -> {
+                    if (!loopClosing) {
+                        if (sts.size() == 2) {
+                            out.add(equality(sts.get(0), "mdot", sts.get(1), prefix));
+                        } else {
+                            out.add(massConservation(refs, sts, prefix, c));
+                        }
+                    }
                 }
             }
         }
@@ -535,14 +539,18 @@ public final class ComponentExpander {
         return new Equation(outlets, inlets, prefix + "sum(mdot_out) = sum(mdot_in)");
     }
 
-    /** Σ Q̇ = 0 over all ports of a heat node (each Q̇ signed into its component). */
-    private Equation heatBalance(List<String> sts, String prefix) {
+    /**
+     * Kirchhoff flow balance Σ(flow)=0 over all ports of a heat or electrical
+     * node — each flow ({@code qdot} heat rate, {@code i} current) signed into its
+     * component, so what leaves one component enters the others.
+     */
+    private Equation kirchhoffBalance(List<String> sts, String flowMember, String prefix) {
         Expr sum = null;
         for (String st : sts) {
-            Expr q = streamMember(st, "qdot");
-            sum = sum == null ? q : new Expr.BinOp('+', sum, q);
+            Expr f = streamMember(st, flowMember);
+            sum = sum == null ? f : new Expr.BinOp('+', sum, f);
         }
-        return new Equation(sum, new Expr.Num(0), prefix + "sum(Qdot) = 0");
+        return new Equation(sum, new Expr.Num(0), prefix + "sum(" + flowMember + ") = 0");
     }
 
     private enum Dir { IN, OUT, UNKNOWN }
@@ -586,25 +594,50 @@ public final class ComponentExpander {
         return m != null && m.contains("mdot");
     }
 
-    /** Whether a {@code connect} node is a heat node — no {@code mdot} anywhere on
-     *  it, but a heat member ({@code qdot}/{@code t}) present. Fluid is the default
-     *  (preserving every existing fluid connect). */
-    private boolean isHeatNode(List<String> streams) {
-        boolean hasFluid = false;
-        boolean hasHeat = false;
+    /** The physical domain of a connection node, with its node rule. */
+    private enum Domain { FLUID, HEAT, ELECTRICAL }
+
+    /**
+     * Classifies a {@code connect} node's domain from the members its streams
+     * carry, keyed by the distinctive flow member (then the across member as a
+     * fallback for source-only nodes): {@code mdot}⇒fluid, {@code qdot}⇒heat,
+     * {@code i}⇒electrical. Fluid is the default, so every existing fluid connect
+     * is unaffected. Heat and electrical share a Kirchhoff flow rule (Σflow=0);
+     * fluid keeps its directional pass-through / branch balance.
+     */
+    private Domain nodeDomain(List<String> streams) {
+        java.util.Set<String> u = new java.util.HashSet<>();
         for (String st : streams) {
             java.util.Set<String> m = streamMembers.get(st);
-            if (m == null) {
-                continue;
-            }
-            if (m.contains("mdot")) {
-                hasFluid = true;
-            }
-            if (m.contains("qdot") || m.contains("t")) {
-                hasHeat = true;
+            if (m != null) {
+                u.addAll(m);
             }
         }
-        return !hasFluid && hasHeat;
+        if (u.contains("mdot")) {
+            return Domain.FLUID;
+        }
+        if (u.contains("qdot")) {
+            return Domain.HEAT;
+        }
+        if (u.contains("i")) {
+            return Domain.ELECTRICAL;
+        }
+        if (u.contains("t")) {
+            return Domain.HEAT;          // a heat node carrying only temperatures (sources)
+        }
+        if (u.contains("v")) {
+            return Domain.ELECTRICAL;    // an electrical node carrying only potentials
+        }
+        return Domain.FLUID;
+    }
+
+    /** The across (equal-at-node) members for a domain. */
+    private static String[] acrossMembers(Domain d) {
+        return switch (d) {
+            case FLUID -> new String[]{"p", "h"};
+            case HEAT -> new String[]{"t"};
+            case ELECTRICAL -> new String[]{"v"};
+        };
     }
 
     /** Resolves a connect endpoint ({@code instance.port} or a bare stream name) to its stream. */
