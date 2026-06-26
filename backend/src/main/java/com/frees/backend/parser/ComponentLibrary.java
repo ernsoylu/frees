@@ -17,6 +17,13 @@ import java.util.List;
  * user-authored components. Property inputs use {@code (P, h)} so any state is
  * recoverable from a stream's canonical members; turbine/compressor isentropic
  * targets use {@code (P, s)}.
+ *
+ * <p><b>No defaults — every parameter is required.</b> A silent default for a
+ * physical input (a pipe length, a fluid, an efficiency) is a footgun: a model
+ * of an R134a system that forgets {@code fluid$} should error, not quietly run
+ * as water. So all library parameters must be supplied at instantiation; an
+ * omission is a clear parse error. (The optional-default <em>language feature</em>
+ * remains available for user-authored components that genuinely want it.)
  */
 public final class ComponentLibrary {
 
@@ -25,7 +32,7 @@ public final class ComponentLibrary {
     /** Standard fluid-domain components (Phase 1). */
     static final String SOURCE = """
             COMPONENT Pump(in, out)
-              PARAM eta = 0.7, fluid$ = Water
+              PARAM eta, fluid$
               v        = Volume(fluid$, P=in.P, h=in.h)
               out.mdot = in.mdot
               out.h    = in.h + v * (out.P - in.P) / eta
@@ -33,7 +40,7 @@ public final class ComponentLibrary {
             END
 
             COMPONENT Turbine(in, out)
-              PARAM eta = 0.85, fluid$ = Water
+              PARAM eta, fluid$
               s_in     = Entropy(fluid$, P=in.P, h=in.h)
               h_s      = Enthalpy(fluid$, P=out.P, s=s_in)
               out.mdot = in.mdot
@@ -42,7 +49,7 @@ public final class ComponentLibrary {
             END
 
             COMPONENT Compressor(in, out)
-              PARAM eta = 0.80, fluid$ = Air
+              PARAM eta, fluid$
               s_in     = Entropy(fluid$, P=in.P, h=in.h)
               h_s      = Enthalpy(fluid$, P=out.P, s=s_in)
               out.mdot = in.mdot
@@ -68,7 +75,7 @@ public final class ComponentLibrary {
             END
 
             COMPONENT Pipe(in, out)
-              PARAM fluid$ = Water, L = 1 [m], D = 0.05 [m], rough = 0.000045 [m]
+              PARAM fluid$, L, D, rough
               out.mdot = in.mdot
               out.h    = in.h
               rho      = Density(fluid$, P=in.P, h=in.h)
@@ -81,7 +88,7 @@ public final class ComponentLibrary {
             END
 
             COMPONENT Fan(in, out)
-              PARAM fluid$ = Air, dP0 = 500 [Pa], Q0 = 1 [m^3/s], eta = 0.6
+              PARAM fluid$, dP0, Q0, eta
               rho      = Density(fluid$, P=in.P, h=in.h)
               Q        = in.mdot / rho
               dP       = dP0 * (1 - (Q / Q0)^2)
@@ -91,7 +98,7 @@ public final class ComponentLibrary {
             END
 
             COMPONENT Duct(in, out)
-              PARAM rho = 1.2 [kg/m^3], mu = 1.8e-5 [Pa-s], L = 1 [m], D = 0.05 [m], rough = 0.000045 [m]
+              PARAM rho, mu, L, D, rough
               out.mdot = in.mdot
               A        = pi# / 4 * D^2
               V        = in.mdot / (rho * A)
@@ -101,7 +108,7 @@ public final class ComponentLibrary {
             END
 
             COMPONENT FanCurve(in, out)
-              PARAM rho = 1.2 [kg/m^3], dP0 = 500 [Pa], Q0 = 1 [m^3/s]
+              PARAM rho, dP0, Q0
               Q        = in.mdot / rho
               dP       = dP0 * (1 - (Q / Q0)^2)
               out.mdot = in.mdot
@@ -123,7 +130,7 @@ public final class ComponentLibrary {
             END
 
             COMPONENT HeatExchanger(hot_in, hot_out, cold_in, cold_out)
-              PARAM UA = 1000 [W/K], hot$ = Water, cold$ = Water, arr$ = counterflow
+              PARAM UA, hot$, cold$, arr$
               hot_out.mdot  = hot_in.mdot
               hot_out.P     = hot_in.P
               cold_out.mdot = cold_in.mdot

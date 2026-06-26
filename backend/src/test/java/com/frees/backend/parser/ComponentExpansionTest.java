@@ -132,6 +132,31 @@ class ComponentExpansionTest {
     }
 
     @Test
+    void missingRequiredLibraryParameterIsRejected() {
+        // The standard library carries no defaults: omitting a required physical
+        // parameter (here the pump fluid$/eta) must error, not silently default.
+        EquationParser.ParseException ex = assertThrows(EquationParser.ParseException.class,
+                () -> parser.parseResult("Pump P1(s1, s2)"));
+        assertTrue(ex.getMessage().contains("has no value"), ex.getMessage());
+    }
+
+    @Test
+    void userComponentDefaultsStillApply() {
+        // The optional-default feature remains for user components that opt in.
+        String src = """
+                COMPONENT Bumper(in, out)
+                  PARAM gain = 3
+                  out.mdot = in.mdot
+                  out.x = in.x * gain
+                END
+                Bumper B1(s1, s2)
+                s1.mdot = 1
+                s1.x = 2
+                """;
+        assertEquals(6.0, solver.solve(src).variables().get("s2.x"), 1e-9);
+    }
+
+    @Test
     void unknownParameterOverrideIsRejected() {
         String src = HEATER_LIB + "Heater H1(s1, s2, bogus=3)";
         EquationParser.ParseException ex = assertThrows(EquationParser.ParseException.class,
