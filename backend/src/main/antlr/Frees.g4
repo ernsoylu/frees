@@ -19,6 +19,7 @@ topLevel
     | dynamicDef
     | componentDef
     | componentInst
+    | connectStmt
     | statement
     ;
 
@@ -215,6 +216,20 @@ componentParam
 //   trailing name=value args override parameters.
 componentInst
     : IDENT IDENT LPAREN componentArgList RPAREN
+    ;
+
+// Native branching connection:  connect(HP.out, LP.in, F1.steam)
+//   Ties the listed ports/streams into one node — pressure & enthalpy equal,
+//   mass conserved (Σ inlet = Σ outlet). Each argument is a port reference
+//   (instance.port) or a bare stream name. Lets parallel paths / splits be
+//   expressed without an explicit Splitter component (the shared-name shorthand
+//   still works for series chains).
+connectStmt
+    : CONNECT LPAREN connectPort (COMMA connectPort)* RPAREN
+    ;
+
+connectPort
+    : IDENT (DOT IDENT)*
     ;
 
 componentArgList
@@ -491,6 +506,7 @@ PLOT      : [pP][lL][oO][tT] ;
 DYNAMIC   : [dD][yY][nN][aA][mM][iI][cC] ;
 EVENT     : [eE][vV][eE][nN][tT] ;
 COMPONENT : [cC][oO][mM][pP][oO][nN][eE][nN][tT] ;
+CONNECT   : [cC][oO][nN][nN][eE][cC][tT] ;
 PARAM     : [pP][aA][rR][aA][mM] ;
 IF        : [iI][fF] ;
 THEN      : [tT][hH][eE][nN] ;

@@ -199,7 +199,7 @@ public final class EquationParser {
         // top-level statements so they unify with the component bodies.
         ComponentExpander components = new ComponentExpander(
                 ComponentLibrary.builtins(), programResult.componentDefs(),
-                programResult.componentInsts(), displayNames);
+                programResult.componentInsts(), programResult.connects(), displayNames);
         List<Equation> componentEquations = components.expand();
         statements = components.rewriteStatements(statements);
 

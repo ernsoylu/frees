@@ -2,6 +2,7 @@ package com.frees.backend.parser;
 
 import com.frees.backend.ast.ComponentDef;
 import com.frees.backend.ast.ComponentInst;
+import com.frees.backend.ast.ConnectDecl;
 import com.frees.backend.ast.Equation;
 import com.frees.backend.ast.Expr;
 import com.frees.backend.ast.Statement;
@@ -42,8 +43,12 @@ public final class ComponentExpander {
     private final Map<String, ComponentDef> defsByName = new LinkedHashMap<>();
     private final Map<String, ResolvedInstance> instancesByName = new LinkedHashMap<>();
     private final List<ResolvedInstance> instances = new ArrayList<>();
+    private final List<ConnectDecl> connects;
     /** Stream name → its CoolProp fluid (from the attached components' fluid params). */
     private final Map<String, String> streamFluid = new LinkedHashMap<>();
+    /** Stream name → display prefix (a synthetic free-port stream {@code inst$port}
+     *  shows as {@code inst.port} so member references read naturally). */
+    private final Map<String, String> streamDisplay = new LinkedHashMap<>();
     private final Map<String, String> displayNames;
 
     /**
@@ -68,7 +73,14 @@ public final class ComponentExpander {
 
     public ComponentExpander(List<ComponentDef> builtinDefs, List<ComponentDef> userDefs,
                              List<ComponentInst> componentInsts, Map<String, String> displayNames) {
+        this(builtinDefs, userDefs, componentInsts, List.of(), displayNames);
+    }
+
+    public ComponentExpander(List<ComponentDef> builtinDefs, List<ComponentDef> userDefs,
+                             List<ComponentInst> componentInsts, List<ConnectDecl> connects,
+                             Map<String, String> displayNames) {
         this.displayNames = displayNames;
+        this.connects = connects;
         // Built-in standard-library components are curated; a user definition of
         // the same name overrides the built-in. Two user definitions collide.
         for (ComponentDef d : builtinDefs) {
@@ -91,6 +103,41 @@ public final class ComponentExpander {
             instances.add(resolved);
         }
         buildStreamFluidMap();
+        propagateFluidAcrossConnects();
+    }
+
+    /**
+     * Connected streams share a fluid (they share P and h), so a fluid known on
+     * one endpoint of a {@code connect} flows to the others — letting derived
+     * properties resolve on the synthetic free-port streams of fluid-less
+     * components (Boiler/Condenser/…) in a connector-style flowsheet.
+     */
+    private void propagateFluidAcrossConnects() {
+        if (connects.isEmpty()) {
+            return;
+        }
+        UnionFind uf = new UnionFind();
+        seedComponentLinks(uf);
+        for (ConnectDecl c : connects) {
+            List<String> refs = c.ports();
+            for (int i = 1; i < refs.size(); i++) {
+                uf.union(streamOf(refs.get(0), c), streamOf(refs.get(i), c));
+            }
+        }
+        // Fluid known anywhere in a connected set → assign it to the whole set.
+        Map<String, String> rootFluid = new LinkedHashMap<>();
+        for (Map.Entry<String, String> e : streamFluid.entrySet()) {
+            rootFluid.putIfAbsent(uf.find(e.getKey()), e.getValue());
+        }
+        for (ConnectDecl c : connects) {
+            for (String ref : c.ports()) {
+                String stream = streamOf(ref, c);
+                String fluid = rootFluid.get(uf.find(stream));
+                if (fluid != null) {
+                    streamFluid.putIfAbsent(stream, fluid);
+                }
+            }
+        }
     }
 
     /**
@@ -186,14 +233,26 @@ public final class ComponentExpander {
                     + "' for instance '" + inst.name() + "'. Define it with COMPONENT "
                     + inst.type() + "(...).");
         }
-        if (inst.portArgs().size() != def.ports().size()) {
+        // Two instantiation styles: shared-name (every port bound positionally to
+        // a stream) or connector (no positional args — ports are "free", bound to
+        // synthetic per-instance streams `inst$port` that connect(...) ties).
+        boolean freePorts = inst.portArgs().isEmpty() && !def.ports().isEmpty();
+        if (!freePorts && inst.portArgs().size() != def.ports().size()) {
             throw new EquationParser.ParseException("Component '" + inst.name() + "' (" + inst.type()
                     + ") binds " + inst.portArgs().size() + " port(s) but COMPONENT " + def.name()
-                    + " declares " + def.ports().size() + " (" + String.join(", ", def.ports()) + ").");
+                    + " declares " + def.ports().size() + " (" + String.join(", ", def.ports())
+                    + "). Bind every port to a stream, or none and wire them with connect(...).");
         }
         Map<String, String> portToStream = new LinkedHashMap<>();
         for (int i = 0; i < def.ports().size(); i++) {
-            portToStream.put(def.ports().get(i), inst.portArgs().get(i));
+            String port = def.ports().get(i);
+            if (freePorts) {
+                String synthetic = inst.name() + "$" + port;
+                portToStream.put(port, synthetic);
+                streamDisplay.put(synthetic, inst.name() + "." + port);
+            } else {
+                portToStream.put(port, inst.portArgs().get(i));
+            }
         }
         // Validate parameter overrides against the declared parameters.
         for (String key : inst.params().keySet()) {
@@ -236,7 +295,8 @@ public final class ComponentExpander {
         };
     }
 
-    /** Expands every instance body into flat scalar equations. */
+    /** Expands every instance body — and every {@code connect(...)} node — into
+     *  flat scalar equations. */
     public List<Equation> expand() {
         List<Equation> out = new ArrayList<>();
         for (ResolvedInstance ri : instances) {
@@ -247,7 +307,166 @@ public final class ComponentExpander {
                 out.add(new Equation(lhs, rhs, prefix + eq.sourceText()));
             }
         }
+        expandConnects(out);
         return out;
+    }
+
+    // ── connect(...) node expansion ──────────────────────────────────────────
+
+    /**
+     * Emits the node equations for each {@code connect(...)}: pressure and
+     * enthalpy equal across all endpoints, and mass conserved. A union-find over
+     * the connection graph keeps the system well-posed: an equality whose two
+     * endpoints are <em>already</em> connected (it closes a loop) is dropped as
+     * redundant — both the P/h equalities (only spanning-tree edges are emitted)
+     * and, for a loop-closing connect, the mass balance (the cyclically
+     * dependent Σṁ). This is exactly the closed-cycle over-determination that the
+     * shared-name model can't express without rejecting the system.
+     */
+    private void expandConnects(List<Equation> out) {
+        if (connects.isEmpty()) {
+            return;
+        }
+        UnionFind uf = new UnionFind();
+        seedComponentLinks(uf);
+        for (ConnectDecl c : connects) {
+            List<String> refs = c.ports();
+            if (refs.size() < 2) {
+                throw new EquationParser.ParseException(
+                        "connect(...) needs at least two endpoints: " + c.sourceText());
+            }
+            List<String> sts = new ArrayList<>(refs.size());
+            for (String ref : refs) {
+                sts.add(streamOf(ref, c));
+            }
+            String prefix = "CONNECT " + String.join(", ", refs) + ": ";
+
+            // Loop closure: do two endpoints already share a connection set?
+            boolean loopClosing = false;
+            for (int i = 0; i < sts.size() && !loopClosing; i++) {
+                for (int j = i + 1; j < sts.size(); j++) {
+                    if (uf.find(sts.get(i)).equals(uf.find(sts.get(j)))) {
+                        loopClosing = true;
+                        break;
+                    }
+                }
+            }
+
+            // Pressure & enthalpy: spanning-tree equalities (skip cycle-closing edges).
+            String root = sts.get(0);
+            for (int j = 1; j < sts.size(); j++) {
+                String st = sts.get(j);
+                if (!uf.find(root).equals(uf.find(st))) {
+                    out.add(equality(root, "p", st, prefix));
+                    out.add(equality(root, "h", st, prefix));
+                    uf.union(root, st);
+                }
+            }
+
+            // Mass conservation — skipped entirely when this connect closes a loop
+            // (the Σṁ is then cyclically dependent on the rest of the loop).
+            if (!loopClosing) {
+                if (sts.size() == 2) {
+                    out.add(equality(sts.get(0), "mdot", sts.get(1), prefix));
+                } else {
+                    out.add(massConservation(refs, sts, prefix, c));
+                }
+            }
+        }
+    }
+
+    /** Σ(outlet ṁ) = Σ(inlet ṁ) for a 3+-port node; inlet/outlet is read from the
+     *  port name ('in'/'out'). Throws if an endpoint's direction is unknowable. */
+    private Equation massConservation(List<String> refs, List<String> sts, String prefix, ConnectDecl c) {
+        Expr outlets = null;
+        Expr inlets = null;
+        for (int i = 0; i < refs.size(); i++) {
+            Expr mdot = streamMember(sts.get(i), "mdot");
+            switch (portDirection(refs.get(i))) {
+                case OUT -> outlets = outlets == null ? mdot : new Expr.BinOp('+', outlets, mdot);
+                case IN -> inlets = inlets == null ? mdot : new Expr.BinOp('+', inlets, mdot);
+                case UNKNOWN -> throw new EquationParser.ParseException(
+                        "connect(...): cannot tell whether '" + refs.get(i)
+                        + "' is an inlet or an outlet for the mass balance — name the port with "
+                        + "'in'/'out', or split the flow with a Splitter/Mixer component. " + c.sourceText());
+            }
+        }
+        if (outlets == null || inlets == null) {
+            throw new EquationParser.ParseException("connect(...): a branching node needs at least one "
+                    + "inlet and one outlet port. " + c.sourceText());
+        }
+        return new Equation(outlets, inlets, prefix + "sum(mdot_out) = sum(mdot_in)");
+    }
+
+    private enum Dir { IN, OUT, UNKNOWN }
+
+    /** Inlet/outlet inferred from a port reference's port name ('in'/'out'). */
+    private static Dir portDirection(String ref) {
+        int dot = ref.lastIndexOf('.');
+        String port = dot >= 0 ? ref.substring(dot + 1) : ref;
+        if (port.contains("out")) {
+            return Dir.OUT;
+        }
+        if (port.contains("in")) {
+            return Dir.IN;
+        }
+        return Dir.UNKNOWN;
+    }
+
+    /**
+     * Seeds the connection union-find with each 2-port pass-through instance's
+     * internal in↔out link, so a series loop closed by {@code connect} is seen as
+     * a cycle (its body carries mass/pressure/enthalpy from one port to the
+     * other). 3+-port components (Splitter/Mixer/HX) are not linked — their port
+     * topology is not a simple pass-through.
+     */
+    private void seedComponentLinks(UnionFind uf) {
+        for (ResolvedInstance ri : instances) {
+            List<String> streams = new ArrayList<>(ri.portToStream().values());
+            if (streams.size() == 2) {
+                uf.union(streams.get(0), streams.get(1));
+            }
+        }
+    }
+
+    /** Resolves a connect endpoint ({@code instance.port} or a bare stream name) to its stream. */
+    private String streamOf(String ref, ConnectDecl c) {
+        int dot = ref.indexOf('.');
+        if (dot < 0) {
+            return ref; // a bare stream name
+        }
+        String instName = ref.substring(0, dot);
+        String port = ref.substring(dot + 1);
+        ResolvedInstance ri = instancesByName.get(instName);
+        if (ri == null || port.indexOf('.') >= 0 || !ri.portToStream().containsKey(port)) {
+            throw new EquationParser.ParseException("connect(...): '" + ref + "' is not a port "
+                    + "(instance.port) or a stream name. " + c.sourceText());
+        }
+        return ri.portToStream().get(port);
+    }
+
+    private Equation equality(String streamA, String member, String streamB, String prefix) {
+        return new Equation(streamMember(streamA, member), streamMember(streamB, member),
+                prefix + streamA + "." + member + " = " + streamB + "." + member);
+    }
+
+    /** Minimal union-find over stream names for connection-graph cycle detection. */
+    private static final class UnionFind {
+        private final Map<String, String> parent = new java.util.HashMap<>();
+
+        String find(String x) {
+            String p = parent.putIfAbsent(x, x);
+            if (p == null || p.equals(x)) {
+                return x;
+            }
+            String root = find(p);
+            parent.put(x, root);
+            return root;
+        }
+
+        void union(String a, String b) {
+            parent.put(find(a), find(b));
+        }
     }
 
     /** Rewrites the dotted member references in top-level statements to flat names. */
@@ -361,7 +580,7 @@ public final class ComponentExpander {
 
     private Expr streamMember(String stream, String member) {
         String flat = stream + "$" + member;
-        displayNames.putIfAbsent(flat, stream + "." + member);
+        displayNames.putIfAbsent(flat, streamDisplay.getOrDefault(stream, stream) + "." + member);
         return new Expr.Var(flat);
     }
 

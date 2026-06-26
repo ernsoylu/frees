@@ -34,7 +34,8 @@ public class AstBuilder extends FreesBaseVisitor<Expr> {
             List<com.frees.backend.ast.StateTableDef> stateTables,
             List<com.frees.backend.ast.DynamicSystem> dynamicSystems,
             List<com.frees.backend.ast.ComponentDef> componentDefs,
-            List<com.frees.backend.ast.ComponentInst> componentInsts) {}
+            List<com.frees.backend.ast.ComponentInst> componentInsts,
+            List<com.frees.backend.ast.ConnectDecl> connects) {}
 
     public ProgramResult buildProgram(FreesParser.ProgramContext ctx) {
         List<Statement> statements = new ArrayList<>();
@@ -45,6 +46,7 @@ public class AstBuilder extends FreesBaseVisitor<Expr> {
         List<com.frees.backend.ast.DynamicSystem> dynamicSystems = new ArrayList<>();
         List<com.frees.backend.ast.ComponentDef> componentDefs = new ArrayList<>();
         List<com.frees.backend.ast.ComponentInst> componentInsts = new ArrayList<>();
+        List<com.frees.backend.ast.ConnectDecl> connects = new ArrayList<>();
 
         if (ctx.topLevel() != null) {
             for (FreesParser.TopLevelContext tl : ctx.topLevel()) {
@@ -72,13 +74,32 @@ public class AstBuilder extends FreesBaseVisitor<Expr> {
                     componentDefs.add(buildComponentDef(tl.componentDef()));
                 } else if (tl.componentInst() != null) {
                     componentInsts.add(buildComponentInst(tl.componentInst()));
+                } else if (tl.connectStmt() != null) {
+                    connects.add(buildConnect(tl.connectStmt()));
                 } else if (tl.statement() != null) {
                     statements.add(buildStatement(tl.statement()));
                 }
             }
         }
         return new ProgramResult(statements, defs, parametricTables, plots, stateTables,
-                dynamicSystems, componentDefs, componentInsts);
+                dynamicSystems, componentDefs, componentInsts, connects);
+    }
+
+    /** Builds {@code connect(HP.out, LP.in, …)} into a {@link com.frees.backend.ast.ConnectDecl};
+     *  each endpoint is kept as its dotted text (instance.port or a stream name). */
+    private com.frees.backend.ast.ConnectDecl buildConnect(FreesParser.ConnectStmtContext ctx) {
+        List<String> ports = new ArrayList<>();
+        for (FreesParser.ConnectPortContext p : ctx.connectPort()) {
+            StringBuilder sb = new StringBuilder();
+            for (int i = 0; i < p.IDENT().size(); i++) {
+                if (i > 0) {
+                    sb.append('.');
+                }
+                sb.append(p.IDENT(i).getText().toLowerCase());
+            }
+            ports.add(sb.toString());
+        }
+        return new com.frees.backend.ast.ConnectDecl(ports, ctx.getText());
     }
 
     // ── Acausal COMPONENT block & instantiation ──────────────────────────────
