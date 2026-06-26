@@ -50,14 +50,21 @@ public final class ComponentExpander {
                                     Map<String, Expr> numericParams,
                                     Map<String, String> stringParams) {}
 
-    public ComponentExpander(List<ComponentDef> componentDefs, List<ComponentInst> componentInsts,
-                             Map<String, String> displayNames) {
+    public ComponentExpander(List<ComponentDef> builtinDefs, List<ComponentDef> userDefs,
+                             List<ComponentInst> componentInsts, Map<String, String> displayNames) {
         this.displayNames = displayNames;
-        for (ComponentDef d : componentDefs) {
-            if (defsByName.put(d.name(), d) != null) {
+        // Built-in standard-library components are curated; a user definition of
+        // the same name overrides the built-in. Two user definitions collide.
+        for (ComponentDef d : builtinDefs) {
+            defsByName.put(d.name(), d);
+        }
+        java.util.Set<String> userNames = new java.util.HashSet<>();
+        for (ComponentDef d : userDefs) {
+            if (!userNames.add(d.name())) {
                 throw new EquationParser.ParseException(
                         "COMPONENT '" + d.name() + "' is defined more than once.");
             }
+            defsByName.put(d.name(), d);
         }
         for (ComponentInst inst : componentInsts) {
             ResolvedInstance resolved = resolve(inst);

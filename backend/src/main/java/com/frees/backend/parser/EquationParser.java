@@ -118,7 +118,7 @@ public final class EquationParser {
         }
     }
 
-    private static class CollectingErrorListener extends BaseErrorListener {
+    static class CollectingErrorListener extends BaseErrorListener {
         final List<String> errors = new ArrayList<>();
 
         @Override
@@ -198,7 +198,8 @@ public final class EquationParser {
         // and rewrite dotted port/stream member references in the remaining
         // top-level statements so they unify with the component bodies.
         ComponentExpander components = new ComponentExpander(
-                programResult.componentDefs(), programResult.componentInsts(), displayNames);
+                ComponentLibrary.builtins(), programResult.componentDefs(),
+                programResult.componentInsts(), displayNames);
         List<Equation> componentEquations = components.expand();
         statements = components.rewriteStatements(statements);
 
