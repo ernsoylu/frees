@@ -239,9 +239,13 @@ public final class ComponentExpander {
         if (paramValue != null) {
             return paramValue;
         }
-        if (ri.stringParams().containsKey(name)) {
-            throw new EquationParser.ParseException("Component '" + ri.def().name() + "': string parameter '"
-                    + name + "' can only be used as a fluid argument, not in arithmetic.");
+        // A string parameter used as a *fluid* argument is already baked into the
+        // encoded prop$ call name (it never reaches here as a bare Var). Anywhere
+        // else — e.g. an arrangement string `hx_effectiveness(arr$, …)` — it
+        // substitutes to its literal value.
+        String stringValue = ri.stringParams().get(name);
+        if (stringValue != null) {
+            return new Expr.Str(stringValue);
         }
         return new Expr.Var(namespaceLocal(name, ri));
     }

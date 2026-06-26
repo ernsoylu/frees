@@ -107,6 +107,38 @@ public final class ComponentLibrary {
               out.mdot = in.mdot
               out.P    = in.P + dP
             END
+
+            COMPONENT Splitter(in, out1, out2)
+              out1.P   = in.P
+              out2.P   = in.P
+              out1.h   = in.h
+              out2.h   = in.h
+              in.mdot  = out1.mdot + out2.mdot
+            END
+
+            COMPONENT Mixer(in1, in2, out)
+              out.P    = in1.P
+              out.mdot = in1.mdot + in2.mdot
+              out.mdot * out.h = in1.mdot * in1.h + in2.mdot * in2.h
+            END
+
+            COMPONENT HeatExchanger(hot_in, hot_out, cold_in, cold_out)
+              PARAM UA = 1000 [W/K], hot$ = Water, cold$ = Water, arr$ = counterflow
+              hot_out.mdot  = hot_in.mdot
+              hot_out.P     = hot_in.P
+              cold_out.mdot = cold_in.mdot
+              cold_out.P    = cold_in.P
+              Th   = Temperature(hot$,  P=hot_in.P,  h=hot_in.h)
+              Tc   = Temperature(cold$, P=cold_in.P, h=cold_in.h)
+              C_h  = hot_in.mdot  * Cp(hot$,  P=hot_in.P,  h=hot_in.h)
+              C_c  = cold_in.mdot * Cp(cold$, P=cold_in.P, h=cold_in.h)
+              Cmin = min(C_h, C_c)
+              Cmax = max(C_h, C_c)
+              eps  = hx_effectiveness(arr$, UA / Cmin, Cmin / Cmax)
+              Q    = eps * Cmin * (Th - Tc)
+              hot_out.h  = hot_in.h  - Q / hot_in.mdot
+              cold_out.h = cold_in.h + Q / cold_in.mdot
+            END
             """;
 
     private static final List<ComponentDef> BUILTINS = parse(SOURCE);
