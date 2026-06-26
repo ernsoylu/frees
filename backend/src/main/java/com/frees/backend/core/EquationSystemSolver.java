@@ -687,6 +687,40 @@ public class EquationSystemSolver {
             seedPropArgsIn(eq.lhs(), specs);
             seedPropArgsIn(eq.rhs(), specs);
         }
+        seedStreamMemberGuesses(equations, specs);
+    }
+
+    /** Physical nominal for a component/stream member, keyed by the member name
+     *  (the token after the last {@code $}): only the ones where the default
+     *  guess 1.0 is clearly unphysical and causes failures (a 1 Pa pressure makes
+     *  a {@code √(ΔP)} resistance go imaginary; a 1 K temperature breaks property
+     *  calls). Deliberately omits ambiguous members (e.g. {@code v} = voltage vs
+     *  specific volume) and reference-dependent enthalpy. */
+    private static final Map<String, Double> MEMBER_NOMINAL = Map.of(
+            "p", 1.0e5,     // pressure ~1 bar
+            "t", 300.0);    // temperature ~ambient
+
+    /**
+     * Seeds physical initial guesses for component/stream member unknowns (§8.5):
+     * a flat name like {@code s$p} / {@code vlv$in$p} that still sits at the
+     * default guess gets a domain nominal so a coupled fluid-resistance network
+     * doesn't start with a negative ΔP (→ NaN). User/GUI guesses always win; only
+     * pressures and temperatures are touched (see {@link #MEMBER_NOMINAL}).
+     */
+    private static void seedStreamMemberGuesses(List<Equation> equations,
+                                                Map<String, VariableSpec> specs) {
+        for (Equation eq : equations) {
+            for (String v : eq.variables()) {
+                int dollar = v.lastIndexOf('$');
+                if (dollar < 0 || v.startsWith("der$")) {
+                    continue;
+                }
+                Double nominal = MEMBER_NOMINAL.get(v.substring(dollar + 1));
+                if (nominal != null) {
+                    applyNominalGuess(v, nominal, specs);
+                }
+            }
+        }
     }
 
     private static void seedPropArgsIn(Expr e, Map<String, VariableSpec> specs) {
