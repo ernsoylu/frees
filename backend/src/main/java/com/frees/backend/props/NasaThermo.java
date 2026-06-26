@@ -30,7 +30,8 @@ public final class NasaThermo {
     /** Reference pressure for the tabulated entropy [Pa] (matches IdealGas). */
     private static final double P_REF = 101_325.0;
 
-    private record Species(double mw, double[] tRanges, double[] low, double[] high) {
+    private record Species(double mw, double[] tRanges, double[] low, double[] high,
+                           double sigma, double epsK) {
         double[] coeffsFor(double t) {
             return t <= tRanges[1] ? low : high;
         }
@@ -49,7 +50,10 @@ public final class NasaThermo {
                 double[] tr = arr(s.get("Tranges"));
                 double[] low = arr(s.get("coeffs").get(0));
                 double[] high = arr(s.get("coeffs").get(1));
-                SPECIES.put(e.getKey().toUpperCase(), new Species(s.get("M").asDouble(), tr, low, high));
+                double sigma = s.hasNonNull("sigma") ? s.get("sigma").asDouble() : Double.NaN;
+                double epsK = s.hasNonNull("epsk") ? s.get("epsk").asDouble() : Double.NaN;
+                SPECIES.put(e.getKey().toUpperCase(),
+                        new Species(s.get("M").asDouble(), tr, low, high, sigma, epsK));
             });
         } catch (Exception ex) {
             throw new ExceptionInInitializerError(ex);
@@ -113,5 +117,21 @@ public final class NasaThermo {
         double s0 = R * (c[0] * Math.log(t) + c[1] * t + c[2] * t * t / 2.0
                 + c[3] * t * t * t / 3.0 + c[4] * t * t * t * t / 4.0 + c[6]);
         return s0 - R * Math.log(p / P_REF);
+    }
+
+    /** Whether Lennard-Jones transport parameters are tabulated for the species. */
+    public static boolean hasTransport(String token) {
+        Species s = SPECIES.get(key(token));
+        return s != null && !Double.isNaN(s.sigma()) && !Double.isNaN(s.epsK());
+    }
+
+    /** Lennard-Jones collision diameter sigma [Angstrom]. */
+    public static double collisionDiameter(String token) {
+        return species(token).sigma();
+    }
+
+    /** Lennard-Jones potential well depth eps/k [K]. */
+    public static double wellDepth(String token) {
+        return species(token).epsK();
     }
 }

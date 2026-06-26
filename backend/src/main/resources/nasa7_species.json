@@ -1,5 +1,5 @@
 {
- "_comment": "NASA-7 polynomial thermo, two temperature ranges. cp/R=a1+a2T+a3T^2+a4T^3+a5T^4; h/RT=a1+a2T/2+a3T^2/3+a4T^3/4+a5T^4/5+a6/T; s/R=a1 lnT+a2T+a3T^2/2+a4T^3/3+a5T^4/4+a7. Source: Cantera gri30.yaml (GRI-Mech 3.0). M in kg/kmol.",
+ "_comment": "NASA-7 polynomial thermo (two ranges) + Lennard-Jones transport. cp/R=a1+a2T+a3T^2+a4T^3+a5T^4; h/RT=a1+a2T/2+a3T^2/3+a4T^3/4+a5T^4/5+a6/T; s/R=a1 lnT+a2T+a3T^2/2+a4T^3/3+a5T^4/4+a7. sigma=LJ collision diameter [Angstrom], epsk=LJ well depth eps/k [K]. M in kg/kmol. Source: Cantera gri30.yaml (GRI-Mech 3.0).",
  "species": {
   "N2": {
    "composition": {
@@ -30,7 +30,9 @@
      -922.7977,
      5.980528
     ]
-   ]
+   ],
+   "sigma": 3.621,
+   "epsk": 97.53
   },
   "O2": {
    "composition": {
@@ -61,7 +63,9 @@
      -1088.45772,
      5.45323129
     ]
-   ]
+   ],
+   "sigma": 3.458,
+   "epsk": 107.4
   },
   "CO2": {
    "composition": {
@@ -93,7 +97,9 @@
      -48759.166,
      2.27163806
     ]
-   ]
+   ],
+   "sigma": 3.763,
+   "epsk": 244.0
   },
   "H2O": {
    "composition": {
@@ -125,7 +131,9 @@
      -30004.2971,
      4.9667701
     ]
-   ]
+   ],
+   "sigma": 2.605,
+   "epsk": 572.4
   },
   "CO": {
    "composition": {
@@ -157,7 +165,9 @@
      -14151.8724,
      7.81868772
     ]
-   ]
+   ],
+   "sigma": 3.65,
+   "epsk": 98.1
   },
   "H2": {
    "composition": {
@@ -188,7 +198,9 @@
      -950.158922,
      -3.20502331
     ]
-   ]
+   ],
+   "sigma": 2.92,
+   "epsk": 38.0
   },
   "CH4": {
    "composition": {
@@ -220,7 +232,9 @@
      -9468.34459,
      18.437318
     ]
-   ]
+   ],
+   "sigma": 3.746,
+   "epsk": 141.4
   },
   "C2H6": {
    "composition": {
@@ -252,7 +266,9 @@
      -11426.3932,
      15.1156107
     ]
-   ]
+   ],
+   "sigma": 4.302,
+   "epsk": 252.3
   },
   "C3H8": {
    "composition": {
@@ -284,7 +300,9 @@
      -16467.516,
      -17.892349
     ]
-   ]
+   ],
+   "sigma": 4.982,
+   "epsk": 266.8
   },
   "C2H4": {
    "composition": {
@@ -316,7 +334,9 @@
      4939.88614,
      10.3053693
     ]
-   ]
+   ],
+   "sigma": 3.971,
+   "epsk": 280.8
   },
   "C2H2": {
    "composition": {
@@ -348,7 +368,9 @@
      25935.9992,
      -1.23028121
     ]
-   ]
+   ],
+   "sigma": 4.1,
+   "epsk": 209.0
   },
   "OH": {
    "composition": {
@@ -380,7 +402,9 @@
      3858.657,
      4.4766961
     ]
-   ]
+   ],
+   "sigma": 2.75,
+   "epsk": 80.0
   },
   "H": {
    "composition": {
@@ -411,7 +435,9 @@
      25473.6599,
      -0.446682914
     ]
-   ]
+   ],
+   "sigma": 2.05,
+   "epsk": 145.0
   },
   "O": {
    "composition": {
@@ -442,7 +468,9 @@
      29217.5791,
      4.78433864
     ]
-   ]
+   ],
+   "sigma": 2.75,
+   "epsk": 80.0
   },
   "N": {
    "composition": {
@@ -473,7 +501,9 @@
      56133.773,
      4.6496096
     ]
-   ]
+   ],
+   "sigma": 3.298,
+   "epsk": 71.4
   },
   "AR": {
    "composition": {
@@ -504,7 +534,9 @@
      -745.375,
      4.366
     ]
-   ]
+   ],
+   "sigma": 3.33,
+   "epsk": 136.5
   }
  }
 }
