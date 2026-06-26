@@ -160,7 +160,11 @@ public class NewtonSolver {
                 return false;
             }
             double scale = Math.max(lhsMagnitude, 1.0);
-            if (Math.abs(residual[i]) / scale > settings.relativeResiduals()) {
+            // A non-finite residual (a property call at an invalid state point)
+            // is NOT within tolerance — guard explicitly, because `NaN > tol` is
+            // false and would otherwise be mistaken for convergence, letting an
+            // invalid guess be accepted as a solution.
+            if (!Double.isFinite(residual[i]) || Math.abs(residual[i]) / scale > settings.relativeResiduals()) {
                 return false;
             }
         }

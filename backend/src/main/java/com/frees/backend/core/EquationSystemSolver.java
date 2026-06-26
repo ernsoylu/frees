@@ -513,7 +513,7 @@ public class EquationSystemSolver {
         NewtonSolver newtonSolver = new NewtonSolver(settings, defs);
         NewtonSolver retrySolver = new NewtonSolver(retrySettings(settings), defs);
         NewtonSolver polisher = new NewtonSolver(polishSettings(settings), defs);
-        SolveConfig config = new SolveConfig(deadlineNanos, expandedSpecs, null, newtonSolver, retrySolver, polisher);
+        SolveConfig config = new SolveConfig(deadlineNanos, expandedSpecs, null, newtonSolver, retrySolver, polisher, defs);
         List<Block> blocks = blocker.blockPermissive(equations);
         int totalIterations = 0;
         Set<Integer> skipIndices = new HashSet<>();
@@ -530,7 +530,8 @@ public class EquationSystemSolver {
             Map<String, Double> warmStart,
             NewtonSolver newton,
             NewtonSolver retry,
-            NewtonSolver polisher
+            NewtonSolver polisher,
+            Map<String, ProcDef> defs
     ) {}
 
     private record InnerSolve(Map<String, Double> values, List<Block> blocks,
@@ -668,7 +669,7 @@ public class EquationSystemSolver {
         NewtonSolver newtonSolver = new NewtonSolver(settings, defs);
         NewtonSolver retrySolver = new NewtonSolver(retrySettings(settings), defs);
         NewtonSolver polisher = new NewtonSolver(polishSettings(settings), defs);
-        SolveConfig config = new SolveConfig(deadlineNanos, expandedSpecs, mutableWarmStart, newtonSolver, retrySolver, polisher);
+        SolveConfig config = new SolveConfig(deadlineNanos, expandedSpecs, mutableWarmStart, newtonSolver, retrySolver, polisher, defs);
 
         List<Block> blocks = blocker.block(equations);
         int totalIterations = 0;
@@ -693,10 +694,20 @@ public class EquationSystemSolver {
             // solutions of all other blocks intact.
             int retryIterations = retryWithTransformedGuesses(config.retry(), block,
                     values, config.deadlineNanos(), config.specs(), config.warmStart());
+            int bracketIterations;
             if (retryIterations >= 0) {
                 iterations += retryIterations;
+            } else if ((bracketIterations =
+                    tryUnivariateBracketingSolve(block, values, config)) >= 0) {
+                // Second resort for a single-unknown block: a bracketing root-find
+                // (Brent). Newton needs a non-zero gradient, but an implicit
+                // property inversion across the two-phase dome is flat there
+                // (dT/dh≈0) while still monotonic overall (§8.7) — a sign-bracketed
+                // solve crosses it where Newton stalls. Only accepted if it drives
+                // the residual within tolerance, so it can never mask a wrong root.
+                iterations += bracketIterations;
             } else {
-                // Second resort: merge with connected blocks in both
+                // Third resort: merge with connected blocks in both
                 // directions and re-solve the combined system.
                 List<Integer> mergedIndices = new ArrayList<>();
                 Block merged = tryMergeBidirectional(blocks, bi, block, mergedIndices, skipIndices);
@@ -721,6 +732,173 @@ public class EquationSystemSolver {
             // Polishing is best-effort; the main solution is still valid.
         }
         return iterations;
+    }
+
+    /** Relative tolerance for accepting a bracketed root: |resid|/max(|lhs|,1). */
+    private static final double BRACKET_RESIDUAL_TOL = 1.0e-6;
+
+    /**
+     * Bracketing root-find for a one-equation, one-unknown block that Newton
+     * could not solve. Newton needs a non-zero gradient; an implicit property
+     * inversion crossing the two-phase dome is flat there ({@code dT/dh≈0}) yet
+     * the overall residual is monotonic and sign-changing (§8.7), so a
+     * sign-bracketed bisection crosses the plateau where Newton stalls. The root
+     * is written back only if it drives the residual within tolerance, so a
+     * wrong or extraneous root can never be silently accepted. Returns the work
+     * done (≥0) on success, or -1 if no valid bracket/root was found.
+     */
+    private int tryUnivariateBracketingSolve(Block block, Map<String, Double> values,
+                                             SolveConfig config) {
+        if (block.variables().size() != 1 || block.equations().size() != 1) {
+            return -1;
+        }
+        Equation eq = block.equations().get(0);
+        // Scope this resort to property inversions — the case it exists for (a
+        // CoolProp call flat across the two-phase dome). For ordinary algebra a
+        // bracketing rescue would bypass the user's Newton iteration-limit stop
+        // criterion and could pick a different root than Newton's basin.
+        if (!usesPropertyCall(eq)) {
+            return -1;
+        }
+        String var = block.variables().get(0);
+        Map<String, ProcDef> defs = config.defs();
+        VariableSpec spec = config.specs().get(var);
+        double lo = spec != null ? spec.lower() : Double.NEGATIVE_INFINITY;
+        double hi = spec != null ? spec.upper() : Double.POSITIVE_INFINITY;
+
+        double saved = values.getOrDefault(var, DEFAULT_GUESS);
+        double x0 = Double.isFinite(saved) ? saved
+                : (spec != null && Double.isFinite(spec.guess()) ? spec.guess() : 1.0);
+        x0 = Math.clamp(x0, lo, hi);
+
+        // Residual of the single equation with var=x; NaN inside an invalid region.
+        java.util.function.DoubleUnaryOperator f = x -> {
+            values.put(var, x);
+            try {
+                return Evaluator.eval(eq.lhs(), values, defs)
+                        - Evaluator.eval(eq.rhs(), values, defs);
+            } catch (com.frees.backend.props.PropertyEvaluationException e) {
+                return Double.NaN;
+            }
+        };
+
+        try {
+            // Sample x0 plus geometrically growing symmetric offsets (clamped to
+            // the box); keep only finite (in-range) evaluations.
+            double m = Math.max(Math.abs(x0), 1.0);
+            TreeMap<Double, Double> samples = new TreeMap<>();
+            recordSample(samples, x0, f);
+            for (double mult = 0.125; mult <= 1.0e9; mult *= 2.0) {
+                if (System.nanoTime() > config.deadlineNanos()) {
+                    break;
+                }
+                double step = m * mult;
+                recordSample(samples, Math.clamp(x0 + step, lo, hi), f);
+                recordSample(samples, Math.clamp(x0 - step, lo, hi), f);
+            }
+
+            // Pick the adjacent finite-sample pair straddling zero whose midpoint
+            // is nearest x0 (bias toward the local root).
+            double a = Double.NaN;
+            double b = Double.NaN;
+            double bestDist = Double.POSITIVE_INFINITY;
+            Map.Entry<Double, Double> prev = null;
+            for (Map.Entry<Double, Double> cur : samples.entrySet()) {
+                if (prev != null && prev.getValue() * cur.getValue() < 0.0) {
+                    double mid = 0.5 * (prev.getKey() + cur.getKey());
+                    double dist = Math.abs(mid - x0);
+                    if (dist < bestDist) {
+                        bestDist = dist;
+                        a = prev.getKey();
+                        b = cur.getKey();
+                    }
+                }
+                prev = cur;
+            }
+            if (Double.isNaN(a)) {
+                values.put(var, saved);
+                return -1;
+            }
+
+            // Bisection on the bracket to a tight relative width.
+            double fa = f.applyAsDouble(a);
+            int iters = 0;
+            for (; iters < 200; iters++) {
+                double c = 0.5 * (a + b);
+                double fc = f.applyAsDouble(c);
+                if (!Double.isFinite(fc)) {
+                    break;
+                }
+                if (fc == 0.0 || (b - a) <= 1.0e-12 * Math.max(Math.abs(c), 1.0)) {
+                    a = c;
+                    b = c;
+                    break;
+                }
+                if (fa * fc < 0.0) {
+                    b = c;
+                } else {
+                    a = c;
+                    fa = fc;
+                }
+            }
+
+            // Validate the root against the residual before committing.
+            double root = 0.5 * (a + b);
+            values.put(var, root);
+            double lhs = Evaluator.eval(eq.lhs(), values, defs);
+            double resid = lhs - Evaluator.eval(eq.rhs(), values, defs);
+            double scale = Math.max(Math.abs(lhs), 1.0);
+            if (Double.isFinite(resid) && Math.abs(resid) / scale <= BRACKET_RESIDUAL_TOL) {
+                return iters + 1;
+            }
+            values.put(var, saved);
+            return -1;
+        } catch (com.frees.backend.props.PropertyEvaluationException e) {
+            values.put(var, saved);
+            return -1;
+        }
+    }
+
+    /** True if either side of the equation contains a CoolProp {@code prop$} call. */
+    private static boolean usesPropertyCall(Equation eq) {
+        return exprUsesPropertyCall(eq.lhs()) || exprUsesPropertyCall(eq.rhs());
+    }
+
+    private static boolean exprUsesPropertyCall(Expr e) {
+        switch (e) {
+            case Expr.Call(String fn, List<Expr> args) -> {
+                if (fn.startsWith("prop$")) {
+                    return true;
+                }
+                for (Expr a : args) {
+                    if (exprUsesPropertyCall(a)) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+            case Expr.BinOp(char op, Expr l, Expr r) -> {
+                return exprUsesPropertyCall(l) || exprUsesPropertyCall(r);
+            }
+            case Expr.Neg(Expr o) -> {
+                return exprUsesPropertyCall(o);
+            }
+            default -> {
+                return false;
+            }
+        }
+    }
+
+    /** Evaluates f at x once and records it only if finite and not already seen. */
+    private static void recordSample(TreeMap<Double, Double> samples, double x,
+                                     java.util.function.DoubleUnaryOperator f) {
+        if (samples.containsKey(x)) {
+            return;
+        }
+        double v = f.applyAsDouble(x);
+        if (Double.isFinite(v)) {
+            samples.put(x, v);
+        }
     }
 
     /**
