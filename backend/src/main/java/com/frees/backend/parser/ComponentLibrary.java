@@ -372,6 +372,14 @@ public final class ComponentLibrary {
               PARAM Crr, Caero
               shaft.tau = Crr + Caero * shaft.w^2
             END
+
+            COMPONENT PIThermostat(port)
+              PARAM Kp, Ki, Tref
+              err         = Tref - port.T
+              der(integ)  = err
+              init(integ) = 0
+              port.Qdot   = -(Kp * err + Ki * integ)
+            END
             """;
 
     private static final List<ComponentDef> BUILTINS = parse(SOURCE);

@@ -91,4 +91,24 @@ class ComponentControlTest {
         assertEquals((100.0 * 350 + 20.0 * 300) / 120.0, v.get("t_final"), 0.2);
         assertTrue(v.get("t_final") > 300.0, "controller drives the mass above ambient");
     }
+
+    @Test
+    void piControllerEliminatesSteadyStateError() {
+        // A PI thermostat (integral state) holds the mass at the setpoint with
+        // zero steady-state offset — unlike the proportional thermostat above,
+        // which settled below Tref. der(integ)=err drives err→0 ⇒ T→Tref exactly.
+        String src = """
+                ThermalMass   M(C=5000, T0=300)
+                PIThermostat  TC(Kp=50, Ki=5, Tref=350)
+                Conduction    wall(k=2, area=1, L=0.1)
+                ThermalSource amb(T=300)
+                connect(TC.port, M.port, wall.a)
+                connect(wall.b, amb.port)
+                DYNAMIC ctrl(method = ode45, time = 0 .. 1000, points = 200)
+                END
+                T_final = FinalValue('m.port.t')
+                """;
+        Map<String, Double> v = solver.solve(src).variables();
+        assertEquals(350.0, v.get("t_final"), 0.2);   // setpoint reached, no offset
+    }
 }
