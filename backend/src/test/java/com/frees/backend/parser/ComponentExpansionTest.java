@@ -117,6 +117,37 @@ class ComponentExpansionTest {
     }
 
     @Test
+    void memberOnFluidlessStreamIsAnOpaqueRider() {
+        // The Heater carries no fluid, so members are generic riders: '.T' is a
+        // plain variable, NOT rewritten to a thermodynamic temperature call.
+        String src = HEATER_LIB + """
+                Heater H1(s1, s2, Q=5000)
+                s1.P = 100000;  s1.mdot = 2;  s1.h = 10000;  s1.T = 300
+                """;
+        Map<String, Double> v = solver.solve(src).variables();
+        assertEquals(300.0, v.get("s1.t"), 1e-9);   // rider, carried verbatim
+        assertEquals(12500.0, v.get("s2.h"), 1e-6);  // heater still works
+    }
+
+    @Test
+    void derivedPropertyResolvesOnAFluidStream() {
+        // A stream attached to a fluid-bearing component resolves '.x' (quality)
+        // to a CoolProp call baked with that fluid.
+        String src = """
+                COMPONENT Sink(in)
+                  PARAM fluid$ = Water
+                  drain = in.mdot
+                END
+                Sink K1(a, fluid$=R134a)
+                a.P = 200000
+                a.x = 1
+                """;
+        List<Equation> eqs = parser.parseResult(src).equations();
+        assertTrue(propFunctionNames(eqs).stream().anyMatch(f -> f.startsWith("prop$quality$r134a$")),
+                "expected an R134a quality call, got: " + propFunctionNames(eqs));
+    }
+
+    @Test
     void unknownComponentTypeIsRejected() {
         EquationParser.ParseException ex = assertThrows(EquationParser.ParseException.class,
                 () -> parser.parseResult("Mystery X(a, b)"));
