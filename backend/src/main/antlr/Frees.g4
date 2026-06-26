@@ -17,6 +17,8 @@ topLevel
     | stateTableDef
     | plotDef
     | dynamicDef
+    | componentDef
+    | componentInst
     | statement
     ;
 
@@ -176,6 +178,52 @@ dynamicItem
 //   zero-crossing of (g_lhs - g_rhs); direction defaults to "any".
 dynamicEvent
     : EVENT IDENT COLON equation (PIPE IDENT)? ARROW IDENT
+    ;
+
+// ── Acausal COMPONENT block (system-modeling layer) ───────────────────────────
+//   COMPONENT Pump(in, out)
+//     PARAM eta = 0.7, fluid$ = Water
+//     v = Volume(fluid$, P=in.P, h=in.h)
+//     out.mdot = in.mdot
+//     out.h    = in.h + v*(out.P - in.P)/eta
+//     W        = in.mdot*(out.h - in.h)
+//   END
+// A reusable template of acausal equations with typed ports. Ports name the
+// streams the component connects to; PARAM lines declare parameters (with
+// optional defaults; a trailing '$' marks a string parameter, e.g. a fluid
+// name). Body equations reference port members with a dotted accessor
+// (in.P, out.h, out.mdot); bare names are component-local variables or named
+// outputs. Instantiation (componentInst) binds the ports to actual streams and
+// the expander clones the body into flat scalar equations the solver handles.
+componentDef
+    : COMPONENT IDENT LPAREN paramList RPAREN sep
+      componentItem (sep componentItem)* sep?
+      END
+    ;
+
+componentItem
+    : PARAM componentParam (COMMA componentParam)*   # CompParam
+    | equation                                       # CompEq
+    ;
+
+componentParam
+    : IDENT (EQ expr)?
+    ;
+
+// Instantiation:  Pump P1(s3, s4, eta=0.8, fluid$=Water)
+//   leading positional args bind ports (to stream names, in declaration order);
+//   trailing name=value args override parameters.
+componentInst
+    : IDENT IDENT LPAREN componentArgList RPAREN
+    ;
+
+componentArgList
+    : (componentArg (COMMA componentArg)*)?
+    ;
+
+componentArg
+    : IDENT EQ expr   # CompArgNamed
+    | expr            # CompArgPos
     ;
 
 numberList
@@ -339,6 +387,7 @@ atom
     | STRING_LITERAL                          # StringAtom
     | IDENT LPAREN argList RPAREN            # CallAtom
     | IF LPAREN argList RPAREN               # IfCallAtom
+    | IDENT (DOT IDENT)+                      # MemberAtom
     | IDENT LBRACKET arrayIndexList RBRACKET # ArrayAtom
     | IDENT                                  # VarAtom
     | LBRACKET matrixRow (SEMI matrixRow)* RBRACKET unit? # MatrixLiteralAtom
@@ -406,6 +455,10 @@ DOTSLASH     : './' ;
 DOTBACKSLASH : '.\\' ;
 DOTCARET     : '.^' ;
 
+// Member accessor for component ports/outputs (in.P, HP.out.h, T1.W). A lone
+// '.'; longest-match keeps '..' (DOTDOT), '.5' (NUMBER) and '.*' etc. distinct.
+DOT          : '.' ;
+
 // ASSIGN must be defined before COLON so ':=' beats ':'
 ASSIGN  : ':=' ;
 COLON   : ':' ;
@@ -437,6 +490,8 @@ PARAMETRIC : [pP][aA][rR][aA][mM][eE][tT][rR][iI][cC] ;
 PLOT      : [pP][lL][oO][tT] ;
 DYNAMIC   : [dD][yY][nN][aA][mM][iI][cC] ;
 EVENT     : [eE][vV][eE][nN][tT] ;
+COMPONENT : [cC][oO][mM][pP][oO][nN][eE][nN][tT] ;
+PARAM     : [pP][aA][rR][aA][mM] ;
 IF        : [iI][fF] ;
 THEN      : [tT][hH][eE][nN] ;
 ELSE      : [eE][lL][sS][eE] ;

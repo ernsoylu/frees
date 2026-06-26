@@ -32,7 +32,9 @@ public class AstBuilder extends FreesBaseVisitor<Expr> {
             List<com.frees.backend.ast.ParametricTable> parametricTables,
             List<com.frees.backend.ast.PlotDef> plots,
             List<com.frees.backend.ast.StateTableDef> stateTables,
-            List<com.frees.backend.ast.DynamicSystem> dynamicSystems) {}
+            List<com.frees.backend.ast.DynamicSystem> dynamicSystems,
+            List<com.frees.backend.ast.ComponentDef> componentDefs,
+            List<com.frees.backend.ast.ComponentInst> componentInsts) {}
 
     public ProgramResult buildProgram(FreesParser.ProgramContext ctx) {
         List<Statement> statements = new ArrayList<>();
@@ -41,6 +43,8 @@ public class AstBuilder extends FreesBaseVisitor<Expr> {
         List<com.frees.backend.ast.PlotDef> plots = new ArrayList<>();
         List<com.frees.backend.ast.StateTableDef> stateTables = new ArrayList<>();
         List<com.frees.backend.ast.DynamicSystem> dynamicSystems = new ArrayList<>();
+        List<com.frees.backend.ast.ComponentDef> componentDefs = new ArrayList<>();
+        List<com.frees.backend.ast.ComponentInst> componentInsts = new ArrayList<>();
 
         if (ctx.topLevel() != null) {
             for (FreesParser.TopLevelContext tl : ctx.topLevel()) {
@@ -64,13 +68,80 @@ public class AstBuilder extends FreesBaseVisitor<Expr> {
                     plots.add(buildPlotDef(tl.plotDef()));
                 } else if (tl.dynamicDef() != null) {
                     dynamicSystems.add(buildDynamicDef(tl.dynamicDef()));
+                } else if (tl.componentDef() != null) {
+                    componentDefs.add(buildComponentDef(tl.componentDef()));
+                } else if (tl.componentInst() != null) {
+                    componentInsts.add(buildComponentInst(tl.componentInst()));
                 } else if (tl.statement() != null) {
                     statements.add(buildStatement(tl.statement()));
                 }
             }
         }
         return new ProgramResult(statements, defs, parametricTables, plots, stateTables,
-                dynamicSystems);
+                dynamicSystems, componentDefs, componentInsts);
+    }
+
+    // ── Acausal COMPONENT block & instantiation ──────────────────────────────
+
+    /**
+     * Builds a {@code COMPONENT … END} block into a {@link com.frees.backend.ast.ComponentDef}:
+     * the port list, the declared parameters (with optional defaults; a trailing
+     * '$' marks a string parameter), and the body equations (dotted port-member
+     * accessors survive as {@code Expr.Var} with dotted names, rewritten at
+     * expansion time).
+     */
+    private com.frees.backend.ast.ComponentDef buildComponentDef(FreesParser.ComponentDefContext ctx) {
+        String name = ctx.IDENT().getText().toLowerCase();
+        List<String> ports = buildParamList(ctx.paramList());
+        List<com.frees.backend.ast.ComponentDef.Param> params = new ArrayList<>();
+        List<com.frees.backend.ast.Equation> body = new ArrayList<>();
+        for (FreesParser.ComponentItemContext item : ctx.componentItem()) {
+            if (item instanceof FreesParser.CompParamContext cp) {
+                for (FreesParser.ComponentParamContext pc : cp.componentParam()) {
+                    String pname = pc.IDENT().getText().toLowerCase();
+                    boolean isString = pname.endsWith("$");
+                    Expr def = pc.expr() != null ? visit(pc.expr()) : null;
+                    params.add(new com.frees.backend.ast.ComponentDef.Param(pname, def, isString));
+                }
+            } else if (item instanceof FreesParser.CompEqContext ce) {
+                FreesParser.EquationContext eq = ce.equation();
+                body.add(new com.frees.backend.ast.Equation(
+                        visit(eq.expr(0)), visit(eq.expr(1)), eq.getText()));
+            }
+        }
+        return new com.frees.backend.ast.ComponentDef(name, ports, params, body);
+    }
+
+    /**
+     * Builds {@code Pump P1(s3, s4, eta=0.8, fluid$=Water)} into a
+     * {@link com.frees.backend.ast.ComponentInst}: leading positional arguments
+     * bind ports to stream names (in declaration order), trailing name=value
+     * arguments override parameters.
+     */
+    private com.frees.backend.ast.ComponentInst buildComponentInst(FreesParser.ComponentInstContext ctx) {
+        String type = ctx.IDENT(0).getText().toLowerCase();
+        String instName = ctx.IDENT(1).getText().toLowerCase();
+        List<String> portArgs = new ArrayList<>();
+        java.util.Map<String, Expr> params = new java.util.LinkedHashMap<>();
+        if (ctx.componentArgList() != null) {
+            for (FreesParser.ComponentArgContext arg : ctx.componentArgList().componentArg()) {
+                if (arg instanceof FreesParser.CompArgNamedContext named) {
+                    params.put(named.IDENT().getText().toLowerCase(), visit(named.expr()));
+                } else if (arg instanceof FreesParser.CompArgPosContext pos) {
+                    if (!params.isEmpty()) {
+                        throw new EquationParser.ParseException("Component '" + instName
+                                + "': positional port arguments must come before name=value parameters.");
+                    }
+                    Expr e = visit(pos.expr());
+                    if (!(e instanceof Expr.Var(String streamName))) {
+                        throw new EquationParser.ParseException("Component '" + instName
+                                + "': each port argument must be a stream name, got: " + pos.expr().getText());
+                    }
+                    portArgs.add(streamName);
+                }
+            }
+        }
+        return new com.frees.backend.ast.ComponentInst(type, instName, portArgs, params, ctx.getText());
     }
 
     // ── Transient / ODE system (DYNAMIC) ─────────────────────────────────────
@@ -1021,6 +1092,25 @@ public class AstBuilder extends FreesBaseVisitor<Expr> {
         }
         displayNames.putIfAbsent(original.toLowerCase(), original);
         return new Expr.Var(original);
+    }
+
+    /**
+     * Dotted port-member / instance-output accessor: {@code in.P}, {@code out.h},
+     * {@code HP.out.h}, {@code T1.W}. Carried as an {@code Expr.Var} whose name
+     * is the dotted path; {@link ComponentExpander} resolves it to a flat solver
+     * variable (port→bound stream, instance.output→namespaced) before the
+     * equation reaches the solver. No other stage need understand the dot.
+     */
+    @Override
+    public Expr visitMemberAtom(FreesParser.MemberAtomContext ctx) {
+        StringBuilder path = new StringBuilder();
+        for (var id : ctx.IDENT()) {
+            if (path.length() > 0) {
+                path.append('.');
+            }
+            path.append(id.getText());
+        }
+        return new Expr.Var(path.toString());
     }
 
     @Override
