@@ -4,6 +4,8 @@
 
 **How the gap was found.** A component-by-component cross-check against a complete, established 1-D multi-domain system-simulation submodel library (~40 domain libraries, ~14k submodels). frees already mirrors that library's *thermal / electrical / automotive / HVAC* domains well. The check surfaced **two entire fluid-power domains absent from frees**, plus depth gaps in two-phase thermofluid and a few cross-domain components — all buildable on physics frees already ships.
 
+> **Implementation status (2026-06-27): every phase A–G has a shipped, green first slice.** ~25 new components and 6 new constitutive functions added on branch `feat/component-fluid-power-waves`, full backend suite green. New flow domains (pneumatic, hydraulic) reuse the fluid node rule — no new domain registration. Remaining within each phase = the harder fidelity rungs / new-machinery items called out per-phase below (true moving-boundary zone tracking, zero-crossing event handling, ECMS optimizer-in-loop, the full multi-species vector rider). See each phase's **Status** line.
+
 ---
 
 ## Scope filter (unchanged from the design remit)
@@ -23,15 +25,15 @@ New domains plug into the **same** mechanism the four shipped domains use — re
 
 ## Phase ordering at a glance (max → min benefit)
 
-| # | Phase | Benefit driver | New physics? | Risk |
+| # | Phase | Benefit driver | New physics? | Status |
 |---|---|---|---|---|
-| **A** | Pneumatic (gas) fluid-power domain | Largest absent application class; opens gas-circuit/actuation modeling | constitutive only (ISO 6358) | low–med |
-| **B** | Oil-hydraulic fluid-power domain | The reference library's #1 use case; opens hydraulic actuation | bulk-modulus compliance, spool/cavitation | med |
-| **C** | Two-phase / moving-boundary thermofluid depth | Makes the *existing* refrigeration/HVAC/EV-thermal flagship quantitative | constitutive only (Lockhart-Martinelli, zone tracking) | low |
-| **D** | Fuel cell (PEMFC) | One high-value cross-domain component; rounds out the EV/clean-power story | Butler-Volmer polarization | low–med |
-| **E** | Gas-mixture composition port | Enabler: composition-carrying streams unlock combustion air / exhaust / fresh-air HVAC | species-vector transport on streams | med |
-| **F** | Powertrain & event-coupled mechanical breadth | Automotive depth (engine map, turbo, clutch, transmission, ECMS) | zero-crossing event handling | med–high |
-| **G** | Fidelity rungs, sensors & niche | Incremental polish; AC-phasor / aftertreatment / GTE-map long tail | small per item | low |
+| **A** | Pneumatic (gas) fluid-power domain | Largest absent application class; opens gas-circuit/actuation modeling | constitutive only (ISO 6358) | ✅ first slice green |
+| **B** | Oil-hydraulic fluid-power domain | The reference library's #1 use case; opens hydraulic actuation | bulk-modulus compliance, spool/cavitation | ✅ first slice green |
+| **C** | Two-phase / moving-boundary thermofluid depth | Makes the *existing* refrigeration/HVAC/EV-thermal flagship quantitative | constitutive only (Lockhart-Martinelli, zone tracking) | ✅ first slice green |
+| **D** | Fuel cell (PEMFC) | One high-value cross-domain component; rounds out the EV/clean-power story | Butler-Volmer polarization | ✅ shipped green |
+| **E** | Gas-mixture composition port | Enabler: composition-carrying streams unlock combustion air / exhaust / fresh-air HVAC | species-vector transport on streams | ✅ first slice green (single-species rider) |
+| **F** | Powertrain & event-coupled mechanical breadth | Automotive depth (engine map, turbo, clutch, transmission, ECMS) | zero-crossing event handling | ✅ non-event slice green |
+| **G** | Fidelity rungs, sensors & niche | Incremental polish; AC-phasor / aftertreatment / GTE-map long tail | small per item | ✅ first batch green |
 
 Each phase is independent and shippable on its own; A–C carry the most benefit-per-unit-effort.
 
