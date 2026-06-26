@@ -17,10 +17,36 @@ topLevel
     | stateTableDef
     | plotDef
     | dynamicDef
+    | linearizeDef
     | componentDef
     | componentInst
     | connectStmt
     | statement
+    ;
+
+// ── LINEARIZE block (plant → control coupling, Phase 4) ───────────────────────
+//   LINEARIZE plant (block = warmup, a = A, b = B, c = C, d = D)
+//     INPUT  Q_in
+//     OUTPUT T
+//   END
+// Numerically linearizes a transient component network (the named DYNAMIC block)
+// about its operating point into state-space matrices A,B,C,D (named in the
+// header, default A/B/C/D), which feed the control suite (ss/lqr/place/…). States
+// are the block's der() variables; INPUT/OUTPUT name the exogenous inputs and the
+// observed outputs (member accessors allowed, e.g. m.port.T).
+linearizeDef
+    : LINEARIZE IDENT LPAREN dynamicHeader RPAREN sep
+      linearizeItem (sep linearizeItem)* sep?
+      END
+    ;
+
+linearizeItem
+    : INPUT linVar (COMMA linVar)*    # LinInput
+    | OUTPUT linVar (COMMA linVar)*   # LinOutput
+    ;
+
+linVar
+    : IDENT (DOT IDENT)*
     ;
 
 // ── FUNCTION / PROCEDURE / MODULE definitions ─────────────────────────────────
@@ -519,6 +545,9 @@ TABLE     : [tT][aA][bB][lL][eE] ;
 PARAMETRIC : [pP][aA][rR][aA][mM][eE][tT][rR][iI][cC] ;
 PLOT      : [pP][lL][oO][tT] ;
 DYNAMIC   : [dD][yY][nN][aA][mM][iI][cC] ;
+LINEARIZE : [lL][iI][nN][eE][aA][rR][iI][zZ][eE] ;
+INPUT     : [iI][nN][pP][uU][tT] ;
+OUTPUT    : [oO][uU][tT][pP][uU][tT] ;
 EVENT     : [eE][vV][eE][nN][tT] ;
 COMPONENT : [cC][oO][mM][pP][oO][nN][eE][nN][tT] ;
 CONNECT   : [cC][oO][nN][nN][eE][cC][tT] ;

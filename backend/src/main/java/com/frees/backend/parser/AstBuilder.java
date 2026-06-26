@@ -35,7 +35,8 @@ public class AstBuilder extends FreesBaseVisitor<Expr> {
             List<com.frees.backend.ast.DynamicSystem> dynamicSystems,
             List<com.frees.backend.ast.ComponentDef> componentDefs,
             List<com.frees.backend.ast.ComponentInst> componentInsts,
-            List<com.frees.backend.ast.ConnectDecl> connects) {}
+            List<com.frees.backend.ast.ConnectDecl> connects,
+            List<com.frees.backend.ast.LinearizeSystem> linearizeSystems) {}
 
     public ProgramResult buildProgram(FreesParser.ProgramContext ctx) {
         List<Statement> statements = new ArrayList<>();
@@ -47,6 +48,7 @@ public class AstBuilder extends FreesBaseVisitor<Expr> {
         List<com.frees.backend.ast.ComponentDef> componentDefs = new ArrayList<>();
         List<com.frees.backend.ast.ComponentInst> componentInsts = new ArrayList<>();
         List<com.frees.backend.ast.ConnectDecl> connects = new ArrayList<>();
+        List<com.frees.backend.ast.LinearizeSystem> linearizeSystems = new ArrayList<>();
 
         if (ctx.topLevel() != null) {
             for (FreesParser.TopLevelContext tl : ctx.topLevel()) {
@@ -70,6 +72,8 @@ public class AstBuilder extends FreesBaseVisitor<Expr> {
                     plots.add(buildPlotDef(tl.plotDef()));
                 } else if (tl.dynamicDef() != null) {
                     dynamicSystems.add(buildDynamicDef(tl.dynamicDef()));
+                } else if (tl.linearizeDef() != null) {
+                    linearizeSystems.add(buildLinearizeDef(tl.linearizeDef()));
                 } else if (tl.componentDef() != null) {
                     componentDefs.add(buildComponentDef(tl.componentDef()));
                 } else if (tl.componentInst() != null) {
@@ -82,7 +86,51 @@ public class AstBuilder extends FreesBaseVisitor<Expr> {
             }
         }
         return new ProgramResult(statements, defs, parametricTables, plots, stateTables,
-                dynamicSystems, componentDefs, componentInsts, connects);
+                dynamicSystems, componentDefs, componentInsts, connects, linearizeSystems);
+    }
+
+    /**
+     * Builds a {@code LINEARIZE name(dynamic = blk, a = A, …) … END} block. The
+     * header names the target DYNAMIC block ({@code dynamic=}) and the output
+     * matrix variables ({@code a/b/c/d=}, defaulting to {@code A/B/C/D}); the
+     * INPUT/OUTPUT items list the exogenous inputs and observed outputs (dotted
+     * member names kept verbatim, lowercased — they are resolved to flat names by
+     * the solver against the component network).
+     */
+    private com.frees.backend.ast.LinearizeSystem buildLinearizeDef(FreesParser.LinearizeDefContext ctx) {
+        String name = ctx.IDENT().getText().toLowerCase();
+        java.util.Map<String, String> opts = new java.util.HashMap<>();
+        if (ctx.dynamicHeader() != null) {
+            for (FreesParser.DynamicOptContext opt : ctx.dynamicHeader().dynamicOpt()) {
+                String key = opt.IDENT().getText().toLowerCase();
+                opts.put(key, opt.dynamicOptVal().getText());
+            }
+        }
+        String dynamicName = opts.get("block");
+        if (dynamicName == null) {
+            throw new EquationParser.ParseException("LINEARIZE " + name
+                    + ": header needs 'block = <name>' naming the DYNAMIC component network to linearize.");
+        }
+        dynamicName = dynamicName.toLowerCase();
+        String aName = opts.getOrDefault("a", "A");
+        String bName = opts.getOrDefault("b", "B");
+        String cName = opts.getOrDefault("c", "C");
+        String dName = opts.getOrDefault("d", "D");
+        List<String> inputs = new ArrayList<>();
+        List<String> outputs = new ArrayList<>();
+        for (FreesParser.LinearizeItemContext item : ctx.linearizeItem()) {
+            if (item instanceof FreesParser.LinInputContext in) {
+                for (FreesParser.LinVarContext lv : in.linVar()) {
+                    inputs.add(lv.getText().toLowerCase());
+                }
+            } else if (item instanceof FreesParser.LinOutputContext out) {
+                for (FreesParser.LinVarContext lv : out.linVar()) {
+                    outputs.add(lv.getText().toLowerCase());
+                }
+            }
+        }
+        return new com.frees.backend.ast.LinearizeSystem(name, dynamicName,
+                aName, bName, cName, dName, inputs, outputs, ctx.getText());
     }
 
     /** Builds {@code connect(HP.out, LP.in, …)} into a {@link com.frees.backend.ast.ConnectDecl};
