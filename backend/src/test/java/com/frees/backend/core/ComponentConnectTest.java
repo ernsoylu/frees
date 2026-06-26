@@ -1,0 +1,154 @@
+package com.frees.backend.core;
+
+import com.frees.backend.parser.EquationParser;
+import org.junit.jupiter.api.Test;
+
+import java.util.Map;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+/**
+ * Phase 1.5 of the component layer: the {@code connect(...)} surface syntax and
+ * loop-closure handling. Components are instantiated with <em>free ports</em>
+ * (no positional streams) and wired explicitly; {@code connect} ties endpoints
+ * into a node — pressure and enthalpy equal, mass conserved — and a connection
+ * that closes a loop adds no redundant equation. Pure-algebra components keep
+ * these tests CoolProp-free.
+ */
+class ComponentConnectTest {
+
+    private final EquationSystemSolver solver = new EquationSystemSolver();
+    private final EquationParser parser = new EquationParser();
+
+    private static final String HEATER = """
+            COMPONENT Heater(in, out)
+              PARAM Q
+              out.mdot = in.mdot
+              out.P    = in.P
+              out.h    = in.h + Q / in.mdot
+            END
+            """;
+
+    @Test
+    void connectWiresFreePortInstancesInSeries() {
+        String src = HEATER + """
+                Heater H1(Q=5000)
+                Heater H2(Q=3000)
+                connect(H1.out, H2.in)
+
+                H1.in.P    = 100000
+                H1.in.mdot = 2
+                H1.in.h    = 10000
+                """;
+        Map<String, Double> v = solver.solve(src).variables();
+        // Mass and pressure pass through the connected node.
+        assertEquals(2.0, v.get("h2.in.mdot"), 1e-9);
+        assertEquals(2.0, v.get("h2.out.mdot"), 1e-9);
+        assertEquals(100000.0, v.get("h2.out.p"), 1e-6);
+        // Enthalpy accumulates across both heaters: 10000 + 5000/2 + 3000/2.
+        assertEquals(10000.0 + 2500.0 + 1500.0, v.get("h2.out.h"), 1e-6);
+    }
+
+    @Test
+    void connectBranchesMassAtAThreeWayNode() {
+        // A source feeds two draws; the 3-way connect conserves mass
+        // (out = in1 + in2) and equates P and h across the node.
+        String src = """
+                COMPONENT Source(out)
+                  PARAM mdot, P, h
+                  out.mdot = mdot
+                  out.P    = P
+                  out.h    = h
+                END
+                COMPONENT Draw(in)
+                  PARAM mdot
+                  in.mdot = mdot
+                END
+                COMPONENT Sink(in)
+                  drain = in.mdot
+                END
+                Source S(mdot=3, P=100000, h=5000)
+                Draw   D1(mdot=1)
+                Sink   D2()
+                connect(S.out, D1.in, D2.in)
+                """;
+        Map<String, Double> v = solver.solve(src).variables();
+        // Conservation determines the unpinned branch: 3 = 1 + D2.
+        assertEquals(2.0, v.get("d2.in.mdot"), 1e-9);
+        assertEquals(2.0, v.get("d2.drain"), 1e-9);
+        // Pressure and enthalpy are common across the node.
+        assertEquals(100000.0, v.get("d1.in.p"), 1e-6);
+        assertEquals(5000.0, v.get("d2.in.h"), 1e-6);
+    }
+
+    @Test
+    void connectClosesALoopWithoutOverDetermining() {
+        // A pump and a pipe form a closed ring (pump raises P, pipe drops it).
+        // The second connect closes the loop; without loop-closure handling the
+        // system is over-determined and rejected. With it, the cycle solves.
+        String src = """
+                COMPONENT Pump2(in, out)
+                  PARAM dP
+                  out.mdot = in.mdot
+                  out.P    = in.P + dP
+                  out.h    = in.h
+                END
+                COMPONENT Pipe2(in, out)
+                  PARAM dP
+                  out.mdot = in.mdot
+                  out.P    = in.P - dP
+                  out.h    = in.h
+                END
+                Pump2 P(dP=50000)
+                Pipe2 L(dP=50000)
+                connect(P.out, L.in)
+                connect(L.out, P.in)
+
+                P.in.P    = 100000
+                P.in.mdot = 5
+                P.in.h    = 1000
+                """;
+        Map<String, Double> v = solver.solve(src).variables();
+        // Mass conserved around the ring.
+        assertEquals(5.0, v.get("l.out.mdot"), 1e-9);
+        // Pump rise then pipe drop returns to the anchored inlet pressure.
+        assertEquals(150000.0, v.get("p.out.p"), 1e-6);
+        assertEquals(100000.0, v.get("l.out.p"), 1e-6);
+        assertEquals(1000.0, v.get("p.out.h"), 1e-6);
+    }
+
+    @Test
+    void connectAcceptsBareStreamNames() {
+        // connect can also tie bare stream names (shared-name endpoints).
+        String src = HEATER + """
+                Heater H1(s1, s2, Q=4000)
+                connect(s2, s3)
+                s1.P = 100000
+                s1.mdot = 4
+                s1.h = 0
+                s3.extra = 7
+                """;
+        Map<String, Double> v = solver.solve(src).variables();
+        assertEquals(4000.0 / 4.0, v.get("s3.h"), 1e-6);   // h carried onto s3
+        assertEquals(4.0, v.get("s3.mdot"), 1e-9);
+        assertEquals(7.0, v.get("s3.extra"), 1e-9);
+    }
+
+    @Test
+    void connectWithUndeterminableDirectionAtBranchIsRejected() {
+        // A 3-way node whose ports don't encode in/out cannot have its mass
+        // balance signed — a clear error, not a silent wrong equation.
+        String src = """
+                COMPONENT Node3(a, b, c)
+                  drain = a.mdot
+                END
+                Node3 N(a, b, c)
+                connect(N.a, N.b, N.c)
+                """;
+        EquationParser.ParseException ex = assertThrows(EquationParser.ParseException.class,
+                () -> parser.parseResult(src));
+        assertTrue(ex.getMessage().contains("inlet or an outlet"), ex.getMessage());
+    }
+}
