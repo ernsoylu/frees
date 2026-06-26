@@ -49,12 +49,18 @@ public final class ComponentLibrary {
             END
 
             COMPONENT Compressor(in, out)
-              PARAM eta, fluid$
+              PARAM eta, fluid$, model$ = isentropic
               s_in     = Entropy(fluid$, P=in.P, h=in.h)
               h_s      = Enthalpy(fluid$, P=out.P, s=s_in)
               out.mdot = in.mdot
               out.h    = in.h + (h_s - in.h) / eta
               W        = in.mdot * (out.h - in.h)
+              VARIANT isentropic
+              END
+              VARIANT volumetric REQUIRE eta_v, disp, rpm
+                rho_in  = Density(fluid$, P=in.P, h=in.h)
+                in.mdot = eta_v * disp * (rpm / 60) * rho_in
+              END
             END
 
             COMPONENT Boiler(in, out)
