@@ -193,12 +193,21 @@ public final class EquationParser {
         Map<String, ProcDef> defs = new HashMap<>(programResult.defs());
 
         Map<String, String> displayNames = new HashMap<>(builder.displayNames());
+
+        // Acausal COMPONENT layer: expand instances into flat scalar equations
+        // and rewrite dotted port/stream member references in the remaining
+        // top-level statements so they unify with the component bodies.
+        ComponentExpander components = new ComponentExpander(
+                programResult.componentDefs(), programResult.componentInsts(), displayNames);
+        List<Equation> componentEquations = components.expand();
+        statements = components.rewriteStatements(statements);
+
         Map<String, Double> constants = extractConstants(statements);
 
         // Counter for module instance namespacing
         AtomicInteger moduleCounter = new AtomicInteger(0);
 
-        List<Equation> equations = new ArrayList<>();
+        List<Equation> equations = new ArrayList<>(componentEquations);
         Set<String> symbolicVars = collectSymbolic(statements);
         flatten(statements, new HashMap<>(), constants, displayNames, equations, defs, moduleCounter, symbolicVars);
 
