@@ -452,7 +452,7 @@ Symbolic differentiation of property libraries (CoolProp = interpolated Helmholt
 | **3** | Transient mode (storage → `DYNAMIC`) | ✅ **complete** | storage routing (`der`/`init` → `DYNAMIC`) + display-name accessor + storage across all 4 domains (`ThermalMass`/`Inertia`/`Capacitor`/`Inductor`/`Accumulator`) + coupled `BatteryTransient` + steady/transient duality + stiff `ode23s` (§15.2.16/17). (Zero-crossing *event* handling — friction/clutch stick-slip — is attributed to Phase R / Phase 6, not the storage core.) |
 | **4** | Plant → control coupling | ✅ **core complete** | `LINEARIZE` block → numeric FD `(A,B,C,D)` from a component network → control suite (`CALL lqr`/`place`/`ss`) ✅; closed-loop via `DYNAMIC` (feedback component) ✅ (§15.2.18). Remaining polish: a dedicated signal-domain + PID/observer controller *library* (ad-hoc feedback components already work) |
 | **5** | Datasheet component wrappers | ⬜ **not started** | shape-preserving map pre-fit; compressor/pump/fan curves; valve `Cv`; `η_v` & efficiency maps |
-| **6** | Domain breadth & flagship system | ⬜ **not started** | full §16 catalog (battery, motors, ICE, HEV/EV, refrigerant multi-zone HX, psychrometrics); EV battery thermal-management flagship |
+| **6** | Domain breadth & flagship system | 🟡 **substantial** | **EV battery-thermal flagship done** (steady + transient); shipped breadth — battery R-int/1RC, DC motor, Stribeck friction, planetary gear, road-load, cross-domain transducers. Remaining breadth: motor/compressor **η-maps** (needs §8.6+TABLE), multi-zone HX, **psychrometric coil** (CoolProp HumidAir exists), clutch (needs events), ICE mean-value engine, ECMS, subsystem/hierarchy |
 
 *(The detailed per-domain component catalog that feeds Phases 2/3/5/6 is §16.)*
 
