@@ -146,6 +146,19 @@ public final class ComponentLibrary {
               hot_out.h  = hot_in.h  - Q / hot_in.mdot
               cold_out.h = cold_in.h + Q / cold_in.mdot
             END
+
+            COMPONENT Source(out)
+              PARAM fluid$, mdot, P, T
+              out.mdot = mdot
+              out.P    = P
+              out.h    = Enthalpy(fluid$, P=P, T=T)
+            END
+
+            COMPONENT Sink(in)
+              mdot = in.mdot
+              P    = in.P
+              h    = in.h
+            END
             """;
 
     private static final List<ComponentDef> BUILTINS = parse(SOURCE);

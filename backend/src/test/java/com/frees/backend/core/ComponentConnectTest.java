@@ -1,6 +1,7 @@
 package com.frees.backend.core;
 
 import com.frees.backend.parser.EquationParser;
+import com.frees.backend.props.CoolProp;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;
@@ -8,6 +9,7 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
  * Phase 1.5 of the component layer: the {@code connect(...)} surface syntax and
@@ -134,6 +136,33 @@ class ComponentConnectTest {
         assertEquals(4000.0 / 4.0, v.get("s3.h"), 1e-6);   // h carried onto s3
         assertEquals(4.0, v.get("s3.mdot"), 1e-9);
         assertEquals(7.0, v.get("s3.extra"), 1e-9);
+    }
+
+    @Test
+    void sourceAndSinkBoundariesBracketAnOpenChain() {
+        // Standard-library boundary components: Source fixes the entering state
+        // (mdot, P, h-from-(P,T)) and Sink reads the arriving stream into named
+        // readouts. A Source -> Boiler -> Sink chain wired by connect solves at
+        // zero DOF, all values evaluated forward (no property inversion).
+        assumeTrue(CoolProp.isAvailable(), "CoolProp not available");
+        String src = """
+                Source S(fluid$=Water, mdot=2, P=8000000, T=773.15)
+                Boiler B()
+                Sink   K()
+                connect(S.out, B.in)
+                connect(B.out, K.in)
+
+                B.Q = 1000000
+                """;
+        Map<String, Double> v = solver.solve(src).variables();
+        double hIn = v.get("s.out.h");
+        // The Sink reads the boiler outlet: mass and pressure pass through
+        // (isobaric), enthalpy rises by Q/mdot.
+        assertEquals(2.0, v.get("k.mdot"), 1e-9);
+        assertEquals(8000000.0, v.get("k.p"), 1e-3);
+        assertEquals(hIn + 1000000.0 / 2.0, v.get("k.h"), 1e-3);
+        // Source computed a physical superheated-steam enthalpy forward.
+        assertTrue(hIn > 3.0e6 && hIn < 3.8e6, "source enthalpy out of range: " + hIn);
     }
 
     @Test
