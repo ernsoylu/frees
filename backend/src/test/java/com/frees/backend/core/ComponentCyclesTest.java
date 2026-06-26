@@ -50,6 +50,60 @@ class ComponentCyclesTest {
             eta_th = (T1.W - P1.W) / B1.Q
             """;
 
+    /**
+     * Air-standard Brayton cycle from components, flowing real air properties
+     * (CoolProp) through compressor → combustor (Boiler) → turbine.
+     * r_p = 10, T1 = 300 K, T3 = 1400 K, eta_c = 0.82, eta_t = 0.85.
+     */
+    static final String BRAYTON_COMPONENTS = """
+            // Brayton Cycle — built from standard components
+            P1 = 100000 [Pa]
+            P2 = 1000000 [Pa]
+            T_in  = 300 [K]
+            T_fire = 1400 [K]
+
+            Compressor C1(s1, s2, eta=0.82, fluid$=Air)
+            Boiler     B1(s2, s3)
+            Turbine    T1(s3, s4, eta=0.85, fluid$=Air)
+
+            s1.P    = P1
+            s1.h    = Enthalpy(Air, T=T_in, P=P1)
+            s1.mdot = 1 [kg/s]
+            s2.P    = P2
+            s3.h    = Enthalpy(Air, T=T_fire, P=P2)
+            s4.P    = P1
+
+            eta_th = (T1.W - C1.W) / B1.Q
+            """;
+
+    /**
+     * Vapor-compression refrigeration (R134a) from components: an open chain
+     * evaporator-outlet → compressor → condenser → throttle. T_evap = -10 C,
+     * T_cond = 40 C, eta_comp = 0.80.
+     */
+    static final String REFRIGERATION_COMPONENTS = """
+            // Vapor-Compression Refrigeration — built from standard components
+            T_evap = 263.15 [K]
+            T_cond = 313.15 [K]
+
+            Compressor K1(s1, s2, eta=0.80, fluid$=R134a)
+            Condenser  C1(s2, s3)
+            Throttle   V1(s3, s4)
+
+            P_lo = P_sat(R134a, T=T_evap)
+            P_hi = P_sat(R134a, T=T_cond)
+
+            s1.P    = P_lo
+            s1.h    = Enthalpy(R134a, T=T_evap, x=1)   { saturated vapor leaving evaporator }
+            s1.mdot = 1 [kg/s]
+            s2.P    = P_hi
+            s3.h    = Enthalpy(R134a, P=P_hi, x=0)     { saturated liquid leaving condenser }
+            s4.P    = P_lo
+
+            q_L = s1.h - s4.h            { refrigeration effect }
+            COP = q_L / K1.W
+            """;
+
     @Test
     void rankineComponentsDeriveUnitsCleanly() {
         List<String> warnings = solver.checkUnits(RANKINE_COMPONENTS, Map.of());
@@ -73,5 +127,36 @@ class ComponentCyclesTest {
         // Boiler heat input and net work are positive and physically ordered.
         assertTrue(v.get("b1.q") > 0, "boiler duty positive");
         assertTrue(v.get("t1.w") > v.get("p1.w"), "turbine work exceeds pump work");
+    }
+
+    @Test
+    void braytonComponentsDeriveUnitsCleanly() {
+        List<String> warnings = solver.checkUnits(BRAYTON_COMPONENTS, Map.of());
+        assertTrue(warnings.isEmpty(), "expected zero unit warnings, got: " + warnings);
+    }
+
+    @Test
+    void braytonComponentsSolve() {
+        assumeTrue(CoolProp.isAvailable(), "CoolProp not available");
+        EquationSystemSolver.Result r = solver.solve(BRAYTON_COMPONENTS);
+        double eta = r.variables().get("eta_th");
+        assertTrue(eta > 0.20 && eta < 0.45, "Brayton thermal efficiency, got " + eta);
+        assertTrue(r.variables().get("t1.w") > r.variables().get("c1.w"),
+                "turbine work exceeds compressor work");
+    }
+
+    @Test
+    void refrigerationComponentsDeriveUnitsCleanly() {
+        List<String> warnings = solver.checkUnits(REFRIGERATION_COMPONENTS, Map.of());
+        assertTrue(warnings.isEmpty(), "expected zero unit warnings, got: " + warnings);
+    }
+
+    @Test
+    void refrigerationComponentsSolve() {
+        assumeTrue(CoolProp.isAvailable(), "CoolProp not available");
+        EquationSystemSolver.Result r = solver.solve(REFRIGERATION_COMPONENTS);
+        double cop = r.variables().get("COP");
+        assertTrue(cop > 2.0 && cop < 7.0, "VCR COP in a sane range, got " + cop);
+        assertTrue(r.variables().get("q_L") > 0, "refrigeration effect positive");
     }
 }
