@@ -382,6 +382,99 @@ public final class Evaluator {
                 yield p * Math.pow(t0 / t, k / (k - 1.0));
             }
 
+            // Ideal-gas compressible-flow relations, functions of (M, k) unless
+            // noted. Ratios are dimensionless; angles are in radians. See
+            // props/CompressibleFlow.java (cross-checked vs Cengel / gdtk / EES).
+            case "t0_t", "isen_t0_t" -> com.frees.backend.props.CompressibleFlow.t0OverT(
+                    arg(c, args, 0, values, defs), arg(c, args, 1, values, defs));
+            case "p0_p", "isen_p0_p" -> com.frees.backend.props.CompressibleFlow.p0OverP(
+                    arg(c, args, 0, values, defs), arg(c, args, 1, values, defs));
+            case "rho0_rho", "isen_rho0_rho" -> com.frees.backend.props.CompressibleFlow.rho0OverRho(
+                    arg(c, args, 0, values, defs), arg(c, args, 1, values, defs));
+            case "a_astar", "isen_a_astar" -> com.frees.backend.props.CompressibleFlow.aOverAstar(
+                    arg(c, args, 0, values, defs), arg(c, args, 1, values, defs));
+            case "mach_a_astar" -> com.frees.backend.props.CompressibleFlow.machFromAOverAstar(
+                    arg(c, args, 0, values, defs), arg(c, args, 1, values, defs), evalString(args.get(2)));
+            // Normal shock (state 2 downstream of upstream M1).
+            case "m2_shock", "mach_shock" -> com.frees.backend.props.CompressibleFlow.machBehindShock(
+                    arg(c, args, 0, values, defs), arg(c, args, 1, values, defs));
+            case "p2_p1_shock" -> com.frees.backend.props.CompressibleFlow.shockPressureRatio(
+                    arg(c, args, 0, values, defs), arg(c, args, 1, values, defs));
+            case "t2_t1_shock" -> com.frees.backend.props.CompressibleFlow.shockTemperatureRatio(
+                    arg(c, args, 0, values, defs), arg(c, args, 1, values, defs));
+            case "rho2_rho1_shock" -> com.frees.backend.props.CompressibleFlow.shockDensityRatio(
+                    arg(c, args, 0, values, defs), arg(c, args, 1, values, defs));
+            case "p02_p01_shock" -> com.frees.backend.props.CompressibleFlow.shockStagnationPressureRatio(
+                    arg(c, args, 0, values, defs), arg(c, args, 1, values, defs));
+            // Rayleigh flow (heat addition, sonic-reference *).
+            case "rayleigh_t0_t0star" -> com.frees.backend.props.CompressibleFlow.rayleighT0OverT0star(
+                    arg(c, args, 0, values, defs), arg(c, args, 1, values, defs));
+            case "rayleigh_t_tstar" -> com.frees.backend.props.CompressibleFlow.rayleighTOverTstar(
+                    arg(c, args, 0, values, defs), arg(c, args, 1, values, defs));
+            case "rayleigh_p_pstar" -> com.frees.backend.props.CompressibleFlow.rayleighPOverPstar(
+                    arg(c, args, 0, values, defs), arg(c, args, 1, values, defs));
+            case "rayleigh_p0_p0star" -> com.frees.backend.props.CompressibleFlow.rayleighP0OverP0star(
+                    arg(c, args, 0, values, defs), arg(c, args, 1, values, defs));
+            // Fanno flow (friction, sonic-reference *).
+            case "fanno_t_tstar" -> com.frees.backend.props.CompressibleFlow.fannoTOverTstar(
+                    arg(c, args, 0, values, defs), arg(c, args, 1, values, defs));
+            case "fanno_p_pstar" -> com.frees.backend.props.CompressibleFlow.fannoPOverPstar(
+                    arg(c, args, 0, values, defs), arg(c, args, 1, values, defs));
+            case "fanno_p0_p0star" -> com.frees.backend.props.CompressibleFlow.fannoP0OverP0star(
+                    arg(c, args, 0, values, defs), arg(c, args, 1, values, defs));
+            case "fanno_fld" -> com.frees.backend.props.CompressibleFlow.fanno4fLmaxOverD(
+                    arg(c, args, 0, values, defs), arg(c, args, 1, values, defs));
+            // Prandtl-Meyer expansion (angles in radians).
+            case "prandtlmeyer", "prandtl_meyer" -> com.frees.backend.props.CompressibleFlow.prandtlMeyer(
+                    arg(c, args, 0, values, defs), arg(c, args, 1, values, defs));
+            case "mach_prandtlmeyer" -> com.frees.backend.props.CompressibleFlow.machFromPrandtlMeyer(
+                    arg(c, args, 0, values, defs), arg(c, args, 1, values, defs));
+            case "machangle" -> com.frees.backend.props.CompressibleFlow.machAngle(
+                    arg(c, args, 0, values, defs));
+            // Oblique shock theta-beta-M (angles in radians).
+            case "theta_oblique" -> com.frees.backend.props.CompressibleFlow.thetaOblique(
+                    arg(c, args, 0, values, defs), arg(c, args, 1, values, defs), arg(c, args, 2, values, defs));
+            case "beta_oblique" -> com.frees.backend.props.CompressibleFlow.betaOblique(
+                    arg(c, args, 0, values, defs), arg(c, args, 1, values, defs),
+                    arg(c, args, 2, values, defs), evalString(args.get(3)));
+
+            // Heat-exchanger effectiveness-NTU, LMTD and fin efficiency. The
+            // arrangement is the leading string argument. See props/HeatExchanger.
+            case "hx_effectiveness", "hx_epsilon" -> com.frees.backend.props.HeatExchanger.effectiveness(
+                    com.frees.backend.props.HeatExchanger.arrangement(evalString(args.get(0))),
+                    arg(c, args, 1, values, defs), arg(c, args, 2, values, defs));
+            case "hx_ntu" -> com.frees.backend.props.HeatExchanger.ntu(
+                    com.frees.backend.props.HeatExchanger.arrangement(evalString(args.get(0))),
+                    arg(c, args, 1, values, defs), arg(c, args, 2, values, defs));
+            case "lmtd" -> com.frees.backend.props.HeatExchanger.lmtd(
+                    arg(c, args, 0, values, defs), arg(c, args, 1, values, defs));
+            case "fin_efficiency" -> com.frees.backend.props.HeatExchanger.finEfficiency(
+                    arg(c, args, 0, values, defs));
+
+            // Cubic equation-of-state backend (SRK/PR), independent of CoolProp.
+            // Signature: eos_*(fluid$, model$, T, P, phase$); pressure takes
+            // (fluid$, model$, T, v) and psat takes (fluid$, model$, T).
+            case "eos_z" -> com.frees.backend.props.CubicEos.z(
+                    evalString(args.get(0)), evalString(args.get(1)),
+                    arg(c, args, 2, values, defs), arg(c, args, 3, values, defs), evalString(args.get(4)));
+            case "eos_volume" -> com.frees.backend.props.CubicEos.volume(
+                    evalString(args.get(0)), evalString(args.get(1)),
+                    arg(c, args, 2, values, defs), arg(c, args, 3, values, defs), evalString(args.get(4)));
+            case "eos_density" -> com.frees.backend.props.CubicEos.density(
+                    evalString(args.get(0)), evalString(args.get(1)),
+                    arg(c, args, 2, values, defs), arg(c, args, 3, values, defs), evalString(args.get(4)));
+            case "eos_enthalpy" -> com.frees.backend.props.CubicEos.enthalpy(
+                    evalString(args.get(0)), evalString(args.get(1)),
+                    arg(c, args, 2, values, defs), arg(c, args, 3, values, defs), evalString(args.get(4)));
+            case "eos_entropy" -> com.frees.backend.props.CubicEos.entropy(
+                    evalString(args.get(0)), evalString(args.get(1)),
+                    arg(c, args, 2, values, defs), arg(c, args, 3, values, defs), evalString(args.get(4)));
+            case "eos_pressure" -> com.frees.backend.props.CubicEos.pressure(
+                    evalString(args.get(0)), evalString(args.get(1)),
+                    arg(c, args, 2, values, defs), arg(c, args, 3, values, defs));
+            case "eos_psat" -> com.frees.backend.props.CubicEos.saturationPressure(
+                    evalString(args.get(0)), evalString(args.get(1)), arg(c, args, 2, values, defs));
+
             // Elementary rounding & integer functions
             case "round" -> {
                 double val = arg(c, args, 0, values, defs);
