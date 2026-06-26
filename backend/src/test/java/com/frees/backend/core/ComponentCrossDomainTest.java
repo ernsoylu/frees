@@ -49,4 +49,35 @@ class ComponentCrossDomainTest {
         assertEquals(301.0, v.get("c.a.t"), 1e-9);
         assertEquals(300.0, v.get("c.b.t"), 1e-9);
     }
+
+    @Test
+    void evPackSelfHeatingReachesSteadyTemperatureAboveCoolant() {
+        // The EV battery-thermal flagship, steady-state slice: a 400 V pack with
+        // 0.1 Ω internal resistance drives a motor/inverter electrical load; its
+        // ohmic self-heat (I²R0) crosses to a cold plate and out to coolant.
+        // Electrical + thermal close together in one solve — the headline
+        // multi-domain use case.
+        String src = """
+                BatteryThermal B(Voc=400, R0=0.1)
+                Resistor       MOT(R=3.9)
+                Ground         G()
+                Conduction     PLATE(k=10, area=1, L=0.1)
+                ThermalSource  COOL(T=298)
+                connect(B.p, MOT.a)
+                connect(B.n, MOT.b, G.port)
+                connect(B.heat, PLATE.a)
+                connect(PLATE.b, COOL.port)
+                """;
+        Map<String, Double> v = solver.solve(src).variables();
+        // Electrical: I = Voc/(R0+R_load) = 400/4 = 100 A; terminal V = 400−I·R0.
+        assertEquals(100.0, v.get("mot.a.i"), 1e-9);
+        assertEquals(390.0, v.get("b.p.v"), 1e-9);          // terminal voltage
+        assertEquals(39000.0, v.get("b.w"), 1e-6);          // power delivered to the load
+        // Self-heating I²R0 = 1000 W crosses into the cooling path.
+        assertEquals(1000.0, v.get("b.q"), 1e-6);
+        assertEquals(-1000.0, v.get("b.heat.qdot"), 1e-6);
+        assertEquals(1000.0, v.get("plate.q"), 1e-6);
+        // Pack temperature settles ΔT = Q/(kA/L) = 1000/100 = 10 K above coolant.
+        assertEquals(308.0, v.get("plate.a.t"), 1e-9);
+    }
 }

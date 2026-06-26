@@ -261,6 +261,15 @@ public final class ComponentLibrary {
               Q         = (p.V - n.V) * p.I
               heat.Qdot = -Q
             END
+
+            COMPONENT BatteryThermal(p, n, heat)
+              PARAM Voc, R0
+              p.V - n.V = Voc + R0 * p.I
+              p.I + n.I = 0
+              Q         = R0 * p.I^2
+              heat.Qdot = -Q
+              W         = (p.V - n.V) * (0 - p.I)
+            END
             """;
 
     private static final List<ComponentDef> BUILTINS = parse(SOURCE);
