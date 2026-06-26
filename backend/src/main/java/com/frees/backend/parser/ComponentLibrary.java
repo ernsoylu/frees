@@ -489,6 +489,28 @@ public final class ComponentLibrary {
               p.I + n.I = 0
             END
 
+            COMPONENT GasSource(out)
+              PARAM y, mdot, P, h0
+              out.y    = y
+              out.mdot = mdot
+              out.P    = P
+              out.h    = h0
+            END
+
+            COMPONENT GasPipe(in, out)
+              out.mdot = in.mdot
+              out.P    = in.P
+              out.h    = in.h
+              out.y    = in.y
+            END
+
+            COMPONENT GasMixer(in1, in2, out)
+              out.P    = in1.P
+              out.mdot = in1.mdot + in2.mdot
+              out.mdot * out.h = in1.mdot * in1.h + in2.mdot * in2.h
+              out.mdot * out.y = in1.mdot * in1.y + in2.mdot * in2.y
+            END
+
             COMPONENT Battery2RC(p, n)
               PARAM Voc, R0, R1, C1, R2, C2, Vrc1_0, Vrc2_0
               p.V - n.V  = Voc + R0 * p.I - Vrc1 - Vrc2
