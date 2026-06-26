@@ -159,6 +159,42 @@ class ComponentTransientTest {
     }
 
     @Test
+    void batteryRcSteadyShowsCombinedDcResistance() {
+        // 1RC Thévenin battery, no DYNAMIC block → steady operating point: the RC
+        // branch contributes its R1 at DC, so terminal V = Voc − (R0+R1)·I.
+        String src = """
+                BatteryRC B(Voc=48, R0=0.1, R1=0.2, C1=1000, Vrc0=0)
+                Resistor  RL(R=4.7)
+                Ground    G()
+                connect(B.p, RL.a)
+                connect(B.n, RL.b, G.port)
+                """;
+        Map<String, Double> v = solver.solve(src).variables();
+        double i = 48.0 / (0.1 + 0.2 + 4.7);             // = 9.6 A
+        assertEquals(i, v.get("rl.a.i"), 1e-6);
+        assertEquals(48.0 - 0.3 * i, v.get("b.p.v"), 1e-6);   // 45.12 V
+    }
+
+    @Test
+    void batteryRcTransientRelaxesItsPolarizationVoltage() {
+        // From Vrc(0)=0 the RC branch charges to its steady I·R1 with τ=R1·C1=200 s.
+        String src = """
+                BatteryRC B(Voc=48, R0=0.1, R1=0.2, C1=1000, Vrc0=0)
+                Resistor  RL(R=4.7)
+                Ground    G()
+                connect(B.p, RL.a)
+                connect(B.n, RL.b, G.port)
+                DYNAMIC drive(method = ode45, time = 0 .. 2000, points = 100)
+                END
+                Vrc_final = FinalValue('b.vrc')
+                Vrc_start = MinValue('b.vrc')
+                """;
+        Map<String, Double> v = solver.solve(src).variables();
+        assertEquals(0.0, v.get("vrc_start"), 1e-6);          // starts unpolarized
+        assertEquals(9.6 * 0.2, v.get("vrc_final"), 5e-3);    // → I·R1 = 1.92 V
+    }
+
+    @Test
     void sameStorageModelSolvesSteadyWithNoDynamicBlock() {
         // Steady/transient duality: the very ThermalMass network above, with no
         // DYNAMIC block, solves its steady operating point (der(T)=0 ⇒ the mass

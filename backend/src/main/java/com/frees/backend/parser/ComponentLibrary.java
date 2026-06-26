@@ -332,6 +332,21 @@ public final class ComponentLibrary {
               a.tau = (Fc + (Fs - Fc) * exp(-(dw / vs)^2)) * tanh(dw / eps) + bv * dw
               a.tau + b.tau = 0
             END
+
+            COMPONENT Planetary(sun, ring, carrier)
+              PARAM g
+              sun.w + g * ring.w = (1 + g) * carrier.w
+              ring.tau           = g * sun.tau
+              sun.tau + ring.tau + carrier.tau = 0
+            END
+
+            COMPONENT BatteryRC(p, n)
+              PARAM Voc, R0, R1, C1, Vrc0
+              p.V - n.V = Voc + R0 * p.I - Vrc
+              der(Vrc)  = -p.I / C1 - Vrc / (R1 * C1)
+              init(Vrc) = Vrc0
+              p.I + n.I = 0
+            END
             """;
 
     private static final List<ComponentDef> BUILTINS = parse(SOURCE);

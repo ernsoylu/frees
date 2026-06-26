@@ -61,4 +61,27 @@ class ComponentMechanicalTest {
         assertEquals(v.get("g.in.tau") * v.get("g.in.w"),
                      v.get("d.a.tau") * v.get("d.a.w"), 1e-6);
     }
+
+    @Test
+    void planetaryGearWithHeldRingReducesSpeedAndAmplifiesTorque() {
+        // Sun driven, ring held, carrier loaded: a (1+g):1 = 3:1 reduction. Sun
+        // torque 10 → carrier torque 30; sun speed 90 → carrier speed 30.
+        String src = """
+                TorqueSource     TS(T=10)
+                Planetary        PG(g=2)
+                RotationalDamper LOAD(c=1)
+                MechGround       GR()
+                MechGround       GS()
+                MechGround       GL()
+                connect(TS.a, PG.sun)
+                connect(TS.b, GS.port)
+                connect(PG.ring, GR.port)
+                connect(PG.carrier, LOAD.a)
+                connect(LOAD.b, GL.port)
+                """;
+        Map<String, Double> v = solver.solve(src).variables();
+        assertEquals(90.0, v.get("pg.sun.w"), 1e-6);     // sun input speed
+        assertEquals(30.0, v.get("load.a.w"), 1e-6);     // carrier output = sun/(1+g)
+        assertEquals(30.0, v.get("load.a.tau"), 1e-6);   // carrier torque = (1+g)·sun
+    }
 }
