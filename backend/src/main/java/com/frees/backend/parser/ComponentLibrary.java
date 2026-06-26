@@ -276,6 +276,48 @@ public final class ComponentLibrary {
               der(port.T)  = port.Qdot / C
               init(port.T) = T0
             END
+
+            COMPONENT Inertia(port)
+              PARAM J, w0
+              der(port.w)  = port.tau / J
+              init(port.w) = w0
+            END
+
+            COMPONENT Capacitor(p, n)
+              PARAM C, V0
+              Vc       = p.V - n.V
+              der(Vc)  = p.I / C
+              init(Vc) = V0
+              p.I + n.I = 0
+            END
+
+            COMPONENT Inductor(p, n)
+              PARAM L, I0
+              der(IL)  = (p.V - n.V) / L
+              init(IL) = I0
+              p.I = IL
+              p.I + n.I = 0
+            END
+
+            COMPONENT BatteryTransient(p, n, heat)
+              PARAM Voc, R0, Q0, C_th, SOC0, T0
+              p.V - n.V = Voc + R0 * p.I
+              p.I + n.I = 0
+              Qgen      = R0 * p.I^2
+              heat.T    = T
+              der(T)    = (Qgen + heat.Qdot) / C_th
+              init(T)   = T0
+              der(SOC)  = p.I / (3600 * Q0)
+              init(SOC) = SOC0
+            END
+
+            COMPONENT Accumulator(in, out)
+              PARAM C, P0
+              out.P       = in.P
+              out.h       = in.h
+              der(in.P)   = (in.mdot - out.mdot) / C
+              init(in.P)  = P0
+            END
             """;
 
     private static final List<ComponentDef> BUILTINS = parse(SOURCE);
