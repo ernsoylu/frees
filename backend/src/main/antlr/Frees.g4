@@ -231,6 +231,8 @@ componentDef
 componentItem
     : PARAM componentParam (COMMA componentParam)*   # CompParam
     | componentVariant                               # CompVariant
+    | componentInst                                  # CompSubInst
+    | connectStmt                                    # CompSubConnect
     | equation                                       # CompEq
     ;
 

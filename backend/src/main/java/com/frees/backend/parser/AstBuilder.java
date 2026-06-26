@@ -165,6 +165,8 @@ public class AstBuilder extends FreesBaseVisitor<Expr> {
         List<com.frees.backend.ast.ComponentDef.Param> params = new ArrayList<>();
         List<com.frees.backend.ast.Equation> body = new ArrayList<>();
         List<com.frees.backend.ast.ComponentDef.Variant> variants = new ArrayList<>();
+        List<com.frees.backend.ast.ComponentInst> subInstances = new ArrayList<>();
+        List<com.frees.backend.ast.ConnectDecl> subConnects = new ArrayList<>();
         for (FreesParser.ComponentItemContext item : ctx.componentItem()) {
             if (item instanceof FreesParser.CompParamContext cp) {
                 for (FreesParser.ComponentParamContext pc : cp.componentParam()) {
@@ -175,6 +177,10 @@ public class AstBuilder extends FreesBaseVisitor<Expr> {
                 }
             } else if (item instanceof FreesParser.CompVariantContext cv) {
                 variants.add(buildComponentVariant(cv.componentVariant()));
+            } else if (item instanceof FreesParser.CompSubInstContext si) {
+                subInstances.add(buildComponentInst(si.componentInst()));
+            } else if (item instanceof FreesParser.CompSubConnectContext sc) {
+                subConnects.add(buildConnect(sc.connectStmt()));
             } else if (item instanceof FreesParser.CompEqContext ce) {
                 FreesParser.EquationContext eq = ce.equation();
                 body.add(new com.frees.backend.ast.Equation(
@@ -196,7 +202,8 @@ public class AstBuilder extends FreesBaseVisitor<Expr> {
                 }
             }
         }
-        return new com.frees.backend.ast.ComponentDef(name, ports, params, body, variants);
+        return new com.frees.backend.ast.ComponentDef(name, ports, params, body, variants,
+                subInstances, subConnects);
     }
 
     /**

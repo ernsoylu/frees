@@ -19,8 +19,14 @@ import java.util.List;
  */
 public record ComponentDef(String name, List<String> ports,
                            List<Param> params, List<Equation> body,
-                           List<Variant> variants)
+                           List<Variant> variants,
+                           List<ComponentInst> subInstances, List<ConnectDecl> subConnects)
         implements java.io.Serializable {
+
+    /** Whether this component is a hierarchical subsystem (built from sub-instances). */
+    public boolean isHierarchical() {
+        return subInstances != null && !subInstances.isEmpty();
+    }
 
     /**
      * A component parameter: its name (a trailing {@code $} marks a string
