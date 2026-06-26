@@ -656,6 +656,10 @@ public final class UnitChecker {
             // Two-phase flow: the Martinelli parameter and its multiplier are
             // both dimensionless (quality / property-ratio arguments unpoliced).
             case "lm_phi2", "lm_martinelli_tt" -> Dim.of(Quantity.dimensionless(1.0));
+            // ISA standard atmosphere: SI property units (altitude argument unpoliced).
+            case "isa_t" -> eosDim("K");
+            case "isa_p" -> eosDim("Pa");
+            case "isa_rho" -> eosDim("kg/m^3");
             // LMTD returns a temperature difference, inheriting the units of its
             // terminal-difference arguments (which the checker does not police).
             case "lmtd" -> dimOf(args.get(0));

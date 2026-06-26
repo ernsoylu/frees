@@ -150,7 +150,9 @@ Each phase is independent and shippable on its own; A–C carry the most benefit
 
 ---
 
-## Phase G — Fidelity rungs, sensors & niche  🟡 *minimum benefit / long tail*
+## Phase G — Fidelity rungs, sensors & niche  🟡 **first batch shipped & green**
+
+**Status (2026-06-27).** Shipped the cheap, clearly-in-scope batch: ISA 1976 standard-atmosphere functions (`props/Atmosphere`: `isa_T`/`isa_P`/`isa_rho`, troposphere + lower stratosphere, wired across the 3-site pattern), `ThermalSensor` / `FlowSensor` (PROBE-style measurement drawing no power), `Battery2RC` (2RC Thévenin extending `BatteryRC`), and `CurrentSource` (the missing electrical primitive). Validated by `ComponentNicheTest` (5 tests). **Remaining (build opportunistically / deferred):** contact-resistance & laminar-transition `model$` rungs; diode/switch **events**; motor & inverter η-maps (datasheet-`TABLE`); AC-phasor electrical (in-scope subset of the excluded switching domain); aftertreatment & GTE component maps (both need Phase E gas-mixture composition).
 
 Small, mostly one-to-three-equation additions; incremental polish and niche coverage. Build opportunistically.
 

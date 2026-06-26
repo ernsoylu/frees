@@ -127,6 +127,11 @@ public class FunctionRegistry {
             new FunctionInfo("lm_phi2", "lm_phi2(X, C)", "Chisholm two-phase multiplier 1+C/X+1/X^2 on the liquid-alone drop", "Two-Phase Flow"),
             new FunctionInfo("lm_martinelli_tt", "lm_martinelli_tt(x, rho_l, rho_g, mu_l, mu_g)", "Turbulent-turbulent Martinelli parameter X_tt", "Two-Phase Flow"),
 
+            // Standard atmosphere (ISA 1976 — Phase G)
+            new FunctionInfo("isa_t", "isa_T(alt)", "ISA 1976 temperature [K] at geopotential altitude [m]", "Atmosphere"),
+            new FunctionInfo("isa_p", "isa_P(alt)", "ISA 1976 pressure [Pa] at geopotential altitude [m]", "Atmosphere"),
+            new FunctionInfo("isa_rho", "isa_rho(alt)", "ISA 1976 density [kg/m^3] at geopotential altitude [m]", "Atmosphere"),
+
             // Cubic-EOS property backend (SRK/PR; CoolProp-independent)
             new FunctionInfo("eos_z", "eos_z(fluid$, model$, T, P, phase$)", "Compressibility factor Z (SRK/PR)", "Properties (EOS)"),
             new FunctionInfo("eos_volume", "eos_volume(fluid$, model$, T, P, phase$)", "Specific volume [m^3/kg] (SRK/PR)", "Properties (EOS)"),
