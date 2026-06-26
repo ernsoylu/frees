@@ -318,6 +318,13 @@ public final class ComponentLibrary {
               der(in.P)   = (in.mdot - out.mdot) / C
               init(in.P)  = P0
             END
+
+            COMPONENT DCMotor(p, n, shaft)
+              PARAM Kt, Ke, R
+              p.V - n.V  = R * p.I + Ke * shaft.w
+              p.I + n.I  = 0
+              shaft.tau  = -Kt * p.I
+            END
             """;
 
     private static final List<ComponentDef> BUILTINS = parse(SOURCE);
