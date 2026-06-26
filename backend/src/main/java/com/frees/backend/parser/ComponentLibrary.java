@@ -516,6 +516,55 @@ public final class ComponentLibrary {
               rod.f   = -(in.P - Patm) * area
               in.mdot = rho * area * rod.vel
             END
+
+            COMPONENT HydraulicSupply(out)
+              PARAM P
+              out.P = P
+              out.h = 0
+            END
+
+            COMPONENT HydraulicTank(port)
+              PARAM P
+              port.P = P
+            END
+
+            COMPONENT HydraulicOrifice(in, out)
+              PARAM CdA, rho
+              out.mdot = in.mdot
+              out.h    = in.h
+              in.mdot * abs(in.mdot) = CdA^2 * 2 * rho * (in.P - out.P)
+            END
+
+            COMPONENT HydraulicValve(in, out)
+              PARAM CdA_max, rho, u
+              out.mdot = in.mdot
+              out.h    = in.h
+              in.mdot * abs(in.mdot) = (u * CdA_max)^2 * 2 * rho * (in.P - out.P)
+            END
+
+            COMPONENT ReliefValve(in, out)
+              PARAM Pcrack, K, eps
+              out.mdot = in.mdot
+              out.h    = in.h
+              open     = 0.5 * (1 + tanh((in.P - Pcrack) / eps))
+              in.mdot  = K * open * (in.P - out.P)
+            END
+
+            COMPONENT HydraulicCylinder(in, rod)
+              PARAM rho, beta, V0, area, Patm, P0
+              rod.f      = -(in.P - Patm) * area
+              der(in.P)  = (beta / V0) * (in.mdot / rho - area * rod.vel)
+              init(in.P) = P0
+            END
+
+            COMPONENT HydraulicPump(in, out, shaft)
+              PARAM disp, rho, eta_v, eta_m
+              n_rev     = shaft.w / (2 * pi#)
+              out.mdot  = rho * disp * n_rev * eta_v
+              in.mdot   = out.mdot
+              out.h     = in.h
+              shaft.tau = -(disp * (out.P - in.P) / (2 * pi#)) / eta_m
+            END
             """;
 
     private static final List<ComponentDef> BUILTINS = parse(SOURCE);
