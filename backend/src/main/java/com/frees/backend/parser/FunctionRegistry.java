@@ -120,6 +120,9 @@ public class FunctionRegistry {
             new FunctionInfo("reynolds", "reynolds(rho, V, D, mu)", "Reynolds number rho*V*D/mu", "Flow Networks"),
             new FunctionInfo("minor_loss", "minor_loss(K, rho, V)", "Minor (fitting) pressure loss K*0.5*rho*V^2 [Pa]", "Flow Networks"),
 
+            // Pneumatics (compressible-gas power — Phase A)
+            new FunctionInfo("iso6358", "iso6358(C, b, Pup, Tup, Pdown)", "ISO 6358 pneumatic mass flow [kg/s] (sonic conductance C, critical ratio b)", "Pneumatics"),
+
             // Cubic-EOS property backend (SRK/PR; CoolProp-independent)
             new FunctionInfo("eos_z", "eos_z(fluid$, model$, T, P, phase$)", "Compressibility factor Z (SRK/PR)", "Properties (EOS)"),
             new FunctionInfo("eos_volume", "eos_volume(fluid$, model$, T, P, phase$)", "Specific volume [m^3/kg] (SRK/PR)", "Properties (EOS)"),
