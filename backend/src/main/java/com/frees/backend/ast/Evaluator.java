@@ -475,6 +475,28 @@ public final class Evaluator {
             case "eos_psat" -> com.frees.backend.props.CubicEos.saturationPressure(
                     evalString(args.get(0)), evalString(args.get(1)), arg(c, args, 2, values, defs));
 
+            // Combustion thermochemistry (NASA-7 / IdealGas). Fuel formula is a
+            // string; phi is the fuel/air equivalence ratio. See Thermochemistry.
+            case "adiabaticflametemp", "adiabaticflametemperature", "flametemp" ->
+                    com.frees.backend.props.Thermochemistry.adiabaticFlameTemp(
+                            evalString(args.get(0)), arg(c, args, 1, values, defs), arg(c, args, 2, values, defs));
+            // Ideal-gas mixture properties from a 'species:amount, ...' string.
+            case "mix_mw", "mix_molarmass" -> com.frees.backend.props.Thermochemistry.mixtureMolarMass(
+                    evalString(args.get(0)));
+            case "mix_cp" -> com.frees.backend.props.Thermochemistry.mixtureCp(
+                    evalString(args.get(0)), arg(c, args, 1, values, defs));
+            case "mix_enthalpy" -> com.frees.backend.props.Thermochemistry.mixtureEnthalpy(
+                    evalString(args.get(0)), arg(c, args, 1, values, defs));
+            case "mix_entropy" -> com.frees.backend.props.Thermochemistry.mixtureEntropy(
+                    evalString(args.get(0)), arg(c, args, 1, values, defs), arg(c, args, 2, values, defs));
+            // Wiebe heat-release (engine combustion); angles are unit-agnostic.
+            case "wiebe" -> com.frees.backend.props.Engine.wiebe(
+                    arg(c, args, 0, values, defs), arg(c, args, 1, values, defs),
+                    arg(c, args, 2, values, defs), arg(c, args, 3, values, defs), arg(c, args, 4, values, defs));
+            case "wiebe_rate" -> com.frees.backend.props.Engine.wiebeRate(
+                    arg(c, args, 0, values, defs), arg(c, args, 1, values, defs),
+                    arg(c, args, 2, values, defs), arg(c, args, 3, values, defs), arg(c, args, 4, values, defs));
+
             // Elementary rounding & integer functions
             case "round" -> {
                 double val = arg(c, args, 0, values, defs);
