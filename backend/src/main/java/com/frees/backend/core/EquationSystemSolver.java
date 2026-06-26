@@ -504,6 +504,7 @@ public class EquationSystemSolver {
                                                    long deadlineNanos) {
         TreeSet<String> allVars = collectVariables(equations);
         Map<String, VariableSpec> expandedSpecs = new HashMap<>(expandSpecs(allVars, specs, settings.complexMode()));
+        seedPropertyArgumentGuesses(equations, expandedSpecs);
         checkAndAdjustGuesses(equations, defs, expandedSpecs, null);
         Map<String, Double> values = new HashMap<>();
         for (String name : allVars) {
@@ -544,6 +545,91 @@ public class EquationSystemSolver {
         return spec != null ? spec.guess() : DEFAULT_GUESS;
     }
 
+    /**
+     * Domain-aware nominal guesses for CoolProp property-call arguments, keyed by
+     * the encoded input indicator ({@code prop$enthalpy$water$p$h} → args carry
+     * indicators {@code p}, {@code h}). A property argument left at the default
+     * guess 1.0 means 1 Pa / 1 J/kg / 1 K — below every fluid's valid table
+     * range — so the very first residual is NaN and the solve never starts.
+     */
+    private static final Map<String, Double> PROP_ARG_NOMINAL = Map.of(
+            "p", 1.0e5,    // pressure ~1 bar
+            "t", 300.0,    // temperature ~ambient
+            "h", 1.0e5,    // enthalpy — inside the liquid range of most fluids
+            "s", 1.0e3,    // entropy
+            "u", 1.0e5,    // internal energy
+            "d", 1.0,      // density
+            "x", 0.5,      // quality (two-phase)
+            "q", 0.5,      // quality (CoolProp 'Q')
+            "v", 1.0e-3);  // specific volume
+
+    /**
+     * Seeds an initial guess for any unknown that appears as a bare argument of a
+     * CoolProp property call and still sits at the default guess 1.0 (todo §8.5).
+     * This puts an implicit-property base point inside the table's valid box so
+     * the first residual evaluates, which is what monotonic inversions
+     * (supercritical/single-phase Temperature(P,h)=T, Density(T,P)=ρ, …) need to
+     * converge. User/GUI guesses always win — only an untouched DEFAULT_GUESS is
+     * replaced. (Two-phase dome-crossing inversions, where dT/dh≈0, still need
+     * the §8.7 homotopy work; this only fixes the invalid-base-point class.)
+     */
+    private static void seedPropertyArgumentGuesses(List<Equation> equations,
+                                                    Map<String, VariableSpec> specs) {
+        for (Equation eq : equations) {
+            seedPropArgsIn(eq.lhs(), specs);
+            seedPropArgsIn(eq.rhs(), specs);
+        }
+    }
+
+    private static void seedPropArgsIn(Expr e, Map<String, VariableSpec> specs) {
+        switch (e) {
+            case Expr.Call(String fn, List<Expr> args) -> {
+                if (fn.startsWith("prop$")) {
+                    String[] tok = fn.split("\\$");
+                    int n = args.size();
+                    // The encoded call ends with one name token per argument
+                    // (…$p$h for two args); map each to its argument expression.
+                    for (int k = 0; k < n; k++) {
+                        int ti = tok.length - n + k;
+                        if (ti < 0) {
+                            continue;
+                        }
+                        Double nominal = PROP_ARG_NOMINAL.get(tok[ti]);
+                        if (nominal != null && args.get(k) instanceof Expr.Var(String vn)) {
+                            applyNominalGuess(vn.toLowerCase(), nominal, specs);
+                        }
+                    }
+                }
+                args.forEach(a -> seedPropArgsIn(a, specs));
+            }
+            case Expr.BinOp(char op, Expr l, Expr r) -> {
+                seedPropArgsIn(l, specs);
+                seedPropArgsIn(r, specs);
+            }
+            case Expr.Neg(Expr o) -> seedPropArgsIn(o, specs);
+            default -> {
+                // leaf or non-arithmetic node: no property argument to seed
+            }
+        }
+    }
+
+    private static void applyNominalGuess(String var, double nominal,
+                                          Map<String, VariableSpec> specs) {
+        VariableSpec spec = specs.get(var);
+        if (spec == null) {
+            // No spec yet (the common case — most unknowns carry no user info):
+            // create one so the nominal becomes the variable's initial guess.
+            specs.put(var, new VariableSpec(var, nominal,
+                    Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY));
+            return;
+        }
+        if (spec.guess() != DEFAULT_GUESS) {
+            return; // a user/GUI guess is already set — it always wins
+        }
+        double seeded = Math.clamp(nominal, spec.lower(), spec.upper());
+        specs.put(var, new VariableSpec(var, seeded, spec.lower(), spec.upper(), spec.uncertainty()));
+    }
+
     private static SolverSettings polishSettings(SolverSettings settings) {
         // Near-zero residual tolerance so the polisher keeps iterating until
         // variable change drops below 1e-15.  This is critical for multiple
@@ -563,6 +649,7 @@ public class EquationSystemSolver {
         TreeSet<String> allVars = collectVariables(equations);
         Map<String, VariableSpec> expandedSpecs = new HashMap<>(
                 expandSpecs(allVars, specs, settings.complexMode()));
+        seedPropertyArgumentGuesses(equations, expandedSpecs);
         Map<String, Double> mutableWarmStart = warmStart != null ? new HashMap<>(warmStart) : null;
 
         checkAndAdjustGuesses(equations, defs, expandedSpecs, mutableWarmStart);
