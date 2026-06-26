@@ -536,6 +536,7 @@ public final class ComponentExpander {
                 case HEAT -> out.add(kirchhoffBalance(sts, "qdot", prefix));
                 case ELECTRICAL -> out.add(kirchhoffBalance(sts, "i", prefix));
                 case MECHANICAL -> out.add(kirchhoffBalance(sts, "tau", prefix));
+                case TRANSLATIONAL -> out.add(kirchhoffBalance(sts, "f", prefix));
                 case FLUID -> {
                     if (!loopClosing) {
                         if (sts.size() == 2) {
@@ -628,7 +629,7 @@ public final class ComponentExpander {
     }
 
     /** The physical domain of a connection node, with its node rule. */
-    private enum Domain { FLUID, HEAT, ELECTRICAL, MECHANICAL }
+    private enum Domain { FLUID, HEAT, ELECTRICAL, MECHANICAL, TRANSLATIONAL }
 
     /**
      * Classifies a {@code connect} node's domain from the members its streams
@@ -659,6 +660,9 @@ public final class ComponentExpander {
         if (u.contains("tau")) {
             return Domain.MECHANICAL;
         }
+        if (u.contains("f")) {
+            return Domain.TRANSLATIONAL;
+        }
         if (u.contains("t")) {
             return Domain.HEAT;          // a heat node carrying only temperatures (sources)
         }
@@ -667,6 +671,9 @@ public final class ComponentExpander {
         }
         if (u.contains("w")) {
             return Domain.MECHANICAL;    // a mechanical node carrying only speeds (grounds/sources)
+        }
+        if (u.contains("vel")) {
+            return Domain.TRANSLATIONAL; // a translational node carrying only velocities
         }
         return Domain.FLUID;
     }
@@ -678,6 +685,7 @@ public final class ComponentExpander {
             case HEAT -> new String[]{"t"};
             case ELECTRICAL -> new String[]{"v"};
             case MECHANICAL -> new String[]{"w"};
+            case TRANSLATIONAL -> new String[]{"vel"};
         };
     }
 
