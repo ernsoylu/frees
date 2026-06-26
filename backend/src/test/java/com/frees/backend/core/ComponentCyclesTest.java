@@ -3,6 +3,7 @@ package com.frees.backend.core;
 import com.frees.backend.props.CoolProp;
 import org.junit.jupiter.api.Test;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -103,6 +104,59 @@ class ComponentCyclesTest {
             q_L = s1.h - s4.h            { refrigeration effect }
             COP = q_L / K1.W
             """;
+
+    /**
+     * Same Rankine, but the inlet/turbine states are given as <em>derived</em>
+     * properties (quality x, temperature T) instead of explicit Enthalpy(...)
+     * calls — the expander rewrites s.x / s.T to CoolProp calls on the stream's
+     * (P, h), and the solver inverts them. The stream's fluid is inferred from
+     * the attached components.
+     */
+    static final String RANKINE_DERIVED = """
+            // Rankine — states given as derived properties (s.x, s.T)
+            P_hi = 8000000 [Pa]
+            P_lo = 10000 [Pa]
+
+            Pump      P1(s1, s2, eta=0.80, fluid$=Water)
+            Boiler    B1(s2, s3)
+            Turbine   T1(s3, s4, eta=0.85, fluid$=Water)
+            Condenser C1(s4, s5)
+
+            s1.P    = P_lo
+            s1.x    = 0              { saturated liquid — derived property }
+            s1.mdot = 1 [kg/s]
+            s2.P    = P_hi
+            s3.T    = 753.15 [K]     { superheated steam — derived property }
+            s4.P    = P_lo
+            s5.x    = 0
+
+            eta_th = (T1.W - P1.W) / B1.Q
+            """;
+
+    @Test
+    void rankineWithDerivedPropertyBoundariesSolves() {
+        assumeTrue(CoolProp.isAvailable(), "CoolProp not available");
+        List<String> warnings = solver.checkUnits(RANKINE_DERIVED, Map.of());
+        assertTrue(warnings.isEmpty(), "expected zero unit warnings, got: " + warnings);
+
+        // Derived-property boundaries (s.x, s.T) make enthalpy an *implicit*
+        // unknown that the solver finds by inverting Quality/Temperature — so it
+        // starts at the default guess (1.0 J/kg, below CoolProp's range) unless
+        // seeded. We seed the stream enthalpies near their state values, the
+        // GUI/Variable-Information path; automating this is the deferred §8.5
+        // scaling work. (The explicit-Enthalpy RANKINE_COMPONENTS needs no seed
+        // because there enthalpy is computed forward.)
+        Map<String, VariableSpec> specs = new HashMap<>();
+        double[] hGuess = {1.9e5, 2.0e5, 3.4e6, 2.4e6, 1.9e5};   // s1..s5
+        for (int i = 0; i < hGuess.length; i++) {
+            String name = "s" + (i + 1) + "$h";
+            specs.put(name, new VariableSpec(name, hGuess[i],
+                    Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY));
+        }
+        double eta = solver.solve(RANKINE_DERIVED, SolverSettings.DEFAULTS, specs)
+                .variables().get("eta_th");
+        assertTrue(eta > 0.30 && eta < 0.45, "Rankine thermal efficiency ~0.35, got " + eta);
+    }
 
     @Test
     void rankineComponentsDeriveUnitsCleanly() {
