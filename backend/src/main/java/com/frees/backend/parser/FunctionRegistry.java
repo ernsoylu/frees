@@ -82,7 +82,47 @@ public class FunctionRegistry {
             new FunctionInfo("lqe", "lqe(A, G, C, Q, R : L)", "Kalman estimator (LQE) gain", "Control"),
             new FunctionInfo("gram", "gram(A, M, type$ : W)", "Controllability ('c') / observability ('o') gramian", "Control"),
             new FunctionInfo("balreal", "balreal(A, B, C : Ab, Bb, Cb)", "Internally-balanced realization", "Control"),
-            new FunctionInfo("pidtune", "pidtune(num, den, type : Kp, Ki, Kd)", "PID tuning", "Control")
+            new FunctionInfo("pidtune", "pidtune(num, den, type : Kp, Ki, Kd)", "PID tuning", "Control"),
+
+            // Compressible Flow (ideal-gas relations; ratios dimensionless, angles in radians)
+            new FunctionInfo("t0_t", "T0_T(M, k)", "Isentropic stagnation/static temperature ratio", "Compressible Flow"),
+            new FunctionInfo("p0_p", "P0_P(M, k)", "Isentropic stagnation/static pressure ratio", "Compressible Flow"),
+            new FunctionInfo("rho0_rho", "rho0_rho(M, k)", "Isentropic stagnation/static density ratio", "Compressible Flow"),
+            new FunctionInfo("a_astar", "A_Astar(M, k)", "Isentropic area ratio A/A*", "Compressible Flow"),
+            new FunctionInfo("mach_a_astar", "mach_A_Astar(A_Astar, k, regime$)", "Mach from A/A* ('subsonic'|'supersonic')", "Compressible Flow"),
+            new FunctionInfo("m2_shock", "M2_shock(M1, k)", "Downstream Mach across a normal shock", "Compressible Flow"),
+            new FunctionInfo("p2_p1_shock", "P2_P1_shock(M1, k)", "Normal-shock static pressure ratio", "Compressible Flow"),
+            new FunctionInfo("t2_t1_shock", "T2_T1_shock(M1, k)", "Normal-shock static temperature ratio", "Compressible Flow"),
+            new FunctionInfo("rho2_rho1_shock", "rho2_rho1_shock(M1, k)", "Normal-shock density ratio", "Compressible Flow"),
+            new FunctionInfo("p02_p01_shock", "P02_P01_shock(M1, k)", "Normal-shock stagnation pressure ratio", "Compressible Flow"),
+            new FunctionInfo("rayleigh_t0_t0star", "rayleigh_T0_T0star(M, k)", "Rayleigh stagnation-temperature ratio", "Compressible Flow"),
+            new FunctionInfo("rayleigh_t_tstar", "rayleigh_T_Tstar(M, k)", "Rayleigh static-temperature ratio", "Compressible Flow"),
+            new FunctionInfo("rayleigh_p_pstar", "rayleigh_P_Pstar(M, k)", "Rayleigh static-pressure ratio", "Compressible Flow"),
+            new FunctionInfo("rayleigh_p0_p0star", "rayleigh_P0_P0star(M, k)", "Rayleigh stagnation-pressure ratio", "Compressible Flow"),
+            new FunctionInfo("fanno_t_tstar", "fanno_T_Tstar(M, k)", "Fanno static-temperature ratio", "Compressible Flow"),
+            new FunctionInfo("fanno_p_pstar", "fanno_P_Pstar(M, k)", "Fanno static-pressure ratio", "Compressible Flow"),
+            new FunctionInfo("fanno_p0_p0star", "fanno_P0_P0star(M, k)", "Fanno stagnation-pressure ratio", "Compressible Flow"),
+            new FunctionInfo("fanno_fld", "fanno_fLD(M, k)", "Fanno friction parameter 4*f*Lmax/D", "Compressible Flow"),
+            new FunctionInfo("prandtlmeyer", "PrandtlMeyer(M, k)", "Prandtl-Meyer angle nu(M) [rad]", "Compressible Flow"),
+            new FunctionInfo("mach_prandtlmeyer", "mach_PrandtlMeyer(nu, k)", "Mach from Prandtl-Meyer angle [rad]", "Compressible Flow"),
+            new FunctionInfo("machangle", "MachAngle(M)", "Mach angle mu = asin(1/M) [rad]", "Compressible Flow"),
+            new FunctionInfo("theta_oblique", "theta_oblique(M1, beta, k)", "Oblique-shock deflection from wave angle [rad]", "Compressible Flow"),
+            new FunctionInfo("beta_oblique", "beta_oblique(M1, theta, k, branch$)", "Oblique-shock wave angle ('weak'|'strong') [rad]", "Compressible Flow"),
+
+            // Heat Transfer (heat-exchanger effectiveness-NTU, LMTD, fin efficiency)
+            new FunctionInfo("hx_effectiveness", "hx_effectiveness(type$, NTU, Cr)", "HX effectiveness eps(NTU, Cr=Cmin/Cmax)", "Heat Transfer"),
+            new FunctionInfo("hx_ntu", "hx_NTU(type$, eps, Cr)", "HX number of transfer units NTU(eps, Cr)", "Heat Transfer"),
+            new FunctionInfo("lmtd", "LMTD(dT1, dT2)", "Log-mean temperature difference", "Heat Transfer"),
+            new FunctionInfo("fin_efficiency", "fin_efficiency(mL)", "Straight-fin efficiency tanh(mL)/mL", "Heat Transfer"),
+
+            // Cubic-EOS property backend (SRK/PR; CoolProp-independent)
+            new FunctionInfo("eos_z", "eos_z(fluid$, model$, T, P, phase$)", "Compressibility factor Z (SRK/PR)", "Properties (EOS)"),
+            new FunctionInfo("eos_volume", "eos_volume(fluid$, model$, T, P, phase$)", "Specific volume [m^3/kg] (SRK/PR)", "Properties (EOS)"),
+            new FunctionInfo("eos_density", "eos_density(fluid$, model$, T, P, phase$)", "Density [kg/m^3] (SRK/PR)", "Properties (EOS)"),
+            new FunctionInfo("eos_pressure", "eos_pressure(fluid$, model$, T, v)", "Pressure [Pa] from (T, specific volume)", "Properties (EOS)"),
+            new FunctionInfo("eos_enthalpy", "eos_enthalpy(fluid$, model$, T, P, phase$)", "Specific enthalpy [J/kg] (SRK/PR)", "Properties (EOS)"),
+            new FunctionInfo("eos_entropy", "eos_entropy(fluid$, model$, T, P, phase$)", "Specific entropy [J/kg-K] (SRK/PR)", "Properties (EOS)"),
+            new FunctionInfo("eos_psat", "eos_psat(fluid$, model$, T)", "Saturation pressure [Pa] (SRK/PR)", "Properties (EOS)")
     );
 
     public static List<FunctionInfo> listFunctions() {
