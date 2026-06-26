@@ -565,6 +565,17 @@ public final class ComponentLibrary {
               out.h     = in.h
               shaft.tau = -(disp * (out.P - in.P) / (2 * pi#)) / eta_m
             END
+
+            COMPONENT FuelCellStack(p, n, heat)
+              PARAM ncells, area, i0, ilim, Rohm, E0, alpha, Eth, T
+              I_cell    = -p.I
+              i         = I_cell / area
+              V_cell    = E0 - (8.314 * T / (alpha * 96485)) * ln(i / i0) - i * Rohm - (8.314 * T / (2 * 96485)) * ln(ilim / (ilim - i))
+              p.V - n.V = ncells * V_cell
+              p.I + n.I = 0
+              Q         = I_cell * ncells * (Eth - V_cell)
+              heat.Qdot = -Q
+            END
             """;
 
     private static final List<ComponentDef> BUILTINS = parse(SOURCE);
