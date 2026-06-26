@@ -474,6 +474,48 @@ public final class ComponentLibrary {
               Q          = in.mdot * (h_in - h_out)
               Q_lat      = in.mdot * 2.501e6 * (in.humrat - out.humrat)
             END
+
+            COMPONENT PneumaticSupply(out)
+              PARAM fluid$, P, T
+              out.P = P
+              out.h = Enthalpy(fluid$, P=P, T=T)
+            END
+
+            COMPONENT PneumaticAtmosphere(port)
+              PARAM P
+              port.P = P
+            END
+
+            COMPONENT PneumaticOrifice(in, out)
+              PARAM fluid$, C, b
+              out.h    = in.h
+              T_in     = Temperature(fluid$, P=in.P, h=in.h)
+              in.mdot  = iso6358(C, b, in.P, T_in, out.P)
+              out.mdot = in.mdot
+            END
+
+            COMPONENT PneumaticServoValve(in, out)
+              PARAM fluid$, Cmax, b, u
+              out.h    = in.h
+              T_in     = Temperature(fluid$, P=in.P, h=in.h)
+              in.mdot  = iso6358(u * Cmax, b, in.P, T_in, out.P)
+              out.mdot = in.mdot
+            END
+
+            COMPONENT PneumaticVolume(in, out)
+              PARAM V, T, R, P0
+              out.P      = in.P
+              out.h      = in.h
+              der(in.P)  = (R * T / V) * (in.mdot - out.mdot)
+              init(in.P) = P0
+            END
+
+            COMPONENT PneumaticActuator(in, rod)
+              PARAM fluid$, area, Patm
+              rho     = Density(fluid$, P=in.P, h=in.h)
+              rod.f   = -(in.P - Patm) * area
+              in.mdot = rho * area * rod.vel
+            END
             """;
 
     private static final List<ComponentDef> BUILTINS = parse(SOURCE);

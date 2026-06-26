@@ -650,6 +650,9 @@ public final class UnitChecker {
             case "friction_factor", "darcy_friction", "reynolds", "re_number" ->
                     Dim.of(Quantity.dimensionless(1.0));
             case "minor_loss" -> eosDim("Pa");
+            // Pneumatics: ISO 6358 returns a mass flow rate [kg/s]; the sonic
+            // conductance / pressure-ratio arguments are not policed.
+            case "iso6358" -> eosDim("kg/s");
             // LMTD returns a temperature difference, inheriting the units of its
             // terminal-difference arguments (which the checker does not police).
             case "lmtd" -> dimOf(args.get(0));
