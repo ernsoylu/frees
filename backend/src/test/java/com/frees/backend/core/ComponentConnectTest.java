@@ -139,6 +139,55 @@ class ComponentConnectTest {
     }
 
     @Test
+    void connectBranchesAndRemergesThroughThreePortNodes() {
+        // A Splitter feeds two legs that recombine at a Mixer — the connection
+        // graph forms a cycle through two 3-port nodes, but it is NOT a redundant
+        // loop: the Mixer's second inlet is a genuine input fed only by its
+        // branch connect. This must stay zero-DOF and solve (regression guard:
+        // seeding a 3-port node's ports into the loop-closure union-find would
+        // wrongly drop the final branch connect and under-determine the Mixer).
+        String src = """
+                COMPONENT Split(in, out1, out2)
+                  in.mdot = out1.mdot + out2.mdot
+                  out1.P  = in.P
+                  out2.P  = in.P
+                  out1.h  = in.h
+                  out2.h  = in.h
+                END
+                COMPONENT Leg(in, out)
+                  PARAM Q
+                  out.mdot = in.mdot
+                  out.P    = in.P
+                  out.h    = in.h + Q / in.mdot
+                END
+                COMPONENT Join(in1, in2, out)
+                  out.mdot      = in1.mdot + in2.mdot
+                  out.P         = in1.P
+                  out.mdot * out.h = in1.mdot * in1.h + in2.mdot * in2.h
+                END
+                Split SP()
+                Leg   L1(Q=1000)
+                Leg   L2(Q=2000)
+                Join  JN()
+                connect(SP.out1, L1.in)
+                connect(SP.out2, L2.in)
+                connect(L1.out, JN.in1)
+                connect(L2.out, JN.in2)
+                SP.in.P    = 100000
+                SP.in.mdot = 4
+                SP.in.h    = 0
+                SP.out1.mdot = 1
+                """;
+        Map<String, Double> v = solver.solve(src).variables();
+        // Mass conserved through the branches: out1=1, out2=3, recombined=4.
+        assertEquals(4.0, v.get("jn.out.mdot"), 1e-9);
+        // Enthalpy mixes: leg1 gains 1000/1, leg2 gains 2000/3; mass-weighted mix
+        // at the Join = (1*1000 + 3*(2000/3)) / 4 = 3000/4 = 750.
+        assertEquals(750.0, v.get("jn.out.h"), 1e-6);
+        assertEquals(100000.0, v.get("jn.out.p"), 1e-3);
+    }
+
+    @Test
     void sourceAndSinkBoundariesBracketAnOpenChain() {
         // Standard-library boundary components: Source fixes the entering state
         // (mdot, P, h-from-(P,T)) and Sink reads the arriving stream into named
