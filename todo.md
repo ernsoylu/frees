@@ -130,7 +130,9 @@ Each phase is independent and shippable on its own; A–C carry the most benefit
 
 ---
 
-## Phase F — Powertrain & event-coupled mechanical breadth  🟡/🔶 *automotive depth*
+## Phase F — Powertrain & event-coupled mechanical breadth  🟡 **non-event slice shipped & green**
+
+**Status (2026-06-27).** Shipped the **non-event** powertrain breadth (no zero-crossing handling needed): `MeanValueEngine` (speed-dependent inverted-parabola WOT torque × throttle − FMEP friction `a+b·ω`), `Transmission` (gear ratio + efficiency, extending the ideal `Gear`), and `GradeRoadLoad` (rolling + aero + `m·g·sin(grade)`). Validated by `ComponentPowertrainBreadthTest` (each constitutive relation in isolation + an engine→transmission→road-load steady geared-torque-balance operating point). **Still deferred (genuinely need new machinery):** clutch lock-up **event** + flow-reversal/diode/valve switching (require the Phase-R zero-crossing event handler in the `DYNAMIC` integrator); **ECMS** (optimizer-in-the-loop supervisory control — `core/Optimizer` + BSFC `TABLE` + `DYNAMIC` SOC, a dedicated multi-part increment); map-based BSFC engine + turbocharger maps (the proven datasheet-`TABLE` pattern, build when prioritized).
 
 **Why here.** Extends the shipped mechanical/electrical/battery powertrain with the automotive-specific components. Several need **zero-crossing event handling** in the `DYNAMIC` integrator (the one genuinely new solver capability in the plan), so this phase is gated on that and ranks below the constitutive-only phases.
 

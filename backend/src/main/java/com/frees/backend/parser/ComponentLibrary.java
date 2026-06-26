@@ -373,6 +373,25 @@ public final class ComponentLibrary {
               shaft.tau = Crr + Caero * shaft.w^2
             END
 
+            COMPONENT MeanValueEngine(shaft)
+              PARAM throttle, Tpeak, w_peak, FMEP_a, FMEP_b
+              T_wot     = Tpeak * (1 - ((shaft.w - w_peak) / w_peak)^2)
+              T_ind     = throttle * T_wot
+              T_fric    = FMEP_a + FMEP_b * shaft.w
+              shaft.tau = -(T_ind - T_fric)
+            END
+
+            COMPONENT Transmission(in, out)
+              PARAM ratio, eta
+              in.w    = ratio * out.w
+              out.tau = -ratio * eta * in.tau
+            END
+
+            COMPONENT GradeRoadLoad(shaft)
+              PARAM Crr, Caero, m, g, grade
+              shaft.tau = Crr + Caero * shaft.w^2 + m * g * sin(grade)
+            END
+
             COMPONENT PIThermostat(port)
               PARAM Kp, Ki, Tref
               err         = Tref - port.T
