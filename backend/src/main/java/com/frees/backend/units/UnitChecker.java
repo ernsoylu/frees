@@ -517,6 +517,15 @@ public final class UnitChecker {
         };
     }
 
+    /** Safe SI-unit dimension for a cubic-EOS output, agnostic if unparseable. */
+    private static Dim eosDim(String unit) {
+        try {
+            return Dim.of(UnitRegistry.parse(unit));
+        } catch (UnitRegistry.UnknownUnitException e) {
+            return Dim.UNKNOWN;
+        }
+    }
+
     /** Property calls carry the dimensions of the requested output. */
     private static Dim propertyDim(String encoded) {
         String[] parts = encoded.split("\\$");
@@ -621,6 +630,32 @@ public final class UnitChecker {
             // Heisler transient-conduction results are dimensionless ratios; the
             // geometry string and Bi/Fo/x* arguments carry no units to check.
             case "heisler_temp", "heisler_q" -> Dim.of(Quantity.dimensionless(1.0));
+            // Ideal-gas compressible-flow relations: every output is a
+            // dimensionless property ratio or an angle in radians (also
+            // dimensionless in SI); the Mach/k/angle arguments carry no units.
+            case "t0_t", "isen_t0_t", "p0_p", "isen_p0_p", "rho0_rho", "isen_rho0_rho",
+                 "a_astar", "isen_a_astar", "mach_a_astar",
+                 "m2_shock", "mach_shock", "p2_p1_shock", "t2_t1_shock",
+                 "rho2_rho1_shock", "p02_p01_shock",
+                 "rayleigh_t0_t0star", "rayleigh_t_tstar", "rayleigh_p_pstar", "rayleigh_p0_p0star",
+                 "fanno_t_tstar", "fanno_p_pstar", "fanno_p0_p0star", "fanno_fld",
+                 "prandtlmeyer", "prandtl_meyer", "mach_prandtlmeyer", "machangle",
+                 "theta_oblique", "beta_oblique" -> Dim.of(Quantity.dimensionless(1.0));
+            // Heat-exchanger effectiveness, NTU and fin efficiency are
+            // dimensionless; the leading arrangement string carries no units.
+            case "hx_effectiveness", "hx_epsilon", "hx_ntu", "fin_efficiency" ->
+                    Dim.of(Quantity.dimensionless(1.0));
+            // LMTD returns a temperature difference, inheriting the units of its
+            // terminal-difference arguments (which the checker does not police).
+            case "lmtd" -> dimOf(args.get(0));
+            // Cubic-EOS backend: outputs carry their SI property units; the
+            // leading fluid$/model$/phase$ strings carry none.
+            case "eos_z" -> Dim.of(Quantity.dimensionless(1.0));
+            case "eos_pressure", "eos_psat" -> eosDim("Pa");
+            case "eos_volume" -> eosDim("m^3/kg");
+            case "eos_density" -> eosDim("kg/m^3");
+            case "eos_enthalpy" -> eosDim("J/kg");
+            case "eos_entropy" -> eosDim("J/kg-K");
             // TABLE lookup/interpolation: the table name is a string and the
             // arguments/result carry the table's own units, which the checker
             // does not track — stay agnostic rather than warn.
