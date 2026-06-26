@@ -385,7 +385,7 @@ public final class ComponentLibrary {
               PARAM Cv, rho
               out.mdot = in.mdot
               out.h    = in.h
-              in.mdot  = Cv * sqrt(rho * (in.P - out.P))
+              in.mdot * abs(in.mdot) = Cv^2 * rho * (in.P - out.P)
             END
             """;
 
