@@ -3,7 +3,7 @@
 
 **Prepared for:** Advisory Board (Mechanical, Thermal, Fluids, HVAC, Control, Automotive/EV)
 **Scope of this report:** *Code/text-based* component modeling only. The graphical (Diagram-window) front end is **explicitly deferred** and is not covered here.
-**Status:** Design complete; **Phase 0 done, Phase 1 mostly done** — flow-resistance functions; the full core component layer; standard library (13 components, **strict no-default parameters**); Rankine/Brayton/refrigeration cycles; the fan-duct operating point; branching (Splitter/Mixer/HX); **derived-property member access** (`s.T`/`s.x`/…) with per-port stream→fluid inference; and **Phase 1.5 `connect()` + loop-closure** (free-ported instances, native branching, union-find cycle handling) are shipped and green. Only the frontend-coupled §6 state-circuit binding (cycle plots) remains in Phase 1; the §8.5/§8.7 robustness gap is now **closed for single-unknown property inversions** — property-argument seeding (valid base point), range-aware FD-Jacobian perturbation (no NaN-poisoned columns), and a `prop$`-scoped univariate bracketing fallback (crosses the two-phase dome where `dT/dh≈0`) are shipped — the fully-derived Rankine now solves seed-free — leaving only a hypothetical genuine **N×N SCC of coupled property inversions** for the solver, which no shipped example yet hits (see §15 for live status & findings). This document is the agreed reference for Phase 0–6 delivery. Revision **R1** incorporates the advisory review (see §0).
+**Status:** Design complete; **Phase 0 done, Phase 1 mostly done** — flow-resistance functions; the full core component layer; standard library (13 components, **strict no-default parameters**); Rankine/Brayton/refrigeration cycles; the fan-duct operating point; branching (Splitter/Mixer/HX); **derived-property member access** (`s.T`/`s.x`/…) with per-port stream→fluid inference; and **Phase 1.5 `connect()` + loop-closure** (free-ported instances, native branching, union-find cycle handling) are shipped and green. Only the frontend-coupled §6 state-circuit binding (cycle plots) remains in Phase 1; the §8.5/§8.7 robustness gap is now **closed for single-unknown property inversions** — property-argument seeding (valid base point), range-aware FD-Jacobian perturbation (no NaN-poisoned columns), and a `prop$`-scoped univariate bracketing fallback (crosses the two-phase dome where `dT/dh≈0`) are shipped — the fully-derived Rankine now solves seed-free — leaving only a hypothetical genuine **N×N SCC of coupled property inversions** for the solver, which no shipped example yet hits (see §15 for live status & findings). This document is the agreed reference for Phase 0–6 delivery. **Phase 0 is complete and has been retired from the active plan** (record preserved in §15.0). Revision **R1** incorporates the advisory review; **R3** folds in a multi-domain component catalog (§16), the `model$` variant-selector mechanism (§5.5), and solver-robustness picks (Phase R) from a 1-D system-simulation library survey (see §0).
 
 ---
 
@@ -20,13 +20,20 @@ Two advisory reviews (multidomain architecture, solver mechanics, UX) judged the
 
 **Revision R2 (scope correction):** removed the Software-Defined-Vehicle / virtual-ECU / FMU framing — frEES is an **off-board, design-time analysis tool**, not a real-time or embedded execution target. The linearized plant feeds frEES's *existing* control suite; a plain `(A,B,C,D)` matrix export (JSON/text) is provided for users who wish to take the model elsewhere. Real-time execution, hardware-in-the-loop, and fixed-step embedded code generation are explicitly out of scope (§8.10, §13).
 
+**Revision R3 (multi-domain reach & solver picks):** a structured cross-study of an established 1-D multi-domain system-simulation component library (thermal, thermal-hydraulic, two-phase/refrigerant, HVAC/air-conditioning, mechanical, electrical, battery, ICE, HEV/EV) sharpened three things, all folded into the phases below:
+1. **The component-variant mechanism (new §5.5):** the reference confirms the central design lesson behind the *"one component, many models"* question — the **component icon is decoupled from its physics submodel**, and every component carries a *fidelity ladder* of interchangeable models (e.g. a compressor as isentropic-η → volumetric-η → performance map → variable-displacement). frEES adopts this as a `model$` **variant selector** on `COMPONENT`, with per-variant required-parameter validation. This is the single highest-leverage enabler and gates the domain catalog.
+2. **A concrete multi-domain component catalog (new §16),** with each component's variant ladder and frEES dependency, mapped onto Phases 2/3/5/6. It supplies the **electrical**, **mechanical**, **battery**, **ICE**, and **HEV/EV** breadth the EV-thermal flagship needs, plus refrigerant multi-zone heat exchangers and psychrometric HVAC coils.
+3. **Solver-robustness picks (Phase R, extending §8.5–8.7):** a readable reference design for a **box-constrained, nominally-scaled Newton with backtracking line search and a rich failure taxonomy**, plus a **stiff variable-order BDF integrator with WRMS error-weight norms** and **discrete-state / zero-crossing event handling** for the `DYNAMIC` engine. These map one-to-one onto frEES's already-recorded §8.5/§8.6/§8.7 gaps (findings 8–9) and gate credible thermal/electrical/battery transients.
+
+**Note on scope filter:** only *physics-fidelity* variants are imported. The reference's causal-plumbing variants (separate submodels per port orientation / flow direction) are **redundant in frEES** — the acausal Newton/Tarjan solver handles direction, so one frEES `COMPONENT` collapses several causal submodels.
+
 ---
 
 ## 1. Executive Summary
 
 frEES is today a declarative **equation solver** (ANTLR parse → matrix/CALL expansion → unit check → Tarjan SCC blocking → Newton with step-halving), augmented with a transient ODE engine (`DYNAMIC`), a control-systems suite (`tf`/`ss`/`lqr`/`bode`/`c2d`/`pidtune`), a CAS (Symja), a curve **digitizer** + unit-tagged `TABLE`/`Interpolate2D`, and first-order **uncertainty propagation**. Over recent work it also gained complete thermo-fluid physics libraries: real-fluid properties (CoolProp), cubic EOS (SRK/PR), NASA-7 ideal-gas thermochemistry, combustion (adiabatic flame temperature, Kp chemical equilibrium, mixtures, kinetic-theory transport), compressible flow (isentropic/shock/Rayleigh/Fanno/Prandtl–Meyer), and heat exchangers (ε-NTU/LMTD/fin efficiency), alongside psychrometrics.
 
-This plan adds an **acausal, multi-domain, component-based system-modeling layer** on top of that foundation. A *component* is a reusable, parameterized template of acausal equations with typed **ports**; instantiating and connecting components **expands into scalar equations** that flow through the *existing* solver unchanged. The theoretical basis is a **pseudo bond graph** (the same formalism underlying Siemens Amesim and Modelica.Fluid).
+This plan adds an **acausal, multi-domain, component-based system-modeling layer** on top of that foundation. A *component* is a reusable, parameterized template of acausal equations with typed **ports**; instantiating and connecting components **expands into scalar equations** that flow through the *existing* solver unchanged. The theoretical basis is a **pseudo bond graph** (the formalism underlying Modelica.Fluid and established commercial 1-D multi-domain system simulators).
 
 **Thesis.** This turns frEES into a declarative **system/network modeler** — power cycles, refrigeration/HVAC, flow networks, EV thermal management — that occupies the 0-D lumped, multi-domain, steady-and-transient band, while remaining transparent (every component is visible, editable, unit-checked equations) and web-based. It is, in effect, *EES + the Simscape/Simulink plant-to-control workflow in one document*, achieved with a thin parser/expander layer plus a short list of constitutive functions — **not** a new solver.
 
@@ -42,7 +49,7 @@ A bond graph represents a physical system by **power flow**. Each bond carries a
 ### 2.2 Why frEES is a *pseudo* bond graph (honest positioning)
 The fluid port pairs pressure `P` (across) with **mass** flow `ṁ` (through). `P·ṁ` is **not** power, and a flowing stream is a **multibond** carrying mass + energy together, with specific enthalpy `h` riding as a **convective "stream" variable**. Two consequences, both standard for thermo-fluid systems:
 
-1. The `(P, ṁ)` pair is a **pseudo bond** (relaxes `e·f = power` while keeping junction algebra) — exactly the choice Amesim makes for thermo-hydraulic/thermal libraries.
+1. The `(P, ṁ)` pair is a **pseudo bond** (relaxes `e·f = power` while keeping junction algebra) — exactly the choice established 1-D thermo-hydraulic/thermal system libraries make.
 2. **Energy conservation is enforced explicitly by component equations** (and a mixing junction's flow-weighted enthalpy balance), not implicitly by the junction. This is precisely why Modelica.Fluid introduced the `stream` connector.
 
 ### 2.3 Structural mapping onto frEES
@@ -56,7 +63,7 @@ The fluid port pairs pressure `P` (across) with **mass** flow `ṁ` (through). `
 | integral causality on C/I | `DYNAMIC` `der(X)` states (transient mode) |
 
 ### 2.4 Positioning vs. established tools
-| Axis | Modelica | Amesim | GT-SUITE | **frEES (this plan)** |
+| Axis | Modelica | Causal 1-D suite | GT-SUITE | **frEES (this plan)** |
 |---|---|---|---|---|
 | Causality | Acausal DAE | Causal (bond-graph) | 1-D FV flux network | **Acausal algebraic** |
 | Primary regime | Transient DAE | Transient DAE | Transient 1-D CFD | **Steady-state (+ `DYNAMIC` ODE)** |
@@ -277,6 +284,36 @@ END
 2. **Stagnation/velocity** for compressible components — reuses `P0_P`/`A_Astar`/`M2_shock` already shipped.
 The base port stays `(P, h, ṁ)`; specialized components carry the extra quantities as locals/port riders.
 
+### 5.5 Component variant selection — the `model$` mechanism (R3)
+**The "one component, many models" problem.** A single physical component is modeled many ways at different fidelities — a compressor as *isentropic-efficiency*, *volumetric-efficiency*, *performance-map*, or *variable-displacement*; a battery as *internal-resistance*, *Thévenin RC*, or *electrochemical*; a friction interface as *Coulomb*, *Stribeck*, or *LuGre*. The established system-modeling answer is to **decouple the component (its ports and role in the network) from its physics submodel**, and let the user pick the submodel per instance. frEES adopts this directly:
+
+```
+COMPONENT Compressor(in, out)
+  PARAM model$ = isentropic            # variant selector
+  VARIANT isentropic   REQUIRE eta, fluid$
+    s_in  = Entropy(fluid$, P=in.P, h=in.h)
+    h_s   = Enthalpy(fluid$, P=out.P, s=s_in)
+    out.h = in.h + (h_s - in.h)/eta
+  VARIANT volumetric   REQUIRE eta_v, disp, rpm, fluid$    # ṁ from displacement & ρ
+    rho      = Density(fluid$, P=in.P, h=in.h)
+    out.mdot = eta_v * disp * (rpm/60) * rho
+    ... isentropic head on top ...
+  VARIANT map          REQUIRE map_mdot, map_eta           # digitized performance maps (§7)
+    out.mdot = map_mdot(out.P/in.P, rpm)
+    eta      = map_eta(out.P/in.P, rpm)
+    ...
+  out.mdot = in.mdot                    # shared (non-variant) equations
+  W        = in.mdot*(out.h - in.h)
+END
+Compressor C1(s1, s2, model$=map, map_mdot=..., map_eta=..., rpm=3000)
+```
+
+**Semantics.** The expander emits **only the selected variant's body** plus the shared equations. `REQUIRE` lists the parameters that variant needs; supplying a parameter the chosen variant doesn't use, or omitting one it does, is a **hard error** (consistent with the strict no-default-parameters rule, finding 15.1). An unknown `model$` value is a hard error listing the valid variants.
+
+**Why this is the keystone (gates the §16 catalog).** Every domain in the catalog ships its components as fidelity ladders, so without `model$` each ladder would fork into N separate `COMPONENT` types. The grammar addition is small (a `VARIANT … REQUIRE …` block inside `COMPONENT`, selected at expansion time before the existing clone/substitute pass), and it reuses the datasheet-map machinery (§7) for the `map` variants. **Build this first in Phase 2.**
+
+**✅ SHIPPED** (grammar `VARIANT … [REQUIRE …] … END` + `model$` selector; `ComponentDef.Variant`; `ComponentExpander` selection — see §15.2 finding 10). A `REQUIRE` name is a variant-scoped parameter (auto-declared, no default), required only when its variant is selected, so a `map` compressor never demands the isentropic variant's `eta`. Unknown `model$`, a missing selector, or a missing required parameter of the selected variant are all hard errors. Tests: `core/ComponentVariantTest` (6, green); full backend suite green.
+
 ---
 
 ## 6. Binding to Fluid States & Cycle Plotting (reuse of existing machinery)
@@ -404,53 +441,69 @@ Symbolic differentiation of property libraries (CoolProp = interpolated Helmholt
 
 > Each phase is independently shippable, fully tested against textbook/corpus values (validation methodology in §12), and leaves the existing engines untouched.
 
-### Phase R — Solver robustness & diagnostics (cross-cutting, R1) — *lands alongside Phases 1–5*
-Not a sequential phase but a robustness spine, prioritized because everything else depends on it:
-- **With Phase 1:** automatic variable scaling (§8.5); source-mapped diagnostics (§14.1); read-only Mermaid topology (§14.2); high-index structural guard (§8.9).
-- **With Phase 3 (transient):** `stream_h` reversing-flow (§8.8); discontinuity event handling (§8.7); causality override (§14.6).
+### 10.0 Phase status at a glance
+
+| Phase | Title | Status | Outstanding work |
+|---|---|---|---|
+| **0** | Constitutive function gaps | ✅ **complete** | — (shipped; see §15.0). *Removed from the active plan.* |
+| **1** | Core component layer (fluid, steady) | 🟢 **essentially complete** | only §6 state-circuit binding (cycle plots, frontend-coupled) |
+| **R** | Solver robustness & diagnostics | 🟡 **partial** | single-unknown property path shipped; remaining: §8.5 scaling/equilibration, box-constrained + backtracking Newton, stiff BDF + event handling, source-mapped diagnostics, Mermaid topology, high-index guard |
+| **2** | Multi-domain ports + variant selector | 🟡 **started** | `model$` variant mechanism (§5.5) ✅ **shipped**; remaining: heat `(T,Q̇)`, electrical `(V,I)`, mechanical `(τ,ω)` ports + their primitive components (§16) |
+| **3** | Transient mode (storage → `DYNAMIC`) | ⬜ **not started** | C/I storage auto-classification; capacitive volume / thermal-mass / SOC states; stiff integrator + events |
+| **4** | Plant → control coupling | ⬜ **not started** | numerical linearization → `(A,B,C,D)` → control suite; signal domain + controller components |
+| **5** | Datasheet component wrappers | ⬜ **not started** | shape-preserving map pre-fit; compressor/pump/fan curves; valve `Cv`; `η_v` & efficiency maps |
+| **6** | Domain breadth & flagship system | ⬜ **not started** | full §16 catalog (battery, motors, ICE, HEV/EV, refrigerant multi-zone HX, psychrometrics); EV battery thermal-management flagship |
+
+*(The detailed per-domain component catalog that feeds Phases 2/3/5/6 is §16.)*
+
+### Phase R — Solver robustness & diagnostics (cross-cutting, R1 + R3) — 🟡 **partial**
+Not a sequential phase but a robustness spine, prioritized because everything else depends on it.
+
+**Shipped (single-unknown property path, finding 9):** property-argument seeding (valid base point, §8.5a); range-aware FD-Jacobian perturbation (no NaN-poisoned columns, §8.5b); `prop$`-scoped univariate bracketing across the two-phase dome + the NaN-not-converged correctness fix (§8.7c). The fully-derived Rankine solves seed-free.
+
+**Remaining:**
+- **Box-constrained, nominally-scaled Newton (R3, extends §8.5/§8.6).** Give every unknown a `[min, max, nominal]` triple and every residual a nominal scale, then take a **scaled** Newton step inside the box. Per-variable nominals come from the unit checker's dimensions (`P~10⁵`, `T~300`, `h~10⁵`, `ṁ~1`, `I~10⁻³`, `V~1`); bounds keep CoolProp/EOS arguments inside their valid range (the documented `P=-nan` root cause, finding 8). This is the load-bearing §8.5 equilibration fix and the prerequisite for stiff real-fluid + electrical networks.
+- **Backtracking line search + failure taxonomy (R3, §14.1).** Replace bare step-halving with a backtracking line search that detects *local-minimum*, *singular-Jacobian* (perturb-and-retry), *out-of-bounds*, and *max-iteration* outcomes as **distinct** results — feeding component-level diagnostics ("`Pump1` under-specified") instead of a generic "did not converge".
+- **Source-mapped diagnostics (§14.1); read-only Mermaid topology (§14.2); high-index structural guard (§8.9).**
+- **With Phase 3 (transient):** a **stiff variable-order BDF integrator with WRMS error-weight norm** `ewt=1/(rtol·|y|+atol)` (R3) — thermal masses + electrical RC + battery are stiff; the current explicit `DYNAMIC` path stalls. Either a compact SDIRK/BDF or a JNI-bound stiff solver (the CoolProp pattern). Plus **discrete-state / zero-crossing event handling** (R3, §8.7): components declare an integer mode + switching function; the integrator detects crossings and restarts the step (friction stick↔slip, flow reversal, valve/diode on↔off). Prefer **smooth (tanh) regularization** where accuracy allows (already used by `stream_h`, §8.8); reserve true events for genuine on/off. Also `stream_h` reversing-flow (§8.8); causality override (§14.6).
 - **With Phase 4 (control):** purely numerical linearization feeding the existing control suite, plus a plain `(A,B,C,D)` matrix export (§8.10).
 - **With Phase 5 (datasheets):** shape-preserving pre-fit + analytic-derivative Jacobian (§8.6); CSV ingestion (§14.5).
-- **As needed:** homotopy/continuation mode (§8.7) for phase-change cycles.
-**Acceptance:** an ill-scaled multidomain network (P, ṁ, I together) converges with scaling on and fails without; a mis-specified component yields a component-named error (not a mangled scalar); a datasheet-fed fan-duct converges from a cold start; a reversing-flow loop integrates through `ṁ=0` without a discontinuity failure; a phase-change cycle that fails cold-start converges under homotopy.
+- **As needed:** homotopy/continuation mode (§8.7) for genuine N×N coupled property inversions (no shipped example hits it yet).
 
-### Phase 0 — Constitutive function gaps (small scalar functions) — ✅ **done** (see §15)
-Add via the established 3-site wiring (`Evaluator` eval + `UnitChecker` dims + `FunctionRegistry` metadata), each with unit tests cross-checked against the corpus:
-- ~~`friction_factor(Re, rel_rough)` — Colebrook/Moody (laminar + turbulent), the gate for all flow networks.~~ ✅ **done** (`props/FlowResistance`).
-- ~~`minor_loss(K, rho, V)`~~ ✅ **done**; ⏳ fitting-`K` table; `valve_cv(...)`.
-- ~~`Re(rho, V, D, …)` helper~~ ✅ **done** as `reynolds(rho, V, D, mu)`.
-**Deliverable:** ~~flow-resistance vocabulary.~~ ✅ **Acceptance:** ~~Colebrook `f` matches Moody chart to chart accuracy~~ ✅ (smooth/rough/fully-rough validated); ~~pipe ΔP matches a Darcy worked example~~ ✅ (fan-duct).
+**Acceptance:** an ill-scaled multidomain network (P, ṁ, I together) converges with scaling on and fails without; a singular/over-specified component yields a component-named diagnostic (not a mangled scalar); a datasheet-fed fan-duct converges from a cold start; a stiff thermal+electrical transient integrates without step collapse; a reversing-flow loop integrates through `ṁ=0`; a friction stick-slip / valve switching transient restarts cleanly at the event.
 
-### Phase 1 — Core component layer (fluid domain, steady) — *the milestone* — 🟡 **mostly done** (see §15)
-- ~~ANTLR grammar: `COMPONENT … END` definition + instantiation statement; dotted port-member references.~~ ✅ **done** (shared-name binding; `connect(...)` → Phase 1.5).
-- ~~`ComponentDef` AST record; component registry (alongside `ProcDef`).~~ ✅ **done** (`ComponentDef`/`ComponentInst`).
-- **Expansion pass**: ~~clone/substitute/mangle → scalar equations~~ ✅ **done** (`ComponentExpander`); branching node resolution shipped via Splitter/Mixer; `connect(...)` surface syntax → Phase 1.5.
-- Standard library (fluid): ~~Pump, Turbine, Compressor, Boiler/Heater, Condenser/Cooler, Throttle, Mixer, Splitter, Pipe (Phase 0), HX (4-port ε-NTU), Source/Sink boundary, Nozzle (CD, ideal-gas)~~ ✅ **done** (+ incompressible Duct/FanCurve, Fan).
-- ⏳ **State-circuit binding** (§6): stream→state adapter; per-fluid `StateTableDef`; `CyclePathResolver` taught member-name states + per-edge process. *(The one substantial Phase 1 item still open — frontend-coupled, see §15.2.6.)*
-**Deliverable:** ~~steady **fan-duct** and **Rankine/Brayton/refrigeration** flowsheets solve end-to-end~~ ✅ **done**; ⏳ auto cycle plots (needs §6 binding).
-**Acceptance:** ~~(i) a 4-component Rankine flowsheet reproduces the hand-written example's numbers~~ ✅; ~~(ii) the fan-duct operating point matches a manual curve-intersection~~ ✅; ~~(iii) zero unit warnings; (iv) full backend suite green~~ ✅.
+### Phase 1 — Core component layer (fluid domain, steady) — 🟢 **essentially complete** (see §15)
+Grammar (`COMPONENT … END` + instantiation + dotted member access), AST/registry, the expansion pass, `connect(...)` + loop-closure (Phase 1.5), and the full standard fluid library (Pump, Turbine, Compressor, Boiler, Condenser, Throttle, Pipe, Fan, Duct, FanCurve, Splitter, Mixer, HeatExchanger, Source, Sink, Nozzle — strict no-default parameters) are **shipped and green**; Rankine/Brayton/refrigeration cycles and the fan-duct operating point reproduce hand-written values with zero unit warnings.
+- ⏳ **State-circuit binding** (§6) — *the one remaining item:* stream→state adapter; per-fluid `StateTableDef` (fluid grouping already available via `streamFluids()`); `CyclePathResolver` taught member-name states + per-edge process. **Frontend-coupled** (see §15.2.6) — best done with frontend cycle-plot wiring.
 
-### Phase 2 — Multi-domain ports & transducers
-- Heat port `(T, Q̇)`; two-stream HX with exposed wall; baked-in-duty components.
-- Electrical port `(V, I)` + R/source primitives; ElectricHeater (kettle/boiler).
-- Mechanical-rotational port `(τ, ω)`; turbine→shaft, motor/generator stubs.
-**Acceptance:** a kettle (elec→thermal) and a shaft-coupled turbine-generator chain solve across domains; node rules validated (`ΣQ̇=0`, `ΣI=0`).
+### Phase 2 — Multi-domain ports + the variant selector (R3-enriched)
+- ~~**`model$` variant mechanism (§5.5) — build first.** The `VARIANT … REQUIRE …` block + selection-at-expansion pass; per-variant required-parameter validation; reuse for the datasheet-map variants. Gates every fidelity ladder in §16.~~ ✅ **shipped** (`ComponentVariantTest`, see §15.2.10).
+- **Heat port `(T, Q̇)`** + primitives (§16.1): conduction, free/forced convection, radiation, contact resistance, thermal source/ambient/sensor; two-stream HX with exposed wall; baked-in-duty components.
+- **Electrical port `(V, I)`** + primitives (§16.5): R/L/C, source, diode, switch; ElectricHeater (kettle/boiler); **battery ECM (R-int variant)** and **motor/inverter efficiency-map transducer** stubs (full ladders in Phase 6).
+- **Mechanical port `(τ, ω)` / `(F, v)`** + primitives (§16.4): inertia, spring, damper, end-stop; gear ratio; turbine→shaft, motor/generator stubs. (Friction/clutch with stick-slip → Phase 3, they need events.)
+**Acceptance:** a `model$`-selected compressor picks the right variant body and rejects wrong/missing params; a kettle (elec→thermal) and a shaft-coupled turbine-generator chain solve across domains; node rules validated (`ΣQ̇=0`, `ΣI=0`, `Στ=0`).
 
-### Phase 3 — Transient mode (storage → `DYNAMIC`)
-- C/I storage elements; auto-classification of states; `der(X)` emission.
-**Acceptance:** kettle time-to-boil and a tank fill/drain integrate correctly; steady limit recovers the Phase-1 operating point.
+### Phase 3 — Transient mode (storage → `DYNAMIC`, R3-enriched)
+- C/I storage elements; auto-classification of states; `der(X)` emission. Concrete storage components (§16.2/§16.6): **capacitive fluid volume / accumulator**, **lumped thermal mass** (`m·cp·der(T)=ΣQ̇`), **battery SOC** (`dSOC/dt=−I/3600Q₀`) + battery thermal node.
+- **Stiff integrator + event handling (Phase R).** Requires the stiff BDF (thermal/electrical/battery stiffness) and zero-crossing events for **friction (Stribeck/LuGre)** and **clutch** stick↔slip, **flow reversal**, **valve/diode** switching (§16.4/§16.5).
+**Acceptance:** kettle time-to-boil and a tank fill/drain integrate correctly; a battery warm-up (`I²R₀` self-heat → thermal node) integrates stably under the stiff solver; a clutch lock-up event restarts cleanly; steady limit recovers the Phase-1 operating point.
 
 ### Phase 4 — Plant → control coupling
 - Numeric (and Symja-symbolic) linearization of a solved network → `(A,B,C,D)`; hand-off to `ss`/`tf` and the control suite; signal domain + PID/state-feedback/observer controller components; closed-loop simulation via `DYNAMIC`.
 **Acceptance:** a tank-level or superheat loop: auto-linearized plant → `pidtune`/`lqr` → closed-loop `DYNAMIC` meets a step-response spec.
 
-### Phase 5 — Datasheet component wrappers
-- Pump/Fan/Compressor curve components (digitizer + `Interpolate2D`) + affinity-law scaling; valve `Cv`; compressor `η_v` map.
-**Acceptance:** a datasheet fan reproduces §7's operating point; affinity scaling matches the fan laws; inverse solve (find `rpm` for target `Q`) converges.
+### Phase 5 — Datasheet component wrappers (R3-enriched)
+- Shape-preserving map pre-fit (§8.6) feeding the `map` variants (§5.5). Pump/Fan/Compressor curve components (digitizer + `Interpolate2D`) + affinity-law scaling; valve `Cv`/orifice; **compressor `η_v` (volumetric-efficiency) and performance-map variants**; **motor torque-speed / efficiency map**; **battery OCV-SOC curve**. These are the `map`/`volumetric` rungs of the §16 ladders.
+**Acceptance:** a datasheet fan reproduces §7's operating point; affinity scaling matches the fan laws; a map-variant compressor matches its digitized map; inverse solve (find `rpm` for target `Q`) converges.
 
-### Phase 6 — Domain breadth & flagship system
-- Electrical battery **ECM** (digitized OCV-SOC, `DYNAMIC` SOC + thermal); motor/inverter efficiency-map transducer; chiller composition; cabin HVAC.
-- **EV battery thermal-management** system model; subsystem/hierarchy support; system-level uncertainty/sensitivity.
-**Acceptance:** an EV pack-cooling loop (ECM + cold plate + pump + chiller/radiator) reaches a steady operating point and a transient warm-up profile; KPI sensitivity ranking produced.
+### Phase 6 — Domain breadth & flagship system (R3-enriched, catalog → §16)
+Build out the §16 catalog, each component as a `model$` ladder:
+- **Refrigerant / HVAC:** AC compressor (isentropic-η → volumetric-η → map → variable-displacement), **multi-zone / moving-boundary evaporator & condenser** (subcool/two-phase/superheat zones), **TXV** (superheat-controlled), receiver/accumulator, **psychrometric cooling/heating coil** (sensible + latent + bypass factor).
+- **Electrical & battery:** battery **ECM ladder** (R-int → 1RC/2RC Thévenin → electrochemical) with **thermal coupling** (`Q̇=I²R₀ − I·T·dV_oc/dT`) at cell↔pack scope; ultracap; **electric machine ladder** (η-map → PMSM dq → flux-map) + inverter η-map.
+- **ICE & powertrain:** **mean-value / map engine** (BSFC/torque map + FMEP friction); **turbocharger** (compressor-map + turbine-map + shaft); **friction (Stribeck/LuGre)**, **clutch** (incl. dual-clutch), gear / planetary; **vehicle longitudinal road-load**; transmission (AT/DCT/fixed-ratio).
+- **HEV/EV supervisory:** rule-based → **ECMS** energy-management; drive-cycle source (reuse `TABLE`).
+- **System glue:** subsystem/hierarchy support; system-level uncertainty/sensitivity.
+**Acceptance:** an EV pack-cooling loop (battery ECM + thermal node → cold plate → pump → chiller/radiator, with motor/inverter heat loads) reaches a steady operating point and a transient warm-up profile; a vapor-compression A/C loop with multi-zone evaporator/condenser + TXV solves; KPI sensitivity ranking produced.
 
 ---
 
@@ -467,6 +520,9 @@ Add via the established 3-site wiring (`Evaluator` eval + `UnitChecker` dims + `
 | `parser/DomainRegistry.java` | per-domain `(across, flow)` + junction rule |
 | `core/Linearizer.java` | operating-point → `(A,B,C,D)` (Phase 4) |
 | `core/SolverScaling.java` | per-variable nominal scaling + Jacobian equilibration (§8.5) |
+| `parser` `VARIANT`/`REQUIRE` block | `model$` component-variant selection at expansion (§5.5, R3) |
+| `core` bounded/scaled Newton + backtracking | `[min,max,nominal]` box, line search, failure taxonomy (Phase R, R3) |
+| `core/ode/` stiff BDF integrator + `EventHandler` | WRMS-norm BDF + zero-crossing/mode events for `DYNAMIC` (Phase R, R3) |
 | `core/Homotopy.java` | continuation solver mode for phase-change/stiff starts (§8.7) |
 | `props/StreamUpwind.java` | `stream_h` reversing-flow enthalpy, tanh-blended (§8.8) |
 | `parser/StructuralIndexCheck.java` | high-index / rigid C-I detector + messages (§8.9) |
@@ -572,13 +628,93 @@ When the expander auto-classifies `C`/`I` storage states (§8.2), the user can *
    - **(a) Invalid base point.** A property argument left at the default guess 1.0 (1 Pa / 1 J/kg, below every fluid's table floor) makes the *first* residual NaN — the solve never starts. **Shipped fix:** `EquationSystemSolver.seedPropertyArgumentGuesses` reads the encoded `prop$…$p$h` indicators and seeds each bare argument variable to a domain nominal (`p`→10⁵, `t`→300, `h`→10⁵, `s`→10³, `x`→0.5, …) **only** when it still sits at `DEFAULT_GUESS` (user/GUI guesses always win). This makes the **monotonic** supercritical/single-phase inversion `Temperature(P,h)=T` converge **from a default guess** (red→green: `PropertyArgumentSeedingTest`). *This corrects finding 8's "seeding fixed nothing" — that judgment was made only on the dome-crossing case (mode c), which seeding genuinely cannot fix; seeding does fix the monotonic class.*
    - **(b) NaN-poisoned Jacobian.** A finite-difference probe can step a CoolProp argument outside its valid box (especially via the cancellation-escape ×10⁴ growth loop, which a near-flat derivative triggers), returning a NaN derivative column ⇒ `clamp(NaN)=NaN` step. **Shipped fix:** `NewtonSolver.computeJacobianColumn` now does **range-aware perturbation** — clamps the probe into the variable's `[lo,hi]` box (dividing by the *actual* step), **flips forward→backward** when a probe lands in a non-finite region, **caps** the growth so it never marches into an invalid region, and **guarantees a finite column** (no-sensitivity ⇒ 0, never NaN). Hardening only — full suite stays green; it is the prerequisite substrate for (c).
    - **(c) Two-phase dome plateau — SHIPPED (§8.7, single-unknown).** Crossing the saturation dome, `dT/dh≈0` (temperature is flat across the dome), so the inversion is non-monotonic and Newton's gradient vanishes even with a valid seed and a finite Jacobian — yet the residual is **monotonic and sign-changing overall**. **Shipped fix (two parts):** (i) `EquationSystemSolver.tryUnivariateBracketingSolve` — a last-resort, **single-equation/single-unknown** bracketing root-find (expanding NaN-skipping sample sweep → bisection) added to the block-solve fallback ladder *after* the transformed-guess retry and *before* block-merge; it is **scoped to blocks whose equation contains a `prop$` call** (so ordinary algebra still honours the Newton iteration-limit stop criterion) and only commits a root that drives the residual within `1e-6` relative tol (never masks a wrong/extraneous root). (ii) A correctness fix in `NewtonSolver.withinResidualTolerance`: a **non-finite residual is no longer mistaken for convergence** (`NaN > tol` is false, so an invalid guess was previously accepted as "solved" — this also let the transformed-guess retry return a bad value and pre-empt the bracketing). The canonical subcritical 8 MPa liquid→superheated inversion now **converges from a plain default guess** (red→green: `PropertyArgumentSeedingTest.subcriticalInversionAcrossDomeConvergesFromDefaultGuess`; verified that disabling the bracketing fallback re-breaks it, i.e. it is genuinely the crossing mechanism). *Validated on a coupled cycle:* the **fully-derived Rankine** (`ComponentCyclesTest.rankineWithDerivedPropertyBoundariesSolves`) now solves **seed-free** (`eta_th=0.332`) — its manual `s1..s5$h` seed was removed. Tarjan separates each stream's `Temperature/Quality(P,h)` inversion into its own 1×1 `prop$` block (`P` is fixed upstream, work terms read the already-solved `h`), so the bracketing aid resolves every state independently — including `s1`/`s5` on the dome and `s3` superheated above it. *Remaining §8.7 scope (now narrower):* only a **genuine N×N SCC** — two property inversions mutually coupled inside one block so they cannot be torn into 1×1 — would still need a past-the-dome seed; generalising the bracket to that case (continuation/homotopy or a quality-bracketed sub-solve) is the open extension, but no shipped example currently hits it.
+10. **Component physics-variant selector (`model$`) — SHIPPED (Phase 2 first increment, §5.5, R3).** The "one component, many models" mechanism: a `COMPONENT` may carry several `VARIANT name [REQUIRE p1, p2, …] … END` bodies and a `PARAM model$` selector that picks one; the chosen variant's equations expand alongside the shared (non-variant) body. **Implementation (4 sites):** (a) grammar — `VARIANT`/`REQUIRE` keywords + a `componentVariant` rule (nested `… END`) added as a `componentItem` alternative; (b) `ast/ComponentDef` — a `Variant(name, require, body)` record + `variants` field + `variant(name)` lookup; (c) `parser/AstBuilder` — `buildComponentVariant`, and **`REQUIRE` names are auto-declared as variant-scoped `Param`s** (no default, trailing `$` ⇒ string) so they need not be repeated as `PARAM`; (d) `parser/ComponentExpander` — `selectVariant` reads `model$`, `effectiveBody()` = shared + selected variant, and the param loop makes a parameter **required only when its variant is selected** (a parameter listed in an *unselected* variant's `REQUIRE` is optional, so a `map` compressor never demands the isentropic `eta`). **Strict errors:** declaring variants without a `model$` selector; an unknown `model$` value (lists valid variants); a missing required parameter of the selected variant (names the variant). **Decision:** the built-in library Compressor was **not** converted to variants (would change its `eta`-only API and break cycle tests) — variants stay a language feature for now; converting/extending built-ins to ladders is Phase 5/6 work. Tests: `core/ComponentVariantTest` (6, green); full backend suite green. *This is the keystone that gates the §16 catalog — every domain ladder now expressible as one component.*
 
 ### 15.3 Immediate next steps (revised ordering)
 - **Solver robustness (§8.5/§8.7) — single-unknown path now fully shipped** (finding 9). All three single-inversion modes are fixed: (a) invalid base point → property-argument seeding; (b) NaN-poisoned Jacobian → range-aware FD perturbation; (c) two-phase dome → `prop$`-scoped univariate bracketing fallback + the NaN-not-converged correctness fix (`PropertyArgumentSeedingTest`, full suite green). The fully-derived Rankine now solves **seed-free** (its manual seed was removed), confirming coupled cycles work whenever Tarjan tears the per-stream inversions into 1×1 `prop$` blocks. **Remaining solver work (narrow):** only a genuine **N×N SCC** of mutually-coupled property inversions would still need a seed — no shipped example hits it yet; generalising the bracket to that case (continuation/homotopy) is deferred until one does. Row/column equilibration (§8.5) stays a worthwhile general conditioning add but is not a gate.
+- ~~**Component variant selector (`model$`)** — Phase 2 first increment~~ **SHIPPED** (finding 10): grammar `VARIANT … REQUIRE … END` + `model$` selection in `ComponentExpander`; `ComponentVariantTest`. **Next Phase 2 increment:** the **thermal `(T, Q̇)` port** + its §16.1 primitives (conduction/convection/radiation/thermal-mass) — backend-self-contained; needs the `connect(...)` node rule made domain-aware (`ΣQ̇=0`, `T` equal) instead of fluid-only `Σṁ=0`/`P,h`.
 - **State-circuit binding (§6)** → emit per-fluid `StateTableDef` (fluid grouping already available via `streamFluids()`) + ordered process edges; teach `CyclePathResolver` + frontend cycle-plot rendering. *(The remaining Phase 1 item — finding 6.)*
 - ~~**Phase 1.5 — `connect()` surface syntax** and **loop-closure handling**~~ **SHIPPED** (findings 1 & 2): free-ported instances + `connect(a, b, …)` (P/h equal, mass conserved, name-inferred branch direction) + union-find loop-closure that drops the redundant cycle equations. `ComponentConnectTest`. *Remaining sub-item:* loop detection through 3+-port splitter/mixer nodes (only 2-port pass-through internal links are currently seeded into the union-find).
 - Remaining standard-library components: ~~Nozzle~~ ✅ **done** and ~~Source/Sink boundary~~ ✅ **done**. `Source` real-fluid inlet `(fluid$,mdot,P,T)`→forward `h`; `Sink` readout terminal. `Nozzle` (CD, ideal-gas isentropic): inlet stream taken as the chamber/stagnation state (`in.P`=P0), `PARAM k,R,A_throat,A_exit,P_amb,T0`; reads supersonic exit Mach off the area ratio (`mach_A_Astar`), then exit static P/T/V, `out.h = in.h − V²/2` (stagnation-enthalpy conservation), and thrust — all forward, no CoolProp. The "stagnation stream rider" need is met by treating the inlet as stagnation + T0 param (kinetic riders are instance locals, per §5.4).
 - Optional: explicit stream-fluid declaration / fluid-less property-name warning (finding 7); fitting-`K` table and `valve_cv` (Phase 0 leftovers).
+
+---
+
+## 16. Multi-Domain Component Catalog (R3) — feeds Phases 2/3/5/6
+
+> Derived from a structured cross-study of an established 1-D multi-domain system-simulation component library. Each component is a **`model$` fidelity ladder** (§5.5). Status key: ✅ physics already in frEES (CoolProp / ε-NTU / compressible / Newton) · 🟡 small constitutive add · 🔶 needs a new port-domain (Phase 2). "Dep" = the enabler it waits on: **V** = `model$` selector, **T/E/M** = heat/electrical/mechanical port, **S** = storage+stiff ODE (Phase 3).
+
+### 16.1 Thermal (Phase 2 heat port `(T, Q̇)`)
+| Component | Variant ladder | Status | Dep |
+|---|---|---|---|
+| Conduction / convection / radiation / contact-resistance node | free vs forced convection; `Q=εσA(T⁴−T⁴)` | 🔶 | T |
+| Lumped thermal mass | 1-node → n-node wall (`C·dT/dt=ΣQ̇`) | 🔶 | T+S |
+| Thermal source / ambient / sensor | — | 🔶 | T |
+
+### 16.2 Thermofluid & heat exchangers (Phase 2/3/5)
+| Component | Variant ladder | Status | Dep |
+|---|---|---|---|
+| **Multi-zone / moving-boundary HX** | ε-NTU (have) → n-cell discretized → 3-zone (subcool/two-phase/superheat) | 🟡 | V |
+| Capacitive **volume / accumulator** | rigid → compressible → two-phase receiver | 🟡 | S |
+| Valve / orifice / control valve | `Cv` → `K` → choked-flow | 🟡 | V |
+| Two-phase pipe pressure drop | Darcy (have) → Lockhart-Martinelli / Friedel | 🟡 | V |
+
+### 16.3 Air conditioning / HVAC (Phase 5/6)
+| Component | Variant ladder | Status | Dep |
+|---|---|---|---|
+| **AC compressor** | isentropic-η (have) → **volumetric-η** (`ṁ=η_v·V_d·N·ρ`) → **map** → **variable-displacement** | ✅/🟡 | V |
+| **Evaporator / condenser** | micro-channel tube-fin · plate-fin · brazed-plate; single-zone → multi-zone | 🟡 | V |
+| **Thermostatic expansion valve (TXV)** | fixed orifice → superheat-controlled | 🟡 | V |
+| **Psychrometric coil / moist-air** | cooling coil (sensible+latent+bypass) · heating coil · humidifier · economizer | 🟡 | — (psychrometrics shipped) |
+| Receiver / accumulator / TXV bulb | — | 🟡 | S |
+
+### 16.4 Mechanical (Phase 2/3 mechanical port `(τ,ω)`/`(F,v)`)
+| Component | Variant ladder | Status | Dep |
+|---|---|---|---|
+| Inertia / spring / damper / end-stop | linear vs rotational | 🔶 | M |
+| **Friction** | Coulomb → viscous → **Stribeck → LuGre** (presliding) | 🔶 | M+S (events) |
+| **Clutch** | locked/slipping torque transfer; dual-clutch | 🔶 | M+S (events) |
+| Gear ratio / **planetary gear train** | ideal → with efficiency/thermal | 🔶 | M |
+| Cam-follower | kinematic → with contact | 🔶 | M |
+
+### 16.5 Electrical (Phase 2 electrical port `(V, I)`)
+| Component | Variant ladder | Status | Dep |
+|---|---|---|---|
+| R / L / C / source / diode / switch | — | 🔶 | E |
+| **Electric machine** | η-map transducer → **PMSM dq** → flux-map → loss/thermal-coupled | 🔶 | E+M+V |
+| **Inverter / power electronics** | efficiency-map | 🔶 | E |
+| Solenoid / reluctance actuator | magnetic-circuit | 🔶 | E+M |
+
+### 16.6 Battery (Phase 6)
+| Component | Variant ladder | Status | Dep |
+|---|---|---|---|
+| **Battery ECM** | R-int → **1RC/2RC Thévenin** → electrochemical; cell ↔ pack | 🔶 | E+S |
+| **Battery thermal coupling** | self-heat `Q̇=I²R₀ − I·T·dV_oc/dT` → thermal node | 🔶 | E+T+S |
+| Ultracapacitor / current-limit unit | — | 🔶 | E |
+
+### 16.7 Internal combustion (Phase 6)
+| Component | Variant ladder | Status | Dep |
+|---|---|---|---|
+| **Mean-value / map engine** | BSFC/torque map (+ FMEP friction) | 🟡 | V |
+| **Turbocharger** | compressor-map + turbine-map + shaft (VG / two-stage) | 🟡 | V+M |
+| Crank-angle-resolved cylinder | Wiebe (have) + Woschni heat transfer | 🟡 | S (stretch / likely out of scope) |
+
+### 16.8 HEV / EV system (Phase 6)
+| Component | Variant ladder | Status | Dep |
+|---|---|---|---|
+| Vehicle longitudinal road-load | rolling + aero + grade | 🔶 | M/S |
+| Transmission | AT / DCT / fixed-ratio | 🔶 | M |
+| **HEV supervisory energy management** | rule-based → **ECMS** | 🟡 | V |
+| Driver / drive-cycle profile | PI driver, cycle source | ✅ | — (`TABLE`) |
+
+### 16.9 Build sequence (waves)
+1. **Wave A — enablers:** `model$` selector (§5.5) + thermal `(T,Q̇)` port and §16.1 primitives. Unlocks multi-zone HX and shared-wall coupling.
+2. **Wave B — refrigerant/HVAC:** compressor variants, multi-zone evaporator/condenser, TXV, psychrometric coils → a complete A/C / refrigeration loop on already-shipped physics.
+3. **Wave C — electrical + battery:** `(V,I)` port + R/L/C + battery ECM + thermal coupling + motor/inverter η-map → the **EV battery-thermal flagship**.
+4. **Wave D — mechanical + powertrain:** `(τ,ω)` port + inertia/spring/damper + friction(Stribeck/LuGre) + clutch/gear + mean-value engine + road-load.
+5. **Wave E — advanced:** turbocharger maps, ECMS energy management, crank-resolved cylinder (if ever).
+
+The algorithmically novel pieces (worth a dedicated derivation) are: **LuGre/Stribeck friction**, **clutch stick-slip torque transfer**, **two-phase pressure drop**, **battery multi-RC Thévenin**, and **PMSM dq flux-map**. Everything else is one-to-three-equation constitutive bodies the existing expander already handles.
 
 ---
 

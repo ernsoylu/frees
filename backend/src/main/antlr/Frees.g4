@@ -204,7 +204,22 @@ componentDef
 
 componentItem
     : PARAM componentParam (COMMA componentParam)*   # CompParam
+    | componentVariant                               # CompVariant
     | equation                                       # CompEq
+    ;
+
+// A selectable physics variant ("one component, many models"). The component's
+// `model$` parameter chooses which variant's body is expanded; equations outside
+// any VARIANT are shared by every variant. REQUIRE lists the parameters that
+// variant needs (validated only when it is the selected one).
+//   VARIANT map REQUIRE map_mdot, map_eta
+//     out.mdot = map_mdot(out.P/in.P, rpm)
+//     ...
+//   END
+componentVariant
+    : VARIANT IDENT (REQUIRE IDENT (COMMA IDENT)*)? sep
+      (equation sep)*
+      END
     ;
 
 componentParam
@@ -508,6 +523,8 @@ EVENT     : [eE][vV][eE][nN][tT] ;
 COMPONENT : [cC][oO][mM][pP][oO][nN][eE][nN][tT] ;
 CONNECT   : [cC][oO][nN][nN][eE][cC][tT] ;
 PARAM     : [pP][aA][rR][aA][mM] ;
+VARIANT   : [vV][aA][rR][iI][aA][nN][tT] ;
+REQUIRE   : [rR][eE][qQ][uU][iI][rR][eE] ;
 IF        : [iI][fF] ;
 THEN      : [tT][hH][eE][nN] ;
 ELSE      : [eE][lL][sS][eE] ;
