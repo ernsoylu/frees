@@ -521,6 +521,7 @@ public final class ComponentExpander {
      *  lifted out into {@link #componentInitials()} (it is not a solver equation). */
     public List<Equation> expand() {
         List<Equation> out = new ArrayList<>();
+        java.util.Set<String> derStates = new java.util.HashSet<>();
         for (ResolvedInstance ri : instances) {
             String prefix = "COMPONENT " + ri.def().name() + " " + ri.inst().name() + ": ";
             for (Equation eq : ri.effectiveBody()) {
@@ -532,15 +533,41 @@ public final class ComponentExpander {
                         initials.add(new DynamicSystem.InitialCondition(state, List.of(), rhs));
                         continue;   // an initial condition, not a solver equation
                     }
-                    if (fn.equals("der")) {
+                    if (fn.equals("der") && args.size() == 1
+                            && args.get(0) instanceof Expr.Var(String state)) {
                         hasStorage = true;
+                        derStates.add(state);
                     }
                 }
                 out.add(new Equation(lhs, rhs, prefix + eq.sourceText()));
             }
         }
         expandConnects(out);
+        checkHighIndex(out, derStates);
         return out;
+    }
+
+    /**
+     * High-index DAE guard (§8.9): two storage states forced equal by an algebraic
+     * equation (e.g. two thermal masses tied to one node — `m1.T = m2.T` while both
+     * carry `der`) make the system index ≥ 2 and singular. Reject it with an
+     * actionable message rather than failing later with a singular matrix.
+     */
+    private void checkHighIndex(List<Equation> equations, java.util.Set<String> derStates) {
+        if (derStates.size() < 2) {
+            return;
+        }
+        for (Equation eq : equations) {
+            if (eq.lhs() instanceof Expr.Var(String a) && eq.rhs() instanceof Expr.Var(String b)
+                    && derStates.contains(a) && derStates.contains(b) && !a.equals(b)) {
+                String da = displayNames.getOrDefault(a, a.replace('$', '.'));
+                String db = displayNames.getOrDefault(b, b.replace('$', '.'));
+                throw new EquationParser.ParseException("High-index DAE: storage states '" + da
+                        + "' and '" + db + "' are rigidly coupled (directly equated) — index ≥ 2. "
+                        + "Lump them into one storage element, or insert a small resistance/compliance "
+                        + "between them.");
+            }
+        }
     }
 
     // ── connect(...) node expansion ──────────────────────────────────────────
