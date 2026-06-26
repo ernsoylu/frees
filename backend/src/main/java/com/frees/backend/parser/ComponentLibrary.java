@@ -66,6 +66,47 @@ public final class ComponentLibrary {
               out.mdot = in.mdot
               out.h    = in.h
             END
+
+            COMPONENT Pipe(in, out)
+              PARAM fluid$ = Water, L = 1 [m], D = 0.05 [m], rough = 0.000045 [m]
+              out.mdot = in.mdot
+              out.h    = in.h
+              rho      = Density(fluid$, P=in.P, h=in.h)
+              mu       = Viscosity(fluid$, P=in.P, h=in.h)
+              A        = pi# / 4 * D^2
+              V        = in.mdot / (rho * A)
+              Re_d     = reynolds(rho, V, D, mu)
+              f        = friction_factor(Re_d, rough / D)
+              out.P    = in.P - f * (L / D) * rho * V^2 / 2
+            END
+
+            COMPONENT Fan(in, out)
+              PARAM fluid$ = Air, dP0 = 500 [Pa], Q0 = 1 [m^3/s], eta = 0.6
+              rho      = Density(fluid$, P=in.P, h=in.h)
+              Q        = in.mdot / rho
+              dP       = dP0 * (1 - (Q / Q0)^2)
+              out.mdot = in.mdot
+              out.P    = in.P + dP
+              out.h    = in.h + dP / (rho * eta)
+            END
+
+            COMPONENT Duct(in, out)
+              PARAM rho = 1.2 [kg/m^3], mu = 1.8e-5 [Pa-s], L = 1 [m], D = 0.05 [m], rough = 0.000045 [m]
+              out.mdot = in.mdot
+              A        = pi# / 4 * D^2
+              V        = in.mdot / (rho * A)
+              Re_d     = reynolds(rho, V, D, mu)
+              f        = friction_factor(Re_d, rough / D)
+              out.P    = in.P - f * (L / D) * rho * V^2 / 2
+            END
+
+            COMPONENT FanCurve(in, out)
+              PARAM rho = 1.2 [kg/m^3], dP0 = 500 [Pa], Q0 = 1 [m^3/s]
+              Q        = in.mdot / rho
+              dP       = dP0 * (1 - (Q / Q0)^2)
+              out.mdot = in.mdot
+              out.P    = in.P + dP
+            END
             """;
 
     private static final List<ComponentDef> BUILTINS = parse(SOURCE);
