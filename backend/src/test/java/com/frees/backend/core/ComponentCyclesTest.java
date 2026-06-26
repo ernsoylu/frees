@@ -3,7 +3,6 @@ package com.frees.backend.core;
 import com.frees.backend.props.CoolProp;
 import org.junit.jupiter.api.Test;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -139,22 +138,15 @@ class ComponentCyclesTest {
         List<String> warnings = solver.checkUnits(RANKINE_DERIVED, Map.of());
         assertTrue(warnings.isEmpty(), "expected zero unit warnings, got: " + warnings);
 
-        // Derived-property boundaries (s.x, s.T) make enthalpy an *implicit*
-        // unknown that the solver finds by inverting Quality/Temperature — so it
-        // starts at the default guess (1.0 J/kg, below CoolProp's range) unless
-        // seeded. We seed the stream enthalpies near their state values, the
-        // GUI/Variable-Information path; automating this is the deferred §8.5
-        // scaling work. (The explicit-Enthalpy RANKINE_COMPONENTS needs no seed
-        // because there enthalpy is computed forward.)
-        Map<String, VariableSpec> specs = new HashMap<>();
-        double[] hGuess = {1.9e5, 2.0e5, 3.4e6, 2.4e6, 1.9e5};   // s1..s5
-        for (int i = 0; i < hGuess.length; i++) {
-            String name = "s" + (i + 1) + "$h";
-            specs.put(name, new VariableSpec(name, hGuess[i],
-                    Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY));
-        }
-        double eta = solver.solve(RANKINE_DERIVED, SolverSettings.DEFAULTS, specs)
-                .variables().get("eta_th");
+        // Derived-property boundaries (s.x, s.T) make each stream enthalpy an
+        // *implicit* unknown the solver finds by inverting Quality/Temperature.
+        // This no longer needs a manual seed: §8.5/§8.7 solver work — property-
+        // argument seeding (valid base point) + the prop$-scoped univariate
+        // bracketing fallback (crosses the two-phase dome where dT/dh≈0) —
+        // resolves every per-stream inversion from a plain default guess, even
+        // for s1/s5 (saturated liquid, on the dome) and s3 (superheated, above
+        // it). The whole coupled cycle solves seed-free.
+        double eta = solver.solve(RANKINE_DERIVED).variables().get("eta_th");
         assertTrue(eta > 0.30 && eta < 0.45, "Rankine thermal efficiency ~0.35, got " + eta);
     }
 
