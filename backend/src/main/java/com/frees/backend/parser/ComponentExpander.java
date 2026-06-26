@@ -170,13 +170,27 @@ public final class ComponentExpander {
                 streamDisplay.put(stream, inst.name() + "." + port);
             }
         }
+        // Resolve the subsystem's own parameter values (override or default) so
+        // they can be substituted into the sub-instances' parameter expressions —
+        // a cell's UA/fluid can reference the subsystem's UA/fluid.
+        Map<String, Expr> outerParams = new LinkedHashMap<>();
+        for (ComponentDef.Param p : def.params()) {
+            Expr val = inst.params().getOrDefault(p.name(), p.defaultValue());
+            if (val != null) {
+                outerParams.put(p.name(), val);
+            }
+        }
         for (ComponentInst sub : def.subInstances()) {
             String subName = inst.name() + "." + sub.name();
             List<String> subPorts = new ArrayList<>();
             for (String pa : sub.portArgs()) {
                 subPorts.add(rewriteSubRef(pa, inst.name(), def, portMap));
             }
-            flattenInstance(new ComponentInst(sub.type(), subName, subPorts, sub.params(),
+            Map<String, Expr> subParams = new LinkedHashMap<>();
+            for (Map.Entry<String, Expr> e : sub.params().entrySet()) {
+                subParams.put(e.getKey(), substituteParams(e.getValue(), outerParams));
+            }
+            flattenInstance(new ComponentInst(sub.type(), subName, subPorts, subParams,
                     sub.sourceText()), outInsts, outConns, stack);
         }
         for (ConnectDecl sc : def.subConnects()) {
@@ -187,6 +201,26 @@ public final class ComponentExpander {
             outConns.add(new ConnectDecl(refs, sc.sourceText()));
         }
         stack.remove(inst.type());
+    }
+
+    /** Substitutes a subsystem's parameter values into a sub-instance's parameter
+     *  expression (e.g. a cell's {@code UA = UA/2} where the outer {@code UA} is a
+     *  subsystem parameter). */
+    private static Expr substituteParams(Expr e, Map<String, Expr> params) {
+        return switch (e) {
+            case Expr.Var(String name) -> params.getOrDefault(name, e);
+            case Expr.Neg(Expr o) -> new Expr.Neg(substituteParams(o, params));
+            case Expr.BinOp(char op, Expr l, Expr r) ->
+                    new Expr.BinOp(op, substituteParams(l, params), substituteParams(r, params));
+            case Expr.Call(String fn, List<Expr> args) -> {
+                List<Expr> na = new ArrayList<>(args.size());
+                for (Expr a : args) {
+                    na.add(substituteParams(a, params));
+                }
+                yield new Expr.Call(fn, na);
+            }
+            default -> e;
+        };
     }
 
     /** Rewrites a reference inside a subsystem body: an outer port → its bound

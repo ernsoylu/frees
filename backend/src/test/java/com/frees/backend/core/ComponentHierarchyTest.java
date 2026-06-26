@@ -79,4 +79,32 @@ class ComponentHierarchyTest {
         Map<String, Double> v = solver.solve(src).variables();
         assertEquals(3000.0, v.get("s2.h"), 1e-6);
     }
+
+    @Test
+    void subsystemParametersFlowIntoSubInstances() {
+        // The subsystem's Qtot parameter is split across its two internal heaters.
+        String src = """
+                COMPONENT Heater(in, out)
+                  PARAM Q
+                  out.mdot = in.mdot
+                  out.P    = in.P
+                  out.h    = in.h + Q / in.mdot
+                END
+                COMPONENT TwoStage(in, out)
+                  PARAM Qtot
+                  Heater H1(Q=Qtot/2)
+                  Heater H2(Q=Qtot/2)
+                  connect(in, H1.in)
+                  connect(H1.out, H2.in)
+                  connect(H2.out, out)
+                END
+                TwoStage TS(s1, s2, Qtot=4000)
+                s1.P    = 100000
+                s1.mdot = 2
+                s1.h    = 0
+                """;
+        Map<String, Double> v = solver.solve(src).variables();
+        // Each heater gets Qtot/2 = 2000 W → adds 1000 J/kg; total 2000.
+        assertEquals(2000.0, v.get("s2.h"), 1e-6);
+    }
 }
