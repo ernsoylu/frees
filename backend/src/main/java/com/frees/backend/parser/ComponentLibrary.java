@@ -483,6 +483,34 @@ public final class ComponentLibrary {
               in.mdot * abs(in.mdot) = CdA^2 * 2 * rho_in * (in.P - out.P)
             END
 
+            COMPONENT CurrentSource(p, n)
+              PARAM I
+              p.I = -I
+              p.I + n.I = 0
+            END
+
+            COMPONENT Battery2RC(p, n)
+              PARAM Voc, R0, R1, C1, R2, C2, Vrc1_0, Vrc2_0
+              p.V - n.V  = Voc + R0 * p.I - Vrc1 - Vrc2
+              der(Vrc1)  = -p.I / C1 - Vrc1 / (R1 * C1)
+              init(Vrc1) = Vrc1_0
+              der(Vrc2)  = -p.I / C2 - Vrc2 / (R2 * C2)
+              init(Vrc2) = Vrc2_0
+              p.I + n.I  = 0
+            END
+
+            COMPONENT ThermalSensor(port)
+              port.Qdot = 0
+              T_meas    = port.T
+            END
+
+            COMPONENT FlowSensor(in, out)
+              out.mdot  = in.mdot
+              out.P     = in.P
+              out.h     = in.h
+              mdot_meas = in.mdot
+            END
+
             COMPONENT CoolingCoil(in, out)
               PARAM P, Tout
               h_in       = Enthalpy(AirH2O, T=in.T, P=P, W=in.humrat)

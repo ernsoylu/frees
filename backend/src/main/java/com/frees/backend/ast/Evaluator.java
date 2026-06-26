@@ -477,6 +477,11 @@ public final class Evaluator {
                     arg(c, args, 2, values, defs), arg(c, args, 3, values, defs),
                     arg(c, args, 4, values, defs));
 
+            // ISA 1976 standard atmosphere: T/P/ρ at a geopotential altitude.
+            case "isa_t" -> com.frees.backend.props.Atmosphere.temperature(arg(c, args, 0, values, defs));
+            case "isa_p" -> com.frees.backend.props.Atmosphere.pressure(arg(c, args, 0, values, defs));
+            case "isa_rho" -> com.frees.backend.props.Atmosphere.density(arg(c, args, 0, values, defs));
+
             // Cubic equation-of-state backend (SRK/PR), independent of CoolProp.
             // Signature: eos_*(fluid$, model$, T, P, phase$); pressure takes
             // (fluid$, model$, T, v) and psat takes (fluid$, model$, T).
