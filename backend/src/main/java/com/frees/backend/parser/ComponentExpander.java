@@ -503,6 +503,7 @@ public final class ComponentExpander {
             switch (dom) {
                 case HEAT -> out.add(kirchhoffBalance(sts, "qdot", prefix));
                 case ELECTRICAL -> out.add(kirchhoffBalance(sts, "i", prefix));
+                case MECHANICAL -> out.add(kirchhoffBalance(sts, "tau", prefix));
                 case FLUID -> {
                     if (!loopClosing) {
                         if (sts.size() == 2) {
@@ -595,15 +596,16 @@ public final class ComponentExpander {
     }
 
     /** The physical domain of a connection node, with its node rule. */
-    private enum Domain { FLUID, HEAT, ELECTRICAL }
+    private enum Domain { FLUID, HEAT, ELECTRICAL, MECHANICAL }
 
     /**
      * Classifies a {@code connect} node's domain from the members its streams
      * carry, keyed by the distinctive flow member (then the across member as a
      * fallback for source-only nodes): {@code mdot}⇒fluid, {@code qdot}⇒heat,
-     * {@code i}⇒electrical. Fluid is the default, so every existing fluid connect
-     * is unaffected. Heat and electrical share a Kirchhoff flow rule (Σflow=0);
-     * fluid keeps its directional pass-through / branch balance.
+     * {@code i}⇒electrical, {@code tau}⇒mechanical (rotational). Fluid is the
+     * default, so every existing fluid connect is unaffected. Heat, electrical and
+     * mechanical share a Kirchhoff flow rule (Σflow=0); fluid keeps its directional
+     * pass-through / branch balance.
      */
     private Domain nodeDomain(List<String> streams) {
         java.util.Set<String> u = new java.util.HashSet<>();
@@ -622,11 +624,17 @@ public final class ComponentExpander {
         if (u.contains("i")) {
             return Domain.ELECTRICAL;
         }
+        if (u.contains("tau")) {
+            return Domain.MECHANICAL;
+        }
         if (u.contains("t")) {
             return Domain.HEAT;          // a heat node carrying only temperatures (sources)
         }
         if (u.contains("v")) {
             return Domain.ELECTRICAL;    // an electrical node carrying only potentials
+        }
+        if (u.contains("w")) {
+            return Domain.MECHANICAL;    // a mechanical node carrying only speeds (grounds/sources)
         }
         return Domain.FLUID;
     }
@@ -637,6 +645,7 @@ public final class ComponentExpander {
             case FLUID -> new String[]{"p", "h"};
             case HEAT -> new String[]{"t"};
             case ELECTRICAL -> new String[]{"v"};
+            case MECHANICAL -> new String[]{"w"};
         };
     }
 
