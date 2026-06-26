@@ -65,11 +65,27 @@ public final class ComponentExpander {
             Map.entry("rho", "density"), Map.entry("d", "density"),
             Map.entry("u", "intenergy"), Map.entry("cp", "cp"), Map.entry("cv", "cv"));
 
-    /** A fully resolved instance: its definition, port→stream map, and parameter values. */
+    /** The string parameter that selects a component's physics variant (§5.5). */
+    private static final String VARIANT_SELECTOR = "model$";
+
+    /** A fully resolved instance: its definition, port→stream map, parameter
+     *  values, and the selected physics variant (null when the component has none). */
     private record ResolvedInstance(ComponentInst inst, ComponentDef def,
                                     Map<String, String> portToStream,
                                     Map<String, Expr> numericParams,
-                                    Map<String, String> stringParams) {}
+                                    Map<String, String> stringParams,
+                                    ComponentDef.Variant selectedVariant) {
+
+        /** The shared body plus the selected variant's body (the equations to expand). */
+        List<Equation> effectiveBody() {
+            if (selectedVariant == null) {
+                return def.body();
+            }
+            List<Equation> all = new ArrayList<>(def.body());
+            all.addAll(selectedVariant.body());
+            return all;
+        }
+    }
 
     public ComponentExpander(List<ComponentDef> builtinDefs, List<ComponentDef> userDefs,
                              List<ComponentInst> componentInsts, Map<String, String> displayNames) {
@@ -261,29 +277,93 @@ public final class ComponentExpander {
                         + "): unknown parameter '" + key + "'.");
             }
         }
+        // Physics-variant selection (§5.5): the `model$` parameter picks one
+        // VARIANT body to expand. A parameter required only by an *unselected*
+        // variant is optional (need not be supplied), so a map-based compressor
+        // doesn't demand the isentropic variant's `eta`, and vice versa.
+        ComponentDef.Variant selected = selectVariant(inst, def);
+        java.util.Set<String> variantParams = new java.util.HashSet<>();
+        for (ComponentDef.Variant v : def.variants()) {
+            variantParams.addAll(v.require());
+        }
+        java.util.Set<String> selectedRequire = selected == null
+                ? java.util.Set.of() : new java.util.HashSet<>(selected.require());
+
         Map<String, Expr> numericParams = new LinkedHashMap<>();
         Map<String, String> stringParams = new LinkedHashMap<>();
         for (ComponentDef.Param p : def.params()) {
             Expr override = inst.params().get(p.name());
+            Expr value = override != null ? override : p.defaultValue();
+            // A parameter listed in some variant's REQUIRE but not the selected
+            // one's is optional — skip it silently when unsupplied.
+            boolean optional = variantParams.contains(p.name()) && !selectedRequire.contains(p.name());
+            if (value == null && optional) {
+                continue;
+            }
             if (p.isString()) {
-                Expr value = override != null ? override : p.defaultValue();
                 if (value == null) {
                     throw new EquationParser.ParseException("Component '" + inst.name() + "' (" + inst.type()
                             + "): string parameter '" + p.name() + "' has no value (give it a default or pass "
-                            + p.name() + "=Name).");
+                            + p.name() + "=Name)." + variantHint(selected, p.name()));
                 }
                 stringParams.put(p.name(), stringToken(inst, p.name(), value));
             } else {
-                Expr value = override != null ? override : p.defaultValue();
                 if (value == null) {
                     throw new EquationParser.ParseException("Component '" + inst.name() + "' (" + inst.type()
                             + "): parameter '" + p.name() + "' has no value (give it a default or pass "
-                            + p.name() + "=value).");
+                            + p.name() + "=value)." + variantHint(selected, p.name()));
                 }
                 numericParams.put(p.name(), value);
             }
         }
-        return new ResolvedInstance(inst, def, portToStream, numericParams, stringParams);
+        return new ResolvedInstance(inst, def, portToStream, numericParams, stringParams, selected);
+    }
+
+    /**
+     * Resolves which physics VARIANT an instance selects via its {@code model$}
+     * parameter. Returns null when the component declares no variants. A component
+     * that declares variants must declare a {@code model$} selector parameter; an
+     * unknown variant name is a hard error listing the valid choices.
+     */
+    private static ComponentDef.Variant selectVariant(ComponentInst inst, ComponentDef def) {
+        if (def.variants().isEmpty()) {
+            return null;
+        }
+        ComponentDef.Param selector = def.param(VARIANT_SELECTOR);
+        if (selector == null) {
+            throw new EquationParser.ParseException("Component '" + inst.name() + "' (" + inst.type()
+                    + "): declares VARIANT blocks but no 'PARAM " + VARIANT_SELECTOR
+                    + "' selector to choose between them.");
+        }
+        Expr selExpr = inst.params().getOrDefault(VARIANT_SELECTOR, selector.defaultValue());
+        if (selExpr == null) {
+            throw new EquationParser.ParseException("Component '" + inst.name() + "' (" + inst.type()
+                    + "): no variant selected — give '" + VARIANT_SELECTOR + "' a default or pass "
+                    + VARIANT_SELECTOR + "=<variant>. Variants: " + variantNames(def) + ".");
+        }
+        String name = stringToken(inst, VARIANT_SELECTOR, selExpr);
+        ComponentDef.Variant v = def.variant(name);
+        if (v == null) {
+            throw new EquationParser.ParseException("Component '" + inst.name() + "' (" + inst.type()
+                    + "): unknown " + VARIANT_SELECTOR + " '" + name + "'. Variants: " + variantNames(def) + ".");
+        }
+        return v;
+    }
+
+    private static String variantNames(ComponentDef def) {
+        List<String> names = new ArrayList<>();
+        for (ComponentDef.Variant v : def.variants()) {
+            names.add(v.name());
+        }
+        return String.join(", ", names);
+    }
+
+    /** Appended to a missing-parameter error to point at the selected variant. */
+    private static String variantHint(ComponentDef.Variant selected, String paramName) {
+        if (selected != null && selected.require().contains(paramName)) {
+            return " (required by the selected '" + selected.name() + "' variant).";
+        }
+        return "";
     }
 
     private static String stringToken(ComponentInst inst, String paramName, Expr value) {
@@ -301,7 +381,7 @@ public final class ComponentExpander {
         List<Equation> out = new ArrayList<>();
         for (ResolvedInstance ri : instances) {
             String prefix = "COMPONENT " + ri.def().name() + " " + ri.inst().name() + ": ";
-            for (Equation eq : ri.def().body()) {
+            for (Equation eq : ri.effectiveBody()) {
                 Expr lhs = rewriteBody(eq.lhs(), ri);
                 Expr rhs = rewriteBody(eq.rhs(), ri);
                 out.add(new Equation(lhs, rhs, prefix + eq.sourceText()));

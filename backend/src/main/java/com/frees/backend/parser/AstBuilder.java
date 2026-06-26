@@ -116,6 +116,7 @@ public class AstBuilder extends FreesBaseVisitor<Expr> {
         List<String> ports = buildParamList(ctx.paramList());
         List<com.frees.backend.ast.ComponentDef.Param> params = new ArrayList<>();
         List<com.frees.backend.ast.Equation> body = new ArrayList<>();
+        List<com.frees.backend.ast.ComponentDef.Variant> variants = new ArrayList<>();
         for (FreesParser.ComponentItemContext item : ctx.componentItem()) {
             if (item instanceof FreesParser.CompParamContext cp) {
                 for (FreesParser.ComponentParamContext pc : cp.componentParam()) {
@@ -124,13 +125,52 @@ public class AstBuilder extends FreesBaseVisitor<Expr> {
                     Expr def = pc.expr() != null ? visit(pc.expr()) : null;
                     params.add(new com.frees.backend.ast.ComponentDef.Param(pname, def, isString));
                 }
+            } else if (item instanceof FreesParser.CompVariantContext cv) {
+                variants.add(buildComponentVariant(cv.componentVariant()));
             } else if (item instanceof FreesParser.CompEqContext ce) {
                 FreesParser.EquationContext eq = ce.equation();
                 body.add(new com.frees.backend.ast.Equation(
                         visit(eq.expr(0)), visit(eq.expr(1)), eq.getText()));
             }
         }
-        return new com.frees.backend.ast.ComponentDef(name, ports, params, body);
+        // A name listed in a VARIANT's REQUIRE clause is a variant-scoped
+        // parameter; declare any that isn't already an explicit PARAM (no default
+        // — it is required only when its variant is selected). A trailing '$'
+        // marks it a string parameter, exactly as for a PARAM.
+        java.util.Set<String> declared = new java.util.HashSet<>();
+        for (com.frees.backend.ast.ComponentDef.Param p : params) {
+            declared.add(p.name());
+        }
+        for (com.frees.backend.ast.ComponentDef.Variant v : variants) {
+            for (String req : v.require()) {
+                if (declared.add(req)) {
+                    params.add(new com.frees.backend.ast.ComponentDef.Param(req, null, req.endsWith("$")));
+                }
+            }
+        }
+        return new com.frees.backend.ast.ComponentDef(name, ports, params, body, variants);
+    }
+
+    /**
+     * Builds a {@code VARIANT name [REQUIRE p1, p2, …] … END} block: its
+     * (lowercased) name, the list of required parameter names, and its body
+     * equations. The component's {@code model$} parameter selects which variant
+     * is expanded (see {@link com.frees.backend.parser.ComponentExpander}).
+     */
+    private com.frees.backend.ast.ComponentDef.Variant buildComponentVariant(
+            FreesParser.ComponentVariantContext ctx) {
+        String vname = ctx.IDENT(0).getText().toLowerCase();
+        List<String> require = new ArrayList<>();
+        // IDENT(0) is the variant name; IDENT(1..) are the REQUIRE parameter names.
+        for (int i = 1; i < ctx.IDENT().size(); i++) {
+            require.add(ctx.IDENT(i).getText().toLowerCase());
+        }
+        List<com.frees.backend.ast.Equation> vbody = new ArrayList<>();
+        for (FreesParser.EquationContext eq : ctx.equation()) {
+            vbody.add(new com.frees.backend.ast.Equation(
+                    visit(eq.expr(0)), visit(eq.expr(1)), eq.getText()));
+        }
+        return new com.frees.backend.ast.ComponentDef.Variant(vname, require, vbody);
     }
 
     /**

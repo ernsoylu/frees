@@ -18,7 +18,8 @@ import java.util.List;
  * scalar equations the existing Newton/Tarjan solver handles unchanged.
  */
 public record ComponentDef(String name, List<String> ports,
-                           List<Param> params, List<Equation> body)
+                           List<Param> params, List<Equation> body,
+                           List<Variant> variants)
         implements java.io.Serializable {
 
     /**
@@ -30,12 +31,35 @@ public record ComponentDef(String name, List<String> ports,
     public record Param(String name, Expr defaultValue, boolean isString)
             implements java.io.Serializable {}
 
+    /**
+     * A selectable physics variant ("one component, many models", e.g. a
+     * compressor as isentropic-η / volumetric-η / map). The component's
+     * {@code model$} parameter picks one variant by {@code name}; the chosen
+     * variant's {@code body} equations are expanded alongside the shared
+     * {@link ComponentDef#body()}. {@code require} lists the parameters that
+     * variant needs — validated only when it is the selected one, so parameters
+     * used solely by an unselected variant need not be supplied.
+     */
+    public record Variant(String name, List<String> require, List<Equation> body)
+            implements java.io.Serializable {}
+
     /** The declared parameter with the given (lowercase) name, or null. */
     public Param param(String paramName) {
         String key = paramName.toLowerCase();
         for (Param p : params) {
             if (p.name().equals(key)) {
                 return p;
+            }
+        }
+        return null;
+    }
+
+    /** The variant with the given (lowercase) name, or null. */
+    public Variant variant(String variantName) {
+        String key = variantName.toLowerCase();
+        for (Variant v : variants) {
+            if (v.name().equals(key)) {
+                return v;
             }
         }
         return null;
