@@ -115,7 +115,9 @@ Each phase is independent and shippable on its own; A–C carry the most benefit
 
 ---
 
-## Phase E — Gas-mixture composition port  🟡 *enabler for combustion / exhaust / fresh-air*
+## Phase E — Gas-mixture composition port  🟡 **first slice shipped & green**
+
+**Status (2026-06-27).** Shipped a focused composition-transport slice **with no expander surgery**: a species mass fraction rides as an ordinary stream member (`.y`), and **shared-name binding aliases it through the network** just like `P`/`h`/`ṁ`. `GasSource`, `GasPipe` (composition pass-through `out.y=in.y`), and `GasMixer` (flow-weighted species `Σṁ·y` conservation, exactly as the standard `Mixer` does enthalpy). Validated by `ComponentGasMixtureTest` (flow-weighted blend, pass-through, cascaded 3-way blend). **Remaining (the harder, deferred design):** a full **multi-species vector rider** `{Y_i}` with `connect`-node propagation (requires teaching the expander's across-rule / mixing logic to carry composition as a first-class convective rider like `h`) — this is the prerequisite that promotes aftertreatment and GTE component maps (Phase G long-tail) from niche to buildable, and adds reactant-partial-pressure dependence to the Phase-D fuel cell.
 
 **Why here.** frees has the thermochemistry (NASA-7, equilibrium Kp, mixtures, combustion) but its **streams don't carry a composition vector** — so multi-species air paths (engine intake/exhaust, HVAC fresh-air mixing, aftertreatment feed) can't be modeled as connected components. This is the **enabler** that unlocks Phase F's engine air-path and the aftertreatment/GTE long tail.
 
