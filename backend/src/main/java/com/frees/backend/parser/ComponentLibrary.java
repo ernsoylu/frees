@@ -380,6 +380,13 @@ public final class ComponentLibrary {
               init(integ) = 0
               port.Qdot   = -(Kp * err + Ki * integ)
             END
+
+            COMPONENT Valve(in, out)
+              PARAM Cv, rho
+              out.mdot = in.mdot
+              out.h    = in.h
+              in.mdot  = Cv * sqrt(rho * (in.P - out.P))
+            END
             """;
 
     private static final List<ComponentDef> BUILTINS = parse(SOURCE);
