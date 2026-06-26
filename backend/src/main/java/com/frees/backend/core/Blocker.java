@@ -71,9 +71,16 @@ public class Blocker {
         }
         if (allVars.size() != equations.size()) {
             String kind = equations.size() < allVars.size() ? "underspecified" : "overspecified";
+            // Source-mapped hint (§14.1): list the involved variables in their
+            // dotted display form ($→.) so the gap localises to a component/stream
+            // (e.g. "s1.mdot, s2.h") rather than a bare count.
+            String sample = allVars.stream().limit(16)
+                    .map(v -> v.replace('$', '.')).collect(java.util.stream.Collectors.joining(", "));
+            String more = allVars.size() > 16 ? ", …" : "";
             throw new SolverException(String.format(
-                    "There are %d equations and %d variables. The problem is %s and cannot be solved.",
-                    equations.size(), allVars.size(), kind));
+                    "There are %d equations and %d variables. The problem is %s and cannot be solved. "
+                            + "Variables involved: %s%s.",
+                    equations.size(), allVars.size(), kind, sample, more));
         }
 
         return matchEquationsToVariables(equations, allVars);
