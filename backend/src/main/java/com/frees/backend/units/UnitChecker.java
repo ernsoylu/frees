@@ -645,6 +645,11 @@ public final class UnitChecker {
             // dimensionless; the leading arrangement string carries no units.
             case "hx_effectiveness", "hx_epsilon", "hx_ntu", "fin_efficiency" ->
                     Dim.of(Quantity.dimensionless(1.0));
+            // Flow resistance: friction factor and Reynolds number are
+            // dimensionless; a minor (fitting) loss is a pressure [Pa].
+            case "friction_factor", "darcy_friction", "reynolds", "re_number" ->
+                    Dim.of(Quantity.dimensionless(1.0));
+            case "minor_loss" -> eosDim("Pa");
             // LMTD returns a temperature difference, inheriting the units of its
             // terminal-difference arguments (which the checker does not police).
             case "lmtd" -> dimOf(args.get(0));

@@ -115,6 +115,11 @@ public class FunctionRegistry {
             new FunctionInfo("lmtd", "LMTD(dT1, dT2)", "Log-mean temperature difference", "Heat Transfer"),
             new FunctionInfo("fin_efficiency", "fin_efficiency(mL)", "Straight-fin efficiency tanh(mL)/mL", "Heat Transfer"),
 
+            // Flow Networks (hydraulic / duct resistance — Phase 0)
+            new FunctionInfo("friction_factor", "friction_factor(Re, rel_rough)", "Darcy friction factor (Colebrook-Moody, laminar+turbulent)", "Flow Networks"),
+            new FunctionInfo("reynolds", "reynolds(rho, V, D, mu)", "Reynolds number rho*V*D/mu", "Flow Networks"),
+            new FunctionInfo("minor_loss", "minor_loss(K, rho, V)", "Minor (fitting) pressure loss K*0.5*rho*V^2 [Pa]", "Flow Networks"),
+
             // Cubic-EOS property backend (SRK/PR; CoolProp-independent)
             new FunctionInfo("eos_z", "eos_z(fluid$, model$, T, P, phase$)", "Compressibility factor Z (SRK/PR)", "Properties (EOS)"),
             new FunctionInfo("eos_volume", "eos_volume(fluid$, model$, T, P, phase$)", "Specific volume [m^3/kg] (SRK/PR)", "Properties (EOS)"),

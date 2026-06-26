@@ -451,6 +451,18 @@ public final class Evaluator {
             case "fin_efficiency" -> com.frees.backend.props.HeatExchanger.finEfficiency(
                     arg(c, args, 0, values, defs));
 
+            // Flow-resistance constitutive functions (Phase 0 flow networks).
+            // friction_factor(Re, eps/D) Darcy-Colebrook; reynolds(rho, V, D, mu);
+            // minor_loss(K, rho, V) -> dP [Pa]. See props/FlowResistance.
+            case "friction_factor", "darcy_friction" -> com.frees.backend.props.FlowResistance.frictionFactor(
+                    arg(c, args, 0, values, defs), arg(c, args, 1, values, defs));
+            case "reynolds", "re_number" -> com.frees.backend.props.FlowResistance.reynolds(
+                    arg(c, args, 0, values, defs), arg(c, args, 1, values, defs),
+                    arg(c, args, 2, values, defs), arg(c, args, 3, values, defs));
+            case "minor_loss" -> com.frees.backend.props.FlowResistance.minorLoss(
+                    arg(c, args, 0, values, defs), arg(c, args, 1, values, defs),
+                    arg(c, args, 2, values, defs));
+
             // Cubic equation-of-state backend (SRK/PR), independent of CoolProp.
             // Signature: eos_*(fluid$, model$, T, P, phase$); pressure takes
             // (fluid$, model$, T, v) and psat takes (fluid$, model$, T).
