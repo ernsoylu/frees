@@ -202,6 +202,29 @@ public final class ComponentLibrary {
               a.Qdot = Q
               b.Qdot = -Q
             END
+
+            COMPONENT VoltageSource(p, n)
+              PARAM E
+              p.V - n.V = E
+              p.I + n.I = 0
+            END
+
+            COMPONENT Resistor(a, b)
+              PARAM R
+              a.V - b.V = R * a.I
+              a.I + b.I = 0
+            END
+
+            COMPONENT Ground(port)
+              port.V = 0
+            END
+
+            COMPONENT Battery(p, n)
+              PARAM Voc, R0
+              p.V - n.V = Voc + R0 * p.I
+              p.I + n.I = 0
+              W = (p.V - n.V) * (0 - p.I)
+            END
             """;
 
     private static final List<ComponentDef> BUILTINS = parse(SOURCE);
