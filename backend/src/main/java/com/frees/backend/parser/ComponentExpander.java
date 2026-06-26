@@ -101,7 +101,6 @@ public final class ComponentExpander {
                              List<ComponentInst> componentInsts, List<ConnectDecl> connects,
                              Map<String, String> displayNames) {
         this.displayNames = displayNames;
-        this.connects = connects;
         // Built-in standard-library components are curated; a user definition of
         // the same name overrides the built-in. Two user definitions collide.
         for (ComponentDef d : builtinDefs) {
@@ -115,7 +114,16 @@ public final class ComponentExpander {
             }
             defsByName.put(d.name(), d);
         }
+        // Hierarchy: flatten subsystem instances (a COMPONENT built from
+        // sub-instances + internal connects) into leaf instances and connects
+        // before resolving, so the rest of the expander sees a flat network.
+        List<ComponentInst> flatInsts = new ArrayList<>();
+        List<ConnectDecl> flatConns = new ArrayList<>(connects);
         for (ComponentInst inst : componentInsts) {
+            flattenInstance(inst, flatInsts, flatConns, new java.util.HashSet<>());
+        }
+        this.connects = flatConns;
+        for (ComponentInst inst : flatInsts) {
             ResolvedInstance resolved = resolve(inst);
             if (instancesByName.put(inst.name(), resolved) != null) {
                 throw new EquationParser.ParseException(
@@ -126,6 +134,71 @@ public final class ComponentExpander {
         buildStreamMembers();
         buildStreamFluidMap();
         propagateFluidAcrossConnects();
+    }
+
+    /** Port-reference alias for flattened subsystem boundary ports:
+     *  {@code "sub.port"} → the stream that port is bound to. */
+    private final Map<String, String> portAlias = new LinkedHashMap<>();
+
+    /**
+     * Recursively flattens a (possibly hierarchical) instance into leaf instances
+     * and connects. A leaf is appended as-is. A hierarchical subsystem expands its
+     * sub-instances (namespaced {@code outer.sub}) and rewrites its internal
+     * connects: a reference to an outer port resolves to the stream that port is
+     * bound to; a {@code sub.port} reference is namespaced; bare internal stream
+     * names are namespaced too.
+     */
+    private void flattenInstance(ComponentInst inst, List<ComponentInst> outInsts,
+                                 List<ConnectDecl> outConns, java.util.Set<String> stack) {
+        ComponentDef def = defsByName.get(inst.type());
+        if (def == null || !def.isHierarchical()) {
+            outInsts.add(inst);
+            return;
+        }
+        if (!stack.add(inst.type())) {
+            throw new EquationParser.ParseException("COMPONENT '" + inst.type()
+                    + "' instantiates itself (hierarchical cycle).");
+        }
+        boolean freePorts = inst.portArgs().isEmpty() && !def.ports().isEmpty();
+        Map<String, String> portMap = new LinkedHashMap<>();
+        for (int i = 0; i < def.ports().size(); i++) {
+            String port = def.ports().get(i);
+            String stream = freePorts ? inst.name() + "$" + port : inst.portArgs().get(i);
+            portMap.put(port, stream);
+            portAlias.put(inst.name() + "." + port, stream);
+            if (freePorts) {
+                streamDisplay.put(stream, inst.name() + "." + port);
+            }
+        }
+        for (ComponentInst sub : def.subInstances()) {
+            String subName = inst.name() + "." + sub.name();
+            List<String> subPorts = new ArrayList<>();
+            for (String pa : sub.portArgs()) {
+                subPorts.add(rewriteSubRef(pa, inst.name(), def, portMap));
+            }
+            flattenInstance(new ComponentInst(sub.type(), subName, subPorts, sub.params(),
+                    sub.sourceText()), outInsts, outConns, stack);
+        }
+        for (ConnectDecl sc : def.subConnects()) {
+            List<String> refs = new ArrayList<>();
+            for (String ref : sc.ports()) {
+                refs.add(rewriteSubRef(ref, inst.name(), def, portMap));
+            }
+            outConns.add(new ConnectDecl(refs, sc.sourceText()));
+        }
+        stack.remove(inst.type());
+    }
+
+    /** Rewrites a reference inside a subsystem body: an outer port → its bound
+     *  stream; otherwise (a {@code sub.port} or internal bare stream) → namespaced
+     *  with the subsystem instance name. */
+    private static String rewriteSubRef(String ref, String prefix, ComponentDef def,
+                                        Map<String, String> portMap) {
+        String r = ref.toLowerCase();
+        if (r.indexOf('.') < 0 && def.ports().contains(r)) {
+            return portMap.get(r);
+        }
+        return prefix + "." + r;
     }
 
     /**
@@ -691,14 +764,23 @@ public final class ComponentExpander {
 
     /** Resolves a connect endpoint ({@code instance.port} or a bare stream name) to its stream. */
     private String streamOf(String ref, ConnectDecl c) {
-        int dot = ref.indexOf('.');
+        // A flattened subsystem boundary port (e.g. "loop.b" where loop is a
+        // hierarchical instance now expanded away) resolves via the alias map.
+        String alias = portAlias.get(ref);
+        if (alias != null) {
+            return alias;
+        }
+        if (ref.indexOf('$') >= 0) {
+            return ref; // already a flat synthetic stream (e.g. a nested subsystem boundary)
+        }
+        int dot = ref.lastIndexOf('.');   // last dot: instance names may be dotted (sub.sub)
         if (dot < 0) {
             return ref; // a bare stream name
         }
         String instName = ref.substring(0, dot);
         String port = ref.substring(dot + 1);
         ResolvedInstance ri = instancesByName.get(instName);
-        if (ri == null || port.indexOf('.') >= 0 || !ri.portToStream().containsKey(port)) {
+        if (ri == null || !ri.portToStream().containsKey(port)) {
             throw new EquationParser.ParseException("connect(...): '" + ref + "' is not a port "
                     + "(instance.port) or a stream name. " + c.sourceText());
         }
