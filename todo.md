@@ -58,7 +58,9 @@ Each phase is independent and shippable on its own; A–C carry the most benefit
 
 ---
 
-## Phase B — Oil-hydraulic fluid-power domain  🔶 *the reference library's flagship domain*
+## Phase B — Oil-hydraulic fluid-power domain  ✅ **first slice shipped & green**
+
+**Status (2026-06-27).** Shipped (no new backend function — the orifice/relief/pump laws are plain algebra over `sqrt`/`abs`/`tanh`/`pi#`): `HydraulicSupply`, `HydraulicTank`, `HydraulicOrifice` (`ṁ·|ṁ|=CdA²·2ρ·ΔP`), `HydraulicValve` (signal-`u` metering edge), `ReliefValve` (tanh-cracked at `Pcrack`), `HydraulicCylinder` (bulk-modulus chamber `der(P)=(β/V)(ṁ/ρ−A·v)` → translational `(F,v)` port), and `HydraulicPump` (positive-displacement `Q=D·N·η_v`, `τ=D·ΔP/η_m`, coupling the hydraulic port to the rotational `(τ,ω)` port). The hydraulic port reuses the **fluid** node rule. Validated by `ComponentHydraulicTest` (4 tests: orifice metering, relief cracking bracket, speed-driven pump operating point, cylinder holding force). **Remaining rungs:** laminar-transition orifice, gas-charged accumulator, spool flow-force, cavitation `β(P)`, full directional-valve (N-position spool).
 
 **Why second.** Oil-hydraulics is the single largest / origin domain of the reference library and is **absent from frees**. frees already has flow resistance, `Cv`/orifice, and the `Accumulator` compliance pattern — the missing piece is the **hydraulic power domain**: incompressible-with-bulk-modulus pressure–flow plus the spool-valve / cylinder / pump actuation chain that defines the domain.
 
