@@ -347,6 +347,31 @@ public final class ComponentLibrary {
               init(Vrc) = Vrc0
               p.I + n.I = 0
             END
+
+            COMPONENT Clutch(a, b)
+              PARAM Tmax, eng, eps
+              dw    = a.w - b.w
+              a.tau = eng * Tmax * tanh(dw / eps)
+              a.tau + b.tau = 0
+            END
+
+            COMPONENT RotationalSpring(a, b)
+              PARAM k, theta0
+              der(theta)  = a.w - b.w
+              init(theta) = theta0
+              a.tau       = k * theta
+              a.tau + b.tau = 0
+            END
+
+            COMPONENT Engine(shaft)
+              PARAM Tmax, throttle, bf
+              shaft.tau = -(throttle * Tmax - bf * shaft.w)
+            END
+
+            COMPONENT RoadLoad(shaft)
+              PARAM Crr, Caero
+              shaft.tau = Crr + Caero * shaft.w^2
+            END
             """;
 
     private static final List<ComponentDef> BUILTINS = parse(SOURCE);
