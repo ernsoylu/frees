@@ -252,6 +252,25 @@ public class NewtonSolver {
         return jacobian;
     }
 
+    /**
+     * Builds one finite-difference column of the Jacobian with <em>range-aware</em>
+     * perturbation (§8.5). A naive forward step {@code x[j]+h} can push a
+     * property-table argument (CoolProp P, h, …) past the variable's valid box —
+     * the property call then returns NaN, the column is poisoned, and the Newton
+     * step becomes {@code clamp(NaN)=NaN}. To stay robust we:
+     * <ol>
+     *   <li>never probe outside the variable's {@code [lo, hi]} bounds (clamp the
+     *       probe, and divide by the <em>actual</em> step taken);</li>
+     *   <li>fall back to a backward step when a forward probe lands in an invalid
+     *       (non-finite) region, and vice-versa;</li>
+     *   <li>cap the cancellation-escape growth so it never marches a probe into an
+     *       invalid region (a near-flat derivative — e.g. {@code dT/dh≈0} inside a
+     *       two-phase dome — is reported honestly as ~0, not grown into NaN);</li>
+     *   <li>guarantee the committed column is finite — if no informative,
+     *       in-range derivative exists, the entry is left 0 (no local
+     *       sensitivity) so the linear solve still produces a finite step.</li>
+     * </ol>
+     */
     private void computeJacobianColumn(IterationContext ctx, double[] x, double[] baseResidual,
                                        double[][] jacobian, double[] perturbed, int j) {
         List<Integer> deps = ctx.varToEquations.get(j);
@@ -259,49 +278,85 @@ public class NewtonSolver {
             return; // Variable does not appear in any equation; its entire column is 0.
         }
 
-        int n = ctx.vars.size();
-        double h = JACOBIAN_EPS * Math.max(Math.abs(x[j]), 1.0);
         String varName = ctx.vars.get(j);
-        
-        for (int attempt = 0; attempt < 5; attempt++) {
-            perturbed[j] = x[j] + h;
-            boolean columnClean = true;
-            boolean anyChange = false;
-            
-            // Push the single perturbed value to values map (avoid writing all variables)
-            double originalVal = ctx.values.get(varName);
-            ctx.values.put(varName, perturbed[j]);
-            
-            try {
-                // Only evaluate equations that actually depend on this variable!
-                for (int i : deps) {
-                    Equation eq = ctx.equations.get(i);
-                    double r_perturbed;
-                    try {
-                        r_perturbed = Evaluator.eval(eq.lhs(), ctx.values, defs) - Evaluator.eval(eq.rhs(), ctx.values, defs);
-                    } catch (com.frees.backend.props.PropertyEvaluationException e) {
-                        r_perturbed = Double.NaN;
-                    }
+        double base = x[j];
+        double lo = ctx.lo[j];
+        double hi = ctx.hi[j];
+        double magnitude = JACOBIAN_EPS * Math.max(Math.abs(base), 1.0);
 
-                    double change = Math.abs(r_perturbed - baseResidual[i]);
-                    jacobian[i][j] = (r_perturbed - baseResidual[i]) / h;
-                    if (change > 0.0) {
-                        anyChange = true;
-                        double ulpScale = Math.ulp(Math.max(Math.abs(r_perturbed), Math.abs(baseResidual[i])));
-                        if (change < 1.0e5 * ulpScale) {
-                            columnClean = false;
+        // Probe forward first, then backward; within a direction, widen a few
+        // times to escape catastrophic cancellation — but only while the probe
+        // stays both in-bounds and in a finite (valid) region.
+        for (int dir = 0; dir < 2; dir++) {
+            double sign = (dir == 0) ? 1.0 : -1.0;
+            if (sign > 0.0 && base >= hi) continue; // pinned at upper bound
+            if (sign < 0.0 && base <= lo) continue;  // pinned at lower bound
+
+            double h = magnitude;
+            for (int attempt = 0; attempt < 5; attempt++) {
+                double probe = Math.clamp(base + sign * h, lo, hi);
+                double actualStep = probe - base;
+                if (actualStep == 0.0) {
+                    break; // clamped onto the bound — this direction is exhausted
+                }
+
+                double[] column = new double[deps.size()];
+                boolean finite = true;
+                boolean anyChange = false;
+                boolean cancellation = false;
+
+                double originalVal = ctx.values.get(varName);
+                ctx.values.put(varName, probe);
+                try {
+                    int k = 0;
+                    for (int i : deps) {
+                        Equation eq = ctx.equations.get(i);
+                        double rPerturbed;
+                        try {
+                            rPerturbed = Evaluator.eval(eq.lhs(), ctx.values, defs)
+                                    - Evaluator.eval(eq.rhs(), ctx.values, defs);
+                        } catch (com.frees.backend.props.PropertyEvaluationException e) {
+                            rPerturbed = Double.NaN;
+                        }
+                        if (!Double.isFinite(rPerturbed)) {
+                            finite = false;
+                            break; // invalid region — abandon this direction/step
+                        }
+                        column[k++] = (rPerturbed - baseResidual[i]) / actualStep;
+                        double change = Math.abs(rPerturbed - baseResidual[i]);
+                        if (change > 0.0) {
+                            anyChange = true;
+                            double ulpScale = Math.ulp(Math.max(Math.abs(rPerturbed), Math.abs(baseResidual[i])));
+                            if (change < 1.0e5 * ulpScale) {
+                                cancellation = true;
+                            }
                         }
                     }
+                } finally {
+                    ctx.values.put(varName, originalVal);
                 }
-            } finally {
-                ctx.values.put(varName, originalVal);
-                perturbed[j] = x[j];
-            }
 
-            if (anyChange && columnClean) {
-                break;
+                if (!finite) {
+                    break; // growing the step only marches further into the bad region
+                }
+                // Commit this finite estimate; a later, cleaner attempt overwrites it.
+                int k = 0;
+                for (int i : deps) {
+                    jacobian[i][j] = column[k++];
+                }
+                if (anyChange && !cancellation) {
+                    return; // clean, informative column
+                }
+                h *= 1.0e4; // finite but noisy/cancelling — widen (still clamped next pass)
             }
-            h *= 1.0e4;
+        }
+
+        // No informative in-range derivative in either direction. Guarantee a
+        // finite column so the linear solve still yields a finite step.
+        for (int i : deps) {
+            if (!Double.isFinite(jacobian[i][j])) {
+                jacobian[i][j] = 0.0;
+            }
         }
     }
 
