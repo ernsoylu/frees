@@ -325,6 +325,13 @@ public final class ComponentLibrary {
               p.I + n.I  = 0
               shaft.tau  = -Kt * p.I
             END
+
+            COMPONENT Friction(a, b)
+              PARAM Fc, Fs, vs, bv, eps
+              dw    = a.w - b.w
+              a.tau = (Fc + (Fs - Fc) * exp(-(dw / vs)^2)) * tanh(dw / eps) + bv * dw
+              a.tau + b.tau = 0
+            END
             """;
 
     private static final List<ComponentDef> BUILTINS = parse(SOURCE);
