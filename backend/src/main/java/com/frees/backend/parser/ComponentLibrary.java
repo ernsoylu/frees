@@ -424,6 +424,18 @@ public final class ComponentLibrary {
               b.Qdot = -Q
             END
 
+            COMPONENT TwoZoneHX(hot_in, hot_out, cold_in, cold_out)
+              PARAM UA, hot$, cold$, arr$
+              HeatExchanger C1(UA=UA/2, hot$=hot$, cold$=cold$, arr$=arr$)
+              HeatExchanger C2(UA=UA/2, hot$=hot$, cold$=cold$, arr$=arr$)
+              connect(hot_in, C1.hot_in)
+              connect(C1.hot_out, C2.hot_in)
+              connect(C2.hot_out, hot_out)
+              connect(cold_in, C2.cold_in)
+              connect(C2.cold_out, C1.cold_in)
+              connect(C1.cold_out, cold_out)
+            END
+
             COMPONENT PMSM(p, n, shaft)
               PARAM Rs, lambda_pm, poles
               Kt        = 1.5 * poles * lambda_pm
