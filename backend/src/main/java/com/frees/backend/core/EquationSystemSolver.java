@@ -279,6 +279,14 @@ public class EquationSystemSolver {
             equations = com.frees.backend.parser.ComplexExpansion.expand(equations, parsed.displayNames());
         }
 
+        // Plant → control coupling (Phase 4): numerically linearize each named
+        // component network about its operating point and inject the resulting
+        // A/B/C/D matrix entries as equations, so the control suite (CALL ss/lqr/
+        // place/…) consumes them in the same solve.
+        if (!parsed.linearizeSystems().isEmpty()) {
+            equations = injectLinearizations(parsed, equations, settings, specs, deadlineNanos);
+        }
+
         // A document whose only content is DYNAMIC block(s) (all parameters inline)
         // has no analytic equations to block/solve — run the ODE blocks directly.
         if (equations.isEmpty() && !parsed.dynamicSystems().isEmpty()) {
@@ -373,6 +381,85 @@ public class EquationSystemSolver {
      * Installs the thread-bound accessor context so ODE Table accessors evaluate
      * live against the current Newton iterate during this solve.
      */
+    /**
+     * Linearizes each {@code LINEARIZE} block's component network about its
+     * operating point and appends the A/B/C/D matrix entries as
+     * {@code name[i,j] = value} equations (plus a 1-D form for single-column B/D),
+     * so a following {@code CALL lqr/place/ss(...)} reads them. The operating
+     * point's exogenous inputs are taken from the document's scalar constants.
+     */
+    private List<Equation> injectLinearizations(EquationParser.ParseResult parsed, List<Equation> equations,
+                                                SolverSettings settings, Map<String, VariableSpec> specs,
+                                                long deadlineNanos) {
+        Map<String, Double> constants = extractScalarConstants(equations);
+        Map<String, String> displayToFlat = invertDisplayNames(parsed.displayNames());
+        SolverSettings inner = relaxedOdeSettings(settings, 1e-7);
+        com.frees.backend.core.ode.DynamicSolver.AlgebraicSolve algebraic =
+                (ordinary, pinned, warmStart) -> solvePinned(ordinary, pinned, inner, specs,
+                        parsed.defs(), deadlineNanos, warmStart).values();
+        List<Equation> out = new ArrayList<>(equations);
+        for (com.frees.backend.ast.LinearizeSystem ls : parsed.linearizeSystems()) {
+            com.frees.backend.ast.DynamicSystem ds = null;
+            for (com.frees.backend.ast.DynamicSystem d : parsed.dynamicSystems()) {
+                if (d.name().equalsIgnoreCase(ls.dynamicName())) {
+                    ds = d;
+                    break;
+                }
+            }
+            if (ds == null) {
+                throw new SolverException("LINEARIZE " + ls.name() + ": no DYNAMIC block named '"
+                        + ls.dynamicName() + "' (it names the transient component network to linearize).");
+            }
+            List<String> inputs = ls.inputs().stream()
+                    .map(s -> displayToFlat.getOrDefault(s, s)).toList();
+            List<String> outputs = ls.outputs().stream()
+                    .map(s -> displayToFlat.getOrDefault(s, s)).toList();
+            com.frees.backend.core.ode.DynamicSolver.Linearization lin =
+                    new com.frees.backend.core.ode.DynamicSolver(ds, constants, parsed.defs(),
+                            algebraic, deadlineNanos).linearize(inputs, outputs);
+            emitMatrix(out, ls.aName(), lin.a(), parsed.displayNames());
+            emitMatrix(out, ls.bName(), lin.b(), parsed.displayNames());
+            emitMatrix(out, ls.cName(), lin.c(), parsed.displayNames());
+            emitMatrix(out, ls.dName(), lin.d(), parsed.displayNames());
+        }
+        return out;
+    }
+
+    /** Emits {@code name[i,j] = value} equations for a matrix (1-indexed); a
+     *  single-column matrix also gets the 1-D {@code name[i]} form so SISO control
+     *  calls (e.g. {@code B[1:n]}) resolve. */
+    private static void emitMatrix(List<Equation> out, String name, double[][] m,
+                                   Map<String, String> displayNames) {
+        String lower = name.toLowerCase();
+        int rows = m.length;
+        int cols = rows > 0 ? m[0].length : 0;
+        for (int i = 0; i < rows; i++) {
+            for (int j = 0; j < cols; j++) {
+                String k2 = lower + "[" + (i + 1) + "," + (j + 1) + "]";
+                out.add(new Equation(new Expr.Var(k2), new Expr.Num(m[i][j]), k2 + " (linearized)"));
+                displayNames.putIfAbsent(k2, name + "[" + (i + 1) + "," + (j + 1) + "]");
+                if (cols == 1) {
+                    String k1 = lower + "[" + (i + 1) + "]";
+                    out.add(new Equation(new Expr.Var(k1), new Expr.Num(m[i][0]), k1 + " (linearized)"));
+                    displayNames.putIfAbsent(k1, name + "[" + (i + 1) + "]");
+                }
+            }
+        }
+    }
+
+    /** Scalar constant assignments ({@code var = number}) from the equation list,
+     *  used as the linearization's exogenous (input) operating-point values. */
+    private static Map<String, Double> extractScalarConstants(List<Equation> equations) {
+        Map<String, Double> c = new HashMap<>();
+        for (Equation e : equations) {
+            if (e.lhs() instanceof Expr.Var(String n)
+                    && e.rhs() instanceof Expr.Num(double v, String u, boolean im) && !im) {
+                c.put(n.toLowerCase(), v);
+            }
+        }
+        return c;
+    }
+
     private void installAccessorContext(EquationParser.ParseResult parsed, SolverSettings settings,
                                         Map<String, VariableSpec> specs, long deadlineNanos,
                                         Map<String, String> displayToFlat) {

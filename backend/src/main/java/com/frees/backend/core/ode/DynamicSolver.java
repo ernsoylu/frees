@@ -65,6 +65,101 @@ public final class DynamicSolver {
         this.timeVar = system.options().timeVar();
     }
 
+    /** The numerically-linearized state-space model of this block at its
+     *  initial-condition operating point: {@code A=∂ẋ/∂x}, {@code B=∂ẋ/∂u},
+     *  {@code C=∂y/∂x}, {@code D=∂y/∂u} (states in der() order). */
+    public record Linearization(List<String> states, List<String> inputs, List<String> outputs,
+                                double[][] a, double[][] b, double[][] c, double[][] d) {}
+
+    /**
+     * Linearizes the block about its initial-condition operating point by finite
+     * differences, reusing the per-step algebraic solve {@code ẋ = f(x, u)}:
+     * perturbing each state gives the A and C columns, each input the B and D
+     * columns. For a linear plant the result is exact at any point. Inputs are
+     * exogenous values pinned in the analytic environment (e.g. a source value);
+     * outputs are any solved variables of the network (flat names).
+     */
+    public Linearization linearize(List<String> inputs, List<String> outputs) {
+        if (states.isEmpty()) {
+            classify();
+        }
+        double t0 = system.options().t0();
+        int n = states.size();
+        int m = inputs.size();
+        int p = outputs.size();
+        double[] x0 = y0.clone();
+        Map<String, Double> base = solveForLinearization(t0, x0, null);
+        double[] f0 = derValuesOf(base);
+        double[] y0v = outputValuesOf(base, outputs);
+
+        double[][] a = new double[n][n];
+        double[][] c = new double[p][n];
+        for (int j = 0; j < n; j++) {
+            double eps = 1e-6 * Math.max(Math.abs(x0[j]), 1.0);
+            double[] xp = x0.clone();
+            xp[j] += eps;
+            Map<String, Double> v = solveForLinearization(t0, xp, null);
+            double[] fp = derValuesOf(v);
+            double[] yp = outputValuesOf(v, outputs);
+            for (int i = 0; i < n; i++) {
+                a[i][j] = (fp[i] - f0[i]) / eps;
+            }
+            for (int k = 0; k < p; k++) {
+                c[k][j] = (yp[k] - y0v[k]) / eps;
+            }
+        }
+        double[][] b = new double[n][m];
+        double[][] d = new double[p][m];
+        for (int q = 0; q < m; q++) {
+            String u = inputs.get(q);
+            double u0 = analyticValues.getOrDefault(u, 0.0);
+            double eps = 1e-6 * Math.max(Math.abs(u0), 1.0);
+            Map<String, Double> v = solveForLinearization(t0, x0, Map.of(u, u0 + eps));
+            double[] fp = derValuesOf(v);
+            double[] yp = outputValuesOf(v, outputs);
+            for (int i = 0; i < n; i++) {
+                b[i][q] = (fp[i] - f0[i]) / eps;
+            }
+            for (int k = 0; k < p; k++) {
+                d[k][q] = (yp[k] - y0v[k]) / eps;
+            }
+        }
+        return new Linearization(new ArrayList<>(states), inputs, outputs, a, b, c, d);
+    }
+
+    private Map<String, Double> solveForLinearization(double t, double[] y, Map<String, Double> overrides) {
+        Map<String, Double> pinned = new LinkedHashMap<>(analyticValues);
+        if (overrides != null) {
+            pinned.putAll(overrides);
+        }
+        pinned.put(timeVar, t);
+        for (int k = 0; k < states.size(); k++) {
+            pinned.put(states.get(k), y[k]);
+        }
+        return algebraic.solve(algebraicTemplate, pinned, null);
+    }
+
+    private double[] derValuesOf(Map<String, Double> values) {
+        double[] f = new double[states.size()];
+        for (int i = 0; i < states.size(); i++) {
+            f[i] = values.getOrDefault(derVar(states.get(i)), 0.0);
+        }
+        return f;
+    }
+
+    private double[] outputValuesOf(Map<String, Double> values, List<String> outputs) {
+        double[] y = new double[outputs.size()];
+        for (int i = 0; i < outputs.size(); i++) {
+            Double val = values.get(outputs.get(i));
+            if (val == null) {
+                throw new SolverException("LINEARIZE: output '" + outputs.get(i)
+                        + "' is not a variable of the network '" + system.name() + "'.");
+            }
+            y[i] = val;
+        }
+        return y;
+    }
+
     public OdeTableResult solve() {
         classify();
         // Cap the step (default span/100) so the adaptive controller cannot grow
