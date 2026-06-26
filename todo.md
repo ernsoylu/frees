@@ -3,7 +3,7 @@
 
 **Prepared for:** Advisory Board (Mechanical, Thermal, Fluids, HVAC, Control, Automotive/EV)
 **Scope of this report:** *Code/text-based* component modeling only. The graphical (Diagram-window) front end is **explicitly deferred** and is not covered here.
-**Status:** Design complete; implementation not yet started. This document is the agreed reference for Phase 0–6 delivery. Revision **R1** incorporates the advisory review (see §0).
+**Status:** Design complete; **Phase 1 in progress** (core component layer + standard library + Rankine/Brayton/refrigeration shipping green — see §15 for live status & findings). This document is the agreed reference for Phase 0–6 delivery. Revision **R1** incorporates the advisory review (see §0).
 
 ---
 
@@ -420,14 +420,14 @@ Add via the established 3-site wiring (`Evaluator` eval + `UnitChecker` dims + `
 - `Re(rho, V, D, fluid$)` helper.
 **Deliverable:** flow-resistance vocabulary. **Acceptance:** Colebrook `f` matches Moody chart to chart accuracy; pipe ΔP matches a Darcy worked example.
 
-### Phase 1 — Core component layer (fluid domain, steady) — *the milestone*
-- ANTLR grammar: `COMPONENT … END` definition + instantiation statement; `connect(...)`/shared-name; dotted port-member references.
-- `ComponentDef` AST record; component registry (alongside `ProcDef`).
-- **Expansion pass**: clone/substitute/mangle → scalar equations; node resolution (`across=`, `Σṁ=0`).
-- Standard library (fluid): Pump, Turbine, Compressor, Boiler/Heater, Condenser/Cooler, Throttle, Mixer, Splitter, Pipe (Phase 0), HX (4-port ε-NTU), Nozzle, Source/Sink boundary.
-- **State-circuit binding** (§6): stream→state adapter; per-fluid `StateTableDef`; `CyclePathResolver` taught member-name states + per-edge process.
-**Deliverable:** steady **fan-duct** and **Rankine/Brayton/refrigeration** flowsheets solve end-to-end with auto cycle plots.
-**Acceptance:** (i) a 4-component Rankine flowsheet reproduces the hand-written example's numbers; (ii) the fan-duct operating point matches a manual curve-intersection; (iii) zero unit warnings; (iv) full backend suite green.
+### Phase 1 — Core component layer (fluid domain, steady) — *the milestone* — 🟡 **in progress** (see §15)
+- ~~ANTLR grammar: `COMPONENT … END` definition + instantiation statement; dotted port-member references.~~ ✅ **done** (shared-name binding; `connect(...)` → Phase 1.5).
+- ~~`ComponentDef` AST record; component registry (alongside `ProcDef`).~~ ✅ **done** (`ComponentDef`/`ComponentInst`).
+- **Expansion pass**: ~~clone/substitute/mangle → scalar equations~~ ✅ **done** (`ComponentExpander`); node resolution (`connect`: `across=`, `Σṁ=0`) → Phase 1.5.
+- Standard library (fluid): ~~Pump, Turbine, Compressor, Boiler/Heater, Condenser/Cooler, Throttle~~ ✅ **done**; ⏳ Mixer, Splitter, Pipe (Phase 0), HX (4-port ε-NTU), Nozzle, Source/Sink boundary.
+- ⏳ **State-circuit binding** (§6): stream→state adapter; per-fluid `StateTableDef`; `CyclePathResolver` taught member-name states + per-edge process.
+**Deliverable:** ⏳ steady **fan-duct** (needs Phase 0 `friction_factor`) and ~~**Rankine/Brayton/refrigeration** flowsheets solve end-to-end~~ ✅ **done**; ⏳ auto cycle plots (needs §6 binding).
+**Acceptance:** ~~(i) a 4-component Rankine flowsheet reproduces the hand-written example's numbers~~ ✅; ⏳ (ii) the fan-duct operating point matches a manual curve-intersection; ~~(iii) zero unit warnings; (iv) full backend suite green~~ ✅.
 
 ### Phase 2 — Multi-domain ports & transducers
 - Heat port `(T, Q̇)`; two-stream HX with exposed wall; baked-in-duty components.
@@ -533,6 +533,35 @@ A `PROBE name = <expression>` statement declares a derived quantity (efficiency,
 
 ### 14.6 Transient state / causality override
 When the expander auto-classifies `C`/`I` storage states (§8.2), the user can **override the chosen state** (e.g. force fluid temperature rather than wall temperature as the integrated variable) via a `STATE`/`der` annotation, with the structural check validating that the override is consistent.
+
+---
+
+## 15. Implementation Status & Findings — Phase 1 (2026-06-26)
+
+> Live status of the build on branch `feat/component-system-modeling`. This
+> section is the source of truth for what is shipped vs pending and records the
+> findings that refine the plan above.
+
+### 15.1 Shipped & validated (Phase 1a–1b, full backend suite green)
+- **Grammar:** `COMPONENT … END` (with `PARAM`), instantiation `Type inst(streamA, streamB, key=val)`, and the dotted port-member accessor (`in.P`, `out.h`, `HP.out.h`, `T1.W`) via a new `DOT` token + `MemberAtom`. `componentDef`/`componentInst` sit at **top level** (not inside `statement`) so the sealed `Statement` hierarchy is untouched.
+- **AST & expander:** `ComponentDef`/`ComponentInst` records; `ComponentExpander` clones each instance body with three rewrites — port `port.member`→`boundStream$member`, bare local/output→`inst$name` (per-instance namespacing, exactly like MODULE), parameter→value — emitting flat scalar equations the **existing Newton/Tarjan solver consumes unchanged**. String (fluid) parameters are baked into the encoded `prop$` property-call names, so two instances can carry different fluids.
+- **Connection model = shared-name** (see finding 15.2.1): ports bind to *stream* names; two instances naming the same stream are connected because they share the flat stream variables (`s$P, s$h, s$mdot`). A series chain conserves mass/energy with **no extra equations**.
+- **Standard library** (`ComponentLibrary`, authored in `COMPONENT` source, parsed once; a user definition of the same name overrides the built-in): **Pump, Turbine, Compressor, Boiler, Condenser, Throttle**.
+- **Validation** (CoolProp live): **Rankine** `eta_th=0.332` (matches the hand-written example), **Brayton** (real air), **R134a vapor-compression refrigeration** — all solve end-to-end with **zero unit warnings**. Tests: `parser/ComponentExpansionTest`, `core/ComponentCyclesTest`.
+
+### 15.2 Findings (these refine the plan above)
+1. **Closed-loop mass-balance redundancy is a real structural obstacle (new robustness item, relates to §8.9).** Closing a cycle (condenser-out fed back to pump-in) makes the per-component mass-conservation equations linearly dependent — the loop's Σṁ is redundant — so the system is **over-determined by exactly one** even though it is consistent, and frEES's zero-DOF Check rejects it. *Mitigation shipped:* model cycles as **open chains** (the pump-inlet state is specified directly and equals the condenser-outlet state by the physics), exactly as the hand-written examples do. *Plan impact:* §8.9's structural guard should additionally **detect a redundant loop-conservation equation and relax/drop one**, or a first-class `LOOP`/closure construct should mark the redundancy as intentional. This is the single most important finding for robust closed-cycle support.
+2. **`connect(...)` and branching are deferred; shared-name shipped first.** Shared-name covers every *series* flowsheet (Rankine/Brayton/refrigeration), which is the bulk of the catalog. `connect(...)` plus explicit **Splitter/Mixer** (for extraction/regenerative FWH, headers, manifolds) is now an explicit **Phase 1.5** rather than part of the Phase 1 core.
+3. **`result.variables()` is keyed by display name** (dotted, e.g. `s1.mdot`, `h1.duty`), not the internal flat `$` name — relevant to the §14.1 source-mapped diagnostics (the user already never sees `s1$mdot`).
+4. **Derived-member access not yet rewritten.** A stream carries canonical members `(P, h, mdot)`; boundary *states* are currently specified with explicit property calls (`s1.h = Enthalpy(Water, P=P_lo, x=0)`). Ergonomic next step: rewrite derived members (`s1.T`, `s1.x`, `s1.s`) to the matching CoolProp call so users can write `s1.T = 480 [C]` directly. (Folds into §6 state binding.)
+5. **`fan-duct` is correctly gated on Phase 0.** It needs `friction_factor` (Colebrook/Moody); confirming Phase 0 is the true prerequisite for the entire flow-network class, not just a convenience.
+
+### 15.3 Immediate next steps (revised ordering)
+- **Phase 0 `friction_factor`** (Colebrook/Moody) → the **fan-duct** operating point, closing Phase 1 acceptance (ii).
+- **State-circuit binding (§6)** → per-fluid `StateTableDef` + ordered process edges so `CyclePathResolver` draws exact T-s/P-h cycle diagrams.
+- **Phase 1.5 — `connect()` + Splitter/Mixer** (branching) and **loop-closure handling** (finding 15.2.1).
+- **Derived-member rewriting** (finding 15.2.4).
+- Remaining standard-library components: Mixer, Splitter, Pipe (post-Phase 0), 4-port HX (ε-NTU), Nozzle, Source/Sink.
 
 ---
 
