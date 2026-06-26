@@ -1,6 +1,7 @@
 package com.frees.backend.core;
 
 import com.frees.backend.parser.EquationParser;
+import com.frees.backend.props.CoolProp;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;
@@ -8,6 +9,7 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
  * The component physics-variant selector (§5.5, "one component, many models").
@@ -93,6 +95,50 @@ class ComponentVariantTest {
         String src = WIDGET + "Widget W(s1, s2, model$=linear, gain=42)\n" + boundary();
         Map<String, Double> v = solver.solve(src).variables();
         assertEquals(1042.0, v.get("s2.h"), 1e-9);
+    }
+
+    @Test
+    void libraryCompressorVolumetricVariantDeterminesMassFlow() {
+        // The standard-library Compressor is now a variant ladder. The
+        // `volumetric` variant pins the mass flow from displacement & speed
+        // (ṁ = η_v · V_disp · N · ρ_suction) — the shared isentropic-η body still
+        // computes the discharge state. Asserts the volumetric relation holds on
+        // the solved suction density (no direct CoolProp call needed in the test).
+        assumeTrue(CoolProp.isAvailable(), "CoolProp not available");
+        String src = """
+                Compressor K(s1, s2, model$=volumetric, eta=0.8, fluid$=R134a, eta_v=0.9, disp=30e-6, rpm=3000)
+                s1.P = 200000
+                s1.T = 283.15
+                s2.P = 1000000
+                """;
+        Map<String, Double> v = solver.solve(src).variables();
+        double rhoIn = v.get("k.rho_in");
+        assertTrue(rhoIn > 0, "suction density must be positive: " + rhoIn);
+        double expectMdot = 0.9 * 30e-6 * (3000.0 / 60.0) * rhoIn;
+        // Mass flow is determined by the compressor and passes through.
+        assertEquals(expectMdot, v.get("s1.mdot"), 1e-9);
+        assertEquals(expectMdot, v.get("s2.mdot"), 1e-9);
+        // Compression raises the enthalpy (shared isentropic-η head).
+        assertTrue(v.get("s2.h") > v.get("s1.h"), "discharge enthalpy must exceed suction");
+    }
+
+    @Test
+    void libraryCompressorDefaultsToIsentropicBackwardCompatible() {
+        // With no model$ override the default `isentropic` variant applies and
+        // mass flow is set by the network (boundary), exactly as before variants
+        // existed — so volumetric-only params (eta_v/disp/rpm) are not required.
+        assumeTrue(CoolProp.isAvailable(), "CoolProp not available");
+        String src = """
+                Compressor K(s1, s2, eta=0.8, fluid$=R134a)
+                s1.P = 200000
+                s1.T = 283.15
+                s1.mdot = 0.05
+                s2.P = 1000000
+                """;
+        Map<String, Double> v = solver.solve(src).variables();
+        assertEquals(0.05, v.get("s2.mdot"), 1e-9);            // network-set ṁ passes through
+        assertTrue(v.get("s2.h") > v.get("s1.h"), "discharge enthalpy must exceed suction");
+        assertTrue(v.get("k.w") > 0, "compressor work must be positive");
     }
 
     @Test
