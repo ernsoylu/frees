@@ -14,12 +14,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  * engine integrates the state while its per-step algebraic solve resolves the
  * surrounding conduction/ambient network at each instant. The same components
  * that solve a steady operating point (Phase 2) thus also run a transient — here
- * the lumped-capacitance relaxation of a hot mass toward ambient.
- *
- * <p>NB: a transient component state is addressed by its flat name (e.g.
- * {@code 'm$port$t'}) in ODE accessors; a display-name ({@code 'm.port.t'})
- * accessor is a follow-up polish (needs display names threaded through the ODE
- * table/analysis). Pure algebra otherwise, so CoolProp-free.
+ * the lumped-capacitance relaxation of a hot mass toward ambient. The transient
+ * state is addressed by its natural dotted display name ({@code 'm.port.t'}) in
+ * the ODE accessors. Pure algebra, so CoolProp-free.
  */
 class ComponentTransientTest {
 
@@ -37,9 +34,9 @@ class ComponentTransientTest {
                 connect(wall.b, amb.port)
                 DYNAMIC warmup(method = ode45, time = 0 .. 2000, points = 100)
                 END
-                T_final = FinalValue('m$port$t')
-                T_peak  = MaxValue('m$port$t')
-                t_half  = TimeAt('m$port$t', 350)
+                T_final = FinalValue('m.port.t')
+                T_peak  = MaxValue('m.port.t')
+                t_half  = TimeAt('m.port.t', 350)
                 """;
         Map<String, Double> v = solver.solve(src).variables();
         // Relaxes to ambient: 300 + 100·e^(−2000/250) ≈ 300.03 K (steady limit =

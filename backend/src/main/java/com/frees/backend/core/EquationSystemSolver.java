@@ -292,8 +292,9 @@ public class EquationSystemSolver {
                 && com.frees.backend.core.ode.OdeAccessors.containsAccessor(equations);
         SolverSettings solveSettings = settings;
         if (odeAccessors) {
-            equations = augmentAccessorDependencies(equations, parsed.dynamicSystems());
-            installAccessorContext(parsed, settings, specs, deadlineNanos);
+            Map<String, String> displayToFlat = invertDisplayNames(parsed.displayNames());
+            equations = augmentAccessorDependencies(equations, parsed.dynamicSystems(), displayToFlat);
+            installAccessorContext(parsed, settings, specs, deadlineNanos, displayToFlat);
             // The accessor constraint residual rides on the ODE/FD noise floor.
             solveSettings = relaxedOdeSettings(settings, 1e-4);
         }
@@ -373,7 +374,8 @@ public class EquationSystemSolver {
      * live against the current Newton iterate during this solve.
      */
     private void installAccessorContext(EquationParser.ParseResult parsed, SolverSettings settings,
-                                        Map<String, VariableSpec> specs, long deadlineNanos) {
+                                        Map<String, VariableSpec> specs, long deadlineNanos,
+                                        Map<String, String> displayToFlat) {
         SolverSettings inner = relaxedOdeSettings(settings, 1e-7);
         com.frees.backend.core.ode.DynamicAccessorContext.BlockRunner runner = (ds, values) -> {
             com.frees.backend.core.ode.DynamicSolver.AlgebraicSolve algebraic =
@@ -382,7 +384,23 @@ public class EquationSystemSolver {
             return new com.frees.backend.core.ode.DynamicSolver(
                     ds, values, parsed.defs(), algebraic, deadlineNanos).solve();
         };
-        com.frees.backend.core.ode.DynamicAccessorContext.install(parsed.dynamicSystems(), runner);
+        com.frees.backend.core.ode.DynamicAccessorContext.install(
+                parsed.dynamicSystems(), displayToFlat, runner);
+    }
+
+    /**
+     * Inverts the flat→display name map into display→flat (both lowercased) so an
+     * ODE accessor can address a component's transient state by its natural
+     * dotted display name ({@code 'm.port.t'}) rather than the internal flat name
+     * ({@code 'm$port$t'}); plain DYNAMIC states keep working (they are absent
+     * from the map, so the column passes through unchanged).
+     */
+    private static Map<String, String> invertDisplayNames(Map<String, String> displayNames) {
+        Map<String, String> inv = new HashMap<>();
+        for (Map.Entry<String, String> e : displayNames.entrySet()) {
+            inv.put(e.getValue().toLowerCase(), e.getKey().toLowerCase());
+        }
+        return inv;
     }
 
     /**
@@ -408,7 +426,8 @@ public class EquationSystemSolver {
      * residual.
      */
     private List<Equation> augmentAccessorDependencies(List<Equation> equations,
-                                                       List<com.frees.backend.ast.DynamicSystem> systems) {
+                                                       List<com.frees.backend.ast.DynamicSystem> systems,
+                                                       Map<String, String> displayToFlat) {
         TreeSet<String> analyticVars = collectVariables(equations);
         List<Equation> out = new ArrayList<>(equations.size());
         for (Equation eq : equations) {
@@ -421,8 +440,9 @@ public class EquationSystemSolver {
             }
             java.util.LinkedHashSet<String> deps = new java.util.LinkedHashSet<>();
             for (String col : cols) {
+                String flatCol = displayToFlat.getOrDefault(col.toLowerCase(), col);
                 for (String v : com.frees.backend.core.ode.DynamicAccessorContext
-                        .inputVarsForColumn(systems, col)) {
+                        .inputVarsForColumn(systems, flatCol)) {
                     if (analyticVars.contains(v)) {
                         deps.add(v);
                     }
