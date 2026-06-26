@@ -424,6 +424,27 @@ public final class ComponentLibrary {
               b.Qdot = -Q
             END
 
+            COMPONENT PMSM(p, n, shaft)
+              PARAM Rs, lambda_pm, poles
+              Kt        = 1.5 * poles * lambda_pm
+              p.V - n.V = Rs * p.I + Kt * shaft.w
+              p.I + n.I = 0
+              shaft.tau = -Kt * p.I
+            END
+
+            COMPONENT Turbocharger(t_in, t_out, c_in, c_out)
+              PARAM cp, eta_t, eta_c, gam
+              PRt        = t_in.P / t_out.P
+              t_out.T    = t_in.T * (1 - eta_t * (1 - PRt^((1 - gam) / gam)))
+              t_out.mdot = t_in.mdot
+              Wt         = t_in.mdot * cp * (t_in.T - t_out.T)
+              PRc        = c_out.P / c_in.P
+              c_out.T    = c_in.T * (1 + (PRc^((gam - 1) / gam) - 1) / eta_c)
+              c_out.mdot = c_in.mdot
+              Wc         = c_in.mdot * cp * (c_out.T - c_in.T)
+              Wt         = Wc
+            END
+
             COMPONENT CoolingCoil(in, out)
               PARAM P, Tout
               h_in       = Enthalpy(AirH2O, T=in.T, P=P, W=in.humrat)
