@@ -778,6 +778,11 @@ The algorithmically novel pieces (worth a dedicated derivation) are: **LuGre/Str
 
 ---
 
+## Appendix B — Deferred component-layer items
+Everything in the phase plan is complete (backend) **except** these, deliberately deferred:
+- **ECMS (HEV online energy management) — DEFERRED.** Not a physical component but an *online optimal-control strategy*: at each step, minimize `ṁ_fuel(P_eng) + s·P_batt/LHV` over the engine/motor split, with the equivalence factor `s` adapted from SOC error so charge stays balanced over the drive cycle (the real-time approximation of the globally-optimal DP/PMP solution). Feasible on existing machinery — BSFC `TABLE` (datasheet pattern), `core/Optimizer`, `DYNAMIC` for SOC, and a supervisory component running the optimizer-in-the-loop — but a genuine multi-part feature, **not** a fixed-ratio "power split" (which would skip the cost-minimization + SOC balancing that *is* ECMS). Build as its own increment when prioritized.
+- **Frontend (separate track):** §6 cycle-plot rendering (`CyclePathResolver` + React property diagrams) and the §14.2 Mermaid topology *view*. Backend data/hooks exist; the rendering is the deliverable.
+
 ## Appendix A — Pre-existing Open Items (not part of this report)
 Retained from prior planning; unrelated to the component work above.
 - **Spreadsheet app, Phase 5 (Plot data source / diagram cell references):** plots integration pending; diagram-cell references are deferred with the rest of the diagram track.
