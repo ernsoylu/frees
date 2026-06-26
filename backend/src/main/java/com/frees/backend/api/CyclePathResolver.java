@@ -84,6 +84,12 @@ public class CyclePathResolver {
             Pattern.compile(
                     "^([a-zA-Z][a-zA-Z_]*?)_?(\\d+)$|^([a-zA-Z][a-zA-Z_]*)\\[(\\d+)\\]$");
 
+    /** A component stream member {@code s1.p}, {@code s2.h}, … — the stream name's
+     *  trailing digits are the cycle state index, the dotted member is the
+     *  property (so the COMPONENT layer's streams plot as a cycle, §6). */
+    private static final Pattern COMPONENT_STREAM_STATE =
+            Pattern.compile("^([a-zA-Z][a-zA-Z_]*?)(\\d+)\\.([a-zA-Z]+)$");
+
     private static final List<PropPair> PREFERRED_PAIRS = List.of(
             new PropPair("P", "P", "h", HMASS),
             new PropPair("P", "P", "s", SMASS),
@@ -467,6 +473,17 @@ public class CyclePathResolver {
                 String base = propName.replace("_", "").toLowerCase();
                 String canonicalProp = PROPERTY_ALIASES.get(base);
                 if (canonicalProp != null) {
+                    stateKnowns.computeIfAbsent(index, k -> new HashMap<>()).put(canonicalProp, entry.getValue());
+                }
+                continue;
+            }
+            // COMPONENT layer (§6): a stream member s1.p / s2.h plots as a cycle
+            // state, indexed by the stream name's trailing digits.
+            Matcher cm = COMPONENT_STREAM_STATE.matcher(entry.getKey());
+            if (cm.matches()) {
+                String canonicalProp = PROPERTY_ALIASES.get(cm.group(3).toLowerCase());
+                if (canonicalProp != null) {
+                    int index = Integer.parseInt(cm.group(2));
                     stateKnowns.computeIfAbsent(index, k -> new HashMap<>()).put(canonicalProp, entry.getValue());
                 }
             }
