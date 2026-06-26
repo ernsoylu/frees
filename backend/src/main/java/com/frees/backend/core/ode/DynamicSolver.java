@@ -121,7 +121,42 @@ public final class DynamicSolver {
             algebraicTemplate.add(new Equation(substituteDer(aux.lhs()),
                     substituteDer(aux.rhs()), aux.sourceText()));
         }
+        registerImplicitAuxiliaries();
         validateReferences();
+    }
+
+    /**
+     * Promotes to auxiliaries every non-state variable the algebraic block
+     * references, not just simple {@code name = expr} assignment targets. An
+     * expanded component network defines variables <em>implicitly</em> through
+     * constraint equations (e.g. {@code a.Qdot + b.Qdot = 0} or {@code mass.T =
+     * wall.T}); these are still per-step unknowns the coupled algebraic solve
+     * determines, so they must be registered (and emitted as output columns)
+     * rather than rejected as undefined. A genuinely undefined reference instead
+     * makes the block non-square and surfaces at the per-step solve.
+     */
+    private void registerImplicitAuxiliaries() {
+        java.util.Set<String> known = new java.util.HashSet<>(analyticValues.keySet());
+        known.add(timeVar);
+        for (String s : states) {
+            known.add(s);
+            known.add(derVar(s));
+        }
+        java.util.LinkedHashSet<String> aux = new java.util.LinkedHashSet<>(auxNames);
+        for (Equation eq : algebraicTemplate) {
+            for (String v : eq.lhs().variables()) {
+                if (!known.contains(v)) {
+                    aux.add(v);
+                }
+            }
+            for (String v : eq.rhs().variables()) {
+                if (!known.contains(v)) {
+                    aux.add(v);
+                }
+            }
+        }
+        auxNames.clear();
+        auxNames.addAll(aux);
     }
 
     private void collectAllDers(Expr e, java.util.Set<String> found) {

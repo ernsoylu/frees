@@ -150,7 +150,7 @@ plotValue
 // by the grammar, so the analytic solver never sees der().
 dynamicDef
     : DYNAMIC IDENT LPAREN dynamicHeader RPAREN sep
-      dynamicItem (sep dynamicItem)* sep?
+      (dynamicItem (sep dynamicItem)* sep?)?
       END
     ;
 

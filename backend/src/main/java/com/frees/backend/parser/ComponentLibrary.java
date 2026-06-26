@@ -270,6 +270,12 @@ public final class ComponentLibrary {
               heat.Qdot = -Q
               W         = (p.V - n.V) * (0 - p.I)
             END
+
+            COMPONENT ThermalMass(port)
+              PARAM C, T0
+              der(port.T)  = port.Qdot / C
+              init(port.T) = T0
+            END
             """;
 
     private static final List<ComponentDef> BUILTINS = parse(SOURCE);
