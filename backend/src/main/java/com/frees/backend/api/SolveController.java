@@ -116,7 +116,10 @@ public class SolveController {
                                 Integer errorLine,
                                 List<SolveDtos.StateTableDto> stateTableDefs,
                                 List<SolveDtos.OdeTableDto> odeTables,
-                                List<SolveDtos.ResidueExpansionDto> residueExpansions) {
+                                List<SolveDtos.ResidueExpansionDto> residueExpansions,
+                                // Mermaid flowchart of the COMPONENT network (§14.2), or
+                                // null when the document has no components.
+                                String topology) {
 
         static SolveResponse failure(String error) {
             return failure(error, null);
@@ -125,7 +128,7 @@ public class SolveController {
         static SolveResponse failure(String error, Integer errorLine) {
             return new SolveResponse(false, List.of(), List.of(), List.of(), null,
                     List.of(), List.of(), error, List.of(), List.of(), List.of(),
-                    List.of(), errorLine, List.of(), List.of(), List.of());
+                    List.of(), errorLine, List.of(), List.of(), List.of(), null);
         }
     }
 
@@ -265,7 +268,8 @@ public class SolveController {
                 null,
                 stateTablesOf(parsed.stateTables()),
                 odeTablesOf(result.odeTables()),
-                result.residueExpansions());
+                result.residueExpansions(),
+                TopologyGraph.mermaid(cleanText));
     }
 
     /** Quick synchronous syntax check used by the asynchronous path to reject

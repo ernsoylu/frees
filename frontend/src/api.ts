@@ -81,6 +81,8 @@ export interface SolveResponse {
   stateTableDefs?: StateTableDto[]
   /** ODE Tables produced by solved DYNAMIC ... END blocks. */
   odeTables?: OdeTableDto[]
+  /** Mermaid flowchart of the COMPONENT network, or null when there are none. */
+  topology?: string | null
 }
 
 export interface CheckResponse {

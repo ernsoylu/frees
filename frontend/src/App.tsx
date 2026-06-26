@@ -103,6 +103,7 @@ const SpreadsheetTab = lazy(() => import('./spreadsheet/SpreadsheetTab'))
 // plot-config modals are also code-split: the Plotly figure machinery is large
 // and only needed once a plot window is opened or a modal is invoked.
 const PlotTab = lazy(() => import('./PlotTab'))
+const TopologyTab = lazy(() => import('./TopologyTab'))
 const MinMaxModal = lazy(() => import('./MinMaxModal'))
 const CurveFitModal = lazy(() => import('./CurveFitModal'))
 const PlotConfigModal = lazy(() => import('./plots/PlotConfigModal'))
@@ -1895,6 +1896,13 @@ export default function App() {
         />
       </div>
     ),
+    topology: (
+      <div style={panelPad}>
+        <Suspense fallback={lazyTabFallback}>
+          <TopologyTab topology={result?.topology} />
+        </Suspense>
+      </div>
+    ),
     digitizer: (
       <div style={{ height: '100%', minHeight: 0 }}>
         <Suspense fallback={lazyTabFallback}>
@@ -2145,6 +2153,7 @@ export default function App() {
     workspace: 'Variable Explorer',
     terminal: 'Terminal',
     states: 'Fluid States',
+    topology: 'Topology',
     inspector: 'Inspector',
   }
 
