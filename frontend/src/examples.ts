@@ -1249,6 +1249,58 @@ v = eos_volume('co2', 'PR', T, P, 'vapor')
 h = eos_enthalpy('co2', 'PR', T, P, 'vapor')
 Psat_300 = eos_psat('co2', 'PR', 300)          { saturation pressure at 300 K }`,
   },
+  {
+    id: 'engine-cycle-wiebe',
+    title: 'Engine Cycle (Wiebe Heat Release)',
+    description: 'Crank-angle single-zone SI-engine pressure trace via a DYNAMIC block.',
+    category: 'Powertrain',
+    featured: true,
+    text: `// Single-Zone Engine Cycle (Wiebe Heat Release)
+{ Crank-angle single-zone first-law model of a spark-ignition engine over the
+  compression-combustion-expansion strokes. Cylinder volume follows slider-crank
+  kinematics; the burned fraction follows a Wiebe function; the DYNAMIC block
+  integrates dp/dtheta over crank angle. The integration variable t is the crank
+  angle in degrees after BDC, so TDC is at 180. Plot p vs V (Plots window) for
+  the indicator diagram. }
+r_c       = 10             { compression ratio }
+Vd        = 0.0005 [m^3]   { displacement volume (0.5 L) }
+Vc        = Vd / (r_c - 1) { clearance volume }
+lambda    = 0.25           { crank radius / connecting-rod length }
+kk        = 1.35           { ratio of specific heats }
+Q_tot     = 800 [J]        { total combustion heat release }
+theta_soc = 165            { start of combustion, deg aBDC (15 deg BTDC) }
+theta_dur = 50             { combustion duration, deg }
+p_ivc     = 100000 [Pa]    { pressure at intake-valve close (BDC) }
+
+DYNAMIC engine (method = ode45, t = 0 .. 360, points = 361, rtol = 1e-8)
+  { the integration variable t is the crank angle in degrees after BDC }
+  th       = (t - 180) * pi# / 180            { crank angle from TDC, radians }
+  root     = sqrt(1 - lambda^2 * sin(th)^2)
+  V        = Vc + (Vd/2) * ((1 - cos(th)) + (1/lambda) * (1 - root))
+  dVdth    = (Vd/2) * (sin(th) + lambda * sin(th) * cos(th) / root)
+  dVdtheta = dVdth * pi# / 180                { dV per crank degree }
+  dQdtheta = Q_tot * wiebe_rate(t, theta_soc, theta_dur, 5, 2)
+  der(p)   = (-kk * p * dVdtheta + (kk - 1) * dQdtheta) / V
+  p(0)     = p_ivc
+END
+
+p_max = MaxValue('p')      { peak cylinder pressure }`,
+  },
+  {
+    id: 'adiabatic-flame-temp',
+    title: 'Adiabatic Flame Temperature',
+    description: 'Methane-air flame temperature, stoichiometric AFR, and heating value.',
+    category: 'Thermodynamics',
+    featured: true,
+    text: `// Adiabatic Flame Temperature
+{ Complete combustion of methane in air (products frozen, no dissociation).
+  Edit phi: 1.0 is stoichiometric, < 1.0 is excess air (lower flame temp). }
+phi     = 1.0              { equivalence ratio (1 = stoichiometric, <1 = excess air) }
+T_react = 298.15 [K]       { reactants enter at 25 C }
+T_flame = AdiabaticFlameTemp('CH4', phi, T_react)
+AFR_st  = StoichAFR('CH4') { stoichiometric air-fuel ratio (mass basis) }
+LHV     = HeatingValue('CH4', 'LHV')`,
+  },
 ]
 
 /** The document new/blank workspaces start from. */

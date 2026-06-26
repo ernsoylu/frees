@@ -656,6 +656,15 @@ public final class UnitChecker {
             case "eos_density" -> eosDim("kg/m^3");
             case "eos_enthalpy" -> eosDim("J/kg");
             case "eos_entropy" -> eosDim("J/kg-K");
+            // Combustion thermochemistry & ideal-gas mixtures (string-keyed
+            // species/composition args carry no units to check).
+            case "adiabaticflametemp", "adiabaticflametemperature", "flametemp" -> eosDim("K");
+            case "mix_mw", "mix_molarmass" -> eosDim("kg/mol");
+            case "mix_cp" -> eosDim("J/kg-K");
+            case "mix_enthalpy" -> eosDim("J/kg");
+            case "mix_entropy" -> eosDim("J/kg-K");
+            // Wiebe burned-fraction and its rate are dimensionless.
+            case "wiebe", "wiebe_rate" -> Dim.of(Quantity.dimensionless(1.0));
             // TABLE lookup/interpolation: the table name is a string and the
             // arguments/result carry the table's own units, which the checker
             // does not track — stay agnostic rather than warn.
