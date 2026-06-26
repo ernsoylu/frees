@@ -253,6 +253,14 @@ public final class ComponentLibrary {
               in.w    = ratio * out.w
               out.tau = -ratio * in.tau
             END
+
+            COMPONENT HeatingResistor(p, n, heat)
+              PARAM R
+              p.V - n.V = R * p.I
+              p.I + n.I = 0
+              Q         = (p.V - n.V) * p.I
+              heat.Qdot = -Q
+            END
             """;
 
     private static final List<ComponentDef> BUILTINS = parse(SOURCE);
