@@ -489,6 +489,17 @@ public final class Evaluator {
                     evalString(args.get(0)), arg(c, args, 1, values, defs));
             case "mix_entropy" -> com.frees.backend.props.Thermochemistry.mixtureEntropy(
                     evalString(args.get(0)), arg(c, args, 1, values, defs), arg(c, args, 2, values, defs));
+            case "mix_viscosity" -> com.frees.backend.props.GasTransport.mixtureViscosity(
+                    evalString(args.get(0)), arg(c, args, 1, values, defs));
+            case "mix_conductivity" -> com.frees.backend.props.GasTransport.mixtureConductivity(
+                    evalString(args.get(0)), arg(c, args, 1, values, defs));
+            // Combustion-product chemical equilibrium (dissociation).
+            case "eq_molefraction" -> com.frees.backend.props.Equilibrium.moleFraction(
+                    evalString(args.get(0)), arg(c, args, 1, values, defs),
+                    arg(c, args, 2, values, defs), arg(c, args, 3, values, defs), evalString(args.get(4)));
+            case "adiabaticflametempeq", "flametemp_eq" -> com.frees.backend.props.Equilibrium.adiabaticFlameTemp(
+                    evalString(args.get(0)), arg(c, args, 1, values, defs),
+                    arg(c, args, 2, values, defs), arg(c, args, 3, values, defs));
             // Wiebe heat-release (engine combustion); angles are unit-agnostic.
             case "wiebe" -> com.frees.backend.props.Engine.wiebe(
                     arg(c, args, 0, values, defs), arg(c, args, 1, values, defs),
