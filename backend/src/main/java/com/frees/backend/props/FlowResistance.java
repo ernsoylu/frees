@@ -19,6 +19,8 @@ public final class FlowResistance {
         if (viscosity <= 0.0) {
             throw new PropertyEvaluationException("reynolds: dynamic viscosity must be > 0.");
         }
+        // A zero/transient-negative flow gives Re = 0 (handled by frictionFactor);
+        // it must not throw, so a Newton iterate passing through zero flow survives.
         return rho * Math.abs(velocity) * diameter / viscosity;
     }
 
@@ -32,8 +34,12 @@ public final class FlowResistance {
      * stays continuous (and so does its numerical derivative) for step-halving.
      */
     public static double frictionFactor(double re, double relativeRoughness) {
-        if (re <= 0.0) {
-            throw new PropertyEvaluationException("friction_factor: Reynolds number must be > 0.");
+        // Clamp a zero/negative Reynolds number (a transient Newton iterate at
+        // near-zero flow) to a tiny positive value instead of throwing: f then
+        // stays large and finite (high resistance at vanishing flow), so the
+        // solver can step through it rather than crashing.
+        if (re <= 1.0e-6) {
+            re = 1.0e-6;
         }
         double laminar = 64.0 / re;
         if (re < 2300.0) {
