@@ -18,6 +18,15 @@ COMPONENT TwoPhaseSink(in)
   h    = in.h
 END
 
+// General (P, h) boundary — sets any state (subcooled / two-phase / superheated)
+// directly, the most general two-phase inlet.
+COMPONENT TwoPhaseSourcePH(out)
+  PARAM mdot, P, h, domain$ = twophase
+  out.mdot = mdot
+  out.P    = P
+  out.h    = h
+END
+
 // Quality / superheat / void readout (pass-through). x and alpha are derived
 // locally; SH = T - Tsat is positive superheated, ~0 in the dome, negative
 // subcooled. Void uses Zivi (slip, no mass-flux dependence).
@@ -60,6 +69,61 @@ COMPONENT TwoPhaseFlowRes(in, out)
   dP_lo    = f_lo * (L / D) * rho_l * V_lo^2 / 2
   phi2     = friedel_phi2(x, rho_l, rho_g, mu_l, mu_g, G, D, sigma)
   out.P    = in.P - phi2 * dP_lo
+END
+
+// ── Switched moving-boundary heat exchangers (Phase T3) ───────────────────
+// Geometry-resolved 2-zone moving-boundary evaporator/condenser with a wall heat
+// port. The refrigerant-side zones (two-phase + single-phase) each occupy a
+// solved LENGTH along the tube; the boundary between them MOVES with operating
+// conditions. A zone that shrinks is handled the §4.8 way: its length is smoothly
+// floored at 0 (the C¹ max `½(x+√(x²+ε²))`) and its heat transfer is gated by
+// `zone_ramp(L,ε)=tanh(L/ε)`, so a collapsing zone fades to an inert passthrough
+// (out.h → the saturation enthalpy) instead of producing a singular UA — no NaN,
+// the integrator steps straight through. The wall port couples to a fixed
+// `ThermalSource` (steady) or a `ThermalMass` (transient warm-up on method=ida).
+// HTCs are effective per-zone U-values (PARAM); compute them from the shipped
+// chen_*/nu_* correlations for a regime-resolved design.
+
+// Two-phase inlet → superheated vapor outlet. Zones: two-phase (Tsat, U_tp) +
+// superheat (gliding vapor, U_sh). wall.T is the hot-side (secondary) temperature.
+COMPONENT MovingBoundaryEvaporator(in, out, wall)
+  PARAM fluid$, U_tp, U_sh, D, L, eps_zone, domain$ = twophase
+  out.mdot  = in.mdot
+  out.P     = in.P
+  Tsat      = T_sat(fluid$, P=in.P)
+  hg        = Enthalpy(fluid$, P=in.P, x=1)
+  Q_tp      = in.mdot * (hg - in.h)
+  L_tp      = Q_tp / (U_tp * pi# * D * (wall.T - Tsat))
+  L_rem     = L - L_tp
+  L_sh      = 0.5 * (L_rem + sqrt(L_rem^2 + eps_zone^2))
+  r_sh      = zone_ramp(L_sh, eps_zone)
+  T_out     = Temperature(fluid$, P=out.P, h=out.h)
+  Q_sh      = U_sh * pi# * D * L_sh * (wall.T - 0.5 * (Tsat + T_out)) * r_sh
+  Q_sh      = in.mdot * (out.h - hg)
+  Q         = Q_tp + Q_sh
+  wall.Qdot = Q
+  SH        = T_out - Tsat
+END
+
+// Vapor inlet → subcooled liquid outlet. Zones: condensing (Tsat, U_cond) +
+// subcool (gliding liquid, U_sc). wall.T is the cold-side (secondary) temperature.
+COMPONENT MovingBoundaryCondenser(in, out, wall)
+  PARAM fluid$, U_cond, U_sc, D, L, eps_zone, domain$ = twophase
+  out.mdot  = in.mdot
+  out.P     = in.P
+  Tsat      = T_sat(fluid$, P=in.P)
+  hf        = Enthalpy(fluid$, P=in.P, x=0)
+  Q_cond    = in.mdot * (in.h - hf)
+  L_cond    = Q_cond / (U_cond * pi# * D * (Tsat - wall.T))
+  L_rem     = L - L_cond
+  L_sc      = 0.5 * (L_rem + sqrt(L_rem^2 + eps_zone^2))
+  r_sc      = zone_ramp(L_sc, eps_zone)
+  T_out     = Temperature(fluid$, P=out.P, h=out.h)
+  Q_sc      = U_sc * pi# * D * L_sc * (0.5 * (Tsat + T_out) - wall.T) * r_sc
+  Q_sc      = in.mdot * (hf - out.h)
+  Q         = Q_cond + Q_sc
+  wall.Qdot = -Q
+  SC        = Tsat - T_out
 END
 
 // ── Moving-boundary / few-cell primitives (Phase T3) ──────────────────────
