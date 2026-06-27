@@ -156,6 +156,33 @@ COMPONENT TwoPhaseVolume(in, out)
   m           = V * rho_mix
 END
 
+// Two-phase capacitive volume / CHAMBER — the Amesim libtpf two-phase C-node:
+// (P, h) are the STATES (pressure from a compressibility compliance C ≈ V·∂ρ̄/∂P;
+// specific enthalpy from the energy balance), so the charge m = ρ(P,h)·V is
+// DERIVED, not a state. Unlike the adiabatic TwoPhaseVolume (P-state, enthalpy
+// pass-through), this stores ENERGY and carries a HEAT PORT — the mechanism that
+// lets a topologically CLOSED C-R-C-R vapor-compression loop integrate to steady:
+// the charge DISTRIBUTION between volumes drives the floating pressures, with
+// total charge conserved by the internal flows (no source/sink, no datum pin).
+// wall.T is the secondary-side temperature (read); Q = UA·(wall.T − T_cv) is the
+// heat into the refrigerant (so the SAME component is an evaporator when the wall
+// is warmer and a condenser when cooler). Alternate with a resistive flow element
+// (never C-C); storage der()/init() route into a DYNAMIC block (method = ida).
+COMPONENT TwoPhaseChamber(in, out, wall)
+  PARAM fluid$, V, C, UA, P0, h0, domain$ = twophase
+  der(in.P)  = (in.mdot - out.mdot) / C
+  init(in.P) = P0
+  rho        = Density(fluid$, P=in.P, h=hcv)
+  Q          = UA * (wall.T - Tcv)
+  der(hcv)   = (in.mdot * (in.h - hcv) + Q) / (rho * V)
+  init(hcv)  = h0
+  out.P     = in.P
+  out.h     = hcv
+  Tcv       = Temperature(fluid$, P=in.P, h=hcv)
+  wall.Qdot = Q
+  m         = rho * V
+END
+
 // Pressure reservoir: fixes pressure (and inlet enthalpy via quality), mass flow
 // FREE — the boundary a C-R-C network needs (a fixed-ṁ source would clash with a
 // volume's pressure state).

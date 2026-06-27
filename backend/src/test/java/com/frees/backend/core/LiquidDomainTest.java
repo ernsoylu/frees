@@ -28,7 +28,8 @@ class LiquidDomainTest {
         var names = ComponentLibrary.builtins().stream().map(c -> c.name()).toList();
         // 90 base + 7 liquid (L) + 4 foundation (T0) + 4 cycle (T1) + 4 charge (T2)
         // + 7 C/R + moving-boundary + (P,h) source (T3) + 6 AC + 4 blend (zeotropic rider)
-        assertEquals(126, names.size(), "built-in component count after the per-domain split");
+        // + 1 TwoPhaseChamber ((P,h) capacitive volume for closed cycles)
+        assertEquals(127, names.size(), "built-in component count after the per-domain split");
         // built-in names are stored lowercased (the language is case-insensitive)
         assertTrue(names.containsAll(java.util.List.of(
                 "liquidsource", "liquidsink", "liquidpump", "liquidpipe",
