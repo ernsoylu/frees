@@ -10,9 +10,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
- * Phase 6 HVAC — a psychrometric {@code CoolingCoil} (moist air, CoolProp
- * HumidAir). Cooling 30 °C / W=0.012 air below its dew point (16.8 °C) to 10 °C
- * condenses moisture, so the duty has both a sensible and a latent part.
+ * HVAC humid-air domain — a psychrometric {@code CoolingCoil} (moist air, CoolProp
+ * HumidAir) on the moist-air port basis {@code (P, ṁ_da, h, W)}: dry-air mass flow
+ * is conserved and the humidity ratio {@code W} and enthalpy {@code h} (per kg dry
+ * air) ride along, carried across a {@code connect} link. Cooling 30 °C / W=0.012
+ * air below its dew point to 10 °C condenses moisture, so the duty has both a
+ * sensible and a latent part. Tagged {@code domain$ = moistair}.
  */
 class ComponentPsychroTest {
 
@@ -22,17 +25,17 @@ class ComponentPsychroTest {
     void coolingCoilCondensesAndRemovesSensiblePlusLatentHeat() {
         assumeTrue(CoolProp.isAvailable(), "CoolProp not available");
         String src = """
-                CoolingCoil CC(s_in, s_out, P=101325, Tout=283.15)
-                s_in.T      = 303.15
-                s_in.humrat = 0.012
-                s_in.mdot   = 1
+                MoistAirSource SRC(P=101325, T=303.15, W=0.012, mdot=1)
+                CoolingCoil    CC(Tout=283.15)
+                MoistAirSink   SNK()
+                connect(SRC.out, CC.in)
+                connect(CC.out, SNK.in)
+                T_out = Temperature(AirH2O, H=CC.out.h, P=101325, W=CC.out.W)
                 """;
         Map<String, Double> v = solver.solve(src).variables();
-        assertEquals(283.15, v.get("s_out.t"), 1e-6);                 // cooled to the coil temperature
-        // Below the dew point → moisture condenses out (saturated outlet).
-        assertTrue(v.get("s_out.humrat") < 0.012, "moisture removed: " + v.get("s_out.humrat"));
-        assertTrue(v.get("s_out.humrat") > 0.005, "outlet saturated ~10 °C");
-        // Total duty positive and exceeds the latent part (so it has sensible too).
+        assertEquals(283.15, v.get("t_out"), 1e-2);                   // cooled to the coil temperature
+        assertTrue(v.get("cc.out.w") < 0.012, "moisture removed: " + v.get("cc.out.w"));
+        assertTrue(v.get("cc.out.w") > 0.005, "outlet saturated ~10 °C");
         assertTrue(v.get("cc.q") > 0, "cooling duty positive");
         assertTrue(v.get("cc.q") > v.get("cc.q_lat"), "total duty exceeds latent alone");
     }
