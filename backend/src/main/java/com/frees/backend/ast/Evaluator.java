@@ -495,6 +495,24 @@ public final class Evaluator {
                     arg(c, args, 0, values, defs), arg(c, args, 1, values, defs),
                     arg(c, args, 2, values, defs), arg(c, args, 3, values, defs),
                     arg(c, args, 4, values, defs));
+            case "nu_dittus_boelter" -> com.frees.backend.props.ConvectiveHeat.dittusBoelter(
+                    arg(c, args, 0, values, defs), arg(c, args, 1, values, defs),
+                    arg(c, args, 2, values, defs));
+            case "nu_gnielinski" -> com.frees.backend.props.ConvectiveHeat.gnielinski(
+                    arg(c, args, 0, values, defs), arg(c, args, 1, values, defs));
+            case "chen_f" -> com.frees.backend.props.ConvectiveHeat.chenF(
+                    arg(c, args, 0, values, defs));
+            case "chen_s" -> com.frees.backend.props.ConvectiveHeat.chenS(
+                    arg(c, args, 0, values, defs), arg(c, args, 1, values, defs));
+            case "nu_shah" -> com.frees.backend.props.ConvectiveHeat.shah(
+                    arg(c, args, 0, values, defs), arg(c, args, 1, values, defs),
+                    arg(c, args, 2, values, defs), arg(c, args, 3, values, defs));
+            case "nu_cavallini_zecchin" -> com.frees.backend.props.ConvectiveHeat.cavalliniZecchin(
+                    arg(c, args, 0, values, defs), arg(c, args, 1, values, defs),
+                    arg(c, args, 2, values, defs), arg(c, args, 3, values, defs),
+                    arg(c, args, 4, values, defs));
+            case "zone_ramp" -> com.frees.backend.props.ConvectiveHeat.zoneRamp(
+                    arg(c, args, 0, values, defs), arg(c, args, 1, values, defs));
 
             // ISA 1976 standard atmosphere: T/P/ρ at a geopotential altitude.
             case "isa_t" -> com.frees.backend.props.Atmosphere.temperature(arg(c, args, 0, values, defs));

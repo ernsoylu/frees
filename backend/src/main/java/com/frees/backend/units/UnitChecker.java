@@ -661,6 +661,10 @@ public final class UnitChecker {
             case "void_homogeneous", "void_zivi", "void_rouhani", "friedel_phi2" ->
                     Dim.of(Quantity.dimensionless(1.0));
             case "momentum_flux" -> eosDim("Pa");
+            // Nusselt numbers and the Chen factors / zone ramp are all dimensionless.
+            case "nu_dittus_boelter", "nu_gnielinski", "chen_f", "chen_s",
+                 "nu_shah", "nu_cavallini_zecchin", "zone_ramp" ->
+                    Dim.of(Quantity.dimensionless(1.0));
             // ISA standard atmosphere: SI property units (altitude argument unpoliced).
             case "isa_t" -> eosDim("K");
             case "isa_p" -> eosDim("Pa");

@@ -131,6 +131,13 @@ public class FunctionRegistry {
             new FunctionInfo("void_rouhani", "void_rouhani(x, rho_l, rho_g, G, sigma)", "Rouhani-Axelsson drift-flux void fraction (default)", "Two-Phase Flow"),
             new FunctionInfo("friedel_phi2", "friedel_phi2(x, rho_l, rho_g, mu_l, mu_g, G, D, sigma)", "Friedel two-phase frictional multiplier on the liquid-only drop", "Two-Phase Flow"),
             new FunctionInfo("momentum_flux", "momentum_flux(x, rho_l, rho_g, alpha, G)", "Separated-flow momentum flux [Pa] (accel. dP = out-in)", "Two-Phase Flow"),
+            new FunctionInfo("nu_dittus_boelter", "nu_dittus_boelter(Re, Pr, n)", "Dittus-Boelter single-phase Nusselt 0.023 Re^0.8 Pr^n", "Two-Phase Flow"),
+            new FunctionInfo("nu_gnielinski", "nu_gnielinski(Re, Pr)", "Gnielinski single-phase Nusselt number", "Two-Phase Flow"),
+            new FunctionInfo("chen_f", "chen_f(X_tt)", "Chen flow-boiling convective enhancement factor F", "Two-Phase Flow"),
+            new FunctionInfo("chen_s", "chen_s(Re_l, F)", "Chen flow-boiling nucleate-suppression factor S", "Two-Phase Flow"),
+            new FunctionInfo("nu_shah", "nu_shah(Re_l, Pr_l, x, p_red)", "Shah condensation Nusselt number", "Two-Phase Flow"),
+            new FunctionInfo("nu_cavallini_zecchin", "nu_cavallini_zecchin(Re_l, Pr_l, x, rho_l, rho_g)", "Cavallini-Zecchin condensation Nusselt number", "Two-Phase Flow"),
+            new FunctionInfo("zone_ramp", "zone_ramp(L, eps)", "Smooth zone-collapse ramp tanh(L/eps) (moving-boundary §4.8)", "Two-Phase Flow"),
 
             // Standard atmosphere (ISA 1976 — Phase G)
             new FunctionInfo("isa_t", "isa_T(alt)", "ISA 1976 temperature [K] at geopotential altitude [m]", "Atmosphere"),
