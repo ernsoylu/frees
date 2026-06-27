@@ -9,7 +9,7 @@ import java.util.Map;
 
 /**
  * Ideal-gas thermochemistry from NASA-7 two-range polynomials, the standard
- * basis for combustion calculations. Coefficients come from Cantera's GRI-Mech
+ * basis for combustion calculations. Coefficients come from a standard combustion mechanism
  * 3.0 dataset (`resources/nasa7_species.json`, parsed verbatim), so enthalpies
  * are absolute (formation-referenced): h(CO2, 298.15 K) = -393.5 kJ/mol, etc.
  *
@@ -21,7 +21,7 @@ import java.util.Map;
  *   s/R    = a1 ln T + a2 T + a3 T^2/2 + a4 T^3/3 + a5 T^4/4 + a7
  * </pre>
  * Molar outputs are J/mol-K and J/mol. This complements {@link IdealGas}, whose
- * cubic JANAF fits cover fuels (octane, alcohols) absent from GRI-Mech.
+ * cubic JANAF fits cover fuels (octane, alcohols) absent from the standard mechanism.
  */
 public final class NasaThermo {
 
@@ -70,7 +70,7 @@ public final class NasaThermo {
         return a;
     }
 
-    /** Canonical GRI-Mech key for a token (uppercased; argon spellings -> AR). */
+    /** Canonical mechanism key for a token (uppercased; argon spellings -> AR). */
     private static String key(String token) {
         String k = token.toUpperCase();
         return switch (k) {

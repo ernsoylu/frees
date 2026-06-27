@@ -78,7 +78,7 @@ public final class CasEngine {
     /**
      * Laplace transform of a time-domain expression {@code f(t)} into the
      * {@code s} domain — e.g. {@code laplace("exp(-a*t)", "t", "s")} yields
-     * {@code 1/(a+s)}. Covers the forward-transform problems in Nise Ch. 2.
+     * {@code 1/(a+s)}. Covers standard forward-transform textbook problems.
      */
     public CasResult laplace(String expression, String timeVar, String freqVar) {
         return applyWithTwoVariables("LaplaceTransform", expression, timeVar, freqVar);

@@ -1,7 +1,7 @@
 [Topic: symbolic-cas]
 # Control Systems & Symbolic CAS
 
-frees brings MATLAB-Control-Toolbox-style workflows in as native, order-independent equations: LTI modeling and conversions, system interconnection, poles/zeros and stability margins, Bode/Nyquist frequency response, step/impulse/forced time response, and state-feedback/PID controller design. Underneath, two engines meet at the `num`/`den` coefficient arrays — an embedded **Symja** computer-algebra system (CAS) for symbolic work, and Apache Commons Math for numeric analysis (companion-matrix eigenvalues, Riccati via the matrix sign function) that stays robust on high-order, floating-point systems.
+frees brings control-toolbox-style workflows in as native, order-independent equations: LTI modeling and conversions, system interconnection, poles/zeros and stability margins, Bode/Nyquist frequency response, step/impulse/forced time response, and state-feedback/PID controller design. Underneath, two engines meet at the `num`/`den` coefficient arrays — an embedded **Symja** computer-algebra system (CAS) for symbolic work, and Apache Commons Math for numeric analysis (companion-matrix eigenvalues, Riccati via the matrix sign function) that stays robust on high-order, floating-point systems.
 
 This page starts with the symbolic CAS layer (symbolic identities and Laplace partial fractions), then covers the LTI model representations and every control-systems `CALL` function.
 
@@ -52,7 +52,7 @@ gives `1/s - 1/(s+1) - 1/(s+1)^2`, i.e. the terms `(p=-1, ord=1, r=-1)`, `(p=-1,
 
 ## Transfer functions: tf(num, den)
 
-`tf(num, den)` builds a transfer function `num(s)/den(s)` from coefficient arrays in **descending powers** (MATLAB-style): `[1, 3]` is `s + 3` and `[1, 3, 2]` is `s^2 + 3*s + 2`. Use it on the left of an identity instead of writing the fraction out:
+`tf(num, den)` builds a transfer function `num(s)/den(s)` from coefficient arrays in **descending powers** (array-language-style): `[1, 3]` is `s + 3` and `[1, 3, 2]` is `s^2 + 3*s + 2`. Use it on the left of an identity instead of writing the fraction out:
 
 ```
 SYMBOLIC s
@@ -72,7 +72,7 @@ This is equivalent to the explicit form above and also yields `A = 2`, `B = -1`.
 
 frees represents LTI systems using standard array/matrix variables rather than introducing custom data types. This integrates seamlessly with the existing matrix/array algebra and unit checker.
 
-- **Transfer Function (TF)**: Represented as a pair of coefficient arrays in descending powers (MATLAB-style). E.g. `num = [0, 0, 1]` and `den = [1, 3, 2]` represents the system:
+- **Transfer Function (TF)**: Represented as a pair of coefficient arrays in descending powers (array-language-style). E.g. `num = [0, 0, 1]` and `den = [1, 3, 2]` represents the system:
   $$G(s) = \frac{1}{s^2 + 3s + 2}$$
 - **State Space (SS)**: Represented as matrices `A` ($n \times n$), `B` ($n \times 1$), `C` ($1 \times n$), and scalar `D` ($1 \times 1$):
   $$\dot{x} = A x + B u$$
@@ -86,9 +86,9 @@ Use `CALL` dispatches to convert between representations. The solver automatical
 
 > **Output sizes are inferred.** You may write `CALL` outputs as **bare names** — frees sizes each output array from the inputs (e.g. `num`/`den` get length `n+1`, a Bode `mag` matches `omega`). Explicit slices like `num[1:3]` still work and are shown in the examples for clarity. Only value-dependent counts need an explicit size: the finite-zero counts of `zero`/`tf2zp` (e.g. `zr[1:2]`) and the `rlocus` sweep length. The same control-systems `CALL` functions, and the symbolic transforms below, are also available in the **REPL terminal** (see *REPL Terminal & Workspace*), where `Factor`, `Expand`, `Apart`, `Laplace`, `InverseLaplace`, `Diff` and `Integrate` run interactively.
 
-## Multi-Output Functions (MATLAB-style)
+## Multi-Output Functions (array-language-style)
 
-Every multi-output `CALL` function below also has a **destructuring** form — the same syntax MATLAB uses. Write the outputs in brackets on the left and call the function on the right; it is exactly equivalent to the `CALL name(inputs : outputs)` form, with output sizes still inferred:
+Every multi-output `CALL` function below also has a **destructuring** form — the same syntax array languages use. Write the outputs in brackets on the left and call the function on the right; it is exactly equivalent to the `CALL name(inputs : outputs)` form, with output sizes still inferred:
 
 ```
 { These two lines are identical }
@@ -374,7 +374,7 @@ CALL place(A, B, pr, pi : K[1:n])
 ```
 
 ### 3. PID Auto-Tuning: pidtune
-Loop-shaping tuning of a P/PI/PID controller for a SISO plant `num/den`. The controller is designed so the open loop crosses over (gain = 1) at frequency `wc` with a 60° phase-margin target (the same default MATLAB uses). The type is a quoted `'P'`, `'PI'`, or `'PID'`; unused gains are returned as `0`. A pure `P` controller only sets the crossover — it cannot reshape phase.
+Loop-shaping tuning of a P/PI/PID controller for a SISO plant `num/den`. The controller is designed so the open loop crosses over (gain = 1) at frequency `wc` with a 60° phase-margin target (a common default). The type is a quoted `'P'`, `'PI'`, or `'PID'`; unused gains are returned as `0`. A pure `P` controller only sets the crossover — it cannot reshape phase.
 ```
 CALL pidtune(num, den, 'PID', wc : Kp, Ki, Kd)
 ```

@@ -9,7 +9,7 @@ import java.util.Map;
  * mixtures from kinetic theory: pure-species values via the Chapman-Enskog
  * relation with the Neufeld collision integral, combined with Wilke's mixing
  * rule (Mason-Saxena for conductivity). Lennard-Jones parameters come from the
- * GRI-Mech transport data embedded in {@link NasaThermo}.
+ * standard combustion-mechanism transport data embedded in {@link NasaThermo}.
  *
  * <p>This covers arbitrary ideal-gas mixtures (air, combustion products) that
  * CoolProp does not handle as mixtures. Inputs use the same
@@ -99,7 +99,7 @@ public final class GasTransport {
         if (!NasaThermo.hasTransport(species)) {
             throw new PropertyEvaluationException(
                     "Transport: no Lennard-Jones data for species '" + species
-                            + "'. Known: GRI-Mech species (N2, O2, CO2, H2O, CH4, ...).");
+                            + "'. Known: the standard combustion-mechanism species (N2, O2, CO2, H2O, CH4, ...).");
         }
     }
 }

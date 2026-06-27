@@ -10,7 +10,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Ideal-gas mixture transport (Chapman-Enskog + Wilke) and combustion-product
  * chemical equilibrium (Kp method). Transport values check against handbook air
  * data; the equilibrium flame temperature checks against the frozen result and
- * the dissociation-corrected value (~2225 K for stoichiometric CH4, Cengel).
+ * the dissociation-corrected value (~2225 K for stoichiometric CH4).
  */
 class EquilibriumTransportTest {
 
@@ -29,7 +29,7 @@ class EquilibriumTransportTest {
 
     @Test
     void equilibriumConstantMatchesJanafTable() {
-        // CO2 = CO + 1/2 O2, ln Kp from Cengel Table A-28 (index 0).
+        // CO2 = CO + 1/2 O2, ln Kp from standard JANAF tables (index 0).
         assertEquals(-6.635, Equilibrium.lnKp(2000.0)[0], 0.02);
         assertEquals(-3.860, Equilibrium.lnKp(2400.0)[0], 0.02);
         assertEquals(-2.801, Equilibrium.lnKp(2600.0)[0], 0.02);

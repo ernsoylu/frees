@@ -134,12 +134,12 @@ w_turb = h3 - h4
 eta_th = (w_turb - w_pump) / q_in`,
   },
   {
-    id: 'cengel-thermodynamics',
-    title: 'Çengel Thermodynamics Compliance',
-    description: ' Nelson-Obert compressibility and diffuser stagnation properties from Çengel.',
+    id: 'thermo-compliance',
+    title: 'Real-Fluid Thermodynamics Compliance',
+    description: ' Nelson-Obert compressibility and diffuser stagnation properties from a standard thermodynamics textbook.',
     category: 'Thermodynamics',
-    text: `// Çengel Thermodynamics Compliance
-{ Verification problems from Çengel's Thermodynamics: An Engineering Approach.
+    text: `// Real-Fluid Thermodynamics Compliance
+{ Verification problems from a standard thermodynamics textbook.
   This example demonstrates the compressibility factor (Z) of real fluids
   and stagnation properties for compressible flow. }
 
@@ -618,11 +618,11 @@ END`,
   },
   {
     id: 'multi-output-destructuring',
-    title: 'Multi-Output Functions (MATLAB-style)',
+    title: 'Multi-Output Functions (array-language-style)',
     description: 'Bracket destructuring of functions: [A,B,C,D] = tf2ss(...), discarding outputs with ~, and omitting trailing outputs.',
     category: 'Control Systems',
     text: `// Multi-Output Functions
-{ Every multi-output function can be used with MATLAB-style
+{ Every multi-output function can be used with array-language-style
   bracket destructuring:  [outs] = name(ins).
   Use ~ to discard an output, or omit trailing outputs you don't
   need. Press Solve (F2). }
@@ -845,7 +845,7 @@ END`,
   {
     id: 'root-locus-analysis',
     title: 'Root Locus Analysis',
-    description: 'Calculate and plot root locus trajectories for a closed-loop system, finding crossover points matching Norman Nise examples.',
+    description: 'Calculate and plot root locus trajectories for a closed-loop system, finding crossover points matching standard control-systems textbook examples.',
     category: 'Control Systems',
     text: `{ Root Locus Analysis }
 { Open-loop plant G(s) = K*(s + 3) / (s*(s + 1)*(s + 2)*(s + 4)) }
@@ -1012,7 +1012,7 @@ q = k * A * (T_hot - T_cold) / L   { heat rate through the plate }`,
     text: `// Engine Map - 2-D Interpolation
 { A brake-specific fuel consumption map: rows are engine speed,
   columns are load. Call the table with two arguments to bilinearly
-  interpolate, bsfc(rpm, load), or use the EES-style Interpolate2D. }
+  interpolate, bsfc(rpm, load), or use the classic-solver-style Interpolate2D. }
 TABLE bsfc(rpm : load = 0.25, 0.5, 1.0)
   1000   320   300   290
   3000   280   260   250
@@ -1020,7 +1020,7 @@ TABLE bsfc(rpm : load = 0.25, 0.5, 1.0)
 END
 
 g_per_kWh = bsfc(2500, 0.6)                  { direct curve-family call }
-g_check   = Interpolate2D('bsfc', 2500, 0.6) { same value, EES name }`,
+g_check   = Interpolate2D('bsfc', 2500, 0.6) { same value, classic-solver name }`,
   },
   {
     id: 'multi-objective-beam',

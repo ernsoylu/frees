@@ -4,7 +4,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * Built-in physical and mathematical constants (EES convention: a trailing
+ * Built-in physical and mathematical constants (by long-standing convention: a trailing
  * '#' marks a constant, e.g. pi#, R#, g#, sigma#).
  *
  * Constants are substituted at parse time as numeric literals carrying their

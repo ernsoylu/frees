@@ -17,7 +17,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  *       (states share one step cursor — what single-state Integral lacks);</li>
  *   <li>aerodynamic drag with an exponential-atmosphere density, resolved as a
  *       per-step algebraic auxiliary;</li>
- *   <li>thrust/mdot gated off at burnout via the EES If() conditional;</li>
+ *   <li>thrust/mdot gated off at burnout via the built-in If() conditional;</li>
  *   <li>an apogee event (v = 0 → stop);</li>
  *   <li>an ODE Table feeding state-vs-time / state-vs-state plots;</li>
  *   <li>the loop closed by an accessor: the propellant burn time is sized so the

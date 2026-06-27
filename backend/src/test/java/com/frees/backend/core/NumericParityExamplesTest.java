@@ -7,9 +7,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 /**
  * End-to-end worked examples grounded in external references, validating the
  * Tier-1 capability additions against independently published / hand-computed
- * answers (the kind of analysis Scilab and EES are used for).
+ * answers (the kind of analysis numerical computing tools are used for).
  */
-class ScilabEesParityExamplesTest {
+class NumericParityExamplesTest {
 
     private final EquationSystemSolver solver = new EquationSystemSolver();
 
@@ -22,14 +22,14 @@ class ScilabEesParityExamplesTest {
     }
 
     /**
-     * Mastering EES (Klein &amp; Nellis), Table 2-1 thermal-conductivity curve fit.
+     * a standard reference, Table 2-1 thermal-conductivity curve fit.
      * A 2nd-order polynomial fit of k(T) over T = 200..550 K reproduces the
      * coefficients printed in the book: a0 = 7.295357, a1 = -0.02812857,
      * a2 = 7.723810e-5 (R² = 99.44%). frees PolyFit returns ascending-power
      * coefficients c[1]=a0, c[2]=a1, c[3]=a2.
      */
     @Test
-    void polyFitConductivityMatchesMasteringEes() {
+    void polyFitConductivityMatchesReference() {
         String src = "T = [200, 250, 300, 350, 400, 450, 500, 550]\n"
                 + "k = [4.53, 5.21, 6.05, 7.02, 8.48, 10.00, 12.11, 15.58]\n"
                 + "CALL PolyFit(T, k, 2 : a)\n";

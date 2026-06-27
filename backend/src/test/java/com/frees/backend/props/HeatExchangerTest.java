@@ -10,8 +10,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Heat-exchanger effectiveness-NTU relations checked against standard tables
- * (Incropera Table 11.3/11.4; Kays &amp; London), cross-checked via NotebookLM
- * against Kays &amp; London and Kakac. NTU = 1, Cr = 0.5 unless noted.
+ * (standard compact-heat-exchanger references), cross-checked
+ * against multiple standard texts. NTU = 1, Cr = 0.5 unless noted.
  */
 class HeatExchangerTest {
 

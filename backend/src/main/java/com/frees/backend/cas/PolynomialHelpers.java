@@ -12,7 +12,7 @@ import java.util.List;
 /**
  * Utility helper class for polynomial calculations.
  * Supports add, multiply, companion-matrix roots, and coeffs-from-roots expansion.
- * Polynomial coefficients are represented as double arrays in descending powers (MATLAB-style).
+ * Polynomial coefficients are represented as double arrays in descending powers (array-language-style).
  */
 public final class PolynomialHelpers {
 
@@ -634,7 +634,7 @@ public final class PolynomialHelpers {
         return normalizePair(tc.num(), tc.den());
     }
 
-    /** Partial-fraction residues, poles, and direct term (MATLAB residue order). */
+    /** Partial-fraction residues, poles, and direct term (standard residue order). */
     public record ResidueResult(double[][] residues, double[][] poles, int[] orders, double k) {
         @Override
         public boolean equals(Object o) {

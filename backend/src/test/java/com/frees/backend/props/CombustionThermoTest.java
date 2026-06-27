@@ -10,8 +10,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * Combustion thermochemistry (NASA-7 + JANAF), ideal-gas mixtures, and the
  * Wiebe heat-release function. Adiabatic-flame-temperature values are
- * cross-checked against Cengel, Thermodynamics (complete combustion, no
- * dissociation) via NotebookLM: CH4/stoich ~2328 K, CH4/200% air ~1481 K,
+ * cross-checked against a standard thermodynamics textbook (complete combustion, no
+ * dissociation): CH4/stoich ~2328 K, CH4/200% air ~1481 K,
  * CH4/150% air = 1789 K (Ex. 15-10), octane/stoich = 2395 K (Ex. 15-8).
  */
 class CombustionThermoTest {
@@ -32,14 +32,14 @@ class CombustionThermoTest {
         assertEquals(2328.0, Thermochemistry.adiabaticFlameTemp("CH4", 1.0, 298.15), 12.0);
         // 200% theoretical air -> phi = 0.5.
         assertEquals(1481.0, Thermochemistry.adiabaticFlameTemp("CH4", 0.5, 298.15), 10.0);
-        // 150% theoretical air -> phi = 1/1.5; Cengel Example 15-10 = 1789 K.
+        // 150% theoretical air -> phi = 1/1.5; standard textbook example = 1789 K.
         assertEquals(1789.0, Thermochemistry.adiabaticFlameTemp("CH4", 1.0 / 1.5, 298.15), 20.0);
     }
 
     @Test
     void adiabaticFlameTemperatureOctaneViaJanafFallback() {
-        // Octane is absent from GRI-Mech, so this exercises the IdealGas fallback.
-        // Cengel Example 15-8 (liquid octane, stoichiometric): 2395 K.
+        // Octane is absent from the standard mechanism, so this exercises the IdealGas fallback.
+        // Standard textbook example (liquid octane, stoichiometric): 2395 K.
         assertEquals(2395.0, Thermochemistry.adiabaticFlameTemp("C8H18", 1.0, 298.15), 40.0);
     }
 

@@ -9,8 +9,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Ideal-gas compressible-flow relations, checked against standard gas-dynamics
- * tables (k = 1.4) from Cengel, <i>Thermodynamics: An Engineering Approach</i>,
- * Appendix tables A-13..A-15, cross-checked via NotebookLM.
+ * tables (k = 1.4) from a standard thermodynamics textbook,
+ * Appendix tables A-13..A-15, cross-checked against published tables.
  */
 class CompressibleFlowTest {
 

@@ -16,7 +16,7 @@ import java.util.Map;
  * accuracy of a two-parameter cubic EOS. P-v-T, the compressibility factor, the
  * enthalpy/entropy departure functions and the saturation pressure follow the
  * standard generalized-cubic formulation (e.g. Smith, Van Ness &amp; Abbott;
- * Poling, Prausnitz &amp; O'Connell).
+ * standard property-estimation references).
  *
  * <p>Enthalpy and entropy are returned on an EOS-self-consistent reference
  * (ideal-gas h = 0, s = 0 at 298.15 K, 1 bar), so <b>differences</b> are

@@ -14,7 +14,7 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  *
  * The fully-coupled cross-domain solve (a refrigerant network and a coolant
  * network joined at a heat-exchanger wall) is too stiff for the cold-start steady
- * block-Newton — it NaNs on the large SCC. The industrial approach (Amesim
+ * block-Newton — it NaNs on the large SCC. The industrial approach (commercial system-simulation tools
  * "stabilizing run") is instead: put storage on the coupling node, hold the
  * boundary inputs, and march the index-1 DAE to {@code der≈0}; that equilibrium
  * IS the steady operating point. Here the chiller bridge (refrigerant evaporator

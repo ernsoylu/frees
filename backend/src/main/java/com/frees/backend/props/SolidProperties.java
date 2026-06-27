@@ -5,9 +5,9 @@ import java.util.Map;
 
 /**
  * Bulk physical properties of common engineering solids, returned by the
- * EES-style material functions {@code k_}, {@code rho_}, {@code c_}, {@code E_},
+ * classic-solver-style material functions {@code k_}, {@code rho_}, {@code c_}, {@code E_},
  * and {@code nu_}. Values are representative room-temperature figures from
- * standard references (Incropera, Cengel); they are treated as constants — the
+ * standard references; they are treated as constants — the
  * temperature-dependence of solid properties is not modelled here.
  *
  * <p>Surface-finish-dependent quantities (emissivity) and liquid-only
@@ -54,7 +54,7 @@ public final class SolidProperties {
 
     private static final double T_REF = 300.0;
 
-    // Fits to standard tabulated data (Incropera) over roughly 250-600 K. Only
+    // Fits to standard tabulated data over roughly 250-600 K. Only
     // the well-characterised metals carry a slope; everything else is constant.
     private static final Map<String, TempSlope> SLOPES = Map.ofEntries(
             Map.entry("aluminum", new TempSlope(-0.02, 0.46)),

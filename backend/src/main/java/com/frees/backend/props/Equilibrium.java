@@ -53,7 +53,7 @@ public final class Equilibrium {
     /**
      * Reaction log-equilibrium constants ln Kp(T) for the five dissociations
      * (index 0 = CO2 = CO + 1/2 O2). Package-visible for validation against
-     * JANAF / Cengel Table A-28.
+     * standard JANAF thermochemical tables.
      */
     static double[] lnKp(double t) {
         double gco2 = gibbs("CO2", t), gco = gibbs("CO", t), go2 = gibbs("O2", t);

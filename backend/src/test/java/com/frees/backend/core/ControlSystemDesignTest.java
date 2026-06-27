@@ -383,7 +383,7 @@ class ControlSystemDesignTest {
     void strictlyProperTransferFunctionNumeratorIsZeroPadded() {
         // A proper transfer function written naturally — num shorter than den —
         // must be accepted (numerator zero-padded with leading zeros), as in
-        // MATLAB. G(s) = 1/(s^2+3s+2) has poles at -1 and -2.
+        // a standard control tool. G(s) = 1/(s^2+3s+2) has poles at -1 and -2.
         EquationSystemSolver.Result result = solver.solve(
                 "num = [1]\n"
               + "den = [1, 3, 2]\n"

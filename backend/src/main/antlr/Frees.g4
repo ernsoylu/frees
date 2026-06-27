@@ -53,7 +53,7 @@ linVar
 
 // Single-output:  FUNCTION f(x) ... f := ... END   (callable inline in exprs)
 // Multi-output:    FUNCTION [a, b] = f(x) ... a := ... b := ... END
-//                  consumed MATLAB-style with [p, q] = f(x) (see multiAssign).
+//                  consumed array-language-style with [p, q] = f(x) (see multiAssign).
 functionDef
     : FUNCTION (LBRACKET funcOutputs RBRACKET EQ)? IDENT LPAREN paramList RPAREN unit? sep
       procBody
@@ -348,7 +348,7 @@ symbolicDecl
     : SYMBOLIC IDENT (COMMA IDENT)*
     ;
 
-// MATLAB-style destructuring call of a multi-output FUNCTION or CALL intrinsic:
+// array-language-style destructuring call of a multi-output FUNCTION or CALL intrinsic:
 //   [q, w]        = split(x)
 //   [A, B, C, D]  = tf2ss(num, den)
 //   [~, ~, V]     = svd(A)        (use '~' to discard an output position)
@@ -369,7 +369,7 @@ callOutput
     | TILDE
     ;
 
-// MATLAB-style range that fills an array variable:
+// array-language-style range that fills an array variable:
 //   speed = 0:10:100        (start:step:stop, step defaults to 1 if omitted)
 //   freq  = 1:5:1000 | Log  (start:count:stop, geometrically spaced)
 // The trailing flag (Linear | Log) selects the spacing; Linear is the default.
@@ -471,7 +471,7 @@ arrayIndexList
     : arrayIndex (COMMA arrayIndex)*
     ;
 
-// Array index range uses MATLAB-style colons: A[1:3], speed[1:N].
+// Array index range uses array-language-style colons: A[1:3], speed[1:N].
 // (The DOTDOT token is retained only for DYNAMIC time spans: t = 0 .. 600.)
 arrayIndex
     : expr (COLON expr)?
@@ -505,7 +505,7 @@ BACKSLASH : '\\' ;
 TRANSPOSE : '\'' ;
 TILDE   : '~' ;
 
-// MATLAB-style element-wise operators. Two chars starting with '.', so they
+// array-language-style element-wise operators. Two chars starting with '.', so they
 // don't clash with '..' (DOTDOT) or decimal literals ('.5' is a NUMBER, since
 // these require an operator char — not a digit — after the dot).
 DOTSTAR      : '.*' ;
@@ -585,8 +585,8 @@ NUMBER
     | '.' DIGIT+ EXPONENT?
     ;
 
-// A trailing '$' marks a string variable (EES convention): R$ = 'R134a'.
-// A trailing '#' marks a built-in constant (EES convention): R#, g#, sigma#.
+// A trailing '$' marks a string variable (by long-standing convention): R$ = 'R134a'.
+// A trailing '#' marks a built-in constant (by long-standing convention): R#, g#, sigma#.
 IDENT
     : [a-zA-Z] [a-zA-Z0-9_]* ('$' | '#')?
     ;

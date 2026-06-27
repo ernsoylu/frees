@@ -91,7 +91,7 @@ public final class Evaluator {
             return new com.frees.backend.parser.ProcedureEvaluator(defs).callFunction(fd, args, values);
         }
 
-        // EES-compatible lookup/interpolation over a named TABLE (the table name
+        // classic-solver-compatible lookup/interpolation over a named TABLE (the table name
         // is the first, string, argument): Interpolate/Interpolate1/Interpolate2D,
         // Lookup, LookupRow, NLookupRows, Differentiate/Differentiate1.
         if (TABLE_FUNCTIONS.contains(c.function())) {
@@ -384,7 +384,7 @@ public final class Evaluator {
 
             // Ideal-gas compressible-flow relations, functions of (M, k) unless
             // noted. Ratios are dimensionless; angles are in radians. See
-            // props/CompressibleFlow.java (cross-checked vs Cengel / gdtk / EES).
+            // props/CompressibleFlow.java (cross-checked vs standard references).
             case "t0_t", "isen_t0_t" -> com.frees.backend.props.CompressibleFlow.t0OverT(
                     arg(c, args, 0, values, defs), arg(c, args, 1, values, defs));
             case "p0_p", "isen_p0_p" -> com.frees.backend.props.CompressibleFlow.p0OverP(
@@ -705,12 +705,12 @@ public final class Evaluator {
         return com.frees.backend.core.CurveInterpolator.evaluate(cd, x, param);
     }
 
-    /** EES-compatible TABLE lookup/interpolation function names. */
+    /** classic-solver-compatible TABLE lookup/interpolation function names. */
     private static final java.util.Set<String> TABLE_FUNCTIONS = java.util.Set.of(
             "interpolate", "interpolate1", "interpolate2d",
             "lookup", "lookuprow", "nlookuprows", "differentiate", "differentiate1");
 
-    // EES-compatible lookup/interpolation functions delegating to a named TABLE.
+    // classic-solver-compatible lookup/interpolation functions delegating to a named TABLE.
     // The table name is the first (string) argument; the remaining arguments are
     // the lookup coordinates or 1-based column indices.
     private static double evalTableFunction(Expr.Call c, Map<String, Double> values, Map<String, ProcDef> defs) {

@@ -249,7 +249,7 @@ final class ControlSystemsFlattener {
      * Zero-pads a transfer-function numerator with leading zeros up to the
      * denominator length and returns its coefficients (high-order first). This
      * lets users write a proper transfer function in natural form — {@code
-     * num=[1], den=[1,3,2]} instead of {@code num=[0,0,1]} — exactly as MATLAB
+     * num=[1], den=[1,3,2]} instead of {@code num=[0,0,1]} — exactly as array languages
      * and standard control theory accept it. Downstream synthetic evaluators
      * assume {@code num} carries {@code den.size} coefficients, so the padding
      * makes the shorter form correct. A numerator <em>longer</em> than the
@@ -1204,7 +1204,7 @@ final class ControlSystemsFlattener {
      * function (num, den) or a state space (A, B, C, D), optionally followed by
      * a time vector t. When t is omitted the response is sampled on a default
      * {@value #DEFAULT_TIME_FINAL}s grid of {@value #DEFAULT_TIME_POINTS} points
-     * (so {@code [y] = step(num, den)} works, MATLAB-style); the generated grid
+     * (so {@code [y] = step(num, den)} works, array-language-style); the generated grid
      * can also be captured as an optional second output, {@code [y, t] =
      * step(num, den)}. Each y[i] is emitted as a synthetic call {@code
      * <name>$<i>$<numInputs>$<N>} over the serialized model entries followed by

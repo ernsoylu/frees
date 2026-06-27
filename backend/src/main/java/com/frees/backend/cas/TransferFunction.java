@@ -13,7 +13,7 @@ import java.util.Map;
  * {@code LatexConverter} and feeds straight into the CAS (e.g. partial
  * fractions).
  *
- * <p>Coefficients are in descending powers, MATLAB-style: {@code [1, 3, 2]}
+ * <p>Coefficients are in descending powers, array-language-style: {@code [1, 3, 2]}
  * means {@code var^2 + 3*var + 2}.
  */
 public final class TransferFunction {

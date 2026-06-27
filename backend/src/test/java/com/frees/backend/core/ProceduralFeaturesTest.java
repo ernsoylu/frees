@@ -145,11 +145,11 @@ class ProceduralFeaturesTest {
         assertEquals(8.0, result.variables().get("large"), 1e-9);
     }
 
-    // ── MATLAB-style multi-output FUNCTION tests ────────────────────────────────
+    // ── array-language-style multi-output FUNCTION tests ────────────────────────────────
 
     @Test
     void multiOutputFunctionBasic() {
-        // FUNCTION [outs] = name(...) is a procedure consumed MATLAB-style with
+        // FUNCTION [outs] = name(...) is a procedure consumed array-language-style with
         // [a, b] = name(...). Outputs are assigned by name in the body via :=.
         String source = """
                 FUNCTION [q, r] = DivMod(a, b)

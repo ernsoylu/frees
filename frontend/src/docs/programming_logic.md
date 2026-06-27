@@ -1,7 +1,7 @@
 [Topic: functions]
 # Custom Functions & Procedures
 
-Most of your model is declarative — equations in any order, solved simultaneously. `FUNCTION` and `PROCEDURE` are for the parts that need **sequential, imperative** logic (loops, conditionals, step-by-step algorithms). Inside them you use `:=` for assignment, just like Python or MATLAB.
+Most of your model is declarative — equations in any order, solved simultaneously. `FUNCTION` and `PROCEDURE` are for the parts that need **sequential, imperative** logic (loops, conditionals, step-by-step algorithms). Inside them you use `:=` for assignment, just like Python or other array languages.
 
 ## Functions
 A `FUNCTION` returns one or more values. Assign the return value(s) with `:=`.
@@ -13,7 +13,7 @@ END
 
 y = poly_fit(3)          { y = 9.5 }
 ```
-- **Multiple outputs** — declare them in brackets in the header (MATLAB-style):
+- **Multiple outputs** — declare them in brackets in the header (array-language-style):
 ```
 FUNCTION [q, r] = DivMod(a, b)
   q := trunc(a / b)
@@ -70,7 +70,7 @@ For a curve family (a table parameterised by a second variable, e.g. an engine m
 [Topic: lookup-tables]
 # Lookup Tables & Interpolation
 
-frees provides functions to query, search, and interpolate a named `TABLE` block. In a TABLE, **column 1 is the x axis** and each further column is a y/curve column. The simplest way to interpolate is to call the table like a function — `tname(x)` (1-D) or `tname(x, y)` (bilinear across a curve family). The functions below are the EES-compatible equivalents.
+frees provides functions to query, search, and interpolate a named `TABLE` block. In a TABLE, **column 1 is the x axis** and each further column is a y/curve column. The simplest way to interpolate is to call the table like a function — `tname(x)` (1-D) or `tname(x, y)` (bilinear across a curve family). The functions below are the classic-solver-compatible equivalents.
 
 ## Interpolation functions
 - **`Interpolate('tname', x)`** — piecewise-linear interpolation at `x` (same as `tname(x)`).
@@ -198,7 +198,7 @@ dP = pump_curve(0.0015)
 [Topic: lookup-tables]
 # Lookup Tables & Interpolation
 
-frees provides functions to query, search, and interpolate data from a named `TABLE` block. In a TABLE, **column 1 is the x axis** and each further column is a y/curve column. The simplest way to interpolate is to call the table like a function — `tname(x)` (1-D) or `tname(x, y)` (bilinear across a curve family, e.g. an engine/efficiency map). The functions below are EES-compatible equivalents.
+frees provides functions to query, search, and interpolate data from a named `TABLE` block. In a TABLE, **column 1 is the x axis** and each further column is a y/curve column. The simplest way to interpolate is to call the table like a function — `tname(x)` (1-D) or `tname(x, y)` (bilinear across a curve family, e.g. an engine/efficiency map). The functions below are classic-solver-compatible equivalents.
 
 ## Interpolation Functions
 - **`Interpolate('tname', x):`** Piecewise-linear interpolation at `x` (same as `tname(x)`).

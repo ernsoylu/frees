@@ -143,7 +143,7 @@ public final class SundialsIda {
             String explicit = System.getenv("SUNDIALS_LIBRARY");
             String name = explicit != null && !explicit.isBlank() ? explicit : "sundials_ida";
             // Probe for the SUNDIALS >= 6 SUNContext API. A pre-6 build (e.g. the
-            // libsundials_ida v5 bundled inside MATLAB) loads fine but lacks this
+            // libsundials_ida v5 bundled inside some numerical environments) loads fine but lacks this
             // symbol and would crash at init(); reject it here so isAvailable() is
             // honest and the IDA-gated tests skip rather than fault.
             com.sun.jna.NativeLibrary probe = com.sun.jna.NativeLibrary.getInstance(name);

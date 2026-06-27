@@ -184,7 +184,7 @@ class PolynomialHelpersTest {
 
     @Test
     void routhCountsRightHalfPlanePoles() {
-        // s^3 + s^2 + 2s + 8 has two right-half-plane roots (classic Nise example)
+        // s^3 + s^2 + 2s + 8 has two right-half-plane roots (classic textbook example)
         double[] den = {1.0, 1.0, 2.0, 8.0};
         assertEquals(2, PolynomialHelpers.routh(den));
     }

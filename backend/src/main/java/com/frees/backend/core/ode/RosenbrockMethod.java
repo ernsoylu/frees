@@ -2,7 +2,7 @@ package com.frees.backend.core.ode;
 
 /**
  * {@code ode23s} — Shampine's modified Rosenbrock (2,3) pair, a linearly
- * implicit one-step method for stiff systems (the scheme MATLAB's {@code ode23s}
+ * implicit one-step method for stiff systems (the scheme the classic {@code ode23s}
  * uses). Each step forms the iteration matrix {@code W = I − h·d·J} once from a
  * finite-difference Jacobian, then takes three linear solves; the third stage
  * yields an embedded order-3 error estimate for adaptive step control. L-stable

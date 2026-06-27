@@ -3,10 +3,10 @@ package com.frees.backend.props;
 /**
  * Ideal-gas (perfect-gas) compressible-flow relations as closed-form functions
  * of Mach number {@code M} and ratio of specific heats {@code k}. These mirror
- * the standalone ideal-gas-flow calculators in the Gas Dynamics Toolkit
- * (gdtk {@code idealgasflow.d}) and the Compressible-Flow function library in
- * EES, and were cross-checked against Cengel, <i>Thermodynamics: An Engineering
- * Approach</i> (isentropic, normal-shock and Rayleigh relations).
+ * the standalone ideal-gas-flow calculators in open-source gas-dynamics
+ * tools and a standard compressible-flow function library, cross-checked
+ * against a standard thermodynamics textbook (isentropic, normal-shock and
+ * Rayleigh relations).
  *
  * <p>All ratios are dimensionless; angles (Prandtl-Meyer, oblique-shock theta
  * and beta) are in <b>radians</b>, the SI angle unit frees uses for the

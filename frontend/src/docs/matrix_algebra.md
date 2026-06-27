@@ -1,7 +1,7 @@
 [Topic: matrices-decl]
 # Declaring Matrices & Vectors
 
-frees uses MATLAB-like syntax for matrices and vectors. **You must declare the shape with a slice suffix** so the compiler can size the variable — the literal alone isn't enough.
+frees uses array-language-like syntax for matrices and vectors. **You must declare the shape with a slice suffix** so the compiler can size the variable — the literal alone isn't enough.
 
 ## Notation
 - **Vector:** `v[1:3] = [1, 2, 3]` — elements in brackets, comma-separated. The `[1:3]` declares a 3-element vector.

@@ -11,7 +11,7 @@ frees parses standard mathematical notation with a few rules worth knowing up fr
 - **Comments** — `{ … }` or `"…"` are inline comments; `//` at the start of a line makes the whole line narrative (markdown). Use comments to label states and document assumptions.
 
 ## Built-in constants
-Physical constants are available with a trailing `#` (EES convention) and substituted at parse time:
+Physical constants are available with a trailing `#` (by long-standing convention) and substituted at parse time:
 
 | Name | Meaning |
 | --- | --- |
