@@ -688,11 +688,12 @@ public final class ComponentExpander {
             // equalities (cycle-closing edges are redundant): fluid equates
             // pressure & enthalpy, heat equates temperature, electrical equates
             // potential.
+            String[] across = acrossMembersForNode(dom, sts);
             String root = sts.get(0);
             for (int j = 1; j < sts.size(); j++) {
                 String st = sts.get(j);
                 if (!uf.find(root).equals(uf.find(st))) {
-                    for (String member : acrossMembers(dom)) {
+                    for (String member : across) {
                         out.add(equality(root, member, st, prefix));
                     }
                     uf.union(root, st);
@@ -911,6 +912,36 @@ public final class ComponentExpander {
                         + "incompatible fluid connector types.");
             }
         }
+    }
+
+    /**
+     * The across members for a specific node — {@link #acrossMembers} for the
+     * domain, plus the humidity-ratio rider {@code W} for a moist-air fluid node
+     * (it is equal across a pass-through / series link; flow-weighted only at an
+     * explicit {@code MixingBox}, like enthalpy). Lets a moist-air series chain be
+     * wired with plain {@code connect(...)} and still carry humidity.
+     */
+    private String[] acrossMembersForNode(Domain dom, List<String> sts) {
+        String[] base = acrossMembers(dom);
+        if (dom == Domain.FLUID && "moistair".equals(nodeFluidType(sts))) {
+            String[] ext = java.util.Arrays.copyOf(base, base.length + 1);
+            ext[base.length] = "w";
+            return ext;
+        }
+        return base;
+    }
+
+    /** The fluid connector type of a node ({@code fluid}/{@code gas}/{@code oil}/
+     *  {@code moistair}), from its first tagged stream (the node is verified
+     *  homogeneous by {@link #checkFluidConnectorType}). Defaults to {@code fluid}. */
+    private String nodeFluidType(List<String> sts) {
+        for (String st : sts) {
+            String d = streamDomain.get(st);
+            if (d != null) {
+                return d;
+            }
+        }
+        return "fluid";
     }
 
     /** The across (equal-at-node) members for a domain. */
