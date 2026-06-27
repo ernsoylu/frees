@@ -54,6 +54,12 @@ public final class ComponentExpander {
      *  {@code {p, h, mdot}} for a fluid stream, {@code {t, qdot}} for a heat
      *  stream). Used to give each {@code connect(...)} node its domain rule. */
     private final Map<String, java.util.Set<String>> streamMembers = new LinkedHashMap<>();
+    /** Stream → fluid connector type ({@code fluid} / {@code gas} / {@code oil}),
+     *  from each component's reserved {@code domain$} parameter (default {@code fluid}).
+     *  Only fluid-class streams are tagged; it separates pneumatic, hydraulic and
+     *  thermofluid lines that share the same {@code (P, ṁ, h)} bond so a wrong
+     *  cross-connection is a hard error rather than a silently-solved nonsense network. */
+    private final Map<String, String> streamDomain = new LinkedHashMap<>();
     private final Map<String, String> displayNames;
 
     /**
@@ -133,7 +139,35 @@ public final class ComponentExpander {
         }
         buildStreamMembers();
         buildStreamFluidMap();
+        buildStreamDomainMap();
         propagateFluidAcrossConnects();
+    }
+
+    /**
+     * Tags each fluid-class stream with its component's reserved {@code domain$}
+     * connector type (default {@code fluid}; {@code gas} for pneumatic, {@code oil}
+     * for hydraulic built-ins). Two ports of conflicting type bound to the <em>same</em>
+     * stream (shared-name misuse) is an immediate error; {@code connect}-bound
+     * conflicts are caught per-node in {@link #expandConnects}. Heat/electrical/
+     * mechanical streams carry no fluid connector type and are skipped.
+     */
+    private void buildStreamDomainMap() {
+        for (ResolvedInstance ri : instances) {
+            String dom = ri.stringParams().getOrDefault("domain$", "fluid");
+            for (String stream : ri.portToStream().values()) {
+                if (nodeDomain(java.util.List.of(stream)) != Domain.FLUID) {
+                    continue;   // only fluid-class ports carry a fluid connector type
+                }
+                String prev = streamDomain.putIfAbsent(stream, dom);
+                if (prev != null && !prev.equals(dom)) {
+                    throw new EquationParser.ParseException(
+                            "Incompatible fluid connector types on stream '" + stream
+                            + "': '" + prev + "' and '" + dom + "' bound to the same stream. "
+                            + "Pneumatic ('gas'), hydraulic ('oil') and thermofluid ('fluid') "
+                            + "lines are different connector types and cannot share a port.");
+                }
+            }
+        }
     }
 
     /** Port-reference alias for flattened subsystem boundary ports:
@@ -633,7 +667,11 @@ public final class ComponentExpander {
                 sts.add(streamOf(ref, c));
             }
             String prefix = "CONNECT " + String.join(", ", refs) + ": ";
+            checkSingleDomain(sts, refs);
             Domain dom = nodeDomain(sts);
+            if (dom == Domain.FLUID) {
+                checkFluidConnectorType(sts, refs);
+            }
 
             // Loop closure: do two endpoints already share a connection set?
             boolean loopClosing = false;
@@ -810,6 +848,69 @@ public final class ComponentExpander {
             return Domain.TRANSLATIONAL; // a translational node carrying only velocities
         }
         return Domain.FLUID;
+    }
+
+    /**
+     * Rejects a {@code connect} node that mixes physical (bond-graph) domains.
+     * Each endpoint is classified individually ({@link #nodeDomain} on the single
+     * stream, so the through-variable wins and a source carrying only an across
+     * variable — a thermal source's {@code T}, a ground's {@code V} — is still
+     * placed in its domain), and all endpoints must agree. Connecting a heat port
+     * to an electrical port, or a fluid line to a mechanical shaft, is a hard error
+     * rather than a silently mis-solved network. (A moist-air stream carrying both
+     * {@code T} and {@code ṁ} classifies as fluid — the through variable wins — so
+     * it is unaffected.) Domains are coupled through a transducer component
+     * (a motor, pump, heating resistor, …), never a bare connect.
+     */
+    private void checkSingleDomain(List<String> sts, List<String> refs) {
+        Domain first = null;
+        String firstRef = null;
+        for (int i = 0; i < sts.size(); i++) {
+            java.util.Set<String> m = streamMembers.get(sts.get(i));
+            if (m == null || m.isEmpty()) {
+                continue;   // a bare stream with no members yet — nothing to classify
+            }
+            Domain d = nodeDomain(java.util.List.of(sts.get(i)));
+            if (first == null) {
+                first = d;
+                firstRef = refs.get(i);
+            } else if (first != d) {
+                throw new EquationParser.ParseException(
+                        "connect(" + String.join(", ", refs) + "): cannot connect a "
+                        + first.name().toLowerCase() + " port (" + firstRef + ") to a "
+                        + d.name().toLowerCase() + " port (" + refs.get(i) + ") — different "
+                        + "physical domains. Couple domains through a transducer component "
+                        + "(a motor, pump, heating resistor, …), not a direct connect.");
+            }
+        }
+    }
+
+    /**
+     * Rejects a fluid {@code connect} node whose endpoints are different fluid
+     * connector types — a pneumatic ({@code gas}) line tied to a hydraulic
+     * ({@code oil}) or thermofluid ({@code fluid}) line. All three share the same
+     * {@code (P, ṁ, h)} bond algebra but model incompatible working fluids, so the
+     * mistake is caught here instead of silently solving.
+     */
+    private void checkFluidConnectorType(List<String> sts, List<String> refs) {
+        String found = null;
+        String foundRef = null;
+        for (int i = 0; i < sts.size(); i++) {
+            String d = streamDomain.get(sts.get(i));
+            if (d == null) {
+                continue;
+            }
+            if (found == null) {
+                found = d;
+                foundRef = refs.get(i);
+            } else if (!found.equals(d)) {
+                throw new EquationParser.ParseException(
+                        "connect(" + String.join(", ", refs) + "): cannot connect a '" + found
+                        + "' line (" + foundRef + ") to a '" + d + "' line (" + refs.get(i) + "). "
+                        + "Pneumatic ('gas'), hydraulic ('oil') and thermofluid ('fluid') are "
+                        + "incompatible fluid connector types.");
+            }
+        }
     }
 
     /** The across (equal-at-node) members for a domain. */

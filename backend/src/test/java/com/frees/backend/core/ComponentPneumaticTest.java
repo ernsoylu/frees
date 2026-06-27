@@ -110,12 +110,13 @@ class ComponentPneumaticTest {
         // τ = V·R/(R_gas·T). Sized to τ = 1 s: V·R/(R_gas·T) = 0.861·1e5/(287·300) = 1.
         String src = """
                 COMPONENT LinPneuRes(in, out)
-                  PARAM R
+                  PARAM R, domain$ = gas
                   out.mdot = in.mdot
                   out.h    = in.h
                   in.mdot  = (in.P - out.P) / R
                 END
                 COMPONENT PneuPlug(port)
+                  PARAM domain$ = gas
                   port.mdot = 0
                 END
                 PneumaticSupply SUP(fluid$=Air, P=200000, T=300)

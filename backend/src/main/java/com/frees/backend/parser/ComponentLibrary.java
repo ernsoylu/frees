@@ -545,18 +545,18 @@ public final class ComponentLibrary {
             END
 
             COMPONENT PneumaticSupply(out)
-              PARAM fluid$, P, T
+              PARAM fluid$, P, T, domain$ = gas
               out.P = P
               out.h = Enthalpy(fluid$, P=P, T=T)
             END
 
             COMPONENT PneumaticAtmosphere(port)
-              PARAM P
+              PARAM P, domain$ = gas
               port.P = P
             END
 
             COMPONENT PneumaticOrifice(in, out)
-              PARAM fluid$, C, b
+              PARAM fluid$, C, b, domain$ = gas
               out.h    = in.h
               T_in     = Temperature(fluid$, P=in.P, h=in.h)
               in.mdot  = iso6358(C, b, in.P, T_in, out.P)
@@ -564,7 +564,7 @@ public final class ComponentLibrary {
             END
 
             COMPONENT PneumaticServoValve(in, out)
-              PARAM fluid$, Cmax, b, u
+              PARAM fluid$, Cmax, b, u, domain$ = gas
               out.h    = in.h
               T_in     = Temperature(fluid$, P=in.P, h=in.h)
               in.mdot  = iso6358(u * Cmax, b, in.P, T_in, out.P)
@@ -572,7 +572,7 @@ public final class ComponentLibrary {
             END
 
             COMPONENT PneumaticVolume(in, out)
-              PARAM V, T, R, P0
+              PARAM V, T, R, P0, domain$ = gas
               out.P      = in.P
               out.h      = in.h
               der(in.P)  = (R * T / V) * (in.mdot - out.mdot)
@@ -580,39 +580,39 @@ public final class ComponentLibrary {
             END
 
             COMPONENT PneumaticActuator(in, rod)
-              PARAM fluid$, area, Patm
+              PARAM fluid$, area, Patm, domain$ = gas
               rho     = Density(fluid$, P=in.P, h=in.h)
               rod.f   = -(in.P - Patm) * area
               in.mdot = rho * area * rod.vel
             END
 
             COMPONENT HydraulicSupply(out)
-              PARAM P
+              PARAM P, domain$ = oil
               out.P = P
               out.h = 0
             END
 
             COMPONENT HydraulicTank(port)
-              PARAM P
+              PARAM P, domain$ = oil
               port.P = P
             END
 
             COMPONENT HydraulicOrifice(in, out)
-              PARAM CdA, rho
+              PARAM CdA, rho, domain$ = oil
               out.mdot = in.mdot
               out.h    = in.h
               in.mdot * abs(in.mdot) = CdA^2 * 2 * rho * (in.P - out.P)
             END
 
             COMPONENT HydraulicValve(in, out)
-              PARAM CdA_max, rho, u
+              PARAM CdA_max, rho, u, domain$ = oil
               out.mdot = in.mdot
               out.h    = in.h
               in.mdot * abs(in.mdot) = (u * CdA_max)^2 * 2 * rho * (in.P - out.P)
             END
 
             COMPONENT ReliefValve(in, out)
-              PARAM Pcrack, K, eps
+              PARAM Pcrack, K, eps, domain$ = oil
               out.mdot = in.mdot
               out.h    = in.h
               open     = 0.5 * (1 + tanh((in.P - Pcrack) / eps))
@@ -620,14 +620,14 @@ public final class ComponentLibrary {
             END
 
             COMPONENT HydraulicCylinder(in, rod)
-              PARAM rho, beta, V0, area, Patm, P0
+              PARAM rho, beta, V0, area, Patm, P0, domain$ = oil
               rod.f      = -(in.P - Patm) * area
               der(in.P)  = (beta / V0) * (in.mdot / rho - area * rod.vel)
               init(in.P) = P0
             END
 
             COMPONENT HydraulicPump(in, out, shaft)
-              PARAM disp, rho, eta_v, eta_m
+              PARAM disp, rho, eta_v, eta_m, domain$ = oil
               n_rev     = shaft.w / (2 * pi#)
               out.mdot  = rho * disp * n_rev * eta_v
               in.mdot   = out.mdot
