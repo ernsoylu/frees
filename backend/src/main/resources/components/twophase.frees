@@ -1,0 +1,38 @@
+COMPONENT TwoPhasePipe(in, out)
+  PARAM fluid$, L, D, rough, x, rho_l, rho_g, mu_l, mu_g
+  out.mdot = in.mdot
+  out.h    = in.h
+  A        = pi# / 4 * D^2
+  V_l      = in.mdot * (1 - x) / (rho_l * A)
+  Re_l     = reynolds(rho_l, V_l, D, mu_l)
+  f_l      = friction_factor(Re_l, rough / D)
+  dP_l     = f_l * (L / D) * rho_l * V_l^2 / 2
+  X_tt     = lm_martinelli_tt(x, rho_l, rho_g, mu_l, mu_g)
+  phi2     = lm_phi2(X_tt, 20)
+  out.P    = in.P - phi2 * dP_l
+END
+
+COMPONENT TXVSuperheat(in, out, bulb)
+  PARAM fluid$, Kv, SH_set
+  out.mdot  = in.mdot
+  out.h     = in.h
+  bulb.Qdot = 0
+  T_sat     = Temperature(fluid$, P=out.P, x=1)
+  SH        = bulb.T - T_sat
+  in.mdot   = Kv * (SH - SH_set)
+END
+
+COMPONENT ThreeZoneHX(hot_in, hot_out, cold_in, cold_out)
+  PARAM UA, hot$, cold$, arr$
+  HeatExchanger Z1(UA=UA/3, hot$=hot$, cold$=cold$, arr$=arr$)
+  HeatExchanger Z2(UA=UA/3, hot$=hot$, cold$=cold$, arr$=arr$)
+  HeatExchanger Z3(UA=UA/3, hot$=hot$, cold$=cold$, arr$=arr$)
+  connect(hot_in, Z1.hot_in)
+  connect(Z1.hot_out, Z2.hot_in)
+  connect(Z2.hot_out, Z3.hot_in)
+  connect(Z3.hot_out, hot_out)
+  connect(cold_in, Z3.cold_in)
+  connect(Z3.cold_out, Z2.cold_in)
+  connect(Z2.cold_out, Z1.cold_in)
+  connect(Z1.cold_out, cold_out)
+END

@@ -908,8 +908,10 @@ public final class ComponentExpander {
                 throw new EquationParser.ParseException(
                         "connect(" + String.join(", ", refs) + "): cannot connect a '" + found
                         + "' line (" + foundRef + ") to a '" + d + "' line (" + refs.get(i) + "). "
-                        + "Pneumatic ('gas'), hydraulic ('oil') and thermofluid ('fluid') are "
-                        + "incompatible fluid connector types.");
+                        + "Thermofluid ('fluid'), liquid ('liquid'), two-phase ('twophase'), "
+                        + "pneumatic ('gas'), hydraulic ('oil') and humid-air ('moistair') are "
+                        + "incompatible fluid connector types; couple them only through a heat "
+                        + "exchanger.");
             }
         }
     }

@@ -1,0 +1,84 @@
+COMPONENT TorqueSource(a, b)
+  PARAM T
+  a.tau = -T
+  a.tau + b.tau = 0
+END
+
+COMPONENT SpeedSource(a, b)
+  PARAM w
+  a.w - b.w = w
+  a.tau + b.tau = 0
+END
+
+COMPONENT RotationalDamper(a, b)
+  PARAM c
+  a.tau = c * (a.w - b.w)
+  a.tau + b.tau = 0
+END
+
+COMPONENT MechGround(port)
+  port.w = 0
+END
+
+COMPONENT Gear(in, out)
+  PARAM ratio
+  in.w    = ratio * out.w
+  out.tau = -ratio * in.tau
+END
+
+COMPONENT Inertia(port)
+  PARAM J, w0
+  der(port.w)  = port.tau / J
+  init(port.w) = w0
+END
+
+COMPONENT Friction(a, b)
+  PARAM Fc, Fs, vs, bv, eps
+  dw    = a.w - b.w
+  a.tau = (Fc + (Fs - Fc) * exp(-(dw / vs)^2)) * tanh(dw / eps) + bv * dw
+  a.tau + b.tau = 0
+END
+
+COMPONENT Planetary(sun, ring, carrier)
+  PARAM g
+  sun.w + g * ring.w = (1 + g) * carrier.w
+  ring.tau           = g * sun.tau
+  sun.tau + ring.tau + carrier.tau = 0
+END
+
+COMPONENT Clutch(a, b)
+  PARAM Tmax, eng, eps
+  dw    = a.w - b.w
+  a.tau = eng * Tmax * tanh(dw / eps)
+  a.tau + b.tau = 0
+END
+
+COMPONENT RotationalSpring(a, b)
+  PARAM k, theta0
+  der(theta)  = a.w - b.w
+  init(theta) = theta0
+  a.tau       = k * theta
+  a.tau + b.tau = 0
+END
+
+COMPONENT ForceSource(a, b)
+  PARAM F
+  a.f = -F
+  a.f + b.f = 0
+END
+
+COMPONENT TransDamper(a, b)
+  PARAM c
+  a.f = c * (a.vel - b.vel)
+  a.f + b.f = 0
+END
+
+COMPONENT TransGround(port)
+  port.vel = 0
+END
+
+COMPONENT TransMass(port)
+  PARAM m, v0
+  der(port.vel)  = port.f / m
+  init(port.vel) = v0
+END
