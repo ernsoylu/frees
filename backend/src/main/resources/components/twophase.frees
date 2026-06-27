@@ -62,6 +62,69 @@ COMPONENT TwoPhaseFlowRes(in, out)
   out.P    = in.P - phi2 * dP_lo
 END
 
+// ── Refrigerant charge inventory (Phase T2) ───────────────────────────────
+// Charge mass in a two-phase volume is M = V·ρ̄, with the void-weighted density
+// ρ̄ = α·ρ_g + (1−α)·ρ_l (α from the §3 slip void model — NOT CoolProp's no-slip
+// (P,h) density, which is why 1.5 kg ≠ 0.75 kg). Pinning the total charge
+// M = Σ ρ̄·V releases one DOF: subcooling, receiver level, or the high-side
+// pressure (the single scalar tear of §4.6).
+
+// A boundary that fixes mass flow and specific enthalpy but leaves the pressure
+// FREE — so a downstream charge/UA balance can set the high-side pressure.
+COMPONENT TwoPhaseEnthalpySource(out)
+  PARAM mdot, h, domain$ = twophase
+  out.mdot = mdot
+  out.h    = h
+END
+
+// Pass-through charge-accounting volume: reports the stored refrigerant mass m
+// using the void-weighted density. Sprinkle through a circuit to inventory it.
+COMPONENT TwoPhaseInventory(in, out)
+  PARAM fluid$, V, domain$ = twophase
+  out.mdot = in.mdot
+  out.P    = in.P
+  out.h    = in.h
+  hf       = Enthalpy(fluid$, P=in.P, x=0)
+  hg       = Enthalpy(fluid$, P=in.P, x=1)
+  x        = (in.h - hf) / (hg - hf)
+  rho_l    = Density(fluid$, P=in.P, x=0)
+  rho_g    = Density(fluid$, P=in.P, x=1)
+  alpha    = void_zivi(x, rho_l, rho_g)
+  rho_mix  = alpha * rho_g + (1 - alpha) * rho_l
+  m        = V * rho_mix
+END
+
+// Liquid/vapor receiver: a saturated vessel that separates phases, delivers
+// SATURATED LIQUID downstream, and buffers charge in its liquid level LL (a
+// solved DOF set by the charge balance). Within 0<LL<1 the cycle is insensitive
+// to charge — the receiver absorbs it.
+COMPONENT TwoPhaseReceiver(in, out)
+  PARAM fluid$, V, domain$ = twophase
+  out.mdot = in.mdot
+  out.P    = in.P
+  out.h    = Enthalpy(fluid$, P=in.P, x=0)
+  rho_l    = Density(fluid$, P=in.P, x=0)
+  rho_g    = Density(fluid$, P=in.P, x=1)
+  m        = V * (LL * rho_l + (1 - LL) * rho_g)
+END
+
+// Condenser with a UA to a fixed-temperature ambient: the condensing pressure
+// (= in.P) is FREE and is set by the charge balance (the high-side tear). More
+// charge ⇒ more mass at fixed volume ⇒ higher density ⇒ higher condensing
+// pressure and more subcooling. Q = UA·(T_cond − T_amb) = ṁ·(h_in − h_out).
+COMPONENT TwoPhaseCondenserUA(in, out)
+  PARAM fluid$, UA, T_amb, V, domain$ = twophase
+  out.mdot = in.mdot
+  out.P    = in.P
+  Tcond    = T_sat(fluid$, P=in.P)
+  Q        = UA * (Tcond - T_amb)
+  Q        = in.mdot * (in.h - out.h)
+  rho_in   = Density(fluid$, P=in.P, h=in.h)
+  rho_out  = Density(fluid$, P=out.P, h=out.h)
+  m        = V * 0.5 * (rho_in + rho_out)
+  SC       = Tcond - Temperature(fluid$, P=out.P, h=out.h)
+END
+
 // ── Lumped two-phase cycle components (Phase T1) ──────────────────────────
 // Vapor-compression building blocks on domain$ = twophase. Heat exchangers are
 // non-isobaric (out.P = in.P − dP), so the compressor suction pressure correctly
