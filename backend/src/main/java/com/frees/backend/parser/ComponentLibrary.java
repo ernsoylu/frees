@@ -39,7 +39,7 @@ public final class ComponentLibrary {
      * tens of KB parsed once and shared across all requests.)
      */
     private static final List<String> DOMAIN_FILES = List.of(
-            "fluid", "liquid", "twophase", "heat", "electrical", "mechanical",
+            "fluid", "liquid", "twophase", "ac", "heat", "electrical", "mechanical",
             "powertrain", "control", "moistair", "pneumatic", "hydraulic");
 
     static final String SOURCE = loadSource();

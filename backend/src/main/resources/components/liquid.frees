@@ -58,6 +58,20 @@ COMPONENT LiquidVolume(in, out)
   init(in.P)  = P0
 END
 
+// Liquid-side heat-exchanger half with a wall heat port: the coolant gives up
+// heat to (or takes it from) the wall node. Pairs with a refrigerant-side
+// evaporator/condenser through a shared wall connection to form a cross-domain
+// bridge (the EV chiller). Q>0 when the coolant is warmer than the wall.
+COMPONENT LiquidWallHX(in, out, wall)
+  PARAM fluid$, UA, domain$ = liquid
+  out.mdot  = in.mdot
+  out.P     = in.P
+  T_in      = Temperature(fluid$, P=in.P, h=in.h)
+  Q         = UA * (T_in - wall.T)
+  out.h     = in.h - Q / in.mdot
+  wall.Qdot = -Q
+END
+
 // Liquid orifice / restrictor. Default is incompressible turbulent flow
 // (odd-symmetric so it is well-behaved through zero). The optional cavitating
 // model is the THH pressure-driven effect: when the downstream pressure falls
