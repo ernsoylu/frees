@@ -683,11 +683,124 @@ public class EquationSystemSolver {
      */
     private static void seedPropertyArgumentGuesses(List<Equation> equations,
                                                     Map<String, VariableSpec> specs) {
+        // Phase A — fluid-aware refrigerant pressure seed FIRST (so the generic
+        // 1-bar nominals below don't overwrite it): a condensable refrigerant's
+        // pressure argument gets ~0.35·Pcrit instead of 1 bar, so a floating-
+        // pressure cycle cold-starts inside the refrigerant operating band.
+        for (Equation eq : equations) {
+            seedRefrigerantPressure(eq.lhs(), specs);
+            seedRefrigerantPressure(eq.rhs(), specs);
+        }
         for (Equation eq : equations) {
             seedPropArgsIn(eq.lhs(), specs);
             seedPropArgsIn(eq.rhs(), specs);
         }
         seedStreamMemberGuesses(equations, specs);
+        // Phase A — consistent state init: seed the reference-dependent enthalpies
+        // (left at 1.0 above) to thermodynamically consistent values from each
+        // port's fluid + seeded pressure, so closed loops start inside the tables.
+        for (Equation eq : equations) {
+            seedConsistentEnthalpy(eq.lhs(), specs);
+            seedConsistentEnthalpy(eq.rhs(), specs);
+        }
+    }
+
+    /**
+     * Phase A consistent-state initialization. For every CoolProp property call,
+     * seed its enthalpy ('h') argument — if still at the default guess — to a
+     * thermodynamically consistent {@code Enthalpy(fluid, P, x=0.5)} (or {@code
+     * T≈300 K} for an incompressible), using the call's own pressure argument.
+     * This is the principled fix for the closed-loop cold-start NaN (an enthalpy
+     * stuck at 1.0 J/kg is below every fluid's table range). User/GUI guesses win.
+     */
+    /**
+     * Phase A — seeds the pressure argument of a condensable-refrigerant property
+     * call to a sub-critical operating nominal (~0.35·Pcrit) instead of the generic
+     * 1 bar, so a floating-pressure refrigerant cycle cold-starts in-band. Runs
+     * before the 1-bar seeders; only touches default-guess vars (user guesses win).
+     */
+    private static void seedRefrigerantPressure(Expr e, Map<String, VariableSpec> specs) {
+        switch (e) {
+            case Expr.Call(String fn, List<Expr> args) -> {
+                if (fn.startsWith("prop$")) {
+                    String[] tok = fn.split("\\$");
+                    int n = args.size();
+                    if (tok.length >= 3) {
+                        double pNom = com.frees.backend.props.PropertyFunctions.nominalPressure(tok[2]);
+                        if (Double.isFinite(pNom)) {
+                            // pNom = 0.35·Pcrit ⇒ physical bounds [10 kPa, ~1.5·Pcrit]
+                            // keep the floating pressure positive and in-table so the
+                            // line-search clamp (NewtonSolver) can't step it to NaN.
+                            double pLo = 1.0e4;
+                            double pHi = pNom / 0.35 * 1.5;
+                            for (int k = 0; k < n; k++) {
+                                int ti = tok.length - n + k;
+                                if (ti >= 0 && tok[ti].equals("p") && args.get(k) instanceof Expr.Var(String vn)) {
+                                    applyNominalGuessWithBounds(vn.toLowerCase(), pNom, pLo, pHi, specs);
+                                }
+                            }
+                        }
+                    }
+                }
+                args.forEach(a -> seedRefrigerantPressure(a, specs));
+            }
+            case Expr.BinOp(char op, Expr l, Expr r) -> {
+                seedRefrigerantPressure(l, specs);
+                seedRefrigerantPressure(r, specs);
+            }
+            case Expr.Neg(Expr o) -> seedRefrigerantPressure(o, specs);
+            default -> {
+                // leaf: nothing to seed
+            }
+        }
+    }
+
+    private static void seedConsistentEnthalpy(Expr e, Map<String, VariableSpec> specs) {
+        switch (e) {
+            case Expr.Call(String fn, List<Expr> args) -> {
+                if (fn.startsWith("prop$")) {
+                    String[] tok = fn.split("\\$");
+                    int n = args.size();
+                    String hVar = null;
+                    double pSeed = 1.0e5;
+                    for (int k = 0; k < n; k++) {
+                        int ti = tok.length - n + k;
+                        if (ti < 0) {
+                            continue;
+                        }
+                        String ind = tok[ti];
+                        Expr arg = args.get(k);
+                        if (ind.equals("h") && arg instanceof Expr.Var(String vn)) {
+                            hVar = vn.toLowerCase();
+                        } else if (ind.equals("p")) {
+                            if (arg instanceof Expr.Var(String pv)) {
+                                VariableSpec ps = specs.get(pv.toLowerCase());
+                                if (ps != null) {
+                                    pSeed = ps.guess();
+                                }
+                            } else if (arg instanceof Expr.Num(double val, String u, boolean im)) {
+                                pSeed = val;
+                            }
+                        }
+                    }
+                    if (hVar != null && tok.length >= 3) {
+                        double h = com.frees.backend.props.PropertyFunctions.nominalEnthalpy(tok[2], pSeed);
+                        if (Double.isFinite(h)) {
+                            applyNominalGuess(hVar, h, specs);
+                        }
+                    }
+                }
+                args.forEach(a -> seedConsistentEnthalpy(a, specs));
+            }
+            case Expr.BinOp(char op, Expr l, Expr r) -> {
+                seedConsistentEnthalpy(l, specs);
+                seedConsistentEnthalpy(r, specs);
+            }
+            case Expr.Neg(Expr o) -> seedConsistentEnthalpy(o, specs);
+            default -> {
+                // leaf or non-arithmetic node: no enthalpy argument to seed
+            }
+        }
     }
 
     /** Physical nominal for a component/stream member, keyed by the member name
@@ -770,6 +883,27 @@ public class EquationSystemSolver {
         }
         double seeded = Math.clamp(nominal, spec.lower(), spec.upper());
         specs.put(var, new VariableSpec(var, seeded, spec.lower(), spec.upper(), spec.uncertainty()));
+    }
+
+    /** Like {@link #applyNominalGuess} but also installs physical bounds when the
+     *  user left them open (±∞), so the Newton line-search clamp keeps the variable
+     *  in a valid region. Only touches an untouched default-guess variable; user
+     *  guesses and user-set bounds always win. */
+    private static void applyNominalGuessWithBounds(String var, double nominal,
+                                                    double lo, double hi,
+                                                    Map<String, VariableSpec> specs) {
+        VariableSpec spec = specs.get(var);
+        if (spec == null) {
+            specs.put(var, new VariableSpec(var, nominal, lo, hi));
+            return;
+        }
+        if (spec.guess() != DEFAULT_GUESS) {
+            return; // user/GUI guess wins (keep its bounds too)
+        }
+        double useLo = Double.isInfinite(spec.lower()) ? lo : spec.lower();
+        double useHi = Double.isInfinite(spec.upper()) ? hi : spec.upper();
+        double seeded = Math.clamp(nominal, useLo, useHi);
+        specs.put(var, new VariableSpec(var, seeded, useLo, useHi, spec.uncertainty()));
     }
 
     private static SolverSettings polishSettings(SolverSettings settings) {

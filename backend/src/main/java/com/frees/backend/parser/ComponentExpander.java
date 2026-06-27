@@ -1145,6 +1145,31 @@ public final class ComponentExpander {
         return out;
     }
 
+    /**
+     * Rewrites the dotted component references in a {@code DYNAMIC}-block body
+     * equation (e.g. a time-scheduled input {@code RIN.out.mdot = f(time)}) to
+     * their flat solver names — the SAME rewrite applied to top-level statements.
+     * Without it a DYNAMIC body equation referencing {@code RIN.out.mdot} targets
+     * a variable distinct from the component's expanded {@code rin$out$mdot}, so
+     * the port var is left unconstrained and the DAE comes out non-square. This is
+     * what lets an acausal component take a scheduled/controlled transient input.
+     */
+    public com.frees.backend.ast.Equation rewriteTopEquation(com.frees.backend.ast.Equation eq) {
+        if (instancesByName.isEmpty() && defsByName.isEmpty()) {
+            return eq;
+        }
+        return new com.frees.backend.ast.Equation(rewriteTop(eq.lhs()), rewriteTop(eq.rhs()), eq.sourceText());
+    }
+
+    /** Rewrites dotted component references in an arbitrary expression (a DYNAMIC
+     *  initial-value or event-guard expression) to flat solver names. */
+    public Expr rewriteTopExpr(Expr e) {
+        if (instancesByName.isEmpty() && defsByName.isEmpty()) {
+            return e;
+        }
+        return rewriteTop(e);
+    }
+
     private Statement rewriteStatement(Statement s) {
         return switch (s) {
             case Statement.Eq(Expr lhs, Expr rhs, String src) ->

@@ -373,7 +373,18 @@ public final class DynamicSolver {
             }
             s.init(o.t0(), dae.y0(), dae.yp0());
             double span = o.tf() - o.t0();
-            s.calcConsistentIc(SundialsIda.IDA_YA_YDP_INIT, o.t0() + span * 1e-3);
+            // IDACalcIC refines the initial (y,y') to satisfy the algebraic
+            // constraints. Its line search can fail (-12) on a stiff coupled DAE
+            // even when the assembled initial state — already seeded from the inner
+            // algebraic solve at t0 (DaeAssembly), with the Phase-A consistent
+            // enthalpies — is itself near-consistent. In that case fall back to
+            // integrating from the seeded state rather than aborting the solve;
+            // IDA's first BDF step will absorb any small residual.
+            try {
+                s.calcConsistentIc(SundialsIda.IDA_YA_YDP_INIT, o.t0() + span * 1e-3);
+            } catch (IllegalStateException icFailed) {
+                s.reinit(o.t0(), dae.y0(), dae.yp0());
+            }
             rows.add(rowOf(o.t0(), s.currentState()));
 
             for (int i = 1; i < times.length; i++) {

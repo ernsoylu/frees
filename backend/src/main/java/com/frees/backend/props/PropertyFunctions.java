@@ -180,6 +180,64 @@ public final class PropertyFunctions {
         return token;
     }
 
+    /**
+     * A thermodynamically consistent nominal specific enthalpy [J/kg] for {@code
+     * fluidToken} at pressure {@code P}, for SEEDING the solver's initial guess
+     * (Phase A consistent-state init). The reference-dependent enthalpy the
+     * auto-seeder otherwise leaves at the 1.0 default makes CoolProp NaN inside a
+     * closed loop (no source to propagate a real h), so the solve never starts.
+     * This inverts the fluid model exactly like the Amesim "type of
+     * initialization" pattern: mid-dome {@code Q=0.5} for a condensable fluid,
+     * falling back to {@code T≈300 K} for an incompressible/single-phase fluid.
+     * Returns NaN if neither resolves (caller then leaves the default guess).
+     * Never throws — seeding must degrade gracefully.
+     */
+    public static double nominalEnthalpy(String fluidToken, double P) {
+        if (!CoolProp.isAvailable() || !(P > 0) || !Double.isFinite(P)) {
+            return Double.NaN;
+        }
+        if ("airh2o".equalsIgnoreCase(fluidToken) || "humidair".equalsIgnoreCase(fluidToken)) {
+            return 5.0e4; // moist air per kg dry air ~50 kJ/kg near ambient (W unknown here)
+        }
+        String fluid;
+        try {
+            fluid = resolveFluid(fluidToken);
+        } catch (RuntimeException e) {
+            return Double.NaN;
+        }
+        double h = CoolProp.propsSIOrNaN("H", "P", P, "Q", 0.5, fluid); // mid-dome (condensable)
+        if (Double.isFinite(h)) {
+            return h;
+        }
+        return CoolProp.propsSIOrNaN("H", "P", P, "T", 300.0, fluid);   // incompressible / single-phase
+    }
+
+    /**
+     * A nominal sub-critical operating pressure [Pa] for SEEDING a condensable
+     * fluid's pressure (Phase A consistent-state init). The generic 1-bar member
+     * nominal is far below a refrigerant's operating band (R1234yf at 1 bar boils
+     * at −37 °C), so a floating-pressure cycle cold-starts in a bad region. For a
+     * fluid with a sub-critical {@code Pcrit} in the refrigerant range this returns
+     * {@code 0.35·Pcrit} (a typical mid-cycle pressure); otherwise {@code NaN} so
+     * the caller keeps the generic nominal (ambient/incompressible/moist air).
+     * Never throws.
+     */
+    public static double nominalPressure(String fluidToken) {
+        if (!CoolProp.isAvailable()
+                || "airh2o".equalsIgnoreCase(fluidToken) || "humidair".equalsIgnoreCase(fluidToken)) {
+            return Double.NaN;
+        }
+        try {
+            double pcrit = CoolProp.props1SI(resolveFluid(fluidToken), "Pcrit");
+            if (Double.isFinite(pcrit) && pcrit > 1.0e6 && pcrit < 2.0e7) {
+                return 0.35 * pcrit;
+            }
+        } catch (RuntimeException ignored) {
+            // incompressible / unknown / no critical point -> keep the generic nominal
+        }
+        return Double.NaN;
+    }
+
     /** Canonical CoolProp fluid names available for property diagrams. */
     public static List<String> plotFluids() {
         return FLUIDS.values().stream()

@@ -67,12 +67,12 @@ class ComponentTwoPhaseTest {
         // the 5 K setpoint, so the valve opens proportionally: ṁ = Kv·(SH − SH_set).
         String src = """
                 COMPONENT RSrc(out)
-                  PARAM P, h0
+                  PARAM P, h0, domain$ = twophase
                   out.P = P
                   out.h = h0
                 END
                 COMPONENT PSink(in)
-                  PARAM P
+                  PARAM P, domain$ = twophase
                   in.P = P
                 END
                 RSrc          SRC(P=900000, h0=270000)
