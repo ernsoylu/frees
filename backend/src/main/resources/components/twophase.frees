@@ -62,6 +62,57 @@ COMPONENT TwoPhaseFlowRes(in, out)
   out.P    = in.P - phi2 * dP_lo
 END
 
+// ── Lumped two-phase cycle components (Phase T1) ──────────────────────────
+// Vapor-compression building blocks on domain$ = twophase. Heat exchangers are
+// non-isobaric (out.P = in.P − dP), so the compressor suction pressure correctly
+// falls BELOW the evaporating pressure and the cycle COP is realistic rather
+// than the optimistic isobaric limit.
+
+// Vapor compressor: real-gas isentropic target h(P_out, s_in) corrected by the
+// isentropic efficiency. Suction is superheated vapor (twophase domain, vapor
+// region); RPM-based volumetric sizing is a T-AC concern.
+COMPONENT TwoPhaseCompressor(in, out)
+  PARAM fluid$, eta, domain$ = twophase
+  s_in     = Entropy(fluid$, P=in.P, h=in.h)
+  h_s      = Enthalpy(fluid$, P=out.P, s=s_in)
+  out.mdot = in.mdot
+  out.h    = in.h + (h_s - in.h) / eta
+  W        = in.mdot * (out.h - in.h)
+END
+
+// Unified Boiler ≡ Evaporator: two-phase/liquid inlet boils to a superheated
+// vapor outlet at a set exit superheat. Non-isobaric. Heat duty Q is an output.
+COMPONENT TwoPhaseEvaporator(in, out)
+  PARAM fluid$, SH_set, dP, domain$ = twophase
+  out.mdot = in.mdot
+  out.P    = in.P - dP
+  Tsat     = T_sat(fluid$, P=out.P)
+  out.h    = Enthalpy(fluid$, P=out.P, T=Tsat + SH_set)
+  Q        = in.mdot * (out.h - in.h)
+END
+
+// Condenser: superheated vapor inlet rejects heat to a subcooled-liquid outlet
+// at a set exit subcooling. Non-isobaric. Heat duty Q is an output.
+COMPONENT TwoPhaseCondenser(in, out)
+  PARAM fluid$, SC_set, dP, domain$ = twophase
+  out.mdot = in.mdot
+  out.P    = in.P - dP
+  Tsat     = T_sat(fluid$, P=out.P)
+  out.h    = Enthalpy(fluid$, P=out.P, T=Tsat - SC_set)
+  Q        = in.mdot * (in.h - out.h)
+END
+
+// Two-phase orifice / expansion valve: isenthalpic, Cv flow on the upstream
+// (subcooled-liquid) density — valid across flashing flow. Odd-symmetric so it
+// is well-behaved through zero flow.
+COMPONENT TwoPhaseExpansionValve(in, out)
+  PARAM fluid$, Cv, domain$ = twophase
+  out.mdot = in.mdot
+  out.h    = in.h
+  rho_in   = Density(fluid$, P=in.P, h=in.h)
+  in.mdot * abs(in.mdot) = Cv^2 * 2 * rho_in * (in.P - out.P)
+END
+
 COMPONENT TwoPhasePipe(in, out)
   PARAM fluid$, L, D, rough, x, rho_l, rho_g, mu_l, mu_g
   out.mdot = in.mdot
