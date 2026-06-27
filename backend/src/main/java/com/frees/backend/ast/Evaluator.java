@@ -476,6 +476,25 @@ public final class Evaluator {
                     arg(c, args, 0, values, defs), arg(c, args, 1, values, defs),
                     arg(c, args, 2, values, defs), arg(c, args, 3, values, defs),
                     arg(c, args, 4, values, defs));
+            case "void_homogeneous" -> com.frees.backend.props.TwoPhase.voidHomogeneous(
+                    arg(c, args, 0, values, defs), arg(c, args, 1, values, defs),
+                    arg(c, args, 2, values, defs));
+            case "void_zivi" -> com.frees.backend.props.TwoPhase.voidZivi(
+                    arg(c, args, 0, values, defs), arg(c, args, 1, values, defs),
+                    arg(c, args, 2, values, defs));
+            case "void_rouhani" -> com.frees.backend.props.TwoPhase.voidRouhani(
+                    arg(c, args, 0, values, defs), arg(c, args, 1, values, defs),
+                    arg(c, args, 2, values, defs), arg(c, args, 3, values, defs),
+                    arg(c, args, 4, values, defs));
+            case "friedel_phi2" -> com.frees.backend.props.TwoPhase.friedelPhi2(
+                    arg(c, args, 0, values, defs), arg(c, args, 1, values, defs),
+                    arg(c, args, 2, values, defs), arg(c, args, 3, values, defs),
+                    arg(c, args, 4, values, defs), arg(c, args, 5, values, defs),
+                    arg(c, args, 6, values, defs), arg(c, args, 7, values, defs));
+            case "momentum_flux" -> com.frees.backend.props.TwoPhase.momentumFlux(
+                    arg(c, args, 0, values, defs), arg(c, args, 1, values, defs),
+                    arg(c, args, 2, values, defs), arg(c, args, 3, values, defs),
+                    arg(c, args, 4, values, defs));
 
             // ISA 1976 standard atmosphere: T/P/ρ at a geopotential altitude.
             case "isa_t" -> com.frees.backend.props.Atmosphere.temperature(arg(c, args, 0, values, defs));

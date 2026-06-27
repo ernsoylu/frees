@@ -654,6 +654,7 @@ public final class ComponentExpander {
         if (connects.isEmpty()) {
             return;
         }
+        checkNoCapacitiveCapacitive();
         UnionFind uf = new UnionFind();
         seedComponentLinks(uf);
         for (ConnectDecl c : connects) {
@@ -719,6 +720,111 @@ public final class ComponentExpander {
                         }
                     }
                 }
+            }
+        }
+    }
+
+    /**
+     * Enforces the {@code never C-C, always C-R-C} index-1 discipline (todo.md
+     * §2.2): two <em>capacitive</em> volumes (each fixing a pressure state via
+     * {@code der(port.P)}) connected directly at one node both assert {@code P}
+     * there — the index-2 trap. A resistive flow element must sit between them.
+     *
+     * <p>A connect-only union-find gives true node granularity (the loop-detection
+     * union-find of {@link #expandConnects} collapses whole series chains through
+     * each 2-port's internal link, so it can't be used here). A capacitive
+     * instance is marked on the node of each of its fluid ports (its pressure
+     * state propagates to both); any node carrying two distinct capacitive
+     * instances is a hard error.
+     */
+    private void checkNoCapacitiveCapacitive() {
+        UnionFind nodeUf = new UnionFind();
+        for (ConnectDecl c : connects) {
+            List<String> sts = new ArrayList<>();
+            for (String ref : c.ports()) {
+                sts.add(streamOf(ref, c));
+            }
+            for (int i = 1; i < sts.size(); i++) {
+                nodeUf.union(sts.get(0), sts.get(i));
+            }
+        }
+        Map<String, java.util.LinkedHashSet<String>> nodeCaps = new LinkedHashMap<>();
+        for (ResolvedInstance ri : instances) {
+            if (!isPressureCapacitive(ri.def())) {
+                continue;
+            }
+            for (String stream : ri.portToStream().values()) {
+                if (!isFluidStream(stream)) {
+                    continue;
+                }
+                nodeCaps.computeIfAbsent(nodeUf.find(stream), k -> new java.util.LinkedHashSet<>())
+                        .add(ri.inst().name());
+            }
+        }
+        for (java.util.Set<String> caps : nodeCaps.values()) {
+            if (caps.size() >= 2) {
+                throw new EquationParser.ParseException(
+                        "connect(...): capacitive volumes " + caps + " are connected directly with "
+                        + "no resistance between them (C-C). Two pressure-storage volumes at one "
+                        + "node make the DAE index-2; interpose a resistive flow element between "
+                        + "them (the C-R-C rule).");
+            }
+        }
+    }
+
+    /** Whether a component fixes a pressure state — has a {@code der(port.P)} in
+     *  its body or any variant (the marker of a capacitive volume). */
+    private boolean isPressureCapacitive(ComponentDef def) {
+        if (bodyHasPressureDer(def.body(), def.ports())) {
+            return true;
+        }
+        for (ComponentDef.Variant v : def.variants()) {
+            if (bodyHasPressureDer(v.body(), def.ports())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean bodyHasPressureDer(List<Equation> body, List<String> ports) {
+        for (Equation eq : body) {
+            if (hasPressureDer(eq.lhs(), ports) || hasPressureDer(eq.rhs(), ports)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean hasPressureDer(Expr e, List<String> ports) {
+        switch (e) {
+            case Expr.Call c -> {
+                if (c.function().equalsIgnoreCase("der") && c.args().size() == 1
+                        && c.args().get(0) instanceof Expr.Var(String name)) {
+                    int dot = name.lastIndexOf('.');
+                    if (dot > 0 && name.substring(dot + 1).equalsIgnoreCase("p")) {
+                        String port = name.substring(0, dot);
+                        for (String p : ports) {
+                            if (p.equalsIgnoreCase(port)) {
+                                return true;
+                            }
+                        }
+                    }
+                }
+                for (Expr a : c.args()) {
+                    if (hasPressureDer(a, ports)) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+            case Expr.BinOp b -> {
+                return hasPressureDer(b.left(), ports) || hasPressureDer(b.right(), ports);
+            }
+            case Expr.Neg n -> {
+                return hasPressureDer(n.operand(), ports);
+            }
+            default -> {
+                return false;
             }
         }
     }

@@ -1,3 +1,67 @@
+// ── Two-phase domain foundation (Phase T0) ────────────────────────────────
+// Connector type domain$ = twophase on the slimmed (P, mdot, h) bond — the same
+// three variables as fluid, no x/alpha riders. Quality x, void alpha, superheat
+// and subcooling are DERIVED LOCALLY from (P, h) via CoolProp inside each
+// component (x = (h - hf(P)) / (hg(P) - hf(P))), never transported (todo.md §2.2).
+
+COMPONENT TwoPhaseSource(out)
+  PARAM fluid$, mdot, P, x, domain$ = twophase
+  out.mdot = mdot
+  out.P    = P
+  out.h    = Enthalpy(fluid$, P=P, x=x)
+END
+
+COMPONENT TwoPhaseSink(in)
+  PARAM domain$ = twophase
+  mdot = in.mdot
+  P    = in.P
+  h    = in.h
+END
+
+// Quality / superheat / void readout (pass-through). x and alpha are derived
+// locally; SH = T - Tsat is positive superheated, ~0 in the dome, negative
+// subcooled. Void uses Zivi (slip, no mass-flux dependence).
+COMPONENT TwoPhaseSensor(in, out)
+  PARAM fluid$, domain$ = twophase
+  out.mdot = in.mdot
+  out.P    = in.P
+  out.h    = in.h
+  hf       = Enthalpy(fluid$, P=in.P, x=0)
+  hg       = Enthalpy(fluid$, P=in.P, x=1)
+  x        = (in.h - hf) / (hg - hf)
+  T        = Temperature(fluid$, P=in.P, h=in.h)
+  Tsat     = T_sat(fluid$, P=in.P)
+  SH       = T - Tsat
+  rho_l    = Density(fluid$, P=in.P, x=0)
+  rho_g    = Density(fluid$, P=in.P, x=1)
+  alpha    = void_zivi(x, rho_l, rho_g)
+END
+
+// Resistive two-phase line (R element): Friedel frictional drop on the
+// liquid-only ΔP. Adiabatic (h conserved); because T = Tsat(P) inside the dome,
+// the pressure drop GLIDES the saturation temperature downstream.
+COMPONENT TwoPhaseFlowRes(in, out)
+  PARAM fluid$, L, D, domain$ = twophase
+  out.mdot = in.mdot
+  out.h    = in.h
+  hf       = Enthalpy(fluid$, P=in.P, x=0)
+  hg       = Enthalpy(fluid$, P=in.P, x=1)
+  x        = (in.h - hf) / (hg - hf)
+  rho_l    = Density(fluid$, P=in.P, x=0)
+  rho_g    = Density(fluid$, P=in.P, x=1)
+  mu_l     = Viscosity(fluid$, P=in.P, x=0)
+  mu_g     = Viscosity(fluid$, P=in.P, x=1)
+  sigma    = SurfaceTension(fluid$, P=in.P)
+  A        = pi# / 4 * D^2
+  G        = in.mdot / A
+  V_lo     = G / rho_l
+  Re_lo    = reynolds(rho_l, V_lo, D, mu_l)
+  f_lo     = friction_factor(Re_lo, 0)
+  dP_lo    = f_lo * (L / D) * rho_l * V_lo^2 / 2
+  phi2     = friedel_phi2(x, rho_l, rho_g, mu_l, mu_g, G, D, sigma)
+  out.P    = in.P - phi2 * dP_lo
+END
+
 COMPONENT TwoPhasePipe(in, out)
   PARAM fluid$, L, D, rough, x, rho_l, rho_g, mu_l, mu_g
   out.mdot = in.mdot
