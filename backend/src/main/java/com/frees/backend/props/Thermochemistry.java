@@ -7,7 +7,7 @@ import java.util.Map;
  * Combustion and ideal-gas-mixture thermochemistry built on a unified molar
  * thermo accessor: NASA-7 polynomials ({@link NasaThermo}) where available
  * (combustion species), falling back to the cubic JANAF fits in
- * {@link IdealGas} (fuels such as octane, methanol that GRI-Mech lacks). Both
+ * {@link IdealGas} (fuels such as octane, methanol that the standard mechanism lacks). Both
  * bases give absolute, formation-referenced enthalpy, so they compose in a
  * single energy balance.
  *
@@ -72,7 +72,7 @@ public final class Thermochemistry {
     private static PropertyEvaluationException unknown(String species) {
         return new PropertyEvaluationException(
                 "Thermochemistry: no ideal-gas thermo data for species '" + species
-                        + "'. Known: GRI-Mech species (N2, O2, CO2, H2O, CH4, C3H8, ...) "
+                        + "'. Known: the standard combustion-mechanism species (N2, O2, CO2, H2O, CH4, C3H8, ...) "
                         + "and the IdealGas fuels (C8H18, CH3OH, ...).");
     }
 

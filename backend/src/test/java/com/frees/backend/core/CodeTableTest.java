@@ -99,7 +99,7 @@ class CodeTableTest {
 
     @Test
     void interpolateNameLinearMatchesDirectCall() {
-        // a reference solver-compatible Interpolate('table', x) == direct call table(x)
+        // classic-solver-compatible Interpolate('table', x) == direct call table(x)
         String text = """
                 TABLE flow(re)
                   0     0
