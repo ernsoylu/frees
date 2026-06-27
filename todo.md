@@ -1,187 +1,241 @@
-# frEES — Component Layer: Forward Plan
+# frEES — Two-Phase & Refrigeration Modeling: Domain Re-Architecture
 
-**What this is.** The component-based system-modeling layer (acausal, multi-domain, pseudo-bond-graph) is **shipped and green (backend)** — ~50 components across fluid / heat / electrical / mechanical, a `model$` variant selector, steady + transient (`DYNAMIC`) operation, plant→control linearization, source-mapped diagnostics, and a Mermaid topology view. That capability is now documented in `README.md` (feature + milestone 11) and `CLAUDE.md` (*Component-Based System Modeling*). This file is the **forward plan only**: the components that are still **missing and in-scope**, phased **from maximum to minimum benefit**.
+## Engineering Plan & Advisory-Board Discussion Document
 
-**How the gap was found.** A component-by-component cross-check against a complete, established 1-D multi-domain system-simulation submodel library (~40 domain libraries, ~14k submodels). frees already mirrors that library's *thermal / electrical / automotive / HVAC* domains well. The check surfaced **two entire fluid-power domains absent from frees**, plus depth gaps in two-phase thermofluid and a few cross-domain components — all buildable on physics frees already ships.
+**Prepared for:** Advisory Board (Thermal-fluids, Refrigeration/HVAC, Two-phase flow, Numerics, Automotive/EV thermal)
+**Scope:** Re-architecting frEES's thermofluid component layer into **two distinct working-fluid domains** — a single-phase **liquid** domain and a phase-change **two-phase** domain — and building an **air-conditioning / refrigeration application layer on top of the two-phase domain**, mirroring the proven the reference simulator `THH` / `TPF` / `AC` library split.
+**Purpose:** This is a *discussion document*. The goal is **accurate refrigeration-system results** — today's 0-D cycle calculator is structurally optimistic (no refrigerant-side ΔP across heat exchangers, suction pressure forced equal to the evaporating pressure, no refrigerant charge, no distributed temperature glide). We want the board to pressure-test the architecture, the correlation choices, and the scope line before implementation.
 
-> **Implementation status (2026-06-27): every phase A–G has a shipped, green first slice.** ~25 new components and 6 new constitutive functions added on branch `feat/component-fluid-power-waves`, full backend suite green. Remaining within each phase = the harder fidelity rungs / new-machinery items called out per-phase below (true moving-boundary zone tracking, zero-crossing event handling, ECMS optimizer-in-loop, the full multi-species vector rider). See each phase's **Status** line.
->
-> **Strict connector-domain separation (added 2026-06-27).** Pneumatic and hydraulic reuse the fluid node *algebra* (`(P,ṁ,h)`) but are now **distinct connector types**, so they can't be cross-wired. A `connect` node must be a single domain or it's a hard error: (1) a general through-variable guard rejects mixing bond-graph domains (heat↔electrical, fluid↔mechanical, …); (2) a reserved `domain$` param separates the fluid-family connector types that share the `(P,ṁ,h)` bond — **`fluid` (default) / `gas` / `oil` / `moistair`**. Cross-domain coupling is only via transducer components (separate same-domain ports). `ComponentDomainSeparationTest` + `ComponentMoistAirTest` cover it. *(This was a guardrail the original plan lacked — pneumatic/hydraulic/thermofluid/humid-air all classified as `FLUID` and connected silently.)*
-
-> **Humid-air (moist-air) domain (added 2026-06-27).** Promoted from a single `CoolingCoil` to its own connector type `domain$ = moistair` on the basis `(P, ṁ_da, h, W)`: a dry-air mass basis with the humidity ratio `W` as a flow-weighted rider (a *second* conserved mass — water — the mechanism that makes it a distinct domain). `W` is carried across a pass-through `connect` (expander adds `w` to the moist-air across members) and flow-weighted at an explicit `MixingBox`. Shipped: `MoistAirSource`/`MoistAirSink`, reworked `CoolingCoil`, `HeatingCoil`, `Humidifier`, `MixingBox` (economizer). Same rider pattern as the gas-mixture `.y` species rider. Enables multi-component air-handling trains (mix → cool → reheat), which the single coil couldn't express. **Remaining:** bypass-factor / ADP coil model, RH-based boundaries, latent-only vs sensible split variants.
+> **Note on prior work.** frEES already ships a complete acausal multi-domain component layer (~90 components: fluid/cycle, pneumatic, hydraulic, electrical/battery, fuel cell, mechanical/powertrain, humid-air HVAC, gas-mixture) with **strict connector-domain separation** (`domain$` typing: `fluid`/`gas`/`oil`/`moistair`). That shipped record lives in `README.md`, `CLAUDE.md`, and git history. This document replaces the prior forward plan and focuses **only** on the two-phase / refrigeration re-architecture.
 
 ---
 
-## Scope filter (unchanged from the design remit)
+## 0. Motivation & grounding (what the investigation found)
 
-frees holds the **0-D / lumped / multi-domain / acausal** band: every component is visible, editable, unit-checked equations expanded into the existing Newton/Tarjan + `DYNAMIC` pipeline. A candidate is **in-scope** only if it is 0-D and acausal. Explicitly **out of scope** (excluded from every phase below):
+A component-level investigation of the reference simulator libraries (`~/dev/sampleCodes`) established the reference architecture we are adopting:
 
-- **Spatial multibody** (2-D/3-D planar & 6-DOF mechanics, kinematic joints) — not lumped.
-- **1-D CFD / wave-action** (method-of-characteristics gas dynamics, acoustics) — spatial/distributed, not 0-D control volumes.
-- **AC power-electronic switching** (PWM inverters/rectifiers at switching resolution, reluctance-machine commutation) — fixed-step switching is a different solver regime (steady phasor models *are* in scope, deferred to the bottom).
-- **Aerospace flight dynamics** (atmosphere + 6-DOF airframe). *(The ISA-atmosphere property function alone is a cheap standalone add, noted under Phase G.)*
+1. **`THH` (Thermal-Hydraulic) is a single-phase *liquid* library** — 571 submodels, **zero** that boil or condense; every fluid is a liquid (oils, fuels, glycol coolants, propellants). It models a compressible liquid with thermal effects and **cavitation** (a *pressure-driven* compressibility effect, **not** thermal phase change). Confirmed: THH cannot represent boiling/condensing.
+2. **`TPF` (Two-Phase Flow) is the general phase-change library** — its `hflow` port carries **P · specific enthalpy · temperature · vapor quality `x` · void fraction `α` · superheat/subcooling**, with per-element **two-phase ΔP, slip-ratio (void), and acceleration** closures. It is built from **C (capacitive volume)** and **R (resistive flow)** primitives — alternating C-R-C-R *is* the staggered-grid finite-volume discretization.
+3. **`AC` (Air Conditioning) is an *application layer on top of `TPF`*** (same `hflow` port) — ready compressors, evaporators, condensers, TXV+bulb, receivers, and the geometry-resolved multi-cell heat exchangers that **bridge domains**: `TPF-THH` (refrigerant ↔ coolant = *the EV chiller*) and `TPF-GMMA` (refrigerant ↔ moist air = *air coil*).
 
-## Reused foundation (no new solver work)
-
-New domains plug into the **same** mechanism the four shipped domains use — register an `(across, flow)` pair + junction rule in `parser/DomainRegistry.java`; storage elements emit `der(member)=…` routed into a `DYNAMIC` block (`core/ode/DynamicSolver.java`, stiff `ode23s`); fidelity rungs are `model$` `VARIANT … REQUIRE …` bodies. The component grammar, expander, `connect`/shared-name closure, unit checker, and diagnostics are all reused unchanged. See `CLAUDE.md` → *Component-Based System Modeling* for the contract.
+**Conclusion the board is asked to ratify:** frEES should mirror this — a **single-phase `liquid` domain** (THH-equivalent), a **`twophase` domain** (TPF-equivalent) carrying `x`/`α`, and an **AC component package** built on the two-phase domain, with the two interoperating through shared two-phase ports and coupling to liquid/moist-air loops only through heat-exchanger transducers.
 
 ---
 
-## Phase ordering at a glance (max → min benefit)
+## 1. Executive summary
 
-| # | Phase | Benefit driver | New physics? | Status |
-|---|---|---|---|---|
-| **A** | Pneumatic (gas) fluid-power domain | Largest absent application class; opens gas-circuit/actuation modeling | constitutive only (ISO 6358) | ✅ first slice green |
-| **B** | Oil-hydraulic fluid-power domain | The reference library's #1 use case; opens hydraulic actuation | bulk-modulus compliance, spool/cavitation | ✅ first slice green |
-| **C** | Two-phase / moving-boundary thermofluid depth | Makes the *existing* refrigeration/HVAC/EV-thermal flagship quantitative | constitutive only (Lockhart-Martinelli, zone tracking) | ✅ first slice green |
-| **D** | Fuel cell (PEMFC) | One high-value cross-domain component; rounds out the EV/clean-power story | Butler-Volmer polarization | ✅ shipped green |
-| **E** | Gas-mixture composition port | Enabler: composition-carrying streams unlock combustion air / exhaust / fresh-air HVAC | species-vector transport on streams | ✅ first slice green (single-species rider) |
-| **F** | Powertrain & event-coupled mechanical breadth | Automotive depth (engine map, turbo, clutch, transmission, ECMS) | zero-crossing event handling | ✅ non-event slice green |
-| **G** | Fidelity rungs, sensors & niche | Incremental polish; AC-phasor / aftertreatment / GTE-map long tail | small per item | ✅ first batch green |
-
-Each phase is independent and shippable on its own; A–C carry the most benefit-per-unit-effort.
+- **Today:** one generic thermofluid connector type (`fluid`) carrying `(P, ṁ, h)`. Refrigeration components (`Compressor`, `Boiler`, `Condenser`, `ExpansionValve`, `TXVSuperheat`, `ThreeZoneHX`, …) are built directly on it. There is **no** vapor-quality/void rider, **no** void fraction, **no** charge inventory, **no** boiling/condensing heat-transfer correlations, **no** refrigerant-side ΔP across heat exchangers (all isobaric), and **no** capacitive/resistive volume primitives. Results are design-point-only and optimistic.
+- **Proposed:** split the thermal working-fluid handling into a **`liquid`** domain and a **`twophase`** domain; give the two-phase domain a richer rider set (`x`, `α`, SH/SC) and a constitutive-correlation library (void fraction, two-phase ΔP, boiling/condensing HT); add **C/R volume + flow primitives**; scope a **refrigerant-charge inventory** constraint to two-phase volumes; and build the **AC application package** (unified evaporator/boiler, condenser, compressor, pump, Cv orifice, 4-quadrant TXV, EXV, receiver, chiller, air coil) on top — interoperable with the two-phase primitives and coupling to liquid/air loops via HX bridges.
+- **Headline modeling decisions for the board (detailed in §4):**
+  1. **A boiler *is* an evaporator** — one two-phase heat-addition component: liquid/two-phase inlet → boils → superheated-vapor outlet, with regime-aware heat transfer. The condenser is its heat-rejection mirror.
+  2. **Pumps and compressors stay distinct** — a pump does incompressible liquid work (`v·ΔP`); a compressor does real-vapor compression (`Δh_s/η`). Different machines, different domains/regions.
+  3. **The two-phase orifice is a `Cv`/`CdA` mathematical relation**; on top of it we build a **4-quadrant-map TXV** and a **controlled EXV**.
+- **Numerics:** lumped and few-cell moving-boundary forms run on the existing `DYNAMIC` engine; a fully distributed (many-cell C/R) capability is gated on a stiff variable-order DAE integrator + fast property tables + sparse linear algebra (the "Tier B" solver investment, §7 Phase S).
 
 ---
 
-## Phase A — Pneumatic (gas) fluid-power domain  ✅ **first slice shipped & green**
+## 2. The domain architecture
 
-**Status (2026-06-27).** Shipped: the **ISO 6358** constitutive function (`props/Pneumatics.iso6358(C, b, Pup, Tup, Pdown)`, choked + subsonic branches, ANR reference, wired across the registry/evaluator/unit-checker 3-site pattern) and the component bodies `PneumaticSupply`, `PneumaticAtmosphere`, `PneumaticOrifice`, `PneumaticServoValve`, `PneumaticVolume` (transient charging), and `PneumaticActuator` (cross-domain pneumatic→translational). A pneumatic port reuses the **fluid** node rule — no new domain registration needed, confirmed by `nodeDomain` classifying `(P, ṁ, h)` as `FLUID`. Validated by `ComponentPneumaticTest` (6 tests: choked/subsonic orifice, choke-independence, servovalve scaling, volume charging transient, actuator force balance); full backend suite green. **Remaining rungs:** signal-driven servovalve opening, dynamic-temperature volume (energy eq vs. isothermal), reversible (acausal) orifice flow, a full moving-boundary cylinder with chamber `der(P)` + piston `der(x)`.
+### 2.1 The `liquid` domain (single-phase — THH-equivalent)
 
-**Why first.** Pneumatics is one of the two largest domains in the reference library and is **entirely absent from frees**, yet all the hard physics — ideal gas, real-gas properties, isentropic/choked compressible flow — is **already shipped**. What's missing is the *domain wrapper*: a pneumatic port and a small component family. Highest new-capability-per-effort with no new solver work.
+A single-phase liquid working fluid for **coolant / water / glycol / oil / fuel** circuits (battery cold-plate loops, low-temperature radiator loops, lubrication). Connector type `domain$ = liquid`.
 
-**Enabler.** Register a **pneumatic port** `(P, ṁ)` carrying gas state (P, T or h, composition optional) in `DomainRegistry` — node rule `P` equal, `Σṁ=0`, energy via the existing stream-enthalpy convention. Reuse the compressible-flow library for the flow laws.
+- **Port / riders:** `(P, ṁ, h)` — same bond as today; temperature is a derived property; no quality/void.
+- **Closures:** single-phase Darcy/Colebrook ΔP (have), temperature-dependent ρ/μ/cp, optional bulk-modulus compliance and **cavitation** (pressure-driven effective-density correction — the THH behaviour, *not* boiling).
+- **Migration:** existing single-phase thermofluid uses of the generic `fluid` domain (coolant loops, water transport) move here. *Open question for the board: do we keep `fluid` as a permissive alias for backward compatibility, or hard-migrate? (§10 Q1).*
 
-**Components (each a `model$` ladder):**
-- **Pneumatic source / reservoir boundary** — fixed `P,T` supply / exhaust to atmosphere.
-- **Pneumatic orifice / restriction** — **ISO 6358** (`C`, `b` critical-pressure-ratio) → constant-`Cq` → sonic/subsonic choked. The subsonic↔choked switch is a smooth `model$` body (tanh-blend at the critical ratio, as `stream_h` already does).
-- **Pneumatic volume / receiver** *(storage, transient)* — `der(P) = (RT/V)·Σṁ` (charge/discharge), with a heat port for non-adiabatic walls. Same storage pattern as the shipped `Accumulator`.
-- **Servovalve / directional valve** — 2-/3-way variable-orifice (signal-driven opening area) built from the orifice law.
-- **Pneumatic cylinder / actuator** — gas chamber `(P,V)` × piston area → translational `(F,v)` port (reuses the shipped translational domain). This is the cross-domain payoff: a pneumatic→mechanical actuator solves in one network.
+### 2.2 The `twophase` domain (phase-change — TPF-equivalent)
 
-**New physics:** ISO 6358 mass-flow law + critical-pressure-ratio choking (one constitutive function). Everything else is existing compressible flow + the storage/transient and translational-port machinery.
+A phase-change-capable working fluid (**refrigerants R134a/R1234yf/R744/R290, steam**) that may be **subcooled liquid, two-phase mixture, or superheated/dry gas** — the state is determined from `(P, h)` via CoolProp, never assumed by the component. Connector type `domain$ = twophase`.
 
-**Acceptance:** a supply→servovalve→cylinder circuit reaches a steady force/position; a reservoir blowdown integrates through the choked→subsonic transition; choked mass flow matches the compressible-flow library; zero unit warnings.
+- **Port / riders:** `(P, ṁ, h)` **+ vapor quality `x` + void fraction `α` + superheat/subcooling** carried as flow-coupled riders. Mechanism reuses the shipped moist-air rider machinery (`ComponentExpander.acrossMembersForNode` already adds a rider — `w` — across a tagged node; we add `x`/`α` for `twophase`).
+- **Saturation coupling:** inside the dome, `T = T_sat(P)`; ΔP along an element therefore *glides* the temperature — the effect the current isobaric model misses.
+- **Constitutive library:** §3.
+- **C/R primitives:** a **capacitive control volume** (`C` — holds `P, h` states, `der(mass)`/`der(energy)`, contributes `ρ(P,h,α)·V` to the charge) and a **resistive flow element** (`R` — two-phase frictional + acceleration ΔP). Alternating C/R builds lumped → few-cell → distributed models.
 
----
+### 2.3 The AC application layer (on top of `twophase`)
 
-## Phase B — Oil-hydraulic fluid-power domain  ✅ **first slice shipped & green**
+Ready refrigeration/AC components that **plug into the two-phase primitives** (same port), so a user can either drop in a packaged `Evaporator` or hand-build one from C/R cells — exactly the `AC`-on-`TPF` relationship. Catalog in §5.
 
-**Status (2026-06-27).** Shipped (no new backend function — the orifice/relief/pump laws are plain algebra over `sqrt`/`abs`/`tanh`/`pi#`): `HydraulicSupply`, `HydraulicTank`, `HydraulicOrifice` (`ṁ·|ṁ|=CdA²·2ρ·ΔP`), `HydraulicValve` (signal-`u` metering edge), `ReliefValve` (tanh-cracked at `Pcrack`), `HydraulicCylinder` (bulk-modulus chamber `der(P)=(β/V)(ṁ/ρ−A·v)` → translational `(F,v)` port), and `HydraulicPump` (positive-displacement `Q=D·N·η_v`, `τ=D·ΔP/η_m`, coupling the hydraulic port to the rotational `(τ,ω)` port). The hydraulic port reuses the **fluid** node rule. Validated by `ComponentHydraulicTest` (4 tests: orifice metering, relief cracking bracket, speed-driven pump operating point, cylinder holding force). **Remaining rungs:** laminar-transition orifice, gas-charged accumulator, spool flow-force, cavitation `β(P)`, full directional-valve (N-position spool).
+### 2.4 Cross-domain heat-exchanger bridges
 
-**Why second.** Oil-hydraulics is the single largest / origin domain of the reference library and is **absent from frees**. frees already has flow resistance, `Cv`/orifice, and the `Accumulator` compliance pattern — the missing piece is the **hydraulic power domain**: incompressible-with-bulk-modulus pressure–flow plus the spool-valve / cylinder / pump actuation chain that defines the domain.
+The two-phase loop couples to other domains **only through heat exchangers** (shared `Q`, never a direct `connect`), enforced by the existing domain type-check:
 
-**Enabler.** A **hydraulic port** `(P, Q)` (volumetric flow `Q`, or keep `ṁ` and divide by ρ) with node rule `P` equal, `ΣQ=0`. The load-bearing new element is a **chamber-compliance storage**: `der(P) = (β/V)·(ΣQ − dV/dt)` (β = effective bulk modulus, optionally pressure/air-entrainment-dependent) — structurally identical to the pneumatic volume and the shipped capacitive elements.
+- **`Chiller` (twophase ↔ liquid)** — refrigerant evaporates against battery coolant. The EV chiller.
+- **`AirCoil` (twophase ↔ moistair)** — refrigerant evaporates/condenses against moist air, with sensible + latent (dehumidification) duty.
 
-**Components (each a `model$` ladder):**
-- **Hydraulic supply / tank / pressure source** — fixed-P or fixed-flow boundary.
-- **Orifice / restrictor / metering edge** — `Q = Cd·A·√(2ΔP/ρ)`, smooth signed form at ΔP=0 (reuse the shipped squared-resistance smoothing) → laminar-transition variant.
-- **Directional / spool control valve** — 2/3/4-port, N-position; signal-driven spool opens metering edges (built from the orifice law). The bread-and-butter hydraulic element.
-- **Relief / pressure / check valve** — cracking-pressure + flow-force variants (smooth-regularized opening).
-- **Hydraulic cylinder** — chamber compliance × area → translational `(F,v)` port (two chambers + piston); the actuation payoff.
-- **Pump / motor (positive-displacement)** — `Q = D·N·η_v`, `τ = D·ΔP/η_m`; couples the hydraulic port to the shipped rotational `(τ,ω)` port (variable-displacement = a `model$` rung).
-- **Hydraulic accumulator** — gas-charged (reuse pneumatic gas law + chamber compliance).
+### 2.5 Interoperability requirement
 
-**New physics:** bulk-modulus compliance (`der(P)`), the spool metering-area function, cracking-pressure relief. Cavitation/air-release as an optional β(P) `model$` rung.
-
-**Acceptance:** a pump→relief→directional-valve→cylinder→tank circuit reaches a steady actuator force/velocity; a closed dead-volume compresses per its bulk modulus; relief cracks at its setpoint; pump torque balances the load through the rotational port; steady limit recovers the algebraic operating point.
+The `twophase` foundation and the AC package **must work together**: AC components are *defined on* the two-phase port, so two-phase pipes/volumes/valves and AC components compose in one circuit. A refrigeration loop can mix a packaged `Compressor` + a hand-built C/R `Evaporator` + a packaged `TXV` freely.
 
 ---
 
-## Phase C — Two-phase / moving-boundary thermofluid depth  ✅ **first slice shipped & green**
+## 3. Constitutive-correlation library (two-phase)
 
-**Status (2026-06-27).** Shipped: the Lockhart–Martinelli / Chisholm functions (`props/TwoPhase`: `lm_phi2(X, C)` two-phase multiplier, `lm_martinelli_tt(x, ρ_l, ρ_g, μ_l, μ_g)` turbulent-turbulent parameter, both wired across the 3-site pattern) and the components `TwoPhasePipe` (liquid-alone Darcy × `φ_l²`), `TXVSuperheat` (superheat-controlled expansion valve sensing the evaporator-outlet temperature via a heat-port bulb, `ṁ=Kv·(SH−SH_set)`, `T_sat` from `Temperature(fluid$, P, x=1)`), and `ThreeZoneHX` (3-cell counterflow ε-NTU subsystem, extending the shipped `TwoZoneHX` pattern). Validated by `ComponentTwoPhaseTest` (LM ΔP vs. backend correlations CoolProp-free; TXV metering with R134a saturation; 3-zone energy balance). **Remaining rungs:** true moving-boundary zone-length tracking (`der(L_zone)`), Friedel correlation, quality-split receiver/separator, micro-channel/plate-fin geometry `model$` rungs.
+The physics that turns the lumped calculator into an accurate system model. Each is a scalar backend function wired across the established 3-site pattern (registry → evaluator → unit-checker), selectable by a `model$`/`corr$` argument. reference-grounded choices:
 
-**Why third.** This does not open a new domain — it makes frees's **existing** refrigeration / A-C / EV-thermal flagship *quantitative* instead of lumped ε-NTU. Pure constitutive adds on shipped CoolProp two-phase properties; lowest risk in the plan; directly serves frees's current users.
+| Closure | Correlations to provide | Status |
+|---|---|---|
+| **Void fraction `α(x, ρ_l, ρ_g, …)`** | homogeneous · **Zivi** · **Rouhani–Axelsson** · slip-ratio `S=f(ρ_l,ρ_g)` | ❌ new — *gates charge inventory* |
+| **Two-phase frictional ΔP** | **Lockhart–Martinelli** ✅ (`lm_phi2`, `lm_martinelli_tt`) · **Friedel** · Chisholm · homogeneous | 🟡 LM only |
+| **Acceleration ΔP** | momentum-flux change across quality | ❌ new |
+| **Boiling heat transfer (Nu)** | **Chen** · Gungor–Winterton | ❌ new |
+| **Condensation heat transfer (Nu)** | **Shah** · **Cavallini–Zecchin** · Dobson–Chato · Traviss | ❌ new |
+| **Single-phase HT (Nu)** | Dittus–Boelter · **Gnielinski** | 🟡 (have ε-NTU, not Nu) |
+| **Evaporator/condenser effectiveness** | ε-NTU ✅ · `Cr→0` evaporating/condensing limit | 🟡 |
 
-**Components (each a `model$` ladder; all built on shipped physics):**
-- **Moving-boundary / multi-zone evaporator & condenser** — ε-NTU (have) → **n-cell discretized** → **3-zone** (subcool / two-phase / superheat) with tracked zone-length fractions. Heat-exchanger geometry variants (micro-channel tube-fin · plate-fin · brazed-plate) as `model$` rungs feeding the area/UA.
-- **Two-phase pipe pressure drop** — Darcy (have) → **Lockhart-Martinelli** → **Friedel**; void-fraction model for the static head.
-- **Thermostatic / electronic expansion valve (TXV/EEV)** — the shipped `ExpansionValve` (fixed orifice, isenthalpic) → **superheat-controlled** rung (bulb superheat sets the opening area; closes the evaporator superheat loop).
-- **Receiver / accumulator / liquid separator** — two-phase volume with quality-split outlets (liquid vs. vapor draw).
-
-**New physics:** Lockhart-Martinelli / Friedel two-phase ΔP correlations; moving-boundary zone-fraction equations. No new ports, no new solver machinery.
-
-**Acceptance:** a vapor-compression loop with a 3-zone evaporator + 3-zone condenser + superheat-controlled TXV solves and matches a textbook design point; two-phase ΔP matches the correlation reference; the steady superheat loop converges to the TXV setpoint.
-
----
-
-## Phase D — Fuel cell (PEMFC)  ✅ **shipped & green**
-
-**Status (2026-06-27).** Shipped `FuelCellStack(p, n, heat)` — a cross-domain component reusing the electrical `(V,I)` + heat `(T,Q̇)` ports. The cell voltage is the standard polarization curve `V_cell = E0 − (RT/αF)·ln(i/i0) − i·R_ohm − (RT/2F)·ln(i_lim/(i_lim−i))` (reversible EMF − activation/Tafel − ohmic − concentration), the stack is `ncells·V_cell`, and the waste heat is `I·ncells·(E_th − V_cell)`. Pure component body over `ln` — no new backend function. Validated by `ComponentFuelCellTest` (polarization voltage + waste-heat at a fixed-current operating point; monotone V↓/Q↑ with current). **Remaining rungs:** dynamic double-layer `der(V)`, reactant-partial-pressure dependence (needs Phase E gas-mixture composition), Faraday reactant-consumption gas ports.
-
-**Why here.** A single, self-contained, high-visibility component that **reuses every domain frees already has** (electrical `(V,I)` + thermal `(T,Q̇)` + gas reactant streams) and complements the battery/EV story — the design-time "clean powertrain" piece. Feasible now; modest scope.
-
-**Component (a `model$` ladder):**
-- **PEMFC stack** — static **polarization curve** (`V = E_nernst − η_act(Butler-Volmer) − η_ohmic − η_conc`) → **dynamic** (double-layer capacitance `der(V)`, reactant-partial-pressure dependence) → stack/cell scope. Couples: electrical port (stack `V,I`), thermal port (waste heat `Q̇ = I·(E_th − V)`), and reactant gas ports (H₂/O₂/air consumption from Faraday's law, optional humidity via the shipped HumidAir).
-- **Supporting boundaries** — reactant supply at a given stoichiometry/humidity (reuses gas + moist-air physics).
-
-**New physics:** Butler-Volmer activation overpotential + Nernst EMF (one polarization function). Reactant consumption is Faraday's law.
-
-**Acceptance:** a stack at a drawn current produces the textbook polarization voltage and waste-heat split; coupled to a resistive load it finds the operating point; with a thermal mass it integrates a warm-up transient.
+*Board question (§10 Q2): which default correlation per closure, and how many alternates are worth shipping vs. deferring?*
 
 ---
 
-## Phase E — Gas-mixture composition port  🟡 **first slice shipped & green**
+## 4. Headline component physics (the discussion points)
 
-**Status (2026-06-27).** Shipped a focused composition-transport slice **with no expander surgery**: a species mass fraction rides as an ordinary stream member (`.y`), and **shared-name binding aliases it through the network** just like `P`/`h`/`ṁ`. `GasSource`, `GasPipe` (composition pass-through `out.y=in.y`), and `GasMixer` (flow-weighted species `Σṁ·y` conservation, exactly as the standard `Mixer` does enthalpy). Validated by `ComponentGasMixtureTest` (flow-weighted blend, pass-through, cascaded 3-way blend). **Remaining (the harder, deferred design):** a full **multi-species vector rider** `{Y_i}` with `connect`-node propagation (requires teaching the expander's across-rule / mixing logic to carry composition as a first-class convective rider like `h`) — this is the prerequisite that promotes aftertreatment and GTE component maps (Phase G long-tail) from niche to buildable, and adds reactant-partial-pressure dependence to the Phase-D fuel cell.
+### 4.1 Unified Boiler ≡ Evaporator (two-phase heat addition)
 
-**Why here.** frees has the thermochemistry (NASA-7, equilibrium Kp, mixtures, combustion) but its **streams don't carry a composition vector** — so multi-species air paths (engine intake/exhaust, HVAC fresh-air mixing, aftertreatment feed) can't be modeled as connected components. This is the **enabler** that unlocks Phase F's engine air-path and the aftertreatment/GTE long tail.
+One component models **liquid/two-phase inlet → boiling → superheated-vapor outlet**. The fluid's phase at every point is read from `(P, h)`; the component applies **single-phase convection** in the subcool zone, **boiling** Nu (Chen) in the two-phase zone, and **single-phase convection** in the superheat zone — a **moving-boundary 3-zone** structure (or lumped `Cr→0` at low fidelity). Heat source is either a baked duty `Q`, a `UA·ΔT` to a secondary stream, or a heat port. This replaces today's separate isobaric `Boiler` (just `Q = ṁΔh`) and gives the evaporator its real superheat, glide, and ΔP.
 
-**Work:**
-- Extend the fluid/gas stream to carry an optional **species mass-fraction rider** `{Y_i}` alongside `(P, ṁ, h)`; node rule mixes it flow-weighted at a junction (`Σṁ·Y_i` balance), passes it through otherwise — the same convective-rider mechanism `h` already uses.
-- **Gas-definition / mixture-source** components (air, fuel, combustion products) building on the shipped NASA-7 / mixture library.
-- **Combustor / reactor** component consuming reactants → products via the shipped adiabatic-flame / equilibrium machinery, now connectable in a flow network.
+### 4.2 Condenser (two-phase heat rejection)
 
-**New physics:** none — composition transport is a new convective rider on the existing stream; chemistry is already shipped.
+The mirror: **superheated vapor → condensing → subcooled liquid**, with desuperheat/condense/subcool zones and condensation Nu (Shah/Cavallini). Same structure as 4.1, reversed.
 
-**Acceptance:** a mixing junction conserves species mass fractions flow-weighted; a combustor fed by connected air + fuel streams reproduces the standalone adiabatic-flame-temperature example; composition propagates downstream through a pipe network.
+### 4.3 Compressor vs. Pump — kept distinct
 
----
+- **Compressor** (vapor machine): real-gas isentropic + efficiency; `ṁ = η_v·V_d·N·ρ_suction` (volumetric) — RPM enters here; suction state is superheated vapor (two-phase domain, vapor region). Variants: isentropic-η → volumetric-η → performance map.
+- **Pump** (liquid machine): incompressible `Δh = v·ΔP/η`; operates in the `liquid` domain (or the subcooled-liquid region). **Not** interchangeable with the compressor — different constitutive law.
 
-## Phase F — Powertrain & event-coupled mechanical breadth  🟡 **non-event slice shipped & green**
+### 4.4 Expansion devices (on the two-phase domain)
 
-**Status (2026-06-27).** Shipped the **non-event** powertrain breadth (no zero-crossing handling needed): `MeanValueEngine` (speed-dependent inverted-parabola WOT torque × throttle − FMEP friction `a+b·ω`), `Transmission` (gear ratio + efficiency, extending the ideal `Gear`), and `GradeRoadLoad` (rolling + aero + `m·g·sin(grade)`). Validated by `ComponentPowertrainBreadthTest` (each constitutive relation in isolation + an engine→transmission→road-load steady geared-torque-balance operating point). **Still deferred (genuinely need new machinery):** clutch lock-up **event** + flow-reversal/diode/valve switching (require the Phase-R zero-crossing event handler in the `DYNAMIC` integrator); **ECMS** (optimizer-in-the-loop supervisory control — `core/Optimizer` + BSFC `TABLE` + `DYNAMIC` SOC, a dedicated multi-part increment); map-based BSFC engine + turbocharger maps (the proven datasheet-`TABLE` pattern, build when prioritized).
+- **Two-phase orifice** — the base mathematical relation: `ṁ = Cv·f(ΔP, ρ_in)` / `CdA` form (isenthalpic), valid across flashing flow. Extends the shipped `ExpansionValve`/`Valve`.
+- **TXV — 4-quadrant map** — a thermostatic expansion valve whose opening is a **2-D characteristic map** of (superheat, pressure-drop) → flow area, covering the full operating envelope (the "4-quadrant" behaviour: bidirectional ΔP / opening-closing hysteresis envelope), with the bulb sensing evaporator-outlet superheat. Supersedes the shipped linear `TXVSuperheat`.
+- **EXV (electronic expansion valve)** — a signal-controlled opening (step position → `CdA`), for controller-in-the-loop superheat/pressure control.
 
-**Why here.** Extends the shipped mechanical/electrical/battery powertrain with the automotive-specific components. Several need **zero-crossing event handling** in the `DYNAMIC` integrator (the one genuinely new solver capability in the plan), so this phase is gated on that and ranks below the constitutive-only phases.
+### 4.5 Accumulator / receiver (phase separation)
 
-**Solver prerequisite (Phase-R carryover):** discrete-state / zero-crossing event handling — components declare an integer mode + switching function; the stiff integrator detects crossings and restarts the step (stick↔slip, flow reversal, valve/diode/clutch on↔off). Prefer smooth (tanh) regularization where accuracy allows; reserve true events for genuine on/off.
+A two-phase volume that **separates liquid and vapor** (quality-split outlets), buffers refrigerant **charge**, and sets the inventory/subcooling relationship (§4.6). The shipped `Accumulator` is a single-phase compliance only.
 
-**Components:**
-- **Clutch / dual-clutch** — locked↔slipping torque transfer (stick-slip **event**). *(The shipped `Friction` is tanh-smoothed and event-free; this adds the true lock-up event.)*
-- **Mean-value / map engine** — BSFC + torque map (digitize→`TABLE`, the proven datasheet pattern) + FMEP friction; intake/exhaust via the Phase-E gas-mixture port.
-- **Turbocharger** — compressor-map + turbine-map + shaft inertia (variable-geometry / two-stage as `model$` rungs).
-- **Transmission** — fixed-ratio / AT (torque converter) / DCT; couples to the clutch + gear set.
-- **Vehicle longitudinal road-load** — rolling + aero + grade resistance → translational port (the shipped `RoadLoad` extended with grade/aero rungs).
-- **HEV supervisory energy management — ECMS** *(deferred item, promoted here)*: an online optimal-control strategy — at each step minimize `ṁ_fuel(P_eng) + s·P_batt/LHV` over the engine/motor split, with the equivalence factor `s` adapted from SOC error. Built on the shipped `Optimizer` + BSFC `TABLE` + `DYNAMIC` SOC; a supervisory component running the optimizer-in-the-loop. A genuine multi-part feature, not a fixed power-split.
+### 4.6 Refrigerant charge inventory
 
-**Acceptance:** a clutch lock-up event restarts the integrator cleanly; a map engine + transmission + road-load reaches a steady drive point and runs a drive-cycle transient; a turbocharged engine balances shaft power; ECMS keeps SOC charge-balanced over a cycle while minimizing fuel.
+A two-phase-scoped constraint `M_charge = Σ_i ρ_i(P, h, α)·V_i` over all two-phase volumes (with `α` from §3 void fraction). This **pins one extra DOF** — subcooling / receiver level — so **charge becomes an input** and 1.5 kg vs 0.75 kg produce different subcooling, condensing pressure, capacity, and COP (today they are indistinguishable). Result is sensitive to the void-fraction correlation (board question §10 Q3).
+
+### 4.7 Pressure-drop realism (suction < evaporating pressure)
+
+With non-isobaric two-phase heat exchangers (§4.1/4.2) and explicit suction/discharge **lines** (two-phase `R` elements), the compressor suction pressure correctly falls **below** the evaporating pressure, the suction density drops, and capacity/COP come out realistically (the current model forces them equal — optimistic).
 
 ---
 
-## Phase G — Fidelity rungs, sensors & niche  🟡 **first batch shipped & green**
+## 5. Component catalog by layer
 
-**Status (2026-06-27).** Shipped the cheap, clearly-in-scope batch: ISA 1976 standard-atmosphere functions (`props/Atmosphere`: `isa_T`/`isa_P`/`isa_rho`, troposphere + lower stratosphere, wired across the 3-site pattern), `ThermalSensor` / `FlowSensor` (PROBE-style measurement drawing no power), `Battery2RC` (2RC Thévenin extending `BatteryRC`), and `CurrentSource` (the missing electrical primitive). Validated by `ComponentNicheTest` (5 tests). **Remaining (build opportunistically / deferred):** contact-resistance & laminar-transition `model$` rungs; diode/switch **events**; motor & inverter η-maps (datasheet-`TABLE`); AC-phasor electrical (in-scope subset of the excluded switching domain); aftertreatment & GTE component maps (both need Phase E gas-mixture composition).
+### 5.1 Two-phase foundation (TPF-equivalent)
+| Component | Role | Status |
+|---|---|---|
+| `TwoPhaseVolume` (C) | capacitive control volume — `P,h` states, mass/energy `der`, charge `ρ·V` | ❌ new |
+| `TwoPhaseFlowRes` (R) | resistive flow — two-phase frictional + acceleration ΔP | 🟡 (have `TwoPhasePipe`, isobaric-coupled) |
+| `TwoPhasePipe` | combined C-R(-C) pipe | 🟡 (ΔP only, no states/charge) |
+| `TwoPhaseSource` / `Sink` | `(P,h)` or `(ṁ,h)` boundary with `x`/`α` | ❌ new (refit `Source`) |
+| `TwoPhaseSensor` | quality/superheat/void readout | ❌ new |
+| fluid-property layer | `x`, `α`, SH/SC, sat. lines (CoolProp + tables) | 🟡 (CoolProp `x` supported) |
 
-Small, mostly one-to-three-equation additions; incremental polish and niche coverage. Build opportunistically.
+### 5.2 Turbomachinery
+| Component | Status |
+|---|---|
+| `Compressor` (vapor; isentropic→volumetric→map) | 🟡 (isentropic+volumetric on `fluid`; retarget `twophase`) |
+| `Pump` (liquid) | 🟡 (on `fluid`; retarget `liquid`) |
 
-- **Thermal:** contact / interface resistance (`model$` rung on convection); thermal sensor; n-node wall.
-- **Electrical:** diode / switch (event-gated); current source; **2RC Thévenin** battery; ultracapacitor; motor & inverter **efficiency maps** (the proven datasheet-`TABLE` pattern).
-- **Mechanical:** rotational/translational spring (angle/position state); planetary-with-efficiency.
-- **Valves/flow:** explicit choked-flow rung on the std `Valve`; laminar-transition orifice.
-- **AC-phasor electrical** *(in-scope subset of the excluded switching domain)*: steady-state single-/three-phase phasor models (impedance, power-factor, RMS sources) — **no** switching resolution. Build only if an AC use case is prioritized.
-- **Aftertreatment** *(needs Phase E)*: 3-way catalytic converter / SCR as map-based conversion-efficiency components (no finite-rate kinetics).
-- **Gas-turbine component maps** *(needs Phase E)*: SAE-format compressor/turbine maps + combustor primary/secondary zones, extending the shipped Brayton cycle.
-- **ISA standard atmosphere** — a standalone property function (1976 US Standard Atmosphere); cheap, useful for any altitude-dependent input.
+### 5.3 Heat exchange (two-phase, unified)
+| Component | Status |
+|---|---|
+| `Evaporator` / `Boiler` (unified, regime-aware, moving-boundary) | 🟡 (separate isobaric `Boiler`; rebuild) |
+| `Condenser` (regime-aware, moving-boundary) | 🟡 (isobaric duty; rebuild) |
+| `Chiller` (twophase ↔ liquid bridge) | ❌ new (designed, not shipped) |
+| `AirCoil` (twophase ↔ moistair bridge) | 🟡 (`CoolingCoil` is moist-air-only, no refrigerant side) |
+| n-cell / multi-zone HX | 🟡 (`TwoZoneHX`/`ThreeZoneHX` are ε-NTU cells, not two-phase FV) |
 
-**Acceptance (per item):** matches its reference correlation/datasheet; zero unit warnings; steady limit consistent where transient.
+### 5.4 Expansion devices
+| Component | Status |
+|---|---|
+| Two-phase orifice (`Cv`/`CdA`) | 🟡 (`ExpansionValve`/`Valve` isenthalpic; recheck flashing) |
+| `TXV` (4-quadrant map + bulb) | 🟡 (`TXVSuperheat` linear only) |
+| `EXV` (signal-controlled) | ❌ new |
+
+### 5.5 Storage / phase separation
+| Component | Status |
+|---|---|
+| `Receiver` / `Accumulator` (liquid/vapor split, charge buffer) | 🟡 (`Accumulator` = single-phase compliance) |
+
+### 5.6 Liquid domain (THH-equivalent)
+| Component | Status |
+|---|---|
+| `LiquidSource`/`Sink`, `LiquidPump`, `LiquidPipe`, `LiquidVolume`, coolant props | 🟡 (exist on `fluid`; retag `liquid`) |
 
 ---
 
-## Build sequence (waves)
+## 6. Current situation — inventory & gap summary
 
-1. **Wave 1 — fluid power:** Phase A (pneumatic) → Phase B (hydraulic). Two new domains on existing flow physics; the biggest absolute capability gain.
-2. **Wave 2 — thermofluid depth + clean power:** Phase C (two-phase/moving-boundary) → Phase D (fuel cell). Deepens the flagship and adds the marquee cross-domain component; constitutive-only, low risk.
-3. **Wave 3 — composition & powertrain:** Phase E (gas-mixture port) unlocks Phase F (engine/turbo/clutch/ECMS, with event handling).
-4. **Wave 4 — long tail:** Phase G fidelity rungs, sensors, AC-phasor, aftertreatment, GTE maps, ISA atmosphere — as prioritized.
+**What exists and is reusable:** the acausal component framework, the expander + `connect`/shared-name, the **`domain$` connector-type machinery with rider-carrying** (the exact mechanism for `x`/`α`), CoolProp (with quality), Lockhart–Martinelli ΔP, ε-NTU, the `DYNAMIC` ODE engine, storage routing, the digitizer/`TABLE`/`Interpolate2D` (for maps).
 
-**Algorithmically novel pieces** (worth a dedicated derivation, the rest are constitutive bodies the expander already handles): ISO 6358 choked-flow blend (A), bulk-modulus chamber compliance + spool metering (B), moving-boundary zone tracking + Lockhart-Martinelli (C), Butler-Volmer polarization (D), species-rider transport (E), zero-crossing clutch/event handling (F).
+**Refrigeration-relevant components today (all on the generic `fluid` domain):** `Compressor`, `Pump`, `Turbine`, `Boiler`, `Condenser`, `Throttle`, `Valve`, `ExpansionValve`, `TXVSuperheat`, `Pipe`, `TwoPhasePipe`, `HeatExchanger`, `TwoZoneHX`, `ThreeZoneHX`, `Accumulator`, `Source`, `Sink`; moist-air side `CoolingCoil`/`HeatingCoil`/`MixingBox`/`Humidifier`/`MoistAirSource`/`Sink`.
+
+**The gaps this plan closes:**
+1. No `liquid` vs `twophase` separation → coolant and refrigerant indistinguishable in type.
+2. No `x`/`α` riders → can't track quality/void through a circuit.
+3. Isobaric heat exchangers → no refrigerant ΔP, no glide, suction = evaporating pressure.
+4. No void fraction → no charge inventory → 1.5 kg ≡ 0.75 kg.
+5. No boiling/condensing HT correlations → effectiveness is a single lump.
+6. `Boiler` and `Evaporator` modeled separately → should be one two-phase component.
+7. `TXVSuperheat` linear → no 4-quadrant map; no EXV.
+8. No C/R volume primitives → no path to few-cell/distributed (Tier A/B).
+9. No `Chiller`/`AirCoil` two-phase bridges → EV chiller not modelable accurately.
+
+---
+
+## 7. Implementation plan (phased)
+
+> Each phase ends compilable + tested (unit + end-to-end), full suite green — the established frEES practice.
+
+**Phase L — Liquid domain (THH-equivalent).** Register `domain$ = liquid`; retag/refit single-phase components (`LiquidPump`/`Pipe`/`Volume`/`Source`/`Sink`, coolant properties, optional cavitation). *Acceptance:* a battery cold-plate coolant loop solves and is type-incompatible with a `twophase` line except through a HX. *Low risk.*
+
+**Phase T0 — Two-phase domain foundation.** Register `domain$ = twophase`; carry `x`/`α`/SH-SC riders (reuse moist-air machinery); two-phase `Source`/`Sink`/`Sensor`; **void-fraction** + **Friedel/acceleration ΔP** correlation functions (§3). *Acceptance:* quality/void propagate through a connected two-phase chain; ΔP glides `T_sat`. *Med risk (correlations).* **Gates everything below.**
+
+**Phase T1 — Lumped two-phase components.** Rebuild on the domain: **unified `Evaporator`/`Boiler`** (regime-aware, non-isobaric), **`Condenser`**, retarget **`Compressor`** (vapor) and **`Pump`** (liquid), two-phase **orifice** (Cv, flashing-checked). *Acceptance:* a closed R134a loop reproduces a textbook cycle with refrigerant ΔP and a suction pressure **below** the evaporating pressure; COP drops vs the isobaric baseline. *Med risk.*
+
+**Phase T2 — Charge inventory.** Internal `V` on two-phase volumes; `M_charge = Σ ρ(P,h,α)V` constraint releasing subcooling/receiver level; **`Receiver`** with liquid/vapor split. *Acceptance:* sweeping charge (0.75↔1.5 kg) changes subcooling, condensing pressure, capacity; a receiver buffers the sensitivity. *Med risk (void-fraction sensitivity).*
+
+**Phase T3 — Moving-boundary / few-cell (C/R), Tier A.** `TwoPhaseVolume`(C) + `TwoPhaseFlowRes`(R) primitives; 3–5-zone moving-boundary `Evaporator`/`Condenser`; **boiling (Chen) / condensing (Shah, Cavallini)** Nu. *Acceptance:* distributed temperature glide along the coil; transient warm-up; charge migration. *Med-high risk; small N on existing `DYNAMIC`.*
+
+**Phase AC — Application package + bridges.** **`Chiller`** (twophase↔liquid), **`AirCoil`** (twophase↔moistair, sensible+latent), **`TXV`** (4-quadrant map + bulb), **`EXV`** (signal-controlled), geometry/`global-data` configuration helpers. *Acceptance:* a single-compressor evaporator-chiller cycle chills a coolant loop to a target supply temperature at a given battery load, at 1000 vs 2500 RPM, with realistic pressures and COP. *Med risk; depends T1–T2.*
+
+**Phase S — Solver enablers (Tier B), the distributed-fidelity gate.** Stiff variable-order **BDF** DAE integrator (WRMS norm, consistent init); **fast property tables** (bicubic on `(P,h)` from CoolProp, analytic derivatives); **sparse/banded** Newton. Plus zero-crossing **events** (phase/regime/flow-reversal). *Acceptance:* a 10–20-cell two-phase HX integrates robustly and fast; benefits every frEES transient. *High effort — the one strategic core investment; gates many-cell distributed models.*
+
+**Suggested order:** L → T0 → T1 → T2 → AC (delivers the accurate EV-chiller result on lumped/charge-aware models) → T3/S (distributed fidelity, when justified).
+
+---
+
+## 8. Validation strategy
+
+- **Per-correlation** unit tests vs published reference values (LM/Friedel, Zivi/Rouhani void, Chen/Shah Nu).
+- **Cycle-level** vs textbook vapor-compression examples (the standard literature/industry-handbook): COP, evap/cond pressures, superheat/subcool, with ΔP and charge.
+- **Charge sweep:** monotone subcooling/pressure response; receiver buffering.
+- **Mode duality:** steady limit recovers the lumped operating point; transient relaxes to it.
+- **Cross-check vs the reference simulator** reference numbers where a comparable case can be built.
+- Full backend suite green at every phase boundary; frontend build green.
+
+---
+
+## 9. Scope boundaries
+
+**In scope:** lumped + few-cell moving-boundary two-phase, charge-aware, correlation-based, on the acausal solver (+ `DYNAMIC`/stiff BDF). **Out of scope (Tier C / different product):** full many-cell 1-D finite-volume with per-cell momentum/acoustic dynamics (the reference simulator `libcfd1d` territory), geometry→UA from plate/fin counts, and stop-start event-heavy distributed dynamics at scale. frEES targets the **transparent, design-point-to-light-transient** band; a 20-cell FV HX is no longer hand-readable, which trades away frEES's core differentiator.
+
+---
+
+## 10. Open questions for the advisory board
+
+1. **Migration:** hard-migrate the generic `fluid` domain into `liquid` + `twophase`, or keep `fluid` as a permissive alias? (back-compat vs strictness)
+2. **Correlations:** the default per closure (void: Rouhani vs Zivi? boiling: Chen? condensing: Shah vs Cavallini?), and how many alternates to ship.
+3. **Charge model:** is a lumped-volume + void-fraction inventory accurate enough for design decisions, given the void-fraction sensitivity — or is few-cell (T3) the minimum credible charge model?
+4. **TXV "4-quadrant":** confirm the intended characteristic (superheat × ΔP → area, with hysteresis envelope) and the data form (digitized map vs analytic).
+5. **Solver investment:** is the stiff-BDF + property-table + sparse work (Phase S) justified now, or do we cap at Tier A (few-cell, small N) until a distributed need is concrete?
+6. **Naming/positioning:** `liquid` + `twophase` as the public domain names (mirroring THH/TPF), and is the AC package a separate namespace or part of the standard library?
+
+---
+
+*Appendix — the reference simulator mapping:* frEES `liquid` ↔ `the thermal-hydraulic library`; frEES `twophase` ↔ `the two-phase library` (`hflow` port: P, h, T, x, α, SH/SC; C/R primitives); frEES AC package ↔ `libac` (compressor/evap/cond/TXV/receiver + `TPF-THH` chiller + `TPF-GMMA` air coil). The board is asked to confirm this mapping is the right reference.
