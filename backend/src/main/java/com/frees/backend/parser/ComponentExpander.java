@@ -656,7 +656,7 @@ public final class ComponentExpander {
         }
         checkNoCapacitiveCapacitive();
         UnionFind uf = new UnionFind();
-        seedComponentLinks(uf);
+        seedComponentLinks(uf, true);  // capacitive volumes break the cycle (states, not pass-through)
         for (ConnectDecl c : connects) {
             List<String> refs = c.ports();
             if (refs.size() < 2) {
@@ -889,6 +889,27 @@ public final class ComponentExpander {
      * topology is not a simple pass-through.
      */
     private void seedComponentLinks(UnionFind uf) {
+        seedComponentLinks(uf, false);
+    }
+
+    /**
+     * Seeds in↔out links for fluid 2-port components.
+     *
+     * <p>{@code excludeCapacitive} drops the link for a <em>capacitive</em> volume
+     * (one with a {@code der(port.P)} pressure state). Such a volume is NOT a
+     * pass-through for loop detection: mass <em>accumulates</em> in it
+     * ({@code der(M)}, so {@code in.mdot ≠ out.mdot}) and its pressure is a state,
+     * so it breaks both the mass cycle and the pressure cycle. Seeding it would
+     * make a closed C-R-C-R loop look fully connected, so the cycle-closing
+     * {@code connect} would be wrongly judged redundant and its across (P/h) AND
+     * Σṁ equalities dropped — leaving the closing port's variables unmatched
+     * (the closed-refrigerant-cycle non-square bug). Excluding it lets the closing
+     * connect emit, matching Amesim's C/R causality (C nodes = states, R nodes
+     * algebraic) where each volume's pressure is an independent state. The
+     * fluid-identity propagation ({@link #propagateFluidAcrossConnects}) still
+     * seeds capacitive links (the fluid IS the same through a volume).
+     */
+    private void seedComponentLinks(UnionFind uf, boolean excludeCapacitive) {
         for (ResolvedInstance ri : instances) {
             List<String> streams = new ArrayList<>(ri.portToStream().values());
             // Only a *fluid* 2-port component carries its members port→port (a
@@ -896,6 +917,9 @@ public final class ComponentExpander {
             // equate its ports — its two ends are at different temperatures — so it
             // must not seed a loop link.
             if (streams.size() == 2 && isFluidStream(streams.get(0)) && isFluidStream(streams.get(1))) {
+                if (excludeCapacitive && isPressureCapacitive(ri.def())) {
+                    continue;
+                }
                 uf.union(streams.get(0), streams.get(1));
             }
         }

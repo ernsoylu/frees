@@ -3,7 +3,6 @@ package com.frees.backend.core;
 import com.frees.backend.core.dae.SundialsIda;
 import com.frees.backend.core.ode.OdeTableResult;
 import com.frees.backend.props.CoolProp;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -86,33 +85,21 @@ class ChargeCycleTest {
       """).formatted(pe0, he0, pc0, hc0);
   }
 
-  /** Documents the closed-loop structural datum deficiency (see @Disabled note). */
-  @Test void closedLoopHasAFreeDatum() {
+  /**
+   * The closed (P,h) loop is now structurally well-posed (DOF 0). The fix:
+   * ComponentExpander no longer seeds an in↔out loop link for a CAPACITIVE volume
+   * (it accumulates mass and its pressure is a state), so the cycle-closing
+   * connect is not wrongly judged redundant and emits its across (P/h) + Σṁ
+   * equalities. This is frees' analogue of Amesim's C/R causality assignment.
+   */
+  @Test void closedLoopIsWellPosed() {
     var r = new EquationSystemSolver().check(model().replaceAll("(?s)DYNAMIC.*?END\n", ""));
     int dof = r.equationCount() - r.unknownCount();
     System.out.printf("CHARGE-CYCLE (P,h) algebraic core: eqs=%d vars=%d (DOF %+d)%n",
         r.equationCount(), r.unknownCount(), dof);
-    // 4 storage states (P,h per volume) + one free datum: a closed fluid loop
-    // with no source/sink has no across-variable reference (every connect node
-    // is across-equal + Sigma-flow), so the loop carries one undetermined
-    // pressure/charge datum that an open R-C-R chain gets from its boundaries.
-    assertTrue(dof < 0, "closed loop is structurally short (states + free datum)");
+    assertTrue(dof == 0, "closed (P,h) charge loop is well-posed (was -3 before the expander fix)");
   }
 
-  @Disabled("FRONTIER (frees connect/assembler, Amesim-grounded): the CORRECT "
-      + "formulation is now in place -- Amesim-style two-phase capacitive volumes "
-      + "with (P,h) STATES (research corpus libtpf: 'mass+energy conservation with "
-      + "(p,h) as states'), so charge m=rho(P,h)V is DERIVED and there is NO "
-      + "conserved-sum-of-states invariant (that was the (M,U) mistake). But a "
-      + "topologically CLOSED loop is still structurally one datum short: frees "
-      + "gives every fluid connect an across-equality + Sigma-flow node, which "
-      + "anchors the pressure/charge datum only at a source/sink boundary (open "
-      + "R-C-R chains solve; the closed loop has none). Amesim avoids this with "
-      + "C/R bond-graph CAUSALITY ASSIGNMENT (the loop is index-1 by construction) "
-      + "+ the BDF integrator carrying charge/energy as conserved quantities from "
-      + "the IC. The frees fix is a closed-loop datum anchor (pick one volume's "
-      + "pressure as the reference, or charge-sum closure) in the connect "
-      + "expander -- assembler work, not component-level.")
   @Test void closedChargeCycleIntegratesToSteady() {
     assumeTrue(CoolProp.isAvailable());
     assumeTrue(SundialsIda.isAvailable());
