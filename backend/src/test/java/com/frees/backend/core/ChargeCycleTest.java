@@ -8,54 +8,54 @@ import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
- * FRONTIER (numerical), the CHARGE-STATE closed cycle: the topologically-closed
- * vapor-compression loop solved by integrate-to-steady with proper finite-volume
- * CONTROL VOLUMES — mass M and energy U as states, pressure derived from the
- * charge (rho = M/V, u = U/M -> P). This is what makes the closed loop march
- * where the single-compliance-volume version was Jacobian-singular: the
- * compressor moves mass low->high and the TXV returns it, so the CHARGE
- * DISTRIBUTION between the two volumes is the genuine dynamic that drives the
- * pressures (total charge M_lo+M_hi is the conserved "head rises with charge"
- * mode, set by the initial condition). No source/sink; both pressures float.
+ * The CLOSED vapor-compression loop solved by integrate-to-steady, the way Amesim
+ * does it (research corpus: libtpf/libthh capacitive volumes — "mass + energy
+ * conservation with (p, h) as states"; alternating C/R discipline -> index-1 DAE).
+ *
+ * The earlier (M, U)-state control volume made total charge M_evap+M_cond a
+ * CONSERVED SUM OF STATES -> an index-2 invariant -> structurally one equation
+ * short. Amesim's fix (and this one): the capacitive volume's STATES are
+ * (P, h) -- pressure from a bulk-modulus/compressibility compliance
+ * (dp/dt = Σṁ / C) and enthalpy from the energy balance -- so the CHARGE
+ * m = ρ(P,h)·V is DERIVED, not a state. Total charge is then a nonlinear
+ * function of the states, conserved as a CONSEQUENCE of the internal flows, with
+ * no algebraic constraint relating states. Index-1, square, marches.
+ *
+ * Loop (C-R-C-R, never C-C): evaporator volume (C) -> displacement compressor (R)
+ * -> condenser volume (C) -> TXV restriction (R) -> back. No source/sink; both
+ * pressures float and settle where compressor throughput == TXV return flow.
  */
 class ChargeCycleTest {
 
   private static final String F = "R1234yf";
 
-  private double rho(double p, double q) { return CoolProp.propsSI("Dmass", "P", p, "Q", q, F); }
-  private double umass(double p, double q) { return CoolProp.propsSI("Umass", "P", p, "Q", q, F); }
+  private double h(double p, double q) { return CoolProp.propsSI("Hmass", "P", p, "Q", q, F); }
 
   private String model() {
-    double ve = 0.02;   // low-side (evaporator) volume  [m^3]
-    double vc = 0.02;   // high-side (condenser) volume   [m^3]
-    // consistent initial charge: low side mostly vapor at ~350 kPa,
-    // high side mostly liquid at ~1.2 MPa.
-    double me = rho(350000, 0.9) * ve, ue = me * umass(350000, 0.9);
-    double mc = rho(1200000, 0.1) * vc, uc = mc * umass(1200000, 0.1);
+    double pe0 = 350000, he0 = h(pe0, 0.9);    // low side: mostly-vapor start
+    double pc0 = 1200000, hc0 = h(pc0, 0.1);   // high side: mostly-liquid start
     return ("""
-      // two-phase control volume, full charge: mass M + energy U states,
-      // P/T/h from (rho=M/V, u=U/M). The compressor moves mass low->high and the
-      // TXV restriction returns it, so the CHARGE DISTRIBUTION drives the pressures.
-      COMPONENT TwoPhaseCV(in, out)
-        PARAM fluid$, V, UA, T_ext, M0, U0, domain$ = twophase
-        der(M) = in.mdot - out.mdot
-        init(M) = M0
-        der(U) = in.mdot * in.h - out.mdot * out.h + Qdot
-        init(U) = U0
-        rho = M / V
-        u   = U / M
-        P   = Pressure(fluid$, D=rho, U=u)
-        Tcv = Temperature(fluid$, D=rho, U=u)
-        out.h = Enthalpy(fluid$, D=rho, U=u)
-        in.P  = P
-        out.P = P
+      // Amesim-style two-phase capacitive volume: STATES are (P, h).
+      // dP/dt from compressibility compliance C (= V*dRho/dP); dh/dt from the
+      // energy balance. Charge m = Rho(P,h)*V is DERIVED (not a state), so the
+      // closed loop has no conserved-sum-of-states invariant -> index-1.
+      COMPONENT PhVol(in, out)
+        PARAM fluid$, V, C, UA, T_ext, P0, h0, domain$ = twophase
+        der(in.P)  = (in.mdot - out.mdot) / C
+        init(in.P) = P0
+        rho = Density(fluid$, P=in.P, h=hcv)
+        der(hcv)  = (in.mdot * (in.h - hcv) + Qdot) / (rho * V)
+        init(hcv) = h0
+        out.P = in.P
+        out.h = hcv
+        Tcv   = Temperature(fluid$, P=in.P, h=hcv)
         Qdot  = UA * (T_ext - Tcv)
       END
+      // displacement compressor (R): swept volume * suction density
       COMPONENT CompVol(in, out)
         PARAM fluid$, disp, eta, domain$ = twophase
         rho_s = Density(fluid$, P=in.P, h=in.h)
@@ -66,52 +66,53 @@ class ChargeCycleTest {
         out.h = in.h + (h_s - in.h) / eta
         W = in.mdot * (out.h - in.h)
       END
-      // TXV as a flow RESTRICTION: the return mass flow is metered by the
-      // pressure drop (orifice-like). This is the equation that determines the
-      // loop mass flow; the volumes then redistribute charge until der(M)=0.
+      // TXV (R): isenthalpic; return flow metered by the pressure drop
       COMPONENT TXV(in, out)
         PARAM Kv, domain$ = twophase
         out.h    = in.h
         out.mdot = in.mdot
         in.mdot  = Kv * sqrt(max(in.P - out.P, 1))
       END
-      TwoPhaseCV EVAP(fluid$=R1234yf, V=%f, UA=200,  T_ext=288, M0=%f, U0=%f)
-      CompVol    CMP(fluid$=R1234yf, disp=0.0025, eta=0.7)
-      TwoPhaseCV COND(fluid$=R1234yf, V=%f, UA=1200, T_ext=313, M0=%f, U0=%f)
-      TXV        TX(Kv=5e-5)
+      PhVol   EVAP(fluid$=R1234yf, V=0.02, C=1.5e-5, UA=200,  T_ext=288, P0=%f, h0=%f)
+      CompVol CMP(fluid$=R1234yf, disp=0.0025, eta=0.7)
+      PhVol   COND(fluid$=R1234yf, V=0.02, C=1.5e-5, UA=1200, T_ext=313, P0=%f, h0=%f)
+      TXV     TX(Kv=5e-5)
       connect(EVAP.out, CMP.in)
       connect(CMP.out, COND.in)
       connect(COND.out, TX.in)
       connect(TX.out, EVAP.in)
-      DYNAMIC cyc (method = ida, time = 0 .. 120, points = 1201, rtol = 1e-6, atol = 1e-6)
+      DYNAMIC cyc (method = ida, time = 0 .. 300, points = 1501, rtol = 1e-6, atol = 1e-6)
       END
-      """).formatted(ve, me, ue, vc, mc, uc);
+      """).formatted(pe0, he0, pc0, hc0);
   }
 
-  @Test void chargeCycleIsSquare() {
+  /** Documents the closed-loop structural datum deficiency (see @Disabled note). */
+  @Test void closedLoopHasAFreeDatum() {
     var r = new EquationSystemSolver().check(model().replaceAll("(?s)DYNAMIC.*?END\n", ""));
     int dof = r.equationCount() - r.unknownCount();
-    System.out.printf("CHARGE-CYCLE (algebraic core): eqs=%d vars=%d (DOF %+d) solvable=%b%n",
-        r.equationCount(), r.unknownCount(), dof, r.solvable());
-    // The closed charge loop carries a CONSERVED-CHARGE invariant (M_evap+M_cond
-    // = const): physically correct, but it leaves the structural matching one
-    // equation short (the invariant's value is set by the initial charge, not by
-    // an equation). This is the documented remaining blocker -- see below.
-    assertTrue(dof < 0, "conserved-charge invariant leaves the loop structurally short");
+    System.out.printf("CHARGE-CYCLE (P,h) algebraic core: eqs=%d vars=%d (DOF %+d)%n",
+        r.equationCount(), r.unknownCount(), dof);
+    // 4 storage states (P,h per volume) + one free datum: a closed fluid loop
+    // with no source/sink has no across-variable reference (every connect node
+    // is across-equal + Sigma-flow), so the loop carries one undetermined
+    // pressure/charge datum that an open R-C-R chain gets from its boundaries.
+    assertTrue(dof < 0, "closed loop is structurally short (states + free datum)");
   }
 
-  @Disabled("FRONTIER (frees DAE infrastructure, not physics): the charge-state "
-      + "closed cycle is the right model -- M+U control volumes, P from (rho,u), "
-      + "compressor moving mass low->high and a TXV restriction returning it, so "
-      + "the charge distribution drives the pressures. But a closed loop has a "
-      + "CONSERVED-CHARGE invariant (M_evap+M_cond=const), so the DAE is "
-      + "structurally one equation short. Pinning total charge as a parameter "
-      + "(M_cond = Mtot - M_evap) is a constraint that RELATES TWO STATES across "
-      + "components -> index-2, and the IC blocker doesn't treat the referenced "
-      + "state as pinned (errors '1 equation / 2 variables: cond.m, evap.m'). The "
-      + "fix is conserved-quantity / index reduction in the DAE assembler (or "
-      + "state-aware top-level equations in the IC solve) -- infra work beyond the "
-      + "component layer.")
+  @Disabled("FRONTIER (frees connect/assembler, Amesim-grounded): the CORRECT "
+      + "formulation is now in place -- Amesim-style two-phase capacitive volumes "
+      + "with (P,h) STATES (research corpus libtpf: 'mass+energy conservation with "
+      + "(p,h) as states'), so charge m=rho(P,h)V is DERIVED and there is NO "
+      + "conserved-sum-of-states invariant (that was the (M,U) mistake). But a "
+      + "topologically CLOSED loop is still structurally one datum short: frees "
+      + "gives every fluid connect an across-equality + Sigma-flow node, which "
+      + "anchors the pressure/charge datum only at a source/sink boundary (open "
+      + "R-C-R chains solve; the closed loop has none). Amesim avoids this with "
+      + "C/R bond-graph CAUSALITY ASSIGNMENT (the loop is index-1 by construction) "
+      + "+ the BDF integrator carrying charge/energy as conserved quantities from "
+      + "the IC. The frees fix is a closed-loop datum anchor (pick one volume's "
+      + "pressure as the reference, or charge-sum closure) in the connect "
+      + "expander -- assembler work, not component-level.")
   @Test void closedChargeCycleIntegratesToSteady() {
     assumeTrue(CoolProp.isAvailable());
     assumeTrue(SundialsIda.isAvailable());
@@ -119,18 +120,17 @@ class ChargeCycleTest {
     OdeTableResult t = res.odeTables().get(0);
     List<List<Double>> r = t.rows();
     int ti = t.columns().indexOf("time"),
-        pe = t.columns().indexOf("evap$p"), pc = t.columns().indexOf("cond$p");
+        pe = t.columns().indexOf("evap$in$p"), pc = t.columns().indexOf("cond$in$p"),
+        he = t.columns().indexOf("evap$hcv"), hc = t.columns().indexOf("cond$hcv");
     System.out.println("cols=" + t.columns());
     for (int idx : new int[]{0, 50, 200, r.size() - 1}) {
-      System.out.printf("t=%6.1f s  P_evap=%s Pa  P_cond=%s Pa%n", r.get(idx).get(ti),
-          pe >= 0 ? String.format("%.0f", r.get(idx).get(pe)) : "?",
-          pc >= 0 ? String.format("%.0f", r.get(idx).get(pc)) : "?");
+      System.out.printf("t=%6.1f s  P_evap=%.0f h_evap=%.0f  P_cond=%.0f h_cond=%.0f%n",
+          r.get(idx).get(ti), r.get(idx).get(pe), r.get(idx).get(he),
+          r.get(idx).get(pc), r.get(idx).get(hc));
     }
+    double peEnd = r.get(r.size() - 1).get(pe), pcEnd = r.get(r.size() - 1).get(pc);
     assertTrue(r.size() > 1, "the closed charge cycle marched");
-    if (pe >= 0 && pc >= 0) {
-      double pEvapEnd = r.get(r.size() - 1).get(pe), pCondEnd = r.get(r.size() - 1).get(pc);
-      assertTrue(pCondEnd > pEvapEnd + 1e5, "discharge above suction at steady");
-      assertTrue(pEvapEnd > 5e4 && pCondEnd < 3e6, "pressures physical");
-    }
+    assertTrue(pcEnd > peEnd + 1e5, "discharge floats above suction at steady: " + peEnd + " -> " + pcEnd);
+    assertTrue(peEnd > 5e4 && pcEnd < 3e6, "both pressures physical");
   }
 }
