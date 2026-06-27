@@ -21,6 +21,157 @@ export interface Example {
 
 export const EXAMPLES: Example[] = [
   {
+    id: 'ev-thermal-management',
+    title: 'EV Thermal Management System',
+    description: 'Coupled refrigerant + coolant loops with wide branches, a discretized radiator, and a battery chiller. Solve (F2) for the steady point.',
+    category: 'Systems',
+    featured: true,
+    text: `// EV Thermal Management System  (coupled refrigerant + coolant)
+{ A complete EV thermal-management system as one acausal component model.
+
+  Coolant line (EG50): the pump feeds a WIDE-BRANCH SPLIT into a battery branch
+  and a motor branch; a flow-weighted COLLECT rejoins them and a DISCRETIZED
+  radiator pipe (three wall-HX + orifice cells) rejects heat to ambient.
+
+  Refrigerant line (R1234yf): one liquid feed SPLITS to a chiller evaporator and
+  a cabin evaporator; both COLLECT at a common compressor suction, then a
+  condenser whose head pressure floats with ambient and load.
+
+  Cross-domain bridge: the chiller refrigerant evaporator wall is tied to the
+  battery-branch coolant (connect at the bottom) — the battery is cooled by the
+  vapour-compression cycle, the motor by the radiator, the cabin directly.
+
+  Press Solve (F2) for the steady operating point (battery ~38 C, motor ~42 C,
+  cabin ~22 C). For the transient pull-down, see the DYNAMIC note at the end. }
+
+COMPONENT LiqMix(in1, in2, out)
+  PARAM domain$ = liquid
+  out.P = in1.P
+  in2.P = in1.P
+  out.mdot = in1.mdot + in2.mdot
+  out.mdot * out.h = in1.mdot * in1.h + in2.mdot * in2.h
+END
+COMPONENT TwoPhaseMixer(in1, in2, out)
+  PARAM domain$ = twophase
+  out.P = in1.P
+  out.mdot = in1.mdot + in2.mdot
+  out.mdot * out.h = in1.mdot * in1.h + in2.mdot * in2.h
+END
+COMPONENT MassGen(port)
+  PARAM C, Qgen, T0
+  der(port.T)  = (Qgen + port.Qdot) / C
+  init(port.T) = T0
+END
+COMPONENT LiqFeed(out)
+  PARAM fluid$, P, x, domain$ = twophase
+  out.P = P
+  out.h = Enthalpy(fluid$, P=P, x=x)
+END
+COMPONENT EvapSH(in, out, wall)
+  PARAM fluid$, UA, SH, domain$ = twophase
+  out.P = in.P
+  Tevap = T_sat(fluid$, P=out.P)
+  Q     = frac * UA * (wall.T - Tevap)
+  out.h = Enthalpy(fluid$, P=out.P, T=Tevap + SH)
+  out.mdot = Q / (out.h - in.h)
+  in.mdot  = out.mdot
+  wall.Qdot = Q
+END
+COMPONENT Compressor(in, out)
+  PARAM fluid$, eta, domain$ = twophase
+  out.mdot = in.mdot
+  s_in = Entropy(fluid$, P=in.P, h=in.h)
+  h_s  = Enthalpy(fluid$, P=out.P, s=s_in)
+  out.h = in.h + (h_s - in.h) / eta
+  W = in.mdot * (out.h - in.h)
+END
+COMPONENT CondFloatUA(in, out)
+  PARAM fluid$, UA, Tamb, domain$ = twophase
+  out.mdot = in.mdot
+  out.P    = in.P
+  Tcond    = T_sat(fluid$, P=in.P)
+  out.h    = Enthalpy(fluid$, P=in.P, x=0)
+  Q        = in.mdot * (in.h - out.h)
+  Q        = UA * (Tcond - Tamb)
+END
+
+{ ---- Coolant line (EG50) ---- }
+LiquidSource  PUMPIN(fluid$=EG50, mdot=0.4, P=200000, T=305)
+LiquidPump    PUMP(fluid$=EG50, eta=0.6)
+LiquidOrifice OBAT(CdA=1.6e-5, rho=1050)
+LiquidOrifice OMOT(CdA=1.2e-5, rho=1050)
+LiquidWallHX  BCP(fluid$=EG50, UA=600)
+LiquidWallHX  CHLC(fluid$=EG50, UA=600)
+LiquidWallHX  MCP(fluid$=EG50, UA=500)
+LiqMix        MIX()
+LiquidWallHX  RAD1(fluid$=EG50, UA=400)
+LiquidOrifice OR1(CdA=1.2e-4, rho=1050)
+LiquidWallHX  RAD2(fluid$=EG50, UA=400)
+LiquidOrifice OR2(CdA=1.2e-4, rho=1050)
+LiquidWallHX  RAD3(fluid$=EG50, UA=400)
+LiquidOrifice OR3(CdA=1.2e-4, rho=1050)
+ThermalSource AMB(T=313)
+LiquidSink    PUMPOUT()
+
+{ ---- Loads (thermal-mass states) ---- }
+MassGen BATT(C=60000, Qgen=4000, T0=305)
+MassGen MOTOR(C=40000, Qgen=5000, T0=305)
+MassGen CABIN(C=8000,  Qgen=2500, T0=305)
+
+{ ---- Refrigerant line (R1234yf) ---- }
+LiqFeed       FEED(fluid$=R1234yf, P=350000, x=0.20)
+EvapSH        CHLR(fluid$=R1234yf, UA=300, SH=5)
+EvapSH        CABE(fluid$=R1234yf, UA=130, SH=8)
+TwoPhaseMixer SUC()
+Compressor    CMP(fluid$=R1234yf, eta=0.7)
+CondFloatUA   COND(fluid$=R1234yf, UA=1500, Tamb=313)
+TwoPhaseSink  LIQ()
+
+{ coolant network: pump -> wide-branch split -> branches -> collect -> radiator }
+connect(PUMPIN.out, PUMP.in)
+connect(PUMP.out, OBAT.in, OMOT.in)
+connect(OBAT.out, BCP.in)
+connect(BCP.wall, BATT.port)
+connect(BCP.out, CHLC.in)
+connect(CHLC.out, MIX.in1)
+connect(OMOT.out, MCP.in)
+connect(MCP.wall, MOTOR.port)
+connect(MCP.out, MIX.in2)
+connect(MIX.out, RAD1.in)
+connect(RAD1.out, OR1.in)
+connect(OR1.out, RAD2.in)
+connect(RAD2.out, OR2.in)
+connect(OR2.out, RAD3.in)
+connect(RAD3.out, OR3.in)
+connect(OR3.out, PUMPOUT.in)
+connect(AMB.port, RAD1.wall, RAD2.wall, RAD3.wall)
+PUMPOUT.in.P = 200000
+
+{ refrigerant network: feed -> wide-branch split -> evaporators -> collect -> compressor }
+connect(FEED.out, CHLR.in, CABE.in)
+connect(CHLR.out, SUC.in1)
+connect(CABE.out, SUC.in2)
+connect(SUC.out, CMP.in)
+connect(CMP.out, COND.in)
+connect(COND.out, LIQ.in)
+connect(CABE.wall, CABIN.port)
+
+{ CROSS-DOMAIN BRIDGE: chiller refrigerant evaporator wall <-> coolant chiller }
+connect(CHLR.wall, CHLC.wall)
+
+{ steady operating point — full compressor capacity }
+CHLR.frac = 1
+CABE.frac = 1
+
+{ Transient pull-down: delete the two frac lines above and wrap a ramp in a
+  DYNAMIC block (the storage states integrate; the steady point is the limit):
+
+    DYNAMIC ev (method = ida, time = 0 .. 600, points = 1201)
+      CHLR.frac = 0.05 + 0.95 * min(time/5, 1)
+      CABE.frac = 0.05 + 0.95 * min(time/5, 1)
+    END }`,
+  },
+  {
     id: 'pump-sizing',
     title: 'Pump Sizing',
     description: 'Hydraulic and shaft power from flow rate, head, and efficiency.',
