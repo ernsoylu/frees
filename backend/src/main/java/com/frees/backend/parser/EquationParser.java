@@ -218,7 +218,13 @@ public final class EquationParser {
         // become that block's algebraic+state body and the init(...) lines its
         // initial conditions, so the same component layer runs under the ODE
         // engine (the per-step algebraic solve resolves the network at each state).
-        List<com.frees.backend.ast.DynamicSystem> dynamicSystems = programResult.dynamicSystems();
+        // DYNAMIC body equations referencing component vars (e.g. a time-scheduled
+        // input RIN.out.mdot = f(time)) carry dotted refs that the top-level rewrite
+        // above does NOT touch (the body lives inside the DYNAMIC block, not the
+        // statement list). Rewrite them to flat names so they unify with the
+        // expanded component bodies — otherwise the port var is left free.
+        List<com.frees.backend.ast.DynamicSystem> dynamicSystems =
+                rewriteDynamicBodies(components, programResult.dynamicSystems());
         if (components.hasStorage()) {
             if (dynamicSystems.isEmpty()) {
                 // Steady/transient duality (§8.2): with no DYNAMIC block the same
@@ -258,6 +264,45 @@ public final class EquationParser {
      * the block body, and component {@code init(...)} lines extend its initial
      * conditions. Exactly one DYNAMIC block must supply the time span / method.
      */
+    /**
+     * Rewrites each DYNAMIC block's body equations (and initial-value / event-guard
+     * expressions) so dotted component references resolve to flat solver names —
+     * the same rewrite top-level statements get. This lets a transient model drive
+     * an acausal component with a scheduled/controlled input written in the DYNAMIC
+     * body (e.g. {@code RIN.out.mdot = mdot_max * min(time/t_ramp, 1)}). Bodies with
+     * no component references (pure ODEs) and empty bodies (storage-routed networks)
+     * are returned unchanged.
+     */
+    private List<com.frees.backend.ast.DynamicSystem> rewriteDynamicBodies(
+            ComponentExpander components, List<com.frees.backend.ast.DynamicSystem> systems) {
+        if (systems.isEmpty()) {
+            return systems;
+        }
+        List<com.frees.backend.ast.DynamicSystem> out = new ArrayList<>(systems.size());
+        for (com.frees.backend.ast.DynamicSystem ds : systems) {
+            List<Equation> body = new ArrayList<>(ds.bodyEquations().size());
+            for (Equation eq : ds.bodyEquations()) {
+                body.add(components.rewriteTopEquation(eq));
+            }
+            List<com.frees.backend.ast.DynamicSystem.InitialCondition> inits =
+                    new ArrayList<>(ds.initials().size());
+            for (com.frees.backend.ast.DynamicSystem.InitialCondition ic : ds.initials()) {
+                inits.add(new com.frees.backend.ast.DynamicSystem.InitialCondition(
+                        ic.state(), ic.indices(), components.rewriteTopExpr(ic.value())));
+            }
+            List<com.frees.backend.ast.DynamicSystem.Event> events =
+                    new ArrayList<>(ds.events().size());
+            for (com.frees.backend.ast.DynamicSystem.Event ev : ds.events()) {
+                events.add(new com.frees.backend.ast.DynamicSystem.Event(
+                        ev.name(), components.rewriteTopExpr(ev.lhs()), components.rewriteTopExpr(ev.rhs()),
+                        ev.direction(), ev.action()));
+            }
+            out.add(new com.frees.backend.ast.DynamicSystem(
+                    ds.name(), ds.options(), body, ds.forBlocks(), inits, events, ds.sourceText()));
+        }
+        return out;
+    }
+
     private List<com.frees.backend.ast.DynamicSystem> routeStorageIntoDynamic(
             List<Equation> componentEquations,
             List<com.frees.backend.ast.DynamicSystem.InitialCondition> componentInitials,

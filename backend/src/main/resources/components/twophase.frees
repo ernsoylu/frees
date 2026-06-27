@@ -312,7 +312,7 @@ COMPONENT TwoPhasePipe(in, out)
 END
 
 COMPONENT TXVSuperheat(in, out, bulb)
-  PARAM fluid$, Kv, SH_set
+  PARAM fluid$, Kv, SH_set, domain$ = twophase
   out.mdot  = in.mdot
   out.h     = in.h
   bulb.Qdot = 0
