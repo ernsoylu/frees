@@ -656,6 +656,11 @@ public final class UnitChecker {
             // Two-phase flow: the Martinelli parameter and its multiplier are
             // both dimensionless (quality / property-ratio arguments unpoliced).
             case "lm_phi2", "lm_martinelli_tt" -> Dim.of(Quantity.dimensionless(1.0));
+            // Void fraction and the Friedel multiplier are dimensionless; the
+            // momentum flux is a pressure [Pa] (quality/property arguments unpoliced).
+            case "void_homogeneous", "void_zivi", "void_rouhani", "friedel_phi2" ->
+                    Dim.of(Quantity.dimensionless(1.0));
+            case "momentum_flux" -> eosDim("Pa");
             // ISA standard atmosphere: SI property units (altitude argument unpoliced).
             case "isa_t" -> eosDim("K");
             case "isa_p" -> eosDim("Pa");

@@ -126,6 +126,11 @@ public class FunctionRegistry {
             // Two-phase flow (Lockhart-Martinelli / Chisholm — Phase C)
             new FunctionInfo("lm_phi2", "lm_phi2(X, C)", "Chisholm two-phase multiplier 1+C/X+1/X^2 on the liquid-alone drop", "Two-Phase Flow"),
             new FunctionInfo("lm_martinelli_tt", "lm_martinelli_tt(x, rho_l, rho_g, mu_l, mu_g)", "Turbulent-turbulent Martinelli parameter X_tt", "Two-Phase Flow"),
+            new FunctionInfo("void_homogeneous", "void_homogeneous(x, rho_l, rho_g)", "Homogeneous (no-slip) void fraction", "Two-Phase Flow"),
+            new FunctionInfo("void_zivi", "void_zivi(x, rho_l, rho_g)", "Zivi void fraction (slip S=(rho_l/rho_g)^(1/3))", "Two-Phase Flow"),
+            new FunctionInfo("void_rouhani", "void_rouhani(x, rho_l, rho_g, G, sigma)", "Rouhani-Axelsson drift-flux void fraction (default)", "Two-Phase Flow"),
+            new FunctionInfo("friedel_phi2", "friedel_phi2(x, rho_l, rho_g, mu_l, mu_g, G, D, sigma)", "Friedel two-phase frictional multiplier on the liquid-only drop", "Two-Phase Flow"),
+            new FunctionInfo("momentum_flux", "momentum_flux(x, rho_l, rho_g, alpha, G)", "Separated-flow momentum flux [Pa] (accel. dP = out-in)", "Two-Phase Flow"),
 
             // Standard atmosphere (ISA 1976 — Phase G)
             new FunctionInfo("isa_t", "isa_T(alt)", "ISA 1976 temperature [K] at geopotential altitude [m]", "Atmosphere"),
