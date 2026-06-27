@@ -26,8 +26,8 @@ class LiquidDomainTest {
     @Test
     void splitLibraryLoadsAllDomainsIncludingLiquid() {
         var names = ComponentLibrary.builtins().stream().map(c -> c.name()).toList();
-        // 90 pre-existing + 7 liquid (L) + 4 twophase foundation (T0) + 4 twophase cycle (T1)
-        assertEquals(105, names.size(), "built-in component count after the per-domain split");
+        // 90 base + 7 liquid (L) + 4 twophase foundation (T0) + 4 cycle (T1) + 4 charge (T2)
+        assertEquals(109, names.size(), "built-in component count after the per-domain split");
         // built-in names are stored lowercased (the language is case-insensitive)
         assertTrue(names.containsAll(java.util.List.of(
                 "liquidsource", "liquidsink", "liquidpump", "liquidpipe",
