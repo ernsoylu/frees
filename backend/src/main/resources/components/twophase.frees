@@ -62,6 +62,50 @@ COMPONENT TwoPhaseFlowRes(in, out)
   out.P    = in.P - phi2 * dP_lo
 END
 
+// ── Moving-boundary / few-cell primitives (Phase T3) ──────────────────────
+// Capacitive control volume (C) for the C-R-C staggered grid: a pressure state
+// der(in.P) with a compliance C (≈ V·∂ρ̄/∂P) and void-weighted charge m = V·ρ̄.
+// Alternating TwoPhaseVolume (C) ⟷ TwoPhaseFlowRes (R) builds a few-cell
+// distributed model; storage der()/init() route into a DYNAMIC block and
+// integrate on the S1 SUNDIALS-IDA path (method = ida). The never-C-C rule keeps
+// the DAE index-1.
+COMPONENT TwoPhaseVolume(in, out)
+  PARAM fluid$, V, C, P0, domain$ = twophase
+  out.P       = in.P
+  out.h       = in.h
+  der(in.P)   = (in.mdot - out.mdot) / C
+  init(in.P)  = P0
+  hf          = Enthalpy(fluid$, P=in.P, x=0)
+  hg          = Enthalpy(fluid$, P=in.P, x=1)
+  x           = (in.h - hf) / (hg - hf)
+  rho_l       = Density(fluid$, P=in.P, x=0)
+  rho_g       = Density(fluid$, P=in.P, x=1)
+  alpha       = void_zivi(x, rho_l, rho_g)
+  rho_mix     = alpha * rho_g + (1 - alpha) * rho_l
+  m           = V * rho_mix
+END
+
+// Pressure reservoir: fixes pressure (and inlet enthalpy via quality), mass flow
+// FREE — the boundary a C-R-C network needs (a fixed-ṁ source would clash with a
+// volume's pressure state).
+COMPONENT TwoPhasePressureSource(out)
+  PARAM fluid$, P, x, domain$ = twophase
+  out.P = P
+  out.h = Enthalpy(fluid$, P=P, x=x)
+END
+
+// Fixed-pressure outlet reservoir (mass flow / enthalpy free).
+COMPONENT TwoPhasePressureSink(in)
+  PARAM P, domain$ = twophase
+  in.P = P
+END
+
+// Closed (dead-end) cap: zero through-flow.
+COMPONENT TwoPhaseCap(in)
+  PARAM domain$ = twophase
+  in.mdot = 0
+END
+
 // ── Refrigerant charge inventory (Phase T2) ───────────────────────────────
 // Charge mass in a two-phase volume is M = V·ρ̄, with the void-weighted density
 // ρ̄ = α·ρ_g + (1−α)·ρ_l (α from the §3 slip void model — NOT CoolProp's no-slip
