@@ -7,6 +7,11 @@ import com.frees.backend.ast.Expr;
 import com.frees.backend.ast.ProcDef;
 import com.frees.backend.ast.Statement;
 import com.frees.backend.core.SolverException;
+import com.frees.backend.core.dae.DaeAssembly;
+import com.frees.backend.core.dae.DaeResidual;
+import com.frees.backend.core.dae.DaeRootFn;
+import com.frees.backend.core.dae.IdaDaeSolver;
+import com.frees.backend.core.dae.SundialsIda;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -162,6 +167,9 @@ public final class DynamicSolver {
 
     public OdeTableResult solve() {
         classify();
+        if (isIdaMethod(system.options().method())) {
+            return solveWithIda();
+        }
         // Cap the step (default span/100) so the adaptive controller cannot grow
         // a single step large enough to step over an event — e.g. a high-altitude
         // near-vacuum coast where the dynamics are smooth would otherwise let one
@@ -173,6 +181,256 @@ public final class DynamicSolver {
                 o.rtol(), o.atol(), maxStep, buildEvents(), deadlineNanos);
         OdeResult result = new OdeIntegrator().integrate(problem);
         return buildTable(result);
+    }
+
+    // ── SUNDIALS IDA DAE path (Phase S1) ─────────────────────────────────────
+
+    /** Above this dimension the IDA path switches from dense to KLU sparse. */
+    private static final int SPARSE_THRESHOLD = 24;
+
+    static boolean isIdaMethod(String method) {
+        if (method == null) {
+            return false;
+        }
+        return switch (method.toLowerCase()) {
+            case "ida", "idas", "ida15s", "dae" -> true;
+            default -> false;
+        };
+    }
+
+    /**
+     * Assembles this classified {@code DYNAMIC} block into an implicit DAE
+     * {@code F(t,y,y')=0} for SUNDIALS IDA. The state vector is {@code y =
+     * [states ; auxiliaries]}; each reified {@code der$X} maps to
+     * {@code y'[stateIndex(X)]}, so every equation of {@link #algebraicTemplate}
+     * becomes one residual and the system is square and index-1. Auxiliary and
+     * derivative initial guesses are seeded from a single inner algebraic solve at
+     * {@code t0} where possible (IDA's {@code IDACalcIC} then makes them
+     * consistent); a failure there leaves zeros for IDA to resolve.
+     */
+    public DaeAssembly assembleDae() {
+        if (states.isEmpty()) {
+            classify();
+        }
+        int ns = states.size();
+        int n = ns + auxNames.size();
+        if (algebraicTemplate.size() != n) {
+            throw new SolverException("DYNAMIC " + system.name() + ": DAE assembly is non-square ("
+                    + algebraicTemplate.size() + " equations for " + n + " unknowns).");
+        }
+
+        List<String> variables = new ArrayList<>(states);
+        variables.addAll(auxNames);
+        Map<String, Integer> column = new HashMap<>();
+        for (int k = 0; k < variables.size(); k++) {
+            column.put(variables.get(k), k);
+        }
+
+        double[] id = new double[n];
+        for (int k = 0; k < ns; k++) {
+            id[k] = 1.0; // differential
+        }
+
+        List<Equation> template = new ArrayList<>(algebraicTemplate);
+        DaeResidual residual = (t, y, yp, res) -> {
+            Map<String, Double> v = daeValues(t, y, yp);
+            for (int i = 0; i < template.size(); i++) {
+                Equation eq = template.get(i);
+                res[i] = Evaluator.eval(eq.lhs(), v, defs) - Evaluator.eval(eq.rhs(), v, defs);
+            }
+        };
+
+        double[] y0full = new double[n];
+        double[] yp0full = new double[n];
+        System.arraycopy(y0, 0, y0full, 0, ns);
+        try {
+            Map<String, Double> seed = solveAlgebraicAt(system.options().t0(), y0);
+            for (int k = 0; k < ns; k++) {
+                yp0full[k] = seed.getOrDefault(derVar(states.get(k)), 0.0);
+            }
+            for (int j = 0; j < auxNames.size(); j++) {
+                y0full[ns + j] = seed.getOrDefault(auxNames.get(j), 0.0);
+            }
+        } catch (RuntimeException ignored) {
+            // IDACalcIC will resolve the auxiliaries / derivatives from zeros.
+        }
+
+        int[][] sparsity = buildSparsity(template, column, ns);
+        DaeRootFn rootFn = buildRootFn();
+        List<String> eventNames = new ArrayList<>();
+        List<Boolean> stops = new ArrayList<>();
+        for (DynamicSystem.Event ev : system.events()) {
+            eventNames.add(ev.name());
+            stops.add("stop".equals(ev.action()));
+        }
+        boolean[] eventStops = new boolean[stops.size()];
+        for (int i = 0; i < stops.size(); i++) {
+            eventStops[i] = stops.get(i);
+        }
+
+        return new DaeAssembly(n, variables, new ArrayList<>(states), new ArrayList<>(auxNames),
+                id, residual, y0full, yp0full, sparsity,
+                eventNames.isEmpty() ? null : rootFn, eventNames, eventStops);
+    }
+
+    /** Builds the name→value map for the DAE residual/roots: params, time, states
+     *  (y), auxiliaries (y), and each {@code der$X} bound to {@code y'[idx(X)]}. */
+    private Map<String, Double> daeValues(double t, double[] y, double[] yp) {
+        Map<String, Double> v = new HashMap<>(analyticValues);
+        v.put(timeVar, t);
+        int ns = states.size();
+        for (int k = 0; k < ns; k++) {
+            v.put(states.get(k), y[k]);
+            v.put(derVar(states.get(k)), yp[k]);
+        }
+        for (int j = 0; j < auxNames.size(); j++) {
+            v.put(auxNames.get(j), y[ns + j]);
+        }
+        return v;
+    }
+
+    /** Per-row column dependency lists: a variable hits its own column; a
+     *  {@code der$X} reference hits state X's column (the {@code ∂F/∂y'} term
+     *  shares the column with {@code ∂F/∂y} in IDA's combined system matrix). */
+    private int[][] buildSparsity(List<Equation> template, Map<String, Integer> column, int ns) {
+        int[][] sparsity = new int[template.size()][];
+        for (int i = 0; i < template.size(); i++) {
+            java.util.TreeSet<Integer> cols = new java.util.TreeSet<>();
+            Equation eq = template.get(i);
+            addColumns(eq.lhs(), column, ns, cols);
+            addColumns(eq.rhs(), column, ns, cols);
+            int[] arr = new int[cols.size()];
+            int c = 0;
+            for (int col : cols) {
+                arr[c++] = col;
+            }
+            sparsity[i] = arr;
+        }
+        return sparsity;
+    }
+
+    private void addColumns(Expr e, Map<String, Integer> column, int ns, java.util.Set<Integer> cols) {
+        for (String var : e.variables()) {
+            Integer col = column.get(var);
+            if (col != null) {
+                cols.add(col);
+            } else if (var.startsWith("der$")) {
+                Integer sc = column.get(var.substring("der$".length()));
+                if (sc != null && sc < ns) {
+                    cols.add(sc);
+                }
+            }
+        }
+    }
+
+    private DaeRootFn buildRootFn() {
+        if (system.events().isEmpty()) {
+            return null;
+        }
+        List<Expr> lhs = new ArrayList<>();
+        List<Expr> rhs = new ArrayList<>();
+        for (DynamicSystem.Event ev : system.events()) {
+            lhs.add(substituteDer(ev.lhs()));
+            rhs.add(substituteDer(ev.rhs()));
+        }
+        return (t, y, yp, gout) -> {
+            Map<String, Double> v = daeValues(t, y, yp);
+            for (int r = 0; r < lhs.size(); r++) {
+                gout[r] = Evaluator.eval(lhs.get(r), v, defs) - Evaluator.eval(rhs.get(r), v, defs);
+            }
+        };
+    }
+
+    private OdeTableResult solveWithIda() {
+        if (!SundialsIda.isAvailable()) {
+            throw new SolverException("DYNAMIC " + system.name() + ": method '"
+                    + system.options().method() + "' needs the SUNDIALS IDA native library. "
+                    + "Set the SUNDIALS_LIBRARY environment variable (and put its dependencies on "
+                    + "LD_LIBRARY_PATH), or pick a built-in method (ode45/ode23s/ode15s).");
+        }
+        DaeAssembly dae = assembleDae();
+        DynamicSystem.Options o = system.options();
+        int points = o.points() != null ? o.points() : DynamicSystem.Options.DEFAULT_POINTS;
+        double[] times = linspace(o.t0(), o.tf(), points);
+
+        List<String> columns = new ArrayList<>();
+        columns.add(timeVar);
+        columns.addAll(states);
+        columns.addAll(auxNames);
+        List<List<Double>> rows = new ArrayList<>();
+        List<OdeTableResult.EventHit> hits = new ArrayList<>();
+
+        try (IdaDaeSolver s = new IdaDaeSolver(dae.n(), dae.residual())) {
+            s.setTolerances(o.rtol(), o.atol());
+            s.setVariableId(dae.id());
+            if (dae.eventCount() > 0) {
+                s.setRoots(dae.eventCount(), dae.rootFn());
+            }
+            // Engage KLU sparse only where it pays (many-cell distributed models);
+            // small lumped/few-cell networks stay on the dense solver.
+            if (dae.n() > SPARSE_THRESHOLD) {
+                s.setSparsity(dae.sparsity());
+            }
+            s.init(o.t0(), dae.y0(), dae.yp0());
+            double span = o.tf() - o.t0();
+            s.calcConsistentIc(SundialsIda.IDA_YA_YDP_INIT, o.t0() + span * 1e-3);
+            rows.add(rowOf(o.t0(), s.currentState()));
+
+            for (int i = 1; i < times.length; i++) {
+                double tout = times[i];
+                IdaDaeSolver.Step step = advanceTo(s, tout, dae, hits);
+                if (step == null) { // a stop event fired
+                    double tStop = hits.get(hits.size() - 1).time();
+                    rows.add(rowOf(tStop, s.currentState()));
+                    return new OdeTableResult(system.name(), columns, rows, hits,
+                            o.method(), true, tStop);
+                }
+                rows.add(rowOf(tout, step.y()));
+            }
+        }
+        return new OdeTableResult(system.name(), columns, rows, hits, o.method(), false, o.tf());
+    }
+
+    /** Integrates to {@code tout}, recording any non-stop root crossings and
+     *  continuing; returns {@code null} if a stop event fired. */
+    private IdaDaeSolver.Step advanceTo(IdaDaeSolver s, double tout, DaeAssembly dae,
+                                        List<OdeTableResult.EventHit> hits) {
+        while (true) {
+            IdaDaeSolver.Step step = s.step(tout);
+            if (step.rootReturn()) {
+                int[] found = step.rootsFound();
+                for (int r = 0; r < found.length; r++) {
+                    if (found[r] != 0) {
+                        hits.add(new OdeTableResult.EventHit(dae.eventNames().get(r), step.t()));
+                        if (dae.eventStops()[r]) {
+                            return null;
+                        }
+                    }
+                }
+                if (step.t() >= tout) {
+                    return step;
+                }
+                continue;
+            }
+            return step;
+        }
+    }
+
+    private List<Double> rowOf(double t, double[] y) {
+        List<Double> row = new ArrayList<>(y.length + 1);
+        row.add(t);
+        for (double v : y) {
+            row.add(v);
+        }
+        return row;
+    }
+
+    private static double[] linspace(double a, double b, int n) {
+        double[] g = new double[Math.max(n, 2)];
+        for (int i = 0; i < g.length; i++) {
+            g[i] = a + (b - a) * i / (g.length - 1);
+        }
+        return g;
     }
 
     // ── Structural classification ───────────────────────────────────────────

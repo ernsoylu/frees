@@ -8,6 +8,20 @@
 
 > **Note on prior work.** frEES already ships a complete acausal multi-domain component layer (~90 components: fluid/cycle, pneumatic, hydraulic, electrical/battery, fuel cell, mechanical/powertrain, humid-air HVAC, gas-mixture) with **strict connector-domain separation** (`domain$` typing: `fluid`/`gas`/`oil`/`moistair`). That shipped record lives in `README.md`, `CLAUDE.md`, and git history. This document replaces the prior forward plan and focuses **only** on the two-phase / refrigeration re-architecture.
 
+> **STATUS — SPEC LOCKED (advisory board ratified, two rounds).** The architecture below is approved for build. Round-1 drove four binding revisions, folded in throughout: **(1)** the solver core is promoted to the **first** phase (**S1**), a hard prerequisite for the two-phase physics — sequence is **S1 → L → T0 → T1 → T2 → AC → T3** (§7); **(2)** the `twophase` connector is **slimmed to `(P, ṁ, h)`** — `x`/`α`/SH/SC are derived locally, *not* carried as riders (§2.2); **(3)** a **two-tier zero-crossing strategy** (smooth-regularize the high-frequency crossings, true-rootfind only structural events) is adopted (§4.8); **(4)** all six open questions are resolved (§10).
+>
+> **Round-2 (critics 3 & 4) decisions, folded in:** **(5)** **Phase S1 wraps SUNDIALS IDA via JNI** (reusing the existing CoolProp native bridge) rather than hand-rolling a BDF — IDA supplies variable-order BDF, `IDARootFind` events, `IDACalcIC` consistent init, KLU sparse (§7-S1); **(6)** a **hard expander rule `never C-C, always C-R-C`** keeps the DAE index-1 (§2.2); **(7)** the void-fraction `corr$` is **branch-wide inherited**, not per-component, to prevent phantom charge at junctions (§3, §10-Q2); **(8)** the property layer treats **supercritical as a first-class region** (R744 transcritical is normal, not an edge case) with a near-critical safe-fallback (§7-S1); **(9)** a floored moving-boundary zone zeroes its **storage term** (true passthrough, no phantom mass) and is **state-pruned from `LINEARIZE`** (§4.8); **(10)** `fluid → liquid/twophase` is a **hard migration + codemod**, no legacy mode (§10-Q1).
+>
+> **BUILD STATUS — Phase S1 COMPLETE & validated (against SUNDIALS v6.4.1 + KLU).** The full solver core is implemented, wired, and green:
+> - **`props/PhPropertyTable`** — globally-C¹ bicubic-Hermite `(P,h)` table with **analytic** ∂/∂P, ∂/∂h (the §4.8 Tier-1 saturation smoothing baked into the same derivative path), a CoolProp grid builder over subcooled/two-phase/superheated/**supercritical**, near-critical NaN safe-fallback (tested incl. an R744 transcritical sweep).
+> - **`core/dae/SundialsIda`** — JNA binding to SUNDIALS IDA. Targets the **≥6 `SUNContext` API** and *probes for `SUNContext_Create`* so a pre-6 lib (e.g. MATLAB's bundled v5) is correctly rejected rather than crashing at init; degrades gracefully when absent, exactly like `CoolProp`. The optional **sparse-matrix + KLU** factories are bound through their own library handles (they're not NEEDED-deps of `libsundials_ida`).
+> - **`core/dae/IdaDaeSolver`** — closure wrapper: `DaeResidual`/`DaeRootFn`, `IDACalcIC` consistent-init, mode-frozen `IDAReInit`, `IDARootInit` events, **dense or KLU-sparse** linear solver (auto-falls back to dense if KLU absent).
+> - **`core/dae/DaeAssembly` + `DynamicSolver.assembleDae()`** — assembles the expanded scalar `DYNAMIC` system into the implicit DAE `F(t,y,y')=0`: `y=[states;aux]`, `der$X→y'[idx(X)]`, **`IDASetId` differential/algebraic vector** from the `C-R-C` structure, and the **combined-Jacobian sparsity pattern**. `method = ida` routes a `DYNAMIC` block through IDA (KLU above a size threshold); aux become true DAE unknowns (no inner Newton).
+> - **`core/dae/DaeJacobian`** — FD assembly of `J = ∂F/∂y + cj·∂F/∂y'` (single-perturbation column trick), reused by the KLU CSC Jacobian callback.
+> - **Deployability** — `backend/Dockerfile` now installs `libsundials-dev` (v6) so the deployed backend has the IDA stack.
+>
+> **Validation:** full backend suite green; with `libsundials-dev` v6.4.1 installed, all IDA tests run for real (0 skipped) — index-1 DAE, root event at `t=ln2`, reinit continuation, **KLU sparse path**, and end-to-end `method=ida` DYNAMIC solves matching the analytic Newton-cooling reference. Next action: **Phase L**.
+
 ---
 
 ## 0. Motivation & grounding (what the investigation found)
@@ -25,12 +39,12 @@ A component-level investigation of the Amesim libraries (`~/dev/sampleCodes`) es
 ## 1. Executive summary
 
 - **Today:** one generic thermofluid connector type (`fluid`) carrying `(P, ṁ, h)`. Refrigeration components (`Compressor`, `Boiler`, `Condenser`, `ExpansionValve`, `TXVSuperheat`, `ThreeZoneHX`, …) are built directly on it. There is **no** vapor-quality/void rider, **no** void fraction, **no** charge inventory, **no** boiling/condensing heat-transfer correlations, **no** refrigerant-side ΔP across heat exchangers (all isobaric), and **no** capacitive/resistive volume primitives. Results are design-point-only and optimistic.
-- **Proposed:** split the thermal working-fluid handling into a **`liquid`** domain and a **`twophase`** domain; give the two-phase domain a richer rider set (`x`, `α`, SH/SC) and a constitutive-correlation library (void fraction, two-phase ΔP, boiling/condensing HT); add **C/R volume + flow primitives**; scope a **refrigerant-charge inventory** constraint to two-phase volumes; and build the **AC application package** (unified evaporator/boiler, condenser, compressor, pump, Cv orifice, 4-quadrant TXV, EXV, receiver, chiller, air coil) on top — interoperable with the two-phase primitives and coupling to liquid/air loops via HX bridges.
+- **Proposed:** split the thermal working-fluid handling into a **`liquid`** domain and a **`twophase`** domain; keep the two-phase connector at `(P, ṁ, h)` and derive `x`/`α`/SH/SC **locally** (§2.2); add a constitutive-correlation library (void fraction, two-phase ΔP, boiling/condensing HT) and **C/R volume + flow primitives**; scope a **refrigerant-charge inventory** constraint to two-phase volumes; and build the **AC application package** (unified evaporator/boiler, condenser, compressor, pump, Cv orifice, 4-quadrant TXV, EXV, receiver, chiller, air coil) on top — interoperable with the two-phase primitives and coupling to liquid/air loops via HX bridges.
 - **Headline modeling decisions for the board (detailed in §4):**
   1. **A boiler *is* an evaporator** — one two-phase heat-addition component: liquid/two-phase inlet → boils → superheated-vapor outlet, with regime-aware heat transfer. The condenser is its heat-rejection mirror.
   2. **Pumps and compressors stay distinct** — a pump does incompressible liquid work (`v·ΔP`); a compressor does real-vapor compression (`Δh_s/η`). Different machines, different domains/regions.
   3. **The two-phase orifice is a `Cv`/`CdA` mathematical relation**; on top of it we build a **4-quadrant-map TXV** and a **controlled EXV**.
-- **Numerics:** lumped and few-cell moving-boundary forms run on the existing `DYNAMIC` engine; a fully distributed (many-cell C/R) capability is gated on a stiff variable-order DAE integrator + fast property tables + sparse linear algebra (the "Tier B" solver investment, §7 Phase S).
+- **Numerics (revised — solver core comes FIRST):** the stiff variable-order **BDF DAE integrator with rootfinding**, **consistent-initialization** solve, and **bicubic `(P,h)` property tables with analytic derivatives** are **Phase S1**, a hard prerequisite — *not* a late "Tier B" add-on. The two-phase physics (T1–T3) are structurally undefined without them: the integrator and the event handler are the **same deliverable**, and a moving-boundary HX (T3) has no semantics without rootfinding + consistent re-init. The smoothing functions of §4.8 must be differentiated **analytically into the same derivative path** as the property tables — FD-smoothing under an analytic Jacobian lets the BDF step straight through the kink (board note).
 
 ---
 
@@ -48,10 +62,13 @@ A single-phase liquid working fluid for **coolant / water / glycol / oil / fuel*
 
 A phase-change-capable working fluid (**refrigerants R134a/R1234yf/R744/R290, steam**) that may be **subcooled liquid, two-phase mixture, or superheated/dry gas** — the state is determined from `(P, h)` via CoolProp, never assumed by the component. Connector type `domain$ = twophase`.
 
-- **Port / riders:** `(P, ṁ, h)` **+ vapor quality `x` + void fraction `α` + superheat/subcooling** carried as flow-coupled riders. Mechanism reuses the shipped moist-air rider machinery (`ComponentExpander.acrossMembersForNode` already adds a rider — `w` — across a tagged node; we add `x`/`α` for `twophase`).
+- **Port (slimmed — board ratified):** strictly `(P, ṁ, h)` — the **same three bond variables as `fluid`**; no quality/void/SH/SC riders. `x`, `α`, SH, SC are **algebraic functions of `(P, h)`** for a pure/azeotropic refrigerant (`x = (h−h_f(P))/(h_g(P)−h_f(P))`, `T = T_sat(P)`, `α` from a slip model), so they are computed **locally inside each component**, never transported. **Why not riders:** the moist-air `w` analogy is a *false friend* — `w` is an independent conserved *mass* (water) that must ride and be flow-weighted at junctions; two-phase `x` is a *dependent state*, and asserting a junction mixing rule for `α` (slip-/regime-dependent, defined inside an element) would be physically wrong. Keeping the connector at `(P, ṁ, h)` guarantees junctions stay a plain mass/enthalpy balance.
+- **Future opt-in — zeotropic glide:** for a multi-component *blend* (R407C, …) composition `z` **is** an independent rider; it slots into `ComponentExpander.acrossMembersForNode` exactly as moist-air `w` does. Designed for, out of scope now.
 - **Saturation coupling:** inside the dome, `T = T_sat(P)`; ΔP along an element therefore *glides* the temperature — the effect the current isobaric model misses.
+- **Four regions, supercritical first-class:** the property layer must resolve **subcooled / two-phase / superheated / supercritical** — for **R744 (CO₂) transcritical operation is the normal high-side mode, not an edge case**, so the trajectory routinely crosses the pseudo-critical line. The S1 `(P,h)` tables carry the supercritical region with a smooth pseudo-critical transition and a **near-critical safe-fallback** (CoolProp's Helmholtz EOS can fail/return non-physical derivatives right at the point) — see §7-S1 acceptance.
 - **Constitutive library:** §3.
-- **C/R primitives:** a **capacitive control volume** (`C` — holds `P, h` states, `der(mass)`/`der(energy)`, contributes `ρ(P,h,α)·V` to the charge) and a **resistive flow element** (`R` — two-phase frictional + acceleration ΔP). Alternating C/R builds lumped → few-cell → distributed models.
+- **C/R primitives:** a **capacitive control volume** (`C` — holds `P, h` states, `der(mass)`/`der(energy)`, contributes `ρ(P,h,α)·V` to the charge, with `α` computed locally) and a **resistive flow element** (`R` — two-phase frictional + acceleration ΔP). Alternating C/R builds lumped → few-cell → distributed models.
+- **Index discipline (hard expander rule): `never C-C, always C-R-C`.** Connecting two `C` volumes directly (both fixing `P` at the node) is the index-2 trap; the expander must reject it. With C-R-C alternation, charge-as-an-IC-invariant in transient (§4.6), and steady-state tearing, the constraint never enters the DAE and the system stays **index-1** — which is exactly the class SUNDIALS IDA handles robustly (§7-S1).
 
 ### 2.3 The AC application layer (on top of `twophase`)
 
@@ -84,7 +101,9 @@ The physics that turns the lumped calculator into an accurate system model. Each
 | **Single-phase HT (Nu)** | Dittus–Boelter · **Gnielinski** | 🟡 (have ε-NTU, not Nu) |
 | **Evaporator/condenser effectiveness** | ε-NTU ✅ · `Cr→0` evaporating/condensing limit | 🟡 |
 
-*Board question (§10 Q2): which default correlation per closure, and how many alternates are worth shipping vs. deferring?*
+**Void-fraction inheritance (board ratified):** the void model is selected **branch-/circuit-wide**, not per-component. Adjacent volumes on different slip models (e.g. evaporator on Rouhani-Axelsson, pipe on Zivi) give different `ρ(P,h)` at the *same* shared state → a density step → phantom charge accumulation in `M=Σρ·V`. So `corr$` for void is **inherited across a connected two-phase branch** by default; a per-component override is allowed only with an explicit flag (and is the user's responsibility for the resulting density discontinuity). Boiling/condensing HT and ΔP correlations may stay per-component (they don't feed the global charge integral).
+
+*Resolved (§10 Q2): defaults are Rouhani-Axelsson (void) / Chen (boil) / Shah (condense) / Lockhart-Martinelli+Friedel (ΔP), with alternates behind `corr$`.*
 
 ---
 
@@ -106,7 +125,7 @@ The mirror: **superheated vapor → condensing → subcooled liquid**, with desu
 ### 4.4 Expansion devices (on the two-phase domain)
 
 - **Two-phase orifice** — the base mathematical relation: `ṁ = Cv·f(ΔP, ρ_in)` / `CdA` form (isenthalpic), valid across flashing flow. Extends the shipped `ExpansionValve`/`Valve`.
-- **TXV — 4-quadrant map** — a thermostatic expansion valve whose opening is a **2-D characteristic map** of (superheat, pressure-drop) → flow area, covering the full operating envelope (the "4-quadrant" behaviour: bidirectional ΔP / opening-closing hysteresis envelope), with the bulb sensing evaporator-outlet superheat. Supersedes the shipped linear `TXVSuperheat`.
+- **TXV — quasi-static map + two dynamic states** — a static **2-D characteristic map** (superheat, ΔP) → flow area is the *quasi-static target*, but hysteresis/hunting requires **memory**, so the opening is governed by **two first-order states**: a **valve-opening lag** relaxing toward the map value, plus a **bulb thermal lag** (the bulb senses evaporator-outlet superheat through a time constant). A static map alone cannot produce hysteresis; a full spring-mass-damper is above the frEES band and would force micro-steps for a stiff mechanical mode — two first-order lags capture the dominant hunting dynamics at the right fidelity (board ratified). Supersedes the shipped linear `TXVSuperheat`.
 - **EXV (electronic expansion valve)** — a signal-controlled opening (step position → `CdA`), for controller-in-the-loop superheat/pressure control.
 
 ### 4.5 Accumulator / receiver (phase separation)
@@ -115,11 +134,30 @@ A two-phase volume that **separates liquid and vapor** (quality-split outlets), 
 
 ### 4.6 Refrigerant charge inventory
 
-A two-phase-scoped constraint `M_charge = Σ_i ρ_i(P, h, α)·V_i` over all two-phase volumes (with `α` from §3 void fraction). This **pins one extra DOF** — subcooling / receiver level — so **charge becomes an input** and 1.5 kg vs 0.75 kg produce different subcooling, condensing pressure, capacity, and COP (today they are indistinguishable). Result is sensitive to the void-fraction correlation (board question §10 Q3).
+A two-phase-scoped constraint `M_charge = Σ_i ρ_i(P, h, α)·V_i` over all two-phase volumes (with `α` from §3 void fraction). This **pins one extra DOF** — subcooling / receiver level — so **charge becomes an input** and 1.5 kg vs 0.75 kg produce different subcooling, condensing pressure, capacity, and COP (today they are indistinguishable).
+
+- **Numerics — tear, don't dense-block (board ratified).** In the **transient** formulation charge is **not** an algebraic constraint at all: each `C`-volume carries `der(mass)`, and total charge is a conserved **initial-condition invariant** (`Σ der(mass)=0`) — nearly free. Only the **steady** form needs the global `M=ΣρV` closure, and it is a **single scalar tear variable** (high-side pressure or receiver level). Tearing on that one variable keeps the Jacobian sparse/block-lower-triangular — the existing **Tarjan** blocker handles it as a small outer Newton loop and does **not** collapse the two-phase network into one dense block. Result remains sensitive to the void-fraction correlation (§10 Q3, resolved).
 
 ### 4.7 Pressure-drop realism (suction < evaporating pressure)
 
 With non-isobaric two-phase heat exchangers (§4.1/4.2) and explicit suction/discharge **lines** (two-phase `R` elements), the compressor suction pressure correctly falls **below** the evaporating pressure, the suction density drops, and capacity/COP come out realistically (the current model forces them equal — optimistic).
+
+### 4.8 Zero-crossing & event handling — two-tier strategy (board ratified)
+
+Two-phase transients (EV-chiller warm-up, load steps, EXV control) generate constant zero-crossings. The governing principle: **most "events" must not be events.** Separate continuous-but-nonsmooth steepness (regularize, integrate through) from genuine discrete structural change (rootfind, switch).
+
+**Tier 1 — smooth regularization, no integrator halt** (the high-frequency crossings):
+- **Saturation-line kinks** (`h` crossing `h_f(P)`/`h_g(P)`): `ρ(P,h)` and `∂ρ/∂h` are C⁰-but-not-C¹. Bake a narrow **C¹ Hermite/`tanh` blend** into the S1 bicubic property tables so the BDF integrates *through* the dome boundary as a steep-but-smooth region. **The smoothing's derivative must be analytic and live in the same path as the table derivatives** — FD-smoothing under an analytic Jacobian defeats the purpose (board note). Avoids thousands of useless per-cell event halts during warm-up.
+- **Flow reversal** (`ṁ→0`): replace the hard donor-cell switch with a **smoothed upwind** `h_conv = ½(h_up+h_dn) + ½·tanh(ṁ/ε)·(h_up−h_dn)`, and make the two-phase friction law **odd-symmetric with a laminar core** `ΔP = sign(ṁ)·f(|ṁ|)`, blended to `∝ṁ` below a small Re. The bare `|ṁ|^1.75`-type term has infinite/zero slope at the origin and stalls Newton — this is a common real failure and must be regularized explicitly.
+
+**Tier 2 — true state events (BDF rootfinding) + mode-frozen re-init** (structural changes only):
+- **Zone collapse** — the one genuinely structural event. Use **fixed-structure switched moving boundary** (Bonilla / Li–Alleyne / THERMOSYS lineage): keep **N zones always**, enforce a **minimum-length floor**, and ramp a collapsing zone's HT contribution to zero via `tanh(L_zone/ε)` so it becomes **inert**, not singular. One cheap state event per zone detects `L_zone` crossing `ε` and **clamps it at zero** (prevents negative); because the **state-vector size never changes**, the BDF history array stays valid and the post-event consistent-init solve is trivial (board note). This is far more robust than swapping 3-zone↔2-zone state vectors.
+  - **No phantom mass (board note):** the ramp must also zero the floored zone's **storage terms** (`der(mass)`/`der(energy)`), not just HT — otherwise a clamped-but-flowing zone fabricates/destroys enthalpy. A floored zone is a **true passthrough** (zero volume, mass/energy in = out), so mass and energy stay conserved across the collapse.
+- **Valve open/close** (TXV/EXV/check) — the other true events.
+- After any structural switch, restart via a **consistent-initialization solve with the discrete mode frozen** — the *same machinery* as cold-start init, so build it once in S1.
+
+**Linearization tie-in (`LINEARIZE` → `(A,B,C,D)`):** use a **frozen-mode FD Jacobian** — hold the discrete structure (zone counts, flow directions, valve states) fixed during the perturbation sweep, perturb only continuous states. Without it an FD step near a zone boundary flips a mode mid-sweep and corrupts the plant model. This is standard Dymola/Modelica fixed-structure linearization.
+- **Prune clamped states (board note):** a floored/inert zone's states are uncontrollable + unobservable; leaving them in produces a violently ill-conditioned `(A,B,C,D)` and an LQR/pole-placement design that chatters when stepped back into the nonlinear sim. **Drop clamped-zone states from the realization** (minimal, well-conditioned per-mode plant), and **warn if the operating point sits within a band of a zone boundary** — that's where any extracted LTI model is least trustworthy.
 
 ---
 
@@ -177,7 +215,7 @@ With non-isobaric two-phase heat exchangers (§4.1/4.2) and explicit suction/dis
 
 **The gaps this plan closes:**
 1. No `liquid` vs `twophase` separation → coolant and refrigerant indistinguishable in type.
-2. No `x`/`α` riders → can't track quality/void through a circuit.
+2. No local `x`/`α` derivation → can't track quality/void (or compute charge) through a circuit. (Resolved by local derivation on the slimmed `(P,ṁ,h)` connector, not riders — §2.2.)
 3. Isobaric heat exchangers → no refrigerant ΔP, no glide, suction = evaporating pressure.
 4. No void fraction → no charge inventory → 1.5 kg ≡ 0.75 kg.
 5. No boiling/condensing HT correlations → effectiveness is a single lump.
@@ -191,22 +229,25 @@ With non-isobaric two-phase heat exchangers (§4.1/4.2) and explicit suction/dis
 ## 7. Implementation plan (phased)
 
 > Each phase ends compilable + tested (unit + end-to-end), full suite green — the established frEES practice.
+> **Locked sequence: S1 → L → T0 → T1 → T2 → AC → T3.** S1 is a hard prerequisite (board ratified).
 
-**Phase L — Liquid domain (THH-equivalent).** Register `domain$ = liquid`; retag/refit single-phase components (`LiquidPump`/`Pipe`/`Volume`/`Source`/`Sink`, coolant properties, optional cavitation). *Acceptance:* a battery cold-plate coolant loop solves and is type-incompatible with a `twophase` line except through a HX. *Low risk.*
+**Phase S1 — Solver core (PREREQUISITE, build first).** **Wrap SUNDIALS IDA via JNI** (reuse the existing CoolProp native bridge — same toolchain), not a hand-rolled BDF. IDA supplies variable-order BDF, `IDARootFind` (Tier-2 events), `IDACalcIC` (consistent init, cold-start + mode-frozen post-event restart), and a **KLU sparse `SUNLinSol`** (so sparsity is in from day one — the old "Phase S2 sparse" mostly evaporates). The frEES-side work is the **interface**: residual `F(t,y,y')` assembly from the expanded scalar system, the Jacobian/sparsity pattern, event functions, and the **bicubic `(P,h)` property tables with analytic derivatives** covering all four regions (subcooled/two-phase/superheated/**supercritical**, §2.2) with the §4.8 Tier-1 smoothing (saturation Hermite/`tanh` blend, smoothed upwind, laminar-core friction) **baked into the analytic derivative path** (FD-smoothing under an analytic Jacobian defeats it) and a **near-critical safe-fallback**. Index stays 1 via the C-R-C rule (§2.2). *Acceptance:* a stiff two-phase toy model integrates through a saturation crossing and a flow reversal without halting; a forced zone-collapse triggers `IDARootFind` + clean `IDACalcIC` re-init with no phantom mass; an index-1 sanity case (closed C-R-C volume) integrates; property-table lookups + derivatives match CoolProp within tolerance (incl. an R744 transcritical sweep) and are orders faster than per-call CoolProp in a Jacobian. *High effort — the strategic core investment; gates all two-phase physics. Benefits every frEES transient.*
 
-**Phase T0 — Two-phase domain foundation.** Register `domain$ = twophase`; carry `x`/`α`/SH-SC riders (reuse moist-air machinery); two-phase `Source`/`Sink`/`Sensor`; **void-fraction** + **Friedel/acceleration ΔP** correlation functions (§3). *Acceptance:* quality/void propagate through a connected two-phase chain; ΔP glides `T_sat`. *Med risk (correlations).* **Gates everything below.**
+**Phase L — Liquid domain (THH-equivalent).** Register `domain$ = liquid`; retag/refit single-phase components (`LiquidPump`/`Pipe`/`Volume`/`Source`/`Sink`, coolant properties, optional cavitation). **Library reorganization (folded in here):** split the monolithic single-`SOURCE`-string `ComponentLibrary.java` into **per-domain frEES source files** (`resources/components/*.frees`: `liquid`, `twophase`, `ac`, plus the existing `fluid`/`pneumatic`/`hydraulic`/`moistair`/`electrical`/`mechanical`/… domains), loaded + concatenated into the **same parse-once, static-immutable `BUILTINS` registry** at startup. *Rationale:* maintainability/transparency as the two-phase/AC catalog grows — **not** memory (the library is ~tens of KB of text + a small AST list, parsed once and shared across all requests; lazy per-component loading saves nothing on a shared server and fights the inter-component reference graph, e.g. `Pump`→`Volume`). Runtime model unchanged: one immutable shared registry, no per-request cost, no dependency-resolution machinery. *Acceptance:* a battery cold-plate coolant loop solves and is type-incompatible with a `twophase` line except through a HX; the split library parses identically (same `BUILTINS` set, full suite green). *Low risk.*
+
+**Phase T0 — Two-phase domain foundation.** Register `domain$ = twophase` on the **slimmed `(P, ṁ, h)`** connector (no riders — §2.2); enforce the **`never C-C, always C-R-C`** expander rule; two-phase `Source`/`Sink`/`Sensor` (deriving `x`/`α`/SH/SC locally); **branch-wide-inherited void-fraction** + **Friedel/acceleration ΔP** correlation functions (§3). *Acceptance:* quality/void compute correctly along a connected two-phase chain; ΔP glides `T_sat`; a `C-C` connection is rejected with a clear error. *Med risk (correlations).* **Gates everything below.**
 
 **Phase T1 — Lumped two-phase components.** Rebuild on the domain: **unified `Evaporator`/`Boiler`** (regime-aware, non-isobaric), **`Condenser`**, retarget **`Compressor`** (vapor) and **`Pump`** (liquid), two-phase **orifice** (Cv, flashing-checked). *Acceptance:* a closed R134a loop reproduces a textbook cycle with refrigerant ΔP and a suction pressure **below** the evaporating pressure; COP drops vs the isobaric baseline. *Med risk.*
 
 **Phase T2 — Charge inventory.** Internal `V` on two-phase volumes; `M_charge = Σ ρ(P,h,α)V` constraint releasing subcooling/receiver level; **`Receiver`** with liquid/vapor split. *Acceptance:* sweeping charge (0.75↔1.5 kg) changes subcooling, condensing pressure, capacity; a receiver buffers the sensitivity. *Med risk (void-fraction sensitivity).*
 
-**Phase T3 — Moving-boundary / few-cell (C/R), Tier A.** `TwoPhaseVolume`(C) + `TwoPhaseFlowRes`(R) primitives; 3–5-zone moving-boundary `Evaporator`/`Condenser`; **boiling (Chen) / condensing (Shah, Cavallini)** Nu. *Acceptance:* distributed temperature glide along the coil; transient warm-up; charge migration. *Med-high risk; small N on existing `DYNAMIC`.*
+**Phase T3 — Moving-boundary / few-cell (C/R), Tier A.** `TwoPhaseVolume`(C) + `TwoPhaseFlowRes`(R) primitives; 3–5-zone **fixed-structure switched moving-boundary** `Evaporator`/`Condenser` (N zones always; min-length floor; `tanh(L/ε)` HT ramp; one zone-collapse state event per zone — §4.8 Tier 2); **boiling (Chen) / condensing (Shah, Cavallini)** Nu. Runs on the **S1** BDF + rootfinding + consistent-init (now available). *Acceptance:* distributed temperature glide along the coil; transient warm-up survives zone collapse without NaNs; charge migration. *Med-high risk; small N.*
 
 **Phase AC — Application package + bridges.** **`Chiller`** (twophase↔liquid), **`AirCoil`** (twophase↔moistair, sensible+latent), **`TXV`** (4-quadrant map + bulb), **`EXV`** (signal-controlled), geometry/`global-data` configuration helpers. *Acceptance:* a single-compressor evaporator-chiller cycle chills a coolant loop to a target supply temperature at a given battery load, at 1000 vs 2500 RPM, with realistic pressures and COP. *Med risk; depends T1–T2.*
 
-**Phase S — Solver enablers (Tier B), the distributed-fidelity gate.** Stiff variable-order **BDF** DAE integrator (WRMS norm, consistent init); **fast property tables** (bicubic on `(P,h)` from CoolProp, analytic derivatives); **sparse/banded** Newton. Plus zero-crossing **events** (phase/regime/flow-reversal). *Acceptance:* a 10–20-cell two-phase HX integrates robustly and fast; benefits every frEES transient. *High effort — the one strategic core investment; gates many-cell distributed models.*
+**Phase S2 — Distributed-scale tuning (Tier B, mostly absorbed into S1).** Since S1 ships IDA with a **KLU sparse** solver, the original "add sparse Newton" scope largely evaporates; S2 is now just **scaling/perf tuning** (sparsity-pattern reuse, Jacobian coloring, ordering) for many-cell (10–20+) two-phase HXs. *Acceptance:* a 10–20-cell two-phase HX integrates robustly and fast. *Optional — only when a distributed model is concretely required; lumped/few-cell (T1–T3) is the target band, §9.*
 
-**Suggested order:** L → T0 → T1 → T2 → AC (delivers the accurate EV-chiller result on lumped/charge-aware models) → T3/S (distributed fidelity, when justified).
+**Locked order:** **S1 first** (de-risks everything) → L → T0 → T1 → T2 → AC (delivers the accurate EV-chiller result on lumped/charge-aware models) → T3 (few-cell distributed fidelity) → S2 only if many-cell is concretely needed.
 
 ---
 
@@ -223,19 +264,21 @@ With non-isobaric two-phase heat exchangers (§4.1/4.2) and explicit suction/dis
 
 ## 9. Scope boundaries
 
-**In scope:** lumped + few-cell moving-boundary two-phase, charge-aware, correlation-based, on the acausal solver (+ `DYNAMIC`/stiff BDF). **Out of scope (Tier C / different product):** full many-cell 1-D finite-volume with per-cell momentum/acoustic dynamics (Amesim `libcfd1d` territory), geometry→UA from plate/fin counts, and stop-start event-heavy distributed dynamics at scale. frEES targets the **transparent, design-point-to-light-transient** band; a 20-cell FV HX is no longer hand-readable, which trades away frEES's core differentiator.
+**In scope:** lumped + few-cell moving-boundary two-phase, charge-aware, correlation-based, on the acausal solver (+ `DYNAMIC`/SUNDIALS-IDA). **Out of scope (Tier C / different product):** full many-cell 1-D finite-volume with per-cell momentum/acoustic dynamics (Amesim `libcfd1d` territory), geometry→UA from plate/fin counts, and stop-start event-heavy distributed dynamics at scale. frEES targets the **transparent, design-point-to-light-transient** band; a 20-cell FV HX is no longer hand-readable, which trades away frEES's core differentiator.
+
+**Explicit momentum ceiling (board note, critic 3).** The `(P, ṁ, h)` connector carries **no `der(ṁ)` fluid-inertia state**, so the model is capped at **thermally-dominated transients** — no water-hammer, valve-stroke acoustics, or cryogenic/aerospace feed-line dynamics, where fluid inertia defines the control problem. This is the deliberate ceiling. It is **deferrable, not architecturally precluded**: the C-R formalism can later carry an **inertance term** (`R` element with `L·der(ṁ)`), an additive change to the resistive primitive — not a re-architecture. Out of scope now.
 
 ---
 
-## 10. Open questions for the advisory board
+## 10. Open questions — RESOLVED (advisory board)
 
-1. **Migration:** hard-migrate the generic `fluid` domain into `liquid` + `twophase`, or keep `fluid` as a permissive alias? (back-compat vs strictness)
-2. **Correlations:** the default per closure (void: Rouhani vs Zivi? boiling: Chen? condensing: Shah vs Cavallini?), and how many alternates to ship.
-3. **Charge model:** is a lumped-volume + void-fraction inventory accurate enough for design decisions, given the void-fraction sensitivity — or is few-cell (T3) the minimum credible charge model?
-4. **TXV "4-quadrant":** confirm the intended characteristic (superheat × ΔP → area, with hysteresis envelope) and the data form (digitized map vs analytic).
-5. **Solver investment:** is the stiff-BDF + property-table + sparse work (Phase S) justified now, or do we cap at Tier A (few-cell, small N) until a distributed need is concrete?
-6. **Naming/positioning:** `liquid` + `twophase` as the public domain names (mirroring THH/TPF), and is the AC package a separate namespace or part of the standard library?
+1. **Migration → HARD MIGRATE, no permissive alias.** `fluid` splits into `liquid` + `twophase`; a permissive alias would let a refrigerant line connect to a coolant line silently and defeat the type split (consistent with the project's strict-over-warn stance). Soften *ergonomics* not the *type rule*: precise parser error (`Component 'Pipe' expects domain 'liquid', got 'twophase'`) + a one-shot migration codemod.
+2. **Correlations → ship defaults, expose a `corr$` selector.** Void: **Rouhani–Axelsson** default (orientation-aware) with Zivi/homogeneous alternates; boiling: **Chen** (Gungor–Winterton alternate); condensing: **Shah** (Cavallini–Zecchin alternate); ΔP: keep **Lockhart–Martinelli**, add Friedel. Closures stay decoupled interfaces (3-site fn pattern) so custom correlations can be injected later (e.g. cryogenic/aerospace fluids).
+3. **Charge model → lumped-volume + void-fraction inventory is sufficient for design/sizing; T3 (few-cell) is the minimum for dynamic EXV-control tuning.** Tear on a single scalar (high-side pressure / receiver level); in transient it's an IC invariant, not a constraint (§4.6).
+4. **TXV → quasi-static 2-D map + two first-order states** (valve-opening lag + bulb thermal lag); a static map cannot produce hysteresis, a full spring-mass-damper is above-band (§4.4). Data form: **digitized map** (reuse `Interpolate2D`/`TABLE`).
+5. **Solver investment → YES, now, and FIRST — via SUNDIALS IDA (JNI), not a hand-rolled BDF.** Round-2 (critics 3 & 4): wrap IDA over the existing CoolProp native bridge — variable-order BDF, `IDARootFind`, `IDACalcIC`, KLU sparse — as **Phase S1**, the prerequisite (§7-S1). frEES owns the interface (residual/Jacobian/event/property-table layer) and index control (`C-R-C`, §2.2). Sparse comes in S1 with KLU; S2 shrinks to perf-tuning.
+6. **Naming/positioning → `liquid` + `twophase` public domain names** (mirroring THH/TPF); **AC is a separate namespace** built on the `twophase` standard library (keeps base primitives uncluttered).
 
 ---
 
-*Appendix — Amesim mapping:* frEES `liquid` ↔ `libthh`; frEES `twophase` ↔ `libtpf` (`hflow` port: P, h, T, x, α, SH/SC; C/R primitives); frEES AC package ↔ `libac` (compressor/evap/cond/TXV/receiver + `TPF-THH` chiller + `TPF-GMMA` air coil). The board is asked to confirm this mapping is the right reference.
+*Appendix — Amesim mapping (board-confirmed reference):* frEES `liquid` ↔ `libthh`; frEES `twophase` ↔ `libtpf` (Amesim's `hflow` port carries P, h, T, x, α, SH/SC — **frEES deliberately slims its connector to `(P, ṁ, h)` and derives x/α/SH/SC locally**, §2.2; C/R primitives kept); frEES AC package ↔ `libac` (compressor/evap/cond/TXV/receiver + `TPF-THH` chiller + `TPF-GMMA` air coil).
