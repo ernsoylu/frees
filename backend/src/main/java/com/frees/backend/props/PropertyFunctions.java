@@ -186,7 +186,7 @@ public final class PropertyFunctions {
      * (Phase A consistent-state init). The reference-dependent enthalpy the
      * auto-seeder otherwise leaves at the 1.0 default makes CoolProp NaN inside a
      * closed loop (no source to propagate a real h), so the solve never starts.
-     * This inverts the fluid model exactly like the Amesim "type of
+     * This inverts the fluid model exactly like a commercial system-simulation tool's "type of
      * initialization" pattern: mid-dome {@code Q=0.5} for a condensable fluid,
      * falling back to {@code T≈300 K} for an incompressible/single-phase fluid.
      * Returns NaN if neither resolves (caller then leaves the default guess).
@@ -249,6 +249,80 @@ public final class PropertyFunctions {
 
     private record Input(String key, double value) {}
 
+    // --- transient property guarding (the IDA residual path) -----------------
+    // A stiff DAE corrector routinely probes states that briefly leave a fluid's
+    // valid (P,h) table box; CoolProp then throws, the IDA residual reports a
+    // recoverable error, and after enough repeats the march dies (IDASolve -9).
+    // When LENIENT is on (set ONLY around the transient residual eval, never the
+    // steady Newton), out-of-range arguments are clamped/sanitized and a finite
+    // fallback replaces a throw, so the corrector always gets a finite residual
+    // and can step back into the valid region. Inactive for in-range args, so
+    // converged results and the strict steady solver are unaffected.
+    private static final ThreadLocal<Boolean> LENIENT = ThreadLocal.withInitial(() -> Boolean.FALSE);
+
+    /** Enables lenient property evaluation on this thread; returns the prior state. */
+    public static boolean enterLenient() {
+        boolean prev = LENIENT.get();
+        LENIENT.set(Boolean.TRUE);
+        return prev;
+    }
+
+    /** Restores the lenient flag to {@code prev} (pair with {@link #enterLenient()} in a finally). */
+    public static void exitLenient(boolean prev) {
+        LENIENT.set(prev);
+    }
+
+    private static double finiteOr(double v, double fallback) {
+        return Double.isFinite(v) ? v : fallback;
+    }
+
+    private static double clamp(double v, double lo, double hi) {
+        return v < lo ? lo : (v > hi ? hi : v);
+    }
+
+    /** Clamps/sanitizes a CoolProp input to broad physical bounds (lenient mode only). */
+    private static Input sanitize(Input in) {
+        double v = in.value();
+        return switch (in.key()) {
+            case "P" -> new Input("P", clamp(finiteOr(v, 1e5), 1e3, 1e8));
+            case "T" -> new Input("T", clamp(finiteOr(v, 300.0), 150.0, 1500.0));
+            case "Q" -> new Input("Q", clamp(finiteOr(v, 0.5), 0.0, 1.0));
+            case "Hmass" -> new Input("Hmass", finiteOr(v, 2e5));
+            case "Smass" -> new Input("Smass", finiteOr(v, 1e3));
+            case "Umass" -> new Input("Umass", finiteOr(v, 2e5));
+            case "Dmass" -> new Input("Dmass", clamp(finiteOr(v, 10.0), 1e-3, 2e3));
+            default -> new Input(in.key(), finiteOr(v, 0.0));
+        };
+    }
+
+    /**
+     * PropsSI with the transient guard: clamp the inputs, try the call; on an
+     * out-of-table NaN, fall back to the SAME output at a safe reference state at
+     * the (clamped) pressure — mid-dome {@code Q=0.5}, then single-phase
+     * {@code T=300} — so the residual stays finite and continuous in pressure.
+     * Last resort returns a small finite value (never NaN/Inf).
+     */
+    private static double guardedPropsSI(String outputKey, Input a, Input b, String fluid) {
+        Input ca = sanitize(a);
+        Input cb = sanitize(b);
+        double v = CoolProp.propsSIOrNaN(outputKey, ca.key(), ca.value(), cb.key(), cb.value(), fluid);
+        if (Double.isFinite(v)) {
+            return v;
+        }
+        double p = "P".equals(ca.key()) ? ca.value() : ("P".equals(cb.key()) ? cb.value() : Double.NaN);
+        if (Double.isFinite(p)) {
+            double f = CoolProp.propsSIOrNaN(outputKey, "P", p, "Q", 0.5, fluid);
+            if (Double.isFinite(f)) {
+                return f;
+            }
+            f = CoolProp.propsSIOrNaN(outputKey, "P", p, "T", 300.0, fluid);
+            if (Double.isFinite(f)) {
+                return f;
+            }
+        }
+        return 1e-6; // finite last resort: lets IDA reject the step, no NaN/Inf
+    }
+
     /** Evaluates an encoded property call against the indicator values. */
     public static double evaluate(String encoded, List<Double> values) {
         return evaluate(encoded, values, List.of());
@@ -306,8 +380,10 @@ public final class PropertyFunctions {
         String fluid = resolveFluid(parts[2]);
         Input first = toInput(parts[3], values.get(0), output);
         Input second = toInput(parts[4], values.get(1), output);
-        double raw = CoolProp.propsSI(outputKey, first.key(), first.value(),
-                second.key(), second.value(), fluid);
+        double raw = LENIENT.get()
+                ? guardedPropsSI(outputKey, first, second, fluid)
+                : CoolProp.propsSI(outputKey, first.key(), first.value(),
+                        second.key(), second.value(), fluid);
         // Volume is reported as specific volume = 1/density.
         return VOLUME.equals(output) ? 1.0 / raw : raw;
     }
@@ -348,10 +424,14 @@ public final class PropertyFunctions {
         }
         String fluid = resolveFluid(parts[2]);
         Input in = toInput(parts[3], values.get(0), output);
+        Input q0 = new Input("Q", 0.0);
         return switch (output) {
-            case "p_sat" -> CoolProp.propsSI("P", in.key(), in.value(), "Q", 0.0, fluid);
-            case "t_sat" -> CoolProp.propsSI("T", in.key(), in.value(), "Q", 0.0, fluid);
-            case "surfacetension" -> CoolProp.propsSI("surface_tension", in.key(), in.value(), "Q", 0.0, fluid);
+            case "p_sat" -> LENIENT.get() ? guardedPropsSI("P", in, q0, fluid)
+                    : CoolProp.propsSI("P", in.key(), in.value(), "Q", 0.0, fluid);
+            case "t_sat" -> LENIENT.get() ? guardedPropsSI("T", in, q0, fluid)
+                    : CoolProp.propsSI("T", in.key(), in.value(), "Q", 0.0, fluid);
+            case "surfacetension" -> LENIENT.get() ? guardedPropsSI("surface_tension", in, q0, fluid)
+                    : CoolProp.propsSI("surface_tension", in.key(), in.value(), "Q", 0.0, fluid);
             default -> 0.0;
         };
     }

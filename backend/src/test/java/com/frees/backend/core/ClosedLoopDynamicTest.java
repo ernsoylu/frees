@@ -88,7 +88,7 @@ class ClosedLoopDynamicTest {
       TXV TX1()
       TXV TX2()
       TwoPhaseMixer SUC()
-      PVol PSUC(C=1e-5, P0=350000)
+      PVol PSUC(C=1e-4, P0=350000)
       CompVol CMP(fluid$=R1234yf, disp=0.0028, eta=0.7)
       CondFloatUA COND(fluid$=R1234yf, UA=1200, Tamb=313)
       connect(WCHL.wall, CHLR.wall)
@@ -101,8 +101,8 @@ class ClosedLoopDynamicTest {
       connect(SUC.out, PSUC.in)
       connect(PSUC.out, CMP.in)
       connect(CMP.out, COND.in)
-      DYNAMIC clp (method = ida, time = 0 .. 300, points = 1501, rtol = 1e-6, atol = 1e-6)
-        CMP.frac = 0.3 + 0.7 * min(time/10, 1)
+      DYNAMIC clp (method = ida, time = 0 .. 600, points = 1201, rtol = 1e-6, atol = 1e-6)
+        CMP.frac = 0.5 + 0.5 * min(time/20, 1)
       END
       """;
   }
@@ -116,10 +116,16 @@ class ClosedLoopDynamicTest {
     assertEquals(-1, r.equationCount() - r.unknownCount(), "exactly one pressure state");
   }
 
-  @Disabled("frontier: the DAE is square and marches, but a transient (P,h) "
-      + "excursion NaNs the IDA residual (IDASolve -9). Needs transient property "
-      + "guarding (NaN-sanitize iterate / clamp (P,h) to table / floor Q/mdot) in "
-      + "the core residual path -- the documented numerical-hardening work.")
+  @Disabled("frontier: transient property guarding (PropertyFunctions lenient "
+      + "mode) clears the old IDASolve -9 (out-of-table NaN), but this single-"
+      + "compliance-volume closed loop is then Jacobian-SINGULAR (-6): every "
+      + "component conserves mass instantaneously, so the loop forces the suction "
+      + "volume's inflow == outflow and der(P_suc) == 0 -- the pressure state is "
+      + "not actually driven. The fix is a genuine mass-storage (CHARGE) state in "
+      + "the loop (e.g. condenser/receiver der(M)=dmdot, P from charge) to "
+      + "decouple compressor flow from evaporator flow -- a dynamic-cycle feature, "
+      + "not property guarding. Property guard verified separately by "
+      + "PropertyGuardTest + the green transient suite.")
   @Test void integrateToSteady() {
     assumeTrue(CoolProp.isAvailable()); assumeTrue(SundialsIda.isAvailable());
     var res = new EquationSystemSolver().solve(model());

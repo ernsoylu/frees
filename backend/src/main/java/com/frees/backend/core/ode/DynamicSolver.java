@@ -234,9 +234,17 @@ public final class DynamicSolver {
         List<Equation> template = new ArrayList<>(algebraicTemplate);
         DaeResidual residual = (t, y, yp, res) -> {
             Map<String, Double> v = daeValues(t, y, yp);
-            for (int i = 0; i < template.size(); i++) {
-                Equation eq = template.get(i);
-                res[i] = Evaluator.eval(eq.lhs(), v, defs) - Evaluator.eval(eq.rhs(), v, defs);
+            // Transient property guarding: a stiff corrector probes states that
+            // briefly leave the fluid table; clamp args + finite fallback so the
+            // residual stays finite (else CoolProp throws -> IDASolve -9).
+            boolean prev = com.frees.backend.props.PropertyFunctions.enterLenient();
+            try {
+                for (int i = 0; i < template.size(); i++) {
+                    Equation eq = template.get(i);
+                    res[i] = Evaluator.eval(eq.lhs(), v, defs) - Evaluator.eval(eq.rhs(), v, defs);
+                }
+            } finally {
+                com.frees.backend.props.PropertyFunctions.exitLenient(prev);
             }
         };
 
