@@ -1,0 +1,124 @@
+COMPONENT VoltageSource(p, n)
+  PARAM E
+  p.V - n.V = E
+  p.I + n.I = 0
+END
+
+COMPONENT Resistor(a, b)
+  PARAM R
+  a.V - b.V = R * a.I
+  a.I + b.I = 0
+END
+
+COMPONENT Ground(port)
+  port.V = 0
+END
+
+COMPONENT Battery(p, n)
+  PARAM Voc, R0
+  p.V - n.V = Voc + R0 * p.I
+  p.I + n.I = 0
+  W = (p.V - n.V) * (0 - p.I)
+END
+
+COMPONENT HeatingResistor(p, n, heat)
+  PARAM R
+  p.V - n.V = R * p.I
+  p.I + n.I = 0
+  Q         = (p.V - n.V) * p.I
+  heat.Qdot = -Q
+END
+
+COMPONENT BatteryThermal(p, n, heat)
+  PARAM Voc, R0
+  p.V - n.V = Voc + R0 * p.I
+  p.I + n.I = 0
+  Q         = R0 * p.I^2
+  heat.Qdot = -Q
+  W         = (p.V - n.V) * (0 - p.I)
+END
+
+COMPONENT Capacitor(p, n)
+  PARAM C, V0
+  Vc       = p.V - n.V
+  der(Vc)  = p.I / C
+  init(Vc) = V0
+  p.I + n.I = 0
+END
+
+COMPONENT Inductor(p, n)
+  PARAM L, I0
+  der(IL)  = (p.V - n.V) / L
+  init(IL) = I0
+  p.I = IL
+  p.I + n.I = 0
+END
+
+COMPONENT BatteryTransient(p, n, heat)
+  PARAM Voc, R0, Q0, C_th, SOC0, T0
+  p.V - n.V = Voc + R0 * p.I
+  p.I + n.I = 0
+  Qgen      = R0 * p.I^2
+  heat.T    = T
+  der(T)    = (Qgen + heat.Qdot) / C_th
+  init(T)   = T0
+  der(SOC)  = p.I / (3600 * Q0)
+  init(SOC) = SOC0
+END
+
+COMPONENT DCMotor(p, n, shaft)
+  PARAM Kt, Ke, R
+  p.V - n.V  = R * p.I + Ke * shaft.w
+  p.I + n.I  = 0
+  shaft.tau  = -Kt * p.I
+END
+
+COMPONENT BatteryRC(p, n)
+  PARAM Voc, R0, R1, C1, Vrc0
+  p.V - n.V = Voc + R0 * p.I - Vrc
+  der(Vrc)  = -p.I / C1 - Vrc / (R1 * C1)
+  init(Vrc) = Vrc0
+  p.I + n.I = 0
+END
+
+COMPONENT Diode(p, n)
+  PARAM Gon, eps
+  vd  = p.V - n.V
+  p.I = Gon * vd * (0.5 + 0.5 * tanh(vd / eps))
+  p.I + n.I = 0
+END
+
+COMPONENT PMSM(p, n, shaft)
+  PARAM Rs, lambda_pm, poles
+  Kt        = 1.5 * poles * lambda_pm
+  p.V - n.V = Rs * p.I + Kt * shaft.w
+  p.I + n.I = 0
+  shaft.tau = -Kt * p.I
+END
+
+COMPONENT CurrentSource(p, n)
+  PARAM I
+  p.I = -I
+  p.I + n.I = 0
+END
+
+COMPONENT Battery2RC(p, n)
+  PARAM Voc, R0, R1, C1, R2, C2, Vrc1_0, Vrc2_0
+  p.V - n.V  = Voc + R0 * p.I - Vrc1 - Vrc2
+  der(Vrc1)  = -p.I / C1 - Vrc1 / (R1 * C1)
+  init(Vrc1) = Vrc1_0
+  der(Vrc2)  = -p.I / C2 - Vrc2 / (R2 * C2)
+  init(Vrc2) = Vrc2_0
+  p.I + n.I  = 0
+END
+
+COMPONENT FuelCellStack(p, n, heat)
+  PARAM ncells, area, i0, ilim, Rohm, E0, alpha, Eth, T
+  I_cell    = -p.I
+  i         = I_cell / area
+  V_cell    = E0 - (8.314 * T / (alpha * 96485)) * ln(i / i0) - i * Rohm - (8.314 * T / (2 * 96485)) * ln(ilim / (ilim - i))
+  p.V - n.V = ncells * V_cell
+  p.I + n.I = 0
+  Q         = I_cell * ncells * (Eth - V_cell)
+  heat.Qdot = -Q
+END

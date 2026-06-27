@@ -1,0 +1,48 @@
+COMPONENT HydraulicSupply(out)
+  PARAM P, domain$ = oil
+  out.P = P
+  out.h = 0
+END
+
+COMPONENT HydraulicTank(port)
+  PARAM P, domain$ = oil
+  port.P = P
+END
+
+COMPONENT HydraulicOrifice(in, out)
+  PARAM CdA, rho, domain$ = oil
+  out.mdot = in.mdot
+  out.h    = in.h
+  in.mdot * abs(in.mdot) = CdA^2 * 2 * rho * (in.P - out.P)
+END
+
+COMPONENT HydraulicValve(in, out)
+  PARAM CdA_max, rho, u, domain$ = oil
+  out.mdot = in.mdot
+  out.h    = in.h
+  in.mdot * abs(in.mdot) = (u * CdA_max)^2 * 2 * rho * (in.P - out.P)
+END
+
+COMPONENT ReliefValve(in, out)
+  PARAM Pcrack, K, eps, domain$ = oil
+  out.mdot = in.mdot
+  out.h    = in.h
+  open     = 0.5 * (1 + tanh((in.P - Pcrack) / eps))
+  in.mdot  = K * open * (in.P - out.P)
+END
+
+COMPONENT HydraulicCylinder(in, rod)
+  PARAM rho, beta, V0, area, Patm, P0, domain$ = oil
+  rod.f      = -(in.P - Patm) * area
+  der(in.P)  = (beta / V0) * (in.mdot / rho - area * rod.vel)
+  init(in.P) = P0
+END
+
+COMPONENT HydraulicPump(in, out, shaft)
+  PARAM disp, rho, eta_v, eta_m, domain$ = oil
+  n_rev     = shaft.w / (2 * pi#)
+  out.mdot  = rho * disp * n_rev * eta_v
+  in.mdot   = out.mdot
+  out.h     = in.h
+  shaft.tau = -(disp * (out.P - in.P) / (2 * pi#)) / eta_m
+END

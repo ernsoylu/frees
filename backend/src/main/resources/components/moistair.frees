@@ -1,0 +1,49 @@
+COMPONENT MoistAirSource(out)
+  PARAM P, T, W, mdot, domain$ = moistair
+  out.P    = P
+  out.mdot = mdot
+  out.W    = W
+  out.h    = Enthalpy(AirH2O, T=T, P=P, W=W)
+END
+
+COMPONENT MoistAirSink(in)
+  PARAM domain$ = moistair
+  mdot = in.mdot
+  P    = in.P
+  h    = in.h
+  W    = in.W
+END
+
+COMPONENT HeatingCoil(in, out)
+  PARAM Q, domain$ = moistair
+  out.mdot = in.mdot
+  out.P    = in.P
+  out.W    = in.W
+  out.h    = in.h + Q / in.mdot
+END
+
+COMPONENT Humidifier(in, out)
+  PARAM mdot_w, h_w, domain$ = moistair
+  out.mdot = in.mdot
+  out.P    = in.P
+  out.W    = in.W + mdot_w / in.mdot
+  out.h    = in.h + mdot_w * h_w / in.mdot
+END
+
+COMPONENT MixingBox(in1, in2, out)
+  PARAM domain$ = moistair
+  out.P    = in1.P
+  out.mdot = in1.mdot + in2.mdot
+  out.mdot * out.W = in1.mdot * in1.W + in2.mdot * in2.W
+  out.mdot * out.h = in1.mdot * in1.h + in2.mdot * in2.h
+END
+
+COMPONENT CoolingCoil(in, out)
+  PARAM Tout, domain$ = moistair
+  out.mdot = in.mdot
+  out.P    = in.P
+  out.W    = HumRat(AirH2O, T=Tout, P=in.P, R=1)
+  out.h    = Enthalpy(AirH2O, T=Tout, P=in.P, W=out.W)
+  Q        = in.mdot * (in.h - out.h)
+  Q_lat    = in.mdot * 2.501e6 * (in.W - out.W)
+END

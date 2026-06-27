@@ -1,0 +1,63 @@
+COMPONENT GasSource(out)
+  PARAM y, mdot, P, h0
+  out.y    = y
+  out.mdot = mdot
+  out.P    = P
+  out.h    = h0
+END
+
+COMPONENT GasPipe(in, out)
+  out.mdot = in.mdot
+  out.P    = in.P
+  out.h    = in.h
+  out.y    = in.y
+END
+
+COMPONENT GasMixer(in1, in2, out)
+  out.P    = in1.P
+  out.mdot = in1.mdot + in2.mdot
+  out.mdot * out.h = in1.mdot * in1.h + in2.mdot * in2.h
+  out.mdot * out.y = in1.mdot * in1.y + in2.mdot * in2.y
+END
+
+COMPONENT PneumaticSupply(out)
+  PARAM fluid$, P, T, domain$ = gas
+  out.P = P
+  out.h = Enthalpy(fluid$, P=P, T=T)
+END
+
+COMPONENT PneumaticAtmosphere(port)
+  PARAM P, domain$ = gas
+  port.P = P
+END
+
+COMPONENT PneumaticOrifice(in, out)
+  PARAM fluid$, C, b, domain$ = gas
+  out.h    = in.h
+  T_in     = Temperature(fluid$, P=in.P, h=in.h)
+  in.mdot  = iso6358(C, b, in.P, T_in, out.P)
+  out.mdot = in.mdot
+END
+
+COMPONENT PneumaticServoValve(in, out)
+  PARAM fluid$, Cmax, b, u, domain$ = gas
+  out.h    = in.h
+  T_in     = Temperature(fluid$, P=in.P, h=in.h)
+  in.mdot  = iso6358(u * Cmax, b, in.P, T_in, out.P)
+  out.mdot = in.mdot
+END
+
+COMPONENT PneumaticVolume(in, out)
+  PARAM V, T, R, P0, domain$ = gas
+  out.P      = in.P
+  out.h      = in.h
+  der(in.P)  = (R * T / V) * (in.mdot - out.mdot)
+  init(in.P) = P0
+END
+
+COMPONENT PneumaticActuator(in, rod)
+  PARAM fluid$, area, Patm, domain$ = gas
+  rho     = Density(fluid$, P=in.P, h=in.h)
+  rod.f   = -(in.P - Patm) * area
+  in.mdot = rho * area * rod.vel
+END

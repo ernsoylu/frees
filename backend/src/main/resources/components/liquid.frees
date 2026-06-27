@@ -1,0 +1,77 @@
+// Liquid domain (THH-equivalent) — single-phase coolant / water / glycol / oil /
+// fuel circuits. Connector type domain$ = liquid: the same (P, mdot, h) bond as
+// the generic fluid domain, but a distinct connector type so a coolant line can
+// only meet a refrigerant (twophase) or pneumatic/hydraulic line through a heat
+// exchanger, never a direct connect. Working fluid for property calls is fluid$
+// (e.g. water, MEG[50%]); domain$ only types the connector.
+
+COMPONENT LiquidSource(out)
+  PARAM fluid$, mdot, P, T, domain$ = liquid
+  out.mdot = mdot
+  out.P    = P
+  out.h    = Enthalpy(fluid$, P=P, T=T)
+END
+
+COMPONENT LiquidSink(in)
+  PARAM domain$ = liquid
+  mdot = in.mdot
+  P    = in.P
+  h    = in.h
+END
+
+COMPONENT LiquidPump(in, out)
+  PARAM eta, fluid$, domain$ = liquid
+  v        = Volume(fluid$, P=in.P, h=in.h)
+  out.mdot = in.mdot
+  out.h    = in.h + v * (out.P - in.P) / eta
+  W        = in.mdot * (out.h - in.h)
+END
+
+COMPONENT LiquidPipe(in, out)
+  PARAM fluid$, L, D, rough, domain$ = liquid
+  out.mdot = in.mdot
+  out.h    = in.h
+  rho      = Density(fluid$, P=in.P, h=in.h)
+  mu       = Viscosity(fluid$, P=in.P, h=in.h)
+  A        = pi# / 4 * D^2
+  V        = in.mdot / (rho * A)
+  Re_d     = reynolds(rho, V, D, mu)
+  f        = friction_factor(Re_d, rough / D)
+  out.P    = in.P - f * (L / D) * rho * V^2 / 2
+END
+
+// Single-phase heat addition to the coolant — a battery cold plate / cold-plate
+// loop load. Duty Q is an input; the coolant warms isobarically (out.P = in.P).
+COMPONENT LiquidColdPlate(in, out)
+  PARAM Q, domain$ = liquid
+  out.mdot = in.mdot
+  out.P    = in.P
+  Q        = in.mdot * (out.h - in.h)
+END
+
+// Lumped liquid volume / compliance: a pressure node with bulk-modulus storage
+// (der(P) from net mass flow). Steady limit recovers in.mdot = out.mdot.
+COMPONENT LiquidVolume(in, out)
+  PARAM C, P0, domain$ = liquid
+  out.h       = in.h
+  der(in.P)   = (in.mdot - out.mdot) / C
+  init(in.P)  = P0
+END
+
+// Liquid orifice / restrictor. Default is incompressible turbulent flow
+// (odd-symmetric so it is well-behaved through zero). The optional cavitating
+// model is the THH pressure-driven effect: when the downstream pressure falls
+// below the fluid vapour pressure Pvap the throat flashes and the flow chokes on
+// (in.P - Pvap) rather than the full (in.P - out.P).
+COMPONENT LiquidOrifice(in, out)
+  PARAM CdA, rho, domain$ = liquid, model$ = incompressible
+  out.mdot = in.mdot
+  out.h    = in.h
+  VARIANT incompressible
+    in.mdot * abs(in.mdot) = CdA^2 * 2 * rho * (in.P - out.P)
+  END
+  VARIANT cavitating REQUIRE Pvap
+    dP_eff = in.P - max(out.P, Pvap)
+    in.mdot * abs(in.mdot) = CdA^2 * 2 * rho * dP_eff
+  END
+END
