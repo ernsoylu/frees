@@ -64,6 +64,30 @@ class MovingBoundaryHxTest {
     }
 
     @Test
+    void undersizedEvaporatorLeavesRefrigerantTwoPhase() {
+        assumeTrue(CoolProp.isAvailable(), "CoolProp not available");
+        // a short tube at a modest wall ΔT cannot complete the evaporation, so the
+        // outlet stays two-phase (0 < x < 1) instead of being capped at saturation
+        String src = """
+                MovingBoundaryEvaporator EV(fluid$=R134a, U_tp=2000, U_sh=200, D=0.01, L=2, eps_zone=0.01)
+                TwoPhaseSource SRC(fluid$=R134a, mdot=0.02, P=350000, x=0.25)
+                TwoPhaseSink SNK()
+                ThermalSource WALL(T=285)
+                connect(SRC.out, EV.in)
+                connect(EV.out, SNK.in)
+                connect(EV.wall, WALL.port)
+                """;
+        Map<String, Double> v = solver.solve(src).variables();
+        double hf = CoolProp.propsSI("H", "P", 350000, "Q", 0.0, "R134a");
+        double hg = CoolProp.propsSI("H", "P", 350000, "Q", 1.0, "R134a");
+        double xOut = (v.get("ev.out.h") - hf) / (hg - hf);
+        assertTrue(xOut > 0.25 && xOut < 1.0, "outlet is two-phase (incomplete evaporation): x=" + xOut);
+        assertTrue(Math.abs(v.get("ev.sh")) < 1.0, "no superheat: still in the dome");
+        // the two-phase zone fills (essentially) the whole short tube
+        assertTrue(v.get("ev.l_tp") > 1.9, "two-phase zone fills the tube: L_tp=" + v.get("ev.l_tp"));
+    }
+
+    @Test
     void condenserResolvesCondensingAndSubcoolZones() {
         assumeTrue(CoolProp.isAvailable(), "CoolProp not available");
         String src = """

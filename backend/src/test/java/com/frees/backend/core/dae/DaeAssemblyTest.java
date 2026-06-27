@@ -90,6 +90,30 @@ class DaeAssemblyTest {
     }
 
     @Test
+    void coloredJacobianEqualsDense() {
+        // S2: the colored finite-difference Jacobian (fewer residual evals) must
+        // equal the plain dense one entry-for-entry on the sparse pattern.
+        DaeResidual res = (t, y, yp, r) -> {
+            r[0] = yp[0] + y[0] - 0.5 * y[1];
+            r[1] = y[1] - 2.0 * y[0] + 0.1 * y[2];
+            r[2] = y[2] - y[1] + 3.0 * y[0];
+        };
+        int[][] sparsityRows = {{0, 1}, {0, 1, 2}, {0, 1, 2}};
+        int[][] colRows = {{0, 1, 2}, {0, 1, 2}, {1, 2}};
+        int[] color = DaeJacobian.colorColumns(sparsityRows, 3);
+        double cj = 7.0;
+        double[] y = {1.0, 2.0, 3.0};
+        double[] yp = {0.5, 0.0, 0.0};
+        double[][] dense = DaeJacobian.dense(res, 0.0, cj, y, yp);
+        double[][] colored = DaeJacobian.denseColored(res, 0.0, cj, y, yp, colRows, color);
+        for (int c = 0; c < 3; c++) {
+            for (int row : colRows[c]) {
+                assertEquals(dense[row][c], colored[row][c], 1e-9, "entry (" + row + "," + c + ")");
+            }
+        }
+    }
+
+    @Test
     void combinedJacobianMatchesAnalytic() {
         // F0 = yp0 + y0 - y1 ; F1 = y1 - 2 y0
         DaeResidual res = (t, y, yp, r) -> {

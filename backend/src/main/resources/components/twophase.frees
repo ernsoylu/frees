@@ -92,14 +92,18 @@ COMPONENT MovingBoundaryEvaporator(in, out, wall)
   out.P     = in.P
   Tsat      = T_sat(fluid$, P=in.P)
   hg        = Enthalpy(fluid$, P=in.P, x=1)
-  Q_tp      = in.mdot * (hg - in.h)
-  L_tp      = Q_tp / (U_tp * pi# * D * (wall.T - Tsat))
-  L_rem     = L - L_tp
-  L_sh      = 0.5 * (L_rem + sqrt(L_rem^2 + eps_zone^2))
+  // length the two-phase zone WANTS for complete evaporation, capped at the tube
+  // length by a C¹ smooth-min. When the tube is long enough this equals the need
+  // and Q_tp = full latent duty (complete-evaporation regime, superheat downstream);
+  // when it is too short, L_tp = L, Q_tp < full duty and the outlet stays two-phase.
+  L_need    = in.mdot * (hg - in.h) / (U_tp * pi# * D * (wall.T - Tsat))
+  L_tp      = 0.5 * (L_need + L - sqrt((L_need - L)^2 + eps_zone^2))
+  Q_tp      = U_tp * pi# * D * L_tp * (wall.T - Tsat)
+  L_sh      = L - L_tp
   r_sh      = zone_ramp(L_sh, eps_zone)
   T_out     = Temperature(fluid$, P=out.P, h=out.h)
   Q_sh      = U_sh * pi# * D * L_sh * (wall.T - 0.5 * (Tsat + T_out)) * r_sh
-  Q_sh      = in.mdot * (out.h - hg)
+  out.h     = in.h + (Q_tp + Q_sh) / in.mdot
   Q         = Q_tp + Q_sh
   wall.Qdot = Q
   SH        = T_out - Tsat
@@ -113,14 +117,17 @@ COMPONENT MovingBoundaryCondenser(in, out, wall)
   out.P     = in.P
   Tsat      = T_sat(fluid$, P=in.P)
   hf        = Enthalpy(fluid$, P=in.P, x=0)
-  Q_cond    = in.mdot * (in.h - hf)
-  L_cond    = Q_cond / (U_cond * pi# * D * (Tsat - wall.T))
-  L_rem     = L - L_cond
-  L_sc      = 0.5 * (L_rem + sqrt(L_rem^2 + eps_zone^2))
+  // condensing-zone length wanted for full condensation, capped at the tube length
+  // (smooth-min). Long enough ⇒ Q_cond = full latent duty and the outlet subcools;
+  // too short ⇒ L_cond = L, Q_cond < full duty and the outlet stays two-phase.
+  L_need    = in.mdot * (in.h - hf) / (U_cond * pi# * D * (Tsat - wall.T))
+  L_cond    = 0.5 * (L_need + L - sqrt((L_need - L)^2 + eps_zone^2))
+  Q_cond    = U_cond * pi# * D * L_cond * (Tsat - wall.T)
+  L_sc      = L - L_cond
   r_sc      = zone_ramp(L_sc, eps_zone)
   T_out     = Temperature(fluid$, P=out.P, h=out.h)
   Q_sc      = U_sc * pi# * D * L_sc * (0.5 * (Tsat + T_out) - wall.T) * r_sc
-  Q_sc      = in.mdot * (hf - out.h)
+  out.h     = in.h - (Q_cond + Q_sc) / in.mdot
   Q         = Q_cond + Q_sc
   wall.Qdot = -Q
   SC        = Tsat - T_out
@@ -327,4 +334,60 @@ COMPONENT ThreeZoneHX(hot_in, hot_out, cold_in, cold_out)
   connect(Z3.cold_out, Z2.cold_in)
   connect(Z2.cold_out, Z1.cold_in)
   connect(Z1.cold_out, cold_out)
+END
+
+// ── Zeotropic blends — temperature glide + composition rider (deferred-item) ──
+// A zeotropic blend (R407C, …) glides in temperature across the dome at fixed
+// pressure (bubble point < dew point) and its circulating composition z can shift
+// (fractionation, leak, hold-up). z is therefore an INDEPENDENT conserved
+// quantity that rides on the connector (opt-in: only components with a .z member
+// carry it; the connector flow-weights it only at a BlendMixer). Properties here
+// use the fixed-composition fluid$ (so the glide is exact for the charged blend);
+// composition-dependent property lookups z→T_sat are a further extension.
+
+// Blend boundary: sets (P, x) state and the composition rider z, and reports the
+// temperature glide (dew − bubble) of the charged blend.
+COMPONENT BlendSource(out)
+  PARAM fluid$, mdot, P, x, z, domain$ = twophase
+  out.mdot = mdot
+  out.P    = P
+  out.h    = Enthalpy(fluid$, P=P, x=x)
+  out.z    = z
+  bubble   = Temperature(fluid$, P=P, x=0)
+  dew      = Temperature(fluid$, P=P, x=1)
+  glide    = dew - bubble
+END
+
+COMPONENT BlendSink(in)
+  PARAM domain$ = twophase
+  mdot  = in.mdot
+  P     = in.P
+  h     = in.h
+  z     = in.z
+END
+
+// Glide-aware sensor (pass-through): local quality, the gliding bubble/dew
+// temperatures, and the carried composition z.
+COMPONENT BlendSensor(in, out)
+  PARAM fluid$, domain$ = twophase
+  out.mdot = in.mdot
+  out.P    = in.P
+  out.h    = in.h
+  out.z    = in.z
+  hf       = Enthalpy(fluid$, P=in.P, x=0)
+  hg       = Enthalpy(fluid$, P=in.P, x=1)
+  x        = (in.h - hf) / (hg - hf)
+  bubble   = Temperature(fluid$, P=in.P, x=0)
+  dew      = Temperature(fluid$, P=in.P, x=1)
+  glide    = dew - bubble
+END
+
+// Blend mixer: conserves mass, enthalpy AND composition (z flow-weighted, the
+// mechanism that makes a blend distinct from a single-component fluid).
+COMPONENT BlendMixer(in1, in2, out)
+  PARAM domain$ = twophase
+  out.P    = in1.P
+  out.mdot = in1.mdot + in2.mdot
+  out.mdot * out.h = in1.mdot * in1.h + in2.mdot * in2.h
+  out.mdot * out.z = in1.mdot * in1.z + in2.mdot * in2.z
 END

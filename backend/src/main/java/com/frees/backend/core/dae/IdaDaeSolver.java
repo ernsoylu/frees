@@ -51,6 +51,8 @@ public final class IdaDaeSolver implements AutoCloseable {
     private int nroots;
     private DaeRootFn rootFn;
     private int[][] colRows;   // CSC: rows present in each column
+    private int[] colStart;    // CSC column pointers (fixed pattern)
+    private int[] color;       // S2 column coloring (structurally-orthogonal groups)
     private int nnz;
     private boolean useSparse;
 
@@ -135,6 +137,13 @@ public final class IdaDaeSolver implements AutoCloseable {
             this.colRows[c] = cols.get(c).stream().mapToInt(Integer::intValue).toArray();
         }
         this.nnz = count;
+        // S2: cumulative column offsets (the fixed CSC pointers) and a column
+        // coloring so the Jacobian needs #colors residual evals, not n.
+        this.colStart = new int[n + 1];
+        for (int c = 0; c < n; c++) {
+            this.colStart[c + 1] = this.colStart[c] + this.colRows[c].length;
+        }
+        this.color = DaeJacobian.colorColumns(sparsityRows, n);
         this.useSparse = true;
         return this;
     }
@@ -296,29 +305,30 @@ public final class IdaDaeSolver implements AutoCloseable {
     }
 
     /**
-     * Fills the CSC {@code SUNSparseMatrix} with {@code J = ∂F/∂y + cj·∂F/∂y'} by
-     * finite differences over the stored sparsity. Index/pointer arrays use
-     * 64-bit {@code sunindextype} (the SUNDIALS default build).
+     * Fills the CSC {@code SUNSparseMatrix} with {@code J = ∂F/∂y + cj·∂F/∂y'}.
+     * The values come from the S2 <b>colored</b> finite difference (#colors
+     * residual evals instead of n; {@link DaeJacobian#denseColored}). The fixed
+     * pattern (IndexPointers/IndexValues) is rewritten each call — cheap, and KLU
+     * keeps its symbolic factorization because the pattern is unchanged. Index
+     * arrays use 64-bit {@code sunindextype} (the SUNDIALS default build).
      */
     private void fillSparseJacobian(double t, double cj, double[] y, double[] yp, Pointer jj) {
         SundialsIda.SparseMatLib sm = SundialsIda.sparseMatLib();
         Pointer data = sm.SUNSparseMatrix_Data(jj);
         Pointer idxVals = sm.SUNSparseMatrix_IndexValues(jj);
         Pointer idxPtrs = sm.SUNSparseMatrix_IndexPointers(jj);
-        double[] f0 = new double[n];
-        residual.eval(t, y, yp, f0);
-        double[] col = new double[n];
+        double[][] j = DaeJacobian.denseColored(residual, t, cj, y, yp, colRows, color);
+        for (int c = 0; c <= n; c++) {
+            idxPtrs.setLong(8L * c, colStart[c]);
+        }
         int pos = 0;
         for (int c = 0; c < n; c++) {
-            idxPtrs.setLong(8L * c, pos);
-            DaeJacobian.column(residual, t, cj, y, yp, c, f0, col);
             for (int row : colRows[c]) {
-                data.setDouble(8L * pos, col[row]);
+                data.setDouble(8L * pos, j[row][c]);
                 idxVals.setLong(8L * pos, row);
                 pos++;
             }
         }
-        idxPtrs.setLong(8L * n, pos);
     }
 
     private double[] readVector(Pointer nvector) {

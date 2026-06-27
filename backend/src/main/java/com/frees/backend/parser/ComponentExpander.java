@@ -1031,12 +1031,33 @@ public final class ComponentExpander {
      */
     private String[] acrossMembersForNode(Domain dom, List<String> sts) {
         String[] base = acrossMembers(dom);
-        if (dom == Domain.FLUID && "moistair".equals(nodeFluidType(sts))) {
-            String[] ext = java.util.Arrays.copyOf(base, base.length + 1);
-            ext[base.length] = "w";
-            return ext;
+        if (dom != Domain.FLUID) {
+            return base;
         }
-        return base;
+        java.util.List<String> ext = new java.util.ArrayList<>(java.util.Arrays.asList(base));
+        if ("moistair".equals(nodeFluidType(sts))) {
+            ext.add("w");   // humidity-ratio rider (water mass) — moist-air domain
+        }
+        // Opt-in zeotropic-blend composition rider: a node whose streams carry a
+        // 'z' member transports the blend composition z (equal across a pass-through
+        // connect; flow-weighted only at an explicit blend mixer, like enthalpy).
+        // Pure/azeotropic refrigerants carry no 'z' member, so this is a no-op for
+        // them and the pure-fluid connector stays a plain (P, ṁ, h) bond.
+        if (nodeHasMember(sts, "z")) {
+            ext.add("z");
+        }
+        return ext.toArray(new String[0]);
+    }
+
+    /** Whether any stream at the node carries the given port member. */
+    private boolean nodeHasMember(List<String> sts, String member) {
+        for (String st : sts) {
+            java.util.Set<String> m = streamMembers.get(st);
+            if (m != null && m.contains(member)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /** The fluid connector type of a node ({@code fluid}/{@code gas}/{@code oil}/
