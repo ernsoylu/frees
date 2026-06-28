@@ -24,7 +24,7 @@ P0 = StagnationPres(P, T, T0, k)
 ## Description
 
 Built on the isentropic relation between pressure and temperature ratios, it pairs
-with [`StagnationTemp`](StagnationTemp) to give the full stagnation state.
+with `StagnationTemp` to give the full stagnation state.
 
 ## Mathematical Formulation
 

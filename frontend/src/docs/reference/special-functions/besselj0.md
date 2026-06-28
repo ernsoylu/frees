@@ -12,7 +12,7 @@ references:
 # besselj0
 
 Returns `J_0(x)`, the **order-0 Bessel function of the first kind** — the
-fixed-order specialization of [`besselj`](besselj). `J_0(0) = 1`, then it
+fixed-order specialization of `besselj`. `J_0(0) = 1`, then it
 oscillates with decaying amplitude.
 
 ## Syntax

@@ -14,8 +14,8 @@ references:
 
 Returns the **overall thermal conductance** `UA` [W/K] of a two-stream heat
 exchanger by combining the two convective side films and the wall as series
-thermal resistances. Feed the result to [`hx_effectiveness`](hx_effectiveness) /
-[`hx_NTU`](hx_NTU) to rate or size the exchanger.
+thermal resistances. Feed the result to `hx_effectiveness` /
+`hx_NTU` to rate or size the exchanger.
 
 ## Syntax
 

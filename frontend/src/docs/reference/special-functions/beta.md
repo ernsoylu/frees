@@ -13,7 +13,7 @@ references:
 # beta
 
 Returns the **Beta function** `B(a, b)` — a normalizing constant built from
-[`gamma`](gamma) functions, central to the Beta distribution and to many definite
+`gamma` functions, central to the Beta distribution and to many definite
 integrals.
 
 ## Syntax

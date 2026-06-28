@@ -31,8 +31,8 @@ The effectiveness–NTU method characterizes an exchanger by three dimensionless
 and a closed-form `ε(NTU, Cr)` relation per flow arrangement, so the duty follows
 directly from the inlet states without solving for the (unknown) outlet temperatures
 first. `type$` selects the arrangement: `'counterflow'`, `'parallel'`, and the
-condenser/evaporator limit. Pair it with [`hx_NTU`](hx_NTU) (the inverse, for sizing)
-and [`LMTD`](LMTD).
+condenser/evaporator limit. Pair it with `hx_NTU` (the inverse, for sizing)
+and `LMTD`.
 
 ## Mathematical Formulation
 

@@ -12,7 +12,7 @@ references:
 # besseli1
 
 Returns `I_1(x)`, the **order-1 modified Bessel function of the first kind** — the
-fixed-order specialization of [`besseli`](besseli). `I_1(0) = 0`, with
+fixed-order specialization of `besseli`. `I_1(0) = 0`, with
 `I_0'(x) = I_1(x)`.
 
 ## Syntax

@@ -14,8 +14,8 @@ references:
 
 Returns the **secondary surface area** [m²] — the total fin area — of a fin-and-tube
 heat-exchanger air side, from the core width, tube count, and developed fin length.
-With [`hx_area_direct`](hx_area_direct) it gives the primary/secondary area split
-that [`hx_eta_surf`](hx_eta_surf) weights by efficiency.
+With `hx_area_direct` it gives the primary/secondary area split
+that `hx_eta_surf` weights by efficiency.
 
 ## Syntax
 
@@ -32,7 +32,7 @@ area, which is why the overall surface efficiency matters.
 ## Mathematical Formulation
 
 The total fin area is the developed fin length (from
-[`hx_fin_len`](hx_fin_len)) summed over the fins across the core width and tube
+`hx_fin_len`) summed over the fins across the core width and tube
 count (both fin faces):
 
 $$ A_{\text{fin}} = f\big(W,\,\text{tubeCount},\,\text{finLen}\big) $$

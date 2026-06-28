@@ -14,8 +14,8 @@ references:
 
 Returns the **primary surface area** [m²] — the exposed bare tube-wall area — of a
 fin-and-tube heat-exchanger air side, from the core width, tube count, tube height,
-core depth, and fin thickness. With [`hx_area_indirect`](hx_area_indirect) (the fin
-area) it gives the area split used by [`hx_eta_surf`](hx_eta_surf).
+core depth, and fin thickness. With `hx_area_indirect` (the fin
+area) it gives the area split used by `hx_eta_surf`.
 
 ## Syntax
 

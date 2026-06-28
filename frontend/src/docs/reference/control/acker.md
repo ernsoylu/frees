@@ -15,7 +15,7 @@ references:
 Returns the **state-feedback gain** `K` for a single-input system using
 **Ackermann's formula**, placing the closed-loop poles of `(A, B)` at the desired
 locations `pr ± j·pi`. It is the explicit closed-form counterpart of
-[`place`](place).
+`place`.
 
 ## Syntax
 
