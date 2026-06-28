@@ -13,7 +13,7 @@ references:
 # dare
 
 Solves the **discrete algebraic Riccati equation** (DARE) for the stabilizing
-solution `X`. It is the core of discrete optimal control — [`dlqr`](dlqr) builds its
+solution `X`. It is the core of discrete optimal control — `dlqr` builds its
 gain from this `X`.
 
 ## Syntax

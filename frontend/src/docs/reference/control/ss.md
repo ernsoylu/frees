@@ -26,7 +26,7 @@ sys = ss(A, B, C, D)
 
 $$ \dot{\mathbf{x}} = A\mathbf{x} + B\mathbf{u}, \qquad \mathbf{y} = C\mathbf{x} + D\mathbf{u} \qquad \text{(Nise Ch. 3)} $$
 
-with transfer function `G(s) = C(sI − A)⁻¹B + D` (see [`ss2tf`](ss2tf)).
+with transfer function `G(s) = C(sI − A)⁻¹B + D` (see `ss2tf`).
 
 > **Method:** stores the `(A, B, C, D)` quadruple as a state-space model.
 

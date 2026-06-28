@@ -21,7 +21,7 @@ y = exp(x)
 
 ## Description
 
-A standard elementary function, the inverse of [`ln`](ln). It appears throughout
+A standard elementary function, the inverse of `ln`. It appears throughout
 transient and decay models.
 
 ## Mathematical Formulation

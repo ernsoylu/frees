@@ -12,7 +12,7 @@ references:
 # besselk1
 
 Returns `K_1(x)`, the **order-1 modified Bessel function of the second kind**
-(Macdonald) — the fixed-order specialization of [`besselk`](besselk). Singular as
+(Macdonald) — the fixed-order specialization of `besselk`. Singular as
 `x → 0⁺`, decaying like `e^{−x}`, with `K_0'(x) = −K_1(x)`.
 
 ## Syntax

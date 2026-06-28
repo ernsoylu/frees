@@ -25,7 +25,7 @@ y = besseli(n, x)
 ## Description
 
 Unlike `J_n`, `I_n` does not oscillate — it increases monotonically for `x > 0`.
-For fixed orders use [`besseli0`](besseli0) / [`besseli1`](besseli1).
+For fixed orders use `besseli0` / `besseli1`.
 
 ## Mathematical Formulation
 

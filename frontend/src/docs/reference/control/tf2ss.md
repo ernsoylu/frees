@@ -13,7 +13,7 @@ references:
 # tf2ss
 
 Converts a transfer function `G(s) = num/den` into a **state-space realization**
-`(A, B, C, D)` — the inverse of [`ss2tf`](ss2tf). Use it to move from a frequency-
+`(A, B, C, D)` — the inverse of `ss2tf`. Use it to move from a frequency-
 domain model to the state form needed for modern (state-feedback, observer,
 LQR/LQE) design.
 

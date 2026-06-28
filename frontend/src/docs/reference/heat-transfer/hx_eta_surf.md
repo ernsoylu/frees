@@ -27,7 +27,7 @@ eta_o = hx_eta_surf(Afin, Atotal, eta_fin)
 
 On a finned surface, the primary tube wall sits at the base temperature
 (efficiency 1) while the fins droop toward the fluid temperature (efficiency
-`eta_fin` < 1, from [`fin_efficiency`](fin_efficiency)). The overall efficiency
+`eta_fin` < 1, from `fin_efficiency`). The overall efficiency
 weights the two by their area shares.
 
 ## Mathematical Formulation

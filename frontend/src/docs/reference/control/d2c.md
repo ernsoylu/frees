@@ -13,7 +13,7 @@ references:
 # d2c
 
 Converts a discrete transfer function `G(z) = numz/denz` to a continuous-time
-equivalent `G(s) = num/den` at sample time `Ts` — the inverse of [`c2d`](c2d),
+equivalent `G(s) = num/den` at sample time `Ts` — the inverse of `c2d`,
 using the requested method (`'tustin'` bilinear or `'zoh'`).
 
 ## Syntax

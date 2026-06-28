@@ -52,7 +52,10 @@ const walk = (dir) => {
       const exFrontmatter = exFm ? exFm[1].split(',').map((s) => s.trim().replace(/^["']|["']$/g, '')).filter(Boolean) : [];
       const exInline = [...fm[2].matchAll(/\[Run:\s*([a-zA-Z0-9_-]+)\s*\]/g)].map((m) => m[1]);
       const generated = /^generated:\s*true\s*$/m.test(fm[1]);
-      pages.push({ file: path.relative(SRC, p), name, generated, examples: [...new Set([...exFrontmatter, ...exInline])] });
+      // Cookbook/guide pages document a task, not a backend symbol — exempt from
+      // the symbol-existence check (their example bindings are still validated).
+      const guide = /^guide:\s*true\s*$/m.test(fm[1]);
+      pages.push({ file: path.relative(SRC, p), name, generated, guide, examples: [...new Set([...exFrontmatter, ...exInline])] });
     }
   }
 };
@@ -60,19 +63,20 @@ if (fs.existsSync(REF_DIR)) walk(REF_DIR);
 
 const errors = [];
 for (const pg of pages) {
-  if (!symbols.has(pg.name.toLowerCase())) {
+  if (!pg.guide && !symbols.has(pg.name.toLowerCase())) {
     errors.push(`${pg.file}: documents "${pg.name}" which is not a known backend symbol`);
   }
   for (const id of pg.examples) {
     if (!exampleIds.has(id)) errors.push(`${pg.file}: binds example "${id}" which is not in examples.ts`);
   }
 }
+const guides = pages.filter((p) => p.guide).length;
 
 const total = manifest.coverage.documentableSurfaceTotal;
 const documented = pages.length;
 const rich = pages.filter((p) => !p.generated).length;
 const baseline = pages.filter((p) => p.generated).length;
-console.log(`doc-coverage: ${documented}/${total} symbols have a page (${(100 * documented / total).toFixed(1)}%) — ${rich} hand-authored (rich), ${baseline} generated (baseline).`);
+console.log(`doc-coverage: ${documented - guides}/${total} symbols have a page (${(100 * (documented - guides) / total).toFixed(1)}%) — ${rich - guides} hand-authored (rich), ${baseline} generated (baseline); ${guides} cookbook guide(s).`);
 
 if (errors.length) {
   console.error(`\n✗ ${errors.length} coverage error(s):`);

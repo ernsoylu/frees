@@ -25,7 +25,7 @@ Ob = obsv(A, C)
 
 ## Mathematical Formulation
 
-For an `n`-state system (Nise §12.5), the dual of [`ctrb`](ctrb):
+For an `n`-state system (Nise §12.5), the dual of `ctrb`:
 
 $$ \mathcal{O} = \begin{bmatrix} C \\ CA \\ CA^2 \\ \vdots \\ CA^{n-1} \end{bmatrix} $$
 
