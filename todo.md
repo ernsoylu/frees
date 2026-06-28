@@ -267,11 +267,16 @@ Body sections (omit a section only when truly N/A):
       interpolation, table/ODE accessors, strings, combustion mixing rules, EOS entropy/pressure;
       42 wrapper functions (CoolProp properties, materials, CAS) finalized without a fabricated
       math section. Verified the complex KaTeX (void_rouhani) renders in a production build + browser.
-    - **339/475 rich; the only baselines left are the 136 components.** Components remain the final
-      lift: their pages already show real ports/params/constitutive-equations (incl. variants) — to
-      reach the rich tier they need prose + a worked `[Run:]` example per component, best per-domain.
+    - DONE — **all 136 components promoted to rich** via `scripts/enrich-components.mjs`: each
+      re-reads its `.frees` definition (ports/params/constitutive-equations/variants verbatim) and
+      adds a curated physical description, domain port semantics (across/through + junction rule per
+      of the 12 domains), a worked `[Run:]` example where bound (28), and references (bond-graph
+      formalism + domain physics text). Verified `TwoPhaseCompressor` (variants + example) in a
+      production build + browser.
+    - **COMPLETE: 475/475 pages, 100% rich, 0 baselines.** The MATLAB-style per-symbol reference is
+      content-complete end to end; coverage gate + tsc + production build green; PR #24.
     - Known minor polish (deferred, pre-existing): the page name renders twice (ReferencePageView
-      Title + body `# name` H1); could strip the leading H1 in the reference compiler.
+      Title + body `# name` H1); one-line fix in the reference compiler if wanted.
   Author per-function pages, highest-traffic
   categories first: Math → Matrix/Linear Algebra → Control Systems → Thermophysical Properties
   → Units → Uncertainty → CAS/Symbolic → Block constructs → Components. For each page: write the
