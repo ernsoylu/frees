@@ -1,0 +1,79 @@
+// Documentation coverage gate.
+//
+// Enforces the correctness invariants that must hold at all times:
+//   1. Every authored reference page names a symbol that actually exists in the
+//      backend (no orphan pages drifting from the implementation).
+//   2. Every example id a page binds to (frontmatter `examples:` / inline
+//      [Run: id]) exists in the verified examples library.
+//
+// Also reports documented-vs-total coverage (informational until Phase 2 fills
+// the reference set). Exits non-zero on any invariant violation.
+//
+// Run: node scripts/build-doc-manifest.mjs && node scripts/check-doc-coverage.mjs
+
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const SRC = path.join(__dirname, '../src');
+const REF_DIR = path.join(SRC, 'docs/reference');
+const read = (p) => fs.readFileSync(p, 'utf-8');
+
+// Known symbol slugs from the generated manifest (every documentable family).
+const manifest = JSON.parse(read(path.join(REF_DIR, 'function-manifest.json')));
+const symbols = new Set();
+for (const f of manifest.functions) symbols.add(f.name.toLowerCase());
+for (const f of manifest.matrixFunctions) symbols.add(f.name.toLowerCase());
+for (const p of manifest.callProcedures) symbols.add(p.name.toLowerCase());
+for (const p of manifest.propertyFunctions) symbols.add(p.name.toLowerCase());
+for (const c of manifest.components) symbols.add(c.name.toLowerCase());
+for (const f of manifest.materials.functions) symbols.add(f.toLowerCase());
+for (const r of manifest.replCasOps) symbols.add(r.toLowerCase());
+
+// Example ids in the verified library.
+const exampleIds = new Set(
+  [...read(path.join(SRC, 'examples.ts')).matchAll(/id:\s*'([^']+)'/g)].map((m) => m[1]),
+);
+
+// Walk authored reference pages.
+const pages = [];
+const walk = (dir) => {
+  for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+    const p = path.join(dir, e.name);
+    if (e.isDirectory()) walk(p);
+    else if (e.name.endsWith('.md') && !e.name.startsWith('_')) {
+      const raw = read(p);
+      const fm = raw.match(/^---\n([\s\S]*?)\n---\n?([\s\S]*)$/);
+      if (!fm) continue;
+      const name = fm[1].match(/^name:\s*(.+)$/m)?.[1].trim();
+      if (!name) continue;
+      const exFm = fm[1].match(/^examples:\s*\[([^\]]*)\]/m);
+      const exFrontmatter = exFm ? exFm[1].split(',').map((s) => s.trim().replace(/^["']|["']$/g, '')).filter(Boolean) : [];
+      const exInline = [...fm[2].matchAll(/\[Run:\s*([a-zA-Z0-9_-]+)\s*\]/g)].map((m) => m[1]);
+      pages.push({ file: path.relative(SRC, p), name, examples: [...new Set([...exFrontmatter, ...exInline])] });
+    }
+  }
+};
+if (fs.existsSync(REF_DIR)) walk(REF_DIR);
+
+const errors = [];
+for (const pg of pages) {
+  if (!symbols.has(pg.name.toLowerCase())) {
+    errors.push(`${pg.file}: documents "${pg.name}" which is not a known backend symbol`);
+  }
+  for (const id of pg.examples) {
+    if (!exampleIds.has(id)) errors.push(`${pg.file}: binds example "${id}" which is not in examples.ts`);
+  }
+}
+
+const total = manifest.coverage.documentableSurfaceTotal;
+const documented = pages.length;
+console.log(`doc-coverage: ${documented}/${total} symbols documented (${(100 * documented / total).toFixed(1)}%), ${pages.length} reference pages.`);
+
+if (errors.length) {
+  console.error(`\n✗ ${errors.length} coverage error(s):`);
+  for (const e of errors) console.error('  - ' + e);
+  process.exit(1);
+}
+console.log('✓ all reference pages name real symbols and bind real examples.');

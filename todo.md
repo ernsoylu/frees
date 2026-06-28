@@ -1,61 +1,226 @@
-# frEES — Meaningful Steady Model: Solver Robustness & Initialization
+# frEES — MATLAB-Style Documentation Overhaul
 
 ## Goal
 
-Make frEES solve **coupled thermofluid cycles** (vapor-compression + coolant + moist-air, e.g. an EV thermal-management system) as a **meaningful steady model** — one where the evaporating/condensing **pressures float and are set by the heat-exchanger balance against the environment**, not pinned by the modeler. Today the fully-coupled steady solve fails (cold-start block-Newton NaNs on the large cross-domain SCC), so the only thing that converges is a *specified-cycle* model with pinned pressures — which pre-assumes the answer.
+Replace the current help system — vague topic-guide prose plus hand-maintained one-line
+function lists — with **MATLAB-style, per-function reference documentation**: granular,
+example-bound, interactive, error-driven, searchable, and **mathematically rigorous**. Every
+built-in function, procedure, block construct, and component must have a reference page that
+matches the implementation, **states the underlying equations / algorithm in rendered math
+(KaTeX) with a literature citation**, is cross-linked to a runnable, backend-verified example,
+and surfaces the exact errors a user can hit. North star: the MathWorks function reference
+(e.g. `zeros`, `ss2tf`) — Syntax / Description / Examples / Input & Output Arguments / See Also
+— but with the governing equations and references made explicit, the way an engineering
+reference (Çengel, Nise, Kays & London) does.
 
-## Why it fails today (observed failure modes)
+## Why the current help is "too vague" (observed today)
 
-1. **No enthalpy seeding** → cold-start NaN. The auto-seeder (`EquationSystemSolver.seedStreamMemberGuesses` / `PROP_ARG_NOMINAL`) seeds pressure→1 bar and temp→300 K but *skips enthalpy* ("reference-dependent"). A closed refrigerant loop has no source to propagate a real `h`, so `h=1.0 J/kg` → CoolProp NaN on the first residual → solve never starts.
-2. **Property-domain blowups mid-Newton** → a step pushes P/h/x outside the CoolProp table box → NaN kills the whole block (no step rejection/recovery).
-3. **One giant SCC** → coupling two full networks through a HX wall makes one huge strongly-connected block the cold-start Newton must crack at once.
-4. **Brutal scaling** → P~1e6, h~1e5, T~300, ṁ~0.01 in one Jacobian.
-5. **Spurious roots** → `ṁ·|ṁ|=…` / linear-superheat TXV admit non-physical (negative-flow) roots without bounds.
+The shipped help (`HelpPage.tsx` 145 KB) is three disconnected things, none of which is a
+function reference:
+1. **Prose topic guides** — `frontend/src/docs/*.md` (10 files) compiled by
+   `scripts/compile-docs.js` (`[Topic: id]` markers) → `docsCatalog.ts` → rendered in
+   `HelpPage.tsx`. Conceptual, not lookup-oriented.
+2. **Hand-transcribed function lists** — `helpReference.ts`: `{name, desc, example?, unit?}`
+   rows grouped into tables. Each function is **one line**; no syntax variants, no argument
+   tables, no error coverage, no per-function examples. The file itself admits *"there is no
+   machine-readable registry … would otherwise only be discoverable by reading the backend
+   switch statements."* — **this drift gap is the root accuracy problem.**
+3. **A giant embedded worked-example catalog** baked directly into `HelpPage.tsx` (Power
+   Cycles, Gas Turbines, Aerospace, Control Systems, …), separate from the curated runnable
+   library in `examples.ts`.
 
-## Reference (commercial system-simulation behaviour — from local research notes)
+There is **no page that answers "how do I call `SolveLinear` / `ss2tf` / `Enthalpy`, what
+are its arguments, show me an example, what errors will I hit."** That is what we are building.
 
-Notes on thermal initialization, numerical-methods/solver, and HX UA-sizing strategies:
+## What we already have (reuse, don't reinvent)
 
-- **Never a global cold-start steady Newton.** Ordered pipeline: pre-init fluids → **per-node consistent state init** → **consistent index-1 DAE init** → **steady-state stabilizing run (hold inputs, integrate DAE to der≈0 = the steady answer)** → dynamic run.
-- **Consistent state init from a user thermodynamic PAIR** (`P+h` / `P+T` / `P+x` / `P+SH|SC`) inverted to the full consistent `(P,h,T,x,ρ)` — the dominant pattern (92 submodels). *This is the principled fix for failure mode #1.*
-- **Steady = `holdinputs_` + integrate to equilibrium** via the BDF/DAE solver's consistent-IC mode (DASSL/DDASKR; frEES has SUNDIALS-IDA + `IDACalcIC`).
-- **ε-NTU HX** (clipped ε, secant-cp, floors) is the workhorse; **pervasive C¹ smoothing** keeps the corrector from chattering; **Salane zero-flow handling**; warm-restart from a saved final state for continuation.
+- **Validated example library** — `frontend/src/examples.ts` (`Example[]`, each `text` verified
+  against the backend with zero unit warnings; harnessed by
+  `backend/.../core/ExampleFixtureHarnessTest.java` and the `*ExamplesTest` suite). Function
+  pages bind to these by `id` instead of inventing untested snippets.
+- **Interactive markdown renderer** — `HelpPage.tsx` already renders KaTeX, `[Graph="…"]`,
+  `[Diagram: X]` (`docs/DocDiagrams.tsx`), and `[Topic: id]` tags. We extend this, not replace it.
+- **REPL execution path** — `ReplTerminal.tsx` → `POST /api/repl/evaluate` (`ReplEvaluator`).
+  "Send to REPL" / "Open as document" needs no new compute infra.
+- **Search** — `searchIndex.ts` (`buildSearchIndex` over `DOCS_CATALOG` + `EXAMPLES`). Extend
+  to index function pages + frontmatter.
+- **Live reference data** — units & constants already come from `GET /api/reference`.
+- **Backend source-of-truth** — `parser/FunctionRegistry.java`, `ast/Evaluator.evalBuiltin`,
+  `ast/ControlSystemsEvaluator`, `parser/ProcedureEvaluator`, `api/ReplEvaluator`; grammar in
+  `backend/src/main/antlr/Frees.g4`. Component library in the `*.frees` std-lib files.
 
-## The path (phased)
+## Architectural decisions (recommended — confirm before Phase 0)
 
-- **Phase A — Consistent state initialization.** Seed every state/stream enthalpy (and other state members) to a **thermodynamically consistent** value: resolve each port's fluid + domain, and from the seeded pressure compute `h = Enthalpy(fluid, P, x=0.5)` (twophase) / `Enthalpy(fluid, P, T≈300)` (liquid) / moist-air enthalpy, instead of leaving `h=1.0`. Optionally expose an `init$` pair on storage/boundary components. *Fixes the cold-start NaN; unblocks closed loops.* **← THIS SESSION**
-- **Phase B — Steady = integrate-to-equilibrium (stabilizing run).** Reuse the SUNDIALS-IDA + `DYNAMIC` machinery as a first-class stabilizing run: storage (thermal masses/volumes) on the C-nodes, boundary inputs held, `IDACalcIC` consistent init seeded from Phase A, march to `der≈0`; the equilibrium is the steady operating point with floating `P_evap`/`P_cond`. Verify on the EV TMS. **← THIS SESSION**
-- **Phase C — ε-NTU coupled HX primitive: DONE (floating pressure demonstrated).** ε-NTU evaporator/condenser with the **Cr→0 limit `ε = 1 − exp(−UA/C_sec)`** (clipped, no moving-boundary zones → no regime NaN). The pressure FLOATS: the HX writes the duty two ways — `Q = ṁ·Δh` and `Q = ε·C_sec·(T_sat(P) − T_env)` — and `P` is the unknown that makes them equal. Plus **fluid-aware refrigerant pressure seeding** (`PropertyFunctions.nominalPressure` → ~0.35·Pcrit; `EquationSystemSolver.seedRefrigerantPressure` runs before the generic 1-bar seed) so a floating-pressure refrigerant model cold-starts in-band. *Validated:* `EpsNtuFloatingTest` — **condensing pressure rises with ambient** (1.25→1.69 MPa for 30→45 °C) and **evaporating pressure rises with load** (0.30→0.46 MPa for 15→30 °C), both solved cold, robust; full suite green (no regression). *Remaining ε-NTU polish (deferred):* secant-cp + tanh-blend, 4-pass outlet fixed point, denominator floors. *Known:* the full BOTH-pressures-float CLOSED cycle still stalls at cold-start steady Newton (tight compressor↔valve↔loop coupling, no bound projection) — that's the integrate-to-steady (Phase B + pressure-state volumes) case, the established route; needs Phase E bound-projection for a cold-start steady solve.
-- **Phase D — Continuation / warm-restart.** Save/restore final state to warm-start parameter sweeps (COP-vs-ambient) and ramp into stiff corners. *(later)*
-- **Phase E — Conditioning at scale. PARTIAL (bound-projection done).** Found the line-search **already projects onto bounds** (`NewtonSolver.backtrackLineSearch` clamps the candidate) and **already column-scales** the Jacobian — they were inert for refrigerant pressures only because the auto-seeded bounds were ±∞. Added **physical refrigerant pressure bounds** (`applyNominalGuessWithBounds` → [10 kPa, ~1.5·Pcrit] from `nominalPressure`) so the clamp keeps a floating pressure in-table; full suite green (no regression). *Still needed for the BOTH-float CLOSED cycle cold start:* once an **unbounded variable** (enthalpy, or `Q/ṁ` with ṁ→0) goes NaN it propagates and `clamp(NaN)=NaN` / halving-NaN can't recover — so the remaining work is **variable NaN-sanitization** (replace a NaN iterate with a nominal) and/or **(P,h)-region clamping in the property evaluator**, or take the cycle via **integrate-to-steady with pressure-state volumes** (Phase B). Deferred: ÷1000 variable scaling, Salane zero-flow, sparse LU + condition estimate, cycle tearing on P_evap/P_cond.
+1. **Extend the existing `.md` + `[Tag]` compile pipeline; do NOT adopt MDX.** The advisory
+   proposed MDX, but frees already owns an interactive markdown+tag renderer, a backend-tested
+   example library, and a REPL endpoint — MDX would duplicate all three and add a
+   Vite/`@mdx-js` toolchain. We add new inline tags (`[Run: id]`, `[Example: id]`,
+   `[ArgTable: fn]`) handled in `HelpPage.tsx`. *(Alternative if richer composition is later
+   needed: MDX via `@mdx-js/rollup`. Not now.)*
+2. **Machine-readable function manifest is the accuracy backbone.** Emit a
+   `function-manifest.json` from the backend registries (names, arity, arg/return kinds,
+   category) and **fail a test** if any backend built-in lacks a doc page or any doc page names
+   a non-existent function. Closes the drift gap `helpReference.ts` calls out.
+3. **Examples are backend-verified, never invented.** Every code block on a function page is
+   either an existing `examples.ts` entry (by `id`) or a new snippet added to the example
+   harness test. Honors frees' standing "every example verified, zero unit warnings" rule.
+4. **Interactivity v1 = "Send to REPL" + "Open as document" + inline expected output.** Reuse
+   the existing single REPL session. **Defer** the advisory's web-worker isolation sandbox and
+   per-block ephemeral workspaces — over-built for v1.
+5. **Error-driven help = stable error codes → doc anchors.** Add machine-stable codes to
+   backend exceptions, map code → `/help/errors#code`, deep-link from frontend error toasts.
+6. **Mathematical rigor with citations is mandatory, not optional.** Every page that
+   implements a formula or algorithm (functions, property models, solver/control/CAS ops,
+   component constitutive equations) must render its governing equations in KaTeX and cite the
+   source. **Ground every citation against the NotebookLM "Frees" notebook**
+   (id `350fef25-d19d-4542-a55d-7217276f077a`, 157 sources — Çengel, Nise, Kays & London,
+   Kakaç, Holman, Idelchik, Collier, EES/Mastering-EES, Amesim lib PDFs). The `notebooklm` CLI
+   is authenticated:
+   `notebooklm ask "<governing equation / method for X>" --notebook 350fef25 -s <srcid>`
+   for a grounded, source-attributed lookup; use `notebooklm source list --notebook 350fef25`
+   to pick the right textbook. Do **not** cite from model memory — pull the equation and the
+   reference from the notebook so they match the implementation and a real document.
 
-## This session: A + B together — DONE (green)
+## Per-function page template (the contract)
 
-1. **A — consistent state init: DONE.** `PropertyFunctions.nominalEnthalpy(fluid, P)` inverts a fluid to a consistent mid-dome enthalpy (`Q=0.5`), falling back to `T≈300 K` for an incompressible and a nominal for moist air; `EquationSystemSolver.seedConsistentEnthalpy` seeds every property-call enthalpy argument from its fluid + seeded pressure (was left at the 1.0 J/kg default that NaN'd CoolProp). User/GUI guesses still win; degrades gracefully (NaN → keep default). *Validated:* `ConsistentInitTest` (unit-tests the primitive); full suite green — **no regression** (the seeding only touches DEFAULT_GUESS vars). The inner algebraic IC solve of the IDA path (`solvePinned`→`solveEquationList`) reuses it, so it also seeds the transient initial state.
-2. **B — steady = integrate-to-equilibrium: DONE.** `DynamicSolver` now treats an `IDACalcIC` line-search failure (`-12`) as recoverable: it falls back to integrating from the assembled, near-consistent seeded initial state (`reinit`) instead of aborting. *Validated:* `SteadyByIntegrationTest` — the cross-domain chiller bridge (R1234yf evaporator ↔ EG50 coolant through a wall thermal mass), held inputs, marched on `method=ida` to equilibrium, settles the wall and reaches the **self-consistent coupled duty `Qref ≡ Qcool` (4012 W, wall 300 K)** — the matched cross-domain operating point the cold-start steady Newton could not reach.
+Authored as one markdown topic per function (`[Topic: fn-solvelinear]`), with frontmatter:
 
-**Known limit found this session (→ Phase C/E):** the *moving-boundary* evaporator in the same integrate-to-steady setup hits `IDASolve -9` (repeated residual NaNs) — its regime switching trips a property-domain blowup mid-march. The lumped (set-superheat) half is robust; making the MB path integrate needs the **ε-NTU / C¹-smoothing / property-clamping** hardening of Phase C/E. Floating *pressure* (vs floating wall T shown here) needs pressure-state volumes, which depend on that same hardening.
+```
+---
+name: SolveLinear
+category: Matrix & Linear Algebra
+summary: Solve the linear system A·x = b.
+related: [Inverse, Determinant, Dot]
+examples: [matrix-meshcurrents, control-ss2tf]   # ids in examples.ts
+tags: [linear, lu, svd, matrix]
+references:                                       # grounded via the Frees notebook
+  - "Golub & Van Loan, Matrix Computations, §3.4 (LU with partial pivoting)"
+---
+```
+Body sections (omit a section only when truly N/A):
+- **Syntax** — every call form / arg variation.
+- **Description** — what it does, then when to use it.
+- **Mathematical Formulation** — the governing equation(s) / algorithm rendered in KaTeX
+  (e.g. `A x = b`, `A = P L U`, Newton step, ε-NTU relation, property correlation), with a
+  one-line note on the numerical method actually used by the backend. **Every formula carries
+  a citation** keyed to the `references` frontmatter.
+- **Examples** — progressive (basic → intermediate → advanced), spanning domains
+  (aerospace / mechanical / electrical / chemical / thermo). Each is a `[Run: id]` block.
+- **Input Arguments** — table: name · type · required · description (units/dims/constraints).
+- **Output Arguments** — table: name · type · description.
+- **Common Errors** — table: error code · cause · fix; with a `[Run: id]` that triggers it.
+- **Extended Capabilities** — units, uncertainty propagation, complex, matrix/array support.
+- **References** — full citations (textbook/standard + section), sourced from the Frees
+  NotebookLM notebook; renders as a footnote list, cross-linked from the formulas above.
+- **See Also** — related functions + Cookbook recipes.
 
-**ROOT CAUSE (definitive, `ClosedLoopDiagnosisTest`):** NOT a solver bug. The relative-enthalpy HX formulation (`out.h=in.h±Q/ṁ`) makes a CLOSED loop **structurally singular** — `check()` (a structural matching test) returns `solvable=false` even at DOF 0, *before the solver runs*. Three layers: (1) structural singularity [model], (2) cold-start NaN from equal-pressure init [init], (3) finite-residual Newton stall on the coupled block [convergence]. Core-solver surgery cannot fix layer 1.
+## Phased plan
 
-**CLOSED-LOOP STRUCTURAL FRONTIER — BROKEN (`ClosedLoopAttemptTest`, green):** a topologically-CLOSED dual-evaporator vapor-compression loop (condenser liquid → split → two TXVs → two evaporators → suction mixer → DISPLACEMENT compressor → condenser → back, NO source/sink) is **structurally well-posed: `check()` = solvable, DOF 0** — directly refuting the "a closed refrigerant loop is structurally singular" note above (which was for the RELATIVE-enthalpy formulation). Two ingredients: (1) **absolute enthalpy anchors** everywhere (evaporator superheat `Enthalpy(P,T=Tsat+SH)` + condenser saturated liquid `Enthalpy(P,x=0)`) so the loop enthalpy level is observable; (2) the **compressor DISPLACEMENT closure** `ṁ = disp·ρ(P_suc)` supplies the suction-pressure equation a pass-through compressor lacks — the same equation that is REDUNDANT in an open chain (where a feed pins P_suc) but REQUIRED once closed. *Remaining = purely numerical:* the cold-start solve of both simultaneously-floating pressures still NaNs (one nominal seed can't serve a low suction + high discharge — `coldStartIsStillTheNumericalFrontier` characterizes it). Route past it = integrate-to-steady with the suction as a compliance STATE (`ClosedLoopDynamicTest`: one PVol `der(P_suc)=Δṁ/C` + the algebraic absolute-anchor condenser → **SQUARE DAE, it marches**).
+- **Phase 0 — Inventory & scaffolding. IN PROGRESS.**
+  - DONE — **Manifest generator** `frontend/scripts/build-doc-manifest.mjs` reads
+    `FunctionRegistry.java` (166 structured fns) + greps live `case "…"` dispatch labels from
+    `Evaluator`/`ControlSystemsEvaluator`/`ReplEvaluator`, emits
+    `frontend/src/docs/reference/function-manifest.json` with per-fn `documented` flags +
+    coverage counts. Drift-resistant (re-reads backend each run). **Surfaced the gap:** 116
+    dispatch-only names absent from the registry (real built-ins — `erf`, `gamma`, `factorial`,
+    `interpolate`, `lookup`, `viewfactor_*`, `heisler_*`, `normalcdf`, bessels — plus noise:
+    multi-output case labels `gm/pm/tr/ts/Kp…` and the `if` keyword, for human triage).
+  - DONE — **Reference scaffolding** `frontend/src/docs/reference/`: `_TEMPLATE.md` (page
+    contract + frontmatter schema), `README.md` (authoring + notebook-grounding workflow),
+    category subfolders.
+  - DONE — **Exemplar page** `reference/heat-transfer/hx_effectiveness.md` realizing the full
+    standard: KaTeX ε-NTU relations grounded against the Frees notebook (Kays & London Eq. 2-13,
+    Kakaç Eq. 2.46, Holman Eq. 10-27), bound to the verified example `hx-effectiveness-ntu`,
+    with Input/Output/Common-Errors tables. Manifest now reports 1/166 documented.
+  - DONE — **Registry completion** (the single-source-of-truth pass). Refined the generator to
+    reconcile at the *dispatch-arm* level: multi-label `case "a","b"` arms are captured whole, and
+    aliases (labels sharing an arm with a registered name — `isen_t0_t`=`t0_t`, `hx_epsilon`,
+    `darcy_friction`, `bessel_j`=`besselj`, `flametemp`…) fold into their canonical instead of
+    showing as gaps. That left **97 genuinely-missing scalar built-ins**, all now added to
+    `FunctionRegistry.java` (166 → **272** functions) with signatures/descriptions harvested from
+    `helpReference.ts` + verified against the Evaluator dispatch: inverse-trig/hyperbolic, number-
+    theory/bitwise, complex helpers, special functions (Gamma/Bessel/erf/orthogonal polys), stats &
+    regression, calculus (`Integral`/`GaussIntegral`/`Differentiate`/`UncertaintyOf`), interpolation
+    & lookup, parametric-table + ODE-result accessors, string helpers, Heisler/view-factors,
+    stagnation props. New categories: Complex, Special Functions, Calculus, Interpolation, Tables,
+    ODE Results, Logic, Strings. **Manifest now reports 0 dispatch-only gaps**; backend
+    `compileJava` green; no duplicate names; the entries also flow to the live `/api/reference`.
+  - DONE — **Full documentable surface** enumerated by the generator (`function-manifest.json`),
+    reading each family from its authoritative source: **136 components** parsed from
+    `resources/components/*.frees` (`COMPONENT <name>`, grouped by 12 domain files), **30 property
+    functions** from `PropertyFunctions.java` `OUTPUTS`/`HA_OUTPUTS` (fluid + humid-air), **5
+    material functions** + 23 materials from `SolidProperties.java`, **44 CALL procedures** and **14
+    matrix functions** from the curated `helpReference.ts`, and **14 REPL/CAS ops** from
+    `ReplEvaluator`. **Grand total: 515 documentable symbols**, each carrying a `documented` flag.
+    Manifest sections: `functions`, `matrixFunctions`, `callProcedures`, `propertyFunctions`,
+    `materials`, `components`, `replCasOps`, plus a `coverage` summary block. (Robust TS-field
+    parsing handles single/double/backtick-quoted `desc`/`signature`.)
+  - TODO — wire the coverage assertion as a failing test (Phase 1, with the renderer): a CI test
+    that every `documented:false` symbol is a known gap and that no page names an unknown symbol.
+- **Phase 1 — Pipeline & renderer. DONE (verified in-browser).**
+  - `compile-docs.js` now also walks `src/docs/reference/**/*.md`, parses YAML-subset frontmatter,
+    and emits `src/referenceCatalog.ts` (`REFERENCE_PAGES: ReferencePage[]` with name/slug/category/
+    summary/related/examples/tags/references/body). `npm run compile-docs` runs it + the manifest.
+  - `HelpPage.tsx`: `ReferencePageView` renders a page (monospace title + category badge, summary,
+    tag badges, KaTeX body via the existing `MarkdownRenderer`, frontmatter-driven "See also"
+    badges that deep-link to sibling pages). New `[Run: id]` tag in `MarkdownRenderer` pulls a
+    backend-verified example from `examples.ts` and renders it as a titled, copyable code block.
+    Reference pages get auto-generated nav categories ("Reference · <Category>") merged into the
+    existing nav + search.
+  - `searchIndex.ts` indexes every reference page (name, summary, tags, references, body).
+  - `check-doc-coverage.mjs` (+ `npm run check-docs`) enforces: every page names a real backend
+    symbol and binds only real example ids; reports documented/total. **Green.**
+  - **Verified**: ran a host Vite dev server, opened `/help`, the `hx_effectiveness` page renders
+    fully — KaTeX ε-NTU formulas with citations, the `[Run:]` example, all tables, references, and
+    See-Also badges. `tsc -b` green; no new console errors (only pre-existing dev 404s).
+- **Phase 2 — Reference content (the bulk). IN PROGRESS (4/515 pages).** Heat-Transfer seed done:
+  `hx_effectiveness` (exemplar) + its See-Also siblings `LMTD`, `fin_efficiency`, `hx_NTU` — each
+  with notebook-grounded KaTeX (Kakaç Eq. 2.28/2.36, Holman Eq. 2-38/10-12, Özışık Eq. 3-41b, Kays
+  & London Ch. 2 / Table 2.4) and bound to verified examples (`hx-effectiveness-ntu`,
+  `ev-thermal-management`); expected values hand-checked against the formulas; coverage gate +
+  `tsc -b` green. Continue per the order below.
+  Author per-function pages, highest-traffic
+  categories first: Math → Matrix/Linear Algebra → Control Systems → Thermophysical Properties
+  → Units → Uncertainty → CAS/Symbolic → Block constructs → Components. For each page: write the
+  Mathematical Formulation in KaTeX and **pull its governing equation + citation from the Frees
+  NotebookLM notebook** (`notebooklm ask … --notebook 350fef25 -s <srcid>`); bind to a verified
+  example; add any new snippets to the harness test. Drive coverage + math/reference tests green.
+- **Phase 3 — Cookbook (intent-based).** Task guides crossing functions/domains: PID by pole
+  placement, thermodynamic cycle analysis, aerospace pitch dynamics (ss↔tf), Monte-Carlo
+  uncertainty, pump/fan operating-point. Migrate the example catalog embedded in `HelpPage.tsx`
+  into these + `examples.ts`.
+- **Phase 4 — Error-driven help.** Stable error codes on backend exceptions (syntax,
+  dimensional mismatch, singular matrix, solver non-convergence, unit mismatch). `code → anchor`
+  map; deep-link frontend error toasts to `/help/errors#code`. `errors/` reference pages.
+- **Phase 5 — Polish & guardrails.** Async-load the search index; "Common Errors" present on
+  every function page; domain-diversity check on examples; About/version cross-link. CI test:
+  every example in a doc page solves clean against the backend.
 
-**TRANSIENT PROPERTY GUARDING — DONE (`PropertyGuardTest`, green; `PropertyFunctions.enterLenient/exitLenient`).** A thread-scoped lenient mode, enabled ONLY around the IDA residual eval (`DynamicSolver`), clamps/sanitizes CoolProp arguments (pressure floor/ceil, NaN→nominal, Q→[0,1]) and falls back to a finite value at a safe reference state instead of throwing — so a stiff corrector that briefly leaves the fluid table gets a finite residual and steps back in, rather than the recoverable-error storm that becomes `IDASolve -9`. Transparent for in-range args (steady Newton stays strict; full suite green, no regression). This **cleared the closed-loop `-9`**.
+## Quality gates (CI-enforceable)
 
-**CHARGE-STATE CLOSED CYCLE — model built, blocked on DAE infrastructure (`ChargeCycleTest`).** The single-compliance-volume loop was Jacobian-singular (`-6`): every component conserves mass instantaneously, so loop conservation forces the suction volume's inflow == outflow and `der(P_suc) ≡ 0`. The correct model is **finite-volume control volumes** — mass `M` + energy `U` states, `P/T/h` from `(ρ=M/V, u=U/M)` via CoolProp `(D,U)` calls — with the compressor moving mass low→high and a **TXV flow restriction** (`ṁ=Kv·√Δp`) returning it, so the **charge distribution** drives the pressures. Built and `(D,U)→P` works.
+- **Coverage**: every backend built-in/procedure/component has a reference page; no page names
+  a non-existent symbol (manifest↔docs test).
+- **Accuracy**: every `[Run:]`/`[Example:]` id resolves and solves against the backend with
+  zero unit warnings (extend the example harness).
+- **Error coverage**: every function page has a Common Errors section.
+- **Mathematical rigor**: every page implementing a formula/algorithm has a Mathematical
+  Formulation section with KaTeX equations, and a non-empty `references` frontmatter; each
+  reference must be traceable to a Frees-notebook source (no memory-only citations).
+- **Searchability**: every page has valid frontmatter feeding the index.
+- **Domain diversity**: examples span ≥3 engineering domains across the reference set.
 
-**HOW AMESIM SORTS IT (research corpus `lib_thermal_hydraulic_libthh_libtpf.md`, `amesim_numerical_methods_solver.md`):** capacitive volumes use **`(p, h)` (or `(p, T)`) as STATES** — "two-phase control volumes: mass + energy conservation with `(p,h)` as states"; `dp/dt` from a **bulk-modulus/compressibility compliance** (`dp/dt = Σṁ / C`), `dh/dt` from the energy balance — so the **charge `m = ρ(P,h)·V` is DERIVED, not a state**. There is therefore **no conserved-sum-of-states invariant** (that was the `(M,U)` mistake: total charge `M_e+M_c` as a sum of states → index-2). Plus the **alternating C/R bond-graph discipline** (capacitive volumes separated by resistive flow-elements, never C-C) gives **causality assignment that makes the network index-1 by construction**, and the BDF integrator (DASSL/IDA) carries charge/energy as **conserved quantities from the initial condition**.
+## Open questions for the user
 
-**DONE — the closed refrigerant cycle integrates to steady (`ChargeCycleTest`, green).** Reformulated to Amesim's form: `PhVol` with `der(in.P)=Δṁ/C` + `der(hcv)=energy/(ρV)`, charge `m=ρ(P,h)V` derived. The remaining blocker was **frees' connect expander, not the model**, and is now FIXED: `ComponentExpander.seedComponentLinks` used to seed an in↔out loop link for EVERY fluid 2-port, so in a closed C-R-C-R loop the cycle-closing `connect` was judged redundant and its across (P/h) + Σṁ equalities were dropped (the `-3` non-square). But a **capacitive volume is not a pass-through** — mass accumulates (`der(M)`, `in.mdot≠out.mdot`) and its pressure is a state, so it breaks both the mass and the pressure cycle. Excluding capacitive volumes from the loop-seed (`seedComponentLinks(uf, excludeCapacitive=true)` in `expandConnects`; fluid-identity propagation still seeds them) lets the closing connect emit — frees' analogue of **Amesim's C/R causality assignment** (C nodes = states, R nodes algebraic; each volume's pressure an independent state). Result: closed two-volume loop (evaporator C → displacement compressor R → condenser C → TXV R) marches with both pressures floating (P_evap 350→289 kPa, P_cond 1.20→1.26 MPa), discharge above suction, DOF 0. Full suite green, no regression. `ClosedLoopDynamicTest.integrateToSteady` (the cruder single-compliance-volume route) stays `@Disabled` — superseded by `ChargeCycleTest`.
-
-**MEANINGFUL-STEADY FLOATING PRESSURE — DELIVERED for the high side (`ChargeClosedCycleTest`, green):** the physically-correct absolute anchor for a refrigerant cycle is the **CHARGE** `M=Σρ(P,h,α)·V` (shipped T2 `TwoPhaseCondenserUA`), NOT HX-outlet pinning (which over-constrains the pressure split). Open design-point chain with charge closure: **P_cond floats with ambient (1.03 MPa@32 °C → 1.48 MPa@47 °C) and with charge** — solvable on shipped components. Standalone floating condenser AND evaporator also green (`EpsNtuFloatingTest`). **Frontier (still open):** floating BOTH pressures in ONE topologically-closed loop — structurally singular with the current component set + checker (every shipped cycle test is an OPEN chain). Needs either a closed-loop-aware formulation (charge + a low-side closure that doesn't over-constrain) or continuation; the compressor's `(P,s)` inversion + a floating pressure also NaNs at cold start (needs continuation/good init).
-
-**Option-3 attempt (integrate-to-steady with pressure-state volumes — the full floating cycle):** built `PVol` (pressure-compliance C-node, `der(P)=Δṁ/C`) on the suction & discharge of an ε-NTU cycle so both pressures are STATES and the held-input DAE marches to equilibrium. The IC algebraic solve (fixed pressures) succeeds, but the MARCH hits `IDASolve -9` (transient residual NaN). Isolation ruled out the compressor (`-9` persisted with a property-free `SimpleComp`) and the `SH` diagnostic call — it's a coupled-cycle transient blowup (a local `Q/ṁ` enthalpy or a `(P,h)` excursion as the compliance volumes transiently decouple in/out ṁ). So the full floating cycle needs the same **transient property/flow guarding** (NaN-sanitize a variable iterate; floor `Q/ṁ`; clamp `(P,h)` into the table) as the MB case. The **cross-domain chiller-bridge** integrate-to-steady (no compressor in the loop) and the **standalone floating condenser/evaporator** are green — the mechanism is proven; the full closed cycle is the remaining nut. Red test was removed (kept the green deliverables).
-
-## Notes / known bugs to fix along the way
-
-- ~~Shipped `TXVSuperheat` (`twophase.frees`) is **missing `domain$ = twophase`** → can't be wired into a two-phase circuit.~~ **FIXED** — `TXVSuperheat` declares `PARAM … domain$ = twophase` (`twophase.frees:342`); regression test `TxvSuperheatDomainTest`, green.
+- Confirm decision #1 (extend existing pipeline vs. MDX) and #4 (defer the isolation sandbox).
+- Scope of v1: all ~130 components in Phase 2, or functions/procedures first and components later?
+- Should `/help/...` deep-link routes be added (URL anchors per function) for error-toast links?
 
 ---
 
-*Prior plan (two-phase/refrigeration domain re-architecture, S1→L→T0→T1→T2→AC→T3 — all phases COMPLETE) is in git history / README.md / CLAUDE.md. This file now tracks the meaningful-steady solver work.*
+*Parked — prior initiative (Meaningful-Steady solver robustness & initialization) is
+substantially DONE and recorded in git history / README.md / CLAUDE.md. Recap: consistent
+state init, steady-by-integration, ε-NTU floating-pressure HX, transient property guarding,
+and the Amesim-style charge-state closed refrigerant cycle all shipped green. Remaining open
+frontier: floating BOTH pressures in ONE topologically-closed loop at cold start (needs a
+closed-loop-aware formulation or continuation) — pick back up from the
+`feat/twophase-refrigeration-s1` line if resumed.*
