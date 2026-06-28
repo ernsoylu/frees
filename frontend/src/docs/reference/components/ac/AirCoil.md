@@ -1,29 +1,32 @@
 ---
 name: AirCoil
 category: Component (ac)
-summary: Acausal ac-domain component AirCoil with ports ref_in, ref_out, air_in, air_out.
+summary: An air-to-refrigerant coil (the air side of an evaporator or condenser).
 related: []
 examples: []
 tags: [aircoil, component, ac, acausal]
-references: []
-generated: true
+references:
+  - "Karnopp, D.C., Margolis, D.L. & Rosenberg, R.C., System Dynamics: Modeling, Simulation, and Control of Mechatronic Systems (5th ed.) — acausal/bond-graph formalism"
+  - "ASHRAE Handbook — Refrigeration"
 ---
 
 # AirCoil
 
-Reusable acausal **ac-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+An air-to-refrigerant coil (the air side of an evaporator or condenser).
 
-> **Auto-generated** from the component library (`backend/src/main/resources/components/`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+## Domain
+
+A reusable **acausal ac-domain** component — its refrigerant/air ports carry pressure `P`, mass-flow `ṁ`, and specific enthalpy `h`. Instantiate it and connect its ports; the constitutive equations below expand into the global scalar system.
+
+## Ports
+
+`ref_in`, `ref_out`, `air_in`, `air_out`
 
 ## Usage
 
 ```
 AirCoil inst(ref$, U_tp, U_sh, D, L, eps_zone, eps_air)
 ```
-
-## Ports
-
-`ref_in`, `ref_out`, `air_in`, `air_out`
 
 ## Parameters
 
@@ -39,7 +42,7 @@ AirCoil inst(ref$, U_tp, U_sh, D, L, eps_zone, eps_air)
 
 ## Constitutive Equations
 
-The acausal equations this component expands into (over its port members and parameters):
+Instantiating the component expands these acausal equations (over its port members and parameters) into scalar equations solved by the standard Newton/Tarjan pipeline:
 
 ```
 MovingBoundaryEvaporator EV(fluid$=ref$, U_tp=U_tp, U_sh=U_sh, D=D, L=L, eps_zone=eps_zone)
@@ -51,3 +54,7 @@ connect(AC.out, air_out)
 connect(EV.wall, AC.wall)
 ```
 
+## References
+
+1. Karnopp, D.C., Margolis, D.L. & Rosenberg, R.C., *System Dynamics: Modeling, Simulation, and Control of Mechatronic Systems* (5th ed.) — acausal/bond-graph formalism.
+2. ASHRAE Handbook — Refrigeration.

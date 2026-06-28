@@ -1,29 +1,32 @@
 ---
 name: BatteryTransient
 category: Component (electrical)
-summary: Acausal electrical-domain component BatteryTransient with ports p, n, heat.
+summary: A transient battery model carrying state-of-charge dynamics.
 related: []
 examples: []
 tags: [batterytransient, component, electrical, acausal]
-references: []
-generated: true
+references:
+  - "Karnopp, D.C., Margolis, D.L. & Rosenberg, R.C., System Dynamics: Modeling, Simulation, and Control of Mechatronic Systems (5th ed.) — acausal/bond-graph formalism"
+  - "Nilsson, J.W. & Riedel, S.A., Electric Circuits (11th ed.)"
 ---
 
 # BatteryTransient
 
-Reusable acausal **electrical-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+A transient battery model carrying state-of-charge dynamics.
 
-> **Auto-generated** from the component library (`backend/src/main/resources/components/`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+## Domain
+
+A reusable **acausal electrical-domain** component — its electrical ports carry potential `V` and current `I`; a node enforces equal `V` and `ΣI = 0` (Kirchhoff). Instantiate it and connect its ports; the constitutive equations below expand into the global scalar system.
+
+## Ports
+
+`p`, `n`, `heat`
 
 ## Usage
 
 ```
 BatteryTransient inst(Voc, R0, Q0, C_th, SOC0, T0)
 ```
-
-## Ports
-
-`p`, `n`, `heat`
 
 ## Parameters
 
@@ -38,7 +41,7 @@ BatteryTransient inst(Voc, R0, Q0, C_th, SOC0, T0)
 
 ## Constitutive Equations
 
-The acausal equations this component expands into (over its port members and parameters):
+Instantiating the component expands these acausal equations (over its port members and parameters) into scalar equations solved by the standard Newton/Tarjan pipeline:
 
 ```
 p.V - n.V = Voc + R0 * p.I
@@ -51,3 +54,7 @@ der(SOC)  = p.I / (3600 * Q0)
 init(SOC) = SOC0
 ```
 
+## References
+
+1. Karnopp, D.C., Margolis, D.L. & Rosenberg, R.C., *System Dynamics: Modeling, Simulation, and Control of Mechatronic Systems* (5th ed.) — acausal/bond-graph formalism.
+2. Nilsson, J.W. & Riedel, S.A., *Electric Circuits* (11th ed.).

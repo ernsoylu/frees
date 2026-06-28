@@ -1,29 +1,32 @@
 ---
 name: Duct
 category: Component (fluid)
-summary: Acausal fluid-domain component Duct with ports in, out.
+summary: A flow passage that imposes a pressure drop on the stream.
 related: []
 examples: []
 tags: [duct, component, fluid, acausal]
-references: []
-generated: true
+references:
+  - "Karnopp, D.C., Margolis, D.L. & Rosenberg, R.C., System Dynamics: Modeling, Simulation, and Control of Mechatronic Systems (5th ed.) — acausal/bond-graph formalism"
+  - "White, F.M., Fluid Mechanics (8th ed.)"
 ---
 
 # Duct
 
-Reusable acausal **fluid-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+A flow passage that imposes a pressure drop on the stream.
 
-> **Auto-generated** from the component library (`backend/src/main/resources/components/`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+## Domain
+
+A reusable **acausal fluid-domain** component — its thermofluid ports carry pressure `P`, mass-flow `ṁ`, and specific enthalpy `h`; a node enforces equal `P` and `Σṁ = 0`. Instantiate it and connect its ports; the constitutive equations below expand into the global scalar system.
+
+## Ports
+
+`in`, `out`
 
 ## Usage
 
 ```
 Duct inst(rho, mu, L, D, rough)
 ```
-
-## Ports
-
-`in`, `out`
 
 ## Parameters
 
@@ -37,7 +40,7 @@ Duct inst(rho, mu, L, D, rough)
 
 ## Constitutive Equations
 
-The acausal equations this component expands into (over its port members and parameters):
+Instantiating the component expands these acausal equations (over its port members and parameters) into scalar equations solved by the standard Newton/Tarjan pipeline:
 
 ```
 out.mdot = in.mdot
@@ -48,3 +51,7 @@ f        = friction_factor(Re_d, rough / D)
 out.P    = in.P - f * (L / D) * rho * V^2 / 2
 ```
 
+## References
+
+1. Karnopp, D.C., Margolis, D.L. & Rosenberg, R.C., *System Dynamics: Modeling, Simulation, and Control of Mechatronic Systems* (5th ed.) — acausal/bond-graph formalism.
+2. White, F.M., *Fluid Mechanics* (8th ed.).

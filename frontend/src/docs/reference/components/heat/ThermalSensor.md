@@ -1,36 +1,43 @@
 ---
 name: ThermalSensor
 category: Component (heat)
-summary: Acausal heat-domain component ThermalSensor with ports port.
+summary: A temperature sensor (pass-through).
 related: []
 examples: []
 tags: [thermalsensor, component, heat, acausal]
-references: []
-generated: true
+references:
+  - "Karnopp, D.C., Margolis, D.L. & Rosenberg, R.C., System Dynamics: Modeling, Simulation, and Control of Mechatronic Systems (5th ed.) — acausal/bond-graph formalism"
+  - "Incropera, F.P. et al., Fundamentals of Heat and Mass Transfer"
 ---
 
 # ThermalSensor
 
-Reusable acausal **heat-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+A temperature sensor (pass-through).
 
-> **Auto-generated** from the component library (`backend/src/main/resources/components/`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+## Domain
 
-## Usage
-
-```
-ThermalSensor inst(param = value, ...)
-```
+A reusable **acausal heat-domain** component — its thermal ports carry temperature `T` and heat-flow rate `Q̇`; a node enforces equal `T` and `ΣQ̇ = 0`. Instantiate it and connect its ports; the constitutive equations below expand into the global scalar system.
 
 ## Ports
 
 `port`
 
+## Usage
+
+```
+ThermalSensor inst(...)
+```
+
 ## Constitutive Equations
 
-The acausal equations this component expands into (over its port members and parameters):
+Instantiating the component expands these acausal equations (over its port members and parameters) into scalar equations solved by the standard Newton/Tarjan pipeline:
 
 ```
 port.Qdot = 0
 T_meas    = port.T
 ```
 
+## References
+
+1. Karnopp, D.C., Margolis, D.L. & Rosenberg, R.C., *System Dynamics: Modeling, Simulation, and Control of Mechatronic Systems* (5th ed.) — acausal/bond-graph formalism.
+2. Incropera, F.P. et al., *Fundamentals of Heat and Mass Transfer*.

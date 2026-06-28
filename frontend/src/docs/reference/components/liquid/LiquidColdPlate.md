@@ -1,29 +1,32 @@
 ---
 name: LiquidColdPlate
 category: Component (liquid)
-summary: Acausal liquid-domain component LiquidColdPlate with ports in, out.
+summary: A liquid cold plate cooling an electronics/heat load.
 related: []
 examples: []
 tags: [liquidcoldplate, component, liquid, acausal]
-references: []
-generated: true
+references:
+  - "Karnopp, D.C., Margolis, D.L. & Rosenberg, R.C., System Dynamics: Modeling, Simulation, and Control of Mechatronic Systems (5th ed.) — acausal/bond-graph formalism"
+  - "Incropera, F.P. et al., Fundamentals of Heat and Mass Transfer, Ch. 8"
 ---
 
 # LiquidColdPlate
 
-Reusable acausal **liquid-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+A liquid cold plate cooling an electronics/heat load.
 
-> **Auto-generated** from the component library (`backend/src/main/resources/components/`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+## Domain
+
+A reusable **acausal liquid-domain** component — its single-phase liquid-coolant ports carry pressure `P`, mass-flow `ṁ`, and specific enthalpy `h`. Instantiate it and connect its ports; the constitutive equations below expand into the global scalar system.
+
+## Ports
+
+`in`, `out`
 
 ## Usage
 
 ```
 LiquidColdPlate inst(Q, domain$)
 ```
-
-## Ports
-
-`in`, `out`
 
 ## Parameters
 
@@ -34,7 +37,7 @@ LiquidColdPlate inst(Q, domain$)
 
 ## Constitutive Equations
 
-The acausal equations this component expands into (over its port members and parameters):
+Instantiating the component expands these acausal equations (over its port members and parameters) into scalar equations solved by the standard Newton/Tarjan pipeline:
 
 ```
 out.mdot = in.mdot
@@ -42,3 +45,7 @@ out.P    = in.P
 Q        = in.mdot * (out.h - in.h)
 ```
 
+## References
+
+1. Karnopp, D.C., Margolis, D.L. & Rosenberg, R.C., *System Dynamics: Modeling, Simulation, and Control of Mechatronic Systems* (5th ed.) — acausal/bond-graph formalism.
+2. Incropera, F.P. et al., *Fundamentals of Heat and Mass Transfer*, Ch. 8.

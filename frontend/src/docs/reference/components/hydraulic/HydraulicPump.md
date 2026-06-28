@@ -1,29 +1,32 @@
 ---
 name: HydraulicPump
 category: Component (hydraulic)
-summary: Acausal hydraulic-domain component HydraulicPump with ports in, out, shaft.
+summary: A hydraulic pump delivering flow against pressure.
 related: []
 examples: []
 tags: [hydraulicpump, component, hydraulic, acausal]
-references: []
-generated: true
+references:
+  - "Karnopp, D.C., Margolis, D.L. & Rosenberg, R.C., System Dynamics: Modeling, Simulation, and Control of Mechatronic Systems (5th ed.) — acausal/bond-graph formalism"
+  - "Merritt, H.E., Hydraulic Control Systems"
 ---
 
 # HydraulicPump
 
-Reusable acausal **hydraulic-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+A hydraulic pump delivering flow against pressure.
 
-> **Auto-generated** from the component library (`backend/src/main/resources/components/`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+## Domain
+
+A reusable **acausal hydraulic-domain** component — its oil-hydraulic ports carry pressure `P`, mass-flow `ṁ`, and enthalpy `h`. Instantiate it and connect its ports; the constitutive equations below expand into the global scalar system.
+
+## Ports
+
+`in`, `out`, `shaft`
 
 ## Usage
 
 ```
 HydraulicPump inst(disp, rho, eta_v, eta_m, domain$)
 ```
-
-## Ports
-
-`in`, `out`, `shaft`
 
 ## Parameters
 
@@ -37,7 +40,7 @@ HydraulicPump inst(disp, rho, eta_v, eta_m, domain$)
 
 ## Constitutive Equations
 
-The acausal equations this component expands into (over its port members and parameters):
+Instantiating the component expands these acausal equations (over its port members and parameters) into scalar equations solved by the standard Newton/Tarjan pipeline:
 
 ```
 n_rev     = shaft.w / (2 * pi#)
@@ -47,3 +50,7 @@ out.h     = in.h
 shaft.tau = -(disp * (out.P - in.P) / (2 * pi#)) / eta_m
 ```
 
+## References
+
+1. Karnopp, D.C., Margolis, D.L. & Rosenberg, R.C., *System Dynamics: Modeling, Simulation, and Control of Mechatronic Systems* (5th ed.) — acausal/bond-graph formalism.
+2. Merritt, H.E., *Hydraulic Control Systems*.

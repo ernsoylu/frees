@@ -1,29 +1,32 @@
 ---
 name: LiquidVolume
 category: Component (liquid)
-summary: Acausal liquid-domain component LiquidVolume with ports in, out.
+summary: A single-phase liquid control volume.
 related: []
 examples: []
 tags: [liquidvolume, component, liquid, acausal]
-references: []
-generated: true
+references:
+  - "Karnopp, D.C., Margolis, D.L. & Rosenberg, R.C., System Dynamics: Modeling, Simulation, and Control of Mechatronic Systems (5th ed.) — acausal/bond-graph formalism"
+  - "Incropera, F.P. et al., Fundamentals of Heat and Mass Transfer, Ch. 8"
 ---
 
 # LiquidVolume
 
-Reusable acausal **liquid-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+A single-phase liquid control volume.
 
-> **Auto-generated** from the component library (`backend/src/main/resources/components/`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+## Domain
+
+A reusable **acausal liquid-domain** component — its single-phase liquid-coolant ports carry pressure `P`, mass-flow `ṁ`, and specific enthalpy `h`. Instantiate it and connect its ports; the constitutive equations below expand into the global scalar system.
+
+## Ports
+
+`in`, `out`
 
 ## Usage
 
 ```
 LiquidVolume inst(C, P0, domain$)
 ```
-
-## Ports
-
-`in`, `out`
 
 ## Parameters
 
@@ -35,7 +38,7 @@ LiquidVolume inst(C, P0, domain$)
 
 ## Constitutive Equations
 
-The acausal equations this component expands into (over its port members and parameters):
+Instantiating the component expands these acausal equations (over its port members and parameters) into scalar equations solved by the standard Newton/Tarjan pipeline:
 
 ```
 out.h       = in.h
@@ -43,3 +46,7 @@ der(in.P)   = (in.mdot - out.mdot) / C
 init(in.P)  = P0
 ```
 
+## References
+
+1. Karnopp, D.C., Margolis, D.L. & Rosenberg, R.C., *System Dynamics: Modeling, Simulation, and Control of Mechatronic Systems* (5th ed.) — acausal/bond-graph formalism.
+2. Incropera, F.P. et al., *Fundamentals of Heat and Mass Transfer*, Ch. 8.

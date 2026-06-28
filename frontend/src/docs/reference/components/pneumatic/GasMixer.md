@@ -1,33 +1,36 @@
 ---
 name: GasMixer
 category: Component (pneumatic)
-summary: Acausal pneumatic-domain component GasMixer with ports in1, in2, out.
+summary: Mixes pneumatic gas streams, carrying the species composition rider.
 related: []
 examples: []
 tags: [gasmixer, component, pneumatic, acausal]
-references: []
-generated: true
+references:
+  - "Karnopp, D.C., Margolis, D.L. & Rosenberg, R.C., System Dynamics: Modeling, Simulation, and Control of Mechatronic Systems (5th ed.) — acausal/bond-graph formalism"
+  - "ISO 6358 — Pneumatic fluid power: flow-rate characteristics"
 ---
 
 # GasMixer
 
-Reusable acausal **pneumatic-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+Mixes pneumatic gas streams, carrying the species composition rider.
 
-> **Auto-generated** from the component library (`backend/src/main/resources/components/`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+## Domain
 
-## Usage
-
-```
-GasMixer inst(param = value, ...)
-```
+A reusable **acausal pneumatic-domain** component — its compressible-gas ports carry pressure `P`, mass-flow `ṁ`, and enthalpy `h` (ISO 6358 flow). Instantiate it and connect its ports; the constitutive equations below expand into the global scalar system.
 
 ## Ports
 
 `in1`, `in2`, `out`
 
+## Usage
+
+```
+GasMixer inst(...)
+```
+
 ## Constitutive Equations
 
-The acausal equations this component expands into (over its port members and parameters):
+Instantiating the component expands these acausal equations (over its port members and parameters) into scalar equations solved by the standard Newton/Tarjan pipeline:
 
 ```
 out.P    = in1.P
@@ -36,3 +39,7 @@ out.mdot * out.h = in1.mdot * in1.h + in2.mdot * in2.h
 out.mdot * out.y = in1.mdot * in1.y + in2.mdot * in2.y
 ```
 
+## References
+
+1. Karnopp, D.C., Margolis, D.L. & Rosenberg, R.C., *System Dynamics: Modeling, Simulation, and Control of Mechatronic Systems* (5th ed.) — acausal/bond-graph formalism.
+2. ISO 6358 — Pneumatic fluid power: flow-rate characteristics.

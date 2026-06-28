@@ -1,29 +1,32 @@
 ---
 name: MixingBox
 category: Component (moistair)
-summary: Acausal moistair-domain component MixingBox with ports in1, in2, out.
+summary: Mixes two humid-air streams with flow-weighted enthalpy and humidity ratio.
 related: []
 examples: []
 tags: [mixingbox, component, moistair, acausal]
-references: []
-generated: true
+references:
+  - "Karnopp, D.C., Margolis, D.L. & Rosenberg, R.C., System Dynamics: Modeling, Simulation, and Control of Mechatronic Systems (5th ed.) — acausal/bond-graph formalism"
+  - "ASHRAE Handbook — Fundamentals (Psychrometrics)"
 ---
 
 # MixingBox
 
-Reusable acausal **moistair-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+Mixes two humid-air streams with flow-weighted enthalpy and humidity ratio.
 
-> **Auto-generated** from the component library (`backend/src/main/resources/components/`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+## Domain
+
+A reusable **acausal moistair-domain** component — its humid-air ports carry pressure `P`, dry-air mass-flow `ṁ_da`, enthalpy `h`, and humidity ratio `W`. Instantiate it and connect its ports; the constitutive equations below expand into the global scalar system.
+
+## Ports
+
+`in1`, `in2`, `out`
 
 ## Usage
 
 ```
 MixingBox inst(domain$)
 ```
-
-## Ports
-
-`in1`, `in2`, `out`
 
 ## Parameters
 
@@ -33,7 +36,7 @@ MixingBox inst(domain$)
 
 ## Constitutive Equations
 
-The acausal equations this component expands into (over its port members and parameters):
+Instantiating the component expands these acausal equations (over its port members and parameters) into scalar equations solved by the standard Newton/Tarjan pipeline:
 
 ```
 out.P    = in1.P
@@ -42,3 +45,7 @@ out.mdot * out.W = in1.mdot * in1.W + in2.mdot * in2.W
 out.mdot * out.h = in1.mdot * in1.h + in2.mdot * in2.h
 ```
 
+## References
+
+1. Karnopp, D.C., Margolis, D.L. & Rosenberg, R.C., *System Dynamics: Modeling, Simulation, and Control of Mechatronic Systems* (5th ed.) — acausal/bond-graph formalism.
+2. ASHRAE Handbook — Fundamentals (Psychrometrics).

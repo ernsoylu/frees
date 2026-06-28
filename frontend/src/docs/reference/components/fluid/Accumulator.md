@@ -1,29 +1,32 @@
 ---
 name: Accumulator
 category: Component (fluid)
-summary: Acausal fluid-domain component Accumulator with ports in, out.
+summary: A fluid accumulator — a compliance volume that stores fluid under pressure and buffers flow transients.
 related: []
 examples: []
 tags: [accumulator, component, fluid, acausal]
-references: []
-generated: true
+references:
+  - "Karnopp, D.C., Margolis, D.L. & Rosenberg, R.C., System Dynamics: Modeling, Simulation, and Control of Mechatronic Systems (5th ed.) — acausal/bond-graph formalism"
+  - "White, F.M., Fluid Mechanics (8th ed.)"
 ---
 
 # Accumulator
 
-Reusable acausal **fluid-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+A fluid accumulator — a compliance volume that stores fluid under pressure and buffers flow transients.
 
-> **Auto-generated** from the component library (`backend/src/main/resources/components/`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+## Domain
+
+A reusable **acausal fluid-domain** component — its thermofluid ports carry pressure `P`, mass-flow `ṁ`, and specific enthalpy `h`; a node enforces equal `P` and `Σṁ = 0`. Instantiate it and connect its ports; the constitutive equations below expand into the global scalar system.
+
+## Ports
+
+`in`, `out`
 
 ## Usage
 
 ```
 Accumulator inst(C, P0)
 ```
-
-## Ports
-
-`in`, `out`
 
 ## Parameters
 
@@ -34,7 +37,7 @@ Accumulator inst(C, P0)
 
 ## Constitutive Equations
 
-The acausal equations this component expands into (over its port members and parameters):
+Instantiating the component expands these acausal equations (over its port members and parameters) into scalar equations solved by the standard Newton/Tarjan pipeline:
 
 ```
 out.P       = in.P
@@ -43,3 +46,7 @@ der(in.P)   = (in.mdot - out.mdot) / C
 init(in.P)  = P0
 ```
 
+## References
+
+1. Karnopp, D.C., Margolis, D.L. & Rosenberg, R.C., *System Dynamics: Modeling, Simulation, and Control of Mechatronic Systems* (5th ed.) — acausal/bond-graph formalism.
+2. White, F.M., *Fluid Mechanics* (8th ed.).

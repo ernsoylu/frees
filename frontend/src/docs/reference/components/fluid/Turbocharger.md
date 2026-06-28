@@ -1,29 +1,32 @@
 ---
 name: Turbocharger
 category: Component (fluid)
-summary: Acausal fluid-domain component Turbocharger with ports t_in, t_out, c_in, c_out.
+summary: A turbine-driven compressor pair coupled on a common shaft.
 related: []
 examples: []
 tags: [turbocharger, component, fluid, acausal]
-references: []
-generated: true
+references:
+  - "Karnopp, D.C., Margolis, D.L. & Rosenberg, R.C., System Dynamics: Modeling, Simulation, and Control of Mechatronic Systems (5th ed.) — acausal/bond-graph formalism"
+  - "White, F.M., Fluid Mechanics (8th ed.)"
 ---
 
 # Turbocharger
 
-Reusable acausal **fluid-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+A turbine-driven compressor pair coupled on a common shaft.
 
-> **Auto-generated** from the component library (`backend/src/main/resources/components/`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+## Domain
+
+A reusable **acausal fluid-domain** component — its thermofluid ports carry pressure `P`, mass-flow `ṁ`, and specific enthalpy `h`; a node enforces equal `P` and `Σṁ = 0`. Instantiate it and connect its ports; the constitutive equations below expand into the global scalar system.
+
+## Ports
+
+`t_in`, `t_out`, `c_in`, `c_out`
 
 ## Usage
 
 ```
 Turbocharger inst(cp, eta_t, eta_c, gam)
 ```
-
-## Ports
-
-`t_in`, `t_out`, `c_in`, `c_out`
 
 ## Parameters
 
@@ -36,7 +39,7 @@ Turbocharger inst(cp, eta_t, eta_c, gam)
 
 ## Constitutive Equations
 
-The acausal equations this component expands into (over its port members and parameters):
+Instantiating the component expands these acausal equations (over its port members and parameters) into scalar equations solved by the standard Newton/Tarjan pipeline:
 
 ```
 PRt        = t_in.P / t_out.P
@@ -50,3 +53,7 @@ Wc         = c_in.mdot * cp * (c_out.T - c_in.T)
 Wt         = Wc
 ```
 
+## References
+
+1. Karnopp, D.C., Margolis, D.L. & Rosenberg, R.C., *System Dynamics: Modeling, Simulation, and Control of Mechatronic Systems* (5th ed.) — acausal/bond-graph formalism.
+2. White, F.M., *Fluid Mechanics* (8th ed.).

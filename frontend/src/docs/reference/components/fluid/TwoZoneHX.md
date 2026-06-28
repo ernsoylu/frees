@@ -1,29 +1,32 @@
 ---
 name: TwoZoneHX
 category: Component (fluid)
-summary: Acausal fluid-domain component TwoZoneHX with ports hot_in, hot_out, cold_in, cold_out.
+summary: A two-zone heat exchanger resolving distinct thermal regions.
 related: []
 examples: []
 tags: [twozonehx, component, fluid, acausal]
-references: []
-generated: true
+references:
+  - "Karnopp, D.C., Margolis, D.L. & Rosenberg, R.C., System Dynamics: Modeling, Simulation, and Control of Mechatronic Systems (5th ed.) — acausal/bond-graph formalism"
+  - "White, F.M., Fluid Mechanics (8th ed.)"
 ---
 
 # TwoZoneHX
 
-Reusable acausal **fluid-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+A two-zone heat exchanger resolving distinct thermal regions.
 
-> **Auto-generated** from the component library (`backend/src/main/resources/components/`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+## Domain
+
+A reusable **acausal fluid-domain** component — its thermofluid ports carry pressure `P`, mass-flow `ṁ`, and specific enthalpy `h`; a node enforces equal `P` and `Σṁ = 0`. Instantiate it and connect its ports; the constitutive equations below expand into the global scalar system.
+
+## Ports
+
+`hot_in`, `hot_out`, `cold_in`, `cold_out`
 
 ## Usage
 
 ```
 TwoZoneHX inst(UA, hot$, cold$, arr$)
 ```
-
-## Ports
-
-`hot_in`, `hot_out`, `cold_in`, `cold_out`
 
 ## Parameters
 
@@ -36,7 +39,7 @@ TwoZoneHX inst(UA, hot$, cold$, arr$)
 
 ## Constitutive Equations
 
-The acausal equations this component expands into (over its port members and parameters):
+Instantiating the component expands these acausal equations (over its port members and parameters) into scalar equations solved by the standard Newton/Tarjan pipeline:
 
 ```
 HeatExchanger C1(UA=UA/2, hot$=hot$, cold$=cold$, arr$=arr$)
@@ -49,3 +52,7 @@ connect(C2.cold_out, C1.cold_in)
 connect(C1.cold_out, cold_out)
 ```
 
+## References
+
+1. Karnopp, D.C., Margolis, D.L. & Rosenberg, R.C., *System Dynamics: Modeling, Simulation, and Control of Mechatronic Systems* (5th ed.) — acausal/bond-graph formalism.
+2. White, F.M., *Fluid Mechanics* (8th ed.).

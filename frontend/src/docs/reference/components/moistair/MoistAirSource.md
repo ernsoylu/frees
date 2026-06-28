@@ -1,29 +1,32 @@
 ---
 name: MoistAirSource
 category: Component (moistair)
-summary: Acausal moistair-domain component MoistAirSource with ports out.
+summary: A humid-air boundary supplying a stream of set state.
 related: []
 examples: []
 tags: [moistairsource, component, moistair, acausal]
-references: []
-generated: true
+references:
+  - "Karnopp, D.C., Margolis, D.L. & Rosenberg, R.C., System Dynamics: Modeling, Simulation, and Control of Mechatronic Systems (5th ed.) — acausal/bond-graph formalism"
+  - "ASHRAE Handbook — Fundamentals (Psychrometrics)"
 ---
 
 # MoistAirSource
 
-Reusable acausal **moistair-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+A humid-air boundary supplying a stream of set state.
 
-> **Auto-generated** from the component library (`backend/src/main/resources/components/`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+## Domain
+
+A reusable **acausal moistair-domain** component — its humid-air ports carry pressure `P`, dry-air mass-flow `ṁ_da`, enthalpy `h`, and humidity ratio `W`. Instantiate it and connect its ports; the constitutive equations below expand into the global scalar system.
+
+## Ports
+
+`out`
 
 ## Usage
 
 ```
 MoistAirSource inst(P, T, W, mdot, domain$)
 ```
-
-## Ports
-
-`out`
 
 ## Parameters
 
@@ -37,7 +40,7 @@ MoistAirSource inst(P, T, W, mdot, domain$)
 
 ## Constitutive Equations
 
-The acausal equations this component expands into (over its port members and parameters):
+Instantiating the component expands these acausal equations (over its port members and parameters) into scalar equations solved by the standard Newton/Tarjan pipeline:
 
 ```
 out.P    = P
@@ -46,3 +49,7 @@ out.W    = W
 out.h    = Enthalpy(AirH2O, T=T, P=P, W=W)
 ```
 
+## References
+
+1. Karnopp, D.C., Margolis, D.L. & Rosenberg, R.C., *System Dynamics: Modeling, Simulation, and Control of Mechatronic Systems* (5th ed.) — acausal/bond-graph formalism.
+2. ASHRAE Handbook — Fundamentals (Psychrometrics).

@@ -1,29 +1,32 @@
 ---
 name: Chiller
 category: Component (ac)
-summary: Acausal ac-domain component Chiller with ports ref_in, ref_out, cool_in, cool_out.
+summary: A refrigerant-to-coolant chiller transferring heat between the two loops.
 related: []
 examples: []
 tags: [chiller, component, ac, acausal]
-references: []
-generated: true
+references:
+  - "Karnopp, D.C., Margolis, D.L. & Rosenberg, R.C., System Dynamics: Modeling, Simulation, and Control of Mechatronic Systems (5th ed.) — acausal/bond-graph formalism"
+  - "ASHRAE Handbook — Refrigeration"
 ---
 
 # Chiller
 
-Reusable acausal **ac-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+A refrigerant-to-coolant chiller transferring heat between the two loops.
 
-> **Auto-generated** from the component library (`backend/src/main/resources/components/`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+## Domain
+
+A reusable **acausal ac-domain** component — its refrigerant/air ports carry pressure `P`, mass-flow `ṁ`, and specific enthalpy `h`. Instantiate it and connect its ports; the constitutive equations below expand into the global scalar system.
+
+## Ports
+
+`ref_in`, `ref_out`, `cool_in`, `cool_out`
 
 ## Usage
 
 ```
 Chiller inst(ref$, cool$, U_tp, U_sh, D, L, eps_zone, UA_cool)
 ```
-
-## Ports
-
-`ref_in`, `ref_out`, `cool_in`, `cool_out`
 
 ## Parameters
 
@@ -40,7 +43,7 @@ Chiller inst(ref$, cool$, U_tp, U_sh, D, L, eps_zone, UA_cool)
 
 ## Constitutive Equations
 
-The acausal equations this component expands into (over its port members and parameters):
+Instantiating the component expands these acausal equations (over its port members and parameters) into scalar equations solved by the standard Newton/Tarjan pipeline:
 
 ```
 MovingBoundaryEvaporator EV(fluid$=ref$, U_tp=U_tp, U_sh=U_sh, D=D, L=L, eps_zone=eps_zone)
@@ -52,3 +55,7 @@ connect(CL.out, cool_out)
 connect(EV.wall, CL.wall)
 ```
 
+## References
+
+1. Karnopp, D.C., Margolis, D.L. & Rosenberg, R.C., *System Dynamics: Modeling, Simulation, and Control of Mechatronic Systems* (5th ed.) — acausal/bond-graph formalism.
+2. ASHRAE Handbook — Refrigeration.

@@ -1,29 +1,32 @@
 ---
 name: HeatingResistor
 category: Component (electrical)
-summary: Acausal electrical-domain component HeatingResistor with ports p, n, heat.
+summary: A resistor that dissipates its electrical power as heat (electrical→thermal transducer).
 related: []
-examples: []
+examples: [pressure-cooker]
 tags: [heatingresistor, component, electrical, acausal]
-references: []
-generated: true
+references:
+  - "Karnopp, D.C., Margolis, D.L. & Rosenberg, R.C., System Dynamics: Modeling, Simulation, and Control of Mechatronic Systems (5th ed.) — acausal/bond-graph formalism"
+  - "Nilsson, J.W. & Riedel, S.A., Electric Circuits (11th ed.)"
 ---
 
 # HeatingResistor
 
-Reusable acausal **electrical-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+A resistor that dissipates its electrical power as heat (electrical→thermal transducer).
 
-> **Auto-generated** from the component library (`backend/src/main/resources/components/`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+## Domain
+
+A reusable **acausal electrical-domain** component — its electrical ports carry potential `V` and current `I`; a node enforces equal `V` and `ΣI = 0` (Kirchhoff). Instantiate it and connect its ports; the constitutive equations below expand into the global scalar system.
+
+## Ports
+
+`p`, `n`, `heat`
 
 ## Usage
 
 ```
 HeatingResistor inst(R)
 ```
-
-## Ports
-
-`p`, `n`, `heat`
 
 ## Parameters
 
@@ -33,7 +36,7 @@ HeatingResistor inst(R)
 
 ## Constitutive Equations
 
-The acausal equations this component expands into (over its port members and parameters):
+Instantiating the component expands these acausal equations (over its port members and parameters) into scalar equations solved by the standard Newton/Tarjan pipeline:
 
 ```
 p.V - n.V = R * p.I
@@ -42,3 +45,13 @@ Q         = (p.V - n.V) * p.I
 heat.Qdot = -Q
 ```
 
+## Examples
+
+Instantiated in the verified example below:
+
+[Run: pressure-cooker]
+
+## References
+
+1. Karnopp, D.C., Margolis, D.L. & Rosenberg, R.C., *System Dynamics: Modeling, Simulation, and Control of Mechatronic Systems* (5th ed.) — acausal/bond-graph formalism.
+2. Nilsson, J.W. & Riedel, S.A., *Electric Circuits* (11th ed.).

@@ -1,29 +1,32 @@
 ---
 name: MovingBoundaryEvaporator
 category: Component (twophase)
-summary: Acausal twophase-domain component MovingBoundaryEvaporator with ports in, out, wall.
+summary: A moving-boundary evaporator tracking the two-phase/superheat zone lengths.
 related: []
 examples: []
 tags: [movingboundaryevaporator, component, twophase, acausal]
-references: []
-generated: true
+references:
+  - "Karnopp, D.C., Margolis, D.L. & Rosenberg, R.C., System Dynamics: Modeling, Simulation, and Control of Mechatronic Systems (5th ed.) — acausal/bond-graph formalism"
+  - "Collier, J.G. & Thome, J.R., Convective Boiling and Condensation (3rd ed.)"
 ---
 
 # MovingBoundaryEvaporator
 
-Reusable acausal **twophase-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+A moving-boundary evaporator tracking the two-phase/superheat zone lengths.
 
-> **Auto-generated** from the component library (`backend/src/main/resources/components/`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+## Domain
+
+A reusable **acausal twophase-domain** component — its two-phase refrigerant ports carry pressure `P`, mass-flow `ṁ`, and specific enthalpy `h` (quality/void follow from the properties). Instantiate it and connect its ports; the constitutive equations below expand into the global scalar system.
+
+## Ports
+
+`in`, `out`, `wall`
 
 ## Usage
 
 ```
 MovingBoundaryEvaporator inst(fluid$, U_tp, U_sh, D, L, eps_zone, domain$)
 ```
-
-## Ports
-
-`in`, `out`, `wall`
 
 ## Parameters
 
@@ -39,7 +42,7 @@ MovingBoundaryEvaporator inst(fluid$, U_tp, U_sh, D, L, eps_zone, domain$)
 
 ## Constitutive Equations
 
-The acausal equations this component expands into (over its port members and parameters):
+Instantiating the component expands these acausal equations (over its port members and parameters) into scalar equations solved by the standard Newton/Tarjan pipeline:
 
 ```
 out.mdot  = in.mdot
@@ -59,3 +62,7 @@ wall.Qdot = Q
 SH        = T_out - Tsat
 ```
 
+## References
+
+1. Karnopp, D.C., Margolis, D.L. & Rosenberg, R.C., *System Dynamics: Modeling, Simulation, and Control of Mechatronic Systems* (5th ed.) — acausal/bond-graph formalism.
+2. Collier, J.G. & Thome, J.R., *Convective Boiling and Condensation* (3rd ed.).

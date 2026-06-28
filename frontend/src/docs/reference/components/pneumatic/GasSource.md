@@ -1,29 +1,32 @@
 ---
 name: GasSource
 category: Component (pneumatic)
-summary: Acausal pneumatic-domain component GasSource with ports out.
+summary: A boundary supplying gas at set conditions.
 related: []
 examples: []
 tags: [gassource, component, pneumatic, acausal]
-references: []
-generated: true
+references:
+  - "Karnopp, D.C., Margolis, D.L. & Rosenberg, R.C., System Dynamics: Modeling, Simulation, and Control of Mechatronic Systems (5th ed.) — acausal/bond-graph formalism"
+  - "ISO 6358 — Pneumatic fluid power: flow-rate characteristics"
 ---
 
 # GasSource
 
-Reusable acausal **pneumatic-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+A boundary supplying gas at set conditions.
 
-> **Auto-generated** from the component library (`backend/src/main/resources/components/`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+## Domain
+
+A reusable **acausal pneumatic-domain** component — its compressible-gas ports carry pressure `P`, mass-flow `ṁ`, and enthalpy `h` (ISO 6358 flow). Instantiate it and connect its ports; the constitutive equations below expand into the global scalar system.
+
+## Ports
+
+`out`
 
 ## Usage
 
 ```
 GasSource inst(y, mdot, P, h0)
 ```
-
-## Ports
-
-`out`
 
 ## Parameters
 
@@ -36,7 +39,7 @@ GasSource inst(y, mdot, P, h0)
 
 ## Constitutive Equations
 
-The acausal equations this component expands into (over its port members and parameters):
+Instantiating the component expands these acausal equations (over its port members and parameters) into scalar equations solved by the standard Newton/Tarjan pipeline:
 
 ```
 out.y    = y
@@ -45,3 +48,7 @@ out.P    = P
 out.h    = h0
 ```
 
+## References
+
+1. Karnopp, D.C., Margolis, D.L. & Rosenberg, R.C., *System Dynamics: Modeling, Simulation, and Control of Mechatronic Systems* (5th ed.) — acausal/bond-graph formalism.
+2. ISO 6358 — Pneumatic fluid power: flow-rate characteristics.

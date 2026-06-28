@@ -1,29 +1,32 @@
 ---
 name: Battery
 category: Component (electrical)
-summary: Acausal electrical-domain component Battery with ports p, n.
+summary: An electrical battery modeled as an EMF in series with an internal resistance.
 related: []
 examples: []
 tags: [battery, component, electrical, acausal]
-references: []
-generated: true
+references:
+  - "Karnopp, D.C., Margolis, D.L. & Rosenberg, R.C., System Dynamics: Modeling, Simulation, and Control of Mechatronic Systems (5th ed.) — acausal/bond-graph formalism"
+  - "Nilsson, J.W. & Riedel, S.A., Electric Circuits (11th ed.)"
 ---
 
 # Battery
 
-Reusable acausal **electrical-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+An electrical battery modeled as an EMF in series with an internal resistance.
 
-> **Auto-generated** from the component library (`backend/src/main/resources/components/`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+## Domain
+
+A reusable **acausal electrical-domain** component — its electrical ports carry potential `V` and current `I`; a node enforces equal `V` and `ΣI = 0` (Kirchhoff). Instantiate it and connect its ports; the constitutive equations below expand into the global scalar system.
+
+## Ports
+
+`p`, `n`
 
 ## Usage
 
 ```
 Battery inst(Voc, R0)
 ```
-
-## Ports
-
-`p`, `n`
 
 ## Parameters
 
@@ -34,7 +37,7 @@ Battery inst(Voc, R0)
 
 ## Constitutive Equations
 
-The acausal equations this component expands into (over its port members and parameters):
+Instantiating the component expands these acausal equations (over its port members and parameters) into scalar equations solved by the standard Newton/Tarjan pipeline:
 
 ```
 p.V - n.V = Voc + R0 * p.I
@@ -42,3 +45,7 @@ p.I + n.I = 0
 W = (p.V - n.V) * (0 - p.I)
 ```
 
+## References
+
+1. Karnopp, D.C., Margolis, D.L. & Rosenberg, R.C., *System Dynamics: Modeling, Simulation, and Control of Mechatronic Systems* (5th ed.) — acausal/bond-graph formalism.
+2. Nilsson, J.W. & Riedel, S.A., *Electric Circuits* (11th ed.).

@@ -1,33 +1,36 @@
 ---
 name: Mixer
 category: Component (fluid)
-summary: Acausal fluid-domain component Mixer with ports in1, in2, out.
+summary: Combines two fluid streams into one, with flow-weighted enthalpy mixing.
 related: []
 examples: []
 tags: [mixer, component, fluid, acausal]
-references: []
-generated: true
+references:
+  - "Karnopp, D.C., Margolis, D.L. & Rosenberg, R.C., System Dynamics: Modeling, Simulation, and Control of Mechatronic Systems (5th ed.) — acausal/bond-graph formalism"
+  - "White, F.M., Fluid Mechanics (8th ed.)"
 ---
 
 # Mixer
 
-Reusable acausal **fluid-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+Combines two fluid streams into one, with flow-weighted enthalpy mixing.
 
-> **Auto-generated** from the component library (`backend/src/main/resources/components/`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+## Domain
 
-## Usage
-
-```
-Mixer inst(param = value, ...)
-```
+A reusable **acausal fluid-domain** component — its thermofluid ports carry pressure `P`, mass-flow `ṁ`, and specific enthalpy `h`; a node enforces equal `P` and `Σṁ = 0`. Instantiate it and connect its ports; the constitutive equations below expand into the global scalar system.
 
 ## Ports
 
 `in1`, `in2`, `out`
 
+## Usage
+
+```
+Mixer inst(...)
+```
+
 ## Constitutive Equations
 
-The acausal equations this component expands into (over its port members and parameters):
+Instantiating the component expands these acausal equations (over its port members and parameters) into scalar equations solved by the standard Newton/Tarjan pipeline:
 
 ```
 out.P    = in1.P
@@ -35,3 +38,7 @@ out.mdot = in1.mdot + in2.mdot
 out.mdot * out.h = in1.mdot * in1.h + in2.mdot * in2.h
 ```
 
+## References
+
+1. Karnopp, D.C., Margolis, D.L. & Rosenberg, R.C., *System Dynamics: Modeling, Simulation, and Control of Mechatronic Systems* (5th ed.) — acausal/bond-graph formalism.
+2. White, F.M., *Fluid Mechanics* (8th ed.).

@@ -1,29 +1,32 @@
 ---
 name: Capacitor
 category: Component (electrical)
-summary: Acausal electrical-domain component Capacitor with ports p, n.
+summary: A capacitor storing charge, with i = C dV/dt.
 related: []
 examples: []
 tags: [capacitor, component, electrical, acausal]
-references: []
-generated: true
+references:
+  - "Karnopp, D.C., Margolis, D.L. & Rosenberg, R.C., System Dynamics: Modeling, Simulation, and Control of Mechatronic Systems (5th ed.) — acausal/bond-graph formalism"
+  - "Nilsson, J.W. & Riedel, S.A., Electric Circuits (11th ed.)"
 ---
 
 # Capacitor
 
-Reusable acausal **electrical-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+A capacitor storing charge, with `i = C dV/dt`.
 
-> **Auto-generated** from the component library (`backend/src/main/resources/components/`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+## Domain
+
+A reusable **acausal electrical-domain** component — its electrical ports carry potential `V` and current `I`; a node enforces equal `V` and `ΣI = 0` (Kirchhoff). Instantiate it and connect its ports; the constitutive equations below expand into the global scalar system.
+
+## Ports
+
+`p`, `n`
 
 ## Usage
 
 ```
 Capacitor inst(C, V0)
 ```
-
-## Ports
-
-`p`, `n`
 
 ## Parameters
 
@@ -34,7 +37,7 @@ Capacitor inst(C, V0)
 
 ## Constitutive Equations
 
-The acausal equations this component expands into (over its port members and parameters):
+Instantiating the component expands these acausal equations (over its port members and parameters) into scalar equations solved by the standard Newton/Tarjan pipeline:
 
 ```
 Vc       = p.V - n.V
@@ -43,3 +46,7 @@ init(Vc) = V0
 p.I + n.I = 0
 ```
 
+## References
+
+1. Karnopp, D.C., Margolis, D.L. & Rosenberg, R.C., *System Dynamics: Modeling, Simulation, and Control of Mechatronic Systems* (5th ed.) — acausal/bond-graph formalism.
+2. Nilsson, J.W. & Riedel, S.A., *Electric Circuits* (11th ed.).

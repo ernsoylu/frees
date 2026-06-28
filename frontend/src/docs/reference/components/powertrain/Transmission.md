@@ -1,29 +1,32 @@
 ---
 name: Transmission
 category: Component (powertrain)
-summary: Acausal powertrain-domain component Transmission with ports in, out.
+summary: A gearbox/transmission imposing a ratio between engine and wheels.
 related: []
 examples: []
 tags: [transmission, component, powertrain, acausal]
-references: []
-generated: true
+references:
+  - "Karnopp, D.C., Margolis, D.L. & Rosenberg, R.C., System Dynamics: Modeling, Simulation, and Control of Mechatronic Systems (5th ed.) — acausal/bond-graph formalism"
+  - "Guzzella, L. & Sciarretta, A., Vehicle Propulsion Systems (3rd ed.)"
 ---
 
 # Transmission
 
-Reusable acausal **powertrain-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+A gearbox/transmission imposing a ratio between engine and wheels.
 
-> **Auto-generated** from the component library (`backend/src/main/resources/components/`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+## Domain
+
+A reusable **acausal powertrain-domain** component — its rotational ports carry angular velocity `ω` and torque `τ`, with vehicle-level speed/force signals. Instantiate it and connect its ports; the constitutive equations below expand into the global scalar system.
+
+## Ports
+
+`in`, `out`
 
 ## Usage
 
 ```
 Transmission inst(ratio, eta)
 ```
-
-## Ports
-
-`in`, `out`
 
 ## Parameters
 
@@ -34,10 +37,14 @@ Transmission inst(ratio, eta)
 
 ## Constitutive Equations
 
-The acausal equations this component expands into (over its port members and parameters):
+Instantiating the component expands these acausal equations (over its port members and parameters) into scalar equations solved by the standard Newton/Tarjan pipeline:
 
 ```
 in.w    = ratio * out.w
 out.tau = -ratio * eta * in.tau
 ```
 
+## References
+
+1. Karnopp, D.C., Margolis, D.L. & Rosenberg, R.C., *System Dynamics: Modeling, Simulation, and Control of Mechatronic Systems* (5th ed.) — acausal/bond-graph formalism.
+2. Guzzella, L. & Sciarretta, A., *Vehicle Propulsion Systems* (3rd ed.).

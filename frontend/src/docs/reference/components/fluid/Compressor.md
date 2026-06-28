@@ -1,29 +1,32 @@
 ---
 name: Compressor
 category: Component (fluid)
-summary: Acausal fluid-domain component Compressor with ports in, out.
+summary: Raises the pressure of a fluid stream, computing the work from an isentropic efficiency.
 related: []
-examples: []
+examples: [ev-thermal-management]
 tags: [compressor, component, fluid, acausal]
-references: []
-generated: true
+references:
+  - "Karnopp, D.C., Margolis, D.L. & Rosenberg, R.C., System Dynamics: Modeling, Simulation, and Control of Mechatronic Systems (5th ed.) — acausal/bond-graph formalism"
+  - "White, F.M., Fluid Mechanics (8th ed.)"
 ---
 
 # Compressor
 
-Reusable acausal **fluid-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+Raises the pressure of a fluid stream, computing the work from an isentropic efficiency.
 
-> **Auto-generated** from the component library (`backend/src/main/resources/components/`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+## Domain
+
+A reusable **acausal fluid-domain** component — its thermofluid ports carry pressure `P`, mass-flow `ṁ`, and specific enthalpy `h`; a node enforces equal `P` and `Σṁ = 0`. Instantiate it and connect its ports; the constitutive equations below expand into the global scalar system.
+
+## Ports
+
+`in`, `out`
 
 ## Usage
 
 ```
 Compressor inst(eta, fluid$, model$)
 ```
-
-## Ports
-
-`in`, `out`
 
 ## Parameters
 
@@ -35,7 +38,7 @@ Compressor inst(eta, fluid$, model$)
 
 ## Constitutive Equations
 
-The acausal equations this component expands into (over its port members and parameters):
+Instantiating the component expands these acausal equations (over its port members and parameters) into scalar equations solved by the standard Newton/Tarjan pipeline:
 
 ```
 s_in     = Entropy(fluid$, P=in.P, h=in.h)
@@ -60,3 +63,13 @@ rho_in  = Density(fluid$, P=in.P, h=in.h)
 in.mdot = eta_v * disp * (rpm / 60) * rho_in
 ```
 
+## Examples
+
+Instantiated in the verified example below:
+
+[Run: ev-thermal-management]
+
+## References
+
+1. Karnopp, D.C., Margolis, D.L. & Rosenberg, R.C., *System Dynamics: Modeling, Simulation, and Control of Mechatronic Systems* (5th ed.) — acausal/bond-graph formalism.
+2. White, F.M., *Fluid Mechanics* (8th ed.).

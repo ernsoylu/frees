@@ -1,29 +1,32 @@
 ---
 name: FuelCellStack
 category: Component (electrical)
-summary: Acausal electrical-domain component FuelCellStack with ports p, n, heat.
+summary: A PEM fuel-cell stack producing voltage from its polarization curve.
 related: []
 examples: []
 tags: [fuelcellstack, component, electrical, acausal]
-references: []
-generated: true
+references:
+  - "Karnopp, D.C., Margolis, D.L. & Rosenberg, R.C., System Dynamics: Modeling, Simulation, and Control of Mechatronic Systems (5th ed.) — acausal/bond-graph formalism"
+  - "Nilsson, J.W. & Riedel, S.A., Electric Circuits (11th ed.)"
 ---
 
 # FuelCellStack
 
-Reusable acausal **electrical-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+A PEM fuel-cell stack producing voltage from its polarization curve.
 
-> **Auto-generated** from the component library (`backend/src/main/resources/components/`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+## Domain
+
+A reusable **acausal electrical-domain** component — its electrical ports carry potential `V` and current `I`; a node enforces equal `V` and `ΣI = 0` (Kirchhoff). Instantiate it and connect its ports; the constitutive equations below expand into the global scalar system.
+
+## Ports
+
+`p`, `n`, `heat`
 
 ## Usage
 
 ```
 FuelCellStack inst(ncells, area, i0, ilim, Rohm, E0, alpha, Eth, T)
 ```
-
-## Ports
-
-`p`, `n`, `heat`
 
 ## Parameters
 
@@ -41,7 +44,7 @@ FuelCellStack inst(ncells, area, i0, ilim, Rohm, E0, alpha, Eth, T)
 
 ## Constitutive Equations
 
-The acausal equations this component expands into (over its port members and parameters):
+Instantiating the component expands these acausal equations (over its port members and parameters) into scalar equations solved by the standard Newton/Tarjan pipeline:
 
 ```
 I_cell    = -p.I
@@ -53,3 +56,7 @@ Q         = I_cell * ncells * (Eth - V_cell)
 heat.Qdot = -Q
 ```
 
+## References
+
+1. Karnopp, D.C., Margolis, D.L. & Rosenberg, R.C., *System Dynamics: Modeling, Simulation, and Control of Mechatronic Systems* (5th ed.) — acausal/bond-graph formalism.
+2. Nilsson, J.W. & Riedel, S.A., *Electric Circuits* (11th ed.).
