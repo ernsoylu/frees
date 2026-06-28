@@ -27,6 +27,12 @@ RUN VITE_COMMIT_HASH="${VITE_COMMIT_HASH:-${RAILWAY_GIT_COMMIT_SHA:-dev}}" \
 # (BACKEND_HOST=api-node) and Railway (BACKEND_HOST=frees-api.railway.internal).
 FROM nginxinc/nginx-unprivileged:alpine
 COPY nginx.conf.template /etc/nginx/templates/default.conf.template
+# Enable the image's built-in 15-local-resolvers.envsh entrypoint, which exports
+# ${NGINX_LOCAL_RESOLVERS} from /etc/resolv.conf before envsubst runs. The /api/
+# block in nginx.conf.template uses it as the `resolver` so nginx re-resolves the
+# backend upstream per request instead of caching a stale IP across redeploys
+# (the Railway private-network 504 trap).
+ENV NGINX_ENTRYPOINT_LOCAL_RESOLVERS=1
 # Security headers, included by every location block in the nginx config.
 COPY security-headers.conf /etc/nginx/security-headers.conf
 COPY --from=build /app/dist /usr/share/nginx/html
