@@ -246,8 +246,13 @@ Body sections (omit a section only when truly N/A):
     - **Whole table finished: 475/475 pages, all with authoritative content.** Two tiers — 76
       hand-curated (full KaTeX derivation + worked `[Run:]` example) and 399 auto-generated
       (source-verbatim content + category citation), transparently flagged via `generated:`.
-    - Future polish (optional): promote auto-generated pages to the hand-curated tier with
-      per-function KaTeX derivations + worked examples, as time allows.
+    - DONE — (a) **VARIANT component truncation fixed**: balanced parser captures shared equations
+      + each `VARIANT … END` body (name, REQUIREd params, equations) → a "Model Variants" section
+      (e.g. `TwoPhaseCompressor` isentropic/volumetric). (b) **Coverage gate wired into CI**
+      (`frontend-build` job runs `npm run check-docs` → fails on doc/implementation drift).
+    - **PR #24 opened** (https://github.com/ernsoylu/frees/pull/24) — 16 commits.
+    - CONTINUING enrichment on the branch (updates PR #24): promote auto-generated pages to the
+      hand-curated tier (per-function KaTeX derivation + citation), category by category.
   Author per-function pages, highest-traffic
   categories first: Math → Matrix/Linear Algebra → Control Systems → Thermophysical Properties
   → Units → Uncertainty → CAS/Symbolic → Block constructs → Components. For each page: write the

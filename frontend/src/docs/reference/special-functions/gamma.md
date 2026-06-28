@@ -1,38 +1,69 @@
 ---
 name: gamma
 category: Special Functions
-summary: Gamma function Gamma(x), Gamma(n+1)=n!
-related: []
+summary: Gamma function Γ(x), the continuous extension of the factorial.
+related: [loggamma, digamma, beta, factorial]
 examples: []
-tags: [gamma, special, functions]
-references: []
-generated: true
+tags: [special function, gamma, factorial, euler]
+references:
+  - "Abramowitz, M. & Stegun, I.A., Handbook of Mathematical Functions, §6.1"
+  - "NIST Digital Library of Mathematical Functions, §5.2 (dlmf.nist.gov)"
 ---
 
 # gamma
 
-Gamma function Gamma(x), Gamma(n+1)=n!
-
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
+Returns the **Gamma function** `Γ(x)` — the continuous extension of the factorial,
+with `Γ(n+1) = n!` for non-negative integers. It appears throughout probability,
+combinatorics, and special-function identities.
 
 ## Syntax
 
 ```
-gamma(x)
+y = gamma(x)
 ```
 
 ## Description
 
-Gamma function Gamma(x), Gamma(n+1)=n!
+Defined for all real `x` except the non-positive integers (where it has poles).
+For large arguments use [`loggamma`](loggamma) to avoid overflow.
+
+## Mathematical Formulation
+
+$$ \Gamma(x) = \int_0^\infty t^{x-1} e^{-t}\,dt, \qquad x > 0 \qquad \text{(A\&S §6.1.1)} $$
+
+with the recurrence and factorial link
+
+$$ \Gamma(x+1) = x\,\Gamma(x), \qquad \Gamma(n+1) = n! $$
+
+> **Method:** Lanczos / Stirling approximation evaluated to machine precision.
+
+## Examples
+
+```
+{ Gamma(5) = 4! = 24 }
+y = gamma(5)
+```
 
 ## Input Arguments
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `x` | Number | Yes | Numeric argument. |
+| `x` | Number | Yes | Argument (not a non-positive integer). |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| `y` | Number | Γ(x). |
+
+## Common Errors
+
+| Error | Cause | Fix |
+| --- | --- | --- |
+| `POLE` | `x` is 0 or a negative integer | Γ has poles there; use a non-integer or positive argument. |
+| `OVERFLOW` | `x` large | Use `loggamma(x)` and work in the log domain. |
 
 ## References
 
-1. Abramowitz, M. & Stegun, I.A., Handbook of Mathematical Functions.
-2. NIST Digital Library of Mathematical Functions (dlmf.nist.gov).
-
+1. Abramowitz, M. & Stegun, I.A. *Handbook of Mathematical Functions*, §6.1.
+2. NIST *Digital Library of Mathematical Functions*, §5.2.

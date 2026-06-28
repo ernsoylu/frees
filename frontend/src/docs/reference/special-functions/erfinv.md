@@ -1,38 +1,65 @@
 ---
 name: erfinv
 category: Special Functions
-summary: Inverse error function
-related: []
+summary: Inverse error function erf⁻¹(x).
+related: [erf, erfc, normalinvcdf]
 examples: []
-tags: [erfinv, special, functions]
-references: []
-generated: true
+tags: [special function, inverse error function, erfinv, quantile, gaussian]
+references:
+  - "Abramowitz, M. & Stegun, I.A., Handbook of Mathematical Functions, §7.1"
+  - "NIST Digital Library of Mathematical Functions, §7.17"
 ---
 
 # erfinv
 
-Inverse error function
-
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
+Returns the **inverse error function** `erf⁻¹(x)` — the value `w` such that
+`erf(w) = x`. It maps a probability-like value back to a Gaussian deviate and
+underlies normal-quantile (inverse-CDF) calculations.
 
 ## Syntax
 
 ```
-erfinv(x)
+w = erfinv(x)
 ```
 
 ## Description
 
-Inverse error function
+Defined on `−1 < x < 1`; it diverges as `x → ±1`. An odd function.
+
+## Mathematical Formulation
+
+$$ w = \operatorname{erf}^{-1}(x) \quad\Longleftrightarrow\quad \operatorname{erf}(w) = x, \qquad -1 < x < 1 $$
+
+linked to the normal quantile by `Φ⁻¹(p) = √2·erfinv(2p − 1)` (A&S §7.1.5–7.1.6).
+
+> **Method:** rational approximation refined by Newton iteration on `erf`.
+
+## Examples
+
+```
+{ erfinv(0.8427) ~ 1.0 }
+w = erfinv(0.8427)
+```
 
 ## Input Arguments
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `x` | Number | Yes | Numeric argument. |
+| `x` | Number | Yes | Value in (−1, 1). |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| `w` | Number | erf⁻¹(x). |
+
+## Common Errors
+
+| Error | Cause | Fix |
+| --- | --- | --- |
+| `DOMAIN_ERROR` | `|x| ≥ 1` | The argument must lie strictly in (−1, 1). |
 
 ## References
 
-1. Abramowitz, M. & Stegun, I.A., Handbook of Mathematical Functions.
-2. NIST Digital Library of Mathematical Functions (dlmf.nist.gov).
-
+1. Abramowitz, M. & Stegun, I.A. *Handbook of Mathematical Functions*, §7.1.
+2. NIST *Digital Library of Mathematical Functions*, §7.17.

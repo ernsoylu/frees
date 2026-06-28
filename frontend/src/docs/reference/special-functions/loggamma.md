@@ -1,38 +1,68 @@
 ---
 name: loggamma
 category: Special Functions
-summary: ln Gamma(x) (overflow-safe)
-related: []
+summary: Natural logarithm of the Gamma function, ln Γ(x) (overflow-safe).
+related: [gamma, digamma, beta]
 examples: []
-tags: [loggamma, special, functions]
-references: []
-generated: true
+tags: [special function, gamma, log gamma, overflow]
+references:
+  - "Abramowitz, M. & Stegun, I.A., Handbook of Mathematical Functions, §6.1.41"
+  - "NIST Digital Library of Mathematical Functions, §5.2"
 ---
 
 # loggamma
 
-ln Gamma(x) (overflow-safe)
-
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
+Returns **ln Γ(x)**, the natural logarithm of the [`gamma`](gamma) function. Use it
+when `Γ(x)` itself would overflow (large `x`), or in likelihoods and combinatorial
+ratios where the log domain is numerically safer.
 
 ## Syntax
 
 ```
-loggamma(x)
+y = loggamma(x)
 ```
 
 ## Description
 
-ln Gamma(x) (overflow-safe)
+For `x > 0`, `ln Γ(x)` grows only logarithmically faster than linearly, so it stays
+finite far past where `Γ(x)` overflows double precision.
+
+## Mathematical Formulation
+
+$$ \ln\Gamma(x) = \ln\!\int_0^\infty t^{x-1}e^{-t}\,dt, \qquad \ln\Gamma(x+1) = \ln x + \ln\Gamma(x) $$
+
+with the Stirling asymptotic (A&S §6.1.41)
+
+$$ \ln\Gamma(x) \sim \left(x-\tfrac12\right)\ln x - x + \tfrac12\ln(2\pi) + \frac{1}{12x} - \dots $$
+
+> **Method:** Lanczos approximation of `ln Γ` directly (no intermediate overflow).
+
+## Examples
+
+```
+{ loggamma(101) = ln(100!) }
+y = loggamma(101)
+```
 
 ## Input Arguments
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `x` | Number | Yes | Numeric argument. |
+| `x` | Number | Yes | Positive argument. |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| `y` | Number | ln Γ(x). |
+
+## Common Errors
+
+| Error | Cause | Fix |
+| --- | --- | --- |
+| `DOMAIN_ERROR` | `x ≤ 0` | Use a positive argument. |
 
 ## References
 
-1. Abramowitz, M. & Stegun, I.A., Handbook of Mathematical Functions.
-2. NIST Digital Library of Mathematical Functions (dlmf.nist.gov).
-
+1. Abramowitz, M. & Stegun, I.A. *Handbook of Mathematical Functions*, §6.1.41.
+2. NIST *Digital Library of Mathematical Functions*, §5.2.
