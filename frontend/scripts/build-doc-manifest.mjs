@@ -219,8 +219,22 @@ const materials = parseMaterials();
 const callProcedures = parseCallProcedures().map((p) => ({ ...p, documented: pages.has(p.name.toLowerCase()) }));
 const matrixFunctions = parseMatrixFunctions().map((p) => ({ ...p, documented: pages.has(p.name.toLowerCase()) }));
 
-const surfaceTotal = functions.length + components.length + propertyFunctions.length +
-  callProcedures.length + matrixFunctions.length + repl.length + materials.functions.length;
+// Unique documentable symbols across all families (a few control names appear in
+// both FunctionRegistry's Control category and callProcedures — count them once).
+const allSymbols = new Map(); // slug -> documented
+const note1 = (name, documented) => {
+  const k = name.toLowerCase();
+  allSymbols.set(k, (allSymbols.get(k) || false) || documented);
+};
+functions.forEach((f) => note1(f.name, f.documented));
+matrixFunctions.forEach((f) => note1(f.name, f.documented));
+callProcedures.forEach((p) => note1(p.name, p.documented));
+propertyFunctions.forEach((p) => note1(p.name, p.documented));
+components.forEach((c) => note1(c.name, c.documented));
+materials.functions.forEach((f) => note1(f, pages.has(f.toLowerCase())));
+repl.forEach((r) => note1(r, pages.has(r.toLowerCase())));
+const surfaceTotal = allSymbols.size;
+const documentedTotal = [...allSymbols.values()].filter(Boolean).length;
 
 const manifest = {
   generatedAt: new Date().toISOString().slice(0, 10),
@@ -234,11 +248,7 @@ const manifest = {
     callProcedures: callProcedures.length,
     materialFunctions: materials.functions.length,
     replCasOps: repl.length,
-    documented: functions.filter((f) => f.documented).length +
-      matrixFunctions.filter((p) => p.documented).length +
-      components.filter((c) => c.documented).length +
-      propertyFunctions.filter((p) => p.documented).length +
-      callProcedures.filter((p) => p.documented).length,
+    documented: documentedTotal,
     dispatchOnlyNeedingRegistry: dispatchOnly.length,
   },
   functions,

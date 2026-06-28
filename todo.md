@@ -49,6 +49,15 @@ are its arguments, show me an example, what errors will I hit."** That is what w
   `ast/ControlSystemsEvaluator`, `parser/ProcedureEvaluator`, `api/ReplEvaluator`; grammar in
   `backend/src/main/antlr/Frees.g4`. Component library in the `*.frees` std-lib files.
 
+## Citation-grounding policy (decided)
+
+- **Engineering categories** (Heat Transfer, Compressible, Two-Phase, Combustion, EOS, fluid) —
+  ground every equation against the **Frees NotebookLM notebook** (`350fef25`) via `notebooklm ask`.
+- **Control / Math / Matrix / Special / Stats** (≈130 fns, not in the notebook) — cite **standard
+  references directly** (decided by user): Nise / Ogata (control), Golub & Van Loan (matrix/linear
+  algebra), Abramowitz & Stegun / NIST DLMF (special functions), Montgomery/Devore (stats). Keep the
+  Mathematical Formulation light for trivial elementary ops (e.g. `sin`, `abs`).
+
 ## Architectural decisions (recommended — confirm before Phase 0)
 
 1. **Extend the existing `.md` + `[Tag]` compile pipeline; do NOT adopt MDX.** The advisory
@@ -188,11 +197,17 @@ Body sections (omit a section only when truly N/A):
     `viewfactor_perp`, `heisler_temp`, `heisler_q` (Holman Table 8-2 Items 1/3/5, Figs 8-12/14/16;
     Appendix C Eq. C-1/C-7..C-12, Eq. 4-16); bound to `radiation-view-factors` / `heisler-transient`.
     View-factor expecteds hand-computed (≈0.20/0.41/0.83); Heisler one-term values approximate (≈).
-  - Coverage gate + `tsc -b` green at each step. **15/515 documented.**
+  - DONE — Control-systems set (9): `pole`, `zero`, `margin`, `bode`, `nyquist`, `step` (→
+    `control-analysis-report`) + `ss2tf`, `series`, `feedback` (→ `cruise-control`), cited to
+    Nise / Ogata per the standard-citation policy; exact poles/zero stated (s=−2±4.583j, z=−2).
+  - **Manifest dedup fix:** the documentable total is now **unique symbols (475, was an inflated
+    515)** — ~40 control names live in both `FunctionRegistry`'s Control category and
+    `callProcedures`; coverage now counts each once. **24/475 documented (5.1%).**
+  - Coverage gate + `tsc -b` green at each step.
   - NEXT batches (by example): HX correlations → `ev-thermal-management` (htc_*/dp_2phase/ua_hx/
-    hx_eta_surf/hx_area_*); view factors + Heisler → `radiation-view-factors` / `heisler-transient`;
-    cubic-EOS → `cubic-eos-properties`; control → `cruise-control` / `control-analysis-report`
-    (note: control/math/special categories aren't grounded by the Frees notebook — decide sources).
+    hx_eta_surf/hx_area_*, notebook-grounded); cubic-EOS → `cubic-eos-properties` (notebook);
+    combustion → `adiabatic-flame-temp`/`engine-cycle-wiebe`; remaining control (`tf`/`tf2ss`/
+    `lqr`/`place`/`c2d`/`routh`/`residue`…) and ODE/table accessors via standard citations.
   Author per-function pages, highest-traffic
   categories first: Math → Matrix/Linear Algebra → Control Systems → Thermophysical Properties
   → Units → Uncertainty → CAS/Symbolic → Block constructs → Components. For each page: write the
