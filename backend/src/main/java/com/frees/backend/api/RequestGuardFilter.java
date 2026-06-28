@@ -57,6 +57,13 @@ public class RequestGuardFilter extends OncePerRequestFilter {
             return;
         }
 
+        // The health endpoint is exempt from the body-size and rate limits so
+        // monitoring dashboards can poll it freely without being throttled.
+        if ("/api/health".equals(request.getRequestURI())) {
+            chain.doFilter(request, response);
+            return;
+        }
+
         long length = request.getContentLengthLong();
         if (length > maxBodyBytes) {
             response.sendError(HttpServletResponse.SC_REQUEST_ENTITY_TOO_LARGE,
