@@ -6,14 +6,13 @@ related: []
 examples: []
 tags: [factor, cas, symbolic, repl]
 references: []
-generated: true
 ---
 
 # factor
 
 Symbolic computer-algebra operation **factor**, available in the REPL terminal (Symja backend).
 
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
+> Real-fluid/material/symbolic operation — see the inputs and references below.
 
 ## Syntax
 

@@ -6,14 +6,12 @@ related: []
 examples: []
 tags: [cross, math]
 references: []
-generated: true
 ---
 
 # Cross
 
 Cross product of 3-vectors
 
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
 
 ## Syntax
 
@@ -24,6 +22,10 @@ Cross(a, b)
 ## Description
 
 Cross product of 3-vectors
+
+## Mathematical Formulation
+
+$$ a \times b = (a_2 b_3 - a_3 b_2,\ a_3 b_1 - a_1 b_3,\ a_1 b_2 - a_2 b_1) $$
 
 ## Input Arguments
 

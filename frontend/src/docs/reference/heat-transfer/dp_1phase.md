@@ -5,15 +5,14 @@ summary: dP [Pa], Darcy. SIDE: single-phase liquid/gas line (coolant, water, air
 related: []
 examples: []
 tags: [dp, 1phase, heat, transfer]
-references: []
-generated: true
+references:
+  - "White, F.M., Fluid Mechanics (8th ed.)"
 ---
 
 # dp_1phase
 
 dP [Pa], Darcy. SIDE: single-phase liquid/gas line (coolant, water, air channel, pipe). HX: radiator/CAC fluid channels
 
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
 
 ## Syntax
 
@@ -24,6 +23,10 @@ dp_1phase(fluid$, P, T, mdot, Dh, Aflow, L)
 ## Description
 
 dP [Pa], Darcy. SIDE: single-phase liquid/gas line (coolant, water, air channel, pipe). HX: radiator/CAC fluid channels
+
+## Mathematical Formulation
+
+$$ \Delta P = f\,\frac{L}{D_h}\,\frac{G^2}{2\rho}, \qquad G = \dot m / A_{\text{flow}} \quad\text{(Darcy)} $$
 
 ## Input Arguments
 

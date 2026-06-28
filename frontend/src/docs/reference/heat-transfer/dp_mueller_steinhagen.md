@@ -5,15 +5,14 @@ summary: dP [Pa], Mueller-Steinhagen-Heck. SIDE: two-phase refrigerant (alt to d
 related: []
 examples: []
 tags: [dp, mueller, steinhagen, heat, transfer]
-references: []
-generated: true
+references:
+  - "Müller-Steinhagen, H. & Heck, K. (1986), Chem. Eng. Process. 20:297"
 ---
 
 # dp_mueller_steinhagen
 
 dP [Pa], Mueller-Steinhagen-Heck. SIDE: two-phase refrigerant (alt to dp_2phase). HX: evaporator/condenser refrigerant line
 
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
 
 ## Syntax
 
@@ -24,6 +23,10 @@ dp_mueller_steinhagen(fluid$, P, x, mdot, Dh, Aflow, L)
 ## Description
 
 dP [Pa], Mueller-Steinhagen-Heck. SIDE: two-phase refrigerant (alt to dp_2phase). HX: evaporator/condenser refrigerant line
+
+## Mathematical Formulation
+
+$$ \frac{dP}{dz} = G_{ms}(1-x)^{1/3} + B\,x^3, \quad G_{ms} = A + 2(B-A)x \quad\text{(Müller-Steinhagen–Heck)} $$
 
 ## Input Arguments
 

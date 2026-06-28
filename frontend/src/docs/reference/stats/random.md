@@ -6,14 +6,12 @@ related: []
 examples: []
 tags: [random, stats]
 references: []
-generated: true
 ---
 
 # random
 
 Uniform random number in [a, b]
 
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
 
 ## Syntax
 
@@ -24,6 +22,10 @@ random(a, b)
 ## Description
 
 Uniform random number in [a, b]
+
+## Mathematical Formulation
+
+$$ X \sim \mathcal{U}(a, b), \qquad X = a + (b-a)\,U,\ \ U\in[0,1) $$
 
 ## Input Arguments
 

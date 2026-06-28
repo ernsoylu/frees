@@ -5,15 +5,14 @@ summary: Ideal-gas mixture entropy [J/kg-K]
 related: []
 examples: []
 tags: [mix, entropy, combustion]
-references: []
-generated: true
+references:
+  - "Turns, S.R., An Introduction to Combustion (3rd ed.)"
 ---
 
 # mix_entropy
 
 Ideal-gas mixture entropy [J/kg-K]
 
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
 
 ## Syntax
 
@@ -24,6 +23,10 @@ mix_entropy(comp$, T, P)
 ## Description
 
 Ideal-gas mixture entropy [J/kg-K]
+
+## Mathematical Formulation
+
+$$ s = \sum_i Y_i\big[s_i(T) - R_i\ln(y_i P/P_0)\big] $$
 
 ## Input Arguments
 

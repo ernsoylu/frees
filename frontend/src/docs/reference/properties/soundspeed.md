@@ -6,14 +6,13 @@ related: []
 examples: []
 tags: [soundspeed, property, fluid, coolprop]
 references: []
-generated: true
 ---
 
 # soundspeed
 
 Returns the **soundspeed** of a real fluid from any valid pair of independent state properties (CoolProp backend).
 
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
+> Real-fluid/material/symbolic operation — see the inputs and references below.
 
 ## Syntax
 

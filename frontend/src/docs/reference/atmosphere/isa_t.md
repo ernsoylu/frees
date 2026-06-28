@@ -5,15 +5,14 @@ summary: ISA 1976 temperature [K] at geopotential altitude [m]
 related: []
 examples: []
 tags: [isa, atmosphere]
-references: []
-generated: true
+references:
+  - "U.S. Standard Atmosphere, 1976 (NOAA/NASA/USAF)"
 ---
 
 # isa_t
 
 ISA 1976 temperature [K] at geopotential altitude [m]
 
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
 
 ## Syntax
 
@@ -24,6 +23,10 @@ isa_T(alt)
 ## Description
 
 ISA 1976 temperature [K] at geopotential altitude [m]
+
+## Mathematical Formulation
+
+$$ T(h) = T_b + L_b\,(h - h_b) \quad\text{(layer lapse rate } L_b) $$
 
 ## Input Arguments
 

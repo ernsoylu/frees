@@ -5,15 +5,14 @@ summary: Wiebe burned mass fraction
 related: []
 examples: []
 tags: [wiebe, combustion]
-references: []
-generated: true
+references:
+  - "Heywood, J.B., Internal Combustion Engine Fundamentals, Ch. 9"
 ---
 
 # wiebe
 
 Wiebe burned mass fraction
 
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
 
 ## Syntax
 
@@ -24,6 +23,10 @@ wiebe(theta, theta0, dtheta, a, m)
 ## Description
 
 Wiebe burned mass fraction
+
+## Mathematical Formulation
+
+$$ x_b(\theta) = 1 - \exp\!\left[-a\left(\frac{\theta-\theta_0}{\Delta\theta}\right)^{m+1}\right] $$
 
 ## Input Arguments
 

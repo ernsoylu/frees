@@ -5,15 +5,14 @@ summary: Chen flow-boiling nucleate-suppression factor S
 related: []
 examples: []
 tags: [chen, two, phase, flow]
-references: []
-generated: true
+references:
+  - "Chen, J.C. (1966), Ind. Eng. Chem. Process Des. Dev. 5:322"
 ---
 
 # chen_s
 
 Chen flow-boiling nucleate-suppression factor S
 
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
 
 ## Syntax
 
@@ -24,6 +23,10 @@ chen_s(Re_l, F)
 ## Description
 
 Chen flow-boiling nucleate-suppression factor S
+
+## Mathematical Formulation
+
+$$ S = \frac{1}{1 + 2.53\times10^{-6}\,Re_l^{1.17}} \quad\text{(nucleate suppression, Chen)} $$
 
 ## Input Arguments
 

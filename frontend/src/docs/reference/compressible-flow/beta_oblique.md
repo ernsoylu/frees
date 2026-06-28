@@ -5,15 +5,14 @@ summary: Oblique-shock wave angle ('weak'|'strong') [rad]
 related: []
 examples: []
 tags: [beta, oblique, compressible, flow]
-references: []
-generated: true
+references:
+  - "Anderson, J.D., Modern Compressible Flow (3rd ed.), Ch. 4"
 ---
 
 # beta_oblique
 
 Oblique-shock wave angle ('weak'|'strong') [rad]
 
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
 
 ## Syntax
 
@@ -24,6 +23,10 @@ beta_oblique(M1, theta, k, branch$)
 ## Description
 
 Oblique-shock wave angle ('weak'|'strong') [rad]
+
+## Mathematical Formulation
+
+$$ \text{solve the } \theta\text{-}\beta\text{-}M \text{ relation for the wave angle } \beta \ (\text{weak/strong root}) $$
 
 ## Input Arguments
 

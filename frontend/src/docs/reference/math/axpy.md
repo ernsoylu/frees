@@ -6,14 +6,12 @@ related: []
 examples: []
 tags: [axpy, math]
 references: []
-generated: true
 ---
 
 # axpy
 
 BLAS: αx + y
 
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
 
 ## Syntax
 
@@ -24,6 +22,10 @@ axpy(α, x, y)
 ## Description
 
 BLAS: αx + y
+
+## Mathematical Formulation
+
+$$ y \leftarrow \alpha x + y \quad\text{(BLAS level 1)} $$
 
 ## Input Arguments
 

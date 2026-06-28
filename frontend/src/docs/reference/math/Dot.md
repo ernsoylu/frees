@@ -6,14 +6,12 @@ related: []
 examples: []
 tags: [dot, math]
 references: []
-generated: true
 ---
 
 # Dot
 
 Vector dot product
 
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
 
 ## Syntax
 
@@ -24,6 +22,10 @@ Dot(a, b)
 ## Description
 
 Vector dot product
+
+## Mathematical Formulation
+
+$$ a \cdot b = \sum_i a_i b_i $$
 
 ## Input Arguments
 

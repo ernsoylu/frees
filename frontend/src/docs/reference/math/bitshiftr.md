@@ -6,14 +6,12 @@ related: []
 examples: []
 tags: [bitshiftr, math]
 references: []
-generated: true
 ---
 
 # bitshiftr
 
 Right bit shift a>>n
 
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
 
 ## Syntax
 
@@ -24,6 +22,10 @@ bitshiftr(a, n)
 ## Description
 
 Right bit shift a>>n
+
+## Mathematical Formulation
+
+$$ a \gg n = \lfloor a / 2^{n} \rfloor $$
 
 ## Input Arguments
 

@@ -5,15 +5,14 @@ summary: Nu, Traviss in-tube condensation. SIDE: condensing two-phase refrigeran
 related: []
 examples: []
 tags: [nu, traviss, heat, transfer]
-references: []
-generated: true
+references:
+  - "Traviss, D.P. et al. (1973), ASHRAE Trans. 79:157"
 ---
 
 # nu_traviss
 
 Nu, Traviss in-tube condensation. SIDE: condensing two-phase refrigerant. HX: tube/microchannel condenser refrigerant side
 
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
 
 ## Syntax
 
@@ -24,6 +23,10 @@ nu_traviss(Re_l, Pr_l, Xtt)
 ## Description
 
 Nu, Traviss in-tube condensation. SIDE: condensing two-phase refrigerant. HX: tube/microchannel condenser refrigerant side
+
+## Mathematical Formulation
+
+$$ Nu = \frac{Pr_l\,Re_l^{0.9}\,F(X_{tt})}{F_2} \quad\text{(Traviss condensation)} $$
 
 ## Input Arguments
 

@@ -6,14 +6,12 @@ related: []
 examples: []
 tags: [sinh, math]
 references: []
-generated: true
 ---
 
 # sinh
 
 Hyperbolic sine
 
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
 
 ## Syntax
 
@@ -24,6 +22,10 @@ sinh(x)
 ## Description
 
 Hyperbolic sine
+
+## Mathematical Formulation
+
+$$ \sinh(x) = \frac{e^{x} - e^{-x}}{2} $$
 
 ## Input Arguments
 

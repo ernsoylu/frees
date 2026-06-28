@@ -5,15 +5,14 @@ summary: Solve A·x = b (same as A \\ b)
 related: []
 examples: []
 tags: [solvelinear, math]
-references: []
-generated: true
+references:
+  - "Golub, G.H. & Van Loan, C.F., Matrix Computations (4th ed.), §3.2"
 ---
 
 # SolveLinear
 
 Solve A·x = b (same as A \\ b)
 
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
 
 ## Syntax
 
@@ -25,6 +24,10 @@ SolveLinear(A, b)
 
 Solve A·x = b (same as A \\ b)
 
+## Mathematical Formulation
+
+$$ A\,x = b \;\Rightarrow\; x = A^{-1}b \quad\text{(via } PA = LU\text{, forward/back substitution)} $$
+
 ## Input Arguments
 
 | Argument | Type | Required | Description |
@@ -32,3 +35,6 @@ Solve A·x = b (same as A \\ b)
 | `A` | Number | Yes | Numeric argument. |
 | `b` | Number | Yes | Numeric argument. |
 
+## References
+
+1. Golub, G.H. & Van Loan, C.F., *Matrix Computations* (4th ed.), §3.2.

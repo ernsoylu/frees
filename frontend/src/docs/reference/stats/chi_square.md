@@ -5,15 +5,14 @@ summary: Chi-square CDF with df degrees of freedom
 related: []
 examples: []
 tags: [chi, square, stats]
-references: []
-generated: true
+references:
+  - "Montgomery, D.C. & Runger, G.C., Applied Statistics and Probability for Engineers"
 ---
 
 # chi_square
 
 Chi-square CDF with df degrees of freedom
 
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
 
 ## Syntax
 
@@ -24,6 +23,10 @@ chi_square(x, df)
 ## Description
 
 Chi-square CDF with df degrees of freedom
+
+## Mathematical Formulation
+
+$$ F(x; k) = \frac{\gamma(k/2,\ x/2)}{\Gamma(k/2)} \quad\text{(chi-square CDF, } k \text{ d.o.f.)} $$
 
 ## Input Arguments
 

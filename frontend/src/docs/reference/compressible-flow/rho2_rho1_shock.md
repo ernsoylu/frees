@@ -5,15 +5,14 @@ summary: Normal-shock density ratio
 related: []
 examples: []
 tags: [rho2, rho1, shock, compressible, flow]
-references: []
-generated: true
+references:
+  - "Çengel, Y.A., Boles, M.A. & Kanoğlu, M., Thermodynamics: An Engineering Approach, Ch. 17, Eq. (17-36)"
 ---
 
 # rho2_rho1_shock
 
 Normal-shock density ratio
 
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
 
 ## Syntax
 
@@ -24,6 +23,10 @@ rho2_rho1_shock(M1, k)
 ## Description
 
 Normal-shock density ratio
+
+## Mathematical Formulation
+
+$$ \frac{\rho_2}{\rho_1} = \frac{(k+1)M_1^2}{2 + (k-1)M_1^2} $$
 
 ## Input Arguments
 

@@ -5,15 +5,14 @@ summary: Separated-flow momentum flux [Pa] (accel. dP = out-in)
 related: []
 examples: []
 tags: [momentum, flux, two, phase, flow]
-references: []
-generated: true
+references:
+  - "Collier, J.G. & Thome, J.R., Convective Boiling and Condensation (3rd ed.), Ch. 2"
 ---
 
 # momentum_flux
 
 Separated-flow momentum flux [Pa] (accel. dP = out-in)
 
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
 
 ## Syntax
 
@@ -24,6 +23,10 @@ momentum_flux(x, rho_l, rho_g, alpha, G)
 ## Description
 
 Separated-flow momentum flux [Pa] (accel. dP = out-in)
+
+## Mathematical Formulation
+
+$$ \left(\frac{d P}{d z}\right)_{\text{acc}} = G^2\frac{d}{dz}\left[\frac{x^2}{\rho_g\alpha} + \frac{(1-x)^2}{\rho_l(1-\alpha)}\right] $$
 
 ## Input Arguments
 

@@ -5,15 +5,14 @@ summary: Factorial n!
 related: []
 examples: []
 tags: [factorial, math]
-references: []
-generated: true
+references:
+  - "Abramowitz, M. & Stegun, I.A., Handbook of Mathematical Functions, §6.1"
 ---
 
 # factorial
 
 Factorial n!
 
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
 
 ## Syntax
 
@@ -25,9 +24,18 @@ factorial(n)
 
 Factorial n!
 
+## Mathematical Formulation
+
+$$ n! = \prod_{k=1}^{n} k = n\,(n-1)! $$
+
+$$ \quad n! = \Gamma(n+1) $$
+
 ## Input Arguments
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
 | `n` | Number | Yes | Numeric argument. |
 
+## References
+
+1. Abramowitz, M. & Stegun, I.A., *Handbook of Mathematical Functions*, §6.1.

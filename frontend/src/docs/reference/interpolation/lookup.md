@@ -6,14 +6,12 @@ related: []
 examples: []
 tags: [lookup, interpolation]
 references: []
-generated: true
 ---
 
 # lookup
 
 Cell value by 1-based row/col indices
 
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
 
 ## Syntax
 
@@ -24,6 +22,10 @@ Lookup('t', row, col)
 ## Description
 
 Cell value by 1-based row/col indices
+
+## Mathematical Formulation
+
+$$ \operatorname{Lookup}(t, r, c) = t_{r,c} \quad\text{(1-based cell)} $$
 
 ## Input Arguments
 

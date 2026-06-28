@@ -6,14 +6,12 @@ related: []
 examples: []
 tags: [arcsinh, math]
 references: []
-generated: true
 ---
 
 # arcsinh
 
 Inverse hyperbolic sine
 
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
 
 ## Syntax
 
@@ -24,6 +22,10 @@ arcsinh(x)
 ## Description
 
 Inverse hyperbolic sine
+
+## Mathematical Formulation
+
+$$ \operatorname{arcsinh}(x) = \ln\!\big(x + \sqrt{x^2+1}\big) $$
 
 ## Input Arguments
 

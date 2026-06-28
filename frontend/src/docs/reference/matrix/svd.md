@@ -5,15 +5,14 @@ summary: Singular value decomposition
 related: []
 examples: []
 tags: [svd, matrix]
-references: []
-generated: true
+references:
+  - "Golub, G.H. & Van Loan, C.F., Matrix Computations (4th ed.), §2.4"
 ---
 
 # svd
 
 Singular value decomposition
 
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
 
 ## Syntax
 
@@ -24,6 +23,10 @@ svd(A : U, S, V)
 ## Description
 
 Singular value decomposition
+
+## Mathematical Formulation
+
+$$ A = U\,\Sigma\,V^\top, \qquad \Sigma = \operatorname{diag}(\sigma_1 \ge \dots \ge \sigma_r > 0) $$
 
 ## Input Arguments
 

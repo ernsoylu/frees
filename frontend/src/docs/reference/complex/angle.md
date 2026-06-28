@@ -6,14 +6,12 @@ related: []
 examples: []
 tags: [angle, complex]
 references: []
-generated: true
 ---
 
 # angle
 
 Argument of z [rad] (alias anglerad)
 
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
 
 ## Syntax
 
@@ -24,6 +22,10 @@ angle(z)
 ## Description
 
 Argument of z [rad] (alias anglerad)
+
+## Mathematical Formulation
+
+$$ \arg(z) = \operatorname{atan2}(b, a)\ \ [\text{rad}] $$
 
 ## Input Arguments
 

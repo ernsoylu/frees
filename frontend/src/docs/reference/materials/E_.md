@@ -6,14 +6,13 @@ related: []
 examples: [multi-objective-beam]
 tags: [e, material, solid, property]
 references: []
-generated: true
 ---
 
 # E_
 
 Returns a solid-material property via `E_(Material[, T])` from the built-in material database.
 
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
+> Real-fluid/material/symbolic operation — see the inputs and references below.
 
 ## Syntax
 

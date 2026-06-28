@@ -5,15 +5,14 @@ summary: Homogeneous (no-slip) void fraction
 related: []
 examples: []
 tags: [void, homogeneous, two, phase, flow]
-references: []
-generated: true
+references:
+  - "Collier, J.G. & Thome, J.R., Convective Boiling and Condensation (3rd ed.), Ch. 2"
 ---
 
 # void_homogeneous
 
 Homogeneous (no-slip) void fraction
 
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
 
 ## Syntax
 
@@ -24,6 +23,10 @@ void_homogeneous(x, rho_l, rho_g)
 ## Description
 
 Homogeneous (no-slip) void fraction
+
+## Mathematical Formulation
+
+$$ \alpha = \frac{1}{1 + \frac{1-x}{x}\frac{\rho_g}{\rho_l}} \quad\text{(no slip)} $$
 
 ## Input Arguments
 

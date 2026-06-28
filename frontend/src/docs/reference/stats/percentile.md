@@ -5,15 +5,14 @@ summary: p-th percentile, p in [0,100]
 related: []
 examples: []
 tags: [percentile, stats]
-references: []
-generated: true
+references:
+  - "Montgomery, D.C. & Runger, G.C., Applied Statistics and Probability for Engineers"
 ---
 
 # percentile
 
 p-th percentile, p in [0,100]
 
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
 
 ## Syntax
 
@@ -24,6 +23,10 @@ percentile(p, x1, x2, ...)
 ## Description
 
 p-th percentile, p in [0,100]
+
+## Mathematical Formulation
+
+$$ P_p = \text{value below which } p\% \text{ of the data fall (linear interpolation)} $$
 
 ## Input Arguments
 

@@ -5,15 +5,14 @@ summary: Matrix trace
 related: []
 examples: []
 tags: [trace, matrix]
-references: []
-generated: true
+references:
+  - "Golub, G.H. & Van Loan, C.F., Matrix Computations (4th ed.)"
 ---
 
 # trace
 
 Matrix trace
 
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
 
 ## Syntax
 
@@ -24,6 +23,10 @@ trace(A)
 ## Description
 
 Matrix trace
+
+## Mathematical Formulation
+
+$$ \operatorname{tr}(A) = \sum_i A_{ii} = \sum_i \lambda_i $$
 
 ## Input Arguments
 

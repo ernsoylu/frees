@@ -6,14 +6,12 @@ related: []
 examples: []
 tags: [tanh, math]
 references: []
-generated: true
 ---
 
 # tanh
 
 Hyperbolic tangent
 
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
 
 ## Syntax
 
@@ -24,6 +22,10 @@ tanh(x)
 ## Description
 
 Hyperbolic tangent
+
+## Mathematical Formulation
+
+$$ \tanh(x) = \frac{\sinh x}{\cosh x} = \frac{e^{x}-e^{-x}}{e^{x}+e^{-x}} $$
 
 ## Input Arguments
 

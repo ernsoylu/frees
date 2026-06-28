@@ -5,15 +5,14 @@ summary: ISA 1976 pressure [Pa] at geopotential altitude [m]
 related: []
 examples: []
 tags: [isa, atmosphere]
-references: []
-generated: true
+references:
+  - "U.S. Standard Atmosphere, 1976 (NOAA/NASA/USAF)"
 ---
 
 # isa_p
 
 ISA 1976 pressure [Pa] at geopotential altitude [m]
 
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
 
 ## Syntax
 
@@ -24,6 +23,10 @@ isa_P(alt)
 ## Description
 
 ISA 1976 pressure [Pa] at geopotential altitude [m]
+
+## Mathematical Formulation
+
+$$ P(h) = P_b\left(\frac{T_b}{T_b + L_b(h-h_b)}\right)^{g_0 M/(R L_b)} \quad (L_b \ne 0) $$
 
 ## Input Arguments
 

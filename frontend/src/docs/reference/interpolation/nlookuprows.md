@@ -6,14 +6,12 @@ related: []
 examples: []
 tags: [nlookuprows, interpolation]
 references: []
-generated: true
 ---
 
 # nlookuprows
 
 Number of data rows in table t
 
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
 
 ## Syntax
 
@@ -24,6 +22,10 @@ NLookupRows('t')
 ## Description
 
 Number of data rows in table t
+
+## Mathematical Formulation
+
+$$ \operatorname{NLookupRows}(t) = \#\text{rows}(t) $$
 
 ## Input Arguments
 

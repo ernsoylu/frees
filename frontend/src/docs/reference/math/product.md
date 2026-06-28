@@ -6,14 +6,12 @@ related: []
 examples: []
 tags: [product, math]
 references: []
-generated: true
 ---
 
 # product
 
 Product series Pi(term) over i = lo..hi
 
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
 
 ## Syntax
 
@@ -24,6 +22,10 @@ product(i, lo, hi, term)
 ## Description
 
 Product series Pi(term) over i = lo..hi
+
+## Mathematical Formulation
+
+$$ \prod_{i=\text{lo}}^{\text{hi}} \text{term}(i) $$
 
 ## Input Arguments
 

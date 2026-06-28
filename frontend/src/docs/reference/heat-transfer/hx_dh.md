@@ -5,15 +5,14 @@ summary: GEOMETRY: hydraulic diameter D_h=4*Aflow*L/Atotal [m] of a compact HX c
 related: []
 examples: []
 tags: [hx, dh, heat, transfer]
-references: []
-generated: true
+references:
+  - "Kays, W.M. & London, A.L., Compact Heat Exchangers (3rd ed.), Ch. 2"
 ---
 
 # hx_dh
 
 GEOMETRY: hydraulic diameter D_h=4*Aflow*L/Atotal [m] of a compact HX core (any side)
 
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
 
 ## Syntax
 
@@ -24,6 +23,10 @@ hx_dh(Aflow, Atotal, L)
 ## Description
 
 GEOMETRY: hydraulic diameter D_h=4*Aflow*L/Atotal [m] of a compact HX core (any side)
+
+## Mathematical Formulation
+
+$$ D_h = \frac{4\,A_{\text{flow}}\,L}{A_{\text{total}}} $$
 
 ## Input Arguments
 

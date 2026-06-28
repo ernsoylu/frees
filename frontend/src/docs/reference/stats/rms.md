@@ -6,14 +6,12 @@ related: []
 examples: []
 tags: [rms, stats]
 references: []
-generated: true
 ---
 
 # rms
 
 Root mean square
 
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
 
 ## Syntax
 
@@ -24,6 +22,10 @@ rms(x1, x2, ...)
 ## Description
 
 Root mean square
+
+## Mathematical Formulation
+
+$$ x_{\text{rms}} = \sqrt{\frac{1}{n}\sum_{i=1}^{n} x_i^2} $$
 
 ## Input Arguments
 

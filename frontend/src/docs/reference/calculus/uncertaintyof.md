@@ -5,15 +5,14 @@ summary: Propagated uncertainty of X (resolved in a second solve pass)
 related: []
 examples: []
 tags: [uncertaintyof, calculus]
-references: []
-generated: true
+references:
+  - "JCGM 100:2008 (GUM)"
 ---
 
 # uncertaintyof
 
 Propagated uncertainty of X (resolved in a second solve pass)
 
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
 
 ## Syntax
 
@@ -24,6 +23,10 @@ UncertaintyOf(X)
 ## Description
 
 Propagated uncertainty of X (resolved in a second solve pass)
+
+## Mathematical Formulation
+
+$$ u(X) = \text{user-supplied or RSS-propagated uncertainty of } X $$
 
 ## Input Arguments
 

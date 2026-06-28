@@ -5,15 +5,14 @@ summary: Gnielinski single-phase Nusselt number
 related: []
 examples: []
 tags: [nu, gnielinski, two, phase, flow]
-references: []
-generated: true
+references:
+  - "Incropera, F.P. et al., Fundamentals of Heat and Mass Transfer, Eq. (8.62)"
 ---
 
 # nu_gnielinski
 
 Gnielinski single-phase Nusselt number
 
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
 
 ## Syntax
 
@@ -24,6 +23,10 @@ nu_gnielinski(Re, Pr)
 ## Description
 
 Gnielinski single-phase Nusselt number
+
+## Mathematical Formulation
+
+$$ Nu = \frac{(f/8)(Re-1000)Pr}{1 + 12.7\sqrt{f/8}\,(Pr^{2/3}-1)} $$
 
 ## Input Arguments
 

@@ -5,15 +5,14 @@ summary: Fanno static-temperature ratio
 related: []
 examples: []
 tags: [fanno, tstar, compressible, flow]
-references: []
-generated: true
+references:
+  - "Çengel, Y.A., Boles, M.A. & Kanoğlu, M., Thermodynamics: An Engineering Approach, Ch. 17, Ch. 17 (Fanno)"
 ---
 
 # fanno_t_tstar
 
 Fanno static-temperature ratio
 
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
 
 ## Syntax
 
@@ -24,6 +23,10 @@ fanno_T_Tstar(M, k)
 ## Description
 
 Fanno static-temperature ratio
+
+## Mathematical Formulation
+
+$$ \frac{T}{T^*} = \frac{k+1}{2 + (k-1)M^2} $$
 
 ## Input Arguments
 

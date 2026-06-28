@@ -5,15 +5,14 @@ summary: Colburn j for a compact fin surface (plain|wavy|louvered|offset). SIDE:
 related: []
 examples: []
 tags: [fin, heat, transfer]
-references: []
-generated: true
+references:
+  - "Kays, W.M. & London, A.L., Compact Heat Exchangers (3rd ed.)"
 ---
 
 # j_fin
 
 Colburn j for a compact fin surface (plain|wavy|louvered|offset). SIDE: air/gas finned side. HX: plate-fin/louvered/offset-strip radiator, condenser, CAC
 
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
 
 ## Syntax
 
@@ -24,6 +23,10 @@ j_fin(surface$, Re)
 ## Description
 
 Colburn j for a compact fin surface (plain|wavy|louvered|offset). SIDE: air/gas finned side. HX: plate-fin/louvered/offset-strip radiator, condenser, CAC
+
+## Mathematical Formulation
+
+$$ j = St\,Pr^{2/3} = C\,Re^{m} \quad\text{(Colburn } j \text{ for the fin surface)} $$
 
 ## Input Arguments
 

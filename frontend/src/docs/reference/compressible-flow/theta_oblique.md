@@ -5,15 +5,14 @@ summary: Oblique-shock deflection from wave angle [rad]
 related: []
 examples: []
 tags: [theta, oblique, compressible, flow]
-references: []
-generated: true
+references:
+  - "Anderson, J.D., Modern Compressible Flow (3rd ed.), Ch. 4"
 ---
 
 # theta_oblique
 
 Oblique-shock deflection from wave angle [rad]
 
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
 
 ## Syntax
 
@@ -24,6 +23,10 @@ theta_oblique(M1, beta, k)
 ## Description
 
 Oblique-shock deflection from wave angle [rad]
+
+## Mathematical Formulation
+
+$$ \tan\theta = 2\cot\beta\,\frac{M_1^2\sin^2\beta - 1}{M_1^2(k + \cos 2\beta) + 2} $$
 
 ## Input Arguments
 

@@ -5,15 +5,14 @@ summary: Normal probability density at x
 related: []
 examples: []
 tags: [normalpdf, stats]
-references: []
-generated: true
+references:
+  - "Montgomery, D.C. & Runger, G.C., Applied Statistics and Probability for Engineers"
 ---
 
 # normalpdf
 
 Normal probability density at x
 
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
 
 ## Syntax
 
@@ -24,6 +23,10 @@ normalpdf(x, mu, sigma)
 ## Description
 
 Normal probability density at x
+
+## Mathematical Formulation
+
+$$ \phi(x;\mu,\sigma) = \frac{1}{\sigma\sqrt{2\pi}}\,e^{-(x-\mu)^2/(2\sigma^2)} $$
 
 ## Input Arguments
 

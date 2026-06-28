@@ -5,15 +5,14 @@ summary: Normal CDF at x
 related: []
 examples: []
 tags: [probability, stats]
-references: []
-generated: true
+references:
+  - "Montgomery, D.C. & Runger, G.C., Applied Statistics and Probability for Engineers"
 ---
 
 # probability
 
 Normal CDF at x
 
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
 
 ## Syntax
 
@@ -24,6 +23,10 @@ probability(x, mu, sigma)
 ## Description
 
 Normal CDF at x
+
+## Mathematical Formulation
+
+$$ \Pr(X \le x) = \Phi\!\left(\frac{x-\mu}{\sigma}\right) $$
 
 ## Input Arguments
 

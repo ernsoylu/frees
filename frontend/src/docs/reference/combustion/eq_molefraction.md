@@ -5,15 +5,14 @@ summary: Equilibrium product mole fraction (dissociation)
 related: []
 examples: []
 tags: [eq, molefraction, combustion]
-references: []
-generated: true
+references:
+  - "Turns, S.R., An Introduction to Combustion (3rd ed.), Ch. 2"
 ---
 
 # eq_molefraction
 
 Equilibrium product mole fraction (dissociation)
 
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
 
 ## Syntax
 
@@ -24,6 +23,10 @@ eq_molefraction(fuel$, phi, T, P, species$)
 ## Description
 
 Equilibrium product mole fraction (dissociation)
+
+## Mathematical Formulation
+
+$$ \text{species mole fraction from chemical equilibrium } \big(\min G \text{ at } T, P\big) $$
 
 ## Input Arguments
 

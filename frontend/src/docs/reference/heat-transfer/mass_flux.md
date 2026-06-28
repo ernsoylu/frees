@@ -6,14 +6,12 @@ related: []
 examples: []
 tags: [mass, flux, heat, transfer]
 references: []
-generated: true
 ---
 
 # mass_flux
 
 GEOMETRY/flow: mass flux G=mdot/Aflow [kg/m^2/s] (any side)
 
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
 
 ## Syntax
 
@@ -24,6 +22,10 @@ mass_flux(mdot, Aflow)
 ## Description
 
 GEOMETRY/flow: mass flux G=mdot/Aflow [kg/m^2/s] (any side)
+
+## Mathematical Formulation
+
+$$ G = \frac{\dot m}{A_{\text{flow}}} $$
 
 ## Input Arguments
 

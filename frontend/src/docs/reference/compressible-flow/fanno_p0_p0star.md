@@ -5,15 +5,14 @@ summary: Fanno stagnation-pressure ratio
 related: []
 examples: []
 tags: [fanno, p0, p0star, compressible, flow]
-references: []
-generated: true
+references:
+  - "Çengel, Y.A., Boles, M.A. & Kanoğlu, M., Thermodynamics: An Engineering Approach, Ch. 17, Ch. 17 (Fanno)"
 ---
 
 # fanno_p0_p0star
 
 Fanno stagnation-pressure ratio
 
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
 
 ## Syntax
 
@@ -24,6 +23,10 @@ fanno_P0_P0star(M, k)
 ## Description
 
 Fanno stagnation-pressure ratio
+
+## Mathematical Formulation
+
+$$ \frac{P_0}{P_0^*} = \frac{1}{M}\left[\frac{2 + (k-1)M^2}{k+1}\right]^{(k+1)/[2(k-1)]} $$
 
 ## Input Arguments
 

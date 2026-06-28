@@ -5,15 +5,14 @@ summary: Mean of vector x
 related: []
 examples: []
 tags: [mean, stats]
-references: []
-generated: true
+references:
+  - "Montgomery, D.C. & Runger, G.C., Applied Statistics and Probability for Engineers"
 ---
 
 # mean
 
 Mean of vector x
 
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
 
 ## Syntax
 
@@ -24,6 +23,10 @@ mean(x)
 ## Description
 
 Mean of vector x
+
+## Mathematical Formulation
+
+$$ \bar x = \frac{1}{n}\sum_{i=1}^{n} x_i $$
 
 ## Input Arguments
 

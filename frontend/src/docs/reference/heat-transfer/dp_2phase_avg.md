@@ -5,15 +5,14 @@ summary: dP [Pa], quality-integrated (n cells). SIDE: two-phase refrigerant alon
 related: []
 examples: []
 tags: [dp, 2phase, avg, heat, transfer]
-references: []
-generated: true
+references:
+  - "Collier, J.G. & Thome, J.R., Convective Boiling and Condensation (3rd ed.)"
 ---
 
 # dp_2phase_avg
 
 dP [Pa], quality-integrated (n cells). SIDE: two-phase refrigerant along an evaporator/condenser pass
 
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
 
 ## Syntax
 
@@ -24,6 +23,10 @@ dp_2phase_avg(fluid$, P, x_in, x_out, mdot, Dh, Aflow, L, n)
 ## Description
 
 dP [Pa], quality-integrated (n cells). SIDE: two-phase refrigerant along an evaporator/condenser pass
+
+## Mathematical Formulation
+
+$$ \Delta P = \frac{1}{n}\sum_{i=1}^{n} \phi_l^2(x_i)\,\left(\frac{dP}{dz}\right)_{l,i} \Delta z \quad\text{(quality-integrated)} $$
 
 ## Input Arguments
 

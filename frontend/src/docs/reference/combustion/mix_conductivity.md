@@ -5,15 +5,14 @@ summary: Ideal-gas mixture conductivity [W/m-K]
 related: []
 examples: []
 tags: [mix, conductivity, combustion]
-references: []
-generated: true
+references:
+  - "Mason, E.A. & Saxena, S.C. (1958), Phys. Fluids 1:361"
 ---
 
 # mix_conductivity
 
 Ideal-gas mixture conductivity [W/m-K]
 
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
 
 ## Syntax
 
@@ -24,6 +23,10 @@ mix_conductivity(comp$, T)
 ## Description
 
 Ideal-gas mixture conductivity [W/m-K]
+
+## Mathematical Formulation
+
+$$ \lambda = \sum_i \frac{y_i \lambda_i}{\sum_j y_j \phi_{ij}} \quad\text{(Wassiljewa/Wilke)} $$
 
 ## Input Arguments
 

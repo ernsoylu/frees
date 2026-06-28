@@ -5,15 +5,14 @@ summary: Nu=j*Re*Pr^(1/3). SIDE: air/gas through a compact finned surface. HX: p
 related: []
 examples: []
 tags: [nu, colburn, heat, transfer]
-references: []
-generated: true
+references:
+  - "Incropera, F.P. et al., Fundamentals of Heat and Mass Transfer"
 ---
 
 # nu_colburn
 
 Nu=j*Re*Pr^(1/3). SIDE: air/gas through a compact finned surface. HX: plate-fin/louvered-fin air side
 
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
 
 ## Syntax
 
@@ -24,6 +23,10 @@ nu_colburn(j, Re, Pr)
 ## Description
 
 Nu=j*Re*Pr^(1/3). SIDE: air/gas through a compact finned surface. HX: plate-fin/louvered-fin air side
+
+## Mathematical Formulation
+
+$$ Nu = j\,Re\,Pr^{1/3} \quad\text{(Colburn } j\text{-factor)} $$
 
 ## Input Arguments
 

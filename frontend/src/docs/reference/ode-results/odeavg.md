@@ -6,14 +6,12 @@ related: []
 examples: []
 tags: [odeavg, ode, results]
 references: []
-generated: true
 ---
 
 # odeavg
 
 Time-mean of an ODE column
 
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
 
 ## Syntax
 
@@ -24,6 +22,10 @@ ODEAvg('col')
 ## Description
 
 Time-mean of an ODE column
+
+## Mathematical Formulation
+
+$$ \frac{1}{N+1}\sum_{i=0}^{N} \text{col}(t_i) $$
 
 ## Input Arguments
 

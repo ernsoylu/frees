@@ -5,15 +5,14 @@ summary: Inverse normal CDF (quantile) at p
 related: []
 examples: []
 tags: [normalinvcdf, stats]
-references: []
-generated: true
+references:
+  - "Montgomery, D.C. & Runger, G.C., Applied Statistics and Probability for Engineers"
 ---
 
 # normalinvcdf
 
 Inverse normal CDF (quantile) at p
 
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
 
 ## Syntax
 
@@ -24,6 +23,10 @@ normalinvcdf(p, mu, sigma)
 ## Description
 
 Inverse normal CDF (quantile) at p
+
+## Mathematical Formulation
+
+$$ x = \Phi^{-1}(p;\mu,\sigma) = \mu + \sigma\sqrt2\,\operatorname{erf}^{-1}(2p-1) $$
 
 ## Input Arguments
 

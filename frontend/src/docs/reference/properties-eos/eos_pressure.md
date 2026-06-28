@@ -5,15 +5,14 @@ summary: Pressure [Pa] from (T, specific volume)
 related: []
 examples: []
 tags: [eos, pressure, properties]
-references: []
-generated: true
+references:
+  - "Peng, D.-Y. & Robinson, D.B. (1976), Ind. Eng. Chem. Fundam. 15(1):59"
 ---
 
 # eos_pressure
 
 Pressure [Pa] from (T, specific volume)
 
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
 
 ## Syntax
 
@@ -24,6 +23,10 @@ eos_pressure(fluid$, model$, T, v)
 ## Description
 
 Pressure [Pa] from (T, specific volume)
+
+## Mathematical Formulation
+
+$$ P = \frac{RT}{v-b} - \frac{a\,\alpha(T)}{v(v+b) + b(v-b)} \quad\text{(PR; from } T, v) $$
 
 ## Input Arguments
 

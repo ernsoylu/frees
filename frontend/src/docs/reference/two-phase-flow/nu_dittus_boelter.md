@@ -5,15 +5,14 @@ summary: Dittus-Boelter single-phase Nusselt 0.023 Re^0.8 Pr^n
 related: []
 examples: []
 tags: [nu, dittus, boelter, two, phase, flow]
-references: []
-generated: true
+references:
+  - "Incropera, F.P. et al., Fundamentals of Heat and Mass Transfer, Eq. (8.60)"
 ---
 
 # nu_dittus_boelter
 
 Dittus-Boelter single-phase Nusselt 0.023 Re^0.8 Pr^n
 
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
 
 ## Syntax
 
@@ -24,6 +23,10 @@ nu_dittus_boelter(Re, Pr, n)
 ## Description
 
 Dittus-Boelter single-phase Nusselt 0.023 Re^0.8 Pr^n
+
+## Mathematical Formulation
+
+$$ Nu = 0.023\,Re^{0.8}\,Pr^{n} \quad (n = 0.4 \text{ heating},\ 0.3 \text{ cooling}) $$
 
 ## Input Arguments
 

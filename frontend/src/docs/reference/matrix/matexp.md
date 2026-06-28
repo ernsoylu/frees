@@ -5,15 +5,14 @@ summary: Matrix exponential
 related: []
 examples: []
 tags: [matexp, matrix]
-references: []
-generated: true
+references:
+  - "Golub, G.H. & Van Loan, C.F., Matrix Computations (4th ed.), §9.3"
 ---
 
 # matexp
 
 Matrix exponential
 
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
 
 ## Syntax
 
@@ -24,6 +23,10 @@ matexp(A)
 ## Description
 
 Matrix exponential
+
+## Mathematical Formulation
+
+$$ e^{A} = \sum_{k=0}^{\infty} \frac{A^{k}}{k!} $$
 
 ## Input Arguments
 

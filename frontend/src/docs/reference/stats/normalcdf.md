@@ -5,15 +5,14 @@ summary: Normal cumulative distribution at x
 related: []
 examples: []
 tags: [normalcdf, stats]
-references: []
-generated: true
+references:
+  - "Montgomery, D.C. & Runger, G.C., Applied Statistics and Probability for Engineers"
 ---
 
 # normalcdf
 
 Normal cumulative distribution at x
 
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
 
 ## Syntax
 
@@ -24,6 +23,10 @@ normalcdf(x, mu, sigma)
 ## Description
 
 Normal cumulative distribution at x
+
+## Mathematical Formulation
+
+$$ \Phi(x;\mu,\sigma) = \tfrac12\left[1 + \operatorname{erf}\!\frac{x-\mu}{\sigma\sqrt2}\right] $$
 
 ## Input Arguments
 

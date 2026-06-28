@@ -5,15 +5,14 @@ summary: Linear interpolation of table t at x (same as t(x))
 related: []
 examples: []
 tags: [interpolate, interpolation]
-references: []
-generated: true
+references:
+  - "Press, W.H. et al., Numerical Recipes (3rd ed.), §3.1"
 ---
 
 # interpolate
 
 Linear interpolation of table t at x (same as t(x))
 
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
 
 ## Syntax
 
@@ -24,6 +23,10 @@ Interpolate('t', x)
 ## Description
 
 Linear interpolation of table t at x (same as t(x))
+
+## Mathematical Formulation
+
+$$ y = y_i + (y_{i+1}-y_i)\frac{x - x_i}{x_{i+1} - x_i} \quad\text{(linear)} $$
 
 ## Input Arguments
 

@@ -6,14 +6,12 @@ related: []
 examples: []
 tags: [floor, math]
 references: []
-generated: true
 ---
 
 # floor
 
 Floor
 
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
 
 ## Syntax
 
@@ -24,6 +22,10 @@ floor(x)
 ## Description
 
 Floor
+
+## Mathematical Formulation
+
+$$ \lfloor x \rfloor = \max\{n \in \mathbb{Z} : n \le x\} $$
 
 ## Input Arguments
 

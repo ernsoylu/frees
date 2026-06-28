@@ -5,15 +5,14 @@ summary: Prandtl-Meyer angle nu(M) [rad]
 related: []
 examples: []
 tags: [prandtlmeyer, compressible, flow]
-references: []
-generated: true
+references:
+  - "Anderson, J.D., Modern Compressible Flow (3rd ed.), Ch. 4"
 ---
 
 # prandtlmeyer
 
 Prandtl-Meyer angle nu(M) [rad]
 
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
 
 ## Syntax
 
@@ -24,6 +23,10 @@ PrandtlMeyer(M, k)
 ## Description
 
 Prandtl-Meyer angle nu(M) [rad]
+
+## Mathematical Formulation
+
+$$ \nu(M) = \sqrt{\tfrac{k+1}{k-1}}\,\arctan\!\sqrt{\tfrac{k-1}{k+1}(M^2-1)} - \arctan\!\sqrt{M^2-1} $$
 
 ## Input Arguments
 

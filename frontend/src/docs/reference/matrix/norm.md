@@ -5,15 +5,14 @@ summary: Matrix norm
 related: []
 examples: []
 tags: [norm, matrix]
-references: []
-generated: true
+references:
+  - "Golub, G.H. & Van Loan, C.F., Matrix Computations (4th ed.)"
 ---
 
 # norm
 
 Matrix norm
 
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
 
 ## Syntax
 
@@ -24,6 +23,10 @@ norm(A)
 ## Description
 
 Matrix norm
+
+## Mathematical Formulation
+
+$$ \lVert v \rVert_2 = \sqrt{\textstyle\sum_i v_i^2} $$
 
 ## Input Arguments
 

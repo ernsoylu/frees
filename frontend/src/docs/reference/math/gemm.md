@@ -6,14 +6,12 @@ related: []
 examples: []
 tags: [gemm, math]
 references: []
-generated: true
 ---
 
 # gemm
 
 BLAS L3: αAB + βC
 
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
 
 ## Syntax
 
@@ -24,6 +22,10 @@ gemm(α, A, B, β, C)
 ## Description
 
 BLAS L3: αAB + βC
+
+## Mathematical Formulation
+
+$$ C \leftarrow \alpha A B + \beta C \quad\text{(BLAS level 3)} $$
 
 ## Input Arguments
 

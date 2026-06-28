@@ -5,15 +5,14 @@ summary: QR decomposition
 related: []
 examples: []
 tags: [qr, matrix]
-references: []
-generated: true
+references:
+  - "Golub, G.H. & Van Loan, C.F., Matrix Computations (4th ed.), §5.2"
 ---
 
 # qr
 
 QR decomposition
 
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
 
 ## Syntax
 
@@ -24,6 +23,10 @@ qr(A : Q, R)
 ## Description
 
 QR decomposition
+
+## Mathematical Formulation
+
+$$ A = Q\,R, \qquad Q^\top Q = I,\ R\ \text{upper triangular} $$
 
 ## Input Arguments
 

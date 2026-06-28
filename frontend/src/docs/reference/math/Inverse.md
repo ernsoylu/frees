@@ -5,15 +5,14 @@ summary: Matrix inverse A⁻¹
 related: []
 examples: []
 tags: [inverse, math]
-references: []
-generated: true
+references:
+  - "Golub, G.H. & Van Loan, C.F., Matrix Computations (4th ed.)"
 ---
 
 # Inverse
 
 Matrix inverse A⁻¹
 
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
 
 ## Syntax
 
@@ -25,9 +24,16 @@ Inverse(A)
 
 Matrix inverse A⁻¹
 
+## Mathematical Formulation
+
+$$ A\,A^{-1} = A^{-1}A = I $$
+
 ## Input Arguments
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
 | `A` | Number | Yes | Numeric argument. |
 
+## References
+
+1. Golub, G.H. & Van Loan, C.F., *Matrix Computations* (4th ed.).

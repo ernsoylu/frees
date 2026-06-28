@@ -5,15 +5,14 @@ summary: Normal-shock static temperature ratio
 related: []
 examples: []
 tags: [t2, t1, shock, compressible, flow]
-references: []
-generated: true
+references:
+  - "Çengel, Y.A., Boles, M.A. & Kanoğlu, M., Thermodynamics: An Engineering Approach, Ch. 17, Eq. (17-37)"
 ---
 
 # t2_t1_shock
 
 Normal-shock static temperature ratio
 
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
 
 ## Syntax
 
@@ -24,6 +23,10 @@ T2_T1_shock(M1, k)
 ## Description
 
 Normal-shock static temperature ratio
+
+## Mathematical Formulation
+
+$$ \frac{T_2}{T_1} = \frac{\big[1 + \tfrac{k-1}{2}M_1^2\big]\big[\tfrac{2k}{k-1}M_1^2 - 1\big]}{M_1^2\,(k+1)^2/[2(k-1)]} $$
 
 ## Input Arguments
 

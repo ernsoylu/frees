@@ -5,15 +5,14 @@ summary: Mach angle mu = asin(1/M) [rad]
 related: []
 examples: []
 tags: [machangle, compressible, flow]
-references: []
-generated: true
+references:
+  - "Anderson, J.D., Modern Compressible Flow (3rd ed.), Ch. 4"
 ---
 
 # machangle
 
 Mach angle mu = asin(1/M) [rad]
 
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
 
 ## Syntax
 
@@ -24,6 +23,10 @@ MachAngle(M)
 ## Description
 
 Mach angle mu = asin(1/M) [rad]
+
+## Mathematical Formulation
+
+$$ \mu = \arcsin\!\frac{1}{M} $$
 
 ## Input Arguments
 

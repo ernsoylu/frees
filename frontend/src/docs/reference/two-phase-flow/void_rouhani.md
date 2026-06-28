@@ -5,15 +5,14 @@ summary: Rouhani-Axelsson drift-flux void fraction (default)
 related: []
 examples: []
 tags: [void, rouhani, two, phase, flow]
-references: []
-generated: true
+references:
+  - "Rouhani, S.Z. & Axelsson, E. (1970), Int. J. Heat Mass Transfer 13:383"
 ---
 
 # void_rouhani
 
 Rouhani-Axelsson drift-flux void fraction (default)
 
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
 
 ## Syntax
 
@@ -24,6 +23,10 @@ void_rouhani(x, rho_l, rho_g, G, sigma)
 ## Description
 
 Rouhani-Axelsson drift-flux void fraction (default)
+
+## Mathematical Formulation
+
+$$ \alpha = \frac{x}{\rho_g}\left[(1 + 0.12(1-x))\left(\frac{x}{\rho_g} + \frac{1-x}{\rho_l}\right) + \frac{1.18(1-x)[g\sigma(\rho_l-\rho_g)]^{0.25}}{G\rho_l^{0.5}}\right]^{-1} $$
 
 ## Input Arguments
 

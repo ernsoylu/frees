@@ -5,15 +5,14 @@ summary: Fanno friction parameter 4*f*Lmax/D
 related: []
 examples: []
 tags: [fanno, fld, compressible, flow]
-references: []
-generated: true
+references:
+  - "Çengel, Y.A., Boles, M.A. & Kanoğlu, M., Thermodynamics: An Engineering Approach, Ch. 17, Ch. 17 (Fanno)"
 ---
 
 # fanno_fld
 
 Fanno friction parameter 4*f*Lmax/D
 
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
 
 ## Syntax
 
@@ -24,6 +23,10 @@ fanno_fLD(M, k)
 ## Description
 
 Fanno friction parameter 4*f*Lmax/D
+
+## Mathematical Formulation
+
+$$ \frac{4 f L^*}{D} = \frac{1-M^2}{kM^2} + \frac{k+1}{2k}\ln\frac{(k+1)M^2}{2 + (k-1)M^2} $$
 
 ## Input Arguments
 

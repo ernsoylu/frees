@@ -5,15 +5,14 @@ summary: Numerical dy/dx at xv from a TABLE
 related: []
 examples: []
 tags: [differentiate, calculus]
-references: []
-generated: true
+references:
+  - "Press, W.H. et al., Numerical Recipes (3rd ed.), §5.7"
 ---
 
 # differentiate
 
 Numerical dy/dx at xv from a TABLE
 
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
 
 ## Syntax
 
@@ -24,6 +23,10 @@ Differentiate('t', y, x, xv)
 ## Description
 
 Numerical dy/dx at xv from a TABLE
+
+## Mathematical Formulation
+
+$$ \left.\frac{dy}{dx}\right|_{x_v} \approx \frac{y_{i+1}-y_{i-1}}{x_{i+1}-x_{i-1}} \quad\text{(central difference on the table)} $$
 
 ## Input Arguments
 

@@ -5,15 +5,15 @@ summary: Darcy friction factor (Colebrook-Moody, laminar+turbulent)
 related: []
 examples: []
 tags: [friction, factor, flow, networks]
-references: []
-generated: true
+references:
+  - "White, F.M., Fluid Mechanics (8th ed.)"
+  - "Colebrook, C.F. (1939), J. Inst. Civ. Eng. 11:133"
 ---
 
 # friction_factor
 
 Darcy friction factor (Colebrook-Moody, laminar+turbulent)
 
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
 
 ## Syntax
 
@@ -24,6 +24,10 @@ friction_factor(Re, rel_rough)
 ## Description
 
 Darcy friction factor (Colebrook-Moody, laminar+turbulent)
+
+## Mathematical Formulation
+
+$$ \frac{1}{\sqrt{f}} = -2\log_{10}\!\left(\frac{\varepsilon/D}{3.7} + \frac{2.51}{Re\sqrt{f}}\right) \quad\text{(Colebrook; } f = 64/Re \text{ laminar)} $$
 
 ## Input Arguments
 

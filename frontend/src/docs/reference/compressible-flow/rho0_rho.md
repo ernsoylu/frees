@@ -5,15 +5,14 @@ summary: Isentropic stagnation/static density ratio
 related: []
 examples: []
 tags: [rho0, rho, compressible, flow]
-references: []
-generated: true
+references:
+  - "Çengel, Y.A., Boles, M.A. & Kanoğlu, M., Thermodynamics: An Engineering Approach, Ch. 17, Eq. (17-20)"
 ---
 
 # rho0_rho
 
 Isentropic stagnation/static density ratio
 
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
 
 ## Syntax
 
@@ -24,6 +23,10 @@ rho0_rho(M, k)
 ## Description
 
 Isentropic stagnation/static density ratio
+
+## Mathematical Formulation
+
+$$ \frac{\rho_0}{\rho} = \left(1 + \tfrac{k-1}{2}M^2\right)^{1/(k-1)} $$
 
 ## Input Arguments
 

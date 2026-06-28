@@ -6,14 +6,12 @@ related: []
 examples: []
 tags: [lcm, math]
 references: []
-generated: true
 ---
 
 # lcm
 
 Least common multiple
 
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
 
 ## Syntax
 
@@ -24,6 +22,10 @@ lcm(a, b)
 ## Description
 
 Least common multiple
+
+## Mathematical Formulation
+
+$$ \operatorname{lcm}(a,b) = \frac{|a\,b|}{\gcd(a,b)} $$
 
 ## Input Arguments
 

@@ -5,15 +5,14 @@ summary: Rayleigh static-pressure ratio
 related: []
 examples: []
 tags: [rayleigh, pstar, compressible, flow]
-references: []
-generated: true
+references:
+  - "Çengel, Y.A., Boles, M.A. & Kanoğlu, M., Thermodynamics: An Engineering Approach, Ch. 17, Ch. 17 (Rayleigh)"
 ---
 
 # rayleigh_p_pstar
 
 Rayleigh static-pressure ratio
 
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
 
 ## Syntax
 
@@ -24,6 +23,10 @@ rayleigh_P_Pstar(M, k)
 ## Description
 
 Rayleigh static-pressure ratio
+
+## Mathematical Formulation
+
+$$ \frac{P}{P^*} = \frac{k+1}{1 + kM^2} $$
 
 ## Input Arguments
 

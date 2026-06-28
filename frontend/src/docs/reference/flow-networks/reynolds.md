@@ -5,15 +5,14 @@ summary: Reynolds number rho*V*D/mu
 related: []
 examples: []
 tags: [reynolds, flow, networks]
-references: []
-generated: true
+references:
+  - "White, F.M., Fluid Mechanics (8th ed.)"
 ---
 
 # reynolds
 
 Reynolds number rho*V*D/mu
 
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
 
 ## Syntax
 
@@ -24,6 +23,10 @@ reynolds(rho, V, D, mu)
 ## Description
 
 Reynolds number rho*V*D/mu
+
+## Mathematical Formulation
+
+$$ Re = \frac{\rho V D}{\mu} $$
 
 ## Input Arguments
 

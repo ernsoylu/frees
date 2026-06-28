@@ -5,15 +5,14 @@ summary: Nu, Zukauskas tube bank (arr$=inline|staggered, Re-band C,m). SIDE: air
 related: []
 examples: []
 tags: [nu, tubebank, heat, transfer]
-references: []
-generated: true
+references:
+  - "Žukauskas, A. (1972), Adv. Heat Transfer 8:93"
 ---
 
 # nu_tubebank
 
 Nu, Zukauskas tube bank (arr$=inline|staggered, Re-band C,m). SIDE: air/gas over a tube bank. HX: fin-and-tube radiator/condenser air side
 
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
 
 ## Syntax
 
@@ -24,6 +23,10 @@ nu_tubebank(arr$, Re, Pr)
 ## Description
 
 Nu, Zukauskas tube bank (arr$=inline|staggered, Re-band C,m). SIDE: air/gas over a tube bank. HX: fin-and-tube radiator/condenser air side
+
+## Mathematical Formulation
+
+$$ Nu = C\,Re_{\max}^{m}\,Pr^{0.36}\,(Pr/Pr_w)^{1/4} \quad (C, m \text{ by arrangement/Re band}) $$
 
 ## Input Arguments
 

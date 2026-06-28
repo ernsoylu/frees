@@ -5,15 +5,14 @@ summary: Nu, free convection from Rayleigh. SIDE: natural convection (still air 
 related: []
 examples: []
 tags: [nu, churchill, chu, heat, transfer]
-references: []
-generated: true
+references:
+  - "Incropera, F.P. et al., Fundamentals of Heat and Mass Transfer, Eq. (9.34)"
 ---
 
 # nu_churchill_chu
 
 Nu, free convection from Rayleigh. SIDE: natural convection (still air / quiescent fluid). HX: passive/low-flow surfaces
 
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
 
 ## Syntax
 
@@ -24,6 +23,10 @@ nu_churchill_chu(Ra, Pr)
 ## Description
 
 Nu, free convection from Rayleigh. SIDE: natural convection (still air / quiescent fluid). HX: passive/low-flow surfaces
+
+## Mathematical Formulation
+
+$$ Nu = \left\{0.60 + \frac{0.387\,Ra^{1/6}}{[1 + (0.559/Pr)^{9/16}]^{8/27}}\right\}^2 \quad\text{(Churchill–Chu)} $$
 
 ## Input Arguments
 

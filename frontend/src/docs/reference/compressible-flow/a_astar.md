@@ -5,15 +5,14 @@ summary: Isentropic area ratio A/A*
 related: []
 examples: []
 tags: [astar, compressible, flow]
-references: []
-generated: true
+references:
+  - "Çengel, Y.A., Boles, M.A. & Kanoğlu, M., Thermodynamics: An Engineering Approach, Ch. 17, Eq. (17-26)"
 ---
 
 # a_astar
 
 Isentropic area ratio A/A*
 
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
 
 ## Syntax
 
@@ -24,6 +23,10 @@ A_Astar(M, k)
 ## Description
 
 Isentropic area ratio A/A*
+
+## Mathematical Formulation
+
+$$ \frac{A}{A^*} = \frac{1}{M}\left[\frac{2}{k+1}\left(1 + \tfrac{k-1}{2}M^2\right)\right]^{(k+1)/[2(k-1)]} $$
 
 ## Input Arguments
 

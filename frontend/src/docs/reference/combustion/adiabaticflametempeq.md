@@ -5,15 +5,14 @@ summary: Adiabatic flame temperature with dissociation [K]
 related: []
 examples: []
 tags: [adiabaticflametempeq, combustion]
-references: []
-generated: true
+references:
+  - "Turns, S.R., An Introduction to Combustion (3rd ed.), Ch. 2"
 ---
 
 # adiabaticflametempeq
 
 Adiabatic flame temperature with dissociation [K]
 
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
 
 ## Syntax
 
@@ -24,6 +23,10 @@ AdiabaticFlameTempEq(fuel$, phi, T_react, P)
 ## Description
 
 Adiabatic flame temperature with dissociation [K]
+
+## Mathematical Formulation
+
+$$ H_{\text{react}}(T_r) = H_{\text{prod}}(T_{ad}) \quad\text{with equilibrium dissociation at } (T_{ad}, P) $$
 
 ## Input Arguments
 

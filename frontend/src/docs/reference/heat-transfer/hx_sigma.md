@@ -5,15 +5,14 @@ summary: GEOMETRY: free-flow (contraction) ratio sigma=Aflow/Afrontal. SIDE: com
 related: []
 examples: []
 tags: [hx, sigma, heat, transfer]
-references: []
-generated: true
+references:
+  - "Kays, W.M. & London, A.L., Compact Heat Exchangers (3rd ed.), Ch. 2"
 ---
 
 # hx_sigma
 
 GEOMETRY: free-flow (contraction) ratio sigma=Aflow/Afrontal. SIDE: compact HX air/gas face
 
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
 
 ## Syntax
 
@@ -24,6 +23,10 @@ hx_sigma(Aflow, Afrontal)
 ## Description
 
 GEOMETRY: free-flow (contraction) ratio sigma=Aflow/Afrontal. SIDE: compact HX air/gas face
+
+## Mathematical Formulation
+
+$$ \sigma = \frac{A_{\text{flow}}}{A_{\text{frontal}}} \quad\text{(free-flow / contraction ratio)} $$
 
 ## Input Arguments
 

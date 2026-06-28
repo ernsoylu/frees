@@ -5,15 +5,14 @@ summary: Nu, chevron-angle dependent. SIDE: either single-phase stream in a braz
 related: []
 examples: []
 tags: [nu, plate, heat, transfer]
-references: []
-generated: true
+references:
+  - "Shah, R.K. & Sekulić, D.P., Fundamentals of Heat Exchanger Design, Ch. 7"
 ---
 
 # nu_plate
 
 Nu, chevron-angle dependent. SIDE: either single-phase stream in a brazed/gasketed PLATE HX. HX: plate heat exchanger (BPHE)
 
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
 
 ## Syntax
 
@@ -24,6 +23,10 @@ nu_plate(Re, Pr, beta_deg)
 ## Description
 
 Nu, chevron-angle dependent. SIDE: either single-phase stream in a brazed/gasketed PLATE HX. HX: plate heat exchanger (BPHE)
+
+## Mathematical Formulation
+
+$$ Nu = C(\beta)\,Re^{m}\,Pr^{1/3} \quad\text{(chevron plate, angle } \beta) $$
 
 ## Input Arguments
 

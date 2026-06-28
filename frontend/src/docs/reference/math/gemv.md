@@ -6,14 +6,12 @@ related: []
 examples: []
 tags: [gemv, math]
 references: []
-generated: true
 ---
 
 # gemv
 
 BLAS L2: αAx + βy
 
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
 
 ## Syntax
 
@@ -24,6 +22,10 @@ gemv(α, A, x, β, y)
 ## Description
 
 BLAS L2: αAx + βy
+
+## Mathematical Formulation
+
+$$ y \leftarrow \alpha A x + \beta y \quad\text{(BLAS level 2)} $$
 
 ## Input Arguments
 

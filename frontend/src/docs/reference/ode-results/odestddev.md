@@ -6,14 +6,12 @@ related: []
 examples: []
 tags: [odestddev, ode, results]
 references: []
-generated: true
 ---
 
 # odestddev
 
 Standard deviation of an ODE column
 
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
 
 ## Syntax
 
@@ -24,6 +22,10 @@ ODEStdDev('col')
 ## Description
 
 Standard deviation of an ODE column
+
+## Mathematical Formulation
+
+$$ s = \sqrt{\tfrac{1}{N}\sum_i (\text{col}(t_i) - \overline{\text{col}})^2} $$
 
 ## Input Arguments
 

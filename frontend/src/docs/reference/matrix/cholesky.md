@@ -5,15 +5,14 @@ summary: Cholesky decomposition
 related: []
 examples: []
 tags: [cholesky, matrix]
-references: []
-generated: true
+references:
+  - "Golub, G.H. & Van Loan, C.F., Matrix Computations (4th ed.), §4.2"
 ---
 
 # cholesky
 
 Cholesky decomposition
 
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
 
 ## Syntax
 
@@ -24,6 +23,10 @@ cholesky(A : L)
 ## Description
 
 Cholesky decomposition
+
+## Mathematical Formulation
+
+$$ A = L\,L^\top \quad\text{(} A \text{ symmetric positive-definite)} $$
 
 ## Input Arguments
 

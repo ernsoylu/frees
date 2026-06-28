@@ -5,15 +5,14 @@ summary: Eigenvalues of A
 related: []
 examples: []
 tags: [eig, matrix]
-references: []
-generated: true
+references:
+  - "Golub, G.H. & Van Loan, C.F., Matrix Computations (4th ed.), Ch. 7"
 ---
 
 # eig
 
 Eigenvalues of A
 
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
 
 ## Syntax
 
@@ -24,6 +23,10 @@ eig(A)
 ## Description
 
 Eigenvalues of A
+
+## Mathematical Formulation
+
+$$ A v = \lambda v, \qquad \det(A - \lambda I) = 0 $$
 
 ## Input Arguments
 

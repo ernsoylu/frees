@@ -5,15 +5,14 @@ summary: Zivi void fraction (slip S=(rho_l/rho_g)^(1/3))
 related: []
 examples: []
 tags: [void, zivi, two, phase, flow]
-references: []
-generated: true
+references:
+  - "Zivi, S.M. (1964), J. Heat Transfer 86:247"
 ---
 
 # void_zivi
 
 Zivi void fraction (slip S=(rho_l/rho_g)^(1/3))
 
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
 
 ## Syntax
 
@@ -24,6 +23,10 @@ void_zivi(x, rho_l, rho_g)
 ## Description
 
 Zivi void fraction (slip S=(rho_l/rho_g)^(1/3))
+
+## Mathematical Formulation
+
+$$ \alpha = \frac{1}{1 + \frac{1-x}{x}\left(\frac{\rho_g}{\rho_l}\right)^{2/3}} \quad\text{(slip } S = (\rho_l/\rho_g)^{1/3}) $$
 
 ## Input Arguments
 

@@ -6,14 +6,12 @@ related: []
 examples: []
 tags: [arctanh, math]
 references: []
-generated: true
 ---
 
 # arctanh
 
 Inverse hyperbolic tangent (|x|<1)
 
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
 
 ## Syntax
 
@@ -24,6 +22,10 @@ arctanh(x)
 ## Description
 
 Inverse hyperbolic tangent (|x|<1)
+
+## Mathematical Formulation
+
+$$ \operatorname{arctanh}(x) = \tfrac12\ln\!\frac{1+x}{1-x}, \quad |x| < 1 $$
 
 ## Input Arguments
 

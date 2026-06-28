@@ -5,15 +5,14 @@ summary: Chen flow-boiling convective enhancement factor F
 related: []
 examples: []
 tags: [chen, two, phase, flow]
-references: []
-generated: true
+references:
+  - "Chen, J.C. (1966), Ind. Eng. Chem. Process Des. Dev. 5:322"
 ---
 
 # chen_f
 
 Chen flow-boiling convective enhancement factor F
 
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
 
 ## Syntax
 
@@ -24,6 +23,10 @@ chen_f(X_tt)
 ## Description
 
 Chen flow-boiling convective enhancement factor F
+
+## Mathematical Formulation
+
+$$ F = \big[1 + X_{tt}^{-1}\big]^{0.736} \text{-type convective enhancement (Chen)} $$
 
 ## Input Arguments
 

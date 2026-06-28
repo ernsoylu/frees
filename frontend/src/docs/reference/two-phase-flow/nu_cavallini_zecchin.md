@@ -5,15 +5,14 @@ summary: Cavallini-Zecchin condensation Nusselt number
 related: []
 examples: []
 tags: [nu, cavallini, zecchin, two, phase, flow]
-references: []
-generated: true
+references:
+  - "Cavallini, A. & Zecchin, R. (1974), 5th Int. Heat Transfer Conf."
 ---
 
 # nu_cavallini_zecchin
 
 Cavallini-Zecchin condensation Nusselt number
 
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
 
 ## Syntax
 
@@ -24,6 +23,10 @@ nu_cavallini_zecchin(Re_l, Pr_l, x, rho_l, rho_g)
 ## Description
 
 Cavallini-Zecchin condensation Nusselt number
+
+## Mathematical Formulation
+
+$$ Nu = 0.05\,Re_{eq}^{0.8}\,Pr_l^{0.33} \quad\text{(Cavallini–Zecchin condensation)} $$
 
 ## Input Arguments
 

@@ -6,14 +6,12 @@ related: []
 examples: []
 tags: [sign, math]
 references: []
-generated: true
 ---
 
 # sign
 
 Sign function (-1, 0, or 1)
 
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
 
 ## Syntax
 
@@ -24,6 +22,10 @@ sign(x)
 ## Description
 
 Sign function (-1, 0, or 1)
+
+## Mathematical Formulation
+
+$$ \operatorname{sign}(x) = \begin{cases} -1 & x<0 \\ 0 & x=0 \\ 1 & x>0 \end{cases} $$
 
 ## Input Arguments
 

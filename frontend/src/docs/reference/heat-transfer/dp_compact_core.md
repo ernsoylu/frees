@@ -5,15 +5,14 @@ summary: dP [Pa], Kays-London core (entrance/accel/core-friction/exit). SIDE: ai
 related: []
 examples: []
 tags: [dp, compact, core, heat, transfer]
-references: []
-generated: true
+references:
+  - "Kays, W.M. & London, A.L., Compact Heat Exchangers (3rd ed.), Ch. 2"
 ---
 
 # dp_compact_core
 
 dP [Pa], Kays-London core (entrance/accel/core-friction/exit). SIDE: air/gas through a compact finned core. HX: fin-and-tube/plate-fin radiator, condenser, CAC air side
 
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
 
 ## Syntax
 
@@ -24,6 +23,10 @@ dp_compact_core(G, rho_in, rho_out, rho_mean, sigma, f, AoverAc, Kc, Ke)
 ## Description
 
 dP [Pa], Kays-London core (entrance/accel/core-friction/exit). SIDE: air/gas through a compact finned core. HX: fin-and-tube/plate-fin radiator, condenser, CAC air side
+
+## Mathematical Formulation
+
+$$ \frac{\Delta P}{P_1} = \frac{G^2}{2\rho_1 P_1}\left[(1+\sigma^2)\!\left(\tfrac{\rho_1}{\rho_2}-1\right) + f\tfrac{A}{A_c}\tfrac{\rho_1}{\rho_m}\right] \quad\text{(Kays–London core)} $$
 
 ## Input Arguments
 

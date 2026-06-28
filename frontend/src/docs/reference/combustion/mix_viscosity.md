@@ -5,15 +5,14 @@ summary: Ideal-gas mixture viscosity [Pa-s] (Chapman-Enskog/Wilke)
 related: []
 examples: []
 tags: [mix, viscosity, combustion]
-references: []
-generated: true
+references:
+  - "Wilke, C.R. (1950), J. Chem. Phys. 18:517"
 ---
 
 # mix_viscosity
 
 Ideal-gas mixture viscosity [Pa-s] (Chapman-Enskog/Wilke)
 
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
 
 ## Syntax
 
@@ -24,6 +23,10 @@ mix_viscosity(comp$, T)
 ## Description
 
 Ideal-gas mixture viscosity [Pa-s] (Chapman-Enskog/Wilke)
+
+## Mathematical Formulation
+
+$$ \mu = \sum_i \frac{y_i \mu_i}{\sum_j y_j \phi_{ij}} \quad\text{(Wilke)} $$
 
 ## Input Arguments
 

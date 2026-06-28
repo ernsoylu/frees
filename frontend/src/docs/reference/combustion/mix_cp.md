@@ -5,15 +5,14 @@ summary: Ideal-gas mixture cp [J/kg-K]
 related: []
 examples: []
 tags: [mix, cp, combustion]
-references: []
-generated: true
+references:
+  - "Turns, S.R., An Introduction to Combustion (3rd ed.)"
 ---
 
 # mix_cp
 
 Ideal-gas mixture cp [J/kg-K]
 
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
 
 ## Syntax
 
@@ -24,6 +23,10 @@ mix_cp(comp$, T)
 ## Description
 
 Ideal-gas mixture cp [J/kg-K]
+
+## Mathematical Formulation
+
+$$ c_p = \sum_i Y_i\,c_{p,i}(T) \quad\text{(mass-weighted, NASA-7)} $$
 
 ## Input Arguments
 

@@ -5,15 +5,14 @@ summary: Matrix determinant
 related: []
 examples: []
 tags: [det, matrix]
-references: []
-generated: true
+references:
+  - "Golub, G.H. & Van Loan, C.F., Matrix Computations (4th ed.)"
 ---
 
 # det
 
 Matrix determinant
 
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
 
 ## Syntax
 
@@ -24,6 +23,10 @@ det(A)
 ## Description
 
 Matrix determinant
+
+## Mathematical Formulation
+
+$$ \det(A) = \pm\prod_i U_{ii} \quad\text{(from } PA = LU\text{)} $$
 
 ## Input Arguments
 

@@ -5,15 +5,14 @@ summary: Definite integral by Gauss-Legendre quadrature
 related: []
 examples: []
 tags: [gaussintegral, calculus]
-references: []
-generated: true
+references:
+  - "Press, W.H. et al., Numerical Recipes (3rd ed.), §4.6"
 ---
 
 # gaussintegral
 
 Definite integral by Gauss-Legendre quadrature
 
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
 
 ## Syntax
 
@@ -24,6 +23,10 @@ GaussIntegral(expr, var, lower, upper)
 ## Description
 
 Definite integral by Gauss-Legendre quadrature
+
+## Mathematical Formulation
+
+$$ \int_a^b f(x)\,dx \approx \frac{b-a}{2}\sum_{i=1}^{n} w_i\,f\!\left(\tfrac{b-a}{2}\xi_i + \tfrac{a+b}{2}\right) \quad\text{(Gauss–Legendre)} $$
 
 ## Input Arguments
 

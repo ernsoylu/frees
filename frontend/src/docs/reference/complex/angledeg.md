@@ -6,14 +6,12 @@ related: []
 examples: []
 tags: [angledeg, complex]
 references: []
-generated: true
 ---
 
 # angledeg
 
 Argument of z [deg]
 
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
 
 ## Syntax
 
@@ -24,6 +22,10 @@ angledeg(z)
 ## Description
 
 Argument of z [deg]
+
+## Mathematical Formulation
+
+$$ \arg(z) = \operatorname{atan2}(b, a)\cdot\tfrac{180}{\pi}\ \ [\text{deg}] $$
 
 ## Input Arguments
 

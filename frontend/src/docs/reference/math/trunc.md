@@ -6,14 +6,12 @@ related: []
 examples: []
 tags: [trunc, math]
 references: []
-generated: true
 ---
 
 # trunc
 
 Discard the fractional part (round toward zero)
 
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
 
 ## Syntax
 
@@ -24,6 +22,10 @@ trunc(x)
 ## Description
 
 Discard the fractional part (round toward zero)
+
+## Mathematical Formulation
+
+$$ \operatorname{trunc}(x) = \operatorname{sign}(x)\,\lfloor |x| \rfloor $$
 
 ## Input Arguments
 

@@ -5,15 +5,14 @@ summary: Nu, single-cylinder cross-flow. SIDE: air/gas over a single tube. HX: b
 related: []
 examples: []
 tags: [nu, hilpert, heat, transfer]
-references: []
-generated: true
+references:
+  - "Incropera, F.P. et al., Fundamentals of Heat and Mass Transfer, Eq. (7.52)"
 ---
 
 # nu_hilpert
 
 Nu, single-cylinder cross-flow. SIDE: air/gas over a single tube. HX: bare-tube / sparse-bank air side
 
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
 
 ## Syntax
 
@@ -24,6 +23,10 @@ nu_hilpert(Re, Pr)
 ## Description
 
 Nu, single-cylinder cross-flow. SIDE: air/gas over a single tube. HX: bare-tube / sparse-bank air side
+
+## Mathematical Formulation
+
+$$ Nu = C\,Re^{m}\,Pr^{1/3} \quad\text{(single cylinder, Hilpert)} $$
 
 ## Input Arguments
 

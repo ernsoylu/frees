@@ -5,15 +5,14 @@ summary: Determinant
 related: []
 examples: []
 tags: [determinant, math]
-references: []
-generated: true
+references:
+  - "Golub, G.H. & Van Loan, C.F., Matrix Computations (4th ed.)"
 ---
 
 # Determinant
 
 Determinant
 
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
 
 ## Syntax
 
@@ -25,9 +24,16 @@ Determinant(A)
 
 Determinant
 
+## Mathematical Formulation
+
+$$ \det(A) = \sum_{\sigma} \operatorname{sgn}(\sigma)\prod_i A_{i,\sigma(i)} = \pm\prod_i U_{ii} $$
+
 ## Input Arguments
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
 | `A` | Number | Yes | Numeric argument. |
 
+## References
+
+1. Golub, G.H. & Van Loan, C.F., *Matrix Computations* (4th ed.).

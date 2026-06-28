@@ -6,14 +6,12 @@ related: []
 examples: []
 tags: [bitnot, math]
 references: []
-generated: true
 ---
 
 # bitnot
 
 Bitwise NOT
 
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
 
 ## Syntax
 
@@ -24,6 +22,10 @@ bitnot(a)
 ## Description
 
 Bitwise NOT
+
+## Mathematical Formulation
+
+$$ (\sim a) = -(a+1)\ \text{(two’s complement)} $$
 
 ## Input Arguments
 
