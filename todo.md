@@ -54,7 +54,7 @@ Notes on thermal initialization, numerical-methods/solver, and HX UA-sizing stra
 
 ## Notes / known bugs to fix along the way
 
-- Shipped `TXVSuperheat` (`twophase.frees`) is **missing `domain$ = twophase`** → can't be wired into a two-phase circuit. Fix + regression test.
+- ~~Shipped `TXVSuperheat` (`twophase.frees`) is **missing `domain$ = twophase`** → can't be wired into a two-phase circuit.~~ **FIXED** — `TXVSuperheat` declares `PARAM … domain$ = twophase` (`twophase.frees:342`); regression test `TxvSuperheatDomainTest`, green.
 
 ---
 
