@@ -173,12 +173,22 @@ Body sections (omit a section only when truly N/A):
   - **Verified**: ran a host Vite dev server, opened `/help`, the `hx_effectiveness` page renders
     fully — KaTeX ε-NTU formulas with citations, the `[Run:]` example, all tables, references, and
     See-Also badges. `tsc -b` green; no new console errors (only pre-existing dev 404s).
-- **Phase 2 — Reference content (the bulk). IN PROGRESS (4/515 pages).** Heat-Transfer seed done:
-  `hx_effectiveness` (exemplar) + its See-Also siblings `LMTD`, `fin_efficiency`, `hx_NTU` — each
-  with notebook-grounded KaTeX (Kakaç Eq. 2.28/2.36, Holman Eq. 2-38/10-12, Özışık Eq. 3-41b, Kays
-  & London Ch. 2 / Table 2.4) and bound to verified examples (`hx-effectiveness-ntu`,
-  `ev-thermal-management`); expected values hand-checked against the formulas; coverage gate +
-  `tsc -b` green. Continue per the order below.
+- **Phase 2 — Reference content (the bulk). IN PROGRESS (10/515 pages).**
+  - **Authoring priority = the 75 functions exercised by `examples.ts`** (computed: each gets a
+    verified `[Run:]` example — satisfies the interactivity gate). Batch by shared example to
+    amortize notebook queries (one query → all functions in that example).
+  - DONE — Heat-Transfer seed (4): `hx_effectiveness`, `LMTD`, `fin_efficiency`, `hx_NTU` (Kakaç
+    2.28/2.36, Holman 2-38/10-12, Özışık 3-41b, Kays & London Table 2.4); bound to
+    `hx-effectiveness-ntu` / `ev-thermal-management`.
+  - DONE — Compressible-flow nozzle set (6): `T0_T`, `P0_P`, `mach_A_Astar`, `M2_shock`,
+    `P2_P1_shock`, `P02_P01_shock` (Çengel Thermodynamics Eq. 17-18/19/26/38/39, Fig. 17-42,
+    Table A-33); all bound to `cd-nozzle-shock`; expected values hand-computed (M1≈2.20, M2≈0.55,
+    P2≈514 kPa, P02≈628 kPa).
+  - Coverage gate + `tsc -b` green at each step.
+  - NEXT batches (by example): HX correlations → `ev-thermal-management` (htc_*/dp_2phase/ua_hx/
+    hx_eta_surf/hx_area_*); view factors + Heisler → `radiation-view-factors` / `heisler-transient`;
+    cubic-EOS → `cubic-eos-properties`; control → `cruise-control` / `control-analysis-report`
+    (note: control/math/special categories aren't grounded by the Frees notebook — decide sources).
   Author per-function pages, highest-traffic
   categories first: Math → Matrix/Linear Algebra → Control Systems → Thermophysical Properties
   → Units → Uncertainty → CAS/Symbolic → Block constructs → Components. For each page: write the
