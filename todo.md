@@ -208,11 +208,18 @@ Body sections (omit a section only when truly N/A):
     to Çengel Eq. 12-57 for the departure, but flagged the Z-cubic/fugacity as not in the notebook,
     so those cite the canonical primaries (Peng-Robinson 1976, Soave 1972, Smith/Van Ness/Abbott).
     CO₂ Psat(300 K) ≈ 6.7 MPa anchored; Z/ρ marked approximate. **29/475 documented (6.1%).**
+  - DONE — Combustion seed (2): `AdiabaticFlameTemp`, `wiebe_rate` (notebook timed out → standard
+    citations Çengel/Turns, Heywood). **31/475.**
+  - DONE — HX correlations core (6): `ua_hx`, `htc_1phase` (Gnielinski), `htc_evap` (Shah boiling),
+    `htc_cond` (Shah 1979), `htc_extair` (Žukauskas), `dp_2phase` (Lockhart-Martinelli/Chisholm) →
+    `ev-thermal-management`; notebook-grounded (Kakaç Eq. 2.11/8.34/8.70, Holman 6-34, Collier &
+    Thome 2.68) + primary papers. **37/475 documented (7.8%).**
   - Coverage gate + `tsc -b` green at each step.
-  - NEXT batches (by example): HX correlations → `ev-thermal-management` (htc_*/dp_2phase/ua_hx/
-    hx_eta_surf/hx_area_*, notebook-grounded); combustion → `adiabatic-flame-temp`/`engine-cycle-wiebe`;
-    remaining control (`tf`/`tf2ss`/`lqr`/`place`/`c2d`/`routh`/`residue`…) and ODE/table accessors
-    via standard citations.
+  - NEXT batches: HX geometry helpers (`hx_aconv`/`hx_fin_len`/`hx_area_direct`/`hx_area_indirect`/
+    `hx_eta_surf` → `ev-thermal-management`, light citations); ODE/table accessors (`finalvalue`/
+    `maxvalue`/`odevalue`/`timeat`/`integralvalue`/`tableavg` — frees-specific, minimal math);
+    remaining control (`tf`/`tf2ss`/`lqr`/`place`/`c2d`/`routh`/`residue`, Nise/Ogata);
+    elementary math (`sin`/`cos`/`sqrt`/`exp`/`ln`/`min`/`max`, light); then unbound functions.
   Author per-function pages, highest-traffic
   categories first: Math → Matrix/Linear Algebra → Control Systems → Thermophysical Properties
   → Units → Uncertainty → CAS/Symbolic → Block constructs → Components. For each page: write the
