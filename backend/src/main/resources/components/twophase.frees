@@ -502,3 +502,18 @@ COMPONENT SteamReliefValve(in, out)
   efact    = 1 - ratio ^ 2
   in.mdot  = opening * mdot_ch * efact
 END
+
+// Proportional / lifting relief valve (the Amesim TPFCV0 model): mass flow rises
+// LINEARLY with overpressure above the crack pressure, m = grad * (P - Pcrack)
+// [kg/s, grad in kg/s/Pa]. A real spring/weighted relief lifts as pressure
+// exceeds the setpoint, so its flow area — and thus capacity — grows with
+// overpressure; it therefore HOLDS the setpoint instead of choking at a fixed
+// orifice area. Use this (not SteamReliefValve) when the valve must regulate to
+// a setpoint. The max(0, .) is smoothed by eps [Pa] for the stiff solver.
+COMPONENT ProportionalReliefValve(in, out)
+  PARAM fluid$, Pcrack, grad, eps, domain$ = twophase
+  out.mdot = in.mdot
+  out.h    = in.h
+  dpv      = in.P - Pcrack
+  in.mdot  = grad * 0.5 * (dpv + sqrt(dpv * dpv + eps * eps))
+END
