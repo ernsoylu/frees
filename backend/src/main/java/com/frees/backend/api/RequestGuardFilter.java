@@ -57,9 +57,10 @@ public class RequestGuardFilter extends OncePerRequestFilter {
             return;
         }
 
-        // The health endpoint is exempt from the body-size and rate limits so
-        // monitoring dashboards can poll it freely without being throttled.
-        if ("/api/health".equals(request.getRequestURI())) {
+        // The health endpoints (/api/health and /api/health/live) are exempt from
+        // the body-size and rate limits so monitoring dashboards and the platform
+        // deploy/liveness probe can poll them freely without being throttled.
+        if (request.getRequestURI().startsWith("/api/health")) {
             chain.doFilter(request, response);
             return;
         }
