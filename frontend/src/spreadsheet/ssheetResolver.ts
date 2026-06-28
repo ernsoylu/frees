@@ -13,10 +13,10 @@ function parseCell(ref: string): { r: number; c: number } | null {
   const [, colStr, rowStr] = match
   let c = 0
   for (let i = 0; i < colStr.length; i++) {
-    c = c * 26 + (colStr.charCodeAt(i) - 64)
+    c = c * 26 + ((colStr.codePointAt(i) ?? 0) - 64)
   }
   c -= 1 // 0-indexed
-  const r = parseInt(rowStr, 10) - 1
+  const r = Number.parseInt(rowStr, 10) - 1
   return { r, c }
 }
 
@@ -70,11 +70,11 @@ function getCellValue(sheet: any, r: number, c: number): number {
     const cell = sheet.celldata.find((cd: any) => cd.r === r && cd.c === c)
     if (cell && cell.v && typeof cell.v.v !== 'undefined') {
       const val = Number(cell.v.v)
-      return isNaN(val) ? 0 : val
+      return Number.isNaN(val) ? 0 : val
     }
   } else if (sheet.data && sheet.data[r] && sheet.data[r][c]) {
     const val = Number(sheet.data[r][c].v)
-    return isNaN(val) ? 0 : val
+    return Number.isNaN(val) ? 0 : val
   }
   return 0
 }

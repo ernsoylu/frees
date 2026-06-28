@@ -53,7 +53,7 @@ public class ReplEvaluator {
 
     /** {@code name = expr} where the '=' isn't part of ==, <=, >=, <>. */
     private static final Pattern ASSIGNMENT =
-            Pattern.compile("^\\s*([A-Za-z_][A-Za-z0-9_$]*(?:\\s*\\[[^\\]]+\\])?)\\s*=\\s*(?!=)(.+)$", Pattern.DOTALL);
+            Pattern.compile("^\\s*+([A-Za-z_][A-Za-z0-9_$]*+(?:\\s*+\\[[^\\]]++\\])?)\\s*+=\\s*+(?!=)(.+)$", Pattern.DOTALL);
 
     /** A {@code CALL name(inputs : outputs)} statement — the procedure/library form. */
     private static final Pattern CALL_PREFIX = Pattern.compile("^\\s*CALL\\b", Pattern.CASE_INSENSITIVE);
@@ -103,9 +103,6 @@ public class ReplEvaluator {
             return new Outcome(success, value, text, unit, uncertainty, error, assignedName, vars);
         }
     }
-
-    private static final Pattern RANGE_PATTERN =
-            Pattern.compile("^\\s*\\[?\\s*(.+?)\\s*:\\s*(.+?)\\s*(?::\\s*(.+?)\\s*)?\\]?\\s*$");
 
     public Outcome evaluate(String input, SolveContextCache.Session session) {
         if (input == null || input.isBlank()) {
@@ -1121,13 +1118,23 @@ public class ReplEvaluator {
     }
 
     private boolean tryParseAndEvaluateRange(String rhs, SolveContextCache.Session session, List<Double> outValues) {
-        Matcher m = RANGE_PATTERN.matcher(rhs.trim());
-        if (!m.matches()) {
+        // Range form: "start:stop" or "start:step:stop", optionally wrapped in [ ].
+        // Split on ':' in code (instead of a backtracking regex) — range bounds are
+        // plain scalar expressions and never contain a colon. java:S5852/S8786.
+        String s = rhs.trim();
+        if (s.length() >= 2 && s.charAt(0) == '[' && s.charAt(s.length() - 1) == ']') {
+            s = s.substring(1, s.length() - 1).trim();
+        }
+        String[] parts = s.split(":", -1);
+        if (parts.length < 2 || parts.length > 3) {
             return false;
         }
-        String startStr = m.group(1);
-        String middleStr = m.group(2);
-        String endStr = m.group(3);
+        String startStr = parts[0].trim();
+        String middleStr = parts[1].trim();
+        String endStr = parts.length == 3 ? parts[2].trim() : null;
+        if (startStr.isEmpty() || middleStr.isEmpty() || (endStr != null && endStr.isEmpty())) {
+            return false;
+        }
 
         String stepStr = endStr != null ? middleStr : "1";
         String stopStr = endStr != null ? endStr : middleStr;
@@ -1336,8 +1343,16 @@ public class ReplEvaluator {
             return Long.toString((long) v);
         }
         String s = String.format("%.6g", v);
-        if (s.contains(".") && !s.contains("e") && !s.contains("E")) {
-            s = s.replaceAll("0+$", "").replaceAll("\\.$", "");
+        if (s.indexOf('.') >= 0 && s.indexOf('e') < 0 && s.indexOf('E') < 0) {
+            // Trim trailing zeros (and a bare trailing '.') without a regex — java:S8786.
+            int end = s.length();
+            while (end > 0 && s.charAt(end - 1) == '0') {
+                end--;
+            }
+            if (end > 0 && s.charAt(end - 1) == '.') {
+                end--;
+            }
+            s = s.substring(0, end);
         }
         return s;
     }

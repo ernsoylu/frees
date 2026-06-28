@@ -40,6 +40,9 @@ public final class Equilibrium {
     }
 
     /** Solved equilibrium state: product moles per mole of fuel, plus inert N2. */
+    // Private carrier record, never value-compared or hashed; the array-content
+    // equals/hashCode the rule asks for would be dead, untestable code. java:S6218.
+    @SuppressWarnings("java:S6218")
     record State(double[] n, double nN2) {
         double total() {
             double s = nN2;

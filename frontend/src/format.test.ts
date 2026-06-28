@@ -5,7 +5,7 @@ describe('formatValue', () => {
   it('renders an em dash for missing or non-numeric values', () => {
     expect(formatValue(null)).toBe('—')
     expect(formatValue(undefined)).toBe('—')
-    expect(formatValue(NaN)).toBe('—')
+    expect(formatValue(Number.NaN)).toBe('—')
   })
 
   it('passes infinities through as their string form', () => {

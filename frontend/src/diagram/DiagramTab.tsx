@@ -3776,9 +3776,9 @@ export default function DiagramTab(props: Readonly<Props>) {
       if (!match) continue
       const colStr = match[1].toUpperCase()
       let c = 0
-      for (let i = 0; i < colStr.length; i++) c = c * 26 + (colStr.charCodeAt(i) - 64)
+      for (let i = 0; i < colStr.length; i++) c = c * 26 + ((colStr.codePointAt(i) ?? 0) - 64)
       c -= 1
-      const r = parseInt(match[2], 10) - 1
+      const r = Number.parseInt(match[2], 10) - 1
       const cell = sheet.celldata?.find((cd: any) => cd.r === r && cd.c === c)
       const num = Number(cell?.v?.v)
       if (Number.isFinite(num)) {

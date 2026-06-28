@@ -460,9 +460,9 @@ export default function App() {
           const rowStr = refMatch[3]
 
           let c = 0
-          for (let i = 0; i < colStr.length; i++) c = c * 26 + (colStr.charCodeAt(i) - 64)
+          for (let i = 0; i < colStr.length; i++) c = c * 26 + ((colStr.codePointAt(i) ?? 0) - 64)
           c -= 1
-          const r = parseInt(rowStr, 10) - 1
+          const r = Number.parseInt(rowStr, 10) - 1
 
           const sheetIndex = newSheets.findIndex((sh) => sh.name && sh.name.toLowerCase() === sheetName.toLowerCase())
           if (sheetIndex === -1) continue

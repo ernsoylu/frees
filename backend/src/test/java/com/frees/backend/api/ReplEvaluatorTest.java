@@ -166,6 +166,35 @@ class ReplEvaluatorTest {
         assertTrue(o.error().toLowerCase().contains("syntax") || o.error().toLowerCase().contains("unexpected"));
     }
 
+    // --- Bare range vectors (colon-split parser, no surrounding brackets) ------
+
+    @Test
+    void bareRangeWithoutStep() {
+        ReplEvaluator.Outcome o = evaluator.evaluate("1:5", session());
+        assertTrue(o.success(), o.error());
+        assertEquals("ans", o.assignedName());
+        assertNotNull(o.assignedVariables());
+        assertEquals(5, o.assignedVariables().size());
+        assertEquals(1.0, o.assignedVariables().get(0).value(), 1e-9);
+        assertEquals(5.0, o.assignedVariables().get(4).value(), 1e-9);
+    }
+
+    @Test
+    void bareRangeWithExplicitStep() {
+        ReplEvaluator.Outcome o = evaluator.evaluate("2:2:8", session());
+        assertTrue(o.success(), o.error());
+        assertEquals(4, o.assignedVariables().size());
+        assertEquals(2.0, o.assignedVariables().get(0).value(), 1e-9);
+        assertEquals(8.0, o.assignedVariables().get(3).value(), 1e-9);
+    }
+
+    @Test
+    void rangeWithTooManyColonsIsRejected() {
+        // Four colon-parts must not be accepted as a range (guards the split logic).
+        ReplEvaluator.Outcome o = evaluator.evaluate("1:2:3:4", session());
+        assertFalse(o.success());
+    }
+
     @Test
     void testReplMatrixAndVectorRangeCreation() {
         SolveContextCache.Session s = session();

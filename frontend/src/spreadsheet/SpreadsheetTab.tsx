@@ -36,7 +36,7 @@ function colName(c: number): string {
   let s = ''
   let t = c
   while (t >= 0) {
-    s = String.fromCharCode(65 + (t % 26)) + s
+    s = String.fromCodePoint(65 + (t % 26)) + s
     t = Math.floor(t / 26) - 1
   }
   return s
@@ -49,7 +49,7 @@ function celldataToMatrix(cells: any[], minRows: number, minCols: number): any[]
     if (cd.r > maxR) maxR = cd.r
     if (cd.c > maxC) maxC = cd.c
   }
-  const m: any[][] = Array.from({ length: maxR + 1 }, () => Array(maxC + 1).fill(''))
+  const m: any[][] = Array.from({ length: maxR + 1 }, () => new Array(maxC + 1).fill(''))
   for (const cd of cells) {
     const v = cd.v ?? {}
     m[cd.r][cd.c] = v.f ?? v.m ?? v.v ?? ''
