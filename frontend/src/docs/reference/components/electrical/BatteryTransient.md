@@ -1,0 +1,60 @@
+---
+name: BatteryTransient
+category: Component (electrical)
+summary: A transient battery model carrying state-of-charge dynamics.
+related: []
+examples: []
+tags: [batterytransient, component, electrical, acausal]
+references:
+  - "Karnopp, D.C., Margolis, D.L. & Rosenberg, R.C., System Dynamics: Modeling, Simulation, and Control of Mechatronic Systems (5th ed.) — acausal/bond-graph formalism"
+  - "Nilsson, J.W. & Riedel, S.A., Electric Circuits (11th ed.)"
+---
+
+# BatteryTransient
+
+A transient battery model carrying state-of-charge dynamics.
+
+## Domain
+
+A reusable **acausal electrical-domain** component — its electrical ports carry potential `V` and current `I`; a node enforces equal `V` and `ΣI = 0` (Kirchhoff). Instantiate it and connect its ports; the constitutive equations below expand into the global scalar system.
+
+## Ports
+
+`p`, `n`, `heat`
+
+## Usage
+
+```
+BatteryTransient inst(Voc, R0, Q0, C_th, SOC0, T0)
+```
+
+## Parameters
+
+| Parameter | Type |
+| --- | --- |
+| `Voc` | Number |
+| `R0` | Number |
+| `Q0` | Number |
+| `C_th` | Number |
+| `SOC0` | Number |
+| `T0` | Number |
+
+## Constitutive Equations
+
+Instantiating the component expands these acausal equations (over its port members and parameters) into scalar equations solved by the standard Newton/Tarjan pipeline:
+
+```
+p.V - n.V = Voc + R0 * p.I
+p.I + n.I = 0
+Qgen      = R0 * p.I^2
+heat.T    = T
+der(T)    = (Qgen + heat.Qdot) / C_th
+init(T)   = T0
+der(SOC)  = p.I / (3600 * Q0)
+init(SOC) = SOC0
+```
+
+## References
+
+1. Karnopp, D.C., Margolis, D.L. & Rosenberg, R.C., *System Dynamics: Modeling, Simulation, and Control of Mechatronic Systems* (5th ed.) — acausal/bond-graph formalism.
+2. Nilsson, J.W. & Riedel, S.A., *Electric Circuits* (11th ed.).

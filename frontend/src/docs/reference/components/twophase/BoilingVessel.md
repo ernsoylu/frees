@@ -1,0 +1,68 @@
+---
+name: BoilingVessel
+category: Component (twophase)
+summary: A rigid vessel boiling a two-phase fluid (rigid two-phase boil-off).
+related: []
+examples: [pressure-cooker]
+tags: [boilingvessel, component, twophase, acausal]
+references:
+  - "Karnopp, D.C., Margolis, D.L. & Rosenberg, R.C., System Dynamics: Modeling, Simulation, and Control of Mechatronic Systems (5th ed.) — acausal/bond-graph formalism"
+  - "Collier, J.G. & Thome, J.R., Convective Boiling and Condensation (3rd ed.)"
+---
+
+# BoilingVessel
+
+A rigid vessel boiling a two-phase fluid (rigid two-phase boil-off).
+
+## Domain
+
+A reusable **acausal twophase-domain** component — its two-phase refrigerant ports carry pressure `P`, mass-flow `ṁ`, and specific enthalpy `h` (quality/void follow from the properties). Instantiate it and connect its ports; the constitutive equations below expand into the global scalar system.
+
+## Ports
+
+`vent`, `wall`
+
+## Usage
+
+```
+BoilingVessel inst(fluid$, V, m0, T0, domain$)
+```
+
+## Parameters
+
+| Parameter | Type |
+| --- | --- |
+| `fluid$` | String |
+| `V` | Number |
+| `m0` | Number |
+| `T0` | Number |
+| `domain$` | String |
+
+## Constitutive Equations
+
+Instantiating the component expands these acausal equations (over its port members and parameters) into scalar equations solved by the standard Newton/Tarjan pipeline:
+
+```
+der(mass)  = -vent.mdot
+init(mass) = m0
+der(Utot)  = wall.Qdot - vent.mdot * vent.h
+init(Utot) = m0 * IntEnergy(fluid$, T=T0, x=0)
+rho_cv = mass / V
+u_cv   = Utot / mass
+vent.P = Pressure(fluid$, d=rho_cv, u=u_cv)      { (rho,u) flash -> pressure }
+T_cv   = Temperature(fluid$, d=rho_cv, u=u_cv)
+x_cv   = Quality(fluid$, d=rho_cv, u=u_cv)        { vapour mass fraction }
+vent.h = Enthalpy(fluid$, P=vent.P, x=1)          { vented stream is sat. vapour }
+wall.T = T_cv
+```
+
+## Examples
+
+Instantiated in the verified example below:
+
+[Run: pressure-cooker]
+
+## References
+
+1. Karnopp, D.C., Margolis, D.L. & Rosenberg, R.C., *System Dynamics: Modeling, Simulation, and Control of Mechatronic Systems* (5th ed.) — acausal/bond-graph formalism.
+2. Collier, J.G. & Thome, J.R., *Convective Boiling and Condensation* (3rd ed.).

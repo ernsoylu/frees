@@ -1,0 +1,55 @@
+---
+name: PneumaticVolume
+category: Component (pneumatic)
+summary: A pneumatic control volume (compressible capacitance).
+related: []
+examples: []
+tags: [pneumaticvolume, component, pneumatic, acausal]
+references:
+  - "Karnopp, D.C., Margolis, D.L. & Rosenberg, R.C., System Dynamics: Modeling, Simulation, and Control of Mechatronic Systems (5th ed.) — acausal/bond-graph formalism"
+  - "ISO 6358 — Pneumatic fluid power: flow-rate characteristics"
+---
+
+# PneumaticVolume
+
+A pneumatic control volume (compressible capacitance).
+
+## Domain
+
+A reusable **acausal pneumatic-domain** component — its compressible-gas ports carry pressure `P`, mass-flow `ṁ`, and enthalpy `h` (ISO 6358 flow). Instantiate it and connect its ports; the constitutive equations below expand into the global scalar system.
+
+## Ports
+
+`in`, `out`
+
+## Usage
+
+```
+PneumaticVolume inst(V, T, R, P0, domain$)
+```
+
+## Parameters
+
+| Parameter | Type |
+| --- | --- |
+| `V` | Number |
+| `T` | Number |
+| `R` | Number |
+| `P0` | Number |
+| `domain$` | String |
+
+## Constitutive Equations
+
+Instantiating the component expands these acausal equations (over its port members and parameters) into scalar equations solved by the standard Newton/Tarjan pipeline:
+
+```
+out.P      = in.P
+out.h      = in.h
+der(in.P)  = (R * T / V) * (in.mdot - out.mdot)
+init(in.P) = P0
+```
+
+## References
+
+1. Karnopp, D.C., Margolis, D.L. & Rosenberg, R.C., *System Dynamics: Modeling, Simulation, and Control of Mechatronic Systems* (5th ed.) — acausal/bond-graph formalism.
+2. ISO 6358 — Pneumatic fluid power: flow-rate characteristics.

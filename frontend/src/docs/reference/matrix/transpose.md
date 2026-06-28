@@ -1,0 +1,39 @@
+---
+name: transpose
+category: Matrix
+summary: Matrix transpose
+related: []
+examples: []
+tags: [transpose, matrix]
+references: []
+---
+
+# transpose
+
+Matrix transpose
+
+
+## Syntax
+
+```
+transpose(A)
+```
+
+## Description
+
+Matrix transpose
+
+## Mathematical Formulation
+
+$$ (A^\top)_{ij} = A_{ji} $$
+
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `A` | Number | Yes | Numeric argument. |
+
+## References
+
+1. Golub, G.H. & Van Loan, C.F., Matrix Computations (4th ed.).
+

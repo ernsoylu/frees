@@ -12,6 +12,7 @@
 
 import { DOCS_CATALOG } from './docsCatalog';
 import { EXAMPLES } from './examples';
+import { REFERENCE_PAGES } from './referenceCatalog';
 import {
   MATH_FUNCTIONS,
   CALL_PROCEDURES,
@@ -115,6 +116,20 @@ function buildIndex(): IndexEntry[] {
   for (const t of refTopics) {
     const text = t.rows.map(r => `${r.name} ${r.desc}`).join('\n').toLowerCase();
     entries.push({ id: t.id, label: t.label, section: t.section, headings: [], keywords: [], text });
+  }
+
+  // 2b. Per-function reference pages (MATLAB-style) — index name, summary, tags,
+  //     and full body so a search for a function or a method/equation lands here.
+  for (const p of REFERENCE_PAGES) {
+    const { headings, text } = parseMarkdown(p.body);
+    entries.push({
+      id: 'refpage:' + p.slug,
+      label: p.name,
+      section: 'Reference · ' + p.category,
+      headings,
+      keywords: [p.name.toLowerCase(), ...p.tags.map(t => t.toLowerCase())],
+      text: `${p.summary} ${p.references.join(' ')} ${text}`.toLowerCase(),
+    });
   }
 
   // 3. Examples library — index titles + descriptions so domain searches land there.

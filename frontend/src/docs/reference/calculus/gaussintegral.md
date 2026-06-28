@@ -1,0 +1,43 @@
+---
+name: gaussintegral
+category: Calculus
+summary: Definite integral by Gauss-Legendre quadrature
+related: []
+examples: []
+tags: [gaussintegral, calculus]
+references:
+  - "Press, W.H. et al., Numerical Recipes (3rd ed.), §4.6"
+---
+
+# gaussintegral
+
+Definite integral by Gauss-Legendre quadrature
+
+
+## Syntax
+
+```
+GaussIntegral(expr, var, lower, upper)
+```
+
+## Description
+
+Definite integral by Gauss-Legendre quadrature
+
+## Mathematical Formulation
+
+$$ \int_a^b f(x)\,dx \approx \frac{b-a}{2}\sum_{i=1}^{n} w_i\,f\!\left(\tfrac{b-a}{2}\xi_i + \tfrac{a+b}{2}\right) \quad\text{(Gauss–Legendre)} $$
+
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `expr` | Number | Yes | Numeric argument. |
+| `var` | Number | Yes | Numeric argument. |
+| `lower` | Number | Yes | Numeric argument. |
+| `upper` | Number | Yes | Numeric argument. |
+
+## References
+
+1. Press, W.H. et al., Numerical Recipes (3rd ed.), Ch. 4.
+

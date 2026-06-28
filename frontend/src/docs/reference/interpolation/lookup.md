@@ -1,0 +1,41 @@
+---
+name: lookup
+category: Interpolation
+summary: Cell value by 1-based row/col indices
+related: []
+examples: []
+tags: [lookup, interpolation]
+references: []
+---
+
+# lookup
+
+Cell value by 1-based row/col indices
+
+
+## Syntax
+
+```
+Lookup('t', row, col)
+```
+
+## Description
+
+Cell value by 1-based row/col indices
+
+## Mathematical Formulation
+
+$$ \operatorname{Lookup}(t, r, c) = t_{r,c} \quad\text{(1-based cell)} $$
+
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `'t'` | Number | Yes | Numeric argument. |
+| `row` | Number | Yes | Numeric argument. |
+| `col` | Number | Yes | Numeric argument. |
+
+## References
+
+1. Press, W.H. et al., Numerical Recipes (3rd ed.), Ch. 3.
+

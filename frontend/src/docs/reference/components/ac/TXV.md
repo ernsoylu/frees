@@ -1,0 +1,65 @@
+---
+name: TXV
+category: Component (ac)
+summary: A thermostatic expansion valve that meters refrigerant to hold a target superheat.
+related: []
+examples: []
+tags: [txv, component, ac, acausal]
+references:
+  - "Karnopp, D.C., Margolis, D.L. & Rosenberg, R.C., System Dynamics: Modeling, Simulation, and Control of Mechatronic Systems (5th ed.) — acausal/bond-graph formalism"
+  - "ASHRAE Handbook — Refrigeration"
+---
+
+# TXV
+
+A thermostatic expansion valve that meters refrigerant to hold a target superheat.
+
+## Domain
+
+A reusable **acausal ac-domain** component — its refrigerant/air ports carry pressure `P`, mass-flow `ṁ`, and specific enthalpy `h`. Instantiate it and connect its ports; the constitutive equations below expand into the global scalar system.
+
+## Ports
+
+`in`, `out`, `bulb`
+
+## Usage
+
+```
+TXV inst(fluid$, Kv, SH_set, CdA0, tau_valve, tau_bulb, domain$)
+```
+
+## Parameters
+
+| Parameter | Type |
+| --- | --- |
+| `fluid$` | String |
+| `Kv` | Number |
+| `SH_set` | Number |
+| `CdA0` | Number |
+| `tau_valve` | Number |
+| `tau_bulb` | Number |
+| `domain$` | String |
+
+## Constitutive Equations
+
+Instantiating the component expands these acausal equations (over its port members and parameters) into scalar equations solved by the standard Newton/Tarjan pipeline:
+
+```
+out.mdot   = in.mdot
+out.h      = in.h
+bulb.Qdot  = 0
+Tsat       = T_sat(fluid$, P=out.P)
+SH_sensed  = bulb.T - Tsat
+der(SH_b)  = (SH_sensed - SH_b) / tau_bulb
+init(SH_b) = SH_set
+CdA_t      = CdA0 + Kv * (SH_b - SH_set)
+der(CdA)   = (CdA_t - CdA) / tau_valve
+init(CdA)  = CdA0
+rho_in     = Density(fluid$, P=in.P, h=in.h)
+in.mdot * abs(in.mdot) = CdA^2 * 2 * rho_in * (in.P - out.P)
+```
+
+## References
+
+1. Karnopp, D.C., Margolis, D.L. & Rosenberg, R.C., *System Dynamics: Modeling, Simulation, and Control of Mechatronic Systems* (5th ed.) — acausal/bond-graph formalism.
+2. ASHRAE Handbook — Refrigeration.

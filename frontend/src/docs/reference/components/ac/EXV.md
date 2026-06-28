@@ -1,0 +1,54 @@
+---
+name: EXV
+category: Component (ac)
+summary: An electronic expansion valve with a commanded opening.
+related: []
+examples: []
+tags: [exv, component, ac, acausal]
+references:
+  - "Karnopp, D.C., Margolis, D.L. & Rosenberg, R.C., System Dynamics: Modeling, Simulation, and Control of Mechatronic Systems (5th ed.) — acausal/bond-graph formalism"
+  - "ASHRAE Handbook — Refrigeration"
+---
+
+# EXV
+
+An electronic expansion valve with a commanded opening.
+
+## Domain
+
+A reusable **acausal ac-domain** component — its refrigerant/air ports carry pressure `P`, mass-flow `ṁ`, and specific enthalpy `h`. Instantiate it and connect its ports; the constitutive equations below expand into the global scalar system.
+
+## Ports
+
+`in`, `out`
+
+## Usage
+
+```
+EXV inst(fluid$, CdA_max, u, domain$)
+```
+
+## Parameters
+
+| Parameter | Type |
+| --- | --- |
+| `fluid$` | String |
+| `CdA_max` | Number |
+| `u` | Number |
+| `domain$` | String |
+
+## Constitutive Equations
+
+Instantiating the component expands these acausal equations (over its port members and parameters) into scalar equations solved by the standard Newton/Tarjan pipeline:
+
+```
+out.mdot = in.mdot
+out.h    = in.h
+rho_in   = Density(fluid$, P=in.P, h=in.h)
+in.mdot * abs(in.mdot) = (u * CdA_max)^2 * 2 * rho_in * (in.P - out.P)
+```
+
+## References
+
+1. Karnopp, D.C., Margolis, D.L. & Rosenberg, R.C., *System Dynamics: Modeling, Simulation, and Control of Mechatronic Systems* (5th ed.) — acausal/bond-graph formalism.
+2. ASHRAE Handbook — Refrigeration.

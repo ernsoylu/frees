@@ -28,6 +28,7 @@ import { getReference, getFluids, type UnitInfo, type ConstantInfo } from './api
 import { DOCS_CATALOG } from './docsCatalog';
 import Latex from './Latex';
 import { EXAMPLES } from './examples';
+import { REFERENCE_PAGES, type ReferencePage } from './referenceCatalog';
 import { buildSearchIndex, searchDocs, type SearchHit } from './searchIndex';
 import { VERSION_LABEL } from './version';
 import {
@@ -3010,6 +3011,33 @@ function MarkdownRenderer({ content }: MarkdownRendererProps) {
       i++;
       continue;
     }
+
+    // 6b. Runnable example: [Run: example-id] — pulls a backend-verified example
+    // from examples.ts and renders it as a copyable code block.
+    if (trimmed.startsWith('[Run:') && trimmed.endsWith(']')) {
+      const exId = trimmed.substring(5, trimmed.length - 1).trim();
+      const ex = EXAMPLES.find((e) => e.id === exId);
+      const key = `run-${i}`;
+      if (ex) {
+        elements.push(
+          <Paper key={key} withBorder p="md" mb="md" bg="light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8))" style={{ position: 'relative' }}>
+            <Group justify="space-between" mb="xs">
+              <Badge color="teal" variant="light" leftSection={<IconBook size={12} />}>{ex.title}</Badge>
+              <CopyButton code={ex.text} />
+            </Group>
+            <Code block style={{ background: 'transparent', maxHeight: '320px', overflowY: 'auto' }}>{ex.text}</Code>
+          </Paper>
+        );
+      } else {
+        elements.push(
+          <Alert key={key} color="orange" title="Missing example" mb="md">
+            <Text size="sm">Example <Code>{exId}</Code> is referenced but not found in the library.</Text>
+          </Alert>
+        );
+      }
+      i++;
+      continue;
+    }
     
     // 7. Regular Paragraph or spacer
     if (trimmed === '') {
@@ -3027,6 +3055,64 @@ function MarkdownRenderer({ content }: MarkdownRendererProps) {
   return <>{elements}</>;
 }
 
+// Reference pages grouped by category, for the "Function Reference" nav.
+const REFERENCE_BY_CATEGORY: [string, ReferencePage[]][] = (() => {
+  const map = new Map<string, ReferencePage[]>();
+  for (const p of REFERENCE_PAGES) {
+    if (!map.has(p.category)) map.set(p.category, []);
+    map.get(p.category)!.push(p);
+  }
+  return [...map.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+})();
+const REFERENCE_BY_SLUG = new Map(REFERENCE_PAGES.map((p) => [p.slug, p]));
+
+// Nav categories generated from the compiled reference pages, one per category.
+const REFERENCE_NAV_CATEGORIES = REFERENCE_BY_CATEGORY.map(([cat, pages]) => ({
+  title: 'Reference · ' + cat,
+  icon: <IconBook size={16} />,
+  items: pages.map((p) => ({
+    id: 'refpage:' + p.slug,
+    label: p.name,
+    keywords: [p.name.toLowerCase(), cat.toLowerCase(), ...p.tags, ...p.related.map((r) => r.toLowerCase())],
+  })),
+}));
+
+// Base nav: the hand-authored guides + the generated reference pages.
+const ALL_CATEGORIES = [...CATEGORIES, ...REFERENCE_NAV_CATEGORIES];
+
+// Renders a single MATLAB-style reference page: frontmatter header + body +
+// references footer, with markdown/KaTeX/[Run:] handled by MarkdownRenderer.
+function ReferencePageView({ page, onNavigate }: Readonly<{ page: ReferencePage; onNavigate: (slug: string) => void }>) {
+  return (
+    <Stack gap="sm">
+      <Group justify="space-between" align="flex-start">
+        <Title order={2} c="blue.4" style={{ fontFamily: 'monospace' }}>{page.name}</Title>
+        <Badge color="grape" variant="light" size="lg">{page.category}</Badge>
+      </Group>
+      {page.summary && <Text size="md" c="dimmed">{page.summary}</Text>}
+      {page.tags.length > 0 && (
+        <Group gap="xs">
+          {page.tags.map((t) => <Badge key={t} color="gray" variant="outline" size="sm">{t}</Badge>)}
+        </Group>
+      )}
+      <Divider my="xs" />
+      <MarkdownRenderer content={page.body} />
+      {page.related.length > 0 && (
+        <Group gap="xs" mt="sm">
+          <Text size="sm" fw={600} c="dimmed">See also:</Text>
+          {page.related.map((r) => {
+            const target = REFERENCE_BY_SLUG.get(r.toLowerCase());
+            return target
+              ? <Badge key={r} component="a" style={{ cursor: 'pointer' }} color="blue" variant="light"
+                  onClick={() => onNavigate(target.slug)}>{r}</Badge>
+              : <Badge key={r} color="gray" variant="light">{r}</Badge>;
+          })}
+        </Group>
+      )}
+    </Stack>
+  );
+}
+
 export default function HelpPage() {
   const [opened, { toggle }] = useDisclosure();
   const [active, setActive] = useState('started');
@@ -3036,7 +3122,7 @@ export default function HelpPage() {
   // Build the full-text search index once, seeding it with the nav keywords.
   useMemo(() => {
     const kw: Record<string, string[]> = {};
-    for (const cat of CATEGORIES) for (const it of cat.items) kw[it.id] = it.keywords;
+    for (const cat of ALL_CATEGORIES) for (const it of cat.items) kw[it.id] = it.keywords;
     buildSearchIndex(kw);
   }, []);
 
@@ -3054,15 +3140,15 @@ export default function HelpPage() {
 
   const navCategories = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
-    if (q.length < 2) return CATEGORIES;
+    if (q.length < 2) return ALL_CATEGORIES;
     // If the content search found hits, restrict the nav to those topics.
     if (searchResults.length > 0) {
       const hitIds = new Set(searchResults.map(h => h.id));
-      return CATEGORIES.map(c => ({ ...c, items: c.items.filter(i => hitIds.has(i.id)) }))
+      return ALL_CATEGORIES.map(c => ({ ...c, items: c.items.filter(i => hitIds.has(i.id)) }))
         .filter(c => c.items.length > 0);
     }
     // Fallback: label/keyword filter.
-    return CATEGORIES.map(category => {
+    return ALL_CATEGORIES.map(category => {
       const filteredItems = category.items.filter(item =>
         item.label.toLowerCase().includes(q) ||
         item.id.toLowerCase().includes(q) ||
@@ -3167,6 +3253,11 @@ export default function HelpPage() {
           ))}
         </Stack>
       );
+    }
+
+    if (active.startsWith('refpage:')) {
+      const page = REFERENCE_BY_SLUG.get(active.slice('refpage:'.length));
+      if (page) return <ReferencePageView page={page} onNavigate={(slug) => navigateTo('refpage:' + slug)} />;
     }
 
     const docContent = DOCS_CATALOG[active];

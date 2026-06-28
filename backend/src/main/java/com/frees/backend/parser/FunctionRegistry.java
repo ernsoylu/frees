@@ -197,7 +197,141 @@ public class FunctionRegistry {
             new FunctionInfo("mix_viscosity", "mix_viscosity(comp$, T)", "Ideal-gas mixture viscosity [Pa-s] (Chapman-Enskog/Wilke)", "Combustion"),
             new FunctionInfo("mix_conductivity", "mix_conductivity(comp$, T)", "Ideal-gas mixture conductivity [W/m-K]", "Combustion"),
             new FunctionInfo("eq_molefraction", "eq_molefraction(fuel$, phi, T, P, species$)", "Equilibrium product mole fraction (dissociation)", "Combustion"),
-            new FunctionInfo("adiabaticflametempeq", "AdiabaticFlameTempEq(fuel$, phi, T_react, P)", "Adiabatic flame temperature with dissociation [K]", "Combustion")
+            new FunctionInfo("adiabaticflametempeq", "AdiabaticFlameTempEq(fuel$, phi, T_react, P)", "Adiabatic flame temperature with dissociation [K]", "Combustion"),
+
+            // Inverse trig & hyperbolic (angles in radians)
+            new FunctionInfo("arcsin", "arcsin(x)", "Inverse sine [rad] (alias of asin)", "Math"),
+            new FunctionInfo("arccos", "arccos(x)", "Inverse cosine [rad] (alias of acos)", "Math"),
+            new FunctionInfo("arctan", "arctan(x)", "Inverse tangent [rad] (alias of atan)", "Math"),
+            new FunctionInfo("sinh", "sinh(x)", "Hyperbolic sine", "Math"),
+            new FunctionInfo("cosh", "cosh(x)", "Hyperbolic cosine", "Math"),
+            new FunctionInfo("tanh", "tanh(x)", "Hyperbolic tangent", "Math"),
+            new FunctionInfo("arcsinh", "arcsinh(x)", "Inverse hyperbolic sine", "Math"),
+            new FunctionInfo("arccosh", "arccosh(x)", "Inverse hyperbolic cosine (x>=1)", "Math"),
+            new FunctionInfo("arctanh", "arctanh(x)", "Inverse hyperbolic tangent (|x|<1)", "Math"),
+
+            // Rounding, number theory & bitwise
+            new FunctionInfo("trunc", "trunc(x)", "Discard the fractional part (round toward zero)", "Math"),
+            new FunctionInfo("factorial", "factorial(n)", "Factorial n!", "Math"),
+            new FunctionInfo("gcd", "gcd(a, b)", "Greatest common divisor", "Math"),
+            new FunctionInfo("lcm", "lcm(a, b)", "Least common multiple", "Math"),
+            new FunctionInfo("bitand", "bitand(a, b)", "Bitwise AND", "Math"),
+            new FunctionInfo("bitor", "bitor(a, b)", "Bitwise OR", "Math"),
+            new FunctionInfo("bitxor", "bitxor(a, b)", "Bitwise XOR", "Math"),
+            new FunctionInfo("bitnot", "bitnot(a)", "Bitwise NOT", "Math"),
+            new FunctionInfo("bitshiftl", "bitshiftl(a, n)", "Left bit shift a<<n", "Math"),
+            new FunctionInfo("bitshiftr", "bitshiftr(a, n)", "Right bit shift a>>n", "Math"),
+            new FunctionInfo("baseconvert", "baseconvert(s$)", "Convert a based-number string literal to a value", "Math"),
+            new FunctionInfo("product", "product(i, lo, hi, term)", "Product series Pi(term) over i = lo..hi", "Math"),
+
+            // Inline conditional
+            new FunctionInfo("if", "If(a, b, lt, eq, gt)", "Branch: lt if a<b, eq if a=b, gt if a>b", "Logic"),
+
+            // Statistics & regression (operate on a list/vector of values)
+            new FunctionInfo("average", "average(x1, x2, ...)", "Arithmetic mean (alias avg)", "Stats"),
+            new FunctionInfo("rms", "rms(x1, x2, ...)", "Root mean square", "Stats"),
+            new FunctionInfo("percentile", "percentile(p, x1, x2, ...)", "p-th percentile, p in [0,100]", "Stats"),
+            new FunctionInfo("slope", "slope(xvals, yvals)", "Least-squares linear-fit slope", "Stats"),
+            new FunctionInfo("intercept", "intercept(xvals, yvals)", "Least-squares linear-fit intercept", "Stats"),
+            new FunctionInfo("r2", "r2(xvals, yvals)", "Linear-fit coefficient of determination R^2", "Stats"),
+            new FunctionInfo("probability", "probability(x, mu, sigma)", "Normal CDF at x", "Stats"),
+            new FunctionInfo("normalcdf", "normalcdf(x, mu, sigma)", "Normal cumulative distribution at x", "Stats"),
+            new FunctionInfo("normalpdf", "normalpdf(x, mu, sigma)", "Normal probability density at x", "Stats"),
+            new FunctionInfo("normalinvcdf", "normalinvcdf(p, mu, sigma)", "Inverse normal CDF (quantile) at p", "Stats"),
+            new FunctionInfo("chi_square", "chi_square(x, df)", "Chi-square CDF with df degrees of freedom", "Stats"),
+            new FunctionInfo("random", "random(a, b)", "Uniform random number in [a, b]", "Stats"),
+            new FunctionInfo("randg", "randg(mu, sigma)", "Gaussian (normal) random number", "Stats"),
+
+            // Complex-number helpers (a complex value is the pair (Z_r, Z_i))
+            new FunctionInfo("real", "real(z)", "Real part of a complex value", "Complex"),
+            new FunctionInfo("imag", "imag(z)", "Imaginary part of a complex value", "Complex"),
+            new FunctionInfo("conj", "conj(z)", "Complex conjugate", "Complex"),
+            new FunctionInfo("magnitude", "magnitude(z)", "Modulus |z|", "Complex"),
+            new FunctionInfo("angle", "angle(z)", "Argument of z [rad] (alias anglerad)", "Complex"),
+            new FunctionInfo("angledeg", "angledeg(z)", "Argument of z [deg]", "Complex"),
+            new FunctionInfo("cis", "cis(theta)", "e^(j*theta) = cos(theta) + j*sin(theta)", "Complex"),
+
+            // Special functions
+            new FunctionInfo("gamma", "gamma(x)", "Gamma function Gamma(x), Gamma(n+1)=n!", "Special Functions"),
+            new FunctionInfo("loggamma", "loggamma(x)", "ln Gamma(x) (overflow-safe)", "Special Functions"),
+            new FunctionInfo("digamma", "digamma(x)", "Digamma psi(x) = d/dx ln Gamma(x)", "Special Functions"),
+            new FunctionInfo("beta", "beta(a, b)", "Beta function B(a, b)", "Special Functions"),
+            new FunctionInfo("erf", "erf(x)", "Error function", "Special Functions"),
+            new FunctionInfo("erfc", "erfc(x)", "Complementary error function 1-erf(x)", "Special Functions"),
+            new FunctionInfo("erfinv", "erfinv(x)", "Inverse error function", "Special Functions"),
+            new FunctionInfo("besselj", "besselj(n, x)", "Bessel function of the 1st kind, order n", "Special Functions"),
+            new FunctionInfo("bessely", "bessely(n, x)", "Bessel function of the 2nd kind, order n", "Special Functions"),
+            new FunctionInfo("besseli", "besseli(n, x)", "Modified Bessel function of the 1st kind, order n", "Special Functions"),
+            new FunctionInfo("besselk", "besselk(n, x)", "Modified Bessel function of the 2nd kind, order n", "Special Functions"),
+            new FunctionInfo("besselj0", "besselj0(x)", "Bessel J0(x)", "Special Functions"),
+            new FunctionInfo("besselj1", "besselj1(x)", "Bessel J1(x)", "Special Functions"),
+            new FunctionInfo("bessely0", "bessely0(x)", "Bessel Y0(x)", "Special Functions"),
+            new FunctionInfo("bessely1", "bessely1(x)", "Bessel Y1(x)", "Special Functions"),
+            new FunctionInfo("besseli0", "besseli0(x)", "Modified Bessel I0(x)", "Special Functions"),
+            new FunctionInfo("besseli1", "besseli1(x)", "Modified Bessel I1(x)", "Special Functions"),
+            new FunctionInfo("besselk0", "besselk0(x)", "Modified Bessel K0(x)", "Special Functions"),
+            new FunctionInfo("besselk1", "besselk1(x)", "Modified Bessel K1(x)", "Special Functions"),
+            new FunctionInfo("chebyshevt", "chebyshevt(n, x)", "Chebyshev polynomial of the 1st kind T_n(x)", "Special Functions"),
+            new FunctionInfo("chebyshevu", "chebyshevu(n, x)", "Chebyshev polynomial of the 2nd kind U_n(x)", "Special Functions"),
+            new FunctionInfo("hermiteh", "hermiteh(n, x)", "Hermite polynomial H_n(x)", "Special Functions"),
+            new FunctionInfo("laguerrel", "laguerrel(n, x)", "Laguerre polynomial L_n(x)", "Special Functions"),
+            new FunctionInfo("legendrep", "legendrep(n, x)", "Legendre polynomial P_n(x)", "Special Functions"),
+
+            // Calculus & error propagation
+            new FunctionInfo("integral", "Integral(expr, var, lower, upper)", "Definite integral; self-referential form integrates a scalar first-order ODE", "Calculus"),
+            new FunctionInfo("gaussintegral", "GaussIntegral(expr, var, lower, upper)", "Definite integral by Gauss-Legendre quadrature", "Calculus"),
+            new FunctionInfo("differentiate", "Differentiate('t', y, x, xv)", "Numerical dy/dx at xv from a TABLE", "Calculus"),
+            new FunctionInfo("integralvalue", "IntegralValue('y', 'x')", "Trapezoidal integral of column y vs x", "Calculus"),
+            new FunctionInfo("uncertaintyof", "UncertaintyOf(X)", "Propagated uncertainty of X (resolved in a second solve pass)", "Calculus"),
+
+            // Interpolation & lookup (against a TABLE block)
+            new FunctionInfo("interpolate", "Interpolate('t', x)", "Linear interpolation of table t at x (same as t(x))", "Interpolation"),
+            new FunctionInfo("interpolate1", "Interpolate1('t', x)", "Cubic-spline interpolation of table t at x", "Interpolation"),
+            new FunctionInfo("interpolate2d", "Interpolate2D('t', x, y)", "Bilinear 2-D interpolation of table t", "Interpolation"),
+            new FunctionInfo("lookup", "Lookup('t', row, col)", "Cell value by 1-based row/col indices", "Interpolation"),
+            new FunctionInfo("lookuprow", "LookupRow('t', col, val)", "Row index where column col crosses val", "Interpolation"),
+            new FunctionInfo("nlookuprows", "NLookupRows('t')", "Number of data rows in table t", "Interpolation"),
+
+            // Parametric-table accessors
+            new FunctionInfo("tablevalue", "TableValue(run, col)", "Cell value in the parametric table", "Tables"),
+            new FunctionInfo("tablerun#", "TableRun#()", "Current parametric run index (1-based)", "Tables"),
+            new FunctionInfo("nparametricruns", "NParametricRuns()", "Total number of configured parametric runs", "Tables"),
+            new FunctionInfo("tablesum", "TableSum('col')", "Sum of a parametric-table column", "Tables"),
+            new FunctionInfo("tableavg", "TableAvg('col')", "Average of a parametric-table column", "Tables"),
+            new FunctionInfo("tablemin", "TableMin('col')", "Minimum of a parametric-table column", "Tables"),
+            new FunctionInfo("tablemax", "TableMax('col')", "Maximum of a parametric-table column", "Tables"),
+            new FunctionInfo("tablestddev", "TableStdDev('col')", "Standard deviation of a parametric-table column", "Tables"),
+
+            // ODE (DYNAMIC) result accessors
+            new FunctionInfo("odevalue", "ODEValue('col', t)", "ODE column value interpolated at time t", "ODE Results"),
+            new FunctionInfo("finalvalue", "FinalValue('col')", "Last value of an ODE column", "ODE Results"),
+            new FunctionInfo("maxvalue", "MaxValue('col')", "Peak value of an ODE column", "ODE Results"),
+            new FunctionInfo("minvalue", "MinValue('col')", "Minimum value of an ODE column", "ODE Results"),
+            new FunctionInfo("timeat", "TimeAt('col', val)", "Time at which an ODE column crosses val", "ODE Results"),
+            new FunctionInfo("odeavg", "ODEAvg('col')", "Time-mean of an ODE column", "ODE Results"),
+            new FunctionInfo("odesum", "ODESum('col')", "Sum of an ODE column", "ODE Results"),
+            new FunctionInfo("odestddev", "ODEStdDev('col')", "Standard deviation of an ODE column", "ODE Results"),
+            new FunctionInfo("odemin", "ODEMin('col')", "Minimum of an ODE column", "ODE Results"),
+            new FunctionInfo("odemax", "ODEMax('col')", "Maximum of an ODE column", "ODE Results"),
+
+            // Numeric string helpers (operate on string-literal arguments)
+            new FunctionInfo("stringlen", "StringLen(s$)", "Length of a string literal", "Strings"),
+            new FunctionInfo("stringpos", "StringPos(s$, sub$)", "1-based position of substring sub$ in s$ (0 if absent)", "Strings"),
+            new FunctionInfo("stringval", "StringVal(s$)", "Parse a numeric string literal to a value", "Strings"),
+
+            // Arrays
+            new FunctionInfo("arrayelmt", "ArrayElmt(arr[1:n], i)", "Select the i-th element of an array range", "Math"),
+
+            // Transient conduction & radiation view factors
+            new FunctionInfo("heisler_temp", "heisler_temp(geom$, Bi, Fo, xstar)", "Heisler one-term transient temperature ratio (geom$ = 'wall'|'cylinder'|'sphere')", "Heat Transfer"),
+            new FunctionInfo("heisler_q", "heisler_q(geom$, Bi, Fo)", "Heisler transient heat-fraction Q/Q0", "Heat Transfer"),
+            new FunctionInfo("viewfactor_perp", "viewfactor_perp(wi, wj, L)", "View factor between perpendicular rectangles with a common edge (Howell)", "Heat Transfer"),
+            new FunctionInfo("viewfactor_plates", "viewfactor_plates(a, b, c)", "View factor between aligned parallel rectangles (Howell)", "Heat Transfer"),
+            new FunctionInfo("viewfactor_disks", "viewfactor_disks(r1, r2, L)", "View factor between coaxial parallel disks (Howell)", "Heat Transfer"),
+
+            // Compressible-flow stagnation properties
+            new FunctionInfo("stagnationtemp", "StagnationTemp(T, V, cp)", "Stagnation temperature T0 = T + V^2/(2 cp) [K]", "Compressible Flow"),
+            new FunctionInfo("stagnationpres", "StagnationPres(P, T, T0, k)", "Stagnation pressure P0 = P (T0/T)^(k/(k-1)) [Pa]", "Compressible Flow")
     );
 
     public static List<FunctionInfo> listFunctions() {
