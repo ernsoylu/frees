@@ -124,7 +124,9 @@ function compileReference() {
         examples: fm.examples || [],
         tags: fm.tags || [],
         references: fm.references || [],
-        body: m[2].trim(),
+        // Strip a leading H1 — the renderer (ReferencePageView) already shows the
+        // page name as the title, so the body `# name` heading is redundant.
+        body: m[2].trim().replace(/^#[ \t]+\S.*(?:\r?\n)+/, ''),
       });
     }
   };
