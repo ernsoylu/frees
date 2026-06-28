@@ -30,13 +30,13 @@ GradeRoadLoad inst(Crr, Caero, m, g, grade)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `Crr` | Number |
-| `Caero` | Number |
-| `m` | Number |
-| `g` | Number |
-| `grade` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `Crr` | Number | Rolling-resistance coefficient. |
+| `Caero` | Number | Aerodynamic drag term ½ρCdA [kg/m]. |
+| `m` | Number | Mass [kg]. |
+| `g` | Number | Gravitational acceleration [m/s²]. |
+| `grade` | Number | Road grade (rise/run). |
 
 ## Constitutive Equations
 

@@ -31,7 +31,7 @@ $$ \operatorname{NLookupRows}(t) = \#\text{rows}(t) $$
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `'t'` | Number | Yes | Numeric argument. |
+| `'t'` | Number | Yes | Name of a TABLE block (string). |
 
 ## References
 

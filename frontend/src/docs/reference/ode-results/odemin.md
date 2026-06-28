@@ -31,5 +31,5 @@ $$ \min_i \text{col}(t_i) $$
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `'col'` | Number | Yes | Numeric argument. |
+| `'col'` | Number | Yes | Name of a result-table column (string). |
 

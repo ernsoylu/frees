@@ -31,5 +31,5 @@ $$ y = \arctan(x), \qquad \tan(y) = x $$
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `x` | Number | Yes | Numeric argument. |
+| `x` | Number | Yes | Vapor quality (0–1). |
 

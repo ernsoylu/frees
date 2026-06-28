@@ -32,8 +32,8 @@ $$ A\,x = b \;\Rightarrow\; x = A^{-1}b \quad\text{(via } PA = LU\text{, forward
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `A` | Number | Yes | Numeric argument. |
-| `b` | Number | Yes | Numeric argument. |
+| `A` | Number | Yes | Matrix. |
+| `b` | Number | Yes | Second operand. |
 
 ## References
 

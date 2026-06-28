@@ -30,9 +30,9 @@ Gear inst(ratio)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `ratio` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `ratio` | Number | Gear / split ratio. |
 
 ## Constitutive Equations
 

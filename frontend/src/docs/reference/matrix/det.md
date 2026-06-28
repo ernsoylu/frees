@@ -32,7 +32,7 @@ $$ \det(A) = \pm\prod_i U_{ii} \quad\text{(from } PA = LU\text{)} $$
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `A` | Number | Yes | Numeric argument. |
+| `A` | Number | Yes | Square input matrix. |
 
 ## References
 

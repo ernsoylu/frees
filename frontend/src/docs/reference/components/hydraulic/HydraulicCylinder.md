@@ -30,15 +30,15 @@ HydraulicCylinder inst(rho, beta, V0, area, Patm, P0, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `rho` | Number |
-| `beta` | Number |
-| `V0` | Number |
-| `area` | Number |
-| `Patm` | Number |
-| `P0` | Number |
-| `domain$` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `rho` | Number | Density [kg/m³]. |
+| `beta` | Number | Chevron angle [deg] / coefficient. |
+| `V0` | Number | Initial voltage / volume. |
+| `area` | Number | Area [m²]. |
+| `Patm` | Number | Atmospheric pressure [Pa]. |
+| `P0` | Number | Reference/initial pressure [Pa]. |
+| `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
 
 ## Constitutive Equations
 

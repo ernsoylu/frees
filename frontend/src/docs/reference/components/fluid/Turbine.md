@@ -30,10 +30,10 @@ Turbine inst(eta, fluid$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `eta` | Number |
-| `fluid$` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `eta` | Number | Efficiency (0–1). |
+| `fluid$` | String | Fluid name (e.g. Water, R134a, Air). |
 
 ## Constitutive Equations
 

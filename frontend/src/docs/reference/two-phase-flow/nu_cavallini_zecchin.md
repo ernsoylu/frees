@@ -32,11 +32,11 @@ $$ Nu = 0.05\,Re_{eq}^{0.8}\,Pr_l^{0.33} \quad\text{(Cavallini–Zecchin condens
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `Re_l` | Number | Yes | Numeric argument. |
-| `Pr_l` | Number | Yes | Numeric argument. |
-| `x` | Number | Yes | Numeric argument. |
-| `rho_l` | Number | Yes | Numeric argument. |
-| `rho_g` | Number | Yes | Numeric argument. |
+| `Re_l` | Number | Yes | Liquid-only Reynolds number. |
+| `Pr_l` | Number | Yes | Liquid Prandtl number. |
+| `x` | Number | Yes | Vapor quality (0–1). |
+| `rho_l` | Number | Yes | Saturated-liquid density [kg/m³]. |
+| `rho_g` | Number | Yes | Saturated-vapor density [kg/m³]. |
 
 ## References
 

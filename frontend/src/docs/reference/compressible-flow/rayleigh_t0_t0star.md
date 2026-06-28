@@ -32,8 +32,8 @@ $$ \frac{T_0}{T_0^*} = \frac{(k+1)M^2\,[2 + (k-1)M^2]}{(1 + kM^2)^2} $$
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `M` | Number | Yes | Numeric argument. |
-| `k` | Number | Yes | Numeric argument. |
+| `M` | Number | Yes | Mach number. |
+| `k` | Number | Yes | Ratio of specific heats (e.g. 1.4 for air). |
 
 ## References
 

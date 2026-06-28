@@ -32,7 +32,7 @@ $$ s^2 = \frac{1}{n-1}\sum_{i=1}^{n}(x_i - \bar x)^2 $$
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `x` | Number | Yes | Numeric argument. |
+| `x` | Number | Yes | Vapor quality (0–1). |
 
 ## References
 

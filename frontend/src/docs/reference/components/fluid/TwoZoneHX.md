@@ -30,12 +30,12 @@ TwoZoneHX inst(UA, hot$, cold$, arr$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `UA` | Number |
-| `hot$` | String |
-| `cold$` | String |
-| `arr$` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `UA` | Number | Overall conductance UA [W/K]. |
+| `hot$` | String | Hot-side fluid name (e.g. Water). |
+| `cold$` | String | Cold-side fluid name (e.g. EG50). |
+| `arr$` | String | Flow arrangement (passed to hx_effectiveness) — one of `counterflow`, `parallel`. |
 
 ## Constitutive Equations
 

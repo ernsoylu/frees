@@ -32,8 +32,8 @@ $$ y = y_i + (y_{i+1}-y_i)\frac{x - x_i}{x_{i+1} - x_i} \quad\text{(linear)} $$
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `'t'` | Number | Yes | Numeric argument. |
-| `x` | Number | Yes | Numeric argument. |
+| `'t'` | Number | Yes | Name of a TABLE block (string). |
+| `x` | Number | Yes | Vapor quality (0–1). |
 
 ## References
 

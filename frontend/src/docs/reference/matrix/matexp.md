@@ -32,7 +32,7 @@ $$ e^{A} = \sum_{k=0}^{\infty} \frac{A^{k}}{k!} $$
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `A` | Number | Yes | Numeric argument. |
+| `A` | Number | Yes | Square input matrix. |
 
 ## References
 

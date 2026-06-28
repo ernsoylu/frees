@@ -30,11 +30,11 @@ Clutch inst(Tmax, eng, eps)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `Tmax` | Number |
-| `eng` | Number |
-| `eps` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `Tmax` | Number | Maximum temperature [K]. |
+| `eng` | Number | Engagement fraction (0–1). |
+| `eps` | Number | Effectiveness / roughness. |
 
 ## Constitutive Equations
 

@@ -32,8 +32,8 @@ $$ Nu = \big(Nu_1^3 + Nu_2^3\big)^{1/3} \quad\text{(free+forced cubic blend)} $$
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `Nu1` | Number | Yes | Numeric argument. |
-| `Nu2` | Number | Yes | Numeric argument. |
+| `Nu1` | Number | Yes | First Nusselt number to blend. |
+| `Nu2` | Number | Yes | Second Nusselt number to blend. |
 
 ## References
 

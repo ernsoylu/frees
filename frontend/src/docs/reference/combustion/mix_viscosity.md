@@ -32,8 +32,8 @@ $$ \mu = \sum_i \frac{y_i \mu_i}{\sum_j y_j \phi_{ij}} \quad\text{(Wilke)} $$
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `comp$` | String | Yes | String argument. |
-| `T` | Number | Yes | Numeric argument. |
+| `comp$` | String | Yes | Mixture composition string, e.g. 'N2:0.79,O2:0.21'. |
+| `T` | Number | Yes | Temperature [K]. |
 
 ## References
 

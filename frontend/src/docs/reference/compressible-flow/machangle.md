@@ -32,7 +32,7 @@ $$ \mu = \arcsin\!\frac{1}{M} $$
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `M` | Number | Yes | Numeric argument. |
+| `M` | Number | Yes | Mach number. |
 
 ## References
 

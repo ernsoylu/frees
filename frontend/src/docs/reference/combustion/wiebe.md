@@ -32,11 +32,11 @@ $$ x_b(\theta) = 1 - \exp\!\left[-a\left(\frac{\theta-\theta_0}{\Delta\theta}\ri
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `theta` | Number | Yes | Numeric argument. |
-| `theta0` | Number | Yes | Numeric argument. |
-| `dtheta` | Number | Yes | Numeric argument. |
-| `a` | Number | Yes | Numeric argument. |
-| `m` | Number | Yes | Numeric argument. |
+| `theta` | Number | Yes | Flow-deflection angle [rad]. |
+| `theta0` | Number | Yes | Start of combustion [deg]. |
+| `dtheta` | Number | Yes | Combustion duration [deg]. |
+| `a` | Number | Yes | First operand. |
+| `m` | Number | Yes | Shape / form parameter. |
 
 ## References
 

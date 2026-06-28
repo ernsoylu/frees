@@ -32,7 +32,7 @@ $$ T(h) = T_b + L_b\,(h - h_b) \quad\text{(layer lapse rate } L_b) $$
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `alt` | Number | Yes | Numeric argument. |
+| `alt` | Number | Yes | Geopotential altitude [m]. |
 
 ## References
 

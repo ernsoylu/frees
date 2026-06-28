@@ -32,8 +32,8 @@ $$ Nu = \left\{0.60 + \frac{0.387\,Ra^{1/6}}{[1 + (0.559/Pr)^{9/16}]^{8/27}}\rig
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `Ra` | Number | Yes | Numeric argument. |
-| `Pr` | Number | Yes | Numeric argument. |
+| `Ra` | Number | Yes | Rayleigh number. |
+| `Pr` | Number | Yes | Prandtl number. |
 
 ## References
 

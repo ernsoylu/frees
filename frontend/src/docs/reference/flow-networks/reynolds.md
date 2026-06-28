@@ -32,10 +32,10 @@ $$ Re = \frac{\rho V D}{\mu} $$
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `rho` | Number | Yes | Numeric argument. |
-| `V` | Number | Yes | Numeric argument. |
-| `D` | Number | Yes | Numeric argument. |
-| `mu` | Number | Yes | Numeric argument. |
+| `rho` | Number | Yes | Density [kg/m³]. |
+| `V` | Number | Yes | Velocity [m/s]. |
+| `D` | Number | Yes | Diameter [m]. |
+| `mu` | Number | Yes | Dynamic viscosity [Pa·s]. |
 
 ## References
 

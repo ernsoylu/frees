@@ -30,11 +30,11 @@ Conduction inst(k, area, L)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `k` | Number |
-| `area` | Number |
-| `L` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `k` | Number | Stiffness / conductivity. |
+| `area` | Number | Area [m²]. |
+| `L` | Number | Length [m]. |
 
 ## Constitutive Equations
 

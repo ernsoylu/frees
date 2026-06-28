@@ -32,9 +32,9 @@ $$ \tan\theta = 2\cot\beta\,\frac{M_1^2\sin^2\beta - 1}{M_1^2(k + \cos 2\beta) +
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `M1` | Number | Yes | Numeric argument. |
-| `beta` | Number | Yes | Numeric argument. |
-| `k` | Number | Yes | Numeric argument. |
+| `M1` | Number | Yes | Upstream Mach number (≥ 1). |
+| `beta` | Number | Yes | Oblique-shock wave angle [rad]. |
+| `k` | Number | Yes | Ratio of specific heats (e.g. 1.4 for air). |
 
 ## References
 

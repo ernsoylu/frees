@@ -31,6 +31,6 @@ $$ \operatorname{StringPos}(s, t) = \text{1-based index of } t \text{ in } s,\ 0
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `s$` | String | Yes | String argument. |
-| `sub$` | String | Yes | String argument. |
+| `s$` | String | Yes | String literal. |
+| `sub$` | String | Yes | Substring to search for. |
 

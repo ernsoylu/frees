@@ -30,12 +30,12 @@ PneumaticActuator inst(fluid$, area, Patm, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `fluid$` | String |
-| `area` | Number |
-| `Patm` | Number |
-| `domain$` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `fluid$` | String | Fluid name (e.g. Water, R134a, Air). |
+| `area` | Number | Area [m²]. |
+| `Patm` | Number | Atmospheric pressure [Pa]. |
+| `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
 
 ## Constitutive Equations
 

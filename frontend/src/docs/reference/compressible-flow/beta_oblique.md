@@ -32,10 +32,10 @@ $$ \text{solve the } \theta\text{-}\beta\text{-}M \text{ relation for the wave a
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `M1` | Number | Yes | Numeric argument. |
-| `theta` | Number | Yes | Numeric argument. |
-| `k` | Number | Yes | Numeric argument. |
-| `branch$` | String | Yes | String argument. |
+| `M1` | Number | Yes | Upstream Mach number (≥ 1). |
+| `theta` | Number | Yes | Flow-deflection angle [rad]. |
+| `k` | Number | Yes | Ratio of specific heats (e.g. 1.4 for air). |
+| `branch$` | String | Yes | Selector — One of `weak`, `strong`. |
 
 ## References
 

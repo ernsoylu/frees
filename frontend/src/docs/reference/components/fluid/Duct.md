@@ -30,13 +30,13 @@ Duct inst(rho, mu, L, D, rough)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `rho` | Number |
-| `mu` | Number |
-| `L` | Number |
-| `D` | Number |
-| `rough` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `rho` | Number | Density [kg/m³]. |
+| `mu` | Number | Dynamic viscosity [Pa·s]. |
+| `L` | Number | Length [m]. |
+| `D` | Number | Diameter [m]. |
+| `rough` | Number | Relative wall roughness. |
 
 ## Constitutive Equations
 

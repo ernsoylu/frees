@@ -32,7 +32,7 @@ $$ \rho(h) = \frac{P(h)\,M}{R\,T(h)} $$
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `alt` | Number | Yes | Numeric argument. |
+| `alt` | Number | Yes | Geopotential altitude [m]. |
 
 ## References
 

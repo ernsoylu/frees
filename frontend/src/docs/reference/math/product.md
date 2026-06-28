@@ -31,8 +31,8 @@ $$ \prod_{i=\text{lo}}^{\text{hi}} \text{term}(i) $$
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `i` | Number | Yes | Numeric argument. |
-| `lo` | Number | Yes | Numeric argument. |
-| `hi` | Number | Yes | Numeric argument. |
-| `term` | Number | Yes | Numeric argument. |
+| `i` | Number | Yes | Index. |
+| `lo` | Number | Yes | Lower bound. |
+| `hi` | Number | Yes | Upper bound. |
+| `term` | Number | Yes | Series-term expression. |
 

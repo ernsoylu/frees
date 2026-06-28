@@ -30,14 +30,14 @@ Nozzle inst(k, R, A_throat, A_exit, P_amb, T0)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `k` | Number |
-| `R` | Number |
-| `A_throat` | Number |
-| `A_exit` | Number |
-| `P_amb` | Number |
-| `T0` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `k` | Number | Stiffness / conductivity. |
+| `R` | Number | Resistance [Ω]. |
+| `A_throat` | Number | Throat area [m²]. |
+| `A_exit` | Number | Exit area [m²]. |
+| `P_amb` | Number | Ambient pressure [Pa]. |
+| `T0` | Number | Reference/initial temperature [K]. |
 
 ## Constitutive Equations
 

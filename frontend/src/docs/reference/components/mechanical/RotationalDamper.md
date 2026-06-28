@@ -30,9 +30,9 @@ RotationalDamper inst(c)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `c` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `c` | Number | Damping / specific-heat coefficient. |
 
 ## Constitutive Equations
 

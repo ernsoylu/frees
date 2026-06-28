@@ -32,8 +32,8 @@ $$ \phi_l^2 = 1 + \frac{C}{X} + \frac{1}{X^2} \quad\text{(Chisholm)} $$
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `X` | Number | Yes | Numeric argument. |
-| `C` | Number | Yes | Numeric argument. |
+| `X` | Number | Yes | Lockhart–Martinelli parameter. |
+| `C` | Number | Yes | Empirical constant. |
 
 ## References
 

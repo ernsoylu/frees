@@ -32,11 +32,11 @@ $$ \alpha = \frac{x}{\rho_g}\left[(1 + 0.12(1-x))\left(\frac{x}{\rho_g} + \frac{
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `x` | Number | Yes | Numeric argument. |
-| `rho_l` | Number | Yes | Numeric argument. |
-| `rho_g` | Number | Yes | Numeric argument. |
-| `G` | Number | Yes | Numeric argument. |
-| `sigma` | Number | Yes | Numeric argument. |
+| `x` | Number | Yes | Vapor quality (0–1). |
+| `rho_l` | Number | Yes | Saturated-liquid density [kg/m³]. |
+| `rho_g` | Number | Yes | Saturated-vapor density [kg/m³]. |
+| `G` | Number | Yes | Mass flux G = ṁ/Aflow [kg/m²·s]. |
+| `sigma` | Number | Yes | Surface tension [N/m]. |
 
 ## References
 

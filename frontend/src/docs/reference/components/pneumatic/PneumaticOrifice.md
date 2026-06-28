@@ -30,12 +30,12 @@ PneumaticOrifice inst(fluid$, C, b, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `fluid$` | String |
-| `C` | Number |
-| `b` | Number |
-| `domain$` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `fluid$` | String | Fluid name (e.g. Water, R134a, Air). |
+| `C` | Number | Capacitance [F]. |
+| `b` | Number | Critical pressure ratio / coefficient. |
+| `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
 
 ## Constitutive Equations
 

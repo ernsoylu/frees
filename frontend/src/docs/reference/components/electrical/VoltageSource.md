@@ -30,9 +30,9 @@ VoltageSource inst(E)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `E` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `E` | Number | EMF / voltage [V]. |
 
 ## Constitutive Equations
 

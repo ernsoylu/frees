@@ -34,7 +34,7 @@ $$ \quad n! = \Gamma(n+1) $$
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `n` | Number | Yes | Numeric argument. |
+| `n` | Number | Yes | Order / number of terms. |
 
 ## References
 

@@ -28,7 +28,7 @@ A REPL-only symbolic transform — it operates on an algebraic expression rather
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `expr` | Number | Yes | Numeric argument. |
+| `expr` | Number | Yes | Expression to evaluate. |
 
 ## References
 

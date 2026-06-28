@@ -30,12 +30,12 @@ PneumaticSupply inst(fluid$, P, T, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `fluid$` | String |
-| `P` | Number |
-| `T` | Number |
-| `domain$` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `fluid$` | String | Fluid name (e.g. Water, R134a, Air). |
+| `P` | Number | Pressure [Pa]. |
+| `T` | Number | Temperature [K]. |
+| `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
 
 ## Constitutive Equations
 

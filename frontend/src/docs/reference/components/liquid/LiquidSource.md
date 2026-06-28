@@ -30,13 +30,13 @@ LiquidSource inst(fluid$, mdot, P, T, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `fluid$` | String |
-| `mdot` | Number |
-| `P` | Number |
-| `T` | Number |
-| `domain$` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `fluid$` | String | Fluid name (e.g. Water, R134a, Air). |
+| `mdot` | Number | Mass flow rate [kg/s]. |
+| `P` | Number | Pressure [Pa]. |
+| `T` | Number | Temperature [K]. |
+| `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
 
 ## Constitutive Equations
 

@@ -32,7 +32,7 @@ $$ \overline{M} = \sum_i y_i M_i $$
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `comp$` | String | Yes | String argument. |
+| `comp$` | String | Yes | Mixture composition string, e.g. 'N2:0.79,O2:0.21'. |
 
 ## References
 

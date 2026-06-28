@@ -30,11 +30,11 @@ MassGen inst(C, Qgen, T0)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `C` | Number |
-| `Qgen` | Number |
-| `T0` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `C` | Number | Capacitance [F]. |
+| `Qgen` | Number | Generated heat [W]. |
+| `T0` | Number | Reference/initial temperature [K]. |
 
 ## Constitutive Equations
 

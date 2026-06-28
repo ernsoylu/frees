@@ -32,9 +32,9 @@ $$ \Delta P = K\,\tfrac12\rho V^2 $$
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `K` | Number | Yes | Numeric argument. |
-| `rho` | Number | Yes | Numeric argument. |
-| `V` | Number | Yes | Numeric argument. |
+| `K` | Number | Yes | Loss coefficient / gain. |
+| `rho` | Number | Yes | Density [kg/m³]. |
+| `V` | Number | Yes | Velocity [m/s]. |
 
 ## References
 

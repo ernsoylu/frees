@@ -32,13 +32,13 @@ $$ \frac{dP}{dz} = G_{ms}(1-x)^{1/3} + B\,x^3, \quad G_{ms} = A + 2(B-A)x \quad\
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `fluid$` | String | Yes | String argument. |
-| `P` | Number | Yes | Numeric argument. |
-| `x` | Number | Yes | Numeric argument. |
-| `mdot` | Number | Yes | Numeric argument. |
-| `Dh` | Number | Yes | Numeric argument. |
-| `Aflow` | Number | Yes | Numeric argument. |
-| `L` | Number | Yes | Numeric argument. |
+| `fluid$` | String | Yes | Fluid name (e.g. Water, R134a, Air). |
+| `P` | Number | Yes | Pressure [Pa]. |
+| `x` | Number | Yes | Vapor quality (0–1). |
+| `mdot` | Number | Yes | Mass flow rate [kg/s]. |
+| `Dh` | Number | Yes | Hydraulic diameter [m]. |
+| `Aflow` | Number | Yes | Free-flow (minimum) cross-sectional area [m²]. |
+| `L` | Number | Yes | Length [m]. |
 
 ## References
 

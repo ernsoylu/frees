@@ -30,10 +30,10 @@ Valve inst(Cv, rho)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `Cv` | Number |
-| `rho` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `Cv` | Number | Flow coefficient. |
+| `rho` | Number | Density [kg/m³]. |
 
 ## Constitutive Equations
 

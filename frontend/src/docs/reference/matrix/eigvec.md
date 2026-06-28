@@ -32,7 +32,7 @@ $$ A v_i = \lambda_i v_i \quad\text{(columns are the eigenvectors)} $$
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `A` | Number | Yes | Numeric argument. |
+| `A` | Number | Yes | Square input matrix. |
 
 ## References
 

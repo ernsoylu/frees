@@ -32,13 +32,13 @@ $$ \Delta P = f\,\frac{L}{D_h}\,\frac{G^2}{2\rho}, \qquad G = \dot m / A_{\text{
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `fluid$` | String | Yes | String argument. |
-| `P` | Number | Yes | Numeric argument. |
-| `T` | Number | Yes | Numeric argument. |
-| `mdot` | Number | Yes | Numeric argument. |
-| `Dh` | Number | Yes | Numeric argument. |
-| `Aflow` | Number | Yes | Numeric argument. |
-| `L` | Number | Yes | Numeric argument. |
+| `fluid$` | String | Yes | Fluid name (e.g. Water, R134a, Air). |
+| `P` | Number | Yes | Pressure [Pa]. |
+| `T` | Number | Yes | Temperature [K]. |
+| `mdot` | Number | Yes | Mass flow rate [kg/s]. |
+| `Dh` | Number | Yes | Hydraulic diameter [m]. |
+| `Aflow` | Number | Yes | Free-flow (minimum) cross-sectional area [m²]. |
+| `L` | Number | Yes | Length [m]. |
 
 ## References
 

@@ -32,8 +32,8 @@ $$ Nu = C\,Re_{\max}^{m}\,Pr^{0.36}\,(Pr/Pr_w)^{1/4} \quad\text{(tube bank)} $$
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `Re` | Number | Yes | Numeric argument. |
-| `Pr` | Number | Yes | Numeric argument. |
+| `Re` | Number | Yes | Reynolds number. |
+| `Pr` | Number | Yes | Prandtl number. |
 
 ## References
 

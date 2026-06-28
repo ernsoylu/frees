@@ -32,8 +32,8 @@ $$ \frac{P_0}{P_0^*} = \frac{1}{M}\left[\frac{2 + (k-1)M^2}{k+1}\right]^{(k+1)/[
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `M` | Number | Yes | Numeric argument. |
-| `k` | Number | Yes | Numeric argument. |
+| `M` | Number | Yes | Mach number. |
+| `k` | Number | Yes | Ratio of specific heats (e.g. 1.4 for air). |
 
 ## References
 

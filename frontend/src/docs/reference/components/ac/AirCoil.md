@@ -30,15 +30,15 @@ AirCoil inst(ref$, U_tp, U_sh, D, L, eps_zone, eps_air)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `ref$` | String |
-| `U_tp` | Number |
-| `U_sh` | Number |
-| `D` | Number |
-| `L` | Number |
-| `eps_zone` | Number |
-| `eps_air` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `ref$` | String | Refrigerant name (e.g. R134a, R1234yf). |
+| `U_tp` | Number | Two-phase-zone overall coefficient [W/m²·K]. |
+| `U_sh` | Number | Superheat-zone overall coefficient [W/m²·K]. |
+| `D` | Number | Diameter [m]. |
+| `L` | Number | Length [m]. |
+| `eps_zone` | Number | Zone-collapse smoothing width. |
+| `eps_air` | Number | Air-side effectiveness. |
 
 ## Constitutive Equations
 

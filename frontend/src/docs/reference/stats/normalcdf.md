@@ -32,9 +32,9 @@ $$ \Phi(x;\mu,\sigma) = \tfrac12\left[1 + \operatorname{erf}\!\frac{x-\mu}{\sigm
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `x` | Number | Yes | Numeric argument. |
-| `mu` | Number | Yes | Numeric argument. |
-| `sigma` | Number | Yes | Numeric argument. |
+| `x` | Number | Yes | Vapor quality (0–1). |
+| `mu` | Number | Yes | Dynamic viscosity [Pa·s]. |
+| `sigma` | Number | Yes | Surface tension [N/m]. |
 
 ## References
 

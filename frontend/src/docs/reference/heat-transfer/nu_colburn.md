@@ -32,9 +32,9 @@ $$ Nu = j\,Re\,Pr^{1/3} \quad\text{(Colburn } j\text{-factor)} $$
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `j` | Number | Yes | Numeric argument. |
-| `Re` | Number | Yes | Numeric argument. |
-| `Pr` | Number | Yes | Numeric argument. |
+| `j` | Number | Yes | Colburn j-factor. |
+| `Re` | Number | Yes | Reynolds number. |
+| `Pr` | Number | Yes | Prandtl number. |
 
 ## References
 

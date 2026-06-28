@@ -32,11 +32,11 @@ $$ s(T,P) = s^{\text{ig}}(T,P) + (s - s^{\text{ig}})_{T,P} \quad\text{(ideal-gas
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `fluid$` | String | Yes | String argument. |
-| `model$` | String | Yes | String argument. |
-| `T` | Number | Yes | Numeric argument. |
-| `P` | Number | Yes | Numeric argument. |
-| `phase$` | String | Yes | String argument. |
+| `fluid$` | String | Yes | Fluid name (e.g. Water, R134a, Air). |
+| `model$` | String | Yes | Selector — One of `SRK`, `PR`. |
+| `T` | Number | Yes | Temperature [K]. |
+| `P` | Number | Yes | Pressure [Pa]. |
+| `phase$` | String | Yes | Selector — One of `vapor`, `liquid`. |
 
 ## References
 

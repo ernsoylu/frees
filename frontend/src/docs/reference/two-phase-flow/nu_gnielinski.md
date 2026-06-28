@@ -32,8 +32,8 @@ $$ Nu = \frac{(f/8)(Re-1000)Pr}{1 + 12.7\sqrt{f/8}\,(Pr^{2/3}-1)} $$
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `Re` | Number | Yes | Numeric argument. |
-| `Pr` | Number | Yes | Numeric argument. |
+| `Re` | Number | Yes | Reynolds number. |
+| `Pr` | Number | Yes | Prandtl number. |
 
 ## References
 

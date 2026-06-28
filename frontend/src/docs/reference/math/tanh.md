@@ -31,5 +31,5 @@ $$ \tanh(x) = \frac{\sinh x}{\cosh x} = \frac{e^{x}-e^{-x}}{e^{x}+e^{-x}} $$
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `x` | Number | Yes | Numeric argument. |
+| `x` | Number | Yes | Vapor quality (0–1). |
 

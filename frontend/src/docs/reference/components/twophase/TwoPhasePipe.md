@@ -30,17 +30,17 @@ TwoPhasePipe inst(fluid$, L, D, rough, x, rho_l, rho_g, mu_l, mu_g)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `fluid$` | String |
-| `L` | Number |
-| `D` | Number |
-| `rough` | Number |
-| `x` | Number |
-| `rho_l` | Number |
-| `rho_g` | Number |
-| `mu_l` | Number |
-| `mu_g` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `fluid$` | String | Fluid name (e.g. Water, R134a, Air). |
+| `L` | Number | Length [m]. |
+| `D` | Number | Diameter [m]. |
+| `rough` | Number | Relative wall roughness. |
+| `x` | Number | Vapor quality / fraction (0–1). |
+| `rho_l` | Number | Liquid density [kg/m³]. |
+| `rho_g` | Number | Vapor density [kg/m³]. |
+| `mu_l` | Number | Liquid viscosity [Pa·s]. |
+| `mu_g` | Number | Vapor viscosity [Pa·s]. |
 
 ## Constitutive Equations
 

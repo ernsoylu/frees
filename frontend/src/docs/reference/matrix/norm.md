@@ -32,7 +32,7 @@ $$ \lVert v \rVert_2 = \sqrt{\textstyle\sum_i v_i^2} $$
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `A` | Number | Yes | Numeric argument. |
+| `A` | Number | Yes | Square input matrix. |
 
 ## References
 

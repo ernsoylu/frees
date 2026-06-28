@@ -32,10 +32,10 @@ $$ \left.\frac{dy}{dx}\right|_{x_v} \approx \frac{y_{i+1}-y_{i-1}}{x_{i+1}-x_{i-
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `'t'` | Number | Yes | Numeric argument. |
-| `y` | Number | Yes | Numeric argument. |
-| `x` | Number | Yes | Numeric argument. |
-| `xv` | Number | Yes | Numeric argument. |
+| `'t'` | Number | Yes | Name of a TABLE block (string). |
+| `y` | Number | Yes | Value / second coordinate. |
+| `x` | Number | Yes | Vapor quality (0–1). |
+| `xv` | Number | Yes | Point at which to evaluate. |
 
 ## References
 

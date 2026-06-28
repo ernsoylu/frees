@@ -30,10 +30,10 @@ RoadLoad inst(Crr, Caero)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `Crr` | Number |
-| `Caero` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `Crr` | Number | Rolling-resistance coefficient. |
+| `Caero` | Number | Aerodynamic drag term ½ρCdA [kg/m]. |
 
 ## Constitutive Equations
 

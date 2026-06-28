@@ -30,9 +30,9 @@ Planetary inst(g)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `g` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `g` | Number | Gravitational acceleration [m/s²]. |
 
 ## Constitutive Equations
 

@@ -31,12 +31,13 @@ $$ \operatorname{ArrayElmt}(\{a_1,\dots,a_n\}, i) = a_i $$
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `arr[1` | Number | Yes | Numeric argument. |
+| `arr[1:n]` | Array | Yes | Array range to index into, e.g. `data[1:n]`. |
+| `i` | Number | Yes | 1-based index of the element to return. |
 
 ## Output Arguments
 
 | Argument | Type | Description |
 | --- | --- | --- |
-| `n]` | Number/Array | Output value. |
-| `i` | Number/Array | Output value. |
+| `n]` | Number/Array | Computed `n]`. |
+| `i` | Number/Array | Computed `i`. |
 

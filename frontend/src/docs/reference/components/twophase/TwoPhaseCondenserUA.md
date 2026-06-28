@@ -30,13 +30,13 @@ TwoPhaseCondenserUA inst(fluid$, UA, T_amb, V, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `fluid$` | String |
-| `UA` | Number |
-| `T_amb` | Number |
-| `V` | Number |
-| `domain$` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `fluid$` | String | Fluid name (e.g. Water, R134a, Air). |
+| `UA` | Number | Overall conductance UA [W/K]. |
+| `T_amb` | Number | Ambient temperature [K]. |
+| `V` | Number | Volume [m³]. |
+| `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
 
 ## Constitutive Equations
 

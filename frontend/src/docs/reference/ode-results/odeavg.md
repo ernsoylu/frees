@@ -31,5 +31,5 @@ $$ \frac{1}{N+1}\sum_{i=0}^{N} \text{col}(t_i) $$
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `'col'` | Number | Yes | Numeric argument. |
+| `'col'` | Number | Yes | Name of a result-table column (string). |
 

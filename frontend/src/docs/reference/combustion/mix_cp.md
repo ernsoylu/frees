@@ -32,8 +32,8 @@ $$ c_p = \sum_i Y_i\,c_{p,i}(T) \quad\text{(mass-weighted, NASA-7)} $$
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `comp$` | String | Yes | String argument. |
-| `T` | Number | Yes | Numeric argument. |
+| `comp$` | String | Yes | Mixture composition string, e.g. 'N2:0.79,O2:0.21'. |
+| `T` | Number | Yes | Temperature [K]. |
 
 ## References
 

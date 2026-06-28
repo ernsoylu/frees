@@ -30,11 +30,11 @@ FanCurve inst(rho, dP0, Q0)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `rho` | Number |
-| `dP0` | Number |
-| `Q0` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `rho` | Number | Density [kg/m³]. |
+| `dP0` | Number | Reference pressure drop [Pa]. |
+| `Q0` | Number | Reference heat [W]. |
 
 ## Constitutive Equations
 

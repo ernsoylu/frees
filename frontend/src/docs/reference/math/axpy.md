@@ -31,7 +31,7 @@ $$ y \leftarrow \alpha x + y \quad\text{(BLAS level 1)} $$
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `α` | Number | Yes | Numeric argument. |
-| `x` | Number | Yes | Numeric argument. |
-| `y` | Number | Yes | Numeric argument. |
+| `α` | Number | Yes | Scalar coefficient α. |
+| `x` | Number | Yes | Vapor quality (0–1). |
+| `y` | Number | Yes | Value / second coordinate. |
 

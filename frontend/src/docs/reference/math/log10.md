@@ -31,5 +31,5 @@ $$ y = \log_{10}(x) = \frac{\ln x}{\ln 10}, \quad x > 0 $$
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `x` | Number | Yes | Numeric argument. |
+| `x` | Number | Yes | Vapor quality (0–1). |
 

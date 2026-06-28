@@ -30,13 +30,13 @@ TwoPhaseVolume inst(fluid$, V, C, P0, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `fluid$` | String |
-| `V` | Number |
-| `C` | Number |
-| `P0` | Number |
-| `domain$` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `fluid$` | String | Fluid name (e.g. Water, R134a, Air). |
+| `V` | Number | Volume [m³]. |
+| `C` | Number | Capacitance [F]. |
+| `P0` | Number | Reference/initial pressure [Pa]. |
+| `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
 
 ## Constitutive Equations
 

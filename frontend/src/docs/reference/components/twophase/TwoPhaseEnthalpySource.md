@@ -30,11 +30,11 @@ TwoPhaseEnthalpySource inst(mdot, h, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `mdot` | Number |
-| `h` | Number |
-| `domain$` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `mdot` | Number | Mass flow rate [kg/s]. |
+| `h` | Number | Heat-transfer coefficient [W/m²·K]. |
+| `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
 
 ## Constitutive Equations
 

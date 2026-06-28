@@ -32,9 +32,9 @@ $$ Nu = 0.023\,Re^{0.8}\,Pr^{n} \quad (n = 0.4 \text{ heating},\ 0.3 \text{ cool
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `Re` | Number | Yes | Numeric argument. |
-| `Pr` | Number | Yes | Numeric argument. |
-| `n` | Number | Yes | Numeric argument. |
+| `Re` | Number | Yes | Reynolds number. |
+| `Pr` | Number | Yes | Prandtl number. |
+| `n` | Number | Yes | Order / number of terms. |
 
 ## References
 

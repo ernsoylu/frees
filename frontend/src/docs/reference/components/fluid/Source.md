@@ -30,12 +30,12 @@ Source inst(fluid$, mdot, P, T)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `fluid$` | String |
-| `mdot` | Number |
-| `P` | Number |
-| `T` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `fluid$` | String | Fluid name (e.g. Water, R134a, Air). |
+| `mdot` | Number | Mass flow rate [kg/s]. |
+| `P` | Number | Pressure [Pa]. |
+| `T` | Number | Temperature [K]. |
 
 ## Constitutive Equations
 

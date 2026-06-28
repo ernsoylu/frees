@@ -30,12 +30,12 @@ Turbocharger inst(cp, eta_t, eta_c, gam)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `cp` | Number |
-| `eta_t` | Number |
-| `eta_c` | Number |
-| `gam` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `cp` | Number | Specific heat [J/kg·K]. |
+| `eta_t` | Number | Turbine efficiency (0–1). |
+| `eta_c` | Number | Compressor efficiency (0–1). |
+| `gam` | Number | Ratio of specific heats. |
 
 ## Constitutive Equations
 

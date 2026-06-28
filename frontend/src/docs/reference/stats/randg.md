@@ -32,8 +32,8 @@ $$ X \sim \mathcal{N}(\mu, \sigma^2) $$
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `mu` | Number | Yes | Numeric argument. |
-| `sigma` | Number | Yes | Numeric argument. |
+| `mu` | Number | Yes | Dynamic viscosity [Pa·s]. |
+| `sigma` | Number | Yes | Surface tension [N/m]. |
 
 ## References
 

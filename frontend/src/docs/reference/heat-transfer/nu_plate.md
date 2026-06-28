@@ -32,9 +32,9 @@ $$ Nu = C(\beta)\,Re^{m}\,Pr^{1/3} \quad\text{(chevron plate, angle } \beta) $$
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `Re` | Number | Yes | Numeric argument. |
-| `Pr` | Number | Yes | Numeric argument. |
-| `beta_deg` | Number | Yes | Numeric argument. |
+| `Re` | Number | Yes | Reynolds number. |
+| `Pr` | Number | Yes | Prandtl number. |
+| `beta_deg` | Number | Yes | Chevron / wave angle [deg]. |
 
 ## References
 

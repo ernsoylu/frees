@@ -30,12 +30,12 @@ TXVSuperheat inst(fluid$, Kv, SH_set, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `fluid$` | String |
-| `Kv` | Number |
-| `SH_set` | Number |
-| `domain$` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `fluid$` | String | Fluid name (e.g. Water, R134a, Air). |
+| `Kv` | Number | Flow coefficient. |
+| `SH_set` | Number | Target superheat [K]. |
+| `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
 
 ## Constitutive Equations
 

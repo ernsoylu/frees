@@ -31,5 +31,5 @@ $$ \sum_{r} c_r $$
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `'col'` | Number | Yes | Numeric argument. |
+| `'col'` | Number | Yes | Name of a result-table column (string). |
 

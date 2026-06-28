@@ -31,5 +31,5 @@ $$ \Im(z) = \Im(a + jb) = b $$
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `z` | Number | Yes | Numeric argument. |
+| `z` | Number | Yes | Argument (complex or real). |
 

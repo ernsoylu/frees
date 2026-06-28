@@ -30,9 +30,9 @@ ThermalSource inst(T)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `T` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `T` | Number | Temperature [K]. |
 
 ## Constitutive Equations
 

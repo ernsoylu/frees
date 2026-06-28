@@ -30,12 +30,12 @@ TwoPhasePressureSource inst(fluid$, P, x, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `fluid$` | String |
-| `P` | Number |
-| `x` | Number |
-| `domain$` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `fluid$` | String | Fluid name (e.g. Water, R134a, Air). |
+| `P` | Number | Pressure [Pa]. |
+| `x` | Number | Vapor quality / fraction (0–1). |
+| `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
 
 ## Constitutive Equations
 

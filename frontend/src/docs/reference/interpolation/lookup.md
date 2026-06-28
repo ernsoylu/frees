@@ -31,9 +31,9 @@ $$ \operatorname{Lookup}(t, r, c) = t_{r,c} \quad\text{(1-based cell)} $$
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `'t'` | Number | Yes | Numeric argument. |
-| `row` | Number | Yes | Numeric argument. |
-| `col` | Number | Yes | Numeric argument. |
+| `'t'` | Number | Yes | Name of a TABLE block (string). |
+| `row` | Number | Yes | Row index (1-based). |
+| `col` | Number | Yes | Name of a result-table column. |
 
 ## References
 

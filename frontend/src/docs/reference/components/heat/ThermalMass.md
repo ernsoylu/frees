@@ -30,10 +30,10 @@ ThermalMass inst(C, T0)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `C` | Number |
-| `T0` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `C` | Number | Capacitance [F]. |
+| `T0` | Number | Reference/initial temperature [K]. |
 
 ## Constitutive Equations
 

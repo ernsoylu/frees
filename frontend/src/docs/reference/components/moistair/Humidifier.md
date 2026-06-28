@@ -30,11 +30,11 @@ Humidifier inst(mdot_w, h_w, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `mdot_w` | Number |
-| `h_w` | Number |
-| `domain$` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `mdot_w` | Number | Water/coolant mass flow [kg/s]. |
+| `h_w` | Number | Wall heat-transfer coefficient [W/m²·K]. |
+| `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
 
 ## Constitutive Equations
 

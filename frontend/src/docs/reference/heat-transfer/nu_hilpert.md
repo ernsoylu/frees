@@ -32,8 +32,8 @@ $$ Nu = C\,Re^{m}\,Pr^{1/3} \quad\text{(single cylinder, Hilpert)} $$
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `Re` | Number | Yes | Numeric argument. |
-| `Pr` | Number | Yes | Numeric argument. |
+| `Re` | Number | Yes | Reynolds number. |
+| `Pr` | Number | Yes | Prandtl number. |
 
 ## References
 

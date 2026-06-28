@@ -30,13 +30,13 @@ BoilingVessel inst(fluid$, V, m0, T0, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `fluid$` | String |
-| `V` | Number |
-| `m0` | Number |
-| `T0` | Number |
-| `domain$` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `fluid$` | String | Fluid name (e.g. Water, R134a, Air). |
+| `V` | Number | Volume [m³]. |
+| `m0` | Number | Initial mass [kg]. |
+| `T0` | Number | Reference/initial temperature [K]. |
+| `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
 
 ## Constitutive Equations
 

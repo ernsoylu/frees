@@ -31,8 +31,8 @@ $$ G = \frac{\dot m}{A_{\text{flow}}} $$
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `mdot` | Number | Yes | Numeric argument. |
-| `Aflow` | Number | Yes | Numeric argument. |
+| `mdot` | Number | Yes | Mass flow rate [kg/s]. |
+| `Aflow` | Number | Yes | Free-flow (minimum) cross-sectional area [m²]. |
 
 ## References
 

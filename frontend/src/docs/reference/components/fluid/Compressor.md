@@ -30,11 +30,11 @@ Compressor inst(eta, fluid$, model$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `eta` | Number |
-| `fluid$` | String |
-| `model$` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `eta` | Number | Efficiency (0–1). |
+| `fluid$` | String | Fluid name (e.g. Water, R134a, Air). |
+| `model$` | String | Model variant — selects the physics body (see Model Variants). |
 
 ## Constitutive Equations
 

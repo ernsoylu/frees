@@ -32,8 +32,8 @@ $$ b = \bar y - m\,\bar x $$
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `xvals` | Number | Yes | Numeric argument. |
-| `yvals` | Number | Yes | Numeric argument. |
+| `xvals` | Number | Yes | Independent-variable data (vector). |
+| `yvals` | Number | Yes | Dependent-variable data (vector). |
 
 ## References
 

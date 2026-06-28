@@ -30,13 +30,13 @@ BatteryRC inst(Voc, R0, R1, C1, Vrc0)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `Voc` | Number |
-| `R0` | Number |
-| `R1` | Number |
-| `C1` | Number |
-| `Vrc0` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `Voc` | Number | Open-circuit voltage [V]. |
+| `R0` | Number | Series (ohmic) resistance [Ω]. |
+| `R1` | Number | First RC-branch resistance [Ω]. |
+| `C1` | Number | First RC-branch capacitance [F]. |
+| `Vrc0` | Number | Initial RC-branch voltage [V]. |
 
 ## Constitutive Equations
 

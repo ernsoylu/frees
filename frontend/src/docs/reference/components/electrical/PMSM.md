@@ -30,11 +30,11 @@ PMSM inst(Rs, lambda_pm, poles)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `Rs` | Number |
-| `lambda_pm` | Number |
-| `poles` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `Rs` | Number | Series resistance [Ω]. |
+| `lambda_pm` | Number | PM flux linkage [Wb]. |
+| `poles` | Number | Number of magnetic pole pairs. |
 
 ## Constitutive Equations
 

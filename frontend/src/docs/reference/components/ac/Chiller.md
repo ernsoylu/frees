@@ -30,16 +30,16 @@ Chiller inst(ref$, cool$, U_tp, U_sh, D, L, eps_zone, UA_cool)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `ref$` | String |
-| `cool$` | String |
-| `U_tp` | Number |
-| `U_sh` | Number |
-| `D` | Number |
-| `L` | Number |
-| `eps_zone` | Number |
-| `UA_cool` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `ref$` | String | Refrigerant name (e.g. R134a, R1234yf). |
+| `cool$` | String | Coolant name (e.g. EG50, Water). |
+| `U_tp` | Number | Two-phase-zone overall coefficient [W/m²·K]. |
+| `U_sh` | Number | Superheat-zone overall coefficient [W/m²·K]. |
+| `D` | Number | Diameter [m]. |
+| `L` | Number | Length [m]. |
+| `eps_zone` | Number | Zone-collapse smoothing width. |
+| `UA_cool` | Number | Coolant-side conductance [W/K]. |
 
 ## Constitutive Equations
 
