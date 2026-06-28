@@ -3,6 +3,13 @@ COMPONENT ThermalSource(port)
   port.T = T
 END
 
+// Heat-flow source: injects a fixed thermal power Q into the connected node
+// (port.Qdot = -Q, so the network receives +Q). The Qdot dual of ThermalSource.
+COMPONENT HeatSource(port)
+  PARAM Q
+  port.Qdot = -Q
+END
+
 COMPONENT Conduction(a, b)
   PARAM k, area, L
   Q      = k * area / L * (a.T - b.T)
