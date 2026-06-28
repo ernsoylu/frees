@@ -259,10 +259,19 @@ Body sections (omit a section only when truly N/A):
     - DONE — **Control Systems category fully rich** (22 more): place/acker/ctrb/obsv/lyap/dlyap/
       dare/dlqr/d2c/errorconst/stepinfo/parallel/pade/mason/ss/ss2ss/tf2zp/zp2tf (Nise/Ogata/
       Franklin/Antsaklis) + Eigenvalues/Eigen/LUDecompose/EulerRotate (Golub & Van Loan/Goldstein).
-    - **122/475 rich, 353 baseline.** Fully-rich categories: Special Functions, Control Systems,
-      and all example-bound HT/Compressible/EOS/Combustion. Next: atmosphere (ISA), two-phase
-      correlations (Collier), stats (Montgomery), remaining math/flow-network, then property
-      functions (30) and the 136 components (heaviest — prose + worked example atop real eqns).
+    - DONE — **all non-component pages enriched** via `scripts/enrich-functions.mjs` (data-driven:
+      standard closed-form KaTeX + citation per function, from textbook forms / registry
+      descriptions): 175 functions across elementary math, complex, stats, matrix/linear algebra,
+      compressible (Rayleigh/Fanno/oblique-shock/Prandtl-Meyer), flow networks (Colebrook), ISA
+      atmosphere, two-phase (Chisholm/Martinelli/void/Shah), HX correlations & geometry, calculus,
+      interpolation, table/ODE accessors, strings, combustion mixing rules, EOS entropy/pressure;
+      42 wrapper functions (CoolProp properties, materials, CAS) finalized without a fabricated
+      math section. Verified the complex KaTeX (void_rouhani) renders in a production build + browser.
+    - **339/475 rich; the only baselines left are the 136 components.** Components remain the final
+      lift: their pages already show real ports/params/constitutive-equations (incl. variants) — to
+      reach the rich tier they need prose + a worked `[Run:]` example per component, best per-domain.
+    - Known minor polish (deferred, pre-existing): the page name renders twice (ReferencePageView
+      Title + body `# name` H1); could strip the leading H1 in the reference compiler.
   Author per-function pages, highest-traffic
   categories first: Math → Matrix/Linear Algebra → Control Systems → Thermophysical Properties
   → Units → Uncertainty → CAS/Symbolic → Block constructs → Components. For each page: write the
