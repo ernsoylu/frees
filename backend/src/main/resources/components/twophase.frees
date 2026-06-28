@@ -459,3 +459,46 @@ COMPONENT BlendMixer(in1, in2, out)
   out.mdot * out.h = in1.mdot * in1.h + in2.mdot * in2.h
   out.mdot * out.z = in1.mdot * in1.z + in2.mdot * in2.z
 END
+
+// ── Rigid variable-mass boil-off vessel + steam relief valve (Phase: cooker) ──
+// Rigid, constant-volume, heated two-phase control volume that vents saturated
+// vapour through a `vent` port and takes heat through a `wall` port. The two
+// conserved states are total mass and total internal energy; the thermodynamic
+// state (P, T, quality) is closed by a (rho, u) flash at fixed volume, so the
+// model is continuous from subcooled heating through saturated boiling with no
+// structural switch (Collier; Amesim two-phase-vessel formulation):
+//   dm/dt = -mdot_vent ,  dU/dt = Q - mdot_vent * h_g ,  rho = m/V , u = U/m.
+// Initial charge is given as mass m0 at temperature T0 (saturated-liquid u).
+COMPONENT BoilingVessel(vent, wall)
+  PARAM fluid$, V, m0, T0, domain$ = twophase
+  der(mass)  = -vent.mdot
+  init(mass) = m0
+  der(Utot)  = wall.Qdot - vent.mdot * vent.h
+  init(Utot) = m0 * IntEnergy(fluid$, T=T0, x=0)
+  rho_cv = mass / V
+  u_cv   = Utot / mass
+  vent.P = Pressure(fluid$, d=rho_cv, u=u_cv)      { (rho,u) flash -> pressure }
+  T_cv   = Temperature(fluid$, d=rho_cv, u=u_cv)
+  x_cv   = Quality(fluid$, d=rho_cv, u=u_cv)        { vapour mass fraction }
+  vent.h = Enthalpy(fluid$, P=vent.P, x=1)          { vented stream is sat. vapour }
+  wall.T = T_cv
+END
+
+// Compressible steam/vapour relief valve: opens above a crack pressure and vents
+// through an effective area A. Choked (critical) when the pressure ratio falls
+// below PRc=(2/(k+1))^(k/(k-1)); subcritical flow uses the PARABOLIC approximation
+// efact=1-ratio^2 (a finite-derivative simplification of the Amesim quarter-ellipse
+// law — sqrt(1-ratio^2) has an infinite slope at ratio=1 that breaks the stiff
+// solver's Jacobian). k≈1.14, R=461.5 J/kg-K for saturated steam.
+COMPONENT SteamReliefValve(in, out)
+  PARAM fluid$, A, Pset, Cd, kgas, Rgas, eps, domain$ = twophase
+  out.mdot = in.mdot
+  out.h    = in.h
+  opening  = 0.5 * (1 + tanh((in.P - Pset) / eps))
+  T0v      = Temperature(fluid$, P=in.P, x=1)
+  PRc      = (2 / (kgas + 1)) ^ (kgas / (kgas - 1))
+  mdot_ch  = Cd * A * in.P * sqrt(kgas / (Rgas * T0v)) * (2 / (kgas + 1)) ^ ((kgas + 1) / (2 * (kgas - 1)))
+  ratio    = (min(max(out.P / in.P, PRc), 1) - PRc) / (1 - PRc)
+  efact    = 1 - ratio ^ 2
+  in.mdot  = opening * mdot_ch * efact
+END
