@@ -14,10 +14,12 @@ import com.frees.backend.core.dae.IdaDaeSolver;
 import com.frees.backend.core.dae.SundialsIda;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * Orchestrates one {@code DYNAMIC} block after the analytic solve: it builds the
@@ -74,7 +76,42 @@ public final class DynamicSolver {
      *  initial-condition operating point: {@code A=∂ẋ/∂x}, {@code B=∂ẋ/∂u},
      *  {@code C=∂y/∂x}, {@code D=∂y/∂u} (states in der() order). */
     public record Linearization(List<String> states, List<String> inputs, List<String> outputs,
-                                double[][] a, double[][] b, double[][] c, double[][] d) {}
+                                double[][] a, double[][] b, double[][] c, double[][] d) {
+        // equals/hashCode/toString consider matrix contents — java:S6218.
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (!(o instanceof Linearization other)) {
+                return false;
+            }
+            return Objects.equals(states, other.states)
+                    && Objects.equals(inputs, other.inputs)
+                    && Objects.equals(outputs, other.outputs)
+                    && Arrays.deepEquals(a, other.a)
+                    && Arrays.deepEquals(b, other.b)
+                    && Arrays.deepEquals(c, other.c)
+                    && Arrays.deepEquals(d, other.d);
+        }
+
+        @Override
+        public int hashCode() {
+            int result = Objects.hash(states, inputs, outputs);
+            result = 31 * result + Arrays.deepHashCode(a);
+            result = 31 * result + Arrays.deepHashCode(b);
+            result = 31 * result + Arrays.deepHashCode(c);
+            result = 31 * result + Arrays.deepHashCode(d);
+            return result;
+        }
+
+        @Override
+        public String toString() {
+            return "Linearization[states=" + states + ", inputs=" + inputs + ", outputs=" + outputs
+                    + ", a=" + Arrays.deepToString(a) + ", b=" + Arrays.deepToString(b)
+                    + ", c=" + Arrays.deepToString(c) + ", d=" + Arrays.deepToString(d) + "]";
+        }
+    }
 
     /**
      * Linearizes the block about its initial-condition operating point by finite

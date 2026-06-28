@@ -139,8 +139,15 @@ public class SolveContextCache {
     public static final class Session implements Serializable {
         private static final long serialVersionUID = 1L;
         // --- solve snapshot (replaced wholesale on each solve) ---
+        // S3077 suppressed: each field holds an *immutable* instance (Map.copyOf/List.copyOf
+        // in replaceSnapshot) replaced atomically, so volatile is the correct safe-publication
+        // idiom. They must stay plain Map/List (not AtomicReference) to remain serializable in
+        // the Jackson/Redis JSON snapshot.
+        @SuppressWarnings("java:S3077")
         private volatile Map<String, Double> siValues = Map.of();      // lowercased name -> SI value
+        @SuppressWarnings("java:S3077")
         private volatile Map<String, ReplVar> displayVars = Map.of();  // lowercased name -> display tuple
+        @SuppressWarnings("java:S3077")
         private volatile List<String> names = List.of();               // display spellings
         /** FUNCTION/TABLE defs in scope. Excluded from the Redis JSON
          *  snapshot (Jackson cannot deserialize the sealed {@link ProcDef}
@@ -148,6 +155,7 @@ public class SolveContextCache {
          *  variables and expressions — calling FUNCTION/TABLE blocks from the
          *  REPL in async mode is a documented follow-up. */
         @JsonIgnore
+        @SuppressWarnings("java:S3077") // immutable Map.copyOf replaced wholesale; volatile = safe publication
         private volatile Map<String, ProcDef> defs = Map.of();
         private volatile UnitRegistry.UnitSystem system = UnitRegistry.UnitSystem.SI;
         // --- REPL-defined overlay (survives across REPL calls, reset on solve).

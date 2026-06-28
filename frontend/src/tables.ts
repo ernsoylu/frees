@@ -203,7 +203,7 @@ function fmt6(v: number): string {
 }
 
 function identifier(raw: string, fallback: string): string {
-  const cleaned = raw.replace(/\[[^\]]*\]/g, '').trim().replace(/\W+/g, '_').replace(/^_|_$/g, '')
+  const cleaned = raw.replace(/\[[^[\]]*\]/g, '').trim().replace(/\W+/g, '_').replace(/^_|_$/g, '')
   return /^[A-Za-z]/.test(cleaned) ? cleaned : fallback
 }
 

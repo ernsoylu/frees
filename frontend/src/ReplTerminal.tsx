@@ -328,6 +328,9 @@ Symbolic CAS (Symja) — returns a transformed expression as text:
 
       <div
         ref={logRef}
+        role="log"
+        aria-label="Terminal output"
+        aria-live="polite"
         style={{
           flex: 1,
           minHeight: 0,
@@ -337,7 +340,6 @@ Symbolic CAS (Symja) — returns a transformed expression as text:
           fontSize: 12.5,
           lineHeight: 1.5,
         }}
-        onClick={() => inputRef.current?.focus()}
       >
         {lines.map((line, i) => (
           <div key={i} style={{ color: colorFor(line.kind), whiteSpace: 'pre-wrap' }}>

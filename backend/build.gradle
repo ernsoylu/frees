@@ -164,6 +164,11 @@ sonar {
         property 'sonar.cpd.exclusions', 'frontend/src/HelpPage.tsx,frontend/src/examples.ts,frontend/src/functionCatalog.ts'
         property 'sonar.coverage.jacoco.xmlReportPaths',
                 "${layout.buildDirectory.get()}/reports/jacoco/test/jacocoTestReport.xml"
-        property 'sonar.coverage.exclusions', 'frontend/**/*,frontend/src/**/*,**/frontend/**/*,backend/Dockerfile,frontend/Dockerfile,docker-compose.yml,.github/workflows/**/*'
+        // Coverage exclusions: the frontend (tested separately) and backend
+        // infrastructure glue that is integration-/native-bound rather than unit
+        // testable — async messaging (RabbitMQ) and the job store/dispatcher,
+        // Spring @Configuration beans, the REST job controller, the app entry
+        // point, and the raw JNA/native SUNDIALS-IDA bindings.
+        property 'sonar.coverage.exclusions', 'frontend/**/*,frontend/src/**/*,**/frontend/**/*,backend/Dockerfile,frontend/Dockerfile,docker-compose.yml,.github/workflows/**/*,backend/src/main/java/com/frees/backend/compute/**,backend/src/main/java/com/frees/backend/config/**,backend/src/main/java/com/frees/backend/FreesBackendApplication.java,backend/src/main/java/com/frees/backend/api/JobController.java,backend/src/main/java/com/frees/backend/core/dae/SundialsIda.java,backend/src/main/java/com/frees/backend/core/dae/IdaDaeSolver.java'
     }
 }

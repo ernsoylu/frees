@@ -30,6 +30,9 @@ public final class NasaThermo {
     /** Reference pressure for the tabulated entropy [Pa] (matches IdealGas). */
     private static final double P_REF = 101_325.0;
 
+    // Private carrier record, never value-compared or hashed; the array-content
+    // equals/hashCode the rule asks for would be dead, untestable code. java:S6218.
+    @SuppressWarnings("java:S6218")
     private record Species(double mw, double[] tRanges, double[] low, double[] high,
                            double sigma, double epsK) {
         double[] coeffsFor(double t) {
