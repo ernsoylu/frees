@@ -30,6 +30,14 @@ COMPONENT ThermalMass(port)
   init(port.T) = T0
 END
 
+// Thermal mass with internal heat generation: der(T) = (Qgen + Qdot)/C. Models a
+// self-heating lump (battery pack, e-motor, cabin load) tied to a heat port.
+COMPONENT MassGen(port)
+  PARAM C, Qgen, T0
+  der(port.T)  = (Qgen + port.Qdot) / C
+  init(port.T) = T0
+END
+
 COMPONENT ContactResistance(a, b)
   PARAM Rth
   Q      = (a.T - b.T) / Rth
