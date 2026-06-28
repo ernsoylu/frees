@@ -1,36 +1,66 @@
 ---
-name: stagnationpres
+name: StagnationPres
 category: Compressible Flow
-summary: Stagnation pressure P0 = P (T0/T)^(k/(k-1)) [Pa]
-related: []
+summary: Stagnation pressure P0 = P·(T0/T)^(k/(k-1)).
+related: [StagnationTemp, P0_P]
 examples: [thermo-compliance]
-tags: [stagnationpres, compressible, flow]
-references: []
-generated: true
+tags: [compressible, stagnation pressure, total pressure, isentropic]
+references:
+  - "Çengel, Y.A., Boles, M.A. & Kanoğlu, M., Thermodynamics: An Engineering Approach, Ch. 17, Eq. (17-5)"
 ---
 
-# stagnationpres
+# StagnationPres
 
-Stagnation pressure P0 = P (T0/T)^(k/(k-1)) [Pa]
-
-> **Baseline page** — auto-generated from the function registry. Syntax, description, and arguments are authoritative; worked examples, the mathematical formulation, and literature references are being added incrementally.
+Returns the **stagnation (total) pressure** `P0` of a flowing gas brought
+isentropically to rest, from the static pressure `P`, static temperature `T`,
+stagnation temperature `T0`, and specific-heat ratio `k`.
 
 ## Syntax
 
 ```
-StagnationPres(P, T, T0, k)
+P0 = StagnationPres(P, T, T0, k)
 ```
 
 ## Description
 
-Stagnation pressure P0 = P (T0/T)^(k/(k-1)) [Pa]
+Built on the isentropic relation between pressure and temperature ratios, it pairs
+with [`StagnationTemp`](StagnationTemp) to give the full stagnation state.
+
+## Mathematical Formulation
+
+$$ P_0 = P\left(\frac{T_0}{T}\right)^{\!k/(k-1)} \qquad \text{(Çengel Eq. 17-5)} $$
+
+> **Method:** direct evaluation of the isentropic stagnation relation.
+
+## Examples
+
+### Example 1 — Total pressure of a flow
+
+[Run: thermo-compliance]
+
+**Expected:** `P0 > P`, the ratio set by `(T0/T)^{k/(k−1)}`.
 
 ## Input Arguments
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `P` | Number | Yes | Numeric argument. |
-| `T` | Number | Yes | Numeric argument. |
-| `T0` | Number | Yes | Numeric argument. |
-| `k` | Number | Yes | Numeric argument. |
+| `P` | Number | Yes | Static pressure [Pa]. |
+| `T` | Number | Yes | Static temperature [K]. |
+| `T0` | Number | Yes | Stagnation temperature [K]. |
+| `k` | Number | Yes | Ratio of specific heats. |
 
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| `P0` | Number | Stagnation pressure [Pa]. |
+
+## Common Errors
+
+| Error | Cause | Fix |
+| --- | --- | --- |
+| `DOMAIN_ERROR` | `k ≤ 1` or `T ≤ 0` | Use a physical `k > 1` and positive temperatures. |
+
+## References
+
+1. Çengel, Y.A., Boles, M.A. & Kanoğlu, M. *Thermodynamics: An Engineering Approach*, Ch. 17, Eq. (17-5).

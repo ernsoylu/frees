@@ -1,35 +1,49 @@
 ---
 name: max
 category: Stats
-summary: Maximum of arguments
-related: []
+summary: Largest of the arguments.
+related: [min, average, percentile]
 examples: [hx-effectiveness-ntu]
-tags: [max, stats]
+tags: [stats, maximum, comparison, elementary]
 references: []
-generated: true
 ---
 
 # max
 
-Maximum of arguments
-
-> **Baseline page** — auto-generated from the function registry. Syntax, description, and arguments are authoritative; worked examples, the mathematical formulation, and literature references are being added incrementally.
+Returns the **largest** of its arguments — e.g. `C_max = max(C_h, C_c)` in
+heat-exchanger analysis.
 
 ## Syntax
 
 ```
-max(x, y, ...)
+y = max(a, b, ...)
 ```
 
 ## Description
 
-Maximum of arguments
+Accepts two or more numeric arguments and returns the greatest. Units must be
+compatible across the arguments.
+
+## Mathematical Formulation
+
+$$ y = \max(a_1, a_2, \dots, a_n) $$
+
+## Examples
+
+### Example 1 — Maximum capacity rate of a heat exchanger
+
+[Run: hx-effectiveness-ntu]
+
+**Expected:** `C_max = max(C_h, C_c)` selects the larger heat-capacity rate.
 
 ## Input Arguments
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `x` | Number | Yes | Numeric argument. |
-| `y` | Number | Yes | Numeric argument. |
-| `...` | Number | Yes | Numeric argument. |
+| `a, b, …` | Number | Yes | Two or more values with compatible units. |
 
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| `y` | Number | The largest argument. |

@@ -1,33 +1,49 @@
 ---
 name: sin
 category: Math
-summary: Sine of x (in radians if dimensionless)
-related: []
-examples: [projectile-motion, projectile-trajectory, damped-oscillator, engine-cycle-wiebe]
-tags: [sin, math]
+summary: Sine of an angle (radians).
+related: [cos, tan, arcsin, atan2]
+examples: [projectile-motion, projectile-trajectory]
+tags: [math, trigonometry, sine, radians, elementary]
 references: []
-generated: true
 ---
 
 # sin
 
-Sine of x (in radians if dimensionless)
-
-> **Baseline page** — auto-generated from the function registry. Syntax, description, and arguments are authoritative; worked examples, the mathematical formulation, and literature references are being added incrementally.
+Returns the **sine** of `x`. The argument is in **radians** unless it carries a
+`[deg]` unit annotation (which frees converts automatically).
 
 ## Syntax
 
 ```
-sin(x)
+y = sin(x)
 ```
 
 ## Description
 
-Sine of x (in radians if dimensionless)
+A standard trigonometric function. Use `x [deg]` or `Convert` to work in degrees;
+bare numeric arguments are radians.
+
+## Mathematical Formulation
+
+$$ y = \sin(x), \qquad x \text{ in radians} $$
+
+## Examples
+
+### Example 1 — Launch-angle component of velocity
+
+[Run: projectile-motion]
+
+**Expected:** `sin` of the launch angle gives the vertical velocity component.
 
 ## Input Arguments
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `x` | Number | Yes | Numeric argument. |
+| `x` | Number | Yes | Angle in radians (or `[deg]`-annotated). |
 
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| `y` | Number | Sine of `x` (dimensionless, in [−1, 1]). |
