@@ -28,6 +28,12 @@ dP [Pa], static head. SIDE: two-phase refrigerant in a vertical riser/downcomer.
 
 $$ \Delta P_{\text{grav}} = \big[\alpha\rho_g + (1-\alpha)\rho_l\big]\,g\,L\sin\theta $$
 
+## Applicability
+
+- **Where it applies:** Two-phase refrigerant in a vertical riser/downcomer.
+- **Valid when:** Static-head term; sign follows the flow direction `θ`.
+- **How it's used:** Add to the frictional and acceleration terms for the total vertical-pass `ΔP`.
+
 ## Input Arguments
 
 | Argument | Type | Required | Description |

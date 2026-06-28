@@ -28,6 +28,12 @@ Nu=j*Re*Pr^(1/3). SIDE: air/gas through a compact finned surface. HX: plate-fin/
 
 $$ Nu = j\,Re\,Pr^{1/3} \quad\text{(Colburn } j\text{-factor)} $$
 
+## Applicability
+
+- **Where it applies:** Air/gas through a compact finned surface.
+- **Valid when:** Compact plate-fin / louvered-fin cores, characterized by a Colburn `j`-factor.
+- **How it's used:** Air-side `h = j·Re·Pr^{1/3}·k/D_h`; pair the friction with `f_fin`.
+
 ## Input Arguments
 
 | Argument | Type | Required | Description |

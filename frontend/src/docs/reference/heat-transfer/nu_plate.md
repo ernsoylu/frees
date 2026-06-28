@@ -28,6 +28,12 @@ Nu, chevron-angle dependent. SIDE: either single-phase stream in a brazed/gasket
 
 $$ Nu = C(\beta)\,Re^{m}\,Pr^{1/3} \quad\text{(chevron plate, angle } \beta) $$
 
+## Applicability
+
+- **Where it applies:** A single-phase stream in a brazed/gasketed plate heat exchanger (BPHE).
+- **Valid when:** Chevron-plate channels; depends on the chevron angle `β`.
+- **How it's used:** Plate-side `h` for either stream of a plate HX.
+
 ## Input Arguments
 
 | Argument | Type | Required | Description |

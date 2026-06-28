@@ -28,6 +28,12 @@ Nu, single-cylinder cross-flow. SIDE: air/gas over a single tube. HX: bare-tube 
 
 $$ Nu = C\,Re^{m}\,Pr^{1/3} \quad\text{(single cylinder, Hilpert)} $$
 
+## Applicability
+
+- **Where it applies:** Air/gas over a single cylinder or a sparse bank.
+- **Valid when:** Cross-flow over an isolated tube; band-dependent `C, m`.
+- **How it's used:** Air-side `h` for bare-tube / low-density-bank exchangers.
+
 ## Input Arguments
 
 | Argument | Type | Required | Description |

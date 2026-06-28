@@ -28,6 +28,12 @@ dP [Pa], compact-HX core (entrance/accel/core-friction/exit). SIDE: air/gas thro
 
 $$ \frac{\Delta P}{P_1} = \frac{G^2}{2\rho_1 P_1}\left[(1+\sigma^2)\!\left(\tfrac{\rho_1}{\rho_2}-1\right) + f\tfrac{A}{A_c}\tfrac{\rho_1}{\rho_m}\right] \quad\text{(the standard literature–London core)} $$
 
+## Applicability
+
+- **Where it applies:** Air/gas through a compact finned core.
+- **Valid when:** Includes the entrance, acceleration, core-friction and exit terms (the standard literature–London).
+- **How it's used:** Air-side `ΔP` for a fin-and-tube / plate-fin radiator, condenser, or CAC.
+
 ## Input Arguments
 
 | Argument | Type | Required | Description |

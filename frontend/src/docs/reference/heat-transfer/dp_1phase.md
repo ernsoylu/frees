@@ -28,6 +28,12 @@ dP [Pa], Darcy. SIDE: single-phase liquid/gas line (coolant, water, air channel,
 
 $$ \Delta P = f\,\frac{L}{D_h}\,\frac{G^2}{2\rho}, \qquad G = \dot m / A_{\text{flow}} \quad\text{(Darcy)} $$
 
+## Applicability
+
+- **Where it applies:** A single-phase liquid/gas line (coolant, water, air channel, pipe).
+- **Valid when:** Single-phase Darcy flow; turbulent or laminar.
+- **How it's used:** Friction `ΔP` for radiator/CAC fluid channels and connecting lines.
+
 ## Input Arguments
 
 | Argument | Type | Required | Description |
