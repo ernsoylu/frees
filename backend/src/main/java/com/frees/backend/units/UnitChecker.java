@@ -650,6 +650,40 @@ public final class UnitChecker {
             case "friction_factor", "darcy_friction", "reynolds", "re_number" ->
                     Dim.of(Quantity.dimensionless(1.0));
             case "minor_loss" -> eosDim("Pa");
+            // Pneumatics: ISO 6358 returns a mass flow rate [kg/s]; the sonic
+            // conductance / pressure-ratio arguments are not policed.
+            case "iso6358" -> eosDim("kg/s");
+            // HX sizing correlations: film coefficients [W/m^2/K], overall UA
+            // [W/K], and friction pressure drops [Pa] (flow/geometry args unpoliced).
+            case "htc_1phase", "htc_evap", "htc_cond", "htc_extair" -> eosDim("W/m^2/K");
+            case "ua_hx" -> eosDim("W/K");
+            case "dp_1phase", "dp_2phase", "dp_mueller_steinhagen", "dp_ms", "dp_compact_core" -> eosDim("Pa");
+            // External/free-convection Nusselt numbers, free-flow ratio and
+            // surface efficiency are dimensionless; convective area [m^2], D_h [m].
+            case "nu_zukauskas", "nu_colburn", "nu_churchill_chu", "nu_blend",
+                 "nu_tubebank", "nu_hilpert", "nu_plate",
+                 "nu_gungor_winterton", "nu_traviss", "j_fin", "f_fin",
+                 "hx_sigma", "hx_eta_surf" -> Dim.of(Quantity.dimensionless(1.0));
+            case "hx_dh", "hx_fin_len" -> eosDim("m");
+            case "hx_aconv", "hx_area_direct", "hx_area_indirect" -> eosDim("m^2");
+            case "dp_gravity", "dp_2phase_avg" -> eosDim("Pa");
+            case "mass_flux" -> eosDim("kg/m^2/s");
+            // Two-phase flow: the Martinelli parameter and its multiplier are
+            // both dimensionless (quality / property-ratio arguments unpoliced).
+            case "lm_phi2", "lm_martinelli_tt" -> Dim.of(Quantity.dimensionless(1.0));
+            // Void fraction and the Friedel multiplier are dimensionless; the
+            // momentum flux is a pressure [Pa] (quality/property arguments unpoliced).
+            case "void_homogeneous", "void_zivi", "void_rouhani", "friedel_phi2" ->
+                    Dim.of(Quantity.dimensionless(1.0));
+            case "momentum_flux" -> eosDim("Pa");
+            // Nusselt numbers and the Chen factors / zone ramp are all dimensionless.
+            case "nu_dittus_boelter", "nu_gnielinski", "chen_f", "chen_s",
+                 "nu_shah", "nu_cavallini_zecchin", "zone_ramp" ->
+                    Dim.of(Quantity.dimensionless(1.0));
+            // ISA standard atmosphere: SI property units (altitude argument unpoliced).
+            case "isa_t" -> eosDim("K");
+            case "isa_p" -> eosDim("Pa");
+            case "isa_rho" -> eosDim("kg/m^3");
             // LMTD returns a temperature difference, inheriting the units of its
             // terminal-difference arguments (which the checker does not police).
             case "lmtd" -> dimOf(args.get(0));
