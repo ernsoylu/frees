@@ -45,3 +45,18 @@ out.h    = in.h + (h_s - in.h) / eta
 W        = in.mdot * (out.h - in.h)
 ```
 
+## Model Variants
+
+Selected via the `model$` parameter; each adds its own equations (and `REQUIRE`d parameters):
+
+### `isentropic`
+
+_No additional equations (uses the shared body)._
+
+### `volumetric` — requires `eta_v`, `disp`, `rpm`
+
+```
+rho_in  = Density(fluid$, P=in.P, h=in.h)
+in.mdot = eta_v * disp * (rpm / 60) * rho_in
+```
+

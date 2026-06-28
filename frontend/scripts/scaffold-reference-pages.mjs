@@ -181,36 +181,49 @@ for (const f of manifest.materials.functions) {
   made++;
 }
 
-// 5. Components — real ports, params, and constitutive equations from the .frees source
+// 5. Components — real ports, params, and constitutive equations from the .frees
+// source. Uses a balanced parser so VARIANT … END blocks are captured per variant
+// (not truncated at the first inner END) along with the component's own END.
 const compDir = path.join(REPO, 'backend/src/main/resources/components');
 const compInfo = {};
 for (const file of fs.readdirSync(compDir).filter((f) => f.endsWith('.frees'))) {
   const domain = file.replace(/\.frees$/, '');
-  const src = read(path.join(compDir, file));
-  const re = /^[ \t]*COMPONENT[ \t]+(\w+)\s*(?:\(([^)]*)\))?([\s\S]*?)^[ \t]*END/gm; let m;
-  while ((m = re.exec(src)) !== null) {
-    const ports = (m[2] || '').split(',').map((s) => s.trim()).filter(Boolean);
-    const bodyLines = m[3].split('\n').map((l) => l.replace(/\s+$/, '')).filter((l) => l.trim());
-    const params = [];
-    const eqs = [];
-    for (const raw of bodyLines) {
-      const l = raw.trim();
+  const lines = read(path.join(compDir, file)).split('\n');
+  for (let i = 0; i < lines.length; i++) {
+    const head = lines[i].match(/^\s*COMPONENT\s+(\w+)\s*(?:\(([^)]*)\))?/);
+    if (!head) continue;
+    const name = head[1];
+    const ports = (head[2] || '').split(',').map((s) => s.trim()).filter(Boolean);
+    const params = []; const shared = []; const variants = [];
+    let cur = null; let depth = 0;
+    for (i++; i < lines.length; i++) {
+      const raw = lines[i].replace(/\s+$/, ''); const l = raw.trim();
+      if (/^END\b/.test(l)) { if (depth === 0) break; depth--; cur = null; continue; }
+      const vm = l.match(/^VARIANT\s+(\w+)(?:\s+REQUIRE\s+(.+))?/);
+      if (vm) { depth++; cur = { name: vm[1], require: (vm[2] || '').split(',').map((s) => s.trim()).filter(Boolean), eqs: [] }; variants.push(cur); continue; }
       const pm = l.match(/^PARAM\s+(.+)$/);
       if (pm) { pm[1].split(',').forEach((p) => params.push(p.trim())); continue; }
-      if (/^(VARIANT|REQUIRE|END|OUTPUT|MODEL|\{|\/\/)/.test(l)) continue;
-      eqs.push(raw.replace(/^\s{0,2}/, ''));
+      if (!l || /^(REQUIRE|OUTPUT|MODEL|\{|\}|\/\/)/.test(l)) continue;
+      (cur ? cur.eqs : shared).push(raw.replace(/^\s{0,4}/, ''));
     }
-    compInfo[m[1]] = { domain, ports, params, eqs };
+    compInfo[name] = { domain, ports, params, shared, variants };
   }
 }
 for (const c of manifest.components) {
   if (done(c.name)) continue;
-  const info = compInfo[c.name] || { domain: c.domain, ports: [], params: [], eqs: [] };
+  const info = compInfo[c.name] || { domain: c.domain, ports: [], params: [], shared: [], variants: [] };
   const portRow = info.ports.length ? ['## Ports', '', '`' + info.ports.join('`, `') + '`', ''] : [];
   const paramRows = info.params.length
     ? ['## Parameters', '', '| Parameter | Type |', '| --- | --- |', ...info.params.map((p) => { const nm = p.split('=')[0].trim(); return `| \`${nm}\` | ${nm.endsWith('$') ? 'String' : 'Number'} |`; }), '']
     : [];
-  const eqRows = info.eqs.length ? ['## Constitutive Equations', '', 'The acausal equations this component expands into (over its port members and parameters):', '', '```', ...info.eqs, '```', ''] : [];
+  const eqRows = info.shared.length ? ['## Constitutive Equations', '', 'The acausal equations this component expands into (over its port members and parameters):', '', '```', ...info.shared, '```', ''] : [];
+  const variantRows = info.variants.length
+    ? ['## Model Variants', '', 'Selected via the `model$` parameter; each adds its own equations (and `REQUIRE`d parameters):', '',
+        ...info.variants.flatMap((v) => [
+          `### \`${v.name}\`${v.require.length ? ' — requires `' + v.require.join('`, `') + '`' : ''}`, '',
+          ...(v.eqs.length ? ['```', ...v.eqs, '```'] : ['_No additional equations (uses the shared body)._']), '']),
+      ]
+    : [];
   emit(`components/${c.domain}`, {
     name: c.name, category: `Component (${c.domain})`,
     summary: `Acausal ${c.domain}-domain component ${c.name}${info.ports.length ? ' with ports ' + info.ports.join(', ') : ''}.`,
@@ -220,7 +233,7 @@ for (const c of manifest.components) {
       `Reusable acausal **${c.domain}-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.`, '',
       '> **Auto-generated** from the component library (`backend/src/main/resources/components/`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.', '',
       '## Usage', '', '```', `${c.name} inst(${info.params.map((p) => p.split('=')[0].trim()).join(', ') || 'param = value, ...'})`, '```', '',
-      ...portRow, ...paramRows, ...eqRows,
+      ...portRow, ...paramRows, ...eqRows, ...variantRows,
     ].join('\n'),
   });
   made++;

@@ -74,6 +74,14 @@ jobs:
         working-directory: frontend
         run: npm run lint
 
+      - name: Check documentation coverage
+        # Regenerates the reference manifest from the backend registries + the
+        # component std-lib and fails if any reference page names a symbol that no
+        # longer exists, or binds an example id absent from examples.ts — i.e. the
+        # docs have drifted from the implementation.
+        working-directory: frontend
+        run: npm run check-docs
+
       - name: Test
         working-directory: frontend
         run: npm test

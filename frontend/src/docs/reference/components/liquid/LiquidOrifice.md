@@ -41,6 +41,22 @@ The acausal equations this component expands into (over its port members and par
 ```
 out.mdot = in.mdot
 out.h    = in.h
-  in.mdot * abs(in.mdot) = CdA^2 * 2 * rho * (in.P - out.P)
+```
+
+## Model Variants
+
+Selected via the `model$` parameter; each adds its own equations (and `REQUIRE`d parameters):
+
+### `incompressible`
+
+```
+in.mdot * abs(in.mdot) = CdA^2 * 2 * rho * (in.P - out.P)
+```
+
+### `cavitating` — requires `Pvap`
+
+```
+dP_eff = in.P - max(out.P, Pvap)
+in.mdot * abs(in.mdot) = CdA^2 * 2 * rho * dP_eff
 ```
 
