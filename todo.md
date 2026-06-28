@@ -218,10 +218,20 @@ Body sections (omit a section only when truly N/A):
     `hx_area_direct`, `hx_area_indirect` (Kays & London / Shah & Sekulić) → `ev-thermal-management`.
   - DONE — ODE/table accessors (6): `FinalValue`, `MaxValue`, `ODEValue`, `TimeAt` (ODE Results) +
     `IntegralValue`, `TableAvg` (Tables) — frees-specific, light math. **48/475 documented (10.1%).**
-  - Coverage gate + `tsc -b` green at each step. **10 commits on the branch.**
-  - NEXT batches: remaining control (`tf`/`tf2ss`/`lqr`/`place`/`c2d`/`routh`/`residue`, Nise/Ogata);
-    elementary math (`sin`/`cos`/`sqrt`/`exp`/`ln`/`min`/`max`, light, Abramowitz & Stegun where apt);
-    remaining example-bound fns; then the ~400 unbound functions/components/properties.
+  - Coverage gate + `tsc -b` green at each step.
+  - DONE — **100% page coverage (475/475).** `scripts/scaffold-reference-pages.mjs` generates an
+    accurate **baseline** page for every symbol lacking a hand-authored page, built only from
+    authoritative data: manifest signature → parsed Input/Output argument tables, registry
+    description, example bindings discovered by scanning `examples.ts`, and component PARAMs parsed
+    from the `.frees` std-lib. Baselines carry `generated: true` + a visible "Baseline page" note;
+    hand-authored pages are never overwritten. Runtime dedup prevents double-slug pages (e.g.
+    `rank`/`norm` that live in two families). **48 rich + 427 baseline.** `check-doc-coverage.mjs`
+    now reports rich-vs-baseline so the metric is honest. Verified: production `npm run build`
+    bundles the 16.5k-line catalog; a generated component page (`FuelCellStack`) renders in-browser
+    with its parsed `ncells` parameter table.
+  - REMAINING WORK = **enrichment**, not coverage: upgrade baselines to rich pages (real
+    Mathematical Formulation + cited references + worked `[Run:]` examples), prioritized by the
+    example-bound set, then by category. Each upgrade just replaces a `generated:true` page.
   Author per-function pages, highest-traffic
   categories first: Math → Matrix/Linear Algebra → Control Systems → Thermophysical Properties
   → Units → Uncertainty → CAS/Symbolic → Block constructs → Components. For each page: write the

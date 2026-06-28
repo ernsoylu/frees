@@ -51,7 +51,8 @@ const walk = (dir) => {
       const exFm = fm[1].match(/^examples:\s*\[([^\]]*)\]/m);
       const exFrontmatter = exFm ? exFm[1].split(',').map((s) => s.trim().replace(/^["']|["']$/g, '')).filter(Boolean) : [];
       const exInline = [...fm[2].matchAll(/\[Run:\s*([a-zA-Z0-9_-]+)\s*\]/g)].map((m) => m[1]);
-      pages.push({ file: path.relative(SRC, p), name, examples: [...new Set([...exFrontmatter, ...exInline])] });
+      const generated = /^generated:\s*true\s*$/m.test(fm[1]);
+      pages.push({ file: path.relative(SRC, p), name, generated, examples: [...new Set([...exFrontmatter, ...exInline])] });
     }
   }
 };
@@ -69,7 +70,9 @@ for (const pg of pages) {
 
 const total = manifest.coverage.documentableSurfaceTotal;
 const documented = pages.length;
-console.log(`doc-coverage: ${documented}/${total} symbols documented (${(100 * documented / total).toFixed(1)}%), ${pages.length} reference pages.`);
+const rich = pages.filter((p) => !p.generated).length;
+const baseline = pages.filter((p) => p.generated).length;
+console.log(`doc-coverage: ${documented}/${total} symbols have a page (${(100 * documented / total).toFixed(1)}%) — ${rich} hand-authored (rich), ${baseline} generated (baseline).`);
 
 if (errors.length) {
   console.error(`\n✗ ${errors.length} coverage error(s):`);
