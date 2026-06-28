@@ -476,6 +476,30 @@ public final class Evaluator {
                     arg(c, args, 0, values, defs), arg(c, args, 1, values, defs),
                     arg(c, args, 2, values, defs), arg(c, args, 3, values, defs),
                     arg(c, args, 4, values, defs));
+
+            // Heat-exchanger UA (heat) and dP (friction) sizing correlations,
+            // computed from flow + geometry + state to be injected into a
+            // component's UA / dP parameter. See props/HxCorrelations.
+            case "htc_1phase" -> com.frees.backend.props.HxCorrelations.htc1phase(
+                    evalString(args.get(0)), arg(c, args, 1, values, defs), arg(c, args, 2, values, defs),
+                    arg(c, args, 3, values, defs), arg(c, args, 4, values, defs), arg(c, args, 5, values, defs));
+            case "htc_evap" -> com.frees.backend.props.HxCorrelations.htcEvap(
+                    evalString(args.get(0)), arg(c, args, 1, values, defs), arg(c, args, 2, values, defs),
+                    arg(c, args, 3, values, defs), arg(c, args, 4, values, defs), arg(c, args, 5, values, defs));
+            case "htc_cond" -> com.frees.backend.props.HxCorrelations.htcCond(
+                    evalString(args.get(0)), arg(c, args, 1, values, defs), arg(c, args, 2, values, defs),
+                    arg(c, args, 3, values, defs), arg(c, args, 4, values, defs), arg(c, args, 5, values, defs));
+            case "ua_hx" -> com.frees.backend.props.HxCorrelations.uaHx(
+                    arg(c, args, 0, values, defs), arg(c, args, 1, values, defs), arg(c, args, 2, values, defs),
+                    arg(c, args, 3, values, defs), arg(c, args, 4, values, defs));
+            case "dp_1phase" -> com.frees.backend.props.HxCorrelations.dp1phase(
+                    evalString(args.get(0)), arg(c, args, 1, values, defs), arg(c, args, 2, values, defs),
+                    arg(c, args, 3, values, defs), arg(c, args, 4, values, defs), arg(c, args, 5, values, defs),
+                    arg(c, args, 6, values, defs));
+            case "dp_2phase" -> com.frees.backend.props.HxCorrelations.dp2phase(
+                    evalString(args.get(0)), arg(c, args, 1, values, defs), arg(c, args, 2, values, defs),
+                    arg(c, args, 3, values, defs), arg(c, args, 4, values, defs), arg(c, args, 5, values, defs),
+                    arg(c, args, 6, values, defs));
             case "void_homogeneous" -> com.frees.backend.props.TwoPhase.voidHomogeneous(
                     arg(c, args, 0, values, defs), arg(c, args, 1, values, defs),
                     arg(c, args, 2, values, defs));

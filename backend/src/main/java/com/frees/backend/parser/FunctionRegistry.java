@@ -123,6 +123,15 @@ public class FunctionRegistry {
             // Pneumatics (compressible-gas power — Phase A)
             new FunctionInfo("iso6358", "iso6358(C, b, Pup, Tup, Pdown)", "ISO 6358 pneumatic mass flow [kg/s] (sonic conductance C, critical ratio b)", "Pneumatics"),
 
+            // HX sizing — UA (heat) and dP (friction) correlations computed from
+            // flow + geometry + state, to be injected into a component's UA/dP.
+            new FunctionInfo("htc_1phase", "htc_1phase(fluid$, P, T, mdot, Dh, Aflow)", "Single-phase film coefficient h [W/m^2/K] (Gnielinski/laminar blend)", "Heat Transfer"),
+            new FunctionInfo("htc_evap", "htc_evap(fluid$, P, x, mdot, Dh, Aflow)", "Flow-boiling film coefficient h [W/m^2/K] (Shah convective)", "Heat Transfer"),
+            new FunctionInfo("htc_cond", "htc_cond(fluid$, P, x, mdot, Dh, Aflow)", "Condensation film coefficient h [W/m^2/K] (Shah 1979)", "Heat Transfer"),
+            new FunctionInfo("ua_hx", "ua_hx(h1, A1, h2, A2, Rwall)", "Overall conductance UA [W/K] = 1/(1/(h1 A1)+Rwall+1/(h2 A2))", "Heat Transfer"),
+            new FunctionInfo("dp_1phase", "dp_1phase(fluid$, P, T, mdot, Dh, Aflow, L)", "Single-phase Darcy pressure drop [Pa]", "Heat Transfer"),
+            new FunctionInfo("dp_2phase", "dp_2phase(fluid$, P, x, mdot, Dh, Aflow, L)", "Two-phase frictional pressure drop [Pa] (Darcy x Chisholm L-M)", "Heat Transfer"),
+
             // Two-phase flow (Lockhart-Martinelli / Chisholm — Phase C)
             new FunctionInfo("lm_phi2", "lm_phi2(X, C)", "Chisholm two-phase multiplier 1+C/X+1/X^2 on the liquid-alone drop", "Two-Phase Flow"),
             new FunctionInfo("lm_martinelli_tt", "lm_martinelli_tt(x, rho_l, rho_g, mu_l, mu_g)", "Turbulent-turbulent Martinelli parameter X_tt", "Two-Phase Flow"),
