@@ -229,9 +229,21 @@ Body sections (omit a section only when truly N/A):
     now reports rich-vs-baseline so the metric is honest. Verified: production `npm run build`
     bundles the 16.5k-line catalog; a generated component page (`FuelCellStack`) renders in-browser
     with its parsed `ncells` parameter table.
-  - REMAINING WORK = **enrichment**, not coverage: upgrade baselines to rich pages (real
-    Mathematical Formulation + cited references + worked `[Run:]` examples), prioritized by the
-    example-bound set, then by category. Each upgrade just replaces a `generated:true` page.
+  - ENRICHMENT IN PROGRESS — upgrade baselines to rich pages (cited Mathematical Formulation +
+    worked `[Run:]` examples). Each upgrade replaces a `generated:true` page; gate + tsc green.
+    - DONE — Control (14): `tf`/`tf2ss`/`impulse`/`lsim`/`nichols`/`c2d`/`rlocus`/`routh`/`lqr`/
+      `lqe`/`gram`/`balreal`/`pidtune`/`residue` (Nise/Ogata/Franklin/Bryson-Ho/Moore/Åström).
+    - DONE — Math/misc (14): `sqrt`/`sin`/`cos`/`exp`/`ln`/`min`/`max`/`diag` (light), `integral`,
+      `interpolate2d`, `cond` (Golub & Van Loan), `if`, `StagnationTemp`/`StagnationPres` (Çengel).
+    - **76/475 rich, 399 baseline. Every example-bound function is now rich.**
+    - REMAINING (no example binding, lower value-per-page, larger lift):
+      - special functions (Abramowitz & Stegun / DLMF), remaining stats (Montgomery), remaining
+        compressible/two-phase/atmosphere/combustion correlations (notebook), remaining control
+        (`acker`/`place`/`dare`/`lyap`/`zp2tf`/`mason`/…, Nise/Ogata) — math+citation, no `[Run:]`.
+      - **30 property functions** (generic CoolProp two-property-input pages).
+      - **136 components** — heaviest lift: each needs port descriptions + constitutive equations
+        read from its `.frees` body. Best done per-domain.
+      - 5 materials, 14 CAS ops — light.
   Author per-function pages, highest-traffic
   categories first: Math → Matrix/Linear Algebra → Control Systems → Thermophysical Properties
   → Units → Uncertainty → CAS/Symbolic → Block constructs → Components. For each page: write the
