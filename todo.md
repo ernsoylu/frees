@@ -256,10 +256,13 @@ Body sections (omit a section only when truly N/A):
     - DONE — **Special Functions category fully rich (24/24)**: core 7 (gamma/loggamma/digamma/
       beta/erf/erfc/erfinv) + order-n & fixed-order Bessel (12) + orthogonal polynomials (5), all
       with KaTeX definitions/recurrences + Abramowitz & Stegun / NIST DLMF citations.
-    - **100/475 rich, 375 baseline.** Next categories: remaining control (`acker`/`place`/`dare`/
-      `lyap`/`dlyap`/`zp2tf`/`tf2zp`/`mason`/`ss`/`ss2ss`/`ctrb`/`obsv`/`stepinfo`/`pade`/`dlqr`/
-      `errorconst`), atmosphere (ISA `isa_T`/`isa_P`/`isa_rho`), two-phase correlations, stats,
-      then property functions and the 136 components (heaviest).
+    - DONE — **Control Systems category fully rich** (22 more): place/acker/ctrb/obsv/lyap/dlyap/
+      dare/dlqr/d2c/errorconst/stepinfo/parallel/pade/mason/ss/ss2ss/tf2zp/zp2tf (Nise/Ogata/
+      Franklin/Antsaklis) + Eigenvalues/Eigen/LUDecompose/EulerRotate (Golub & Van Loan/Goldstein).
+    - **122/475 rich, 353 baseline.** Fully-rich categories: Special Functions, Control Systems,
+      and all example-bound HT/Compressible/EOS/Combustion. Next: atmosphere (ISA), two-phase
+      correlations (Collier), stats (Montgomery), remaining math/flow-network, then property
+      functions (30) and the 136 components (heaviest — prose + worked example atop real eqns).
   Author per-function pages, highest-traffic
   categories first: Math → Matrix/Linear Algebra → Control Systems → Thermophysical Properties
   → Units → Uncertainty → CAS/Symbolic → Block constructs → Components. For each page: write the
