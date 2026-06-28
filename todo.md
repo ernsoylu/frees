@@ -184,7 +184,11 @@ Body sections (omit a section only when truly N/A):
     `P2_P1_shock`, `P02_P01_shock` (Çengel Thermodynamics Eq. 17-18/19/26/38/39, Fig. 17-42,
     Table A-33); all bound to `cd-nozzle-shock`; expected values hand-computed (M1≈2.20, M2≈0.55,
     P2≈514 kPa, P02≈628 kPa).
-  - Coverage gate + `tsc -b` green at each step.
+  - DONE — Radiation view factors + Heisler (5): `viewfactor_disks`, `viewfactor_plates`,
+    `viewfactor_perp`, `heisler_temp`, `heisler_q` (Holman Table 8-2 Items 1/3/5, Figs 8-12/14/16;
+    Appendix C Eq. C-1/C-7..C-12, Eq. 4-16); bound to `radiation-view-factors` / `heisler-transient`.
+    View-factor expecteds hand-computed (≈0.20/0.41/0.83); Heisler one-term values approximate (≈).
+  - Coverage gate + `tsc -b` green at each step. **15/515 documented.**
   - NEXT batches (by example): HX correlations → `ev-thermal-management` (htc_*/dp_2phase/ua_hx/
     hx_eta_surf/hx_area_*); view factors + Heisler → `radiation-view-factors` / `heisler-transient`;
     cubic-EOS → `cubic-eos-properties`; control → `cruise-control` / `control-analysis-report`
