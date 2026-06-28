@@ -125,7 +125,7 @@ UA_bcp  = h_chl_c * 0.5
 UA_mcp  = htc_1phase('EG50', 200000, 320, 0.17, 0.008, 1.5e-4) * 0.5
 
 { ---- Coolant line ---- }
-LiquidSource  PUMPIN(fluid$=EG50, mdot=0.4, P=200000, T=305)
+LiquidSource  PUMPIN(fluid$=EG50, mdot=0.4, P=200000 [Pa], T=305 [K])
 LiquidPump    PUMP(fluid$=EG50, eta=0.6)
 LiquidOrifice OBAT(CdA=1.6e-5, rho=1050)
 LiquidOrifice OMOT(CdA=1.2e-5, rho=1050)
@@ -139,15 +139,15 @@ LiqWallUA     RAD2(fluid$=EG50, UA=UA_rad)
 LiquidOrifice OR2(CdA=1.2e-4, rho=1050)
 LiqWallUA     RAD3(fluid$=EG50, UA=UA_rad)
 LiquidOrifice OR3(CdA=1.2e-4, rho=1050)
-ThermalSource AMB(T=313)
+ThermalSource AMB(T=313 [K])
 LiquidSink    PUMPOUT()
 
-MassGen BATT(C=60000, Qgen=4000, T0=305)
-MassGen MOTOR(C=40000, Qgen=5000, T0=305)
-MassGen CABIN(C=8000,  Qgen=2500, T0=305)
+MassGen BATT(C=60000, Qgen=4000, T0=305 [K])
+MassGen MOTOR(C=40000, Qgen=5000, T0=305 [K])
+MassGen CABIN(C=8000,  Qgen=2500, T0=305 [K])
 
 { ---- Refrigerant line ---- }
-LiqFeed       FEED(fluid$=R1234yf, P=350000, x=0.20)
+LiqFeed       FEED(fluid$=R1234yf, P=350000 [Pa], x=0.20)
 EvapSH        CHLR(fluid$=R1234yf, UA=UA_chl_r, dP=dP_chl, SH=5)
 EvapSH        CABE(fluid$=R1234yf, UA=UA_cab,  dP=dP_cab, SH=8)
 TwoPhaseMixer SUC()
@@ -172,7 +172,7 @@ connect(OR2.out, RAD3.in)
 connect(RAD3.out, OR3.in)
 connect(OR3.out, PUMPOUT.in)
 connect(AMB.port, RAD1.wall, RAD2.wall, RAD3.wall)
-PUMPOUT.in.P = 200000
+PUMPOUT.in.P = 200000 [Pa]
 
 connect(FEED.out, CHLR.in, CABE.in)
 connect(CHLR.out, SUC.in1)
