@@ -32,8 +32,8 @@ $$ S = \frac{1}{1 + 2.53\times10^{-6}\,Re_l^{1.17}} \quad\text{(nucleate suppres
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `Re_l` | Number | Yes | Numeric argument. |
-| `F` | Number | Yes | Numeric argument. |
+| `Re_l` | Number | Yes | Liquid-only Reynolds number. |
+| `F` | Number | Yes | Convective enhancement factor. |
 
 ## References
 

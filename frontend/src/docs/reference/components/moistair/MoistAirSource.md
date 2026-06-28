@@ -30,13 +30,13 @@ MoistAirSource inst(P, T, W, mdot, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `P` | Number |
-| `T` | Number |
-| `W` | Number |
-| `mdot` | Number |
-| `domain$` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `P` | Number | Pressure [Pa]. |
+| `T` | Number | Temperature [K]. |
+| `W` | Number | Humidity ratio [kg/kg] / work [W]. |
+| `mdot` | Number | Mass flow rate [kg/s]. |
+| `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
 
 ## Constitutive Equations
 

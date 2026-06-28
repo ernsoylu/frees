@@ -32,9 +32,9 @@ $$ \alpha = \frac{1}{1 + \frac{1-x}{x}\left(\frac{\rho_g}{\rho_l}\right)^{2/3}} 
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `x` | Number | Yes | Numeric argument. |
-| `rho_l` | Number | Yes | Numeric argument. |
-| `rho_g` | Number | Yes | Numeric argument. |
+| `x` | Number | Yes | Vapor quality (0–1). |
+| `rho_l` | Number | Yes | Saturated-liquid density [kg/m³]. |
+| `rho_g` | Number | Yes | Saturated-vapor density [kg/m³]. |
 
 ## References
 

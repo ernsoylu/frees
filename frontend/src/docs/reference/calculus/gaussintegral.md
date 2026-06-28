@@ -32,10 +32,10 @@ $$ \int_a^b f(x)\,dx \approx \frac{b-a}{2}\sum_{i=1}^{n} w_i\,f\!\left(\tfrac{b-
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `expr` | Number | Yes | Numeric argument. |
-| `var` | Number | Yes | Numeric argument. |
-| `lower` | Number | Yes | Numeric argument. |
-| `upper` | Number | Yes | Numeric argument. |
+| `expr` | Number | Yes | Expression to evaluate. |
+| `var` | Number | Yes | Integration variable. |
+| `lower` | Number | Yes | Lower limit. |
+| `upper` | Number | Yes | Upper limit. |
 
 ## References
 

@@ -31,5 +31,5 @@ $$ \operatorname{trunc}(x) = \operatorname{sign}(x)\,\lfloor |x| \rfloor $$
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `x` | Number | Yes | Numeric argument. |
+| `x` | Number | Yes | Vapor quality (0–1). |
 

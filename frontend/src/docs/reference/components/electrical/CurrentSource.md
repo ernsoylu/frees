@@ -30,9 +30,9 @@ CurrentSource inst(I)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `I` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `I` | Number | Current [A]. |
 
 ## Constitutive Equations
 

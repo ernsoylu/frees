@@ -32,9 +32,9 @@ $$ Nu = Nu_l\big[1 + 3000\,Bo^{0.86} + 1.12(x/(1-x))^{0.75}(\rho_l/\rho_g)^{0.41
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `Nu_l` | Number | Yes | Numeric argument. |
-| `Xtt` | Number | Yes | Numeric argument. |
-| `Bo` | Number | Yes | Numeric argument. |
+| `Nu_l` | Number | Yes | Liquid-only Nusselt number. |
+| `Xtt` | Number | Yes | Turbulent–turbulent Martinelli parameter. |
+| `Bo` | Number | Yes | Boiling number. |
 
 ## References
 

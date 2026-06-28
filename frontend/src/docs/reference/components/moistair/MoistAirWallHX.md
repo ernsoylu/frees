@@ -30,10 +30,10 @@ MoistAirWallHX inst(eps, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `eps` | Number |
-| `domain$` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `eps` | Number | Effectiveness / roughness. |
+| `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
 
 ## Constitutive Equations
 

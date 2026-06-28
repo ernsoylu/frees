@@ -32,9 +32,9 @@ $$ s = \sum_i Y_i\big[s_i(T) - R_i\ln(y_i P/P_0)\big] $$
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `comp$` | String | Yes | String argument. |
-| `T` | Number | Yes | Numeric argument. |
-| `P` | Number | Yes | Numeric argument. |
+| `comp$` | String | Yes | Mixture composition string, e.g. 'N2:0.79,O2:0.21'. |
+| `T` | Number | Yes | Temperature [K]. |
+| `P` | Number | Yes | Pressure [Pa]. |
 
 ## References
 

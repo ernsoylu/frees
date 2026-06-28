@@ -32,9 +32,9 @@ $$ D_h = \frac{4\,A_{\text{flow}}\,L}{A_{\text{total}}} $$
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `Aflow` | Number | Yes | Numeric argument. |
-| `Atotal` | Number | Yes | Numeric argument. |
-| `L` | Number | Yes | Numeric argument. |
+| `Aflow` | Number | Yes | Free-flow (minimum) cross-sectional area [m²]. |
+| `Atotal` | Number | Yes | Total convective surface area [m²]. |
+| `L` | Number | Yes | Length [m]. |
 
 ## References
 

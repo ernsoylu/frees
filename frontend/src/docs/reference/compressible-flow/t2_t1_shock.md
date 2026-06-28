@@ -32,8 +32,8 @@ $$ \frac{T_2}{T_1} = \frac{\big[1 + \tfrac{k-1}{2}M_1^2\big]\big[\tfrac{2k}{k-1}
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `M1` | Number | Yes | Numeric argument. |
-| `k` | Number | Yes | Numeric argument. |
+| `M1` | Number | Yes | Upstream Mach number (≥ 1). |
+| `k` | Number | Yes | Ratio of specific heats (e.g. 1.4 for air). |
 
 ## References
 

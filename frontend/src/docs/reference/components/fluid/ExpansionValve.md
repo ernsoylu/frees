@@ -30,10 +30,10 @@ ExpansionValve inst(CdA, rho_in)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `CdA` | Number |
-| `rho_in` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `CdA` | Number | Discharge coefficient × area Cd·A [m²]. |
+| `rho_in` | Number | Inlet density [kg/m³]. |
 
 ## Constitutive Equations
 

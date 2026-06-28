@@ -30,14 +30,14 @@ BatteryTransient inst(Voc, R0, Q0, C_th, SOC0, T0)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `Voc` | Number |
-| `R0` | Number |
-| `Q0` | Number |
-| `C_th` | Number |
-| `SOC0` | Number |
-| `T0` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `Voc` | Number | Open-circuit voltage [V]. |
+| `R0` | Number | Series (ohmic) resistance [Ω]. |
+| `Q0` | Number | Reference heat [W]. |
+| `C_th` | Number | Thermal capacitance [J/K]. |
+| `SOC0` | Number | Initial state of charge (0–1). |
+| `T0` | Number | Reference/initial temperature [K]. |
 
 ## Constitutive Equations
 

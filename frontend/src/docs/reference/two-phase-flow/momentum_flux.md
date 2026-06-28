@@ -32,11 +32,11 @@ $$ \left(\frac{d P}{d z}\right)_{\text{acc}} = G^2\frac{d}{dz}\left[\frac{x^2}{\
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `x` | Number | Yes | Numeric argument. |
-| `rho_l` | Number | Yes | Numeric argument. |
-| `rho_g` | Number | Yes | Numeric argument. |
-| `alpha` | Number | Yes | Numeric argument. |
-| `G` | Number | Yes | Numeric argument. |
+| `x` | Number | Yes | Vapor quality (0–1). |
+| `rho_l` | Number | Yes | Saturated-liquid density [kg/m³]. |
+| `rho_g` | Number | Yes | Saturated-vapor density [kg/m³]. |
+| `alpha` | Number | Yes | Void fraction (0–1). |
+| `G` | Number | Yes | Mass flux G = ṁ/Aflow [kg/m²·s]. |
 
 ## References
 

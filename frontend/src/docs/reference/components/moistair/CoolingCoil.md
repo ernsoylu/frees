@@ -30,10 +30,10 @@ CoolingCoil inst(Tout, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `Tout` | Number |
-| `domain$` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `Tout` | Number | Outlet temperature [K]. |
+| `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
 
 ## Constitutive Equations
 

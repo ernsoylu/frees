@@ -30,12 +30,12 @@ TwoPhaseSourcePH inst(mdot, P, h, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `mdot` | Number |
-| `P` | Number |
-| `h` | Number |
-| `domain$` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `mdot` | Number | Mass flow rate [kg/s]. |
+| `P` | Number | Pressure [Pa]. |
+| `h` | Number | Heat-transfer coefficient [W/m²·K]. |
+| `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
 
 ## Constitutive Equations
 

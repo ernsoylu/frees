@@ -30,13 +30,13 @@ Friction inst(Fc, Fs, vs, bv, eps)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `Fc` | Number |
-| `Fs` | Number |
-| `vs` | Number |
-| `bv` | Number |
-| `eps` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `Fc` | Number | Coulomb friction force [N]. |
+| `Fs` | Number | Static friction force [N]. |
+| `vs` | Number | Reference / slip velocity [m/s]. |
+| `bv` | Number | Viscous-friction coefficient. |
+| `eps` | Number | Effectiveness / roughness. |
 
 ## Constitutive Equations
 

@@ -30,11 +30,11 @@ Engine inst(Tmax, throttle, bf)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `Tmax` | Number |
-| `throttle` | Number |
-| `bf` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `Tmax` | Number | Maximum temperature [K]. |
+| `throttle` | Number | Throttle (0–1). |
+| `bf` | Number | Friction coefficient. |
 
 ## Constitutive Equations
 

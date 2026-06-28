@@ -30,10 +30,10 @@ BatteryThermal inst(Voc, R0)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `Voc` | Number |
-| `R0` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `Voc` | Number | Open-circuit voltage [V]. |
+| `R0` | Number | Series (ohmic) resistance [Ω]. |
 
 ## Constitutive Equations
 

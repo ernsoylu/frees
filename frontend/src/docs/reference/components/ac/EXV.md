@@ -30,12 +30,12 @@ EXV inst(fluid$, CdA_max, u, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `fluid$` | String |
-| `CdA_max` | Number |
-| `u` | Number |
-| `domain$` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `fluid$` | String | Fluid name (e.g. Water, R134a, Air). |
+| `CdA_max` | Number | Maximum Cd·A [m²]. |
+| `u` | Number | Specific internal energy [J/kg]. |
+| `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
 
 ## Constitutive Equations
 

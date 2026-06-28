@@ -30,9 +30,9 @@ HeatingResistor inst(R)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `R` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `R` | Number | Resistance [Ω]. |
 
 ## Constitutive Equations
 

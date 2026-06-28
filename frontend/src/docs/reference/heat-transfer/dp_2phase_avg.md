@@ -32,15 +32,15 @@ $$ \Delta P = \frac{1}{n}\sum_{i=1}^{n} \phi_l^2(x_i)\,\left(\frac{dP}{dz}\right
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `fluid$` | String | Yes | String argument. |
-| `P` | Number | Yes | Numeric argument. |
-| `x_in` | Number | Yes | Numeric argument. |
-| `x_out` | Number | Yes | Numeric argument. |
-| `mdot` | Number | Yes | Numeric argument. |
-| `Dh` | Number | Yes | Numeric argument. |
-| `Aflow` | Number | Yes | Numeric argument. |
-| `L` | Number | Yes | Numeric argument. |
-| `n` | Number | Yes | Numeric argument. |
+| `fluid$` | String | Yes | Fluid name (e.g. Water, R134a, Air). |
+| `P` | Number | Yes | Pressure [Pa]. |
+| `x_in` | Number | Yes | Inlet vapor quality (0–1). |
+| `x_out` | Number | Yes | Outlet vapor quality (0–1). |
+| `mdot` | Number | Yes | Mass flow rate [kg/s]. |
+| `Dh` | Number | Yes | Hydraulic diameter [m]. |
+| `Aflow` | Number | Yes | Free-flow (minimum) cross-sectional area [m²]. |
+| `L` | Number | Yes | Length [m]. |
+| `n` | Number | Yes | Order / number of terms. |
 
 ## References
 

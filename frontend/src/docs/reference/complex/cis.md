@@ -31,5 +31,5 @@ $$ \operatorname{cis}(\theta) = e^{j\theta} = \cos\theta + j\sin\theta $$
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `theta` | Number | Yes | Numeric argument. |
+| `theta` | Number | Yes | Flow-deflection angle [rad]. |
 

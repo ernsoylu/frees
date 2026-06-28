@@ -31,6 +31,6 @@ $$ \operatorname{atan2}(y,x) = \arg(x + jy) \in (-\pi, \pi] $$
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `y` | Number | Yes | Numeric argument. |
-| `x` | Number | Yes | Numeric argument. |
+| `y` | Number | Yes | Value / second coordinate. |
+| `x` | Number | Yes | Vapor quality (0–1). |
 

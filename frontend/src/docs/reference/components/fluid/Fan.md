@@ -30,12 +30,12 @@ Fan inst(fluid$, dP0, Q0, eta)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `fluid$` | String |
-| `dP0` | Number |
-| `Q0` | Number |
-| `eta` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `fluid$` | String | Fluid name (e.g. Water, R134a, Air). |
+| `dP0` | Number | Reference pressure drop [Pa]. |
+| `Q0` | Number | Reference heat [W]. |
+| `eta` | Number | Efficiency (0–1). |
 
 ## Constitutive Equations
 

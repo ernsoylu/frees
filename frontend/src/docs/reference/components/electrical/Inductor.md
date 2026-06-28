@@ -30,10 +30,10 @@ Inductor inst(L, I0)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `L` | Number |
-| `I0` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `L` | Number | Length [m]. |
+| `I0` | Number | Saturation current [A]. |
 
 ## Constitutive Equations
 

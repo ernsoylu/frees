@@ -30,10 +30,10 @@ RotationalSpring inst(k, theta0)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `k` | Number |
-| `theta0` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `k` | Number | Stiffness / conductivity. |
+| `theta0` | Number | Initial angle [rad]. |
 
 ## Constitutive Equations
 

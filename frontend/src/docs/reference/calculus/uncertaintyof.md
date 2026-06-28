@@ -32,7 +32,7 @@ $$ u(X) = \text{user-supplied or RSS-propagated uncertainty of } X $$
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `X` | Number | Yes | Numeric argument. |
+| `X` | Number | Yes | Lockhart–Martinelli parameter. |
 
 ## References
 

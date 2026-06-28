@@ -32,15 +32,15 @@ $$ A = U\,\Sigma\,V^\top, \qquad \Sigma = \operatorname{diag}(\sigma_1 \ge \dots
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `A` | Number | Yes | Numeric argument. |
+| `A` | Number | Yes | Square input matrix. |
 
 ## Output Arguments
 
 | Argument | Type | Description |
 | --- | --- | --- |
-| `U` | Number/Array | Output value. |
-| `S` | Number/Array | Output value. |
-| `V` | Number/Array | Output value. |
+| `U` | Number/Array | Computed `U`. |
+| `S` | Number/Array | Nucleate-suppression factor. |
+| `V` | Number/Array | Velocity [m/s]. |
 
 ## References
 

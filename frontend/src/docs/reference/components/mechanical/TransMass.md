@@ -30,10 +30,10 @@ TransMass inst(m, v0)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `m` | Number |
-| `v0` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `m` | Number | Mass [kg]. |
+| `v0` | Number | Initial velocity [m/s]. |
 
 ## Constitutive Equations
 

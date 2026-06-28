@@ -32,9 +32,9 @@ $$ Nu = C\,Re_{\max}^{m}\,Pr^{0.36}\,(Pr/Pr_w)^{1/4} \quad (C, m \text{ by arran
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `arr$` | String | Yes | String argument. |
-| `Re` | Number | Yes | Numeric argument. |
-| `Pr` | Number | Yes | Numeric argument. |
+| `arr$` | String | Yes | Selector — One of `inline`, `staggered`. |
+| `Re` | Number | Yes | Reynolds number. |
+| `Pr` | Number | Yes | Prandtl number. |
 
 ## References
 

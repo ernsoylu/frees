@@ -32,8 +32,8 @@ $$ \nu(M) = \sqrt{\tfrac{k+1}{k-1}}\,\arctan\!\sqrt{\tfrac{k-1}{k+1}(M^2-1)} - \
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `M` | Number | Yes | Numeric argument. |
-| `k` | Number | Yes | Numeric argument. |
+| `M` | Number | Yes | Mach number. |
+| `k` | Number | Yes | Ratio of specific heats (e.g. 1.4 for air). |
 
 ## References
 

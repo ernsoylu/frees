@@ -32,10 +32,10 @@ $$ H_{\text{react}}(T_r) = H_{\text{prod}}(T_{ad}) \quad\text{with equilibrium d
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `fuel$` | String | Yes | String argument. |
-| `phi` | Number | Yes | Numeric argument. |
-| `T_react` | Number | Yes | Numeric argument. |
-| `P` | Number | Yes | Numeric argument. |
+| `fuel$` | String | Yes | Fuel name/formula (e.g. 'CH4'). |
+| `phi` | Number | Yes | Equivalence ratio (1 = stoichiometric). |
+| `T_react` | Number | Yes | Reactant inlet temperature [K]. |
+| `P` | Number | Yes | Pressure [Pa]. |
 
 ## References
 

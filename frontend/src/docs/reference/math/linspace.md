@@ -31,7 +31,7 @@ $$ x_k = a + (b-a)\,\frac{k-1}{n-1}, \quad k = 1,\dots,n $$
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `a` | Number | Yes | Numeric argument. |
-| `b` | Number | Yes | Numeric argument. |
-| `n` | Number | Yes | Numeric argument. |
+| `a` | Number | Yes | First operand. |
+| `b` | Number | Yes | Second operand. |
+| `n` | Number | Yes | Order / number of terms. |
 

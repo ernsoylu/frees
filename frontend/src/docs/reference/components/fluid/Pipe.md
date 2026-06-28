@@ -30,12 +30,12 @@ Pipe inst(fluid$, L, D, rough)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `fluid$` | String |
-| `L` | Number |
-| `D` | Number |
-| `rough` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `fluid$` | String | Fluid name (e.g. Water, R134a, Air). |
+| `L` | Number | Length [m]. |
+| `D` | Number | Diameter [m]. |
+| `rough` | Number | Relative wall roughness. |
 
 ## Constitutive Equations
 

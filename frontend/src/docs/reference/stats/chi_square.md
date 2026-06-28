@@ -32,8 +32,8 @@ $$ F(x; k) = \frac{\gamma(k/2,\ x/2)}{\Gamma(k/2)} \quad\text{(chi-square CDF, }
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `x` | Number | Yes | Numeric argument. |
-| `df` | Number | Yes | Numeric argument. |
+| `x` | Number | Yes | Vapor quality (0–1). |
+| `df` | Number | Yes | Degrees of freedom. |
 
 ## References
 

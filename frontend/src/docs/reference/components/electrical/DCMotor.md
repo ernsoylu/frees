@@ -30,11 +30,11 @@ DCMotor inst(Kt, Ke, R)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `Kt` | Number |
-| `Ke` | Number |
-| `R` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `Kt` | Number | Torque constant [N·m/A]. |
+| `Ke` | Number | Back-EMF constant [V·s/rad]. |
+| `R` | Number | Resistance [Ω]. |
 
 ## Constitutive Equations
 

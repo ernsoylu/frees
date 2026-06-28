@@ -30,9 +30,9 @@ ContactResistance inst(Rth)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `Rth` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `Rth` | Number | Thermal resistance [K/W]. |
 
 ## Constitutive Equations
 

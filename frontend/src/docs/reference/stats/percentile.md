@@ -32,10 +32,10 @@ $$ P_p = \text{value below which } p\% \text{ of the data fall (linear interpola
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `p` | Number | Yes | Numeric argument. |
-| `x1` | Number | Yes | Numeric argument. |
-| `x2` | Number | Yes | Numeric argument. |
-| `...` | Number | Yes | Numeric argument. |
+| `p` | Number | Yes | Probability (0–1) / percentile rank. |
+| `x1` | Number | Yes | First value. |
+| `x2` | Number | Yes | Second value. |
+| `...` | Number | Yes | Additional values (variadic). |
 
 ## References
 

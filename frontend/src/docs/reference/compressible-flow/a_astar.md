@@ -32,8 +32,8 @@ $$ \frac{A}{A^*} = \frac{1}{M}\left[\frac{2}{k+1}\left(1 + \tfrac{k-1}{2}M^2\rig
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `M` | Number | Yes | Numeric argument. |
-| `k` | Number | Yes | Numeric argument. |
+| `M` | Number | Yes | Mach number. |
+| `k` | Number | Yes | Ratio of specific heats (e.g. 1.4 for air). |
 
 ## References
 

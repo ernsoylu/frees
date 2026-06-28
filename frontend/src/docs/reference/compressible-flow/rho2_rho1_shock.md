@@ -32,8 +32,8 @@ $$ \frac{\rho_2}{\rho_1} = \frac{(k+1)M_1^2}{2 + (k-1)M_1^2} $$
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `M1` | Number | Yes | Numeric argument. |
-| `k` | Number | Yes | Numeric argument. |
+| `M1` | Number | Yes | Upstream Mach number (≥ 1). |
+| `k` | Number | Yes | Ratio of specific heats (e.g. 1.4 for air). |
 
 ## References
 

@@ -32,7 +32,7 @@ $$ \text{the middle order statistic (mean of the two middle values if } n \text{
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `x` | Number | Yes | Numeric argument. |
+| `x` | Number | Yes | Vapor quality (0–1). |
 
 ## References
 

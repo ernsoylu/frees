@@ -32,9 +32,9 @@ $$ Nu = \frac{Pr_l\,Re_l^{0.9}\,F(X_{tt})}{F_2} \quad\text{(Traviss condensation
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `Re_l` | Number | Yes | Numeric argument. |
-| `Pr_l` | Number | Yes | Numeric argument. |
-| `Xtt` | Number | Yes | Numeric argument. |
+| `Re_l` | Number | Yes | Liquid-only Reynolds number. |
+| `Pr_l` | Number | Yes | Liquid Prandtl number. |
+| `Xtt` | Number | Yes | Turbulent–turbulent Martinelli parameter. |
 
 ## References
 

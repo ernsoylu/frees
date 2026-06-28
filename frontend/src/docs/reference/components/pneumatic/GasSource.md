@@ -30,12 +30,12 @@ GasSource inst(y, mdot, P, h0)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `y` | Number |
-| `mdot` | Number |
-| `P` | Number |
-| `h0` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `y` | Number | Position / fraction. |
+| `mdot` | Number | Mass flow rate [kg/s]. |
+| `P` | Number | Pressure [Pa]. |
+| `h0` | Number | Reference enthalpy [J/kg]. |
 
 ## Constitutive Equations
 

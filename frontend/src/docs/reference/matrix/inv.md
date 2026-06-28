@@ -32,7 +32,7 @@ $$ A\,A^{-1} = A^{-1}A = I $$
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `A` | Number | Yes | Numeric argument. |
+| `A` | Number | Yes | Square input matrix. |
 
 ## References
 

@@ -31,6 +31,6 @@ $$ (a \,\&\, b)\ \text{— bitwise AND of the integer operands} $$
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `a` | Number | Yes | Numeric argument. |
-| `b` | Number | Yes | Numeric argument. |
+| `a` | Number | Yes | First operand. |
+| `b` | Number | Yes | Second operand. |
 

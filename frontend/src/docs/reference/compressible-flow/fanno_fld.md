@@ -32,8 +32,8 @@ $$ \frac{4 f L^*}{D} = \frac{1-M^2}{kM^2} + \frac{k+1}{2k}\ln\frac{(k+1)M^2}{2 +
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `M` | Number | Yes | Numeric argument. |
-| `k` | Number | Yes | Numeric argument. |
+| `M` | Number | Yes | Mach number. |
+| `k` | Number | Yes | Ratio of specific heats (e.g. 1.4 for air). |
 
 ## References
 

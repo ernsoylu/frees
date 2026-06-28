@@ -30,10 +30,10 @@ Diode inst(Gon, eps)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `Gon` | Number |
-| `eps` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `Gon` | Number | On-state conductance [S]. |
+| `eps` | Number | Effectiveness / roughness. |
 
 ## Constitutive Equations
 

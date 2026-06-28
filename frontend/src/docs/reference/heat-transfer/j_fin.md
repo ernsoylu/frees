@@ -32,8 +32,8 @@ $$ j = St\,Pr^{2/3} = C\,Re^{m} \quad\text{(Colburn } j \text{ for the fin surfa
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `surface$` | String | Yes | String argument. |
-| `Re` | Number | Yes | Numeric argument. |
+| `surface$` | String | Yes | Selector — One of `plain`, `wavy`, `louvered`, `offset`. |
+| `Re` | Number | Yes | Reynolds number. |
 
 ## References
 

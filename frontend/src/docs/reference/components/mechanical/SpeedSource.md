@@ -30,9 +30,9 @@ SpeedSource inst(w)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `w` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `w` | Number | Frequency [rad/s]. |
 
 ## Constitutive Equations
 

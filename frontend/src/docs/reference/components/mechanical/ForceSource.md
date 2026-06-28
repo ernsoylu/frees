@@ -30,9 +30,9 @@ ForceSource inst(F)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `F` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `F` | Number | Force [N]. |
 
 ## Constitutive Equations
 
