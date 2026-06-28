@@ -13,7 +13,9 @@ import io.opentelemetry.context.propagation.TextMapGetter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.amqp.support.AmqpHeaders;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
 import org.springframework.messaging.handler.annotation.Headers;
 import org.springframework.stereotype.Component;
@@ -46,12 +48,14 @@ public class ComputeTaskListener {
     private final ObjectMapper objectMapper;
     private final OpenTelemetry openTelemetry;
     private final Tracer tracer;
+    private final boolean dropRedelivered;
 
     public ComputeTaskListener(SolveController solveController,
                                OptimizeController optimizeController,
                                JobStore jobStore,
                                ObjectMapper objectMapper,
-                               ObjectProvider<OpenTelemetry> openTelemetryProvider) {
+                               ObjectProvider<OpenTelemetry> openTelemetryProvider,
+                               @Value("${frees.compute.drop-redelivered:true}") boolean dropRedelivered) {
         this.solveController = solveController;
         this.optimizeController = optimizeController;
         this.jobStore = jobStore;
@@ -59,10 +63,31 @@ public class ComputeTaskListener {
         this.openTelemetry = openTelemetryProvider.getIfAvailable();
         this.tracer = this.openTelemetry != null
                 ? this.openTelemetry.getTracer("frees.compute") : null;
+        this.dropRedelivered = dropRedelivered;
     }
 
     @RabbitListener(queues = ComputeTask.QUEUE)
     public void onTask(ComputeTask task, @Headers Map<String, Object> headers) {
+        // Poison-message guard. The listener catches every *thrown* solver failure
+        // and records it as FAILED (see handle/dispatch), so a normal return always
+        // acks. A redelivery therefore means the previous consumer DIED without
+        // acking — a native crash (e.g. a JNI/SUNDIALS abort), an OOM kill, or a
+        // hard shutdown mid-message. Re-running such a task just kills the next
+        // worker, and because RabbitMQ keeps redelivering an unacked message it
+        // takes down the whole tier (the SUNDIALS incident). Drop it once instead:
+        // mark the job FAILED and ack, so one bad task can't crash-loop the workers.
+        if (dropRedelivered && Boolean.TRUE.equals(headers.get(AmqpHeaders.REDELIVERED))
+                && !ComputeTask.WARMUP.equals(task.taskType())) {
+            log.error("Dropping redelivered task {} ({}): a previous worker died processing it; "
+                    + "marking the job FAILED to protect the compute tier from a crash loop.",
+                    task.jobId(), task.taskType());
+            jobStore.saveFailed(task.jobId(),
+                    "This job crashed a compute worker and was dropped to protect the workers "
+                    + "from a repeated crash. Please retry; if it recurs the model may be "
+                    + "triggering a native fault.");
+            return;
+        }
+
         // Extract the producer's trace context from the message headers and
         // start a consumer span as its child, so the two join into one
         // distributed trace (HTTP request → RabbitMQ publish → compute).
