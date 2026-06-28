@@ -1,6 +1,8 @@
 package com.frees.backend.core.dae;
 
+import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * A fully-assembled implicit DAE {@code F(t, y, y') = 0} produced from a frees
@@ -42,5 +44,48 @@ public record DaeAssembly(
 
     public int eventCount() {
         return eventNames == null ? 0 : eventNames.size();
+    }
+
+    // equals/hashCode/toString consider array contents (closures by reference) — java:S6218.
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (!(o instanceof DaeAssembly other)) {
+            return false;
+        }
+        return n == other.n
+                && Objects.equals(variables, other.variables)
+                && Objects.equals(states, other.states)
+                && Objects.equals(aux, other.aux)
+                && Arrays.equals(id, other.id)
+                && Objects.equals(residual, other.residual)
+                && Arrays.equals(y0, other.y0)
+                && Arrays.equals(yp0, other.yp0)
+                && Arrays.deepEquals(sparsity, other.sparsity)
+                && Objects.equals(rootFn, other.rootFn)
+                && Objects.equals(eventNames, other.eventNames)
+                && Arrays.equals(eventStops, other.eventStops);
+    }
+
+    @Override
+    public int hashCode() {
+        int result = Objects.hash(n, variables, states, aux, residual, rootFn, eventNames);
+        result = 31 * result + Arrays.hashCode(id);
+        result = 31 * result + Arrays.hashCode(y0);
+        result = 31 * result + Arrays.hashCode(yp0);
+        result = 31 * result + Arrays.deepHashCode(sparsity);
+        result = 31 * result + Arrays.hashCode(eventStops);
+        return result;
+    }
+
+    @Override
+    public String toString() {
+        return "DaeAssembly[n=" + n + ", variables=" + variables + ", states=" + states
+                + ", aux=" + aux + ", id=" + Arrays.toString(id) + ", residual=" + residual
+                + ", y0=" + Arrays.toString(y0) + ", yp0=" + Arrays.toString(yp0)
+                + ", sparsity=" + Arrays.deepToString(sparsity) + ", rootFn=" + rootFn
+                + ", eventNames=" + eventNames + ", eventStops=" + Arrays.toString(eventStops) + "]";
     }
 }

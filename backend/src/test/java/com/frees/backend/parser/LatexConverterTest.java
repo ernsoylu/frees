@@ -2,6 +2,7 @@ package com.frees.backend.parser;
 
 import com.frees.backend.ast.Equation;
 import com.frees.backend.ast.Expr;
+import com.frees.backend.cas.PolynomialHelpers.ResidueResult;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -9,6 +10,7 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class LatexConverterTest {
 
@@ -151,5 +153,125 @@ class LatexConverterTest {
 
         Equation eq = new Equation(new Expr.Var("x"), new Expr.Num(5), "x=5");
         assertEquals("x = 5", LatexConverter.toLatex(eq, Map.of()));
+    }
+
+    @Test
+    void testToLatexString() {
+        Expr s = new Expr.Str("hello");
+        assertEquals("\\text{'hello'}", LatexConverter.toLatex(s, Map.of()));
+    }
+
+    @Test
+    void testPowerWithBinopBaseWrapsInParens() {
+        Expr pow = new Expr.BinOp('^', new Expr.BinOp('+', new Expr.Var("x"), new Expr.Var("y")), new Expr.Num(2));
+        assertEquals("\\left(x + y\\right)^{2}", LatexConverter.toLatex(pow, Map.of()));
+    }
+
+    @Test
+    void testHyperbolicAndInverseHyperbolicCalls() {
+        assertEquals("\\sinh\\left(x\\right)", LatexConverter.toLatex(new Expr.Call("sinh", List.of(new Expr.Var("x"))), Map.of()));
+        assertEquals("\\cosh\\left(x\\right)", LatexConverter.toLatex(new Expr.Call("cosh", List.of(new Expr.Var("x"))), Map.of()));
+        assertEquals("\\tanh\\left(x\\right)", LatexConverter.toLatex(new Expr.Call("tanh", List.of(new Expr.Var("x"))), Map.of()));
+        assertEquals("\\text{arcsinh}\\left(x\\right)", LatexConverter.toLatex(new Expr.Call("arcsinh", List.of(new Expr.Var("x"))), Map.of()));
+        assertEquals("\\text{arccosh}\\left(x\\right)", LatexConverter.toLatex(new Expr.Call("arccosh", List.of(new Expr.Var("x"))), Map.of()));
+        assertEquals("\\text{arctanh}\\left(x\\right)", LatexConverter.toLatex(new Expr.Call("arctanh", List.of(new Expr.Var("x"))), Map.of()));
+    }
+
+    @Test
+    void testBesselAndChiSquareCalls() {
+        assertEquals("J_{n}\\left(x\\right)",
+                LatexConverter.toLatex(new Expr.Call("besselj", List.of(new Expr.Var("x"), new Expr.Var("n"))), Map.of()));
+        assertEquals("I_{n}\\left(x\\right)",
+                LatexConverter.toLatex(new Expr.Call("bessel_i", List.of(new Expr.Var("x"), new Expr.Var("n"))), Map.of()));
+        assertEquals("Y_{n}\\left(x\\right)",
+                LatexConverter.toLatex(new Expr.Call("bessely", List.of(new Expr.Var("x"), new Expr.Var("n"))), Map.of()));
+        assertEquals("K_{n}\\left(x\\right)",
+                LatexConverter.toLatex(new Expr.Call("besselk", List.of(new Expr.Var("x"), new Expr.Var("n"))), Map.of()));
+        assertEquals("J_0\\left(x\\right)",
+                LatexConverter.toLatex(new Expr.Call("besselj0", List.of(new Expr.Var("x"))), Map.of()));
+        assertEquals("I_1\\left(x\\right)",
+                LatexConverter.toLatex(new Expr.Call("besseli1", List.of(new Expr.Var("x"))), Map.of()));
+        assertEquals("Y_0\\left(x\\right)",
+                LatexConverter.toLatex(new Expr.Call("bessely0", List.of(new Expr.Var("x"))), Map.of()));
+        assertEquals("K_1\\left(x\\right)",
+                LatexConverter.toLatex(new Expr.Call("besselk1", List.of(new Expr.Var("x"))), Map.of()));
+        assertEquals("\\chi^2\\left(x\\right)",
+                LatexConverter.toLatex(new Expr.Call("chi_square", List.of(new Expr.Var("x"))), Map.of()));
+    }
+
+    @Test
+    void testChemistryPropertyCallWithoutEncodedArgs() {
+        // prop$molarmass has fewer than 3 '$'-parts → rendered straight from args.
+        Expr prop = new Expr.Call("prop$molarmass", List.of(new Expr.Str("H2O")));
+        assertEquals("\\text{Molarmass}\\left(\\text{'H2O'}\\right)", LatexConverter.toLatex(prop, Map.of()));
+    }
+
+    @Test
+    void testTransferFunctionFallbackOnNonConstantCoeffs() {
+        // tf with symbolic (non-array-literal) coefficients can't expand → plain call form.
+        Expr tf = new Expr.Call("tf", List.of(new Expr.Var("a"), new Expr.Var("b")));
+        assertEquals("\\text{tf}\\left(a, b\\right)", LatexConverter.toLatex(tf, Map.of()));
+    }
+
+    // --- Partial-fraction (residue) rendering ------------------------------
+
+    @Test
+    void testResidueRealPolesSum() {
+        // 2/(s+1) + (-1)/(s+2)
+        ResidueResult res = new ResidueResult(
+                new double[][]{{2, 0}, {-1, 0}},
+                new double[][]{{-1, 0}, {-2, 0}},
+                new int[]{1, 1}, 0.0);
+        assertEquals("\\frac{2}{s + 1} + \\frac{-1}{s + 2}", LatexConverter.toLatex(res));
+    }
+
+    @Test
+    void testResidueRepeatedPolePlusDirectTerm() {
+        // 1/(s-3)^2 + 5
+        ResidueResult res = new ResidueResult(
+                new double[][]{{1, 0}},
+                new double[][]{{3, 0}},
+                new int[]{2}, 5.0);
+        assertEquals("\\frac{1}{\\left(s - 3\\right)^{2}} + 5", LatexConverter.toLatex(res));
+    }
+
+    @Test
+    void testResidueComplexPoleAndResidue() {
+        // 2i / (s + (1 - 3i))  from residue (0,2i), pole (-1,3i)
+        ResidueResult res = new ResidueResult(
+                new double[][]{{0, 2}},
+                new double[][]{{-1, 3}},
+                new int[]{1}, 0.0);
+        assertEquals("\\frac{2i}{s + \\left(1 - 3i\\right)}", LatexConverter.toLatex(res));
+    }
+
+    @Test
+    void testResidueAtOriginWithNegImaginaryResidue() {
+        // -i / s  (residue (0,-1), pole at origin)
+        ResidueResult res = new ResidueResult(
+                new double[][]{{0, -1}},
+                new double[][]{{0, 0}},
+                new int[]{1}, 0.0);
+        assertEquals("\\frac{-i}{s}", LatexConverter.toLatex(res));
+    }
+
+    @Test
+    void testResidueSkipsZeroResiduesAndShowsLoneDirectTerm() {
+        // All residues zero → only the direct term k remains.
+        ResidueResult res = new ResidueResult(
+                new double[][]{{0, 0}},
+                new double[][]{{-1, 0}},
+                new int[]{1}, 0.0);
+        assertEquals("0", LatexConverter.toLatex(res));
+    }
+
+    @Test
+    void testResidueWithFullComplexResidue() {
+        // residue (2 + i) over a pole at origin exercises the full re+im formatComplex branch.
+        ResidueResult res = new ResidueResult(
+                new double[][]{{2, 1}},
+                new double[][]{{0, 0}},
+                new int[]{1}, 0.0);
+        assertTrue(LatexConverter.toLatex(res).contains("2 + i"), LatexConverter.toLatex(res));
     }
 }

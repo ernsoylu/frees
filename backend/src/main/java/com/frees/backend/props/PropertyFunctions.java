@@ -269,7 +269,13 @@ public final class PropertyFunctions {
 
     /** Restores the lenient flag to {@code prev} (pair with {@link #enterLenient()} in a finally). */
     public static void exitLenient(boolean prev) {
-        LENIENT.set(prev);
+        // Calling remove() when restoring to the initial FALSE state avoids leaking a
+        // bound value onto pooled threads (the steady solver runs on shared executors).
+        if (prev) {
+            LENIENT.set(Boolean.TRUE);
+        } else {
+            LENIENT.remove();
+        }
     }
 
     private static double finiteOr(double v, double fallback) {

@@ -148,8 +148,8 @@ function getSpreadsheetValues(spreadsheets: any[], refStr: string): Map<number, 
     if (!match) return { r: 0, c: 0 }
     const colStr = match[1]
     let c = 0
-    for (let i = 0; i < colStr.length; i++) c = c * 26 + (colStr.charCodeAt(i) - 64)
-    return { r: parseInt(match[2], 10) - 1, c: c - 1 }
+    for (let i = 0; i < colStr.length; i++) c = c * 26 + ((colStr.codePointAt(i) ?? 0) - 64)
+    return { r: Number.parseInt(match[2], 10) - 1, c: c - 1 }
   }
 
   const start = parseA1(rangeParts[0])

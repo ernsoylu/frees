@@ -3,6 +3,7 @@ package com.frees.backend.core.dae;
 import com.sun.jna.Pointer;
 import com.sun.jna.ptr.DoubleByReference;
 import com.sun.jna.ptr.PointerByReference;
+import java.util.Arrays;
 
 /**
  * High-level Java wrapper over {@link SundialsIda} — the frees-facing DAE
@@ -37,6 +38,38 @@ public final class IdaDaeSolver implements AutoCloseable {
     public record Step(double t, double[] y, double[] yp, int flag, int[] rootsFound) {
         public boolean rootReturn() {
             return flag == SundialsIda.IDA_ROOT_RETURN;
+        }
+
+        // equals/hashCode/toString consider array contents — java:S6218.
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (!(o instanceof Step other)) {
+                return false;
+            }
+            return Double.compare(t, other.t) == 0
+                    && flag == other.flag
+                    && Arrays.equals(y, other.y)
+                    && Arrays.equals(yp, other.yp)
+                    && Arrays.equals(rootsFound, other.rootsFound);
+        }
+
+        @Override
+        public int hashCode() {
+            int result = Double.hashCode(t);
+            result = 31 * result + flag;
+            result = 31 * result + Arrays.hashCode(y);
+            result = 31 * result + Arrays.hashCode(yp);
+            result = 31 * result + Arrays.hashCode(rootsFound);
+            return result;
+        }
+
+        @Override
+        public String toString() {
+            return "Step[t=" + t + ", y=" + Arrays.toString(y) + ", yp=" + Arrays.toString(yp)
+                    + ", flag=" + flag + ", rootsFound=" + Arrays.toString(rootsFound) + "]";
         }
     }
 

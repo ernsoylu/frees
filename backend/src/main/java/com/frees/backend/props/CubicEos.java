@@ -4,8 +4,10 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.io.InputStream;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * Cubic equation-of-state property backend (Soave-Redlich-Kwong and
@@ -32,7 +34,35 @@ public final class CubicEos {
 
     /** Fluid critical/ideal-gas parameters. cp0 is molar [J/mol-K]. */
     public record Fluid(String name, double tc, double pc, double omega, double mw,
-                        double[] cp0) {}
+                        double[] cp0) {
+        // equals/hashCode/toString consider array contents — java:S6218.
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (!(o instanceof Fluid other)) {
+                return false;
+            }
+            return Double.compare(tc, other.tc) == 0
+                    && Double.compare(pc, other.pc) == 0
+                    && Double.compare(omega, other.omega) == 0
+                    && Double.compare(mw, other.mw) == 0
+                    && Objects.equals(name, other.name)
+                    && Arrays.equals(cp0, other.cp0);
+        }
+
+        @Override
+        public int hashCode() {
+            return 31 * Objects.hash(name, tc, pc, omega, mw) + Arrays.hashCode(cp0);
+        }
+
+        @Override
+        public String toString() {
+            return "Fluid[name=" + name + ", tc=" + tc + ", pc=" + pc + ", omega=" + omega
+                    + ", mw=" + mw + ", cp0=" + Arrays.toString(cp0) + "]";
+        }
+    }
 
     public enum Model { SRK, PR }
 

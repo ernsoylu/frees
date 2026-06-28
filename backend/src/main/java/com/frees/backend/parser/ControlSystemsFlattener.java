@@ -11,6 +11,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -1862,7 +1863,33 @@ final class ControlSystemsFlattener {
         }
     }
 
-    record MatrixData(String name, int rows, int cols, Expr[][] elements) {}
+    record MatrixData(String name, int rows, int cols, Expr[][] elements) {
+        // equals/hashCode/toString consider array contents — java:S6218.
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (!(o instanceof MatrixData other)) {
+                return false;
+            }
+            return rows == other.rows
+                    && cols == other.cols
+                    && Objects.equals(name, other.name)
+                    && Arrays.deepEquals(elements, other.elements);
+        }
+
+        @Override
+        public int hashCode() {
+            return 31 * Objects.hash(name, rows, cols) + Arrays.deepHashCode(elements);
+        }
+
+        @Override
+        public String toString() {
+            return "MatrixData[name=" + name + ", rows=" + rows + ", cols=" + cols
+                    + ", elements=" + Arrays.deepToString(elements) + "]";
+        }
+    }
 
     private MatrixData getMatrixData(Expr e, EquationParser.FlattenContext ctx) {
         if (e instanceof Expr.ArrayAccess aa) {

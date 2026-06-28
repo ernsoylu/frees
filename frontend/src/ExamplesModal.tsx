@@ -16,7 +16,7 @@ export default function ExamplesModal({ opened, onClose, onSelect }: Readonly<Pr
 
   const categories = useMemo(() => {
     const cats = new Set(EXAMPLES.map((ex) => ex.category))
-    return Array.from(cats).sort()
+    return Array.from(cats).sort((a, b) => a.localeCompare(b))
   }, [])
 
   const filteredExamples = useMemo(() => {
