@@ -142,6 +142,13 @@ public class FunctionRegistry {
             new FunctionInfo("hx_aconv", "hx_aconv(Aflow, L, Dh)", "Convective area A = 4*Aflow*L/Dh [m^2]", "Heat Transfer"),
             new FunctionInfo("hx_sigma", "hx_sigma(Aflow, Afrontal)", "Free-flow (contraction) ratio sigma = Aflow/Afrontal", "Heat Transfer"),
             new FunctionInfo("hx_eta_surf", "hx_eta_surf(Afin, Atotal, eta_fin)", "Overall fin-surface efficiency 1-(Afin/Atotal)(1-eta_fin)", "Heat Transfer"),
+            new FunctionInfo("nu_tubebank", "nu_tubebank(arr$, Re, Pr)", "Zukauskas tube-bank Nusselt (arr$=inline|staggered, Re-band C,m)", "Heat Transfer"),
+            new FunctionInfo("nu_hilpert", "nu_hilpert(Re, Pr)", "Hilpert single-cylinder cross-flow Nusselt", "Heat Transfer"),
+            new FunctionInfo("nu_plate", "nu_plate(Re, Pr, beta_deg)", "Chevron plate-HX Nusselt (angle-dependent)", "Heat Transfer"),
+            new FunctionInfo("hx_fin_len", "hx_fin_len(depth, t, finDensity, Htube)", "Developed fin length [m] (fin-and-tube geometry)", "Heat Transfer"),
+            new FunctionInfo("hx_area_direct", "hx_area_direct(W, tubeCount, Htube, depth, t)", "Primary tube-wall area [m^2]", "Heat Transfer"),
+            new FunctionInfo("hx_area_indirect", "hx_area_indirect(W, tubeCount, finLen)", "Secondary fin area [m^2]", "Heat Transfer"),
+            new FunctionInfo("dp_gravity", "dp_gravity(rho_l, rho_g, alpha, L, theta_deg)", "Two-phase gravitational (static-head) pressure change [Pa]", "Heat Transfer"),
 
             // Two-phase flow (Lockhart-Martinelli / Chisholm — Phase C)
             new FunctionInfo("lm_phi2", "lm_phi2(X, C)", "Chisholm two-phase multiplier 1+C/X+1/X^2 on the liquid-alone drop", "Two-Phase Flow"),

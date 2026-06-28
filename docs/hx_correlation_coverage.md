@@ -44,14 +44,16 @@ geometry `(D_h, A_flow, A_conv)` is supplied to those functions.
 - **Colburn j-factor** `nu_colburn(j,Re,Pr)`; **Churchill–Chu** free convection
   `nu_churchill_chu(Ra,Pr)`; **free+forced cubic blend** `nu_blend(Nu1,Nu2)`.
 
+### Implemented (revision B)
+- **Bank-arrangement Žukauskas** `nu_tubebank(arr$, Re, Pr)` (inline/staggered,
+  Re-band C,m); **Hilpert single-cylinder** `nu_hilpert(Re, Pr)`; **chevron
+  plate-HX** `nu_plate(Re, Pr, beta_deg)`.
+
 ### Still NOT implemented
-- **Hilpert (single-cylinder)** and **bank-arrangement-specific** Žukauskas C,m
-  tables (current `nu_zukauskas` uses one representative C,m); **Colburn-j data
-  tables** (j is supplied, not looked up from a fin-surface database).
+- **Colburn-j data tables** (j supplied, not looked up from a fin-surface DB).
 - **Other two-phase correlations** in the AC menus: **Arima** (plate boiling),
-  **VDI**, **Traviss**, **Cavallini** (boiling). frees has Chen + Shah (boiling),
-  Shah + Cavallini-Zecchin (condensation).
-- **Plate-HX (BPHE) chevron-angle** Nu correlations.
+  **VDI**, **Traviss**, **Cavallini** (boiling) — these need digitized charts.
+  frees has Chen + Shah (boiling), Shah + Cavallini-Zecchin (condensation).
 
 ---
 
@@ -72,10 +74,12 @@ geometry `(D_h, A_flow, A_conv)` is supplied to those functions.
 - `hx_eta_surf(Afin,Atotal,eta_fin)` = 1 − (A_fin/A_total)(1−η_fin) — overall
   fin-surface efficiency (composes with the existing single-fin `fin_efficiency`).
 
+### Implemented (revision B)
+- **Fin-and-tube developed-fin geometry**: `hx_fin_len(depth,t,finDensity,Htube)`,
+  `hx_area_direct(W,tubeCount,Htube,depth,t)`, `hx_area_indirect(W,tubeCount,finLen)`
+  → compose into `hx_eta_surf` / `hx_dh`.
+
 ### Still NOT implemented
-- The **full fin-and-tube developed-fin-length** resolver (compute A_direct,
-  A_indirect, fin block from fin density/thickness/pitch + tube geometry) — the
-  user still supplies `A_fin`/`A_total` or `A_flow` for the macro path.
 - A **mass-flux `G = ṁ/A_flow`** convenience helper (trivial to write inline).
 
 ---
@@ -99,11 +103,13 @@ geometry `(D_h, A_flow, A_conv)` is supplied to those functions.
 - **Compact-core entrance/exit + acceleration** ΔP: `dp_compact_core(G,ρin,ρout,σ,Kc,Ke)`
   (Kays–London).
 
+### Implemented (revision B)
+- **Gravitational (static-head) two-phase term**: `dp_gravity(rho_l,rho_g,alpha,L,theta_deg)`.
+
 ### Still NOT implemented
 - **`dp_2phase` / `dp_mueller_steinhagen` integrate a single mid-quality point**,
   not a quality-averaged or cell-by-cell integral along the HX (Amesim discretizes;
   frees lumps).
-- **Gravitational (static head) two-phase term** for vertical risers.
 - **Louvered-fin air-side ΔP** correlations (the friction analogue of the
   Colburn-j heat side).
 
@@ -116,15 +122,15 @@ Churchill-Chu + free+forced blend), the geometry resolver (D_h/A_conv/σ/η_surf
 and Müller–Steinhagen + compact-core dP. The coupled EV-TMS example is now
 geometry-driven (UA + dP from correlations, injected — `EvTmsCorrelatedTest`).
 
-**Remaining (lower priority):**
-1. Bank-arrangement-specific Žukauskas C,m tables + Colburn-j fin-surface data
-   tables (currently one representative correlation / supplied j).
-2. Full fin-and-tube developed-fin-length geometry resolver (compute A_fin/A_total
-   from fin density/thickness/pitch + tube geometry).
-3. More two-phase HT correlations (Arima / VDI / Traviss / Cavallini-boiling) and
-   plate-HX chevron Nu, for AC correlation-menu parity.
-4. Quality-integrated (cell-by-cell) ΔP, gravitational two-phase term, louvered-
-   fin air-side ΔP.
+**Remaining (lower priority, revision B narrowed further):**
+1. Colburn-j fin-surface data tables (j currently supplied).
+2. Chart-digitized two-phase HT correlations (Arima / VDI / Traviss /
+   Cavallini-boiling) for full AC correlation-menu parity.
+3. Quality-integrated (cell-by-cell) ΔP and louvered-fin air-side ΔP.
+4. A mass-flux `G=ṁ/A_flow` helper (trivial).
+
+The UI "EV Thermal Management System" example is now the **geometry-driven**
+model (every HX UA + the evaporator dP from correlations, injected).
 
 All present correlations are Amesim-grounded (Nu+Geom engine, ε-NTU, Chen/Shah/
 Cavallini, Žukauskas/Colburn, Friedel/Lockhart-Martinelli/Müller-Steinhagen,

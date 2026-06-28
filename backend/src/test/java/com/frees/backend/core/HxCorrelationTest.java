@@ -79,6 +79,30 @@ class HxCorrelationTest {
     assertTrue(dpCore > 0, "compact-core drop (acceleration-dominated here) positive");
   }
 
+  @Test void remainingCorrelations() {
+    assumeTrue(CoolProp.isAvailable());
+    // tube-bank (inline vs staggered), single cylinder, chevron plate Nu
+    double nuIn = HxCorrelations.nuTubeBank("inline", 1e4, 0.7);
+    double nuSt = HxCorrelations.nuTubeBank("staggered", 1e4, 0.7);
+    double nuHi = HxCorrelations.nuHilpert(1e4, 0.7);
+    double nuPl30 = HxCorrelations.nuPlate(2000, 5, 30);
+    double nuPl60 = HxCorrelations.nuPlate(2000, 5, 60);
+    System.out.printf("Nu bank in=%.0f stag=%.0f  hilpert=%.0f  plate30=%.0f plate60=%.0f%n",
+        nuIn, nuSt, nuHi, nuPl30, nuPl60);
+    assertTrue(nuSt > nuIn, "staggered bank enhances over inline");
+    assertTrue(nuHi > 0 && nuPl60 > nuPl30, "Hilpert positive; steeper chevron -> higher Nu");
+    // fin-and-tube geometry -> areas -> eta_surf
+    double finLen = HxCorrelations.hxFinLen(0.025, 1.5e-4, 1000, 0.002);
+    double aDir = HxCorrelations.hxAreaDirect(0.4, 30, 0.002, 0.025, 1.5e-4);
+    double aInd = HxCorrelations.hxAreaIndirect(0.4, 30, finLen);
+    double etaSurf = HxCorrelations.hxEtaSurf(aInd, aDir + aInd, 0.85);
+    System.out.printf("finLen=%.4f Adir=%.3f Aind=%.3f eta_surf=%.3f%n", finLen, aDir, aInd, etaSurf);
+    assertTrue(finLen > 0 && aInd > aDir && etaSurf > 0 && etaSurf <= 1, "fin geometry sane");
+    // gravitational two-phase dP (vertical riser)
+    double dpG = HxCorrelations.dpGravity(1100, 30, 0.7, 1.0, 90);
+    assertTrue(dpG > 0, "vertical riser static head positive: " + dpG);
+  }
+
   @Test void uaAndDpInjectedIntoComponent() {
     assumeTrue(CoolProp.isAvailable());
     // A chiller evaporator whose UA and dP are CALCULATED OUTSIDE (correlation +

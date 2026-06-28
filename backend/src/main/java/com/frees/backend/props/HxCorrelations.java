@@ -219,6 +219,91 @@ public final class HxCorrelations {
                 * ((kc + 1.0 - s2) + 2.0 * (rhoIn / rhoOut - 1.0) - (1.0 - s2 - ke) * (rhoIn / rhoOut));
     }
 
+    // ── Remaining correlations (advisory item A) ────────────────────────────
+
+    /** Žukauskas tube-bank cross-flow Nusselt with arrangement + Re-band C,m.
+     *  {@code arr} = "inline" | "staggered"; Pr^0.36 (Pr/Prw ratio ≈ 1 for gases). */
+    public static double nuTubeBank(String arr, double re, double pr) {
+        boolean staggered = arr != null && arr.toLowerCase(java.util.Locale.ROOT).startsWith("stag");
+        double reEff = Math.max(re, 1.0);
+        double c;
+        double m;
+        if (reEff < 100) {
+            c = staggered ? 0.90 : 0.80;
+            m = 0.40;
+        } else if (reEff < 1000) {
+            c = 0.51;
+            m = 0.50;
+        } else if (reEff < 2e5) {
+            c = staggered ? 0.40 : 0.27;
+            m = staggered ? 0.60 : 0.63;
+        } else {
+            c = staggered ? 0.022 : 0.021;
+            m = 0.84;
+        }
+        return c * Math.pow(reEff, m) * Math.pow(pr, 0.36);
+    }
+
+    /** Hilpert single-cylinder cross-flow Nusselt: Nu = C·Re^m·Pr^(1/3), C,m by Re band. */
+    public static double nuHilpert(double re, double pr) {
+        double reEff = Math.max(re, 0.4);
+        double c;
+        double m;
+        if (reEff < 4) {
+            c = 0.989;
+            m = 0.330;
+        } else if (reEff < 40) {
+            c = 0.911;
+            m = 0.385;
+        } else if (reEff < 4000) {
+            c = 0.683;
+            m = 0.466;
+        } else if (reEff < 4e4) {
+            c = 0.193;
+            m = 0.618;
+        } else {
+            c = 0.027;
+            m = 0.805;
+        }
+        return c * Math.pow(reEff, m) * Math.pow(pr, 1.0 / 3.0);
+    }
+
+    /** Chevron plate-HX Nusselt: Nu = C(β)·Re^m·Pr^(1/3); C,m rise with chevron
+     *  angle β (30°→60°), a Martin/Kumar-style fit. */
+    public static double nuPlate(double re, double pr, double betaDeg) {
+        double b = clip(betaDeg, 30.0, 60.0);
+        double f = (b - 30.0) / 30.0;
+        double c = 0.2 + 0.2 * f;
+        double m = 0.6 + 0.14 * f;
+        return c * Math.pow(Math.max(re, 1.0), m) * Math.pow(pr, 1.0 / 3.0);
+    }
+
+    // fin-and-tube geometry (Amesim hx_sizing §1.2): developed fin length and the
+    // primary (tube-wall) + secondary (fin) areas → feed hx_eta_surf / hx_dh.
+    /** Developed fin length. */
+    public static double hxFinLen(double depth, double t, double finDensity, double hTube) {
+        double a = hTube - 2.0 * t;
+        double b = 1.0 / (2.0 * finDensity);
+        return 2.0 * (depth - 2.0 * t) * finDensity * Math.sqrt(a * a + b * b);
+    }
+
+    /** Primary (tube-wall) area. */
+    public static double hxAreaDirect(double w, double tubeCount, double hTube, double depth, double t) {
+        return 2.0 * w * tubeCount * ((hTube - 2.0 * t) + (depth - 2.0 * t));
+    }
+
+    /** Secondary (fin) area. */
+    public static double hxAreaIndirect(double w, double tubeCount, double finLen) {
+        return 2.0 * w * tubeCount * finLen;
+    }
+
+    /** Two-phase gravitational (static-head) pressure change [Pa] over length L at
+     *  inclination θ from horizontal: (α·ρg+(1−α)·ρl)·g·L·sin θ. */
+    public static double dpGravity(double rhoL, double rhoG, double alpha, double l, double thetaDeg) {
+        double rhoMix = alpha * rhoG + (1.0 - alpha) * rhoL;
+        return rhoMix * 9.80665 * l * Math.sin(Math.toRadians(thetaDeg));
+    }
+
     private static double smooth(double lo, double hi, double x, double x1, double x2) {
         if (x <= x1) {
             return lo;

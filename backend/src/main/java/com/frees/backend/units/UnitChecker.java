@@ -661,9 +661,11 @@ public final class UnitChecker {
             // External/free-convection Nusselt numbers, free-flow ratio and
             // surface efficiency are dimensionless; convective area [m^2], D_h [m].
             case "nu_zukauskas", "nu_colburn", "nu_churchill_chu", "nu_blend",
+                 "nu_tubebank", "nu_hilpert", "nu_plate",
                  "hx_sigma", "hx_eta_surf" -> Dim.of(Quantity.dimensionless(1.0));
-            case "hx_dh" -> eosDim("m");
-            case "hx_aconv" -> eosDim("m^2");
+            case "hx_dh", "hx_fin_len" -> eosDim("m");
+            case "hx_aconv", "hx_area_direct", "hx_area_indirect" -> eosDim("m^2");
+            case "dp_gravity" -> eosDim("Pa");
             // Two-phase flow: the Martinelli parameter and its multiplier are
             // both dimensionless (quality / property-ratio arguments unpoliced).
             case "lm_phi2", "lm_martinelli_tt" -> Dim.of(Quantity.dimensionless(1.0));
