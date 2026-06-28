@@ -1,39 +1,70 @@
 ---
 name: besselk
 category: Special Functions
-summary: Modified Bessel function of the 2nd kind, order n
-related: []
+summary: Modified Bessel function of the second kind, order n — K_n(x).
+related: [besseli, bessely, besselk0, besselk1]
 examples: []
-tags: [besselk, special, functions]
-references: []
-generated: true
+tags: [special function, modified bessel, second kind, macdonald, decay]
+references:
+  - "Abramowitz, M. & Stegun, I.A., Handbook of Mathematical Functions, §9.6"
+  - "NIST Digital Library of Mathematical Functions, §10.25"
 ---
 
 # besselk
 
-Modified Bessel function of the 2nd kind, order n
-
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
+Returns the **modified Bessel function of the second kind** `K_n(x)` (Macdonald
+function) of integer order `n` — the exponentially decaying solution of the modified
+Bessel equation, used for outward (decaying) cylindrical fields.
 
 ## Syntax
 
 ```
-besselk(n, x)
+y = besselk(n, x)
 ```
 
 ## Description
 
-Modified Bessel function of the 2nd kind, order n
+`K_n(x) → ∞` as `x → 0⁺` and decays like `e^{−x}` for large `x`. The natural
+partner to [`besseli`](besseli). For fixed orders use [`besselk0`](besselk0) /
+[`besselk1`](besselk1).
+
+## Mathematical Formulation
+
+`K_n` is the decaying solution of the modified Bessel equation (A&S §9.6):
+
+$$ x^2 y'' + x y' - (x^2 + n^2)y = 0, \qquad K_n(x) = \frac{\pi}{2}\frac{I_{-n}(x) - I_n(x)}{\sin(n\pi)} $$
+
+(a limit for integer `n`), with asymptotic `K_n(x) ~ \sqrt{\pi/2x}\,e^{-x}`.
+
+> **Method:** standard library evaluation via the `I`/`K` relations.
+
+## Examples
+
+```
+{ K_0(x) -> inf as x -> 0; decays for large x }
+y = besselk(0, 1)
+```
 
 ## Input Arguments
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `n` | Number | Yes | Numeric argument. |
-| `x` | Number | Yes | Numeric argument. |
+| `n` | Number | Yes | Integer order. |
+| `x` | Number | Yes | Argument (> 0). |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| `y` | Number | K_n(x). |
+
+## Common Errors
+
+| Error | Cause | Fix |
+| --- | --- | --- |
+| `DOMAIN_ERROR` | `x ≤ 0` | `K_n` is singular at and below 0; use a positive argument. |
 
 ## References
 
-1. Abramowitz, M. & Stegun, I.A., Handbook of Mathematical Functions.
-2. NIST Digital Library of Mathematical Functions (dlmf.nist.gov).
-
+1. Abramowitz, M. & Stegun, I.A. *Handbook of Mathematical Functions*, §9.6.
+2. NIST *Digital Library of Mathematical Functions*, §10.25.

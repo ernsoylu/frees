@@ -1,38 +1,55 @@
 ---
 name: bessely1
 category: Special Functions
-summary: Bessel Y1(x)
-related: []
+summary: Bessel function of the second kind, order 1 — Y_1(x).
+related: [bessely, bessely0, besselj1]
 examples: []
-tags: [bessely1, special, functions]
-references: []
-generated: true
+tags: [special function, bessel, y1, second kind, neumann]
+references:
+  - "Abramowitz, M. & Stegun, I.A., Handbook of Mathematical Functions, §9.1"
 ---
 
 # bessely1
 
-Bessel Y1(x)
-
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
+Returns `Y_1(x)`, the **order-1 Bessel function of the second kind** (Neumann) — the
+fixed-order specialization of [`bessely`](bessely). Singular as `x → 0⁺`.
 
 ## Syntax
 
 ```
-bessely1(x)
+y = bessely1(x)
 ```
 
-## Description
+## Mathematical Formulation
 
-Bessel Y1(x)
+`Y_1` is the second independent order-1 solution of Bessel's equation (A&S §9.1),
+with `Y_0'(x) = −Y_1(x)`.
+
+## Examples
+
+```
+{ finite for x > 0 }
+y = bessely1(1)
+```
 
 ## Input Arguments
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `x` | Number | Yes | Numeric argument. |
+| `x` | Number | Yes | Argument (> 0). |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| `y` | Number | Y_1(x). |
+
+## Common Errors
+
+| Error | Cause | Fix |
+| --- | --- | --- |
+| `DOMAIN_ERROR` | `x ≤ 0` | Singular at and below 0; use a positive argument. |
 
 ## References
 
-1. Abramowitz, M. & Stegun, I.A., Handbook of Mathematical Functions.
-2. NIST Digital Library of Mathematical Functions (dlmf.nist.gov).
-
+1. Abramowitz, M. & Stegun, I.A. *Handbook of Mathematical Functions*, §9.1.

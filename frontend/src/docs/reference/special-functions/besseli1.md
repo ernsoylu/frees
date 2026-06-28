@@ -1,38 +1,49 @@
 ---
 name: besseli1
 category: Special Functions
-summary: Modified Bessel I1(x)
-related: []
+summary: Modified Bessel function of the first kind, order 1 — I_1(x).
+related: [besseli, besseli0, besselk1]
 examples: []
-tags: [besseli1, special, functions]
-references: []
-generated: true
+tags: [special function, modified bessel, i1, first kind]
+references:
+  - "Abramowitz, M. & Stegun, I.A., Handbook of Mathematical Functions, §9.6"
 ---
 
 # besseli1
 
-Modified Bessel I1(x)
-
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
+Returns `I_1(x)`, the **order-1 modified Bessel function of the first kind** — the
+fixed-order specialization of [`besseli`](besseli). `I_1(0) = 0`, with
+`I_0'(x) = I_1(x)`.
 
 ## Syntax
 
 ```
-besseli1(x)
+y = besseli1(x)
 ```
 
-## Description
+## Mathematical Formulation
 
-Modified Bessel I1(x)
+$$ I_1(x) = \sum_{k=0}^{\infty}\frac{1}{k!\,(k+1)!}\left(\frac{x}{2}\right)^{2k+1}, \qquad I_0'(x) = I_1(x) \qquad \text{(A\&S §9.6)} $$
+
+## Examples
+
+```
+{ besseli1(0) = 0 }
+y = besseli1(0)
+```
 
 ## Input Arguments
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `x` | Number | Yes | Numeric argument. |
+| `x` | Number | Yes | Argument. |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| `y` | Number | I_1(x). |
 
 ## References
 
-1. Abramowitz, M. & Stegun, I.A., Handbook of Mathematical Functions.
-2. NIST Digital Library of Mathematical Functions (dlmf.nist.gov).
-
+1. Abramowitz, M. & Stegun, I.A. *Handbook of Mathematical Functions*, §9.6.

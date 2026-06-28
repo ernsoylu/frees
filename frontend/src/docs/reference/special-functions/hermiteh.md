@@ -1,39 +1,60 @@
 ---
 name: hermiteh
 category: Special Functions
-summary: Hermite polynomial H_n(x)
-related: []
+summary: Hermite polynomial H_n(x) (physicists' convention).
+related: [laguerrel, legendrep, chebyshevt]
 examples: []
-tags: [hermiteh, special, functions]
-references: []
-generated: true
+tags: [special function, hermite, orthogonal polynomial, gaussian]
+references:
+  - "Abramowitz, M. & Stegun, I.A., Handbook of Mathematical Functions, §22"
+  - "NIST Digital Library of Mathematical Functions, §18.3"
 ---
 
 # hermiteh
 
-Hermite polynomial H_n(x)
-
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
+Returns the **Hermite polynomial** `H_n(x)` (physicists' convention) of degree `n`
+— orthogonal on `(−∞, ∞)` with weight `e^{−x²}`, central to Gauss–Hermite
+quadrature and the quantum harmonic oscillator.
 
 ## Syntax
 
 ```
-hermiteh(n, x)
+y = hermiteh(n, x)
 ```
 
 ## Description
 
-Hermite polynomial H_n(x)
+`H_0 = 1`, `H_1 = 2x`, with the standard three-term recurrence.
+
+## Mathematical Formulation
+
+$$ H_{n+1}(x) = 2x\,H_n(x) - 2n\,H_{n-1}(x), \qquad H_0 = 1,\ H_1 = 2x \qquad \text{(A\&S §22)} $$
+
+with orthogonality $\int_{-\infty}^{\infty} H_m H_n\,e^{-x^2}\,dx = 2^n n!\sqrt{\pi}\,\delta_{mn}$.
+
+> **Method:** three-term recurrence from `H_0`, `H_1`.
+
+## Examples
+
+```
+{ H_2(x) = 4x^2 - 2; hermiteh(2, 1) = 2 }
+y = hermiteh(2, 1)
+```
 
 ## Input Arguments
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `n` | Number | Yes | Numeric argument. |
-| `x` | Number | Yes | Numeric argument. |
+| `n` | Number | Yes | Polynomial degree (≥ 0). |
+| `x` | Number | Yes | Argument. |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| `y` | Number | H_n(x). |
 
 ## References
 
-1. Abramowitz, M. & Stegun, I.A., Handbook of Mathematical Functions.
-2. NIST Digital Library of Mathematical Functions (dlmf.nist.gov).
-
+1. Abramowitz, M. & Stegun, I.A. *Handbook of Mathematical Functions*, §22.
+2. NIST *Digital Library of Mathematical Functions*, §18.3.

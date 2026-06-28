@@ -1,39 +1,59 @@
 ---
 name: chebyshevu
 category: Special Functions
-summary: Chebyshev polynomial of the 2nd kind U_n(x)
-related: []
+summary: Chebyshev polynomial of the second kind, U_n(x).
+related: [chebyshevt, legendrep]
 examples: []
-tags: [chebyshevu, special, functions]
-references: []
-generated: true
+tags: [special function, chebyshev, orthogonal polynomial, second kind]
+references:
+  - "Abramowitz, M. & Stegun, I.A., Handbook of Mathematical Functions, §22"
+  - "NIST Digital Library of Mathematical Functions, §18.3"
 ---
 
 # chebyshevu
 
-Chebyshev polynomial of the 2nd kind U_n(x)
-
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
+Returns the **Chebyshev polynomial of the second kind** `U_n(x)` of degree `n` —
+orthogonal on `[−1, 1]` with weight `√(1 − x²)`, and the derivative partner of
+[`chebyshevt`](chebyshevt).
 
 ## Syntax
 
 ```
-chebyshevu(n, x)
+y = chebyshevu(n, x)
 ```
 
 ## Description
 
-Chebyshev polynomial of the 2nd kind U_n(x)
+On `[−1, 1]`, `U_n(cos θ) = sin((n+1)θ)/sin θ`. `U_0 = 1`, `U_1 = 2x`, with
+`T_n'(x) = n·U_{n−1}(x)`.
+
+## Mathematical Formulation
+
+$$ U_n(\cos\theta) = \frac{\sin((n+1)\theta)}{\sin\theta}, \qquad U_{n+1}(x) = 2x\,U_n(x) - U_{n-1}(x) \qquad \text{(A\&S §22)} $$
+
+> **Method:** three-term recurrence from `U_0 = 1`, `U_1 = 2x`.
+
+## Examples
+
+```
+{ U_1(x) = 2x; chebyshevu(1, 1) = 2 }
+y = chebyshevu(1, 1)
+```
 
 ## Input Arguments
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `n` | Number | Yes | Numeric argument. |
-| `x` | Number | Yes | Numeric argument. |
+| `n` | Number | Yes | Polynomial degree (≥ 0). |
+| `x` | Number | Yes | Argument. |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| `y` | Number | U_n(x). |
 
 ## References
 
-1. Abramowitz, M. & Stegun, I.A., Handbook of Mathematical Functions.
-2. NIST Digital Library of Mathematical Functions (dlmf.nist.gov).
-
+1. Abramowitz, M. & Stegun, I.A. *Handbook of Mathematical Functions*, §22.
+2. NIST *Digital Library of Mathematical Functions*, §18.3.

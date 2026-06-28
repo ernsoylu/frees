@@ -1,39 +1,63 @@
 ---
 name: legendrep
 category: Special Functions
-summary: Legendre polynomial P_n(x)
-related: []
+summary: Legendre polynomial P_n(x).
+related: [chebyshevt, hermiteh, laguerrel]
 examples: []
-tags: [legendrep, special, functions]
-references: []
-generated: true
+tags: [special function, legendre, orthogonal polynomial, quadrature]
+references:
+  - "Abramowitz, M. & Stegun, I.A., Handbook of Mathematical Functions, §8, §22"
+  - "NIST Digital Library of Mathematical Functions, §18.3"
 ---
 
 # legendrep
 
-Legendre polynomial P_n(x)
-
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
+Returns the **Legendre polynomial** `P_n(x)` of degree `n` — the orthogonal
+polynomials on `[−1, 1]` with unit weight, central to Gauss–Legendre quadrature and
+spherical-harmonic expansions.
 
 ## Syntax
 
 ```
-legendrep(n, x)
+y = legendrep(n, x)
 ```
 
 ## Description
 
-Legendre polynomial P_n(x)
+`P_0 = 1`, `P_1 = x`, and higher degrees follow Bonnet's recurrence. Orthogonal on
+`[−1, 1]`.
+
+## Mathematical Formulation
+
+Bonnet recurrence (A&S §22; DLMF §18.9):
+
+$$ (n+1)P_{n+1}(x) = (2n+1)\,x\,P_n(x) - n\,P_{n-1}(x), \qquad P_0 = 1,\ P_1 = x $$
+
+with orthogonality $\int_{-1}^{1} P_m P_n\,dx = \tfrac{2}{2n+1}\delta_{mn}$.
+
+> **Method:** three-term recurrence from `P_0`, `P_1`.
+
+## Examples
+
+```
+{ P_2(x) = (3x^2 - 1)/2; legendrep(2, 1) = 1 }
+y = legendrep(2, 1)
+```
 
 ## Input Arguments
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `n` | Number | Yes | Numeric argument. |
-| `x` | Number | Yes | Numeric argument. |
+| `n` | Number | Yes | Polynomial degree (≥ 0). |
+| `x` | Number | Yes | Argument. |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| `y` | Number | P_n(x). |
 
 ## References
 
-1. Abramowitz, M. & Stegun, I.A., Handbook of Mathematical Functions.
-2. NIST Digital Library of Mathematical Functions (dlmf.nist.gov).
-
+1. Abramowitz, M. & Stegun, I.A. *Handbook of Mathematical Functions*, §8, §22.
+2. NIST *Digital Library of Mathematical Functions*, §18.3.

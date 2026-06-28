@@ -1,38 +1,56 @@
 ---
 name: besselk1
 category: Special Functions
-summary: Modified Bessel K1(x)
-related: []
+summary: Modified Bessel function of the second kind, order 1 — K_1(x).
+related: [besselk, besselk0, besseli1]
 examples: []
-tags: [besselk1, special, functions]
-references: []
-generated: true
+tags: [special function, modified bessel, k1, second kind, macdonald]
+references:
+  - "Abramowitz, M. & Stegun, I.A., Handbook of Mathematical Functions, §9.6"
 ---
 
 # besselk1
 
-Modified Bessel K1(x)
-
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
+Returns `K_1(x)`, the **order-1 modified Bessel function of the second kind**
+(Macdonald) — the fixed-order specialization of [`besselk`](besselk). Singular as
+`x → 0⁺`, decaying like `e^{−x}`, with `K_0'(x) = −K_1(x)`.
 
 ## Syntax
 
 ```
-besselk1(x)
+y = besselk1(x)
 ```
 
-## Description
+## Mathematical Formulation
 
-Modified Bessel K1(x)
+`K_1` is the decaying order-1 solution of the modified Bessel equation, with
+`K_0'(x) = −K_1(x)` and `K_1(x) ~ √(π/2x)·e^{−x}` for large `x` (A&S §9.6).
+
+## Examples
+
+```
+{ decays for large x }
+y = besselk1(1)
+```
 
 ## Input Arguments
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `x` | Number | Yes | Numeric argument. |
+| `x` | Number | Yes | Argument (> 0). |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| `y` | Number | K_1(x). |
+
+## Common Errors
+
+| Error | Cause | Fix |
+| --- | --- | --- |
+| `DOMAIN_ERROR` | `x ≤ 0` | Singular at and below 0; use a positive argument. |
 
 ## References
 
-1. Abramowitz, M. & Stegun, I.A., Handbook of Mathematical Functions.
-2. NIST Digital Library of Mathematical Functions (dlmf.nist.gov).
-
+1. Abramowitz, M. & Stegun, I.A. *Handbook of Mathematical Functions*, §9.6.

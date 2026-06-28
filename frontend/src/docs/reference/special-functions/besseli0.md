@@ -1,38 +1,49 @@
 ---
 name: besseli0
 category: Special Functions
-summary: Modified Bessel I0(x)
-related: []
+summary: Modified Bessel function of the first kind, order 0 — I_0(x).
+related: [besseli, besseli1, besselk0]
 examples: []
-tags: [besseli0, special, functions]
-references: []
-generated: true
+tags: [special function, modified bessel, i0, first kind]
+references:
+  - "Abramowitz, M. & Stegun, I.A., Handbook of Mathematical Functions, §9.6"
 ---
 
 # besseli0
 
-Modified Bessel I0(x)
-
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
+Returns `I_0(x)`, the **order-0 modified Bessel function of the first kind** — the
+fixed-order specialization of [`besseli`](besseli). `I_0(0) = 1`; it grows like
+`e^x/√(2πx)`.
 
 ## Syntax
 
 ```
-besseli0(x)
+y = besseli0(x)
 ```
 
-## Description
+## Mathematical Formulation
 
-Modified Bessel I0(x)
+$$ I_0(x) = \sum_{k=0}^{\infty}\frac{1}{(k!)^2}\left(\frac{x}{2}\right)^{2k} \qquad \text{(A\&S §9.6)} $$
+
+## Examples
+
+```
+{ besseli0(0) = 1 }
+y = besseli0(0)
+```
 
 ## Input Arguments
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `x` | Number | Yes | Numeric argument. |
+| `x` | Number | Yes | Argument. |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| `y` | Number | I_0(x). |
 
 ## References
 
-1. Abramowitz, M. & Stegun, I.A., Handbook of Mathematical Functions.
-2. NIST Digital Library of Mathematical Functions (dlmf.nist.gov).
-
+1. Abramowitz, M. & Stegun, I.A. *Handbook of Mathematical Functions*, §9.6.

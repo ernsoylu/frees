@@ -1,38 +1,49 @@
 ---
 name: besselj1
 category: Special Functions
-summary: Bessel J1(x)
-related: []
+summary: Bessel function of the first kind, order 1 — J_1(x).
+related: [besselj, besselj0, bessely1]
 examples: []
-tags: [besselj1, special, functions]
-references: []
-generated: true
+tags: [special function, bessel, j1, first kind]
+references:
+  - "Abramowitz, M. & Stegun, I.A., Handbook of Mathematical Functions, §9.1"
 ---
 
 # besselj1
 
-Bessel J1(x)
-
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
+Returns `J_1(x)`, the **order-1 Bessel function of the first kind** — the
+fixed-order specialization of [`besselj`](besselj). `J_1(0) = 0`; it is the
+derivative companion `J_0'(x) = −J_1(x)`.
 
 ## Syntax
 
 ```
-besselj1(x)
+y = besselj1(x)
 ```
 
-## Description
+## Mathematical Formulation
 
-Bessel J1(x)
+$$ J_1(x) = \sum_{k=0}^{\infty}\frac{(-1)^k}{k!\,(k+1)!}\left(\frac{x}{2}\right)^{2k+1}, \qquad J_0'(x) = -J_1(x) \qquad \text{(A\&S §9.1)} $$
+
+## Examples
+
+```
+{ besselj1(0) = 0 }
+y = besselj1(0)
+```
 
 ## Input Arguments
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `x` | Number | Yes | Numeric argument. |
+| `x` | Number | Yes | Argument. |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| `y` | Number | J_1(x). |
 
 ## References
 
-1. Abramowitz, M. & Stegun, I.A., Handbook of Mathematical Functions.
-2. NIST Digital Library of Mathematical Functions (dlmf.nist.gov).
-
+1. Abramowitz, M. & Stegun, I.A. *Handbook of Mathematical Functions*, §9.1.
