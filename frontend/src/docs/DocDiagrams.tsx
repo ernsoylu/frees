@@ -435,3 +435,117 @@ export function BraytonCycleDiagram() {
     </svg>
   );
 }
+
+// ── Cookbook system schematics ───────────────────────────────────────────────
+// Self-contained SVG block diagrams (solid theme colors, no shared gradient IDs)
+// so they render correctly standalone on a Cookbook page.
+
+const D_ARROW = (
+  <marker id="ckArrow" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+    <path d="M 0 1.5 L 7 5 L 0 8.5 z" fill={THEME.textColor} />
+  </marker>
+);
+
+function CkBox({ x, y, w = 140, h = 56, fill, title, sub }: Readonly<{ x: number; y: number; w?: number; h?: number; fill: string; title: string; sub?: string }>) {
+  return (
+    <g transform={`translate(${x}, ${y})`}>
+      <rect width={w} height={h} rx="8" fill={fill} stroke="#FFFFFF22" strokeWidth="1" />
+      <text x={w / 2} y={sub ? 24 : 32} fill="#FFF" fontWeight="700" fontSize="13" textAnchor="middle">{title}</text>
+      {sub && <text x={w / 2} y={40} fill="#FFF" fontSize="10" opacity="0.9" textAnchor="middle">{sub}</text>}
+    </g>
+  );
+}
+const ckLine = (x1: number, y1: number, x2: number, y2: number, color = THEME.textColor, dash = false) => (
+  <line x1={x1} y1={y1} x2={x2} y2={y2} stroke={color} strokeWidth="2" strokeDasharray={dash ? '5 4' : undefined} markerEnd="url(#ckArrow)" />
+);
+
+/** Closed four-component thermodynamic loop (refrigeration / Rankine). */
+function FourBoxLoop({ title, boxes, heatIn, heatOut, work }: Readonly<{
+  title: string;
+  boxes: [string, string, string, string];   // top-left, top-right, bottom-right, bottom-left
+  heatIn: string; heatOut: string; work: string;
+}>) {
+  const w = 150, h = 58;
+  const TL = { x: 80, y: 60 }, TR = { x: 410, y: 60 }, BR = { x: 410, y: 215 }, BL = { x: 80, y: 215 };
+  return (
+    <svg viewBox="0 0 640 320" width="100%" height="auto" style={{ background: THEME.bg, fontFamily: 'system-ui, sans-serif' }}>
+      <defs>{D_ARROW}</defs>
+      <text x="320" y="28" fill={THEME.textColor} fontSize="14" fontWeight="700" textAnchor="middle">{title}</text>
+      <CkBox x={TL.x} y={TL.y} w={w} h={h} fill={THEME.secondary} title={boxes[0]} />
+      <CkBox x={TR.x} y={TR.y} w={w} h={h} fill={THEME.danger} title={boxes[1]} />
+      <CkBox x={BR.x} y={BR.y} w={w} h={h} fill={THEME.warning} title={boxes[2]} />
+      <CkBox x={BL.x} y={BL.y} w={w} h={h} fill={THEME.accent} title={boxes[3]} />
+      {/* clockwise loop */}
+      {ckLine(TL.x + w, TL.y + h / 2, TR.x, TR.y + h / 2)}
+      {ckLine(TR.x + w / 2, TR.y + h, BR.x + w / 2, BR.y)}
+      {ckLine(BR.x, BR.y + h / 2, BL.x + w, BL.y + h / 2)}
+      {ckLine(BL.x + w / 2, BL.y, TL.x + w / 2, TL.y + h)}
+      {/* energy labels */}
+      <text x={TL.x + w / 2} y={TL.y - 8} fill={THEME.secondary} fontSize="11" fontWeight="700" textAnchor="middle">{work}</text>
+      <text x={TR.x + w / 2} y={TR.y - 8} fill="#FF8787" fontSize="11" fontWeight="700" textAnchor="middle">{heatOut}</text>
+      <text x={BL.x + w / 2} y={BL.y + h + 18} fill="#63E6BE" fontSize="11" fontWeight="700" textAnchor="middle">{heatIn}</text>
+    </svg>
+  );
+}
+
+export function RefrigerationCycleDiagram() {
+  return <FourBoxLoop title="Vapor-Compression Refrigeration Cycle"
+    boxes={['Compressor', 'Condenser', 'Expansion Valve', 'Evaporator']}
+    work="w_c (in)" heatOut="q_H → ambient" heatIn="q_L ← cold space" />;
+}
+
+export function RankineCycleDiagram() {
+  return <FourBoxLoop title="Rankine Steam Power Cycle"
+    boxes={['Boiler', 'Turbine', 'Condenser', 'Pump']}
+    work="w_pump (in)" heatOut="q_out (turbine work →)" heatIn="q_in ← furnace" />;
+}
+
+/** EV thermal-management: coolant loop + refrigerant loop coupled by a chiller. */
+export function EvThermalDiagram() {
+  const w = 120, h = 50;
+  const C = THEME.accent;   // coolant (teal)
+  const R = THEME.secondary; // refrigerant (purple)
+  return (
+    <svg viewBox="0 0 700 380" width="100%" height="auto" style={{ background: THEME.bg, fontFamily: 'system-ui, sans-serif' }}>
+      <defs>{D_ARROW}</defs>
+      <text x="350" y="26" fill={THEME.textColor} fontSize="14" fontWeight="700" textAnchor="middle">EV Thermal-Management System</text>
+      <text x="165" y="48" fill={C} fontSize="11" fontWeight="700" textAnchor="middle">Coolant loop (EG50)</text>
+      <text x="535" y="48" fill={R} fontSize="11" fontWeight="700" textAnchor="middle">Refrigerant loop (R1234yf)</text>
+
+      {/* Coolant loop (left) */}
+      <CkBox x={105} y={70}  w={w} h={h} fill={THEME.danger} title="Radiator" sub="→ ambient" />
+      <CkBox x={40}  y={170} w={w} h={h} fill={C} title="Battery" />
+      <CkBox x={170} y={170} w={w} h={h} fill={C} title="Motor" />
+      <CkBox x={105} y={280} w={w} h={h} fill={THEME.primary} title="Pump" />
+      {/* pump -> split -> battery & motor -> radiator -> pump */}
+      {ckLine(135, 280, 100, 220, C)}
+      {ckLine(195, 280, 230, 220, C)}
+      {ckLine(100, 170, 150, 120, C)}
+      {ckLine(230, 170, 180, 120, C)}
+      {ckLine(165, 280, 165, 280, C)}
+      {ckLine(110, 95, 60, 95, C)}
+      <line x1={60} y1={95} x2={60} y2={305} stroke={C} strokeWidth="2" />
+      {ckLine(60, 305, 105, 305, C)}
+
+      {/* Refrigerant loop (right) */}
+      <CkBox x={530} y={70}  w={w} h={h} fill={THEME.danger} title="Condenser" sub="→ ambient" />
+      <CkBox x={530} y={280} w={w} h={h} fill={R} title="Compressor" sub="w_c (in)" />
+      <CkBox x={400} y={280} w={w} h={h} fill={THEME.warning} title="Exp. Valve" />
+      <CkBox x={400} y={170} w={w} h={h} fill={R} title="Chiller" sub="evaporator" />
+      {/* compressor -> condenser -> valve -> chiller -> compressor */}
+      {ckLine(590, 280, 590, 126, R)}
+      {ckLine(530, 95, 460, 130, R)}
+      <line x1={460} y1={95} x2={460} y2={95} stroke={R} strokeWidth="2" />
+      {ckLine(460, 280, 460, 220, R)}
+      {ckLine(460, 170, 460, 130, R)}
+      {ckLine(460, 220, 460, 280, R)}
+      {ckLine(520, 305, 460, 305, R)}
+      <line x1={400} y1={305} x2={400} y2={305} stroke={R} strokeWidth="2" />
+      {ckLine(530, 305, 520, 305, R)}
+
+      {/* cross-domain bridge: battery coolant <-> chiller refrigerant */}
+      {ckLine(160, 195, 400, 195, THEME.danger, true)}
+      <text x="280" y="185" fill="#FF8787" fontSize="10.5" fontWeight="700" textAnchor="middle">Q̇  (cross-domain wall)</text>
+    </svg>
+  );
+}

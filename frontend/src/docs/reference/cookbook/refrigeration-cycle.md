@@ -18,6 +18,8 @@ references:
 
 ## What you'll build
 
+[Diagram: RefrigerationCycle]
+
 The cycle walks one refrigerant (R134a here) around four state points:
 
 1. **Evaporator** — saturated/superheated vapor leaves at the low pressure, absorbing `q_L`.

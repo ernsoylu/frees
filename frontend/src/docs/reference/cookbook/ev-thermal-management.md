@@ -19,6 +19,8 @@ heat exchangers are **sized from correlations and geometry**, not hand-set `UA`.
 
 ## What you'll build
 
+[Diagram: EvThermal]
+
 Three interacting sub-systems solved together:
 
 - **Coolant loop (EG50):** a pump feeds a branch split (battery + motor), rejoined and
