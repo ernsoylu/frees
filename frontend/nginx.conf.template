@@ -17,7 +17,19 @@ server {
     location /api/ {
         include /etc/nginx/security-headers.conf;
         limit_req zone=api burst=20 nodelay;
-        proxy_pass http://${BACKEND_HOST}:8080;
+
+        # Re-resolve the backend on every request instead of caching the IP for
+        # the life of the worker. A bare `proxy_pass http://host:8080;` makes
+        # nginx resolve ${BACKEND_HOST} ONCE at startup; on Railway's private
+        # network the backend's IPv6 changes on every redeploy, so a stale cache
+        # makes all of /api hang (Cloudflare 504) until the frontend is
+        # restarted. Putting the host in a variable forces per-request DNS via
+        # the container resolver. NGINX_LOCAL_RESOLVERS is populated from
+        # /etc/resolv.conf by the image's built-in 15-local-resolvers.envsh
+        # entrypoint (enabled via NGINX_ENTRYPOINT_LOCAL_RESOLVERS in the Dockerfile).
+        resolver ${NGINX_LOCAL_RESOLVERS} valid=10s;
+        set $backend_host ${BACKEND_HOST};
+        proxy_pass http://$backend_host:8080;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
