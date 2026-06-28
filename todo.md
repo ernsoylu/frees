@@ -214,12 +214,14 @@ Body sections (omit a section only when truly N/A):
     `htc_cond` (Shah 1979), `htc_extair` (Žukauskas), `dp_2phase` (Lockhart-Martinelli/Chisholm) →
     `ev-thermal-management`; notebook-grounded (Kakaç Eq. 2.11/8.34/8.70, Holman 6-34, Collier &
     Thome 2.68) + primary papers. **37/475 documented (7.8%).**
-  - Coverage gate + `tsc -b` green at each step.
-  - NEXT batches: HX geometry helpers (`hx_aconv`/`hx_fin_len`/`hx_area_direct`/`hx_area_indirect`/
-    `hx_eta_surf` → `ev-thermal-management`, light citations); ODE/table accessors (`finalvalue`/
-    `maxvalue`/`odevalue`/`timeat`/`integralvalue`/`tableavg` — frees-specific, minimal math);
-    remaining control (`tf`/`tf2ss`/`lqr`/`place`/`c2d`/`routh`/`residue`, Nise/Ogata);
-    elementary math (`sin`/`cos`/`sqrt`/`exp`/`ln`/`min`/`max`, light); then unbound functions.
+  - DONE — HX geometry helpers (5): `hx_eta_surf` (Incropera 11.3), `hx_aconv`, `hx_fin_len`,
+    `hx_area_direct`, `hx_area_indirect` (Kays & London / Shah & Sekulić) → `ev-thermal-management`.
+  - DONE — ODE/table accessors (6): `FinalValue`, `MaxValue`, `ODEValue`, `TimeAt` (ODE Results) +
+    `IntegralValue`, `TableAvg` (Tables) — frees-specific, light math. **48/475 documented (10.1%).**
+  - Coverage gate + `tsc -b` green at each step. **10 commits on the branch.**
+  - NEXT batches: remaining control (`tf`/`tf2ss`/`lqr`/`place`/`c2d`/`routh`/`residue`, Nise/Ogata);
+    elementary math (`sin`/`cos`/`sqrt`/`exp`/`ln`/`min`/`max`, light, Abramowitz & Stegun where apt);
+    remaining example-bound fns; then the ~400 unbound functions/components/properties.
   Author per-function pages, highest-traffic
   categories first: Math → Matrix/Linear Algebra → Control Systems → Thermophysical Properties
   → Units → Uncertainty → CAS/Symbolic → Block constructs → Components. For each page: write the
