@@ -548,6 +548,22 @@ public final class Evaluator {
             case "dp_gravity" -> com.frees.backend.props.HxCorrelations.dpGravity(
                     arg(c, args, 0, values, defs), arg(c, args, 1, values, defs), arg(c, args, 2, values, defs),
                     arg(c, args, 3, values, defs), arg(c, args, 4, values, defs));
+            // Gap-completion: mass flux, compact-fin j/f surfaces, Gungor-Winterton
+            // boiling, Traviss condensation, quality-integrated two-phase dP.
+            case "mass_flux" -> com.frees.backend.props.HxCorrelations.massFlux(
+                    arg(c, args, 0, values, defs), arg(c, args, 1, values, defs));
+            case "j_fin" -> com.frees.backend.props.HxCorrelations.jFin(
+                    evalString(args.get(0)), arg(c, args, 1, values, defs));
+            case "f_fin" -> com.frees.backend.props.HxCorrelations.fFin(
+                    evalString(args.get(0)), arg(c, args, 1, values, defs));
+            case "nu_gungor_winterton" -> com.frees.backend.props.HxCorrelations.nuGungorWinterton(
+                    arg(c, args, 0, values, defs), arg(c, args, 1, values, defs), arg(c, args, 2, values, defs));
+            case "nu_traviss" -> com.frees.backend.props.HxCorrelations.nuTraviss(
+                    arg(c, args, 0, values, defs), arg(c, args, 1, values, defs), arg(c, args, 2, values, defs));
+            case "dp_2phase_avg" -> com.frees.backend.props.HxCorrelations.dp2phaseAvg(
+                    evalString(args.get(0)), arg(c, args, 1, values, defs), arg(c, args, 2, values, defs),
+                    arg(c, args, 3, values, defs), arg(c, args, 4, values, defs), arg(c, args, 5, values, defs),
+                    arg(c, args, 6, values, defs), arg(c, args, 7, values, defs), arg(c, args, 8, values, defs));
             case "void_homogeneous" -> com.frees.backend.props.TwoPhase.voidHomogeneous(
                     arg(c, args, 0, values, defs), arg(c, args, 1, values, defs),
                     arg(c, args, 2, values, defs));
