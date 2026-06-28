@@ -55,6 +55,30 @@ class HxCorrelationTest {
     assertTrue(v.get("dp") > 0, "two-phase drop computed in-document");
   }
 
+  @Test void airSideGeometryAndExtraDp() {
+    assumeTrue(CoolProp.isAvailable());
+    // (1) external air-side convection (finned tube bank) + Nusselt helpers
+    double hAir = HxCorrelations.htcExtAir("Air", 101325, 313, 0.8, 0.01, 0.02);
+    double nuBlend = HxCorrelations.nuBlend(10, 40); // (1000+64000)^(1/3) ≈ 40.2
+    System.out.printf("air-side h=%.0f W/m2K  nu_blend=%.2f%n", hAir, nuBlend);
+    assertTrue(hAir > 5 && hAir < 1e4, "external air-side h physical: " + hAir);
+    assertTrue(nuBlend > 40 && nuBlend < 41, "cubic free+forced blend");
+    // (2) geometry resolver: Dh, A_conv, sigma, eta_surf
+    double dh = HxCorrelations.hxDh(1e-3, 2.0, 1.0);
+    double aconv = HxCorrelations.hxAconv(1e-3, 1.0, dh);
+    double sigma = HxCorrelations.hxSigma(1e-3, 5e-3);
+    double etaSurf = HxCorrelations.hxEtaSurf(0.8, 1.0, 0.85);
+    System.out.printf("geom Dh=%.4f Aconv=%.4f sigma=%.3f eta_surf=%.3f%n", dh, aconv, sigma, etaSurf);
+    assertEquals(4.0 * 1e-3 * 1.0 / dh, aconv, 1e-9, "A_conv = 4*Aflow*L/Dh identity");
+    assertTrue(sigma > 0 && sigma < 1 && etaSurf > 0 && etaSurf <= 1, "sigma, eta_surf in (0,1]");
+    // (4) Müller-Steinhagen two-phase dP and compact-core entrance/exit dP
+    double dpMs = HxCorrelations.dpMuellerSteinhagen("R1234yf", 350000, 0.5, 0.03, 0.006, 8e-5, 2.0);
+    double dpCore = HxCorrelations.dpCompactCore(50, 1.2, 1.0, 0.6, 0.4, 0.2);
+    System.out.printf("dp_MS=%.0f Pa  dp_core=%.1f Pa%n", dpMs, dpCore);
+    assertTrue(dpMs > 0, "Mueller-Steinhagen drop positive");
+    assertTrue(dpCore > 0, "compact-core drop (acceleration-dominated here) positive");
+  }
+
   @Test void uaAndDpInjectedIntoComponent() {
     assumeTrue(CoolProp.isAvailable());
     // A chiller evaporator whose UA and dP are CALCULATED OUTSIDE (correlation +
