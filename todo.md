@@ -203,11 +203,16 @@ Body sections (omit a section only when truly N/A):
   - **Manifest dedup fix:** the documentable total is now **unique symbols (475, was an inflated
     515)** — ~40 control names live in both `FunctionRegistry`'s Control category and
     `callProcedures`; coverage now counts each once. **24/475 documented (5.1%).**
+  - DONE — Cubic-EOS set (5): `eos_z`, `eos_volume`, `eos_density`, `eos_enthalpy`, `eos_psat` (→
+    `cubic-eos-properties`). Notebook confirmed the SRK/PR pressure forms + a/b/m params and pointed
+    to Çengel Eq. 12-57 for the departure, but flagged the Z-cubic/fugacity as not in the notebook,
+    so those cite the canonical primaries (Peng-Robinson 1976, Soave 1972, Smith/Van Ness/Abbott).
+    CO₂ Psat(300 K) ≈ 6.7 MPa anchored; Z/ρ marked approximate. **29/475 documented (6.1%).**
   - Coverage gate + `tsc -b` green at each step.
   - NEXT batches (by example): HX correlations → `ev-thermal-management` (htc_*/dp_2phase/ua_hx/
-    hx_eta_surf/hx_area_*, notebook-grounded); cubic-EOS → `cubic-eos-properties` (notebook);
-    combustion → `adiabatic-flame-temp`/`engine-cycle-wiebe`; remaining control (`tf`/`tf2ss`/
-    `lqr`/`place`/`c2d`/`routh`/`residue`…) and ODE/table accessors via standard citations.
+    hx_eta_surf/hx_area_*, notebook-grounded); combustion → `adiabatic-flame-temp`/`engine-cycle-wiebe`;
+    remaining control (`tf`/`tf2ss`/`lqr`/`place`/`c2d`/`routh`/`residue`…) and ODE/table accessors
+    via standard citations.
   Author per-function pages, highest-traffic
   categories first: Math → Matrix/Linear Algebra → Control Systems → Thermophysical Properties
   → Units → Uncertainty → CAS/Symbolic → Block constructs → Components. For each page: write the
