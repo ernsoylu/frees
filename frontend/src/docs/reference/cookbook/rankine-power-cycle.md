@@ -18,6 +18,8 @@ from real-water (CoolProp) properties.
 
 ## What you'll build
 
+[Diagram: RankineCycle]
+
 Water is carried around four state points:
 
 1. **Pump** — isentropic compression of saturated liquid to the boiler pressure.

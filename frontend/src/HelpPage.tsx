@@ -53,7 +53,10 @@ import {
   DegreesOfFreedomDiagram,
   DependentPropertiesDiagram,
   GuessConvergenceDiagram,
-  BraytonCycleDiagram
+  BraytonCycleDiagram,
+  RefrigerationCycleDiagram,
+  RankineCycleDiagram,
+  EvThermalDiagram
 } from './docs/DocDiagrams';
 
 function CopyButton({ code }: Readonly<{ code: string }>) {
@@ -2997,6 +3000,12 @@ function MarkdownRenderer({ content }: MarkdownRendererProps) {
         elements.push(<DependentPropertiesDiagram key={key} />);
       } else if (diagName === 'GuessConvergence') {
         elements.push(<GuessConvergenceDiagram key={key} />);
+      } else if (diagName === 'RefrigerationCycle') {
+        elements.push(<RefrigerationCycleDiagram key={key} />);
+      } else if (diagName === 'RankineCycle') {
+        elements.push(<RankineCycleDiagram key={key} />);
+      } else if (diagName === 'EvThermal') {
+        elements.push(<EvThermalDiagram key={key} />);
       }
       i++;
       continue;
