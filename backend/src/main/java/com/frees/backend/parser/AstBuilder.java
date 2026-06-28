@@ -541,7 +541,7 @@ public class AstBuilder extends FreesBaseVisitor<Expr> {
     /**
      * Builds a FUNCTION block. The single-output form
      * {@code FUNCTION f(x) ... f := ... END} becomes a {@link ProcDef.FunctionDef}
-     * (callable inline in expressions). The MATLAB-style multi-output form
+     * (callable inline in expressions). The array-language-style multi-output form
      * {@code FUNCTION [a, b] = f(x) ... END} is lowered to a
      * {@link ProcDef.ProcedureDef} — its outputs are the bracketed names assigned
      * in the body — so it reuses the procedure call/flatten machinery and is
@@ -920,7 +920,7 @@ public class AstBuilder extends FreesBaseVisitor<Expr> {
     private static final int MAX_RANGE_ELEMENTS = 100_000;
 
     /**
-     * MATLAB-style range that fills an array: {@code speed = 0:10:100 | Linear}.
+     * array-language-style range that fills an array: {@code speed = 0:10:100 | Linear}.
      * Lowered to the equivalent array assignment {@code speed[1:N] = [v1, ...]}
      * so the existing array-literal expansion in EquationParser materializes the
      * element equations. Linear (default) uses an arithmetic step; Log treats
@@ -1003,7 +1003,7 @@ public class AstBuilder extends FreesBaseVisitor<Expr> {
     }
 
     /**
-     * MATLAB-style destructuring call {@code [q, w] = split(x)} of a multi-output
+     * array-language-style destructuring call {@code [q, w] = split(x)} of a multi-output
      * FUNCTION. Lowered to the same {@link Statement.CallProc} a
      * {@code CALL split(x : q, w)} produces, so EquationParser's procedure
      * flattening (proc$name$k binding equations) handles it unchanged.
@@ -1101,7 +1101,7 @@ public class AstBuilder extends FreesBaseVisitor<Expr> {
     }
 
     /** Map a multiplicative operator's text to its op char, including the
-     * MATLAB-style element-wise operators (which are two characters). */
+     * array-language-style element-wise operators (which are two characters). */
     private static char mulOpChar(String text) {
         return switch (text) {
             case ".*" -> EquationParser.ELEMENT_MUL;

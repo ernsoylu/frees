@@ -91,7 +91,7 @@ public final class Evaluator {
             return new com.frees.backend.parser.ProcedureEvaluator(defs).callFunction(fd, args, values);
         }
 
-        // EES-compatible lookup/interpolation over a named TABLE (the table name
+        // classic-solver-compatible lookup/interpolation over a named TABLE (the table name
         // is the first, string, argument): Interpolate/Interpolate1/Interpolate2D,
         // Lookup, LookupRow, NLookupRows, Differentiate/Differentiate1.
         if (TABLE_FUNCTIONS.contains(c.function())) {
@@ -384,7 +384,7 @@ public final class Evaluator {
 
             // Ideal-gas compressible-flow relations, functions of (M, k) unless
             // noted. Ratios are dimensionless; angles are in radians. See
-            // props/CompressibleFlow.java (cross-checked vs Cengel / gdtk / EES).
+            // props/CompressibleFlow.java (cross-checked vs standard references).
             case "t0_t", "isen_t0_t" -> com.frees.backend.props.CompressibleFlow.t0OverT(
                     arg(c, args, 0, values, defs), arg(c, args, 1, values, defs));
             case "p0_p", "isen_p0_p" -> com.frees.backend.props.CompressibleFlow.p0OverP(
@@ -462,6 +462,151 @@ public final class Evaluator {
             case "minor_loss" -> com.frees.backend.props.FlowResistance.minorLoss(
                     arg(c, args, 0, values, defs), arg(c, args, 1, values, defs),
                     arg(c, args, 2, values, defs));
+
+            // Pneumatics: ISO 6358 mass flow ṁ(C, b, Pup, Tup, Pdown) [kg/s].
+            case "iso6358" -> com.frees.backend.props.Pneumatics.iso6358(
+                    arg(c, args, 0, values, defs), arg(c, args, 1, values, defs),
+                    arg(c, args, 2, values, defs), arg(c, args, 3, values, defs),
+                    arg(c, args, 4, values, defs));
+
+            // Two-phase flow: Lockhart-Martinelli / Chisholm multiplier & parameter.
+            case "lm_phi2" -> com.frees.backend.props.TwoPhase.lmPhi2(
+                    arg(c, args, 0, values, defs), arg(c, args, 1, values, defs));
+            case "lm_martinelli_tt" -> com.frees.backend.props.TwoPhase.lmMartinelliTt(
+                    arg(c, args, 0, values, defs), arg(c, args, 1, values, defs),
+                    arg(c, args, 2, values, defs), arg(c, args, 3, values, defs),
+                    arg(c, args, 4, values, defs));
+
+            // Heat-exchanger UA (heat) and dP (friction) sizing correlations,
+            // computed from flow + geometry + state to be injected into a
+            // component's UA / dP parameter. See props/HxCorrelations.
+            case "htc_1phase" -> com.frees.backend.props.HxCorrelations.htc1phase(
+                    evalString(args.get(0)), arg(c, args, 1, values, defs), arg(c, args, 2, values, defs),
+                    arg(c, args, 3, values, defs), arg(c, args, 4, values, defs), arg(c, args, 5, values, defs));
+            case "htc_evap" -> com.frees.backend.props.HxCorrelations.htcEvap(
+                    evalString(args.get(0)), arg(c, args, 1, values, defs), arg(c, args, 2, values, defs),
+                    arg(c, args, 3, values, defs), arg(c, args, 4, values, defs), arg(c, args, 5, values, defs));
+            case "htc_cond" -> com.frees.backend.props.HxCorrelations.htcCond(
+                    evalString(args.get(0)), arg(c, args, 1, values, defs), arg(c, args, 2, values, defs),
+                    arg(c, args, 3, values, defs), arg(c, args, 4, values, defs), arg(c, args, 5, values, defs));
+            case "ua_hx" -> com.frees.backend.props.HxCorrelations.uaHx(
+                    arg(c, args, 0, values, defs), arg(c, args, 1, values, defs), arg(c, args, 2, values, defs),
+                    arg(c, args, 3, values, defs), arg(c, args, 4, values, defs));
+            case "dp_1phase" -> com.frees.backend.props.HxCorrelations.dp1phase(
+                    evalString(args.get(0)), arg(c, args, 1, values, defs), arg(c, args, 2, values, defs),
+                    arg(c, args, 3, values, defs), arg(c, args, 4, values, defs), arg(c, args, 5, values, defs),
+                    arg(c, args, 6, values, defs));
+            case "dp_2phase" -> com.frees.backend.props.HxCorrelations.dp2phase(
+                    evalString(args.get(0)), arg(c, args, 1, values, defs), arg(c, args, 2, values, defs),
+                    arg(c, args, 3, values, defs), arg(c, args, 4, values, defs), arg(c, args, 5, values, defs),
+                    arg(c, args, 6, values, defs));
+            // External / air-side convection (compact finned HX, tube banks).
+            case "nu_zukauskas" -> com.frees.backend.props.HxCorrelations.nuZukauskas(
+                    arg(c, args, 0, values, defs), arg(c, args, 1, values, defs));
+            case "nu_colburn" -> com.frees.backend.props.HxCorrelations.nuColburn(
+                    arg(c, args, 0, values, defs), arg(c, args, 1, values, defs), arg(c, args, 2, values, defs));
+            case "nu_churchill_chu" -> com.frees.backend.props.HxCorrelations.nuChurchillChu(
+                    arg(c, args, 0, values, defs), arg(c, args, 1, values, defs));
+            case "nu_blend" -> com.frees.backend.props.HxCorrelations.nuBlend(
+                    arg(c, args, 0, values, defs), arg(c, args, 1, values, defs));
+            case "htc_extair" -> com.frees.backend.props.HxCorrelations.htcExtAir(
+                    evalString(args.get(0)), arg(c, args, 1, values, defs), arg(c, args, 2, values, defs),
+                    arg(c, args, 3, values, defs), arg(c, args, 4, values, defs), arg(c, args, 5, values, defs));
+            // Geometry resolution: primary dimensions -> Dh, A_conv, sigma, eta_surf.
+            case "hx_dh" -> com.frees.backend.props.HxCorrelations.hxDh(
+                    arg(c, args, 0, values, defs), arg(c, args, 1, values, defs), arg(c, args, 2, values, defs));
+            case "hx_aconv" -> com.frees.backend.props.HxCorrelations.hxAconv(
+                    arg(c, args, 0, values, defs), arg(c, args, 1, values, defs), arg(c, args, 2, values, defs));
+            case "hx_sigma" -> com.frees.backend.props.HxCorrelations.hxSigma(
+                    arg(c, args, 0, values, defs), arg(c, args, 1, values, defs));
+            case "hx_eta_surf" -> com.frees.backend.props.HxCorrelations.hxEtaSurf(
+                    arg(c, args, 0, values, defs), arg(c, args, 1, values, defs), arg(c, args, 2, values, defs));
+            // Pressure drop: Müller-Steinhagen two-phase + compact-core entrance/exit.
+            case "dp_mueller_steinhagen", "dp_ms" -> com.frees.backend.props.HxCorrelations.dpMuellerSteinhagen(
+                    evalString(args.get(0)), arg(c, args, 1, values, defs), arg(c, args, 2, values, defs),
+                    arg(c, args, 3, values, defs), arg(c, args, 4, values, defs), arg(c, args, 5, values, defs),
+                    arg(c, args, 6, values, defs));
+            case "dp_compact_core" -> com.frees.backend.props.HxCorrelations.dpCompactCore(
+                    arg(c, args, 0, values, defs), arg(c, args, 1, values, defs), arg(c, args, 2, values, defs),
+                    arg(c, args, 3, values, defs), arg(c, args, 4, values, defs), arg(c, args, 5, values, defs),
+                    arg(c, args, 6, values, defs), arg(c, args, 7, values, defs), arg(c, args, 8, values, defs));
+            // Remaining HX correlations: tube-bank/cylinder/plate Nu, fin geometry,
+            // gravitational two-phase dP.
+            case "nu_tubebank" -> com.frees.backend.props.HxCorrelations.nuTubeBank(
+                    evalString(args.get(0)), arg(c, args, 1, values, defs), arg(c, args, 2, values, defs));
+            case "nu_hilpert" -> com.frees.backend.props.HxCorrelations.nuHilpert(
+                    arg(c, args, 0, values, defs), arg(c, args, 1, values, defs));
+            case "nu_plate" -> com.frees.backend.props.HxCorrelations.nuPlate(
+                    arg(c, args, 0, values, defs), arg(c, args, 1, values, defs), arg(c, args, 2, values, defs));
+            case "hx_fin_len" -> com.frees.backend.props.HxCorrelations.hxFinLen(
+                    arg(c, args, 0, values, defs), arg(c, args, 1, values, defs),
+                    arg(c, args, 2, values, defs), arg(c, args, 3, values, defs));
+            case "hx_area_direct" -> com.frees.backend.props.HxCorrelations.hxAreaDirect(
+                    arg(c, args, 0, values, defs), arg(c, args, 1, values, defs), arg(c, args, 2, values, defs),
+                    arg(c, args, 3, values, defs), arg(c, args, 4, values, defs));
+            case "hx_area_indirect" -> com.frees.backend.props.HxCorrelations.hxAreaIndirect(
+                    arg(c, args, 0, values, defs), arg(c, args, 1, values, defs), arg(c, args, 2, values, defs));
+            case "dp_gravity" -> com.frees.backend.props.HxCorrelations.dpGravity(
+                    arg(c, args, 0, values, defs), arg(c, args, 1, values, defs), arg(c, args, 2, values, defs),
+                    arg(c, args, 3, values, defs), arg(c, args, 4, values, defs));
+            // Gap-completion: mass flux, compact-fin j/f surfaces, Gungor-Winterton
+            // boiling, Traviss condensation, quality-integrated two-phase dP.
+            case "mass_flux" -> com.frees.backend.props.HxCorrelations.massFlux(
+                    arg(c, args, 0, values, defs), arg(c, args, 1, values, defs));
+            case "j_fin" -> com.frees.backend.props.HxCorrelations.jFin(
+                    evalString(args.get(0)), arg(c, args, 1, values, defs));
+            case "f_fin" -> com.frees.backend.props.HxCorrelations.fFin(
+                    evalString(args.get(0)), arg(c, args, 1, values, defs));
+            case "nu_gungor_winterton" -> com.frees.backend.props.HxCorrelations.nuGungorWinterton(
+                    arg(c, args, 0, values, defs), arg(c, args, 1, values, defs), arg(c, args, 2, values, defs));
+            case "nu_traviss" -> com.frees.backend.props.HxCorrelations.nuTraviss(
+                    arg(c, args, 0, values, defs), arg(c, args, 1, values, defs), arg(c, args, 2, values, defs));
+            case "dp_2phase_avg" -> com.frees.backend.props.HxCorrelations.dp2phaseAvg(
+                    evalString(args.get(0)), arg(c, args, 1, values, defs), arg(c, args, 2, values, defs),
+                    arg(c, args, 3, values, defs), arg(c, args, 4, values, defs), arg(c, args, 5, values, defs),
+                    arg(c, args, 6, values, defs), arg(c, args, 7, values, defs), arg(c, args, 8, values, defs));
+            case "void_homogeneous" -> com.frees.backend.props.TwoPhase.voidHomogeneous(
+                    arg(c, args, 0, values, defs), arg(c, args, 1, values, defs),
+                    arg(c, args, 2, values, defs));
+            case "void_zivi" -> com.frees.backend.props.TwoPhase.voidZivi(
+                    arg(c, args, 0, values, defs), arg(c, args, 1, values, defs),
+                    arg(c, args, 2, values, defs));
+            case "void_rouhani" -> com.frees.backend.props.TwoPhase.voidRouhani(
+                    arg(c, args, 0, values, defs), arg(c, args, 1, values, defs),
+                    arg(c, args, 2, values, defs), arg(c, args, 3, values, defs),
+                    arg(c, args, 4, values, defs));
+            case "friedel_phi2" -> com.frees.backend.props.TwoPhase.friedelPhi2(
+                    arg(c, args, 0, values, defs), arg(c, args, 1, values, defs),
+                    arg(c, args, 2, values, defs), arg(c, args, 3, values, defs),
+                    arg(c, args, 4, values, defs), arg(c, args, 5, values, defs),
+                    arg(c, args, 6, values, defs), arg(c, args, 7, values, defs));
+            case "momentum_flux" -> com.frees.backend.props.TwoPhase.momentumFlux(
+                    arg(c, args, 0, values, defs), arg(c, args, 1, values, defs),
+                    arg(c, args, 2, values, defs), arg(c, args, 3, values, defs),
+                    arg(c, args, 4, values, defs));
+            case "nu_dittus_boelter" -> com.frees.backend.props.ConvectiveHeat.dittusBoelter(
+                    arg(c, args, 0, values, defs), arg(c, args, 1, values, defs),
+                    arg(c, args, 2, values, defs));
+            case "nu_gnielinski" -> com.frees.backend.props.ConvectiveHeat.gnielinski(
+                    arg(c, args, 0, values, defs), arg(c, args, 1, values, defs));
+            case "chen_f" -> com.frees.backend.props.ConvectiveHeat.chenF(
+                    arg(c, args, 0, values, defs));
+            case "chen_s" -> com.frees.backend.props.ConvectiveHeat.chenS(
+                    arg(c, args, 0, values, defs), arg(c, args, 1, values, defs));
+            case "nu_shah" -> com.frees.backend.props.ConvectiveHeat.shah(
+                    arg(c, args, 0, values, defs), arg(c, args, 1, values, defs),
+                    arg(c, args, 2, values, defs), arg(c, args, 3, values, defs));
+            case "nu_cavallini_zecchin" -> com.frees.backend.props.ConvectiveHeat.cavalliniZecchin(
+                    arg(c, args, 0, values, defs), arg(c, args, 1, values, defs),
+                    arg(c, args, 2, values, defs), arg(c, args, 3, values, defs),
+                    arg(c, args, 4, values, defs));
+            case "zone_ramp" -> com.frees.backend.props.ConvectiveHeat.zoneRamp(
+                    arg(c, args, 0, values, defs), arg(c, args, 1, values, defs));
+
+            // ISA 1976 standard atmosphere: T/P/ρ at a geopotential altitude.
+            case "isa_t" -> com.frees.backend.props.Atmosphere.temperature(arg(c, args, 0, values, defs));
+            case "isa_p" -> com.frees.backend.props.Atmosphere.pressure(arg(c, args, 0, values, defs));
+            case "isa_rho" -> com.frees.backend.props.Atmosphere.density(arg(c, args, 0, values, defs));
 
             // Cubic equation-of-state backend (SRK/PR), independent of CoolProp.
             // Signature: eos_*(fluid$, model$, T, P, phase$); pressure takes
@@ -649,12 +794,12 @@ public final class Evaluator {
         return com.frees.backend.core.CurveInterpolator.evaluate(cd, x, param);
     }
 
-    /** EES-compatible TABLE lookup/interpolation function names. */
+    /** classic-solver-compatible TABLE lookup/interpolation function names. */
     private static final java.util.Set<String> TABLE_FUNCTIONS = java.util.Set.of(
             "interpolate", "interpolate1", "interpolate2d",
             "lookup", "lookuprow", "nlookuprows", "differentiate", "differentiate1");
 
-    // EES-compatible lookup/interpolation functions delegating to a named TABLE.
+    // classic-solver-compatible lookup/interpolation functions delegating to a named TABLE.
     // The table name is the first (string) argument; the remaining arguments are
     // the lookup coordinates or 1-based column indices.
     private static double evalTableFunction(Expr.Call c, Map<String, Double> values, Map<String, ProcDef> defs) {

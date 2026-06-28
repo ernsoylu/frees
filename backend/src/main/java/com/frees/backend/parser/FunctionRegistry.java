@@ -120,6 +120,63 @@ public class FunctionRegistry {
             new FunctionInfo("reynolds", "reynolds(rho, V, D, mu)", "Reynolds number rho*V*D/mu", "Flow Networks"),
             new FunctionInfo("minor_loss", "minor_loss(K, rho, V)", "Minor (fitting) pressure loss K*0.5*rho*V^2 [Pa]", "Flow Networks"),
 
+            // Pneumatics (compressible-gas power — Phase A)
+            new FunctionInfo("iso6358", "iso6358(C, b, Pup, Tup, Pdown)", "ISO 6358 pneumatic mass flow [kg/s] (sonic conductance C, critical ratio b)", "Pneumatics"),
+
+            // HX sizing — UA (heat) and dP (friction) correlations computed from
+            // flow + geometry + state, to be injected into a component's UA/dP.
+            new FunctionInfo("htc_1phase", "htc_1phase(fluid$, P, T, mdot, Dh, Aflow)", "HEAT h [W/m^2/K], Gnielinski/laminar. SIDE: single-phase fluid in tubes (coolant/water/oil, refrigerant liquid line, or internal air). HX: radiator & charge-air-cooler liquid side, chiller coolant side, economizer", "Heat Transfer"),
+            new FunctionInfo("htc_evap", "htc_evap(fluid$, P, x, mdot, Dh, Aflow)", "HEAT h [W/m^2/K], Shah convective boiling. SIDE: boiling two-phase refrigerant. HX: evaporator & battery-chiller refrigerant side", "Heat Transfer"),
+            new FunctionInfo("htc_cond", "htc_cond(fluid$, P, x, mdot, Dh, Aflow)", "HEAT h [W/m^2/K], Shah 1979 condensation. SIDE: condensing two-phase refrigerant. HX: condenser/gas-cooler refrigerant side", "Heat Transfer"),
+            new FunctionInfo("ua_hx", "ua_hx(h1, A1, h2, A2, Rwall)", "Overall conductance UA [W/K]=1/(1/(h1 A1)+Rwall+1/(h2 A2)). USE: combine the two side films + wall of ANY two-stream HX", "Heat Transfer"),
+            new FunctionInfo("dp_1phase", "dp_1phase(fluid$, P, T, mdot, Dh, Aflow, L)", "dP [Pa], Darcy. SIDE: single-phase liquid/gas line (coolant, water, air channel, pipe). HX: radiator/CAC fluid channels", "Heat Transfer"),
+            new FunctionInfo("dp_2phase", "dp_2phase(fluid$, P, x, mdot, Dh, Aflow, L)", "dP [Pa], Darcy x Chisholm L-M. SIDE: two-phase refrigerant. HX: evaporator/condenser refrigerant line", "Heat Transfer"),
+            new FunctionInfo("dp_mueller_steinhagen", "dp_mueller_steinhagen(fluid$, P, x, mdot, Dh, Aflow, L)", "dP [Pa], Mueller-Steinhagen-Heck. SIDE: two-phase refrigerant (alt to dp_2phase). HX: evaporator/condenser refrigerant line", "Heat Transfer"),
+            new FunctionInfo("dp_compact_core", "dp_compact_core(G, rho_in, rho_out, rho_mean, sigma, f, AoverAc, Kc, Ke)", "dP [Pa], Kays-London core (entrance/accel/core-friction/exit). SIDE: air/gas through a compact finned core. HX: fin-and-tube/plate-fin radiator, condenser, CAC air side", "Heat Transfer"),
+            new FunctionInfo("htc_extair", "htc_extair(fluid$, P, T, mdot, D, Aflow)", "HEAT h [W/m^2/K], Zukauskas tube bank. SIDE: AIR/gas cross-flow over finned tubes. HX: radiator/condenser/cabin-evaporator air side", "Heat Transfer"),
+            new FunctionInfo("nu_zukauskas", "nu_zukauskas(Re, Pr)", "Nu, tube-bank cross-flow. SIDE: air/gas over a tube bank. HX: fin-and-tube radiator/condenser air side", "Heat Transfer"),
+            new FunctionInfo("nu_colburn", "nu_colburn(j, Re, Pr)", "Nu=j*Re*Pr^(1/3). SIDE: air/gas through a compact finned surface. HX: plate-fin/louvered-fin air side", "Heat Transfer"),
+            new FunctionInfo("nu_churchill_chu", "nu_churchill_chu(Ra, Pr)", "Nu, free convection from Rayleigh. SIDE: natural convection (still air / quiescent fluid). HX: passive/low-flow surfaces", "Heat Transfer"),
+            new FunctionInfo("nu_blend", "nu_blend(Nu1, Nu2)", "Cubic free+forced blend (Nu1^3+Nu2^3)^(1/3). USE: combine natural + forced Nu on any side", "Heat Transfer"),
+            new FunctionInfo("hx_dh", "hx_dh(Aflow, Atotal, L)", "GEOMETRY: hydraulic diameter D_h=4*Aflow*L/Atotal [m] of a compact HX core (any side)", "Heat Transfer"),
+            new FunctionInfo("hx_aconv", "hx_aconv(Aflow, L, Dh)", "GEOMETRY: convective area A=4*Aflow*L/Dh [m^2] of a compact HX core (any side)", "Heat Transfer"),
+            new FunctionInfo("hx_sigma", "hx_sigma(Aflow, Afrontal)", "GEOMETRY: free-flow (contraction) ratio sigma=Aflow/Afrontal. SIDE: compact HX air/gas face", "Heat Transfer"),
+            new FunctionInfo("hx_eta_surf", "hx_eta_surf(Afin, Atotal, eta_fin)", "GEOMETRY: overall fin-surface efficiency 1-(Afin/Atotal)(1-eta_fin). SIDE: finned (extended-surface) side, usually air", "Heat Transfer"),
+            new FunctionInfo("nu_tubebank", "nu_tubebank(arr$, Re, Pr)", "Nu, Zukauskas tube bank (arr$=inline|staggered, Re-band C,m). SIDE: air/gas over a tube bank. HX: fin-and-tube radiator/condenser air side", "Heat Transfer"),
+            new FunctionInfo("nu_hilpert", "nu_hilpert(Re, Pr)", "Nu, single-cylinder cross-flow. SIDE: air/gas over a single tube. HX: bare-tube / sparse-bank air side", "Heat Transfer"),
+            new FunctionInfo("nu_plate", "nu_plate(Re, Pr, beta_deg)", "Nu, chevron-angle dependent. SIDE: either single-phase stream in a brazed/gasketed PLATE HX. HX: plate heat exchanger (BPHE)", "Heat Transfer"),
+            new FunctionInfo("hx_fin_len", "hx_fin_len(depth, t, finDensity, Htube)", "GEOMETRY: developed fin length [m]. SIDE: finned air side of a fin-and-tube HX", "Heat Transfer"),
+            new FunctionInfo("hx_area_direct", "hx_area_direct(W, tubeCount, Htube, depth, t)", "GEOMETRY: primary tube-wall area [m^2], fin-and-tube HX (air side)", "Heat Transfer"),
+            new FunctionInfo("hx_area_indirect", "hx_area_indirect(W, tubeCount, finLen)", "GEOMETRY: secondary fin area [m^2], fin-and-tube HX (air side)", "Heat Transfer"),
+            new FunctionInfo("dp_gravity", "dp_gravity(rho_l, rho_g, alpha, L, theta_deg)", "dP [Pa], static head. SIDE: two-phase refrigerant in a vertical riser/downcomer. HX: evaporator/condenser vertical passes", "Heat Transfer"),
+            new FunctionInfo("mass_flux", "mass_flux(mdot, Aflow)", "GEOMETRY/flow: mass flux G=mdot/Aflow [kg/m^2/s] (any side)", "Heat Transfer"),
+            new FunctionInfo("j_fin", "j_fin(surface$, Re)", "Colburn j for a compact fin surface (plain|wavy|louvered|offset). SIDE: air/gas finned side. HX: plate-fin/louvered/offset-strip radiator, condenser, CAC", "Heat Transfer"),
+            new FunctionInfo("f_fin", "f_fin(surface$, Re)", "Fanning friction for a compact fin surface. SIDE: air/gas finned side dP (pair with j_fin). HX: same as j_fin", "Heat Transfer"),
+            new FunctionInfo("nu_gungor_winterton", "nu_gungor_winterton(Nu_l, Xtt, Bo)", "Nu, Gungor-Winterton flow boiling from liquid-only Nu. SIDE: boiling two-phase refrigerant. HX: evaporator refrigerant side", "Heat Transfer"),
+            new FunctionInfo("nu_traviss", "nu_traviss(Re_l, Pr_l, Xtt)", "Nu, Traviss in-tube condensation. SIDE: condensing two-phase refrigerant. HX: tube/microchannel condenser refrigerant side", "Heat Transfer"),
+            new FunctionInfo("dp_2phase_avg", "dp_2phase_avg(fluid$, P, x_in, x_out, mdot, Dh, Aflow, L, n)", "dP [Pa], quality-integrated (n cells). SIDE: two-phase refrigerant along an evaporator/condenser pass", "Heat Transfer"),
+
+            // Two-phase flow (Lockhart-Martinelli / Chisholm — Phase C)
+            new FunctionInfo("lm_phi2", "lm_phi2(X, C)", "Chisholm two-phase multiplier 1+C/X+1/X^2 on the liquid-alone drop", "Two-Phase Flow"),
+            new FunctionInfo("lm_martinelli_tt", "lm_martinelli_tt(x, rho_l, rho_g, mu_l, mu_g)", "Turbulent-turbulent Martinelli parameter X_tt", "Two-Phase Flow"),
+            new FunctionInfo("void_homogeneous", "void_homogeneous(x, rho_l, rho_g)", "Homogeneous (no-slip) void fraction", "Two-Phase Flow"),
+            new FunctionInfo("void_zivi", "void_zivi(x, rho_l, rho_g)", "Zivi void fraction (slip S=(rho_l/rho_g)^(1/3))", "Two-Phase Flow"),
+            new FunctionInfo("void_rouhani", "void_rouhani(x, rho_l, rho_g, G, sigma)", "Rouhani-Axelsson drift-flux void fraction (default)", "Two-Phase Flow"),
+            new FunctionInfo("friedel_phi2", "friedel_phi2(x, rho_l, rho_g, mu_l, mu_g, G, D, sigma)", "Friedel two-phase frictional multiplier on the liquid-only drop", "Two-Phase Flow"),
+            new FunctionInfo("momentum_flux", "momentum_flux(x, rho_l, rho_g, alpha, G)", "Separated-flow momentum flux [Pa] (accel. dP = out-in)", "Two-Phase Flow"),
+            new FunctionInfo("nu_dittus_boelter", "nu_dittus_boelter(Re, Pr, n)", "Dittus-Boelter single-phase Nusselt 0.023 Re^0.8 Pr^n", "Two-Phase Flow"),
+            new FunctionInfo("nu_gnielinski", "nu_gnielinski(Re, Pr)", "Gnielinski single-phase Nusselt number", "Two-Phase Flow"),
+            new FunctionInfo("chen_f", "chen_f(X_tt)", "Chen flow-boiling convective enhancement factor F", "Two-Phase Flow"),
+            new FunctionInfo("chen_s", "chen_s(Re_l, F)", "Chen flow-boiling nucleate-suppression factor S", "Two-Phase Flow"),
+            new FunctionInfo("nu_shah", "nu_shah(Re_l, Pr_l, x, p_red)", "Shah condensation Nusselt number", "Two-Phase Flow"),
+            new FunctionInfo("nu_cavallini_zecchin", "nu_cavallini_zecchin(Re_l, Pr_l, x, rho_l, rho_g)", "Cavallini-Zecchin condensation Nusselt number", "Two-Phase Flow"),
+            new FunctionInfo("zone_ramp", "zone_ramp(L, eps)", "Smooth zone-collapse ramp tanh(L/eps) (moving-boundary §4.8)", "Two-Phase Flow"),
+
+            // Standard atmosphere (ISA 1976 — Phase G)
+            new FunctionInfo("isa_t", "isa_T(alt)", "ISA 1976 temperature [K] at geopotential altitude [m]", "Atmosphere"),
+            new FunctionInfo("isa_p", "isa_P(alt)", "ISA 1976 pressure [Pa] at geopotential altitude [m]", "Atmosphere"),
+            new FunctionInfo("isa_rho", "isa_rho(alt)", "ISA 1976 density [kg/m^3] at geopotential altitude [m]", "Atmosphere"),
+
             // Cubic-EOS property backend (SRK/PR; CoolProp-independent)
             new FunctionInfo("eos_z", "eos_z(fluid$, model$, T, P, phase$)", "Compressibility factor Z (SRK/PR)", "Properties (EOS)"),
             new FunctionInfo("eos_volume", "eos_volume(fluid$, model$, T, P, phase$)", "Specific volume [m^3/kg] (SRK/PR)", "Properties (EOS)"),

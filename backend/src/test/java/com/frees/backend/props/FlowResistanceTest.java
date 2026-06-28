@@ -7,7 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Validates the Phase 0 flow-resistance functions against the Moody chart and
- * textbook hydraulics (Çengel & Cimbala, White).
+ * standard fluid-mechanics textbooks.
  */
 class FlowResistanceTest {
 

@@ -74,7 +74,7 @@ public final class EquationParser {
     static final int MAX_RANGE_SPAN = 1_000_000;
     static final int MAX_GENERATED_EQUATIONS = 500_000;
 
-    // Internal sentinel op chars for MATLAB-style element-wise operators. They
+    // Internal sentinel op chars for array-language-style element-wise operators. They
     // only ever exist on a raw Expr inside matrix compilation; compileMatrixExpr
     // expands them to per-element BinOps using the corresponding base op, so the
     // sentinels never reach the scalar consumers (Evaluator, LatexConverter, …).
@@ -218,7 +218,13 @@ public final class EquationParser {
         // become that block's algebraic+state body and the init(...) lines its
         // initial conditions, so the same component layer runs under the ODE
         // engine (the per-step algebraic solve resolves the network at each state).
-        List<com.frees.backend.ast.DynamicSystem> dynamicSystems = programResult.dynamicSystems();
+        // DYNAMIC body equations referencing component vars (e.g. a time-scheduled
+        // input RIN.out.mdot = f(time)) carry dotted refs that the top-level rewrite
+        // above does NOT touch (the body lives inside the DYNAMIC block, not the
+        // statement list). Rewrite them to flat names so they unify with the
+        // expanded component bodies — otherwise the port var is left free.
+        List<com.frees.backend.ast.DynamicSystem> dynamicSystems =
+                rewriteDynamicBodies(components, programResult.dynamicSystems());
         if (components.hasStorage()) {
             if (dynamicSystems.isEmpty()) {
                 // Steady/transient duality (§8.2): with no DYNAMIC block the same
@@ -258,6 +264,45 @@ public final class EquationParser {
      * the block body, and component {@code init(...)} lines extend its initial
      * conditions. Exactly one DYNAMIC block must supply the time span / method.
      */
+    /**
+     * Rewrites each DYNAMIC block's body equations (and initial-value / event-guard
+     * expressions) so dotted component references resolve to flat solver names —
+     * the same rewrite top-level statements get. This lets a transient model drive
+     * an acausal component with a scheduled/controlled input written in the DYNAMIC
+     * body (e.g. {@code RIN.out.mdot = mdot_max * min(time/t_ramp, 1)}). Bodies with
+     * no component references (pure ODEs) and empty bodies (storage-routed networks)
+     * are returned unchanged.
+     */
+    private List<com.frees.backend.ast.DynamicSystem> rewriteDynamicBodies(
+            ComponentExpander components, List<com.frees.backend.ast.DynamicSystem> systems) {
+        if (systems.isEmpty()) {
+            return systems;
+        }
+        List<com.frees.backend.ast.DynamicSystem> out = new ArrayList<>(systems.size());
+        for (com.frees.backend.ast.DynamicSystem ds : systems) {
+            List<Equation> body = new ArrayList<>(ds.bodyEquations().size());
+            for (Equation eq : ds.bodyEquations()) {
+                body.add(components.rewriteTopEquation(eq));
+            }
+            List<com.frees.backend.ast.DynamicSystem.InitialCondition> inits =
+                    new ArrayList<>(ds.initials().size());
+            for (com.frees.backend.ast.DynamicSystem.InitialCondition ic : ds.initials()) {
+                inits.add(new com.frees.backend.ast.DynamicSystem.InitialCondition(
+                        ic.state(), ic.indices(), components.rewriteTopExpr(ic.value())));
+            }
+            List<com.frees.backend.ast.DynamicSystem.Event> events =
+                    new ArrayList<>(ds.events().size());
+            for (com.frees.backend.ast.DynamicSystem.Event ev : ds.events()) {
+                events.add(new com.frees.backend.ast.DynamicSystem.Event(
+                        ev.name(), components.rewriteTopExpr(ev.lhs()), components.rewriteTopExpr(ev.rhs()),
+                        ev.direction(), ev.action()));
+            }
+            out.add(new com.frees.backend.ast.DynamicSystem(
+                    ds.name(), ds.options(), body, ds.forBlocks(), inits, events, ds.sourceText()));
+        }
+        return out;
+    }
+
     private List<com.frees.backend.ast.DynamicSystem> routeStorageIntoDynamic(
             List<Equation> componentEquations,
             List<com.frees.backend.ast.DynamicSystem.InitialCondition> componentInitials,
@@ -345,7 +390,7 @@ public final class EquationParser {
     }
 
     /** Rewrites bare references to a registered matrix/vector variable into the
-     * explicit A[1:r,1:c] form, so MATLAB-style bare names work in operations. */
+     * explicit A[1:r,1:c] form, so array-language-style bare names work in operations. */
     private Expr resolveShapes(Expr e, FlattenContext ctx) {
         return switch (e) {
             case Expr.Var(String name) -> {
@@ -577,7 +622,7 @@ public final class EquationParser {
             return;
         }
 
-        // MATLAB-style bare creation: A = [1 2; 3 4], v = [1 2 3], Z = zeros(2,2).
+        // array-language-style bare creation: A = [1 2; 3 4], v = [1 2 3], Z = zeros(2,2).
         if (lhs instanceof Expr.Var(String vname)
                 && (rhs instanceof Expr.ArrayLiteral
                     || isMatrixExpr(rhs, ctx.loopVars(), ctx.constants(), ctx.defs())
@@ -644,7 +689,7 @@ public final class EquationParser {
             return false;
         }
         String func = switch (function.toLowerCase()) {
-            case "inv" -> FN_INVERSE;          // MATLAB aliases
+            case "inv" -> FN_INVERSE;          // array-language aliases
             case "det" -> FN_DETERMINANT;
             default -> function.toLowerCase();
         };
@@ -715,7 +760,7 @@ public final class EquationParser {
                 rhsMat.length + "x" + rhsMat[0].length);
     }
 
-    /** MATLAB-style bare creation: A = [1 2; 3 4], v = [1, 2, 3] or v = [1; 2; 3].
+    /** array-language-style bare creation: A = [1 2; 3 4], v = [1, 2, 3] or v = [1; 2; 3].
      * Emits element equations (A[i,j] or v[k]) and registers the shape. */
     private void flattenBareMatrixCreation(String name, Expr rhs, String sourceText, FlattenContext ctx) {
         Expr[][] m = compileMatrixExpr(rhs, ctx);
@@ -914,7 +959,7 @@ public final class EquationParser {
 
     /**
      * Pads a partial output list (fewer targets than the intrinsic produces) with hidden sink
-     * variables so MATLAB-style trailing omission — {@code [A, B] = tf2ss(num, den)} — works:
+     * variables so array-language-style trailing omission — {@code [A, B] = tf2ss(num, den)} — works:
      * the dropped outputs are still computed into sinks the solver determines but never surfaces.
      * Only fixed-shape CALL intrinsics are padded (via {@link #expectedOutputCount}); user
      * PROCEDURE/MODULE calls and unknown names return {@code -1} and keep their own arity checks.
@@ -930,7 +975,7 @@ public final class EquationParser {
     }
 
     /**
-     * The number of outputs a fixed-shape CALL intrinsic produces, used to pad MATLAB-style
+     * The number of outputs a fixed-shape CALL intrinsic produces, used to pad array-language-style
      * trailing omission. Returns {@code -1} for user-defined PROCEDURE/MODULE calls and for
      * intrinsics whose output count must be stated explicitly (so they are never auto-padded).
      * Interconnection ops ({@code series}/{@code parallel}/{@code feedback}) yield 4 outputs in
@@ -1220,7 +1265,7 @@ public final class EquationParser {
         inputs = resolvedInputs;
         outputs = resolvedOutputs;
 
-        // MATLAB-style trailing-output omission: [A, B] = tf2ss(num, den) keeps only the
+        // array-language-style trailing-output omission: [A, B] = tf2ss(num, den) keeps only the
         // first outputs and discards the rest. Pad the missing trailing slots with hidden
         // sink variables up to the intrinsic's full arity so the flattener still computes
         // (and the solver still determines) every output; the sinks are filtered from results.
@@ -2305,7 +2350,7 @@ public final class EquationParser {
         }
     }
 
-    /** MATLAB-style matrix generators: zeros, ones, eye/identity, diag, linspace. */
+    /** array-language-style matrix generators: zeros, ones, eye/identity, diag, linspace. */
     private Expr[][] compileMatrixGenerator(String fn, List<Expr> args, FlattenContext ctx) {
         java.util.function.ToDoubleFunction<Expr> num = a ->
                 evalIndexExpr(expandExpr(a, ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs()),
@@ -2378,7 +2423,7 @@ public final class EquationParser {
         return m;
     }
 
-    /** The MATLAB spelling of an element-wise op, for error messages. */
+    /** The array-language spelling of an element-wise op, for error messages. */
     private static String elementwiseSymbol(char op) {
         return switch (op) {
             case ELEMENT_MUL -> ".*";

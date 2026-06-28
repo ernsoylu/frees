@@ -6,8 +6,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Closed-form radiation view-factor built-ins, checked against standard
- * textbook values (the chart-lookup configurations in Long &amp; Sayma /
- * Incropera).
+ * textbook values (standard chart-lookup configurations from
+ * standard heat-transfer references).
  */
 class ViewFactorTest {
 

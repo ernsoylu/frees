@@ -1,0 +1,43 @@
+COMPONENT ThermalSource(port)
+  PARAM T
+  port.T = T
+END
+
+COMPONENT Conduction(a, b)
+  PARAM k, area, L
+  Q      = k * area / L * (a.T - b.T)
+  a.Qdot = Q
+  b.Qdot = -Q
+END
+
+COMPONENT Convection(a, b)
+  PARAM htc, area
+  Q      = htc * area * (a.T - b.T)
+  a.Qdot = Q
+  b.Qdot = -Q
+END
+
+COMPONENT Radiation(a, b)
+  PARAM emis, area
+  Q      = emis * 5.670374419e-8 * area * (a.T^4 - b.T^4)
+  a.Qdot = Q
+  b.Qdot = -Q
+END
+
+COMPONENT ThermalMass(port)
+  PARAM C, T0
+  der(port.T)  = port.Qdot / C
+  init(port.T) = T0
+END
+
+COMPONENT ContactResistance(a, b)
+  PARAM Rth
+  Q      = (a.T - b.T) / Rth
+  a.Qdot = Q
+  b.Qdot = -Q
+END
+
+COMPONENT ThermalSensor(port)
+  port.Qdot = 0
+  T_meas    = port.T
+END

@@ -9,7 +9,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * MATLAB-style multi-output destructuring of CALL intrinsics:
+ * array-language-style multi-output destructuring of CALL intrinsics:
  *   [A, B, C, D] = tf2ss(num, den)   (full)
  *   [~, ~, V]    = svd(A)            ('~' discards an output slot)
  *   [A, B]       = tf2ss(num, den)   (omit trailing outputs)

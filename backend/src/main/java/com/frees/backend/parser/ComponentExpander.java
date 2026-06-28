@@ -54,6 +54,12 @@ public final class ComponentExpander {
      *  {@code {p, h, mdot}} for a fluid stream, {@code {t, qdot}} for a heat
      *  stream). Used to give each {@code connect(...)} node its domain rule. */
     private final Map<String, java.util.Set<String>> streamMembers = new LinkedHashMap<>();
+    /** Stream → fluid connector type ({@code fluid} / {@code gas} / {@code oil}),
+     *  from each component's reserved {@code domain$} parameter (default {@code fluid}).
+     *  Only fluid-class streams are tagged; it separates pneumatic, hydraulic and
+     *  thermofluid lines that share the same {@code (P, ṁ, h)} bond so a wrong
+     *  cross-connection is a hard error rather than a silently-solved nonsense network. */
+    private final Map<String, String> streamDomain = new LinkedHashMap<>();
     private final Map<String, String> displayNames;
 
     /**
@@ -133,7 +139,35 @@ public final class ComponentExpander {
         }
         buildStreamMembers();
         buildStreamFluidMap();
+        buildStreamDomainMap();
         propagateFluidAcrossConnects();
+    }
+
+    /**
+     * Tags each fluid-class stream with its component's reserved {@code domain$}
+     * connector type (default {@code fluid}; {@code gas} for pneumatic, {@code oil}
+     * for hydraulic built-ins). Two ports of conflicting type bound to the <em>same</em>
+     * stream (shared-name misuse) is an immediate error; {@code connect}-bound
+     * conflicts are caught per-node in {@link #expandConnects}. Heat/electrical/
+     * mechanical streams carry no fluid connector type and are skipped.
+     */
+    private void buildStreamDomainMap() {
+        for (ResolvedInstance ri : instances) {
+            String dom = ri.stringParams().getOrDefault("domain$", "fluid");
+            for (String stream : ri.portToStream().values()) {
+                if (nodeDomain(java.util.List.of(stream)) != Domain.FLUID) {
+                    continue;   // only fluid-class ports carry a fluid connector type
+                }
+                String prev = streamDomain.putIfAbsent(stream, dom);
+                if (prev != null && !prev.equals(dom)) {
+                    throw new EquationParser.ParseException(
+                            "Incompatible fluid connector types on stream '" + stream
+                            + "': '" + prev + "' and '" + dom + "' bound to the same stream. "
+                            + "Pneumatic ('gas'), hydraulic ('oil') and thermofluid ('fluid') "
+                            + "lines are different connector types and cannot share a port.");
+                }
+            }
+        }
     }
 
     /** Port-reference alias for flattened subsystem boundary ports:
@@ -620,8 +654,9 @@ public final class ComponentExpander {
         if (connects.isEmpty()) {
             return;
         }
+        checkNoCapacitiveCapacitive();
         UnionFind uf = new UnionFind();
-        seedComponentLinks(uf);
+        seedComponentLinks(uf, true);  // capacitive volumes break the cycle (states, not pass-through)
         for (ConnectDecl c : connects) {
             List<String> refs = c.ports();
             if (refs.size() < 2) {
@@ -633,7 +668,11 @@ public final class ComponentExpander {
                 sts.add(streamOf(ref, c));
             }
             String prefix = "CONNECT " + String.join(", ", refs) + ": ";
+            checkSingleDomain(sts, refs);
             Domain dom = nodeDomain(sts);
+            if (dom == Domain.FLUID) {
+                checkFluidConnectorType(sts, refs);
+            }
 
             // Loop closure: do two endpoints already share a connection set?
             boolean loopClosing = false;
@@ -650,11 +689,12 @@ public final class ComponentExpander {
             // equalities (cycle-closing edges are redundant): fluid equates
             // pressure & enthalpy, heat equates temperature, electrical equates
             // potential.
+            String[] across = acrossMembersForNode(dom, sts);
             String root = sts.get(0);
             for (int j = 1; j < sts.size(); j++) {
                 String st = sts.get(j);
                 if (!uf.find(root).equals(uf.find(st))) {
-                    for (String member : acrossMembers(dom)) {
+                    for (String member : across) {
                         out.add(equality(root, member, st, prefix));
                     }
                     uf.union(root, st);
@@ -680,6 +720,111 @@ public final class ComponentExpander {
                         }
                     }
                 }
+            }
+        }
+    }
+
+    /**
+     * Enforces the {@code never C-C, always C-R-C} index-1 discipline (todo.md
+     * §2.2): two <em>capacitive</em> volumes (each fixing a pressure state via
+     * {@code der(port.P)}) connected directly at one node both assert {@code P}
+     * there — the index-2 trap. A resistive flow element must sit between them.
+     *
+     * <p>A connect-only union-find gives true node granularity (the loop-detection
+     * union-find of {@link #expandConnects} collapses whole series chains through
+     * each 2-port's internal link, so it can't be used here). A capacitive
+     * instance is marked on the node of each of its fluid ports (its pressure
+     * state propagates to both); any node carrying two distinct capacitive
+     * instances is a hard error.
+     */
+    private void checkNoCapacitiveCapacitive() {
+        UnionFind nodeUf = new UnionFind();
+        for (ConnectDecl c : connects) {
+            List<String> sts = new ArrayList<>();
+            for (String ref : c.ports()) {
+                sts.add(streamOf(ref, c));
+            }
+            for (int i = 1; i < sts.size(); i++) {
+                nodeUf.union(sts.get(0), sts.get(i));
+            }
+        }
+        Map<String, java.util.LinkedHashSet<String>> nodeCaps = new LinkedHashMap<>();
+        for (ResolvedInstance ri : instances) {
+            if (!isPressureCapacitive(ri.def())) {
+                continue;
+            }
+            for (String stream : ri.portToStream().values()) {
+                if (!isFluidStream(stream)) {
+                    continue;
+                }
+                nodeCaps.computeIfAbsent(nodeUf.find(stream), k -> new java.util.LinkedHashSet<>())
+                        .add(ri.inst().name());
+            }
+        }
+        for (java.util.Set<String> caps : nodeCaps.values()) {
+            if (caps.size() >= 2) {
+                throw new EquationParser.ParseException(
+                        "connect(...): capacitive volumes " + caps + " are connected directly with "
+                        + "no resistance between them (C-C). Two pressure-storage volumes at one "
+                        + "node make the DAE index-2; interpose a resistive flow element between "
+                        + "them (the C-R-C rule).");
+            }
+        }
+    }
+
+    /** Whether a component fixes a pressure state — has a {@code der(port.P)} in
+     *  its body or any variant (the marker of a capacitive volume). */
+    private boolean isPressureCapacitive(ComponentDef def) {
+        if (bodyHasPressureDer(def.body(), def.ports())) {
+            return true;
+        }
+        for (ComponentDef.Variant v : def.variants()) {
+            if (bodyHasPressureDer(v.body(), def.ports())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean bodyHasPressureDer(List<Equation> body, List<String> ports) {
+        for (Equation eq : body) {
+            if (hasPressureDer(eq.lhs(), ports) || hasPressureDer(eq.rhs(), ports)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean hasPressureDer(Expr e, List<String> ports) {
+        switch (e) {
+            case Expr.Call c -> {
+                if (c.function().equalsIgnoreCase("der") && c.args().size() == 1
+                        && c.args().get(0) instanceof Expr.Var(String name)) {
+                    int dot = name.lastIndexOf('.');
+                    if (dot > 0 && name.substring(dot + 1).equalsIgnoreCase("p")) {
+                        String port = name.substring(0, dot);
+                        for (String p : ports) {
+                            if (p.equalsIgnoreCase(port)) {
+                                return true;
+                            }
+                        }
+                    }
+                }
+                for (Expr a : c.args()) {
+                    if (hasPressureDer(a, ports)) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+            case Expr.BinOp b -> {
+                return hasPressureDer(b.left(), ports) || hasPressureDer(b.right(), ports);
+            }
+            case Expr.Neg n -> {
+                return hasPressureDer(n.operand(), ports);
+            }
+            default -> {
+                return false;
             }
         }
     }
@@ -744,6 +889,27 @@ public final class ComponentExpander {
      * topology is not a simple pass-through.
      */
     private void seedComponentLinks(UnionFind uf) {
+        seedComponentLinks(uf, false);
+    }
+
+    /**
+     * Seeds in↔out links for fluid 2-port components.
+     *
+     * <p>{@code excludeCapacitive} drops the link for a <em>capacitive</em> volume
+     * (one with a {@code der(port.P)} pressure state). Such a volume is NOT a
+     * pass-through for loop detection: mass <em>accumulates</em> in it
+     * ({@code der(M)}, so {@code in.mdot ≠ out.mdot}) and its pressure is a state,
+     * so it breaks both the mass cycle and the pressure cycle. Seeding it would
+     * make a closed C-R-C-R loop look fully connected, so the cycle-closing
+     * {@code connect} would be wrongly judged redundant and its across (P/h) AND
+     * Σṁ equalities dropped — leaving the closing port's variables unmatched
+     * (the closed-refrigerant-cycle non-square bug). Excluding it lets the closing
+     * connect emit, matching Amesim's C/R causality (C nodes = states, R nodes
+     * algebraic) where each volume's pressure is an independent state. The
+     * fluid-identity propagation ({@link #propagateFluidAcrossConnects}) still
+     * seeds capacitive links (the fluid IS the same through a volume).
+     */
+    private void seedComponentLinks(UnionFind uf, boolean excludeCapacitive) {
         for (ResolvedInstance ri : instances) {
             List<String> streams = new ArrayList<>(ri.portToStream().values());
             // Only a *fluid* 2-port component carries its members port→port (a
@@ -751,6 +917,9 @@ public final class ComponentExpander {
             // equate its ports — its two ends are at different temperatures — so it
             // must not seed a loop link.
             if (streams.size() == 2 && isFluidStream(streams.get(0)) && isFluidStream(streams.get(1))) {
+                if (excludeCapacitive && isPressureCapacitive(ri.def())) {
+                    continue;
+                }
                 uf.union(streams.get(0), streams.get(1));
             }
         }
@@ -810,6 +979,122 @@ public final class ComponentExpander {
             return Domain.TRANSLATIONAL; // a translational node carrying only velocities
         }
         return Domain.FLUID;
+    }
+
+    /**
+     * Rejects a {@code connect} node that mixes physical (bond-graph) domains.
+     * Each endpoint is classified individually ({@link #nodeDomain} on the single
+     * stream, so the through-variable wins and a source carrying only an across
+     * variable — a thermal source's {@code T}, a ground's {@code V} — is still
+     * placed in its domain), and all endpoints must agree. Connecting a heat port
+     * to an electrical port, or a fluid line to a mechanical shaft, is a hard error
+     * rather than a silently mis-solved network. (A moist-air stream carrying both
+     * {@code T} and {@code ṁ} classifies as fluid — the through variable wins — so
+     * it is unaffected.) Domains are coupled through a transducer component
+     * (a motor, pump, heating resistor, …), never a bare connect.
+     */
+    private void checkSingleDomain(List<String> sts, List<String> refs) {
+        Domain first = null;
+        String firstRef = null;
+        for (int i = 0; i < sts.size(); i++) {
+            java.util.Set<String> m = streamMembers.get(sts.get(i));
+            if (m == null || m.isEmpty()) {
+                continue;   // a bare stream with no members yet — nothing to classify
+            }
+            Domain d = nodeDomain(java.util.List.of(sts.get(i)));
+            if (first == null) {
+                first = d;
+                firstRef = refs.get(i);
+            } else if (first != d) {
+                throw new EquationParser.ParseException(
+                        "connect(" + String.join(", ", refs) + "): cannot connect a "
+                        + first.name().toLowerCase() + " port (" + firstRef + ") to a "
+                        + d.name().toLowerCase() + " port (" + refs.get(i) + ") — different "
+                        + "physical domains. Couple domains through a transducer component "
+                        + "(a motor, pump, heating resistor, …), not a direct connect.");
+            }
+        }
+    }
+
+    /**
+     * Rejects a fluid {@code connect} node whose endpoints are different fluid
+     * connector types — a pneumatic ({@code gas}) line tied to a hydraulic
+     * ({@code oil}) or thermofluid ({@code fluid}) line. All three share the same
+     * {@code (P, ṁ, h)} bond algebra but model incompatible working fluids, so the
+     * mistake is caught here instead of silently solving.
+     */
+    private void checkFluidConnectorType(List<String> sts, List<String> refs) {
+        String found = null;
+        String foundRef = null;
+        for (int i = 0; i < sts.size(); i++) {
+            String d = streamDomain.get(sts.get(i));
+            if (d == null) {
+                continue;
+            }
+            if (found == null) {
+                found = d;
+                foundRef = refs.get(i);
+            } else if (!found.equals(d)) {
+                throw new EquationParser.ParseException(
+                        "connect(" + String.join(", ", refs) + "): cannot connect a '" + found
+                        + "' line (" + foundRef + ") to a '" + d + "' line (" + refs.get(i) + "). "
+                        + "Thermofluid ('fluid'), liquid ('liquid'), two-phase ('twophase'), "
+                        + "pneumatic ('gas'), hydraulic ('oil') and humid-air ('moistair') are "
+                        + "incompatible fluid connector types; couple them only through a heat "
+                        + "exchanger.");
+            }
+        }
+    }
+
+    /**
+     * The across members for a specific node — {@link #acrossMembers} for the
+     * domain, plus the humidity-ratio rider {@code W} for a moist-air fluid node
+     * (it is equal across a pass-through / series link; flow-weighted only at an
+     * explicit {@code MixingBox}, like enthalpy). Lets a moist-air series chain be
+     * wired with plain {@code connect(...)} and still carry humidity.
+     */
+    private String[] acrossMembersForNode(Domain dom, List<String> sts) {
+        String[] base = acrossMembers(dom);
+        if (dom != Domain.FLUID) {
+            return base;
+        }
+        java.util.List<String> ext = new java.util.ArrayList<>(java.util.Arrays.asList(base));
+        if ("moistair".equals(nodeFluidType(sts))) {
+            ext.add("w");   // humidity-ratio rider (water mass) — moist-air domain
+        }
+        // Opt-in zeotropic-blend composition rider: a node whose streams carry a
+        // 'z' member transports the blend composition z (equal across a pass-through
+        // connect; flow-weighted only at an explicit blend mixer, like enthalpy).
+        // Pure/azeotropic refrigerants carry no 'z' member, so this is a no-op for
+        // them and the pure-fluid connector stays a plain (P, ṁ, h) bond.
+        if (nodeHasMember(sts, "z")) {
+            ext.add("z");
+        }
+        return ext.toArray(new String[0]);
+    }
+
+    /** Whether any stream at the node carries the given port member. */
+    private boolean nodeHasMember(List<String> sts, String member) {
+        for (String st : sts) {
+            java.util.Set<String> m = streamMembers.get(st);
+            if (m != null && m.contains(member)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** The fluid connector type of a node ({@code fluid}/{@code gas}/{@code oil}/
+     *  {@code moistair}), from its first tagged stream (the node is verified
+     *  homogeneous by {@link #checkFluidConnectorType}). Defaults to {@code fluid}. */
+    private String nodeFluidType(List<String> sts) {
+        for (String st : sts) {
+            String d = streamDomain.get(st);
+            if (d != null) {
+                return d;
+            }
+        }
+        return "fluid";
     }
 
     /** The across (equal-at-node) members for a domain. */
@@ -882,6 +1167,31 @@ public final class ComponentExpander {
             out.add(rewriteStatement(s));
         }
         return out;
+    }
+
+    /**
+     * Rewrites the dotted component references in a {@code DYNAMIC}-block body
+     * equation (e.g. a time-scheduled input {@code RIN.out.mdot = f(time)}) to
+     * their flat solver names — the SAME rewrite applied to top-level statements.
+     * Without it a DYNAMIC body equation referencing {@code RIN.out.mdot} targets
+     * a variable distinct from the component's expanded {@code rin$out$mdot}, so
+     * the port var is left unconstrained and the DAE comes out non-square. This is
+     * what lets an acausal component take a scheduled/controlled transient input.
+     */
+    public com.frees.backend.ast.Equation rewriteTopEquation(com.frees.backend.ast.Equation eq) {
+        if (instancesByName.isEmpty() && defsByName.isEmpty()) {
+            return eq;
+        }
+        return new com.frees.backend.ast.Equation(rewriteTop(eq.lhs()), rewriteTop(eq.rhs()), eq.sourceText());
+    }
+
+    /** Rewrites dotted component references in an arbitrary expression (a DYNAMIC
+     *  initial-value or event-guard expression) to flat solver names. */
+    public Expr rewriteTopExpr(Expr e) {
+        if (instancesByName.isEmpty() && defsByName.isEmpty()) {
+            return e;
+        }
+        return rewriteTop(e);
     }
 
     private Statement rewriteStatement(Statement s) {

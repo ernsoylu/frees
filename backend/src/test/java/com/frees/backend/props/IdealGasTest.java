@@ -129,7 +129,7 @@ class IdealGasTest {
         }
         // Compressibility of R134a at 1 MPa and 50 C (323.15 K)
         double z = eval("prop$compressibility$r134a$t$p", 323.15, 1_000_000.0);
-        // From Cengel Example 3-12: Z should be around 0.84
+        // From a standard textbook example: Z should be around 0.84
         assertEquals(0.84, z, 0.02);
 
         // Gibbs energy of Water at 300 K, 100 kPa
@@ -159,7 +159,7 @@ class IdealGasTest {
 
     @Test
     void stagnationProperties() {
-        // Cengel Example 17-1: Air entering diffuser at T = 300 K, P = 100 kPa with V = 200 m/s.
+        // Standard textbook example: Air entering diffuser at T = 300 K, P = 100 kPa with V = 200 m/s.
         // cp = 1005 J/kg-K. stagnation temperature should be around 319.9 K.
         String source = """
                 T = 300 [K]

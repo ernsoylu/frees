@@ -21,6 +21,180 @@ export interface Example {
 
 export const EXAMPLES: Example[] = [
   {
+    id: 'ev-thermal-management',
+    title: 'EV Thermal Management System',
+    description: 'Coupled refrigerant + coolant loops with wide branches and a discretized radiator; every HX UA and the evaporator dP are computed from correlations + geometry and injected. Solve (F2).',
+    category: 'Systems',
+    featured: true,
+    text: `// EV Thermal Management System  (coupled, geometry-driven HX sizing)
+{ A complete EV thermal-management system as one acausal component model, with
+  every heat exchanger sized from CORRELATION + GEOMETRY rather than a hand-set UA.
+
+  Coolant line (EG50): the pump feeds a WIDE-BRANCH SPLIT into a battery branch
+  and a motor branch; a flow-weighted COLLECT rejoins them and a DISCRETIZED
+  radiator pipe (three wall-HX + orifice cells) rejects heat to ambient.
+
+  Refrigerant line (R1234yf): one liquid feed SPLITS to a chiller evaporator and
+  a cabin evaporator; both COLLECT at a common compressor suction; condenser head
+  pressure floats with ambient and load.
+
+  Cross-domain bridge: the chiller refrigerant evaporator wall is tied to the
+  battery-branch coolant.
+
+  Each UA is built from the correlation toolkit (htc_evap / htc_cond / htc_1phase
+  + the external air-side htc_extair) and ua_hx, and the evaporator dP from
+  dp_2phase — computed OUTSIDE the components and injected into their UA / dP
+  parameters. Press Solve (F2) for the steady operating point. }
+
+COMPONENT LiqMix(in1, in2, out)
+  PARAM domain$ = liquid
+  out.P = in1.P
+  in2.P = in1.P
+  out.mdot = in1.mdot + in2.mdot
+  out.mdot * out.h = in1.mdot * in1.h + in2.mdot * in2.h
+END
+COMPONENT TwoPhaseMixer(in1, in2, out)
+  PARAM domain$ = twophase
+  out.P = in1.P
+  out.mdot = in1.mdot + in2.mdot
+  out.mdot * out.h = in1.mdot * in1.h + in2.mdot * in2.h
+END
+COMPONENT MassGen(port)
+  PARAM C, Qgen, T0
+  der(port.T)  = (Qgen + port.Qdot) / C
+  init(port.T) = T0
+END
+COMPONENT LiqFeed(out)
+  PARAM fluid$, P, x, domain$ = twophase
+  out.P = P
+  out.h = Enthalpy(fluid$, P=P, x=x)
+END
+COMPONENT EvapSH(in, out, wall)
+  PARAM fluid$, UA, dP, SH, domain$ = twophase
+  out.P = in.P - dP
+  Tevap = T_sat(fluid$, P=in.P)
+  Q     = frac * UA * (wall.T - Tevap)
+  out.h = Enthalpy(fluid$, P=out.P, T=Tevap + SH)
+  in.mdot  = Q / (out.h - in.h)
+  out.mdot = in.mdot
+  wall.Qdot = Q
+END
+COMPONENT Compressor(in, out)
+  PARAM fluid$, eta, domain$ = twophase
+  out.mdot = in.mdot
+  s_in = Entropy(fluid$, P=in.P, h=in.h)
+  h_s  = Enthalpy(fluid$, P=out.P, s=s_in)
+  out.h = in.h + (h_s - in.h) / eta
+  W = in.mdot * (out.h - in.h)
+END
+COMPONENT LiqWallUA(in, out, wall)
+  PARAM fluid$, UA, domain$ = liquid
+  out.mdot = in.mdot
+  out.P    = in.P
+  T_in     = Temperature(fluid$, P=in.P, h=in.h)
+  Q        = UA * (T_in - wall.T)
+  out.h    = in.h - Q / in.mdot
+  wall.Qdot = -Q
+END
+COMPONENT CondFloatUA(in, out)
+  PARAM fluid$, UA, Tamb, domain$ = twophase
+  out.mdot = in.mdot
+  out.P    = in.P
+  Tcond    = T_sat(fluid$, P=in.P)
+  out.h    = Enthalpy(fluid$, P=in.P, x=0)
+  Q        = in.mdot * (in.h - out.h)
+  Q        = UA * (Tcond - Tamb)
+END
+
+{ ---- UA / dP objects from correlation + geometry (design-point flows) ---- }
+h_chl_r = htc_evap('R1234yf', 350000, 0.5, 0.05, 0.006, 8e-5)
+h_chl_c = htc_1phase('EG50', 200000, 290, 0.23, 0.008, 1.5e-4)
+UA_chl_r = h_chl_r * 0.05
+UA_chl_c = h_chl_c * 0.35
+dP_chl   = dp_2phase('R1234yf', 350000, 0.5, 0.05, 0.006, 1.2e-4, 0.4)
+h_cab_r = htc_evap('R1234yf', 350000, 0.5, 0.02, 0.006, 8e-5)
+UA_cab   = h_cab_r * 0.03
+dP_cab   = dp_2phase('R1234yf', 350000, 0.5, 0.02, 0.006, 1.2e-4, 0.4)
+h_cnd_r = htc_cond('R1234yf', 1200000, 0.5, 0.07, 0.006, 8e-5)
+h_cnd_a = htc_extair('Air', 101325, 313, 0.6, 0.01, 0.03)
+UA_cond = ua_hx(h_cnd_r, 1.0, h_cnd_a, 6.0, 1e-4)
+h_rad_c = htc_1phase('EG50', 200000, 320, 0.4, 0.008, 1.5e-4)
+h_rad_a = htc_extair('Air', 101325, 313, 0.5, 0.01, 0.03)
+UA_rad  = ua_hx(h_rad_c, 0.4, h_rad_a, 2.5, 1e-4)
+UA_bcp  = h_chl_c * 0.5
+UA_mcp  = htc_1phase('EG50', 200000, 320, 0.17, 0.008, 1.5e-4) * 0.5
+
+{ ---- Coolant line ---- }
+LiquidSource  PUMPIN(fluid$=EG50, mdot=0.4, P=200000, T=305)
+LiquidPump    PUMP(fluid$=EG50, eta=0.6)
+LiquidOrifice OBAT(CdA=1.6e-5, rho=1050)
+LiquidOrifice OMOT(CdA=1.2e-5, rho=1050)
+LiqWallUA     BCP(fluid$=EG50, UA=UA_bcp)
+LiqWallUA     CHLC(fluid$=EG50, UA=UA_chl_c)
+LiqWallUA     MCP(fluid$=EG50, UA=UA_mcp)
+LiqMix        MIX()
+LiqWallUA     RAD1(fluid$=EG50, UA=UA_rad)
+LiquidOrifice OR1(CdA=1.2e-4, rho=1050)
+LiqWallUA     RAD2(fluid$=EG50, UA=UA_rad)
+LiquidOrifice OR2(CdA=1.2e-4, rho=1050)
+LiqWallUA     RAD3(fluid$=EG50, UA=UA_rad)
+LiquidOrifice OR3(CdA=1.2e-4, rho=1050)
+ThermalSource AMB(T=313)
+LiquidSink    PUMPOUT()
+
+MassGen BATT(C=60000, Qgen=4000, T0=305)
+MassGen MOTOR(C=40000, Qgen=5000, T0=305)
+MassGen CABIN(C=8000,  Qgen=2500, T0=305)
+
+{ ---- Refrigerant line ---- }
+LiqFeed       FEED(fluid$=R1234yf, P=350000, x=0.20)
+EvapSH        CHLR(fluid$=R1234yf, UA=UA_chl_r, dP=dP_chl, SH=5)
+EvapSH        CABE(fluid$=R1234yf, UA=UA_cab,  dP=dP_cab, SH=8)
+TwoPhaseMixer SUC()
+Compressor    CMP(fluid$=R1234yf, eta=0.7)
+CondFloatUA   COND(fluid$=R1234yf, UA=UA_cond, Tamb=313)
+TwoPhaseSink  LIQ()
+
+connect(PUMPIN.out, PUMP.in)
+connect(PUMP.out, OBAT.in, OMOT.in)
+connect(OBAT.out, BCP.in)
+connect(BCP.wall, BATT.port)
+connect(BCP.out, CHLC.in)
+connect(CHLC.out, MIX.in1)
+connect(OMOT.out, MCP.in)
+connect(MCP.wall, MOTOR.port)
+connect(MCP.out, MIX.in2)
+connect(MIX.out, RAD1.in)
+connect(RAD1.out, OR1.in)
+connect(OR1.out, RAD2.in)
+connect(RAD2.out, OR2.in)
+connect(OR2.out, RAD3.in)
+connect(RAD3.out, OR3.in)
+connect(OR3.out, PUMPOUT.in)
+connect(AMB.port, RAD1.wall, RAD2.wall, RAD3.wall)
+PUMPOUT.in.P = 200000
+
+connect(FEED.out, CHLR.in, CABE.in)
+connect(CHLR.out, SUC.in1)
+connect(CABE.out, SUC.in2)
+connect(SUC.out, CMP.in)
+connect(CMP.out, COND.in)
+connect(COND.out, LIQ.in)
+connect(CABE.wall, CABIN.port)
+connect(CHLR.wall, CHLC.wall)
+
+{ steady operating point — full compressor capacity }
+CHLR.frac = 1
+CABE.frac = 1
+
+{ Transient pull-down: delete the two frac lines above and wrap a ramp in a
+  DYNAMIC block:
+    DYNAMIC ev (method = ida, time = 0 .. 600, points = 1201)
+      CHLR.frac = 0.05 + 0.95 * min(time/5, 1)
+      CABE.frac = 0.05 + 0.95 * min(time/5, 1)
+    END }`,
+  },
+  {
     id: 'pump-sizing',
     title: 'Pump Sizing',
     description: 'Hydraulic and shaft power from flow rate, head, and efficiency.',
@@ -134,12 +308,12 @@ w_turb = h3 - h4
 eta_th = (w_turb - w_pump) / q_in`,
   },
   {
-    id: 'cengel-thermodynamics',
-    title: 'Çengel Thermodynamics Compliance',
-    description: ' Nelson-Obert compressibility and diffuser stagnation properties from Çengel.',
+    id: 'thermo-compliance',
+    title: 'Real-Fluid Thermodynamics Compliance',
+    description: ' Nelson-Obert compressibility and diffuser stagnation properties from a standard thermodynamics textbook.',
     category: 'Thermodynamics',
-    text: `// Çengel Thermodynamics Compliance
-{ Verification problems from Çengel's Thermodynamics: An Engineering Approach.
+    text: `// Real-Fluid Thermodynamics Compliance
+{ Verification problems from a standard thermodynamics textbook.
   This example demonstrates the compressibility factor (Z) of real fluids
   and stagnation properties for compressible flow. }
 
@@ -618,11 +792,11 @@ END`,
   },
   {
     id: 'multi-output-destructuring',
-    title: 'Multi-Output Functions (MATLAB-style)',
+    title: 'Multi-Output Functions (array-language-style)',
     description: 'Bracket destructuring of functions: [A,B,C,D] = tf2ss(...), discarding outputs with ~, and omitting trailing outputs.',
     category: 'Control Systems',
     text: `// Multi-Output Functions
-{ Every multi-output function can be used with MATLAB-style
+{ Every multi-output function can be used with array-language-style
   bracket destructuring:  [outs] = name(ins).
   Use ~ to discard an output, or omit trailing outputs you don't
   need. Press Solve (F2). }
@@ -845,7 +1019,7 @@ END`,
   {
     id: 'root-locus-analysis',
     title: 'Root Locus Analysis',
-    description: 'Calculate and plot root locus trajectories for a closed-loop system, finding crossover points matching Norman Nise examples.',
+    description: 'Calculate and plot root locus trajectories for a closed-loop system, finding crossover points matching standard control-systems textbook examples.',
     category: 'Control Systems',
     text: `{ Root Locus Analysis }
 { Open-loop plant G(s) = K*(s + 3) / (s*(s + 1)*(s + 2)*(s + 4)) }
@@ -1012,7 +1186,7 @@ q = k * A * (T_hot - T_cold) / L   { heat rate through the plate }`,
     text: `// Engine Map - 2-D Interpolation
 { A brake-specific fuel consumption map: rows are engine speed,
   columns are load. Call the table with two arguments to bilinearly
-  interpolate, bsfc(rpm, load), or use the EES-style Interpolate2D. }
+  interpolate, bsfc(rpm, load), or use the classic-solver-style Interpolate2D. }
 TABLE bsfc(rpm : load = 0.25, 0.5, 1.0)
   1000   320   300   290
   3000   280   260   250
@@ -1020,7 +1194,7 @@ TABLE bsfc(rpm : load = 0.25, 0.5, 1.0)
 END
 
 g_per_kWh = bsfc(2500, 0.6)                  { direct curve-family call }
-g_check   = Interpolate2D('bsfc', 2500, 0.6) { same value, EES name }`,
+g_check   = Interpolate2D('bsfc', 2500, 0.6) { same value, classic-solver name }`,
   },
   {
     id: 'multi-objective-beam',

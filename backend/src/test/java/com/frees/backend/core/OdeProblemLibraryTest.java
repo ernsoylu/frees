@@ -9,8 +9,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * A library of 20 classic engineering-physics ODE problems (sourced from the EES
- * Clone NotebookLM notebook — EES manual / Mastering EES / Chapra) solved through
+ * A library of 20 classic engineering-physics ODE problems (sourced from
+ * standard reference manuals and numerical-methods texts) solved through
  * frees DYNAMIC blocks and verified against closed-form or well-known reference
  * answers. Collectively they exercise every solver in the roster: fixed-step
  * ode1–ode5, adaptive ode45/ode23, and stiff ode23s/ode15s. These mirror the

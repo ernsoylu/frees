@@ -3,7 +3,7 @@ package com.frees.backend.core.ode;
 /**
  * Explicit Runge–Kutta stepper driven by a {@link ButcherTableau}. Handles both
  * fixed-step methods (no embedded error estimate) and adaptive embedded pairs
- * with a PI-style step-size controller (rtol/atol, MATLAB-like). The driver in
+ * with a PI-style step-size controller (rtol/atol, array-language-like). The driver in
  * {@link OdeIntegrator} owns the time loop and dense-output sampling.
  */
 public final class RungeKuttaMethod implements OdeMethod {

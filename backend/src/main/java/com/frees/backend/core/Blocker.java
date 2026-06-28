@@ -175,8 +175,8 @@ public class Blocker {
     }
 
     private void strongConnect(int v, TarjanContext ctx) {
-        // Iterative Tarjan to avoid stack overflow on large systems (EES
-        // supports thousands of equations).
+        // Iterative Tarjan to avoid stack overflow on large systems (real-world
+        // problems may have thousands of equations).
         Deque<int[]> work = new ArrayDeque<>();
         work.push(new int[]{v, 0});
 

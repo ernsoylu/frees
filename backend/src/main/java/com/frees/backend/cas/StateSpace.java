@@ -67,7 +67,7 @@ public final class StateSpace {
 
             // The denominator is the degree-n characteristic polynomial; the
             // numerator has degree at most n. Read coefficients s^n .. s^0.
-            // num and den both have length n+1 (MATLAB convention; the numerator
+            // num and den both have length n+1 (array-language convention; the numerator
             // is zero-padded at the high-order end when it is lower degree).
             double[] den = new double[n + 1];
             double[] num = new double[n + 1];

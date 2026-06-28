@@ -5,7 +5,7 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
- * Phase 2: MATLAB-style range generation that fills an array variable,
+ * Phase 2: array-language-style range generation that fills an array variable,
  * e.g. speed = 0:10:100 | Linear  and  freq = 1:5:1000 | Log.
  */
 class CodeRangeTest {

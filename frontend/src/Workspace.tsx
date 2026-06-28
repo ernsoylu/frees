@@ -23,7 +23,7 @@ import { VariableResult } from './api'
 import { formatValue } from './format'
 
 /**
- * The advanced Workspace (MATLAB-style variable window): a live, typed view of
+ * The advanced Workspace (array-language-style variable window): a live, typed view of
  * the current solved state. Scalars list in a sortable table with value, type,
  * unit and uncertainty; vectors and matrices group under expandable rows that
  * reveal their grid. Updates whenever the document is re-solved (its source is

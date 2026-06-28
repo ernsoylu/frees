@@ -12,7 +12,7 @@
  */
 
 /**
- * Built-in constants (EES convention: a trailing '#' marks a constant, e.g.
+ * Built-in constants (by long-standing convention: a trailing '#' marks a constant, e.g.
  * pi#, g#). Values mirror the backend ConstantsRegistry; diagram formulas work
  * on already-solved SI values, so only the numeric magnitude is needed here.
  */

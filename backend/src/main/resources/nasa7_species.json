@@ -1,5 +1,5 @@
 {
- "_comment": "NASA-7 polynomial thermo (two ranges) + Lennard-Jones transport. cp/R=a1+a2T+a3T^2+a4T^3+a5T^4; h/RT=a1+a2T/2+a3T^2/3+a4T^3/4+a5T^4/5+a6/T; s/R=a1 lnT+a2T+a3T^2/2+a4T^3/3+a5T^4/4+a7. sigma=LJ collision diameter [Angstrom], epsk=LJ well depth eps/k [K]. M in kg/kmol. Source: Cantera gri30.yaml (GRI-Mech 3.0).",
+ "_comment": "NASA-7 polynomial thermo (two ranges) + Lennard-Jones transport. cp/R=a1+a2T+a3T^2+a4T^3+a5T^4; h/RT=a1+a2T/2+a3T^2/3+a4T^3/4+a5T^4/5+a6/T; s/R=a1 lnT+a2T+a3T^2/2+a4T^3/3+a5T^4/4+a7. sigma=LJ collision diameter [Angstrom], epsk=LJ well depth eps/k [K]. M in kg/kmol. Source: a standard combustion mechanism.",
  "species": {
   "N2": {
    "composition": {

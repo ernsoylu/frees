@@ -10,7 +10,7 @@ import java.util.Map;
 
 /**
  * Resolution of string variables — identifiers with a trailing {@code $}
- * (EES convention), e.g. {@code R$ = 'R134a'}.
+ * (by long-standing convention), e.g. {@code R$ = 'R134a'}.
  *
  * <p>A string variable is defined by an equation binding it to a string
  * literal (on either side). Definitions are compile-time constants: every use

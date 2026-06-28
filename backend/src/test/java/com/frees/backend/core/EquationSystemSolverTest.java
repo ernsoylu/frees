@@ -16,7 +16,7 @@ class EquationSystemSolverTest {
 
     @Test
     void solvesMatlabStyleBareNameMatrix() {
-        // MATLAB-style bare creation + bare references in SolveLinear.
+        // array-language-style bare creation + bare references in SolveLinear.
         EquationSystemSolver.Result result =
                 solver.solve("A = [2 0; 0 4]\nb = [6; 8]\nx = SolveLinear(A, b)");
         assertEquals(3.0, result.variables().get("x[1]"), 1e-9);

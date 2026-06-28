@@ -36,7 +36,7 @@ public final class ButcherTableau {
         return bErr != null;
     }
 
-    // ── Fixed-step explicit methods (Simulink ode1–ode5) ────────────────────
+    // ── Fixed-step explicit methods (orders ode1–ode5) ────────────────────
 
     /** ode1 — explicit (forward) Euler, order 1. */
     public static ButcherTableau euler() {

@@ -240,7 +240,7 @@ public final class ControllerDesign {
      *
      * <p>The controller is designed so the open loop {@code C(jw)G(jw)} has its
      * gain crossover (|loop| = 1) at {@code wc} with a 60° phase margin — the same
-     * default target MATLAB's {@code pidtune} uses. At {@code wc} the required
+     * default target a standard {@code pidtune} routine uses. At {@code wc} the required
      * controller response is {@code Mc∠θc} with {@code Mc = 1/|G|} and
      * {@code θc = (-180° + 60°) - ∠G}; the gains follow in closed form:
      * <ul>

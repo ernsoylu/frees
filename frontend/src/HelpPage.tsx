@@ -154,7 +154,7 @@ function UnitsReference() {
 
       <Title order={3} mt="md">Built-in Constants</Title>
       <Text size="sm" c="dimmed">
-        Use these anywhere in equations by their <code>#</code>-suffixed name (EES convention).
+        Use these anywhere in equations by their <code>#</code>-suffixed name (by long-standing convention).
         They are substituted at parse time with the SI value and unit shown.
       </Text>
       <Table striped withTableBorder>
@@ -260,7 +260,7 @@ function ProceduresReference() {
         the colon; sizes are inferred from the inputs unless noted.
       </Text>
       <Text size="sm" c="dimmed">
-        Every procedure also has a MATLAB-style destructuring form:{' '}
+        Every procedure also has a array-language-style destructuring form:{' '}
         <Code>[A, B, C, D] = tf2ss(num, den)</Code> is identical to{' '}
         <Code>CALL tf2ss(num, den : A, B, C, D)</Code>. Discard an output with{' '}
         <Code>~</Code> (<Code>[~, ~, V] = svd(M)</Code>) or omit trailing outputs you
@@ -461,7 +461,7 @@ function ConstantsReference() {
       <Title order={3} mt="sm">Built-in Constants</Title>
       <Text size="sm" c="dimmed">
         Physical and mathematical constants, available with a trailing{' '}
-        <Code>#</Code> (EES convention). Substituted at parse time with their SI
+        <Code>#</Code> (by long-standing convention). Substituted at parse time with their SI
         value. The full unit list is on the <b>Units &amp; Constants</b> page.
       </Text>
       {constants === null && <Text size="sm" c="dimmed">Loading constants…</Text>}
@@ -2287,8 +2287,8 @@ END
 y_test = siyavula_data(0)`,
   },
   // ── Differential Equations (ODE) — 20 worked DYNAMIC problems ──────────────
-  // Sourced from the EES Clone NotebookLM notebook (EES manual / Mastering EES /
-  // Chapra) and verified in the backend OdeProblemLibraryTest against closed-form
+  // Sourced from standard reference manuals and classic
+  // numerical-methods texts, and verified in the backend OdeProblemLibraryTest against closed-form
   // answers. They span every solver: fixed ode1–ode5, adaptive ode45/ode23, and
   // stiff ode23s/ode15s.
   {
@@ -2665,8 +2665,8 @@ const CATEGORIES = [
     title: 'Matrix & Linear Algebra',
     icon: <IconGrid3x3 size={16} />,
     items: [
-      { id: 'matrices-decl', label: 'Declaring Matrices & Vectors', keywords: ['matrix', 'vector', 'declaring', 'literal', 'semicolon', 'brackets', 'matlab'] },
-      { id: 'matrices-ops', label: 'Matrix Operators (+, -, *, \\, \')', keywords: ['operators', 'transpose', 'backslash', 'multiplication', 'solve', 'matlab'] },
+      { id: 'matrices-decl', label: 'Declaring Matrices & Vectors', keywords: ['matrix', 'vector', 'declaring', 'literal', 'semicolon', 'brackets', 'arrays'] },
+      { id: 'matrices-ops', label: 'Matrix Operators (+, -, *, \\, \')', keywords: ['operators', 'transpose', 'backslash', 'multiplication', 'solve', 'arrays'] },
       { id: 'matrices-blas', label: 'OpenBLAS Algebra Functions', keywords: ['blas', 'axpy', 'scal', 'copy', 'asum', 'nrm2', 'gemv', 'ger', 'gemm', 'openblas'] },
       { id: 'matrices-sys', label: 'Linear Systems & Decomp', keywords: ['solvelinear', 'determinant', 'ludecompose', 'eigen', 'eigenvalues', 'eulerrotate', 'eulerdecompose', 'rotation'] },
     ]

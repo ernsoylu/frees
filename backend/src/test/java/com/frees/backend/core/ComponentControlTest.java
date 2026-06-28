@@ -12,7 +12,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * linearizes a transient component network about its operating point into the
  * state-space matrices {@code A, B, C, D}, which then feed the shipped control
  * suite ({@code lqr}, {@code eig}, …) in the same solve. This is the
- * Simscape→Simulink "build physical plant → auto-linearize → design controller"
+ * the classic "build physical plant → auto-linearize → design controller"
  * workflow in one document. Pure-algebra plant, so CoolProp-free.
  */
 class ComponentControlTest {

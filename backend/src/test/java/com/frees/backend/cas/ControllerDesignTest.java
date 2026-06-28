@@ -89,8 +89,8 @@ class ControllerDesignTest {
         assertEquals(0.5, m[2], 0.02, "PI gain crossover should land at wc=0.5");
     }
     @Test
-    void rankAndCtrbNiseExample() {
-        // Nise Chapter 12, Example 12.1
+    void rankAndCtrbTextbookExample() {
+        // Standard control-systems textbook, Chapter 12, Example 12.1
         double[][] a = {
             {0, 1, 0},
             {0, 0, 1},
@@ -117,7 +117,7 @@ class ControllerDesignTest {
     }
 
     @Test
-    void obsvNiseExample() {
+    void obsvTextbookExample() {
         double[][] a = {
             {0, 1},
             {-2, -3}
@@ -220,7 +220,7 @@ class ControllerDesignTest {
     }
 
     @Test
-    void stepInfoNiseExample() {
+    void stepInfoTextbookExample() {
         double[] num = {0, 0, 100};
         double[] den = {1, 15, 100};
 
@@ -245,7 +245,7 @@ class ControllerDesignTest {
     }
 
     @Test
-    void padeSecondOrderNiseExample() {
+    void padeSecondOrderTextbookExample() {
         double Td = 0.2;
         int order = 2;
         double[][] res = ControllerDesign.pade(Td, order);
@@ -264,7 +264,7 @@ class ControllerDesignTest {
     }
 
     @Test
-    void rlocusNiseExample() {
+    void rlocusTextbookExample() {
         double[] num = {1, 3};
         double[] den = {1, 7, 14, 8, 0};
 

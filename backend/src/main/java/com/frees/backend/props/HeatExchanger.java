@@ -3,9 +3,9 @@ package com.frees.backend.props;
 /**
  * Heat-exchanger effectiveness-NTU relations, the log-mean temperature
  * difference, and fin efficiency. The epsilon-NTU correlations are the standard
- * forms from Kays &amp; London, <i>Compact Heat Exchangers</i>, and Kakac,
- * <i>Heat Exchangers: Selection, Rating and Thermal Design</i> (cross-checked
- * via NotebookLM against those texts and the VDI Heat Atlas).
+ * forms from standard compact-heat-exchanger references
+ * (cross-checked
+ * against multiple standard heat-transfer references).
  *
  * <p>Conventions: {@code NTU = UA/Cmin}, capacity ratio
  * {@code Cr = Cmin/Cmax in [0, 1]}, effectiveness {@code eps in [0, 1]}. A
