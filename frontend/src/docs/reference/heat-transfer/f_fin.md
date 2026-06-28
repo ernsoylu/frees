@@ -28,6 +28,12 @@ Fanning friction for a compact fin surface. SIDE: air/gas finned side dP (pair w
 
 $$ f = C_f\,Re^{m_f} \quad\text{(Fanning friction for the fin surface)} $$
 
+## Applicability
+
+- **Where it applies:** The air/gas finned side of a compact surface.
+- **Valid when:** Same fin surfaces as `j_fin`.
+- **How it's used:** Air-side friction (Fanning) for the core `ΔP`.
+
 ## Input Arguments
 
 | Argument | Type | Required | Description |
