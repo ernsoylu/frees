@@ -500,6 +500,35 @@ public final class Evaluator {
                     evalString(args.get(0)), arg(c, args, 1, values, defs), arg(c, args, 2, values, defs),
                     arg(c, args, 3, values, defs), arg(c, args, 4, values, defs), arg(c, args, 5, values, defs),
                     arg(c, args, 6, values, defs));
+            // External / air-side convection (compact finned HX, tube banks).
+            case "nu_zukauskas" -> com.frees.backend.props.HxCorrelations.nuZukauskas(
+                    arg(c, args, 0, values, defs), arg(c, args, 1, values, defs));
+            case "nu_colburn" -> com.frees.backend.props.HxCorrelations.nuColburn(
+                    arg(c, args, 0, values, defs), arg(c, args, 1, values, defs), arg(c, args, 2, values, defs));
+            case "nu_churchill_chu" -> com.frees.backend.props.HxCorrelations.nuChurchillChu(
+                    arg(c, args, 0, values, defs), arg(c, args, 1, values, defs));
+            case "nu_blend" -> com.frees.backend.props.HxCorrelations.nuBlend(
+                    arg(c, args, 0, values, defs), arg(c, args, 1, values, defs));
+            case "htc_extair" -> com.frees.backend.props.HxCorrelations.htcExtAir(
+                    evalString(args.get(0)), arg(c, args, 1, values, defs), arg(c, args, 2, values, defs),
+                    arg(c, args, 3, values, defs), arg(c, args, 4, values, defs), arg(c, args, 5, values, defs));
+            // Geometry resolution: primary dimensions -> Dh, A_conv, sigma, eta_surf.
+            case "hx_dh" -> com.frees.backend.props.HxCorrelations.hxDh(
+                    arg(c, args, 0, values, defs), arg(c, args, 1, values, defs), arg(c, args, 2, values, defs));
+            case "hx_aconv" -> com.frees.backend.props.HxCorrelations.hxAconv(
+                    arg(c, args, 0, values, defs), arg(c, args, 1, values, defs), arg(c, args, 2, values, defs));
+            case "hx_sigma" -> com.frees.backend.props.HxCorrelations.hxSigma(
+                    arg(c, args, 0, values, defs), arg(c, args, 1, values, defs));
+            case "hx_eta_surf" -> com.frees.backend.props.HxCorrelations.hxEtaSurf(
+                    arg(c, args, 0, values, defs), arg(c, args, 1, values, defs), arg(c, args, 2, values, defs));
+            // Pressure drop: Müller-Steinhagen two-phase + compact-core entrance/exit.
+            case "dp_mueller_steinhagen", "dp_ms" -> com.frees.backend.props.HxCorrelations.dpMuellerSteinhagen(
+                    evalString(args.get(0)), arg(c, args, 1, values, defs), arg(c, args, 2, values, defs),
+                    arg(c, args, 3, values, defs), arg(c, args, 4, values, defs), arg(c, args, 5, values, defs),
+                    arg(c, args, 6, values, defs));
+            case "dp_compact_core" -> com.frees.backend.props.HxCorrelations.dpCompactCore(
+                    arg(c, args, 0, values, defs), arg(c, args, 1, values, defs), arg(c, args, 2, values, defs),
+                    arg(c, args, 3, values, defs), arg(c, args, 4, values, defs), arg(c, args, 5, values, defs));
             case "void_homogeneous" -> com.frees.backend.props.TwoPhase.voidHomogeneous(
                     arg(c, args, 0, values, defs), arg(c, args, 1, values, defs),
                     arg(c, args, 2, values, defs));

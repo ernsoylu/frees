@@ -131,6 +131,17 @@ public class FunctionRegistry {
             new FunctionInfo("ua_hx", "ua_hx(h1, A1, h2, A2, Rwall)", "Overall conductance UA [W/K] = 1/(1/(h1 A1)+Rwall+1/(h2 A2))", "Heat Transfer"),
             new FunctionInfo("dp_1phase", "dp_1phase(fluid$, P, T, mdot, Dh, Aflow, L)", "Single-phase Darcy pressure drop [Pa]", "Heat Transfer"),
             new FunctionInfo("dp_2phase", "dp_2phase(fluid$, P, x, mdot, Dh, Aflow, L)", "Two-phase frictional pressure drop [Pa] (Darcy x Chisholm L-M)", "Heat Transfer"),
+            new FunctionInfo("dp_mueller_steinhagen", "dp_mueller_steinhagen(fluid$, P, x, mdot, Dh, Aflow, L)", "Two-phase pressure drop [Pa] (Mueller-Steinhagen-Heck)", "Heat Transfer"),
+            new FunctionInfo("dp_compact_core", "dp_compact_core(G, rho_in, rho_out, sigma, Kc, Ke)", "Compact-core pressure drop [Pa] (Kays-London entrance/accel/exit)", "Heat Transfer"),
+            new FunctionInfo("htc_extair", "htc_extair(fluid$, P, T, mdot, D, Aflow)", "External air-side film coefficient h [W/m^2/K] over a finned tube bank (Zukauskas)", "Heat Transfer"),
+            new FunctionInfo("nu_zukauskas", "nu_zukauskas(Re, Pr)", "Zukauskas tube-bank cross-flow Nusselt number", "Heat Transfer"),
+            new FunctionInfo("nu_colburn", "nu_colburn(j, Re, Pr)", "Colburn j-factor Nusselt: j*Re*Pr^(1/3)", "Heat Transfer"),
+            new FunctionInfo("nu_churchill_chu", "nu_churchill_chu(Ra, Pr)", "Churchill-Chu natural-convection Nusselt from Rayleigh", "Heat Transfer"),
+            new FunctionInfo("nu_blend", "nu_blend(Nu1, Nu2)", "Cubic free+forced convection blend (Nu1^3+Nu2^3)^(1/3)", "Heat Transfer"),
+            new FunctionInfo("hx_dh", "hx_dh(Aflow, Atotal, L)", "Compact hydraulic diameter D_h = 4*Aflow*L/Atotal [m]", "Heat Transfer"),
+            new FunctionInfo("hx_aconv", "hx_aconv(Aflow, L, Dh)", "Convective area A = 4*Aflow*L/Dh [m^2]", "Heat Transfer"),
+            new FunctionInfo("hx_sigma", "hx_sigma(Aflow, Afrontal)", "Free-flow (contraction) ratio sigma = Aflow/Afrontal", "Heat Transfer"),
+            new FunctionInfo("hx_eta_surf", "hx_eta_surf(Afin, Atotal, eta_fin)", "Overall fin-surface efficiency 1-(Afin/Atotal)(1-eta_fin)", "Heat Transfer"),
 
             // Two-phase flow (Lockhart-Martinelli / Chisholm — Phase C)
             new FunctionInfo("lm_phi2", "lm_phi2(X, C)", "Chisholm two-phase multiplier 1+C/X+1/X^2 on the liquid-alone drop", "Two-Phase Flow"),

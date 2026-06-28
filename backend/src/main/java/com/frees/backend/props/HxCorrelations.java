@@ -119,6 +119,106 @@ public final class HxCorrelations {
         return dpLo * TwoPhase.lmPhi2(xtt, 20.0); // C=20 turbulent-turbulent
     }
 
+    // ── External / air-side convection (compact finned HX, tube banks) ──────
+    /** Žukauskas tube-bank cross-flow Nusselt (forced, gases): Nu = 0.27·Re^0.63·Pr^0.36. */
+    public static double nuZukauskas(double re, double pr) {
+        return 0.27 * Math.pow(Math.max(re, 1.0), 0.63) * Math.pow(pr, 0.36);
+    }
+
+    /** Colburn j-factor Nusselt for compact surfaces: Nu = j·Re·Pr^(1/3). */
+    public static double nuColburn(double j, double re, double pr) {
+        return j * re * Math.pow(pr, 1.0 / 3.0);
+    }
+
+    /** Churchill–Chu natural-convection Nusselt (vertical surface) from Rayleigh Ra. */
+    public static double nuChurchillChu(double ra, double pr) {
+        double d = Math.pow(1.0 + Math.pow(0.492 / pr, 9.0 / 16.0), 8.0 / 27.0);
+        double term = 0.825 + 0.387 * Math.pow(Math.max(ra, 0.0), 1.0 / 6.0) / d;
+        return term * term;
+    }
+
+    /** Cubic free+forced convection blend Nu = (Nu1³ + Nu2³)^(1/3) (Amesim recipe). */
+    public static double nuBlend(double nu1, double nu2) {
+        return Math.cbrt(nu1 * nu1 * nu1 + nu2 * nu2 * nu2);
+    }
+
+    /** Air-side / external-flow film coefficient h [W/m²K] over a finned tube bank
+     *  (Žukauskas), characteristic length = tube outer diameter D. */
+    public static double htcExtAir(String fluidTok, double p, double t, double mdot, double d, double aFlow) {
+        guardGeom(d, aFlow);
+        String f = PropertyFunctions.resolveFluid(fluidTok.toLowerCase(java.util.Locale.ROOT));
+        double mu = CoolProp.propsSI("viscosity", "P", p, "T", t, f);
+        double k = CoolProp.propsSI("conductivity", "P", p, "T", t, f);
+        double cp = CoolProp.propsSI("Cpmass", "P", p, "T", t, f);
+        double re = mdot * d / (aFlow * mu);
+        double pr = mu * cp / k;
+        return nuZukauskas(re, pr) * k / d;
+    }
+
+    // ── Geometry resolution: primary dimensions → D_h, A_conv, σ, η_surf ─────
+    /** Compact hydraulic diameter D_h = 4·A_flow·L / A_total. */
+    public static double hxDh(double aFlow, double aTotal, double l) {
+        if (!(aTotal > 0)) {
+            throw new PropertyEvaluationException("hx_dh: total area must be > 0.");
+        }
+        return 4.0 * aFlow * l / aTotal;
+    }
+
+    /** Convective area from the compact identity A = 4·A_flow·L / D_h. */
+    public static double hxAconv(double aFlow, double l, double dh) {
+        if (!(dh > 0)) {
+            throw new PropertyEvaluationException("hx_aconv: D_h must be > 0.");
+        }
+        return 4.0 * aFlow * l / dh;
+    }
+
+    /** Free-flow (contraction) ratio σ = A_flow / A_frontal. */
+    public static double hxSigma(double aFlow, double aFrontal) {
+        if (!(aFrontal > 0)) {
+            throw new PropertyEvaluationException("hx_sigma: frontal area must be > 0.");
+        }
+        return aFlow / aFrontal;
+    }
+
+    /** Overall fin-surface efficiency η_surf = 1 − (A_fin/A_total)(1 − η_fin). */
+    public static double hxEtaSurf(double aFin, double aTotal, double etaFin) {
+        if (!(aTotal > 0)) {
+            throw new PropertyEvaluationException("hx_eta_surf: total area must be > 0.");
+        }
+        return 1.0 - (aFin / aTotal) * (1.0 - etaFin);
+    }
+
+    // ── Pressure drop: Müller–Steinhagen two-phase + compact-core entrance/exit
+    /** Müller–Steinhagen–Heck two-phase frictional ΔP [Pa]:
+     *  ΔP = [A + 2(B−A)x](1−x)^(1/3) + B·x³, A/B = all-liquid / all-gas Darcy drop. */
+    public static double dpMuellerSteinhagen(String fluidTok, double p, double x, double mdot, double dh, double aFlow, double l) {
+        guardGeom(dh, aFlow);
+        String f = PropertyFunctions.resolveFluid(fluidTok.toLowerCase(java.util.Locale.ROOT));
+        double a = darcyDrop(CoolProp.propsSI("Dmass", "P", p, "Q", 0.0, f),
+                CoolProp.propsSI("viscosity", "P", p, "Q", 0.0, f), mdot, dh, aFlow, l);
+        double b = darcyDrop(CoolProp.propsSI("Dmass", "P", p, "Q", 1.0, f),
+                CoolProp.propsSI("viscosity", "P", p, "Q", 1.0, f), mdot, dh, aFlow, l);
+        double xx = clip(x, 0.0, 1.0);
+        return (a + 2.0 * (b - a) * xx) * Math.pow(1.0 - xx, 1.0 / 3.0) + b * Math.pow(xx, 3.0);
+    }
+
+    private static double darcyDrop(double rho, double mu, double mdot, double dh, double aFlow, double l) {
+        double v = mdot / (rho * aFlow);
+        double re = rho * Math.abs(v) * dh / mu;
+        return FlowResistance.frictionFactor(re, 0.0) * (l / dh) * rho * v * Math.abs(v) / 2.0;
+    }
+
+    /** Compact-core ΔP [Pa] (Kays & London): entrance contraction Kc, flow
+     *  acceleration (ρ_in→ρ_out), and exit expansion Ke, for a free-flow ratio σ. */
+    public static double dpCompactCore(double g, double rhoIn, double rhoOut, double sigma, double kc, double ke) {
+        if (!(rhoIn > 0) || !(rhoOut > 0)) {
+            throw new PropertyEvaluationException("dp_compact_core: densities must be > 0.");
+        }
+        double s2 = sigma * sigma;
+        return (g * g / (2.0 * rhoIn))
+                * ((kc + 1.0 - s2) + 2.0 * (rhoIn / rhoOut - 1.0) - (1.0 - s2 - ke) * (rhoIn / rhoOut));
+    }
+
     private static double smooth(double lo, double hi, double x, double x1, double x2) {
         if (x <= x1) {
             return lo;

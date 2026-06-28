@@ -12,6 +12,13 @@ component** by scalar correlation functions and **injected** into the component'
 `UA` / `dP` parameters (the component no longer owns the correlation). The
 geometry `(D_h, A_flow, A_conv)` is supplied to those functions.
 
+> **Update (this revision):** the three top-priority gaps below have now been
+> implemented — air-side external convection (`htc_extair`, `nu_zukauskas`,
+> `nu_colburn`, `nu_churchill_chu`, `nu_blend`), the geometry resolver (`hx_dh`,
+> `hx_aconv`, `hx_sigma`, `hx_eta_surf`), and Müller–Steinhagen + compact-core
+> dP (`dp_mueller_steinhagen`, `dp_compact_core`). The coupled EV-TMS example is
+> now geometry-driven (`EvTmsCorrelatedTest`). Remaining gaps are narrowed below.
+
 ---
 
 ## 1. Heat transfer
@@ -30,21 +37,21 @@ geometry `(D_h, A_flow, A_conv)` is supplied to those functions.
 | Fin efficiency | `fin_efficiency(mL)` | finned-surface weighting |
 | Overall conductance (series films + wall) | `ua_hx(h1,A1,h2,A2,Rwall)` | combine two sides → UA |
 
-### NOT implemented (gaps)
-- **External / cross-flow convection** — *the most important gap.* The **air side**
-  of radiators/condensers/evaporators is external flow over finned tube banks, not
-  internal pipe flow. Missing: **Hilpert**, **Žukauskas** (tube banks), **Churchill–
-  Bernstein**. Today `htc_1phase('Air', …)` treats air as internal pipe flow — an
-  approximation. (Amesim notes §4–5: Hilpert/Churchill-Chu used for the gas side.)
-- **Colburn j-factor** compact-surface correlation `Nu = j·Re·Pr^(1/3)` (Amesim's
-  primary compact-HX air-side path, `calc_heat_exchanges_thh_Colburn_j_factor`).
-- **Natural-convection blend** — Amesim uses `Nu = (Nu_free³ + Nu_forced³)^(1/3)`
-  with **Churchill–Chu** free convection. frees does forced-only.
-- **Other two-phase correlations** named in the AC menus: **Arima** (plate-HX
-  boiling), **VDI** (horizontal/vertical tubes), **Traviss**, **Cavallini**
-  (boiling). frees has Chen + Shah (boiling) and Shah + Cavallini-Zecchin
-  (condensation) only.
-- **Plate-HX (BPHE) specific** Nu correlations (chevron-angle dependent).
+### Implemented (this revision) — air-side / external
+- **Žukauskas tube-bank cross-flow** `nu_zukauskas(Re,Pr)`, and the air-side film
+  `htc_extair(fluid$,P,T,ṁ,D,Aflow)` — the radiator/condenser/evaporator AIR side
+  is now external-flow, not internal-pipe approximated.
+- **Colburn j-factor** `nu_colburn(j,Re,Pr)`; **Churchill–Chu** free convection
+  `nu_churchill_chu(Ra,Pr)`; **free+forced cubic blend** `nu_blend(Nu1,Nu2)`.
+
+### Still NOT implemented
+- **Hilpert (single-cylinder)** and **bank-arrangement-specific** Žukauskas C,m
+  tables (current `nu_zukauskas` uses one representative C,m); **Colburn-j data
+  tables** (j is supplied, not looked up from a fin-surface database).
+- **Other two-phase correlations** in the AC menus: **Arima** (plate boiling),
+  **VDI**, **Traviss**, **Cavallini** (boiling). frees has Chen + Shah (boiling),
+  Shah + Cavallini-Zecchin (condensation).
+- **Plate-HX (BPHE) chevron-angle** Nu correlations.
 
 ---
 
@@ -58,24 +65,18 @@ geometry `(D_h, A_flow, A_conv)` is supplied to those functions.
 - A few components carry their own geometry (`MovingBoundaryEvaporator/Condenser`
   use `U·π·D·L`; pipes use `L`, `D`, `rough`).
 
-### NOT implemented (gaps)
-- **The geometry-resolution layer** — the Amesim `HexGeometryModel` (§1 of
-  `amesim_hx_sizing_UA_methods.md`) that turns a datasheet/CAD into
-  `(A_flow, A_total, A_conv,int, A_conv,ext, D_h, σ, η_surf)`:
-  - macro box: `σ = A_flow·passCount/(depth·H)`, `A = 4·A_flow·L/D_h`;
-  - fin-and-tube: developed fin length, `A_direct + η_fin·A_indirect`,
-    `D_h = 4·W·A_flow·passCount/A_total`, `η_surf = A_eff/A_total`.
-  There are **no functions** to compute these from primary dimensions (fin
-  density/thickness/pitch, tube count, plate spacing). The user must supply
-  `D_h`/`A_flow`/`A` directly.
-- **Overall fin-surface efficiency** `η_surf = 1 − (A_fin/A_total)(1−η_fin)`
-  (only the single-fin `fin_efficiency` exists).
-- **Free-flow / frontal-area ratio σ** and the mass-flux `G = ṁ/A_flow` helpers
-  used by the NTU/compact methods.
+### Implemented (this revision)
+- `hx_dh(Aflow,Atotal,L)` = 4·A_flow·L/A_total — compact hydraulic diameter.
+- `hx_aconv(Aflow,L,Dh)` = 4·A_flow·L/D_h — convective area identity.
+- `hx_sigma(Aflow,Afrontal)` — free-flow (contraction) ratio σ.
+- `hx_eta_surf(Afin,Atotal,eta_fin)` = 1 − (A_fin/A_total)(1−η_fin) — overall
+  fin-surface efficiency (composes with the existing single-fin `fin_efficiency`).
 
-**Recommendation:** add a small geometry-resolution function set
-(`hx_geom_*` → `D_h`, `A_conv`, `sigma`, `eta_surf`) so a UA "object" can be built
-from datasheet geometry, not pre-computed areas.
+### Still NOT implemented
+- The **full fin-and-tube developed-fin-length** resolver (compute A_direct,
+  A_indirect, fin block from fin density/thickness/pitch + tube geometry) — the
+  user still supplies `A_fin`/`A_total` or `A_flow` for the macro path.
+- A **mass-flux `G = ṁ/A_flow`** convenience helper (trivial to write inline).
 
 ---
 
@@ -93,32 +94,38 @@ from datasheet geometry, not pre-computed areas.
 | Minor (fitting) loss | `minor_loss(K,ρ,V)` | K-factor singular losses |
 | Void fraction | `void_homogeneous`, `void_zivi`, `void_rouhani` | for momentum/charge terms |
 
-### NOT implemented (gaps)
-- **Müller–Steinhagen–Heck** two-phase ΔP (named in the Amesim AC menus alongside
-  Friedel). frees has Friedel + Chisholm only.
-- **Compact-core entrance/exit losses** — contraction/expansion `K_c`, `K_e` and
-  the core acceleration term for compact HXs (`ΔP = (G²/2ρ_in)[(K_c+1−σ²) + …]`).
-  `dp_1phase` is straight Darcy friction only; no `σ`-based core ΔP.
-- **`dp_2phase` integrates a single mid-quality point**, not a quality-averaged or
-  cell-by-cell integral along the HX (Amesim discretizes; frees lumps).
+### Implemented (this revision)
+- **Müller–Steinhagen–Heck** two-phase ΔP: `dp_mueller_steinhagen(fluid$,P,x,ṁ,Dh,Aflow,L)`.
+- **Compact-core entrance/exit + acceleration** ΔP: `dp_compact_core(G,ρin,ρout,σ,Kc,Ke)`
+  (Kays–London).
+
+### Still NOT implemented
+- **`dp_2phase` / `dp_mueller_steinhagen` integrate a single mid-quality point**,
+  not a quality-averaged or cell-by-cell integral along the HX (Amesim discretizes;
+  frees lumps).
 - **Gravitational (static head) two-phase term** for vertical risers.
-- **Fin-and-tube / louvered-fin air-side ΔP** correlations (the air-side friction
-  analogue of the Colburn-j heat side).
+- **Louvered-fin air-side ΔP** correlations (the friction analogue of the
+  Colburn-j heat side).
 
 ---
 
-## 4. Summary — priority gaps (heat / geometry / dP)
+## 4. Summary — status
 
-1. **Air-side external convection** (Hilpert / Žukauskas / Colburn-j) + the
-   **free+forced cubic blend** — needed for *any* air-coupled HX (radiator,
-   condenser, cabin evaporator) to be physically right rather than
-   internal-pipe-flow approximated. **(highest impact)**
-2. **Geometry-resolution layer** (`D_h`, `A_conv`, `σ`, `η_surf` from fin-and-tube
-   / macro-box dimensions) so UA/dP objects are built from datasheet geometry.
-3. **Müller–Steinhagen ΔP** and **compact-core entrance/exit (Kc/Ke) losses**.
-4. Additional two-phase HT correlations (Arima/VDI/Traviss/Cavallini-boiling) for
-   correlation-menu parity with Amesim AC submodels.
+**Done (this revision):** air-side external convection (Žukauskas/Colburn-j/
+Churchill-Chu + free+forced blend), the geometry resolver (D_h/A_conv/σ/η_surf),
+and Müller–Steinhagen + compact-core dP. The coupled EV-TMS example is now
+geometry-driven (UA + dP from correlations, injected — `EvTmsCorrelatedTest`).
+
+**Remaining (lower priority):**
+1. Bank-arrangement-specific Žukauskas C,m tables + Colburn-j fin-surface data
+   tables (currently one representative correlation / supplied j).
+2. Full fin-and-tube developed-fin-length geometry resolver (compute A_fin/A_total
+   from fin density/thickness/pitch + tube geometry).
+3. More two-phase HT correlations (Arima / VDI / Traviss / Cavallini-boiling) and
+   plate-HX chevron Nu, for AC correlation-menu parity.
+4. Quality-integrated (cell-by-cell) ΔP, gravitational two-phase term, louvered-
+   fin air-side ΔP.
 
 All present correlations are Amesim-grounded (Nu+Geom engine, ε-NTU, Chen/Shah/
-Cavallini, Friedel/Lockhart-Martinelli). The main missing pillars are the
-**air-side (external) heat transfer** and the **geometry→area resolver**.
+Cavallini, Žukauskas/Colburn, Friedel/Lockhart-Martinelli/Müller-Steinhagen,
+Kays–London compact core).

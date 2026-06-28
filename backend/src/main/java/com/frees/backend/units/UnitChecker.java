@@ -655,9 +655,15 @@ public final class UnitChecker {
             case "iso6358" -> eosDim("kg/s");
             // HX sizing correlations: film coefficients [W/m^2/K], overall UA
             // [W/K], and friction pressure drops [Pa] (flow/geometry args unpoliced).
-            case "htc_1phase", "htc_evap", "htc_cond" -> eosDim("W/m^2/K");
+            case "htc_1phase", "htc_evap", "htc_cond", "htc_extair" -> eosDim("W/m^2/K");
             case "ua_hx" -> eosDim("W/K");
-            case "dp_1phase", "dp_2phase" -> eosDim("Pa");
+            case "dp_1phase", "dp_2phase", "dp_mueller_steinhagen", "dp_ms", "dp_compact_core" -> eosDim("Pa");
+            // External/free-convection Nusselt numbers, free-flow ratio and
+            // surface efficiency are dimensionless; convective area [m^2], D_h [m].
+            case "nu_zukauskas", "nu_colburn", "nu_churchill_chu", "nu_blend",
+                 "hx_sigma", "hx_eta_surf" -> Dim.of(Quantity.dimensionless(1.0));
+            case "hx_dh" -> eosDim("m");
+            case "hx_aconv" -> eosDim("m^2");
             // Two-phase flow: the Martinelli parameter and its multiplier are
             // both dimensionless (quality / property-ratio arguments unpoliced).
             case "lm_phi2", "lm_martinelli_tt" -> Dim.of(Quantity.dimensionless(1.0));
