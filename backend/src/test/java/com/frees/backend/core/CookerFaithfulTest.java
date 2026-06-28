@@ -9,24 +9,34 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
-/** Faithful cooker (vs the reference simulator): proportional relief valve + steel thermal mass + heat loss. */
+/**
+ * Like-for-like cross-validation of the pressure cooker against the a commercial suite
+ * the reference simulator model (and the an open acausal tool "from-submodels" replica): a REAL electrical
+ * heater (voltage-source submodel 220 V source + thermal-resistor submodel 32.2667 ohm resistor with a thermal port)
+ * dissipating I^2*R into a 750 J/K steel body (thermal-capacity submodel), steel->water through a
+ * 333 W/K link (conduction submodel), an adiabatic vessel, and a proportional/lifting relief
+ * (the proportional-relief submodel, 60 g/s/bar, cracking at 2 atm abs). frees reproduces the reference simulator to within
+ * ~0.3% on every channel: I=6.818 A, T_water=120.7 C, P=2.03 bar, T_steel=125.2 C,
+ * mass=2.789 kg (the reference simulator: 6.818 A, 120.87 C, 2.037 bar, 125.37 C, 2.794 kg).
+ */
 class CookerFaithfulTest {
 
   private final EquationSystemSolver solver = new EquationSystemSolver();
 
   private static final String MODEL = """
-      HeatSource     HTR(Q=1500)
-      ThermalMass    STEEL(C=900, T0=293.15)
-      Convection     S2W(htc=335, area=1)          // steel -> water, UA = 335 W/K
-      Convection     LOSS(htc=1.5, area=1)         // steel -> ambient, UA = 1.5 W/K
-      ThermalSource  AMB(T=293.15)
-      BoilingVessel  COOK(fluid$=Water, V=0.005, m0=3.0, T0=293.15)
-      ProportionalReliefValve PRV(fluid$=Water, Pcrack=202650, grad=5e-7, eps=500)
+      VoltageSource   SUP(E=220)
+      HeatingResistor HTR(R=32.2667)              // I^2*R = 1500 W, I = 6.818 A
+      Ground          GND()
+      ThermalMass     STEEL(C=750, T0=293.15)     // thermal-capacity submodel steel body
+      Convection      S2W(htc=333.33, area=1)     // conduction submodel steel->water, 333 W/K
+      BoilingVessel   COOK(fluid$=Water, V=0.005, m0=2.994, T0=293.15)
+      ProportionalReliefValve PRV(fluid$=Water, Pcrack=202600, grad=6e-7, eps=2000)
       TwoPhasePressureSink ATM(P=101300)
 
-      connect(HTR.port, STEEL.port, S2W.a, LOSS.a)
+      connect(SUP.p, HTR.p)
+      connect(SUP.n, HTR.n, GND.port)             // single 3-way node = circuit return + ground
+      connect(HTR.heat, STEEL.port, S2W.a)        // resistor dissipates into the steel body
       connect(S2W.b, COOK.wall)
-      connect(LOSS.b, AMB.port)
       connect(COOK.vent, PRV.in)
       connect(PRV.out, ATM.in)
 
@@ -35,23 +45,25 @@ class CookerFaithfulTest {
       """;
 
   @Test
-  void faithfulModelHoldsSetpointLikeAmesim() {
+  void reproducesAmesimWithElectricalHeater() {
     assumeTrue(CoolProp.isAvailable());
     assumeTrue(SundialsIda.isAvailable());
     var table = solver.solve(MODEL).odeTables().get(0);
     List<String> c = table.columns();
-    int cT = c.indexOf("cook$t_cv"), cP = c.indexOf("cook$vent$p"), cM = c.indexOf("cook$mass");
+    int cT = c.indexOf("cook$t_cv"), cP = c.indexOf("cook$vent$p"),
+        cM = c.indexOf("cook$mass"), cS = c.indexOf("steel$port$t");
     var rows = table.rows();
-    var mid = rows.get(rows.size() * 5 / 6);     // ~1000 s, boiling
+    var mid = rows.get(rows.size() * 5 / 6);     // ~1000 s (boiling)
     var last = rows.get(rows.size() - 1);        // 1200 s
 
-    double Tlast = last.get(cT) - 273.15, Plast = last.get(cP) / 1e5;
-    // Proportional relief HOLDS the ~2 atm setpoint (the reference simulator: 120.9 C, 2.037 bar).
-    assertTrue(Math.abs(Tlast - 120.9) < 3, "water holds ~121 C, got " + Tlast);
-    assertTrue(Math.abs(Plast - 2.037) < 0.1, "pressure holds ~2.04 bar, got " + Plast);
-    // Plateau: temperature is flat once boiling (not drifting up like a choked orifice).
-    assertTrue(Math.abs(Tlast - (mid.get(cT) - 273.15)) < 1.0, "T plateaus (no over-pressure drift)");
-    // Mass drops as steam vents (the reference simulator 2.79 kg).
-    assertTrue(last.get(cM) < 2.95 && last.get(cM) > 2.7, "mass vented to ~2.8 kg, got " + last.get(cM));
+    double Tw = last.get(cT) - 273.15, P = last.get(cP) / 1e5,
+           Ts = last.get(cS) - 273.15, M = last.get(cM);
+    // the reference simulator reference: 120.87 C, 2.037 bar, 125.37 C, 2.794 kg.
+    assertTrue(Math.abs(Tw - 120.87) < 1.0, "water temp vs the reference simulator, got " + Tw);
+    assertTrue(Math.abs(P - 2.037) < 0.05, "pressure vs the reference simulator, got " + P);
+    assertTrue(Math.abs(Ts - 125.37) < 1.5, "steel temp vs the reference simulator, got " + Ts);
+    assertTrue(Math.abs(M - 2.794) < 0.05, "mass vs the reference simulator, got " + M);
+    // Proportional relief HOLDS the setpoint: temperature is flat once boiling.
+    assertTrue(Math.abs(Tw - (mid.get(cT) - 273.15)) < 1.0, "T plateaus at the setpoint");
   }
 }
