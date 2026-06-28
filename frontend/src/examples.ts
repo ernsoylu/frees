@@ -44,67 +44,12 @@ export const EXAMPLES: Example[] = [
   Each UA is built from the correlation toolkit (htc_evap / htc_cond / htc_1phase
   + the external air-side htc_extair) and ua_hx, and the evaporator dP from
   dp_2phase — computed OUTSIDE the components and injected into their UA / dP
-  parameters. Press Solve (F2) for the steady operating point. }
+  parameters.
 
-COMPONENT LiqMix(in1, in2, out)
-  PARAM domain$ = liquid
-  out.P = in1.P
-  in2.P = in1.P
-  out.mdot = in1.mdot + in2.mdot
-  out.mdot * out.h = in1.mdot * in1.h + in2.mdot * in2.h
-END
-COMPONENT TwoPhaseMixer(in1, in2, out)
-  PARAM domain$ = twophase
-  out.P = in1.P
-  out.mdot = in1.mdot + in2.mdot
-  out.mdot * out.h = in1.mdot * in1.h + in2.mdot * in2.h
-END
-COMPONENT MassGen(port)
-  PARAM C, Qgen, T0
-  der(port.T)  = (Qgen + port.Qdot) / C
-  init(port.T) = T0
-END
-COMPONENT LiqFeed(out)
-  PARAM fluid$, P, x, domain$ = twophase
-  out.P = P
-  out.h = Enthalpy(fluid$, P=P, x=x)
-END
-COMPONENT EvapSH(in, out, wall)
-  PARAM fluid$, UA, dP, SH, domain$ = twophase
-  out.P = in.P - dP
-  Tevap = T_sat(fluid$, P=in.P)
-  Q     = frac * UA * (wall.T - Tevap)
-  out.h = Enthalpy(fluid$, P=out.P, T=Tevap + SH)
-  in.mdot  = Q / (out.h - in.h)
-  out.mdot = in.mdot
-  wall.Qdot = Q
-END
-COMPONENT Compressor(in, out)
-  PARAM fluid$, eta, domain$ = twophase
-  out.mdot = in.mdot
-  s_in = Entropy(fluid$, P=in.P, h=in.h)
-  h_s  = Enthalpy(fluid$, P=out.P, s=s_in)
-  out.h = in.h + (h_s - in.h) / eta
-  W = in.mdot * (out.h - in.h)
-END
-COMPONENT LiqWallUA(in, out, wall)
-  PARAM fluid$, UA, domain$ = liquid
-  out.mdot = in.mdot
-  out.P    = in.P
-  T_in     = Temperature(fluid$, P=in.P, h=in.h)
-  Q        = UA * (T_in - wall.T)
-  out.h    = in.h - Q / in.mdot
-  wall.Qdot = -Q
-END
-COMPONENT CondFloatUA(in, out)
-  PARAM fluid$, UA, Tamb, domain$ = twophase
-  out.mdot = in.mdot
-  out.P    = in.P
-  Tcond    = T_sat(fluid$, P=in.P)
-  out.h    = Enthalpy(fluid$, P=in.P, x=0)
-  Q        = in.mdot * (in.h - out.h)
-  Q        = UA * (Tcond - Tamb)
-END
+  Every block here is a STANDARD-LIBRARY component (LiquidWallHX, LiquidMixer,
+  TwoPhaseEvaporatorUA, TwoPhaseCompressor, TwoPhaseCondenserFloat, TwoPhaseMixer,
+  MassGen, …) — nothing is hand-defined. Press Solve (F2) for the steady point. }
+
 
 { ---- UA / dP objects: heat-transfer AREA from the geometry toolkit, not
   hand-set. Internal sides use hx_aconv(Aflow, L, Dh) = 4*Aflow*L/Dh over their
@@ -159,15 +104,15 @@ LiquidSource  PUMPIN(fluid$=EG50, mdot=0.4, P=200000 [Pa], T=305 [K])
 LiquidPump    PUMP(fluid$=EG50, eta=0.6)
 LiquidOrifice OBAT(CdA=1.6e-5, rho=1050)
 LiquidOrifice OMOT(CdA=1.2e-5, rho=1050)
-LiqWallUA     BCP(fluid$=EG50, UA=UA_bcp)
-LiqWallUA     CHLC(fluid$=EG50, UA=UA_chl_c)
-LiqWallUA     MCP(fluid$=EG50, UA=UA_mcp)
-LiqMix        MIX()
-LiqWallUA     RAD1(fluid$=EG50, UA=UA_rad)
+LiquidWallHX  BCP(fluid$=EG50, UA=UA_bcp)
+LiquidWallHX  CHLC(fluid$=EG50, UA=UA_chl_c)
+LiquidWallHX  MCP(fluid$=EG50, UA=UA_mcp)
+LiquidMixer   MIX()
+LiquidWallHX  RAD1(fluid$=EG50, UA=UA_rad)
 LiquidOrifice OR1(CdA=1.2e-4, rho=1050)
-LiqWallUA     RAD2(fluid$=EG50, UA=UA_rad)
+LiquidWallHX  RAD2(fluid$=EG50, UA=UA_rad)
 LiquidOrifice OR2(CdA=1.2e-4, rho=1050)
-LiqWallUA     RAD3(fluid$=EG50, UA=UA_rad)
+LiquidWallHX  RAD3(fluid$=EG50, UA=UA_rad)
 LiquidOrifice OR3(CdA=1.2e-4, rho=1050)
 ThermalSource AMB(T=313 [K])
 LiquidSink    PUMPOUT()
@@ -177,12 +122,12 @@ MassGen MOTOR(C=40000, Qgen=5000, T0=305 [K])
 MassGen CABIN(C=8000,  Qgen=2500, T0=305 [K])
 
 { ---- Refrigerant line ---- }
-LiqFeed       FEED(fluid$=R1234yf, P=350000 [Pa], x=0.20)
-EvapSH        CHLR(fluid$=R1234yf, UA=UA_chl_r, dP=dP_chl, SH=5)
-EvapSH        CABE(fluid$=R1234yf, UA=UA_cab,  dP=dP_cab, SH=8)
+TwoPhasePressureSource FEED(fluid$=R1234yf, P=350000 [Pa], x=0.20)
+TwoPhaseEvaporatorUA CHLR(fluid$=R1234yf, UA=UA_chl_r, dP=dP_chl, SH=5)
+TwoPhaseEvaporatorUA CABE(fluid$=R1234yf, UA=UA_cab,  dP=dP_cab, SH=8)
 TwoPhaseMixer SUC()
-Compressor    CMP(fluid$=R1234yf, eta=0.7)
-CondFloatUA   COND(fluid$=R1234yf, UA=UA_cond, Tamb=313)
+TwoPhaseCompressor CMP(fluid$=R1234yf, eta=0.7)
+TwoPhaseCondenserFloat COND(fluid$=R1234yf, UA=UA_cond, T_amb=313)
 TwoPhaseSink  LIQ()
 
 connect(PUMPIN.out, PUMP.in)

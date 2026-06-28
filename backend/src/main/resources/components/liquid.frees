@@ -72,6 +72,18 @@ COMPONENT LiquidWallHX(in, out, wall)
   wall.Qdot = -Q
 END
 
+// Liquid mixer that merges two parallel branches into one, equalising the inlet
+// pressures (in2.P = in1.P) so the branch flow split is closed — the orifice
+// flows adapt until both branches reach the merge pressure. Conserves mass and
+// flow-weights enthalpy. (The general no-tie mixer is Mixer.)
+COMPONENT LiquidMixer(in1, in2, out)
+  PARAM domain$ = liquid
+  out.P    = in1.P
+  in2.P    = in1.P
+  out.mdot = in1.mdot + in2.mdot
+  out.mdot * out.h = in1.mdot * in1.h + in2.mdot * in2.h
+END
+
 // Liquid orifice / restrictor. Default is incompressible turbulent flow
 // (odd-symmetric so it is well-behaved through zero). The optional cavitating
 // model is the THH pressure-driven effect: when the downstream pressure falls

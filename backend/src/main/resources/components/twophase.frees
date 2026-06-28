@@ -267,6 +267,20 @@ COMPONENT TwoPhaseCondenserUA(in, out)
   SC       = Tcond - Temperature(fluid$, P=out.P, h=out.h)
 END
 
+// Floating-head UA condenser for OPEN / once-through layouts (no charge tear):
+// the condensing pressure (= in.P) floats so the exit is exactly saturated
+// liquid (x=0), with Q = UA·(T_cond − T_amb) = ṁ·(h_in − h_out). Use
+// TwoPhaseCondenserUA instead when the high side is closed by a charge inventory.
+COMPONENT TwoPhaseCondenserFloat(in, out)
+  PARAM fluid$, UA, T_amb, domain$ = twophase
+  out.mdot = in.mdot
+  out.P    = in.P
+  Tcond    = T_sat(fluid$, P=in.P)
+  out.h    = Enthalpy(fluid$, P=in.P, x=0)
+  Q        = in.mdot * (in.h - out.h)
+  Q        = UA * (Tcond - T_amb)
+END
+
 // ── Lumped two-phase cycle components (Phase T1) ──────────────────────────
 // Vapor-compression building blocks on domain$ = twophase. Heat exchangers are
 // non-isobaric (out.P = in.P − dP), so the compressor suction pressure correctly
@@ -300,6 +314,33 @@ COMPONENT TwoPhaseEvaporator(in, out)
   Tsat     = T_sat(fluid$, P=out.P)
   out.h    = Enthalpy(fluid$, P=out.P, T=Tsat + SH_set)
   Q        = in.mdot * (out.h - in.h)
+END
+
+// Wall-coupled UA evaporator: absorbs Q = frac·UA·(T_wall − T_evap) from a
+// thermal `wall` port and sizes its own flow to leave at a set superheat SH.
+// `frac` is a free capacity-command input — set inst.frac externally (1 for full
+// load, or a time ramp for a pull-down). Non-isobaric (out.P = in.P − dP).
+COMPONENT TwoPhaseEvaporatorUA(in, out, wall)
+  PARAM fluid$, UA, dP, SH, domain$ = twophase
+  out.P     = in.P - dP
+  Tevap     = T_sat(fluid$, P=in.P)
+  Q         = frac * UA * (wall.T - Tevap)
+  out.h     = Enthalpy(fluid$, P=out.P, T=Tevap + SH)
+  in.mdot   = Q / (out.h - in.h)
+  out.mdot  = in.mdot
+  wall.Qdot = Q
+END
+
+// Two-phase mixer: merges two streams into one at the first inlet's pressure
+// (in2 is assumed to arrive at the same pressure, e.g. two evaporator branches
+// joining a common compressor suction), conserving mass and enthalpy. The
+// fluid-domain equivalent is Mixer; use a connect() junction instead when the
+// branch pressures must be tied (the junction enforces equality).
+COMPONENT TwoPhaseMixer(in1, in2, out)
+  PARAM domain$ = twophase
+  out.P    = in1.P
+  out.mdot = in1.mdot + in2.mdot
+  out.mdot * out.h = in1.mdot * in1.h + in2.mdot * in2.h
 END
 
 // Condenser: superheated vapor inlet rejects heat to a subcooled-liquid outlet
