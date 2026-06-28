@@ -22,11 +22,17 @@ momentum_flux(x, rho_l, rho_g, alpha, G)
 
 ## Description
 
-Separated-flow momentum flux [Pa] (accel. dP = out-in)
+Returns the **separated-flow momentum flux** — the acceleration pressure change (outlet − inlet) caused by the change in vapor quality, not by friction.
 
 ## Mathematical Formulation
 
 $$ \left(\frac{d P}{d z}\right)_{\text{acc}} = G^2\frac{d}{dz}\left[\frac{x^2}{\rho_g\alpha} + \frac{(1-x)^2}{\rho_l(1-\alpha)}\right] $$
+
+## Applicability
+
+- **Where it applies:** The acceleration `ΔP` term along an evaporator/condenser pass.
+- **Valid when:** Wherever quality changes appreciably (vapor generation in an evaporator accelerates the flow).
+- **How it's used:** Add it to the frictional (`lm_phi2`) and gravitational (`dp_gravity`) terms for the total pass `ΔP`.
 
 ## Input Arguments
 

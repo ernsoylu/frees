@@ -28,6 +28,12 @@ dP [Pa], quality-integrated (n cells). SIDE: two-phase refrigerant along an evap
 
 $$ \Delta P = \frac{1}{n}\sum_{i=1}^{n} \phi_l^2(x_i)\,\left(\frac{dP}{dz}\right)_{l,i} \Delta z \quad\text{(quality-integrated)} $$
 
+## Applicability
+
+- **Where it applies:** Two-phase refrigerant along an evaporator/condenser pass.
+- **Valid when:** Integrates the two-phase multiplier over `n` quality cells from `x_in` to `x_out`.
+- **How it's used:** A quality-averaged frictional `ΔP` for a whole pass.
+
 ## Input Arguments
 
 | Argument | Type | Required | Description |

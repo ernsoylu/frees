@@ -22,11 +22,17 @@ friedel_phi2(x, rho_l, rho_g, mu_l, mu_g, G, D, sigma)
 
 ## Description
 
-Friedel two-phase frictional multiplier on the liquid-only drop
+Returns the **Friedel two-phase frictional multiplier** on the liquid-only pressure drop — an alternative to Chisholm that uses the Froude and Weber numbers for broader validity.
 
 ## Mathematical Formulation
 
 $$ \phi_{lo}^2 = E + \frac{3.24\,F H}{Fr^{0.045}We^{0.035}} \quad\text{(Friedel)} $$
+
+## Applicability
+
+- **Where it applies:** Two-phase frictional pressure drop in refrigerant passages.
+- **Valid when:** Recommended (Collier) for `μ_l/μ_g < 1000`; covers a wider mass-flux range than the simple Chisholm form.
+- **How it's used:** Multiply the liquid-only gradient by the multiplier to get the two-phase `ΔP`; an alternative to `lm_phi2`.
 
 ## Input Arguments
 
