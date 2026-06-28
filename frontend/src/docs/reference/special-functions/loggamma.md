@@ -12,7 +12,7 @@ references:
 
 # loggamma
 
-Returns **ln Γ(x)**, the natural logarithm of the [`gamma`](gamma) function. Use it
+Returns **ln Γ(x)**, the natural logarithm of the `gamma` function. Use it
 when `Γ(x)` itself would overflow (large `x`), or in likelihoods and combinatorial
 ratios where the log domain is numerically safer.
 

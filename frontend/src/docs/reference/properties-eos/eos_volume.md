@@ -15,7 +15,7 @@ references:
 Returns the **specific volume** `v` [m³/kg] of a real fluid from a cubic equation
 of state (`'SRK'` or `'PR'`) at temperature `T` and pressure `P`. It is the
 compressibility factor expressed as a volume — the reciprocal of
-[`eos_density`](eos_density).
+`eos_density`.
 
 ## Syntax
 
@@ -25,7 +25,7 @@ v = eos_volume(fluid$, model$, T, P, phase$)
 
 ## Description
 
-Once the cubic is solved for the compressibility factor `Z` (see [`eos_z`](eos_z)),
+Once the cubic is solved for the compressibility factor `Z` (see `eos_z`),
 the specific volume follows directly from its definition.
 
 ## Mathematical Formulation

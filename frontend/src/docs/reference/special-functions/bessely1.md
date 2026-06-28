@@ -12,7 +12,7 @@ references:
 # bessely1
 
 Returns `Y_1(x)`, the **order-1 Bessel function of the second kind** (Neumann) — the
-fixed-order specialization of [`bessely`](bessely). Singular as `x → 0⁺`.
+fixed-order specialization of `bessely`. Singular as `x → 0⁺`.
 
 ## Syntax
 

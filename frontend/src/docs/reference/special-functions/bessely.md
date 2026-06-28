@@ -25,7 +25,7 @@ y = bessely(n, x)
 ## Description
 
 `Y_n(x) → −∞` as `x → 0⁺`, so it appears only where the origin is excluded. For
-fixed orders use [`bessely0`](bessely0) / [`bessely1`](bessely1).
+fixed orders use `bessely0` / `bessely1`.
 
 ## Mathematical Formulation
 

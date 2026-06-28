@@ -15,7 +15,7 @@ references:
 
 Returns the **number of transfer units** `NTU` required to achieve a target
 effectiveness `ε` at capacity ratio `Cr` for a given flow arrangement — the
-inverse of [`hx_effectiveness`](hx_effectiveness). Use it to **size** an exchanger:
+inverse of `hx_effectiveness`. Use it to **size** an exchanger:
 from a required duty you back out `ε`, then `NTU`, then `UA = NTU·C_min`.
 
 ## Syntax

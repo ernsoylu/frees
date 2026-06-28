@@ -14,7 +14,7 @@ references:
 
 Converts a transfer function `G(s) = num/den` to **zero-pole-gain** form: the zeros
 (`zr`/`zi`), poles (`pr`/`pi`), and scalar gain `k`. It is the factored view of the
-rational system, the inverse of [`zp2tf`](zp2tf).
+rational system, the inverse of `zp2tf`.
 
 ## Syntax
 

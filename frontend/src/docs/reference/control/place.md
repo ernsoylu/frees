@@ -37,7 +37,7 @@ $$ \det\!\big(sI - (A - BK)\big) = \prod_i (s - p_i) \qquad \text{(the standard 
 with the desired characteristic polynomial set by `{p_i}`.
 
 > **Method:** solve for `K` from the desired characteristic polynomial (Ackermann /
-> robust placement); see [`acker`](acker) for the single-input Ackermann form.
+> robust placement); see `acker` for the single-input Ackermann form.
 
 ## Examples
 

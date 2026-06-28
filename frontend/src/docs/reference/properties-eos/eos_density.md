@@ -14,7 +14,7 @@ references:
 
 Returns the **mass density** `ρ` [kg/m³] of a real fluid from a cubic equation of
 state (`'SRK'` or `'PR'`) at temperature `T` and pressure `P`. The CoolProp-
-independent real-gas density, the reciprocal of [`eos_volume`](eos_volume).
+independent real-gas density, the reciprocal of `eos_volume`.
 
 ## Syntax
 

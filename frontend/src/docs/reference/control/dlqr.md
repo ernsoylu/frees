@@ -13,7 +13,7 @@ references:
 # dlqr
 
 Returns the **discrete-time LQR gain** `K` — the discrete counterpart of
-[`lqr`](lqr). The control `u_k = −K x_k` minimizes a summed quadratic cost on the
+`lqr`. The control `u_k = −K x_k` minimizes a summed quadratic cost on the
 states and effort.
 
 ## Syntax
@@ -30,7 +30,7 @@ Minimizing `J = Σ (xₖᵀQxₖ + uₖᵀRuₖ)` gives
 $$ K = (R + B^\top X B)^{-1} B^\top X A $$
 
 where `X` is the stabilizing solution of the discrete algebraic Riccati equation
-([`dare`](dare)).
+(`dare`).
 
 > **Method:** solve the DARE for `X`, then form `K`.
 

@@ -3086,7 +3086,7 @@ function ReferencePageView({ page, onNavigate }: Readonly<{ page: ReferencePage;
   return (
     <Stack gap="sm">
       <Group justify="space-between" align="flex-start">
-        <Title order={2} c="blue.4" style={{ fontFamily: 'monospace' }}>{page.name}</Title>
+        <Title order={2} c="blue.4" style={{ fontFamily: page.category.startsWith('Cookbook') ? undefined : 'monospace' }}>{page.name}</Title>
         <Badge color="grape" variant="light" size="lg">{page.category}</Badge>
       </Group>
       {page.summary && <Text size="md" c="dimmed">{page.summary}</Text>}

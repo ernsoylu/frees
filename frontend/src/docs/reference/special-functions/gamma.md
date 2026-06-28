@@ -25,7 +25,7 @@ y = gamma(x)
 ## Description
 
 Defined for all real `x` except the non-positive integers (where it has poles).
-For large arguments use [`loggamma`](loggamma) to avoid overflow.
+For large arguments use `loggamma` to avoid overflow.
 
 ## Mathematical Formulation
 

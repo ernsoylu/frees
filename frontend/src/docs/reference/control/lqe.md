@@ -14,7 +14,7 @@ references:
 
 Returns the **optimal estimator (Kalman) gain** `L` for a linear system with process
 noise (intensity via `G`, `Q`) and measurement noise (`R`). It is the dual of
-[`lqr`](lqr): the observer `x̂̇ = Ax̂ + Bu + L(y − Cx̂)` reconstructs the state from
+`lqr`: the observer `x̂̇ = Ax̂ + Bu + L(y − Cx̂)` reconstructs the state from
 noisy measurements with minimum error variance.
 
 ## Syntax

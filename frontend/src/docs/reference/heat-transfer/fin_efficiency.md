@@ -16,7 +16,7 @@ Returns the **efficiency of a straight fin** with an insulated tip from its
 dimensionless parameter `mL` — the ratio of the heat the fin actually dissipates
 to what it would dissipate if its entire surface were at the base temperature.
 Use it when sizing extended surfaces (fin-and-tube and plate-fin cores), typically
-combined with [`hx_eta_surf`](hx_eta_surf) into an overall surface efficiency.
+combined with `hx_eta_surf` into an overall surface efficiency.
 
 ## Syntax
 

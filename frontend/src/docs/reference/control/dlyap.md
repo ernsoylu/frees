@@ -13,7 +13,7 @@ references:
 # dlyap
 
 Solves the **discrete Lyapunov (Stein) equation** for `X` — the discrete-time
-counterpart of [`lyap`](lyap). A positive-definite `X` for `Q > 0` certifies that
+counterpart of `lyap`. A positive-definite `X` for `Q > 0` certifies that
 the discrete system `A` is Schur-stable (all eigenvalues inside the unit circle).
 
 ## Syntax

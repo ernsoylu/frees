@@ -12,7 +12,7 @@ references:
 # besselj1
 
 Returns `J_1(x)`, the **order-1 Bessel function of the first kind** — the
-fixed-order specialization of [`besselj`](besselj). `J_1(0) = 0`; it is the
+fixed-order specialization of `besselj`. `J_1(0) = 0`; it is the
 derivative companion `J_0'(x) = −J_1(x)`.
 
 ## Syntax

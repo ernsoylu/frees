@@ -14,7 +14,7 @@ references:
 
 Converts a **zero-pole-gain** description — zeros (`zr`/`zi`), poles (`pr`/`pi`),
 and gain `k` — into a transfer function `num/den`. It is the inverse of
-[`tf2zp`](tf2zp), used to build a model from a factored (root) specification.
+`tf2zp`, used to build a model from a factored (root) specification.
 
 ## Syntax
 

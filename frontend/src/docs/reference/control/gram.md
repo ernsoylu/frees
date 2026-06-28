@@ -15,7 +15,7 @@ references:
 Returns the **controllability** (`'c'`) or **observability** (`'o'`) Gramian of a
 stable state-space system. The Gramians quantify how strongly each state direction
 is excited by the input / observed at the output, and underpin balanced model
-reduction ([`balreal`](balreal)).
+reduction (`balreal`).
 
 ## Syntax
 

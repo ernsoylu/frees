@@ -25,8 +25,8 @@ y = besselk(n, x)
 ## Description
 
 `K_n(x) → ∞` as `x → 0⁺` and decays like `e^{−x}` for large `x`. The natural
-partner to [`besseli`](besseli). For fixed orders use [`besselk0`](besselk0) /
-[`besselk1`](besselk1).
+partner to `besseli`. For fixed orders use `besselk0` /
+`besselk1`.
 
 ## Mathematical Formulation
 

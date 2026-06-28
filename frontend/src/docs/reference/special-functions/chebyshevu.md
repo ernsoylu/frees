@@ -14,7 +14,7 @@ references:
 
 Returns the **Chebyshev polynomial of the second kind** `U_n(x)` of degree `n` —
 orthogonal on `[−1, 1]` with weight `√(1 − x²)`, and the derivative partner of
-[`chebyshevt`](chebyshevt).
+`chebyshevt`.
 
 ## Syntax
 

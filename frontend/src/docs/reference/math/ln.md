@@ -10,7 +10,7 @@ references: []
 
 # ln
 
-Returns the **natural logarithm** `ln(x)` (base e), the inverse of [`exp`](exp).
+Returns the **natural logarithm** `ln(x)` (base e), the inverse of `exp`.
 The argument must be a positive dimensionless number.
 
 ## Syntax
@@ -21,7 +21,7 @@ y = ln(x)
 
 ## Description
 
-A standard elementary function. For base-10 or base-2 use [`log10`](log10) /
+A standard elementary function. For base-10 or base-2 use `log10` /
 `log2`.
 
 ## Mathematical Formulation

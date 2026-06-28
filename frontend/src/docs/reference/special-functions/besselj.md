@@ -25,7 +25,7 @@ y = besselj(n, x)
 ## Description
 
 `J_n` oscillates with a slowly decaying amplitude. For the common fixed orders use
-[`besselj0`](besselj0) / [`besselj1`](besselj1).
+`besselj0` / `besselj1`.
 
 ## Mathematical Formulation
 

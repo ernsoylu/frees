@@ -23,7 +23,7 @@ t = TimeAt('col', val)
 ## Description
 
 `TimeAt` scans the column for the first interval that brackets `val`, then linearly
-interpolates the crossing time — the inverse of [`ODEValue`](ODEValue).
+interpolates the crossing time — the inverse of `ODEValue`.
 
 ## Mathematical Formulation
 

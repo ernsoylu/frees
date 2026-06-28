@@ -24,7 +24,7 @@ ratio = heisler_q(geom$, Bi, Fo)
 
 ## Description
 
-While [`heisler_temp`](heisler_temp) gives a point temperature, `heisler_q` gives
+While `heisler_temp` gives a point temperature, `heisler_q` gives
 the integrated energy removed (or added) so far — useful for transient duty and
 storage calculations.
 

@@ -12,7 +12,7 @@ references:
 # bessely0
 
 Returns `Y_0(x)`, the **order-0 Bessel function of the second kind** (Neumann) — the
-fixed-order specialization of [`bessely`](bessely). `Y_0(x) → −∞` as `x → 0⁺`.
+fixed-order specialization of `bessely`. `Y_0(x) → −∞` as `x → 0⁺`.
 
 ## Syntax
 

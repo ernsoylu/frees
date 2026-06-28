@@ -12,7 +12,7 @@ references:
 # besseli0
 
 Returns `I_0(x)`, the **order-0 modified Bessel function of the first kind** — the
-fixed-order specialization of [`besseli`](besseli). `I_0(0) = 1`; it grows like
+fixed-order specialization of `besseli`. `I_0(0) = 1`; it grows like
 `e^x/√(2πx)`.
 
 ## Syntax

@@ -13,7 +13,7 @@ references:
 # digamma
 
 Returns the **digamma function** `ψ(x)` — the logarithmic derivative of the
-[`gamma`](gamma) function. It arises in series summation, maximum-likelihood
+`gamma` function. It arises in series summation, maximum-likelihood
 estimation, and the derivatives of many special functions.
 
 ## Syntax
