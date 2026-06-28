@@ -1,0 +1,53 @@
+---
+name: Humidifier
+category: Component (moistair)
+summary: Adds moisture to a humid-air stream, raising its humidity ratio.
+related: []
+examples: []
+tags: [humidifier, component, moistair, acausal]
+references:
+  - "the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., a standard system-dynamics text (5th ed.) — acausal/bond-graph formalism"
+  - "the industry handbook — Fundamentals (Psychrometrics)"
+---
+
+# Humidifier
+
+Adds moisture to a humid-air stream, raising its humidity ratio.
+
+## Domain
+
+A reusable **acausal moistair-domain** component — its humid-air ports carry pressure `P`, dry-air mass-flow `ṁ_da`, enthalpy `h`, and humidity ratio `W`. Instantiate it and connect its ports; the constitutive equations below expand into the global scalar system.
+
+## Ports
+
+`in`, `out`
+
+## Usage
+
+```
+Humidifier inst(mdot_w, h_w, domain$)
+```
+
+## Parameters
+
+| Parameter | Type |
+| --- | --- |
+| `mdot_w` | Number |
+| `h_w` | Number |
+| `domain$` | String |
+
+## Constitutive Equations
+
+Instantiating the component expands these acausal equations (over its port members and parameters) into scalar equations solved by the standard Newton/Tarjan pipeline:
+
+```
+out.mdot = in.mdot
+out.P    = in.P
+out.W    = in.W + mdot_w / in.mdot
+out.h    = in.h + mdot_w * h_w / in.mdot
+```
+
+## References
+
+1. the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., *a standard system-dynamics text* (5th ed.) — acausal/bond-graph formalism.
+2. the industry handbook — Fundamentals (Psychrometrics).

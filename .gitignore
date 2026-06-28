@@ -12,6 +12,10 @@ frontend/dist/
 # Generated from src/docs/*.md by scripts/compile-docs.js (run on every
 # build/dev/start and in the Docker build) — a build artifact, not source.
 frontend/src/docsCatalog.ts
+# Generated from src/docs/reference/**/*.md by scripts/compile-docs.js.
+frontend/src/referenceCatalog.ts
+# Generated from the backend registries by scripts/build-doc-manifest.mjs.
+frontend/src/docs/reference/function-manifest.json
 
 # IDE
 .idea/
