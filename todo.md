@@ -253,6 +253,13 @@ Body sections (omit a section only when truly N/A):
     - **PR #24 opened** (https://github.com/ernsoylu/frees/pull/24) — 16 commits.
     - CONTINUING enrichment on the branch (updates PR #24): promote auto-generated pages to the
       hand-curated tier (per-function KaTeX derivation + citation), category by category.
+    - DONE — **Special Functions category fully rich (24/24)**: core 7 (gamma/loggamma/digamma/
+      beta/erf/erfc/erfinv) + order-n & fixed-order Bessel (12) + orthogonal polynomials (5), all
+      with KaTeX definitions/recurrences + Abramowitz & Stegun / NIST DLMF citations.
+    - **100/475 rich, 375 baseline.** Next categories: remaining control (`acker`/`place`/`dare`/
+      `lyap`/`dlyap`/`zp2tf`/`tf2zp`/`mason`/`ss`/`ss2ss`/`ctrb`/`obsv`/`stepinfo`/`pade`/`dlqr`/
+      `errorconst`), atmosphere (ISA `isa_T`/`isa_P`/`isa_rho`), two-phase correlations, stats,
+      then property functions and the 136 components (heaviest).
   Author per-function pages, highest-traffic
   categories first: Math → Matrix/Linear Algebra → Control Systems → Thermophysical Properties
   → Units → Uncertainty → CAS/Symbolic → Block constructs → Components. For each page: write the
