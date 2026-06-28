@@ -653,6 +653,11 @@ public final class UnitChecker {
             // Pneumatics: ISO 6358 returns a mass flow rate [kg/s]; the sonic
             // conductance / pressure-ratio arguments are not policed.
             case "iso6358" -> eosDim("kg/s");
+            // HX sizing correlations: film coefficients [W/m^2/K], overall UA
+            // [W/K], and friction pressure drops [Pa] (flow/geometry args unpoliced).
+            case "htc_1phase", "htc_evap", "htc_cond" -> eosDim("W/m^2/K");
+            case "ua_hx" -> eosDim("W/K");
+            case "dp_1phase", "dp_2phase" -> eosDim("Pa");
             // Two-phase flow: the Martinelli parameter and its multiplier are
             // both dimensionless (quality / property-ratio arguments unpoliced).
             case "lm_phi2", "lm_martinelli_tt" -> Dim.of(Quantity.dimensionless(1.0));
