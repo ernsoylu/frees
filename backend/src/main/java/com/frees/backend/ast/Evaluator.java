@@ -529,6 +529,25 @@ public final class Evaluator {
             case "dp_compact_core" -> com.frees.backend.props.HxCorrelations.dpCompactCore(
                     arg(c, args, 0, values, defs), arg(c, args, 1, values, defs), arg(c, args, 2, values, defs),
                     arg(c, args, 3, values, defs), arg(c, args, 4, values, defs), arg(c, args, 5, values, defs));
+            // Remaining HX correlations: tube-bank/cylinder/plate Nu, fin geometry,
+            // gravitational two-phase dP.
+            case "nu_tubebank" -> com.frees.backend.props.HxCorrelations.nuTubeBank(
+                    evalString(args.get(0)), arg(c, args, 1, values, defs), arg(c, args, 2, values, defs));
+            case "nu_hilpert" -> com.frees.backend.props.HxCorrelations.nuHilpert(
+                    arg(c, args, 0, values, defs), arg(c, args, 1, values, defs));
+            case "nu_plate" -> com.frees.backend.props.HxCorrelations.nuPlate(
+                    arg(c, args, 0, values, defs), arg(c, args, 1, values, defs), arg(c, args, 2, values, defs));
+            case "hx_fin_len" -> com.frees.backend.props.HxCorrelations.hxFinLen(
+                    arg(c, args, 0, values, defs), arg(c, args, 1, values, defs),
+                    arg(c, args, 2, values, defs), arg(c, args, 3, values, defs));
+            case "hx_area_direct" -> com.frees.backend.props.HxCorrelations.hxAreaDirect(
+                    arg(c, args, 0, values, defs), arg(c, args, 1, values, defs), arg(c, args, 2, values, defs),
+                    arg(c, args, 3, values, defs), arg(c, args, 4, values, defs));
+            case "hx_area_indirect" -> com.frees.backend.props.HxCorrelations.hxAreaIndirect(
+                    arg(c, args, 0, values, defs), arg(c, args, 1, values, defs), arg(c, args, 2, values, defs));
+            case "dp_gravity" -> com.frees.backend.props.HxCorrelations.dpGravity(
+                    arg(c, args, 0, values, defs), arg(c, args, 1, values, defs), arg(c, args, 2, values, defs),
+                    arg(c, args, 3, values, defs), arg(c, args, 4, values, defs));
             case "void_homogeneous" -> com.frees.backend.props.TwoPhase.voidHomogeneous(
                     arg(c, args, 0, values, defs), arg(c, args, 1, values, defs),
                     arg(c, args, 2, values, defs));

@@ -23,26 +23,28 @@ export const EXAMPLES: Example[] = [
   {
     id: 'ev-thermal-management',
     title: 'EV Thermal Management System',
-    description: 'Coupled refrigerant + coolant loops with wide branches, a discretized radiator, and a battery chiller. Solve (F2) for the steady point.',
+    description: 'Coupled refrigerant + coolant loops with wide branches and a discretized radiator; every HX UA and the evaporator dP are computed from correlations + geometry and injected. Solve (F2).',
     category: 'Systems',
     featured: true,
-    text: `// EV Thermal Management System  (coupled refrigerant + coolant)
-{ A complete EV thermal-management system as one acausal component model.
+    text: `// EV Thermal Management System  (coupled, geometry-driven HX sizing)
+{ A complete EV thermal-management system as one acausal component model, with
+  every heat exchanger sized from CORRELATION + GEOMETRY rather than a hand-set UA.
 
   Coolant line (EG50): the pump feeds a WIDE-BRANCH SPLIT into a battery branch
   and a motor branch; a flow-weighted COLLECT rejoins them and a DISCRETIZED
   radiator pipe (three wall-HX + orifice cells) rejects heat to ambient.
 
   Refrigerant line (R1234yf): one liquid feed SPLITS to a chiller evaporator and
-  a cabin evaporator; both COLLECT at a common compressor suction, then a
-  condenser whose head pressure floats with ambient and load.
+  a cabin evaporator; both COLLECT at a common compressor suction; condenser head
+  pressure floats with ambient and load.
 
   Cross-domain bridge: the chiller refrigerant evaporator wall is tied to the
-  battery-branch coolant (connect at the bottom) — the battery is cooled by the
-  vapour-compression cycle, the motor by the radiator, the cabin directly.
+  battery-branch coolant.
 
-  Press Solve (F2) for the steady operating point (battery ~38 C, motor ~42 C,
-  cabin ~22 C). For the transient pull-down, see the DYNAMIC note at the end. }
+  Each UA is built from the correlation toolkit (htc_evap / htc_cond / htc_1phase
+  + the external air-side htc_extair) and ua_hx, and the evaporator dP from
+  dp_2phase — computed OUTSIDE the components and injected into their UA / dP
+  parameters. Press Solve (F2) for the steady operating point. }
 
 COMPONENT LiqMix(in1, in2, out)
   PARAM domain$ = liquid
@@ -68,13 +70,13 @@ COMPONENT LiqFeed(out)
   out.h = Enthalpy(fluid$, P=P, x=x)
 END
 COMPONENT EvapSH(in, out, wall)
-  PARAM fluid$, UA, SH, domain$ = twophase
-  out.P = in.P
-  Tevap = T_sat(fluid$, P=out.P)
+  PARAM fluid$, UA, dP, SH, domain$ = twophase
+  out.P = in.P - dP
+  Tevap = T_sat(fluid$, P=in.P)
   Q     = frac * UA * (wall.T - Tevap)
   out.h = Enthalpy(fluid$, P=out.P, T=Tevap + SH)
-  out.mdot = Q / (out.h - in.h)
-  in.mdot  = out.mdot
+  in.mdot  = Q / (out.h - in.h)
+  out.mdot = in.mdot
   wall.Qdot = Q
 END
 COMPONENT Compressor(in, out)
@@ -84,6 +86,15 @@ COMPONENT Compressor(in, out)
   h_s  = Enthalpy(fluid$, P=out.P, s=s_in)
   out.h = in.h + (h_s - in.h) / eta
   W = in.mdot * (out.h - in.h)
+END
+COMPONENT LiqWallUA(in, out, wall)
+  PARAM fluid$, UA, domain$ = liquid
+  out.mdot = in.mdot
+  out.P    = in.P
+  T_in     = Temperature(fluid$, P=in.P, h=in.h)
+  Q        = UA * (T_in - wall.T)
+  out.h    = in.h - Q / in.mdot
+  wall.Qdot = -Q
 END
 COMPONENT CondFloatUA(in, out)
   PARAM fluid$, UA, Tamb, domain$ = twophase
@@ -95,39 +106,55 @@ COMPONENT CondFloatUA(in, out)
   Q        = UA * (Tcond - Tamb)
 END
 
-{ ---- Coolant line (EG50) ---- }
+{ ---- UA / dP objects from correlation + geometry (design-point flows) ---- }
+h_chl_r = htc_evap('R1234yf', 350000, 0.5, 0.05, 0.006, 8e-5)
+h_chl_c = htc_1phase('EG50', 200000, 290, 0.23, 0.008, 1.5e-4)
+UA_chl_r = h_chl_r * 0.05
+UA_chl_c = h_chl_c * 0.35
+dP_chl   = dp_2phase('R1234yf', 350000, 0.5, 0.05, 0.006, 1.2e-4, 0.4)
+h_cab_r = htc_evap('R1234yf', 350000, 0.5, 0.02, 0.006, 8e-5)
+UA_cab   = h_cab_r * 0.03
+dP_cab   = dp_2phase('R1234yf', 350000, 0.5, 0.02, 0.006, 1.2e-4, 0.4)
+h_cnd_r = htc_cond('R1234yf', 1200000, 0.5, 0.07, 0.006, 8e-5)
+h_cnd_a = htc_extair('Air', 101325, 313, 0.6, 0.01, 0.03)
+UA_cond = ua_hx(h_cnd_r, 1.0, h_cnd_a, 6.0, 1e-4)
+h_rad_c = htc_1phase('EG50', 200000, 320, 0.4, 0.008, 1.5e-4)
+h_rad_a = htc_extair('Air', 101325, 313, 0.5, 0.01, 0.03)
+UA_rad  = ua_hx(h_rad_c, 0.4, h_rad_a, 2.5, 1e-4)
+UA_bcp  = h_chl_c * 0.5
+UA_mcp  = htc_1phase('EG50', 200000, 320, 0.17, 0.008, 1.5e-4) * 0.5
+
+{ ---- Coolant line ---- }
 LiquidSource  PUMPIN(fluid$=EG50, mdot=0.4, P=200000, T=305)
 LiquidPump    PUMP(fluid$=EG50, eta=0.6)
 LiquidOrifice OBAT(CdA=1.6e-5, rho=1050)
 LiquidOrifice OMOT(CdA=1.2e-5, rho=1050)
-LiquidWallHX  BCP(fluid$=EG50, UA=600)
-LiquidWallHX  CHLC(fluid$=EG50, UA=600)
-LiquidWallHX  MCP(fluid$=EG50, UA=500)
+LiqWallUA     BCP(fluid$=EG50, UA=UA_bcp)
+LiqWallUA     CHLC(fluid$=EG50, UA=UA_chl_c)
+LiqWallUA     MCP(fluid$=EG50, UA=UA_mcp)
 LiqMix        MIX()
-LiquidWallHX  RAD1(fluid$=EG50, UA=400)
+LiqWallUA     RAD1(fluid$=EG50, UA=UA_rad)
 LiquidOrifice OR1(CdA=1.2e-4, rho=1050)
-LiquidWallHX  RAD2(fluid$=EG50, UA=400)
+LiqWallUA     RAD2(fluid$=EG50, UA=UA_rad)
 LiquidOrifice OR2(CdA=1.2e-4, rho=1050)
-LiquidWallHX  RAD3(fluid$=EG50, UA=400)
+LiqWallUA     RAD3(fluid$=EG50, UA=UA_rad)
 LiquidOrifice OR3(CdA=1.2e-4, rho=1050)
 ThermalSource AMB(T=313)
 LiquidSink    PUMPOUT()
 
-{ ---- Loads (thermal-mass states) ---- }
 MassGen BATT(C=60000, Qgen=4000, T0=305)
 MassGen MOTOR(C=40000, Qgen=5000, T0=305)
 MassGen CABIN(C=8000,  Qgen=2500, T0=305)
 
-{ ---- Refrigerant line (R1234yf) ---- }
+{ ---- Refrigerant line ---- }
 LiqFeed       FEED(fluid$=R1234yf, P=350000, x=0.20)
-EvapSH        CHLR(fluid$=R1234yf, UA=300, SH=5)
-EvapSH        CABE(fluid$=R1234yf, UA=130, SH=8)
+EvapSH        CHLR(fluid$=R1234yf, UA=UA_chl_r, dP=dP_chl, SH=5)
+EvapSH        CABE(fluid$=R1234yf, UA=UA_cab,  dP=dP_cab, SH=8)
 TwoPhaseMixer SUC()
 Compressor    CMP(fluid$=R1234yf, eta=0.7)
-CondFloatUA   COND(fluid$=R1234yf, UA=1500, Tamb=313)
+CondFloatUA   COND(fluid$=R1234yf, UA=UA_cond, Tamb=313)
 TwoPhaseSink  LIQ()
 
-{ coolant network: pump -> wide-branch split -> branches -> collect -> radiator }
 connect(PUMPIN.out, PUMP.in)
 connect(PUMP.out, OBAT.in, OMOT.in)
 connect(OBAT.out, BCP.in)
@@ -147,7 +174,6 @@ connect(OR3.out, PUMPOUT.in)
 connect(AMB.port, RAD1.wall, RAD2.wall, RAD3.wall)
 PUMPOUT.in.P = 200000
 
-{ refrigerant network: feed -> wide-branch split -> evaporators -> collect -> compressor }
 connect(FEED.out, CHLR.in, CABE.in)
 connect(CHLR.out, SUC.in1)
 connect(CABE.out, SUC.in2)
@@ -155,8 +181,6 @@ connect(SUC.out, CMP.in)
 connect(CMP.out, COND.in)
 connect(COND.out, LIQ.in)
 connect(CABE.wall, CABIN.port)
-
-{ CROSS-DOMAIN BRIDGE: chiller refrigerant evaporator wall <-> coolant chiller }
 connect(CHLR.wall, CHLC.wall)
 
 { steady operating point — full compressor capacity }
@@ -164,8 +188,7 @@ CHLR.frac = 1
 CABE.frac = 1
 
 { Transient pull-down: delete the two frac lines above and wrap a ramp in a
-  DYNAMIC block (the storage states integrate; the steady point is the limit):
-
+  DYNAMIC block:
     DYNAMIC ev (method = ida, time = 0 .. 600, points = 1201)
       CHLR.frac = 0.05 + 0.95 * min(time/5, 1)
       CABE.frac = 0.05 + 0.95 * min(time/5, 1)
