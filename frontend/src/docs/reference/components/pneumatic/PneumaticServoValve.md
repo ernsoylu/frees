@@ -30,13 +30,13 @@ PneumaticServoValve inst(fluid$, Cmax, b, u, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `fluid$` | String |
-| `Cmax` | Number |
-| `b` | Number |
-| `u` | Number |
-| `domain$` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `fluid$` | String | Fluid name (e.g. Water, R134a, Air). |
+| `Cmax` | Number | Maximum capacity rate [W/K]. |
+| `b` | Number | Critical pressure ratio / coefficient. |
+| `u` | Number | Specific internal energy [J/kg]. |
+| `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
 
 ## Constitutive Equations
 

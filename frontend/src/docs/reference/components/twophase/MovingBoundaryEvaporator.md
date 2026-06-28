@@ -30,15 +30,15 @@ MovingBoundaryEvaporator inst(fluid$, U_tp, U_sh, D, L, eps_zone, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `fluid$` | String |
-| `U_tp` | Number |
-| `U_sh` | Number |
-| `D` | Number |
-| `L` | Number |
-| `eps_zone` | Number |
-| `domain$` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `fluid$` | String | Fluid name (e.g. Water, R134a, Air). |
+| `U_tp` | Number | Two-phase-zone overall coefficient [W/m²·K]. |
+| `U_sh` | Number | Superheat-zone overall coefficient [W/m²·K]. |
+| `D` | Number | Diameter [m]. |
+| `L` | Number | Length [m]. |
+| `eps_zone` | Number | Zone-collapse smoothing width. |
+| `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
 
 ## Constitutive Equations
 

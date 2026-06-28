@@ -30,12 +30,12 @@ TwoPhaseCondenser inst(fluid$, SC_set, dP, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `fluid$` | String |
-| `SC_set` | Number |
-| `dP` | Number |
-| `domain$` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `fluid$` | String | Fluid name (e.g. Water, R134a, Air). |
+| `SC_set` | Number | Target subcooling [K]. |
+| `dP` | Number | Nominal pressure drop [Pa]. |
+| `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
 
 ## Constitutive Equations
 

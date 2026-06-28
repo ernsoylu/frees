@@ -31,5 +31,5 @@ $$ \operatorname{StringLen}(s) = |s| $$
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `s$` | String | Yes | String argument. |
+| `s$` | String | Yes | String literal. |
 

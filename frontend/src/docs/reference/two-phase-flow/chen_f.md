@@ -32,7 +32,7 @@ $$ F = \big[1 + X_{tt}^{-1}\big]^{0.736} \text{-type convective enhancement (Che
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `X_tt` | Number | Yes | Numeric argument. |
+| `X_tt` | Number | Yes | Turbulent–turbulent Martinelli parameter. |
 
 ## References
 

@@ -30,13 +30,13 @@ MeanValueEngine inst(throttle, Tpeak, w_peak, FMEP_a, FMEP_b)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `throttle` | Number |
-| `Tpeak` | Number |
-| `w_peak` | Number |
-| `FMEP_a` | Number |
-| `FMEP_b` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `throttle` | Number | Throttle (0–1). |
+| `Tpeak` | Number | Peak temperature [K]. |
+| `w_peak` | Number | Peak frequency [rad/s]. |
+| `FMEP_a` | Number | Friction-MEP constant [Pa]. |
+| `FMEP_b` | Number | Friction-MEP slope coefficient. |
 
 ## Constitutive Equations
 

@@ -33,8 +33,8 @@ $$ \frac{1}{\sqrt{f}} = -2\log_{10}\!\left(\frac{\varepsilon/D}{3.7} + \frac{2.5
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `Re` | Number | Yes | Numeric argument. |
-| `rel_rough` | Number | Yes | Numeric argument. |
+| `Re` | Number | Yes | Reynolds number. |
+| `rel_rough` | Number | Yes | Relative wall roughness ε/D. |
 
 ## References
 

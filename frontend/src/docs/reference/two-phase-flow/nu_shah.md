@@ -32,10 +32,10 @@ $$ Nu_{TP} = Nu_l\left(1 + \frac{3.8}{Z^{0.95}}\right), \quad Z = (1/x - 1)^{0.8
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `Re_l` | Number | Yes | Numeric argument. |
-| `Pr_l` | Number | Yes | Numeric argument. |
-| `x` | Number | Yes | Numeric argument. |
-| `p_red` | Number | Yes | Numeric argument. |
+| `Re_l` | Number | Yes | Liquid-only Reynolds number. |
+| `Pr_l` | Number | Yes | Liquid Prandtl number. |
+| `x` | Number | Yes | Vapor quality (0–1). |
+| `p_red` | Number | Yes | Reduced pressure P/Pcrit. |
 
 ## References
 

@@ -30,13 +30,13 @@ TwoPhaseEvaporatorUA inst(fluid$, UA, dP, SH, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `fluid$` | String |
-| `UA` | Number |
-| `dP` | Number |
-| `SH` | Number |
-| `domain$` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `fluid$` | String | Fluid name (e.g. Water, R134a, Air). |
+| `UA` | Number | Overall conductance UA [W/K]. |
+| `dP` | Number | Nominal pressure drop [Pa]. |
+| `SH` | Number | Superheat [K]. |
+| `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
 
 ## Constitutive Equations
 

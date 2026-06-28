@@ -32,10 +32,10 @@ $$ P = \frac{RT}{v-b} - \frac{a\,\alpha(T)}{v(v+b) + b(v-b)} \quad\text{(PR; fro
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `fluid$` | String | Yes | String argument. |
-| `model$` | String | Yes | String argument. |
-| `T` | Number | Yes | Numeric argument. |
-| `v` | Number | Yes | Numeric argument. |
+| `fluid$` | String | Yes | Fluid name (e.g. Water, R134a, Air). |
+| `model$` | String | Yes | Selector — One of `SRK`, `PR`. |
+| `T` | Number | Yes | Temperature [K]. |
+| `v` | Number | Yes | Specific volume [m³/kg]. |
 
 ## References
 

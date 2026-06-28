@@ -30,15 +30,15 @@ TXV inst(fluid$, Kv, SH_set, CdA0, tau_valve, tau_bulb, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `fluid$` | String |
-| `Kv` | Number |
-| `SH_set` | Number |
-| `CdA0` | Number |
-| `tau_valve` | Number |
-| `tau_bulb` | Number |
-| `domain$` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `fluid$` | String | Fluid name (e.g. Water, R134a, Air). |
+| `Kv` | Number | Flow coefficient. |
+| `SH_set` | Number | Target superheat [K]. |
+| `CdA0` | Number | Reference Cd·A [m²]. |
+| `tau_valve` | Number | Valve time constant [s]. |
+| `tau_bulb` | Number | Bulb time constant [s]. |
+| `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
 
 ## Constitutive Equations
 

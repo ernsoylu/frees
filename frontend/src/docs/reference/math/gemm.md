@@ -31,9 +31,9 @@ $$ C \leftarrow \alpha A B + \beta C \quad\text{(BLAS level 3)} $$
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `α` | Number | Yes | Numeric argument. |
-| `A` | Number | Yes | Numeric argument. |
-| `B` | Number | Yes | Numeric argument. |
-| `β` | Number | Yes | Numeric argument. |
-| `C` | Number | Yes | Numeric argument. |
+| `α` | Number | Yes | Scalar coefficient α. |
+| `A` | Number | Yes | Matrix. |
+| `B` | Number | Yes | Matrix operand. |
+| `β` | Number | Yes | Scalar coefficient β. |
+| `C` | Number | Yes | Empirical constant. |
 

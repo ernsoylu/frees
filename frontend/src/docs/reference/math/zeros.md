@@ -31,6 +31,6 @@ $$ Z_{ij} = 0 \quad (m\times n) $$
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `m` | Number | Yes | Numeric argument. |
-| `n` | Number | Yes | Numeric argument. |
+| `m` | Number | Yes | Shape / form parameter. |
+| `n` | Number | Yes | Order / number of terms. |
 

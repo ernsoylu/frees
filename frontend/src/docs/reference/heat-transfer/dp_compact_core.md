@@ -32,15 +32,15 @@ $$ \frac{\Delta P}{P_1} = \frac{G^2}{2\rho_1 P_1}\left[(1+\sigma^2)\!\left(\tfra
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `G` | Number | Yes | Numeric argument. |
-| `rho_in` | Number | Yes | Numeric argument. |
-| `rho_out` | Number | Yes | Numeric argument. |
-| `rho_mean` | Number | Yes | Numeric argument. |
-| `sigma` | Number | Yes | Numeric argument. |
-| `f` | Number | Yes | Numeric argument. |
-| `AoverAc` | Number | Yes | Numeric argument. |
-| `Kc` | Number | Yes | Numeric argument. |
-| `Ke` | Number | Yes | Numeric argument. |
+| `G` | Number | Yes | Mass flux G = ṁ/Aflow [kg/m²·s]. |
+| `rho_in` | Number | Yes | Inlet density [kg/m³]. |
+| `rho_out` | Number | Yes | Outlet density [kg/m³]. |
+| `rho_mean` | Number | Yes | Mean density [kg/m³]. |
+| `sigma` | Number | Yes | Surface tension [N/m]. |
+| `f` | Number | Yes | Fanning/Darcy friction factor. |
+| `AoverAc` | Number | Yes | Area ratio A/Ac. |
+| `Kc` | Number | Yes | Contraction (entrance) loss coefficient. |
+| `Ke` | Number | Yes | Exit (expansion) loss coefficient. |
 
 ## References
 

@@ -30,10 +30,10 @@ HeatingCoil inst(Q, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `Q` | Number |
-| `domain$` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `Q` | Number | Heat input [W]. |
+| `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
 
 ## Constitutive Equations
 

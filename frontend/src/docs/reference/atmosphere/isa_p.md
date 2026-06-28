@@ -32,7 +32,7 @@ $$ P(h) = P_b\left(\frac{T_b}{T_b + L_b(h-h_b)}\right)^{g_0 M/(R L_b)} \quad (L_
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `alt` | Number | Yes | Numeric argument. |
+| `alt` | Number | Yes | Geopotential altitude [m]. |
 
 ## References
 

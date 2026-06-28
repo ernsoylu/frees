@@ -31,5 +31,5 @@ $$ \tan(x) = \frac{\sin x}{\cos x}, \qquad x \text{ in radians} $$
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `x` | Number | Yes | Numeric argument. |
+| `x` | Number | Yes | Vapor quality (0–1). |
 

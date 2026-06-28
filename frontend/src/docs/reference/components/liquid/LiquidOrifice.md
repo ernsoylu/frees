@@ -30,12 +30,12 @@ LiquidOrifice inst(CdA, rho, domain$, model$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `CdA` | Number |
-| `rho` | Number |
-| `domain$` | String |
-| `model$` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `CdA` | Number | Discharge coefficient × area Cd·A [m²]. |
+| `rho` | Number | Density [kg/m³]. |
+| `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
+| `model$` | String | Model variant — selects the physics body (see Model Variants). |
 
 ## Constitutive Equations
 

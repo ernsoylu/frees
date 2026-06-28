@@ -32,8 +32,8 @@ $$ \sigma = \frac{A_{\text{flow}}}{A_{\text{frontal}}} \quad\text{(free-flow / c
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `Aflow` | Number | Yes | Numeric argument. |
-| `Afrontal` | Number | Yes | Numeric argument. |
+| `Aflow` | Number | Yes | Free-flow (minimum) cross-sectional area [m²]. |
+| `Afrontal` | Number | Yes | Frontal (face) area [m²]. |
 
 ## References
 

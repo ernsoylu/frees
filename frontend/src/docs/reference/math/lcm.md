@@ -31,6 +31,6 @@ $$ \operatorname{lcm}(a,b) = \frac{|a\,b|}{\gcd(a,b)} $$
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `a` | Number | Yes | Numeric argument. |
-| `b` | Number | Yes | Numeric argument. |
+| `a` | Number | Yes | First operand. |
+| `b` | Number | Yes | Second operand. |
 

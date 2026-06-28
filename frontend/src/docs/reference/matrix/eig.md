@@ -32,7 +32,7 @@ $$ A v = \lambda v, \qquad \det(A - \lambda I) = 0 $$
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `A` | Number | Yes | Numeric argument. |
+| `A` | Number | Yes | Square input matrix. |
 
 ## References
 

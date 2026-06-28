@@ -30,11 +30,11 @@ PIThermostat inst(Kp, Ki, Tref)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `Kp` | Number |
-| `Ki` | Number |
-| `Tref` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `Kp` | Number | Proportional gain. |
+| `Ki` | Number | Integral gain. |
+| `Tref` | Number | Reference (setpoint) temperature [K]. |
 
 ## Constitutive Equations
 

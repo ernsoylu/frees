@@ -32,7 +32,7 @@ $$ \operatorname{tr}(A) = \sum_i A_{ii} = \sum_i \lambda_i $$
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `A` | Number | Yes | Numeric argument. |
+| `A` | Number | Yes | Square input matrix. |
 
 ## References
 

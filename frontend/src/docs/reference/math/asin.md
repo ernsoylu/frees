@@ -31,5 +31,5 @@ $$ y = \arcsin(x), \qquad \sin(y) = x,\ \ y \in [-\tfrac{\pi}{2}, \tfrac{\pi}{2}
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `x` | Number | Yes | Numeric argument. |
+| `x` | Number | Yes | Vapor quality (0–1). |
 

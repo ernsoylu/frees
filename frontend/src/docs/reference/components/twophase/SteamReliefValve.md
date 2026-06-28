@@ -30,16 +30,16 @@ SteamReliefValve inst(fluid$, A, Pset, Cd, kgas, Rgas, eps, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `fluid$` | String |
-| `A` | Number |
-| `Pset` | Number |
-| `Cd` | Number |
-| `kgas` | Number |
-| `Rgas` | Number |
-| `eps` | Number |
-| `domain$` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `fluid$` | String | Fluid name (e.g. Water, R134a, Air). |
+| `A` | Number | Area [m²]. |
+| `Pset` | Number | Set pressure [Pa]. |
+| `Cd` | Number | Discharge coefficient. |
+| `kgas` | Number | Gas specific-heat ratio. |
+| `Rgas` | Number | Specific gas constant [J/kg·K]. |
+| `eps` | Number | Effectiveness / roughness. |
+| `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
 
 ## Constitutive Equations
 

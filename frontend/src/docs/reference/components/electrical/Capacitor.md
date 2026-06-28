@@ -30,10 +30,10 @@ Capacitor inst(C, V0)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `C` | Number |
-| `V0` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `C` | Number | Capacitance [F]. |
+| `V0` | Number | Initial voltage / volume. |
 
 ## Constitutive Equations
 

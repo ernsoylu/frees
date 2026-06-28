@@ -32,8 +32,8 @@ $$ \text{solve } \nu(M) = \nu_{\text{target}} \text{ for } M \quad (M \ge 1) $$
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `nu` | Number | Yes | Numeric argument. |
-| `k` | Number | Yes | Numeric argument. |
+| `nu` | Number | Yes | Prandtl–Meyer angle [rad]. |
+| `k` | Number | Yes | Ratio of specific heats (e.g. 1.4 for air). |
 
 ## References
 

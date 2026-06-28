@@ -30,10 +30,10 @@ Convection inst(htc, area)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `htc` | Number |
-| `area` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `htc` | Number | Heat-transfer coefficient [W/m²·K]. |
+| `area` | Number | Area [m²]. |
 
 ## Constitutive Equations
 

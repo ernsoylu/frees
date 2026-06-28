@@ -30,12 +30,12 @@ HydraulicValve inst(CdA_max, rho, u, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `CdA_max` | Number |
-| `rho` | Number |
-| `u` | Number |
-| `domain$` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `CdA_max` | Number | Maximum Cd·A [m²]. |
+| `rho` | Number | Density [kg/m³]. |
+| `u` | Number | Specific internal energy [J/kg]. |
+| `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
 
 ## Constitutive Equations
 

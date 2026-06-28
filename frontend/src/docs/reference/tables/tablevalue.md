@@ -31,6 +31,6 @@ $$ \operatorname{TableValue}(r, c) = \text{cell } (r, c) \text{ of the parametri
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `run` | Number | Yes | Numeric argument. |
-| `col` | Number | Yes | Numeric argument. |
+| `run` | Number | Yes | Parametric run index. |
+| `col` | Number | Yes | Name of a result-table column. |
 

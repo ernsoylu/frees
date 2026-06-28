@@ -32,8 +32,8 @@ $$ r(L) = \tanh\!\left(\frac{L}{\varepsilon}\right) \quad\text{(smooth zone-coll
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `L` | Number | Yes | Numeric argument. |
-| `eps` | Number | Yes | Numeric argument. |
+| `L` | Number | Yes | Length [m]. |
+| `eps` | Number | Yes | Effectiveness ε (0–1). |
 
 ## References
 

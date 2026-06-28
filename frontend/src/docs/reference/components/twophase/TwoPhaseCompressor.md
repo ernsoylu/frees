@@ -30,12 +30,12 @@ TwoPhaseCompressor inst(fluid$, eta, domain$, model$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `fluid$` | String |
-| `eta` | Number |
-| `domain$` | String |
-| `model$` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `fluid$` | String | Fluid name (e.g. Water, R134a, Air). |
+| `eta` | Number | Efficiency (0–1). |
+| `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
+| `model$` | String | Model variant — selects the physics body (see Model Variants). |
 
 ## Constitutive Equations
 

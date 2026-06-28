@@ -30,10 +30,10 @@ Inertia inst(J, w0)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `J` | Number |
-| `w0` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `J` | Number | Inertia [kg·m²]. |
+| `w0` | Number | Natural frequency [rad/s]. |
 
 ## Constitutive Equations
 

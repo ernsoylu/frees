@@ -32,7 +32,7 @@ $$ \operatorname{rank}(A) = \#\{\sigma_i > \text{tol}\} \quad\text{(numerical, v
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `A` | Number | Yes | Numeric argument. |
+| `A` | Number | Yes | Square input matrix. |
 
 ## References
 

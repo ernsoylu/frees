@@ -30,15 +30,15 @@ MovingBoundaryCondenser inst(fluid$, U_cond, U_sc, D, L, eps_zone, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `fluid$` | String |
-| `U_cond` | Number |
-| `U_sc` | Number |
-| `D` | Number |
-| `L` | Number |
-| `eps_zone` | Number |
-| `domain$` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `fluid$` | String | Fluid name (e.g. Water, R134a, Air). |
+| `U_cond` | Number | Condenser-zone overall coefficient [W/m²·K]. |
+| `U_sc` | Number | Subcool-zone overall coefficient [W/m²·K]. |
+| `D` | Number | Diameter [m]. |
+| `L` | Number | Length [m]. |
+| `eps_zone` | Number | Zone-collapse smoothing width. |
+| `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
 
 ## Constitutive Equations
 

@@ -31,5 +31,5 @@ $$ |z| = \sqrt{a^2 + b^2} $$
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `z` | Number | Yes | Numeric argument. |
+| `z` | Number | Yes | Argument (complex or real). |
 

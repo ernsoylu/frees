@@ -32,14 +32,14 @@ $$ A = Q\,R, \qquad Q^\top Q = I,\ R\ \text{upper triangular} $$
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `A` | Number | Yes | Numeric argument. |
+| `A` | Number | Yes | Square input matrix. |
 
 ## Output Arguments
 
 | Argument | Type | Description |
 | --- | --- | --- |
-| `Q` | Number/Array | Output value. |
-| `R` | Number/Array | Output value. |
+| `Q` | Number/Array | Computed `Q`. |
+| `R` | Number/Array | Computed `R`. |
 
 ## References
 

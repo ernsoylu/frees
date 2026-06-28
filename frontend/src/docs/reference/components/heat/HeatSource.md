@@ -30,9 +30,9 @@ HeatSource inst(Q)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `Q` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `Q` | Number | Heat input [W]. |
 
 ## Constitutive Equations
 

@@ -30,10 +30,10 @@ Radiation inst(emis, area)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `emis` | Number |
-| `area` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `emis` | Number | Emissivity (0–1). |
+| `area` | Number | Area [m²]. |
 
 ## Constitutive Equations
 

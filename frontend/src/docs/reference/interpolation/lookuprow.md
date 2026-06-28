@@ -31,9 +31,9 @@ $$ \text{row } r \text{ where column } c \text{ crosses } val \text{ (interpolat
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `'t'` | Number | Yes | Numeric argument. |
-| `col` | Number | Yes | Numeric argument. |
-| `val` | Number | Yes | Numeric argument. |
+| `'t'` | Number | Yes | Name of a TABLE block (string). |
+| `col` | Number | Yes | Name of a result-table column. |
+| `val` | Number | Yes | Target value to cross. |
 
 ## References
 

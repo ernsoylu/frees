@@ -32,13 +32,13 @@ $$ A = L\,L^\top \quad\text{(} A \text{ symmetric positive-definite)} $$
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `A` | Number | Yes | Numeric argument. |
+| `A` | Number | Yes | Square input matrix. |
 
 ## Output Arguments
 
 | Argument | Type | Description |
 | --- | --- | --- |
-| `L` | Number/Array | Output value. |
+| `L` | Number/Array | Length [m]. |
 
 ## References
 

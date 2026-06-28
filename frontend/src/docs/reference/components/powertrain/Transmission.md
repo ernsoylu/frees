@@ -30,10 +30,10 @@ Transmission inst(ratio, eta)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `ratio` | Number |
-| `eta` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `ratio` | Number | Gear / split ratio. |
+| `eta` | Number | Efficiency (0–1). |
 
 ## Constitutive Equations
 

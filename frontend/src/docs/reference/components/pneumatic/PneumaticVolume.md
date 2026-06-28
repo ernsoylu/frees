@@ -30,13 +30,13 @@ PneumaticVolume inst(V, T, R, P0, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `V` | Number |
-| `T` | Number |
-| `R` | Number |
-| `P0` | Number |
-| `domain$` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `V` | Number | Volume [m³]. |
+| `T` | Number | Temperature [K]. |
+| `R` | Number | Resistance [Ω]. |
+| `P0` | Number | Reference/initial pressure [Pa]. |
+| `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
 
 ## Constitutive Equations
 

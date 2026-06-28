@@ -31,5 +31,5 @@ $$ \Re(z) = \Re(a + jb) = a $$
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `z` | Number | Yes | Numeric argument. |
+| `z` | Number | Yes | Argument (complex or real). |
 

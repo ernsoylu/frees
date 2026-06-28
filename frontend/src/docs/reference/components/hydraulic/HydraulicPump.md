@@ -30,13 +30,13 @@ HydraulicPump inst(disp, rho, eta_v, eta_m, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `disp` | Number |
-| `rho` | Number |
-| `eta_v` | Number |
-| `eta_m` | Number |
-| `domain$` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `disp` | Number | Displacement volume [m³]. |
+| `rho` | Number | Density [kg/m³]. |
+| `eta_v` | Number | Volumetric efficiency (0–1). |
+| `eta_m` | Number | Mechanical efficiency (0–1). |
+| `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
 
 ## Constitutive Equations
 

@@ -32,7 +32,7 @@ $$ \det(A) = \sum_{\sigma} \operatorname{sgn}(\sigma)\prod_i A_{i,\sigma(i)} = \
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `A` | Number | Yes | Numeric argument. |
+| `A` | Number | Yes | Matrix. |
 
 ## References
 

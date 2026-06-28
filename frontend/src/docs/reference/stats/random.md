@@ -31,8 +31,8 @@ $$ X \sim \mathcal{U}(a, b), \qquad X = a + (b-a)\,U,\ \ U\in[0,1) $$
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `a` | Number | Yes | Numeric argument. |
-| `b` | Number | Yes | Numeric argument. |
+| `a` | Number | Yes | First operand. |
+| `b` | Number | Yes | Second operand. |
 
 ## References
 

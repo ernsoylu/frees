@@ -32,11 +32,11 @@ $$ \Delta P_{\text{grav}} = \big[\alpha\rho_g + (1-\alpha)\rho_l\big]\,g\,L\sin\
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `rho_l` | Number | Yes | Numeric argument. |
-| `rho_g` | Number | Yes | Numeric argument. |
-| `alpha` | Number | Yes | Numeric argument. |
-| `L` | Number | Yes | Numeric argument. |
-| `theta_deg` | Number | Yes | Numeric argument. |
+| `rho_l` | Number | Yes | Saturated-liquid density [kg/m³]. |
+| `rho_g` | Number | Yes | Saturated-vapor density [kg/m³]. |
+| `alpha` | Number | Yes | Void fraction (0–1). |
+| `L` | Number | Yes | Length [m]. |
+| `theta_deg` | Number | Yes | Angle [deg]. |
 
 ## References
 

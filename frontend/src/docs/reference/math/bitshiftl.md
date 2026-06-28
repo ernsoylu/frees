@@ -31,6 +31,6 @@ $$ a \ll n = a\cdot 2^{n} $$
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `a` | Number | Yes | Numeric argument. |
-| `n` | Number | Yes | Numeric argument. |
+| `a` | Number | Yes | First operand. |
+| `n` | Number | Yes | Order / number of terms. |
 

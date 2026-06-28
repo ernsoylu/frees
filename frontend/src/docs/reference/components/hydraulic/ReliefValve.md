@@ -30,12 +30,12 @@ ReliefValve inst(Pcrack, K, eps, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `Pcrack` | Number |
-| `K` | Number |
-| `eps` | Number |
-| `domain$` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `Pcrack` | Number | Cracking (relief) pressure [Pa]. |
+| `K` | Number | Gain / coefficient. |
+| `eps` | Number | Effectiveness / roughness. |
+| `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
 
 ## Constitutive Equations
 

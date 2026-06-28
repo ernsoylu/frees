@@ -30,10 +30,10 @@ Accumulator inst(C, P0)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `C` | Number |
-| `P0` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `C` | Number | Capacitance [F]. |
+| `P0` | Number | Reference/initial pressure [Pa]. |
 
 ## Constitutive Equations
 

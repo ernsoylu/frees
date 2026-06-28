@@ -32,11 +32,11 @@ $$ \text{species mole fraction from chemical equilibrium } \big(\min G \text{ at
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `fuel$` | String | Yes | String argument. |
-| `phi` | Number | Yes | Numeric argument. |
-| `T` | Number | Yes | Numeric argument. |
-| `P` | Number | Yes | Numeric argument. |
-| `species$` | String | Yes | String argument. |
+| `fuel$` | String | Yes | Fuel name/formula (e.g. 'CH4'). |
+| `phi` | Number | Yes | Equivalence ratio (1 = stoichiometric). |
+| `T` | Number | Yes | Temperature [K]. |
+| `P` | Number | Yes | Pressure [Pa]. |
+| `species$` | String | Yes | Product species name (e.g. CO, NO). |
 
 ## References
 

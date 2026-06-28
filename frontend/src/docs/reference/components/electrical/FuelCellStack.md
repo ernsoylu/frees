@@ -30,17 +30,17 @@ FuelCellStack inst(ncells, area, i0, ilim, Rohm, E0, alpha, Eth, T)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `ncells` | Number |
-| `area` | Number |
-| `i0` | Number |
-| `ilim` | Number |
-| `Rohm` | Number |
-| `E0` | Number |
-| `alpha` | Number |
-| `Eth` | Number |
-| `T` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `ncells` | Number | Number of cells. |
+| `area` | Number | Area [m²]. |
+| `i0` | Number | Initial current [A]. |
+| `ilim` | Number | Current limit [A]. |
+| `Rohm` | Number | Ohmic resistance [Ω]. |
+| `E0` | Number | Reference EMF [V]. |
+| `alpha` | Number | Void fraction / coefficient. |
+| `Eth` | Number | Activation/threshold energy. |
+| `T` | Number | Temperature [K]. |
 
 ## Constitutive Equations
 

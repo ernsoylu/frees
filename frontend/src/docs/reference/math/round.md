@@ -31,5 +31,5 @@ $$ \operatorname{round}(x, d) = \frac{\lfloor x\cdot 10^{d} + 0.5\rfloor}{10^{d}
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `x` | Number | Yes | Numeric argument. |
+| `x` | Number | Yes | Vapor quality (0–1). |
 

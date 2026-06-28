@@ -30,10 +30,10 @@ HydraulicSupply inst(P, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `P` | Number |
-| `domain$` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `P` | Number | Pressure [Pa]. |
+| `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
 
 ## Constitutive Equations
 
