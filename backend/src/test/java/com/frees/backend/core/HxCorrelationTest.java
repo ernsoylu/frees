@@ -103,6 +103,29 @@ class HxCorrelationTest {
     assertTrue(dpG > 0, "vertical riser static head positive: " + dpG);
   }
 
+  @Test void gapCompletionCorrelations() {
+    assumeTrue(CoolProp.isAvailable());
+    // mass flux helper
+    assertEquals(0.4 / 0.02, HxCorrelations.massFlux(0.4, 0.02), 1e-9);
+    // Colburn-j + friction for compact fin surfaces (louvered > plain at same Re)
+    double jPlain = HxCorrelations.jFin("plain", 1000);
+    double jLouv = HxCorrelations.jFin("louvered", 1000);
+    double fLouv = HxCorrelations.fFin("louvered", 1000);
+    System.out.printf("j plain=%.4f louvered=%.4f  f louvered=%.4f%n", jPlain, jLouv, fLouv);
+    assertTrue(jPlain > 0 && jLouv > 0 && fLouv > jLouv, "j and f physical (f>j)");
+    // Gungor-Winterton boiling (enhances over liquid Nu) and Traviss condensation
+    double nuGw = HxCorrelations.nuGungorWinterton(50, 0.3, 0.0); // convective limit
+    double nuTr = HxCorrelations.nuTraviss(2e4, 3.0, 0.3);
+    System.out.printf("Nu GW=%.0f  Nu Traviss=%.0f%n", nuGw, nuTr);
+    assertTrue(nuGw > 50, "Gungor-Winterton enhances over liquid-only Nu");
+    assertTrue(nuTr > 0, "Traviss condensation Nu positive");
+    // quality-integrated two-phase dP vs single mid-point
+    double dpAvg = HxCorrelations.dp2phaseAvg("R1234yf", 350000, 0.1, 0.9, 0.03, 0.006, 8e-5, 2.0, 10);
+    double dpMid = HxCorrelations.dp2phase("R1234yf", 350000, 0.5, 0.03, 0.006, 8e-5, 2.0);
+    System.out.printf("dp_avg(10 cells)=%.0f Pa  dp_mid=%.0f Pa%n", dpAvg, dpMid);
+    assertTrue(dpAvg > 0 && Math.abs(dpAvg - dpMid) < 5 * dpMid, "quality-integrated dP in a sane band");
+  }
+
   @Test void uaAndDpInjectedIntoComponent() {
     assumeTrue(CoolProp.isAvailable());
     // A chiller evaporator whose UA and dP are CALCULATED OUTSIDE (correlation +

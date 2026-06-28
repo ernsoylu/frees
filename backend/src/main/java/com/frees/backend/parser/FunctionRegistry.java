@@ -149,6 +149,12 @@ public class FunctionRegistry {
             new FunctionInfo("hx_area_direct", "hx_area_direct(W, tubeCount, Htube, depth, t)", "Primary tube-wall area [m^2]", "Heat Transfer"),
             new FunctionInfo("hx_area_indirect", "hx_area_indirect(W, tubeCount, finLen)", "Secondary fin area [m^2]", "Heat Transfer"),
             new FunctionInfo("dp_gravity", "dp_gravity(rho_l, rho_g, alpha, L, theta_deg)", "Two-phase gravitational (static-head) pressure change [Pa]", "Heat Transfer"),
+            new FunctionInfo("mass_flux", "mass_flux(mdot, Aflow)", "Mass flux G = mdot/Aflow [kg/m^2/s]", "Heat Transfer"),
+            new FunctionInfo("j_fin", "j_fin(surface$, Re)", "Colburn j-factor for a compact fin surface (plain|wavy|louvered|offset)", "Heat Transfer"),
+            new FunctionInfo("f_fin", "f_fin(surface$, Re)", "Fanning friction factor for a compact fin surface (air-side dP)", "Heat Transfer"),
+            new FunctionInfo("nu_gungor_winterton", "nu_gungor_winterton(Nu_l, Xtt, Bo)", "Gungor-Winterton flow-boiling two-phase Nusselt from liquid-only Nu", "Heat Transfer"),
+            new FunctionInfo("nu_traviss", "nu_traviss(Re_l, Pr_l, Xtt)", "Traviss in-tube condensation Nusselt", "Heat Transfer"),
+            new FunctionInfo("dp_2phase_avg", "dp_2phase_avg(fluid$, P, x_in, x_out, mdot, Dh, Aflow, L, n)", "Quality-integrated two-phase frictional dP [Pa] over n cells", "Heat Transfer"),
 
             // Two-phase flow (Lockhart-Martinelli / Chisholm — Phase C)
             new FunctionInfo("lm_phi2", "lm_phi2(X, C)", "Chisholm two-phase multiplier 1+C/X+1/X^2 on the liquid-alone drop", "Two-Phase Flow"),

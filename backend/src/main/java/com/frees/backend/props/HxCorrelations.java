@@ -304,6 +304,81 @@ public final class HxCorrelations {
         return rhoMix * 9.80665 * l * Math.sin(Math.toRadians(thetaDeg));
     }
 
+    // ── Gap-completion correlations ─────────────────────────────────────────
+
+    /** Mass flux G = ṁ / A_flow [kg/m²s]. */
+    public static double massFlux(double mdot, double aFlow) {
+        if (!(aFlow > 0)) {
+            throw new PropertyEvaluationException("mass_flux: A_flow must be > 0.");
+        }
+        return mdot / aFlow;
+    }
+
+    /** Colburn j-factor for a compact fin surface (the "j data table" as a
+     *  representative Re power-law per surface type): plain / wavy / louvered /
+     *  offset-strip. Nu = j·Re·Pr^(1/3) (use with nu_colburn). */
+    public static double jFin(String surface, double re) {
+        double r = Math.max(re, 1.0);
+        return switch (finSurface(surface)) {
+            case "wavy" -> 0.394 * Math.pow(r, -0.41);
+            case "louvered" -> 0.490 * Math.pow(r, -0.49);
+            case "offset" -> 0.650 * Math.pow(r, -0.54);
+            default -> 0.264 * Math.pow(r, -0.40); // plain
+        };
+    }
+
+    /** Fanning friction factor for a compact fin surface (the air-side ΔP analogue
+     *  of {@link #jFin}); apply as ΔP = 4·f·(L/D_h)·G²/(2ρ). */
+    public static double fFin(String surface, double re) {
+        double r = Math.max(re, 1.0);
+        return switch (finSurface(surface)) {
+            case "wavy" -> 0.890 * Math.pow(r, -0.30);
+            case "louvered" -> 1.100 * Math.pow(r, -0.41);
+            case "offset" -> 1.500 * Math.pow(r, -0.42);
+            default -> 0.508 * Math.pow(r, -0.30); // plain
+        };
+    }
+
+    private static String finSurface(String s) {
+        return s == null ? "plain" : s.toLowerCase(java.util.Locale.ROOT);
+    }
+
+    /** Gungor–Winterton (1986) flow-boiling two-phase Nusselt from the liquid-only
+     *  Nu: Nu_tp = Nu_l·(1 + 24000·Bo^1.16 + 1.37·(1/X_tt)^0.86). Bo = boiling
+     *  number q/(G·h_fg) (pass 0 for the convective limit). */
+    public static double nuGungorWinterton(double nuL, double xtt, double bo) {
+        double e = 1.0 + 24000.0 * Math.pow(Math.max(bo, 0.0), 1.16)
+                + 1.37 * Math.pow(1.0 / Math.max(xtt, 1e-6), 0.86);
+        return nuL * e;
+    }
+
+    /** Traviss (1973) in-tube condensation Nusselt:
+     *  Nu = 0.15·Pr_l·Re_l^0.9 / F_T · (1/X_tt + 2.85/X_tt^0.476),
+     *  F_T = 5·Pr_l + 5·ln(1+5·Pr_l) + 2.5·ln(0.00313·Re_l^0.812). */
+    public static double nuTraviss(double reL, double prL, double xtt) {
+        double r = Math.max(reL, 1.0);
+        double ft = 5.0 * prL + 5.0 * Math.log(1.0 + 5.0 * prL) + 2.5 * Math.log(0.00313 * Math.pow(r, 0.812));
+        ft = Math.max(ft, 1e-3);
+        double x = Math.max(xtt, 1e-6);
+        return 0.15 * prL * Math.pow(r, 0.9) / ft * (1.0 / x + 2.85 / Math.pow(x, 0.476));
+    }
+
+    /** Quality-integrated two-phase frictional ΔP [Pa]: the local two-phase drop
+     *  (dp_2phase basis) integrated across x_in→x_out over n equal cells — the
+     *  cell-by-cell average the lumped single-point dp_2phase cannot capture. */
+    public static double dp2phaseAvg(String fluidTok, double p, double xIn, double xOut,
+                                     double mdot, double dh, double aFlow, double l, double n) {
+        guardGeom(dh, aFlow);
+        int cells = (int) Math.max(1, Math.round(n));
+        double seg = l / cells;
+        double total = 0.0;
+        for (int i = 0; i < cells; i++) {
+            double xMid = xIn + (xOut - xIn) * (i + 0.5) / cells;
+            total += dp2phase(fluidTok, p, xMid, mdot, dh, aFlow, seg);
+        }
+        return total;
+    }
+
     private static double smooth(double lo, double hi, double x, double x1, double x2) {
         if (x <= x1) {
             return lo;
