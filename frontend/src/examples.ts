@@ -106,23 +106,34 @@ COMPONENT CondFloatUA(in, out)
   Q        = UA * (Tcond - Tamb)
 END
 
-{ ---- UA / dP objects from correlation + geometry (design-point flows) ---- }
-h_chl_r = htc_evap('R1234yf', 350000, 0.5, 0.05, 0.006, 8e-5)
-h_chl_c = htc_1phase('EG50', 200000, 290, 0.23, 0.008, 1.5e-4)
-UA_chl_r = h_chl_r * 0.05
-UA_chl_c = h_chl_c * 0.35
+{ ---- UA / dP objects: heat-transfer AREA from hx_aconv(Aflow, L, Dh) =
+  4*Aflow*L/Dh over each side geometry (tube/channel count x developed length),
+  then UA = htc * area. Nothing hand-set. ---- }
+h_chl_r  = htc_evap('R1234yf', 350000, 0.5, 0.05, 0.006, 8e-5)
+h_chl_c  = htc_1phase('EG50', 200000, 290, 0.23, 0.008, 1.5e-4)
+A_chl_r  = 3  * hx_aconv(8e-5,   0.30, 0.006)   { 3 refrigerant channels x 0.30 m }
+A_chl_c  = 12 * hx_aconv(1.5e-4, 0.40, 0.008)   { 12 coolant channels x 0.40 m }
+UA_chl_r = h_chl_r * A_chl_r
+UA_chl_c = h_chl_c * A_chl_c
 dP_chl   = dp_2phase('R1234yf', 350000, 0.5, 0.05, 0.006, 1.2e-4, 0.4)
-h_cab_r = htc_evap('R1234yf', 350000, 0.5, 0.02, 0.006, 8e-5)
-UA_cab   = h_cab_r * 0.03
+h_cab_r  = htc_evap('R1234yf', 350000, 0.5, 0.02, 0.006, 8e-5)
+A_cab    = 2  * hx_aconv(8e-5, 0.30, 0.006)     { 2 refrigerant channels x 0.30 m }
+UA_cab   = h_cab_r * A_cab
 dP_cab   = dp_2phase('R1234yf', 350000, 0.5, 0.02, 0.006, 1.2e-4, 0.4)
-h_cnd_r = htc_cond('R1234yf', 1200000, 0.5, 0.07, 0.006, 8e-5)
-h_cnd_a = htc_extair('Air', 101325, 313, 0.6, 0.01, 0.03)
-UA_cond = ua_hx(h_cnd_r, 1.0, h_cnd_a, 6.0, 1e-4)
-h_rad_c = htc_1phase('EG50', 200000, 320, 0.4, 0.008, 1.5e-4)
-h_rad_a = htc_extair('Air', 101325, 313, 0.5, 0.01, 0.03)
-UA_rad  = ua_hx(h_rad_c, 0.4, h_rad_a, 2.5, 1e-4)
-UA_bcp  = h_chl_c * 0.5
-UA_mcp  = htc_1phase('EG50', 200000, 320, 0.17, 0.008, 1.5e-4) * 0.5
+h_cnd_r  = htc_cond('R1234yf', 1200000, 0.5, 0.07, 0.006, 8e-5)
+h_cnd_a  = htc_extair('Air', 101325, 313, 0.6, 0.01, 0.03)
+A_cnd_r  = 50 * hx_aconv(8e-5, 0.40, 0.006)     { 50 refrigerant microchannels x 0.40 m }
+A_cnd_a  = hx_aconv(0.03, 0.50, 0.01)           { condenser air-side core }
+UA_cond  = ua_hx(h_cnd_r, A_cnd_r, h_cnd_a, A_cnd_a, 1e-4)
+h_rad_c  = htc_1phase('EG50', 200000, 320, 0.4, 0.008, 1.5e-4)
+h_rad_a  = htc_extair('Air', 101325, 313, 0.5, 0.01, 0.03)
+A_rad_c  = 16 * hx_aconv(1.5e-4, 0.30, 0.008)   { 16 coolant tubes per cell x 0.30 m }
+A_rad_a  = hx_aconv(0.03, 0.20, 0.01)           { radiator air-side core per cell }
+UA_rad   = ua_hx(h_rad_c, A_rad_c, h_rad_a, A_rad_a, 1e-4)
+A_bcp    = 20 * hx_aconv(1.5e-4, 0.30, 0.008)   { battery cold-plate channels }
+A_mcp    = 20 * hx_aconv(1.5e-4, 0.30, 0.008)   { motor cold-plate channels }
+UA_bcp   = h_chl_c * A_bcp
+UA_mcp   = htc_1phase('EG50', 200000, 320, 0.17, 0.008, 1.5e-4) * A_mcp
 
 { ---- Coolant line ---- }
 LiquidSource  PUMPIN(fluid$=EG50, mdot=0.4, P=200000 [Pa], T=305 [K])
