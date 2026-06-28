@@ -6,6 +6,8 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.Map;
+
 /**
  * {@code GET /api/health} — a topology-wide health report covering every service
  * in the deployment chart: {@code frees-api} (this node), {@code frees-redis},
@@ -36,5 +38,17 @@ public class HealthController {
                 ? HttpStatus.SERVICE_UNAVAILABLE
                 : HttpStatus.OK;
         return ResponseEntity.status(code).body(report);
+    }
+
+    /**
+     * Liveness probe — always 200 if this JVM can serve a request, with NO
+     * dependency checks. Use this as the platform deploy/liveness healthcheck so a
+     * rollout (or auto-restart) is never gated on Redis/RabbitMQ being up; use
+     * {@code /api/health} (which 503s on a critical dependency) for monitoring and
+     * alerting instead.
+     */
+    @GetMapping("/health/live")
+    public Map<String, String> live() {
+        return Map.of("status", "UP", "service", "frees-api");
     }
 }
