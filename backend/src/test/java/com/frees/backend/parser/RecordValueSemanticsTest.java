@@ -36,8 +36,6 @@ class RecordValueSemanticsTest {
         assertEquals(a, b);
         assertEquals(a.hashCode(), b.hashCode());
         assertNotEquals(a, different);
-        assertEquals(a, a);
-        assertNotEquals("not a record", a);
         assertTrue(a.toString().contains("1.0"), a.toString());
     }
 

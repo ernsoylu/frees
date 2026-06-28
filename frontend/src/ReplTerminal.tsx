@@ -331,7 +331,6 @@ Symbolic CAS (Symja) — returns a transformed expression as text:
         role="log"
         aria-label="Terminal output"
         aria-live="polite"
-        tabIndex={0}
         style={{
           flex: 1,
           minHeight: 0,
@@ -340,13 +339,6 @@ Symbolic CAS (Symja) — returns a transformed expression as text:
           fontFamily: 'var(--mantine-font-family-monospace)',
           fontSize: 12.5,
           lineHeight: 1.5,
-        }}
-        onClick={() => inputRef.current?.focus()}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault()
-            inputRef.current?.focus()
-          }
         }}
       >
         {lines.map((line, i) => (
