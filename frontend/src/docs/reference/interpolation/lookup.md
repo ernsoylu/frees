@@ -13,7 +13,7 @@ generated: true
 
 Cell value by 1-based row/col indices
 
-> **Baseline page** — auto-generated from the function registry. Syntax, description, and arguments are authoritative; worked examples, the mathematical formulation, and literature references are being added incrementally.
+> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
 
 ## Syntax
 
@@ -32,4 +32,8 @@ Cell value by 1-based row/col indices
 | `'t'` | Number | Yes | Numeric argument. |
 | `row` | Number | Yes | Numeric argument. |
 | `col` | Number | Yes | Numeric argument. |
+
+## References
+
+1. Press, W.H. et al., Numerical Recipes (3rd ed.), Ch. 3.
 

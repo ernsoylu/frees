@@ -1,7 +1,7 @@
 ---
 name: HydraulicValve
 category: Component (hydraulic)
-summary: Acausal hydraulic-domain component HydraulicValve.
+summary: Acausal hydraulic-domain component HydraulicValve with ports in, out.
 related: []
 examples: []
 tags: [hydraulicvalve, component, hydraulic, acausal]
@@ -11,19 +11,36 @@ generated: true
 
 # HydraulicValve
 
-Reusable acausal **hydraulic-domain** component. Instantiate it and connect its ports; instantiation expands to scalar equations solved by the standard Newton/Tarjan pipeline.
+Reusable acausal **hydraulic-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Baseline page** — auto-generated from the component library. The parameter list is authoritative; port descriptions, the constitutive equations, and a worked example are being added incrementally.
+> **Auto-generated** from the component library (`backend/src/main/resources/components/`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
 ```
-HydraulicValve inst(param = value, ...)
+HydraulicValve inst(CdA_max, rho, u, domain$)
 ```
+
+## Ports
+
+`in`, `out`
 
 ## Parameters
 
 | Parameter | Type |
 | --- | --- |
 | `CdA_max` | Number |
+| `rho` | Number |
+| `u` | Number |
+| `domain$` | String |
+
+## Constitutive Equations
+
+The acausal equations this component expands into (over its port members and parameters):
+
+```
+out.mdot = in.mdot
+out.h    = in.h
+in.mdot * abs(in.mdot) = (u * CdA_max)^2 * 2 * rho * (in.P - out.P)
+```
 

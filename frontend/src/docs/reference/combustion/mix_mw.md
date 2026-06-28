@@ -13,7 +13,7 @@ generated: true
 
 Ideal-gas mixture molar mass [kg/mol], comp 'N2:0.79,O2:0.21'
 
-> **Baseline page** — auto-generated from the function registry. Syntax, description, and arguments are authoritative; worked examples, the mathematical formulation, and literature references are being added incrementally.
+> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
 
 ## Syntax
 
@@ -30,4 +30,9 @@ Ideal-gas mixture molar mass [kg/mol], comp 'N2:0.79,O2:0.21'
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
 | `comp$` | String | Yes | String argument. |
+
+## References
+
+1. Turns, S.R., An Introduction to Combustion (3rd ed.).
+2. Heywood, J.B., Internal Combustion Engine Fundamentals.
 

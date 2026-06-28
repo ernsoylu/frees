@@ -13,7 +13,7 @@ generated: true
 
 Darcy friction factor (Colebrook-Moody, laminar+turbulent)
 
-> **Baseline page** — auto-generated from the function registry. Syntax, description, and arguments are authoritative; worked examples, the mathematical formulation, and literature references are being added incrementally.
+> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
 
 ## Syntax
 
@@ -31,4 +31,9 @@ Darcy friction factor (Colebrook-Moody, laminar+turbulent)
 | --- | --- | --- | --- |
 | `Re` | Number | Yes | Numeric argument. |
 | `rel_rough` | Number | Yes | Numeric argument. |
+
+## References
+
+1. White, F.M., Fluid Mechanics (8th ed.).
+2. Idelchik, I.E., Handbook of Hydraulic Resistance.
 

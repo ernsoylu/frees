@@ -13,7 +13,7 @@ generated: true
 
 Turbulent-turbulent Martinelli parameter X_tt
 
-> **Baseline page** — auto-generated from the function registry. Syntax, description, and arguments are authoritative; worked examples, the mathematical formulation, and literature references are being added incrementally.
+> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
 
 ## Syntax
 
@@ -34,4 +34,8 @@ Turbulent-turbulent Martinelli parameter X_tt
 | `rho_g` | Number | Yes | Numeric argument. |
 | `mu_l` | Number | Yes | Numeric argument. |
 | `mu_g` | Number | Yes | Numeric argument. |
+
+## References
+
+1. Collier, J.G. & Thome, J.R., Convective Boiling and Condensation (3rd ed.).
 

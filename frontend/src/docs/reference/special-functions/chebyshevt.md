@@ -13,7 +13,7 @@ generated: true
 
 Chebyshev polynomial of the 1st kind T_n(x)
 
-> **Baseline page** — auto-generated from the function registry. Syntax, description, and arguments are authoritative; worked examples, the mathematical formulation, and literature references are being added incrementally.
+> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
 
 ## Syntax
 
@@ -31,4 +31,9 @@ Chebyshev polynomial of the 1st kind T_n(x)
 | --- | --- | --- | --- |
 | `n` | Number | Yes | Numeric argument. |
 | `x` | Number | Yes | Numeric argument. |
+
+## References
+
+1. Abramowitz, M. & Stegun, I.A., Handbook of Mathematical Functions.
+2. NIST Digital Library of Mathematical Functions (dlmf.nist.gov).
 

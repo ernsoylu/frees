@@ -13,7 +13,7 @@ generated: true
 
 Specific entropy [J/kg-K] (SRK/PR)
 
-> **Baseline page** — auto-generated from the function registry. Syntax, description, and arguments are authoritative; worked examples, the mathematical formulation, and literature references are being added incrementally.
+> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
 
 ## Syntax
 
@@ -34,4 +34,8 @@ Specific entropy [J/kg-K] (SRK/PR)
 | `T` | Number | Yes | Numeric argument. |
 | `P` | Number | Yes | Numeric argument. |
 | `phase$` | String | Yes | String argument. |
+
+## References
+
+1. Poling, B.E., Prausnitz, J.M. & O’Connell, J.P., The Properties of Gases and Liquids (5th ed.).
 

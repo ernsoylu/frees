@@ -13,7 +13,7 @@ generated: true
 
 Returns the **humrat** of a humid-air (AirH2O) from any valid pair of independent state properties (CoolProp backend).
 
-> **Baseline page** — auto-generated from the function registry. Syntax, description, and arguments are authoritative; worked examples, the mathematical formulation, and literature references are being added incrementally.
+> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
 
 ## Syntax
 
@@ -23,5 +23,9 @@ humrat(AirH2O, T=, P=, R=)
 
 ## Description
 
-A humid-air property; supply the dry-bulb T, total pressure P, and one humidity coordinate. Property names are case-insensitive.
+A humid-air property; supply the dry-bulb T, total pressure P, and one humidity coordinate (R, W, B, or D). Property names are case-insensitive.
+
+## References
+
+1. Bell, I.H. et al. (2014), Ind. Eng. Chem. Res. 53:2498 — CoolProp.
 

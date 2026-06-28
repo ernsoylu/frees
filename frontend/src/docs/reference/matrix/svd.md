@@ -13,7 +13,7 @@ generated: true
 
 Singular value decomposition
 
-> **Baseline page** — auto-generated from the function registry. Syntax, description, and arguments are authoritative; worked examples, the mathematical formulation, and literature references are being added incrementally.
+> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
 
 ## Syntax
 
@@ -38,4 +38,8 @@ Singular value decomposition
 | `U` | Number/Array | Output value. |
 | `S` | Number/Array | Output value. |
 | `V` | Number/Array | Output value. |
+
+## References
+
+1. Golub, G.H. & Van Loan, C.F., Matrix Computations (4th ed.).
 

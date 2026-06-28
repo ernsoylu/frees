@@ -1,7 +1,7 @@
 ---
 name: CurrentSource
 category: Component (electrical)
-summary: Acausal electrical-domain component CurrentSource.
+summary: Acausal electrical-domain component CurrentSource with ports p, n.
 related: []
 examples: []
 tags: [currentsource, component, electrical, acausal]
@@ -11,19 +11,32 @@ generated: true
 
 # CurrentSource
 
-Reusable acausal **electrical-domain** component. Instantiate it and connect its ports; instantiation expands to scalar equations solved by the standard Newton/Tarjan pipeline.
+Reusable acausal **electrical-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Baseline page** — auto-generated from the component library. The parameter list is authoritative; port descriptions, the constitutive equations, and a worked example are being added incrementally.
+> **Auto-generated** from the component library (`backend/src/main/resources/components/`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
 ```
-CurrentSource inst(param = value, ...)
+CurrentSource inst(I)
 ```
+
+## Ports
+
+`p`, `n`
 
 ## Parameters
 
 | Parameter | Type |
 | --- | --- |
 | `I` | Number |
+
+## Constitutive Equations
+
+The acausal equations this component expands into (over its port members and parameters):
+
+```
+p.I = -I
+p.I + n.I = 0
+```
 

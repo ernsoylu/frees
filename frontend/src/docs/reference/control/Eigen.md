@@ -13,7 +13,7 @@ generated: true
 
 Eigenvalues & eigenvectors
 
-> **Baseline page** — auto-generated from the function registry. Syntax, description, and arguments are authoritative; worked examples, the mathematical formulation, and literature references are being added incrementally.
+> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
 
 ## Syntax
 
@@ -37,4 +37,9 @@ Eigenvalues & eigenvectors Invoked as a `CALL` with the listed inputs and output
 | --- | --- | --- |
 | `lambda` | Number/Array | Output value. |
 | `V` | Number/Array | Output value. |
+
+## References
+
+1. Nise, N.S., Control Systems Engineering (7th ed.).
+2. Ogata, K., Modern Control Engineering (5th ed.).
 

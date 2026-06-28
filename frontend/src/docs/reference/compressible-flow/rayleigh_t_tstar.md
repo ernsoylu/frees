@@ -13,7 +13,7 @@ generated: true
 
 Rayleigh static-temperature ratio
 
-> **Baseline page** — auto-generated from the function registry. Syntax, description, and arguments are authoritative; worked examples, the mathematical formulation, and literature references are being added incrementally.
+> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
 
 ## Syntax
 
@@ -31,4 +31,9 @@ Rayleigh static-temperature ratio
 | --- | --- | --- | --- |
 | `M` | Number | Yes | Numeric argument. |
 | `k` | Number | Yes | Numeric argument. |
+
+## References
+
+1. Çengel, Y.A., Boles, M.A. & Kanoğlu, M., Thermodynamics: An Engineering Approach, Ch. 17.
+2. Anderson, J.D., Modern Compressible Flow (3rd ed.).
 

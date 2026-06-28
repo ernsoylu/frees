@@ -13,7 +13,7 @@ generated: true
 
 Minor (fitting) pressure loss K*0.5*rho*V^2 [Pa]
 
-> **Baseline page** — auto-generated from the function registry. Syntax, description, and arguments are authoritative; worked examples, the mathematical formulation, and literature references are being added incrementally.
+> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
 
 ## Syntax
 
@@ -32,4 +32,9 @@ Minor (fitting) pressure loss K*0.5*rho*V^2 [Pa]
 | `K` | Number | Yes | Numeric argument. |
 | `rho` | Number | Yes | Numeric argument. |
 | `V` | Number | Yes | Numeric argument. |
+
+## References
+
+1. White, F.M., Fluid Mechanics (8th ed.).
+2. Idelchik, I.E., Handbook of Hydraulic Resistance.
 

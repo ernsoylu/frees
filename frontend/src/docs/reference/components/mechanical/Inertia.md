@@ -1,7 +1,7 @@
 ---
 name: Inertia
 category: Component (mechanical)
-summary: Acausal mechanical-domain component Inertia.
+summary: Acausal mechanical-domain component Inertia with ports port.
 related: []
 examples: []
 tags: [inertia, component, mechanical, acausal]
@@ -11,19 +11,33 @@ generated: true
 
 # Inertia
 
-Reusable acausal **mechanical-domain** component. Instantiate it and connect its ports; instantiation expands to scalar equations solved by the standard Newton/Tarjan pipeline.
+Reusable acausal **mechanical-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Baseline page** — auto-generated from the component library. The parameter list is authoritative; port descriptions, the constitutive equations, and a worked example are being added incrementally.
+> **Auto-generated** from the component library (`backend/src/main/resources/components/`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
 ```
-Inertia inst(param = value, ...)
+Inertia inst(J, w0)
 ```
+
+## Ports
+
+`port`
 
 ## Parameters
 
 | Parameter | Type |
 | --- | --- |
 | `J` | Number |
+| `w0` | Number |
+
+## Constitutive Equations
+
+The acausal equations this component expands into (over its port members and parameters):
+
+```
+der(port.w)  = port.tau / J
+init(port.w) = w0
+```
 

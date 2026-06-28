@@ -1,7 +1,7 @@
 ---
 name: TwoPhaseEnthalpySource
 category: Component (twophase)
-summary: Acausal twophase-domain component TwoPhaseEnthalpySource.
+summary: Acausal twophase-domain component TwoPhaseEnthalpySource with ports out.
 related: []
 examples: []
 tags: [twophaseenthalpysource, component, twophase, acausal]
@@ -11,19 +11,34 @@ generated: true
 
 # TwoPhaseEnthalpySource
 
-Reusable acausal **twophase-domain** component. Instantiate it and connect its ports; instantiation expands to scalar equations solved by the standard Newton/Tarjan pipeline.
+Reusable acausal **twophase-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Baseline page** — auto-generated from the component library. The parameter list is authoritative; port descriptions, the constitutive equations, and a worked example are being added incrementally.
+> **Auto-generated** from the component library (`backend/src/main/resources/components/`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
 ```
-TwoPhaseEnthalpySource inst(param = value, ...)
+TwoPhaseEnthalpySource inst(mdot, h, domain$)
 ```
+
+## Ports
+
+`out`
 
 ## Parameters
 
 | Parameter | Type |
 | --- | --- |
 | `mdot` | Number |
+| `h` | Number |
+| `domain$` | String |
+
+## Constitutive Equations
+
+The acausal equations this component expands into (over its port members and parameters):
+
+```
+out.mdot = mdot
+out.h    = h
+```
 

@@ -13,7 +13,7 @@ generated: true
 
 p-th percentile, p in [0,100]
 
-> **Baseline page** — auto-generated from the function registry. Syntax, description, and arguments are authoritative; worked examples, the mathematical formulation, and literature references are being added incrementally.
+> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
 
 ## Syntax
 
@@ -33,4 +33,8 @@ p-th percentile, p in [0,100]
 | `x1` | Number | Yes | Numeric argument. |
 | `x2` | Number | Yes | Numeric argument. |
 | `...` | Number | Yes | Numeric argument. |
+
+## References
+
+1. Montgomery, D.C. & Runger, G.C., Applied Statistics and Probability for Engineers.
 
