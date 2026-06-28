@@ -1,47 +1,62 @@
 ---
 name: errorconst
 category: Control Systems
-summary: Static error constants Kp, Kv, Ka
-related: []
+summary: Static error constants Kp, Kv, Ka of an open-loop system.
+related: [margin, feedback, step]
 examples: []
-tags: [errorconst, control]
-references: []
-generated: true
+tags: [control, error constant, steady state error, position, velocity, acceleration]
+references:
+  - "Nise, N.S., Control Systems Engineering (7th ed.), Ch. 7, §7.3"
+  - "Ogata, K., Modern Control Engineering (5th ed.), Ch. 5, §5.8"
 ---
 
 # errorconst
 
-Static error constants Kp, Kv, Ka
-
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
+Returns the **static error constants** — position `Kp`, velocity `Kv`, and
+acceleration `Ka` — of an open-loop system `num/den`. They set the steady-state
+tracking error of the unity-feedback closed loop to step, ramp, and parabolic
+inputs.
 
 ## Syntax
 
 ```
 CALL errorconst(num, den : Kp, Kv, Ka)
+[Kp, Kv, Ka] = errorconst(num, den)
 ```
 
-## Description
+## Mathematical Formulation
 
-Static error constants Kp, Kv, Ka Invoked as a `CALL` with the listed inputs and outputs.
+For open-loop `G(s)` (Nise §7.3):
+
+$$ K_p = \lim_{s\to 0} G(s), \quad K_v = \lim_{s\to 0} s\,G(s), \quad K_a = \lim_{s\to 0} s^2 G(s) $$
+
+with steady-state errors `e_step = 1/(1+Kp)`, `e_ramp = 1/Kv`, `e_parabola = 1/Ka`.
+
+> **Method:** evaluate the low-frequency limits from the system type (number of
+> integrators).
+
+## Examples
+
+```
+{ [Kp, Kv, Ka] = errorconst(num, den); a type-1 system has finite Kv, infinite Kp }
+```
 
 ## Input Arguments
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `num` | Number | Yes | Numeric argument. |
-| `den` | Number | Yes | Numeric argument. |
+| `num` | Vector | Yes | Open-loop numerator (descending powers of `s`). |
+| `den` | Vector | Yes | Open-loop denominator. |
 
 ## Output Arguments
 
 | Argument | Type | Description |
 | --- | --- | --- |
-| `Kp` | Number/Array | Output value. |
-| `Kv` | Number/Array | Output value. |
-| `Ka` | Number/Array | Output value. |
+| `Kp` | Number | Position error constant. |
+| `Kv` | Number | Velocity error constant. |
+| `Ka` | Number | Acceleration error constant. |
 
 ## References
 
-1. Nise, N.S., Control Systems Engineering (7th ed.).
-2. Ogata, K., Modern Control Engineering (5th ed.).
-
+1. Nise, N.S. *Control Systems Engineering* (7th ed.), Ch. 7, §7.3.
+2. Ogata, K. *Modern Control Engineering* (5th ed.), Ch. 5, §5.8.

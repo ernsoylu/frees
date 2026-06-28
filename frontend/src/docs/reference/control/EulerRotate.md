@@ -1,46 +1,62 @@
 ---
 name: EulerRotate
-category: Control Systems
-summary: 3×3 rotation from Euler angles
-related: []
+category: Matrix
+summary: 3×3 rotation matrix from Euler angles (φ, θ, ψ).
+related: [Eigen, Transpose]
 examples: []
-tags: [eulerrotate, control]
-references: []
-generated: true
+tags: [matrix, rotation, euler angles, kinematics, attitude]
+references:
+  - "Goldstein, H., Poole, C. & Safko, J., Classical Mechanics (3rd ed.), Ch. 4"
 ---
 
 # EulerRotate
 
-3×3 rotation from Euler angles
-
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
+Returns the **3×3 rotation matrix** `R` corresponding to a sequence of Euler-angle
+rotations `(φ, θ, ψ)`. Use it for rigid-body attitude, coordinate-frame transforms,
+and vehicle/spacecraft kinematics.
 
 ## Syntax
 
 ```
 CALL EulerRotate(phi, theta, psi : R)
+R = EulerRotate(phi, theta, psi)
 ```
 
 ## Description
 
-3×3 rotation from Euler angles Invoked as a `CALL` with the listed inputs and outputs.
+The angles are applied as elementary rotations about successive axes; the product
+is an orthonormal rotation (`Rᵀ = R⁻¹`, `det R = 1`).
+
+## Mathematical Formulation
+
+The rotation is the product of three elementary rotations (Goldstein Ch. 4):
+
+$$ R(\phi, \theta, \psi) = R_z(\psi)\,R_x(\theta)\,R_z(\phi), \qquad R^\top R = I,\ \det R = 1 $$
+
+(the standard `z–x–z` convention).
+
+> **Method:** multiply the three elementary axis rotations.
+
+## Examples
+
+```
+{ R = EulerRotate(phi, theta, psi) }
+```
 
 ## Input Arguments
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `phi` | Number | Yes | Numeric argument. |
-| `theta` | Number | Yes | Numeric argument. |
-| `psi` | Number | Yes | Numeric argument. |
+| `phi` | Number | Yes | First rotation angle [rad]. |
+| `theta` | Number | Yes | Second rotation angle [rad]. |
+| `psi` | Number | Yes | Third rotation angle [rad]. |
 
 ## Output Arguments
 
 | Argument | Type | Description |
 | --- | --- | --- |
-| `R` | Number/Array | Output value. |
+| `R` | Matrix | 3×3 orthonormal rotation matrix. |
 
 ## References
 
-1. Nise, N.S., Control Systems Engineering (7th ed.).
-2. Ogata, K., Modern Control Engineering (5th ed.).
-
+1. Goldstein, H., Poole, C. & Safko, J. *Classical Mechanics* (3rd ed.), Ch. 4.

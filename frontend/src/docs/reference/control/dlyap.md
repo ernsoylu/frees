@@ -1,45 +1,64 @@
 ---
 name: dlyap
-category: Control
-summary: Discrete Lyapunov equation
-related: []
+category: Control Systems
+summary: Solve the discrete Lyapunov (Stein) equation A·X·Aᵀ − X + Q = 0.
+related: [lyap, dare, dlqr]
 examples: []
-tags: [dlyap, control]
-references: []
-generated: true
+tags: [control, lyapunov, stein, discrete, stability]
+references:
+  - "Antsaklis, P.J. & Michel, A.N., A Linear Systems Primer, Ch. 4"
+  - "Franklin, G.F. et al., Digital Control of Dynamic Systems (3rd ed.), Ch. 8"
 ---
 
 # dlyap
 
-Discrete Lyapunov equation
-
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
+Solves the **discrete Lyapunov (Stein) equation** for `X` — the discrete-time
+counterpart of [`lyap`](lyap). A positive-definite `X` for `Q > 0` certifies that
+the discrete system `A` is Schur-stable (all eigenvalues inside the unit circle).
 
 ## Syntax
 
 ```
-dlyap(A, Q : X)
+CALL dlyap(A, Q : X)
+X = dlyap(A, Q)
 ```
 
-## Description
+## Mathematical Formulation
 
-Discrete Lyapunov equation
+$$ A X A^\top - X + Q = 0 $$
+
+For a Schur-stable `A` (`|λ_i(A)| < 1`) and `Q = Qᵀ ⪰ 0`, the unique solution is
+
+$$ X = \sum_{k=0}^{\infty} A^k Q\,(A^\top)^k $$
+
+> **Method:** Bartels–Stewart-type (Schur-based) solve of the Stein equation.
+
+## Examples
+
+```
+{ X = dlyap(A, Q); X > 0 certifies A is Schur-stable when Q > 0 }
+```
 
 ## Input Arguments
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `A` | Number | Yes | Numeric argument. |
-| `Q` | Number | Yes | Numeric argument. |
+| `A` | Matrix | Yes | Discrete state matrix. |
+| `Q` | Matrix | Yes | Symmetric right-hand side. |
 
 ## Output Arguments
 
 | Argument | Type | Description |
 | --- | --- | --- |
-| `X` | Number/Array | Output value. |
+| `X` | Matrix | Symmetric solution. |
+
+## Common Errors
+
+| Error | Cause | Fix |
+| --- | --- | --- |
+| `NO_UNIQUE_SOLUTION` | `λ_i·λ_j = 1` for some eigenvalue pair | The Stein operator is singular; check `A`'s spectrum. |
 
 ## References
 
-1. Nise, N.S., Control Systems Engineering (7th ed.).
-2. Ogata, K., Modern Control Engineering (5th ed.).
-
+1. Antsaklis, P.J. & Michel, A.N. *A Linear Systems Primer*, Ch. 4.
+2. Franklin, G.F. et al. *Digital Control of Dynamic Systems* (3rd ed.), Ch. 8.

@@ -1,47 +1,73 @@
 ---
 name: place
-category: Control
-summary: Pole placement (Ackermann)
-related: []
+category: Control Systems
+summary: State-feedback pole placement to a set of desired closed-loop poles.
+related: [acker, lqr, ctrb]
 examples: []
-tags: [place, control]
-references: []
-generated: true
+tags: [control, pole placement, state feedback, ackermann, design]
+references:
+  - "Nise, N.S., Control Systems Engineering (7th ed.), Ch. 12, §12.2"
+  - "Ogata, K., Modern Control Engineering (5th ed.), Ch. 10, §10.2"
 ---
 
 # place
 
-Pole placement (Ackermann)
-
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
+Returns the **state-feedback gain** `K` that moves the closed-loop poles of
+`(A, B)` to the desired locations given by their real/imaginary parts (`pr`, `pi`).
+The control law `u = −Kx` makes `eig(A − BK)` equal the requested poles.
 
 ## Syntax
 
 ```
-place(A, B, pr, pi : K)
+CALL place(A, B, pr, pi : K)
+K = place(A, B, pr, pi)
 ```
 
 ## Description
 
-Pole placement (Ackermann)
+The pair `(A, B)` must be controllable for arbitrary pole placement. Provide the
+desired poles as conjugate pairs in `pr ± j·pi`.
+
+## Mathematical Formulation
+
+Find `K` such that
+
+$$ \det\!\big(sI - (A - BK)\big) = \prod_i (s - p_i) \qquad \text{(Nise §12.2)} $$
+
+with the desired characteristic polynomial set by `{p_i}`.
+
+> **Method:** solve for `K` from the desired characteristic polynomial (Ackermann /
+> robust placement); see [`acker`](acker) for the single-input Ackermann form.
+
+## Examples
+
+```
+{ place the regulator poles of a controllable (A,B) at -2 +/- j }
+{ K = place(A, B, [-2,-2], [1,-1]) }
+```
 
 ## Input Arguments
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `A` | Number | Yes | Numeric argument. |
-| `B` | Number | Yes | Numeric argument. |
-| `pr` | Number | Yes | Numeric argument. |
-| `pi` | Number | Yes | Numeric argument. |
+| `A` | Matrix | Yes | State matrix. |
+| `B` | Matrix | Yes | Input matrix. |
+| `pr` | Vector | Yes | Real parts of the desired poles. |
+| `pi` | Vector | Yes | Imaginary parts of the desired poles. |
 
 ## Output Arguments
 
 | Argument | Type | Description |
 | --- | --- | --- |
-| `K` | Number/Array | Output value. |
+| `K` | Matrix | State-feedback gain (`u = −Kx`). |
+
+## Common Errors
+
+| Error | Cause | Fix |
+| --- | --- | --- |
+| `NOT_CONTROLLABLE` | `(A, B)` not controllable | Arbitrary placement needs a controllable pair (check `ctrb`). |
 
 ## References
 
-1. Nise, N.S., Control Systems Engineering (7th ed.).
-2. Ogata, K., Modern Control Engineering (5th ed.).
-
+1. Nise, N.S. *Control Systems Engineering* (7th ed.), Ch. 12, §12.2.
+2. Ogata, K. *Modern Control Engineering* (5th ed.), Ch. 10, §10.2.

@@ -1,47 +1,72 @@
 ---
 name: acker
-category: Control
-summary: Pole placement via Ackermann's formula
-related: []
+category: Control Systems
+summary: Single-input pole placement via Ackermann's formula.
+related: [place, ctrb, lqr]
 examples: []
-tags: [acker, control]
-references: []
-generated: true
+tags: [control, pole placement, ackermann, state feedback]
+references:
+  - "Nise, N.S., Control Systems Engineering (7th ed.), Ch. 12, §12.2"
+  - "Ogata, K., Modern Control Engineering (5th ed.), Ch. 10, §10.2"
 ---
 
 # acker
 
-Pole placement via Ackermann's formula
-
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
+Returns the **state-feedback gain** `K` for a single-input system using
+**Ackermann's formula**, placing the closed-loop poles of `(A, B)` at the desired
+locations `pr ± j·pi`. It is the explicit closed-form counterpart of
+[`place`](place).
 
 ## Syntax
 
 ```
-acker(A, B, pr, pi : K)
+CALL acker(A, B, pr, pi : K)
+K = acker(A, B, pr, pi)
 ```
 
 ## Description
 
-Pole placement via Ackermann's formula
+Ackermann's formula gives `K` directly from the desired characteristic polynomial
+and the controllability matrix; it is exact for single-input systems but
+numerically sensitive for high order.
+
+## Mathematical Formulation
+
+With desired characteristic polynomial `Φ(s) = Π(s − p_i)` and controllability
+matrix `C = [B AB … Aⁿ⁻¹B]` (Nise §12.2):
+
+$$ K = \begin{bmatrix} 0 & \cdots & 0 & 1 \end{bmatrix}\,\mathcal{C}^{-1}\,\Phi(A) $$
+
+> **Method:** Ackermann's formula evaluated from `Φ(A)` and `ctrb(A, B)`.
+
+## Examples
+
+```
+{ K = acker(A, B, [-2,-2], [1,-1]) for a single-input controllable plant }
+```
 
 ## Input Arguments
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `A` | Number | Yes | Numeric argument. |
-| `B` | Number | Yes | Numeric argument. |
-| `pr` | Number | Yes | Numeric argument. |
-| `pi` | Number | Yes | Numeric argument. |
+| `A` | Matrix | Yes | State matrix. |
+| `B` | Vector | Yes | Single-input matrix. |
+| `pr` | Vector | Yes | Real parts of the desired poles. |
+| `pi` | Vector | Yes | Imaginary parts of the desired poles. |
 
 ## Output Arguments
 
 | Argument | Type | Description |
 | --- | --- | --- |
-| `K` | Number/Array | Output value. |
+| `K` | Vector | State-feedback gain (`u = −Kx`). |
+
+## Common Errors
+
+| Error | Cause | Fix |
+| --- | --- | --- |
+| `NOT_CONTROLLABLE` | `ctrb(A, B)` singular | Ackermann needs a controllable single-input pair. |
 
 ## References
 
-1. Nise, N.S., Control Systems Engineering (7th ed.).
-2. Ogata, K., Modern Control Engineering (5th ed.).
-
+1. Nise, N.S. *Control Systems Engineering* (7th ed.), Ch. 12, §12.2.
+2. Ogata, K. *Modern Control Engineering* (5th ed.), Ch. 10, §10.2.

@@ -1,41 +1,57 @@
 ---
 name: ss
-category: Control
-summary: Create state-space model
-related: []
+category: Control Systems
+summary: Create a state-space model from (A, B, C, D).
+related: [ss2tf, tf2ss, ss2ss]
 examples: []
-tags: [ss, control]
-references: []
-generated: true
+tags: [control, state space, model, ss]
+references:
+  - "Nise, N.S., Control Systems Engineering (7th ed.), Ch. 3"
+  - "Ogata, K., Modern Control Engineering (5th ed.), Ch. 9"
 ---
 
 # ss
 
-Create state-space model
-
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
+Builds a **state-space model** from the matrices `(A, B, C, D)` — the time-domain
+representation `ẋ = Ax + Bu`, `y = Cx + Du` on which modern (state-feedback,
+observer, LQR/LQE) design operates.
 
 ## Syntax
 
 ```
-ss(A, B, C, D)
+sys = ss(A, B, C, D)
 ```
 
-## Description
+## Mathematical Formulation
 
-Create state-space model
+$$ \dot{\mathbf{x}} = A\mathbf{x} + B\mathbf{u}, \qquad \mathbf{y} = C\mathbf{x} + D\mathbf{u} \qquad \text{(Nise Ch. 3)} $$
+
+with transfer function `G(s) = C(sI − A)⁻¹B + D` (see [`ss2tf`](ss2tf)).
+
+> **Method:** stores the `(A, B, C, D)` quadruple as a state-space model.
+
+## Examples
+
+```
+{ sys = ss(A, B, C, D) }
+```
 
 ## Input Arguments
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `A` | Number | Yes | Numeric argument. |
-| `B` | Number | Yes | Numeric argument. |
-| `C` | Number | Yes | Numeric argument. |
-| `D` | Number | Yes | Numeric argument. |
+| `A` | Matrix | Yes | State matrix. |
+| `B` | Matrix | Yes | Input matrix. |
+| `C` | Matrix | Yes | Output matrix. |
+| `D` | Number/Matrix | Yes | Feedthrough. |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| `sys` | State-space | The model `(A, B, C, D)`. |
 
 ## References
 
-1. Nise, N.S., Control Systems Engineering (7th ed.).
-2. Ogata, K., Modern Control Engineering (5th ed.).
-
+1. Nise, N.S. *Control Systems Engineering* (7th ed.), Ch. 3.
+2. Ogata, K. *Modern Control Engineering* (5th ed.), Ch. 9.

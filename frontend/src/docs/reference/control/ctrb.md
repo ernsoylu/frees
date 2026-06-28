@@ -1,45 +1,58 @@
 ---
 name: ctrb
-category: Control
-summary: Controllability matrix
-related: []
+category: Control Systems
+summary: Controllability matrix of a state-space pair (A, B).
+related: [obsv, place, acker, gram]
 examples: []
-tags: [ctrb, control]
-references: []
-generated: true
+tags: [control, controllability, state space, rank]
+references:
+  - "Nise, N.S., Control Systems Engineering (7th ed.), Ch. 12, §12.2"
+  - "Ogata, K., Modern Control Engineering (5th ed.), Ch. 9, §9.7"
 ---
 
 # ctrb
 
-Controllability matrix
-
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
+Returns the **controllability matrix** `Co` of the pair `(A, B)`. The system is
+controllable — every state reachable by the input, hence arbitrary pole placement
+is possible — iff `Co` has full rank.
 
 ## Syntax
 
 ```
-ctrb(A, B : Co)
+CALL ctrb(A, B : Co)
+Co = ctrb(A, B)
 ```
 
-## Description
+## Mathematical Formulation
 
-Controllability matrix
+For an `n`-state system (Nise §12.2):
+
+$$ \mathcal{C} = \begin{bmatrix} B & AB & A^2B & \cdots & A^{n-1}B \end{bmatrix} $$
+
+The pair is controllable iff `rank(C) = n`.
+
+> **Method:** assemble the Krylov block `[B, AB, …, Aⁿ⁻¹B]`.
+
+## Examples
+
+```
+{ Co = ctrb(A, B); controllable iff rank(Co) = n }
+```
 
 ## Input Arguments
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `A` | Number | Yes | Numeric argument. |
-| `B` | Number | Yes | Numeric argument. |
+| `A` | Matrix | Yes | State matrix (n×n). |
+| `B` | Matrix | Yes | Input matrix. |
 
 ## Output Arguments
 
 | Argument | Type | Description |
 | --- | --- | --- |
-| `Co` | Number/Array | Output value. |
+| `Co` | Matrix | Controllability matrix. |
 
 ## References
 
-1. Nise, N.S., Control Systems Engineering (7th ed.).
-2. Ogata, K., Modern Control Engineering (5th ed.).
-
+1. Nise, N.S. *Control Systems Engineering* (7th ed.), Ch. 12, §12.2.
+2. Ogata, K. *Modern Control Engineering* (5th ed.), Ch. 9, §9.7.

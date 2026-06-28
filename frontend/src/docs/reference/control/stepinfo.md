@@ -1,50 +1,62 @@
 ---
 name: stepinfo
-category: Control
-summary: Step response characteristics
-related: []
+category: Control Systems
+summary: Step-response performance metrics (rise time, peak time, settling time, overshoot).
+related: [step, pole, margin]
 examples: []
-tags: [stepinfo, control]
-references: []
-generated: true
+tags: [control, step response, rise time, settling time, overshoot, transient]
+references:
+  - "Nise, N.S., Control Systems Engineering (7th ed.), Ch. 4, §4.6"
+  - "Ogata, K., Modern Control Engineering (5th ed.), Ch. 5, §5.3"
 ---
 
 # stepinfo
 
-Step response characteristics
-
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
+Returns the **transient performance metrics** of a step response sampled as
+`(t, y)`: rise time `Tr`, peak time `Tp`, settling time `Ts`, and percent overshoot
+`OS`. Use it to quantify a closed-loop design against time-domain specifications.
 
 ## Syntax
 
 ```
-stepinfo(num, den : tr, ts, tp, os, peak, final)
+CALL stepinfo(t, y : Tr, Tp, Ts, OS)
+[Tr, Tp, Ts, OS] = stepinfo(t, y)
 ```
 
-## Description
+## Mathematical Formulation
 
-Step response characteristics
+From the response `y(t)` with steady-state value `y_∞` and peak `y_p` (Nise §4.6):
+
+$$ OS = \frac{y_p - y_\infty}{y_\infty}\times 100\%, \qquad T_p = \arg\max_t y(t) $$
+
+`Tr` is the 10–90% rise time and `Ts` the time after which `|y − y_∞|` stays within
+a 2% band.
+
+> **Method:** scan the response for the crossing, peak, and settling instants.
+
+## Examples
+
+```
+{ [Tr, Tp, Ts, OS] = stepinfo(t, y) from a step() response }
+```
 
 ## Input Arguments
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `num` | Number | Yes | Numeric argument. |
-| `den` | Number | Yes | Numeric argument. |
+| `t` | Vector | Yes | Time samples [s]. |
+| `y` | Vector | Yes | Step response aligned with `t`. |
 
 ## Output Arguments
 
 | Argument | Type | Description |
 | --- | --- | --- |
-| `tr` | Number/Array | Output value. |
-| `ts` | Number/Array | Output value. |
-| `tp` | Number/Array | Output value. |
-| `os` | Number/Array | Output value. |
-| `peak` | Number/Array | Output value. |
-| `final` | Number/Array | Output value. |
+| `Tr` | Number | Rise time (10–90%) [s]. |
+| `Tp` | Number | Peak time [s]. |
+| `Ts` | Number | Settling time (2% band) [s]. |
+| `OS` | Number | Percent overshoot. |
 
 ## References
 
-1. Nise, N.S., Control Systems Engineering (7th ed.).
-2. Ogata, K., Modern Control Engineering (5th ed.).
-
+1. Nise, N.S. *Control Systems Engineering* (7th ed.), Ch. 4, §4.6.
+2. Ogata, K. *Modern Control Engineering* (5th ed.), Ch. 5, §5.3.

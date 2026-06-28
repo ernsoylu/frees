@@ -1,49 +1,59 @@
 ---
 name: tf2zp
 category: Control Systems
-summary: Transfer function → zero-pole-gain
-related: []
+summary: Transfer function to zero-pole-gain form.
+related: [zp2tf, pole, zero, tf]
 examples: []
-tags: [tf2zp, control]
-references: []
-generated: true
+tags: [control, zero pole gain, zpk, transfer function, factorization]
+references:
+  - "Nise, N.S., Control Systems Engineering (7th ed.), Ch. 4"
+  - "Ogata, K., Modern Control Engineering (5th ed.), Ch. 5"
 ---
 
 # tf2zp
 
-Transfer function → zero-pole-gain
-
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
+Converts a transfer function `G(s) = num/den` to **zero-pole-gain** form: the zeros
+(`zr`/`zi`), poles (`pr`/`pi`), and scalar gain `k`. It is the factored view of the
+rational system, the inverse of [`zp2tf`](zp2tf).
 
 ## Syntax
 
 ```
 CALL tf2zp(num, den : zr, zi, pr, pi, k)
+[zr, zi, pr, pi, k] = tf2zp(num, den)
 ```
 
-## Description
+## Mathematical Formulation
 
-Transfer function → zero-pole-gain Invoked as a `CALL` with the listed inputs and outputs.
+$$ G(s) = k\,\frac{\prod_i (s - z_i)}{\prod_j (s - p_j)} $$
+
+where the zeros are the roots of `num`, the poles the roots of `den`, and `k` the
+leading-coefficient ratio.
+
+> **Method:** factor `num` and `den` (root-finding) and extract the gain.
+
+## Examples
+
+```
+{ [zr,zi,pr,pi,k] = tf2zp(num, den) }
+```
 
 ## Input Arguments
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `num` | Number | Yes | Numeric argument. |
-| `den` | Number | Yes | Numeric argument. |
+| `num` | Vector | Yes | Numerator coefficients (descending powers of `s`). |
+| `den` | Vector | Yes | Denominator coefficients. |
 
 ## Output Arguments
 
 | Argument | Type | Description |
 | --- | --- | --- |
-| `zr` | Number/Array | Output value. |
-| `zi` | Number/Array | Output value. |
-| `pr` | Number/Array | Output value. |
-| `pi` | Number/Array | Output value. |
-| `k` | Number/Array | Output value. |
+| `zr`, `zi` | Vector | Real / imaginary parts of the zeros. |
+| `pr`, `pi` | Vector | Real / imaginary parts of the poles. |
+| `k` | Number | Scalar gain. |
 
 ## References
 
-1. Nise, N.S., Control Systems Engineering (7th ed.).
-2. Ogata, K., Modern Control Engineering (5th ed.).
-
+1. Nise, N.S. *Control Systems Engineering* (7th ed.), Ch. 4.
+2. Ogata, K. *Modern Control Engineering* (5th ed.), Ch. 5.

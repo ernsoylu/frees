@@ -1,44 +1,53 @@
 ---
 name: Eigenvalues
-category: Control Systems
-summary: Matrix eigenvalues
-related: []
+category: Matrix
+summary: Eigenvalues of a square matrix.
+related: [Eigen, Determinant, cond]
 examples: []
-tags: [eigenvalues, control]
-references: []
-generated: true
+tags: [matrix, eigenvalues, spectrum, linear algebra]
+references:
+  - "Golub, G.H. & Van Loan, C.F., Matrix Computations (4th ed.), Ch. 7"
 ---
 
 # Eigenvalues
 
-Matrix eigenvalues
-
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
+Returns the **eigenvalues** `lambda` of a square matrix `A` — the scalars `λ` for
+which `A v = λ v` has a nonzero solution. They set system stability (continuous:
+left half-plane; discrete: inside the unit circle) and modal frequencies.
 
 ## Syntax
 
 ```
 CALL Eigenvalues(A : lambda)
+lambda = Eigenvalues(A)
 ```
 
-## Description
+## Mathematical Formulation
 
-Matrix eigenvalues Invoked as a `CALL` with the listed inputs and outputs.
+The eigenvalues are the roots of the characteristic polynomial (Golub & Van Loan Ch. 7):
+
+$$ \det(A - \lambda I) = 0 $$
+
+> **Method:** QR algorithm on the (balanced) matrix.
+
+## Examples
+
+```
+{ lambda = Eigenvalues(A) }
+```
 
 ## Input Arguments
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `A` | Number | Yes | Numeric argument. |
+| `A` | Matrix | Yes | Square matrix. |
 
 ## Output Arguments
 
 | Argument | Type | Description |
 | --- | --- | --- |
-| `lambda` | Number/Array | Output value. |
+| `lambda` | Vector | Eigenvalues (possibly complex). |
 
 ## References
 
-1. Nise, N.S., Control Systems Engineering (7th ed.).
-2. Ogata, K., Modern Control Engineering (5th ed.).
-
+1. Golub, G.H. & Van Loan, C.F. *Matrix Computations* (4th ed.), Ch. 7.

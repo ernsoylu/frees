@@ -1,46 +1,62 @@
 ---
 name: mason
 category: Control Systems
-summary: Mason's gain formula for a graph
-related: []
+summary: Overall gain of a signal-flow graph by Mason's gain formula.
+related: [series, parallel, feedback]
 examples: []
-tags: [mason, control]
-references: []
-generated: true
+tags: [control, mason, signal flow graph, gain formula, block diagram]
+references:
+  - "Nise, N.S., Control Systems Engineering (7th ed.), Ch. 5, §5.4"
+  - "Ogata, K., Modern Control Engineering (5th ed.), Ch. 3"
 ---
 
 # mason
 
-Mason's gain formula for a graph
-
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
+Returns the **overall transfer gain** `T` between a source and sink node of a
+signal-flow graph, using **Mason's gain formula**. It reduces an arbitrary
+interconnection — including multiple loops and forward paths — to a single
+input-output gain.
 
 ## Syntax
 
 ```
 CALL mason(G, source, sink : T)
+T = mason(G, source, sink)
 ```
 
-## Description
+## Mathematical Formulation
 
-Mason's gain formula for a graph Invoked as a `CALL` with the listed inputs and outputs.
+Mason's rule (Nise §5.4):
+
+$$ T = \frac{\sum_k P_k \Delta_k}{\Delta}, \qquad \Delta = 1 - \sum L_i + \sum L_iL_j - \dots $$
+
+where `P_k` are the forward-path gains, `Δ` is the graph determinant built from the
+loop gains `L_i`, and `Δ_k` is `Δ` with the paths touching `P_k` removed.
+
+> **Method:** enumerate forward paths and loops on the graph `G`, then apply the
+> formula.
+
+## Examples
+
+```
+{ T = mason(G, source, sink) for a signal-flow graph G }
+```
 
 ## Input Arguments
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `G` | Number | Yes | Numeric argument. |
-| `source` | Number | Yes | Numeric argument. |
-| `sink` | Number | Yes | Numeric argument. |
+| `G` | Matrix | Yes | Signal-flow graph (branch-gain adjacency). |
+| `source` | Number | Yes | Source node index. |
+| `sink` | Number | Yes | Sink node index. |
 
 ## Output Arguments
 
 | Argument | Type | Description |
 | --- | --- | --- |
-| `T` | Number/Array | Output value. |
+| `T` | Number | Overall source-to-sink gain. |
 
 ## References
 
-1. Nise, N.S., Control Systems Engineering (7th ed.).
-2. Ogata, K., Modern Control Engineering (5th ed.).
-
+1. Nise, N.S. *Control Systems Engineering* (7th ed.), Ch. 5, §5.4.
+2. Ogata, K. *Modern Control Engineering* (5th ed.), Ch. 3.

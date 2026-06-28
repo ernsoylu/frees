@@ -1,45 +1,55 @@
 ---
 name: parallel
-category: Control
-summary: Parallel connection
-related: []
+category: Control Systems
+summary: Parallel connection of two transfer functions, G = G1 + G2.
+related: [series, feedback]
 examples: []
-tags: [parallel, control]
-references: []
-generated: true
+tags: [control, parallel, block diagram, transfer function, sum]
+references:
+  - "Nise, N.S., Control Systems Engineering (7th ed.), Ch. 5, §5.2"
+  - "Ogata, K., Modern Control Engineering (5th ed.), Ch. 5"
 ---
 
 # parallel
 
-Parallel connection
-
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
+Returns the **parallel connection** of two transfer functions —
+`G(s) = G1(s) + G2(s)` — as a single `num/den` pair. It models two blocks fed the
+same input whose outputs are summed.
 
 ## Syntax
 
 ```
-parallel(sys1, sys2 : sys)
+CALL parallel(num1, den1, num2, den2 : num, den)
+[num, den] = parallel(num1, den1, num2, den2)
 ```
 
-## Description
+## Mathematical Formulation
 
-Parallel connection
+$$ G(s) = G_1(s) + G_2(s) = \frac{\text{num}_1\,\text{den}_2 + \text{num}_2\,\text{den}_1}{\text{den}_1\,\text{den}_2} \qquad \text{(Nise §5.2)} $$
+
+> **Method:** common-denominator polynomial addition.
+
+## Examples
+
+```
+{ [num, den] = parallel(num1, den1, num2, den2) }
+```
 
 ## Input Arguments
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `sys1` | Number | Yes | Numeric argument. |
-| `sys2` | Number | Yes | Numeric argument. |
+| `num1`, `den1` | Vector | Yes | First transfer function `G1`. |
+| `num2`, `den2` | Vector | Yes | Second transfer function `G2`. |
 
 ## Output Arguments
 
 | Argument | Type | Description |
 | --- | --- | --- |
-| `sys` | Number/Array | Output value. |
+| `num` | Vector | Numerator of `G1 + G2`. |
+| `den` | Vector | Denominator of `G1 + G2`. |
 
 ## References
 
-1. Nise, N.S., Control Systems Engineering (7th ed.).
-2. Ogata, K., Modern Control Engineering (5th ed.).
-
+1. Nise, N.S. *Control Systems Engineering* (7th ed.), Ch. 5, §5.2.
+2. Ogata, K. *Modern Control Engineering* (5th ed.), Ch. 5.

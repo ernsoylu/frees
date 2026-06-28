@@ -1,47 +1,70 @@
 ---
 name: d2c
-category: Control
-summary: Discrete to continuous conversion
-related: []
+category: Control Systems
+summary: Discrete-to-continuous transfer-function conversion (Tustin / ZOH).
+related: [c2d, tf, pole]
 examples: []
-tags: [d2c, control]
-references: []
-generated: true
+tags: [control, discretization, d2c, tustin, zoh, continuous]
+references:
+  - "Franklin, G.F., Powell, J.D. & Workman, M.L., Digital Control of Dynamic Systems (3rd ed.), Ch. 4"
+  - "Ogata, K., Discrete-Time Control Systems (2nd ed.), Ch. 3"
 ---
 
 # d2c
 
-Discrete to continuous conversion
-
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
+Converts a discrete transfer function `G(z) = numz/denz` to a continuous-time
+equivalent `G(s) = num/den` at sample time `Ts` — the inverse of [`c2d`](c2d),
+using the requested method (`'tustin'` bilinear or `'zoh'`).
 
 ## Syntax
 
 ```
-d2c(num, den, Ts : num_c, den_c)
+CALL d2c(numz, denz, Ts, 'tustin' : num, den)
+[num, den] = d2c(numz, denz, Ts, 'zoh')
 ```
 
 ## Description
 
-Discrete to continuous conversion
+Use it to recover a continuous model from an identified or implemented discrete
+controller for analysis in the s-domain.
+
+## Mathematical Formulation
+
+Tustin (bilinear), the inverse of the `c2d` substitution:
+
+$$ G(s) = G(z)\Big|_{\,z = \frac{1 + (T_s/2)s}{1 - (T_s/2)s}} \qquad \text{(Franklin Ch. 4)} $$
+
+> **Method:** inverse bilinear substitution (or inverse ZOH).
+
+## Examples
+
+```
+{ [num, den] = d2c(numz, denz, Ts, 'tustin') }
+```
 
 ## Input Arguments
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `num` | Number | Yes | Numeric argument. |
-| `den` | Number | Yes | Numeric argument. |
-| `Ts` | Number | Yes | Numeric argument. |
+| `numz` | Vector | Yes | Discrete numerator (descending powers of `z`). |
+| `denz` | Vector | Yes | Discrete denominator. |
+| `Ts` | Number | Yes | Sample time [s]. |
+| `method$` | String | Yes | `'tustin'` or `'zoh'`. |
 
 ## Output Arguments
 
 | Argument | Type | Description |
 | --- | --- | --- |
-| `num_c` | Number/Array | Output value. |
-| `den_c` | Number/Array | Output value. |
+| `num` | Vector | Continuous numerator (descending powers of `s`). |
+| `den` | Vector | Continuous denominator. |
+
+## Common Errors
+
+| Error | Cause | Fix |
+| --- | --- | --- |
+| `BAD_SAMPLE_TIME` | `Ts ≤ 0` | Use a positive sample time. |
 
 ## References
 
-1. Nise, N.S., Control Systems Engineering (7th ed.).
-2. Ogata, K., Modern Control Engineering (5th ed.).
-
+1. Franklin, G.F., Powell, J.D. & Workman, M.L. *Digital Control of Dynamic Systems* (3rd ed.), Ch. 4.
+2. Ogata, K. *Discrete-Time Control Systems* (2nd ed.), Ch. 3.

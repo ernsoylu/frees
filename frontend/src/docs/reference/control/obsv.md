@@ -1,45 +1,58 @@
 ---
 name: obsv
-category: Control
-summary: Observability matrix
-related: []
+category: Control Systems
+summary: Observability matrix of a state-space pair (A, C).
+related: [ctrb, lqe, gram]
 examples: []
-tags: [obsv, control]
-references: []
-generated: true
+tags: [control, observability, state space, observer, rank]
+references:
+  - "Nise, N.S., Control Systems Engineering (7th ed.), Ch. 12, §12.5"
+  - "Ogata, K., Modern Control Engineering (5th ed.), Ch. 9, §9.7"
 ---
 
 # obsv
 
-Observability matrix
-
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
+Returns the **observability matrix** `Ob` of the pair `(A, C)`. The system is
+observable — its full state can be reconstructed from the output, so an observer of
+arbitrary speed exists — iff `Ob` has full rank.
 
 ## Syntax
 
 ```
-obsv(A, C : Ob)
+CALL obsv(A, C : Ob)
+Ob = obsv(A, C)
 ```
 
-## Description
+## Mathematical Formulation
 
-Observability matrix
+For an `n`-state system (Nise §12.5), the dual of [`ctrb`](ctrb):
+
+$$ \mathcal{O} = \begin{bmatrix} C \\ CA \\ CA^2 \\ \vdots \\ CA^{n-1} \end{bmatrix} $$
+
+The pair is observable iff `rank(O) = n`.
+
+> **Method:** stack `[C; CA; …; CAⁿ⁻¹]`.
+
+## Examples
+
+```
+{ Ob = obsv(A, C); observable iff rank(Ob) = n }
+```
 
 ## Input Arguments
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `A` | Number | Yes | Numeric argument. |
-| `C` | Number | Yes | Numeric argument. |
+| `A` | Matrix | Yes | State matrix (n×n). |
+| `C` | Matrix | Yes | Output matrix. |
 
 ## Output Arguments
 
 | Argument | Type | Description |
 | --- | --- | --- |
-| `Ob` | Number/Array | Output value. |
+| `Ob` | Matrix | Observability matrix. |
 
 ## References
 
-1. Nise, N.S., Control Systems Engineering (7th ed.).
-2. Ogata, K., Modern Control Engineering (5th ed.).
-
+1. Nise, N.S. *Control Systems Engineering* (7th ed.), Ch. 12, §12.5.
+2. Ogata, K. *Modern Control Engineering* (5th ed.), Ch. 9, §9.7.

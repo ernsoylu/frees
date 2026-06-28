@@ -1,45 +1,64 @@
 ---
 name: lyap
-category: Control
-summary: Continuous Lyapunov equation
-related: []
+category: Control Systems
+summary: Solve the continuous Lyapunov equation A·X + X·Aᵀ + Q = 0.
+related: [dlyap, dare, gram]
 examples: []
-tags: [lyap, control]
-references: []
-generated: true
+tags: [control, lyapunov, stability, gramian, riccati]
+references:
+  - "Antsaklis, P.J. & Michel, A.N., A Linear Systems Primer, Ch. 4"
+  - "Ogata, K., Modern Control Engineering (5th ed.), Ch. 9"
 ---
 
 # lyap
 
-Continuous Lyapunov equation
-
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
+Solves the **continuous Lyapunov equation** for `X`. It underpins stability
+analysis (a positive-definite `X` for `Q > 0` certifies stability of `A`) and the
+controllability/observability Gramians.
 
 ## Syntax
 
 ```
-lyap(A, Q : X)
+CALL lyap(A, Q : X)
+X = lyap(A, Q)
 ```
 
-## Description
+## Mathematical Formulation
 
-Continuous Lyapunov equation
+$$ A X + X A^\top + Q = 0 $$
+
+For a Hurwitz `A` and `Q = Qᵀ ⪰ 0`, the unique solution is
+
+$$ X = \int_0^\infty e^{A t} Q\, e^{A^\top t}\,dt \qquad \text{(Antsaklis Ch. 4)} $$
+
+> **Method:** Bartels–Stewart (Schur-based) solve of the linear Lyapunov system.
+
+## Examples
+
+```
+{ X = lyap(A, Q); X > 0 certifies A is stable when Q > 0 }
+```
 
 ## Input Arguments
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `A` | Number | Yes | Numeric argument. |
-| `Q` | Number | Yes | Numeric argument. |
+| `A` | Matrix | Yes | State matrix (stable for a bounded solution). |
+| `Q` | Matrix | Yes | Symmetric right-hand side. |
 
 ## Output Arguments
 
 | Argument | Type | Description |
 | --- | --- | --- |
-| `X` | Number/Array | Output value. |
+| `X` | Matrix | Symmetric solution. |
+
+## Common Errors
+
+| Error | Cause | Fix |
+| --- | --- | --- |
+| `NO_UNIQUE_SOLUTION` | `A` shares eigenvalues with `−Aᵀ` | The Lyapunov operator is singular; check `A`'s spectrum. |
 
 ## References
 
-1. Nise, N.S., Control Systems Engineering (7th ed.).
-2. Ogata, K., Modern Control Engineering (5th ed.).
-
+1. Antsaklis, P.J. & Michel, A.N. *A Linear Systems Primer*, Ch. 4.
+2. Ogata, K. *Modern Control Engineering* (5th ed.), Ch. 9.

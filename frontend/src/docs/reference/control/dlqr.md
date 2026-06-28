@@ -1,47 +1,67 @@
 ---
 name: dlqr
-category: Control
-summary: Linear quadratic regulator (discrete)
-related: []
+category: Control Systems
+summary: Discrete-time LQR optimal state-feedback gain (via the DARE).
+related: [lqr, dare, place]
 examples: []
-tags: [dlqr, control]
-references: []
-generated: true
+tags: [control, lqr, discrete, optimal, state feedback, riccati]
+references:
+  - "Ogata, K., Discrete-Time Control Systems (2nd ed.), Ch. 8"
+  - "Franklin, G.F. et al., Digital Control of Dynamic Systems (3rd ed.), Ch. 9"
 ---
 
 # dlqr
 
-Linear quadratic regulator (discrete)
-
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
+Returns the **discrete-time LQR gain** `K` — the discrete counterpart of
+[`lqr`](lqr). The control `u_k = −K x_k` minimizes a summed quadratic cost on the
+states and effort.
 
 ## Syntax
 
 ```
-dlqr(A, B, Q, R : K)
+CALL dlqr(A, B, Q, R : K)
+K = dlqr(A, B, Q, R)
 ```
 
-## Description
+## Mathematical Formulation
 
-Linear quadratic regulator (discrete)
+Minimizing `J = Σ (xₖᵀQxₖ + uₖᵀRuₖ)` gives
+
+$$ K = (R + B^\top X B)^{-1} B^\top X A $$
+
+where `X` is the stabilizing solution of the discrete algebraic Riccati equation
+([`dare`](dare)).
+
+> **Method:** solve the DARE for `X`, then form `K`.
+
+## Examples
+
+```
+{ K = dlqr(A, B, Q, R); discrete optimal regulator gain }
+```
 
 ## Input Arguments
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `A` | Number | Yes | Numeric argument. |
-| `B` | Number | Yes | Numeric argument. |
-| `Q` | Number | Yes | Numeric argument. |
-| `R` | Number | Yes | Numeric argument. |
+| `A` | Matrix | Yes | Discrete state matrix. |
+| `B` | Matrix | Yes | Input matrix. |
+| `Q` | Matrix | Yes | State weight (⪰ 0). |
+| `R` | Matrix | Yes | Input weight (≻ 0). |
 
 ## Output Arguments
 
 | Argument | Type | Description |
 | --- | --- | --- |
-| `K` | Number/Array | Output value. |
+| `K` | Matrix | Discrete state-feedback gain (`u = −Kx`). |
+
+## Common Errors
+
+| Error | Cause | Fix |
+| --- | --- | --- |
+| `NOT_STABILIZABLE` | `(A, B)` not stabilizable | The pair must be stabilizable. |
 
 ## References
 
-1. Nise, N.S., Control Systems Engineering (7th ed.).
-2. Ogata, K., Modern Control Engineering (5th ed.).
-
+1. Ogata, K. *Discrete-Time Control Systems* (2nd ed.), Ch. 8.
+2. Franklin, G.F. et al. *Digital Control of Dynamic Systems* (3rd ed.), Ch. 9.

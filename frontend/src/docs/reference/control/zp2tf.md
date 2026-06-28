@@ -1,49 +1,56 @@
 ---
 name: zp2tf
 category: Control Systems
-summary: Zero-pole-gain → transfer function
-related: []
+summary: Zero-pole-gain to transfer-function form.
+related: [tf2zp, tf, pole, zero]
 examples: []
-tags: [zp2tf, control]
-references: []
-generated: true
+tags: [control, zero pole gain, zpk, transfer function]
+references:
+  - "Nise, N.S., Control Systems Engineering (7th ed.), Ch. 4"
+  - "Ogata, K., Modern Control Engineering (5th ed.), Ch. 5"
 ---
 
 # zp2tf
 
-Zero-pole-gain → transfer function
-
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
+Converts a **zero-pole-gain** description — zeros (`zr`/`zi`), poles (`pr`/`pi`),
+and gain `k` — into a transfer function `num/den`. It is the inverse of
+[`tf2zp`](tf2zp), used to build a model from a factored (root) specification.
 
 ## Syntax
 
 ```
 CALL zp2tf(zr, zi, pr, pi, k : num, den)
+[num, den] = zp2tf(zr, zi, pr, pi, k)
 ```
 
-## Description
+## Mathematical Formulation
 
-Zero-pole-gain → transfer function Invoked as a `CALL` with the listed inputs and outputs.
+$$ G(s) = k\,\frac{\prod_i (s - z_i)}{\prod_j (s - p_j)} = \frac{\text{num}(s)}{\text{den}(s)} $$
+
+> **Method:** expand the zero and pole factors into polynomials and scale by `k`.
+
+## Examples
+
+```
+{ [num, den] = zp2tf(zr, zi, pr, pi, k) }
+```
 
 ## Input Arguments
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `zr` | Number | Yes | Numeric argument. |
-| `zi` | Number | Yes | Numeric argument. |
-| `pr` | Number | Yes | Numeric argument. |
-| `pi` | Number | Yes | Numeric argument. |
-| `k` | Number | Yes | Numeric argument. |
+| `zr`, `zi` | Vector | Yes | Real / imaginary parts of the zeros. |
+| `pr`, `pi` | Vector | Yes | Real / imaginary parts of the poles. |
+| `k` | Number | Yes | Scalar gain. |
 
 ## Output Arguments
 
 | Argument | Type | Description |
 | --- | --- | --- |
-| `num` | Number/Array | Output value. |
-| `den` | Number/Array | Output value. |
+| `num` | Vector | Numerator coefficients (descending powers of `s`). |
+| `den` | Vector | Denominator coefficients. |
 
 ## References
 
-1. Nise, N.S., Control Systems Engineering (7th ed.).
-2. Ogata, K., Modern Control Engineering (5th ed.).
-
+1. Nise, N.S. *Control Systems Engineering* (7th ed.), Ch. 4.
+2. Ogata, K. *Modern Control Engineering* (5th ed.), Ch. 5.

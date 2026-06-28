@@ -1,45 +1,54 @@
 ---
 name: Eigen
-category: Control Systems
-summary: Eigenvalues & eigenvectors
-related: []
+category: Matrix
+summary: Eigenvalues and eigenvectors of a square matrix.
+related: [Eigenvalues, balreal]
 examples: []
-tags: [eigen, control]
-references: []
-generated: true
+tags: [matrix, eigenvalues, eigenvectors, spectral, linear algebra]
+references:
+  - "Golub, G.H. & Van Loan, C.F., Matrix Computations (4th ed.), Ch. 7"
 ---
 
 # Eigen
 
-Eigenvalues & eigenvectors
-
-> **Auto-generated** from the function registry. The syntax, description, and arguments are taken directly from the implementation; a worked example and an expanded mathematical derivation are added as the page is curated.
+Returns the **eigenvalues** `lambda` and **eigenvectors** `V` of a square matrix
+`A` — the full eigendecomposition `A V = V Λ`. The eigenvectors give the modal
+directions; the eigenvalues their rates/frequencies.
 
 ## Syntax
 
 ```
 CALL Eigen(A : lambda, V)
+[lambda, V] = Eigen(A)
 ```
 
-## Description
+## Mathematical Formulation
 
-Eigenvalues & eigenvectors Invoked as a `CALL` with the listed inputs and outputs.
+$$ A\,v_i = \lambda_i\,v_i, \qquad A = V\,\Lambda\,V^{-1} $$
+
+where `Λ = diag(λ_i)` and the columns of `V` are the eigenvectors (Golub & Van Loan Ch. 7).
+
+> **Method:** QR algorithm with eigenvector back-substitution.
+
+## Examples
+
+```
+{ [lambda, V] = Eigen(A) }
+```
 
 ## Input Arguments
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `A` | Number | Yes | Numeric argument. |
+| `A` | Matrix | Yes | Square matrix. |
 
 ## Output Arguments
 
 | Argument | Type | Description |
 | --- | --- | --- |
-| `lambda` | Number/Array | Output value. |
-| `V` | Number/Array | Output value. |
+| `lambda` | Vector | Eigenvalues. |
+| `V` | Matrix | Eigenvectors (columns). |
 
 ## References
 
-1. Nise, N.S., Control Systems Engineering (7th ed.).
-2. Ogata, K., Modern Control Engineering (5th ed.).
-
+1. Golub, G.H. & Van Loan, C.F. *Matrix Computations* (4th ed.), Ch. 7.
