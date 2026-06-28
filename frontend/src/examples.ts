@@ -106,9 +106,16 @@ COMPONENT CondFloatUA(in, out)
   Q        = UA * (Tcond - Tamb)
 END
 
-{ ---- UA / dP objects: heat-transfer AREA from hx_aconv(Aflow, L, Dh) =
-  4*Aflow*L/Dh over each side geometry (tube/channel count x developed length),
-  then UA = htc * area. Nothing hand-set. ---- }
+{ ---- UA / dP objects: heat-transfer AREA from the geometry toolkit, not
+  hand-set. Internal sides use hx_aconv(Aflow, L, Dh) = 4*Aflow*L/Dh over their
+  channel geometry; the finned AIR sides build primary + fin area with
+  hx_area_direct / hx_area_indirect / hx_fin_len and derate it by the surface
+  efficiency hx_eta_surf(.., fin_efficiency(mL)). Then UA = htc * area. ---- }
+{ fin-and-tube air-side stock (aluminium louvered fin) }
+k_fin    = 200 [W/m-K]    { fin conductivity }
+t_fin    = 0.0001 [m]     { fin/wall stock thickness }
+fin_dens = 800            { fins per m }
+b_fin    = 0.006 [m]      { fin half-height }
 h_chl_r  = htc_evap('R1234yf', 350000, 0.5, 0.05, 0.006, 8e-5)
 h_chl_c  = htc_1phase('EG50', 200000, 290, 0.23, 0.008, 1.5e-4)
 A_chl_r  = 3  * hx_aconv(8e-5,   0.30, 0.006)   { 3 refrigerant channels x 0.30 m }
@@ -123,12 +130,24 @@ dP_cab   = dp_2phase('R1234yf', 350000, 0.5, 0.02, 0.006, 1.2e-4, 0.4)
 h_cnd_r  = htc_cond('R1234yf', 1200000, 0.5, 0.07, 0.006, 8e-5)
 h_cnd_a  = htc_extair('Air', 101325, 313, 0.6, 0.01, 0.03)
 A_cnd_r  = 50 * hx_aconv(8e-5, 0.40, 0.006)     { 50 refrigerant microchannels x 0.40 m }
-A_cnd_a  = hx_aconv(0.03, 0.50, 0.01)           { condenser air-side core }
+finlen_cnd = hx_fin_len(0.016, t_fin, fin_dens, 0.002)        { developed fin length }
+A_cnd_prim = hx_area_direct(0.5, 100, 0.002, 0.016, t_fin)    { primary tube-wall area }
+A_cnd_fin  = hx_area_indirect(0.5, 100, finlen_cnd)           { secondary fin area }
+A_cnd_tot  = A_cnd_prim + A_cnd_fin
+mL_cnd     = b_fin * sqrt(2 * h_cnd_a / (k_fin * t_fin))      { fin parameter mL }
+etaO_cnd   = hx_eta_surf(A_cnd_fin, A_cnd_tot, fin_efficiency(mL_cnd))
+A_cnd_a    = etaO_cnd * A_cnd_tot                             { fin-efficiency-weighted air area }
 UA_cond  = ua_hx(h_cnd_r, A_cnd_r, h_cnd_a, A_cnd_a, 1e-4)
 h_rad_c  = htc_1phase('EG50', 200000, 320, 0.4, 0.008, 1.5e-4)
 h_rad_a  = htc_extair('Air', 101325, 313, 0.5, 0.01, 0.03)
 A_rad_c  = 16 * hx_aconv(1.5e-4, 0.30, 0.008)   { 16 coolant tubes per cell x 0.30 m }
-A_rad_a  = hx_aconv(0.03, 0.20, 0.01)           { radiator air-side core per cell }
+finlen_rad = hx_fin_len(0.016, t_fin, fin_dens, 0.002)
+A_rad_prim = hx_area_direct(0.5, 40, 0.002, 0.016, t_fin)
+A_rad_fin  = hx_area_indirect(0.5, 40, finlen_rad)
+A_rad_tot  = A_rad_prim + A_rad_fin
+mL_rad     = b_fin * sqrt(2 * h_rad_a / (k_fin * t_fin))
+etaO_rad   = hx_eta_surf(A_rad_fin, A_rad_tot, fin_efficiency(mL_rad))
+A_rad_a    = etaO_rad * A_rad_tot                            { air-side area per radiator cell }
 UA_rad   = ua_hx(h_rad_c, A_rad_c, h_rad_a, A_rad_a, 1e-4)
 A_bcp    = 20 * hx_aconv(1.5e-4, 0.30, 0.008)   { battery cold-plate channels }
 A_mcp    = 20 * hx_aconv(1.5e-4, 0.30, 0.008)   { motor cold-plate channels }
