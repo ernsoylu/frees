@@ -23,7 +23,7 @@ export const EXAMPLES: Example[] = [
   {
     id: 'ev-thermal-management',
     title: 'EV Thermal Management System',
-    description: 'Coupled refrigerant + coolant loops with wide branches and a discretized radiator; every HX UA and the evaporator dP are computed from correlations + geometry and injected. Solve (F2).',
+    description: 'Coupled refrigerant + coolant loops with wide branches and a discretized radiator; every HX UA and the evaporator dP are computed from correlations + geometry and injected. Reports the steady cycle performance — cooling duties, compressor power and COP. Solve (F2).',
     category: 'Systems',
     featured: true,
     text: `// EV Thermal Management System  (coupled, geometry-driven HX sizing)
@@ -186,6 +186,17 @@ connect(CHLR.wall, CHLC.wall)
 { steady operating point — full compressor capacity }
 CHLR.frac = 1
 CABE.frac = 1
+
+{ ---- Steady cycle performance — each component already computes its own duty
+  and power internally (EvapSH.Q, Compressor.W, CondFloatUA.Q); reference them
+  directly as inst.Q / inst.W rather than re-deriving from port enthalpies. ---- }
+mdot_ref  = CMP.in.mdot           { refrigerant mass flow, kg/s }
+Q_chiller = CHLR.Q                { chiller cooling duty, W }
+Q_cabin   = CABE.Q                { cabin evaporator duty, W }
+Q_evap    = Q_chiller + Q_cabin   { total cooling delivered, W }
+W_comp    = CMP.W                 { compressor power, W }
+COP_cool  = Q_evap / W_comp       { cooling coefficient of performance }
+Q_cond    = COND.Q                { condenser heat rejection, W }
 
 { Transient pull-down: delete the two frac lines above and wrap a ramp in a
   DYNAMIC block:
