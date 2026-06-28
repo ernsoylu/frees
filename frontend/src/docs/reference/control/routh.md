@@ -1,39 +1,72 @@
 ---
 name: routh
-category: Control
-summary: Routh-Hurwitz array
-related: []
+category: Control Systems
+summary: Routh-Hurwitz stability test — count of right-half-plane roots.
+related: [pole, margin, rlocus]
 examples: [routh-stability]
-tags: [routh, control]
-references: []
-generated: true
+tags: [control, routh, hurwitz, stability, characteristic polynomial]
+references:
+  - "Nise, N.S., Control Systems Engineering (7th ed.), Ch. 6, §6.2"
+  - "Ogata, K., Modern Control Engineering (5th ed.), Ch. 5, §5.6"
 ---
 
 # routh
 
-Routh-Hurwitz array
-
-> **Baseline page** — auto-generated from the function registry. Syntax, description, and arguments are authoritative; worked examples, the mathematical formulation, and literature references are being added incrementally.
+Applies the **Routh-Hurwitz criterion** to a characteristic polynomial `den(s)` and
+returns the number of right-half-plane roots `nRHP` and a stability flag `stable`.
+It decides stability without computing the roots — useful for symbolic gain ranges.
 
 ## Syntax
 
 ```
-routh(den : R)
+CALL routh(den : nRHP, stable)
+[nRHP, stable] = routh(den)
 ```
 
 ## Description
 
-Routh-Hurwitz array
+The Routh array is built from the polynomial coefficients; the number of sign
+changes in its first column equals the number of poles in the right half-plane. A
+system is stable iff there are none.
+
+## Mathematical Formulation
+
+For `den(s) = a_n s^n + … + a_0`, the Routh array's first-column sign changes count
+the RHP roots; stability requires (Nise §6.2):
+
+$$ \text{all first-column entries} > 0 \quad\Longleftrightarrow\quad n_{RHP} = 0 $$
+
+> **Method:** construct the Routh array (handling zero-pivot and zero-row special
+> cases) and count first-column sign changes.
+
+## Examples
+
+### Example 1 — Stability of a characteristic polynomial
+
+[Run: routh-stability]
+
+**Expected:** `nRHP` right-half-plane roots and `stable = 1` only when `nRHP = 0`.
 
 ## Input Arguments
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `den` | Number | Yes | Numeric argument. |
+| `den` | Vector | Yes | Characteristic-polynomial coefficients (descending powers of `s`). |
 
 ## Output Arguments
 
 | Argument | Type | Description |
 | --- | --- | --- |
-| `R` | Number/Array | Output value. |
+| `nRHP` | Number | Count of right-half-plane roots. |
+| `stable` | Number | 1 if stable (`nRHP = 0`), else 0. |
 
+## Common Errors
+
+| Error | Cause | Fix |
+| --- | --- | --- |
+| `EMPTY_DENOMINATOR` | invalid `den` | Provide a valid characteristic polynomial. |
+
+## References
+
+1. Nise, N.S. *Control Systems Engineering* (7th ed.), Ch. 6, §6.2.
+2. Ogata, K. *Modern Control Engineering* (5th ed.), Ch. 5, §5.6.

@@ -1,42 +1,78 @@
 ---
 name: lqr
-category: Control
-summary: Linear quadratic regulator (continuous)
-related: []
+category: Control Systems
+summary: Linear-quadratic regulator optimal state-feedback gain.
+related: [lqe, place, dare, pidtune]
 examples: [controller-design-lqr-pid]
-tags: [lqr, control]
-references: []
-generated: true
+tags: [control, lqr, optimal, state feedback, riccati, regulator]
+references:
+  - "Ogata, K., Modern Control Engineering (5th ed.), Ch. 10, §10.8"
+  - "Bryson, A.E. & Ho, Y.-C., Applied Optimal Control, Ch. 5"
 ---
 
 # lqr
 
-Linear quadratic regulator (continuous)
-
-> **Baseline page** — auto-generated from the function registry. Syntax, description, and arguments are authoritative; worked examples, the mathematical formulation, and literature references are being added incrementally.
+Returns the **optimal state-feedback gain** `K` for a continuous linear-quadratic
+regulator: the control `u = −Kx` that minimizes a weighted quadratic cost on the
+states and the effort. Use it for systematic multi-state feedback design.
 
 ## Syntax
 
 ```
-lqr(A, B, Q, R : K)
+CALL lqr(A, B, Q, R : K)
+K = lqr(A, B, Q, R)
 ```
 
 ## Description
 
-Linear quadratic regulator (continuous)
+`Q` (state weighting, ≥ 0) penalizes deviations; `R` (input weighting, > 0)
+penalizes effort. Larger `Q/R` gives a faster, more aggressive regulator.
+
+## Mathematical Formulation
+
+Minimizing
+
+$$ J = \int_0^\infty \big(\mathbf{x}^\top Q\,\mathbf{x} + \mathbf{u}^\top R\,\mathbf{u}\big)\,dt $$
+
+gives `K = R⁻¹BᵀP`, where `P` solves the continuous algebraic Riccati equation
+(Ogata §10.8):
+
+$$ A^\top P + P A - P B R^{-1} B^\top P + Q = 0 $$
+
+> **Method:** solve the continuous ARE for `P`, then `K = R⁻¹BᵀP`.
+
+## Examples
+
+### Example 1 — LQR gain for a plant
+
+[Run: controller-design-lqr-pid]
+
+**Expected:** a gain `K` placing the closed-loop poles `(A − BK)` for the chosen
+`Q`, `R` trade-off.
 
 ## Input Arguments
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `A` | Number | Yes | Numeric argument. |
-| `B` | Number | Yes | Numeric argument. |
-| `Q` | Number | Yes | Numeric argument. |
-| `R` | Number | Yes | Numeric argument. |
+| `A` | Matrix | Yes | State matrix. |
+| `B` | Matrix | Yes | Input matrix. |
+| `Q` | Matrix | Yes | State weighting (symmetric, ≥ 0). |
+| `R` | Matrix | Yes | Input weighting (symmetric, > 0). |
 
 ## Output Arguments
 
 | Argument | Type | Description |
 | --- | --- | --- |
-| `K` | Number/Array | Output value. |
+| `K` | Matrix | Optimal state-feedback gain (`u = −Kx`). |
 
+## Common Errors
+
+| Error | Cause | Fix |
+| --- | --- | --- |
+| `NOT_STABILIZABLE` | `(A, B)` not stabilizable | The pair must be stabilizable for a solution to exist. |
+| `R_NOT_PD` | `R` not positive-definite | Use a positive-definite input weighting. |
+
+## References
+
+1. Ogata, K. *Modern Control Engineering* (5th ed.), Ch. 10, §10.8.
+2. Bryson, A.E. & Ho, Y.-C. *Applied Optimal Control*, Ch. 5.
