@@ -19,6 +19,31 @@ geometry `(D_h, A_flow, A_conv)` is supplied to those functions.
 > dP (`dp_mueller_steinhagen`, `dp_compact_core`). The coupled EV-TMS example is
 > now geometry-driven (`EvTmsCorrelatedTest`). Remaining gaps are narrowed below.
 
+## 0. Verification against Amesim source + textbooks (revision C)
+
+Cross-checked every embedded coefficient against the NotebookLM textbook corpus
+(Kays & London, Holman, Çengel, Collier, Idelchik) **and** the Amesim 2404 source
+(`/opt/simcenter/2404/Amesim`). Key facts:
+
+- **Amesim single-phase/air side = Colburn-j + Gnielinski + Churchill only** (no
+  Žukauskas/Hilpert/Dittus by name); the Colburn-j is an editable expression/table
+  (`≈0.22·Re^-0.4·(A/Ag0)^-0.15`). Gnielinski default
+  `ff/8·(Re-1000)·Pr/(1+12.7·√(ff/8)·(Pr^(2/3)-1))` — **identical to frees**.
+- **Amesim two-phase Nu are simple power-laws on an equivalent Re** (Shah
+  `0.023·Re^0.8·Pr^0.4`, Cavallini-Zecchin `0.05·Re^0.8·Pr^(1/3)` (Akers),
+  Traviss `0.023·Re^0.9·Pr^(1/3)`). frees' `nu_cavallini_zecchin` matches Amesim
+  exactly; frees' Shah/Traviss use the **fuller textbook forms** (deliberately
+  richer than Amesim's defaults).
+
+**Three real defects found & FIXED (revision C):**
+1. `nu_tubebank` in-line Re>2×10⁵ coefficient `0.021` → **`0.21`** (Holman Tbl 6-6).
+2. `j_fin`/`f_fin` recalibrated to Kays-London magnitudes (plain j≈0.005, wavy
+   ≈0.008, louvered≈0.011, offset≈0.019 at Re=1000) with ordering
+   offset>louvered>wavy>plain (was plain≈louvered, ~3× high).
+3. `dp_compact_core` now includes the **core-friction term `f·(A/Ac)·(ρ_in/ρ_mean)`**
+   (Kays-London) — previously only entrance/accel/exit; new signature
+   `dp_compact_core(G, ρ_in, ρ_out, ρ_mean, σ, f, A/Ac, Kc, Ke)`.
+
 ---
 
 ## 1. Heat transfer

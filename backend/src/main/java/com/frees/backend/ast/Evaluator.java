@@ -528,7 +528,8 @@ public final class Evaluator {
                     arg(c, args, 6, values, defs));
             case "dp_compact_core" -> com.frees.backend.props.HxCorrelations.dpCompactCore(
                     arg(c, args, 0, values, defs), arg(c, args, 1, values, defs), arg(c, args, 2, values, defs),
-                    arg(c, args, 3, values, defs), arg(c, args, 4, values, defs), arg(c, args, 5, values, defs));
+                    arg(c, args, 3, values, defs), arg(c, args, 4, values, defs), arg(c, args, 5, values, defs),
+                    arg(c, args, 6, values, defs), arg(c, args, 7, values, defs), arg(c, args, 8, values, defs));
             // Remaining HX correlations: tube-bank/cylinder/plate Nu, fin geometry,
             // gravitational two-phase dP.
             case "nu_tubebank" -> com.frees.backend.props.HxCorrelations.nuTubeBank(

@@ -208,15 +208,23 @@ public final class HxCorrelations {
         return FlowResistance.frictionFactor(re, 0.0) * (l / dh) * rho * v * Math.abs(v) / 2.0;
     }
 
-    /** Compact-core ΔP [Pa] (Kays & London): entrance contraction Kc, flow
-     *  acceleration (ρ_in→ρ_out), and exit expansion Ke, for a free-flow ratio σ. */
-    public static double dpCompactCore(double g, double rhoIn, double rhoOut, double sigma, double kc, double ke) {
-        if (!(rhoIn > 0) || !(rhoOut > 0)) {
+    /** Compact-core ΔP [Pa] (Kays & London, full): entrance contraction Kc, flow
+     *  acceleration (ρ_in→ρ_out), the CORE-FRICTION term f·(A/Ac)·(ρ_in/ρ_mean),
+     *  and exit expansion Ke, for a free-flow ratio σ. {@code aOverAc} = total
+     *  heat-transfer area / free-flow area; {@code fanning} = Fanning friction
+     *  factor (e.g. f_fin). The friction term is usually dominant and must not be
+     *  dropped. */
+    public static double dpCompactCore(double g, double rhoIn, double rhoOut, double rhoMean,
+                                       double sigma, double fanning, double aOverAc, double kc, double ke) {
+        if (!(rhoIn > 0) || !(rhoOut > 0) || !(rhoMean > 0)) {
             throw new PropertyEvaluationException("dp_compact_core: densities must be > 0.");
         }
         double s2 = sigma * sigma;
         return (g * g / (2.0 * rhoIn))
-                * ((kc + 1.0 - s2) + 2.0 * (rhoIn / rhoOut - 1.0) - (1.0 - s2 - ke) * (rhoIn / rhoOut));
+                * ((kc + 1.0 - s2)
+                   + 2.0 * (rhoIn / rhoOut - 1.0)
+                   + fanning * aOverAc * (rhoIn / rhoMean)
+                   - (1.0 - s2 - ke) * (rhoIn / rhoOut));
     }
 
     // ── Remaining correlations (advisory item A) ────────────────────────────
@@ -238,7 +246,7 @@ public final class HxCorrelations {
             c = staggered ? 0.40 : 0.27;
             m = staggered ? 0.60 : 0.63;
         } else {
-            c = staggered ? 0.022 : 0.021;
+            c = staggered ? 0.022 : 0.21; // Holman Table 6-6 (in-line 0.21, not 0.021)
             m = 0.84;
         }
         return c * Math.pow(reEff, m) * Math.pow(pr, 0.36);
@@ -316,26 +324,32 @@ public final class HxCorrelations {
 
     /** Colburn j-factor for a compact fin surface (the "j data table" as a
      *  representative Re power-law per surface type): plain / wavy / louvered /
-     *  offset-strip. Nu = j·Re·Pr^(1/3) (use with nu_colburn). */
+     *  offset-strip. Nu = j·Re·Pr^(1/3) (use with nu_colburn). Coefficients
+     *  calibrated to Kays &amp; London data magnitudes at Re≈1000 (plain≈0.005,
+     *  wavy≈0.008, louvered≈0.011, offset≈0.019) with the physical ordering
+     *  offset &gt; louvered &gt; wavy &gt; plain (interrupted fins break the boundary
+     *  layer → higher j); uniform exponent −0.4. */
     public static double jFin(String surface, double re) {
         double r = Math.max(re, 1.0);
         return switch (finSurface(surface)) {
-            case "wavy" -> 0.394 * Math.pow(r, -0.41);
-            case "louvered" -> 0.490 * Math.pow(r, -0.49);
-            case "offset" -> 0.650 * Math.pow(r, -0.54);
-            default -> 0.264 * Math.pow(r, -0.40); // plain
+            case "wavy" -> 0.130 * Math.pow(r, -0.40);
+            case "louvered" -> 0.174 * Math.pow(r, -0.40);
+            case "offset" -> 0.300 * Math.pow(r, -0.40);
+            default -> 0.080 * Math.pow(r, -0.40); // plain
         };
     }
 
     /** Fanning friction factor for a compact fin surface (the air-side ΔP analogue
-     *  of {@link #jFin}); apply as ΔP = 4·f·(L/D_h)·G²/(2ρ). */
+     *  of {@link #jFin}); apply as ΔP = 4·f·(L/D_h)·G²/(2ρ). Calibrated to
+     *  Kays &amp; London magnitudes at Re≈1000 (plain≈0.019, wavy≈0.035,
+     *  louvered≈0.053, offset≈0.071); uniform exponent −0.3. */
     public static double fFin(String surface, double re) {
         double r = Math.max(re, 1.0);
         return switch (finSurface(surface)) {
-            case "wavy" -> 0.890 * Math.pow(r, -0.30);
-            case "louvered" -> 1.100 * Math.pow(r, -0.41);
-            case "offset" -> 1.500 * Math.pow(r, -0.42);
-            default -> 0.508 * Math.pow(r, -0.30); // plain
+            case "wavy" -> 0.280 * Math.pow(r, -0.30);
+            case "louvered" -> 0.420 * Math.pow(r, -0.30);
+            case "offset" -> 0.560 * Math.pow(r, -0.30);
+            default -> 0.150 * Math.pow(r, -0.30); // plain
         };
     }
 
