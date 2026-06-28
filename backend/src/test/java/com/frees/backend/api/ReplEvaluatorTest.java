@@ -196,6 +196,15 @@ class ReplEvaluatorTest {
     }
 
     @Test
+    void decimalResultTrimsTrailingZeros() {
+        // Exercises the regex-free trailing-zero trim in number(): 0.125000 -> 0.125.
+        ReplEvaluator.Outcome o = evaluator.evaluate("1 / 8", session());
+        assertTrue(o.success(), o.error());
+        assertEquals(0.125, o.value(), 1e-12);
+        assertEquals("0.125", o.text());
+    }
+
+    @Test
     void testReplMatrixAndVectorRangeCreation() {
         SolveContextCache.Session s = session();
 

@@ -36,6 +36,8 @@ class RecordValueSemanticsTest {
         assertEquals(a, b);
         assertEquals(a.hashCode(), b.hashCode());
         assertNotEquals(a, different);
+        assertNotEquals(a, null);
+        assertTrue(List.of(a).contains(a));   // exercises the this==o fast path
         assertTrue(a.toString().contains("1.0"), a.toString());
     }
 
@@ -49,6 +51,7 @@ class RecordValueSemanticsTest {
         assertEquals(a.hashCode(), b.hashCode());
         assertNotEquals(a, different);
         assertNotEquals(a, null);
+        assertTrue(List.of(a).contains(a));
         assertTrue(a.toString().contains("2.0"), a.toString());
     }
 
@@ -67,6 +70,8 @@ class RecordValueSemanticsTest {
         assertEquals(a, b);
         assertEquals(a.hashCode(), b.hashCode());
         assertNotEquals(a, different);
+        assertNotEquals(a, null);
+        assertTrue(List.of(a).contains(a));
         assertTrue(a.toString().contains("2.0"), a.toString());
     }
 
@@ -79,6 +84,8 @@ class RecordValueSemanticsTest {
         assertEquals(a, b);
         assertEquals(a.hashCode(), b.hashCode());
         assertNotEquals(a, different);
+        assertNotEquals(a, null);
+        assertTrue(List.of(a).contains(a));
         assertTrue(a.toString().contains("R134a"), a.toString());
     }
 
@@ -95,6 +102,8 @@ class RecordValueSemanticsTest {
         assertEquals(a, b);
         assertEquals(a.hashCode(), b.hashCode());
         assertNotEquals(a, different);
+        assertNotEquals(a, null);
+        assertTrue(List.of(a).contains(a));
         assertTrue(a.toString().contains("M"), a.toString());
     }
 }
