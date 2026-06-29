@@ -389,6 +389,20 @@ public final class UnitRegistry {
             "rad/min", "rad/h", "rad/hr", "rad/hour");
 
     /**
+     * Newton-metre <em>moment/torque</em> spellings the engineer expects kept as
+     * N-m rather than canonicalized to the dimensionally-identical joule. Compared
+     * after stripping spaces and lowercasing, so {@code N-m}, {@code N·m},
+     * {@code N m} all match — but <em>not</em> the explicit-multiply form
+     * {@code N*m} (kept as "n*m"), which is read as a product and still reduces to J.
+     */
+    private static final java.util.Set<String> MOMENT_UNITS = java.util.Set.of(
+            "n-m", "n·m", "n.m", "nm",
+            "newton-meter", "newton-metre", "newtonmeter", "newtonmetre");
+
+    /** The energy/torque dimension kg·m²·s⁻² — shared by joules and moments. */
+    private static final double[] MOMENT_DIMS = {1, 2, -2, 0, 0, 0, 0};
+
+    /**
      * SI display name for a value originally written with {@code originalUnit}.
      *
      * Angular-rate units (rpm, rad/s) are dimensionally identical to frequency
@@ -401,6 +415,11 @@ public final class UnitRegistry {
             String normalized = originalUnit.trim().toLowerCase().replace(" ", "");
             if (ANGULAR_RATE_UNITS.contains(normalized)) {
                 return "rad/s";
+            }
+            // A moment written as N-m stays N-m, not the dimensionally-equal "J".
+            // (The dims guard keeps a true nanometre, were "nm" ever a length, safe.)
+            if (java.util.Arrays.equals(dims, MOMENT_DIMS) && MOMENT_UNITS.contains(normalized)) {
+                return "N-m";
             }
         }
         return siName(dims);
