@@ -233,7 +233,12 @@ final class SolverApiSupport {
         Map<String, String> units = new HashMap<>();
         solver.inferUnits(parsed)
                 .forEach((name, unit) -> units.put(name.toLowerCase(), unit));
-        units.putAll(unitsByVariable(variableInfo));
+        // Ground component stream members (s2$p → Pa, s2$h → J/kg, …) from their
+        // physical domain so the unit checker propagates from them instead of
+        // leaving every port member dimensionless.
+        parsed.componentMemberUnits()
+                .forEach((name, unit) -> units.put(name.toLowerCase(), unit));
+        units.putAll(unitsByVariable(variableInfo));   // explicit user units still win
         return units;
     }
 
