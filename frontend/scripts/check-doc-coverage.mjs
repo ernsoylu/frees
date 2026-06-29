@@ -85,7 +85,21 @@ const walk = (dir) => {
       // Cookbook/guide pages document a task, not a backend symbol — exempt from
       // the symbol-existence check (their example bindings are still validated).
       const guide = /^guide:\s*true\s*$/m.test(fm[1]);
-      pages.push({ file: path.relative(SRC, p), name, generated, guide, related, examples: [...new Set([...exFrontmatter, ...exInline])] });
+
+      // Substance tier (non-guide pages). The Syntax block is always a fenced
+      // code sample, so it is not a signal; a *worked* example is one in the
+      // Examples section or a [Run:] binding.
+      const body = fm[2];
+      const exSection = body.split(/^##\s+Examples\s*$/m)[1];
+      const hasWorkedExample = exInline.length > 0
+        || (exSection && /```|\[Run:/.test(exSection.split(/^##\s/m)[0]));
+      const refsNonEmpty = /^references:\s*\n\s*-\s+/m.test(fm[1]);
+      const bodyLen = body.replace(/\s+/g, ' ').trim().length;
+      const tier = hasWorkedExample ? 'rich'
+        : (refsNonEmpty || bodyLen >= 500) ? 'reference'
+        : 'stub';
+
+      pages.push({ file: path.relative(SRC, p), name, generated, guide, related, tier, examples: [...new Set([...exFrontmatter, ...exInline])] });
     }
   }
 };
@@ -128,15 +142,30 @@ for (const file of fs.readdirSync(GUIDE_DIR).filter((f) => f.endsWith('.md'))) {
 
 const guides = pages.filter((p) => p.guide).length;
 
+// Coverage is presence (every symbol has a page); substance is depth. Report both
+// so a 100% presence number doesn't hide signature-only stubs. Tiers (non-guide):
+//   rich      — has a worked example (runnable [Run:] or an Examples-section sample)
+//   reference — substantive (citations, or a non-trivial body) but no worked example
+//   stub      — signature-only: no worked example, no references, short body
+const symbolPages = pages.filter((p) => !p.guide);
+const rich = symbolPages.filter((p) => p.tier === 'rich').length;
+const reference = symbolPages.filter((p) => p.tier === 'reference').length;
+const stubs = symbolPages.filter((p) => p.tier === 'stub');
+
 const total = manifest.coverage.documentableSurfaceTotal;
-const documented = pages.length;
-const rich = pages.filter((p) => !p.generated).length;
-const baseline = pages.filter((p) => p.generated).length;
-console.log(`doc-coverage: ${documented - guides}/${total} symbols have a page (${(100 * (documented - guides) / total).toFixed(1)}%) — ${rich - guides} hand-authored (rich), ${baseline} generated (baseline); ${guides} cookbook guide(s).`);
+console.log(
+  `doc-coverage: ${symbolPages.length}/${total} symbols have a page (${(100 * symbolPages.length / total).toFixed(1)}%) — `
+  + `${rich} rich (worked example), ${reference} reference, ${stubs.length} stub (signature-only); ${guides} cookbook guide(s).`,
+);
+if (stubs.length) {
+  // Informational, not a failure: surface the thinnest pages as enrichment work.
+  console.log(`\n  ${stubs.length} stub page(s) to enrich (no example, no references):`);
+  console.log('    ' + stubs.map((p) => p.name).sort().join(', '));
+}
 
 if (errors.length) {
   console.error(`\n✗ ${errors.length} coverage error(s):`);
   for (const e of errors) console.error('  - ' + e);
   process.exit(1);
 }
-console.log('✓ all reference pages name real symbols, bind real examples, cross-link real pages, and guides cite real functions.');
+console.log('\n✓ all reference pages name real symbols, bind real examples, cross-link real pages, and guides cite real functions.');

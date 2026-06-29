@@ -104,13 +104,14 @@ s = Sum(i, 1, 4, i^2)
 Transcendental and statistical distribution functions for less common but important calculations.
 
 ## Statistical distributions
-- **`Probability(x, mean, stddev)`** — cumulative normal CDF at `x`.
+- **`Probability(x1, x2, mean, stddev)`** — probability that a normal variate lies in the interval `[x1, x2]`.
+- **`NormalCDF(x, mean, stddev)`** — cumulative normal probability `Pr(X ≤ x)`.
 - **`Chi_Square(x, df)`** — cumulative chi-square CDF at `x` with `df` degrees of freedom.
 - **`Random(a, b[, seed])`** — uniform random number in `[a, b]`.
 - **`RandG(mean, stddev[, seed])`** — Gaussian random number.
 
 ```
-prob = Probability(85, 80, 5)   { 0.8413 }
+prob = Probability(75, 85, 80, 5)   { 0.6827 — within ±1σ of N(80, 5) }
 ```
 
 ## Special mathematical functions
