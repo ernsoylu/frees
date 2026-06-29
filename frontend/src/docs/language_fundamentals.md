@@ -30,6 +30,8 @@ Physical constants are available with a trailing `#` (by long-standing conventio
 d = 0.5 * g# * t^2
 ```
 
+[Related: gs-declarative, variables, units]
+
 [Topic: math-funcs]
 # Mathematical Functions
 
@@ -92,6 +94,10 @@ k = If(temp, 300, 1.2, 1.5, 1.8)   { k = 1.8 }
 s = Sum(i, 1, 4, i^2)
 ```
 
+> **Looking for one function?** This page teaches the families; every built-in has its own page with full syntax, arguments, and examples. Browse them all in **Reference → A–Z Function Index**.
+
+[Related: special-funcs, ref-index, complex]
+
 [Topic: special-funcs]
 # Special & Statistical Functions
 
@@ -115,6 +121,10 @@ prob = Probability(85, 80, 5)   { 0.8413 }
 - **`Erf(x)` / `Erfc(x)` / `ErfInv(x)`** — error function, complementary, and inverse.
 - **`BesselJ(n, x)` / `BesselY(n, x)`** — Bessel functions of the first and second kind, order $n$.
 - **`BesselI(n, x)` / `BesselK(n, x)`** — modified Bessel functions of the first and second kind.
+
+> Each function above has a dedicated reference page with its mathematical definition and worked examples — see **Reference → A–Z Function Index**.
+
+[Related: math-funcs, ref-index, uncertainty]
 
 [Topic: variables]
 # Variables, Guesses & Bounds
@@ -144,6 +154,8 @@ A guess near `0.02` converges in a few iterations; a guess of `0.5` may stall. A
 
 > **Tip:** For implicit property lookups (e.g. `h = Enthalpy(Water, P=P, s=s)`), a guess on the unknown output variable also helps the solver pick the right two-phase region.
 
+[Related: gs-units-check, uncertainty, api]
+
 [Topic: uncertainty]
 # Uncertainty Propagation
 
@@ -172,6 +184,8 @@ UncertaintyOf(T) = 2.0 [K]
 unc_rho = UncertaintyOf(rho)
 ```
 Only independent inputs should carry a declared uncertainty; assigning one to a computed output that you also query is redundant. Uncertainties are shown alongside each value in the Solution panel.
+
+[Related: variables, units, api]
 
 [Topic: units]
 # Units & Dimensional Consistency
@@ -219,6 +233,8 @@ P_kPa = P_Pa / 1000                  { 689.5 kPa }
 
 [Component: UnitsReference]
 
+[Related: syntax, variables, ref-units]
+
 [Topic: arrays]
 # Arrays & For Loops
 
@@ -245,6 +261,8 @@ val = ArrayElmt(T[1:10], idx)   { the value of T[3] }
 
 > **Tip:** for matrices and vectors declared with literals, see *Declaring Matrices & Vectors*. For column-by-column access to solved tables, see *Table Accessors & Aggregates*.
 
+[Related: matrices-decl, functions, table-accessors]
+
 [Topic: complex]
 # Complex Numbers
 
@@ -268,6 +286,8 @@ Z_i = 0
 A = Cis(phi)           { unit phasor at angle phi }
 ```
 
+[Related: math-funcs, symbolic-cas, matrices-sys]
+
 [Topic: strings]
 # String Variables & Functions
 
@@ -285,3 +305,5 @@ These take string-literal (or string-variable) arguments and return a number:
 - **`StringVal(s)`** — convert a numeric string to a scalar (`StringVal('3.14')` → `3.14`).
 
 String-returning functions (also suffixed `$`) include `LowerCase$`, `UpperCase$`, `Trim$`, `Concat$`, `Copy$`, `Chr$`, `Date$`, `Time$`, `TimeStamp$`, `UnitSystem$`, and `UnitsOf$`.
+
+[Related: syntax, thermo, ref-index]

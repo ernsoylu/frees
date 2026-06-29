@@ -23,6 +23,8 @@ V   = V0 - drop          { water volume at t = 60 s }
 
 > **When to use this vs. `DYNAMIC`:** `Integral()` handles a single first-order ODE. For coupled, multi-state, stiff, or event-driven systems, use the `DYNAMIC` block on the next page instead.
 
+[Related: dynamic-ode, optimization, variables]
+
 [Topic: dynamic-ode]
 # Transient / ODE Systems (DYNAMIC)
 
@@ -74,6 +76,8 @@ final_displacement = FinalValue('x')   { read back into the analytic solve }
 
 > **Name clash tip:** the time variable and a state named `T` are case-insensitively the same. Name the block's time axis `time` (or rename the state) to avoid the collision.
 
+[Related: calculus, plot-code, symbolic-cas]
+
 [Topic: optimization]
 # Optimization & Parametric Sweeps
 
@@ -104,6 +108,8 @@ Use the `| Log` suffix instead of `| Linear` for logarithmic spacing (handy for 
 ## Multi-objective optimization (Pareto front)
 When objectives conflict (minimise mass *and* maximise efficiency, say) there is no single optimum — only a **Pareto front** of non-dominated trade-offs. frees traces it with **NSGA-II**: supply two or more objectives (each flagged minimise or maximise) plus the decision variables and their bounds. Each candidate solves the equation system with the decisions fixed; the result is a list of `(decisions, objectives)` points where no objective improves without worsening another. Plot one objective against the other to see the trade-off curve.
 
+[Related: table-accessors, variables, plot-code]
+
 [Topic: api]
 # Solver Reference & API
 
@@ -120,3 +126,5 @@ Knowing the execution pipeline helps you read convergence diagnostics and diagno
 - **"Singular Jacobian"** — two equations are effectively dependent, or a guess landed on a flat region. Check for duplicate/redundant equations and adjust guesses.
 - **"Max iterations"** — the solver didn't converge. Almost always a guess or bound problem; try a guess closer to the expected magnitude.
 - **DoF ≠ 0** — too few or too many equations. F4 (Check) reports the imbalance before you solve.
+
+[Related: variables, gs-units-check, uncertainty]

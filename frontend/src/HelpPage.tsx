@@ -20,7 +20,10 @@ import {
   Accordion as MantineAccordion,
   Highlight,
   Divider,
-  Box
+  Box,
+  SimpleGrid,
+  Card,
+  Anchor
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { useState, useEffect, useMemo } from 'react';
@@ -32,21 +35,12 @@ import { REFERENCE_PAGES, type ReferencePage } from './referenceCatalog';
 import { buildSearchIndex, searchDocs, type SearchHit } from './searchIndex';
 import { VERSION_LABEL } from './version';
 import {
-  MATH_FUNCTIONS,
-  CALL_PROCEDURES,
-  MATRIX_FUNCTIONS,
   FLUID_PROPERTY_OUTPUTS,
   FLUID_INPUT_INDICATORS,
   AIRH2O_OUTPUTS,
   AIRH2O_INDICATORS,
-  MATERIAL_FUNCTIONS,
-  SOLID_MATERIALS,
-  TABLE_FUNCTIONS,
-  PARAMETRIC_ACCESSORS,
-  ODE_ACCESSORS,
   UTILITY_PROPERTY_FUNCS,
-  type FuncEntry,
-  type CallEntry
+  type FuncEntry
 } from './helpReference';
 import {
   SolverPipelineDiagram,
@@ -212,97 +206,6 @@ function FunctionTable({ rows }: Readonly<{ rows: FuncEntry[] }>) {
 }
 
 /**
- * Catalog of every built-in scalar function, grouped by family. The list is
- * transcribed from the backend evaluator's dispatch (no machine-readable
- * registry exists server-side), so it is kept in helpReference.ts.
- */
-function FunctionsReference() {
-  return (
-    <Stack gap="md">
-      <Title order={3} mt="sm">Built-in Functions</Title>
-      <Text size="sm" c="dimmed">
-        All names are case-insensitive. Functions are differentiable, so the
-        solver can build Jacobians for any equation that uses them.
-      </Text>
-      {MATH_FUNCTIONS.map((g) => (
-        <Stack key={g.title} gap="xs">
-          <Title order={4} c="blue.3" mt="sm">{g.title}</Title>
-          {g.blurb && <Text size="sm" c="dimmed">{g.blurb}</Text>}
-          <FunctionTable rows={g.functions} />
-        </Stack>
-      ))}
-
-      <Title order={3} mt="md">Matrix & Vector Functions</Title>
-      <Text size="sm" c="dimmed">
-        These return matrices/vectors — declare the output shape with a slice
-        suffix, or rely on automatic sizing.
-      </Text>
-      <FunctionTable rows={MATRIX_FUNCTIONS} />
-    </Stack>
-  );
-}
-
-/**
- * The CALL procedure library — control-systems analysis, model conversions,
- * and linear-algebra dispatches. Grouped by category. Output lengths are
- * sized automatically from the inputs; only value-dependent counts (finite
- * zeros, root-locus sweep) need an explicit slice.
- */
-function ProceduresReference() {
-  const cats: { key: CallEntry['category']; label: string }[] = [
-    { key: 'Model', label: 'Model representations & interconnection' },
-    { key: 'Analysis', label: 'Analysis (poles, frequency, time response)' },
-    { key: 'Design', label: 'Controller design' },
-    { key: 'Digital', label: 'Digital control (z-domain)' },
-    { key: 'Linear', label: 'Linear algebra & decomposition' },
-  ];
-  return (
-    <Stack gap="md">
-      <Title order={3} mt="sm">CALL Procedure Library</Title>
-      <Text size="sm" c="dimmed">
-        Invoke with <Code>CALL</Code>. Outputs are written to the variables after
-        the colon; sizes are inferred from the inputs unless noted.
-      </Text>
-      <Text size="sm" c="dimmed">
-        Every procedure also has a array-language-style destructuring form:{' '}
-        <Code>[A, B, C, D] = tf2ss(num, den)</Code> is identical to{' '}
-        <Code>CALL tf2ss(num, den : A, B, C, D)</Code>. Discard an output with{' '}
-        <Code>~</Code> (<Code>[~, ~, V] = svd(M)</Code>) or omit trailing outputs you
-        don't need (<Code>[A, B] = tf2ss(num, den)</Code>). Discarded values are still
-        computed; they're just not shown.
-      </Text>
-      {cats.map((c) => {
-        const rows = CALL_PROCEDURES.filter((p) => p.category === c.key);
-        if (rows.length === 0) return null;
-        return (
-          <Stack key={c.key} gap="xs">
-            <Title order={4} c="blue.3" mt="sm">{c.label}</Title>
-            <Table striped withTableBorder withColumnBorders>
-              <Table.Thead>
-                <Table.Tr>
-                  <Table.Th style={{ width: '20%' }}>Procedure</Table.Th>
-                  <Table.Th style={{ width: '34%' }}>Description</Table.Th>
-                  <Table.Th>Signature</Table.Th>
-                </Table.Tr>
-              </Table.Thead>
-              <Table.Tbody>
-                {rows.map((p) => (
-                  <Table.Tr key={p.name}>
-                    <Table.Td style={{ fontFamily: 'monospace' }}>{p.name}</Table.Td>
-                    <Table.Td>{p.desc}</Table.Td>
-                    <Table.Td style={{ fontFamily: 'monospace', fontSize: '12px' }}>{p.signature}</Table.Td>
-                  </Table.Tr>
-                ))}
-              </Table.Tbody>
-            </Table>
-          </Stack>
-        );
-      })}
-    </Stack>
-  );
-}
-
-/**
  * Fluid property functions, supported fluids (live from /api/fluids), and the
  * humid-air / glycol classes.
  */
@@ -395,58 +298,6 @@ function FluidsReference() {
 
       <Title order={3} mt="md">Utility & Combustion Functions</Title>
       <FunctionTable rows={UTILITY_PROPERTY_FUNCS} />
-    </Stack>
-  );
-}
-
-/** Solid material property functions and the list of supported materials. */
-function MaterialsReference() {
-  return (
-    <Stack gap="md">
-      <Title order={3} mt="sm">Solid Material Properties</Title>
-      <Text size="sm" c="dimmed">
-        Bulk (room-temperature) properties from the built-in material database.
-        <Code>k_</Code> and <Code>c_</Code> accept an optional temperature{' '}
-        <Code>T</Code> (kelvin); well-characterised metals get a linear
-        correction about 300 K. <Code>rho_</Code>, <Code>E_</Code>,{' '}
-        <Code>nu_</Code> are constants.
-      </Text>
-      <FunctionTable rows={MATERIAL_FUNCTIONS} />
-
-      <Title order={4} c="blue.3" mt="sm">Supported materials</Title>
-      <Group gap={6}>
-        {SOLID_MATERIALS.map((m) => (
-          <Badge key={m} variant="default" style={{ fontFamily: 'monospace', textTransform: 'none' }}>{m}</Badge>
-        ))}
-      </Group>
-    </Stack>
-  );
-}
-
-/** Table lookup, parametric, and ODE accessor functions. */
-function AccessorsReference() {
-  return (
-    <Stack gap="md">
-      <Title order={3} mt="sm">Table Lookup & Interpolation</Title>
-      <Text size="sm" c="dimmed">
-        Query a named <Code>TABLE</Code> block. Column 1 is the x axis. The
-        simplest form is to call the table like a function: <Code>t(x)</Code>.
-      </Text>
-      <FunctionTable rows={TABLE_FUNCTIONS} />
-
-      <Title order={3} mt="md">Parametric Table Accessors</Title>
-      <Text size="sm" c="dimmed">
-        Query the active Parametric Table. Aggregates are computed once per
-        table solve and are identical in every row.
-      </Text>
-      <FunctionTable rows={PARAMETRIC_ACCESSORS} />
-
-      <Title order={3} mt="md">ODE / DYNAMIC Accessors</Title>
-      <Text size="sm" c="dimmed">
-        Read columns of a compiled ODE Table back into the analytic solve — e.g.
-        close a sizing loop with <Code>MaxValue('h') = h_target</Code>.
-      </Text>
-      <FunctionTable rows={ODE_ACCESSORS} />
     </Stack>
   );
 }
@@ -2634,108 +2485,166 @@ import {
   IconCode,
   IconFlask,
   IconAdjustments,
-  IconChartBar,
-  IconFileText
+  IconFileText,
+  IconRocket,
+  IconTool,
+  IconList,
+  IconChevronLeft,
+  IconChevronRight,
+  IconArrowRight
 } from '@tabler/icons-react';
 
-const CATEGORIES = [
+interface NavItem {
+  id: string;
+  label: string;
+  blurb?: string;
+  keywords: string[];
+}
+interface NavCategory {
+  title: string;
+  icon: React.ReactNode;
+  /** The overview/landing page id for this group (rendered as a card grid). */
+  overview?: string;
+  items: NavItem[];
+}
+
+const CATEGORIES: NavCategory[] = [
   {
-    title: 'Getting Started',
-    icon: <IconBook size={16} />,
+    title: 'Get Started',
+    icon: <IconRocket size={16} />,
+    overview: 'started',
     items: [
-      { id: 'started', label: 'Introduction & Workflow', keywords: ['intro', 'philosophy', 'workflow', 'getting started'] },
-      { id: 'repl', label: 'REPL Terminal & Workspace', keywords: ['repl', 'terminal', 'workspace', 'console', 'vars', 'who', 'whos', 'calculator', 'cas', 'factor', 'expand', 'simplify', 'apart', 'laplace', 'diff', 'integrate', 'call', 'symbolic', 'interactive', 'ans'] },
-      { id: 'shortcuts', label: 'Keyboard Shortcuts', keywords: ['hotkey', 'shortcuts', 'keyboard', 'f2', 'f4', 'f9', 'ctrl'] },
-      { id: 'reports', label: 'Markdown & Reports', keywords: ['markdown', 'report', 'latex', 'katex', 'inline', 'equations'] },
-      { id: 'digitizer-fit', label: 'Graph Digitizer & Curve Fit', keywords: ['digitizer', 'curve', 'fit', 'table', 'regression', 'equation', 'graph'] },
+      { id: 'started', label: 'Get Started Overview', blurb: 'What frees is, and a map of this documentation.', keywords: ['intro', 'philosophy', 'overview', 'getting started', 'welcome'] },
+      { id: 'gs-first-solve', label: '1. Your First Solve', blurb: 'Type four lines and let frees find the unknown.', keywords: ['first solve', 'tutorial', 'quick start', 'f2', 'solve', 'ideal gas'] },
+      { id: 'gs-declarative', label: '2. Thinking Declaratively', blurb: 'Why equation order never matters and any variable can be the unknown.', keywords: ['declarative', 'equality', 'order', 'unknown', 'assignment'] },
+      { id: 'gs-units-check', label: '3. Units & Checking', blurb: 'Annotate inputs, work in SI, and verify with Check (F4).', keywords: ['units', 'check', 'f4', 'degrees of freedom', 'dof', 'guess', 'si'] },
+      { id: 'gs-next', label: '4. Where to Go Next', blurb: 'A guided map of the rest of the documentation.', keywords: ['next steps', 'learn', 'map', 'where to go'] },
     ]
   },
   {
     title: 'Language Fundamentals',
     icon: <IconCalculator size={16} />,
+    overview: 'lang-overview',
     items: [
-      { id: 'syntax', label: 'Equation Syntax & Rules', keywords: ['syntax', 'equality', 'case', 'comment', 'rules'] },
-      { id: 'math-funcs', label: 'Mathematical Functions', keywords: ['abs', 'sqrt', 'ln', 'log10', 'exp', 'sin', 'cos', 'tan', 'atan2', 'min', 'max', 'sum', 'avg', 'sinh', 'cosh', 'tanh', 'arcsinh', 'arccosh', 'arctanh', 'round', 'floor', 'ceil', 'trunc', 'sign', 'factorial', 'step', 'if', 'product', 'gcd', 'lcm', 'bitand', 'bitor', 'bitxor', 'bitnot', 'bitshiftl', 'bitshiftr', 'bitwise', 'shift', 'baseconvert'] },
-      { id: 'special-funcs', label: 'Special & Statistical Functions', keywords: ['bessel', 'besselk', 'bessely', 'bessel_i0', 'bessel_j0', 'chi_square', 'random', 'randg', 'probability', 'gamma', 'loggamma', 'digamma', 'beta', 'erf', 'erfc', 'erfinv'] },
-      { id: 'variables', label: 'Variables, Guesses & Bounds', keywords: ['variables', 'guess', 'bounds', 'limits', 'variable info'] },
-      { id: 'uncertainty', label: 'Uncertainty Propagation', keywords: ['uncertainty', 'propagation', 'error', 'uncertaintyof', 'svd'] },
-      { id: 'units', label: 'Units & Consistency', keywords: ['unit', 'units', 'supported units', 'unit list', 'si', 'convert', 'converttemp', 'temperature', 'dimension', 'annotation', 'constants', 'pi', 'gas constant', 'gravity', 'boltzmann', 'avogadro', 'planck'] },
-      { id: 'arrays', label: 'Arrays & For Loops', keywords: ['array', 'for', 'duplicate', 'loops', 'slice', 'index'] },
-      { id: 'complex', label: 'Complex Numbers & Helpers', keywords: ['complex', 'imaginary', 'real', 'i', 'j', 'angle', 'polar', 'conj', 'magnitude', 'cis'] },
-      { id: 'strings', label: 'String Variables & Functions', keywords: ['string', 'chr$', 'concat$', 'copy$', 'lowercase$', 'uppercase$', 'trim$', 'stringlen', 'stringpos', 'stringval', 'date$', 'time$', 'timestamp$', 'unitsystem$', 'unitsof$'] },
+      { id: 'lang-overview', label: 'Overview', blurb: 'The grammar, variables, units, and built-in functions of the frees language.', keywords: ['language', 'fundamentals', 'overview', 'grammar'] },
+      { id: 'syntax', label: 'Equation Syntax & Rules', blurb: 'Equality vs assignment, case-insensitivity, operators, and comments.', keywords: ['syntax', 'equality', 'case', 'comment', 'rules'] },
+      { id: 'variables', label: 'Variables, Guesses & Bounds', blurb: 'Degrees of freedom, and the guesses and bounds that make nonlinear solves converge.', keywords: ['variables', 'guess', 'bounds', 'limits', 'variable info'] },
+      { id: 'units', label: 'Units & Consistency', blurb: 'Annotate inputs, convert with Convert/ConvertTemp, and read SI results.', keywords: ['unit', 'units', 'supported units', 'unit list', 'si', 'convert', 'converttemp', 'temperature', 'dimension', 'annotation', 'constants', 'pi', 'gas constant', 'gravity', 'boltzmann', 'avogadro', 'planck'] },
+      { id: 'arrays', label: 'Arrays & For Loops', blurb: 'Indexed variables and compile-time FOR expansion into equation families.', keywords: ['array', 'for', 'duplicate', 'loops', 'slice', 'index'] },
+      { id: 'complex', label: 'Complex Numbers', blurb: 'Paired _r/_i components and the complex helper functions.', keywords: ['complex', 'imaginary', 'real', 'i', 'j', 'angle', 'polar', 'conj', 'magnitude', 'cis'] },
+      { id: 'strings', label: 'String Variables', blurb: '$-suffixed strings for fluid names, geometry labels, and string functions.', keywords: ['string', 'chr$', 'concat$', 'copy$', 'lowercase$', 'uppercase$', 'trim$', 'stringlen', 'stringpos', 'stringval', 'date$', 'time$', 'timestamp$', 'unitsystem$', 'unitsof$'] },
+      { id: 'uncertainty', label: 'Uncertainty Propagation', blurb: 'First-order RSS error propagation via UncertaintyOf.', keywords: ['uncertainty', 'propagation', 'error', 'uncertaintyof', 'svd'] },
+      { id: 'math-funcs', label: 'Mathematical Functions', blurb: 'Trig, logs, rounding, conditionals — the differentiable scalar toolbox.', keywords: ['abs', 'sqrt', 'ln', 'log10', 'exp', 'sin', 'cos', 'tan', 'atan2', 'min', 'max', 'sum', 'avg', 'sinh', 'cosh', 'tanh', 'arcsinh', 'arccosh', 'arctanh', 'round', 'floor', 'ceil', 'trunc', 'sign', 'factorial', 'step', 'if', 'product', 'gcd', 'lcm', 'bitand', 'bitor', 'bitxor', 'bitnot', 'bitshiftl', 'bitshiftr', 'bitwise', 'shift', 'baseconvert'] },
+      { id: 'special-funcs', label: 'Special & Statistical Functions', blurb: 'Bessel, gamma, error functions and statistical distributions.', keywords: ['bessel', 'besselk', 'bessely', 'bessel_i0', 'bessel_j0', 'chi_square', 'random', 'randg', 'probability', 'gamma', 'loggamma', 'digamma', 'beta', 'erf', 'erfc', 'erfinv'] },
     ]
   },
   {
-    title: 'Matrix & Linear Algebra',
+    title: 'Matrices & Linear Algebra',
     icon: <IconGrid3x3 size={16} />,
+    overview: 'matrix-overview',
     items: [
-      { id: 'matrices-decl', label: 'Declaring Matrices & Vectors', keywords: ['matrix', 'vector', 'declaring', 'literal', 'semicolon', 'brackets', 'arrays'] },
-      { id: 'matrices-ops', label: 'Matrix Operators (+, -, *, \\, \')', keywords: ['operators', 'transpose', 'backslash', 'multiplication', 'solve', 'arrays'] },
-      { id: 'matrices-blas', label: 'OpenBLAS Algebra Functions', keywords: ['blas', 'axpy', 'scal', 'copy', 'asum', 'nrm2', 'gemv', 'ger', 'gemm', 'openblas'] },
-      { id: 'matrices-sys', label: 'Linear Systems & Decomp', keywords: ['solvelinear', 'determinant', 'ludecompose', 'eigen', 'eigenvalues', 'eulerrotate', 'eulerdecompose', 'rotation'] },
+      { id: 'matrix-overview', label: 'Overview', blurb: 'Declare, operate on, and solve with matrices and vectors.', keywords: ['matrix', 'linear algebra', 'overview', 'vector'] },
+      { id: 'matrices-decl', label: 'Declaring Matrices & Vectors', blurb: 'Bracket literals, slice suffixes, and generation helpers.', keywords: ['matrix', 'vector', 'declaring', 'literal', 'semicolon', 'brackets', 'arrays'] },
+      { id: 'matrices-ops', label: 'Matrix Operators (+, -, *, \\, \')', blurb: 'Element-wise vs matrix operations and the backslash solve.', keywords: ['operators', 'transpose', 'backslash', 'multiplication', 'solve', 'arrays'] },
+      { id: 'matrices-blas', label: 'OpenBLAS Algebra Functions', blurb: 'Low-level BLAS primitives (axpy, gemv, gemm, …).', keywords: ['blas', 'axpy', 'scal', 'copy', 'asum', 'nrm2', 'gemv', 'ger', 'gemm', 'openblas'] },
+      { id: 'matrices-sys', label: 'Linear Systems & Decomposition', blurb: 'SolveLinear, determinants, LU, eigenvalues, and rotations.', keywords: ['solvelinear', 'determinant', 'ludecompose', 'eigen', 'eigenvalues', 'eulerrotate', 'eulerdecompose', 'rotation'] },
     ]
   },
   {
-    title: 'Programming & Logic',
+    title: 'Programming & Tables',
     icon: <IconCode size={16} />,
+    overview: 'prog-overview',
     items: [
-      { id: 'functions', label: 'Custom Functions & Procedures', keywords: ['functions', 'procedures', 'call', 'custom', 'outputs', 'while', 'repeat', 'until', 'loop', 'if', 'then', 'else'] },
-      { id: 'tables-code', label: 'Custom Tables (TABLE)', keywords: ['table', 'interp', 'tabulated', 'custom tables', 'curve fit'] },
-      { id: 'lookup-tables', label: 'Lookup Tables & Interpolation', keywords: ['lookup', 'interpolate', 'differentiate', 'table', 'interpolation', 'spline'] },
-      { id: 'table-accessors', label: 'Table Accessors & Aggregates', keywords: ['parametric', 'integral', 'run', 'tablevalue', 'tablerun#', 'nparametricruns', 'sum', 'avg', 'min', 'max', 'stddev', 'integralvalue'] },
-      { id: 'modules', label: 'Modular Submodels (MODULE)', keywords: ['module', 'submodel', 'modular', 'call module'] },
+      { id: 'prog-overview', label: 'Overview', blurb: 'Reusable functions, submodels, and tabulated data.', keywords: ['programming', 'tables', 'overview', 'logic'] },
+      { id: 'functions', label: 'Custom Functions & Procedures', blurb: 'FUNCTION/PROCEDURE bodies with imperative control flow.', keywords: ['functions', 'procedures', 'call', 'custom', 'outputs', 'while', 'repeat', 'until', 'loop', 'if', 'then', 'else'] },
+      { id: 'modules', label: 'Modular Submodels (MODULE)', blurb: 'Encapsulate and reuse whole equation subsystems.', keywords: ['module', 'submodel', 'modular', 'call module'] },
+      { id: 'tables-code', label: 'Custom Tables (TABLE)', blurb: 'Inline tabulated data callable as a function.', keywords: ['table', 'interp', 'tabulated', 'custom tables', 'curve fit'] },
+      { id: 'lookup-tables', label: 'Lookup Tables & Interpolation', blurb: 'Interpolate, differentiate, and look up tabulated columns.', keywords: ['lookup', 'interpolate', 'differentiate', 'table', 'interpolation', 'spline'] },
+      { id: 'table-accessors', label: 'Table Accessors & Aggregates', blurb: 'Query Parametric tables and whole-table aggregates.', keywords: ['parametric', 'integral', 'run', 'tablevalue', 'tablerun#', 'nparametricruns', 'sum', 'avg', 'min', 'max', 'stddev', 'integralvalue'] },
     ]
   },
   {
     title: 'Fluids & Materials',
     icon: <IconFlask size={16} />,
+    overview: 'fluids-overview',
     items: [
-      { id: 'thermo', label: 'Fluid Properties (CoolProp & Gas)', keywords: ['coolprop', 'fluids', 'water', 'steam', 'refrigerant', 'glycol', 'density', 'enthalpy', 'entropy', 'p_sat', 't_sat', 'molarmass', 'compressibilityfactor', 'prandtl', 'surfacetension', 'fugacity', 'enthalpy_fusion', 'dipole', 'p_crit', 't_crit', 'v_crit', 't_triple', 'isidealgas', 'phase$'] },
-      { id: 'chemistry', label: 'Chemistry & Combustion', keywords: ['chemistry', 'combustion', 'molarmass', 'heatingvalue', 'lhv', 'hhv', 'stoichafr', 'afr', 'fuel', 'formula', 'molar mass', 'chemical', 'c8h18', 'ch4', 'ethanol', 'hydrocarbon'] },
-      { id: 'solid-materials', label: 'Solid & Material Properties', keywords: ['material', 'solid', 'c_', 'k_', 'rho_', 'mu_', 'pv_', 'e_', 'nu_', 'epsilon_', 'volexpcoef', 'freezingpt', 'deltal\\l_293', 'ek_lj', 'sigma_lj'] },
-      { id: 'humidair', label: 'Psychrometrics (AirH2O)', keywords: ['psychrometric', 'humid air', 'airh2o', 'relative humidity', 'wet bulb', 'dew point'] },
-      { id: 'state-tables', label: 'Fluid State Tables (STATE TABLE)', keywords: ['state table', 'states', 'fluid states', 'circuit', 'multi-fluid', 'multi-circuit', 'fill missing', 'state points', 'overlay'] },
+      { id: 'fluids-overview', label: 'Overview', blurb: 'Real-fluid, ideal-gas, humid-air, and solid-material property data.', keywords: ['fluids', 'materials', 'overview', 'properties'] },
+      { id: 'thermo', label: 'Fluid Properties (CoolProp & Gas)', blurb: 'Enthalpy, entropy, density … for CoolProp fluids and ideal gases.', keywords: ['coolprop', 'fluids', 'water', 'steam', 'refrigerant', 'glycol', 'density', 'enthalpy', 'entropy', 'p_sat', 't_sat', 'molarmass', 'compressibilityfactor', 'prandtl', 'surfacetension', 'fugacity', 'enthalpy_fusion', 'dipole', 'p_crit', 't_crit', 'v_crit', 't_triple', 'isidealgas', 'phase$'] },
+      { id: 'humidair', label: 'Psychrometrics (AirH2O)', blurb: 'Humid-air states from three coordinates; wet-bulb, dew-point, humidity ratio.', keywords: ['psychrometric', 'humid air', 'airh2o', 'relative humidity', 'wet bulb', 'dew point'] },
+      { id: 'chemistry', label: 'Chemistry & Combustion', blurb: 'Molar mass from formulas, heating values, view factors, Heisler charts.', keywords: ['chemistry', 'combustion', 'molarmass', 'heatingvalue', 'lhv', 'hhv', 'stoichafr', 'afr', 'fuel', 'formula', 'molar mass', 'chemical', 'c8h18', 'ch4', 'ethanol', 'hydrocarbon'] },
+      { id: 'solid-materials', label: 'Solid & Material Properties', blurb: 'Conductivity, specific heat, modulus … for common engineering solids.', keywords: ['material', 'solid', 'c_', 'k_', 'rho_', 'mu_', 'pv_', 'e_', 'nu_', 'epsilon_', 'volexpcoef', 'freezingpt', 'deltal\\l_293', 'ek_lj', 'sigma_lj'] },
+      { id: 'state-tables', label: 'Fluid State Tables (STATE TABLE)', blurb: 'Group circuit state points, isolate fluids, and overlay cycles.', keywords: ['state table', 'states', 'fluid states', 'circuit', 'multi-fluid', 'multi-circuit', 'fill missing', 'state points', 'overlay'] },
     ]
   },
   {
-    title: 'Advanced Solving',
+    title: 'Modeling & Solving',
     icon: <IconAdjustments size={16} />,
+    overview: 'modeling-overview',
     items: [
-      { id: 'calculus', label: 'Numerical Integration (ODEs)', keywords: ['integral', 'ode', 'differential', 'calculus', 'runge-kutta'] },
-      { id: 'dynamic-ode', label: 'Transient / ODE Systems (DYNAMIC)', keywords: ['dynamic', 'transient', 'ode', 'der', 'state', 'event', 'ode45', 'ode23', 'ode23s', 'ode15s', 'rocket', 'odevalue', 'finalvalue', 'maxvalue', 'timeat', 'ode table', 'stiff', 'initial condition', 'apogee'] },
-      { id: 'symbolic-cas', label: 'Control Systems & Symbolic CAS', keywords: ['symbolic', 'cas', 'laplace', 's', 'partial fractions', 'residue', 'transfer function', 'tf', 'identity', 'control', 'decompose', 'apart', 'numerator', 'denominator', 'state space', 'ss2tf', 'tf2ss', 'zp2tf', 'tf2zp', 'series', 'parallel', 'feedback', 'pole', 'zero', 'bode', 'nyquist', 'margin', 'frequency response', 'step', 'impulse', 'lsim', 'time response', 'lqr', 'place', 'pole placement', 'ackermann', 'pidtune', 'pid', 'riccati', 'controller design'] },
-      { id: 'optimization', label: 'Optimization & sweeps', keywords: ['optimization', 'sweep', 'parametric', 'minimization', 'maximization'] },
-      { id: 'api', label: 'Solver Reference & API', keywords: ['api', 'solver', 'newton', 'tarjan', 'residuals', 'jacobian'] },
+      { id: 'modeling-overview', label: 'Overview', blurb: 'Differential systems, control design, optimization, diagrams, and the solver pipeline.', keywords: ['modeling', 'solving', 'overview', 'advanced'] },
+      { id: 'calculus', label: 'Numerical Integration (ODEs)', blurb: 'Definite integrals and the scalar first-order ODE feedback pattern.', keywords: ['integral', 'ode', 'differential', 'calculus', 'runge-kutta'] },
+      { id: 'dynamic-ode', label: 'Transient / ODE Systems (DYNAMIC)', blurb: 'Coupled, multi-state, stiff, event-driven ODE integration.', keywords: ['dynamic', 'transient', 'ode', 'der', 'state', 'event', 'ode45', 'ode23', 'ode23s', 'ode15s', 'rocket', 'odevalue', 'finalvalue', 'maxvalue', 'timeat', 'ode table', 'stiff', 'initial condition', 'apogee'] },
+      { id: 'symbolic-cas', label: 'Control Systems & Symbolic CAS', blurb: 'Transfer functions, state space, Bode/Nyquist, LQR, and Laplace algebra.', keywords: ['symbolic', 'cas', 'laplace', 's', 'partial fractions', 'residue', 'transfer function', 'tf', 'identity', 'control', 'decompose', 'apart', 'numerator', 'denominator', 'state space', 'ss2tf', 'tf2ss', 'zp2tf', 'tf2zp', 'series', 'parallel', 'feedback', 'pole', 'zero', 'bode', 'nyquist', 'margin', 'frequency response', 'step', 'impulse', 'lsim', 'time response', 'lqr', 'place', 'pole placement', 'ackermann', 'pidtune', 'pid', 'riccati', 'controller design'] },
+      { id: 'optimization', label: 'Optimization & Sweeps', blurb: 'Parametric sweeps, single-objective optimization, and Pareto fronts.', keywords: ['optimization', 'sweep', 'parametric', 'minimization', 'maximization'] },
+      { id: 'diagram', label: 'Diagram Canvas & Schematics', blurb: 'Build schematics and overlay live solved data and cycle paths.', keywords: ['diagram', 'plots', 'graph', 'canvas', 'recording', 'export'] },
+      { id: 'plot-code', label: 'Plots in Code (PLOT)', blurb: 'Declare XY, property, Bode, Nyquist and pole-zero figures in code.', keywords: ['plot', 'graph', 'chart', 'code', 'programmatic', 'xy', 'property', 'psychro'] },
+      { id: 'api', label: 'Solver Internals & Diagnostics', blurb: 'The compile/solve pipeline and how to read convergence diagnostics.', keywords: ['api', 'solver', 'newton', 'tarjan', 'residuals', 'jacobian', 'singular', 'convergence'] },
     ]
   },
   {
-    title: 'Diagrams & Plots',
-    icon: <IconChartBar size={16} />,
+    title: 'Tools & Workflow',
+    icon: <IconTool size={16} />,
+    overview: 'tools-overview',
     items: [
-      { id: 'diagram', label: 'Diagram Canvas & Plotting', keywords: ['diagram', 'plots', 'graph', 'canvas', 'recording', 'export'] },
-      { id: 'plot-code', label: 'Plots in Code (PLOT)', keywords: ['plot', 'graph', 'chart', 'code', 'programmatic', 'xy', 'property', 'psychro'] },
+      { id: 'tools-overview', label: 'Overview', blurb: 'The interactive console, shortcuts, reports, and data-capture tools.', keywords: ['tools', 'workflow', 'overview'] },
+      { id: 'repl', label: 'REPL Terminal & Workspace', blurb: 'A unit-aware console over the solved session, with CALL and CAS.', keywords: ['repl', 'terminal', 'workspace', 'console', 'vars', 'who', 'whos', 'calculator', 'cas', 'factor', 'expand', 'simplify', 'apart', 'laplace', 'diff', 'integrate', 'call', 'symbolic', 'interactive', 'ans'] },
+      { id: 'shortcuts', label: 'Keyboard Shortcuts', blurb: 'Solve, Check, Variable Info, and block-solve hotkeys.', keywords: ['hotkey', 'shortcuts', 'keyboard', 'f2', 'f4', 'f9', 'ctrl'] },
+      { id: 'reports', label: 'Markdown & Reports', blurb: 'Weave narrative, live values, and plots into a Formatted report.', keywords: ['markdown', 'report', 'latex', 'katex', 'inline', 'equations'] },
+      { id: 'digitizer-fit', label: 'Graph Digitizer & Curve Fit', blurb: 'Turn a chart image or a table into a fitted equation.', keywords: ['digitizer', 'curve', 'fit', 'table', 'regression', 'equation', 'graph'] },
     ]
   },
   {
-    title: 'Case Studies',
+    title: 'Examples',
     icon: <IconFileText size={16} />,
     items: [
-      { id: 'examples', label: 'Engineering Examples Library', keywords: ['examples', 'rankine', 'brayton', 'cold air standard', 'combined cycle', 'pipe network', 'truss', 'radiation', 'cooling loop', 'reforming', 'pid', 'fatigue', 'nuclear', 'siyavula', 'nozzle', 'co2', 'compressible', 'throat', 'sonic', 'pelton', 'turbine', 'turbomachinery', 'hydropower', 'impulse', 'vehicle', 'ev', 'electric vehicle', 'longitudinal', 'lateral', 'bicycle model', 'understeer', 'road load', 'drag', 'battery', 'pack', 'cell', 'sizing', 'motor', 'range', 'batemo', 'c-rate', 'ode', 'differential equations', 'runge-kutta', 'stiff', 'van der pol', 'robertson', 'lotka-volterra', 'predator-prey', 'pendulum', 'rlc', 'rc circuit', 'rl circuit', 'orbit', 'logistic', 'decay', 'cooling', 'mass-spring-damper', 'parachutist', 'torricelli'] },
+      { id: 'examples', label: 'Engineering Examples Library', blurb: 'Verified, ready-to-run problems grouped by discipline.', keywords: ['examples', 'rankine', 'brayton', 'cold air standard', 'combined cycle', 'pipe network', 'truss', 'radiation', 'cooling loop', 'reforming', 'pid', 'fatigue', 'nuclear', 'siyavula', 'nozzle', 'co2', 'compressible', 'throat', 'sonic', 'pelton', 'turbine', 'turbomachinery', 'hydropower', 'impulse', 'vehicle', 'ev', 'electric vehicle', 'longitudinal', 'lateral', 'bicycle model', 'understeer', 'road load', 'drag', 'battery', 'pack', 'cell', 'sizing', 'motor', 'range', 'batemo', 'c-rate', 'ode', 'differential equations', 'runge-kutta', 'stiff', 'van der pol', 'robertson', 'lotka-volterra', 'predator-prey', 'pendulum', 'rlc', 'rc circuit', 'rl circuit', 'orbit', 'logistic', 'decay', 'cooling', 'mass-spring-damper', 'parachutist', 'torricelli'] },
     ]
   },
   {
-    title: 'Quick Reference',
-    icon: <IconBook size={16} />,
+    title: 'Reference',
+    icon: <IconList size={16} />,
+    overview: 'ref-index',
     items: [
-      { id: 'ref-functions', label: 'Built-in Functions', keywords: ['function', 'math', 'sin', 'cos', 'exp', 'ln', 'log10', 'sqrt', 'abs', 'min', 'max', 'sum', 'average', 'sinh', 'cosh', 'tanh', 'round', 'floor', 'ceil', 'sign', 'step', 'if', 'mod', 'gcd', 'lcm', 'gamma', 'erf', 'bessel', 'atan2', 'factorial', 'complex', 'conj', 'magnitude', 'angle', 'cis', 'matrix', 'solvelinear', 'inverse', 'determinant', 'transpose', 'zeros', 'ones', 'eye', 'linspace', 'blas'] },
-      { id: 'ref-procedures', label: 'CALL Procedure Library', keywords: ['call', 'procedure', 'ss2tf', 'tf2ss', 'zp2tf', 'tf2zp', 'series', 'parallel', 'feedback', 'pole', 'zero', 'bode', 'nyquist', 'nichols', 'margin', 'rlocus', 'routh', 'step', 'impulse', 'lsim', 'stepinfo', 'lqr', 'place', 'pidtune', 'c2d', 'd2c', 'residue', 'eigenvalues', 'eigen', 'ludecompose', 'eulerrotate', 'pade', 'mason', 'ctrb', 'obsv', 'rank', 'ss2ss', 'errorconst'] },
-      { id: 'ref-fluids', label: 'Fluids & Properties', keywords: ['fluid', 'water', 'steam', 'r134a', 'ammonia', 'air', 'airh2o', 'glycol', 'eg50', 'pg30', 'enthalpy', 'entropy', 'density', 'volume', 'intenergy', 'quality', 'cp', 'cv', 'viscosity', 'conductivity', 'soundspeed', 'compressibilityfactor', 'gibbs', 'humrat', 'relhum', 'wetbulb', 'dewpoint', 'p_sat', 't_sat', 'molarmass', 'heatingvalue', 'stoichafr', 'phase$', 'stagnation', 'surfacetension', 'viewfactor', 'heisler'] },
-      { id: 'ref-materials', label: 'Solid Materials', keywords: ['material', 'solid', 'aluminum', 'copper', 'steel', 'iron', 'glass', 'concrete', 'k_', 'c_', 'rho_', 'e_', 'nu_', 'young', 'modulus', 'poisson', 'thermal conductivity', 'density', 'specific heat'] },
-      { id: 'ref-accessors', label: 'Table & ODE Accessors', keywords: ['interpolate', 'lookup', 'lookuprow', 'tablevalue', 'tablerun', 'nparametricruns', 'tablesum', 'tableavg', 'tablemin', 'tablemax', 'tablestddev', 'integralvalue', 'finalvalue', 'maxvalue', 'minvalue', 'timeat', 'odevalue', 'accessor', 'parametric', 'ode'] },
-      { id: 'ref-constants', label: 'Constants & Units', keywords: ['constant', 'pi#', 'e#', 'r#', 'g#', 'na#', 'k#', 'h#', 'c#', 'sigma#', 'gc#', 'qe#', 'avogadro', 'boltzmann', 'planck', 'gravity', 'gas constant', 'unit', 'si', 'dimension', 'kpa', 'pa', 'c', 'f', 'k', 'deg', 'rad'] },
+      { id: 'ref-index', label: 'A–Z Function Index', blurb: 'Every documented symbol, alphabetically, linking to its reference page.', keywords: ['index', 'a-z', 'alphabetical', 'all functions', 'reference', 'list'] },
+      { id: 'ref-units', label: 'Units & Constants', blurb: 'The live list of accepted units and built-in physical constants.', keywords: ['constant', 'pi#', 'e#', 'r#', 'g#', 'na#', 'k#', 'h#', 'c#', 'sigma#', 'gc#', 'qe#', 'avogadro', 'boltzmann', 'planck', 'gravity', 'gas constant', 'unit', 'units', 'si', 'dimension', 'kpa', 'pa', 'convert', 'deg', 'rad'] },
+      { id: 'ref-fluids', label: 'Supported Fluids', blurb: 'The live CoolProp fluid list, ideal gases, and glycol coolants.', keywords: ['fluid', 'water', 'steam', 'r134a', 'ammonia', 'air', 'airh2o', 'glycol', 'eg50', 'pg30', 'coolprop', 'supported fluids'] },
     ]
   }
 ];
+
+// id → display label / blurb, for cross-links ([Related:] markers, landing cards).
+const NAV_LABELS: Record<string, string> = {};
+const NAV_BLURBS: Record<string, string> = {};
+for (const cat of CATEGORIES) for (const it of cat.items) {
+  NAV_LABELS[it.id] = it.label;
+  if (it.blurb) NAV_BLURBS[it.id] = it.blurb;
+}
+// overview id → the category it introduces (so a landing page can list siblings).
+const CATEGORY_BY_OVERVIEW = new Map<string, NavCategory>();
+for (const cat of CATEGORIES) if (cat.overview) CATEGORY_BY_OVERVIEW.set(cat.overview, cat);
+
+// The numbered Get-Started reading order, used for Prev/Next navigation.
+const GETTING_STARTED_SEQUENCE = ['started', 'gs-first-solve', 'gs-declarative', 'gs-units-check', 'gs-next'];
+
+// Slugify a heading for an in-page anchor ("On this page" links).
+function slugify(s: string): string {
+  return s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+}
+
+// Strip markdown emphasis/code/math markers so heading text reads cleanly in a TOC.
+function plainText(s: string): string {
+  return s.replace(/[`*_$]/g, '').trim();
+}
 
 function renderInlineContent(text: string): React.ReactNode[] {
   const result: React.ReactNode[] = [];
@@ -2788,9 +2697,11 @@ function renderInlineContent(text: string): React.ReactNode[] {
 
 interface MarkdownRendererProps {
   content: string;
+  /** Navigate to another topic/reference id (for [Related:] cross-links). */
+  onNavigate?: (id: string) => void;
 }
 
-function MarkdownRenderer({ content }: MarkdownRendererProps) {
+function MarkdownRenderer({ content, onNavigate }: MarkdownRendererProps) {
   if (!content) return null;
   const lines = content.split('\n');
   const elements: React.ReactNode[] = [];
@@ -2978,8 +2889,11 @@ function MarkdownRenderer({ content }: MarkdownRendererProps) {
       
       if (titleText) {
         const key = `heading-${i}`;
+        // H2 (rendered order 3) gets an anchor id so the "On this page" TOC can scroll to it.
+        const anchorId = order === 3 ? slugify(plainText(titleText)) : undefined;
         elements.push(
-          <Title key={key} order={order} mt={order === 2 ? 'md' : 'sm'} mb="xs" c="blue.4">
+          <Title key={key} id={anchorId} order={order} mt={order === 2 ? 'md' : 'sm'} mb="xs" c="blue.4"
+            style={anchorId ? { scrollMarginTop: '76px' } : undefined}>
             {renderInlineContent(titleText)}
           </Title>
         );
@@ -3048,6 +2962,41 @@ function MarkdownRenderer({ content }: MarkdownRendererProps) {
       continue;
     }
     
+    // 6c. Related topics footer: [Related: id1, id2, …] — clickable cross-links to
+    // other guide/reference pages, mirroring the reference pages' "See also" row.
+    if (trimmed.startsWith('[Related:') && trimmed.endsWith(']')) {
+      const ids = trimmed.substring(9, trimmed.length - 1).split(',').map((s) => s.trim()).filter(Boolean);
+      const key = `related-${i}`;
+      elements.push(
+        <Box key={key} mt="xl" pt="md" style={{ borderTop: '1px solid var(--mantine-color-default-border)' }}>
+          <Text size="sm" fw={700} c="dimmed" mb="xs" style={{ textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+            Related Topics
+          </Text>
+          <Group gap="xs">
+            {ids.map((id) => {
+              const label = NAV_LABELS[id] ?? id;
+              return (
+                <Badge
+                  key={id}
+                  component="a"
+                  variant="light"
+                  color="blue"
+                  size="lg"
+                  style={{ cursor: onNavigate ? 'pointer' : 'default', textTransform: 'none' }}
+                  rightSection={<IconArrowRight size={12} />}
+                  onClick={() => onNavigate?.(id)}
+                >
+                  {label}
+                </Badge>
+              );
+            })}
+          </Group>
+        </Box>
+      );
+      i++;
+      continue;
+    }
+
     // 7. Regular Paragraph or spacer
     if (trimmed === '') {
       elements.push(<div key={`spacer-${i}`} style={{ height: '0.8em' }} />);
@@ -3118,6 +3067,128 @@ function ReferencePageView({ page, onNavigate }: Readonly<{ page: ReferencePage;
           })}
         </Group>
       )}
+    </Stack>
+  );
+}
+
+// "On this page" mini-TOC built from the H2 (`##`) headings of a markdown doc.
+function OnThisPage({ content }: Readonly<{ content: string }>) {
+  const headings: string[] = [];
+  let inCode = false;
+  for (const raw of content.split('\n')) {
+    const t = raw.trim();
+    if (t.startsWith('```')) { inCode = !inCode; continue; }
+    if (!inCode && t.startsWith('## ') && !t.startsWith('### ')) headings.push(plainText(t.substring(3)));
+  }
+  if (headings.length < 2) return null;
+  return (
+    <Paper withBorder p="sm" mb="lg" bg="light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-9))">
+      <Text size="xs" fw={700} c="dimmed" mb={6} style={{ textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+        On this page
+      </Text>
+      <Stack gap={2}>
+        {headings.map((h) => (
+          <Anchor key={h} size="sm" c="blue.4" href={`#${slugify(h)}`}
+            onClick={(e) => {
+              e.preventDefault();
+              document.getElementById(slugify(h))?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }}>
+            {h}
+          </Anchor>
+        ))}
+      </Stack>
+    </Paper>
+  );
+}
+
+// Prev/Next pager for pages that belong to the numbered Get-Started sequence.
+function PrevNext({ active, onNavigate }: Readonly<{ active: string; onNavigate: (id: string) => void }>) {
+  const idx = GETTING_STARTED_SEQUENCE.indexOf(active);
+  if (idx === -1) return null;
+  const prev = idx > 0 ? GETTING_STARTED_SEQUENCE[idx - 1] : null;
+  const next = idx < GETTING_STARTED_SEQUENCE.length - 1 ? GETTING_STARTED_SEQUENCE[idx + 1] : null;
+  return (
+    <Group justify="space-between" mt="xl" pt="md" style={{ borderTop: '1px solid var(--mantine-color-default-border)' }}>
+      {prev
+        ? <Button variant="default" leftSection={<IconChevronLeft size={16} />} onClick={() => onNavigate(prev)}>{NAV_LABELS[prev]}</Button>
+        : <span />}
+      {next
+        ? <Button variant="filled" rightSection={<IconChevronRight size={16} />} onClick={() => onNavigate(next)}>{NAV_LABELS[next]}</Button>
+        : <span />}
+    </Group>
+  );
+}
+
+// Category landing page: optional intro markdown + a card grid of the group's pages.
+function CategoryLanding({ category, intro, onNavigate }: Readonly<{ category: NavCategory; intro?: string; onNavigate: (id: string) => void }>) {
+  const cards = category.items.filter((it) => it.id !== category.overview);
+  return (
+    <Stack gap="md">
+      <Title order={2} c="blue.4">{category.title}</Title>
+      {intro && <MarkdownRenderer content={intro} onNavigate={onNavigate} />}
+      <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="md" mt="xs">
+        {cards.map((it) => (
+          <Card key={it.id} withBorder padding="md" radius="md"
+            style={{ cursor: 'pointer', height: '100%' }}
+            onClick={() => onNavigate(it.id)}
+            className="doc-landing-card">
+            <Group justify="space-between" wrap="nowrap" align="flex-start">
+              <Text fw={600} c="blue.4">{it.label}</Text>
+              <IconArrowRight size={16} style={{ flexShrink: 0, opacity: 0.5 }} />
+            </Group>
+            {it.blurb && <Text size="sm" c="dimmed" mt={4}>{it.blurb}</Text>}
+          </Card>
+        ))}
+      </SimpleGrid>
+    </Stack>
+  );
+}
+
+// Alphabetical A–Z index of every per-symbol reference page (the single source of
+// truth for the function surface). Replaces the old hand-maintained tables.
+function ReferenceIndex({ onNavigate }: Readonly<{ onNavigate: (id: string) => void }>) {
+  const [query, setQuery] = useState('');
+  const q = query.trim().toLowerCase();
+  const pages = q
+    ? REFERENCE_PAGES.filter((p) => p.name.toLowerCase().includes(q) || p.summary.toLowerCase().includes(q) || p.tags.some((t) => t.includes(q)))
+    : REFERENCE_PAGES;
+  // Group by uppercased first character of the name.
+  const groups = new Map<string, ReferencePage[]>();
+  for (const p of [...pages].sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }))) {
+    const letter = (p.name[0] || '#').toUpperCase();
+    const key = /[A-Z]/.test(letter) ? letter : '#';
+    (groups.get(key) ?? groups.set(key, []).get(key)!).push(p);
+  }
+  return (
+    <Stack gap="md">
+      <Title order={2} c="blue.4">A–Z Function Index</Title>
+      <Text size="sm" c="dimmed">
+        Every documented function, procedure, block, and component — the canonical
+        reference for each symbol. Click a name for its full page (syntax,
+        arguments, examples, errors).
+      </Text>
+      <TextInput
+        placeholder="Filter by name, summary, or tag (e.g. enthalpy, bode, matrix)"
+        value={query}
+        onChange={(e) => setQuery(e.currentTarget.value)}
+        leftSection={<IconSearch size={16} />}
+        rightSection={query ? <CloseButton size="sm" onClick={() => setQuery('')} /> : null}
+        maw={480}
+      />
+      {[...groups.entries()].map(([letter, list]) => (
+        <Box key={letter}>
+          <Title order={3} c="blue.3" mb="xs">{letter}</Title>
+          <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }} spacing={6}>
+            {list.map((p) => (
+              <Anchor key={p.slug} size="sm" style={{ fontFamily: 'monospace' }}
+                onClick={() => onNavigate('refpage:' + p.slug)}>
+                {p.name}
+              </Anchor>
+            ))}
+          </SimpleGrid>
+        </Box>
+      ))}
+      {pages.length === 0 && <Text size="sm" c="dimmed">No symbols match “{query}”.</Text>}
     </Stack>
   );
 }
@@ -3269,20 +3340,42 @@ export default function HelpPage() {
       if (page) return <ReferencePageView page={page} onNavigate={(slug) => navigateTo('refpage:' + slug)} />;
     }
 
-    const docContent = DOCS_CATALOG[active];
-    if (docContent) {
-      return <MarkdownRenderer content={docContent} />;
+    // Reference data pages (single source of truth; the old Quick-Reference
+    // duplicate tables are gone — symbols live on their per-symbol pages).
+    if (active === 'ref-index') return <ReferenceIndex onNavigate={navigateTo} />;
+    if (active === 'ref-fluids') return <FluidsReference />;
+    if (active === 'ref-units') {
+      return (
+        <Stack gap="xl">
+          <UnitsReference />
+          <ConstantsReference />
+        </Stack>
+      );
     }
 
-    switch (active) {
-      case 'ref-functions': return <FunctionsReference />;
-      case 'ref-procedures': return <ProceduresReference />;
-      case 'ref-fluids': return <FluidsReference />;
-      case 'ref-materials': return <MaterialsReference />;
-      case 'ref-accessors': return <AccessorsReference />;
-      case 'ref-constants': return <ConstantsReference />;
-      default: return null;
+    // Category landing page: intro markdown (if any) + a card grid of its pages.
+    const landingCategory = CATEGORY_BY_OVERVIEW.get(active);
+    if (landingCategory) {
+      return (
+        <>
+          <CategoryLanding category={landingCategory} intro={DOCS_CATALOG[active]} onNavigate={navigateTo} />
+          <PrevNext active={active} onNavigate={navigateTo} />
+        </>
+      );
     }
+
+    const docContent = DOCS_CATALOG[active];
+    if (docContent) {
+      return (
+        <>
+          <OnThisPage content={docContent} />
+          <MarkdownRenderer content={docContent} onNavigate={navigateTo} />
+          <PrevNext active={active} onNavigate={navigateTo} />
+        </>
+      );
+    }
+
+    return null;
   };
 
   return (
