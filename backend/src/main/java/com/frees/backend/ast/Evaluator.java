@@ -285,7 +285,9 @@ public final class Evaluator {
             case "exp"    -> Math.exp(arg(c, args, 0, values, defs));
             case "ln"     -> Math.log(arg(c, args, 0, values, defs));
             case "log10"  -> Math.log10(arg(c, args, 0, values, defs));
+            case "log2"   -> Math.log(arg(c, args, 0, values, defs)) / Math.log(2.0);
             case "sqrt"   -> Math.sqrt(arg(c, args, 0, values, defs));
+            case "cbrt"   -> Math.cbrt(arg(c, args, 0, values, defs));
             case "sin"    -> Math.sin(arg(c, args, 0, values, defs));
             case "cos"    -> Math.cos(arg(c, args, 0, values, defs));
             case "tan"    -> Math.tan(arg(c, args, 0, values, defs));

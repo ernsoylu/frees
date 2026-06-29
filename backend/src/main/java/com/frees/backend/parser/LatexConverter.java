@@ -145,6 +145,7 @@ public final class LatexConverter {
                 }
                 yield switch (function) {
                     case "sqrt" -> "\\sqrt{" + argLates.get(0) + "}";
+                    case "cbrt" -> "\\sqrt[3]{" + argLates.get(0) + "}";
                     case "sin" -> "\\sin\\left(" + argsStr + RIGHT_PAREN;
                     case "cos" -> "\\cos\\left(" + argsStr + RIGHT_PAREN;
                     case "tan" -> "\\tan\\left(" + argsStr + RIGHT_PAREN;
@@ -159,6 +160,7 @@ public final class LatexConverter {
                     case "arctanh" -> "\\text{arctanh}\\left(" + argsStr + RIGHT_PAREN;
                     case "ln" -> "\\ln\\left(" + argsStr + RIGHT_PAREN;
                     case "log10" -> "\\log_{10}\\left(" + argsStr + RIGHT_PAREN;
+                    case "log2" -> "\\log_{2}\\left(" + argsStr + RIGHT_PAREN;
                     case "exp" -> "e^{" + argLates.get(0) + "}";
                     case "abs" -> "\\left|" + argLates.get(0) + "\\right|";
                     case "convert" -> "\\text{Convert}\\left(" + argsStr + RIGHT_PAREN;

@@ -762,6 +762,10 @@ public final class UnitChecker {
                 Dim arg = dimOf(args.get(0));
                 yield arg.known() ? Dim.of(arg.quantity().pow(0.5)) : Dim.UNKNOWN;
             }
+            case "cbrt" -> {
+                Dim arg = dimOf(args.get(0));
+                yield arg.known() ? Dim.of(arg.quantity().pow(1.0 / 3.0)) : Dim.UNKNOWN;
+            }
             // Integral(f, t, a, b) has the dimensions of f*t; the checker
             // does not track them, so stay agnostic instead of warning.
             case "integral", "gaussintegral" -> Dim.UNKNOWN;
@@ -774,7 +778,7 @@ public final class UnitChecker {
             // probability/quantile; do not constrain the (possibly dimensioned) inputs.
             case "normalcdf", "normalpdf", "normalinvcdf" -> Dim.UNKNOWN;
             default -> {
-                // sin, cos, tan, exp, ln, log10, arc*: argument must be dimensionless.
+                // sin, cos, tan, exp, ln, log10, log2, arc*: argument must be dimensionless.
                 Dim arg = dimOf(args.get(0));
                 if (arg.known() && !arg.quantity().isDimensionless()) {
                     warn(String.format(

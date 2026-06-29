@@ -2,7 +2,7 @@
 name: sqrt
 category: Math
 summary: Square root of a number (with unit propagation).
-related: [exp, abs]
+related: [cbrt, exp, abs]
 examples: [tank-draining, ev-thermal-management]
 tags: [math, square root, elementary]
 references: []

@@ -7,6 +7,9 @@
 //      [Run: id]) exists in the verified examples library.
 //   3. Every "See also" cross-link (frontmatter `related:`) resolves to a page
 //      that actually exists (no dangling badges to deleted/renamed/absent pages).
+//   4. Every function-call mention in the guide prose (src/docs/*.md inline code,
+//      `name(`) names a real backend callable — so a guide can't teach a built-in
+//      that doesn't exist (e.g. the cbrt/log2/Dipole class of drift).
 //
 // Also reports documented-vs-total coverage (informational until Phase 2 fills
 // the reference set). Exits non-zero on any invariant violation.
@@ -32,6 +35,29 @@ for (const p of manifest.propertyFunctions) symbols.add(p.name.toLowerCase());
 for (const c of manifest.components) symbols.add(c.name.toLowerCase());
 for (const f of manifest.materials.functions) symbols.add(f.toLowerCase());
 for (const r of manifest.replCasOps) symbols.add(r.toLowerCase());
+
+// Complete callable surface for the guide-prose linter: the manifest families
+// above, plus the function aliases and dispatch-only arms the manifest records.
+const callable = new Set(symbols);
+for (const f of manifest.functions) for (const a of f.aliases || []) callable.add(a.toLowerCase());
+for (const d of manifest.dispatchOnly || []) {
+  callable.add(d.name.toLowerCase());
+  for (const a of d.aliases || []) callable.add(a.toLowerCase());
+}
+// Real backend callables the manifest does not yet enumerate: unit helpers,
+// the der() dynamic operator, property-output functions (P_sat/T_sat/MolarMass/…),
+// chemistry/EOS outputs, and the low-level BLAS primitives. All verified present
+// in the backend. TODO: fold these into build-doc-manifest.mjs so this list shrinks.
+const EXTRA_CALLABLES = [
+  'convert', 'converttemp', 'der', 'identity',
+  'p_sat', 't_sat', 'molarmass', 'heatingvalue', 'stoichafr', 'surfacetension',
+  'isidealgas', 'phase$', 'stagnationtemp', 'stagnationpres',
+  'scal', 'asum', 'nrm2', 'copy', 'ger', 'gemv', 'gemm', 'axpy',
+];
+for (const n of EXTRA_CALLABLES) callable.add(n);
+// Bare math notation that reads like a call in inline code (`num(s)/den(s)`, a
+// generic `Tname(...)` placeholder) — not references to a built-in.
+const NOTATION = new Set(['num', 'den', 'tname']);
 
 // Example ids in the verified library.
 const exampleIds = new Set(
@@ -83,6 +109,23 @@ for (const pg of pages) {
     }
   }
 }
+// Invariant 4: guide-prose function mentions must name a real callable. Scan the
+// inline-code spans of each guide markdown file for a `name(` shape; skip 1–2 char
+// identifiers (loop/user variables) and known math notation.
+const GUIDE_DIR = path.join(SRC, 'docs');
+for (const file of fs.readdirSync(GUIDE_DIR).filter((f) => f.endsWith('.md'))) {
+  const text = read(path.join(GUIDE_DIR, file));
+  const flagged = new Set();
+  for (const m of text.matchAll(/`([A-Za-z_][A-Za-z0-9_]*\$?)\s*\(/g)) {
+    const name = m[1].toLowerCase();
+    if (name.replace(/\$$/, '').length <= 2 || NOTATION.has(name) || callable.has(name) || flagged.has(name)) {
+      continue;
+    }
+    flagged.add(name);
+    errors.push(`docs/${file}: guide documents call "${m[1]}(…)" which is not a known backend function`);
+  }
+}
+
 const guides = pages.filter((p) => p.guide).length;
 
 const total = manifest.coverage.documentableSurfaceTotal;
@@ -96,4 +139,4 @@ if (errors.length) {
   for (const e of errors) console.error('  - ' + e);
   process.exit(1);
 }
-console.log('✓ all reference pages name real symbols, bind real examples, and cross-link real pages.');
+console.log('✓ all reference pages name real symbols, bind real examples, cross-link real pages, and guides cite real functions.');

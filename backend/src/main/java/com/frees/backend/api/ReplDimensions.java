@@ -27,7 +27,7 @@ final class ReplDimensions {
     private static final Set<String> DIMENSIONLESS = Set.of(
             "sin", "cos", "tan", "arcsin", "arccos", "arctan", "atan2",
             "sinh", "cosh", "tanh", "arcsinh", "arccosh", "arctanh",
-            "exp", "ln", "log10");
+            "exp", "ln", "log10", "log2");
 
     /** Functions whose result carries the dimension of their (first) argument. */
     private static final Set<String> ARG_PRESERVING = Set.of(
