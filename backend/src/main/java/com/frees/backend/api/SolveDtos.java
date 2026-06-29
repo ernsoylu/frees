@@ -33,6 +33,23 @@ public final class SolveDtos {
 
     public record BlockDto(int index, List<String> equations, List<String> variables) {}
 
+    /**
+     * A solved COMPONENT instance's identity and the parameters it was built
+     * with, so the Variable Explorer can present each component as a datasheet
+     * (its given inputs alongside its computed port members). {@code params} are
+     * the user-supplied bindings at instantiation, in declaration order.
+     */
+    public record ComponentDto(String name, String type, List<ComponentParamDto> params) {}
+
+    /**
+     * One parameter binding on a component, e.g. {@code UA=UA_chl_r} or
+     * {@code SH=5} or {@code fluid$=R1234yf}. {@code ref} is the bound
+     * expression as written (a variable name, literal, or expression);
+     * {@code value}/{@code units} are the resolved numeric value when the
+     * binding is a variable or number (null for strings/unevaluated expressions).
+     */
+    public record ComponentParamDto(String name, String ref, Double value, String units) {}
+
     public record ResidualDto(String equation, double value) {}
 
     public record StatsDto(int equations,
