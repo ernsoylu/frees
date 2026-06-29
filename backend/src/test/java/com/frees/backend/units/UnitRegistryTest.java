@@ -87,9 +87,10 @@ class UnitRegistryTest {
     }
 
     @Test
-    void onlyOneSlashAllowed() {
-        assertThrows(UnitRegistry.UnknownUnitException.class,
-                () -> UnitRegistry.parse("m/s/s"));
+    void chainedSlashesAreDenominators() {
+        // Each '/'-separated term after the first divides: m/s/s = m/(s·s) = m/s^2.
+        assertEquals(UnitRegistry.parse("m/s^2"), UnitRegistry.parse("m/s/s"));
+        assertEquals(UnitRegistry.parse("W/m^2-K"), UnitRegistry.parse("W/m^2/K"));
     }
 
     @Test

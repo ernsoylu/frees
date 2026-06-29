@@ -411,6 +411,48 @@ public final class ComponentExpander {
     }
 
     /**
+     * SI units of each stream's <em>canonical</em> stored members, keyed by the
+     * flat solver-variable name ({@code s2$p}, {@code s2$h}, {@code s2$mdot}).
+     * These members are the solver's own unknowns — unlike derived properties
+     * (`s2.T`), nothing ever grounds their units, so without this map they show
+     * up dimensionless even though the stream's physical domain fixes them. The
+     * unit is chosen by the stream's domain (the through-variable wins, per
+     * {@link #nodeDomain}), so a moist-air stream's {@code w} is a humidity ratio
+     * (dimensionless) while a mechanical stream's {@code w} is an angular speed.
+     */
+    public Map<String, String> memberUnits() {
+        Map<String, String> out = new LinkedHashMap<>();
+        for (Map.Entry<String, java.util.Set<String>> e : streamMembers.entrySet()) {
+            String stream = e.getKey();
+            Map<String, String> table = CANONICAL_UNITS.get(nodeDomain(List.of(stream)));
+            if (table == null) {
+                continue;
+            }
+            for (String member : e.getValue()) {
+                String unit = table.get(member);
+                if (unit != null) {
+                    out.put((stream + "$" + member).toLowerCase(), unit);
+                }
+            }
+        }
+        return out;
+    }
+
+    /**
+     * Canonical (stored, solver-unknown) member → SI unit, per physical domain.
+     * Derived properties (temperature, entropy, … of a fluid stream) are absent
+     * — they are rewritten to property calls that already carry units. {@code w}
+     * appears in two domains with different meanings (moist-air humidity ratio vs.
+     * mechanical angular speed); keying by domain keeps them apart.
+     */
+    private static final Map<Domain, Map<String, String>> CANONICAL_UNITS = Map.of(
+            Domain.FLUID, Map.of("p", "Pa", "mdot", "kg/s", "h", "J/kg", "w", "-"),
+            Domain.HEAT, Map.of("t", "K", "qdot", "W"),
+            Domain.ELECTRICAL, Map.of("v", "V", "i", "A"),
+            Domain.MECHANICAL, Map.of("w", "rad/s", "tau", "N-m"),
+            Domain.TRANSLATIONAL, Map.of("vel", "m/s", "f", "N"));
+
+    /**
      * The fluid a given port draws on: an exact {@code fluid$} parameter applies
      * to all ports; otherwise a string parameter whose base name is {@code fluid}
      * or is a prefix of the port name (so {@code hot$} ⇒ {@code hot_in},
