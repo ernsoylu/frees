@@ -229,18 +229,15 @@ public final class UnitRegistry {
             return Quantity.dimensionless(1.0);
         }
 
-        int slash = text.indexOf('/');
-        if (slash >= 0 && text.indexOf('/', slash + 1) >= 0) {
-            throw new UnknownUnitException(
-                    "Only one '/' is allowed in a unit expression: " + expression);
-        }
-
-        String numerator = slash >= 0 ? text.substring(0, slash) : text;
-        String denominator = slash >= 0 ? text.substring(slash + 1) : null;
-
-        Quantity result = parseProduct(numerator, expression);
-        if (denominator != null) {
-            result = result.divide(parseProduct(denominator, expression));
+        // Numerator is the first '/'-separated term; every subsequent term is a
+        // denominator factor, so "W/m^2/K" reads as W/(m^2·K). (Dash/star/space
+        // still mean multiplication *within* a term — see parseProduct.) This
+        // matches engineering shorthand and how the correlation unit rules and
+        // CoolProp property units are written (e.g. "kg/m^2/s", "W/m^2/K").
+        String[] terms = text.split("/", -1);
+        Quantity result = parseProduct(terms[0], expression);
+        for (int i = 1; i < terms.length; i++) {
+            result = result.divide(parseProduct(terms[i], expression));
         }
         return result;
     }

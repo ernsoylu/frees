@@ -138,7 +138,21 @@ public final class EquationParser {
             List<com.frees.backend.ast.PlotDef> plots,
             List<com.frees.backend.ast.StateTableDef> stateTables,
             List<com.frees.backend.ast.DynamicSystem> dynamicSystems,
-            List<com.frees.backend.ast.LinearizeSystem> linearizeSystems) {
+            List<com.frees.backend.ast.LinearizeSystem> linearizeSystems,
+            /** SI units of component stream members (s2$p → "Pa", …), grounded so
+             *  port-member variables aren't dimensionless; empty for non-component docs. */
+            java.util.Map<String, String> componentMemberUnits) {
+
+        public ParseResult(List<Equation> equations, java.util.Map<String, String> displayNames,
+                           java.util.Map<String, ProcDef> defs,
+                           List<com.frees.backend.ast.ParametricTable> parametricTables,
+                           List<com.frees.backend.ast.PlotDef> plots,
+                           List<com.frees.backend.ast.StateTableDef> stateTables,
+                           List<com.frees.backend.ast.DynamicSystem> dynamicSystems,
+                           List<com.frees.backend.ast.LinearizeSystem> linearizeSystems) {
+            this(equations, displayNames, defs, parametricTables, plots, stateTables, dynamicSystems,
+                    linearizeSystems, Map.of());
+        }
 
         public ParseResult(List<Equation> equations, java.util.Map<String, String> displayNames,
                            java.util.Map<String, ProcDef> defs,
@@ -146,7 +160,8 @@ public final class EquationParser {
                            List<com.frees.backend.ast.PlotDef> plots,
                            List<com.frees.backend.ast.StateTableDef> stateTables,
                            List<com.frees.backend.ast.DynamicSystem> dynamicSystems) {
-            this(equations, displayNames, defs, parametricTables, plots, stateTables, dynamicSystems, List.of());
+            this(equations, displayNames, defs, parametricTables, plots, stateTables, dynamicSystems,
+                    List.of(), Map.of());
         }
 
         public ParseResult(List<Equation> equations, java.util.Map<String, String> displayNames,
@@ -154,30 +169,30 @@ public final class EquationParser {
                            List<com.frees.backend.ast.ParametricTable> parametricTables,
                            List<com.frees.backend.ast.PlotDef> plots,
                            List<com.frees.backend.ast.StateTableDef> stateTables) {
-            this(equations, displayNames, defs, parametricTables, plots, stateTables, List.of(), List.of());
+            this(equations, displayNames, defs, parametricTables, plots, stateTables, List.of(), List.of(), Map.of());
         }
 
         public ParseResult(List<Equation> equations, java.util.Map<String, String> displayNames,
                            java.util.Map<String, ProcDef> defs,
                            List<com.frees.backend.ast.ParametricTable> parametricTables,
                            List<com.frees.backend.ast.PlotDef> plots) {
-            this(equations, displayNames, defs, parametricTables, plots, List.of(), List.of(), List.of());
+            this(equations, displayNames, defs, parametricTables, plots, List.of(), List.of(), List.of(), Map.of());
         }
 
         public ParseResult(List<Equation> equations, java.util.Map<String, String> displayNames,
                            java.util.Map<String, ProcDef> defs,
                            List<com.frees.backend.ast.ParametricTable> parametricTables) {
-            this(equations, displayNames, defs, parametricTables, List.of(), List.of(), List.of(), List.of());
+            this(equations, displayNames, defs, parametricTables, List.of(), List.of(), List.of(), List.of(), Map.of());
         }
 
         public ParseResult(List<Equation> equations, java.util.Map<String, String> displayNames,
                            java.util.Map<String, ProcDef> defs) {
-            this(equations, displayNames, defs, List.of(), List.of(), List.of(), List.of(), List.of());
+            this(equations, displayNames, defs, List.of(), List.of(), List.of(), List.of(), List.of(), Map.of());
         }
 
         /** Backward-compat constructor for callers that don't need defs. */
         public ParseResult(List<Equation> equations, java.util.Map<String, String> displayNames) {
-            this(equations, displayNames, Map.of(), List.of(), List.of(), List.of(), List.of(), List.of());
+            this(equations, displayNames, Map.of(), List.of(), List.of(), List.of(), List.of(), List.of(), Map.of());
         }
     }
 
@@ -255,7 +270,7 @@ public final class EquationParser {
 
         return new ParseResult(equations, displayNames, defs, programResult.parametricTables(),
                 programResult.plots(), programResult.stateTables(), dynamicSystems,
-                programResult.linearizeSystems());
+                programResult.linearizeSystems(), components.memberUnits());
     }
 
     /**
