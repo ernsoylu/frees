@@ -236,7 +236,7 @@ public class FunctionRegistry {
             new FunctionInfo("slope", "slope(xvals, yvals)", "Least-squares linear-fit slope", "Stats"),
             new FunctionInfo("intercept", "intercept(xvals, yvals)", "Least-squares linear-fit intercept", "Stats"),
             new FunctionInfo("r2", "r2(xvals, yvals)", "Linear-fit coefficient of determination R^2", "Stats"),
-            new FunctionInfo("probability", "probability(x, mu, sigma)", "Normal CDF at x", "Stats"),
+            new FunctionInfo("probability", "probability(x1, x2, mu, sigma)", "Normal probability that x1 <= X <= x2", "Stats"),
             new FunctionInfo("normalcdf", "normalcdf(x, mu, sigma)", "Normal cumulative distribution at x", "Stats"),
             new FunctionInfo("normalpdf", "normalpdf(x, mu, sigma)", "Normal probability density at x", "Stats"),
             new FunctionInfo("normalinvcdf", "normalinvcdf(p, mu, sigma)", "Inverse normal CDF (quantile) at p", "Stats"),
