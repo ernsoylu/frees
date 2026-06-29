@@ -5,7 +5,7 @@ guide: true
 summary: Model an ideal steam Rankine cycle and compute its thermal efficiency.
 examples: [rankine-cycle]
 tags: [cookbook, rankine, steam, power cycle, efficiency, thermodynamics]
-related: [Enthalpy, Entropy, Quality, T_sat, Pump, Boiler, Turbine, Condenser]
+related: [Enthalpy, Entropy, Quality, Pump, Boiler, Turbine, Condenser]
 references:
   - "Çengel, Y.A., Boles, M.A. & Kanoğlu, M., Thermodynamics: An Engineering Approach, Ch. 10"
   - "Moran, M.J. et al., Fundamentals of Engineering Thermodynamics, Ch. 8"

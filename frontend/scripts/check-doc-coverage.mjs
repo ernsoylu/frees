@@ -5,6 +5,8 @@
 //      backend (no orphan pages drifting from the implementation).
 //   2. Every example id a page binds to (frontmatter `examples:` / inline
 //      [Run: id]) exists in the verified examples library.
+//   3. Every "See also" cross-link (frontmatter `related:`) resolves to a page
+//      that actually exists (no dangling badges to deleted/renamed/absent pages).
 //
 // Also reports documented-vs-total coverage (informational until Phase 2 fills
 // the reference set). Exits non-zero on any invariant violation.
@@ -51,15 +53,21 @@ const walk = (dir) => {
       const exFm = fm[1].match(/^examples:\s*\[([^\]]*)\]/m);
       const exFrontmatter = exFm ? exFm[1].split(',').map((s) => s.trim().replace(/^["']|["']$/g, '')).filter(Boolean) : [];
       const exInline = [...fm[2].matchAll(/\[Run:\s*([a-zA-Z0-9_-]+)\s*\]/g)].map((m) => m[1]);
+      const relFm = fm[1].match(/^related:\s*\[([^\]]*)\]/m);
+      const related = relFm ? relFm[1].split(',').map((s) => s.trim().replace(/^["']|["']$/g, '')).filter(Boolean) : [];
       const generated = /^generated:\s*true\s*$/m.test(fm[1]);
       // Cookbook/guide pages document a task, not a backend symbol — exempt from
       // the symbol-existence check (their example bindings are still validated).
       const guide = /^guide:\s*true\s*$/m.test(fm[1]);
-      pages.push({ file: path.relative(SRC, p), name, generated, guide, examples: [...new Set([...exFrontmatter, ...exInline])] });
+      pages.push({ file: path.relative(SRC, p), name, generated, guide, related, examples: [...new Set([...exFrontmatter, ...exInline])] });
     }
   }
 };
 if (fs.existsSync(REF_DIR)) walk(REF_DIR);
+
+// Every page is addressable by its name (lower-cased) — the slug a `related:`
+// cross-link must resolve to.
+const pageSlugs = new Set(pages.map((p) => p.name.toLowerCase()));
 
 const errors = [];
 for (const pg of pages) {
@@ -68,6 +76,11 @@ for (const pg of pages) {
   }
   for (const id of pg.examples) {
     if (!exampleIds.has(id)) errors.push(`${pg.file}: binds example "${id}" which is not in examples.ts`);
+  }
+  for (const rel of pg.related) {
+    if (!pageSlugs.has(rel.toLowerCase())) {
+      errors.push(`${pg.file}: "See also" links to "${rel}" which has no reference page`);
+    }
   }
 }
 const guides = pages.filter((p) => p.guide).length;
@@ -83,4 +96,4 @@ if (errors.length) {
   for (const e of errors) console.error('  - ' + e);
   process.exit(1);
 }
-console.log('✓ all reference pages name real symbols and bind real examples.');
+console.log('✓ all reference pages name real symbols, bind real examples, and cross-link real pages.');

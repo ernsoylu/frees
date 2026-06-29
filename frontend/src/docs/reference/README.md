@@ -7,7 +7,7 @@ pipeline compiles into the in-app Help → Reference section.
 ## Files
 
 - `_TEMPLATE.md` — the page contract. Copy it to start a new page. Do **not** edit it as content (the leading `_` keeps it out of the manifest/compile).
-- `function-manifest.json` — **generated**, do not hand-edit. The machine-readable inventory of the entire documentable surface (**515 symbols**: `functions`, `matrixFunctions`, `callProcedures`, `propertyFunctions`, `materials`, `components`, `replCasOps`), each with a `documented` flag, reconciled against the backend by `frontend/scripts/build-doc-manifest.mjs`. Regenerate with `node scripts/build-doc-manifest.mjs`.
+- `function-manifest.json` — **generated**, do not hand-edit. The machine-readable inventory of the entire documentable surface across `functions`, `matrixFunctions`, `callProcedures`, `propertyFunctions`, `materials`, `components`, and `replCasOps` — each with a `documented` flag, reconciled against the backend by `frontend/scripts/build-doc-manifest.mjs`. The authoritative count is `coverage.documentableSurfaceTotal` (**475 unique symbols**, deduplicated across families); regenerate with `node scripts/build-doc-manifest.mjs`.
 - `<category>/<name>.md` — authored reference pages, grouped by category folder (e.g. `heat-transfer/hx_effectiveness.md`).
 
 ## The contract (every page)
