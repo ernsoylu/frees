@@ -104,6 +104,7 @@ const SpreadsheetTab = lazy(() => import('./spreadsheet/SpreadsheetTab'))
 // and only needed once a plot window is opened or a modal is invoked.
 const PlotTab = lazy(() => import('./PlotTab'))
 const TopologyTab = lazy(() => import('./TopologyTab'))
+const ComponentWizardModal = lazy(() => import('./ComponentWizardModal'))
 const MinMaxModal = lazy(() => import('./MinMaxModal'))
 const CurveFitModal = lazy(() => import('./CurveFitModal'))
 const PlotConfigModal = lazy(() => import('./plots/PlotConfigModal'))
@@ -291,6 +292,7 @@ export default function App() {
   const [showCurveFit, setShowCurveFit] = useState(false)
   const [showAbout, setShowAbout] = useState(false)
   const [showExamples, setShowExamples] = useState(false)
+  const [showComponentWizard, setShowComponentWizard] = useState(false)
   const [showShortcuts, setShowShortcuts] = useState(false)
   const [activeTab, setActiveTab] = useState<string>('equations')
 
@@ -308,6 +310,12 @@ export default function App() {
   const insertEquationLine = useCallback((text: string) => {
     setActiveTab('equations')
     setTimeout(() => editorRef.current?.insertStatement(text), 50)
+  }, [])
+  // Component Browser/Wizard: append the generated `Type NAME(...)` block on its
+  // own line in the equations editor (same path as bound-cell statements).
+  const insertComponentBlock = useCallback((block: string) => {
+    setActiveTab('equations')
+    setTimeout(() => editorRef.current?.insertStatement(block), 50)
   }, [])
   // Dockview workspace manager: imperative handle + set of currently-open
   // window kinds (drives the sidebar's open-state indicators).
@@ -1762,6 +1770,7 @@ export default function App() {
       group: 'Project',
       actions: [
         { id: 'proj-examples', label: 'Open Example…', description: 'Load a ready-to-solve worked example', leftSection: <IconLayoutGrid size={18} />, onClick: () => setShowExamples(true) },
+        { id: 'proj-component', label: 'Component Wizard', description: 'Browse the component library and insert a configured component', leftSection: <IconLayoutGrid size={18} />, onClick: () => setShowComponentWizard(true) },
         { id: 'proj-new', label: 'New Project', leftSection: <IconFilePlus size={18} />, onClick: handleNewProject },
         { id: 'proj-open', label: 'Open Project…', leftSection: <IconFolderOpen size={18} />, onClick: handleOpenProject },
         { id: 'proj-save', label: 'Save Project', leftSection: <IconDeviceFloppy size={18} />, onClick: handleSaveProject },
@@ -2505,6 +2514,7 @@ export default function App() {
           onSaveProject={handleSaveProject}
           onSaveProjectAs={handleSaveProjectAs}
           onInsertFunction={insertFunction}
+          onInsertComponent={() => setShowComponentWizard(true)}
           onOpenExamples={() => setShowExamples(true)}
           onOpenInspector={() => dockRef.current?.open('inspector')}
           onOpenWorkspace={() => dockRef.current?.open('workspace')}
@@ -2555,6 +2565,16 @@ export default function App() {
         onClose={() => setShowExamples(false)}
         onSelect={loadExample}
       />
+
+      <Suspense fallback={null}>
+        {showComponentWizard && (
+          <ComponentWizardModal
+            opened={showComponentWizard}
+            onClose={() => setShowComponentWizard(false)}
+            onInsert={insertComponentBlock}
+          />
+        )}
+      </Suspense>
 
       <ShortcutsModal opened={showShortcuts} onClose={() => setShowShortcuts(false)} />
 
