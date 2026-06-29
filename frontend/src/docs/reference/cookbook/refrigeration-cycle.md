@@ -5,7 +5,7 @@ guide: true
 summary: Build an R134a vapor-compression cycle and compute its COP from real-refrigerant properties.
 examples: [refrigeration-vcr]
 tags: [cookbook, refrigeration, vcr, cop, refrigerant, cycle, thermodynamics]
-related: [Enthalpy, Quality, T_sat, P_sat, Compressor, Condenser, ExpansionValve, Evaporator]
+related: [Enthalpy, Quality, Compressor, Condenser, ExpansionValve, TwoPhaseEvaporator]
 references:
   - "the standard literature, Y.A., the standard literature, M.A. & Kanoğlu, M., a standard thermodynamics text, Ch. 11"
   - "Moran, M.J. et al., Fundamentals of Engineering Thermodynamics, Ch. 10"

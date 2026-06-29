@@ -17,6 +17,9 @@ function compileDocs() {
 
   const files = fs.readdirSync(DOCS_DIR).filter(file => file.endsWith('.md'));
   const catalog = {};
+  // Where each topic id was first defined, so a duplicate fails loudly instead of
+  // silently shadowing the earlier block (the last [Topic:] used to win).
+  const topicSource = {};
 
   for (const file of files) {
     const filepath = path.join(DOCS_DIR, file);
@@ -26,12 +29,23 @@ function compileDocs() {
     let currentTopic = null;
     let currentContent = [];
 
+    const commit = () => {
+      if (!currentTopic) return;
+      if (Object.prototype.hasOwnProperty.call(topicSource, currentTopic)) {
+        console.error(
+          `Duplicate [Topic: ${currentTopic}] — defined in ${topicSource[currentTopic]} and ${file}. ` +
+          `Topic ids must be unique; remove or rename one block.`,
+        );
+        process.exit(1);
+      }
+      topicSource[currentTopic] = file;
+      catalog[currentTopic] = currentContent.join('\n').trim();
+    };
+
     for (const line of lines) {
       const match = line.match(/^\[Topic:\s*([a-zA-Z0-9_-]+)\]/);
       if (match) {
-        if (currentTopic) {
-          catalog[currentTopic] = currentContent.join('\n').trim();
-        }
+        commit();
         currentTopic = match[1];
         currentContent = [];
       } else {
@@ -40,9 +54,7 @@ function compileDocs() {
         }
       }
     }
-    if (currentTopic) {
-      catalog[currentTopic] = currentContent.join('\n').trim();
-    }
+    commit();
   }
 
   // Generate TypeScript code

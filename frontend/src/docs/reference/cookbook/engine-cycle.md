@@ -5,7 +5,7 @@ guide: true
 summary: Build a single-zone spark-ignition engine cycle and integrate its cylinder-pressure trace.
 examples: [engine-cycle-wiebe]
 tags: [cookbook, engine, wiebe, heat release, indicator diagram, powertrain, dynamic]
-related: [wiebe_rate, AdiabaticFlameTemp, DYNAMIC]
+related: [wiebe_rate, AdiabaticFlameTemp]
 references:
   - "the standard literature, J.B., a standard engine text (2nd ed.), Ch. 9"
   - "the standard literature, Y.A. & the standard literature, M.A., a standard thermodynamics text, Ch. 9"
