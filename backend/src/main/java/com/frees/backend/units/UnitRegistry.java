@@ -306,6 +306,10 @@ public final class UnitRegistry {
             new NamedUnit("W", new double[]{1, 2, -3, 0, 0, 0, 0}),
             // Heat-capacity rate / thermal conductance, common in heat transfer.
             new NamedUnit("W/K", new double[]{1, 2, -3, -1, 0, 0, 0}),
+            // Convective heat-transfer coefficient and heat flux — the htc/q'' that
+            // pervade HX sizing; without these they print as kg/s^3-K and kg/s^3.
+            new NamedUnit("W/m^2-K", new double[]{1, 0, -3, -1, 0, 0, 0}),
+            new NamedUnit("W/m^2", new double[]{1, 0, -3, 0, 0, 0, 0}),
             // Engineering composites common in thermodynamics output.
             new NamedUnit("J/kg", new double[]{0, 2, -2, 0, 0, 0, 0}),
             new NamedUnit("J/kg-K", new double[]{0, 2, -2, -1, 0, 0, 0}),

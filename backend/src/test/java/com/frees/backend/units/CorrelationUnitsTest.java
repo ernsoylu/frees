@@ -24,6 +24,8 @@ class CorrelationUnitsTest {
         var d = solver.deriveUnits(
                 "h = htc_evap('R1234yf', 350000, 0.5, 0.05, 0.006, 8e-5)", Map.of());
         assertNotNull(d.get("h"), "htc_evap result must carry units");
+        // Must display as the engineering form, not the base-SI decomposition kg/s^3-K.
+        assertEquals("W/m^2-K", d.get("h"));
         assertEquals(UnitRegistry.parse("W/m^2-K"), UnitRegistry.parse(d.get("h")));
     }
 
