@@ -2091,7 +2091,7 @@ export default function App() {
         <Workspace
           variables={workspaceVariables}
           replNames={replNames}
-          topology={result?.topology}
+          components={result?.components}
           onEdit={() => setShowVariableInfo(true)}
           onExportSpreadsheet={exportToSpreadsheet}
         />

@@ -83,6 +83,25 @@ export interface SolveResponse {
   odeTables?: OdeTableDto[]
   /** Mermaid flowchart of the COMPONENT network, or null when there are none. */
   topology?: string | null
+  /** Per-instance component metadata (type + parameter bindings) for the datasheet view. */
+  components?: ComponentResult[]
+}
+
+/** One parameter binding on a component instance (`UA=UA_chl_r`, `SH=5`, `fluid$=R1234yf`). */
+export interface ComponentParamResult {
+  name: string
+  /** Bound expression as written: a variable name, literal, or expression. */
+  ref: string
+  /** Resolved numeric value when the binding is a variable or number; null for strings/expressions. */
+  value?: number | null
+  units?: string | null
+}
+
+/** A solved component instance: its identity and the parameters it was built with. */
+export interface ComponentResult {
+  name: string
+  type: string
+  params: ComponentParamResult[]
 }
 
 export interface CheckResponse {
@@ -402,6 +421,8 @@ function mapSolveData(data: any): SolveResponse {
     definedPlots: data.definedPlots ?? [],
     stateTableDefs: data.stateTableDefs ?? [],
     odeTables: data.odeTables ?? [],
+    topology: data.topology ?? null,
+    components: data.components ?? [],
   }
 }
 

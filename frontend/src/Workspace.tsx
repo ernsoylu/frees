@@ -20,7 +20,7 @@ import {
   IconVariable,
 } from '@tabler/icons-react'
 import { Button } from '@mantine/core'
-import { VariableResult } from './api'
+import { ComponentParamResult, ComponentResult, VariableResult } from './api'
 import { formatValue } from './format'
 
 /**
@@ -95,47 +95,45 @@ function typeLabel(g: ArrayGroup): string {
 }
 
 /**
- * A solved COMPONENT instance: its solver variables flatten to dotted
- * port-member names (`chlr.out.h`, `cmp.in.mdot`), which the workspace would
- * otherwise scatter across the scalar list. We regroup them under the instance
- * name with the component type as a pill and the members under an accordion —
- * the same affordance arrays/matrices already get.
+ * A solved COMPONENT instance presented as a datasheet: its given inputs (the
+ * parameter bindings it was built with) alongside its computed outputs (the
+ * solver variables, which flatten to dotted port-member names like `chlr.out.h`
+ * / `cmp.in.mdot`). The workspace would otherwise scatter the members across the
+ * scalar list and hide the parameters entirely — here they regroup under the
+ * instance name with the component type as a pill, the same affordance
+ * arrays/matrices already get.
  */
 export interface ComponentGroup {
   name: string
-  /** Component type (e.g. `TwoPhaseEvaporatorUA`) parsed from the topology, if known. */
+  /** Component type (e.g. `TwoPhaseEvaporatorUA`), from the backend metadata. */
   type?: string
+  /** Input parameter bindings (`UA=UA_chl_r`, `SH=5`, `fluid$=R1234yf`). */
+  params: ComponentParamResult[]
+  /** Computed port/output members, with the instance prefix stripped from the label. */
   members: { v: VariableResult; label: string }[]
 }
 
 /**
- * Maps instance name → component type by parsing the backend's Mermaid topology
- * (`n0["chlr<br/>TwoPhaseEvaporatorUA"]`). Keyed lowercase: frees names are
- * case-insensitive. Empty when no topology (no components, or a parse hiccup).
- */
-export function parseTopologyTypes(topology?: string | null): Map<string, string> {
-  const map = new Map<string, string>()
-  if (!topology) return map
-  const re = /\["([^"]*?)<br\/>([^"]*?)"\]/g
-  let m: RegExpExecArray | null
-  while ((m = re.exec(topology)) !== null) {
-    map.set(m[1].trim().toLowerCase(), m[2].trim())
-  }
-  return map
-}
-
-/**
- * Splits scalars into plain scalars and component instances. A variable is a
- * component member when its name carries a dot (`inst.member`) — in frees only
- * COMPONENT port/output members display with a dot, so the prefix is the
- * instance and the remainder (`out.h`, `wall.qdot`, `tevap`) is the member.
+ * Splits scalars into plain scalars and component instances. The instance list
+ * (`instances`, from the backend) is authoritative — it carries every
+ * component's type and parameters, so even an instance with no output variables
+ * still shows its inputs. Dotted scalar names (`inst.member`) attach their
+ * member to the matching instance; in frees only COMPONENT port/output members
+ * display with a dot, so an unrecognized prefix still forms its own group rather
+ * than leaking into the scalar list. Fully empty instances (no params, no
+ * members) are dropped.
  */
 export function groupComponents(
   scalars: VariableResult[],
-  typeMap: Map<string, string>,
+  instances: ComponentResult[],
 ): { plain: VariableResult[]; components: ComponentGroup[] } {
   const plain: VariableResult[] = []
   const comps = new Map<string, ComponentGroup>()
+  // Seed from the authoritative instance list (keyed lowercase: frees names are
+  // case-insensitive and members display lowercased).
+  for (const c of instances) {
+    comps.set(c.name.toLowerCase(), { name: c.name, type: c.type, params: c.params ?? [], members: [] })
+  }
   for (const v of scalars) {
     const dot = v.name.indexOf('.')
     if (dot <= 0) {
@@ -146,7 +144,7 @@ export function groupComponents(
     const key = inst.toLowerCase()
     let c = comps.get(key)
     if (!c) {
-      c = { name: inst, type: typeMap.get(key), members: [] }
+      c = { name: inst, params: [], members: [] }
       comps.set(key, c)
     }
     c.members.push({ v, label: v.name.slice(dot + 1) })
@@ -156,7 +154,9 @@ export function groupComponents(
   }
   return {
     plain,
-    components: Array.from(comps.values()).sort((a, b) => a.name.localeCompare(b.name)),
+    components: Array.from(comps.values())
+      .filter((c) => c.members.length > 0 || c.params.length > 0)
+      .sort((a, b) => a.name.localeCompare(b.name)),
   }
 }
 
@@ -299,44 +299,80 @@ function ComponentRow({ c, replNames }: Readonly<{ c: ComponentGroup; replNames:
             />
           </ActionIcon>
           <Text size="sm" fw={600} style={{ textTransform: 'none' }} truncate>{c.name}</Text>
-          <Badge variant="light" color="grape" size="xs" style={{ flexShrink: 0, textTransform: 'none' }}>
-            {c.type ?? 'Component'}
-          </Badge>
+          {c.type && (
+            <Badge variant="light" color="grape" size="xs" style={{ flexShrink: 0, textTransform: 'none' }}>
+              {c.type}
+            </Badge>
+          )}
         </Group>
         <Text size="xs" c="dimmed" ff="monospace" style={{ flexShrink: 0 }}>
-          {c.members.length} var{c.members.length === 1 ? '' : 's'}
+          {c.params.length > 0 && `${c.params.length} par`}
+          {c.params.length > 0 && c.members.length > 0 && ' · '}
+          {c.members.length > 0 && `${c.members.length} var`}
         </Text>
       </Group>
       {open && (
-        <div style={{ overflowX: 'auto', padding: 8 }}>
-          <Table withTableBorder striped highlightOnHover>
-            <Table.Thead>
-              <Table.Tr>
-                <Table.Th>Variable</Table.Th>
-                <Table.Th>Value</Table.Th>
-                <Table.Th>Units</Table.Th>
-                <Table.Th>Uncertainty</Table.Th>
-              </Table.Tr>
-            </Table.Thead>
-            <Table.Tbody>
-              {c.members.map(({ v, label }) => (
-                <Table.Tr key={v.name}>
-                  <Table.Td style={{ textTransform: 'none' }}>
-                    <Group gap={6} wrap="nowrap">
-                      {label}
-                      {replNames.has(v.name.toLowerCase()) && (
-                        <Badge variant="light" color="teal" size="xs" title="Defined in the terminal">repl</Badge>
-                      )}
-                    </Group>
-                  </Table.Td>
-                  <Table.Td ff="monospace" c="green.4">{formatValue(v.value)}</Table.Td>
-                  <Table.Td ff="monospace" c="dimmed">{v.units || <span title="dimensionless">—</span>}</Table.Td>
-                  <Table.Td ff="monospace" c="dimmed">{uncertaintyText(v) || '—'}</Table.Td>
-                </Table.Tr>
-              ))}
-            </Table.Tbody>
-          </Table>
-        </div>
+        <Stack gap={8} p={8}>
+          {c.params.length > 0 && (
+            <div style={{ overflowX: 'auto' }}>
+              <Text size="xs" fw={700} c="dimmed" tt="uppercase" lts="0.05em" mb={4}>Parameters</Text>
+              <Table withTableBorder striped>
+                <Table.Thead>
+                  <Table.Tr>
+                    <Table.Th>Parameter</Table.Th>
+                    <Table.Th>Binding</Table.Th>
+                    <Table.Th>Value</Table.Th>
+                    <Table.Th>Units</Table.Th>
+                  </Table.Tr>
+                </Table.Thead>
+                <Table.Tbody>
+                  {c.params.map((p) => (
+                    <Table.Tr key={p.name}>
+                      <Table.Td style={{ textTransform: 'none' }}>{p.name}</Table.Td>
+                      <Table.Td ff="monospace" c="grape.3" style={{ textTransform: 'none' }}>{p.ref}</Table.Td>
+                      <Table.Td ff="monospace" c={p.value != null ? 'green.4' : 'dimmed'}>
+                        {p.value != null ? formatValue(p.value) : '—'}
+                      </Table.Td>
+                      <Table.Td ff="monospace" c="dimmed">{p.units || '—'}</Table.Td>
+                    </Table.Tr>
+                  ))}
+                </Table.Tbody>
+              </Table>
+            </div>
+          )}
+          {c.members.length > 0 && (
+            <div style={{ overflowX: 'auto' }}>
+              <Text size="xs" fw={700} c="dimmed" tt="uppercase" lts="0.05em" mb={4}>Results</Text>
+              <Table withTableBorder striped highlightOnHover>
+                <Table.Thead>
+                  <Table.Tr>
+                    <Table.Th>Variable</Table.Th>
+                    <Table.Th>Value</Table.Th>
+                    <Table.Th>Units</Table.Th>
+                    <Table.Th>Uncertainty</Table.Th>
+                  </Table.Tr>
+                </Table.Thead>
+                <Table.Tbody>
+                  {c.members.map(({ v, label }) => (
+                    <Table.Tr key={v.name}>
+                      <Table.Td style={{ textTransform: 'none' }}>
+                        <Group gap={6} wrap="nowrap">
+                          {label}
+                          {replNames.has(v.name.toLowerCase()) && (
+                            <Badge variant="light" color="teal" size="xs" title="Defined in the terminal">repl</Badge>
+                          )}
+                        </Group>
+                      </Table.Td>
+                      <Table.Td ff="monospace" c="green.4">{formatValue(v.value)}</Table.Td>
+                      <Table.Td ff="monospace" c="dimmed">{v.units || <span title="dimensionless">—</span>}</Table.Td>
+                      <Table.Td ff="monospace" c="dimmed">{uncertaintyText(v) || '—'}</Table.Td>
+                    </Table.Tr>
+                  ))}
+                </Table.Tbody>
+              </Table>
+            </div>
+          )}
+        </Stack>
       )}
     </Paper>
   )
@@ -346,26 +382,33 @@ interface Props {
   variables: VariableResult[]
   /** Lowercased names of variables defined/changed in the REPL (badged in the table). */
   replNames?: Set<string>
-  /** Backend Mermaid topology — supplies the component-type pill for each instance. */
-  topology?: string | null
+  /** Backend component metadata — supplies each instance's type pill and parameter datasheet. */
+  components?: ComponentResult[]
   /** Opens the Variable Information modal (guesses, bounds, units, uncertainty). */
   onEdit?: () => void
   onExportSpreadsheet?: (vars: VariableResult[]) => void
 }
 
-export default function Workspace({ variables, replNames, topology, onEdit, onExportSpreadsheet }: Readonly<Props>) {
+export default function Workspace({ variables, replNames, components: instances, onEdit, onExportSpreadsheet }: Readonly<Props>) {
   const [query, setQuery] = useState('')
   const repl = replNames ?? new Set<string>()
 
   const { plain, components, groups } = useMemo(() => {
-    const filtered = query.trim()
-      ? variables.filter((v) => v.name.toLowerCase().includes(query.trim().toLowerCase()))
-      : variables
+    const q = query.trim().toLowerCase()
+    const filtered = q ? variables.filter((v) => v.name.toLowerCase().includes(q)) : variables
     const grouped = group(filtered)
-    const typeMap = parseTopologyTypes(topology)
-    const { plain, components } = groupComponents(grouped.scalars, typeMap)
+    // A component matches the filter by its name, type, or any parameter; its
+    // members are whatever survived the variable filter above.
+    const inst = (instances ?? []).filter(
+      (c) =>
+        !q ||
+        c.name.toLowerCase().includes(q) ||
+        c.type.toLowerCase().includes(q) ||
+        c.params.some((p) => p.name.toLowerCase().includes(q) || p.ref.toLowerCase().includes(q)),
+    )
+    const { plain, components } = groupComponents(grouped.scalars, inst)
     return { plain, components, groups: grouped.groups }
-  }, [variables, query, topology])
+  }, [variables, query, instances])
 
   const empty = variables.length === 0
 
