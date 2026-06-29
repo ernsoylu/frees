@@ -154,8 +154,13 @@ public final class Differentiator {
             case "ln"  -> chainRule(args, var, f -> simplifyDiv(num(1), f));
             case "log10" -> chainRule(args, var, f ->
                     simplifyDiv(num(1), simplifyMul(f, call("ln", num(10)))));
+            case "log2" -> chainRule(args, var, f ->
+                    simplifyDiv(num(1), simplifyMul(f, call("ln", num(2)))));
             case "sqrt" -> chainRule(args, var, f ->
                     simplifyDiv(num(1), simplifyMul(num(2), call("sqrt", f))));
+            // d/dx cbrt(f) = f' / (3 · cbrt(f)²)
+            case "cbrt" -> chainRule(args, var, f ->
+                    simplifyDiv(num(1), simplifyMul(num(3), simplifyMul(call("cbrt", f), call("cbrt", f)))));
 
             // ── abs ─────────────────────────────────────────────────────
             // d/dx |f| = f / |f| * f'  (= sign(f) * f')

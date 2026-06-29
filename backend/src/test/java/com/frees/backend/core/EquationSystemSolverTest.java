@@ -665,5 +665,24 @@ class EquationSystemSolverTest {
         assertEquals(2.0, r.variables().get("c[1]"), 1e-9);
         assertEquals(4.0, r.variables().get("c[3]"), 1e-9);
     }
+
+    @Test
+    void evaluatesCbrtAndLog2() {
+        // Forward evaluation of the cube-root and base-2 logarithm.
+        EquationSystemSolver.Result result = solver.solve("y = cbrt(27)\nz = log2(8)");
+        assertEquals(3.0, result.variables().get("y"), 1e-9);
+        assertEquals(3.0, result.variables().get("z"), 1e-9);
+    }
+
+    @Test
+    void solvesImplicitlyThroughCbrtAndLog2() {
+        // Implicit (single-unknown) solves force Newton to use the analytic
+        // derivative of each function, exercising the Differentiator wiring.
+        EquationSystemSolver.Result cube = solver.solve("cbrt(x) = 3");
+        assertEquals(27.0, cube.variables().get("x"), 1e-7);
+
+        EquationSystemSolver.Result lg = solver.solve("log2(w) = 5");
+        assertEquals(32.0, lg.variables().get("w"), 1e-7);
+    }
 }
 

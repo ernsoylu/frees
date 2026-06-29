@@ -2,7 +2,7 @@
 name: ln
 category: Math
 summary: Natural logarithm (base e).
-related: [exp, log10]
+related: [exp, log10, log2]
 examples: [karman-rocket]
 tags: [math, logarithm, natural log, elementary]
 references: []

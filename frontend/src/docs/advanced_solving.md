@@ -110,6 +110,35 @@ When objectives conflict (minimise mass *and* maximise efficiency, say) there is
 
 [Related: table-accessors, variables, plot-code]
 
+[Topic: debugging]
+# Debugging a Solve
+
+When a model won't solve, the cause is almost always **structural** (the equation set) or a **guess** — not a bug in the solver. Work through it methodically instead of editing equations at random.
+
+## Build incrementally
+The fastest way to localize a failure is to *not* type the whole model and hit Solve. Enter a few equations, solve, then add the next group. This pins any new syntax or convergence error to the lines you just added.
+
+- Press **F9** to *solve the selected block only*, ignoring the rest of the document — ideal for isolating one subsystem.
+- Press **F4 (Check)** after each addition so the degrees of freedom stay balanced as you grow the model.
+
+## Read the residuals and blocking order
+frees groups the equations into strongly-connected **blocks** (Tarjan) and solves them in order. When a solve fails, the Solution panel's diagnostics tell you *which block* stalled and the **residual** — the difference between the two sides of each equation. The block that fails to converge, and the equation with the largest residual, is where to look first.
+
+## Seed a guess for nonlinear blocks
+Newton iterates from the guess in **Variable Info** (`Ctrl + I`); a guess near the expected magnitude is often the difference between converging and diverging. For a tightly coupled nonlinear block (radiation, simultaneous property inversions), bootstrap it with a **temporary equation**:
+
+1. Temporarily replace the hard constraint with a rough explicit estimate, e.g. `T = (T_hot + T_cold) / 2`.
+2. Solve — every variable now gets a physically sensible value.
+3. Copy those values into the guesses (Variable Info), restore the real equation, and solve again from the good starting point.
+
+## Common stalls
+- **Singular Jacobian** — two equations are effectively the same, so the system is rank-deficient. A subtle version: two property calls from the *same* independent pair add no new information — `h = Enthalpy(Water, T=T, P=P)` together with `T = Temperature(Water, h=h, P=P)` just restate one relationship and stall the solver. Supply a genuinely independent equation instead.
+- **Max iterations / diverged** — usually a guess or bound problem. Set a guess near the expected order of magnitude and bound the variable to its physical range (e.g. `T ≥ 0`, `0 ≤ x ≤ 1`).
+- **DoF ≠ 0** — too few or too many equations; **F4** reports the imbalance before you solve. An accidental duplicate (the same equation written two ways) silently over-constrains the system.
+- **Two-phase property lookups** — inside the vapor dome, temperature and pressure are *not* independent. Identify a saturated state by quality `x` with either `T` or `P`, never by `T` and `P` together.
+
+[Related: variables, gs-units-check, api]
+
 [Topic: api]
 # Solver Reference & API
 

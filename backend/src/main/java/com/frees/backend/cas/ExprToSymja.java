@@ -19,7 +19,9 @@ public final class ExprToSymja {
     private static final Map<String, String> FUNCTION_NAMES = Map.ofEntries(
             Map.entry("ln", "Log"),
             Map.entry("log10", "Log10"),
+            Map.entry("log2", "Log2"),
             Map.entry("sqrt", "Sqrt"),
+            Map.entry("cbrt", "CubeRoot"),
             Map.entry("exp", "Exp"),
             Map.entry("abs", "Abs"),
             Map.entry("sin", "Sin"),

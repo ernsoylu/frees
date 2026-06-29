@@ -60,9 +60,6 @@ Every function takes the fluid name first, then coordinates:
 - **`StagnationTemp(T, V, cp)`** — $T_0 = T + V^2/(2c_p)$ (K).
 - **`StagnationPres(P, T, T0, k)`** — $P_0 = P(T_0/T)^{k/(k-1)}$ (Pa).
 - **`SurfaceTension(Fluid, T=t)`** — surface tension (N/m).
-- **`Fugacity(Fluid, T=t, P=p)`** — fugacity coefficient.
-- **`Enthalpy_fusion(Fluid)`** — latent heat of melting (J/kg).
-- **`Dipole(Fluid)`** — dipole moment.
 
 [Related: humidair, state-tables, chemistry]
 
