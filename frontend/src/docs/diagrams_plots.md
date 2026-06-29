@@ -11,6 +11,8 @@ The **Diagram** panel lets you build schematics of engineering systems and overl
 ## Dynamic diagrams
 Beyond schematics, the canvas supports thermodynamic diagrams (T-s, P-h, etc.). State points from a `STATE TABLE` are overlaid automatically and connected as a cycle path — so you can see your Rankine/Brayton cycle drawn on the real fluid chart. See *Fluid State Tables* for how to declare the states.
 
+[Related: plot-code, state-tables, reports]
+
 [Topic: plot-code]
 # Plots in Code (PLOT)
 
@@ -77,3 +79,5 @@ Reference any code-defined plot in your narrative with a graph tag and it render
 [Graph="Boiler Cycle"] Temperature–entropy diagram of the power cycle [/Graph]
 ```
 The name inside the quotes must match a `PLOT` block's title.
+
+[Related: diagram, reports, symbolic-cas]

@@ -26,6 +26,8 @@ grid[1:11] = linspace(0, 1, 11)      { 0, 0.1, …, 1.0 }
 
 > **Tip:** for control-systems work, transfer-function coefficient arrays are just vectors — `num = [0, 0, 1]` and `den = [1, 3, 2]` represent $1/(s^2+3s+2)$. See *Control Systems & Symbolic CAS*.
 
+[Related: matrices-ops, matrices-sys, arrays]
+
 [Topic: matrices-ops]
 # Matrix Operators
 
@@ -43,6 +45,8 @@ A[1:2, 1:2] = [1, 2; 3, 4]
 b[1:2] = [5, 6]
 x[1:2] = A \ b      { solves A * x = b }
 ```
+
+[Related: matrices-sys, matrices-blas, matrices-decl]
 
 [Topic: matrices-blas]
 # OpenBLAS Algebra Functions
@@ -65,6 +69,8 @@ v1[1:3] = [1, 2, 3]
 v2[1:3] = [4, 5, 6]
 result[1:3] = axpy(2.5, v1[1:3], v2[1:3])   { 2.5*v1 + v2 }
 ```
+
+[Related: matrices-sys, matrices-ops, ref-index]
 
 [Topic: matrices-sys]
 # Linear Systems & Decomposition
@@ -91,3 +97,5 @@ A[1:3, 1:3] = [2, 1, -1; -3, -1, 2; -2, 1, 2]
 b[1:3] = [8, -11, -3]
 x[1:3] = SolveLinear(A[1:3,1:3], b[1:3])
 ```
+
+[Related: matrices-decl, symbolic-cas, ref-index]

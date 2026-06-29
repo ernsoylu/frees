@@ -99,18 +99,21 @@ function buildIndex(): IndexEntry[] {
 
   // 2. Reference catalog topics — index their function/material rows so a
   //    search for "bode" or "enthalpy" lands on the right reference page.
+  // The per-symbol reference pages (2b below) are the canonical search targets.
+  // These topic entries are a belt-and-braces fallback that re-homes the full
+  // symbol surface onto the A–Z index and the live data pages, so a name search
+  // still resolves even for any symbol that lacks a dedicated page yet.
   const refTopics: { id: string; label: string; section: string; rows: { name: string; desc: string }[] }[] = [
-    { id: 'ref-functions', label: 'Built-in Functions', section: 'Quick Reference',
-      rows: [...MATH_FUNCTIONS.flatMap(g => g.functions), ...MATRIX_FUNCTIONS] },
-    { id: 'ref-procedures', label: 'CALL Procedure Library', section: 'Quick Reference',
-      rows: CALL_PROCEDURES.map(p => ({ name: p.name, desc: p.desc })) },
-    { id: 'ref-fluids', label: 'Fluids & Properties', section: 'Quick Reference',
+    { id: 'ref-index', label: 'A–Z Function Index', section: 'Reference',
+      rows: [
+        ...MATH_FUNCTIONS.flatMap(g => g.functions), ...MATRIX_FUNCTIONS,
+        ...CALL_PROCEDURES.map(p => ({ name: p.name, desc: p.desc })),
+        ...MATERIAL_FUNCTIONS, ...SOLID_MATERIALS.map(m => ({ name: m, desc: '' })),
+        ...TABLE_FUNCTIONS, ...PARAMETRIC_ACCESSORS, ...ODE_ACCESSORS,
+      ] },
+    { id: 'ref-fluids', label: 'Supported Fluids', section: 'Reference',
       rows: [...FLUID_PROPERTY_OUTPUTS, ...AIRH2O_OUTPUTS, ...UTILITY_PROPERTY_FUNCS] },
-    { id: 'ref-materials', label: 'Solid Materials', section: 'Quick Reference',
-      rows: [...MATERIAL_FUNCTIONS, ...SOLID_MATERIALS.map(m => ({ name: m, desc: '' }))] },
-    { id: 'ref-accessors', label: 'Table & ODE Accessors', section: 'Quick Reference',
-      rows: [...TABLE_FUNCTIONS, ...PARAMETRIC_ACCESSORS, ...ODE_ACCESSORS] },
-    { id: 'ref-constants', label: 'Constants & Units', section: 'Quick Reference',
+    { id: 'ref-units', label: 'Units & Constants', section: 'Reference',
       rows: CONSTANT_DESCRIPTIONS.map(c => ({ name: c.name, desc: c.desc })) },
   ];
   for (const t of refTopics) {

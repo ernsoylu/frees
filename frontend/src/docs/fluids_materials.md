@@ -64,6 +64,8 @@ Every function takes the fluid name first, then coordinates:
 - **`Enthalpy_fusion(Fluid)`** — latent heat of melting (J/kg).
 - **`Dipole(Fluid)`** — dipole moment.
 
+[Related: humidair, state-tables, chemistry]
+
 [Topic: solid-materials]
 # Solid Material Properties Reference
 
@@ -92,6 +94,8 @@ L = 0.1 [m];  A = 2 [m^2]
 k = k_(Aluminum)                 { ~237 W/m-K }
 q = k * A * (T_hot - T_cold) / L { watts }
 ```
+
+[Related: thermo, chemistry, ref-index]
 
 [Topic: chemistry]
 # Chemistry & Combustion
@@ -146,6 +150,8 @@ theta_s = heisler_temp('wall', Bi, Fo, 1)   { surface }
 Q_ratio = heisler_q('wall', Bi, Fo)         { heat removed fraction }
 ```
 
+[Related: thermo, solid-materials, ref-index]
+
 [Topic: humidair]
 # Psychrometrics (AirH2O / Humid Air)
 
@@ -182,6 +188,8 @@ T_wet   = WetBulb(AirH2O, T=T_db, P=P_atm, R=phi)
 h_moist = Enthalpy(AirH2O, T=T_db, P=P_atm, R=phi)   { J/kg dry air }
 ```
 
+[Related: thermo, state-tables, ref-fluids]
+
 [Topic: state-tables]
 # Fluid State Tables (STATE TABLE)
 
@@ -210,4 +218,6 @@ STATE TABLE RefrigerantLoop(Pref_1, xref_1, href_1, Pref_2, Tref_2, href_2)
   FLUID = R134a
 END
 ```
+
+[Related: thermo, diagram, plot-code]
 

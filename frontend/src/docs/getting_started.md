@@ -1,25 +1,16 @@
 [Topic: started]
-# Introduction & Solver Philosophy
-
 Welcome to **frees** — a declarative equation-solving environment for engineering problems: thermodynamics, fluid mechanics, heat transfer, control systems, structural analysis, and multi-domain simulation.
 
-## The declarative difference
-In a traditional language you write *assignments* (`x = y + 2` to compute `x`). frees is **declarative**: you write equations exactly as they appear in a textbook, and the compiler figures out what is unknown and in what order to solve it. Equation order does not matter, and any variable on either side can be the unknown:
-
-```
-P * V = m * R * T      { solve for m, or for V, or for T — all valid }
-```
-
-A few consequences worth knowing up front:
-- A single `=` means **mathematical equality**, never assignment. There is no `==`.
-- Names are case-insensitive (`Temp`, `TEMP`, `temp` are one variable).
-- Implicit multiplication is **not** allowed — write `2 * x`, not `2x`.
-- Everything is computed in SI base units internally; you annotate inputs with `[unit]` (see *Units & Consistency*).
+You write equations the way they appear in a textbook; frees figures out what is unknown and in what order to solve it. This **Get Started** path is the fastest way in — work through the four steps below in order, then use *Where to go next* to branch into the area you need.
 
 [Diagram: SolverPipeline]
 
-## Your first solve
-Type this into the editor and press **F2** (Solve). The tank's mass is the unknown, recovered from the implicit ideal-gas equation:
+**New here? Start with step 1 below and press *Next* at the bottom of each page.** The rest of the portal is organized as: **Language Fundamentals** (the grammar), **Matrices**, **Programming & Tables**, **Fluids & Materials** (property data), **Modeling & Solving** (ODEs, control, optimization), **Tools & Workflow** (the REPL, shortcuts, reports), **Examples**, and a per-symbol **Reference**.
+
+[Topic: gs-first-solve]
+# 1. Your First Solve
+
+The quickest way to understand frees is to solve something. Type this into the editor and press **F2** (Solve):
 
 ```
 { Mass of air in a rigid tank }
@@ -30,15 +21,83 @@ R = 0.287 [kJ/kg-K]
 P * Vol = m * R * T      { frees solves this for m }
 ```
 
-Swap one line — `T = 25 [C]` becomes `m = 0.3 [kg]` — and the *same* equation now solves for temperature instead. That is the whole point: you describe the physics, frees decides the calculation order.
+You never told frees to "compute `m`". It read the five equations, saw that `m` was the only unknown, and rearranged the ideal-gas relation to find it. The result appears in the **Solution** panel, in SI units, with any propagated uncertainty.
 
-## The frees workflow
+## Any variable can be the unknown
+Swap one line — change `T = 25 [C]` to `m = 0.3 [kg]` — and the *same* equation now solves for temperature instead. You describe the physics; frees decides the calculation order. That is the whole idea, and the next page explains why it matters.
+
+## The four-step loop
+Every model follows the same rhythm:
+
 1. **Describe** the system — algebraic, matrix, or differential equations, in any order.
-2. **Check (F4)** — validates syntax and the degrees of freedom (DoF). For nonlinear systems, open the **Variable Info** panel (`Ctrl + I`) and set a guess and physical bounds (e.g. `T ≥ 0`). A good guess is often the difference between convergence and divergence.
-3. **Solve (F2)** — runs the Newton-Raphson solver. Results appear in the Solution panel with units and uncertainties.
-4. **Sweep** — build a **Parametric Table** (`Ctrl + T`) to vary an input across runs and plot the response.
+2. **Check (F4)** — validates syntax and the degrees of freedom (see step 3).
+3. **Solve (F2)** — runs the Newton–Raphson solver; results land in the Solution panel.
+4. **Sweep** — optionally build a **Parametric Table** (`Ctrl + T`) to vary an input and plot the response.
 
-> **Tip:** If the solver fails to converge, the cause is almost always a missing guess or a wrong unit annotation, not a bug. Check the Solution panel's diagnostics and the Variable Info guesses first.
+[Related: gs-declarative, shortcuts, variables]
+
+[Topic: gs-declarative]
+# 2. Thinking Declaratively
+
+In a traditional language you write *assignments*: `x = y + 2` means "compute `x` from `y`". frees is **declarative** — an `=` is a mathematical **equality**, a constraint that must hold once solved. The solver looks at the whole system at once and finds the values that satisfy every equation simultaneously.
+
+```
+P * V = m * R * T      { solve for m, or for V, or for T — all valid }
+```
+
+Because equations are constraints, **order does not matter** and **any variable on either side can be the unknown**. A consequence: you can transcribe a textbook problem line for line without first rearranging it to isolate the answer.
+
+## Rules that follow from this
+- A single `=` is equality, never assignment. There is no `==`.
+- Names are **case-insensitive** — `Temp`, `TEMP`, and `temp` are one variable.
+- Implicit multiplication is **not** allowed — write `2 * x`, not `2x`.
+- Everything is computed in **SI base units** internally; you annotate inputs with `[unit]`.
+
+The full grammar — operators, comments, constants — is in *Equation Syntax & Rules*. The next page covers the two things that most often decide whether a solve succeeds: units and the Check.
+
+[Related: gs-units-check, syntax, variables]
+
+[Topic: gs-units-check]
+# 3. Units & Checking the Model
+
+### Annotate inputs; read SI results
+frees runs every calculation in SI base units. You annotate **inputs** for convenience and the compiler converts them at parse time:
+
+```
+P = 500 [kPa]      { stored as 500000 Pa }
+T = 25 [C]         { stored as 298.15 K }
+m = 120 [lb]       { stored as 54.43 kg }
+```
+
+Results come back in SI; convert or label them for display (see *Units & Consistency*). Mixing inconsistent units is reported as a warning, never a silent error — and warnings never block a solve.
+
+### Check before you solve (F4)
+A system is solvable only when the number of equations equals the number of unknowns — the **degrees of freedom (DoF)** are zero. Press **F4** (Check) to verify this *before* solving: it reports the DoF and any unit mismatches instantly, so you fix structural problems before the solver ever runs. Make F4-before-F2 a habit.
+
+### Guesses make nonlinear solves converge
+For nonlinear or transcendental equations, the Newton solver iterates from a **guess**. Open **Variable Info** (`Ctrl + I`) to set a starting guess and physical bounds (e.g. `T ≥ 0`, `0 ≤ x ≤ 1`). A good guess is usually the difference between convergence and divergence.
+
+> **Tip:** If a solve fails to converge, the cause is almost always a missing guess or a wrong unit annotation — not a bug. Check the Solution panel's diagnostics and the Variable Info guesses first.
+
+[Related: gs-next, units, variables]
+
+[Topic: gs-next]
+# 4. Where to Go Next
+
+You now know the whole loop: describe equations, Check (F4), Solve (F2), and seed guesses for nonlinear problems. Where you go next depends on what you're modeling.
+
+## Pick your direction
+- **Master the language** — operators, arrays, complex numbers, strings, and uncertainty: *Language Fundamentals*.
+- **Work with matrices** — declare, operate, and solve linear systems: *Matrices & Linear Algebra*.
+- **Reuse logic & data** — custom functions, submodels, and tables: *Programming & Tables*.
+- **Use property data** — CoolProp fluids, ideal gases, humid air, and solid materials: *Fluids & Materials*.
+- **Go beyond algebra** — ODE transients, control systems, optimization, and plots: *Modeling & Solving*.
+- **Work faster** — the REPL console, keyboard shortcuts, and automated reports: *Tools & Workflow*.
+
+## Learn by example
+The **Examples** library has verified, ready-to-run problems across every discipline — each lists the result you should get. Copy one in, press F2, and confirm your solve. When you need the exact signature of a function, the **Reference** A–Z index is the canonical home for every symbol.
+
+[Related: lang-overview, fluids-overview, modeling-overview, examples]
 
 [Topic: repl]
 # REPL Terminal & Workspace
@@ -110,6 +169,8 @@ When the CAS can't find a closed form, the REPL reports *"no closed form found"*
 ## What the REPL does not do
 The REPL evaluates a single expression per line, so multi-line block constructs are editor-only: `FUNCTION`/`PROCEDURE`/`MODULE` definitions, `DYNAMIC` ODE systems, `TABLE` blocks, `IF`/`FOR` control flow, and the `SYMBOLIC`/`SOLVE BLOCK` directives. You can *call* a function or read `ODEValue`/`Interpolate`/table accessors that a prior solve produced — you just can't *define* the block from the REPL.
 
+[Related: shortcuts, symbolic-cas, matrices-sys]
+
 [Topic: shortcuts]
 # Keyboard Shortcuts
 
@@ -122,6 +183,8 @@ The REPL evaluates a single expression per line, so multi-line block constructs 
 | `F9` | **Solve selected block only** — ignores all other lines |
 
 > **Tip:** make `F4` (Check) a habit before `F2` (Solve). It reports the DoF and any unit mismatches instantly, so you fix problems before the solver runs. For parametric-table examples, use **Solve Table** in the Tables tab instead of `F2`.
+
+[Related: gs-units-check, variables, repl]
 
 [Topic: reports]
 # Markdown & Reports
@@ -155,6 +218,8 @@ eta_th = 36.9
 ```
 Press Solve (F2), then switch to the **Formatted** tab to see the values and the chart woven into the prose.
 
+[Related: plot-code, diagram, reports]
+
 [Topic: digitizer-fit]
 # Graph Digitizer & Curve Fit
 
@@ -177,3 +242,5 @@ head_loss [m] = -0.084 * flow_rate^2 + 1.54 * flow_rate + 0.12 [m]
 ```
 
 > **Tip:** you can also define the data inline with a `TABLE` block (see *Custom Tables*) and fit against that — handy for reproducing a textbook table without an image. The statistics example in the Examples Library shows exactly this route.
+
+[Related: tables-code, lookup-tables, reports]

@@ -378,3 +378,5 @@ Loop-shaping tuning of a P/PI/PID controller for a SISO plant `num/den`. The con
 ```
 CALL pidtune(num, den, 'PID', wc : Kp, Ki, Kd)
 ```
+
+[Related: matrices-sys, plot-code, dynamic-ode]
