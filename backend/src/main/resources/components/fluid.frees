@@ -88,6 +88,39 @@ COMPONENT FanCurve(in, out)
   out.P    = in.P + dP
 END
 
+// Fan driven by a tabulated pressure-rise curve. `map$` names a TABLE/FUNCTION
+// declared in the document: dP = map$(Q), Q the volumetric flow [m^3/s].
+COMPONENT FanMap(in, out)
+  PARAM rho, map$
+  Q        = in.mdot / rho
+  dP       = map$(Q)
+  out.mdot = in.mdot
+  out.P    = in.P + dP
+END
+
+// Pump driven by a tabulated head curve. `map$` names a TABLE/FUNCTION giving
+// head [m] vs volumetric flow [m^3/s]; the pressure rise is rho*g*head.
+COMPONENT PumpMap(in, out)
+  PARAM rho, map$
+  Q        = in.mdot / rho
+  head     = map$(Q)
+  out.mdot = in.mdot
+  out.P    = in.P + rho * 9.80665 * head
+END
+
+// Compressor whose isentropic efficiency comes from a tabulated map. `map_eta$`
+// names a TABLE/FUNCTION giving eta vs pressure ratio (out.P/in.P).
+COMPONENT CompressorMap(in, out)
+  PARAM fluid$, map_eta$
+  s_in     = Entropy(fluid$, P=in.P, h=in.h)
+  h_s      = Enthalpy(fluid$, P=out.P, s=s_in)
+  PR       = out.P / in.P
+  eta      = map_eta$(PR)
+  out.mdot = in.mdot
+  out.h    = in.h + (h_s - in.h) / eta
+  W        = in.mdot * (out.h - in.h)
+END
+
 COMPONENT Splitter(in, out1, out2)
   out1.P   = in.P
   out2.P   = in.P

@@ -14,6 +14,8 @@ frontend/dist/
 frontend/src/docsCatalog.ts
 # Generated from src/docs/reference/**/*.md by scripts/compile-docs.js.
 frontend/src/referenceCatalog.ts
+# Generated from src/docs/reference/components/**/*.md by scripts/compile-docs.js.
+frontend/src/componentCatalog.ts
 # Generated from the backend registries by scripts/build-doc-manifest.mjs.
 frontend/src/docs/reference/function-manifest.json
 

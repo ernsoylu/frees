@@ -185,5 +185,234 @@ ${body}
 `;
 }
 
+// ── Component catalog: src/docs/reference/components/**/*.md → componentCatalog.ts
+// Structured, machine-readable specs for the Component Browser/Wizard. Parsed
+// ONLY from files under src/docs (compile-docs runs inside the frontend Docker
+// build, where backend/ is not present), so the component markdown is the
+// single source of truth here.
+const COMP_OUTPUT = path.join(__dirname, '../src/componentCatalog.ts');
+
+// Normalize a unit string from a parameter description (unicode → frees-safe
+// ASCII: superscripts, ·, Ω, µ, °). Returns '' if anything unsafe survives, so
+// a weird token never breaks the inserted line (and never matters: frees unit
+// warnings don't block solving).
+function normalizeUnit(u) {
+  const s = u
+    .replace(/⁰/g, '^0').replace(/¹/g, '^1').replace(/²/g, '^2').replace(/³/g, '^3')
+    .replace(/⁴/g, '^4').replace(/⁵/g, '^5').replace(/⁶/g, '^6').replace(/⁷/g, '^7')
+    .replace(/⁸/g, '^8').replace(/⁹/g, '^9')
+    .replace(/[·⋅]/g, '-').replace(/×/g, '*')
+    .replace(/Ω/g, 'ohm').replace(/[µμ]/g, 'u').replace(/°/g, 'deg')
+    .trim();
+  return /^[A-Za-z0-9/^.\-*() ]+$/.test(s) ? s : '';
+}
+
+// Pull the unit out of a parameter description: the last [...] bracket, e.g.
+// "Two-phase-zone overall coefficient [W/m²·K]." → "W/m^2-K".
+function unitFromDescription(desc) {
+  const matches = [...desc.matchAll(/\[([^\]]+)\]/g)];
+  if (!matches.length) return '';
+  return normalizeUnit(matches[matches.length - 1][1]);
+}
+
+// Section helper: lines from a "## Heading" up to the next "## ".
+function sectionLines(body, heading) {
+  const lines = body.split('\n');
+  const start = lines.findIndex((l) => l.trim() === heading);
+  if (start < 0) return [];
+  const out = [];
+  for (let i = start + 1; i < lines.length; i++) {
+    if (/^##\s/.test(lines[i])) break;
+    out.push(lines[i]);
+  }
+  return out;
+}
+
+// Parse the Usage fenced block → { type, paramOrder }. The first non-empty
+// code line looks like `Chiller inst(ref$, cool$, U_tp, ...)`.
+function parseUsage(body) {
+  const lines = sectionLines(body, '## Usage');
+  const code = lines.find((l) => /^\w+\s+\w+\s*\(/.test(l.trim()));
+  if (!code) return { type: '', paramOrder: [] };
+  const m = code.trim().match(/^(\w+)\s+\w+\s*\(([^)]*)\)/);
+  if (!m) return { type: '', paramOrder: [] };
+  const inside = m[2].trim();
+  const paramOrder = inside && inside !== '...'
+    ? inside.split(',').map((s) => s.trim()).filter((s) => s && s !== '...')
+    : [];
+  return { type: m[1], paramOrder };
+}
+
+// Parse the Parameters table → Map<name, { type, description, unit }>.
+function parseParamTable(body) {
+  const lines = sectionLines(body, '## Parameters');
+  const meta = new Map();
+  for (const line of lines) {
+    const m = line.match(/^\|\s*`([^`]+)`\s*\|\s*([^|]+?)\s*\|\s*([^|]*?)\s*\|/);
+    if (!m) continue;
+    const name = m[1].trim();
+    const type = m[2].trim();
+    const description = m[3].trim();
+    meta.set(name, {
+      type,
+      description,
+      unit: /string/i.test(type) ? '' : unitFromDescription(description),
+    });
+  }
+  return meta;
+}
+
+// Parse the Ports section → ["in", "out", ...] (backtick-quoted, comma-listed).
+function parsePorts(body) {
+  const lines = sectionLines(body, '## Ports');
+  const text = lines.join(' ');
+  return [...text.matchAll(/`([^`]+)`/g)].map((m) => m[1].trim());
+}
+
+// Parse the optional Model Variants section → [{ name, requires }]. The headings
+// look like "### `volumetric` — requires `eta_v`, `disp`, `rpm`" (the requires
+// suffix is present only when the variant adds REQUIRE'd params).
+function parseVariants(body) {
+  const lines = sectionLines(body, '## Model Variants');
+  return [...lines.join('\n').matchAll(/^###\s+`([^`]+)`(?:\s+—\s+requires\s+(.+))?$/gm)].map((m) => ({
+    name: m[1].trim(),
+    requires: m[2] ? [...m[2].matchAll(/`([^`]+)`/g)].map((r) => r[1].trim()) : [],
+  }));
+}
+
+function compileComponents() {
+  if (!fs.existsSync(REF_DIR)) {
+    fs.writeFileSync(COMP_OUTPUT, componentModule([]), 'utf-8');
+    return;
+  }
+  const specs = [];
+  const walk = (dir) => {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const p = path.join(dir, entry.name);
+      if (entry.isDirectory()) { walk(p); continue; }
+      if (!entry.name.endsWith('.md') || entry.name.startsWith('_')) continue;
+      const raw = fs.readFileSync(p, 'utf-8');
+      const m = raw.match(/^---\n([\s\S]*?)\n---\n?([\s\S]*)$/);
+      if (!m) continue;
+      const fm = parseFrontmatter(m[1]);
+      const libMatch = (fm.category || '').match(/^Component\s*\(([^)]+)\)/);
+      if (!libMatch) continue; // not a component page
+      const body = m[2];
+      const { type, paramOrder } = parseUsage(body);
+      if (!type) continue;
+      const meta = parseParamTable(body);
+      const variants = parseVariants(body);
+      const variantNames = variants.map((v) => v.name);
+      const mkParam = (name, requiredByVariants) => {
+        const info = meta.get(name) || { description: '', unit: '' };
+        const isString = name.endsWith('$');
+        const isSelector = /model\$$/.test(name);
+        return {
+          name,
+          isString,
+          isSelector,
+          // A string param naming a TABLE/FUNCTION map (map$, map_eta$, …): the
+          // wizard offers a "Build a map" affordance for these.
+          isMap: isString && /map.*\$$/.test(name),
+          unit: info.unit || '',
+          description: info.description || '',
+          // Selector (model$) and the internal connector-type guard (domain$)
+          // carry std-library defaults; everything else is required.
+          required: !isSelector && name !== 'domain$',
+          // model$ selector lists the variant names; everything else lists nothing.
+          values: isSelector ? variantNames : [],
+          // Which variants require this param. [] = a shared/always-shown param;
+          // non-empty = shown (and required) only when one of these variants is
+          // the active model$.
+          variants: requiredByVariants,
+        };
+      };
+      const params = paramOrder.map((name) => mkParam(name, []));
+      // Variant-REQUIRE params (eta_v, disp, rpm, Pvap, …) live ONLY in the Model
+      // Variants headings — never in the Usage line or Parameters table — so add
+      // them here, tagged with the variants that require them.
+      const known = new Set(paramOrder);
+      const byVariant = new Map();
+      for (const v of variants) {
+        for (const p of v.requires) {
+          if (!byVariant.has(p)) byVariant.set(p, []);
+          byVariant.get(p).push(v.name);
+        }
+      }
+      for (const [name, reqVariants] of byVariant) {
+        if (known.has(name)) continue;
+        params.push(mkParam(name, reqVariants));
+      }
+      specs.push({
+        type,
+        library: libMatch[1].trim(),
+        summary: fm.summary || '',
+        tags: fm.tags || [],
+        ports: parsePorts(body),
+        params,
+        variants,
+      });
+    }
+  };
+  walk(REF_DIR);
+  specs.sort((a, b) => a.library.localeCompare(b.library) || a.type.localeCompare(b.type));
+  fs.writeFileSync(COMP_OUTPUT, componentModule(specs), 'utf-8');
+  console.log(`Successfully compiled ${specs.length} component specs to ${COMP_OUTPUT}`);
+}
+
+function componentModule(specs) {
+  const esc = (s) => String(s).replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\$\{/g, '\\${');
+  const arr = (a) => '[' + a.map((x) => `\`${esc(x)}\``).join(', ') + ']';
+  const paramObj = (p) => `{ name: \`${esc(p.name)}\`, isString: ${p.isString}, isSelector: ${p.isSelector}, isMap: ${p.isMap}, unit: \`${esc(p.unit)}\`, description: \`${esc(p.description)}\`, required: ${p.required}, values: ${arr(p.values)}, variants: ${arr(p.variants)} }`;
+  const variantObj = (v) => `{ name: \`${esc(v.name)}\`, requires: ${arr(v.requires)} }`;
+  const body = specs.map((s) => `  {
+    type: \`${esc(s.type)}\`,
+    library: \`${esc(s.library)}\`,
+    summary: \`${esc(s.summary)}\`,
+    tags: ${arr(s.tags)},
+    ports: ${arr(s.ports)},
+    params: [
+${s.params.map((p) => `      ${paramObj(p)}`).join(',\n')}
+    ],
+    variants: [${s.variants.map(variantObj).join(', ')}],
+  }`).join(',\n');
+  return `// GENERATED FILE - DO NOT EDIT DIRECTLY.
+// Compiled from src/docs/reference/components/**/*.md by scripts/compile-docs.js
+// (npm run compile-docs). Structured specs for the Component Browser/Wizard.
+
+export interface ComponentParam {
+  name: string;          // e.g. "U_tp", "fluid$"
+  isString: boolean;     // name ends in "$"
+  isSelector: boolean;   // a model$ variant selector
+  isMap: boolean;        // a string param naming a TABLE/FUNCTION map (map$, map_eta$)
+  unit: string;          // frees-safe unit token, or "" if none/dimensionless
+  description: string;
+  required: boolean;
+  values: string[];      // selector option values (model variants), else []
+  variants: string[];    // variants that require this param; [] = shared/always-shown
+}
+
+export interface ComponentVariant {
+  name: string;          // model$ value, e.g. "volumetric"
+  requires: string[];    // params this variant requires
+}
+
+export interface ComponentSpec {
+  type: string;          // "Chiller"
+  library: string;       // "ac"
+  summary: string;
+  tags: string[];
+  ports: string[];       // ["ref_in","ref_out","cool_in","cool_out"]
+  params: ComponentParam[]; // in Usage (canonical) order
+  variants: ComponentVariant[]; // model$ variants, [] if none
+}
+
+export const COMPONENT_CATALOG: ComponentSpec[] = [
+${body}
+];
+`;
+}
+
 compileDocs();
 compileReference();
+compileComponents();

@@ -751,6 +751,7 @@ interface TopBarProps {
   onSaveProject: () => void
   onSaveProjectAs: () => void
   onInsertFunction: (snippet: string) => void
+  onInsertComponent: () => void
   onOpenExamples: () => void
   /** Tools menu: open the auxiliary Inspector edge panel. */
   onOpenInspector: () => void
@@ -894,6 +895,11 @@ export function TopBar(props: Readonly<TopBarProps>) {
             </Button>
           </Menu.Target>
           <Menu.Dropdown>
+            <Menu.Label>Modeling</Menu.Label>
+            <Menu.Item leftSection={<IconLayoutGrid size={14} />} onClick={props.onInsertComponent}>
+              Component Wizard
+            </Menu.Item>
+            <Menu.Divider />
             <Menu.Label>Equation tools</Menu.Label>
             <Menu.Item leftSection={<IconVariable size={14} />} onClick={props.onVariableInfo}>
               Variable Information

@@ -1266,6 +1266,15 @@ public final class ComponentExpander {
                 for (Expr a : args) {
                     na.add(rewriteBody(a, ri));
                 }
+                // A string parameter used as a *function/table name* (e.g.
+                // `PARAM map$` with a body call `map$(x)`) bakes to the param's
+                // string value, so a map-driven component resolves to the
+                // globally-declared TABLE/FUNCTION of that name. Normal function
+                // names are never string-param keys, so this never collides.
+                String tableName = ri.stringParams().get(fn);
+                if (tableName != null) {
+                    yield new Expr.Call(tableName, na);
+                }
                 yield new Expr.Call(bakeFluid(fn, ri.stringParams()), na);
             }
             case Expr.ArrayAccess(String name, List<Expr> idx) -> {
