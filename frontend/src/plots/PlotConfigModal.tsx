@@ -38,6 +38,9 @@ interface Props {
   defaultName: string
   fluids: string[]
   tableVars: string[]
+  /** Seed for a new X-Y plot (e.g. opened from a table's column selection):
+   * pre-fills the x-axis variable and y-axis variables. */
+  initialXy?: { xVar: string; yVars: string[] }
   hasStates: boolean
   /** Declared STATE TABLE blocks, so property/psychro plots can overlay one
    * specific circuit's states (and adopt its fluid). */
@@ -692,15 +695,22 @@ export default function PlotConfigModal({
   defaultName,
   fluids,
   tableVars,
+  initialXy,
   hasStates,
   stateTables = [],
   spreadsheets = [],
   onSave,
   onClose,
 }: Readonly<Props>) {
-  const [draft, setDraft] = useState<PlotSpec>(
-    () => spec ?? newPlotSpec(allowedKinds[0], defaultName),
-  )
+  const [draft, setDraft] = useState<PlotSpec>(() => {
+    if (spec) return spec
+    const base = newPlotSpec(allowedKinds[0], defaultName)
+    // Seed a fresh X-Y plot from a table column selection: x = time, y = picks.
+    if (initialXy && base.kind === 'xy') {
+      return { ...base, xy: { ...base.xy, xVar: initialXy.xVar, yVars: initialXy.yVars } }
+    }
+    return base
+  })
   const creating = spec === null
   const kindOptions = KIND_OPTIONS.filter((o) =>
     allowedKinds.includes(o.value as PlotKind),
