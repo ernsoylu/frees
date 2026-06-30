@@ -3,7 +3,7 @@ import { Flex, Group, Title, UnstyledButton, Text, Box, Paper, ActionIcon, Menu 
 import {
   IconMathFunction,
   IconVariable,
-  IconCode,
+  IconChartLine,
   IconTable,
   IconSettings,
   IconDeviceFloppy,
@@ -19,6 +19,8 @@ import { TableSpec } from './tables'
 interface MobileLayoutProps {
   panelContent: Record<string, ReactNode>
   tables: TableSpec[]
+  /** Plot windows, shown in the Plots tab (each renders panelContent['plot:<id>']). */
+  plots: { id: string; name: string }[]
   projectName: string
   checking: boolean
   solving: boolean
@@ -40,6 +42,7 @@ interface MobileLayoutProps {
 export default function MobileLayout({
   panelContent,
   tables,
+  plots,
   projectName,
   checking,
   solving,
@@ -57,8 +60,9 @@ export default function MobileLayout({
   onRenameProject,
   onOpenExamples,
 }: MobileLayoutProps) {
-  const [activeTab, setActiveTab] = useState<'equations' | 'workspace' | 'terminal' | 'table'>('equations')
+  const [activeTab, setActiveTab] = useState<'equations' | 'workspace' | 'plots' | 'table'>('equations')
   const [activeTableId, setActiveTableId] = useState<string | null>(tables.length > 0 ? tables[0].id : null)
+  const [activePlotId, setActivePlotId] = useState<string | null>(plots.length > 0 ? plots[0].id : null)
 
   useEffect(() => {
     if (tables.length > 0 && (!activeTableId || !tables.find((t) => t.id === activeTableId))) {
@@ -68,17 +72,32 @@ export default function MobileLayout({
     }
   }, [tables, activeTableId])
 
+  useEffect(() => {
+    if (plots.length > 0 && (!activePlotId || !plots.find((p) => p.id === activePlotId))) {
+      setActivePlotId(plots[plots.length - 1].id)
+    } else if (plots.length === 0 && activePlotId !== null) {
+      setActivePlotId(null)
+    }
+  }, [plots, activePlotId])
+
   const TABS = [
     { id: 'equations', label: 'Equations', icon: IconMathFunction },
     { id: 'workspace', label: 'Variables', icon: IconVariable },
-    { id: 'terminal', label: 'REPL', icon: IconCode },
+    { id: 'plots', label: 'Plots', icon: IconChartLine },
     { id: 'table', label: 'Tables', icon: IconTable },
   ] as const
 
   let content: ReactNode = null
   if (activeTab === 'equations') content = panelContent['equations']
   if (activeTab === 'workspace') content = panelContent['workspace']
-  if (activeTab === 'terminal') content = panelContent['terminal']
+  if (activeTab === 'plots') {
+    if (plots.length === 0) {
+      content = <Box p="md"><Text c="dimmed">No plots yet. Add one from a table (select columns → Plot curve) or with a [Graph=…] tag.</Text></Box>
+    } else {
+      const pId = activePlotId ?? plots[0].id
+      content = panelContent[`plot:${pId}`] || <Box p="md"><Text c="dimmed">Plot not found.</Text></Box>
+    }
+  }
   if (activeTab === 'table') {
     if (tables.length === 0) {
       content = <Box p="md"><Text c="dimmed">No tables available.</Text></Box>
@@ -229,6 +248,24 @@ export default function MobileLayout({
               >
                 <Text size="xs" fw={700}>
                   {t.name.slice(0, 2).toUpperCase()}
+                </Text>
+              </ActionIcon>
+            ))}
+          </Group>
+        )}
+        {activeTab === 'plots' && plots.length > 1 && (
+          <Group gap="xs" mb="sm" style={{ overflowX: 'auto', flexWrap: 'nowrap' }}>
+            {plots.map((p) => (
+              <ActionIcon
+                key={p.id}
+                variant={activePlotId === p.id ? 'filled' : 'light'}
+                color="teal"
+                onClick={() => setActivePlotId(p.id)}
+                size="lg"
+                title={p.name}
+              >
+                <Text size="xs" fw={700}>
+                  {p.name.slice(0, 2).toUpperCase()}
                 </Text>
               </ActionIcon>
             ))}
