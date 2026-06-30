@@ -1,18 +1,26 @@
 import { useCallback, useMemo, useState } from 'react'
 import {
+  CompactSelection,
   DataEditor,
   GridCell,
   GridCellKind,
   GridColumn,
+  GridSelection,
   Item,
   Theme as GdgTheme,
 } from '@glideapps/glide-data-grid'
 import '@glideapps/glide-data-grid/dist/index.css'
-import { useComputedColorScheme, useMantineTheme } from '@mantine/core'
+import { Button, Group, Stack, Text, useComputedColorScheme, useMantineTheme } from '@mantine/core'
+import { IconChartLine } from '@tabler/icons-react'
 import { useElementSize } from '@mantine/hooks'
 import { ParamRow } from './ParametricTableTab'
 import { VariableDraft } from './VariableInfoModal'
 import { displayVar } from './varDisplay'
+
+const EMPTY_SELECTION: GridSelection = {
+  columns: CompactSelection.empty(),
+  rows: CompactSelection.empty(),
+}
 
 // ---------------------------------------------------------------------------
 // Read-only, virtualized data grid for solver-produced tables (code PARAMETRIC
@@ -32,9 +40,12 @@ interface Props {
   /** Per-column SI units for ODE/code tables (column name → unit). Preferred
    * over `varDrafts` since ODE columns are not solved scalars in `varDrafts`. */
   columnUnits?: Record<string, string>
+  /** Open a new X-Y plot from the column selection: the first column is the
+   * x-axis (time for ODE tables) and the selected columns are the y-axis. */
+  onPlotColumns?: (xVar: string, yVars: string[]) => void
 }
 
-export default function DataGridReadOnly({ vars, rows, varDrafts, columnUnits }: Readonly<Props>) {
+export default function DataGridReadOnly({ vars, rows, varDrafts, columnUnits, onPlotColumns }: Readonly<Props>) {
   const theme = useMantineTheme()
   const scheme = useComputedColorScheme('dark')
   const dark = scheme === 'dark'
@@ -115,23 +126,54 @@ export default function DataGridReadOnly({ vars, rows, varDrafts, columnUnits }:
     if (column.id) setWidthOverrides((w) => ({ ...w, [column.id as string]: newSize }))
   }, [])
 
+  // Column selection drives the "Plot curve" action: the first column is the
+  // x-axis (time for ODE tables) and the other selected columns are the y-axis.
+  const [selection, setSelection] = useState<GridSelection>(EMPTY_SELECTION)
+  const xVar = vars[0]
+  const selectedY = useMemo(
+    () => selection.columns.toArray().map((i) => vars[i]).filter((v) => v && v !== xVar),
+    [selection, vars, xVar],
+  )
+
   return (
-    <div ref={ref} style={{ flex: 1, minHeight: 0, width: '100%', position: 'relative' }}>
-      {width > 0 && height > 0 && (
-        <DataEditor
-          theme={gridTheme}
-          columns={columns}
-          rows={rows.length}
-          getCellContent={getCellContent}
-          width={width}
-          height={height}
-          rowMarkers="number"
-          smoothScrollX
-          smoothScrollY
-          getCellsForSelection
-          onColumnResize={onColumnResize}
-        />
+    <Stack gap={6} style={{ flex: 1, minHeight: 0 }}>
+      {onPlotColumns && (
+        <Group gap="sm">
+          <Button
+            size="xs"
+            variant="light"
+            leftSection={<IconChartLine size={14} />}
+            disabled={selectedY.length === 0}
+            onClick={() => onPlotColumns(xVar, selectedY)}
+          >
+            Plot curve
+          </Button>
+          <Text size="xs" c="dimmed">
+            {selectedY.length === 0
+              ? `Select one or more columns (click a header, Ctrl/Cmd-click to add) to plot them vs ${displayVar(xVar)}.`
+              : `Plot ${selectedY.map(displayVar).join(', ')} vs ${displayVar(xVar)}.`}
+          </Text>
+        </Group>
       )}
-    </div>
+      <div ref={ref} style={{ flex: 1, minHeight: 0, width: '100%', position: 'relative' }}>
+        {width > 0 && height > 0 && (
+          <DataEditor
+            theme={gridTheme}
+            columns={columns}
+            rows={rows.length}
+            getCellContent={getCellContent}
+            width={width}
+            height={height}
+            rowMarkers="number"
+            smoothScrollX
+            smoothScrollY
+            getCellsForSelection
+            gridSelection={selection}
+            onGridSelectionChange={setSelection}
+            onColumnResize={onColumnResize}
+          />
+        )}
+      </div>
+    </Stack>
   )
 }

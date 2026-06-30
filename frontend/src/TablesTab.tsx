@@ -52,6 +52,9 @@ interface Props {
   onAlterColumn: (name: string) => void
   onColumnUnitsChange: (name: string, units: string) => void
   onCellChange: (rowIndex: number, name: string, value: string) => void
+  /** Open a new X-Y plot from a read-only table's column selection (x = first
+   *  column / time, y = the selected columns). */
+  onPlotColumns?: (xVar: string, yVars: string[]) => void
   /** When set, render only this one table and hide the table-tab strip (used
    *  when each table is its own dock window). */
   singleTableId?: string
@@ -221,6 +224,7 @@ export default function TablesTab(props: Readonly<Props>) {
               rows={active.rows}
               varDrafts={props.varDrafts}
               columnUnits={active.columnUnits}
+              onPlotColumns={props.onPlotColumns}
             />
           </Suspense>
         </>
