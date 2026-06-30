@@ -2375,6 +2375,7 @@ export default function App() {
         <MobileLayout
           panelContent={panelContent}
           tables={tables}
+          plots={mergedPlots}
           projectName={projectName}
           checking={checking}
           solving={solving}
