@@ -21,6 +21,8 @@ interface Props {
   tableVars: string[]
   rows: ParamRow[]
   results: TableRowResult[]
+  /** Per-column SI units of the active table (ODE/code), for axis annotation. */
+  tableUnits?: Record<string, string>
   activePlotId?: string | null
   onActivePlotIdChange?: (id: string | null) => void
   hideHeader?: boolean
@@ -46,6 +48,7 @@ export default function PlotTab({
   tableVars,
   rows,
   results,
+  tableUnits,
   activePlotId,
   onActivePlotIdChange,
   hideHeader = false,
@@ -143,6 +146,7 @@ export default function PlotTab({
           tableRows={rows}
           tableResults={results}
           variables={solvedVariables}
+          tableUnits={tableUnits}
           stateTableDefs={stateTableDefs}
           spreadsheets={spreadsheets}
           onConfigure={() => setEditing(current)}

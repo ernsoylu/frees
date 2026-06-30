@@ -2269,6 +2269,7 @@ export default function App() {
           tableVars={tableVars}
           rows={paramRows}
           results={tableResults}
+          tableUnits={activeParam?.columnUnits}
           activePlotId={pl.id}
           onActivePlotIdChange={setActivePlotId}
           spreadsheets={spreadsheets}

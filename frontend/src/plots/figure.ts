@@ -8,6 +8,7 @@ import { DiagramCurve, DiagramResponse, PsychartResponse } from '../api'
 import { PlotFormat, PropertyConfig, PsychroConfig, XYConfig } from './types'
 import { StateTable, statesForAxes } from './stateTable'
 import { UnitChoice, resolveUnit } from './units'
+import { displayVar } from '../varDisplay'
 
 /**
  * Builds Plotly figures for every plot kind in one place so the on-screen
@@ -428,7 +429,7 @@ export function buildXYFigure(
         type: 'pie',
         labels: s.x.map(String),
         values: s.y,
-        name: s.name,
+        name: displayVar(s.name),
         textposition: 'inside',
         hoverinfo: 'label+value+percent',
       })
@@ -438,7 +439,7 @@ export function buildXYFigure(
       traces.push({
         type: 'histogram',
         x: s.y,
-        name: s.name,
+        name: displayVar(s.name),
         opacity: 0.75,
         marker: { color: format.lineColors?.[s.name] || undefined },
       })
@@ -447,7 +448,7 @@ export function buildXYFigure(
     series.forEach((s) => {
       traces.push({
         type: 'bar',
-        name: s.name,
+        name: displayVar(s.name),
         x: s.x,
         y: s.y,
         marker: { color: format.lineColors?.[s.name] || undefined },
@@ -460,7 +461,7 @@ export function buildXYFigure(
       traces.push({
         type: 'scatter',
         mode: 'markers',
-        name: s.name,
+        name: displayVar(s.name),
         x: s.x,
         y: s.y,
         marker: {
@@ -475,7 +476,7 @@ export function buildXYFigure(
       if (s.z && s.z.length > 0) {
         traces.push({
           type: 'mesh3d',
-          name: s.name,
+          name: displayVar(s.name),
           x: s.x,
           y: s.y,
           z: s.z,
@@ -491,7 +492,7 @@ export function buildXYFigure(
       traces.push({
         type: 'scatter',
         mode: 'lines+markers',
-        name: s.name,
+        name: displayVar(s.name),
         x: s.x,
         y: s.y,
         line: { color: format.lineColors?.[s.name] || undefined },
@@ -516,7 +517,7 @@ export function buildXYFigure(
   // Secondary right Y axis for the series tagged 'y2'.
   if (traces.some((t) => t.yaxis === 'y2')) {
     const colors = THEMES[theme]
-    const y2Names = series.filter((s) => s.axis === 'y2').map((s) => s.name)
+    const y2Names = series.filter((s) => s.axis === 'y2').map((s) => displayVar(s.name))
     layout.yaxis2 = {
       title: { text: format.y2Label || y2Names.join(', ') },
       overlaying: 'y',

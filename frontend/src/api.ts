@@ -156,6 +156,8 @@ export interface PlotDefDto {
 export interface OdeTableDto {
   name: string
   vars: string[]
+  /** Per-column SI unit, aligned to `vars` (the ODE rows are SI). */
+  units: string[]
   rows: (number | null)[][]
   events: { name: string; time: number }[]
   method: string

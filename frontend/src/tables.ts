@@ -25,6 +25,9 @@ export interface ParamTableSpec {
   /** Set when this "parametric" table was produced from a DYNAMIC/ODE block
    * rather than a PARAMETRIC block, so the UI can describe it correctly. */
   origin?: 'ode'
+  /** Per-column SI units (column name → unit), for read-only code/ODE tables
+   * whose columns are not solved scalars: used for grid headers and plot axes. */
+  columnUnits?: Record<string, string>
 }
 
 interface CurveRow {
@@ -321,6 +324,11 @@ function odeTableFromDto(dto: OdeTableDto): ParamTableSpec {
     })
     return { id: crypto.randomUUID(), values }
   })
+  const columnUnits: Record<string, string> = {}
+  dto.vars.forEach((v, j) => {
+    const u = dto.units?.[j] ?? ''
+    if (u) columnUnits[v] = u
+  })
   return {
     id: `code-ode-${dto.name.toLowerCase()}`,
     kind: 'parametric',
@@ -333,6 +341,7 @@ function odeTableFromDto(dto: OdeTableDto): ParamTableSpec {
     checkMessage: '',
     source: 'code',
     origin: 'ode',
+    columnUnits,
   }
 }
 

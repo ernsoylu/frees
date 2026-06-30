@@ -11,6 +11,7 @@ import {
   getPsychrometricChart,
 } from '../api'
 import { ParamRow } from '../ParametricTableTab'
+import { displayVar } from '../varDisplay'
 import { PlotSpec } from './types'
 import { StateTable, detectStateTables } from './stateTable'
 import {
@@ -37,6 +38,9 @@ interface Props {
   /** Flat solved variables; the data source for XY plots that reference solved
    * arrays (e.g. x = speed[1:N]) rather than a parametric table. */
   variables?: VariableResult[]
+  /** Per-column SI units for the active read-only table (ODE/code), used to
+   * unit-annotate axis labels when the columns are not solved scalars. */
+  tableUnits?: Record<string, string>
   /** Declared STATE TABLE blocks, for overlaying a single circuit's states. */
   stateTableDefs?: StateTableDto[]
   onConfigure: () => void
@@ -260,6 +264,9 @@ export interface FigureInputs {
   /** Flat solved variables, used as the XY data source when no parametric
    * table rows are available (plots referencing solved arrays). */
   variables?: VariableResult[]
+  /** Per-column SI units for the active read-only table (ODE/code), whose
+   * columns are not solved scalars — used to unit-annotate the axis labels. */
+  tableUnits?: Record<string, string>
   diagram: DiagramResponse | null
   psychart: PsychartResponse | null
   /** Declared STATE TABLE blocks, so a plot can overlay just one circuit. */
@@ -361,8 +368,15 @@ function buildXyFigureFromSpec(spec: PlotSpec, inputs: FigureInputs, xVar: strin
   const { tableRows, tableResults, variables = [], theme } = inputs
   // Use solved array variables when there is no parametric table, or when the
   // table exists but has not been run yet (results empty). Fall back to
-  // parametric-table rows only when the table was actually executed.
-  const useArrays = tableRows.length === 0 || tableResults.length === 0
+  // parametric-table rows only when the table was actually executed — OR when
+  // the rows already carry the requested series data even though there are no
+  // run results, which is the case for read-only code PARAMETRIC tables and
+  // DYNAMIC/ODE trajectories (their values live in the rows, not in `results`).
+  const yAll = [...spec.xy.yVars, ...(spec.xy.y2Vars ?? [])]
+  const rowsCarrySeries =
+    tableRows.length > 0 &&
+    yAll.some((y) => tableRows.some((r) => (r.values[y] ?? '').trim() !== ''))
+  const useArrays = (tableRows.length === 0 || tableResults.length === 0) && !rowsCarrySeries
   const series = useArrays
     ? buildArrayXYSeries(variables, inputs.spreadsheets || [], xVar, spec.xy.yVars)
     : buildXYSeries(tableRows, tableResults, xVar, spec.xy.yVars, spec.xy.zVar, spec.xy.sizeVar)
@@ -378,7 +392,9 @@ function buildXyFigureFromSpec(spec: PlotSpec, inputs: FigureInputs, xVar: strin
   const showUnits = spec.format.showUnits !== false
   const unitOf = (name: string): string => {
     const v = variables.find((x) => x.name.toLowerCase() === name.toLowerCase())
-    return v?.units ?? ''
+    // Solved scalars carry their unit; ODE/code-table columns are not scalars,
+    // so fall back to the table's per-column SI units.
+    return v?.units ?? inputs.tableUnits?.[name] ?? ''
   }
   const withUnit = (label: string, unit: string) =>
     showUnits && unit ? `${label} [${unit}]` : label
@@ -388,8 +404,8 @@ function buildXyFigureFromSpec(spec: PlotSpec, inputs: FigureInputs, xVar: strin
   return buildXYFigure(
     series,
     spec.format,
-    withUnit(xVar, unitOf(xVar)),
-    withUnit(spec.xy.yVars.join(', '), yUnit),
+    withUnit(displayVar(xVar), unitOf(xVar)),
+    withUnit(spec.xy.yVars.map(displayVar).join(', '), yUnit),
     theme,
     spec.xy,
   )
@@ -402,6 +418,7 @@ export default function PlotCard({
   tableRows,
   tableResults,
   variables = [],
+  tableUnits,
   stateTableDefs,
   onConfigure,
   onRemove,
@@ -425,8 +442,8 @@ export default function PlotCard({
   }, [exportTrigger])
 
   const figure = useMemo(
-    () => buildFigure(spec, { states, cyclePath, tableRows, tableResults, variables, diagram, psychart, stateTableDefs, spreadsheets, theme: 'dark' }),
-    [spec, states, cyclePath, tableRows, tableResults, variables, diagram, psychart, stateTableDefs, spreadsheets],
+    () => buildFigure(spec, { states, cyclePath, tableRows, tableResults, variables, tableUnits, diagram, psychart, stateTableDefs, spreadsheets, theme: 'dark' }),
+    [spec, states, cyclePath, tableRows, tableResults, variables, tableUnits, diagram, psychart, stateTableDefs, spreadsheets],
   )
 
   async function onExport(format: (typeof EXPORT_FORMATS)[number]['value']) {
@@ -437,6 +454,7 @@ export default function PlotCard({
       tableRows,
       tableResults,
       variables,
+      tableUnits,
       diagram,
       psychart,
       stateTableDefs,
