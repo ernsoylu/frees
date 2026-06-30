@@ -347,6 +347,9 @@ export default function App() {
   // config modal opens even though plots are now per-instance dock windows.
   // The kind decides which plot type the modal creates: xy / property / psychro.
   const [newPlotKind, setNewPlotKind] = useState<PlotKind | null>(null)
+  // Seed for a new X-Y plot opened from a table's column selection (x + y vars),
+  // applied as the modal's initial XY config.
+  const [plotSeed, setPlotSeed] = useState<{ xVar: string; yVars: string[] } | null>(null)
   const [diagrams, setDiagrams] = useState<DiagramSpec[]>(() =>
     boot ? boot.diagrams : loadDiagrams(),
   )
@@ -1338,6 +1341,13 @@ export default function App() {
       return await onSolveTable(tableId, res, overrideTbl)
     }
     return false
+  }
+
+  // From a read-only table's column selection: open the New X-Y plot modal
+  // pre-filled with the time column as x and the selected columns as y.
+  const handlePlotColumns = (xVar: string, yVars: string[]) => {
+    setPlotSeed({ xVar, yVars })
+    setNewPlotKind('xy')
   }
 
   const handlePlotsChange = (nextPlots: PlotSpec[]) => {
@@ -2343,6 +2353,7 @@ export default function App() {
             setAlterColumn(name)
           }}
           onColumnUnitsChange={setColumnUnits}
+          onPlotColumns={handlePlotColumns}
           onCellChange={(rowIndex, name, value) =>
             updateParamTable(t.id, (pt) =>
               invalidateActiveParam({
@@ -2701,14 +2712,16 @@ export default function App() {
             defaultName={`${PLOT_KIND_LABEL[newPlotKind]} ${mergedPlots.filter((p) => p.kind === newPlotKind).length + 1}`}
             fluids={fluids}
             tableVars={tableVars}
+            initialXy={newPlotKind === 'xy' ? (plotSeed ?? undefined) : undefined}
             hasStates={detectStates(result?.variables ?? []).indices.length > 0}
             onSave={(spec) => {
               handlePlotsChange([...plots, spec])
               setActivePlotId(spec.id)
               setNewPlotKind(null)
+              setPlotSeed(null)
               requestAnimationFrame(() => dockRef.current?.openInstance(`plot:${spec.id}`, 'plot', spec.name))
             }}
-            onClose={() => setNewPlotKind(null)}
+            onClose={() => { setNewPlotKind(null); setPlotSeed(null) }}
           />
         </Suspense>
       )}
