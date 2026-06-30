@@ -1,7 +1,9 @@
 # Build stage: compile the React app.
 FROM node:20-alpine AS build
 WORKDIR /app
-COPY package.json package-lock.json ./
+# .npmrc carries `legacy-peer-deps=true` (glide-data-grid's React-18 peer ceiling
+# vs the project's React 19); npm ci must see it or the install fails.
+COPY package.json package-lock.json .npmrc ./
 RUN npm ci --ignore-scripts
 COPY tsconfig.json vite.config.ts postcss.config.cjs index.html ./
 COPY src ./src
