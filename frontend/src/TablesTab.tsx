@@ -220,6 +220,7 @@ export default function TablesTab(props: Readonly<Props>) {
               vars={active.vars}
               rows={active.rows}
               varDrafts={props.varDrafts}
+              columnUnits={active.columnUnits}
             />
           </Suspense>
         </>

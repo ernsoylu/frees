@@ -83,9 +83,9 @@ public final class SolveDtos {
      * {@code [time, states…, auxiliaries…]} and the sampled trajectory rows, plus
      * any event firings. Shaped like {@link ParametricTableDto} so the frontend
      * renders it in the Tables window and plots it through the parametric path. */
-    public record OdeTableDto(String name, List<String> vars, List<List<Double>> rows,
-                              List<OdeEventDto> events, String method, boolean stopped,
-                              double endTime) {}
+    public record OdeTableDto(String name, List<String> vars, List<String> units,
+                              List<List<Double>> rows, List<OdeEventDto> events,
+                              String method, boolean stopped, double endTime) {}
 
     public record OdeEventDto(String name, double time) {}
 
@@ -168,14 +168,26 @@ public final class SolveDtos {
     }
 
     static List<OdeTableDto> odeTablesOf(
-            List<OdeTableResult> tables) {
+            List<OdeTableResult> tables, java.util.Map<String, String> unitsByLower) {
         List<OdeTableDto> out = new ArrayList<>();
         for (OdeTableResult t : tables) {
             List<OdeEventDto> events = new ArrayList<>();
             for (OdeTableResult.EventHit e : t.events()) {
                 events.add(new OdeEventDto(e.name(), e.time()));
             }
-            out.add(new OdeTableDto(t.name(), t.columns(), t.rows(), events,
+            // Per-column SI units (the ODE rows are SI): the dimensionally-derived
+            // unit of each column variable. The first column is the time variable,
+            // which the unit deriver does not track, so default it to seconds.
+            List<String> columns = t.columns();
+            List<String> units = new ArrayList<>(columns.size());
+            for (int i = 0; i < columns.size(); i++) {
+                String u = unitsByLower.getOrDefault(columns.get(i).toLowerCase(), "");
+                if (u.isEmpty() && i == 0) {
+                    u = "s";
+                }
+                units.add(u);
+            }
+            out.add(new OdeTableDto(t.name(), columns, units, t.rows(), events,
                     t.method(), t.stopped(), t.endTime()));
         }
         return out;

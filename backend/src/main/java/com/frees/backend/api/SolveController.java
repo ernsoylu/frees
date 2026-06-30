@@ -270,7 +270,7 @@ public class SolveController {
                 plotsOf(parsed.plots()),
                 null,
                 stateTablesOf(parsed.stateTables()),
-                odeTablesOf(result.odeTables()),
+                odeTablesOf(result.odeTables(), unitsByLower),
                 result.residueExpansions(),
                 TopologyGraph.mermaid(cleanText),
                 ComponentMetadata.build(cleanText, variableDtos));
