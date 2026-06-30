@@ -11,9 +11,15 @@ import {
   Tooltip,
 } from '@mantine/core'
 import { IconChartGridDots, IconCopy, IconPlus, IconTable, IconTrash } from '@tabler/icons-react'
+import { lazy, Suspense } from 'react'
 import { TableRowResult } from './api'
 import FunctionTableEditor from './FunctionTableEditor'
 import ParametricTableTab, { ParamRow } from './ParametricTableTab'
+
+// Solver-produced (read-only) tables can be huge; render them through a
+// virtualized canvas grid, code-split so glide-data-grid stays out of the
+// initial bundle and only loads when such a table is opened.
+const DataGridReadOnly = lazy(() => import('./DataGridReadOnly'))
 import {
   duplicateAsEditable,
   FunctionTableSpec,
@@ -202,14 +208,31 @@ export default function TablesTab(props: Readonly<Props>) {
         </Text>
       )}
 
-      {active?.kind === 'parametric' && (
+      {active?.kind === 'parametric' && active.source === 'code' && (
+        <>
+          <Text size="xs" c="dimmed">
+            {active.origin === 'ode'
+              ? 'Solved trajectory from a DYNAMIC (ODE) block — virtualized read-only grid (columns are SI-solver values; drag column edges to resize, click-drag to select/copy).'
+              : 'Defined in code (PARAMETRIC … END) — virtualized read-only grid. Run it with Solve Table.'}
+          </Text>
+          <Suspense fallback={<Text size="sm" c="dimmed">Loading grid…</Text>}>
+            <DataGridReadOnly
+              vars={active.vars}
+              rows={active.rows}
+              varDrafts={props.varDrafts}
+            />
+          </Suspense>
+        </>
+      )}
+
+      {active?.kind === 'parametric' && active.source !== 'code' && (
         <ParametricTableTab
           tableVars={props.tableVars}
           rows={props.rows}
           results={props.results}
           varDrafts={props.varDrafts}
-          readOnly={active.source === 'code'}
-          isOde={active.origin === 'ode'}
+          readOnly={false}
+          isOde={false}
           onConfigure={props.onConfigure}
           onAddRow={props.onAddRow}
           onRemoveRow={props.onRemoveRow}
