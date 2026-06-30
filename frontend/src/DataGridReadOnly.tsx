@@ -12,6 +12,7 @@ import { useComputedColorScheme, useMantineTheme } from '@mantine/core'
 import { useElementSize } from '@mantine/hooks'
 import { ParamRow } from './ParametricTableTab'
 import { VariableDraft } from './VariableInfoModal'
+import { displayVar } from './varDisplay'
 
 // ---------------------------------------------------------------------------
 // Read-only, virtualized data grid for solver-produced tables (code PARAMETRIC
@@ -28,9 +29,12 @@ interface Props {
   rows: ParamRow[]
   /** Per-variable display metadata; only `units` is used here (header label). */
   varDrafts: Record<string, VariableDraft>
+  /** Per-column SI units for ODE/code tables (column name → unit). Preferred
+   * over `varDrafts` since ODE columns are not solved scalars in `varDrafts`. */
+  columnUnits?: Record<string, string>
 }
 
-export default function DataGridReadOnly({ vars, rows, varDrafts }: Readonly<Props>) {
+export default function DataGridReadOnly({ vars, rows, varDrafts, columnUnits }: Readonly<Props>) {
   const theme = useMantineTheme()
   const scheme = useComputedColorScheme('dark')
   const dark = scheme === 'dark'
@@ -74,12 +78,12 @@ export default function DataGridReadOnly({ vars, rows, varDrafts }: Readonly<Pro
   const columns = useMemo<GridColumn[]>(
     () =>
       vars.map((name) => {
-        const units = varDrafts[name]?.units
+        const units = columnUnits?.[name] ?? varDrafts[name]?.units
         // Demangle flat solver names for display only: component port members are
         // stored as `brg$port$t` but shown dotted (`brg.port.t`), matching how the
         // rest of the app renders them. The column id / data key stays the raw
         // name so cell lookup and plot wiring are unaffected.
-        const label = name.replace(/\$/g, '.')
+        const label = displayVar(name)
         const title = units ? `${label} [${units}]` : label
         return {
           id: name,
@@ -87,7 +91,7 @@ export default function DataGridReadOnly({ vars, rows, varDrafts }: Readonly<Pro
           width: widthOverrides[name] ?? Math.max(96, title.length * 8 + 28),
         }
       }),
-    [vars, varDrafts, widthOverrides],
+    [vars, varDrafts, columnUnits, widthOverrides],
   )
 
   // Cell values are already formatted strings (fmt6) on the ParamRow; paint them

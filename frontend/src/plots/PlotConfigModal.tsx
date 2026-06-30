@@ -28,6 +28,7 @@ import {
 } from './types'
 import { defaultUnitId, unitIdsFor } from './units'
 import { StateTableDto } from '../api'
+import { displayVar, varOptions } from '../varDisplay'
 
 interface Props {
   /** Existing spec to edit, or null to create a new plot. */
@@ -69,6 +70,9 @@ function XYSection({
   const chartType = config.chartType ?? 'line'
   const isSpreadsheet = config.xVar?.startsWith('spreadsheet:') ?? false
   const sourceType = isSpreadsheet ? 'spreadsheet' : 'variables'
+  // Options show demangled labels (brg$port$t → brg.port.t) but keep the raw
+  // name as the value so the selection still keys into the table data.
+  const varOpts = varOptions(tableVars)
 
   const ssId = isSpreadsheet ? config.xVar!.split('!')[0].replace('spreadsheet:', '') : ''
   const ssOptions = spreadsheets.map((s) => ({ value: s.id, label: s.name }))
@@ -129,7 +133,7 @@ function XYSection({
           <Select
             label={chartType === 'histogram' ? 'Variable (uses Y-axis)' : 'X-axis variable'}
             size="xs"
-            data={tableVars}
+            data={varOpts}
             value={config.xVar}
             onChange={(xVar) => onChange({ ...config, xVar })}
             searchable
@@ -153,7 +157,7 @@ function XYSection({
             <MultiSelect
               label={chartType === 'pie' ? 'Value variable (uses first Y)' : 'Y-axis variables'}
               size="xs"
-              data={tableVars}
+              data={varOpts}
               value={config.yVars}
               onChange={(yVars) => onChange({ ...config, yVars })}
               maxValues={chartType === 'pie' ? 1 : undefined}
@@ -163,7 +167,7 @@ function XYSection({
               <Select
                 label="Z-axis variable"
                 size="xs"
-                data={tableVars}
+                data={varOpts}
                 value={config.zVar ?? null}
                 onChange={(zVar) => onChange({ ...config, zVar })}
                 searchable
@@ -173,7 +177,7 @@ function XYSection({
               <Select
                 label="Bubble size variable (optional)"
                 size="xs"
-                data={tableVars}
+                data={varOpts}
                 value={config.sizeVar ?? null}
                 onChange={(sizeVar) => onChange({ ...config, sizeVar })}
                 searchable
@@ -185,7 +189,7 @@ function XYSection({
             <MultiSelect
               label="Right Y-axis variables (optional, dual-Y)"
               size="xs"
-              data={tableVars.filter((v) => !config.yVars.includes(v))}
+              data={varOptions(tableVars.filter((v) => !config.yVars.includes(v)))}
               value={config.y2Vars ?? []}
               onChange={(y2Vars) => onChange({ ...config, y2Vars })}
               searchable
@@ -462,7 +466,7 @@ function XyLineColors({
       {spec.xy.yVars.map((yVar) => (
         <ColorInput
           key={yVar}
-          label={`Color for ${yVar}`}
+          label={`Color for ${displayVar(yVar)}`}
           size="xs"
           style={{ flex: '1 1 120px' }}
           value={format.lineColors?.[yVar] ?? '#228be6'}
