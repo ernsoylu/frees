@@ -23,7 +23,11 @@ import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO = path.resolve(__dirname, '../..');
-const BK = path.join(REPO, 'backend/src/main/java/com/frees/backend');
+// Post core/web split: pure computation (parser/ast/props/...) lives in core,
+// the Spring web layer (controllers, ReplEvaluator — which needs the Redis-backed
+// session cache) lives in web.
+const BK = path.join(REPO, 'backend/core/src/main/java/com/frees/backend');
+const BK_WEB = path.join(REPO, 'backend/web/src/main/java/com/frees/backend');
 const REF_DIR = path.join(__dirname, '../src/docs/reference');
 const OUT = path.join(REF_DIR, 'function-manifest.json');
 
@@ -49,8 +53,8 @@ function parseRegistry() {
 // ── 2. Dispatch arms from an evaluator's switch ──────────────────────────────
 // Returns one entry per `case ... ->` arm: the list of labels that share it.
 // Labels sharing an arm are ALIASES of one function (e.g. case "t0_t","isen_t0_t").
-function dispatchArms(rel) {
-  const src = read(path.join(BK, rel));
+function dispatchArms(rel, base = BK) {
+  const src = read(path.join(base, rel));
   const arms = [];
   const caseRe = /case\s+("(?:[^"\\]|\\.)*"(?:\s*,\s*"(?:[^"\\]|\\.)*")*)\s*->/g;
   let m;
@@ -72,7 +76,7 @@ const NON_FUNCTION_TOKENS = new Set([
 
 // Components: every `COMPONENT <Name>` in the std-lib resources, grouped by domain file.
 function parseComponents() {
-  const dir = path.join(REPO, 'backend/src/main/resources/components');
+  const dir = path.join(REPO, 'backend/core/src/main/resources/components');
   const out = [];
   for (const file of fs.readdirSync(dir).filter((f) => f.endsWith('.frees'))) {
     const domain = file.replace(/\.frees$/, '');
@@ -205,7 +209,7 @@ const dispatchOnly = arms
   .map((labels) => ({ name: labels[0], aliases: labels.slice(1) }))
   .sort((a, b) => a.name.localeCompare(b.name));
 
-const repl = [...new Set(dispatchArms('api/ReplEvaluator.java').flat())]
+const repl = [...new Set(dispatchArms('api/ReplEvaluator.java', BK_WEB).flat())]
   .filter((n) => !NON_FUNCTION_TOKENS.has(n)).sort();
 
 // Name-set-routed families (not in the Evaluator switch).

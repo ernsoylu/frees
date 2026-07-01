@@ -1,1 +1,3 @@
 rootProject.name = 'frees-backend'
+
+include 'core', 'web'
