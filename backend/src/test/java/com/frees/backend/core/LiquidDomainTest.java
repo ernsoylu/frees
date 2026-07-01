@@ -31,7 +31,8 @@ class LiquidDomainTest {
         // + 1 TwoPhaseChamber ((P,h) capacitive volume for closed cycles)
         // + later additions shipped after this breakdown was written (boil-off vessels,
         //   relief valves, heat/mass sources, UA/float two-phase HXs, blend sensors, …)
-        assertEquals(136, names.size(), "built-in component count after the per-domain split");
+        // + 3 map-driven components (FanMap, PumpMap, CompressorMap) for the Component Wizard
+        assertEquals(139, names.size(), "built-in component count after the per-domain split");
         // built-in names are stored lowercased (the language is case-insensitive)
         assertTrue(names.containsAll(java.util.List.of(
                 "liquidsource", "liquidsink", "liquidpump", "liquidpipe",
