@@ -45,30 +45,27 @@ subprojects {
         useJUnitPlatform()
         maxHeapSize = "2g"
     }
-
-    // The sonarqube plugin auto-detects every Gradle subproject and, by default,
-    // scans each as its own hierarchical sonar module using its own source sets —
-    // on top of the flat `sonar.sources`/`sonar.tests` this build declares below,
-    // which already lists both modules' paths explicitly. Left enabled, that's a
-    // double-index ("file can't be indexed twice") for every core/web source file.
-    // skipProject keeps this a single flat project scan, matching the pre-split
-    // single-module behavior.
-    sonar {
-        skipProject = true
-    }
 }
 
 // CI-based SonarCloud scan covering the whole repository in one project:
 // Java is analyzed with bytecode here (automatic analysis cannot do that),
 // and the frontend, Dockerfiles and CI workflows are swept into the same scan.
+//
+// This is a multi-module Gradle build (:core, :web); the sonarqube plugin
+// auto-detects each subproject and scans it as its own hierarchical sonar
+// module, auto-wiring sonar.sources/sonar.tests/sonar.java.binaries from that
+// subproject's own sourceSets — do NOT also declare backend/core or
+// backend/web java paths here, that double-indexes every Java file (and,
+// if worked around via `skipProject`, drops the auto-wired java.binaries,
+// which then hard-fails the Java sensor). Only the non-Java parts of the
+// repo (frontend, Dockerfiles, compose, CI) need to be declared explicitly.
 sonar {
     properties {
         property 'sonar.projectKey', 'ernsoylu_frEES'
         property 'sonar.organization', 'ernsoylu'
         property 'sonar.host.url', 'https://sonarcloud.io'
         property 'sonar.projectBaseDir', "${projectDir}/.."
-        property 'sonar.sources', 'backend/core/src/main/java,backend/web/src/main/java,frontend/src,backend/Dockerfile,frontend/Dockerfile,docker-compose.yml,.github/workflows'
-        property 'sonar.tests', 'backend/core/src/test/java,backend/web/src/test/java'
+        property 'sonar.sources', 'frontend/src,backend/Dockerfile,frontend/Dockerfile,docker-compose.yml,.github/workflows'
         property 'sonar.exclusions', '**/node_modules/**,**/build/**,**/dist/**'
         // HelpPage.tsx, examples.ts and functionCatalog.ts are declarative
         // content: the duplication detector anonymizes string literals, so their
