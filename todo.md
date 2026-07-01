@@ -47,7 +47,7 @@ are its arguments, show me an example, what errors will I hit."** That is what w
 - **Live reference data** — units & constants already come from `GET /api/reference`.
 - **Backend source-of-truth** — `parser/FunctionRegistry.java`, `ast/Evaluator.evalBuiltin`,
   `ast/ControlSystemsEvaluator`, `parser/ProcedureEvaluator`, `api/ReplEvaluator`; grammar in
-  `backend/src/main/antlr/Frees.g4`. Component library in the `*.frees` std-lib files.
+  `backend/core/src/main/antlr/Frees.g4`. Component library in the `*.frees` std-lib files.
 
 ## Citation-grounding policy (decided)
 

@@ -1,7 +1,7 @@
-# Gradle
+# Gradle (backend is a multi-module build: root + core/ + web/ subprojects)
 .gradle/
-backend/.gradle/
-backend/build/
+backend/**/.gradle/
+backend/**/build/
 backend/bin/
 !backend/gradle/wrapper/gradle-wrapper.jar
 
@@ -24,8 +24,8 @@ frontend/src/docs/reference/function-manifest.json
 *.iml
 .vscode/
 # Eclipse / Buildship (local Gradle/JDK paths leak into committed prefs)
-backend/.project
-backend/.settings/
+backend/**/.project
+backend/**/.settings/
 
 # OS
 .DS_Store
