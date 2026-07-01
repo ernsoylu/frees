@@ -79,6 +79,6 @@ sonar {
         // testable — async messaging (RabbitMQ) and the job store/dispatcher,
         // Spring @Configuration beans, the REST job controller, the app entry
         // point, and the raw JNA/native SUNDIALS-IDA bindings.
-        property 'sonar.coverage.exclusions', 'frontend/**/*,frontend/src/**/*,**/frontend/**/*,backend/Dockerfile,frontend/Dockerfile,docker-compose.yml,.github/workflows/**/*,backend/web/src/main/java/com/frees/backend/compute/**,backend/web/src/main/java/com/frees/backend/config/**,backend/web/src/main/java/com/frees/backend/FreesBackendApplication.java,backend/web/src/main/java/com/frees/backend/api/JobController.java,backend/core/src/main/java/com/frees/backend/core/dae/SundialsIda.java,backend/core/src/main/java/com/frees/backend/core/dae/IdaDaeSolver.java'
+        property 'sonar.coverage.exclusions', 'frontend/**/*,frontend/src/**/*,**/frontend/**/*,backend/Dockerfile,frontend/Dockerfile,docker-compose.yml,.github/workflows/**/*,backend/core/src/main/java/com/frees/backend/compute/**,backend/web/src/main/java/com/frees/backend/compute/**,backend/web/src/main/java/com/frees/backend/config/**,backend/web/src/main/java/com/frees/backend/FreesBackendApplication.java,backend/web/src/main/java/com/frees/backend/api/JobController.java,backend/core/src/main/java/com/frees/backend/core/dae/SundialsIda.java,backend/core/src/main/java/com/frees/backend/core/dae/IdaDaeSolver.java'
     }
 }
