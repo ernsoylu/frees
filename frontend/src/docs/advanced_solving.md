@@ -12,7 +12,7 @@ area = Integral(3 * x^2, x, 0, 1)
 ## The ODE feedback pattern (scalar, first-order)
 When `expr` contains the result variable itself, frees detects the self-reference and integrates the corresponding initial-value ODE **starting from 0 at the lower limit**. Because the integral always starts at 0, you integrate the *change* and rebuild the quantity of interest:
 
-```
+```run
 { Tank draining: dV/dt = -C*sqrt(V), V(0) = V0 }
 V0 = 1.0
 C = 0.02
@@ -61,7 +61,7 @@ Query columns of the compiled ODE Table from your analytic equations:
 These let an ODE result feed back into the analytic solve — e.g. close a sizing loop with `MaxValue('h') = h_target`.
 
 ## Coupled two-state example
-```
+```run
 m = 1.0; k = 20.0; c = 0.5
 DYNAMIC mass_spring (method = ode45, t = 0 .. 20, points = 400)
   der(x) = v
