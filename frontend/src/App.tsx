@@ -945,6 +945,30 @@ export default function App() {
     guardedAction(() => actuallyLoadExample(example))
   }
 
+  // "Open in Editor" handoff from the /help docs: the Help page parks a runnable
+  // snippet in localStorage and opens this route; consume it exactly once on
+  // mount. Stale keys (> 5 min) are dropped — they are leftovers, not intent.
+  useEffect(() => {
+    const raw = localStorage.getItem('frees.pendingSnippet')
+    if (!raw) return
+    localStorage.removeItem('frees.pendingSnippet')
+    try {
+      const snip = JSON.parse(raw)
+      if (typeof snip?.text !== 'string' || !snip.text.trim()) return
+      if (typeof snip.ts !== 'number' || Date.now() - snip.ts > 5 * 60_000) return
+      loadExample({
+        id: 'doc-snippet',
+        title: String(snip.title || 'Documentation example'),
+        description: 'Loaded from the documentation',
+        category: 'Documentation',
+        text: snip.text,
+      })
+    } catch {
+      // Malformed handoff: nothing to load.
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   /** The equations actually solved: editor text plus diagram control bindings and spreadsheet bindings. */
   function effectiveText(): string {
     const lines = [text]

@@ -1,18 +1,18 @@
 [Topic: started]
 Welcome to **frees** — a declarative equation-solving environment for engineering problems: thermodynamics, fluid mechanics, heat transfer, control systems, structural analysis, and multi-domain simulation.
 
-You write equations the way they appear in a textbook; frees figures out what is unknown and in what order to solve it. This **Get Started** path is the fastest way in — work through the four steps below in order, then use *Where to go next* to branch into the area you need.
+You write equations the way they appear in a textbook; frees figures out what is unknown and in what order to solve it. This **Get Started** path is the fastest way in — work through the seven steps below in order, then use *Where to go next* to branch into the area you need.
 
 [Diagram: SolverPipeline]
 
-**New here? Start with step 1 below and press *Next* at the bottom of each page.** The rest of the portal is organized as: **Language Fundamentals** (the grammar), **Matrices**, **Programming & Tables**, **Fluids & Materials** (property data), **Modeling & Solving** (ODEs, control, optimization), **Tools & Workflow** (the REPL, shortcuts, reports), **Examples**, and a per-symbol **Reference**.
+**New here? Start with step 1 below and press *Next* at the bottom of each page.** The rest of the portal is organized as: **Language Fundamentals** (the grammar), **Matrices**, **Programming & Tables**, **Fluids & Materials** (property data), **Solving & Optimization** (how the solver works, debugging, uncertainty), **Dynamic Systems & Control** (ODEs, transfer functions, Bode), **System Modeling with Components** (the acausal component library), **Tools & Workflow** (the REPL, shortcuts, reports), **Examples & Tutorials**, **Architecture & Deployment**, and a per-symbol **Reference**.
 
 [Topic: gs-first-solve]
 # 1. Your First Solve
 
 The quickest way to understand frees is to solve something. Type this into the editor and press **F2** (Solve):
 
-```
+```run
 { Mass of air in a rigid tank }
 P = 500 [kPa]
 Vol = 0.05 [m^3]
@@ -79,25 +79,99 @@ For nonlinear or transcendental equations, the Newton solver iterates from a **g
 
 > **Tip:** If a solve fails to converge, the cause is almost always a missing guess or a wrong unit annotation — not a bug. Check the Solution panel's diagnostics and the Variable Info guesses first.
 
-[Related: gs-next, units, variables]
+[Related: gs-plots, units, variables]
+
+[Topic: gs-plots]
+# 4. See It: Tables & Plots
+
+A single answer is rarely the goal — engineers want the *response*: how the answer moves when an input does. In frees that is a **parametric sweep**, and it takes four lines more than your first solve:
+
+```run
+P = 500 [kPa]
+Vol = 0.05 [m^3]
+T = 25 [C]
+R = 0.287 [kJ/kg-K]
+P * Vol = m * R * T
+
+PARAMETRIC tank_sweep(T, m)
+  T = 275 : 5 : 375 | Linear
+END
+```
+
+The `PARAMETRIC` block **drives** `T` across the range (overriding any fixed value each run) and records `m` as a computed output. Open the **Tables** tab and click **Solve Table** — one solve per row fills the grid.
+
+## From table to plot
+Select the columns in the table and click **Plot curve** — the figure opens in the **Plots** panel. For figures you want built every solve, declare them in code with a `PLOT` block instead (see *Plots in Code*). Property plots (T-s, P-h, psychrometric) with your state points overlaid come later in the *Fluids & Materials* group.
+
+That is the everyday loop: model → sweep → curve. The next two steps add the interactive console and the component library.
+
+[Related: gs-repl, optimization, plot-code]
+
+[Topic: gs-repl]
+# 5. Ask Questions: the REPL
+
+After a solve, the **REPL terminal** (a dockable console window) holds the whole solved session as a live **workspace**. Instead of editing the document to ask a side question, ask it directly:
+
+```
+>> m                                  { query a solved value -> with units }
+>> m * 3600                           { unit-aware calculator; result stored in ans }
+>> Enthalpy('Water', T=400, P=1e5)    { any property or math function }
+>> vars                               { list the workspace }
+```
+
+Three things make it more than a calculator:
+
+- **Implicit solve** — type an equation with one unknown and the REPL solves it on the spot.
+- **The CALL library** — eigenvalues, Bode data, partial fractions: `CALL bode(num, den, omega : mag, phase)` works interactively, with output sizes inferred for you.
+- **Symbolic CAS** — `Factor(x^2 - 1)`, `Apart(...)`, `Laplace(...)` return transformed expressions (REPL-only).
+
+The full command set is on the *REPL Terminal & Workspace* page. One step left: components.
+
+[Related: gs-components, repl, shortcuts]
+
+[Topic: gs-components]
+# 6. Wire Components
+
+For system problems — loops, circuits, networks — frees has a library of ~130 **components**: parameterized, connectable blocks of physics. You wire them; frees turns the network into equations and solves it like everything else:
+
+```run
+{ What pressure does 50 m of pipe cost? }
+Source  SUP(fluid$=Water, mdot=2 [kg/s], P=300000 [Pa], T=298 [K])
+Pipe    LINE(fluid$=Water, L=50 [m], D=0.05 [m], rough=0.0001)
+Sink    RET()
+
+connect(SUP.out, LINE.in)
+connect(LINE.out, RET.in)
+
+dP = SUP.out.P - RET.in.P
+```
+
+Solve, and read `dP` — the `Pipe` computed density, Reynolds number, and friction factor internally. Port members like `LINE.out.P` are ordinary variables you can probe or pin, and the **Topology** tab draws the network you actually built.
+
+This scales a long way: pumps, heat exchangers, refrigerant circuits, electrical and mechanical elements, humid-air HVAC — including transients, from the same wiring. The **System Modeling with Components** group teaches it properly, starting with *Your First Component Network*.
+
+[Related: gs-next, comp-first-network, comp-library]
 
 [Topic: gs-next]
-# 4. Where to Go Next
+# 7. Where to Go Next
 
-You now know the whole loop: describe equations, Check (F4), Solve (F2), and seed guesses for nonlinear problems. Where you go next depends on what you're modeling.
+You now know the whole loop: describe equations, Check (F4), Solve (F2), sweep and plot, ask follow-ups in the REPL, and wire component networks. Where you go next depends on what you're modeling.
 
 ## Pick your direction
-- **Master the language** — operators, arrays, complex numbers, strings, and uncertainty: *Language Fundamentals*.
+- **Master the language** — operators, arrays, complex numbers, and strings: *Language Fundamentals*.
 - **Work with matrices** — declare, operate, and solve linear systems: *Matrices & Linear Algebra*.
 - **Reuse logic & data** — custom functions, submodels, and tables: *Programming & Tables*.
 - **Use property data** — CoolProp fluids, ideal gases, humid air, and solid materials: *Fluids & Materials*.
-- **Go beyond algebra** — ODE transients, control systems, optimization, and plots: *Modeling & Solving*.
+- **Understand and steer the solver** — convergence, debugging, uncertainty propagation, and optimization: *Solving & Optimization*.
+- **Go dynamic** — ODE transients, linearization, transfer functions, and Bode plots: *Dynamic Systems & Control*.
+- **Model whole systems** — the acausal component library, from a pipe run to a full refrigeration loop: *System Modeling with Components*.
 - **Work faster** — the REPL console, keyboard shortcuts, and automated reports: *Tools & Workflow*.
+- **Run it yourself** — the async architecture, the REST API, Docker, and Railway: *Architecture & Deployment*.
 
 ## Learn by example
-The **Examples** library has verified, ready-to-run problems across every discipline — each lists the result you should get. Copy one in, press F2, and confirm your solve. When you need the exact signature of a function, the **Reference** A–Z index is the canonical home for every symbol.
+**Examples & Tutorials** has both: guided, multi-stage tutorials that build a real engineering problem step by step, and a library of verified, ready-to-run examples across every discipline — each lists the result you should get. When you need the exact signature of a function, the **Reference** A–Z index is the canonical home for every symbol.
 
-[Related: lang-overview, fluids-overview, modeling-overview, examples]
+[Related: lang-overview, fluids-overview, components-overview, examples]
 
 [Topic: repl]
 # REPL Terminal & Workspace
