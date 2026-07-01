@@ -6,7 +6,6 @@ import com.frees.backend.ast.Expr;
 import com.frees.backend.ast.ProcDef;
 import com.frees.backend.parser.EquationParser;
 import com.frees.backend.units.UnitChecker;
-import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -29,7 +28,6 @@ import org.apache.commons.math3.linear.SingularValueDecomposition;
  * Orchestrates the full solve pipeline:
  * parse -> extract variables (guess 1.0, bounds ±infinity) -> block -> solve.
  */
-@Service
 public class EquationSystemSolver {
 
     private static final Logger log = LoggerFactory.getLogger(EquationSystemSolver.class);

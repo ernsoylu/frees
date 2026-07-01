@@ -193,7 +193,7 @@ const CDESC = {
 };
 
 // ── Parse components from .frees (balanced parser) ───────────────────────────
-const compDir = path.join(REPO, 'backend/src/main/resources/components');
+const compDir = path.join(REPO, 'backend/core/src/main/resources/components');
 const compInfo = {};
 for (const file of fs.readdirSync(compDir).filter((f) => f.endsWith('.frees'))) {
   const domain = file.replace(/\.frees$/, '');

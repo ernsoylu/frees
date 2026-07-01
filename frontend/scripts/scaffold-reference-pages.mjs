@@ -184,7 +184,7 @@ for (const f of manifest.materials.functions) {
 // 5. Components — real ports, params, and constitutive equations from the .frees
 // source. Uses a balanced parser so VARIANT … END blocks are captured per variant
 // (not truncated at the first inner END) along with the component's own END.
-const compDir = path.join(REPO, 'backend/src/main/resources/components');
+const compDir = path.join(REPO, 'backend/core/src/main/resources/components');
 const compInfo = {};
 for (const file of fs.readdirSync(compDir).filter((f) => f.endsWith('.frees'))) {
   const domain = file.replace(/\.frees$/, '');
@@ -231,7 +231,7 @@ for (const c of manifest.components) {
     body: [
       `# ${c.name}`, '',
       `Reusable acausal **${c.domain}-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.`, '',
-      '> **Auto-generated** from the component library (`backend/src/main/resources/components/`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.', '',
+      '> **Auto-generated** from the component library (`backend/core/src/main/resources/components/`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.', '',
       '## Usage', '', '```', `${c.name} inst(${info.params.map((p) => p.split('=')[0].trim()).join(', ') || 'param = value, ...'})`, '```', '',
       ...portRow, ...paramRows, ...eqRows, ...variantRows,
     ].join('\n'),

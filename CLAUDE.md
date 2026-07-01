@@ -6,6 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **frees** (free solver) is a web-based, declarative equation-solving environment for engineering problems. It uses a Java Spring Boot backend for high-performance symbolic compiling and numerical solving, and a React 19/TypeScript frontend for a multi-window dashboard interface.
 
+**Backend is a Gradle multi-module build under `backend/`** (root aggregator, no source of its own): **`core`** is the pure computational engine (AST/parser, unit checker, Newton solver + Tarjan blocking, component expansion, ODE/DAE integrators, CAS, fluid/gas property models — ANTLR grammar and the CoolProp/SUNDIALS native bindings live here too) with **zero Spring/AMQP/Redis dependency**, so it's reusable by any future non-web consumer (e.g. a desktop client); **`web`** is the Spring Boot server (REST controllers, RabbitMQ task dispatch, Redis job store, WebSocket) and depends on `core` via `implementation project(':core')`. Both modules keep the `com.frees.backend` base package (no rename) to minimize import churn — Gradle module boundaries are what actually separate them, not package names. A handful of classes that look pure but are tied to web-only state (e.g. `ReplEvaluator`, coupled to the Redis-backed `SolveContextCache` session) stay in `web`; `EquationSystemSolver` and `CyclePathResolver` moved to `core` and lost their `@Service`/`@Component` annotations — `web`'s `config/CoreBeansConfig.java` wires them into the Spring context instead. Run `./gradlew test` from `backend/` to test both modules (unqualified task names run in every subproject); qualify single-test runs with `:core:test --tests ...` or `:web:test --tests ...` since an unmatched module fails the whole build.
+
 **Frontend UI framework:** [Mantine](https://mantine.dev) (component patterns at https://ui.mantine.dev) with the **dark theme** (`MantineProvider defaultColorScheme="dark"`). Build all new UI with Mantine components (Paper, Tabs, Modal, Table, Alert, Group/Stack/Flex); do not write bespoke CSS components.
 
 ## Build and Run Commands
@@ -38,10 +40,10 @@ The frontend bundle is stamped with the git commit it was built from, surfaced i
 **Tests and local development** (run on the host, not in Docker):
 
 ```bash
-### Backend
-cd backend && ./gradlew test        # run all backend tests
-cd backend && ./gradlew test --tests "com.frees.backend.core.EquationSystemSolverTest"  # single class
-cd backend && ./gradlew bootRun     # dev-only: run backend on host
+### Backend (multi-module: core = pure computation, web = Spring Boot server, depends on core)
+cd backend && ./gradlew test        # run all backend tests (both modules)
+cd backend && ./gradlew :core:test --tests "com.frees.backend.core.EquationSystemSolverTest"  # single class — module-qualify or an unmatched module fails the build
+cd backend && ./gradlew :web:bootRun     # dev-only: run backend on host
 
 ### Frontend
 cd frontend && npm install && npm run build   # type-check + production build
@@ -84,18 +86,17 @@ On top of the equation solver, frees has an **acausal, multi-domain, component-b
 See `README.md` for the full system design and Agile plan.
 
 **Client-Server flow (Asynchronous):**
-1. React frontend collects equation + markdown text → POST to Spring Boot API node (`api` profile).
+1. React frontend collects equation/procedure DSL text (with `{...}` free-text comments) → POST to Spring Boot API node (`api` profile).
 2. API Node syntax-checks equations. If valid, pushes a `ComputeTask` to RabbitMQ and returns a `202 Accepted` with a `jobId`.
-3. Compute Node (`compute` profile) picks up the task from RabbitMQ, extracts equations from markdown lines (preserving text structure; multiple `;`-separated equations per line are supported), lexes/parses them (ANTLR), expands matrix/vector operations (`SolveLinear`, `Inverse`, `Dot`, …) into scalar equations, performs unit verification, blocks equations via Tarjan SCC, solves via Newton's method, and writes the JSON payload result to Redis.
+3. Compute Node (`compute` profile) picks up the task from RabbitMQ (multiple `;`-separated equations per line are supported), lexes/parses them (ANTLR), expands matrix/vector operations (`SolveLinear`, `Inverse`, `Dot`, …) into scalar equations, performs unit verification, blocks equations via Tarjan SCC, solves via Newton's method, and writes the JSON payload result to Redis.
 4. Frontend polls the API node (`GET /api/jobs/{jobId}`) until the state is COMPLETED/FAILED.
 5. Frontend renders each window based on the JSON payload:
-   - **Editor**: Custom monospace text editor with a scroll-synchronized line numbers gutter on the left.
-   - **Formatted**: Renders compiled Markdown report combining normal text with LaTeX/KaTeX equations, inline solutions, hover tooltips, and embedded interactive plots via `[Graph="..."]` tag resolution.
+   - **Editor**: CodeMirror-based monospace text editor (`EquationEditor.tsx`) with line numbers, syntax highlighting for the frees DSL.
    - **Solution, Arrays, Plots, Diagram**: Grid, charts, and overlay layouts built from the JSON payload.
    - **Whiteboard**: A code-split [Excalidraw](https://github.com/excalidraw/excalidraw) freehand sketch canvas (`whiteboard/WhiteboardTab.tsx`) that complements the solver-bound native Diagram window — a pure drawing surface (hand-drawn shapes, text, imported images) for quick problem-explanation sketches, with no variable binding. Each whiteboard opens as its own dock window (`whiteboard:<id>`, mirroring the Diagram pattern), its scene persisted as opaque JSON (`{elements, appState, files}`) into App state → the `.frees` project file (with a `frees-whiteboards` localStorage fallback), exportable to PNG/SVG. The Excalidraw theme tracks the app color scheme.
    - **REPL Terminal & Workspace**: Dockable console window — movable like the Editor/Variable Explorer (`ReplTerminal.tsx` → `POST /api/repl/evaluate`, handled by `ReplEvaluator`) that evaluates one line against the cached solved session — expressions, variable query/assign, implicit single-unknown solve, the full `CALL` library (outputs auto-sized from inputs via `EquationParser.autoSizeCallOutputs`, so bare output names work in documents and the REPL), and Symja CAS transforms (`Factor`/`Apart`/`Laplace`/`InverseLaplace`/`Diff`/`Integrate`/…, REPL-only). Block constructs (`FUNCTION`/`DYNAMIC`/`TABLE`, `SYMBOLIC`) remain editor-only.
 
-**Check-before-Solve (Check/Format):** `POST /api/check` verifies syntax and structural solvability (zero degrees of freedom + complete equation↔variable matching) without solving. The frontend gates the Solve button on a successful check; any edit invalidates it.
+**Check-before-Solve (Check):** `POST /api/check` verifies syntax and structural solvability (zero degrees of freedom + complete equation↔variable matching) without solving. The frontend gates the Solve button on a successful check; any edit invalidates it.
 
 **Deployment:** Both servers are containerized (`backend/Dockerfile` multi-stage Gradle build → JRE; `frontend/Dockerfile` Vite build → nginx with `/api` reverse proxy to the `backend` service). `docker-compose.yml` wires them with a TCP healthcheck so the frontend waits for a healthy backend.
 

@@ -1,0 +1,106 @@
+plugins {
+    id 'jacoco'
+    id 'org.springframework.boot' version '4.0.7'
+    id 'io.spring.dependency-management' version '1.1.7'
+}
+
+// frees-web: the Spring Boot server (REST API, async RabbitMQ task dispatch,
+// Redis job store). Contains no computational logic of its own — it wraps
+// frees-core, translating HTTP/async requests into calls against it.
+
+dependencies {
+    implementation project(':core')
+
+    implementation platform('org.springframework.boot:spring-boot-dependencies:4.0.7')
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+
+    // Boot 4 defaults to Jackson 3 (tools.jackson) and no longer pulls in the
+    // legacy Jackson 2 (com.fasterxml.jackson) databind module transitively —
+    // this module needs it explicitly for JacksonConfig's Jackson 2 ObjectMapper
+    // bean (Redis/RabbitMQ payload serialization; see JacksonConfig javadoc).
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.21.4'
+
+    // Asynchronous Compute Architecture
+    implementation 'org.springframework.boot:spring-boot-starter-amqp'
+    implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+
+    // OpenTelemetry — Spring Boot's native starter (Boot 4+). Exports traces via
+    // OTLP through Micrometer and still registers an injectable
+    // io.opentelemetry.api.OpenTelemetry bean, which the manual RabbitMQ
+    // trace-context propagation (TraceContextInjector / ComputeTaskListener)
+    // uses. Replaces the former community opentelemetry-spring-boot-starter.
+    implementation 'org.springframework.boot:spring-boot-starter-opentelemetry'
+
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    // Boot 4 split the web-MVC test slice (MockMvc / @AutoConfigureMockMvc) out
+    // of spring-boot-test-autoconfigure into its own module; starter-test no
+    // longer pulls it transitively.
+    testImplementation 'org.springframework.boot:spring-boot-webmvc-test'
+    testImplementation 'org.springframework.boot:spring-boot-testcontainers'
+    // Testcontainers 2.x renamed every module with a `testcontainers-` prefix
+    // (org.testcontainers:junit-jupiter -> testcontainers-junit-jupiter, etc.)
+    // and relocated container classes into module-specific packages.
+    testImplementation 'org.testcontainers:testcontainers-junit-jupiter'
+    testImplementation 'org.testcontainers:testcontainers-rabbitmq'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.named('test') {
+    exclude '**/integration/**'
+    // CoolProp shared library for fluid property tests (skipped if absent).
+    environment 'COOLPROP_LIBRARY', "${projectDir}/../core/native/libCoolProp.so"
+    systemProperty 'api.version', '1.43'
+}
+
+// Asynchronous-compute integration tests spin up RabbitMQ + Redis via
+// Testcontainers, so they run in their own task (and are excluded from the
+// fast default `test`/JaCoCo gate that must stay broker-free).
+tasks.register('integrationTest', Test) {
+    useJUnitPlatform()
+    maxHeapSize = "2g"
+    include '**/integration/**'
+    environment 'COOLPROP_LIBRARY', "${projectDir}/../core/native/libCoolProp.so"
+    systemProperty 'api.version', '1.43'
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+    shouldRunAfter 'test'
+}
+
+tasks.named('bootRun') {
+    environment 'COOLPROP_LIBRARY', "${projectDir}/../core/native/libCoolProp.so"
+}
+
+jacocoTestReport {
+    dependsOn test
+    reports {
+        xml.required = true
+    }
+}
+
+// Coverage floor so the suite can't silently erode. Thresholds sit a few
+// points below the module's actual measured ratio post-split (instruction
+// ~68.0%, branch ~51.4% — web is thinner than core because it's mostly REST
+// controllers plus RabbitMQ/Redis glue, much of which is exercised only by
+// `integrationTest`, not this fast unit-test gate) to absorb normal churn
+// while still failing on a real regression. Raise them as coverage grows.
+jacocoTestCoverageVerification {
+    dependsOn test
+    violationRules {
+        rule {
+            limit {
+                counter = 'INSTRUCTION'
+                value = 'COVEREDRATIO'
+                minimum = 0.63
+            }
+            limit {
+                counter = 'BRANCH'
+                value = 'COVEREDRATIO'
+                minimum = 0.46
+            }
+        }
+    }
+}
+
+tasks.named('check') {
+    dependsOn jacocoTestCoverageVerification
+}

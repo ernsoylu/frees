@@ -7,7 +7,6 @@ import com.frees.backend.props.CoolProp;
 import com.frees.backend.props.PropertyFunctions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -34,10 +33,10 @@ import java.util.regex.Pattern;
  * {@link EquationSystemSolver.Result} and the source text, with no controller
  * state, so they collapse cleanly into this one component.
  *
- * <p>Made a Spring {@code @Component} (rather than a static utility) so it can be
- * mocked in tests and so its {@link Logger} is owned once.
+ * <p>Kept as an instantiable class (rather than a static utility) so it can be
+ * mocked in tests and so its {@link Logger} is owned once; the web module wires
+ * it as a Spring bean via {@code CoreBeansConfig}.
  */
-@Component
 public class CyclePathResolver {
 
     private static final Logger log = LoggerFactory.getLogger(CyclePathResolver.class);

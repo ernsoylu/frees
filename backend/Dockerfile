@@ -4,13 +4,19 @@
 FROM eclipse-temurin:21-jdk-noble AS build
 WORKDIR /app
 
-# Cache the Gradle distribution and dependencies as separate layers.
-COPY gradlew settings.gradle build.gradle gradle.lockfile ./
+# Cache the Gradle distribution and dependencies as separate layers. This is a
+# multi-module build (frees-core: pure computation, no Spring; frees-web:
+# Spring Boot server depending on core) rooted here at backend/.
+COPY gradlew settings.gradle build.gradle ./
 COPY gradle ./gradle
+COPY core/build.gradle core/gradle.lockfile ./core/
+COPY web/build.gradle web/gradle.lockfile ./web/
 RUN ./gradlew --no-daemon dependencies > /dev/null 2>&1 || true
 
-COPY src ./src
-RUN ./gradlew --no-daemon bootJar
+COPY core/src ./core/src
+COPY core/native ./core/native
+COPY web/src ./web/src
+RUN ./gradlew --no-daemon :web:bootJar
 
 # Runtime stage: JRE plus the CoolProp native library for fluid properties and
 # the SUNDIALS IDA stack (variable-order BDF DAE integrator + KLU sparse) used
@@ -46,8 +52,8 @@ RUN apt-get update \
            fi; \
          done; \
        done
-COPY --from=build /app/build/libs/*.jar app.jar
-COPY native/libCoolProp.so /opt/coolprop/libCoolProp.so
+COPY --from=build /app/web/build/libs/*.jar app.jar
+COPY core/native/libCoolProp.so /opt/coolprop/libCoolProp.so
 ENV COOLPROP_LIBRARY=/opt/coolprop/libCoolProp.so
 RUN useradd --system --no-create-home --uid 10001 frees
 USER frees

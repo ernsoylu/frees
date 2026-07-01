@@ -25,6 +25,8 @@ jobs:
         uses: gradle/actions/setup-gradle@48b5f213c81028ace310571dc5ec0fbbca0b2947 # v4
 
       - name: Run tests, generate coverage report, and enforce coverage floor
+        # Unqualified task names in a Gradle multi-project build run in every
+        # subproject that defines them, so this covers both :core and :web.
         working-directory: backend
         run: ./gradlew test jacocoTestReport jacocoTestCoverageVerification
 
@@ -47,7 +49,9 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: backend-test-report
-          path: backend/build/reports/tests/test/
+          path: |
+            backend/core/build/reports/tests/test/
+            backend/web/build/reports/tests/test/
 
   frontend-build:
     name: Frontend type-check and build
@@ -97,7 +101,8 @@ jobs:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       # Trivy scans the repo filesystem for known CVEs in locked dependencies:
-      # backend/gradle.lockfile (Java) and frontend/package-lock.json (npm). It
+      # backend/core/gradle.lockfile + backend/web/gradle.lockfile (Java) and
+      # frontend/package-lock.json (npm). It
       # uses its own vulnerability DB (GitHub Advisories, OSV, distro feeds) and
       # needs NO API key. Fails the build on any HIGH/CRITICAL with a fix.
       #
