@@ -45,6 +45,17 @@ subprojects {
         useJUnitPlatform()
         maxHeapSize = "2g"
     }
+
+    // The sonarqube plugin auto-detects every Gradle subproject and, by default,
+    // scans each as its own hierarchical sonar module using its own source sets —
+    // on top of the flat `sonar.sources`/`sonar.tests` this build declares below,
+    // which already lists both modules' paths explicitly. Left enabled, that's a
+    // double-index ("file can't be indexed twice") for every core/web source file.
+    // skipProject keeps this a single flat project scan, matching the pre-split
+    // single-module behavior.
+    sonar {
+        skipProject = true
+    }
 }
 
 // CI-based SonarCloud scan covering the whole repository in one project:
