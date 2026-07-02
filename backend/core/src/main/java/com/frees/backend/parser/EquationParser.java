@@ -308,9 +308,19 @@ public final class EquationParser {
             List<com.frees.backend.ast.DynamicSystem.Event> events =
                     new ArrayList<>(ds.events().size());
             for (com.frees.backend.ast.DynamicSystem.Event ev : ds.events()) {
+                // A set-action's target is a variable name: route it through the
+                // same top-level rewrite as any expression so a component member
+                // (inst.port.T) resolves to its flat state name.
+                String setVar = ev.setVar();
+                if (setVar != null
+                        && components.rewriteTopExpr(new Expr.Var(setVar))
+                                instanceof Expr.Var(String flat)) {
+                    setVar = flat;
+                }
                 events.add(new com.frees.backend.ast.DynamicSystem.Event(
                         ev.name(), components.rewriteTopExpr(ev.lhs()), components.rewriteTopExpr(ev.rhs()),
-                        ev.direction(), ev.action()));
+                        ev.direction(), ev.action(), setVar,
+                        ev.setExpr() == null ? null : components.rewriteTopExpr(ev.setExpr())));
             }
             out.add(new com.frees.backend.ast.DynamicSystem(
                     ds.name(), ds.options(), body, ds.forBlocks(), inits, events, ds.sourceText()));

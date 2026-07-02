@@ -201,10 +201,12 @@ dynamicItem
     | equation                                                          # DynItemEq
     ;
 
-// EVENT name: g_lhs = g_rhs [| rising|falling] -> stop|record
-//   zero-crossing of (g_lhs - g_rhs); direction defaults to "any".
+// EVENT name: g_lhs = g_rhs [| rising|falling] -> stop|record|set <state> = <expr>
+//   zero-crossing of (g_lhs - g_rhs); direction defaults to "any". A `set`
+//   action reassigns a state at the crossing and restarts integration from the
+//   modified state (discrete latch/mode switching — true hysteresis).
 dynamicEvent
-    : EVENT IDENT COLON equation (PIPE IDENT)? ARROW IDENT
+    : EVENT IDENT COLON equation (PIPE IDENT)? ARROW IDENT (IDENT EQ expr)?
     ;
 
 // ── Acausal COMPONENT block (system-modeling layer) ───────────────────────────

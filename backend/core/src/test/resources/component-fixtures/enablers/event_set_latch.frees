@@ -1,0 +1,30 @@
+// E2 — EVENT set-actions: a thermostat with a TRUE deadband. The latch state q
+// (der(q) = 0) is reassigned at the crossings, so the trajectory must show TWO
+// distinct switching temperatures (19 on-switch, 21 off-switch) — impossible
+// for a smooth relay, which switches at one point. Hand trajectory: T starts at
+// 20.5 falling at -1 K/s; hits 19 at t = 1.5 (q := 1, heating +1 K/s); hits 21
+// at t = 3.5 (q := 0); period 4 s. Maxima at 3.5, 7.5, …, 19.5; from the last
+// maximum T falls 0.5 s to end at 20.5 with q = 0.
+// EXPECT T_max = 21 tol 1e-6
+// EXPECT T_min = 19 tol 1e-6
+// EXPECT T_end = 20.5 tol 1e-4
+// EXPECT q_end = 0 tol 1e-9
+// The event fires at exactly t = 1.5, but the sampled table smears the
+// discrete q-step across one sample interval (0.025 s), so the column
+// crossing reads half a sample early — tolerance is one sample width.
+// EXPECT t_first_on = 1.5 tol 0.03
+
+DYNAMIC therm (method = ode45, time = 0 .. 20, points = 801)
+  der(T) = 2 * q - 1            { q=1: heat at +1 K/s; q=0: cool at -1 K/s }
+  der(q) = 0                    { q is a pure latch — only events change it }
+  T(0) = 20.5
+  q(0) = 0
+  EVENT on:  T = 19 | falling -> set q = 1
+  EVENT off: T = 21 | rising  -> set q = 0
+END
+
+T_max = MaxValue('T')
+T_min = MinValue('T')
+T_end = FinalValue('T')
+q_end = FinalValue('q')
+t_first_on = TimeAt('q', 0.5)   { q steps 0 -> 1 at the first on-switch }

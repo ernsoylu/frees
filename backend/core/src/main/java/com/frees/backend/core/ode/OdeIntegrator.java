@@ -72,6 +72,23 @@ public final class OdeIntegrator {
                 endTime = hit.time;
                 break;
             }
+            if (hit != null && hit.event.isSet()) {
+                // Discrete reassignment: jump to the crossing, overwrite the target
+                // state, and restart integration from the modified state. The knot
+                // at the crossing carries the POST-set state so the trajectory shows
+                // the switch; re-evaluating gPrev there re-arms every event against
+                // the new state (direction guards stop immediate retriggering).
+                t = hit.time;
+                y = hit.y.clone();
+                y[hit.event.setIndex()] = hit.event.setValue().eval(t, y);
+                f = p.rhs().eval(t, y);
+                checkFinite(f, t, "post-event derivative");
+                gPrev = evalEvents(p, t, y);
+                knotT.add(t);
+                knotY.add(y.clone());
+                knotF.add(f.clone());
+                continue;
+            }
 
             accepted++;
             t = tNew;
@@ -157,6 +174,23 @@ public final class OdeIntegrator {
                 endTime = hit.time;
                 stopped = true;
                 break;
+            }
+            if (hit != null && hit.event.isSet()) {
+                // Discrete reassignment: jump to the crossing, overwrite the target
+                // state, and restart integration from the modified state. The knot
+                // at the crossing carries the POST-set state so the trajectory shows
+                // the switch; re-evaluating gPrev there re-arms every event against
+                // the new state (direction guards stop immediate retriggering).
+                t = hit.time;
+                y = hit.y.clone();
+                y[hit.event.setIndex()] = hit.event.setValue().eval(t, y);
+                f = p.rhs().eval(t, y);
+                checkFinite(f, t, "post-event derivative");
+                gPrev = evalEvents(p, t, y);
+                knotT.add(t);
+                knotY.add(y.clone());
+                knotF.add(f.clone());
+                continue;
             }
 
             accepted++;
@@ -336,7 +370,7 @@ public final class OdeIntegrator {
 
     // ── Events ──────────────────────────────────────────────────────────────
 
-    record EventHit(String name, double time, double[] y, boolean stop) {
+    record EventHit(String name, double time, double[] y, boolean stop, OdeEvent event) {
         @Override
         public boolean equals(Object o) {
             if (this == o) {
@@ -386,7 +420,7 @@ public final class OdeIntegrator {
             double tc = refineCrossing(ev, t, y, f, tNew, yNew, fNew);
             double[] yc = hermite(t, y, f, tNew, yNew, fNew, tc);
             if (best == null || tc < best.time) {
-                best = new EventHit(ev.name(), tc, yc, ev.stop());
+                best = new EventHit(ev.name(), tc, yc, ev.stop(), ev);
             }
         }
         return best;

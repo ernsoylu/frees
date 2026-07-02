@@ -316,9 +316,22 @@ public final class DynamicSolver {
         DaeRootFn rootFn = buildRootFn();
         List<String> eventNames = new ArrayList<>();
         List<Boolean> stops = new ArrayList<>();
+        int ne = system.events().size();
+        idaEventDirs = new int[ne];
+        idaEventSetIdx = new int[ne];
+        idaEventSetExpr = new Expr[ne];
+        int e = 0;
         for (DynamicSystem.Event ev : system.events()) {
             eventNames.add(ev.name());
             stops.add("stop".equals(ev.action()));
+            idaEventDirs[e] = OdeEvent.directionFromKeyword(ev.direction());
+            if ("set".equals(ev.action())) {
+                idaEventSetIdx[e] = eventSetStateIndex(ev);
+                idaEventSetExpr[e] = substituteDer(ev.setExpr());
+            } else {
+                idaEventSetIdx[e] = -1;
+            }
+            e++;
         }
         boolean[] eventStops = new boolean[stops.size()];
         for (int i = 0; i < stops.size(); i++) {
@@ -379,6 +392,12 @@ public final class DynamicSolver {
             }
         }
     }
+
+    // Per-event direction / set-action info for the IDA path, aligned with the
+    // assembly's event order (populated by assembleDae).
+    private int[] idaEventDirs;
+    private int[] idaEventSetIdx;
+    private Expr[] idaEventSetExpr;
 
     private DaeRootFn buildRootFn() {
         if (system.events().isEmpty()) {
@@ -467,13 +486,47 @@ public final class DynamicSolver {
             IdaDaeSolver.Step step = s.step(tout);
             if (step.rootReturn()) {
                 int[] found = step.rootsFound();
+                int setEvent = -1;
                 for (int r = 0; r < found.length; r++) {
-                    if (found[r] != 0) {
+                    // SUNDIALS reports the crossing direction as the sign of
+                    // found[r]; honour the event's declared rising/falling filter
+                    // (matching the built-in integrators' behaviour).
+                    boolean matches = found[r] != 0
+                            && (idaEventDirs[r] == 0 || idaEventDirs[r] * found[r] > 0);
+                    if (matches) {
                         hits.add(new OdeTableResult.EventHit(dae.eventNames().get(r), step.t()));
                         if (dae.eventStops()[r]) {
                             return null;
                         }
+                        if (idaEventSetIdx[r] >= 0 && setEvent < 0) {
+                            setEvent = r;
+                        }
                     }
+                }
+                if (setEvent >= 0) {
+                    // Discrete reassignment: overwrite the state at the crossing,
+                    // re-initialize IDA there, and let IDACalcIC re-derive the
+                    // algebraic variables consistent with the modified state.
+                    double[] y = step.y().clone();
+                    double[] yp = step.yp().clone();
+                    Map<String, Double> v = daeValues(step.t(), y, yp);
+                    y[idaEventSetIdx[setEvent]] = Evaluator.eval(idaEventSetExpr[setEvent], v, defs);
+                    s.reinit(step.t(), y, yp);
+                    // IDACalcIC's tout1 is a direction hint and must lie strictly
+                    // beyond the reinit time (the root can land exactly on tout).
+                    double hint = step.t() + Math.max(1e-9, 1e-6 * Math.abs(step.t()));
+                    try {
+                        s.calcConsistentIc(SundialsIda.IDA_YA_YDP_INIT, Math.max(tout, hint));
+                    } catch (IllegalStateException icFailed) {
+                        // Integrate from the reassigned state; the first BDF step
+                        // absorbs any small residual (same fallback as at t0).
+                    }
+                    if (step.t() >= tout) {
+                        // The crossing coincided with the requested sample: report
+                        // the post-set state rather than asking IDA for tout == t.
+                        return new IdaDaeSolver.Step(step.t(), y, yp, 0, step.rootsFound());
+                    }
+                    continue;
                 }
                 if (step.t() >= tout) {
                     return step;
@@ -846,10 +899,29 @@ public final class DynamicSolver {
                 Map<String, Double> values = solveAlgebraicAt(t, y);
                 return Evaluator.eval(lhs, values, defs) - Evaluator.eval(rhs, values, defs);
             };
+            int setIdx = -1;
+            OdeScalarFn setValue = null;
+            if ("set".equals(ev.action())) {
+                setIdx = eventSetStateIndex(ev);
+                Expr sv = substituteDer(ev.setExpr());
+                setValue = (t, y) -> Evaluator.eval(sv, solveAlgebraicAt(t, y), defs);
+            }
             out.add(new OdeEvent(ev.name(), g, OdeEvent.directionFromKeyword(ev.direction()),
-                    "stop".equals(ev.action())));
+                    "stop".equals(ev.action()), setIdx, setValue));
         }
         return out;
+    }
+
+    /** Resolves a set-action's target to its state index; only differential
+     *  states can be reassigned at an event (auxiliaries re-derive from them). */
+    private int eventSetStateIndex(DynamicSystem.Event ev) {
+        int idx = states.indexOf(ev.setVar());
+        if (idx < 0) {
+            throw new SolverException("EVENT " + ev.name() + ": set target '" + ev.setVar()
+                    + "' is not a state of this DYNAMIC block — only der(...) states "
+                    + "can be reassigned at an event.");
+        }
+        return idx;
     }
 
     // ── ODE Table assembly ──────────────────────────────────────────────────

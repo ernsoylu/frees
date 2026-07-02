@@ -1,0 +1,9 @@
+// E2 — set-action validation: the target must be a state of the block.
+// EXPECT-ERROR is not a state
+
+DYNAMIC bad (method = ode45, time = 0 .. 1, points = 10)
+  der(x) = -x
+  x(0) = 1
+  aux = 2 * x
+  EVENT e: x = 0.5 | falling -> set aux = 0
+END
