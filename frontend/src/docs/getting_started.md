@@ -86,7 +86,7 @@ For nonlinear or transcendental equations, the Newton solver iterates from a **g
 
 A single answer is rarely the goal — engineers want the *response*: how the answer moves when an input does. In frees that is a **parametric sweep**, and it takes four lines more than your first solve:
 
-```run
+```run vary=P=100000:25000:900000
 P = 500 [kPa]
 Vol = 0.05 [m^3]
 T = 25 [C]
@@ -97,6 +97,8 @@ PARAMETRIC tank_sweep(T, m)
   T = 275 : 5 : 375 | Linear
 END
 ```
+
+*(Drag the `P` slider above the code — in pascals — and the whole system re-solves live, the same override mechanism the REPL uses.)*
 
 The `PARAMETRIC` block **drives** `T` across the range (overriding any fixed value each run) and records `m` as a computed output. Open the **Tables** tab and click **Solve Table** — one solve per row fills the grid.
 
@@ -257,6 +259,7 @@ The REPL evaluates a single expression per line, so multi-line block constructs 
 | `Ctrl + I` | Open the **Variable Information** panel (guesses & bounds) |
 | `Ctrl + T` | Open the **Parametric Table** panel |
 | `F9` | **Solve selected block only** — ignores all other lines |
+| `F1` | **Contextual help** — opens the reference page for the symbol under the cursor |
 
 > **Tip:** make `F4` (Check) a habit before `F2` (Solve). It reports the DoF and any unit mismatches instantly, so you fix problems before the solver runs. For parametric-table examples, use **Solve Table** in the Tables tab instead of `F2`.
 

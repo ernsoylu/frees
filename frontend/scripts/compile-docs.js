@@ -168,6 +168,7 @@ function compileReference(guideCatalog) {
   }
   fs.writeFileSync(REF_OUTPUT, referenceModule(pages), 'utf-8');
   console.log(`Successfully compiled ${pages.length} reference pages to ${REF_OUTPUT} (${backlinks} guide backlinks)`);
+  return pages;
 }
 
 function referenceModule(pages) {
@@ -438,6 +439,38 @@ ${body}
 `;
 }
 
+// ── Lightweight topic/slug lists for the MAIN bundle (Spotlight palette, F1
+// contextual help). The full catalogs stay code-split with the /help route;
+// this module is a few KB of ids and labels only.
+const TOPICS_OUTPUT = path.join(__dirname, '../src/docsTopics.ts');
+
+function writeDocsTopics(catalog, refPages) {
+  const esc = (x) => String(x).replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\$\{/g, '\\${');
+  const topics = [];
+  for (const [id, md] of Object.entries(catalog)) {
+    const h1 = md.match(/^#[ \t]+(\S.*)$/m);
+    if (h1) topics.push({ id, label: h1[1].trim() });
+  }
+  const slugs = refPages.map((p) => p.slug);
+  const body = `// GENERATED FILE - DO NOT EDIT DIRECTLY.
+// Compiled by scripts/compile-docs.js (npm run compile-docs). Small id/label
+// lists for the main bundle: the Spotlight palette's Documentation group and
+// the editor's F1 contextual help. The full content stays in the code-split
+// /help route.
+
+export const DOCS_TOPICS: { id: string; label: string }[] = [
+${topics.map((t) => `  { id: \`${esc(t.id)}\`, label: \`${esc(t.label)}\` }`).join(',\n')}
+];
+
+export const REFERENCE_SLUGS: string[] = [
+${slugs.map((sl) => `  \`${esc(sl)}\``).join(',\n')}
+];
+`;
+  fs.writeFileSync(TOPICS_OUTPUT, body, 'utf-8');
+  console.log(`Successfully compiled ${topics.length} topic labels + ${slugs.length} slugs to ${TOPICS_OUTPUT}`);
+}
+
 const guideCatalog = compileDocs();
-compileReference(guideCatalog);
+const refPages = compileReference(guideCatalog) || [];
 compileComponents();
+writeDocsTopics(guideCatalog, refPages);

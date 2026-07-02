@@ -16,6 +16,8 @@ frontend/src/docsCatalog.ts
 frontend/src/referenceCatalog.ts
 # Generated from src/docs/reference/components/**/*.md by scripts/compile-docs.js.
 frontend/src/componentCatalog.ts
+# Generated topic/slug lists for the main bundle (Spotlight, F1 help).
+frontend/src/docsTopics.ts
 # Generated from the backend registries by scripts/build-doc-manifest.mjs.
 frontend/src/docs/reference/function-manifest.json
 
