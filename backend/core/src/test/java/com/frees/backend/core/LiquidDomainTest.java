@@ -55,7 +55,9 @@ class LiquidDomainTest {
         // + 11 Wave 6 thermal/gas/aero breadth: WallRC, RadiationTwoSurface, HeatPipe,
         //   PCMMass, PeltierTEC, ThermalSwitch, HeatedDuct, Regenerator, Combustor,
         //   AtmosphereSource, Propeller
-        assertEquals(245, names.size(), "built-in component count after the per-domain split");
+        // + 3 physical-to-signal probes (SigThermalProbe, SigSpeedProbe, SigVelProbe)
+        //   closing measurement loops for the D-phase showcases
+        assertEquals(248, names.size(), "built-in component count after the per-domain split");
         // built-in names are stored lowercased (the language is case-insensitive)
         assertTrue(names.containsAll(java.util.List.of(
                 "liquidsource", "liquidsink", "liquidpump", "liquidpipe",

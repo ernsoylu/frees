@@ -218,3 +218,24 @@ COMPONENT SigSwitch(in1, in2, ctrl, out)
   wgt     = 0.5 * (1 + tanh((ctrl.sig - thresh) / eps))
   out.sig = wgt * in1.sig + (1 - wgt) * in2.sig
 END
+
+// ── Physical-to-signal probes (measurement bridges for closed loops) ────────
+
+// Temperature probe: reads the heat-node temperature onto a signal wire,
+// drawing no heat.
+COMPONENT SigThermalProbe(port, out)
+  port.Qdot = 0
+  out.sig   = port.T
+END
+
+// Shaft-speed probe (torque-free).
+COMPONENT SigSpeedProbe(shaft, out)
+  shaft.tau = 0
+  out.sig   = shaft.w
+END
+
+// Translational velocity probe (force-free).
+COMPONENT SigVelProbe(port, out)
+  port.f  = 0
+  out.sig = port.vel
+END
