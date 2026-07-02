@@ -1,0 +1,17 @@
+// HydraulicThermalVolume: supply-fed volume discharging through an orifice
+// with a 360 K wall. At steady state the temperature satisfies the mixed
+// energy balance (replica) and the cav variant's bulk-modulus clamp
+// reproduces its own sigmoid (replica, exact).
+// EXPECT t_res = 0 tol 1e-2
+// EXPECT beta_res = 0 tol 1e-3
+
+HydraulicSupply  HSV(h0, P=2e6)
+HydraulicOrifice OI(h0, h1, CdA=5e-7, rho=870, model$=turbulent)
+HydraulicThermalVolume HTV(h1, h2, hw, V=0.004, rho=870, cp_o=1900, beta=1.4e9, hA=60, P0=1.2e6, T0=300, Pvap=800, eps_c=400, model$=cav)
+HydraulicOrifice OO(h2, h3, CdA=5e-7, rho=870, model$=turbulent)
+HydraulicTank    HTK(h3, P=1e5)
+ThermalSource    HW(hw, T=360)
+DYNAMIC warm(method = ode23s, time = 0 .. 1500, points = 500)
+END
+t_res    = FinalValue('h1.mdot') * 1900 * (FinalValue('h1.h') / 1900 - FinalValue('htv.Tm')) + 60 * (360 - FinalValue('htv.Tm'))
+beta_res = FinalValue('htv.beta_eff') - 1.4e9 * 0.5 * (1 + tanh((FinalValue('htv.Pm') - 800) / 400))

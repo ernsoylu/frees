@@ -181,3 +181,20 @@ COMPONENT AnodeRecirc(sup_in, ret_in, out)
   out.mdot    = sup_in.mdot + ret_in.mdot
   out.mdot * out.h = sup_in.mdot * sup_in.h + ret_in.mdot * ret_in.h
 END
+
+
+// ── Multi-species gas rider (E3) + Wave 10 ──────────────────────────────────
+
+// Species-conserving mixer: merges two gas branches, flow-weighting enthalpy
+// and every named species fraction exactly (the junction rule for the E3
+// multi-species rider).
+COMPONENT GasMixerN(in1, in2, out)
+  PARAM domain$ = gas
+  out.P    = in1.P
+  out.mdot = in1.mdot + in2.mdot
+  out.mdot * out.h    = in1.mdot * in1.h    + in2.mdot * in2.h
+  out.mdot * out.yo2  = in1.mdot * in1.yo2  + in2.mdot * in2.yo2
+  out.mdot * out.yco2 = in1.mdot * in1.yco2 + in2.mdot * in2.yco2
+  out.mdot * out.yh2o = in1.mdot * in1.yh2o + in2.mdot * in2.yh2o
+  out.mdot * out.yn2  = in1.mdot * in1.yn2  + in2.mdot * in2.yn2
+END

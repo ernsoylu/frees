@@ -1,0 +1,15 @@
+// FewCellEvaporator: R134a two-phase feed through the 3-cell C-R chain with
+// 305 K walls; at steady state the enthalpy pickup must equal the summed
+// wall heat (port-level energy replica; relaxed tolerance per the wave plan).
+// EXPECT e_cells_res = 0 tol 50
+
+FewCellEvaporator FCE(f0, f1, wx1, wx2, wx3, fluid$=R134a, V=3e-4, Cc=5e-9, UA=120, Kv=2e-8, P0=345000, h0=255000)
+ThermalSource W1S(wx1, T=305)
+ThermalSource W2S(wx2, T=305)
+ThermalSource W3S(wx3, T=305)
+f0.P = 350000
+f0.h = 255000
+f1.P = 330000
+DYNAMIC fill(method = ida, time = 0 .. 40, points = 400, rtol = 1e-5, atol = 1e-3)
+END
+e_cells_res = FinalValue('f0.mdot') * (FinalValue('f1.h') - 255000) - (FinalValue('wx1.Qdot') + FinalValue('wx2.Qdot') + FinalValue('wx3.Qdot'))

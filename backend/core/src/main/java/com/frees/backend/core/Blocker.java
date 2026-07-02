@@ -88,6 +88,16 @@ public class Blocker {
      * lumped-network tools: instead of forbidding topologies, frees points at
      * the element whose constitutive law is missing or duplicated.
      */
+    /** Public entry for other structural checkers (e.g. the DAE assembler):
+     *  the same named diagnosis over an arbitrary equation set. */
+    public static String diagnose(List<Equation> equations) {
+        Set<String> allVars = new TreeSet<>();
+        for (Equation eq : equations) {
+            allVars.addAll(eq.variables());
+        }
+        return new Blocker().causalityDiagnosis(equations, allVars);
+    }
+
     private String causalityDiagnosis(List<Equation> equations, Set<String> allVars) {
         boolean under = equations.size() < allVars.size();
         MatchingResult mr = runMatching(equations, allVars);

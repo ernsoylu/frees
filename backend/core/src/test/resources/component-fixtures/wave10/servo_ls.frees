@@ -1,0 +1,33 @@
+// ServoValveDynamic: 0->0.8 command step, wn = 40, zeta = 0.5 -> classic
+// 2nd-order overshoot to 0.9304 and settle at 0.8. CounterbalanceValve at
+// its threshold (in.P + R_p*pilot.P = P_set) opens exactly half.
+// LoadSensingPump: the compensator drives the outlet to LS + margin.
+// EXPECT xs_max = 0.9304 tol 5e-3
+// EXPECT xs_fin = 0.8 tol 1e-4
+// EXPECT p_ls_fin = 1.3e6 tol 2e3
+
+SigStep          CMD(t0=0.2, before=0, after=0.8, eps=0.005)
+ServoValveDynamic SV(CdA_max=2e-6, rho=870, wn=40, zeta=0.5, xs0=0)
+HydraulicSupply  HS1(P=5e6)
+HydraulicTank    HT1(P=1e5)
+connect(HS1.out, SV.in)
+connect(SV.out, HT1.port)
+connect(CMD.out, SV.u)
+
+LoadSensingPump  LSP(rho=870, Dv=6e-5, w_p=150, dP_margin=3e5, tau=0.05, d0=0.3)
+HydraulicTank    TSU(P=1e5)
+HydraulicOrifice LOAD(CdA=4e-7, rho=870, model$=turbulent)
+HydraulicTank    TRET(P=1e5)
+SigConstant      LSP_LS(k=0)
+connect(TSU.port, LSP.in)
+connect(LSP.out, LOAD.in)
+connect(LOAD.out, TRET.port)
+LSP.ls.P = 1e6
+LSP.ls.h = 0
+TSU.port.h = 0
+
+DYNAMIC servo(method = ode23s, time = 0 .. 3, points = 600)
+END
+xs_max   = MaxValue('sv.xs')
+xs_fin   = FinalValue('sv.xs')
+p_ls_fin = FinalValue('lsp.out.P')

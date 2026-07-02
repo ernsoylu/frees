@@ -367,8 +367,16 @@ public final class DynamicSolver {
                     + "defines (e.g. re-equating a mixer pressure or T-pinning a wall "
                     + "state).");
         }
-        sb.append(" States: ").append(display(states));
-        sb.append("; algebraic unknowns: ").append(display(auxNames)).append('.');
+        sb.append(" States: ").append(display(states)).append('.');
+        // Name the exact hole: run the bipartite diagnosis over the template
+        // with the states and time pinned (they are knowns per step).
+        List<Equation> probe = new ArrayList<>(algebraicTemplate);
+        for (String st : states) {
+            probe.add(new Equation(new Expr.Var(st), new Expr.Num(0), st + " [state]"));
+        }
+        probe.add(new Equation(new Expr.Var(timeVar), new Expr.Num(0), timeVar + " [time]"));
+        probe.add(new Equation(new Expr.Var("time"), new Expr.Num(0), "time [time]"));
+        sb.append(' ').append(com.frees.backend.core.Blocker.diagnose(probe));
         return sb.toString();
     }
 

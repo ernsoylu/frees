@@ -1,324 +1,381 @@
-# frEES — MATLAB-Style Documentation Overhaul
+# frEES — Data Analyzer (MDA-like Measurement Analysis App)
 
-## Goal
+## Context
 
-Replace the current help system — vague topic-guide prose plus hand-maintained one-line
-function lists — with **MATLAB-style, per-function reference documentation**: granular,
-example-bound, interactive, error-driven, searchable, and **mathematically rigorous**. Every
-built-in function, procedure, block construct, and component must have a reference page that
-matches the implementation, **states the underlying equations / algorithm in rendered math
-(KaTeX) with a literature citation**, is cross-linked to a runnable, backend-verified example,
-and surfaces the exact errors a user can hit. North star: the MathWorks function reference
-(e.g. `zeros`, `ss2tf`) — Syntax / Description / Examples / Input & Output Arguments / See Also
-— but with the governing equations and references made explicit, the way an engineering
-reference (Çengel, Nise, Kays & London) does.
+frees has solver-bound plotting (Plotly) and spreadsheet/table windows, but no way to import
+external measurement data, explore recorded signals, or do time-series root-cause analysis.
+This increment adds a native **Data Analyzer** app, benchmarked against **ETAS MDA V8**
+(Measure Data Analyzer), the industry-standard ECU/vehicle measurement analysis tool. Feature
+research is grounded in the MDA documentation NotebookLM notebook (id
+`674b82cb-527f-463d-aff2-555dd5ca70f4`); libraries verified on npm/Maven Central.
 
-## Why the current help is "too vague" (observed today)
+**Revision 4 (final — unconditionally approved by both reviewers)** — incorporates four
+external critique rounds. Every critique claim was verified against the codebase before
+adoption; adopted points became the **Design contracts** (§2.5) and phase amendments below;
+non-adopted points are recorded in **Rejected / deferred critique points** with reasons.
+Round 3 approved the architecture and contributed implementation-level notes (Transferables,
+GC contract, over-cap UX, sidecar transport = decision 4, CoolProp lock starvation risk).
+Round 4 approved unconditionally; its three mechanical gotchas are folded in (detached-buffer
+ordering in the worker, uPlot ResizeObserver loop guard, primitive-boxing escalation of the
+GC contract) and the **mdf4j spike is now a structured, gated timebox** (§ Phase 3).
 
-The shipped help (`HelpPage.tsx` 145 KB) is three disconnected things, none of which is a
-function reference:
-1. **Prose topic guides** — `frontend/src/docs/*.md` (10 files) compiled by
-   `scripts/compile-docs.js` (`[Topic: id]` markers) → `docsCatalog.ts` → rendered in
-   `HelpPage.tsx`. Conceptual, not lookup-oriented.
-2. **Hand-transcribed function lists** — `helpReference.ts`: `{name, desc, example?, unit?}`
-   rows grouped into tables. Each function is **one line**; no syntax variants, no argument
-   tables, no error coverage, no per-function examples. The file itself admits *"there is no
-   machine-readable registry … would otherwise only be discoverable by reading the backend
-   switch statements."* — **this drift gap is the root accuracy problem.**
-3. **A giant embedded worked-example catalog** baked directly into `HelpPage.tsx` (Power
-   Cycles, Gas Turbines, Aerospace, Control Systems, …), separate from the curated runnable
-   library in `examples.ts`.
+**Decisions taken (with owner sign-off):**
+1. Oscilloscope engine = **uPlot** (new ~45 KB dep; canvas, millions of points, built-in cursor
+   + multi-chart sync). Plotly remains for scatter/histogram and all existing plots.
+   Alternative was Plotly `scattergl` with hand-built cursors.
+2. **ASAM MDF4 (.mf4) import is in scope**, phased in at Phase 3 behind a timeboxed spike
+   (CSV/TSV ships first, client-side). Fallback ladder now includes a planned **asammdf
+   Python sidecar** rung (§ Phase 3) if mdf4j fails on real OEM files.
+3. **Phase 4 calc compute policy = cap + cache, no cancel in v1**: hard raster cap, CoolProp
+   LRU cache on the calc path, async SSE above a low threshold; cooperative job cancellation
+   is deferred (none exists anywhere in the backend today — it would be net-new).
+4. **Sidecar transport (if the asammdf rung is reached) = internal REST over Railway's
+   private network, not gRPC.** Rationale: the sidecar is a contingency, not a core service —
+   a proto toolchain + codegen in two languages is unjustified for ~3 stateless endpoints
+   (`parse-metadata`, `extract-channel`, `health`); Railway's private network is plain
+   HTTP-friendly, and the repo already carries a hard-won lesson that its private IPv6
+   addresses change per redeploy (the nginx `resolver` foot-gun in CLAUDE.md) — the Java
+   client must re-resolve DNS per request (set `networkaddress.cache.ttl` low / resolve by
+   hostname each call), which is trivial over HTTP and awkward with long-lived gRPC channels.
+   Resilience contract in § Phase 3.
 
-There is **no page that answers "how do I call `SolveLinear` / `ss2tf` / `Enthalpy`, what
-are its arguments, show me an example, what errors will I hit."** That is what we are building.
+## 1. Feature Investigation — MDA features → frees requirements (NotebookLM-grounded)
 
-## What we already have (reuse, don't reinvent)
+MDA is a high-performance viewer/analyzer for ECU & vehicle measurement data: docking-window
+UI, "Configurations" storing layout + signal assignments + measure files, engineered for
+millions of samples.
 
-- **Validated example library** — `frontend/src/examples.ts` (`Example[]`, each `text` verified
-  against the backend with zero unit warnings; harnessed by
-  `backend/.../core/ExampleFixtureHarnessTest.java` and the `*ExamplesTest` suite). Function
-  pages bind to these by `id` instead of inventing untested snippets.
-- **Interactive markdown renderer** — `HelpPage.tsx` already renders KaTeX, `[Graph="…"]`,
-  `[Diagram: X]` (`docs/DocDiagrams.tsx`), and `[Topic: id]` tags. We extend this, not replace it.
-- **REPL execution path** — `ReplTerminal.tsx` → `POST /api/repl/evaluate` (`ReplEvaluator`).
-  "Send to REPL" / "Open as document" needs no new compute infra.
-- **Search** — `searchIndex.ts` (`buildSearchIndex` over `DOCS_CATALOG` + `EXAMPLES`). Extend
-  to index function pages + frontmatter.
-- **Live reference data** — units & constants already come from `GET /api/reference`.
-- **Backend source-of-truth** — `parser/FunctionRegistry.java`, `ast/Evaluator.evalBuiltin`,
-  `ast/ControlSystemsEvaluator`, `parser/ProcedureEvaluator`, `api/ReplEvaluator`; grammar in
-  `backend/core/src/main/antlr/Frees.g4`. Component library in the `*.frees` std-lib files.
+| MDA feature | Detail (from docs) | frees Data Analyzer requirement |
+|---|---|---|
+| **File formats** | ASAM MDF V3 (`.dat`/`.mf3`), MDF V4/4.3 (`.mf4`, LZ4/ZSTD), CSV/TSV/DXL/DIA ASCII (custom INI layouts), XLS(X), MATLAB, bus traces (BLF/ASC), `.lab`, `.cdf` | **P0:** CSV/TSV (client-side). **P1:** MF4 (backend). Later: MDF3, XLSX, `.mat`. Bus traces/lab/cdf out of scope |
+| **Variable Explorer** | Search/filter huge signal lists by source file, device, raster, type; AND/OR filters | Signal browser panel (glide-data-grid) with text search + per-file filters |
+| **Oscilloscope** | Analog/Boolean/event strips; independent X/Y zoom + zoom-box; dual cursors → auto delta readout; continuous vs sample-snap cursors; anchored cursors | Multi-strip time-series (uPlot), dual cursors + Δt/Δy readout, sample-snap, zoom-box |
+| **Table** | Values by timestamp; interpolates empty cells (step-hold) | Time-indexed grid of selected signals, step-hold fill |
+| **Scatter / Histogram / Statistics** | Signal-vs-signal correlation; user-defined classes; avg/min/max/median/stddev over selected range | Scatter + histogram instruments (Plotly); stats bound to cursor-bounded range |
+| **Event List** | Condition (or Boolean calc signal) → timestamps; double-click jumps all synced instruments | Condition-based event finder + click-to-navigate |
+| **GPS Map / Video / Phasor / Battery instruments** | Domain add-ons | Out of scope v1 (GPS map candidate P2) |
+| **Calculated signals** | Formula editor; arith/logic/bitwise/ternary; reduction behaviors (`Accumulate_Prefix/Rolling/Reset/Samples`) × fns (`_Average/_Integral/_Min/_Max/_Sum/_Count`); `State_Delay()`, `Delta()`, `Master()`; inputs step-interpolated; output raster = merge / fixed / same-as-signal; compiled C-like engine in V8 | **Reuse the frees equation evaluator** per-sample over a merged raster with per-input step/linear interpolation; `delta`/`integral`/`movavg`/`delay` time ops. frees differentiator: units-aware + CoolProp property functions on measured data |
+| **FMU functions** | FMI V2 derived-signal models | Out of scope (frees COMPONENT layer is the future analog) |
+| **Cross-instrument sync** | Linked time axes; master sync cursor drives oscilloscope ↔ table ↔ scatter ↔ map | Shared per-session time cursor + range; one move updates every instrument |
+| **Multi-file compare** | Multiple files per config; per-file or per-signal time offset (numeric or SHIFT-drag) | Multi-file sessions with per-file time offset (numeric Δt entry **and** SHIFT-drag) |
+| **Export** | Signal subset and/or visible time range to MDF/CSV; instrument toolbar pre-fills range | Export selected signals × visible window → CSV (MF4 later) |
+| **Configs/templates** | `.xdx` config, `.xdt` template (layout w/o data), `.zdx` zipped | Analyzer session as a slice in the `.frees` project file (layout, assignments, formulas, file refs — never bulk data); see **template mode** contract §2.5b |
+| **Large-file performance** | MDF index → reduced dataset drawn w/o losing peaks; on-the-fly indexing; signal cache; lazy cursor values (`~` approx → exact) | Min/max envelope decimation (M4-style, type-aware §2.5d), per-channel columnar cache, exact cursor lookup via binary search / lazy fetch |
 
-## Citation-grounding policy (decided)
+## 2. Technology Stack
 
-- **Engineering categories** (Heat Transfer, Compressible, Two-Phase, Combustion, EOS, fluid) —
-  ground every equation against the **Frees NotebookLM notebook** (`350fef25`) via `notebooklm ask`.
-- **Control / Math / Matrix / Special / Stats** (≈130 fns, not in the notebook) — cite **standard
-  references directly** (decided by user): Nise / Ogata (control), Golub & Van Loan (matrix/linear
-  algebra), Abramowitz & Stegun / NIST DLMF (special functions), Montgomery/Devore (stats). Keep the
-  Mathematical Formulation light for trivial elementary ops (e.g. `sin`, `abs`).
+| Concern | Choice | Rationale |
+|---|---|---|
+| Oscilloscope charting | **uPlot 1.6.32** (new dep, MIT) | Canvas, millions of points, built-in cursor + multi-chart cursor sync = MDA sync-cursor for free. Wrapper modeled on `frontend/src/plots/PlotlyChart.tsx` **in lifecycle only** (dynamic import, ResizeObserver, purge-on-unmount) — uPlot's aligned-arrays data shape and `cursor.sync` API differ materially from Plotly (risk-listed) |
+| Scatter/histogram | **Plotly** (existing) | Not perf-critical; reuse `plots/figure.ts` builder style |
+| Grid | **@glideapps/glide-data-grid 6.0.3** (existing) | Canvas-virtualized; already the read-only grid (`DataGridReadOnly.tsx`, `TablesTab.tsx`) |
+| CSV parse | **papaparse 5.5.4** (new dep, MIT) | Streaming client-side parse in **worker mode** (no main-thread jank at 1 M+ rows) into `Float64Array` columns via a chunked growable-buffer strategy (double-on-full, trim at end). Parsed buffers return to the main thread as **Transferable Objects** (`postMessage(msg, [buffers])` — zero-copy ownership transfer); a structured-clone copy of hundreds of MB would freeze the main thread for seconds and defeat the worker. **Ordering rule:** transfer detaches the buffers in the worker instantly, so every worker-side derived result (column min/max, monotonicity validation, type sniffing) must be computed *before* the `postMessage` — reading a detached buffer throws |
+| MF4 parse | **`de.richardliebscher.mdf4j:mdf4j:0.2.0`** (backend, spike-gated) | Only MDF4 reader on Maven Central; early-stage → isolated behind a `MeasurementParser` interface with a 4-rung fallback ladder (§ Phase 3). **License check is a spike deliverable** (repo is MIT; no license tooling exists) |
+| State | **`useReducer` + local context** inside the analyzer (no zustand) | Self-contained window; App.tsx keeps only the serializable `AnalyzerSpec[]` slice like `whiteboards`. Bulk samples live in a module-level ChannelStore outside React (no re-render storms, no autosave bloat). **ADR note:** the frontend has no external store today (verified — App.tsx `useState` + prop drilling everywhere); ChannelStore is deliberately the first non-React store, holding bulk data only, never UI state |
+| Windowing | **dockview-react** (existing) `analyzer:<uuid>` kind | Exact whiteboard pattern. Inside the window: vertical resizable strip stack (not nested dockview) — matches MDA's stacked-strip workflow, trivially serializable |
+| Backend service | Spring `MeasurementController` on the API node + core `measurement` package | I/O-bound, not solver compute; async job pattern (dispatcher → RabbitMQ → Redis job store + SSE) already exists for heavy calc requests |
 
-## Architectural decisions (recommended — confirm before Phase 0)
+**Data-locality architecture (hybrid):** all instruments read from a client-side columnar
+**ChannelStore** (`getWindow(ref, from, to, maxPoints)`), fed by `InMemorySource` (CSV parsed
+in-browser) or `RemoteSource` (MF4 uploaded, indexed server-side, fetched as windowed decimated
+envelopes). One shared window DTO for both:
+`ChannelWindow { t[], v?[], min?[], max?[], decimated, totalSamples, unit }` — raw `v` when
+small, M4 min/max envelope when large; cursor readout always resolves the exact sample lazily
+(MDA's `~`→exact pattern).
 
-1. **Extend the existing `.md` + `[Tag]` compile pipeline; do NOT adopt MDX.** The advisory
-   proposed MDX, but frees already owns an interactive markdown+tag renderer, a backend-tested
-   example library, and a REPL endpoint — MDX would duplicate all three and add a
-   Vite/`@mdx-js` toolchain. We add new inline tags (`[Run: id]`, `[Example: id]`,
-   `[ArgTable: fn]`) handled in `HelpPage.tsx`. *(Alternative if richer composition is later
-   needed: MDX via `@mdx-js/rollup`. Not now.)*
-2. **Machine-readable function manifest is the accuracy backbone.** Emit a
-   `function-manifest.json` from the backend registries (names, arity, arg/return kinds,
-   category) and **fail a test** if any backend built-in lacks a doc page or any doc page names
-   a non-existent function. Closes the drift gap `helpReference.ts` calls out.
-3. **Examples are backend-verified, never invented.** Every code block on a function page is
-   either an existing `examples.ts` entry (by `id`) or a new snippet added to the example
-   harness test. Honors frees' standing "every example verified, zero unit warnings" rule.
-4. **Interactivity v1 = "Send to REPL" + "Open as document" + inline expected output.** Reuse
-   the existing single REPL session. **Defer** the advisory's web-worker isolation sandbox and
-   per-block ephemeral workspaces — over-built for v1.
-5. **Error-driven help = stable error codes → doc anchors.** Add machine-stable codes to
-   backend exceptions, map code → `/help/errors#code`, deep-link from frontend error toasts.
-6. **Mathematical rigor with citations is mandatory, not optional.** Every page that
-   implements a formula or algorithm (functions, property models, solver/control/CAS ops,
-   component constitutive equations) must render its governing equations in KaTeX and cite the
-   source. **Ground every citation against the NotebookLM "Frees" notebook**
-   (id `350fef25-d19d-4542-a55d-7217276f077a`, 157 sources — Çengel, Nise, Kays & London,
-   Kakaç, Holman, Idelchik, Collier, EES/Mastering-EES, Amesim lib PDFs). The `notebooklm` CLI
-   is authenticated:
-   `notebooklm ask "<governing equation / method for X>" --notebook 350fef25 -s <srcid>`
-   for a grounded, source-attributed lookup; use `notebooklm source list --notebook 350fef25`
-   to pick the right textbook. Do **not** cite from model memory — pull the equation and the
-   reference from the notebook so they match the implementation and a real document.
+## 2.5 Design contracts (bind Phase 1+; written before code)
 
-## Per-function page template (the contract)
+These pin the load-bearing behaviors both critiques flagged as named-but-unspecified.
 
-Authored as one markdown topic per function (`[Topic: fn-solvelinear]`), with frontmatter:
+### a. ChannelStore lifecycle
 
-```
----
-name: SolveLinear
-category: Matrix & Linear Algebra
-summary: Solve the linear system A·x = b.
-related: [Inverse, Determinant, Dot]
-examples: [matrix-meshcurrents, control-ss2tf]   # ids in examples.ts
-tags: [linear, lu, svd, matrix]
-references:                                       # grounded via the Frees notebook
-  - "Golub & Van Loan, Matrix Computations, §3.4 (LU with partial pivoting)"
----
-```
-Body sections (omit a section only when truly N/A):
-- **Syntax** — every call form / arg variation.
-- **Description** — what it does, then when to use it.
-- **Mathematical Formulation** — the governing equation(s) / algorithm rendered in KaTeX
-  (e.g. `A x = b`, `A = P L U`, Newton step, ε-NTU relation, property correlation), with a
-  one-line note on the numerical method actually used by the backend. **Every formula carries
-  a citation** keyed to the `references` frontmatter.
-- **Examples** — progressive (basic → intermediate → advanced), spanning domains
-  (aerospace / mechanical / electrical / chemical / thermo). Each is a `[Run: id]` block.
-- **Input Arguments** — table: name · type · required · description (units/dims/constraints).
-- **Output Arguments** — table: name · type · description.
-- **Common Errors** — table: error code · cause · fix; with a `[Run: id]` that triggers it.
-- **Extended Capabilities** — units, uncertainty propagation, complex, matrix/array support.
-- **References** — full citations (textbook/standard + section), sourced from the Frees
-  NotebookLM notebook; renders as a footnote list, cross-linked from the formulas above.
-- **See Also** — related functions + Cookbook recipes.
+- **Cache key** = `measurementId` (uuid minted at import time), stored in `AnalyzerSpec`
+  together with a **file signature** `{ name, size, headerHash }` where `headerHash` = hash of
+  the first 64 KB + the parsed column-name list. Never a full-content hash (1 GB CSVs).
+- **Sharing + refcount**: entries are refcounted by the `AnalyzerSpec`s that reference them;
+  two analyzer windows on the same file share one entry.
+- **Release binds to analyzer *deletion*, not window close.** Verified codebase behavior:
+  closing a dockview window never deletes backing state — App reconciles state→windows
+  (`App.tsx:1492-1508` closes windows whose object was deleted; there is no
+  `onDidRemovePanel` cleanup hook exposed to App). So `channelStore.release(measurementId)`
+  is called from `onDeleteAnalyzer` (mirroring `onDeleteWhiteboard`, `App.tsx:2503`), and a
+  closed-but-not-deleted analyzer keeps its data (reopen is instant), exactly like every other
+  frees window kind.
+- **Eviction**: warn at ~50 M cells; past the ceiling, LRU-evict measurements not referenced
+  by any *open* analyzer window. Evicted data degrades to the same "re-import file" placeholder
+  as project load (§b) — never a silent OOM crash. Note the ceiling is deliberate headroom,
+  not comfort: 50 M cells ≈ 400 MB of `Float64Array`s is high for one browser tab — Phase 1
+  end-to-end testing includes watching overall tab memory (DevTools memory panel) at the
+  warning threshold.
 
-## Phased plan
+### b. Persistence — "template mode"
 
-- **Phase 0 — Inventory & scaffolding. IN PROGRESS.**
-  - DONE — **Manifest generator** `frontend/scripts/build-doc-manifest.mjs` reads
-    `FunctionRegistry.java` (166 structured fns) + greps live `case "…"` dispatch labels from
-    `Evaluator`/`ControlSystemsEvaluator`/`ReplEvaluator`, emits
-    `frontend/src/docs/reference/function-manifest.json` with per-fn `documented` flags +
-    coverage counts. Drift-resistant (re-reads backend each run). **Surfaced the gap:** 116
-    dispatch-only names absent from the registry (real built-ins — `erf`, `gamma`, `factorial`,
-    `interpolate`, `lookup`, `viewfactor_*`, `heisler_*`, `normalcdf`, bessels — plus noise:
-    multi-output case labels `gm/pm/tr/ts/Kp…` and the `if` keyword, for human triage).
-  - DONE — **Reference scaffolding** `frontend/src/docs/reference/`: `_TEMPLATE.md` (page
-    contract + frontmatter schema), `README.md` (authoring + notebook-grounding workflow),
-    category subfolders.
-  - DONE — **Exemplar page** `reference/heat-transfer/hx_effectiveness.md` realizing the full
-    standard: KaTeX ε-NTU relations grounded against the Frees notebook (Kays & London Eq. 2-13,
-    Kakaç Eq. 2.46, Holman Eq. 10-27), bound to the verified example `hx-effectiveness-ntu`,
-    with Input/Output/Common-Errors tables. Manifest now reports 1/166 documented.
-  - DONE — **Registry completion** (the single-source-of-truth pass). Refined the generator to
-    reconcile at the *dispatch-arm* level: multi-label `case "a","b"` arms are captured whole, and
-    aliases (labels sharing an arm with a registered name — `isen_t0_t`=`t0_t`, `hx_epsilon`,
-    `darcy_friction`, `bessel_j`=`besselj`, `flametemp`…) fold into their canonical instead of
-    showing as gaps. That left **97 genuinely-missing scalar built-ins**, all now added to
-    `FunctionRegistry.java` (166 → **272** functions) with signatures/descriptions harvested from
-    `helpReference.ts` + verified against the Evaluator dispatch: inverse-trig/hyperbolic, number-
-    theory/bitwise, complex helpers, special functions (Gamma/Bessel/erf/orthogonal polys), stats &
-    regression, calculus (`Integral`/`GaussIntegral`/`Differentiate`/`UncertaintyOf`), interpolation
-    & lookup, parametric-table + ODE-result accessors, string helpers, Heisler/view-factors,
-    stagnation props. New categories: Complex, Special Functions, Calculus, Interpolation, Tables,
-    ODE Results, Logic, Strings. **Manifest now reports 0 dispatch-only gaps**; backend
-    `compileJava` green; no duplicate names; the entries also flow to the live `/api/reference`.
-  - DONE — **Full documentable surface** enumerated by the generator (`function-manifest.json`),
-    reading each family from its authoritative source: **136 components** parsed from
-    `resources/components/*.frees` (`COMPONENT <name>`, grouped by 12 domain files), **30 property
-    functions** from `PropertyFunctions.java` `OUTPUTS`/`HA_OUTPUTS` (fluid + humid-air), **5
-    material functions** + 23 materials from `SolidProperties.java`, **44 CALL procedures** and **14
-    matrix functions** from the curated `helpReference.ts`, and **14 REPL/CAS ops** from
-    `ReplEvaluator`. **Grand total: 515 documentable symbols**, each carrying a `documented` flag.
-    Manifest sections: `functions`, `matrixFunctions`, `callProcedures`, `propertyFunctions`,
-    `materials`, `components`, `replCasOps`, plus a `coverage` summary block. (Robust TS-field
-    parsing handles single/double/backtick-quoted `desc`/`signature`.)
-  - TODO — wire the coverage assertion as a failing test (Phase 1, with the renderer): a CI test
-    that every `documented:false` symbol is a known gap and that no page names an unknown symbol.
-- **Phase 1 — Pipeline & renderer. DONE (verified in-browser).**
-  - `compile-docs.js` now also walks `src/docs/reference/**/*.md`, parses YAML-subset frontmatter,
-    and emits `src/referenceCatalog.ts` (`REFERENCE_PAGES: ReferencePage[]` with name/slug/category/
-    summary/related/examples/tags/references/body). `npm run compile-docs` runs it + the manifest.
-  - `HelpPage.tsx`: `ReferencePageView` renders a page (monospace title + category badge, summary,
-    tag badges, KaTeX body via the existing `MarkdownRenderer`, frontmatter-driven "See also"
-    badges that deep-link to sibling pages). New `[Run: id]` tag in `MarkdownRenderer` pulls a
-    backend-verified example from `examples.ts` and renders it as a titled, copyable code block.
-    Reference pages get auto-generated nav categories ("Reference · <Category>") merged into the
-    existing nav + search.
-  - `searchIndex.ts` indexes every reference page (name, summary, tags, references, body).
-  - `check-doc-coverage.mjs` (+ `npm run check-docs`) enforces: every page names a real backend
-    symbol and binds only real example ids; reports documented/total. **Green.**
-  - **Verified**: ran a host Vite dev server, opened `/help`, the `hx_effectiveness` page renders
-    fully — KaTeX ε-NTU formulas with citations, the `[Run:]` example, all tables, references, and
-    See-Also badges. `tsc -b` green; no new console errors (only pre-existing dev 404s).
-- **Phase 2 — Reference content (the bulk). IN PROGRESS (10/515 pages).**
-  - **Authoring priority = the 75 functions exercised by `examples.ts`** (computed: each gets a
-    verified `[Run:]` example — satisfies the interactivity gate). Batch by shared example to
-    amortize notebook queries (one query → all functions in that example).
-  - DONE — Heat-Transfer seed (4): `hx_effectiveness`, `LMTD`, `fin_efficiency`, `hx_NTU` (Kakaç
-    2.28/2.36, Holman 2-38/10-12, Özışık 3-41b, Kays & London Table 2.4); bound to
-    `hx-effectiveness-ntu` / `ev-thermal-management`.
-  - DONE — Compressible-flow nozzle set (6): `T0_T`, `P0_P`, `mach_A_Astar`, `M2_shock`,
-    `P2_P1_shock`, `P02_P01_shock` (Çengel Thermodynamics Eq. 17-18/19/26/38/39, Fig. 17-42,
-    Table A-33); all bound to `cd-nozzle-shock`; expected values hand-computed (M1≈2.20, M2≈0.55,
-    P2≈514 kPa, P02≈628 kPa).
-  - DONE — Radiation view factors + Heisler (5): `viewfactor_disks`, `viewfactor_plates`,
-    `viewfactor_perp`, `heisler_temp`, `heisler_q` (Holman Table 8-2 Items 1/3/5, Figs 8-12/14/16;
-    Appendix C Eq. C-1/C-7..C-12, Eq. 4-16); bound to `radiation-view-factors` / `heisler-transient`.
-    View-factor expecteds hand-computed (≈0.20/0.41/0.83); Heisler one-term values approximate (≈).
-  - DONE — Control-systems set (9): `pole`, `zero`, `margin`, `bode`, `nyquist`, `step` (→
-    `control-analysis-report`) + `ss2tf`, `series`, `feedback` (→ `cruise-control`), cited to
-    Nise / Ogata per the standard-citation policy; exact poles/zero stated (s=−2±4.583j, z=−2).
-  - **Manifest dedup fix:** the documentable total is now **unique symbols (475, was an inflated
-    515)** — ~40 control names live in both `FunctionRegistry`'s Control category and
-    `callProcedures`; coverage now counts each once. **24/475 documented (5.1%).**
-  - DONE — Cubic-EOS set (5): `eos_z`, `eos_volume`, `eos_density`, `eos_enthalpy`, `eos_psat` (→
-    `cubic-eos-properties`). Notebook confirmed the SRK/PR pressure forms + a/b/m params and pointed
-    to Çengel Eq. 12-57 for the departure, but flagged the Z-cubic/fugacity as not in the notebook,
-    so those cite the canonical primaries (Peng-Robinson 1976, Soave 1972, Smith/Van Ness/Abbott).
-    CO₂ Psat(300 K) ≈ 6.7 MPa anchored; Z/ρ marked approximate. **29/475 documented (6.1%).**
-  - DONE — Combustion seed (2): `AdiabaticFlameTemp`, `wiebe_rate` (notebook timed out → standard
-    citations Çengel/Turns, Heywood). **31/475.**
-  - DONE — HX correlations core (6): `ua_hx`, `htc_1phase` (Gnielinski), `htc_evap` (Shah boiling),
-    `htc_cond` (Shah 1979), `htc_extair` (Žukauskas), `dp_2phase` (Lockhart-Martinelli/Chisholm) →
-    `ev-thermal-management`; notebook-grounded (Kakaç Eq. 2.11/8.34/8.70, Holman 6-34, Collier &
-    Thome 2.68) + primary papers. **37/475 documented (7.8%).**
-  - DONE — HX geometry helpers (5): `hx_eta_surf` (Incropera 11.3), `hx_aconv`, `hx_fin_len`,
-    `hx_area_direct`, `hx_area_indirect` (Kays & London / Shah & Sekulić) → `ev-thermal-management`.
-  - DONE — ODE/table accessors (6): `FinalValue`, `MaxValue`, `ODEValue`, `TimeAt` (ODE Results) +
-    `IntegralValue`, `TableAvg` (Tables) — frees-specific, light math. **48/475 documented (10.1%).**
-  - Coverage gate + `tsc -b` green at each step.
-  - DONE — **100% page coverage (475/475).** `scripts/scaffold-reference-pages.mjs` generates an
-    accurate **baseline** page for every symbol lacking a hand-authored page, built only from
-    authoritative data: manifest signature → parsed Input/Output argument tables, registry
-    description, example bindings discovered by scanning `examples.ts`, and component PARAMs parsed
-    from the `.frees` std-lib. Baselines carry `generated: true` + a visible "Baseline page" note;
-    hand-authored pages are never overwritten. Runtime dedup prevents double-slug pages (e.g.
-    `rank`/`norm` that live in two families). **48 rich + 427 baseline.** `check-doc-coverage.mjs`
-    now reports rich-vs-baseline so the metric is honest. Verified: production `npm run build`
-    bundles the 16.5k-line catalog; a generated component page (`FuelCellStack`) renders in-browser
-    with its parsed `ncells` parameter table.
-  - ENRICHMENT IN PROGRESS — upgrade baselines to rich pages (cited Mathematical Formulation +
-    worked `[Run:]` examples). Each upgrade replaces a `generated:true` page; gate + tsc green.
-    - DONE — Control (14): `tf`/`tf2ss`/`impulse`/`lsim`/`nichols`/`c2d`/`rlocus`/`routh`/`lqr`/
-      `lqe`/`gram`/`balreal`/`pidtune`/`residue` (Nise/Ogata/Franklin/Bryson-Ho/Moore/Åström).
-    - DONE — Math/misc (14): `sqrt`/`sin`/`cos`/`exp`/`ln`/`min`/`max`/`diag` (light), `integral`,
-      `interpolate2d`, `cond` (Golub & Van Loan), `if`, `StagnationTemp`/`StagnationPres` (Çengel).
-    - **76/475 hand-authored rich; every example-bound function is rich.**
-    - DONE — **all 399 remaining pages made content-complete from their authoritative source**
-      (enhanced `scaffold-reference-pages.mjs`): **136 components now carry their real Ports,
-      Parameters, and verbatim Constitutive Equations parsed from the `.frees` std-lib** (e.g.
-      `Resistor`: `a.V - b.V = R*a.I`, `a.I + b.I = 0`); every function/property/material/CAS page
-      carries its signature, registry description, parsed argument tables, and a per-CATEGORY
-      standard reference (Abramowitz & Stegun, Golub & Van Loan, Nise/Ogata, Çengel, Collier,
-      Poling et al., US Std Atmosphere 1976, CoolProp, …). `tsc -b` green (20.6k-line catalog).
-    - **Whole table finished: 475/475 pages, all with authoritative content.** Two tiers — 76
-      hand-curated (full KaTeX derivation + worked `[Run:]` example) and 399 auto-generated
-      (source-verbatim content + category citation), transparently flagged via `generated:`.
-    - DONE — (a) **VARIANT component truncation fixed**: balanced parser captures shared equations
-      + each `VARIANT … END` body (name, REQUIREd params, equations) → a "Model Variants" section
-      (e.g. `TwoPhaseCompressor` isentropic/volumetric). (b) **Coverage gate wired into CI**
-      (`frontend-build` job runs `npm run check-docs` → fails on doc/implementation drift).
-    - **PR #24 opened** (https://github.com/ernsoylu/frees/pull/24) — 16 commits.
-    - CONTINUING enrichment on the branch (updates PR #24): promote auto-generated pages to the
-      hand-curated tier (per-function KaTeX derivation + citation), category by category.
-    - DONE — **Special Functions category fully rich (24/24)**: core 7 (gamma/loggamma/digamma/
-      beta/erf/erfc/erfinv) + order-n & fixed-order Bessel (12) + orthogonal polynomials (5), all
-      with KaTeX definitions/recurrences + Abramowitz & Stegun / NIST DLMF citations.
-    - DONE — **Control Systems category fully rich** (22 more): place/acker/ctrb/obsv/lyap/dlyap/
-      dare/dlqr/d2c/errorconst/stepinfo/parallel/pade/mason/ss/ss2ss/tf2zp/zp2tf (Nise/Ogata/
-      Franklin/Antsaklis) + Eigenvalues/Eigen/LUDecompose/EulerRotate (Golub & Van Loan/Goldstein).
-    - DONE — **all non-component pages enriched** via `scripts/enrich-functions.mjs` (data-driven:
-      standard closed-form KaTeX + citation per function, from textbook forms / registry
-      descriptions): 175 functions across elementary math, complex, stats, matrix/linear algebra,
-      compressible (Rayleigh/Fanno/oblique-shock/Prandtl-Meyer), flow networks (Colebrook), ISA
-      atmosphere, two-phase (Chisholm/Martinelli/void/Shah), HX correlations & geometry, calculus,
-      interpolation, table/ODE accessors, strings, combustion mixing rules, EOS entropy/pressure;
-      42 wrapper functions (CoolProp properties, materials, CAS) finalized without a fabricated
-      math section. Verified the complex KaTeX (void_rouhani) renders in a production build + browser.
-    - DONE — **all 136 components promoted to rich** via `scripts/enrich-components.mjs`: each
-      re-reads its `.frees` definition (ports/params/constitutive-equations/variants verbatim) and
-      adds a curated physical description, domain port semantics (across/through + junction rule per
-      of the 12 domains), a worked `[Run:]` example where bound (28), and references (bond-graph
-      formalism + domain physics text). Verified `TwoPhaseCompressor` (variants + example) in a
-      production build + browser.
-    - **COMPLETE: 475/475 pages, 100% rich, 0 baselines.** The MATLAB-style per-symbol reference is
-      content-complete end to end; coverage gate + tsc + production build green; PR #24.
-    - Known minor polish (deferred, pre-existing): the page name renders twice (ReferencePageView
-      Title + body `# name` H1); one-line fix in the reference compiler if wanted.
-  Author per-function pages, highest-traffic
-  categories first: Math → Matrix/Linear Algebra → Control Systems → Thermophysical Properties
-  → Units → Uncertainty → CAS/Symbolic → Block constructs → Components. For each page: write the
-  Mathematical Formulation in KaTeX and **pull its governing equation + citation from the Frees
-  NotebookLM notebook** (`notebooklm ask … --notebook 350fef25 -s <srcid>`); bind to a verified
-  example; add any new snippets to the harness test. Drive coverage + math/reference tests green.
-- **Phase 3 — Cookbook (intent-based).** Task guides crossing functions/domains: PID by pole
-  placement, thermodynamic cycle analysis, aerospace pitch dynamics (ss↔tf), Monte-Carlo
-  uncertainty, pump/fan operating-point. Migrate the example catalog embedded in `HelpPage.tsx`
-  into these + `examples.ts`.
-- **Phase 4 — Error-driven help.** Stable error codes on backend exceptions (syntax,
-  dimensional mismatch, singular matrix, solver non-convergence, unit mismatch). `code → anchor`
-  map; deep-link frontend error toasts to `/help/errors#code`. `errors/` reference pages.
-- **Phase 5 — Polish & guardrails.** Async-load the search index; "Common Errors" present on
-  every function page; domain-diversity check on examples; About/version cross-link. CI test:
-  every example in a doc page solves clean against the backend.
+- Named behavior (MDA `.xdt` analog): the `.frees` project stores **refs only** (layout,
+  signal assignments, formulas, file signatures). On load, an analyzer window renders its
+  **full layout with empty strips** plus one per-missing-file "Locate file…" banner; one
+  re-pick repopulates every strip bound to that file.
+- Re-picked files are **verified against the stored signature**: column-name match is
+  mandatory (wrong file rejected — hard error, per project strict-over-warn policy);
+  size/headerHash mismatch is advisory with explicit override.
+- Project load shows one summary toast: "N analyzer window(s) awaiting measurement files."
+- Mid-session `RemoteSource` 404 (API node restarted, ephemeral store gone) reuses the same
+  banner inline with a re-upload action — not just at project load.
 
-## Quality gates (CI-enforceable)
+### c. CSV time-base contract
 
-- **Coverage**: every backend built-in/procedure/component has a reference page; no page names
-  a non-existent symbol (manifest↔docs test).
-- **Accuracy**: every `[Run:]`/`[Example:]` id resolves and solves against the backend with
-  zero unit warnings (extend the example harness).
-- **Error coverage**: every function page has a Common Errors section.
-- **Mathematical rigor**: every page implementing a formula/algorithm has a Mathematical
-  Formulation section with KaTeX equations, and a non-empty `references` frontmatter; each
-  reference must be traceable to a Frees-notebook source (no memory-only citations).
-- **Searchability**: every page has valid frontmatter feeding the index.
-- **Domain diversity**: examples span ≥3 engineering domains across the reference set.
+- `csvImport.ts` must emit a **sorted, strictly monotonic `Float64Array` of seconds** per file.
+- Detection heuristic, in order: column-name match (`time|t|timestamp|zeit|sec|ms`),
+  monotonicity scan, format sniffing (ISO-8601 string, epoch s vs ms by magnitude, relative
+  seconds, sample index). Unit-header rows on lines 2–3 are consumed by the existing
+  header/unit-row detection.
+- **Ambiguous or absent time column → modal asks the user** (pick a column, or enter a sample
+  rate `dt` for index-based data). No silent guess.
+- Duplicate timestamps or non-monotonic rows → **hard import error** naming the offending
+  row numbers (strict-over-warn). This contract is load-bearing for step-hold fill (Phase 2)
+  and the merged raster (Phase 4).
 
-## Open questions for the user
+### d. Type-aware decimation
 
-- Confirm decision #1 (extend existing pipeline vs. MDX) and #4 (defer the isolation sandbox).
-- Scope of v1: all ~130 components in Phase 2, or functions/procedures first and components later?
-- Should `/help/...` deep-link routes be added (URL anchors per function) for error-toast links?
+- Float64 analog channels → M4 min/max envelope (as before).
+- **Boolean/enum channels → transition-preserving decimation**: all edges kept while under the
+  point budget; over budget, per-bucket "any-change" flag so no pulse ever disappears. Min/max
+  alone renders a 1-sample pulse sub-pixel — wrong for the boolean strips Phase 1 ships.
+- String-valued channels (fault codes, state names) → **out of scope Phase 1**; known
+  limitation noted in the signal browser (import keeps them listed but unplottable).
 
----
+### e. Signal colors + cursor model
 
-*Parked — prior initiative (Meaningful-Steady solver robustness & initialization) is
-substantially DONE and recorded in git history / README.md / CLAUDE.md. Recap: consistent
-state init, steady-by-integration, ε-NTU floating-pressure HX, transient property guarding,
-and the Amesim-style charge-state closed refrigerant cycle all shipped green. Remaining open
-frontier: floating BOTH pressures in ONE topologically-closed loop at cold start (needs a
-closed-loop-aware formulation or continuation) — pick back up from the
-`feat/twophase-refrigeration-s1` line if resumed.*
+- **Colors**: auto-assigned from a fixed 10-color categorical palette by assignment slot,
+  **persisted per-signal in `AnalyzerSpec`** so sessions are color-stable; user override is a
+  later polish item. New palette array under `frontend/src/analyzer/` — no reusable helper
+  exists (`figure.ts:52-59` palette is property-semantic; XY plots fall back to Plotly's
+  colorway).
+- **Phase 2 cursor model (explicit)**: cursors **A + B**; continuous ↔ sample-snap toggle;
+  Δt/Δv readout; statistics bind to the A–B range. **Anchored cursors are deferred** past v1.
+
+## 3. Implementation Plan (each phase independently shippable)
+
+### Phase 1 — Analyzer shell, CSV import, oscilloscope MVP
+Create `frontend/src/analyzer/`: `types.ts` (AnalyzerSpec/SignalRef/ChannelWindow + file
+signature), `channelStore.ts` (lifecycle per §2.5a: measurementId key, refcount,
+deletion-bound release, LRU eviction), `decimate.ts` (pure min/max envelope **+
+transition-preserving boolean path**, §2.5d), `csvImport.ts` (papaparse **worker mode** →
+chunked-growable Float64Array, buffers handed back to the main thread as **Transferables**
+(zero-copy, per §2), header/unit-row detection, **time-column detection + user
+fallback modal**, §2.5c), `palette.ts` (10-color categorical, §2.5e), `UPlotChart.tsx`
+(imperative wrapper à la `PlotlyChart.tsx` lifecycle + ResizeObserver — **rAF-throttle the
+resize callback and hand uPlot explicit pixel dimensions**, as `PlotlyChart.tsx` already does:
+uPlot in a flex/grid dock tile can otherwise trigger a `ResizeObserver loop limit exceeded`
+feedback loop),
+`DataAnalyzerTab.tsx` (reducer, signal browser, multi-strip oscilloscope, X/Y zoom/pan,
+boolean strips).
+Modify: `workspace/WorkspaceDock.tsx` (KIND_ICONS), `App.tsx` (state + `createAnalyzer` +
+`onDeleteAnalyzer` → `channelStore.release`, near the `createWhiteboard` pattern ~L1576,
+content-map loop ~L2261, Spotlight ~L1779), `WorkspaceChrome.tsx` (menu ≈L481),
+`package.json` (+uplot, +papaparse).
+Tests: vitest `decimate.test.ts` (peak preservation **+ boolean pulse preservation**),
+`csvImport.test.ts` (delimiters, unit rows, NaN gaps, **time-column detection matrix: ISO /
+epoch s / epoch ms / relative / index+dt / ambiguous→ask / non-monotonic→error**);
+`npm run build` type gate. **Fixture policy: large CSVs are script-generated at test time,
+never committed.**
+
+### Phase 2 — Cursors + sync, Table & Statistics instruments, persistence, CSV export
+Create: `analyzer/instruments/TableInstrument.tsx` (step-hold fill),
+`instruments/StatisticsInstrument.tsx`, `analyzer/stats.ts`, `analyzer/exportCsv.ts`
+(selected signals × visible range, merged raster).
+Modify: `DataAnalyzerTab.tsx` (cursor model per §2.5e: A+B, Δ readout, sample-snap toggle,
+uPlot `cursor.sync`, zoom-box), `project.ts` (`analyzers: AnalyzerSpec[]` slice,
+`PROJECT_VERSION` → 2, `migrate()`/sanitize — note `migrate` already tolerates missing slices
+via `?? []`), `App.tsx` (slice into `buildProject`/load). **Template mode** per §2.5b:
+missing-file placeholder + signature-verified re-pick + load-summary toast + mid-session 404
+banner.
+Tests: stats/step-hold/export-raster vitest; project round-trip + migration test; template-mode
+re-pick rejects a wrong-signature file.
+
+### Phase 3 — Backend measurement service + MF4 (spike-gated)
+Create: `backend/core/src/main/java/com/frees/backend/measurement/` — `MeasurementParser`
+(interface), `Mf4Parser` (mdf4j; **1-day spike first**, see checklist below),
+`EnvelopeDecimator` (Java twin of `decimate.ts`, incl. boolean path), `ChannelWindowDto`;
+`backend/web/.../api/MeasurementController.java` (`POST /api/measurements` multipart →
+metadata; `GET /api/measurements/{id}`; `GET .../channels/{name}?from&to&maxPoints`;
+`DELETE`), `MeasurementStore.java` (**stream multipart directly to temp dir — never buffer in
+heap**; channel reads via `FileChannel`/`MappedByteBuffer`; in-memory metadata map + TTL/LRU
+mirroring `web/.../api/SolveContextCache.java`; lazy channel extraction).
+Modify: `application.properties` (multipart limits + `frees.security.max-upload-bytes`),
+`RequestGuardFilter.java` (per-route cap raise — **only** `/api/measurements*`, everything
+else keeps 1 MB; pattern = the existing `/api/health` short-circuit, lines 63-66. **Note: the
+existing cap is Content-Length-only, so the upload route must additionally count streamed
+bytes and abort over-cap, and validate magic bytes**), `core/build.gradle` (mdf4j), frontend
+`channelStore.ts` (+RemoteSource), `api.ts` (client fns), upload UI.
+**Spike structure (1-day timebox, gated — gates the phase):**
+- *Pre-work (off the clock):* script-generate the fixture set with Python **asammdf** (the
+  reference MDF4 implementation — using it for fixtures also proves the sidecar rung's
+  toolchain for free): (a) small uncompressed, (b) DZ/ZSTD-compressed, (c) LZ4-compressed,
+  (d) VLSD channel, (e) multi-channel-group with differing rasters + linear/rational/
+  value-to-text CCBLOCK conversions, (f) ~100 MB realistic file. Fixtures are generated by a
+  committed script, not committed as binaries (except the small (a) test fixture).
+- *Gate 1 (hour 0–1) — smoke:* dep resolves, parse (a), enumerate groups/channels, extract one
+  channel to arrays. **Fail → spike over, drop to rung 2 immediately.**
+- *Gate 2 (hours 1–3) — OEM breakers:* (b), (c), (d), (e) in that order; each binary
+  pass/fail into a support matrix. Record the **license** here too.
+- *Gate 3 (hours 3–5) — scale:* on (f), measure full-index time, lazy single-channel extract
+  time, and peak heap (must not materialize the whole file).
+- *Verdict (hour 5–6), criteria fixed up front:* **full pass** = (a)+(b)+(c)+(e) parse and
+  Gate 3 is sane → mdf4j is the parser; VLSD (d) alone failing is acceptable (VLSD is mostly
+  strings/bus data, out of scope v1) and gets a known-limitation note. **Partial** =
+  uncompressed-only → rung 2 covers demos; real OEM files need the sidecar → decision goes to
+  the owner with the matrix. **Fail at Gate 1/2 broadly** → sidecar rung, per ladder.
+- *Deliverable:* the support matrix + license + measured numbers + go/no-go, recorded here.
+**Fallback ladder (in order):** mdf4j → minimal in-house uncompressed-DT-block reader →
+**asammdf Python sidecar** (separate container; implements `MeasurementParser` remotely —
+adds a second runtime + Railway deploy unit, planned but not built until the spike fails) →
+ship Phase 3 as CSV-upload-only.
+**Sidecar contract (decision 4, applies only if that rung is reached):** transport = internal
+**REST** over Railway's private network (`http://<service>.railway.internal:<port>`), ~3
+stateless endpoints (`POST /parse-metadata`, `GET /channels/{name}` streaming, `GET /health`);
+the Java client **re-resolves DNS per request** (`networkaddress.cache.ttl` low — Railway
+private IPv6 changes every redeploy, same foot-gun nginx already guards against); **read
+timeout 60 s** (MDF parsing of GB-scale files takes seconds, not ms) with connect timeout
+short (~2 s); sidecar failures map to **typed error payloads** surfaced to the user (e.g.
+"unsupported bus-channel format in group 3"), never a bare 502; the raw file stays on the
+shared temp volume / is re-streamed — the sidecar holds no state, so a sidecar restart is
+invisible beyond a retried request.
+Tests: `:core:test` (parser vs committed small `.mf4` fixture, decimator property tests);
+`:web:test` (MockMvc multipart round-trip; oversize still rejected on other routes; streamed
+over-cap upload aborted).
+
+### Phase 4 — Calculated signals (the differentiator)
+**Pre-spike (2–4 h, gates the phase estimate):** measure per-call `PropsSI` cost through the
+JNA binding **including the process-wide `synchronized` lock** (`core/.../props/CoolProp.java`
+— every binding method serializes on one global lock, and the throwing `propsSI` used by
+solves is uncached; only `propsSIOrNaN` hits the 20k LRU today). **Measure evaluator overhead
+separately from CoolProp** (a no-property formula over the same raster) so allocation cost
+doesn't masquerade as native-call cost. Output: measured µs/call for both, and the cache
+decision below.
+Create: `core/.../measurement/MergedRaster.java`, `SampledSeries.java` (**per-input
+interpolation mode: `step` — default for boolean/enum/ECU states — or `linear` — default for
+continuous analog inputs feeding property functions**; step-holding T/P into nonlinear
+CoolProp functions manufactures artificial derivative spikes; linear-interp precedent:
+`core/ode/OdeAccessors.valueAtTime`), `TimeSeriesEvaluator.java` — evaluates the formula per
+raster point via the existing `Evaluator` (`backend/core/.../ast/Evaluator.java`; units +
+CoolProp free). **GC-pressure contract:** do NOT allocate a fresh input `Map` per point — over
+a 1 M-pt raster that's 1 M map + boxing allocations and the GC dominates runtime. And a
+reused `Map<String, Double>` only halves the problem: writing a primitive `double` into it
+still boxes a new `Double` per point per variable. The target is an **array-backed primitive
+resolver** — pre-resolve each formula variable to an index once, then per point the
+`Evaluator` reads `double resolve(int varId)` from a reused `double[]` (add the core
+`Evaluator` overload for this; a mutated map is the acceptable fallback only if the AST walk
+can't take an indexed resolver without invasive surgery — pre-spike quantifies the gap). Time ops `delta`/`integral`/`movavg`/
+`delay` (net-new accessors; `OdeAccessors` interpolation/crossing helpers are the reusable
+building blocks).
+**Compute policy (decision 3):** hard raster cap (~1 M pts); calc-path
+property calls routed through the CoolProp LRU (extend caching to the throwing `propsSI`
+path or a calc-local cache — pre-spike decides); `POST /api/measurements/calc` sync below a
+threshold that is **lowered when the formula contains property functions** (the global lock
+makes CoolProp formulas the slow class), else 202+job via existing JobController/SSE;
+**no mid-job cancel in v1** — client abandons stale jobs, the 1 h Redis job TTL cleans up
+(documented limitation; cooperative cancel would be net-new backend machinery).
+**Over-cap UX:** a `merge` raster easily exceeds the cap organically (two 1 MHz channels with
+offset timestamps → ~2 M union points), so exceeding it is a *guided path, not a failure*:
+the API returns a **typed error** (`RASTER_CAP_EXCEEDED` + actual point count + a suggested
+`dt` that lands under the cap), and `CalcSignalModal.tsx` catches it and offers one-click
+"Switch to fixed dt = <suggested> with linear interpolation" — never a generic failure toast.
+Request carries `{name, formula, inputs: [{var, measurementId, channel, interp} |
+{var, inline:{t[],v[]}, interp}], raster: merge|fixed(dt)|sameAs(var)}` — inline covers
+client-parsed CSV (route shares the raised body cap). Frontend
+`analyzer/CalcSignalModal.tsx` (CodeMirror w/ existing frees-DSL setup, var→channel binding,
+per-input interp picker, raster picker); results land in ChannelStore as first-class channels.
+Tests: core — raster merge, step vs linear edges, delta/integral/movavg/delay vs analytic
+signals, one CoolProp per-sample case (`Enthalpy('R134a', T=…, P=…)` ramp) with cache-hit
+assertion, over-cap merge → `RASTER_CAP_EXCEEDED` with a suggested `dt` that verifiably lands
+under the cap; web MockMvc; vitest DTO mapping + modal over-cap recovery path.
+
+### Phase 5a — Multi-file sessions, time offsets, Event List
+Create: multi-file session support in `channelStore.ts`/`DataAnalyzerTab.tsx`, per-file
+time-offset UI (**numeric Δt entry field and SHIFT-drag** — numeric entry is mandatory;
+visual drag alone is too imprecise for high-frequency control-loop sync),
+`instruments/EventListInstrument.tsx` (simple comparisons client-side, complex conditions via
+Phase-4 boolean calc channel; rising-edge timestamps; click sets shared cursor). These three
+are coupled: cross-file events need offsets applied first.
+Tests: event-edge detection, offset application vitest.
+
+### Phase 5b — Scatter + Histogram instruments
+Create: `instruments/ScatterInstrument.tsx`, `instruments/HistogramInstrument.tsx` (Plotly
+builders, `plots/figure.ts` style). Independent of the sync model — parallelizable with 5a.
+Tests: builder vitest; `npm run build`.
+
+### Phase 5c — Polish + accessibility pass
+Keyboard cursor stepping, snap toggle, keyboard-navigable signal browser / table / event list
+(beyond glide-data-grid/Mantine defaults).
+
+## Risks
+
+- **mdf4j 0.2.0 maturity** (highest): may lack DZ compression, VLSD, CCBLOCK conversions.
+  Mitigated by the spike checklist + `MeasurementParser` seam + 4-rung fallback ladder
+  (incl. planned asammdf sidecar).
+- **CoolProp per-sample cost + process-wide lock**: every property call goes through one
+  global `synchronized` JNA binding with per-call string fluid resolution; the solve-path
+  variant is uncached. Mitigated by the Phase-4 pre-spike, raster cap, calc-path caching,
+  and the lowered async threshold for property-function formulas.
+- **Multi-user CoolProp lock starvation (compute tier)**: concurrent property-heavy calc jobs
+  all serialize on the single JNA lock, so saturated consumer threads on `frees.tasks` could
+  delay unrelated solves platform-wide. Acceptable single-/few-user today (the raster cap
+  bounds each job). Documented future mitigations, in escalation order: a separate RabbitMQ
+  queue + capped consumer concurrency for calc tasks (so property jobs can't starve solves),
+  then pooled native library instances or a dedicated CoolProp worker node. Not built in v1.
+- **Evaluator GC pressure (Phase 4)**: naive per-point `Map` allocation over a 1 M-pt raster
+  makes GC the bottleneck and corrupts the pre-spike's CoolProp numbers — and even a reused
+  map still boxes a `Double` per write. Mitigated by the array-backed primitive-resolver
+  contract in Phase 4 and the split pre-spike measurement.
+- **uPlot wrapper complexity**: aligned-arrays data shape + `cursor.sync` differ materially
+  from Plotly; "modeled on PlotlyChart.tsx" holds for lifecycle only. Budget wrapper time
+  accordingly in Phase 1.
+- **ChannelStore leak/growth**: mitigated by refcount + deletion-bound release + LRU eviction
+  (§2.5a); closing a window intentionally retains data (matches all frees window kinds).
+- **Upload security**: raise the cap per-route only; the existing guard is Content-Length-only
+  so the route must count streamed bytes; validate magic bytes; stream to temp dir, never
+  buffer whole file in heap.
+- **Memory (backend)**: extract channels lazily via memory-mapped reads, keep raw file on
+  disk, LRU/TTL eviction; frontend warns then evicts per §2.5a.
+- **Railway statelessness**: measurement store is per-API-node + ephemeral — acceptable
+  single-node today; 404 on known id → inline re-upload banner (§2.5b), same path as project
+  load; multi-node needs sticky routing/object storage later (documented, out of scope).
+  If the asammdf sidecar rung is reached, it adds a second deploy unit — transport, DNS
+  re-resolution, timeouts, and error mapping are pinned by decision 4 + the Phase 3 sidecar
+  contract.
+- **App.tsx growth**: all new code under `frontend/src/analyzer/`; App.tsx gains only the spec
+  slice + factory + delete-release hook (same footprint as whiteboards).
+
+## Rejected / deferred critique points
+
+- **"Two state patterns" (zustand vs reducer)**: moot — the frontend has no zustand or any
+  external store (verified); ChannelStore is deliberately the first non-React store, bulk data
+  only. ADR one-liner added to §2.
+- **Global undo/redo for analyzer actions**: no app-wide undo exists (only DiagramTab-local
+  stacks, `DiagramTab.tsx:3511`); the analyzer opts out in v1, consistent with whiteboards,
+  plots, and tables.
+- **Per-phase a11y Definition-of-Done**: deferred to Phase 5c beyond the default keyboard
+  behavior of glide-data-grid/Mantine components.
+- **Visible-window-only calc recompute**: rejected for v1 — the calc channel must be fully
+  materialized for export and cursor-range statistics; full-raster with a hard cap instead.
+- **NotebookLM/MDA IP concern**: requirements are behavioral feature parity derived from the
+  owner's own research notebook, not copied documentation text; no action.
+- **Anchored cursors, string-channel plotting, GPS map**: explicitly deferred (§2.5d/e, §1).
+
+## Verification
+
+- Per phase: `cd frontend && npm run build` (type gate) + `npx vitest run`; backend phases:
+  `cd backend && ./gradlew :core:test :web:test` (module-qualified per project rule).
+- End-to-end after Phase 1/2: `./frees.sh start`, open http://localhost:5173, create an
+  Analyzer window, import a generated 1 M-row CSV (script it), verify smooth zoom/pan (parse
+  must not jank the UI — worker mode, and the buffer handoff must be a Transferable: no
+  multi-second freeze at parse completion), watch overall tab memory near the ~50 M-cell
+  warning threshold (DevTools memory panel), boolean pulse visible at full zoom-out, cursor delta
+  correctness against known values; save/reload the `.frees` file and verify **template mode**:
+  layout restored, "Locate file…" banner, re-pick repopulates, wrong file rejected by
+  signature; close the analyzer window and reopen (data retained), delete it (store released).
+- After Phase 3: upload a real `.mf4` fixture, browse channels, verify decimated envelope
+  preserves a known injected spike; verify oversize upload rejected mid-stream.
+- After Phase 4: calc channel `P_kW = tq * w / 1000` and a CoolProp property channel; verify
+  against hand-computed samples at cursor positions; verify linear vs step interp on a ramp
+  input; verify async path on a large raster and the raster-cap error above the limit.

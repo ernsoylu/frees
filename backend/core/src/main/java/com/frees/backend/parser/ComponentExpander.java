@@ -1119,8 +1119,22 @@ public final class ComponentExpander {
         if (nodeHasMember(sts, "z")) {
             ext.add("z");
         }
+        // E3 — multi-species gas vector rider: named species mass fractions (and
+        // the oil-circulation fraction) ride like W/z — equal across pass-through
+        // nodes, flow-weighted only at an explicit mixer (GasMixerN). Opt-in per
+        // member presence, so species-free lines keep the plain (P, mdot, h) bond.
+        for (String sp : SPECIES_RIDERS) {
+            if (nodeHasMember(sts, sp)) {
+                ext.add(sp);
+            }
+        }
         return ext.toArray(new String[0]);
     }
+
+    /** Conserved-scalar riders carried across fluid nodes when present (E3):
+     *  the single-species fraction, the named combustion species, and the
+     *  oil-circulation fraction. */
+    private static final String[] SPECIES_RIDERS = {"y", "yo2", "yco2", "yh2o", "yn2", "oc"};
 
     /** Whether any stream at the node carries the given port member. */
     private boolean nodeHasMember(List<String> sts, String member) {
