@@ -77,3 +77,32 @@ COMPONENT EXVCmd(in, out, u)
   rho_in   = Density(fluid$, P=in.P, h=in.h)
   in.mdot * abs(in.mdot) = (u.sig * CdA_max)^2 * 2 * rho_in * (in.P - out.P)
 END
+
+// Radiator: coolant rejects heat to ambient moist air through a shared wall
+// node (hierarchical single-domain halves, per the §2.4 rule). Sized by the
+// coolant-side UA and an air-side effectiveness; UA from the hx correlation
+// functions for a geometry-resolved rating.
+COMPONENT Radiator(cool_in, cool_out, air_in, air_out)
+  PARAM cool$, UA_cool, eps_air
+  LiquidWallHX   CL(fluid$=cool$, UA=UA_cool)
+  MoistAirWallHX AR(model$=eps_t, eps=eps_air)
+  connect(cool_in, CL.in)
+  connect(CL.out, cool_out)
+  connect(air_in, AR.in)
+  connect(AR.out, air_out)
+  connect(CL.wall, AR.wall)
+END
+
+// Heater core: the cabin-heating radiator — hot coolant warms the ventilation
+// air stream through the shared wall node. Same structure as Radiator, named
+// for the application (HVAC schematic clarity).
+COMPONENT HeaterCore(cool_in, cool_out, air_in, air_out)
+  PARAM cool$, UA_cool, eps_air
+  LiquidWallHX   CL(fluid$=cool$, UA=UA_cool)
+  MoistAirWallHX AR(model$=eps_t, eps=eps_air)
+  connect(cool_in, CL.in)
+  connect(CL.out, cool_out)
+  connect(air_in, AR.in)
+  connect(AR.out, air_out)
+  connect(CL.wall, AR.wall)
+END

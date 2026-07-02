@@ -1,0 +1,26 @@
+// Threlkeld enthalpy-potential wet coil at NTU=20: the outlet enthalpy reaches
+// saturated-air-at-wall-T enthalpy (eps_h -> 1), replicated independently.
+// The original eps_t variant still matches its own law (regression).
+// EXPECT d_ntu = 0 tol 1e-3
+// EXPECT d_eps = 0 tol 1e-6
+MoistAirSource SA(P=101325, T=305, W=0.01, mdot=0.3)
+MoistAirWallHX WC(model$=ntu_wet, NTU=20)
+MoistAirSink   KW()
+ThermalSource  CW(T=280)
+connect(SA.out, WC.in)
+connect(WC.out, KW.in)
+connect(WC.wall, CW.port)
+W_sw_chk = HumRat(AirH2O, T=280, P=101325, R=1)
+h_sw_chk = Enthalpy(AirH2O, T=280, P=101325, W=W_sw_chk)
+d_ntu = WC.out.h - h_sw_chk
+
+MoistAirSource SB(P=101325, T=305, W=0.01, mdot=0.3)
+MoistAirWallHX WE(model$=eps_t, eps=0.6)
+MoistAirSink   KE()
+ThermalSource  CE(T=280)
+connect(SB.out, WE.in)
+connect(WE.out, KE.in)
+connect(WE.wall, CE.port)
+T_in_chk = Temperature(AirH2O, h=SB.out.h, P=101325, W=0.01)
+T_out_chk = T_in_chk - 0.6 * (T_in_chk - 280)
+d_eps = Temperature(AirH2O, h=WE.out.h, P=101325, W=WE.out.W) - T_out_chk

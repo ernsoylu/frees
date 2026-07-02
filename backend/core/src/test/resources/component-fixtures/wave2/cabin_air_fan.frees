@@ -1,0 +1,14 @@
+// EXPECT d_fan = 0 tol 1e-6
+// EXPECT dm.outa.mdot = 0.1 tol 1e-9
+// EXPECT dm.outb.mdot = 0.3 tol 1e-9
+MoistAirSource SRC(P=101325, T=300, W=0.008, mdot=0.4)
+MoistAirFan    FN(dP=1000, eta=0.5)
+MoistAirDamper DM(u=0.25)
+MoistAirSink   K1()
+MoistAirSink   K2()
+connect(SRC.out, FN.in)
+connect(FN.out, DM.in)
+connect(DM.outa, K1.in)
+connect(DM.outb, K2.in)
+v_chk = Volume(AirH2O, T=300, P=101325, W=0.008)
+d_fan = (FN.out.h - FN.in.h) - v_chk * 1000 / 0.5
