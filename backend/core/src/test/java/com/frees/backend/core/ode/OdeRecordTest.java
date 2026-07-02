@@ -87,9 +87,9 @@ class OdeRecordTest {
 
     @Test
     void eventHitEqualsHashCodeAndToStringUseArrayContent() {
-        OdeIntegrator.EventHit a = new OdeIntegrator.EventHit("hit", 1.0, new double[] {4.0, 5.0}, true);
-        OdeIntegrator.EventHit b = new OdeIntegrator.EventHit("hit", 1.0, new double[] {4.0, 5.0}, true);
-        OdeIntegrator.EventHit diff = new OdeIntegrator.EventHit("hit", 1.0, new double[] {4.0, 6.0}, true);
+        OdeIntegrator.EventHit a = new OdeIntegrator.EventHit("hit", 1.0, new double[] {4.0, 5.0}, true, null);
+        OdeIntegrator.EventHit b = new OdeIntegrator.EventHit("hit", 1.0, new double[] {4.0, 5.0}, true, null);
+        OdeIntegrator.EventHit diff = new OdeIntegrator.EventHit("hit", 1.0, new double[] {4.0, 6.0}, true, null);
 
         assertEquals(a, a);
         assertEquals(a, b);

@@ -64,5 +64,11 @@ public record DynamicSystem(
      * The crossing variable is {@code lhs - rhs}; {@code direction} is one of
      * {@code rising|falling|any} and {@code action} one of {@code stop|record}.
      */
-    public record Event(String name, Expr lhs, Expr rhs, String direction, String action) {}
+    public record Event(String name, Expr lhs, Expr rhs, String direction, String action,
+                        String setVar, Expr setExpr) {
+        /** stop/record event (no state reassignment). */
+        public Event(String name, Expr lhs, Expr rhs, String direction, String action) {
+            this(name, lhs, rhs, direction, action, null, null);
+        }
+    }
 }

@@ -644,3 +644,134 @@ COMPONENT OilSeparator(in, out, bleed)
   bleed.h    = Enthalpy(fluid$, P=in.P, x=0)
   out.mdot * out.h = in.mdot * in.h - bleed.mdot * bleed.h
 END
+
+
+// ── Two-phase distributed & transcritical (Wave 10) ─────────────────────────
+
+// Packaged 3-cell evaporator: three well-mixed cells with PRIVATE pressure
+// and enthalpy states, linear inter-cell conductances (Kv), resistive at both
+// boundaries, and a wall port per cell — the distributed rung between
+// moving-boundary and full finite-volume models. (States live on component
+// locals, never on port members: the composable pattern.)
+COMPONENT FewCellEvaporator(in, out, w1, w2, w3)
+  PARAM fluid$, V, Cc, UA, Kv, P0, h0, domain$ = twophase
+  in.mdot  = Kv * (in.P - P1)
+  m2       = Kv * (P1 - P2)
+  m3       = Kv * (P2 - P3)
+  out.mdot = Kv * (P3 - out.P)
+  der(P1)  = (in.mdot - m2) / Cc
+  init(P1) = P0
+  der(P2)  = (m2 - m3) / Cc
+  init(P2) = P0
+  der(P3)  = (m3 - out.mdot) / Cc
+  init(P3) = P0
+  T1 = Temperature(fluid$, P=P1, h=h1)
+  T2 = Temperature(fluid$, P=P2, h=h2)
+  T3 = Temperature(fluid$, P=P3, h=h3)
+  Q1 = UA * (w1.T - T1)
+  Q2 = UA * (w2.T - T2)
+  Q3 = UA * (w3.T - T3)
+  w1.Qdot = Q1
+  w2.Qdot = Q2
+  w3.Qdot = Q3
+  rho1 = Density(fluid$, P=P1, h=h1)
+  rho2 = Density(fluid$, P=P2, h=h2)
+  rho3 = Density(fluid$, P=P3, h=h3)
+  der(h1)  = (in.mdot * (in.h - h1) + Q1) / (rho1 * V)
+  init(h1) = h0
+  der(h2)  = (m2 * (h1 - h2) + Q2) / (rho2 * V)
+  init(h2) = h0
+  der(h3)  = (m3 * (h2 - h3) + Q3) / (rho3 * V)
+  init(h3) = h0
+  out.h = h3
+END
+
+// Packaged 3-cell condenser: the same private-state C-R chain (heat leaves
+// through the walls when they run colder than the refrigerant).
+COMPONENT FewCellCondenser(in, out, w1, w2, w3)
+  PARAM fluid$, V, Cc, UA, Kv, P0, h0, domain$ = twophase
+  in.mdot  = Kv * (in.P - P1)
+  m2       = Kv * (P1 - P2)
+  m3       = Kv * (P2 - P3)
+  out.mdot = Kv * (P3 - out.P)
+  der(P1)  = (in.mdot - m2) / Cc
+  init(P1) = P0
+  der(P2)  = (m2 - m3) / Cc
+  init(P2) = P0
+  der(P3)  = (m3 - out.mdot) / Cc
+  init(P3) = P0
+  T1 = Temperature(fluid$, P=P1, h=h1)
+  T2 = Temperature(fluid$, P=P2, h=h2)
+  T3 = Temperature(fluid$, P=P3, h=h3)
+  Q1 = UA * (w1.T - T1)
+  Q2 = UA * (w2.T - T2)
+  Q3 = UA * (w3.T - T3)
+  w1.Qdot = Q1
+  w2.Qdot = Q2
+  w3.Qdot = Q3
+  rho1 = Density(fluid$, P=P1, h=h1)
+  rho2 = Density(fluid$, P=P2, h=h2)
+  rho3 = Density(fluid$, P=P3, h=h3)
+  der(h1)  = (in.mdot * (in.h - h1) + Q1) / (rho1 * V)
+  init(h1) = h0
+  der(h2)  = (m2 * (h1 - h2) + Q2) / (rho2 * V)
+  init(h2) = h0
+  der(h3)  = (m3 * (h2 - h3) + Q3) / (rho3 * V)
+  init(h3) = h0
+  out.h = h3
+END
+
+// Transcritical gas cooler: supercritical single-phase cooling against a wall
+// (no saturation clamp — the R744 high side has none); effectiveness on the
+// local cp, LiquidWallHX sign conventions.
+COMPONENT GasCooler(in, out, wall)
+  PARAM fluid$, UA, dP, domain$ = twophase
+  out.mdot  = in.mdot
+  out.P     = in.P - dP
+  T_in      = Temperature(fluid$, P=in.P, h=in.h)
+  cp_g      = Cp(fluid$, P=in.P, h=in.h)
+  epsg      = 1 - exp(-UA / (in.mdot * cp_g))
+  Q         = epsg * in.mdot * cp_g * (T_in - wall.T)
+  out.h     = in.h - Q / in.mdot
+  wall.Qdot = -Q
+END
+
+// Transcritical back-pressure valve: signal-commanded high-side pressure
+// control (CO2 cycles) — commanded-area odd-symmetric square law.
+COMPONENT TranscriticalBackPressureValve(in, out, u)
+  PARAM fluid$, CdA_max, domain$ = twophase
+  rho      = Density(fluid$, P=in.P, h=in.h)
+  out.mdot = in.mdot
+  out.h    = in.h
+  in.mdot * abs(in.mdot) = (u.sig * CdA_max)^2 * 2 * rho * (in.P - out.P)
+END
+
+// Oil-circulation-rate rider: declares the oil mass fraction on the stream
+// (it rides every downstream pass-through node like W/z) and exposes the
+// documented HTC degradation factor f_deg = 1 - k_deg*OCR to inject into
+// downstream UA parameters.
+COMPONENT TwoPhaseOilRider(in, out)
+  PARAM oc_set, k_deg, domain$ = twophase
+  out.mdot = in.mdot
+  out.P    = in.P
+  out.h    = in.h
+  out.oc   = oc_set
+  f_deg    = 1 - k_deg * oc_set
+END
+
+// Momentum-based two-phase ejector: the motive stream expands (nozzle
+// efficiency) to the suction pressure, momentum-mixes with the entrained
+// stream at constant area, and the mixed velocity head recovers as the
+// diffuser lift. Total enthalpy is conserved exactly.
+COMPONENT EjectorMomentum(mot_in, suc_in, out)
+  PARAM fluid$, eta_n, eta_m, domain$ = twophase
+  s_m     = Entropy(fluid$, P=mot_in.P, h=mot_in.h)
+  h_mi    = Enthalpy(fluid$, P=suc_in.P, s=s_m)
+  v_m     = sqrt(2 * eta_n * (mot_in.h - h_mi))
+  out.mdot = mot_in.mdot + suc_in.mdot
+  v_mix   = eta_m * mot_in.mdot * v_m / out.mdot
+  out.mdot * out.h = mot_in.mdot * mot_in.h + suc_in.mdot * suc_in.h
+  h_mix   = out.h - v_mix^2 / 2
+  rho_mix = Density(fluid$, P=suc_in.P, h=h_mix)
+  out.P   = suc_in.P + rho_mix * v_mix^2 / 2
+END

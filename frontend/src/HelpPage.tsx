@@ -2773,7 +2773,7 @@ const CATEGORIES: NavCategory[] = [
     icon: <IconTopologyStar3 size={16} />,
     overview: 'components-overview',
     items: [
-      { id: 'components-overview', label: 'Overview', blurb: 'Acausal, multi-domain system modeling with a ~250-component library.', keywords: ['components', 'system modeling', 'overview', 'acausal', 'network', 'bond graph'] },
+      { id: 'components-overview', label: 'Overview', blurb: 'Acausal, multi-domain system modeling with a ~295-component library.', keywords: ['components', 'system modeling', 'overview', 'acausal', 'network', 'bond graph'] },
       { id: 'comp-first-network', label: 'Your First Component Network', blurb: 'Instantiate, connect, probe — a pipe run solved as a network.', keywords: ['component', 'network', 'instantiate', 'first', 'source', 'pipe', 'sink', 'probe', 'port'] },
       { id: 'comp-connections', label: 'Connections & Junctions', blurb: 'connect statements vs shared streams; junction rules and boundary conditions.', keywords: ['connect', 'junction', 'node', 'stream', 'shared name', 'branch', 'split', 'mixer', 'boundary condition'] },
       { id: 'comp-domains', label: 'Domains & Fluid Families', blurb: 'Fluid, heat, electrical, mechanical — and the guarded fluid families.', keywords: ['domain', 'fluid', 'heat', 'electrical', 'mechanical', 'signal', 'sig', 'command', 'probe', 'moistair', 'gas', 'oil', 'liquid', 'twophase', 'domain$', 'across', 'through', 'transducer', 'humid air'] },

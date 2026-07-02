@@ -1,0 +1,23 @@
+// GasCooler on transcritical CO2 (10 MPa — no saturation clamp): the
+// effectiveness law and cooler energy closure replicate exactly. The
+// back-pressure valve at command 0.7 must satisfy its own commanded-area
+// square law (replica).
+// EXPECT q_gc_res = 0 tol 1e-6
+// EXPECT eps_gc_res = 0 tol 1e-9
+// EXPECT bpv_res = 0 tol 1e-9
+
+time = 0
+GasCooler        GC(g0, g1, gw, fluid$=R744, UA=900, dP=50000)
+SigConstant      UB(ub, k=0.7)
+TranscriticalBackPressureValve BPV(g1, g2, ub, fluid$=R744, CdA_max=4e-7)
+TwoPhasePressureSink GSNK(g2, P=5e6)
+ThermalSource    GW(gw, T=305)
+g0.P = 10e6
+g0.h = 520000
+t_in_gc  = Temperature(R744, P=g0.P, h=g0.h)
+cp_gc    = Cp(R744, P=g0.P, h=g0.h)
+eps_hand = 1 - exp(-900 / (g0.mdot * cp_gc))
+q_gc_res   = g0.mdot * (g0.h - g1.h) - eps_hand * g0.mdot * cp_gc * (t_in_gc - 305)
+eps_gc_res = GC.epsg - eps_hand
+rho_bpv  = Density(R744, P=g1.P, h=g1.h)
+bpv_res  = g1.mdot * abs(g1.mdot) - (0.7 * 4e-7)^2 * 2 * rho_bpv * (g1.P - g2.P)

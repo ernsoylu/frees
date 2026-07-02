@@ -119,7 +119,7 @@ END
 // Compressor whose isentropic efficiency comes from a tabulated map. `map_eta$`
 // names a TABLE/FUNCTION giving eta vs pressure ratio (out.P/in.P).
 COMPONENT CompressorMap(in, out)
-  PARAM fluid$, map_eta$
+  PARAM fluid$, map_eta$, map_mdot$, domain$ = fluid, model$ = eta
   s_in     = Entropy(fluid$, P=in.P, h=in.h)
   h_s      = Enthalpy(fluid$, P=out.P, s=s_in)
   PR       = out.P / in.P
@@ -127,6 +127,11 @@ COMPONENT CompressorMap(in, out)
   out.mdot = in.mdot
   out.h    = in.h + (h_s - in.h) / eta
   W        = in.mdot * (out.h - in.h)
+  VARIANT eta
+  END
+  VARIANT flow REQUIRE map_mdot$
+    in.mdot = map_mdot$(PR)
+  END
 END
 
 COMPONENT Splitter(in, out1, out2)
@@ -311,4 +316,26 @@ COMPONENT Propeller(shaft, veh)
   J         = veh.vel / (n * Dp + epsn)
   veh.f     = -(ct$(J) * rhoA * n^2 * Dp^4)
   shaft.tau = cpw$(J) * rhoA * n^2 * Dp^5 / (2 * pi#)
+END
+
+
+// ── Multi-species gas rider (E3) + Wave 10 ──────────────────────────────────
+
+// Combustor emitting product composition: complete combustion of a CxHy fuel
+// stream into the E3 species riders — CO2/H2O produced and O2 consumed by
+// stoichiometry per kg of fuel; N2 passes as the balance. Energy as in
+// Combustor (eta_b * LHV heat release).
+COMPONENT CombustorSpecies(in, out)
+  PARAM mdot_f, LHV, eta_b, dP, xC, yH, domain$ = gas
+  mfuel    = 12 * xC + yH
+  mCO2     = mdot_f * 44 * xC / mfuel
+  mH2O     = mdot_f * 9 * yH / mfuel
+  mO2      = mdot_f * 32 * (xC + yH / 4) / mfuel
+  out.mdot = in.mdot + mdot_f
+  out.P    = in.P - dP
+  out.mdot * out.h    = in.mdot * in.h + eta_b * mdot_f * LHV
+  out.mdot * out.yco2 = in.mdot * in.yco2 + mCO2
+  out.mdot * out.yh2o = in.mdot * in.yh2o + mH2O
+  out.mdot * out.yo2  = in.mdot * in.yo2  - mO2
+  out.mdot * out.yn2  = in.mdot * in.yn2
 END

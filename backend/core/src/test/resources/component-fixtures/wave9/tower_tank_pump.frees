@@ -1,0 +1,28 @@
+// CoolingTower: Merkel-lite duty replica from the same AirH2O calls (exact).
+// LiquidPump npsh rung: the derate must reproduce its own sigmoid from the
+// component's available head (replica, exact) and the head sits near 10.53 m
+// for water at 2 bar suction.
+// EXPECT q_tower_res = 0 tol 1e-6
+// EXPECT derate_res = 0 tol 1e-9
+// EXPECT npsh_a = 10.53 tol 0.05
+
+time = 0
+LiquidSource W1(fluid$=Water, mdot=4, P=250000, T=308.15)
+CoolingTower CT(fluid$=Water, eps_t=0.6, mdot_a=2, Patm=101325)
+LiquidSink   W9()
+SigConstant  WB(k=295.15)
+connect(W1.out, CT.in)
+connect(CT.out, W9.in)
+connect(WB.out, CT.wb)
+t_in_ct  = Temperature(Water, P=CT.in.P, h=CT.in.h)
+q_hand   = 0.6 * 2 * (Enthalpy(AirH2O, T=t_in_ct, P=101325, R=1) - Enthalpy(AirH2O, T=295.15, P=101325, R=1))
+q_tower_res = 4 * (CT.in.h - CT.out.h) - q_hand
+
+LiquidSource P1(fluid$=Water, mdot=2, P=200000, T=298.15)
+LiquidPump   PU(fluid$=Water, eta=0.7, Pvap=97000, NPSHr=10.503077, eps_n=0.5, model$=npsh)
+LiquidSink   P9()
+connect(P1.out, PU.in)
+connect(PU.out, P9.in)
+PU.out.P = 500000
+npsh_a = PU.NPSH_a
+derate_res = PU.derate - 0.5 * (1 + tanh((PU.NPSH_a - 10.503077) / 0.5))

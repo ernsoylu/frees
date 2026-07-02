@@ -7,7 +7,18 @@ package com.frees.backend.core.ode;
  * {@code stop} is true the integration terminates at the crossing (e.g. apogee
  * {@code v = 0}); otherwise the crossing is only recorded.
  */
-public record OdeEvent(String name, OdeScalarFn g, int direction, boolean stop) {
+public record OdeEvent(String name, OdeScalarFn g, int direction, boolean stop,
+                       int setIndex, OdeScalarFn setValue) {
+
+    /** stop/record event (no state reassignment). */
+    public OdeEvent(String name, OdeScalarFn g, int direction, boolean stop) {
+        this(name, g, direction, stop, -1, null);
+    }
+
+    /** Whether this event reassigns a state at the crossing (a `set` action). */
+    public boolean isSet() {
+        return setIndex >= 0;
+    }
 
     public static int directionFromKeyword(String keyword) {
         return switch (keyword == null ? "any" : keyword.toLowerCase()) {

@@ -1,0 +1,17 @@
+// CellToPackThermal: 40 W from a self-heating cell mass through Rcc = 0.05
+// into the plate mass held by convection (hA = 20) to 300 K ambient. At
+// equilibrium the plate sits at 300 + 40/20 = 302 K and the cell 2 K hotter.
+// EXPECT t_plate = 302 tol 0.1
+// EXPECT t_cell = 304 tol 0.1
+
+MassGen          CELLM(C=3000, Qgen=40, T0=300)
+CellToPackThermal C2P(Rcc=0.05, Cpl=5000, T0=300)
+Convection       CV(htc=20, area=1)
+ThermalSource    AMB(T=300)
+connect(CELLM.port, C2P.cell)
+connect(C2P.plate, CV.a)
+connect(CV.b, AMB.port)
+DYNAMIC warm(method = ode23s, time = 0 .. 4000, points = 400)
+END
+t_plate = FinalValue('c2p.Tp')
+t_cell  = FinalValue('cellm.port.T')

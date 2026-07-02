@@ -1,0 +1,19 @@
+// E2 — the same true-deadband thermostat on the SUNDIALS IDA (DAE) path:
+// set-actions must reinit the integrator at the crossing and the declared
+// rising/falling directions must be honoured from IDA's root signs.
+// EXPECT T_max = 21 tol 1e-3
+// EXPECT T_min = 19 tol 1e-3
+// EXPECT q_end = 0 tol 1e-9
+
+DYNAMIC therm (method = ida, time = 0 .. 20, points = 801)
+  der(T) = 2 * q - 1
+  der(q) = 0
+  T(0) = 20.5
+  q(0) = 0
+  EVENT on:  T = 19 | falling -> set q = 1
+  EVENT off: T = 21 | rising  -> set q = 0
+END
+
+T_max = MaxValue('T')
+T_min = MinValue('T')
+q_end = FinalValue('q')

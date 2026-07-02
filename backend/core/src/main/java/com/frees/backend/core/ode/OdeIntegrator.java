@@ -23,92 +23,32 @@ public final class OdeIntegrator {
     private static final int BISECTION_ITERS = 60;
 
     public double[][] integrateAndSampleAt(OdeProblem p, double[] targetTimes) {
-        OdeMethod method = resolveMethod(p.method());
-        int n = p.dimension();
-        if (p.tf() <= p.t0()) {
-            throw new SolverException("DYNAMIC: the time span must satisfy t0 < tf (got "
-                    + p.t0() + " .. " + p.tf() + ").");
-        }
-        double span = p.tf() - p.t0();
-        double minStep = span * 1e-12;
-
-        List<Double> knotT = new ArrayList<>();
-        List<double[]> knotY = new ArrayList<>();
-        List<double[]> knotF = new ArrayList<>();
-
-        double t = p.t0();
-        double[] y = p.y0().clone();
-        double[] f = p.rhs().eval(t, y);
-        checkFinite(f, t, "initial derivative");
-        knotT.add(t);
-        knotY.add(y.clone());
-        knotF.add(f.clone());
-
-        boolean fixed = !method.adaptive();
-        double hFixed = p.fixedStep() != null ? p.fixedStep() : span / (p.sampleCount() - 1);
-        double h = computeInitialStep(p, method, y, f, span, fixed, hFixed);
-
-        List<OdeResult.EventRecord> recorded = new ArrayList<>();
-        double[] gPrev = evalEvents(p, t, y);
-        int accepted = 0;
-        int rejected = 0;
-        int steps = 0;
-        double endTime = p.tf();
-
-        while (t < p.tf() - minStep) {
-            StepOutcome out = stepWithRetries(method, p, t, y, f, h, minStep, steps);
-            steps += out.extraSteps();
-            rejected += out.rejections();
-            OdeMethod.StepResult sr = out.sr();
-            double tNew = t + out.hUse();
-            double[] yNew = sr.yNew();
-            double[] fNew = sr.fNew();
-            checkFinite(yNew, tNew, "state");
-            checkFinite(fNew, tNew, "derivative");
-
-            double[] gNew = evalEvents(p, tNew, yNew);
-            EventHit hit = earliestEvent(p, t, y, f, tNew, yNew, fNew, gPrev, gNew);
-            if (recordEvents(p, hit, recorded, knotT, knotY, knotF)) {
-                endTime = hit.time;
-                break;
-            }
-
-            accepted++;
-            t = tNew;
-            y = yNew;
-            f = fNew;
-            gPrev = gNew;
-            knotT.add(t);
-            knotY.add(y.clone());
-            knotF.add(f.clone());
-
-            h = fixed ? hFixed : sr.hNext();
-            if (p.maxStep() != null) {
-                h = Math.min(h, p.maxStep());
-            }
-        }
-
-        int count = targetTimes.length;
-        double[][] outStates = new double[count][n];
-        int knot = 0;
-        int knots = knotT.size();
-        for (int i = 0; i < count; i++) {
-            double tau = targetTimes[i];
-            while (knot < knots - 2 && knotT.get(knot + 1) < tau) {
-                knot++;
-            }
-            int lo = Math.min(knot, knots - 2);
-            int hi = lo + 1;
-            double[] yi = hermite(knotT.get(lo), knotY.get(lo), knotF.get(lo),
-                    knotT.get(hi), knotY.get(hi), knotF.get(hi), tau);
-            System.arraycopy(yi, 0, outStates[i], 0, n);
-        }
-        return outStates;
+        Trajectory tr = run(p);
+        return interpolateAt(tr.knotT, tr.knotY, tr.knotF, targetTimes);
     }
 
     public OdeResult integrate(OdeProblem p) {
+        Trajectory tr = run(p);
+        int count = p.sampleCount();
+        double[] times = new double[count];
+        for (int i = 0; i < count; i++) {
+            times[i] = count == 1 ? tr.endTime
+                    : p.t0() + (tr.endTime - p.t0()) * i / (count - 1);
+        }
+        double[][] states = interpolateAt(tr.knotT, tr.knotY, tr.knotF, times);
+        return new OdeResult(times, states, tr.recorded, tr.stopped, tr.endTime,
+                tr.accepted, tr.rejected);
+    }
+
+    /** The accepted-step knots plus event bookkeeping of one integration. */
+    private record Trajectory(List<Double> knotT, List<double[]> knotY, List<double[]> knotF,
+                              List<OdeResult.EventRecord> recorded, boolean stopped,
+                              double endTime, int accepted, int rejected) {}
+
+    /** The shared time loop: advances knot by knot, handling stop events (terminate)
+     *  and set events (discrete state reassignment at the crossing, then resume). */
+    private Trajectory run(OdeProblem p) {
         OdeMethod method = resolveMethod(p.method());
-        int n = p.dimension();
         if (p.tf() <= p.t0()) {
             throw new SolverException("DYNAMIC: the time span must satisfy t0 < tf (got "
                     + p.t0() + " .. " + p.tf() + ").");
@@ -158,31 +98,34 @@ public final class OdeIntegrator {
                 stopped = true;
                 break;
             }
-
-            accepted++;
-            t = tNew;
-            y = yNew;
-            f = fNew;
-            gPrev = gNew;
+            if (hit != null && hit.event.isSet()) {
+                // Discrete reassignment: jump to the crossing, overwrite the target
+                // state, and restart integration from the modified state. The knot
+                // at the crossing carries the POST-set state so the trajectory shows
+                // the switch; re-evaluating gPrev there re-arms every event against
+                // the new state (direction guards stop immediate retriggering).
+                t = hit.time;
+                y = hit.y.clone();
+                y[hit.event.setIndex()] = hit.event.setValue().eval(t, y);
+                f = p.rhs().eval(t, y);
+                checkFinite(f, t, "post-event derivative");
+                gPrev = evalEvents(p, t, y);
+            } else {
+                accepted++;
+                t = tNew;
+                y = yNew;
+                f = fNew;
+                gPrev = gNew;
+                h = fixed ? hFixed : sr.hNext();
+                if (p.maxStep() != null) {
+                    h = Math.min(h, p.maxStep());
+                }
+            }
             knotT.add(t);
             knotY.add(y.clone());
             knotF.add(f.clone());
-
-            h = fixed ? hFixed : sr.hNext();
-            if (p.maxStep() != null) {
-                h = Math.min(h, p.maxStep());
-            }
         }
-
-        double[][] sampled = sample(knotT, knotY, knotF, p.t0(), endTime, p.sampleCount(), n);
-        double[] times = new double[sampled.length];
-        double[][] states = new double[sampled.length][];
-        for (int i = 0; i < sampled.length; i++) {
-            times[i] = sampled[i][0];
-            states[i] = new double[n];
-            System.arraycopy(sampled[i], 1, states[i], 0, n);
-        }
-        return new OdeResult(times, states, recorded, stopped, endTime, accepted, rejected);
+        return new Trajectory(knotT, knotY, knotF, recorded, stopped, endTime, accepted, rejected);
     }
 
     // ── Step driving ─────────────────────────────────────────────────────────
@@ -336,7 +279,7 @@ public final class OdeIntegrator {
 
     // ── Events ──────────────────────────────────────────────────────────────
 
-    record EventHit(String name, double time, double[] y, boolean stop) {
+    record EventHit(String name, double time, double[] y, boolean stop, OdeEvent event) {
         @Override
         public boolean equals(Object o) {
             if (this == o) {
@@ -386,7 +329,7 @@ public final class OdeIntegrator {
             double tc = refineCrossing(ev, t, y, f, tNew, yNew, fNew);
             double[] yc = hermite(t, y, f, tNew, yNew, fNew, tc);
             if (best == null || tc < best.time) {
-                best = new EventHit(ev.name(), tc, yc, ev.stop());
+                best = new EventHit(ev.name(), tc, yc, ev.stop(), ev);
             }
         }
         return best;
@@ -438,25 +381,22 @@ public final class OdeIntegrator {
         return out;
     }
 
-    /** Samples the trajectory at {@code count} evenly spaced times in
-     *  {@code [t0, endTime]}; each output row is {@code [t, y0, y1, …]}. */
-    private static double[][] sample(List<Double> knotT, List<double[]> knotY, List<double[]> knotF,
-                                     double t0, double endTime, int count, int n) {
-        double[][] out = new double[count][n + 1];
+    /** Samples the trajectory at the given (ascending) times via cubic Hermite
+     *  interpolation between accepted-step knots; one state row per time. */
+    private static double[][] interpolateAt(List<Double> knotT, List<double[]> knotY,
+                                            List<double[]> knotF, double[] taus) {
+        double[][] out = new double[taus.length][];
         int knot = 0;
         int knots = knotT.size();
-        for (int i = 0; i < count; i++) {
-            double tau = count == 1 ? endTime
-                    : t0 + (endTime - t0) * i / (double) (count - 1);
+        for (int i = 0; i < taus.length; i++) {
+            double tau = taus[i];
             while (knot < knots - 2 && knotT.get(knot + 1) < tau) {
                 knot++;
             }
             int lo = Math.min(knot, knots - 2);
             int hi = lo + 1;
-            double[] yi = hermite(knotT.get(lo), knotY.get(lo), knotF.get(lo),
+            out[i] = hermite(knotT.get(lo), knotY.get(lo), knotF.get(lo),
                     knotT.get(hi), knotY.get(hi), knotF.get(hi), tau);
-            out[i][0] = tau;
-            System.arraycopy(yi, 0, out[i], 1, n);
         }
         return out;
     }

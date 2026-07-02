@@ -264,8 +264,7 @@ public final class DynamicSolver {
         int ns = states.size();
         int n = ns + auxNames.size();
         if (algebraicTemplate.size() != n) {
-            throw new SolverException("DYNAMIC " + system.name() + ": DAE assembly is non-square ("
-                    + algebraicTemplate.size() + " equations for " + n + " unknowns).");
+            throw new SolverException(nonSquareDiagnostic(n));
         }
 
         List<String> variables = new ArrayList<>(states);
@@ -316,9 +315,22 @@ public final class DynamicSolver {
         DaeRootFn rootFn = buildRootFn();
         List<String> eventNames = new ArrayList<>();
         List<Boolean> stops = new ArrayList<>();
+        int ne = system.events().size();
+        idaEventDirs = new int[ne];
+        idaEventSetIdx = new int[ne];
+        idaEventSetExpr = new Expr[ne];
+        int e = 0;
         for (DynamicSystem.Event ev : system.events()) {
             eventNames.add(ev.name());
             stops.add("stop".equals(ev.action()));
+            idaEventDirs[e] = OdeEvent.directionFromKeyword(ev.direction());
+            if ("set".equals(ev.action())) {
+                idaEventSetIdx[e] = eventSetStateIndex(ev);
+                idaEventSetExpr[e] = substituteDer(ev.setExpr());
+            } else {
+                idaEventSetIdx[e] = -1;
+            }
+            e++;
         }
         boolean[] eventStops = new boolean[stops.size()];
         for (int i = 0; i < stops.size(); i++) {
@@ -328,6 +340,52 @@ public final class DynamicSolver {
         return new DaeAssembly(n, variables, new ArrayList<>(states), new ArrayList<>(auxNames),
                 id, residual, y0full, yp0full, sparsity,
                 eventNames.isEmpty() ? null : rootFn, eventNames, eventStops);
+    }
+
+    /**
+     * A non-square DAE assembly explained in the model's own vocabulary: which
+     * variables the network carries, how many equations it produced, and the
+     * usual physical cause (an element chain with no flow-determining law —
+     * e.g. an efficiency-only machine feeding a volume — or a boundary that
+     * pins too much/too little). Display names, never flat internals.
+     */
+    private String nonSquareDiagnostic(int n) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("DYNAMIC ").append(system.name()).append(": the network's equation set is ")
+          .append(algebraicTemplate.size() < n ? "underdetermined" : "overdetermined")
+          .append(" (").append(algebraicTemplate.size()).append(" equations for ")
+          .append(n).append(" unknowns: ").append(states.size()).append(" state")
+          .append(states.size() == 1 ? "" : "s").append(" + ")
+          .append(auxNames.size()).append(" algebraic).");
+        if (algebraicTemplate.size() < n) {
+            sb.append(" A common cause: a branch has no flow-determining element — an "
+                    + "efficiency-only machine or rigid pass-through feeding a storage "
+                    + "volume leaves the through-flow free; add an orifice/valve/flow "
+                    + "map, or pin a boundary flow.");
+        } else {
+            sb.append(" A common cause: a boundary pins a quantity a component already "
+                    + "defines (e.g. re-equating a mixer pressure or T-pinning a wall "
+                    + "state).");
+        }
+        sb.append(" States: ").append(display(states)).append('.');
+        // Name the exact hole: run the bipartite diagnosis over the template
+        // with the states and time pinned (they are knowns per step).
+        List<Equation> probe = new ArrayList<>(algebraicTemplate);
+        for (String st : states) {
+            probe.add(new Equation(new Expr.Var(st), new Expr.Num(0), st + " [state]"));
+        }
+        probe.add(new Equation(new Expr.Var(timeVar), new Expr.Num(0), timeVar + " [time]"));
+        probe.add(new Equation(new Expr.Var("time"), new Expr.Num(0), "time [time]"));
+        sb.append(' ').append(com.frees.backend.core.Blocker.diagnose(probe));
+        return sb.toString();
+    }
+
+    private String display(List<String> names) {
+        List<String> out = new ArrayList<>(names.size());
+        for (String v : names) {
+            out.add(v.replace('$', '.'));   // flat solver names -> dotted display
+        }
+        return String.join(", ", out);
     }
 
     /** Builds the name→value map for the DAE residual/roots: params, time, states
@@ -379,6 +437,12 @@ public final class DynamicSolver {
             }
         }
     }
+
+    // Per-event direction / set-action info for the IDA path, aligned with the
+    // assembly's event order (populated by assembleDae).
+    private int[] idaEventDirs;
+    private int[] idaEventSetIdx;
+    private Expr[] idaEventSetExpr;
 
     private DaeRootFn buildRootFn() {
         if (system.events().isEmpty()) {
@@ -465,23 +529,73 @@ public final class DynamicSolver {
                                         List<OdeTableResult.EventHit> hits) {
         while (true) {
             IdaDaeSolver.Step step = s.step(tout);
-            if (step.rootReturn()) {
-                int[] found = step.rootsFound();
-                for (int r = 0; r < found.length; r++) {
-                    if (found[r] != 0) {
-                        hits.add(new OdeTableResult.EventHit(dae.eventNames().get(r), step.t()));
-                        if (dae.eventStops()[r]) {
-                            return null;
-                        }
-                    }
-                }
-                if (step.t() >= tout) {
-                    return step;
-                }
-                continue;
+            if (!step.rootReturn()) {
+                return step;
             }
-            return step;
+            RootOutcome out = handleRoots(s, step, tout, dae, hits);
+            if (out.terminal()) {
+                return out.step();
+            }
         }
+    }
+
+    /** What a batch of root crossings means for the integration: stop it
+     *  ({@code terminal} with a {@code null} step), report a step at {@code tout}
+     *  ({@code terminal} with the step), or resume integrating (not terminal). */
+    private record RootOutcome(boolean terminal, IdaDaeSolver.Step step) {}
+
+    private RootOutcome handleRoots(IdaDaeSolver s, IdaDaeSolver.Step step, double tout,
+                                    DaeAssembly dae, List<OdeTableResult.EventHit> hits) {
+        int[] found = step.rootsFound();
+        int setEvent = -1;
+        for (int r = 0; r < found.length; r++) {
+            // SUNDIALS reports the crossing direction as the sign of
+            // found[r]; honour the event's declared rising/falling filter
+            // (matching the built-in integrators' behaviour).
+            boolean matches = found[r] != 0
+                    && (idaEventDirs[r] == 0 || idaEventDirs[r] * found[r] > 0);
+            if (matches) {
+                hits.add(new OdeTableResult.EventHit(dae.eventNames().get(r), step.t()));
+                if (dae.eventStops()[r]) {
+                    return new RootOutcome(true, null);
+                }
+                if (idaEventSetIdx[r] >= 0 && setEvent < 0) {
+                    setEvent = r;
+                }
+            }
+        }
+        if (setEvent >= 0) {
+            return applySetEvent(s, step, tout, setEvent);
+        }
+        return new RootOutcome(step.t() >= tout, step.t() >= tout ? step : null);
+    }
+
+    /** Discrete reassignment: overwrite the state at the crossing, re-initialize
+     *  IDA there, and let IDACalcIC re-derive the algebraic variables consistent
+     *  with the modified state. */
+    private RootOutcome applySetEvent(IdaDaeSolver s, IdaDaeSolver.Step step, double tout,
+                                      int setEvent) {
+        double[] y = step.y().clone();
+        double[] yp = step.yp().clone();
+        Map<String, Double> v = daeValues(step.t(), y, yp);
+        y[idaEventSetIdx[setEvent]] = Evaluator.eval(idaEventSetExpr[setEvent], v, defs);
+        s.reinit(step.t(), y, yp);
+        // IDACalcIC's tout1 is a direction hint and must lie strictly
+        // beyond the reinit time (the root can land exactly on tout).
+        double hint = step.t() + Math.max(1e-9, 1e-6 * Math.abs(step.t()));
+        try {
+            s.calcConsistentIc(SundialsIda.IDA_YA_YDP_INIT, Math.max(tout, hint));
+        } catch (IllegalStateException icFailed) {
+            // Integrate from the reassigned state; the first BDF step
+            // absorbs any small residual (same fallback as at t0).
+        }
+        if (step.t() >= tout) {
+            // The crossing coincided with the requested sample: report
+            // the post-set state rather than asking IDA for tout == t.
+            return new RootOutcome(true,
+                    new IdaDaeSolver.Step(step.t(), y, yp, 0, step.rootsFound()));
+        }
+        return new RootOutcome(false, null);
     }
 
     private List<Double> rowOf(double t, double[] y) {
@@ -830,7 +944,24 @@ public final class DynamicSolver {
         for (int k = 0; k < states.size(); k++) {
             pinned.put(states.get(k), y[k]);
         }
-        Map<String, Double> values = algebraic.solve(algebraicTemplate, pinned, warmStart);
+        Map<String, Double> values;
+        try {
+            values = algebraic.solve(algebraicTemplate, pinned, warmStart);
+        } catch (SolverException e) {
+            String msg = e.getMessage() == null ? "" : e.getMessage();
+            if (msg.contains("underspecified") || msg.contains("structurally singular")) {
+                // Same vocabulary as the DAE diagnostic: name the block and the
+                // usual physical cause instead of leaking a bare count.
+                throw new SolverException("DYNAMIC " + system.name()
+                        + " (per-step algebraic solve at " + timeVar + " = " + t + "): " + msg
+                        + " A common cause: a branch with no flow-determining element "
+                        + "(an efficiency-only machine or rigid pass-through leaves its "
+                        + "through-flow or a port pressure free) — add an orifice/valve/"
+                        + "flow map, pin a boundary, or use method = ida for genuinely "
+                        + "derivative-coupled networks.");
+            }
+            throw e;
+        }
         warmStart = values;
         return values;
     }
@@ -846,10 +977,29 @@ public final class DynamicSolver {
                 Map<String, Double> values = solveAlgebraicAt(t, y);
                 return Evaluator.eval(lhs, values, defs) - Evaluator.eval(rhs, values, defs);
             };
+            int setIdx = -1;
+            OdeScalarFn setValue = null;
+            if ("set".equals(ev.action())) {
+                setIdx = eventSetStateIndex(ev);
+                Expr sv = substituteDer(ev.setExpr());
+                setValue = (t, y) -> Evaluator.eval(sv, solveAlgebraicAt(t, y), defs);
+            }
             out.add(new OdeEvent(ev.name(), g, OdeEvent.directionFromKeyword(ev.direction()),
-                    "stop".equals(ev.action())));
+                    "stop".equals(ev.action()), setIdx, setValue));
         }
         return out;
+    }
+
+    /** Resolves a set-action's target to its state index; only differential
+     *  states can be reassigned at an event (auxiliaries re-derive from them). */
+    private int eventSetStateIndex(DynamicSystem.Event ev) {
+        int idx = states.indexOf(ev.setVar());
+        if (idx < 0) {
+            throw new SolverException("EVENT " + ev.name() + ": set target '" + ev.setVar()
+                    + "' is not a state of this DYNAMIC block — only der(...) states "
+                    + "can be reassigned at an event.");
+        }
+        return idx;
     }
 
     // ── ODE Table assembly ──────────────────────────────────────────────────

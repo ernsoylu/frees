@@ -1,0 +1,19 @@
+// WheelBrakeThermal without fade (k_fade = 0): full command on a 50 rad/s
+// slip gives tau = 100 N·m -> 5000 W of friction heat; rotor equilibrium is
+// T_amb + P/hA = 300 + 200 = 500 K (time constant C/hA = 400 s; 3000 s run).
+// EXPECT tau_b = 100 tol 1e-3
+// EXPECT tr_fin = 500 tol 0.5
+
+SigConstant       CMD(k=1)
+SpeedSource       BS(w=50)
+MechGround        BG1()
+WheelBrakeThermal BRK(Tmax=100, eps=0.01, C=10000, hA=25, T_amb=300, T_fade=1e6, k_fade=0, eps_f=50, T0=300)
+MechGround        BG2()
+connect(BS.a, BRK.a)
+connect(BS.b, BG1.port)
+connect(BRK.b, BG2.port)
+connect(CMD.out, BRK.u)
+DYNAMIC heatup(method = ode23s, time = 0 .. 3000, points = 400)
+END
+tau_b  = FinalValue('brk.tau_b')
+tr_fin = FinalValue('brk.Tr')

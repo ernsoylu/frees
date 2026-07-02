@@ -1,0 +1,19 @@
+// AHU chain, steady: 50/50 mixing of return and outdoor air, filter loss,
+// cooling coil to 285.15 K saturated, 3 kW reheat, 500 Pa fan. Asserted as
+// port-level replicas: total flow, and the supply humidity ratio equals the
+// coil's saturated value at its (filter-dropped) pressure — reheat and fan
+// pass W through.
+// EXPECT mdot_sup = 1 tol 1e-9
+// EXPECT w_sup_res = 0 tol 1e-9
+
+time = 0
+MoistAirSource RET(P=101325, T=299.15, W=0.010, mdot=0.5)
+MoistAirSource OA(P=101325, T=306.15, W=0.014, mdot=0.5)
+AHU            AH(Kf=4000, foul=1, Tc=285.15, Qh=3000, dPfan=500, eta_fan=0.65)
+MoistAirSink   SUP9()
+connect(RET.out, AH.ret_in)
+connect(OA.out, AH.oa_in)
+connect(AH.sup_out, SUP9.in)
+mdot_sup  = AH.sup_out.mdot
+p_cc      = 101325 - 4000 * 1
+w_sup_res = AH.sup_out.W - HumRat(AirH2O, T=285.15, P=p_cc, R=1)

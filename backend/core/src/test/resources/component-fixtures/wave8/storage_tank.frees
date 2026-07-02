@@ -1,0 +1,12 @@
+// ThermalStorageTank: charging a 300 K tank with 350 K water for 2000 s
+// (loss-free) drives every node to the charge temperature.
+// EXPECT t3_fin = 350 tol 1
+
+LiquidSource CH(fluid$=Water, mdot=0.5, P=200000, T=350)
+ThermalStorageTank TK(fluid$=Water, m_node=50, cp_f=4180, UA_loss=0, T_amb=293.15, kmix=5, T10=300, T20=300, T30=300)
+LiquidSink   CS2()
+connect(CH.out, TK.in)
+connect(TK.out, CS2.in)
+DYNAMIC charge(method = ode23s, time = 0 .. 2000, points = 300)
+END
+t3_fin = FinalValue('tk.T3')

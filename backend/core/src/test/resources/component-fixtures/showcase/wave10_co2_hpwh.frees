@@ -1,0 +1,31 @@
+// Wave 10 showcase — transcritical CO2 heat-pump water heater, open cycle:
+// compressor map lifts the pinned 10 MPa high side; the back-pressure valve
+// is the single flow-determining element of the chain; the gas cooler rejects
+// into 305 K water-side wall. Energy must close exactly across the chain
+// (compressor work + inlet enthalpy - cooler duty - outlet enthalpy = 0) and
+// the cooler duty replicates the effectiveness law in enthalpy space (cp is
+// wildly non-constant near the CO2 critical point, so no T-space check).
+// EXPECT e_close = 0 tol 1e-6
+// EXPECT q_res = 0 tol 1e-3
+
+time = 0
+TABLE etam(pr)
+  1    0.7
+  4    0.7
+END
+CompressorMap    CMP(c0, c1, fluid$=R744, map_eta$=etam, domain$=twophase)
+GasCooler        GCX(c1, c2, cw, fluid$=R744, UA=1200, dP=80000)
+SigConstant      UBP(ub, k=0.65)
+TranscriticalBackPressureValve BPX(c2, c3, ub, fluid$=R744, CdA_max=3.5e-7)
+TwoPhasePressureSink SNKX(c3, P=5.05e6)
+ThermalSource    WTR(cw, T=305)
+c0.P = 5e6
+c0.h = 460000
+c1.P = 10e6
+w_cmp   = c0.mdot * (c1.h - c0.h)
+q_gc    = c0.mdot * (c1.h - c2.h)
+e_close = c0.mdot * c0.h + w_cmp - q_gc - c0.mdot * c2.h
+t1      = Temperature(R744, P=c1.P, h=c1.h)
+cpg     = Cp(R744, P=c1.P, h=c1.h)
+epsx    = 1 - exp(-1200 / (c0.mdot * cpg))
+q_res   = q_gc - epsx * c0.mdot * cpg * (t1 - 305)

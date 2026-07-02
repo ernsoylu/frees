@@ -1,0 +1,16 @@
+// Cathode-manifold filling dynamics, well-posed: supply -> inlet orifice
+// (the flow-determining law) -> manifold volume -> discharge orifice ->
+// atmosphere. At equilibrium the manifold passes the discharge flow exactly
+// (continuity replica). An efficiency-only CompressorMap in this chain leaves
+// its inlet pressure free — the structural diagnostics now explain that —
+// so the compressor belongs in pressure-pinned circuits (see its own fixtures).
+// EXPECT flow_res = 0 tol 1e-9
+
+PneumaticSupply     AIN(s0, fluid$=Air, P=240000, T=298.15)
+PneumaticOrifice    OIN(s0, s1, fluid$=Air, C=3e-7, b=0.3)
+PneumaticVolume     MV(s1, s2, V=0.01, T=320, R=287, P0=110000)
+PneumaticOrifice    ORF(s2, s3, fluid$=Air, C=2e-7, b=0.3)
+PneumaticAtmosphere ATM(s3, P=101325)
+DYNAMIC fill(method = ode23s, time = 0 .. 20, points = 200)
+END
+flow_res = FinalValue('s1.mdot') - FinalValue('s2.mdot')

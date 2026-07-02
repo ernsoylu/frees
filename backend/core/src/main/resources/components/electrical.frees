@@ -132,11 +132,10 @@ END
 // capacity fade (Qcap = Q0·(1 − k_age·Ah)). Discharge current is positive
 // (I = −p.I, matching the Battery sign convention).
 COMPONENT BatteryCellMap(p, n, heat)
-  PARAM ocv$, dudt$, R0ref, Tref, Ea, Q0, C_th, SOC0, T0, k_age, model$ = static
+  PARAM ocv$, dudt$, R0ref, Tref, Ea, Q0, C_th, SOC0, T0, k_age, R1, C1, k_cal, Ea_cal, model$ = static
   I         = -p.I
   R0        = R0ref * exp((Ea / 8.314) * (1 / T - 1 / Tref))
   Voc       = ocv$(SOC)
-  p.V - n.V = Voc - R0 * I
   p.I + n.I = 0
   der(SOC)  = -I / (3600 * Qcap)
   init(SOC) = SOC0
@@ -145,12 +144,28 @@ COMPONENT BatteryCellMap(p, n, heat)
   der(T)    = (Qgen + heat.Qdot) / C_th
   init(T)   = T0
   VARIANT static
-    Qcap = Q0
+    Qcap      = Q0
+    p.V - n.V = Voc - R0 * I
   END
   VARIANT aging REQUIRE k_age
-    der(Ah)  = abs(I) / 3600
-    init(Ah) = 0
-    Qcap     = Q0 * (1 - k_age * Ah)
+    der(Ah)   = abs(I) / 3600
+    init(Ah)  = 0
+    Qcap      = Q0 * (1 - k_age * Ah)
+    p.V - n.V = Voc - R0 * I
+  END
+  VARIANT rc_map REQUIRE R1, C1
+    der(v1)   = I / C1 - v1 / (R1 * C1)
+    init(v1)  = 0
+    Qcap      = Q0
+    p.V - n.V = Voc - R0 * I - v1
+  END
+  VARIANT aging_cal REQUIRE k_age, k_cal, Ea_cal
+    der(Ah)   = abs(I) / 3600
+    init(Ah)  = 0
+    der(fcal) = k_cal * exp(-Ea_cal / (8.314 * T))
+    init(fcal) = 0
+    Qcap      = Q0 * (1 - k_age * Ah - fcal)
+    p.V - n.V = Voc - R0 * I
   END
 END
 
@@ -278,4 +293,53 @@ COMPONENT SolarArray(p, n, G)
   V   = p.V - n.V
   p.I = -Iph * 0.5 * (1 + tanh((Voc - V) / epsV))
   p.I + n.I = 0
+END
+
+
+// ── Electrochemistry & energy systems (Wave 8) ──────────────────────────────
+
+// Single-diode PV module: I = Iph − I0·(exp(Vd/(n·Vt)) − 1) − Vd/Rsh with the
+// series-resistance diode voltage Vd = V + I·Rs — the physics rung above
+// SolarArray's clamp model. Current is signed out of p (sourcing).
+COMPONENT PVSingleDiode(p, n, G)
+  PARAM Isc_ref, Gref, I0d, n_d, Vt, Rs, Rsh
+  V   = p.V - n.V
+  I   = -p.I
+  Iph = Isc_ref * G.sig / Gref
+  Vd  = V + I * Rs
+  I   = Iph - I0d * (exp(Vd / (n_d * Vt)) - 1) - Vd / Rsh
+  p.I + n.I = 0
+END
+
+// PEM stack with a coolant jacket: the electrochemical stack's waste heat
+// crosses into a liquid loop through a UA wall (drop-in for FuelCellStack
+// when the thermal loop matters).
+COMPONENT FuelCellStackCooled(p, n, cool_in, cool_out)
+  PARAM ncells, area, i0, ilim, Rohm, E0, alpha, Eth, T, fluid$, UA
+  FuelCellStack FC(ncells=ncells, area=area, i0=i0, ilim=ilim, Rohm=Rohm, E0=E0, alpha=alpha, Eth=Eth, T=T)
+  LiquidWallHX  HX(fluid$=fluid$, UA=UA)
+  connect(p, FC.p)
+  connect(n, FC.n)
+  connect(FC.heat, HX.wall)
+  connect(cool_in, HX.in)
+  connect(HX.out, cool_out)
+END
+
+// Electrolyzer with a coolant jacket (same pattern as the cooled stack).
+COMPONENT ElectrolyzerThermal(p, n, cool_in, cool_out)
+  PARAM ncells, area, i0, Rohm, E0, alpha, Eth, T, fluid$, UA
+  Electrolyzer EL(ncells=ncells, area=area, i0=i0, Rohm=Rohm, E0=E0, alpha=alpha, Eth=Eth, T=T)
+  LiquidWallHX HX(fluid$=fluid$, UA=UA)
+  connect(p, EL.p)
+  connect(n, EL.n)
+  connect(EL.heat, HX.wall)
+  connect(cool_in, HX.in)
+  connect(HX.out, cool_out)
+END
+
+// Map-referenced maximum-power-point command: Vmp from an irradiance map
+// (perturb-free analytic tracking; pair with PVSingleDiode + a DC-DC stage).
+COMPONENT MPPTBlock(G, out)
+  PARAM vmp$
+  out.sig = vmp$(G.sig)
 END

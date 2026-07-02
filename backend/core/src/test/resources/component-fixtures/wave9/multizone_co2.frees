@@ -1,0 +1,23 @@
+// MultiZoneWall: at steady state the full 40 W of side-a generation flows
+// through the wall, so the face difference is exactly q/(U*A) = 2 K.
+// ZoneCO2 dilution equilibrium: c = c_amb + occ*gen/vent = 400 + 4*5/0.1
+// = 600 ppm exactly.
+// EXPECT dz_t = 2 tol 0.02
+// EXPECT c_fin = 600 tol 0.5
+
+MassGen       HZ(C=4000, Qgen=40, T0=295.15)
+MultiZoneWall MZ(h_a=8, h_b=8, U=4, A=5, C1=20000, C2=20000, T10=295.15, T20=295.15)
+ThermalSource AMBZ(T=293.15)
+connect(HZ.port, MZ.a)
+connect(MZ.b, AMBZ.port)
+
+SigConstant VENT(k=0.1)
+SigConstant OCC(k=4)
+ZoneCO2     CO2(Vz=75, c_amb=400, gen_occ=5, c0=400)
+connect(VENT.out, CO2.vent)
+connect(OCC.out, CO2.occ)
+
+DYNAMIC settle(method = ode23s, time = 0 .. 30000, points = 500)
+END
+dz_t  = FinalValue('mz.T1') - FinalValue('mz.T2')
+c_fin = FinalValue('co2.c')

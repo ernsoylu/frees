@@ -190,3 +190,69 @@ COMPONENT HydraulicResistance(in, out)
   V        = in.mdot / (rho * A)
   out.P    = in.P - K * rho * V * abs(V) / 2
 END
+
+
+// ── Hydraulic servo depth (Wave 10) ─────────────────────────────────────────
+
+// Servo valve with 2nd-order spool dynamics: the spool position tracks the
+// command through (wn, zeta) and gates the odd-symmetric square-law flow —
+// the dynamic rung above HydraulicValveCmd.
+COMPONENT ServoValveDynamic(in, out, u)
+  PARAM CdA_max, rho, wn, zeta, xs0, domain$ = oil
+  der(xs)  = vs
+  init(xs) = xs0
+  der(vs)  = wn^2 * (u.sig - xs) - 2 * zeta * wn * vs
+  init(vs) = 0
+  out.mdot = in.mdot
+  out.h    = in.h
+  in.mdot * abs(in.mdot) = (xs * CdA_max)^2 * 2 * rho * (in.P - out.P)
+END
+
+// Counterbalance (overcenter) valve: opens on the spring-referenced blend of
+// load pressure and pilot assist (ratio R_p), then meters with the square
+// law — controlled load lowering.
+COMPONENT CounterbalanceValve(in, out, pilot)
+  PARAM CdA_max, rho, P_set, R_p, eps_o, domain$ = oil
+  x_o      = 0.5 * (1 + tanh((in.P + R_p * pilot.P - P_set) / eps_o))
+  out.mdot = in.mdot
+  out.h    = in.h
+  pilot.mdot = 0
+  in.mdot * abs(in.mdot) = (x_o * CdA_max)^2 * 2 * rho * (in.P - out.P)
+END
+
+// Load-sensing pump: the displacement fraction integrates the compensator
+// error (LS pressure + margin vs outlet), soft-clamped to 0..1 by a logistic;
+// delivery is the effective displacement at the drive speed.
+COMPONENT LoadSensingPump(in, out, ls)
+  PARAM rho, Dv, w_p, dP_margin, tau, d0, domain$ = oil
+  der(dfrac)  = ((ls.P + dP_margin) - out.P) / (tau * dP_margin)
+  init(dfrac) = d0
+  deff     = 1 / (1 + exp(-8 * (dfrac - 0.5)))
+  out.mdot = deff * rho * Dv * w_p / (2 * pi#)
+  in.mdot  = out.mdot
+  out.h    = in.h
+  ls.mdot  = 0
+END
+
+// Oil volume with pressure AND temperature states plus a heat port — the
+// thermal-hydraulic node for warm-up and cooling-loop studies. The cav
+// variant collapses the effective bulk modulus as pressure approaches vapor
+// (aeration/cavitation clamp).
+COMPONENT HydraulicThermalVolume(in, out, wall)
+  PARAM V, rho, cp_o, beta, hA, P0, T0, Pvap, eps_c, model$ = stiff, domain$ = oil
+  der(Pm)  = beta_eff / (rho * V) * (in.mdot - out.mdot)
+  init(Pm) = P0
+  T_in     = in.h / cp_o
+  der(Tm)  = (in.mdot * cp_o * (T_in - Tm) + hA * (wall.T - Tm)) / (rho * V * cp_o)
+  init(Tm) = T0
+  in.P     = Pm
+  out.P    = Pm
+  out.h    = cp_o * Tm
+  wall.Qdot = hA * (wall.T - Tm)
+  VARIANT stiff
+    beta_eff = beta
+  END
+  VARIANT cav REQUIRE Pvap, eps_c
+    beta_eff = beta * 0.5 * (1 + tanh((Pm - Pvap) / eps_c))
+  END
+END
