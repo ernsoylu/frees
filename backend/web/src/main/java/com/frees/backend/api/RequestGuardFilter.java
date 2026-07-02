@@ -30,6 +30,7 @@ public class RequestGuardFilter extends OncePerRequestFilter {
     private static final int MAX_TRACKED_IPS = 50_000;
 
     private final long maxBodyBytes;
+    private final long maxUploadBytes;
     private final int maxRequests;
     private final long windowMillis;
     private final int maxReplRequests;
@@ -38,11 +39,13 @@ public class RequestGuardFilter extends OncePerRequestFilter {
 
     public RequestGuardFilter(
             @Value("${frees.security.max-body-bytes:1048576}") long maxBodyBytes,
+            @Value("${frees.security.max-upload-bytes:209715200}") long maxUploadBytes,
             @Value("${frees.security.rate-limit-requests:120}") int maxRequests,
             @Value("${frees.security.rate-limit-window-seconds:60}") long windowSeconds,
             @Value("${frees.security.rate-limit-repl-requests:15}") int maxReplRequests,
             @Value("${frees.security.rate-limit-repl-window-seconds:60}") long replWindowSeconds) {
         this.maxBodyBytes = maxBodyBytes;
+        this.maxUploadBytes = maxUploadBytes;
         this.maxRequests = maxRequests;
         this.windowMillis = windowSeconds * 1000L;
         this.maxReplRequests = maxReplRequests;
@@ -65,10 +68,17 @@ public class RequestGuardFilter extends OncePerRequestFilter {
             return;
         }
 
+        // Measurement uploads (Data Analyzer) get a dedicated, much larger cap
+        // — ONLY on /api/measurements*; every other route keeps the 1 MB cap.
+        // Content-Length alone is spoofable, so MeasurementStore additionally
+        // counts the streamed bytes and aborts over-cap uploads mid-stream.
+        long routeCap = request.getRequestURI().startsWith("/api/measurements")
+                ? maxUploadBytes
+                : maxBodyBytes;
         long length = request.getContentLengthLong();
-        if (length > maxBodyBytes) {
+        if (length > routeCap) {
             response.sendError(HttpServletResponse.SC_REQUEST_ENTITY_TOO_LARGE,
-                    "Request body exceeds the " + maxBodyBytes + "-byte limit.");
+                    "Request body exceeds the " + routeCap + "-byte limit.");
             return;
         }
 
