@@ -134,7 +134,7 @@ The full command set is on the *REPL Terminal & Workspace* page. One step left: 
 [Topic: gs-components]
 # 6. Wire Components
 
-For system problems — loops, circuits, networks — frees has a library of ~250 **components**: parameterized, connectable blocks of physics. You wire them; frees turns the network into equations and solves it like everything else:
+For system problems — loops, circuits, networks — frees has a library of ~295 **components**: parameterized, connectable blocks of physics. You wire them; frees turns the network into equations and solves it like everything else:
 
 ```run
 { What pressure does 50 m of pipe cost? }

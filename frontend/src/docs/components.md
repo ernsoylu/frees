@@ -1,7 +1,7 @@
 [Topic: comp-first-network]
 # Your First Component Network
 
-frees has a library of ~250 **components** — reusable, parameterized blocks of physics (pumps, pipes, heat exchangers, resistors, gears, cooling coils …) with typed **ports**. You instantiate them, wire the ports together, and frees expands the network into ordinary scalar equations solved by the same Newton/Tarjan pipeline as everything else. There is no separate "simulation mode": components and plain equations mix freely in one document.
+frees has a library of ~295 **components** — reusable, parameterized blocks of physics (pumps, pipes, heat exchangers, resistors, gears, cooling coils …) with typed **ports**. You instantiate them, wire the ports together, and frees expands the network into ordinary scalar equations solved by the same Newton/Tarjan pipeline as everything else. There is no separate "simulation mode": components and plain equations mix freely in one document.
 
 ## Water through a pipe
 
@@ -142,7 +142,7 @@ The `moistair` family conserves **two** masses. Its basis is `(P, mdot_da, h, W)
 [Topic: comp-library]
 # The Component Library
 
-The standard library ships ~250 components across thirteen domain libraries. This page is a map, not a catalog — every component's authoritative page (ports, parameters, variants, governing equations) lives in the **Reference**; find it by name in the A–Z index, or browse it from the Component Wizard.
+The standard library ships ~295 components across thirteen domain libraries. This page is a map, not a catalog — every component's authoritative page (ports, parameters, variants, governing equations) lives in the **Reference**; find it by name in the A–Z index, or browse it from the Component Wizard.
 
 | Library | What's in it |
 | --- | --- |
