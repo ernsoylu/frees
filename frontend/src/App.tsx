@@ -100,6 +100,8 @@ const SpreadsheetTab = lazy(() => import('./spreadsheet/SpreadsheetTab'))
 // The Data Analyzer (uPlot + papaparse) is code-split so the measurement
 // tooling is only fetched when an analyzer window opens.
 const DataAnalyzerTab = lazy(() => import('./analyzer/DataAnalyzerTab'))
+// Lazy: pulls the full 58 KB example catalog only when the picker opens.
+const ExamplesModal = lazy(() => import('./ExamplesModal'))
 
 // The Plot tab (and its Plotly figure builders) plus the optimization and
 // plot-config modals are also code-split: the Plotly figure machinery is large
@@ -121,10 +123,10 @@ import { plotDefToSpec } from './plots/fromCode'
 import Workspace from './Workspace'
 import ReplTerminal from './ReplTerminal'
 import MobileLayout from './MobileLayout'
-import ExamplesModal from './ExamplesModal'
 import { DOCS_TOPICS } from './docsTopics'
 import ShortcutsModal from './ShortcutsModal'
-import { DEFAULT_EXAMPLE_TEXT, Example } from './examples'
+import { DEFAULT_EXAMPLE_TEXT } from './defaultExample'
+import type { Example } from './examples'
 import EquationEditor, { EquationEditorHandle } from './EquationEditor'
 import { MessageModal, SaveCheckModal, TextPromptModal } from './dialogs'
 import { Rail, TopBar } from './WorkspaceChrome'
@@ -2505,11 +2507,15 @@ export default function App() {
       )}
       {showAbout && <AboutModal onClose={() => setShowAbout(false)} />}
 
-      <ExamplesModal
-        opened={showExamples}
-        onClose={() => setShowExamples(false)}
-        onSelect={loadExample}
-      />
+      {showExamples && (
+        <Suspense fallback={null}>
+          <ExamplesModal
+            opened={showExamples}
+            onClose={() => setShowExamples(false)}
+            onSelect={loadExample}
+          />
+        </Suspense>
+      )}
 
       <Suspense fallback={null}>
         {showComponentWizard && (
