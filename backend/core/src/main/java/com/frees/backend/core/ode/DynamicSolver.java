@@ -529,57 +529,68 @@ public final class DynamicSolver {
                                         List<OdeTableResult.EventHit> hits) {
         while (true) {
             IdaDaeSolver.Step step = s.step(tout);
-            if (step.rootReturn()) {
-                int[] found = step.rootsFound();
-                int setEvent = -1;
-                for (int r = 0; r < found.length; r++) {
-                    // SUNDIALS reports the crossing direction as the sign of
-                    // found[r]; honour the event's declared rising/falling filter
-                    // (matching the built-in integrators' behaviour).
-                    boolean matches = found[r] != 0
-                            && (idaEventDirs[r] == 0 || idaEventDirs[r] * found[r] > 0);
-                    if (matches) {
-                        hits.add(new OdeTableResult.EventHit(dae.eventNames().get(r), step.t()));
-                        if (dae.eventStops()[r]) {
-                            return null;
-                        }
-                        if (idaEventSetIdx[r] >= 0 && setEvent < 0) {
-                            setEvent = r;
-                        }
-                    }
-                }
-                if (setEvent >= 0) {
-                    // Discrete reassignment: overwrite the state at the crossing,
-                    // re-initialize IDA there, and let IDACalcIC re-derive the
-                    // algebraic variables consistent with the modified state.
-                    double[] y = step.y().clone();
-                    double[] yp = step.yp().clone();
-                    Map<String, Double> v = daeValues(step.t(), y, yp);
-                    y[idaEventSetIdx[setEvent]] = Evaluator.eval(idaEventSetExpr[setEvent], v, defs);
-                    s.reinit(step.t(), y, yp);
-                    // IDACalcIC's tout1 is a direction hint and must lie strictly
-                    // beyond the reinit time (the root can land exactly on tout).
-                    double hint = step.t() + Math.max(1e-9, 1e-6 * Math.abs(step.t()));
-                    try {
-                        s.calcConsistentIc(SundialsIda.IDA_YA_YDP_INIT, Math.max(tout, hint));
-                    } catch (IllegalStateException icFailed) {
-                        // Integrate from the reassigned state; the first BDF step
-                        // absorbs any small residual (same fallback as at t0).
-                    }
-                    if (step.t() >= tout) {
-                        // The crossing coincided with the requested sample: report
-                        // the post-set state rather than asking IDA for tout == t.
-                        return new IdaDaeSolver.Step(step.t(), y, yp, 0, step.rootsFound());
-                    }
-                    continue;
-                }
-                if (step.t() >= tout) {
-                    return step;
-                }
-                continue;
+            if (!step.rootReturn()) {
+                return step;
             }
-            return step;
+            RootOutcome out = handleRoots(s, step, tout, dae, hits);
+            if (out.terminal()) {
+                return out.step();
+            }
         }
+    }
+
+    /** What a batch of root crossings means for the integration: stop it
+     *  ({@code terminal} with a {@code null} step), report a step at {@code tout}
+     *  ({@code terminal} with the step), or resume integrating (not terminal). */
+    private record RootOutcome(boolean terminal, IdaDaeSolver.Step step) {}
+
+    private RootOutcome handleRoots(IdaDaeSolver s, IdaDaeSolver.Step step, double tout,
+                                    DaeAssembly dae, List<OdeTableResult.EventHit> hits) {
+        int[] found = step.rootsFound();
+        int setEvent = -1;
+        for (int r = 0; r < found.length; r++) {
+            // SUNDIALS reports the crossing direction as the sign of
+            // found[r]; honour the event's declared rising/falling filter
+            // (matching the built-in integrators' behaviour).
+            boolean matches = found[r] != 0
+                    && (idaEventDirs[r] == 0 || idaEventDirs[r] * found[r] > 0);
+            if (matches) {
+                hits.add(new OdeTableResult.EventHit(dae.eventNames().get(r), step.t()));
+                if (dae.eventStops()[r]) {
+                    return new RootOutcome(true, null);
+                }
+                if (idaEventSetIdx[r] >= 0 && setEvent < 0) {
+                    setEvent = r;
+                }
+            }
+        }
+        if (setEvent >= 0) {
+            // Discrete reassignment: overwrite the state at the crossing,
+            // re-initialize IDA there, and let IDACalcIC re-derive the
+            // algebraic variables consistent with the modified state.
+            double[] y = step.y().clone();
+            double[] yp = step.yp().clone();
+            Map<String, Double> v = daeValues(step.t(), y, yp);
+            y[idaEventSetIdx[setEvent]] = Evaluator.eval(idaEventSetExpr[setEvent], v, defs);
+            s.reinit(step.t(), y, yp);
+            // IDACalcIC's tout1 is a direction hint and must lie strictly
+            // beyond the reinit time (the root can land exactly on tout).
+            double hint = step.t() + Math.max(1e-9, 1e-6 * Math.abs(step.t()));
+            try {
+                s.calcConsistentIc(SundialsIda.IDA_YA_YDP_INIT, Math.max(tout, hint));
+            } catch (IllegalStateException icFailed) {
+                // Integrate from the reassigned state; the first BDF step
+                // absorbs any small residual (same fallback as at t0).
+            }
+            if (step.t() >= tout) {
+                // The crossing coincided with the requested sample: report
+                // the post-set state rather than asking IDA for tout == t.
+                return new RootOutcome(true,
+                        new IdaDaeSolver.Step(step.t(), y, yp, 0, step.rootsFound()));
+            }
+            return new RootOutcome(false, null);
+        }
+        return new RootOutcome(step.t() >= tout, step.t() >= tout ? step : null);
     }
 
     private List<Double> rowOf(double t, double[] y) {

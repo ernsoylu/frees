@@ -87,9 +87,10 @@ public class Blocker {
      * the acausal counterpart of the C/R causality discipline in
      * lumped-network tools: instead of forbidding topologies, frees points at
      * the element whose constitutive law is missing or duplicated.
+     *
+     * <p>Public entry for other structural checkers (e.g. the DAE assembler):
+     * the same named diagnosis over an arbitrary equation set.
      */
-    /** Public entry for other structural checkers (e.g. the DAE assembler):
-     *  the same named diagnosis over an arbitrary equation set. */
     public static String diagnose(List<Equation> equations) {
         Set<String> allVars = new TreeSet<>();
         for (Equation eq : equations) {
@@ -106,42 +107,52 @@ public class Blocker {
                         + "and cannot be solved.",
                 equations.size(), allVars.size(), under ? "underspecified" : "overspecified"));
         if (under) {
-            List<String> freeFlat = new ArrayList<>();
-            for (String v : allVars) {
-                if (!mr.matchedVars.contains(v)) {
-                    freeFlat.add(v);
-                }
-            }
-            List<String> free = freeFlat.stream().map(v -> v.replace('$', '.')).toList();
-            sb.append(" Free quantit").append(free.size() == 1 ? "y" : "ies")
-              .append(" (no defining relation): ").append(limit(free, 8)).append('.');
-            Set<String> group = alternatingReachable(equations, mr, free.size());
-            freeFlat.forEach(group::remove);
-            if (!group.isEmpty()) {
-                List<String> disp = group.stream().sorted().limit(12)
-                        .map(v -> v.replace('$', '.')).toList();
-                sb.append(" Coupled to: ").append(String.join(", ", disp))
-                  .append(group.size() > 12 ? ", …" : "").append('.');
-            }
-            sb.append(" A common cause: an element chain with no constitutive law for that "
-                    + "quantity — e.g. an efficiency-only machine or rigid pass-through "
-                    + "between boundaries leaves its through-flow or a port pressure free; "
-                    + "add an orifice/valve/flow-map element or pin a boundary value.");
+            appendFreeQuantities(sb, equations, allVars, mr);
         } else {
-            List<String> redundant = new ArrayList<>();
-            for (int i = 0; i < equations.size() && redundant.size() < 4; i++) {
-                if (!mr.matchedEqs.contains(i)) {
-                    redundant.add(equations.get(i).sourceText());
-                }
-            }
-            sb.append(" Redundant relation").append(redundant.size() == 1 ? "" : "s")
-              .append(" (no free variable left to determine): ")
-              .append(String.join("; ", redundant)).append('.')
-              .append(" A common cause: the same physics stated twice — a boundary pinning "
-                    + "a quantity a component already defines (a re-equated mixer pressure, "
-                    + "a T-pinned wall state), or two property calls restating one relation.");
+            appendRedundantRelations(sb, equations, mr);
         }
         return sb.toString();
+    }
+
+    private void appendFreeQuantities(StringBuilder sb, List<Equation> equations,
+                                      Set<String> allVars, MatchingResult mr) {
+        List<String> freeFlat = new ArrayList<>();
+        for (String v : allVars) {
+            if (!mr.matchedVars.contains(v)) {
+                freeFlat.add(v);
+            }
+        }
+        List<String> free = freeFlat.stream().map(v -> v.replace('$', '.')).toList();
+        sb.append(" Free quantit").append(free.size() == 1 ? "y" : "ies")
+          .append(" (no defining relation): ").append(limit(free, 8)).append('.');
+        Set<String> group = alternatingReachable(equations, mr, free.size());
+        freeFlat.forEach(group::remove);
+        if (!group.isEmpty()) {
+            List<String> disp = group.stream().sorted().limit(12)
+                    .map(v -> v.replace('$', '.')).toList();
+            sb.append(" Coupled to: ").append(String.join(", ", disp))
+              .append(group.size() > 12 ? ", …" : "").append('.');
+        }
+        sb.append(" A common cause: an element chain with no constitutive law for that "
+                + "quantity — e.g. an efficiency-only machine or rigid pass-through "
+                + "between boundaries leaves its through-flow or a port pressure free; "
+                + "add an orifice/valve/flow-map element or pin a boundary value.");
+    }
+
+    private void appendRedundantRelations(StringBuilder sb, List<Equation> equations,
+                                          MatchingResult mr) {
+        List<String> redundant = new ArrayList<>();
+        for (int i = 0; i < equations.size() && redundant.size() < 4; i++) {
+            if (!mr.matchedEqs.contains(i)) {
+                redundant.add(equations.get(i).sourceText());
+            }
+        }
+        sb.append(" Redundant relation").append(redundant.size() == 1 ? "" : "s")
+          .append(" (no free variable left to determine): ")
+          .append(String.join("; ", redundant)).append('.')
+          .append(" A common cause: the same physics stated twice — a boundary pinning "
+                + "a quantity a component already defines (a re-equated mixer pressure, "
+                + "a T-pinned wall state), or two property calls restating one relation.");
     }
 
     private static String limit(List<String> items, int n) {
@@ -156,12 +167,7 @@ public class Blocker {
         if (seeds == 0) {
             return Set.of();
         }
-        Map<String, List<Integer>> varToEqs = new HashMap<>();
-        for (int i = 0; i < equations.size(); i++) {
-            for (String v : equations.get(i).variables()) {
-                varToEqs.computeIfAbsent(v, k -> new ArrayList<>()).add(i);
-            }
-        }
+        Map<String, List<Integer>> varToEqs = variableUsageIndex(equations);
         Deque<String> frontier = new ArrayDeque<>();
         Set<String> seen = new LinkedHashSet<>();
         for (String v : varToEqs.keySet()) {
@@ -174,16 +180,23 @@ public class Blocker {
         while (!frontier.isEmpty()) {
             String v = frontier.poll();
             for (int eq : varToEqs.getOrDefault(v, List.of())) {
-                if (!seenEq.add(eq)) {
-                    continue;
-                }
-                String matched = mr.eqToVar.get(eq);
+                String matched = seenEq.add(eq) ? mr.eqToVar.get(eq) : null;
                 if (matched != null && seen.add(matched)) {
                     frontier.add(matched);
                 }
             }
         }
         return seen;
+    }
+
+    private static Map<String, List<Integer>> variableUsageIndex(List<Equation> equations) {
+        Map<String, List<Integer>> varToEqs = new HashMap<>();
+        for (int i = 0; i < equations.size(); i++) {
+            for (String v : equations.get(i).variables()) {
+                varToEqs.computeIfAbsent(v, k -> new ArrayList<>()).add(i);
+            }
+        }
+        return varToEqs;
     }
 
     /** A maximum matching plus its coverage sets, for diagnosis. */
@@ -222,9 +235,9 @@ public class Blocker {
             String eqNode = source.startsWith("eq:") ? source : target;
             String varNode = source.startsWith("eq:") ? target : source;
             int eq = Integer.parseInt(eqNode.substring(3));
-            String var = varNode.substring(4);
-            eqToVar.put(eq, var);
-            matchedVars.add(var);
+            String varName = varNode.substring(4);
+            eqToVar.put(eq, varName);
+            matchedVars.add(varName);
             matchedEqs.add(eq);
         }
         return new MatchingResult(eqToVar, matchedVars, matchedEqs);
@@ -232,31 +245,8 @@ public class Blocker {
 
     private Map<Integer, String> matchEquationsToVariables(List<Equation> equations,
                                                            Set<String> allVars) {
-        Graph<String, DefaultEdge> graph = new SimpleGraph<>(DefaultEdge.class);
-        Set<String> eqNodes = new LinkedHashSet<>();
-        Set<String> varNodes = new LinkedHashSet<>();
-
-        for (int i = 0; i < equations.size(); i++) {
-            String eqNode = "eq:" + i;
-            eqNodes.add(eqNode);
-            graph.addVertex(eqNode);
-        }
-        for (String varName : allVars) {
-            String varNode = "var:" + varName;
-            varNodes.add(varNode);
-            graph.addVertex(varNode);
-        }
-        for (int i = 0; i < equations.size(); i++) {
-            for (String varName : equations.get(i).variables()) {
-                graph.addEdge("eq:" + i, "var:" + varName);
-            }
-        }
-
-        MatchingAlgorithm.Matching<String, DefaultEdge> matching =
-                new HopcroftKarpMaximumCardinalityBipartiteMatching<>(graph, eqNodes, varNodes)
-                        .getMatching();
-
-        if (matching.getEdges().size() != equations.size()) {
+        MatchingResult mr = runMatching(equations, allVars);
+        if (mr.matchedEqs.size() != equations.size()) {
             // Square but singular: equal counts with no perfect matching means a
             // subset is overdetermined while another is underdetermined — name
             // both sides with the same causality diagnosis.
@@ -264,16 +254,7 @@ public class Blocker {
                     + "assignment of equations to variables exists. "
                     + causalityDiagnosis(equations, allVars));
         }
-
-        Map<Integer, String> assignment = new HashMap<>();
-        for (DefaultEdge edge : matching.getEdges()) {
-            String source = graph.getEdgeSource(edge);
-            String target = graph.getEdgeTarget(edge);
-            String eqNode = source.startsWith("eq:") ? source : target;
-            String varNode = source.startsWith("eq:") ? target : source;
-            assignment.put(Integer.parseInt(eqNode.substring(3)), varNode.substring(4));
-        }
-        return assignment;
+        return mr.eqToVar;
     }
 
     /**

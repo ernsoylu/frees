@@ -796,11 +796,13 @@ public final class Evaluator {
         return com.frees.backend.core.CurveInterpolator.evaluate(cd, x, param);
     }
 
+    private static final String DTABLE1 = "dtable1";
+
     /** classic-solver-compatible TABLE lookup/interpolation function names. */
     private static final java.util.Set<String> TABLE_FUNCTIONS = java.util.Set.of(
             "interpolate", "interpolate1", "interpolate2d",
             "lookup", "lookuprow", "nlookuprows", "differentiate", "differentiate1",
-            "dtable", "dtable1");
+            "dtable", DTABLE1);
 
     // classic-solver-compatible lookup/interpolation functions delegating to a named TABLE.
     // The table name is the first (string) argument; the remaining arguments are
@@ -837,8 +839,8 @@ public final class Evaluator {
             // segment slope (dtable) or the cubic-spline derivative (dtable1).
             // First y curve vs the x column — the 1-D map-call convention, so a
             // component's `dtable(map$, x)` is the feedforward slope of its map.
-            case "dtable", "dtable1" -> com.frees.backend.core.CurveInterpolator.differentiate(cd,
-                    2, 1, argAt(fn, args, 1, values, defs), fn.equals("dtable1"));
+            case "dtable", DTABLE1 -> com.frees.backend.core.CurveInterpolator.differentiate(cd,
+                    2, 1, argAt(fn, args, 1, values, defs), fn.equals(DTABLE1));
             default -> 0.0;
         };
     }
