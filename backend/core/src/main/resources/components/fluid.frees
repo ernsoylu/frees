@@ -15,18 +15,26 @@ COMPONENT Turbine(in, out)
   W        = in.mdot * (in.h - out.h)
 END
 
+// Compressor fidelity ladder: fixed isentropic efficiency → RPM/volumetric
+// sizing → 2-D efficiency map η(PR, rpm) on a curve-family TABLE.
 COMPONENT Compressor(in, out)
-  PARAM eta, fluid$, model$ = isentropic
+  PARAM eta, fluid$, eta_v, disp, rpm, map_eta$, model$ = isentropic
   s_in     = Entropy(fluid$, P=in.P, h=in.h)
   h_s      = Enthalpy(fluid$, P=out.P, s=s_in)
   out.mdot = in.mdot
-  out.h    = in.h + (h_s - in.h) / eta
   W        = in.mdot * (out.h - in.h)
-  VARIANT isentropic
+  VARIANT isentropic REQUIRE eta
+    out.h = in.h + (h_s - in.h) / eta
   END
-  VARIANT volumetric REQUIRE eta_v, disp, rpm
+  VARIANT volumetric REQUIRE eta, eta_v, disp, rpm
+    out.h   = in.h + (h_s - in.h) / eta
     rho_in  = Density(fluid$, P=in.P, h=in.h)
     in.mdot = eta_v * disp * (rpm / 60) * rho_in
+  END
+  VARIANT map REQUIRE map_eta$, rpm
+    PRr   = out.P / in.P
+    eta_m = map_eta$(PRr, rpm)
+    out.h = in.h + (h_s - in.h) / eta_m
   END
 END
 
@@ -185,11 +193,23 @@ COMPONENT Accumulator(in, out)
   init(in.P)  = P0
 END
 
+// Valve with an installed-characteristic ladder: fixed Cv (the original law) →
+// linear opening u·Cv → equal-percentage Cv·R^(u−1) (rangeability R), the two
+// standard trims.
 COMPONENT Valve(in, out)
-  PARAM Cv, rho
+  PARAM Cv, rho, u, R, model$ = fixed
   out.mdot = in.mdot
   out.h    = in.h
-  in.mdot * abs(in.mdot) = Cv^2 * rho * (in.P - out.P)
+  VARIANT fixed REQUIRE Cv
+    in.mdot * abs(in.mdot) = Cv^2 * rho * (in.P - out.P)
+  END
+  VARIANT linear REQUIRE Cv, u
+    in.mdot * abs(in.mdot) = (u * Cv)^2 * rho * (in.P - out.P)
+  END
+  VARIANT eqpct REQUIRE Cv, u, R
+    Cveff = Cv * R^(u - 1)
+    in.mdot * abs(in.mdot) = Cveff^2 * rho * (in.P - out.P)
+  END
 END
 
 COMPONENT TwoZoneHX(hot_in, hot_out, cold_in, cold_out)

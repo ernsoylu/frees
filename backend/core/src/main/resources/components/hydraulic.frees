@@ -9,11 +9,25 @@ COMPONENT HydraulicTank(port)
   port.P = P
 END
 
+// Hydraulic orifice fidelity ladder. `turbulent` is the original square-law on
+// CdA. `cq_lambda` is the reference simulator flow law: the flow coefficient rises with the
+// flow number λ = (D/ν)·√(2|ΔP|/ρ) as Cq = Cqmax·tanh(2λ/λc), so the orifice is
+// LINEAR in ΔP in the laminar regime and square-law when fully turbulent, with
+// a C∞ transition — no Reynolds branch switch. epsP [Pa] smooths the flow
+// direction through ΔP = 0.
 COMPONENT HydraulicOrifice(in, out)
-  PARAM CdA, rho, domain$ = oil
+  PARAM CdA, rho, A, D, nu, Cqmax, lamc, epsP, domain$ = oil, model$ = turbulent
   out.mdot = in.mdot
   out.h    = in.h
-  in.mdot * abs(in.mdot) = CdA^2 * 2 * rho * (in.P - out.P)
+  VARIANT turbulent REQUIRE CdA
+    in.mdot * abs(in.mdot) = CdA^2 * 2 * rho * (in.P - out.P)
+  END
+  VARIANT cq_lambda REQUIRE A, D, nu, Cqmax, lamc, epsP
+    dP      = in.P - out.P
+    lam     = (D / nu) * sqrt(2 * abs(dP) / rho)
+    Cq      = Cqmax * tanh(2 * lam / lamc)
+    in.mdot = Cq * A * sqrt(2 * rho * abs(dP)) * dP / sqrt(dP^2 + epsP^2)
+  END
 END
 
 COMPONENT HydraulicValve(in, out)

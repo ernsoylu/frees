@@ -8,12 +8,19 @@ COMPONENT RoadLoad(shaft)
   shaft.tau = Crr + Caero * shaft.w^2
 END
 
+// Mean-value engine with a WOT-torque fidelity ladder: the original parabolic
+// wide-open-throttle curve, or a tabulated WOT map (dyno data) via map_wot$.
 COMPONENT MeanValueEngine(shaft)
-  PARAM throttle, Tpeak, w_peak, FMEP_a, FMEP_b
-  T_wot     = Tpeak * (1 - ((shaft.w - w_peak) / w_peak)^2)
+  PARAM throttle, Tpeak, w_peak, FMEP_a, FMEP_b, map_wot$, model$ = parabolic
   T_ind     = throttle * T_wot
   T_fric    = FMEP_a + FMEP_b * shaft.w
   shaft.tau = -(T_ind - T_fric)
+  VARIANT parabolic REQUIRE Tpeak, w_peak
+    T_wot = Tpeak * (1 - ((shaft.w - w_peak) / w_peak)^2)
+  END
+  VARIANT wotmap REQUIRE map_wot$
+    T_wot = map_wot$(shaft.w)
+  END
 END
 
 COMPONENT Transmission(in, out)
