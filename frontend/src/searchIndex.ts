@@ -28,6 +28,9 @@ import {
   CONSTANT_DESCRIPTIONS,
 } from './helpReference';
 
+/** Facet for filtering results by what kind of page they are. */
+export type SearchKind = 'guide' | 'reference' | 'component' | 'example';
+
 export interface SearchHit {
   /** Topic id to navigate to. */
   id: string;
@@ -39,12 +42,38 @@ export interface SearchHit {
   snippet: string;
   /** Relevance score (higher = better). */
   score: number;
+  /** Facet kind (guide page, reference page, component, example library). */
+  kind: SearchKind;
 }
+
+// Search-term synonyms for engineers arriving from other tools: each term is
+// expanded to the frees vocabulary and the best-scoring variant counts.
+// Single words only (the query is split on whitespace before expansion).
+const SYNONYMS: Record<string, string[]> = {
+  // a matrix language / block-diagram tools
+  ode113: ['dynamic', 'ode45'],
+  fsolve: ['newton', 'solve', 'guess'],
+  fzero: ['newton', 'guess'],
+  interp1: ['interpolate'],
+  interp2: ['interpolate2d'],
+  block-diagram tools: ['components', 'dynamic'],
+  acausal-tools: ['components', 'acausal'],
+  an acausal language: ['components', 'acausal'],
+  // a reference solver
+  duplicate: ['for', 'arrays'],
+  procedure: ['function', 'call'],
+  // Domain vocabulary
+  humidity: ['airh2o', 'psychrometric'],
+  refrigerant: ['coolprop', 'fluid'],
+  transient: ['dynamic'],
+  simulation: ['dynamic', 'components'],
+};
 
 interface IndexEntry {
   id: string;
   label: string;
   section: string;
+  kind: SearchKind;
   /** Lowercased headings extracted from the markdown (## ...). */
   headings: string[];
   /** Lowercased keywords from the nav (added by the caller). */
@@ -91,6 +120,7 @@ function buildIndex(): IndexEntry[] {
       id,
       label: h1 ? h1[1].trim() : id,
       section: 'Documentation',
+      kind: 'guide',
       headings,
       keywords: [],
       text,
@@ -118,7 +148,7 @@ function buildIndex(): IndexEntry[] {
   ];
   for (const t of refTopics) {
     const text = t.rows.map(r => `${r.name} ${r.desc}`).join('\n').toLowerCase();
-    entries.push({ id: t.id, label: t.label, section: t.section, headings: [], keywords: [], text });
+    entries.push({ id: t.id, label: t.label, section: t.section, kind: 'reference', headings: [], keywords: [], text });
   }
 
   // 2b. Per-function reference pages (industry-standard-style) — index name, summary, tags,
@@ -129,6 +159,7 @@ function buildIndex(): IndexEntry[] {
       id: 'refpage:' + p.slug,
       label: p.name,
       section: 'Reference · ' + p.category,
+      kind: p.category.startsWith('Component') ? 'component' : 'reference',
       headings,
       keywords: [p.name.toLowerCase(), ...p.tags.map(t => t.toLowerCase())],
       text: `${p.summary} ${p.references.join(' ')} ${text}`.toLowerCase(),
@@ -141,6 +172,7 @@ function buildIndex(): IndexEntry[] {
     id: 'examples',
     label: 'Engineering Examples Library',
     section: 'Case Studies',
+    kind: 'example',
     headings: [],
     keywords: [],
     text: exText,
@@ -164,6 +196,16 @@ export function buildSearchIndex(
     e.keywords = (navKeywords[e.id] ?? []).map(k => k.toLowerCase());
   }
   return idx;
+}
+
+// Score a term (with its synonyms — best variant wins) against an entry.
+function scoreTermExpanded(term: string, entry: IndexEntry): number {
+  let best = scoreTerm(term, entry);
+  for (const syn of SYNONYMS[term] ?? []) {
+    const s = scoreTerm(syn, entry);
+    if (s > best) best = s;
+  }
+  return best;
 }
 
 // Score a single term against an entry across all fields.
@@ -221,7 +263,7 @@ function snippet(terms: string[], text: string): string {
  * by the sum of per-term scores. Short queries (1-2 chars) use prefix-only
  * matching against labels/keywords to stay snappy and relevant.
  */
-export function searchDocs(query: string, limit = 12): SearchHit[] {
+export function searchDocs(query: string, limit = 12, kind: SearchKind | null = null): SearchHit[] {
   const q = query.trim().toLowerCase();
   if (q.length < 2) return [];
   const idx = getIndex();
@@ -229,10 +271,11 @@ export function searchDocs(query: string, limit = 12): SearchHit[] {
 
   const hits: SearchHit[] = [];
   for (const entry of idx) {
+    if (kind && entry.kind !== kind) continue;
     let total = 0;
     let matchedAll = true;
     for (const term of terms) {
-      const s = scoreTerm(term, entry);
+      const s = scoreTermExpanded(term, entry);
       if (s === 0) { matchedAll = false; break; }
       total += s;
     }
@@ -243,6 +286,7 @@ export function searchDocs(query: string, limit = 12): SearchHit[] {
       section: entry.section,
       snippet: snippet(terms, entry.text) || snippet(terms, entry.label.toLowerCase()),
       score: total,
+      kind: entry.kind,
     });
   }
   hits.sort((a, b) => b.score - a.score);

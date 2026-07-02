@@ -126,6 +126,26 @@ class EquationParserTest {
     }
 
     @Test
+    void negativeTemperatureLiteralsConvertTheSignedValue() {
+        // The minus is part of the literal: -10 [C] is -10 °C = 263.15 K,
+        // not -(10 °C) = -283.15 K.
+        Equation celsius = parser.parse("T = -10 [C]").get(0);
+        assertEquals(263.15, Evaluator.eval(celsius.rhs(), Map.of()), 1e-9);
+        assertEquals("K", ((com.frees.backend.ast.Expr.Num) celsius.rhs()).unit());
+
+        Equation fahrenheit = parser.parse("T = -40 [F]").get(0);
+        assertEquals(233.15, Evaluator.eval(fahrenheit.rhs(), Map.of()), 1e-6);
+
+        // Pure-factor units are unchanged by where the sign binds.
+        Equation gauge = parser.parse("P = -50 [kPa]").get(0);
+        assertEquals(-50000.0, Evaluator.eval(gauge.rhs(), Map.of()), 1e-9);
+
+        // Inside a larger expression the fold still applies to the literal only.
+        Equation expr = parser.parse("x = 5 - 10 [C]").get(0);
+        assertEquals(5 - 283.15, Evaluator.eval(expr.rhs(), Map.of()), 1e-9);
+    }
+
+    @Test
     void convertTempRejectsUnknownScale() {
         assertThrows(EquationParser.ParseException.class,
                 () -> parser.parse("T = ConvertTemp(X, K, 25)"));

@@ -54,15 +54,93 @@ END
 // latent (dehumidification) duty. Pairs with a refrigerant evaporator through a
 // shared wall node to form the AirCoil bridge. Q>0 = heat from air into the wall.
 COMPONENT MoistAirWallHX(in, out, wall)
-  PARAM eps, domain$ = moistair
+  PARAM eps, NTU, domain$ = moistair, model$ = eps_t
   out.mdot  = in.mdot
   out.P     = in.P
-  T_in      = Temperature(AirH2O, h=in.h, P=in.P, W=in.W)
-  T_out     = T_in - eps * (T_in - wall.T)
-  W_sat     = HumRat(AirH2O, T=T_out, P=in.P, R=1)
-  out.W     = 0.5 * (in.W + W_sat - sqrt((in.W - W_sat)^2 + 1e-12))
-  out.h     = Enthalpy(AirH2O, T=T_out, P=in.P, W=out.W)
   Q         = in.mdot * (in.h - out.h)
   Q_lat     = in.mdot * 2.501e6 * (in.W - out.W)
   wall.Qdot = -Q
+  // Temperature-effectiveness rung (the original model): the air approaches
+  // the wall temperature; outlet W smooth-clamped at saturation.
+  VARIANT eps_t REQUIRE eps
+    T_in      = Temperature(AirH2O, h=in.h, P=in.P, W=in.W)
+    T_out     = T_in - eps * (T_in - wall.T)
+    W_sat     = HumRat(AirH2O, T=T_out, P=in.P, R=1)
+    out.W     = 0.5 * (in.W + W_sat - sqrt((in.W - W_sat)^2 + 1e-12))
+    out.h     = Enthalpy(AirH2O, T=T_out, P=in.P, W=out.W)
+  END
+  // Threlkeld enthalpy-potential rung: for a wet coil the driving potential is
+  // the ENTHALPY difference to saturated air at the wall temperature, with
+  // effectiveness 1 − e^(−NTU) on the air side. The outlet humidity follows the
+  // same smooth saturation clamp at the (implicit) outlet temperature.
+  VARIANT ntu_wet REQUIRE NTU
+    W_sw      = HumRat(AirH2O, T=wall.T, P=in.P, R=1)
+    h_sw      = Enthalpy(AirH2O, T=wall.T, P=in.P, W=W_sw)
+    eps_h     = 1 - exp(-NTU)
+    out.h     = in.h - eps_h * (in.h - h_sw)
+    W_sat_o   = HumRat(AirH2O, h=out.h, P=in.P, R=1)
+    out.W     = 0.5 * (in.W + W_sat_o - sqrt((in.W - W_sat_o)^2 + 1e-12))
+  END
+END
+
+// ── Cabin / air-handling set (Wave 2) ──────────────────────────────────────
+
+// Blower: fixed pressure rise dP with motor+aero inefficiency heating the
+// stream (shaft power = V̇·ΔP/η, all of it ends up in the air).
+COMPONENT MoistAirFan(in, out)
+  PARAM dP, eta, domain$ = moistair
+  out.mdot = in.mdot
+  out.W    = in.W
+  out.P    = in.P + dP
+  T_in     = Temperature(AirH2O, h=in.h, P=in.P, W=in.W)
+  v_in     = Volume(AirH2O, T=T_in, P=in.P, W=in.W)
+  out.h    = in.h + v_in * dP / eta
+  W_el     = in.mdot * v_in * dP / eta
+END
+
+// Diverting damper: routes fraction u of the air to outa, the rest to outb
+// (both riders carried).
+COMPONENT MoistAirDamper(in, outa, outb)
+  PARAM u, domain$ = moistair
+  outa.P    = in.P
+  outb.P    = in.P
+  outa.h    = in.h
+  outb.h    = in.h
+  outa.W    = in.W
+  outb.W    = in.W
+  outa.mdot = u * in.mdot
+  outb.mdot = (1 - u) * in.mdot
+END
+
+// Adiabatic evaporative cooler: constant-enthalpy humidification toward
+// saturation with effectiveness eff (eff=1 reaches the adiabatic-saturation
+// state, W directly from the (h, P, R=1) property call — no implicit outlet
+// temperature to iterate).
+COMPONENT EvaporativeCooler(in, out)
+  PARAM eff, domain$ = moistair
+  out.mdot = in.mdot
+  out.P    = in.P
+  out.h    = in.h
+  W_sat    = HumRat(AirH2O, h=in.h, P=in.P, R=1)
+  out.W    = in.W + eff * (W_sat - in.W)
+END
+
+// Cabin zone: a perfectly-mixed air volume Vz with temperature and humidity
+// STATES, occupant sensible/moisture loads, a solar/auxiliary heat input, and
+// a wall heat port (couple it to ThermalMass walls or an evaporator AirCoil).
+// Ventilation air flows through (in → out at the zone state).
+COMPONENT CabinZone(in, out, wall)
+  PARAM Vz, T0, W0, n_occ, q_sens, mw_occ, Q_aux, domain$ = moistair
+  out.mdot  = in.mdot
+  out.P     = in.P
+  out.W     = Wz
+  out.h     = Enthalpy(AirH2O, T=Tz, P=in.P, W=Wz)
+  v_z       = Volume(AirH2O, T=Tz, P=in.P, W=Wz)
+  cp_z      = Cp(AirH2O, T=Tz, P=in.P, W=Wz)
+  m_air     = Vz / v_z
+  der(Wz)   = (in.mdot * (in.W - Wz) + n_occ * mw_occ) / m_air
+  init(Wz)  = W0
+  der(Tz)   = (in.mdot * (in.h - out.h) + n_occ * q_sens + Q_aux + wall.Qdot) / (m_air * cp_z)
+  init(Tz)  = T0
+  wall.T    = Tz
 END

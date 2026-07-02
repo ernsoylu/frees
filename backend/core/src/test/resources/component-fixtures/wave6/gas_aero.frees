@@ -1,0 +1,71 @@
+// Heated duct, regenerator and combustor replicate their laws from
+// independent property calls; the ISA source hits the standard 5 km pressure;
+// the propeller reproduces its map thrust/torque at J = v/(nD).
+// EXPECT d_hd = 0 tol 1e-6
+// EXPECT d_rg = 0 tol 1e-6
+// EXPECT d_cb = 0 tol 1e-6
+// EXPECT p_isa = 54019.5 tol 300
+// EXPECT f_prop = -7.7574 tol 1e-3
+// EXPECT tau_prop = 0.308657 tol 1e-5
+Source     SH(fluid$=Air, mdot=1, P=101325, T=300)
+HeatedDuct HD(fluid$=Air, UA=500)
+Sink       KH()
+ThermalSource WH(T=400)
+connect(SH.out, HD.in)
+connect(HD.out, KH.in)
+connect(HD.wall, WH.port)
+cp_chk = Cp(Air, P=101325, T=300)
+t_chk  = Temperature(Air, P=101325, h=SH.out.h)
+d_hd   = (HD.out.h - HD.in.h) - (1 - exp(-500 / (1 * cp_chk))) * cp_chk * (400 - t_chk)
+
+Source      RH(fluid$=Air, mdot=1, P=101325, T=500)
+Source      RC(fluid$=Air, mdot=1.5, P=101325, T=300)
+Regenerator RG(hot$=Air, cold$=Air, eps=0.75)
+Sink        KRH()
+Sink        KRC()
+connect(RH.out, RG.hot_in)
+connect(RG.hot_out, KRH.in)
+connect(RC.out, RG.cold_in)
+connect(RG.cold_out, KRC.in)
+ch_chk = 1 * Cp(Air, P=101325, T=500)
+cc_chk = 1.5 * Cp(Air, P=101325, T=300)
+th_chk = Temperature(Air, P=101325, h=RH.out.h)
+tc_chk = Temperature(Air, P=101325, h=RC.out.h)
+d_rg   = 1 * (RH.out.h - RG.hot_out.h) - 0.75 * min(ch_chk, cc_chk) * (th_chk - tc_chk)
+
+Source    SB(fluid$=Air, mdot=1, P=1000000, T=600)
+Combustor CB(mdot_f=0.02, LHV=43e6, eta_b=0.98, dP=5000)
+Sink      KB()
+connect(SB.out, CB.in)
+connect(CB.out, KB.in)
+d_cb = 1.02 * CB.out.h - (1 * SB.out.h + 0.98 * 0.02 * 43e6)
+
+AtmosphereSource ATM(alt=5000, mdot=1)
+Sink             KA()
+connect(ATM.out, KA.in)
+p_isa = ATM.out.P
+
+TABLE ctm(j)
+  0   0.1
+  2   0.1
+END
+TABLE cpm(j)
+  0   0.05
+  2   0.05
+END
+SpeedSource PSH(w=200)
+MechGround  PMG()
+Propeller   PR(Dp=0.5, rhoA=1.225, ct$=ctm, cpw$=cpm, epsn=1e-6)
+COMPONENT VelPin2(a, b)
+  PARAM v
+  a.vel - b.vel = v
+  a.f + b.f = 0
+END
+VelPin2     VV(v=10)
+TransGround TGV()
+connect(PSH.a, PR.shaft)
+connect(PSH.b, PMG.port)
+connect(VV.a, PR.veh)
+connect(VV.b, TGV.port)
+f_prop   = PR.veh.f
+tau_prop = PR.shaft.tau

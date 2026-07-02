@@ -1,0 +1,20 @@
+// Suction-line internal HX: exact energy conservation between the sides and
+// the vapor-side effectiveness law replicated from independent property calls.
+// EXPECT d_cons = 0 tol 1e-6
+// EXPECT d_eff = 0 tol 1e-6
+hliq = Enthalpy(R134a, P=1200000, x=0)
+hvap = Enthalpy(R134a, P=300000, x=1)
+TwoPhaseSourcePH  SL(mdot=0.08, P=1200000, h=hliq)
+TwoPhaseSourcePH  SV(mdot=0.08, P=300000, h=hvap)
+TwoPhaseInternalHX IHX(fluid$=R134a, eps=0.6)
+TwoPhaseSink      KL()
+TwoPhaseSink      KV()
+connect(SL.out, IHX.liq_in)
+connect(IHX.liq_out, KL.in)
+connect(SV.out, IHX.vap_in)
+connect(IHX.vap_out, KV.in)
+d_cons = 0.08 * (SL.out.h - IHX.liq_out.h) - 0.08 * (IHX.vap_out.h - SV.out.h)
+T_l    = Temperature(R134a, P=1200000, h=hliq)
+T_v    = Temperature(R134a, P=300000, h=hvap)
+cp_chk = Cp(R134a, P=300000, h=hvap)
+d_eff  = (IHX.vap_out.h - hvap) * 0.08 - 0.6 * 0.08 * cp_chk * (T_l - T_v)

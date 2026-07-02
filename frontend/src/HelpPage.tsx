@@ -23,16 +23,25 @@ import {
   Box,
   SimpleGrid,
   Card,
-  Anchor
+  Anchor,
+  Slider
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { useState, useEffect, useMemo } from 'react';
-import { getReference, getFluids, type UnitInfo, type ConstantInfo } from './api';
+import { getReference, getFluids, check, solve, DEFAULT_STOP_CRITERIA, type UnitInfo, type ConstantInfo, type VariableResult } from './api';
 import { DOCS_CATALOG } from './docsCatalog';
 import Latex from './Latex';
 import { EXAMPLES } from './examples';
 import { REFERENCE_PAGES, type ReferencePage } from './referenceCatalog';
-import { buildSearchIndex, searchDocs, type SearchHit } from './searchIndex';
+import { buildSearchIndex, searchDocs, type SearchHit, type SearchKind } from './searchIndex';
+
+// Facet chips shown in the search dropdown, in display order.
+const SEARCH_FACETS: [SearchKind, string][] = [
+  ['guide', 'Guides'],
+  ['reference', 'Reference'],
+  ['component', 'Components'],
+  ['example', 'Examples'],
+];
 import { VERSION_LABEL } from './version';
 import {
   FLUID_PROPERTY_OUTPUTS,
@@ -50,7 +59,8 @@ import {
   BraytonCycleDiagram,
   RefrigerationCycleDiagram,
   RankineCycleDiagram,
-  EvThermalDiagram
+  EvThermalDiagram,
+  LearningMapDiagram
 } from './docs/DocDiagrams';
 
 function CopyButton({ code }: Readonly<{ code: string }>) {
@@ -70,6 +80,150 @@ function CopyButton({ code }: Readonly<{ code: string }>) {
     >
       {copied ? "Copied!" : "Copy Code"}
     </Button>
+  );
+}
+
+// Compact numeric display for inline solution tables.
+function formatRunValue(v: number): string {
+  if (!Number.isFinite(v)) return String(v);
+  const a = Math.abs(v);
+  if (a !== 0 && (a < 1e-4 || a >= 1e7)) return v.toExponential(4);
+  return String(Number(v.toPrecision(6)));
+}
+
+// A fenced block tagged ```run (every one is verified against the backend by
+// scripts/check-doc-snippets.mjs). Run executes the real Check → Solve pipeline
+// and renders the solution inline; Open in Editor hands the code to the main
+// app through the frees.pendingSnippet localStorage key (consumed in App.tsx).
+/** A `vary=` slider spec parsed from a runnable fence's info string. */
+interface VarySpec { name: string; min: number; step: number; max: number }
+
+function RunnableCode({ code, title, vary = [] }: Readonly<{ code: string; title?: string; vary?: VarySpec[] }>) {
+  const [running, setRunning] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [vars, setVars] = useState<VariableResult[] | null>(null);
+  // Slider values, seeded at each range's midpoint (snapped to the step).
+  const [varyVals, setVaryVals] = useState<Record<string, number>>(() => {
+    const init: Record<string, number> = {};
+    for (const v of vary) init[v.name] = v.min + Math.round((v.max - v.min) / 2 / v.step) * v.step;
+    return init;
+  });
+
+  const run = async (vals: Record<string, number> = varyVals) => {
+    // Sliders override the document's fixed values through the same overrides
+    // channel the REPL uses ("name = value" beats the editor equation).
+    const overrides = vary.map((v) => `${v.name} = ${vals[v.name]}`);
+    setRunning(true);
+    setError(null);
+    try {
+      const chk = await check(code, [], false, [], overrides);
+      if (!chk.solvable) {
+        setVars(null);
+        setError(chk.message || 'The system did not pass Check.');
+        return;
+      }
+      const sol = await solve(code, DEFAULT_STOP_CRITERIA, [], false, 'SI', false, [], undefined, overrides);
+      if (!sol.success) {
+        setVars(null);
+        setError(sol.error || 'The solve did not converge.');
+        return;
+      }
+      setVars(sol.variables);
+    } finally {
+      setRunning(false);
+    }
+  };
+
+  const openInEditor = () => {
+    const firstComment = /\{\s*([^}]*?)\s*\}/.exec(code)?.[1];
+    localStorage.setItem('frees.pendingSnippet', JSON.stringify({
+      title: (title || firstComment || 'Documentation example').slice(0, 80),
+      text: code,
+      ts: Date.now(),
+    }));
+    window.open('/', '_blank');
+  };
+
+  const shown = vars ? vars.slice(0, 60) : [];
+  const hasUncertainty = shown.some((v) => (v.uncertainty ?? 0) !== 0);
+  return (
+    <Paper withBorder p="md" bg="light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8))" mb="md">
+      <Group justify={title ? 'space-between' : 'flex-end'} gap="xs" mb="xs">
+        {title && <Badge color="teal" variant="light" leftSection={<IconBook size={12} />}>{title}</Badge>}
+        <Group gap="xs">
+          <Button size="xs" variant="filled" color="teal" onClick={() => run()} loading={running}>Run</Button>
+          <Button size="xs" variant="light" onClick={openInEditor}>Open in Editor</Button>
+        </Group>
+      </Group>
+      {vary.length > 0 && (
+        <Stack gap={6} mb="sm">
+          {vary.map((v) => (
+            <Group key={v.name} gap="sm" wrap="nowrap">
+              <Code style={{ whiteSpace: 'nowrap', minWidth: 130 }}>{v.name} = {formatRunValue(varyVals[v.name])}</Code>
+              <Slider
+                style={{ flexGrow: 1 }}
+                size="sm"
+                color="teal"
+                min={v.min}
+                max={v.max}
+                step={v.step}
+                value={varyVals[v.name]}
+                label={null}
+                onChange={(val) => setVaryVals((prev) => ({ ...prev, [v.name]: val }))}
+                onChangeEnd={(val) => {
+                  const next = { ...varyVals, [v.name]: val };
+                  setVaryVals(next);
+                  void run(next);
+                }}
+              />
+            </Group>
+          ))}
+        </Stack>
+      )}
+      <Box style={{ position: 'relative' }}>
+        <CopyButton code={code} />
+        <Code block style={{ background: 'transparent', maxHeight: '340px', overflowY: 'auto' }}>{code}</Code>
+      </Box>
+      {error && (
+        <Alert color="red" mt="sm" title="Did not solve">
+          <Text size="sm" style={{ whiteSpace: 'pre-wrap' }}>{error}</Text>
+        </Alert>
+      )}
+      {vars && (
+        <Box mt="sm">
+          <Text size="sm" fw={700} c="teal.4" mb="xs">
+            Solved — {vars.length} variable{vars.length === 1 ? '' : 's'}
+          </Text>
+          <Box style={{ maxHeight: 280, overflowY: 'auto' }}>
+            <Table striped withTableBorder verticalSpacing={2} fz="sm">
+              <Table.Thead>
+                <Table.Tr>
+                  <Table.Th>Variable</Table.Th>
+                  <Table.Th>Value</Table.Th>
+                  <Table.Th>Units</Table.Th>
+                  {hasUncertainty && <Table.Th>±</Table.Th>}
+                </Table.Tr>
+              </Table.Thead>
+              <Table.Tbody>
+                {shown.map((v) => (
+                  <Table.Tr key={v.name}>
+                    <Table.Td><Code>{v.name}</Code></Table.Td>
+                    <Table.Td>{formatRunValue(v.value)}</Table.Td>
+                    <Table.Td>{v.units}</Table.Td>
+                    {hasUncertainty && <Table.Td>{(v.uncertainty ?? 0) !== 0 ? formatRunValue(v.uncertainty!) : ''}</Table.Td>}
+                  </Table.Tr>
+                ))}
+              </Table.Tbody>
+            </Table>
+          </Box>
+          {vars.length > shown.length && (
+            <Text size="xs" c="dimmed" mt={4}>
+              …and {vars.length - shown.length} more — open in the editor for the full solution, tables, and plots.
+            </Text>
+          )}
+        </Box>
+      )}
+    </Paper>
   );
 }
 
@@ -2476,6 +2630,15 @@ const WORKSPACE_EXAMPLE_CATEGORIES: [string, typeof EXAMPLES][] = (() => {
   return Array.from(groups.entries());
 })();
 
+// Every gallery category name (workspace + curated), deduped in display order —
+// the facet chips of the Examples library.
+const ALL_EXAMPLE_CATEGORY_NAMES: string[] = (() => {
+  const names: string[] = [];
+  for (const [cat] of WORKSPACE_EXAMPLE_CATEGORIES) if (!names.includes(cat)) names.push(cat);
+  for (const [cat] of EXAMPLE_CATEGORIES) if (!names.includes(cat)) names.push(cat);
+  return names;
+})();
+
 
 import {
   IconSearch,
@@ -2489,6 +2652,9 @@ import {
   IconRocket,
   IconTool,
   IconList,
+  IconWaveSine,
+  IconTopologyStar3,
+  IconServerCog,
   IconChevronLeft,
   IconChevronRight,
   IconArrowRight
@@ -2518,7 +2684,10 @@ const CATEGORIES: NavCategory[] = [
       { id: 'gs-first-solve', label: '1. Your First Solve', blurb: 'Type four lines and let frees find the unknown.', keywords: ['first solve', 'tutorial', 'quick start', 'f2', 'solve', 'ideal gas'] },
       { id: 'gs-declarative', label: '2. Thinking Declaratively', blurb: 'Why equation order never matters and any variable can be the unknown.', keywords: ['declarative', 'equality', 'order', 'unknown', 'assignment'] },
       { id: 'gs-units-check', label: '3. Units & Checking', blurb: 'Annotate inputs, work in SI, and verify with Check (F4).', keywords: ['units', 'check', 'f4', 'degrees of freedom', 'dof', 'guess', 'si'] },
-      { id: 'gs-next', label: '4. Where to Go Next', blurb: 'A guided map of the rest of the documentation.', keywords: ['next steps', 'learn', 'map', 'where to go'] },
+      { id: 'gs-plots', label: '4. See It: Tables & Plots', blurb: 'Sweep an input with a parametric table and plot the response.', keywords: ['plot', 'parametric', 'sweep', 'table', 'solve table', 'plot curve', 'chart'] },
+      { id: 'gs-repl', label: '5. Ask Questions: the REPL', blurb: 'Query the solved session, calculate with units, and call the CAS.', keywords: ['repl', 'terminal', 'console', 'workspace', 'query', 'interactive'] },
+      { id: 'gs-components', label: '6. Wire Components', blurb: 'Instantiate and connect library components into a solved network.', keywords: ['components', 'connect', 'network', 'system', 'pipe', 'acausal'] },
+      { id: 'gs-next', label: '7. Where to Go Next', blurb: 'A guided map of the rest of the documentation.', keywords: ['next steps', 'learn', 'map', 'where to go'] },
     ]
   },
   {
@@ -2533,7 +2702,6 @@ const CATEGORIES: NavCategory[] = [
       { id: 'arrays', label: 'Arrays & For Loops', blurb: 'Indexed variables and compile-time FOR expansion into equation families.', keywords: ['array', 'for', 'duplicate', 'loops', 'slice', 'index'] },
       { id: 'complex', label: 'Complex Numbers', blurb: 'Paired _r/_i components and the complex helper functions.', keywords: ['complex', 'imaginary', 'real', 'i', 'j', 'angle', 'polar', 'conj', 'magnitude', 'cis'] },
       { id: 'strings', label: 'String Variables', blurb: '$-suffixed strings for fluid names, geometry labels, and string functions.', keywords: ['string', 'chr$', 'concat$', 'copy$', 'lowercase$', 'uppercase$', 'trim$', 'stringlen', 'stringpos', 'stringval', 'date$', 'time$', 'timestamp$', 'unitsystem$', 'unitsof$'] },
-      { id: 'uncertainty', label: 'Uncertainty Propagation', blurb: 'First-order RSS error propagation via UncertaintyOf.', keywords: ['uncertainty', 'propagation', 'error', 'uncertaintyof', 'svd'] },
       { id: 'math-funcs', label: 'Mathematical Functions', blurb: 'Trig, logs, rounding, conditionals — the differentiable scalar toolbox.', keywords: ['abs', 'sqrt', 'ln', 'log10', 'exp', 'sin', 'cos', 'tan', 'atan2', 'min', 'max', 'sum', 'avg', 'sinh', 'cosh', 'tanh', 'arcsinh', 'arccosh', 'arctanh', 'round', 'floor', 'ceil', 'trunc', 'sign', 'factorial', 'step', 'if', 'product', 'gcd', 'lcm', 'bitand', 'bitor', 'bitxor', 'bitnot', 'bitshiftl', 'bitshiftr', 'bitwise', 'shift', 'baseconvert'] },
       { id: 'special-funcs', label: 'Special & Statistical Functions', blurb: 'Bessel, gamma, error functions and statistical distributions.', keywords: ['bessel', 'besselk', 'bessely', 'bessel_i0', 'bessel_j0', 'chi_square', 'random', 'randg', 'probability', 'gamma', 'loggamma', 'digamma', 'beta', 'erf', 'erfc', 'erfinv'] },
     ]
@@ -2564,7 +2732,7 @@ const CATEGORIES: NavCategory[] = [
     ]
   },
   {
-    title: 'Fluids & Materials',
+    title: 'Fluids, Materials & Psychrometrics',
     icon: <IconFlask size={16} />,
     overview: 'fluids-overview',
     items: [
@@ -2577,19 +2745,46 @@ const CATEGORIES: NavCategory[] = [
     ]
   },
   {
-    title: 'Modeling & Solving',
+    title: 'Solving & Optimization',
     icon: <IconAdjustments size={16} />,
-    overview: 'modeling-overview',
+    overview: 'solving-overview',
     items: [
-      { id: 'modeling-overview', label: 'Overview', blurb: 'Differential systems, control design, optimization, diagrams, and the solver pipeline.', keywords: ['modeling', 'solving', 'overview', 'advanced'] },
+      { id: 'solving-overview', label: 'Overview', blurb: 'How frees solves, what to do when it doesn\'t, and the system-level analyses on top.', keywords: ['solving', 'optimization', 'overview', 'solver'] },
+      { id: 'debugging', label: 'Debugging a Solve', blurb: 'Build incrementally, read residuals and blocking order, and seed guesses for stubborn nonlinear systems.', keywords: ['debug', 'debugging', 'troubleshoot', 'converge', 'convergence', 'diverge', 'residual', 'blocking', 'singular', 'guess', 'stall', 'wont solve', 'no solution'] },
+      { id: 'errors', label: 'Errors & Diagnostics Index', blurb: 'Every checker and solver message, with its cause and fix.', keywords: ['error', 'errors', 'message', 'diagnostic', 'singular jacobian', 'max iterations', 'stalled', 'syntax error', 'degrees of freedom', 'dof', 'coolprop', 'range', 'unit warning', 'failed', 'pending', '429', 'poison'] },
+      { id: 'uncertainty', label: 'Uncertainty Propagation', blurb: 'First-order RSS error propagation via UncertaintyOf.', keywords: ['uncertainty', 'propagation', 'error', 'uncertaintyof', 'svd'] },
+      { id: 'optimization', label: 'Optimization & Sweeps', blurb: 'Parametric sweeps, single-objective optimization, and Pareto fronts.', keywords: ['optimization', 'sweep', 'parametric', 'minimization', 'maximization', 'nsga', 'pareto'] },
+      { id: 'api', label: 'Solver Internals & Diagnostics', blurb: 'The compile/solve pipeline and how to read convergence diagnostics.', keywords: ['api', 'solver', 'newton', 'tarjan', 'residuals', 'jacobian', 'singular', 'convergence'] },
+    ]
+  },
+  {
+    title: 'Dynamic Systems & Control',
+    icon: <IconWaveSine size={16} />,
+    overview: 'dynamics-overview',
+    items: [
+      { id: 'dynamics-overview', label: 'Overview', blurb: 'Transient integration, linearization, and the control-design suite.', keywords: ['dynamics', 'control', 'overview', 'transient'] },
       { id: 'calculus', label: 'Numerical Integration (ODEs)', blurb: 'Definite integrals and the scalar first-order ODE feedback pattern.', keywords: ['integral', 'ode', 'differential', 'calculus', 'runge-kutta'] },
       { id: 'dynamic-ode', label: 'Transient / ODE Systems (DYNAMIC)', blurb: 'Coupled, multi-state, stiff, event-driven ODE integration.', keywords: ['dynamic', 'transient', 'ode', 'der', 'state', 'event', 'ode45', 'ode23', 'ode23s', 'ode15s', 'rocket', 'odevalue', 'finalvalue', 'maxvalue', 'timeat', 'ode table', 'stiff', 'initial condition', 'apogee'] },
       { id: 'symbolic-cas', label: 'Control Systems & Symbolic CAS', blurb: 'Transfer functions, state space, Bode/Nyquist, LQR, and Laplace algebra.', keywords: ['symbolic', 'cas', 'laplace', 's', 'partial fractions', 'residue', 'transfer function', 'tf', 'identity', 'control', 'decompose', 'apart', 'numerator', 'denominator', 'state space', 'ss2tf', 'tf2ss', 'zp2tf', 'tf2zp', 'series', 'parallel', 'feedback', 'pole', 'zero', 'bode', 'nyquist', 'margin', 'frequency response', 'step', 'impulse', 'lsim', 'time response', 'lqr', 'place', 'pole placement', 'ackermann', 'pidtune', 'pid', 'riccati', 'controller design'] },
-      { id: 'optimization', label: 'Optimization & Sweeps', blurb: 'Parametric sweeps, single-objective optimization, and Pareto fronts.', keywords: ['optimization', 'sweep', 'parametric', 'minimization', 'maximization'] },
-      { id: 'diagram', label: 'Diagram Canvas & Schematics', blurb: 'Build schematics and overlay live solved data and cycle paths.', keywords: ['diagram', 'plots', 'graph', 'canvas', 'recording', 'export'] },
-      { id: 'plot-code', label: 'Plots in Code (PLOT)', blurb: 'Declare XY, property, Bode, Nyquist and pole-zero figures in code.', keywords: ['plot', 'graph', 'chart', 'code', 'programmatic', 'xy', 'property', 'psychro'] },
-      { id: 'debugging', label: 'Debugging a Solve', blurb: 'Build incrementally, read residuals and blocking order, and seed guesses for stubborn nonlinear systems.', keywords: ['debug', 'debugging', 'troubleshoot', 'converge', 'convergence', 'diverge', 'residual', 'blocking', 'singular', 'guess', 'stall', 'wont solve', 'no solution'] },
-      { id: 'api', label: 'Solver Internals & Diagnostics', blurb: 'The compile/solve pipeline and how to read convergence diagnostics.', keywords: ['api', 'solver', 'newton', 'tarjan', 'residuals', 'jacobian', 'singular', 'convergence'] },
+    ]
+  },
+  {
+    title: 'System Modeling with Components',
+    icon: <IconTopologyStar3 size={16} />,
+    overview: 'components-overview',
+    items: [
+      { id: 'components-overview', label: 'Overview', blurb: 'Acausal, multi-domain system modeling with a ~250-component library.', keywords: ['components', 'system modeling', 'overview', 'acausal', 'network', 'bond graph'] },
+      { id: 'comp-first-network', label: 'Your First Component Network', blurb: 'Instantiate, connect, probe — a pipe run solved as a network.', keywords: ['component', 'network', 'instantiate', 'first', 'source', 'pipe', 'sink', 'probe', 'port'] },
+      { id: 'comp-connections', label: 'Connections & Junctions', blurb: 'connect statements vs shared streams; junction rules and boundary conditions.', keywords: ['connect', 'junction', 'node', 'stream', 'shared name', 'branch', 'split', 'mixer', 'boundary condition'] },
+      { id: 'comp-domains', label: 'Domains & Fluid Families', blurb: 'Fluid, heat, electrical, mechanical — and the guarded fluid families.', keywords: ['domain', 'fluid', 'heat', 'electrical', 'mechanical', 'signal', 'sig', 'command', 'probe', 'moistair', 'gas', 'oil', 'liquid', 'twophase', 'domain$', 'across', 'through', 'transducer', 'humid air'] },
+      { id: 'comp-library', label: 'The Component Library', blurb: 'A map of the thirteen domain libraries and their conventions.', keywords: ['library', 'components', 'catalog', 'signal', 'fluid', 'liquid', 'twophase', 'moistair', 'pneumatic', 'hydraulic', 'electrical', 'mechanical', 'powertrain', 'heat'] },
+      { id: 'comp-variants', label: 'Fidelity Variants (model$)', blurb: 'One component, many models — select physics fidelity per instance.', keywords: ['variant', 'model$', 'fidelity', 'require', 'isentropic', 'volumetric', 'map'] },
+      { id: 'comp-authoring', label: 'Writing Your Own Component', blurb: 'COMPONENT blocks: ports, PARAM, outputs, and VARIANT bodies.', keywords: ['component', 'custom', 'authoring', 'param', 'ports', 'variant', 'require', 'outputs'] },
+      { id: 'comp-transient', label: 'Steady ↔ Transient Networks', blurb: 'Storage components carry the states; one wiring, both analyses.', keywords: ['transient', 'steady', 'storage', 'thermalmass', 'inertia', 'capacitor', 'accumulator', 'soc', 'ida', 'dae', 'ramp', 'time', 'sigstep', 'sigramp', 'drive cycle'] },
+      { id: 'comp-linearize', label: 'From Plant to Controller (LINEARIZE)', blurb: 'Extract (A,B,C,D) from a transient network and design the loop.', keywords: ['linearize', 'state space', 'plant', 'abcd', 'input', 'output', 'lqr', 'controller'] },
+      { id: 'comp-topology', label: 'Topology View & Cycle Plots', blurb: 'The auto-generated schematic and cycle overlays on property charts.', keywords: ['topology', 'mermaid', 'schematic', 'cycle', 'overlay', 'property plot', 'diagnostics'] },
+      { id: 'comp-wizard', label: 'The Component Wizard', blurb: 'Guided instantiation with variant gating, UA helpers, and map ingestion.', keywords: ['wizard', 'component wizard', 'ua', 'correlation', 'map', 'insert'] },
+      { id: 'comp-troubleshooting', label: 'Troubleshooting Networks', blurb: 'The strict parse errors, and the cold-start patterns that fix convergence.', keywords: ['troubleshooting', 'error', 'domain mismatch', 'port count', 'cold start', 'seed', 'pressure', 'mixer', 'capacity floor', 'converge'] },
     ]
   },
   {
@@ -2601,14 +2796,34 @@ const CATEGORIES: NavCategory[] = [
       { id: 'repl', label: 'REPL Terminal & Workspace', blurb: 'A unit-aware console over the solved session, with CALL and CAS.', keywords: ['repl', 'terminal', 'workspace', 'console', 'vars', 'who', 'whos', 'calculator', 'cas', 'factor', 'expand', 'simplify', 'apart', 'laplace', 'diff', 'integrate', 'call', 'symbolic', 'interactive', 'ans'] },
       { id: 'shortcuts', label: 'Keyboard Shortcuts', blurb: 'Solve, Check, Variable Info, and block-solve hotkeys.', keywords: ['hotkey', 'shortcuts', 'keyboard', 'f2', 'f4', 'f9', 'ctrl'] },
       { id: 'reports', label: 'Markdown & Reports', blurb: 'Weave narrative, live values, and plots into a Formatted report.', keywords: ['markdown', 'report', 'latex', 'katex', 'inline', 'equations'] },
+      { id: 'plot-code', label: 'Plots in Code (PLOT)', blurb: 'Declare XY, property, Bode, Nyquist and pole-zero figures in code.', keywords: ['plot', 'graph', 'chart', 'code', 'programmatic', 'xy', 'property', 'psychro'] },
+      { id: 'diagram', label: 'Diagram Canvas & Schematics', blurb: 'Build schematics and overlay live solved data and cycle paths.', keywords: ['diagram', 'plots', 'graph', 'canvas', 'recording', 'export'] },
       { id: 'digitizer-fit', label: 'Graph Digitizer & Curve Fit', blurb: 'Turn a chart image or a table into a fitted equation.', keywords: ['digitizer', 'curve', 'fit', 'table', 'regression', 'equation', 'graph'] },
     ]
   },
   {
-    title: 'Examples',
+    title: 'Examples & Tutorials',
     icon: <IconFileText size={16} />,
     items: [
+      { id: 'tut-msd', label: 'Tutorial: Mass–Spring–Damper → Bode', blurb: 'From a transient ring-down to the plant\'s frequency response, in stages.', keywords: ['tutorial', 'mass spring damper', 'oscillator', 'bode', 'transfer function', 'dynamic', 'vibration', 'resonance', 'damping'] },
+      { id: 'tut-coil', label: 'Tutorial: AC Cooling Coil', blurb: 'Psychrometric coil analysis by hand, then rebuilt from components.', keywords: ['tutorial', 'cooling coil', 'psychrometrics', 'hvac', 'dehumidification', 'latent', 'sensible', 'shr', 'moist air', 'air conditioning'] },
+      { id: 'tut-rlc', label: 'Tutorial: RLC Filter Response', blurb: 'Phasor spot checks, then the full Bode picture of a low-pass filter.', keywords: ['tutorial', 'rlc', 'filter', 'circuit', 'frequency response', 'bode', 'impedance', 'phasor', 'resonance', 'low-pass'] },
+      { id: 'tut-vccycle', label: 'Tutorial: Refrigeration Cycle ± Uncertainty', blurb: 'An R134a cycle whose COP carries real instrument error bars.', keywords: ['tutorial', 'refrigeration', 'vapor compression', 'cop', 'uncertainty', 'r134a', 'cycle', 'error propagation'] },
+      { id: 'tut-pump', label: 'Tutorial: Pump Selection', blurb: 'Digitize a datasheet curve, intersect the system curve, size the motor.', keywords: ['tutorial', 'pump', 'digitizer', 'head curve', 'system curve', 'operating point', 'table', 'shaft power'] },
       { id: 'examples', label: 'Engineering Examples Library', blurb: 'Verified, ready-to-run problems grouped by discipline.', keywords: ['examples', 'rankine', 'brayton', 'cold air standard', 'combined cycle', 'pipe network', 'truss', 'radiation', 'cooling loop', 'reforming', 'pid', 'fatigue', 'nuclear', 'siyavula', 'nozzle', 'co2', 'compressible', 'throat', 'sonic', 'pelton', 'turbine', 'turbomachinery', 'hydropower', 'impulse', 'vehicle', 'ev', 'electric vehicle', 'longitudinal', 'lateral', 'bicycle model', 'understeer', 'road load', 'drag', 'battery', 'pack', 'cell', 'sizing', 'motor', 'range', 'batemo', 'c-rate', 'ode', 'differential equations', 'runge-kutta', 'stiff', 'van der pol', 'robertson', 'lotka-volterra', 'predator-prey', 'pendulum', 'rlc', 'rc circuit', 'rl circuit', 'orbit', 'logistic', 'decay', 'cooling', 'mass-spring-damper', 'parachutist', 'torricelli'] },
+    ]
+  },
+  {
+    title: 'Architecture & Deployment',
+    icon: <IconServerCog size={16} />,
+    overview: 'deploy-overview',
+    items: [
+      { id: 'deploy-overview', label: 'Overview', blurb: 'The async compute model, the REST API, and both deployment paths.', keywords: ['architecture', 'deployment', 'overview', 'server'] },
+      { id: 'arch-async', label: 'How a Solve Runs', blurb: 'Editor → API → queue → compute → job store, and why it\'s asynchronous.', keywords: ['async', 'asynchronous', 'architecture', 'rabbitmq', 'redis', 'queue', 'job', 'jobid', '202', 'poll', 'compute', 'check'] },
+      { id: 'arch-api', label: 'The REST API', blurb: 'Drive frees from scripts: check, solve, poll, REPL, and optimization endpoints.', keywords: ['api', 'rest', 'http', 'curl', 'endpoint', 'solve', 'check', 'jobs', 'integration', 'script'] },
+      { id: 'deploy-docker', label: 'Run Locally with Docker', blurb: 'frees.sh, the compose topology, and host-side development.', keywords: ['docker', 'compose', 'local', 'frees.sh', 'install', 'run', 'container', 'localhost'] },
+      { id: 'deploy-railway', label: 'Deploy to Railway', blurb: 'The five-service layout and the production configuration that must stay.', keywords: ['railway', 'deploy', 'production', 'cloud', 'nginx', 'private network', 'commit', 'about'] },
+      { id: 'deploy-health', label: 'Health & Scaling', blurb: 'The topology health endpoint, compute replicas, and the poison-message guard.', keywords: ['health', 'scaling', 'monitoring', 'replicas', 'workers', 'poison', 'redelivered', '503', 'degraded'] },
     ]
   },
   {
@@ -2635,7 +2850,7 @@ const CATEGORY_BY_OVERVIEW = new Map<string, NavCategory>();
 for (const cat of CATEGORIES) if (cat.overview) CATEGORY_BY_OVERVIEW.set(cat.overview, cat);
 
 // The numbered Get-Started reading order, used for Prev/Next navigation.
-const GETTING_STARTED_SEQUENCE = ['started', 'gs-first-solve', 'gs-declarative', 'gs-units-check', 'gs-next'];
+const GETTING_STARTED_SEQUENCE = ['started', 'gs-first-solve', 'gs-declarative', 'gs-units-check', 'gs-plots', 'gs-repl', 'gs-components', 'gs-next'];
 
 // Slugify a heading for an in-page anchor ("On this page" links).
 function slugify(s: string): string {
@@ -2712,8 +2927,12 @@ function MarkdownRenderer({ content, onNavigate }: MarkdownRendererProps) {
     const line = lines[i];
     const trimmed = line.trim();
     
-    // 1. Fenced Code Block
+    // 1. Fenced Code Block. The info string marks behavior: ```run blocks are
+    // backend-verified (scripts/check-doc-snippets.mjs) and render with
+    // Run / Open in Editor buttons; `vary=name=min:step:max` tokens add live
+    // parameter sliders that re-solve through the overrides channel.
     if (trimmed.startsWith('```')) {
+      const fence = trimmed.slice(3).trim();
       const codeLines: string[] = [];
       i++;
       while (i < lines.length && !lines[i].trim().startsWith('```')) {
@@ -2722,12 +2941,19 @@ function MarkdownRenderer({ content, onNavigate }: MarkdownRendererProps) {
       }
       const code = codeLines.join('\n');
       const key = `code-${i}`;
-      elements.push(
-        <Paper key={key} withBorder p="md" bg="light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8))" mb="md" style={{ position: 'relative' }}>
-          <CopyButton code={code} />
-          <Code block style={{ background: 'transparent' }}>{code}</Code>
-        </Paper>
-      );
+      if (fence === 'run' || fence.startsWith('run ')) {
+        const vary = [...fence.matchAll(/vary=([A-Za-z_][A-Za-z0-9_]*)=(-?[\d.eE+-]+):(-?[\d.eE+-]+):(-?[\d.eE+-]+)/g)]
+          .map((m) => ({ name: m[1], min: Number(m[2]), step: Number(m[3]), max: Number(m[4]) }))
+          .filter((v) => Number.isFinite(v.min) && Number.isFinite(v.step) && v.step > 0 && v.max > v.min);
+        elements.push(<RunnableCode key={key} code={code} vary={vary} />);
+      } else {
+        elements.push(
+          <Paper key={key} withBorder p="md" bg="light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8))" mb="md" style={{ position: 'relative' }}>
+            <CopyButton code={code} />
+            <Code block style={{ background: 'transparent' }}>{code}</Code>
+          </Paper>
+        );
+      }
       i++;
       continue;
     }
@@ -2921,6 +3147,8 @@ function MarkdownRenderer({ content, onNavigate }: MarkdownRendererProps) {
         elements.push(<RankineCycleDiagram key={key} />);
       } else if (diagName === 'EvThermal') {
         elements.push(<EvThermalDiagram key={key} />);
+      } else if (diagName === 'LearningMap') {
+        elements.push(<LearningMapDiagram key={key} onNavigate={onNavigate} />);
       }
       i++;
       continue;
@@ -2943,15 +3171,7 @@ function MarkdownRenderer({ content, onNavigate }: MarkdownRendererProps) {
       const ex = EXAMPLES.find((e) => e.id === exId);
       const key = `run-${i}`;
       if (ex) {
-        elements.push(
-          <Paper key={key} withBorder p="md" mb="md" bg="light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8))" style={{ position: 'relative' }}>
-            <Group justify="space-between" mb="xs">
-              <Badge color="teal" variant="light" leftSection={<IconBook size={12} />}>{ex.title}</Badge>
-              <CopyButton code={ex.text} />
-            </Group>
-            <Code block style={{ background: 'transparent', maxHeight: '320px', overflowY: 'auto' }}>{ex.text}</Code>
-          </Paper>
-        );
+        elements.push(<RunnableCode key={key} code={ex.text} title={ex.title} />);
       } else {
         elements.push(
           <Alert key={key} color="orange" title="Missing example" mb="md">
@@ -3041,7 +3261,7 @@ const ALL_CATEGORIES = [...CATEGORIES, ...REFERENCE_NAV_CATEGORIES];
 
 // Renders a single industry-standard-style reference page: frontmatter header + body +
 // references footer, with markdown/KaTeX/[Run:] handled by MarkdownRenderer.
-function ReferencePageView({ page, onNavigate }: Readonly<{ page: ReferencePage; onNavigate: (slug: string) => void }>) {
+function ReferencePageView({ page, onNavigate, onNavigateTopic }: Readonly<{ page: ReferencePage; onNavigate: (slug: string) => void; onNavigateTopic?: (id: string) => void }>) {
   return (
     <Stack gap="sm">
       <Group justify="space-between" align="flex-start">
@@ -3066,6 +3286,15 @@ function ReferencePageView({ page, onNavigate }: Readonly<{ page: ReferencePage;
                   onClick={() => onNavigate(target.slug)}>{r}</Badge>
               : <Badge key={r} color="gray" variant="light">{r}</Badge>;
           })}
+        </Group>
+      )}
+      {onNavigateTopic && page.guides.filter((g) => NAV_LABELS[g]).length > 0 && (
+        <Group gap="xs" mt="xs">
+          <Text size="sm" fw={600} c="dimmed">In the guides:</Text>
+          {page.guides.filter((g) => NAV_LABELS[g]).map((g) => (
+            <Badge key={g} component="a" style={{ cursor: 'pointer', textTransform: 'none' }} color="teal" variant="light"
+              onClick={() => onNavigateTopic(g)}>{NAV_LABELS[g]}</Badge>
+          ))}
         </Group>
       )}
     </Stack>
@@ -3194,11 +3423,39 @@ function ReferenceIndex({ onNavigate }: Readonly<{ onNavigate: (id: string) => v
   );
 }
 
+// A location.hash value that names a real portal page (guide topic, special
+// page, or refpage:slug). In-page heading anchors from the "On this page" TOC
+// are NOT topics — they must be ignored by the hash router, not navigated.
+function knownTopicId(id: string): boolean {
+  if (!id) return false;
+  if (id.startsWith('refpage:')) return REFERENCE_BY_SLUG.has(id.slice('refpage:'.length));
+  if (Object.prototype.hasOwnProperty.call(DOCS_CATALOG, id)) return true;
+  return id === 'examples' || id === 'ref-index' || id === 'ref-units' || id === 'ref-fluids';
+}
+
+const hashTopic = () => decodeURIComponent(globalThis.location.hash.slice(1));
+
 export default function HelpPage() {
   const [opened, { toggle }] = useDisclosure();
-  const [active, setActive] = useState('started');
+  // Deep-linkable pages: /help#comp-first-network, /help#refpage:bode, … The
+  // active page mirrors location.hash so doc URLs are shareable and the app's
+  // error/help links can target a specific page. Unknown hashes are left to
+  // the browser (they are in-page heading anchors).
+  const [active, setActive] = useState(() => (knownTopicId(hashTopic()) ? hashTopic() : 'started'));
   const [searchQuery, setSearchQuery] = useState('');
   const [searchFocused, setSearchFocused] = useState(false);
+
+  useEffect(() => {
+    const onHash = () => {
+      const id = hashTopic();
+      if (knownTopicId(id)) setActive(id);
+    };
+    globalThis.addEventListener('hashchange', onHash);
+    return () => globalThis.removeEventListener('hashchange', onHash);
+  }, []);
+  // Examples-gallery facets: free-text filter + a single active category chip.
+  const [exampleFilter, setExampleFilter] = useState('');
+  const [exampleCat, setExampleCat] = useState<string | null>(null);
 
   // Build the full-text search index once, seeding it with the nav keywords.
   useMemo(() => {
@@ -3207,17 +3464,21 @@ export default function HelpPage() {
     buildSearchIndex(kw);
   }, []);
 
+  // Search facet: restrict results to one kind of page (guide/reference/…).
+  const [searchKind, setSearchKind] = useState<SearchKind | null>(null);
+
   // Intelligent full-text search across all docs, catalogs, and examples.
   const searchResults = useMemo<SearchHit[]>(
-    () => (searchQuery.trim().length >= 2 ? searchDocs(searchQuery) : []),
-    [searchQuery]
+    () => (searchQuery.trim().length >= 2 ? searchDocs(searchQuery, 12, searchKind) : []),
+    [searchQuery, searchKind]
   );
 
   // When not searching, the nav shows all topics. When searching with no
   // content hits, fall back to the old label/keyword filter so the nav still
   // narrows. When content hits exist, the dropdown takes over and the nav
-  // shows the matching topic ids only.
-  const showResults = searchFocused && searchQuery.trim().length >= 2 && searchResults.length > 0;
+  // shows the matching topic ids only. An active facet keeps the dropdown
+  // open even at zero hits, so the chips stay reachable.
+  const showResults = searchFocused && searchQuery.trim().length >= 2 && (searchResults.length > 0 || searchKind !== null);
 
   const navCategories = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -3241,6 +3502,8 @@ export default function HelpPage() {
 
   const navigateTo = (id: string) => {
     setActive(id);
+    // Keep the URL shareable; guard so the hashchange listener doesn't loop.
+    if (hashTopic() !== id) globalThis.location.hash = id;
     setSearchQuery('');
     setSearchFocused(false);
     if (opened) toggle();
@@ -3248,6 +3511,18 @@ export default function HelpPage() {
 
   const renderContent = () => {
     if (active === 'examples') {
+      const q = exampleFilter.trim().toLowerCase();
+      const matches = (title: string, desc: string, code: string) =>
+        !q || title.toLowerCase().includes(q) || desc.toLowerCase().includes(q) || code.toLowerCase().includes(q);
+      const wsCats = WORKSPACE_EXAMPLE_CATEGORIES
+        .filter(([cat]) => !exampleCat || cat === exampleCat)
+        .map(([cat, exs]) => [cat, exs.filter((ex) => matches(ex.title, ex.description, ex.text))] as const)
+        .filter(([, exs]) => exs.length > 0);
+      const cycleCats = EXAMPLE_CATEGORIES
+        .filter(([cat]) => !exampleCat || cat === exampleCat)
+        .map(([cat, exs]) => [cat, exs.filter((ex) => matches(ex.title, ex.description, ex.code))] as const)
+        .filter(([, exs]) => exs.length > 0);
+      const nothing = wsCats.length === 0 && cycleCats.length === 0;
       return (
         <Stack gap="md">
           <Title order={2} c="blue.4">Engineering Examples Library</Title>
@@ -3257,6 +3532,34 @@ export default function HelpPage() {
             <b>Copy Code</b> button, paste into the editor, and press{' '}
             <Code>F2</Code> (Solve).
           </Text>
+          <Group gap="xs">
+            <TextInput
+              placeholder="Filter examples…"
+              value={exampleFilter}
+              onChange={(e) => setExampleFilter(e.currentTarget.value)}
+              leftSection={<IconSearch size={14} />}
+              rightSection={exampleFilter ? <CloseButton size="sm" onClick={() => setExampleFilter('')} /> : null}
+              w={260}
+            />
+            <Group gap={6}>
+              {ALL_EXAMPLE_CATEGORY_NAMES.map((cat) => (
+                <Badge
+                  key={cat}
+                  variant={exampleCat === cat ? 'filled' : 'light'}
+                  color="blue"
+                  style={{ cursor: 'pointer', textTransform: 'none' }}
+                  onClick={() => setExampleCat(exampleCat === cat ? null : cat)}
+                >
+                  {cat}
+                </Badge>
+              ))}
+            </Group>
+          </Group>
+          {nothing && (
+            <Alert color="gray" title="No examples match">
+              <Text size="sm">Nothing matches this filter — clear the text or the category chip to see the full library.</Text>
+            </Alert>
+          )}
           <Alert color="blue" variant="light" icon={<IconBook size={18} />}>
             <Text size="sm">
               Examples that solve an implicit or transcendental equation mention a{' '}
@@ -3267,14 +3570,14 @@ export default function HelpPage() {
               tab with <b>Solve Table</b>, not the main Solve.
             </Text>
           </Alert>
-          {WORKSPACE_EXAMPLE_CATEGORIES.length > 0 && (
+          {wsCats.length > 0 && (
             <Stack gap="xs">
               <Title order={3} c="cyan.4" mt="sm">Quick Workspace Examples</Title>
               <Text size="sm" c="dimmed">
                 Additional ready-to-run documents (the rest are in the File →
                 Open Example picker). Copy one into the editor and press Solve.
               </Text>
-              {WORKSPACE_EXAMPLE_CATEGORIES.map(([category, examples]) => (
+              {wsCats.map(([category, examples]) => (
                 <Stack gap="xs" key={`ws-${category}`}>
                   <Title order={4} c="blue.3" mt="sm">{category}</Title>
                   <MantineAccordion variant="separated">
@@ -3285,12 +3588,7 @@ export default function HelpPage() {
                         </MantineAccordion.Control>
                         <MantineAccordion.Panel>
                           <Text size="sm" mb="xs">{ex.description}</Text>
-                          <Paper withBorder p="xs" bg="light-dark(var(--mantine-color-gray-1), var(--mantine-color-dark-9))" style={{ position: 'relative' }}>
-                            <CopyButton code={ex.text} />
-                            <Code block style={{ background: 'transparent', maxHeight: '250px', overflowY: 'auto' }}>
-                              {ex.text}
-                            </Code>
-                          </Paper>
+                          <RunnableCode code={ex.text} title={ex.title} />
                         </MantineAccordion.Panel>
                       </MantineAccordion.Item>
                     ))}
@@ -3299,7 +3597,7 @@ export default function HelpPage() {
               ))}
             </Stack>
           )}
-          {EXAMPLE_CATEGORIES.map(([category, examples]) => (
+          {cycleCats.map(([category, examples]) => (
             <Stack gap="xs" key={category}>
               <Title order={4} c="blue.3" mt="sm">{category}</Title>
               <MantineAccordion variant="separated">
@@ -3320,12 +3618,7 @@ export default function HelpPage() {
                           <BraytonCycleDiagram />
                         </Paper>
                       )}
-                      <Paper withBorder p="xs" bg="light-dark(var(--mantine-color-gray-1), var(--mantine-color-dark-9))" style={{ position: 'relative' }}>
-                        <CopyButton code={ex.code} />
-                        <Code block style={{ background: 'transparent', maxHeight: '250px', overflowY: 'auto' }}>
-                          {ex.code}
-                        </Code>
-                      </Paper>
+                      <RunnableCode code={ex.code} title={exampleShortTitle(ex.title)} />
                     </MantineAccordion.Panel>
                   </MantineAccordion.Item>
                 ))}
@@ -3338,7 +3631,7 @@ export default function HelpPage() {
 
     if (active.startsWith('refpage:')) {
       const page = REFERENCE_BY_SLUG.get(active.slice('refpage:'.length));
-      if (page) return <ReferencePageView page={page} onNavigate={(slug) => navigateTo('refpage:' + slug)} />;
+      if (page) return <ReferencePageView page={page} onNavigate={(slug) => navigateTo('refpage:' + slug)} onNavigateTopic={navigateTo} />;
     }
 
     // Reference data pages (single source of truth; the old Quick-Reference
@@ -3437,10 +3730,32 @@ export default function HelpPage() {
                 maxHeight: '60vh', overflowY: 'auto',
               }}
             >
-              <Text size="xs" c="dimmed" fw={700} px="xs" pb={4}>
-                {searchResults.length} result{searchResults.length === 1 ? '' : 's'}
-              </Text>
+              <Group gap="xs" px="xs" pb={4} justify="space-between">
+                <Text size="xs" c="dimmed" fw={700}>
+                  {searchResults.length} result{searchResults.length === 1 ? '' : 's'}
+                </Text>
+                <Group gap={4}>
+                  {SEARCH_FACETS.map(([kind, label]) => (
+                    <Badge
+                      key={kind}
+                      size="xs"
+                      variant={searchKind === kind ? 'filled' : 'light'}
+                      color="blue"
+                      style={{ cursor: 'pointer', textTransform: 'none' }}
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => setSearchKind(searchKind === kind ? null : kind)}
+                    >
+                      {label}
+                    </Badge>
+                  ))}
+                </Group>
+              </Group>
               <Divider mb={4} />
+              {searchResults.length === 0 && (
+                <Text size="xs" c="dimmed" px="xs" py={6}>
+                  No {SEARCH_FACETS.find(([k]) => k === searchKind)?.[1].toLowerCase()} results — click the chip again to search everything.
+                </Text>
+              )}
               {searchResults.map((hit, idx) => (
                 <Box
                   key={`${hit.id}-${idx}`}

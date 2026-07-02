@@ -32,7 +32,32 @@ class LiquidDomainTest {
         // + later additions shipped after this breakdown was written (boil-off vessels,
         //   relief valves, heat/mass sources, UA/float two-phase HXs, blend sensors, …)
         // + 3 map-driven components (FanMap, PumpMap, CompressorMap) for the Component Wizard
-        assertEquals(139, names.size(), "built-in component count after the per-domain split");
+        // + 29 signal & control blocks (Wave 1: sources, math, dynamics, PID, lookup)
+        // + 4 signal-commanded actuators (EXVCmd, ClutchCmd, HydraulicValveCmd,
+        //   PneumaticServoValveCmd)
+        // + 20 Wave 2 thermal-fluid: VCC devices (short tube, capillary, internal HX,
+        //   reversing valve, suction accumulator, flash tank, ejector, oil separator),
+        //   coolant TMS set (3-way valve, check valve, tank, thermostat, pump map,
+        //   expansion tank), cabin/air set (fan, damper, evaporative cooler, cabin
+        //   zone) and the Radiator/HeaterCore composites
+        // + 11 Wave 3 electrification: BatteryCellMap (OCV/entropic/Arrhenius, aging
+        //   variant), BatteryPack, MotorMap, InverterLoss, DCDCConverter,
+        //   Supercapacitor, ChargerCCCV, ThermalFuse, HarnessResistance,
+        //   Electrolyzer, SolarArray
+        // + 14 Wave 4 mechanics & vehicle: TorsionalBacklash, EndStop, TransSpring,
+        //   ScrewDrive, RackPinion, Lever, BeltDrive, Brake, TorqueConverter,
+        //   TireLongitudinal, VehicleBody, DriveCycleSource, Differential, QuarterCar
+        // + 17 Wave 5 fluid power: hydraulic (check + pilot-check valves, gas-charged
+        //   accumulator, motor, volume, pipe, flow control, flow divider, sequence
+        //   valve, double-acting cylinder, K-resistance) and pneumatic (check valve,
+        //   3/2 + 5/2 directional valves, double-acting cylinder, thermal volume,
+        //   vacuum ejector)
+        // + 11 Wave 6 thermal/gas/aero breadth: WallRC, RadiationTwoSurface, HeatPipe,
+        //   PCMMass, PeltierTEC, ThermalSwitch, HeatedDuct, Regenerator, Combustor,
+        //   AtmosphereSource, Propeller
+        // + 3 physical-to-signal probes (SigThermalProbe, SigSpeedProbe, SigVelProbe)
+        //   closing measurement loops for the D-phase showcases
+        assertEquals(248, names.size(), "built-in component count after the per-domain split");
         // built-in names are stored lowercased (the language is case-insensitive)
         assertTrue(names.containsAll(java.util.List.of(
                 "liquidsource", "liquidsink", "liquidpump", "liquidpipe",

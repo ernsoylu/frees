@@ -1,0 +1,15 @@
+// Radiator composite: energy picked up by the air equals energy dropped by the
+// coolant (wall node closure), and the heated air keeps its humidity ratio.
+// EXPECT d_bal = 0 tol 1e-3
+// EXPECT d_w = 0 tol 1e-6
+LiquidSource   CIN(fluid$=Water, mdot=0.5, P=200000, T=360)
+Radiator       RAD(cool$=Water, UA_cool=800, eps_air=0.6)
+LiquidSink     COUT()
+MoistAirSource AIN(P=101325, T=300, W=0.006, mdot=1.0)
+MoistAirSink   AOUT()
+connect(CIN.out, RAD.cool_in)
+connect(RAD.cool_out, COUT.in)
+connect(AIN.out, RAD.air_in)
+connect(RAD.air_out, AOUT.in)
+d_bal = 0.5 * (CIN.out.h - RAD.cool_out.h) - 1.0 * (RAD.air_out.h - AIN.out.h)
+d_w   = RAD.air_out.W - 0.006

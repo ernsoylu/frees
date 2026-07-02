@@ -753,6 +753,7 @@ public final class ComponentExpander {
                 case ELECTRICAL -> out.add(kirchhoffBalance(sts, "i", prefix));
                 case MECHANICAL -> out.add(kirchhoffBalance(sts, "tau", prefix));
                 case TRANSLATIONAL -> out.add(kirchhoffBalance(sts, "f", prefix));
+                case SIGNAL -> { /* causal broadcast: across equality only, no flow */ }
                 case FLUID -> {
                     if (!loopClosing) {
                         if (sts.size() == 2) {
@@ -974,7 +975,7 @@ public final class ComponentExpander {
     }
 
     /** The physical domain of a connection node, with its node rule. */
-    private enum Domain { FLUID, HEAT, ELECTRICAL, MECHANICAL, TRANSLATIONAL }
+    private enum Domain { FLUID, HEAT, ELECTRICAL, MECHANICAL, TRANSLATIONAL, SIGNAL }
 
     /**
      * Classifies a {@code connect} node's domain from the members its streams
@@ -983,7 +984,10 @@ public final class ComponentExpander {
      * {@code i}⇒electrical, {@code tau}⇒mechanical (rotational). Fluid is the
      * default, so every existing fluid connect is unaffected. Heat, electrical and
      * mechanical share a Kirchhoff flow rule (Σflow=0); fluid keeps its directional
-     * pass-through / branch balance.
+     * pass-through / branch balance. A {@code sig} member marks the CAUSAL signal
+     * domain (control/command values): across-only — the node equates the value at
+     * every endpoint and carries no flow, so one writer broadcasts to any number
+     * of readers.
      */
     private Domain nodeDomain(List<String> streams) {
         java.util.Set<String> u = new java.util.HashSet<>();
@@ -992,6 +996,9 @@ public final class ComponentExpander {
             if (m != null) {
                 u.addAll(m);
             }
+        }
+        if (u.contains("sig")) {
+            return Domain.SIGNAL;
         }
         if (u.contains("mdot")) {
             return Domain.FLUID;
@@ -1147,6 +1154,7 @@ public final class ComponentExpander {
             case ELECTRICAL -> new String[]{"v"};
             case MECHANICAL -> new String[]{"w"};
             case TRANSLATIONAL -> new String[]{"vel"};
+            case SIGNAL -> new String[]{"sig"};
         };
     }
 
@@ -1327,6 +1335,15 @@ public final class ComponentExpander {
         String stringValue = ri.stringParams().get(name);
         if (stringValue != null) {
             return new Expr.Str(stringValue);
+        }
+        // Reserved global: `time` in a component body is the simulation time,
+        // never a per-instance local. The DYNAMIC integrators pin it alongside
+        // the block's declared time variable (whatever the header names it); in
+        // a steady solve it is an ordinary global the document pins (time = 0).
+        // This is what lets time-driven source blocks (Step/Ramp/Sine/drive
+        // cycles) exist as library components at all.
+        if (name.equals("time")) {
+            return new Expr.Var("time");
         }
         return new Expr.Var(namespaceLocal(name, ri));
     }

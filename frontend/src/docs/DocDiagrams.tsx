@@ -549,3 +549,94 @@ export function EvThermalDiagram() {
     </svg>
   );
 }
+
+// ── Learning map ──────────────────────────────────────────────────────────────
+// The "Where to Go Next" prerequisite map: four stages, every node clickable
+// (navigates to that section's landing page). Pure SVG in the DocDiagrams
+// style — no graph library.
+
+const LEARNING_MAP: { title: string; fill: string; stroke: string; nodes: { id: string; label: string }[] }[] = [
+  {
+    title: 'Start here', fill: '#0CA678', stroke: '#63E6BE',
+    nodes: [{ id: 'started', label: 'Get Started (1–7)' }],
+  },
+  {
+    title: 'Foundations', fill: '#1C7ED6', stroke: '#4DABF7',
+    nodes: [
+      { id: 'lang-overview', label: 'Language Fundamentals' },
+      { id: 'matrix-overview', label: 'Matrices & Linear Algebra' },
+      { id: 'prog-overview', label: 'Programming & Tables' },
+      { id: 'fluids-overview', label: 'Fluids & Materials' },
+    ],
+  },
+  {
+    title: 'Applied modeling', fill: '#7048E8', stroke: '#9775FA',
+    nodes: [
+      { id: 'solving-overview', label: 'Solving & Optimization' },
+      { id: 'dynamics-overview', label: 'Dynamics & Control' },
+      { id: 'components-overview', label: 'System Modeling' },
+    ],
+  },
+  {
+    title: 'Practice & ship', fill: '#0CA678', stroke: '#63E6BE',
+    nodes: [
+      { id: 'tools-overview', label: 'Tools & Workflow' },
+      { id: 'tut-msd', label: 'Guided Tutorials' },
+      { id: 'deploy-overview', label: 'Architecture & Deployment' },
+    ],
+  },
+];
+
+export function LearningMapDiagram({ onNavigate }: { onNavigate?: (id: string) => void }) {
+  const colW = 168;
+  const colGap = 38;
+  const nodeH = 40;
+  const nodeGap = 12;
+  const topPad = 34;
+  const maxNodes = Math.max(...LEARNING_MAP.map((c) => c.nodes.length));
+  const height = topPad + maxNodes * (nodeH + nodeGap) + 8;
+  const width = LEARNING_MAP.length * colW + (LEARNING_MAP.length - 1) * colGap + 30;
+  const colX = (i: number) => 15 + i * (colW + colGap);
+  const colMidY = (i: number) => topPad + (LEARNING_MAP[i].nodes.length * (nodeH + nodeGap) - nodeGap) / 2;
+  return (
+    <svg viewBox={`0 0 ${width} ${height}`} width="100%" height="auto" style={{ background: THEME.bg, fontFamily: 'system-ui, sans-serif' }}>
+      <defs>
+        <marker id="lmArrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M 0 1.5 L 6 5 L 0 8.5 z" fill={THEME.textDimmed} />
+        </marker>
+      </defs>
+      {LEARNING_MAP.map((col, i) => (
+        <g key={col.title} transform={`translate(${colX(i)}, 0)`}>
+          <text x={colW / 2} y={18} fill={THEME.textDimmed} fontSize="11" fontWeight="700" textAnchor="middle" style={{ letterSpacing: '0.5px', textTransform: 'uppercase' }}>
+            {col.title}
+          </text>
+          {col.nodes.map((n, j) => (
+            <g
+              key={n.id}
+              transform={`translate(0, ${topPad + j * (nodeH + nodeGap)})`}
+              onClick={() => onNavigate?.(n.id)}
+              style={{ cursor: onNavigate ? 'pointer' : 'default' }}
+            >
+              <rect width={colW} height={nodeH} rx="8" fill={col.fill} stroke={col.stroke} strokeWidth="1" />
+              <text x={colW / 2} y={nodeH / 2 + 4} fill="#FFF" fontWeight="600" fontSize="11.5" textAnchor="middle">
+                {n.label}
+              </text>
+            </g>
+          ))}
+        </g>
+      ))}
+      {LEARNING_MAP.slice(0, -1).map((_, i) => (
+        <line
+          key={`arrow-${LEARNING_MAP[i].title}`}
+          x1={colX(i) + colW + 4}
+          y1={colMidY(i)}
+          x2={colX(i + 1) - 6}
+          y2={colMidY(i + 1)}
+          stroke={THEME.textDimmed}
+          strokeWidth={THEME.strokeWidth}
+          markerEnd="url(#lmArrow)"
+        />
+      ))}
+    </svg>
+  );
+}

@@ -1,0 +1,15 @@
+// Suction accumulator: a slightly wet inlet (x=0.98) at 3 bar. The energy
+// balance forces the vapor outflow to x_in*m_in, so liquid accumulates at
+// (1-x)*m_in = 0.001 kg/s: after 100 s the inventory grew by 0.1 kg.
+// EXPECT m_fin = 0.6 tol 1e-3
+// EXPECT mout_fin = 0.049 tol 1e-4
+hwet = Enthalpy(R134a, P=300000, x=0.98)
+TwoPhaseSourcePH   WIN(mdot=0.05, P=300000, h=hwet)
+SuctionAccumulator ACC(fluid$=R134a, m0=0.5)
+TwoPhaseSink       KS()
+connect(WIN.out, ACC.in)
+connect(ACC.out, KS.in)
+DYNAMIC fill(method = ode23s, time = 0 .. 100, points = 100)
+END
+m_fin    = FinalValue('acc.m')
+mout_fin = FinalValue('acc.out.mdot')
