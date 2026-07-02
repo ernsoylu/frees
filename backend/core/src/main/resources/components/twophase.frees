@@ -291,17 +291,29 @@ END
 // isentropic efficiency. Suction is superheated vapor (twophase domain, vapor
 // region); RPM-based volumetric sizing is a T-AC concern.
 COMPONENT TwoPhaseCompressor(in, out)
-  PARAM fluid$, eta, domain$ = twophase, model$ = isentropic
+  PARAM fluid$, eta, eta_v, disp, rpm, map_etas$, map_etav$, domain$ = twophase, model$ = isentropic
   s_in     = Entropy(fluid$, P=in.P, h=in.h)
   h_s      = Enthalpy(fluid$, P=out.P, s=s_in)
   out.mdot = in.mdot
-  out.h    = in.h + (h_s - in.h) / eta
   W        = in.mdot * (out.h - in.h)
-  VARIANT isentropic
+  VARIANT isentropic REQUIRE eta
+    out.h = in.h + (h_s - in.h) / eta
   END
-  VARIANT volumetric REQUIRE eta_v, disp, rpm
+  VARIANT volumetric REQUIRE eta, eta_v, disp, rpm
+    out.h   = in.h + (h_s - in.h) / eta
     rho_in  = Density(fluid$, P=in.P, h=in.h)
     in.mdot = eta_v * disp * (rpm / 60) * rho_in
+  END
+  // Suction-corrected 2-D map rung: isentropic AND volumetric efficiencies from
+  // curve-family TABLEs over (pressure ratio, rpm), the Amesim map-compressor
+  // form — displacement flow on the real suction density.
+  VARIANT map2d REQUIRE map_etas$, map_etav$, disp, rpm
+    PRr     = out.P / in.P
+    etas    = map_etas$(PRr, rpm)
+    etav    = map_etav$(PRr, rpm)
+    rho_in  = Density(fluid$, P=in.P, h=in.h)
+    in.mdot = etav * disp * (rpm / 60) * rho_in
+    out.h   = in.h + (h_s - in.h) / etas
   END
 END
 
