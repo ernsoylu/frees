@@ -40,7 +40,11 @@ class LiquidDomainTest {
         //   coolant TMS set (3-way valve, check valve, tank, thermostat, pump map,
         //   expansion tank), cabin/air set (fan, damper, evaporative cooler, cabin
         //   zone) and the Radiator/HeaterCore composites
-        assertEquals(192, names.size(), "built-in component count after the per-domain split");
+        // + 11 Wave 3 electrification: BatteryCellMap (OCV/entropic/Arrhenius, aging
+        //   variant), BatteryPack, MotorMap, InverterLoss, DCDCConverter,
+        //   Supercapacitor, ChargerCCCV, ThermalFuse, HarnessResistance,
+        //   Electrolyzer, SolarArray
+        assertEquals(203, names.size(), "built-in component count after the per-domain split");
         // built-in names are stored lowercased (the language is case-insensitive)
         assertTrue(names.containsAll(java.util.List.of(
                 "liquidsource", "liquidsink", "liquidpump", "liquidpipe",
