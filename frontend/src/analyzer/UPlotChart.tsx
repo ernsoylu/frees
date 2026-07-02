@@ -26,30 +26,52 @@ import { useEffect, useRef } from 'react'
 import uPlot from 'uplot'
 import 'uplot/dist/uPlot.min.css'
 
+/** Measurement cursors A + B (§2.5e), drawn as labeled vertical lines. */
+export interface AbCursors {
+  a: number | null
+  b: number | null
+}
+
+const CURSOR_COLORS = { a: '#ffd43b', b: '#3bc9db' } as const
+
 interface Props {
   /** Chart options sans width/height (owned by the wrapper's ResizeObserver). */
   options: Omit<uPlot.Options, 'width' | 'height'>
   data: uPlot.AlignedData
   /** Requested x window; null = fit the full data extents. */
   xRange: [number, number] | null
+  /** A/B measurement cursor positions (time values) to draw. */
+  cursors?: AbCursors
   /** User changed the x scale (drag-zoom or wheel); NOT fired for setData. */
   onUserZoom?: (min: number, max: number) => void
   /** Double-click — reset to the full recording. */
   onResetZoom?: () => void
+  /** Plain click placed a cursor: A on click, B on Shift+click. */
+  onCursorSet?: (t: number, which: 'a' | 'b') => void
 }
 
-export default function UPlotChart({ options, data, xRange, onUserZoom, onResetZoom }: Readonly<Props>) {
+export default function UPlotChart({
+  options,
+  data,
+  xRange,
+  cursors,
+  onUserZoom,
+  onResetZoom,
+  onCursorSet,
+}: Readonly<Props>) {
   const containerRef = useRef<HTMLDivElement>(null)
   const chartRef = useRef<uPlot | null>(null)
   const dataRef = useRef(data)
   dataRef.current = data
   const xRangeRef = useRef(xRange)
   xRangeRef.current = xRange
+  const cursorsRef = useRef(cursors)
+  cursorsRef.current = cursors
   // True while a programmatic update (create/setData/setSize) is in flight,
   // including the microtask in which uPlot flushes the resulting hooks.
   const internalUpdate = useRef(false)
-  const cbRef = useRef({ onUserZoom, onResetZoom })
-  cbRef.current = { onUserZoom, onResetZoom }
+  const cbRef = useRef({ onUserZoom, onResetZoom, onCursorSet })
+  cbRef.current = { onUserZoom, onResetZoom, onCursorSet }
 
   /** Run a programmatic chart mutation without it registering as a user zoom. */
   const guarded = (fn: () => void) => {
@@ -90,6 +112,37 @@ export default function UPlotChart({ options, data, xRange, onUserZoom, onResetZ
             if (min != null && max != null) cbRef.current.onUserZoom?.(min, max)
           },
         ],
+        // Measurement cursors A/B: labeled vertical lines over the plot area,
+        // read from a ref so cursor moves only need a redraw, not a rebuild.
+        draw: [
+          ...(options.hooks?.draw ?? []),
+          (u: uPlot) => {
+            const cur = cursorsRef.current
+            if (!cur) return
+            const ctx = u.ctx
+            const dpr = window.devicePixelRatio || 1
+            for (const which of ['a', 'b'] as const) {
+              const t = cur[which]
+              if (t == null) continue
+              const { min, max } = u.scales.x
+              if (min == null || max == null || t < min || t > max) continue
+              const x = u.valToPos(t, 'x', true)
+              ctx.save()
+              ctx.strokeStyle = CURSOR_COLORS[which]
+              ctx.lineWidth = dpr
+              ctx.setLineDash([4 * dpr, 4 * dpr])
+              ctx.beginPath()
+              ctx.moveTo(x, u.bbox.top)
+              ctx.lineTo(x, u.bbox.top + u.bbox.height)
+              ctx.stroke()
+              ctx.setLineDash([])
+              ctx.fillStyle = CURSOR_COLORS[which]
+              ctx.font = `${11 * dpr}px sans-serif`
+              ctx.fillText(which.toUpperCase(), x + 3 * dpr, u.bbox.top + 11 * dpr)
+              ctx.restore()
+            }
+          },
+        ],
       },
     }
     let chart: uPlot
@@ -106,6 +159,25 @@ export default function UPlotChart({ options, data, xRange, onUserZoom, onResetZ
       cbRef.current.onResetZoom?.()
     }
     chart!.over.addEventListener('dblclick', onDblClick, { capture: true })
+
+    // Plain click (no drag) places measurement cursor A; Shift+click places B.
+    // A drag-select is distinguished by pointer travel, so zoom-box still works.
+    let downPos: { x: number; y: number } | null = null
+    const onMouseDown = (e: MouseEvent) => {
+      downPos = { x: e.clientX, y: e.clientY }
+    }
+    const onMouseUp = (e: MouseEvent) => {
+      const down = downPos
+      downPos = null
+      if (!down || Math.abs(e.clientX - down.x) > 3 || Math.abs(e.clientY - down.y) > 3) return
+      const c = chartRef.current
+      if (!c) return
+      const rect = c.over.getBoundingClientRect()
+      const t = c.posToVal(e.clientX - rect.left, 'x')
+      if (Number.isFinite(t)) cbRef.current.onCursorSet?.(t, e.shiftKey ? 'b' : 'a')
+    }
+    chart!.over.addEventListener('mousedown', onMouseDown)
+    chart!.over.addEventListener('mouseup', onMouseUp)
 
     // Wheel = x-zoom centered on the cursor.
     const onWheel = (e: WheelEvent) => {
@@ -140,12 +212,19 @@ export default function UPlotChart({ options, data, xRange, onUserZoom, onResetZ
       cancelAnimationFrame(frame)
       chart.over.removeEventListener('dblclick', onDblClick, { capture: true })
       chart.over.removeEventListener('wheel', onWheel)
+      chart.over.removeEventListener('mousedown', onMouseDown)
+      chart.over.removeEventListener('mouseup', onMouseUp)
       chartRef.current = null
       // Destroy can fire hooks too — keep it guarded.
       guarded(() => chart.destroy())
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [options])
+
+  // Cursor moves only repaint (draw hooks re-run); no data or scale change.
+  useEffect(() => {
+    chartRef.current?.redraw(false)
+  }, [cursors])
 
   // Data-only updates keep the chart instance (cursor state survives). The
   // scale range() function re-applies xRangeRef during the reset.

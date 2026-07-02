@@ -378,10 +378,19 @@ export default function App() {
   const [spreadsheets, setSpreadsheets] = useState<SpreadsheetSpec[]>(() =>
     boot?.spreadsheets ?? loadSpreadsheets(),
   )
-  // Data Analyzer windows (todo.md Phase 1). Session-only for now: the spec
-  // slice joins the .frees project file in Phase 2 (template mode); bulk
-  // samples always stay out of React, in the module-level ChannelStore.
-  const [analyzers, setAnalyzers] = useState<AnalyzerSpec[]>([])
+  // Data Analyzer windows: the spec slice (layout + signal assignments +
+  // measurement file refs, never bulk data) rides the .frees project file
+  // ("template mode", §2.5b); samples live in the module-level ChannelStore
+  // and are re-picked on load via each window's "Locate file…" banner.
+  const [analyzers, setAnalyzers] = useState<AnalyzerSpec[]>(() => boot?.analyzers ?? [])
+  // One-line self-dismissing notice (e.g. "N analyzer window(s) awaiting
+  // measurement files" after a project load).
+  const [loadNotice, setLoadNotice] = useState<string | null>(null)
+  useEffect(() => {
+    if (loadNotice === null) return
+    const id = setTimeout(() => setLoadNotice(null), 8000)
+    return () => clearTimeout(id)
+  }, [loadNotice])
   // Diagrams are addressed per-window now; we only need the setter (to track
   // the most-recently-created/focused diagram for new-window opening).
   const [, setActiveDiagramId] = useState<string | null>(() => {
@@ -440,8 +449,9 @@ export default function App() {
       diagrams,
       whiteboards,
       spreadsheets,
+      analyzers,
     }),
-    [text, varDrafts, stopCriteria, unitSystem, fillMissing, stateUnitIds, tables, plots, diagrams, whiteboards, spreadsheets],
+    [text, varDrafts, stopCriteria, unitSystem, fillMissing, stateUnitIds, tables, plots, diagrams, whiteboards, spreadsheets, analyzers],
   )
 
   // Debounced autosave of the entire workspace to a single localStorage key,
@@ -641,8 +651,8 @@ export default function App() {
       return
     }
     isDirtyRef.current = true
-     
-  }, [text, tables, plots, diagrams, whiteboards, spreadsheets, varDrafts])
+
+  }, [text, tables, plots, diagrams, whiteboards, spreadsheets, analyzers, varDrafts])
 
   // Apply an opened/loaded project to every workspace slice. Child-owned slices
   // are written back to their caches and the relevant tabs are remounted (epoch
@@ -662,6 +672,17 @@ export default function App() {
     setActiveDiagramId(p.diagrams?.[0]?.id ?? null)
     setWhiteboards(p.whiteboards ?? [])
     setSpreadsheets(p.spreadsheets ?? [])
+    // Template mode (§2.5b): analyzer layouts load with refs only — the
+    // measurement data itself is gone, so each window shows a "Locate file…"
+    // banner. Clear any stale samples from a previous project first.
+    channelStore.clear()
+    setAnalyzers(p.analyzers ?? [])
+    const awaiting = (p.analyzers ?? []).filter((a) => a.files.length > 0).length
+    setLoadNotice(
+      awaiting > 0
+        ? `${awaiting} analyzer window${awaiting === 1 ? '' : 's'} awaiting measurement files — open them and use “Locate file…”.`
+        : null,
+    )
     // Diagrams present at project-open mount in Run view (see initialMode prop).
     runOnLoadDiagramIdsRef.current = new Set((p.diagrams ?? []).map((d) => d.id))
     setResult(null)
@@ -680,6 +701,11 @@ export default function App() {
       const firstWhiteboard = p.whiteboards?.[0]
       if (firstWhiteboard) {
         dockRef.current?.openInstance(`whiteboard:${firstWhiteboard.id}`, 'whiteboard', firstWhiteboard.name)
+      }
+      // And the first analyzer, so its "Locate file…" banner is discoverable.
+      const firstAnalyzer = p.analyzers?.[0]
+      if (firstAnalyzer) {
+        dockRef.current?.openInstance(`analyzer:${firstAnalyzer.id}`, 'analyzer', firstAnalyzer.name)
       }
     })
   }, [])
@@ -780,6 +806,7 @@ export default function App() {
       diagrams: [],
       whiteboards: [],
       spreadsheets: [],
+      analyzers: [],
       customComponents: null,
       digitizer: null,
       dockLayout: null,
@@ -932,6 +959,7 @@ export default function App() {
       diagrams: [],
       whiteboards: [],
       spreadsheets: [],
+      analyzers: [],
       customComponents: null,
       digitizer: null,
       dockLayout: null,
@@ -2732,6 +2760,19 @@ export default function App() {
         message={dialogError ?? ''}
         onClose={() => setDialogError(null)}
       />
+
+      {/* Self-dismissing project-load summary (template mode, §2.5b). */}
+      {loadNotice !== null && (
+        <Alert
+          icon={<IconWaveSine size={16} />}
+          color="teal"
+          withCloseButton
+          onClose={() => setLoadNotice(null)}
+          style={{ position: 'fixed', bottom: 16, right: 16, zIndex: 400, maxWidth: 420 }}
+        >
+          {loadNotice}
+        </Alert>
+      )}
 
       {showPreferences && (
         <PreferencesModal
