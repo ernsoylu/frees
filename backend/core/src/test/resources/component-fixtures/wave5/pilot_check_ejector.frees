@@ -1,0 +1,35 @@
+// Pilot-operated check valve: without pilot pressure a reverse ΔP blocks;
+// with a 3:1 pilot at 60 bar the same reverse ΔP flows (negative, load
+// lowering). Vacuum ejector: motive choked flow, suction = ER * motive.
+// EXPECT pcv0.in.mdot = 0 tol 1e-6
+// EXPECT r_rev < 0 via d_rev
+// EXPECT d_rev = 0 tol 1e-7
+// EXPECT d_ej = 0 tol 1e-9
+// EXPECT d_es = 0 tol 1e-12
+HydraulicSupply LOW0(P=100000)
+HydraulicPilotCheckValve PCV0(CdA=1e-6, rho=850, rp=3, eps=100000)
+HydraulicTank   HIGH0(P=5000000)
+HydraulicSupply PIL0(P=100000)
+connect(LOW0.out, PCV0.in)
+connect(PCV0.out, HIGH0.port)
+connect(PIL0.out, PCV0.pilot)
+
+HydraulicSupply LOW1(P=100000)
+HydraulicPilotCheckValve PCV1(CdA=1e-6, rho=850, rp=3, eps=100000)
+HydraulicTank   HIGH1(P=5000000)
+HydraulicSupply PIL1(P=6000000)
+connect(LOW1.out, PCV1.in)
+connect(PCV1.out, HIGH1.port)
+connect(PIL1.out, PCV1.pilot)
+d_rev = PCV1.in.mdot * abs(PCV1.in.mdot) - (1e-6)^2 * 2 * 850 * (100000 - 5000000)
+
+PneumaticSupply     MOT(fluid$=Air, P=700000, T=300)
+VacuumEjector       EJ(fluid$=Air, C=1e-8, b=0.4, ER=0.6)
+PneumaticSupply     SUC(fluid$=Air, P=60000, T=300)
+PneumaticAtmosphere EXH(P=100000)
+connect(MOT.out, EJ.sup_in)
+connect(SUC.out, EJ.suc_in)
+connect(EJ.exh_out, EXH.port)
+t_m  = Temperature(Air, P=700000, h=MOT.out.h)
+d_ej = EJ.sup_in.mdot - iso6358(1e-8, 0.4, 700000, t_m, 100000)
+d_es = EJ.suc_in.mdot - 0.6 * EJ.sup_in.mdot

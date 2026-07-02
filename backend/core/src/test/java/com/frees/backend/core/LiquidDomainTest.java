@@ -47,7 +47,12 @@ class LiquidDomainTest {
         // + 14 Wave 4 mechanics & vehicle: TorsionalBacklash, EndStop, TransSpring,
         //   ScrewDrive, RackPinion, Lever, BeltDrive, Brake, TorqueConverter,
         //   TireLongitudinal, VehicleBody, DriveCycleSource, Differential, QuarterCar
-        assertEquals(217, names.size(), "built-in component count after the per-domain split");
+        // + 17 Wave 5 fluid power: hydraulic (check + pilot-check valves, gas-charged
+        //   accumulator, motor, volume, pipe, flow control, flow divider, sequence
+        //   valve, double-acting cylinder, K-resistance) and pneumatic (check valve,
+        //   3/2 + 5/2 directional valves, double-acting cylinder, thermal volume,
+        //   vacuum ejector)
+        assertEquals(234, names.size(), "built-in component count after the per-domain split");
         // built-in names are stored lowercased (the language is case-insensitive)
         assertTrue(names.containsAll(java.util.List.of(
                 "liquidsource", "liquidsink", "liquidpump", "liquidpipe",
