@@ -1,9 +1,13 @@
 package com.frees.backend.config;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.frees.backend.api.CyclePathResolver;
+import com.frees.backend.api.SidecarMeasurementParser;
 import com.frees.backend.core.EquationSystemSolver;
+import com.frees.backend.measurement.FallbackMeasurementParser;
 import com.frees.backend.measurement.MeasurementParser;
 import com.frees.backend.measurement.Mf4Parser;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -29,11 +33,21 @@ public class CoreBeansConfig {
         return new CyclePathResolver();
     }
 
+    /**
+     * The MeasurementParser seam is where the MF4 fallback ladder lives:
+     * in-process mdf4j handles uncompressed files; when a sidecar URL is
+     * configured, DZ-compressed OEM files fall through to the asammdf
+     * sidecar (todo.md decision 4). Empty URL = mdf4j only.
+     */
     @Bean
-    public MeasurementParser measurementParser() {
-        // The MeasurementParser seam is where the MF4 fallback ladder lives
-        // (mdf4j → in-house DT reader → asammdf sidecar); swapping rungs is a
-        // one-line change here.
-        return new Mf4Parser();
+    public MeasurementParser measurementParser(
+            @Value("${frees.measurements.sidecar-url:}") String sidecarUrl,
+            ObjectMapper objectMapper) {
+        Mf4Parser primary = new Mf4Parser();
+        if (sidecarUrl == null || sidecarUrl.isBlank()) {
+            return primary;
+        }
+        return new FallbackMeasurementParser(
+                primary, new SidecarMeasurementParser(sidecarUrl, objectMapper));
     }
 }

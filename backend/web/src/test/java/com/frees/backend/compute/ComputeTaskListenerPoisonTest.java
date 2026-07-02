@@ -51,7 +51,7 @@ class ComputeTaskListenerPoisonTest {
         RecordingJobStore store = new RecordingJobStore();
         // Null controllers are safe: the guard returns before any dispatch.
         ComputeTaskListener listener = new ComputeTaskListener(
-                null, null, store, new ObjectMapper(),
+                null, null, null, store, new ObjectMapper(),
                 ComputeTaskListenerPoisonTest.<OpenTelemetry>noProvider(), true);
 
         ComputeTask task = new ComputeTask("job-1", ComputeTask.SOLVE, "sess", "{}");
@@ -69,7 +69,7 @@ class ComputeTaskListenerPoisonTest {
         // attempted by using a listener whose dispatch path throws on null deps.
         AtomicInteger dispatched = new AtomicInteger();
         ComputeTaskListener listener = new ComputeTaskListener(
-                null, null, store, new ObjectMapper(),
+                null, null, null, store, new ObjectMapper(),
                 ComputeTaskListenerPoisonTest.<OpenTelemetry>noProvider(), true) {
         };
 
