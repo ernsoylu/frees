@@ -53,6 +53,9 @@ services:
       - SPRING_PROFILES_ACTIVE=api
       - SPRING_RABBITMQ_HOST=rabbitmq
       - SPRING_DATA_REDIS_HOST=redis
+      # asammdf sidecar: covers DZ-compressed .mf4 files the in-process
+      # parser cannot read (fallback ladder rung 3, todo.md decision 4).
+      - FREES_MEASUREMENTS_SIDECAR_URL=http://mdf-sidecar:8090
       # OpenTelemetry: export traces to the OTel collector service below.
       - OTEL_SERVICE_NAME=api-node
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
@@ -106,6 +109,16 @@ services:
         condition: service_healthy
       otel-collector:
         condition: service_started
+
+  mdf-sidecar:
+    build: ./mdf-sidecar
+    container_name: frees-mdf-sidecar
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8090/health')\" || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
 
   frontend:
     build:

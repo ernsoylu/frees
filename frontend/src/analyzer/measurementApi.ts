@@ -107,15 +107,41 @@ export interface CalcResultDto {
   v: number[]
 }
 
-/** Evaluate a calculated signal server-side (Phase 4). */
+/**
+ * Evaluate a calculated signal server-side (Phase 4). Small/call-free
+ * formulas answer synchronously; property-function formulas over large
+ * rasters come back as 202 + jobId and are polled here (decision 3 — no
+ * mid-job cancel in v1, abandoning the poll just leaves the job to its TTL).
+ */
 export async function calcSignal(request: CalcRequestDto): Promise<CalcResultDto> {
   const response = await fetch(`${API_BASE}/api/measurements/calc`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(request),
   })
+  if (response.status === 202) {
+    const ticket = (await response.json()) as { jobId?: string }
+    if (!ticket.jobId) throw new MeasurementApiError(202, 'Job submission did not return a jobId.')
+    return pollCalcJob(ticket.jobId)
+  }
   if (!response.ok) await fail(response)
   return (await response.json()) as CalcResultDto
+}
+
+async function pollCalcJob(jobId: string): Promise<CalcResultDto> {
+  const deadline = Date.now() + 5 * 60_000
+  while (Date.now() < deadline) {
+    const response = await fetch(`${API_BASE}/api/jobs/${jobId}`)
+    if (response.status === 404) throw new MeasurementApiError(404, 'Calc job not found (API node restarted?).')
+    if (!response.ok) await fail(response)
+    const state = (await response.json()) as { status: string; result?: CalcResultDto; error?: string }
+    if (state.status === 'COMPLETED' && state.result) return state.result
+    if (state.status === 'FAILED') {
+      throw new MeasurementApiError(422, state.error ?? 'Calculated-signal job failed.')
+    }
+    await new Promise((resolve) => setTimeout(resolve, 400))
+  }
+  throw new MeasurementApiError(408, 'Calculated-signal job timed out after 5 minutes.')
 }
 
 export function deleteMeasurement(id: string): void {
