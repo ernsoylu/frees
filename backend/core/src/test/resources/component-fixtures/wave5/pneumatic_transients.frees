@@ -1,0 +1,48 @@
+// Thermal gas volume charged at 1 g/s of 300 K air for 10 s (adiabatic wall,
+// inflow at the tank temperature): T stays 300 K, mass grows from 1.1614 g to
+// 11.1614 g, and P = mRT/V reaches 961.0 kPa.
+// Double-acting cylinder with blocked ports and the rod held still keeps its
+// chamber pressures; the rod force is -(Pa*Aa - Pb*Ab) = -550 N.
+// EXPECT p_fin = 961000 tol 5000
+// EXPECT f_rod = -550 tol 0.01
+COMPONENT GasFlowSource(out)
+  PARAM fluid$, mdot, T, domain$ = gas
+  out.mdot = mdot
+  out.h    = Enthalpy(fluid$, P=100000, T=T)
+END
+COMPONENT GasCap(port)
+  PARAM domain$ = gas
+  port.mdot = 0
+END
+// Dead-end cap for a chamber that defines no enthalpy of its own.
+COMPONENT GasCapH(port)
+  PARAM domain$ = gas
+  port.mdot = 0
+  port.h    = 0
+END
+GasFlowSource         GFS(fluid$=Air, mdot=0.001, T=300)
+PneumaticThermalVolume PTV(fluid$=Air, V=1e-3, R=287, cv=717, cp=1004, m0=0.0011614402, T0=300)
+GasCap                CAPO()
+HeatSource            ADB(Q=0)
+connect(GFS.out, PTV.in)
+connect(PTV.out, CAPO.port)
+connect(PTV.wall, ADB.port)
+
+GasCapH CA()
+GasCapH CB()
+PneumaticDoubleActingCylinder CYL(Aa=1e-3, Ab=5e-4, R=287, T=300, Va0=1e-4, Vb0=1e-4, Pa0=600000, Pb0=100000)
+COMPONENT VelPin(a, b)
+  PARAM v
+  a.vel - b.vel = v
+  a.f + b.f = 0
+END
+VelPin      VP(v=0)
+TransGround TG()
+connect(CA.port, CYL.a)
+connect(CB.port, CYL.b)
+connect(VP.a, CYL.rod)
+connect(VP.b, TG.port)
+DYNAMIC pneu(method = ode23s, time = 0 .. 10, points = 100)
+END
+p_fin = FinalValue('ptv.in.p')
+f_rod = FinalValue('cyl.rod.f')

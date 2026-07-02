@@ -1,0 +1,18 @@
+// Quarter car towed at a constant 1 m/s road speed: with damping, both masses
+// converge to the road speed and the springs stop winding.
+// EXPECT vs_fin = 1 tol 0.05
+// EXPECT vu_fin = 1 tol 0.05
+COMPONENT VelSrc(a, b)
+  PARAM v
+  a.vel - b.vel = v
+  a.f + b.f = 0
+END
+VelSrc      ROAD(v=1)
+TransGround TGQ()
+QuarterCar  QC(ms=300, mu=40, ks=20000, cs=2500, kt=180000)
+connect(ROAD.a, QC.road)
+connect(ROAD.b, TGQ.port)
+DYNAMIC qc(method = ode23s, time = 0 .. 30, points = 600)
+END
+vs_fin = FinalValue('qc.ms.port.vel')
+vu_fin = FinalValue('qc.mu.port.vel')

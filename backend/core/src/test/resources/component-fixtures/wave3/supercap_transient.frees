@@ -1,0 +1,11 @@
+// Supercapacitor: 10 A into 100 F for 50 s -> Vc rises 5 V.
+// EXPECT vc_fin = 7 tol 1e-3
+Supercapacitor SC(C=100, R_esr=0.01, V0=2)
+CurrentSource  CS(I=10)
+Ground         GS()
+connect(SC.p, CS.p)
+connect(SC.n, CS.n, GS.port)
+DYNAMIC chg(method = ode23s, time = 0 .. 50, points = 100)
+END
+vc_fin = FinalValue('sc.vc')
+

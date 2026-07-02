@@ -1,0 +1,43 @@
+// Signal-commanded actuators against hand values / physical invariants:
+//   HydraulicValveCmd u=0.5: mdot = 0.5e-6 * sqrt(2*850*9e5) = 0.0195576 kg/s
+//   ClutchCmd u=1 passes the 30 N-m drive -> damper w = 30/2 = 15
+//   PneumaticServoValveCmd: choked ISO 6358 flow is linear in C -> u=0.5 gives
+//   exactly half the u=1 flow (rat = 0.5)
+// EXPECT hv.in.mdot = 0.0195576 tol 1e-6
+// EXPECT ld.a.w = 15 tol 1e-3
+// EXPECT rat = 0.5 tol 1e-6
+SigConstant UH(k=0.5)
+HydraulicSupply   SUP(P=1000000)
+HydraulicValveCmd HV(CdA_max=1e-6, rho=850)
+HydraulicTank     TNK(P=100000)
+connect(UH.out, HV.u)
+connect(SUP.out, HV.in)
+connect(HV.out, TNK.port)
+
+SigConstant UC(k=1)
+TorqueSource     TS(T=30)
+ClutchCmd        CL(Tmax=50, eps=0.01)
+RotationalDamper LD(c=2)
+MechGround       GS()
+MechGround       GL()
+connect(UC.out, CL.u)
+connect(TS.a, CL.a)
+connect(TS.b, GS.port)
+connect(CL.b, LD.a)
+connect(LD.b, GL.port)
+
+SigConstant UP5(k=0.5)
+SigConstant UP10(k=1)
+PneumaticSupply SUPA(fluid$=Air, P=700000, T=300)
+PneumaticSupply SUPB(fluid$=Air, P=700000, T=300)
+PneumaticServoValveCmd PVA(fluid$=Air, Cmax=1e-8, b=0.4)
+PneumaticServoValveCmd PVB(fluid$=Air, Cmax=1e-8, b=0.4)
+PneumaticAtmosphere ATMA(P=100000)
+PneumaticAtmosphere ATMB(P=100000)
+connect(UP5.out, PVA.u)
+connect(UP10.out, PVB.u)
+connect(SUPA.out, PVA.in)
+connect(PVA.out, ATMA.port)
+connect(SUPB.out, PVB.in)
+connect(PVB.out, ATMB.port)
+rat = PVA.in.mdot / PVB.in.mdot

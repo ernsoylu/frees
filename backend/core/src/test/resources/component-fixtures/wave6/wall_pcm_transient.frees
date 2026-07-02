@@ -1,0 +1,17 @@
+// WallRC between 400 K and 300 K sources through 0.1 K/W conductions on each
+// side (wall R = 0.2): steady Q = 100/0.4 = 250 W, T1 = 375 K, T2 = 325 K.
+// EXPECT t1_fin = 375 tol 0.5
+// EXPECT t2_fin = 325 tol 0.5
+ThermalSource HOT(T=400)
+ThermalSource CLD(T=300)
+Conduction    CA(k=1, area=1, L=0.1)
+Conduction    CB(k=1, area=1, L=0.1)
+WallRC        WL(C1=1000, C2=1000, R=0.2, T10=350, T20=350)
+connect(HOT.port, CA.a)
+connect(CA.b, WL.a)
+connect(WL.b, CB.a)
+connect(CB.b, CLD.port)
+DYNAMIC wall(method = ode23s, time = 0 .. 3000, points = 600)
+END
+t1_fin = FinalValue('wl.t1')
+t2_fin = FinalValue('wl.t2')

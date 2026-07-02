@@ -1,0 +1,9 @@
+// PCMMass heated 500 W for 100 s from 290 K through a 300 K melt (L = 20 kJ):
+// 50 kJ = cp*(Tf-290) + L -> Tf = 305 K.
+// EXPECT tp_fin = 305 tol 0.3
+HeatSource HS(Q=500)
+PCMMass    PCM(m=1, cp=2000, L=20000, Tm=300, dTm=1, T0=290)
+connect(HS.port, PCM.port)
+DYNAMIC melt(method = ode23s, time = 0 .. 100, points = 400)
+END
+tp_fin = FinalValue('pcm.port.t')
