@@ -1,0 +1,23 @@
+// EjectorMomentum: total-enthalpy conservation and the diffuser lift must
+// replicate the component's own momentum law exactly from port values.
+// TwoPhaseOilRider: the oil fraction rides the downstream pass-through node
+// and the degradation factor is 1 - k_deg*OCR.
+// EXPECT h_ej_res = 0 tol 1e-9
+// EXPECT lift_res = 0 tol 1e-6
+// EXPECT oc_out = 0.03 tol 1e-12
+// EXPECT f_deg = 0.985 tol 1e-12
+
+time = 0
+TwoPhaseSourcePH MOT(mdot=0.04, P=900000, h=422000)
+TwoPhaseSourcePH SUC(mdot=0.02, P=350000, h=402000)
+EjectorMomentum  EJ(fluid$=R134a, eta_n=0.85, eta_m=0.9)
+connect(MOT.out, EJ.mot_in)
+connect(SUC.out, EJ.suc_in)
+h_ej_res = 0.06 * EJ.out.h - (0.04 * EJ.mot_in.h + 0.02 * EJ.suc_in.h)
+lift_res = (EJ.out.P - EJ.suc_in.P) - EJ.rho_mix * EJ.v_mix^2 / 2
+
+TwoPhaseSourcePH OS(o0, mdot=0.05, P=400000, h=410000)
+TwoPhaseOilRider ORD(o0, o1, oc_set=0.03, k_deg=0.5)
+TwoPhaseFlowRes  OFR(o1, o2, fluid$=R134a, L=0.5, D=0.008)
+oc_out = o1.oc
+f_deg  = ORD.f_deg

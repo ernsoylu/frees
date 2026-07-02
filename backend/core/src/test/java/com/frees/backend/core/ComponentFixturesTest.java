@@ -18,6 +18,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
  * Golden-circuit component fixture harness — the throughput enabler for a large
@@ -47,6 +48,8 @@ class ComponentFixturesTest {
             Pattern.compile("^//\\s*EXPECT\\s+(\\S+)\\s*=\\s*(\\S+)(?:\\s+tol\\s+(\\S+))?\\s*$");
     private static final Pattern EXPECT_ERROR =
             Pattern.compile("^//\\s*EXPECT-ERROR\\s+(.+?)\\s*$");
+    private static final Pattern IDA_METHOD =
+            Pattern.compile("method\\s*=\\s*ida\\b");
 
     private final EquationSystemSolver solver = new EquationSystemSolver();
 
@@ -64,6 +67,12 @@ class ComponentFixturesTest {
 
     private void runFixture(Path file) throws IOException {
         String src = Files.readString(file);
+        // Fixtures on the SUNDIALS IDA path need the native library; skip (not
+        // fail) where it is absent, matching every other IDA-gated test.
+        if (IDA_METHOD.matcher(src).find()) {
+            assumeTrue(com.frees.backend.core.dae.SundialsIda.isAvailable(),
+                    file + ": SUNDIALS IDA native library not available — skipping.");
+        }
         List<String[]> expects = new ArrayList<>();   // {var, value, tol?}
         List<String> expectErrors = new ArrayList<>();
         for (String line : src.split("\n")) {

@@ -36,8 +36,11 @@ DYNAMIC name (method = solver, t = t0 .. tf, points = n_samples)
   state(0)   = initial_value
   auxiliary  = algebraic_calc      { an extra output column }
   EVENT name: condition -> stop | record
+  EVENT name: g1 = g2 | rising -> set state = expr
 END
 ```
+
+An `EVENT` watches the zero crossing of its condition (`| rising` / `| falling` filters the direction). **`stop`** ends the run at the crossing; **`record`** logs it and continues; **`set state = expr`** reassigns a state at the crossing and restarts integration from the modified value — a *discrete* switch. That is what makes true hysteresis possible: a thermostat latch (`der(q) = 0`, one event setting `q = 1` at the low threshold, another setting `q = 0` at the high one) shows two distinct switching temperatures, which no smooth relay can. Give set events an explicit direction so the reassignment can't immediately retrigger itself.
 
 [Diagram: GuessConvergence]
 

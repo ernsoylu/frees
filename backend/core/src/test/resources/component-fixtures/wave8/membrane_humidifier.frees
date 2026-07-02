@@ -1,0 +1,19 @@
+// Membrane humidifier at eff_w = 0.7, eff_h = 0.6, equal 0.1 kg/s dry-air
+// flows: dry outlet W = 0.002 + 0.7*(0.015 - 0.002) = 0.0111, and the water
+// the dry stream gained leaves the wet stream exactly (balance replica).
+// EXPECT w_dry_out = 0.0111 tol 1e-9
+// EXPECT water_res = 0 tol 1e-12
+// EXPECT energy_res = 0 tol 1e-9
+
+MoistAirSource DRY(P=101325, T=323.15, W=0.002, mdot=0.1)
+MoistAirSource WET(P=101325, T=343.15, W=0.015, mdot=0.1)
+MembraneHumidifier MH(eff_h=0.6, eff_w=0.7)
+MoistAirSink   DS()
+MoistAirSink   WS()
+connect(DRY.out, MH.dry_in)
+connect(MH.dry_out, DS.in)
+connect(WET.out, MH.wet_in)
+connect(MH.wet_out, WS.in)
+w_dry_out  = MH.dry_out.W
+water_res  = 0.1 * (MH.dry_out.W - MH.dry_in.W) + 0.1 * (MH.wet_out.W - MH.wet_in.W)
+energy_res = 0.1 * (MH.dry_out.h - MH.dry_in.h) + 0.1 * (MH.wet_out.h - MH.wet_in.h)

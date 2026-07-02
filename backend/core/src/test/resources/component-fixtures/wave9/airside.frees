@@ -1,0 +1,49 @@
+// Air-side elements, steady (time pinned for any sources). AirFilter drops
+// exactly foul*K*mdot^2 = 1.2*5000*0.25 = 1500 Pa. VAVBox is a flow source:
+// 0.6 of mdot_max = 0.6 kg/s with reheat 0.5*2000/0.6 J/kg. Diffuser recovery
+// and enthalpy-wheel water/energy closures are in-fixture law replicas.
+// EXPECT dp_filter = 1500 tol 1e-9
+// EXPECT mdot_vav = 0.6 tol 1e-12
+// EXPECT dh_vav = 1666.6667 tol 1e-3
+// EXPECT dp_diff_res = 0 tol 1e-9
+// EXPECT wheel_water_res = 0 tol 1e-12
+// EXPECT wheel_energy_res = 0 tol 1e-9
+
+time = 0
+MoistAirSource A1(P=101325, T=298.15, W=0.008, mdot=0.5)
+AirFilter      FL(K=5000, foul=1.2)
+MoistAirSink   S1()
+connect(A1.out, FL.in)
+connect(FL.out, S1.in)
+dp_filter = FL.in.P - FL.out.P
+
+SigConstant    UD(su, k=0.6)
+SigConstant    UR(sr, k=0.5)
+VAVBox         VAV(v1, v2, su, sr, mdot_max=1, Qr_max=2000)
+v1.P = 101825
+v1.W = 0.008
+v1.h = 46000
+v2.P = 101325
+mdot_vav = VAV.in.mdot
+dh_vav   = VAV.out.h - VAV.in.h
+
+MoistAirSource A3(P=101325, T=298.15, W=0.008, mdot=0.5)
+Diffuser       DF(A1=0.1, A2=0.2, eta_rec=0.8)
+MoistAirSink   S3()
+connect(A3.out, DF.in)
+connect(DF.out, S3.in)
+rho_d = 1 / Volume(AirH2O, h=DF.in.h, P=DF.in.P, W=DF.in.W)
+v1_d  = 0.5 * 1.008 / (rho_d * 0.1)
+dp_diff_res = (DF.out.P - DF.in.P) - 0.8 * 0.5 * rho_d * v1_d^2 * (1 - 0.25)
+
+MoistAirSource SUP(P=101325, T=305.15, W=0.004, mdot=0.4)
+MoistAirSource EXH(P=101325, T=297.15, W=0.011, mdot=0.5)
+EnthalpyWheel  EW(eff_h=0.75, eff_w=0.7)
+MoistAirSink   S4()
+MoistAirSink   S5()
+connect(SUP.out, EW.sup_in)
+connect(EW.sup_out, S4.in)
+connect(EXH.out, EW.exh_in)
+connect(EW.exh_out, S5.in)
+wheel_water_res  = 0.4 * (EW.sup_out.W - EW.sup_in.W) + 0.5 * (EW.exh_out.W - EW.exh_in.W)
+wheel_energy_res = 0.4 * (EW.sup_out.h - EW.sup_in.h) + 0.5 * (EW.exh_out.h - EW.exh_in.h)

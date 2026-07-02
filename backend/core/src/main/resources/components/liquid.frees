@@ -20,11 +20,18 @@ COMPONENT LiquidSink(in)
 END
 
 COMPONENT LiquidPump(in, out)
-  PARAM eta, fluid$, domain$ = liquid
+  PARAM eta, fluid$, Pvap, NPSHr, eps_n, domain$ = liquid, model$ = basic
   v        = Volume(fluid$, P=in.P, h=in.h)
   out.mdot = in.mdot
-  out.h    = in.h + v * (out.P - in.P) / eta
   W        = in.mdot * (out.h - in.h)
+  VARIANT basic
+    out.h = in.h + v * (out.P - in.P) / eta
+  END
+  VARIANT npsh REQUIRE Pvap, NPSHr, eps_n
+    NPSH_a  = (in.P - Pvap) * v / 9.80665
+    derate  = 0.5 * (1 + tanh((NPSH_a - NPSHr) / eps_n))
+    out.h   = in.h + v * (out.P - in.P) / (eta * derate)
+  END
 END
 
 COMPONENT LiquidPipe(in, out)
@@ -171,4 +178,88 @@ END
 COMPONENT LiquidExpansionTank(port)
   PARAM P, domain$ = liquid
   port.P = P
+END
+
+
+// ── Electrochemistry & energy systems (Wave 8) ──────────────────────────────
+
+// Hydro turbine: shaft power eta·(V̇·ΔP) from the head across it, efficiency
+// from a flow map; the extracted work leaves the stream enthalpy.
+COMPONENT HydroTurbine(in, out, shaft)
+  PARAM fluid$, rho, eta$, epsw, domain$ = liquid
+  out.mdot  = in.mdot
+  dP        = in.P - out.P
+  Pf        = (in.mdot / rho) * dP
+  eta       = eta$(in.mdot)
+  Pm        = eta * Pf
+  shaft.tau = -Pm / (shaft.w + epsw)
+  out.h     = in.h - Pm / in.mdot
+END
+
+// Stratified thermal-storage tank: three plug-flow nodes top→bottom with
+// inter-node mixing conductance and shell losses; charge enters the top node,
+// draw leaves the bottom at its temperature. One-directional flow (in→out) by
+// construction — reverse the connections for the discharge circuit.
+COMPONENT ThermalStorageTank(in, out)
+  PARAM fluid$, m_node, cp_f, UA_loss, T_amb, kmix, T10, T20, T30, domain$ = liquid
+  out.mdot = in.mdot
+  out.P    = in.P
+  T_in     = Temperature(fluid$, P=in.P, h=in.h)
+  der(T1)  = (in.mdot * cp_f * (T_in - T1) + kmix * (T2 - T1) - UA_loss * (T1 - T_amb)) / (m_node * cp_f)
+  init(T1) = T10
+  der(T2)  = (in.mdot * cp_f * (T1 - T2) + kmix * (T1 - T2) + kmix * (T3 - T2) - UA_loss * (T2 - T_amb)) / (m_node * cp_f)
+  init(T2) = T20
+  der(T3)  = (in.mdot * cp_f * (T2 - T3) + kmix * (T2 - T3) - UA_loss * (T3 - T_amb)) / (m_node * cp_f)
+  init(T3) = T30
+  out.h    = Enthalpy(fluid$, P=out.P, T=T3)
+END
+
+// Ice/PCM storage on a brine loop: the latent mass sits behind a UA wall in
+// the brine stream — charge below the melt band, discharge above it.
+COMPONENT IceStorageBrine(in, out)
+  PARAM fluid$, UA, m, cp_p, L, Tm, dTm, T0
+  LiquidWallHX HX(fluid$=fluid$, UA=UA)
+  PCMMass      ICE(m=m, cp=cp_p, L=L, Tm=Tm, dTm=dTm, T0=T0)
+  connect(in, HX.in)
+  connect(HX.out, out)
+  connect(HX.wall, ICE.port)
+END
+
+
+// ── HVAC, buildings & process-lite (Wave 9) ─────────────────────────────────
+
+// Cooling tower (Merkel-lite): heat rejection on the enthalpy potential
+// between saturated air at the water inlet temperature and ambient air at its
+// wet-bulb (signal port), with a tower effectiveness and design air flow.
+COMPONENT CoolingTower(in, out, wb)
+  PARAM fluid$, eps_t, mdot_a, Patm, domain$ = liquid
+  T_in   = Temperature(fluid$, P=in.P, h=in.h)
+  h_s_in = Enthalpy(AirH2O, T=T_in, P=Patm, R=1)
+  h_wb   = Enthalpy(AirH2O, T=wb.sig, P=Patm, R=1)
+  Q      = eps_t * mdot_a * (h_s_in - h_wb)
+  out.mdot = in.mdot
+  out.P    = in.P
+  out.h    = in.h - Q / in.mdot
+END
+
+// Open (vented) tank: level state from the flow imbalance; the inlet sees the
+// free surface (P0), the outlet the gravity head at the base. Well-mixed and
+// adiabatic in enthalpy.
+COMPONENT OpenTank(in, out)
+  PARAM A_t, P0, rho, L0, domain$ = liquid
+  der(lvl)  = (in.mdot - out.mdot) / (rho * A_t)
+  init(lvl) = L0
+  in.P  = P0
+  out.P = P0 + rho * 9.80665 * lvl
+  out.h = in.h
+END
+
+// Gravity drain (Torricelli): the C1 odd-symmetric flow law
+// mdot|mdot| = (Cd*A)^2 * 2*rho*dP — smooth through zero head, reversible.
+COMPONENT GravityDrain(in, out)
+  PARAM Cd, A_d, rho, domain$ = liquid
+  dP = in.P - out.P
+  in.mdot * abs(in.mdot) = (Cd * A_d)^2 * 2 * rho * dP
+  out.mdot = in.mdot
+  out.h    = in.h
 END

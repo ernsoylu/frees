@@ -1,0 +1,16 @@
+// OpenTank draining through a Torricelli GravityDrain: with A_t = 0.5 m2,
+// Cd*A = 6e-4 and L0 = 2 m, sqrt-level falls linearly and the level after
+// 60 s is 1.5745 m (closed form).
+// EXPECT lvl_fin = 1.5745 tol 2e-3
+
+OpenTank     TK(A_t=0.5, P0=101325, rho=998, L0=2)
+GravityDrain GD(Cd=0.6, A_d=1e-3, rho=998)
+LiquidSink   OUT9()
+connect(TK.out, GD.in)
+connect(GD.out, OUT9.in)
+TK.in.mdot = 0
+TK.in.h    = 104920
+OUT9.in.P  = 101325
+DYNAMIC drain(method = ode23s, time = 0 .. 60, points = 300)
+END
+lvl_fin = FinalValue('tk.lvl')

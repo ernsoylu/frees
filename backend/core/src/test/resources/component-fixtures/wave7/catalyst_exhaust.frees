@@ -1,0 +1,30 @@
+// CatalystLightOff: 0.05 kg/s of 800 K air, UA = 50 W/K, exotherm 1e5 J/kg.
+// Once lit (T50 = 600 K << Tb) the brick settles where UA*(Tg - Tb) balances
+// the exotherm: Tb = 800 + 0.05*1e5/50 = 900 K with full conversion.
+// EXPECT tb_fin = 900 tol 1
+// EXPECT eta_fin = 1 tol 1e-4
+// ExhaustPipeThermal: at equilibrium the duct's wall heat equals the RC wall's
+// through-flow (T1 - T2)/R — asserted as an in-fixture law replica.
+// EXPECT q_res = 0 tol 1
+// EXPECT q_wall = 0 tol 1
+
+Source          SRC(fluid$=Air, mdot=0.05, P=101325, T=800)
+CatalystLightOff CAT(fluid$=Air, C=500, UA=50, T50=600, k=30, q_exo=1e5, T0=300)
+Sink            SNK()
+connect(SRC.out, CAT.in)
+connect(CAT.out, SNK.in)
+
+Source            SRC2(fluid$=Air, mdot=0.1, P=101325, T=700)
+ExhaustPipeThermal EXP(fluid$=Air, UA=40, hA=30, C1=2000, C2=2000, R=0.05, T10=300, T20=300)
+Sink              SNK2()
+ThermalSource     AMB(T=300)
+connect(SRC2.out, EXP.in)
+connect(EXP.out, SNK2.in)
+connect(EXP.amb, AMB.port)
+
+DYNAMIC warm(method = ode23s, time = 0 .. 600, points = 300)
+END
+tb_fin  = FinalValue('cat.Tb')
+eta_fin = FinalValue('cat.eta')
+q_res   = FinalValue('exp.d.Q') + (FinalValue('exp.w.T1') - FinalValue('exp.w.T2')) / 0.05
+q_wall  = (FinalValue('exp.w.T1') - FinalValue('exp.w.T2')) / 0.05 - 30 * (FinalValue('exp.w.T2') - 300)

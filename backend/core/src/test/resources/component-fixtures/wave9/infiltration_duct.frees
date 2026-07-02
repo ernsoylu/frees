@@ -1,0 +1,25 @@
+// Infiltration crack flow at n = 0.65, C = 2e-5, dP = 50 Pa (eps = 1):
+// mdot = 2.5429e-4 kg/s by hand. MoistAirDuct: Darcy law replica from the
+// same reynolds/friction_factor calls.
+// EXPECT mdot_inf = 2.5429e-4 tol 1e-8
+// EXPECT dp_duct_res = 0 tol 1e-9
+
+time = 0
+Infiltration   INF(i1, i2, C_inf=2e-5, n_exp=0.65, eps=1)
+i1.P = 101375
+i1.W = 0.008
+i1.h = 41500
+i2.P = 101325
+mdot_inf = INF.in.mdot
+
+MoistAirSource D0(P=101325, T=298.15, W=0.008, mdot=0.6)
+MoistAirDuct   DU(L=15, D=0.3, rough=1.5e-4, mu_a=1.85e-5)
+MoistAirSink   D9()
+connect(D0.out, DU.in)
+connect(DU.out, D9.in)
+rho_u = 1 / Volume(AirH2O, h=DU.in.h, P=DU.in.P, W=DU.in.W)
+a_u   = pi# / 4 * 0.3^2
+v_u   = 0.6 * 1.008 / (rho_u * a_u)
+re_u  = reynolds(rho_u, v_u, 0.3, 1.85e-5)
+f_u   = friction_factor(re_u, 1.5e-4 / 0.3)
+dp_duct_res = (DU.in.P - DU.out.P) - f_u * (15 / 0.3) * rho_u * v_u^2 / 2

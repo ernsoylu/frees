@@ -1,0 +1,51 @@
+// Wave 7 showcase — fuel budget through the full conventional chain:
+// MVEM (bsfc rung) -> torque converter -> scheduled gearbox (ratio 3 on the
+// signal wire) -> Pacejka tire -> vehicle body accelerating under road load.
+// (The AutomaticTransmission composite is unit-verified separately; its
+// lockup clutch is kept out of this transient on purpose.)
+// The integrated fuel mass must reproduce bsfc * integrated brake energy
+// EXACTLY (in-fixture law replica, flat 6e-8 kg/J map), and the engine's
+// inertia state keeps the cold start well-posed.
+// EXPECT fuel_res = 0 tol 1e-12
+// (the car is still accelerating at t = 10 s, so a small drive slip remains)
+// EXPECT slip_fin = 0 tol 0.05
+
+TABLE wot(w)
+  0    200
+  600  200
+END
+TABLE bm(w : tau = 0, 200)
+  0    6e-8  6e-8
+  600  6e-8  6e-8
+END
+TABLE kmap(sr)
+  0   25
+  1   25
+END
+TABLE trmap(sr)
+  0    2.0
+  0.5  1.6
+  1    1.0
+END
+SigConstant GEAR(k=3)
+MeanValueEngine ENG(throttle=0.6, map_wot$=wot, bsfc$=bm, FMEP_a=10, FMEP_b=0.05, model$=bsfc)
+Inertia         FLY(J=2, w0=150)
+TorqueConverter  TC(Kmap$=kmap, TRmap$=trmap)
+GearboxScheduled GB(eta=0.9)
+Inertia         WHL(J=1.5, w0=17)
+TirePacejka     TIRE(r=0.3, Fz=4000, B=10, C=1.5, D=1, E=-1, epsv=0.1)
+VehicleBody     CAR(m=1200, Cd=0.32, Af=2.2, rhoA=1.2, Crr=0.012, grade=0, v0=5)
+connect(ENG.shaft, FLY.port, TC.pump)
+connect(TC.turb, GB.in)
+connect(GB.out, WHL.port, TIRE.wheel)
+connect(TIRE.veh, CAR.port)
+connect(GEAR.out, GB.u)
+
+DYNAMIC drive(method = ida, time = 0 .. 10, points = 201, rtol = 1e-5, atol = 1e-4)
+  der(fuel) = ENG.mdot_f
+  fuel(0) = 0
+  der(eb) = ENG.P_b
+  eb(0) = 0
+END
+fuel_res = FinalValue('fuel') - 6e-8 * FinalValue('eb')
+slip_fin = FinalValue('tire.slip')

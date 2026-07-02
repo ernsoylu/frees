@@ -120,3 +120,38 @@ COMPONENT ThermalSwitch(a, b)
   a.Qdot = u * G * (a.T - b.T)
   a.Qdot + b.Qdot = 0
 END
+
+
+// ── Electrochemistry & energy systems (Wave 8) ──────────────────────────────
+
+// Cell-to-plate thermal path: contact/interface resistance into the cold-plate
+// mass — the network that makes pack gradients (cell hot spot vs plate) real.
+// (Direct equations: the plate node carries this component's own state.)
+COMPONENT CellToPackThermal(cell, plate)
+  PARAM Rcc, Cpl, T0
+  Q         = (cell.T - Tp) / Rcc
+  cell.Qdot = Q
+  der(Tp)   = (Q + plate.Qdot) / Cpl
+  init(Tp)  = T0
+  plate.T   = Tp
+END
+
+
+// ── HVAC, buildings & process-lite (Wave 9) ─────────────────────────────────
+
+// Two-zone partition wall: surface films (h_a, h_b) into two face masses with
+// U·A conduction between them. The ports are resistive — they READ the zone
+// temperatures — so the wall composes directly with any temperature-setting
+// zone (CabinZone, MassGen) without C-C adjacency.
+COMPONENT MultiZoneWall(a, b)
+  PARAM h_a, h_b, U, A, C1, C2, T10, T20
+  qa       = h_a * A * (a.T - T1)
+  a.Qdot   = qa
+  q        = U * A * (T1 - T2)
+  der(T1)  = (qa - q) / C1
+  init(T1) = T10
+  qb       = h_b * A * (T2 - b.T)
+  b.Qdot   = -qb
+  der(T2)  = (q - qb) / C2
+  init(T2) = T20
+END

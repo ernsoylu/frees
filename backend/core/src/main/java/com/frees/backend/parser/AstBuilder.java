@@ -405,13 +405,34 @@ public class AstBuilder extends FreesBaseVisitor<Expr> {
     private com.frees.backend.ast.DynamicSystem.Event buildDynamicEvent(
             FreesParser.DynamicEventContext ctx) {
         String name = ctx.IDENT(0).getText();
-        String action = ctx.IDENT(ctx.IDENT().size() - 1).getText().toLowerCase();
+        int i = 1;
         String direction = ctx.PIPE() != null
-                ? ctx.IDENT(1).getText().toLowerCase()
+                ? ctx.IDENT(i++).getText().toLowerCase()
                 : "any";
+        String action = ctx.IDENT(i++).getText().toLowerCase();
+        // `-> set <state> = <expr>` reassigns a state at the crossing and restarts
+        // integration from the modified state; stop/record take no assignment.
+        // Malformed combinations are hard errors, never silently ignored.
+        String setVar = null;
+        Expr setExpr = null;
+        if (ctx.EQ() != null) {
+            if (!action.equals("set")) {
+                throw new EquationParser.ParseException("EVENT " + name + ": only the 'set' action "
+                        + "takes an assignment (got '-> " + action + " … = …').");
+            }
+            setVar = ctx.IDENT(i).getText().toLowerCase();
+            setExpr = visit(ctx.expr());
+        } else if (action.equals("set")) {
+            throw new EquationParser.ParseException("EVENT " + name + ": the 'set' action needs "
+                    + "an assignment — EVENT " + name + ": g1 = g2 -> set <state> = <expr>.");
+        }
+        if (!action.equals("stop") && !action.equals("record") && !action.equals("set")) {
+            throw new EquationParser.ParseException("EVENT " + name + ": unknown action '" + action
+                    + "' — use stop, record, or set <state> = <expr>.");
+        }
         FreesParser.EquationContext eq = ctx.equation();
         return new com.frees.backend.ast.DynamicSystem.Event(
-                name, visit(eq.expr(0)), visit(eq.expr(1)), direction, action);
+                name, visit(eq.expr(0)), visit(eq.expr(1)), direction, action, setVar, setExpr);
     }
 
     /** Builds a fluid state table: the declared state-point variables plus the

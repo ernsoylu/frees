@@ -1,0 +1,18 @@
+// Cooled PEM stack at 50 A: the coolant must pick up exactly the stack's
+// waste heat ncells*I*(Eth - Vcell) — port-level energy replica with Vcell
+// read from the bus voltage.
+// EXPECT q_res = 0 tol 1e-6
+
+CurrentSource      DRAW(I=50)
+Ground             GF()
+LiquidSource       CIN(fluid$=EG50, mdot=0.3, P=200000, T=333.15)
+LiquidSink         COUT()
+FuelCellStackCooled FCS(ncells=300, area=0.03, i0=1e-4, ilim=2.2e4, Rohm=1e-6, E0=1.03, alpha=0.5, Eth=1.253, T=348.15, fluid$=EG50, UA=1500)
+connect(FCS.p, DRAW.p)
+connect(FCS.n, DRAW.n, GF.port)
+connect(CIN.out, FCS.cool_in)
+connect(FCS.cool_out, COUT.in)
+v_stack = FCS.p.V - FCS.n.V
+q_stack = 300 * 50 * 1.253 - 50 * v_stack
+q_pick  = 0.3 * (FCS.cool_out.h - FCS.cool_in.h)
+q_res   = q_pick - q_stack

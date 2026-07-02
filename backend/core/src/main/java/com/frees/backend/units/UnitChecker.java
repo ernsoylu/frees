@@ -715,7 +715,8 @@ public final class UnitChecker {
             // does not track — stay agnostic rather than warn.
             case "interpolate", "interpolate1", "interpolate2d",
                  "lookup", "lookuprow", "nlookuprows",
-                 "differentiate", "differentiate1" -> Dim.UNKNOWN;
+                 "differentiate", "differentiate1",
+                 "dtable", "dtable1" -> Dim.UNKNOWN;
             // Parametric-table accessors carry the referenced column's units,
             // which the checker does not track — stay agnostic.
             case "tablerun#", "tablerun", "nparametricruns", "tablevalue",

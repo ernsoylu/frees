@@ -290,6 +290,8 @@ public class FunctionRegistry {
             new FunctionInfo("interpolate", "Interpolate('t', x)", "Linear interpolation of table t at x (same as t(x))", "Interpolation"),
             new FunctionInfo("interpolate1", "Interpolate1('t', x)", "Cubic-spline interpolation of table t at x", "Interpolation"),
             new FunctionInfo("interpolate2d", "Interpolate2D('t', x, y)", "Bilinear 2-D interpolation of table t", "Interpolation"),
+            new FunctionInfo("dtable", "dtable('t', x)", "Analytic slope of the linear interpolant of table t at x (exact d/dx of t(x))", "Interpolation"),
+            new FunctionInfo("dtable1", "dtable1('t', x)", "Cubic-spline derivative of table t at x (d/dx of Interpolate1)", "Interpolation"),
             new FunctionInfo("lookup", "Lookup('t', row, col)", "Cell value by 1-based row/col indices", "Interpolation"),
             new FunctionInfo("lookuprow", "LookupRow('t', col, val)", "Row index where column col crosses val", "Interpolation"),
             new FunctionInfo("nlookuprows", "NLookupRows('t')", "Number of data rows in table t", "Interpolation"),
