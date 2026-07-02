@@ -1,0 +1,36 @@
+// Torsional backlash: constant 1 rad/s wind-up crosses the ±0.5 rad lash at
+// t = 0.5 s, so at t = 12 s the spring carries k*(12 - 0.5) = 115 N·m.
+// End stop: 10 N pushes a damped mass into a stop at gap 0.1 m with
+// k = 1000 N/m -> settles at 0.11 m. Trans spring settles at F/k = 1.25 m.
+// EXPECT tau_fin = 115 tol 0.1
+// EXPECT x_fin = 0.11 tol 1e-3
+// EXPECT xs_fin = 1.25 tol 1e-3
+SpeedSource      SSB(w=1)
+MechGround       MGA()
+MechGround       MGB()
+TorsionalBacklash BL(k=10, half=0.5, eps=1e-3, theta0=0)
+connect(SSB.a, BL.a)
+connect(SSB.b, MGA.port)
+connect(BL.b, MGB.port)
+
+ForceSource FS(F=10)
+TransMass   MST(m=1, v0=0)
+EndStop     ES(gap=0.1, k=1000, c=200, eps=1e-4, x0=0)
+TransGround TGF()
+connect(FS.a, MST.port, ES.port)
+connect(FS.b, TGF.port)
+
+ForceSource FS2(F=5)
+TransMass   MS2(m=1, v0=0)
+TransSpring SPR(k=4, x0=0)
+TransDamper DMP(c=4)
+TransGround TGS1()
+TransGround TGS2()
+connect(FS2.a, MS2.port, SPR.a, DMP.a)
+connect(FS2.b, TGS1.port)
+connect(SPR.b, DMP.b, TGS2.port)
+DYNAMIC mech(method = ode23s, time = 0 .. 12, points = 400)
+END
+tau_fin = FinalValue('bl.a.tau')
+x_fin   = FinalValue('es.x')
+xs_fin  = FinalValue('spr.x')

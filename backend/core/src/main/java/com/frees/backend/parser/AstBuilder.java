@@ -1116,11 +1116,49 @@ public class AstBuilder extends FreesBaseVisitor<Expr> {
         if (ctx.powExpr() != null) {
             return visit(ctx.powExpr());
         }
-        Expr operand = visit(ctx.unaryExpr());
         if (ctx.MINUS() != null) {
-            return new Expr.Neg(operand);
+            // A minus directly on a unit-annotated numeric literal belongs to the
+            // literal, not to the converted value: -10 [C] is -10 °C = 263.15 K,
+            // never -(283.15 K). Only offset scales (C, F) are affected — pure
+            // factors commute with negation, so they keep the ordinary Neg path.
+            FreesParser.NumberAtomContext lit = bareUnitLiteral(ctx.unaryExpr());
+            if (lit != null) {
+                String unit = unitText(lit.unit());
+                if (unit != null) {
+                    try {
+                        var quantity = UnitRegistry.parseWithOffset(unit);
+                        if (quantity.offset() != 0) {
+                            double value = -Double.parseDouble(lit.NUMBER().getText()) * quantity.factor() + quantity.offset();
+                            return new Expr.Num(value, UnitRegistry.siDisplayName(unit, quantity.dims()), false);
+                        }
+                    } catch (UnitRegistry.UnknownUnitException ignored) {
+                        // Unknown unit: fall through to the Neg path (warning surfaces later).
+                    }
+                }
+            }
+            return new Expr.Neg(visit(ctx.unaryExpr()));
         }
-        return operand;
+        return visit(ctx.unaryExpr());
+    }
+
+    /** The bare {@code NUMBER unit} literal directly under a unary sign — no
+     *  exponent, no transpose, no nested sign — or null for anything else
+     *  (so {@code -10 [C]^2} and {@code --10 [C]} keep operator semantics). */
+    private static FreesParser.NumberAtomContext bareUnitLiteral(FreesParser.UnaryExprContext ctx) {
+        if (ctx.powExpr() == null) return null;
+        FreesParser.PowExprContext pow = ctx.powExpr();
+        if (pow.unaryExpr() != null || (pow.TRANSPOSE() != null && !pow.TRANSPOSE().isEmpty())) return null;
+        if (pow.atom() instanceof FreesParser.NumberAtomContext num && num.unit() != null) return num;
+        return null;
+    }
+
+    /** The trimmed unit text inside a bracket annotation, or null when empty. */
+    private static String unitText(FreesParser.UnitContext uctx) {
+        int startIdx = uctx.start.getStartIndex();
+        int stopIdx = uctx.stop.getStopIndex();
+        String bracketed = uctx.start.getInputStream().getText(new org.antlr.v4.runtime.misc.Interval(startIdx, stopIdx));
+        String unit = bracketed.substring(1, bracketed.length() - 1).trim();
+        return unit.isEmpty() ? null : unit;
     }
 
     @Override

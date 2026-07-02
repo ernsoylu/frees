@@ -291,17 +291,29 @@ END
 // isentropic efficiency. Suction is superheated vapor (twophase domain, vapor
 // region); RPM-based volumetric sizing is a T-AC concern.
 COMPONENT TwoPhaseCompressor(in, out)
-  PARAM fluid$, eta, domain$ = twophase, model$ = isentropic
+  PARAM fluid$, eta, eta_v, disp, rpm, map_etas$, map_etav$, domain$ = twophase, model$ = isentropic
   s_in     = Entropy(fluid$, P=in.P, h=in.h)
   h_s      = Enthalpy(fluid$, P=out.P, s=s_in)
   out.mdot = in.mdot
-  out.h    = in.h + (h_s - in.h) / eta
   W        = in.mdot * (out.h - in.h)
-  VARIANT isentropic
+  VARIANT isentropic REQUIRE eta
+    out.h = in.h + (h_s - in.h) / eta
   END
-  VARIANT volumetric REQUIRE eta_v, disp, rpm
+  VARIANT volumetric REQUIRE eta, eta_v, disp, rpm
+    out.h   = in.h + (h_s - in.h) / eta
     rho_in  = Density(fluid$, P=in.P, h=in.h)
     in.mdot = eta_v * disp * (rpm / 60) * rho_in
+  END
+  // Suction-corrected 2-D map rung: isentropic AND volumetric efficiencies from
+  // curve-family TABLEs over (pressure ratio, rpm), the Amesim map-compressor
+  // form — displacement flow on the real suction density.
+  VARIANT map2d REQUIRE map_etas$, map_etav$, disp, rpm
+    PRr     = out.P / in.P
+    etas    = map_etas$(PRr, rpm)
+    etav    = map_etav$(PRr, rpm)
+    rho_in  = Density(fluid$, P=in.P, h=in.h)
+    in.mdot = etav * disp * (rpm / 60) * rho_in
+    out.h   = in.h + (h_s - in.h) / etas
   END
 END
 
@@ -516,4 +528,119 @@ COMPONENT ProportionalReliefValve(in, out)
   out.h    = in.h
   dpv      = in.P - Pcrack
   in.mdot  = grad * 0.5 * (dpv + sqrt(dpv * dpv + eps * eps))
+END
+
+// ── VCC device completion (Wave 2) ─────────────────────────────────────────
+
+// Short-tube (fixed) orifice: square-law on the upstream liquid density,
+// CHOKED ON FLASHING — once the downstream pressure falls below the upstream
+// liquid's saturation pressure the throat flashes and the flow rides on
+// (P_up − P_sat(T_up)) instead of the full ΔP, so it becomes insensitive to
+// the evaporator pressure (the defining short-tube behaviour; more upstream
+// subcooling ⇒ lower Psat(T_up) ⇒ more flow).
+COMPONENT TwoPhaseShortTube(in, out)
+  PARAM fluid$, CdA, domain$ = twophase
+  out.mdot = in.mdot
+  out.h    = in.h
+  rho_in   = Density(fluid$, P=in.P, h=in.h)
+  T_in     = Temperature(fluid$, P=in.P, h=in.h)
+  Pf       = P_sat(fluid$, T=T_in)
+  dP_eff   = in.P - max(out.P, Pf)
+  in.mdot * abs(in.mdot) = CdA^2 * 2 * rho_in * dP_eff
+END
+
+// Capillary tube: the empirical power-law rating m = C·ΔP_eff^n (n ≈ 0.5),
+// with the same flashing choke as the short tube (ΔP_eff clamps at the
+// upstream saturation pressure).
+COMPONENT CapillaryTube(in, out)
+  PARAM fluid$, C, n, domain$ = twophase
+  out.mdot = in.mdot
+  out.h    = in.h
+  T_in     = Temperature(fluid$, P=in.P, h=in.h)
+  Pf       = P_sat(fluid$, T=T_in)
+  dP_eff   = in.P - max(out.P, Pf)
+  in.mdot  = C * dP_eff^n
+END
+
+// Internal (suction-line) heat exchanger: subcools the liquid line against the
+// suction vapor at an effectiveness on the vapor side (the usual Cmin side).
+// Isobaric on both sides; energy is conserved exactly.
+COMPONENT TwoPhaseInternalHX(liq_in, liq_out, vap_in, vap_out)
+  PARAM fluid$, eps, domain$ = twophase
+  liq_out.mdot = liq_in.mdot
+  vap_out.mdot = vap_in.mdot
+  liq_out.P    = liq_in.P
+  vap_out.P    = vap_in.P
+  T_liq        = Temperature(fluid$, P=liq_in.P, h=liq_in.h)
+  T_vap        = Temperature(fluid$, P=vap_in.P, h=vap_in.h)
+  cp_v         = Cp(fluid$, P=vap_in.P, h=vap_in.h)
+  Q            = eps * vap_in.mdot * cp_v * (T_liq - T_vap)
+  vap_out.h    = vap_in.h + Q / vap_in.mdot
+  liq_out.h    = liq_in.h - Q / liq_in.mdot
+END
+
+// Four-way reversing valve (heat pump mode switch). Ports: compressor
+// discharge d, compressor suction s, indoor coil i, outdoor coil o.
+// mode = 0 (cooling): d→o and i→s.  mode = 1 (heating): d→i and o→s.
+// Each tie is a mode-blend of the two routings, so the equation COUNT is
+// constant across modes (intermediate mode values model transfer leakage).
+COMPONENT ReversingValve(d, s, i, o)
+  PARAM mode, domain$ = twophase
+  o.P    = (1 - mode) * d.P + mode * s.P
+  i.P    = (1 - mode) * s.P + mode * d.P
+  o.mdot = (1 - mode) * d.mdot + mode * s.mdot
+  i.mdot = (1 - mode) * s.mdot + mode * d.mdot
+  (1 - mode) * (o.h - d.h) + mode * (s.h - o.h) = 0
+  (1 - mode) * (s.h - i.h) + mode * (i.h - d.h) = 0
+END
+
+// Suction accumulator: traps liquid carryover and delivers SATURATED VAPOR to
+// the compressor. The liquid inventory m is a state; its energy balance
+// (liquid stored at h_f) closes the outlet flow. In steady state der(m)=0
+// forces h_in = h_g — a dry steady inlet, exactly the physical statement.
+COMPONENT SuctionAccumulator(in, out)
+  PARAM fluid$, m0, domain$ = twophase
+  out.P   = in.P
+  hf      = Enthalpy(fluid$, P=in.P, x=0)
+  hg      = Enthalpy(fluid$, P=in.P, x=1)
+  out.h   = hg
+  der(m)  = in.mdot - out.mdot
+  init(m) = m0
+  hf * (in.mdot - out.mdot) = in.mdot * in.h - out.mdot * hg
+END
+
+// Flash tank / economizer separator: splits a two-phase inlet into saturated
+// liquid and saturated vapor streams at the tank pressure, conserving mass and
+// energy (the split ratio IS the inlet quality).
+COMPONENT FlashTank(in, liq, vap)
+  PARAM fluid$, domain$ = twophase
+  liq.P = in.P
+  vap.P = in.P
+  liq.h = Enthalpy(fluid$, P=in.P, x=0)
+  vap.h = Enthalpy(fluid$, P=in.P, x=1)
+  in.mdot = liq.mdot + vap.mdot
+  in.mdot * in.h = liq.mdot * liq.h + vap.mdot * vap.h
+END
+
+// Two-phase ejector, lumped: motive m entrains suction s; mass and energy mix
+// exactly, and the diffuser recovers a pressure lift parameterized as the
+// pressure-lift ratio PLR = P_out / P_suction (rate it from CFD/test data).
+COMPONENT TwoPhaseEjector(m, s, out)
+  PARAM PLR, domain$ = twophase
+  out.mdot = m.mdot + s.mdot
+  out.mdot * out.h = m.mdot * m.h + s.mdot * s.h
+  out.P = PLR * s.P
+END
+
+// Oil separator: bleeds a mass fraction f off the discharge line as saturated
+// liquid (the oil-rich film) back toward the compressor sump; the main stream's
+// enthalpy follows from the exact energy balance.
+COMPONENT OilSeparator(in, out, bleed)
+  PARAM fluid$, f, domain$ = twophase
+  bleed.mdot = f * in.mdot
+  out.mdot   = (1 - f) * in.mdot
+  out.P      = in.P
+  bleed.P    = in.P
+  bleed.h    = Enthalpy(fluid$, P=in.P, x=0)
+  out.mdot * out.h = in.mdot * in.h - bleed.mdot * bleed.h
 END

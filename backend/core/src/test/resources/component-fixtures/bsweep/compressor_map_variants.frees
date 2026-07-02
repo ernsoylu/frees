@@ -1,0 +1,46 @@
+// Map-variant compressors against their closed-form twins.
+// C1 (fluid, model$=map): eta table is flat 0.7/0.8 over rpm 1000/3000 ->
+// eta(PR, 2000) = 0.75 exactly; C2 is the isentropic variant at eta=0.75, so
+// their discharge enthalpies must be identical.
+// EXPECT d_h = 0 tol 1e-9
+// The two-phase map2d compressor must reproduce its own displacement law and
+// isentropic-map relation, cross-checked with independent property calls.
+// EXPECT d_m = 0 tol 1e-9
+// EXPECT d_h2 = 0 tol 1e-9
+TABLE etamap(pr : rpm = 1000, 3000)
+  1   0.7   0.8
+  5   0.7   0.8
+END
+Source     SRCA(fluid$=Air, mdot=1, P=100000, T=300)
+Compressor C1(fluid$=Air, model$=map, map_eta$=etamap, rpm=2000)
+Sink       SNA()
+connect(SRCA.out, C1.in)
+connect(C1.out, SNA.in)
+C1.out.P = 300000
+Source     SRCB(fluid$=Air, mdot=1, P=100000, T=300)
+Compressor C2(fluid$=Air, model$=isentropic, eta=0.75)
+Sink       SNB()
+connect(SRCB.out, C2.in)
+connect(C2.out, SNB.in)
+C2.out.P = 300000
+d_h = C1.out.h - C2.out.h
+
+TABLE etas2(pr : rpm = 1000, 5000)
+  1   0.7   0.7
+  6   0.7   0.7
+END
+TABLE etav2(pr : rpm = 1000, 5000)
+  1   0.9   0.9
+  6   0.9   0.9
+END
+TwoPhasePressureSource PS(fluid$=R134a, P=300000, x=1)
+TwoPhaseCompressor     CMP(fluid$=R134a, model$=map2d, map_etas$=etas2, map_etav$=etav2, disp=100e-6, rpm=3000)
+TwoPhasePressureSink   PK(P=900000)
+connect(PS.out, CMP.in)
+connect(CMP.out, PK.in)
+rho_chk = Density(R134a, P=300000, x=1)
+d_m     = CMP.in.mdot - 0.9 * 100e-6 * (3000/60) * rho_chk
+h_in    = Enthalpy(R134a, P=300000, x=1)
+s_chk   = Entropy(R134a, P=300000, x=1)
+hs_chk  = Enthalpy(R134a, P=900000, s=s_chk)
+d_h2    = CMP.out.h - (h_in + (hs_chk - h_in) / 0.7)
