@@ -1,0 +1,27 @@
+// SHOWCASE — hydraulic press: a fixed-displacement pump (157 rad/s) feeds a
+// cylinder pressing a stiff end stop; the relief valve holds the circuit at
+// its settling point P = 19.656 MPa (where the tanh-gated relief passes the
+// full pump flow), giving a press force (P - Patm)*A = 19.556 kN.
+// EXPECT p_fin = 19656227 tol 3e4
+// EXPECT f_fin = -19556.2 tol 40
+SpeedSource    WSP(w=157)
+MechGround     MG()
+HydraulicPump  PMP(disp=1e-5, rho=850, eta_v=0.95, eta_m=0.9)
+HydraulicSupply RES(P=100000)
+ReliefValve    RLF(Pcrack=2e7, K=1e-5, eps=1e5)
+HydraulicTank  RET(P=100000)
+HydraulicCylinder CYL(rho=850, beta=1.5e9, V0=5e-4, area=1e-3, Patm=100000, P0=100000)
+EndStop        STP(gap=0.001, k=1e8, c=1e6, eps=1e-5, x0=0)
+TransDamper    RDMP(c=1e4)
+TransGround    TGP()
+connect(WSP.a, PMP.shaft)
+connect(WSP.b, MG.port)
+connect(RES.out, PMP.in)
+connect(PMP.out, RLF.in, CYL.in)
+connect(RLF.out, RET.port)
+connect(CYL.rod, STP.port, RDMP.a)
+connect(RDMP.b, TGP.port)
+DYNAMIC press(method = ode23s, time = 0 .. 10, points = 400)
+END
+p_fin = FinalValue('cyl.in.p')
+f_fin = FinalValue('cyl.rod.f')

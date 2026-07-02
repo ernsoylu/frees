@@ -1,0 +1,30 @@
+// SHOWCASE — pneumatic position servo: a 5/2 valve drives a double-acting
+// cylinder + mass; rod velocity is integrated to position, a clamped PID
+// commands the spool. The rod settles at the 0.05 m setpoint.
+// EXPECT x_fin = 0.05 tol 0.005
+PneumaticSupply     SUP(fluid$=Air, P=700000, T=300)
+PneumaticValve52    V52(fluid$=Air, C=5e-9, b=0.4)
+PneumaticAtmosphere EA(P=100000)
+PneumaticAtmosphere EB(P=100000)
+PneumaticDoubleActingCylinder CYL(Aa=5e-4, Ab=5e-4, R=287, T=300, Va0=5e-5, Vb0=5e-5, Pa0=400000, Pb0=400000)
+TransMass    MSS(m=2, v0=0)
+TransDamper  DMP(c=200)
+TransGround  TG()
+SigVelProbe  VP()
+SigIntegrator POS(y0=0)
+SigConstant  SP(k=0.05)
+SigPID       PC(model$=clamped, Kp=30, Ki=6, Kd=1, tau=0.02, i0=0.5, d0=0, umin=0, umax=1, Taw=0.2)
+connect(SUP.out, V52.sup_in)
+connect(V52.wa, CYL.a)
+connect(V52.wb, CYL.b)
+connect(V52.ea_out, EA.port)
+connect(V52.eb_out, EB.port)
+connect(CYL.rod, MSS.port, DMP.a, VP.port)
+connect(DMP.b, TG.port)
+connect(VP.out, POS.in)
+connect(SP.out, PC.sp)
+connect(POS.out, PC.pv)
+connect(PC.out, V52.u)
+DYNAMIC servo(method = ode23s, time = 0 .. 20, points = 800)
+END
+x_fin = FinalValue('pos.y')

@@ -1,0 +1,47 @@
+// SHOWCASE — drive-cycle EV: a tabulated speed trace commands a PID torque
+// controller driving a map-efficiency motor through a slipping tire into the
+// vehicle mass, powered by a battery pack. The controller tracks the 15 m/s
+// plateau; traction-only driving discharges the pack monotonically.
+// EXPECT v_fin = 15 tol 0.3
+// EXPECT d_soc = 0 tol 1e-6
+TABLE cyc(t)
+  0    0
+  30   15
+  120  15
+END
+TABLE ocvp(soc)
+  0   3.2
+  1   4.1
+END
+TABLE dudtp(soc)
+  0   0
+  1   0
+END
+TABLE effm(w : tau = -700, 700)
+  0     0.9   0.9
+  600   0.9   0.9
+END
+SigTable     CYC(map$=cyc)
+SigVelProbe  VP()
+SigPID       SC(model$=clamped, Kp=300, Ki=30, Kd=0, tau=0.05, i0=0, d0=0, umin=-600, umax=600, Taw=0.5)
+BatteryPack  BAT(Ns=96, Np=4, ocv$=ocvp, dudt$=dudtp, R0ref=0.0015, Tref=298.15, Ea=0, Q0=50, C_th=20000, SOC0=0.9, T0=300)
+Ground       GB()
+HeatSource   ADB(Q=0)
+MotorMap     MOT(eff$=effm, epsP=10)
+ThermalSource TSM(T=300)
+Inertia      WHL(J=1, w0=0)
+TireLongitudinal TIRE(r=0.3, Fz=6000, B=10, C=1.5, D=1, epsv=0.1)
+VehicleBody  CAR(m=800, Cd=0.3, Af=2.2, rhoA=1.2, Crr=0.01, grade=0, v0=0)
+connect(CYC.out, SC.sp)
+connect(VP.out, SC.pv)
+connect(SC.out, MOT.u)
+connect(BAT.p, MOT.p)
+connect(BAT.n, MOT.n, GB.port)
+connect(BAT.heat, ADB.port)
+connect(MOT.heat, TSM.port)
+connect(MOT.shaft, WHL.port, TIRE.wheel)
+connect(TIRE.veh, CAR.port, VP.port)
+DYNAMIC cycle(method = ode23s, time = 0 .. 120, points = 600)
+END
+v_fin = FinalValue('car.port.vel')
+d_soc = FinalValue('bat.soc') - MinValue('bat.soc')
