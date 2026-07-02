@@ -2489,6 +2489,9 @@ import {
   IconRocket,
   IconTool,
   IconList,
+  IconWaveSine,
+  IconTopologyStar3,
+  IconServerCog,
   IconChevronLeft,
   IconChevronRight,
   IconArrowRight
@@ -2518,7 +2521,10 @@ const CATEGORIES: NavCategory[] = [
       { id: 'gs-first-solve', label: '1. Your First Solve', blurb: 'Type four lines and let frees find the unknown.', keywords: ['first solve', 'tutorial', 'quick start', 'f2', 'solve', 'ideal gas'] },
       { id: 'gs-declarative', label: '2. Thinking Declaratively', blurb: 'Why equation order never matters and any variable can be the unknown.', keywords: ['declarative', 'equality', 'order', 'unknown', 'assignment'] },
       { id: 'gs-units-check', label: '3. Units & Checking', blurb: 'Annotate inputs, work in SI, and verify with Check (F4).', keywords: ['units', 'check', 'f4', 'degrees of freedom', 'dof', 'guess', 'si'] },
-      { id: 'gs-next', label: '4. Where to Go Next', blurb: 'A guided map of the rest of the documentation.', keywords: ['next steps', 'learn', 'map', 'where to go'] },
+      { id: 'gs-plots', label: '4. See It: Tables & Plots', blurb: 'Sweep an input with a parametric table and plot the response.', keywords: ['plot', 'parametric', 'sweep', 'table', 'solve table', 'plot curve', 'chart'] },
+      { id: 'gs-repl', label: '5. Ask Questions: the REPL', blurb: 'Query the solved session, calculate with units, and call the CAS.', keywords: ['repl', 'terminal', 'console', 'workspace', 'query', 'interactive'] },
+      { id: 'gs-components', label: '6. Wire Components', blurb: 'Instantiate and connect library components into a solved network.', keywords: ['components', 'connect', 'network', 'system', 'pipe', 'acausal'] },
+      { id: 'gs-next', label: '7. Where to Go Next', blurb: 'A guided map of the rest of the documentation.', keywords: ['next steps', 'learn', 'map', 'where to go'] },
     ]
   },
   {
@@ -2533,7 +2539,6 @@ const CATEGORIES: NavCategory[] = [
       { id: 'arrays', label: 'Arrays & For Loops', blurb: 'Indexed variables and compile-time FOR expansion into equation families.', keywords: ['array', 'for', 'duplicate', 'loops', 'slice', 'index'] },
       { id: 'complex', label: 'Complex Numbers', blurb: 'Paired _r/_i components and the complex helper functions.', keywords: ['complex', 'imaginary', 'real', 'i', 'j', 'angle', 'polar', 'conj', 'magnitude', 'cis'] },
       { id: 'strings', label: 'String Variables', blurb: '$-suffixed strings for fluid names, geometry labels, and string functions.', keywords: ['string', 'chr$', 'concat$', 'copy$', 'lowercase$', 'uppercase$', 'trim$', 'stringlen', 'stringpos', 'stringval', 'date$', 'time$', 'timestamp$', 'unitsystem$', 'unitsof$'] },
-      { id: 'uncertainty', label: 'Uncertainty Propagation', blurb: 'First-order RSS error propagation via UncertaintyOf.', keywords: ['uncertainty', 'propagation', 'error', 'uncertaintyof', 'svd'] },
       { id: 'math-funcs', label: 'Mathematical Functions', blurb: 'Trig, logs, rounding, conditionals — the differentiable scalar toolbox.', keywords: ['abs', 'sqrt', 'ln', 'log10', 'exp', 'sin', 'cos', 'tan', 'atan2', 'min', 'max', 'sum', 'avg', 'sinh', 'cosh', 'tanh', 'arcsinh', 'arccosh', 'arctanh', 'round', 'floor', 'ceil', 'trunc', 'sign', 'factorial', 'step', 'if', 'product', 'gcd', 'lcm', 'bitand', 'bitor', 'bitxor', 'bitnot', 'bitshiftl', 'bitshiftr', 'bitwise', 'shift', 'baseconvert'] },
       { id: 'special-funcs', label: 'Special & Statistical Functions', blurb: 'Bessel, gamma, error functions and statistical distributions.', keywords: ['bessel', 'besselk', 'bessely', 'bessel_i0', 'bessel_j0', 'chi_square', 'random', 'randg', 'probability', 'gamma', 'loggamma', 'digamma', 'beta', 'erf', 'erfc', 'erfinv'] },
     ]
@@ -2564,7 +2569,7 @@ const CATEGORIES: NavCategory[] = [
     ]
   },
   {
-    title: 'Fluids & Materials',
+    title: 'Fluids, Materials & Psychrometrics',
     icon: <IconFlask size={16} />,
     overview: 'fluids-overview',
     items: [
@@ -2577,19 +2582,45 @@ const CATEGORIES: NavCategory[] = [
     ]
   },
   {
-    title: 'Modeling & Solving',
+    title: 'Solving & Optimization',
     icon: <IconAdjustments size={16} />,
-    overview: 'modeling-overview',
+    overview: 'solving-overview',
     items: [
-      { id: 'modeling-overview', label: 'Overview', blurb: 'Differential systems, control design, optimization, diagrams, and the solver pipeline.', keywords: ['modeling', 'solving', 'overview', 'advanced'] },
+      { id: 'solving-overview', label: 'Overview', blurb: 'How frees solves, what to do when it doesn\'t, and the system-level analyses on top.', keywords: ['solving', 'optimization', 'overview', 'solver'] },
+      { id: 'debugging', label: 'Debugging a Solve', blurb: 'Build incrementally, read residuals and blocking order, and seed guesses for stubborn nonlinear systems.', keywords: ['debug', 'debugging', 'troubleshoot', 'converge', 'convergence', 'diverge', 'residual', 'blocking', 'singular', 'guess', 'stall', 'wont solve', 'no solution'] },
+      { id: 'uncertainty', label: 'Uncertainty Propagation', blurb: 'First-order RSS error propagation via UncertaintyOf.', keywords: ['uncertainty', 'propagation', 'error', 'uncertaintyof', 'svd'] },
+      { id: 'optimization', label: 'Optimization & Sweeps', blurb: 'Parametric sweeps, single-objective optimization, and Pareto fronts.', keywords: ['optimization', 'sweep', 'parametric', 'minimization', 'maximization', 'nsga', 'pareto'] },
+      { id: 'api', label: 'Solver Internals & Diagnostics', blurb: 'The compile/solve pipeline and how to read convergence diagnostics.', keywords: ['api', 'solver', 'newton', 'tarjan', 'residuals', 'jacobian', 'singular', 'convergence'] },
+    ]
+  },
+  {
+    title: 'Dynamic Systems & Control',
+    icon: <IconWaveSine size={16} />,
+    overview: 'dynamics-overview',
+    items: [
+      { id: 'dynamics-overview', label: 'Overview', blurb: 'Transient integration, linearization, and the control-design suite.', keywords: ['dynamics', 'control', 'overview', 'transient'] },
       { id: 'calculus', label: 'Numerical Integration (ODEs)', blurb: 'Definite integrals and the scalar first-order ODE feedback pattern.', keywords: ['integral', 'ode', 'differential', 'calculus', 'runge-kutta'] },
       { id: 'dynamic-ode', label: 'Transient / ODE Systems (DYNAMIC)', blurb: 'Coupled, multi-state, stiff, event-driven ODE integration.', keywords: ['dynamic', 'transient', 'ode', 'der', 'state', 'event', 'ode45', 'ode23', 'ode23s', 'ode15s', 'rocket', 'odevalue', 'finalvalue', 'maxvalue', 'timeat', 'ode table', 'stiff', 'initial condition', 'apogee'] },
       { id: 'symbolic-cas', label: 'Control Systems & Symbolic CAS', blurb: 'Transfer functions, state space, Bode/Nyquist, LQR, and Laplace algebra.', keywords: ['symbolic', 'cas', 'laplace', 's', 'partial fractions', 'residue', 'transfer function', 'tf', 'identity', 'control', 'decompose', 'apart', 'numerator', 'denominator', 'state space', 'ss2tf', 'tf2ss', 'zp2tf', 'tf2zp', 'series', 'parallel', 'feedback', 'pole', 'zero', 'bode', 'nyquist', 'margin', 'frequency response', 'step', 'impulse', 'lsim', 'time response', 'lqr', 'place', 'pole placement', 'ackermann', 'pidtune', 'pid', 'riccati', 'controller design'] },
-      { id: 'optimization', label: 'Optimization & Sweeps', blurb: 'Parametric sweeps, single-objective optimization, and Pareto fronts.', keywords: ['optimization', 'sweep', 'parametric', 'minimization', 'maximization'] },
-      { id: 'diagram', label: 'Diagram Canvas & Schematics', blurb: 'Build schematics and overlay live solved data and cycle paths.', keywords: ['diagram', 'plots', 'graph', 'canvas', 'recording', 'export'] },
-      { id: 'plot-code', label: 'Plots in Code (PLOT)', blurb: 'Declare XY, property, Bode, Nyquist and pole-zero figures in code.', keywords: ['plot', 'graph', 'chart', 'code', 'programmatic', 'xy', 'property', 'psychro'] },
-      { id: 'debugging', label: 'Debugging a Solve', blurb: 'Build incrementally, read residuals and blocking order, and seed guesses for stubborn nonlinear systems.', keywords: ['debug', 'debugging', 'troubleshoot', 'converge', 'convergence', 'diverge', 'residual', 'blocking', 'singular', 'guess', 'stall', 'wont solve', 'no solution'] },
-      { id: 'api', label: 'Solver Internals & Diagnostics', blurb: 'The compile/solve pipeline and how to read convergence diagnostics.', keywords: ['api', 'solver', 'newton', 'tarjan', 'residuals', 'jacobian', 'singular', 'convergence'] },
+    ]
+  },
+  {
+    title: 'System Modeling with Components',
+    icon: <IconTopologyStar3 size={16} />,
+    overview: 'components-overview',
+    items: [
+      { id: 'components-overview', label: 'Overview', blurb: 'Acausal, multi-domain system modeling with a ~130-component library.', keywords: ['components', 'system modeling', 'overview', 'acausal', 'network', 'bond graph'] },
+      { id: 'comp-first-network', label: 'Your First Component Network', blurb: 'Instantiate, connect, probe — a pipe run solved as a network.', keywords: ['component', 'network', 'instantiate', 'first', 'source', 'pipe', 'sink', 'probe', 'port'] },
+      { id: 'comp-connections', label: 'Connections & Junctions', blurb: 'connect statements vs shared streams; junction rules and boundary conditions.', keywords: ['connect', 'junction', 'node', 'stream', 'shared name', 'branch', 'split', 'mixer', 'boundary condition'] },
+      { id: 'comp-domains', label: 'Domains & Fluid Families', blurb: 'Fluid, heat, electrical, mechanical — and the guarded fluid families.', keywords: ['domain', 'fluid', 'heat', 'electrical', 'mechanical', 'moistair', 'gas', 'oil', 'liquid', 'twophase', 'domain$', 'across', 'through', 'transducer', 'humid air'] },
+      { id: 'comp-library', label: 'The Component Library', blurb: 'A map of the twelve domain libraries and their conventions.', keywords: ['library', 'components', 'catalog', 'fluid', 'liquid', 'twophase', 'moistair', 'pneumatic', 'hydraulic', 'electrical', 'mechanical', 'powertrain', 'heat'] },
+      { id: 'comp-variants', label: 'Fidelity Variants (model$)', blurb: 'One component, many models — select physics fidelity per instance.', keywords: ['variant', 'model$', 'fidelity', 'require', 'isentropic', 'volumetric', 'map'] },
+      { id: 'comp-authoring', label: 'Writing Your Own Component', blurb: 'COMPONENT blocks: ports, PARAM, outputs, and VARIANT bodies.', keywords: ['component', 'custom', 'authoring', 'param', 'ports', 'variant', 'require', 'outputs'] },
+      { id: 'comp-transient', label: 'Steady ↔ Transient Networks', blurb: 'Storage components carry the states; one wiring, both analyses.', keywords: ['transient', 'steady', 'storage', 'thermalmass', 'inertia', 'capacitor', 'accumulator', 'soc', 'ida', 'dae', 'ramp', 'time'] },
+      { id: 'comp-linearize', label: 'From Plant to Controller (LINEARIZE)', blurb: 'Extract (A,B,C,D) from a transient network and design the loop.', keywords: ['linearize', 'state space', 'plant', 'abcd', 'input', 'output', 'lqr', 'controller'] },
+      { id: 'comp-topology', label: 'Topology View & Cycle Plots', blurb: 'The auto-generated schematic and cycle overlays on property charts.', keywords: ['topology', 'mermaid', 'schematic', 'cycle', 'overlay', 'property plot', 'diagnostics'] },
+      { id: 'comp-wizard', label: 'The Component Wizard', blurb: 'Guided instantiation with variant gating, UA helpers, and map ingestion.', keywords: ['wizard', 'component wizard', 'ua', 'correlation', 'map', 'insert'] },
+      { id: 'comp-troubleshooting', label: 'Troubleshooting Networks', blurb: 'The strict parse errors, and the cold-start patterns that fix convergence.', keywords: ['troubleshooting', 'error', 'domain mismatch', 'port count', 'cold start', 'seed', 'pressure', 'mixer', 'capacity floor', 'converge'] },
     ]
   },
   {
@@ -2601,14 +2632,31 @@ const CATEGORIES: NavCategory[] = [
       { id: 'repl', label: 'REPL Terminal & Workspace', blurb: 'A unit-aware console over the solved session, with CALL and CAS.', keywords: ['repl', 'terminal', 'workspace', 'console', 'vars', 'who', 'whos', 'calculator', 'cas', 'factor', 'expand', 'simplify', 'apart', 'laplace', 'diff', 'integrate', 'call', 'symbolic', 'interactive', 'ans'] },
       { id: 'shortcuts', label: 'Keyboard Shortcuts', blurb: 'Solve, Check, Variable Info, and block-solve hotkeys.', keywords: ['hotkey', 'shortcuts', 'keyboard', 'f2', 'f4', 'f9', 'ctrl'] },
       { id: 'reports', label: 'Markdown & Reports', blurb: 'Weave narrative, live values, and plots into a Formatted report.', keywords: ['markdown', 'report', 'latex', 'katex', 'inline', 'equations'] },
+      { id: 'plot-code', label: 'Plots in Code (PLOT)', blurb: 'Declare XY, property, Bode, Nyquist and pole-zero figures in code.', keywords: ['plot', 'graph', 'chart', 'code', 'programmatic', 'xy', 'property', 'psychro'] },
+      { id: 'diagram', label: 'Diagram Canvas & Schematics', blurb: 'Build schematics and overlay live solved data and cycle paths.', keywords: ['diagram', 'plots', 'graph', 'canvas', 'recording', 'export'] },
       { id: 'digitizer-fit', label: 'Graph Digitizer & Curve Fit', blurb: 'Turn a chart image or a table into a fitted equation.', keywords: ['digitizer', 'curve', 'fit', 'table', 'regression', 'equation', 'graph'] },
     ]
   },
   {
-    title: 'Examples',
+    title: 'Examples & Tutorials',
     icon: <IconFileText size={16} />,
     items: [
+      { id: 'tut-msd', label: 'Tutorial: Mass–Spring–Damper → Bode', blurb: 'From a transient ring-down to the plant\'s frequency response, in stages.', keywords: ['tutorial', 'mass spring damper', 'oscillator', 'bode', 'transfer function', 'dynamic', 'vibration', 'resonance', 'damping'] },
+      { id: 'tut-coil', label: 'Tutorial: AC Cooling Coil', blurb: 'Psychrometric coil analysis by hand, then rebuilt from components.', keywords: ['tutorial', 'cooling coil', 'psychrometrics', 'hvac', 'dehumidification', 'latent', 'sensible', 'shr', 'moist air', 'air conditioning'] },
       { id: 'examples', label: 'Engineering Examples Library', blurb: 'Verified, ready-to-run problems grouped by discipline.', keywords: ['examples', 'rankine', 'brayton', 'cold air standard', 'combined cycle', 'pipe network', 'truss', 'radiation', 'cooling loop', 'reforming', 'pid', 'fatigue', 'nuclear', 'siyavula', 'nozzle', 'co2', 'compressible', 'throat', 'sonic', 'pelton', 'turbine', 'turbomachinery', 'hydropower', 'impulse', 'vehicle', 'ev', 'electric vehicle', 'longitudinal', 'lateral', 'bicycle model', 'understeer', 'road load', 'drag', 'battery', 'pack', 'cell', 'sizing', 'motor', 'range', 'batemo', 'c-rate', 'ode', 'differential equations', 'runge-kutta', 'stiff', 'van der pol', 'robertson', 'lotka-volterra', 'predator-prey', 'pendulum', 'rlc', 'rc circuit', 'rl circuit', 'orbit', 'logistic', 'decay', 'cooling', 'mass-spring-damper', 'parachutist', 'torricelli'] },
+    ]
+  },
+  {
+    title: 'Architecture & Deployment',
+    icon: <IconServerCog size={16} />,
+    overview: 'deploy-overview',
+    items: [
+      { id: 'deploy-overview', label: 'Overview', blurb: 'The async compute model, the REST API, and both deployment paths.', keywords: ['architecture', 'deployment', 'overview', 'server'] },
+      { id: 'arch-async', label: 'How a Solve Runs', blurb: 'Editor → API → queue → compute → job store, and why it\'s asynchronous.', keywords: ['async', 'asynchronous', 'architecture', 'rabbitmq', 'redis', 'queue', 'job', 'jobid', '202', 'poll', 'compute', 'check'] },
+      { id: 'arch-api', label: 'The REST API', blurb: 'Drive frees from scripts: check, solve, poll, REPL, and optimization endpoints.', keywords: ['api', 'rest', 'http', 'curl', 'endpoint', 'solve', 'check', 'jobs', 'integration', 'script'] },
+      { id: 'deploy-docker', label: 'Run Locally with Docker', blurb: 'frees.sh, the compose topology, and host-side development.', keywords: ['docker', 'compose', 'local', 'frees.sh', 'install', 'run', 'container', 'localhost'] },
+      { id: 'deploy-railway', label: 'Deploy to Railway', blurb: 'The five-service layout and the production configuration that must stay.', keywords: ['railway', 'deploy', 'production', 'cloud', 'nginx', 'private network', 'commit', 'about'] },
+      { id: 'deploy-health', label: 'Health & Scaling', blurb: 'The topology health endpoint, compute replicas, and the poison-message guard.', keywords: ['health', 'scaling', 'monitoring', 'replicas', 'workers', 'poison', 'redelivered', '503', 'degraded'] },
     ]
   },
   {
@@ -2635,7 +2683,7 @@ const CATEGORY_BY_OVERVIEW = new Map<string, NavCategory>();
 for (const cat of CATEGORIES) if (cat.overview) CATEGORY_BY_OVERVIEW.set(cat.overview, cat);
 
 // The numbered Get-Started reading order, used for Prev/Next navigation.
-const GETTING_STARTED_SEQUENCE = ['started', 'gs-first-solve', 'gs-declarative', 'gs-units-check', 'gs-next'];
+const GETTING_STARTED_SEQUENCE = ['started', 'gs-first-solve', 'gs-declarative', 'gs-units-check', 'gs-plots', 'gs-repl', 'gs-components', 'gs-next'];
 
 // Slugify a heading for an in-page anchor ("On this page" links).
 function slugify(s: string): string {
