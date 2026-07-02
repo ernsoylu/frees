@@ -63,6 +63,12 @@ export interface AnalyzerStrip {
 export interface AnalyzerFileRef {
   measurementId: string
   signature: FileSignature
+  /**
+   * Per-file time offset in seconds (Phase 5a, MDA multi-file compare):
+   * displayed time = recorded time + offset. Set numerically or by
+   * SHIFT-dragging a strip; persisted with the analyzer.
+   */
+  offset?: number
 }
 
 /** One persisted Data Analyzer document (mirrors WhiteboardSpec/DiagramSpec). */

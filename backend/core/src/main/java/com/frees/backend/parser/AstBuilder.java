@@ -891,7 +891,9 @@ public class AstBuilder extends FreesBaseVisitor<Expr> {
 
     // ── Boolean expression ────────────────────────────────────────────────────
 
-    private Expr buildBoolExpr(FreesParser.BoolExprContext ctx) {
+    /** Public for consumers that parse a single condition/formula (e.g. the
+     *  Data Analyzer calculated-signal engine). */
+    public Expr buildBoolExpr(FreesParser.BoolExprContext ctx) {
         return switch (ctx) {
             case FreesParser.BoolNotContext not ->
                     new Expr.Not(buildBoolExpr(not.boolExpr()));

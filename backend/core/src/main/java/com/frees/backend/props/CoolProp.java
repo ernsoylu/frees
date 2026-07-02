@@ -58,14 +58,27 @@ public final class CoolProp {
         return LIB != null;
     }
 
-    /** PropsSI with CoolProp's error string surfaced on failure. */
+    /**
+     * PropsSI with CoolProp's error string surfaced on failure. Successful
+     * results go through the same LRU as propsSIOrNaN (PropsSI is a pure
+     * function of its arguments): repeated states — iterative solves circling
+     * a fixed point, calculated measurement signals sweeping a bounded input
+     * (Data Analyzer Phase 4) — skip the global-lock native call entirely.
+     * Failures are not cached so the error string stays fresh.
+     */
     public static synchronized double propsSI(String output, String name1, double prop1,
                                               String name2, double prop2, String fluid) {
         requireLibrary();
+        CacheKey key = new CacheKey(output, name1, prop1, name2, prop2, fluid);
+        Double cached = PROPS_CACHE.get(key);
+        if (cached != null && !cached.isNaN()) {
+            return cached;
+        }
         double value = LIB.PropsSI(output, name1, prop1, name2, prop2, fluid);
         if (!Double.isFinite(value) || Math.abs(value) > FAILURE_THRESHOLD) {
             throw new PropertyEvaluationException("CoolProp: " + lastError());
         }
+        PROPS_CACHE.put(key, value);
         return value;
     }
 

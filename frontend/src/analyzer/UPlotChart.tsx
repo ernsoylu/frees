@@ -48,6 +48,9 @@ interface Props {
   onResetZoom?: () => void
   /** Plain click placed a cursor: A on click, B on Shift+click. */
   onCursorSet?: (t: number, which: 'a' | 'b') => void
+  /** SHIFT-drag finished: shift the strip's file offset by this many seconds
+   *  (Phase 5a; numeric entry remains the precise path). */
+  onOffsetDrag?: (deltaSeconds: number) => void
 }
 
 export default function UPlotChart({
@@ -58,6 +61,7 @@ export default function UPlotChart({
   onUserZoom,
   onResetZoom,
   onCursorSet,
+  onOffsetDrag,
 }: Readonly<Props>) {
   const containerRef = useRef<HTMLDivElement>(null)
   const chartRef = useRef<uPlot | null>(null)
@@ -70,8 +74,8 @@ export default function UPlotChart({
   // True while a programmatic update (create/setData/setSize) is in flight,
   // including the microtask in which uPlot flushes the resulting hooks.
   const internalUpdate = useRef(false)
-  const cbRef = useRef({ onUserZoom, onResetZoom, onCursorSet })
-  cbRef.current = { onUserZoom, onResetZoom, onCursorSet }
+  const cbRef = useRef({ onUserZoom, onResetZoom, onCursorSet, onOffsetDrag })
+  cbRef.current = { onUserZoom, onResetZoom, onCursorSet, onOffsetDrag }
 
   /** Run a programmatic chart mutation without it registering as a user zoom. */
   const guarded = (fn: () => void) => {
@@ -93,6 +97,17 @@ export default function UPlotChart({
       ...options,
       width: Math.max(el.clientWidth, 100),
       height: Math.max(el.clientHeight, 80),
+      cursor: {
+        ...options.cursor,
+        bind: {
+          // SHIFT is reserved for cursor B and offset-drag: keep uPlot's own
+          // drag-select (zoom-box) off while shift is held.
+          mousedown: (_u, _targ, handler) => (e) => {
+            if (!(e as MouseEvent).shiftKey) handler(e)
+            return null
+          },
+        },
+      },
       scales: {
         ...options.scales,
         x: {
@@ -160,21 +175,33 @@ export default function UPlotChart({
     }
     chart!.over.addEventListener('dblclick', onDblClick, { capture: true })
 
-    // Plain click (no drag) places measurement cursor A; Shift+click places B.
-    // A drag-select is distinguished by pointer travel, so zoom-box still works.
-    let downPos: { x: number; y: number } | null = null
+    // Plain click (no drag) places measurement cursor A; Shift+click places B;
+    // SHIFT-drag (travel > 3px) shifts the strip's file offset (Phase 5a).
+    // A plain drag stays uPlot's zoom-box.
+    let downPos: { x: number; y: number; shift: boolean } | null = null
     const onMouseDown = (e: MouseEvent) => {
-      downPos = { x: e.clientX, y: e.clientY }
+      downPos = { x: e.clientX, y: e.clientY, shift: e.shiftKey }
     }
     const onMouseUp = (e: MouseEvent) => {
       const down = downPos
       downPos = null
-      if (!down || Math.abs(e.clientX - down.x) > 3 || Math.abs(e.clientY - down.y) > 3) return
+      if (!down) return
       const c = chartRef.current
       if (!c) return
       const rect = c.over.getBoundingClientRect()
+      const dragged = Math.abs(e.clientX - down.x) > 3 || Math.abs(e.clientY - down.y) > 3
+      if (dragged) {
+        if (down.shift) {
+          const t0 = c.posToVal(down.x - rect.left, 'x')
+          const t1 = c.posToVal(e.clientX - rect.left, 'x')
+          if (Number.isFinite(t0) && Number.isFinite(t1) && t1 !== t0) {
+            cbRef.current.onOffsetDrag?.(t1 - t0)
+          }
+        }
+        return // plain drag = uPlot zoom-box
+      }
       const t = c.posToVal(e.clientX - rect.left, 'x')
-      if (Number.isFinite(t)) cbRef.current.onCursorSet?.(t, e.shiftKey ? 'b' : 'a')
+      if (Number.isFinite(t)) cbRef.current.onCursorSet?.(t, down.shift ? 'b' : 'a')
     }
     chart!.over.addEventListener('mousedown', onMouseDown)
     chart!.over.addEventListener('mouseup', onMouseUp)
