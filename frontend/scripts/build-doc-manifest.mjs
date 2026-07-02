@@ -55,11 +55,23 @@ function parseRegistry() {
 // Labels sharing an arm are ALIASES of one function (e.g. case "t0_t","isen_t0_t").
 function dispatchArms(rel, base = BK) {
   const src = read(path.join(base, rel));
+  // Case labels may be string literals or named `static final String` constants
+  // (Sonar S1192 pushes repeated dispatch names into constants); resolve the
+  // constants to their values. Identifiers that don't resolve (e.g. enum
+  // labels in unrelated switches) are dropped.
+  const consts = new Map();
+  const constRe = /static\s+final\s+String\s+([A-Z][A-Z0-9_]*)\s*=\s*"((?:[^"\\]|\\.)*)"/g;
+  let c;
+  while ((c = constRe.exec(src)) !== null) consts.set(c[1], c[2]);
   const arms = [];
-  const caseRe = /case\s+("(?:[^"\\]|\\.)*"(?:\s*,\s*"(?:[^"\\]|\\.)*")*)\s*->/g;
+  const label = '(?:"(?:[^"\\\\]|\\\\.)*"|[A-Z][A-Z0-9_]*)';
+  const caseRe = new RegExp(`case\\s+(${label}(?:\\s*,\\s*${label})*)\\s*->`, 'g');
   let m;
   while ((m = caseRe.exec(src)) !== null) {
-    const labels = (m[1].match(/"((?:[^"\\]|\\.)*)"/g) || []).map((l) => l.slice(1, -1).toLowerCase());
+    const labels = (m[1].match(/"(?:[^"\\]|\\.)*"|[A-Z][A-Z0-9_]*/g) || [])
+      .map((l) => (l.startsWith('"') ? l.slice(1, -1) : consts.get(l)))
+      .filter(Boolean)
+      .map((l) => l.toLowerCase());
     if (labels.length) arms.push(labels);
   }
   return arms;
