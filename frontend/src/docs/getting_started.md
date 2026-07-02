@@ -155,7 +155,9 @@ This scales a long way: pumps, heat exchangers, refrigerant circuits, electrical
 [Topic: gs-next]
 # 7. Where to Go Next
 
-You now know the whole loop: describe equations, Check (F4), Solve (F2), sweep and plot, ask follow-ups in the REPL, and wire component networks. Where you go next depends on what you're modeling.
+You now know the whole loop: describe equations, Check (F4), Solve (F2), sweep and plot, ask follow-ups in the REPL, and wire component networks. Where you go next depends on what you're modeling — the map below is clickable.
+
+[Diagram: LearningMap]
 
 ## Pick your direction
 - **Master the language** — operators, arrays, complex numbers, and strings: *Language Fundamentals*.

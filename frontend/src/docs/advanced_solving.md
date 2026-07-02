@@ -139,6 +139,70 @@ Newton iterates from the guess in **Variable Info** (`Ctrl + I`); a guess near t
 
 [Related: variables, gs-units-check, api]
 
+[Topic: errors]
+# Errors & Diagnostics Index
+
+Every message the checker and solver can raise, with its cause and fix. The red status pill in the app links here — find your message below. Two habits solve most of these before they happen: **F4 before F2**, and **build incrementally** (see *Debugging a Solve*).
+
+## Syntax error on line N
+
+The parser could not read that line. The usual culprits:
+
+- **Implicit multiplication** — write `2 * x`, never `2x`.
+- **A stray `==`** — frees has only the single `=` equality.
+- **REPL-only syntax in the editor** — range literals like `[1 : 0.5 : 10]` and the symbolic CAS calls work only in the REPL; in a document build ranges with `x[1:n] = linspace(a, b, n)`.
+- **Unbalanced brackets or block keywords** — every `FUNCTION`/`TABLE`/`DYNAMIC`/`COMPONENT`/`PLOT` needs its `END`.
+
+## Degrees of freedom ≠ 0 (equations ≠ unknowns)
+
+The system is under- or over-determined; the Check message reports both counts.
+
+- **Too few equations** — a variable is mentioned but never constrained. Typos create this silently: `T_evap` vs `T_evp` are *two* variables.
+- **Too many equations** — the same physics written twice. A classic: two property calls that restate one relationship (`h = Enthalpy(Water, T=T, P=P)` **and** `T = Temperature(Water, h=h, P=P)`), or re-equating pressures a component junction already equalizes.
+- Case-insensitivity can *merge* names you meant to be distinct: `t` and `T` are the same variable.
+
+## Singular Jacobian
+
+Newton's step could not be computed — the equation block is rank-deficient at the current point.
+
+- **Dependent equations**: two equations carry the same information (see the duplicate-physics cases above).
+- **A guess on a flat spot**: the derivative vanishes at the guess (e.g. `x` starting exactly at a function's extremum). Nudge the guess in Variable Info (`Ctrl + I`).
+- In component networks: a **re-equated mixer pressure** or a **loop with no pinned pressure level** — see *Troubleshooting Networks*.
+
+## Newton iteration stalled / Max iterations
+
+The solver ran but did not converge; the diagnostic names the failing **block** and its largest **residual**.
+
+1. Set a **guess** near the expected magnitude for the block's variables (`Ctrl + I`), and **bounds** to keep the iteration physical (`T ≥ 0`, `0 ≤ x ≤ 1`).
+2. If the block contains property calls, check the *property error* appended to the message — the iteration usually walked a state out of the fluid's valid range (next entry).
+3. Bootstrap a stubborn block with a temporary explicit estimate, solve, copy values into guesses, restore the real equation (*Debugging a Solve* shows the pattern).
+
+## CoolProp range / property errors ("must be in range …")
+
+A property was evaluated outside the fluid's validity envelope — almost always a symptom, not the disease: an unseeded unknown wandered there during iteration.
+
+- Give the offending variable a physically sensible guess and bounds.
+- **Inside the vapor dome, `T` and `P` are not independent** — identify a saturated state by quality `x` with `T` *or* `P`, never both; use `P_sat(fluid, T=…)` for the saturation line.
+- For humid air, every `AirH2O` query needs **three** coordinates including total pressure `P`.
+
+## Unit warnings ("dimensionally inconsistent …")
+
+Warnings never block a solve, but they are usually pointing at a real slip: a missing `[unit]` annotation on an input, a formula mixing annotated and raw numbers, or a `TABLE`/`FUNCTION` without declared argument/output units. See *Units & Consistency*. Only trust results after the warning list is empty or understood.
+
+## Component network errors
+
+`connect` domain mismatches, port-count errors, mismatched fluid families, missing `PARAM`/`REQUIRE` values, and the shared-stream limit are all **deliberate hard errors** with their own page — see *Troubleshooting Networks*.
+
+## Job FAILED without a diagnostic / stuck in PENDING
+
+These come from the compute tier, not your model:
+
+- **Stuck PENDING** — no compute workers are consuming the queue. Check `GET /api/health`: the `compute` entry counts live workers (see *Health & Scaling*).
+- **FAILED after a worker crash** — a redelivered task is dropped by design (the poison-message guard) so one pathological job can't crash-loop the tier. Re-submit once; if it fails again, the model itself is killing the worker — reduce it and report.
+- **429 Too many requests** — the API rate-limits bursts; wait a moment and retry.
+
+[Related: debugging, comp-troubleshooting, api]
+
 [Topic: api]
 # Solver Reference & API
 
