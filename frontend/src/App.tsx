@@ -36,6 +36,7 @@ import {
   IconTargetArrow,
   IconTemperature,
   IconVariable,
+  IconWaveSine,
   IconGrid4x4,
 } from '@tabler/icons-react'
 import {
@@ -84,6 +85,8 @@ import { loadWhiteboards, newWhiteboard, saveWhiteboards } from './whiteboard/wh
 import { WhiteboardSpec } from './whiteboard/types'
 import { loadSpreadsheets, newSpreadsheet, saveSpreadsheets } from './spreadsheet/spreadsheetStorage'
 import { emptySpreadsheetData, type SpreadsheetSpec } from './spreadsheet/types'
+import { newAnalyzer, type AnalyzerSpec } from './analyzer/types'
+import { channelStore } from './analyzer/channelStore'
 import { substituteSsheetRefs } from './spreadsheet/ssheetResolver'
 import { group } from './Workspace'
 
@@ -98,6 +101,9 @@ const DiagramTab = lazy(() => import('./diagram/DiagramTab'))
 // so the Excalidraw bundle is only fetched when a whiteboard window opens.
 const WhiteboardTab = lazy(() => import('./whiteboard/WhiteboardTab'))
 const SpreadsheetTab = lazy(() => import('./spreadsheet/SpreadsheetTab'))
+// The Data Analyzer (uPlot + papaparse) is code-split so the measurement
+// tooling is only fetched when an analyzer window opens.
+const DataAnalyzerTab = lazy(() => import('./analyzer/DataAnalyzerTab'))
 
 // The Plot tab (and its Plotly figure builders) plus the optimization and
 // plot-config modals are also code-split: the Plotly figure machinery is large
@@ -372,6 +378,10 @@ export default function App() {
   const [spreadsheets, setSpreadsheets] = useState<SpreadsheetSpec[]>(() =>
     boot?.spreadsheets ?? loadSpreadsheets(),
   )
+  // Data Analyzer windows (todo.md Phase 1). Session-only for now: the spec
+  // slice joins the .frees project file in Phase 2 (template mode); bulk
+  // samples always stay out of React, in the module-level ChannelStore.
+  const [analyzers, setAnalyzers] = useState<AnalyzerSpec[]>([])
   // Diagrams are addressed per-window now; we only need the setter (to track
   // the most-recently-created/focused diagram for new-window opening).
   const [, setActiveDiagramId] = useState<string | null>(() => {
@@ -783,6 +793,8 @@ export default function App() {
     setActiveDiagramId(null)
     setWhiteboards([])
     setSpreadsheets([])
+    setAnalyzers([])
+    channelStore.clear()
     setResult(null)
     setCheckResult(null)
     setProjectName('untitled')
@@ -933,6 +945,8 @@ export default function App() {
     setActiveDiagramId(null)
     setWhiteboards([])
     setSpreadsheets([])
+    setAnalyzers([])
+    channelStore.clear()
     setResult(null)
     setCheckResult(null)
     setLastSolvedWithFillMissing(false)
@@ -1500,12 +1514,13 @@ export default function App() {
       ...tables.map((t) => `table:${t.id}`),
       ...whiteboards.map((w) => `whiteboard:${w.id}`),
       ...spreadsheets.map((s) => `spreadsheet:${s.id}`),
+      ...analyzers.map((a) => `analyzer:${a.id}`),
       ...(result?.stateTableDefs ?? checkResult?.stateTableDefs ?? []).map((s) => `state:${s.name}`),
     ])
     for (const w of openWindows) {
       if (!valid.has(w.id)) dockRef.current?.close(w.id)
     }
-  }, [diagrams, mergedPlots, tables, whiteboards, spreadsheets, openWindows, result?.stateTableDefs, checkResult?.stateTableDefs])
+  }, [diagrams, mergedPlots, tables, whiteboards, spreadsheets, analyzers, openWindows, result?.stateTableDefs, checkResult?.stateTableDefs])
 
   // Keep dock tab titles in sync with instance names (so renames in the
   // Inspector show on the tabs). Deferred out of the commit cycle so dockview's
@@ -1517,9 +1532,18 @@ export default function App() {
       for (const t of tables) dockRef.current?.setTitle(`table:${t.id}`, t.name)
       for (const w of whiteboards) dockRef.current?.setTitle(`whiteboard:${w.id}`, w.name)
       for (const s of spreadsheets) dockRef.current?.setTitle(`spreadsheet:${s.id}`, s.name)
+      for (const a of analyzers) dockRef.current?.setTitle(`analyzer:${a.id}`, a.name)
     })
     return () => cancelAnimationFrame(raf)
-  }, [diagrams, mergedPlots, tables, whiteboards, spreadsheets])
+  }, [diagrams, mergedPlots, tables, whiteboards, spreadsheets, analyzers])
+
+  // Analyzers with an OPEN dock window are protected from the ChannelStore's
+  // over-ceiling LRU eviction (§2.5a) — tell the store which ones those are.
+  useEffect(() => {
+    channelStore.setOpenAnalyzers(
+      openWindows.filter((w) => w.kind === 'analyzer').map((w) => w.id.slice('analyzer:'.length)),
+    )
+  }, [openWindows])
 
   const baseVariables =
     solutions.length > 0 ? solutions[0].variables : result?.variables ?? []
@@ -1592,6 +1616,24 @@ export default function App() {
     const ss = spreadsheets[spreadsheets.length - 1]
     if (ss) dockRef.current?.openInstance(`spreadsheet:${ss.id}`, 'spreadsheet', ss.name)
     else createSpreadsheet()
+  }
+  const createAnalyzer = () => {
+    const a = newAnalyzer(analyzers.length)
+    setAnalyzers((prev) => [...prev, a])
+    requestAnimationFrame(() => dockRef.current?.openInstance(`analyzer:${a.id}`, 'analyzer', a.name))
+  }
+  const openLatestOrNewAnalyzer = () => {
+    const a = analyzers[analyzers.length - 1]
+    if (a) dockRef.current?.openInstance(`analyzer:${a.id}`, 'analyzer', a.name)
+    else createAnalyzer()
+  }
+  // Release binds to analyzer DELETION, not window close (§2.5a): dropping the
+  // spec releases its measurements from the ChannelStore (shared entries are
+  // refcounted, so a second analyzer on the same file keeps its data).
+  const deleteAnalyzer = (id: string) => {
+    const a = analyzers.find((x) => x.id === id)
+    if (a) for (const f of a.files) channelStore.release(f.measurementId, a.id)
+    setAnalyzers((prev) => prev.filter((x) => x.id !== id))
   }
   const exportToSpreadsheet = (vars: VariableResult[]) => {
     const grouped = group(vars)
@@ -1765,6 +1807,7 @@ export default function App() {
         { id: 'view-diagram', label: 'Diagram', description: 'Open the latest diagram (or create one)', leftSection: <IconSchema size={18} />, onClick: openLatestOrNewDiagram },
         { id: 'view-whiteboard', label: 'Whiteboard', description: 'Open the latest whiteboard (or create one)', leftSection: <IconBrush size={18} />, onClick: openLatestOrNewWhiteboard },
         { id: 'view-spreadsheet', label: 'Spreadsheet', description: 'Open the latest spreadsheet (or create one)', leftSection: <IconGrid4x4 size={18} />, onClick: openLatestOrNewSpreadsheet },
+        { id: 'view-analyzer', label: 'Data Analyzer', description: 'Open the latest analyzer (or create one)', leftSection: <IconWaveSine size={18} />, onClick: openLatestOrNewAnalyzer },
         { id: 'view-inspector', label: 'Inspector', leftSection: <IconSettings size={18} />, onClick: () => dockRef.current?.open('inspector') },
       ],
     },
@@ -1778,6 +1821,7 @@ export default function App() {
         { id: 'new-diagram', label: 'Add diagram', leftSection: <IconSchema size={18} />, onClick: createDiagram },
         { id: 'new-whiteboard', label: 'Add whiteboard', description: 'New Excalidraw freehand sketch canvas', leftSection: <IconBrush size={18} />, onClick: createWhiteboard },
         { id: 'new-spreadsheet', label: 'Add spreadsheet', description: 'New spreadsheet workbook', leftSection: <IconGrid4x4 size={18} />, onClick: createSpreadsheet },
+        { id: 'new-analyzer', label: 'Add data analyzer', description: 'Import and explore measurement data (CSV/TSV)', leftSection: <IconWaveSine size={18} />, onClick: createAnalyzer },
         { id: 'new-state-table', label: 'Add fluid state table', description: 'Insert a STATE TABLE block (fluid-aware circuit) at the caret', leftSection: <IconTemperature size={18} />, onClick: () => insertFunction('STATE TABLE Circuit1(P1, T1, h2)\n  FLUID = Water\nEND\n') },
       ],
     },
@@ -2275,6 +2319,25 @@ export default function App() {
     )
   }
 
+  // Per-instance Data Analyzer windows ("analyzer:<id>"), mirroring the
+  // whiteboard pattern. Bulk samples live in the ChannelStore, never here.
+  for (const a of analyzers) {
+    const winId = `analyzer:${a.id}`
+    panelTitles[winId] = a.name
+    panelContent[winId] = (
+      <div style={{ height: '100%', minHeight: 0 }}>
+        <Suspense fallback={lazyTabFallback}>
+          <DataAnalyzerTab
+            key={`analyzer-${a.id}-${workspaceEpoch}`}
+            singleAnalyzerId={a.id}
+            analyzers={analyzers}
+            onAnalyzersChange={setAnalyzers}
+          />
+        </Suspense>
+      </div>
+    )
+  }
+
   // Per-instance Spreadsheet windows:
   for (const ss of spreadsheets) {
     const winId = `spreadsheet:${ss.id}`
@@ -2509,6 +2572,14 @@ export default function App() {
         }}
         onDeleteSpreadsheet={(id) => setSpreadsheets((prev) => prev.filter((s) => s.id !== id))}
         onNewSpreadsheet={createSpreadsheet}
+        analyzers={analyzers.map((a) => ({ id: a.id, name: a.name, deletable: true }))}
+        analyzerCount={analyzers.length}
+        onOpenAnalyzer={(id) => {
+          const a = analyzers.find((x) => x.id === id)
+          if (a) dockRef.current?.openInstance(`analyzer:${id}`, 'analyzer', a.name)
+        }}
+        onNewAnalyzer={createAnalyzer}
+        onDeleteAnalyzer={deleteAnalyzer}
         onMinMax={() => setShowMinMax(true)}
         onCurveFit={() => setShowCurveFit(true)}
         onPreferences={() => setShowPreferences(true)}
