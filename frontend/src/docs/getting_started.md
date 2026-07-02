@@ -297,7 +297,7 @@ eta_th = 36.9
 ```
 Press Solve (F2), then switch to the **Formatted** tab to see the values and the chart woven into the prose.
 
-[Related: plot-code, diagram, reports]
+[Related: plot-code, reports]
 
 [Topic: digitizer-fit]
 # Graph Digitizer & Curve Fit

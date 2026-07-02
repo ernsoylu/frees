@@ -2797,7 +2797,6 @@ const CATEGORIES: NavCategory[] = [
       { id: 'shortcuts', label: 'Keyboard Shortcuts', blurb: 'Solve, Check, Variable Info, and block-solve hotkeys.', keywords: ['hotkey', 'shortcuts', 'keyboard', 'f2', 'f4', 'f9', 'ctrl'] },
       { id: 'reports', label: 'Markdown & Reports', blurb: 'Weave narrative, live values, and plots into a Formatted report.', keywords: ['markdown', 'report', 'latex', 'katex', 'inline', 'equations'] },
       { id: 'plot-code', label: 'Plots in Code (PLOT)', blurb: 'Declare XY, property, Bode, Nyquist and pole-zero figures in code.', keywords: ['plot', 'graph', 'chart', 'code', 'programmatic', 'xy', 'property', 'psychro'] },
-      { id: 'diagram', label: 'Diagram Canvas & Schematics', blurb: 'Build schematics and overlay live solved data and cycle paths.', keywords: ['diagram', 'plots', 'graph', 'canvas', 'recording', 'export'] },
       { id: 'digitizer-fit', label: 'Graph Digitizer & Curve Fit', blurb: 'Turn a chart image or a table into a fitted equation.', keywords: ['digitizer', 'curve', 'fit', 'table', 'regression', 'equation', 'graph'] },
     ]
   },

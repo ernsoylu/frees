@@ -323,7 +323,7 @@ Close the loop back in the time domain with controller components (`PIThermostat
 
 ## The topology view
 
-Every solved component network generates a **read-only schematic** — open the **Topology** tab to see instances as nodes and connections as edges, grouped by domain. It is derived from the expanded network itself, so it is always faithful to what actually solved: if the diagram looks wrong, the model *is* wrong (a missing connection or an unintended tie), which makes it the fastest first check when a network misbehaves. Use the Diagram canvas instead when you want a hand-built, annotated schematic bound to live values.
+Every solved component network generates a **read-only schematic** — open the **Topology** tab to see instances as nodes and connections as edges, grouped by domain. It is derived from the expanded network itself, so it is always faithful to what actually solved: if the diagram looks wrong, the model *is* wrong (a missing connection or an unintended tie), which makes it the fastest first check when a network misbehaves. Use the Whiteboard when you want a hand-drawn, annotated sketch alongside it.
 
 ## Source-mapped diagnostics
 
@@ -345,7 +345,7 @@ END
 
 See *Plots in Code (PLOT)* for the full attribute set, and *Fluid State Tables* for the STATE TABLE route to the same overlay.
 
-[Related: diagram, plot-code, state-tables]
+[Related: plot-code, state-tables]
 
 [Topic: comp-wizard]
 # The Component Wizard
