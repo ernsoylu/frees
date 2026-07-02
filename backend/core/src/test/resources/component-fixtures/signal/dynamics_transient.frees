@@ -1,0 +1,32 @@
+// Dynamic blocks integrating in one DYNAMIC run (t = 0..4):
+//   integrator of 2 from 1        -> 1 + 2*4 = 9
+//   first-order lag of unit step  -> 1 - e^-4 = 0.9816844
+//   filtered derivative of ramp 3 -> 3
+//   critically damped 2nd order   -> settles to the input 2
+//   rate limiter (rate 1) on 10   -> 1*4 = 4
+// EXPECT i_final = 9 tol 1e-3
+// EXPECT fo_final = 0.9816844 tol 1e-3
+// EXPECT dv_final = 3 tol 1e-2
+// EXPECT so_final = 2 tol 1e-3
+// EXPECT rl_final = 4 tol 2e-2
+SigConstant C2(k=2)
+SigConstant C1(k=1)
+SigConstant C10(k=10)
+SigRamp     RMP(t0=0, slope=3, eps=1e-5)
+SigIntegrator  INTG(y0=1)
+SigFirstOrder  FO(tau=1, y0=0)
+SigDerivative  DV(tau=0.01, y0=0)
+SigSecondOrder SO(wn=5, zeta=1, y0=0, v0=0)
+SigRateLimiter RL(rate=1, tau=0.01, y0=0)
+connect(C2.out, INTG.in)
+connect(C1.out, FO.in)
+connect(RMP.out, DV.in)
+connect(C2.out, SO.in)
+connect(C10.out, RL.in)
+DYNAMIC run(method = ode45, time = 0 .. 4, points = 400)
+END
+i_final  = FinalValue('intg.out.sig')
+fo_final = FinalValue('fo.out.sig')
+dv_final = FinalValue('dv.out.sig')
+so_final = FinalValue('so.out.sig')
+rl_final = FinalValue('rl.out.sig')

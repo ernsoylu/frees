@@ -1,0 +1,23 @@
+// PID closed loop, both variants at once. Plant = first-order lag (unity dc
+// gain), setpoint 5. The basic PID (Ki>0, type-1 loop) drives pv -> sp exactly.
+// The clamped variant saturates at umax=0.5, so its plant settles at 0.5 with
+// the integrator held by back-calculation anti-windup.
+// EXPECT pv1 = 5 tol 1e-2
+// EXPECT pv2 = 0.5 tol 1e-2
+// EXPECT u2 = 0.5 tol 1e-3
+SigConstant SP(k=5)
+SigPID         PID1(Kp=2, Ki=1, Kd=0, tau=0.1, i0=0, d0=0)
+SigFirstOrder  PLANT1(tau=2, y0=0)
+connect(SP.out, PID1.sp)
+connect(PID1.out, PLANT1.in)
+connect(PLANT1.out, PID1.pv)
+SigPID         PID2(Kp=2, Ki=1, Kd=0, tau=0.1, i0=0, d0=0, model$=clamped, umin=0, umax=0.5, Taw=1)
+SigFirstOrder  PLANT2(tau=2, y0=0)
+connect(SP.out, PID2.sp)
+connect(PID2.out, PLANT2.in)
+connect(PLANT2.out, PID2.pv)
+DYNAMIC loop(method = ode23s, time = 0 .. 40, points = 400)
+END
+pv1 = FinalValue('plant1.out.sig')
+pv2 = FinalValue('plant2.out.sig')
+u2  = FinalValue('pid2.out.sig')
