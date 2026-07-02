@@ -253,3 +253,17 @@ COMPONENT SupervisoryECMS(soc, dem, eng, mot)
   mot.sig = s * dem.sig
   eng.sig = (1 - s) * dem.sig
 END
+
+
+// ── HVAC, buildings & process-lite (Wave 9) ─────────────────────────────────
+
+// Zone CO2 / IAQ balance (well-mixed): ventilation dilutes toward the ambient
+// concentration while occupants generate. Signal-level block: vent carries the
+// volumetric airflow [m3/s], occ the occupant count; concentration in the
+// same unit family as c_amb/gen_occ (ppm with gen in ppm.m3/s, or kg/m3).
+COMPONENT ZoneCO2(vent, occ, out)
+  PARAM Vz, c_amb, gen_occ, c0
+  der(c)  = (vent.sig * (c_amb - c) + occ.sig * gen_occ) / Vz
+  init(c) = c0
+  out.sig = c
+END

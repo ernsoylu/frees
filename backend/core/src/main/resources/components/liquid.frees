@@ -20,11 +20,18 @@ COMPONENT LiquidSink(in)
 END
 
 COMPONENT LiquidPump(in, out)
-  PARAM eta, fluid$, domain$ = liquid
+  PARAM eta, fluid$, Pvap, NPSHr, eps_n, domain$ = liquid, model$ = basic
   v        = Volume(fluid$, P=in.P, h=in.h)
   out.mdot = in.mdot
-  out.h    = in.h + v * (out.P - in.P) / eta
   W        = in.mdot * (out.h - in.h)
+  VARIANT basic
+    out.h = in.h + v * (out.P - in.P) / eta
+  END
+  VARIANT npsh REQUIRE Pvap, NPSHr, eps_n
+    NPSH_a  = (in.P - Pvap) * v / 9.80665
+    derate  = 0.5 * (1 + tanh((NPSH_a - NPSHr) / eps_n))
+    out.h   = in.h + v * (out.P - in.P) / (eta * derate)
+  END
 END
 
 COMPONENT LiquidPipe(in, out)
@@ -216,4 +223,43 @@ COMPONENT IceStorageBrine(in, out)
   connect(in, HX.in)
   connect(HX.out, out)
   connect(HX.wall, ICE.port)
+END
+
+
+// ── HVAC, buildings & process-lite (Wave 9) ─────────────────────────────────
+
+// Cooling tower (Merkel-lite): heat rejection on the enthalpy potential
+// between saturated air at the water inlet temperature and ambient air at its
+// wet-bulb (signal port), with a tower effectiveness and design air flow.
+COMPONENT CoolingTower(in, out, wb)
+  PARAM fluid$, eps_t, mdot_a, Patm, domain$ = liquid
+  T_in   = Temperature(fluid$, P=in.P, h=in.h)
+  h_s_in = Enthalpy(AirH2O, T=T_in, P=Patm, R=1)
+  h_wb   = Enthalpy(AirH2O, T=wb.sig, P=Patm, R=1)
+  Q      = eps_t * mdot_a * (h_s_in - h_wb)
+  out.mdot = in.mdot
+  out.P    = in.P
+  out.h    = in.h - Q / in.mdot
+END
+
+// Open (vented) tank: level state from the flow imbalance; the inlet sees the
+// free surface (P0), the outlet the gravity head at the base. Well-mixed and
+// adiabatic in enthalpy.
+COMPONENT OpenTank(in, out)
+  PARAM A_t, P0, rho, L0, domain$ = liquid
+  der(lvl)  = (in.mdot - out.mdot) / (rho * A_t)
+  init(lvl) = L0
+  in.P  = P0
+  out.P = P0 + rho * 9.80665 * lvl
+  out.h = in.h
+END
+
+// Gravity drain (Torricelli): the C1 odd-symmetric flow law
+// mdot|mdot| = (Cd*A)^2 * 2*rho*dP — smooth through zero head, reversible.
+COMPONENT GravityDrain(in, out)
+  PARAM Cd, A_d, rho, domain$ = liquid
+  dP = in.P - out.P
+  in.mdot * abs(in.mdot) = (Cd * A_d)^2 * 2 * rho * dP
+  out.mdot = in.mdot
+  out.h    = in.h
 END

@@ -1,0 +1,35 @@
+// Wave 9 showcase — a conditioned zone against a free-floating neighbour:
+// AHU supplies zone A (occupants + auxiliary load); a partition wall couples
+// zone A to zone B, which leaks to ambient through a crack (infiltration).
+// A CO2 balance rides on the occupancy. Long-run assertions: the CO2
+// dilution equilibrium is exact (500 ppm), and at steady state zone A's
+// energy books close: supply duty + internal gains balance the wall loss
+// (in-fixture replica from the solved columns).
+// EXPECT c_day = 500 tol 0.5
+// EXPECT ea_res = 0 tol 2
+
+MoistAirSource RET(P=101325, T=297.15, W=0.009, mdot=0.4)
+MoistAirSource OA(P=101325, T=304.15, W=0.013, mdot=0.1)
+AHU            AH(Kf=3000, foul=1, Tc=286.15, Qh=1500, dPfan=400, eta_fan=0.65)
+CabinZone      ZA(Vz=120, T0=299.15, W0=0.010, n_occ=4, q_sens=75, mw_occ=1.4e-5, Q_aux=800)
+MoistAirSink   ZS()
+connect(RET.out, AH.ret_in)
+connect(OA.out, AH.oa_in)
+connect(AH.sup_out, ZA.in)
+connect(ZA.out, ZS.in)
+
+MultiZoneWall  MZ(h_a=8, h_b=8, U=3, A=12, C1=50000, C2=50000, T10=297.15, T20=297.15)
+MassGen        ZB(C=150000, Qgen=0, T0=297.15)
+connect(ZA.wall, MZ.a)
+connect(MZ.b, ZB.port)
+
+SigConstant VENT(k=0.42)
+SigConstant OCC(k=4)
+ZoneCO2     CO2(Vz=120, c_amb=400, gen_occ=10.5, c0=400)
+connect(VENT.out, CO2.vent)
+connect(OCC.out, CO2.occ)
+
+DYNAMIC day(method = ode23s, time = 0 .. 40000, points = 500)
+END
+c_day  = FinalValue('co2.c')
+ea_res = 0.5 * (FinalValue('ah.sup_out.h') - FinalValue('za.out.h')) + 4 * 75 + 800 - FinalValue('mz.q')
