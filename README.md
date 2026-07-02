@@ -17,14 +17,13 @@ Solves systems of non-linear simultaneous equations: ANTLR-parsed equations are 
 - **Uncertainty Propagation**: Propagates measurement/parameter uncertainties (specified as absolute or relative values in the Variable Information window, or defined via equations like `UncertaintyOf(X) = <expr>`) through implicit systems of simultaneous equations using numerical Jacobians and Singular Value Decomposition (SVD). Allows querying calculated uncertainties inside the model using the `UncertaintyOf(X)` accessor (e.g., `u_T = UncertaintyOf(T)`). Propagated uncertainties are displayed as `val ± unc` in the Solution window.
 - **Optimization**: Single- and multi-variable minimization/maximization (Brent, Nelder–Mead Simplex, BOBYQA) with bound and constraint handling (log-barrier inequalities, augmented-Lagrangian equalities).
 - **Graph Digitizer & Function Tables**: Trace data off a scanned chart and call the resulting curve as a function inside your equations, or define tabulated/interpolated functions.
-- **Interactive Diagram Window & Live Dashboards**: A vector schematic editor whose labels, gauges, and embedded Plotly charts read live from the solver — with conditional formatting, animation/flow, parametric-table playback, recording, templates, and SVG/PNG/PDF export.
-- **Whiteboard**: An [Excalidraw](https://excalidraw.com) freehand sketch canvas complementing the solver-bound Diagram window — hand-drawn shapes, text, and pasted images for quickly sketching out a problem. Each whiteboard is a managed dock window that round-trips with your project (saved into the `.frees` file) and exports to PNG/SVG.
+- **Whiteboard**: An [Excalidraw](https://excalidraw.com) freehand sketch canvas — hand-drawn shapes, text, and pasted images for quickly sketching out a problem. Each whiteboard is a managed dock window that round-trips with your project (saved into the `.frees` file) and exports to PNG/SVG.
 
 ## Architecture and System Design
 
 The application operates on a **Decoupled Asynchronous Client-Server model**.
 
-1. The **React Frontend** provides a multi-window dashboard representing the Editor, Solution, Arrays, Parametric Tables, Plots, Diagram, and Whiteboard windows.
+1. The **React Frontend** provides a multi-window dashboard representing the Editor, Solution, Arrays, Parametric Tables, Plots, Whiteboard, and Data Analyzer windows.
 2. The user inputs equation/procedure DSL text (with `{...}` free-text comments). Upon pressing "Solve" or "Check", the frontend posts the text string to the **Spring Boot API Node** (`api` profile).
 3. The **API Node** performs syntax validation and pushes the compute payload to a **RabbitMQ** task queue, responding with a `202 Accepted` job ID.
 4. The **Compute Node** (`compute` profile) asynchronously consumes the task, extracts equations, lexes/parses them, builds an Abstract Syntax Tree (AST), blocks equations via Tarjan's algorithm, solves them using a numerical Jacobian matrix, and writes the JSON payload containing solutions to **Redis**.
@@ -94,9 +93,9 @@ The uncertainty engine implements a system-wide numerical first-order propagatio
 
 ### Whiteboard (Excalidraw Sketch Canvas)
 
-Complementing the solver-bound native Diagram editor (Epics 6/10), the **Whiteboard** is a pure freehand sketching surface — hand-drawn shapes, text, and pasted/imported images for quickly explaining a problem — with no variable binding. It embeds [Excalidraw](https://github.com/excalidraw/excalidraw) (`@excalidraw/excalidraw`) in `frontend/src/whiteboard/`:
+The **Whiteboard** is a pure freehand sketching surface — hand-drawn shapes, text, and pasted/imported images for quickly explaining a problem — with no variable binding. It embeds [Excalidraw](https://github.com/excalidraw/excalidraw) (`@excalidraw/excalidraw`) in `frontend/src/whiteboard/`:
 
-- **Multi-instance dock windows** — each whiteboard opens as its own dock window (`whiteboard:<id>`), mirroring the Diagram pattern: created/opened/renamed/deleted from the icon rail's `InstanceLauncher` and the Diagram menu, with titles and lifecycle managed by `App.tsx`.
+- **Multi-instance dock windows** — each whiteboard opens as its own dock window (`whiteboard:<id>`): created/opened/renamed/deleted from the icon rail's `InstanceLauncher`, with titles and lifecycle managed by `App.tsx`.
 - **Persistence** — an Excalidraw scene serializes to a plain-JSON `{ elements, appState, files }` blob, persisted verbatim as opaque JSON (`WhiteboardSpec`, deliberately untyped against Excalidraw's evolving element union) through App-owned state into the unified `.frees` project file, so whiteboards round-trip alongside diagrams, tables, and plots. A `frees-whiteboards` localStorage cache (`whiteboardStorage.ts`) is the fallback when no unified project exists; the live scene is debounced (500 ms in-component, 800 ms to cache) and migrated through Excalidraw's `restore()` on mount.
 - **Code-splitting** — Excalidraw is a large dependency, so `WhiteboardTab` is `lazy`-loaded and its bundle is only fetched when a whiteboard window is first opened.
 - **Theme & export** — the Excalidraw canvas and UI chrome track the app's Mantine color scheme (light/dark) via `updateScene`; a toolbar above the canvas exports the scene to PNG (`exportToBlob`) and SVG (`exportToSvg`). localStorage save failures (typically quota overflow from large embedded images) are surfaced as a non-blocking warning prompting an export.
