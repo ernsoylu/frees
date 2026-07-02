@@ -1,0 +1,11 @@
+// Adiabatic evaporative cooler at eff=1: enthalpy conserved and the outlet
+// humidity equals the saturation humidity on its own enthalpy line.
+// EXPECT d_ec = 0 tol 1e-9
+// EXPECT r_sat = 1 tol 1e-6
+MoistAirSource SRC2(P=101325, T=310, W=0.005, mdot=0.5)
+EvaporativeCooler EC(eff=1)
+MoistAirSink   K3()
+connect(SRC2.out, EC.in)
+connect(EC.out, K3.in)
+d_ec  = EC.out.h - EC.in.h
+r_sat = EC.out.W / HumRat(AirH2O, h=EC.out.h, P=101325, R=1)

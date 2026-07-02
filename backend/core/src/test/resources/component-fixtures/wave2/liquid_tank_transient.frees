@@ -1,0 +1,14 @@
+// Thermal-mass tank warm-up: 10 kg of water at 300 K fed 0.1 kg/s of 350 K
+// water (adiabatic wall via UA=0): first-order with tau = m/mdot = 100 s ->
+// T(300) = 350 - 50*e^-3 = 347.51 K.
+// EXPECT t_fin = 347.51 tol 0.2
+LiquidSource  HOT(fluid$=Water, mdot=0.1, P=200000, T=350)
+LiquidTank    TK(fluid$=Water, m=10, UA=0, T0=300)
+LiquidSink    KO()
+ThermalSource AMB(T=300)
+connect(HOT.out, TK.in)
+connect(TK.out, KO.in)
+connect(TK.wall, AMB.port)
+DYNAMIC warm(method = ode23s, time = 0 .. 300, points = 200)
+END
+t_fin = FinalValue('tk.tt')

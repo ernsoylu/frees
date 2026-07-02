@@ -35,7 +35,12 @@ class LiquidDomainTest {
         // + 29 signal & control blocks (Wave 1: sources, math, dynamics, PID, lookup)
         // + 4 signal-commanded actuators (EXVCmd, ClutchCmd, HydraulicValveCmd,
         //   PneumaticServoValveCmd)
-        assertEquals(172, names.size(), "built-in component count after the per-domain split");
+        // + 20 Wave 2 thermal-fluid: VCC devices (short tube, capillary, internal HX,
+        //   reversing valve, suction accumulator, flash tank, ejector, oil separator),
+        //   coolant TMS set (3-way valve, check valve, tank, thermostat, pump map,
+        //   expansion tank), cabin/air set (fan, damper, evaporative cooler, cabin
+        //   zone) and the Radiator/HeaterCore composites
+        assertEquals(192, names.size(), "built-in component count after the per-domain split");
         // built-in names are stored lowercased (the language is case-insensitive)
         assertTrue(names.containsAll(java.util.List.of(
                 "liquidsource", "liquidsink", "liquidpump", "liquidpipe",
