@@ -52,7 +52,10 @@ class LiquidDomainTest {
         //   valve, double-acting cylinder, K-resistance) and pneumatic (check valve,
         //   3/2 + 5/2 directional valves, double-acting cylinder, thermal volume,
         //   vacuum ejector)
-        assertEquals(234, names.size(), "built-in component count after the per-domain split");
+        // + 11 Wave 6 thermal/gas/aero breadth: WallRC, RadiationTwoSurface, HeatPipe,
+        //   PCMMass, PeltierTEC, ThermalSwitch, HeatedDuct, Regenerator, Combustor,
+        //   AtmosphereSource, Propeller
+        assertEquals(245, names.size(), "built-in component count after the per-domain split");
         // built-in names are stored lowercased (the language is case-insensitive)
         assertTrue(names.containsAll(java.util.List.of(
                 "liquidsource", "liquidsink", "liquidpump", "liquidpipe",
