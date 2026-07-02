@@ -1,0 +1,23 @@
+// Aging variant: 10 A for 3600 s puts 10 Ah through the cell; with
+// k_age = 1e-3 the capacity fades to Q0*(1 - 0.01) = 9.9 Ah.
+// EXPECT ah_fin = 10 tol 1e-3
+// EXPECT qcap_fin = 9.9 tol 1e-3
+TABLE ocv2(soc)
+  0   3.0
+  1   4.2
+END
+TABLE dudt2(soc)
+  0   0
+  1   0
+END
+BatteryCellMap BAT(model$=aging, k_age=1e-3, ocv$=ocv2, dudt$=dudt2, R0ref=0.01, Tref=298.15, Ea=0, Q0=10, C_th=500, SOC0=0.95, T0=300)
+CurrentSource  LOAD(I=-10)
+Ground         G()
+HeatSource     ADB(Q=0)
+connect(BAT.p, LOAD.p)
+connect(BAT.n, LOAD.n, G.port)
+connect(BAT.heat, ADB.port)
+DYNAMIC age(method = ode23s, time = 0 .. 3600, points = 200)
+END
+ah_fin   = FinalValue('bat.ah')
+qcap_fin = FinalValue('bat.qcap')
