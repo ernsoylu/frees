@@ -239,3 +239,17 @@ COMPONENT SigVelProbe(port, out)
   port.f  = 0
   out.sig = port.vel
 END
+
+
+// ── Supervisory control (Wave 7) ────────────────────────────────────────────
+
+// ECMS-lite torque-split supervisor: a C1 blend between engine-lean and
+// motor-lean operation driven by battery SOC around its reference — an honest
+// smooth surrogate for the argmin equivalence-cost rule (documented as such).
+// dem is the total demand; mot + eng always reconstruct it exactly.
+COMPONENT SupervisoryECMS(soc, dem, eng, mot)
+  PARAM soc_ref, eps
+  s       = 0.5 * (1 + tanh((soc.sig - soc_ref) / eps))
+  mot.sig = s * dem.sig
+  eng.sig = (1 - s) * dem.sig
+END

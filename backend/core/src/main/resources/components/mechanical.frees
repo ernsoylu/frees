@@ -163,3 +163,55 @@ COMPONENT Brake(a, b, u)
   a.tau = u.sig * Tmax * tanh(dw / eps)
   a.tau + b.tau = 0
 END
+
+
+// ── Complete vehicle & powertrain depth (Wave 7) ────────────────────────────
+
+// One-way clutch (freewheel/overrunning sprag): transmits a stiff viscous
+// torque only while the driver overruns the driven side (dw > 0) — the C1
+// smooth-max hinge of width eps; free in the reverse direction.
+COMPONENT Freewheel(a, b)
+  PARAM k, eps
+  dw    = a.w - b.w
+  a.tau = k * 0.5 * (dw + sqrt(dw^2 + eps^2))
+  a.tau + b.tau = 0
+END
+
+// Cam: rotational-to-translational profile drive. The lift slope dl/dtheta
+// comes analytically from the profile table (dtable), so follower velocity is
+// exact and the reaction torque conserves power (tau*w = f*v virtual work).
+COMPONENT Cam(shaft, rod)
+  PARAM prof$, theta0
+  der(theta)  = shaft.w
+  init(theta) = theta0
+  slope     = dtable(prof$, theta)
+  lift      = prof$(theta)
+  rod.vel   = slope * shaft.w
+  shaft.tau = slope * rod.f
+END
+
+// Spring-loaded cam follower: mass held on the profile by a preloaded return
+// spring to ground — pair with Cam for valvetrain/profile-driven kinematics.
+COMPONENT CamFollower(rod)
+  PARAM m, kspring, x0, v0
+  TransMass   M(m=m, v0=v0)
+  TransSpring S(k=kspring, x0=x0)
+  TransGround G()
+  connect(rod, M.port, S.a)
+  connect(S.b, G.port)
+END
+
+// Commanded friction brake with rotor thermal state and temperature fade:
+// friction power heats the rotor mass (convecting hA to ambient) and the
+// available torque derates through a C1 sigmoid above T_fade (fade studies).
+COMPONENT WheelBrakeThermal(a, b, u)
+  PARAM Tmax, eps, C, hA, T_amb, T_fade, k_fade, eps_f, T0
+  fade  = 1 - k_fade * 0.5 * (1 + tanh((Tr - T_fade) / eps_f))
+  dw    = a.w - b.w
+  tau_b = fade * u.sig * Tmax * tanh(dw / eps)
+  a.tau = tau_b
+  a.tau + b.tau = 0
+  Pf       = tau_b * dw
+  der(Tr)  = (Pf - hA * (Tr - T_amb)) / C
+  init(Tr) = T0
+END

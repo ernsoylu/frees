@@ -1,0 +1,20 @@
+// GradeProfile on a flat 10 m/s trace over a constant 0.05 rad grade:
+// resistance 1000*9.81*sin(0.05) = 490.296 N; distance 600 m after 60 s.
+// EXPECT s_fin = 600 tol 0.5
+// EXPECT f_fin = 490.296 tol 0.05
+
+TABLE flat10(t)
+  0    10
+  100  10
+END
+TABLE hill(s)
+  0     0.05
+  2000  0.05
+END
+DriveCycleSource  V4(map$=flat10)
+GradeProfile      GP(m=1000, g=9.81, map$=hill, s0=0)
+connect(V4.port, GP.port)
+DYNAMIC roll(method = ode23s, time = 0 .. 60, points = 200)
+END
+s_fin = FinalValue('gp.s')
+f_fin = FinalValue('gp.port.f')

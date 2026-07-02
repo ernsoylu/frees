@@ -57,7 +57,7 @@ class LiquidDomainTest {
         //   AtmosphereSource, Propeller
         // + 3 physical-to-signal probes (SigThermalProbe, SigSpeedProbe, SigVelProbe)
         //   closing measurement loops for the D-phase showcases
-        assertEquals(248, names.size(), "built-in component count after the per-domain split");
+        assertEquals(260, names.size(), "built-in component count after Program II Wave 7");
         // built-in names are stored lowercased (the language is case-insensitive)
         assertTrue(names.containsAll(java.util.List.of(
                 "liquidsource", "liquidsink", "liquidpump", "liquidpipe",

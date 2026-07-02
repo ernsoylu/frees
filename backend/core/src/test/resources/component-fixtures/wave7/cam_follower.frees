@@ -1,0 +1,29 @@
+// Cam on a linear profile (slope 3) at 2 rad/s: rod velocity 6 m/s against a
+// c = 2 damper -> rod force, reaction torque by virtual work; with torque
+// signed into the shaft source and force into the damper, power conservation
+// reads tau*w + f*v = 0 identically. Lift after 1 s: prof(2) = 6.
+// All probes are trajectory accessors (the cam state routes everything into
+// the DYNAMIC block).
+// EXPECT v_rod = 6 tol 1e-6
+// EXPECT lift_fin = 6 tol 1e-6
+// EXPECT p_res = 0 tol 1e-9
+
+TABLE prof(th)
+  0   0
+  1   3
+  4   12
+END
+SpeedSource CW(w=2)
+MechGround  CG()
+Cam         CAM(prof$=prof, theta0=0)
+TransDamper RD(c=2)
+TransGround TG()
+connect(CW.a, CAM.shaft)
+connect(CW.b, CG.port)
+connect(CAM.rod, RD.a)
+connect(RD.b, TG.port)
+DYNAMIC turn(method = ode45, time = 0 .. 1, points = 100)
+END
+v_rod    = FinalValue('cam.rod.vel')
+lift_fin = FinalValue('cam.lift')
+p_res    = FinalValue('cam.shaft.tau') * 2 + FinalValue('rd.a.f') * FinalValue('cam.rod.vel')
