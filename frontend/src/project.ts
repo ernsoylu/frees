@@ -15,8 +15,13 @@ import type { PlotSpec } from './plots/types'
 import type { DiagramSpec } from './diagram/types'
 import type { WhiteboardSpec } from './whiteboard/types'
 import type { SpreadsheetSpec } from './spreadsheet/types'
+import type { AnalyzerSpec } from './analyzer/types'
 
-const PROJECT_VERSION = 1
+// v2 (Data Analyzer Phase 2): + `analyzers` slice — layout, signal
+// assignments and measurement file REFS only ("template mode", §2.5b in
+// todo.md); bulk samples never enter the project file. v1 files migrate by
+// defaulting the slice to [].
+const PROJECT_VERSION = 2
 const PROJECT_KEY = 'frees.project'
 
 // Child-owned localStorage keys bridged into the project file. These mirror the
@@ -39,6 +44,7 @@ export interface ProjectSlices {
   diagrams: DiagramSpec[]
   whiteboards: WhiteboardSpec[]
   spreadsheets: SpreadsheetSpec[]
+  analyzers: AnalyzerSpec[]
 }
 
 export interface FreesProject extends ProjectSlices {
@@ -144,6 +150,7 @@ function sanitizeProject(project: FreesProject): FreesProject | null {
     diagrams: Array.isArray(project.diagrams) ? plainJson(project.diagrams) : [],
     whiteboards: Array.isArray(project.whiteboards) ? plainJson(project.whiteboards) : [],
     spreadsheets: Array.isArray(project.spreadsheets) ? plainJson(project.spreadsheets) : [],
+    analyzers: Array.isArray(project.analyzers) ? plainJson(project.analyzers) : [],
     customComponents: plainJson(project.customComponents),
     digitizer: plainJson(project.digitizer),
     dockLayout: plainJson(project.dockLayout),
@@ -189,6 +196,7 @@ function migrate(p: FreesProject): FreesProject {
     diagrams: p.diagrams ?? [],
     whiteboards: p.whiteboards ?? [],
     spreadsheets: p.spreadsheets ?? [],
+    analyzers: p.analyzers ?? [],
     customComponents: p.customComponents ?? null,
     digitizer: p.digitizer ?? null,
     dockLayout: p.dockLayout ?? null,

@@ -76,9 +76,19 @@ class ChannelStore {
     for (const l of this.listeners) l(ev)
   }
 
-  /** Register a freshly imported measurement, referenced by one analyzer. */
-  register(measurement: ImportedMeasurement, analyzerId: string): MeasurementMeta {
-    const measurementId = crypto.randomUUID()
+  /**
+   * Register a freshly imported measurement, referenced by one analyzer.
+   * Passing `reuseMeasurementId` re-binds an existing id to new data — the
+   * template-mode re-pick (§2.5b): strips keep their SignalRefs and simply
+   * resolve again. Existing analyzer refs on that id are preserved.
+   */
+  register(
+    measurement: ImportedMeasurement,
+    analyzerId: string,
+    reuseMeasurementId?: string,
+  ): MeasurementMeta {
+    const previous = reuseMeasurementId ? this.entries.get(reuseMeasurementId) : undefined
+    const measurementId = reuseMeasurementId ?? crypto.randomUUID()
     const signature: FileSignature = {
       name: measurement.signatureName,
       size: measurement.size,
@@ -109,11 +119,13 @@ class ChannelStore {
       })),
       totalSamples: measurement.rowCount,
     }
+    const refs = new Set(previous?.refs ?? [])
+    refs.add(analyzerId)
     this.entries.set(measurementId, {
       meta,
       time: measurement.time,
       channels,
-      refs: new Set([analyzerId]),
+      refs,
       lastAccess: Date.now(),
       cells,
       evicted: false,
@@ -233,6 +245,38 @@ class ChannelStore {
     const idx = Math.max(0, Math.min(entry.time.length - 1, lowerBound(entry.time, x)))
     const i = idx > 0 && entry.time[idx] > x ? idx - 1 : idx
     return { t: entry.time[i], v: channel.values[i] }
+  }
+
+  /** Time of the sample NEAREST to x (for the sample-snap cursor mode). */
+  nearestTime(ref: SignalRef, x: number): number | null {
+    const entry = this.entries.get(ref.measurementId)
+    if (!entry || entry.evicted || entry.time.length === 0) return null
+    const t = entry.time
+    const lb = Math.min(t.length - 1, lowerBound(t, x))
+    const before = Math.max(0, lb - (t[lb] > x ? 1 : 0))
+    const after = Math.min(t.length - 1, before + 1)
+    return Math.abs(t[after] - x) < Math.abs(t[before] - x) ? t[after] : t[before]
+  }
+
+  /**
+   * Full-resolution slice over [from, to] (null = open end) as SUBARRAY VIEWS
+   * onto the stored columns — zero-copy, read-only by convention. Feeds the
+   * Statistics/Table instruments and the CSV exporter.
+   */
+  getRawRange(
+    ref: SignalRef,
+    from: number | null,
+    to: number | null,
+  ): { t: Float64Array; v: Float64Array; unit?: string } | null {
+    const entry = this.entries.get(ref.measurementId)
+    const channel = entry?.channels.get(ref.channel)
+    if (!entry || entry.evicted || !channel || channel.values === null) return null
+    const t = entry.time
+    const i0 = from === null ? 0 : lowerBound(t, from)
+    let i1 = to === null ? t.length : lowerBound(t, to)
+    if (i1 < t.length && t[i1] <= (to ?? Infinity)) i1++
+    entry.lastAccess = Date.now()
+    return { t: t.subarray(i0, i1), v: channel.values.subarray(i0, i1), unit: channel.unit }
   }
 
   private enforceCeiling() {
