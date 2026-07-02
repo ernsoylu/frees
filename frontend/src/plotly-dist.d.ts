@@ -37,6 +37,8 @@ declare module 'plotly.js-dist-min' {
     hoverinfo?: string
     connectgaps?: boolean
     yaxis?: string
+    /** Histogram bin-count hint (analyzer Histogram instrument). */
+    nbinsx?: number
   }
 
   export interface PlotlyAxisLayout {

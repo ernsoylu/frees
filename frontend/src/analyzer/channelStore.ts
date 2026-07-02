@@ -284,6 +284,14 @@ class ChannelStore {
     return this.entries.get(measurementId)?.remote?.lastError ?? null
   }
 
+  /** Server address of a remote channel (for the calc endpoint); null = local. */
+  remoteAddress(ref: SignalRef): { serverId: string; group: number; name: string } | null {
+    const remote = this.entries.get(ref.measurementId)?.remote
+    const target = remote?.channels.get(ref.channel)
+    if (!remote || !target) return null
+    return { serverId: remote.serverId, group: target.group, name: target.name }
+  }
+
   totalCells(): number {
     let sum = 0
     for (const e of this.entries.values()) sum += e.cells

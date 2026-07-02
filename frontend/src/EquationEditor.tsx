@@ -81,7 +81,8 @@ function scanWord(stream: StringStream): string | null {
 // A small line-oriented tokenizer for the frees language: {comments}, string
 // literals, numbers, keywords, and known built-in functions. Unknown
 // identifiers (user variables) are left unstyled.
-const freesLanguage = StreamLanguage.define<StreamState>({
+// Exported for other frees-DSL inputs (e.g. the analyzer CalcSignalModal).
+export const freesLanguage = StreamLanguage.define<StreamState>({
   startState: () => ({ inComment: false }),
   token(stream, state) {
     if (state.inComment) return continueComment(stream, state)
@@ -114,7 +115,7 @@ const freesLanguage = StreamLanguage.define<StreamState>({
 })
 
 // Syntax palette for dark mode (bright tokens on a dark background).
-const freesHighlightDark = HighlightStyle.define([
+export const freesHighlightDark = HighlightStyle.define([
   { tag: tags.comment, color: '#7d8590', fontStyle: 'italic' },
   { tag: tags.string, color: '#38d9a9' },
   { tag: tags.number, color: '#ffa94d' },
@@ -125,7 +126,7 @@ const freesHighlightDark = HighlightStyle.define([
 
 // Light-mode counterpart: darker, higher-contrast tokens that stay legible on a
 // white background (the bright dark-mode colours wash out on light).
-const freesHighlightLight = HighlightStyle.define([
+export const freesHighlightLight = HighlightStyle.define([
   { tag: tags.comment, color: '#6e7781', fontStyle: 'italic' },
   { tag: tags.string, color: '#0a7c5a' },
   { tag: tags.number, color: '#b35900' },

@@ -12,7 +12,7 @@ import { useElementSize } from '@mantine/hooks'
 import { IconAlertTriangle } from '@tabler/icons-react'
 import { useGlideTheme } from '../../DataGridReadOnly'
 import { formatValue } from '../../format'
-import { channelStore } from '../channelStore'
+import { offsetRawRange } from '../offsets'
 import { mergeTimestamps, stepHoldAt } from '../stats'
 import type { AnalyzerSignal } from '../types'
 
@@ -21,12 +21,14 @@ const MAX_ROWS = 200_000
 interface Props {
   /** All assigned signals, in strip order. */
   signals: AnalyzerSignal[]
+  /** Per-file display-time offsets (Phase 5a). */
+  offsets: Map<string, number>
   xRange: [number, number] | null
   /** ChannelStore version — invalidates the model on register/evict. */
   storeVersion: number
 }
 
-export default function TableInstrument({ signals, xRange, storeVersion }: Readonly<Props>) {
+export default function TableInstrument({ signals, offsets, xRange, storeVersion }: Readonly<Props>) {
   const gridTheme = useGlideTheme()
   const { ref, width, height } = useElementSize()
 
@@ -42,8 +44,9 @@ export default function TableInstrument({ signals, xRange, storeVersion }: Reado
     }[] = []
     const windowT: Float64Array[] = []
     for (const sig of signals) {
-      const full = channelStore.getRawRange(sig, null, null)
-      const windowed = channelStore.getRawRange(sig, from, to)
+      const off = offsets.get(sig.measurementId) ?? 0
+      const full = offsetRawRange(sig, off, null, null)
+      const windowed = offsetRawRange(sig, off, from, to)
       if (!full || !windowed) continue
       cols.push({ signal: sig, unit: full.unit, t: full.t, v: full.v })
       windowT.push(windowed.t)
@@ -52,7 +55,7 @@ export default function TableInstrument({ signals, xRange, storeVersion }: Reado
     const truncated = raster.length > MAX_ROWS
     return { cols, raster: truncated ? raster.subarray(0, MAX_ROWS) : raster, truncated }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [signals, xRange, storeVersion])
+  }, [signals, offsets, xRange, storeVersion])
 
   const columns = useMemo<GridColumn[]>(
     () => [

@@ -36,25 +36,29 @@ export interface RemoteWindow {
   kind: string
 }
 
-/** Error carrying the HTTP status so callers can special-case 404 (§2.5b). */
+/** Error carrying the HTTP status + typed payload (e.g. RASTER_CAP_EXCEEDED). */
 export class MeasurementApiError extends Error {
   readonly status: number
-  constructor(status: number, message: string) {
+  readonly payload: Record<string, unknown> | null
+  constructor(status: number, message: string, payload: Record<string, unknown> | null = null) {
     super(message)
     this.name = 'MeasurementApiError'
     this.status = status
+    this.payload = payload
   }
 }
 
 async function fail(response: Response): Promise<never> {
   let message = `Measurement request failed (${response.status}).`
+  let payload: Record<string, unknown> | null = null
   try {
     const body = await response.json()
-    if (typeof body?.error === 'string') message = body.error
+    if (body && typeof body === 'object') payload = body as Record<string, unknown>
+    if (typeof payload?.error === 'string') message = payload.error as string
   } catch {
     /* non-JSON error body */
   }
-  throw new MeasurementApiError(response.status, message)
+  throw new MeasurementApiError(response.status, message, payload)
 }
 
 export async function uploadMeasurement(file: File): Promise<RemoteMeasurement> {
@@ -81,6 +85,37 @@ export async function fetchChannelWindow(
   )
   if (!response.ok) await fail(response)
   return (await response.json()) as RemoteWindow
+}
+
+export interface CalcRequestDto {
+  name: string
+  formula: string
+  inputs: {
+    var: string
+    interp: 'step' | 'linear'
+    measurementId?: string
+    channel?: string
+    group?: number
+    inline?: { t: number[]; v: number[] }
+  }[]
+  raster: { mode: 'merge' } | { mode: 'fixed'; dt: number } | { mode: 'sameAs'; sameAs: string }
+}
+
+export interface CalcResultDto {
+  name: string
+  t: number[]
+  v: number[]
+}
+
+/** Evaluate a calculated signal server-side (Phase 4). */
+export async function calcSignal(request: CalcRequestDto): Promise<CalcResultDto> {
+  const response = await fetch(`${API_BASE}/api/measurements/calc`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(request),
+  })
+  if (!response.ok) await fail(response)
+  return (await response.json()) as CalcResultDto
 }
 
 export function deleteMeasurement(id: string): void {

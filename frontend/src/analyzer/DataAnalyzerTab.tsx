@@ -1,9 +1,10 @@
-// Data Analyzer window (todo.md Phases 1–2): CSV import → signal browser →
-// multi-strip oscilloscope (uPlot) with synced hover cursor, A/B measurement
-// cursors with Δt/Δv readout (§2.5e), Table & Statistics instruments, CSV
-// export, and template-mode file relocation (§2.5b). Mirrors the whiteboard
-// pattern: App owns the AnalyzerSpec[] slice; bulk samples live in the
-// module-level ChannelStore.
+// Data Analyzer window (todo.md Phases 1–5): CSV/.mf4 import → signal browser
+// → multi-strip oscilloscope (uPlot) with synced hover cursor, A/B measurement
+// cursors with Δt/Δv readout (§2.5e), Table / Statistics / Event List /
+// Scatter / Histogram instruments, calculated signals (Phase 4), per-file time
+// offsets (Phase 5a), CSV export, and template-mode file relocation (§2.5b).
+// Mirrors the whiteboard pattern: App owns the AnalyzerSpec[] slice; bulk
+// samples live in the module-level ChannelStore.
 
 import {
   useCallback,
@@ -35,9 +36,13 @@ import {
 } from '@mantine/core'
 import {
   IconAlertTriangle,
+  IconChartDots,
+  IconChartHistogram,
   IconDownload,
   IconFileImport,
   IconFileSearch,
+  IconListSearch,
+  IconMathFunction,
   IconPlus,
   IconSearch,
   IconSum,
@@ -50,7 +55,11 @@ import {
 import uPlot from 'uplot'
 import UPlotChart, { type AbCursors } from './UPlotChart'
 import { channelStore, flattenRemoteChannels } from './channelStore'
-import { uploadMeasurement } from './measurementApi'
+import { uploadMeasurement, type CalcResultDto } from './measurementApi'
+import { calcResultToMeasurement } from './calc'
+import CalcSignalModal from './CalcSignalModal'
+import { lowerBound } from './decimate'
+import { offsetNearestTime, offsetRawRange, offsetWindow, offsetsOf } from './offsets'
 import { formatValue } from '../format'
 import {
   importCsvFile,
@@ -64,6 +73,9 @@ import { checkRelocatedFile } from './relocate'
 import { signalColor } from './palette'
 import TableInstrument from './instruments/TableInstrument'
 import StatisticsInstrument from './instruments/StatisticsInstrument'
+import EventListInstrument from './instruments/EventListInstrument'
+import ScatterInstrument from './instruments/ScatterInstrument'
+import HistogramInstrument from './instruments/HistogramInstrument'
 import {
   newStrip,
   type AnalyzerSpec,
@@ -80,7 +92,7 @@ const STRIP_HEIGHT = 200
 // snap mode, selected strip, and the active instrument tab.
 // ---------------------------------------------------------------------------
 
-type Instrument = 'scope' | 'table' | 'stats'
+type Instrument = 'scope' | 'table' | 'stats' | 'events' | 'scatter' | 'histogram'
 
 interface ViewState {
   /** null = the full recording. Shared by every strip (linked time axes). */
@@ -144,13 +156,20 @@ interface LoadedSignal {
 function buildStripData(
   strip: AnalyzerStrip,
   xRange: [number, number] | null,
+  offsets: Map<string, number>,
 ): { data: uPlot.AlignedData; loaded: LoadedSignal[]; missing: string[]; decimated: boolean } {
   const tables: uPlot.AlignedData[] = []
   const loaded: LoadedSignal[] = []
   const missing: string[] = []
   let decimated = false
   for (const sig of strip.signals) {
-    const win = channelStore.getWindow(sig, xRange?.[0] ?? null, xRange?.[1] ?? null, MAX_POINTS)
+    const win = offsetWindow(
+      sig,
+      offsets.get(sig.measurementId) ?? 0,
+      xRange?.[0] ?? null,
+      xRange?.[1] ?? null,
+      MAX_POINTS,
+    )
     if (win === null) {
       // null = evicted/unknown (banner) OR a remote window still in flight
       // (loaded → just wait; the store notifies when it lands).
@@ -218,6 +237,7 @@ interface StripViewProps {
   syncKey: string
   xRange: [number, number] | null
   cursors: AbCursors
+  offsets: Map<string, number>
   storeVersion: number
   selected: boolean
   dark: boolean
@@ -225,6 +245,7 @@ interface StripViewProps {
   onZoom: (min: number, max: number) => void
   onResetZoom: () => void
   onCursorSet: (t: number, which: 'a' | 'b') => void
+  onOffsetDrag: (deltaSeconds: number) => void
   onRemoveSignal: (channel: string, measurementId: string) => void
   onRemoveStrip: () => void
 }
@@ -234,6 +255,7 @@ function StripView({
   syncKey,
   xRange,
   cursors,
+  offsets,
   storeVersion,
   selected,
   dark,
@@ -241,14 +263,15 @@ function StripView({
   onZoom,
   onResetZoom,
   onCursorSet,
+  onOffsetDrag,
   onRemoveSignal,
   onRemoveStrip,
 }: Readonly<StripViewProps>) {
   const built = useMemo(
-    () => buildStripData(strip, xRange),
+    () => buildStripData(strip, xRange, offsets),
     // storeVersion invalidates when measurements register/evict.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [strip, xRange, storeVersion],
+    [strip, xRange, offsets, storeVersion],
   )
   // Options identity only changes when the series composition does, so the
   // chart instance — and the synced cursor — survives zoom/data updates.
@@ -333,6 +356,7 @@ function StripView({
             onUserZoom={onZoom}
             onResetZoom={onResetZoom}
             onCursorSet={onCursorSet}
+            onOffsetDrag={onOffsetDrag}
           />
         ) : (
           <Group justify="center" h="100%">
@@ -596,6 +620,8 @@ export default function DataAnalyzerTab({ singleAnalyzerId, analyzers, onAnalyze
 
   // All hooks above; early-out below keeps hook order stable.
   const allSignals = useMemo(() => spec?.strips.flatMap((s) => s.signals) ?? [], [spec])
+  const offsets = useMemo(() => (spec ? offsetsOf(spec) : new Map<string, number>()), [spec])
+  const [showCalc, setShowCalc] = useState(false)
 
   if (spec === undefined) return null
   const syncKey = `frees-analyzer-${spec.id}`
@@ -664,20 +690,76 @@ export default function DataAnalyzerTab({ singleAnalyzerId, analyzers, onAnalyze
   }
 
   /** Cursor placement: snap to the nearest sample of the clicked strip's
-   *  first loaded signal when snap mode is on (§2.5e). */
+   *  first loaded signal when snap mode is on (§2.5e); offset-aware. */
   const placeCursor = (strip: AnalyzerStrip) => (t: number, which: 'a' | 'b') => {
     let snapped = t
     if (view.snap) {
       const first = strip.signals[0]
-      if (first) snapped = channelStore.nearestTime(first, t) ?? t
+      if (first) snapped = offsetNearestTime(first, offsets.get(first.measurementId) ?? 0, t) ?? t
     }
     dispatch({ type: 'set-cursor', which, t: snapped })
+  }
+
+  /** Per-file time offset (Phase 5a): numeric entry is the precise path;
+   *  SHIFT-drag adds a delta on top of the current value. */
+  const setFileOffset = (measurementId: string, offset: number) => {
+    updateSpec((cur) => ({
+      ...cur,
+      files: cur.files.map((f) => (f.measurementId === measurementId ? { ...f, offset } : f)),
+    }))
+  }
+  const dragOffset = (strip: AnalyzerStrip) => (deltaSeconds: number) => {
+    const first = strip.signals[0]
+    if (!first) return
+    const current = spec.files.find((f) => f.measurementId === first.measurementId)?.offset ?? 0
+    setFileOffset(first.measurementId, Number((current + deltaSeconds).toPrecision(9)))
+  }
+
+  /** Calc result (Phase 4) → first-class ChannelStore channel + auto-assign. */
+  const handleCalcResult = (result: CalcResultDto) => {
+    setShowCalc(false)
+    const meta = channelStore.register(calcResultToMeasurement(result.name, result.t, result.v), spec.id)
+    updateSpec((cur) => ({
+      ...cur,
+      files: [...cur.files, { measurementId: meta.measurementId, signature: meta.signature }],
+    }))
+    const ch = meta.channels[0]
+    if (ch) addSignal(meta.measurementId, ch)
+  }
+
+  /** Event List click (Phase 5a): move cursor A there and recenter the view. */
+  const eventJump = (t: number) => {
+    dispatch({ type: 'set-cursor', which: 'a', t })
+    if (view.xRange !== null) {
+      const width = view.xRange[1] - view.xRange[0]
+      dispatch({ type: 'zoom', min: t - width / 2, max: t + width / 2 })
+    }
+    dispatch({ type: 'set-instrument', instrument: 'scope' })
+  }
+
+  /** Keyboard cursor stepping (Phase 5c): ←/→ steps cursor A one sample of
+   *  the first assigned signal; Shift+←/→ steps cursor B. */
+  const stepCursor = (which: 'a' | 'b', direction: 1 | -1) => {
+    const first = allSignals[0]
+    if (!first) return
+    const off = offsets.get(first.measurementId) ?? 0
+    const raw = offsetRawRange(first, off, null, null)
+    if (!raw || raw.t.length === 0) return
+    const current = which === 'a' ? view.cursorA : view.cursorB
+    if (current === null) {
+      dispatch({ type: 'set-cursor', which, t: raw.t[0] })
+      return
+    }
+    let idx = lowerBound(raw.t, current)
+    if (idx >= raw.t.length || raw.t[idx] > current) idx--
+    const next = Math.max(0, Math.min(raw.t.length - 1, idx + direction))
+    dispatch({ type: 'set-cursor', which, t: raw.t[next] })
   }
 
   const handleExport = () => {
     const exportSignals: ExportSignal[] = []
     for (const sig of allSignals) {
-      const raw = channelStore.getRawRange(sig, null, null)
+      const raw = offsetRawRange(sig, offsets.get(sig.measurementId) ?? 0, null, null)
       if (raw) exportSignals.push({ name: sig.channel, unit: raw.unit, t: raw.t, v: raw.v })
     }
     if (exportSignals.length === 0) return
@@ -777,9 +859,27 @@ export default function DataAnalyzerTab({ singleAnalyzerId, analyzers, onAnalyze
                     </Tooltip>
                   </Group>
                   {meta !== null && loaded && (
-                    <Text size="xs" c="dimmed">
-                      {meta.totalSamples.toLocaleString()} samples · {meta.channels.length} channels
-                    </Text>
+                    <Group gap={6} wrap="nowrap" justify="space-between">
+                      <Text size="xs" c="dimmed">
+                        {meta.totalSamples.toLocaleString()} samples · {meta.channels.length} channels
+                      </Text>
+                      {/* Per-file time offset (Phase 5a): numeric entry is the
+                          precise path; SHIFT-drag on a strip adjusts it too. */}
+                      <NumberInput
+                        size="xs"
+                        w={100}
+                        hideControls
+                        value={f.offset ?? 0}
+                        step={0.1}
+                        decimalScale={9}
+                        prefix="Δt "
+                        suffix=" s"
+                        aria-label={`Time offset for ${f.signature.name}`}
+                        onChange={(v) =>
+                          setFileOffset(f.measurementId, typeof v === 'number' ? v : Number(v) || 0)
+                        }
+                      />
+                    </Group>
                   )}
                   {remoteError !== null && (
                     <Alert color="red" p={6} mt={4} icon={<IconAlertTriangle size={14} />}>
@@ -879,8 +979,26 @@ export default function DataAnalyzerTab({ singleAnalyzerId, analyzers, onAnalyze
             <Tabs.Tab value="stats" leftSection={<IconSum size={14} />}>
               Statistics
             </Tabs.Tab>
+            <Tabs.Tab value="events" leftSection={<IconListSearch size={14} />}>
+              Events
+            </Tabs.Tab>
+            <Tabs.Tab value="scatter" leftSection={<IconChartDots size={14} />}>
+              Scatter
+            </Tabs.Tab>
+            <Tabs.Tab value="histogram" leftSection={<IconChartHistogram size={14} />}>
+              Histogram
+            </Tabs.Tab>
           </Tabs.List>
           <Group gap="xs" wrap="nowrap">
+            <Button
+              size="compact-xs"
+              variant="light"
+              leftSection={<IconMathFunction size={13} />}
+              disabled={spec.files.length === 0}
+              onClick={() => setShowCalc(true)}
+            >
+              Calc signal
+            </Button>
             <Button
               size="compact-xs"
               variant="default"
@@ -909,7 +1027,19 @@ export default function DataAnalyzerTab({ singleAnalyzerId, analyzers, onAnalyze
           </Group>
         </Group>
 
-        <Tabs.Panel value="scope" style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }} pt={6}>
+        <Tabs.Panel
+          value="scope"
+          style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', outline: 'none' }}
+          pt={6}
+          tabIndex={0}
+          aria-label="Oscilloscope — arrow keys step cursor A one sample, Shift+arrows step cursor B"
+          onKeyDown={(e) => {
+            if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+              e.preventDefault()
+              stepCursor(e.shiftKey ? 'b' : 'a', e.key === 'ArrowRight' ? 1 : -1)
+            }
+          }}
+        >
           {/* Cursor readout bar (§2.5e): A (click), B (Shift+click), Δt. */}
           <Group gap="md" wrap="nowrap" mb={6}>
             <Group gap={4} wrap="nowrap">
@@ -957,6 +1087,7 @@ export default function DataAnalyzerTab({ singleAnalyzerId, analyzers, onAnalyze
                   syncKey={syncKey}
                   xRange={view.xRange}
                   cursors={cursors}
+                  offsets={offsets}
                   storeVersion={storeVersion}
                   selected={view.selectedStripId === strip.id}
                   dark={dark}
@@ -964,6 +1095,7 @@ export default function DataAnalyzerTab({ singleAnalyzerId, analyzers, onAnalyze
                   onZoom={(min, max) => dispatch({ type: 'zoom', min, max })}
                   onResetZoom={() => dispatch({ type: 'reset-zoom' })}
                   onCursorSet={placeCursor(strip)}
+                  onOffsetDrag={dragOffset(strip)}
                   onRemoveSignal={(channel, measurementId) =>
                     removeSignal(strip.id, channel, measurementId)
                   }
@@ -980,20 +1112,56 @@ export default function DataAnalyzerTab({ singleAnalyzerId, analyzers, onAnalyze
         </Tabs.Panel>
 
         <Tabs.Panel value="table" style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }} pt={6}>
-          <TableInstrument signals={allSignals} xRange={view.xRange} storeVersion={storeVersion} />
+          <TableInstrument signals={allSignals} offsets={offsets} xRange={view.xRange} storeVersion={storeVersion} />
         </Tabs.Panel>
 
         <Tabs.Panel value="stats" style={{ flex: 1, minHeight: 0 }} pt={6}>
           <ScrollArea h="100%" type="auto">
             <StatisticsInstrument
               signals={allSignals}
+              offsets={offsets}
               xRange={view.xRange}
               cursors={cursors}
               storeVersion={storeVersion}
             />
           </ScrollArea>
         </Tabs.Panel>
+
+        <Tabs.Panel value="events" style={{ flex: 1, minHeight: 0 }} pt={6}>
+          <ScrollArea h="100%" type="auto">
+            <EventListInstrument
+              signals={allSignals}
+              offsets={offsets}
+              storeVersion={storeVersion}
+              onJump={eventJump}
+            />
+          </ScrollArea>
+        </Tabs.Panel>
+
+        <Tabs.Panel value="scatter" style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }} pt={6}>
+          <ScatterInstrument
+            signals={allSignals}
+            offsets={offsets}
+            xRange={view.xRange}
+            cursors={cursors}
+            storeVersion={storeVersion}
+          />
+        </Tabs.Panel>
+
+        <Tabs.Panel value="histogram" style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }} pt={6}>
+          <HistogramInstrument
+            signals={allSignals}
+            offsets={offsets}
+            xRange={view.xRange}
+            cursors={cursors}
+            storeVersion={storeVersion}
+          />
+        </Tabs.Panel>
       </Tabs>
+
+      {showCalc && (
+        <CalcSignalModal spec={spec} onResult={handleCalcResult} onClose={() => setShowCalc(false)} />
+      )}
 
       {pendingTime !== null && (
         <TimeColumnModal

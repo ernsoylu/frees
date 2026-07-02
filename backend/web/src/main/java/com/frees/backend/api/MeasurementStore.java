@@ -199,6 +199,17 @@ public class MeasurementStore {
         return ChannelWindowDto.decimated(envelope, n, unit, kind);
     }
 
+    /** Full-resolution channel for the calc engine; null for unknown ids. */
+    public ChannelData channel(String id, int group, String channel)
+            throws IOException, MeasurementParseException {
+        Entry entry = entries.get(id);
+        if (entry == null) {
+            return null;
+        }
+        entry.touch();
+        return extract(entry, group, channel);
+    }
+
     public boolean delete(String id) {
         Entry entry = entries.remove(id);
         if (entry == null) {

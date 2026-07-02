@@ -258,6 +258,18 @@ Tests: `:core:test` (parser vs committed small `.mf4` fixture, decimator propert
 over-cap upload aborted).
 
 ### Phase 4 — Calculated signals (the differentiator)
+**PRE-SPIKE RESULT (2026-07-02, measured in `CalcPreSpikeTest`):** compiled
+array-backed resolver evaluates a 1M-point arithmetic formula in **107 ms
+(107 ns/pt)** — allocation-free per point, the GC contract holds without an
+invasive core-Evaluator overload (Call subtrees fall back to one reused map;
+negligible next to native cost). CoolProp `propsSI` through the JNA binding:
+**70–82 µs/call uncached, 3.1–3.8 µs cached** (LRU extended to the throwing
+`propsSI`, successes only). Policy taken: raster cap **1M points** for
+call-free formulas, **100k** when the formula contains any function call
+(typed `RASTER_CAP_EXCEEDED` with suggested dt either way); worst-case
+all-miss 100k-property formula ≈ 8 s sync — **async path deferred** (v1 is
+sync-only; the lowered cap replaces the lowered-threshold-202 design until
+job plumbing is worth it).
 **Pre-spike (2–4 h, gates the phase estimate):** measure per-call `PropsSI` cost through the
 JNA binding **including the process-wide `synchronized` lock** (`core/.../props/CoolProp.java`
 — every binding method serializes on one global lock, and the throwing `propsSI` used by

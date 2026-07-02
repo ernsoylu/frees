@@ -8,13 +8,15 @@ import { useMemo } from 'react'
 import { Badge, Group, Stack, Table, Text } from '@mantine/core'
 import { formatValue } from '../../format'
 import type { AbCursors } from '../UPlotChart'
-import { channelStore } from '../channelStore'
+import { offsetExactValueAt, offsetRawRange } from '../offsets'
 import { rangeStats, type RangeStats } from '../stats'
 import type { AnalyzerSignal } from '../types'
 
 interface Props {
   /** All assigned signals, in strip order. */
   signals: AnalyzerSignal[]
+  /** Per-file display-time offsets (Phase 5a). */
+  offsets: Map<string, number>
   xRange: [number, number] | null
   cursors: AbCursors
   /** ChannelStore version — invalidates the model on register/evict. */
@@ -29,7 +31,7 @@ interface Row {
   stats: RangeStats | null
 }
 
-export default function StatisticsInstrument({ signals, xRange, cursors, storeVersion }: Readonly<Props>) {
+export default function StatisticsInstrument({ signals, offsets, xRange, cursors, storeVersion }: Readonly<Props>) {
   const bothCursors = cursors.a !== null && cursors.b !== null
   const range: [number, number] | null = bothCursors
     ? [Math.min(cursors.a as number, cursors.b as number), Math.max(cursors.a as number, cursors.b as number)]
@@ -38,20 +40,21 @@ export default function StatisticsInstrument({ signals, xRange, cursors, storeVe
   const rows = useMemo<Row[]>(
     () =>
       signals.flatMap((sig) => {
-        const raw = channelStore.getRawRange(sig, null, null)
+        const off = offsets.get(sig.measurementId) ?? 0
+        const raw = offsetRawRange(sig, off, null, null)
         if (!raw) return []
         return [
           {
             signal: sig,
             unit: raw.unit,
-            vA: cursors.a === null ? null : (channelStore.exactValueAt(sig, cursors.a)?.v ?? null),
-            vB: cursors.b === null ? null : (channelStore.exactValueAt(sig, cursors.b)?.v ?? null),
+            vA: cursors.a === null ? null : (offsetExactValueAt(sig, off, cursors.a)?.v ?? null),
+            vB: cursors.b === null ? null : (offsetExactValueAt(sig, off, cursors.b)?.v ?? null),
             stats: rangeStats(raw.t, raw.v, range?.[0] ?? null, range?.[1] ?? null),
           },
         ]
       }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [signals, range?.[0], range?.[1], cursors.a, cursors.b, storeVersion],
+    [signals, offsets, range?.[0], range?.[1], cursors.a, cursors.b, storeVersion],
   )
 
   if (rows.length === 0) {
