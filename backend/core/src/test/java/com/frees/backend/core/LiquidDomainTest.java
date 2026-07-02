@@ -44,7 +44,10 @@ class LiquidDomainTest {
         //   variant), BatteryPack, MotorMap, InverterLoss, DCDCConverter,
         //   Supercapacitor, ChargerCCCV, ThermalFuse, HarnessResistance,
         //   Electrolyzer, SolarArray
-        assertEquals(203, names.size(), "built-in component count after the per-domain split");
+        // + 14 Wave 4 mechanics & vehicle: TorsionalBacklash, EndStop, TransSpring,
+        //   ScrewDrive, RackPinion, Lever, BeltDrive, Brake, TorqueConverter,
+        //   TireLongitudinal, VehicleBody, DriveCycleSource, Differential, QuarterCar
+        assertEquals(217, names.size(), "built-in component count after the per-domain split");
         // built-in names are stored lowercased (the language is case-insensitive)
         assertTrue(names.containsAll(java.util.List.of(
                 "liquidsource", "liquidsink", "liquidpump", "liquidpipe",

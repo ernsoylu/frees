@@ -1,0 +1,27 @@
+// Tire + vehicle: wheel held at 40 rad/s (r = 0.3 -> 12 m/s); with zero
+// road loads the body accelerates until the slip vanishes -> v = 12 m/s.
+// Drive-cycle source reaches its tabulated 10 m/s at t = 60.
+// EXPECT v_fin = 12 tol 0.1
+// EXPECT vdc_fin = 10 tol 1e-6
+SpeedSource       WSP(w=40)
+MechGround        WG()
+TireLongitudinal  TIRE(r=0.3, Fz=4000, B=10, C=1.5, D=1, epsv=0.1)
+VehicleBody       CAR(m=1000, Cd=0, Af=2, rhoA=1.2, Crr=0, grade=0, v0=0)
+connect(WSP.a, TIRE.wheel)
+connect(WSP.b, WG.port)
+connect(TIRE.veh, CAR.port)
+
+TABLE cyc(t)
+  0    0
+  10   10
+  60   10
+END
+DriveCycleSource DCS(map$=cyc)
+TransDamper      RLD(c=50)
+TransGround      TGD()
+connect(DCS.port, RLD.a)
+connect(RLD.b, TGD.port)
+DYNAMIC drive(method = ode23s, time = 0 .. 60, points = 400)
+END
+v_fin   = FinalValue('car.port.vel')
+vdc_fin = FinalValue('dcs.port.vel')
