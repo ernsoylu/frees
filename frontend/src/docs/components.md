@@ -1,7 +1,7 @@
 [Topic: comp-first-network]
 # Your First Component Network
 
-frees has a library of ~130 **components** — reusable, parameterized blocks of physics (pumps, pipes, heat exchangers, resistors, gears, cooling coils …) with typed **ports**. You instantiate them, wire the ports together, and frees expands the network into ordinary scalar equations solved by the same Newton/Tarjan pipeline as everything else. There is no separate "simulation mode": components and plain equations mix freely in one document.
+frees has a library of ~250 **components** — reusable, parameterized blocks of physics (pumps, pipes, heat exchangers, resistors, gears, cooling coils …) with typed **ports**. You instantiate them, wire the ports together, and frees expands the network into ordinary scalar equations solved by the same Newton/Tarjan pipeline as everything else. There is no separate "simulation mode": components and plain equations mix freely in one document.
 
 ## Water through a pipe
 
@@ -96,8 +96,21 @@ Every port belongs to a **domain** — the pair of *across* / *through* variable
 | **Electrical** | voltage `V` | current `I` | — |
 | **Mechanical (rotational)** | speed `omega` | torque `tau` | — |
 | **Mechanical (translational)** | velocity `v` | force `F` | — |
+| **Signal** | value `sig` | *(none — causal)* | — |
 
 The domain is inferred from the members a port carries — you never register it. A port carrying `(P, mdot, h)` is fluid; `(T, Qdot)` is heat, and so on.
+
+## The signal domain: causal command wires
+
+The acausal domains conserve something at a node; the **signal** domain deliberately doesn't. A port referenced as `port.sig` carries a bare value with *no* flow member — a `connect` node simply equates it everywhere, so **one writer broadcasts to any number of readers**, exactly like a control-diagram wire. That is what command inputs, setpoints, and measurements are:
+
+```
+SigSine  CMD(amp=0.5, freq=0.2, phase=0, bias=0.5)   { 0..1 command wave }
+EXVCmd   VALVE(fluid$=R134a, CdA_max=2e-6)
+connect(CMD.out, VALVE.u)                             { the wire }
+```
+
+The library ships ~30 signal blocks: **sources** (`SigConstant`, `SigStep`, `SigRamp`, `SigSine`, `SigPulse`, `SigTable` drive cycles), **math** (`SigSum`, `SigGain`, `SigProduct`, …), **nonlinearities** (`SigSaturation`, `SigDeadband`, `SigRelay`, `SigRateLimiter`), **dynamics** (`SigIntegrator`, `SigFirstOrder`, `SigSecondOrder`, `SigLeadLag`), the `SigPID` controller, and **probes** (`SigThermalProbe`, `SigSpeedProbe`, `SigVelProbe`) that read a physical port *into* a signal — the sanctioned way to close a loop around a plant. Signal-to-physical wiring is rejected by the same strict single-domain guard as every other mismatch: commandable actuators expose a dedicated signal port instead (the `u` port on `EXVCmd` above).
 
 ## One node, one domain — enforced
 
@@ -129,22 +142,23 @@ The `moistair` family conserves **two** masses. Its basis is `(P, mdot_da, h, W)
 [Topic: comp-library]
 # The Component Library
 
-The standard library ships twelve domain libraries. This page is a map, not a catalog — every component's authoritative page (ports, parameters, variants, governing equations) lives in the **Reference**; find it by name in the A–Z index.
+The standard library ships ~250 components across thirteen domain libraries. This page is a map, not a catalog — every component's authoritative page (ports, parameters, variants, governing equations) lives in the **Reference**; find it by name in the A–Z index, or browse it from the Component Wizard.
 
 | Library | What's in it |
 | --- | --- |
-| **fluid** | General thermofluid: `Source`/`Sink`, `Pipe`, `Valve`, `Nozzle`, `Pump`, `Fan`, `Compressor`, `Turbine`, `HeatExchanger`, `Mixer`/`Splitter`, map-driven turbomachines (`CompressorMap`, `PumpMap`, `FanCurve`) |
-| **liquid** | Incompressible coolant loops: `LiquidSource`, `LiquidPump`, `LiquidOrifice`, `LiquidWallHX`, `LiquidMixer` |
-| **twophase** | Evaporating/condensing refrigerant circuits: `TwoPhasePressureSource`, `TwoPhaseCompressor`, `TwoPhaseEvaporatorUA`, `TwoPhaseCondenserFloat`, `TwoPhasePipe` (Lockhart–Martinelli), `TXVSuperheat`, `ThreeZoneHX`, `BoilingVessel` |
-| **ac** | Packaged air-conditioning / chiller-level blocks built on the two-phase set (e.g. `Chiller`) |
-| **moistair** | Humid-air HVAC: `MoistAirSource`/`MoistAirSink`, `CoolingCoil`, `HeatingCoil`, `Humidifier`, `MixingBox`, `MoistAirWallHX` |
-| **pneumatic** | ISO 6358 compressible gas lines: orifices, volumes, sources |
-| **hydraulic** | Oil-hydraulic power: pumps, orifices, accumulators, `ReliefValve` |
-| **heat** | Lumped heat transfer: `ThermalSource`, `ThermalMass`, `Conduction`, `Convection`, `Radiation`, `ContactResistance`, `HeatSource`, `MassGen` (self-heating mass) |
-| **electrical** | Circuits & storage: `VoltageSource`, `Ground`, resistors (`HeatingResistor` couples to heat), `Capacitor`, `Inductor`, battery blocks with SOC, `FuelCellStack` (PEMFC) |
-| **mechanical** | Rotational & translational 1-D mechanics: `Inertia`, `TransMass`, springs, dampers, `Gear`, `Planetary`, `Clutch`, `Friction`, grounds and sources |
-| **powertrain** | Vehicle-level: `MeanValueEngine`, `Transmission`, `GradeRoadLoad` |
-| **control** | Sensors and controllers that close loops on a network (e.g. `PIThermostat`, `ThermalSensor`, `FlowSensor`) |
+| **signal** | Causal control wires: sources (`SigConstant`/`SigStep`/`SigRamp`/`SigSine`/`SigPulse`, `SigTable` drive cycles), block-diagram math, saturation/deadband/relay/rate limits, transfer-function dynamics (`SigFirstOrder`, `SigSecondOrder`, `SigLeadLag`), `SigPID`, map lookups, and physical→signal probes |
+| **fluid** | General thermofluid plus gas/aero breadth: `Source`/`Sink`, `Pipe`, `Valve`, `Nozzle`, `Pump`, `Fan`, `Compressor`, `Turbine`, `HeatExchanger`, `Mixer`/`Splitter`, map-driven turbomachines, ducts, regenerator, combustor, ISA atmosphere, propeller |
+| **liquid** | Incompressible coolant / TMS loops: `LiquidSource`, `LiquidPump` (+ pump map), `LiquidOrifice`, `LiquidWallHX`, `LiquidMixer`, three-way valve, tank, thermostat, expansion tank |
+| **twophase** | Evaporating/condensing refrigerant circuits: boundaries, `TwoPhaseCompressor`, moving-boundary heat exchangers, `TwoPhasePipe` (Lockhart–Martinelli), `TXVSuperheat`, `ThreeZoneHX`, charge/receiver volumes, `BoilingVessel`, VCC devices |
+| **ac** | Application composites built on the two-phase set: `Chiller`, `AirCoil`, `Radiator`, `HeaterCore`, `TXV`, `EXV`/`EXVCmd` |
+| **moistair** | Humid-air HVAC: `MoistAirSource`/`MoistAirSink`, `CoolingCoil` (wet coils), `HeatingCoil`, `Humidifier`, `MixingBox`, `MoistAirWallHX`, cabin zone |
+| **pneumatic** | ISO 6358 compressible gas power: orifices, volumes, valves, cylinders, sources |
+| **hydraulic** | Oil-hydraulic power: pumps, orifices, valves, cylinders, accumulators, `ReliefValve` |
+| **heat** | Lumped heat transfer: `ThermalSource`, `ThermalMass`, `Conduction`/`Convection`/`Radiation`, `ContactResistance`, `MassGen` (self-heating mass), transient walls, PCM, Peltier, heat pipe |
+| **electrical** | Circuits & electrification: `VoltageSource`, `Ground`, resistors (`HeatingResistor` couples to heat), `Capacitor`/`Inductor`, battery cells and packs with SOC, motor/inverter/DC-DC, PV, electrolyzer, `FuelCellStack` (PEMFC) |
+| **mechanical** | Rotational & translational 1-D mechanics: `Inertia`, `TransMass`, springs, dampers, `Gear`, `Planetary`, `Clutch`, `Friction`, backlash, hard stops, kinematic pairs |
+| **powertrain** | Vehicle-level: engines (`MeanValueEngine`), `Transmission`, torque converter, tire, vehicle body, `GradeRoadLoad`, drive cycles |
+| **control** | Network-level sensors and controllers (e.g. `PIThermostat`, `ThermalSensor`, `FlowSensor`) — see the **signal** library for full block-diagram control |
 
 Three conventions hold across the whole library:
 
@@ -203,11 +217,15 @@ T_supply = H1.T_out          { read the named output }
 
 The rules:
 
-- **Ports** carry whatever members your equations reference. Use `(P, mdot, h)` members and the port is a fluid port; use `(T, Qdot)` and it is a heat port — domain inference is automatic (see *Domains & Fluid Families*).
+- **Ports** carry whatever members your equations reference. Use `(P, mdot, h)` members and the port is a fluid port; use `(T, Qdot)` and it is a heat port — domain inference is automatic (see *Domains & Fluid Families*). A port referenced only as `port.sig` becomes a causal **signal** port: one writer, any readers — use one for every command input rather than pinning a component's internals from outside.
 - **Parameters** — a trailing `$` marks a string parameter (`fluid$` is special: it names the stream's fluid for property calls and per-port fluid inference). `PARAM x = value` gives *your* component a default; the standard library deliberately never uses them.
 - **Locals and outputs** — any bare name in the body is instance-private (auto-namespaced, like `MODULE` locals). Reading it from outside as `inst.name` makes it a named output.
 - **Fluid family** — a component for a non-default family opts in with `PARAM domain$ = gas` (or `oil`, `moistair`, `liquid`, `twophase`), so the connector guard protects your lines too.
 - **Composition** — a component body may instantiate other components and `connect` them: build a subsystem once, stamp it many times.
+- **Time** — a body may reference the reserved global `time` (never namespaced) to build time-driven behavior; the `DYNAMIC` integrators pin it, and a steady document sets `time = 0` explicitly.
+- **Keep closures C¹-smooth.** Newton differentiates everything, so a hard `if`/corner in a constitutive law stalls convergence. Use smooth surrogates — a `tanh` gate, the hinge `0.5*(x + sqrt(x^2 + eps^2))`, odd-symmetric flow laws — and expose the smoothing width as an `eps` parameter.
+
+> **Contributing to the built-in library?** The end-to-end process (physics in the `.frees` domain files, golden-value fixture tests, generated reference pages) is documented in the repository at `docs/component_authoring.md`.
 
 ## Variants
 
@@ -254,7 +272,9 @@ An **empty** `DYNAMIC` body is enough — the storage components inject their `d
 
 ## Scheduling inputs over time
 
-Equations inside the `DYNAMIC` body may reference `time`, which is how time-varying inputs are expressed — ramp a compressor's capacity, step a heat load:
+The idiomatic way to drive a transient is a **signal source**: `SigStep`, `SigRamp`, `SigSine`, `SigPulse`, or a `SigTable` drive cycle, wired to an actuator's command port (see *Domains & Fluid Families*). Component bodies may reference the reserved global `time`, which the integrators pin to the running clock — that is what makes those sources tick (in a steady document, pin it yourself with `time = 0`).
+
+Raw equations inside the `DYNAMIC` body may also reference `time` directly — still handy for one-off ramps:
 
 ```
 DYNAMIC pulldown (method = ida, time = 0 .. 600, points = 1201)
