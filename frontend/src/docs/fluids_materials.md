@@ -216,5 +216,5 @@ STATE TABLE RefrigerantLoop(Pref_1, xref_1, href_1, Pref_2, Tref_2, href_2)
 END
 ```
 
-[Related: thermo, diagram, plot-code]
+[Related: thermo, plot-code]
 

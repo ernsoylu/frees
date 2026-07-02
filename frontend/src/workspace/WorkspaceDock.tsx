@@ -30,12 +30,11 @@ import {
 import { useComputedColorScheme } from '@mantine/core'
 import {
   IconChartGridDots,
+  IconSettings,
   IconChartLine,
   IconChecks,
   IconCode,
   IconBrush,
-  IconSchema,
-  IconSettings,
   IconTable,
   IconTemperature,
   IconTerminal2,
@@ -74,7 +73,6 @@ const KIND_ICONS: Record<string, FC<IconProps>> = {
   digitizer: IconChartGridDots,
   workspace: IconVariable,
   terminal: IconTerminal2,
-  diagram: IconSchema,
   whiteboard: IconBrush,
   spreadsheet: IconGrid4x4,
   analyzer: IconWaveSine,
