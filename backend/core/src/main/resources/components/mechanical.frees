@@ -82,3 +82,84 @@ COMPONENT TransMass(port)
   der(port.vel)  = port.f / m
   init(port.vel) = v0
 END
+
+// Signal-commanded clutch: engagement fraction from a signal port `u`
+// (u.sig ∈ [0,1]) instead of a fixed `eng` parameter — launch/shift schedules.
+COMPONENT ClutchCmd(a, b, u)
+  PARAM Tmax, eps
+  dw    = a.w - b.w
+  a.tau = u.sig * Tmax * tanh(dw / eps)
+  a.tau + b.tau = 0
+END
+
+// ── 1-D mechanics breadth (Wave 4) ─────────────────────────────────────────
+
+// Torsional backlash: a torsional spring dead over ±half of relative wind-up
+// (the C¹ two-hinge deadband, width eps) — gear lash, spline play.
+COMPONENT TorsionalBacklash(a, b)
+  PARAM k, half, eps, theta0
+  der(th)  = a.w - b.w
+  init(th) = theta0
+  up       = th - half
+  dn       = th + half
+  a.tau    = k * (0.5 * (up + sqrt(up^2 + eps^2)) + 0.5 * (dn - sqrt(dn^2 + eps^2)))
+  a.tau + b.tau = 0
+END
+
+// Translational end stop at x = gap: spring-damper contact engaged smoothly
+// beyond the gap (penetration hinge + tanh-gated damping).
+COMPONENT EndStop(port)
+  PARAM gap, k, c, eps, x0
+  der(x)  = port.vel
+  init(x) = x0
+  pen     = 0.5 * ((x - gap) + sqrt((x - gap)^2 + eps^2))
+  port.f  = k * pen + c * port.vel * 0.5 * (1 + tanh((x - gap) / eps))
+END
+
+// Translational spring (the missing twin of TransDamper/TransMass).
+COMPONENT TransSpring(a, b)
+  PARAM k, x0
+  der(x)  = a.vel - b.vel
+  init(x) = x0
+  a.f     = k * x
+  a.f + b.f = 0
+END
+
+// Ideal power-conserving screw drive: lead [m/rev] couples rotation to
+// translation (τ·ω + F·v = 0).
+COMPONENT ScrewDrive(shaft, rod)
+  PARAM lead
+  rod.vel   = lead / (2 * pi#) * shaft.w
+  shaft.tau = -(lead / (2 * pi#)) * rod.f
+END
+
+// Ideal rack and pinion of pitch radius r.
+COMPONENT RackPinion(shaft, rod)
+  PARAM r
+  rod.vel   = r * shaft.w
+  shaft.tau = -r * rod.f
+END
+
+// Ideal lever (translational ratio).
+COMPONENT Lever(a, b)
+  PARAM ratio
+  a.vel = ratio * b.vel
+  b.f   = -ratio * a.f
+END
+
+// Belt/chain drive: speed ratio with a torque-transfer efficiency
+// (Transmission's translational-free cousin, named for the application).
+COMPONENT BeltDrive(a, b)
+  PARAM ratio, eta
+  a.w   = ratio * b.w
+  b.tau = -ratio * eta * a.tau
+END
+
+// Commanded friction brake: clamp fraction from the signal port u scales the
+// capacity, tanh-smooth through zero slip. Ground b for a chassis brake.
+COMPONENT Brake(a, b, u)
+  PARAM Tmax, eps
+  dw    = a.w - b.w
+  a.tau = u.sig * Tmax * tanh(dw / eps)
+  a.tau + b.tau = 0
+END

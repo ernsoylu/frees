@@ -1,0 +1,49 @@
+// 3/2 valve fully shifted (u=1): the work port fills with the full-C ISO 6358
+// flow and the exhaust path is shut; at u=0 the work line vents. The 5/2 valve
+// at u=1 pressurizes A (full C) while B vents to its exhaust.
+// EXPECT d32 = 0 tol 1e-9
+// EXPECT v32b.work.mdot < replicated vent flow via d32b
+// EXPECT d32b = 0 tol 1e-9
+// EXPECT d52a = 0 tol 1e-9
+// EXPECT d52b = 0 tol 1e-9
+SigConstant U1(k=1)
+PneumaticSupply     PS1(fluid$=Air, P=700000, T=300)
+PneumaticValve32    V32(fluid$=Air, C=1e-8, b=0.4)
+PneumaticAtmosphere WRK(P=200000)
+PneumaticAtmosphere EXH(P=100000)
+connect(U1.out, V32.u)
+connect(PS1.out, V32.sup_in)
+connect(V32.work, WRK.port)
+connect(V32.exh_out, EXH.port)
+t_chk = Temperature(Air, P=700000, h=PS1.out.h)
+d32   = V32.sup_in.mdot - iso6358(1e-8, 0.4, 700000, t_chk, 200000)
+
+SigConstant U0(k=0)
+PneumaticSupply     PS2(fluid$=Air, P=700000, T=300)
+PneumaticValve32    V32B(fluid$=Air, C=1e-8, b=0.4)
+PneumaticAtmosphere WRK2(P=400000)
+PneumaticAtmosphere EXH2(P=100000)
+connect(U0.out, V32B.u)
+connect(PS2.out, V32B.sup_in)
+connect(V32B.work, WRK2.port)
+connect(V32B.exh_out, EXH2.port)
+t_w2 = Temperature(Air, P=400000, h=V32B.work.h)
+d32b = V32B.exh_out.mdot - iso6358(1e-8, 0.4, 400000, t_w2, 100000)
+
+SigConstant U52(k=1)
+PneumaticSupply     PS3(fluid$=Air, P=700000, T=300)
+PneumaticValve52    V52(fluid$=Air, C=1e-8, b=0.4)
+PneumaticAtmosphere WA(P=200000)
+PneumaticAtmosphere WB(P=300000)
+PneumaticAtmosphere EA(P=100000)
+PneumaticAtmosphere EB(P=100000)
+connect(U52.out, V52.u)
+connect(PS3.out, V52.sup_in)
+connect(V52.wa, WA.port)
+connect(V52.wb, WB.port)
+connect(V52.ea_out, EA.port)
+connect(V52.eb_out, EB.port)
+t_s3 = Temperature(Air, P=700000, h=PS3.out.h)
+t_b3 = Temperature(Air, P=300000, h=V52.wb.h)
+d52a = V52.wa.mdot - iso6358(1e-8, 0.4, 700000, t_s3, 200000)
+d52b = V52.eb_out.mdot - iso6358(1e-8, 0.4, 300000, t_b3, 100000)

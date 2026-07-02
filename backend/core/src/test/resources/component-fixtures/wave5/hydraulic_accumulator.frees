@@ -1,0 +1,14 @@
+// Accumulator charged at 1 L/s from 10 L of precharge gas: after 5 s the gas
+// is at 5 L and P = 100 bar * 2^1.4 = 263.9016 bar.
+// EXPECT p_fin = 26390158 tol 5e3
+COMPONENT OilFlowSrc2(out)
+  PARAM mdot, domain$ = oil
+  out.mdot = mdot
+  out.h    = 0
+END
+OilFlowSrc2          CHG(mdot=0.85)
+HydraulicAccumulator ACC(P0=10000000, V0=0.01, gamma=1.4, rho=850, Vg0=0.01)
+connect(CHG.out, ACC.port)
+DYNAMIC charge(method = ode23s, time = 0 .. 5, points = 100)
+END
+p_fin = FinalValue('acc.port.p')

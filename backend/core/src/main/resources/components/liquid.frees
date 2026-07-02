@@ -101,3 +101,74 @@ COMPONENT LiquidOrifice(in, out)
     in.mdot * abs(in.mdot) = CdA^2 * 2 * rho * dP_eff
   END
 END
+
+// ── Coolant thermal-management set (Wave 2) ────────────────────────────────
+
+// Diverting three-way valve: routes fraction u of the inlet to outa, the rest
+// to outb, both at the inlet pressure — the TMS loop-splitting staple.
+COMPONENT LiquidThreeWayValve(in, outa, outb)
+  PARAM u, domain$ = liquid
+  outa.P    = in.P
+  outb.P    = in.P
+  outa.h    = in.h
+  outb.h    = in.h
+  outa.mdot = u * in.mdot
+  outb.mdot = (1 - u) * in.mdot
+END
+
+// Check valve: the square-law orifice gated smoothly to forward ΔP only
+// (tanh gate of width eps [Pa]); reverse flow decays to zero, no branch switch.
+COMPONENT LiquidCheckValve(in, out)
+  PARAM CdA, rho, eps, domain$ = liquid
+  out.mdot = in.mdot
+  out.h    = in.h
+  dP       = in.P - out.P
+  fwd      = 0.5 * (1 + tanh(dP / eps))
+  in.mdot * abs(in.mdot) = fwd * CdA^2 * 2 * rho * dP
+END
+
+// Thermal-mass tank (m kg of coolant, perfectly mixed): the outlet leaves at
+// the tank temperature state Tt; a wall heat port exchanges UA·(T_wall − Tt).
+// The loop warm-up element.
+COMPONENT LiquidTank(in, out, wall)
+  PARAM fluid$, m, UA, T0, domain$ = liquid
+  out.P     = in.P
+  out.mdot  = in.mdot
+  out.h     = Enthalpy(fluid$, P=in.P, T=Tt)
+  cp_t      = Cp(fluid$, P=in.P, T=Tt)
+  Q         = UA * (wall.T - Tt)
+  der(Tt)   = (in.mdot * (in.h - out.h) + Q) / (m * cp_t)
+  init(Tt)  = T0
+  wall.Qdot = Q
+END
+
+// Wax thermostat: the element opens smoothly over a temperature band
+// (Topen ± Tband) sensed on the inlet coolant — the engine warm-up bypass
+// switch, no discrete event.
+COMPONENT LiquidThermostat(in, out)
+  PARAM fluid$, CdA, rho, Topen, Tband, domain$ = liquid
+  out.mdot = in.mdot
+  out.h    = in.h
+  T_in     = Temperature(fluid$, P=in.P, h=in.h)
+  u        = 0.5 * (1 + tanh((T_in - Topen) / Tband))
+  in.mdot * abs(in.mdot) = (u * CdA)^2 * 2 * rho * (in.P - out.P)
+END
+
+// Head-curve pump: rise from a tabulated head map [m] vs volumetric flow, with
+// the hydraulic inefficiency heating the coolant (out.h mirrors LiquidPump).
+COMPONENT LiquidPumpMap(in, out)
+  PARAM rho, eta, map$, domain$ = liquid
+  Q        = in.mdot / rho
+  head     = map$(Q)
+  out.P    = in.P + rho * 9.80665 * head
+  out.mdot = in.mdot
+  out.h    = in.h + 9.80665 * head / eta
+  W        = in.mdot * 9.80665 * head / eta
+END
+
+// Expansion tank / degas bottle: pins the loop pressure datum — the one
+// pressure reference every CLOSED coolant loop needs.
+COMPONENT LiquidExpansionTank(port)
+  PARAM P, domain$ = liquid
+  port.P = P
+END

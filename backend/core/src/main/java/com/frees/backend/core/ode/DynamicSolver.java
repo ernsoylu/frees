@@ -72,6 +72,18 @@ public final class DynamicSolver {
         this.timeVar = system.options().timeVar();
     }
 
+    /**
+     * Pins the block's declared time variable AND the reserved global
+     * {@code time} (the name component bodies use — see the expander's reserved
+     * global) to the integrator's current time. The alias is skipped when the
+     * document itself defines {@code time} (already present in the map), so a
+     * legacy variable of that name keeps its meaning.
+     */
+    private void pinTime(Map<String, Double> m, double t) {
+        m.put(timeVar, t);
+        m.putIfAbsent("time", t);
+    }
+
     /** The numerically-linearized state-space model of this block at its
      *  initial-condition operating point: {@code A=∂ẋ/∂x}, {@code B=∂ẋ/∂u},
      *  {@code C=∂y/∂x}, {@code D=∂y/∂u} (states in der() order). */
@@ -174,7 +186,7 @@ public final class DynamicSolver {
         if (overrides != null) {
             pinned.putAll(overrides);
         }
-        pinned.put(timeVar, t);
+        pinTime(pinned, t);
         for (int k = 0; k < states.size(); k++) {
             pinned.put(states.get(k), y[k]);
         }
@@ -322,7 +334,7 @@ public final class DynamicSolver {
      *  (y), auxiliaries (y), and each {@code der$X} bound to {@code y'[idx(X)]}. */
     private Map<String, Double> daeValues(double t, double[] y, double[] yp) {
         Map<String, Double> v = new HashMap<>(analyticValues);
-        v.put(timeVar, t);
+        pinTime(v, t);
         int ns = states.size();
         for (int k = 0; k < ns; k++) {
             v.put(states.get(k), y[k]);
@@ -547,6 +559,7 @@ public final class DynamicSolver {
     private void registerImplicitAuxiliaries() {
         java.util.Set<String> known = new java.util.HashSet<>(analyticValues.keySet());
         known.add(timeVar);
+        known.add("time");   // reserved global alias, pinned by pinTime()
         for (String s : states) {
             known.add(s);
             known.add(derVar(s));
@@ -766,6 +779,7 @@ public final class DynamicSolver {
     private void validateReferences() {
         java.util.Set<String> known = new java.util.HashSet<>(analyticValues.keySet());
         known.add(timeVar);
+        known.add("time");   // reserved global alias, pinned by pinTime()
         for (String s : states) {
             known.add(s);
             known.add(derVar(s));
@@ -812,7 +826,7 @@ public final class DynamicSolver {
     /** Solve the algebraic block with time and the state vector pinned. */
     private Map<String, Double> solveAlgebraicAt(double t, double[] y) {
         Map<String, Double> pinned = new LinkedHashMap<>(analyticValues);
-        pinned.put(timeVar, t);
+        pinTime(pinned, t);
         for (int k = 0; k < states.size(); k++) {
             pinned.put(states.get(k), y[k]);
         }

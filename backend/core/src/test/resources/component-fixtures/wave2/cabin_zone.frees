@@ -1,0 +1,17 @@
+// Cabin zone with ventilation and occupant loads (adiabatic walls): humidity
+// settles at W_in + n*mw/mdot = 0.005 + 4e-5 = 0.00504, and the steady energy
+// balance gives out.h = in.h + (4*100 + 0)/1.
+// EXPECT w_fin = 0.00504 tol 2e-5
+// EXPECT d_h = 0 tol 2
+MoistAirSource VIN(P=101325, T=285, W=0.005, mdot=1)
+CabinZone      CZ(Vz=3, T0=300, W0=0.008, n_occ=4, q_sens=100, mw_occ=1e-5, Q_aux=0)
+MoistAirSink   VOUT()
+HeatSource     ADB(Q=0)
+connect(VIN.out, CZ.in)
+connect(CZ.out, VOUT.in)
+connect(CZ.wall, ADB.port)
+DYNAMIC settle(method = ode23s, time = 0 .. 120, points = 200)
+END
+w_fin  = FinalValue('cz.wz')
+h_in_chk = Enthalpy(AirH2O, T=285, P=101325, W=0.005)
+d_h    = FinalValue('cz.out.h') - (h_in_chk + 400)
