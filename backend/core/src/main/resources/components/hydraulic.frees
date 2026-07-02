@@ -46,3 +46,12 @@ COMPONENT HydraulicPump(in, out, shaft)
   out.h     = in.h
   shaft.tau = -(disp * (out.P - in.P) / (2 * pi#)) / eta_m
 END
+
+// Signal-commanded proportional valve: spool command u.sig ∈ [0,1] scales the
+// orifice CdA — the closed-loop counterpart of HydraulicValve.
+COMPONENT HydraulicValveCmd(in, out, u)
+  PARAM CdA_max, rho, domain$ = oil
+  out.mdot = in.mdot
+  out.h    = in.h
+  in.mdot * abs(in.mdot) = (u.sig * CdA_max)^2 * 2 * rho * (in.P - out.P)
+END

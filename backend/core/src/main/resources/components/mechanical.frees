@@ -82,3 +82,12 @@ COMPONENT TransMass(port)
   der(port.vel)  = port.f / m
   init(port.vel) = v0
 END
+
+// Signal-commanded clutch: engagement fraction from a signal port `u`
+// (u.sig ∈ [0,1]) instead of a fixed `eng` parameter — launch/shift schedules.
+COMPONENT ClutchCmd(a, b, u)
+  PARAM Tmax, eps
+  dw    = a.w - b.w
+  a.tau = u.sig * Tmax * tanh(dw / eps)
+  a.tau + b.tau = 0
+END

@@ -32,7 +32,10 @@ class LiquidDomainTest {
         // + later additions shipped after this breakdown was written (boil-off vessels,
         //   relief valves, heat/mass sources, UA/float two-phase HXs, blend sensors, …)
         // + 3 map-driven components (FanMap, PumpMap, CompressorMap) for the Component Wizard
-        assertEquals(139, names.size(), "built-in component count after the per-domain split");
+        // + 29 signal & control blocks (Wave 1: sources, math, dynamics, PID, lookup)
+        // + 4 signal-commanded actuators (EXVCmd, ClutchCmd, HydraulicValveCmd,
+        //   PneumaticServoValveCmd)
+        assertEquals(172, names.size(), "built-in component count after the per-domain split");
         // built-in names are stored lowercased (the language is case-insensitive)
         assertTrue(names.containsAll(java.util.List.of(
                 "liquidsource", "liquidsink", "liquidpump", "liquidpipe",

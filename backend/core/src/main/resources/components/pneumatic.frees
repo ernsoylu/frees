@@ -61,3 +61,14 @@ COMPONENT PneumaticActuator(in, rod)
   rod.f   = -(in.P - Patm) * area
   in.mdot = rho * area * rod.vel
 END
+
+// Signal-commanded servo valve: ISO 6358 flow with the sonic conductance
+// scaled by the spool command u.sig ∈ [0,1] — the closed-loop counterpart of
+// PneumaticServoValve.
+COMPONENT PneumaticServoValveCmd(in, out, u)
+  PARAM fluid$, Cmax, b, domain$ = gas
+  out.h    = in.h
+  T_in     = Temperature(fluid$, P=in.P, h=in.h)
+  in.mdot  = iso6358(u.sig * Cmax, b, in.P, T_in, out.P)
+  out.mdot = in.mdot
+END
