@@ -1,0 +1,26 @@
+// The ultimate-fix regression pair (C/R causality, Amesim-grounded):
+// CompressorMap's `flow` rung is a true R-element — mdot from the PR map —
+// so supply -> compressor -> manifold volume -> orifice -> atmosphere is
+// well-posed even on the RK path (this exact chain was structurally
+// underdetermined with the efficiency-only rung). Flat 0.04 kg/s map:
+// equilibrium continuity closes exactly.
+// EXPECT flow_res = 0 tol 1e-9
+// EXPECT mdot_fin = 0.04 tol 1e-9
+
+TABLE etac(pr)
+  1    0.72
+  4    0.72
+END
+TABLE mflow(pr)
+  1    0.04
+  4    0.04
+END
+PneumaticSupply     AIN(s0, fluid$=Air, P=101325, T=298.15)
+CompressorMap       CM(s0, s1, fluid$=Air, map_eta$=etac, map_mdot$=mflow, domain$=gas, model$=flow)
+PneumaticVolume     MV(s1, s2, V=0.01, T=320, R=287, P0=150000)
+PneumaticOrifice    ORF(s2, s3, fluid$=Air, C=2e-6, b=0.3)
+PneumaticAtmosphere ATM(s3, P=101325)
+DYNAMIC fill(method = ode23s, time = 0 .. 30, points = 300)
+END
+flow_res = FinalValue('s0.mdot') - FinalValue('s2.mdot')
+mdot_fin = FinalValue('s0.mdot')

@@ -1,0 +1,13 @@
+// AnodeRecirc: the ejector entrains ER = 0.6 of the supply, so the outlet
+// carries 1.6x the supply flow (replica); boundaries as in the proven
+// pilot_check_ejector harness.
+// EXPECT mdot_res = 0 tol 1e-12
+
+PneumaticSupply HSUP(fluid$=Hydrogen, P=600000, T=343.15)
+PneumaticSupply HRET(fluid$=Hydrogen, P=200000, T=343.15)
+AnodeRecirc     AR(fluid$=Hydrogen, C=5e-8, b=0.3, ER=0.6)
+PneumaticAtmosphere OUTL(P=250000)
+connect(HSUP.out, AR.sup_in)
+connect(HRET.out, AR.ret_in)
+connect(AR.out, OUTL.port)
+mdot_res = AR.out.mdot - 1.6 * AR.sup_in.mdot

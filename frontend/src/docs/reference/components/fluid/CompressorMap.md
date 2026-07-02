@@ -25,7 +25,7 @@ A reusable **acausal fluid-domain** component — its thermofluid ports carry pr
 ## Usage
 
 ```
-CompressorMap inst(fluid$, map_eta$)
+CompressorMap inst(fluid$, map_eta$, model$)
 ```
 
 ## Parameters
@@ -48,6 +48,24 @@ out.mdot = in.mdot
 out.h    = in.h + (h_s - in.h) / eta
 W        = in.mdot * (out.h - in.h)
 ```
+
+## Model Variants
+
+Selected via the `model$` parameter; each adds its own equations (and `REQUIRE`d parameters):
+
+### `eta`
+
+_No additional equations (uses the shared body; the through-flow is imposed by the surrounding network)._
+
+### `flow` — requires `map_mdot$`
+
+```
+in.mdot = map_mdot$(PR)
+```
+
+The flow rung makes the machine a true flow-determining (R) element — the mass
+flow comes from the pressure-ratio characteristic, so a supply → compressor →
+volume chain is well-posed on every integrator.
 
 ## References
 

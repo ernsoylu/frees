@@ -206,3 +206,16 @@ COMPONENT HybridPowerSplit(eng, out, sun, p, n, u1, u2, heat)
   connect(MG2.u, u2)
   connect(MG1.heat, MG2.heat, heat)
 END
+
+
+// ── Electrochemistry & energy systems (Wave 8) ──────────────────────────────
+
+// Wind rotor: Cp(λ, pitch) from a 2-D map turns the swept-area wind power
+// into shaft torque; tip-speed ratio and torque are eps-regularized at rest.
+COMPONENT WindRotor(shaft, wind, pitch)
+  PARAM rho, R, cp$, epsv, epsw
+  lam       = shaft.w * R / (wind.sig + epsv)
+  Cpw       = cp$(lam, pitch.sig)
+  Pw        = 0.5 * rho * pi# * R^2 * wind.sig^3 * Cpw
+  shaft.tau = -Pw / (shaft.w + epsw)
+END

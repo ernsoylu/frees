@@ -1,0 +1,17 @@
+// The eta-only compressor between a supply and a volume has no constitutive
+// law for its through-flow/inlet pressure — the causality diagnosis must name
+// the free quantity instead of dumping counts.
+// EXPECT-ERROR no defining relation
+
+TABLE etac(pr)
+  1    0.72
+  4    0.72
+END
+PneumaticSupply     AIN(s0, fluid$=Air, P=101325, T=298.15)
+CompressorMap       CM(s0, s1, fluid$=Air, map_eta$=etac, domain$=gas)
+PneumaticVolume     MV(s1, s2, V=0.01, T=320, R=287, P0=150000)
+PneumaticOrifice    ORF(s2, s3, fluid$=Air, C=2e-6, b=0.3)
+PneumaticAtmosphere ATM(s3, P=101325)
+DYNAMIC fill(method = ode23s, time = 0 .. 30, points = 300)
+END
+probe = FinalValue('s2.mdot')

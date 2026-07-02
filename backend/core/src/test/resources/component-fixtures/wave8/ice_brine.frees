@@ -1,0 +1,12 @@
+// IceStorageBrine: 268 K brine discharges the 273 K PCM; once the small
+// latent band drains the PCM approaches the brine temperature.
+// EXPECT t_pcm = 268.15 tol 0.5
+
+LiquidSource  BR(fluid$=EG50, mdot=0.4, P=200000, T=268.15)
+IceStorageBrine IB(fluid$=EG50, UA=400, m=20, cp_p=2100, L=5000, Tm=273.15, dTm=1, T0=273.15)
+LiquidSink    BS()
+connect(BR.out, IB.in)
+connect(IB.out, BS.in)
+DYNAMIC melt(method = ode23s, time = 0 .. 4000, points = 400)
+END
+t_pcm = FinalValue('ib.ice.port.T')

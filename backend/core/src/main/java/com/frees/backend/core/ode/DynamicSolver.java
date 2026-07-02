@@ -264,8 +264,7 @@ public final class DynamicSolver {
         int ns = states.size();
         int n = ns + auxNames.size();
         if (algebraicTemplate.size() != n) {
-            throw new SolverException("DYNAMIC " + system.name() + ": DAE assembly is non-square ("
-                    + algebraicTemplate.size() + " equations for " + n + " unknowns).");
+            throw new SolverException(nonSquareDiagnostic(n));
         }
 
         List<String> variables = new ArrayList<>(states);
@@ -341,6 +340,44 @@ public final class DynamicSolver {
         return new DaeAssembly(n, variables, new ArrayList<>(states), new ArrayList<>(auxNames),
                 id, residual, y0full, yp0full, sparsity,
                 eventNames.isEmpty() ? null : rootFn, eventNames, eventStops);
+    }
+
+    /**
+     * A non-square DAE assembly explained in the model's own vocabulary: which
+     * variables the network carries, how many equations it produced, and the
+     * usual physical cause (an element chain with no flow-determining law —
+     * e.g. an efficiency-only machine feeding a volume — or a boundary that
+     * pins too much/too little). Display names, never flat internals.
+     */
+    private String nonSquareDiagnostic(int n) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("DYNAMIC ").append(system.name()).append(": the network's equation set is ")
+          .append(algebraicTemplate.size() < n ? "underdetermined" : "overdetermined")
+          .append(" (").append(algebraicTemplate.size()).append(" equations for ")
+          .append(n).append(" unknowns: ").append(states.size()).append(" state")
+          .append(states.size() == 1 ? "" : "s").append(" + ")
+          .append(auxNames.size()).append(" algebraic).");
+        if (algebraicTemplate.size() < n) {
+            sb.append(" A common cause: a branch has no flow-determining element — an "
+                    + "efficiency-only machine or rigid pass-through feeding a storage "
+                    + "volume leaves the through-flow free; add an orifice/valve/flow "
+                    + "map, or pin a boundary flow.");
+        } else {
+            sb.append(" A common cause: a boundary pins a quantity a component already "
+                    + "defines (e.g. re-equating a mixer pressure or T-pinning a wall "
+                    + "state).");
+        }
+        sb.append(" States: ").append(display(states));
+        sb.append("; algebraic unknowns: ").append(display(auxNames)).append('.');
+        return sb.toString();
+    }
+
+    private String display(List<String> names) {
+        List<String> out = new ArrayList<>(names.size());
+        for (String v : names) {
+            out.add(v.replace('$', '.'));   // flat solver names -> dotted display
+        }
+        return String.join(", ", out);
     }
 
     /** Builds the name→value map for the DAE residual/roots: params, time, states
@@ -883,7 +920,24 @@ public final class DynamicSolver {
         for (int k = 0; k < states.size(); k++) {
             pinned.put(states.get(k), y[k]);
         }
-        Map<String, Double> values = algebraic.solve(algebraicTemplate, pinned, warmStart);
+        Map<String, Double> values;
+        try {
+            values = algebraic.solve(algebraicTemplate, pinned, warmStart);
+        } catch (SolverException e) {
+            String msg = e.getMessage() == null ? "" : e.getMessage();
+            if (msg.contains("underspecified") || msg.contains("structurally singular")) {
+                // Same vocabulary as the DAE diagnostic: name the block and the
+                // usual physical cause instead of leaking a bare count.
+                throw new SolverException("DYNAMIC " + system.name()
+                        + " (per-step algebraic solve at " + timeVar + " = " + t + "): " + msg
+                        + " A common cause: a branch with no flow-determining element "
+                        + "(an efficiency-only machine or rigid pass-through leaves its "
+                        + "through-flow or a port pressure free) — add an orifice/valve/"
+                        + "flow map, pin a boundary, or use method = ida for genuinely "
+                        + "derivative-coupled networks.");
+            }
+            throw e;
+        }
         warmStart = values;
         return values;
     }

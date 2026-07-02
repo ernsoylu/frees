@@ -144,3 +144,21 @@ COMPONENT CabinZone(in, out, wall)
   init(Tz)  = T0
   wall.T    = Tz
 END
+
+
+// ── Electrochemistry & energy systems (Wave 8) ──────────────────────────────
+
+// Membrane humidifier: effectiveness exchange of BOTH enthalpy and moisture
+// between a wet (cathode exhaust) and a dry (supply) stream; water and energy
+// balances close exactly on the dry-air basis.
+COMPONENT MembraneHumidifier(dry_in, dry_out, wet_in, wet_out)
+  PARAM eff_h, eff_w, domain$ = moistair
+  dry_out.mdot = dry_in.mdot
+  wet_out.mdot = wet_in.mdot
+  dry_out.P    = dry_in.P
+  wet_out.P    = wet_in.P
+  dry_out.W    = dry_in.W + eff_w * (wet_in.W - dry_in.W)
+  dry_out.h    = dry_in.h + eff_h * (wet_in.h - dry_in.h)
+  wet_out.W    = wet_in.W - (dry_in.mdot / wet_in.mdot) * (dry_out.W - dry_in.W)
+  wet_out.h    = wet_in.h - (dry_in.mdot / wet_in.mdot) * (dry_out.h - dry_in.h)
+END

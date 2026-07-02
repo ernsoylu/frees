@@ -120,3 +120,18 @@ COMPONENT ThermalSwitch(a, b)
   a.Qdot = u * G * (a.T - b.T)
   a.Qdot + b.Qdot = 0
 END
+
+
+// ── Electrochemistry & energy systems (Wave 8) ──────────────────────────────
+
+// Cell-to-plate thermal path: contact/interface resistance into the cold-plate
+// mass — the network that makes pack gradients (cell hot spot vs plate) real.
+// (Direct equations: the plate node carries this component's own state.)
+COMPONENT CellToPackThermal(cell, plate)
+  PARAM Rcc, Cpl, T0
+  Q         = (cell.T - Tp) / Rcc
+  cell.Qdot = Q
+  der(Tp)   = (Q + plate.Qdot) / Cpl
+  init(Tp)  = T0
+  plate.T   = Tp
+END

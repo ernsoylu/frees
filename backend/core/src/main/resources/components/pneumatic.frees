@@ -159,3 +159,25 @@ COMPONENT VacuumEjector(sup_in, suc_in, exh_out)
   exh_out.mdot = sup_in.mdot + suc_in.mdot
   exh_out.mdot * exh_out.h = sup_in.mdot * sup_in.h + suc_in.mdot * suc_in.h
 END
+
+
+// ── Electrochemistry & energy systems (Wave 8) ──────────────────────────────
+
+// NOTE (Program II): there is deliberately no packaged CathodeAirPath —
+// CompressorMap is an efficiency-only machine (no flow-vs-PR characteristic),
+// so a supply -> compressor -> volume chain is genuinely underdetermined: its
+// inlet pressure/flow need a flow-determining element (orifice, valve, or a
+// flow map) or a pressure-pinned discharge. The solver's structural
+// diagnostics explain this; the well-posed filling pattern is fixture-proven
+// in wave8/cathode_path.frees (supply -> orifice -> volume -> orifice -> atm).
+
+// Anode recirculation: the supply ejector entrains stack return (H2 loop) —
+// the VacuumEjector law as a named balance-of-plant stage (direct equations).
+COMPONENT AnodeRecirc(sup_in, ret_in, out)
+  PARAM fluid$, C, b, ER, domain$ = gas
+  T_s         = Temperature(fluid$, P=sup_in.P, h=sup_in.h)
+  sup_in.mdot = iso6358(C, b, sup_in.P, T_s, out.P)
+  ret_in.mdot = ER * sup_in.mdot
+  out.mdot    = sup_in.mdot + ret_in.mdot
+  out.mdot * out.h = sup_in.mdot * sup_in.h + ret_in.mdot * ret_in.h
+END
