@@ -46,6 +46,12 @@ export default defineConfig({
           if (id.includes('@mantine')) return 'mantine'
           if (id.includes('katex')) return 'katex'
           if (id.includes('ag-grid')) return 'ag-grid'
+          // CodeMirror (+ its @lezer runtime) changes far less often than app
+          // code: isolating it keeps ~300 kB of the entry cacheable across
+          // deploys and shrinks the frequently-invalidated App chunk.
+          if (id.includes('@codemirror') || id.includes('@lezer') || id.includes('@uiw/react-codemirror')) {
+            return 'codemirror'
+          }
           if (id.includes('/react-dom/') || id.includes('/react/') || id.includes('/scheduler/')) {
             return 'react'
           }
