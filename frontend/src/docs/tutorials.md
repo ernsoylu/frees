@@ -393,7 +393,9 @@ Solve again and read `COP` — now shown as `value ± uncertainty`. The dominant
 
 ## Complete listing
 
-```run
+Drag the sliders to move the cycle's boundary temperatures and watch the COP re-solve — the falloff with condensing temperature is the whole story of air-conditioning on a hot day:
+
+```run vary=T_evap=253.15:1:273.15 vary=T_cond=303.15:1:323.15
 { R134a vapor-compression cycle with uncertainty -- Tutorial 4 }
 T_evap = 263.15 [K]     { -10 C }
 T_cond = 313.15 [K]     {  40 C }

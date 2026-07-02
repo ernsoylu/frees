@@ -29,7 +29,7 @@ function extractSnippets() {
       const t = lines[i].trim();
       const m = t.match(/^\[Topic:\s*([a-zA-Z0-9_-]+)\]/);
       if (m) topic = m[1];
-      if (!inRun && t === '```run') { inRun = true; buf = []; startLine = i + 1; continue; }
+      if (!inRun && (t === '```run' || t.startsWith('```run '))) { inRun = true; buf = []; startLine = i + 1; continue; }
       if (inRun && t.startsWith('```')) {
         inRun = false;
         snippets.push({ file, topic, line: startLine, code: buf.join('\n') });

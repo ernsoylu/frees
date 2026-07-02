@@ -23,7 +23,8 @@ import {
   Box,
   SimpleGrid,
   Card,
-  Anchor
+  Anchor,
+  Slider
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { useState, useEffect, useMemo } from 'react';
@@ -94,23 +95,36 @@ function formatRunValue(v: number): string {
 // scripts/check-doc-snippets.mjs). Run executes the real Check → Solve pipeline
 // and renders the solution inline; Open in Editor hands the code to the main
 // app through the frees.pendingSnippet localStorage key (consumed in App.tsx).
-function RunnableCode({ code, title }: Readonly<{ code: string; title?: string }>) {
+/** A `vary=` slider spec parsed from a runnable fence's info string. */
+interface VarySpec { name: string; min: number; step: number; max: number }
+
+function RunnableCode({ code, title, vary = [] }: Readonly<{ code: string; title?: string; vary?: VarySpec[] }>) {
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [vars, setVars] = useState<VariableResult[] | null>(null);
+  // Slider values, seeded at each range's midpoint (snapped to the step).
+  const [varyVals, setVaryVals] = useState<Record<string, number>>(() => {
+    const init: Record<string, number> = {};
+    for (const v of vary) init[v.name] = v.min + Math.round((v.max - v.min) / 2 / v.step) * v.step;
+    return init;
+  });
 
-  const run = async () => {
+  const run = async (vals: Record<string, number> = varyVals) => {
+    // Sliders override the document's fixed values through the same overrides
+    // channel the REPL uses ("name = value" beats the editor equation).
+    const overrides = vary.map((v) => `${v.name} = ${vals[v.name]}`);
     setRunning(true);
     setError(null);
-    setVars(null);
     try {
-      const chk = await check(code, [], false);
+      const chk = await check(code, [], false, [], overrides);
       if (!chk.solvable) {
+        setVars(null);
         setError(chk.message || 'The system did not pass Check.');
         return;
       }
-      const sol = await solve(code, DEFAULT_STOP_CRITERIA, [], false, 'SI', false);
+      const sol = await solve(code, DEFAULT_STOP_CRITERIA, [], false, 'SI', false, [], undefined, overrides);
       if (!sol.success) {
+        setVars(null);
         setError(sol.error || 'The solve did not converge.');
         return;
       }
@@ -137,10 +151,35 @@ function RunnableCode({ code, title }: Readonly<{ code: string; title?: string }
       <Group justify={title ? 'space-between' : 'flex-end'} gap="xs" mb="xs">
         {title && <Badge color="teal" variant="light" leftSection={<IconBook size={12} />}>{title}</Badge>}
         <Group gap="xs">
-          <Button size="xs" variant="filled" color="teal" onClick={run} loading={running}>Run</Button>
+          <Button size="xs" variant="filled" color="teal" onClick={() => run()} loading={running}>Run</Button>
           <Button size="xs" variant="light" onClick={openInEditor}>Open in Editor</Button>
         </Group>
       </Group>
+      {vary.length > 0 && (
+        <Stack gap={6} mb="sm">
+          {vary.map((v) => (
+            <Group key={v.name} gap="sm" wrap="nowrap">
+              <Code style={{ whiteSpace: 'nowrap', minWidth: 130 }}>{v.name} = {formatRunValue(varyVals[v.name])}</Code>
+              <Slider
+                style={{ flexGrow: 1 }}
+                size="sm"
+                color="teal"
+                min={v.min}
+                max={v.max}
+                step={v.step}
+                value={varyVals[v.name]}
+                label={null}
+                onChange={(val) => setVaryVals((prev) => ({ ...prev, [v.name]: val }))}
+                onChangeEnd={(val) => {
+                  const next = { ...varyVals, [v.name]: val };
+                  setVaryVals(next);
+                  void run(next);
+                }}
+              />
+            </Group>
+          ))}
+        </Stack>
+      )}
       <Box style={{ position: 'relative' }}>
         <CopyButton code={code} />
         <Code block style={{ background: 'transparent', maxHeight: '340px', overflowY: 'auto' }}>{code}</Code>
@@ -2890,7 +2929,8 @@ function MarkdownRenderer({ content, onNavigate }: MarkdownRendererProps) {
     
     // 1. Fenced Code Block. The info string marks behavior: ```run blocks are
     // backend-verified (scripts/check-doc-snippets.mjs) and render with
-    // Run / Open in Editor buttons.
+    // Run / Open in Editor buttons; `vary=name=min:step:max` tokens add live
+    // parameter sliders that re-solve through the overrides channel.
     if (trimmed.startsWith('```')) {
       const fence = trimmed.slice(3).trim();
       const codeLines: string[] = [];
@@ -2901,8 +2941,11 @@ function MarkdownRenderer({ content, onNavigate }: MarkdownRendererProps) {
       }
       const code = codeLines.join('\n');
       const key = `code-${i}`;
-      if (fence === 'run') {
-        elements.push(<RunnableCode key={key} code={code} />);
+      if (fence === 'run' || fence.startsWith('run ')) {
+        const vary = [...fence.matchAll(/vary=([A-Za-z_][A-Za-z0-9_]*)=(-?[\d.eE+-]+):(-?[\d.eE+-]+):(-?[\d.eE+-]+)/g)]
+          .map((m) => ({ name: m[1], min: Number(m[2]), step: Number(m[3]), max: Number(m[4]) }))
+          .filter((v) => Number.isFinite(v.min) && Number.isFinite(v.step) && v.step > 0 && v.max > v.min);
+        elements.push(<RunnableCode key={key} code={code} vary={vary} />);
       } else {
         elements.push(
           <Paper key={key} withBorder p="md" bg="light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8))" mb="md" style={{ position: 'relative' }}>

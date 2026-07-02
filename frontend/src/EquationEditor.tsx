@@ -1,7 +1,8 @@
 import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef } from 'react'
 import { useComputedColorScheme } from '@mantine/core'
 import CodeMirror, { ReactCodeMirrorRef } from '@uiw/react-codemirror'
-import { Decoration, DecorationSet, EditorView } from '@codemirror/view'
+import { Decoration, DecorationSet, EditorView, keymap } from '@codemirror/view'
+import { REFERENCE_SLUGS } from './docsTopics'
 import { Extension, StateEffect, StateField } from '@codemirror/state'
 import { HighlightStyle, StreamLanguage, StringStream, syntaxHighlighting } from '@codemirror/language'
 import { CompletionContext, CompletionResult } from '@codemirror/autocomplete'
@@ -228,6 +229,31 @@ interface Props {
   placeholder?: string
 }
 
+// F1 = contextual help: open the reference page for the documented symbol
+// under the cursor, or the portal itself when the cursor isn't on one. The
+// slug set is the compact generated list (docsTopics.ts), not the catalogs.
+const REFERENCE_SLUG_SET = new Set(REFERENCE_SLUGS)
+
+const f1ContextualHelp = keymap.of([
+  {
+    key: 'F1',
+    run: (view) => {
+      const pos = view.state.selection.main.head
+      const line = view.state.doc.lineAt(pos)
+      const text = line.text
+      const col = pos - line.from
+      const isWordChar = (ch: string) => /[A-Za-z0-9_$#]/.test(ch)
+      let start = col
+      while (start > 0 && isWordChar(text[start - 1])) start--
+      let end = col
+      while (end < text.length && isWordChar(text[end])) end++
+      const word = text.slice(start, end).toLowerCase()
+      globalThis.open(REFERENCE_SLUG_SET.has(word) ? `/help#refpage:${word}` : '/help', '_blank')
+      return true
+    },
+  },
+])
+
 function EquationEditorInner(
   { value, onChange, variables, errorLine, placeholder }: Readonly<Props>,
   ref: React.Ref<EquationEditorHandle>,
@@ -251,6 +277,7 @@ function EquationEditorInner(
       syntaxHighlighting(isDark ? freesHighlightDark : freesHighlightLight),
       makeFreesTheme(isDark),
       errorLineField,
+      f1ContextualHelp,
     ],
     [isDark],
   )
