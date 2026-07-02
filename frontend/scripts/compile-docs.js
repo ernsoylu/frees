@@ -77,6 +77,7 @@ export const DOCS_CATALOG: Record<string, string> = {
 
   fs.writeFileSync(OUTPUT_FILE, tsCode, 'utf-8');
   console.log(`Successfully compiled ${Object.keys(catalog).length} topics to ${OUTPUT_FILE}`);
+  return catalog;
 }
 
 // ── Reference pages: src/docs/reference/**/*.md → referenceCatalog.ts ─────────
@@ -111,7 +112,19 @@ function parseFrontmatter(fm) {
 }
 const stripQuotes = (s) => s.replace(/^["']|["']$/g, '');
 
-function compileReference() {
+// True when `name(` appears in `text` as a call (not as the tail of a longer
+// identifier). Both arguments must already be lowercased.
+function mentionsCall(text, name) {
+  const needle = name + '(';
+  let i = -1;
+  while ((i = text.indexOf(needle, i + 1)) !== -1) {
+    const prev = i === 0 ? '' : text[i - 1];
+    if (!/[a-z0-9_$#]/.test(prev)) return true;
+  }
+  return false;
+}
+
+function compileReference(guideCatalog) {
   if (!fs.existsSync(REF_DIR)) {
     fs.writeFileSync(REF_OUTPUT, referenceModule([]), 'utf-8');
     return;
@@ -144,8 +157,17 @@ function compileReference() {
   };
   walk(REF_DIR);
   pages.sort((a, b) => a.category.localeCompare(b.category) || a.name.localeCompare(b.name));
+  // Auto backlinks: which guide topics call this symbol (`name(` in the topic
+  // markdown, code blocks included)? Computed here so the pages never go stale.
+  const topics = Object.entries(guideCatalog || {}).map(([id, md]) => [id, md.toLowerCase()]);
+  let backlinks = 0;
+  for (const p of pages) {
+    const lower = p.name.toLowerCase();
+    p.guides = topics.filter(([, md]) => mentionsCall(md, lower)).map(([id]) => id).slice(0, 6);
+    backlinks += p.guides.length;
+  }
   fs.writeFileSync(REF_OUTPUT, referenceModule(pages), 'utf-8');
-  console.log(`Successfully compiled ${pages.length} reference pages to ${REF_OUTPUT}`);
+  console.log(`Successfully compiled ${pages.length} reference pages to ${REF_OUTPUT} (${backlinks} guide backlinks)`);
 }
 
 function referenceModule(pages) {
@@ -161,6 +183,7 @@ function referenceModule(pages) {
     examples: ${arr(p.examples)},
     tags: ${arr(p.tags)},
     references: ${arr(p.references)},
+    guides: ${arr(p.guides || [])},
     body: \`${esc(p.body)}\`,
   }`;
   }).join(',\n');
@@ -176,6 +199,8 @@ export interface ReferencePage {
   examples: string[];
   tags: string[];
   references: string[];
+  /** Guide topic ids whose text calls this symbol (auto-computed backlinks). */
+  guides: string[];
   body: string;
 }
 
@@ -413,6 +438,6 @@ ${body}
 `;
 }
 
-compileDocs();
-compileReference();
+const guideCatalog = compileDocs();
+compileReference(guideCatalog);
 compileComponents();

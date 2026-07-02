@@ -32,7 +32,15 @@ import { DOCS_CATALOG } from './docsCatalog';
 import Latex from './Latex';
 import { EXAMPLES } from './examples';
 import { REFERENCE_PAGES, type ReferencePage } from './referenceCatalog';
-import { buildSearchIndex, searchDocs, type SearchHit } from './searchIndex';
+import { buildSearchIndex, searchDocs, type SearchHit, type SearchKind } from './searchIndex';
+
+// Facet chips shown in the search dropdown, in display order.
+const SEARCH_FACETS: [SearchKind, string][] = [
+  ['guide', 'Guides'],
+  ['reference', 'Reference'],
+  ['component', 'Components'],
+  ['example', 'Examples'],
+];
 import { VERSION_LABEL } from './version';
 import {
   FLUID_PROPERTY_OUTPUTS,
@@ -50,7 +58,8 @@ import {
   BraytonCycleDiagram,
   RefrigerationCycleDiagram,
   RankineCycleDiagram,
-  EvThermalDiagram
+  EvThermalDiagram,
+  LearningMapDiagram
 } from './docs/DocDiagrams';
 
 function CopyButton({ code }: Readonly<{ code: string }>) {
@@ -2703,6 +2712,7 @@ const CATEGORIES: NavCategory[] = [
     items: [
       { id: 'solving-overview', label: 'Overview', blurb: 'How frees solves, what to do when it doesn\'t, and the system-level analyses on top.', keywords: ['solving', 'optimization', 'overview', 'solver'] },
       { id: 'debugging', label: 'Debugging a Solve', blurb: 'Build incrementally, read residuals and blocking order, and seed guesses for stubborn nonlinear systems.', keywords: ['debug', 'debugging', 'troubleshoot', 'converge', 'convergence', 'diverge', 'residual', 'blocking', 'singular', 'guess', 'stall', 'wont solve', 'no solution'] },
+      { id: 'errors', label: 'Errors & Diagnostics Index', blurb: 'Every checker and solver message, with its cause and fix.', keywords: ['error', 'errors', 'message', 'diagnostic', 'singular jacobian', 'max iterations', 'stalled', 'syntax error', 'degrees of freedom', 'dof', 'coolprop', 'range', 'unit warning', 'failed', 'pending', '429', 'poison'] },
       { id: 'uncertainty', label: 'Uncertainty Propagation', blurb: 'First-order RSS error propagation via UncertaintyOf.', keywords: ['uncertainty', 'propagation', 'error', 'uncertaintyof', 'svd'] },
       { id: 'optimization', label: 'Optimization & Sweeps', blurb: 'Parametric sweeps, single-objective optimization, and Pareto fronts.', keywords: ['optimization', 'sweep', 'parametric', 'minimization', 'maximization', 'nsga', 'pareto'] },
       { id: 'api', label: 'Solver Internals & Diagnostics', blurb: 'The compile/solve pipeline and how to read convergence diagnostics.', keywords: ['api', 'solver', 'newton', 'tarjan', 'residuals', 'jacobian', 'singular', 'convergence'] },
@@ -3094,6 +3104,8 @@ function MarkdownRenderer({ content, onNavigate }: MarkdownRendererProps) {
         elements.push(<RankineCycleDiagram key={key} />);
       } else if (diagName === 'EvThermal') {
         elements.push(<EvThermalDiagram key={key} />);
+      } else if (diagName === 'LearningMap') {
+        elements.push(<LearningMapDiagram key={key} onNavigate={onNavigate} />);
       }
       i++;
       continue;
@@ -3206,7 +3218,7 @@ const ALL_CATEGORIES = [...CATEGORIES, ...REFERENCE_NAV_CATEGORIES];
 
 // Renders a single industry-standard-style reference page: frontmatter header + body +
 // references footer, with markdown/KaTeX/[Run:] handled by MarkdownRenderer.
-function ReferencePageView({ page, onNavigate }: Readonly<{ page: ReferencePage; onNavigate: (slug: string) => void }>) {
+function ReferencePageView({ page, onNavigate, onNavigateTopic }: Readonly<{ page: ReferencePage; onNavigate: (slug: string) => void; onNavigateTopic?: (id: string) => void }>) {
   return (
     <Stack gap="sm">
       <Group justify="space-between" align="flex-start">
@@ -3231,6 +3243,15 @@ function ReferencePageView({ page, onNavigate }: Readonly<{ page: ReferencePage;
                   onClick={() => onNavigate(target.slug)}>{r}</Badge>
               : <Badge key={r} color="gray" variant="light">{r}</Badge>;
           })}
+        </Group>
+      )}
+      {onNavigateTopic && page.guides.filter((g) => NAV_LABELS[g]).length > 0 && (
+        <Group gap="xs" mt="xs">
+          <Text size="sm" fw={600} c="dimmed">In the guides:</Text>
+          {page.guides.filter((g) => NAV_LABELS[g]).map((g) => (
+            <Badge key={g} component="a" style={{ cursor: 'pointer', textTransform: 'none' }} color="teal" variant="light"
+              onClick={() => onNavigateTopic(g)}>{NAV_LABELS[g]}</Badge>
+          ))}
         </Group>
       )}
     </Stack>
@@ -3359,11 +3380,36 @@ function ReferenceIndex({ onNavigate }: Readonly<{ onNavigate: (id: string) => v
   );
 }
 
+// A location.hash value that names a real portal page (guide topic, special
+// page, or refpage:slug). In-page heading anchors from the "On this page" TOC
+// are NOT topics — they must be ignored by the hash router, not navigated.
+function knownTopicId(id: string): boolean {
+  if (!id) return false;
+  if (id.startsWith('refpage:')) return REFERENCE_BY_SLUG.has(id.slice('refpage:'.length));
+  if (Object.prototype.hasOwnProperty.call(DOCS_CATALOG, id)) return true;
+  return id === 'examples' || id === 'ref-index' || id === 'ref-units' || id === 'ref-fluids';
+}
+
+const hashTopic = () => decodeURIComponent(globalThis.location.hash.slice(1));
+
 export default function HelpPage() {
   const [opened, { toggle }] = useDisclosure();
-  const [active, setActive] = useState('started');
+  // Deep-linkable pages: /help#comp-first-network, /help#refpage:bode, … The
+  // active page mirrors location.hash so doc URLs are shareable and the app's
+  // error/help links can target a specific page. Unknown hashes are left to
+  // the browser (they are in-page heading anchors).
+  const [active, setActive] = useState(() => (knownTopicId(hashTopic()) ? hashTopic() : 'started'));
   const [searchQuery, setSearchQuery] = useState('');
   const [searchFocused, setSearchFocused] = useState(false);
+
+  useEffect(() => {
+    const onHash = () => {
+      const id = hashTopic();
+      if (knownTopicId(id)) setActive(id);
+    };
+    globalThis.addEventListener('hashchange', onHash);
+    return () => globalThis.removeEventListener('hashchange', onHash);
+  }, []);
   // Examples-gallery facets: free-text filter + a single active category chip.
   const [exampleFilter, setExampleFilter] = useState('');
   const [exampleCat, setExampleCat] = useState<string | null>(null);
@@ -3375,17 +3421,21 @@ export default function HelpPage() {
     buildSearchIndex(kw);
   }, []);
 
+  // Search facet: restrict results to one kind of page (guide/reference/…).
+  const [searchKind, setSearchKind] = useState<SearchKind | null>(null);
+
   // Intelligent full-text search across all docs, catalogs, and examples.
   const searchResults = useMemo<SearchHit[]>(
-    () => (searchQuery.trim().length >= 2 ? searchDocs(searchQuery) : []),
-    [searchQuery]
+    () => (searchQuery.trim().length >= 2 ? searchDocs(searchQuery, 12, searchKind) : []),
+    [searchQuery, searchKind]
   );
 
   // When not searching, the nav shows all topics. When searching with no
   // content hits, fall back to the old label/keyword filter so the nav still
   // narrows. When content hits exist, the dropdown takes over and the nav
-  // shows the matching topic ids only.
-  const showResults = searchFocused && searchQuery.trim().length >= 2 && searchResults.length > 0;
+  // shows the matching topic ids only. An active facet keeps the dropdown
+  // open even at zero hits, so the chips stay reachable.
+  const showResults = searchFocused && searchQuery.trim().length >= 2 && (searchResults.length > 0 || searchKind !== null);
 
   const navCategories = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -3409,6 +3459,8 @@ export default function HelpPage() {
 
   const navigateTo = (id: string) => {
     setActive(id);
+    // Keep the URL shareable; guard so the hashchange listener doesn't loop.
+    if (hashTopic() !== id) globalThis.location.hash = id;
     setSearchQuery('');
     setSearchFocused(false);
     if (opened) toggle();
@@ -3536,7 +3588,7 @@ export default function HelpPage() {
 
     if (active.startsWith('refpage:')) {
       const page = REFERENCE_BY_SLUG.get(active.slice('refpage:'.length));
-      if (page) return <ReferencePageView page={page} onNavigate={(slug) => navigateTo('refpage:' + slug)} />;
+      if (page) return <ReferencePageView page={page} onNavigate={(slug) => navigateTo('refpage:' + slug)} onNavigateTopic={navigateTo} />;
     }
 
     // Reference data pages (single source of truth; the old Quick-Reference
@@ -3635,10 +3687,32 @@ export default function HelpPage() {
                 maxHeight: '60vh', overflowY: 'auto',
               }}
             >
-              <Text size="xs" c="dimmed" fw={700} px="xs" pb={4}>
-                {searchResults.length} result{searchResults.length === 1 ? '' : 's'}
-              </Text>
+              <Group gap="xs" px="xs" pb={4} justify="space-between">
+                <Text size="xs" c="dimmed" fw={700}>
+                  {searchResults.length} result{searchResults.length === 1 ? '' : 's'}
+                </Text>
+                <Group gap={4}>
+                  {SEARCH_FACETS.map(([kind, label]) => (
+                    <Badge
+                      key={kind}
+                      size="xs"
+                      variant={searchKind === kind ? 'filled' : 'light'}
+                      color="blue"
+                      style={{ cursor: 'pointer', textTransform: 'none' }}
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => setSearchKind(searchKind === kind ? null : kind)}
+                    >
+                      {label}
+                    </Badge>
+                  ))}
+                </Group>
+              </Group>
               <Divider mb={4} />
+              {searchResults.length === 0 && (
+                <Text size="xs" c="dimmed" px="xs" py={6}>
+                  No {SEARCH_FACETS.find(([k]) => k === searchKind)?.[1].toLowerCase()} results — click the chip again to search everything.
+                </Text>
+              )}
               {searchResults.map((hit, idx) => (
                 <Box
                   key={`${hit.id}-${idx}`}

@@ -1,5 +1,6 @@
 import {
   ActionIcon,
+  Anchor,
   Badge,
   Button,
   Checkbox,
@@ -614,15 +615,28 @@ interface PillContent {
   label: string
   message: string
   warnings: string[]
+  /** Deep link into the /help portal for this failure, when we recognize it. */
+  helpHref?: string
+}
+
+// Map a diagnostic message to the documentation page that explains it. The
+// portal pages are hash-addressable (/help#topic), so a failure is one click
+// from its cause-and-fix entry in the Errors & Diagnostics index.
+function helpHrefForMessage(msg: string): string {
+  const m = msg.toLowerCase()
+  if (/component|connect|port|domain|stream|fluid family/.test(m)) return '/help#comp-troubleshooting'
+  return '/help#errors'
 }
 
 function solvePill(result: SolveResponse): PillContent {
   if (!result.success) {
+    const message = result.error || 'Solve failed'
     return {
       color: 'red',
       label: 'Solve failed',
-      message: result.error || 'Solve failed',
+      message,
       warnings: [],
+      helpHref: helpHrefForMessage(message),
     }
   }
   const warnings = result.unitWarnings
@@ -641,6 +655,7 @@ function checkPill(checkResult: CheckResponse): PillContent {
       label: 'Check errors',
       message: checkResult.message,
       warnings: checkResult.unitWarnings,
+      helpHref: helpHrefForMessage(checkResult.message),
     }
   }
   const warnings = checkResult.unitWarnings
@@ -711,6 +726,11 @@ function StatusPill({ pill, hint }: Readonly<{ pill: PillContent | null; hint: s
                 </Text>
               ))}
             </Stack>
+          )}
+          {pill.helpHref && (
+            <Anchor href={pill.helpHref} target="_blank" size="xs">
+              Help with this error →
+            </Anchor>
           )}
         </Stack>
       </Popover.Dropdown>
