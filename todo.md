@@ -226,6 +226,19 @@ bytes and abort over-cap, and validate magic bytes**), `core/build.gradle` (mdf4
   uncompressed-only → rung 2 covers demos; real OEM files need the sidecar → decision goes to
   the owner with the matrix. **Fail at Gate 1/2 broadly** → sidecar rung, per ladder.
 - *Deliverable:* the support matrix + license + measured numbers + go/no-go, recorded here.
+- **SPIKE RESULT (2026-07-02, mdf4j 0.2.0, license Apache-2.0 ✓): PARTIAL.**
+  Matrix (fixtures from `backend/core/src/test/resources/measurement/generate_mdf_fixtures.py`,
+  probes in `Mf4SpikeTest`): (a) uncompressed 4.10 **PASS**; (d) VLSD **PASS** (string channel
+  listed, numeric channels extract fine — better than expected); (h) linear conversions
+  **PASS** (applied: 0.1·raw−40 verified) and multi-group **PASS**; (b) ZSTD → FAIL
+  "Unknown zip type: 2"; (c) LZ4 → FAIL "Unknown zip type: 4"; (g/e) **plain deflate DZ →
+  FAIL** ("Should not happen") — i.e. *no DZ compression of any kind*, the real boundary is
+  compression, not conversions. Gate 3 on the 99.9 MB fixture: metadata 1 ms, one-channel
+  extract 876 ms, retained heap 21 MB (lazy, never materializes the file). **Decision taken:**
+  ship Phase 3 on mdf4j for uncompressed .mf4 (typed error tells users to re-export
+  uncompressed when a compressed file is uploaded); the **asammdf-sidecar rung for
+  compressed OEM files is now an owner decision** (matrix above) — contract already pinned
+  in decision 4 below.
 **Fallback ladder (in order):** mdf4j → minimal in-house uncompressed-DT-block reader →
 **asammdf Python sidecar** (separate container; implements `MeasurementParser` remotely —
 adds a second runtime + Railway deploy unit, planned but not built until the spike fails) →

@@ -2,6 +2,8 @@ package com.frees.backend.config;
 
 import com.frees.backend.api.CyclePathResolver;
 import com.frees.backend.core.EquationSystemSolver;
+import com.frees.backend.measurement.MeasurementParser;
+import com.frees.backend.measurement.Mf4Parser;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -25,5 +27,13 @@ public class CoreBeansConfig {
     @Bean
     public CyclePathResolver cyclePathResolver() {
         return new CyclePathResolver();
+    }
+
+    @Bean
+    public MeasurementParser measurementParser() {
+        // The MeasurementParser seam is where the MF4 fallback ladder lives
+        // (mdf4j → in-house DT reader → asammdf sidecar); swapping rungs is a
+        // one-line change here.
+        return new Mf4Parser();
     }
 }

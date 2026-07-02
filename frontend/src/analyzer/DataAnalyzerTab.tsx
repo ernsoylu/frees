@@ -49,7 +49,8 @@ import {
 } from '@tabler/icons-react'
 import uPlot from 'uplot'
 import UPlotChart, { type AbCursors } from './UPlotChart'
-import { channelStore } from './channelStore'
+import { channelStore, flattenRemoteChannels } from './channelStore'
+import { uploadMeasurement } from './measurementApi'
 import { formatValue } from '../format'
 import {
   importCsvFile,
@@ -151,7 +152,9 @@ function buildStripData(
   for (const sig of strip.signals) {
     const win = channelStore.getWindow(sig, xRange?.[0] ?? null, xRange?.[1] ?? null, MAX_POINTS)
     if (win === null) {
-      missing.push(sig.channel)
+      // null = evicted/unknown (banner) OR a remote window still in flight
+      // (loaded → just wait; the store notifies when it lands).
+      if (!channelStore.isLoaded(sig.measurementId)) missing.push(sig.channel)
       continue
     }
     if (win.decimated) {
@@ -501,6 +504,50 @@ export default function DataAnalyzerTab({ singleAnalyzerId, analyzers, onAnalyze
       setImporting(true)
       setImportError(null)
       try {
+        // .mf4 goes to the backend measurement service (RemoteSource); the
+        // browser only ever sees windowed decimated envelopes.
+        if (file.name.toLowerCase().endsWith('.mf4')) {
+          const remote = await uploadMeasurement(file)
+          if (relocateId !== undefined) {
+            const required = spec.strips
+              .flatMap((s) => s.signals)
+              .filter((sig) => sig.measurementId === relocateId)
+              .map((sig) => sig.channel)
+            const stored = spec.files.find((f) => f.measurementId === relocateId)?.signature
+            const check = checkRelocatedFile(
+              [...new Set(required)],
+              flattenRemoteChannels(remote).map((c) => c.display),
+              stored ?? { name: file.name, size: -1, headerHash: 'mf4' },
+              { size: remote.size, headerHash: 'mf4' },
+            )
+            if (check.status === 'rejected') {
+              setImportError(
+                `Wrong file: it is missing the channel(s) ${check.missingChannels.join(', ')} that this analyzer uses.`,
+              )
+              return
+            }
+            // Advisory (size drift) applies immediately for remote files —
+            // the upload already happened; the strips just rebind.
+            const meta = channelStore.registerRemote(remote, spec.id, relocateId)
+            updateSpec((cur) => ({
+              ...cur,
+              files: cur.files.map((f) =>
+                f.measurementId === relocateId ? { ...f, signature: meta.signature } : f,
+              ),
+            }))
+          } else {
+            const meta = channelStore.registerRemote(remote, spec.id)
+            updateSpec((cur) => ({
+              ...cur,
+              files: [
+                ...cur.files,
+                { measurementId: meta.measurementId, signature: meta.signature },
+              ],
+            }))
+          }
+          dispatch({ type: 'reset-zoom' })
+          return
+        }
         const outcome = await importCsvFile(file, choice)
         if (outcome.status === 'needs-time') {
           setPendingTime({ file, candidates: outcome.candidates, relocateId })
@@ -655,7 +702,7 @@ export default function DataAnalyzerTab({ singleAnalyzerId, analyzers, onAnalyze
         style={{ borderRight: '1px solid var(--mantine-color-default-border)', flexShrink: 0 }}
       >
         <Group gap="xs" wrap="nowrap">
-          <FileButton onChange={(f) => void handleImport(f)} accept=".csv,.tsv,.txt,text/csv">
+          <FileButton onChange={(f) => void handleImport(f)} accept=".csv,.tsv,.txt,.mf4,text/csv">
             {(props) => (
               <Button
                 {...props}
@@ -664,7 +711,7 @@ export default function DataAnalyzerTab({ singleAnalyzerId, analyzers, onAnalyze
                 leftSection={<IconFileImport size={14} />}
                 loading={importing}
               >
-                Import CSV/TSV
+                Import CSV/MF4
               </Button>
             )}
           </FileButton>
@@ -711,6 +758,7 @@ export default function DataAnalyzerTab({ singleAnalyzerId, analyzers, onAnalyze
             {spec.files.map((f) => {
               const meta = channelStore.getMeta(f.measurementId)
               const loaded = channelStore.isLoaded(f.measurementId)
+              const remoteError = channelStore.remoteError(f.measurementId)
               return (
                 <Box key={f.measurementId}>
                   <Group justify="space-between" gap={4} wrap="nowrap">
@@ -733,6 +781,11 @@ export default function DataAnalyzerTab({ singleAnalyzerId, analyzers, onAnalyze
                       {meta.totalSamples.toLocaleString()} samples · {meta.channels.length} channels
                     </Text>
                   )}
+                  {remoteError !== null && (
+                    <Alert color="red" p={6} mt={4} icon={<IconAlertTriangle size={14} />}>
+                      <Text size="xs">{remoteError}</Text>
+                    </Alert>
+                  )}
                   {!loaded && (
                     // Template mode (§2.5b): the layout survived the project
                     // round-trip; the samples did not. One re-pick repopulates
@@ -745,7 +798,7 @@ export default function DataAnalyzerTab({ singleAnalyzerId, analyzers, onAnalyze
                         </Text>
                         <FileButton
                           onChange={(nf) => void handleImport(nf, undefined, f.measurementId)}
-                          accept=".csv,.tsv,.txt,text/csv"
+                          accept=".csv,.tsv,.txt,.mf4,text/csv"
                         >
                           {(props) => (
                             <Button
