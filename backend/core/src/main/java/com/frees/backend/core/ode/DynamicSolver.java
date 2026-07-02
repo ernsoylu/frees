@@ -565,32 +565,37 @@ public final class DynamicSolver {
             }
         }
         if (setEvent >= 0) {
-            // Discrete reassignment: overwrite the state at the crossing,
-            // re-initialize IDA there, and let IDACalcIC re-derive the
-            // algebraic variables consistent with the modified state.
-            double[] y = step.y().clone();
-            double[] yp = step.yp().clone();
-            Map<String, Double> v = daeValues(step.t(), y, yp);
-            y[idaEventSetIdx[setEvent]] = Evaluator.eval(idaEventSetExpr[setEvent], v, defs);
-            s.reinit(step.t(), y, yp);
-            // IDACalcIC's tout1 is a direction hint and must lie strictly
-            // beyond the reinit time (the root can land exactly on tout).
-            double hint = step.t() + Math.max(1e-9, 1e-6 * Math.abs(step.t()));
-            try {
-                s.calcConsistentIc(SundialsIda.IDA_YA_YDP_INIT, Math.max(tout, hint));
-            } catch (IllegalStateException icFailed) {
-                // Integrate from the reassigned state; the first BDF step
-                // absorbs any small residual (same fallback as at t0).
-            }
-            if (step.t() >= tout) {
-                // The crossing coincided with the requested sample: report
-                // the post-set state rather than asking IDA for tout == t.
-                return new RootOutcome(true,
-                        new IdaDaeSolver.Step(step.t(), y, yp, 0, step.rootsFound()));
-            }
-            return new RootOutcome(false, null);
+            return applySetEvent(s, step, tout, setEvent);
         }
         return new RootOutcome(step.t() >= tout, step.t() >= tout ? step : null);
+    }
+
+    /** Discrete reassignment: overwrite the state at the crossing, re-initialize
+     *  IDA there, and let IDACalcIC re-derive the algebraic variables consistent
+     *  with the modified state. */
+    private RootOutcome applySetEvent(IdaDaeSolver s, IdaDaeSolver.Step step, double tout,
+                                      int setEvent) {
+        double[] y = step.y().clone();
+        double[] yp = step.yp().clone();
+        Map<String, Double> v = daeValues(step.t(), y, yp);
+        y[idaEventSetIdx[setEvent]] = Evaluator.eval(idaEventSetExpr[setEvent], v, defs);
+        s.reinit(step.t(), y, yp);
+        // IDACalcIC's tout1 is a direction hint and must lie strictly
+        // beyond the reinit time (the root can land exactly on tout).
+        double hint = step.t() + Math.max(1e-9, 1e-6 * Math.abs(step.t()));
+        try {
+            s.calcConsistentIc(SundialsIda.IDA_YA_YDP_INIT, Math.max(tout, hint));
+        } catch (IllegalStateException icFailed) {
+            // Integrate from the reassigned state; the first BDF step
+            // absorbs any small residual (same fallback as at t0).
+        }
+        if (step.t() >= tout) {
+            // The crossing coincided with the requested sample: report
+            // the post-set state rather than asking IDA for tout == t.
+            return new RootOutcome(true,
+                    new IdaDaeSolver.Step(step.t(), y, yp, 0, step.rootsFound()));
+        }
+        return new RootOutcome(false, null);
     }
 
     private List<Double> rowOf(double t, double[] y) {

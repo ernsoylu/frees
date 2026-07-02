@@ -797,11 +797,12 @@ public final class Evaluator {
     }
 
     private static final String DTABLE1 = "dtable1";
+    private static final String DIFFERENTIATE1 = "differentiate1";
 
     /** classic-solver-compatible TABLE lookup/interpolation function names. */
     private static final java.util.Set<String> TABLE_FUNCTIONS = java.util.Set.of(
             "interpolate", "interpolate1", "interpolate2d",
-            "lookup", "lookuprow", "nlookuprows", "differentiate", "differentiate1",
+            "lookup", "lookuprow", "nlookuprows", "differentiate", DIFFERENTIATE1,
             "dtable", DTABLE1);
 
     // classic-solver-compatible lookup/interpolation functions delegating to a named TABLE.
@@ -831,10 +832,10 @@ public final class Evaluator {
             case "lookuprow" -> com.frees.backend.core.CurveInterpolator.lookupRow(cd,
                     (int) Math.round(argAt(fn, args, 1, values, defs)),
                     argAt(fn, args, 2, values, defs));
-            case "differentiate", "differentiate1" -> com.frees.backend.core.CurveInterpolator.differentiate(cd,
+            case "differentiate", DIFFERENTIATE1 -> com.frees.backend.core.CurveInterpolator.differentiate(cd,
                     (int) Math.round(argAt(fn, args, 1, values, defs)),
                     (int) Math.round(argAt(fn, args, 2, values, defs)),
-                    argAt(fn, args, 3, values, defs), fn.equals("differentiate1"));
+                    argAt(fn, args, 3, values, defs), fn.equals(DIFFERENTIATE1));
             // Derivative of the interpolant a bare `t(x)` call evaluates: the exact
             // segment slope (dtable) or the cubic-spline derivative (dtable1).
             // First y curve vs the x column — the 1-D map-call convention, so a

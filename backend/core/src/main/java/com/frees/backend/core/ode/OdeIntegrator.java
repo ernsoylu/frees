@@ -33,7 +33,7 @@ public final class OdeIntegrator {
         double[] times = new double[count];
         for (int i = 0; i < count; i++) {
             times[i] = count == 1 ? tr.endTime
-                    : p.t0() + (tr.endTime - p.t0()) * i / (double) (count - 1);
+                    : p.t0() + (tr.endTime - p.t0()) * i / (count - 1);
         }
         double[][] states = interpolateAt(tr.knotT, tr.knotY, tr.knotF, times);
         return new OdeResult(times, states, tr.recorded, tr.stopped, tr.endTime,
