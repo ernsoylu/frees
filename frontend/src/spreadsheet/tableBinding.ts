@@ -194,6 +194,11 @@ export interface SheetEditsResult {
   errorCells: string[]
   /** Content existed beyond the bound columns / row cap (host clears it). */
   outOfRegion: boolean
+  /** Parametric only: the display-only Run column no longer matches the
+   * materialized labels — e.g. the user drag-filled run numbers into it
+   * (Univer's fill-drag can write through range protection). The host must
+   * repaint the sheet to repair it. */
+  runColumnDrift?: boolean
 }
 
 export function sheetEditsToSpec(spec: TableSpec, read: RegionRead): SheetEditsResult {
@@ -294,6 +299,28 @@ function paramSheetEditsToSpec(prev: ParamTableSpec, read: RegionRead): SheetEdi
     }
   }
 
+  // The Run column is display-only, but Univer's fill-drag can write through
+  // range protection. Detect any drift from the materialized labels —
+  // content beyond the run count, a tampered label, or a missing label on a
+  // freshly grown row — so the host repaints the sheet instead of leaving
+  // half-stale run numbers behind.
+  let runColumnDrift = false
+  const runRows = Math.max(read.values.length, rows.length + HEADER_ROW_COUNT)
+  for (let r = HEADER_ROW_COUNT; r < runRows; r++) {
+    const raw = read.values[r]?.[0]
+    const text = raw === null || raw === undefined ? '' : String(raw).trim()
+    const runIndex = r - HEADER_ROW_COUNT
+    if (runIndex >= rows.length) {
+      if (text !== '') {
+        runColumnDrift = true
+        break
+      }
+    } else if (text !== `${runIndex + 1}` && text !== `${runIndex + 1} ✗`) {
+      runColumnDrift = true
+      break
+    }
+  }
+
   const spec: ParamTableSpec = {
     ...prev,
     rows,
@@ -302,7 +329,7 @@ function paramSheetEditsToSpec(prev: ParamTableSpec, read: RegionRead): SheetEdi
       ? { results: [], stats: null, checkResult: null, checkMessage: '' }
       : {}),
   }
-  return { spec, truncated, errorCells, outOfRegion }
+  return { spec, truncated, errorCells, outOfRegion, runColumnDrift }
 }
 
 function functionSheetEditsToSpec(spec: FunctionTableSpec, read: RegionRead): SheetEditsResult {
