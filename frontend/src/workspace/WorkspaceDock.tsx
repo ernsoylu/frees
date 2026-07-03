@@ -123,6 +123,22 @@ export interface OpenWindow {
   title: string
 }
 
+/** Named layout presets ("perspectives") a user can jump between without
+ *  hand-rearranging panels after an accidental close/drag. */
+export type LayoutPerspective = 'default' | 'results' | 'split'
+
+// Each perspective is groups of tabbed center panels laid out left→right, plus
+// whether the right edge group (Variable Explorer / Inspector) starts expanded.
+// 'default' is not listed: it delegates to buildDefault so it always tracks the
+// `defaultOpen` prop.
+const PERSPECTIVES: Record<Exclude<LayoutPerspective, 'default'>, { center: string[][]; expandEdge: boolean }> = {
+  // Editor beside the solved outputs (Plots tabbed with Fluid States), with the
+  // Variable Explorer expanded — everything a re-solve changes, on one screen.
+  results: { center: [['equations'], ['plots', 'states']], expandEdge: true },
+  // A clean 50/50 Editor | Plots split; the edge group stays collapsed.
+  split: { center: [['equations'], ['plots']], expandEdge: false },
+}
+
 export interface WorkspaceDockHandle {
   /** Open (or focus) a singleton window whose id equals its kind. */
   open: (kind: string) => void
@@ -137,6 +153,8 @@ export interface WorkspaceDockHandle {
   reset: () => void
   /** Restore a previously-serialised dockview layout (from a project file). */
   restore: (layout: unknown) => void
+  /** Rebuild the dock as one of the named layout presets. */
+  applyPerspective: (perspective: LayoutPerspective) => void
 }
 
 interface Props {
@@ -276,6 +294,50 @@ export function WorkspaceDock({
     api.panels.find((p) => !edgeKindsRef.current.includes(kindOf(p)))?.api.setActive()
   }
 
+  const buildPerspective = (api: DockviewApi, perspective: LayoutPerspective) => {
+    if (perspective === 'default') {
+      buildDefault(api)
+      return
+    }
+    const spec = PERSPECTIVES[perspective]
+    api.clear()
+    spec.center.forEach((group, gi) => {
+      group.forEach((id, pi) => {
+        api.addPanel({
+          id,
+          component: 'panel',
+          title: titlesRef.current[id] ?? id,
+          params: { kind: id },
+          // First panel of the first group anchors; later groups split to the
+          // right; later panels within a group tab onto the group's first.
+          position: pi > 0 ? { referencePanel: group[0] } : gi === 0 ? undefined : { direction: 'right' },
+        })
+      })
+    })
+    // The edge chrome (Variable Explorer / Inspector) is part of every
+    // perspective; only whether it starts expanded varies.
+    ensureRightEdge(api)
+    for (const id of edgeKindsRef.current) {
+      api.addPanel({
+        id,
+        component: 'panel',
+        title: titlesRef.current[id] ?? id,
+        params: { kind: id },
+        position: { referenceGroup: RIGHT_EDGE_ID },
+      })
+    }
+    if (spec.expandEdge) {
+      api.getEdgeGroup('right')?.expand()
+      // The last-added edge panel (Inspector) is active by default; the
+      // Variable Explorer is the edge tab a results layout is about.
+      api.getPanel(edgeKindsRef.current[0])?.api.setActive()
+    }
+    // Show each group's first tab, ending on the editor group.
+    for (const group of [...spec.center].reverse()) {
+      api.getPanel(group[0])?.api.setActive()
+    }
+  }
+
   // Expose the imperative handle.
   useEffect(() => {
     if (!handleRef) return
@@ -315,6 +377,9 @@ export function WorkspaceDock({
           // Corrupt or version-mismatched layout — fall back to default.
           buildDefault(apiRef.current)
         }
+      },
+      applyPerspective: (perspective) => {
+        if (apiRef.current) buildPerspective(apiRef.current, perspective)
       },
     }
     return () => {

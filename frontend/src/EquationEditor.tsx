@@ -1,7 +1,8 @@
-import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef } from 'react'
+import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react'
 import { useComputedColorScheme } from '@mantine/core'
 import CodeMirror, { ReactCodeMirrorRef } from '@uiw/react-codemirror'
 import { Decoration, DecorationSet, EditorView, keymap } from '@codemirror/view'
+import { Diagnostic, lintGutter, setDiagnostics } from '@codemirror/lint'
 import { REFERENCE_SLUGS } from './docsTopics'
 import { Extension, StateEffect, StateField } from '@codemirror/state'
 import { HighlightStyle, StreamLanguage, StringStream, syntaxHighlighting } from '@codemirror/language'
@@ -16,6 +17,9 @@ export interface EquationEditorHandle {
   /** Append `text` as its own line at the end of the document, guaranteeing a
    *  line break before and after so repeated calls each land on a fresh line. */
   insertStatement: (text: string) => void
+  /** Replace the whole document (project load, examples, generated equations).
+   *  Does NOT fire onChange — the caller already holds the new text. */
+  setDoc: (text: string) => void
   goToLine: (line: number) => void
   focus: () => void
 }
@@ -176,6 +180,18 @@ function makeFreesTheme(dark: boolean) {
         backgroundColor: 'rgba(250, 82, 82, 0.13)',
         boxShadow: 'inset 2px 0 0 var(--mantine-color-red-6)',
       },
+      // Lint hover tooltip (diagnostic message) styled to the Mantine surface.
+      '.cm-tooltip': {
+        backgroundColor: dark ? 'var(--mantine-color-dark-6)' : 'var(--mantine-color-white)',
+        color: dark ? 'var(--mantine-color-dark-0)' : 'var(--mantine-color-gray-9)',
+        border: '1px solid var(--mantine-color-default-border)',
+        borderRadius: 'var(--mantine-radius-sm)',
+      },
+      '.cm-tooltip-lint': {
+        fontFamily: 'var(--mantine-font-family)',
+        fontSize: 'var(--mantine-font-size-xs)',
+      },
+      '.cm-diagnostic-error': { borderLeft: '3px solid var(--mantine-color-red-6)' },
       '&.cm-focused': { outline: 'none' },
     },
     { dark },
@@ -207,6 +223,25 @@ const errorLineField = StateField.define<DecorationSet>({
   provide: (field) => EditorView.decorations.from(field),
 })
 
+// Paint the reported error as both the full-line tint (errorLineField) and a
+// lint diagnostic spanning the line — squiggle, gutter marker, and a hover
+// tooltip carrying the actual message instead of just "syntax error".
+function applyErrorMark(view: EditorView, errorLine: number | null, errorMessage?: string | null) {
+  const valid = errorLine != null && errorLine >= 1 && errorLine <= view.state.doc.lines
+  view.dispatch({ effects: setErrorLine.of(valid ? errorLine : null) })
+  const diagnostics: Diagnostic[] = []
+  if (valid) {
+    const target = view.state.doc.line(errorLine)
+    diagnostics.push({
+      from: target.from,
+      to: target.to,
+      severity: 'error',
+      message: errorMessage?.trim() || `Syntax error on line ${errorLine}`,
+    })
+  }
+  view.dispatch(setDiagnostics(view.state, diagnostics))
+}
+
 function makeCompletionSource(
   namesRef: React.MutableRefObject<{ functions: string[]; variables: string[] }>,
 ) {
@@ -223,10 +258,15 @@ function makeCompletionSource(
 }
 
 interface Props {
-  value: string
+  /** Document at mount time (lazy — called once). The editor owns the text
+   *  afterwards (uncontrolled); programmatic replacements go through the
+   *  setDoc() handle, so parent re-renders can never reset the doc mid-typing. */
+  initialDoc: () => string
   onChange: (value: string) => void
   variables: string[]
   errorLine: number | null
+  /** Message for the error on `errorLine`, surfaced as the lint hover tooltip. */
+  errorMessage?: string | null
   placeholder?: string
 }
 
@@ -256,11 +296,17 @@ const f1ContextualHelp = keymap.of([
 ])
 
 function EquationEditorInner(
-  { value, onChange, variables, errorLine, placeholder }: Readonly<Props>,
+  { initialDoc, onChange, variables, errorLine, errorMessage, placeholder }: Readonly<Props>,
   ref: React.Ref<EquationEditorHandle>,
 ) {
   const cmRef = useRef<ReactCodeMirrorRef>(null)
   const viewRef = useRef<EditorView | null>(null)
+  // Frozen at mount (initialDoc doubles as the lazy initializer); never updated,
+  // so the CodeMirror wrapper's value-sync effect can never clobber user typing.
+  const [mountDoc] = useState(initialDoc)
+  // Set while setDoc() replaces the document so the change doesn't echo back
+  // through onChange as if the user had typed it.
+  const programmaticRef = useRef(false)
   // Read by the (stable) completion source so suggestions always reflect the
   // latest variable list without reconfiguring the editor.
   const namesRef = useRef({ functions: FUNCTION_NAMES, variables })
@@ -278,17 +324,18 @@ function EquationEditorInner(
       syntaxHighlighting(isDark ? freesHighlightDark : freesHighlightLight),
       makeFreesTheme(isDark),
       errorLineField,
+      lintGutter(),
       f1ContextualHelp,
     ],
     [isDark],
   )
 
-  // Push the error-line decoration whenever the prop changes (and once on mount,
-  // after onCreateEditor has captured the view).
+  // Push the error decoration + diagnostic whenever the reported error changes
+  // (and once on mount, after onCreateEditor has captured the view).
   useEffect(() => {
     const view = viewRef.current
-    if (view) view.dispatch({ effects: setErrorLine.of(errorLine) })
-  }, [errorLine])
+    if (view) applyErrorMark(view, errorLine, errorMessage)
+  }, [errorLine, errorMessage])
 
   useImperativeHandle(
     ref,
@@ -323,6 +370,19 @@ function EquationEditorInner(
         })
         view.focus()
       },
+      setDoc(text: string) {
+        const view = viewRef.current
+        if (!view) return
+        programmaticRef.current = true
+        try {
+          view.dispatch({
+            changes: { from: 0, to: view.state.doc.length, insert: text },
+            selection: { anchor: 0 },
+          })
+        } finally {
+          programmaticRef.current = false
+        }
+      },
       goToLine(line: number) {
         const view = viewRef.current
         if (!view) return
@@ -344,8 +404,10 @@ function EquationEditorInner(
   return (
     <CodeMirror
       ref={cmRef}
-      value={value}
-      onChange={onChange}
+      value={mountDoc}
+      onChange={(v) => {
+        if (!programmaticRef.current) onChange(v)
+      }}
       extensions={extensions}
       placeholder={placeholder}
       theme="none"
@@ -354,7 +416,7 @@ function EquationEditorInner(
       basicSetup={{ foldGutter: false, highlightActiveLine: true, bracketMatching: true }}
       onCreateEditor={(view) => {
         viewRef.current = view
-        view.dispatch({ effects: setErrorLine.of(errorLine) })
+        applyErrorMark(view, errorLine, errorMessage)
       }}
     />
   )
