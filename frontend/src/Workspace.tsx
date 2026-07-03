@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { lazy, Suspense, useDeferredValue, useMemo, useState } from 'react'
 import {
   Badge,
   Group,
@@ -32,6 +32,15 @@ import { formatValue } from './format'
  */
 
 const ARRAY_ELEMENT_REGEX = /^([^[]+)\[([\d,\s-]+)\]$/
+
+// Beyond these sizes the Mantine tables (one DOM node per cell) are replaced by
+// lazy-loaded virtualized canvas grids, so render cost stops scaling with the
+// solved system. Below them the richer DOM tables (badges, hover) are kept.
+const VIRTUALIZE_SCALARS_AT = 200
+const VIRTUALIZE_CELLS_AT = 400
+const ScalarGrid = lazy(() => import('./WorkspaceGrids').then((m) => ({ default: m.ScalarGrid })))
+const MatrixGrid = lazy(() => import('./WorkspaceGrids').then((m) => ({ default: m.MatrixGrid })))
+const gridFallback = <Text size="xs" c="dimmed">Loading grid…</Text>
 
 export interface ArrayGroup {
   name: string
@@ -230,7 +239,14 @@ function ArrayRow({ g }: Readonly<{ g: ArrayGroup }>) {
         </Group>
         {g.units && <Text size="xs" c="dimmed" ff="monospace">[{g.units}]</Text>}
       </Group>
-      {open && (
+      {open && g.cells.size > VIRTUALIZE_CELLS_AT && (
+        <div style={{ padding: 8 }}>
+          <Suspense fallback={gridFallback}>
+            <MatrixGrid g={g} />
+          </Suspense>
+        </div>
+      )}
+      {open && g.cells.size <= VIRTUALIZE_CELLS_AT && (
         <div style={{ overflowX: 'auto', padding: 8 }}>
           {g.is2D ? (
             <Table withTableBorder withColumnBorders striped>
@@ -391,10 +407,14 @@ interface Props {
 
 export default function Workspace({ variables, replNames, components: instances, onEdit, onExportSpreadsheet }: Readonly<Props>) {
   const [query, setQuery] = useState('')
+  // The input stays urgent (every keystroke paints immediately); the heavy
+  // filter + regroup below trails behind at transition priority, so typing in
+  // the search box never blocks on a large workspace.
+  const deferredQuery = useDeferredValue(query)
   const repl = replNames ?? new Set<string>()
 
   const { plain, components, groups } = useMemo(() => {
-    const q = query.trim().toLowerCase()
+    const q = deferredQuery.trim().toLowerCase()
     const filtered = q ? variables.filter((v) => v.name.toLowerCase().includes(q)) : variables
     const grouped = group(filtered)
     // A component matches the filter by its name, type, or any parameter; its
@@ -408,7 +428,7 @@ export default function Workspace({ variables, replNames, components: instances,
     )
     const { plain, components } = groupComponents(grouped.scalars, inst)
     return { plain, components, groups: grouped.groups }
-  }, [variables, query, instances])
+  }, [variables, deferredQuery, instances])
 
   const empty = variables.length === 0
 
@@ -463,7 +483,14 @@ export default function Workspace({ variables, replNames, components: instances,
         </Text>
       ) : (
         <Stack gap="md">
-          {plain.length > 0 && <ScalarTable scalars={plain} replNames={repl} />}
+          {plain.length > 0 &&
+            (plain.length > VIRTUALIZE_SCALARS_AT ? (
+              <Suspense fallback={gridFallback}>
+                <ScalarGrid scalars={plain} replNames={repl} />
+              </Suspense>
+            ) : (
+              <ScalarTable scalars={plain} replNames={repl} />
+            ))}
           {components.length > 0 && (
             <Stack gap="xs">
               <Group gap={6}>
@@ -483,7 +510,7 @@ export default function Workspace({ variables, replNames, components: instances,
             </Stack>
           )}
           {plain.length === 0 && components.length === 0 && groups.length === 0 && (
-            <Text c="dimmed" size="sm">No variables match “{query}”.</Text>
+            <Text c="dimmed" size="sm">No variables match “{deferredQuery}”.</Text>
           )}
         </Stack>
       )}
