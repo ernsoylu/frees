@@ -62,13 +62,13 @@ import VariableInfoModal, {
 
 import ConfigureTableModal from './ConfigureTableModal'
 import AlterValuesModal from './AlterValuesModal'
-import { newParamRow } from './ParametricTableTab'
 import TablesTab from './TablesTab'
 import {
   functionTableFromDigitizer,
   loadTables,
   mergeCodeTables,
   newFunctionTable,
+  newParamRow,
   newParamTable,
   ParamTableSpec,
   saveTables,
@@ -82,6 +82,12 @@ import { loadWhiteboards, newWhiteboard, saveWhiteboards } from './whiteboard/wh
 import { WhiteboardSpec } from './whiteboard/types'
 import { loadSpreadsheets, newSpreadsheet, saveSpreadsheets } from './spreadsheet/spreadsheetStorage'
 import { emptySpreadsheetData, type SpreadsheetSpec } from './spreadsheet/types'
+import {
+  flushTablesWorkbook,
+  isHostedTable,
+  TABLES_WORKBOOK_WINDOW_ID,
+} from './spreadsheet/tablesWorkbookBridge'
+import { buildSnapshotSheet, type SnapshotInput } from './spreadsheet/snapshot'
 import { newAnalyzer, type AnalyzerSpec } from './analyzer/types'
 import { channelStore } from './analyzer/channelStore'
 import { substituteSsheetRefs } from './spreadsheet/ssheetResolver'
@@ -97,6 +103,10 @@ const DigitizerTab = lazy(() =>
 // so the Excalidraw bundle is only fetched when a whiteboard window opens.
 const WhiteboardTab = lazy(() => import('./whiteboard/WhiteboardTab'))
 const SpreadsheetTab = lazy(() => import('./spreadsheet/SpreadsheetTab'))
+// The Univer Tables workbook (function/lookup tables as bound sheets) shares
+// the Univer chunk with SpreadsheetTab; lazy so tables-only sessions without
+// it opened never fetch the engine.
+const TablesWorkbookTab = lazy(() => import('./spreadsheet/TablesWorkbookTab'))
 // The Data Analyzer (uPlot + papaparse) is code-split so the measurement
 // tooling is only fetched when an analyzer window opens.
 const DataAnalyzerTab = lazy(() => import('./analyzer/DataAnalyzerTab'))
@@ -515,123 +525,11 @@ export default function App() {
     })
   }, [result])
 
-  // Phase 4.3: Linked Table View - Sync tables to spreadsheets
-  useEffect(() => {
-    setSpreadsheets((prev) => {
-      let changed = false
-      const next = prev.map((ss) => {
-        if (!ss.linkedTableId) return ss
-        const rawT = tables.find((x) => x.id === ss.linkedTableId)
-        if (!rawT || rawT.kind !== 'parametric') return ss
-        const t = rawT as import('./tables').ParamTableSpec
-
-        let sheetChanged = false
-        const newSheets = [...(ss.sheets as any[])]
-        const targetSheet = { ...newSheets[0] }
-        targetSheet.celldata = [...(targetSheet.celldata || [])]
-
-        const headerRow = targetSheet.celldata.filter((cd: any) => cd.r === 0)
-        const colMap: Record<string, number> = {}
-        for (const cell of headerRow) {
-          if (cell.v?.v && cell.v.v !== 'Run') {
-            colMap[String(cell.v.v)] = cell.c
-          }
-        }
-
-        for (let i = 0; i < t.rows.length; i++) {
-          const r = i + 1
-          for (const v of t.vars) {
-            const c = colMap[v]
-            if (c === undefined) continue
-
-            const draft = t.rows[i].values[v]
-            const computed = t.results[i]?.success ? t.results[i].values[v] : undefined
-            const val = draft && draft.trim() !== '' ? draft : (computed !== undefined ? String(computed) : '')
-
-            const cellIndex = targetSheet.celldata.findIndex((cd: any) => cd.r === r && cd.c === c)
-            if (cellIndex !== -1) {
-              if (String(targetSheet.celldata[cellIndex].v?.v) !== String(val)) {
-                targetSheet.celldata[cellIndex] = { ...targetSheet.celldata[cellIndex], v: { ...targetSheet.celldata[cellIndex].v, v: val, m: String(val) } }
-                sheetChanged = true
-              }
-            } else if (val !== '') {
-              targetSheet.celldata.push({ r, c, v: { v: val, m: String(val) } })
-              sheetChanged = true
-            }
-          }
-        }
-
-        if (sheetChanged) {
-          changed = true
-          newSheets[0] = targetSheet
-          return { ...ss, sheets: newSheets }
-        }
-        return ss
-      })
-      return changed ? next : prev
-    })
-  }, [tables])
-
-  // Phase 4.3: Linked Table View - Sync spreadsheets to tables
-  useEffect(() => {
-    setTables((prev) => {
-      let changed = false
-      const next = prev.map((rawT) => {
-        const ss = spreadsheets.find((x) => x.linkedTableId === rawT.id)
-        if (!ss || rawT.kind !== 'parametric') return rawT
-        const t = rawT as import('./tables').ParamTableSpec
-
-        let tableChanged = false
-        const targetSheet = (ss.sheets[0] as any)
-        const headerRow = targetSheet.celldata?.filter((cd: any) => cd.r === 0) || []
-        const colMap: Record<number, string> = {}
-        for (const cell of headerRow) {
-          if (cell.v?.v && cell.v.v !== 'Run') {
-            colMap[cell.c] = String(cell.v.v)
-          }
-        }
-
-        const newRows = [...t.rows]
-        let maxRow = 0
-        for (const cell of targetSheet.celldata || []) {
-          if (cell.r > maxRow) maxRow = cell.r
-        }
-        
-        while (newRows.length < maxRow) {
-          newRows.push({ id: crypto.randomUUID(), values: {} })
-          tableChanged = true
-        }
-
-        for (let i = 0; i < maxRow; i++) {
-          const r = i + 1
-          for (const [cStr, varName] of Object.entries(colMap)) {
-            if (!t.vars.includes(varName)) continue
-            const c = Number(cStr)
-            const cell = targetSheet.celldata.find((cd: any) => cd.r === r && cd.c === c)
-            const val = cell?.v?.v !== undefined && cell.v.v !== null ? String(cell.v.v) : ''
-            
-            const computed = t.results[i]?.success ? String(t.results[i].values[varName]) : undefined
-            if (val !== '' && val !== computed) {
-              if (newRows[i].values[varName] !== val) {
-                newRows[i] = { ...newRows[i], values: { ...newRows[i].values, [varName]: val } }
-                tableChanged = true
-              }
-            } else if (val === '' && newRows[i].values[varName] !== undefined && newRows[i].values[varName] !== '') {
-              newRows[i] = { ...newRows[i], values: { ...newRows[i].values, [varName]: '' } }
-              tableChanged = true
-            }
-          }
-        }
-
-        if (tableChanged) {
-          changed = true
-          return { ...t, rows: newRows }
-        }
-        return t
-      })
-      return changed ? next : prev
-    })
-  }, [spreadsheets])
+  // Linked Table View (the old one-off parametric<->spreadsheet sync) is
+  // superseded by the Tables workbook, which hosts GUI parametric tables as
+  // bound sheets. `SpreadsheetSpec.linkedTableId` is kept INERT on load and
+  // in saved files (downgrade-safe, contract d of the unification plan) and
+  // is only stripped by an explicit Unlink in the spreadsheet toolbar.
 
   // Mark the project dirty whenever content changes, unless the change came from
   // an explicit load/new/save (suppressDirtyRef lets those operations opt out).
@@ -667,11 +565,20 @@ export default function App() {
     channelStore.clear()
     setAnalyzers(p.analyzers ?? [])
     const awaiting = (p.analyzers ?? []).filter((a) => a.files.length > 0).length
-    setLoadNotice(
-      awaiting > 0
-        ? `${awaiting} analyzer window${awaiting === 1 ? '' : 's'} awaiting measurement files — open them and use “Locate file…”.`
-        : null,
-    )
+    const notices: string[] = []
+    if (awaiting > 0) {
+      notices.push(
+        `${awaiting} analyzer window${awaiting === 1 ? '' : 's'} awaiting measurement files — open them and use “Locate file…”.`,
+      )
+    }
+    // Legacy linked-table views are inert now (superseded by the Tables
+    // workbook); the field is preserved for downgrade safety (contract d).
+    if ((p.spreadsheets ?? []).some((s) => s.linkedTableId)) {
+      notices.push(
+        'This project used a linked table view — parametric tables now live in the Tables window; the old link is inactive (Unlink in the spreadsheet toolbar removes it).',
+      )
+    }
+    setLoadNotice(notices.length > 0 ? notices.join(' ') : null)
     setResult(null)
     setCheckResult(null)
     writeBridgedKeys(p)
@@ -833,12 +740,21 @@ export default function App() {
   // TopBar's Check Table / Run Table buttons and status pill track this table.
   const focusedParam: ParamTableSpec | null = (() => {
     if (focusedWindow?.kind !== 'table') return null
+    // The Tables workbook window tracks whichever hosted table is active.
+    if (focusedWindow.id === TABLES_WORKBOOK_WINDOW_ID) return activeParam
     const t = tables.find((x) => `table:${x.id}` === focusedWindow.id)
     return t?.kind === 'parametric' ? t : null
   })()
   const tableCheckResult = focusedParam?.checkResult ?? null
   const tableCheckMessage = focusedParam?.checkMessage ?? ''
-  const functionTableDtos = toFunctionTableDtos(tables)
+  // Function-table wire payloads. When the Univer Tables workbook is mounted,
+  // flush its pending sheet→spec sync first (contract b's pre-DTO scrape) and
+  // build from the returned fresh specs — React state lands a render later,
+  // too late for the calling handler's closure.
+  const functionTableDtos = () => {
+    const fresh = flushTablesWorkbook()
+    return fresh ? toFunctionTableDtos(fresh) : toFunctionTableDtos(tables)
+  }
 
   function updateParamTable(id: string, update: (t: ParamTableSpec) => ParamTableSpec) {
     setTables((all) =>
@@ -855,6 +771,9 @@ export default function App() {
     setTables((all) => [...all, table])
     setActiveTableId(table.id)
     setActiveTab('table')
+    requestAnimationFrame(() =>
+      dockRef.current?.openInstance(TABLES_WORKBOOK_WINDOW_ID, 'table', 'Tables'),
+    )
   }
 
   const handleStateUnitIdsChange = (
@@ -1031,7 +950,7 @@ export default function App() {
         effectiveText(),
         buildVariableInfo(),
         complexMode,
-        functionTableDtos,
+        functionTableDtos(),
         Object.values(replVars).map(replOverrideEquation),
       )
       setCheckResult(response)
@@ -1090,22 +1009,20 @@ export default function App() {
     return { ...t, results: [], stats: null, checkResult: null, checkMessage: '' }
   }
 
-  function setColumnUnits(name: string, units: string) {
-    setVarDrafts((drafts) => ({
-      ...drafts,
-      [name]: {
-        ...(drafts[name] ?? { ...DEFAULT_DRAFT }),
-        units,
-        isUnitsUserSet: units.trim() !== '',
-      },
-    }))
-    invalidateTable()
+  // Fresh hosted spec for a table run (contract b's pre-run scrape): flush
+  // the Tables workbook so a just-typed sheet edit is part of THIS run — the
+  // React state update from the flush lands a render too late for this
+  // handler's closure.
+  function freshParamTable(tableId: string): ParamTableSpec | undefined {
+    const fresh = flushTablesWorkbook()?.find((t) => t.id === tableId)
+    const t = fresh ?? tables.find((x) => x.id === tableId)
+    return t?.kind === 'parametric' ? t : undefined
   }
 
   async function onCheckTable(tableIdArg?: string, overrideTbl?: ParamTableSpec): Promise<CheckResponse | null> {
     const tableId = tableIdArg ?? activeParam?.id
     if (checkingTableId !== null || !tableId) return null
-    const tbl = overrideTbl ?? tables.find((t) => t.id === tableId) as ParamTableSpec | undefined
+    const tbl = overrideTbl ?? freshParamTable(tableId)
     if (!tbl || tbl.kind !== 'parametric') return null
     const tVars = tbl.vars
     const tRows = tbl.rows
@@ -1119,7 +1036,7 @@ export default function App() {
       for (const [name, value] of filled) {
         augmented += `\n${name} = ${value}`
       }
-      const response = await check(augmented, buildVariableInfo(), complexMode, functionTableDtos)
+      const response = await check(augmented, buildVariableInfo(), complexMode, functionTableDtos())
       updateParamTable(tableId, (t) => ({ ...t, checkResult: response }))
 
       // Sync variable list and units so the column headers show units for
@@ -1161,7 +1078,7 @@ export default function App() {
   async function onSolveTable(tableIdArg?: string, checkOverride?: CheckResponse, overrideTbl?: ParamTableSpec): Promise<boolean> {
     const tableId = tableIdArg ?? activeParam?.id
     if (solvingTableId !== null || !tableId) return false
-    const tbl = overrideTbl ?? tables.find((t) => t.id === tableId) as ParamTableSpec | undefined
+    const tbl = overrideTbl ?? freshParamTable(tableId)
     if (!tbl || tbl.kind !== 'parametric' || tbl.vars.length === 0) return false
     // When checkOverride is explicitly provided (from checkThenSolveTable), honour it.
     // When called directly from a per-window "Run Table" button we skip the gate so
@@ -1190,7 +1107,7 @@ export default function App() {
         unitSystem,
         tbl.vars,
         rows,
-        functionTableDtos,
+        functionTableDtos(),
       )
       updateParamTable(tableId, (t) => ({
         ...t,
@@ -1249,7 +1166,7 @@ export default function App() {
         findAll,
         unitSystem,
         shouldFillMissing,
-        functionTableDtos,
+        functionTableDtos(),
         sessionId,
         // REPL-defined/changed variables take priority over the editor until the
         // user runs `clear` in the terminal.
@@ -1363,7 +1280,7 @@ export default function App() {
   async function checkThenSolveTable(tableIdArg?: string, overrideTbl?: ParamTableSpec): Promise<boolean> {
     const tableId = tableIdArg ?? activeParam?.id
     if (solvingTableId !== null || checkingTableId !== null || !tableId) return false
-    const tbl = overrideTbl ?? tables.find((t) => t.id === tableId) as ParamTableSpec | undefined
+    const tbl = overrideTbl ?? freshParamTable(tableId)
     if (!tbl || tbl.kind !== 'parametric') return false
     if (tbl.checkResult?.solvable === true) {
       return await onSolveTable(tableId, undefined, overrideTbl)
@@ -1465,8 +1382,11 @@ export default function App() {
   useEffect(() => {
     const valid = new Set<string>([
       'equations', 'table', 'plots', 'digitizer', 'workspace', 'terminal', 'states', 'inspector',
+      TABLES_WORKBOOK_WINDOW_ID,
       ...mergedPlots.map((p) => `plot:${p.id}`),
-      ...tables.map((t) => `table:${t.id}`),
+      // Hosted tables (function + GUI parametric) live as sheets in the
+      // single Tables workbook window; no per-table windows (decision 2).
+      ...tables.filter((t) => !isHostedTable(t)).map((t) => `table:${t.id}`),
       ...whiteboards.map((w) => `whiteboard:${w.id}`),
       ...spreadsheets.map((s) => `spreadsheet:${s.id}`),
       ...analyzers.map((a) => `analyzer:${a.id}`),
@@ -1483,7 +1403,10 @@ export default function App() {
   useEffect(() => {
     const raf = requestAnimationFrame(() => {
       for (const p of mergedPlots) dockRef.current?.setTitle(`plot:${p.id}`, p.name)
-      for (const t of tables) dockRef.current?.setTitle(`table:${t.id}`, t.name)
+      for (const t of tables) {
+        if (isHostedTable(t)) continue // hosted in the Tables workbook
+        dockRef.current?.setTitle(`table:${t.id}`, t.name)
+      }
       for (const w of whiteboards) dockRef.current?.setTitle(`whiteboard:${w.id}`, w.name)
       for (const s of spreadsheets) dockRef.current?.setTitle(`spreadsheet:${s.id}`, s.name)
       for (const a of analyzers) dockRef.current?.setTitle(`analyzer:${a.id}`, a.name)
@@ -1526,6 +1449,17 @@ export default function App() {
 
   // Reusable window open/create handlers, shared by the left rail and the
   // command palette so both open real dock windows (not just highlight a tab).
+  // Opens the dock window backing a table: function tables live as sheets in
+  // the single Univer Tables workbook (decision 2), everything else keeps its
+  // per-table window.
+  const openTableWindow = (t: TableSpec) => {
+    if (isHostedTable(t)) {
+      setActiveTableId(t.id)
+      dockRef.current?.openInstance(TABLES_WORKBOOK_WINDOW_ID, 'table', 'Tables')
+    } else {
+      dockRef.current?.openInstance(`table:${t.id}`, 'table', t.name)
+    }
+  }
   const createTable = (kind: 'parametric' | 'function-1d' | 'function-2d') => {
     const t =
       kind === 'parametric'
@@ -1533,7 +1467,7 @@ export default function App() {
         : newFunctionTable(tables, kind === 'function-1d')
     setTables((prev) => [...prev, t])
     setActiveTableId(t.id)
-    requestAnimationFrame(() => dockRef.current?.openInstance(`table:${t.id}`, 'table', t.name))
+    requestAnimationFrame(() => openTableWindow(t))
   }
   const createWhiteboard = () => {
     const wb = newWhiteboard(whiteboards.length)
@@ -1654,46 +1588,51 @@ export default function App() {
     setSpreadsheets((prev) => [...prev, ss])
     requestAnimationFrame(() => dockRef.current?.openInstance(`spreadsheet:${ss.id}`, 'spreadsheet', ss.name))
   }
-  const exportTableToSpreadsheet = (tableId: string) => {
-    const t = tables.find((tbl) => tbl.id === tableId)
-    if (!t || t.kind !== 'parametric') return
-
+  // "Open in Spreadsheet" (Phase 3, contract e): a one-shot, timestamped,
+  // cap-guarded snapshot into a NEW spreadsheet window — deliberately
+  // decoupled from re-solves. Shared by table exports and the states table.
+  const createSnapshotSpreadsheet = (input: SnapshotInput) => {
+    const out = buildSnapshotSheet(input)
+    if (!out.ok) {
+      if (out.reason === 'too-big') setLoadNotice(out.message)
+      return
+    }
     const ss = newSpreadsheet(spreadsheets.length)
-    ss.name = `Export ${t.name}`
-    ss.linkedTableId = t.id
-
-    const celldata: any[] = []
-    let currentRow = 0
-    const headerStyle = { bl: 1 }
-
-    celldata.push({ r: currentRow, c: 0, v: { v: 'Run', m: 'Run', ...headerStyle } })
-    for (let j = 0; j < t.vars.length; j++) {
-      celldata.push({ r: currentRow, c: j + 1, v: { v: t.vars[j], m: t.vars[j], ...headerStyle } })
-    }
-    currentRow++
-
-    for (let i = 0; i < t.rows.length; i++) {
-      celldata.push({ r: currentRow, c: 0, v: { v: String(i + 1), m: String(i + 1) } })
-      for (let j = 0; j < t.vars.length; j++) {
-        const v = t.vars[j]
-        const draft = t.rows[i].values[v]
-        const computed = t.results[i]?.success ? t.results[i].values[v] : undefined
-        const val = draft && draft.trim() !== '' ? draft : (computed !== undefined ? String(computed) : '')
-        celldata.push({ r: currentRow, c: j + 1, v: { v: val, m: val } })
-      }
-      currentRow++
-    }
-
+    ss.name = out.name
     const sheetData = emptySpreadsheetData()
-    ;(sheetData[0] as any).celldata = celldata
+    Object.assign(sheetData[0] as object, {
+      celldata: out.sheet.celldata,
+      styles: out.sheet.styles,
+      name: 'Sheet1',
+    })
     ss.sheets = sheetData
-
     setSpreadsheets((prev) => [...prev, ss])
     requestAnimationFrame(() => dockRef.current?.openInstance(`spreadsheet:${ss.id}`, 'spreadsheet', ss.name))
   }
+
+  const exportTableToSpreadsheet = (tableId: string) => {
+    const t = tables.find((tbl) => tbl.id === tableId)
+    if (!t || t.kind !== 'parametric') return
+    createSnapshotSpreadsheet({
+      title: `Export ${t.name}`,
+      columns: [
+        { name: 'Run' },
+        ...t.vars.map((v) => ({ name: v, unit: t.columnUnits?.[v] })),
+      ],
+      rows: t.rows.map((row, i) => [
+        t.results[i] && !t.results[i].success ? `${i + 1} ✗` : i + 1,
+        ...t.vars.map((v) => {
+          const draft = row.values[v]
+          if (draft && draft.trim() !== '') return draft
+          const computed = t.results[i]?.success ? t.results[i].values[v] : undefined
+          return computed !== undefined ? computed : ''
+        }),
+      ]),
+    })
+  }
   const openLatestOrNewTable = () => {
     const t = tables[tables.length - 1]
-    if (t) dockRef.current?.openInstance(`table:${t.id}`, 'table', t.name)
+    if (t) openTableWindow(t)
     else createTable('parametric')
   }
   const openLatestOrNewPlot = () => {
@@ -1932,6 +1871,7 @@ export default function App() {
           onFillMissing={() => onSolve(true)}
           solving={solving}
           solvable={solvable}
+          onSnapshot={createSnapshotSpreadsheet}
         />
       </div>
     ),
@@ -1946,9 +1886,13 @@ export default function App() {
       const fw = focusedWindow
       const bodyStyle: React.CSSProperties = { flex: 1, minHeight: 0, overflow: 'auto', padding: 10 }
 
-      // Table: rename + the parametric table's quick actions.
+      // Table: rename + the parametric table's quick actions. The Tables
+      // workbook window inspects whichever hosted table is active in it.
       if (fw?.kind === 'table') {
-        const t = tables.find((x) => `table:${x.id}` === fw.id)
+        const t =
+          fw.id === TABLES_WORKBOOK_WINDOW_ID
+            ? (activeTable && isHostedTable(activeTable) ? activeTable : undefined)
+            : tables.find((x) => `table:${x.id}` === fw.id)
         return (
           <div style={{ height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
             <div style={{ ...bodyStyle }}>
@@ -2291,57 +2235,59 @@ export default function App() {
           }}
           solving={solving && fillMissingFor === s.name}
           solvable={solvable}
+          onSnapshot={createSnapshotSpreadsheet}
         />
       </div>
     )
   }
 
-  // Per-instance Table windows: each table opens as its own dock window
-  // ("table:<id>"). Each window reads its own spec's rows/results and routes
-  // edits to that specific table id (decoupled from the "active" table).
+  // The single Univer Tables workbook window hosting every editable table
+  // (function/lookup + GUI parametric) as a bound sheet (decision 2 of the
+  // unification plan). Code PARAMETRIC / ODE tables keep per-table windows.
+  {
+    panelTitles[TABLES_WORKBOOK_WINDOW_ID] = 'Tables'
+    panelContent[TABLES_WORKBOOK_WINDOW_ID] = (
+      <div style={{ height: '100%', minHeight: 0 }}>
+        <Suspense fallback={lazyTabFallback}>
+          <TablesWorkbookTab
+            key={`tables-workbook-${workspaceEpoch}`}
+            tables={tables}
+            activeTableId={activeTableId}
+            onTablesChange={setTables}
+            onActiveTableIdChange={setActiveTableId}
+            onConfigureTable={(id) => {
+              setActiveTableId(id)
+              setShowConfigureTable(true)
+            }}
+            onAlterColumn={(id, name) => {
+              setActiveTableId(id)
+              setAlterColumn(name)
+            }}
+          />
+        </Suspense>
+      </div>
+    )
+  }
+
+  // Per-instance Table windows: only read-only code PARAMETRIC / ODE tables
+  // (each "table:<id>"); editable tables are sheets in the Tables workbook.
   for (const t of tables) {
+    if (isHostedTable(t)) continue
     const winId = `table:${t.id}`
-    const param = t.kind === 'parametric' ? t : null
     panelTitles[winId] = t.name
     panelContent[winId] = (
       <div style={panelPad}>
         <TablesTab
           tables={tables}
           singleTableId={t.id}
-          activeTableId={t.id}
-          onTablesChange={setTables}
-          onActiveTableIdChange={setActiveTableId}
-          tableVars={param?.vars ?? []}
-          rows={param?.rows ?? []}
-          results={param?.results ?? []}
           varDrafts={varDrafts}
-          onConfigure={() => {
-            setActiveTableId(t.id)
-            setShowConfigureTable(true)
-          }}
-          onAddRow={() =>
-            updateParamTable(t.id, (pt) => invalidateActiveParam({ ...pt, rows: [...pt.rows, newParamRow()] }))
-          }
-          onRemoveRow={() =>
-            updateParamTable(t.id, (pt) => invalidateActiveParam({ ...pt, rows: pt.rows.slice(0, -1) }))
-          }
-          onClearResults={() => updateParamTable(t.id, (pt) => ({ ...pt, results: [] }))}
-          onAlterColumn={(name) => {
-            setActiveTableId(t.id)
-            setAlterColumn(name)
-          }}
-          onColumnUnitsChange={setColumnUnits}
           onPlotColumns={handlePlotColumns}
-          onCellChange={(rowIndex, name, value) =>
-            updateParamTable(t.id, (pt) =>
-              invalidateActiveParam({
-                ...pt,
-                rows: pt.rows.map((row, i) =>
-                  i === rowIndex ? { ...row, values: { ...row.values, [name]: value } } : row,
-                ),
-              }),
-            )
-          }
+          onExportTable={exportTableToSpreadsheet}
+          onCopyToEditable={(copy) => {
+            setTables((prev) => [...prev, copy])
+            setActiveTableId(copy.id)
+            requestAnimationFrame(() => openTableWindow(copy))
+          }}
         />
       </div>
     )
@@ -2404,7 +2350,7 @@ export default function App() {
             return
           }
           const t = tables.find((x) => x.id === id)
-          if (t) dockRef.current?.openInstance(`table:${id}`, 'table', t.name)
+          if (t) openTableWindow(t)
         }}
         onDeleteTable={(id) => setTables((prev) => prev.filter((t) => t.id !== id))}
         onOpenStates={() => {
@@ -2511,7 +2457,13 @@ export default function App() {
               setActiveTab(active?.kind ?? '')
               // Focusing a table window makes it the "active" table so the
               // shared Solve-Table / Configure / Alter actions target it.
-              if (active?.kind === 'table' && active.id.startsWith('table:')) {
+              // The Tables workbook window is excluded: its nav list drives
+              // activeTableId itself (one window, many hosted tables).
+              if (
+                active?.kind === 'table' &&
+                active.id.startsWith('table:') &&
+                active.id !== TABLES_WORKBOOK_WINDOW_ID
+              ) {
                 setActiveTableId(active.id.slice('table:'.length))
               }
               // The Inspector reflects the last-focused main window; focusing

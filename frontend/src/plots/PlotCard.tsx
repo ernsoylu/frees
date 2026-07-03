@@ -10,7 +10,7 @@ import {
   getPropertyDiagram,
   getPsychrometricChart,
 } from '../api'
-import { ParamRow } from '../ParametricTableTab'
+import { ParamRow } from '../tables'
 import { displayVar } from '../varDisplay'
 import { PlotSpec } from './types'
 import { StateTable, detectStateTables } from './stateTable'

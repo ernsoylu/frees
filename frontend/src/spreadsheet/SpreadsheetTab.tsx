@@ -7,10 +7,9 @@ import '@univerjs/preset-sheets-core/lib/index.css'
 import './theme.css'
 import { type SpreadsheetSpec, emptySpreadsheetData } from './types'
 import { colName, extractSheets, sheetsToWorkbookData, type FWorkbookLike, type StoredSheet } from './univerAdapter'
-import { Button, Group, Modal, TextInput, Switch, Text, Select, useComputedColorScheme } from '@mantine/core'
+import { Button, Group, Modal, TextInput, Switch, Text, Select, Tooltip, useComputedColorScheme } from '@mantine/core'
 import { IconTablePlus, IconLink, IconDownload } from '@tabler/icons-react'
-import { ParamTableSpec } from '../tables'
-import { newParamRow } from '../ParametricTableTab'
+import { newParamRow, ParamTableSpec } from '../tables'
 
 interface Props {
   singleSpreadsheetId: string
@@ -302,6 +301,25 @@ export default function SpreadsheetTab({ singleSpreadsheetId, spreadsheets, onSp
             onSpreadsheetsChange((prev) => prev.map((s) => (s.id === spec.id ? { ...s, autoSync: val } : s)))
           }}
         />
+        {spec.linkedTableId && (
+          // Legacy linked-table view: superseded by the Tables workbook. The
+          // field stays inert in the file (downgrade-safe) until the user
+          // explicitly unlinks (contract d of the unification plan).
+          <Tooltip label="This spreadsheet was linked to a parametric table (old mechanism). The link is inactive — the table lives in the Tables window now. Unlink removes the leftover marker.">
+            <Button
+              size="xs"
+              variant="light"
+              color="gray"
+              onClick={() =>
+                onSpreadsheetsChange((prev) =>
+                  prev.map((s) => (s.id === spec.id ? { ...s, linkedTableId: undefined } : s)),
+                )
+              }
+            >
+              Unlink table (legacy)
+            </Button>
+          </Tooltip>
+        )}
       </Group>
 
       <div ref={containerRef} className="frees-univer" style={{ flex: 1, minHeight: 0 }} />

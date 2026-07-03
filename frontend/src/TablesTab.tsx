@@ -1,256 +1,95 @@
-import {
-  ActionIcon,
-  Badge,
-  Button,
-  Group,
-  Menu,
-  Paper,
-  Stack,
-  Text,
-  TextInput,
-  Tooltip,
-} from '@mantine/core'
-import { IconChartGridDots, IconCopy, IconPlus, IconTable, IconTrash } from '@tabler/icons-react'
+import { Button, Group, Stack, Text, Tooltip } from '@mantine/core'
 import { lazy, Suspense } from 'react'
-import { TableRowResult } from './api'
-import FunctionTableEditor from './FunctionTableEditor'
-import ParametricTableTab, { ParamRow } from './ParametricTableTab'
+import { duplicateAsEditable, TableSpec } from './tables'
+import { VariableDraft } from './VariableInfoModal'
 
 // Solver-produced (read-only) tables can be huge; render them through a
 // virtualized canvas grid, code-split so glide-data-grid stays out of the
 // initial bundle and only loads when such a table is opened.
 const DataGridReadOnly = lazy(() => import('./DataGridReadOnly'))
-import {
-  duplicateAsEditable,
-  FunctionTableSpec,
-  newFunctionTable,
-  newParamTable,
-  TableSpec,
-} from './tables'
-import { VariableDraft } from './VariableInfoModal'
 
 // ---------------------------------------------------------------------------
-// Tables window (Story 8.6): manages any number of Parametric Tables and
-// Function Tables, added like plots. The active parametric table is the one
-// Check Table / Solve Table and the plots operate on.
+// Read-only table window: code-defined PARAMETRIC tables and solved ODE
+// trajectories, each in its own dock window ("table:<id>"). Editable tables
+// (GUI parametric + all function/lookup tables) live as bound sheets in the
+// Univer Tables workbook (TablesWorkbookTab) — the Mantine editors this file
+// used to host were retired in Phase 4 of the unification plan.
 // ---------------------------------------------------------------------------
 
 interface Props {
   tables: TableSpec[]
-  activeTableId: string | null
-  onTablesChange: (tables: TableSpec[]) => void
-  onActiveTableIdChange: (id: string | null) => void
-  // Active parametric table pass-through (wired to solver state in App):
-  tableVars: string[]
-  rows: ParamRow[]
-  results: TableRowResult[]
+  /** The one table this window renders. */
+  singleTableId: string
   varDrafts: Record<string, VariableDraft>
-  onConfigure: () => void
-  onAddRow: () => void
-  onRemoveRow: () => void
-  onClearResults: () => void
-  onAlterColumn: (name: string) => void
-  onColumnUnitsChange: (name: string, units: string) => void
-  onCellChange: (rowIndex: number, name: string, value: string) => void
-  /** Open a new X-Y plot from a read-only table's column selection (x = first
-   *  column / time, y = the selected columns). */
+  /** Open a new X-Y plot from the column selection (x = first column / time,
+   * y = the selected columns). */
   onPlotColumns?: (xVar: string, yVars: string[]) => void
-  /** When set, render only this one table and hide the table-tab strip (used
-   *  when each table is its own dock window). */
-  singleTableId?: string
+  /** "Open in Spreadsheet": one-shot snapshot into a new spreadsheet window
+   * (Phase 3, contract e). */
+  onExportTable?: (id: string) => void
+  /** Make an editable GUI copy (decoupled from the editor text); the copy
+   * opens as a bound sheet in the Tables workbook. */
+  onCopyToEditable?: (copy: TableSpec) => void
 }
 
 export default function TablesTab(props: Readonly<Props>) {
-  const { tables, activeTableId, onTablesChange, onActiveTableIdChange, singleTableId } = props
-  const active = singleTableId
-    ? (tables.find((t) => t.id === singleTableId) ?? null)
-    : (tables.find((t) => t.id === activeTableId) ?? tables[0] ?? null)
+  const { tables, singleTableId } = props
+  const active = tables.find((t) => t.id === singleTableId) ?? null
 
-  const addTable = (kind: 'parametric' | 'function-1d' | 'function-2d') => {
-    const table =
-      kind === 'parametric'
-        ? newParamTable(tables)
-        : newFunctionTable(tables, kind === 'function-1d')
-    onTablesChange([...tables, table])
-    onActiveTableIdChange(table.id)
+  if (!active) {
+    return (
+      <Text size="sm" c="dimmed" mt="md">
+        Table not found — it may have been removed or renamed by the last solve.
+      </Text>
+    )
   }
 
-  const removeTable = (id: string) => {
-    const remaining = tables.filter((t) => t.id !== id)
-    onTablesChange(remaining)
-    if (activeTableId === id) {
-      onActiveTableIdChange(remaining[0]?.id ?? null)
-    }
-  }
-
-  const renameTable = (id: string, name: string) => {
-    onTablesChange(tables.map((t) => (t.id === id ? { ...t, name } : t)))
-  }
-
-  const updateFunctionTable = (next: FunctionTableSpec) => {
-    onTablesChange(tables.map((t) => (t.id === next.id ? next : t)))
-  }
-
-  const copyToEditable = (table: TableSpec) => {
-    const copy = duplicateAsEditable(table)
-    onTablesChange([...tables, copy])
-    onActiveTableIdChange(copy.id)
+  if (active.kind !== 'parametric' || active.source !== 'code') {
+    // Editable tables are hosted in the Tables workbook; this window kind
+    // only ever backs read-only code/ODE tables.
+    return (
+      <Text size="sm" c="dimmed" mt="md">
+        This table lives in the Tables window now.
+      </Text>
+    )
   }
 
   return (
     <Stack gap="xs" style={{ flex: 1, minHeight: 0 }}>
-      {!singleTableId && (
-      <Group gap="xs" wrap="wrap">
-        {tables.map((t) => (
-          <Paper
-            key={t.id}
-            withBorder
-            px={6}
-            py={2}
-            style={{
-              cursor: 'pointer',
-              borderColor:
-                active?.id === t.id ? 'var(--mantine-color-teal-7)' : undefined,
-            }}
-            onClick={() => onActiveTableIdChange(t.id)}
-          >
-            <Group gap={6} wrap="nowrap">
-              {t.kind === 'parametric' ? (
-                <IconTable size={13} color="var(--mantine-color-teal-4)" />
-              ) : (
-                <IconChartGridDots size={13} color="var(--mantine-color-teal-4)" />
-              )}
-              {active?.id === t.id && t.source !== 'code' ? (
-                <TextInput
-                  size="xs"
-                  variant="unstyled"
-                  w={110}
-                  value={t.name}
-                  onChange={(e) => renameTable(t.id, e.currentTarget.value)}
-                />
-              ) : (
-                <Text size="xs">{t.name}</Text>
-              )}
-              {t.source === 'code' ? (
-                <Group gap={2} wrap="nowrap">
-                  <Tooltip label="Defined by a code block in the editor (read-only)">
-                    <Badge size="xs" variant="light" color="grape">
-                      code
-                    </Badge>
-                  </Tooltip>
-                  <Tooltip label="Make an editable copy (decoupled from the text)">
-                    <ActionIcon
-                      size="xs"
-                      variant="subtle"
-                      color="grape"
-                      aria-label={`Copy ${t.name} to an editable table`}
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        copyToEditable(t)
-                      }}
-                    >
-                      <IconCopy size={11} />
-                    </ActionIcon>
-                  </Tooltip>
-                </Group>
-              ) : (
-                <ActionIcon
-                  size="xs"
-                  variant="subtle"
-                  color="red"
-                  aria-label={`Delete ${t.name}`}
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    removeTable(t.id)
-                  }}
-                >
-                  <IconTrash size={11} />
-                </ActionIcon>
-              )}
-            </Group>
-          </Paper>
-        ))}
-        <Menu position="bottom-start" shadow="md">
-          <Menu.Target>
-            <Button size="compact-xs" leftSection={<IconPlus size={13} />}>
-              Add Table
+      <Group gap="xs" wrap="nowrap" align="center">
+        <Text size="xs" c="dimmed" style={{ flex: 1 }}>
+          {active.origin === 'ode'
+            ? 'Solved trajectory from a DYNAMIC (ODE) block — virtualized read-only grid (columns are SI-solver values; drag column edges to resize, click-drag to select/copy).'
+            : 'Defined in code (PARAMETRIC … END) — virtualized read-only grid. Run it with Solve Table.'}
+        </Text>
+        {props.onCopyToEditable && (
+          <Tooltip label="Make an editable copy in the Tables workbook (decoupled from the editor text)">
+            <Button
+              size="compact-xs"
+              variant="default"
+              onClick={() => props.onCopyToEditable?.(duplicateAsEditable(active))}
+            >
+              Editable copy
             </Button>
-          </Menu.Target>
-          <Menu.Dropdown>
-            <Menu.Item leftSection={<IconTable size={14} />} onClick={() => addTable('parametric')}>
-              Parametric Table — solve the system once per row
-            </Menu.Item>
-            <Menu.Item
-              leftSection={<IconChartGridDots size={14} />}
-              onClick={() => addTable('function-1d')}
-            >
-              Function Table (without Curve) — single-argument function
-            </Menu.Item>
-            <Menu.Item
-              leftSection={<IconChartGridDots size={14} />}
-              onClick={() => addTable('function-2d')}
-            >
-              Function Table (with Curve family) — multi-argument function
-            </Menu.Item>
-          </Menu.Dropdown>
-        </Menu>
-        {active?.kind === 'function' && (
-          <Tooltip label="The table name is the function name; the first column is its argument.">
-            <Badge size="xs" variant="light" color="teal">
-              tabulated function
-            </Badge>
+          </Tooltip>
+        )}
+        {props.onExportTable && (
+          <Tooltip label="One-shot snapshot into a new spreadsheet (timestamped; not linked to re-solves)">
+            <Button size="compact-xs" variant="default" onClick={() => props.onExportTable?.(active.id)}>
+              Open in Spreadsheet
+            </Button>
           </Tooltip>
         )}
       </Group>
-      )}
-
-      {active === null && (
-        <Text size="sm" c="dimmed" mt="md">
-          No tables yet. Add a Parametric Table to run the system over value sets, or a Function
-          Table to turn digitized graph data into a function you can call from the equations.
-        </Text>
-      )}
-
-      {active?.kind === 'parametric' && active.source === 'code' && (
-        <>
-          <Text size="xs" c="dimmed">
-            {active.origin === 'ode'
-              ? 'Solved trajectory from a DYNAMIC (ODE) block — virtualized read-only grid (columns are SI-solver values; drag column edges to resize, click-drag to select/copy).'
-              : 'Defined in code (PARAMETRIC … END) — virtualized read-only grid. Run it with Solve Table.'}
-          </Text>
-          <Suspense fallback={<Text size="sm" c="dimmed">Loading grid…</Text>}>
-            <DataGridReadOnly
-              vars={active.vars}
-              rows={active.rows}
-              varDrafts={props.varDrafts}
-              columnUnits={active.columnUnits}
-              onPlotColumns={props.onPlotColumns}
-            />
-          </Suspense>
-        </>
-      )}
-
-      {active?.kind === 'parametric' && active.source !== 'code' && (
-        <ParametricTableTab
-          tableVars={props.tableVars}
-          rows={props.rows}
-          results={props.results}
+      <Suspense fallback={<Text size="sm" c="dimmed">Loading grid…</Text>}>
+        <DataGridReadOnly
+          vars={active.vars}
+          rows={active.rows}
           varDrafts={props.varDrafts}
-          readOnly={false}
-          isOde={false}
-          onConfigure={props.onConfigure}
-          onAddRow={props.onAddRow}
-          onRemoveRow={props.onRemoveRow}
-          onClearResults={props.onClearResults}
-          onAlterColumn={props.onAlterColumn}
-          onColumnUnitsChange={props.onColumnUnitsChange}
-          onCellChange={props.onCellChange}
+          columnUnits={active.columnUnits}
+          onPlotColumns={props.onPlotColumns}
         />
-      )}
-
-      {active?.kind === 'function' && (
-        <FunctionTableEditor table={active} onChange={updateFunctionTable} />
-      )}
+      </Suspense>
     </Stack>
   )
 }

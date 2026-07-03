@@ -1,5 +1,16 @@
 import { CheckResponse, FunctionTableDto, OdeTableDto, ParametricTableDto, TableRowResult, TableStats } from './api'
-import { newParamRow, ParamRow } from './ParametricTableTab'
+
+/** One parametric-table run: a stable identity plus the cell drafts.
+ * (Lived in ParametricTableTab until the Mantine grid was retired in favour
+ * of the Univer Tables workbook — Phase 4 of the unification plan.) */
+export interface ParamRow {
+  id: string
+  values: Record<string, string>
+}
+
+export function newParamRow(): ParamRow {
+  return { id: crypto.randomUUID(), values: {} }
+}
 
 // ---------------------------------------------------------------------------
 // Tables (Epic 8): the Tables window manages any number of
@@ -25,6 +36,9 @@ export interface ParamTableSpec {
   /** Set when this "parametric" table was produced from a DYNAMIC/ODE block
    * rather than a PARAMETRIC block, so the UI can describe it correctly. */
   origin?: 'ode'
+  /** Sparse formula overlay (contract f) for input cells edited as a bound
+   * sheet in the Tables workbook — same mechanics as FunctionTableSpec. */
+  formulas?: Record<string, string>
   /** Per-column SI units (column name → unit), for read-only code/ODE tables
    * whose columns are not solved scalars: used for grid headers and plot axes. */
   columnUnits?: Record<string, string>
@@ -50,6 +64,13 @@ export interface FunctionTableSpec {
   // are shown read-only (the editor text is their source of truth). Undefined
   // / 'gui' tables are created and edited in the Tables window.
   source?: 'code' | 'gui'
+  /** Sparse formula overlay (contract f of the table-spreadsheet unification
+   * plan): A1 cell ref → Univer formula string for data cells the user
+   * entered as formulas in the bound sheet. Row cells keep the last computed
+   * value (the solver wire path reads only those); this overlay is re-applied
+   * as `f`-only cells at materialization so formulas survive reloads and
+   * recompute. Optional — absent on tables never edited as sheets. */
+  formulas?: Record<string, string>
 }
 
 export type TableSpec = ParamTableSpec | FunctionTableSpec

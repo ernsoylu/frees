@@ -103,7 +103,11 @@ export default function MobileLayout({
       content = <Box p="md"><Text c="dimmed">No tables available.</Text></Box>
     } else {
       const tId = activeTableId ?? tables[0].id
-      content = panelContent[`table:${tId}`] || <Box p="md"><Text c="dimmed">Table not found.</Text></Box>
+      // Editable tables live in the single Tables workbook window; only
+      // read-only code/ODE tables still have per-table panels.
+      content = panelContent[`table:${tId}`]
+        || panelContent['table:univer-workbook']
+        || <Box p="md"><Text c="dimmed">Table not found.</Text></Box>
     }
   }
 
