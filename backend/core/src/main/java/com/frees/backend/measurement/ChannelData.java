@@ -10,9 +10,9 @@ public record ChannelData(double[] time, double[] values) {
 
     @Override
     public boolean equals(Object o) {
-        return o instanceof ChannelData other
-                && Arrays.equals(time, other.time)
-                && Arrays.equals(values, other.values);
+        return o instanceof ChannelData(double[] otherTime, double[] otherValues)
+                && Arrays.equals(time, otherTime)
+                && Arrays.equals(values, otherValues);
     }
 
     @Override

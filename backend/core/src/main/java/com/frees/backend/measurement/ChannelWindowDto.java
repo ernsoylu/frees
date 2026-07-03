@@ -30,15 +30,17 @@ public record ChannelWindowDto(
 
     @Override
     public boolean equals(Object o) {
-        return o instanceof ChannelWindowDto other
-                && decimated == other.decimated
-                && totalSamples == other.totalSamples
-                && java.util.Objects.equals(unit, other.unit)
-                && java.util.Objects.equals(kind, other.kind)
-                && java.util.Arrays.equals(t, other.t)
-                && java.util.Arrays.equals(v, other.v)
-                && java.util.Arrays.equals(min, other.min)
-                && java.util.Arrays.equals(max, other.max);
+        return o instanceof ChannelWindowDto(
+                        double[] ot, double[] ov, double[] omin, double[] omax,
+                        boolean odecimated, long ototal, String ounit, String okind)
+                && decimated == odecimated
+                && totalSamples == ototal
+                && java.util.Objects.equals(unit, ounit)
+                && java.util.Objects.equals(kind, okind)
+                && java.util.Arrays.equals(t, ot)
+                && java.util.Arrays.equals(v, ov)
+                && java.util.Arrays.equals(min, omin)
+                && java.util.Arrays.equals(max, omax);
     }
 
     @Override

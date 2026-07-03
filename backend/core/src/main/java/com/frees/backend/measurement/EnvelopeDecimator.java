@@ -18,10 +18,10 @@ public final class EnvelopeDecimator {
 
         @Override
         public boolean equals(Object o) {
-            return o instanceof Envelope other
-                    && java.util.Arrays.equals(t, other.t)
-                    && java.util.Arrays.equals(min, other.min)
-                    && java.util.Arrays.equals(max, other.max);
+            return o instanceof Envelope(double[] ot, double[] omin, double[] omax)
+                    && java.util.Arrays.equals(t, ot)
+                    && java.util.Arrays.equals(min, omin)
+                    && java.util.Arrays.equals(max, omax);
         }
 
         @Override

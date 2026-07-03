@@ -52,9 +52,9 @@ public class MeasurementCalcController {
 
         @Override
         public boolean equals(Object o) {
-            return o instanceof InlineSeries other
-                    && Arrays.equals(t, other.t)
-                    && Arrays.equals(v, other.v);
+            return o instanceof InlineSeries(double[] ot, double[] ov)
+                    && Arrays.equals(t, ot)
+                    && Arrays.equals(v, ov);
         }
 
         @Override
@@ -82,10 +82,10 @@ public class MeasurementCalcController {
 
         @Override
         public boolean equals(Object o) {
-            return o instanceof CalcResult other
-                    && java.util.Objects.equals(name, other.name)
-                    && Arrays.equals(t, other.t)
-                    && Arrays.equals(v, other.v);
+            return o instanceof CalcResult(String otherName, double[] ot, double[] ov)
+                    && java.util.Objects.equals(name, otherName)
+                    && Arrays.equals(t, ot)
+                    && Arrays.equals(v, ov);
         }
 
         @Override
@@ -108,11 +108,13 @@ public class MeasurementCalcController {
 
         @Override
         public boolean equals(Object o) {
-            return o instanceof Prepared other
-                    && callBearing == other.callBearing
-                    && java.util.Objects.equals(formula, other.formula)
-                    && java.util.Objects.equals(inputs, other.inputs)
-                    && Arrays.equals(raster, other.raster);
+            return o instanceof Prepared(
+                            Expr otherFormula, double[] otherRaster,
+                            Map<String, SampledSeries> otherInputs, boolean otherCallBearing)
+                    && callBearing == otherCallBearing
+                    && java.util.Objects.equals(formula, otherFormula)
+                    && java.util.Objects.equals(inputs, otherInputs)
+                    && Arrays.equals(raster, otherRaster);
         }
 
         @Override

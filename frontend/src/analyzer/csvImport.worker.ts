@@ -33,7 +33,7 @@ function fail(err: unknown) {
 self.addEventListener('message', (event) => {
   // A dedicated worker only receives messages from the page that spawned it
   // (origin is "" for those); reject anything else defensively.
-  if (event.origin !== '' && event.origin !== self.location.origin) return
+  if (event.origin !== '' && event.origin !== globalThis.location.origin) return
   const { file, choice } = (event as MessageEvent<WorkerRequest>).data
   const ingest = new CsvIngest(choice)
   let failed = false
