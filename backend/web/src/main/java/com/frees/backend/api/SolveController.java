@@ -223,6 +223,21 @@ public class SolveController {
                 effectiveUnits(parsed, request.variableInfo(), solver));
         Map<String, String> unitsByLower =
                 unitsByLowerName(parsed, request.variableInfo(), solver);
+        // Fill-missing injects state properties (h1, s2, rho1, …) into the
+        // result AFTER the solve — they never appear in the text the unit
+        // checker reads, so stamp their SI units from the property identity
+        // or the Variable Explorer shows them unitless.
+        if (result != rawResult) {
+            for (String name : result.variables().keySet()) {
+                if (rawResult.variables().containsKey(name)) {
+                    continue;
+                }
+                String unit = CyclePathResolver.siUnitForStateVariable(name);
+                if (unit != null) {
+                    unitsByLower.putIfAbsent(name.toLowerCase(), unit);
+                }
+            }
+        }
         UnitRegistry.UnitSystem system = unitSystem(request.displayUnitSystem());
 
         List<SolveDtos.VariableDto> variableDtos = result.variables().entrySet().stream()
@@ -576,6 +591,14 @@ public class SolveController {
             for (Map.Entry<String, Double> e : finalResult.variables().entrySet()) {
                 String name = e.getKey();
                 String unit = context.unitsByLowerName().getOrDefault(name.toLowerCase(), "");
+                if (unit.isEmpty() && !result.variables().containsKey(name)) {
+                    // Property filled in AFTER the row solve (never in the text):
+                    // stamp its SI unit from the property identity.
+                    String stateUnit = CyclePathResolver.siUnitForStateVariable(name);
+                    if (stateUnit != null) {
+                        unit = stateUnit;
+                    }
+                }
                 rowValues.put(name, toDisplay(name, e.getValue(), unit, context.system(), context.explicitUnits()).value());
             }
             Map<String, Double> siValues = new HashMap<>();

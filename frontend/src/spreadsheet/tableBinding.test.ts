@@ -269,7 +269,11 @@ describe('parametric specToSheetData', () => {
     expect(at(0, 2)?.v).toBe('P')
     expect(at(1, 0)?.v).toBe(1)
     expect(at(1, 1)?.v).toBe(300)
-    expect(at(1, 2)).toBeUndefined() // blank input, no result
+    // Blank input cells are materialized as empty bordered cells — the
+    // table must read as a bounded grid ("these cells should exist").
+    expect(at(1, 2)?.v).toBe('')
+    expect(sheet.styles?.C2).toContain('border')
+    expect(sheet.rowCount ?? 0).toBeGreaterThanOrEqual(1000)
   })
 
   it('materializes computed cells (blank input + successful run) with the green style', () => {
