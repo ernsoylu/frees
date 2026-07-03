@@ -14,10 +14,10 @@ public record SampledSeries(double[] t, double[] v, Interp interp) {
 
     @Override
     public boolean equals(Object o) {
-        return o instanceof SampledSeries other
-                && interp == other.interp
-                && java.util.Arrays.equals(t, other.t)
-                && java.util.Arrays.equals(v, other.v);
+        return o instanceof SampledSeries(double[] ot, double[] ov, Interp otherInterp)
+                && interp == otherInterp
+                && java.util.Arrays.equals(t, ot)
+                && java.util.Arrays.equals(v, ov);
     }
 
     @Override

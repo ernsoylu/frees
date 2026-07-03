@@ -175,12 +175,23 @@ class MeasurementCalcControllerTest {
         var s2 = new MeasurementCalcController.InlineSeries(new double[]{0, 1}, new double[]{2, 3});
         assertEquals(s1, s2);
         assertEquals(s1.hashCode(), s2.hashCode());
+        org.junit.jupiter.api.Assertions.assertNotEquals(s1,
+                new MeasurementCalcController.InlineSeries(new double[]{9, 9}, new double[]{2, 3}));
+        org.junit.jupiter.api.Assertions.assertNotEquals(s1,
+                new MeasurementCalcController.InlineSeries(new double[]{0, 1}, new double[]{9, 9}));
+        org.junit.jupiter.api.Assertions.assertNotEquals(null, s1);
         assertTrue(s1.toString().contains("n=2"));
 
         var r1 = new MeasurementCalcController.CalcResult("p", new double[]{0}, new double[]{1});
         var r2 = new MeasurementCalcController.CalcResult("p", new double[]{0}, new double[]{1});
         assertEquals(r1, r2);
         assertEquals(r1.hashCode(), r2.hashCode());
+        org.junit.jupiter.api.Assertions.assertNotEquals(r1,
+                new MeasurementCalcController.CalcResult("q", new double[]{0}, new double[]{1}));
+        org.junit.jupiter.api.Assertions.assertNotEquals(r1,
+                new MeasurementCalcController.CalcResult("p", new double[]{9}, new double[]{1}));
+        org.junit.jupiter.api.Assertions.assertNotEquals(r1,
+                new MeasurementCalcController.CalcResult("p", new double[]{0}, new double[]{9}));
         assertTrue(r1.toString().contains("name=p"));
 
         var inputs = java.util.Map.of("x", new com.frees.backend.measurement.SampledSeries(
@@ -191,6 +202,10 @@ class MeasurementCalcControllerTest {
         var p2 = new MeasurementCalcController.Prepared(formula, new double[]{0, 1}, inputs, false);
         assertEquals(p1, p2);
         assertEquals(p1.hashCode(), p2.hashCode());
+        org.junit.jupiter.api.Assertions.assertNotEquals(p1,
+                new MeasurementCalcController.Prepared(formula, new double[]{0, 1}, inputs, true));
+        org.junit.jupiter.api.Assertions.assertNotEquals(p1,
+                new MeasurementCalcController.Prepared(formula, new double[]{9}, inputs, false));
         assertTrue(p1.toString().contains("raster=2"));
     }
 

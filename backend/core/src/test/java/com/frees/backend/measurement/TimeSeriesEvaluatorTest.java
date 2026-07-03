@@ -281,24 +281,26 @@ class TimeSeriesEvaluatorTest {
     }
 
     @Test
-    void timeOpArgumentValidationIsTyped() {
+    void timeOpArgumentValidationIsTyped() throws Exception {
         double[] raster = ramp(10, 0.1);
         Map<String, SampledSeries> in = oneInput(raster, new double[10]);
 
         // First argument must be an input variable, and a KNOWN one.
-        assertThrows(MeasurementParseException.class, () -> TimeSeriesEvaluator.evaluate(
-                TimeSeriesEvaluator.parseFormula("delta(1 + 2)"), raster, in));
+        Expr nonVarArg = TimeSeriesEvaluator.parseFormula("delta(1 + 2)");
+        assertThrows(MeasurementParseException.class,
+                () -> TimeSeriesEvaluator.evaluate(nonVarArg, raster, in));
+        Expr unknownInput = TimeSeriesEvaluator.parseFormula("integral(zzz)");
         MeasurementParseException unknown = assertThrows(MeasurementParseException.class,
-                () -> TimeSeriesEvaluator.evaluate(
-                        TimeSeriesEvaluator.parseFormula("integral(zzz)"), raster, in));
+                () -> TimeSeriesEvaluator.evaluate(unknownInput, raster, in));
         assertTrue(unknown.getMessage().contains("zzz"), unknown.getMessage());
 
         // The window/delay parameter must be a positive numeric constant.
-        assertThrows(MeasurementParseException.class, () -> TimeSeriesEvaluator.evaluate(
-                TimeSeriesEvaluator.parseFormula("movavg(x, x)"), raster, in));
+        Expr nonNumericWindow = TimeSeriesEvaluator.parseFormula("movavg(x, x)");
+        assertThrows(MeasurementParseException.class,
+                () -> TimeSeriesEvaluator.evaluate(nonNumericWindow, raster, in));
+        Expr zeroWindow = TimeSeriesEvaluator.parseFormula("movavg(x, 0)");
         MeasurementParseException nonPositive = assertThrows(MeasurementParseException.class,
-                () -> TimeSeriesEvaluator.evaluate(
-                        TimeSeriesEvaluator.parseFormula("movavg(x, 0)"), raster, in));
+                () -> TimeSeriesEvaluator.evaluate(zeroWindow, raster, in));
         assertTrue(nonPositive.getMessage().contains("> 0"), nonPositive.getMessage());
     }
 
@@ -336,12 +338,12 @@ class TimeSeriesEvaluatorTest {
     }
 
     @Test
-    void runtimeFailureInsideACallIsWrappedWithTheTimestamp() {
+    void runtimeFailureInsideACallIsWrappedWithTheTimestamp() throws Exception {
         double[] raster = ramp(3, 0.5);
         Map<String, SampledSeries> in = oneInput(raster, new double[]{1, 2, 3});
+        Expr unknownFn = TimeSeriesEvaluator.parseFormula("nosuchfunction(x)");
         MeasurementParseException e = assertThrows(MeasurementParseException.class,
-                () -> TimeSeriesEvaluator.evaluate(
-                        TimeSeriesEvaluator.parseFormula("nosuchfunction(x)"), raster, in));
+                () -> TimeSeriesEvaluator.evaluate(unknownFn, raster, in));
         assertTrue(e.getMessage().contains("Formula failed at t = 0.0"), e.getMessage());
     }
 }

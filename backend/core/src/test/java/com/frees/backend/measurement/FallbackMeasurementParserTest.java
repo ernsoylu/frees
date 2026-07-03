@@ -46,7 +46,9 @@ class FallbackMeasurementParserTest {
             switch (failure) {
                 case MeasurementParseException e -> throw e;
                 case IOException e -> throw e;
-                case null, default -> { }
+                case null, default -> {
+                    // no scripted failure — fall through to the stubbed result
+                }
             }
         }
     }
