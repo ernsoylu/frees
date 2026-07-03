@@ -357,14 +357,35 @@ export async function check(
       body: JSON.stringify({ text, variableInfo, stopCriteria: { complexMode }, functionTables, overrides }),
     })
     if (!response.ok) {
+      // A syntax-error rejection (400) carries a full CheckResponse body —
+      // including the 1-based errorLine the editor marks and the lint tooltip
+      // shows — so parse it before reducing to a bare message.
+      let body = ''
+      try {
+        body = await response.text()
+      } catch {
+        // unreadable body — fall through to the status fallback
+      }
+      let data: Record<string, any> | null = null
+      try {
+        const parsed = JSON.parse(body)
+        if (parsed && typeof parsed === 'object') data = parsed
+      } catch {
+        // Body is not JSON — keep the raw text as the message.
+      }
       return {
         solvable: false,
-        equations: 0,
-        unknowns: 0,
-        variables: [],
-        unitWarnings: [],
-        inferredUnits: {},
-        message: await extractErrorMessage(response, `Server error (${response.status})`),
+        equations: data?.equations ?? 0,
+        unknowns: data?.unknowns ?? 0,
+        variables: data?.variables ?? [],
+        unitWarnings: data?.unitWarnings ?? [],
+        inferredUnits: data?.inferredUnits ?? {},
+        message:
+          (typeof data?.message === 'string' && data.message) ||
+          (typeof data?.error === 'string' && data.error) ||
+          body ||
+          `Server error (${response.status})`,
+        errorLine: data?.errorLine ?? null,
       }
     }
     const data = await response.json()
@@ -376,6 +397,7 @@ export async function check(
       unitWarnings: data.unitWarnings ?? [],
       inferredUnits: data.inferredUnits ?? {},
       message: data.message ?? '',
+      errorLine: data.errorLine ?? null,
       codeTables: data.codeTables ?? [],
       parametricTables: data.parametricTables ?? [],
       definedPlots: data.definedPlots ?? [],

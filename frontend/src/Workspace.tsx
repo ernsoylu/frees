@@ -224,6 +224,7 @@ function ArrayRow({ g }: Readonly<{ g: ArrayGroup }>) {
         wrap="nowrap"
         px="sm"
         py={6}
+        className="frees-row-toggle"
         style={{ cursor: 'pointer' }}
         onClick={() => setOpen((o) => !o)}
       >
@@ -304,6 +305,7 @@ function ComponentRow({ c, replNames }: Readonly<{ c: ComponentGroup; replNames:
         wrap="nowrap"
         px="sm"
         py={6}
+        className="frees-row-toggle"
         style={{ cursor: 'pointer' }}
         onClick={() => setOpen((o) => !o)}
       >
@@ -433,7 +435,17 @@ export default function Workspace({ variables, replNames, components: instances,
   const empty = variables.length === 0
 
   return (
-    <Paper withBorder p="md" h="100%" style={{ overflowY: 'auto' }}>
+    // Slightly darker than the editor canvas (same tint as the REPL terminal)
+    // so the tool surfaces read as distinct from the main document.
+    <Paper
+      withBorder
+      p="md"
+      h="100%"
+      style={{
+        overflowY: 'auto',
+        backgroundColor: 'light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8))',
+      }}
+    >
       {/* Wrap (not nowrap) so in a narrow dock/edge panel the filter + Edit drop
           below the title instead of squeezing it into a clipped two-line wrap. */}
       <Group justify="space-between" mb="sm" gap="xs" wrap="wrap">
