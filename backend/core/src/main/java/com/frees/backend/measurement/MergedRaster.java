@@ -40,7 +40,7 @@ public final class MergedRaster {
                 tMax = Math.max(tMax, b[b.length - 1]);
             }
         }
-        double[] all = new double[(int) Math.min(total, Integer.MAX_VALUE - 8)];
+        double[] all = new double[(int) Math.min(total, Integer.MAX_VALUE - 8L)];
         int off = 0;
         for (double[] b : bases) {
             System.arraycopy(b, 0, all, off, b.length);

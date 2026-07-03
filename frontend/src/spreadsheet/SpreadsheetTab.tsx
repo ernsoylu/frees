@@ -258,7 +258,7 @@ export default function SpreadsheetTab({ singleSpreadsheetId, spreadsheets, onSp
       .map((row) =>
         row
           .map((cell) => {
-            let val = String(cell ?? '').replace(/"/g, '""')
+            let val = String(cell ?? '').replaceAll('"', '""')
             if (val.includes(',') || val.includes('"') || val.includes('\n')) val = `"${val}"`
             return val
           })

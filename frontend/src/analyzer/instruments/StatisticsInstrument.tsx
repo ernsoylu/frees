@@ -65,7 +65,7 @@ export default function StatisticsInstrument({ signals, offsets, xRange, cursors
     )
   }
 
-  const fmt = (x: number | null | undefined) => formatValue(x ?? NaN)
+  const fmt = (x: number | null | undefined) => formatValue(x ?? Number.NaN)
 
   return (
     <Stack gap="xs" p={4}>

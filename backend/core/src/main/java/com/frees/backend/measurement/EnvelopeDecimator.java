@@ -15,6 +15,27 @@ public final class EnvelopeDecimator {
 
     /** Envelope triple; arrays are aligned by bucket. */
     public record Envelope(double[] t, double[] min, double[] max) {
+
+        @Override
+        public boolean equals(Object o) {
+            return o instanceof Envelope(double[] ot, double[] omin, double[] omax)
+                    && java.util.Arrays.equals(t, ot)
+                    && java.util.Arrays.equals(min, omin)
+                    && java.util.Arrays.equals(max, omax);
+        }
+
+        @Override
+        public int hashCode() {
+            int h = java.util.Arrays.hashCode(t);
+            h = 31 * h + java.util.Arrays.hashCode(min);
+            h = 31 * h + java.util.Arrays.hashCode(max);
+            return h;
+        }
+
+        @Override
+        public String toString() {
+            return "Envelope[buckets=" + t.length + "]";
+        }
     }
 
     /** First index i in [0, a.length) with a[i] >= x (a ascending). */

@@ -228,6 +228,9 @@ public class SystemHealthService {
             }
             return new ComponentHealth("frees-frontend", "web", DOWN, 0,
                     "HTTP " + code + " from " + frontendUrl);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return new ComponentHealth("frees-frontend", "web", DOWN, 0, cause(e));
         } catch (Exception e) {
             return new ComponentHealth("frees-frontend", "web", DOWN, 0, cause(e));
         }
@@ -242,6 +245,10 @@ public class SystemHealthService {
             future.cancel(true);
             return new ComponentHealth(name, role, DOWN, 0,
                     "probe timed out after " + PROBE_TIMEOUT_MS + " ms (unreachable?)");
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            log.warn("Health probe for {} interrupted", name, e);
+            return new ComponentHealth(name, role, DOWN, 0, cause(e));
         } catch (Exception e) {
             log.warn("Health probe for {} failed", name, e);
             return new ComponentHealth(name, role, DOWN, 0, cause(e));

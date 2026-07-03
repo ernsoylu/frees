@@ -7,7 +7,7 @@
 
 /** Demangle a flat solver variable name for display: `brg$port$t` → `brg.port.t`. */
 export function displayVar(name: string): string {
-  return name.replace(/\$/g, '.')
+  return name.replaceAll('$', '.')
 }
 
 /** Build Mantine Select/MultiSelect options that show the demangled label but

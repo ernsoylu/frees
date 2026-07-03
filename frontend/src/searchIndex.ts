@@ -99,7 +99,7 @@ function parseMarkdown(md: string): { headings: string[]; text: string } {
   }
   // strip common markdown markers for the text index
   const text = cleaned.join('\n')
-    .replace(/```/g, ' ')
+    .replaceAll('```', ' ')
     .replace(/`([^`]*)`/g, '$1')   // inline code -> plain text
     .replace(/\$\$?([^$]*)\$\$?/g, '$1') // latex -> plain text
     .replace(/[#*_>|]/g, ' ')

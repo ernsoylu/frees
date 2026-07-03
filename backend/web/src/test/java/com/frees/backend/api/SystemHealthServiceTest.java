@@ -74,6 +74,23 @@ class SystemHealthServiceTest {
     }
 
     @Test
+    void interruptedProbeRestoresTheInterruptFlagAndReportsDown() {
+        SystemHealthService svc = new SystemHealthService(empty(), empty(), "test", "");
+        try {
+            // With the caller interrupted, every pooled probe's future.get()
+            // throws InterruptedException; the service must re-interrupt and
+            // degrade to DOWN instead of swallowing the flag (java:S2142).
+            Thread.currentThread().interrupt();
+            HealthReport report = svc.report();
+            assertTrue(Thread.currentThread().isInterrupted(),
+                    "the interrupt flag must be restored");
+            assertNotNull(report);
+        } finally {
+            Thread.interrupted(); // clear so no other test inherits the flag
+        }
+    }
+
+    @Test
     void frontendProbedWhenUrlConfiguredButUnreachableIsDown() {
         // An unroutable URL must resolve to DOWN within the probe budget, never hang.
         SystemHealthService svc = new SystemHealthService(
