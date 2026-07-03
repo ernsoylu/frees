@@ -9,8 +9,7 @@ import { type SpreadsheetSpec, emptySpreadsheetData } from './types'
 import { colName, extractSheets, sheetsToWorkbookData, type FWorkbookLike, type StoredSheet } from './univerAdapter'
 import { Button, Group, Modal, TextInput, Switch, Text, Select, Tooltip, useComputedColorScheme } from '@mantine/core'
 import { IconTablePlus, IconLink, IconDownload } from '@tabler/icons-react'
-import { ParamTableSpec } from '../tables'
-import { newParamRow } from '../ParametricTableTab'
+import { newParamRow, ParamTableSpec } from '../tables'
 
 interface Props {
   singleSpreadsheetId: string

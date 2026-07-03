@@ -16,8 +16,7 @@
 // the schema's bounding box, so content outside the region can never reach a
 // spec even if a mutation slips past the UI-level protection rules.
 
-import { FunctionTableSpec, ParamTableSpec, TableSpec } from '../tables'
-import { newParamRow, ParamRow } from '../ParametricTableTab'
+import { FunctionTableSpec, newParamRow, ParamRow, ParamTableSpec, TableSpec } from '../tables'
 import { colName, StoredCell, StoredCellValue, StoredSheet } from './univerAdapter'
 
 /** Hard cap on data rows (contract a): a runaway 50k-row paste truncates here

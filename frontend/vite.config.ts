@@ -40,12 +40,6 @@ export default defineConfig({
     // Split the big shared libraries into their own cached vendor chunks so the
     // editor and Help-page chunks stay small.
     rollupOptions: {
-      // SPIKE-BRANCH ONLY: second HTML entry for the Univer capability probe
-      // (todo.md Phase 0). Remove before merging.
-      input: {
-        main: 'index.html',
-        spike: 'univer-spike.html',
-      },
       output: {
         manualChunks(id: string) {
           // Rollup's virtual CommonJS-interop helpers are shared by every
@@ -58,7 +52,6 @@ export default defineConfig({
           if (!id.includes('node_modules')) return undefined
           if (id.includes('@mantine')) return 'mantine'
           if (id.includes('katex')) return 'katex'
-          if (id.includes('ag-grid')) return 'ag-grid'
           // CodeMirror (+ its @lezer runtime) changes far less often than app
           // code: isolating it keeps ~300 kB of the entry cacheable across
           // deploys and shrinks the frequently-invalidated App chunk.

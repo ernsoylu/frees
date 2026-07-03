@@ -62,13 +62,13 @@ import VariableInfoModal, {
 
 import ConfigureTableModal from './ConfigureTableModal'
 import AlterValuesModal from './AlterValuesModal'
-import { newParamRow } from './ParametricTableTab'
 import TablesTab from './TablesTab'
 import {
   functionTableFromDigitizer,
   loadTables,
   mergeCodeTables,
   newFunctionTable,
+  newParamRow,
   newParamTable,
   ParamTableSpec,
   saveTables,
@@ -85,7 +85,6 @@ import { emptySpreadsheetData, type SpreadsheetSpec } from './spreadsheet/types'
 import {
   flushTablesWorkbook,
   isHostedTable,
-  TABLES_WORKBOOK_ENABLED,
   TABLES_WORKBOOK_WINDOW_ID,
 } from './spreadsheet/tablesWorkbookBridge'
 import { buildSnapshotSheet, type SnapshotInput } from './spreadsheet/snapshot'
@@ -574,7 +573,7 @@ export default function App() {
     }
     // Legacy linked-table views are inert now (superseded by the Tables
     // workbook); the field is preserved for downgrade safety (contract d).
-    if (TABLES_WORKBOOK_ENABLED && (p.spreadsheets ?? []).some((s) => s.linkedTableId)) {
+    if ((p.spreadsheets ?? []).some((s) => s.linkedTableId)) {
       notices.push(
         'This project used a linked table view — parametric tables now live in the Tables window; the old link is inactive (Unlink in the spreadsheet toolbar removes it).',
       )
@@ -772,11 +771,9 @@ export default function App() {
     setTables((all) => [...all, table])
     setActiveTableId(table.id)
     setActiveTab('table')
-    if (TABLES_WORKBOOK_ENABLED) {
-      requestAnimationFrame(() =>
-        dockRef.current?.openInstance(TABLES_WORKBOOK_WINDOW_ID, 'table', 'Tables'),
-      )
-    }
+    requestAnimationFrame(() =>
+      dockRef.current?.openInstance(TABLES_WORKBOOK_WINDOW_ID, 'table', 'Tables'),
+    )
   }
 
   const handleStateUnitIdsChange = (
@@ -1020,18 +1017,6 @@ export default function App() {
     const fresh = flushTablesWorkbook()?.find((t) => t.id === tableId)
     const t = fresh ?? tables.find((x) => x.id === tableId)
     return t?.kind === 'parametric' ? t : undefined
-  }
-
-  function setColumnUnits(name: string, units: string) {
-    setVarDrafts((drafts) => ({
-      ...drafts,
-      [name]: {
-        ...(drafts[name] ?? { ...DEFAULT_DRAFT }),
-        units,
-        isUnitsUserSet: units.trim() !== '',
-      },
-    }))
-    invalidateTable()
   }
 
   async function onCheckTable(tableIdArg?: string, overrideTbl?: ParamTableSpec): Promise<CheckResponse | null> {
@@ -1397,13 +1382,11 @@ export default function App() {
   useEffect(() => {
     const valid = new Set<string>([
       'equations', 'table', 'plots', 'digitizer', 'workspace', 'terminal', 'states', 'inspector',
-      ...(TABLES_WORKBOOK_ENABLED ? [TABLES_WORKBOOK_WINDOW_ID] : []),
+      TABLES_WORKBOOK_WINDOW_ID,
       ...mergedPlots.map((p) => `plot:${p.id}`),
       // Hosted tables (function + GUI parametric) live as sheets in the
       // single Tables workbook window; no per-table windows (decision 2).
-      ...tables
-        .filter((t) => !(TABLES_WORKBOOK_ENABLED && isHostedTable(t)))
-        .map((t) => `table:${t.id}`),
+      ...tables.filter((t) => !isHostedTable(t)).map((t) => `table:${t.id}`),
       ...whiteboards.map((w) => `whiteboard:${w.id}`),
       ...spreadsheets.map((s) => `spreadsheet:${s.id}`),
       ...analyzers.map((a) => `analyzer:${a.id}`),
@@ -1421,7 +1404,7 @@ export default function App() {
     const raf = requestAnimationFrame(() => {
       for (const p of mergedPlots) dockRef.current?.setTitle(`plot:${p.id}`, p.name)
       for (const t of tables) {
-        if (TABLES_WORKBOOK_ENABLED && isHostedTable(t)) continue // hosted in the Tables workbook
+        if (isHostedTable(t)) continue // hosted in the Tables workbook
         dockRef.current?.setTitle(`table:${t.id}`, t.name)
       }
       for (const w of whiteboards) dockRef.current?.setTitle(`whiteboard:${w.id}`, w.name)
@@ -1470,7 +1453,7 @@ export default function App() {
   // the single Univer Tables workbook (decision 2), everything else keeps its
   // per-table window.
   const openTableWindow = (t: TableSpec) => {
-    if (TABLES_WORKBOOK_ENABLED && isHostedTable(t)) {
+    if (isHostedTable(t)) {
       setActiveTableId(t.id)
       dockRef.current?.openInstance(TABLES_WORKBOOK_WINDOW_ID, 'table', 'Tables')
     } else {
@@ -2258,10 +2241,10 @@ export default function App() {
     )
   }
 
-  // The single Univer Tables workbook window hosting every function/lookup
-  // table as a bound sheet (decision 2 of the unification plan). Parametric
-  // and code/ODE tables keep their per-table windows until Phase 2.
-  if (TABLES_WORKBOOK_ENABLED) {
+  // The single Univer Tables workbook window hosting every editable table
+  // (function/lookup + GUI parametric) as a bound sheet (decision 2 of the
+  // unification plan). Code PARAMETRIC / ODE tables keep per-table windows.
+  {
     panelTitles[TABLES_WORKBOOK_WINDOW_ID] = 'Tables'
     panelContent[TABLES_WORKBOOK_WINDOW_ID] = (
       <div style={{ height: '100%', minHeight: 0 }}>
@@ -2286,54 +2269,25 @@ export default function App() {
     )
   }
 
-  // Per-instance Table windows: each table opens as its own dock window
-  // ("table:<id>"). Each window reads its own spec's rows/results and routes
-  // edits to that specific table id (decoupled from the "active" table).
+  // Per-instance Table windows: only read-only code PARAMETRIC / ODE tables
+  // (each "table:<id>"); editable tables are sheets in the Tables workbook.
   for (const t of tables) {
-    if (TABLES_WORKBOOK_ENABLED && isHostedTable(t)) continue
+    if (isHostedTable(t)) continue
     const winId = `table:${t.id}`
-    const param = t.kind === 'parametric' ? t : null
     panelTitles[winId] = t.name
     panelContent[winId] = (
       <div style={panelPad}>
         <TablesTab
           tables={tables}
           singleTableId={t.id}
-          activeTableId={t.id}
-          onExportTable={exportTableToSpreadsheet}
-          onTablesChange={setTables}
-          onActiveTableIdChange={setActiveTableId}
-          tableVars={param?.vars ?? []}
-          rows={param?.rows ?? []}
-          results={param?.results ?? []}
           varDrafts={varDrafts}
-          onConfigure={() => {
-            setActiveTableId(t.id)
-            setShowConfigureTable(true)
-          }}
-          onAddRow={() =>
-            updateParamTable(t.id, (pt) => invalidateActiveParam({ ...pt, rows: [...pt.rows, newParamRow()] }))
-          }
-          onRemoveRow={() =>
-            updateParamTable(t.id, (pt) => invalidateActiveParam({ ...pt, rows: pt.rows.slice(0, -1) }))
-          }
-          onClearResults={() => updateParamTable(t.id, (pt) => ({ ...pt, results: [] }))}
-          onAlterColumn={(name) => {
-            setActiveTableId(t.id)
-            setAlterColumn(name)
-          }}
-          onColumnUnitsChange={setColumnUnits}
           onPlotColumns={handlePlotColumns}
-          onCellChange={(rowIndex, name, value) =>
-            updateParamTable(t.id, (pt) =>
-              invalidateActiveParam({
-                ...pt,
-                rows: pt.rows.map((row, i) =>
-                  i === rowIndex ? { ...row, values: { ...row.values, [name]: value } } : row,
-                ),
-              }),
-            )
-          }
+          onExportTable={exportTableToSpreadsheet}
+          onCopyToEditable={(copy) => {
+            setTables((prev) => [...prev, copy])
+            setActiveTableId(copy.id)
+            requestAnimationFrame(() => openTableWindow(copy))
+          }}
         />
       </div>
     )

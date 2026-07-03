@@ -1,5 +1,16 @@
 import { CheckResponse, FunctionTableDto, OdeTableDto, ParametricTableDto, TableRowResult, TableStats } from './api'
-import { newParamRow, ParamRow } from './ParametricTableTab'
+
+/** One parametric-table run: a stable identity plus the cell drafts.
+ * (Lived in ParametricTableTab until the Mantine grid was retired in favour
+ * of the Univer Tables workbook — Phase 4 of the unification plan.) */
+export interface ParamRow {
+  id: string
+  values: Record<string, string>
+}
+
+export function newParamRow(): ParamRow {
+  return { id: crypto.randomUUID(), values: {} }
+}
 
 // ---------------------------------------------------------------------------
 // Tables (Epic 8): the Tables window manages any number of
