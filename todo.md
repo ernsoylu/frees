@@ -1,5 +1,18 @@
 # frEES — Data Analyzer (MDA-like Measurement Analysis App)
 
+> **STATUS: SHIPPED (2026-07-02, branch `feat/data-analyzer`).** All five phases
+> plus both follow-ups landed and were verified end-to-end against the Docker
+> stack: Phase 1 `4ee7010` (shell, CSV import, oscilloscope), Phase 2 `027d682`
+> (A/B cursors, Table/Statistics, template-mode persistence, CSV export),
+> Phase 3 `34d0874` (backend measurement service + mdf4j, spike verdict below),
+> Phases 4+5 `27573f9` (calculated signals, offsets, Event List,
+> Scatter/Histogram, a11y), asammdf sidecar + async calc `02a3401`. Help topics:
+> `analyzer`, `calc-signals`. Still deferred by design: anchored cursors,
+> string-channel plotting, GPS map, MDF3/XLSX/.mat, mid-job cancel, multi-node
+> measurement storage. The sections below are the reviewed plan, kept as the
+> design record — the §2.5 contracts and the spike/pre-spike results remain the
+> reference for how the shipped code behaves.
+
 ## Context
 
 frees has solver-bound plotting (Plotly) and spreadsheet/table windows, but no way to import
