@@ -25,6 +25,9 @@ export interface ParamTableSpec {
   /** Set when this "parametric" table was produced from a DYNAMIC/ODE block
    * rather than a PARAMETRIC block, so the UI can describe it correctly. */
   origin?: 'ode'
+  /** Sparse formula overlay (contract f) for input cells edited as a bound
+   * sheet in the Tables workbook — same mechanics as FunctionTableSpec. */
+  formulas?: Record<string, string>
   /** Per-column SI units (column name → unit), for read-only code/ODE tables
    * whose columns are not solved scalars: used for grid headers and plot axes. */
   columnUnits?: Record<string, string>

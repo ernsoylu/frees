@@ -49,23 +49,33 @@ import {
   IconChartGridDots,
   IconPlus,
   IconSparkles,
+  IconTable,
   IconTrash,
 } from '@tabler/icons-react'
 import {
   fillMissingCells,
   FunctionTableSpec,
   newFunctionTable,
+  newParamTable,
+  ParamTableSpec,
   sortFunctionRows,
   TableSpec,
 } from '../tables'
+import { newParamRow } from '../ParametricTableTab'
 import {
   boundColumnCount,
+  isHostedTable,
   protectedRangesFor,
   sheetEditsToSpec,
   specToSheetData,
   TABLE_MAX_ROWS,
 } from './tableBinding'
-import { sheetsToWorkbookData, type StoredSheet } from './univerAdapter'
+import { colName, cssToStyleData, sheetsToWorkbookData, type StoredSheet } from './univerAdapter'
+
+/** A1 ref for 0-based coordinates (style lookup on the mutation path). */
+function a1Ref(r: number, c: number): string {
+  return `${colName(c)}${r + 1}`
+}
 import { initialSyncMachine, transition, type SyncEvent, type SyncMachine } from './tableSyncMachine'
 
 import { tablesWorkbookSync } from './tablesWorkbookBridge'
@@ -90,10 +100,14 @@ interface Props {
   activeTableId: string | null
   onTablesChange: Dispatch<SetStateAction<TableSpec[]>>
   onActiveTableIdChange: (id: string | null) => void
+  /** Opens ConfigureTableModal for a parametric table (App-level modal). */
+  onConfigureTable?: (tableId: string) => void
+  /** Opens the fill-column-values modal for a parametric table variable. */
+  onAlterColumn?: (tableId: string, varName: string) => void
 }
 
-function hostedOf(tables: TableSpec[]): FunctionTableSpec[] {
-  return tables.filter((t): t is FunctionTableSpec => t.kind === 'function')
+function hostedOf(tables: TableSpec[]): TableSpec[] {
+  return tables.filter(isHostedTable)
 }
 
 export default function TablesWorkbookTab({
@@ -101,6 +115,8 @@ export default function TablesWorkbookTab({
   activeTableId,
   onTablesChange,
   onActiveTableIdChange,
+  onConfigureTable,
+  onAlterColumn,
 }: Readonly<Props>) {
   const hosted = hostedOf(tables)
   const active =
@@ -123,7 +139,7 @@ export default function TablesWorkbookTab({
   // spec.id -> the exact spec object last written to / read from the sheet;
   // the external-change effect skips specs whose identity matches (the
   // selfWriteRef pattern, per spec instead of per array).
-  const lastWritten = useRef(new Map<string, FunctionTableSpec>())
+  const lastWritten = useRef(new Map<string, TableSpec>())
   // Non-zero while our own materializer writes are executing, so the
   // CommandExecuted listener doesn't schedule a sheet→spec sync for them.
   const suppressSync = useRef(0)
@@ -149,7 +165,7 @@ export default function TablesWorkbookTab({
   // sheet -> spec (user edits)
 
   const syncSheetOut = useCallback(
-    (specId: string): FunctionTableSpec | null => {
+    (specId: string): TableSpec | null => {
       const api = apiRef.current
       if (!api) return null
       const spec = hostedOf(tablesRef.current).find((t) => t.id === specId)
@@ -206,14 +222,14 @@ export default function TablesWorkbookTab({
   /** Flush pending syncs and return the up-to-date hosted specs (the pre-DTO
    * scrape entry point — React state lands a render later, too late for the
    * solve handler's closure). */
-  const flushSync = useCallback((): FunctionTableSpec[] => {
+  const flushSync = useCallback((): TableSpec[] => {
     if (syncTimer.current) {
       clearTimeout(syncTimer.current)
       syncTimer.current = null
     }
     const ids = [...dirtySheets.current]
     dirtySheets.current.clear()
-    const freshById = new Map<string, FunctionTableSpec>()
+    const freshById = new Map<string, TableSpec>()
     for (const id of ids) {
       const fresh = syncSheetOut(id)
       if (fresh) freshById.set(id, fresh)
@@ -239,7 +255,7 @@ export default function TablesWorkbookTab({
   // -------------------------------------------------------------------------
   // spec -> sheet (materialization; mutation-level, permission-exempt)
 
-  const materializeSheet = useCallback((api: FUniver, spec: FunctionTableSpec, prev?: FunctionTableSpec) => {
+  const materializeSheet = useCallback((api: FUniver, spec: TableSpec, prev?: TableSpec) => {
     const sid = sheetIdBySpec.current.get(spec.id)
     if (!sid) return
     const stored = specToSheetData(spec)
@@ -250,16 +266,19 @@ export default function TablesWorkbookTab({
     const clearRows = Math.max(rows, prevRows) + 5
     const clearCols = Math.max(cols, prevCols) + 2
 
-    // Blank-out matrix, then lay the spec cells over it.
+    // Blank-out matrix (value AND style, so a stale computed-green cell never
+    // lingers after results invalidate), then lay the spec cells over it.
     const cellValue: Record<number, Record<number, unknown>> = {}
     for (let r = 0; r < clearRows; r++) {
       const row: Record<number, unknown> = {}
-      for (let c = 0; c < clearCols; c++) row[c] = { v: '', m: '', f: null, si: null }
+      for (let c = 0; c < clearCols; c++) row[c] = { v: '', m: '', f: null, si: null, s: null }
       cellValue[r] = row
     }
     for (const cd of stored.celldata) {
+      const css = stored.styles?.[a1Ref(cd.r, cd.c)]
+      const s = css ? (cssToStyleData(css) ?? null) : null
       cellValue[cd.r] ??= {}
-      cellValue[cd.r][cd.c] = cd.v.f ? { f: cd.v.f, v: null, m: null } : { v: cd.v.v, m: cd.v.m }
+      cellValue[cd.r][cd.c] = cd.v.f ? { f: cd.v.f, v: null, m: null, s } : { v: cd.v.v, m: cd.v.m, s }
     }
 
     suppressSync.current++
@@ -285,7 +304,7 @@ export default function TablesWorkbookTab({
     lastWritten.current.set(spec.id, spec)
   }, [findSheet])
 
-  const applyProtection = useCallback(async (api: FUniver, spec: FunctionTableSpec) => {
+  const applyProtection = useCallback(async (api: FUniver, spec: TableSpec) => {
     const fws = findSheet(api, spec.id)
     if (!fws) return
     for (const rangeRef of protectedRangesFor(spec)) {
@@ -481,17 +500,38 @@ export default function TablesWorkbookTab({
   // ---------------------------------------------------------------------------
   // Toolbar actions (schema lives here, not in cells — contract a)
 
-  const updateActive = (patch: Partial<FunctionTableSpec>) => {
-    if (!active) return
+  const activeFn: FunctionTableSpec | null = active?.kind === 'function' ? active : null
+  const activeParam: ParamTableSpec | null = active?.kind === 'parametric' ? active : null
+
+  const updateActiveFn = (patch: Partial<FunctionTableSpec>) => {
+    if (!activeFn) return
     onTablesChange((prev) =>
-      prev.map((t) => (t.id === active.id && t.kind === 'function' ? { ...t, ...patch } : t)),
+      prev.map((t) => (t.id === activeFn.id && t.kind === 'function' ? { ...t, ...patch } : t)),
     )
   }
 
-  const addTable = (is1D: boolean) => {
-    let created: FunctionTableSpec | null = null
+  const updateActiveParam = (update: (t: ParamTableSpec) => ParamTableSpec) => {
+    if (!activeParam) return
+    onTablesChange((prev) =>
+      prev.map((t) => (t.id === activeParam.id && t.kind === 'parametric' ? update(t) : t)),
+    )
+  }
+
+  /** Any row-count change invalidates results/check, mirroring the old
+   * grid's invalidateActiveParam. */
+  const invalidated = (t: ParamTableSpec): ParamTableSpec => ({
+    ...t,
+    results: [],
+    stats: null,
+    checkResult: null,
+    checkMessage: '',
+  })
+
+  const addTable = (kind: 'function-1d' | 'function-2d' | 'parametric') => {
+    let created: TableSpec | null = null
     onTablesChange((prev) => {
-      created = newFunctionTable(prev, is1D)
+      created =
+        kind === 'parametric' ? newParamTable(prev) : newFunctionTable(prev, kind === 'function-1d')
       return [...prev, created]
     })
     requestAnimationFrame(() => {
@@ -505,11 +545,11 @@ export default function TablesWorkbookTab({
   }
 
   const readOnly = active?.source === 'code'
-  const multiCurve = (active?.columns.length ?? 0) > 1
-  const callSignature = active
+  const multiCurve = (activeFn?.columns.length ?? 0) > 1
+  const callSignature = activeFn
     ? multiCurve
-      ? `${active.name || 'name'}(${active.argName || 'x'}, ${active.paramName || 'param'})`
-      : `${active.name || 'name'}(${active.argName || 'x'})`
+      ? `${activeFn.name || 'name'}(${activeFn.argName || 'x'}, ${activeFn.paramName || 'param'})`
+      : `${activeFn.name || 'name'}(${activeFn.argName || 'x'})`
     : ''
 
   return (
@@ -532,19 +572,22 @@ export default function TablesWorkbookTab({
       >
         <Group justify="space-between" wrap="nowrap">
           <Text size="xs" fw={700} c="dimmed">
-            Function tables
+            Tables
           </Text>
           <Menu position="bottom-start" shadow="md">
             <Menu.Target>
-              <ActionIcon size="sm" variant="light" aria-label="Add function table">
+              <ActionIcon size="sm" variant="light" aria-label="Add table">
                 <IconPlus size={14} />
               </ActionIcon>
             </Menu.Target>
             <Menu.Dropdown>
-              <Menu.Item leftSection={<IconChartGridDots size={14} />} onClick={() => addTable(true)}>
+              <Menu.Item leftSection={<IconTable size={14} />} onClick={() => addTable('parametric')}>
+                Parametric Table — solve the system once per row
+              </Menu.Item>
+              <Menu.Item leftSection={<IconChartGridDots size={14} />} onClick={() => addTable('function-1d')}>
                 Function Table (without Curve)
               </Menu.Item>
-              <Menu.Item leftSection={<IconChartGridDots size={14} />} onClick={() => addTable(false)}>
+              <Menu.Item leftSection={<IconChartGridDots size={14} />} onClick={() => addTable('function-2d')}>
                 Function Table (with Curve family)
               </Menu.Item>
             </Menu.Dropdown>
@@ -564,7 +607,11 @@ export default function TablesWorkbookTab({
             }}
             onClick={() => onActiveTableIdChange(t.id)}
           >
-            <IconChartGridDots size={13} color="var(--mantine-color-teal-4)" />
+            {t.kind === 'parametric' ? (
+              <IconTable size={13} color="var(--mantine-color-teal-4)" />
+            ) : (
+              <IconChartGridDots size={13} color="var(--mantine-color-teal-4)" />
+            )}
             <Text size="xs" style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {t.name}
             </Text>
@@ -592,37 +639,38 @@ export default function TablesWorkbookTab({
         ))}
         {hosted.length === 0 && (
           <Text size="xs" c="dimmed">
-            No function tables yet. Add one to tabulate a function callable from the equations.
+            No tables yet. Add a Parametric Table to run the system over value sets, or a Function
+            Table to turn tabulated data into a function callable from the equations.
           </Text>
         )}
       </Stack>
 
       <Stack gap={4} p="xs" style={{ flex: 1, minWidth: 0 }}>
-        {active && (
+        {activeFn && (
           <Group gap="xs" align="flex-end" wrap="wrap">
             <TextInput
               size="xs"
               label="Function name"
-              value={active.name}
-              onChange={(e) => updateActive({ name: e.currentTarget.value })}
+              value={activeFn.name}
+              onChange={(e) => updateActiveFn({ name: e.currentTarget.value })}
               readOnly={readOnly}
               w={130}
             />
             <TextInput
               size="xs"
               label="Argument (X column)"
-              value={active.argName}
-              onChange={(e) => updateActive({ argName: e.currentTarget.value })}
+              value={activeFn.argName}
+              onChange={(e) => updateActiveFn({ argName: e.currentTarget.value })}
               readOnly={readOnly}
               w={130}
             />
-            {!active.is1D && (
+            {!activeFn.is1D && (
               <TextInput
                 size="xs"
                 label="Curve parameter"
                 placeholder="e.g. T"
-                value={active.paramName}
-                onChange={(e) => updateActive({ paramName: e.currentTarget.value })}
+                value={activeFn.paramName}
+                onChange={(e) => updateActiveFn({ paramName: e.currentTarget.value })}
                 readOnly={readOnly}
                 disabled={!multiCurve}
                 w={110}
@@ -631,30 +679,30 @@ export default function TablesWorkbookTab({
             <Checkbox
               size="xs"
               label="log X"
-              checked={active.xLog}
-              onChange={(e) => updateActive({ xLog: e.currentTarget.checked })}
+              checked={activeFn.xLog}
+              onChange={(e) => updateActiveFn({ xLog: e.currentTarget.checked })}
               disabled={readOnly}
               mb={6}
             />
             <Checkbox
               size="xs"
               label="log Y"
-              checked={active.yLog}
-              onChange={(e) => updateActive({ yLog: e.currentTarget.checked })}
+              checked={activeFn.yLog}
+              onChange={(e) => updateActiveFn({ yLog: e.currentTarget.checked })}
               disabled={readOnly}
               mb={6}
             />
             {!readOnly && (
               <>
-                {!active.is1D && (
+                {!activeFn.is1D && (
                   <Button
                     size="compact-xs"
                     variant="default"
                     mb={4}
                     onClick={() =>
-                      updateActive({
-                        columns: [...active.columns, ''],
-                        rows: active.rows.map((r) => ({ ...r, ys: [...r.ys, ''] })),
+                      updateActiveFn({
+                        columns: [...activeFn.columns, ''],
+                        rows: activeFn.rows.map((r) => ({ ...r, ys: [...r.ys, ''] })),
                       })
                     }
                   >
@@ -666,7 +714,7 @@ export default function TablesWorkbookTab({
                   variant="default"
                   mb={4}
                   leftSection={<IconArrowsSort size={13} />}
-                  onClick={() => onTablesChange((prev) => prev.map((t) => (t.id === active.id ? sortFunctionRows(active) : t)))}
+                  onClick={() => onTablesChange((prev) => prev.map((t) => (t.id === activeFn.id ? sortFunctionRows(activeFn) : t)))}
                 >
                   Sort
                 </Button>
@@ -675,7 +723,7 @@ export default function TablesWorkbookTab({
                     size="compact-xs"
                     mb={4}
                     leftSection={<IconSparkles size={13} />}
-                    onClick={() => onTablesChange((prev) => prev.map((t) => (t.id === active.id ? fillMissingCells(active) : t)))}
+                    onClick={() => onTablesChange((prev) => prev.map((t) => (t.id === activeFn.id ? fillMissingCells(activeFn) : t)))}
                   >
                     Fill missing
                   </Button>
@@ -684,6 +732,60 @@ export default function TablesWorkbookTab({
             )}
             <Text size="xs" c="dimmed" mb={6}>
               Use in equations: <Code>U = {callSignature}</Code>
+            </Text>
+          </Group>
+        )}
+        {activeParam && (
+          <Group gap="xs" align="center" wrap="wrap">
+            <Button size="xs" variant="default" onClick={() => onConfigureTable?.(activeParam.id)}>
+              Configure Columns
+            </Button>
+            <Button
+              size="xs"
+              variant="default"
+              onClick={() => updateActiveParam((t) => invalidated({ ...t, rows: [...t.rows, newParamRow()] }))}
+            >
+              Add Row
+            </Button>
+            <Button
+              size="xs"
+              variant="default"
+              disabled={activeParam.rows.length <= 1}
+              onClick={() => updateActiveParam((t) => invalidated({ ...t, rows: t.rows.slice(0, -1) }))}
+            >
+              Remove Row
+            </Button>
+            {activeParam.vars.length > 0 && (
+              <Menu position="bottom-start" shadow="md">
+                <Menu.Target>
+                  <Button size="xs" variant="default">
+                    Fill Column…
+                  </Button>
+                </Menu.Target>
+                <Menu.Dropdown>
+                  {activeParam.vars.map((name) => (
+                    <Menu.Item key={name} onClick={() => onAlterColumn?.(activeParam.id, name)}>
+                      {name}
+                    </Menu.Item>
+                  ))}
+                </Menu.Dropdown>
+              </Menu>
+            )}
+            {activeParam.results.length > 0 && (
+              <Button
+                size="xs"
+                variant="subtle"
+                onClick={() => updateActiveParam((t) => ({ ...t, results: [] }))}
+              >
+                Clear Results
+              </Button>
+            )}
+            <Text size="xs" c="dimmed">
+              {activeParam.vars.length === 0
+                ? 'Run Check first, then Configure Columns to choose the table variables. Blank cells are solved per run (shown green).'
+                : activeParam.results.length > 0
+                  ? `${activeParam.results.filter((r) => r.success).length}/${activeParam.results.length} runs solved — computed cells are green; typing over one makes it an input.`
+                  : 'Fill cells for independent variables; blank cells are solved for each run (Run Table in the top bar).'}
             </Text>
           </Group>
         )}
