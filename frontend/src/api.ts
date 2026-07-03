@@ -264,7 +264,7 @@ async function pollJob(jobId: string, timeoutMs = 120_000): Promise<JobState> {
     try {
       response = await fetch(url)
     } catch (e) {
-      throw new Error(`Could not reach the solver backend: ${String(e)}`)
+      throw new Error(`Could not reach the solver backend: ${String(e)}`, { cause: e })
     }
     if (response.status === 404) {
       throw new Error('Job not found')

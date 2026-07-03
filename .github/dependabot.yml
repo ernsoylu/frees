@@ -28,6 +28,13 @@ updates:
       frontend-dependencies:
         patterns:
           - "*"
+    ignore:
+      # plugin-react 6.x requires Vite 8 (imports vite/internal, absent in
+      # Vite 6) — the legacy-peer-deps .npmrc masks the conflict at install
+      # and the toolchain then crashes at config load. Take 6.x together with
+      # a deliberate Vite 8 migration, not via a routine bump (PR #52).
+      - dependency-name: "@vitejs/plugin-react"
+        update-types: ["version-update:semver-major"]
 
   # Docker base images (the SUNDIALS/MPI base-pin foot-gun lives here — keep an
   # eye on Temurin base bumps).

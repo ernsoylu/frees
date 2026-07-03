@@ -3504,7 +3504,7 @@ export default function HelpPage() {
   const navigateTo = (id: string) => {
     setActive(id);
     // Keep the URL shareable; guard so the hashchange listener doesn't loop.
-    if (hashTopic() !== id) globalThis.location.hash = id;
+    if (hashTopic() !== id) globalThis.location.assign(`#${id}`);
     setSearchQuery('');
     setSearchFocused(false);
     if (opened) toggle();
