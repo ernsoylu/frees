@@ -40,6 +40,12 @@ export default defineConfig({
     // Split the big shared libraries into their own cached vendor chunks so the
     // editor and Help-page chunks stay small.
     rollupOptions: {
+      // SPIKE-BRANCH ONLY: second HTML entry for the Univer capability probe
+      // (todo.md Phase 0). Remove before merging.
+      input: {
+        main: 'index.html',
+        spike: 'univer-spike.html',
+      },
       output: {
         manualChunks(id: string) {
           // Rollup's virtual CommonJS-interop helpers are shared by every

@@ -1,7 +1,7 @@
 # frEES — Table–Spreadsheet Unification
 
-> **STATUS: PLAN (Revision 3, 2026-07-03) — APPROVED FOR EXECUTION, start at
-> Phase 0.** Goal: one tabular
+> **STATUS: Revision 3 (2026-07-03), critique-approved. Phase 0 spike DONE —
+> FULL PASS (result recorded in § Phase 0); next: Phase 1.** Goal: one tabular
 > surface in the app. Today there are two disjoint systems — the Tables window
 > (parametric + lookup/function tables, Mantine grids) and the Univer
 > spreadsheet — plus read-only glide-data-grid result tables. This plan makes
@@ -344,6 +344,67 @@ contract c + the named formula-complete event for contract b.
 **Fail on (1) AND (2) → stop, redesign; fail on (3) with no discoverable
 completion signal → formulas in bound sheets are cut from v1 (overlay
 contract f ships dormant) rather than shipping stale-read corruption.**
+
+**SPIKE RESULT (2026-07-03, `@univerjs/preset-sheets-core` 0.25.1,
+branch `spike/univer-capability`): FULL PASS — no contract needs its
+fallback.** Probe: `frontend/univer-spike.html` +
+`frontend/src/spike/univerSpike.ts` (spike branch only, plus a temporary
+vite `rollupOptions.input` entry), run headless via `vite build` +
+`vite preview` + Playwright. Matrix:
+1. **Protection: PASS, with one gotcha.** `FRange.getRangePermission()
+   .protect()` ships in the preset (`protectedRangeShadow` config confirms
+   the render side too), but the default rule only restricts *non-owners* —
+   the local session is the owner, so writes still succeed after a bare
+   `protect()`. The working recipe is `protect()` **then
+   `rule.setPoint(RangePermissionPoint.Edit, false)`**: command-level writes
+   are then rejected (`executeCommand` returns `false`, no exception).
+2. **Undo-stack cleanliness: PASS on both paths.** A mixed write spanning
+   editable + protected columns (the paste shape) is rejected **atomically**
+   by native protection — no partial write to the editable part, **no undo
+   entry**. The `onBeforeCommandExecute`-throw veto also cancels cleanly
+   (value unchanged, undo stack untouched, error propagates to the caller)
+   — so interception stays viable for filtering *structural* mutations.
+   Contract c's "hard blocker" branch is moot.
+3. **Async formula: PASS — and the critique's trap is confirmed real.**
+   After editing `A1` upstream of `B1 = =SUM(A1:A5)`, `B1` still reads the
+   stale value 2 ms after the edit; fresh at ~104 ms.
+   `FFormula.onCalculationResultApplied()` / `calculationResultApplied()` /
+   `calculationEnd()` all exist and work — this is contract b's gate. The
+   dependent recalc dispatches `formula.mutation.set-formula-calculation-
+   result` — **not** `sheet.mutation.*` — so the existing `SpreadsheetTab`
+   sync filter would indeed miss it. Bonus: the `SheetValueChanged` facade
+   event fires for **both** the edited and the dependent cell (A1 *and*
+   B1) — candidate single event source for the sheet→spec trigger.
+4. **`getValues()` post-calc: PASS** — fresh value after awaiting
+   `onCalculationResultApplied()`.
+5. **Context menu: config surface confirmed** — the preset factory accepts
+   `menu` (per-item `{hidden}`) + `contextMenu`; instance-level granularity
+   is sufficient because the Tables workbook is its own Univer instance
+   (decision 2). Exact menu-item ids verified visually in Phase 1.
+6. **Sheet ops + `#REF!`: PASS.** Facade create/`setName` work;
+   `SheetDeleted` event fires. Deleting a referenced sheet **rewrites the
+   dependent formula itself to `=#REF!`** (cell holds
+   `{f:'=#REF!', v:'#REF!', t:1}`) — Univer destroys the original formula,
+   which makes the contract-f overlay the *recovery* path, not just
+   persistence. `getValue()` on the error cell returns `null` → maps onto
+   the omit-invalid wire rule with no extra code. (Caveat: `deleteSheet`
+   returned `false` despite succeeding — don't trust its return value.)
+7. **Perf: PASS, non-issue.** 10 sheets × 1k rows × 8 cols:
+   `createWorkbook` 37–39 ms, single edit 7–8 ms, 8k-cell facade read
+   9–10 ms, engine boot 19–51 ms.
+
+**Write-back mechanism decision (new):** the materializer writes protected
+result cells via the **mutation level** (`sheet.mutation.set-range-values`),
+which bypasses the command-layer permission gate by design and creates **no
+undo entry** — correct semantics, since solver write-back must not be
+user-undoable. Point-toggling (allow→write→deny, ~5 ms) also works but has
+a race window while permission is lifted — rejected.
+
+**New constraint for Phase 1:** protection rules are engine session state,
+not part of our stored format — `specToSheetData`'s protection map must be
+(re-)applied on every mount/materialization, and rule creation is async
+(`protect()` + `setPoint()` are promises) so the host must await protection
+before declaring a bound sheet ready for input.
 
 ### Phase 1 — Lookup/function tables hosted in Univer
 Create: `spreadsheet/tableBinding.ts` (contract a: FunctionTableSpec both
