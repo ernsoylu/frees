@@ -208,8 +208,8 @@ class ChannelStore {
         name: ch.display,
         unit: ch.unit,
         kind: ch.kind,
-        min: NaN,
-        max: NaN,
+        min: Number.NaN,
+        max: Number.NaN,
       })),
       totalSamples: remote.metadata.groups.reduce((acc, g) => Math.max(acc, g.records), 0),
     }

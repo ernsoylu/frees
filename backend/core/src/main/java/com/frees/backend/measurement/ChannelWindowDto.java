@@ -27,4 +27,34 @@ public record ChannelWindowDto(
         return new ChannelWindowDto(
                 envelope.t(), null, envelope.min(), envelope.max(), true, totalSamples, unit, kind);
     }
+
+    @Override
+    public boolean equals(Object o) {
+        return o instanceof ChannelWindowDto other
+                && decimated == other.decimated
+                && totalSamples == other.totalSamples
+                && java.util.Objects.equals(unit, other.unit)
+                && java.util.Objects.equals(kind, other.kind)
+                && java.util.Arrays.equals(t, other.t)
+                && java.util.Arrays.equals(v, other.v)
+                && java.util.Arrays.equals(min, other.min)
+                && java.util.Arrays.equals(max, other.max);
+    }
+
+    @Override
+    public int hashCode() {
+        int h = java.util.Objects.hash(decimated, totalSamples, unit, kind);
+        h = 31 * h + java.util.Arrays.hashCode(t);
+        h = 31 * h + java.util.Arrays.hashCode(v);
+        h = 31 * h + java.util.Arrays.hashCode(min);
+        h = 31 * h + java.util.Arrays.hashCode(max);
+        return h;
+    }
+
+    @Override
+    public String toString() {
+        return "ChannelWindowDto[points=" + (t == null ? 0 : t.length)
+                + ", decimated=" + decimated + ", totalSamples=" + totalSamples
+                + ", unit=" + unit + ", kind=" + kind + "]";
+    }
 }

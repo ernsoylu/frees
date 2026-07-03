@@ -109,7 +109,7 @@ function isNumericCell(s: string): boolean {
 /** Parse one data cell: '' → NaN gap, true/false → 1/0, else numeric or NaN. */
 export function cellToNumber(s: string): number {
   const trimmed = s.trim()
-  if (trimmed === '') return NaN
+  if (trimmed === '') return Number.NaN
   const lower = trimmed.toLowerCase()
   if (lower === 'true') return 1
   if (lower === 'false') return 0
@@ -177,7 +177,15 @@ export function detectHeader(rows: string[][]): HeaderInfo {
 const TIME_NAMES = new Set(['time', 't', 'timestamp', 'zeit', 'sec', 'secs', 'seconds', 'ms', 'millis'])
 
 function isTimeName(name: string): boolean {
-  const norm = name.toLowerCase().replace(/\s*[[(].*$/, '').trim()
+  // Cut at the first "[" or "(" (unit suffix) — an index scan, not a regex,
+  // because /\s*[[(].*$/ backtracks super-linearly on pathological headers.
+  const lower = name.toLowerCase()
+  let cut = lower.length
+  for (const ch of ['[', '(']) {
+    const i = lower.indexOf(ch)
+    if (i >= 0 && i < cut) cut = i
+  }
+  const norm = lower.slice(0, cut).trim()
   return TIME_NAMES.has(norm) || norm.startsWith('time')
 }
 
@@ -358,8 +366,8 @@ export class CsvIngest {
         unit: header.units[c],
         kind,
         values: stringy ? null : this.cols[idx].finish(),
-        min: this.mins[idx] === Number.POSITIVE_INFINITY ? NaN : this.mins[idx],
-        max: this.maxs[idx] === Number.NEGATIVE_INFINITY ? NaN : this.maxs[idx],
+        min: this.mins[idx] === Number.POSITIVE_INFINITY ? Number.NaN : this.mins[idx],
+        max: this.maxs[idx] === Number.NEGATIVE_INFINITY ? Number.NaN : this.maxs[idx],
       })
     }
     if (channels.length === 0) {
@@ -493,8 +501,8 @@ export function ingestCsvText(text: string, choice?: TimeChoice): FinishOutcome 
 
 export function fnv1a(s: string): string {
   let h = 0x811c9dc5
-  for (let i = 0; i < s.length; i++) {
-    h ^= s.charCodeAt(i)
+  for (const ch of s) {
+    h ^= ch.codePointAt(0) ?? 0
     h = Math.imul(h, 0x01000193)
   }
   return (h >>> 0).toString(16).padStart(8, '0')

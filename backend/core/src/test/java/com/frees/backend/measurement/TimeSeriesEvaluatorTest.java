@@ -1,6 +1,7 @@
 package com.frees.backend.measurement;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
@@ -131,12 +132,11 @@ class TimeSeriesEvaluatorTest {
     }
 
     @Test
-    void unknownVariableIsATypedError() {
-        assertThrows(MeasurementParseException.class, () -> {
-            Expr f = TimeSeriesEvaluator.parseFormula("a + b");
-            TimeSeriesEvaluator.evaluate(f, ramp(10, 0.1), Map.of(
-                    "a", new SampledSeries(ramp(10, 0.1), new double[10], SampledSeries.Interp.STEP)));
-        });
+    void unknownVariableIsATypedError() throws Exception {
+        Expr f = TimeSeriesEvaluator.parseFormula("a + b");
+        assertThrows(MeasurementParseException.class, () ->
+                TimeSeriesEvaluator.evaluate(f, ramp(10, 0.1), Map.of(
+                        "a", new SampledSeries(ramp(10, 0.1), new double[10], SampledSeries.Interp.STEP))));
     }
 
     // ------------------------------------------------------------------
@@ -214,5 +214,134 @@ class TimeSeriesEvaluatorTest {
                 firstMs, secondMs);
         assertTrue(secondMs <= Math.max(firstMs, 5),
                 "cached pass should not be slower: first=" + firstMs + " second=" + secondMs);
+    }
+
+    // ------------------------------------------------------------------
+    // Formula parsing errors, operator matrix, time-op argument validation
+    // ------------------------------------------------------------------
+
+    private static Map<String, SampledSeries> oneInput(double[] raster, double[] v) {
+        return Map.of("x", new SampledSeries(raster, v, SampledSeries.Interp.STEP));
+    }
+
+    @Test
+    void syntaxErrorsAreTypedWithColumn() {
+        MeasurementParseException e = assertThrows(MeasurementParseException.class,
+                () -> TimeSeriesEvaluator.parseFormula("x + * 2"));
+        assertTrue(e.getMessage().startsWith("Formula error:"), e.getMessage());
+        assertTrue(e.getMessage().contains("column"), e.getMessage());
+    }
+
+    @Test
+    void trailingGarbageIsATypedError() {
+        MeasurementParseException e = assertThrows(MeasurementParseException.class,
+                () -> TimeSeriesEvaluator.parseFormula("x + 1 )"));
+        assertTrue(e.getMessage().startsWith("Formula error:"), e.getMessage());
+    }
+
+    @Test
+    void containsCallRecursesEveryNodeKind() throws Exception {
+        assertTrue(TimeSeriesEvaluator.containsCall(
+                TimeSeriesEvaluator.parseFormula("1 + abs(x)")));
+        assertTrue(TimeSeriesEvaluator.containsCall(
+                TimeSeriesEvaluator.parseFormula("-abs(x)")));
+        assertTrue(TimeSeriesEvaluator.containsCall(
+                TimeSeriesEvaluator.parseFormula("abs(x) > 1")));
+        assertTrue(TimeSeriesEvaluator.containsCall(
+                TimeSeriesEvaluator.parseFormula("abs(x) > 1 and x < 2")));
+        assertTrue(TimeSeriesEvaluator.containsCall(
+                TimeSeriesEvaluator.parseFormula("not (abs(x) > 1)")));
+        assertFalse(TimeSeriesEvaluator.containsCall(
+                TimeSeriesEvaluator.parseFormula("not (x > 1) or x * 2 < -3")));
+    }
+
+    @Test
+    void comparisonLogicalAndNegationOperatorsEvaluate() throws Exception {
+        double[] raster = ramp(5, 1.0); // x = time: 0,1,2,3,4
+        Map<String, SampledSeries> in = oneInput(raster, raster.clone());
+
+        record Case(String formula, double[] expected) { }
+        List<Case> cases = List.of(
+                new Case("x < 2", new double[]{1, 1, 0, 0, 0}),
+                new Case("x <= 2", new double[]{1, 1, 1, 0, 0}),
+                new Case("x >= 3", new double[]{0, 0, 0, 1, 1}),
+                new Case("x = 2", new double[]{0, 0, 1, 0, 0}),
+                new Case("x <> 2", new double[]{1, 1, 0, 1, 1}),
+                new Case("x > 1 and x < 3", new double[]{0, 0, 1, 0, 0}),
+                new Case("x < 1 or x > 3", new double[]{1, 0, 0, 0, 1}),
+                new Case("not (x > 0)", new double[]{1, 0, 0, 0, 0}),
+                new Case("-x", new double[]{0, -1, -2, -3, -4}));
+        for (Case c : cases) {
+            double[] out = TimeSeriesEvaluator.evaluate(
+                    TimeSeriesEvaluator.parseFormula(c.formula()), raster, in);
+            for (int i = 0; i < raster.length; i++) {
+                assertEquals(c.expected()[i], out[i], 1e-12, c.formula() + " @ i=" + i);
+            }
+        }
+    }
+
+    @Test
+    void timeOpArgumentValidationIsTyped() {
+        double[] raster = ramp(10, 0.1);
+        Map<String, SampledSeries> in = oneInput(raster, new double[10]);
+
+        // First argument must be an input variable, and a KNOWN one.
+        assertThrows(MeasurementParseException.class, () -> TimeSeriesEvaluator.evaluate(
+                TimeSeriesEvaluator.parseFormula("delta(1 + 2)"), raster, in));
+        MeasurementParseException unknown = assertThrows(MeasurementParseException.class,
+                () -> TimeSeriesEvaluator.evaluate(
+                        TimeSeriesEvaluator.parseFormula("integral(zzz)"), raster, in));
+        assertTrue(unknown.getMessage().contains("zzz"), unknown.getMessage());
+
+        // The window/delay parameter must be a positive numeric constant.
+        assertThrows(MeasurementParseException.class, () -> TimeSeriesEvaluator.evaluate(
+                TimeSeriesEvaluator.parseFormula("movavg(x, x)"), raster, in));
+        MeasurementParseException nonPositive = assertThrows(MeasurementParseException.class,
+                () -> TimeSeriesEvaluator.evaluate(
+                        TimeSeriesEvaluator.parseFormula("movavg(x, 0)"), raster, in));
+        assertTrue(nonPositive.getMessage().contains("> 0"), nonPositive.getMessage());
+    }
+
+    @Test
+    void timeOpsNestInsideNegationComparisonAndCalls() throws Exception {
+        double[] raster = ramp(11, 0.1);
+        double[] lin = new double[11];
+        for (int i = 0; i < 11; i++) {
+            lin[i] = 2 * raster[i]; // x = 2t → delta = 0.2/point
+        }
+        Map<String, SampledSeries> in = Map.of(
+                "x", new SampledSeries(raster, lin, SampledSeries.Interp.LINEAR));
+
+        // Neg + rewrite path.
+        double[] neg = TimeSeriesEvaluator.evaluate(
+                TimeSeriesEvaluator.parseFormula("-delta(x)"), raster, in);
+        assertEquals(-0.2, neg[5], 1e-12);
+
+        // Not + Compare + rewrite path.
+        double[] flag = TimeSeriesEvaluator.evaluate(
+                TimeSeriesEvaluator.parseFormula("not (delta(x) > 0.1)"), raster, in);
+        assertEquals(0.0, flag[5], 1e-12);
+
+        // Call-argument rewrite path (abs of a synthetic series).
+        double[] call = TimeSeriesEvaluator.evaluate(
+                TimeSeriesEvaluator.parseFormula("abs(-delta(x))"), raster, in);
+        assertEquals(0.2, call[5], 1e-9);
+
+        // delay() with an uppercase-named input exercises original-key lookup.
+        Map<String, SampledSeries> upper = Map.of(
+                "X", new SampledSeries(raster, lin, SampledSeries.Interp.LINEAR));
+        double[] delayed = TimeSeriesEvaluator.evaluate(
+                TimeSeriesEvaluator.parseFormula("delay(x, 0.2)"), raster, upper);
+        assertEquals(lin[3], delayed[5], 1e-12);
+    }
+
+    @Test
+    void runtimeFailureInsideACallIsWrappedWithTheTimestamp() {
+        double[] raster = ramp(3, 0.5);
+        Map<String, SampledSeries> in = oneInput(raster, new double[]{1, 2, 3});
+        MeasurementParseException e = assertThrows(MeasurementParseException.class,
+                () -> TimeSeriesEvaluator.evaluate(
+                        TimeSeriesEvaluator.parseFormula("nosuchfunction(x)"), raster, in));
+        assertTrue(e.getMessage().contains("Formula failed at t = 0.0"), e.getMessage());
     }
 }

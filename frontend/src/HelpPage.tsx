@@ -135,7 +135,7 @@ function RunnableCode({ code, title, vary = [] }: Readonly<{ code: string; title
   };
 
   const openInEditor = () => {
-    const firstComment = /\{\s*([^}]*?)\s*\}/.exec(code)?.[1];
+    const firstComment = /\{([^}]*)\}/.exec(code)?.[1]?.trim();
     localStorage.setItem('frees.pendingSnippet', JSON.stringify({
       title: (title || firstComment || 'Documentation example').slice(0, 80),
       text: code,

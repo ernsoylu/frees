@@ -97,11 +97,15 @@ class Mf4SpikeTest {
         probe(dir.resolve("e_multigroup.mf4"), "e0: linear-conversion group", 0, "temp_raw");
         probe(dir.resolve("e_multigroup.mf4"), "e1: fast group + value2text", 1, "speed");
         probe(dir.resolve("g_deflate.mf4"), "g: plain deflate DZ", 0, "speed");
-        probe(dir.resolve("h_linear_uncompressed.mf4"), "h0: linear conv, uncompressed", 0, "temp_raw");
+        boolean baseline =
+                probe(dir.resolve("h_linear_uncompressed.mf4"), "h0: linear conv, uncompressed", 0, "temp_raw");
         probe(dir.resolve("h_linear_uncompressed.mf4"), "h1: second group, uncompressed", 1, "speed");
+        // The matrix is informational (FAILs are printed, not thrown), but the
+        // plain uncompressed baseline must always parse.
+        assertTrue(baseline, "baseline uncompressed fixture must parse");
     }
 
-    private void probe(Path file, String label, int group, String channel) {
+    private boolean probe(Path file, String label, int group, String channel) {
         try {
             MeasurementMetadata meta = parser.parseMetadata(file);
             int channels = meta.groups().stream().mapToInt(g -> g.channels().size()).sum();
@@ -109,8 +113,10 @@ class Mf4SpikeTest {
             System.out.printf("PASS  %-32s groups=%d channels=%d extracted %s n=%d v0=%s%n",
                     label, meta.groups().size(), channels, channel, data.values().length,
                     data.values().length > 0 ? data.values()[0] : "-");
+            return true;
         } catch (Exception e) {
             System.out.printf("FAIL  %-32s %s: %s%n", label, e.getClass().getSimpleName(), e.getMessage());
+            return false;
         }
     }
 

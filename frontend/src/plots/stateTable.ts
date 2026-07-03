@@ -56,7 +56,7 @@ export interface StateTable {
 function matchStateVariable(name: string): { property: string; index: number } | null {
   const m = /^([a-z]+(?:_[a-z]+)*?)_?(\d+)$|^([a-z]+)\[(\d+)\]$/i.exec(name)
   if (!m) return null
-  const base = (m[1] ?? m[3]).replace(/_/g, '').toLowerCase()
+  const base = (m[1] ?? m[3]).replaceAll('_', '').toLowerCase()
   const property = PROPERTY_ALIASES[base]
   if (!property) return null
   return { property, index: Number(m[2] ?? m[4]) }
@@ -95,7 +95,7 @@ function matchBlockStateVariable(
     if (prefix.startsWith(sym)) {
       // Whatever follows the property symbol is the circuit tag (the `w` in
       // `Pw_1`), used to keep colliding state indices in separate circuits.
-      return { property: PROPERTY_ALIASES[sym], tag: prefix.slice(sym.length).replace(/_/g, ''), index }
+      return { property: PROPERTY_ALIASES[sym], tag: prefix.slice(sym.length).replaceAll('_', ''), index }
     }
   }
   return null
