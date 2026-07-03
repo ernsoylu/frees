@@ -377,7 +377,7 @@ function resampleByX(points: DigPoint[], target: number): DigPoint[] {
   if (target <= 0 || points.length <= target) return points
   const sorted = [...points].sort((p, q) => p.x - q.x)
   const minX = sorted[0].x
-  const maxX = sorted[sorted.length - 1].x
+  const maxX = sorted.at(-1)!.x
   const span = maxX - minX || 1
   const buckets: DigPoint[][] = Array.from({ length: target }, () => [])
   for (const p of sorted) {
@@ -560,7 +560,7 @@ function drawMaskRect(ctx: CanvasRenderingContext2D, rect: MaskRect | null, scal
 export function DigitizerTab({
   onSendToFunctionTable,
 }: Readonly<{ onSendToFunctionTable?: (data: DigitizedExport) => void }>) {
-  const saved = useMemo(loadSaved, [])
+  const saved = useMemo(() => loadSaved(), [])
   const [image, setImage] = useState<HTMLImageElement | null>(null)
   const [imageDataUrl, setImageDataUrl] = useState<string | null>(saved?.imageDataUrl ?? null)
   const [scale, setScale] = useState(1)

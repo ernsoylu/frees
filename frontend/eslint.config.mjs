@@ -38,6 +38,15 @@ export default tseslint.config(
     },
     rules: {
       ...reactHooks.configs.recommended.rules,
+      // eslint-plugin-react-hooks v7 (React Compiler-era) additions, surfaced
+      // as warnings rather than errors: `refs` forbids the latest-props-in-ref
+      // pattern this codebase uses deliberately (WorkspaceDock, EquationEditor
+      // — a ref updated during render so stable callbacks see current props
+      // without resubscribing), and `set-state-in-effect` flags intentional
+      // derived-state resets on prop change. Revisit if/when React Compiler
+      // is adopted, which requires both to hold strictly.
+      'react-hooks/refs': 'warn',
+      'react-hooks/set-state-in-effect': 'warn',
       'react-refresh/only-export-components': [
         'warn',
         { allowConstantExport: true },
