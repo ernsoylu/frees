@@ -267,6 +267,21 @@ function paramSheetEditsToSpec(prev: ParamTableSpec, read: RegionRead): SheetEdi
     rows.push(prevRow ? { ...prevRow, values } : { ...newParamRow(), values })
   }
 
+  // Deleting runs by clearing their cells: trailing rows whose inputs just
+  // transitioned from filled (in prev) to fully blank are dropped — the user
+  // deleted them by hand. Rows that were ALREADY blank (starter rows, Add
+  // Row) are kept: blank runs are legitimate, and Add Row must survive
+  // unrelated edits. Explicit shrinking beyond that stays on Remove Row.
+  const isBlank = (values: Record<string, string>) =>
+    prev.vars.every((name) => (values[name] ?? '').trim() === '')
+  while (rows.length > 0) {
+    const i = rows.length - 1
+    const prevRow = prev.rows[i]
+    if (!prevRow || isBlank(prevRow.values) || !isBlank(rows[i].values)) break
+    rows.pop()
+    inputChanged = true
+  }
+
   let outOfRegion = truncated
   for (let r = 0; r < read.values.length && !outOfRegion; r++) {
     const rowVals = read.values[r] ?? []
