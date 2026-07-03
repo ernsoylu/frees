@@ -162,6 +162,132 @@ export default function TablesWorkbookTab({
   }, [])
 
   // -------------------------------------------------------------------------
+  // spec -> sheet (materialization; mutation-level, permission-exempt)
+
+  const materializeSheet = useCallback((api: FUniver, spec: TableSpec, prev?: TableSpec) => {
+    const sid = sheetIdBySpec.current.get(spec.id)
+    if (!sid) return
+    const stored = specToSheetData(spec)
+    const cols = boundColumnCount(spec)
+    const prevCols = prev ? boundColumnCount(prev) : cols
+    const rows = spec.rows.length + 1
+    const prevRows = prev ? prev.rows.length + 1 : rows
+    const clearRows = Math.max(rows, prevRows) + 5
+    const clearCols = Math.max(cols, prevCols) + 2
+
+    // Blank-out matrix (value AND style, so a stale computed-green cell never
+    // lingers after results invalidate), then lay the spec cells over it.
+    const cellValue: Record<number, Record<number, unknown>> = {}
+    for (let r = 0; r < clearRows; r++) {
+      const row: Record<number, unknown> = {}
+      for (let c = 0; c < clearCols; c++) row[c] = { v: '', m: '', f: null, si: null, s: null }
+      cellValue[r] = row
+    }
+    for (const cd of stored.celldata) {
+      const css = stored.styles?.[a1Ref(cd.r, cd.c)]
+      const s = css ? (cssToStyleData(css) ?? null) : null
+      cellValue[cd.r] ??= {}
+      cellValue[cd.r][cd.c] = cd.v.f ? { f: cd.v.f, v: null, m: null, s } : { v: cd.v.v, m: cd.v.m, s }
+    }
+
+    suppressSync.current++
+    void Promise.resolve(
+      (api as unknown as { executeCommand(id: string, p: unknown): Promise<unknown> }).executeCommand(
+        'sheet.mutation.set-range-values',
+        { unitId: WORKBOOK_ID, subUnitId: sid, cellValue },
+      ),
+    ).finally(() => {
+      suppressSync.current--
+    })
+
+    // Keep the sheet tab name in step with the spec (rename via toolbar).
+    const fws = findSheet(api, spec.id)
+    if (fws && typeof fws.setName === 'function' && fws.getSheetName?.() !== spec.name) {
+      internalOps.current++
+      try {
+        fws.setName(spec.name)
+      } finally {
+        internalOps.current--
+      }
+    }
+    lastWritten.current.set(spec.id, spec)
+  }, [findSheet])
+
+  const applyProtection = useCallback(async (api: FUniver, spec: TableSpec) => {
+    const fws = findSheet(api, spec.id)
+    if (!fws) return
+    for (const rangeRef of protectedRangesFor(spec)) {
+      try {
+        const perm = fws.getRange(rangeRef).getRangePermission?.()
+        if (!perm) return
+        const rule = await perm.protect({ name: `frees:${spec.id}:${rangeRef}` })
+        const editPoint = (api as unknown as { Enum?: { RangePermissionPoint?: { Edit: unknown } } })
+          .Enum?.RangePermissionPoint?.Edit
+        if (rule && editPoint !== undefined) await rule.setPoint(editPoint, false)
+      } catch {
+        // Protection is UX; the mapper's spatial filter is the guarantee
+        // (contract a) — a protection failure must not kill the window.
+      }
+    }
+  }, [findSheet])
+
+  const runMaterializePass = useCallback(() => {
+    const api = apiRef.current
+    if (!api) return
+    const fwb = fwbOf(api) as {
+      create(name: string, rows: number, cols: number): UniverSheetLike
+      deleteSheet(ws: unknown): unknown
+      setActiveSheet?(ws: unknown): void
+    } | null
+    if (!fwb) return
+    const specs = hostedOf(tablesRef.current)
+    const specIds = new Set(specs.map((s) => s.id))
+
+    // Remove sheets whose spec is gone.
+    for (const [specId] of [...sheetIdBySpec.current]) {
+      if (specIds.has(specId)) continue
+      const fws = findSheet(api, specId)
+      sheetIdBySpec.current.delete(specId)
+      lastWritten.current.delete(specId)
+      if (fws) {
+        internalOps.current++
+        try {
+          fwb.deleteSheet(fws)
+        } finally {
+          internalOps.current--
+        }
+      }
+    }
+
+    // Create + materialize new specs; rewrite changed ones.
+    for (const spec of specs) {
+      if (!sheetIdBySpec.current.has(spec.id)) {
+        internalOps.current++
+        try {
+          const fws = fwb.create(spec.name, Math.max(spec.rows.length + 50, 120), boundColumnCount(spec) + 6)
+          sheetIdBySpec.current.set(spec.id, fws.getSheetId())
+        } finally {
+          internalOps.current--
+        }
+        materializeSheet(api, spec)
+        void applyProtection(api, spec)
+      } else if (lastWritten.current.get(spec.id) !== spec) {
+        materializeSheet(api, spec, lastWritten.current.get(spec.id))
+        if (spec.source === 'code') void applyProtection(api, spec)
+      }
+    }
+  }, [applyProtection, findSheet, materializeSheet])
+
+  const dispatch = (ev: SyncEvent) => {
+    const t = transition(machine.current, ev)
+    machine.current = t.machine
+    if (t.runMaterialize) {
+      runMaterializePass()
+      machine.current = transition(machine.current, 'MATERIALIZE_DONE').machine
+    }
+  }
+
+  // -------------------------------------------------------------------------
   // sheet -> spec (user edits)
 
   const syncSheetOut = useCallback(
@@ -251,132 +377,6 @@ export default function TablesWorkbookTab({
     },
     [flushSync],
   )
-
-  // -------------------------------------------------------------------------
-  // spec -> sheet (materialization; mutation-level, permission-exempt)
-
-  const materializeSheet = useCallback((api: FUniver, spec: TableSpec, prev?: TableSpec) => {
-    const sid = sheetIdBySpec.current.get(spec.id)
-    if (!sid) return
-    const stored = specToSheetData(spec)
-    const cols = boundColumnCount(spec)
-    const prevCols = prev ? boundColumnCount(prev) : cols
-    const rows = spec.rows.length + 1
-    const prevRows = prev ? prev.rows.length + 1 : rows
-    const clearRows = Math.max(rows, prevRows) + 5
-    const clearCols = Math.max(cols, prevCols) + 2
-
-    // Blank-out matrix (value AND style, so a stale computed-green cell never
-    // lingers after results invalidate), then lay the spec cells over it.
-    const cellValue: Record<number, Record<number, unknown>> = {}
-    for (let r = 0; r < clearRows; r++) {
-      const row: Record<number, unknown> = {}
-      for (let c = 0; c < clearCols; c++) row[c] = { v: '', m: '', f: null, si: null, s: null }
-      cellValue[r] = row
-    }
-    for (const cd of stored.celldata) {
-      const css = stored.styles?.[a1Ref(cd.r, cd.c)]
-      const s = css ? (cssToStyleData(css) ?? null) : null
-      cellValue[cd.r] ??= {}
-      cellValue[cd.r][cd.c] = cd.v.f ? { f: cd.v.f, v: null, m: null, s } : { v: cd.v.v, m: cd.v.m, s }
-    }
-
-    suppressSync.current++
-    void Promise.resolve(
-      (api as unknown as { executeCommand(id: string, p: unknown): Promise<unknown> }).executeCommand(
-        'sheet.mutation.set-range-values',
-        { unitId: WORKBOOK_ID, subUnitId: sid, cellValue },
-      ),
-    ).finally(() => {
-      suppressSync.current--
-    })
-
-    // Keep the sheet tab name in step with the spec (rename via toolbar).
-    const fws = findSheet(api, spec.id)
-    if (fws && typeof fws.setName === 'function' && fws.getSheetName?.() !== spec.name) {
-      internalOps.current++
-      try {
-        fws.setName(spec.name)
-      } finally {
-        internalOps.current--
-      }
-    }
-    lastWritten.current.set(spec.id, spec)
-  }, [findSheet])
-
-  const applyProtection = useCallback(async (api: FUniver, spec: TableSpec) => {
-    const fws = findSheet(api, spec.id)
-    if (!fws) return
-    for (const rangeRef of protectedRangesFor(spec)) {
-      try {
-        const perm = fws.getRange(rangeRef).getRangePermission?.()
-        if (!perm) return
-        const rule = await perm.protect({ name: `frees:${spec.id}:${rangeRef}` })
-        const editPoint = (api as unknown as { Enum?: { RangePermissionPoint?: { Edit: unknown } } })
-          .Enum?.RangePermissionPoint?.Edit
-        if (rule && editPoint !== undefined) await rule.setPoint(editPoint, false)
-      } catch {
-        // Protection is UX; the mapper's spatial filter is the guarantee
-        // (contract a) — a protection failure must not kill the window.
-      }
-    }
-  }, [findSheet])
-
-  const dispatch = (ev: SyncEvent) => {
-    const t = transition(machine.current, ev)
-    machine.current = t.machine
-    if (t.runMaterialize) {
-      runMaterializePass()
-      machine.current = transition(machine.current, 'MATERIALIZE_DONE').machine
-    }
-  }
-
-  const runMaterializePass = useCallback(() => {
-    const api = apiRef.current
-    if (!api) return
-    const fwb = fwbOf(api) as {
-      create(name: string, rows: number, cols: number): UniverSheetLike
-      deleteSheet(ws: unknown): unknown
-      setActiveSheet?(ws: unknown): void
-    } | null
-    if (!fwb) return
-    const specs = hostedOf(tablesRef.current)
-    const specIds = new Set(specs.map((s) => s.id))
-
-    // Remove sheets whose spec is gone.
-    for (const [specId] of [...sheetIdBySpec.current]) {
-      if (specIds.has(specId)) continue
-      const fws = findSheet(api, specId)
-      sheetIdBySpec.current.delete(specId)
-      lastWritten.current.delete(specId)
-      if (fws) {
-        internalOps.current++
-        try {
-          fwb.deleteSheet(fws)
-        } finally {
-          internalOps.current--
-        }
-      }
-    }
-
-    // Create + materialize new specs; rewrite changed ones.
-    for (const spec of specs) {
-      if (!sheetIdBySpec.current.has(spec.id)) {
-        internalOps.current++
-        try {
-          const fws = fwb.create(spec.name, Math.max(spec.rows.length + 50, 120), boundColumnCount(spec) + 6)
-          sheetIdBySpec.current.set(spec.id, fws.getSheetId())
-        } finally {
-          internalOps.current--
-        }
-        materializeSheet(api, spec)
-        void applyProtection(api, spec)
-      } else if (lastWritten.current.get(spec.id) !== spec) {
-        materializeSheet(api, spec, lastWritten.current.get(spec.id))
-        if (spec.source === 'code') void applyProtection(api, spec)
-      }
-    }
-  }, [applyProtection, findSheet, materializeSheet])
 
   // -------------------------------------------------------------------------
   // Engine lifecycle: boot once there is at least one hosted table.
