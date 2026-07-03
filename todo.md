@@ -1,10 +1,10 @@
 # frEES — Table–Spreadsheet Unification
 
-> **STATUS: Revision 3 (2026-07-03), critique-approved. Phases 0–3 DONE
-> (branch `spike/univer-capability`, verified end-to-end against the Docker
-> stack — see the per-phase result blocks). Phase 4 (retire the fallback
-> editors) is deliberately deferred one release, per its own gate: the
-> workbook host must win on merit first.** Goal: one tabular
+> **STATUS: COMPLETE — Revision 3 (2026-07-03), critique-approved; ALL
+> phases 0–4 DONE on branch `spike/univer-capability`, verified end-to-end
+> against the Docker stack (see the per-phase result blocks). The Phase 4
+> one-release gate was waived by owner decision. Branch is PR-ready; spike
+> artifacts already stripped.** Goal: one tabular
 > surface in the app. Today there are two disjoint systems — the Tables window
 > (parametric + lookup/function tables, Mantine grids) and the Univer
 > spreadsheet — plus read-only glide-data-grid result tables. This plan makes
@@ -554,6 +554,29 @@ render site and remove the dependency if so. Update help topics
 (`src/docs/`) that show the old table editors. Bundle check: Univer must
 remain lazy — the Tables workbook host ships in the same lazy chunk as
 `SpreadsheetTab`.
+
+**PHASE 4 RESULT (2026-07-03, same branch): DONE — the one-release
+fallback gate was waived by owner decision ("proceed next phase").**
+- `FunctionTableEditor.tsx` + `ParametricTableTab.tsx` deleted
+  (`CurveTableEditor.tsx` never existed as a file); `ParamRow`/
+  `newParamRow` moved to `tables.ts`; `VITE_TABLES_WORKBOOK` flag removed
+  (workbook unconditional). TablesTab is now a slim read-only code/ODE
+  window (glide grid + Open in Spreadsheet + a new **"Editable copy"**
+  action cloning a code table into the workbook — preserves the old
+  strip's copy-to-editable feature).
+- MobileLayout falls back to the workbook panel for hosted tables.
+- ag-grid: the dependency was already gone from package.json and src;
+  only the dead manualChunks line remained — removed. Bundle verified:
+  no ag-grid chunk, no spike entry, Univer absent from every entry
+  chunk (lives in the lazy shared `univerAdapter` chunk, 5.4 MB, shared
+  by SpreadsheetTab + TablesWorkbookTab as intended).
+- Docs audit: help pages describe `PARAMETRIC` blocks and the Tables
+  window generically; no old-editor UI was documented → no doc changes.
+- Spike artifacts stripped (univer-spike.html, `src/spike/`, vite input
+  entry); the vite `preview.proxy` addition is kept (useful for host
+  verification).
+- Live smoke post-retirement: function and parametric table creation
+  both land in the workbook with their toolbars. 151 tests green.
 
 ## Risks
 
