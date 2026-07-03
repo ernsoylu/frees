@@ -13,7 +13,11 @@ export interface SpreadsheetSpec {
   resultBindings?: Record<string, string>
   /** Whether to auto-sync resultBindings after a successful solve */
   autoSync?: boolean
-  /** ID of a parametric table this spreadsheet is linked to (if any) */
+  /** SUPERSEDED (kept parsed for downgrade safety, contract d of the
+   * table-spreadsheet unification plan): the old one-off link syncing a
+   * parametric table into sheet 0. The Tables workbook hosts parametric
+   * tables as bound sheets now, so this link is inert — never acted on, only
+   * stripped by the explicit "Unlink" button in the spreadsheet toolbar. */
   linkedTableId?: string
 }
 

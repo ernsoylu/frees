@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Button, Stack, Tabs, Text } from '@mantine/core'
 import { StateTableDto, TableRowResult, VariableResult, getFluids } from './api'
-import { ParamRow } from './ParametricTableTab'
+import { ParamRow } from './tables'
 import { PlotKind, PlotSpec } from './plots/types'
 import { detectStates } from './plots/stateTable'
 import PlotCard from './plots/PlotCard'

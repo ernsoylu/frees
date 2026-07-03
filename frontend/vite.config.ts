@@ -52,7 +52,6 @@ export default defineConfig({
           if (!id.includes('node_modules')) return undefined
           if (id.includes('@mantine')) return 'mantine'
           if (id.includes('katex')) return 'katex'
-          if (id.includes('ag-grid')) return 'ag-grid'
           // CodeMirror (+ its @lezer runtime) changes far less often than app
           // code: isolating it keeps ~300 kB of the entry cacheable across
           // deploys and shrinks the frequently-invalidated App chunk.
@@ -74,6 +73,17 @@ export default defineConfig({
   },
   server: {
     port: 5173,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8080',
+        changeOrigin: true,
+      },
+    },
+  },
+  // `vite preview` serves the built bundle (the dev server can hit watcher
+  // ENOSPC limits here); give it the same /api proxy so host verification
+  // against the Docker backend works.
+  preview: {
     proxy: {
       '/api': {
         target: 'http://localhost:8080',
