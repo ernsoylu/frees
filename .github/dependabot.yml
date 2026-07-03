@@ -1,0 +1,45 @@
+# Automated dependency vulnerability scanning + update PRs.
+#
+# Added after a manual review found matheclipse-core transitively dragging in a
+# jackson-databind with HIGH CVEs (caught by hand, pinned in build.gradle). This
+# config makes the next such drift surface automatically as a PR instead of
+# waiting for the next manual audit. Grouped so routine bumps land as one PR per
+# ecosystem rather than a flood.
+version: 2
+updates:
+  # Backend — both Gradle modules (core, web) are discovered from the root.
+  - package-ecosystem: "gradle"
+    directory: "/backend"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    groups:
+      backend-dependencies:
+        patterns:
+          - "*"
+
+  # Frontend npm dependencies.
+  - package-ecosystem: "npm"
+    directory: "/frontend"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    groups:
+      frontend-dependencies:
+        patterns:
+          - "*"
+
+  # Docker base images (the SUNDIALS/MPI base-pin foot-gun lives here — keep an
+  # eye on Temurin base bumps).
+  - package-ecosystem: "docker"
+    directories:
+      - "/backend"
+      - "/frontend"
+    schedule:
+      interval: "weekly"
+
+  # GitHub Actions used by CI.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
