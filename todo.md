@@ -1,9 +1,10 @@
 # frEES — Table–Spreadsheet Unification
 
-> **STATUS: Revision 3 (2026-07-03), critique-approved. Phases 0–2 DONE
-> (branch `spike/univer-capability`, each verified end-to-end against the
-> Docker stack — see the per-phase result blocks); next: Phase 3
-> (snapshots), Phase 4 (retirement).** Goal: one tabular
+> **STATUS: Revision 3 (2026-07-03), critique-approved. Phases 0–3 DONE
+> (branch `spike/univer-capability`, verified end-to-end against the Docker
+> stack — see the per-phase result blocks). Phase 4 (retire the fallback
+> editors) is deliberately deferred one release, per its own gate: the
+> workbook host must win on merit first.** Goal: one tabular
 > surface in the app. Today there are two disjoint systems — the Tables window
 > (parametric + lookup/function tables, Mantine grids) and the Univer
 > spreadsheet — plus read-only glide-data-grid result tables. This plan makes
@@ -531,6 +532,19 @@ the call site).
 Tests: snapshot of an ODE fixture lands values+units header; cap paths
 (warn accepted, hard cap routes to CSV); `.frees` round-trip includes the
 snapshot sheet.
+
+**PHASE 3 RESULT (2026-07-03, same branch): DONE.**
+`spreadsheet/snapshot.ts` (Univer-free builder, unit-tested caps: 5k
+confirm / 10k hard → CSV message; timestamped names); shared
+`createSnapshotSpreadsheet` in App feeding (a) the rewritten Export to
+Spreadsheet (units headers, `n ✗` failed-run markers, caps), (b) an "Open
+in Spreadsheet" button on read-only code/ODE table windows, (c) per-grid
+snapshot buttons in Fluid States (converted to the selected display
+units). **Deviation:** the analyzer `TableInstrument` snapshot is deferred
+— measurement-scale channels mostly exceed the 10k cap by design and the
+analyzer already ships CSV export; revisit on demand. Verified live
+(Inspector export from the workbook window → timestamped spreadsheet
+opens). 151 tests green.
 
 ### Phase 4 — Retirement & cleanup
 Remove the flag-fallback Mantine editors (`FunctionTableEditor.tsx`,
