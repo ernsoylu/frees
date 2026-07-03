@@ -53,3 +53,12 @@ parse_sources.py
 inspect.js
 inspect2.js
 local_screenshot.png
+
+# Environment files / secrets — never commit. Runtime config is injected via
+# Railway/CI env vars and docker-compose, not checked-in .env files.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets.*
