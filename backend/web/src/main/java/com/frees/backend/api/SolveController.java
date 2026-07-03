@@ -117,9 +117,6 @@ public class SolveController {
                                 List<SolveDtos.StateTableDto> stateTableDefs,
                                 List<SolveDtos.OdeTableDto> odeTables,
                                 List<SolveDtos.ResidueExpansionDto> residueExpansions,
-                                // Mermaid flowchart of the COMPONENT network (§14.2), or
-                                // null when the document has no components.
-                                String topology,
                                 // Per-component-instance identity + parameter bindings,
                                 // for the Variable Explorer's component datasheet view.
                                 List<SolveDtos.ComponentDto> components) {
@@ -131,7 +128,7 @@ public class SolveController {
         static SolveResponse failure(String error, Integer errorLine) {
             return new SolveResponse(false, List.of(), List.of(), List.of(), null,
                     List.of(), List.of(), error, List.of(), List.of(), List.of(),
-                    List.of(), errorLine, List.of(), List.of(), List.of(), null, List.of());
+                    List.of(), errorLine, List.of(), List.of(), List.of(), List.of());
         }
     }
 
@@ -272,7 +269,6 @@ public class SolveController {
                 stateTablesOf(parsed.stateTables()),
                 odeTablesOf(result.odeTables(), unitsByLower),
                 result.residueExpansions(),
-                TopologyGraph.mermaid(cleanText),
                 ComponentMetadata.build(cleanText, variableDtos));
     }
 

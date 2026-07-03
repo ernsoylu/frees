@@ -148,7 +148,7 @@ connect(LINE.out, RET.in)
 dP = SUP.out.P - RET.in.P
 ```
 
-Solve, and read `dP` — the `Pipe` computed density, Reynolds number, and friction factor internally. Port members like `LINE.out.P` are ordinary variables you can probe or pin, and the **Topology** tab draws the network you actually built.
+Solve, and read `dP` — the `Pipe` computed density, Reynolds number, and friction factor internally. Port members like `LINE.out.P` are ordinary variables you can probe or pin.
 
 This scales a long way: pumps, heat exchangers, refrigerant circuits, electrical and mechanical elements, humid-air HVAC — including transients, from the same wiring. The **System Modeling with Components** group teaches it properly, starting with *Your First Component Network*.
 
