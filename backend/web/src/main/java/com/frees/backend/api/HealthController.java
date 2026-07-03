@@ -1,11 +1,14 @@
 package com.frees.backend.api;
 
+import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -17,27 +20,60 @@ import java.util.Map;
  * observable, and a short detail.
  *
  * <p>Returns 200 when the system is UP or DEGRADED and 503 when a critical
- * dependency is DOWN, so uptime monitors flag outages while the full per-service
- * breakdown stays readable in the body either way. Exempt from the API rate
- * limiter (see {@code RequestGuardFilter}) so dashboards can poll it freely.
+ * dependency is DOWN, so uptime monitors flag outages while the overall status
+ * is readable either way. Exempt from the API rate limiter (see
+ * {@code RequestGuardFilter}) so dashboards can poll it freely.
+ *
+ * <p><b>Topology-detail gating.</b> The per-service breakdown (service names,
+ * roles, replica counts, queue depth, dependency latency) is reconnaissance-
+ * grade information, so it is only included for callers that present the
+ * configured {@code X-Health-Token}. Everyone else gets the overall status and
+ * the correct 200/503 code — enough for an uptime monitor — with an empty
+ * component list. When no token is configured (e.g. local dev) the full detail
+ * is returned unguarded, preserving the prior behaviour.
  */
 @RestController
 @RequestMapping("/api")
 public class HealthController {
 
-    private final SystemHealthService health;
+    /** Header a monitoring caller sends to receive the full per-service breakdown. */
+    static final String HEALTH_TOKEN_HEADER = "X-Health-Token";
 
-    public HealthController(SystemHealthService health) {
+    private final SystemHealthService health;
+    private final String detailToken;
+
+    public HealthController(
+            SystemHealthService health,
+            @Value("${frees.security.health-detail-token:}") String detailToken) {
         this.health = health;
+        this.detailToken = detailToken == null ? "" : detailToken.trim();
     }
 
     @GetMapping("/health")
-    public ResponseEntity<SystemHealthService.HealthReport> health() {
+    public ResponseEntity<SystemHealthService.HealthReport> health(HttpServletRequest request) {
         SystemHealthService.HealthReport report = health.report();
         HttpStatus code = SystemHealthService.DOWN.equals(report.status())
                 ? HttpStatus.SERVICE_UNAVAILABLE
                 : HttpStatus.OK;
-        return ResponseEntity.status(code).body(report);
+        // The overall status (and its 200/503 code) is always public; the
+        // per-service topology is redacted unless the caller is authorized.
+        return ResponseEntity.status(code).body(detailAllowed(request) ? report : redact(report));
+    }
+
+    /** True when topology detail may be disclosed: either no token is configured
+     *  (unguarded, for local/dev use) or the request presents the matching token. */
+    private boolean detailAllowed(HttpServletRequest request) {
+        if (detailToken.isEmpty()) {
+            return true;
+        }
+        String presented = request.getHeader(HEALTH_TOKEN_HEADER);
+        return presented != null && detailToken.equals(presented.trim());
+    }
+
+    /** Strips the per-service breakdown, keeping only the overall status. */
+    private static SystemHealthService.HealthReport redact(SystemHealthService.HealthReport report) {
+        return new SystemHealthService.HealthReport(
+                report.status(), report.service(), report.timestamp(), List.of());
     }
 
     /**
