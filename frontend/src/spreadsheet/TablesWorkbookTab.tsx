@@ -66,6 +66,7 @@ import {
   boundColumnCount,
   isHostedTable,
   protectedRangesFor,
+  sheetDimsFor,
   sheetEditsToSpec,
   specToSheetData,
   TABLE_MAX_ROWS,
@@ -176,18 +177,51 @@ export default function TablesWorkbookTab({
     // spec's extent — stray content (e.g. run numbers drag-filled through
     // range protection far below the table) would otherwise survive a
     // repaint as half-stale leftovers.
-    const usedVals = findSheet(api, spec.id)?.getDataRange()?.getValues() ?? []
+    const fws = findSheet(api, spec.id)
+    const usedVals = fws?.getDataRange()?.getValues() ?? []
     const usedRows = usedVals.length
     const usedCols = usedVals.reduce((m, row) => Math.max(m, row.length), 0)
-    const clearRows = Math.max(rows, prevRows, usedRows) + 5
-    const clearCols = Math.max(cols, prevCols, usedCols) + 2
+    let clearRows = Math.max(rows, prevRows, usedRows) + 5
+    let clearCols = Math.max(cols, prevCols, usedCols) + 2
 
-    // Blank-out matrix (value AND style, so a stale computed-green cell never
-    // lingers after results invalidate), then lay the spec cells over it.
+    // Univer hard-throws "Range is out of bounds" on writes past the sheet's
+    // grid (the crash a user hit after growing a table). Grow the grid when
+    // the table outgrew it, then clamp the write window to what exists.
+    if (fws) {
+      try {
+        const maxR = fws.getMaxRows?.() ?? 0
+        const maxC = fws.getMaxColumns?.() ?? 0
+        internalOps.current++
+        suppressSync.current++
+        try {
+          if (maxR > 0 && clearRows > maxR && typeof fws.insertRowsAfter === 'function') {
+            fws.insertRowsAfter(maxR - 1, clearRows - maxR + 200)
+          }
+          if (maxC > 0 && clearCols > maxC && typeof fws.insertColumnsAfter === 'function') {
+            fws.insertColumnsAfter(maxC - 1, clearCols - maxC + 5)
+          }
+        } finally {
+          internalOps.current--
+          suppressSync.current--
+        }
+        const mr = fws.getMaxRows?.() ?? clearRows
+        const mc = fws.getMaxColumns?.() ?? clearCols
+        clearRows = Math.min(clearRows, Math.max(mr, 1))
+        clearCols = Math.min(clearCols, Math.max(mc, 1))
+      } catch {
+        // capacity probing must never take the workbook down
+      }
+    }
+
+    // Blank-out matrix, then lay the spec cells over it. Cleared cells are
+    // written as NULL (cell removed) — an empty-string cell still counts as
+    // content for Univer's used range, which made every materialize see a
+    // bigger range, pad it, and grow the sheet (+2 cols/+5 rows per Add Row:
+    // a runaway that scrolled the grid out to column BL).
     const cellValue: Record<number, Record<number, unknown>> = {}
     for (let r = 0; r < clearRows; r++) {
       const row: Record<number, unknown> = {}
-      for (let c = 0; c < clearCols; c++) row[c] = { v: '', m: '', f: null, si: null, s: null }
+      for (let c = 0; c < clearCols; c++) row[c] = null
       cellValue[r] = row
     }
     for (const cd of stored.celldata) {
@@ -198,17 +232,23 @@ export default function TablesWorkbookTab({
     }
 
     suppressSync.current++
-    void Promise.resolve(
-      (api as unknown as { executeCommand(id: string, p: unknown): Promise<unknown> }).executeCommand(
-        'sheet.mutation.set-range-values',
-        { unitId: WORKBOOK_ID, subUnitId: sid, cellValue },
-      ),
-    ).finally(() => {
-      suppressSync.current--
-    })
+    void Promise.resolve()
+      .then(() =>
+        (api as unknown as { executeCommand(id: string, p: unknown): Promise<unknown> }).executeCommand(
+          'sheet.mutation.set-range-values',
+          { unitId: WORKBOOK_ID, subUnitId: sid, cellValue },
+        ),
+      )
+      .catch(() => {
+        // A failed repaint must degrade to a warning, never the app's error
+        // boundary — the spec is still the source of truth.
+        setWarning('The sheet could not be fully redrawn — reopen the Tables window to repaint it.')
+      })
+      .finally(() => {
+        suppressSync.current--
+      })
 
     // Keep the sheet tab name in step with the spec (rename via toolbar).
-    const fws = findSheet(api, spec.id)
     if (fws && typeof fws.setName === 'function' && fws.getSheetName?.() !== spec.name) {
       internalOps.current++
       try {
@@ -271,7 +311,8 @@ export default function TablesWorkbookTab({
       if (!sheetIdBySpec.current.has(spec.id)) {
         internalOps.current++
         try {
-          const fws = fwb.create(spec.name, Math.max(spec.rows.length + 50, 120), boundColumnCount(spec) + 6)
+          const dims = sheetDimsFor(spec)
+          const fws = fwb.create(spec.name, dims.rowCount, dims.columnCount)
           sheetIdBySpec.current.set(spec.id, fws.getSheetId())
         } finally {
           internalOps.current--
@@ -435,6 +476,7 @@ export default function TablesWorkbookTab({
     // formula recalcs (formula.mutation.*, NOT sheet.mutation.*) must trigger
     // it too — dependent cells recalc without any sheet mutation (spike P4).
     const cmdSub = univerAPI.addEvent(univerAPI.Event.CommandExecuted, (e: { id?: string; params?: unknown }) => {
+      try {
       const id = String(e?.id ?? '')
       const params = (e?.params ?? {}) as { unitId?: string; subUnitId?: string; name?: string }
       if (params.unitId && params.unitId !== WORKBOOK_ID) return
@@ -454,6 +496,10 @@ export default function TablesWorkbookTab({
             onTablesChange((prev) => prev.map((t) => (t.id === specId ? { ...t, name: params.name! } : t)))
           }
         }
+      }
+      } catch {
+        // Listener errors propagate into Univer's command pipeline and can
+        // take the whole workspace down — contain them here.
       }
     })
 
@@ -837,6 +883,10 @@ interface UniverSheetLike {
   getSheetId(): string
   getSheetName?(): string
   setName?(name: string): void
+  getMaxRows?(): number
+  getMaxColumns?(): number
+  insertRowsAfter?(afterIndex: number, howMany: number): unknown
+  insertColumnsAfter?(afterIndex: number, howMany: number): unknown
   getDataRange(): {
     getValues(): (string | number | boolean | null)[][]
     getFormulas(): string[][]
