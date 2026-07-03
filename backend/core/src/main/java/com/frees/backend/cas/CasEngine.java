@@ -165,7 +165,22 @@ public final class CasEngine {
             }
     );
 
+    /** Symja's first evaluation pays a large one-time rule-engine
+     * initialization (can exceed a second on cold or loaded machines). Left
+     * on the per-call clock it gets billed to whichever caller happens to be
+     * first — the source of order-dependent {@code TimeoutException} flakes
+     * (CasEngineTest failing in isolation but passing after another test
+     * warmed the engine). Pay it once here, without a timeout. */
+    private static volatile boolean warmedUp = false;
+
+    private static synchronized void warmUp() {
+        if (warmedUp) return;
+        new ExprEvaluator(false, MAX_RECURSION).eval("Expand[(x+1)^2]");
+        warmedUp = true;
+    }
+
     private String evaluate(String command) {
+        warmUp();
         Future<String> future = executor.submit(() -> {
             ExprEvaluator util = new ExprEvaluator(false, MAX_RECURSION);
             IExpr result = util.eval(command);
