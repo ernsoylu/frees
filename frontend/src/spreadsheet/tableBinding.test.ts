@@ -323,6 +323,55 @@ describe('parametric sheetEditsToSpec', () => {
     expect(untouched.rows.length).toBe(2) // floor = previous count
   })
 
+  it('drops trailing runs the user deleted by clearing their cells', () => {
+    // 4 filled runs; the user hand-clears the last two -> 2 runs, invalidated.
+    const spec = paramSpec({
+      rows: [
+        { id: 'r1', values: { T: '300', P: '' } },
+        { id: 'r2', values: { T: '350', P: '' } },
+        { id: 'r3', values: { T: '400', P: '' } },
+        { id: 'r4', values: { T: '450', P: '' } },
+      ],
+    })
+    const read = readOf(specToSheetData(spec))
+    read.values[3][1] = null
+    read.values[4][1] = null
+    const p = sheetEditsToSpec(spec, read).spec as ParamTableSpec
+    expect(p.rows.length).toBe(2)
+    expect(p.rows.map((r) => r.id)).toEqual(['r1', 'r2'])
+  })
+
+  it('keeps rows that were already blank (Add Row survives unrelated edits)', () => {
+    // Third run added via Add Row (blank); editing run 1 must not drop it.
+    const spec = paramSpec({
+      rows: [
+        { id: 'r1', values: { T: '300', P: '' } },
+        { id: 'r2', values: { T: '350', P: '' } },
+        { id: 'r3', values: {} },
+      ],
+    })
+    const read = readOf(specToSheetData(spec))
+    read.values[1][1] = 310
+    const p = sheetEditsToSpec(spec, read).spec as ParamTableSpec
+    expect(p.rows.length).toBe(3)
+    expect(p.rows[0].values.T).toBe('310')
+  })
+
+  it('clearing a middle row keeps it as a blank (free-solve) run', () => {
+    const spec = paramSpec({
+      rows: [
+        { id: 'r1', values: { T: '300', P: '' } },
+        { id: 'r2', values: { T: '350', P: '' } },
+        { id: 'r3', values: { T: '400', P: '' } },
+      ],
+    })
+    const read = readOf(specToSheetData(spec))
+    read.values[2][1] = null // clear run 2 only
+    const p = sheetEditsToSpec(spec, read).spec as ParamTableSpec
+    expect(p.rows.length).toBe(3)
+    expect(p.rows[1].values.T).toBe('')
+  })
+
   it('never mutates code/ODE specs and they are not hosted', () => {
     const code = paramSpec({ source: 'code' })
     const read = readOf(specToSheetData(code))
