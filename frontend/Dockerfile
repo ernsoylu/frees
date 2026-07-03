@@ -1,5 +1,5 @@
 # Build stage: compile the React app.
-FROM node:20-alpine AS build
+FROM node:26-alpine AS build
 WORKDIR /app
 # .npmrc carries `legacy-peer-deps=true` (glide-data-grid's React-18 peer ceiling
 # vs the project's React 19); npm ci must see it or the install fails.
