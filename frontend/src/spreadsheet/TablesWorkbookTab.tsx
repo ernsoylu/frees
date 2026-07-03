@@ -172,8 +172,15 @@ export default function TablesWorkbookTab({
     const prevCols = prev ? boundColumnCount(prev) : cols
     const rows = spec.rows.length + 1
     const prevRows = prev ? prev.rows.length + 1 : rows
-    const clearRows = Math.max(rows, prevRows) + 5
-    const clearCols = Math.max(cols, prevCols) + 2
+    // The clear window must also cover the sheet's USED range, not just the
+    // spec's extent — stray content (e.g. run numbers drag-filled through
+    // range protection far below the table) would otherwise survive a
+    // repaint as half-stale leftovers.
+    const usedVals = findSheet(api, spec.id)?.getDataRange()?.getValues() ?? []
+    const usedRows = usedVals.length
+    const usedCols = usedVals.reduce((m, row) => Math.max(m, row.length), 0)
+    const clearRows = Math.max(rows, prevRows, usedRows) + 5
+    const clearCols = Math.max(cols, prevCols, usedCols) + 2
 
     // Blank-out matrix (value AND style, so a stale computed-green cell never
     // lingers after results invalidate), then lay the spec cells over it.
@@ -310,6 +317,8 @@ export default function TablesWorkbookTab({
         setWarning(`Formula error in ${result.errorCells.join(', ')} — those cells are excluded from the solver.`)
       } else if (result.outOfRegion) {
         setWarning('Content outside the table columns was cleared (columns are schema — use the toolbar).')
+      } else if (result.runColumnDrift) {
+        setWarning('The Run column is managed by the table — hand-typed run numbers were reset (use Add Row to add runs).')
       } else {
         setWarning(null)
       }
@@ -340,9 +349,17 @@ export default function TablesWorkbookTab({
 
       lastWritten.current.set(specId, result.spec)
       onTablesChange((prev) => prev.map((t) => (t.id === specId ? result.spec : t)))
+
+      // Run-column drift (fill-drag writes through range protection): repaint
+      // the whole sheet from the fresh spec — the materializer's clear window
+      // covers the used range, so stray labels are wiped completely instead
+      // of leaving half-stale leftovers.
+      if (result.runColumnDrift) {
+        materializeSheet(api, result.spec, spec)
+      }
       return result.spec
     },
-    [findSheet, onTablesChange],
+    [findSheet, materializeSheet, onTablesChange],
   )
 
   /** Flush pending syncs and return the up-to-date hosted specs (the pre-DTO
@@ -707,6 +724,22 @@ export default function TablesWorkbookTab({
                     }
                   >
                     Add curve
+                  </Button>
+                )}
+                {!activeFn.is1D && (
+                  <Button
+                    size="compact-xs"
+                    variant="default"
+                    mb={4}
+                    disabled={activeFn.columns.length <= 1}
+                    onClick={() =>
+                      updateActiveFn({
+                        columns: activeFn.columns.slice(0, -1),
+                        rows: activeFn.rows.map((r) => ({ ...r, ys: r.ys.slice(0, -1) })),
+                      })
+                    }
+                  >
+                    Remove curve
                   </Button>
                 )}
                 <Button
