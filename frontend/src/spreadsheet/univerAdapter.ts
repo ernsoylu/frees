@@ -31,6 +31,10 @@ export interface StoredSheet {
   /** CSS strings keyed by A1 ref (e.g. { A1: 'font-weight:bold;' }). */
   styles?: Record<string, string>
   config?: unknown
+  /** Optional minimum grid dimensions (bound table sheets ask for headroom
+   * so Add Row / pastes don't hit Univer's "Range is out of bounds"). */
+  rowCount?: number
+  columnCount?: number
 }
 
 const MIN_ROWS = 100
@@ -113,6 +117,17 @@ export function cssToStyleData(css: string): IStyleData | undefined {
         s.ff = val.replace(/^['"]|['"]$/g, '')
         any = true
         break
+      case 'border': {
+        // "1px solid #rrggbb" — used by the Tables workbook to draw the bound
+        // region as a real grid. Width/style are fixed thin lines.
+        const color = val.split(/\s+/).find((p) => p.startsWith('#'))
+        if (color) {
+          const side = { s: 1, cl: { rgb: color } }
+          s.bd = { t: side, b: side, l: side, r: side }
+          any = true
+        }
+        break
+      }
     }
   }
   return any ? s : undefined
@@ -135,6 +150,8 @@ export function styleDataToCss(s: IStyleData | null | undefined): string {
   if (vtName) out.push(`vertical-align: ${vtName}`)
   if (typeof s.fs === 'number' && s.fs > 0) out.push(`font-size: ${Math.round((s.fs / 0.75) * 100) / 100}px`)
   if (s.ff) out.push(`font-family: ${s.ff}`)
+  const bdColor = s.bd?.t?.cl?.rgb ?? s.bd?.b?.cl?.rgb ?? s.bd?.l?.cl?.rgb ?? s.bd?.r?.cl?.rgb
+  if (bdColor) out.push(`border: 1px solid ${bdColor}`)
   return out.length ? out.join('; ') + ';' : ''
 }
 
@@ -185,8 +202,8 @@ export function sheetsToWorkbookData(id: string, name: string, sheets: StoredShe
     wsheets[sid] = {
       id: sid,
       name: sh.name || `Sheet${i + 1}`,
-      rowCount: Math.max(MIN_ROWS, maxR + 20),
-      columnCount: Math.max(MIN_COLS, maxC + 5),
+      rowCount: Math.max(MIN_ROWS, maxR + 20, sh.rowCount ?? 0),
+      columnCount: Math.max(MIN_COLS, maxC + 5, sh.columnCount ?? 0),
       cellData,
     } as Partial<IWorksheetData>
   })

@@ -83,6 +83,33 @@ public class CyclePathResolver {
             Pattern.compile(
                     "^([a-zA-Z][a-zA-Z_]*?)_?(\\d+)$|^([a-zA-Z][a-zA-Z_]*)\\[(\\d+)\\]$");
 
+    /** SI units of the canonical state properties this resolver fills in
+     *  (quality {@code x} is dimensionless and deliberately absent). */
+    private static final Map<String, String> PROPERTY_SI_UNITS = Map.of(
+            "T", "K",
+            "P", "Pa",
+            "v", "m^3/kg",
+            "u", "J/kg",
+            "h", "J/kg",
+            "s", "J/kg-K",
+            "rho", "kg/m^3");
+
+    /** The SI unit for a state-indexed property variable ({@code h1},
+     *  {@code rho[2]}, {@code T_3}, …), or {@code null} when the name is not a
+     *  recognisable state property. Fill-missing injects these variables into
+     *  the result AFTER the solve, so they never appear in the equation text
+     *  the unit checker reads — callers stamp their units from the property
+     *  identity instead (otherwise the workspace shows them unitless). */
+    public static String siUnitForStateVariable(String name) {
+        Matcher m = STATE_VAR_INDEX.matcher(name);
+        if (!m.matches()) {
+            return null;
+        }
+        String base = (m.group(1) != null ? m.group(1) : m.group(3)).toLowerCase();
+        String canonical = PROPERTY_ALIASES.get(base);
+        return canonical == null ? null : PROPERTY_SI_UNITS.get(canonical);
+    }
+
     /** A component stream member {@code s1.p}, {@code s2.h}, … — the stream name's
      *  trailing digits are the cycle state index, the dotted member is the
      *  property (so the COMPONENT layer's streams plot as a cycle, §6). */
