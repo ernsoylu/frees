@@ -50,6 +50,13 @@ export interface FunctionTableSpec {
   // are shown read-only (the editor text is their source of truth). Undefined
   // / 'gui' tables are created and edited in the Tables window.
   source?: 'code' | 'gui'
+  /** Sparse formula overlay (contract f of the table-spreadsheet unification
+   * plan): A1 cell ref → Univer formula string for data cells the user
+   * entered as formulas in the bound sheet. Row cells keep the last computed
+   * value (the solver wire path reads only those); this overlay is re-applied
+   * as `f`-only cells at materialization so formulas survive reloads and
+   * recompute. Optional — absent on tables never edited as sheets. */
+  formulas?: Record<string, string>
 }
 
 export type TableSpec = ParamTableSpec | FunctionTableSpec

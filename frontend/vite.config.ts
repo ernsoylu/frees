@@ -87,4 +87,15 @@ export default defineConfig({
       },
     },
   },
+  // `vite preview` serves the built bundle (the dev server can hit watcher
+  // ENOSPC limits here); give it the same /api proxy so host verification
+  // against the Docker backend works.
+  preview: {
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8080',
+        changeOrigin: true,
+      },
+    },
+  },
 })

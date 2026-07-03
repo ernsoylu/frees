@@ -82,6 +82,11 @@ import { loadWhiteboards, newWhiteboard, saveWhiteboards } from './whiteboard/wh
 import { WhiteboardSpec } from './whiteboard/types'
 import { loadSpreadsheets, newSpreadsheet, saveSpreadsheets } from './spreadsheet/spreadsheetStorage'
 import { emptySpreadsheetData, type SpreadsheetSpec } from './spreadsheet/types'
+import {
+  flushTablesWorkbook,
+  TABLES_WORKBOOK_ENABLED,
+  TABLES_WORKBOOK_WINDOW_ID,
+} from './spreadsheet/tablesWorkbookBridge'
 import { newAnalyzer, type AnalyzerSpec } from './analyzer/types'
 import { channelStore } from './analyzer/channelStore'
 import { substituteSsheetRefs } from './spreadsheet/ssheetResolver'
@@ -97,6 +102,10 @@ const DigitizerTab = lazy(() =>
 // so the Excalidraw bundle is only fetched when a whiteboard window opens.
 const WhiteboardTab = lazy(() => import('./whiteboard/WhiteboardTab'))
 const SpreadsheetTab = lazy(() => import('./spreadsheet/SpreadsheetTab'))
+// The Univer Tables workbook (function/lookup tables as bound sheets) shares
+// the Univer chunk with SpreadsheetTab; lazy so tables-only sessions without
+// it opened never fetch the engine.
+const TablesWorkbookTab = lazy(() => import('./spreadsheet/TablesWorkbookTab'))
 // The Data Analyzer (uPlot + papaparse) is code-split so the measurement
 // tooling is only fetched when an analyzer window opens.
 const DataAnalyzerTab = lazy(() => import('./analyzer/DataAnalyzerTab'))
@@ -838,7 +847,14 @@ export default function App() {
   })()
   const tableCheckResult = focusedParam?.checkResult ?? null
   const tableCheckMessage = focusedParam?.checkMessage ?? ''
-  const functionTableDtos = toFunctionTableDtos(tables)
+  // Function-table wire payloads. When the Univer Tables workbook is mounted,
+  // flush its pending sheet→spec sync first (contract b's pre-DTO scrape) and
+  // build from the returned fresh specs — React state lands a render later,
+  // too late for the calling handler's closure.
+  const functionTableDtos = () => {
+    const fresh = flushTablesWorkbook()
+    return fresh ? toFunctionTableDtos(fresh) : toFunctionTableDtos(tables)
+  }
 
   function updateParamTable(id: string, update: (t: ParamTableSpec) => ParamTableSpec) {
     setTables((all) =>
@@ -855,6 +871,11 @@ export default function App() {
     setTables((all) => [...all, table])
     setActiveTableId(table.id)
     setActiveTab('table')
+    if (TABLES_WORKBOOK_ENABLED) {
+      requestAnimationFrame(() =>
+        dockRef.current?.openInstance(TABLES_WORKBOOK_WINDOW_ID, 'table', 'Tables'),
+      )
+    }
   }
 
   const handleStateUnitIdsChange = (
@@ -1031,7 +1052,7 @@ export default function App() {
         effectiveText(),
         buildVariableInfo(),
         complexMode,
-        functionTableDtos,
+        functionTableDtos(),
         Object.values(replVars).map(replOverrideEquation),
       )
       setCheckResult(response)
@@ -1119,7 +1140,7 @@ export default function App() {
       for (const [name, value] of filled) {
         augmented += `\n${name} = ${value}`
       }
-      const response = await check(augmented, buildVariableInfo(), complexMode, functionTableDtos)
+      const response = await check(augmented, buildVariableInfo(), complexMode, functionTableDtos())
       updateParamTable(tableId, (t) => ({ ...t, checkResult: response }))
 
       // Sync variable list and units so the column headers show units for
@@ -1190,7 +1211,7 @@ export default function App() {
         unitSystem,
         tbl.vars,
         rows,
-        functionTableDtos,
+        functionTableDtos(),
       )
       updateParamTable(tableId, (t) => ({
         ...t,
@@ -1249,7 +1270,7 @@ export default function App() {
         findAll,
         unitSystem,
         shouldFillMissing,
-        functionTableDtos,
+        functionTableDtos(),
         sessionId,
         // REPL-defined/changed variables take priority over the editor until the
         // user runs `clear` in the terminal.
@@ -1465,8 +1486,13 @@ export default function App() {
   useEffect(() => {
     const valid = new Set<string>([
       'equations', 'table', 'plots', 'digitizer', 'workspace', 'terminal', 'states', 'inspector',
+      ...(TABLES_WORKBOOK_ENABLED ? [TABLES_WORKBOOK_WINDOW_ID] : []),
       ...mergedPlots.map((p) => `plot:${p.id}`),
-      ...tables.map((t) => `table:${t.id}`),
+      // Function tables live as sheets in the single Tables workbook window;
+      // they no longer get per-table windows (decision 2 of the plan).
+      ...tables
+        .filter((t) => !(TABLES_WORKBOOK_ENABLED && t.kind === 'function'))
+        .map((t) => `table:${t.id}`),
       ...whiteboards.map((w) => `whiteboard:${w.id}`),
       ...spreadsheets.map((s) => `spreadsheet:${s.id}`),
       ...analyzers.map((a) => `analyzer:${a.id}`),
@@ -1483,7 +1509,10 @@ export default function App() {
   useEffect(() => {
     const raf = requestAnimationFrame(() => {
       for (const p of mergedPlots) dockRef.current?.setTitle(`plot:${p.id}`, p.name)
-      for (const t of tables) dockRef.current?.setTitle(`table:${t.id}`, t.name)
+      for (const t of tables) {
+        if (TABLES_WORKBOOK_ENABLED && t.kind === 'function') continue // hosted in the Tables workbook
+        dockRef.current?.setTitle(`table:${t.id}`, t.name)
+      }
       for (const w of whiteboards) dockRef.current?.setTitle(`whiteboard:${w.id}`, w.name)
       for (const s of spreadsheets) dockRef.current?.setTitle(`spreadsheet:${s.id}`, s.name)
       for (const a of analyzers) dockRef.current?.setTitle(`analyzer:${a.id}`, a.name)
@@ -1526,6 +1555,17 @@ export default function App() {
 
   // Reusable window open/create handlers, shared by the left rail and the
   // command palette so both open real dock windows (not just highlight a tab).
+  // Opens the dock window backing a table: function tables live as sheets in
+  // the single Univer Tables workbook (decision 2), everything else keeps its
+  // per-table window.
+  const openTableWindow = (t: TableSpec) => {
+    if (TABLES_WORKBOOK_ENABLED && t.kind === 'function') {
+      setActiveTableId(t.id)
+      dockRef.current?.openInstance(TABLES_WORKBOOK_WINDOW_ID, 'table', 'Tables')
+    } else {
+      dockRef.current?.openInstance(`table:${t.id}`, 'table', t.name)
+    }
+  }
   const createTable = (kind: 'parametric' | 'function-1d' | 'function-2d') => {
     const t =
       kind === 'parametric'
@@ -1533,7 +1573,7 @@ export default function App() {
         : newFunctionTable(tables, kind === 'function-1d')
     setTables((prev) => [...prev, t])
     setActiveTableId(t.id)
-    requestAnimationFrame(() => dockRef.current?.openInstance(`table:${t.id}`, 'table', t.name))
+    requestAnimationFrame(() => openTableWindow(t))
   }
   const createWhiteboard = () => {
     const wb = newWhiteboard(whiteboards.length)
@@ -1693,7 +1733,7 @@ export default function App() {
   }
   const openLatestOrNewTable = () => {
     const t = tables[tables.length - 1]
-    if (t) dockRef.current?.openInstance(`table:${t.id}`, 'table', t.name)
+    if (t) openTableWindow(t)
     else createTable('parametric')
   }
   const openLatestOrNewPlot = () => {
@@ -2296,10 +2336,31 @@ export default function App() {
     )
   }
 
+  // The single Univer Tables workbook window hosting every function/lookup
+  // table as a bound sheet (decision 2 of the unification plan). Parametric
+  // and code/ODE tables keep their per-table windows until Phase 2.
+  if (TABLES_WORKBOOK_ENABLED) {
+    panelTitles[TABLES_WORKBOOK_WINDOW_ID] = 'Tables'
+    panelContent[TABLES_WORKBOOK_WINDOW_ID] = (
+      <div style={{ height: '100%', minHeight: 0 }}>
+        <Suspense fallback={lazyTabFallback}>
+          <TablesWorkbookTab
+            key={`tables-workbook-${workspaceEpoch}`}
+            tables={tables}
+            activeTableId={activeTableId}
+            onTablesChange={setTables}
+            onActiveTableIdChange={setActiveTableId}
+          />
+        </Suspense>
+      </div>
+    )
+  }
+
   // Per-instance Table windows: each table opens as its own dock window
   // ("table:<id>"). Each window reads its own spec's rows/results and routes
   // edits to that specific table id (decoupled from the "active" table).
   for (const t of tables) {
+    if (TABLES_WORKBOOK_ENABLED && t.kind === 'function') continue
     const winId = `table:${t.id}`
     const param = t.kind === 'parametric' ? t : null
     panelTitles[winId] = t.name
@@ -2404,7 +2465,7 @@ export default function App() {
             return
           }
           const t = tables.find((x) => x.id === id)
-          if (t) dockRef.current?.openInstance(`table:${id}`, 'table', t.name)
+          if (t) openTableWindow(t)
         }}
         onDeleteTable={(id) => setTables((prev) => prev.filter((t) => t.id !== id))}
         onOpenStates={() => {
