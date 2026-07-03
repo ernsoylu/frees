@@ -42,6 +42,13 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks(id: string) {
+          // Rollup's virtual CommonJS-interop helpers are shared by every
+          // CJS-converted vendor module. Left to auto-placement they can land
+          // in a vendor chunk that itself imports react (e.g. mantine),
+          // creating a mantine <-> react chunk cycle whose init order breaks
+          // at runtime (React undefined inside Mantine). Pin them to the
+          // react chunk, which everything loads first and imports nothing back.
+          if (id.includes('commonjsHelpers')) return 'react'
           if (!id.includes('node_modules')) return undefined
           if (id.includes('@mantine')) return 'mantine'
           if (id.includes('katex')) return 'katex'
@@ -52,7 +59,12 @@ export default defineConfig({
           if (id.includes('@codemirror') || id.includes('@lezer') || id.includes('@uiw/react-codemirror')) {
             return 'codemirror'
           }
-          if (id.includes('/react-dom/') || id.includes('/react/') || id.includes('/scheduler/')) {
+          // Match only the real react/react-dom/scheduler packages. A loose
+          // `/react/` also caught e.g. @floating-ui/react (a Mantine dep),
+          // dragging it into this chunk and creating a mantine <-> react
+          // chunk cycle (tslib landed in mantine, @floating-ui/react needs it,
+          // mantine needs @floating-ui/react) that broke init order at runtime.
+          if (/node_modules\/(react|react-dom|scheduler)\//.test(id)) {
             return 'react'
           }
           return undefined
