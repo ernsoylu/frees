@@ -1,7 +1,9 @@
 # frEES — Table–Spreadsheet Unification
 
 > **STATUS: Revision 3 (2026-07-03), critique-approved. Phase 0 spike DONE —
-> FULL PASS (result recorded in § Phase 0); next: Phase 1.** Goal: one tabular
+> FULL PASS; Phase 1 DONE (branch `spike/univer-capability`, verified
+> end-to-end against the Docker stack — see § Phase 1 result); next:
+> Phase 2 (parametric tables).** Goal: one tabular
 > surface in the app. Today there are two disjoint systems — the Tables window
 > (parametric + lookup/function tables, Mantine grids) and the Univer
 > spreadsheet — plus read-only glide-data-grid result tables. This plan makes
@@ -434,6 +436,35 @@ retained**; out-of-region content never reaches the spec.
 scrape** — upstream value change with no event for the dependent formula
 cell still yields a fresh value at DTO build (the pre-DTO scrape).
 `npm run build` type gate.
+
+**PHASE 1 RESULT (2026-07-03, branch `spike/univer-capability`): DONE,
+verified end-to-end.** Implementation notes vs the plan:
+- Files: `spreadsheet/tableBinding.ts` (+`.test`), `tableSyncMachine.ts`
+  (+`.test` — named per its state-machine role; the "hook" is the host's
+  dispatch), `TablesWorkbookTab.tsx`, `tablesWorkbookBridge.ts` (Univer-free
+  module carrying the flag + pre-DTO `flush` so App never statically imports
+  the Univer chunk). `FunctionTableSpec.formulas` added (contract f).
+- One dock window `table:univer-workbook`; function tables lose their
+  per-table windows; every open path (rail menu, Spotlight, digitizer send,
+  `openTableWindow`) routes there. Fallback `VITE_TABLES_WORKBOOK=0`.
+- v1 deviation: the grid **context menu is disabled wholesale** on the
+  Tables workbook (per-item filtering deferred to Phase 2 polish);
+  structural column/sheet commands are additionally vetoed command-level.
+- Pre-DTO scrape: `flushTablesWorkbook()` returns the fresh specs
+  synchronously (React state lands a render later — too late for the solve
+  handler's closure); `functionTableDtos` became a function calling it.
+- Materializer writes protected cells at the mutation level per the spike
+  decision; protection rules re-applied on every mount (session state).
+- E2E verified against the live Docker backend (vite preview + `/api`
+  proxy, added to vite.config): sheet-entered 1-D table → `U = func1(2.5)`
+  solves to 25; a `=A4*10` cell contributes its **computed** value to the
+  DTO, survives reload (overlay → rematerialize → Univer recomputes), and
+  editing upstream A4 refreshes the dependent spec value to 40 (the
+  dependent-recalc trap, closed); protected header edit rejected
+  (`argName` unchanged). Vitest 138 green (29 new); build green.
+- Not yet exercised live: 2-D curve-header edits, paste clipping UX, code
+  `TABLE` blocks as protected sheets — covered by unit tests, flagged for
+  Phase 2's e2e sweep.
 
 ### Phase 2 — Parametric tables + result write-back
 Extend `tableBinding.ts` to `ParamTableSpec`: input columns editable,
