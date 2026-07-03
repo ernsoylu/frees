@@ -377,7 +377,7 @@ function resampleByX(points: DigPoint[], target: number): DigPoint[] {
   if (target <= 0 || points.length <= target) return points
   const sorted = [...points].sort((p, q) => p.x - q.x)
   const minX = sorted[0].x
-  const maxX = sorted[sorted.length - 1].x
+  const maxX = sorted.at(-1)!.x
   const span = maxX - minX || 1
   const buckets: DigPoint[][] = Array.from({ length: target }, () => [])
   for (const p of sorted) {
