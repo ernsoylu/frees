@@ -1,9 +1,9 @@
 # frEES — Table–Spreadsheet Unification
 
-> **STATUS: Revision 3 (2026-07-03), critique-approved. Phase 0 spike DONE —
-> FULL PASS; Phase 1 DONE (branch `spike/univer-capability`, verified
-> end-to-end against the Docker stack — see § Phase 1 result); next:
-> Phase 2 (parametric tables).** Goal: one tabular
+> **STATUS: Revision 3 (2026-07-03), critique-approved. Phases 0–2 DONE
+> (branch `spike/univer-capability`, each verified end-to-end against the
+> Docker stack — see the per-phase result blocks); next: Phase 3
+> (snapshots), Phase 4 (retirement).** Goal: one tabular
 > surface in the app. Today there are two disjoint systems — the Tables window
 > (parametric + lookup/function tables, Mantine grids) and the Univer
 > spreadsheet — plus read-only glide-data-grid result tables. This plan makes
@@ -482,6 +482,45 @@ not echo into spec inputs; write-back queued during an active edit lands
 after settle; a `linkedTableId` project fixture loads with the field intact
 and the link inert; existing project round-trip tests stay green (`tables`
 slice format is backward-compatible — that is the point of decision 1).
+
+**PHASE 2 RESULT (2026-07-03, same branch): DONE, verified end-to-end.**
+Deviations vs the plan, all deliberate:
+- **Computed cells are not range-protected.** The frees parametric model has
+  no fixed result columns — any blank input cell becomes computed per run —
+  so "protected result columns" would be a scattered, per-cell rule set.
+  Instead: computed cells render green (visual lock cue), typing over one
+  turns it into an **input override** (override-style) and invalidates
+  results/check exactly as the old grid's invalidateActiveParam did; the
+  mapper detects untouched computed cells against the previous spec, so
+  write-backs never echo into inputs. Failed runs render a red `n ✗` Run
+  marker.
+- **Code PARAMETRIC and ODE tables stay in their per-table glide windows**
+  (decision 5's spirit — ODE trajectories can be 100k rows of derived
+  data); only GUI parametric tables are hosted. `isHostedTable` (in the
+  Univer-free bridge) is the single predicate App and the host share.
+- **Row floor:** blank rows are runs, so sheet→spec never trims below the
+  previous row count; Add/Remove Row buttons (workbook toolbar) stay the
+  row-count controls, typing below the last run grows it.
+- **solveTable write-back needed no new path** — results land in the spec
+  and the existing materializer (state-machine-queued, mutation-level,
+  style-carrying) writes the computed cells.
+- Header units are not sheet-editable in v1 (schema stays in
+  ConfigureTableModal / variable info); code/ODE headers render `name
+  [unit]`.
+- `linkedTableId`: both sync effects removed; field inert + preserved;
+  "Unlink table (legacy)" button in the spreadsheet toolbar strips it;
+  legacy projects get a load notice; "Export to Spreadsheet" is now a
+  timestamped snapshot with no link (contract e).
+- Bug found by e2e and fixed: focusing the workbook window clobbered
+  `activeTableId` with the window id — excluded in the dock focus handler.
+- E2E (Docker backend, preview + Playwright): parametric table created in
+  the workbook, columns configured via the modal, inputs typed (stray
+  keystrokes into the protected header were rejected), Check Table OK, Run
+  Table wrote green computed values; a 99 typed over computed `c`
+  invalidated results and the re-run failed that row with the red marker
+  (2/3 runs solved). Note for host verification: build with
+  `VITE_ASYNC_API=1` or the 202+job solve path silently never polls.
+Vitest 147 green (9 new parametric binding cases); build green.
 
 ### Phase 3 — Read-only snapshots ("Open in Spreadsheet")
 Create: snapshot action on the ODE glide grid, `StatesTab`, and the
