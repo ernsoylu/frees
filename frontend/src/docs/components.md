@@ -318,12 +318,8 @@ Close the loop back in the time domain with controller components (`PIThermostat
 
 [Related: comp-transient, symbolic-cas, plot-code]
 
-[Topic: comp-topology]
-# Topology View & Cycle Plots
-
-## The topology view
-
-Every solved component network generates a **read-only schematic** — open the **Topology** tab to see instances as nodes and connections as edges, grouped by domain. It is derived from the expanded network itself, so it is always faithful to what actually solved: if the diagram looks wrong, the model *is* wrong (a missing connection or an unintended tie), which makes it the fastest first check when a network misbehaves. Use the Whiteboard when you want a hand-drawn, annotated sketch alongside it.
+[Topic: comp-cycle-plots]
+# Cycle Plots & Diagnostics
 
 ## Source-mapped diagnostics
 
@@ -388,6 +384,6 @@ A coupled cycle (a refrigeration loop, a pump network) can be structurally perfe
 
 ## Working method
 
-Build the network **one leg at a time**: source → component → sink, solve, extend. Select a subsystem and press **F9** to solve only it. Diagnostics are source-mapped (component and stream names), so the failing block names the device to look at — and the Topology tab shows you at a glance whether the wiring you *meant* is the wiring you *wrote*. Set guesses on stream members (they appear under their display names, e.g. `s2.P`) in Variable Info exactly as for scalar variables. And inside the vapor dome, remember the two-phase rule: identify a state by quality `x` with `T` *or* `P`, never both.
+Build the network **one leg at a time**: source → component → sink, solve, extend. Select a subsystem and press **F9** to solve only it. Diagnostics are source-mapped (component and stream names), so the failing block names the device to look at. Set guesses on stream members (they appear under their display names, e.g. `s2.P`) in Variable Info exactly as for scalar variables. And inside the vapor dome, remember the two-phase rule: identify a state by quality `x` with `T` *or* `P`, never both.
 
 [Related: debugging, comp-connections, comp-transient]

@@ -81,8 +81,6 @@ export interface SolveResponse {
   stateTableDefs?: StateTableDto[]
   /** ODE Tables produced by solved DYNAMIC ... END blocks. */
   odeTables?: OdeTableDto[]
-  /** Mermaid flowchart of the COMPONENT network, or null when there are none. */
-  topology?: string | null
   /** Per-instance component metadata (type + parameter bindings) for the datasheet view. */
   components?: ComponentResult[]
 }
@@ -445,7 +443,6 @@ function mapSolveData(data: any): SolveResponse {
     definedPlots: data.definedPlots ?? [],
     stateTableDefs: data.stateTableDefs ?? [],
     odeTables: data.odeTables ?? [],
-    topology: data.topology ?? null,
     components: data.components ?? [],
   }
 }
@@ -558,18 +555,6 @@ export async function replClear(sessionId: string, variableName?: string): Promi
     })
   } catch {
     /* best-effort */
-  }
-}
-
-/** Variable names currently in the workspace, for REPL tab-completion. */
-export async function replVariables(sessionId: string): Promise<string[]> {
-  try {
-    const response = await fetch(`${API_BASE}/api/repl/variables?sessionId=${encodeURIComponent(sessionId)}`)
-    if (!response.ok) return []
-    const data = await response.json()
-    return Array.isArray(data) ? data : []
-  } catch {
-    return []
   }
 }
 
