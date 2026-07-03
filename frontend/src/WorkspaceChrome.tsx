@@ -40,7 +40,6 @@ import {
   IconPencil,
   IconPlus,
   IconPlayerPlayFilled,
-  IconSchema,
   IconSitemap,
   IconSettings,
   IconTable,
@@ -49,6 +48,7 @@ import {
   IconTrash,
   IconSearch,
   IconVariable,
+  IconWaveSine,
   IconGrid4x4,
 } from '@tabler/icons-react'
 import { spotlight } from '@mantine/spotlight'
@@ -73,10 +73,10 @@ const VIEWS = [
     tip: 'Graph Digitizer — extract curves from chart images',
     icon: IconChartGridDots,
   },
-  { value: 'diagram', label: 'Diagram', tip: 'Diagram — interactive schematic editor', icon: IconSchema },
   { value: 'topology', label: 'Topology', tip: 'Topology — component network graph (read-only)', icon: IconSitemap },
   { value: 'whiteboard', label: 'Whiteboard', tip: 'Whiteboard — Excalidraw freehand sketch canvas', icon: IconBrush },
   { value: 'spreadsheet', label: 'Spreadsheet', tip: 'Spreadsheet — Excel-like workbook', icon: IconGrid4x4 },
+  { value: 'analyzer', label: 'Analyzer', tip: 'Data Analyzer — explore imported measurement data', icon: IconWaveSine },
   { value: 'terminal', label: 'Terminal', tip: 'Terminal — REPL evaluated against the workspace', icon: IconTerminal2 },
 ]
 
@@ -88,10 +88,6 @@ interface RailProps {
   openKinds?: string[]
   /** Specific window ids open (e.g. "diagram:<id>") for per-instance marks. */
   openIds?: string[]
-  /** Diagrams available to open as individual windows. */
-  diagrams?: { id: string; name: string; deletable?: boolean }[]
-  /** Number of diagram windows currently open (badge on the Diagram icon). */
-  diagramCount?: number
   /** Plots (X-Y, property, psychrometric) available to open as windows. */
   plots?: { id: string; name: string; tag?: string; deletable?: boolean }[]
   /** Number of plot windows currently open (badge on the Plots icon). */
@@ -103,9 +99,6 @@ interface RailProps {
   onSelect: (view: string) => void
   onClose?: (view: string) => void
   onResetLayout?: () => void
-  onOpenDiagram?: (id: string) => void
-  onNewDiagram?: () => void
-  onDeleteDiagram?: (id: string) => void
   /** Excalidraw whiteboards available to open as individual windows. */
   whiteboards?: { id: string; name: string; deletable?: boolean }[]
   /** Number of whiteboard windows currently open (badge on the Whiteboard icon). */
@@ -120,6 +113,13 @@ interface RailProps {
   onOpenSpreadsheet?: (id: string) => void
   onNewSpreadsheet?: () => void
   onDeleteSpreadsheet?: (id: string) => void
+  /** Data Analyzer windows available to open (measurement analysis). */
+  analyzers?: { id: string; name: string; deletable?: boolean }[]
+  /** Number of analyzer windows currently open. */
+  analyzerCount?: number
+  onOpenAnalyzer?: (id: string) => void
+  onNewAnalyzer?: () => void
+  onDeleteAnalyzer?: (id: string) => void
   onOpenPlot?: (id: string) => void
   onNewPlot?: (kind: 'xy' | 'property' | 'psychro') => void
   onDeletePlot?: (id: string) => void
@@ -370,8 +370,6 @@ export function Rail({
   active,
   openKinds = [],
   openIds = [],
-  diagrams,
-  diagramCount = 0,
   plots,
   plotCount = 0,
   workspaceTables,
@@ -379,9 +377,6 @@ export function Rail({
   onSelect,
   onClose,
   onResetLayout,
-  onOpenDiagram,
-  onNewDiagram,
-  onDeleteDiagram,
   whiteboards,
   whiteboardCount = 0,
   onOpenWhiteboard,
@@ -392,6 +387,11 @@ export function Rail({
   onOpenSpreadsheet,
   onNewSpreadsheet,
   onDeleteSpreadsheet,
+  analyzers,
+  analyzerCount = 0,
+  onOpenAnalyzer,
+  onNewAnalyzer,
+  onDeleteAnalyzer,
   onOpenPlot,
   onNewPlot,
   onDeletePlot,
@@ -454,25 +454,7 @@ export function Rail({
           onClick={toggle}
         />
         {VIEWS.map((view) =>
-          view.value === 'diagram' && diagrams ? (
-            <InstanceLauncher
-              key={view.value}
-              expanded={expanded}
-              active={active === 'diagram'}
-              count={diagramCount}
-              idPrefix="diagram:"
-              label="Diagram"
-              newActions={[
-                { label: 'New diagram', onClick: () => onNewDiagram?.() },
-              ]}
-              emptyLabel="No diagrams yet"
-              icon={<IconSchema size={iconSize} stroke={1.6} />}
-              items={diagrams}
-              openIds={openIdSet}
-              onOpen={onOpenDiagram}
-              onDelete={onDeleteDiagram}
-            />
-          ) : view.value === 'whiteboard' && whiteboards ? (
+          view.value === 'whiteboard' && whiteboards ? (
             <InstanceLauncher
               key={view.value}
               expanded={expanded}
@@ -503,6 +485,22 @@ export function Rail({
               openIds={openIdSet}
               onOpen={onOpenSpreadsheet}
               onDelete={onDeleteSpreadsheet}
+            />
+          ) : view.value === 'analyzer' && analyzers ? (
+            <InstanceLauncher
+              key={view.value}
+              expanded={expanded}
+              active={active === 'analyzer'}
+              count={analyzerCount}
+              idPrefix="analyzer:"
+              label="Analyzer"
+              newActions={[{ label: 'New analyzer', onClick: () => onNewAnalyzer?.() }]}
+              emptyLabel="No analyzers yet"
+              icon={<IconWaveSine size={iconSize} stroke={1.6} />}
+              items={analyzers}
+              openIds={openIdSet}
+              onOpen={onOpenAnalyzer}
+              onDelete={onDeleteAnalyzer}
             />
           ) : view.value === 'plots' && plots ? (
             <InstanceLauncher

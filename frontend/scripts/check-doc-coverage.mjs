@@ -53,6 +53,10 @@ const EXTRA_CALLABLES = [
   'p_sat', 't_sat', 'molarmass', 'heatingvalue', 'stoichafr', 'surfacetension',
   'isidealgas', 'phase$', 'stagnationtemp', 'stagnationpres',
   'scal', 'asum', 'nrm2', 'copy', 'ger', 'gemv', 'gemm', 'axpy',
+  // Data Analyzer calculated-signal time operators: handled by
+  // TimeSeriesEvaluator (core measurement package), not the function
+  // registry — real, documented, callable in calc formulas only.
+  'delta', 'movavg', 'delay',
 ];
 for (const n of EXTRA_CALLABLES) callable.add(n);
 // Bare math notation that reads like a call in inline code (`num(s)/den(s)`, a

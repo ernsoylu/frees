@@ -18,5 +18,8 @@ public record ComputeTask(String jobId,
     public static final String OPTIMIZE = "OPTIMIZE";
     public static final String OPTIMIZE_MULTI = "OPTIMIZE_MULTI";
     public static final String CURVE_FIT = "CURVE_FIT";
+    /** Calculated measurement signal (Data Analyzer Phase 4) — property-
+     *  function formulas over large rasters run on the compute tier. */
+    public static final String CALC = "CALC";
     public static final String WARMUP = "WARMUP";
 }

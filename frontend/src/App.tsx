@@ -29,13 +29,13 @@ import {
   IconLayoutGrid,
   IconMathFunction,
   IconPlayerPlayFilled,
-  IconSchema,
   IconSearch,
   IconSettings,
   IconTable,
   IconTargetArrow,
   IconTemperature,
   IconVariable,
+  IconWaveSine,
   IconGrid4x4,
 } from '@tabler/icons-react'
 import {
@@ -78,26 +78,30 @@ import {
 } from './tables'
 import StatesTab from './StatesTab'
 import type { DigitizedExport } from './DigitizerTab'
-import { loadDiagrams, saveDiagrams } from './diagram/diagramStorage'
-import { DiagramSpec } from './diagram/types'
 import { loadWhiteboards, newWhiteboard, saveWhiteboards } from './whiteboard/whiteboardStorage'
 import { WhiteboardSpec } from './whiteboard/types'
 import { loadSpreadsheets, newSpreadsheet, saveSpreadsheets } from './spreadsheet/spreadsheetStorage'
 import { emptySpreadsheetData, type SpreadsheetSpec } from './spreadsheet/types'
+import { newAnalyzer, type AnalyzerSpec } from './analyzer/types'
+import { channelStore } from './analyzer/channelStore'
 import { substituteSsheetRefs } from './spreadsheet/ssheetResolver'
 import { group } from './Workspace'
 
-// The Digitizer and Diagram tabs are large, self-contained editors that most
+// The Digitizer tab is a large, self-contained editor that most
 // sessions never open, so they are code-split and only fetched when their tab
 // is first shown (wrapped in <Suspense> at their render sites below).
 const DigitizerTab = lazy(() =>
   import('./DigitizerTab').then((m) => ({ default: m.DigitizerTab })),
 )
-const DiagramTab = lazy(() => import('./diagram/DiagramTab'))
 // The Excalidraw whiteboard editor is large and self-contained; code-split it
 // so the Excalidraw bundle is only fetched when a whiteboard window opens.
 const WhiteboardTab = lazy(() => import('./whiteboard/WhiteboardTab'))
 const SpreadsheetTab = lazy(() => import('./spreadsheet/SpreadsheetTab'))
+// The Data Analyzer (uPlot + papaparse) is code-split so the measurement
+// tooling is only fetched when an analyzer window opens.
+const DataAnalyzerTab = lazy(() => import('./analyzer/DataAnalyzerTab'))
+// Lazy: pulls the full 58 KB example catalog only when the picker opens.
+const ExamplesModal = lazy(() => import('./ExamplesModal'))
 
 // The Plot tab (and its Plotly figure builders) plus the optimization and
 // plot-config modals are also code-split: the Plotly figure machinery is large
@@ -119,10 +123,10 @@ import { plotDefToSpec } from './plots/fromCode'
 import Workspace from './Workspace'
 import ReplTerminal from './ReplTerminal'
 import MobileLayout from './MobileLayout'
-import ExamplesModal from './ExamplesModal'
 import { DOCS_TOPICS } from './docsTopics'
 import ShortcutsModal from './ShortcutsModal'
-import { DEFAULT_EXAMPLE_TEXT, Example } from './examples'
+import { DEFAULT_EXAMPLE_TEXT } from './defaultExample'
+import type { Example } from './examples'
 import EquationEditor, { EquationEditorHandle } from './EquationEditor'
 import { MessageModal, SaveCheckModal, TextPromptModal } from './dialogs'
 import { Rail, TopBar } from './WorkspaceChrome'
@@ -233,10 +237,6 @@ export default function App() {
   const projectFileRef = useRef<HTMLInputElement>(null)
 
   const [text, setText] = useState(boot?.text ?? EXAMPLE)
-  // Equation lines contributed by the Diagram window's input controls
-  // (Story 6.2). They are appended to the text on Check/Solve.
-  const [diagramBindings, setDiagramBindings] = useState<string[]>([])
-  const diagramBoundVarsRef = useRef('')
   const [checkResult, setCheckResult] = useState<CheckResponse | null>(null)
   const [checking, setChecking] = useState(false)
   const [result, setResult] = useState<SolveResponse | null>(null)
@@ -321,13 +321,7 @@ export default function App() {
   // Dockview workspace manager: imperative handle + set of currently-open
   // window kinds (drives the sidebar's open-state indicators).
   const dockRef = useRef<WorkspaceDockHandle | null>(null)
-  // Diagram ids that should mount in Run view because they came from an opened
-  // project (consumed via the DiagramTab initialMode prop on the next mount).
-  const runOnLoadDiagramIdsRef = useRef<Set<string>>(new Set())
   const [openWindows, setOpenWindows] = useState<OpenWindow[]>([])
-  // Shared Inspector edge panel: the focused diagram window portals its
-  // Properties/Layers into this outlet so one inspector serves all diagrams.
-  const [inspectorOutlet, setInspectorOutlet] = useState<HTMLDivElement | null>(null)
   // Last-focused non-auxiliary window — drives the content-aware Inspector
   // (focusing the Inspector/Solution panels themselves doesn't change it).
   const [focusedWindow, setFocusedWindow] = useState<OpenWindow | null>(null)
@@ -359,12 +353,8 @@ export default function App() {
   // Seed for a new X-Y plot opened from a table's column selection (x + y vars),
   // applied as the modal's initial XY config.
   const [plotSeed, setPlotSeed] = useState<{ xVar: string; yVars: string[] } | null>(null)
-  const [diagrams, setDiagrams] = useState<DiagramSpec[]>(() =>
-    boot ? boot.diagrams : loadDiagrams(),
-  )
-  // Excalidraw whiteboards (Epic complement to the native Diagram window):
-  // managed as App-owned state so they round-trip with the .frees project,
-  // exactly like diagrams. The localStorage cache is a fallback when no
+  // Excalidraw whiteboards: managed as App-owned state so they round-trip
+  // with the .frees project. The localStorage cache is a fallback when no
   // unified project exists.
   const [whiteboards, setWhiteboards] = useState<WhiteboardSpec[]>(() =>
     boot?.whiteboards ?? loadWhiteboards(),
@@ -372,12 +362,19 @@ export default function App() {
   const [spreadsheets, setSpreadsheets] = useState<SpreadsheetSpec[]>(() =>
     boot?.spreadsheets ?? loadSpreadsheets(),
   )
-  // Diagrams are addressed per-window now; we only need the setter (to track
-  // the most-recently-created/focused diagram for new-window opening).
-  const [, setActiveDiagramId] = useState<string | null>(() => {
-    const list = boot ? boot.diagrams : loadDiagrams()
-    return list[0]?.id ?? null
-  })
+  // Data Analyzer windows: the spec slice (layout + signal assignments +
+  // measurement file refs, never bulk data) rides the .frees project file
+  // ("template mode", §2.5b); samples live in the module-level ChannelStore
+  // and are re-picked on load via each window's "Locate file…" banner.
+  const [analyzers, setAnalyzers] = useState<AnalyzerSpec[]>(() => boot?.analyzers ?? [])
+  // One-line self-dismissing notice (e.g. "N analyzer window(s) awaiting
+  // measurement files" after a project load).
+  const [loadNotice, setLoadNotice] = useState<string | null>(null)
+  useEffect(() => {
+    if (loadNotice === null) return
+    const id = setTimeout(() => setLoadNotice(null), 8000)
+    return () => clearTimeout(id)
+  }, [loadNotice])
   const [fluids, setFluids] = useState<string[]>([])
   const [stateUnitIds, setStateUnitIds] = useState<Record<string, string>>(() => {
     if (boot) return boot.stateUnitIds ?? {}
@@ -397,10 +394,6 @@ export default function App() {
   useEffect(() => {
     saveTables(tables)
   }, [tables])
-
-  useEffect(() => {
-    saveDiagrams(diagrams)
-  }, [diagrams])
 
   // Whiteboards can carry large embedded image data, so debounce the scratch-
   // cache write (the unified project autosave at 800ms is the other path).
@@ -427,11 +420,11 @@ export default function App() {
       stateUnitIds,
       tables,
       plots,
-      diagrams,
       whiteboards,
       spreadsheets,
+      analyzers,
     }),
-    [text, varDrafts, stopCriteria, unitSystem, fillMissing, stateUnitIds, tables, plots, diagrams, whiteboards, spreadsheets],
+    [text, varDrafts, stopCriteria, unitSystem, fillMissing, stateUnitIds, tables, plots, whiteboards, spreadsheets, analyzers],
   )
 
   // Debounced autosave of the entire workspace to a single localStorage key,
@@ -631,8 +624,8 @@ export default function App() {
       return
     }
     isDirtyRef.current = true
-     
-  }, [text, tables, plots, diagrams, whiteboards, spreadsheets, varDrafts])
+
+  }, [text, tables, plots, whiteboards, spreadsheets, analyzers, varDrafts])
 
   // Apply an opened/loaded project to every workspace slice. Child-owned slices
   // are written back to their caches and the relevant tabs are remounted (epoch
@@ -648,12 +641,19 @@ export default function App() {
     setStateUnitIds(p.stateUnitIds ?? {})
     setTables(p.tables)
     setPlots(p.plots ?? [])
-    setDiagrams(p.diagrams ?? [])
-    setActiveDiagramId(p.diagrams?.[0]?.id ?? null)
     setWhiteboards(p.whiteboards ?? [])
     setSpreadsheets(p.spreadsheets ?? [])
-    // Diagrams present at project-open mount in Run view (see initialMode prop).
-    runOnLoadDiagramIdsRef.current = new Set((p.diagrams ?? []).map((d) => d.id))
+    // Template mode (§2.5b): analyzer layouts load with refs only — the
+    // measurement data itself is gone, so each window shows a "Locate file…"
+    // banner. Clear any stale samples from a previous project first.
+    channelStore.clear()
+    setAnalyzers(p.analyzers ?? [])
+    const awaiting = (p.analyzers ?? []).filter((a) => a.files.length > 0).length
+    setLoadNotice(
+      awaiting > 0
+        ? `${awaiting} analyzer window${awaiting === 1 ? '' : 's'} awaiting measurement files — open them and use “Locate file…”.`
+        : null,
+    )
     setResult(null)
     setCheckResult(null)
     writeBridgedKeys(p)
@@ -661,15 +661,15 @@ export default function App() {
     setWorkspaceEpoch((e) => e + 1)
     requestAnimationFrame(() => {
       dockRef.current?.restore(p.dockLayout)
-      // Always surface the first diagram so an opened project shows its diagram.
-      const firstDiagram = p.diagrams?.[0]
-      if (firstDiagram) {
-        dockRef.current?.openInstance(`diagram:${firstDiagram.id}`, 'diagram', firstDiagram.name)
-      }
       // Surface the first whiteboard too, if any.
       const firstWhiteboard = p.whiteboards?.[0]
       if (firstWhiteboard) {
         dockRef.current?.openInstance(`whiteboard:${firstWhiteboard.id}`, 'whiteboard', firstWhiteboard.name)
+      }
+      // And the first analyzer, so its "Locate file…" banner is discoverable.
+      const firstAnalyzer = p.analyzers?.[0]
+      if (firstAnalyzer) {
+        dockRef.current?.openInstance(`analyzer:${firstAnalyzer.id}`, 'analyzer', firstAnalyzer.name)
       }
     })
   }, [])
@@ -767,10 +767,9 @@ export default function App() {
       stateUnitIds: {},
       tables: [],
       plots: [],
-      diagrams: [],
       whiteboards: [],
       spreadsheets: [],
-      customComponents: null,
+      analyzers: [],
       digitizer: null,
       dockLayout: null,
     })
@@ -779,10 +778,10 @@ export default function App() {
     setStateUnitIds({})
     setTables([])
     setPlots([])
-    setDiagrams([])
-    setActiveDiagramId(null)
     setWhiteboards([])
     setSpreadsheets([])
+    setAnalyzers([])
+    channelStore.clear()
     setResult(null)
     setCheckResult(null)
     setProjectName('untitled')
@@ -801,12 +800,6 @@ export default function App() {
   const tableVars = activeParam?.vars ?? []
   const paramRows = activeParam?.rows ?? []
   const tableResults = activeParam?.results ?? []
-  // Solved table runs fed to the Diagram window for animation playback (6.4).
-  const diagramRuns = tableResults
-    .map((r, i) => ({ ok: r.success, label: `Run ${i + 1}`, values: r.values }))
-    .filter((r) => r.ok)
-    .map(({ label, values }) => ({ label, values }))
-
   const solvedVars = useMemo(() => {
     const names = new Set<string>()
     if (result?.variables) {
@@ -917,10 +910,9 @@ export default function App() {
       stateUnitIds: {},
       tables: [],
       plots: [],
-      diagrams: [],
       whiteboards: [],
       spreadsheets: [],
-      customComponents: null,
+      analyzers: [],
       digitizer: null,
       dockLayout: null,
     })
@@ -929,10 +921,10 @@ export default function App() {
     setStateUnitIds({})
     setTables([])
     setPlots([])
-    setDiagrams([])
-    setActiveDiagramId(null)
     setWhiteboards([])
     setSpreadsheets([])
+    setAnalyzers([])
+    channelStore.clear()
     setResult(null)
     setCheckResult(null)
     setLastSolvedWithFillMissing(false)
@@ -970,12 +962,9 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  /** The equations actually solved: editor text plus diagram control bindings and spreadsheet bindings. */
+  /** The equations actually solved: editor text plus spreadsheet bindings. */
   function effectiveText(): string {
     const lines = [text]
-    if (diagramBindings.length > 0) {
-      lines.push(...diagramBindings)
-    }
 
     for (const ss of spreadsheets) {
       if (ss.bindings) {
@@ -1007,25 +996,6 @@ export default function App() {
       })
       .join('\n')
   }
-
-  // Diagram input controls report their `var = value` lines here. Changing a
-  // control's VALUE keeps the system structure intact (same equation/variable
-  // counts), so the existing Check stays valid and Solve can run immediately.
-  // Adding/removing a control or renaming its variable changes the structure
-  // and invalidates the Check, forcing a re-Check before Solve.
-  const handleDiagramBindings = useCallback((lines: string[]) => {
-    setDiagramBindings(lines)
-    const vars = lines
-      .map((l) => l.split('=')[0].trim().toLowerCase())
-      .sort((a, b) => a.localeCompare(b))
-      .join(',')
-    if (vars !== diagramBoundVarsRef.current) {
-      diagramBoundVarsRef.current = vars
-      setCheckResult(null)
-      setResult(null)
-      setLastSolvedWithFillMissing(false)
-    }
-  }, [])
 
   async function onCheck(): Promise<CheckResponse | null> {
     if (checking) return null
@@ -1394,35 +1364,6 @@ export default function App() {
     }
   }
 
-  const handleNavigate = useCallback(
-    (action: { tab?: string; query?: string; plotId?: string; diagramId?: string }) => {
-      if (action.tab) {
-        dockRef.current?.open(action.tab)
-      }
-      if (action.diagramId) {
-        const d = diagrams.find((x) => x.id === action.diagramId)
-        if (d) dockRef.current?.openInstance(`diagram:${action.diagramId}`, 'diagram', d.name)
-      }
-      if (action.plotId) {
-        const targetPlot = plots.find((p) => p.id === action.plotId)
-        if (targetPlot) {
-          dockRef.current?.openInstance(`plot:${action.plotId}`, 'plot', targetPlot.name)
-        }
-      }
-      if (action.query) {
-        const query = action.query.trim().toLowerCase()
-        if (query) {
-          const lines = text.split('\n')
-          const matchingIdx = lines.findIndex((l) => l.toLowerCase().includes(query))
-          if (matchingIdx !== -1) {
-            setActiveTab('equations')
-            setTimeout(() => editorRef.current?.goToLine(matchingIdx + 1), 50)
-          }
-        }
-      }
-    },
-    [plots, text],
-  )
 
   // Jump the editor to a 1-based line (selecting it) — used to reach the line a
   // syntax error points at. Ensures the editor is visible first.
@@ -1490,36 +1431,44 @@ export default function App() {
   }, [plots, codePlots])
 
   // Auto-close dock windows whose backing instance no longer exists — e.g. a
-  // plot removed from its card, a deleted diagram/table, or a stale window
+  // plot removed from its card, a deleted table, or a stale window
   // restored from a saved layout. Without this they'd render as blank panels.
   useEffect(() => {
     const valid = new Set<string>([
       'equations', 'table', 'plots', 'digitizer', 'workspace', 'terminal', 'states', 'inspector',
-      ...diagrams.map((d) => `diagram:${d.id}`),
       ...mergedPlots.map((p) => `plot:${p.id}`),
       ...tables.map((t) => `table:${t.id}`),
       ...whiteboards.map((w) => `whiteboard:${w.id}`),
       ...spreadsheets.map((s) => `spreadsheet:${s.id}`),
+      ...analyzers.map((a) => `analyzer:${a.id}`),
       ...(result?.stateTableDefs ?? checkResult?.stateTableDefs ?? []).map((s) => `state:${s.name}`),
     ])
     for (const w of openWindows) {
       if (!valid.has(w.id)) dockRef.current?.close(w.id)
     }
-  }, [diagrams, mergedPlots, tables, whiteboards, spreadsheets, openWindows, result?.stateTableDefs, checkResult?.stateTableDefs])
+  }, [mergedPlots, tables, whiteboards, spreadsheets, analyzers, openWindows, result?.stateTableDefs, checkResult?.stateTableDefs])
 
   // Keep dock tab titles in sync with instance names (so renames in the
   // Inspector show on the tabs). Deferred out of the commit cycle so dockview's
   // own re-render can't re-enter React mid-update.
   useEffect(() => {
     const raf = requestAnimationFrame(() => {
-      for (const d of diagrams) dockRef.current?.setTitle(`diagram:${d.id}`, d.name)
       for (const p of mergedPlots) dockRef.current?.setTitle(`plot:${p.id}`, p.name)
       for (const t of tables) dockRef.current?.setTitle(`table:${t.id}`, t.name)
       for (const w of whiteboards) dockRef.current?.setTitle(`whiteboard:${w.id}`, w.name)
       for (const s of spreadsheets) dockRef.current?.setTitle(`spreadsheet:${s.id}`, s.name)
+      for (const a of analyzers) dockRef.current?.setTitle(`analyzer:${a.id}`, a.name)
     })
     return () => cancelAnimationFrame(raf)
-  }, [diagrams, mergedPlots, tables, whiteboards, spreadsheets])
+  }, [mergedPlots, tables, whiteboards, spreadsheets, analyzers])
+
+  // Analyzers with an OPEN dock window are protected from the ChannelStore's
+  // over-ceiling LRU eviction (§2.5a) — tell the store which ones those are.
+  useEffect(() => {
+    channelStore.setOpenAnalyzers(
+      openWindows.filter((w) => w.kind === 'analyzer').map((w) => w.id.slice('analyzer:'.length)),
+    )
+  }, [openWindows])
 
   const baseVariables =
     solutions.length > 0 ? solutions[0].variables : result?.variables ?? []
@@ -1548,17 +1497,6 @@ export default function App() {
 
   // Reusable window open/create handlers, shared by the left rail and the
   // command palette so both open real dock windows (not just highlight a tab).
-  const createDiagram = () => {
-    const id = crypto.randomUUID()
-    const name = `Diagram ${diagrams.length + 1}`
-    setDiagrams((prev) => [
-      ...prev,
-      { id, name, state: { elements: [], gridSize: 10, snap: true, showGrid: true } },
-    ])
-    setActiveDiagramId(id)
-    // Defer until the new diagram's content entry exists in the next render.
-    requestAnimationFrame(() => dockRef.current?.openInstance(`diagram:${id}`, 'diagram', name))
-  }
   const createTable = (kind: 'parametric' | 'function-1d' | 'function-2d') => {
     const t =
       kind === 'parametric'
@@ -1567,11 +1505,6 @@ export default function App() {
     setTables((prev) => [...prev, t])
     setActiveTableId(t.id)
     requestAnimationFrame(() => dockRef.current?.openInstance(`table:${t.id}`, 'table', t.name))
-  }
-  const openLatestOrNewDiagram = () => {
-    const d = diagrams[diagrams.length - 1]
-    if (d) dockRef.current?.openInstance(`diagram:${d.id}`, 'diagram', d.name)
-    else createDiagram()
   }
   const createWhiteboard = () => {
     const wb = newWhiteboard(whiteboards.length)
@@ -1592,6 +1525,24 @@ export default function App() {
     const ss = spreadsheets[spreadsheets.length - 1]
     if (ss) dockRef.current?.openInstance(`spreadsheet:${ss.id}`, 'spreadsheet', ss.name)
     else createSpreadsheet()
+  }
+  const createAnalyzer = () => {
+    const a = newAnalyzer(analyzers.length)
+    setAnalyzers((prev) => [...prev, a])
+    requestAnimationFrame(() => dockRef.current?.openInstance(`analyzer:${a.id}`, 'analyzer', a.name))
+  }
+  const openLatestOrNewAnalyzer = () => {
+    const a = analyzers[analyzers.length - 1]
+    if (a) dockRef.current?.openInstance(`analyzer:${a.id}`, 'analyzer', a.name)
+    else createAnalyzer()
+  }
+  // Release binds to analyzer DELETION, not window close (§2.5a): dropping the
+  // spec releases its measurements from the ChannelStore (shared entries are
+  // refcounted, so a second analyzer on the same file keeps its data).
+  const deleteAnalyzer = (id: string) => {
+    const a = analyzers.find((x) => x.id === id)
+    if (a) for (const f of a.files) channelStore.release(f.measurementId, a.id)
+    setAnalyzers((prev) => prev.filter((x) => x.id !== id))
   }
   const exportToSpreadsheet = (vars: VariableResult[]) => {
     const grouped = group(vars)
@@ -1762,9 +1713,9 @@ export default function App() {
           else dockRef.current?.open('states')
         } },
         { id: 'view-digitizer', label: 'Graph Digitizer', leftSection: <IconChartGridDots size={18} />, onClick: () => dockRef.current?.open('digitizer') },
-        { id: 'view-diagram', label: 'Diagram', description: 'Open the latest diagram (or create one)', leftSection: <IconSchema size={18} />, onClick: openLatestOrNewDiagram },
         { id: 'view-whiteboard', label: 'Whiteboard', description: 'Open the latest whiteboard (or create one)', leftSection: <IconBrush size={18} />, onClick: openLatestOrNewWhiteboard },
         { id: 'view-spreadsheet', label: 'Spreadsheet', description: 'Open the latest spreadsheet (or create one)', leftSection: <IconGrid4x4 size={18} />, onClick: openLatestOrNewSpreadsheet },
+        { id: 'view-analyzer', label: 'Data Analyzer', description: 'Open the latest analyzer (or create one)', leftSection: <IconWaveSine size={18} />, onClick: openLatestOrNewAnalyzer },
         { id: 'view-inspector', label: 'Inspector', leftSection: <IconSettings size={18} />, onClick: () => dockRef.current?.open('inspector') },
       ],
     },
@@ -1775,9 +1726,9 @@ export default function App() {
         { id: 'new-xy-plot', label: 'Add graph (X-Y)', leftSection: <IconChartLine size={18} />, onClick: () => setNewPlotKind('xy') },
         { id: 'new-property-plot', label: 'Add property graph', leftSection: <IconTemperature size={18} />, onClick: () => setNewPlotKind('property') },
         { id: 'new-psychro-plot', label: 'Add psychrometric graph', leftSection: <IconTemperature size={18} />, onClick: () => setNewPlotKind('psychro') },
-        { id: 'new-diagram', label: 'Add diagram', leftSection: <IconSchema size={18} />, onClick: createDiagram },
         { id: 'new-whiteboard', label: 'Add whiteboard', description: 'New Excalidraw freehand sketch canvas', leftSection: <IconBrush size={18} />, onClick: createWhiteboard },
         { id: 'new-spreadsheet', label: 'Add spreadsheet', description: 'New spreadsheet workbook', leftSection: <IconGrid4x4 size={18} />, onClick: createSpreadsheet },
+        { id: 'new-analyzer', label: 'Add data analyzer', description: 'Import and explore measurement data (CSV/TSV)', leftSection: <IconWaveSine size={18} />, onClick: createAnalyzer },
         { id: 'new-state-table', label: 'Add fluid state table', description: 'Insert a STATE TABLE block (fluid-aware circuit) at the caret', leftSection: <IconTemperature size={18} />, onClick: () => insertFunction('STATE TABLE Circuit1(P1, T1, h2)\n  FLUID = Water\nEND\n') },
       ],
     },
@@ -1970,30 +1921,7 @@ export default function App() {
     ),
     inspector: (() => {
       const fw = focusedWindow
-      const headerStyle: React.CSSProperties = { padding: '6px 10px' }
       const bodyStyle: React.CSSProperties = { flex: 1, minHeight: 0, overflow: 'auto', padding: 10 }
-
-      // Diagram: render the portal outlet (DiagramTab pushes its Properties/
-      // Layers in) plus a rename field for the focused diagram.
-      if (fw?.kind === 'diagram') {
-        const d = diagrams.find((x) => `diagram:${x.id}` === fw.id)
-        return (
-          <div style={{ height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-            <div style={headerStyle}>
-              <TextInput
-                size="xs"
-                label="Diagram name"
-                value={d?.name ?? ''}
-                onChange={(e) => {
-                  const value = e.currentTarget.value
-                  if (d) setDiagrams((prev) => renameById(prev, d.id, value))
-                }}
-              />
-            </div>
-            <div ref={setInspectorOutlet} style={{ flex: 1, minHeight: 0, overflow: 'auto' }} />
-          </div>
-        )
-      }
 
       // Table: rename + the parametric table's quick actions.
       if (fw?.kind === 'table') {
@@ -2140,7 +2068,7 @@ export default function App() {
 
       return (
         <div style={bodyStyle}>
-          <Text size="xs" c="dimmed">Focus a window (Diagram, Table, Plot, Editor) to inspect it here.</Text>
+          <Text size="xs" c="dimmed">Focus a window (Table, Plot, Whiteboard, Editor) to inspect it here.</Text>
         </div>
       )
     })(),
@@ -2216,47 +2144,8 @@ export default function App() {
     inspector: 'Inspector',
   }
 
-  // Per-instance Diagram windows: each diagram opens as its own dock window
-  // ("diagram:<id>"), so several diagrams can sit side by side as windows.
-  for (const d of diagrams) {
-    const winId = `diagram:${d.id}`
-    panelTitles[winId] = d.name
-    panelContent[winId] = (
-      <div style={{ height: '100%', minHeight: 0 }}>
-        <Suspense fallback={lazyTabFallback}>
-        <DiagramTab
-          key={`diagram-${d.id}-${workspaceEpoch}`}
-          singleDiagramId={d.id}
-          variables={result?.variables ?? []}
-          runs={diagramRuns}
-          onBindingsChange={handleDiagramBindings}
-          plots={mergedPlots}
-          tableRows={paramRows}
-          tableResults={tableResults}
-          cyclePath={result?.cyclePath}
-          solving={solving}
-          onSolve={onSolve}
-          onCheck={async () => {
-            await onCheck()
-          }}
-          onNavigate={handleNavigate}
-          onVarDraftsChange={setVarDrafts}
-          diagrams={diagrams}
-          activeDiagramId={d.id}
-          onDiagramsChange={setDiagrams}
-          onActiveDiagramIdChange={setActiveDiagramId}
-          spreadsheets={spreadsheets}
-          inspectorOutlet={inspectorOutlet}
-          isActive={focusedWindow?.id === `diagram:${d.id}`}
-          initialMode={runOnLoadDiagramIdsRef.current.has(d.id) ? 'run' : 'develop'}
-        />
-        </Suspense>
-      </div>
-    )
-  }
-
   // Per-instance Whiteboard windows: each Excalidraw whiteboard opens as its
-  // own dock window ("whiteboard:<id>"), mirroring the diagram pattern. The
+  // own dock window ("whiteboard:<id>"). The
   // scene is persisted through App-owned state → .frees file.
   for (const w of whiteboards) {
     const winId = `whiteboard:${w.id}`
@@ -2269,6 +2158,25 @@ export default function App() {
             singleWhiteboardId={w.id}
             whiteboards={whiteboards}
             onWhiteboardsChange={setWhiteboards}
+          />
+        </Suspense>
+      </div>
+    )
+  }
+
+  // Per-instance Data Analyzer windows ("analyzer:<id>"), mirroring the
+  // whiteboard pattern. Bulk samples live in the ChannelStore, never here.
+  for (const a of analyzers) {
+    const winId = `analyzer:${a.id}`
+    panelTitles[winId] = a.name
+    panelContent[winId] = (
+      <div style={{ height: '100%', minHeight: 0 }}>
+        <Suspense fallback={lazyTabFallback}>
+          <DataAnalyzerTab
+            key={`analyzer-${a.id}-${workspaceEpoch}`}
+            singleAnalyzerId={a.id}
+            analyzers={analyzers}
+            onAnalyzersChange={setAnalyzers}
           />
         </Suspense>
       </div>
@@ -2447,7 +2355,6 @@ export default function App() {
         active={activeTab}
         openKinds={openKinds}
         openIds={openIds}
-        diagrams={diagrams.map((d) => ({ id: d.id, name: d.name, deletable: true }))}
         plots={mergedPlots.map((p) => ({ id: p.id, name: p.name, tag: PLOT_KIND_LABEL[p.kind], deletable: !p.fromCode }))}
         plotCount={mergedPlots.length}
         onOpenPlot={(id) => {
@@ -2456,8 +2363,6 @@ export default function App() {
         }}
         onNewPlot={(kind) => setNewPlotKind(kind)}
         onDeletePlot={(id) => handlePlotsChange(plots.filter((p) => p.id !== id))}
-        diagramCount={diagrams.length}
-        onDeleteDiagram={(id) => setDiagrams((prev) => prev.filter((d) => d.id !== id))}
         workspaceTables={[
           ...tables.map((t) => ({ id: t.id, name: t.name, deletable: t.source !== 'code' })),
           // Declared STATE TABLE blocks appear as read-only entries that open
@@ -2488,11 +2393,6 @@ export default function App() {
         onNewTable={(kind) => createTable(kind)}
         onSelect={(kind) => dockRef.current?.open(kind)}
         onClose={(kind) => dockRef.current?.close(kind)}
-        onOpenDiagram={(id) => {
-          const d = diagrams.find((x) => x.id === id)
-          if (d) dockRef.current?.openInstance(`diagram:${id}`, 'diagram', d.name)
-        }}
-        onNewDiagram={createDiagram}
         whiteboards={whiteboards.map((w) => ({ id: w.id, name: w.name, deletable: true }))}
         whiteboardCount={whiteboards.length}
         onOpenWhiteboard={(id) => {
@@ -2509,6 +2409,14 @@ export default function App() {
         }}
         onDeleteSpreadsheet={(id) => setSpreadsheets((prev) => prev.filter((s) => s.id !== id))}
         onNewSpreadsheet={createSpreadsheet}
+        analyzers={analyzers.map((a) => ({ id: a.id, name: a.name, deletable: true }))}
+        analyzerCount={analyzers.length}
+        onOpenAnalyzer={(id) => {
+          const a = analyzers.find((x) => x.id === id)
+          if (a) dockRef.current?.openInstance(`analyzer:${id}`, 'analyzer', a.name)
+        }}
+        onNewAnalyzer={createAnalyzer}
+        onDeleteAnalyzer={deleteAnalyzer}
         onMinMax={() => setShowMinMax(true)}
         onCurveFit={() => setShowCurveFit(true)}
         onPreferences={() => setShowPreferences(true)}
@@ -2599,11 +2507,15 @@ export default function App() {
       )}
       {showAbout && <AboutModal onClose={() => setShowAbout(false)} />}
 
-      <ExamplesModal
-        opened={showExamples}
-        onClose={() => setShowExamples(false)}
-        onSelect={loadExample}
-      />
+      {showExamples && (
+        <Suspense fallback={null}>
+          <ExamplesModal
+            opened={showExamples}
+            onClose={() => setShowExamples(false)}
+            onSelect={loadExample}
+          />
+        </Suspense>
+      )}
 
       <Suspense fallback={null}>
         {showComponentWizard && (
@@ -2661,6 +2573,19 @@ export default function App() {
         message={dialogError ?? ''}
         onClose={() => setDialogError(null)}
       />
+
+      {/* Self-dismissing project-load summary (template mode, §2.5b). */}
+      {loadNotice !== null && (
+        <Alert
+          icon={<IconWaveSine size={16} />}
+          color="teal"
+          withCloseButton
+          onClose={() => setLoadNotice(null)}
+          style={{ position: 'fixed', bottom: 16, right: 16, zIndex: 400, maxWidth: 420 }}
+        >
+          {loadNotice}
+        </Alert>
+      )}
 
       {showPreferences && (
         <PreferencesModal

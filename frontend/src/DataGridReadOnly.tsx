@@ -45,16 +45,16 @@ interface Props {
   onPlotColumns?: (xVar: string, yVars: string[]) => void
 }
 
-export default function DataGridReadOnly({ vars, rows, varDrafts, columnUnits, onPlotColumns }: Readonly<Props>) {
+/**
+ * Map glide's theme onto Mantine tokens so a grid matches the rest of the app
+ * and follows the active color scheme. Header text uses the same teal the
+ * Mantine table headers used; cell backgrounds use the dark surface shades.
+ * Exported for other read-only glide grids (e.g. the analyzer Table).
+ */
+export function useGlideTheme(): Partial<GdgTheme> {
   const theme = useMantineTheme()
-  const scheme = useComputedColorScheme('dark')
-  const dark = scheme === 'dark'
-  const { ref, width, height } = useElementSize()
-
-  // Map glide's theme onto Mantine tokens so the grid matches the rest of the
-  // app and follows the active color scheme. Header text uses the same teal the
-  // Mantine table headers used; cell backgrounds use the dark surface shades.
-  const gridTheme = useMemo<Partial<GdgTheme>>(() => {
+  const dark = useComputedColorScheme('dark') === 'dark'
+  return useMemo<Partial<GdgTheme>>(() => {
     const c = theme.colors
     return {
       accentColor: c.teal[6],
@@ -83,6 +83,11 @@ export default function DataGridReadOnly({ vars, rows, varDrafts, columnUnits, o
       cellVerticalPadding: 4,
     }
   }, [theme, dark])
+}
+
+export default function DataGridReadOnly({ vars, rows, varDrafts, columnUnits, onPlotColumns }: Readonly<Props>) {
+  const { ref, width, height } = useElementSize()
+  const gridTheme = useGlideTheme()
 
   // Columns are user-resizable; remember overrides keyed by column id (var name).
   const [widthOverrides, setWidthOverrides] = useState<Record<string, number>>({})
