@@ -78,7 +78,7 @@ On top of the equation solver, frees has an **acausal, multi-domain, component-b
 - **`model$` variant selector** ("one component, many models") — a `VARIANT … REQUIRE …` mechanism picks a physics body by fidelity (e.g. compressor isentropic-η → volumetric-η → map), with per-variant required-parameter validation.
 - **Steady ↔ transient from one network** — storage components emit `der(member)=…` + initials, routed into a `DYNAMIC` block's algebraic body (`core/ode/DynamicSolver.java`, stiff `ode23s`); the steady limit recovers the Phase-1 operating point. Shipped storage: `ThermalMass`/`Inertia`/`Capacitor`/`Inductor`/`Accumulator`/battery SOC.
 - **Plant → control** — a `LINEARIZE` block produces a numeric FD `(A,B,C,D)` handed to the control suite (`lqr`/`place`/`ss`); closed loops via `DYNAMIC` + controller components (e.g. `PIThermostat`).
-- **Diagnostics** — source-mapped (component-named, never mangled scalars) and an auto-generated read-only **Mermaid topology view** (`api/TopologyGraph.java` → frontend `TopologyTab`).
+- **Diagnostics** — source-mapped (component-named, never mangled scalars).
 - **Cycle plotting** — `api/CyclePathResolver.java` recognises component stream members (`s1.P`/`s1.h`) and emits the cycle overlay the existing property-plot renderer draws.
 
 ## Architecture Summary

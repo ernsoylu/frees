@@ -81,8 +81,6 @@ export interface SolveResponse {
   stateTableDefs?: StateTableDto[]
   /** ODE Tables produced by solved DYNAMIC ... END blocks. */
   odeTables?: OdeTableDto[]
-  /** Mermaid flowchart of the COMPONENT network, or null when there are none. */
-  topology?: string | null
   /** Per-instance component metadata (type + parameter bindings) for the datasheet view. */
   components?: ComponentResult[]
 }
@@ -357,14 +355,35 @@ export async function check(
       body: JSON.stringify({ text, variableInfo, stopCriteria: { complexMode }, functionTables, overrides }),
     })
     if (!response.ok) {
+      // A syntax-error rejection (400) carries a full CheckResponse body —
+      // including the 1-based errorLine the editor marks and the lint tooltip
+      // shows — so parse it before reducing to a bare message.
+      let body = ''
+      try {
+        body = await response.text()
+      } catch {
+        // unreadable body — fall through to the status fallback
+      }
+      let data: Record<string, any> | null = null
+      try {
+        const parsed = JSON.parse(body)
+        if (parsed && typeof parsed === 'object') data = parsed
+      } catch {
+        // Body is not JSON — keep the raw text as the message.
+      }
       return {
         solvable: false,
-        equations: 0,
-        unknowns: 0,
-        variables: [],
-        unitWarnings: [],
-        inferredUnits: {},
-        message: await extractErrorMessage(response, `Server error (${response.status})`),
+        equations: data?.equations ?? 0,
+        unknowns: data?.unknowns ?? 0,
+        variables: data?.variables ?? [],
+        unitWarnings: data?.unitWarnings ?? [],
+        inferredUnits: data?.inferredUnits ?? {},
+        message:
+          (typeof data?.message === 'string' && data.message) ||
+          (typeof data?.error === 'string' && data.error) ||
+          body ||
+          `Server error (${response.status})`,
+        errorLine: data?.errorLine ?? null,
       }
     }
     const data = await response.json()
@@ -376,6 +395,7 @@ export async function check(
       unitWarnings: data.unitWarnings ?? [],
       inferredUnits: data.inferredUnits ?? {},
       message: data.message ?? '',
+      errorLine: data.errorLine ?? null,
       codeTables: data.codeTables ?? [],
       parametricTables: data.parametricTables ?? [],
       definedPlots: data.definedPlots ?? [],
@@ -423,7 +443,6 @@ function mapSolveData(data: any): SolveResponse {
     definedPlots: data.definedPlots ?? [],
     stateTableDefs: data.stateTableDefs ?? [],
     odeTables: data.odeTables ?? [],
-    topology: data.topology ?? null,
     components: data.components ?? [],
   }
 }
@@ -536,18 +555,6 @@ export async function replClear(sessionId: string, variableName?: string): Promi
     })
   } catch {
     /* best-effort */
-  }
-}
-
-/** Variable names currently in the workspace, for REPL tab-completion. */
-export async function replVariables(sessionId: string): Promise<string[]> {
-  try {
-    const response = await fetch(`${API_BASE}/api/repl/variables?sessionId=${encodeURIComponent(sessionId)}`)
-    if (!response.ok) return []
-    const data = await response.json()
-    return Array.isArray(data) ? data : []
-  } catch {
-    return []
   }
 }
 

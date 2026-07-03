@@ -96,9 +96,3 @@ export function stepHoldAt(t: Float64Array, v: Float64Array, x: number): number 
   const i = lb < t.length && t[lb] === x ? lb : lb - 1
   return i < 0 ? NaN : v[i]
 }
-
-/** Index-based variant when the caller already knows the row's exact index. */
-export function stepHoldIndexAt(t: Float64Array, x: number): number {
-  const lb = lowerBound(t, x)
-  return lb < t.length && t[lb] === x ? lb : lb - 1
-}

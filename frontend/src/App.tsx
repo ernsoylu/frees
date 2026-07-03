@@ -1,4 +1,4 @@
-import { ChangeEvent, lazy, Suspense, useCallback, useEffect, useMemo, useState, useRef, type ReactNode } from 'react'
+import { ChangeEvent, lazy, startTransition, Suspense, useCallback, useEffect, useMemo, useState, useRef, type ReactNode } from 'react'
 import {
   Alert,
   Badge,
@@ -107,7 +107,6 @@ const ExamplesModal = lazy(() => import('./ExamplesModal'))
 // plot-config modals are also code-split: the Plotly figure machinery is large
 // and only needed once a plot window is opened or a modal is invoked.
 const PlotTab = lazy(() => import('./PlotTab'))
-const TopologyTab = lazy(() => import('./TopologyTab'))
 const ComponentWizardModal = lazy(() => import('./ComponentWizardModal'))
 const MinMaxModal = lazy(() => import('./MinMaxModal'))
 const CurveFitModal = lazy(() => import('./CurveFitModal'))
@@ -237,6 +236,12 @@ export default function App() {
   const projectFileRef = useRef<HTMLInputElement>(null)
 
   const [text, setText] = useState(boot?.text ?? EXAMPLE)
+  // Always-current editor document. The editor is uncontrolled after mount, so
+  // every keystroke lands here synchronously while the `text` state above (which
+  // drives autosave/dirty-tracking/modals) trails behind in a low-priority
+  // transition, keeping the full App re-render off the typing critical path.
+  // Event-time readers (solve/check/save) must use this ref, not `text`.
+  const textRef = useRef(text)
   const [checkResult, setCheckResult] = useState<CheckResponse | null>(null)
   const [checking, setChecking] = useState(false)
   const [result, setResult] = useState<SolveResponse | null>(null)
@@ -317,6 +322,14 @@ export default function App() {
   const insertComponentBlock = useCallback((block: string) => {
     setActiveTab('equations')
     setTimeout(() => editorRef.current?.insertStatement(block), 50)
+  }, [])
+  // Programmatic document replacement (project load, new/example, generated
+  // equations): updates the ref + state and pushes the doc into the uncontrolled
+  // editor. setDoc does not echo back through onTextChange.
+  const applyText = useCallback((next: string) => {
+    textRef.current = next
+    setText(next)
+    editorRef.current?.setDoc(next)
   }, [])
   // Dockview workspace manager: imperative handle + set of currently-open
   // window kinds (drives the sidebar's open-state indicators).
@@ -412,7 +425,9 @@ export default function App() {
   // by buildProject(), so they are captured without lifting them into App.
   const currentSlices = useCallback(
     (): ProjectSlices => ({
-      text,
+      // Ref, not state: an explicit Save fired right after a keystroke must not
+      // lose the edits still riding the deferred `text` transition.
+      text: textRef.current,
       varDrafts,
       stopCriteria,
       unitSystem,
@@ -424,6 +439,9 @@ export default function App() {
       spreadsheets,
       analyzers,
     }),
+    // `text` stays a dependency so the autosave effect keyed on this callback
+    // still refreshes when the (deferred) editor document state lands.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [text, varDrafts, stopCriteria, unitSystem, fillMissing, stateUnitIds, tables, plots, whiteboards, spreadsheets, analyzers],
   )
 
@@ -633,7 +651,7 @@ export default function App() {
   const applyProject = useCallback((p: FreesProject) => {
     suppressDirtyRef.current = true
     isDirtyRef.current = false
-    setText(p.text ?? '')
+    applyText(p.text ?? '')
     setVarDrafts(p.varDrafts ?? {})
     setStopCriteria(p.stopCriteria)
     setUnitSystem(p.unitSystem ?? 'SI')
@@ -672,7 +690,7 @@ export default function App() {
         dockRef.current?.openInstance(`analyzer:${firstAnalyzer.id}`, 'analyzer', firstAnalyzer.name)
       }
     })
-  }, [])
+  }, [applyText])
 
   // If the project is dirty, show the save-check dialog; otherwise run immediately.
   const guardedAction = useCallback((action: () => void) => {
@@ -773,7 +791,7 @@ export default function App() {
       digitizer: null,
       dockLayout: null,
     })
-    setText(EXAMPLE)
+    applyText(EXAMPLE)
     setVarDrafts({})
     setStateUnitIds({})
     setTables([])
@@ -787,7 +805,7 @@ export default function App() {
     setProjectName('untitled')
     setWorkspaceEpoch((e) => e + 1)
     requestAnimationFrame(() => dockRef.current?.reset())
-  }, [stopCriteria, unitSystem, fillMissing])
+  }, [stopCriteria, unitSystem, fillMissing, applyText])
 
   const handleNewProject = useCallback(() => guardedAction(performNewProject), [guardedAction, performNewProject])
 
@@ -884,12 +902,16 @@ export default function App() {
   }
 
   function onTextChange(value: string) {
-    setText(value)
+    // Keystrokes land in the ref synchronously; the state update that re-renders
+    // the rest of the app rides a low-priority (interruptible) transition.
+    textRef.current = value
+    startTransition(() => setText(value))
     // Any edit invalidates the previous Check; Solve is gated
     // until the system is re-checked. Table checks depend on the same text.
-    setCheckResult(null)
-    setResult(null)
-    setLastSolvedWithFillMissing(false)
+    // Guarded so only the first edit after a check/solve pays an urgent render.
+    if (checkResult) setCheckResult(null)
+    if (result) setResult(null)
+    if (lastSolvedWithFillMissing) setLastSolvedWithFillMissing(false)
     invalidateTable()
   }
 
@@ -916,7 +938,7 @@ export default function App() {
       digitizer: null,
       dockLayout: null,
     })
-    setText(example.text)
+    applyText(example.text)
     setVarDrafts({})
     setStateUnitIds({})
     setTables([])
@@ -962,9 +984,11 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  /** The equations actually solved: editor text plus spreadsheet bindings. */
+  /** The equations actually solved: editor text plus spreadsheet bindings.
+   *  Reads textRef (not `text`) so a solve fired right after a keystroke sees
+   *  the document before the deferred state sync lands. */
   function effectiveText(): string {
-    const lines = [text]
+    const lines = [textRef.current]
 
     for (const ss of spreadsheets) {
       if (ss.bindings) {
@@ -1047,14 +1071,19 @@ export default function App() {
   }
 
   function invalidateTable() {
-    // Text edits invalidate the runs of every parametric table.
-    setTables((all) =>
-      all.map((t) =>
-        t.kind === 'parametric'
-          ? { ...t, results: [], stats: null, checkResult: null, checkMessage: '' }
-          : t,
-      ),
-    )
+    // Text edits invalidate the runs of every parametric table. Return the same
+    // array when there is nothing to clear so a plain keystroke doesn't
+    // re-render every table consumer.
+    setTables((all) => {
+      let changed = false
+      const next = all.map((t) => {
+        if (t.kind !== 'parametric') return t
+        if (t.results.length === 0 && !t.stats && !t.checkResult && !t.checkMessage) return t
+        changed = true
+        return { ...t, results: [], stats: null, checkResult: null, checkMessage: '' }
+      })
+      return changed ? next : all
+    })
   }
 
   function invalidateActiveParam(t: ParamTableSpec): ParamTableSpec {
@@ -1879,10 +1908,11 @@ export default function App() {
         >
           <EquationEditor
             ref={editorRef}
-            value={text}
+            initialDoc={() => textRef.current}
             onChange={onTextChange}
             variables={variables}
             errorLine={errorLine}
+            errorMessage={result?.error ?? checkResult?.message ?? null}
             placeholder={'Enter equations and markdown notes, e.g.\n# Rankine Cycle\nT1 = 100 [C]\nP1 = 250 [kPa]'}
           />
         </div>
@@ -1903,13 +1933,6 @@ export default function App() {
           solving={solving}
           solvable={solvable}
         />
-      </div>
-    ),
-    topology: (
-      <div style={panelPad}>
-        <Suspense fallback={lazyTabFallback}>
-          <TopologyTab topology={result?.topology} />
-        </Suspense>
       </div>
     ),
     digitizer: (
@@ -2140,7 +2163,6 @@ export default function App() {
     workspace: 'Variable Explorer',
     terminal: 'Terminal',
     states: 'Fluid States',
-    topology: 'Topology',
     inspector: 'Inspector',
   }
 
@@ -2393,6 +2415,7 @@ export default function App() {
         onNewTable={(kind) => createTable(kind)}
         onSelect={(kind) => dockRef.current?.open(kind)}
         onClose={(kind) => dockRef.current?.close(kind)}
+        onApplyLayout={(p) => dockRef.current?.applyPerspective(p)}
         whiteboards={whiteboards.map((w) => ({ id: w.id, name: w.name, deletable: true }))}
         whiteboardCount={whiteboards.length}
         onOpenWhiteboard={(id) => {
@@ -2682,7 +2705,7 @@ export default function App() {
             defaultTableId={activeTableId}
             onClose={() => setShowCurveFit(false)}
             onInsertEquation={(eq) => {
-              setText((prev) => prev.trim() + '\n\n' + eq)
+              applyText(textRef.current.trim() + '\n\n' + eq)
             }}
           />
         </Suspense>

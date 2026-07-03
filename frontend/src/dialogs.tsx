@@ -60,40 +60,6 @@ export function TextPromptModal({
   )
 }
 
-export function ConfirmModal({
-  opened,
-  title,
-  message,
-  confirmLabel = 'Confirm',
-  confirmColor = 'red',
-  onConfirm,
-  onClose,
-}: Readonly<{
-  opened: boolean
-  title: string
-  message: string
-  confirmLabel?: string
-  confirmColor?: string
-  onConfirm: () => void
-  onClose: () => void
-}>) {
-  return (
-    <Modal opened={opened} onClose={onClose} title={title} centered>
-      <Stack gap="md">
-        <Text size="sm">{message}</Text>
-        <Group justify="flex-end" gap="xs">
-          <Button variant="default" size="xs" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button color={confirmColor} size="xs" onClick={onConfirm}>
-            {confirmLabel}
-          </Button>
-        </Group>
-      </Stack>
-    </Modal>
-  )
-}
-
 /** "Save before closing?" — three-way choice: Save / Don't Save / Cancel. */
 export function SaveCheckModal({
   opened,
