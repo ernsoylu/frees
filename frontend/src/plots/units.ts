@@ -97,10 +97,10 @@ export function defaultUnitId(property: string, celsius: boolean): string {
 
 function normalizeId(id: string): string {
   return id
-    .replace(/°/g, '')
-    .replace(/·/g, '-')
+    .replaceAll('°', '')
+    .replaceAll('·', '-')
     .replace(/[\^³]/g, '3')
-    .replace(/\*/g, '')
+    .replaceAll('*', '')
     .trim()
     .toLowerCase()
 }

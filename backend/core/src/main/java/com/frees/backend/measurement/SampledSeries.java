@@ -12,6 +12,27 @@ public record SampledSeries(double[] t, double[] v, Interp interp) {
 
     public enum Interp { STEP, LINEAR }
 
+    @Override
+    public boolean equals(Object o) {
+        return o instanceof SampledSeries other
+                && interp == other.interp
+                && java.util.Arrays.equals(t, other.t)
+                && java.util.Arrays.equals(v, other.v);
+    }
+
+    @Override
+    public int hashCode() {
+        int h = interp == null ? 0 : interp.hashCode();
+        h = 31 * h + java.util.Arrays.hashCode(t);
+        h = 31 * h + java.util.Arrays.hashCode(v);
+        return h;
+    }
+
+    @Override
+    public String toString() {
+        return "SampledSeries[n=" + t.length + ", interp=" + interp + "]";
+    }
+
     /** Value at time x; NaN before the first sample (nothing to hold). */
     public double at(double x) {
         int n = t.length;

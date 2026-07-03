@@ -118,7 +118,7 @@ function viewReducer(state: ViewState, action: ViewAction): ViewState {
   switch (action.type) {
     case 'zoom': {
       if (!(action.max > action.min)) return state
-      const [curMin, curMax] = state.xRange ?? [NaN, NaN]
+      const [curMin, curMax] = state.xRange ?? [Number.NaN, Number.NaN]
       if (action.min === curMin && action.max === curMax) return state
       return { ...state, xRange: [action.min, action.max] }
     }

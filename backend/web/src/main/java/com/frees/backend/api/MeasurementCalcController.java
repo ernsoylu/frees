@@ -10,6 +10,7 @@ import com.frees.backend.measurement.SampledSeries;
 import com.frees.backend.measurement.TimeSeriesEvaluator;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -48,6 +49,23 @@ public class MeasurementCalcController {
     static final int ASYNC_THRESHOLD = 10_000;
 
     public record InlineSeries(double[] t, double[] v) {
+
+        @Override
+        public boolean equals(Object o) {
+            return o instanceof InlineSeries other
+                    && Arrays.equals(t, other.t)
+                    && Arrays.equals(v, other.v);
+        }
+
+        @Override
+        public int hashCode() {
+            return 31 * Arrays.hashCode(t) + Arrays.hashCode(v);
+        }
+
+        @Override
+        public String toString() {
+            return "InlineSeries[n=" + (t == null ? 0 : t.length) + "]";
+        }
     }
 
     public record CalcInput(String var, String measurementId, String channel, Integer group,
@@ -61,11 +79,52 @@ public class MeasurementCalcController {
     }
 
     public record CalcResult(String name, double[] t, double[] v) {
+
+        @Override
+        public boolean equals(Object o) {
+            return o instanceof CalcResult other
+                    && java.util.Objects.equals(name, other.name)
+                    && Arrays.equals(t, other.t)
+                    && Arrays.equals(v, other.v);
+        }
+
+        @Override
+        public int hashCode() {
+            int h = name == null ? 0 : name.hashCode();
+            h = 31 * h + Arrays.hashCode(t);
+            h = 31 * h + Arrays.hashCode(v);
+            return h;
+        }
+
+        @Override
+        public String toString() {
+            return "CalcResult[name=" + name + ", n=" + t.length + "]";
+        }
     }
 
     /** Everything resolved and validated, ready to evaluate. */
-    private record Prepared(Expr formula, double[] raster,
+    record Prepared(Expr formula, double[] raster,
                             Map<String, SampledSeries> inputs, boolean callBearing) {
+
+        @Override
+        public boolean equals(Object o) {
+            return o instanceof Prepared other
+                    && callBearing == other.callBearing
+                    && java.util.Objects.equals(formula, other.formula)
+                    && java.util.Objects.equals(inputs, other.inputs)
+                    && Arrays.equals(raster, other.raster);
+        }
+
+        @Override
+        public int hashCode() {
+            return 31 * java.util.Objects.hash(formula, inputs, callBearing)
+                    + Arrays.hashCode(raster);
+        }
+
+        @Override
+        public String toString() {
+            return "Prepared[raster=" + raster.length + " pts, callBearing=" + callBearing + "]";
+        }
     }
 
     private final MeasurementStore store;

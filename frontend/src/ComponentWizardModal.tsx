@@ -93,7 +93,9 @@ export default function ComponentWizardModal({ opened, onClose, onInsert }: Read
   const [mapBuilderFor, setMapBuilderFor] = useState<string | null>(null)
 
   const libraries = useMemo(() => {
-    const libs = Array.from(new Set(COMPONENT_CATALOG.map((c) => c.library))).sort()
+    const libs = Array.from(new Set(COMPONENT_CATALOG.map((c) => c.library))).sort((a, b) =>
+      a.localeCompare(b),
+    )
     return libs.map((lib) => ({ value: lib, label: libraryLabel(lib) }))
   }, [])
 

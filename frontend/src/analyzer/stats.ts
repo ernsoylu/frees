@@ -94,5 +94,5 @@ export function mergeTimestamps(arrays: readonly Float64Array[]): Float64Array {
 export function stepHoldAt(t: Float64Array, v: Float64Array, x: number): number {
   const lb = lowerBound(t, x)
   const i = lb < t.length && t[lb] === x ? lb : lb - 1
-  return i < 0 ? NaN : v[i]
+  return i < 0 ? Number.NaN : v[i]
 }

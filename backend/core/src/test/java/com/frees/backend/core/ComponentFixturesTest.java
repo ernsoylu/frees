@@ -44,10 +44,13 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 class ComponentFixturesTest {
 
     private static final Path ROOT = Path.of("src/test/resources/component-fixtures");
+    // Matched against trim()ed lines, so no trailing \s*$ — that (and a \S+
+    // name able to swallow the '=') made the old patterns backtrack
+    // super-linearly on malformed directives.
     private static final Pattern EXPECT =
-            Pattern.compile("^//\\s*EXPECT\\s+(\\S+)\\s*=\\s*(\\S+)(?:\\s+tol\\s+(\\S+))?\\s*$");
+            Pattern.compile("^//\\s*EXPECT\\s+([^=\\s]+)\\s*=\\s*(\\S+)(?:\\s+tol\\s+(\\S+))?$");
     private static final Pattern EXPECT_ERROR =
-            Pattern.compile("^//\\s*EXPECT-ERROR\\s+(.+?)\\s*$");
+            Pattern.compile("^//\\s*EXPECT-ERROR\\s+(.+)$");
     private static final Pattern IDA_METHOD =
             Pattern.compile("method\\s*=\\s*ida\\b");
 
