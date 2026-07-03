@@ -1,3 +1,9 @@
+// Foojay resolver lets Gradle auto-provision the Java 21 toolchain pinned in
+// build.gradle when the running JDK differs (e.g. the JDK-25 Docker build stage).
+plugins {
+    id 'org.gradle.toolchains.foojay-resolver-convention' version '1.0.0'
+}
+
 rootProject.name = 'frees-backend'
 
 include 'core', 'web'
