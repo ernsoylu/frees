@@ -2798,6 +2798,8 @@ const CATEGORIES: NavCategory[] = [
       { id: 'reports', label: 'Markdown & Reports', blurb: 'Weave narrative, live values, and plots into a Formatted report.', keywords: ['markdown', 'report', 'latex', 'katex', 'inline', 'equations'] },
       { id: 'plot-code', label: 'Plots in Code (PLOT)', blurb: 'Declare XY, property, Bode, Nyquist and pole-zero figures in code.', keywords: ['plot', 'graph', 'chart', 'code', 'programmatic', 'xy', 'property', 'psychro'] },
       { id: 'digitizer-fit', label: 'Graph Digitizer & Curve Fit', blurb: 'Turn a chart image or a table into a fitted equation.', keywords: ['digitizer', 'curve', 'fit', 'table', 'regression', 'equation', 'graph'] },
+      { id: 'analyzer', label: 'Data Analyzer (Measurements)', blurb: 'Import CSV/MF4 recordings — oscilloscope, cursors, events, statistics.', keywords: ['analyzer', 'measurement', 'oscilloscope', 'mf4', 'mdf', 'csv', 'import', 'oscilloscope', 'cursor', 'events', 'scatter', 'histogram', 'offset', 'export', 'signals'] },
+      { id: 'calc-signals', label: 'Calculated Signals', blurb: 'frees formulas over measured data — properties, delta, integral, movavg, delay.', keywords: ['calculated', 'calc', 'signal', 'formula', 'delta', 'integral', 'movavg', 'delay', 'coolprop', 'property', 'raster', 'boolean', 'condition'] },
     ]
   },
   {
