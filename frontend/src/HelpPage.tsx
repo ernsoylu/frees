@@ -3430,7 +3430,7 @@ function ReferenceIndex({ onNavigate }: Readonly<{ onNavigate: (id: string) => v
 function knownTopicId(id: string): boolean {
   if (!id) return false;
   if (id.startsWith('refpage:')) return REFERENCE_BY_SLUG.has(id.slice('refpage:'.length));
-  if (Object.prototype.hasOwnProperty.call(DOCS_CATALOG, id)) return true;
+  if (Object.hasOwn(DOCS_CATALOG, id)) return true;
   return id === 'examples' || id === 'ref-index' || id === 'ref-units' || id === 'ref-fluids';
 }
 
@@ -3504,7 +3504,7 @@ export default function HelpPage() {
   const navigateTo = (id: string) => {
     setActive(id);
     // Keep the URL shareable; guard so the hashchange listener doesn't loop.
-    if (hashTopic() !== id) globalThis.location.hash = id;
+    if (hashTopic() !== id) globalThis.location.assign(`#${id}`);
     setSearchQuery('');
     setSearchFocused(false);
     if (opened) toggle();
