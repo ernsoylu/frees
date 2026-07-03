@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { FunctionTableSpec, toFunctionTableDtos } from '../tables'
+import { FunctionTableSpec, ParamTableSpec, toFunctionTableDtos } from '../tables'
 import {
   boundColumnCount,
   isErrorValue,
+  isHostedTable,
+  paramComputedValue,
   protectedRangesFor,
   RegionRead,
   sheetEditsToSpec,
@@ -106,9 +108,10 @@ describe('sheetEditsToSpec round-trip', () => {
   it('spec -> sheet -> spec is identity for values and overlay', () => {
     const spec = spec2D({ formulas: { B2: '=C2/2' } })
     const back = sheetEditsToSpec(spec, readOf(specToSheetData(spec)))
-    expect(back.spec.rows).toEqual(spec.rows)
-    expect(back.spec.columns).toEqual(spec.columns)
-    expect(back.spec.formulas).toEqual(spec.formulas)
+    const f = back.spec as FunctionTableSpec
+    expect(f.rows).toEqual(spec.rows)
+    expect(f.columns).toEqual(spec.columns)
+    expect(f.formulas).toEqual(spec.formulas)
     expect(back.truncated).toBe(false)
     expect(back.errorCells).toEqual([])
     expect(back.outOfRegion).toBe(false)
@@ -119,8 +122,9 @@ describe('sheetEditsToSpec round-trip', () => {
     const read = readOf(specToSheetData(spec))
     read.values[0][2] = 3000
     const back = sheetEditsToSpec(spec, read)
-    expect(back.spec.columns).toEqual(['1000', '3000'])
-    expect(back.spec.columns.length).toBe(spec.columns.length)
+    const f = back.spec as FunctionTableSpec
+    expect(f.columns).toEqual(['1000', '3000'])
+    expect(f.columns.length).toBe(spec.columns.length)
   })
 
   it('keeps blank/invalid-cell omission in step with toFunctionTableDtos', () => {
@@ -158,9 +162,10 @@ describe('sheetEditsToSpec round-trip', () => {
     read.values[1][1] = '#REF!'
     read.formulas[1][1] = '=Gone!A1'
     const back = sheetEditsToSpec(spec, read)
+    const f = back.spec as FunctionTableSpec
     expect(back.errorCells).toEqual(['B2'])
-    expect(back.spec.rows[0].ys[0]).toBe('')
-    expect(back.spec.formulas?.B2).toBe('=Gone!A1')
+    expect(f.rows[0].ys[0]).toBe('')
+    expect(f.formulas?.B2).toBe('=Gone!A1')
     const dtos = toFunctionTableDtos([back.spec])
     expect(dtos[0].curves[0].points).toEqual([[2, 20]])
   })
@@ -171,8 +176,9 @@ describe('sheetEditsToSpec round-trip', () => {
     read.formulas[1][1] = ''
     read.values[1][1] = 42
     const back = sheetEditsToSpec(spec, read)
-    expect(back.spec.formulas).toBeUndefined()
-    expect(back.spec.rows[0].ys[0]).toBe('42')
+    const f = back.spec as FunctionTableSpec
+    expect(f.formulas).toBeUndefined()
+    expect(f.rows[0].ys[0]).toBe('42')
   })
 
   it('never mutates code-sourced specs (mapper defense in depth)', () => {
@@ -221,5 +227,121 @@ describe('boundColumnCount', () => {
   it('is x plus one per curve', () => {
     expect(boundColumnCount(spec1D())).toBe(2)
     expect(boundColumnCount(spec2D())).toBe(3)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Parametric tables (Phase 2)
+
+function paramSpec(over: Partial<ParamTableSpec> = {}): ParamTableSpec {
+  return {
+    id: 'p1',
+    kind: 'parametric',
+    name: 'Sweep',
+    vars: ['T', 'P'],
+    rows: [
+      { id: 'r1', values: { T: '300', P: '' } },
+      { id: 'r2', values: { T: '350', P: '' } },
+    ],
+    results: [],
+    stats: null,
+    checkResult: null,
+    checkMessage: '',
+    ...over,
+  }
+}
+
+function solvedParam(): ParamTableSpec {
+  return paramSpec({
+    results: [
+      { success: true, values: { T: 300, P: 101.3 } },
+      { success: false, error: 'diverged', values: {} },
+    ] as ParamTableSpec['results'],
+  })
+}
+
+describe('parametric specToSheetData', () => {
+  it('lays out Run column + var headers + inputs', () => {
+    const sheet = specToSheetData(paramSpec())
+    const at = (r: number, c: number) => sheet.celldata.find((cd) => cd.r === r && cd.c === c)?.v
+    expect(at(0, 0)?.v).toBe('Run')
+    expect(at(0, 1)?.v).toBe('T')
+    expect(at(0, 2)?.v).toBe('P')
+    expect(at(1, 0)?.v).toBe(1)
+    expect(at(1, 1)?.v).toBe(300)
+    expect(at(1, 2)).toBeUndefined() // blank input, no result
+  })
+
+  it('materializes computed cells (blank input + successful run) with the green style', () => {
+    const sheet = specToSheetData(solvedParam())
+    const at = (r: number, c: number) => sheet.celldata.find((cd) => cd.r === r && cd.c === c)?.v
+    expect(at(1, 2)?.v).toBe(101.3) // P computed for run 1
+    expect(sheet.styles?.C2).toContain('color')
+    expect(at(2, 0)?.v).toBe('2 ✗') // failed run marker
+  })
+})
+
+describe('parametric sheetEditsToSpec', () => {
+  it('round-trips inputs, preserving row identities, without invalidating', () => {
+    const spec = solvedParam()
+    const back = sheetEditsToSpec(spec, readOf(specToSheetData(spec)))
+    const p = back.spec as ParamTableSpec
+    expect(p.rows.map((r) => r.id)).toEqual(['r1', 'r2'])
+    expect(p.rows[0].values).toEqual({ T: '300', P: '' }) // computed cell NOT an input
+    expect(p.results.length).toBe(2) // untouched -> results kept
+  })
+
+  it('an input edit invalidates results/check', () => {
+    const spec = solvedParam()
+    const read = readOf(specToSheetData(spec))
+    read.values[1][1] = 310 // edit T for run 1
+    const p = sheetEditsToSpec(spec, read).spec as ParamTableSpec
+    expect(p.rows[0].values.T).toBe('310')
+    expect(p.results).toEqual([])
+    expect(p.checkResult).toBeNull()
+  })
+
+  it('typing over a computed cell turns it into an input override and invalidates', () => {
+    const spec = solvedParam()
+    const read = readOf(specToSheetData(spec))
+    read.values[1][2] = 999 // overwrite computed P
+    const p = sheetEditsToSpec(spec, read).spec as ParamTableSpec
+    expect(p.rows[0].values.P).toBe('999')
+    expect(p.results).toEqual([])
+  })
+
+  it('typing below the last run adds rows; blank starter rows are never trimmed', () => {
+    const spec = paramSpec()
+    const read = readOf(specToSheetData(spec))
+    read.values.push([null, 400, null])
+    read.formulas.push(['', '', ''])
+    const p = sheetEditsToSpec(spec, read).spec as ParamTableSpec
+    expect(p.rows.length).toBe(3)
+    expect(p.rows[2].values.T).toBe('400')
+
+    const untouched = sheetEditsToSpec(spec, readOf(specToSheetData(spec))).spec as ParamTableSpec
+    expect(untouched.rows.length).toBe(2) // floor = previous count
+  })
+
+  it('never mutates code/ODE specs and they are not hosted', () => {
+    const code = paramSpec({ source: 'code' })
+    const read = readOf(specToSheetData(code))
+    read.values[1][1] = 999999
+    expect(sheetEditsToSpec(code, read).spec).toBe(code)
+    expect(isHostedTable(code)).toBe(false)
+    expect(isHostedTable(paramSpec())).toBe(true)
+    expect(isHostedTable(spec1D({ source: 'code' }))).toBe(true) // code FUNCTION tables are hosted (protected)
+  })
+})
+
+describe('parametric protection + computed detection', () => {
+  it('protects the header row and Run column on GUI tables', () => {
+    expect(protectedRangesFor(paramSpec())).toEqual(['A1:C1', `A1:A${TABLE_MAX_ROWS + 1}`])
+  })
+  it('paramComputedValue only fires for blank input + successful run', () => {
+    const spec = solvedParam()
+    expect(paramComputedValue(spec, 0, 'P')).toBe(101.3)
+    expect(paramComputedValue(spec, 0, 'T')).toBeUndefined() // has input draft
+    expect(paramComputedValue(spec, 1, 'P')).toBeUndefined() // failed run
   })
 })

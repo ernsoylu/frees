@@ -16,7 +16,8 @@
 // the schema's bounding box, so content outside the region can never reach a
 // spec even if a mutation slips past the UI-level protection rules.
 
-import { FunctionTableSpec } from '../tables'
+import { FunctionTableSpec, ParamTableSpec, TableSpec } from '../tables'
+import { newParamRow, ParamRow } from '../ParametricTableTab'
 import { colName, StoredCell, StoredCellValue, StoredSheet } from './univerAdapter'
 
 /** Hard cap on data rows (contract a): a runaway 50k-row paste truncates here
@@ -34,9 +35,25 @@ export function isErrorValue(v: unknown): boolean {
   return typeof v === 'string' && ERROR_VALUE.test(v.trim())
 }
 
-/** Bound columns: the x column plus one per curve. */
-export function boundColumnCount(spec: FunctionTableSpec): number {
-  return 1 + spec.columns.length
+/** Bound columns: function tables = x plus one per curve; parametric tables
+ * = the Run column plus one per table variable. */
+export function boundColumnCount(spec: TableSpec): number {
+  return spec.kind === 'function' ? 1 + spec.columns.length : 1 + spec.vars.length
+}
+
+export { isHostedTable } from './tablesWorkbookBridge'
+
+/** The computed (solver-written) value shown in a parametric cell: only when
+ * the row solved successfully AND the user left the input draft blank. */
+export function paramComputedValue(
+  spec: ParamTableSpec,
+  rowIndex: number,
+  varName: string,
+): number | undefined {
+  const res = spec.results[rowIndex]
+  if (!res?.success) return undefined
+  if ((spec.rows[rowIndex]?.values[varName] ?? '').trim() !== '') return undefined
+  return res.values[varName]
 }
 
 function cellValue(raw: string): StoredCellValue {
@@ -54,7 +71,55 @@ export function a1(r: number, c: number): string {
 // ---------------------------------------------------------------------------
 // spec -> sheet (materialization)
 
-export function specToSheetData(spec: FunctionTableSpec): StoredSheet {
+export function specToSheetData(spec: TableSpec): StoredSheet {
+  return spec.kind === 'function' ? functionSpecToSheetData(spec) : paramSpecToSheetData(spec)
+}
+
+/** Green used for solver-computed cells (matches the old grid's green.4). */
+const COMPUTED_CSS = 'color: #69db7c;'
+const FAILED_CSS = 'color: #fa5252;'
+
+function paramSpecToSheetData(spec: ParamTableSpec): StoredSheet {
+  const celldata: StoredCell[] = []
+  const styles: Record<string, string> = {}
+
+  // Header: Run column + one column per table variable (units appended for
+  // code/ODE display tables that carry them).
+  celldata.push({ r: 0, c: 0, v: cellValue('Run') })
+  styles.A1 = 'font-weight: bold;'
+  spec.vars.forEach((name, j) => {
+    const unit = spec.columnUnits?.[name]
+    celldata.push({ r: 0, c: j + 1, v: cellValue(unit ? `${name} [${unit}]` : name) })
+    styles[a1(0, j + 1)] = 'font-weight: bold;'
+  })
+
+  const formulas = spec.formulas ?? {}
+  spec.rows.forEach((row, i) => {
+    const r = i + HEADER_ROW_COUNT
+    const res = spec.results[i]
+    const failed = res && !res.success
+    celldata.push({ r, c: 0, v: cellValue(failed ? `${i + 1} ✗` : String(i + 1)) })
+    if (failed) styles[a1(r, 0)] = FAILED_CSS
+    spec.vars.forEach((name, j) => {
+      const ref = a1(r, j + 1)
+      const draft = row.values[name] ?? ''
+      const computed = paramComputedValue(spec, i, name)
+      const f = formulas[ref]
+      if (computed !== undefined) {
+        celldata.push({ r, c: j + 1, v: { v: computed, m: String(computed) } })
+        styles[ref] = COMPUTED_CSS
+      } else if (f || draft.trim() !== '') {
+        const v = cellValue(draft)
+        if (f) v.f = f
+        celldata.push({ r, c: j + 1, v })
+      }
+    })
+  })
+
+  return { name: spec.name, id: spec.id, celldata, styles, config: {} }
+}
+
+function functionSpecToSheetData(spec: FunctionTableSpec): StoredSheet {
   const celldata: StoredCell[] = []
   const styles: Record<string, string> = {}
 
@@ -94,10 +159,18 @@ export function specToSheetData(spec: FunctionTableSpec): StoredSheet {
  * truth); GUI tables protect the schema header cells only: the argument name
  * (toolbar-edited) and, for 1-D, the fixed 'y' label. 2-D curve-parameter
  * headers stay editable — they map back to spec.columns. */
-export function protectedRangesFor(spec: FunctionTableSpec): string[] {
+export function protectedRangesFor(spec: TableSpec): string[] {
   if (spec.source === 'code') {
-    const lastCol = colName(Math.max(spec.columns.length, 1))
+    const lastCol = colName(Math.max(boundColumnCount(spec) - 1, 1))
     return [`A1:${lastCol}${TABLE_MAX_ROWS + HEADER_ROW_COUNT}`]
+  }
+  if (spec.kind === 'parametric') {
+    // Header row (column schema lives in ConfigureTableModal) + the Run
+    // column. Computed result cells are NOT range-protected — they are a
+    // scattered per-cell set; typing over one turns it into an input (an
+    // override), and the mapper handles that (invalidating the results).
+    const lastCol = colName(spec.vars.length)
+    return [`A1:${lastCol}1`, `A1:A${TABLE_MAX_ROWS + HEADER_ROW_COUNT}`]
   }
   return spec.is1D ? ['A1:B1'] : ['A1:A1']
 }
@@ -115,7 +188,7 @@ export interface RegionRead {
 }
 
 export interface SheetEditsResult {
-  spec: FunctionTableSpec
+  spec: TableSpec
   /** Data rows exceeded TABLE_MAX_ROWS and were cut (toast the user). */
   truncated: boolean
   /** A1 refs whose value was a formula error, mapped to blank (flag them). */
@@ -124,12 +197,101 @@ export interface SheetEditsResult {
   outOfRegion: boolean
 }
 
-export function sheetEditsToSpec(spec: FunctionTableSpec, read: RegionRead): SheetEditsResult {
+export function sheetEditsToSpec(spec: TableSpec, read: RegionRead): SheetEditsResult {
   // Code tables are never writable through the sheet; the mapper is the
   // last line of defense if a mutation slips past protection.
   if (spec.source === 'code') {
     return { spec, truncated: false, errorCells: [], outOfRegion: false }
   }
+  return spec.kind === 'function'
+    ? functionSheetEditsToSpec(spec, read)
+    : paramSheetEditsToSpec(spec, read)
+}
+
+/** Parametric sheet → spec. Cells showing solver-computed values (blank
+ * input + successful run, detected against the PREVIOUS spec) are not inputs
+ * — unless the user typed over one, which turns it into an input override.
+ * Any input change (or new rows) invalidates results/stats/check, exactly
+ * like the old grid's invalidateActiveParam. Row identities are preserved.
+ * Rows are never trimmed below the previous count — blank rows are runs;
+ * Remove Row is the way to drop them (matches the old UI). */
+function paramSheetEditsToSpec(prev: ParamTableSpec, read: RegionRead): SheetEditsResult {
+  const cols = boundColumnCount(prev)
+  const errorCells: string[] = []
+  const formulas: Record<string, string> = {}
+
+  const cellStr = (r: number, c: number): string => {
+    const f = read.formulas[r]?.[c] ?? ''
+    const raw = read.values[r]?.[c]
+    if (f) formulas[a1(r, c)] = f
+    if (isErrorValue(raw)) {
+      errorCells.push(a1(r, c))
+      return ''
+    }
+    return raw === null || raw === undefined ? '' : String(raw)
+  }
+
+  // Last data row carrying content in the bound variable columns.
+  let lastDataRow = prev.rows.length + HEADER_ROW_COUNT - 1
+  for (let r = HEADER_ROW_COUNT; r < read.values.length; r++) {
+    for (let c = 1; c < cols; c++) {
+      const raw = read.values[r]?.[c]
+      if ((raw !== null && raw !== undefined && String(raw).trim() !== '') || read.formulas[r]?.[c]) {
+        if (r > lastDataRow) lastDataRow = r
+        break
+      }
+    }
+  }
+  let truncated = false
+  if (lastDataRow > TABLE_MAX_ROWS) {
+    lastDataRow = TABLE_MAX_ROWS
+    truncated = true
+  }
+
+  let inputChanged = false
+  const rows: ParamRow[] = []
+  for (let r = HEADER_ROW_COUNT; r <= lastDataRow; r++) {
+    const i = r - HEADER_ROW_COUNT
+    const prevRow = prev.rows[i]
+    const values: Record<string, string> = {}
+    prev.vars.forEach((name, j) => {
+      const raw = cellStr(r, j + 1)
+      const computed = paramComputedValue(prev, i, name)
+      // A cell still showing the solver's value is not an input.
+      const isUntouchedComputed =
+        computed !== undefined && raw.trim() !== '' && Number(raw) === computed
+      const draft = isUntouchedComputed ? '' : raw
+      values[name] = draft
+      if ((prevRow?.values[name] ?? '') !== draft) inputChanged = true
+    })
+    if (!prevRow) inputChanged = true
+    rows.push(prevRow ? { ...prevRow, values } : { ...newParamRow(), values })
+  }
+
+  let outOfRegion = truncated
+  for (let r = 0; r < read.values.length && !outOfRegion; r++) {
+    const rowVals = read.values[r] ?? []
+    for (let c = cols; c < rowVals.length; c++) {
+      const raw = rowVals[c]
+      if ((raw !== null && raw !== undefined && String(raw).trim() !== '') || read.formulas[r]?.[c]) {
+        outOfRegion = true
+        break
+      }
+    }
+  }
+
+  const spec: ParamTableSpec = {
+    ...prev,
+    rows,
+    formulas: Object.keys(formulas).length > 0 ? formulas : undefined,
+    ...(inputChanged
+      ? { results: [], stats: null, checkResult: null, checkMessage: '' }
+      : {}),
+  }
+  return { spec, truncated, errorCells, outOfRegion }
+}
+
+function functionSheetEditsToSpec(spec: FunctionTableSpec, read: RegionRead): SheetEditsResult {
 
   const cols = boundColumnCount(spec)
   const errorCells: string[] = []
