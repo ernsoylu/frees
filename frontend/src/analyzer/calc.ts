@@ -103,8 +103,8 @@ export function calcResultToMeasurement(name: string, t: number[], v: number[]):
         unit: undefined,
         kind: sniffKind(values),
         values,
-        min: min === Number.POSITIVE_INFINITY ? NaN : min,
-        max: max === Number.NEGATIVE_INFINITY ? NaN : max,
+        min: min === Number.POSITIVE_INFINITY ? Number.NaN : min,
+        max: max === Number.NEGATIVE_INFINITY ? Number.NaN : max,
       },
     ],
   }

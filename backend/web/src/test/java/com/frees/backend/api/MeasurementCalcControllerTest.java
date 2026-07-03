@@ -109,6 +109,106 @@ class MeasurementCalcControllerTest {
                 .andExpect(jsonPath("$.error", org.hamcrest.Matchers.containsString("y")));
     }
 
+    @Autowired
+    private MeasurementCalcController controller;
+
+    private void expect422(String body, String messageFragment) throws Exception {
+        mockMvc.perform(post("/api/measurements/calc")
+                        .contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.error",
+                        org.hamcrest.Matchers.containsString(messageFragment)));
+    }
+
+    @Test
+    void requestValidationErrorsAreTyped() throws Exception {
+        String x = inline("x", "step", 3, 0.1, "10");
+        expect422("{\"name\":\"c\",\"formula\":\"  \",\"inputs\":[" + x + "]}", "empty");
+        expect422("{\"name\":\"c\",\"formula\":\"x + 1\",\"inputs\":["
+                + "{\"var\":\"\",\"inline\":{\"t\":[0],\"v\":[1]}}]}", "variable name");
+        expect422("{\"name\":\"c\",\"formula\":\"x + 1\",\"inputs\":["
+                + "{\"var\":\"x\",\"inline\":{\"t\":[0,1],\"v\":[1]}}]}", "malformed");
+        expect422("{\"name\":\"c\",\"formula\":\"1 + 1\",\"inputs\":[]}", "at least one input");
+        expect422("{\"name\":\"c\",\"formula\":\"x + 1\",\"inputs\":[" + x
+                + "],\"raster\":{\"mode\":\"spline\"}}", "Unknown raster mode");
+        expect422("{\"name\":\"c\",\"formula\":\"x + 1\",\"inputs\":[" + x
+                + "],\"raster\":{\"mode\":\"fixed\"}}", "dt > 0");
+        expect422("{\"name\":\"c\",\"formula\":\"x + 1\",\"inputs\":[" + x
+                + "],\"raster\":{\"mode\":\"sameAs\",\"sameAs\":\"nope\"}}", "unknown input");
+    }
+
+    @Test
+    void unknownMeasurementIdIs404() throws Exception {
+        String body = "{\"name\":\"c\",\"formula\":\"x + 1\",\"inputs\":["
+                + "{\"var\":\"x\",\"measurementId\":\"gone\",\"channel\":\"speed\"}]}";
+        mockMvc.perform(post("/api/measurements/calc")
+                        .contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error",
+                        org.hamcrest.Matchers.containsString("re-upload")));
+    }
+
+    @Test
+    void computeCalcEvaluatesInlineRequestsAndWrapsFailures() {
+        MeasurementCalcController.CalcRequest ok = new MeasurementCalcController.CalcRequest(
+                "double", "2 * x",
+                java.util.List.of(new MeasurementCalcController.CalcInput(
+                        "x", null, null, null,
+                        new MeasurementCalcController.InlineSeries(
+                                new double[]{0, 1, 2}, new double[]{1, 2, 3}),
+                        "step")),
+                new MeasurementCalcController.RasterSpec("sameAs", null, "x"));
+        MeasurementCalcController.CalcResult result = controller.computeCalc(ok);
+        assertEquals(3, result.t().length);
+        assertEquals(4.0, result.v()[1], 1e-12);
+
+        MeasurementCalcController.CalcRequest bad = new MeasurementCalcController.CalcRequest(
+                "broken", "x +* 2", ok.inputs(), null);
+        IllegalStateException e = org.junit.jupiter.api.Assertions.assertThrows(
+                IllegalStateException.class, () -> controller.computeCalc(bad));
+        assertTrue(e.getMessage().contains("Formula error"), e.getMessage());
+    }
+
+    @Test
+    void arrayBearingDtosCompareByContent() throws Exception {
+        var s1 = new MeasurementCalcController.InlineSeries(new double[]{0, 1}, new double[]{2, 3});
+        var s2 = new MeasurementCalcController.InlineSeries(new double[]{0, 1}, new double[]{2, 3});
+        assertEquals(s1, s2);
+        assertEquals(s1.hashCode(), s2.hashCode());
+        org.junit.jupiter.api.Assertions.assertNotEquals(s1,
+                new MeasurementCalcController.InlineSeries(new double[]{9, 9}, new double[]{2, 3}));
+        org.junit.jupiter.api.Assertions.assertNotEquals(s1,
+                new MeasurementCalcController.InlineSeries(new double[]{0, 1}, new double[]{9, 9}));
+        org.junit.jupiter.api.Assertions.assertNotEquals(null, s1);
+        assertTrue(s1.toString().contains("n=2"));
+
+        var r1 = new MeasurementCalcController.CalcResult("p", new double[]{0}, new double[]{1});
+        var r2 = new MeasurementCalcController.CalcResult("p", new double[]{0}, new double[]{1});
+        assertEquals(r1, r2);
+        assertEquals(r1.hashCode(), r2.hashCode());
+        org.junit.jupiter.api.Assertions.assertNotEquals(r1,
+                new MeasurementCalcController.CalcResult("q", new double[]{0}, new double[]{1}));
+        org.junit.jupiter.api.Assertions.assertNotEquals(r1,
+                new MeasurementCalcController.CalcResult("p", new double[]{9}, new double[]{1}));
+        org.junit.jupiter.api.Assertions.assertNotEquals(r1,
+                new MeasurementCalcController.CalcResult("p", new double[]{0}, new double[]{9}));
+        assertTrue(r1.toString().contains("name=p"));
+
+        var inputs = java.util.Map.of("x", new com.frees.backend.measurement.SampledSeries(
+                new double[]{0, 1}, new double[]{1, 2},
+                com.frees.backend.measurement.SampledSeries.Interp.STEP));
+        var formula = com.frees.backend.measurement.TimeSeriesEvaluator.parseFormula("x + 1");
+        var p1 = new MeasurementCalcController.Prepared(formula, new double[]{0, 1}, inputs, false);
+        var p2 = new MeasurementCalcController.Prepared(formula, new double[]{0, 1}, inputs, false);
+        assertEquals(p1, p2);
+        assertEquals(p1.hashCode(), p2.hashCode());
+        org.junit.jupiter.api.Assertions.assertNotEquals(p1,
+                new MeasurementCalcController.Prepared(formula, new double[]{0, 1}, inputs, true));
+        org.junit.jupiter.api.Assertions.assertNotEquals(p1,
+                new MeasurementCalcController.Prepared(formula, new double[]{9}, inputs, false));
+        assertTrue(p1.toString().contains("raster=2"));
+    }
+
     @Test
     void fixedRasterAndTimeOpsWork() throws Exception {
         String body = "{\"name\":\"d\",\"formula\":\"integral(x)\",\"inputs\":["

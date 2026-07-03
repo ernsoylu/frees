@@ -11,12 +11,14 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.PosixFilePermissions;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -65,9 +67,9 @@ public class MeasurementStore {
     }
 
     record Entry(String id, String name, long size, Path file, MeasurementMetadata metadata,
-                 long[] lastAccess) {
+                 AtomicLong lastAccess) {
         void touch() {
-            lastAccess[0] = System.currentTimeMillis();
+            lastAccess.set(System.currentTimeMillis());
         }
     }
 
@@ -94,7 +96,24 @@ public class MeasurementStore {
         this.maxUploadBytes = maxUploadBytes;
         this.ttlMillis = Duration.ofMinutes(ttlMinutes).toMillis();
         this.maxFiles = maxFiles;
-        this.tempDir = Files.createTempDirectory("frees-measurements");
+        this.tempDir = createPrivateTempDir();
+    }
+
+    /**
+     * The system temp dir is publicly writable; give our upload directory
+     * owner-only permissions so other local users can neither read nor swap
+     * uploaded files. Falls back to the default-permission variant only on
+     * filesystems without POSIX permissions (e.g. Windows dev hosts, where
+     * java.io.tmpdir is already per-user).
+     */
+    private static Path createPrivateTempDir() throws IOException {
+        try {
+            return Files.createTempDirectory("frees-measurements",
+                    PosixFilePermissions.asFileAttribute(
+                            PosixFilePermissions.fromString("rwx------")));
+        } catch (UnsupportedOperationException e) {
+            return Files.createTempDirectory("frees-measurements"); // NOSONAR java:S5443 — non-POSIX fs, per-user tmp
+        }
     }
 
     /**
@@ -140,7 +159,7 @@ public class MeasurementStore {
             throw e;
         }
         Entry entry = new Entry(id, filename, total, file, metadata,
-                new long[]{System.currentTimeMillis()});
+                new AtomicLong(System.currentTimeMillis()));
         entries.put(id, entry);
         evictOverCap();
         return new StoredMeasurement(id, filename, total, metadata);
@@ -260,7 +279,7 @@ public class MeasurementStore {
     private void evictOverCap() {
         while (entries.size() > maxFiles) {
             entries.values().stream()
-                    .min((a, b) -> Long.compare(a.lastAccess()[0], b.lastAccess()[0]))
+                    .min((a, b) -> Long.compare(a.lastAccess().get(), b.lastAccess().get()))
                     .ifPresent(oldest -> {
                         log.info("Evicting measurement {} ({}) — file cap reached",
                                 oldest.id(), oldest.name());
@@ -274,7 +293,7 @@ public class MeasurementStore {
     public void sweepExpired() {
         long cutoff = System.currentTimeMillis() - ttlMillis;
         entries.values().stream()
-                .filter(e -> e.lastAccess()[0] < cutoff)
+                .filter(e -> e.lastAccess().get() < cutoff)
                 .map(Entry::id)
                 .toList()
                 .forEach(this::delete);

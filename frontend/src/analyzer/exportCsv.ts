@@ -48,7 +48,7 @@ export function buildCsv(
 }
 
 function csvCell(s: string): string {
-  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
+  return /[",\n]/.test(s) ? `"${s.replaceAll('"', '""')}"` : s
 }
 
 /** Trigger a browser download of CSV text (same pattern as project.ts). */

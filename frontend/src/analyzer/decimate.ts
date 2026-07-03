@@ -59,8 +59,8 @@ export function minMaxEnvelope(
     }
     outT[b] = t[start + ((end - start) >>> 1)]
     if (mn === Number.POSITIVE_INFINITY) {
-      outMin[b] = NaN
-      outMax[b] = NaN
+      outMin[b] = Number.NaN
+      outMax[b] = Number.NaN
     } else {
       outMin[b] = mn
       outMax[b] = mx

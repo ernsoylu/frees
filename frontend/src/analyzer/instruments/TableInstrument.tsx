@@ -78,7 +78,7 @@ export default function TableInstrument({ signals, offsets, xRange, storeVersion
         text = ts === undefined ? '' : String(Number(ts.toPrecision(10)))
       } else {
         const c = model.cols[col - 1]
-        const x = c === undefined || ts === undefined ? NaN : stepHoldAt(c.t, c.v, ts)
+        const x = c === undefined || ts === undefined ? Number.NaN : stepHoldAt(c.t, c.v, ts)
         text = Number.isNaN(x) ? '' : formatValue(x)
       }
       return {
