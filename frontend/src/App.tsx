@@ -88,6 +88,7 @@ import {
   TABLES_WORKBOOK_ENABLED,
   TABLES_WORKBOOK_WINDOW_ID,
 } from './spreadsheet/tablesWorkbookBridge'
+import { buildSnapshotSheet, type SnapshotInput } from './spreadsheet/snapshot'
 import { newAnalyzer, type AnalyzerSpec } from './analyzer/types'
 import { channelStore } from './analyzer/channelStore'
 import { substituteSsheetRefs } from './spreadsheet/ssheetResolver'
@@ -1604,45 +1605,47 @@ export default function App() {
     setSpreadsheets((prev) => [...prev, ss])
     requestAnimationFrame(() => dockRef.current?.openInstance(`spreadsheet:${ss.id}`, 'spreadsheet', ss.name))
   }
+  // "Open in Spreadsheet" (Phase 3, contract e): a one-shot, timestamped,
+  // cap-guarded snapshot into a NEW spreadsheet window — deliberately
+  // decoupled from re-solves. Shared by table exports and the states table.
+  const createSnapshotSpreadsheet = (input: SnapshotInput) => {
+    const out = buildSnapshotSheet(input)
+    if (!out.ok) {
+      if (out.reason === 'too-big') setLoadNotice(out.message)
+      return
+    }
+    const ss = newSpreadsheet(spreadsheets.length)
+    ss.name = out.name
+    const sheetData = emptySpreadsheetData()
+    Object.assign(sheetData[0] as object, {
+      celldata: out.sheet.celldata,
+      styles: out.sheet.styles,
+      name: 'Sheet1',
+    })
+    ss.sheets = sheetData
+    setSpreadsheets((prev) => [...prev, ss])
+    requestAnimationFrame(() => dockRef.current?.openInstance(`spreadsheet:${ss.id}`, 'spreadsheet', ss.name))
+  }
+
   const exportTableToSpreadsheet = (tableId: string) => {
     const t = tables.find((tbl) => tbl.id === tableId)
     if (!t || t.kind !== 'parametric') return
-
-    // A one-shot SNAPSHOT (contract e): deliberately decoupled from re-solves
-    // — the live table is a bound sheet in the Tables workbook now. The
-    // timestamped name keeps it from being mistaken for a live table.
-    const stamp = new Date().toISOString().slice(0, 16).replace('T', ' ')
-    const ss = newSpreadsheet(spreadsheets.length)
-    ss.name = `Export ${t.name} (${stamp})`
-
-    const celldata: any[] = []
-    let currentRow = 0
-    const headerStyle = { bl: 1 }
-
-    celldata.push({ r: currentRow, c: 0, v: { v: 'Run', m: 'Run', ...headerStyle } })
-    for (let j = 0; j < t.vars.length; j++) {
-      celldata.push({ r: currentRow, c: j + 1, v: { v: t.vars[j], m: t.vars[j], ...headerStyle } })
-    }
-    currentRow++
-
-    for (let i = 0; i < t.rows.length; i++) {
-      celldata.push({ r: currentRow, c: 0, v: { v: String(i + 1), m: String(i + 1) } })
-      for (let j = 0; j < t.vars.length; j++) {
-        const v = t.vars[j]
-        const draft = t.rows[i].values[v]
-        const computed = t.results[i]?.success ? t.results[i].values[v] : undefined
-        const val = draft && draft.trim() !== '' ? draft : (computed !== undefined ? String(computed) : '')
-        celldata.push({ r: currentRow, c: j + 1, v: { v: val, m: val } })
-      }
-      currentRow++
-    }
-
-    const sheetData = emptySpreadsheetData()
-    ;(sheetData[0] as any).celldata = celldata
-    ss.sheets = sheetData
-
-    setSpreadsheets((prev) => [...prev, ss])
-    requestAnimationFrame(() => dockRef.current?.openInstance(`spreadsheet:${ss.id}`, 'spreadsheet', ss.name))
+    createSnapshotSpreadsheet({
+      title: `Export ${t.name}`,
+      columns: [
+        { name: 'Run' },
+        ...t.vars.map((v) => ({ name: v, unit: t.columnUnits?.[v] })),
+      ],
+      rows: t.rows.map((row, i) => [
+        t.results[i] && !t.results[i].success ? `${i + 1} ✗` : i + 1,
+        ...t.vars.map((v) => {
+          const draft = row.values[v]
+          if (draft && draft.trim() !== '') return draft
+          const computed = t.results[i]?.success ? t.results[i].values[v] : undefined
+          return computed !== undefined ? computed : ''
+        }),
+      ]),
+    })
   }
   const openLatestOrNewTable = () => {
     const t = tables[tables.length - 1]
@@ -1885,6 +1888,7 @@ export default function App() {
           onFillMissing={() => onSolve(true)}
           solving={solving}
           solvable={solvable}
+          onSnapshot={createSnapshotSpreadsheet}
         />
       </div>
     ),
@@ -2248,6 +2252,7 @@ export default function App() {
           }}
           solving={solving && fillMissingFor === s.name}
           solvable={solvable}
+          onSnapshot={createSnapshotSpreadsheet}
         />
       </div>
     )
@@ -2295,6 +2300,7 @@ export default function App() {
           tables={tables}
           singleTableId={t.id}
           activeTableId={t.id}
+          onExportTable={exportTableToSpreadsheet}
           onTablesChange={setTables}
           onActiveTableIdChange={setActiveTableId}
           tableVars={param?.vars ?? []}
