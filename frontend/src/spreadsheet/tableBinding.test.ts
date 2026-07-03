@@ -372,6 +372,29 @@ describe('parametric sheetEditsToSpec', () => {
     expect(p.rows[1].values.T).toBe('')
   })
 
+  it('flags Run-column drift so the host repaints (fill-drag through protection)', () => {
+    const spec = paramSpec()
+    // Pristine materialized sheet: labels match -> no drift.
+    const clean = sheetEditsToSpec(spec, readOf(specToSheetData(spec)))
+    expect(clean.runColumnDrift).toBe(false)
+
+    // Run numbers drag-filled below the table -> drift.
+    const below = readOf(specToSheetData(spec))
+    below.values.push([5, null, null])
+    below.formulas.push(['', '', ''])
+    expect(sheetEditsToSpec(spec, below).runColumnDrift).toBe(true)
+
+    // Tampered in-range label -> drift.
+    const tampered = readOf(specToSheetData(spec))
+    tampered.values[1][0] = 99
+    expect(sheetEditsToSpec(spec, tampered).runColumnDrift).toBe(true)
+
+    // Failed-run marker is a legitimate label -> no drift.
+    const solved = solvedParam()
+    const withMarker = sheetEditsToSpec(solved, readOf(specToSheetData(solved)))
+    expect(withMarker.runColumnDrift).toBe(false)
+  })
+
   it('never mutates code/ODE specs and they are not hosted', () => {
     const code = paramSpec({ source: 'code' })
     const read = readOf(specToSheetData(code))
