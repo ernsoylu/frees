@@ -1,18 +1,3 @@
-[Topic: diagram]
-# Diagram Canvas & Schematics
-
-The **Diagram** panel lets you build schematics of engineering systems and overlay live, solved data onto them.
-
-## Schematic modeler
-- **Add components** — drag pumps, turbines, heat exchangers, pipelines, etc. from the palette onto the canvas.
-- **Wire connections** — click and drag between component ports to define flows.
-- **Bind variables** — double-click a component or connection label and link it to a solved variable (e.g. bind a temperature label to `T[2]`). The label updates live after each solve.
-
-## Dynamic diagrams
-Beyond schematics, the canvas supports thermodynamic diagrams (T-s, P-h, etc.). State points from a `STATE TABLE` are overlaid automatically and connected as a cycle path — so you can see your Rankine/Brayton cycle drawn on the real fluid chart. See *Fluid State Tables* for how to declare the states.
-
-[Related: plot-code, state-tables, reports]
-
 [Topic: plot-code]
 # Plots in Code (PLOT)
 
@@ -80,4 +65,4 @@ Reference any code-defined plot in your narrative with a graph tag and it render
 ```
 The name inside the quotes must match a `PLOT` block's title.
 
-[Related: diagram, reports, symbolic-cas]
+[Related: reports, symbolic-cas]

@@ -24,6 +24,10 @@ dependencies {
     // directives (factor/expand/simplify; later solve/integrate).
     implementation 'org.matheclipse:matheclipse-core:3.0.0'
     implementation 'org.slf4j:slf4j-api:2.0.16'
+    // ASAM MDF4 measurement-file reader (Data Analyzer Phase 3). Apache-2.0.
+    // Early-stage library — isolated behind the MeasurementParser interface;
+    // the spike support matrix lives in Mf4SpikeTest + todo.md.
+    implementation 'de.richardliebscher.mdf4j:mdf4j:0.2.0'
 
     testImplementation 'org.junit.jupiter:junit-jupiter:5.11.4'
     testRuntimeOnly 'org.slf4j:slf4j-simple:2.0.16'

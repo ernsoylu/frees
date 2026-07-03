@@ -1,5 +1,18 @@
 # frEES — Data Analyzer (oscilloscope-like Measurement Analysis App)
 
+> **STATUS: SHIPPED (2026-07-02, branch `feat/data-analyzer`).** All five phases
+> plus both follow-ups landed and were verified end-to-end against the Docker
+> stack: Phase 1 `4ee7010` (shell, CSV import, oscilloscope), Phase 2 `027d682`
+> (A/B cursors, Table/Statistics, template-mode persistence, CSV export),
+> Phase 3 `34d0874` (backend measurement service + mdf4j, spike verdict below),
+> Phases 4+5 `27573f9` (calculated signals, offsets, Event List,
+> Scatter/Histogram, a11y), asammdf sidecar + async calc `02a3401`. Help topics:
+> `analyzer`, `calc-signals`. Still deferred by design: anchored cursors,
+> string-channel plotting, GPS map, MDF3/XLSX/.mat, mid-job cancel, multi-node
+> measurement storage. The sections below are the reviewed plan, kept as the
+> design record — the §2.5 contracts and the spike/pre-spike results remain the
+> reference for how the shipped code behaves.
+
 ## Context
 
 frees has solver-bound plotting (Plotly) and spreadsheet/table windows, but no way to import
@@ -226,6 +239,19 @@ bytes and abort over-cap, and validate magic bytes**), `core/build.gradle` (mdf4
   uncompressed-only → rung 2 covers demos; real OEM files need the sidecar → decision goes to
   the owner with the matrix. **Fail at Gate 1/2 broadly** → sidecar rung, per ladder.
 - *Deliverable:* the support matrix + license + measured numbers + go/no-go, recorded here.
+- **SPIKE RESULT (2026-07-02, mdf4j 0.2.0, license Apache-2.0 ✓): PARTIAL.**
+  Matrix (fixtures from `backend/core/src/test/resources/measurement/generate_mdf_fixtures.py`,
+  probes in `Mf4SpikeTest`): (a) uncompressed 4.10 **PASS**; (d) VLSD **PASS** (string channel
+  listed, numeric channels extract fine — better than expected); (h) linear conversions
+  **PASS** (applied: 0.1·raw−40 verified) and multi-group **PASS**; (b) ZSTD → FAIL
+  "Unknown zip type: 2"; (c) LZ4 → FAIL "Unknown zip type: 4"; (g/e) **plain deflate DZ →
+  FAIL** ("Should not happen") — i.e. *no DZ compression of any kind*, the real boundary is
+  compression, not conversions. Gate 3 on the 99.9 MB fixture: metadata 1 ms, one-channel
+  extract 876 ms, retained heap 21 MB (lazy, never materializes the file). **Decision taken:**
+  ship Phase 3 on mdf4j for uncompressed .mf4 (typed error tells users to re-export
+  uncompressed when a compressed file is uploaded); the **asammdf-sidecar rung for
+  compressed OEM files is now an owner decision** (matrix above) — contract already pinned
+  in decision 4 below.
 **Fallback ladder (in order):** mdf4j → minimal in-house uncompressed-DT-block reader →
 **asammdf Python sidecar** (separate container; implements `MeasurementParser` remotely —
 adds a second runtime + Railway deploy unit, planned but not built until the spike fails) →
@@ -245,6 +271,18 @@ Tests: `:core:test` (parser vs committed small `.mf4` fixture, decimator propert
 over-cap upload aborted).
 
 ### Phase 4 — Calculated signals (the differentiator)
+**PRE-SPIKE RESULT (2026-07-02, measured in `CalcPreSpikeTest`):** compiled
+array-backed resolver evaluates a 1M-point arithmetic formula in **107 ms
+(107 ns/pt)** — allocation-free per point, the GC contract holds without an
+invasive core-Evaluator overload (Call subtrees fall back to one reused map;
+negligible next to native cost). CoolProp `propsSI` through the JNA binding:
+**70–82 µs/call uncached, 3.1–3.8 µs cached** (LRU extended to the throwing
+`propsSI`, successes only). Policy taken: raster cap **1M points** for
+call-free formulas, **100k** when the formula contains any function call
+(typed `RASTER_CAP_EXCEEDED` with suggested dt either way); worst-case
+all-miss 100k-property formula ≈ 8 s sync — **async path deferred** (v1 is
+sync-only; the lowered cap replaces the lowered-threshold-202 design until
+job plumbing is worth it).
 **Pre-spike (2–4 h, gates the phase estimate):** measure per-call `PropsSI` cost through the
 JNA binding **including the process-wide `synchronized` lock** (`core/.../props/CoolProp.java`
 — every binding method serializes on one global lock, and the throwing `propsSI` used by

@@ -44,6 +44,7 @@ public class ComputeTaskListener {
 
     private final SolveController solveController;
     private final OptimizeController optimizeController;
+    private final com.frees.backend.api.MeasurementCalcController calcController;
     private final JobStore jobStore;
     private final ObjectMapper objectMapper;
     private final OpenTelemetry openTelemetry;
@@ -52,12 +53,14 @@ public class ComputeTaskListener {
 
     public ComputeTaskListener(SolveController solveController,
                                OptimizeController optimizeController,
+                               com.frees.backend.api.MeasurementCalcController calcController,
                                JobStore jobStore,
                                ObjectMapper objectMapper,
                                ObjectProvider<OpenTelemetry> openTelemetryProvider,
                                @Value("${frees.compute.drop-redelivered:true}") boolean dropRedelivered) {
         this.solveController = solveController;
         this.optimizeController = optimizeController;
+        this.calcController = calcController;
         this.jobStore = jobStore;
         this.objectMapper = objectMapper;
         this.openTelemetry = openTelemetryProvider.getIfAvailable();
@@ -148,6 +151,9 @@ public class ComputeTaskListener {
                         optimizeController::computeOptimizeMulti);
                 case ComputeTask.CURVE_FIT -> handle(task, "Curve-fit", OptimizeController.CurveFitRequest.class,
                         optimizeController::computeCurveFit);
+                case ComputeTask.CALC -> handle(task, "Calc-signal",
+                        com.frees.backend.api.MeasurementCalcController.CalcRequest.class,
+                        calcController::computeCalc);
                 case ComputeTask.WARMUP -> log.info("Received WARMUP task, acknowledging and dropping.");
                 default -> jobStore.saveFailed(task.jobId(),
                         "Unknown task type: " + task.taskType());

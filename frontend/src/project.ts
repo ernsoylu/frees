@@ -12,17 +12,20 @@ import type { StopCriteria, UnitSystem } from './api'
 import type { VariableDraft } from './VariableInfoModal'
 import type { TableSpec } from './tables'
 import type { PlotSpec } from './plots/types'
-import type { DiagramSpec } from './diagram/types'
 import type { WhiteboardSpec } from './whiteboard/types'
 import type { SpreadsheetSpec } from './spreadsheet/types'
+import type { AnalyzerSpec } from './analyzer/types'
 
-const PROJECT_VERSION = 1
+// v2 (Data Analyzer Phase 2): + `analyzers` slice — layout, signal
+// assignments and measurement file REFS only ("template mode", §2.5b in
+// todo.md); bulk samples never enter the project file. v1 files migrate by
+// defaulting the slice to [].
+const PROJECT_VERSION = 2
 const PROJECT_KEY = 'frees.project'
 
 // Child-owned localStorage keys bridged into the project file. These mirror the
-// literals used inside DiagramTab.tsx, DigitizerTab.tsx, and WorkspaceDock.tsx;
-// the project file is the source of truth, those keys act as local caches.
-const CUSTOM_COMPONENTS_KEY = 'frees-custom-components'
+// literals used inside DigitizerTab.tsx and WorkspaceDock.tsx; the project
+// file is the source of truth, those keys act as local caches.
 const DIGITIZER_KEY = 'frees-digitizer'
 const DOCK_LAYOUT_KEY = 'frees-dock-layout-v3'
 
@@ -36,16 +39,15 @@ export interface ProjectSlices {
   stateUnitIds: Record<string, string>
   tables: TableSpec[]
   plots: PlotSpec[]
-  diagrams: DiagramSpec[]
   whiteboards: WhiteboardSpec[]
   spreadsheets: SpreadsheetSpec[]
+  analyzers: AnalyzerSpec[]
 }
 
 export interface FreesProject extends ProjectSlices {
   version: number
   savedAt: string
   // Bridged from child-owned localStorage; opaque to App.
-  customComponents: unknown
   digitizer: unknown
   dockLayout: unknown
 }
@@ -65,7 +67,6 @@ export function buildProject(slices: ProjectSlices): FreesProject {
     version: PROJECT_VERSION,
     savedAt: new Date().toISOString(),
     ...slices,
-    customComponents: readJson(CUSTOM_COMPONENTS_KEY),
     digitizer: readJson(DIGITIZER_KEY),
     dockLayout: readJson(DOCK_LAYOUT_KEY),
   }
@@ -77,11 +78,6 @@ export function buildProject(slices: ProjectSlices): FreesProject {
  */
 export function writeBridgedKeys(project: FreesProject) {
   try {
-    if (project.customComponents != null) {
-      localStorage.setItem(CUSTOM_COMPONENTS_KEY, JSON.stringify(project.customComponents))
-    } else {
-      localStorage.removeItem(CUSTOM_COMPONENTS_KEY)
-    }
     if (project.digitizer != null) {
       localStorage.setItem(DIGITIZER_KEY, JSON.stringify(project.digitizer))
     } else {
@@ -141,10 +137,9 @@ function sanitizeProject(project: FreesProject): FreesProject | null {
     stateUnitIds: plainJson(project.stateUnitIds) ?? {},
     tables: Array.isArray(project.tables) ? plainJson(project.tables) : [],
     plots: Array.isArray(project.plots) ? plainJson(project.plots) : [],
-    diagrams: Array.isArray(project.diagrams) ? plainJson(project.diagrams) : [],
     whiteboards: Array.isArray(project.whiteboards) ? plainJson(project.whiteboards) : [],
     spreadsheets: Array.isArray(project.spreadsheets) ? plainJson(project.spreadsheets) : [],
-    customComponents: plainJson(project.customComponents),
+    analyzers: Array.isArray(project.analyzers) ? plainJson(project.analyzers) : [],
     digitizer: plainJson(project.digitizer),
     dockLayout: plainJson(project.dockLayout),
   }
@@ -186,10 +181,9 @@ function migrate(p: FreesProject): FreesProject {
     stateUnitIds: p.stateUnitIds ?? {},
     tables: p.tables ?? [],
     plots: p.plots ?? [],
-    diagrams: p.diagrams ?? [],
     whiteboards: p.whiteboards ?? [],
     spreadsheets: p.spreadsheets ?? [],
-    customComponents: p.customComponents ?? null,
+    analyzers: p.analyzers ?? [],
     digitizer: p.digitizer ?? null,
     dockLayout: p.dockLayout ?? null,
   }

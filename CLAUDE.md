@@ -92,8 +92,8 @@ See `README.md` for the full system design and Agile plan.
 4. Frontend polls the API node (`GET /api/jobs/{jobId}`) until the state is COMPLETED/FAILED.
 5. Frontend renders each window based on the JSON payload:
    - **Editor**: CodeMirror-based monospace text editor (`EquationEditor.tsx`) with line numbers, syntax highlighting for the frees DSL.
-   - **Solution, Arrays, Plots, Diagram**: Grid, charts, and overlay layouts built from the JSON payload.
-   - **Whiteboard**: A code-split [Excalidraw](https://github.com/excalidraw/excalidraw) freehand sketch canvas (`whiteboard/WhiteboardTab.tsx`) that complements the solver-bound native Diagram window — a pure drawing surface (hand-drawn shapes, text, imported images) for quick problem-explanation sketches, with no variable binding. Each whiteboard opens as its own dock window (`whiteboard:<id>`, mirroring the Diagram pattern), its scene persisted as opaque JSON (`{elements, appState, files}`) into App state → the `.frees` project file (with a `frees-whiteboards` localStorage fallback), exportable to PNG/SVG. The Excalidraw theme tracks the app color scheme.
+   - **Solution, Arrays, Plots**: Grid, charts, and overlay layouts built from the JSON payload.
+   - **Whiteboard**: A code-split [Excalidraw](https://github.com/excalidraw/excalidraw) freehand sketch canvas (`whiteboard/WhiteboardTab.tsx`) — a pure drawing surface (hand-drawn shapes, text, imported images) for quick problem-explanation sketches, with no variable binding. Each whiteboard opens as its own dock window (`whiteboard:<id>`), its scene persisted as opaque JSON (`{elements, appState, files}`) into App state → the `.frees` project file (with a `frees-whiteboards` localStorage fallback), exportable to PNG/SVG. The Excalidraw theme tracks the app color scheme.
    - **REPL Terminal & Workspace**: Dockable console window — movable like the Editor/Variable Explorer (`ReplTerminal.tsx` → `POST /api/repl/evaluate`, handled by `ReplEvaluator`) that evaluates one line against the cached solved session — expressions, variable query/assign, implicit single-unknown solve, the full `CALL` library (outputs auto-sized from inputs via `EquationParser.autoSizeCallOutputs`, so bare output names work in documents and the REPL), and Symja CAS transforms (`Factor`/`Apart`/`Laplace`/`InverseLaplace`/`Diff`/`Integrate`/…, REPL-only). Block constructs (`FUNCTION`/`DYNAMIC`/`TABLE`, `SYMBOLIC`) remain editor-only.
 
 **Check-before-Solve (Check):** `POST /api/check` verifies syntax and structural solvability (zero degrees of freedom + complete equation↔variable matching) without solving. The frontend gates the Solve button on a successful check; any edit invalidates it.
@@ -132,8 +132,7 @@ See `README.md` for the full system design and Agile plan.
 | Equation rendering | KaTeX or MathJax — Formatted Equations window (`_dot`, `_hat`, subscripts) |
 | Data grids | ag-Grid or Handsontable — Parametric, Lookup, and Array tables |
 | Charting | Plotly.js — X-Y, contour, 3D surface, and thermodynamic property plots |
-| Diagram Window | react-konva or Fabric.js (HTML5 Canvas) + CSS absolute-positioned HTML overlays |
-| Whiteboard | Excalidraw (`@excalidraw/excalidraw`) — code-split freehand sketch canvas, complementing the solver-bound Diagram window |
+| Whiteboard | Excalidraw (`@excalidraw/excalidraw`) — code-split freehand sketch canvas |
 
 ## Build & Deployment (Docker)
 
