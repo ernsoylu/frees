@@ -58,6 +58,9 @@ interface Props {
   /** When set, render only this one table and hide the table-tab strip (used
    *  when each table is its own dock window). */
   singleTableId?: string
+  /** "Open in Spreadsheet": one-shot snapshot of a read-only (code/ODE)
+   * table into a new spreadsheet window (Phase 3, contract e). */
+  onExportTable?: (id: string) => void
 }
 
 export default function TablesTab(props: Readonly<Props>) {
@@ -213,11 +216,20 @@ export default function TablesTab(props: Readonly<Props>) {
 
       {active?.kind === 'parametric' && active.source === 'code' && (
         <>
-          <Text size="xs" c="dimmed">
-            {active.origin === 'ode'
-              ? 'Solved trajectory from a DYNAMIC (ODE) block — virtualized read-only grid (columns are SI-solver values; drag column edges to resize, click-drag to select/copy).'
-              : 'Defined in code (PARAMETRIC … END) — virtualized read-only grid. Run it with Solve Table.'}
-          </Text>
+          <Group gap="xs" wrap="nowrap" align="center">
+            <Text size="xs" c="dimmed" style={{ flex: 1 }}>
+              {active.origin === 'ode'
+                ? 'Solved trajectory from a DYNAMIC (ODE) block — virtualized read-only grid (columns are SI-solver values; drag column edges to resize, click-drag to select/copy).'
+                : 'Defined in code (PARAMETRIC … END) — virtualized read-only grid. Run it with Solve Table.'}
+            </Text>
+            {props.onExportTable && (
+              <Tooltip label="One-shot snapshot into a new spreadsheet (timestamped; not linked to re-solves)">
+                <Button size="compact-xs" variant="default" onClick={() => props.onExportTable?.(active.id)}>
+                  Open in Spreadsheet
+                </Button>
+              </Tooltip>
+            )}
+          </Group>
           <Suspense fallback={<Text size="sm" c="dimmed">Loading grid…</Text>}>
             <DataGridReadOnly
               vars={active.vars}
