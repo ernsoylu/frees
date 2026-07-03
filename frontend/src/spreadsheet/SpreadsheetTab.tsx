@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react'
-import { Spreadsheet, Worksheet } from '@jspreadsheet-ce/react'
-import 'jsuites/dist/jsuites.css'
-import 'jspreadsheet-ce/dist/jspreadsheet.css'
-import 'material-icons/iconfont/material-icons.css' // toolbar glyphs (self-hosted, no CDN)
+import { createUniver, defaultTheme, LocaleType, mergeLocales } from '@univerjs/presets'
+import type { FUniver } from '@univerjs/presets'
+import { UniverSheetsCorePreset } from '@univerjs/preset-sheets-core'
+import UniverPresetSheetsCoreEnUS from '@univerjs/preset-sheets-core/locales/en-US'
+import '@univerjs/preset-sheets-core/lib/index.css'
 import './theme.css'
 import { type SpreadsheetSpec, emptySpreadsheetData } from './types'
-import { Button, Group, Modal, TextInput, Switch, Text, Select } from '@mantine/core'
+import { colName, extractSheets, sheetsToWorkbookData, type FWorkbookLike, type StoredSheet } from './univerAdapter'
+import { Button, Group, Modal, TextInput, Switch, Text, Select, useComputedColorScheme } from '@mantine/core'
 import { IconTablePlus, IconLink, IconDownload } from '@tabler/icons-react'
 import { ParamTableSpec } from '../tables'
 import { newParamRow } from '../ParametricTableTab'
@@ -22,184 +24,159 @@ interface Props {
   onInsertText?: (text: string) => void
 }
 
-// jspreadsheet speaks a 2D `data` array plus a separate `style` map (CSS strings
-// keyed by A1). The rest of frees (App auto-sync, ssheetResolver, bindings, CSV,
-// linked tables) speaks the legacy `celldata` shape `{ r, c, v: { v, m, f? } }`.
-// We keep `celldata` as the canonical *stored* format and convert here, so the
-// grid library stays isolated to this file. Formulas live in `v.f`, the computed
-// value in `v.v` (what the resolver/bindings read), the display string in `v.m`.
-
-const MIN_ROWS = 40
-const MIN_COLS = 12
-
-function colName(c: number): string {
-  let s = ''
-  let t = c
-  while (t >= 0) {
-    s = String.fromCodePoint(65 + (t % 26)) + s
-    t = Math.floor(t / 26) - 1
-  }
-  return s
-}
-
-function celldataToMatrix(cells: any[], minRows: number, minCols: number): any[][] {
-  let maxR = minRows - 1
-  let maxC = minCols - 1
-  for (const cd of cells) {
-    if (cd.r > maxR) maxR = cd.r
-    if (cd.c > maxC) maxC = cd.c
-  }
-  const m: any[][] = Array.from({ length: maxR + 1 }, () => new Array(maxC + 1).fill(''))
-  for (const cd of cells) {
-    const v = cd.v ?? {}
-    m[cd.r][cd.c] = v.f ?? v.m ?? v.v ?? ''
-  }
-  return m
-}
-
-// jspreadsheet's getStyle() returns an entry for EVERY cell — most just the
-// per-cell default it stamps on the whole grid. Keep only cells with real
-// formatting so the persisted style map (and .frees file) stays lean.
-function pruneStyles(styles: Record<string, string>): Record<string, string> {
-  const out: Record<string, string> = {}
-  for (const k in styles) {
-    const meaningful = (styles[k] || '')
-      .replace(/text-align:\s*center;?/gi, '')
-      .replace(/overflow:\s*hidden;?/gi, '')
-      .replace(/[\s;]+/g, '')
-    if (meaningful.length > 0) out[k] = styles[k]
-  }
-  return out
-}
-
-// raw = getData(false) (formulas preserved). The computed value of a formula
-// cell is fetched per-coordinate via `getProc(c, r)` — i.e. getValueFromCoords(.., true).
-// We deliberately do NOT consume getData(true) as a parallel matrix: in this
-// jspreadsheet build it can return `[]` or a matrix with text cells silently
-// dropped, which then misaligns against `raw` and corrupts/column-shifts every
-// cell (a "Power" label becomes the neighbouring number, etc.). The per-cell
-// accessor is shift-proof, so only formula cells need it; for a plain value the
-// raw entry IS the value.
-function matrixToCelldata(raw: any[][], getProc: (c: number, r: number) => any): any[] {
-  const out: any[] = []
-  for (let r = 0; r < raw.length; r++) {
-    const row = raw[r]
-    if (!row) continue
-    for (let c = 0; c < row.length; c++) {
-      const rv = row[c]
-      if (rv === '' || rv === null || rv === undefined) continue
-      const rawStr = String(rv)
-      const isFormula = rawStr.startsWith('=')
-      const pv = isFormula ? getProc(c, r) : rv
-      const procStr = pv === null || pv === undefined ? rawStr : String(pv)
-      const num = Number(procStr)
-      const computed = procStr.trim() !== '' && !Number.isNaN(num) ? num : procStr
-      const cell: any = { r, c, v: { v: computed, m: procStr } }
-      if (isFormula) cell.v.f = rawStr
-      out.push(cell)
-    }
-  }
-  return out
+// Univer theme with the primary scale swapped for the Mantine blue palette so
+// selection/toolbar accents match the rest of the app. Dark mode itself is
+// native (createUniver darkMode + univerAPI.toggleDarkMode), no CSS hacks.
+const freesTheme = {
+  ...defaultTheme,
+  primary: {
+    50: '#e7f5ff',
+    100: '#d0ebff',
+    200: '#a5d8ff',
+    300: '#74c0fc',
+    400: '#4dabf7',
+    500: '#339af0',
+    600: '#228be6',
+    700: '#1c7ed6',
+    800: '#1971c2',
+    900: '#1864ab',
+  },
 }
 
 export default function SpreadsheetTab({ singleSpreadsheetId, spreadsheets, onSpreadsheetsChange, onCreateTable, availableVariables = [], onInsertText }: Props) {
   const spec = spreadsheets.find((s) => s.id === singleSpreadsheetId)
-  const ssRef = useRef<any>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
+  const apiRef = useRef<FUniver | null>(null)
+  const [ready, setReady] = useState(false)
   const [showBindModal, setShowBindModal] = useState(false)
   const [bindVarName, setBindVarName] = useState('')
   const [bindType, setBindType] = useState<'input' | 'result'>('input')
   const [hasSelection, setHasSelection] = useState(false)
   const [selectedCell, setSelectedCell] = useState<string>('')
+  const scheme = useComputedColorScheme('dark')
 
-  // Last selection reported by jspreadsheet's onselection — kept in a ref so the
-  // Mantine toolbar buttons (which live outside the grid) can act on it even after
-  // the grid blurs.
-  const selRef = useRef<{ ws: number; x1: number; y1: number; x2: number; y2: number } | null>(null)
-  const activeWsRef = useRef(0)
-
-  // jspreadsheet is imperative: it initializes from these props once and is then
-  // driven through the ref. Capture the initial worksheet config a single time so
-  // React never re-mounts the grid out from under the user.
-  const initialRef = useRef<any[] | null>(null)
-  if (!initialRef.current) {
-    const sheets = (!spec || !spec.sheets || spec.sheets.length === 0
-      ? emptySpreadsheetData()
-      : spec.sheets) as any[]
-    initialRef.current = sheets.map((sh, i) => ({
-      worksheetName: sh.name || `Sheet${i + 1}`,
-      data: celldataToMatrix(sh.celldata ?? [], MIN_ROWS, MIN_COLS),
-      style: sh.styles ?? {},
-      minDimensions: [MIN_COLS, MIN_ROWS],
-    }))
-  }
+  // Last selection reported by Univer's SelectionChanged — kept in a ref so the
+  // Mantine toolbar buttons (which live outside the grid) can act on it even
+  // after the grid blurs.
+  const selRef = useRef<{ sheetName: string; x1: number; y1: number; x2: number; y2: number } | null>(null)
 
   // Reference to the exact sheets array we last wrote, so the external-update
   // effect can tell our own writes apart from App's auto-sync / linked-table writes.
   const selfWriteRef = useRef<unknown[] | null>(null)
   const syncTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  // Latest spec, readable from stable callbacks without re-subscribing events.
+  const specRef = useRef(spec)
+  specRef.current = spec
+
   const syncOut = useCallback(() => {
-    const insts = ssRef.current
-    if (!insts || !insts.length) return
-    const prevSheets = (spec?.sheets ?? []) as any[]
-    const newSheets = insts.map((ws: any, i: number) => {
-      const raw = ws.getData(false)
-      const styles = pruneStyles(ws.getStyle() || {})
-      const prev = prevSheets[i] ?? {}
-      return {
-        name: ws.options?.worksheetName || prev.name || `Sheet${i + 1}`,
-        id: prev.id ?? crypto.randomUUID(),
-        status: i === activeWsRef.current ? 1 : 0,
-        order: i,
-        celldata: matrixToCelldata(raw, (c: number, r: number) => ws.getValueFromCoords(c, r, true)),
-        styles,
-        config: prev.config ?? {},
-      }
-    })
+    const api = apiRef.current
+    const fwb = api?.getActiveWorkbook() as unknown as FWorkbookLike | null
+    if (!fwb) return
+    const prevSheets = (specRef.current?.sheets ?? []) as StoredSheet[]
+    const newSheets = extractSheets(fwb, prevSheets)
     selfWriteRef.current = newSheets
     onSpreadsheetsChange((prev) =>
       prev.map((s) => (s.id === singleSpreadsheetId ? { ...s, sheets: newSheets } : s))
     )
-  }, [spec, singleSpreadsheetId, onSpreadsheetsChange])
+  }, [singleSpreadsheetId, onSpreadsheetsChange])
 
   const scheduleSync = useCallback(() => {
     if (syncTimer.current) clearTimeout(syncTimer.current)
     syncTimer.current = setTimeout(syncOut, 300)
   }, [syncOut])
 
-  // Flush any pending edits when the window unmounts (dock close / tab switch).
+  // Create the Univer instance once per mount; dispose on unmount (flushing any
+  // pending edits first — dock close / tab switch).
   useEffect(() => {
+    const container = containerRef.current
+    if (!container || !specRef.current) return
+
+    const { univerAPI } = createUniver({
+      locale: LocaleType.EN_US,
+      locales: {
+        [LocaleType.EN_US]: mergeLocales(UniverPresetSheetsCoreEnUS),
+      },
+      theme: freesTheme,
+      darkMode: document.documentElement.getAttribute('data-mantine-color-scheme') !== 'light',
+      presets: [
+        UniverSheetsCorePreset({
+          container,
+        }),
+      ],
+    })
+    apiRef.current = univerAPI
+
+    const s = specRef.current
+    const sheets = (!s.sheets || s.sheets.length === 0 ? emptySpreadsheetData() : s.sheets) as StoredSheet[]
+    univerAPI.createWorkbook(sheetsToWorkbookData(s.id, s.name, sheets))
+
+    // Any sheet mutation (values, styles, merges, renames, add/remove sheet)
+    // schedules a debounced persist back into App state.
+    const cmdSub = univerAPI.addEvent(univerAPI.Event.CommandExecuted, (e: { id?: string }) => {
+      if (String(e?.id ?? '').startsWith('sheet.mutation.')) scheduleSync()
+    })
+
+    const selSub = univerAPI.addEvent(univerAPI.Event.SelectionChanged, (params: any) => {
+      const sel = params?.selections?.[0]
+      const ws = params?.worksheet
+      if (!sel || !ws) return
+      const sheetName: string = ws.getSheetName()
+      selRef.current = {
+        sheetName,
+        x1: sel.startColumn,
+        y1: sel.startRow,
+        x2: sel.endColumn,
+        y2: sel.endRow,
+      }
+      setHasSelection(true)
+      setSelectedCell(`${sheetName}!${colName(sel.startColumn)}${sel.startRow + 1}`)
+    })
+
+    setReady(true)
+
     return () => {
       if (syncTimer.current) {
         clearTimeout(syncTimer.current)
+        syncTimer.current = null
         syncOut()
       }
+      cmdSub?.dispose?.()
+      selSub?.dispose?.()
+      apiRef.current = null
+      setReady(false)
+      univerAPI.dispose()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Push external celldata changes (auto-sync results, linked-table sync) into the
-  // live grid. Skips our own writes by reference identity.
+  // Track the Mantine color scheme (same pattern as the whiteboard).
   useEffect(() => {
-    const insts = ssRef.current
-    if (!insts || !spec) return
+    if (ready) apiRef.current?.toggleDarkMode(scheme === 'dark')
+  }, [scheme, ready])
+
+  // Push external celldata changes (auto-sync results, linked-table sync) into
+  // the live grid. Skips our own writes by reference identity.
+  useEffect(() => {
+    const api = apiRef.current
+    if (!api || !spec || !ready) return
     if (spec.sheets === selfWriteRef.current) return
-    ;(spec.sheets as any[]).forEach((sh, i) => {
-      const ws = insts[i]
-      if (!ws) return
-      const target = celldataToMatrix(sh.celldata ?? [], 0, 0)
-      const current = ws.getData(false)
-      for (let r = 0; r < target.length; r++) {
-        for (let c = 0; c < target[r].length; c++) {
-          const tv = target[r][c]
-          const cv = current[r]?.[c]
-          if (String(tv ?? '') !== String(cv ?? '')) {
-            ws.setValueFromCoords(c, r, tv, true)
-          }
+    const fwb = api.getActiveWorkbook()
+    if (!fwb) return
+    const facadeSheets = fwb.getSheets()
+    ;(spec.sheets as StoredSheet[]).forEach((sh, i) => {
+      const fws = fwb.getSheetByName(sh.name) ?? facadeSheets[i]
+      if (!fws) return
+      for (const cd of sh.celldata ?? []) {
+        const target = cd.v?.f ?? cd.v?.m ?? cd.v?.v ?? ''
+        const range = fws.getRange(cd.r, cd.c)
+        const current = range.getFormula() || range.getValue()
+        if (String(target ?? '') !== String(current ?? '')) {
+          range.setValue(cd.v?.f ? { f: cd.v.f } : (cd.v?.v ?? ''))
         }
       }
     })
-  }, [spec])
+  }, [spec, ready])
 
   if (!spec) {
     return (
@@ -209,42 +186,24 @@ export default function SpreadsheetTab({ singleSpreadsheetId, spreadsheets, onSp
     )
   }
 
-  const onselection = (instance: any, x1: number, y1: number, x2: number, y2: number) => {
-    const insts = ssRef.current
-    const idx = insts ? insts.indexOf(instance) : 0
-    const ws = idx >= 0 ? idx : 0
-    activeWsRef.current = ws
-    selRef.current = { ws, x1, y1, x2, y2 }
-    setHasSelection(true)
-    setSelectedCell(`${sheetNameAt(ws)}!${colName(x1)}${y1 + 1}`)
-    scheduleSync() // capture any formatting applied just before moving the selection
-  }
-
-  const sheetNameAt = (i: number): string =>
-    (spec.sheets as any[])[i]?.name || ssRef.current?.[i]?.options?.worksheetName || `Sheet${i + 1}`
-
   const handleCreateTable = () => {
     const sel = selRef.current
-    const ws = ssRef.current?.[sel?.ws ?? 0]
-    if (!sel || !ws) return
-    const startRow = sel.y1
-    const endRow = sel.y2
-    const startCol = sel.x1
-    const endCol = sel.x2
-    if (startRow >= endRow) return // need header + at least one row
+    const fwb = apiRef.current?.getActiveWorkbook()
+    const fws = sel && fwb ? fwb.getSheetByName(sel.sheetName) : null
+    if (!sel || !fws) return
+    if (sel.y1 >= sel.y2) return // need header + at least one row
 
-    const vars: string[] = []
-    for (let c = startCol; c <= endCol; c++) {
-      vars.push(String(ws.getValueFromCoords(c, startRow, true) || `Var${c - startCol + 1}`))
-    }
+    const values = fws.getRange(sel.y1, sel.x1, sel.y2 - sel.y1 + 1, sel.x2 - sel.x1 + 1).getValues()
+
+    const vars: string[] = values[0].map((v, j) => String(v ?? '') || `Var${j + 1}`)
 
     const rows = []
-    for (let r = startRow + 1; r <= endRow; r++) {
+    for (let r = 1; r < values.length; r++) {
       const paramRow = newParamRow()
-      for (let c = startCol; c <= endCol; c++) {
-        const val = ws.getValueFromCoords(c, r, true)
+      for (let c = 0; c < vars.length; c++) {
+        const val = values[r][c]
         if (val !== '' && val !== null && val !== undefined) {
-          paramRow.values[vars[c - startCol]] = String(val)
+          paramRow.values[vars[c]] = String(val)
         }
       }
       rows.push(paramRow)
@@ -274,8 +233,8 @@ export default function SpreadsheetTab({ singleSpreadsheetId, spreadsheets, onSp
   const confirmBind = () => {
     const sel = selRef.current
     if (!sel || !spec) return
-    const refStr = `${sheetNameAt(sel.ws)}!${colName(sel.x1)}${sel.y1 + 1}`
-    
+    const refStr = `${sel.sheetName}!${colName(sel.x1)}${sel.y1 + 1}`
+
     if (bindType === 'input') {
       // Input bindings: insert the ssheet equation directly into the editor text
       onInsertText?.(`${bindVarName} = ssheet('${spec.name}', '${refStr}')`)
@@ -286,23 +245,20 @@ export default function SpreadsheetTab({ singleSpreadsheetId, spreadsheets, onSp
         prev.map((s) => (s.id === singleSpreadsheetId ? { ...s, [key]: { ...s[key], [bindVarName]: refStr } } : s))
       )
     }
-    
+
     setShowBindModal(false)
     setBindVarName('')
   }
 
   const handleExportCSV = () => {
-    const ws = ssRef.current?.[activeWsRef.current]
-    if (!ws) return
-    // Read raw (shift-safe) and resolve each cell's displayed value per-coordinate;
-    // getData(true) is unreliable in this jspreadsheet build (see matrixToCelldata).
-    const raw: any[][] = ws.getData(false)
-    const csvStr = raw
-      .map((row, r) =>
+    const fws = apiRef.current?.getActiveWorkbook()?.getActiveSheet()
+    if (!fws) return
+    const values = fws.getDataRange().getValues()
+    const csvStr = values
+      .map((row) =>
         row
-          .map((cell, c) => {
-            const resolved = String(cell ?? '').startsWith('=') ? ws.getValueFromCoords(c, r, true) : cell
-            let val = String(resolved ?? '').replace(/"/g, '""')
+          .map((cell) => {
+            let val = String(cell ?? '').replace(/"/g, '""')
             if (val.includes(',') || val.includes('"') || val.includes('\n')) val = `"${val}"`
             return val
           })
@@ -348,19 +304,7 @@ export default function SpreadsheetTab({ singleSpreadsheetId, spreadsheets, onSp
         />
       </Group>
 
-      <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }} className="frees-jss">
-        <Spreadsheet
-          ref={ssRef}
-          tabs
-          toolbar
-          onafterchanges={scheduleSync}
-          onselection={onselection}
-        >
-          {initialRef.current.map((cfg, i) => (
-            <Worksheet key={i} {...cfg} />
-          ))}
-        </Spreadsheet>
-      </div>
+      <div ref={containerRef} className="frees-univer" style={{ flex: 1, minHeight: 0 }} />
 
       <Modal opened={showBindModal} onClose={() => setShowBindModal(false)} title={`Bind Cell as ${bindType === 'input' ? 'Input' : 'Result'}`} size="sm">
         <Text size="sm" mb="xs" c="dimmed">

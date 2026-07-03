@@ -24,7 +24,7 @@ export function emptySpreadsheetData(): unknown[] {
     status: 1,        // active
     order: 0,
     celldata: [],
-    /** jspreadsheet cell styles: CSS strings keyed by A1 ref (e.g. { A1: 'font-weight:bold;' }). */
+    /** Cell styles: CSS strings keyed by A1 ref (e.g. { A1: 'font-weight:bold;' }). */
     styles: {},
     config: {},
   }]
