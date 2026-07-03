@@ -56,12 +56,12 @@ import {
   fillMissingCells,
   FunctionTableSpec,
   newFunctionTable,
+  newParamRow,
   newParamTable,
   ParamTableSpec,
   sortFunctionRows,
   TableSpec,
 } from '../tables'
-import { newParamRow } from '../ParametricTableTab'
 import {
   boundColumnCount,
   isHostedTable,

@@ -13,7 +13,7 @@ import '@glideapps/glide-data-grid/dist/index.css'
 import { Button, Group, Stack, Text, useComputedColorScheme, useMantineTheme } from '@mantine/core'
 import { IconChartLine } from '@tabler/icons-react'
 import { useElementSize } from '@mantine/hooks'
-import { ParamRow } from './ParametricTableTab'
+import { ParamRow } from './tables'
 import { VariableDraft } from './VariableInfoModal'
 import { displayVar } from './varDisplay'
 
