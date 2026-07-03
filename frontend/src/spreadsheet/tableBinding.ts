@@ -75,8 +75,21 @@ export function specToSheetData(spec: TableSpec): StoredSheet {
 }
 
 /** Green used for solver-computed cells (matches the old grid's green.4). */
-const COMPUTED_CSS = 'color: #69db7c;'
-const FAILED_CSS = 'color: #fa5252;'
+const COMPUTED_CSS = 'color: #69db7c; '
+const FAILED_CSS = 'color: #fa5252; '
+/** Every in-region cell gets a border so the bound table reads as a real
+ * grid — and a freshly added run/row is visibly part of it even while its
+ * input cells are still empty ("these cells should exist"). */
+const BORDER_CSS = 'border: 1px solid #64686f;'
+
+/** Grid headroom for bound sheets, so Add Row and ordinary pastes don't hit
+ * Univer's hard "Range is out of bounds" error at the default 100×26. */
+export function sheetDimsFor(spec: TableSpec): { rowCount: number; columnCount: number } {
+  return {
+    rowCount: Math.max(spec.rows.length + 200, 1000),
+    columnCount: Math.max(boundColumnCount(spec) + 10, 26),
+  }
+}
 
 function paramSpecToSheetData(spec: ParamTableSpec): StoredSheet {
   const celldata: StoredCell[] = []
@@ -85,11 +98,11 @@ function paramSpecToSheetData(spec: ParamTableSpec): StoredSheet {
   // Header: Run column + one column per table variable (units appended for
   // code/ODE display tables that carry them).
   celldata.push({ r: 0, c: 0, v: cellValue('Run') })
-  styles.A1 = 'font-weight: bold;'
+  styles.A1 = 'font-weight: bold; ' + BORDER_CSS
   spec.vars.forEach((name, j) => {
     const unit = spec.columnUnits?.[name]
     celldata.push({ r: 0, c: j + 1, v: cellValue(unit ? `${name} [${unit}]` : name) })
-    styles[a1(0, j + 1)] = 'font-weight: bold;'
+    styles[a1(0, j + 1)] = 'font-weight: bold; ' + BORDER_CSS
   })
 
   const formulas = spec.formulas ?? {}
@@ -98,7 +111,7 @@ function paramSpecToSheetData(spec: ParamTableSpec): StoredSheet {
     const res = spec.results[i]
     const failed = res && !res.success
     celldata.push({ r, c: 0, v: cellValue(failed ? `${i + 1} ✗` : String(i + 1)) })
-    if (failed) styles[a1(r, 0)] = FAILED_CSS
+    styles[a1(r, 0)] = (failed ? FAILED_CSS : '') + BORDER_CSS
     spec.vars.forEach((name, j) => {
       const ref = a1(r, j + 1)
       const draft = row.values[name] ?? ''
@@ -106,16 +119,20 @@ function paramSpecToSheetData(spec: ParamTableSpec): StoredSheet {
       const f = formulas[ref]
       if (computed !== undefined) {
         celldata.push({ r, c: j + 1, v: { v: computed, m: String(computed) } })
-        styles[ref] = COMPUTED_CSS
-      } else if (f || draft.trim() !== '') {
+        styles[ref] = COMPUTED_CSS + BORDER_CSS
+      } else {
+        // Blank input cells are materialized too — an empty cell with a
+        // border is still a visible part of the table region.
         const v = cellValue(draft)
         if (f) v.f = f
         celldata.push({ r, c: j + 1, v })
+        styles[ref] = BORDER_CSS
       }
     })
   })
 
-  return { name: spec.name, id: spec.id, celldata, styles, config: {} }
+  const dims = sheetDimsFor(spec)
+  return { name: spec.name, id: spec.id, celldata, styles, config: {}, ...dims }
 }
 
 function functionSpecToSheetData(spec: FunctionTableSpec): StoredSheet {
@@ -126,30 +143,32 @@ function functionSpecToSheetData(spec: FunctionTableSpec): StoredSheet {
   // family-parameter strings (editable for 2-D tables, mapped back to
   // spec.columns), or a fixed 'y' label for 1-D.
   celldata.push({ r: 0, c: 0, v: cellValue(spec.argName || 'x') })
-  styles.A1 = 'font-weight: bold;'
+  styles.A1 = 'font-weight: bold; ' + BORDER_CSS
   spec.columns.forEach((param, j) => {
     celldata.push({ r: 0, c: j + 1, v: cellValue(spec.is1D ? 'y' : param) })
-    styles[a1(0, j + 1)] = 'font-weight: bold;'
+    styles[a1(0, j + 1)] = 'font-weight: bold; ' + BORDER_CSS
   })
 
-  // Data rows. Blank cells are skipped unless the formula overlay has an
-  // entry there — overlay cells are written with `f` so the adapter's load
-  // path (f-only, no cached v) makes Univer recompute them.
+  // Data rows — every in-region cell is materialized (blank ones as empty
+  // bordered cells) so the table reads as a bounded grid. Formula-overlay
+  // cells are written with `f` so the adapter's load path (f-only, no cached
+  // v) makes Univer recompute them.
   const formulas = spec.formulas ?? {}
   const pushCell = (r: number, c: number, raw: string) => {
     const ref = a1(r, c)
     const f = formulas[ref]
-    if (!f && raw.trim() === '') return
     const v = cellValue(raw)
     if (f) v.f = f
     celldata.push({ r, c, v })
+    styles[ref] = BORDER_CSS
   }
   spec.rows.forEach((row, i) => {
     pushCell(i + HEADER_ROW_COUNT, 0, row.x)
     spec.columns.forEach((_, j) => pushCell(i + HEADER_ROW_COUNT, j + 1, row.ys[j] ?? ''))
   })
 
-  return { name: spec.name, id: spec.id, celldata, styles, config: {} }
+  const dims = sheetDimsFor(spec)
+  return { name: spec.name, id: spec.id, celldata, styles, config: {}, ...dims }
 }
 
 /** A1 ranges the host must protect (protect() + setPoint(Edit, false) per the
