@@ -560,7 +560,7 @@ function drawMaskRect(ctx: CanvasRenderingContext2D, rect: MaskRect | null, scal
 export function DigitizerTab({
   onSendToFunctionTable,
 }: Readonly<{ onSendToFunctionTable?: (data: DigitizedExport) => void }>) {
-  const saved = useMemo(loadSaved, [])
+  const saved = useMemo(() => loadSaved(), [])
   const [image, setImage] = useState<HTMLImageElement | null>(null)
   const [imageDataUrl, setImageDataUrl] = useState<string | null>(saved?.imageDataUrl ?? null)
   const [scale, setScale] = useState(1)

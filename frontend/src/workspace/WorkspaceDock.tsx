@@ -418,7 +418,8 @@ export function WorkspaceDock({
         panel ? { id: panel.id, kind: kindOf(panel), title: panel.title ?? panel.id } : null,
       )
     }
-    api.onDidActivePanelChange((panel) => reportActive(panel ?? undefined))
+    // dockview 7 wraps the panel in a { panel, origin } event object.
+    api.onDidActivePanelChange(({ panel }) => reportActive(panel ?? undefined))
     const sync = () => emitOpen(api)
     api.onDidAddPanel(sync)
     api.onDidRemovePanel(sync)
