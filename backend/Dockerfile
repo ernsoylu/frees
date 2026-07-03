@@ -1,7 +1,7 @@
 # Build stage: compile the Spring Boot fat jar with the Gradle wrapper.
 # Pinned to the noble (24.04 LTS) variant to match the runtime stage and keep
 # the toolchain off the drifting `:21-jdk` tag.
-FROM eclipse-temurin:21-jdk-noble AS build
+FROM eclipse-temurin:25-jdk-noble AS build
 WORKDIR /app
 
 # Cache the Gradle distribution and dependencies as separate layers. This is a
@@ -31,7 +31,7 @@ RUN ./gradlew --no-daemon :web:bootJar
 # ships SUNDIALS v6, which has the SUNContext API the binding targets AND links
 # no MPI into any library the binding loads. See the build-time guard below,
 # which fails the build if a future base bump reintroduces an MPI-linked SUNDIALS.
-FROM eclipse-temurin:21-jre-noble
+FROM eclipse-temurin:25-jre-noble
 WORKDIR /app
 RUN apt-get update \
     && apt-get install -y --no-install-recommends libsundials-dev \
