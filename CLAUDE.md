@@ -101,7 +101,7 @@ See `README.md` for the full system design and Agile plan.
 **Deployment:** Both servers are containerized (`backend/Dockerfile` multi-stage Gradle build → JRE; `frontend/Dockerfile` Vite build → nginx with `/api` reverse proxy to the `backend` service). `docker-compose.yml` wires them with a TCP healthcheck so the frontend waits for a healthy backend.
 
 **Two deployment foot-guns (both fixed, keep them fixed):**
-- **Backend base image is PINNED to `eclipse-temurin:21-jre-noble`** (and `-jdk-noble`), not the floating `:21-jre`. The floating tag drifted to Ubuntu 26.04, whose `libsundials-dev` is SUNDIALS v7 with an MPI-linked `libsundials_core.so`; the JNA binding pre-loads `sundials_core`, so the first IDA/transient solve aborted the JVM (`MPI_Comm_dup before MPI_INIT`) and crash-looped the compute tier. 24.04 (noble) ships SUNDIALS v6 (the SUNContext ABI the binding targets, MPI-free). A build-time guard in `backend/Dockerfile` fails the image build if any binding-loaded SUNDIALS lib ever links MPI again.
+- **Backend base image is PINNED to `eclipse-temurin:25-jre-noble`** (and `-jdk-noble`), not a floating `:<version>-jre`. The floating tag drifted to Ubuntu 26.04, whose `libsundials-dev` is SUNDIALS v7 with an MPI-linked `libsundials_core.so`; the JNA binding pre-loads `sundials_core`, so the first IDA/transient solve aborted the JVM (`MPI_Comm_dup before MPI_INIT`) and crash-looped the compute tier. 24.04 (noble) ships SUNDIALS v6 (the SUNContext ABI the binding targets, MPI-free). A build-time guard in `backend/Dockerfile` fails the image build if any binding-loaded SUNDIALS lib ever links MPI again.
 - **nginx re-resolves the backend upstream per request** (`resolver` + a variable `proxy_pass` in `frontend/nginx.conf.template`). A bare `proxy_pass http://host:8080;` resolves once at startup and caches the IP; on Railway's private network the backend IPv6 changes every redeploy, so a stale cache hung all of `/api` (Cloudflare 504) until the frontend restarted.
 
 **Health/observability:** `GET /api/health` reports the whole topology (api/redis/rabbitmq/compute/frontend) with per-service status and replica counts (compute workers = live consumers on `frees.tasks`); 200 when UP/DEGRADED, 503 when a critical dependency is DOWN. The compute consumer drops a **redelivered** task (marks it FAILED) as a poison-message guard, since a redelivery means a worker died on it — so one bad job can't crash-loop the tier (`frees.compute.drop-redelivered`).
@@ -140,7 +140,7 @@ See `README.md` for the full system design and Agile plan.
 |---|---|
 | Containerization | Docker (multi-stage builds for both servers) |
 | Orchestration | Docker Compose (`docker-compose.yml` at repo root) |
-| Backend image | `eclipse-temurin:21-jdk` build stage (Gradle wrapper, `bootJar`) → `eclipse-temurin:21-jre` runtime |
-| Frontend image | `node:20-alpine` build stage (Vite) → `nginx:alpine` serving static bundle + `/api` reverse proxy |
+| Backend image | `eclipse-temurin:25-jdk-noble` build stage (Gradle wrapper, `bootJar`; foojay resolver provisions the Java 21 toolchain) → `eclipse-temurin:25-jre-noble` runtime |
+| Frontend image | `node:26-alpine` build stage (Vite) → `nginx:alpine` serving static bundle + `/api` reverse proxy |
 | Server lifecycle | `./frees.sh start \| stop \| restart \| status \| logs \| build` |
 | CI/CD | GitHub Actions (`.github/workflows/ci.yml`): backend tests + frontend build on every push/PR; Docker images pushed to GHCR on main |
