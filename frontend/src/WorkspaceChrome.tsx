@@ -32,6 +32,7 @@ import {
   IconHelp,
   IconInfoCircle,
   IconLayoutGrid,
+  IconLayoutColumns,
   IconMathFunction,
   IconPointFilled,
   IconX,
@@ -54,6 +55,7 @@ import {
 import { spotlight } from '@mantine/spotlight'
 import { useState } from 'react'
 import { CheckResponse, SolveResponse, TableRowResult } from './api'
+import type { LayoutPerspective } from './workspace/WorkspaceDock'
 import { withStableKeys } from './format'
 import { FUNCTION_CATEGORIES } from './functionCatalog'
 
@@ -98,7 +100,8 @@ interface RailProps {
   tableCount?: number
   onSelect: (view: string) => void
   onClose?: (view: string) => void
-  onResetLayout?: () => void
+  /** Rebuild the dock as a named layout preset (shows the Layout menu). */
+  onApplyLayout?: (perspective: LayoutPerspective) => void
   /** Excalidraw whiteboards available to open as individual windows. */
   whiteboards?: { id: string; name: string; deletable?: boolean }[]
   /** Number of whiteboard windows currently open (badge on the Whiteboard icon). */
@@ -376,7 +379,7 @@ export function Rail({
   tableCount = 0,
   onSelect,
   onClose,
-  onResetLayout,
+  onApplyLayout,
   whiteboards,
   whiteboardCount = 0,
   onOpenWhiteboard,
@@ -559,14 +562,50 @@ export function Rail({
         )}
       </Stack>
       <Stack gap={4}>
-        {onResetLayout && (
-          <RailEntry
-            icon={<IconLayoutGrid size={iconSize} stroke={1.6} />}
-            label="Reset layout"
-            tip="Reset window layout"
-            expanded={expanded}
-            onClick={onResetLayout}
-          />
+        {onApplyLayout && (
+          <Menu position="right-start" shadow="md" width={220} withinPortal>
+            <Menu.Target>
+              {expanded ? (
+                <Button
+                  variant="subtle"
+                  color="gray"
+                  justify="flex-start"
+                  fullWidth
+                  size="sm"
+                  radius="md"
+                  leftSection={<IconLayoutGrid size={iconSize} stroke={1.6} />}
+                  aria-label="Window layout presets"
+                >
+                  Layout
+                </Button>
+              ) : (
+                <ActionIcon variant="subtle" color="gray" size={40} radius="md" aria-label="Window layout presets">
+                  <IconLayoutGrid size={iconSize} stroke={1.6} />
+                </ActionIcon>
+              )}
+            </Menu.Target>
+            <Menu.Dropdown>
+              <Menu.Label>Window layout</Menu.Label>
+              <Menu.Item
+                leftSection={<IconLayoutGrid size={14} />}
+                onClick={() => onApplyLayout('default')}
+              >
+                Default view
+              </Menu.Item>
+              <Menu.Item
+                leftSection={<IconChartLine size={14} />}
+                onClick={() => onApplyLayout('results')}
+              >
+                Results focused
+              </Menu.Item>
+              <Menu.Item
+                leftSection={<IconLayoutColumns size={14} />}
+                onClick={() => onApplyLayout('split')}
+              >
+                Split view
+              </Menu.Item>
+            </Menu.Dropdown>
+          </Menu>
         )}
         {tools.map((tool) => (
           <RailEntry
@@ -997,8 +1036,12 @@ export function TopBar(props: Readonly<TopBarProps>) {
         </Tooltip>
         <Tooltip label={solveTooltip}>
           <Button.Group>
+            {/* The primary action of the whole app — a gradient sets it apart
+                from the neutral Check and the rest of the toolbar. */}
             <Button
               size="xs"
+              variant="gradient"
+              gradient={{ from: 'teal.7', to: 'cyan.6', deg: 90 }}
               leftSection={<IconPlayerPlayFilled size={13} />}
               onClick={isTable ? props.onSolveTable : props.onSolve}
               loading={isTable ? props.tableSolving : props.solving}

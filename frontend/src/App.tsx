@@ -2424,6 +2424,7 @@ export default function App() {
         onNewTable={(kind) => createTable(kind)}
         onSelect={(kind) => dockRef.current?.open(kind)}
         onClose={(kind) => dockRef.current?.close(kind)}
+        onApplyLayout={(p) => dockRef.current?.applyPerspective(p)}
         whiteboards={whiteboards.map((w) => ({ id: w.id, name: w.name, deletable: true }))}
         whiteboardCount={whiteboards.length}
         onOpenWhiteboard={(id) => {
