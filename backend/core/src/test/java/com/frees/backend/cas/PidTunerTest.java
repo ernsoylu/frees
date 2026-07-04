@@ -111,6 +111,33 @@ class PidTunerTest {
         assertRatioEquals(gNum, gDen, gRev[0], gRev[1]);
     }
 
+    @Test
+    void ssToTfConvertsAFirstOrderSystem() {
+        // A = −1, B = 1, C = 2, D = 0 → G = 2/(s+1).
+        double[][] g = PidTuner.ssToTf(new double[][]{{-1}}, new double[]{1}, new double[]{2}, 0);
+        // num = [0, 2] (padded), den = [1, 1] → 2/(s+1).
+        assertEquals(1.0, g[1][0], 1e-12);
+        assertEquals(1.0, g[1][1], 1e-12);
+        assertEquals(0.0, g[0][0], 1e-12);
+        assertEquals(2.0, g[0][1], 1e-12);
+    }
+
+    @Test
+    void ssToTfHandlesAPureGainSystem() {
+        double[][] g = PidTuner.ssToTf(new double[0][0], new double[0], new double[0], 3.5);
+        assertArrayEquals(new double[]{3.5}, g[0], 1e-12);
+        assertArrayEquals(new double[]{1.0}, g[1], 1e-12);
+    }
+
+    @Test
+    void ssToTfConvertsATwoStateSystem() {
+        // Companion form of 1/(s^2+3s+2): A=[[0,1],[-2,-3]], B=[0,1], C=[1,0], D=0.
+        double[][] g = PidTuner.ssToTf(
+                new double[][]{{0, 1}, {-2, -3}}, new double[]{0, 1}, new double[]{1, 0}, 0);
+        assertArrayEquals(new double[]{1.0, 3.0, 2.0}, g[1], 1e-9); // den = s^2+3s+2
+        assertEquals(1.0, g[0][2], 1e-9);                          // num constant = 1
+    }
+
     /** Two transfer functions are equal up to a common scale (compare num·den'
      *  cross-products, normalized). */
     private static void assertRatioEquals(double[] n1, double[] d1, double[] n2, double[] d2) {
