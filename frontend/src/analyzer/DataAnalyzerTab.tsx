@@ -11,8 +11,10 @@ import {
   useEffect,
   useMemo,
   useReducer,
+  useRef,
   useState,
   useSyncExternalStore,
+  type CSSProperties,
 } from 'react'
 import {
   ActionIcon,
@@ -22,6 +24,7 @@ import {
   Button,
   FileButton,
   Group,
+  Menu,
   Modal,
   NumberInput,
   Radio,
@@ -38,9 +41,12 @@ import {
   IconAlertTriangle,
   IconChartDots,
   IconChartHistogram,
+  IconDotsVertical,
   IconDownload,
   IconFileImport,
   IconFileSearch,
+  IconGripVertical,
+  IconHandMove,
   IconListSearch,
   IconMathFunction,
   IconPlus,
@@ -49,17 +55,28 @@ import {
   IconTable,
   IconTrash,
   IconWaveSine,
+  IconWaveSquare,
   IconX,
+  IconZoomIn,
+  IconZoomInArea,
+  IconZoomOut,
   IconZoomReset,
 } from '@tabler/icons-react'
 import uPlot from 'uplot'
-import UPlotChart, { type AbCursors } from './UPlotChart'
+import UPlotChart, { type AbCursors, type MouseMode } from './UPlotChart'
 import { channelStore, flattenRemoteChannels } from './channelStore'
 import { uploadMeasurement, type CalcResultDto } from './measurementApi'
 import { calcResultToMeasurement } from './calc'
 import CalcSignalModal from './CalcSignalModal'
 import { lowerBound } from './decimate'
-import { offsetNearestTime, offsetRawRange, offsetWindow, offsetsOf } from './offsets'
+import {
+  offsetExactValueAt,
+  offsetNearestTime,
+  offsetRawRange,
+  offsetWindow,
+  offsetsOf,
+} from './offsets'
+import { moveSignal as moveSignalOp, reorderStrip as reorderStripOp } from './stripOps'
 import { formatValue } from '../format'
 import {
   importCsvFile,
@@ -85,7 +102,21 @@ import {
 
 /** Decimation budget per strip (≈2 samples per px at typical tile widths). */
 const MAX_POINTS = 2400
+/** Reference px height a legacy strip.height is normalized against. */
 const STRIP_HEIGHT = 200
+/** Flex-weight clamp for the per-strip share of the oscilloscope area. */
+const WEIGHT_MIN = 0.25
+const WEIGHT_MAX = 6
+/** A strip never compresses below this (the container scrolls instead). */
+const STRIP_MIN_PX = 120
+/** DnD payload mime for signal-row and strip-reorder drags. */
+const DND_MIME = 'application/x-frees-analyzer'
+
+/** Effective flex weight of a strip (migrates the legacy px height). */
+function stripWeight(strip: AnalyzerStrip): number {
+  const w = strip.weight ?? (strip.height !== undefined ? strip.height / STRIP_HEIGHT : 1)
+  return Math.max(WEIGHT_MIN, Math.min(WEIGHT_MAX, w))
+}
 
 // ---------------------------------------------------------------------------
 // View state (per-window, non-persisted): shared x range, A/B cursors (§2.5e),
@@ -102,6 +133,8 @@ interface ViewState {
   cursorB: number | null
   /** Sample-snap (true) vs continuous (false) cursor placement. */
   snap: boolean
+  /** What a plain mouse drag does on a strip: box zoom or pan. */
+  mouseMode: MouseMode
   instrument: Instrument
 }
 
@@ -112,6 +145,7 @@ type ViewAction =
   | { type: 'set-cursor'; which: 'a' | 'b'; t: number | null }
   | { type: 'clear-cursors' }
   | { type: 'toggle-snap' }
+  | { type: 'set-mouse-mode'; mode: MouseMode }
   | { type: 'set-instrument'; instrument: Instrument }
 
 function viewReducer(state: ViewState, action: ViewAction): ViewState {
@@ -132,6 +166,8 @@ function viewReducer(state: ViewState, action: ViewAction): ViewState {
       return { ...state, cursorA: null, cursorB: null }
     case 'toggle-snap':
       return { ...state, snap: !state.snap }
+    case 'set-mouse-mode':
+      return { ...state, mouseMode: action.mode }
     case 'set-instrument':
       return { ...state, instrument: action.instrument }
   }
@@ -185,7 +221,9 @@ function buildStripData(
     loaded.push({
       channel: sig.channel,
       color: sig.color,
-      kind: win.kind === 'boolean' ? 'boolean' : 'analog',
+      // MDA "Treat As Boolean/Analog Signal": the per-signal override wins
+      // over the imported channel kind (rendering only — stepped + 0/1 band).
+      kind: sig.kindOverride ?? (win.kind === 'boolean' ? 'boolean' : 'analog'),
     })
   }
   const data: uPlot.AlignedData =
@@ -232,11 +270,207 @@ function stripOptions(
   }
 }
 
+// ---------------------------------------------------------------------------
+// Per-strip signal list (MDA parity): Style | Name | Unit | Value | A | B | Δ.
+// Value follows the hover cursor live; A/B/Δ read the measurement cursors.
+// Remote (.mf4) values may briefly show a ~approximation until the exact raw
+// micro-window lands (the store notifies → storeVersion re-renders).
+// ---------------------------------------------------------------------------
+
+const SIGNAL_LIST_GRID = '10px minmax(60px, 1fr) 30px 58px 58px 58px 58px 18px'
+
+function fmtHit(hit: { v: number; approx?: boolean } | null): string {
+  if (hit === null) return '—'
+  return `${hit.approx ? '~' : ''}${formatValue(hit.v)}`
+}
+
+interface SignalListProps {
+  strip: AnalyzerStrip
+  offsets: Map<string, number>
+  hoverT: number | null
+  cursors: AbCursors
+  onRemoveSignal: (channel: string, measurementId: string) => void
+  /** MDA "Treat As Boolean/Analog Signal"; undefined = back to auto. */
+  onSetKind: (channel: string, measurementId: string, kind: 'analog' | 'boolean' | undefined) => void
+  onMoveToNewStrip: (channel: string, measurementId: string) => void
+}
+
+function SignalList({
+  strip,
+  offsets,
+  hoverT,
+  cursors,
+  onRemoveSignal,
+  onSetKind,
+  onMoveToNewStrip,
+}: Readonly<SignalListProps>) {
+  const numCell: CSSProperties = {
+    textAlign: 'right',
+    fontFamily: 'var(--mantine-font-family-monospace)',
+    fontSize: 10.5,
+    whiteSpace: 'nowrap',
+    overflow: 'hidden',
+  }
+  return (
+    <Box
+      w={392}
+      style={{
+        flexShrink: 0,
+        borderLeft: '1px solid var(--mantine-color-default-border)',
+        overflowY: 'auto',
+        overflowX: 'hidden',
+      }}
+    >
+      <Box
+        px={6}
+        py={2}
+        style={{
+          display: 'grid',
+          gridTemplateColumns: SIGNAL_LIST_GRID,
+          gap: 4,
+          position: 'sticky',
+          top: 0,
+          background: 'var(--mantine-color-body)',
+          borderBottom: '1px solid var(--mantine-color-default-border)',
+        }}
+      >
+        <span />
+        <Text size="xs" c="dimmed">
+          Signal
+        </Text>
+        <Text size="xs" c="dimmed">
+          Unit
+        </Text>
+        <Text size="xs" c="dimmed" ta="right">
+          Value
+        </Text>
+        <Text size="xs" c="yellow" ta="right">
+          A
+        </Text>
+        <Text size="xs" c="cyan" ta="right">
+          B
+        </Text>
+        <Text size="xs" c="dimmed" ta="right">
+          Δ (B−A)
+        </Text>
+        <span />
+      </Box>
+      {strip.signals.map((sig) => {
+        const off = offsets.get(sig.measurementId) ?? 0
+        const chMeta = channelStore
+          .getMeta(sig.measurementId)
+          ?.channels.find((c) => c.name === sig.channel)
+        const unit = chMeta?.unit
+        const storeKind = chMeta?.kind === 'boolean' ? 'boolean' : 'analog'
+        const effKind = sig.kindOverride ?? storeKind
+        const otherKind = effKind === 'boolean' ? 'analog' : 'boolean'
+        const hover = hoverT === null ? null : offsetExactValueAt(sig, off, hoverT)
+        const a = cursors.a === null ? null : offsetExactValueAt(sig, off, cursors.a)
+        const b = cursors.b === null ? null : offsetExactValueAt(sig, off, cursors.b)
+        const delta =
+          a !== null && b !== null
+            ? { v: b.v - a.v, approx: a.approx === true || b.approx === true }
+            : null
+        return (
+          <Box
+            key={`${sig.measurementId}:${sig.channel}`}
+            px={6}
+            py={1}
+            draggable
+            onDragStart={(e) => {
+              e.dataTransfer.setData(
+                DND_MIME,
+                JSON.stringify({
+                  type: 'signal',
+                  stripId: strip.id,
+                  measurementId: sig.measurementId,
+                  channel: sig.channel,
+                }),
+              )
+              e.dataTransfer.effectAllowed = 'move'
+            }}
+            style={{
+              display: 'grid',
+              gridTemplateColumns: SIGNAL_LIST_GRID,
+              gap: 4,
+              alignItems: 'center',
+              cursor: 'grab',
+            }}
+          >
+            <Box w={10} h={10} style={{ background: sig.color, borderRadius: 2 }} />
+            <Text size="xs" truncate title={`${sig.channel} — drag onto another strip to move it`}>
+              {sig.channel}
+            </Text>
+            <Text size="xs" c="dimmed" truncate>
+              {unit ?? ''}
+            </Text>
+            <span style={numCell}>{fmtHit(hover)}</span>
+            <span style={numCell}>{fmtHit(a)}</span>
+            <span style={numCell}>{fmtHit(b)}</span>
+            <span style={numCell}>{fmtHit(delta)}</span>
+            <Menu withinPortal position="bottom-end" shadow="md" width={200}>
+              <Menu.Target>
+                <ActionIcon
+                  size={14}
+                  variant="subtle"
+                  color="gray"
+                  aria-label={`Options for ${sig.channel}`}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <IconDotsVertical size={10} />
+                </ActionIcon>
+              </Menu.Target>
+              <Menu.Dropdown>
+                <Menu.Item
+                  leftSection={
+                    effKind === 'boolean' ? <IconWaveSine size={13} /> : <IconWaveSquare size={13} />
+                  }
+                  onClick={() =>
+                    // Back to auto when the requested kind IS the imported one.
+                    onSetKind(
+                      sig.channel,
+                      sig.measurementId,
+                      otherKind === storeKind ? undefined : otherKind,
+                    )
+                  }
+                >
+                  Treat as {otherKind} signal
+                </Menu.Item>
+                <Menu.Item
+                  leftSection={<IconPlus size={13} />}
+                  onClick={() => onMoveToNewStrip(sig.channel, sig.measurementId)}
+                >
+                  Move to new strip
+                </Menu.Item>
+                <Menu.Divider />
+                <Menu.Item
+                  color="red"
+                  leftSection={<IconX size={13} />}
+                  onClick={() => onRemoveSignal(sig.channel, sig.measurementId)}
+                >
+                  Remove from strip
+                </Menu.Item>
+              </Menu.Dropdown>
+            </Menu>
+          </Box>
+        )
+      })}
+      {strip.signals.length === 0 && (
+        <Text size="xs" c="dimmed" p={6}>
+          No signals — add from the browser or drop a row here.
+        </Text>
+      )}
+    </Box>
+  )
+}
+
 interface StripViewProps {
   strip: AnalyzerStrip
   syncKey: string
   xRange: [number, number] | null
   cursors: AbCursors
+  hoverT: number | null
+  mouseMode: MouseMode
   offsets: Map<string, number>
   storeVersion: number
   selected: boolean
@@ -246,8 +480,15 @@ interface StripViewProps {
   onResetZoom: () => void
   onCursorSet: (t: number, which: 'a' | 'b') => void
   onOffsetDrag: (deltaSeconds: number) => void
+  onHover: (t: number | null) => void
   onRemoveSignal: (channel: string, measurementId: string) => void
   onRemoveStrip: () => void
+  /** Commit a new flex weight (share of the scope area) after a resize drag. */
+  onResizeWeight: (weight: number) => void
+  onDropSignal: (fromStripId: string, measurementId: string, channel: string) => void
+  onDropStrip: (dragStripId: string) => void
+  onSetKind: (channel: string, measurementId: string, kind: 'analog' | 'boolean' | undefined) => void
+  onMoveToNewStrip: (channel: string, measurementId: string) => void
 }
 
 function StripView({
@@ -255,6 +496,8 @@ function StripView({
   syncKey,
   xRange,
   cursors,
+  hoverT,
+  mouseMode,
   offsets,
   storeVersion,
   selected,
@@ -264,8 +507,14 @@ function StripView({
   onResetZoom,
   onCursorSet,
   onOffsetDrag,
+  onHover,
   onRemoveSignal,
   onRemoveStrip,
+  onResizeWeight,
+  onDropSignal,
+  onDropStrip,
+  onSetKind,
+  onMoveToNewStrip,
 }: Readonly<StripViewProps>) {
   const built = useMemo(
     () => buildStripData(strip, xRange, offsets),
@@ -281,43 +530,68 @@ function StripView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [seriesKey, syncKey, dark],
   )
+  // Live weight override while the bottom handle is being dragged; the final
+  // value is committed to the spec (persisted) on release. Flex handles the
+  // rebalancing: growing one strip shrinks the others proportionally.
+  const [liveWeight, setLiveWeight] = useState<number | null>(null)
+  const weight = liveWeight ?? stripWeight(strip)
 
   return (
     <Box
       onClick={onSelect}
+      onDragOver={(e) => {
+        if (e.dataTransfer.types.includes(DND_MIME)) {
+          e.preventDefault()
+          e.dataTransfer.dropEffect = 'move'
+        }
+      }}
+      onDrop={(e) => {
+        const raw = e.dataTransfer.getData(DND_MIME)
+        if (raw === '') return
+        e.preventDefault()
+        try {
+          const payload = JSON.parse(raw) as
+            | { type: 'signal'; stripId: string; measurementId: string; channel: string }
+            | { type: 'strip'; stripId: string }
+          if (payload.type === 'signal') {
+            onDropSignal(payload.stripId, payload.measurementId, payload.channel)
+          } else {
+            onDropStrip(payload.stripId)
+          }
+        } catch {
+          /* foreign drop — ignore */
+        }
+      }}
       style={{
         border: `1px solid var(--mantine-color-${selected ? 'teal-6' : 'default-border'})`,
         borderRadius: 6,
         overflow: 'hidden',
+        // Fill-area layout (MDA): strips share the panel by flex weight.
+        flex: `${weight} 1 0%`,
+        minHeight: STRIP_MIN_PX,
+        display: 'flex',
+        flexDirection: 'column',
       }}
     >
       <Group justify="space-between" px={6} py={2} gap={4} wrap="nowrap">
         <Group gap={4} style={{ overflow: 'hidden' }} wrap="nowrap">
-          {strip.signals.length === 0 && (
-            <Text size="xs" c="dimmed">
-              Empty strip — add signals from the browser
-            </Text>
-          )}
-          {strip.signals.map((sig) => (
-            <Badge
-              key={`${sig.measurementId}:${sig.channel}`}
-              variant="outline"
-              size="sm"
-              styles={{ root: { borderColor: sig.color, color: sig.color, textTransform: 'none' } }}
-              rightSection={
-                <IconX
-                  size={10}
-                  style={{ cursor: 'pointer' }}
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    onRemoveSignal(sig.channel, sig.measurementId)
-                  }}
-                />
-              }
+          <Tooltip label="Drag to reorder strips">
+            <span
+              draggable
+              onDragStart={(e) => {
+                e.dataTransfer.setData(DND_MIME, JSON.stringify({ type: 'strip', stripId: strip.id }))
+                e.dataTransfer.effectAllowed = 'move'
+              }}
+              style={{ cursor: 'grab', display: 'inline-flex', alignItems: 'center' }}
             >
-              {sig.channel}
-            </Badge>
-          ))}
+              <IconGripVertical size={14} color="var(--mantine-color-dimmed)" />
+            </span>
+          </Tooltip>
+          <Text size="xs" c="dimmed">
+            {strip.signals.length === 0
+              ? 'Empty strip — add signals from the browser or drop one here'
+              : `${strip.signals.length} signal${strip.signals.length === 1 ? '' : 's'}`}
+          </Text>
           {built.decimated && (
             <Badge size="xs" variant="light" color="gray">
               envelope
@@ -346,23 +620,75 @@ function StripView({
           </Text>
         </Alert>
       )}
-      <Box h={STRIP_HEIGHT}>
-        {built.loaded.length > 0 ? (
-          <UPlotChart
-            data={built.data}
-            options={options}
-            xRange={xRange}
-            cursors={cursors}
-            onUserZoom={onZoom}
-            onResetZoom={onResetZoom}
-            onCursorSet={onCursorSet}
-            onOffsetDrag={onOffsetDrag}
-          />
-        ) : (
-          <Group justify="center" h="100%">
-            <IconWaveSine size={28} color="var(--mantine-color-dimmed)" stroke={1.2} />
-          </Group>
-        )}
+      <Group gap={0} align="stretch" wrap="nowrap" style={{ flex: 1, minHeight: 0 }}>
+        <Box style={{ flex: 1, minWidth: 0 }}>
+          {built.loaded.length > 0 ? (
+            <UPlotChart
+              data={built.data}
+              options={options}
+              xRange={xRange}
+              cursors={cursors}
+              mouseMode={mouseMode}
+              onUserZoom={onZoom}
+              onResetZoom={onResetZoom}
+              onCursorSet={onCursorSet}
+              onOffsetDrag={onOffsetDrag}
+              onHover={onHover}
+            />
+          ) : (
+            <Group justify="center" h="100%">
+              <IconWaveSine size={28} color="var(--mantine-color-dimmed)" stroke={1.2} />
+            </Group>
+          )}
+        </Box>
+        <SignalList
+          strip={strip}
+          offsets={offsets}
+          hoverT={hoverT}
+          cursors={cursors}
+          onRemoveSignal={onRemoveSignal}
+          onSetKind={onSetKind}
+          onMoveToNewStrip={onMoveToNewStrip}
+        />
+      </Group>
+      {/* Bottom resize handle: pixel drag rescales this strip's flex weight
+          (share of the panel); flex rebalances the sibling strips live. */}
+      <Box
+        h={7}
+        aria-label="Resize strip"
+        style={{ cursor: 'ns-resize', touchAction: 'none', flexShrink: 0 }}
+        onPointerDown={(e) => {
+          e.preventDefault()
+          e.stopPropagation()
+          const root = e.currentTarget.parentElement
+          if (root === null) return
+          const startY = e.clientY
+          const startPx = root.getBoundingClientRect().height
+          const startWeight = weight
+          if (startPx <= 0) return
+          e.currentTarget.setPointerCapture(e.pointerId)
+          const clamp = (w: number) => Math.max(WEIGHT_MIN, Math.min(WEIGHT_MAX, w))
+          const toWeight = (clientY: number) =>
+            clamp((startWeight * Math.max(STRIP_MIN_PX, startPx + clientY - startY)) / startPx)
+          const target = e.currentTarget
+          const onMove = (ev: PointerEvent) => setLiveWeight(toWeight(ev.clientY))
+          const onUp = (ev: PointerEvent) => {
+            target.removeEventListener('pointermove', onMove)
+            target.removeEventListener('pointerup', onUp)
+            setLiveWeight(null)
+            onResizeWeight(Number(toWeight(ev.clientY).toFixed(3)))
+          }
+          target.addEventListener('pointermove', onMove)
+          target.addEventListener('pointerup', onUp)
+        }}
+      >
+        <Box
+          w={36}
+          h={3}
+          mx="auto"
+          mt={2}
+          style={{ borderRadius: 2, background: 'var(--mantine-color-default-border)' }}
+        />
       </Box>
     </Box>
   )
@@ -468,8 +794,23 @@ export default function DataAnalyzerTab({ singleAnalyzerId, analyzers, onAnalyze
     cursorA: null,
     cursorB: null,
     snap: true,
+    mouseMode: 'zoom',
     instrument: 'scope',
   })
+  // Hover time (floating-cursor readout), rAF-coalesced: setCursor fires per
+  // mousemove and re-renders every strip's signal list.
+  const [hoverT, setHoverT] = useState<number | null>(null)
+  const hoverPending = useRef<number | null>(null)
+  const hoverFrame = useRef(0)
+  const handleHover = useCallback((t: number | null) => {
+    hoverPending.current = t
+    if (hoverFrame.current !== 0) return
+    hoverFrame.current = requestAnimationFrame(() => {
+      hoverFrame.current = 0
+      setHoverT(hoverPending.current)
+    })
+  }, [])
+  useEffect(() => () => cancelAnimationFrame(hoverFrame.current), [])
   const [search, setSearch] = useState('')
   const [importing, setImporting] = useState(false)
   const [importError, setImportError] = useState<string | null>(null)
@@ -671,6 +1012,86 @@ export default function DataAnalyzerTab({ singleAnalyzerId, analyzers, onAnalyze
   const removeStrip = (id: string) => {
     updateSpec((cur) => ({ ...cur, strips: cur.strips.filter((s) => s.id !== id) }))
     if (view.selectedStripId === id) dispatch({ type: 'select-strip', id: null })
+  }
+
+  /** Drop of a signal row onto another strip (MDA drag-between-strips). */
+  const dropSignal = (toStripId: string, fromStripId: string, measurementId: string, channel: string) => {
+    updateSpec((cur) => ({
+      ...cur,
+      strips: moveSignalOp(cur.strips, fromStripId, toStripId, measurementId, channel),
+    }))
+  }
+
+  /** Drop of a strip grip onto another strip: the dragged strip takes its slot. */
+  const dropStrip = (targetStripId: string, dragStripId: string) => {
+    updateSpec((cur) => ({ ...cur, strips: reorderStripOp(cur.strips, dragStripId, targetStripId) }))
+  }
+
+  const setStripWeight = (stripId: string, weight: number) => {
+    updateSpec((cur) => ({
+      ...cur,
+      // Drop the legacy px height once a weight is set (it only feeds the
+      // one-time migration in stripWeight()).
+      strips: cur.strips.map((s) =>
+        s.id === stripId ? { ...s, weight, height: undefined } : s,
+      ),
+    }))
+  }
+
+  /** MDA "Treat As Boolean/Analog Signal" (undefined = back to auto). */
+  const setSignalKind = (
+    stripId: string,
+    channel: string,
+    measurementId: string,
+    kind: 'analog' | 'boolean' | undefined,
+  ) => {
+    updateSpec((cur) => ({
+      ...cur,
+      strips: cur.strips.map((s) =>
+        s.id === stripId
+          ? {
+              ...s,
+              signals: s.signals.map((sig) =>
+                sig.channel === channel && sig.measurementId === measurementId
+                  ? { ...sig, kindOverride: kind }
+                  : sig,
+              ),
+            }
+          : s,
+      ),
+    }))
+  }
+
+  /** MDA "Move to New Strip": insert a strip right below and move the signal. */
+  const moveToNewStrip = (fromStripId: string, channel: string, measurementId: string) => {
+    const strip = newStrip()
+    updateSpec((cur) => {
+      const strips = [...cur.strips]
+      const idx = strips.findIndex((s) => s.id === fromStripId)
+      strips.splice(idx < 0 ? strips.length : idx + 1, 0, strip)
+      return { ...cur, strips: moveSignalOp(strips, fromStripId, strip.id, measurementId, channel) }
+    })
+  }
+
+  /** Zoom in/out buttons: scale the window about its center (factor <1 = in).
+   *  With no explicit window yet, start from the loaded data extents. */
+  const zoomBy = (factor: number) => {
+    let range = view.xRange
+    if (range === null) {
+      let lo = Number.POSITIVE_INFINITY
+      let hi = Number.NEGATIVE_INFINITY
+      for (const sig of allSignals) {
+        const win = offsetWindow(sig, offsets.get(sig.measurementId) ?? 0, null, null, MAX_POINTS)
+        if (!win || win.t.length === 0) continue
+        lo = Math.min(lo, win.t[0])
+        hi = Math.max(hi, win.t[win.t.length - 1])
+      }
+      if (!(hi > lo)) return
+      range = [lo, hi]
+    }
+    const center = (range[0] + range[1]) / 2
+    const half = ((range[1] - range[0]) / 2) * factor
+    if (half > 0) dispatch({ type: 'zoom', min: center - half, max: center + half })
   }
 
   const removeSignal = (stripId: string, channel: string, measurementId: string) => {
@@ -1040,7 +1461,8 @@ export default function DataAnalyzerTab({ singleAnalyzerId, analyzers, onAnalyze
             }
           }}
         >
-          {/* Cursor readout bar (§2.5e): A (click), B (Shift+click), Δt. */}
+          {/* Cursor readout bar (§2.5e): A (click), B (Shift+click), Δt, live
+              hover time; per-signal values live in each strip's signal list. */}
           <Group gap="md" wrap="nowrap" mb={6}>
             <Group gap={4} wrap="nowrap">
               <Badge size="sm" variant="light" color="yellow">
@@ -1062,6 +1484,9 @@ export default function DataAnalyzerTab({ singleAnalyzerId, analyzers, onAnalyze
               Δt = {dt !== null ? `${formatValue(dt)} s` : '—'}
               {dt !== null && dt !== 0 ? `  (${formatValue(1 / Math.abs(dt))} Hz)` : ''}
             </Text>
+            <Text size="xs" ff="monospace" c="dimmed" w={110}>
+              t = {hoverT !== null ? `${formatValue(hoverT)} s` : '—'}
+            </Text>
             <Switch
               size="xs"
               label="Snap to samples"
@@ -1077,16 +1502,72 @@ export default function DataAnalyzerTab({ singleAnalyzerId, analyzers, onAnalyze
             >
               Clear cursors
             </Button>
+            {/* Mouse-mode + zoom tools (MDA toolbar parity). */}
+            <Group gap={4} wrap="nowrap" ml="auto">
+              <Tooltip label="Area zoom — drag a box to zoom in">
+                <ActionIcon
+                  size="sm"
+                  variant={view.mouseMode === 'zoom' ? 'filled' : 'default'}
+                  aria-label="Area zoom mode"
+                  onClick={() => dispatch({ type: 'set-mouse-mode', mode: 'zoom' })}
+                >
+                  <IconZoomInArea size={14} />
+                </ActionIcon>
+              </Tooltip>
+              <Tooltip label="Pan — drag to scroll along the time axis">
+                <ActionIcon
+                  size="sm"
+                  variant={view.mouseMode === 'pan' ? 'filled' : 'default'}
+                  aria-label="Pan mode"
+                  onClick={() => dispatch({ type: 'set-mouse-mode', mode: 'pan' })}
+                >
+                  <IconHandMove size={14} />
+                </ActionIcon>
+              </Tooltip>
+              <Tooltip label="Zoom in">
+                <ActionIcon
+                  size="sm"
+                  variant="default"
+                  aria-label="Zoom in"
+                  onClick={() => zoomBy(0.5)}
+                >
+                  <IconZoomIn size={14} />
+                </ActionIcon>
+              </Tooltip>
+              <Tooltip label="Zoom out">
+                <ActionIcon
+                  size="sm"
+                  variant="default"
+                  aria-label="Zoom out"
+                  onClick={() => zoomBy(2)}
+                >
+                  <IconZoomOut size={14} />
+                </ActionIcon>
+              </Tooltip>
+            </Group>
           </Group>
-          <ScrollArea style={{ flex: 1 }} type="auto">
-            <Stack gap="sm">
-              {spec.strips.map((strip) => (
+          {/* Fill-area strip stack (MDA): one strip covers the whole panel,
+              added strips split it by their flex weights; below the minimum
+              per-strip height the stack scrolls. */}
+          <Box
+            style={{
+              flex: 1,
+              minHeight: 0,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 8,
+              overflowY: 'auto',
+            }}
+          >
+            {spec.strips.map((strip) => (
                 <StripView
                   key={strip.id}
                   strip={strip}
                   syncKey={syncKey}
                   xRange={view.xRange}
                   cursors={cursors}
+                  hoverT={hoverT}
+                  mouseMode={view.mouseMode}
                   offsets={offsets}
                   storeVersion={storeVersion}
                   selected={view.selectedStripId === strip.id}
@@ -1096,19 +1577,30 @@ export default function DataAnalyzerTab({ singleAnalyzerId, analyzers, onAnalyze
                   onResetZoom={() => dispatch({ type: 'reset-zoom' })}
                   onCursorSet={placeCursor(strip)}
                   onOffsetDrag={dragOffset(strip)}
+                  onHover={handleHover}
                   onRemoveSignal={(channel, measurementId) =>
                     removeSignal(strip.id, channel, measurementId)
                   }
                   onRemoveStrip={() => removeStrip(strip.id)}
+                  onResizeWeight={(weight) => setStripWeight(strip.id, weight)}
+                  onDropSignal={(fromStripId, measurementId, channel) =>
+                    dropSignal(strip.id, fromStripId, measurementId, channel)
+                  }
+                  onDropStrip={(dragStripId) => dropStrip(strip.id, dragStripId)}
+                  onSetKind={(channel, measurementId, kind) =>
+                    setSignalKind(strip.id, channel, measurementId, kind)
+                  }
+                  onMoveToNewStrip={(channel, measurementId) =>
+                    moveToNewStrip(strip.id, channel, measurementId)
+                  }
                 />
-              ))}
-              {spec.strips.length === 0 && (
-                <Text size="sm" c="dimmed" ta="center" mt="xl">
-                  No strips — add one to start plotting signals.
-                </Text>
-              )}
-            </Stack>
-          </ScrollArea>
+            ))}
+            {spec.strips.length === 0 && (
+              <Text size="sm" c="dimmed" ta="center" mt="xl">
+                No strips — add one to start plotting signals.
+              </Text>
+            )}
+          </Box>
         </Tabs.Panel>
 
         <Tabs.Panel value="table" style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }} pt={6}>
