@@ -25,6 +25,7 @@
 import { useEffect, useRef } from 'react'
 import uPlot from 'uplot'
 import 'uplot/dist/uPlot.min.css'
+import { formatValue } from '../format'
 
 /** Measurement cursors A + B (§2.5e), drawn as labeled vertical lines. */
 export interface AbCursors {
@@ -32,7 +33,13 @@ export interface AbCursors {
   b: number | null
 }
 
+/** What a mouse drag does on the plot area (toolbar-selected, oscilloscope-style). */
+export type MouseMode = 'zoom' | 'pan'
+
 const CURSOR_COLORS = { a: '#ffd43b', b: '#3bc9db' } as const
+
+/** Min ms between live pan dispatches (remote windows refetch per range). */
+const PAN_DISPATCH_MS = 80
 
 interface Props {
   /** Chart options sans width/height (owned by the wrapper's ResizeObserver). */
@@ -42,6 +49,8 @@ interface Props {
   xRange: [number, number] | null
   /** A/B measurement cursor positions (time values) to draw. */
   cursors?: AbCursors
+  /** Drag behavior: 'zoom' = box zoom (default), 'pan' = scroll the window. */
+  mouseMode?: MouseMode
   /** User changed the x scale (drag-zoom or wheel); NOT fired for setData. */
   onUserZoom?: (min: number, max: number) => void
   /** Double-click — reset to the full recording. */
@@ -51,6 +60,9 @@ interface Props {
   /** SHIFT-drag finished: shift the strip's file offset by this many seconds
    *  (Phase 5a; numeric entry remains the precise path). */
   onOffsetDrag?: (deltaSeconds: number) => void
+  /** Hover cursor moved (display-time x), null on leave. Fires from the
+   *  hovered chart only; synced strips follow via uPlot's cursor sync. */
+  onHover?: (t: number | null) => void
 }
 
 export default function UPlotChart({
@@ -58,10 +70,12 @@ export default function UPlotChart({
   data,
   xRange,
   cursors,
+  mouseMode = 'zoom',
   onUserZoom,
   onResetZoom,
   onCursorSet,
   onOffsetDrag,
+  onHover,
 }: Readonly<Props>) {
   const containerRef = useRef<HTMLDivElement>(null)
   const chartRef = useRef<uPlot | null>(null)
@@ -71,11 +85,15 @@ export default function UPlotChart({
   xRangeRef.current = xRange
   const cursorsRef = useRef(cursors)
   cursorsRef.current = cursors
+  const modeRef = useRef(mouseMode)
+  modeRef.current = mouseMode
+  /** True while the pointer is over THIS chart (not a sync follower). */
+  const hovered = useRef(false)
   // True while a programmatic update (create/setData/setSize) is in flight,
   // including the microtask in which uPlot flushes the resulting hooks.
   const internalUpdate = useRef(false)
-  const cbRef = useRef({ onUserZoom, onResetZoom, onCursorSet, onOffsetDrag })
-  cbRef.current = { onUserZoom, onResetZoom, onCursorSet, onOffsetDrag }
+  const cbRef = useRef({ onUserZoom, onResetZoom, onCursorSet, onOffsetDrag, onHover })
+  cbRef.current = { onUserZoom, onResetZoom, onCursorSet, onOffsetDrag, onHover }
 
   /** Run a programmatic chart mutation without it registering as a user zoom. */
   const guarded = (fn: () => void) => {
@@ -100,10 +118,10 @@ export default function UPlotChart({
       cursor: {
         ...options.cursor,
         bind: {
-          // SHIFT is reserved for cursor B and offset-drag: keep uPlot's own
-          // drag-select (zoom-box) off while shift is held.
+          // SHIFT is reserved for cursor B and offset-drag, and pan mode owns
+          // the plain drag: keep uPlot's drag-select (zoom-box) off for both.
           mousedown: (_u, _targ, handler) => (e) => {
-            if (!(e as MouseEvent).shiftKey) handler(e)
+            if (!(e as MouseEvent).shiftKey && modeRef.current !== 'pan') handler(e)
             return null
           },
         },
@@ -125,6 +143,18 @@ export default function UPlotChart({
             if (key !== 'x' || internalUpdate.current) return
             const { min, max } = u.scales.x
             if (min != null && max != null) cbRef.current.onUserZoom?.(min, max)
+          },
+        ],
+        // Live hover readout: report the hovered time (only from the chart the
+        // mouse is actually over — synced followers fire setCursor too).
+        setCursor: [
+          ...(options.hooks?.setCursor ?? []),
+          (u: uPlot) => {
+            if (!hovered.current) return
+            const left = u.cursor.left
+            cbRef.current.onHover?.(
+              left == null || left < 0 ? null : u.posToVal(left, 'x'),
+            )
           },
         ],
         // Measurement cursors A/B: labeled vertical lines over the plot area,
@@ -153,7 +183,12 @@ export default function UPlotChart({
               ctx.setLineDash([])
               ctx.fillStyle = CURSOR_COLORS[which]
               ctx.font = `${11 * dpr}px sans-serif`
-              ctx.fillText(which.toUpperCase(), x + 3 * dpr, u.bbox.top + 11 * dpr)
+              // Label + time value attached to the cursor line (the reference measurement tool tooltip).
+              ctx.fillText(
+                `${which.toUpperCase()} ${formatValue(t)}s`,
+                x + 3 * dpr,
+                u.bbox.top + 11 * dpr,
+              )
               ctx.restore()
             }
           },
@@ -177,10 +212,36 @@ export default function UPlotChart({
 
     // Plain click (no drag) places measurement cursor A; Shift+click places B;
     // SHIFT-drag (travel > 3px) shifts the strip's file offset (Phase 5a).
-    // A plain drag stays uPlot's zoom-box.
+    // A plain drag is uPlot's zoom-box in 'zoom' mode, a live window pan in
+    // 'pan' mode (window listeners so the drag survives leaving the strip).
     let downPos: { x: number; y: number; shift: boolean } | null = null
+    let panStart: { px: number; min: number; max: number; width: number } | null = null
+    let lastPanDispatch = 0
     const onMouseDown = (e: MouseEvent) => {
       downPos = { x: e.clientX, y: e.clientY, shift: e.shiftKey }
+      if (modeRef.current === 'pan' && !e.shiftKey && e.button === 0) {
+        const c = chartRef.current
+        const { min, max } = c?.scales.x ?? {}
+        if (c && min != null && max != null) {
+          panStart = { px: e.clientX, min, max, width: c.over.getBoundingClientRect().width }
+        }
+      }
+    }
+    const onWindowMove = (e: MouseEvent) => {
+      if (!panStart || panStart.width <= 0) return
+      const now = performance.now()
+      if (now - lastPanDispatch < PAN_DISPATCH_MS) return
+      lastPanDispatch = now
+      const d = ((panStart.px - e.clientX) / panStart.width) * (panStart.max - panStart.min)
+      cbRef.current.onUserZoom?.(panStart.min + d, panStart.max + d)
+    }
+    const onWindowUp = (e: MouseEvent) => {
+      if (!panStart) return
+      const start = panStart
+      panStart = null
+      if (start.width <= 0 || Math.abs(e.clientX - start.px) <= 3) return
+      const d = ((start.px - e.clientX) / start.width) * (start.max - start.min)
+      cbRef.current.onUserZoom?.(start.min + d, start.max + d)
     }
     const onMouseUp = (e: MouseEvent) => {
       const down = downPos
@@ -198,13 +259,24 @@ export default function UPlotChart({
             cbRef.current.onOffsetDrag?.(t1 - t0)
           }
         }
-        return // plain drag = uPlot zoom-box
+        return // plain drag = zoom-box ('zoom') or pan (handled above)
       }
       const t = c.posToVal(e.clientX - rect.left, 'x')
       if (Number.isFinite(t)) cbRef.current.onCursorSet?.(t, down.shift ? 'b' : 'a')
     }
+    const onEnter = () => {
+      hovered.current = true
+    }
+    const onLeave = () => {
+      hovered.current = false
+      cbRef.current.onHover?.(null)
+    }
     chart!.over.addEventListener('mousedown', onMouseDown)
     chart!.over.addEventListener('mouseup', onMouseUp)
+    chart!.over.addEventListener('mouseenter', onEnter)
+    chart!.over.addEventListener('mouseleave', onLeave)
+    window.addEventListener('mousemove', onWindowMove)
+    window.addEventListener('mouseup', onWindowUp)
 
     // Wheel = x-zoom centered on the cursor.
     const onWheel = (e: WheelEvent) => {
@@ -241,6 +313,10 @@ export default function UPlotChart({
       chart.over.removeEventListener('wheel', onWheel)
       chart.over.removeEventListener('mousedown', onMouseDown)
       chart.over.removeEventListener('mouseup', onMouseUp)
+      chart.over.removeEventListener('mouseenter', onEnter)
+      chart.over.removeEventListener('mouseleave', onLeave)
+      window.removeEventListener('mousemove', onWindowMove)
+      window.removeEventListener('mouseup', onWindowUp)
       chartRef.current = null
       // Destroy can fire hooks too — keep it guarded.
       guarded(() => chart.destroy())
@@ -252,6 +328,12 @@ export default function UPlotChart({
   useEffect(() => {
     chartRef.current?.redraw(false)
   }, [cursors])
+
+  // Pan mode advertises itself with a grab cursor over the plot area.
+  useEffect(() => {
+    const over = chartRef.current?.over
+    if (over) over.style.cursor = mouseMode === 'pan' ? 'grab' : ''
+  }, [mouseMode, options])
 
   // Data-only updates keep the chart instance (cursor state survives). The
   // scale range() function re-applies xRangeRef during the reset.

@@ -51,12 +51,22 @@ export interface SignalRef {
  */
 export interface AnalyzerSignal extends SignalRef {
   color: string
+  /** Rendering override (the reference measurement tool "Treat As Boolean/Analog Signal"); absent = auto. */
+  kindOverride?: 'analog' | 'boolean'
 }
 
 /** One oscilloscope strip (a horizontal time-series band). */
 export interface AnalyzerStrip {
   id: string
   signals: AnalyzerSignal[]
+  /** Legacy chart height in px (pre fill-area layout); migrated to `weight`. */
+  height?: number
+  /**
+   * Relative share of the oscilloscope area (flex weight, default 1): one
+   * strip fills the whole panel, added strips split it, and the per-strip
+   * resize handle rebalances the shares (the reference measurement tool strip layout).
+   */
+  weight?: number
 }
 
 /** A measurement file attached to an analyzer window. */

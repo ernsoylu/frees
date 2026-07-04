@@ -58,14 +58,14 @@ export function offsetRawRange(
   return { ...raw, t: shifted(raw.t, offset) }
 }
 
-/** Exact sample at/before display time x. */
+/** Exact sample at/before display time x (`approx` = remote envelope estimate). */
 export function offsetExactValueAt(
   ref: SignalRef,
   offset: number,
   x: number,
-): { t: number; v: number } | null {
+): { t: number; v: number; approx?: boolean } | null {
   const hit = channelStore.exactValueAt(ref, x - offset)
-  return hit ? { t: hit.t + offset, v: hit.v } : null
+  return hit ? { t: hit.t + offset, v: hit.v, approx: hit.approx } : null
 }
 
 /** Nearest sample time in display time (cursor snap). */
