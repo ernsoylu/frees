@@ -63,6 +63,44 @@ class ControlControllerPlantTest {
         assertEquals(HttpStatus.BAD_REQUEST, res.getStatusCode());
     }
 
+    @Test
+    void rejectsMissingLoopArguments() {
+        assertEquals(HttpStatus.BAD_REQUEST, controller.plant(new ControlController.PlantRequest(
+                LOOP, null, "SP", "plant.out.sig", true, "pi", 2, 1, 0)).getStatusCode());
+        assertEquals(HttpStatus.BAD_REQUEST, controller.plant(new ControlController.PlantRequest(
+                LOOP, "loop", null, "plant.out.sig", true, "pi", 2, 1, 0)).getStatusCode());
+    }
+
+    @Test
+    void reportsAnUnfindableReferenceConstant() {
+        ResponseEntity<Object> res = controller.plant(new ControlController.PlantRequest(
+                LOOP, "loop", "NOPE", "plant.out.sig", true, "pi", 2, 1, 0));
+        assertEquals(HttpStatus.BAD_REQUEST, res.getStatusCode());
+    }
+
+    @Test
+    void reportsWhenPlantExtractionHasNoSolver() {
+        ControlController noSolver = new ControlController(null);
+        assertEquals(HttpStatus.BAD_REQUEST, noSolver.plant(new ControlController.PlantRequest(
+                LOOP, "loop", "SP", "plant.out.sig", true, "pi", 2, 1, 0)).getStatusCode());
+    }
+
+    @Test
+    void injectReferenceVariableRewritesTheConstant() {
+        String out = ControlController.injectReferenceVariable(
+                "SigConstant SP(k=303)\nconnect(SP.out, PID.pv)", "SP", "freespidref");
+        assertTrue(out.contains("freespidref = 303"), out);
+        assertTrue(out.contains("k = freespidref"), out);
+    }
+
+    @Test
+    void injectReferenceVariableReturnsNullWhenAbsent() {
+        assertEquals(null, ControlController.injectReferenceVariable(
+                "SigConstant SP(k=1)", "OTHER", "freespidref"));
+        assertEquals(null, ControlController.injectReferenceVariable(
+                "SigStep SP(t0=1)", "SP", "freespidref"));
+    }
+
     /** Evaluate num(jw)/den(jw) → {re, im}. */
     private static double[] evalRational(double[] num, double[] den, double w) {
         double[] n = evalPoly(num, w);
