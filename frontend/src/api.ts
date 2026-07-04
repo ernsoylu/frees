@@ -992,3 +992,51 @@ export async function solveTable(
     throw e instanceof Error ? e : new Error(String(e))
   }
 }
+
+// ---------------------------------------------------------------------------
+// PID Tuner (control design) — POST /api/control/pidtune
+// ---------------------------------------------------------------------------
+
+export interface PidTuneRequest {
+  /** Plant transfer function, descending powers. */
+  num: number[]
+  den: number[]
+  type: 'p' | 'pi' | 'pid'
+  /** Target open-loop gain crossover (rad/s) — the "response time" knob. */
+  wc?: number
+  /** Target phase margin (deg) — the "transient behaviour"/robustness knob. */
+  pm?: number
+  horizon?: number
+  points?: number
+}
+
+export interface PidTuneResponse {
+  kp: number
+  ki: number
+  kd: number
+  wc: number
+  pm: number
+  t: number[]
+  y: number[]
+  riseTime: number
+  peakTime: number
+  settlingTime: number
+  overshoot: number
+  gainMargin: number
+  phaseMargin: number
+}
+
+/** Tune a PID for a plant and get the closed-loop step + metrics back.
+ *  Pure numeric work on the API node — always a direct (non-job) call. */
+export async function pidTune(req: PidTuneRequest): Promise<PidTuneResponse> {
+  const response = await fetch(`${API_BASE}/api/control/pidtune`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(req),
+  })
+  const data = await response.json().catch(() => null)
+  if (!response.ok) {
+    throw new Error(data?.error ?? `PID tune failed with status ${response.status}`)
+  }
+  return data as PidTuneResponse
+}
