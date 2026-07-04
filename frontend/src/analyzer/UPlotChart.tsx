@@ -329,11 +329,6 @@ export default function UPlotChart({
     chartRef.current?.redraw(false)
   }, [cursors])
 
-  // Pan mode advertises itself with a grab cursor over the plot area.
-  useEffect(() => {
-    const over = chartRef.current?.over
-    if (over) over.style.cursor = mouseMode === 'pan' ? 'grab' : ''
-  }, [mouseMode, options])
 
   // Data-only updates keep the chart instance (cursor state survives). The
   // scale range() function re-applies xRangeRef during the reset.
@@ -344,5 +339,16 @@ export default function UPlotChart({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data])
 
-  return <div ref={containerRef} style={{ width: '100%', height: '100%', minHeight: 0 }} />
+  // Pan mode advertises itself with a grab cursor (inherited by the overlay).
+  return (
+    <div
+      ref={containerRef}
+      style={{
+        width: '100%',
+        height: '100%',
+        minHeight: 0,
+        cursor: mouseMode === 'pan' ? 'grab' : undefined,
+      }}
+    />
+  )
 }
