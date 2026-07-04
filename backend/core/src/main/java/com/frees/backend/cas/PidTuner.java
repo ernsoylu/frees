@@ -146,6 +146,184 @@ public final class PidTuner {
         return 1.0;
     }
 
+    /**
+     * Recover the open-loop plant {@code G(s)} seen by a SigPID from the
+     * linearized closed loop and the controller currently in the loop.
+     *
+     * <p>Perturbing the exogenous reference and measuring the plant output gives
+     * the closed-loop transfer {@code M = ∂y/∂r} (via {@code LINEARIZE} +
+     * {@code ss2tf}). frees' PID error is {@code e = sp − pv}, so with the loop
+     * gain {@code L = C0·G}:
+     * <ul>
+     *   <li>reference on the {@code sp} input, measurement on {@code pv} (the
+     *       common wiring, {@code e = r − y}): {@code M = L/(1+L)} ⟹
+     *       {@code L = M/(1−M)};</li>
+     *   <li>reference on {@code pv}, measurement on {@code sp} (reverse-acting,
+     *       {@code e = y − r}): {@code M = −L/(1−L)} ⟹ {@code L = M/(M−1)}.</li>
+     * </ul>
+     * Then {@code G = L/C0}. All operations are exact polynomial algebra.
+     *
+     * @param mNum,mDen  closed-loop transfer M = ∂output/∂reference
+     * @param cNum,cDen  current controller C0(s)
+     * @param referenceOnSp true when the reference drives the PID's {@code sp}
+     *                      input (the common wiring); false for the reverse
+     *                      wiring where the reference drives {@code pv}
+     * @return {@code {num, den}} of the recovered plant G(s)
+     */
+    public static double[][] recoverPlant(
+            double[] mNum, double[] mDen, double[] cNum, double[] cDen, boolean referenceOnSp) {
+        // L = M/(1−M) = mNum / (mDen − mNum)  [reference on sp, standard]
+        // L = M/(M−1) = mNum / (mNum − mDen)  [reference on pv, reverse-acting]
+        double[] lNum = mNum;
+        double[] lDen = referenceOnSp
+                ? subtractRaw(mDen, mNum)
+                : subtractRaw(mNum, mDen);
+        // G = L / C0 = (lNum·cDen) / (lDen·cNum)
+        double[] gNum = PolynomialHelpers.multiplyRaw(lNum, cDen);
+        double[] gDen = PolynomialHelpers.multiplyRaw(lDen, cNum);
+        // Cancel the common s^k factor the recovery introduces: the controller's
+        // integrator (cDen = s) and the type-1 loop's (1−M) each contribute a
+        // root at the origin, which must cancel for G to have the right type.
+        int drop = commonTrailingZeros(gNum, gDen);
+        gNum = java.util.Arrays.copyOfRange(gNum, 0, gNum.length - drop);
+        gDen = java.util.Arrays.copyOfRange(gDen, 0, gDen.length - drop);
+        return new double[][]{trimLeadingZeros(gNum), trimLeadingZeros(gDen)};
+    }
+
+    /** Count trailing (constant-end) coefficients that are ≈0 in BOTH
+     *  polynomials — the common factor of s^k to divide out of a ratio. */
+    private static int commonTrailingZeros(double[] num, double[] den) {
+        double scale = 0;
+        for (double v : num) {
+            scale = Math.max(scale, Math.abs(v));
+        }
+        for (double v : den) {
+            scale = Math.max(scale, Math.abs(v));
+        }
+        double tol = (scale == 0 ? 1 : scale) * 1e-9;
+        int drop = 0;
+        int maxDrop = Math.min(num.length, den.length) - 1;
+        while (drop < maxDrop
+                && Math.abs(num[num.length - 1 - drop]) < tol
+                && Math.abs(den[den.length - 1 - drop]) < tol) {
+            drop++;
+        }
+        return drop;
+    }
+
+    /**
+     * SISO state-space → transfer function {@code C(sI−A)⁻¹B + D}, computed
+     * numerically via the Faddeev–LeVerrier (Souriau–Frame) recursion. Returns
+     * {@code {num, den}}, both length n+1 (descending powers). This avoids the
+     * symbolic CAS path, which can choke on some numerically-linearized systems.
+     */
+    public static double[][] ssToTf(double[][] a, double[] b, double[] c, double d) {
+        int n = a.length;
+        if (n == 0) {
+            return new double[][]{{d}, {1.0}};
+        }
+        double[] den = new double[n + 1];
+        den[0] = 1.0;
+        double[] numAdj = new double[n]; // C·adj(sI−A)·B, descending s^{n-1}..s^0
+        double[][] bk = identity(n);     // B_0 = I
+        for (int k = 1; k <= n; k++) {
+            // numerator contribution from B_{k-1}: c · (B_{k-1} · b)
+            numAdj[k - 1] = dot(c, matVec(bk, b));
+            double[][] abk = matMul(a, bk);
+            double pk = -trace(abk) / k;
+            den[k] = pk;
+            // B_k = A·B_{k-1} + pk·I
+            bk = addScaledIdentity(abk, pk);
+        }
+        // G_num = numAdj (deg n-1) + D·den (deg n); pad numAdj to length n+1.
+        double[] num = new double[n + 1];
+        System.arraycopy(numAdj, 0, num, 1, n);
+        for (int i = 0; i <= n; i++) {
+            num[i] += d * den[i];
+        }
+        return new double[][]{num, den};
+    }
+
+    private static double[][] identity(int n) {
+        double[][] m = new double[n][n];
+        for (int i = 0; i < n; i++) {
+            m[i][i] = 1.0;
+        }
+        return m;
+    }
+
+    private static double[][] matMul(double[][] a, double[][] b) {
+        int n = a.length;
+        double[][] r = new double[n][n];
+        for (int i = 0; i < n; i++) {
+            for (int k = 0; k < n; k++) {
+                double aik = a[i][k];
+                if (aik == 0.0) {
+                    continue;
+                }
+                for (int j = 0; j < n; j++) {
+                    r[i][j] += aik * b[k][j];
+                }
+            }
+        }
+        return r;
+    }
+
+    private static double[] matVec(double[][] m, double[] v) {
+        int n = m.length;
+        double[] r = new double[n];
+        for (int i = 0; i < n; i++) {
+            double s = 0;
+            for (int j = 0; j < n; j++) {
+                s += m[i][j] * v[j];
+            }
+            r[i] = s;
+        }
+        return r;
+    }
+
+    private static double dot(double[] a, double[] b) {
+        double s = 0;
+        for (int i = 0; i < a.length && i < b.length; i++) {
+            s += a[i] * b[i];
+        }
+        return s;
+    }
+
+    private static double trace(double[][] m) {
+        double s = 0;
+        for (int i = 0; i < m.length; i++) {
+            s += m[i][i];
+        }
+        return s;
+    }
+
+    private static double[][] addScaledIdentity(double[][] m, double scalar) {
+        double[][] r = new double[m.length][m.length];
+        for (int i = 0; i < m.length; i++) {
+            System.arraycopy(m[i], 0, r[i], 0, m.length);
+            r[i][i] += scalar;
+        }
+        return r;
+    }
+
+    private static double[] subtractRaw(double[] a, double[] b) {
+        double[] negB = b.clone();
+        for (int i = 0; i < negB.length; i++) {
+            negB[i] = -negB[i];
+        }
+        return PolynomialHelpers.addRaw(a, negB);
+    }
+
+    /** Drop leading (highest-order) zero coefficients; keep at least one term. */
+    private static double[] trimLeadingZeros(double[] c) {
+        int i = 0;
+        while (i < c.length - 1 && c[i] == 0.0) {
+            i++;
+        }
+        return i == 0 ? c : java.util.Arrays.copyOfRange(c, i, c.length);
+    }
+
     /** Left-pad a coefficient vector with leading zeros to {@code len}. */
     private static double[] leftPad(double[] c, int len) {
         if (c.length >= len) {

@@ -10,7 +10,8 @@ import org.springframework.http.ResponseEntity;
 
 class ControlControllerTest {
 
-    private final ControlController controller = new ControlController();
+    private final ControlController controller =
+            new ControlController(new com.frees.backend.core.EquationSystemSolver());
 
     private static ControlController.TuneRequest req(
             double[] num, double[] den, String type, Double wc, Double pm) {
