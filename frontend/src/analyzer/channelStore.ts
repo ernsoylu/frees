@@ -415,21 +415,84 @@ class ChannelStore {
     return null
   }
 
-  /** Exact sample at/before time x (MDA's lazy `~` → exact cursor pattern). */
-  exactValueAt(ref: SignalRef, x: number): { t: number; v: number } | null {
+  /**
+   * Sample at/before time x (MDA's lazy `~` → exact cursor pattern). Local
+   * measurements answer exactly from the resident columns. Remote (.mf4)
+   * measurements answer from the cached windows: a raw window containing x is
+   * exact; if only a decimated envelope covers x, the bucket midpoint value is
+   * returned with `approx: true` (MDA's `~` readout) AND a small raw window
+   * around x is fetched in the background — the store notifies when it lands
+   * and the next read is exact.
+   */
+  exactValueAt(ref: SignalRef, x: number): { t: number; v: number; approx?: boolean } | null {
     const entry = this.entries.get(ref.measurementId)
-    const channel = entry?.channels.get(ref.channel)
-    if (!entry || entry.evicted || !channel || channel.values === null) return null
+    if (!entry || entry.evicted) return null
+    if (entry.remote) return this.remoteValueAt(entry, entry.remote, ref, x)
+    const channel = entry.channels.get(ref.channel)
+    if (!channel || channel.values === null) return null
     const idx = Math.max(0, Math.min(entry.time.length - 1, lowerBound(entry.time, x)))
     const i = idx > 0 && entry.time[idx] > x ? idx - 1 : idx
     return { t: entry.time[i], v: channel.values[i] }
   }
 
+  /** Best cached window of a remote channel that covers x (prefer raw). */
+  private static bestCachedWindow(
+    remote: RemoteState,
+    channel: string,
+    x: number,
+  ): ChannelWindow | null {
+    let fallback: ChannelWindow | null = null
+    for (const [key, win] of remote.windows) {
+      if (!key.startsWith(`${channel}|`) || win.t.length === 0) continue
+      // Envelope bucket midpoints are inset from the window edges — allow one
+      // bucket spacing of slop so edge positions still resolve.
+      const last = win.t.length - 1
+      const slop = last > 0 ? (win.t[last] - win.t[0]) / last : 0
+      if (x < win.t[0] - slop || x > win.t[last] + slop) continue
+      if (!win.decimated && win.v) return win
+      if (fallback === null || win.t[last] - win.t[0] < fallback.t[fallback.t.length - 1] - fallback.t[0]) {
+        fallback = win
+      }
+    }
+    return fallback
+  }
+
+  private remoteValueAt(
+    entry: Entry,
+    remote: RemoteState,
+    ref: SignalRef,
+    x: number,
+  ): { t: number; v: number; approx?: boolean } | null {
+    const win = ChannelStore.bestCachedWindow(remote, ref.channel, x)
+    if (win === null) return null
+    const t = win.t
+    const idx = Math.max(0, Math.min(t.length - 1, lowerBound(t, x)))
+    const i = idx > 0 && t[idx] > x ? idx - 1 : idx
+    if (!win.decimated && win.v) return { t: t[i], v: win.v[i] }
+    // Approximate from the envelope bucket, and refine: fetch a raw window one
+    // bucket wide around x. remoteWindow dedupes/memoizes and notifies.
+    const last = t.length - 1
+    const spacing = last > 0 ? (t[last] - t[0]) / last : 1
+    this.remoteWindow(entry, remote, ref, x - spacing, x + spacing, 2048)
+    const lo = win.min?.[i]
+    const hi = win.max?.[i]
+    if (lo === undefined || hi === undefined) return null
+    return { t: t[i], v: (lo + hi) / 2, approx: true }
+  }
+
   /** Time of the sample NEAREST to x (for the sample-snap cursor mode). */
   nearestTime(ref: SignalRef, x: number): number | null {
     const entry = this.entries.get(ref.measurementId)
-    if (!entry || entry.evicted || entry.time.length === 0) return null
-    const t = entry.time
+    if (!entry || entry.evicted) return null
+    let t: Float64Array | undefined
+    if (entry.remote) {
+      // Remote: snap against the best cached window (raw = exact samples,
+      // decimated = bucket midpoints — refined by the exactValueAt fetch).
+      t = ChannelStore.bestCachedWindow(entry.remote, ref.channel, x)?.t
+    } else {
+      t = entry.time
+    }
+    if (t === undefined || t.length === 0) return null
     const lb = Math.min(t.length - 1, lowerBound(t, x))
     const before = Math.max(0, lb - (t[lb] > x ? 1 : 0))
     const after = Math.min(t.length - 1, before + 1)
