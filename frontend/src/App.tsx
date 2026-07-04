@@ -110,6 +110,9 @@ const TablesWorkbookTab = lazy(() => import('./spreadsheet/TablesWorkbookTab'))
 // The Data Analyzer (uPlot + papaparse) is code-split so the measurement
 // tooling is only fetched when an analyzer window opens.
 const DataAnalyzerTab = lazy(() => import('./analyzer/DataAnalyzerTab'))
+// The analyzer's variable/signal browser, hosted by the Inspector when an
+// analyzer window is focused (the reference measurement tool's dockable variable-selection window).
+const SignalBrowser = lazy(() => import('./analyzer/SignalBrowser'))
 // Lazy: pulls the full 58 KB example catalog only when the picker opens.
 const ExamplesModal = lazy(() => import('./ExamplesModal'))
 
@@ -2020,6 +2023,55 @@ export default function App() {
         )
       }
 
+      // Data Analyzer: rename + the signal browser (the reference measurement tool's dockable variable
+      // window) — import CSV/MF4 or solved tables and assign channels to the
+      // selected strip without leaving the Inspector.
+      if (fw?.kind === 'analyzer') {
+        const an = analyzers.find((x) => `analyzer:${x.id}` === fw.id)
+        if (an) {
+          return (
+            <div style={{ height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+              <div style={{ padding: 10, paddingBottom: 4 }}>
+                <Stack gap="xs">
+                  <Text size="sm" fw={600} c="teal.4">Data Analyzer</Text>
+                  <TextInput
+                    size="xs"
+                    label="Analyzer name"
+                    value={an.name}
+                    onChange={(e) => {
+                      const value = e.currentTarget.value
+                      setAnalyzers((prev) => renameById(prev, an.id, value))
+                    }}
+                  />
+                </Stack>
+              </div>
+              <div style={{ flex: 1, minHeight: 0, padding: 10, paddingTop: 4 }}>
+                <Suspense fallback={lazyTabFallback}>
+                  <SignalBrowser
+                    spec={an}
+                    updateSpec={(mutate) =>
+                      setAnalyzers((prev) => prev.map((a) => (a.id === an.id ? mutate(a) : a)))
+                    }
+                    tables={tables}
+                  />
+                </Suspense>
+              </div>
+              <div style={{ padding: 10, paddingTop: 4 }}>
+                <Button
+                  size="xs"
+                  variant="light"
+                  color="red"
+                  fullWidth
+                  onClick={() => deleteAnalyzer(an.id)}
+                >
+                  Delete analyzer
+                </Button>
+              </div>
+            </div>
+          )
+        }
+      }
+
       // Equations: surface the equation tools.
       if (fw?.kind === 'equations') {
         return (
@@ -2143,6 +2195,7 @@ export default function App() {
             singleAnalyzerId={a.id}
             analyzers={analyzers}
             onAnalyzersChange={setAnalyzers}
+            tables={tables}
           />
         </Suspense>
       </div>
