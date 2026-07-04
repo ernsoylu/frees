@@ -9,8 +9,10 @@ import {
   TextInput,
   ThemeIcon,
   ActionIcon,
+  Tooltip,
 } from '@mantine/core'
 import {
+  IconAdjustments,
   IconChevronRight,
   IconComponents,
   IconFileExport,
@@ -296,8 +298,13 @@ function ArrayRow({ g }: Readonly<{ g: ArrayGroup }>) {
   )
 }
 
-function ComponentRow({ c, replNames }: Readonly<{ c: ComponentGroup; replNames: Set<string> }>) {
+function ComponentRow({
+  c,
+  replNames,
+  onTunePid,
+}: Readonly<{ c: ComponentGroup; replNames: Set<string>; onTunePid?: (c: ComponentGroup) => void }>) {
   const [open, setOpen] = useState(false)
+  const isPid = c.type === 'SigPID'
   return (
     <Paper withBorder p={0} radius="sm" style={{ overflow: 'hidden' }}>
       <Group
@@ -323,11 +330,29 @@ function ComponentRow({ c, replNames }: Readonly<{ c: ComponentGroup; replNames:
             </Badge>
           )}
         </Group>
-        <Text size="xs" c="dimmed" ff="monospace" style={{ flexShrink: 0 }}>
-          {c.params.length > 0 && `${c.params.length} par`}
-          {c.params.length > 0 && c.members.length > 0 && ' · '}
-          {c.members.length > 0 && `${c.members.length} var`}
-        </Text>
+        <Group gap="xs" wrap="nowrap" style={{ flexShrink: 0 }}>
+          {isPid && onTunePid && (
+            <Tooltip label="Auto-tune this PID's gains (PID Tuner)">
+              <Button
+                size="compact-xs"
+                variant="light"
+                color="teal"
+                leftSection={<IconAdjustments size={12} />}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onTunePid(c)
+                }}
+              >
+                Tune…
+              </Button>
+            </Tooltip>
+          )}
+          <Text size="xs" c="dimmed" ff="monospace">
+            {c.params.length > 0 && `${c.params.length} par`}
+            {c.params.length > 0 && c.members.length > 0 && ' · '}
+            {c.members.length > 0 && `${c.members.length} var`}
+          </Text>
+        </Group>
       </Group>
       {open && (
         <Stack gap={8} p={8}>
@@ -405,9 +430,11 @@ interface Props {
   /** Opens the Variable Information modal (guesses, bounds, units, uncertainty). */
   onEdit?: () => void
   onExportSpreadsheet?: (vars: VariableResult[]) => void
+  /** Opens the PID Tuner for a selected SigPID component instance. */
+  onTunePid?: (c: ComponentGroup) => void
 }
 
-export default function Workspace({ variables, replNames, components: instances, onEdit, onExportSpreadsheet }: Readonly<Props>) {
+export default function Workspace({ variables, replNames, components: instances, onEdit, onExportSpreadsheet, onTunePid }: Readonly<Props>) {
   const [query, setQuery] = useState('')
   // The input stays urgent (every keystroke paints immediately); the heavy
   // filter + regroup below trails behind at transition priority, so typing in
@@ -509,7 +536,9 @@ export default function Workspace({ variables, replNames, components: instances,
                 <IconComponents size={13} />
                 <Text size="xs" fw={700} c="dimmed" tt="uppercase" lts="0.05em">Components</Text>
               </Group>
-              {components.map((c) => <ComponentRow key={c.name} c={c} replNames={repl} />)}
+              {components.map((c) => (
+                <ComponentRow key={c.name} c={c} replNames={repl} onTunePid={onTunePid} />
+              ))}
             </Stack>
           )}
           {groups.length > 0 && (
