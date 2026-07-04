@@ -774,9 +774,10 @@ export default function DataAnalyzerTab({
     })
   }, [])
   useEffect(() => () => cancelAnimationFrame(hoverFrame.current), [])
-  // In-tab signal browser visibility: collapsible so the oscilloscope can use
-  // the full width when the Inspector hosts the browser instead.
-  const [browserOpen, setBrowserOpen] = useState(true)
+  // In-tab signal browser visibility. Collapsed by default: the same browser
+  // lives in the Inspector (open by default) whenever an analyzer is focused,
+  // so the oscilloscope gets the full width until the user expands it here.
+  const [browserOpen, setBrowserOpen] = useState(false)
 
   // Functional update against the LATEST state: two spec changes in the same
   // tick (e.g. two rapid add-signal clicks) must both land, so never derive

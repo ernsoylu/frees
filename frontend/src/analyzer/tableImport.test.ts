@@ -23,13 +23,13 @@ describe('tableToMeasurement — ODE origin', () => {
   const ode = paramTable({
     name: 'ode1',
     origin: 'ode',
-    vars: ['Time', 'T', 'note$'],
-    columnUnits: { Time: 's', T: 'K' },
+    vars: ['Time', 'ch.ev$hg', 'note$'],
+    columnUnits: { Time: 's', 'ch.ev$hg': 'K' },
     rows: [
-      row({ Time: '0', T: '300', note$: 'a' }),
-      row({ Time: '2', T: '340', note$: 'b' }), // out of order on purpose
-      row({ Time: '1', T: '320', note$: 'c' }),
-      row({ Time: '', T: '999', note$: 'd' }), // no time → dropped
+      row({ Time: '0', 'ch.ev$hg': '300', note$: 'a' }),
+      row({ Time: '2', 'ch.ev$hg': '340', note$: 'b' }), // out of order on purpose
+      row({ Time: '1', 'ch.ev$hg': '320', note$: 'c' }),
+      row({ Time: '', 'ch.ev$hg': '999', note$: 'd' }), // no time → dropped
     ],
   })
 
@@ -39,9 +39,10 @@ describe('tableToMeasurement — ODE origin', () => {
     expect(m.rowCount).toBe(3)
   })
 
-  it('imports value columns with units and drops all-NaN (string) columns', () => {
+  it('imports value columns with units, demangles $, and drops all-NaN columns', () => {
     const m = tableToMeasurement(ode)!
-    expect(m.channels.map((c) => c.name)).toEqual(['T'])
+    // 'ch.ev$hg' → dotted display form; the all-string 'note$' column is dropped.
+    expect(m.channels.map((c) => c.name)).toEqual(['ch.ev.hg'])
     expect(m.channels[0].unit).toBe('K')
     expect(Array.from(m.channels[0].values!)).toEqual([300, 320, 340])
     expect(m.channels[0].min).toBe(300)
