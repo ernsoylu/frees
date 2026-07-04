@@ -131,6 +131,7 @@ interface RailProps {
   onOpenStates?: () => void
   onMinMax: () => void
   onCurveFit: () => void
+  onPidTuner: () => void
   onPreferences: () => void
   onAbout: () => void
 }
@@ -402,6 +403,7 @@ export function Rail({
   onOpenStates,
   onMinMax,
   onCurveFit,
+  onPidTuner,
   onPreferences,
   onAbout,
 }: Readonly<RailProps>) {
@@ -429,6 +431,7 @@ export function Rail({
   const tools = [
     { label: 'Min/Max', tip: 'Min/Max (optimization)', icon: IconTargetArrow, onClick: onMinMax },
     { label: 'Curve Fit', tip: 'Curve Fit (least squares)', icon: IconMathFunction, onClick: onCurveFit },
+    { label: 'PID Tuner', tip: 'PID Tuner (auto-tune P/PI/PID gains)', icon: IconAdjustments, onClick: onPidTuner },
     { label: 'Preferences', tip: 'Preferences', icon: IconSettings, onClick: onPreferences },
     { label: 'About', tip: 'About', icon: IconInfoCircle, onClick: onAbout },
   ]
@@ -817,6 +820,7 @@ interface TopBarProps {
   onVariableInfo: () => void
   onMinMax: () => void
   onCurveFit: () => void
+  onPidTuner: () => void
 }
 
 function solveTooltipFor(canSolve: boolean, isTable: boolean): string {
@@ -964,6 +968,9 @@ export function TopBar(props: Readonly<TopBarProps>) {
             </Menu.Item>
             <Menu.Item leftSection={<IconMathFunction size={14} />} onClick={props.onCurveFit}>
               Curve Fit
+            </Menu.Item>
+            <Menu.Item leftSection={<IconAdjustments size={14} />} onClick={props.onPidTuner}>
+              PID Tuner
             </Menu.Item>
             <Menu.Divider />
             <Menu.Label>Auxiliary panels</Menu.Label>
