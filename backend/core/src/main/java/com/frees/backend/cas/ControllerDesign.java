@@ -257,6 +257,16 @@ public final class ControllerDesign {
      * @return {@code {Kp, Ki, Kd}} (unused terms are zero)
      */
     public static double[] pidtune(double[] num, double[] den, String type, double wc) {
+        return pidtune(num, den, type, wc, 60.0);
+    }
+
+    /**
+     * Loop-shaping PID auto-tuning with an explicit target phase margin
+     * {@code pmDeg} (degrees) — the "Transient Behavior"/robustness knob a
+     * industry-standard-style tuner exposes. {@code pidtune(num, den, type, wc)} defaults
+     * it to 60°.
+     */
+    public static double[] pidtune(double[] num, double[] den, String type, double wc, double pmDeg) {
         Complex s = new Complex(0.0, wc);
         Complex g = evalPolyComplex(num, s).divide(evalPolyComplex(den, s));
         double mg = g.abs();
@@ -265,7 +275,7 @@ public final class ControllerDesign {
                     "pidtune: plant gain is zero or singular at wc = " + wc);
         }
         double pg = g.getArgument();                 // plant phase (rad)
-        double thetaC = (-Math.PI + Math.toRadians(60.0)) - pg;
+        double thetaC = (-Math.PI + Math.toRadians(pmDeg)) - pg;
         double mc = 1.0 / mg;
 
         double kp;

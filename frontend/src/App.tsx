@@ -11,6 +11,7 @@ import {
   Text,
   TextInput,
   Title,
+  useComputedColorScheme,
 } from '@mantine/core'
 import { useMediaQuery } from '@mantine/hooks'
 import { Spotlight, SpotlightActionGroupData } from '@mantine/spotlight'
@@ -27,6 +28,7 @@ import {
   IconInfoCircle,
   IconKeyboard,
   IconLayoutGrid,
+  IconAdjustments,
   IconMathFunction,
   IconPlayerPlayFilled,
   IconSearch,
@@ -123,6 +125,7 @@ const PlotTab = lazy(() => import('./PlotTab'))
 const ComponentWizardModal = lazy(() => import('./ComponentWizardModal'))
 const MinMaxModal = lazy(() => import('./MinMaxModal'))
 const CurveFitModal = lazy(() => import('./CurveFitModal'))
+const PidTunerModal = lazy(() => import('./PidTunerModal'))
 const PlotConfigModal = lazy(() => import('./plots/PlotConfigModal'))
 
 const lazyTabFallback = (
@@ -132,7 +135,8 @@ const lazyTabFallback = (
 )
 import { PlotSpec, PlotKind } from './plots/types'
 import { plotDefToSpec } from './plots/fromCode'
-import Workspace from './Workspace'
+import Workspace, { type ComponentGroup } from './Workspace'
+import { rewritePidGains } from './pidGainRewrite'
 import ReplTerminal from './ReplTerminal'
 import MobileLayout from './MobileLayout'
 import { DOCS_TOPICS } from './docsTopics'
@@ -145,6 +149,7 @@ import { Rail, TopBar } from './WorkspaceChrome'
 import { WorkspaceDock, type WorkspaceDockHandle, type OpenWindow } from './workspace/WorkspaceDock'
 import { detectStates } from './plots/stateTable'
 import {
+  formatValue,
   withStableKeys,
 } from './format'
 import { FUNCTION_CATEGORIES, catalogFunctionNames } from './functionCatalog'
@@ -309,6 +314,15 @@ export default function App() {
   const [showVariableInfo, setShowVariableInfo] = useState(false)
   const [showMinMax, setShowMinMax] = useState(false)
   const [showCurveFit, setShowCurveFit] = useState(false)
+  const computedScheme = useComputedColorScheme('dark')
+  // PID Tuner: null = closed; the object carries what to tune. `instanceName`
+  // set → Apply rewrites that SigPID's gains in the editor; absent (Tools menu)
+  // → Apply inserts a tuned SigPID snippet.
+  const [pidTuner, setPidTuner] = useState<{
+    instanceName?: string
+    initial?: { type: 'p' | 'pi' | 'pid'; kp: number; ki: number; kd: number }
+    subject?: string
+  } | null>(null)
   const [showAbout, setShowAbout] = useState(false)
   const [showExamples, setShowExamples] = useState(false)
   const [showComponentWizard, setShowComponentWizard] = useState(false)
@@ -343,6 +357,19 @@ export default function App() {
     textRef.current = next
     setText(next)
     editorRef.current?.setDoc(next)
+  }, [])
+
+  /** Open the PID Tuner seeded from a solved SigPID instance's current gains. */
+  const openPidTunerFor = useCallback((c: ComponentGroup) => {
+    const gain = (key: string): number => {
+      const p = c.params.find((x) => x.name.toLowerCase() === key)
+      return typeof p?.value === 'number' ? p.value : 0
+    }
+    const kp = gain('kp')
+    const ki = gain('ki')
+    const kd = gain('kd')
+    const type: 'p' | 'pi' | 'pid' = kd !== 0 ? 'pid' : ki !== 0 ? 'pi' : 'p'
+    setPidTuner({ instanceName: c.name, initial: { type, kp, ki, kd }, subject: c.name })
   }, [])
   // Dockview workspace manager: imperative handle + set of currently-open
   // window kinds (drives the sidebar's open-state indicators).
@@ -1709,6 +1736,7 @@ export default function App() {
         { id: 'tool-variables', label: 'Variable Information', leftSection: <IconVariable size={18} />, onClick: () => setShowVariableInfo(true) },
         { id: 'tool-minmax', label: 'Min/Max (Optimization)', leftSection: <IconTargetArrow size={18} />, onClick: () => setShowMinMax(true) },
         { id: 'tool-curvefit', label: 'Curve Fit', leftSection: <IconMathFunction size={18} />, onClick: () => setShowCurveFit(true) },
+        { id: 'tool-pidtune', label: 'PID Tuner', description: 'Auto-tune P/PI/PID gains for a plant transfer function', leftSection: <IconAdjustments size={18} />, onClick: () => setPidTuner({}) },
         { id: 'tool-preferences', label: 'Preferences', leftSection: <IconSettings size={18} />, onClick: () => setShowPreferences(true) },
         { id: 'tool-about', label: 'About', leftSection: <IconInfoCircle size={18} />, onClick: () => setShowAbout(true) },
       ],
@@ -2099,6 +2127,7 @@ export default function App() {
           components={result?.components}
           onEdit={() => setShowVariableInfo(true)}
           onExportSpreadsheet={exportToSpreadsheet}
+          onTunePid={openPidTunerFor}
         />
       </div>
     ),
@@ -2441,6 +2470,7 @@ export default function App() {
         onDeleteAnalyzer={deleteAnalyzer}
         onMinMax={() => setShowMinMax(true)}
         onCurveFit={() => setShowCurveFit(true)}
+          onPidTuner={() => setPidTuner({})}
         onPreferences={() => setShowPreferences(true)}
         onAbout={() => setShowAbout(true)}
       />
@@ -2491,6 +2521,7 @@ export default function App() {
           onVariableInfo={() => setShowVariableInfo(true)}
           onMinMax={() => setShowMinMax(true)}
           onCurveFit={() => setShowCurveFit(true)}
+          onPidTuner={() => setPidTuner({})}
         />
         <input
           ref={projectFileRef}
@@ -2711,6 +2742,32 @@ export default function App() {
             onClose={() => setShowCurveFit(false)}
             onInsertEquation={(eq) => {
               applyText(textRef.current.trim() + '\n\n' + eq)
+            }}
+          />
+        </Suspense>
+      )}
+
+      {pidTuner !== null && (
+        <Suspense fallback={null}>
+          <PidTunerModal
+            opened
+            onClose={() => setPidTuner(null)}
+            initial={pidTuner.initial}
+            subject={pidTuner.subject}
+            dark={computedScheme === 'dark'}
+            onApply={(g) => {
+              if (pidTuner.instanceName) {
+                // Rewrite the SigPID's gains in place in the editor text.
+                applyText(rewritePidGains(textRef.current, pidTuner.instanceName, g))
+              } else {
+                // Tools-menu path: drop a ready-to-wire SigPID snippet.
+                const parts = [`Kp=${formatValue(g.kp)}`]
+                if (g.type !== 'p') parts.push(`Ki=${formatValue(g.ki)}`)
+                if (g.type === 'pid') parts.push(`Kd=${formatValue(g.kd)}`)
+                applyText(
+                  `${textRef.current.trim()}\n\n// PID Tuner result\nSigPID PID(${parts.join(', ')})`,
+                )
+              }
             }}
           />
         </Suspense>
