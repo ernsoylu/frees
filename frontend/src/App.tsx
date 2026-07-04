@@ -126,6 +126,7 @@ const ComponentWizardModal = lazy(() => import('./ComponentWizardModal'))
 const MinMaxModal = lazy(() => import('./MinMaxModal'))
 const CurveFitModal = lazy(() => import('./CurveFitModal'))
 const PidTunerModal = lazy(() => import('./PidTunerModal'))
+type PidType = 'p' | 'pi' | 'pid'
 const PlotConfigModal = lazy(() => import('./plots/PlotConfigModal'))
 
 const lazyTabFallback = (
@@ -320,7 +321,7 @@ export default function App() {
   // → Apply inserts a tuned SigPID snippet.
   const [pidTuner, setPidTuner] = useState<{
     instanceName?: string
-    initial?: { type: 'p' | 'pi' | 'pid'; kp: number; ki: number; kd: number }
+    initial?: { type: PidType; kp: number; ki: number; kd: number }
     subject?: string
   } | null>(null)
   const [showAbout, setShowAbout] = useState(false)
@@ -368,7 +369,9 @@ export default function App() {
     const kp = gain('kp')
     const ki = gain('ki')
     const kd = gain('kd')
-    const type: 'p' | 'pi' | 'pid' = kd !== 0 ? 'pid' : ki !== 0 ? 'pi' : 'p'
+    let type: PidType = 'p'
+    if (kd !== 0) type = 'pid'
+    else if (ki !== 0) type = 'pi'
     setPidTuner({ instanceName: c.name, initial: { type, kp, ki, kd }, subject: c.name })
   }, [])
   // Dockview workspace manager: imperative handle + set of currently-open

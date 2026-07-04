@@ -14,7 +14,7 @@ export interface PidGains {
 
 /** Locate the balanced `( … )` argument span of `SigPID <name>(`; null if absent. */
 function findInstanceArgs(text: string, name: string): { open: number; close: number } | null {
-  const decl = new RegExp(`\\bSigPID\\s+${escapeRegex(name)}\\s*\\(`, 'i')
+  const decl = new RegExp(String.raw`\bSigPID\s+${escapeRegex(name)}\s*\(`, 'i')
   const m = decl.exec(text)
   if (m === null) return null
   const open = m.index + m[0].length - 1 // index of '('
@@ -30,14 +30,15 @@ function findInstanceArgs(text: string, name: string): { open: number; close: nu
 }
 
 function escapeRegex(s: string): string {
-  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  return s.replace(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`)
 }
 
 /** Set one `Key=value` inside an argument list, replacing or appending it. */
 function setArg(args: string, key: string, value: string): string {
-  const re = new RegExp(`(\\b${key}\\s*=\\s*)(-?[\\d.eE+]+)`, 'i')
+  const re = new RegExp(String.raw`(\b${key}\s*=\s*)(-?[\d.eE+]+)`, 'i')
   if (re.test(args)) return args.replace(re, `$1${value}`)
-  return `${args.trim().length === 0 ? '' : `${args.trimEnd()}, `}${key}=${value}`
+  const prefix = args.trim().length === 0 ? '' : `${args.trimEnd()}, `
+  return `${prefix}${key}=${value}`
 }
 
 /**

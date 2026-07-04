@@ -34,8 +34,10 @@ export interface PidPlant {
   den: number[]
 }
 
+export type PidType = 'p' | 'pi' | 'pid'
+
 export interface TunedGains {
-  type: 'p' | 'pi' | 'pid'
+  type: PidType
   kp: number
   ki: number
   kd: number
@@ -74,7 +76,7 @@ export default function PidTunerModal({
   onApply,
   dark = true,
 }: Readonly<Props>) {
-  const [type, setType] = useState<'p' | 'pi' | 'pid'>(initial?.type ?? 'pi')
+  const [type, setType] = useState<PidType>(initial?.type ?? 'pi')
   // Manual plant entry (Tools-menu path) — ignored when `plant` is supplied.
   const [numText, setNumText] = useState('1')
   const [denText, setDenText] = useState('5, 1')
@@ -95,7 +97,7 @@ export default function PidTunerModal({
   // Debounced tune whenever the plant, type, or slider targets change.
   const runId = useRef(0)
   const doTune = useCallback(
-    (p: PidPlant, t: 'p' | 'pi' | 'pid', wc: number, phaseMargin: number) => {
+    (p: PidPlant, t: PidType, wc: number, phaseMargin: number) => {
       const id = ++runId.current
       setLoading(true)
       pidTune({ num: p.num, den: p.den, type: t, wc, pm: phaseMargin })
@@ -201,11 +203,13 @@ export default function PidTunerModal({
     </Table.Tr>
   )
 
+  const title = subject ? `PID Tuner — ${subject}` : 'PID Tuner'
+
   return (
     <Modal
       opened={opened}
       onClose={onClose}
-      title={`PID Tuner${subject ? ` — ${subject}` : ''}`}
+      title={title}
       size="xl"
       centered
     >
@@ -215,7 +219,7 @@ export default function PidTunerModal({
           <SegmentedControl
             size="xs"
             value={type}
-            onChange={(v) => setType(v as 'p' | 'pi' | 'pid')}
+            onChange={(v) => setType(v as PidType)}
             data={[
               { label: 'P', value: 'p' },
               { label: 'PI', value: 'pi' },

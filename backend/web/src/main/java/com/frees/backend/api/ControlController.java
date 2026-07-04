@@ -19,12 +19,16 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/control")
 public class ControlController {
 
-    /** Plant {@code num/den} (descending powers), controller type, and targets. */
+    /** Plant {@code num/den} (descending powers), controller type, and targets.
+     *  A request DTO — its coefficient arrays are never compared or hashed. */
+    @SuppressWarnings("java:S6218")
     public record TuneRequest(
             double[] num, double[] den, String type,
             Double wc, Double pm, Double horizon, Integer points) {
     }
 
+    /** A response DTO — its {@code t}/{@code y} arrays are never compared or hashed. */
+    @SuppressWarnings("java:S6218")
     public record TuneResponse(
             double kp, double ki, double kd, double wc, double pm,
             double[] t, double[] y,
