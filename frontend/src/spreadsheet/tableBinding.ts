@@ -319,22 +319,19 @@ function paramSheetEditsToSpec(prev: ParamTableSpec, read: RegionRead): SheetEdi
   }
 
   // The Run column is display-only, but Univer's fill-drag can write through
-  // range protection. Detect any drift from the materialized labels —
-  // content beyond the run count, a tampered label, or a missing label on a
-  // freshly grown row — so the host repaints the sheet instead of leaving
-  // half-stale run numbers behind.
+  // range protection. Detect drift from the materialized labels — content
+  // beyond the run count, or a PRESENT label with the wrong text — so the
+  // host repaints the sheet instead of leaving half-stale run numbers
+  // behind. A missing in-range label is deliberately NOT drift: freshly
+  // grown rows are blank until the materialize-on-spec-change repaint lands
+  // (treating that write race as tampering fired spurious warnings).
   let runColumnDrift = false
-  const runRows = Math.max(read.values.length, rows.length + HEADER_ROW_COUNT)
-  for (let r = HEADER_ROW_COUNT; r < runRows; r++) {
+  for (let r = HEADER_ROW_COUNT; r < read.values.length; r++) {
     const raw = read.values[r]?.[0]
     const text = raw === null || raw === undefined ? '' : String(raw).trim()
+    if (text === '') continue
     const runIndex = r - HEADER_ROW_COUNT
-    if (runIndex >= rows.length) {
-      if (text !== '') {
-        runColumnDrift = true
-        break
-      }
-    } else if (text !== `${runIndex + 1}` && text !== `${runIndex + 1} ✗`) {
+    if (runIndex >= rows.length || (text !== `${runIndex + 1}` && text !== `${runIndex + 1} ✗`)) {
       runColumnDrift = true
       break
     }

@@ -126,7 +126,7 @@ export default function TablesWorkbookTab({
   const containerRef = useRef<HTMLDivElement>(null)
   const apiRef = useRef<FUniver | null>(null)
   const [ready, setReady] = useState(false)
-  const [warning, setWarning] = useState<string | null>(null)
+  const [warnings, setWarnings] = useState<Record<string, string>>({})
   const scheme = useComputedColorScheme('dark')
 
   const tablesRef = useRef(tables)
@@ -242,7 +242,10 @@ export default function TablesWorkbookTab({
       .catch(() => {
         // A failed repaint must degrade to a warning, never the app's error
         // boundary — the spec is still the source of truth.
-        setWarning('The sheet could not be fully redrawn — reopen the Tables window to repaint it.')
+        setWarnings((prev) => ({
+          ...prev,
+          [spec.id]: 'The sheet could not be fully redrawn — reopen the Tables window to repaint it.',
+        }))
       })
       .finally(() => {
         suppressSync.current--
@@ -352,17 +355,26 @@ export default function TablesWorkbookTab({
       const formulas = dataRange?.getFormulas() ?? []
       const result = sheetEditsToSpec(spec, { values, formulas })
 
+      let warning: string | null = null
       if (result.truncated) {
-        setWarning(`Table row limit reached — data past ${TABLE_MAX_ROWS} rows was dropped.`)
+        warning = `Table row limit reached — data past ${TABLE_MAX_ROWS} rows was dropped.`
       } else if (result.errorCells.length > 0) {
-        setWarning(`Formula error in ${result.errorCells.join(', ')} — those cells are excluded from the solver.`)
+        warning = `Formula error in ${result.errorCells.join(', ')} — those cells are excluded from the solver.`
       } else if (result.outOfRegion) {
-        setWarning('Content outside the table columns was cleared (columns are schema — use the toolbar).')
+        warning = 'Content outside the table columns was cleared (columns are schema — use the toolbar).'
       } else if (result.runColumnDrift) {
-        setWarning('The Run column is managed by the table — hand-typed run numbers were reset (use Add Row to add runs).')
-      } else {
-        setWarning(null)
+        warning = 'The Run column is managed by the table — hand-typed run numbers were reset (use Add Row to add runs).'
       }
+      // Warnings are per sheet: showing another table's message on the
+      // active one (e.g. a Run-column notice on a function table) reads as
+      // nonsense.
+      setWarnings((prev) => {
+        if (warning) return { ...prev, [specId]: warning }
+        if (!(specId in prev)) return prev
+        const next = { ...prev }
+        delete next[specId]
+        return next
+      })
 
       // Clear anything beyond the bound region (contract a: rejected, not
       // silently kept). Suppress the resulting mutations from re-syncing.
@@ -868,9 +880,9 @@ export default function TablesWorkbookTab({
             </Text>
           </Group>
         )}
-        {warning && (
+        {active && warnings[active.id] && (
           <Text size="xs" c="yellow.5">
-            {warning}
+            {warnings[active.id]}
           </Text>
         )}
         <div ref={containerRef} style={{ flex: 1, minHeight: 0 }} />
