@@ -19,7 +19,10 @@ public final class PidTuner {
     private PidTuner() {
     }
 
-    /** Tuned gains + closed-loop step response + performance metrics. */
+    /** Tuned gains + closed-loop step response + performance metrics. A plain
+     *  transport record; the {@code t}/{@code y} arrays are never compared or
+     *  hashed, so identity-based record semantics are fine here. */
+    @SuppressWarnings("java:S6218")
     public record Result(
             double kp, double ki, double kd,
             double[] t, double[] y,
@@ -73,8 +76,8 @@ public final class PidTuner {
         double[] closedNum = leftPad(closed[0], closed[1].length);
         double[] y = TimeResponse.response(TimeResponse.Kind.STEP, closedNum, closed[1], null, t);
 
-        double[] info = ControllerDesign.stepinfo(t, y);      // {tr, tp, ts, os}
-        double[] mar = PolynomialHelpers.margin(loop[0], loop[1]); // {gm_db, pm, wcg, wcp}
+        double[] info = ControllerDesign.stepinfo(t, y);      // rise, peak, settling, overshoot
+        double[] mar = PolynomialHelpers.margin(loop[0], loop[1]); // gainMargin dB, phaseMargin, wGm, wPm
 
         return new Result(kp, ki, kd, t, y,
                 info[0], info[1], info[2], info[3],
@@ -104,7 +107,7 @@ public final class PidTuner {
         if (!Double.isFinite(slowest)) {
             return fallback;
         }
-        return Math.min(Math.max(7.0 / slowest, 2.0 / Math.max(wc, 1e-9)), 1e6);
+        return Math.clamp(7.0 / slowest, 2.0 / Math.max(wc, 1e-9), 1e6);
     }
 
     /**
