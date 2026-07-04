@@ -5,6 +5,7 @@
 // row strings, so no display-precision is lost where results exist.
 
 import { sniffKind } from './calc'
+import { displayVar } from '../varDisplay'
 import type { ImportedMeasurement } from './csvImport'
 import type { ParamTableSpec, TableSpec } from '../tables'
 
@@ -75,7 +76,9 @@ export function tableToMeasurement(t: ParamTableSpec): ImportedMeasurement | nul
     const { min, max } = minMax(values)
     if (Number.isNaN(min)) continue // no finite sample (e.g. string column)
     channels.push({
-      name: v,
+      // Component-expanded columns are stored flat with '$' (e.g. `ch.ev$hg`);
+      // show the dotted form the rest of the app uses (`ch.ev.hg`).
+      name: displayVar(v),
       unit: t.columnUnits?.[v] || undefined,
       kind: sniffKind(values),
       values,
