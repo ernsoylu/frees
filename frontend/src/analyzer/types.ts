@@ -87,6 +87,12 @@ export interface AnalyzerSpec {
   name: string
   files: AnalyzerFileRef[]
   strips: AnalyzerStrip[]
+  /**
+   * Strip that receives browser “+” assignments. Lives on the spec (not view
+   * state) so the Inspector-hosted SignalBrowser targets the same strip the
+   * user selected inside the analyzer window.
+   */
+  selectedStripId?: string
 }
 
 /**

@@ -1,10 +1,11 @@
 // Data Analyzer window (todo.md Phases 1–5): CSV/.mf4 import → signal browser
-// → multi-strip oscilloscope (uPlot) with synced hover cursor, A/B measurement
-// cursors with Δt/Δv readout (§2.5e), Table / Statistics / Event List /
-// Scatter / Histogram instruments, calculated signals (Phase 4), per-file time
-// offsets (Phase 5a), CSV export, and template-mode file relocation (§2.5b).
-// Mirrors the whiteboard pattern: App owns the AnalyzerSpec[] slice; bulk
-// samples live in the module-level ChannelStore.
+// (SignalBrowser.tsx, also hosted by the Inspector) → multi-strip oscilloscope
+// (uPlot) with synced hover cursor, A/B measurement cursors with per-signal
+// value readout (§2.5e), Table / Statistics / Event List / Scatter / Histogram
+// instruments, calculated signals (Phase 4), per-file time offsets (Phase 5a),
+// CSV export, and template-mode file relocation (§2.5b). Mirrors the
+// whiteboard pattern: App owns the AnalyzerSpec[] slice; bulk samples live in
+// the module-level ChannelStore.
 
 import {
   useCallback,
@@ -22,18 +23,13 @@ import {
   Badge,
   Box,
   Button,
-  FileButton,
   Group,
   Menu,
-  Modal,
-  NumberInput,
-  Radio,
   ScrollArea,
   Stack,
   Switch,
   Tabs,
   Text,
-  TextInput,
   Tooltip,
   useComputedColorScheme,
 } from '@mantine/core'
@@ -41,16 +37,15 @@ import {
   IconAlertTriangle,
   IconChartDots,
   IconChartHistogram,
+  IconChevronLeft,
+  IconChevronRight,
   IconDotsVertical,
   IconDownload,
-  IconFileImport,
-  IconFileSearch,
   IconGripVertical,
   IconHandMove,
   IconListSearch,
   IconMathFunction,
   IconPlus,
-  IconSearch,
   IconSum,
   IconTable,
   IconTrash,
@@ -64,10 +59,11 @@ import {
 } from '@tabler/icons-react'
 import uPlot from 'uplot'
 import UPlotChart, { type AbCursors, type MouseMode } from './UPlotChart'
-import { channelStore, flattenRemoteChannels } from './channelStore'
-import { uploadMeasurement, type CalcResultDto } from './measurementApi'
+import { channelStore } from './channelStore'
+import { type CalcResultDto } from './measurementApi'
 import { calcResultToMeasurement } from './calc'
 import CalcSignalModal from './CalcSignalModal'
+import SignalBrowser from './SignalBrowser'
 import { lowerBound } from './decimate'
 import {
   offsetExactValueAt,
@@ -78,27 +74,20 @@ import {
 } from './offsets'
 import { moveSignal as moveSignalOp, reorderStrip as reorderStripOp } from './stripOps'
 import { formatValue } from '../format'
-import {
-  importCsvFile,
-  type ImportedMeasurement,
-  type TimeCandidate,
-  type TimeChoice,
-  type TimeKind,
-} from './csvImport'
 import { buildCsv, downloadCsv, type ExportSignal } from './exportCsv'
-import { checkRelocatedFile } from './relocate'
-import { signalColor } from './palette'
 import TableInstrument from './instruments/TableInstrument'
 import StatisticsInstrument from './instruments/StatisticsInstrument'
 import EventListInstrument from './instruments/EventListInstrument'
 import ScatterInstrument from './instruments/ScatterInstrument'
 import HistogramInstrument from './instruments/HistogramInstrument'
+import { signalColor } from './palette'
 import {
   newStrip,
+  type AnalyzerSignal,
   type AnalyzerSpec,
   type AnalyzerStrip,
-  type ChannelMeta,
 } from './types'
+import type { TableSpec } from '../tables'
 
 /** Decimation budget per strip (≈2 samples per px at typical tile widths). */
 const MAX_POINTS = 2400
@@ -128,7 +117,6 @@ type Instrument = 'scope' | 'table' | 'stats' | 'events' | 'scatter' | 'histogra
 interface ViewState {
   /** null = the full recording. Shared by every strip (linked time axes). */
   xRange: [number, number] | null
-  selectedStripId: string | null
   cursorA: number | null
   cursorB: number | null
   /** Sample-snap (true) vs continuous (false) cursor placement. */
@@ -141,7 +129,6 @@ interface ViewState {
 type ViewAction =
   | { type: 'zoom'; min: number; max: number }
   | { type: 'reset-zoom' }
-  | { type: 'select-strip'; id: string | null }
   | { type: 'set-cursor'; which: 'a' | 'b'; t: number | null }
   | { type: 'clear-cursors' }
   | { type: 'toggle-snap' }
@@ -158,8 +145,6 @@ function viewReducer(state: ViewState, action: ViewAction): ViewState {
     }
     case 'reset-zoom':
       return state.xRange === null ? state : { ...state, xRange: null }
-    case 'select-strip':
-      return { ...state, selectedStripId: action.id }
     case 'set-cursor':
       return action.which === 'a' ? { ...state, cursorA: action.t } : { ...state, cursorB: action.t }
     case 'clear-cursors':
@@ -284,6 +269,151 @@ function fmtHit(hit: { v: number; approx?: boolean } | null): string {
   return `${hit.approx ? '~' : ''}${formatValue(hit.v)}`
 }
 
+const NUM_CELL: CSSProperties = {
+  textAlign: 'right',
+  fontFamily: 'var(--mantine-font-family-monospace)',
+  fontSize: 10.5,
+  whiteSpace: 'nowrap',
+  overflow: 'hidden',
+}
+
+interface SignalRowProps {
+  sig: AnalyzerSignal
+  stripId: string
+  offset: number
+  hoverT: number | null
+  cursors: AbCursors
+  onRemoveSignal: (channel: string, measurementId: string) => void
+  onSetKind: (channel: string, measurementId: string, kind: 'analog' | 'boolean' | undefined) => void
+  onMoveToNewStrip: (channel: string, measurementId: string) => void
+}
+
+/** One signal-list row: draggable, with an MDA-style context menu reachable
+ *  from BOTH the ⋮ icon and a right-click anywhere on the row. */
+function SignalRow({
+  sig,
+  stripId,
+  offset,
+  hoverT,
+  cursors,
+  onRemoveSignal,
+  onSetKind,
+  onMoveToNewStrip,
+}: Readonly<SignalRowProps>) {
+  const [menuOpened, setMenuOpened] = useState(false)
+  const chMeta = channelStore
+    .getMeta(sig.measurementId)
+    ?.channels.find((c) => c.name === sig.channel)
+  const unit = chMeta?.unit
+  const storeKind = chMeta?.kind === 'boolean' ? 'boolean' : 'analog'
+  const effKind = sig.kindOverride ?? storeKind
+  const otherKind = effKind === 'boolean' ? 'analog' : 'boolean'
+  const hover = hoverT === null ? null : offsetExactValueAt(sig, offset, hoverT)
+  const a = cursors.a === null ? null : offsetExactValueAt(sig, offset, cursors.a)
+  const b = cursors.b === null ? null : offsetExactValueAt(sig, offset, cursors.b)
+  const delta =
+    a !== null && b !== null
+      ? { v: b.v - a.v, approx: a.approx === true || b.approx === true }
+      : null
+  return (
+    <Box
+      px={6}
+      py={1}
+      draggable
+      onDragStart={(e) => {
+        e.dataTransfer.setData(
+          DND_MIME,
+          JSON.stringify({
+            type: 'signal',
+            stripId,
+            measurementId: sig.measurementId,
+            channel: sig.channel,
+          }),
+        )
+        e.dataTransfer.effectAllowed = 'move'
+      }}
+      onContextMenu={(e) => {
+        e.preventDefault()
+        e.stopPropagation()
+        setMenuOpened(true)
+      }}
+      style={{
+        display: 'grid',
+        gridTemplateColumns: SIGNAL_LIST_GRID,
+        gap: 4,
+        alignItems: 'center',
+        cursor: 'grab',
+      }}
+    >
+      <Box w={10} h={10} style={{ background: sig.color, borderRadius: 2 }} />
+      <Text size="xs" truncate title={`${sig.channel} — drag onto another strip to move it`}>
+        {sig.channel}
+      </Text>
+      <Text size="xs" c="dimmed" truncate>
+        {unit ?? ''}
+      </Text>
+      <span style={NUM_CELL}>{fmtHit(hover)}</span>
+      <span style={NUM_CELL}>{fmtHit(a)}</span>
+      <span style={NUM_CELL}>{fmtHit(b)}</span>
+      <span style={NUM_CELL}>{fmtHit(delta)}</span>
+      <Menu
+        withinPortal
+        position="bottom-end"
+        shadow="md"
+        width={200}
+        opened={menuOpened}
+        onChange={setMenuOpened}
+      >
+        <Menu.Target>
+          <ActionIcon
+            size={14}
+            variant="subtle"
+            color="gray"
+            aria-label={`Options for ${sig.channel}`}
+            onClick={(e) => {
+              e.stopPropagation()
+              setMenuOpened((o) => !o)
+            }}
+          >
+            <IconDotsVertical size={10} />
+          </ActionIcon>
+        </Menu.Target>
+        <Menu.Dropdown>
+          <Menu.Item
+            leftSection={
+              effKind === 'boolean' ? <IconWaveSine size={13} /> : <IconWaveSquare size={13} />
+            }
+            onClick={() =>
+              // Back to auto when the requested kind IS the imported one.
+              onSetKind(
+                sig.channel,
+                sig.measurementId,
+                otherKind === storeKind ? undefined : otherKind,
+              )
+            }
+          >
+            Treat as {otherKind} signal
+          </Menu.Item>
+          <Menu.Item
+            leftSection={<IconPlus size={13} />}
+            onClick={() => onMoveToNewStrip(sig.channel, sig.measurementId)}
+          >
+            Move to new strip
+          </Menu.Item>
+          <Menu.Divider />
+          <Menu.Item
+            color="red"
+            leftSection={<IconX size={13} />}
+            onClick={() => onRemoveSignal(sig.channel, sig.measurementId)}
+          >
+            Remove from strip
+          </Menu.Item>
+        </Menu.Dropdown>
+      </Menu>
+    </Box>
+  )
+}
+
 interface SignalListProps {
   strip: AnalyzerStrip
   offsets: Map<string, number>
@@ -304,13 +434,6 @@ function SignalList({
   onSetKind,
   onMoveToNewStrip,
 }: Readonly<SignalListProps>) {
-  const numCell: CSSProperties = {
-    textAlign: 'right',
-    fontFamily: 'var(--mantine-font-family-monospace)',
-    fontSize: 10.5,
-    whiteSpace: 'nowrap',
-    overflow: 'hidden',
-  }
   return (
     <Box
       w={392}
@@ -355,106 +478,19 @@ function SignalList({
         </Text>
         <span />
       </Box>
-      {strip.signals.map((sig) => {
-        const off = offsets.get(sig.measurementId) ?? 0
-        const chMeta = channelStore
-          .getMeta(sig.measurementId)
-          ?.channels.find((c) => c.name === sig.channel)
-        const unit = chMeta?.unit
-        const storeKind = chMeta?.kind === 'boolean' ? 'boolean' : 'analog'
-        const effKind = sig.kindOverride ?? storeKind
-        const otherKind = effKind === 'boolean' ? 'analog' : 'boolean'
-        const hover = hoverT === null ? null : offsetExactValueAt(sig, off, hoverT)
-        const a = cursors.a === null ? null : offsetExactValueAt(sig, off, cursors.a)
-        const b = cursors.b === null ? null : offsetExactValueAt(sig, off, cursors.b)
-        const delta =
-          a !== null && b !== null
-            ? { v: b.v - a.v, approx: a.approx === true || b.approx === true }
-            : null
-        return (
-          <Box
-            key={`${sig.measurementId}:${sig.channel}`}
-            px={6}
-            py={1}
-            draggable
-            onDragStart={(e) => {
-              e.dataTransfer.setData(
-                DND_MIME,
-                JSON.stringify({
-                  type: 'signal',
-                  stripId: strip.id,
-                  measurementId: sig.measurementId,
-                  channel: sig.channel,
-                }),
-              )
-              e.dataTransfer.effectAllowed = 'move'
-            }}
-            style={{
-              display: 'grid',
-              gridTemplateColumns: SIGNAL_LIST_GRID,
-              gap: 4,
-              alignItems: 'center',
-              cursor: 'grab',
-            }}
-          >
-            <Box w={10} h={10} style={{ background: sig.color, borderRadius: 2 }} />
-            <Text size="xs" truncate title={`${sig.channel} — drag onto another strip to move it`}>
-              {sig.channel}
-            </Text>
-            <Text size="xs" c="dimmed" truncate>
-              {unit ?? ''}
-            </Text>
-            <span style={numCell}>{fmtHit(hover)}</span>
-            <span style={numCell}>{fmtHit(a)}</span>
-            <span style={numCell}>{fmtHit(b)}</span>
-            <span style={numCell}>{fmtHit(delta)}</span>
-            <Menu withinPortal position="bottom-end" shadow="md" width={200}>
-              <Menu.Target>
-                <ActionIcon
-                  size={14}
-                  variant="subtle"
-                  color="gray"
-                  aria-label={`Options for ${sig.channel}`}
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <IconDotsVertical size={10} />
-                </ActionIcon>
-              </Menu.Target>
-              <Menu.Dropdown>
-                <Menu.Item
-                  leftSection={
-                    effKind === 'boolean' ? <IconWaveSine size={13} /> : <IconWaveSquare size={13} />
-                  }
-                  onClick={() =>
-                    // Back to auto when the requested kind IS the imported one.
-                    onSetKind(
-                      sig.channel,
-                      sig.measurementId,
-                      otherKind === storeKind ? undefined : otherKind,
-                    )
-                  }
-                >
-                  Treat as {otherKind} signal
-                </Menu.Item>
-                <Menu.Item
-                  leftSection={<IconPlus size={13} />}
-                  onClick={() => onMoveToNewStrip(sig.channel, sig.measurementId)}
-                >
-                  Move to new strip
-                </Menu.Item>
-                <Menu.Divider />
-                <Menu.Item
-                  color="red"
-                  leftSection={<IconX size={13} />}
-                  onClick={() => onRemoveSignal(sig.channel, sig.measurementId)}
-                >
-                  Remove from strip
-                </Menu.Item>
-              </Menu.Dropdown>
-            </Menu>
-          </Box>
-        )
-      })}
+      {strip.signals.map((sig) => (
+        <SignalRow
+          key={`${sig.measurementId}:${sig.channel}`}
+          sig={sig}
+          stripId={strip.id}
+          offset={offsets.get(sig.measurementId) ?? 0}
+          hoverT={hoverT}
+          cursors={cursors}
+          onRemoveSignal={onRemoveSignal}
+          onSetKind={onSetKind}
+          onMoveToNewStrip={onMoveToNewStrip}
+        />
+      ))}
       {strip.signals.length === 0 && (
         <Text size="xs" c="dimmed" p={6}>
           No signals — add from the browser or drop a row here.
@@ -695,85 +731,6 @@ function StripView({
 }
 
 // ---------------------------------------------------------------------------
-// Time-base modal (§2.5c: ambiguous/absent time column → ask, never guess)
-// ---------------------------------------------------------------------------
-
-const KIND_LABELS: Record<TimeKind, string> = {
-  iso: 'ISO-8601 timestamps',
-  'epoch-s': 'epoch seconds',
-  'epoch-ms': 'epoch milliseconds',
-  relative: 'relative seconds',
-  index: 'sample index',
-}
-
-function TimeColumnModal({
-  fileName,
-  candidates,
-  onConfirm,
-  onCancel,
-}: Readonly<{
-  fileName: string
-  candidates: TimeCandidate[]
-  onConfirm: (choice: TimeChoice) => void
-  onCancel: () => void
-}>) {
-  const [selection, setSelection] = useState<string>(
-    candidates.length > 0 ? String(candidates[0].column) : 'dt',
-  )
-  const [dt, setDt] = useState<number | string>(0.01)
-
-  const confirm = () => {
-    if (selection === 'dt') {
-      const v = typeof dt === 'number' ? dt : Number(dt)
-      if (!(v > 0)) return
-      onConfirm({ mode: 'dt', dt: v })
-    } else {
-      onConfirm({ mode: 'column', column: Number(selection) })
-    }
-  }
-
-  return (
-    <Modal opened onClose={onCancel} title="Select the time base" centered>
-      <Stack gap="sm">
-        <Text size="sm">
-          The time column of “{fileName}” could not be identified unambiguously. Pick the column
-          that holds time, or give a fixed sample interval for index-based data.
-        </Text>
-        <Radio.Group value={selection} onChange={setSelection}>
-          <Stack gap={6}>
-            {candidates.map((c) => (
-              <Radio
-                key={c.column}
-                value={String(c.column)}
-                label={`${c.name} — ${KIND_LABELS[c.kind]}`}
-              />
-            ))}
-            <Radio value="dt" label="No time column — use a fixed sample interval" />
-          </Stack>
-        </Radio.Group>
-        {selection === 'dt' && (
-          <NumberInput
-            label="Sample interval dt"
-            suffix=" s"
-            value={dt}
-            onChange={setDt}
-            min={1e-9}
-            step={0.001}
-            decimalScale={9}
-          />
-        )}
-        <Group justify="flex-end" gap="xs">
-          <Button variant="default" onClick={onCancel}>
-            Cancel
-          </Button>
-          <Button onClick={confirm}>Import</Button>
-        </Group>
-      </Stack>
-    </Modal>
-  )
-}
-
-// ---------------------------------------------------------------------------
 // The analyzer window
 // ---------------------------------------------------------------------------
 
@@ -782,15 +739,21 @@ interface Props {
   analyzers: AnalyzerSpec[]
   /** setState-compatible so rapid updates can't clobber each other. */
   onAnalyzersChange: (update: (prev: AnalyzerSpec[]) => AnalyzerSpec[]) => void
+  /** Solved document tables offered by the browser's “Import table” menu. */
+  tables?: TableSpec[]
 }
 
-export default function DataAnalyzerTab({ singleAnalyzerId, analyzers, onAnalyzersChange }: Readonly<Props>) {
+export default function DataAnalyzerTab({
+  singleAnalyzerId,
+  analyzers,
+  onAnalyzersChange,
+  tables,
+}: Readonly<Props>) {
   const spec = analyzers.find((a) => a.id === singleAnalyzerId)
   const dark = useComputedColorScheme('dark') === 'dark'
   const storeVersion = useSyncExternalStore(channelStore.subscribe, channelStore.version)
   const [view, dispatch] = useReducer(viewReducer, {
     xRange: null,
-    selectedStripId: null,
     cursorA: null,
     cursorB: null,
     snap: true,
@@ -811,28 +774,9 @@ export default function DataAnalyzerTab({ singleAnalyzerId, analyzers, onAnalyze
     })
   }, [])
   useEffect(() => () => cancelAnimationFrame(hoverFrame.current), [])
-  const [search, setSearch] = useState('')
-  const [importing, setImporting] = useState(false)
-  const [importError, setImportError] = useState<string | null>(null)
-  const [pendingTime, setPendingTime] = useState<{
-    file: File
-    candidates: TimeCandidate[]
-    relocateId?: string
-  } | null>(null)
-  const [pendingAdvisory, setPendingAdvisory] = useState<{
-    measurement: ImportedMeasurement
-    relocateId: string
-    mismatches: string[]
-  } | null>(null)
-  const [memWarning, setMemWarning] = useState(false)
-
-  useEffect(
-    () =>
-      channelStore.subscribe((ev) => {
-        if (ev === 'warn') setMemWarning(true)
-      }),
-    [],
-  )
+  // In-tab signal browser visibility: collapsible so the oscilloscope can use
+  // the full width when the Inspector hosts the browser instead.
+  const [browserOpen, setBrowserOpen] = useState(true)
 
   // Functional update against the LATEST state: two spec changes in the same
   // tick (e.g. two rapid add-signal clicks) must both land, so never derive
@@ -846,119 +790,6 @@ export default function DataAnalyzerTab({ singleAnalyzerId, analyzers, onAnalyze
     [onAnalyzersChange, singleAnalyzerId],
   )
 
-  /** Template-mode re-pick (§2.5b): rebind an existing measurementId to the
-   *  re-imported data and refresh the stored signature. */
-  const applyRelocation = useCallback(
-    (measurement: ImportedMeasurement, relocateId: string) => {
-      if (spec === undefined) return
-      const meta = channelStore.register(measurement, spec.id, relocateId)
-      updateSpec((cur) => ({
-        ...cur,
-        files: cur.files.map((f) =>
-          f.measurementId === relocateId ? { ...f, signature: meta.signature } : f,
-        ),
-      }))
-      dispatch({ type: 'reset-zoom' })
-    },
-    [spec, updateSpec],
-  )
-
-  const handleImport = useCallback(
-    async (file: File | null, choice?: TimeChoice, relocateId?: string) => {
-      if (file === null || spec === undefined) return
-      setImporting(true)
-      setImportError(null)
-      try {
-        // .mf4 goes to the backend measurement service (RemoteSource); the
-        // browser only ever sees windowed decimated envelopes.
-        if (file.name.toLowerCase().endsWith('.mf4')) {
-          const remote = await uploadMeasurement(file)
-          if (relocateId !== undefined) {
-            const required = spec.strips
-              .flatMap((s) => s.signals)
-              .filter((sig) => sig.measurementId === relocateId)
-              .map((sig) => sig.channel)
-            const stored = spec.files.find((f) => f.measurementId === relocateId)?.signature
-            const check = checkRelocatedFile(
-              [...new Set(required)],
-              flattenRemoteChannels(remote).map((c) => c.display),
-              stored ?? { name: file.name, size: -1, headerHash: 'mf4' },
-              { size: remote.size, headerHash: 'mf4' },
-            )
-            if (check.status === 'rejected') {
-              setImportError(
-                `Wrong file: it is missing the channel(s) ${check.missingChannels.join(', ')} that this analyzer uses.`,
-              )
-              return
-            }
-            // Advisory (size drift) applies immediately for remote files —
-            // the upload already happened; the strips just rebind.
-            const meta = channelStore.registerRemote(remote, spec.id, relocateId)
-            updateSpec((cur) => ({
-              ...cur,
-              files: cur.files.map((f) =>
-                f.measurementId === relocateId ? { ...f, signature: meta.signature } : f,
-              ),
-            }))
-          } else {
-            const meta = channelStore.registerRemote(remote, spec.id)
-            updateSpec((cur) => ({
-              ...cur,
-              files: [
-                ...cur.files,
-                { measurementId: meta.measurementId, signature: meta.signature },
-              ],
-            }))
-          }
-          dispatch({ type: 'reset-zoom' })
-          return
-        }
-        const outcome = await importCsvFile(file, choice)
-        if (outcome.status === 'needs-time') {
-          setPendingTime({ file, candidates: outcome.candidates, relocateId })
-        } else if (relocateId !== undefined) {
-          // §2.5b verification: referenced channels are mandatory; size/hash
-          // differences are advisory with an explicit override.
-          const required = spec.strips
-            .flatMap((s) => s.signals)
-            .filter((sig) => sig.measurementId === relocateId)
-            .map((sig) => sig.channel)
-          const stored = spec.files.find((f) => f.measurementId === relocateId)?.signature
-          const check = checkRelocatedFile(
-            [...new Set(required)],
-            outcome.measurement.channels.map((c) => c.name),
-            stored ?? { name: file.name, size: -1, headerHash: '' },
-            { size: outcome.measurement.size, headerHash: outcome.measurement.headerHash },
-          )
-          if (check.status === 'rejected') {
-            setImportError(
-              `Wrong file: it is missing the channel(s) ${check.missingChannels.join(', ')} that this analyzer uses.`,
-            )
-          } else if (check.status === 'advisory') {
-            setPendingAdvisory({ measurement: outcome.measurement, relocateId, mismatches: check.mismatches })
-          } else {
-            applyRelocation(outcome.measurement, relocateId)
-          }
-        } else {
-          const meta = channelStore.register(outcome.measurement, spec.id)
-          updateSpec((cur) => ({
-            ...cur,
-            files: [
-              ...cur.files,
-              { measurementId: meta.measurementId, signature: meta.signature },
-            ],
-          }))
-          dispatch({ type: 'reset-zoom' })
-        }
-      } catch (err) {
-        setImportError(err instanceof Error ? err.message : String(err))
-      } finally {
-        setImporting(false)
-      }
-    },
-    [spec, updateSpec, applyRelocation],
-  )
-
   // All hooks above; early-out below keeps hook order stable.
   const allSignals = useMemo(() => spec?.strips.flatMap((s) => s.signals) ?? [], [spec])
   const offsets = useMemo(() => (spec ? offsetsOf(spec) : new Map<string, number>()), [spec])
@@ -967,51 +798,21 @@ export default function DataAnalyzerTab({ singleAnalyzerId, analyzers, onAnalyze
   if (spec === undefined) return null
   const syncKey = `frees-analyzer-${spec.id}`
 
-  const removeFile = (measurementId: string) => {
-    channelStore.release(measurementId, spec.id)
-    updateSpec((cur) => ({
-      ...cur,
-      files: cur.files.filter((f) => f.measurementId !== measurementId),
-      strips: cur.strips.map((s) => ({
-        ...s,
-        signals: s.signals.filter((sig) => sig.measurementId !== measurementId),
-      })),
-    }))
-  }
-
-  const addSignal = (measurementId: string, channel: ChannelMeta) => {
-    const selectedStripId = view.selectedStripId
-    updateSpec((cur) => {
-      // Color by assignment slot, persisted per-signal (§2.5e).
-      const slot = cur.strips.reduce((acc, s) => acc + s.signals.length, 0)
-      let strips = cur.strips
-      let target =
-        strips.find((s) => s.id === selectedStripId) ?? strips[strips.length - 1]
-      if (target === undefined) {
-        target = newStrip()
-        strips = [target]
-      }
-      if (target.signals.some((s) => s.measurementId === measurementId && s.channel === channel.name)) {
-        return cur
-      }
-      const signal = { measurementId, channel: channel.name, color: signalColor(slot) }
-      const targetId = target.id
-      return {
-        ...cur,
-        strips: strips.map((s) => (s.id === targetId ? { ...s, signals: [...s.signals, signal] } : s)),
-      }
-    })
+  const selectStrip = (id: string | undefined) => {
+    updateSpec((cur) => (cur.selectedStripId === id ? cur : { ...cur, selectedStripId: id }))
   }
 
   const addStrip = () => {
     const strip = newStrip()
-    updateSpec((cur) => ({ ...cur, strips: [...cur.strips, strip] }))
-    dispatch({ type: 'select-strip', id: strip.id })
+    updateSpec((cur) => ({ ...cur, strips: [...cur.strips, strip], selectedStripId: strip.id }))
   }
 
   const removeStrip = (id: string) => {
-    updateSpec((cur) => ({ ...cur, strips: cur.strips.filter((s) => s.id !== id) }))
-    if (view.selectedStripId === id) dispatch({ type: 'select-strip', id: null })
+    updateSpec((cur) => ({
+      ...cur,
+      strips: cur.strips.filter((s) => s.id !== id),
+      selectedStripId: cur.selectedStripId === id ? undefined : cur.selectedStripId,
+    }))
   }
 
   /** Drop of a signal row onto another strip (MDA drag-between-strips). */
@@ -1136,16 +937,32 @@ export default function DataAnalyzerTab({ singleAnalyzerId, analyzers, onAnalyze
     setFileOffset(first.measurementId, Number((current + deltaSeconds).toPrecision(9)))
   }
 
-  /** Calc result (Phase 4) → first-class ChannelStore channel + auto-assign. */
+  /** Calc result (Phase 4) → first-class ChannelStore channel + auto-assign
+   *  to the selected strip (mirrors SignalBrowser.addSignal). */
   const handleCalcResult = (result: CalcResultDto) => {
     setShowCalc(false)
     const meta = channelStore.register(calcResultToMeasurement(result.name, result.t, result.v), spec.id)
-    updateSpec((cur) => ({
-      ...cur,
-      files: [...cur.files, { measurementId: meta.measurementId, signature: meta.signature }],
-    }))
     const ch = meta.channels[0]
-    if (ch) addSignal(meta.measurementId, ch)
+    updateSpec((cur) => {
+      const next = {
+        ...cur,
+        files: [...cur.files, { measurementId: meta.measurementId, signature: meta.signature }],
+      }
+      if (!ch) return next
+      const slot = next.strips.reduce((acc, s) => acc + s.signals.length, 0)
+      let strips = next.strips
+      let target = strips.find((s) => s.id === next.selectedStripId) ?? strips[strips.length - 1]
+      if (target === undefined) {
+        target = newStrip()
+        strips = [target]
+      }
+      const signal = { measurementId: meta.measurementId, channel: ch.name, color: signalColor(slot) }
+      const targetId = target.id
+      return {
+        ...next,
+        strips: strips.map((s) => (s.id === targetId ? { ...s, signals: [...s.signals, signal] } : s)),
+      }
+    })
   }
 
   /** Event List click (Phase 5a): move cursor A there and recenter the view. */
@@ -1192,194 +1009,53 @@ export default function DataAnalyzerTab({ singleAnalyzerId, analyzers, onAnalyze
 
   const cursors: AbCursors = { a: view.cursorA, b: view.cursorB }
   const dt = view.cursorA !== null && view.cursorB !== null ? view.cursorB - view.cursorA : null
-  const searchLower = search.trim().toLowerCase()
 
   return (
     <Group align="stretch" gap={0} h="100%" wrap="nowrap">
-      {/* Signal browser */}
-      <Stack
-        w={280}
-        gap="xs"
-        p="xs"
-        h="100%"
-        style={{ borderRight: '1px solid var(--mantine-color-default-border)', flexShrink: 0 }}
-      >
-        <Group gap="xs" wrap="nowrap">
-          <FileButton onChange={(f) => void handleImport(f)} accept=".csv,.tsv,.txt,.mf4,text/csv">
-            {(props) => (
-              <Button
-                {...props}
-                size="xs"
-                variant="light"
-                leftSection={<IconFileImport size={14} />}
-                loading={importing}
-              >
-                Import CSV/MF4
-              </Button>
-            )}
-          </FileButton>
-        </Group>
-        <TextInput
-          size="xs"
-          placeholder="Search signals…"
-          leftSection={<IconSearch size={13} />}
-          value={search}
-          onChange={(e) => setSearch(e.currentTarget.value)}
-        />
-        {importError !== null && (
-          <Alert
-            color="red"
-            icon={<IconAlertTriangle size={14} />}
-            withCloseButton
-            onClose={() => setImportError(null)}
-            p="xs"
-          >
-            <Text size="xs">{importError}</Text>
-          </Alert>
-        )}
-        {memWarning && (
-          <Alert
-            color="yellow"
-            icon={<IconAlertTriangle size={14} />}
-            withCloseButton
-            onClose={() => setMemWarning(false)}
-            p="xs"
-          >
-            <Text size="xs">
-              Measurement cache is large (&gt;50M cells). Least-recently-used files not shown in an
-              open analyzer may be evicted.
+      {/* Signal browser (shared component — the Inspector hosts it too).
+          Collapsible so the oscilloscope can take the full width. */}
+      {browserOpen ? (
+        <Stack
+          w={280}
+          gap="xs"
+          p="xs"
+          h="100%"
+          style={{ borderRight: '1px solid var(--mantine-color-default-border)', flexShrink: 0 }}
+        >
+          <Group justify="space-between" gap={4} wrap="nowrap">
+            <Text size="xs" fw={600} c="dimmed">
+              Signals
             </Text>
-          </Alert>
-        )}
-        <ScrollArea style={{ flex: 1 }} type="auto">
-          <Stack gap="sm">
-            {spec.files.length === 0 && (
-              <Text size="xs" c="dimmed" ta="center" mt="lg">
-                Import a CSV/TSV measurement file to browse its signals.
-              </Text>
-            )}
-            {spec.files.map((f) => {
-              const meta = channelStore.getMeta(f.measurementId)
-              const loaded = channelStore.isLoaded(f.measurementId)
-              const remoteError = channelStore.remoteError(f.measurementId)
-              return (
-                <Box key={f.measurementId}>
-                  <Group justify="space-between" gap={4} wrap="nowrap">
-                    <Text size="xs" fw={600} truncate title={f.signature.name}>
-                      {f.signature.name}
-                    </Text>
-                    <Tooltip label="Remove file from this analyzer">
-                      <ActionIcon
-                        size="xs"
-                        variant="subtle"
-                        color="gray"
-                        onClick={() => removeFile(f.measurementId)}
-                      >
-                        <IconTrash size={12} />
-                      </ActionIcon>
-                    </Tooltip>
-                  </Group>
-                  {meta !== null && loaded && (
-                    <Group gap={6} wrap="nowrap" justify="space-between">
-                      <Text size="xs" c="dimmed">
-                        {meta.totalSamples.toLocaleString()} samples · {meta.channels.length} channels
-                      </Text>
-                      {/* Per-file time offset (Phase 5a): numeric entry is the
-                          precise path; SHIFT-drag on a strip adjusts it too. */}
-                      <NumberInput
-                        size="xs"
-                        w={100}
-                        hideControls
-                        value={f.offset ?? 0}
-                        step={0.1}
-                        decimalScale={9}
-                        prefix="Δt "
-                        suffix=" s"
-                        aria-label={`Time offset for ${f.signature.name}`}
-                        onChange={(v) =>
-                          setFileOffset(f.measurementId, typeof v === 'number' ? v : Number(v) || 0)
-                        }
-                      />
-                    </Group>
-                  )}
-                  {remoteError !== null && (
-                    <Alert color="red" p={6} mt={4} icon={<IconAlertTriangle size={14} />}>
-                      <Text size="xs">{remoteError}</Text>
-                    </Alert>
-                  )}
-                  {!loaded && (
-                    // Template mode (§2.5b): the layout survived the project
-                    // round-trip; the samples did not. One re-pick repopulates
-                    // every strip bound to this file.
-                    <Alert color="orange" p={6} mt={4} icon={<IconAlertTriangle size={14} />}>
-                      <Stack gap={6}>
-                        <Text size="xs">
-                          Measurement data is not loaded ({(f.signature.size / 1e6).toFixed(1)} MB
-                          file).
-                        </Text>
-                        <FileButton
-                          onChange={(nf) => void handleImport(nf, undefined, f.measurementId)}
-                          accept=".csv,.tsv,.txt,.mf4,text/csv"
-                        >
-                          {(props) => (
-                            <Button
-                              {...props}
-                              size="compact-xs"
-                              variant="light"
-                              color="orange"
-                              leftSection={<IconFileSearch size={13} />}
-                            >
-                              Locate file…
-                            </Button>
-                          )}
-                        </FileButton>
-                      </Stack>
-                    </Alert>
-                  )}
-                  {loaded &&
-                    meta?.channels
-                      .filter((ch) => searchLower === '' || ch.name.toLowerCase().includes(searchLower))
-                      .map((ch) => (
-                        <Group key={ch.name} justify="space-between" gap={4} wrap="nowrap" py={1}>
-                          <Group gap={4} wrap="nowrap" style={{ overflow: 'hidden' }}>
-                            <Text size="xs" truncate title={ch.name}>
-                              {ch.name}
-                            </Text>
-                            {ch.unit !== undefined && (
-                              <Text size="xs" c="dimmed">
-                                [{ch.unit}]
-                              </Text>
-                            )}
-                            {ch.kind !== 'analog' && (
-                              <Badge size="xs" variant="light" color={ch.kind === 'boolean' ? 'teal' : 'gray'}>
-                                {ch.kind === 'boolean' ? 'bool' : 'str'}
-                              </Badge>
-                            )}
-                          </Group>
-                          <Tooltip
-                            label={
-                              ch.kind === 'string'
-                                ? 'String channels cannot be plotted (known limitation)'
-                                : 'Add to the selected strip'
-                            }
-                          >
-                            <ActionIcon
-                              size="xs"
-                              variant="subtle"
-                              disabled={ch.kind === 'string'}
-                              onClick={() => addSignal(f.measurementId, ch)}
-                            >
-                              <IconPlus size={12} />
-                            </ActionIcon>
-                          </Tooltip>
-                        </Group>
-                      ))}
-                </Box>
-              )
-            })}
-          </Stack>
-        </ScrollArea>
-      </Stack>
+            <Tooltip label="Collapse the signal browser (it is also available in the Inspector)">
+              <ActionIcon size="xs" variant="subtle" color="gray" onClick={() => setBrowserOpen(false)}>
+                <IconChevronLeft size={12} />
+              </ActionIcon>
+            </Tooltip>
+          </Group>
+          <Box style={{ flex: 1, minHeight: 0 }}>
+            <SignalBrowser
+              spec={spec}
+              updateSpec={updateSpec}
+              tables={tables}
+              onAfterImport={() => dispatch({ type: 'reset-zoom' })}
+            />
+          </Box>
+        </Stack>
+      ) : (
+        <Stack
+          w={26}
+          p={2}
+          h="100%"
+          align="center"
+          style={{ borderRight: '1px solid var(--mantine-color-default-border)', flexShrink: 0 }}
+        >
+          <Tooltip label="Expand the signal browser">
+            <ActionIcon size="sm" variant="subtle" color="gray" onClick={() => setBrowserOpen(true)}>
+              <IconChevronRight size={14} />
+            </ActionIcon>
+          </Tooltip>
+        </Stack>
+      )}
 
       {/* Instruments */}
       <Tabs
@@ -1570,9 +1246,9 @@ export default function DataAnalyzerTab({ singleAnalyzerId, analyzers, onAnalyze
                   mouseMode={view.mouseMode}
                   offsets={offsets}
                   storeVersion={storeVersion}
-                  selected={view.selectedStripId === strip.id}
+                  selected={spec.selectedStripId === strip.id}
                   dark={dark}
-                  onSelect={() => dispatch({ type: 'select-strip', id: strip.id })}
+                  onSelect={() => selectStrip(strip.id)}
                   onZoom={(min, max) => dispatch({ type: 'zoom', min, max })}
                   onResetZoom={() => dispatch({ type: 'reset-zoom' })}
                   onCursorSet={placeCursor(strip)}
@@ -1653,47 +1329,6 @@ export default function DataAnalyzerTab({ singleAnalyzerId, analyzers, onAnalyze
 
       {showCalc && (
         <CalcSignalModal spec={spec} onResult={handleCalcResult} onClose={() => setShowCalc(false)} />
-      )}
-
-      {pendingTime !== null && (
-        <TimeColumnModal
-          fileName={pendingTime.file.name}
-          candidates={pendingTime.candidates}
-          onConfirm={(choice) => {
-            const { file, relocateId } = pendingTime
-            setPendingTime(null)
-            void handleImport(file, choice, relocateId)
-          }}
-          onCancel={() => setPendingTime(null)}
-        />
-      )}
-
-      {pendingAdvisory !== null && (
-        <Modal opened onClose={() => setPendingAdvisory(null)} title="File differs from the saved reference" centered>
-          <Stack gap="sm">
-            <Text size="sm">
-              The picked file has all the channels this analyzer uses, but its{' '}
-              {pendingAdvisory.mismatches.join(' and ')} differ
-              {pendingAdvisory.mismatches.length === 1 ? 's' : ''} from the file the project was
-              saved with. It may be a different recording.
-            </Text>
-            <Group justify="flex-end" gap="xs">
-              <Button variant="default" onClick={() => setPendingAdvisory(null)}>
-                Cancel
-              </Button>
-              <Button
-                color="orange"
-                onClick={() => {
-                  const { measurement, relocateId } = pendingAdvisory
-                  setPendingAdvisory(null)
-                  applyRelocation(measurement, relocateId)
-                }}
-              >
-                Use anyway
-              </Button>
-            </Group>
-          </Stack>
-        </Modal>
       )}
     </Group>
   )
