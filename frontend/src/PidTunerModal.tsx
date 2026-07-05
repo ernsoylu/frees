@@ -54,6 +54,10 @@ interface Props {
   subject?: string
   /** Apply the tuned gains (write back to the SigPID / insert a snippet). */
   onApply?: (gains: TunedGains) => void
+  /** The plant is being auto-extracted (linearizing the loop). */
+  plantLoading?: boolean
+  /** Auto-extraction failed / was skipped; shown above the manual entry. */
+  plantError?: string
   dark?: boolean
 }
 
@@ -74,6 +78,8 @@ export default function PidTunerModal({
   initial,
   subject,
   onApply,
+  plantLoading = false,
+  plantError,
   dark = true,
 }: Readonly<Props>) {
   const [type, setType] = useState<PidType>(initial?.type ?? 'pi')
@@ -228,8 +234,28 @@ export default function PidTunerModal({
             fullWidth
           />
 
-          {!plant && (
+          {plantLoading && (
+            <Group gap="xs" wrap="nowrap">
+              <Loader size="xs" />
+              <Text size="xs" c="dimmed">
+                Linearizing the loop to identify the plant…
+              </Text>
+            </Group>
+          )}
+
+          {plant && !plantLoading && (
+            <Text size="xs" c="dimmed">
+              Plant auto-identified from the loop by linearization.
+            </Text>
+          )}
+
+          {!plant && !plantLoading && (
             <>
+              {plantError !== undefined && (
+                <Alert color="yellow" p="xs" icon={<IconAlertTriangle size={14} />}>
+                  <Text size="xs">{plantError}</Text>
+                </Alert>
+              )}
               <TextInput
                 size="xs"
                 label="Plant numerator (descending powers)"

@@ -87,4 +87,71 @@ class PidTunerTest {
     void controllerTfRejectsUnknownType() {
         assertThrows(CasEngine.CasException.class, () -> PidTuner.controllerTf("lead", 1, 1, 1));
     }
+
+    /** Round-trip: build the closed loop M from a known plant G and controller
+     *  C0, then recover G back out — for both setpoint-wiring conventions. */
+    @Test
+    void recoversThePlantFromTheClosedLoop() {
+        double[] gNum = {2.0};
+        double[] gDen = {5.0, 1.0};          // G = 2/(5s+1)
+        double[] cNum = {1.0, 0.5};
+        double[] cDen = {1.0, 0.0};          // C0 = (s + 0.5)/s  (a PI controller)
+
+        // Standard wiring (reference on sp): M = L/(1+L), L = C0·G.
+        double[][] loop = PolynomialHelpers.series(cNum, cDen, gNum, gDen);
+        double[][] m = PolynomialHelpers.feedback(loop[0], loop[1], new double[]{1}, new double[]{1}, 1.0);
+        double[][] g = PidTuner.recoverPlant(m[0], m[1], cNum, cDen, true);
+        assertRatioEquals(gNum, gDen, g[0], g[1]);
+
+        // Reverse wiring (reference on pv): M = -L/(1-L).
+        double[] negLoopNum = loop[0].clone();
+        for (int i = 0; i < negLoopNum.length; i++) negLoopNum[i] = -negLoopNum[i];
+        double[][] mRev = PolynomialHelpers.feedback(negLoopNum, loop[1], new double[]{1}, new double[]{1}, 1.0);
+        double[][] gRev = PidTuner.recoverPlant(mRev[0], mRev[1], cNum, cDen, false);
+        assertRatioEquals(gNum, gDen, gRev[0], gRev[1]);
+    }
+
+    @Test
+    void ssToTfConvertsAFirstOrderSystem() {
+        // A = −1, B = 1, C = 2, D = 0 → G = 2/(s+1).
+        double[][] g = PidTuner.ssToTf(new double[][]{{-1}}, new double[]{1}, new double[]{2}, 0);
+        // num = [0, 2] (padded), den = [1, 1] → 2/(s+1).
+        assertEquals(1.0, g[1][0], 1e-12);
+        assertEquals(1.0, g[1][1], 1e-12);
+        assertEquals(0.0, g[0][0], 1e-12);
+        assertEquals(2.0, g[0][1], 1e-12);
+    }
+
+    @Test
+    void ssToTfHandlesAPureGainSystem() {
+        double[][] g = PidTuner.ssToTf(new double[0][0], new double[0], new double[0], 3.5);
+        assertArrayEquals(new double[]{3.5}, g[0], 1e-12);
+        assertArrayEquals(new double[]{1.0}, g[1], 1e-12);
+    }
+
+    @Test
+    void ssToTfConvertsATwoStateSystem() {
+        // Companion form of 1/(s^2+3s+2): A=[[0,1],[-2,-3]], B=[0,1], C=[1,0], D=0.
+        double[][] g = PidTuner.ssToTf(
+                new double[][]{{0, 1}, {-2, -3}}, new double[]{0, 1}, new double[]{1, 0}, 0);
+        assertArrayEquals(new double[]{1.0, 3.0, 2.0}, g[1], 1e-9); // den = s^2+3s+2
+        assertEquals(1.0, g[0][2], 1e-9);                          // num constant = 1
+    }
+
+    /** Two transfer functions are equal up to a common scale (compare num·den'
+     *  cross-products, normalized). */
+    private static void assertRatioEquals(double[] n1, double[] d1, double[] n2, double[] d2) {
+        double[] lhs = PolynomialHelpers.multiplyRaw(n1, d2);
+        double[] rhs = PolynomialHelpers.multiplyRaw(n2, d1);
+        int n = Math.max(lhs.length, rhs.length);
+        double scale = 0;
+        for (double v : lhs) scale = Math.max(scale, Math.abs(v));
+        for (double v : rhs) scale = Math.max(scale, Math.abs(v));
+        if (scale == 0) scale = 1;
+        for (int i = 0; i < n; i++) {
+            double a = i < lhs.length ? lhs[lhs.length - 1 - i] : 0;
+            double b = i < rhs.length ? rhs[rhs.length - 1 - i] : 0;
+            assertEquals(0.0, (a - b) / scale, 1e-9, "coefficient " + i + " mismatch");
+        }
+    }
 }
