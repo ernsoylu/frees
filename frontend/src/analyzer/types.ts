@@ -93,6 +93,8 @@ export interface AnalyzerSpec {
    * user selected inside the analyzer window.
    */
   selectedStripId?: string
+  /** Width (px) of each strip's signal-list column; shared by all strips. */
+  signalListWidth?: number
 }
 
 /**
