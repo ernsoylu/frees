@@ -127,6 +127,8 @@ interface ViewState {
   snap: boolean
   /** What a plain mouse drag does on a strip: box zoom or pan. */
   mouseMode: MouseMode
+  /** Signal highlighted in the list + emphasized in the plot (MDA selection). */
+  selectedSignal: SignalKey | null
   instrument: Instrument
 }
 
@@ -137,6 +139,7 @@ type ViewAction =
   | { type: 'clear-cursors' }
   | { type: 'toggle-snap' }
   | { type: 'set-mouse-mode'; mode: MouseMode }
+  | { type: 'select-signal'; sig: SignalKey | null }
   | { type: 'set-instrument'; instrument: Instrument }
 
 function viewReducer(state: ViewState, action: ViewAction): ViewState {
@@ -157,6 +160,8 @@ function viewReducer(state: ViewState, action: ViewAction): ViewState {
       return { ...state, snap: !state.snap }
     case 'set-mouse-mode':
       return { ...state, mouseMode: action.mode }
+    case 'select-signal':
+      return { ...state, selectedSignal: action.sig }
     case 'set-instrument':
       return { ...state, instrument: action.instrument }
   }
@@ -167,9 +172,30 @@ function viewReducer(state: ViewState, action: ViewAction): ViewState {
 // ---------------------------------------------------------------------------
 
 interface LoadedSignal {
+  measurementId: string
   channel: string
   color: string
   kind: 'analog' | 'boolean'
+}
+
+/** Identity of a selected/highlighted signal. */
+interface SignalKey {
+  measurementId: string
+  channel: string
+}
+
+const sameSignal = (a: SignalKey | null, m: string, c: string): boolean =>
+  a !== null && a.measurementId === m && a.channel === c
+
+/** Fade a #rrggbb signal color for non-selected curves (blend toward mid-gray). */
+function dimColor(hex: string): string {
+  const m = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex)
+  if (m === null) return hex
+  const mix = (v: number) => Math.round(v * 0.4 + 128 * 0.6)
+  const r = mix(parseInt(m[1], 16))
+  const g = mix(parseInt(m[2], 16))
+  const b = mix(parseInt(m[3], 16))
+  return `rgb(${r}, ${g}, ${b})`
 }
 
 /**
@@ -208,6 +234,7 @@ function buildStripData(
       tables.push([win.t, win.v, win.v] as unknown as uPlot.AlignedData)
     }
     loaded.push({
+      measurementId: sig.measurementId,
       channel: sig.channel,
       color: sig.color,
       // MDA "Treat As Boolean/Analog Signal": the per-signal override wins
@@ -228,16 +255,23 @@ function stripOptions(
   loaded: LoadedSignal[],
   syncKey: string,
   dark: boolean,
+  selected: SignalKey | null,
 ): Omit<uPlot.Options, 'width' | 'height'> {
   const axisColor = dark ? '#909296' : '#495057'
   const gridColor = dark ? 'rgba(134,142,150,0.15)' : 'rgba(134,142,150,0.25)'
+  // When a signal is selected, its curve is bold and the others dim (MDA
+  // emphasis). With nothing selected, every curve is at its normal weight.
+  const anySelected = loaded.some((s) => sameSignal(selected, s.measurementId, s.channel))
   const series: uPlot.Series[] = [{}]
   for (const sig of loaded) {
     const stepped =
       sig.kind === 'boolean' ? uPlot.paths?.stepped?.({ align: 1 }) : undefined
+    const isSel = sameSignal(selected, sig.measurementId, sig.channel)
+    const width = isSel ? 2.5 : 1
+    const stroke = anySelected && !isSel ? dimColor(sig.color) : sig.color
     // Envelope pair: min line + max line in the signal color (identical when raw).
-    series.push({ label: `${sig.channel} (env)`, stroke: sig.color, width: 1, spanGaps: true, paths: stepped })
-    series.push({ label: sig.channel, stroke: sig.color, width: 1, spanGaps: true, paths: stepped })
+    series.push({ label: `${sig.channel} (env)`, stroke, width, spanGaps: true, paths: stepped })
+    series.push({ label: sig.channel, stroke, width, spanGaps: true, paths: stepped })
   }
   const allBoolean = loaded.length > 0 && loaded.every((s) => s.kind === 'boolean')
   return {
@@ -287,19 +321,24 @@ interface SignalRowProps {
   offset: number
   hoverT: number | null
   cursors: AbCursors
+  selected: boolean
+  onSelect: () => void
   onRemoveSignal: (channel: string, measurementId: string) => void
   onSetKind: (channel: string, measurementId: string, kind: 'analog' | 'boolean' | undefined) => void
   onMoveToNewStrip: (channel: string, measurementId: string) => void
 }
 
-/** One signal-list row: draggable, with an MDA-style context menu reachable
- *  from BOTH the ⋮ icon and a right-click anywhere on the row. */
+/** One signal-list row: draggable, selectable (click / right-click highlights
+ *  it and its curve), with an MDA-style context menu reachable from BOTH the ⋮
+ *  icon and a right-click anywhere on the row. */
 function SignalRow({
   sig,
   stripId,
   offset,
   hoverT,
   cursors,
+  selected,
+  onSelect,
   onRemoveSignal,
   onSetKind,
   onMoveToNewStrip,
@@ -336,9 +375,14 @@ function SignalRow({
         )
         e.dataTransfer.effectAllowed = 'move'
       }}
+      onClick={(e) => {
+        e.stopPropagation()
+        onSelect()
+      }}
       onContextMenu={(e) => {
         e.preventDefault()
         e.stopPropagation()
+        onSelect()
         setMenuOpened(true)
       }}
       style={{
@@ -347,6 +391,9 @@ function SignalRow({
         gap: 4,
         alignItems: 'center',
         cursor: 'grab',
+        borderRadius: 3,
+        background: selected ? 'var(--mantine-color-teal-light)' : undefined,
+        boxShadow: selected ? 'inset 2px 0 0 var(--mantine-color-teal-6)' : undefined,
       }}
     >
       <Box w={10} h={10} style={{ background: sig.color, borderRadius: 2 }} />
@@ -424,6 +471,8 @@ interface SignalListProps {
   offsets: Map<string, number>
   hoverT: number | null
   cursors: AbCursors
+  selectedSignal: SignalKey | null
+  onSelectSignal: (sig: SignalKey) => void
   onRemoveSignal: (channel: string, measurementId: string) => void
   /** MDA "Treat As Boolean/Analog Signal"; undefined = back to auto. */
   onSetKind: (channel: string, measurementId: string, kind: 'analog' | 'boolean' | undefined) => void
@@ -436,6 +485,8 @@ function SignalList({
   offsets,
   hoverT,
   cursors,
+  selectedSignal,
+  onSelectSignal,
   onRemoveSignal,
   onSetKind,
   onMoveToNewStrip,
@@ -492,6 +543,8 @@ function SignalList({
           offset={offsets.get(sig.measurementId) ?? 0}
           hoverT={hoverT}
           cursors={cursors}
+          selected={sameSignal(selectedSignal, sig.measurementId, sig.channel)}
+          onSelect={() => onSelectSignal({ measurementId: sig.measurementId, channel: sig.channel })}
           onRemoveSignal={onRemoveSignal}
           onSetKind={onSetKind}
           onMoveToNewStrip={onMoveToNewStrip}
@@ -523,6 +576,8 @@ interface StripViewProps {
   onCursorSet: (t: number, which: 'a' | 'b') => void
   onOffsetDrag: (deltaSeconds: number) => void
   onHover: (t: number | null) => void
+  selectedSignal: SignalKey | null
+  onSelectSignal: (sig: SignalKey) => void
   /** Width (px) of the signal-list column, shared across strips. */
   signalListWidth: number
   /** Signal-list width during (done=false) / after (done=true) a divider drag. */
@@ -554,6 +609,8 @@ function StripView({
   onCursorSet,
   onOffsetDrag,
   onHover,
+  selectedSignal,
+  onSelectSignal,
   signalListWidth,
   onResizeSignalList,
   onRemoveSignal,
@@ -570,13 +627,18 @@ function StripView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [strip, xRange, offsets, storeVersion],
   )
-  // Options identity only changes when the series composition does, so the
-  // chart instance — and the synced cursor — survives zoom/data updates.
+  // Options identity only changes when the series composition or the highlight
+  // does, so the chart instance — and the synced cursor — survives zoom/data
+  // updates. selKey rebuilds only the strip whose selection state changed.
   const seriesKey = built.loaded.map((s) => `${s.channel} ${s.color} ${s.kind}`).join('|')
+  const selInStrip = built.loaded.find((s) =>
+    sameSignal(selectedSignal, s.measurementId, s.channel),
+  )
+  const selKey = selInStrip ? `${selInStrip.measurementId}:${selInStrip.channel}` : ''
   const options = useMemo(
-    () => stripOptions(built.loaded, syncKey, dark),
+    () => stripOptions(built.loaded, syncKey, dark, selectedSignal),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [seriesKey, syncKey, dark],
+    [seriesKey, syncKey, dark, selKey],
   )
   // Live weight override while the bottom handle is being dragged; the final
   // value is committed to the spec (persisted) on release. Flex handles the
@@ -725,6 +787,8 @@ function StripView({
           offsets={offsets}
           hoverT={hoverT}
           cursors={cursors}
+          selectedSignal={selectedSignal}
+          onSelectSignal={onSelectSignal}
           onRemoveSignal={onRemoveSignal}
           onSetKind={onSetKind}
           onMoveToNewStrip={onMoveToNewStrip}
@@ -801,6 +865,7 @@ export default function DataAnalyzerTab({
     cursorB: null,
     snap: true,
     mouseMode: 'zoom',
+    selectedSignal: null,
     instrument: 'scope',
   })
   // Hover time (floating-cursor readout), rAF-coalesced: setCursor fires per
@@ -1309,6 +1374,8 @@ export default function DataAnalyzerTab({
                   onCursorSet={placeCursor(strip)}
                   onOffsetDrag={dragOffset(strip)}
                   onHover={handleHover}
+                  selectedSignal={view.selectedSignal}
+                  onSelectSignal={(sig) => dispatch({ type: 'select-signal', sig })}
                   signalListWidth={listWidth}
                   onResizeSignalList={resizeSignalList}
                   onRemoveSignal={(channel, measurementId) =>
