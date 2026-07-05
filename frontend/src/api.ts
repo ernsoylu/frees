@@ -1040,3 +1040,37 @@ export async function pidTune(req: PidTuneRequest): Promise<PidTuneResponse> {
   }
   return data as PidTuneResponse
 }
+
+// ---------------------------------------------------------------------------
+// Plant extraction for the SigPID "Tune…" path — POST /api/control/plant
+// ---------------------------------------------------------------------------
+
+export interface PlantRequest {
+  text: string
+  dynamic: string
+  /** Reference SigConstant instance whose constant is perturbed (e.g. "SP"). */
+  reference: string
+  /** Measured plant-output variable (e.g. "bp.t"). */
+  output: string
+  /** True when the reference drives the PID's sp input (the common wiring). */
+  referenceOnSp: boolean
+  type: 'p' | 'pi' | 'pid'
+  kp: number
+  ki: number
+  kd: number
+}
+
+/** Linearize the closed loop a SigPID sees and return the recovered plant G(s).
+ *  Runs a synchronous solve on the API node — allow a generous timeout. */
+export async function extractPlant(req: PlantRequest): Promise<{ num: number[]; den: number[] }> {
+  const response = await fetch(`${API_BASE}/api/control/plant`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(req),
+  })
+  const data = await response.json().catch(() => null)
+  if (!response.ok) {
+    throw new Error(data?.error ?? `Plant extraction failed with status ${response.status}`)
+  }
+  return data as { num: number[]; den: number[] }
+}

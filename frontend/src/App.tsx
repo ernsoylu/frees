@@ -44,6 +44,7 @@ import {
   check,
   CheckResponse,
   DEFAULT_STOP_CRITERIA,
+  extractPlant,
   getFluids,
   solve,
   replClear,
@@ -138,6 +139,7 @@ import { PlotSpec, PlotKind } from './plots/types'
 import { plotDefToSpec } from './plots/fromCode'
 import Workspace, { type ComponentGroup } from './Workspace'
 import { rewritePidGains } from './pidGainRewrite'
+import { analyzePidLoop } from './pidLoop'
 import ReplTerminal from './ReplTerminal'
 import MobileLayout from './MobileLayout'
 import { DOCS_TOPICS } from './docsTopics'
@@ -323,6 +325,9 @@ export default function App() {
     instanceName?: string
     initial?: { type: PidType; kp: number; ki: number; kd: number }
     subject?: string
+    plant?: { num: number[]; den: number[] }
+    plantLoading?: boolean
+    plantError?: string
   } | null>(null)
   const [showAbout, setShowAbout] = useState(false)
   const [showExamples, setShowExamples] = useState(false)
@@ -360,7 +365,8 @@ export default function App() {
     editorRef.current?.setDoc(next)
   }, [])
 
-  /** Open the PID Tuner seeded from a solved SigPID instance's current gains. */
+  /** Open the PID Tuner for a solved SigPID: seed its current gains and try to
+   *  auto-extract the plant from the loop (falling back to manual entry). */
   const openPidTunerFor = useCallback((c: ComponentGroup) => {
     const gain = (key: string): number => {
       const p = c.params.find((x) => x.name.toLowerCase() === key)
@@ -372,7 +378,33 @@ export default function App() {
     let type: PidType = 'p'
     if (kd !== 0) type = 'pid'
     else if (ki !== 0) type = 'pi'
-    setPidTuner({ instanceName: c.name, initial: { type, kp, ki, kd }, subject: c.name })
+    const initial = { type, kp, ki, kd }
+
+    const loop = analyzePidLoop(textRef.current, c.name)
+    if (loop === null) {
+      // Couldn't read the wiring — open with manual plant entry.
+      setPidTuner({
+        instanceName: c.name,
+        initial,
+        subject: c.name,
+        plantError: 'Could not identify the loop automatically — enter the plant transfer function.',
+      })
+      return
+    }
+    setPidTuner({ instanceName: c.name, initial, subject: c.name, plantLoading: true })
+    extractPlant({ text: textRef.current, dynamic: loop.dynamic, reference: loop.reference, output: loop.output, referenceOnSp: loop.referenceOnSp, type, kp, ki, kd })
+      .then((plant) =>
+        setPidTuner((prev) =>
+          prev && prev.instanceName === c.name ? { ...prev, plant, plantLoading: false } : prev,
+        ),
+      )
+      .catch((e: unknown) =>
+        setPidTuner((prev) =>
+          prev && prev.instanceName === c.name
+            ? { ...prev, plantLoading: false, plantError: `Auto-linearization failed (${e instanceof Error ? e.message : String(e)}). Enter the plant manually.` }
+            : prev,
+        ),
+      )
   }, [])
   // Dockview workspace manager: imperative handle + set of currently-open
   // window kinds (drives the sidebar's open-state indicators).
@@ -2757,6 +2789,9 @@ export default function App() {
             onClose={() => setPidTuner(null)}
             initial={pidTuner.initial}
             subject={pidTuner.subject}
+            plant={pidTuner.plant}
+            plantLoading={pidTuner.plantLoading}
+            plantError={pidTuner.plantError}
             dark={computedScheme === 'dark'}
             onApply={(g) => {
               if (pidTuner.instanceName) {
