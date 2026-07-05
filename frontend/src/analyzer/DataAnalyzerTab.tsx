@@ -98,6 +98,10 @@ const WEIGHT_MIN = 0.25
 const WEIGHT_MAX = 6
 /** A strip never compresses below this (the container scrolls instead). */
 const STRIP_MIN_PX = 120
+/** Signal-list column width: default and drag clamp. */
+const LIST_WIDTH_DEFAULT = 392
+const LIST_WIDTH_MIN = 180
+const LIST_WIDTH_MAX = 760
 /** DnD payload mime for signal-row and strip-reorder drags. */
 const DND_MIME = 'application/x-frees-analyzer'
 
@@ -416,6 +420,7 @@ function SignalRow({
 
 interface SignalListProps {
   strip: AnalyzerStrip
+  width: number
   offsets: Map<string, number>
   hoverT: number | null
   cursors: AbCursors
@@ -427,6 +432,7 @@ interface SignalListProps {
 
 function SignalList({
   strip,
+  width,
   offsets,
   hoverT,
   cursors,
@@ -436,7 +442,7 @@ function SignalList({
 }: Readonly<SignalListProps>) {
   return (
     <Box
-      w={392}
+      w={width}
       style={{
         flexShrink: 0,
         borderLeft: '1px solid var(--mantine-color-default-border)',
@@ -517,6 +523,10 @@ interface StripViewProps {
   onCursorSet: (t: number, which: 'a' | 'b') => void
   onOffsetDrag: (deltaSeconds: number) => void
   onHover: (t: number | null) => void
+  /** Width (px) of the signal-list column, shared across strips. */
+  signalListWidth: number
+  /** Signal-list width during (done=false) / after (done=true) a divider drag. */
+  onResizeSignalList: (width: number, done: boolean) => void
   onRemoveSignal: (channel: string, measurementId: string) => void
   onRemoveStrip: () => void
   /** Commit a new flex weight (share of the scope area) after a resize drag. */
@@ -544,6 +554,8 @@ function StripView({
   onCursorSet,
   onOffsetDrag,
   onHover,
+  signalListWidth,
+  onResizeSignalList,
   onRemoveSignal,
   onRemoveStrip,
   onResizeWeight,
@@ -677,8 +689,39 @@ function StripView({
             </Group>
           )}
         </Box>
+        {/* Draggable divider: resize the plot vs signal-list split (shared by
+            all strips). Dragging left widens the list, right narrows it. */}
+        <Box
+          aria-label="Resize signal list"
+          h="100%"
+          w={6}
+          style={{ cursor: 'ew-resize', flexShrink: 0, touchAction: 'none' }}
+          onClick={(e) => e.stopPropagation()}
+          onPointerDown={(e) => {
+            e.preventDefault()
+            e.stopPropagation()
+            const startX = e.clientX
+            const startW = signalListWidth
+            const target = e.currentTarget
+            target.setPointerCapture(e.pointerId)
+            const clamp = (w: number) =>
+              Math.max(LIST_WIDTH_MIN, Math.min(LIST_WIDTH_MAX, Math.round(w)))
+            const onMove = (ev: PointerEvent) =>
+              onResizeSignalList(clamp(startW - (ev.clientX - startX)), false)
+            const onUp = (ev: PointerEvent) => {
+              target.removeEventListener('pointermove', onMove)
+              target.removeEventListener('pointerup', onUp)
+              onResizeSignalList(clamp(startW - (ev.clientX - startX)), true)
+            }
+            target.addEventListener('pointermove', onMove)
+            target.addEventListener('pointerup', onUp)
+          }}
+        >
+          <Box w={1} h="100%" mx="auto" style={{ background: 'var(--mantine-color-default-border)' }} />
+        </Box>
         <SignalList
           strip={strip}
+          width={signalListWidth}
           offsets={offsets}
           hoverT={hoverT}
           cursors={cursors}
@@ -778,6 +821,8 @@ export default function DataAnalyzerTab({
   // lives in the Inspector (open by default) whenever an analyzer is focused,
   // so the oscilloscope gets the full width until the user expands it here.
   const [browserOpen, setBrowserOpen] = useState(false)
+  // Live signal-list width during a divider drag; committed to the spec on release.
+  const [liveListWidth, setLiveListWidth] = useState<number | null>(null)
 
   // Functional update against the LATEST state: two spec changes in the same
   // tick (e.g. two rapid add-signal clicks) must both land, so never derive
@@ -1010,6 +1055,15 @@ export default function DataAnalyzerTab({
 
   const cursors: AbCursors = { a: view.cursorA, b: view.cursorB }
   const dt = view.cursorA !== null && view.cursorB !== null ? view.cursorB - view.cursorA : null
+  const listWidth = liveListWidth ?? spec.signalListWidth ?? LIST_WIDTH_DEFAULT
+  const resizeSignalList = (width: number, done: boolean) => {
+    if (done) {
+      setLiveListWidth(null)
+      updateSpec((cur) => ({ ...cur, signalListWidth: width }))
+    } else {
+      setLiveListWidth(width)
+    }
+  }
 
   return (
     <Group align="stretch" gap={0} h="100%" wrap="nowrap">
@@ -1255,6 +1309,8 @@ export default function DataAnalyzerTab({
                   onCursorSet={placeCursor(strip)}
                   onOffsetDrag={dragOffset(strip)}
                   onHover={handleHover}
+                  signalListWidth={listWidth}
+                  onResizeSignalList={resizeSignalList}
                   onRemoveSignal={(channel, measurementId) =>
                     removeSignal(strip.id, channel, measurementId)
                   }
