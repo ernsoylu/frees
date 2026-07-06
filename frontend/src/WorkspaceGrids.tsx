@@ -3,7 +3,7 @@ import { DataEditor, GridCell, GridCellKind, GridColumn, Item } from '@glideapps
 import '@glideapps/glide-data-grid/dist/index.css'
 import { useElementSize } from '@mantine/hooks'
 import { useGlideTheme } from './DataGridReadOnly'
-import type { ArrayGroup } from './Workspace'
+import type { ArrayGroup } from './workspaceData'
 import { VariableResult } from './api'
 import { formatValue } from './format'
 

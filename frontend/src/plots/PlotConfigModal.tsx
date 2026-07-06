@@ -28,6 +28,7 @@ import {
 } from './types'
 import { defaultUnitId, unitIdsFor } from './units'
 import { StateTableDto } from '../api'
+import { SpreadsheetSpec } from '../spreadsheet/types'
 import { displayVar, varOptions } from '../varDisplay'
 
 interface Props {
@@ -45,7 +46,7 @@ interface Props {
   /** Declared STATE TABLE blocks, so property/psychro plots can overlay one
    * specific circuit's states (and adopt its fluid). */
   stateTables?: StateTableDto[]
-  spreadsheets?: any[]
+  spreadsheets?: SpreadsheetSpec[]
   onSave: (spec: PlotSpec) => void
   onClose: () => void
 }
@@ -67,7 +68,7 @@ function XYSection({
 }: Readonly<{
   config: XYConfig
   tableVars: string[]
-  spreadsheets?: any[]
+  spreadsheets?: SpreadsheetSpec[]
   onChange: (config: XYConfig) => void
 }>) {
   const chartType = config.chartType ?? 'line'

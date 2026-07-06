@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react'
 import { createUniver, defaultTheme, LocaleType, mergeLocales } from '@univerjs/presets'
 import type { FUniver } from '@univerjs/presets'
 import { UniverSheetsCorePreset } from '@univerjs/preset-sheets-core'
@@ -66,7 +66,9 @@ export default function SpreadsheetTab({ singleSpreadsheetId, spreadsheets, onSp
 
   // Latest spec, readable from stable callbacks without re-subscribing events.
   const specRef = useRef(spec)
-  specRef.current = spec
+  useLayoutEffect(() => {
+    specRef.current = spec
+  })
 
   const syncOut = useCallback(() => {
     const api = apiRef.current
@@ -116,6 +118,7 @@ export default function SpreadsheetTab({ singleSpreadsheetId, spreadsheets, onSp
       if (String(e?.id ?? '').startsWith('sheet.mutation.')) scheduleSync()
     })
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const selSub = univerAPI.addEvent(univerAPI.Event.SelectionChanged, (params: any) => {
       const sel = params?.selections?.[0]
       const ws = params?.worksheet

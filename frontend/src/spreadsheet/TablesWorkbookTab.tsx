@@ -19,6 +19,7 @@
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
   type Dispatch,
@@ -130,9 +131,12 @@ export default function TablesWorkbookTab({
   const scheme = useComputedColorScheme('dark')
 
   const tablesRef = useRef(tables)
-  tablesRef.current = tables
   const activeIdRef = useRef<string | null>(active?.id ?? null)
-  activeIdRef.current = active?.id ?? null
+
+  useLayoutEffect(() => {
+    tablesRef.current = tables
+    activeIdRef.current = active?.id ?? null
+  })
 
   // spec.id -> Univer sheet id (boot sheets reuse spec ids; later fwb.create
   // mints its own, so the mapping is explicit).
@@ -443,9 +447,8 @@ export default function TablesWorkbookTab({
       dispatch('EDIT_START')
       if (syncTimer.current) clearTimeout(syncTimer.current)
       syncTimer.current = setTimeout(flushSync, 300)
-      // eslint-disable-next-line react-hooks/exhaustive-deps
     },
-    [flushSync],
+    [flushSync, dispatch],
   )
 
   // -------------------------------------------------------------------------
@@ -529,6 +532,8 @@ export default function TablesWorkbookTab({
     tablesWorkbookSync.flush = flushSync
     setReady(true)
 
+    const lastWrittenMap = lastWritten.current
+
     return () => {
       tablesWorkbookSync.flush = null
       if (syncTimer.current) {
@@ -540,7 +545,7 @@ export default function TablesWorkbookTab({
       ;(vetoSub as { dispose?: () => void })?.dispose?.()
       apiRef.current = null
       sheetIdBySpec.current.clear()
-      lastWritten.current.clear()
+      lastWrittenMap.clear()
       machine.current = initialSyncMachine
       setReady(false)
       univerAPI.dispose()

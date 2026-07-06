@@ -65,9 +65,15 @@ export function parseSsheetReferences(text: string): SsheetReference[] {
   return refs
 }
 
-function getCellValue(sheet: any, r: number, c: number): number {
+type LooseSheet = {
+  name?: string
+  celldata?: Array<{ r: number; c: number; v?: { v?: string | number } }>
+  data?: Record<number, Record<number, { v?: string | number }>>
+}
+
+function getCellValue(sheet: LooseSheet, r: number, c: number): number {
   if (sheet.celldata) {
-    const cell = sheet.celldata.find((cd: any) => cd.r === r && cd.c === c)
+    const cell = sheet.celldata.find((cd) => cd.r === r && cd.c === c)
     if (cell && cell.v && typeof cell.v.v !== 'undefined') {
       const val = Number(cell.v.v)
       return Number.isNaN(val) ? 0 : val
@@ -97,7 +103,7 @@ export function resolveSsheetValues(
       // If no workbook matched, maybe it was a Sheet name (e.g. ssheet('Sheet1', 'A1'))
       if (!spec) {
         const matchingWorkbooks = spreadsheets.filter((s) => 
-          (s.sheets as any[]).some(sh => sh.name && sh.name.toLowerCase() === spreadsheetName!.toLowerCase())
+          (s.sheets as LooseSheet[]).some(sh => sh.name && sh.name.toLowerCase() === spreadsheetName!.toLowerCase())
         )
         if (matchingWorkbooks.length > 1) {
           throw new Error(`Ambiguous spreadsheet reference: Multiple workbooks contain a sheet named '${spreadsheetName}'. Please specify the workbook explicitly.`)
@@ -119,9 +125,9 @@ export function resolveSsheetValues(
       continue
     }
 
-    let sheet: any = spec.sheets[0]
+    let sheet: LooseSheet = spec.sheets[0] as LooseSheet
     if (sheetName) {
-      const found = (spec.sheets as any[]).find(
+      const found = (spec.sheets as LooseSheet[]).find(
         (sh) => sh.name && sh.name.toLowerCase() === sheetName!.toLowerCase()
       )
       if (found) sheet = found

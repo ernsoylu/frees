@@ -3459,10 +3459,13 @@ export default function HelpPage() {
   const [exampleCat, setExampleCat] = useState<string | null>(null);
 
   // Build the full-text search index once, seeding it with the nav keywords.
-  useMemo(() => {
-    const kw: Record<string, string[]> = {};
-    for (const cat of ALL_CATEGORIES) for (const it of cat.items) kw[it.id] = it.keywords;
-    buildSearchIndex(kw);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const kw: Record<string, string[]> = {};
+      for (const cat of ALL_CATEGORIES) for (const it of cat.items) kw[it.id] = it.keywords;
+      buildSearchIndex(kw);
+    }, 100);
+    return () => clearTimeout(timer);
   }, []);
 
   // Search facet: restrict results to one kind of page (guide/reference/…).
