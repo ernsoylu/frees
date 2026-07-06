@@ -9,6 +9,8 @@ backend/bin/
 node_modules/
 frontend/node_modules/
 frontend/dist/
+# rollup-plugin-visualizer bundle report (regenerated on every build).
+frontend/stats.html
 # Generated from src/docs/*.md by scripts/compile-docs.js (run on every
 # build/dev/start and in the Docker build) — a build artifact, not source.
 frontend/src/docsCatalog.ts
@@ -53,6 +55,8 @@ parse_sources.py
 inspect.js
 inspect2.js
 local_screenshot.png
+# One-off bundle-inspection scratch script.
+frontend/time_index.js
 
 # Environment files / secrets — never commit. Runtime config is injected via
 # Railway/CI env vars and docker-compose, not checked-in .env files.

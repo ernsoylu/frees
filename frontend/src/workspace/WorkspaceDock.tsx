@@ -22,8 +22,9 @@ import {
   createContext,
   useContext,
   useEffect,
+  useLayoutEffect,
   useRef,
-  useState,
+  useSyncExternalStore,
   type FC,
   type ReactNode,
 } from 'react'
@@ -88,13 +89,14 @@ function WorkspaceTab(props: IDockviewPanelHeaderProps) {
   const { api } = props
   const kind = (props.params?.kind as string) ?? api.id
   const Icon = KIND_ICONS[kind]
-  const [title, setTitle] = useState(api.title)
-  useEffect(() => {
-    const sub = api.onDidTitleChange((e) => setTitle(e.title))
-    if (title !== api.title) setTitle(api.title)
-    return () => sub.dispose()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [api])
+  const title = useSyncExternalStore(
+    (cb) => {
+      const sub = api.onDidTitleChange(cb)
+      return () => sub.dispose()
+    },
+    () => api.title,
+    () => api.title,
+  )
   return (
     <div className="dv-default-tab" data-testid="dockview-dv-default-tab">
       {Icon && <Icon size={13} style={{ flexShrink: 0, marginRight: 4 }} aria-hidden />}
@@ -189,13 +191,16 @@ export function WorkspaceDock({
   // Stable refs so the imperative handle and dockview callbacks always see the
   // latest props without being recreated.
   const titlesRef = useRef(titles)
-  titlesRef.current = titles
   const defaultsRef = useRef(defaultOpen)
-  defaultsRef.current = defaultOpen
   const edgeKindsRef = useRef(edgeKinds)
-  edgeKindsRef.current = edgeKinds
   const cbRef = useRef({ onActiveChange, onOpenChange })
-  cbRef.current = { onActiveChange, onOpenChange }
+
+  useLayoutEffect(() => {
+    titlesRef.current = titles
+    defaultsRef.current = defaultOpen
+    edgeKindsRef.current = edgeKinds
+    cbRef.current = { onActiveChange, onOpenChange }
+  })
 
   const kindOf = (panel: { id: string; params?: Record<string, unknown> }): string =>
     (panel.params?.kind as string) ?? panel.id

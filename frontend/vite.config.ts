@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import { visualizer } from 'rollup-plugin-visualizer'
 import pkg from './package.json'
 
 // Inject the runtime build-info.js script into the production HTML.
@@ -20,7 +21,7 @@ function buildInfoPlugin() {
 }
 
 export default defineConfig({
-  plugins: [react(), buildInfoPlugin()],
+  plugins: [react(), buildInfoPlugin(), visualizer({ open: false, filename: 'stats.html' })],
   define: {
     // The app version from package.json, baked in at build time so the REPL
     // banner and About dialog show "v0.1.0" without a runtime lookup. Paired
@@ -49,6 +50,9 @@ export default defineConfig({
           // at runtime (React undefined inside Mantine). Pin them to the
           // react chunk, which everything loads first and imports nothing back.
           if (id.includes('commonjsHelpers')) return 'react'
+          if (id.includes('docsCatalog.ts') || id.includes('referenceCatalog.ts') || id.includes('examples.ts') || id.includes('searchIndex.ts')) {
+            return 'docs-data'
+          }
           if (!id.includes('node_modules')) return undefined
           if (id.includes('@mantine')) return 'mantine'
           if (id.includes('katex')) return 'katex'
