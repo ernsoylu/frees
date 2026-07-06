@@ -55,17 +55,17 @@ import {
   VariableInfo,
   VariableResult,
 } from './api'
-import PreferencesModal from './PreferencesModal'
-import AboutModal from './AboutModal'
+const PreferencesModal = lazy(() => import('./PreferencesModal'))
+const AboutModal = lazy(() => import('./AboutModal'))
 import VariableInfoModal, {
   DEFAULT_DRAFT,
   parseBound,
   VariableDraft,
 } from './VariableInfoModal'
 
-import ConfigureTableModal from './ConfigureTableModal'
-import AlterValuesModal from './AlterValuesModal'
-import TablesTab from './TablesTab'
+const ConfigureTableModal = lazy(() => import('./ConfigureTableModal'))
+const AlterValuesModal = lazy(() => import('./AlterValuesModal'))
+const TablesTab = lazy(() => import('./TablesTab'))
 import {
   functionTableFromDigitizer,
   loadTables,
@@ -79,7 +79,7 @@ import {
   toFunctionTableDtos,
   paramTableFromDto,
 } from './tables'
-import StatesTab from './StatesTab'
+const StatesTab = lazy(() => import('./StatesTab'))
 import type { DigitizedExport } from './DigitizerTab'
 import { loadWhiteboards, newWhiteboard, saveWhiteboards } from './whiteboard/whiteboardStorage'
 import { WhiteboardSpec } from './whiteboard/types'
@@ -94,7 +94,7 @@ import { buildSnapshotSheet, type SnapshotInput } from './spreadsheet/snapshot'
 import { newAnalyzer, type AnalyzerSpec } from './analyzer/types'
 import { channelStore } from './analyzer/channelStore'
 import { substituteSsheetRefs } from './spreadsheet/ssheetResolver'
-import { group } from './Workspace'
+import { group } from './workspaceData'
 
 // The Digitizer tab is a large, self-contained editor that most
 // sessions never open, so they are code-split and only fetched when their tab
@@ -137,19 +137,22 @@ const lazyTabFallback = (
 )
 import { PlotSpec, PlotKind } from './plots/types'
 import { plotDefToSpec } from './plots/fromCode'
-import Workspace, { type ComponentGroup } from './Workspace'
+import type { ComponentGroup } from './Workspace'
+const Workspace = lazy(() => import('./Workspace'))
 import { rewritePidGains } from './pidGainRewrite'
 import { analyzePidLoop } from './pidLoop'
-import ReplTerminal from './ReplTerminal'
-import MobileLayout from './MobileLayout'
+const ReplTerminal = lazy(() => import('./ReplTerminal'))
+const MobileLayout = lazy(() => import('./MobileLayout'))
 import { DOCS_TOPICS } from './docsTopics'
-import ShortcutsModal from './ShortcutsModal'
+const ShortcutsModal = lazy(() => import('./ShortcutsModal'))
 import { DEFAULT_EXAMPLE_TEXT } from './defaultExample'
 import type { Example } from './examples'
-import EquationEditor, { EquationEditorHandle } from './EquationEditor'
+import type { EquationEditorHandle } from './EquationEditor'
+const EquationEditor = lazy(() => import('./EquationEditor'))
 import { MessageModal, SaveCheckModal, TextPromptModal } from './dialogs'
 import { Rail, TopBar } from './WorkspaceChrome'
-import { WorkspaceDock, type WorkspaceDockHandle, type OpenWindow } from './workspace/WorkspaceDock'
+import type { WorkspaceDockHandle, OpenWindow } from './workspace/WorkspaceDock'
+const WorkspaceDock = lazy(() => import('./workspace/WorkspaceDock').then(m => ({ default: m.WorkspaceDock })))
 import { detectStates } from './plots/stateTable'
 import {
   formatValue,
@@ -1911,15 +1914,17 @@ export default function App() {
             borderRadius: 'var(--mantine-radius-sm)',
           }}
         >
-          <EquationEditor
-            ref={editorRef}
-            initialDoc={() => textRef.current}
-            onChange={onTextChange}
-            variables={variables}
-            errorLine={errorLine}
-            errorMessage={result?.error ?? checkResult?.message ?? null}
-            placeholder={'Enter equations and markdown notes, e.g.\n# Rankine Cycle\nT1 = 100 [C]\nP1 = 250 [kPa]'}
-          />
+          <Suspense fallback={lazyTabFallback}>
+            <EquationEditor
+              ref={editorRef}
+              initialDoc={() => textRef.current}
+              onChange={onTextChange}
+              variables={variables}
+              errorLine={errorLine}
+              errorMessage={result?.error ?? checkResult?.message ?? null}
+              placeholder={'Enter equations and markdown notes, e.g.\n# Rankine Cycle\nT1 = 100 [C]\nP1 = 250 [kPa]'}
+            />
+          </Suspense>
         </div>
       </div>
     ),
@@ -1929,16 +1934,18 @@ export default function App() {
           <Title order={5} c="teal.4">Fluid State Table</Title>
           <Text size="xs" c="dimmed">Solved state points</Text>
         </Group>
-        <StatesTab
-          solvedVariables={result?.variables ?? []}
-          stateTableDefs={result?.stateTableDefs ?? checkResult?.stateTableDefs ?? []}
-          unitIds={stateUnitIds}
-          onUnitIdsChange={handleStateUnitIdsChange}
-          onFillMissing={() => onSolve(true)}
-          solving={solving}
-          solvable={solvable}
-          onSnapshot={createSnapshotSpreadsheet}
-        />
+        <Suspense fallback={lazyTabFallback}>
+          <StatesTab
+            solvedVariables={result?.variables ?? []}
+            stateTableDefs={result?.stateTableDefs ?? checkResult?.stateTableDefs ?? []}
+            unitIds={stateUnitIds}
+            onUnitIdsChange={handleStateUnitIdsChange}
+            onFillMissing={() => onSolve(true)}
+            solving={solving}
+            solvable={solvable}
+            onSnapshot={createSnapshotSpreadsheet}
+          />
+        </Suspense>
       </div>
     ),
     digitizer: (
@@ -2156,62 +2163,66 @@ export default function App() {
     })(),
     workspace: (
       <div style={{ height: '100%', minHeight: 0 }}>
-        <Workspace
-          variables={workspaceVariables}
-          replNames={replNames}
-          components={result?.components}
-          onEdit={() => setShowVariableInfo(true)}
-          onExportSpreadsheet={exportToSpreadsheet}
-          onTunePid={openPidTunerFor}
-        />
+        <Suspense fallback={lazyTabFallback}>
+          <Workspace
+            variables={workspaceVariables}
+            replNames={replNames}
+            components={result?.components}
+            onEdit={() => setShowVariableInfo(true)}
+            onExportSpreadsheet={exportToSpreadsheet}
+            onTunePid={openPidTunerFor}
+          />
+        </Suspense>
       </div>
     ),
     terminal: (
       <div style={{ height: '100%', minHeight: 0 }}>
-        <ReplTerminal
-          sessionId={sessionId}
-          variables={workspaceVariables}
-          replNames={replNames}
-          functions={replFunctionNames}
-          unitSystem={unitSystem}
-          onAssign={(v) => {
-            setReplVars((prev) => ({ ...prev, [v.name.toLowerCase()]: v }))
-            if (!v.name.includes('[')) {
-              setVarDrafts((prev) => {
-                const existing = prev[v.name]
-                if (existing?.isUnitsUserSet) return prev
-                return {
-                  ...prev,
-                  [v.name]: { ...(existing ?? DEFAULT_DRAFT), units: v.units || '' },
-                }
-              })
-            }
-          }}
-          onCheck={() => void onCheck()}
-          onSolve={() => void checkThenSolve()}
-          onClear={() => {
-            setReplVars({})
-            setResult(null)
-            setCheckResult(null)
-            setVariables([])
-            void replClear(sessionId)
-          }}
-          onClearVar={(name) => {
-            const lower = name.toLowerCase()
-            const prefix = lower + '['
-            setReplVars((prev) => {
-              const next = { ...prev }
-              delete next[lower]
-              for (const k of Object.keys(next)) {
-                if (k.startsWith(prefix)) {
-                  delete next[k]
-                }
+        <Suspense fallback={lazyTabFallback}>
+          <ReplTerminal
+            sessionId={sessionId}
+            variables={workspaceVariables}
+            replNames={replNames}
+            functions={replFunctionNames}
+            unitSystem={unitSystem}
+            onAssign={(v) => {
+              setReplVars((prev) => ({ ...prev, [v.name.toLowerCase()]: v }))
+              if (!v.name.includes('[')) {
+                setVarDrafts((prev) => {
+                  const existing = prev[v.name]
+                  if (existing?.isUnitsUserSet) return prev
+                  return {
+                    ...prev,
+                    [v.name]: { ...(existing ?? DEFAULT_DRAFT), units: v.units || '' },
+                  }
+                })
               }
-              return next
-            })
-            void replClear(sessionId, name)
-          }}
-        />
+            }}
+            onCheck={() => void onCheck()}
+            onSolve={() => void checkThenSolve()}
+            onClear={() => {
+              setReplVars({})
+              setResult(null)
+              setCheckResult(null)
+              setVariables([])
+              void replClear(sessionId)
+            }}
+            onClearVar={(name) => {
+              const lower = name.toLowerCase()
+              const prefix = lower + '['
+              setReplVars((prev) => {
+                const next = { ...prev }
+                delete next[lower]
+                for (const k of Object.keys(next)) {
+                  if (k.startsWith(prefix)) {
+                    delete next[k]
+                  }
+                }
+                return next
+              })
+              void replClear(sessionId, name)
+            }}
+          />
+        </Suspense>
       </div>
     ),
   }
@@ -2394,18 +2405,20 @@ export default function App() {
     panelTitles[winId] = t.name
     panelContent[winId] = (
       <div style={panelPad}>
-        <TablesTab
-          tables={tables}
-          singleTableId={t.id}
-          varDrafts={varDrafts}
-          onPlotColumns={handlePlotColumns}
-          onExportTable={exportTableToSpreadsheet}
-          onCopyToEditable={(copy) => {
-            setTables((prev) => [...prev, copy])
-            setActiveTableId(copy.id)
-            requestAnimationFrame(() => openTableWindow(copy))
-          }}
-        />
+        <Suspense fallback={lazyTabFallback}>
+          <TablesTab
+            tables={tables}
+            singleTableId={t.id}
+            varDrafts={varDrafts}
+            onPlotColumns={handlePlotColumns}
+            onExportTable={exportTableToSpreadsheet}
+            onCopyToEditable={(copy) => {
+              setTables((prev) => [...prev, copy])
+              setActiveTableId(copy.id)
+              requestAnimationFrame(() => openTableWindow(copy))
+            }}
+          />
+        </Suspense>
       </div>
     )
   }
@@ -2413,27 +2426,29 @@ export default function App() {
   return (
     <>
       {isMobile ? (
-        <MobileLayout
-          panelContent={panelContent}
-          tables={tables}
-          plots={mergedPlots}
-          projectName={projectName}
-          checking={checking}
-          solving={solving}
-          onCheck={checkWithFallback}
-          onSolve={checkThenSolve}
-          checkingTableId={checkingTableId}
-          solvingTableId={solvingTableId}
-          onCheckTable={onCheckTable}
-          onSolveTable={onSolveTable}
-          onSaveProject={handleSaveProject}
-          onSaveProjectAs={handleSaveProjectAs}
-          onNewProject={handleNewProject}
-          onOpenProject={handleOpenProject}
-          onPreferences={() => setShowPreferences(true)}
-          onRenameProject={handleRenameProject}
-          onOpenExamples={() => setShowExamples(true)}
-        />
+        <Suspense fallback={lazyTabFallback}>
+          <MobileLayout
+            panelContent={panelContent}
+            tables={tables}
+            plots={mergedPlots}
+            projectName={projectName}
+            checking={checking}
+            solving={solving}
+            onCheck={checkWithFallback}
+            onSolve={checkThenSolve}
+            checkingTableId={checkingTableId}
+            solvingTableId={solvingTableId}
+            onCheckTable={onCheckTable}
+            onSolveTable={onSolveTable}
+            onSaveProject={handleSaveProject}
+            onSaveProjectAs={handleSaveProjectAs}
+            onNewProject={handleNewProject}
+            onOpenProject={handleOpenProject}
+            onPreferences={() => setShowPreferences(true)}
+            onRenameProject={handleRenameProject}
+            onOpenExamples={() => setShowExamples(true)}
+          />
+        </Suspense>
       ) : (
         <Flex h="100vh" style={{ overflow: 'hidden' }}>
       <Rail
@@ -2567,33 +2582,35 @@ export default function App() {
         />
 
         <div style={{ flex: 1, minHeight: 0, display: 'flex' }}>
-          <WorkspaceDock
-            content={panelContent}
-            titles={panelTitles}
-            defaultOpen={['equations', 'inspector', 'workspace']}
-            edgeKinds={['workspace', 'inspector']}
-            onActiveChange={(active) => {
-              setActiveTab(active?.kind ?? '')
-              // Focusing a table window makes it the "active" table so the
-              // shared Solve-Table / Configure / Alter actions target it.
-              // The Tables workbook window is excluded: its nav list drives
-              // activeTableId itself (one window, many hosted tables).
-              if (
-                active?.kind === 'table' &&
-                active.id.startsWith('table:') &&
-                active.id !== TABLES_WORKBOOK_WINDOW_ID
-              ) {
-                setActiveTableId(active.id.slice('table:'.length))
-              }
-              // The Inspector reflects the last-focused main window; focusing
-              // the auxiliary Inspector / Variable Explorer edge panels must not change it.
-              if (active && active.kind !== 'inspector' && active.kind !== 'workspace') {
-                setFocusedWindow(active)
-              }
-            }}
-            onOpenChange={setOpenWindows}
-            handleRef={dockRef}
-          />
+          <Suspense fallback={lazyTabFallback}>
+            <WorkspaceDock
+              content={panelContent}
+              titles={panelTitles}
+              defaultOpen={['equations', 'inspector', 'workspace']}
+              edgeKinds={['workspace', 'inspector']}
+              onActiveChange={(active) => {
+                setActiveTab(active?.kind ?? '')
+                // Focusing a table window makes it the "active" table so the
+                // shared Solve-Table / Configure / Alter actions target it.
+                // The Tables workbook window is excluded: its nav list drives
+                // activeTableId itself (one window, many hosted tables).
+                if (
+                  active?.kind === 'table' &&
+                  active.id.startsWith('table:') &&
+                  active.id !== TABLES_WORKBOOK_WINDOW_ID
+                ) {
+                  setActiveTableId(active.id.slice('table:'.length))
+                }
+                // The Inspector reflects the last-focused main window; focusing
+                // the auxiliary Inspector / Variable Explorer edge panels must not change it.
+                if (active && active.kind !== 'inspector' && active.kind !== 'workspace') {
+                  setFocusedWindow(active)
+                }
+              }}
+              onOpenChange={setOpenWindows}
+              handleRef={dockRef}
+            />
+          </Suspense>
         </div>
       </Flex>
 
