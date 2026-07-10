@@ -6,7 +6,6 @@ related: [chebyshevt, hermiteh, laguerrel]
 examples: []
 tags: [special function, legendre, orthogonal polynomial, quadrature]
 references:
-  - "the standard literature, M. & the standard literature, I.A., Handbook of Mathematical Functions, §8, §22"
   - "NIST Digital Library of Mathematical Functions, §18.3"
 ---
 
@@ -29,7 +28,7 @@ y = legendrep(n, x)
 
 ## Mathematical Formulation
 
-Bonnet recurrence (A&S §22; DLMF §18.9):
+Bonnet recurrence (DLMF §18.9):
 
 $$ (n+1)P_{n+1}(x) = (2n+1)\,x\,P_n(x) - n\,P_{n-1}(x), \qquad P_0 = 1,\ P_1 = x $$
 
@@ -59,5 +58,4 @@ y = legendrep(2, 1)
 
 ## References
 
-1. the standard literature, M. & the standard literature, I.A. *Handbook of Mathematical Functions*, §8, §22.
-2. NIST *Digital Library of Mathematical Functions*, §18.3.
+1. NIST *Digital Library of Mathematical Functions*, §18.3.

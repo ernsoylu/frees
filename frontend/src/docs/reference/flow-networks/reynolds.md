@@ -5,8 +5,6 @@ summary: Reynolds number rho*V*D/mu
 related: []
 examples: []
 tags: [reynolds, flow, networks]
-references:
-  - "the standard literature, a standard fluids text"
 ---
 
 # reynolds
@@ -36,9 +34,3 @@ $$ Re = \frac{\rho V D}{\mu} $$
 | `V` | Number | Yes | Velocity [m/s]. |
 | `D` | Number | Yes | Diameter [m]. |
 | `mu` | Number | Yes | Dynamic viscosity [Pa·s]. |
-
-## References
-
-1. the standard literature, a standard fluids text.
-2. the standard literature, I.E., Handbook of Hydraulic Resistance.
-

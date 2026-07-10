@@ -37,4 +37,3 @@ $$ \rho(h) = \frac{P(h)\,M}{R\,T(h)} $$
 ## References
 
 1. U.S. Standard Atmosphere, 1976 (NOAA/NASA/USAF).
-

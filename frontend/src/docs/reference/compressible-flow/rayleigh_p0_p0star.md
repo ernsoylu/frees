@@ -5,8 +5,6 @@ summary: Rayleigh stagnation-pressure ratio
 related: []
 examples: []
 tags: [rayleigh, p0, p0star, compressible, flow]
-references:
-  - "the standard literature, Y.A., the standard literature, M.A. & Kanoğlu, M., a standard thermodynamics text, Ch. 17, Ch. 17 (Rayleigh)"
 ---
 
 # rayleigh_p0_p0star
@@ -34,9 +32,3 @@ $$ \frac{P_0}{P_0^*} = \frac{k+1}{1+kM^2}\left[\frac{2 + (k-1)M^2}{k+1}\right]^{
 | --- | --- | --- | --- |
 | `M` | Number | Yes | Mach number. |
 | `k` | Number | Yes | Ratio of specific heats (e.g. 1.4 for air). |
-
-## References
-
-1. the standard literature, Y.A., the standard literature, M.A. & Kanoğlu, M., a standard thermodynamics text, Ch. 17.
-2. Anderson, J.D., Modern Compressible Flow (3rd ed.).
-

@@ -5,8 +5,6 @@ summary: Static pressure ratio across a normal shock P2/P1(M1, k).
 related: [M2_shock, P02_P01_shock, P0_P]
 examples: [cd-nozzle-shock]
 tags: [compressible, normal shock, pressure, rankine-hugoniot, nozzle]
-references:
-  - "the standard literature, Y.A., the standard literature, M.A. & Kanoğlu, M., a standard thermodynamics text, Ch. 17, Eq. (17-38)"
 ---
 
 # P2_P1_shock
@@ -28,7 +26,7 @@ pressure follows from the upstream value as `P2 = P1 · P2_P1_shock(M1, k)`.
 
 ## Mathematical Formulation
 
-$$ \frac{P_2}{P_1} = \frac{2k\,M_1^2 - (k-1)}{k+1} \qquad \text{(the standard literature Eq. 17-38)} $$
+$$ \frac{P_2}{P_1} = \frac{2k\,M_1^2 - (k-1)}{k+1} $$
 
 > **Method:** direct evaluation (Rankine–Hugoniot static pressure ratio); valid
 > for `M1 ≥ 1`.
@@ -59,7 +57,3 @@ $$ \frac{P_2}{P_1} = \frac{2k\,M_1^2 - (k-1)}{k+1} \qquad \text{(the standard li
 | Error | Cause | Fix |
 | --- | --- | --- |
 | `DOMAIN_ERROR` | `M1 < 1` | A normal shock requires supersonic inflow; check the upstream state. |
-
-## References
-
-1. the standard literature, Y.A., the standard literature, M.A. & Kanoğlu, M. *a standard thermodynamics text*, Ch. 17, Eq. (17-38).

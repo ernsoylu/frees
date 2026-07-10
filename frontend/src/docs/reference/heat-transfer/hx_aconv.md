@@ -5,9 +5,6 @@ summary: Convective surface area of a compact heat-exchanger core from its geome
 related: [hx_dh, hx_eta_surf, ua_hx]
 examples: [ev-thermal-management]
 tags: [heat exchanger, geometry, convective area, hydraulic diameter, compact core]
-references:
-  - "the standard literature, W.M. & London, A.L., Compact Heat Exchangers (3rd ed.), Ch. 2"
-  - "Shah, R.K. & Sekulić, D.P., Fundamentals of Heat Exchanger Design, Ch. 8"
 ---
 
 # hx_aconv
@@ -33,7 +30,7 @@ known free-flow area and flow length.
 $$ A = \frac{4\,A_{\text{flow}}\,L}{D_h} $$
 
 the inverse of the hydraulic-diameter definition
-$D_h = 4 A_{\text{flow}} L / A$ (the standard compact-HX text, Ch. 2).
+$D_h = 4 A_{\text{flow}} L / A$.
 
 > **Method:** direct evaluation from the compact-core geometry.
 
@@ -64,8 +61,3 @@ $D_h = 4 A_{\text{flow}} L / A$ (the standard compact-HX text, Ch. 2).
 | Error | Cause | Fix |
 | --- | --- | --- |
 | `DOMAIN_ERROR` | `Dh ≤ 0` | Hydraulic diameter must be positive. |
-
-## References
-
-1. the standard literature, W.M. & London, A.L. *Compact Heat Exchangers* (3rd ed.), Ch. 2.
-2. Shah, R.K. & Sekulić, D.P. *Fundamentals of Heat Exchanger Design*, Ch. 8.

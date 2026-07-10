@@ -17,8 +17,8 @@ import java.util.Objects;
  * native backend: it supports custom fluids and fluids CoolProp may lack, at the
  * accuracy of a two-parameter cubic EOS. P-v-T, the compressibility factor, the
  * enthalpy/entropy departure functions and the saturation pressure follow the
- * standard generalized-cubic formulation (e.g. Smith, the standard literature &amp; Abbott;
- * standard property-estimation references).
+ * standard generalized-cubic formulation from the property-estimation
+ * literature.
  *
  * <p>Enthalpy and entropy are returned on an EOS-self-consistent reference
  * (ideal-gas h = 0, s = 0 at 298.15 K, 1 bar), so <b>differences</b> are

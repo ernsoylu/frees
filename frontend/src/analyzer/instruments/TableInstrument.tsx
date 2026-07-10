@@ -1,4 +1,4 @@
-// Table instrument (the reference measurement tool "Table", todo.md Phase 2): values of every assigned
+// Table instrument (todo.md Phase 2): values of every assigned
 // signal by timestamp over the visible window, empty cells filled by
 // step-hold (§ stats.ts). Rendered through glide-data-grid (canvas,
 // virtualized) with O(log n) cell lookup — the merged raster is the only

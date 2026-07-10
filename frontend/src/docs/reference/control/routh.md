@@ -5,9 +5,6 @@ summary: Routh-Hurwitz stability test — count of right-half-plane roots.
 related: [pole, margin, rlocus]
 examples: [routh-stability]
 tags: [control, routh, hurwitz, stability, characteristic polynomial]
-references:
-  - "the standard literature, N.S., a standard controls text (7th ed.), Ch. 6, §6.2"
-  - "the standard literature, K., a standard controls text (5th ed.), Ch. 5, §5.6"
 ---
 
 # routh
@@ -32,7 +29,7 @@ system is stable iff there are none.
 ## Mathematical Formulation
 
 For `den(s) = a_n s^n + … + a_0`, the Routh array's first-column sign changes count
-the RHP roots; stability requires (the standard literature §6.2):
+the RHP roots; stability requires:
 
 $$ \text{all first-column entries} > 0 \quad\Longleftrightarrow\quad n_{RHP} = 0 $$
 
@@ -65,8 +62,3 @@ $$ \text{all first-column entries} > 0 \quad\Longleftrightarrow\quad n_{RHP} = 0
 | Error | Cause | Fix |
 | --- | --- | --- |
 | `EMPTY_DENOMINATOR` | invalid `den` | Provide a valid characteristic polynomial. |
-
-## References
-
-1. the standard literature, N.S. *a standard controls text* (7th ed.), Ch. 6, §6.2.
-2. the standard literature, K. *a standard controls text* (5th ed.), Ch. 5, §5.6.

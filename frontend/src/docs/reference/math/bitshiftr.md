@@ -33,4 +33,3 @@ $$ a \gg n = \lfloor a / 2^{n} \rfloor $$
 | --- | --- | --- | --- |
 | `a` | Number | Yes | First operand. |
 | `n` | Number | Yes | Order / number of terms. |
-

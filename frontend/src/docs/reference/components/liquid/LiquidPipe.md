@@ -5,9 +5,6 @@ summary: A single-phase liquid pipe with frictional pressure drop.
 related: []
 examples: []
 tags: [liquidpipe, component, liquid, acausal]
-references:
-  - "the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., a standard system-dynamics text (5th ed.) — acausal/bond-graph formalism"
-  - "the standard literature, F.P. et al., Fundamentals of Heat and Mass Transfer, Ch. 8"
 ---
 
 # LiquidPipe
@@ -53,8 +50,3 @@ Re_d     = reynolds(rho, V, D, mu)
 f        = friction_factor(Re_d, rough / D)
 out.P    = in.P - f * (L / D) * rho * V^2 / 2
 ```
-
-## References
-
-1. the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., *a standard system-dynamics text* (5th ed.) — acausal/bond-graph formalism.
-2. the standard literature, F.P. et al., *Fundamentals of Heat and Mass Transfer*, Ch. 8.

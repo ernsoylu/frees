@@ -10,14 +10,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
- * Like-for-like cross-validation of the pressure cooker against the a commercial suite
- * the reference simulator model (and the an open acausal tool "from-submodels" replica): a REAL electrical
- * heater (voltage-source submodel 220 V source + thermal-resistor submodel 32.2667 ohm resistor with a thermal port)
- * dissipating I^2*R into a 750 J/K steel body (thermal-capacity submodel), steel->water through a
- * 333 W/K link (conduction submodel), an adiabatic vessel, and a proportional/lifting relief
- * (the proportional-relief submodel, 60 g/s/bar, cracking at 2 atm abs). frees reproduces the reference simulator to within
- * ~0.3% on every channel: I=6.818 A, T_water=120.7 C, P=2.03 bar, T_steel=125.2 C,
- * mass=2.789 kg (the reference simulator: 6.818 A, 120.87 C, 2.037 bar, 125.37 C, 2.794 kg).
+ * Like-for-like cross-validation of the pressure cooker against an independent
+ * commercial reference simulation: a REAL electrical heater (a 220 V source +
+ * 32.2667 ohm resistor with a thermal port) dissipating I^2*R into a 750 J/K
+ * lumped steel body, steel->water through a 333 W/K convective link, an
+ * adiabatic vessel, and a proportional/lifting relief (60 g/s/bar, cracking at
+ * 2 atm abs). frees matches the reference to within ~0.3% on every channel:
+ * I=6.818 A, T_water=120.7 C, P=2.03 bar, T_steel=125.2 C, mass=2.789 kg
+ * (reference: 6.818 A, 120.87 C, 2.037 bar, 125.37 C, 2.794 kg).
  */
 class CookerFaithfulTest {
 
@@ -27,8 +27,8 @@ class CookerFaithfulTest {
       VoltageSource   SUP(E=220)
       HeatingResistor HTR(R=32.2667)              // I^2*R = 1500 W, I = 6.818 A
       Ground          GND()
-      ThermalMass     STEEL(C=750, T0=293.15)     // thermal-capacity submodel steel body
-      Convection      S2W(htc=333.33, area=1)     // conduction submodel steel->water, 333 W/K
+      ThermalMass     STEEL(C=750, T0=293.15)     // lumped steel body
+      Convection      S2W(htc=333.33, area=1)     // steel->water link, 333 W/K
       BoilingVessel   COOK(fluid$=Water, V=0.005, m0=2.994, T0=293.15)
       ProportionalReliefValve PRV(fluid$=Water, Pcrack=202600, grad=6e-7, eps=2000)
       TwoPhasePressureSink ATM(P=101300)
@@ -45,7 +45,7 @@ class CookerFaithfulTest {
       """;
 
   @Test
-  void reproducesAmesimWithElectricalHeater() {
+  void reproducesReferenceWithElectricalHeater() {
     assumeTrue(CoolProp.isAvailable());
     assumeTrue(SundialsIda.isAvailable());
     var table = solver.solve(MODEL).odeTables().get(0);
@@ -58,11 +58,11 @@ class CookerFaithfulTest {
 
     double Tw = last.get(cT) - 273.15, P = last.get(cP) / 1e5,
            Ts = last.get(cS) - 273.15, M = last.get(cM);
-    // the reference simulator reference: 120.87 C, 2.037 bar, 125.37 C, 2.794 kg.
-    assertTrue(Math.abs(Tw - 120.87) < 1.0, "water temp vs the reference simulator, got " + Tw);
-    assertTrue(Math.abs(P - 2.037) < 0.05, "pressure vs the reference simulator, got " + P);
-    assertTrue(Math.abs(Ts - 125.37) < 1.5, "steel temp vs the reference simulator, got " + Ts);
-    assertTrue(Math.abs(M - 2.794) < 0.05, "mass vs the reference simulator, got " + M);
+    // Reference simulation: 120.87 C, 2.037 bar, 125.37 C, 2.794 kg.
+    assertTrue(Math.abs(Tw - 120.87) < 1.0, "water temp vs reference, got " + Tw);
+    assertTrue(Math.abs(P - 2.037) < 0.05, "pressure vs reference, got " + P);
+    assertTrue(Math.abs(Ts - 125.37) < 1.5, "steel temp vs reference, got " + Ts);
+    assertTrue(Math.abs(M - 2.794) < 0.05, "mass vs reference, got " + M);
     // Proportional relief HOLDS the setpoint: temperature is flat once boiling.
     assertTrue(Math.abs(Tw - (mid.get(cT) - 273.15)) < 1.0, "T plateaus at the setpoint");
   }

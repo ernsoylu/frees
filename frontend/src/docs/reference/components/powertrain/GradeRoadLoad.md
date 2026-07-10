@@ -5,9 +5,6 @@ summary: A vehicle road load including the road-grade contribution.
 related: []
 examples: []
 tags: [graderoadload, component, powertrain, acausal]
-references:
-  - "the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., a standard system-dynamics text (5th ed.) — acausal/bond-graph formalism"
-  - "the standard literature, L. & the standard literature, A., a standard propulsion text"
 ---
 
 # GradeRoadLoad
@@ -45,8 +42,3 @@ Instantiating the component expands these acausal equations (over its port membe
 ```
 shaft.tau = Crr + Caero * shaft.w^2 + m * g * sin(grade)
 ```
-
-## References
-
-1. the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., *a standard system-dynamics text* (5th ed.) — acausal/bond-graph formalism.
-2. the standard literature, L. & the standard literature, A., *Vehicle Propulsion Systems* (3rd ed.).

@@ -41,4 +41,3 @@ out.mdot = m.mdot + s.mdot
 out.mdot * out.h = m.mdot * m.h + s.mdot * s.h
 out.P = PLR * s.P
 ```
-

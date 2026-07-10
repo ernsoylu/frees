@@ -5,9 +5,6 @@ summary: Primary (bare tube-wall) surface area of a fin-and-tube heat exchanger.
 related: [hx_area_indirect, hx_eta_surf, ua_hx]
 examples: [ev-thermal-management]
 tags: [heat exchanger, geometry, primary area, tube wall, fin-and-tube]
-references:
-  - "Shah, R.K. & Sekulić, D.P., Fundamentals of Heat Exchanger Design, Ch. 8"
-  - "the standard literature, W.M. & London, A.L., Compact Heat Exchangers (3rd ed.), Ch. 2"
 ---
 
 # hx_area_direct
@@ -35,7 +32,7 @@ The exposed tube-wall area over all tubes, net of the fin-occupied fraction:
 
 $$ A_{\text{primary}} = f\big(W,\,\text{tubeCount},\,H_{\text{tube}},\,\text{depth},\,t\big) $$
 
-(a fin-and-tube geometric construction; Shah & Sekulić, Ch. 8).
+(a fin-and-tube geometric construction).
 
 > **Method:** direct geometric evaluation of the bare tube-wall area.
 
@@ -69,8 +66,3 @@ air-side `A_total = A_primary + A_fin`.
 | Error | Cause | Fix |
 | --- | --- | --- |
 | `DOMAIN_ERROR` | A geometry input ≤ 0 | All dimensions must be positive. |
-
-## References
-
-1. Shah, R.K. & Sekulić, D.P. *Fundamentals of Heat Exchanger Design*, Ch. 8.
-2. the standard literature, W.M. & London, A.L. *Compact Heat Exchangers* (3rd ed.), Ch. 2.

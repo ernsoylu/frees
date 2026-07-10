@@ -5,8 +5,6 @@ summary: Ideal-gas mixture enthalpy [J/kg]
 related: []
 examples: []
 tags: [mix, enthalpy, combustion]
-references:
-  - "Turns, S.R., An Introduction to Combustion (3rd ed.)"
 ---
 
 # mix_enthalpy
@@ -34,9 +32,3 @@ $$ h = \sum_i Y_i\,h_i(T) \quad\text{(NASA-7 polynomials)} $$
 | --- | --- | --- | --- |
 | `comp$` | String | Yes | Mixture composition string, e.g. 'N2:0.79,O2:0.21'. |
 | `T` | Number | Yes | Temperature [K]. |
-
-## References
-
-1. Turns, S.R., An Introduction to Combustion (3rd ed.).
-2. the standard literature, J.B., a standard engine text.
-

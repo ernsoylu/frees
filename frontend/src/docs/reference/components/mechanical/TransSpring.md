@@ -42,4 +42,3 @@ init(x) = x0
 a.f     = k * x
 a.f + b.f = 0
 ```
-

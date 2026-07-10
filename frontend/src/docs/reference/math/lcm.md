@@ -33,4 +33,3 @@ $$ \operatorname{lcm}(a,b) = \frac{|a\,b|}{\gcd(a,b)} $$
 | --- | --- | --- | --- |
 | `a` | Number | Yes | First operand. |
 | `b` | Number | Yes | Second operand. |
-

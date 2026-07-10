@@ -5,8 +5,6 @@ summary: Definite integral; with self-reference, a scalar first-order ODE.
 related: [gaussintegral, differentiate, IntegralValue]
 examples: [tank-draining, newton-cooling]
 tags: [calculus, integral, quadrature, ode, definite integral]
-references:
-  - "a standard numerics text, a standard numerics text (3rd ed.), Ch. 4"
 ---
 
 # integral
@@ -69,7 +67,3 @@ tank volume after the elapsed time.
 | Error | Cause | Fix |
 | --- | --- | --- |
 | `NON_CONVERGENT` | integrand singular/stiff | Use `GaussIntegral`, a finer setup, or a `DYNAMIC` block. |
-
-## References
-
-1. a standard numerics text *a standard numerics text* (3rd ed.), Ch. 4.

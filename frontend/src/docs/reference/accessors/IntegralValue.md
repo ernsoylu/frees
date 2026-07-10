@@ -5,8 +5,6 @@ summary: Trapezoidal integral of one column versus another (ODE or table data).
 related: [TableAvg, ODEValue, integral]
 examples: [driving-cycle-energy]
 tags: [accessor, integral, trapezoidal, table, ode, area]
-references:
-  - "a standard numerics text, a standard numerics text (3rd ed.), §4.1 (trapezoidal rule)"
 ---
 
 # IntegralValue
@@ -59,7 +57,3 @@ $$ A = \int y\,dx \approx \sum_{i=0}^{N-1} \frac{y_i + y_{i+1}}{2}\,(x_{i+1} - x
 | Error | Cause | Fix |
 | --- | --- | --- |
 | `UNKNOWN_COLUMN` | `'y'` or `'x'` not a column | Use valid column names from the result table. |
-
-## References
-
-1. a standard numerics text *a standard numerics text* (3rd ed.), §4.1.

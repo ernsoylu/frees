@@ -46,4 +46,3 @@ der(m)  = in.mdot - out.mdot
 init(m) = m0
 hf * (in.mdot - out.mdot) = in.mdot * in.h - out.mdot * hg
 ```
-

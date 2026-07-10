@@ -5,9 +5,6 @@ summary: A fluid accumulator — a compliance volume that stores fluid under pre
 related: []
 examples: []
 tags: [accumulator, component, fluid, acausal]
-references:
-  - "the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., a standard system-dynamics text (5th ed.) — acausal/bond-graph formalism"
-  - "the standard literature, a standard fluids text"
 ---
 
 # Accumulator
@@ -45,8 +42,3 @@ out.h       = in.h
 der(in.P)   = (in.mdot - out.mdot) / C
 init(in.P)  = P0
 ```
-
-## References
-
-1. the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., *a standard system-dynamics text* (5th ed.) — acausal/bond-graph formalism.
-2. the standard literature, *Fluid Mechanics* (8th ed.).

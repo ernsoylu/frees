@@ -41,4 +41,3 @@ der(y)  = (in.sig - y) / tau
 init(y) = y0
 out.sig = (in.sig - y) / tau
 ```
-

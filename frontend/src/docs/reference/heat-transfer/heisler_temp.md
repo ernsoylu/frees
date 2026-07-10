@@ -5,8 +5,6 @@ summary: One-term (Heisler) transient temperature ratio for a wall, cylinder, or
 related: [heisler_q]
 examples: [heisler-transient]
 tags: [transient conduction, heisler, biot, fourier, one-term, unsteady]
-references:
-  - "the standard literature, J.P., Heat Transfer (10th ed.), Appendix C, Eq. (C-1), (C-7), (C-8), (C-9)"
 ---
 
 # heisler_temp
@@ -35,9 +33,9 @@ centre/midplane, `1` = surface). Recover the temperature with
 
 Midplane/centre temperature (`Fo > 0.2`):
 
-$$ \theta_0^* = C_1\,\exp\!\left(-\lambda_1^2\,Fo\right) \qquad \text{(the standard literature Eq. C-1)} $$
+$$ \theta_0^* = C_1\,\exp\!\left(-\lambda_1^2\,Fo\right) $$
 
-Position correction `θ*/θ_0*` (the standard literature Eq. C-7/8/9):
+Position correction `θ*/θ_0*`:
 
 $$ \text{wall: }\cos\!\left(\lambda_1 x^*\right),\quad \text{cylinder: }J_0\!\left(\lambda_1 x^*\right),\quad \text{sphere: }\frac{\sin(\lambda_1 x^*)}{\lambda_1 x^*} $$
 
@@ -79,7 +77,3 @@ A plane wall (`Bi = 3.33`, `Fo = 0.225`) cooling from 200 °C into a 25 °C stre
 | --- | --- | --- |
 | `UNKNOWN_GEOMETRY` | `geom$` not recognized | Use `'wall'`, `'cylinder'`, or `'sphere'`. |
 | (inaccurate result) | `Fo < 0.2` | The one-term approximation is invalid early in the transient; the centre has barely responded. |
-
-## References
-
-1. the standard literature, J.P. *Heat Transfer* (10th ed.), Appendix C, Eq. (C-1), (C-7), (C-8), (C-9).

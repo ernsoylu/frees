@@ -47,4 +47,3 @@ out.h    = in.h
 pilot.mdot = 0
 in.mdot * abs(in.mdot) = (x_o * CdA_max)^2 * 2 * rho * (in.P - out.P)
 ```
-

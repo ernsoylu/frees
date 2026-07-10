@@ -56,4 +56,3 @@ der(Tz)   = (in.mdot * (in.h - out.h) + n_occ * q_sens + Q_aux + wall.Qdot) / (m
 init(Tz)  = T0
 wall.T    = Tz
 ```
-

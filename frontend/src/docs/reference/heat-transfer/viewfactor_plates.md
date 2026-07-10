@@ -5,8 +5,6 @@ summary: Diffuse radiation view factor between two aligned parallel rectangles.
 related: [viewfactor_disks, viewfactor_perp]
 examples: [radiation-view-factors]
 tags: [radiation, view factor, configuration factor, parallel plates, rectangles]
-references:
-  - "the standard literature, J.P., Heat Transfer (10th ed.), Table 8-2 (Item 1), Fig. 8-12"
 ---
 
 # viewfactor_plates
@@ -32,9 +30,7 @@ With $x = X/D$ and $y = Y/D$,
 
 $$ F_{1\to 2} = \frac{2}{\pi x y}\left\{ \ln\!\left[\frac{(1+x^2)(1+y^2)}{1+x^2+y^2}\right]^{1/2} + x\sqrt{1+y^2}\,\tan^{-1}\!\frac{x}{\sqrt{1+y^2}} + y\sqrt{1+x^2}\,\tan^{-1}\!\frac{y}{\sqrt{1+x^2}} - x\tan^{-1}x - y\tan^{-1}y \right\} $$
 
-(the standard literature Table 8-2, Item 1).
-
-> **Method:** direct evaluation of the Howell-catalog closed form (the standard literature Fig. 8-12).
+> **Method:** direct evaluation of the standard closed-form view-factor expression.
 
 ## Examples
 
@@ -63,7 +59,3 @@ $$ F_{1\to 2} = \frac{2}{\pi x y}\left\{ \ln\!\left[\frac{(1+x^2)(1+y^2)}{1+x^2+
 | Error | Cause | Fix |
 | --- | --- | --- |
 | `DOMAIN_ERROR` | `D ≤ 0` or a side ≤ 0 | All three lengths must be positive. |
-
-## References
-
-1. the standard literature, J.P. *Heat Transfer* (10th ed.), Table 8-2 (Item 1), Fig. 8-12.

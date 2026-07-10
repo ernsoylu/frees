@@ -5,8 +5,6 @@ summary: Modified Bessel function of the second kind, order 1 — K_1(x).
 related: [besselk, besselk0, besseli1]
 examples: []
 tags: [special function, modified bessel, k1, second kind, macdonald]
-references:
-  - "the standard literature, M. & the standard literature, I.A., Handbook of Mathematical Functions, §9.6"
 ---
 
 # besselk1
@@ -24,7 +22,7 @@ y = besselk1(x)
 ## Mathematical Formulation
 
 `K_1` is the decaying order-1 solution of the modified Bessel equation, with
-`K_0'(x) = −K_1(x)` and `K_1(x) ~ √(π/2x)·e^{−x}` for large `x` (A&S §9.6).
+`K_0'(x) = −K_1(x)` and `K_1(x) ~ √(π/2x)·e^{−x}` for large `x`.
 
 ## Examples
 
@@ -50,7 +48,3 @@ y = besselk1(1)
 | Error | Cause | Fix |
 | --- | --- | --- |
 | `DOMAIN_ERROR` | `x ≤ 0` | Singular at and below 0; use a positive argument. |
-
-## References
-
-1. the standard literature, M. & the standard literature, I.A. *Handbook of Mathematical Functions*, §9.6.

@@ -33,4 +33,3 @@ The acausal equations this component expands into (over its port members and par
 port.Qdot = 0
 out.sig   = port.T
 ```
-

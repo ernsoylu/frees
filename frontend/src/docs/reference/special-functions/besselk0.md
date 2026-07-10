@@ -5,8 +5,6 @@ summary: Modified Bessel function of the second kind, order 0 — K_0(x).
 related: [besselk, besselk1, besseli0]
 examples: []
 tags: [special function, modified bessel, k0, second kind, macdonald]
-references:
-  - "the standard literature, M. & the standard literature, I.A., Handbook of Mathematical Functions, §9.6"
 ---
 
 # besselk0
@@ -24,7 +22,7 @@ y = besselk0(x)
 ## Mathematical Formulation
 
 `K_0` is the decaying order-0 solution of the modified Bessel equation, with
-`K_0(x) ~ √(π/2x)·e^{−x}` for large `x` (A&S §9.6).
+`K_0(x) ~ √(π/2x)·e^{−x}` for large `x`.
 
 ## Examples
 
@@ -50,7 +48,3 @@ y = besselk0(1)
 | Error | Cause | Fix |
 | --- | --- | --- |
 | `DOMAIN_ERROR` | `x ≤ 0` | Singular at and below 0; use a positive argument. |
-
-## References
-
-1. the standard literature, M. & the standard literature, I.A. *Handbook of Mathematical Functions*, §9.6.

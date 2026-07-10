@@ -56,4 +56,3 @@ der(T3)  = (in.mdot * cp_f * (T2 - T3) + kmix * (T2 - T3) - UA_loss * (T3 - T_am
 init(T3) = T30
 out.h    = Enthalpy(fluid$, P=out.P, T=T3)
 ```
-

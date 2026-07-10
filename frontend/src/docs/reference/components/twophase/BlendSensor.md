@@ -5,9 +5,6 @@ summary: A sensor reading the state of a gas-blend stream.
 related: []
 examples: []
 tags: [blendsensor, component, twophase, acausal]
-references:
-  - "the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., a standard system-dynamics text (5th ed.) — acausal/bond-graph formalism"
-  - "the standard literature, J.G. & the standard literature, J.R., a standard two-phase text (3rd ed.)"
 ---
 
 # BlendSensor
@@ -51,8 +48,3 @@ bubble   = Temperature(fluid$, P=in.P, x=0)
 dew      = Temperature(fluid$, P=in.P, x=1)
 glide    = dew - bubble
 ```
-
-## References
-
-1. the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., *a standard system-dynamics text* (5th ed.) — acausal/bond-graph formalism.
-2. the standard literature, J.G. & the standard literature, J.R., *a standard two-phase text* (3rd ed.).

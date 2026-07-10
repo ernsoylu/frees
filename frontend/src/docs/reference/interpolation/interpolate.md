@@ -5,8 +5,6 @@ summary: Linear interpolation of table t at x (same as t(x))
 related: []
 examples: []
 tags: [interpolate, interpolation]
-references:
-  - "a standard numerics text, a standard numerics text (3rd ed.), §3.1"
 ---
 
 # interpolate
@@ -34,8 +32,3 @@ $$ y = y_i + (y_{i+1}-y_i)\frac{x - x_i}{x_{i+1} - x_i} \quad\text{(linear)} $$
 | --- | --- | --- | --- |
 | `'t'` | Number | Yes | Name of a TABLE block (string). |
 | `x` | Number | Yes | Vapor quality (0–1). |
-
-## References
-
-1. a standard numerics text, a standard numerics text (3rd ed.), Ch. 3.
-

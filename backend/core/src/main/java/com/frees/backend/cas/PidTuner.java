@@ -3,7 +3,7 @@ package com.frees.backend.cas;
 import org.apache.commons.math3.complex.Complex;
 
 /**
- * interactive-tuner-style front door over the existing control primitives: given
+ * Industry-standard interactive-tuner-style front door over the existing control primitives: given
  * a SISO plant {@code num/den}, a controller type, a target crossover
  * {@code wc} (the "response time" knob) and a target phase margin (the
  * "transient behaviour"/robustness knob), it returns the tuned gains together

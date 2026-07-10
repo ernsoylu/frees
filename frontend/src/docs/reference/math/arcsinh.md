@@ -32,4 +32,3 @@ $$ \operatorname{arcsinh}(x) = \ln\!\big(x + \sqrt{x^2+1}\big) $$
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
 | `x` | Number | Yes | Vapor quality (0–1). |
-

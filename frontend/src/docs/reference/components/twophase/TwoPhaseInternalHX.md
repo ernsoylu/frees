@@ -49,4 +49,3 @@ Q            = eps * vap_in.mdot * cp_v * (T_liq - T_vap)
 vap_out.h    = vap_in.h + Q / vap_in.mdot
 liq_out.h    = liq_in.h - Q / liq_in.mdot
 ```
-

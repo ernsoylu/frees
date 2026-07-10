@@ -5,9 +5,6 @@ summary: Create a state-space model from (A, B, C, D).
 related: [ss2tf, tf2ss, ss2ss]
 examples: []
 tags: [control, state space, model, ss]
-references:
-  - "the standard literature, N.S., a standard controls text (7th ed.), Ch. 3"
-  - "the standard literature, K., a standard controls text (5th ed.), Ch. 9"
 ---
 
 # ss
@@ -24,7 +21,7 @@ sys = ss(A, B, C, D)
 
 ## Mathematical Formulation
 
-$$ \dot{\mathbf{x}} = A\mathbf{x} + B\mathbf{u}, \qquad \mathbf{y} = C\mathbf{x} + D\mathbf{u} \qquad \text{(the standard literature Ch. 3)} $$
+$$ \dot{\mathbf{x}} = A\mathbf{x} + B\mathbf{u}, \qquad \mathbf{y} = C\mathbf{x} + D\mathbf{u} $$
 
 with transfer function `G(s) = C(sI − A)⁻¹B + D` (see `ss2tf`).
 
@@ -50,8 +47,3 @@ with transfer function `G(s) = C(sI − A)⁻¹B + D` (see `ss2tf`).
 | Argument | Type | Description |
 | --- | --- | --- |
 | `sys` | State-space | The model `(A, B, C, D)`. |
-
-## References
-
-1. the standard literature, N.S. *a standard controls text* (7th ed.), Ch. 3.
-2. the standard literature, K. *a standard controls text* (5th ed.), Ch. 9.

@@ -45,4 +45,3 @@ cpe          = cp + (L / (dTm * 1.7724539)) * exp(-((port.T - Tm) / dTm)^2)
 der(port.T)  = port.Qdot / (m * cpe)
 init(port.T) = T0
 ```
-

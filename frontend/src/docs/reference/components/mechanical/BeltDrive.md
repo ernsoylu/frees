@@ -40,4 +40,3 @@ The acausal equations this component expands into (over its port members and par
 a.w   = ratio * b.w
 b.tau = -ratio * eta * a.tau
 ```
-

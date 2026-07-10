@@ -5,9 +5,6 @@ summary: Solve the continuous Lyapunov equation A·X + X·Aᵀ + Q = 0.
 related: [dlyap, dare, gram]
 examples: []
 tags: [control, lyapunov, stability, gramian, riccati]
-references:
-  - "the standard literature, P.J. & Michel, A.N., A Linear Systems Primer, Ch. 4"
-  - "the standard literature, K., a standard controls text (5th ed.), Ch. 9"
 ---
 
 # lyap
@@ -29,7 +26,7 @@ $$ A X + X A^\top + Q = 0 $$
 
 For a Hurwitz `A` and `Q = Qᵀ ⪰ 0`, the unique solution is
 
-$$ X = \int_0^\infty e^{A t} Q\, e^{A^\top t}\,dt \qquad \text{(the standard literature Ch. 4)} $$
+$$ X = \int_0^\infty e^{A t} Q\, e^{A^\top t}\,dt $$
 
 > **Method:** Bartels–Stewart (Schur-based) solve of the linear Lyapunov system.
 
@@ -57,8 +54,3 @@ $$ X = \int_0^\infty e^{A t} Q\, e^{A^\top t}\,dt \qquad \text{(the standard lit
 | Error | Cause | Fix |
 | --- | --- | --- |
 | `NO_UNIQUE_SOLUTION` | `A` shares eigenvalues with `−Aᵀ` | The Lyapunov operator is singular; check `A`'s spectrum. |
-
-## References
-
-1. the standard literature, P.J. & Michel, A.N. *A Linear Systems Primer*, Ch. 4.
-2. the standard literature, K. *a standard controls text* (5th ed.), Ch. 9.

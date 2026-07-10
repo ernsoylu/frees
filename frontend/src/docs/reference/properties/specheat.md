@@ -23,8 +23,3 @@ specheat(Fluid, P=, T=)
 ## Description
 
 Supply the fluid name and any two independent state properties (T, P, h, s, x, …). Property names are case-insensitive.
-
-## References
-
-1. Bell, I.H. et al. (2014), Ind. Eng. Chem. Res. 53:2498 — CoolProp.
-

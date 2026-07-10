@@ -34,8 +34,3 @@ $$ \text{row } r \text{ where column } c \text{ crosses } val \text{ (interpolat
 | `'t'` | Number | Yes | Name of a TABLE block (string). |
 | `col` | Number | Yes | Name of a result-table column. |
 | `val` | Number | Yes | Target value to cross. |
-
-## References
-
-1. a standard numerics text, a standard numerics text (3rd ed.), Ch. 3.
-

@@ -5,9 +5,6 @@ summary: Overall gain of a signal-flow graph by Mason's gain formula.
 related: [series, parallel, feedback]
 examples: []
 tags: [control, mason, signal flow graph, gain formula, block diagram]
-references:
-  - "the standard literature, N.S., a standard controls text (7th ed.), Ch. 5, §5.4"
-  - "the standard literature, K., a standard controls text (5th ed.), Ch. 3"
 ---
 
 # mason
@@ -26,7 +23,7 @@ T = mason(G, source, sink)
 
 ## Mathematical Formulation
 
-Mason's rule (the standard literature §5.4):
+Mason's rule:
 
 $$ T = \frac{\sum_k P_k \Delta_k}{\Delta}, \qquad \Delta = 1 - \sum L_i + \sum L_iL_j - \dots $$
 
@@ -55,8 +52,3 @@ loop gains `L_i`, and `Δ_k` is `Δ` with the paths touching `P_k` removed.
 | Argument | Type | Description |
 | --- | --- | --- |
 | `T` | Number | Overall source-to-sink gain. |
-
-## References
-
-1. the standard literature, N.S. *a standard controls text* (7th ed.), Ch. 5, §5.4.
-2. the standard literature, K. *a standard controls text* (5th ed.), Ch. 3.

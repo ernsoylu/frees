@@ -31,7 +31,7 @@ to 245 components (Waves 1–6); follow it and each new component costs one
 - Cross-domain devices couple through **separate same-domain ports**
   (transducers) or shared **wall heat nodes** (hierarchical composites — see
   `Chiller`, `Radiator`, `QuarterCar`). Never a direct cross-domain connect.
-- Inject UA/ΔP from the correlation functions (`docs/hx_correlation_coverage.md`)
+- Inject UA/ΔP from the correlation functions
   instead of embedding a correlation in the component.
 - New scalar functions follow the 3-site wiring: `FunctionRegistry` →
   `Evaluator` dispatch → units rule. (Note: the arctangent is `arctan`, not

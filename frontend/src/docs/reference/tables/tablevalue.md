@@ -33,4 +33,3 @@ $$ \operatorname{TableValue}(r, c) = \text{cell } (r, c) \text{ of the parametri
 | --- | --- | --- | --- |
 | `run` | Number | Yes | Parametric run index. |
 | `col` | Number | Yes | Name of a result-table column. |
-

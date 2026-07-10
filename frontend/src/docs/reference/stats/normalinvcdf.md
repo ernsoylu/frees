@@ -5,8 +5,6 @@ summary: Inverse normal CDF (quantile) at p
 related: []
 examples: []
 tags: [normalinvcdf, stats]
-references:
-  - "the standard literature, D.C. & the standard literature, G.C., a standard statistics text"
 ---
 
 # normalinvcdf
@@ -35,8 +33,3 @@ $$ x = \Phi^{-1}(p;\mu,\sigma) = \mu + \sigma\sqrt2\,\operatorname{erf}^{-1}(2p-
 | `p` | Number | Yes | Probability (0–1) / percentile rank. |
 | `mu` | Number | Yes | Dynamic viscosity [Pa·s]. |
 | `sigma` | Number | Yes | Surface tension [N/m]. |
-
-## References
-
-1. the standard literature, D.C. & the standard literature, G.C., a standard statistics text.
-

@@ -5,9 +5,6 @@ summary: Controllability matrix of a state-space pair (A, B).
 related: [obsv, place, acker, gram]
 examples: []
 tags: [control, controllability, state space, rank]
-references:
-  - "the standard literature, N.S., a standard controls text (7th ed.), Ch. 12, §12.2"
-  - "the standard literature, K., a standard controls text (5th ed.), Ch. 9, §9.7"
 ---
 
 # ctrb
@@ -25,7 +22,7 @@ Co = ctrb(A, B)
 
 ## Mathematical Formulation
 
-For an `n`-state system (the standard literature §12.2):
+For an `n`-state system:
 
 $$ \mathcal{C} = \begin{bmatrix} B & AB & A^2B & \cdots & A^{n-1}B \end{bmatrix} $$
 
@@ -51,8 +48,3 @@ The pair is controllable iff `rank(C) = n`.
 | Argument | Type | Description |
 | --- | --- | --- |
 | `Co` | Matrix | Controllability matrix. |
-
-## References
-
-1. the standard literature, N.S. *a standard controls text* (7th ed.), Ch. 12, §12.2.
-2. the standard literature, K. *a standard controls text* (5th ed.), Ch. 9, §9.7.

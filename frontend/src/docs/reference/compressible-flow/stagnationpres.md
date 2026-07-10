@@ -5,8 +5,6 @@ summary: Stagnation pressure P0 = P·(T0/T)^(k/(k-1)).
 related: [StagnationTemp, P0_P]
 examples: [thermo-compliance]
 tags: [compressible, stagnation pressure, total pressure, isentropic]
-references:
-  - "the standard literature, Y.A., the standard literature, M.A. & Kanoğlu, M., a standard thermodynamics text, Ch. 17, Eq. (17-5)"
 ---
 
 # StagnationPres
@@ -28,7 +26,7 @@ with `StagnationTemp` to give the full stagnation state.
 
 ## Mathematical Formulation
 
-$$ P_0 = P\left(\frac{T_0}{T}\right)^{\!k/(k-1)} \qquad \text{(the standard literature Eq. 17-5)} $$
+$$ P_0 = P\left(\frac{T_0}{T}\right)^{\!k/(k-1)} $$
 
 > **Method:** direct evaluation of the isentropic stagnation relation.
 
@@ -60,7 +58,3 @@ $$ P_0 = P\left(\frac{T_0}{T}\right)^{\!k/(k-1)} \qquad \text{(the standard lite
 | Error | Cause | Fix |
 | --- | --- | --- |
 | `DOMAIN_ERROR` | `k ≤ 1` or `T ≤ 0` | Use a physical `k > 1` and positive temperatures. |
-
-## References
-
-1. the standard literature, Y.A., the standard literature, M.A. & Kanoğlu, M. *a standard thermodynamics text*, Ch. 17, Eq. (17-5).

@@ -5,8 +5,6 @@ summary: Nu=j*Re*Pr^(1/3). SIDE: air/gas through a compact finned surface. HX: p
 related: []
 examples: []
 tags: [nu, colburn, heat, transfer]
-references:
-  - "the standard literature, F.P. et al., Fundamentals of Heat and Mass Transfer"
 ---
 
 # nu_colburn
@@ -41,9 +39,3 @@ $$ Nu = j\,Re\,Pr^{1/3} \quad\text{(Colburn } j\text{-factor)} $$
 | `j` | Number | Yes | Colburn j-factor. |
 | `Re` | Number | Yes | Reynolds number. |
 | `Pr` | Number | Yes | Prandtl number. |
-
-## References
-
-1. the standard literature, F.P. et al., Fundamentals of Heat and Mass Transfer.
-2. the standard literature, S. et al., Heat Exchangers: Selection, Rating, and Thermal Design.
-

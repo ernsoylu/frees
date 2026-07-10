@@ -5,9 +5,6 @@ summary: A translational mass, F = m dv/dt.
 related: []
 examples: []
 tags: [transmass, component, mechanical, acausal]
-references:
-  - "the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., a standard system-dynamics text (5th ed.) — acausal/bond-graph formalism"
-  - "the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., System Dynamics (5th ed.)"
 ---
 
 # TransMass
@@ -43,8 +40,3 @@ Instantiating the component expands these acausal equations (over its port membe
 der(port.vel)  = port.f / m
 init(port.vel) = v0
 ```
-
-## References
-
-1. the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., *a standard system-dynamics text* (5th ed.) — acausal/bond-graph formalism.
-2. the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., *System Dynamics* (5th ed.).

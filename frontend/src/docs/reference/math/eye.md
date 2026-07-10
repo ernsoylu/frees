@@ -32,4 +32,3 @@ $$ I_{ij} = \delta_{ij} \quad (n\times n) $$
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
 | `n` | Number | Yes | Order / number of terms. |
-

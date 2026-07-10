@@ -5,9 +5,6 @@ summary: Adds a pressure rise to a gas/air stream, computing the fan work.
 related: []
 examples: []
 tags: [fan, component, fluid, acausal]
-references:
-  - "the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., a standard system-dynamics text (5th ed.) — acausal/bond-graph formalism"
-  - "the standard literature, a standard fluids text"
 ---
 
 # Fan
@@ -49,8 +46,3 @@ out.mdot = in.mdot
 out.P    = in.P + dP
 out.h    = in.h + dP / (rho * eta)
 ```
-
-## References
-
-1. the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., *a standard system-dynamics text* (5th ed.) — acausal/bond-graph formalism.
-2. the standard literature, *Fluid Mechanics* (8th ed.).

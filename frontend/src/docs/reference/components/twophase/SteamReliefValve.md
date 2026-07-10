@@ -5,9 +5,6 @@ summary: A steam relief valve venting above the set pressure.
 related: []
 examples: []
 tags: [steamreliefvalve, component, twophase, acausal]
-references:
-  - "the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., a standard system-dynamics text (5th ed.) — acausal/bond-graph formalism"
-  - "the standard literature, J.G. & the standard literature, J.R., a standard two-phase text (3rd ed.)"
 ---
 
 # SteamReliefValve
@@ -56,8 +53,3 @@ ratio    = (min(max(out.P / in.P, PRc), 1) - PRc) / (1 - PRc)
 efact    = 1 - ratio ^ 2
 in.mdot  = opening * mdot_ch * efact
 ```
-
-## References
-
-1. the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., *a standard system-dynamics text* (5th ed.) — acausal/bond-graph formalism.
-2. the standard literature, J.G. & the standard literature, J.R., *a standard two-phase text* (3rd ed.).

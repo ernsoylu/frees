@@ -5,8 +5,6 @@ summary: Oblique-shock deflection from wave angle [rad]
 related: []
 examples: []
 tags: [theta, oblique, compressible, flow]
-references:
-  - "Anderson, J.D., Modern Compressible Flow (3rd ed.), Ch. 4"
 ---
 
 # theta_oblique
@@ -35,9 +33,3 @@ $$ \tan\theta = 2\cot\beta\,\frac{M_1^2\sin^2\beta - 1}{M_1^2(k + \cos 2\beta) +
 | `M1` | Number | Yes | Upstream Mach number (≥ 1). |
 | `beta` | Number | Yes | Oblique-shock wave angle [rad]. |
 | `k` | Number | Yes | Ratio of specific heats (e.g. 1.4 for air). |
-
-## References
-
-1. the standard literature, Y.A., the standard literature, M.A. & Kanoğlu, M., a standard thermodynamics text, Ch. 17.
-2. Anderson, J.D., Modern Compressible Flow (3rd ed.).
-

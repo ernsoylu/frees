@@ -69,7 +69,7 @@ const C = {
   friedel_phi2: {
     desc: 'Returns the **Friedel two-phase frictional multiplier** on the liquid-only pressure drop — an alternative to Chisholm that uses the Froude and Weber numbers for broader validity.',
     where: 'Two-phase frictional pressure drop in refrigerant passages.',
-    when: 'Recommended (the standard literature) for `μ_l/μ_g < 1000`; covers a wider mass-flux range than the simple Chisholm form.',
+    when: 'Recommended in the standard two-phase literature for `μ_l/μ_g < 1000`; covers a wider mass-flux range than the simple Chisholm form.',
     use: 'Multiply the liquid-only gradient by the multiplier to get the two-phase `ΔP`; an alternative to [`lm_phi2`](lm_phi2).',
   },
   momentum_flux: {
@@ -119,7 +119,7 @@ const HX = {
   nu_traviss: { where: 'Condensing two-phase refrigerant in tube/microchannel condensers.', when: 'In-tube condensation, annular-flow dominated.', use: 'Condenser refrigerant-side `h`; alternative to [`nu_shah`](nu_shah)/[`nu_cavallini_zecchin`](nu_cavallini_zecchin).' },
   dp_1phase: { where: 'A single-phase liquid/gas line (coolant, water, air channel, pipe).', when: 'Single-phase Darcy flow; turbulent or laminar.', use: 'Friction `ΔP` for radiator/CAC fluid channels and connecting lines.' },
   dp_mueller_steinhagen: { where: 'Two-phase refrigerant in an evaporator/condenser line.', when: 'Two-phase frictional drop; an alternative to the Chisholm/Friedel route ([`dp_2phase`](dp_2phase)).', use: 'Interpolates between the all-liquid and all-vapor drops over the quality range.' },
-  dp_compact_core: { where: 'Air/gas through a compact finned core.', when: 'Includes the entrance, acceleration, core-friction and exit terms (the standard literature–London).', use: 'Air-side `ΔP` for a fin-and-tube / plate-fin radiator, condenser, or CAC.' },
+  dp_compact_core: { where: 'Air/gas through a compact finned core.', when: 'Includes the entrance, acceleration, core-friction and exit terms of the standard compact-core formulation.', use: 'Air-side `ΔP` for a fin-and-tube / plate-fin radiator, condenser, or CAC.' },
   dp_gravity: { where: 'Two-phase refrigerant in a vertical riser/downcomer.', when: 'Static-head term; sign follows the flow direction `θ`.', use: 'Add to the frictional and acceleration terms for the total vertical-pass `ΔP`.' },
   dp_2phase_avg: { where: 'Two-phase refrigerant along an evaporator/condenser pass.', when: 'Integrates the two-phase multiplier over `n` quality cells from `x_in` to `x_out`.', use: 'A quality-averaged frictional `ΔP` for a whole pass.' },
   j_fin: { where: 'The air/gas finned side of a compact surface.', when: 'Plain / wavy / louvered / offset-strip fin surfaces (`surface$`).', use: 'Air-side `h` via the Colburn `j`-factor; pair with [`f_fin`](f_fin).' },

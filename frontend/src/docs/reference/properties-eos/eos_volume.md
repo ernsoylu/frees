@@ -5,9 +5,6 @@ summary: Specific volume from a cubic equation of state (SRK or PR).
 related: [eos_z, eos_density, eos_pressure]
 examples: [cubic-eos-properties]
 tags: [eos, cubic, peng-robinson, srk, specific volume, real gas]
-references:
-  - "the original PR publication"
-  - "the standard literature, the standard literature, H.C. & the standard literature, a standard chemical-thermodynamics text, Ch. 3"
 ---
 
 # eos_volume
@@ -67,8 +64,3 @@ the reciprocal of the density.
 | Error | Cause | Fix |
 | --- | --- | --- |
 | `UNKNOWN_FLUID` | `fluid$` not in the table | Use a supported fluid name. |
-
-## References
-
-1. the original PR publication
-2. the standard literature, the standard literature, H.C. & the standard literature *a standard chemical-thermodynamics text*, Ch. 3.

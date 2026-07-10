@@ -5,9 +5,6 @@ summary: Convert a transfer function to a state-space realization (A, B, C, D).
 related: [ss2tf, tf, pole]
 examples: [multi-output-destructuring]
 tags: [control, transfer function, state space, tf2ss, realization, controllable canonical]
-references:
-  - "the standard literature, N.S., a standard controls text (7th ed.), Ch. 3, §3.5"
-  - "the standard literature, K., a standard controls text (5th ed.), Ch. 9"
 ---
 
 # tf2ss
@@ -32,7 +29,7 @@ the infinitely many state-space models sharing the same input-output behavior.
 ## Mathematical Formulation
 
 For `G(s) = num/den`, the controllable canonical realization places the denominator
-coefficients in the companion `A` and the numerator in `C` (the standard literature §3.5):
+coefficients in the companion `A` and the numerator in `C`:
 
 $$ \dot{\mathbf{x}} = A\mathbf{x} + B u, \qquad y = C\mathbf{x} + D u, \qquad C(sI-A)^{-1}B + D = G(s) $$
 
@@ -68,8 +65,3 @@ $$ \dot{\mathbf{x}} = A\mathbf{x} + B u, \qquad y = C\mathbf{x} + D u, \qquad C(
 | Error | Cause | Fix |
 | --- | --- | --- |
 | `IMPROPER_TF` | `num` order exceeds `den` order | Provide a proper transfer function. |
-
-## References
-
-1. the standard literature, N.S. *a standard controls text* (7th ed.), Ch. 3, §3.5.
-2. the standard literature, K. *a standard controls text* (5th ed.), Ch. 9.

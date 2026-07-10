@@ -41,4 +41,3 @@ s       = 0.5 * (1 + tanh((soc.sig - soc_ref) / eps))
 mot.sig = s * dem.sig
 eng.sig = (1 - s) * dem.sig
 ```
-

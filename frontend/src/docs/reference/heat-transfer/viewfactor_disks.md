@@ -5,8 +5,6 @@ summary: Diffuse radiation view factor between two coaxial parallel disks.
 related: [viewfactor_plates, viewfactor_perp]
 examples: [radiation-view-factors]
 tags: [radiation, view factor, configuration factor, disks, coaxial, enclosure]
-references:
-  - "the standard literature, J.P., Heat Transfer (10th ed.), Table 8-2 (Item 5), Fig. 8-16"
 ---
 
 # viewfactor_disks
@@ -33,9 +31,9 @@ summation rules closing the enclosure).
 
 With $R_1 = r_1/L$, $R_2 = r_2/L$, and $X = 1 + \dfrac{1 + R_2^2}{R_1^2}$,
 
-$$ F_{1\to 2} = \frac{1}{2}\left\{\,X - \left[X^2 - 4\left(\frac{R_2}{R_1}\right)^2\right]^{1/2}\right\} \qquad \text{(the standard literature Table 8-2, Item 5)} $$
+$$ F_{1\to 2} = \frac{1}{2}\left\{\,X - \left[X^2 - 4\left(\frac{R_2}{R_1}\right)^2\right]^{1/2}\right\} $$
 
-> **Method:** direct evaluation of the Howell-catalog closed form (the standard literature Fig. 8-16).
+> **Method:** direct evaluation of the standard closed-form view-factor expression.
 
 ## Examples
 
@@ -64,7 +62,3 @@ $$ F_{1\to 2} = \frac{1}{2}\left\{\,X - \left[X^2 - 4\left(\frac{R_2}{R_1}\right
 | Error | Cause | Fix |
 | --- | --- | --- |
 | `DOMAIN_ERROR` | `L ≤ 0` or a radius ≤ 0 | All three lengths must be positive. |
-
-## References
-
-1. the standard literature, J.P. *Heat Transfer* (10th ed.), Table 8-2 (Item 5), Fig. 8-16.

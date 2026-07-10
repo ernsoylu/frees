@@ -5,8 +5,6 @@ summary: Chi-square CDF with df degrees of freedom
 related: []
 examples: []
 tags: [chi, square, stats]
-references:
-  - "the standard literature, D.C. & the standard literature, G.C., a standard statistics text"
 ---
 
 # chi_square
@@ -34,8 +32,3 @@ $$ F(x; k) = \frac{\gamma(k/2,\ x/2)}{\Gamma(k/2)} \quad\text{(chi-square CDF, }
 | --- | --- | --- | --- |
 | `x` | Number | Yes | Vapor quality (0–1). |
 | `df` | Number | Yes | Degrees of freedom. |
-
-## References
-
-1. the standard literature, D.C. & the standard literature, G.C., a standard statistics text.
-

@@ -5,9 +5,6 @@ summary: A resistor that dissipates its electrical power as heat (electrical→t
 related: []
 examples: [pressure-cooker]
 tags: [heatingresistor, component, electrical, acausal]
-references:
-  - "the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., a standard system-dynamics text (5th ed.) — acausal/bond-graph formalism"
-  - "the standard literature, J.W. & the standard literature, S.A., a standard circuits text"
 ---
 
 # HeatingResistor
@@ -50,8 +47,3 @@ heat.Qdot = -Q
 Instantiated in the verified example below:
 
 [Run: pressure-cooker]
-
-## References
-
-1. the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., *a standard system-dynamics text* (5th ed.) — acausal/bond-graph formalism.
-2. the standard literature, J.W. & the standard literature, S.A., *Electric Circuits* (11th ed.).

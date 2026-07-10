@@ -49,4 +49,3 @@ h_mix   = out.h - v_mix^2 / 2
 rho_mix = Density(fluid$, P=suc_in.P, h=h_mix)
 out.P   = suc_in.P + rho_mix * v_mix^2 / 2
 ```
-

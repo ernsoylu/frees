@@ -41,4 +41,3 @@ The acausal equations this component expands into (over its port members and par
 dt      = time - t0
 out.sig = slope * 0.5 * (dt + sqrt(dt^2 + eps^2))
 ```
-

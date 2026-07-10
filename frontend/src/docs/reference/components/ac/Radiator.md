@@ -46,4 +46,3 @@ connect(air_in, AR.in)
 connect(AR.out, air_out)
 connect(CL.wall, AR.wall)
 ```
-

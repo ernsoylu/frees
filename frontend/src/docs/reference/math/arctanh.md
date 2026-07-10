@@ -32,4 +32,3 @@ $$ \operatorname{arctanh}(x) = \tfrac12\ln\!\frac{1+x}{1-x}, \quad |x| < 1 $$
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
 | `x` | Number | Yes | Vapor quality (0–1). |
-

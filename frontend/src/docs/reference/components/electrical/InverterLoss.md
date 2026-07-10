@@ -51,4 +51,3 @@ out_p.V   = in_p.V - dV
 Q         = dV * I
 heat.Qdot = -Q
 ```
-

@@ -32,4 +32,3 @@ $$ \arg(z) = \operatorname{atan2}(b, a)\cdot\tfrac{180}{\pi}\ \ [\text{deg}] $$
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
 | `z` | Number | Yes | Argument (complex or real). |
-

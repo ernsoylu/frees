@@ -49,4 +49,3 @@ connect(GB.out, out)
 connect(gear, GB.u)
 connect(lock, LU.u)
 ```
-

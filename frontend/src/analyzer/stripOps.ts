@@ -1,4 +1,4 @@
-// Pure strip-list operations for the oscilloscope (the reference measurement tool parity: signals can be
+// Pure strip-list operations for the oscilloscope (oscilloscope-tool parity: signals can be
 // dragged between strips, strips reordered by dragging). Kept out of the
 // component so the reducer-style spec mutations are unit-testable.
 

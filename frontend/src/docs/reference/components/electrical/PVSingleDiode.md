@@ -49,4 +49,3 @@ Vd  = V + I * Rs
 I   = Iph - I0d * (exp(Vd / (n_d * Vt)) - 1) - Vd / Rsh
 p.I + n.I = 0
 ```
-

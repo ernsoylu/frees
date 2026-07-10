@@ -5,9 +5,6 @@ summary: Adds heat to a fluid stream, raising its enthalpy (and generating vapor
 related: []
 examples: []
 tags: [boiler, component, fluid, acausal]
-references:
-  - "the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., a standard system-dynamics text (5th ed.) — acausal/bond-graph formalism"
-  - "the standard literature, a standard fluids text"
 ---
 
 # Boiler
@@ -37,8 +34,3 @@ out.mdot = in.mdot
 out.P    = in.P
 Q        = in.mdot * (out.h - in.h)
 ```
-
-## References
-
-1. the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., *a standard system-dynamics text* (5th ed.) — acausal/bond-graph formalism.
-2. the standard literature, *Fluid Mechanics* (8th ed.).

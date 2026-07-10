@@ -5,8 +5,6 @@ summary: Rayleigh stagnation-temperature ratio
 related: []
 examples: []
 tags: [rayleigh, t0, t0star, compressible, flow]
-references:
-  - "the standard literature, Y.A., the standard literature, M.A. & Kanoğlu, M., a standard thermodynamics text, Ch. 17, Ch. 17 (Rayleigh)"
 ---
 
 # rayleigh_t0_t0star
@@ -34,9 +32,3 @@ $$ \frac{T_0}{T_0^*} = \frac{(k+1)M^2\,[2 + (k-1)M^2]}{(1 + kM^2)^2} $$
 | --- | --- | --- | --- |
 | `M` | Number | Yes | Mach number. |
 | `k` | Number | Yes | Ratio of specific heats (e.g. 1.4 for air). |
-
-## References
-
-1. the standard literature, Y.A., the standard literature, M.A. & Kanoğlu, M., a standard thermodynamics text, Ch. 17.
-2. Anderson, J.D., Modern Compressible Flow (3rd ed.).
-

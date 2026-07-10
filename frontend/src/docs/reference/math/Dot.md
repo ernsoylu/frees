@@ -33,4 +33,3 @@ $$ a \cdot b = \sum_i a_i b_i $$
 | --- | --- | --- | --- |
 | `a` | Number | Yes | First operand. |
 | `b` | Number | Yes | Second operand. |
-

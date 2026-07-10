@@ -5,8 +5,6 @@ summary: Nu, Gungor-Winterton flow boiling from liquid-only Nu. SIDE: boiling tw
 related: []
 examples: []
 tags: [nu, gungor, winterton, heat, transfer]
-references:
-  - "Gungor, K.E. & Winterton, R.H.S. (1986), Int. J. Heat Mass Transfer 29:351"
 ---
 
 # nu_gungor_winterton
@@ -41,9 +39,3 @@ $$ Nu = Nu_l\big[1 + 3000\,Bo^{0.86} + 1.12(x/(1-x))^{0.75}(\rho_l/\rho_g)^{0.41
 | `Nu_l` | Number | Yes | Liquid-only Nusselt number. |
 | `Xtt` | Number | Yes | Turbulent–turbulent Martinelli parameter. |
 | `Bo` | Number | Yes | Boiling number. |
-
-## References
-
-1. the standard literature, F.P. et al., Fundamentals of Heat and Mass Transfer.
-2. the standard literature, S. et al., Heat Exchangers: Selection, Rating, and Thermal Design.
-

@@ -5,10 +5,6 @@ summary: Compressibility factor Z from a cubic equation of state (SRK or PR).
 related: [eos_volume, eos_density, eos_enthalpy, eos_psat]
 examples: [cubic-eos-properties]
 tags: [eos, cubic, peng-robinson, srk, compressibility, real gas, z-factor]
-references:
-  - "the original PR publication"
-  - "the original SRK publication"
-  - "the standard literature, the standard literature, H.C. & the standard literature, a standard chemical-thermodynamics text, Ch. 3"
 ---
 
 # eos_z
@@ -82,9 +78,3 @@ just above the CO₂ critical temperature (304 K) at near-critical pressure.
 | --- | --- | --- |
 | `UNKNOWN_FLUID` | `fluid$` not in the critical-constant table | Use a supported fluid name. |
 | `UNKNOWN_MODEL` | `model$` not `'SRK'`/`'PR'` | Pass `'SRK'` or `'PR'`. |
-
-## References
-
-1. the original PR publication
-2. the original SRK publication
-3. the standard literature, the standard literature, H.C. & the standard literature *a standard chemical-thermodynamics text*, Ch. 3.

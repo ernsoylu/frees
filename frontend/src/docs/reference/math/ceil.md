@@ -32,4 +32,3 @@ $$ \lceil x \rceil = \min\{n \in \mathbb{Z} : n \ge x\} $$
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
 | `x` | Number | Yes | Vapor quality (0–1). |
-

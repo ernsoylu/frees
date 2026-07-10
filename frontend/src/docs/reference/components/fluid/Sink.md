@@ -5,9 +5,6 @@ summary: A fluid boundary that absorbs a stream at a set pressure.
 related: []
 examples: []
 tags: [sink, component, fluid, acausal]
-references:
-  - "the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., a standard system-dynamics text (5th ed.) — acausal/bond-graph formalism"
-  - "the standard literature, a standard fluids text"
 ---
 
 # Sink
@@ -37,8 +34,3 @@ mdot = in.mdot
 P    = in.P
 h    = in.h
 ```
-
-## References
-
-1. the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., *a standard system-dynamics text* (5th ed.) — acausal/bond-graph formalism.
-2. the standard literature, *Fluid Mechanics* (8th ed.).

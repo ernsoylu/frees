@@ -5,9 +5,6 @@ summary: Log-mean temperature difference of a heat exchanger.
 related: [hx_effectiveness, hx_NTU]
 examples: [hx-effectiveness-ntu]
 tags: [heat exchanger, lmtd, log-mean, temperature difference, duty]
-references:
-  - "the standard literature, S. et al., Heat Exchangers: Selection, Rating, and Thermal Design (4th ed.), Eq. (2.28), (2.36)"
-  - "the standard literature, J.P., Heat Transfer (10th ed.), §10-5, Eq. (10-12), (10-13)"
 ---
 
 # LMTD
@@ -35,12 +32,12 @@ counter/parallel flow).
 
 ## Mathematical Formulation
 
-$$ \Delta T_{lm} = \frac{\Delta T_1 - \Delta T_2}{\ln(\Delta T_1 / \Delta T_2)} \qquad \text{(the standard literature Eq. 2.28; the standard literature Eq. 10-12)} $$
+$$ \Delta T_{lm} = \frac{\Delta T_1 - \Delta T_2}{\ln(\Delta T_1 / \Delta T_2)} $$
 
 and the heat-exchanger duty, with overall conductance $UA$ and configuration
 correction factor $F$,
 
-$$ Q = U A\, F\, \Delta T_{lm} \qquad \text{(the standard literature Eq. 2.36; the standard literature Eq. 10-13)} $$
+$$ Q = U A\, F\, \Delta T_{lm} $$
 
 > **Method:** direct evaluation. As $\Delta T_1 \to \Delta T_2$ the ratio is the
 > arithmetic mean (the removable singularity of the log form).
@@ -75,8 +72,3 @@ log-mean of its two end temperature differences gives the mean driving ΔT.
 | Error | Cause | Fix |
 | --- | --- | --- |
 | `DOMAIN_ERROR` | `dT1` and `dT2` have opposite signs, or one is zero | Use consistent hot−cold differences; a sign change implies a temperature cross — check the stream arrangement. |
-
-## References
-
-1. the standard literature, S., Liu, H. & Pramuanjaroenkij, A. *Heat Exchangers: Selection, Rating, and Thermal Design* (4th ed.), Eq. (2.28), (2.36).
-2. the standard literature, J.P. *Heat Transfer* (10th ed.), §10-5, Eq. (10-12), (10-13).

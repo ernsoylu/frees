@@ -5,9 +5,6 @@ summary: Tracks the refrigerant charge inventory across the circuit.
 related: []
 examples: []
 tags: [twophaseinventory, component, twophase, acausal]
-references:
-  - "the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., a standard system-dynamics text (5th ed.) — acausal/bond-graph formalism"
-  - "the standard literature, J.G. & the standard literature, J.R., a standard two-phase text (3rd ed.)"
 ---
 
 # TwoPhaseInventory
@@ -53,8 +50,3 @@ alpha    = void_zivi(x, rho_l, rho_g)
 rho_mix  = alpha * rho_g + (1 - alpha) * rho_l
 m        = V * rho_mix
 ```
-
-## References
-
-1. the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., *a standard system-dynamics text* (5th ed.) — acausal/bond-graph formalism.
-2. the standard literature, J.G. & the standard literature, J.R., *a standard two-phase text* (3rd ed.).

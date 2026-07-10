@@ -5,8 +5,6 @@ summary: Normal-shock static temperature ratio
 related: []
 examples: []
 tags: [t2, t1, shock, compressible, flow]
-references:
-  - "the standard literature, Y.A., the standard literature, M.A. & Kanoğlu, M., a standard thermodynamics text, Ch. 17, Eq. (17-37)"
 ---
 
 # t2_t1_shock
@@ -34,9 +32,3 @@ $$ \frac{T_2}{T_1} = \frac{\big[1 + \tfrac{k-1}{2}M_1^2\big]\big[\tfrac{2k}{k-1}
 | --- | --- | --- | --- |
 | `M1` | Number | Yes | Upstream Mach number (≥ 1). |
 | `k` | Number | Yes | Ratio of specific heats (e.g. 1.4 for air). |
-
-## References
-
-1. the standard literature, Y.A., the standard literature, M.A. & Kanoğlu, M., a standard thermodynamics text, Ch. 17.
-2. Anderson, J.D., Modern Compressible Flow (3rd ed.).
-

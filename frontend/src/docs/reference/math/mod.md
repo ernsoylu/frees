@@ -33,4 +33,3 @@ $$ \operatorname{mod}(a,b) = a - b\,\lfloor a/b \rfloor $$
 | --- | --- | --- | --- |
 | `x` | Number | Yes | Vapor quality (0–1). |
 | `y` | Number | Yes | Value / second coordinate. |
-

@@ -5,9 +5,6 @@ summary: A two-phase flow resistance relating pressure drop to mass flow.
 related: []
 examples: []
 tags: [twophaseflowres, component, twophase, acausal]
-references:
-  - "the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., a standard system-dynamics text (5th ed.) — acausal/bond-graph formalism"
-  - "the standard literature, J.G. & the standard literature, J.R., a standard two-phase text (3rd ed.)"
 ---
 
 # TwoPhaseFlowRes
@@ -61,8 +58,3 @@ dP_lo    = f_lo * (L / D) * rho_l * V_lo^2 / 2
 phi2     = friedel_phi2(x, rho_l, rho_g, mu_l, mu_g, G, D, sigma)
 out.P    = in.P - phi2 * dP_lo
 ```
-
-## References
-
-1. the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., *a standard system-dynamics text* (5th ed.) — acausal/bond-graph formalism.
-2. the standard literature, J.G. & the standard literature, J.R., *a standard two-phase text* (3rd ed.).

@@ -40,4 +40,3 @@ The acausal equations this component expands into (over its port members and par
 wgt     = 0.5 * (1 + tanh((ctrl.sig - thresh) / eps))
 out.sig = wgt * in1.sig + (1 - wgt) * in2.sig
 ```
-

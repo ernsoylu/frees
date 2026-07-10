@@ -6,9 +6,6 @@ summary: Tune a PID and an LQR state-feedback controller for a plant and check t
 examples: [controller-design-lqr-pid]
 tags: [cookbook, control, pid, lqr, controller, state feedback, design]
 related: [pidtune, lqr, place, feedback, pole, margin]
-references:
-  - "the standard literature, N.S., a standard controls text (7th ed.), Ch. 9, 12"
-  - "the standard literature, K., a standard controls text (5th ed.), Ch. 10"
 ---
 
 # Designing a Controller (PID & LQR)
@@ -28,11 +25,11 @@ Starting from the plant `G(s) = num/den` (or its state space `(A, B)`):
 ## Approach
 
 The PID controller `C(s) = Kp + Ki/s + Kd·s` is shaped to cross 0 dB near `ωc` with
-adequate phase margin (the standard literature Ch. 9). The LQR minimizes
+adequate phase margin. The LQR minimizes
 
 $$ J = \int_0^\infty (\mathbf{x}^\top Q\,\mathbf{x} + \mathbf{u}^\top R\,\mathbf{u})\,dt $$
 
-giving `K = R⁻¹BᵀP` with `P` solving the algebraic Riccati equation (the standard literature Ch. 10).
+giving `K = R⁻¹BᵀP` with `P` solving the algebraic Riccati equation.
 Verify each design with `pole`/`margin` on the closed loop, formed
 with `feedback`.
 
@@ -43,8 +40,3 @@ with `feedback`.
 **What it tells you:** the PID gains and the LQR gain, plus where each places the
 closed-loop poles. Increasing `Q/R` (or `ωc`) gives a faster, more aggressive
 response; both should land the dominant poles in the left half-plane.
-
-## References
-
-1. the standard literature, N.S. *a standard controls text* (7th ed.), Ch. 9, 12.
-2. the standard literature, K. *a standard controls text* (5th ed.), Ch. 10.

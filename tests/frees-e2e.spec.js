@@ -1024,7 +1024,7 @@ W_dot = Q_dot / COP`);
   // ── 23: Ammonia refrigeration cycle (English units) ───────────────────────
   test('23 · HVAC: ammonia refrigeration COP', async ({ page }) => {
     await openApp(page);
-    await setCode(page, `{ Ammonia Refrigeration Cycle COP (licensure-exam Problem 1) }
+    await setCode(page, `{ Ammonia Refrigeration Cycle COP }
 P_suction = 38.5 [psia]
 P_discharge = 229 [psia]
 m_dot = 22 [lb/min]

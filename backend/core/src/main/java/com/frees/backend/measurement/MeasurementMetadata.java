@@ -5,8 +5,8 @@ import java.util.List;
 /**
  * Parsed structure of a measurement file: channel groups (recordings with a
  * shared time base) and their channels. This is what the signal browser
- * shows; sample data is extracted lazily per channel (the reference measurement tool's on-the-fly
- * indexing pattern).
+ * shows; sample data is extracted lazily per channel (the on-the-fly
+ * indexing pattern of conventional measurement-analysis suites).
  */
 public record MeasurementMetadata(List<GroupInfo> groups) {
 

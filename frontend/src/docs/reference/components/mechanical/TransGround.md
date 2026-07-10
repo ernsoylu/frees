@@ -5,9 +5,6 @@ summary: The translational reference (v = 0).
 related: []
 examples: []
 tags: [transground, component, mechanical, acausal]
-references:
-  - "the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., a standard system-dynamics text (5th ed.) — acausal/bond-graph formalism"
-  - "the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., System Dynamics (5th ed.)"
 ---
 
 # TransGround
@@ -35,8 +32,3 @@ Instantiating the component expands these acausal equations (over its port membe
 ```
 port.vel = 0
 ```
-
-## References
-
-1. the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., *a standard system-dynamics text* (5th ed.) — acausal/bond-graph formalism.
-2. the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., *System Dynamics* (5th ed.).

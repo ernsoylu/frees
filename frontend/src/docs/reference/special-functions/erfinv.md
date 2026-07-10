@@ -6,7 +6,6 @@ related: [erf, erfc, normalinvcdf]
 examples: []
 tags: [special function, inverse error function, erfinv, quantile, gaussian]
 references:
-  - "the standard literature, M. & the standard literature, I.A., Handbook of Mathematical Functions, §7.1"
   - "NIST Digital Library of Mathematical Functions, §7.17"
 ---
 
@@ -30,7 +29,7 @@ Defined on `−1 < x < 1`; it diverges as `x → ±1`. An odd function.
 
 $$ w = \operatorname{erf}^{-1}(x) \quad\Longleftrightarrow\quad \operatorname{erf}(w) = x, \qquad -1 < x < 1 $$
 
-linked to the normal quantile by `Φ⁻¹(p) = √2·erfinv(2p − 1)` (A&S §7.1.5–7.1.6).
+linked to the normal quantile by `Φ⁻¹(p) = √2·erfinv(2p − 1)`.
 
 > **Method:** rational approximation refined by Newton iteration on `erf`.
 
@@ -61,5 +60,4 @@ w = erfinv(0.8427)
 
 ## References
 
-1. the standard literature, M. & the standard literature, I.A. *Handbook of Mathematical Functions*, §7.1.
-2. NIST *Digital Library of Mathematical Functions*, §7.17.
+1. NIST *Digital Library of Mathematical Functions*, §7.17.

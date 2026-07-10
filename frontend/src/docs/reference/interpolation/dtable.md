@@ -5,8 +5,6 @@ summary: Analytic slope of a table's linear interpolant — the exact derivative
 related: [dtable1, interpolate, differentiate]
 examples: []
 tags: [table, derivative, slope, interpolation, cam, feedforward, map]
-references:
-  - "a standard numerics text, a standard numerics text (3rd ed.), §3.1 — piecewise-linear interpolation"
 ---
 
 # dtable

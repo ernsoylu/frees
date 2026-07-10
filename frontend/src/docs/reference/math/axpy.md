@@ -34,4 +34,3 @@ $$ y \leftarrow \alpha x + y \quad\text{(BLAS level 1)} $$
 | `α` | Number | Yes | Scalar coefficient α. |
 | `x` | Number | Yes | Vapor quality (0–1). |
 | `y` | Number | Yes | Value / second coordinate. |
-

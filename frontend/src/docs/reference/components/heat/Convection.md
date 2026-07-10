@@ -5,9 +5,6 @@ summary: A convective link (Newton’s law of cooling), Q̇ = h·A·ΔT.
 related: []
 examples: [pressure-cooker]
 tags: [convection, component, heat, acausal]
-references:
-  - "the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., a standard system-dynamics text (5th ed.) — acausal/bond-graph formalism"
-  - "the standard literature, F.P. et al., Fundamentals of Heat and Mass Transfer"
 ---
 
 # Convection
@@ -50,8 +47,3 @@ b.Qdot = -Q
 Instantiated in the verified example below:
 
 [Run: pressure-cooker]
-
-## References
-
-1. the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., *a standard system-dynamics text* (5th ed.) — acausal/bond-graph formalism.
-2. the standard literature, F.P. et al., *Fundamentals of Heat and Mass Transfer*.

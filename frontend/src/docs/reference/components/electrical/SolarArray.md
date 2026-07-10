@@ -44,4 +44,3 @@ V   = p.V - n.V
 p.I = -Iph * 0.5 * (1 + tanh((Voc - V) / epsV))
 p.I + n.I = 0
 ```
-

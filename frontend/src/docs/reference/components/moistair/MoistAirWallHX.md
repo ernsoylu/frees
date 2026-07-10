@@ -5,9 +5,6 @@ summary: A humid-air-to-wall heat exchanger.
 related: []
 examples: []
 tags: [moistairwallhx, component, moistair, acausal]
-references:
-  - "the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., a standard system-dynamics text (5th ed.) — acausal/bond-graph formalism"
-  - "the industry handbook — Fundamentals (Psychrometrics)"
 ---
 
 # MoistAirWallHX
@@ -51,8 +48,3 @@ Q         = in.mdot * (in.h - out.h)
 Q_lat     = in.mdot * 2.501e6 * (in.W - out.W)
 wall.Qdot = -Q
 ```
-
-## References
-
-1. the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., *a standard system-dynamics text* (5th ed.) — acausal/bond-graph formalism.
-2. the industry handbook — Fundamentals (Psychrometrics).

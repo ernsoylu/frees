@@ -5,9 +5,6 @@ summary: Overall heat-exchanger conductance UA from two side films and the wall.
 related: [htc_1phase, htc_evap, htc_cond, hx_effectiveness]
 examples: [ev-thermal-management]
 tags: [heat exchanger, ua, overall conductance, thermal resistance, series]
-references:
-  - "the standard literature, S. et al., Heat Exchangers: Selection, Rating, and Thermal Design (4th ed.), Eq. (2.11), (2.16)"
-  - "the standard literature, F.P. et al., Fundamentals of Heat and Mass Transfer, Ch. 11"
 ---
 
 # ua_hx
@@ -30,10 +27,10 @@ resistance `Rwall`. In series these sum to the inverse conductance.
 
 ## Mathematical Formulation
 
-$$ \frac{1}{UA} = \frac{1}{h_1 A_1} + R_{\text{wall}} + \frac{1}{h_2 A_2} \qquad \text{(the standard literature Eq. 2.11)} $$
+$$ \frac{1}{UA} = \frac{1}{h_1 A_1} + R_{\text{wall}} + \frac{1}{h_2 A_2} $$
 
 For finned (extended) surfaces each film term carries its overall surface
-efficiency, `1/(η·h·A)` (the standard literature Eq. 2.16) — supply the efficiency-weighted area or
+efficiency, `1/(η·h·A)` — supply the efficiency-weighted area or
 an `h·η` product.
 
 > **Method:** direct series-resistance sum; the smaller `h·A` dominates `UA`.
@@ -71,8 +68,3 @@ whose `h·A` is far smaller than a boiling/condensing refrigerant side.
 | Error | Cause | Fix |
 | --- | --- | --- |
 | `DOMAIN_ERROR` | A film coefficient or area ≤ 0 | All resistances must be finite and positive. |
-
-## References
-
-1. the standard literature, S., Liu, H. & Pramuanjaroenkij, A. *Heat Exchangers: Selection, Rating, and Thermal Design* (4th ed.), Eq. (2.11), (2.16).
-2. the standard literature, F.P. et al. *Fundamentals of Heat and Mass Transfer*, Ch. 11.

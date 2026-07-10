@@ -36,4 +36,3 @@ $$ C \leftarrow \alpha A B + \beta C \quad\text{(BLAS level 3)} $$
 | `B` | Number | Yes | Matrix operand. |
 | `β` | Number | Yes | Scalar coefficient β. |
 | `C` | Number | Yes | Empirical constant. |
-

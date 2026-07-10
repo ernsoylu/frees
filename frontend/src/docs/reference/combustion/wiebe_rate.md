@@ -5,9 +5,6 @@ summary: Wiebe heat-release rate dxb/dθ for an engine combustion model.
 related: [wiebe, AdiabaticFlameTemp]
 examples: [engine-cycle-wiebe]
 tags: [combustion, engine, wiebe, vibe, heat release, burn rate, crank angle]
-references:
-  - "the standard literature, J.B., a standard engine text (2nd ed.), Ch. 9, §9.4"
-  - "Wiebe, J.I. (1956), Brennverlauf und Kreisprozess von Verbrennungsmotoren"
 ---
 
 # wiebe_rate
@@ -32,7 +29,7 @@ parameter (≈ 5 for ~99% completion), and `m` the form factor (≈ 2 for SI eng
 
 ## Mathematical Formulation
 
-Burned mass fraction and its rate (the standard literature §9.4):
+Burned mass fraction and its rate:
 
 $$ x_b(\theta) = 1 - \exp\!\left[-a\left(\frac{\theta-\theta_0}{\Delta\theta}\right)^{m+1}\right] $$
 
@@ -74,8 +71,3 @@ to build the cylinder-pressure trace.
 | Error | Cause | Fix |
 | --- | --- | --- |
 | (zero result) | `theta < theta0` | The rate is zero before combustion starts — expected. |
-
-## References
-
-1. the standard literature, J.B. *a standard engine text* (2nd ed.), Ch. 9, §9.4.
-2. Wiebe, J.I. (1956), *Brennverlauf und Kreisprozess von Verbrennungsmotoren*.

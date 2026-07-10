@@ -5,9 +5,6 @@ summary: Combines two fluid streams into one, with flow-weighted enthalpy mixing
 related: []
 examples: []
 tags: [mixer, component, fluid, acausal]
-references:
-  - "the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., a standard system-dynamics text (5th ed.) — acausal/bond-graph formalism"
-  - "the standard literature, a standard fluids text"
 ---
 
 # Mixer
@@ -37,8 +34,3 @@ out.P    = in1.P
 out.mdot = in1.mdot + in2.mdot
 out.mdot * out.h = in1.mdot * in1.h + in2.mdot * in2.h
 ```
-
-## References
-
-1. the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., *a standard system-dynamics text* (5th ed.) — acausal/bond-graph formalism.
-2. the standard literature, *Fluid Mechanics* (8th ed.).

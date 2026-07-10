@@ -5,8 +5,6 @@ summary: LU decomposition of a matrix (A = L·U).
 related: [SolveLinear, Inverse, Determinant]
 examples: []
 tags: [matrix, lu decomposition, factorization, linear solve]
-references:
-  - "the standard literature, G.H. & the standard literature, C.F., Matrix Computations (4th ed.), §3.2"
 ---
 
 # LUDecompose
@@ -24,7 +22,7 @@ CALL LUDecompose(A : L, U)
 
 ## Mathematical Formulation
 
-With a permutation `P` for partial pivoting (the standard matrix-computations reference §3.2):
+With a permutation `P` for partial pivoting:
 
 $$ P A = L U $$
 
@@ -56,7 +54,3 @@ where `L` is unit-lower-triangular and `U` upper-triangular. Then `det(A) = ±�
 | Error | Cause | Fix |
 | --- | --- | --- |
 | `SINGULAR_MATRIX` | a zero pivot remains | The matrix is singular; LU is not unique. |
-
-## References
-
-1. the standard literature, G.H. & the standard literature, C.F. *Matrix Computations* (4th ed.), §3.2.

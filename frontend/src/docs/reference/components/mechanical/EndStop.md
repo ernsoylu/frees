@@ -45,4 +45,3 @@ init(x) = x0
 pen     = 0.5 * ((x - gap) + sqrt((x - gap)^2 + eps^2))
 port.f  = k * pen + c * port.vel * 0.5 * (1 + tanh((x - gap) / eps))
 ```
-

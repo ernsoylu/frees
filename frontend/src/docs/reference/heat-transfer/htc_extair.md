@@ -5,10 +5,6 @@ summary: External air-side heat-transfer coefficient — Zukauskas tube-bank cro
 related: [htc_1phase, ua_hx, hx_eta_surf]
 examples: [ev-thermal-management]
 tags: [heat transfer, air side, zukauskas, tube bank, cross-flow, nusselt, film coefficient]
-references:
-  - "Žukauskas, A. (1972), Adv. Heat Transfer 8:93 — tube banks"
-  - "the standard literature, J.P., Heat Transfer (10th ed.), Eq. (6-34)"
-  - "the standard literature, S. et al., Heat Exchangers: Selection, Rating, and Thermal Design (4th ed.), Eq. (3.41)"
 ---
 
 # htc_extair
@@ -34,7 +30,7 @@ correction.
 
 With $Re_{d,\max} = \rho V_{\max} D/\mu$ at the minimum free-flow area,
 
-$$ Nu_d = C\,Re_{d,\max}^{\,n}\,Pr^{0.36}\left(\frac{Pr}{Pr_w}\right)^{1/4} \qquad \text{(the standard literature Eq. 6-34; the standard literature Eq. 3.41)} $$
+$$ Nu_d = C\,Re_{d,\max}^{\,n}\,Pr^{0.36}\left(\frac{Pr}{Pr_w}\right)^{1/4} $$
 
 where `C` and `n` depend on the bank arrangement (in-line/staggered) and Reynolds
 band; then $h = Nu_d\,k/D$.
@@ -73,9 +69,3 @@ weak side that sets the overall `UA`, which is why it is finned.
 | Error | Cause | Fix |
 | --- | --- | --- |
 | `DOMAIN_ERROR` | `D` or `Aflow` ≤ 0 | Provide positive geometry. |
-
-## References
-
-1. Žukauskas, A. (1972), *Adv. Heat Transfer* 8:93.
-2. the standard literature, J.P. *Heat Transfer* (10th ed.), Eq. (6-34).
-3. the standard literature, S., Liu, H. & Pramuanjaroenkij, A. *Heat Exchangers: Selection, Rating, and Thermal Design* (4th ed.), Eq. (3.41).

@@ -5,8 +5,6 @@ summary: Fanno static-temperature ratio
 related: []
 examples: []
 tags: [fanno, tstar, compressible, flow]
-references:
-  - "the standard literature, Y.A., the standard literature, M.A. & Kanoğlu, M., a standard thermodynamics text, Ch. 17, Ch. 17 (Fanno)"
 ---
 
 # fanno_t_tstar
@@ -34,9 +32,3 @@ $$ \frac{T}{T^*} = \frac{k+1}{2 + (k-1)M^2} $$
 | --- | --- | --- | --- |
 | `M` | Number | Yes | Mach number. |
 | `k` | Number | Yes | Ratio of specific heats (e.g. 1.4 for air). |
-
-## References
-
-1. the standard literature, Y.A., the standard literature, M.A. & Kanoğlu, M., a standard thermodynamics text, Ch. 17.
-2. Anderson, J.D., Modern Compressible Flow (3rd ed.).
-

@@ -470,7 +470,7 @@ public final class UnitRegistry {
 
     // ------------------------------------------------------------------
     // Display unit systems (Preferences): values are computed in SI and
-    // converted for display only, the display-only conversion model.
+    // converted for display only (the display-only unit-conversion model).
     // ------------------------------------------------------------------
 
     public enum UnitSystem { SI, ENG_SI, ENGLISH }

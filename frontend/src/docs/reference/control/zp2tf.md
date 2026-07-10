@@ -5,9 +5,6 @@ summary: Zero-pole-gain to transfer-function form.
 related: [tf2zp, tf, pole, zero]
 examples: []
 tags: [control, zero pole gain, zpk, transfer function]
-references:
-  - "the standard literature, N.S., a standard controls text (7th ed.), Ch. 4"
-  - "the standard literature, K., a standard controls text (5th ed.), Ch. 5"
 ---
 
 # zp2tf
@@ -49,8 +46,3 @@ $$ G(s) = k\,\frac{\prod_i (s - z_i)}{\prod_j (s - p_j)} = \frac{\text{num}(s)}{
 | --- | --- | --- |
 | `num` | Vector | Numerator coefficients (descending powers of `s`). |
 | `den` | Vector | Denominator coefficients. |
-
-## References
-
-1. the standard literature, N.S. *a standard controls text* (7th ed.), Ch. 4.
-2. the standard literature, K. *a standard controls text* (5th ed.), Ch. 5.

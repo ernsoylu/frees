@@ -3,9 +3,9 @@ package com.frees.backend.props;
 /**
  * Heat-exchanger sizing correlations — UA (heat transfer) and dP (friction) —
  * computed from flow + geometry + fluid state, to be evaluated OUTSIDE a
- * component and injected into its {@code UA} / {@code dP} parameters. This is the
- * the reference simulator "Nu+Geom" engine (research: {@code amesim_hx_sizing_UA_methods.md} §2,
- * {@code amesim_heat_exchanger_algorithms.md} §4-5):
+ * component and injected into its {@code UA} / {@code dP} parameters. This is a
+ * conventional "Nu + geometry" sizing engine, grounded in the standard
+ * heat-transfer literature:
  *
  * <pre>
  *   Re = ṁ·D_h/(A_flow·μ)   Pr = μ·cp/λ   Nu = f(Re,Pr)   h = Nu·λ/D_h
@@ -13,7 +13,7 @@ package com.frees.backend.props;
  * </pre>
  *
  * with a smooth laminar↔turbulent blend, two-phase boiling (Shah convective) and
- * condensation (Shah 1979) factors on the refrigerant side, and a single-phase
+ * condensation (Shah) factors on the refrigerant side, and a single-phase
  * Darcy / two-phase Chisholm (Lockhart–Martinelli) pressure drop. All scalar,
  * stateless, and reusable from documents (3-site wired like {@code iso6358}).
  */
@@ -68,7 +68,7 @@ public final class HxCorrelations {
         return hlo * Math.max(1.0, 1.8 / Math.pow(co, 0.8));
     }
 
-    /** Condensation coefficient h [W/m²K] — Shah (1979):
+    /** Condensation coefficient h [W/m²K] — the Shah condensation correlation:
      *  h = h_lo · [(1−x)^0.8 + 3.8·x^0.76·(1−x)^0.04 / pr^0.38], pr = P/Pcrit. */
     public static double htcCond(String fluidTok, double p, double x, double mdot, double dh, double aFlow) {
         guardGeom(dh, aFlow);
@@ -137,7 +137,7 @@ public final class HxCorrelations {
         return term * term;
     }
 
-    /** Cubic free+forced convection blend Nu = (Nu1³ + Nu2³)^(1/3) (the reference simulator recipe). */
+    /** Cubic free+forced convection blend Nu = (Nu1³ + Nu2³)^(1/3) (the standard cubic-blend recipe). */
     public static double nuBlend(double nu1, double nu2) {
         return Math.cbrt(nu1 * nu1 * nu1 + nu2 * nu2 * nu2);
     }
@@ -208,7 +208,7 @@ public final class HxCorrelations {
         return FlowResistance.frictionFactor(re, 0.0) * (l / dh) * rho * v * Math.abs(v) / 2.0;
     }
 
-    /** Compact-core ΔP [Pa] (the standard compact-HX text, full): entrance contraction Kc, flow
+    /** Compact-core ΔP [Pa] (full four-term form): entrance contraction Kc, flow
      *  acceleration (ρ_in→ρ_out), the CORE-FRICTION term f·(A/Ac)·(ρ_in/ρ_mean),
      *  and exit expansion Ke, for a free-flow ratio σ. {@code aOverAc} = total
      *  heat-transfer area / free-flow area; {@code fanning} = Fanning friction
@@ -246,7 +246,7 @@ public final class HxCorrelations {
             c = staggered ? 0.40 : 0.27;
             m = staggered ? 0.60 : 0.63;
         } else {
-            c = staggered ? 0.022 : 0.21; // the standard literature Table 6-6 (in-line 0.21, not 0.021)
+            c = staggered ? 0.022 : 0.21; // standard tube-bank constants (in-line 0.21, not 0.021)
             m = 0.84;
         }
         return c * Math.pow(reEff, m) * Math.pow(pr, 0.36);
@@ -286,7 +286,7 @@ public final class HxCorrelations {
         return c * Math.pow(Math.max(re, 1.0), m) * Math.pow(pr, 1.0 / 3.0);
     }
 
-    // fin-and-tube geometry (the reference simulator hx_sizing §1.2): developed fin length and the
+    // fin-and-tube geometry: developed fin length and the
     // primary (tube-wall) + secondary (fin) areas → feed hx_eta_surf / hx_dh.
     /** Developed fin length. */
     public static double hxFinLen(double depth, double t, double finDensity, double hTube) {
@@ -325,7 +325,7 @@ public final class HxCorrelations {
     /** Colburn j-factor for a compact fin surface (the "j data table" as a
      *  representative Re power-law per surface type): plain / wavy / louvered /
      *  offset-strip. Nu = j·Re·Pr^(1/3) (use with nu_colburn). Coefficients
-     *  calibrated to the standard literature &amp; London data magnitudes at Re≈1000 (plain≈0.005,
+     *  calibrated to standard compact-surface data magnitudes at Re≈1000 (plain≈0.005,
      *  wavy≈0.008, louvered≈0.011, offset≈0.019) with the physical ordering
      *  offset &gt; louvered &gt; wavy &gt; plain (interrupted fins break the boundary
      *  layer → higher j); uniform exponent −0.4. */
@@ -341,7 +341,7 @@ public final class HxCorrelations {
 
     /** Fanning friction factor for a compact fin surface (the air-side ΔP analogue
      *  of {@link #jFin}); apply as ΔP = 4·f·(L/D_h)·G²/(2ρ). Calibrated to
-     *  the standard literature &amp; London magnitudes at Re≈1000 (plain≈0.019, wavy≈0.035,
+     *  standard compact-surface data magnitudes at Re≈1000 (plain≈0.019, wavy≈0.035,
      *  louvered≈0.053, offset≈0.071); uniform exponent −0.3. */
     public static double fFin(String surface, double re) {
         double r = Math.max(re, 1.0);
@@ -357,7 +357,7 @@ public final class HxCorrelations {
         return s == null ? "plain" : s.toLowerCase(java.util.Locale.ROOT);
     }
 
-    /** Gungor–Winterton (1986) flow-boiling two-phase Nusselt from the liquid-only
+    /** Gungor–Winterton flow-boiling two-phase Nusselt from the liquid-only
      *  Nu: Nu_tp = Nu_l·(1 + 24000·Bo^1.16 + 1.37·(1/X_tt)^0.86). Bo = boiling
      *  number q/(G·h_fg) (pass 0 for the convective limit). */
     public static double nuGungorWinterton(double nuL, double xtt, double bo) {
@@ -366,7 +366,7 @@ public final class HxCorrelations {
         return nuL * e;
     }
 
-    /** Traviss (1973) in-tube condensation Nusselt:
+    /** Traviss in-tube condensation Nusselt:
      *  Nu = 0.15·Pr_l·Re_l^0.9 / F_T · (1/X_tt + 2.85/X_tt^0.476),
      *  F_T = 5·Pr_l + 5·ln(1+5·Pr_l) + 2.5·ln(0.00313·Re_l^0.812). */
     public static double nuTraviss(double reL, double prL, double xtt) {

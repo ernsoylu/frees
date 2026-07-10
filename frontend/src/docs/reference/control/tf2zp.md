@@ -5,9 +5,6 @@ summary: Transfer function to zero-pole-gain form.
 related: [zp2tf, pole, zero, tf]
 examples: []
 tags: [control, zero pole gain, zpk, transfer function, factorization]
-references:
-  - "the standard literature, N.S., a standard controls text (7th ed.), Ch. 4"
-  - "the standard literature, K., a standard controls text (5th ed.), Ch. 5"
 ---
 
 # tf2zp
@@ -52,8 +49,3 @@ leading-coefficient ratio.
 | `zr`, `zi` | Vector | Real / imaginary parts of the zeros. |
 | `pr`, `pi` | Vector | Real / imaginary parts of the poles. |
 | `k` | Number | Scalar gain. |
-
-## References
-
-1. the standard literature, N.S. *a standard controls text* (7th ed.), Ch. 4.
-2. the standard literature, K. *a standard controls text* (5th ed.), Ch. 5.

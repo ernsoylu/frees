@@ -127,7 +127,7 @@ interface ViewState {
   snap: boolean
   /** What a plain mouse drag does on a strip: box zoom or pan. */
   mouseMode: MouseMode
-  /** Signal highlighted in the list + emphasized in the plot (the reference measurement tool selection). */
+  /** Signal highlighted in the list + emphasized in the plot (oscilloscope-tool selection). */
   selectedSignal: SignalKey | null
   instrument: Instrument
 }
@@ -237,7 +237,7 @@ function buildStripData(
       measurementId: sig.measurementId,
       channel: sig.channel,
       color: sig.color,
-      // the reference measurement tool "Treat As Boolean/Analog Signal": the per-signal override wins
+      // "Treat As Boolean/Analog Signal": the per-signal override wins
       // over the imported channel kind (rendering only — stepped + 0/1 band).
       kind: sig.kindOverride ?? (win.kind === 'boolean' ? 'boolean' : 'analog'),
     })
@@ -259,8 +259,8 @@ function stripOptions(
 ): Omit<uPlot.Options, 'width' | 'height'> {
   const axisColor = dark ? '#909296' : '#495057'
   const gridColor = dark ? 'rgba(134,142,150,0.15)' : 'rgba(134,142,150,0.25)'
-  // When a signal is selected, its curve is bold and the others dim (the reference measurement tool
-  // emphasis). With nothing selected, every curve is at its normal weight.
+  // When a signal is selected, its curve is bold and the others dim
+  // (selection emphasis). With nothing selected, every curve is at its normal weight.
   const anySelected = loaded.some((s) => sameSignal(selected, s.measurementId, s.channel))
   const series: uPlot.Series[] = [{}]
   for (const sig of loaded) {
@@ -294,7 +294,7 @@ function stripOptions(
 }
 
 // ---------------------------------------------------------------------------
-// Per-strip signal list (the reference measurement tool parity): Style | Name | Unit | Value | A | B | Δ.
+// Per-strip signal list (oscilloscope-tool parity): Style | Name | Unit | Value | A | B | Δ.
 // Value follows the hover cursor live; A/B/Δ read the measurement cursors.
 // Remote (.mf4) values may briefly show a ~approximation until the exact raw
 // micro-window lands (the store notifies → storeVersion re-renders).
@@ -329,7 +329,7 @@ interface SignalRowProps {
 }
 
 /** One signal-list row: draggable, selectable (click / right-click highlights
- *  it and its curve), with an oscilloscope-style context menu reachable from BOTH the ⋮
+ *  it and its curve), with a measurement-tool-style context menu reachable from BOTH the ⋮
  *  icon and a right-click anywhere on the row. */
 function SignalRow({
   sig,
@@ -474,7 +474,7 @@ interface SignalListProps {
   selectedSignal: SignalKey | null
   onSelectSignal: (sig: SignalKey) => void
   onRemoveSignal: (channel: string, measurementId: string) => void
-  /** the reference measurement tool "Treat As Boolean/Analog Signal"; undefined = back to auto. */
+  /** "Treat As Boolean/Analog Signal"; undefined = back to auto. */
   onSetKind: (channel: string, measurementId: string, kind: 'analog' | 'boolean' | undefined) => void
   onMoveToNewStrip: (channel: string, measurementId: string) => void
 }
@@ -676,7 +676,7 @@ function StripView({
         border: `1px solid var(--mantine-color-${selected ? 'teal-6' : 'default-border'})`,
         borderRadius: 6,
         overflow: 'hidden',
-        // Fill-area layout (the reference measurement tool): strips share the panel by flex weight.
+        // Fill-area layout: strips share the panel by flex weight.
         flex: `${weight} 1 0%`,
         minHeight: STRIP_MIN_PX,
         display: 'flex',
@@ -926,7 +926,7 @@ export default function DataAnalyzerTab({
     }))
   }
 
-  /** Drop of a signal row onto another strip (the reference measurement tool drag-between-strips). */
+  /** Drop of a signal row onto another strip (drag-between-strips). */
   const dropSignal = (toStripId: string, fromStripId: string, measurementId: string, channel: string) => {
     updateSpec((cur) => ({
       ...cur,
@@ -950,7 +950,7 @@ export default function DataAnalyzerTab({
     }))
   }
 
-  /** the reference measurement tool "Treat As Boolean/Analog Signal" (undefined = back to auto). */
+  /** "Treat As Boolean/Analog Signal" (undefined = back to auto). */
   const setSignalKind = (
     stripId: string,
     channel: string,
@@ -974,7 +974,7 @@ export default function DataAnalyzerTab({
     }))
   }
 
-  /** the reference measurement tool "Move to New Strip": insert a strip right below and move the signal. */
+  /** "Move to New Strip": insert a strip right below and move the signal. */
   const moveToNewStrip = (fromStripId: string, channel: string, measurementId: string) => {
     const strip = newStrip()
     updateSpec((cur) => {
@@ -1298,7 +1298,7 @@ export default function DataAnalyzerTab({
             >
               Clear cursors
             </Button>
-            {/* Mouse-mode + zoom tools (the reference measurement tool toolbar parity). */}
+            {/* Mouse-mode + zoom tools (oscilloscope-tool toolbar parity). */}
             <Group gap={4} wrap="nowrap" ml="auto">
               <Tooltip label="Area zoom — drag a box to zoom in">
                 <ActionIcon
@@ -1342,7 +1342,7 @@ export default function DataAnalyzerTab({
               </Tooltip>
             </Group>
           </Group>
-          {/* Fill-area strip stack (the reference measurement tool): one strip covers the whole panel,
+          {/* Fill-area strip stack: one strip covers the whole panel,
               added strips split it by their flex weights; below the minimum
               per-strip height the stack scrolls. */}
           <Box

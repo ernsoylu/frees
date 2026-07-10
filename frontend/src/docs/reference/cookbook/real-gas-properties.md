@@ -6,9 +6,6 @@ summary: Get Z, density, enthalpy, and saturation pressure of a real gas from a 
 examples: [cubic-eos-properties]
 tags: [cookbook, eos, peng-robinson, srk, real gas, properties, thermodynamics]
 related: [eos_z, eos_density, eos_enthalpy, eos_psat, eos_entropy]
-references:
-  - "the original PR publication"
-  - "the standard literature, the standard literature, H.C. & the standard literature, a standard chemical-thermodynamics text"
 ---
 
 # Real-Gas Properties with a Cubic EOS
@@ -44,8 +41,3 @@ saturation pressure is the `P` at which the liquid and vapor fugacities match.
 **What it tells you:** for CO₂ near its critical region (320 K, 6 MPa), `Z ≈ 0.7`
 (strong real-gas deviation) and a density far above the ideal-gas estimate;
 `eos_psat('co2','PR',300) ≈ 6.7 MPa` matches the known vapor pressure.
-
-## References
-
-1. the original PR publication
-2. the standard literature, the standard literature, H.C. & the standard literature *a standard chemical-thermodynamics text*.

@@ -33,4 +33,3 @@ $$ \gcd(a,b) = \gcd(b,\ a \bmod b), \qquad \gcd(a,0)=a \quad\text{(Euclid)} $$
 | --- | --- | --- | --- |
 | `a` | Number | Yes | First operand. |
 | `b` | Number | Yes | Second operand. |
-

@@ -43,4 +43,3 @@ out.mdot = in.mdot
 out.W    = in.W
 out.h    = in.h + ur.sig * Qr_max / in.mdot
 ```
-

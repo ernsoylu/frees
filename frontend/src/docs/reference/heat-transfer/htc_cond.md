@@ -1,19 +1,16 @@
 ---
 name: htc_cond
 category: Heat Transfer
-summary: In-tube condensation heat-transfer coefficient — Shah 1979 correlation.
+summary: In-tube condensation heat-transfer coefficient — Shah correlation.
 related: [htc_evap, htc_1phase, dp_2phase]
 examples: [ev-thermal-management]
 tags: [heat transfer, condensation, two-phase, shah, refrigerant, film coefficient]
-references:
-  - "Shah, M.M. (1979), Int. J. Heat Mass Transfer 22:547 — condensation"
-  - "the standard literature, S. et al., Heat Exchangers: Selection, Rating, and Thermal Design (4th ed.), Eq. (8.34), (8.35)"
 ---
 
 # htc_cond
 
 Returns the **in-tube condensation heat-transfer coefficient** `h` [W/m²·K] for a
-condensing two-phase refrigerant at quality `x`, using the **Shah 1979**
+condensing two-phase refrigerant at quality `x`, using the **Shah**
 correlation. Use it for the refrigerant side of a condenser or gas cooler.
 
 ## Syntax
@@ -33,7 +30,7 @@ quality-dependent enhancement.
 With the liquid-only coefficient $h_l$ (Dittus–Boelter), reduced pressure $p_r$,
 and $Z = \big(\tfrac{1}{x}-1\big)^{0.8}p_r^{0.4}$,
 
-$$ h_{TP} = h_l\left(1 + \frac{3.8}{Z^{0.95}}\right) \qquad \text{(the standard literature Eq. 8.34–8.35; Shah 1979)} $$
+$$ h_{TP} = h_l\left(1 + \frac{3.8}{Z^{0.95}}\right) $$
 
 > **Method:** liquid-only `h_l` → Shah enhancement from `Z(x, p_r)` → `h_TP` at the
 > local quality.
@@ -69,8 +66,3 @@ value, decreasing as quality falls toward the subcooled liquid outlet.
 | Error | Cause | Fix |
 | --- | --- | --- |
 | `DOMAIN_ERROR` | `x` outside [0, 1] | Quality must be a mass fraction in [0, 1]. |
-
-## References
-
-1. Shah, M.M. (1979), *Int. J. Heat Mass Transfer* 22:547.
-2. the standard literature, S., Liu, H. & Pramuanjaroenkij, A. *Heat Exchangers: Selection, Rating, and Thermal Design* (4th ed.), Eq. (8.34), (8.35).

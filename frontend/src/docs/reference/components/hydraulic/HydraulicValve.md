@@ -5,9 +5,6 @@ summary: A hydraulic valve metering flow vs. pressure drop.
 related: []
 examples: []
 tags: [hydraulicvalve, component, hydraulic, acausal]
-references:
-  - "the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., a standard system-dynamics text (5th ed.) — acausal/bond-graph formalism"
-  - "the standard literature, H.E., a standard hydraulics text"
 ---
 
 # HydraulicValve
@@ -46,8 +43,3 @@ out.mdot = in.mdot
 out.h    = in.h
 in.mdot * abs(in.mdot) = (u * CdA_max)^2 * 2 * rho * (in.P - out.P)
 ```
-
-## References
-
-1. the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., *a standard system-dynamics text* (5th ed.) — acausal/bond-graph formalism.
-2. the standard literature, H.E., *a standard hydraulics text*.

@@ -5,8 +5,6 @@ summary: Gaussian (normal) random number
 related: []
 examples: []
 tags: [randg, stats]
-references:
-  - "the standard literature, D.C. & the standard literature, G.C., a standard statistics text"
 ---
 
 # randg
@@ -34,8 +32,3 @@ $$ X \sim \mathcal{N}(\mu, \sigma^2) $$
 | --- | --- | --- | --- |
 | `mu` | Number | Yes | Dynamic viscosity [Pa·s]. |
 | `sigma` | Number | Yes | Surface tension [N/m]. |
-
-## References
-
-1. the standard literature, D.C. & the standard literature, G.C., a standard statistics text.
-

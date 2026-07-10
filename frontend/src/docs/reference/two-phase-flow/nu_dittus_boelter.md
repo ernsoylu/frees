@@ -5,8 +5,6 @@ summary: Dittus-Boelter single-phase Nusselt 0.023 Re^0.8 Pr^n
 related: []
 examples: []
 tags: [nu, dittus, boelter, two, phase, flow]
-references:
-  - "the standard literature, F.P. et al., Fundamentals of Heat and Mass Transfer, Eq. (8.60)"
 ---
 
 # nu_dittus_boelter
@@ -41,8 +39,3 @@ $$ Nu = 0.023\,Re^{0.8}\,Pr^{n} \quad (n = 0.4 \text{ heating},\ 0.3 \text{ cool
 | `Re` | Number | Yes | Reynolds number. |
 | `Pr` | Number | Yes | Prandtl number. |
 | `n` | Number | Yes | Order / number of terms. |
-
-## References
-
-1. the standard literature, J.G. & the standard literature, J.R., a standard two-phase text (3rd ed.).
-

@@ -5,9 +5,6 @@ summary: Impulse response of a transfer function over a time vector.
 related: [step, lsim, pole]
 examples: [step-impulse-response]
 tags: [control, impulse response, transient, time domain]
-references:
-  - "the standard literature, N.S., a standard controls text (7th ed.), Ch. 4, §4.6"
-  - "the standard literature, K., a standard controls text (5th ed.), Ch. 5"
 ---
 
 # impulse
@@ -33,7 +30,7 @@ the derivative of the step response.
 
 $$ y(t) = \mathcal{L}^{-1}\{G(s)\}, \qquad g(t) = \frac{d}{dt}\,y_{\text{step}}(t) $$
 
-> **Method:** numerical evaluation of the impulse response at each `t` (the standard literature §4.6).
+> **Method:** numerical evaluation of the impulse response at each `t`.
 
 ## Examples
 
@@ -63,8 +60,3 @@ zero, reflecting the open-loop poles.
 | Error | Cause | Fix |
 | --- | --- | --- |
 | `IMPROPER_TF` | `num` order exceeds `den` order | Provide a proper transfer function. |
-
-## References
-
-1. the standard literature, N.S. *a standard controls text* (7th ed.), Ch. 4, §4.6.
-2. the standard literature, K. *a standard controls text* (5th ed.), Ch. 5.

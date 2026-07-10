@@ -5,9 +5,6 @@ summary: A conductive thermal resistance (Fourier), Q̇ = (T1 − T2)/R.
 related: []
 examples: [heat-conduction, transient-heat-rod, heisler-transient, material-conduction]
 tags: [conduction, component, heat, acausal]
-references:
-  - "the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., a standard system-dynamics text (5th ed.) — acausal/bond-graph formalism"
-  - "the standard literature, F.P. et al., Fundamentals of Heat and Mass Transfer"
 ---
 
 # Conduction
@@ -51,8 +48,3 @@ b.Qdot = -Q
 Instantiated in the verified example below:
 
 [Run: heat-conduction]
-
-## References
-
-1. the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., *a standard system-dynamics text* (5th ed.) — acausal/bond-graph formalism.
-2. the standard literature, F.P. et al., *Fundamentals of Heat and Mass Transfer*.

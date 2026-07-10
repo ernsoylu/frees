@@ -5,8 +5,6 @@ summary: dP [Pa], static head. SIDE: two-phase refrigerant in a vertical riser/d
 related: []
 examples: []
 tags: [dp, gravity, heat, transfer]
-references:
-  - "the standard literature, J.G. & the standard literature, J.R., a standard two-phase text (3rd ed.)"
 ---
 
 # dp_gravity
@@ -43,9 +41,3 @@ $$ \Delta P_{\text{grav}} = \big[\alpha\rho_g + (1-\alpha)\rho_l\big]\,g\,L\sin\
 | `alpha` | Number | Yes | Void fraction (0–1). |
 | `L` | Number | Yes | Length [m]. |
 | `theta_deg` | Number | Yes | Angle [deg]. |
-
-## References
-
-1. the standard literature, F.P. et al., Fundamentals of Heat and Mass Transfer.
-2. the standard literature, S. et al., Heat Exchangers: Selection, Rating, and Thermal Design.
-

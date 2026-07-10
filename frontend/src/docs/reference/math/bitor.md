@@ -33,4 +33,3 @@ $$ (a \mathbin{|} b)\ \text{— bitwise OR of the integer operands} $$
 | --- | --- | --- | --- |
 | `a` | Number | Yes | First operand. |
 | `b` | Number | Yes | Second operand. |
-

@@ -37,4 +37,3 @@ $$ P(h) = P_b\left(\frac{T_b}{T_b + L_b(h-h_b)}\right)^{g_0 M/(R L_b)} \quad (L_
 ## References
 
 1. U.S. Standard Atmosphere, 1976 (NOAA/NASA/USAF).
-

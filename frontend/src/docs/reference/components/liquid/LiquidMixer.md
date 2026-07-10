@@ -5,9 +5,6 @@ summary: Mixes two single-phase liquid streams.
 related: []
 examples: [ev-thermal-management]
 tags: [liquidmixer, component, liquid, acausal]
-references:
-  - "the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., a standard system-dynamics text (5th ed.) — acausal/bond-graph formalism"
-  - "the standard literature, F.P. et al., Fundamentals of Heat and Mass Transfer, Ch. 8"
 ---
 
 # LiquidMixer
@@ -50,8 +47,3 @@ out.mdot * out.h = in1.mdot * in1.h + in2.mdot * in2.h
 Instantiated in the verified example below:
 
 [Run: ev-thermal-management]
-
-## References
-
-1. the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., *a standard system-dynamics text* (5th ed.) — acausal/bond-graph formalism.
-2. the standard literature, F.P. et al., *Fundamentals of Heat and Mass Transfer*, Ch. 8.

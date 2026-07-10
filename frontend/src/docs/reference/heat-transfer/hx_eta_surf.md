@@ -5,9 +5,6 @@ summary: Overall surface (fin) efficiency of an extended-surface heat-exchanger 
 related: [fin_efficiency, ua_hx, htc_extair]
 examples: [ev-thermal-management]
 tags: [heat exchanger, fin, overall surface efficiency, extended surface, compact]
-references:
-  - "the standard literature, F.P. et al., Fundamentals of Heat and Mass Transfer, Eq. (11.3)"
-  - "the standard literature, W.M. & London, A.L., Compact Heat Exchangers (3rd ed.), Ch. 2"
 ---
 
 # hx_eta_surf
@@ -32,7 +29,7 @@ weights the two by their area shares.
 
 ## Mathematical Formulation
 
-$$ \eta_o = 1 - \frac{A_{\text{fin}}}{A_{\text{total}}}\big(1 - \eta_{\text{fin}}\big) \qquad \text{(the standard literature Eq. 11.3)} $$
+$$ \eta_o = 1 - \frac{A_{\text{fin}}}{A_{\text{total}}}\big(1 - \eta_{\text{fin}}\big) $$
 
 > **Method:** direct evaluation; `η_o = 1` for an unfinned surface
 > (`A_fin = 0`), and `η_o → η_fin` as the fins dominate the area.
@@ -68,8 +65,3 @@ The EV thermal-management sizing forms `η_o` from the fin area share and
 | Error | Cause | Fix |
 | --- | --- | --- |
 | `DOMAIN_ERROR` | `Afin > Atotal` | The fin area cannot exceed the total area. |
-
-## References
-
-1. the standard literature, F.P. et al. *Fundamentals of Heat and Mass Transfer*, Eq. (11.3).
-2. the standard literature, W.M. & London, A.L. *Compact Heat Exchangers* (3rd ed.), Ch. 2.

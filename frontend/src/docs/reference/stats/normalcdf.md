@@ -5,8 +5,6 @@ summary: Normal cumulative distribution at x
 related: []
 examples: []
 tags: [normalcdf, stats]
-references:
-  - "the standard literature, D.C. & the standard literature, G.C., a standard statistics text"
 ---
 
 # normalcdf
@@ -35,8 +33,3 @@ $$ \Phi(x;\mu,\sigma) = \tfrac12\left[1 + \operatorname{erf}\!\frac{x-\mu}{\sigm
 | `x` | Number | Yes | Vapor quality (0–1). |
 | `mu` | Number | Yes | Dynamic viscosity [Pa·s]. |
 | `sigma` | Number | Yes | Surface tension [N/m]. |
-
-## References
-
-1. the standard literature, D.C. & the standard literature, G.C., a standard statistics text.
-

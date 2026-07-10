@@ -5,8 +5,6 @@ summary: Matrix inverse A⁻¹
 related: []
 examples: []
 tags: [inverse, math]
-references:
-  - "the standard literature, G.H. & the standard literature, C.F., Matrix Computations (4th ed.)"
 ---
 
 # Inverse
@@ -33,7 +31,3 @@ $$ A\,A^{-1} = A^{-1}A = I $$
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
 | `A` | Number | Yes | Matrix. |
-
-## References
-
-1. the standard literature, G.H. & the standard literature, C.F., *Matrix Computations* (4th ed.).

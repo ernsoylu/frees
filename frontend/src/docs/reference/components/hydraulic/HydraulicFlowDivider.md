@@ -43,4 +43,3 @@ outa.h    = in.h
 outb.h    = in.h
 in.P      = frac * outa.P + (1 - frac) * outb.P
 ```
-

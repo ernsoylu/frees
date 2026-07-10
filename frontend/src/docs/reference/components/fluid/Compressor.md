@@ -5,9 +5,6 @@ summary: Raises the pressure of a fluid stream, computing the work from an isent
 related: []
 examples: [ev-thermal-management]
 tags: [compressor, component, fluid, acausal]
-references:
-  - "the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., a standard system-dynamics text (5th ed.) — acausal/bond-graph formalism"
-  - "the standard literature, a standard fluids text"
 ---
 
 # Compressor
@@ -68,8 +65,3 @@ in.mdot = eta_v * disp * (rpm / 60) * rho_in
 Instantiated in the verified example below:
 
 [Run: ev-thermal-management]
-
-## References
-
-1. the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., *a standard system-dynamics text* (5th ed.) — acausal/bond-graph formalism.
-2. the standard literature, *Fluid Mechanics* (8th ed.).

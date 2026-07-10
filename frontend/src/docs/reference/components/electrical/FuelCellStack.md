@@ -5,9 +5,6 @@ summary: A PEM fuel-cell stack producing voltage from its polarization curve.
 related: []
 examples: []
 tags: [fuelcellstack, component, electrical, acausal]
-references:
-  - "the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., a standard system-dynamics text (5th ed.) — acausal/bond-graph formalism"
-  - "the standard literature, J.W. & the standard literature, S.A., a standard circuits text"
 ---
 
 # FuelCellStack
@@ -55,8 +52,3 @@ p.I + n.I = 0
 Q         = I_cell * ncells * (Eth - V_cell)
 heat.Qdot = -Q
 ```
-
-## References
-
-1. the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., *a standard system-dynamics text* (5th ed.) — acausal/bond-graph formalism.
-2. the standard literature, J.W. & the standard literature, S.A., *Electric Circuits* (11th ed.).

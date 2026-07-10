@@ -43,4 +43,3 @@ der(c)  = (vent.sig * (c_amb - c) + occ.sig * gen_occ) / Vz
 init(c) = c0
 out.sig = c
 ```
-

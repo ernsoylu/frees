@@ -45,4 +45,3 @@ dP       = in.P - out.P
 fwd      = 0.5 * (1 + tanh(dP / eps))
 in.mdot * abs(in.mdot) = fwd * CdA^2 * 2 * rho * dP
 ```
-

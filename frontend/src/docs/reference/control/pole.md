@@ -5,9 +5,6 @@ summary: Poles of a transfer function (roots of the denominator).
 related: [zero, margin, residue]
 examples: [control-analysis-report]
 tags: [control, poles, stability, transfer function, eigenvalues]
-references:
-  - "the standard literature, N.S., a standard controls text (7th ed.), Ch. 4, §4.2"
-  - "the standard literature, K., a standard controls text (5th ed.), Ch. 5"
 ---
 
 # pole
@@ -71,8 +68,3 @@ left half-plane, so the plant is stable (`ω_n = 5 rad/s`, `ζ = 0.4`).
 | Error | Cause | Fix |
 | --- | --- | --- |
 | `EMPTY_DENOMINATOR` | `den` has no nonzero leading coefficient | Provide a valid denominator polynomial. |
-
-## References
-
-1. the standard literature, N.S. *a standard controls text* (7th ed.), Ch. 4, §4.2.
-2. the standard literature, K. *a standard controls text* (5th ed.), Ch. 5.

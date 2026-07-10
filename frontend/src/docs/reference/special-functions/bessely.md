@@ -6,7 +6,6 @@ related: [besselj, besseli, besselk, bessely0, bessely1]
 examples: []
 tags: [special function, bessel, second kind, neumann, cylinder]
 references:
-  - "the standard literature, M. & the standard literature, I.A., Handbook of Mathematical Functions, §9.1"
   - "NIST Digital Library of Mathematical Functions, §10.2"
 ---
 
@@ -29,7 +28,7 @@ fixed orders use `bessely0` / `bessely1`.
 
 ## Mathematical Formulation
 
-`Y_n` is the second independent solution of Bessel's equation (A&S §9.1.2):
+`Y_n` is the second independent solution of Bessel's equation:
 
 $$ x^2 y'' + x y' + (x^2 - n^2)y = 0, \qquad Y_n(x) = \frac{J_n(x)\cos(n\pi) - J_{-n}(x)}{\sin(n\pi)} $$
 
@@ -65,5 +64,4 @@ y = bessely(0, 1)
 
 ## References
 
-1. the standard literature, M. & the standard literature, I.A. *Handbook of Mathematical Functions*, §9.1.
-2. NIST *Digital Library of Mathematical Functions*, §10.2.
+1. NIST *Digital Library of Mathematical Functions*, §10.2.

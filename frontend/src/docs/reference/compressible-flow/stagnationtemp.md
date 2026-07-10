@@ -5,8 +5,6 @@ summary: Stagnation temperature T0 = T + V²/(2·cp).
 related: [StagnationPres, T0_T]
 examples: [thermo-compliance]
 tags: [compressible, stagnation temperature, total temperature, energy]
-references:
-  - "the standard literature, Y.A., the standard literature, M.A. & Kanoğlu, M., a standard thermodynamics text, Ch. 17, Eq. (17-4)"
 ---
 
 # StagnationTemp
@@ -29,7 +27,7 @@ conditions change.
 
 ## Mathematical Formulation
 
-$$ T_0 = T + \frac{V^2}{2\,c_p} \qquad \text{(the standard literature Eq. 17-4)} $$
+$$ T_0 = T + \frac{V^2}{2\,c_p} $$
 
 > **Method:** direct evaluation of the energy balance.
 
@@ -60,7 +58,3 @@ $$ T_0 = T + \frac{V^2}{2\,c_p} \qquad \text{(the standard literature Eq. 17-4)}
 | Error | Cause | Fix |
 | --- | --- | --- |
 | `DOMAIN_ERROR` | `cp ≤ 0` | Provide a positive specific heat. |
-
-## References
-
-1. the standard literature, Y.A., the standard literature, M.A. & Kanoğlu, M. *a standard thermodynamics text*, Ch. 17, Eq. (17-4).

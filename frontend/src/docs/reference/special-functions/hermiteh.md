@@ -6,7 +6,6 @@ related: [laguerrel, legendrep, chebyshevt]
 examples: []
 tags: [special function, hermite, orthogonal polynomial, gaussian]
 references:
-  - "the standard literature, M. & the standard literature, I.A., Handbook of Mathematical Functions, §22"
   - "NIST Digital Library of Mathematical Functions, §18.3"
 ---
 
@@ -28,7 +27,7 @@ y = hermiteh(n, x)
 
 ## Mathematical Formulation
 
-$$ H_{n+1}(x) = 2x\,H_n(x) - 2n\,H_{n-1}(x), \qquad H_0 = 1,\ H_1 = 2x \qquad \text{(A\&S §22)} $$
+$$ H_{n+1}(x) = 2x\,H_n(x) - 2n\,H_{n-1}(x), \qquad H_0 = 1,\ H_1 = 2x $$
 
 with orthogonality $\int_{-\infty}^{\infty} H_m H_n\,e^{-x^2}\,dx = 2^n n!\sqrt{\pi}\,\delta_{mn}$.
 
@@ -56,5 +55,4 @@ y = hermiteh(2, 1)
 
 ## References
 
-1. the standard literature, M. & the standard literature, I.A. *Handbook of Mathematical Functions*, §22.
-2. NIST *Digital Library of Mathematical Functions*, §18.3.
+1. NIST *Digital Library of Mathematical Functions*, §18.3.

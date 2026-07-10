@@ -6,7 +6,6 @@ related: [loggamma, digamma, beta, factorial]
 examples: []
 tags: [special function, gamma, factorial, euler]
 references:
-  - "the standard literature, M. & the standard literature, I.A., Handbook of Mathematical Functions, §6.1"
   - "NIST Digital Library of Mathematical Functions, §5.2 (dlmf.nist.gov)"
 ---
 
@@ -29,7 +28,7 @@ For large arguments use `loggamma` to avoid overflow.
 
 ## Mathematical Formulation
 
-$$ \Gamma(x) = \int_0^\infty t^{x-1} e^{-t}\,dt, \qquad x > 0 \qquad \text{(A\&S §6.1.1)} $$
+$$ \Gamma(x) = \int_0^\infty t^{x-1} e^{-t}\,dt, \qquad x > 0 $$
 
 with the recurrence and factorial link
 
@@ -65,5 +64,4 @@ y = gamma(5)
 
 ## References
 
-1. the standard literature, M. & the standard literature, I.A. *Handbook of Mathematical Functions*, §6.1.
-2. NIST *Digital Library of Mathematical Functions*, §5.2.
+1. NIST *Digital Library of Mathematical Functions*, §5.2.

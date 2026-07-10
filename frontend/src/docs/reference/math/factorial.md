@@ -5,8 +5,6 @@ summary: Factorial n!
 related: []
 examples: []
 tags: [factorial, math]
-references:
-  - "the standard literature, M. & the standard literature, I.A., Handbook of Mathematical Functions, §6.1"
 ---
 
 # factorial
@@ -35,7 +33,3 @@ $$ \quad n! = \Gamma(n+1) $$
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
 | `n` | Number | Yes | Order / number of terms. |
-
-## References
-
-1. the standard literature, M. & the standard literature, I.A., *Handbook of Mathematical Functions*, §6.1.

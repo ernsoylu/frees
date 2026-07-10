@@ -5,9 +5,6 @@ summary: An internal-combustion engine acting as a torque source.
 related: []
 examples: [engine-map-2d, engine-cycle-wiebe]
 tags: [engine, component, powertrain, acausal]
-references:
-  - "the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., a standard system-dynamics text (5th ed.) — acausal/bond-graph formalism"
-  - "the standard literature, L. & the standard literature, A., a standard propulsion text"
 ---
 
 # Engine
@@ -49,8 +46,3 @@ shaft.tau = -(throttle * Tmax - bf * shaft.w)
 Instantiated in the verified example below:
 
 [Run: engine-map-2d]
-
-## References
-
-1. the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., *a standard system-dynamics text* (5th ed.) — acausal/bond-graph formalism.
-2. the standard literature, L. & the standard literature, A., *Vehicle Propulsion Systems* (3rd ed.).

@@ -32,4 +32,3 @@ $$ \cosh(x) = \frac{e^{x} + e^{-x}}{2} $$
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
 | `x` | Number | Yes | Vapor quality (0–1). |
-

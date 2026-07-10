@@ -5,8 +5,6 @@ summary: dP [Pa], Darcy. SIDE: single-phase liquid/gas line (coolant, water, air
 related: []
 examples: []
 tags: [dp, 1phase, heat, transfer]
-references:
-  - "the standard literature, a standard fluids text"
 ---
 
 # dp_1phase
@@ -45,9 +43,3 @@ $$ \Delta P = f\,\frac{L}{D_h}\,\frac{G^2}{2\rho}, \qquad G = \dot m / A_{\text{
 | `Dh` | Number | Yes | Hydraulic diameter [m]. |
 | `Aflow` | Number | Yes | Free-flow (minimum) cross-sectional area [m²]. |
 | `L` | Number | Yes | Length [m]. |
-
-## References
-
-1. the standard literature, F.P. et al., Fundamentals of Heat and Mass Transfer.
-2. the standard literature, S. et al., Heat Exchangers: Selection, Rating, and Thermal Design.
-

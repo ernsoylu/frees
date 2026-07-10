@@ -5,9 +5,6 @@ summary: An electrical battery modeled as an EMF in series with an internal resi
 related: []
 examples: []
 tags: [battery, component, electrical, acausal]
-references:
-  - "the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., a standard system-dynamics text (5th ed.) — acausal/bond-graph formalism"
-  - "the standard literature, J.W. & the standard literature, S.A., a standard circuits text"
 ---
 
 # Battery
@@ -44,8 +41,3 @@ p.V - n.V = Voc + R0 * p.I
 p.I + n.I = 0
 W = (p.V - n.V) * (0 - p.I)
 ```
-
-## References
-
-1. the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., *a standard system-dynamics text* (5th ed.) — acausal/bond-graph formalism.
-2. the standard literature, J.W. & the standard literature, S.A., *Electric Circuits* (11th ed.).

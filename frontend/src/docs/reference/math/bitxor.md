@@ -33,4 +33,3 @@ $$ (a \oplus b)\ \text{— bitwise XOR of the integer operands} $$
 | --- | --- | --- | --- |
 | `a` | Number | Yes | First operand. |
 | `b` | Number | Yes | Second operand. |
-

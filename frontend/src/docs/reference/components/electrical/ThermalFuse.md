@@ -43,4 +43,3 @@ m         = 1 + kR * 0.5 * (1 + tanh((abs(p.I) - Iblow) / epsI))
 p.V - n.V = R0 * m * p.I
 p.I + n.I = 0
 ```
-

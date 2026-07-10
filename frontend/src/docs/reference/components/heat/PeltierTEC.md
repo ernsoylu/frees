@@ -46,4 +46,3 @@ Qh        = Sab * hot.T * I + 0.5 * Rel * I^2 - Kth * (hot.T - cold.T)
 cold.Qdot = Qc
 hot.Qdot  = -Qh
 ```
-

@@ -156,7 +156,7 @@ COMPONENT TwoPhaseVolume(in, out)
   m           = V * rho_mix
 END
 
-// Two-phase capacitive volume / CHAMBER — the reference simulator the two-phase library two-phase C-node:
+// Two-phase capacitive volume / CHAMBER — the standard two-phase capacitive C-node formulation:
 // (P, h) are the STATES (pressure from a compressibility compliance C ≈ V·∂ρ̄/∂P;
 // specific enthalpy from the energy balance), so the charge m = ρ(P,h)·V is
 // DERIVED, not a state. Unlike the adiabatic TwoPhaseVolume (P-state, enthalpy
@@ -305,7 +305,7 @@ COMPONENT TwoPhaseCompressor(in, out)
     in.mdot = eta_v * disp * (rpm / 60) * rho_in
   END
   // Suction-corrected 2-D map rung: isentropic AND volumetric efficiencies from
-  // curve-family TABLEs over (pressure ratio, rpm), the reference simulator map-compressor
+  // curve-family TABLEs over (pressure ratio, rpm), a map-based compressor
   // form — displacement flow on the real suction density.
   VARIANT map2d REQUIRE map_etas$, map_etav$, disp, rpm
     PRr     = out.P / in.P
@@ -478,7 +478,7 @@ END
 // conserved states are total mass and total internal energy; the thermodynamic
 // state (P, T, quality) is closed by a (rho, u) flash at fixed volume, so the
 // model is continuous from subcooled heating through saturated boiling with no
-// structural switch (the standard literature; the reference simulator two-phase-vessel formulation):
+// structural switch (the standard two-phase-vessel formulation):
 //   dm/dt = -mdot_vent ,  dU/dt = Q - mdot_vent * h_g ,  rho = m/V , u = U/m.
 // Initial charge is given as mass m0 at temperature T0 (saturated-liquid u).
 COMPONENT BoilingVessel(vent, wall)
@@ -499,7 +499,7 @@ END
 // Compressible steam/vapour relief valve: opens above a crack pressure and vents
 // through an effective area A. Choked (critical) when the pressure ratio falls
 // below PRc=(2/(k+1))^(k/(k-1)); subcritical flow uses the PARABOLIC approximation
-// efact=1-ratio^2 (a finite-derivative simplification of the reference simulator quarter-ellipse
+// efact=1-ratio^2 (a finite-derivative simplification of the classic quarter-ellipse
 // law — sqrt(1-ratio^2) has an infinite slope at ratio=1 that breaks the stiff
 // solver's Jacobian). k≈1.14, R=461.5 J/kg-K for saturated steam.
 COMPONENT SteamReliefValve(in, out)
@@ -515,7 +515,7 @@ COMPONENT SteamReliefValve(in, out)
   in.mdot  = opening * mdot_ch * efact
 END
 
-// Proportional / lifting relief valve (the reference simulator the proportional-relief family model): mass flow rises
+// Proportional / lifting relief valve: mass flow rises
 // LINEARLY with overpressure above the crack pressure, m = grad * (P - Pcrack)
 // [kg/s, grad in kg/s/Pa]. A real spring/weighted relief lifts as pressure
 // exceeds the setpoint, so its flow area — and thus capacity — grows with

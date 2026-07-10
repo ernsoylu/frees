@@ -6,9 +6,6 @@ summary: Model an ideal steam Rankine cycle and compute its thermal efficiency.
 examples: [rankine-cycle]
 tags: [cookbook, rankine, steam, power cycle, efficiency, thermodynamics]
 related: [Enthalpy, Entropy, Quality, Pump, Boiler, Turbine, Condenser]
-references:
-  - "the standard literature, Y.A., the standard literature, M.A. & Kanoğlu, M., a standard thermodynamics text, Ch. 10"
-  - "Moran, M.J. et al., Fundamentals of Engineering Thermodynamics, Ch. 8"
 ---
 
 # Rankine Steam Power Cycle
@@ -30,7 +27,7 @@ Water is carried around four state points:
 ## Approach
 
 Fix the boiler and condenser pressures, then evaluate each enthalpy from the
-fluid state. The ideal-cycle balances (the standard literature Ch. 10) are:
+fluid state. The ideal-cycle balances are:
 
 $$ w_{turb} = h_3 - h_4,\quad w_{pump} = h_2 - h_1,\quad q_{in} = h_3 - h_2,\quad \eta_{th} = \frac{w_{turb} - w_{pump}}{q_{in}} $$
 
@@ -50,8 +47,3 @@ a reheat stage keeps the exit quality acceptable.
 
 A connected plant chains `Pump` → `Boiler` → `Turbine`
 → `Condenser` on a single `fluid$` stream.
-
-## References
-
-1. the standard literature, Y.A., the standard literature, M.A. & Kanoğlu, M. *a standard thermodynamics text*, Ch. 10.
-2. Moran, M.J. et al. *Fundamentals of Engineering Thermodynamics*, Ch. 8.

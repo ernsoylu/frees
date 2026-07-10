@@ -5,8 +5,6 @@ summary: Pressure [Pa] from (T, specific volume)
 related: []
 examples: []
 tags: [eos, pressure, properties]
-references:
-  - "the original PR publication"
 ---
 
 # eos_pressure
@@ -36,8 +34,3 @@ $$ P = \frac{RT}{v-b} - \frac{a\,\alpha(T)}{v(v+b) + b(v-b)} \quad\text{(PR; fro
 | `model$` | String | Yes | Selector — One of `SRK`, `PR`. |
 | `T` | Number | Yes | Temperature [K]. |
 | `v` | Number | Yes | Specific volume [m³/kg]. |
-
-## References
-
-1. the standard literature, B.E., the standard literature, J.M. & O’Connell, J.P., The Properties of Gases and Liquids (5th ed.).
-

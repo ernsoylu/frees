@@ -34,4 +34,3 @@ $$ x_k = a + (b-a)\,\frac{k-1}{n-1}, \quad k = 1,\dots,n $$
 | `a` | Number | Yes | First operand. |
 | `b` | Number | Yes | Second operand. |
 | `n` | Number | Yes | Order / number of terms. |
-

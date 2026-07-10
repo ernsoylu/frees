@@ -54,4 +54,3 @@ connect(FC.heat, HX.wall)
 connect(cool_in, HX.in)
 connect(HX.out, cool_out)
 ```
-

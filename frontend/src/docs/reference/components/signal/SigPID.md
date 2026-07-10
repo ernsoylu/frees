@@ -67,4 +67,3 @@ out.sig = u_raw
 out.sig = min(max(u_raw, umin), umax)
 der(ie) = e + (out.sig - u_raw) / Taw
 ```
-

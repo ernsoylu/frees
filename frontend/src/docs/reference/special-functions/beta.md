@@ -6,7 +6,6 @@ related: [gamma, loggamma]
 examples: []
 tags: [special function, beta, gamma, integral]
 references:
-  - "the standard literature, M. & the standard literature, I.A., Handbook of Mathematical Functions, §6.2"
   - "NIST Digital Library of Mathematical Functions, §5.12"
 ---
 
@@ -28,7 +27,7 @@ Symmetric in its arguments (`B(a, b) = B(b, a)`); defined for positive `a`, `b`.
 
 ## Mathematical Formulation
 
-$$ B(a, b) = \int_0^1 t^{a-1}(1-t)^{b-1}\,dt = \frac{\Gamma(a)\,\Gamma(b)}{\Gamma(a+b)} \qquad \text{(A\&S §6.2.1–6.2.2)} $$
+$$ B(a, b) = \int_0^1 t^{a-1}(1-t)^{b-1}\,dt = \frac{\Gamma(a)\,\Gamma(b)}{\Gamma(a+b)} $$
 
 > **Method:** evaluated via `exp(loggamma(a) + loggamma(b) − loggamma(a+b))` for
 > numerical safety.
@@ -61,5 +60,4 @@ y = beta(2, 3)
 
 ## References
 
-1. the standard literature, M. & the standard literature, I.A. *Handbook of Mathematical Functions*, §6.2.
-2. NIST *Digital Library of Mathematical Functions*, §5.12.
+1. NIST *Digital Library of Mathematical Functions*, §5.12.

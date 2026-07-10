@@ -38,4 +38,3 @@ The acausal equations this component expands into (over its port members and par
 ```
 out.sig = map$(in1.sig, in2.sig)
 ```
-

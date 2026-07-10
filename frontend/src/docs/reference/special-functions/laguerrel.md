@@ -6,7 +6,6 @@ related: [hermiteh, legendrep, chebyshevt]
 examples: []
 tags: [special function, laguerre, orthogonal polynomial, quadrature]
 references:
-  - "the standard literature, M. & the standard literature, I.A., Handbook of Mathematical Functions, §22"
   - "NIST Digital Library of Mathematical Functions, §18.3"
 ---
 
@@ -28,7 +27,7 @@ y = laguerrel(n, x)
 
 ## Mathematical Formulation
 
-$$ (n+1)L_{n+1}(x) = (2n+1-x)L_n(x) - n\,L_{n-1}(x), \qquad L_0 = 1,\ L_1 = 1 - x \qquad \text{(A\&S §22)} $$
+$$ (n+1)L_{n+1}(x) = (2n+1-x)L_n(x) - n\,L_{n-1}(x), \qquad L_0 = 1,\ L_1 = 1 - x $$
 
 with orthogonality $\int_0^\infty L_m L_n\,e^{-x}\,dx = \delta_{mn}$.
 
@@ -56,5 +55,4 @@ y = laguerrel(1, 0)
 
 ## References
 
-1. the standard literature, M. & the standard literature, I.A. *Handbook of Mathematical Functions*, §22.
-2. NIST *Digital Library of Mathematical Functions*, §18.3.
+1. NIST *Digital Library of Mathematical Functions*, §18.3.

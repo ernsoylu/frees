@@ -5,10 +5,6 @@ summary: Two-phase frictional pressure drop — Lockhart-Martinelli / Chisholm m
 related: [htc_evap, htc_cond, dp_1phase]
 examples: [ev-thermal-management]
 tags: [two-phase, pressure drop, lockhart-martinelli, chisholm, friction, refrigerant]
-references:
-  - "the standard literature, J.G. & the standard literature, J.R., a standard two-phase text (3rd ed.), Eq. (2.68)"
-  - "Lockhart, R.W. & Martinelli, R.C. (1949), Chem. Eng. Prog. 45:39"
-  - "Chisholm, D. (1967), Int. J. Heat Mass Transfer 10:1767"
 ---
 
 # dp_2phase
@@ -33,7 +29,7 @@ Darcy drop by a factor that depends on the Martinelli parameter `X`.
 
 With the liquid-only pressure gradient $(dP/dz)_l$ and the Martinelli parameter `X`,
 
-$$ \phi_l^2 = 1 + \frac{C}{X} + \frac{1}{X^2}, \qquad \Delta P = \phi_l^2\left(\frac{dP}{dz}\right)_l L \qquad \text{(the standard literature \& the standard literature Eq. 2.68)} $$
+$$ \phi_l^2 = 1 + \frac{C}{X} + \frac{1}{X^2}, \qquad \Delta P = \phi_l^2\left(\frac{dP}{dz}\right)_l L $$
 
 where the Chisholm constant `C` ranges from 5 (laminar–laminar) to 20
 (turbulent–turbulent).
@@ -73,9 +69,3 @@ quality as the vapor fraction grows.
 | Error | Cause | Fix |
 | --- | --- | --- |
 | `DOMAIN_ERROR` | `x` outside [0, 1] or `L ≤ 0` | Quality in [0, 1], positive length. |
-
-## References
-
-1. the standard literature, J.G. & the standard literature, J.R. *a standard two-phase text* (3rd ed.), Eq. (2.68).
-2. Lockhart, R.W. & Martinelli, R.C. (1949), *Chem. Eng. Prog.* 45:39.
-3. Chisholm, D. (1967), *Int. J. Heat Mass Transfer* 10:1767.

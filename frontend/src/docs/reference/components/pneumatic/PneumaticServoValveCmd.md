@@ -44,4 +44,3 @@ T_in     = Temperature(fluid$, P=in.P, h=in.h)
 in.mdot  = iso6358(u.sig * Cmax, b, in.P, T_in, out.P)
 out.mdot = in.mdot
 ```
-

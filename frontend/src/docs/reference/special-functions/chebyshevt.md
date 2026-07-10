@@ -6,7 +6,6 @@ related: [chebyshevu, legendrep]
 examples: []
 tags: [special function, chebyshev, orthogonal polynomial, approximation]
 references:
-  - "the standard literature, M. & the standard literature, I.A., Handbook of Mathematical Functions, §22"
   - "NIST Digital Library of Mathematical Functions, §18.3"
 ---
 
@@ -28,7 +27,7 @@ On `[−1, 1]`, `T_n(x) = cos(n·arccos x)`, so `|T_n| ≤ 1`. `T_0 = 1`, `T_1 =
 
 ## Mathematical Formulation
 
-$$ T_n(\cos\theta) = \cos(n\theta), \qquad T_{n+1}(x) = 2x\,T_n(x) - T_{n-1}(x) \qquad \text{(A\&S §22)} $$
+$$ T_n(\cos\theta) = \cos(n\theta), \qquad T_{n+1}(x) = 2x\,T_n(x) - T_{n-1}(x) $$
 
 > **Method:** three-term recurrence from `T_0 = 1`, `T_1 = x`.
 
@@ -54,5 +53,4 @@ y = chebyshevt(2, 1)
 
 ## References
 
-1. the standard literature, M. & the standard literature, I.A. *Handbook of Mathematical Functions*, §22.
-2. NIST *Digital Library of Mathematical Functions*, §18.3.
+1. NIST *Digital Library of Mathematical Functions*, §18.3.

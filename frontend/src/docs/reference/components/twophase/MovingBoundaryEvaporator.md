@@ -5,9 +5,6 @@ summary: A moving-boundary evaporator tracking the two-phase/superheat zone leng
 related: []
 examples: []
 tags: [movingboundaryevaporator, component, twophase, acausal]
-references:
-  - "the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., a standard system-dynamics text (5th ed.) — acausal/bond-graph formalism"
-  - "the standard literature, J.G. & the standard literature, J.R., a standard two-phase text (3rd ed.)"
 ---
 
 # MovingBoundaryEvaporator
@@ -61,8 +58,3 @@ Q         = Q_tp + Q_sh
 wall.Qdot = Q
 SH        = T_out - Tsat
 ```
-
-## References
-
-1. the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., *a standard system-dynamics text* (5th ed.) — acausal/bond-graph formalism.
-2. the standard literature, J.G. & the standard literature, J.R., *a standard two-phase text* (3rd ed.).

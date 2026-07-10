@@ -5,8 +5,6 @@ summary: Eigenvalues of A
 related: []
 examples: []
 tags: [eig, matrix]
-references:
-  - "the standard literature, G.H. & the standard literature, C.F., Matrix Computations (4th ed.), Ch. 7"
 ---
 
 # eig
@@ -33,8 +31,3 @@ $$ A v = \lambda v, \qquad \det(A - \lambda I) = 0 $$
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
 | `A` | Number | Yes | Square input matrix. |
-
-## References
-
-1. the standard literature, G.H. & the standard literature, C.F., Matrix Computations (4th ed.).
-

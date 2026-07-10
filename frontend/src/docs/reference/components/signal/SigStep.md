@@ -41,4 +41,3 @@ The acausal equations this component expands into (over its port members and par
 ```
 out.sig = before + (after - before) * 0.5 * (1 + tanh((time - t0) / eps))
 ```
-

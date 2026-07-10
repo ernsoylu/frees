@@ -1,7 +1,7 @@
 // Pure range statistics + raster helpers for the Data Analyzer (Phase 2).
 //
 // The merged raster + step-hold pair here is shared by the Table instrument
-// and the CSV exporter: the reference measurement tool's Table interpolates empty cells by step-hold
+// and the CSV exporter: the Table instrument interpolates empty cells by step-hold
 // (a signal's value at time t is its last sample at or before t), and the
 // same fill rule is what the export writes. Statistics bind to the cursor
 // A–B range per design contract §2.5e.

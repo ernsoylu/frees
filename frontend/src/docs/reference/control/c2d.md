@@ -5,9 +5,6 @@ summary: Continuous-to-discrete transfer-function conversion (ZOH / Tustin).
 related: [d2c, tf, pole]
 examples: [digital-control-c2d]
 tags: [control, discretization, c2d, zoh, tustin, digital, sampling]
-references:
-  - "Franklin, G.F., Powell, J.D. & Workman, M.L., Digital Control of Dynamic Systems (3rd ed.), Ch. 4"
-  - "the standard literature, K., Discrete-Time Control Systems (2nd ed.), Ch. 3"
 ---
 
 # c2d
@@ -38,7 +35,7 @@ $$ G(z) = (1 - z^{-1})\,\mathcal{Z}\!\left\{\frac{G(s)}{s}\right\} $$
 
 Tustin (bilinear):
 
-$$ G(z) = G(s)\Big|_{\,s = \frac{2}{T_s}\frac{z-1}{z+1}} \qquad \text{(Franklin Ch. 4)} $$
+$$ G(z) = G(s)\Big|_{\,s = \frac{2}{T_s}\frac{z-1}{z+1}} $$
 
 > **Method:** ZOH step-invariant transform, or the bilinear substitution.
 
@@ -73,8 +70,3 @@ $$ G(z) = G(s)\Big|_{\,s = \frac{2}{T_s}\frac{z-1}{z+1}} \qquad \text{(Franklin 
 | --- | --- | --- |
 | `BAD_SAMPLE_TIME` | `Ts ≤ 0` | Use a positive sample time. |
 | `UNKNOWN_METHOD` | method not recognized | Use `'zoh'` or `'tustin'`. |
-
-## References
-
-1. Franklin, G.F., Powell, J.D. & Workman, M.L. *Digital Control of Dynamic Systems* (3rd ed.), Ch. 4.
-2. the standard literature, K. *Discrete-Time Control Systems* (2nd ed.), Ch. 3.

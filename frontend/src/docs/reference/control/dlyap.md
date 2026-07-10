@@ -5,9 +5,6 @@ summary: Solve the discrete Lyapunov (Stein) equation A·X·Aᵀ − X + Q = 0.
 related: [lyap, dare, dlqr]
 examples: []
 tags: [control, lyapunov, stein, discrete, stability]
-references:
-  - "the standard literature, P.J. & Michel, A.N., A Linear Systems Primer, Ch. 4"
-  - "Franklin, G.F. et al., Digital Control of Dynamic Systems (3rd ed.), Ch. 8"
 ---
 
 # dlyap
@@ -57,8 +54,3 @@ $$ X = \sum_{k=0}^{\infty} A^k Q\,(A^\top)^k $$
 | Error | Cause | Fix |
 | --- | --- | --- |
 | `NO_UNIQUE_SOLUTION` | `λ_i·λ_j = 1` for some eigenvalue pair | The Stein operator is singular; check `A`'s spectrum. |
-
-## References
-
-1. the standard literature, P.J. & Michel, A.N. *A Linear Systems Primer*, Ch. 4.
-2. Franklin, G.F. et al. *Digital Control of Dynamic Systems* (3rd ed.), Ch. 8.

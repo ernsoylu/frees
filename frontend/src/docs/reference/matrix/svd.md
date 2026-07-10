@@ -5,8 +5,6 @@ summary: Singular value decomposition
 related: []
 examples: []
 tags: [svd, matrix]
-references:
-  - "the standard literature, G.H. & the standard literature, C.F., Matrix Computations (4th ed.), §2.4"
 ---
 
 # svd
@@ -41,8 +39,3 @@ $$ A = U\,\Sigma\,V^\top, \qquad \Sigma = \operatorname{diag}(\sigma_1 \ge \dots
 | `U` | Number/Array | Computed `U`. |
 | `S` | Number/Array | Nucleate-suppression factor. |
 | `V` | Number/Array | Velocity [m/s]. |
-
-## References
-
-1. the standard literature, G.H. & the standard literature, C.F., Matrix Computations (4th ed.).
-

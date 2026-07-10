@@ -5,9 +5,6 @@ summary: Convert a state-space model (A, B, C, D) to a transfer function.
 related: [tf2ss, series, feedback]
 examples: [cruise-control]
 tags: [control, state space, transfer function, ss2tf, model conversion]
-references:
-  - "the standard literature, N.S., a standard controls text (7th ed.), Ch. 5, §5.7"
-  - "the standard literature, K., a standard controls text (5th ed.), Ch. 9"
 ---
 
 # ss2tf
@@ -35,8 +32,7 @@ $$ G(s) = C\,(sI - A)^{-1} B + D = \frac{\text{num}(s)}{\text{den}(s)} $$
 
 The denominator is the characteristic polynomial `den(s) = det(sI − A)`.
 
-> **Method:** form `det(sI − A)` for `den` and the adjugate product for `num`
-> (the standard literature §5.7).
+> **Method:** form `det(sI − A)` for `den` and the adjugate product for `num`.
 
 ## Examples
 
@@ -71,8 +67,3 @@ velocity-from-force plant.
 | Error | Cause | Fix |
 | --- | --- | --- |
 | `DIMENSION_MISMATCH` | `A`, `B`, `C`, `D` shapes inconsistent | `A` is n×n, `B` is n×1, `C` is 1×n, `D` is scalar (SISO). |
-
-## References
-
-1. the standard literature, N.S. *a standard controls text* (7th ed.), Ch. 5, §5.7.
-2. the standard literature, K. *a standard controls text* (5th ed.), Ch. 9.

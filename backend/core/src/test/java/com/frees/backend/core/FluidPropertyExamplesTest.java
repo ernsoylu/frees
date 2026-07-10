@@ -12,9 +12,9 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * Classic steam and refrigerant property-lookup examples solved as frees
  * equation systems against CoolProp. All values SI: K, Pa, J/kg, m3/kg.
  *
- * Note: many R134a tables use the industry-handbook reference state while
- * CoolProp defaults to IIR, so R134a checks use reference-independent
- * quantities (h_fg, quality, T, v). Common water tables share CoolProp's
+ * Note: many published R134a tables use a different enthalpy/entropy
+ * reference state than CoolProp's IIR default, so R134a checks use
+ * reference-independent quantities (h_fg, quality, T, v). Common water tables share CoolProp's
  * reference (u = 0 for saturated liquid at the triple point), so water
  * energies are compared directly.
  */
@@ -41,7 +41,7 @@ class FluidPropertyExamplesTest {
                 h_g = Enthalpy(Water, P=P_atm, x=1)
                 E_in = m * (h_g - h_f)
                 """);
-        // Book: DeltaV = 0.3386 m3, E = 451.5 kJ (h_fg = 2257.5 kJ/kg).
+        // Reference: DeltaV = 0.3386 m3, E = 451.5 kJ (h_fg = 2257.5 kJ/kg).
         assertEquals(0.3386, result.variables().get("DELTAV"), 0.001);
         assertEquals(451_500.0, result.variables().get("E_in"), 600.0);
     }
@@ -62,7 +62,7 @@ class FluidPropertyExamplesTest {
                 v_avg = v_f + x * (v_g - v_f)
                 Vol2 = m_total * v_avg
                 """);
-        // Book: P = Psat@90C = 70.183 kPa, V = 4.73 m3 (x = 0.2, v = 0.473).
+        // Reference: P = Psat@90C = 70.183 kPa, V = 4.73 m3 (x = 0.2, v = 0.473).
         assertEquals(70_183.0, result.variables().get("P_tank"), 100.0);
         assertEquals(0.2, result.variables().get("x"), 1e-9);
         assertEquals(4.73, result.variables().get("Vol"), 0.02);
@@ -88,7 +88,7 @@ class FluidPropertyExamplesTest {
                 m_vap = x * m
                 Vol_vapor = m_vap * vol_g
                 """);
-        // Book: T = -15.60 C = 257.55 K, x = 0.157, h_fg = 209.96 kJ/kg,
+        // Reference: T = -15.60 C = 257.55 K, x = 0.157, h_fg = 209.96 kJ/kg,
         // m_g = 0.628 kg, V_g = 0.0776 m3.
         assertEquals(257.55, result.variables().get("T_sat"), 0.3);
         assertEquals(0.157, result.variables().get("x"), 0.003);
@@ -106,7 +106,7 @@ class FluidPropertyExamplesTest {
                 h1 = 2890000
                 T1 = Temperature(Steam, P=P1, h=h1)
                 """);
-        // Book (linear interpolation in Table A-6): T = 216.3 C = 489.45 K.
+        // Reference (linear interpolation in the superheated-steam tables): T = 216.3 C = 489.45 K.
         assertEquals(489.45, result.variables().get("T1"), 1.5);
     }
 
@@ -120,7 +120,7 @@ class FluidPropertyExamplesTest {
                 u_approx = IntEnergy(Water, T=T1, x=0)
                 err_pct = (u_approx - u_exact) / u_exact * 100
                 """);
-        // Book: u = 333.82 kJ/kg (Table A-7), u_f@80C = 334.97 kJ/kg, error 0.34%.
+        // Reference: u = 333.82 kJ/kg (compressed-liquid tables), u_f@80C = 334.97 kJ/kg, error 0.34%.
         assertEquals(333_820.0, result.variables().get("u_exact"), 700.0);
         assertEquals(334_970.0, result.variables().get("u_approx"), 700.0);
         assertEquals(0.34, result.variables().get("err_pct"), 0.1);

@@ -5,8 +5,6 @@ summary: Numerical dy/dx at xv from a TABLE
 related: []
 examples: []
 tags: [differentiate, calculus]
-references:
-  - "a standard numerics text, a standard numerics text (3rd ed.), §5.7"
 ---
 
 # differentiate
@@ -36,8 +34,3 @@ $$ \left.\frac{dy}{dx}\right|_{x_v} \approx \frac{y_{i+1}-y_{i-1}}{x_{i+1}-x_{i-
 | `y` | Number | Yes | Value / second coordinate. |
 | `x` | Number | Yes | Vapor quality (0–1). |
 | `xv` | Number | Yes | Point at which to evaluate. |
-
-## References
-
-1. a standard numerics text, a standard numerics text (3rd ed.), Ch. 4.
-

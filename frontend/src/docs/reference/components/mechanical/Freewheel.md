@@ -41,4 +41,3 @@ dw    = a.w - b.w
 a.tau = k * 0.5 * (dw + sqrt(dw^2 + eps^2))
 a.tau + b.tau = 0
 ```
-

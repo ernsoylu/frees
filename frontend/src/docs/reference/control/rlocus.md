@@ -5,9 +5,6 @@ summary: Root-locus trajectories of the closed-loop poles as gain K varies.
 related: [pole, margin, place]
 examples: [root-locus-analysis]
 tags: [control, root locus, poles, gain, design, stability]
-references:
-  - "the standard literature, N.S., a standard controls text (7th ed.), Ch. 8"
-  - "the standard literature, K., a standard controls text (5th ed.), Ch. 6"
 ---
 
 # rlocus
@@ -33,7 +30,7 @@ real/imaginary parts of the closed-loop poles at each gain `K`.
 
 The locus is the set of `s` satisfying the characteristic equation
 
-$$ 1 + K\,G(s) = 0 \quad\Longleftrightarrow\quad \angle G(s) = \pm 180°(2\ell+1) \qquad \text{(the standard literature Ch. 8)} $$
+$$ 1 + K\,G(s) = 0 \quad\Longleftrightarrow\quad \angle G(s) = \pm 180°(2\ell+1) $$
 
 with the gain at any locus point `K = 1/|G(s)|`.
 
@@ -68,8 +65,3 @@ asymptotes; crossings of the imaginary axis mark the stability-limiting gain.
 | Error | Cause | Fix |
 | --- | --- | --- |
 | `EMPTY_DENOMINATOR` | invalid `den` | Provide a valid open-loop denominator. |
-
-## References
-
-1. the standard literature, N.S. *a standard controls text* (7th ed.), Ch. 8.
-2. the standard literature, K. *a standard controls text* (5th ed.), Ch. 6.

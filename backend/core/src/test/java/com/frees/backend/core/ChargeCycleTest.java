@@ -12,7 +12,7 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
  * The CLOSED vapor-compression cycle solved by integrate-to-steady, built
- * ENTIRELY from the standard library — the reference simulator methodology productised:
+ * ENTIRELY from the standard library — the standard C/R network methodology productised:
  *
  *  - {@code TwoPhaseChamber} (promoted): the (P,h)-state two-phase capacitive
  *    volume with a heat port. Charge {@code m=ρ(P,h)V} is DERIVED, so there is no
@@ -27,7 +27,7 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * condenser chamber (C, cool wall) → expansion valve (R) → back. Both pressures
  * float and settle where compressor throughput == valve return flow. This is the
  * closed loop that was structurally non-square before the ComponentExpander
- * capacitive-loop-seed fix (the reference simulator C/R causality: C nodes are states).
+ * capacitive-loop-seed fix (C/R causality: C nodes are states).
  */
 class ChargeCycleTest {
 

@@ -46,4 +46,3 @@ F_res = 0.5 * rhoA * Cd * Af * port.vel * abs(port.vel) + m * 9.80665 * (Crr * t
 der(port.vel)  = (port.f - F_res) / m
 init(port.vel) = v0
 ```
-

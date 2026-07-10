@@ -5,9 +5,6 @@ summary: Adds moisture to a humid-air stream, raising its humidity ratio.
 related: []
 examples: []
 tags: [humidifier, component, moistair, acausal]
-references:
-  - "the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., a standard system-dynamics text (5th ed.) — acausal/bond-graph formalism"
-  - "the industry handbook — Fundamentals (Psychrometrics)"
 ---
 
 # Humidifier
@@ -46,8 +43,3 @@ out.P    = in.P
 out.W    = in.W + mdot_w / in.mdot
 out.h    = in.h + mdot_w * h_w / in.mdot
 ```
-
-## References
-
-1. the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., *a standard system-dynamics text* (5th ed.) — acausal/bond-graph formalism.
-2. the industry handbook — Fundamentals (Psychrometrics).

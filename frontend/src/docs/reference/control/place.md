@@ -5,9 +5,6 @@ summary: State-feedback pole placement to a set of desired closed-loop poles.
 related: [acker, lqr, ctrb]
 examples: []
 tags: [control, pole placement, state feedback, ackermann, design]
-references:
-  - "the standard literature, N.S., a standard controls text (7th ed.), Ch. 12, §12.2"
-  - "the standard literature, K., a standard controls text (5th ed.), Ch. 10, §10.2"
 ---
 
 # place
@@ -32,7 +29,7 @@ desired poles as conjugate pairs in `pr ± j·pi`.
 
 Find `K` such that
 
-$$ \det\!\big(sI - (A - BK)\big) = \prod_i (s - p_i) \qquad \text{(the standard literature §12.2)} $$
+$$ \det\!\big(sI - (A - BK)\big) = \prod_i (s - p_i) $$
 
 with the desired characteristic polynomial set by `{p_i}`.
 
@@ -66,8 +63,3 @@ with the desired characteristic polynomial set by `{p_i}`.
 | Error | Cause | Fix |
 | --- | --- | --- |
 | `NOT_CONTROLLABLE` | `(A, B)` not controllable | Arbitrary placement needs a controllable pair (check `ctrb`). |
-
-## References
-
-1. the standard literature, N.S. *a standard controls text* (7th ed.), Ch. 12, §12.2.
-2. the standard literature, K. *a standard controls text* (5th ed.), Ch. 10, §10.2.

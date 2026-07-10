@@ -5,9 +5,6 @@ summary: Heats a humid-air stream at constant humidity ratio.
 related: []
 examples: []
 tags: [heatingcoil, component, moistair, acausal]
-references:
-  - "the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., a standard system-dynamics text (5th ed.) — acausal/bond-graph formalism"
-  - "the industry handbook — Fundamentals (Psychrometrics)"
 ---
 
 # HeatingCoil
@@ -45,8 +42,3 @@ out.P    = in.P
 out.W    = in.W
 out.h    = in.h + Q / in.mdot
 ```
-
-## References
-
-1. the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., *a standard system-dynamics text* (5th ed.) — acausal/bond-graph formalism.
-2. the industry handbook — Fundamentals (Psychrometrics).

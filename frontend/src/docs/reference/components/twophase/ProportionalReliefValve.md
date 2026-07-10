@@ -5,9 +5,6 @@ summary: A pressure-relief valve whose opening rises proportionally above the se
 related: []
 examples: [pressure-cooker]
 tags: [proportionalreliefvalve, component, twophase, acausal]
-references:
-  - "the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., a standard system-dynamics text (5th ed.) — acausal/bond-graph formalism"
-  - "the standard literature, J.G. & the standard literature, J.R., a standard two-phase text (3rd ed.)"
 ---
 
 # ProportionalReliefValve
@@ -54,8 +51,3 @@ in.mdot  = grad * 0.5 * (dpv + sqrt(dpv * dpv + eps * eps))
 Instantiated in the verified example below:
 
 [Run: pressure-cooker]
-
-## References
-
-1. the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., *a standard system-dynamics text* (5th ed.) — acausal/bond-graph formalism.
-2. the standard literature, J.G. & the standard literature, J.R., *a standard two-phase text* (3rd ed.).

@@ -49,4 +49,3 @@ der(Tt)   = (in.mdot * (in.h - out.h) + Q) / (m * cp_t)
 init(Tt)  = T0
 wall.Qdot = Q
 ```
-

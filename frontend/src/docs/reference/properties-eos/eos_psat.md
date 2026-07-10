@@ -5,9 +5,6 @@ summary: Saturation pressure from a cubic EOS via the equal-fugacity condition.
 related: [eos_z, eos_enthalpy]
 examples: [cubic-eos-properties]
 tags: [eos, cubic, peng-robinson, srk, saturation pressure, fugacity, vapor pressure]
-references:
-  - "the original PR publication"
-  - "the standard literature, the standard literature, H.C. & the standard literature, a standard chemical-thermodynamics text, Ch. 11 (equal fugacity)"
 ---
 
 # eos_psat
@@ -72,8 +69,3 @@ the critical point is 304 K / 7.38 MPa).
 | --- | --- | --- |
 | `SUPERCRITICAL` | `T ≥ Tc` | No saturation pressure exists above the critical temperature. |
 | `UNKNOWN_FLUID` | `fluid$` not in the table | Use a supported fluid name. |
-
-## References
-
-1. the original PR publication
-2. the standard literature, the standard literature, H.C. & the standard literature *a standard chemical-thermodynamics text*, Ch. 11.

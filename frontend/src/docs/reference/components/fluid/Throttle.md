@@ -5,9 +5,6 @@ summary: An isenthalpic pressure-reducing restriction.
 related: []
 examples: []
 tags: [throttle, component, fluid, acausal]
-references:
-  - "the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., a standard system-dynamics text (5th ed.) — acausal/bond-graph formalism"
-  - "the standard literature, a standard fluids text"
 ---
 
 # Throttle
@@ -36,8 +33,3 @@ Instantiating the component expands these acausal equations (over its port membe
 out.mdot = in.mdot
 out.h    = in.h
 ```
-
-## References
-
-1. the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., *a standard system-dynamics text* (5th ed.) — acausal/bond-graph formalism.
-2. the standard literature, *Fluid Mechanics* (8th ed.).

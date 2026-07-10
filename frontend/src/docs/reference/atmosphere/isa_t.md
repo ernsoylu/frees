@@ -37,4 +37,3 @@ $$ T(h) = T_b + L_b\,(h - h_b) \quad\text{(layer lapse rate } L_b) $$
 ## References
 
 1. U.S. Standard Atmosphere, 1976 (NOAA/NASA/USAF).
-

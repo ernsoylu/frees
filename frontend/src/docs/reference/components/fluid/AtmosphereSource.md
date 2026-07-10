@@ -41,4 +41,3 @@ out.mdot = mdot
 out.P    = isa_P(alt)
 out.h    = Enthalpy(Air, P=isa_P(alt), T=isa_T(alt))
 ```
-

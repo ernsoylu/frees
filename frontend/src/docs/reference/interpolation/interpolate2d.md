@@ -5,8 +5,6 @@ summary: Bilinear interpolation of a 2-D table at (x, y).
 related: [interpolate, lookup, interpolate1]
 examples: [engine-map-2d]
 tags: [interpolation, bilinear, 2d, table, lookup, map]
-references:
-  - "a standard numerics text, a standard numerics text (3rd ed.), §3.6 (bilinear interpolation)"
 ---
 
 # interpolate2d
@@ -64,7 +62,3 @@ $$ z = (1-t_x)(1-t_y)z_{i,j} + t_x(1-t_y)z_{i+1,j} + (1-t_x)t_y\,z_{i,j+1} + t_x
 | --- | --- | --- |
 | `OUT_OF_RANGE` | `(x, y)` outside the table grid | Keep the query within the tabulated bounds. |
 | `UNKNOWN_TABLE` | `'t'` is not a defined table | Define the 2-D `TABLE` block first. |
-
-## References
-
-1. a standard numerics text *a standard numerics text* (3rd ed.), §3.6.

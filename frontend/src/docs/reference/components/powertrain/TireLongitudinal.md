@@ -47,4 +47,3 @@ Fx        = Fz * D * sin(C * arctan(B * slip))
 veh.f     = -Fx
 wheel.tau = r * Fx
 ```
-

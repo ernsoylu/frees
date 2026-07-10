@@ -5,9 +5,6 @@ summary: Response of a transfer function to an arbitrary input u(t).
 related: [step, impulse]
 examples: [step-impulse-response]
 tags: [control, simulation, arbitrary input, convolution, time domain]
-references:
-  - "the standard literature, N.S., a standard controls text (7th ed.), Ch. 4, §4.2"
-  - "the standard literature, K., a standard controls text (5th ed.), Ch. 5"
 ---
 
 # lsim
@@ -63,8 +60,3 @@ $$ y(t) = \int_0^t g(t-\tau)\,u(\tau)\,d\tau, \qquad g(t) = \mathcal{L}^{-1}\{G(
 | Error | Cause | Fix |
 | --- | --- | --- |
 | `LENGTH_MISMATCH` | `u` and `t` differ in length | Provide input and time vectors of equal length. |
-
-## References
-
-1. the standard literature, N.S. *a standard controls text* (7th ed.), Ch. 4, §4.2.
-2. the standard literature, K. *a standard controls text* (5th ed.), Ch. 5.

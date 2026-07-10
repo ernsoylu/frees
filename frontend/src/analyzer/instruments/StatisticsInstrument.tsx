@@ -2,7 +2,7 @@
 // stddev over the cursor-bounded range. Binding order per §2.5e: the A–B
 // cursor range when both cursors are placed, else the visible window, else
 // the full recording. Also carries the Δ readout half of the cursor model:
-// value at A, value at B (exact samples, the reference measurement tool's ~→exact pattern) and Δv.
+// value at A, value at B (exact samples, the ~→exact readout pattern) and Δv.
 
 import { useMemo } from 'react'
 import { Badge, Group, Stack, Table, Text } from '@mantine/core'

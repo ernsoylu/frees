@@ -5,8 +5,6 @@ summary: Isentropic stagnation-to-static pressure ratio P0/P(M, k).
 related: [T0_T, mach_A_Astar, stagnationpres]
 examples: [cd-nozzle-shock]
 tags: [compressible, isentropic, stagnation, pressure, mach, nozzle]
-references:
-  - "the standard literature, Y.A., the standard literature, M.A. & Kanoğlu, M., a standard thermodynamics text, Ch. 17, Eq. (17-19)"
 ---
 
 # P0_P
@@ -29,7 +27,7 @@ For isentropic flow the pressure ratio is the temperature ratio raised to
 
 ## Mathematical Formulation
 
-$$ \frac{P_0}{P} = \left(1 + \frac{k-1}{2}\,M^2\right)^{\!k/(k-1)} \qquad \text{(the standard literature Eq. 17-19)} $$
+$$ \frac{P_0}{P} = \left(1 + \frac{k-1}{2}\,M^2\right)^{\!k/(k-1)} $$
 
 > **Method:** direct evaluation; consistent with `T0_T` via the isentropic
 > relation `P0/P = (T0/T)^{k/(k-1)}`.
@@ -62,7 +60,3 @@ The supersonic static pressure at the shock station: `P1 = P0 / P0_P(M1, k)`.
 | Error | Cause | Fix |
 | --- | --- | --- |
 | `DOMAIN_ERROR` | `M` negative or `k ≤ 1` | Use a non-negative Mach and a physical `k > 1`. |
-
-## References
-
-1. the standard literature, Y.A., the standard literature, M.A. & Kanoğlu, M. *a standard thermodynamics text*, Ch. 17, Eq. (17-19).

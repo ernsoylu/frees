@@ -49,4 +49,3 @@ connect(MS.port, KS.a, CS.a)
 connect(KS.b, CS.b, MU.port, KT.a)
 connect(KT.b, road)
 ```
-

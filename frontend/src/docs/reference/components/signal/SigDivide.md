@@ -32,4 +32,3 @@ The acausal equations this component expands into (over its port members and par
 ```
 out.sig = in1.sig / in2.sig
 ```
-

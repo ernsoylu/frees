@@ -42,4 +42,3 @@ der(x)  = (in.sig - x) / T2
 init(x) = y0
 out.sig = x + (T1 / T2) * (in.sig - x)
 ```
-

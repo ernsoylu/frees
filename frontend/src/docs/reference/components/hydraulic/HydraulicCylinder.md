@@ -5,9 +5,6 @@ summary: A hydraulic actuator converting flow/pressure to motion/force.
 related: []
 examples: []
 tags: [hydrauliccylinder, component, hydraulic, acausal]
-references:
-  - "the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., a standard system-dynamics text (5th ed.) — acausal/bond-graph formalism"
-  - "the standard literature, H.E., a standard hydraulics text"
 ---
 
 # HydraulicCylinder
@@ -49,8 +46,3 @@ rod.f      = -(in.P - Patm) * area
 der(in.P)  = (beta / V0) * (in.mdot / rho - area * rod.vel)
 init(in.P) = P0
 ```
-
-## References
-
-1. the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., *a standard system-dynamics text* (5th ed.) — acausal/bond-graph formalism.
-2. the standard literature, H.E., *a standard hydraulics text*.

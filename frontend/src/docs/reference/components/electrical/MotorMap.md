@@ -48,4 +48,3 @@ p.I + n.I = 0
 Q         = Pe - Pm
 heat.Qdot = -Q
 ```
-

@@ -45,4 +45,3 @@ der(Vg)  = -port.mdot / rho
 init(Vg) = Vg0
 port.P   = P0 * (V0 / Vg)^gamma
 ```
-

@@ -12,7 +12,7 @@ references: []
 
 Returns a solid-material property via `k_(Material[, T])` from the built-in material database.
 
-> Real-fluid/material/symbolic operation — see the inputs and references below.
+> Real-fluid/material/symbolic operation — see the inputs below.
 
 ## Syntax
 
@@ -23,8 +23,3 @@ k_(Material[, T])
 ## Description
 
 Looks up a thermophysical/mechanical property of a named solid (e.g. Aluminum, Copper, Steel). Some properties accept an optional temperature.
-
-## References
-
-1. the standard literature, F.P. et al., Fundamentals of Heat and Mass Transfer, Appendix A.
-

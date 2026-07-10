@@ -5,8 +5,6 @@ summary: Friedel two-phase frictional multiplier on the liquid-only drop
 related: []
 examples: []
 tags: [friedel, phi2, two, phase, flow]
-references:
-  - "the standard literature, J.G. & the standard literature, J.R., a standard two-phase text (3rd ed.), §2.5"
 ---
 
 # friedel_phi2
@@ -31,7 +29,7 @@ $$ \phi_{lo}^2 = E + \frac{3.24\,F H}{Fr^{0.045}We^{0.035}} \quad\text{(Friedel)
 ## Applicability
 
 - **Where it applies:** Two-phase frictional pressure drop in refrigerant passages.
-- **Valid when:** Recommended (the standard literature) for `μ_l/μ_g < 1000`; covers a wider mass-flux range than the simple Chisholm form.
+- **Valid when:** Recommended for `μ_l/μ_g < 1000`; covers a wider mass-flux range than the simple Chisholm form.
 - **How it's used:** Multiply the liquid-only gradient by the multiplier to get the two-phase `ΔP`; an alternative to `lm_phi2`.
 
 ## Input Arguments
@@ -46,8 +44,3 @@ $$ \phi_{lo}^2 = E + \frac{3.24\,F H}{Fr^{0.045}We^{0.035}} \quad\text{(Friedel)
 | `G` | Number | Yes | Mass flux G = ṁ/Aflow [kg/m²·s]. |
 | `D` | Number | Yes | Diameter [m]. |
 | `sigma` | Number | Yes | Surface tension [N/m]. |
-
-## References
-
-1. the standard literature, J.G. & the standard literature, J.R., a standard two-phase text (3rd ed.).
-

@@ -5,9 +5,6 @@ summary: Cascade (series) connection of two transfer functions, G = G1·G2.
 related: [feedback, ss2tf]
 examples: [cruise-control]
 tags: [control, series, cascade, block diagram, transfer function]
-references:
-  - "the standard literature, N.S., a standard controls text (7th ed.), Ch. 5, §5.2"
-  - "the standard literature, K., a standard controls text (5th ed.), Ch. 5"
 ---
 
 # series
@@ -34,8 +31,7 @@ $$ G(s) = G_1(s)\,G_2(s) = \frac{\text{num}_1 \ast \text{num}_2}{\text{den}_1 \a
 
 where $\ast$ is polynomial multiplication (coefficient convolution).
 
-> **Method:** convolve the numerator and denominator coefficient vectors
-> (the standard literature §5.2).
+> **Method:** convolve the numerator and denominator coefficient vectors.
 
 ## Examples
 
@@ -68,8 +64,3 @@ with the first-order plant pole.
 | Error | Cause | Fix |
 | --- | --- | --- |
 | `EMPTY_POLYNOMIAL` | A `num`/`den` vector is empty | Provide valid coefficient vectors for both blocks. |
-
-## References
-
-1. the standard literature, N.S. *a standard controls text* (7th ed.), Ch. 5, §5.2.
-2. the standard literature, K. *a standard controls text* (5th ed.), Ch. 5.

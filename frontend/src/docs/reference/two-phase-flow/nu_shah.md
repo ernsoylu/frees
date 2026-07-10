@@ -5,8 +5,6 @@ summary: Shah condensation Nusselt number
 related: []
 examples: []
 tags: [nu, shah, two, phase, flow]
-references:
-  - "Shah, M.M. (1979), Int. J. Heat Mass Transfer 22:547"
 ---
 
 # nu_shah
@@ -42,8 +40,3 @@ $$ Nu_{TP} = Nu_l\left(1 + \frac{3.8}{Z^{0.95}}\right), \quad Z = (1/x - 1)^{0.8
 | `Pr_l` | Number | Yes | Liquid Prandtl number. |
 | `x` | Number | Yes | Vapor quality (0–1). |
 | `p_red` | Number | Yes | Reduced pressure P/Pcrit. |
-
-## References
-
-1. the standard literature, J.G. & the standard literature, J.R., a standard two-phase text (3rd ed.).
-

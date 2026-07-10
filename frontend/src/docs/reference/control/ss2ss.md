@@ -5,9 +5,6 @@ summary: Similarity transform of a state-space model, x = P·z.
 related: [ss, balreal, ss2tf]
 examples: []
 tags: [control, similarity transform, state space, coordinate change]
-references:
-  - "the standard literature, K., a standard controls text (5th ed.), Ch. 9, §9.4"
-  - "the standard literature, P.J. & Michel, A.N., A Linear Systems Primer, Ch. 3"
 ---
 
 # ss2ss
@@ -26,7 +23,7 @@ CALL ss2ss(A, B, C, D, P : An, Bn, Cn, Dn)
 
 ## Mathematical Formulation
 
-With `x = P·z` (the standard literature §9.4):
+With `x = P·z`:
 
 $$ A_n = P^{-1}AP, \quad B_n = P^{-1}B, \quad C_n = CP, \quad D_n = D $$
 
@@ -58,8 +55,3 @@ The transfer function `C(sI−A)⁻¹B + D` is invariant under the transform.
 | Error | Cause | Fix |
 | --- | --- | --- |
 | `SINGULAR_TRANSFORM` | `P` not invertible | Use a nonsingular transform matrix. |
-
-## References
-
-1. the standard literature, K. *a standard controls text* (5th ed.), Ch. 9, §9.4.
-2. the standard literature, P.J. & Michel, A.N. *A Linear Systems Primer*, Ch. 3.

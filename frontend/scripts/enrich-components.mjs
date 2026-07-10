@@ -25,20 +25,20 @@ const boundExamples = (name) => exBlocks.filter(([, t]) => new RegExp('\\b' + na
 
 // ── Domain port semantics + references ───────────────────────────────────────
 const DOMAIN = {
-  fluid: { across: 'thermofluid ports carry pressure `P`, mass-flow `ṁ`, and specific enthalpy `h`; a node enforces equal `P` and `Σṁ = 0`', ref: 'the standard literature, *Fluid Mechanics* (8th ed.)' },
-  ac: { across: 'refrigerant/air ports carry pressure `P`, mass-flow `ṁ`, and specific enthalpy `h`', ref: 'the industry handbook — Refrigeration' },
-  electrical: { across: 'electrical ports carry potential `V` and current `I`; a node enforces equal `V` and `ΣI = 0` (Kirchhoff)', ref: 'the standard literature, J.W. & the standard literature, S.A., *Electric Circuits* (11th ed.)' },
-  twophase: { across: 'two-phase refrigerant ports carry pressure `P`, mass-flow `ṁ`, and specific enthalpy `h` (quality/void follow from the properties)', ref: 'the standard literature, J.G. & the standard literature, J.R., *a standard two-phase text* (3rd ed.)' },
-  mechanical: { across: 'rotational ports carry angular velocity `ω` and torque `τ` (`Στ = 0`); translational ports carry velocity `v` and force `F` (`ΣF = 0`)', ref: 'the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., *System Dynamics* (5th ed.)' },
-  heat: { across: 'thermal ports carry temperature `T` and heat-flow rate `Q̇`; a node enforces equal `T` and `ΣQ̇ = 0`', ref: 'the standard literature, F.P. et al., *Fundamentals of Heat and Mass Transfer*' },
-  moistair: { across: 'humid-air ports carry pressure `P`, dry-air mass-flow `ṁ_da`, enthalpy `h`, and humidity ratio `W`', ref: 'the industry handbook — Fundamentals (Psychrometrics)' },
-  powertrain: { across: 'rotational ports carry angular velocity `ω` and torque `τ`, with vehicle-level speed/force signals', ref: 'the standard literature, L. & the standard literature, A., *Vehicle Propulsion Systems* (3rd ed.)' },
+  fluid: { across: 'thermofluid ports carry pressure `P`, mass-flow `ṁ`, and specific enthalpy `h`; a node enforces equal `P` and `Σṁ = 0`', ref: 'Standard fluid-mechanics literature' },
+  ac: { across: 'refrigerant/air ports carry pressure `P`, mass-flow `ṁ`, and specific enthalpy `h`', ref: 'Standard refrigeration-engineering literature' },
+  electrical: { across: 'electrical ports carry potential `V` and current `I`; a node enforces equal `V` and `ΣI = 0` (Kirchhoff)', ref: 'Standard circuit-analysis literature' },
+  twophase: { across: 'two-phase refrigerant ports carry pressure `P`, mass-flow `ṁ`, and specific enthalpy `h` (quality/void follow from the properties)', ref: 'Standard two-phase flow and boiling/condensation literature' },
+  mechanical: { across: 'rotational ports carry angular velocity `ω` and torque `τ` (`Στ = 0`); translational ports carry velocity `v` and force `F` (`ΣF = 0`)', ref: 'Standard system-dynamics literature' },
+  heat: { across: 'thermal ports carry temperature `T` and heat-flow rate `Q̇`; a node enforces equal `T` and `ΣQ̇ = 0`', ref: 'Standard heat-transfer literature' },
+  moistair: { across: 'humid-air ports carry pressure `P`, dry-air mass-flow `ṁ_da`, enthalpy `h`, and humidity ratio `W`', ref: 'Standard psychrometrics literature' },
+  powertrain: { across: 'rotational ports carry angular velocity `ω` and torque `τ`, with vehicle-level speed/force signals', ref: 'Standard vehicle-propulsion-systems literature' },
   pneumatic: { across: 'compressible-gas ports carry pressure `P`, mass-flow `ṁ`, and enthalpy `h` (ISO 6358 flow)', ref: 'ISO 6358 — Pneumatic fluid power: flow-rate characteristics' },
-  hydraulic: { across: 'oil-hydraulic ports carry pressure `P`, mass-flow `ṁ`, and enthalpy `h`', ref: 'the standard literature, H.E., *a standard hydraulics text*' },
-  liquid: { across: 'single-phase liquid-coolant ports carry pressure `P`, mass-flow `ṁ`, and specific enthalpy `h`', ref: 'the standard literature, F.P. et al., *Fundamentals of Heat and Mass Transfer*, Ch. 8' },
-  control: { across: 'signal ports carry the measured and commanded scalar values', ref: 'the standard literature, N.S., *a standard controls text* (7th ed.)' },
+  hydraulic: { across: 'oil-hydraulic ports carry pressure `P`, mass-flow `ṁ`, and enthalpy `h`', ref: 'Standard hydraulic-control literature' },
+  liquid: { across: 'single-phase liquid-coolant ports carry pressure `P`, mass-flow `ṁ`, and specific enthalpy `h`', ref: 'Standard heat-transfer literature' },
+  control: { across: 'signal ports carry the measured and commanded scalar values', ref: 'Standard control-systems literature' },
 };
-const FORMALISM = 'the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., *a standard system-dynamics text* (5th ed.) — acausal/bond-graph formalism';
+const FORMALISM = 'Bond-graph / acausal lumped-parameter system-modeling formalism (standard system-dynamics literature)';
 
 // ── Per-component one-line physical descriptions ─────────────────────────────
 const CDESC = {

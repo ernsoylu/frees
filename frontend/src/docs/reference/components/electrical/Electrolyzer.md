@@ -52,4 +52,3 @@ mdot_h2   = ncells * I_cell * 2.016e-3 / (2 * 96485)
 Q         = I_cell * ncells * (V_cell - Eth)
 heat.Qdot = -Q
 ```
-

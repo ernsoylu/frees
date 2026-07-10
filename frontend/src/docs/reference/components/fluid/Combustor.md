@@ -43,4 +43,3 @@ out.mdot = in.mdot + mdot_f
 out.P    = in.P - dP
 out.mdot * out.h = in.mdot * in.h + eta_b * mdot_f * LHV
 ```
-

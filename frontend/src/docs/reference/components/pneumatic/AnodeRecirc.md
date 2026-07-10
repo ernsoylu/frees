@@ -46,4 +46,3 @@ ret_in.mdot = ER * sup_in.mdot
 out.mdot    = sup_in.mdot + ret_in.mdot
 out.mdot * out.h = sup_in.mdot * sup_in.h + ret_in.mdot * ret_in.h
 ```
-

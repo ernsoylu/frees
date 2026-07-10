@@ -34,8 +34,3 @@ $$ \operatorname{Lookup}(t, r, c) = t_{r,c} \quad\text{(1-based cell)} $$
 | `'t'` | Number | Yes | Name of a TABLE block (string). |
 | `row` | Number | Yes | Row index (1-based). |
 | `col` | Number | Yes | Name of a result-table column. |
-
-## References
-
-1. a standard numerics text, a standard numerics text (3rd ed.), Ch. 3.
-

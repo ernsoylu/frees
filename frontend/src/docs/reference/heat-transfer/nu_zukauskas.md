@@ -5,8 +5,6 @@ summary: Nu, tube-bank cross-flow. SIDE: air/gas over a tube bank. HX: fin-and-t
 related: []
 examples: []
 tags: [nu, zukauskas, heat, transfer]
-references:
-  - "Žukauskas, A. (1972), Adv. Heat Transfer 8:93"
 ---
 
 # nu_zukauskas
@@ -40,9 +38,3 @@ $$ Nu = C\,Re_{\max}^{m}\,Pr^{0.36}\,(Pr/Pr_w)^{1/4} \quad\text{(tube bank)} $$
 | --- | --- | --- | --- |
 | `Re` | Number | Yes | Reynolds number. |
 | `Pr` | Number | Yes | Prandtl number. |
-
-## References
-
-1. the standard literature, F.P. et al., Fundamentals of Heat and Mass Transfer.
-2. the standard literature, S. et al., Heat Exchangers: Selection, Rating, and Thermal Design.
-

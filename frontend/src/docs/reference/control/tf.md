@@ -5,9 +5,6 @@ summary: Create a transfer function from numerator and denominator coefficients.
 related: [tf2ss, ss2tf, pole, zero]
 examples: [partial-fractions]
 tags: [control, transfer function, tf, model, laplace]
-references:
-  - "the standard literature, N.S., a standard controls text (7th ed.), Ch. 2, §2.4"
-  - "the standard literature, K., a standard controls text (5th ed.), Ch. 2"
 ---
 
 # tf
@@ -30,7 +27,7 @@ a SISO linear system.
 
 ## Mathematical Formulation
 
-$$ G(s) = \frac{\text{num}(s)}{\text{den}(s)} = \frac{b_m s^m + \dots + b_0}{a_n s^n + \dots + a_0} \qquad \text{(the standard literature §2.4)} $$
+$$ G(s) = \frac{\text{num}(s)}{\text{den}(s)} = \frac{b_m s^m + \dots + b_0}{a_n s^n + \dots + a_0} $$
 
 with `m ≤ n` for a proper system.
 
@@ -62,8 +59,3 @@ with `m ≤ n` for a proper system.
 | Error | Cause | Fix |
 | --- | --- | --- |
 | `IMPROPER_TF` | `num` order exceeds `den` order | Provide a proper transfer function (`m ≤ n`). |
-
-## References
-
-1. the standard literature, N.S. *a standard controls text* (7th ed.), Ch. 2, §2.4.
-2. the standard literature, K. *a standard controls text* (5th ed.), Ch. 2.

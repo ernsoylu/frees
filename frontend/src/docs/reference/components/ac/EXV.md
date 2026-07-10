@@ -5,9 +5,6 @@ summary: An electronic expansion valve with a commanded opening.
 related: []
 examples: []
 tags: [exv, component, ac, acausal]
-references:
-  - "the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., a standard system-dynamics text (5th ed.) — acausal/bond-graph formalism"
-  - "the industry handbook — Refrigeration"
 ---
 
 # EXV
@@ -47,8 +44,3 @@ out.h    = in.h
 rho_in   = Density(fluid$, P=in.P, h=in.h)
 in.mdot * abs(in.mdot) = (u * CdA_max)^2 * 2 * rho_in * (in.P - out.P)
 ```
-
-## References
-
-1. the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., *a standard system-dynamics text* (5th ed.) — acausal/bond-graph formalism.
-2. the industry handbook — Refrigeration.

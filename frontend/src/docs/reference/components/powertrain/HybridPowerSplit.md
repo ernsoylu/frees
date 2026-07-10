@@ -51,4 +51,3 @@ connect(MG1.u, u1)
 connect(MG2.u, u2)
 connect(MG1.heat, MG2.heat, heat)
 ```
-

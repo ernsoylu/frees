@@ -5,8 +5,6 @@ summary: Nu, Traviss in-tube condensation. SIDE: condensing two-phase refrigeran
 related: []
 examples: []
 tags: [nu, traviss, heat, transfer]
-references:
-  - "the original correlation publication"
 ---
 
 # nu_traviss
@@ -41,9 +39,3 @@ $$ Nu = \frac{Pr_l\,Re_l^{0.9}\,F(X_{tt})}{F_2} \quad\text{(Traviss condensation
 | `Re_l` | Number | Yes | Liquid-only Reynolds number. |
 | `Pr_l` | Number | Yes | Liquid Prandtl number. |
 | `Xtt` | Number | Yes | Turbulent–turbulent Martinelli parameter. |
-
-## References
-
-1. the standard literature, F.P. et al., Fundamentals of Heat and Mass Transfer.
-2. the standard literature, S. et al., Heat Exchangers: Selection, Rating, and Thermal Design.
-

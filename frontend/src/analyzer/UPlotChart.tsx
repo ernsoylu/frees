@@ -33,7 +33,7 @@ export interface AbCursors {
   b: number | null
 }
 
-/** What a mouse drag does on the plot area (toolbar-selected, oscilloscope-style). */
+/** What a mouse drag does on the plot area (toolbar-selected, oscilloscope-tool style). */
 export type MouseMode = 'zoom' | 'pan'
 
 const CURSOR_COLORS = { a: '#ffd43b', b: '#3bc9db' } as const
@@ -183,7 +183,7 @@ export default function UPlotChart({
               ctx.setLineDash([])
               ctx.fillStyle = CURSOR_COLORS[which]
               ctx.font = `${11 * dpr}px sans-serif`
-              // Label + time value attached to the cursor line (the reference measurement tool tooltip).
+              // Label + time value attached to the cursor line (cursor tooltip).
               ctx.fillText(
                 `${which.toUpperCase()} ${formatValue(t)}s`,
                 x + 3 * dpr,

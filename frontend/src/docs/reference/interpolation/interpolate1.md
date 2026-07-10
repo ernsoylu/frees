@@ -5,8 +5,6 @@ summary: Cubic-spline interpolation of table t at x
 related: []
 examples: []
 tags: [interpolate1, interpolation]
-references:
-  - "a standard numerics text, a standard numerics text (3rd ed.), §3.3"
 ---
 
 # interpolate1
@@ -34,8 +32,3 @@ $$ \text{piecewise cubic spline through the table knots (} C^2 \text{ continuous
 | --- | --- | --- | --- |
 | `'t'` | Number | Yes | Name of a TABLE block (string). |
 | `x` | Number | Yes | Vapor quality (0–1). |
-
-## References
-
-1. a standard numerics text, a standard numerics text (3rd ed.), Ch. 3.
-

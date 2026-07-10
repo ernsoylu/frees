@@ -42,4 +42,3 @@ tau_p    = (pump.w / Kmap$(SR))^2
 pump.tau = tau_p
 turb.tau = -TRmap$(SR) * tau_p
 ```
-

@@ -5,9 +5,6 @@ summary: A flow passage that imposes a frictional pressure drop.
 related: []
 examples: []
 tags: [pipe, component, fluid, acausal]
-references:
-  - "the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., a standard system-dynamics text (5th ed.) — acausal/bond-graph formalism"
-  - "the standard literature, a standard fluids text"
 ---
 
 # Pipe
@@ -52,8 +49,3 @@ Re_d     = reynolds(rho, V, D, mu)
 f        = friction_factor(Re_d, rough / D)
 out.P    = in.P - f * (L / D) * rho * V^2 / 2
 ```
-
-## References
-
-1. the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., *a standard system-dynamics text* (5th ed.) — acausal/bond-graph formalism.
-2. the standard literature, *Fluid Mechanics* (8th ed.).

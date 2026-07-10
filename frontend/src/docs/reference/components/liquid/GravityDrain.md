@@ -44,4 +44,3 @@ in.mdot * abs(in.mdot) = (Cd * A_d)^2 * 2 * rho * dP
 out.mdot = in.mdot
 out.h    = in.h
 ```
-

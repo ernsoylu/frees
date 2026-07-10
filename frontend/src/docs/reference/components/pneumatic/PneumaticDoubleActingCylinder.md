@@ -50,4 +50,3 @@ init(a.P) = Pa0
 der(b.P)  = (R * T * b.mdot + b.P * Ab * rod.vel) / Vb0
 init(b.P) = Pb0
 ```
-

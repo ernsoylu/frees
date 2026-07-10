@@ -5,8 +5,6 @@ summary: Bessel function of the first kind, order 1 — J_1(x).
 related: [besselj, besselj0, bessely1]
 examples: []
 tags: [special function, bessel, j1, first kind]
-references:
-  - "the standard literature, M. & the standard literature, I.A., Handbook of Mathematical Functions, §9.1"
 ---
 
 # besselj1
@@ -23,7 +21,7 @@ y = besselj1(x)
 
 ## Mathematical Formulation
 
-$$ J_1(x) = \sum_{k=0}^{\infty}\frac{(-1)^k}{k!\,(k+1)!}\left(\frac{x}{2}\right)^{2k+1}, \qquad J_0'(x) = -J_1(x) \qquad \text{(A\&S §9.1)} $$
+$$ J_1(x) = \sum_{k=0}^{\infty}\frac{(-1)^k}{k!\,(k+1)!}\left(\frac{x}{2}\right)^{2k+1}, \qquad J_0'(x) = -J_1(x) $$
 
 ## Examples
 
@@ -43,7 +41,3 @@ y = besselj1(0)
 | Argument | Type | Description |
 | --- | --- | --- |
 | `y` | Number | J_1(x). |
-
-## References
-
-1. the standard literature, M. & the standard literature, I.A. *Handbook of Mathematical Functions*, §9.1.

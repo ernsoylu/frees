@@ -5,8 +5,6 @@ summary: Fanning friction for a compact fin surface. SIDE: air/gas finned side d
 related: []
 examples: []
 tags: [fin, heat, transfer]
-references:
-  - "the standard literature, W.M. & London, A.L., Compact Heat Exchangers (3rd ed.)"
 ---
 
 # f_fin
@@ -40,9 +38,3 @@ $$ f = C_f\,Re^{m_f} \quad\text{(Fanning friction for the fin surface)} $$
 | --- | --- | --- | --- |
 | `surface$` | String | Yes | Selector — One of `plain`, `wavy`, `louvered`, `offset`. |
 | `Re` | Number | Yes | Reynolds number. |
-
-## References
-
-1. the standard literature, F.P. et al., Fundamentals of Heat and Mass Transfer.
-2. the standard literature, S. et al., Heat Exchangers: Selection, Rating, and Thermal Design.
-

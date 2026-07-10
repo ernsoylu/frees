@@ -39,4 +39,3 @@ The acausal equations this component expands into (over its port members and par
 a.vel = ratio * b.vel
 b.f   = -ratio * a.f
 ```
-

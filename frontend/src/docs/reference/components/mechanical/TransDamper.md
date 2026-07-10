@@ -5,9 +5,6 @@ summary: A translational viscous damper, F = c·v.
 related: []
 examples: []
 tags: [transdamper, component, mechanical, acausal]
-references:
-  - "the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., a standard system-dynamics text (5th ed.) — acausal/bond-graph formalism"
-  - "the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., System Dynamics (5th ed.)"
 ---
 
 # TransDamper
@@ -42,8 +39,3 @@ Instantiating the component expands these acausal equations (over its port membe
 a.f = c * (a.vel - b.vel)
 a.f + b.f = 0
 ```
-
-## References
-
-1. the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., *a standard system-dynamics text* (5th ed.) — acausal/bond-graph formalism.
-2. the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., *System Dynamics* (5th ed.).

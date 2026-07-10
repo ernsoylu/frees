@@ -5,9 +5,6 @@ summary: A gear pair imposing a fixed speed/torque ratio between two shafts.
 related: []
 examples: []
 tags: [gear, component, mechanical, acausal]
-references:
-  - "the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., a standard system-dynamics text (5th ed.) — acausal/bond-graph formalism"
-  - "the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., System Dynamics (5th ed.)"
 ---
 
 # Gear
@@ -42,8 +39,3 @@ Instantiating the component expands these acausal equations (over its port membe
 in.w    = ratio * out.w
 out.tau = -ratio * in.tau
 ```
-
-## References
-
-1. the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., *a standard system-dynamics text* (5th ed.) — acausal/bond-graph formalism.
-2. the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., *System Dynamics* (5th ed.).

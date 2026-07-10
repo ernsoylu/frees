@@ -5,9 +5,6 @@ summary: Secondary (fin) surface area of a fin-and-tube heat exchanger.
 related: [hx_area_direct, hx_fin_len, hx_eta_surf]
 examples: [ev-thermal-management]
 tags: [heat exchanger, geometry, secondary area, fin area, fin-and-tube]
-references:
-  - "Shah, R.K. & Sekulić, D.P., Fundamentals of Heat Exchanger Design, Ch. 8"
-  - "the standard literature, W.M. & London, A.L., Compact Heat Exchangers (3rd ed.), Ch. 2"
 ---
 
 # hx_area_indirect
@@ -37,7 +34,7 @@ count (both fin faces):
 
 $$ A_{\text{fin}} = f\big(W,\,\text{tubeCount},\,\text{finLen}\big) $$
 
-(a fin-and-tube geometric construction; Shah & Sekulić, Ch. 8).
+(a fin-and-tube geometric construction).
 
 > **Method:** direct geometric evaluation of the total fin area.
 
@@ -69,8 +66,3 @@ $$ A_{\text{fin}} = f\big(W,\,\text{tubeCount},\,\text{finLen}\big) $$
 | Error | Cause | Fix |
 | --- | --- | --- |
 | `DOMAIN_ERROR` | A geometry input ≤ 0 | All dimensions must be positive. |
-
-## References
-
-1. Shah, R.K. & Sekulić, D.P. *Fundamentals of Heat Exchanger Design*, Ch. 8.
-2. the standard literature, W.M. & London, A.L. *Compact Heat Exchangers* (3rd ed.), Ch. 2.

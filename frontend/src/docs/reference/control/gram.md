@@ -5,9 +5,6 @@ summary: Controllability or observability Gramian of a state-space system.
 related: [ctrb, obsv, balreal]
 examples: [estimator-gramian-balreal]
 tags: [control, gramian, controllability, observability, balanced]
-references:
-  - "the standard literature, P.J. & Michel, A.N., A Linear Systems Primer, Ch. 5"
-  - "Moore, B.C. (1981), IEEE Trans. Automat. Control 26(1):17"
 ---
 
 # gram
@@ -32,7 +29,7 @@ for a stable, controllable/observable system.
 
 ## Mathematical Formulation
 
-The Gramians solve the Lyapunov equations (the standard literature Ch. 5):
+The Gramians solve the Lyapunov equations:
 
 $$ A W_c + W_c A^\top + B B^\top = 0, \qquad A^\top W_o + W_o A + C^\top C = 0 $$
 
@@ -68,8 +65,3 @@ state directions by controllability/observability.
 | Error | Cause | Fix |
 | --- | --- | --- |
 | `NOT_STABLE` | `A` has non-negative eigenvalues | The Gramian integral converges only for a stable `A`. |
-
-## References
-
-1. the standard literature, P.J. & Michel, A.N. *A Linear Systems Primer*, Ch. 5.
-2. Moore, B.C. (1981), *IEEE Trans. Automat. Control* 26(1):17.

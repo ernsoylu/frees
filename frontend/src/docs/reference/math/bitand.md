@@ -33,4 +33,3 @@ $$ (a \,\&\, b)\ \text{— bitwise AND of the integer operands} $$
 | --- | --- | --- | --- |
 | `a` | Number | Yes | First operand. |
 | `b` | Number | Yes | Second operand. |
-

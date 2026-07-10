@@ -32,4 +32,3 @@ $$ \arg(z) = \operatorname{atan2}(b, a)\ \ [\text{rad}] $$
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
 | `z` | Number | Yes | Argument (complex or real). |
-

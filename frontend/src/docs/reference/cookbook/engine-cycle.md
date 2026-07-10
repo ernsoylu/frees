@@ -6,9 +6,6 @@ summary: Build a single-zone spark-ignition engine cycle and integrate its cylin
 examples: [engine-cycle-wiebe]
 tags: [cookbook, engine, wiebe, heat release, indicator diagram, powertrain, dynamic]
 related: [wiebe_rate, AdiabaticFlameTemp]
-references:
-  - "the standard literature, J.B., a standard engine text (2nd ed.), Ch. 9"
-  - "the standard literature, Y.A. & the standard literature, M.A., a standard thermodynamics text, Ch. 9"
 ---
 
 # SI Engine Cycle (Wiebe Heat Release)
@@ -27,8 +24,7 @@ A crank-angle first-law model integrated by a `DYNAMIC` block:
 
 ## Approach
 
-The Wiebe burn rate spreads the total heat release `Q_tot` over the burn duration
-(the standard literature Ch. 9):
+The Wiebe burn rate spreads the total heat release `Q_tot` over the burn duration:
 
 $$ \frac{dQ}{d\theta} = Q_{tot}\,\frac{dx_b}{d\theta},\qquad x_b = 1 - \exp\!\left[-a\left(\tfrac{\theta-\theta_0}{\Delta\theta}\right)^{m+1}\right] $$
 
@@ -43,8 +39,3 @@ angle. Plot `p` vs `V` for the indicator diagram.
 **What it tells you:** the cylinder-pressure history and the closed p–V loop whose
 area is the indicated work. The burn looks bell-shaped (peaking partway through the
 duration); advancing or retarding `θ_soc` shifts the peak pressure and the work.
-
-## References
-
-1. the standard literature, J.B. *a standard engine text* (2nd ed.), Ch. 9.
-2. the standard literature, Y.A. & the standard literature, M.A. *a standard thermodynamics text*, Ch. 9.

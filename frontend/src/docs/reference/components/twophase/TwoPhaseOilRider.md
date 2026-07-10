@@ -44,4 +44,3 @@ out.h    = in.h
 out.oc   = oc_set
 f_deg    = 1 - k_deg * oc_set
 ```
-

@@ -5,9 +5,6 @@ summary: A two-phase boundary fixing the pressure (source).
 related: []
 examples: [ev-thermal-management]
 tags: [twophasepressuresource, component, twophase, acausal]
-references:
-  - "the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., a standard system-dynamics text (5th ed.) — acausal/bond-graph formalism"
-  - "the standard literature, J.G. & the standard literature, J.R., a standard two-phase text (3rd ed.)"
 ---
 
 # TwoPhasePressureSource
@@ -51,8 +48,3 @@ out.h = Enthalpy(fluid$, P=P, x=x)
 Instantiated in the verified example below:
 
 [Run: ev-thermal-management]
-
-## References
-
-1. the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., *a standard system-dynamics text* (5th ed.) — acausal/bond-graph formalism.
-2. the standard literature, J.G. & the standard literature, J.R., *a standard two-phase text* (3rd ed.).

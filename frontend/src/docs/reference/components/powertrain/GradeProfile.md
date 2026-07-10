@@ -43,4 +43,3 @@ der(s)  = port.vel
 init(s) = s0
 port.f  = m * g * sin(map$(s))
 ```
-

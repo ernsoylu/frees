@@ -6,7 +6,6 @@ related: [besselk, besselj, besseli0, besseli1]
 examples: []
 tags: [special function, modified bessel, first kind, fin, conduction]
 references:
-  - "the standard literature, M. & the standard literature, I.A., Handbook of Mathematical Functions, §9.6"
   - "NIST Digital Library of Mathematical Functions, §10.25"
 ---
 
@@ -29,7 +28,7 @@ For fixed orders use `besseli0` / `besseli1`.
 
 ## Mathematical Formulation
 
-`I_n` solves the modified Bessel equation (A&S §9.6.1, §9.6.10):
+`I_n` solves the modified Bessel equation:
 
 $$ x^2 y'' + x y' - (x^2 + n^2)y = 0, \qquad I_n(x) = \sum_{k=0}^{\infty}\frac{1}{k!\,(n+k)!}\left(\frac{x}{2}\right)^{2k+n} $$
 
@@ -59,5 +58,4 @@ y = besseli(0, 0)
 
 ## References
 
-1. the standard literature, M. & the standard literature, I.A. *Handbook of Mathematical Functions*, §9.6.
-2. NIST *Digital Library of Mathematical Functions*, §10.25.
+1. NIST *Digital Library of Mathematical Functions*, §10.25.

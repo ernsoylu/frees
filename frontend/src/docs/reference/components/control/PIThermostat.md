@@ -5,9 +5,6 @@ summary: A proportional–integral thermostat controller driving an actuator to 
 related: []
 examples: []
 tags: [pithermostat, component, control, acausal]
-references:
-  - "the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., a standard system-dynamics text (5th ed.) — acausal/bond-graph formalism"
-  - "the standard literature, N.S., a standard controls text (7th ed.)"
 ---
 
 # PIThermostat
@@ -46,8 +43,3 @@ der(integ)  = err
 init(integ) = 0
 port.Qdot   = -(Kp * err + Ki * integ)
 ```
-
-## References
-
-1. the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., *a standard system-dynamics text* (5th ed.) — acausal/bond-graph formalism.
-2. the standard literature, N.S., *a standard controls text* (7th ed.).

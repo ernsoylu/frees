@@ -5,9 +5,6 @@ summary: A refrigerant expansion valve (isenthalpic throttle).
 related: []
 examples: []
 tags: [twophaseexpansionvalve, component, twophase, acausal]
-references:
-  - "the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., a standard system-dynamics text (5th ed.) — acausal/bond-graph formalism"
-  - "the standard literature, J.G. & the standard literature, J.R., a standard two-phase text (3rd ed.)"
 ---
 
 # TwoPhaseExpansionValve
@@ -46,8 +43,3 @@ out.h    = in.h
 rho_in   = Density(fluid$, P=in.P, h=in.h)
 in.mdot * abs(in.mdot) = Cv^2 * 2 * rho_in * (in.P - out.P)
 ```
-
-## References
-
-1. the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., *a standard system-dynamics text* (5th ed.) — acausal/bond-graph formalism.
-2. the standard literature, J.G. & the standard literature, J.R., *a standard two-phase text* (3rd ed.).

@@ -40,4 +40,3 @@ in.w      = ratio * 0.5 * (left.w + right.w)
 left.tau  = -0.5 * ratio * in.tau
 right.tau = -0.5 * ratio * in.tau
 ```
-

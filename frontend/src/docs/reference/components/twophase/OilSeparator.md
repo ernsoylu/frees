@@ -45,4 +45,3 @@ bleed.P    = in.P
 bleed.h    = Enthalpy(fluid$, P=in.P, x=0)
 out.mdot * out.h = in.mdot * in.h - bleed.mdot * bleed.h
 ```
-

@@ -6,7 +6,6 @@ related: [chebyshevt, legendrep]
 examples: []
 tags: [special function, chebyshev, orthogonal polynomial, second kind]
 references:
-  - "the standard literature, M. & the standard literature, I.A., Handbook of Mathematical Functions, §22"
   - "NIST Digital Library of Mathematical Functions, §18.3"
 ---
 
@@ -29,7 +28,7 @@ On `[−1, 1]`, `U_n(cos θ) = sin((n+1)θ)/sin θ`. `U_0 = 1`, `U_1 = 2x`, with
 
 ## Mathematical Formulation
 
-$$ U_n(\cos\theta) = \frac{\sin((n+1)\theta)}{\sin\theta}, \qquad U_{n+1}(x) = 2x\,U_n(x) - U_{n-1}(x) \qquad \text{(A\&S §22)} $$
+$$ U_n(\cos\theta) = \frac{\sin((n+1)\theta)}{\sin\theta}, \qquad U_{n+1}(x) = 2x\,U_n(x) - U_{n-1}(x) $$
 
 > **Method:** three-term recurrence from `U_0 = 1`, `U_1 = 2x`.
 
@@ -55,5 +54,4 @@ y = chebyshevu(1, 1)
 
 ## References
 
-1. the standard literature, M. & the standard literature, I.A. *Handbook of Mathematical Functions*, §22.
-2. NIST *Digital Library of Mathematical Functions*, §18.3.
+1. NIST *Digital Library of Mathematical Functions*, §18.3.

@@ -43,4 +43,3 @@ out.h    = in.h
 rho_in   = Density(fluid$, P=in.P, h=in.h)
 in.mdot * abs(in.mdot) = (u.sig * CdA_max)^2 * 2 * rho_in * (in.P - out.P)
 ```
-

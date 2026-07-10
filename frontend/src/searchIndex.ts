@@ -50,16 +50,13 @@ export interface SearchHit {
 // expanded to the frees vocabulary and the best-scoring variant counts.
 // Single words only (the query is split on whitespace before expansion).
 const SYNONYMS: Record<string, string[]> = {
-  // a matrix language / block-diagram tools
+  // matrix-language / block-diagram vocabulary
   ode113: ['dynamic', 'ode45'],
   fsolve: ['newton', 'solve', 'guess'],
   fzero: ['newton', 'guess'],
   interp1: ['interpolate'],
   interp2: ['interpolate2d'],
-  block-diagram tools: ['components', 'dynamic'],
-  acausal-tools: ['components', 'acausal'],
-  an acausal language: ['components', 'acausal'],
-  // a reference solver
+  // equation-solver vocabulary
   duplicate: ['for', 'arrays'],
   procedure: ['function', 'call'],
   // Domain vocabulary
@@ -151,7 +148,7 @@ function buildIndex(): IndexEntry[] {
     entries.push({ id: t.id, label: t.label, section: t.section, kind: 'reference', headings: [], keywords: [], text });
   }
 
-  // 2b. Per-function reference pages (industry-standard-style) — index name, summary, tags,
+  // 2b. Per-function reference pages — index name, summary, tags,
   //     and full body so a search for a function or a method/equation lands here.
   for (const p of REFERENCE_PAGES) {
     const { headings, text } = parseMarkdown(p.body);

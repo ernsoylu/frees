@@ -33,4 +33,3 @@ $$ \operatorname{StringPos}(s, t) = \text{1-based index of } t \text{ in } s,\ 0
 | --- | --- | --- | --- |
 | `s$` | String | Yes | String literal. |
 | `sub$` | String | Yes | Substring to search for. |
-

@@ -32,4 +32,3 @@ $$ \min_r c_r $$
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
 | `'col'` | Number | Yes | Name of a result-table column (string). |
-

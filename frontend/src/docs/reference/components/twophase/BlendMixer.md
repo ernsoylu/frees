@@ -5,9 +5,6 @@ summary: A gas-blend (mixture) mixing junction carrying the species rider.
 related: []
 examples: []
 tags: [blendmixer, component, twophase, acausal]
-references:
-  - "the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., a standard system-dynamics text (5th ed.) — acausal/bond-graph formalism"
-  - "the standard literature, J.G. & the standard literature, J.R., a standard two-phase text (3rd ed.)"
 ---
 
 # BlendMixer
@@ -44,8 +41,3 @@ out.mdot = in1.mdot + in2.mdot
 out.mdot * out.h = in1.mdot * in1.h + in2.mdot * in2.h
 out.mdot * out.z = in1.mdot * in1.z + in2.mdot * in2.z
 ```
-
-## References
-
-1. the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., *a standard system-dynamics text* (5th ed.) — acausal/bond-graph formalism.
-2. the standard literature, J.G. & the standard literature, J.R., *a standard two-phase text* (3rd ed.).

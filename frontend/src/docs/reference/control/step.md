@@ -5,9 +5,6 @@ summary: Unit step response of a transfer function over a time vector.
 related: [impulse, lsim, pole]
 examples: [control-analysis-report]
 tags: [control, step response, transient, overshoot, time domain]
-references:
-  - "the standard literature, N.S., a standard controls text (7th ed.), Ch. 4, §4.6"
-  - "the standard literature, K., a standard controls text (5th ed.), Ch. 5, §5.3"
 ---
 
 # step
@@ -36,7 +33,7 @@ $$ Y(s) = G(s)\cdot\frac{1}{s}, \qquad y(t) = \mathcal{L}^{-1}\{Y(s)\} $$
 For a standard second-order system $G = \omega_n^2/(s^2 + 2\zeta\omega_n s + \omega_n^2)$,
 the peak overshoot is $M_p = \exp\!\big(-\pi\zeta/\sqrt{1-\zeta^2}\big)$.
 
-> **Method:** numerical evaluation of the step response at each `t` (the standard literature §4.6).
+> **Method:** numerical evaluation of the step response at each `t`.
 
 ## Examples
 
@@ -68,8 +65,3 @@ steady-state value within a few seconds.
 | Error | Cause | Fix |
 | --- | --- | --- |
 | `IMPROPER_TF` | `num` higher order than `den` | The transfer function must be proper (order of `num` ≤ order of `den`). |
-
-## References
-
-1. the standard literature, N.S. *a standard controls text* (7th ed.), Ch. 4, §4.6.
-2. the standard literature, K. *a standard controls text* (5th ed.), Ch. 5, §5.3.

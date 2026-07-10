@@ -5,8 +5,6 @@ summary: Determinant
 related: []
 examples: []
 tags: [determinant, math]
-references:
-  - "the standard literature, G.H. & the standard literature, C.F., Matrix Computations (4th ed.)"
 ---
 
 # Determinant
@@ -33,7 +31,3 @@ $$ \det(A) = \sum_{\sigma} \operatorname{sgn}(\sigma)\prod_i A_{i,\sigma(i)} = \
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
 | `A` | Number | Yes | Matrix. |
-
-## References
-
-1. the standard literature, G.H. & the standard literature, C.F., *Matrix Computations* (4th ed.).

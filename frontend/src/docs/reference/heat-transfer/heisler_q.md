@@ -5,8 +5,6 @@ summary: Fraction of total heat transferred Q/Q0 (Heisler one-term) for a wall, 
 related: [heisler_temp]
 examples: [heisler-transient]
 tags: [transient conduction, heisler, heat fraction, biot, fourier, energy]
-references:
-  - "the standard literature, J.P., Heat Transfer (10th ed.), Appendix C, Eq. (C-10), (C-11), (C-12), Eq. (4-16)"
 ---
 
 # heisler_q
@@ -31,10 +29,10 @@ storage calculations.
 ## Mathematical Formulation
 
 With the midplane ratio $\theta_0^* = C_1\exp(-\lambda_1^2 Fo)$ and
-$Q_0 = \rho c V(T_i - T_\infty)$ (the standard literature Eq. 4-16):
+$Q_0 = \rho c V(T_i - T_\infty)$:
 
-$$ \text{wall: } \frac{Q}{Q_0} = 1 - \frac{\theta_0^*}{\lambda_1}\sin\lambda_1 \qquad \text{(the standard literature Eq. C-10)} $$
-$$ \text{cylinder: } \frac{Q}{Q_0} = 1 - \frac{2\theta_0^*}{\lambda_1}J_1(\lambda_1) \quad\text{(C-11)}, \qquad \text{sphere: } \frac{Q}{Q_0} = 1 - \frac{3\theta_0^*}{\lambda_1^3}\big(\sin\lambda_1 - \lambda_1\cos\lambda_1\big) \quad\text{(C-12)} $$
+$$ \text{wall: } \frac{Q}{Q_0} = 1 - \frac{\theta_0^*}{\lambda_1}\sin\lambda_1 $$
+$$ \text{cylinder: } \frac{Q}{Q_0} = 1 - \frac{2\theta_0^*}{\lambda_1}J_1(\lambda_1), \qquad \text{sphere: } \frac{Q}{Q_0} = 1 - \frac{3\theta_0^*}{\lambda_1^3}\big(\sin\lambda_1 - \lambda_1\cos\lambda_1\big) $$
 
 > **Method:** first-term truncation using the same `λ1(Bi)`, `C1(Bi)` as
 > `heisler_temp`.
@@ -68,7 +66,3 @@ $$ \text{cylinder: } \frac{Q}{Q_0} = 1 - \frac{2\theta_0^*}{\lambda_1}J_1(\lambd
 | --- | --- | --- |
 | `UNKNOWN_GEOMETRY` | `geom$` not recognized | Use `'wall'`, `'cylinder'`, or `'sphere'`. |
 | (inaccurate result) | `Fo < 0.2` | The one-term approximation is invalid very early in the transient. |
-
-## References
-
-1. the standard literature, J.P. *Heat Transfer* (10th ed.), Appendix C, Eq. (C-10), (C-11), (C-12), Eq. (4-16).

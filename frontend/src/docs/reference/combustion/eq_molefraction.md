@@ -5,8 +5,6 @@ summary: Equilibrium product mole fraction (dissociation)
 related: []
 examples: []
 tags: [eq, molefraction, combustion]
-references:
-  - "Turns, S.R., An Introduction to Combustion (3rd ed.), Ch. 2"
 ---
 
 # eq_molefraction
@@ -37,9 +35,3 @@ $$ \text{species mole fraction from chemical equilibrium } \big(\min G \text{ at
 | `T` | Number | Yes | Temperature [K]. |
 | `P` | Number | Yes | Pressure [Pa]. |
 | `species$` | String | Yes | Product species name (e.g. CO, NO). |
-
-## References
-
-1. Turns, S.R., An Introduction to Combustion (3rd ed.).
-2. the standard literature, J.B., a standard engine text.
-

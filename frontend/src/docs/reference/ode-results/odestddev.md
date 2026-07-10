@@ -32,4 +32,3 @@ $$ s = \sqrt{\tfrac{1}{N}\sum_i (\text{col}(t_i) - \overline{\text{col}})^2} $$
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
 | `'col'` | Number | Yes | Name of a result-table column (string). |
-

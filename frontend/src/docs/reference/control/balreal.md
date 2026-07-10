@@ -5,9 +5,6 @@ summary: Internally-balanced state-space realization for model reduction.
 related: [gram, ctrb, obsv, ss2tf]
 examples: [estimator-gramian-balreal]
 tags: [control, balanced realization, model reduction, gramian, hankel]
-references:
-  - "Moore, B.C. (1981), IEEE Trans. Automat. Control 26(1):17"
-  - "the standard literature, P.J. & Michel, A.N., A Linear Systems Primer, Ch. 5"
 ---
 
 # balreal
@@ -31,7 +28,7 @@ reduced model that drops the least-significant states keeps the dominant dynamic
 
 ## Mathematical Formulation
 
-Find `T` such that the transformed Gramians satisfy (Moore 1981):
+Find `T` such that the transformed Gramians satisfy:
 
 $$ \tilde W_c = \tilde W_o = \Sigma = \mathrm{diag}(\sigma_1 \ge \sigma_2 \ge \dots), \qquad (A_b, B_b, C_b) = (T^{-1}AT,\ T^{-1}B,\ CT) $$
 
@@ -70,8 +67,3 @@ singular values for truncation.
 | Error | Cause | Fix |
 | --- | --- | --- |
 | `NOT_MINIMAL` | system not controllable/observable | Balancing requires a minimal (or stable) realization. |
-
-## References
-
-1. Moore, B.C. (1981), *IEEE Trans. Automat. Control* 26(1):17.
-2. the standard literature, P.J. & Michel, A.N. *A Linear Systems Primer*, Ch. 5.

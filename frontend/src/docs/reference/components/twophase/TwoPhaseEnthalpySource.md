@@ -5,9 +5,6 @@ summary: A two-phase boundary fixing the stream enthalpy.
 related: []
 examples: []
 tags: [twophaseenthalpysource, component, twophase, acausal]
-references:
-  - "the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., a standard system-dynamics text (5th ed.) — acausal/bond-graph formalism"
-  - "the standard literature, J.G. & the standard literature, J.R., a standard two-phase text (3rd ed.)"
 ---
 
 # TwoPhaseEnthalpySource
@@ -44,8 +41,3 @@ Instantiating the component expands these acausal equations (over its port membe
 out.mdot = mdot
 out.h    = h
 ```
-
-## References
-
-1. the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., *a standard system-dynamics text* (5th ed.) — acausal/bond-graph formalism.
-2. the standard literature, J.G. & the standard literature, J.R., *a standard two-phase text* (3rd ed.).

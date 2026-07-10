@@ -44,4 +44,3 @@ Rrad   = (1 - e1) / (e1 * A1) + 1 / (A1 * F12) + (1 - e2) / (e2 * A2)
 a.Qdot = 5.670374419e-8 * (a.T^4 - b.T^4) / Rrad
 a.Qdot + b.Qdot = 0
 ```
-

@@ -42,4 +42,3 @@ u      = 0.5 * (1 + tanh((a.T - Ton) / band))
 a.Qdot = u * G * (a.T - b.T)
 a.Qdot + b.Qdot = 0
 ```
-

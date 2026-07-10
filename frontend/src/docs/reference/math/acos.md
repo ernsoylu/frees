@@ -32,4 +32,3 @@ $$ y = \arccos(x), \qquad \cos(y) = x,\ \ y \in [0, \pi] $$
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
 | `x` | Number | Yes | Vapor quality (0–1). |
-

@@ -5,9 +5,6 @@ summary: A thermal contact resistance between two surfaces.
 related: []
 examples: []
 tags: [contactresistance, component, heat, acausal]
-references:
-  - "the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., a standard system-dynamics text (5th ed.) — acausal/bond-graph formalism"
-  - "the standard literature, F.P. et al., Fundamentals of Heat and Mass Transfer"
 ---
 
 # ContactResistance
@@ -43,8 +40,3 @@ Q      = (a.T - b.T) / Rth
 a.Qdot = Q
 b.Qdot = -Q
 ```
-
-## References
-
-1. the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., *a standard system-dynamics text* (5th ed.) — acausal/bond-graph formalism.
-2. the standard literature, F.P. et al., *Fundamentals of Heat and Mass Transfer*.

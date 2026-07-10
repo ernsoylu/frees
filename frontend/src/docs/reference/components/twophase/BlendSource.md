@@ -5,9 +5,6 @@ summary: A boundary supplying a gas-blend stream of set composition.
 related: []
 examples: []
 tags: [blendsource, component, twophase, acausal]
-references:
-  - "the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., a standard system-dynamics text (5th ed.) — acausal/bond-graph formalism"
-  - "the standard literature, J.G. & the standard literature, J.R., a standard two-phase text (3rd ed.)"
 ---
 
 # BlendSource
@@ -52,8 +49,3 @@ bubble   = Temperature(fluid$, P=P, x=0)
 dew      = Temperature(fluid$, P=P, x=1)
 glide    = dew - bubble
 ```
-
-## References
-
-1. the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., *a standard system-dynamics text* (5th ed.) — acausal/bond-graph formalism.
-2. the standard literature, J.G. & the standard literature, J.R., *a standard two-phase text* (3rd ed.).

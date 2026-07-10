@@ -6,7 +6,6 @@ related: [erfc, erfinv, normalcdf]
 examples: []
 tags: [special function, error function, erf, gaussian, probability]
 references:
-  - "the standard literature, M. & the standard literature, I.A., Handbook of Mathematical Functions, §7.1"
   - "NIST Digital Library of Mathematical Functions, §7.2"
 ---
 
@@ -28,7 +27,7 @@ An odd function (`erf(−x) = −erf(x)`) ranging from −1 to 1, with `erf(0) =
 
 ## Mathematical Formulation
 
-$$ \operatorname{erf}(x) = \frac{2}{\sqrt{\pi}}\int_0^x e^{-t^2}\,dt \qquad \text{(A\&S §7.1.1)} $$
+$$ \operatorname{erf}(x) = \frac{2}{\sqrt{\pi}}\int_0^x e^{-t^2}\,dt $$
 
 related to the normal CDF by `Φ(x) = ½[1 + erf(x/√2)]`.
 
@@ -55,5 +54,4 @@ y = erf(1)
 
 ## References
 
-1. the standard literature, M. & the standard literature, I.A. *Handbook of Mathematical Functions*, §7.1.
-2. NIST *Digital Library of Mathematical Functions*, §7.2.
+1. NIST *Digital Library of Mathematical Functions*, §7.2.

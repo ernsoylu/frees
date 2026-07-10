@@ -6,7 +6,6 @@ related: []
 examples: []
 tags: [pneumaticvolume, component, pneumatic, acausal]
 references:
-  - "the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., a standard system-dynamics text (5th ed.) — acausal/bond-graph formalism"
   - "ISO 6358 — Pneumatic fluid power: flow-rate characteristics"
 ---
 
@@ -51,5 +50,4 @@ init(in.P) = P0
 
 ## References
 
-1. the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., *a standard system-dynamics text* (5th ed.) — acausal/bond-graph formalism.
-2. ISO 6358 — Pneumatic fluid power: flow-rate characteristics.
+1. ISO 6358 — Pneumatic fluid power: flow-rate characteristics.

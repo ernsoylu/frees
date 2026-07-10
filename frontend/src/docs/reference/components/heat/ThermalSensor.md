@@ -5,9 +5,6 @@ summary: A temperature sensor (pass-through).
 related: []
 examples: []
 tags: [thermalsensor, component, heat, acausal]
-references:
-  - "the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., a standard system-dynamics text (5th ed.) — acausal/bond-graph formalism"
-  - "the standard literature, F.P. et al., Fundamentals of Heat and Mass Transfer"
 ---
 
 # ThermalSensor
@@ -36,8 +33,3 @@ Instantiating the component expands these acausal equations (over its port membe
 port.Qdot = 0
 T_meas    = port.T
 ```
-
-## References
-
-1. the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., *a standard system-dynamics text* (5th ed.) — acausal/bond-graph formalism.
-2. the standard literature, F.P. et al., *Fundamentals of Heat and Mass Transfer*.

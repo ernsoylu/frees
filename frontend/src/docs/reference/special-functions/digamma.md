@@ -6,7 +6,6 @@ related: [gamma, loggamma, beta]
 examples: []
 tags: [special function, digamma, psi, gamma derivative]
 references:
-  - "the standard literature, M. & the standard literature, I.A., Handbook of Mathematical Functions, §6.3"
   - "NIST Digital Library of Mathematical Functions, §5.15"
 ---
 
@@ -29,7 +28,7 @@ recurrence that mirrors the Gamma recurrence.
 
 ## Mathematical Formulation
 
-$$ \psi(x) = \frac{d}{dx}\ln\Gamma(x) = \frac{\Gamma'(x)}{\Gamma(x)} \qquad \text{(A\&S §6.3.1)} $$
+$$ \psi(x) = \frac{d}{dx}\ln\Gamma(x) = \frac{\Gamma'(x)}{\Gamma(x)} $$
 
 with the recurrence and the harmonic-number link
 
@@ -66,5 +65,4 @@ y = digamma(1)
 
 ## References
 
-1. the standard literature, M. & the standard literature, I.A. *Handbook of Mathematical Functions*, §6.3.
-2. NIST *Digital Library of Mathematical Functions*, §5.15.
+1. NIST *Digital Library of Mathematical Functions*, §5.15.

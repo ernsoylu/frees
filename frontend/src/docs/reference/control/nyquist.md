@@ -5,9 +5,6 @@ summary: Nyquist frequency response — real and imaginary parts of G(jω).
 related: [bode, margin]
 examples: [control-analysis-report]
 tags: [control, nyquist, frequency response, stability, polar plot]
-references:
-  - "the standard literature, N.S., a standard controls text (7th ed.), Ch. 10, §10.4"
-  - "the standard literature, K., a standard controls text (5th ed.), Ch. 7, §7.3"
 ---
 
 # nyquist
@@ -37,7 +34,7 @@ $$ G(j\omega) = \mathrm{re}(\omega) + j\,\mathrm{im}(\omega), \qquad \mathrm{re}
 The Nyquist stability criterion relates closed-loop right-half-plane poles `Z` to
 encirclements `N` of `−1` and open-loop RHP poles `P` by `Z = N + P`.
 
-> **Method:** evaluate `G(jω)` at each `omega`; return Cartesian parts (the standard literature §10.4).
+> **Method:** evaluate `G(jω)` at each `omega`; return Cartesian parts.
 
 ## Examples
 
@@ -68,8 +65,3 @@ with the stable closed loop.
 | Error | Cause | Fix |
 | --- | --- | --- |
 | `EMPTY_FREQUENCY` | `omega` is empty | Provide a frequency vector spanning the dynamics of interest. |
-
-## References
-
-1. the standard literature, N.S. *a standard controls text* (7th ed.), Ch. 10, §10.4.
-2. the standard literature, K. *a standard controls text* (5th ed.), Ch. 7, §7.3.

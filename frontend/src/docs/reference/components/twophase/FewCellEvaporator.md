@@ -73,4 +73,3 @@ der(h3)  = (m3 * (h2 - h3) + Q3) / (rho3 * V)
 init(h3) = h0
 out.h = h3
 ```
-

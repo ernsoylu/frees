@@ -5,8 +5,6 @@ summary: 3×3 rotation matrix from Euler angles (φ, θ, ψ).
 related: [Eigen, Transpose]
 examples: []
 tags: [matrix, rotation, euler angles, kinematics, attitude]
-references:
-  - "the standard literature, H., Poole, C. & the standard literature, J., a standard mechanics text, Ch. 4"
 ---
 
 # EulerRotate
@@ -29,7 +27,7 @@ is an orthonormal rotation (`Rᵀ = R⁻¹`, `det R = 1`).
 
 ## Mathematical Formulation
 
-The rotation is the product of three elementary rotations (the standard literature Ch. 4):
+The rotation is the product of three elementary rotations:
 
 $$ R(\phi, \theta, \psi) = R_z(\psi)\,R_x(\theta)\,R_z(\phi), \qquad R^\top R = I,\ \det R = 1 $$
 
@@ -56,7 +54,3 @@ $$ R(\phi, \theta, \psi) = R_z(\psi)\,R_x(\theta)\,R_z(\phi), \qquad R^\top R = 
 | Argument | Type | Description |
 | --- | --- | --- |
 | `R` | Matrix | 3×3 orthonormal rotation matrix. |
-
-## References
-
-1. the standard literature, H., Poole, C. & the standard literature, J. *Classical Mechanics* (3rd ed.), Ch. 4.

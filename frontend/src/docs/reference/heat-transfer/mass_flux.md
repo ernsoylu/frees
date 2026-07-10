@@ -33,9 +33,3 @@ $$ G = \frac{\dot m}{A_{\text{flow}}} $$
 | --- | --- | --- | --- |
 | `mdot` | Number | Yes | Mass flow rate [kg/s]. |
 | `Aflow` | Number | Yes | Free-flow (minimum) cross-sectional area [m²]. |
-
-## References
-
-1. the standard literature, F.P. et al., Fundamentals of Heat and Mass Transfer.
-2. the standard literature, S. et al., Heat Exchangers: Selection, Rating, and Thermal Design.
-

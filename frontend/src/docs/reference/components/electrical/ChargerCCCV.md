@@ -42,4 +42,3 @@ V   = p.V - n.V
 p.I = -Imax * 0.5 * (1 + tanh((Vmax - V) / epsV))
 p.I + n.I = 0
 ```
-

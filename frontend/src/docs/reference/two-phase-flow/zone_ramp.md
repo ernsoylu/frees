@@ -1,17 +1,15 @@
 ---
 name: zone_ramp
 category: Two-Phase Flow
-summary: Smooth zone-collapse ramp tanh(L/eps) (moving-boundary §4.8)
+summary: Smooth zone-collapse ramp tanh(L/eps) (moving-boundary models)
 related: []
 examples: []
 tags: [zone, ramp, two, phase, flow]
-references:
-  - "the standard literature, J.G. & the standard literature, J.R., a standard two-phase text (3rd ed.)"
 ---
 
 # zone_ramp
 
-Smooth zone-collapse ramp tanh(L/eps) (moving-boundary §4.8)
+Smooth zone-collapse ramp tanh(L/eps) (moving-boundary models)
 
 
 ## Syntax
@@ -40,8 +38,3 @@ $$ r(L) = \tanh\!\left(\frac{L}{\varepsilon}\right) \quad\text{(smooth zone-coll
 | --- | --- | --- | --- |
 | `L` | Number | Yes | Length [m]. |
 | `eps` | Number | Yes | Effectiveness ε (0–1). |
-
-## References
-
-1. the standard literature, J.G. & the standard literature, J.R., a standard two-phase text (3rd ed.).
-

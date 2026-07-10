@@ -5,9 +5,6 @@ summary: Solve the discrete algebraic Riccati equation.
 related: [dlqr, lqr, dlyap]
 examples: []
 tags: [control, riccati, discrete, optimal, dare]
-references:
-  - "the standard literature, K., Discrete-Time Control Systems (2nd ed.), Ch. 8"
-  - "Franklin, G.F. et al., Digital Control of Dynamic Systems (3rd ed.), Ch. 9"
 ---
 
 # dare
@@ -28,7 +25,7 @@ X = dare(A, B, Q, R)
 $$ X = A^\top X A - A^\top X B\,(R + B^\top X B)^{-1} B^\top X A + Q $$
 
 with `Q ⪰ 0` (state weight) and `R ≻ 0` (input weight); the stabilizing `X ⪰ 0`
-is the one for which the closed loop is Schur-stable (the standard literature, Discrete-Time, Ch. 8).
+is the one for which the closed loop is Schur-stable.
 
 > **Method:** Schur / structured-eigenvector solve of the symplectic pencil.
 
@@ -58,8 +55,3 @@ is the one for which the closed loop is Schur-stable (the standard literature, D
 | Error | Cause | Fix |
 | --- | --- | --- |
 | `NOT_STABILIZABLE` | `(A, B)` not stabilizable | A stabilizing solution requires a stabilizable pair. |
-
-## References
-
-1. the standard literature, K. *Discrete-Time Control Systems* (2nd ed.), Ch. 8.
-2. Franklin, G.F. et al. *Digital Control of Dynamic Systems* (3rd ed.), Ch. 9.

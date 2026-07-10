@@ -5,9 +5,6 @@ summary: A hydraulic pump delivering flow against pressure.
 related: []
 examples: []
 tags: [hydraulicpump, component, hydraulic, acausal]
-references:
-  - "the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., a standard system-dynamics text (5th ed.) — acausal/bond-graph formalism"
-  - "the standard literature, H.E., a standard hydraulics text"
 ---
 
 # HydraulicPump
@@ -49,8 +46,3 @@ in.mdot   = out.mdot
 out.h     = in.h
 shaft.tau = -(disp * (out.P - in.P) / (2 * pi#)) / eta_m
 ```
-
-## References
-
-1. the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., *a standard system-dynamics text* (5th ed.) — acausal/bond-graph formalism.
-2. the standard literature, H.E., *a standard hydraulics text*.

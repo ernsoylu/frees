@@ -5,9 +5,6 @@ summary: A refrigerant-to-coolant chiller transferring heat between the two loop
 related: []
 examples: []
 tags: [chiller, component, ac, acausal]
-references:
-  - "the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., a standard system-dynamics text (5th ed.) — acausal/bond-graph formalism"
-  - "the industry handbook — Refrigeration"
 ---
 
 # Chiller
@@ -54,8 +51,3 @@ connect(cool_in, CL.in)
 connect(CL.out, cool_out)
 connect(EV.wall, CL.wall)
 ```
-
-## References
-
-1. the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., *a standard system-dynamics text* (5th ed.) — acausal/bond-graph formalism.
-2. the industry handbook — Refrigeration.

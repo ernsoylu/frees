@@ -52,4 +52,3 @@ out.mdot = in.mdot
 out.P    = in.P
 out.h    = in.h - Q / in.mdot
 ```
-

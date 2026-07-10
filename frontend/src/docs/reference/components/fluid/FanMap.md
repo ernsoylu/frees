@@ -5,9 +5,6 @@ summary: A fan whose pressure rise comes from a tabulated performance map (ΔP v
 related: []
 examples: []
 tags: [fanmap, fan, map, component, fluid, acausal]
-references:
-  - "the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., a standard system-dynamics text (5th ed.) — acausal/bond-graph formalism"
-  - "the industry handbook — HVAC Systems and Equipment (Fans)"
 ---
 
 # FanMap
@@ -45,8 +42,3 @@ dP       = map$(Q)
 out.mdot = in.mdot
 out.P    = in.P + dP
 ```
-
-## References
-
-1. the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., *a standard system-dynamics text* (5th ed.) — acausal/bond-graph formalism.
-2. the industry handbook — HVAC Systems and Equipment (Fans).

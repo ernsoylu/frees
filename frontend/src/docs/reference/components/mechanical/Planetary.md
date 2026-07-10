@@ -5,9 +5,6 @@ summary: A planetary gearset relating sun, ring, and carrier speeds.
 related: []
 examples: []
 tags: [planetary, component, mechanical, acausal]
-references:
-  - "the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., a standard system-dynamics text (5th ed.) — acausal/bond-graph formalism"
-  - "the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., System Dynamics (5th ed.)"
 ---
 
 # Planetary
@@ -43,8 +40,3 @@ sun.w + g * ring.w = (1 + g) * carrier.w
 ring.tau           = g * sun.tau
 sun.tau + ring.tau + carrier.tau = 0
 ```
-
-## References
-
-1. the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., *a standard system-dynamics text* (5th ed.) — acausal/bond-graph formalism.
-2. the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., *System Dynamics* (5th ed.).

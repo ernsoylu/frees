@@ -11,7 +11,7 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
  * Humid air property calls (AirH2O) mapped to CoolProp's HAPropsSI.
- * Reference state: 25 C, 1 atm, 50% relative humidity (industry-handbook values:
+ * Reference state: 25 C, 1 atm, 50% relative humidity (standard psychrometric values:
  * W = 0.00989 kg/kg, Twb = 17.9 C, Tdp = 13.8 C, v = 0.858 m3/kg dry air,
  * h = 50.4 kJ/kg dry air).
  */

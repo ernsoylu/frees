@@ -5,8 +5,6 @@ summary: Oblique-shock wave angle ('weak'|'strong') [rad]
 related: []
 examples: []
 tags: [beta, oblique, compressible, flow]
-references:
-  - "Anderson, J.D., Modern Compressible Flow (3rd ed.), Ch. 4"
 ---
 
 # beta_oblique
@@ -36,9 +34,3 @@ $$ \text{solve the } \theta\text{-}\beta\text{-}M \text{ relation for the wave a
 | `theta` | Number | Yes | Flow-deflection angle [rad]. |
 | `k` | Number | Yes | Ratio of specific heats (e.g. 1.4 for air). |
 | `branch$` | String | Yes | Selector — One of `weak`, `strong`. |
-
-## References
-
-1. the standard literature, Y.A., the standard literature, M.A. & Kanoğlu, M., a standard thermodynamics text, Ch. 17.
-2. Anderson, J.D., Modern Compressible Flow (3rd ed.).
-

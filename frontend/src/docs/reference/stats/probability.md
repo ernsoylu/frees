@@ -5,8 +5,6 @@ summary: Probability that a normal variate falls in the interval [x1, x2].
 related: [normalcdf, normalpdf, chi_square]
 examples: []
 tags: [probability, stats, normal, gaussian, interval, range]
-references:
-  - "the standard literature, D.C. & the standard literature, G.C., a standard statistics text"
 ---
 
 # probability
@@ -64,7 +62,3 @@ p = probability(75, 85, 80, 5)   { 0.6827 }
 | Error | Cause | Fix |
 | --- | --- | --- |
 | `Probability standard deviation must be > 0` | `sigma ≤ 0` | Pass a positive standard deviation. |
-
-## References
-
-1. the standard literature, D.C. & the standard literature, G.C., *a standard statistics text*.

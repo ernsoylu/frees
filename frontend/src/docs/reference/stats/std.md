@@ -5,8 +5,6 @@ summary: Standard deviation of vector x
 related: []
 examples: []
 tags: [std, stats]
-references:
-  - "the standard literature, D.C. & the standard literature, G.C., a standard statistics text"
 ---
 
 # std
@@ -33,8 +31,3 @@ $$ s = \sqrt{\frac{1}{n-1}\sum_{i=1}^{n}(x_i - \bar x)^2} $$
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
 | `x` | Number | Yes | Vapor quality (0–1). |
-
-## References
-
-1. the standard literature, D.C. & the standard literature, G.C., a standard statistics text.
-

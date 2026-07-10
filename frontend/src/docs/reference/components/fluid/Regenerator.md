@@ -50,4 +50,3 @@ Q    = eps * min(C_h, C_c) * (Th - Tc)
 hot_out.h  = hot_in.h  - Q / hot_in.mdot
 cold_out.h = cold_in.h + Q / cold_in.mdot
 ```
-

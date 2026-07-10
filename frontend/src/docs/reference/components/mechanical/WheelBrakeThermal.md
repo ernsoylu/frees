@@ -53,4 +53,3 @@ Pf       = tau_b * dw
 der(Tr)  = (Pf - hA * (Tr - T_amb)) / C
 init(Tr) = T0
 ```
-

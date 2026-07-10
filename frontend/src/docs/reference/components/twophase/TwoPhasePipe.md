@@ -5,9 +5,6 @@ summary: A two-phase pipe with a Lockhart–Martinelli frictional pressure drop.
 related: []
 examples: []
 tags: [twophasepipe, component, twophase, acausal]
-references:
-  - "the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., a standard system-dynamics text (5th ed.) — acausal/bond-graph formalism"
-  - "the standard literature, J.G. & the standard literature, J.R., a standard two-phase text (3rd ed.)"
 ---
 
 # TwoPhasePipe
@@ -58,8 +55,3 @@ X_tt     = lm_martinelli_tt(x, rho_l, rho_g, mu_l, mu_g)
 phi2     = lm_phi2(X_tt, 20)
 out.P    = in.P - phi2 * dP_l
 ```
-
-## References
-
-1. the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., *a standard system-dynamics text* (5th ed.) — acausal/bond-graph formalism.
-2. the standard literature, J.G. & the standard literature, J.R., *a standard two-phase text* (3rd ed.).

@@ -5,8 +5,6 @@ summary: Nu, single-cylinder cross-flow. SIDE: air/gas over a single tube. HX: b
 related: []
 examples: []
 tags: [nu, hilpert, heat, transfer]
-references:
-  - "the standard literature, F.P. et al., Fundamentals of Heat and Mass Transfer, Eq. (7.52)"
 ---
 
 # nu_hilpert
@@ -40,9 +38,3 @@ $$ Nu = C\,Re^{m}\,Pr^{1/3} \quad\text{(single cylinder, Hilpert)} $$
 | --- | --- | --- | --- |
 | `Re` | Number | Yes | Reynolds number. |
 | `Pr` | Number | Yes | Prandtl number. |
-
-## References
-
-1. the standard literature, F.P. et al., Fundamentals of Heat and Mass Transfer.
-2. the standard literature, S. et al., Heat Exchangers: Selection, Rating, and Thermal Design.
-

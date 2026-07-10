@@ -46,4 +46,3 @@ s    = 0.5 * (1 + tanh(Pout / epsP))
 Pin  = s * Pout / eta + (1 - s) * Pout * eta
 Pin  = (in_p.V - in_n.V) * in_p.I
 ```
-

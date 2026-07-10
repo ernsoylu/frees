@@ -5,8 +5,6 @@ summary: Wiebe burned mass fraction
 related: []
 examples: []
 tags: [wiebe, combustion]
-references:
-  - "the standard literature, J.B., a standard engine text, Ch. 9"
 ---
 
 # wiebe
@@ -37,9 +35,3 @@ $$ x_b(\theta) = 1 - \exp\!\left[-a\left(\frac{\theta-\theta_0}{\Delta\theta}\ri
 | `dtheta` | Number | Yes | Combustion duration [deg]. |
 | `a` | Number | Yes | First operand. |
 | `m` | Number | Yes | Shape / form parameter. |
-
-## References
-
-1. Turns, S.R., An Introduction to Combustion (3rd ed.).
-2. the standard literature, J.B., a standard engine text.
-

@@ -5,8 +5,6 @@ summary: Condition number of a matrix (sensitivity to perturbations).
 related: [norm, rank, inv, svd]
 examples: [ev-thermal-management]
 tags: [matrix, condition number, conditioning, svd, linear algebra]
-references:
-  - "the standard literature, G.H. & the standard literature, C.F., Matrix Computations (4th ed.), §2.6, §2.7"
 ---
 
 # cond
@@ -32,7 +30,7 @@ treated with caution.
 
 $$ \kappa(A) = \|A\|\,\|A^{-1}\| = \frac{\sigma_{\max}(A)}{\sigma_{\min}(A)} $$
 
-where the `σ` are the singular values of `A` (the standard matrix-computations reference §2.6).
+where the `σ` are the singular values of `A`.
 
 > **Method:** singular value decomposition; `κ = σ_max/σ_min`.
 
@@ -62,7 +60,3 @@ linear system is ill-conditioned.
 | Error | Cause | Fix |
 | --- | --- | --- |
 | `SINGULAR_MATRIX` | `σ_min = 0` | The matrix is singular — condition number is infinite. |
-
-## References
-
-1. the standard literature, G.H. & the standard literature, C.F. *Matrix Computations* (4th ed.), §2.6, §2.7.

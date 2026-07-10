@@ -5,9 +5,6 @@ summary: Throttles a fluid to a lower pressure isenthalpically (Joule–Thomson)
 related: []
 examples: []
 tags: [expansionvalve, component, fluid, acausal]
-references:
-  - "the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., a standard system-dynamics text (5th ed.) — acausal/bond-graph formalism"
-  - "the standard literature, a standard fluids text"
 ---
 
 # ExpansionValve
@@ -44,8 +41,3 @@ out.mdot = in.mdot
 out.h    = in.h
 in.mdot * abs(in.mdot) = CdA^2 * 2 * rho_in * (in.P - out.P)
 ```
-
-## References
-
-1. the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., *a standard system-dynamics text* (5th ed.) — acausal/bond-graph formalism.
-2. the standard literature, *Fluid Mechanics* (8th ed.).

@@ -5,9 +5,6 @@ summary: Linear-quadratic (Kalman) estimator gain.
 related: [lqr, gram, balreal, obsv]
 examples: [estimator-gramian-balreal]
 tags: [control, kalman, estimator, observer, lqe, riccati]
-references:
-  - "Anderson, B.D.O. & Moore, J.B., Optimal Filtering, Ch. 4"
-  - "the standard literature, K., a standard controls text (5th ed.), Ch. 10"
 ---
 
 # lqe
@@ -68,8 +65,3 @@ the chosen noise weights.
 | Error | Cause | Fix |
 | --- | --- | --- |
 | `NOT_DETECTABLE` | `(A, C)` not detectable | The pair must be detectable for a solution to exist. |
-
-## References
-
-1. Anderson, B.D.O. & Moore, J.B. *Optimal Filtering*, Ch. 4.
-2. the standard literature, K. *a standard controls text* (5th ed.), Ch. 10.

@@ -5,9 +5,6 @@ summary: A DC motor — an electrical-to-mechanical transducer (back-EMF and tor
 related: []
 examples: []
 tags: [dcmotor, component, electrical, acausal]
-references:
-  - "the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., a standard system-dynamics text (5th ed.) — acausal/bond-graph formalism"
-  - "the standard literature, J.W. & the standard literature, S.A., a standard circuits text"
 ---
 
 # DCMotor
@@ -45,8 +42,3 @@ p.V - n.V  = R * p.I + Ke * shaft.w
 p.I + n.I  = 0
 shaft.tau  = -Kt * p.I
 ```
-
-## References
-
-1. the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., *a standard system-dynamics text* (5th ed.) — acausal/bond-graph formalism.
-2. the standard literature, J.W. & the standard literature, S.A., *Electric Circuits* (11th ed.).

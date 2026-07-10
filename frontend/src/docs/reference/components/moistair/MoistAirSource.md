@@ -5,9 +5,6 @@ summary: A humid-air boundary supplying a stream of set state.
 related: []
 examples: []
 tags: [moistairsource, component, moistair, acausal]
-references:
-  - "the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., a standard system-dynamics text (5th ed.) — acausal/bond-graph formalism"
-  - "the industry handbook — Fundamentals (Psychrometrics)"
 ---
 
 # MoistAirSource
@@ -48,8 +45,3 @@ out.mdot = mdot
 out.W    = W
 out.h    = Enthalpy(AirH2O, T=T, P=P, W=W)
 ```
-
-## References
-
-1. the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., *a standard system-dynamics text* (5th ed.) — acausal/bond-graph formalism.
-2. the industry handbook — Fundamentals (Psychrometrics).

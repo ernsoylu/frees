@@ -5,8 +5,6 @@ summary: GEOMETRY: hydraulic diameter D_h=4*Aflow*L/Atotal [m] of a compact HX c
 related: []
 examples: []
 tags: [hx, dh, heat, transfer]
-references:
-  - "the standard literature, W.M. & London, A.L., Compact Heat Exchangers (3rd ed.), Ch. 2"
 ---
 
 # hx_dh
@@ -35,9 +33,3 @@ $$ D_h = \frac{4\,A_{\text{flow}}\,L}{A_{\text{total}}} $$
 | `Aflow` | Number | Yes | Free-flow (minimum) cross-sectional area [m²]. |
 | `Atotal` | Number | Yes | Total convective surface area [m²]. |
 | `L` | Number | Yes | Length [m]. |
-
-## References
-
-1. the standard literature, F.P. et al., Fundamentals of Heat and Mass Transfer.
-2. the standard literature, S. et al., Heat Exchangers: Selection, Rating, and Thermal Design.
-

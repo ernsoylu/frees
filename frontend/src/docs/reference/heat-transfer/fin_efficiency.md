@@ -5,9 +5,6 @@ summary: Efficiency of a straight fin with an insulated tip.
 related: [hx_effectiveness, hx_eta_surf]
 examples: [ev-thermal-management]
 tags: [fin, efficiency, extended surface, tanh, conduction]
-references:
-  - "the standard literature, J.P., Heat Transfer (10th ed.), §2-10, Eq. (2-38)"
-  - "Özışık, M.N., Heat Transfer: A Basic Approach, Eq. (3-41b), Example 3-15"
 ---
 
 # fin_efficiency
@@ -35,11 +32,11 @@ from 1 (short/high-conductivity fin) toward 0 (long/poorly-conducting fin).
 
 For a straight fin of length $L$ with an insulated (adiabatic) tip,
 
-$$ \eta_f = \frac{\tanh(mL)}{mL} \qquad \text{(the standard literature Eq. 2-38)} $$
+$$ \eta_f = \frac{\tanh(mL)}{mL} $$
 
 where the fin parameter follows from the 1-D fin energy balance,
 
-$$ m = \sqrt{\frac{h\,P}{k\,A_c}} \qquad \text{(Özışık Eq. 3-41b)} $$
+$$ m = \sqrt{\frac{h\,P}{k\,A_c}} $$
 
 for convection coefficient $h$, fin perimeter $P$, thermal conductivity $k$, and
 cross-sectional area $A_c$.
@@ -73,8 +70,3 @@ core and feeds `fin_efficiency(mL)` into the overall surface efficiency
 | Error | Cause | Fix |
 | --- | --- | --- |
 | `DOMAIN_ERROR` | `mL` negative | `m` and `L` are positive; check `h`, `P`, `k`, `Ac` in `m = sqrt(h·P/(k·Ac))`. |
-
-## References
-
-1. the standard literature, J.P. *Heat Transfer* (10th ed.), §2-10, Eq. (2-38).
-2. Özışık, M.N. *Heat Transfer: A Basic Approach*, Eq. (3-41b), Example 3-15.

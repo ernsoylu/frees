@@ -5,8 +5,6 @@ summary: Variance of vector x
 related: []
 examples: []
 tags: [var, stats]
-references:
-  - "the standard literature, D.C. & the standard literature, G.C., a standard statistics text"
 ---
 
 # var
@@ -33,8 +31,3 @@ $$ s^2 = \frac{1}{n-1}\sum_{i=1}^{n}(x_i - \bar x)^2 $$
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
 | `x` | Number | Yes | Vapor quality (0–1). |
-
-## References
-
-1. the standard literature, D.C. & the standard literature, G.C., a standard statistics text.
-

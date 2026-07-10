@@ -21,7 +21,8 @@ import org.antlr.v4.runtime.Token;
  * Per-sample formula evaluation over a merged raster — the calculated-signal
  * engine (todo.md Phase 4). Reuses the frees expression language: the full
  * function library including units-aware CoolProp property functions works on
- * measured data, which is the differentiator over the reference measurement tool's C-like calc engine.
+ * measured data, which is the differentiator over the C-like calc engines of
+ * conventional measurement-analysis tools.
  *
  * <h2>GC contract (Phase 4 design contract)</h2>
  * The formula AST is COMPILED once into a tree of primitive lambdas: a

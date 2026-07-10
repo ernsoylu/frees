@@ -4,7 +4,7 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
- * Validates the 10 licensure-exam Mechanical: HVAC and Refrigeration Sample Questions
+ * Validates ten representative HVAC-and-refrigeration worked examples
  * against the frees solver engine, checking exact numerical results.
  */
 class HvacExamplesTest {

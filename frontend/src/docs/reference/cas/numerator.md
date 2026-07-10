@@ -29,8 +29,3 @@ A REPL-only symbolic transform — it operates on an algebraic expression rather
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
 | `expr` | Number | Yes | Expression to evaluate. |
-
-## References
-
-1. Symja / matheclipse computer-algebra system.
-

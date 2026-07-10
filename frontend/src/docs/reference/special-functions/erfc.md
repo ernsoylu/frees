@@ -6,7 +6,6 @@ related: [erf, erfinv]
 examples: []
 tags: [special function, complementary error function, erfc, gaussian, tail]
 references:
-  - "the standard literature, M. & the standard literature, I.A., Handbook of Mathematical Functions, §7.1"
   - "NIST Digital Library of Mathematical Functions, §7.2"
 ---
 
@@ -30,7 +29,7 @@ cancellation.
 
 ## Mathematical Formulation
 
-$$ \operatorname{erfc}(x) = 1 - \operatorname{erf}(x) = \frac{2}{\sqrt{\pi}}\int_x^\infty e^{-t^2}\,dt \qquad \text{(A\&S §7.1.2)} $$
+$$ \operatorname{erfc}(x) = 1 - \operatorname{erf}(x) = \frac{2}{\sqrt{\pi}}\int_x^\infty e^{-t^2}\,dt $$
 
 > **Method:** direct rational/continued-fraction approximation of the tail.
 
@@ -55,5 +54,4 @@ y = erfc(1)
 
 ## References
 
-1. the standard literature, M. & the standard literature, I.A. *Handbook of Mathematical Functions*, §7.1.
-2. NIST *Digital Library of Mathematical Functions*, §7.2.
+1. NIST *Digital Library of Mathematical Functions*, §7.2.

@@ -5,9 +5,6 @@ summary: Measures the mass flow of a stream (a pass-through sensor).
 related: []
 examples: []
 tags: [flowsensor, component, fluid, acausal]
-references:
-  - "the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., a standard system-dynamics text (5th ed.) — acausal/bond-graph formalism"
-  - "the standard literature, a standard fluids text"
 ---
 
 # FlowSensor
@@ -38,8 +35,3 @@ out.P     = in.P
 out.h     = in.h
 mdot_meas = in.mdot
 ```
-
-## References
-
-1. the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., *a standard system-dynamics text* (5th ed.) — acausal/bond-graph formalism.
-2. the standard literature, *Fluid Mechanics* (8th ed.).

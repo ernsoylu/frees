@@ -32,8 +32,3 @@ $$ \operatorname{NLookupRows}(t) = \#\text{rows}(t) $$
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
 | `'t'` | Number | Yes | Name of a TABLE block (string). |
-
-## References
-
-1. a standard numerics text, a standard numerics text (3rd ed.), Ch. 3.
-

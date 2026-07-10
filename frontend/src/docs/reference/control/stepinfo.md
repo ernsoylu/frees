@@ -5,9 +5,6 @@ summary: Step-response performance metrics (rise time, peak time, settling time,
 related: [step, pole, margin]
 examples: []
 tags: [control, step response, rise time, settling time, overshoot, transient]
-references:
-  - "the standard literature, N.S., a standard controls text (7th ed.), Ch. 4, §4.6"
-  - "the standard literature, K., a standard controls text (5th ed.), Ch. 5, §5.3"
 ---
 
 # stepinfo
@@ -25,7 +22,7 @@ CALL stepinfo(t, y : Tr, Tp, Ts, OS)
 
 ## Mathematical Formulation
 
-From the response `y(t)` with steady-state value `y_∞` and peak `y_p` (the standard literature §4.6):
+From the response `y(t)` with steady-state value `y_∞` and peak `y_p`:
 
 $$ OS = \frac{y_p - y_\infty}{y_\infty}\times 100\%, \qquad T_p = \arg\max_t y(t) $$
 
@@ -55,8 +52,3 @@ a 2% band.
 | `Tp` | Number | Peak time [s]. |
 | `Ts` | Number | Settling time (2% band) [s]. |
 | `OS` | Number | Percent overshoot. |
-
-## References
-
-1. the standard literature, N.S. *a standard controls text* (7th ed.), Ch. 4, §4.6.
-2. the standard literature, K. *a standard controls text* (5th ed.), Ch. 5, §5.3.

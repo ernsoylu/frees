@@ -5,8 +5,6 @@ summary: Isentropic area ratio A/A*
 related: []
 examples: []
 tags: [astar, compressible, flow]
-references:
-  - "the standard literature, Y.A., the standard literature, M.A. & Kanoğlu, M., a standard thermodynamics text, Ch. 17, Eq. (17-26)"
 ---
 
 # a_astar
@@ -34,9 +32,3 @@ $$ \frac{A}{A^*} = \frac{1}{M}\left[\frac{2}{k+1}\left(1 + \tfrac{k-1}{2}M^2\rig
 | --- | --- | --- | --- |
 | `M` | Number | Yes | Mach number. |
 | `k` | Number | Yes | Ratio of specific heats (e.g. 1.4 for air). |
-
-## References
-
-1. the standard literature, Y.A., the standard literature, M.A. & Kanoğlu, M., a standard thermodynamics text, Ch. 17.
-2. Anderson, J.D., Modern Compressible Flow (3rd ed.).
-

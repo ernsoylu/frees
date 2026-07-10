@@ -5,9 +5,6 @@ summary: Mass density from a cubic equation of state (SRK or PR).
 related: [eos_z, eos_volume, eos_enthalpy]
 examples: [cubic-eos-properties]
 tags: [eos, cubic, peng-robinson, srk, density, real gas]
-references:
-  - "the original PR publication"
-  - "the standard literature, the standard literature, H.C. & the standard literature, a standard chemical-thermodynamics text, Ch. 3"
 ---
 
 # eos_density
@@ -65,8 +62,3 @@ above the ideal-gas estimate because `Z < 1`.
 | Error | Cause | Fix |
 | --- | --- | --- |
 | `UNKNOWN_FLUID` | `fluid$` not in the table | Use a supported fluid name. |
-
-## References
-
-1. the original PR publication
-2. the standard literature, the standard literature, H.C. & the standard literature *a standard chemical-thermodynamics text*, Ch. 3.

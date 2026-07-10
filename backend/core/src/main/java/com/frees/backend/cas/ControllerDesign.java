@@ -262,8 +262,8 @@ public final class ControllerDesign {
 
     /**
      * Loop-shaping PID auto-tuning with an explicit target phase margin
-     * {@code pmDeg} (degrees) — the "Transient Behavior"/robustness knob a
-     * industry-standard-style tuner exposes. {@code pidtune(num, den, type, wc)} defaults
+     * {@code pmDeg} (degrees) — the "Transient Behavior"/robustness knob an
+     * industry-standard interactive tuner exposes. {@code pidtune(num, den, type, wc)} defaults
      * it to 60°.
      */
     public static double[] pidtune(double[] num, double[] den, String type, double wc, double pmDeg) {

@@ -5,9 +5,6 @@ summary: A gearbox/transmission imposing a ratio between engine and wheels.
 related: []
 examples: []
 tags: [transmission, component, powertrain, acausal]
-references:
-  - "the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., a standard system-dynamics text (5th ed.) — acausal/bond-graph formalism"
-  - "the standard literature, L. & the standard literature, A., a standard propulsion text"
 ---
 
 # Transmission
@@ -43,8 +40,3 @@ Instantiating the component expands these acausal equations (over its port membe
 in.w    = ratio * out.w
 out.tau = -ratio * eta * in.tau
 ```
-
-## References
-
-1. the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., *a standard system-dynamics text* (5th ed.) — acausal/bond-graph formalism.
-2. the standard literature, L. & the standard literature, A., *Vehicle Propulsion Systems* (3rd ed.).

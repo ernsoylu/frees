@@ -30,7 +30,7 @@ class PsychrometricsTest {
 
     @Test
     void saturationLineMatchesHaPropsSI() {
-        // W at saturation, 25 C, 1 atm is ~0.0202 kg/kg (industry-handbook).
+        // W at saturation, 25 C, 1 atm is ~0.0202 kg/kg (standard psychrometric value).
         assertEquals(0.0202,
                 CoolProp.haPropsSI("W", "T", 298.15, "P", 101_325.0, "R", 1.0), 0.001);
 

@@ -76,4 +76,3 @@ der(Ah)  = abs(I) / 3600
 init(Ah) = 0
 Qcap     = Q0 * (1 - k_age * Ah)
 ```
-

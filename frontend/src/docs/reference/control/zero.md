@@ -5,9 +5,6 @@ summary: Zeros of a transfer function (roots of the numerator).
 related: [pole, margin]
 examples: [control-analysis-report]
 tags: [control, zeros, transfer function, root locus]
-references:
-  - "the standard literature, N.S., a standard controls text (7th ed.), Ch. 4, §4.2"
-  - "the standard literature, K., a standard controls text (5th ed.), Ch. 5"
 ---
 
 # zero
@@ -65,8 +62,3 @@ For `G(s) = (s + 2)/(s² + 4s + 25)`:
 | Error | Cause | Fix |
 | --- | --- | --- |
 | `EMPTY_NUMERATOR` | `num` is constant or empty | A constant numerator has no finite zeros. |
-
-## References
-
-1. the standard literature, N.S. *a standard controls text* (7th ed.), Ch. 4, §4.2.
-2. the standard literature, K. *a standard controls text* (5th ed.), Ch. 5.

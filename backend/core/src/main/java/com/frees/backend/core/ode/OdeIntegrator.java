@@ -134,7 +134,8 @@ public final class OdeIntegrator {
     private record StepOutcome(OdeMethod.StepResult sr, double hUse, int extraSteps, int rejections) {}
 
     /** First-step size: fixed methods use {@code hFixed}; adaptive methods honour
-     *  an explicit fixed step or fall back to Hairer's estimate, clamped to maxStep. */
+     *  an explicit fixed step or fall back to the automatic initial-step estimate,
+     *  clamped to maxStep. */
     private static double computeInitialStep(OdeProblem p, OdeMethod method, double[] y, double[] f,
                                              double span, boolean fixed, double hFixed) {
         double h = fixed ? hFixed
@@ -210,7 +211,7 @@ public final class OdeIntegrator {
     }
 
     /**
-     * Hairer's automatic initial step-size estimate (Solving ODEs I, II.4). A
+     * The standard automatic initial step-size estimate from the ODE literature. A
      * fixed fraction of the span is a poor first step for systems with fast early
      * dynamics — too large a first step can diverge before the controller
      * recovers. This bases the first step on the scaled norms of {@code y0} and

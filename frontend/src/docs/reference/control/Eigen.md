@@ -5,8 +5,6 @@ summary: Eigenvalues and eigenvectors of a square matrix.
 related: [Eigenvalues, balreal]
 examples: []
 tags: [matrix, eigenvalues, eigenvectors, spectral, linear algebra]
-references:
-  - "the standard literature, G.H. & the standard literature, C.F., Matrix Computations (4th ed.), Ch. 7"
 ---
 
 # Eigen
@@ -26,7 +24,7 @@ CALL Eigen(A : lambda, V)
 
 $$ A\,v_i = \lambda_i\,v_i, \qquad A = V\,\Lambda\,V^{-1} $$
 
-where `Λ = diag(λ_i)` and the columns of `V` are the eigenvectors (the standard matrix-computations reference Ch. 7).
+where `Λ = diag(λ_i)` and the columns of `V` are the eigenvectors.
 
 > **Method:** QR algorithm with eigenvector back-substitution.
 
@@ -48,7 +46,3 @@ where `Λ = diag(λ_i)` and the columns of `V` are the eigenvectors (the standar
 | --- | --- | --- |
 | `lambda` | Vector | Eigenvalues. |
 | `V` | Matrix | Eigenvectors (columns). |
-
-## References
-
-1. the standard literature, G.H. & the standard literature, C.F. *Matrix Computations* (4th ed.), Ch. 7.

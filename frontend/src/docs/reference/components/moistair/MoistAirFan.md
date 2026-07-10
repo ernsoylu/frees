@@ -46,4 +46,3 @@ v_in     = Volume(AirH2O, T=T_in, P=in.P, W=in.W)
 out.h    = in.h + v_in * dP / eta
 W_el     = in.mdot * v_in * dP / eta
 ```
-

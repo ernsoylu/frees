@@ -39,4 +39,3 @@ The acausal equations this component expands into (over its port members and par
 rod.vel   = r * shaft.w
 shaft.tau = -r * rod.f
 ```
-

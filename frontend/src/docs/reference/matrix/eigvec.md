@@ -5,8 +5,6 @@ summary: Eigenvectors of A
 related: []
 examples: []
 tags: [eigvec, matrix]
-references:
-  - "the standard literature, G.H. & the standard literature, C.F., Matrix Computations (4th ed.), Ch. 7"
 ---
 
 # eigvec
@@ -33,8 +31,3 @@ $$ A v_i = \lambda_i v_i \quad\text{(columns are the eigenvectors)} $$
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
 | `A` | Number | Yes | Square input matrix. |
-
-## References
-
-1. the standard literature, G.H. & the standard literature, C.F., Matrix Computations (4th ed.).
-

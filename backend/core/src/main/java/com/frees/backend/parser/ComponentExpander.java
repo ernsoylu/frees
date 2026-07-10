@@ -947,7 +947,7 @@ public final class ComponentExpander {
      * {@code connect} would be wrongly judged redundant and its across (P/h) AND
      * Σṁ equalities dropped — leaving the closing port's variables unmatched
      * (the closed-refrigerant-cycle non-square bug). Excluding it lets the closing
-     * connect emit, matching the reference simulator's C/R causality (C nodes = states, R nodes
+     * connect emit, matching the standard C/R network causality (C nodes = states, R nodes
      * algebraic) where each volume's pressure is an independent state. The
      * fluid-identity propagation ({@link #propagateFluidAcrossConnects}) still
      * seeds capacitive links (the fluid IS the same through a volume).

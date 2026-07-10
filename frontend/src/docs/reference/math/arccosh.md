@@ -32,4 +32,3 @@ $$ \operatorname{arccosh}(x) = \ln\!\big(x + \sqrt{x^2-1}\big), \quad x \ge 1 $$
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
 | `x` | Number | Yes | Vapor quality (0–1). |
-

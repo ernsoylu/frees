@@ -42,4 +42,3 @@ der(y)  = rate * tanh((in.sig - y) / (rate * tau))
 init(y) = y0
 out.sig = y
 ```
-

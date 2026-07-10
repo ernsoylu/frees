@@ -40,4 +40,3 @@ The acausal equations this component expands into (over its port members and par
 a.Qdot = Qmax * tanh(G * (a.T - b.T) / Qmax)
 a.Qdot + b.Qdot = 0
 ```
-

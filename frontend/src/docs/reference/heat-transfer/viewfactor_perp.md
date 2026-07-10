@@ -5,8 +5,6 @@ summary: Diffuse radiation view factor between perpendicular rectangles with a c
 related: [viewfactor_plates, viewfactor_disks]
 examples: [radiation-view-factors]
 tags: [radiation, view factor, configuration factor, perpendicular, rectangles, corner]
-references:
-  - "the standard literature, J.P., Heat Transfer (10th ed.), Table 8-2 (Item 3), Fig. 8-14"
 ---
 
 # viewfactor_perp
@@ -34,10 +32,9 @@ With $H = Z/X$ and $W = Y/X$,
 
 $$ F_{1\to 2} = \frac{1}{\pi W}\Bigg( W\tan^{-1}\frac{1}{W} + H\tan^{-1}\frac{1}{H} - \sqrt{H^2+W^2}\,\tan^{-1}\frac{1}{\sqrt{H^2+W^2}} + \frac{1}{4}\ln\Big[\,\cdots\,\Big] \Bigg) $$
 
-(the standard literature Table 8-2, Item 3; the logarithmic term is the full Howell-catalog
-expression in $H$ and $W$.)
+(the logarithmic term is the full standard closed-form expression in $H$ and $W$.)
 
-> **Method:** direct evaluation of the Howell-catalog closed form (the standard literature Fig. 8-14).
+> **Method:** direct evaluation of the standard closed-form view-factor expression.
 
 ## Examples
 
@@ -66,7 +63,3 @@ expression in $H$ and $W$.)
 | Error | Cause | Fix |
 | --- | --- | --- |
 | `DOMAIN_ERROR` | `X ≤ 0` or an extent ≤ 0 | All three lengths must be positive. |
-
-## References
-
-1. the standard literature, J.P. *Heat Transfer* (10th ed.), Table 8-2 (Item 3), Fig. 8-14.

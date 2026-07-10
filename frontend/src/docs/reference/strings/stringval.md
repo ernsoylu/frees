@@ -32,4 +32,3 @@ $$ \operatorname{StringVal}(s) = \text{numeric value parsed from } s $$
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
 | `s$` | String | Yes | String literal. |
-

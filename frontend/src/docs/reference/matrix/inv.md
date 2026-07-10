@@ -5,8 +5,6 @@ summary: Matrix inverse
 related: []
 examples: []
 tags: [inv, matrix]
-references:
-  - "the standard literature, G.H. & the standard literature, C.F., Matrix Computations (4th ed.)"
 ---
 
 # inv
@@ -33,8 +31,3 @@ $$ A\,A^{-1} = A^{-1}A = I $$
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
 | `A` | Number | Yes | Square input matrix. |
-
-## References
-
-1. the standard literature, G.H. & the standard literature, C.F., Matrix Computations (4th ed.).
-

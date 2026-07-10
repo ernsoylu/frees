@@ -5,8 +5,6 @@ summary: Cholesky decomposition
 related: []
 examples: []
 tags: [cholesky, matrix]
-references:
-  - "the standard literature, G.H. & the standard literature, C.F., Matrix Computations (4th ed.), §4.2"
 ---
 
 # cholesky
@@ -39,8 +37,3 @@ $$ A = L\,L^\top \quad\text{(} A \text{ symmetric positive-definite)} $$
 | Argument | Type | Description |
 | --- | --- | --- |
 | `L` | Number/Array | Length [m]. |
-
-## References
-
-1. the standard literature, G.H. & the standard literature, C.F., Matrix Computations (4th ed.).
-

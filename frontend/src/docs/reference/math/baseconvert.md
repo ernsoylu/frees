@@ -32,4 +32,3 @@ $$ \operatorname{baseconvert}(s) = \text{numeric value of the based literal } s 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
 | `s$` | String | Yes | String literal. |
-

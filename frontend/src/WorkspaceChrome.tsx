@@ -75,7 +75,7 @@ const VIEWS = [
     icon: IconChartGridDots,
   },
   { value: 'whiteboard', label: 'Whiteboard', tip: 'Whiteboard — Excalidraw freehand sketch canvas', icon: IconBrush },
-  { value: 'spreadsheet', label: 'Spreadsheet', tip: 'Spreadsheet — spreadsheet-like workbook', icon: IconGrid4x4 },
+  { value: 'spreadsheet', label: 'Spreadsheet', tip: 'Spreadsheet — formula-capable workbook', icon: IconGrid4x4 },
   { value: 'analyzer', label: 'Analyzer', tip: 'Data Analyzer — explore imported measurement data', icon: IconWaveSine },
   { value: 'terminal', label: 'Terminal', tip: 'Terminal — REPL evaluated against the workspace', icon: IconTerminal2 },
 ]

@@ -45,4 +45,3 @@ A        = pi# / 4 * D^2
 V        = in.mdot / (rho * A)
 out.P    = in.P - K * rho * V * abs(V) / 2
 ```
-

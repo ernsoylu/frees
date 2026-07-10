@@ -5,8 +5,6 @@ summary: Ideal-gas mixture cp [J/kg-K]
 related: []
 examples: []
 tags: [mix, cp, combustion]
-references:
-  - "Turns, S.R., An Introduction to Combustion (3rd ed.)"
 ---
 
 # mix_cp
@@ -34,9 +32,3 @@ $$ c_p = \sum_i Y_i\,c_{p,i}(T) \quad\text{(mass-weighted, NASA-7)} $$
 | --- | --- | --- | --- |
 | `comp$` | String | Yes | Mixture composition string, e.g. 'N2:0.79,O2:0.21'. |
 | `T` | Number | Yes | Temperature [K]. |
-
-## References
-
-1. Turns, S.R., An Introduction to Combustion (3rd ed.).
-2. the standard literature, J.B., a standard engine text.
-

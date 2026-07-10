@@ -5,9 +5,6 @@ summary: A liquid receiver buffering refrigerant charge at saturation.
 related: []
 examples: []
 tags: [twophasereceiver, component, twophase, acausal]
-references:
-  - "the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., a standard system-dynamics text (5th ed.) — acausal/bond-graph formalism"
-  - "the standard literature, J.G. & the standard literature, J.R., a standard two-phase text (3rd ed.)"
 ---
 
 # TwoPhaseReceiver
@@ -48,8 +45,3 @@ rho_l    = Density(fluid$, P=in.P, x=0)
 rho_g    = Density(fluid$, P=in.P, x=1)
 m        = V * (LL * rho_l + (1 - LL) * rho_g)
 ```
-
-## References
-
-1. the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., *a standard system-dynamics text* (5th ed.) — acausal/bond-graph formalism.
-2. the standard literature, J.G. & the standard literature, J.R., *a standard two-phase text* (3rd ed.).

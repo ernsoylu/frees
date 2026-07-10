@@ -46,4 +46,3 @@ dn       = th + half
 a.tau    = k * (0.5 * (up + sqrt(up^2 + eps^2)) + 0.5 * (dn - sqrt(dn^2 + eps^2)))
 a.tau + b.tau = 0
 ```
-

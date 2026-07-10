@@ -5,9 +5,6 @@ summary: Flow-boiling (evaporation) heat-transfer coefficient — Shah correlati
 related: [htc_cond, htc_1phase, dp_2phase]
 examples: [ev-thermal-management]
 tags: [heat transfer, boiling, evaporation, two-phase, shah, refrigerant, film coefficient]
-references:
-  - "Shah, M.M. (1982), industry-handbook Trans. 88:185 — flow boiling"
-  - "the standard literature, S. et al., Heat Exchangers: Selection, Rating, and Thermal Design (4th ed.), Eq. (8.70)"
 ---
 
 # htc_evap
@@ -34,7 +31,7 @@ With the liquid-only coefficient $h_l$ (Dittus–Boelter on the liquid fraction)
 the convection number $Co = \big(\tfrac{1-x}{x}\big)^{0.8}(\rho_g/\rho_l)^{0.5}$,
 the Shah convective-boiling enhancement is
 
-$$ h_{TP} = h_l\,F_{cb}, \qquad F_{cb} = \frac{1.8}{Co^{0.8}} \qquad \text{(the standard literature Eq. 8.70)} $$
+$$ h_{TP} = h_l\,F_{cb}, \qquad F_{cb} = \frac{1.8}{Co^{0.8}} $$
 
 with the nucleate-boiling branch taken where it dominates.
 
@@ -72,8 +69,3 @@ value — the high-conductance side of the chiller.
 | Error | Cause | Fix |
 | --- | --- | --- |
 | `DOMAIN_ERROR` | `x` outside [0, 1] | Quality must be a mass fraction in [0, 1]. |
-
-## References
-
-1. Shah, M.M. (1982), *industry-handbook Trans.* 88:185.
-2. the standard literature, S., Liu, H. & Pramuanjaroenkij, A. *Heat Exchangers: Selection, Rating, and Thermal Design* (4th ed.), Eq. (8.70).

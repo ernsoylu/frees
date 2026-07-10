@@ -1,4 +1,4 @@
-// Data Analyzer model (oscilloscope-like measurement analysis, todo.md Phase 1).
+// Data Analyzer model (oscilloscope-style measurement analysis, todo.md Phase 1).
 //
 // An analyzer window binds imported measurement files (referenced by
 // `measurementId` + a file signature, never bulk data) to a stack of
@@ -51,7 +51,7 @@ export interface SignalRef {
  */
 export interface AnalyzerSignal extends SignalRef {
   color: string
-  /** Rendering override (the reference measurement tool "Treat As Boolean/Analog Signal"); absent = auto. */
+  /** Rendering override (the "Treat As Boolean/Analog Signal" menu); absent = auto. */
   kindOverride?: 'analog' | 'boolean'
 }
 
@@ -64,7 +64,7 @@ export interface AnalyzerStrip {
   /**
    * Relative share of the oscilloscope area (flex weight, default 1): one
    * strip fills the whole panel, added strips split it, and the per-strip
-   * resize handle rebalances the shares (the reference measurement tool strip layout).
+   * resize handle rebalances the shares (conventional oscilloscope strip layout).
    */
   weight?: number
 }
@@ -74,7 +74,7 @@ export interface AnalyzerFileRef {
   measurementId: string
   signature: FileSignature
   /**
-   * Per-file time offset in seconds (Phase 5a, the reference measurement tool multi-file compare):
+   * Per-file time offset in seconds (Phase 5a, multi-file compare):
    * displayed time = recorded time + offset. Set numerically or by
    * SHIFT-dragging a strip; persisted with the analyzer.
    */

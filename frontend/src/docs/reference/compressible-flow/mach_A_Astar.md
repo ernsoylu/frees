@@ -5,8 +5,6 @@ summary: Mach number from the isentropic area ratio A/A* and flow regime.
 related: [T0_T, P0_P, M2_shock]
 examples: [cd-nozzle-shock]
 tags: [compressible, isentropic, area ratio, mach, nozzle, subsonic, supersonic]
-references:
-  - "the standard literature, Y.A., the standard literature, M.A. & Kanoğlu, M., a standard thermodynamics text, Ch. 17, Eq. (17-26)"
 ---
 
 # mach_A_Astar
@@ -32,9 +30,9 @@ inverts the area–Mach relation for the requested branch (a bounded root solve)
 
 The forward area–Mach relation (inverted here for `M`):
 
-$$ \frac{A}{A^*} = \frac{1}{M}\left[\left(\frac{2}{k+1}\right)\left(1 + \frac{k-1}{2}M^2\right)\right]^{(k+1)/[2(k-1)]} \qquad \text{(the standard literature Eq. 17-26)} $$
+$$ \frac{A}{A^*} = \frac{1}{M}\left[\left(\frac{2}{k+1}\right)\left(1 + \frac{k-1}{2}M^2\right)\right]^{(k+1)/[2(k-1)]} $$
 
-> **Method:** bounded numerical inversion of Eq. (17-26) on the branch selected by
+> **Method:** bounded numerical inversion of the area–Mach relation on the branch selected by
 > `regime$` (`M ≤ 1` subsonic, `M ≥ 1` supersonic).
 
 ## Examples
@@ -68,7 +66,3 @@ A normal shock stands where `A/A* = 2.0`; the supersonic upstream Mach is
 | --- | --- | --- |
 | `DOMAIN_ERROR` | `A_Astar < 1` | The area ratio cannot be below 1 (the sonic throat). Check the geometry. |
 | `UNKNOWN_REGIME` | `regime$` not recognized | Use `'subsonic'` or `'supersonic'`. |
-
-## References
-
-1. the standard literature, Y.A., the standard literature, M.A. & Kanoğlu, M. *a standard thermodynamics text*, Ch. 17, Eq. (17-26).

@@ -5,8 +5,6 @@ summary: Matrix rank
 related: []
 examples: []
 tags: [rank, matrix]
-references:
-  - "the standard literature, G.H. & the standard literature, C.F., Matrix Computations (4th ed.)"
 ---
 
 # rank
@@ -33,8 +31,3 @@ $$ \operatorname{rank}(A) = \#\{\sigma_i > \text{tol}\} \quad\text{(numerical, v
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
 | `A` | Number | Yes | Square input matrix. |
-
-## References
-
-1. the standard literature, G.H. & the standard literature, C.F., Matrix Computations (4th ed.).
-

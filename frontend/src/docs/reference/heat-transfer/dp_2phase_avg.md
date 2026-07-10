@@ -5,8 +5,6 @@ summary: dP [Pa], quality-integrated (n cells). SIDE: two-phase refrigerant alon
 related: []
 examples: []
 tags: [dp, 2phase, avg, heat, transfer]
-references:
-  - "the standard literature, J.G. & the standard literature, J.R., a standard two-phase text (3rd ed.)"
 ---
 
 # dp_2phase_avg
@@ -47,9 +45,3 @@ $$ \Delta P = \frac{1}{n}\sum_{i=1}^{n} \phi_l^2(x_i)\,\left(\frac{dP}{dz}\right
 | `Aflow` | Number | Yes | Free-flow (minimum) cross-sectional area [m²]. |
 | `L` | Number | Yes | Length [m]. |
 | `n` | Number | Yes | Order / number of terms. |
-
-## References
-
-1. the standard literature, F.P. et al., Fundamentals of Heat and Mass Transfer.
-2. the standard literature, S. et al., Heat Exchangers: Selection, Rating, and Thermal Design.
-

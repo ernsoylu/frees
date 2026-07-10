@@ -6,7 +6,6 @@ related: [besseli, bessely, besselk0, besselk1]
 examples: []
 tags: [special function, modified bessel, second kind, macdonald, decay]
 references:
-  - "the standard literature, M. & the standard literature, I.A., Handbook of Mathematical Functions, §9.6"
   - "NIST Digital Library of Mathematical Functions, §10.25"
 ---
 
@@ -30,7 +29,7 @@ partner to `besseli`. For fixed orders use `besselk0` /
 
 ## Mathematical Formulation
 
-`K_n` is the decaying solution of the modified Bessel equation (A&S §9.6):
+`K_n` is the decaying solution of the modified Bessel equation:
 
 $$ x^2 y'' + x y' - (x^2 + n^2)y = 0, \qquad K_n(x) = \frac{\pi}{2}\frac{I_{-n}(x) - I_n(x)}{\sin(n\pi)} $$
 
@@ -66,5 +65,4 @@ y = besselk(0, 1)
 
 ## References
 
-1. the standard literature, M. & the standard literature, I.A. *Handbook of Mathematical Functions*, §9.6.
-2. NIST *Digital Library of Mathematical Functions*, §10.25.
+1. NIST *Digital Library of Mathematical Functions*, §10.25.

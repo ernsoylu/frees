@@ -5,10 +5,6 @@ summary: Single-phase in-tube heat-transfer coefficient (Gnielinski / laminar).
 related: [htc_evap, htc_cond, ua_hx]
 examples: [ev-thermal-management]
 tags: [heat transfer, convection, gnielinski, nusselt, single phase, tube, film coefficient]
-references:
-  - "Gnielinski, V. (1976), Int. Chem. Eng. 16:359"
-  - "the standard literature, S. et al., Heat Exchangers: Selection, Rating, and Thermal Design (4th ed.), §3 (Gnielinski)"
-  - "the standard literature, F.P. et al., Fundamentals of Heat and Mass Transfer, Eq. (8.62)"
 ---
 
 # htc_1phase
@@ -36,7 +32,7 @@ turbulent/laminar Nusselt correlation, and returns `h = Nu·k/Dh`.
 With $Re = \dot m\,D_h/(A_{\text{flow}}\,\mu)$ and Darcy factor $f$, the Gnielinski
 turbulent Nusselt number is
 
-$$ Nu = \frac{(f/8)(Re-1000)\,Pr}{1 + 12.7\sqrt{f/8}\,\big(Pr^{2/3}-1\big)} \qquad \text{(Gnielinski 1976; the standard literature Eq. 8.62)} $$
+$$ Nu = \frac{(f/8)(Re-1000)\,Pr}{1 + 12.7\sqrt{f/8}\,\big(Pr^{2/3}-1\big)} $$
 
 valid for $3000 \lesssim Re \lesssim 5\times10^6$; laminar flow uses the
 fully-developed constant-Nu limit. Then
@@ -78,9 +74,3 @@ W/m²·K range, well below the boiling/condensing refrigerant side.
 | --- | --- | --- |
 | `UNKNOWN_FLUID` | `fluid$` not resolvable | Use a supported fluid name. |
 | `DOMAIN_ERROR` | `Dh` or `Aflow` ≤ 0 | Provide positive geometry. |
-
-## References
-
-1. Gnielinski, V. (1976), *Int. Chem. Eng.* 16:359.
-2. the standard literature, S., Liu, H. & Pramuanjaroenkij, A. *Heat Exchangers: Selection, Rating, and Thermal Design* (4th ed.), §3.
-3. the standard literature, F.P. et al. *Fundamentals of Heat and Mass Transfer*, Eq. (8.62).

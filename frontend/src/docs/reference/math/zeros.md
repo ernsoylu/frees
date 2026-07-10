@@ -33,4 +33,3 @@ $$ Z_{ij} = 0 \quad (m\times n) $$
 | --- | --- | --- | --- |
 | `m` | Number | Yes | Shape / form parameter. |
 | `n` | Number | Yes | Order / number of terms. |
-

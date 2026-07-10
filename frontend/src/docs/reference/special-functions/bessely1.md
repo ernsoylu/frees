@@ -5,8 +5,6 @@ summary: Bessel function of the second kind, order 1 — Y_1(x).
 related: [bessely, bessely0, besselj1]
 examples: []
 tags: [special function, bessel, y1, second kind, neumann]
-references:
-  - "the standard literature, M. & the standard literature, I.A., Handbook of Mathematical Functions, §9.1"
 ---
 
 # bessely1
@@ -22,7 +20,7 @@ y = bessely1(x)
 
 ## Mathematical Formulation
 
-`Y_1` is the second independent order-1 solution of Bessel's equation (A&S §9.1),
+`Y_1` is the second independent order-1 solution of Bessel's equation,
 with `Y_0'(x) = −Y_1(x)`.
 
 ## Examples
@@ -49,7 +47,3 @@ y = bessely1(1)
 | Error | Cause | Fix |
 | --- | --- | --- |
 | `DOMAIN_ERROR` | `x ≤ 0` | Singular at and below 0; use a positive argument. |
-
-## References
-
-1. the standard literature, M. & the standard literature, I.A. *Handbook of Mathematical Functions*, §9.1.

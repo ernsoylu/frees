@@ -44,4 +44,3 @@ out.mdot * out.yco2 = in1.mdot * in1.yco2 + in2.mdot * in2.yco2
 out.mdot * out.yh2o = in1.mdot * in1.yh2o + in2.mdot * in2.yh2o
 out.mdot * out.yn2  = in1.mdot * in1.yn2  + in2.mdot * in2.yn2
 ```
-

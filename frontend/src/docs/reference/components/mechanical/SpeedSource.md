@@ -5,9 +5,6 @@ summary: A prescribed angular velocity.
 related: []
 examples: []
 tags: [speedsource, component, mechanical, acausal]
-references:
-  - "the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., a standard system-dynamics text (5th ed.) — acausal/bond-graph formalism"
-  - "the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., System Dynamics (5th ed.)"
 ---
 
 # SpeedSource
@@ -42,8 +39,3 @@ Instantiating the component expands these acausal equations (over its port membe
 a.w - b.w = w
 a.tau + b.tau = 0
 ```
-
-## References
-
-1. the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., *a standard system-dynamics text* (5th ed.) — acausal/bond-graph formalism.
-2. the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., *System Dynamics* (5th ed.).

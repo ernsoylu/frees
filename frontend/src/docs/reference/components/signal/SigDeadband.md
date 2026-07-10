@@ -41,4 +41,3 @@ up      = in.sig - w
 dn      = in.sig + w
 out.sig = 0.5 * (up + sqrt(up^2 + eps^2)) + 0.5 * (dn - sqrt(dn^2 + eps^2))
 ```
-

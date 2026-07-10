@@ -5,8 +5,6 @@ summary: Mach from Prandtl-Meyer angle [rad]
 related: []
 examples: []
 tags: [mach, prandtlmeyer, compressible, flow]
-references:
-  - "Anderson, J.D., Modern Compressible Flow (3rd ed.), Ch. 4"
 ---
 
 # mach_prandtlmeyer
@@ -34,9 +32,3 @@ $$ \text{solve } \nu(M) = \nu_{\text{target}} \text{ for } M \quad (M \ge 1) $$
 | --- | --- | --- | --- |
 | `nu` | Number | Yes | Prandtl–Meyer angle [rad]. |
 | `k` | Number | Yes | Ratio of specific heats (e.g. 1.4 for air). |
-
-## References
-
-1. the standard literature, Y.A., the standard literature, M.A. & Kanoğlu, M., a standard thermodynamics text, Ch. 17.
-2. Anderson, J.D., Modern Compressible Flow (3rd ed.).
-

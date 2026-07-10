@@ -35,4 +35,3 @@ $$ \prod_{i=\text{lo}}^{\text{hi}} \text{term}(i) $$
 | `lo` | Number | Yes | Lower bound. |
 | `hi` | Number | Yes | Upper bound. |
 | `term` | Number | Yes | Series-term expression. |
-

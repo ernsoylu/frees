@@ -5,9 +5,6 @@ summary: Transfers heat between two fluid streams across a wall.
 related: []
 examples: []
 tags: [heatexchanger, component, fluid, acausal]
-references:
-  - "the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., a standard system-dynamics text (5th ed.) — acausal/bond-graph formalism"
-  - "the standard literature, a standard fluids text"
 ---
 
 # HeatExchanger
@@ -57,8 +54,3 @@ Q    = eps * Cmin * (Th - Tc)
 hot_out.h  = hot_in.h  - Q / hot_in.mdot
 cold_out.h = cold_in.h + Q / cold_in.mdot
 ```
-
-## References
-
-1. the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., *a standard system-dynamics text* (5th ed.) — acausal/bond-graph formalism.
-2. the standard literature, *Fluid Mechanics* (8th ed.).

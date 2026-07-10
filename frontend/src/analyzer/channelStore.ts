@@ -416,11 +416,12 @@ class ChannelStore {
   }
 
   /**
-   * Sample at/before time x (the reference measurement tool's lazy `~` → exact cursor pattern). Local
+   * Sample at/before time x (the conventional measurement-suite lazy `~` →
+   * exact cursor pattern). Local
    * measurements answer exactly from the resident columns. Remote (.mf4)
    * measurements answer from the cached windows: a raw window containing x is
    * exact; if only a decimated envelope covers x, the bucket midpoint value is
-   * returned with `approx: true` (the reference measurement tool's `~` readout) AND a small raw window
+   * returned with `approx: true` (the `~` approximate readout) AND a small raw window
    * around x is fetched in the background — the store notifies when it lands
    * and the next read is exact.
    */

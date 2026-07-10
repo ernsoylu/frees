@@ -5,9 +5,6 @@ summary: A single-phase liquid control volume.
 related: []
 examples: []
 tags: [liquidvolume, component, liquid, acausal]
-references:
-  - "the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., a standard system-dynamics text (5th ed.) — acausal/bond-graph formalism"
-  - "the standard literature, F.P. et al., Fundamentals of Heat and Mass Transfer, Ch. 8"
 ---
 
 # LiquidVolume
@@ -45,8 +42,3 @@ out.h       = in.h
 der(in.P)   = (in.mdot - out.mdot) / C
 init(in.P)  = P0
 ```
-
-## References
-
-1. the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., *a standard system-dynamics text* (5th ed.) — acausal/bond-graph formalism.
-2. the standard literature, F.P. et al., *Fundamentals of Heat and Mass Transfer*, Ch. 8.

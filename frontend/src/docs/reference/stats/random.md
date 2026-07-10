@@ -33,8 +33,3 @@ $$ X \sim \mathcal{U}(a, b), \qquad X = a + (b-a)\,U,\ \ U\in[0,1) $$
 | --- | --- | --- | --- |
 | `a` | Number | Yes | First operand. |
 | `b` | Number | Yes | Second operand. |
-
-## References
-
-1. the standard literature, D.C. & the standard literature, G.C., a standard statistics text.
-

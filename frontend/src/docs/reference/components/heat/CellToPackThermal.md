@@ -44,4 +44,3 @@ der(Tp)   = (Q + plate.Qdot) / Cpl
 init(Tp)  = T0
 plate.T   = Tp
 ```
-

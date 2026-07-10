@@ -5,8 +5,6 @@ summary: Solve A·x = b (same as A \\ b)
 related: []
 examples: []
 tags: [solvelinear, math]
-references:
-  - "the standard literature, G.H. & the standard literature, C.F., Matrix Computations (4th ed.), §3.2"
 ---
 
 # SolveLinear
@@ -34,7 +32,3 @@ $$ A\,x = b \;\Rightarrow\; x = A^{-1}b \quad\text{(via } PA = LU\text{, forward
 | --- | --- | --- | --- |
 | `A` | Number | Yes | Matrix. |
 | `b` | Number | Yes | Second operand. |
-
-## References
-
-1. the standard literature, G.H. & the standard literature, C.F., *Matrix Computations* (4th ed.), §3.2.

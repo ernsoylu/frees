@@ -5,8 +5,6 @@ summary: Definite integral by Gauss-Legendre quadrature
 related: []
 examples: []
 tags: [gaussintegral, calculus]
-references:
-  - "a standard numerics text, a standard numerics text (3rd ed.), §4.6"
 ---
 
 # gaussintegral
@@ -36,8 +34,3 @@ $$ \int_a^b f(x)\,dx \approx \frac{b-a}{2}\sum_{i=1}^{n} w_i\,f\!\left(\tfrac{b-
 | `var` | Number | Yes | Integration variable. |
 | `lower` | Number | Yes | Lower limit. |
 | `upper` | Number | Yes | Upper limit. |
-
-## References
-
-1. a standard numerics text, a standard numerics text (3rd ed.), Ch. 4.
-

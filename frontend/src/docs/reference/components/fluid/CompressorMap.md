@@ -5,9 +5,6 @@ summary: A compressor whose isentropic efficiency comes from a tabulated map (et
 related: []
 examples: []
 tags: [compressormap, compressor, map, component, fluid, acausal]
-references:
-  - "the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., a standard system-dynamics text (5th ed.) — acausal/bond-graph formalism"
-  - "Moran, M.J. et al., Fundamentals of Engineering Thermodynamics (9th ed.)"
 ---
 
 # CompressorMap
@@ -66,8 +63,3 @@ in.mdot = map_mdot$(PR)
 The flow rung makes the machine a true flow-determining (R) element — the mass
 flow comes from the pressure-ratio characteristic, so a supply → compressor →
 volume chain is well-posed on every integrator.
-
-## References
-
-1. the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., *a standard system-dynamics text* (5th ed.) — acausal/bond-graph formalism.
-2. Moran, M.J. et al., *Fundamentals of Engineering Thermodynamics* (9th ed.).

@@ -5,8 +5,6 @@ summary: Prandtl-Meyer angle nu(M) [rad]
 related: []
 examples: []
 tags: [prandtlmeyer, compressible, flow]
-references:
-  - "Anderson, J.D., Modern Compressible Flow (3rd ed.), Ch. 4"
 ---
 
 # prandtlmeyer
@@ -34,9 +32,3 @@ $$ \nu(M) = \sqrt{\tfrac{k+1}{k-1}}\,\arctan\!\sqrt{\tfrac{k-1}{k+1}(M^2-1)} - \
 | --- | --- | --- | --- |
 | `M` | Number | Yes | Mach number. |
 | `k` | Number | Yes | Ratio of specific heats (e.g. 1.4 for air). |
-
-## References
-
-1. the standard literature, Y.A., the standard literature, M.A. & Kanoğlu, M., a standard thermodynamics text, Ch. 17.
-2. Anderson, J.D., Modern Compressible Flow (3rd ed.).
-

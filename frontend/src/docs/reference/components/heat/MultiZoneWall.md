@@ -53,4 +53,3 @@ b.Qdot   = -qb
 der(T2)  = (q - qb) / C2
 init(T2) = T20
 ```
-

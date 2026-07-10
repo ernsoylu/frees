@@ -32,4 +32,3 @@ $$ \lfloor x \rfloor = \max\{n \in \mathbb{Z} : n \le x\} $$
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
 | `x` | Number | Yes | Vapor quality (0–1). |
-

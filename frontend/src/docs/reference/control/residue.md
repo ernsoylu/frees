@@ -5,9 +5,6 @@ summary: Partial-fraction residues and poles of a transfer function.
 related: [pole, tf, zero]
 examples: [inverse-laplace-residue]
 tags: [control, partial fraction, residue, poles, inverse laplace]
-references:
-  - "the standard literature, N.S., a standard controls text (7th ed.), Ch. 2, §2.2"
-  - "the standard literature, K., a standard controls text (5th ed.), Ch. 2"
 ---
 
 # residue
@@ -33,7 +30,7 @@ poles, so the time response is read off as a sum of exponentials/sinusoids.
 
 $$ G(s) = \frac{\text{num}(s)}{\text{den}(s)} = \sum_{i} \frac{r_i}{s - p_i} + k(s) $$
 
-with the residue at a simple pole `p_i` given by (the standard literature §2.2):
+with the residue at a simple pole `p_i` given by:
 
 $$ r_i = \big[(s - p_i)\,G(s)\big]_{s = p_i} $$
 
@@ -69,8 +66,3 @@ modal terms.
 | Error | Cause | Fix |
 | --- | --- | --- |
 | `REPEATED_POLE` | high-multiplicity poles | Repeated poles need the extended residue form; check the result. |
-
-## References
-
-1. the standard literature, N.S. *a standard controls text* (7th ed.), Ch. 2, §2.2.
-2. the standard literature, K. *a standard controls text* (5th ed.), Ch. 2.

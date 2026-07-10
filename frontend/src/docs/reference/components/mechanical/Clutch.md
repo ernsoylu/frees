@@ -5,9 +5,6 @@ summary: A friction clutch coupling/decoupling two rotational shafts.
 related: []
 examples: []
 tags: [clutch, component, mechanical, acausal]
-references:
-  - "the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., a standard system-dynamics text (5th ed.) — acausal/bond-graph formalism"
-  - "the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., System Dynamics (5th ed.)"
 ---
 
 # Clutch
@@ -45,8 +42,3 @@ dw    = a.w - b.w
 a.tau = eng * Tmax * tanh(dw / eps)
 a.tau + b.tau = 0
 ```
-
-## References
-
-1. the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., *a standard system-dynamics text* (5th ed.) — acausal/bond-graph formalism.
-2. the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., *System Dynamics* (5th ed.).

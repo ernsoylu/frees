@@ -41,4 +41,3 @@ dw    = a.w - b.w
 a.tau = u.sig * Tmax * tanh(dw / eps)
 a.tau + b.tau = 0
 ```
-

@@ -33,4 +33,3 @@ $$ a \ll n = a\cdot 2^{n} $$
 | --- | --- | --- | --- |
 | `a` | Number | Yes | First operand. |
 | `n` | Number | Yes | Order / number of terms. |
-

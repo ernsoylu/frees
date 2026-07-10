@@ -6,7 +6,7 @@ import java.util.List;
 /**
  * Psychrometric chart data via CoolProp's HAPropsSI, all SI. Dry-bulb
  * temperature on the x axis, humidity ratio (kg water / kg dry air) on the
- * y axis, at a fixed total pressure. Families follow the industry-handbook chart:
+ * y axis, at a fixed total pressure. Families follow the standard psychrometric chart:
  * saturation line, constant relative humidity, constant wet-bulb, constant
  * mixture enthalpy and constant specific volume lines.
  */

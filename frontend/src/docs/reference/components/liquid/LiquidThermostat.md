@@ -47,4 +47,3 @@ T_in     = Temperature(fluid$, P=in.P, h=in.h)
 u        = 0.5 * (1 + tanh((T_in - Topen) / Tband))
 in.mdot * abs(in.mdot) = (u * CdA)^2 * 2 * rho * (in.P - out.P)
 ```
-

@@ -5,9 +5,6 @@ summary: Single-input pole placement via Ackermann's formula.
 related: [place, ctrb, lqr]
 examples: []
 tags: [control, pole placement, ackermann, state feedback]
-references:
-  - "the standard literature, N.S., a standard controls text (7th ed.), Ch. 12, §12.2"
-  - "the standard literature, K., a standard controls text (5th ed.), Ch. 10, §10.2"
 ---
 
 # acker
@@ -33,7 +30,7 @@ numerically sensitive for high order.
 ## Mathematical Formulation
 
 With desired characteristic polynomial `Φ(s) = Π(s − p_i)` and controllability
-matrix `C = [B AB … Aⁿ⁻¹B]` (the standard literature §12.2):
+matrix `C = [B AB … Aⁿ⁻¹B]`:
 
 $$ K = \begin{bmatrix} 0 & \cdots & 0 & 1 \end{bmatrix}\,\mathcal{C}^{-1}\,\Phi(A) $$
 
@@ -65,8 +62,3 @@ $$ K = \begin{bmatrix} 0 & \cdots & 0 & 1 \end{bmatrix}\,\mathcal{C}^{-1}\,\Phi(
 | Error | Cause | Fix |
 | --- | --- | --- |
 | `NOT_CONTROLLABLE` | `ctrb(A, B)` singular | Ackermann needs a controllable single-input pair. |
-
-## References
-
-1. the standard literature, N.S. *a standard controls text* (7th ed.), Ch. 12, §12.2.
-2. the standard literature, K. *a standard controls text* (5th ed.), Ch. 10, §10.2.

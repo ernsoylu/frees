@@ -5,9 +5,6 @@ summary: A thermostatic expansion valve that meters refrigerant to hold a target
 related: []
 examples: []
 tags: [txv, component, ac, acausal]
-references:
-  - "the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., a standard system-dynamics text (5th ed.) — acausal/bond-graph formalism"
-  - "the industry handbook — Refrigeration"
 ---
 
 # TXV
@@ -58,8 +55,3 @@ init(CdA)  = CdA0
 rho_in     = Density(fluid$, P=in.P, h=in.h)
 in.mdot * abs(in.mdot) = CdA^2 * 2 * rho_in * (in.P - out.P)
 ```
-
-## References
-
-1. the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., *a standard system-dynamics text* (5th ed.) — acausal/bond-graph formalism.
-2. the industry handbook — Refrigeration.

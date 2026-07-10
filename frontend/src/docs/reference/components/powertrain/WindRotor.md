@@ -45,4 +45,3 @@ Cpw       = cp$(lam, pitch.sig)
 Pw        = 0.5 * rho * pi# * R^2 * wind.sig^3 * Cpw
 shaft.tau = -Pw / (shaft.w + epsw)
 ```
-

@@ -5,8 +5,6 @@ summary: Downstream Mach number across a normal shock M2(M1, k).
 related: [P2_P1_shock, P02_P01_shock, mach_A_Astar]
 examples: [cd-nozzle-shock]
 tags: [compressible, normal shock, mach, supersonic, subsonic, nozzle]
-references:
-  - "the standard literature, Y.A., the standard literature, M.A. & Kanoğlu, M., a standard thermodynamics text, Ch. 17, Eq. (17-39), Table A-33"
 ---
 
 # M2_shock
@@ -28,7 +26,7 @@ while conserving mass, momentum, and energy. `M2` depends only on `M1` and `k`.
 
 ## Mathematical Formulation
 
-$$ M_2 = \sqrt{\frac{(k-1)\,M_1^2 + 2}{2k\,M_1^2 - (k-1)}} \qquad \text{(the standard literature Eq. 17-39; Table A-33)} $$
+$$ M_2 = \sqrt{\frac{(k-1)\,M_1^2 + 2}{2k\,M_1^2 - (k-1)}} $$
 
 > **Method:** direct evaluation; valid for `M1 ≥ 1` (a shock requires supersonic
 > inflow). `M1 = 1` gives `M2 = 1` (vanishing shock).
@@ -59,7 +57,3 @@ $$ M_2 = \sqrt{\frac{(k-1)\,M_1^2 + 2}{2k\,M_1^2 - (k-1)}} \qquad \text{(the sta
 | Error | Cause | Fix |
 | --- | --- | --- |
 | `DOMAIN_ERROR` | `M1 < 1` | A normal shock requires supersonic inflow; check the upstream state. |
-
-## References
-
-1. the standard literature, Y.A., the standard literature, M.A. & Kanoğlu, M. *a standard thermodynamics text*, Ch. 17, Eq. (17-39), Table A-33.

@@ -1,4 +1,4 @@
-// Interactive PID Tuner (interactive-tuner style). Given a SISO plant transfer
+// Interactive PID Tuner (industry-standard interactive-tuner style). Given a SISO plant transfer
 // function it auto-tunes P/PI/PID gains via loop-shaping and previews the
 // closed-loop step response live as the two sliders move:
 //   • Response time  → target crossover wc (bandwidth)

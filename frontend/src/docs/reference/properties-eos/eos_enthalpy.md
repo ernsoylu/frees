@@ -5,10 +5,6 @@ summary: Specific enthalpy from a cubic equation of state (ideal-gas + departure
 related: [eos_z, eos_entropy, eos_density]
 examples: [cubic-eos-properties]
 tags: [eos, cubic, peng-robinson, srk, enthalpy, departure, residual]
-references:
-  - "the original PR publication"
-  - "the standard literature, Y.A. & the standard literature, M.A., a standard thermodynamics text, Eq. (12-57) — enthalpy departure"
-  - "the standard literature, the standard literature, H.C. & the standard literature, a standard chemical-thermodynamics text, Ch. 6"
 ---
 
 # eos_enthalpy
@@ -33,7 +29,7 @@ the equation of state — the analytic real-gas correction to the ideal value.
 
 $$ h(T,P) = h^{\text{ig}}(T) + \big(h - h^{\text{ig}}\big)_{T,P} $$
 
-where the departure is the residual from the EOS (the standard literature Eq. 12-57):
+where the departure is the residual from the EOS:
 
 $$ h - h^{\text{ig}} = RT\,(Z-1) + \frac{T\,\dfrac{da}{dT} - a}{2\sqrt{2}\,b}\,\ln\!\left[\frac{Z + (1+\sqrt2)B}{Z + (1-\sqrt2)B}\right] $$
 
@@ -73,9 +69,3 @@ forces.
 | Error | Cause | Fix |
 | --- | --- | --- |
 | `UNKNOWN_FLUID` | `fluid$` not in the table | Use a supported fluid name. |
-
-## References
-
-1. the original PR publication
-2. the standard literature, Y.A. & the standard literature, M.A. *a standard thermodynamics text*, Eq. (12-57).
-3. the standard literature, the standard literature, H.C. & the standard literature *a standard chemical-thermodynamics text*, Ch. 6.

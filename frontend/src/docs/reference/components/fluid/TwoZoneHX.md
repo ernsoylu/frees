@@ -5,9 +5,6 @@ summary: A two-zone heat exchanger resolving distinct thermal regions.
 related: []
 examples: []
 tags: [twozonehx, component, fluid, acausal]
-references:
-  - "the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., a standard system-dynamics text (5th ed.) — acausal/bond-graph formalism"
-  - "the standard literature, a standard fluids text"
 ---
 
 # TwoZoneHX
@@ -51,8 +48,3 @@ connect(cold_in, C2.cold_in)
 connect(C2.cold_out, C1.cold_in)
 connect(C1.cold_out, cold_out)
 ```
-
-## References
-
-1. the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., *a standard system-dynamics text* (5th ed.) — acausal/bond-graph formalism.
-2. the standard literature, *Fluid Mechanics* (8th ed.).

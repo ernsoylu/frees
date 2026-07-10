@@ -47,4 +47,3 @@ sup_out.h    = sup_in.h + eff_h * (exh_in.h - sup_in.h)
 exh_out.W    = exh_in.W - (sup_in.mdot / exh_in.mdot) * (sup_out.W - sup_in.W)
 exh_out.h    = exh_in.h - (sup_in.mdot / exh_in.mdot) * (sup_out.h - sup_in.h)
 ```
-

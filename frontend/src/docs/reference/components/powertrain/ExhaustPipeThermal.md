@@ -52,4 +52,3 @@ connect(D.wall, W.a)
 connect(W.b, CV.a)
 connect(CV.b, amb)
 ```
-

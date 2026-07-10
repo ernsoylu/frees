@@ -5,9 +5,6 @@ summary: Accelerates a flow, converting enthalpy into kinetic energy.
 related: []
 examples: [cd-nozzle-shock]
 tags: [nozzle, component, fluid, acausal]
-references:
-  - "the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., a standard system-dynamics text (5th ed.) — acausal/bond-graph formalism"
-  - "the standard literature, a standard fluids text"
 ---
 
 # Nozzle
@@ -58,8 +55,3 @@ thrust   = in.mdot * V_exit + (out.P - P_amb) * A_exit
 Instantiated in the verified example below:
 
 [Run: cd-nozzle-shock]
-
-## References
-
-1. the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., *a standard system-dynamics text* (5th ed.) — acausal/bond-graph formalism.
-2. the standard literature, *Fluid Mechanics* (8th ed.).

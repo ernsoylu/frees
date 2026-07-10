@@ -49,4 +49,3 @@ out.mdot = in.mdot
 out.h    = in.h
 in.mdot * abs(in.mdot) = (xs * CdA_max)^2 * 2 * rho * (in.P - out.P)
 ```
-

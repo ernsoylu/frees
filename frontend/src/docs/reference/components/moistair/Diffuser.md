@@ -46,4 +46,3 @@ rho      = 1 / Volume(AirH2O, h=in.h, P=in.P, W=in.W)
 V1       = in.mdot * (1 + in.W) / (rho * A1)
 out.P    = in.P + eta_rec * 0.5 * rho * V1^2 * (1 - (A1 / A2)^2)
 ```
-

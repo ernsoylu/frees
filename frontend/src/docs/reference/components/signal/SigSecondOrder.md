@@ -45,4 +45,3 @@ der(v)  = wn^2 * (in.sig - y) - 2 * zeta * wn * v
 init(v) = v0
 out.sig = y
 ```
-

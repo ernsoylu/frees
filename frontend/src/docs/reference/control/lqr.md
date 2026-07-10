@@ -5,9 +5,6 @@ summary: Linear-quadratic regulator optimal state-feedback gain.
 related: [lqe, place, dare, pidtune]
 examples: [controller-design-lqr-pid]
 tags: [control, lqr, optimal, state feedback, riccati, regulator]
-references:
-  - "the standard literature, K., a standard controls text (5th ed.), Ch. 10, §10.8"
-  - "the standard literature, A.E. & Ho, Y.-C., Applied Optimal Control, Ch. 5"
 ---
 
 # lqr
@@ -34,8 +31,7 @@ Minimizing
 
 $$ J = \int_0^\infty \big(\mathbf{x}^\top Q\,\mathbf{x} + \mathbf{u}^\top R\,\mathbf{u}\big)\,dt $$
 
-gives `K = R⁻¹BᵀP`, where `P` solves the continuous algebraic Riccati equation
-(the standard literature §10.8):
+gives `K = R⁻¹BᵀP`, where `P` solves the continuous algebraic Riccati equation:
 
 $$ A^\top P + P A - P B R^{-1} B^\top P + Q = 0 $$
 
@@ -71,8 +67,3 @@ $$ A^\top P + P A - P B R^{-1} B^\top P + Q = 0 $$
 | --- | --- | --- |
 | `NOT_STABILIZABLE` | `(A, B)` not stabilizable | The pair must be stabilizable for a solution to exist. |
 | `R_NOT_PD` | `R` not positive-definite | Use a positive-definite input weighting. |
-
-## References
-
-1. the standard literature, K. *a standard controls text* (5th ed.), Ch. 10, §10.8.
-2. the standard literature, A.E. & Ho, Y.-C. *Applied Optimal Control*, Ch. 5.

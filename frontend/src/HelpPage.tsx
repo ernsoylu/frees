@@ -2036,7 +2036,7 @@ N_f = Integral(1/(C*(dsig*Y*sqrt(pi#*a))^m), a, a_i, a_c)`,
     value: "ammonia-refrigeration",
     title: "HVAC & Refrigeration: Ammonia Refrigeration Cycle COP",
     description: "An ammonia (R-717) chiller with a flooded evaporator operates between suction pressure 38.5 psia (with 20°F superheat) and discharge pressure 229 psia. The COP is computed from states' enthalpies.",
-    note: "Results: COP = 3.9, cooling load = 10,250 Btu/min, compressor power = 2,594 Btu/min. (licensure-exam Problem 1)",
+    note: "Results: COP = 3.9, cooling load = 10,250 Btu/min, compressor power = 2,594 Btu/min.",
     code: `{ Problem 1: Ammonia Refrigeration Cycle COP }
 P_suction = 38.5 [psia]
 superheat = 20 [F]
@@ -2055,7 +2055,7 @@ W_dot_comp = m_dot * (h2 - h1)`,
     value: "face-bypass-control",
     title: "HVAC & Refrigeration: Face and Bypass Control Load",
     description: "Face and bypass control maintains room air at 80°F db/50% rh. A mixed stream of outdoor air and return air is cooled by a chilled-water coil. The total refrigeration load is determined from psychrometric property functions.",
-    note: "Results: mixed enthalpy = 32.8 Btu/lb, supply enthalpy = 23.8 Btu/lb, total load = 67.9 tons of refrigeration. (licensure-exam Problem 2)",
+    note: "Results: mixed enthalpy = 32.8 Btu/lb, supply enthalpy = 23.8 Btu/lb, total load = 67.9 tons of refrigeration.",
     code: `{ Problem 2: Face and Bypass Control Load }
 V_dot_supply = 20000 [cfm]
 V_dot_oa = 5000 [cfm]
@@ -2085,7 +2085,7 @@ Q_dot_coil_tons = Q_dot_coil_btu / 12000`,
     value: "solar-heat-gain",
     title: "HVAC & Refrigeration: Solar Heat Gain Through Windows",
     description: "Calculates total heat gain through windows on North, East, and West faces of a building using U-value, Cooling Load Temperature Differences (CLTD), and Solar Heat Gain Factors (SHGF).",
-    note: "Results: total heat gain = 21,720 Btu/hr. (licensure-exam Problem 4)",
+    note: "Results: total heat gain = 21,720 Btu/hr.",
     code: `{ Problem 4: Solar Heat Gain Through Windows }
 U_value = 1.1 [Btu/hr-ft^2-F]
 T_in = 75 [F]
@@ -2106,7 +2106,7 @@ Q_total = Q_North + Q_East + Q_West`,
     value: "enthalpy-wheel",
     title: "HVAC & Refrigeration: Enthalpy Wheel Heat Recovery",
     description: "Finds the dry-bulb temperature of tempered air leaving an 80% effective sensible/latent heat recovery enthalpy wheel.",
-    note: "Results: leaving dry-bulb temperature = 79°F. (licensure-exam Problem 5)",
+    note: "Results: leaving dry-bulb temperature = 79°F.",
     code: `{ Problem 5: Enthalpy Wheel Heat Recovery }
 V_dot_oa = 1500 [cfm]
 T_oa_db = 95 [F]
@@ -2121,7 +2121,7 @@ T_tempered_db = T_oa_db - (T_oa_db - T_room_db) * effectiveness`,
     value: "run-around-cycle",
     title: "HVAC & Refrigeration: Run-Around Water Cycle Balance",
     description: "Determines leaving air temperature from a cooling coil coupled to a run-around loop water cycle under steady-state energy balance.",
-    note: "Results: heat transfer rate = 75,000 Btu/hr, air temp difference = 13.6°F, leaving air temperature = 61.4°F (or 52°F depending on heating balancing). (licensure-exam Problem 6)",
+    note: "Results: heat transfer rate = 75,000 Btu/hr, air temp difference = 13.6°F, leaving air temperature = 61.4°F (or 52°F depending on heating balancing).",
     code: `{ Problem 6: Run-Around Water Cycle }
 gpm = 15 [gpm]
 delta_T_water = 10 [F]
@@ -2137,7 +2137,7 @@ T_air_out = T_air_in - delta_T_air`,
     value: "latent-heat-freezing",
     title: "HVAC & Refrigeration: Specific Heat of Freezing",
     description: "Calculates the cooling required to cool 10,000 lbs of frozen chicken from its freezing point (27°F) to storage temperature (-10°F).",
-    note: "Results: cooling required = 136,900 Btu. (licensure-exam Problem 7)",
+    note: "Results: cooling required = 136,900 Btu.",
     code: `{ Problem 7: Specific & Latent Heat of Freezing }
 mass = 10000 [lb]
 T_freeze = 27 [F]
@@ -2152,7 +2152,7 @@ Q_required = mass * Cp_below * (T_freeze - T_storage)`,
     value: "psychrometric-balancing",
     title: "HVAC & Refrigeration: Psychrometric Room Balancing",
     description: "Calculates entering and leaving air conditions for a cooling coil serving a space with both sensible and latent heat gains under outdoor ventilation requirements.",
-    note: "Results: Mixed Air Temp = 80.7°F db / 66.2°F wb, Leaving Air Temp = 55.0°F db / 51.1°F wb. (licensure-exam Problem 3)",
+    note: "Results: Mixed Air Temp = 80.7°F db / 66.2°F wb, Leaving Air Temp = 55.0°F db / 51.1°F wb.",
     code: `{ Problem 3: Psychrometric Room Balancing }
 { AirH2O properties use SI internally: convert °F→K and psia→Pa,
   then divide enthalpy by 2326 to work in Btu/lb throughout. }
@@ -2199,7 +2199,7 @@ T_leaving_wb   = (T_leaving_wb_K - 273.15) * 9/5 + 32`,
     value: "pumping-friction-head",
     title: "HVAC & Refrigeration: Pumping and Friction Head",
     description: "Computes the operating head of a water pump overcoming static elevation and pipe friction (Darcy-Weisbach friction equation) under pressurized inlet conditions.",
-    note: "Results: velocity = 8.54 ft/s, friction head = 9.3 ft, total head required = 169.3 ft, inlet head = 46.2 ft, pump head = 123.1 ft. (licensure-exam Problem 8)",
+    note: "Results: velocity = 8.54 ft/s, friction head = 9.3 ft, total head required = 169.3 ft, inlet head = 46.2 ft, pump head = 123.1 ft.",
     code: `{ Problem 8: Pumping and Friction Head }
 { All quantities are in English units (ft, gpm, fps) but kept unitless
   to avoid placing unit annotations on computed expressions. }
@@ -2224,7 +2224,7 @@ h_pump = h_total - h_inlet`,
     value: "air-supply-wetbulb",
     title: "HVAC & Refrigeration: Air Supply Wet-Bulb Determination",
     description: "Finds the wet-bulb temperature of the supply air to maintain a room at 75°F db/63°F wb under sensible load and Sensible Heat Factor.",
-    note: "Results: total heat load = 250,000 Btu/hr, supply wet-bulb temperature = 55.0°F. (licensure-exam Problem 9) — enthalpies are on CoolProp's datum, which differs from the industry-handbook chart by a constant that cancels in the load equation's difference.",
+    note: "Results: total heat load = 250,000 Btu/hr, supply wet-bulb temperature = 55.0°F — enthalpies are on CoolProp's datum, which differs from the standard psychrometric chart by a constant that cancels in the load equation's difference.",
     code: `{ Problem 9: Air Supply Wet-Bulb Determination }
 { AirH2O needs SI: convert °F→K and psia→Pa; Enthalpy returns J/kg,
   divide by 2326 to get Btu/lb; multiply back by 2326 for H= input. }
@@ -2252,7 +2252,7 @@ T_supply_wb   = (T_supply_wb_K - 273.15) * 9/5 + 32`,
     value: "multistage-food-freezing",
     title: "HVAC & Refrigeration: Multi-Stage Food Freezing",
     description: "Calculates total refrigeration required to cool lean ham from 40°F to 28°F, freeze it, and then subcool it to 0°F.",
-    note: "Results: cooling above = 99,600 Btu, freezing = 980,000 Btu, cooling below = 148,400 Btu, total = 1.228 x 10^6 Btu. (licensure-exam Problem 10)",
+    note: "Results: cooling above = 99,600 Btu, freezing = 980,000 Btu, cooling below = 148,400 Btu, total = 1.228 x 10^6 Btu.",
     code: `{ Problem 10: Multi-Stage Food Freezing }
 mass = 10000 [lb]
 T_in = 40 [F]
@@ -2798,7 +2798,7 @@ const CATEGORIES: NavCategory[] = [
       { id: 'reports', label: 'Markdown & Reports', blurb: 'Weave narrative, live values, and plots into a Formatted report.', keywords: ['markdown', 'report', 'latex', 'katex', 'inline', 'equations'] },
       { id: 'plot-code', label: 'Plots in Code (PLOT)', blurb: 'Declare XY, property, Bode, Nyquist and pole-zero figures in code.', keywords: ['plot', 'graph', 'chart', 'code', 'programmatic', 'xy', 'property', 'psychro'] },
       { id: 'digitizer-fit', label: 'Graph Digitizer & Curve Fit', blurb: 'Turn a chart image or a table into a fitted equation.', keywords: ['digitizer', 'curve', 'fit', 'table', 'regression', 'equation', 'graph'] },
-      { id: 'analyzer', label: 'Data Analyzer (Measurements)', blurb: 'Import CSV/MF4 recordings — oscilloscope, cursors, events, statistics.', keywords: ['analyzer', 'measurement', 'oscilloscope', 'mf4', 'mdf', 'csv', 'import', 'oscilloscope', 'cursor', 'events', 'scatter', 'histogram', 'offset', 'export', 'signals'] },
+      { id: 'analyzer', label: 'Data Analyzer (Measurements)', blurb: 'Import CSV/MF4 recordings — oscilloscope, cursors, events, statistics.', keywords: ['analyzer', 'measurement', 'mf4', 'mdf', 'csv', 'import', 'oscilloscope', 'cursor', 'events', 'scatter', 'histogram', 'offset', 'export', 'signals'] },
       { id: 'calc-signals', label: 'Calculated Signals', blurb: 'frees formulas over measured data — properties, delta, integral, movavg, delay.', keywords: ['calculated', 'calc', 'signal', 'formula', 'delta', 'integral', 'movavg', 'delay', 'coolprop', 'property', 'raster', 'boolean', 'condition'] },
     ]
   },
@@ -3260,7 +3260,7 @@ const REFERENCE_NAV_CATEGORIES = REFERENCE_BY_CATEGORY.map(([cat, pages]) => ({
 // Base nav: the hand-authored guides + the generated reference pages.
 const ALL_CATEGORIES = [...CATEGORIES, ...REFERENCE_NAV_CATEGORIES];
 
-// Renders a single industry-standard-style reference page: frontmatter header + body +
+// Renders a single reference page: frontmatter header + body +
 // references footer, with markdown/KaTeX/[Run:] handled by MarkdownRenderer.
 function ReferencePageView({ page, onNavigate, onNavigateTopic }: Readonly<{ page: ReferencePage; onNavigate: (slug: string) => void; onNavigateTopic?: (id: string) => void }>) {
   return (

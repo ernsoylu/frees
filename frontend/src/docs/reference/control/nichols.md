@@ -5,9 +5,6 @@ summary: Nichols frequency response — open-loop gain (dB) versus phase (deg).
 related: [bode, nyquist, margin]
 examples: [nichols-chart]
 tags: [control, nichols, frequency response, gain, phase, stability]
-references:
-  - "the standard literature, N.S., a standard controls text (7th ed.), Ch. 10, §10.10"
-  - "the standard literature, K., a standard controls text (5th ed.), Ch. 7"
 ---
 
 # nichols
@@ -33,7 +30,7 @@ directly from where the open-loop curve grazes them.
 
 $$ \text{mag}(\omega) = 20\log_{10}|G(j\omega)|\ [\text{dB}], \qquad \text{phase}(\omega) = \angle G(j\omega)\ [\text{deg}] $$
 
-plotted as `mag` vs `phase` (the standard literature §10.10).
+plotted as `mag` vs `phase`.
 
 > **Method:** evaluate `G(jω)` at each `omega`; return magnitude in dB and phase in
 > degrees for the gain-phase plane.
@@ -67,8 +64,3 @@ the gain and phase margins.
 | Error | Cause | Fix |
 | --- | --- | --- |
 | `EMPTY_FREQUENCY` | `omega` empty | Provide a frequency vector. |
-
-## References
-
-1. the standard literature, N.S. *a standard controls text* (7th ed.), Ch. 10, §10.10.
-2. the standard literature, K. *a standard controls text* (5th ed.), Ch. 7.

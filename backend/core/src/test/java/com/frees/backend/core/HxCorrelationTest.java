@@ -12,8 +12,8 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
  * Correlation-based UA (heat) and dP (friction) computed OUTSIDE a component and
- * injected into its parameters — the reference simulator Nu+Geom sizing recipe as reusable
- * scalar functions (props/HxCorrelations).
+ * injected into its parameters — the standard Nu-correlation + geometry sizing
+ * recipe as reusable scalar functions (props/HxCorrelations).
  */
 class HxCorrelationTest {
 
@@ -73,7 +73,7 @@ class HxCorrelationTest {
     assertTrue(sigma > 0 && sigma < 1 && etaSurf > 0 && etaSurf <= 1, "sigma, eta_surf in (0,1]");
     // (4) Müller-Steinhagen two-phase dP and compact-core entrance/exit dP
     double dpMs = HxCorrelations.dpMuellerSteinhagen("R1234yf", 350000, 0.5, 0.03, 0.006, 8e-5, 2.0);
-    // full compact-HX core dP incl. the core-friction term f*(A/Ac)*(rho_in/rho_mean)
+    // full compact-core dP incl. the core-friction term f*(A/Ac)*(rho_in/rho_mean)
     double dpCore = HxCorrelations.dpCompactCore(50, 1.2, 1.0, 1.1, 0.6, 0.05, 50, 0.4, 0.2);
     System.out.printf("dp_MS=%.0f Pa  dp_core=%.1f Pa%n", dpMs, dpCore);
     assertTrue(dpMs > 0, "Mueller-Steinhagen drop positive");
@@ -108,8 +108,8 @@ class HxCorrelationTest {
     assumeTrue(CoolProp.isAvailable());
     // mass flux helper
     assertEquals(0.4 / 0.02, HxCorrelations.massFlux(0.4, 0.02), 1e-9);
-    // Colburn-j + friction for compact fin surfaces, calibrated to the standard compact-HX text
-    // magnitudes at Re=1000 with ordering offset > louvered > wavy > plain.
+    // Colburn-j + friction for compact fin surfaces, calibrated to published
+    // compact-surface data magnitudes at Re=1000 with ordering offset > louvered > wavy > plain.
     double jPlain = HxCorrelations.jFin("plain", 1000);
     double jWavy = HxCorrelations.jFin("wavy", 1000);
     double jLouv = HxCorrelations.jFin("louvered", 1000);
@@ -118,8 +118,8 @@ class HxCorrelationTest {
     System.out.printf("j plain=%.4f wavy=%.4f louvered=%.4f offset=%.4f  f louvered=%.4f%n",
         jPlain, jWavy, jLouv, jOff, fLouv);
     assertTrue(jOff > jLouv && jLouv > jWavy && jWavy > jPlain, "ordering offset>louvered>wavy>plain");
-    assertTrue(jPlain > 0.003 && jPlain < 0.008, "plain j ~ compact-HX 0.005: " + jPlain);
-    assertTrue(jLouv > 0.009 && jLouv < 0.014, "louvered j ~ compact-HX 0.011: " + jLouv);
+    assertTrue(jPlain > 0.003 && jPlain < 0.008, "plain j ~ 0.005 (compact-surface data): " + jPlain);
+    assertTrue(jLouv > 0.009 && jLouv < 0.014, "louvered j ~ 0.011 (compact-surface data): " + jLouv);
     assertTrue(fLouv > jLouv, "friction factor exceeds j");
     // Gungor-Winterton boiling (enhances over liquid Nu) and Traviss condensation
     double nuGw = HxCorrelations.nuGungorWinterton(50, 0.3, 0.0); // convective limit

@@ -46,4 +46,3 @@ outb.W    = in.W
 outa.mdot = u * in.mdot
 outb.mdot = (1 - u) * in.mdot
 ```
-

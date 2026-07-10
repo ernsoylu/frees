@@ -5,8 +5,6 @@ summary: Eigenvalues of a square matrix.
 related: [Eigen, Determinant, cond]
 examples: []
 tags: [matrix, eigenvalues, spectrum, linear algebra]
-references:
-  - "the standard literature, G.H. & the standard literature, C.F., Matrix Computations (4th ed.), Ch. 7"
 ---
 
 # Eigenvalues
@@ -24,7 +22,7 @@ lambda = Eigenvalues(A)
 
 ## Mathematical Formulation
 
-The eigenvalues are the roots of the characteristic polynomial (the standard matrix-computations reference Ch. 7):
+The eigenvalues are the roots of the characteristic polynomial:
 
 $$ \det(A - \lambda I) = 0 $$
 
@@ -47,7 +45,3 @@ $$ \det(A - \lambda I) = 0 $$
 | Argument | Type | Description |
 | --- | --- | --- |
 | `lambda` | Vector | Eigenvalues (possibly complex). |
-
-## References
-
-1. the standard literature, G.H. & the standard literature, C.F. *Matrix Computations* (4th ed.), Ch. 7.

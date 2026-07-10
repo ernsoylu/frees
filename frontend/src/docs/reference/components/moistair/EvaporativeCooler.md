@@ -43,4 +43,3 @@ out.h    = in.h
 W_sat    = HumRat(AirH2O, h=in.h, P=in.P, R=1)
 out.W    = in.W + eff * (W_sat - in.W)
 ```
-

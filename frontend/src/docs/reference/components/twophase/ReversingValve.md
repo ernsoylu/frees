@@ -44,4 +44,3 @@ i.mdot = (1 - mode) * s.mdot + mode * d.mdot
 (1 - mode) * (o.h - d.h) + mode * (s.h - o.h) = 0
 (1 - mode) * (s.h - i.h) + mode * (i.h - d.h) = 0
 ```
-

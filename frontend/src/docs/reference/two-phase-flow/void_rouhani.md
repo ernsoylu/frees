@@ -5,8 +5,6 @@ summary: Rouhani-Axelsson drift-flux void fraction (default)
 related: []
 examples: []
 tags: [void, rouhani, two, phase, flow]
-references:
-  - "Rouhani, S.Z. & Axelsson, E. (1970), Int. J. Heat Mass Transfer 13:383"
 ---
 
 # void_rouhani
@@ -43,8 +41,3 @@ $$ \alpha = \frac{x}{\rho_g}\left[(1 + 0.12(1-x))\left(\frac{x}{\rho_g} + \frac{
 | `rho_g` | Number | Yes | Saturated-vapor density [kg/m³]. |
 | `G` | Number | Yes | Mass flux G = ṁ/Aflow [kg/m²·s]. |
 | `sigma` | Number | Yes | Surface tension [N/m]. |
-
-## References
-
-1. the standard literature, J.G. & the standard literature, J.R., a standard two-phase text (3rd ed.).
-

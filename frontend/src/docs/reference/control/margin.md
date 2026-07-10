@@ -5,9 +5,6 @@ summary: Gain and phase margins and their crossover frequencies.
 related: [bode, nyquist, pole]
 examples: [control-analysis-report]
 tags: [control, gain margin, phase margin, stability, crossover, frequency response]
-references:
-  - "the standard literature, N.S., a standard controls text (7th ed.), Ch. 10, §10.7"
-  - "the standard literature, K., a standard controls text (5th ed.), Ch. 7, §7.4"
 ---
 
 # margin
@@ -41,7 +38,7 @@ At the **gain-crossover** frequency $\omega_{cp}$ where $|L(j\omega_{cp})| = 1$:
 $$ PM = 180° + \angle L(j\omega_{cp}) $$
 
 > **Method:** locate the crossover frequencies on the open-loop frequency response,
-> then evaluate the margins there (the standard literature §10.7).
+> then evaluate the margins there.
 
 ## Examples
 
@@ -73,8 +70,3 @@ margin is large — consistent with the stable left-half-plane poles.
 | Error | Cause | Fix |
 | --- | --- | --- |
 | `NO_CROSSOVER` | The response never crosses `−180°` or `0 dB` | Margin is infinite/undefined for this loop — interpret accordingly. |
-
-## References
-
-1. the standard literature, N.S. *a standard controls text* (7th ed.), Ch. 10, §10.7.
-2. the standard literature, K. *a standard controls text* (5th ed.), Ch. 7, §7.4.

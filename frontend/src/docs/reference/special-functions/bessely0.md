@@ -5,8 +5,6 @@ summary: Bessel function of the second kind, order 0 — Y_0(x).
 related: [bessely, bessely1, besselj0]
 examples: []
 tags: [special function, bessel, y0, second kind, neumann]
-references:
-  - "the standard literature, M. & the standard literature, I.A., Handbook of Mathematical Functions, §9.1"
 ---
 
 # bessely0
@@ -22,7 +20,7 @@ y = bessely0(x)
 
 ## Mathematical Formulation
 
-$$ Y_0(x) = \frac{2}{\pi}\left[\ln\!\frac{x}{2} + \gamma\right]J_0(x) + \dots \qquad \text{(A\&S §9.1)} $$
+$$ Y_0(x) = \frac{2}{\pi}\left[\ln\!\frac{x}{2} + \gamma\right]J_0(x) + \dots $$
 
 the second independent order-0 solution of Bessel's equation.
 
@@ -50,7 +48,3 @@ y = bessely0(1)
 | Error | Cause | Fix |
 | --- | --- | --- |
 | `DOMAIN_ERROR` | `x ≤ 0` | Singular at and below 0; use a positive argument. |
-
-## References
-
-1. the standard literature, M. & the standard literature, I.A. *Handbook of Mathematical Functions*, §9.1.

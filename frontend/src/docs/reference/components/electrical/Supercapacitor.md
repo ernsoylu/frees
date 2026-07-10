@@ -43,4 +43,3 @@ init(Vc)  = V0
 p.V - n.V = Vc + R_esr * p.I
 p.I + n.I = 0
 ```
-

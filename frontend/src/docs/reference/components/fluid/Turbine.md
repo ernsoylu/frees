@@ -5,9 +5,6 @@ summary: Extracts work from an expanding fluid stream, computing it from an isen
 related: []
 examples: []
 tags: [turbine, component, fluid, acausal]
-references:
-  - "the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., a standard system-dynamics text (5th ed.) — acausal/bond-graph formalism"
-  - "the standard literature, a standard fluids text"
 ---
 
 # Turbine
@@ -46,8 +43,3 @@ out.mdot = in.mdot
 out.h    = in.h - eta * (in.h - h_s)
 W        = in.mdot * (in.h - out.h)
 ```
-
-## References
-
-1. the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., *a standard system-dynamics text* (5th ed.) — acausal/bond-graph formalism.
-2. the standard literature, *Fluid Mechanics* (8th ed.).

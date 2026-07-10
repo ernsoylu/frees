@@ -39,4 +39,3 @@ The acausal equations this component expands into (over its port members and par
 in.w    = u.sig * out.w
 out.tau = -u.sig * eta * in.tau
 ```
-

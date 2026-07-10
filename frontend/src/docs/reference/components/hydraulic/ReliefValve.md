@@ -5,9 +5,6 @@ summary: A pressure-relief valve that opens above its set pressure.
 related: []
 examples: []
 tags: [reliefvalve, component, hydraulic, acausal]
-references:
-  - "the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., a standard system-dynamics text (5th ed.) — acausal/bond-graph formalism"
-  - "the standard literature, H.E., a standard hydraulics text"
 ---
 
 # ReliefValve
@@ -47,8 +44,3 @@ out.h    = in.h
 open     = 0.5 * (1 + tanh((in.P - Pcrack) / eps))
 in.mdot  = K * open * (in.P - out.P)
 ```
-
-## References
-
-1. the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., *a standard system-dynamics text* (5th ed.) — acausal/bond-graph formalism.
-2. the standard literature, H.E., *a standard hydraulics text*.

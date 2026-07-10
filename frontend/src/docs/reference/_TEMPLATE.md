@@ -5,8 +5,8 @@ summary: One-line description of what it returns.
 related: [RelatedFn1, RelatedFn2]        # See Also cross-links (names of other pages)
 examples: [example-id-1, example-id-2]   # ids that exist in frontend/src/examples.ts (backend-verified)
 tags: [keyword, keyword]                 # extra search terms
-references:                              # grounded against the research corpus
-  - "Author, Title (edition), §section / Eq. (n) — what it grounds"
+references:                              # optional; cite only public standards / data sources
+  - "Public standard or data source, §section / Eq. (n) — what it grounds"
 ---
 
 # FunctionName
@@ -26,10 +26,10 @@ What it does and when to use it (1–3 short paragraphs). Lead with behavior, no
 
 ## Mathematical Formulation
 
-State the governing equation(s) in KaTeX, each tagged to a reference. Then one line on
+State the governing equation(s) in KaTeX. Then one line on
 the numerical method the backend actually uses.
 
-$$ y = f(x) \qquad \text{(Ref. Eq. n)} $$
+$$ y = f(x) $$
 
 > **Method:** <e.g. LU with partial pivoting / Brent root-find / CoolProp EOS inversion>.
 
@@ -66,7 +66,4 @@ $$ y = f(x) \qquad \text{(Ref. Eq. n)} $$
 
 ## References
 
-1. Author, *Title* (edition), §section, Eq. (n).
-
-<!-- "See Also" is rendered automatically from the `related:` frontmatter as
-     clickable badges — do not add a See Also section in the body. -->
+1. Public standard or data source, §section, Eq. (n).

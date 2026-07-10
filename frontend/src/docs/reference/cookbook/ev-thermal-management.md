@@ -6,9 +6,6 @@ summary: Couple a coolant loop, a refrigerant loop, and a cabin into one acausal
 examples: [ev-thermal-management]
 tags: [cookbook, ev, thermal management, coolant, refrigerant, chiller, multi-domain, system]
 related: [ua_hx, htc_1phase, htc_evap, htc_cond, dp_2phase, hx_eta_surf, LiquidPump, TwoPhaseCompressor, Chiller]
-references:
-  - "the standard literature, F.P. et al., Fundamentals of Heat and Mass Transfer, Ch. 11"
-  - "the standard literature, S. et al., Heat Exchangers: Selection, Rating, and Thermal Design"
 ---
 
 # EV Thermal-Management System
@@ -51,8 +48,3 @@ Newton/Tarjan pipeline — the heat balances close themselves (e.g. chiller `Q_r
 refrigerant flows, the floating condenser/evaporator pressures, the battery-chiller
 duty, and every `UA` that the geometry implies. Change the ambient temperature or a
 fan speed and the floating pressures and duties re-solve consistently.
-
-## References
-
-1. the standard literature, F.P. et al. *Fundamentals of Heat and Mass Transfer*, Ch. 11.
-2. the standard literature, S., Liu, H. & Pramuanjaroenkij, A. *Heat Exchangers: Selection, Rating, and Thermal Design*.

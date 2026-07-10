@@ -5,8 +5,6 @@ summary: Nu, chevron-angle dependent. SIDE: either single-phase stream in a braz
 related: []
 examples: []
 tags: [nu, plate, heat, transfer]
-references:
-  - "Shah, R.K. & Sekulić, D.P., Fundamentals of Heat Exchanger Design, Ch. 7"
 ---
 
 # nu_plate
@@ -41,9 +39,3 @@ $$ Nu = C(\beta)\,Re^{m}\,Pr^{1/3} \quad\text{(chevron plate, angle } \beta) $$
 | `Re` | Number | Yes | Reynolds number. |
 | `Pr` | Number | Yes | Prandtl number. |
 | `beta_deg` | Number | Yes | Chevron / wave angle [deg]. |
-
-## References
-
-1. the standard literature, F.P. et al., Fundamentals of Heat and Mass Transfer.
-2. the standard literature, S. et al., Heat Exchangers: Selection, Rating, and Thermal Design.
-

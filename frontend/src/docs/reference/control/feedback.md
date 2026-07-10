@@ -5,9 +5,6 @@ summary: Close a feedback loop, T = G1/(1 + G1·G2).
 related: [series, margin, pole]
 examples: [cruise-control]
 tags: [control, feedback, closed loop, block diagram, transfer function]
-references:
-  - "the standard literature, N.S., a standard controls text (7th ed.), Ch. 5, §5.2"
-  - "the standard literature, K., a standard controls text (5th ed.), Ch. 5"
 ---
 
 # feedback
@@ -36,7 +33,7 @@ For negative feedback,
 $$ T(s) = \frac{G_1(s)}{1 + G_1(s)\,G_2(s)} = \frac{\text{num}_1\,\text{den}_2}{\text{den}_1\,\text{den}_2 + \text{num}_1\,\text{num}_2} $$
 
 > **Method:** form the closed-loop numerator and denominator by polynomial
-> multiplication and addition (the standard literature §5.2).
+> multiplication and addition.
 
 ## Examples
 
@@ -69,8 +66,3 @@ with the PI integrator giving zero steady-state error.
 | Error | Cause | Fix |
 | --- | --- | --- |
 | `IMPROPER_LOOP` | Forward path improper | Ensure `G1` is proper so the closed loop is realizable. |
-
-## References
-
-1. the standard literature, N.S. *a standard controls text* (7th ed.), Ch. 5, §5.2.
-2. the standard literature, K. *a standard controls text* (5th ed.), Ch. 5.

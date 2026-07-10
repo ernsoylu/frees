@@ -39,4 +39,3 @@ The acausal equations this component expands into (over its port members and par
 rod.vel   = lead / (2 * pi#) * shaft.w
 shaft.tau = -(lead / (2 * pi#)) * rod.f
 ```
-

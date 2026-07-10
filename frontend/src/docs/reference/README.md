@@ -1,6 +1,6 @@
 # frees Reference Documentation (`src/docs/reference/`)
 
-industry-standard-style, per-symbol reference pages — one markdown file per built-in function,
+Per-symbol reference pages — one markdown file per built-in function,
 procedure, block construct, or component. This directory is the source the Phase-1
 pipeline compiles into the in-app Help → Reference section.
 
@@ -13,23 +13,14 @@ pipeline compiles into the in-app Help → Reference section.
 ## The contract (every page)
 
 1. **YAML frontmatter** — `name`, `category`, `summary`, `related`, `examples` (ids in `examples.ts`), `tags`, `references`. Feeds search + the manifest coverage gate.
-2. **Mathematical Formulation** — governing equations in KaTeX, every formula citation-keyed, plus the numerical method the backend actually uses. **Citations are grounded against the the research corpus "Frees" notebook** (`350fef25-…`), never model memory.
+2. **Mathematical Formulation** — governing equations in KaTeX, plus the numerical method the backend actually uses. **Content is grounded in the standard literature**, never model memory.
 3. **Examples** — bound to backend-verified entries in `examples.ts` via `[Run: id]`; progressive and multi-domain.
 4. **Common Errors** — error-code table with a triggering snippet.
-5. **References** — full citations (textbook/standard + equation/section), sourced from the notebook.
-
-## Grounding a citation
-
-```
-the research corpus source list --notebook 350fef25                 # find the right textbook
-the research corpus ask "<governing equation / method for X>" --notebook 350fef25
-```
-Copy the cited equation numbers (e.g. "the standard compact-HX text Eq. 2-13") into the page's
-`references` frontmatter and the Mathematical Formulation section.
+5. **References** — optional; cite only public standards and data sources (standard + section/equation).
 
 ## Quality gates (CI, Phase 1+)
 
 - Every registry function (`function-manifest.json → functions[]`) has a page (`documented: true`).
 - No page names a symbol absent from the backend.
 - Every `examples:` id resolves and solves clean against the backend.
-- Every formula page has a Mathematical Formulation section and non-empty `references`.
+- Every formula page has a Mathematical Formulation section.

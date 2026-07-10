@@ -46,4 +46,3 @@ Pf       = P_sat(fluid$, T=T_in)
 dP_eff   = in.P - max(out.P, Pf)
 in.mdot * abs(in.mdot) = CdA^2 * 2 * rho_in * dP_eff
 ```
-

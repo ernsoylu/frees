@@ -16,7 +16,7 @@ import org.apache.commons.math3.linear.SingularValueDecomposition;
  *
  * <p>All kernels are backed by Apache Commons Math; {@link #expm} adds the one
  * routine Commons Math does not provide, via scaling-and-squaring with a [6/6]
- * Padé approximant (the standard literature &amp; the standard literature, <i>Matrix Computations</i>).
+ * Padé approximant (the standard matrix-computations algorithm).
  */
 public final class LinearAlgebra {
 

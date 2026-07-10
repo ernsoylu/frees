@@ -164,7 +164,7 @@ it the primary UI, instead of a bolt-on.
   Auto-expanding 2-D curve columns on horizontal paste overflow is deferred
   (see Rejected/deferred). *(Rev 2: critique-adopted.)*
 - **Row cap on growth (5,000 rows):** the mapper's row-growth op enforces a
-  hard cap, so a runaway 50k-row bulk paste (or fill-drag) truncates at the
+  hard cap, so a runaway 50k-row spreadsheet paste (or fill-drag) truncates at the
   cap with a toast ("Paste truncated: table row limit") instead of appending
   50k rows to the spec, bloating the `.frees` file, and lagging the solver.
   Enforced in `sheetEditsToSpec` (covers every growth path, not just paste);
@@ -490,7 +490,7 @@ Deviations vs the plan, all deliberate:
   no fixed result columns — any blank input cell becomes computed per run —
   so "protected result columns" would be a scattered, per-cell rule set.
   Instead: computed cells render green (visual lock cue), typing over one
-  turns it into an **input override** (override-style) and invalidates
+  turns it into an **input override** (standard equation-solver behavior) and invalidates
   results/check exactly as the old grid's invalidateActiveParam did; the
   mapper detects untouched computed cells against the previous spec, so
   write-backs never echo into inputs. Failed runs render a red `n ✗` Run

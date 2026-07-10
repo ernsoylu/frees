@@ -5,9 +5,6 @@ summary: Rejects heat from a fluid stream to a coolant/ambient, condensing it.
 related: []
 examples: []
 tags: [condenser, component, fluid, acausal]
-references:
-  - "the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., a standard system-dynamics text (5th ed.) — acausal/bond-graph formalism"
-  - "the standard literature, a standard fluids text"
 ---
 
 # Condenser
@@ -37,8 +34,3 @@ out.mdot = in.mdot
 out.P    = in.P
 Q        = in.mdot * (in.h - out.h)
 ```
-
-## References
-
-1. the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., *a standard system-dynamics text* (5th ed.) — acausal/bond-graph formalism.
-2. the standard literature, *Fluid Mechanics* (8th ed.).

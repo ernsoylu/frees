@@ -5,9 +5,6 @@ summary: A turbine-driven compressor pair coupled on a common shaft.
 related: []
 examples: []
 tags: [turbocharger, component, fluid, acausal]
-references:
-  - "the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., a standard system-dynamics text (5th ed.) — acausal/bond-graph formalism"
-  - "the standard literature, a standard fluids text"
 ---
 
 # Turbocharger
@@ -52,8 +49,3 @@ c_out.mdot = c_in.mdot
 Wc         = c_in.mdot * cp * (c_out.T - c_in.T)
 Wt         = Wc
 ```
-
-## References
-
-1. the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., *a standard system-dynamics text* (5th ed.) — acausal/bond-graph formalism.
-2. the standard literature, *Fluid Mechanics* (8th ed.).

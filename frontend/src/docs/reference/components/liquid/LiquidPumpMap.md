@@ -46,4 +46,3 @@ out.mdot = in.mdot
 out.h    = in.h + 9.80665 * head / eta
 W        = in.mdot * 9.80665 * head / eta
 ```
-

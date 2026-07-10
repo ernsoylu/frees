@@ -43,4 +43,3 @@ out.W    = in.W
 out.h    = in.h
 out.P    = in.P - foul * K * in.mdot^2
 ```
-

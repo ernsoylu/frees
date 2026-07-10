@@ -5,8 +5,6 @@ summary: Cubic free+forced blend (Nu1^3+Nu2^3)^(1/3). USE: combine natural + for
 related: []
 examples: []
 tags: [nu, blend, heat, transfer]
-references:
-  - "the standard literature, F.P. et al., Fundamentals of Heat and Mass Transfer"
 ---
 
 # nu_blend
@@ -40,9 +38,3 @@ $$ Nu = \big(Nu_1^3 + Nu_2^3\big)^{1/3} \quad\text{(free+forced cubic blend)} $$
 | --- | --- | --- | --- |
 | `Nu1` | Number | Yes | First Nusselt number to blend. |
 | `Nu2` | Number | Yes | Second Nusselt number to blend. |
-
-## References
-
-1. the standard literature, F.P. et al., Fundamentals of Heat and Mass Transfer.
-2. the standard literature, S. et al., Heat Exchangers: Selection, Rating, and Thermal Design.
-

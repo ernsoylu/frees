@@ -5,9 +5,6 @@ summary: A mean-value engine model (cycle-averaged torque and flows).
 related: []
 examples: []
 tags: [meanvalueengine, component, powertrain, acausal]
-references:
-  - "the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., a standard system-dynamics text (5th ed.) — acausal/bond-graph formalism"
-  - "the standard literature, L. & the standard literature, A., a standard propulsion text"
 ---
 
 # MeanValueEngine
@@ -48,8 +45,3 @@ T_ind     = throttle * T_wot
 T_fric    = FMEP_a + FMEP_b * shaft.w
 shaft.tau = -(T_ind - T_fric)
 ```
-
-## References
-
-1. the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., *a standard system-dynamics text* (5th ed.) — acausal/bond-graph formalism.
-2. the standard literature, L. & the standard literature, A., *Vehicle Propulsion Systems* (3rd ed.).

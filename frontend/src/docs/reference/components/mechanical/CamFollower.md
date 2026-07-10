@@ -45,4 +45,3 @@ TransGround G()
 connect(rod, M.port, S.a)
 connect(S.b, G.port)
 ```
-

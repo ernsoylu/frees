@@ -5,8 +5,6 @@ summary: Bessel function of the first kind, order 0 — J_0(x).
 related: [besselj, besselj1, bessely0]
 examples: []
 tags: [special function, bessel, j0, first kind]
-references:
-  - "the standard literature, M. & the standard literature, I.A., Handbook of Mathematical Functions, §9.1"
 ---
 
 # besselj0
@@ -23,7 +21,7 @@ y = besselj0(x)
 
 ## Mathematical Formulation
 
-$$ J_0(x) = \sum_{k=0}^{\infty}\frac{(-1)^k}{(k!)^2}\left(\frac{x}{2}\right)^{2k} \qquad \text{(A\&S §9.1)} $$
+$$ J_0(x) = \sum_{k=0}^{\infty}\frac{(-1)^k}{(k!)^2}\left(\frac{x}{2}\right)^{2k} $$
 
 ## Examples
 
@@ -43,7 +41,3 @@ y = besselj0(0)
 | Argument | Type | Description |
 | --- | --- | --- |
 | `y` | Number | J_0(x). |
-
-## References
-
-1. the standard literature, M. & the standard literature, I.A. *Handbook of Mathematical Functions*, §9.1.

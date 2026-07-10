@@ -5,9 +5,6 @@ summary: A pump whose head comes from a tabulated performance map (head vs volum
 related: []
 examples: []
 tags: [pumpmap, pump, map, component, fluid, acausal]
-references:
-  - "the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., a standard system-dynamics text (5th ed.) — acausal/bond-graph formalism"
-  - "the standard literature, a standard fluids text"
 ---
 
 # PumpMap
@@ -45,8 +42,3 @@ head     = map$(Q)
 out.mdot = in.mdot
 out.P    = in.P + rho * 9.80665 * head
 ```
-
-## References
-
-1. the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., *a standard system-dynamics text* (5th ed.) — acausal/bond-graph formalism.
-2. the standard literature, *Fluid Mechanics* (8th ed.).

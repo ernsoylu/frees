@@ -5,8 +5,6 @@ summary: Cubic-spline derivative of a table at x — the smooth d/dx of Interpol
 related: [dtable, interpolate1, differentiate]
 examples: []
 tags: [table, derivative, spline, cubic, interpolation, smooth]
-references:
-  - "a standard numerics text, a standard numerics text (3rd ed.), §3.3 — cubic spline interpolation"
 ---
 
 # dtable1

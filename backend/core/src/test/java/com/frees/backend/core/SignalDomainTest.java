@@ -13,7 +13,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * The causal SIGNAL connector domain: a port member {@code sig} marks a
  * control/command value. A signal {@code connect} node is across-only — it
  * equates the value at every endpoint and carries NO flow member — so one
- * writer broadcasts to any number of readers (the conventional block-diagram signal-wire
+ * writer broadcasts to any number of readers (conventional block-diagram signal-wire
  * semantics), and the strict domain-separation guard keeps a signal wire from
  * ever landing on a physical (bond-graph) port.
  */

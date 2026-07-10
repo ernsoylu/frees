@@ -5,9 +5,6 @@ summary: A friction element opposing motion.
 related: []
 examples: []
 tags: [friction, component, mechanical, acausal]
-references:
-  - "the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., a standard system-dynamics text (5th ed.) — acausal/bond-graph formalism"
-  - "the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., System Dynamics (5th ed.)"
 ---
 
 # Friction
@@ -47,8 +44,3 @@ dw    = a.w - b.w
 a.tau = (Fc + (Fs - Fc) * exp(-(dw / vs)^2)) * tanh(dw / eps) + bv * dw
 a.tau + b.tau = 0
 ```
-
-## References
-
-1. the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., *a standard system-dynamics text* (5th ed.) — acausal/bond-graph formalism.
-2. the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., *System Dynamics* (5th ed.).

@@ -41,4 +41,3 @@ The acausal equations this component expands into (over its port members and par
 ```
 out.sig = low + (high - low) * 0.5 * (1 + tanh((in.sig - thresh) / eps))
 ```
-

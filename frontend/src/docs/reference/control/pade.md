@@ -5,9 +5,6 @@ summary: Padé rational approximation of a pure time delay.
 related: [tf, series, feedback]
 examples: []
 tags: [control, pade, time delay, dead time, approximation]
-references:
-  - "the standard literature, N.S., a standard controls text (7th ed.), Ch. 5"
-  - "the standard literature, G.H. & the standard literature, C.F., Matrix Computations (4th ed.), §9.3 (Padé)"
 ---
 
 # pade
@@ -25,7 +22,7 @@ CALL pade(Td, order : num, den)
 
 ## Mathematical Formulation
 
-The order-`n` Padé approximant of the delay (the standard literature Ch. 5; the standard matrix-computations reference §9.3):
+The order-`n` Padé approximant of the delay:
 
 $$ e^{-T_d s} \approx \frac{N_n(-T_d s)}{N_n(T_d s)}, \qquad \text{e.g. (n=1): } \frac{1 - T_d s/2}{1 + T_d s/2} $$
 
@@ -52,8 +49,3 @@ with the right-half-plane zeros that give a delay its characteristic phase lag.
 | --- | --- | --- |
 | `num` | Vector | Numerator of the approximant. |
 | `den` | Vector | Denominator of the approximant. |
-
-## References
-
-1. the standard literature, N.S. *a standard controls text* (7th ed.), Ch. 5.
-2. the standard literature, G.H. & the standard literature, C.F. *Matrix Computations* (4th ed.), §9.3.

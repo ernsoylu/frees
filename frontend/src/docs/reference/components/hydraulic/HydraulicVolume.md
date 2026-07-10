@@ -45,4 +45,3 @@ out.h      = in.h
 der(in.P)  = (beta / (V * rho)) * (in.mdot - out.mdot)
 init(in.P) = P0
 ```
-

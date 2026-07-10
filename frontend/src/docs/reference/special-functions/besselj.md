@@ -6,7 +6,6 @@ related: [bessely, besseli, besselk, besselj0, besselj1]
 examples: []
 tags: [special function, bessel, first kind, cylinder, wave]
 references:
-  - "the standard literature, M. & the standard literature, I.A., Handbook of Mathematical Functions, §9.1"
   - "NIST Digital Library of Mathematical Functions, §10.2"
 ---
 
@@ -29,7 +28,7 @@ y = besselj(n, x)
 
 ## Mathematical Formulation
 
-`J_n(x)` solves Bessel's equation and has the series (A&S §9.1.10)
+`J_n(x)` solves Bessel's equation and has the series
 
 $$ x^2 y'' + x y' + (x^2 - n^2)y = 0, \qquad J_n(x) = \sum_{k=0}^{\infty} \frac{(-1)^k}{k!\,(n+k)!}\left(\frac{x}{2}\right)^{2k+n} $$
 
@@ -59,5 +58,4 @@ y = besselj(0, 0)
 
 ## References
 
-1. the standard literature, M. & the standard literature, I.A. *Handbook of Mathematical Functions*, §9.1.
-2. NIST *Digital Library of Mathematical Functions*, §10.2.
+1. NIST *Digital Library of Mathematical Functions*, §10.2.

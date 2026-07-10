@@ -46,4 +46,3 @@ g        = 0.5 * (1 + tanh((in.P - out.P) / eps))
 T_in     = Temperature(fluid$, P=in.P, h=in.h)
 in.mdot  = g * iso6358(C, b, in.P, T_in, out.P)
 ```
-

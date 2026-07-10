@@ -6,7 +6,6 @@ related: [gamma, digamma, beta]
 examples: []
 tags: [special function, gamma, log gamma, overflow]
 references:
-  - "the standard literature, M. & the standard literature, I.A., Handbook of Mathematical Functions, §6.1.41"
   - "NIST Digital Library of Mathematical Functions, §5.2"
 ---
 
@@ -31,7 +30,7 @@ finite far past where `Γ(x)` overflows double precision.
 
 $$ \ln\Gamma(x) = \ln\!\int_0^\infty t^{x-1}e^{-t}\,dt, \qquad \ln\Gamma(x+1) = \ln x + \ln\Gamma(x) $$
 
-with the Stirling asymptotic (A&S §6.1.41)
+with the Stirling asymptotic
 
 $$ \ln\Gamma(x) \sim \left(x-\tfrac12\right)\ln x - x + \tfrac12\ln(2\pi) + \frac{1}{12x} - \dots $$
 
@@ -64,5 +63,4 @@ y = loggamma(101)
 
 ## References
 
-1. the standard literature, M. & the standard literature, I.A. *Handbook of Mathematical Functions*, §6.1.41.
-2. NIST *Digital Library of Mathematical Functions*, §5.2.
+1. NIST *Digital Library of Mathematical Functions*, §5.2.

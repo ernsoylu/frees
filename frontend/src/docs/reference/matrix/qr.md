@@ -5,8 +5,6 @@ summary: QR decomposition
 related: []
 examples: []
 tags: [qr, matrix]
-references:
-  - "the standard literature, G.H. & the standard literature, C.F., Matrix Computations (4th ed.), §5.2"
 ---
 
 # qr
@@ -40,8 +38,3 @@ $$ A = Q\,R, \qquad Q^\top Q = I,\ R\ \text{upper triangular} $$
 | --- | --- | --- |
 | `Q` | Number/Array | Computed `Q`. |
 | `R` | Number/Array | Computed `R`. |
-
-## References
-
-1. the standard literature, G.H. & the standard literature, C.F., Matrix Computations (4th ed.).
-

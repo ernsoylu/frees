@@ -5,9 +5,6 @@ summary: Discrete-to-continuous transfer-function conversion (Tustin / ZOH).
 related: [c2d, tf, pole]
 examples: []
 tags: [control, discretization, d2c, tustin, zoh, continuous]
-references:
-  - "Franklin, G.F., Powell, J.D. & Workman, M.L., Digital Control of Dynamic Systems (3rd ed.), Ch. 4"
-  - "the standard literature, K., Discrete-Time Control Systems (2nd ed.), Ch. 3"
 ---
 
 # d2c
@@ -32,7 +29,7 @@ controller for analysis in the s-domain.
 
 Tustin (bilinear), the inverse of the `c2d` substitution:
 
-$$ G(s) = G(z)\Big|_{\,z = \frac{1 + (T_s/2)s}{1 - (T_s/2)s}} \qquad \text{(Franklin Ch. 4)} $$
+$$ G(s) = G(z)\Big|_{\,z = \frac{1 + (T_s/2)s}{1 - (T_s/2)s}} $$
 
 > **Method:** inverse bilinear substitution (or inverse ZOH).
 
@@ -63,8 +60,3 @@ $$ G(s) = G(z)\Big|_{\,z = \frac{1 + (T_s/2)s}{1 - (T_s/2)s}} \qquad \text{(Fran
 | Error | Cause | Fix |
 | --- | --- | --- |
 | `BAD_SAMPLE_TIME` | `Ts ≤ 0` | Use a positive sample time. |
-
-## References
-
-1. Franklin, G.F., Powell, J.D. & Workman, M.L. *Digital Control of Dynamic Systems* (3rd ed.), Ch. 4.
-2. the standard literature, K. *Discrete-Time Control Systems* (2nd ed.), Ch. 3.

@@ -5,9 +5,6 @@ summary: Cools and (below dew point) dehumidifies a humid-air stream.
 related: []
 examples: []
 tags: [coolingcoil, component, moistair, acausal]
-references:
-  - "the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., a standard system-dynamics text (5th ed.) — acausal/bond-graph formalism"
-  - "the industry handbook — Fundamentals (Psychrometrics)"
 ---
 
 # CoolingCoil
@@ -47,8 +44,3 @@ out.h    = Enthalpy(AirH2O, T=Tout, P=in.P, W=out.W)
 Q        = in.mdot * (in.h - out.h)
 Q_lat    = in.mdot * 2.501e6 * (in.W - out.W)
 ```
-
-## References
-
-1. the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., *a standard system-dynamics text* (5th ed.) — acausal/bond-graph formalism.
-2. the industry handbook — Fundamentals (Psychrometrics).

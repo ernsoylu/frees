@@ -5,8 +5,6 @@ summary: Turbulent-turbulent Martinelli parameter X_tt
 related: []
 examples: []
 tags: [lm, martinelli, tt, two, phase, flow]
-references:
-  - "the standard literature, J.G. & the standard literature, J.R., a standard two-phase text (3rd ed.), §2.4"
 ---
 
 # lm_martinelli_tt
@@ -43,8 +41,3 @@ $$ X_{tt} = \left(\frac{1-x}{x}\right)^{0.9}\left(\frac{\rho_g}{\rho_l}\right)^{
 | `rho_g` | Number | Yes | Saturated-vapor density [kg/m³]. |
 | `mu_l` | Number | Yes | Liquid dynamic viscosity [Pa·s]. |
 | `mu_g` | Number | Yes | Vapor dynamic viscosity [Pa·s]. |
-
-## References
-
-1. the standard literature, J.G. & the standard literature, J.R., a standard two-phase text (3rd ed.).
-

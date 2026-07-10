@@ -42,4 +42,3 @@ The acausal equations this component expands into (over its port members and par
 ```
 out.sig = low + (high - low) * 0.5 * (tanh((time - t0) / eps) - tanh((time - t0 - width) / eps))
 ```
-

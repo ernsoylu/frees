@@ -32,8 +32,3 @@ $$ (A^\top)_{ij} = A_{ji} $$
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
 | `A` | Number | Yes | Square input matrix. |
-
-## References
-
-1. the standard literature, G.H. & the standard literature, C.F., Matrix Computations (4th ed.).
-

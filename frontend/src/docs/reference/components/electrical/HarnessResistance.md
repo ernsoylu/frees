@@ -43,4 +43,3 @@ a.I + b.I = 0
 Q         = R * a.I^2
 heat.Qdot = -Q
 ```
-

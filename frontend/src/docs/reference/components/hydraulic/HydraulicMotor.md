@@ -46,4 +46,3 @@ out.mdot  = in.mdot
 out.h     = in.h
 shaft.tau = -(disp * (in.P - out.P) / (2 * pi#)) * eta_m
 ```
-

@@ -40,4 +40,3 @@ der(y)  = in.sig
 init(y) = y0
 out.sig = y
 ```
-

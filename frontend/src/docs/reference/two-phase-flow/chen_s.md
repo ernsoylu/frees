@@ -5,8 +5,6 @@ summary: Chen flow-boiling nucleate-suppression factor S
 related: []
 examples: []
 tags: [chen, two, phase, flow]
-references:
-  - "Chen, J.C. (1966), Ind. Eng. Chem. Process Des. Dev. 5:322"
 ---
 
 # chen_s
@@ -40,8 +38,3 @@ $$ S = \frac{1}{1 + 2.53\times10^{-6}\,Re_l^{1.17}} \quad\text{(nucleate suppres
 | --- | --- | --- | --- |
 | `Re_l` | Number | Yes | Liquid-only Reynolds number. |
 | `F` | Number | Yes | Convective enhancement factor. |
-
-## References
-
-1. the standard literature, J.G. & the standard literature, J.R., a standard two-phase text (3rd ed.).
-

@@ -5,9 +5,6 @@ summary: A rotational inertia, τ = J dω/dt.
 related: []
 examples: []
 tags: [inertia, component, mechanical, acausal]
-references:
-  - "the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., a standard system-dynamics text (5th ed.) — acausal/bond-graph formalism"
-  - "the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., System Dynamics (5th ed.)"
 ---
 
 # Inertia
@@ -43,8 +40,3 @@ Instantiating the component expands these acausal equations (over its port membe
 der(port.w)  = port.tau / J
 init(port.w) = w0
 ```
-
-## References
-
-1. the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., *a standard system-dynamics text* (5th ed.) — acausal/bond-graph formalism.
-2. the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., *System Dynamics* (5th ed.).

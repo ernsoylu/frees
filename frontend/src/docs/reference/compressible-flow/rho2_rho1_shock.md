@@ -5,8 +5,6 @@ summary: Normal-shock density ratio
 related: []
 examples: []
 tags: [rho2, rho1, shock, compressible, flow]
-references:
-  - "the standard literature, Y.A., the standard literature, M.A. & Kanoğlu, M., a standard thermodynamics text, Ch. 17, Eq. (17-36)"
 ---
 
 # rho2_rho1_shock
@@ -34,9 +32,3 @@ $$ \frac{\rho_2}{\rho_1} = \frac{(k+1)M_1^2}{2 + (k-1)M_1^2} $$
 | --- | --- | --- | --- |
 | `M1` | Number | Yes | Upstream Mach number (≥ 1). |
 | `k` | Number | Yes | Ratio of specific heats (e.g. 1.4 for air). |
-
-## References
-
-1. the standard literature, Y.A., the standard literature, M.A. & Kanoğlu, M., a standard thermodynamics text, Ch. 17.
-2. Anderson, J.D., Modern Compressible Flow (3rd ed.).
-

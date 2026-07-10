@@ -5,9 +5,6 @@ summary: Constant-pressure adiabatic flame temperature of a fuel-air mixture.
 related: [AdiabaticFlameTempEq, mix_enthalpy, wiebe_rate]
 examples: [adiabatic-flame-temp]
 tags: [combustion, adiabatic flame temperature, energy balance, equivalence ratio, methane]
-references:
-  - "the standard literature, Y.A. & the standard literature, M.A., a standard thermodynamics text, Ch. 15, §15-4"
-  - "Turns, S.R., An Introduction to Combustion (3rd ed.), Ch. 2"
 ---
 
 # AdiabaticFlameTemp
@@ -39,7 +36,7 @@ $$ H_{\text{react}}(T_{\text{react}}) = H_{\text{prod}}(T_{\text{ad}}) $$
 
 i.e.
 
-$$ \sum_{\text{react}} N_i\big(\bar h_f^\circ + \Delta\bar h(T_{\text{react}})\big)_i = \sum_{\text{prod}} N_j\big(\bar h_f^\circ + \Delta\bar h(T_{\text{ad}})\big)_j \qquad \text{(the standard literature §15-4)} $$
+$$ \sum_{\text{react}} N_i\big(\bar h_f^\circ + \Delta\bar h(T_{\text{react}})\big)_i = \sum_{\text{prod}} N_j\big(\bar h_f^\circ + \Delta\bar h(T_{\text{ad}})\big)_j $$
 
 where $\bar h_f^\circ$ is the enthalpy of formation and $\Delta\bar h(T)$ the
 sensible enthalpy (here from NASA-7 polynomials).
@@ -75,8 +72,3 @@ sensible enthalpy (here from NASA-7 polynomials).
 | Error | Cause | Fix |
 | --- | --- | --- |
 | `UNKNOWN_FUEL` | `fuel$` has no thermo data | Use a fuel present in the NASA-7 species set. |
-
-## References
-
-1. the standard literature, Y.A. & the standard literature, M.A. *a standard thermodynamics text*, Ch. 15, §15-4.
-2. Turns, S.R. *An Introduction to Combustion* (3rd ed.), Ch. 2.

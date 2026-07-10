@@ -47,4 +47,3 @@ dPe        = (in.P - out.P) + rp * (pilot.P - in.P)
 g          = 0.5 * (1 + tanh(dPe / eps))
 in.mdot * abs(in.mdot) = g * CdA^2 * 2 * rho * (in.P - out.P)
 ```
-

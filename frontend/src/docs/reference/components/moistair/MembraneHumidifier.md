@@ -47,4 +47,3 @@ dry_out.h    = dry_in.h + eff_h * (wet_in.h - dry_in.h)
 wet_out.W    = wet_in.W - (dry_in.mdot / wet_in.mdot) * (dry_out.W - dry_in.W)
 wet_out.h    = wet_in.h - (dry_in.mdot / wet_in.mdot) * (dry_out.h - dry_in.h)
 ```
-

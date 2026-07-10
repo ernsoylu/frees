@@ -5,9 +5,6 @@ summary: A mass/heat generation source term.
 related: []
 examples: [ev-thermal-management]
 tags: [massgen, component, heat, acausal]
-references:
-  - "the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., a standard system-dynamics text (5th ed.) — acausal/bond-graph formalism"
-  - "the standard literature, F.P. et al., Fundamentals of Heat and Mass Transfer"
 ---
 
 # MassGen
@@ -50,8 +47,3 @@ init(port.T) = T0
 Instantiated in the verified example below:
 
 [Run: ev-thermal-management]
-
-## References
-
-1. the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., *a standard system-dynamics text* (5th ed.) — acausal/bond-graph formalism.
-2. the standard literature, F.P. et al., *Fundamentals of Heat and Mass Transfer*.

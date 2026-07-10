@@ -33,4 +33,3 @@ The acausal equations this component expands into (over its port members and par
 port.f  = 0
 out.sig = port.vel
 ```
-

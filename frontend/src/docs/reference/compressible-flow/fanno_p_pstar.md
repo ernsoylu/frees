@@ -5,8 +5,6 @@ summary: Fanno static-pressure ratio
 related: []
 examples: []
 tags: [fanno, pstar, compressible, flow]
-references:
-  - "the standard literature, Y.A., the standard literature, M.A. & Kanoğlu, M., a standard thermodynamics text, Ch. 17, Ch. 17 (Fanno)"
 ---
 
 # fanno_p_pstar
@@ -34,9 +32,3 @@ $$ \frac{P}{P^*} = \frac{1}{M}\sqrt{\frac{k+1}{2 + (k-1)M^2}} $$
 | --- | --- | --- | --- |
 | `M` | Number | Yes | Mach number. |
 | `k` | Number | Yes | Ratio of specific heats (e.g. 1.4 for air). |
-
-## References
-
-1. the standard literature, Y.A., the standard literature, M.A. & Kanoğlu, M., a standard thermodynamics text, Ch. 17.
-2. Anderson, J.D., Modern Compressible Flow (3rd ed.).
-

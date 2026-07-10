@@ -5,8 +5,6 @@ summary: Isentropic stagnation-to-static temperature ratio T0/T(M, k).
 related: [P0_P, mach_A_Astar, stagnationtemp]
 examples: [cd-nozzle-shock]
 tags: [compressible, isentropic, stagnation, temperature, mach, nozzle]
-references:
-  - "the standard literature, Y.A., the standard literature, M.A. & Kanoğlu, M., a standard thermodynamics text, Ch. 17, Eq. (17-18)"
 ---
 
 # T0_T
@@ -30,7 +28,7 @@ temperature follows from a known stagnation value as `T = T0 / T0_T(M, k)`.
 
 ## Mathematical Formulation
 
-$$ \frac{T_0}{T} = 1 + \frac{k-1}{2}\,M^2 \qquad \text{(the standard literature Eq. 17-18)} $$
+$$ \frac{T_0}{T} = 1 + \frac{k-1}{2}\,M^2 $$
 
 > **Method:** direct evaluation; dimensionless `M` and `k`.
 
@@ -63,7 +61,3 @@ from the reservoir temperature: `T1 = T0 / T0_T(M1, k)`.
 | Error | Cause | Fix |
 | --- | --- | --- |
 | `DOMAIN_ERROR` | `M` negative or `k ≤ 1` | Use a non-negative Mach and a physical `k > 1`. |
-
-## References
-
-1. the standard literature, Y.A., the standard literature, M.A. & Kanoğlu, M. *a standard thermodynamics text*, Ch. 17, Eq. (17-18).

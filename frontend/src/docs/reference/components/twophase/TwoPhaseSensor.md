@@ -5,9 +5,6 @@ summary: A sensor reading the two-phase stream state.
 related: []
 examples: []
 tags: [twophasesensor, component, twophase, acausal]
-references:
-  - "the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., a standard system-dynamics text (5th ed.) — acausal/bond-graph formalism"
-  - "the standard literature, J.G. & the standard literature, J.R., a standard two-phase text (3rd ed.)"
 ---
 
 # TwoPhaseSensor
@@ -53,8 +50,3 @@ rho_l    = Density(fluid$, P=in.P, x=0)
 rho_g    = Density(fluid$, P=in.P, x=1)
 alpha    = void_zivi(x, rho_l, rho_g)
 ```
-
-## References
-
-1. the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., *a standard system-dynamics text* (5th ed.) — acausal/bond-graph formalism.
-2. the standard literature, J.G. & the standard literature, J.R., *a standard two-phase text* (3rd ed.).

@@ -5,9 +5,6 @@ summary: Developed fin length of a fin-and-tube heat-exchanger air side.
 related: [hx_area_indirect, hx_eta_surf, fin_efficiency]
 examples: [ev-thermal-management]
 tags: [heat exchanger, geometry, fin length, fin-and-tube, air side]
-references:
-  - "Shah, R.K. & Sekulić, D.P., Fundamentals of Heat Exchanger Design, Ch. 8"
-  - "the standard literature, W.M. & London, A.L., Compact Heat Exchangers (3rd ed.), Ch. 2"
 ---
 
 # hx_fin_len
@@ -36,7 +33,7 @@ given fin pitch (`1/finDensity`) and thickness `t`:
 
 $$ \text{finLen} = f\big(\text{depth},\,t,\,\text{finDensity},\,H_{\text{tube}}\big) $$
 
-(a fin-and-tube geometric construction; Shah & Sekulić, Ch. 8).
+(a fin-and-tube geometric construction).
 
 > **Method:** direct geometric evaluation of the developed fin path between tubes.
 
@@ -69,8 +66,3 @@ sets `mL` and hence `fin_efficiency(mL)`.
 | Error | Cause | Fix |
 | --- | --- | --- |
 | `DOMAIN_ERROR` | A geometry input ≤ 0 | All dimensions must be positive. |
-
-## References
-
-1. Shah, R.K. & Sekulić, D.P. *Fundamentals of Heat Exchanger Design*, Ch. 8.
-2. the standard literature, W.M. & London, A.L. *Compact Heat Exchangers* (3rd ed.), Ch. 2.

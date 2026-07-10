@@ -57,4 +57,3 @@ heat.T    = T
 der(T)    = (Qgen + heat.Qdot) / C_th
 init(T)   = T0
 ```
-

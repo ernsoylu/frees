@@ -5,9 +5,6 @@ summary: Static error constants Kp, Kv, Ka of an open-loop system.
 related: [margin, feedback, step]
 examples: []
 tags: [control, error constant, steady state error, position, velocity, acceleration]
-references:
-  - "the standard literature, N.S., a standard controls text (7th ed.), Ch. 7, §7.3"
-  - "the standard literature, K., a standard controls text (5th ed.), Ch. 5, §5.8"
 ---
 
 # errorconst
@@ -26,7 +23,7 @@ CALL errorconst(num, den : Kp, Kv, Ka)
 
 ## Mathematical Formulation
 
-For open-loop `G(s)` (the standard literature §7.3):
+For open-loop `G(s)`:
 
 $$ K_p = \lim_{s\to 0} G(s), \quad K_v = \lim_{s\to 0} s\,G(s), \quad K_a = \lim_{s\to 0} s^2 G(s) $$
 
@@ -55,8 +52,3 @@ with steady-state errors `e_step = 1/(1+Kp)`, `e_ramp = 1/Kv`, `e_parabola = 1/K
 | `Kp` | Number | Position error constant. |
 | `Kv` | Number | Velocity error constant. |
 | `Ka` | Number | Acceleration error constant. |
-
-## References
-
-1. the standard literature, N.S. *a standard controls text* (7th ed.), Ch. 7, §7.3.
-2. the standard literature, K. *a standard controls text* (5th ed.), Ch. 5, §5.8.

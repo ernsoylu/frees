@@ -45,4 +45,3 @@ J         = veh.vel / (n * Dp + epsn)
 veh.f     = -(ct$(J) * rhoA * n^2 * Dp^4)
 shaft.tau = cpw$(J) * rhoA * n^2 * Dp^5 / (2 * pi#)
 ```
-

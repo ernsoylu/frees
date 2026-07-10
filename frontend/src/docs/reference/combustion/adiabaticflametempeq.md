@@ -5,8 +5,6 @@ summary: Adiabatic flame temperature with dissociation [K]
 related: []
 examples: []
 tags: [adiabaticflametempeq, combustion]
-references:
-  - "Turns, S.R., An Introduction to Combustion (3rd ed.), Ch. 2"
 ---
 
 # adiabaticflametempeq
@@ -36,9 +34,3 @@ $$ H_{\text{react}}(T_r) = H_{\text{prod}}(T_{ad}) \quad\text{with equilibrium d
 | `phi` | Number | Yes | Equivalence ratio (1 = stoichiometric). |
 | `T_react` | Number | Yes | Reactant inlet temperature [K]. |
 | `P` | Number | Yes | Pressure [Pa]. |
-
-## References
-
-1. Turns, S.R., An Introduction to Combustion (3rd ed.).
-2. the standard literature, J.B., a standard engine text.
-

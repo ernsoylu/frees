@@ -50,4 +50,3 @@ Re_d     = reynolds(rho, V, D, mu_a)
 f        = friction_factor(Re_d, rough / D)
 out.P    = in.P - f * (L / D) * rho * V^2 / 2
 ```
-

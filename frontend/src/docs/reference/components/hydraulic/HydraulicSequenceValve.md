@@ -45,4 +45,3 @@ out.h    = in.h
 g        = 0.5 * (1 + tanh((in.P - Pset) / eps))
 in.mdot * abs(in.mdot) = g * CdA^2 * 2 * rho * (in.P - out.P)
 ```
-

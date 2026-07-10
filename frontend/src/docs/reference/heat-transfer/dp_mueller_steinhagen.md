@@ -5,8 +5,6 @@ summary: dP [Pa], Mueller-Steinhagen-Heck. SIDE: two-phase refrigerant (alt to d
 related: []
 examples: []
 tags: [dp, mueller, steinhagen, heat, transfer]
-references:
-  - "Müller-Steinhagen, H. & Heck, K. (1986), Chem. Eng. Process. 20:297"
 ---
 
 # dp_mueller_steinhagen
@@ -45,9 +43,3 @@ $$ \frac{dP}{dz} = G_{ms}(1-x)^{1/3} + B\,x^3, \quad G_{ms} = A + 2(B-A)x \quad\
 | `Dh` | Number | Yes | Hydraulic diameter [m]. |
 | `Aflow` | Number | Yes | Free-flow (minimum) cross-sectional area [m²]. |
 | `L` | Number | Yes | Length [m]. |
-
-## References
-
-1. the standard literature, F.P. et al., Fundamentals of Heat and Mass Transfer.
-2. the standard literature, S. et al., Heat Exchangers: Selection, Rating, and Thermal Design.
-

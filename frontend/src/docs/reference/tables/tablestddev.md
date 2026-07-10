@@ -32,4 +32,3 @@ $$ s = \sqrt{\tfrac{1}{n-1}\sum_r (c_r - \bar c)^2} $$
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
 | `'col'` | Number | Yes | Name of a result-table column (string). |
-

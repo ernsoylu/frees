@@ -5,9 +5,6 @@ summary: Automatic PID gain tuning by loop-shaping to a target crossover.
 related: [margin, feedback, lqr]
 examples: [controller-design-lqr-pid]
 tags: [control, pid, tuning, loop shaping, crossover, kp ki kd]
-references:
-  - "Åström, K.J. & Hägglund, T., Advanced PID Control, Ch. 4"
-  - "the standard literature, N.S., a standard controls text (7th ed.), Ch. 9"
 ---
 
 # pidtune
@@ -38,7 +35,7 @@ The gains are chosen so that at the target crossover `ωc`:
 $$ |C(j\omega_c)G(j\omega_c)| = 1, \qquad \angle C(j\omega_c)G(j\omega_c) = -180° + \text{PM} $$
 
 > **Method:** solve the magnitude/phase loop-shaping conditions at `wc` for the
-> controller gains (Åström & Hägglund Ch. 4).
+> controller gains.
 
 ## Examples
 
@@ -71,8 +68,3 @@ crossover and margin.
 | Error | Cause | Fix |
 | --- | --- | --- |
 | `INFEASIBLE_WC` | target crossover unreachable | Choose a `wc` consistent with the plant bandwidth. |
-
-## References
-
-1. Åström, K.J. & Hägglund, T. *Advanced PID Control*, Ch. 4.
-2. the standard literature, N.S. *a standard controls text* (7th ed.), Ch. 9.

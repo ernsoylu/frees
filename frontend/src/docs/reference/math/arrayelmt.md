@@ -40,4 +40,3 @@ $$ \operatorname{ArrayElmt}(\{a_1,\dots,a_n\}, i) = a_i $$
 | --- | --- | --- |
 | `n]` | Number/Array | Computed `n]`. |
 | `i` | Number/Array | Computed `i`. |
-

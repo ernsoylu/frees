@@ -5,9 +5,6 @@ summary: A liquid boundary supplying a stream of set state.
 related: []
 examples: [ev-thermal-management]
 tags: [liquidsource, component, liquid, acausal]
-references:
-  - "the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., a standard system-dynamics text (5th ed.) — acausal/bond-graph formalism"
-  - "the standard literature, F.P. et al., Fundamentals of Heat and Mass Transfer, Ch. 8"
 ---
 
 # LiquidSource
@@ -53,8 +50,3 @@ out.h    = Enthalpy(fluid$, P=P, T=T)
 Instantiated in the verified example below:
 
 [Run: ev-thermal-management]
-
-## References
-
-1. the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., *a standard system-dynamics text* (5th ed.) — acausal/bond-graph formalism.
-2. the standard literature, F.P. et al., *Fundamentals of Heat and Mass Transfer*, Ch. 8.

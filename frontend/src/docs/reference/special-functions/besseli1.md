@@ -5,8 +5,6 @@ summary: Modified Bessel function of the first kind, order 1 — I_1(x).
 related: [besseli, besseli0, besselk1]
 examples: []
 tags: [special function, modified bessel, i1, first kind]
-references:
-  - "the standard literature, M. & the standard literature, I.A., Handbook of Mathematical Functions, §9.6"
 ---
 
 # besseli1
@@ -23,7 +21,7 @@ y = besseli1(x)
 
 ## Mathematical Formulation
 
-$$ I_1(x) = \sum_{k=0}^{\infty}\frac{1}{k!\,(k+1)!}\left(\frac{x}{2}\right)^{2k+1}, \qquad I_0'(x) = I_1(x) \qquad \text{(A\&S §9.6)} $$
+$$ I_1(x) = \sum_{k=0}^{\infty}\frac{1}{k!\,(k+1)!}\left(\frac{x}{2}\right)^{2k+1}, \qquad I_0'(x) = I_1(x) $$
 
 ## Examples
 
@@ -43,7 +41,3 @@ y = besseli1(0)
 | Argument | Type | Description |
 | --- | --- | --- |
 | `y` | Number | I_1(x). |
-
-## References
-
-1. the standard literature, M. & the standard literature, I.A. *Handbook of Mathematical Functions*, §9.6.

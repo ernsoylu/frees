@@ -5,9 +5,6 @@ summary: An air-to-refrigerant coil (the air side of an evaporator or condenser)
 related: []
 examples: []
 tags: [aircoil, component, ac, acausal]
-references:
-  - "the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., a standard system-dynamics text (5th ed.) — acausal/bond-graph formalism"
-  - "the industry handbook — Refrigeration"
 ---
 
 # AirCoil
@@ -53,8 +50,3 @@ connect(air_in, AC.in)
 connect(AC.out, air_out)
 connect(EV.wall, AC.wall)
 ```
-
-## References
-
-1. the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., *a standard system-dynamics text* (5th ed.) — acausal/bond-graph formalism.
-2. the industry handbook — Refrigeration.

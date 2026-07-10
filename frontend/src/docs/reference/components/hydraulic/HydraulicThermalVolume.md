@@ -72,4 +72,3 @@ beta_eff = beta
 ```
 beta_eff = beta * 0.5 * (1 + tanh((Pm - Pvap) / eps_c))
 ```
-

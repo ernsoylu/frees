@@ -5,8 +5,6 @@ summary: Cavallini-Zecchin condensation Nusselt number
 related: []
 examples: []
 tags: [nu, cavallini, zecchin, two, phase, flow]
-references:
-  - "Cavallini, A. & Zecchin, R. (1974), 5th Int. Heat Transfer Conf."
 ---
 
 # nu_cavallini_zecchin
@@ -43,8 +41,3 @@ $$ Nu = 0.05\,Re_{eq}^{0.8}\,Pr_l^{0.33} \quad\text{(Cavallini–Zecchin condens
 | `x` | Number | Yes | Vapor quality (0–1). |
 | `rho_l` | Number | Yes | Saturated-liquid density [kg/m³]. |
 | `rho_g` | Number | Yes | Saturated-vapor density [kg/m³]. |
-
-## References
-
-1. the standard literature, J.G. & the standard literature, J.R., a standard two-phase text (3rd ed.).
-

@@ -5,9 +5,6 @@ summary: A two-phase condenser sized by an overall conductance UA.
 related: []
 examples: []
 tags: [twophasecondenserua, component, twophase, acausal]
-references:
-  - "the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., a standard system-dynamics text (5th ed.) — acausal/bond-graph formalism"
-  - "the standard literature, J.G. & the standard literature, J.R., a standard two-phase text (3rd ed.)"
 ---
 
 # TwoPhaseCondenserUA
@@ -53,8 +50,3 @@ rho_out  = Density(fluid$, P=out.P, h=out.h)
 m        = V * 0.5 * (rho_in + rho_out)
 SC       = Tcond - Temperature(fluid$, P=out.P, h=out.h)
 ```
-
-## References
-
-1. the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., *a standard system-dynamics text* (5th ed.) — acausal/bond-graph formalism.
-2. the standard literature, J.G. & the standard literature, J.R., *a standard two-phase text* (3rd ed.).

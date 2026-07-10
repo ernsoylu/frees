@@ -48,4 +48,3 @@ Pm        = eta * Pf
 shaft.tau = -Pm / (shaft.w + epsw)
 out.h     = in.h - Pm / in.mdot
 ```
-

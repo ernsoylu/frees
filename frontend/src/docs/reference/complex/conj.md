@@ -32,4 +32,3 @@ $$ \bar z = \overline{a + jb} = a - jb $$
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
 | `z` | Number | Yes | Argument (complex or real). |
-

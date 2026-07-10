@@ -32,4 +32,3 @@ $$ \min_{0 \le i \le N} \text{col}(t_i) $$
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
 | `'col'` | Number | Yes | Name of a result-table column (string). |
-

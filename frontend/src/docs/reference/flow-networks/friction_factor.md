@@ -5,9 +5,6 @@ summary: Darcy friction factor (Colebrook-Moody, laminar+turbulent)
 related: []
 examples: []
 tags: [friction, factor, flow, networks]
-references:
-  - "the standard literature, a standard fluids text"
-  - "Colebrook, C.F. (1939), J. Inst. Civ. Eng. 11:133"
 ---
 
 # friction_factor
@@ -35,9 +32,3 @@ $$ \frac{1}{\sqrt{f}} = -2\log_{10}\!\left(\frac{\varepsilon/D}{3.7} + \frac{2.5
 | --- | --- | --- | --- |
 | `Re` | Number | Yes | Reynolds number. |
 | `rel_rough` | Number | Yes | Relative wall roughness ε/D. |
-
-## References
-
-1. the standard literature, a standard fluids text.
-2. the standard literature, I.E., Handbook of Hydraulic Resistance.
-

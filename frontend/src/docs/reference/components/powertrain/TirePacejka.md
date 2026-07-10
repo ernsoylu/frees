@@ -49,4 +49,3 @@ Fx        = Fz * D * sin(C * arctan(Bs - E * (Bs - arctan(Bs))))
 veh.f     = -Fx
 wheel.tau = r * Fx
 ```
-

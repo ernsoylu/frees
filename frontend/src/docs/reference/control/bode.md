@@ -5,9 +5,6 @@ summary: Bode frequency response — magnitude (dB) and phase (deg) versus frequ
 related: [nyquist, margin]
 examples: [control-analysis-report]
 tags: [control, bode, frequency response, magnitude, phase, frequency]
-references:
-  - "the standard literature, N.S., a standard controls text (7th ed.), Ch. 10, §10.2"
-  - "the standard literature, K., a standard controls text (5th ed.), Ch. 7, §7.2"
 ---
 
 # bode
@@ -34,7 +31,7 @@ vectors aligned with `omega` (typically log-spaced).
 $$ \text{mag}(\omega) = 20\log_{10}\big|G(j\omega)\big| \quad[\text{dB}], \qquad \text{phase}(\omega) = \angle G(j\omega) \quad[\text{deg}] $$
 
 > **Method:** evaluate `G(jω)` at each `omega`; magnitude in dB, phase unwrapped in
-> degrees (the standard literature §10.2).
+> degrees.
 
 ## Examples
 
@@ -67,8 +64,3 @@ roll-off of −20 dB/decade (one more pole than zero).
 | Error | Cause | Fix |
 | --- | --- | --- |
 | `EMPTY_FREQUENCY` | `omega` is empty | Provide a frequency vector, e.g. `omega = 0.1:50:100 | Log`. |
-
-## References
-
-1. the standard literature, N.S. *a standard controls text* (7th ed.), Ch. 10, §10.2.
-2. the standard literature, K. *a standard controls text* (5th ed.), Ch. 7, §7.2.

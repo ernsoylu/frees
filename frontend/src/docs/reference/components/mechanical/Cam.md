@@ -44,4 +44,3 @@ lift      = prof$(theta)
 rod.vel   = slope * shaft.w
 shaft.tau = slope * rod.f
 ```
-

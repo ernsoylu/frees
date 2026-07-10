@@ -10,7 +10,7 @@ COMPONENT HydraulicTank(port)
 END
 
 // Hydraulic orifice fidelity ladder. `turbulent` is the original square-law on
-// CdA. `cq_lambda` is the reference simulator flow law: the flow coefficient rises with the
+// CdA. `cq_lambda` is the Cq(λ) flow law: the flow coefficient rises with the
 // flow number λ = (D/ν)·√(2|ΔP|/ρ) as Cq = Cqmax·tanh(2λ/λc), so the orifice is
 // LINEAR in ΔP in the laminar regime and square-law when fully turbulent, with
 // a C∞ transition — no Reynolds branch switch. epsP [Pa] smooths the flow
@@ -181,7 +181,7 @@ COMPONENT HydraulicDoubleActingCylinder(a, b, rod)
 END
 
 // Generic K-factor resistance (bend, tee, sudden expansion — set K from the
-// the standard literature/flow-network correlations).
+// standard flow-network loss correlations).
 COMPONENT HydraulicResistance(in, out)
   PARAM K, rho, D, domain$ = oil
   out.mdot = in.mdot

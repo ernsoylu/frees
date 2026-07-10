@@ -45,4 +45,3 @@ out.mdot = in.mdot
 out.W    = in.W
 out.h    = in.h
 ```
-

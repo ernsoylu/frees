@@ -6,9 +6,6 @@ summary: Analyze a plant end to end — poles/zeros, gain & phase margins, Bode,
 examples: [control-analysis-report]
 tags: [cookbook, control, bode, nyquist, margin, stability, frequency response]
 related: [pole, zero, margin, bode, nyquist, step]
-references:
-  - "the standard literature, N.S., a standard controls text (7th ed.), Ch. 8, 10"
-  - "the standard literature, K., a standard controls text (5th ed.), Ch. 6, 7"
 ---
 
 # Frequency-Domain Stability Analysis
@@ -28,7 +25,7 @@ From `G(s) = num/den`:
 
 ## Approach
 
-Stability is read three ways that must agree (the standard literature Ch. 8, 10): all poles in the left
+Stability is read three ways that must agree: all poles in the left
 half-plane; positive gain/phase margins; and a Nyquist locus that does not encircle
 `−1 + j0`. The frequency response evaluates `G(jω)` along the imaginary axis:
 
@@ -44,8 +41,3 @@ Embed the plots with `[Graph="…"]` tags so the Formatted report renders them i
 `−2 ± 4.58j` (stable, `ω_n = 5`, `ζ ≈ 0.4`), a resonant Bode peak near 5 rad/s, a
 Nyquist locus clear of `−1`, and a step response that overshoots and rings before
 settling.
-
-## References
-
-1. the standard literature, N.S. *a standard controls text* (7th ed.), Ch. 8, 10.
-2. the standard literature, K. *a standard controls text* (5th ed.), Ch. 6, 7.

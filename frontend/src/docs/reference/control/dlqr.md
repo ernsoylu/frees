@@ -5,9 +5,6 @@ summary: Discrete-time LQR optimal state-feedback gain (via the DARE).
 related: [lqr, dare, place]
 examples: []
 tags: [control, lqr, discrete, optimal, state feedback, riccati]
-references:
-  - "the standard literature, K., Discrete-Time Control Systems (2nd ed.), Ch. 8"
-  - "Franklin, G.F. et al., Digital Control of Dynamic Systems (3rd ed.), Ch. 9"
 ---
 
 # dlqr
@@ -60,8 +57,3 @@ where `X` is the stabilizing solution of the discrete algebraic Riccati equation
 | Error | Cause | Fix |
 | --- | --- | --- |
 | `NOT_STABILIZABLE` | `(A, B)` not stabilizable | The pair must be stabilizable. |
-
-## References
-
-1. the standard literature, K. *Discrete-Time Control Systems* (2nd ed.), Ch. 8.
-2. Franklin, G.F. et al. *Digital Control of Dynamic Systems* (3rd ed.), Ch. 9.

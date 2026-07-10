@@ -114,7 +114,8 @@ const TablesWorkbookTab = lazy(() => import('./spreadsheet/TablesWorkbookTab'))
 // tooling is only fetched when an analyzer window opens.
 const DataAnalyzerTab = lazy(() => import('./analyzer/DataAnalyzerTab'))
 // The analyzer's variable/signal browser, hosted by the Inspector when an
-// analyzer window is focused (the reference measurement tool's dockable variable-selection window).
+// analyzer window is focused (a measurement-suite-style dockable
+// variable-selection window).
 const SignalBrowser = lazy(() => import('./analyzer/SignalBrowser'))
 // Lazy: pulls the full 58 KB example catalog only when the picker opens.
 const ExamplesModal = lazy(() => import('./ExamplesModal'))
@@ -2093,8 +2094,8 @@ export default function App() {
         )
       }
 
-      // Data Analyzer: rename + the signal browser (the reference measurement tool's dockable variable
-      // window) — import CSV/MF4 or solved tables and assign channels to the
+      // Data Analyzer: rename + the signal browser (a measurement-suite-style
+      // dockable variable window) — import CSV/MF4 or solved tables and assign channels to the
       // selected strip without leaving the Inspector.
       if (fw?.kind === 'analyzer') {
         const an = analyzers.find((x) => `analyzer:${x.id}` === fw.id)

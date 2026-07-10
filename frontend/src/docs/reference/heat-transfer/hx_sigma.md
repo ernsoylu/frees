@@ -5,8 +5,6 @@ summary: GEOMETRY: free-flow (contraction) ratio sigma=Aflow/Afrontal. SIDE: com
 related: []
 examples: []
 tags: [hx, sigma, heat, transfer]
-references:
-  - "the standard literature, W.M. & London, A.L., Compact Heat Exchangers (3rd ed.), Ch. 2"
 ---
 
 # hx_sigma
@@ -34,9 +32,3 @@ $$ \sigma = \frac{A_{\text{flow}}}{A_{\text{frontal}}} \quad\text{(free-flow / c
 | --- | --- | --- | --- |
 | `Aflow` | Number | Yes | Free-flow (minimum) cross-sectional area [m²]. |
 | `Afrontal` | Number | Yes | Frontal (face) area [m²]. |
-
-## References
-
-1. the standard literature, F.P. et al., Fundamentals of Heat and Mass Transfer.
-2. the standard literature, S. et al., Heat Exchangers: Selection, Rating, and Thermal Design.
-

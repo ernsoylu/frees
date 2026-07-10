@@ -46,4 +46,3 @@ Q         = epsd * in.mdot * cp_d * (wall.T - T_in)
 out.h     = in.h + Q / in.mdot
 wall.Qdot = Q
 ```
-

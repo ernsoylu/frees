@@ -36,5 +36,4 @@ $$ u(X) = \text{user-supplied or RSS-propagated uncertainty of } X $$
 
 ## References
 
-1. a standard numerics text, a standard numerics text (3rd ed.), Ch. 4.
-
+1. JCGM 100:2008 — Evaluation of measurement data: Guide to the expression of uncertainty in measurement (GUM).

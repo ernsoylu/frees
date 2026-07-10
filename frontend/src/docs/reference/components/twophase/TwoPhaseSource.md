@@ -5,9 +5,6 @@ summary: A boundary supplying a two-phase stream.
 related: []
 examples: []
 tags: [twophasesource, component, twophase, acausal]
-references:
-  - "the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., a standard system-dynamics text (5th ed.) — acausal/bond-graph formalism"
-  - "the standard literature, J.G. & the standard literature, J.R., a standard two-phase text (3rd ed.)"
 ---
 
 # TwoPhaseSource
@@ -47,8 +44,3 @@ out.mdot = mdot
 out.P    = P
 out.h    = Enthalpy(fluid$, P=P, x=x)
 ```
-
-## References
-
-1. the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., *a standard system-dynamics text* (5th ed.) — acausal/bond-graph formalism.
-2. the standard literature, J.G. & the standard literature, J.R., *a standard two-phase text* (3rd ed.).

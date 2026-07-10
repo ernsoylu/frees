@@ -1,4 +1,4 @@
-// The ultimate-fix regression pair (C/R causality, reference-grounded):
+// The ultimate-fix regression pair (C/R causality, grounded in the standard literature):
 // CompressorMap's `flow` rung is a true R-element — mdot from the PR map —
 // so supply -> compressor -> manifold volume -> orifice -> atmosphere is
 // well-posed even on the RK path (this exact chain was structurally

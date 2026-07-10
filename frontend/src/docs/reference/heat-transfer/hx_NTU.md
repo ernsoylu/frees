@@ -5,10 +5,6 @@ summary: Number of transfer units NTU(ε, Cr) — the inverse of hx_effectivenes
 related: [hx_effectiveness, LMTD]
 examples: [hx-effectiveness-ntu]
 tags: [heat exchanger, ntu, effectiveness, sizing, counterflow]
-references:
-  - "the standard literature, W.M. & London, A.L., Compact Heat Exchangers (3rd ed.), Ch. 2"
-  - "the standard literature, S. et al., Heat Exchangers: Selection, Rating, and Thermal Design (4th ed.), §2.6, Table 2.4"
-  - "the standard literature, J.P., Heat Transfer (10th ed.), §10-6, Table 10-4"
 ---
 
 # hx_NTU
@@ -34,7 +30,7 @@ the `ε`(NTU, Cr) relation analytically per arrangement.
 
 With $NTU = UA/C_{min}$ and $C_r = C_{min}/C_{max}$:
 
-**Counterflow** ($C_r < 1$ — the standard compact-HX text Ch. 2; the standard literature Table 2.4; the standard literature Table 10-4):
+**Counterflow** ($C_r < 1$):
 
 $$ NTU = \frac{1}{C_r - 1}\,\ln\!\left(\frac{\varepsilon - 1}{\varepsilon\,C_r - 1}\right) $$
 
@@ -82,9 +78,3 @@ target effectiveness.
 | --- | --- | --- |
 | `INFEASIBLE_EFFECTIVENESS` | `ε` at or above the arrangement's ceiling (e.g. `ε ≥ 1/(1+Cr)` for parallel flow) | No finite `NTU` reaches it — lower the target or switch to counterflow. |
 | `UNKNOWN_HX_TYPE` | `type$` not recognized | Use `'counterflow'` or `'parallel'`; pass `Cr = 0` for a condenser/evaporator. |
-
-## References
-
-1. the standard literature, W.M. & London, A.L. *Compact Heat Exchangers* (3rd ed.), Ch. 2.
-2. the standard literature, S., Liu, H. & Pramuanjaroenkij, A. *Heat Exchangers: Selection, Rating, and Thermal Design* (4th ed.), §2.6, Table 2.4.
-3. the standard literature, J.P. *Heat Transfer* (10th ed.), §10-6, Table 10-4.

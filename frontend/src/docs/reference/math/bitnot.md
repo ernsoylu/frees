@@ -32,4 +32,3 @@ $$ (\sim a) = -(a+1)\ \text{(two’s complement)} $$
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
 | `a` | Number | Yes | First operand. |
-

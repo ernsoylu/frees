@@ -41,4 +41,3 @@ The acausal equations this component expands into (over its port members and par
 ```
 out.sig = bias + amp * sin(2 * pi# * freq * time + phase)
 ```
-

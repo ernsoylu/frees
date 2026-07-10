@@ -5,9 +5,6 @@ summary: A fluid boundary that supplies a stream at set conditions.
 related: []
 examples: []
 tags: [source, component, fluid, acausal]
-references:
-  - "the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., a standard system-dynamics text (5th ed.) — acausal/bond-graph formalism"
-  - "the standard literature, a standard fluids text"
 ---
 
 # Source
@@ -46,8 +43,3 @@ out.mdot = mdot
 out.P    = P
 out.h    = Enthalpy(fluid$, P=P, T=T)
 ```
-
-## References
-
-1. the standard literature, D.C., the standard literature, D.L. & Rosenberg, R.C., *a standard system-dynamics text* (5th ed.) — acausal/bond-graph formalism.
-2. the standard literature, *Fluid Mechanics* (8th ed.).

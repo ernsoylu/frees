@@ -5,8 +5,6 @@ summary: Stagnation pressure ratio across a normal shock P02/P01(M1, k).
 related: [M2_shock, P2_P1_shock, P0_P]
 examples: [cd-nozzle-shock]
 tags: [compressible, normal shock, stagnation pressure, loss, irreversibility, nozzle]
-references:
-  - "the standard literature, Y.A., the standard literature, M.A. & Kanoğlu, M., a standard thermodynamics text, Ch. 17, Fig. 17-42, Table A-33"
 ---
 
 # P02_P01_shock
@@ -29,7 +27,7 @@ stagnation (total) pressure. The recovered stagnation pressure downstream is
 
 ## Mathematical Formulation
 
-$$ \frac{P_{02}}{P_{01}} = \left[\frac{(k+1)M_1^2}{2 + (k-1)M_1^2}\right]^{k/(k-1)}\left[\frac{k+1}{2k\,M_1^2 - (k-1)}\right]^{1/(k-1)} \qquad \text{(the standard literature Fig. 17-42; Table A-33)} $$
+$$ \frac{P_{02}}{P_{01}} = \left[\frac{(k+1)M_1^2}{2 + (k-1)M_1^2}\right]^{k/(k-1)}\left[\frac{k+1}{2k\,M_1^2 - (k-1)}\right]^{1/(k-1)} $$
 
 > **Method:** direct evaluation; `≤ 1` with equality only at `M1 = 1`, decreasing
 > as the shock strengthens.
@@ -60,7 +58,3 @@ $$ \frac{P_{02}}{P_{01}} = \left[\frac{(k+1)M_1^2}{2 + (k-1)M_1^2}\right]^{k/(k-
 | Error | Cause | Fix |
 | --- | --- | --- |
 | `DOMAIN_ERROR` | `M1 < 1` | A normal shock requires supersonic inflow; check the upstream state. |
-
-## References
-
-1. the standard literature, Y.A., the standard literature, M.A. & Kanoğlu, M. *a standard thermodynamics text*, Ch. 17, Fig. 17-42, Table A-33.

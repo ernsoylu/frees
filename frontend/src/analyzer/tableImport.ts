@@ -1,4 +1,4 @@
-// Table → measurement conversion (the reference measurement tool parity: analyze solved table results in
+// Table → measurement conversion (oscilloscope-tool parity: analyze solved table results in
 // the oscilloscope). An ODE Table (DYNAMIC block trajectory) imports with its
 // time column as the time base; a Parametric Table imports on a run-number
 // base (1..N). Values prefer the numeric solve results over the formatted

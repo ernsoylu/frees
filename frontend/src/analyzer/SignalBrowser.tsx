@@ -1,11 +1,11 @@
-// The analyzer's variable/signal browser (the reference measurement tool "Variables" window): file
+// The analyzer's variable/signal browser (the "Variables" window): file
 // import (CSV/MF4 + solved ODE/Parametric tables), template-mode relocation
 // (§2.5b), per-file time offsets, and the searchable channel list that
 // assigns signals to the selected strip.
 //
 // Extracted from DataAnalyzerTab so the SAME browser renders in two hosts:
 // embedded on the left of each analyzer window, and in the Inspector edge
-// panel whenever an analyzer window is focused (the oscilloscope-style dockable
+// panel whenever an analyzer window is focused (the measurement-tool-style dockable
 // variable-selection window). Both hosts share the AnalyzerSpec, so the
 // selected strip and file list stay in sync.
 

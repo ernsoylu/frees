@@ -54,4 +54,3 @@ out.mdot * out.yh2o = in.mdot * in.yh2o + mH2O
 out.mdot * out.yo2  = in.mdot * in.yo2  - mO2
 out.mdot * out.yn2  = in.mdot * in.yn2
 ```
-

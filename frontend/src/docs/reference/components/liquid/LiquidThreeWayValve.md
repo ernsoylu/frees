@@ -44,4 +44,3 @@ outb.h    = in.h
 outa.mdot = u * in.mdot
 outb.mdot = (1 - u) * in.mdot
 ```
-
