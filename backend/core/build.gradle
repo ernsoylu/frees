@@ -19,7 +19,7 @@ dependencies {
     // matheclipse-core transitively pulls jackson-databind 2.15.3, which has HIGH
     // CVEs (CVE-2026-54512, CVE-2026-54513, PolymorphicTypeValidator bypasses).
     // Pin to the patched version explicitly (matches web/build.gradle).
-    implementation 'com.fasterxml.jackson.core:jackson-databind:2.22.0'
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.22.1'
     // Symja (matheclipse): pure-Java computer algebra system powering the CAS
     // directives (factor/expand/simplify; later solve/integrate).
     implementation 'org.matheclipse:matheclipse-core:3.2.0'
