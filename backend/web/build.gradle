@@ -18,7 +18,7 @@ dependencies {
     // legacy Jackson 2 (com.fasterxml.jackson) databind module transitively —
     // this module needs it explicitly for JacksonConfig's Jackson 2 ObjectMapper
     // bean (Redis/RabbitMQ payload serialization; see JacksonConfig javadoc).
-    implementation 'com.fasterxml.jackson.core:jackson-databind:2.22.0'
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.22.1'
 
     // Asynchronous Compute Architecture
     implementation 'org.springframework.boot:spring-boot-starter-amqp'
