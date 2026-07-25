@@ -178,6 +178,24 @@ public class AsynchronousComputeIntegrationTest {
                 .andExpect(status().isNotFound());
     }
 
+    /**
+     * Streaming an unknown job id must not allocate anything.
+     *
+     * <p>The id is a caller-controlled path segment and the SSE emitter map was
+     * keyed straight off it, so invented ids each bought a map entry plus an
+     * async request held open for the full 60 s timeout. The dispatcher writes
+     * the PENDING entry before publishing, so any id a client legitimately holds
+     * already resolves; one that does not is unknown, and 404 costs nothing to
+     * hold.
+     */
+    @Test
+    public void testStreamingAnUnknownJobIsRefusedRatherThanHeldOpen() throws Exception {
+        for (int i = 0; i < 25; i++) {
+            mockMvc.perform(get("/api/jobs/invented-id-" + i + "/stream"))
+                    .andExpect(status().isNotFound());
+        }
+    }
+
     // TIER 2: Boundary & Corner Cases
 
     @Test

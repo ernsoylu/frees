@@ -2,22 +2,25 @@ package com.frees.backend.api;
 
 import com.frees.backend.units.UnitRegistry;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.util.List;
 
 /**
  * REPL endpoints: evaluate a single expression against the cached solved
- * workspace, and expose the in-scope variable names for tab-completion.
+ * workspace, and clear REPL-defined variables.
  *
  * <p>Stateless apart from the {@link SolveContextCache} it reads. The context is
  * populated by a successful {@code /api/solve}; until then evaluate returns a
  * friendly "solve first" message rather than an error.
+ *
+ * <p>There was also a {@code GET /variables} returning the in-scope names for
+ * tab-completion. Nothing ever called it — the terminal completes against the
+ * workspace it already holds — so it was an unauthenticated way to read any
+ * session's variable names for no benefit, and was removed rather than
+ * hardened. {@link SolveContextCache.Session#completionNames()} stays: the
+ * evaluator still uses it in-process.
  */
 @RestController
 @RequestMapping("/api/repl")
@@ -73,13 +76,5 @@ public class ReplController {
             }
         }
         return ResponseEntity.ok().build();
-    }
-
-    /** Variable names currently in the workspace (plus REPL-defined), for tab-completion. */
-    @GetMapping("/variables")
-    public ResponseEntity<List<String>> variables(
-            @RequestParam(name = "sessionId", required = false) String sessionId) {
-        SolveContextCache.Session session = cache.peek(sessionId);
-        return ResponseEntity.ok(session == null ? List.of() : session.completionNames());
     }
 }

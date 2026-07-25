@@ -9,6 +9,7 @@ import com.frees.backend.units.UnitRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.env.Environment;
 import org.springframework.core.env.Profiles;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -21,7 +22,9 @@ import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Pattern;
 
 /**
  * Store of the most recent successful solve, keyed by a client-supplied
@@ -63,6 +66,37 @@ public class SolveContextCache {
     private static final String REDIS_KEY_PREFIX = "session:";
     private static final long REDIS_TTL_SECONDS = 60L * 60L; // 1 hour
 
+    /**
+     * Sorted-set index of live Redis session keys, scored by write time, used
+     * to bound how many can exist at once.
+     *
+     * <p>The in-memory store is capped at {@link #MAX_SESSIONS}, but the Redis
+     * mirror was not capped by anything: the key is chosen by the client, every
+     * solve writes one, and each lives an hour. Nothing stopped a caller from
+     * minting a fresh id per request and growing Redis without limit — and
+     * Redis is a critical dependency in the health rollup, so exhausting it
+     * takes the whole system DOWN, not just the REPL. Validating the id fixes
+     * key SIZE but not key COUNT (unlimited valid UUIDs are free to generate),
+     * so the count needs its own bound.
+     */
+    private static final String REDIS_INDEX_KEY = "session:index";
+
+    /** Hard ceiling on mirrored sessions; oldest are evicted past it. Well above
+     *  any real concurrent-user count for this deployment. Field-initialised so
+     *  the no-arg (unit-test) constructor still gets the production value when
+     *  Spring is not doing the injecting. */
+    @Value("${frees.security.max-redis-sessions:2000}")
+    private int maxRedisSessions = 2_000;
+
+    /**
+     * A session id may only be a UUID — which is exactly what the frontend
+     * generates ({@code crypto.randomUUID()} in App.tsx). Anything else is not
+     * from our client, and is kept out of Redis so the shared key namespace
+     * cannot be polluted with arbitrary or oversized keys.
+     */
+    private static final Pattern SESSION_ID = Pattern.compile(
+            "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}");
+
     private final Map<String, Session> store = new ConcurrentHashMap<>();
     private final Environment environment;
     /** StringRedisTemplate is always auto-configured when Redis is on the
@@ -93,13 +127,27 @@ public class SolveContextCache {
                 && objectMapper != null;
     }
 
+    /**
+     * True when this id may touch Redis at all.
+     *
+     * <p>Deliberately excludes {@link #DEFAULT_SESSION}: the no-id fallback is a
+     * single shared key, so mirroring it would persist one client's workspace
+     * under a name every other no-id client also reads — and push it across
+     * JVMs. Keeping it in-memory confines that shared namespace to a single
+     * process, which is all the local single-user convenience it exists for
+     * needs. (Our own frontend always sends an id, so nothing real lands here.)
+     */
+    private boolean mirrorable(String sessionId) {
+        return redisActive() && sessionId != null && SESSION_ID.matcher(sessionId).matches();
+    }
+
     private static String redisKey(String sessionId) {
         return REDIS_KEY_PREFIX + key(sessionId);
     }
 
     /** Loads a session snapshot from Redis, or {@code null} if absent/unreadable. */
     private Session loadFromRedis(String sessionId) {
-        if (!redisActive()) {
+        if (!mirrorable(sessionId)) {
             return null;
         }
         try {
@@ -119,15 +167,43 @@ public class SolveContextCache {
 
     /** Mirrors the current snapshot of {@code session} to Redis (best-effort). */
     private void mirrorToRedis(String sessionId, Session session) {
-        if (!redisActive()) {
+        if (!mirrorable(sessionId)) {
             return;
         }
         try {
             String json = objectMapper.writeValueAsString(session);
             redisTemplate.opsForValue().set(redisKey(sessionId), json,
                     Duration.ofSeconds(REDIS_TTL_SECONDS));
+            indexAndTrim(sessionId);
         } catch (Exception e) {
             log.warn("Failed to mirror session {} to Redis", sessionId, e);
+        }
+    }
+
+    /**
+     * Records the key in the index and drops the oldest once the ceiling is
+     * passed, so the mirrored set stays bounded no matter how many distinct
+     * ids arrive. Best-effort: a failure here must never fail the solve that
+     * triggered it, since the snapshot itself is already written.
+     */
+    private void indexAndTrim(String sessionId) {
+        try {
+            var zset = redisTemplate.opsForZSet();
+            zset.add(REDIS_INDEX_KEY, sessionId, System.currentTimeMillis());
+            Long size = zset.size(REDIS_INDEX_KEY);
+            if (size == null || size <= maxRedisSessions) {
+                return;
+            }
+            long excess = size - maxRedisSessions;
+            Set<String> oldest = zset.range(REDIS_INDEX_KEY, 0, excess - 1);
+            if (oldest == null || oldest.isEmpty()) {
+                return;
+            }
+            log.info("Redis session cap reached ({}); evicting {} oldest session(s)", size, oldest.size());
+            redisTemplate.delete(oldest.stream().map(SolveContextCache::redisKey).toList());
+            zset.remove(REDIS_INDEX_KEY, oldest.toArray());
+        } catch (RuntimeException e) {
+            log.warn("Failed to trim the Redis session index", e);
         }
     }
 
@@ -225,14 +301,47 @@ public class SolveContextCache {
             overlayDisplay.keySet().removeIf(k -> k.startsWith(prefix));
         }
 
-        /** True once anything is available to evaluate against (solve, defs, or REPL vars). */
+        /**
+         * True once anything is available to evaluate against (solve, defs, or
+         * REPL vars).
+         *
+         * <p>{@code @JsonIgnore} is load-bearing, not tidiness. The class sets
+         * {@code getterVisibility = NONE}, but that does not cover IS-getters,
+         * so this was serialised into the Redis snapshot as {@code "populated"}
+         * — a name matching no field on the way back in. With Jackson's default
+         * FAIL_ON_UNKNOWN_PROPERTIES that made every read throw
+         * UnrecognizedPropertyException, which loadFromRedis catches and turns
+         * into "no session". Cross-JVM hydration therefore never worked: an api
+         * node could not see a solve performed by a compute node, so the REPL
+         * silently behaved as if the document had never been solved.
+         */
+        @JsonIgnore
         public boolean isPopulated() {
             return !siValues.isEmpty() || !defs.isEmpty() || !overlaySi.isEmpty();
         }
     }
 
+    /**
+     * True when an id-less caller must NOT be given the shared fallback session.
+     *
+     * <p>{@link #DEFAULT_SESSION} is a single key shared by every caller that
+     * omits an id, so on a deployment serving more than one user it hands one
+     * client's solved workspace — variable names and values — to any other
+     * client that simply leaves the id off. That is fine for the local
+     * single-user case it exists for, and not fine anywhere else, so it is
+     * confined to the profile where there is only one user: the async profiles
+     * (api/compute) are the deployed, potentially multi-user topology, and
+     * there an id-less caller gets a private throwaway session instead.
+     */
+    private boolean sharedFallbackForbidden(String sessionId) {
+        return (sessionId == null || sessionId.isBlank()) && redisActive();
+    }
+
     /** The session for {@code sessionId}, creating an empty one if absent. */
     public Session session(String sessionId) {
+        if (sharedFallbackForbidden(sessionId)) {
+            return new Session(); // private, not stored, not shared
+        }
         evict();
         String k = key(sessionId);
         Session s = store.get(k);
@@ -250,6 +359,9 @@ public class SolveContextCache {
 
     /** The session for {@code sessionId}, or {@code null} if absent/expired. */
     public Session peek(String sessionId) {
+        if (sharedFallbackForbidden(sessionId)) {
+            return null;
+        }
         String k = key(sessionId);
         Session s = store.get(k);
         if (s == null) {
@@ -287,9 +399,10 @@ public class SolveContextCache {
     public void clear(String sessionId) {
         String k = key(sessionId);
         store.remove(k);
-        if (redisActive()) {
+        if (mirrorable(sessionId)) {
             try {
                 redisTemplate.delete(redisKey(sessionId));
+                redisTemplate.opsForZSet().remove(REDIS_INDEX_KEY, sessionId);
             } catch (RuntimeException e) {
                 log.warn("Failed to delete session {} from Redis", sessionId, e);
             }

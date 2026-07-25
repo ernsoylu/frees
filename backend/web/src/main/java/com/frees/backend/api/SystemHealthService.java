@@ -26,6 +26,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * Probes every service in the deployment topology so {@code GET /api/health}
@@ -53,6 +55,21 @@ public class SystemHealthService {
     /** Per-probe wall-clock budget; the endpoint never blocks longer than this. */
     private static final long PROBE_TIMEOUT_MS = 2500;
 
+    /**
+     * How long a probe result is served before the topology is re-probed.
+     *
+     * <p>{@code /api/health} is unauthenticated and deliberately exempt from the
+     * API rate limiter so monitors can poll freely — but a full report opens a
+     * Redis connection, opens an AMQP connection, runs a queue-info RPC and
+     * makes an outbound HTTP request. Uncached that turns an unmetered endpoint
+     * into an amplifier: cheap requests in, four fan-out operations plus five
+     * threads out, each hit churning broker connections. Caching collapses any
+     * arrival rate to at most one probe per window, which is also simply
+     * correct — dependency health does not meaningfully change within it, and
+     * every real monitor polls far slower than this.
+     */
+    private static final long CACHE_TTL_MS = 2000;
+
     public record ComponentHealth(String name, String role, String status,
                                   Integer replicas, String detail) {}
 
@@ -64,11 +81,29 @@ public class SystemHealthService {
     private final String activeProfiles;
     private final String frontendUrl;
 
-    private final ExecutorService probePool = Executors.newCachedThreadPool(r -> {
+    /**
+     * Fixed rather than cached: an unbounded pool grows a thread per concurrent
+     * probe, so a flood of health requests used to spawn threads without limit.
+     * Four concurrent probes per report is the most a single report needs, and
+     * the cache below means reports no longer overlap in normal operation.
+     */
+    private final ExecutorService probePool = Executors.newFixedThreadPool(4, r -> {
         Thread t = new Thread(r, "health-probe");
         t.setDaemon(true);
         return t;
     });
+
+    /** Last report and when it was taken; see {@link #CACHE_TTL_MS}. */
+    private final AtomicReference<CachedReport> cached = new AtomicReference<>();
+    /** Held by the one caller doing the re-probe, so a burst arriving on a cold
+     *  cache produces a single probe rather than one per request. */
+    private final ReentrantLock probeLock = new ReentrantLock();
+
+    private record CachedReport(HealthReport report, long takenAtMillis) {
+        boolean isFresh(long now) {
+            return now - takenAtMillis < CACHE_TTL_MS;
+        }
+    }
 
     private final HttpClient httpClient = HttpClient.newBuilder()
             .connectTimeout(Duration.ofMillis(PROBE_TIMEOUT_MS))
@@ -86,8 +121,47 @@ public class SystemHealthService {
         this.frontendUrl = frontendUrl == null ? "" : frontendUrl.trim();
     }
 
-    /** Probe every component and roll up an overall status. */
+    /**
+     * The current topology report, re-probed at most once per
+     * {@link #CACHE_TTL_MS}.
+     *
+     * <p>A burst arriving on a stale cache collapses to one probe: whoever wins
+     * {@link #probeLock} refreshes while the rest keep serving the previous
+     * report. Only a burst on a completely cold cache (nothing to serve yet)
+     * waits, and it waits for that same single probe rather than starting its
+     * own.
+     */
     public HealthReport report() {
+        long now = System.currentTimeMillis();
+        CachedReport current = cached.get();
+        if (current != null && current.isFresh(now)) {
+            return current.report();
+        }
+
+        if (!probeLock.tryLock()) {
+            // Someone else is already re-probing. Serve the stale report rather
+            // than piling on; if there is none yet, wait for theirs.
+            if (current != null) {
+                return current.report();
+            }
+            probeLock.lock();
+        }
+        try {
+            // Re-check: the holder we queued behind may have just refreshed it.
+            CachedReport refreshed = cached.get();
+            if (refreshed != null && refreshed.isFresh(System.currentTimeMillis())) {
+                return refreshed.report();
+            }
+            HealthReport report = probeAll();
+            cached.set(new CachedReport(report, System.currentTimeMillis()));
+            return report;
+        } finally {
+            probeLock.unlock();
+        }
+    }
+
+    /** Probe every component and roll up an overall status. */
+    private HealthReport probeAll() {
         List<ComponentHealth> components = new ArrayList<>();
         components.add(probeApi());
         components.add(timed("frees-redis", "cache", this::probeRedis));
