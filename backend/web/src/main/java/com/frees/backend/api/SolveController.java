@@ -16,6 +16,7 @@ import com.frees.backend.units.UnitRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -383,6 +384,26 @@ public class SolveController {
             List<SolveDtos.VariableDto> variables
     ) {}
 
+    /**
+     * Largest parametric table a single request may run, and the wall-clock
+     * budget for the whole run.
+     *
+     * <p>The solver's {@code MAX_ELAPSED_SECONDS_CAP} is a PER-SOLVE cap, and a
+     * table performs one solve per row — times up to {@link #MAX_PARAMETRIC_PASSES}
+     * when accessors are present. Nothing bounded the product, so a single
+     * request could occupy a compute worker for far longer than the per-solve
+     * cap suggests, and three of them could hold the whole tier until the
+     * broker's consumer timeout eventually tore the connections down. The row
+     * count bounds the work admitted; the deadline bounds it in time even when
+     * individual rows turn out to be slow. Both are overridable per deployment
+     * via {@code frees.solver.max-table-rows} / {@code -seconds}.
+     */
+    @Value("${frees.solver.max-table-rows:5000}")
+    private int maxTableRows;
+
+    @Value("${frees.solver.max-table-seconds:120}")
+    private long maxTableSeconds;
+
     @PostMapping("/solve/table")
     public ResponseEntity<?> solveTable(@RequestBody SolveTableRequest request) {
         if (request.text() == null || request.text().isBlank()) {
@@ -390,6 +411,11 @@ public class SolveController {
         }
         if (request.table() == null || request.table().rows() == null) {
             return ResponseEntity.badRequest().build();
+        }
+        // Reject before enqueueing, so an oversized run never reaches a worker.
+        if (request.table().rows().size() > maxTableRows) {
+            return ResponseEntity.unprocessableEntity().body(Map.of("error", tooManyRowsMessage(
+                    request.table().rows().size())));
         }
         if (dispatcher != null) {
             try {
@@ -409,6 +435,14 @@ public class SolveController {
      */
     public SolveTableResponse computeSolveTable(SolveTableRequest request) {
         String cleanText = request.text();
+
+        // Re-checked here, not just at the endpoint: this is also the compute
+        // worker's entry point, and it deserialises the request off the queue.
+        List<Map<String, Double>> requestedRows = request.table().rows();
+        if (requestedRows != null && requestedRows.size() > maxTableRows) {
+            throw new IllegalStateException(tooManyRowsMessage(requestedRows.size()));
+        }
+        TableDeadline deadline = new TableDeadline(System.nanoTime(), maxTableSeconds);
 
         SolverSettings settings = request.stopCriteria() != null
                 ? request.stopCriteria().toSettings()
@@ -436,8 +470,8 @@ public class SolveController {
         List<String> varOrder = request.table().variables() != null
                 ? request.table().variables() : List.of();
         List<RowOutcome> outcomes = mentionsParametricAccessor(cleanText)
-                ? solveTableWithAccessors(rows, varOrder, context)
-                : solveTableRows(rows, context);
+                ? solveTableWithAccessors(rows, varOrder, context, deadline)
+                : solveTableRows(rows, context, deadline);
 
         List<TableRowResult> results = new ArrayList<>();
         for (RowOutcome outcome : outcomes) {
@@ -486,12 +520,41 @@ public class SolveController {
     ) {}
 
     /** Solves every parametric row independently (the common, accessor-free case). */
-    private List<RowOutcome> solveTableRows(List<Map<String, Double>> rows, TableRowContext context) {
+    private List<RowOutcome> solveTableRows(List<Map<String, Double>> rows, TableRowContext context,
+                                            TableDeadline deadline) {
         List<RowOutcome> outcomes = new ArrayList<>();
         for (Map<String, Double> row : rows) {
+            deadline.check();
             outcomes.add(solveTableRow(row, context));
         }
         return outcomes;
+    }
+
+    private String tooManyRowsMessage(int rows) {
+        return "The parametric table has too many rows (" + rows + "; limit "
+                + maxTableRows + "). Reduce the run count.";
+    }
+
+    /**
+     * Wall-clock budget for one whole table run, checked between rows and
+     * between fixed-point passes.
+     *
+     * <p>Cooperative rather than a cancelling timeout on purpose: the row loop
+     * returns control between solves, so checking here reliably stops the work,
+     * whereas interrupting a solve mid-flight would leave a thread running
+     * inside solver/native code with no guarantee it notices — which is how a
+     * worker ends up pinned even after its job is declared dead.
+     */
+    private record TableDeadline(long startNanos, long budgetSeconds) {
+        void check() {
+            long elapsed = (System.nanoTime() - startNanos) / 1_000_000_000L;
+            if (elapsed >= budgetSeconds) {
+                throw new IllegalStateException(
+                        "The parametric run exceeded its " + budgetSeconds
+                        + "-second budget and was stopped. Reduce the number of runs, or "
+                        + "tighten the stop criteria so each run converges faster.");
+            }
+        }
     }
 
     /** Maximum table-wide fixed-point passes when accessors are present. */
@@ -506,12 +569,16 @@ public class SolveController {
      * columns stop changing.
      */
     private List<RowOutcome> solveTableWithAccessors(List<Map<String, Double>> rows,
-                                                     List<String> varOrder, TableRowContext context) {
+                                                     List<String> varOrder, TableRowContext context,
+                                                     TableDeadline deadline) {
         Map<String, double[]> columns = new HashMap<>();
         List<RowOutcome> outcomes = new ArrayList<>();
         for (int pass = 0; pass < MAX_PARAMETRIC_PASSES; pass++) {
             outcomes = new ArrayList<>();
             for (int i = 0; i < rows.size(); i++) {
+                // This is the worst multiplier in the request: every row is
+                // re-solved on every pass, so the budget is checked per row.
+                deadline.check();
                 ParametricAccessorContext.install(i + 1, rows.size(), columns, varOrder);
                 try {
                     outcomes.add(solveTableRow(rows.get(i), context));

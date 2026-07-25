@@ -46,6 +46,7 @@ public class RequestGuardFilter extends OncePerRequestFilter {
     private final long windowMillis;
     private final int maxReplRequests;
     private final long replWindowMillis;
+    private final int maxHealthRequests;
     private final Map<String, Counter> counters = new ConcurrentHashMap<>();
     private final Semaphore parseSlots;
 
@@ -56,6 +57,7 @@ public class RequestGuardFilter extends OncePerRequestFilter {
             @Value("${frees.security.rate-limit-window-seconds:60}") long windowSeconds,
             @Value("${frees.security.rate-limit-repl-requests:15}") int maxReplRequests,
             @Value("${frees.security.rate-limit-repl-window-seconds:60}") long replWindowSeconds,
+            @Value("${frees.security.rate-limit-health-requests:240}") int maxHealthRequests,
             @Value("${frees.security.max-concurrent-parses:8}") int maxConcurrentParses) {
         this.maxBodyBytes = maxBodyBytes;
         this.maxUploadBytes = maxUploadBytes;
@@ -63,6 +65,7 @@ public class RequestGuardFilter extends OncePerRequestFilter {
         this.windowMillis = windowSeconds * 1000L;
         this.maxReplRequests = maxReplRequests;
         this.replWindowMillis = replWindowSeconds * 1000L;
+        this.maxHealthRequests = maxHealthRequests;
         this.parseSlots = new Semaphore(Math.max(1, maxConcurrentParses));
     }
 
@@ -74,10 +77,27 @@ public class RequestGuardFilter extends OncePerRequestFilter {
             return;
         }
 
-        // The health endpoints (/api/health and /api/health/live) are exempt from
-        // the body-size and rate limits so monitoring dashboards and the platform
-        // deploy/liveness probe can poll them freely without being throttled.
+        // The liveness probe (/api/health/live) is fully exempt: it touches no
+        // dependency, just confirms this JVM can serve, and the platform's
+        // deploy/restart check must never be throttled.
+        if (request.getRequestURI().startsWith("/api/health/live")) {
+            chain.doFilter(request, response);
+            return;
+        }
+
+        // The topology report (/api/health) keeps its body-size exemption and
+        // gets a generous limit of its own rather than being unmetered. It is
+        // unauthenticated and fans out to Redis, the broker and the frontend,
+        // so an unlimited version is an amplifier; the result is also cached
+        // (SystemHealthService), which caps the real work regardless. The limit
+        // is set well above any real monitor's poll rate.
         if (request.getRequestURI().startsWith("/api/health")) {
+            if (!allow(clientIp(request) + ":health", maxHealthRequests, windowMillis)) {
+                response.setStatus(429);
+                response.setContentType("text/plain");
+                response.getWriter().write("Too many health requests. Please slow down and retry shortly.");
+                return;
+            }
             chain.doFilter(request, response);
             return;
         }

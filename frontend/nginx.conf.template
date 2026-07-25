@@ -34,6 +34,23 @@ server {
     # Mirrors the backend's own per-route cap in RequestGuardFilter; the
     # backend still counts streamed bytes, so this is the outer of three
     # enforcement layers, not the only one.
+    # Liveness probe: no rate limit. It performs no dependency work — it only
+    # confirms the JVM can serve a request — and a platform's deploy/restart
+    # check must never be throttled, or a burst of probes can make a healthy
+    # instance look dead and trigger a restart loop. The backend exempts this
+    # path too (RequestGuardFilter); this keeps the guarantee true end to end.
+    # Longest-prefix match beats both /api/health and /api/ below.
+    location /api/health/live {
+        include /etc/nginx/security-headers.conf;
+
+        resolver ${NGINX_LOCAL_RESOLVERS} valid=10s;
+        set $backend_host ${BACKEND_HOST};
+        proxy_pass http://$backend_host:8080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
+
     location /api/measurements {
         include /etc/nginx/security-headers.conf;
         limit_req zone=api burst=20 nodelay;

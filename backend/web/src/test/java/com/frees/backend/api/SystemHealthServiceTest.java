@@ -12,6 +12,8 @@ import java.util.function.Function;
 import static java.util.stream.Collectors.toMap;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class SystemHealthServiceTest {
@@ -88,6 +90,66 @@ class SystemHealthServiceTest {
         } finally {
             Thread.interrupted(); // clear so no other test inherits the flag
         }
+    }
+
+    /**
+     * /api/health is unauthenticated and each report opens a Redis connection,
+     * opens an AMQP connection, runs a queue RPC and makes an outbound HTTP
+     * call. Uncached, that turns an unmetered endpoint into an amplifier, so
+     * repeated calls inside the TTL must reuse the previous report rather than
+     * re-probe. Identity is the assertion because the cache stores and returns
+     * the exact instance — a re-probe would necessarily build a new one.
+     */
+    @Test
+    void repeatedReportsWithinTheTtlReuseTheProbeResult() {
+        SystemHealthService svc = new SystemHealthService(empty(), empty(), "test", "");
+        HealthReport first = svc.report();
+        for (int i = 0; i < 20; i++) {
+            assertSame(first, svc.report(), "report must be served from cache within the TTL");
+        }
+    }
+
+    @Test
+    void reprobesOnceTheCacheHasExpired() throws Exception {
+        SystemHealthService svc = new SystemHealthService(empty(), empty(), "test", "");
+        HealthReport first = svc.report();
+        Thread.sleep(2100); // just past CACHE_TTL_MS
+        assertNotSame(first, svc.report(), "a stale cache must be refreshed");
+    }
+
+    /**
+     * A burst arriving on a COLD cache must still collapse to one probe — the
+     * case that matters, since that is exactly what a flood produces. Losers of
+     * the race wait for the winner's result instead of each starting their own.
+     */
+    @Test
+    void aConcurrentBurstOnAColdCacheProbesOnce() throws Exception {
+        // An unreachable frontend makes each probe take real time, so the
+        // threads genuinely overlap rather than trivially serialising.
+        SystemHealthService svc = new SystemHealthService(
+                empty(), empty(), "test", "http://frees-frontend.invalid-host.local:8080/");
+        int threads = 12;
+        var barrier = new java.util.concurrent.CyclicBarrier(threads);
+        var results = new java.util.concurrent.ConcurrentLinkedQueue<HealthReport>();
+        var pool = java.util.concurrent.Executors.newFixedThreadPool(threads);
+        try {
+            for (int i = 0; i < threads; i++) {
+                pool.submit(() -> {
+                    barrier.await();
+                    results.add(svc.report());
+                    return null;
+                });
+            }
+            pool.shutdown();
+            assertTrue(pool.awaitTermination(30, java.util.concurrent.TimeUnit.SECONDS),
+                    "burst did not finish in time");
+        } finally {
+            pool.shutdownNow();
+        }
+        assertEquals(threads, results.size());
+        HealthReport any = results.peek();
+        assertTrue(results.stream().allMatch(r -> r == any),
+                "every caller in the burst must receive the same single probe result");
     }
 
     @Test
