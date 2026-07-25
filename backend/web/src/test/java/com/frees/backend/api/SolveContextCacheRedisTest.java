@@ -18,6 +18,7 @@ import java.util.Map;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -52,6 +53,12 @@ class SolveContextCacheRedisTest {
     @Autowired
     private StringRedisTemplate redisTemplate;
 
+    @Autowired
+    private com.fasterxml.jackson.databind.ObjectMapper objectMapper;
+
+    @Autowired
+    private org.springframework.core.env.Environment environment;
+
     private void put(String sessionId) {
         cache.put(sessionId, Map.of("x", 1.0), Map.of(), List.of("x"), Map.of(), null);
     }
@@ -76,6 +83,59 @@ class SolveContextCacheRedisTest {
         assertNull(redisTemplate.opsForValue().get("session:" + "x".repeat(100_000)));
         assertNull(redisTemplate.opsForValue().get("session:" + SolveContextCache.DEFAULT_SESSION),
                 "the shared no-id fallback must stay in-memory, never persisted or shared across JVMs");
+    }
+
+    /**
+     * The point of mirroring to Redis at all: an api node that has never seen a
+     * session in memory must be able to hydrate it from a solve a COMPUTE node
+     * performed. This is the whole cross-JVM path, and it was silently broken.
+     *
+     * <p>{@code Session} sets {@code getterVisibility = NONE}, which does not
+     * cover IS-getters, so {@code isPopulated()} was serialised as
+     * {@code "populated"} — a name matching no field on the way back. Jackson's
+     * default FAIL_ON_UNKNOWN_PROPERTIES turned every read into an exception,
+     * which {@code loadFromRedis} catches and reports as "no session". Nothing
+     * failed loudly: the REPL simply behaved as though the document had never
+     * been solved. A second cache instance over the same Redis is the honest
+     * reproduction — a fresh in-memory store, exactly like a different JVM.
+     */
+    @Test
+    void aSecondNodeHydratesASessionSolvedElsewhere() {
+        String id = UUID.randomUUID().toString();
+        cache.put(id, Map.of("alpha", 1.0, "beta", 2.0),
+                Map.of("beta", new SolveContextCache.ReplVar(2.0, "kPa", 0.5)),
+                List.of("alpha", "beta"), Map.of(), null);
+
+        SolveContextCache otherNode = new SolveContextCache(redisTemplate, objectMapper, environment);
+        SolveContextCache.Session hydrated = otherNode.peek(id);
+
+        assertNotNull(hydrated, "a node that never saw this session must hydrate it from Redis");
+        assertEquals(2.0, hydrated.siValues().get("beta"));
+        assertTrue(hydrated.completionNames().contains("alpha"));
+        assertTrue(hydrated.isPopulated(), "the hydrated snapshot must not look empty");
+        assertEquals("kPa", hydrated.unitOf("beta"));
+    }
+
+    /**
+     * The same defect one level down, where the failure names itself. The cache
+     * swallows a deserialisation error into a null session, so without this the
+     * only symptom is "the REPL forgot my solve".
+     */
+    @Test
+    void theSessionSnapshotSurvivesAJsonRoundTrip() throws Exception {
+        String id = UUID.randomUUID().toString();
+        cache.put(id, Map.of("alpha", 1.0), Map.of(), List.of("alpha"), Map.of(), null);
+        SolveContextCache.Session original = cache.peek(id);
+        assertNotNull(original);
+
+        String json = objectMapper.writeValueAsString(original);
+        SolveContextCache.Session parsed =
+                objectMapper.readValue(json, SolveContextCache.Session.class);
+
+        assertEquals(1.0, parsed.siValues().get("alpha"));
+        assertFalse(json.contains("\"populated\""),
+                "derived IS-getters must not be serialised: they come back as unknown "
+                        + "properties and fail the read. JSON was: " + json);
     }
 
     /**
