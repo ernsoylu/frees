@@ -246,6 +246,28 @@ class EquationParserTest {
     }
 
     @Test
+    void arrayRangeUnderTheSpanLimitStillRespectsTheEquationBudget() {
+        // The array path emits one equation per element but never consulted the
+        // equation budget — only the FOR path did — so a range that fits under
+        // MAX_RANGE_SPAN expanded unchecked: this 17-byte body produced a
+        // million equations (~1.5 GB, ~22 s) on the API node's request thread,
+        // despite the stated cap. The budget is now enforced in the accumulator
+        // itself, so every emission path is covered.
+        EquationParser.ParseException ex = assertThrows(EquationParser.ParseException.class,
+                () -> parser.parse("x[1:1000000] = 1"));
+        org.junit.jupiter.api.Assertions.assertTrue(
+                ex.getMessage().toLowerCase().contains("too many equations"),
+                "expected the equation budget to reject it, got: " + ex.getMessage());
+    }
+
+    @Test
+    void arraysWithinTheEquationBudgetStillParse() {
+        // The guard must not touch documents of a realistic size (the largest
+        // array in the shipped examples and docs is 400 elements).
+        assertEquals(400, parser.parse("x[1:400] = 1").size());
+    }
+
+    @Test
     void allowsReasonableLoop() {
         // A normal loop within the limit still works.
         List<Equation> equations = parser.parse("FOR i = 1 TO 50\n  x[i] = i\nEND");

@@ -16,6 +16,7 @@ import com.frees.backend.cas.CasIdentity;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -70,9 +71,23 @@ public final class EquationParser {
     /** Largest span a single FOR loop or array range (1:N) may expand to, and
      * the backstop on the total number of equations a program may generate.
      * These bound parse-time expansion so a tiny input (e.g. FOR i = 1 TO 1e9)
-     * cannot exhaust memory/CPU — a denial-of-service guard. */
+     * cannot exhaust memory/CPU — a denial-of-service guard.
+     *
+     * <p>The equation budget matters most: expansion runs SYNCHRONOUSLY on the
+     * API node's request thread (CheckController, and SolveController's
+     * pre-dispatch validateSyntax), so it is charged to an unauthenticated
+     * caller. The budget is therefore effectively a per-request memory cap.
+     * Measured over the full check pipeline (parse + check + deriveUnits +
+     * inferUnits + checkUnits): at 25 000 a worst-case request costs ~48 MB and
+     * ~0.9 s, versus ~1.6 GB and ~8.2 s at the former 500 000 — the latter
+     * enough to OOM the container from a 35-byte request body.
+     * Real documents are far below this (the largest in the repo's own
+     * examples and docs is a 400-element array); a self-hosted deployment with
+     * a genuinely larger model can raise it with
+     * {@code -Dfrees.parser.max-generated-equations=N}. */
     static final int MAX_RANGE_SPAN = 1_000_000;
-    static final int MAX_GENERATED_EQUATIONS = 500_000;
+    static final int MAX_GENERATED_EQUATIONS =
+            Integer.getInteger("frees.parser.max-generated-equations", 25_000);
 
     // Internal sentinel op chars for array-language-style element-wise operators. They
     // only ever exist on a raw Expr inside matrix compilation; compileMatrixExpr
@@ -260,7 +275,7 @@ public final class EquationParser {
         // Counter for module instance namespacing
         AtomicInteger moduleCounter = new AtomicInteger(0);
 
-        List<Equation> equations = new ArrayList<>(componentEquations);
+        List<Equation> equations = new BoundedEquationList(componentEquations);
         Set<String> symbolicVars = collectSymbolic(statements);
         flatten(statements, new HashMap<>(), constants, displayNames, equations, defs, moduleCounter, symbolicVars);
 
@@ -621,8 +636,51 @@ public final class EquationParser {
      * may not generate more than {@link #MAX_GENERATED_EQUATIONS} equations. */
     private static void checkEquationBudget(List<Equation> out) {
         if (out.size() > MAX_GENERATED_EQUATIONS) {
-            throw new ParseException("Too many equations generated (over "
-                    + MAX_GENERATED_EQUATIONS + "). Reduce loop or array sizes.");
+            throw new ParseException(TOO_MANY_EQUATIONS);
+        }
+    }
+
+    static final String TOO_MANY_EQUATIONS = "Too many equations generated (over "
+            + MAX_GENERATED_EQUATIONS + "). Reduce loop or array sizes.";
+
+    /**
+     * The equation accumulator, self-limiting at {@link #MAX_GENERATED_EQUATIONS}.
+     *
+     * <p>The budget is enforced here rather than at each call site because
+     * equations are appended from ~30 places (element-wise array equations,
+     * matrix/vector expansion, eigen/LU/SolveLinear emission, …) and only the
+     * FOR-loop path used to check it. That left the array path unbounded: an
+     * {@code x[1:1000000] = 1} body — 17 bytes — produced a million equations,
+     * sailing past the stated 500 000 cap because nothing on that path ever
+     * called {@link #checkEquationBudget}. Enforcing in {@code add} makes the
+     * cap hold for every current and future emission site by construction.
+     */
+    private static final class BoundedEquationList extends ArrayList<Equation> {
+        private static final long serialVersionUID = 1L;
+
+        BoundedEquationList(Collection<? extends Equation> initial) {
+            super(initial);
+            check();
+        }
+
+        @Override
+        public boolean add(Equation equation) {
+            check();
+            return super.add(equation);
+        }
+
+        @Override
+        public boolean addAll(Collection<? extends Equation> more) {
+            if (size() + more.size() > MAX_GENERATED_EQUATIONS) {
+                throw new ParseException(TOO_MANY_EQUATIONS);
+            }
+            return super.addAll(more);
+        }
+
+        private void check() {
+            if (size() >= MAX_GENERATED_EQUATIONS) {
+                throw new ParseException(TOO_MANY_EQUATIONS);
+            }
         }
     }
 

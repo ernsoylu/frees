@@ -11,6 +11,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Semaphore;
 
 /**
  * Defense-in-depth guard on the /api endpoints against application-layer
@@ -29,6 +30,16 @@ public class RequestGuardFilter extends OncePerRequestFilter {
      * without bound (which would be a memory-exhaustion vector). */
     private static final int MAX_TRACKED_IPS = 50_000;
 
+    /**
+     * Routes that parse and expand the document SYNCHRONOUSLY on the request
+     * thread — {@code /api/check} outright, and {@code /api/solve} +
+     * {@code /api/solve/table} via their pre-dispatch syntax validation. Peak
+     * heap on the API node is (concurrent parses) x (per-parse cost), so
+     * bounding concurrency is what actually bounds memory; the per-request cost
+     * itself is bounded by the parser's equation budget.
+     */
+    private static final String[] PARSE_HEAVY_ROUTES = {"/api/check", "/api/solve"};
+
     private final long maxBodyBytes;
     private final long maxUploadBytes;
     private final int maxRequests;
@@ -36,6 +47,7 @@ public class RequestGuardFilter extends OncePerRequestFilter {
     private final int maxReplRequests;
     private final long replWindowMillis;
     private final Map<String, Counter> counters = new ConcurrentHashMap<>();
+    private final Semaphore parseSlots;
 
     public RequestGuardFilter(
             @Value("${frees.security.max-body-bytes:1048576}") long maxBodyBytes,
@@ -43,13 +55,15 @@ public class RequestGuardFilter extends OncePerRequestFilter {
             @Value("${frees.security.rate-limit-requests:120}") int maxRequests,
             @Value("${frees.security.rate-limit-window-seconds:60}") long windowSeconds,
             @Value("${frees.security.rate-limit-repl-requests:15}") int maxReplRequests,
-            @Value("${frees.security.rate-limit-repl-window-seconds:60}") long replWindowSeconds) {
+            @Value("${frees.security.rate-limit-repl-window-seconds:60}") long replWindowSeconds,
+            @Value("${frees.security.max-concurrent-parses:8}") int maxConcurrentParses) {
         this.maxBodyBytes = maxBodyBytes;
         this.maxUploadBytes = maxUploadBytes;
         this.maxRequests = maxRequests;
         this.windowMillis = windowSeconds * 1000L;
         this.maxReplRequests = maxReplRequests;
         this.replWindowMillis = replWindowSeconds * 1000L;
+        this.parseSlots = new Semaphore(Math.max(1, maxConcurrentParses));
     }
 
     @Override
@@ -103,7 +117,35 @@ public class RequestGuardFilter extends OncePerRequestFilter {
             return;
         }
 
+        if (isParseHeavy(uri)) {
+            if (!parseSlots.tryAcquire()) {
+                // Shed rather than queue: admitting these unbounded is what lets
+                // concurrent large documents stack their peak heap and OOM the node.
+                response.setStatus(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
+                response.setContentType("text/plain");
+                response.setHeader("Retry-After", "2");
+                response.getWriter().write(
+                        "The server is busy checking other documents. Please retry in a moment.");
+                return;
+            }
+            try {
+                chain.doFilter(request, response);
+            } finally {
+                parseSlots.release();
+            }
+            return;
+        }
+
         chain.doFilter(request, response);
+    }
+
+    private static boolean isParseHeavy(String uri) {
+        for (String route : PARSE_HEAVY_ROUTES) {
+            if (uri.startsWith(route)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /** Fixed-window per-IP counter; returns false once the window's quota is
@@ -124,17 +166,46 @@ public class RequestGuardFilter extends OncePerRequestFilter {
         }
     }
 
-    /** Resolves the client IP, trusting the proxy's forwarded headers (set by
-     * nginx) and falling back to the socket address for direct connections. */
+    /**
+     * Resolves the client IP for rate-limit accounting.
+     *
+     * <p><b>Only the right-hand end of the forwarded chain is trustworthy.</b>
+     * {@code X-Forwarded-For} is append-only: nginx forwards it as
+     * {@code $proxy_add_x_forwarded_for}, which expands to
+     * "&lt;whatever the client sent&gt;, &lt;the peer nginx saw&gt;". Reading the
+     * FIRST element therefore reads a value the client chose — so a caller
+     * sending a fresh {@code X-Forwarded-For} per request got a fresh counter
+     * per request and the rate limits (both the general one and the stricter
+     * REPL one) did nothing at all.
+     *
+     * <p>{@code X-Real-IP} is preferred because nginx sets it with
+     * {@code proxy_set_header X-Real-IP $remote_addr}, which REPLACES any
+     * client-supplied value rather than appending to it, and because nginx's
+     * {@code real_ip} module (see nginx.conf.template) has by then already
+     * resolved {@code $remote_addr} to the true client through any upstream
+     * edge proxy — Railway's router, a Pangolin/Traefik tunnel. The last
+     * {@code X-Forwarded-For} element is the fallback for a proxy that sets
+     * only that; it is the address our immediate peer observed, which is
+     * likewise not client-settable. A direct connection (no proxy headers at
+     * all) falls back to the socket address.
+     *
+     * <p>These headers are only trustworthy because every deployment reaches
+     * the backend through the frontend's nginx. On a local dev box the API port
+     * is bound to loopback, so the only caller able to forge them is the user
+     * themselves.
+     */
     private static String clientIp(HttpServletRequest request) {
-        String forwarded = request.getHeader("X-Forwarded-For");
-        if (forwarded != null && !forwarded.isBlank()) {
-            int comma = forwarded.indexOf(',');
-            return (comma > 0 ? forwarded.substring(0, comma) : forwarded).trim();
-        }
         String realIp = request.getHeader("X-Real-IP");
         if (realIp != null && !realIp.isBlank()) {
             return realIp.trim();
+        }
+        String forwarded = request.getHeader("X-Forwarded-For");
+        if (forwarded != null && !forwarded.isBlank()) {
+            int lastComma = forwarded.lastIndexOf(',');
+            String last = lastComma >= 0 ? forwarded.substring(lastComma + 1) : forwarded;
+            if (!last.isBlank()) {
+                return last.trim();
+            }
         }
         return request.getRemoteAddr();
     }
