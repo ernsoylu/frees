@@ -1,0 +1,3 @@
+[      55ms] [ERROR] Manifest: Line: 1, column: 1, Syntax error. @ http://localhost:5173/manifest.json:0
+[     116ms] [ERROR] Manifest: Line: 1, column: 1, Syntax error. @ http://localhost:5173/manifest.json:0
+[    1357ms] [ERROR] The column width is less than 0, need to adjust page width to make it great than 0 @ http://localhost:5173/assets/univerAdapter-BlifwFmC.js:14

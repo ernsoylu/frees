@@ -1,0 +1,338 @@
+- generic [ref=e1]:
+  - generic [ref=e5]:
+    - generic [ref=e6]:
+      - generic [ref=e7]:
+        - button "Expand sidebar" [ref=e9] [cursor=pointer]
+        - button "Editor" [ref=e15] [cursor=pointer]
+        - generic [ref=e21]:
+          - button "Tables windows" [ref=e22] [cursor=pointer]
+          - generic: "2"
+        - button "Plots windows" [ref=e27] [cursor=pointer]
+        - button "Graph Digitizer — extract curves from chart images" [ref=e32] [cursor=pointer]
+        - button "Whiteboard windows" [ref=e40] [cursor=pointer]
+        - button "Spreadsheet windows" [ref=e48] [cursor=pointer]
+        - generic [ref=e51]:
+          - button "Analyzer windows" [ref=e52] [cursor=pointer]
+          - generic: "1"
+        - button "Terminal — REPL evaluated against the workspace" [ref=e57] [cursor=pointer]
+      - generic [ref=e62]:
+        - button "Window layout presets" [ref=e63] [cursor=pointer]
+        - button "Min/Max (optimization)" [ref=e71] [cursor=pointer]
+        - button "Curve Fit (least squares)" [ref=e80] [cursor=pointer]
+        - button "PID Tuner (auto-tune P/PI/PID gains)" [ref=e87] [cursor=pointer]
+        - button "Preferences" [ref=e94] [cursor=pointer]
+        - button "About" [ref=e100] [cursor=pointer]
+        - button "Switch to light mode" [ref=e106] [cursor=pointer]
+        - link "Help" [ref=e112] [cursor=pointer]:
+          - /url: /help
+    - generic [ref=e117]:
+      - generic [ref=e118]:
+        - generic [ref=e119]:
+          - heading "frees" [level=3] [ref=e120]
+          - button "File" [ref=e121] [cursor=pointer]
+          - button "Functions" [ref=e131] [cursor=pointer]
+          - button "Tools" [ref=e142] [cursor=pointer]
+          - button "Open command palette" [ref=e153] [cursor=pointer]
+          - button "Rename project (currently untitled.frees)" [ref=e158] [cursor=pointer]:
+            - paragraph [ref=e159]: untitled.frees
+          - paragraph [ref=e163]: free solver
+        - generic [ref=e164]:
+          - paragraph [ref=e165]: Check (F4) · Solve (F2)
+          - button "Check" [ref=e166] [cursor=pointer]
+          - group [ref=e173]:
+            - button "Solve" [ref=e174] [cursor=pointer]
+            - button "Solve options" [ref=e180] [cursor=pointer]
+      - generic [ref=e192]:
+        - generic [ref=e199]:
+          - region "Editor" [ref=e206]:
+            - tablist [ref=e209]:
+              - tab "Editor Close" [selected] [ref=e210] [cursor=pointer]:
+                - generic [ref=e212]:
+                  - generic [ref=e217]: Editor
+                  - button "Close" [ref=e218]
+              - tab "Tables" [ref=e222] [cursor=pointer]
+              - tab "Analyzer 1" [ref=e228] [cursor=pointer]
+              - tab "loop" [ref=e234] [cursor=pointer]
+            - tabpanel "Editor Close" [ref=e241]:
+              - generic [ref=e248]:
+                - generic [ref=e342]:
+                  - generic [ref=e343]: "1"
+                  - generic [ref=e344]: "2"
+                  - generic [ref=e345]: "3"
+                  - generic [ref=e346]: "4"
+                  - generic [ref=e347]: "5"
+                  - generic [ref=e348]: "6"
+                  - generic [ref=e349]: "7"
+                  - generic [ref=e350]: "8"
+                  - generic [ref=e351]: "9"
+                  - generic [ref=e352]: "10"
+                  - generic [ref=e353]: "11"
+                  - generic [ref=e354]: "12"
+                - textbox [ref=e265]:
+                  - generic [ref=e266]: SigConstant SP(k=5)
+                  - generic [ref=e267]: SigPID PID(Kp=2, Ki=1, Kd=0, tau=0.1, i0=0, d0=0)
+                  - generic [ref=e268]: SigFirstOrder PLANT(tau=2, y0=0)
+                  - generic [ref=e269]: connect(SP.out, PID.sp)
+                  - generic [ref=e270]: connect(PID.out, PLANT.in)
+                  - generic [ref=e271]: connect(PLANT.out, PID.pv)
+                  - generic [ref=e272]: DYNAMIC loop(method = ode23s, time = 0 .. 40, points = 400)
+                  - generic [ref=e273]: END
+                  - generic [ref=e274]: y = FinalValue('plant.out.sig')
+                  - generic [ref=e276]: // PID Tuner result
+                  - generic [ref=e277]: SigPID PID(Kp=0.61995042, Ki=0.25421735)
+          - status [ref=e278]
+          - alert [ref=e279]
+        - region "Variable Explorer" [ref=e281]:
+          - tablist [ref=e284]:
+            - tab "Inspector" [ref=e285] [cursor=pointer]
+            - tab "Variable Explorer Close" [selected] [ref=e292] [cursor=pointer]:
+              - generic [ref=e294]:
+                - generic [ref=e298]: Variable Explorer
+                - button "Close" [ref=e299]
+  - dialog [ref=e356]:
+    - banner [ref=e357]:
+      - heading "Open an Example" [level=2] [ref=e358]
+      - button [active] [ref=e359] [cursor=pointer]
+    - generic [ref=e363]:
+      - generic [ref=e364]:
+        - paragraph [ref=e365]:
+          - text: Pick a worked example to load into the editor, then press
+          - strong [ref=e366]: Solve
+          - text: (F2). Each one is ready to run — edit the inputs to explore.
+        - combobox "All Categories" [ref=e369] [cursor=pointer]
+      - generic [ref=e370]:
+        - button "EV Thermal Management System Systems Coupled refrigerant + coolant loops with wide branches and a discretized radiator; every HX UA and the evaporator dP are computed from correlations + geometry and injected. Reports the steady cycle performance — cooling duties, compressor power and COP. Solve (F2)." [ref=e371] [cursor=pointer]:
+          - generic [ref=e372]:
+            - paragraph [ref=e373]: EV Thermal Management System
+            - generic [ref=e374]: Systems
+          - paragraph [ref=e376]: Coupled refrigerant + coolant loops with wide branches and a discretized radiator; every HX UA and the evaporator dP are computed from correlations + geometry and injected. Reports the steady cycle performance — cooling duties, compressor power and COP. Solve (F2).
+        - 'button "Pressure Cooker (transient) Systems Multi-domain boil-off: an electric element heats a steel body and the water; a lifting relief valve holds the cooker at its ~2 atm setpoint. Solve, then open the Plots tab." [ref=e377] [cursor=pointer]':
+          - generic [ref=e378]:
+            - paragraph [ref=e379]: Pressure Cooker (transient)
+            - generic [ref=e380]: Systems
+          - paragraph [ref=e382]: "Multi-domain boil-off: an electric element heats a steel body and the water; a lifting relief valve holds the cooker at its ~2 atm setpoint. Solve, then open the Plots tab."
+        - button "Pump Sizing Mechanical Hydraulic and shaft power from flow rate, head, and efficiency." [ref=e383] [cursor=pointer]:
+          - generic [ref=e384]:
+            - paragraph [ref=e385]: Pump Sizing
+            - generic [ref=e386]: Mechanical
+          - paragraph [ref=e388]: Hydraulic and shaft power from flow rate, head, and efficiency.
+        - button "Projectile Motion Mechanics Range, flight time, and peak height of a launched projectile." [ref=e389] [cursor=pointer]:
+          - generic [ref=e390]:
+            - paragraph [ref=e391]: Projectile Motion
+            - generic [ref=e392]: Mechanics
+          - paragraph [ref=e394]: Range, flight time, and peak height of a launched projectile.
+        - button "Heat Conduction Heat Transfer Steady 1-D conduction through a wall (Fourier's law)." [ref=e395] [cursor=pointer]:
+          - generic [ref=e396]:
+            - paragraph [ref=e397]: Heat Conduction
+            - generic [ref=e398]: Heat Transfer
+          - paragraph [ref=e400]: Steady 1-D conduction through a wall (Fourier's law).
+        - button "Ideal Gas Law Thermodynamics Mass of air in a rigid tank — note the implicit equation." [ref=e401] [cursor=pointer]:
+          - generic [ref=e402]:
+            - paragraph [ref=e403]: Ideal Gas Law
+            - generic [ref=e404]: Thermodynamics
+          - paragraph [ref=e406]: Mass of air in a rigid tank — note the implicit equation.
+        - button "DC Circuit Electrical Current and power dissipation from Ohm’s law." [ref=e407] [cursor=pointer]:
+          - generic [ref=e408]:
+            - paragraph [ref=e409]: DC Circuit
+            - generic [ref=e410]: Electrical
+          - paragraph [ref=e412]: Current and power dissipation from Ohm’s law.
+        - button "Rankine Cycle Thermodynamics Ideal steam power cycle efficiency using CoolProp properties." [ref=e413] [cursor=pointer]:
+          - generic [ref=e414]:
+            - paragraph [ref=e415]: Rankine Cycle
+            - generic [ref=e416]: Thermodynamics
+          - paragraph [ref=e418]: Ideal steam power cycle efficiency using CoolProp properties.
+        - button "Real-Fluid Thermodynamics Compliance Thermodynamics Nelson-Obert compressibility and diffuser stagnation properties from a standard thermodynamics textbook." [ref=e419] [cursor=pointer]:
+          - generic [ref=e420]:
+            - paragraph [ref=e421]: Real-Fluid Thermodynamics Compliance
+            - generic [ref=e422]: Thermodynamics
+          - paragraph [ref=e424]: Nelson-Obert compressibility and diffuser stagnation properties from a standard thermodynamics textbook.
+        - button "Multi-Fluid State Tables Thermodynamics Two fluid circuits grouped with explicit, fluid-aware STATE TABLE blocks." [ref=e425] [cursor=pointer]:
+          - generic [ref=e426]:
+            - paragraph [ref=e427]: Multi-Fluid State Tables
+            - generic [ref=e428]: Thermodynamics
+          - paragraph [ref=e430]: Two fluid circuits grouped with explicit, fluid-aware STATE TABLE blocks.
+        - button "Tank Draining (ODE) Fluids First-order ODE via Integral — Torricelli draining of a tank." [ref=e431] [cursor=pointer]:
+          - generic [ref=e432]:
+            - paragraph [ref=e433]: Tank Draining (ODE)
+            - generic [ref=e434]: Fluids
+          - paragraph [ref=e436]: First-order ODE via Integral — Torricelli draining of a tank.
+        - button "Newton's Cooling (ODE) Heat Transfer First-order ODE via Integral — a hot body cooling to ambient." [ref=e437] [cursor=pointer]:
+          - generic [ref=e438]:
+            - paragraph [ref=e439]: Newton's Cooling (ODE)
+            - generic [ref=e440]: Heat Transfer
+          - paragraph [ref=e442]: First-order ODE via Integral — a hot body cooling to ambient.
+        - button "Projectile Trajectory (table) Mechanics Parametric time sweep — full flight path sampled over time." [ref=e443] [cursor=pointer]:
+          - generic [ref=e444]:
+            - paragraph [ref=e445]: Projectile Trajectory (table)
+            - generic [ref=e446]: Mechanics
+          - paragraph [ref=e448]: Parametric time sweep — full flight path sampled over time.
+        - button "Damped Oscillator (table) Mechanics Parametric time sweep — free vibration of a mass-spring-damper." [ref=e449] [cursor=pointer]:
+          - generic [ref=e450]:
+            - paragraph [ref=e451]: Damped Oscillator (table)
+            - generic [ref=e452]: Mechanics
+          - paragraph [ref=e454]: Parametric time sweep — free vibration of a mass-spring-damper.
+        - button "Sounding Rocket to the Kármán Line Aerospace Sizes a CH4/LOX rocket to loft a 10 kg payload to 100 km — combustion, Isp, and an implicit mass/Δv solve." [ref=e455] [cursor=pointer]:
+          - generic [ref=e456]:
+            - paragraph [ref=e457]: Sounding Rocket to the Kármán Line
+            - generic [ref=e458]: Aerospace
+          - paragraph [ref=e460]: Sizes a CH4/LOX rocket to loft a 10 kg payload to 100 km — combustion, Isp, and an implicit mass/Δv solve.
+        - button "Newton Cooling (Transient) Heat Transfer A DYNAMIC ODE block integrates a cooling curve and reports peak/final temperature." [ref=e461] [cursor=pointer]:
+          - generic [ref=e462]:
+            - paragraph [ref=e463]: Newton Cooling (Transient)
+            - generic [ref=e464]: Heat Transfer
+          - paragraph [ref=e466]: A DYNAMIC ODE block integrates a cooling curve and reports peak/final temperature.
+        - button "Transient Heat Rod (method of lines) Heat Transfer A 1-D heat-conduction PDE discretized into N nodes, integrated as a stiff ODE system." [ref=e467] [cursor=pointer]:
+          - generic [ref=e468]:
+            - paragraph [ref=e469]: Transient Heat Rod (method of lines)
+            - generic [ref=e470]: Heat Transfer
+          - paragraph [ref=e472]: A 1-D heat-conduction PDE discretized into N nodes, integrated as a stiff ODE system.
+        - button "Damped Oscillator (2-state) Mechanics A true two-state ODE (position + velocity) sharing one step cursor." [ref=e473] [cursor=pointer]:
+          - generic [ref=e474]:
+            - paragraph [ref=e475]: Damped Oscillator (2-state)
+            - generic [ref=e476]: Mechanics
+          - paragraph [ref=e478]: A true two-state ODE (position + velocity) sharing one step cursor.
+        - button "Sounding Rocket Trajectory (loss-accurate) Aerospace Coupled h/v/m ODE with drag, burnout and an apogee event; apogee read back via an accessor." [ref=e479] [cursor=pointer]:
+          - generic [ref=e480]:
+            - paragraph [ref=e481]: Sounding Rocket Trajectory (loss-accurate)
+            - generic [ref=e482]: Aerospace
+          - paragraph [ref=e484]: Coupled h/v/m ODE with drag, burnout and an apogee event; apogee read back via an accessor.
+        - button "Partial Fractions (Laplace) Control Systems Decompose a transfer function and read the residues A, B as solved variables." [ref=e485] [cursor=pointer]:
+          - generic [ref=e486]:
+            - paragraph [ref=e487]: Partial Fractions (Laplace)
+            - generic [ref=e488]: Control Systems
+          - paragraph [ref=e490]: Decompose a transfer function and read the residues A, B as solved variables.
+        - button "Cruise Control System Design Control Systems Models a 1000 kg car with drag, tunes a PI controller, and performs frequency & stability analysis." [ref=e491] [cursor=pointer]:
+          - generic [ref=e492]:
+            - paragraph [ref=e493]: Cruise Control System Design
+            - generic [ref=e494]: Control Systems
+          - paragraph [ref=e496]: Models a 1000 kg car with drag, tunes a PI controller, and performs frequency & stability analysis.
+        - 'button "Multi-Output Functions (array-language-style) Control Systems Bracket destructuring of functions: [A,B,C,D] = tf2ss(...), discarding outputs with ~, and omitting trailing outputs." [ref=e497] [cursor=pointer]':
+          - generic [ref=e498]:
+            - paragraph [ref=e499]: Multi-Output Functions (array-language-style)
+            - generic [ref=e500]: Control Systems
+          - paragraph [ref=e502]: "Bracket destructuring of functions: [A,B,C,D] = tf2ss(...), discarding outputs with ~, and omitting trailing outputs."
+        - 'button "Step & Impulse Response Control Systems Time-domain analysis of a second-order system: step response, impulse response, and forced response (lsim)." [ref=e503] [cursor=pointer]':
+          - generic [ref=e504]:
+            - paragraph [ref=e505]: Step & Impulse Response
+            - generic [ref=e506]: Control Systems
+          - paragraph [ref=e508]: "Time-domain analysis of a second-order system: step response, impulse response, and forced response (lsim)."
+        - button "Controller Design (LQR & PID) Control Systems LQR optimal state-feedback for a double integrator (with closed-loop pole check) and loop-shaping PID auto-tuning of a SISO plant." [ref=e509] [cursor=pointer]:
+          - generic [ref=e510]:
+            - paragraph [ref=e511]: Controller Design (LQR & PID)
+            - generic [ref=e512]: Control Systems
+          - paragraph [ref=e514]: LQR optimal state-feedback for a double integrator (with closed-loop pole check) and loop-shaping PID auto-tuning of a SISO plant.
+        - button "Estimator, Gramians & Balanced Realization Control Systems Kalman estimator (LQE) gain, controllability/observability gramians, and an internally-balanced realization for a stable state-space plant." [ref=e515] [cursor=pointer]:
+          - generic [ref=e516]:
+            - paragraph [ref=e517]: Estimator, Gramians & Balanced Realization
+            - generic [ref=e518]: Control Systems
+          - paragraph [ref=e520]: Kalman estimator (LQE) gain, controllability/observability gramians, and an internally-balanced realization for a stable state-space plant.
+        - 'button "Control Analysis Report (Formatted) Control Systems End-to-end report: poles/zeros, stability margins, Bode, Nyquist, and step response" [ref=e521] [cursor=pointer]':
+          - generic [ref=e522]:
+            - paragraph [ref=e523]: Control Analysis Report (Formatted)
+            - generic [ref=e524]: Control Systems
+          - paragraph [ref=e526]: "End-to-end report: poles/zeros, stability margins, Bode, Nyquist, and step response"
+        - button "Root Locus Analysis Control Systems Calculate and plot root locus trajectories for a closed-loop system, finding crossover points matching standard control-systems textbook examples." [ref=e527] [cursor=pointer]:
+          - generic [ref=e528]:
+            - paragraph [ref=e529]: Root Locus Analysis
+            - generic [ref=e530]: Control Systems
+          - paragraph [ref=e532]: Calculate and plot root locus trajectories for a closed-loop system, finding crossover points matching standard control-systems textbook examples.
+        - button "Transient Conduction (Heisler) Heat Transfer Centre/surface temperature of a thick plate cooling by convection." [ref=e533] [cursor=pointer]:
+          - generic [ref=e534]:
+            - paragraph [ref=e535]: Transient Conduction (Heisler)
+            - generic [ref=e536]: Heat Transfer
+          - paragraph [ref=e538]: Centre/surface temperature of a thick plate cooling by convection.
+        - button "Nichols Chart Presentation (Slide) Control Systems Open-loop frequency response on the Nichols grid, formatted as a slide presentation." [ref=e539] [cursor=pointer]:
+          - generic [ref=e540]:
+            - paragraph [ref=e541]: Nichols Chart Presentation (Slide)
+            - generic [ref=e542]: Control Systems
+          - paragraph [ref=e544]: Open-loop frequency response on the Nichols grid, formatted as a slide presentation.
+        - button "Routh-Hurwitz Stability Control Systems Count right-half-plane poles of a characteristic polynomial." [ref=e545] [cursor=pointer]:
+          - generic [ref=e546]:
+            - paragraph [ref=e547]: Routh-Hurwitz Stability
+            - generic [ref=e548]: Control Systems
+          - paragraph [ref=e550]: Count right-half-plane poles of a characteristic polynomial.
+        - button "Inverse Laplace (Residues) Control Systems Partial-fraction residues and poles of a transfer function." [ref=e551] [cursor=pointer]:
+          - generic [ref=e552]:
+            - paragraph [ref=e553]: Inverse Laplace (Residues)
+            - generic [ref=e554]: Control Systems
+          - paragraph [ref=e556]: Partial-fraction residues and poles of a transfer function.
+        - 'button "Digital Control: Discretization Control Systems Convert a continuous plant to discrete time (Tustin and ZOH)." [ref=e557] [cursor=pointer]':
+          - generic [ref=e558]:
+            - paragraph [ref=e559]: "Digital Control: Discretization"
+            - generic [ref=e560]: Control Systems
+          - paragraph [ref=e562]: Convert a continuous plant to discrete time (Tustin and ZOH).
+        - button "Radiation View Factors Heat Transfer Closed-form diffuse view factors for standard configurations." [ref=e563] [cursor=pointer]:
+          - generic [ref=e564]:
+            - paragraph [ref=e565]: Radiation View Factors
+            - generic [ref=e566]: Heat Transfer
+          - paragraph [ref=e568]: Closed-form diffuse view factors for standard configurations.
+        - button "Conduction (Material Database) Heat Transfer Fourier conduction using a built-in solid-material property." [ref=e569] [cursor=pointer]:
+          - generic [ref=e570]:
+            - paragraph [ref=e571]: Conduction (Material Database)
+            - generic [ref=e572]: Heat Transfer
+          - paragraph [ref=e574]: Fourier conduction using a built-in solid-material property.
+        - button "Engine Map (2-D Interpolation) Powertrain Bilinear lookup of a brake-specific-fuel-consumption map." [ref=e575] [cursor=pointer]:
+          - generic [ref=e576]:
+            - paragraph [ref=e577]: Engine Map (2-D Interpolation)
+            - generic [ref=e578]: Powertrain
+          - paragraph [ref=e580]: Bilinear lookup of a brake-specific-fuel-consumption map.
+        - button "Multi-Objective Beam Design (Pareto) Optimization Trade off mass against deflection — run via Min/Max > Pareto." [ref=e581] [cursor=pointer]:
+          - generic [ref=e582]:
+            - paragraph [ref=e583]: Multi-Objective Beam Design (Pareto)
+            - generic [ref=e584]: Optimization
+          - paragraph [ref=e586]: Trade off mass against deflection — run via Min/Max > Pareto.
+        - button "Driving-Cycle Energy (Parametric) Powertrain Integrate tractive power over a speed profile with IntegralValue." [ref=e587] [cursor=pointer]:
+          - generic [ref=e588]:
+            - paragraph [ref=e589]: Driving-Cycle Energy (Parametric)
+            - generic [ref=e590]: Powertrain
+          - paragraph [ref=e592]: Integrate tractive power over a speed profile with IntegralValue.
+        - button "Rankine Cycle Thermodynamics Steam power cycle efficiency with real-water properties (CoolProp)." [ref=e593] [cursor=pointer]:
+          - generic [ref=e594]:
+            - paragraph [ref=e595]: Rankine Cycle
+            - generic [ref=e596]: Thermodynamics
+          - paragraph [ref=e598]: Steam power cycle efficiency with real-water properties (CoolProp).
+        - button "Brayton Cycle Thermodynamics Gas-turbine cycle, cold air-standard with component efficiencies." [ref=e599] [cursor=pointer]:
+          - generic [ref=e600]:
+            - paragraph [ref=e601]: Brayton Cycle
+            - generic [ref=e602]: Thermodynamics
+          - paragraph [ref=e604]: Gas-turbine cycle, cold air-standard with component efficiencies.
+        - button "Otto Cycle Thermodynamics Spark-ignition engine efficiency from compression ratio (air-standard)." [ref=e605] [cursor=pointer]:
+          - generic [ref=e606]:
+            - paragraph [ref=e607]: Otto Cycle
+            - generic [ref=e608]: Thermodynamics
+          - paragraph [ref=e610]: Spark-ignition engine efficiency from compression ratio (air-standard).
+        - button "Refrigeration Cycle Thermodynamics Vapor-compression R134a cycle COP with real-refrigerant properties." [ref=e611] [cursor=pointer]:
+          - generic [ref=e612]:
+            - paragraph [ref=e613]: Refrigeration Cycle
+            - generic [ref=e614]: Thermodynamics
+          - paragraph [ref=e616]: Vapor-compression R134a cycle COP with real-refrigerant properties.
+        - 'button "Nozzle with a Normal Shock Aerospace Compressible flow: supersonic nozzle with a normal shock (gas dynamics)." [ref=e617] [cursor=pointer]':
+          - generic [ref=e618]:
+            - paragraph [ref=e619]: Nozzle with a Normal Shock
+            - generic [ref=e620]: Aerospace
+          - paragraph [ref=e622]: "Compressible flow: supersonic nozzle with a normal shock (gas dynamics)."
+        - button "Heat Exchanger (Effectiveness-NTU) Heat Transfer Counterflow exchanger duty and outlet temperatures via effectiveness-NTU." [ref=e623] [cursor=pointer]:
+          - generic [ref=e624]:
+            - paragraph [ref=e625]: Heat Exchanger (Effectiveness-NTU)
+            - generic [ref=e626]: Heat Transfer
+          - paragraph [ref=e628]: Counterflow exchanger duty and outlet temperatures via effectiveness-NTU.
+        - 'button "Cubic-EOS Real-Gas Properties Thermodynamics CoolProp-independent SRK/PR backend: Z, density, and saturation pressure." [ref=e629] [cursor=pointer]':
+          - generic [ref=e630]:
+            - paragraph [ref=e631]: Cubic-EOS Real-Gas Properties
+            - generic [ref=e632]: Thermodynamics
+          - paragraph [ref=e634]: "CoolProp-independent SRK/PR backend: Z, density, and saturation pressure."
+        - button "Engine Cycle (Wiebe Heat Release) Powertrain Crank-angle single-zone SI-engine pressure trace via a DYNAMIC block." [ref=e635] [cursor=pointer]:
+          - generic [ref=e636]:
+            - paragraph [ref=e637]: Engine Cycle (Wiebe Heat Release)
+            - generic [ref=e638]: Powertrain
+          - paragraph [ref=e640]: Crank-angle single-zone SI-engine pressure trace via a DYNAMIC block.
+        - button "Adiabatic Flame Temperature Thermodynamics Methane-air flame temperature, stoichiometric AFR, and heating value." [ref=e641] [cursor=pointer]:
+          - generic [ref=e642]:
+            - paragraph [ref=e643]: Adiabatic Flame Temperature
+            - generic [ref=e644]: Thermodynamics
+          - paragraph [ref=e646]: Methane-air flame temperature, stoichiometric AFR, and heating value.
+        - 'button "EV Battery Cooling with Closed-Loop EXV Control Systems Five domains in one transient solve: pack discharge (electrical) heats the cell thermal state, a coolant loop carries it to an R134a chiller, and a reverse-acting PID on a signal wire modulates the electronic expansion valve to hold the pack at 303 K. Solve (F2)." [ref=e647] [cursor=pointer]':
+          - generic [ref=e648]:
+            - paragraph [ref=e649]: EV Battery Cooling with Closed-Loop EXV Control
+            - generic [ref=e650]: Systems
+          - paragraph [ref=e652]: "Five domains in one transient solve: pack discharge (electrical) heats the cell thermal state, a coolant loop carries it to an R134a chiller, and a reverse-acting PID on a signal wire modulates the electronic expansion valve to hold the pack at 303 K. Solve (F2)."
