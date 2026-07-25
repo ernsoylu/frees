@@ -118,9 +118,12 @@ services:
     environment:
       BUILD_COMMIT: latest
       BACKEND_HOST: api-node
-      # Upstream hops allowed to set X-Forwarded-For (docker-entrypoint.d/10-real-ip.sh).
-      # Empty by default; set only to the edge proxy's actual source range.
+      # Upstream hops allowed to set the client-address header, and which header
+      # carries it (docker-entrypoint.d/10-real-ip.sh). Empty by default; set
+      # only from what the edge measurably does. Behind Cloudflare that is
+      # "100.64.0.0/10" + "CF-Connecting-IP".
       TRUSTED_PROXY_CIDRS: ${TRUSTED_PROXY_CIDRS:-}
+      TRUSTED_PROXY_HEADER: ${TRUSTED_PROXY_HEADER:-}
     container_name: frees-frontend
     ports:
     # The only port meant to carry traffic, and the only configurable bind.
