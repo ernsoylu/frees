@@ -43,33 +43,14 @@ class ReplControllerTest {
                 .andExpect(jsonPath("$.value").value(1200.0));
     }
 
+    /** GET /api/repl/variables is gone: nothing called it, and it let anyone
+     *  holding a session id read that workspace's variable names. */
     @Test
-    void exposesWorkspaceVariablesForTabCompletion() throws Exception {
-        solve("alpha = 1\\nbeta = alpha + 1");
-
+    void theVariablesEndpointNoLongerExists() throws Exception {
         mockMvc.perform(get("/api/repl/variables").header("X-Frees-Session", SESSION))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$").isArray())
-                .andExpect(jsonPath("$[?(@ == 'alpha')]").exists())
-                .andExpect(jsonPath("$[?(@ == 'beta')]").exists());
-    }
-
-    /**
-     * The session id must not be accepted from the query string. With no
-     * authentication it is the only thing guarding a user's solved workspace,
-     * and query strings land in access logs, platform HTTP logs, tracing spans
-     * and outgoing Referer headers.
-     */
-    @Test
-    void doesNotAcceptTheSessionIdFromTheQueryString() throws Exception {
-        solve("alpha = 1\\nbeta = alpha + 1");
-
-        // The id is supplied ONLY as a query parameter, so the workspace it names
-        // must not be handed back.
+                .andExpect(status().isNotFound());
         mockMvc.perform(get("/api/repl/variables").param("sessionId", SESSION))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$[?(@ == 'alpha')]").doesNotExist())
-                .andExpect(jsonPath("$[?(@ == 'beta')]").doesNotExist());
+                .andExpect(status().isNotFound());
     }
 
     @Test
