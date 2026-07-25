@@ -208,5 +208,7 @@ See [CLAUDE.md](CLAUDE.md) for the development workflow.
 
 ## License
 
-MIT
+MIT — see [LICENSE](LICENSE). Bundled and linked third-party components
+(CoolProp, SUNDIALS, Symja, JGraphT, …) remain under their own licenses,
+listed in [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
 
