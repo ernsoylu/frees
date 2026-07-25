@@ -6,6 +6,7 @@ services:
   otel-collector:
     image: otel/opentelemetry-collector-contrib:0.110.0
     container_name: frees-otel-collector
+    restart: unless-stopped
     command: ["--config=/etc/otelcol/config.yaml"]
     volumes:
       - ./observability/otel-collector-config.yaml:/etc/otelcol/config.yaml:ro
@@ -22,6 +23,7 @@ services:
   jaeger:
     image: jaegertracing/all-in-one:1.62.0
     container_name: frees-jaeger
+    restart: unless-stopped
     environment:
       - COLLECTOR_OTLP_ENABLED=true
     # Loopback-only: the Jaeger UI has NO authentication, and every trace it
@@ -34,6 +36,7 @@ services:
   redis:
     image: redis:7-alpine
     container_name: frees-redis
+    restart: unless-stopped
     # Loopback-only: no password is configured, so the only thing keeping a LAN
     # neighbour out of the job store and REPL session cache is Redis's
     # protected-mode default — which silently stops applying the moment a
@@ -50,6 +53,7 @@ services:
   rabbitmq:
     image: rabbitmq:3-management-alpine
     container_name: frees-rabbitmq
+    restart: unless-stopped
     # Loopback-only: the management UI on 15672 is a login page for a broker
     # still using the default guest credentials (remote guest login is refused
     # by RabbitMQ's loopback-user default, but there is no reason to offer the
@@ -66,6 +70,7 @@ services:
   api-node:
     build: ./backend
     container_name: frees-api-node
+    restart: unless-stopped
     environment:
       - SPRING_PROFILES_ACTIVE=api
       - SPRING_RABBITMQ_HOST=rabbitmq
@@ -103,6 +108,12 @@ services:
     build: ./backend
     deploy:
       replicas: 3
+    # A solve that exhausts the JVM heap kills the worker process; without a
+    # restart policy that permanently shrinks the compute tier until a manual
+    # `frees.sh start`. Restarting is safe: the poison-message guard
+    # (frees.compute.drop-redelivered) fails the offending job on redelivery
+    # instead of letting it crash-loop the fresh worker.
+    restart: unless-stopped
     environment:
       - SPRING_PROFILES_ACTIVE=compute
       - SPRING_RABBITMQ_HOST=rabbitmq
@@ -130,6 +141,7 @@ services:
   mdf-sidecar:
     build: ./mdf-sidecar
     container_name: frees-mdf-sidecar
+    restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8090/health')\" || exit 1"]
       interval: 10s
@@ -160,6 +172,7 @@ services:
       TRUSTED_PROXY_CIDRS: ${TRUSTED_PROXY_CIDRS:-}
       TRUSTED_PROXY_HEADER: ${TRUSTED_PROXY_HEADER:-}
     container_name: frees-frontend
+    restart: unless-stopped
     # The ONLY port meant to carry traffic — and the only one whose bind address
     # is configurable, because the right answer differs per deployment. Defaults
     # to loopback (a personal machine, where http://localhost:5173 is all you
