@@ -400,6 +400,89 @@ class EquationSystemSolverTest {
     }
 
     @Test
+    void solvesComplexEigenvaluesViaTwoOutputForm() {
+        // Rotation matrix: spectrum ±i. The single-output form rejects complex
+        // spectra; the (re, im) pair form carries them, sorted by (re, then im).
+        EquationSystemSolver.Result result = solver.solve(
+                "A[1,1] = 0; A[1,2] = -1\n" +
+                "A[2,1] = 1; A[2,2] = 0\n" +
+                "CALL Eigenvalues(A[1:2,1:2] : re[1:2], im[1:2])");
+
+        assertEquals(0.0, result.variables().get("re[1]"), 1e-8);
+        assertEquals(0.0, result.variables().get("re[2]"), 1e-8);
+        assertEquals(-1.0, result.variables().get("im[1]"), 1e-8);
+        assertEquals(1.0, result.variables().get("im[2]"), 1e-8);
+    }
+
+    @Test
+    void twoOutputEigenvaluesOnRealSpectrumHasZeroImaginaryParts() {
+        EquationSystemSolver.Result result = solver.solve(
+                "A[1,1] = 2; A[1,2] = 1\n" +
+                "A[2,1] = 1; A[2,2] = 2\n" +
+                "CALL Eigenvalues(A[1:2,1:2] : re[1:2], im[1:2])");
+
+        assertEquals(1.0, result.variables().get("re[1]"), 1e-8);
+        assertEquals(3.0, result.variables().get("re[2]"), 1e-8);
+        assertEquals(0.0, result.variables().get("im[1]"), 1e-8);
+        assertEquals(0.0, result.variables().get("im[2]"), 1e-8);
+    }
+
+    @Test
+    void singleOutputEigenvaluesRejectsComplexSpectrumWithHint() {
+        Exception e = assertThrows(Exception.class, () -> solver.solve(
+                "A[1,1] = 0; A[1,2] = -1\n" +
+                "A[2,1] = 1; A[2,2] = 0\n" +
+                "CALL Eigenvalues(A[1:2,1:2] : lambda[1:2])"));
+
+        StringBuilder chain = new StringBuilder();
+        for (Throwable t = e; t != null; t = t.getCause()) {
+            chain.append(t.getMessage()).append(" | ");
+        }
+        assertTrue(chain.toString().contains("CALL Eigenvalues(A : re, im)"), chain.toString());
+    }
+
+    @Test
+    void solvesLargeDeterminantViaLuIntrinsic() {
+        // 10x10 upper-triangular with diagonal 1..10: det = 10! = 3628800.
+        // Above 3x3 the parser emits a det$<n> LU call instead of the O(n!)
+        // closed-form cofactor expansion (an 11x11 expansion exhausted a
+        // worker heap), so this must parse and solve in milliseconds.
+        StringBuilder doc = new StringBuilder();
+        for (int i = 1; i <= 10; i++) {
+            for (int j = 1; j <= 10; j++) {
+                int v = j < i ? 0 : (j == i ? i : 1);
+                doc.append("A[").append(i).append(',').append(j).append("] = ").append(v).append('\n');
+            }
+        }
+        doc.append("d = Determinant(A[1:10,1:10])");
+
+        EquationSystemSolver.Result result = solver.solve(doc.toString());
+
+        assertEquals(3628800.0, result.variables().get("d"), 1e-4);
+    }
+
+    @Test
+    void solvesUnknownInsideLuDeterminant() {
+        // diag(x, 2, 3, 4): det = 24x. With det(A) pinned to 48, Newton must
+        // recover x = 2 through the det$ intrinsic via finite differences.
+        StringBuilder doc = new StringBuilder("A[1,1] = x\n");
+        for (int i = 1; i <= 4; i++) {
+            for (int j = 1; j <= 4; j++) {
+                if (i == 1 && j == 1) {
+                    continue;
+                }
+                doc.append("A[").append(i).append(',').append(j).append("] = ").append(i == j ? i : 0).append('\n');
+            }
+        }
+        doc.append("d = Determinant(A[1:4,1:4])\n");
+        doc.append("d = 48");
+
+        EquationSystemSolver.Result result = solver.solve(doc.toString());
+
+        assertEquals(2.0, result.variables().get("x"), 1e-6);
+    }
+
+    @Test
     void solvesEigenDecompositionWithVectorsAndDownstreamEquations() {
         EquationSystemSolver.Result result = solver.solve(
                 "A[1,1] = 2; A[1,2] = 1\n" +

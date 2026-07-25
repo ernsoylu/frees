@@ -569,7 +569,11 @@ public final class UnitChecker {
         // Dense linear-algebra, signal-processing and regression intrinsics:
         // their results' dimensions are not tracked, so stay agnostic rather
         // than asserting (and warning about) dimensionless arguments.
-        if (c.function().startsWith("qr$") ||
+        // (det$ carries [u]^n for a uniform [u] matrix, which Dim cannot
+        // express without a power op — agnostic like the rest; the n<=3
+        // closed-form expansion still derives exact dimensions.)
+        if (c.function().startsWith("det$") ||
+            c.function().startsWith("qr$") ||
             c.function().startsWith("chol$") ||
             c.function().startsWith("expm$") ||
             c.function().startsWith("svd$") ||
