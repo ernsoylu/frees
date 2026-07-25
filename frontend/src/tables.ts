@@ -222,8 +222,36 @@ export function sortFunctionRows(table: FunctionTableSpec): FunctionTableSpec {
   return { ...table, rows }
 }
 
-function fmt6(v: number): string {
+/** Shared 6-significant-figure formatter for table cells. Exported so the
+ *  read-only grid formats solver-computed values exactly like the input cells
+ *  it renders them alongside. */
+export function fmt6(v: number): string {
   return Number.parseFloat(v.toPrecision(6)).toString()
+}
+
+/**
+ * The string a read-only parametric/ODE grid should paint for one cell.
+ *
+ * <p>`rows` carries only what was supplied as INPUT, so a code PARAMETRIC table
+ * painted from `rows` alone shows its sweep column and nothing else — every
+ * solved column stays blank no matter how many runs succeeded. The solved
+ * numbers arrive separately in `results` and are merged here.
+ *
+ * <p>Same rule as `paramComputedValue` in spreadsheet/tableBinding.ts: a
+ * computed value shows only where the row solved AND the input was left blank,
+ * so the solver's echo of an input never overwrites what the user typed. Lives
+ * here, not in the grid component, so it is reachable from a unit test without
+ * mounting a canvas — and so the two grids cannot drift apart silently.
+ */
+export function readOnlyCellText(
+  row: ParamRow | undefined,
+  outcome: TableRowResult | undefined,
+  name: string,
+): string {
+  const draft = row?.values[name] ?? ''
+  if (draft.trim() !== '') return draft
+  const computed = outcome?.success ? outcome.values[name] : undefined
+  return computed !== undefined && Number.isFinite(computed) ? fmt6(computed) : draft
 }
 
 function identifier(raw: string, fallback: string): string {

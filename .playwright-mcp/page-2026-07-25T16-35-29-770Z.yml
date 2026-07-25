@@ -1,0 +1,98 @@
+- generic [ref=e1]:
+  - generic [ref=e5]:
+    - generic [ref=e6]:
+      - generic [ref=e7]:
+        - button "Expand sidebar" [ref=e9] [cursor=pointer]
+        - button "Editor" [ref=e15] [cursor=pointer]
+        - generic [ref=e21]:
+          - button "Tables windows" [ref=e22] [cursor=pointer]
+          - generic: "2"
+        - button "Plots windows" [ref=e27] [cursor=pointer]
+        - button "Graph Digitizer — extract curves from chart images" [ref=e32] [cursor=pointer]
+        - button "Whiteboard windows" [ref=e40] [cursor=pointer]
+        - button "Spreadsheet windows" [ref=e48] [cursor=pointer]
+        - generic [ref=e51]:
+          - button "Analyzer windows" [ref=e52] [cursor=pointer]
+          - generic: "1"
+        - button "Terminal — REPL evaluated against the workspace" [ref=e57] [cursor=pointer]
+      - generic [ref=e62]:
+        - button "Window layout presets" [ref=e63] [cursor=pointer]
+        - button "Min/Max (optimization)" [ref=e71] [cursor=pointer]
+        - button "Curve Fit (least squares)" [ref=e80] [cursor=pointer]
+        - button "PID Tuner (auto-tune P/PI/PID gains)" [ref=e87] [cursor=pointer]
+        - button "Preferences" [ref=e94] [cursor=pointer]
+        - button "About" [ref=e100] [cursor=pointer]
+        - button "Switch to light mode" [ref=e106] [cursor=pointer]
+        - link "Help" [ref=e112] [cursor=pointer]:
+          - /url: /help
+    - generic [ref=e117]:
+      - generic [ref=e118]:
+        - generic [ref=e119]:
+          - heading "frees" [level=3] [ref=e120]
+          - button "File" [expanded] [ref=e121] [cursor=pointer]
+          - button "Functions" [ref=e131] [cursor=pointer]
+          - button "Tools" [ref=e142] [cursor=pointer]
+          - button "Open command palette" [ref=e153] [cursor=pointer]
+          - button "Rename project (currently untitled.frees)" [ref=e158] [cursor=pointer]:
+            - paragraph [ref=e159]: untitled.frees
+          - paragraph [ref=e163]: free solver
+        - generic [ref=e164]:
+          - paragraph [ref=e165]: Check (F4) · Solve (F2)
+          - button "Check" [ref=e166] [cursor=pointer]
+          - group [ref=e173]:
+            - button "Solve" [ref=e174] [cursor=pointer]
+            - button "Solve options" [ref=e180] [cursor=pointer]
+      - generic [ref=e192]:
+        - generic [ref=e199]:
+          - region "Editor" [ref=e206]:
+            - tablist [ref=e209]:
+              - tab "Editor Close" [selected] [ref=e210] [cursor=pointer]:
+                - generic [ref=e212]:
+                  - generic [ref=e217]: Editor
+                  - button "Close" [ref=e218]
+              - tab "Tables" [ref=e222] [cursor=pointer]
+              - tab "Analyzer 1" [ref=e228] [cursor=pointer]
+              - tab "loop" [ref=e234] [cursor=pointer]
+            - tabpanel "Editor Close" [ref=e241]:
+              - generic [ref=e248]:
+                - generic [ref=e250]:
+                  - generic [ref=e251]: "1"
+                  - generic [ref=e252]: "2"
+                  - generic [ref=e253]: "3"
+                  - generic [ref=e254]: "4"
+                  - generic [ref=e255]: "5"
+                  - generic [ref=e256]: "6"
+                  - generic [ref=e257]: "7"
+                  - generic [ref=e258]: "8"
+                  - generic [ref=e259]: "9"
+                  - generic [ref=e260]: "10"
+                  - generic [ref=e261]: "11"
+                  - generic [ref=e262]: "12"
+                - textbox [ref=e265]:
+                  - generic [ref=e266]: SigConstant SP(k=5)
+                  - generic [ref=e267]: SigPID PID(Kp=2, Ki=1, Kd=0, tau=0.1, i0=0, d0=0)
+                  - generic [ref=e268]: SigFirstOrder PLANT(tau=2, y0=0)
+                  - generic [ref=e269]: connect(SP.out, PID.sp)
+                  - generic [ref=e270]: connect(PID.out, PLANT.in)
+                  - generic [ref=e271]: connect(PLANT.out, PID.pv)
+                  - generic [ref=e272]: DYNAMIC loop(method = ode23s, time = 0 .. 40, points = 400)
+                  - generic [ref=e273]: END
+                  - generic [ref=e274]: y = FinalValue('plant.out.sig')
+                  - generic [ref=e276]: // PID Tuner result
+                  - generic [ref=e277]: SigPID PID(Kp=0.61995042, Ki=0.25421735)
+          - status [ref=e278]
+          - alert [ref=e279]
+        - region "Variable Explorer" [ref=e281]:
+          - tablist [ref=e284]:
+            - tab "Inspector" [ref=e285] [cursor=pointer]
+            - tab "Variable Explorer Close" [selected] [ref=e292] [cursor=pointer]:
+              - generic [ref=e294]:
+                - generic [ref=e298]: Variable Explorer
+                - button "Close" [ref=e299]
+  - menu "File" [ref=e306]:
+    - generic [ref=e307]: untitled.frees
+    - menuitem "New Project" [ref=e308] [cursor=pointer]
+    - menuitem "Open Project…" [ref=e314] [cursor=pointer]
+    - menuitem "Open Example…" [ref=e319] [cursor=pointer]
+    - menuitem "Save Project" [ref=e328] [cursor=pointer]
+    - menuitem "Save Project As…" [ref=e335] [cursor=pointer]

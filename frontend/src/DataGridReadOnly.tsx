@@ -13,7 +13,8 @@ import '@glideapps/glide-data-grid/dist/index.css'
 import { Button, Group, Stack, Text, useComputedColorScheme, useMantineTheme } from '@mantine/core'
 import { IconChartLine } from '@tabler/icons-react'
 import { useElementSize } from '@mantine/hooks'
-import { ParamRow } from './tables'
+import { ParamRow, readOnlyCellText } from './tables'
+import { TableRowResult } from './api'
 import { VariableDraft } from './VariableInfoModal'
 import { displayVar } from './varDisplay'
 
@@ -35,6 +36,19 @@ const EMPTY_SELECTION: GridSelection = {
 interface Props {
   vars: string[]
   rows: ParamRow[]
+  /**
+   * Per-row solve outcomes, when the table has been run.
+   *
+   * <p>`rows` holds only what the user (or the code block) supplied as INPUT,
+   * so a code PARAMETRIC table painted from `rows` alone shows its sweep column
+   * and nothing else — the solved columns stay blank however many runs
+   * succeeded. The solved numbers live here instead, and are merged in per cell
+   * exactly as the editable workbook does it, via the shared
+   * {@link paramComputedValue}: a computed value appears only where the row
+   * solved AND the input was left blank, so a user-supplied input is never
+   * overwritten by the solver's echo of it.
+   */
+  results?: TableRowResult[]
   /** Per-variable display metadata; only `units` is used here (header label). */
   varDrafts: Record<string, VariableDraft>
   /** Per-column SI units for ODE/code tables (column name → unit). Preferred
@@ -85,7 +99,7 @@ export function useGlideTheme(): Partial<GdgTheme> {
   }, [theme, dark])
 }
 
-export default function DataGridReadOnly({ vars, rows, varDrafts, columnUnits, onPlotColumns }: Readonly<Props>) {
+export default function DataGridReadOnly({ vars, rows, results, varDrafts, columnUnits, onPlotColumns }: Readonly<Props>) {
   const { ref, width, height } = useElementSize()
   const gridTheme = useGlideTheme()
 
@@ -110,12 +124,20 @@ export default function DataGridReadOnly({ vars, rows, varDrafts, columnUnits, o
     [vars, varDrafts, columnUnits, widthOverrides],
   )
 
-  // Cell values are already formatted strings (fmt6) on the ParamRow; paint them
-  // right-aligned as read-only text (no overlay editor).
+  // Input cells are already formatted strings (fmt6) on the ParamRow; solved
+  // cells are merged in from `results` here, per cell, so the merge stays as
+  // lazy as the virtualized paint and a long ODE trajectory never materializes
+  // a second copy of itself.
+  //
+  // The rule is the one paramComputedValue() applies in
+  // spreadsheet/tableBinding.ts — computed only where the row solved and the
+  // input was blank — reimplemented rather than imported because that module
+  // pulls in the Univer adapter, by far the largest chunk in the bundle and
+  // deliberately kept out of this lazily-loaded grid.
   const getCellContent = useCallback(
     ([col, row]: Item): GridCell => {
       const name = vars[col]
-      const value = rows[row]?.values[name] ?? ''
+      const value = readOnlyCellText(rows[row], results?.[row], name)
       return {
         kind: GridCellKind.Text,
         data: value,
@@ -124,7 +146,7 @@ export default function DataGridReadOnly({ vars, rows, varDrafts, columnUnits, o
         contentAlign: 'right',
       }
     },
-    [vars, rows],
+    [vars, rows, results],
   )
 
   const onColumnResize = useCallback((column: GridColumn, newSize: number) => {
