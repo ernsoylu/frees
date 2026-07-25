@@ -184,7 +184,7 @@ export const FUNCTION_CATEGORIES: FunctionCategory[] = [
       { label: 'Dot', snippet: 'Dot($0, )', description: 'Dot (inner) product of two vectors.', usage: 'd = Dot(a, b)' },
       { label: 'Cross', snippet: 'Cross($0, )', description: 'Cross product of two 3-vectors.', usage: 'c = Cross(a, b)' },
       { label: 'Norm', snippet: 'Norm($0)', description: 'Euclidean norm (length) of a vector.', usage: 'n = Norm(v)' },
-      { label: 'Eigenvalues', snippet: 'Eigenvalues($0)', description: 'Eigenvalues of a square matrix.', usage: 'lambda = Eigenvalues(A)' },
+      { label: 'Eigenvalues', snippet: 'Eigenvalues($0)', description: 'Eigenvalues of a square matrix; CALL Eigenvalues(A : re, im) returns a complex spectrum as real/imaginary parts.', usage: 'lambda = Eigenvalues(A)' },
       { label: 'Eigen', snippet: 'Eigen($0)', description: 'Eigenvalues and eigenvectors of a square matrix.', usage: 'Eigen(A)' },
       { label: 'LUDecompose', snippet: 'LUDecompose($0)', description: 'LU decomposition of a square matrix.', usage: 'LUDecompose(A)' },
       { label: 'zeros', snippet: 'zeros($0, )', description: 'Create an m×n zero matrix.', usage: 'A = zeros(3, 3)' },

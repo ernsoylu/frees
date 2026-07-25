@@ -1880,7 +1880,7 @@ export default function App() {
         {showFirstRun && (
           <Alert color="teal" variant="light" p="xs" mb={6} withCloseButton onClose={dismissFirstRun} title="Welcome to frees">
             <Text size="xs">
-              Write equations and markdown notes on the left — they can be
+              Write equations and notes on the left — they can be
               entered in any order. Click <strong>Check</strong> (F4) to
               validate, then <strong>Solve</strong> (F2). Solve also runs
               Check for you automatically.
@@ -1923,7 +1923,7 @@ export default function App() {
               variables={variables}
               errorLine={errorLine}
               errorMessage={result?.error ?? checkResult?.message ?? null}
-              placeholder={'Enter equations and markdown notes, e.g.\n# Rankine Cycle\nT1 = 100 [C]\nP1 = 250 [kPa]'}
+              placeholder={'Enter equations and notes, e.g.\n{ Rankine Cycle }\nT1 = 100 [C]\nP1 = 250 [kPa]'}
             />
           </Suspense>
         </div>

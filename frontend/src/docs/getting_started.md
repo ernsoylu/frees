@@ -266,36 +266,28 @@ The REPL evaluates a single expression per line, so multi-line block constructs 
 [Related: gs-units-check, variables, repl]
 
 [Topic: reports]
-# Markdown & Reports
+# Notes & Narrative
 
-Combine narrative with live solver equations to build automated engineering reports. After solving, open the **Formatted** tab to read the rendered document with solved values and embedded plots inline.
+Structure a document as a readable calculation note: equations in any order, with the narrative alongside them as comments. Comments never affect solving.
 
 ## Mixing narrative and equations
-- A line starting with `//`, or any text inside `{ }`, is a comment. `//` at the start of a line is also treated as markdown narrative.
-- Markdown headings (`#`, `##`), bold (`**`), italics (`*`), and inline code (`` ` ``) are all supported.
-- Embed a solved value inline with `[varName]`, or with units as `[varName [units]]`.
+- A line starting with `//`, or any text inside `{ }`, is a comment. Use them for section headings, explanations, and data provenance.
+- A `{ }` comment may span several lines, so a paragraph of narrative can sit above the equations it describes.
+- An inline comment documents a single equation in place: `Q = m*cp*dT { sensible heat }`.
 
-## Embedding plots inline
-A `PLOT ... END` block (see *Plots in Code*) produces a named figure. Reference it anywhere in your narrative with a graph tag and it renders as a live chart in the Formatted view:
+## Named figures from code
+A `PLOT ... END` block (see *Plots in Code*) declares a named figure that appears in the **Plots** window after every solve, so a document carries its own charts next to the equations they visualize.
 
+## Example
 ```
-[Graph="Boiler Cycle"] Temperature–entropy diagram of the power cycle [/Graph]
-```
-
-## Example report
-```
-// # Boiler Analysis
-// The boiler runs at P_high = **[P_high [kPa]]**.
-// At a firing temperature of [T_boiler [C]] the thermal
-// efficiency is **[eta_th] %**.
-//
-// [Graph="Rankine T-s"] Cycle on a T-s diagram [/Graph]
+{ Boiler Analysis — the pressure and firing temperature
+  below fix the cycle's thermal efficiency. }
 
 P_high = 8000 [kPa]
 T_boiler = 500 [C]
 eta_th = 36.9
 ```
-Press Solve (F2), then switch to the **Formatted** tab to see the values and the chart woven into the prose.
+Press Solve (F2): solved values appear in the Solution window, and any PLOT figures in the Plots window.
 
 [Related: plot-code, reports]
 

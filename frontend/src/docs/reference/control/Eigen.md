@@ -28,6 +28,10 @@ where `Λ = diag(λ_i)` and the columns of `V` are the eigenvectors.
 
 > **Method:** QR algorithm with eigenvector back-substitution.
 
+Eigen supports **real spectra only** (symmetric matrices always qualify) and
+stops with an error on complex eigenvalues; for a complex spectrum use
+`CALL Eigenvalues(A : re, im)`, which returns real/imaginary part vectors.
+
 ## Examples
 
 ```

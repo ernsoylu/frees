@@ -831,7 +831,7 @@ Rn = 0.1 [V^2]
   },
   {
     id: 'control-analysis-report',
-    title: 'Control Analysis Report (Formatted)',
+    title: 'Control Analysis Report',
     description: 'End-to-end report: poles/zeros, stability margins, Bode, Nyquist, and step response ',
     category: 'Control Systems',
     text: `// Control System Analysis Report

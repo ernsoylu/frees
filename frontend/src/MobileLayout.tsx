@@ -92,7 +92,7 @@ export default function MobileLayout({
   if (activeTab === 'workspace') content = panelContent['workspace']
   if (activeTab === 'plots') {
     if (plots.length === 0) {
-      content = <Box p="md"><Text c="dimmed">No plots yet. Add one from a table (select columns → Plot curve) or with a [Graph=…] tag.</Text></Box>
+      content = <Box p="md"><Text c="dimmed">No plots yet. Add one from a table (select columns → Plot curve) or with a PLOT block in code.</Text></Box>
     } else {
       const pId = activePlotId ?? plots[0].id
       content = panelContent[`plot:${pId}`] || <Box p="md"><Text c="dimmed">Plot not found.</Text></Box>
