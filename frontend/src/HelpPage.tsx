@@ -596,7 +596,7 @@ PLOT 'Reheat Rankine T-s'
   connectstates = true
 END
 
-[Graph="Reheat Rankine T-s"] T-s diagram of the reheat Rankine cycle [/Graph]`,
+{ T-s diagram of the reheat Rankine cycle appears in the Plots window }`,
   },
   {
     value: "reheat-regen-rankine",
@@ -915,7 +915,7 @@ PLOT 'Brayton T-s'
   connectstates = true
 END
 
-[Graph="Brayton T-s"] T-s diagram of the regenerative Brayton cycle [/Graph]`,
+{ T-s diagram of the regenerative Brayton cycle appears in the Plots window }`,
   },
 
   // ── Hard cross-discipline case studies (all verified against the solver) ──
@@ -1918,56 +1918,40 @@ CALL pole(Acl[1:3,1:3] : ppr[1:3], ppi[1:3])`,
   },
   {
     value: "control-analysis-report",
-    title: "Control Systems: End-to-End Analysis Report (Formatted)",
-    description: "A single document that narrates a complete plant analysis — poles/zeros, stability margins, Bode, Nyquist and step response — with every plot embedded inline via [Graph='…'] tags. Solve, then open the Formatted tab to read it as a report.",
+    title: "Control Systems: End-to-End Analysis Report",
+    description: "A single document that walks through a complete plant analysis — poles/zeros, stability margins, Bode, Nyquist and step response — with the narrative in comments and each figure declared by a named PLOT block. Solve, then open the Plots window.",
     note: "Analyzes G(s) = (s+3)/[(s+2)(s²+2s+25)]: all poles are left-half-plane (stable), and the lightly damped pole pair produces a pronounced, slowly decaying step response.",
-    code: `# Control System Analysis Report
+    code: `{ Control System Analysis Report
 
-This report analyzes the plant G(s) end to end: poles and zeros, gain and phase
-margins, frequency response (Bode and Nyquist), and the unit step response. Press
-Solve (F2), then open the **Formatted** tab to read the report with the plots
-embedded inline.
+  This document analyzes the plant G(s) end to end: poles and zeros, gain and
+  phase margins, frequency response (Bode and Nyquist), and the unit step
+  response. Press Solve (F2), then open the Plots window — each PLOT block
+  below declares a named figure. }
 
-## 1. Plant model
-
-The numerator and denominator coefficients below (descending powers of s) define
-a third-order plant with one real zero, one real pole, and a lightly damped
-second-order pole pair.
+{ 1. Plant model — the numerator and denominator coefficients (descending
+  powers of s) define a third-order plant with one real zero, one real pole,
+  and a lightly damped second-order pole pair. }
 num = [0, 0, 1, 3]
 den = [1, 4, 29, 50]
 
-## 2. Poles, zeros and stability margins
-
+{ 2. Poles, zeros and stability margins — all three poles lie in the left
+  half-plane, so the open-loop plant is stable. }
 [pr, pi] = pole(num[1:4], den[1:4])
 CALL zero(num[1:4], den[1:4] : zr[1:1], zi[1:1])
 [gm, pm, w_cg, w_cp] = margin(num[1:4], den[1:4])
 
-All three poles lie in the left half-plane, so the open-loop plant is stable.
-
-[Graph="Pole-Zero Map"] Poles (x) and the zero (o) in the s-plane [/Graph]
-
-## 3. Frequency response
-
-Sweep 50 logarithmically spaced frequencies, then evaluate the Bode and Nyquist
-responses.
+{ 3. Frequency response — sweep 50 logarithmically spaced frequencies, then
+  evaluate the Bode and Nyquist responses. }
 Nw = 50
 omega = 0.1:50:100 | Log
 [mag, phase] = bode(num[1:4], den[1:4], omega[1:Nw])
 [re, im] = nyquist(num[1:4], den[1:4], omega[1:Nw])
 
-[Graph="Bode Diagram"] Magnitude (dB) and phase (deg) versus frequency [/Graph]
-
-[Graph="Nyquist Diagram"] Polar plot with the critical point marked at -1 + j0 [/Graph]
-
-## 4. Time-domain step response
-
-Integrate the unit step response over 6 seconds; the lightly damped pole pair
-produces a pronounced, slowly decaying oscillation.
+{ 4. Time-domain step response — the lightly damped pole pair produces a
+  pronounced, slowly decaying oscillation over 6 seconds. }
 Nt = 121
 t = 0:0.05:6
 [y] = step(num[1:4], den[1:4], t[1:Nt])
-
-[Graph="Step Response"] Unit step response of the plant [/Graph]
 
 PLOT 'Pole-Zero Map'
   kind = polezero
@@ -2792,10 +2776,10 @@ const CATEGORIES: NavCategory[] = [
     icon: <IconTool size={16} />,
     overview: 'tools-overview',
     items: [
-      { id: 'tools-overview', label: 'Overview', blurb: 'The interactive console, shortcuts, reports, and data-capture tools.', keywords: ['tools', 'workflow', 'overview'] },
+      { id: 'tools-overview', label: 'Overview', blurb: 'The interactive console, shortcuts, notes, and data-capture tools.', keywords: ['tools', 'workflow', 'overview'] },
       { id: 'repl', label: 'REPL Terminal & Workspace', blurb: 'A unit-aware console over the solved session, with CALL and CAS.', keywords: ['repl', 'terminal', 'workspace', 'console', 'vars', 'who', 'whos', 'calculator', 'cas', 'factor', 'expand', 'simplify', 'apart', 'laplace', 'diff', 'integrate', 'call', 'symbolic', 'interactive', 'ans'] },
       { id: 'shortcuts', label: 'Keyboard Shortcuts', blurb: 'Solve, Check, Variable Info, and block-solve hotkeys.', keywords: ['hotkey', 'shortcuts', 'keyboard', 'f2', 'f4', 'f9', 'ctrl'] },
-      { id: 'reports', label: 'Markdown & Reports', blurb: 'Weave narrative, live values, and plots into a Formatted report.', keywords: ['markdown', 'report', 'latex', 'katex', 'inline', 'equations'] },
+      { id: 'reports', label: 'Notes & Narrative', blurb: 'Structure a document with comment narrative; figures come from named PLOT blocks.', keywords: ['notes', 'narrative', 'comments', 'report', 'document', 'figures'] },
       { id: 'plot-code', label: 'Plots in Code (PLOT)', blurb: 'Declare XY, property, Bode, Nyquist and pole-zero figures in code.', keywords: ['plot', 'graph', 'chart', 'code', 'programmatic', 'xy', 'property', 'psychro'] },
       { id: 'digitizer-fit', label: 'Graph Digitizer & Curve Fit', blurb: 'Turn a chart image or a table into a fitted equation.', keywords: ['digitizer', 'curve', 'fit', 'table', 'regression', 'equation', 'graph'] },
       { id: 'analyzer', label: 'Data Analyzer (Measurements)', blurb: 'Import CSV/MF4 recordings — oscilloscope, cursors, events, statistics.', keywords: ['analyzer', 'measurement', 'mf4', 'mdf', 'csv', 'import', 'oscilloscope', 'cursor', 'events', 'scatter', 'histogram', 'offset', 'export', 'signals'] },

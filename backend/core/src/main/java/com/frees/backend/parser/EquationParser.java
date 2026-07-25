@@ -960,12 +960,26 @@ public final class EquationParser {
         return sumAbs;
     }
 
+    /** Largest matrix expanded by the closed-form cofactor sum. The expansion
+     *  builds O(n!) AST nodes re-evaluated on every residual pass — a few rows
+     *  beyond this it exhausts a worker's heap — so larger matrices become a
+     *  runtime det$<n> LU intrinsic instead (numeric, so blocks containing it
+     *  fall back to finite-difference Jacobians). */
+    private static final int DET_CLOSED_FORM_MAX = 3;
+
     private Expr matrixDeterminant(List<Expr> args, FlattenContext ctx) {
         MatrixInfo m = parseMatrixInfo(args.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
         if (m.rows != m.cols) {
             throw new ParseException("Determinant requires a square matrix.");
         }
-        return expandDeterminant(m.elements);
+        if (m.rows <= DET_CLOSED_FORM_MAX) {
+            return expandDeterminant(m.elements);
+        }
+        List<Expr> entries = new ArrayList<>(m.rows * m.rows);
+        for (Expr[] row : m.elements) {
+            entries.addAll(Arrays.asList(row));
+        }
+        return new Expr.Call("det$" + m.rows, entries);
     }
 
     /** Trace: sum of the diagonal entries of a square matrix. */
@@ -1103,7 +1117,13 @@ public final class EquationParser {
         }
         try {
             switch (name) {
-                case "eigenvalues" -> setVec(outputs, 0, inMatRows(inputs, 0, ctx));
+                case "eigenvalues" -> {
+                    int n = inMatRows(inputs, 0, ctx);
+                    setVec(outputs, 0, n);
+                    if (outputs.size() == 2) {
+                        setVec(outputs, 1, n);
+                    }
+                }
                 case "eigen" -> {
                     int n = inMatRows(inputs, 0, ctx);
                     setVec(outputs, 0, n);
@@ -1549,11 +1569,15 @@ public final class EquationParser {
 
     private void flattenEigen(String defName, List<Expr> inputs, List<Expr> outputs, String sourceText, FlattenContext ctx) {
         boolean wantVectors = defName.equals("eigen");
-        int expectedOutputs = wantVectors ? 2 : 1;
-        if (inputs.size() != 1 || outputs.size() != expectedOutputs) {
+        // Eigenvalues also accepts a two-output (re, im) form so non-symmetric
+        // matrices with complex spectra stay expressible in the real-valued
+        // equation language (mirroring how FFT carries complex data).
+        boolean complexPair = !wantVectors && outputs.size() == 2;
+        boolean outputCountOk = wantVectors ? outputs.size() == 2 : outputs.size() == 1 || outputs.size() == 2;
+        if (inputs.size() != 1 || !outputCountOk) {
             throw new ParseException(wantVectors
                     ? "Eigen expects 1 input matrix and 2 outputs (eigenvalue vector, eigenvector matrix), e.g. CALL Eigen(A[1:3,1:3] : lambda[1:3], V[1:3,1:3])"
-                    : "Eigenvalues expects 1 input matrix and 1 output vector, e.g. CALL Eigenvalues(A[1:3,1:3] : lambda[1:3])");
+                    : "Eigenvalues expects 1 input matrix and 1 output vector (real spectra) or 2 output vectors (real and imaginary parts), e.g. CALL Eigenvalues(A[1:3,1:3] : lambda[1:3]) or CALL Eigenvalues(A[1:2,1:2] : re[1:2], im[1:2])");
         }
         MatrixInfo a = parseMatrixInfo(inputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
         VectorInfo lambda = parseVectorInfo(outputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
@@ -1565,9 +1589,20 @@ public final class EquationParser {
         for (int i = 0; i < n; i++) {
             entries.addAll(Arrays.asList(a.elements[i]));
         }
+        String realPrefix = complexPair ? "eigen$re$" : "eigen$val$";
         for (int k = 0; k < n; k++) {
             ctx.out().add(new Equation(lambda.elements[k],
-                    new Expr.Call("eigen$val$" + k + "$" + n, entries), sourceText));
+                    new Expr.Call(realPrefix + k + "$" + n, entries), sourceText));
+        }
+        if (complexPair) {
+            VectorInfo imag = parseVectorInfo(outputs.get(1), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+            if (imag.size != n) {
+                throw new ParseException("Eigenvalues requires the imaginary-part vector to match the matrix size.");
+            }
+            for (int k = 0; k < n; k++) {
+                ctx.out().add(new Equation(imag.elements[k],
+                        new Expr.Call("eigen$im$" + k + "$" + n, entries), sourceText));
+            }
         }
         if (wantVectors) {
             emitEigenvectors(outputs, n, entries, sourceText, ctx);
@@ -2375,6 +2410,8 @@ public final class EquationParser {
         return sub;
     }
 
+    /** Closed-form cofactor expansion — only for n <= {@link #DET_CLOSED_FORM_MAX}
+     *  (O(n!) growth); larger matrices route through the det$ LU intrinsic. */
     private Expr expandDeterminant(Expr[][] mat) {
         int n = mat.length;
         if (n == 1) {

@@ -6,6 +6,7 @@ services:
   otel-collector:
     image: otel/opentelemetry-collector-contrib:0.110.0
     container_name: frees-otel-collector
+    restart: unless-stopped
     command: ["--config=/etc/otelcol/config.yaml"]
     volumes:
       - ./observability/otel-collector-config.yaml:/etc/otelcol/config.yaml:ro
@@ -20,6 +21,7 @@ services:
   jaeger:
     image: jaegertracing/all-in-one:1.62.0
     container_name: frees-jaeger
+    restart: unless-stopped
     environment:
       - COLLECTOR_OTLP_ENABLED=true
     ports:
@@ -30,6 +32,7 @@ services:
   redis:
     image: redis:7-alpine
     container_name: frees-redis
+    restart: unless-stopped
     ports:
     # Loopback-only: no password; protected-mode is the sole barrier, and it
     # stops applying as soon as a password or bind directive is added.
@@ -43,6 +46,7 @@ services:
   rabbitmq:
     image: rabbitmq:3-management-alpine
     container_name: frees-rabbitmq
+    restart: unless-stopped
     ports:
     # Loopback-only: management UI on default guest credentials, and the task
     # queue itself on 5672.
@@ -57,6 +61,7 @@ services:
   api-node:
     image: ghcr.io/ernsoylu/frees-backend:latest
     container_name: frees-api-node
+    restart: unless-stopped
     environment:
       - SPRING_PROFILES_ACTIVE=api
       - SPRING_RABBITMQ_HOST=rabbitmq
@@ -91,6 +96,11 @@ services:
     image: ghcr.io/ernsoylu/frees-backend:latest
     deploy:
       replicas: 3
+    # A solve that exhausts the JVM heap kills the worker process; without a
+    # restart policy that permanently shrinks the compute tier. Restarting is
+    # safe: the poison-message guard (frees.compute.drop-redelivered) fails the
+    # offending job on redelivery instead of crash-looping the fresh worker.
+    restart: unless-stopped
     environment:
       - SPRING_PROFILES_ACTIVE=compute
       - SPRING_RABBITMQ_HOST=rabbitmq
@@ -125,6 +135,7 @@ services:
       TRUSTED_PROXY_CIDRS: ${TRUSTED_PROXY_CIDRS:-}
       TRUSTED_PROXY_HEADER: ${TRUSTED_PROXY_HEADER:-}
     container_name: frees-frontend
+    restart: unless-stopped
     ports:
     # The only port meant to carry traffic, and the only configurable bind.
     # Defaults to loopback; set FREES_FRONTEND_BIND=0.0.0.0 when a tunnel

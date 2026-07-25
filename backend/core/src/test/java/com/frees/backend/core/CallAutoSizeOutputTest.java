@@ -58,6 +58,15 @@ class CallAutoSizeOutputTest {
     }
 
     @Test
+    void complexEigenvaluePairSizedFromMatrixDimension() {
+        String setup = "A = [0, -1; 1, 0]\n";
+        assertBareMatchesExplicit(setup,
+                "CALL Eigenvalues(A : re, im)",
+                "CALL Eigenvalues(A : re[1:2], im[1:2])",
+                "re", "im");
+    }
+
+    @Test
     void tf2ssSizedFromDenominatorDegree() {
         String setup = "num = [0, 0, 1]\nden = [1, 3, 2]\n";
         assertBareMatchesExplicit(setup,

@@ -13,6 +13,21 @@ import './index.css'
 const App = lazy(() => import('./App'))
 const HelpPage = lazy(() => import('./HelpPage'))
 
+// A deploy replaces the hashed /assets chunks, so a tab left open across it
+// 404s on its next lazy import ("Failed to fetch dynamically imported
+// module"). Reload once to pick up the fresh index.html; if the failure
+// repeats within a minute (a genuinely broken deploy, not a stale tab), let
+// the error through to the ErrorBoundary instead of reload-looping.
+globalThis.addEventListener('vite:preloadError', (event) => {
+  const RELOADED_AT_KEY = 'frees.chunkReloadAt'
+  const last = Number(sessionStorage.getItem(RELOADED_AT_KEY) ?? 0)
+  if (Date.now() - last > 60_000) {
+    sessionStorage.setItem(RELOADED_AT_KEY, String(Date.now()))
+    event.preventDefault()
+    globalThis.location.reload()
+  }
+})
+
 const theme = createTheme({
   primaryColor: 'teal',
   fontFamilyMonospace:

@@ -17,6 +17,7 @@ left half-plane; discrete: inside the unit circle) and modal frequencies.
 
 ```
 CALL Eigenvalues(A : lambda)
+CALL Eigenvalues(A : re, im)
 lambda = Eigenvalues(A)
 ```
 
@@ -27,6 +28,11 @@ The eigenvalues are the roots of the characteristic polynomial:
 $$ \det(A - \lambda I) = 0 $$
 
 > **Method:** QR algorithm on the (balanced) matrix.
+
+The single-output form supports **real spectra only** (symmetric matrices always
+qualify) and stops with an error on complex eigenvalues. The two-output form
+carries a complex spectrum as real/imaginary part vectors; eigenvalues are
+sorted ascending by real part, then imaginary part.
 
 ## Examples
 
@@ -44,4 +50,5 @@ $$ \det(A - \lambda I) = 0 $$
 
 | Argument | Type | Description |
 | --- | --- | --- |
-| `lambda` | Vector | Eigenvalues (possibly complex). |
+| `lambda` | Vector | Eigenvalues, ascending (single-output form; real spectra only). |
+| `re`, `im` | Vector | Real and imaginary parts of the spectrum (two-output form). |

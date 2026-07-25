@@ -31,7 +31,7 @@ half-plane; positive gain/phase margins; and a Nyquist locus that does not encir
 
 $$ \text{mag} = 20\log_{10}|G(j\omega)|,\qquad \text{phase} = \angle G(j\omega) $$
 
-Embed the plots with `[Graph="…"]` tags so the Formatted report renders them inline.
+Each figure is declared by a named `PLOT … END` block and appears in the Plots window after the solve.
 
 ## Worked example
 
