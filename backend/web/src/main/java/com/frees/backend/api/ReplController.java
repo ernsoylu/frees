@@ -5,8 +5,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -22,6 +22,9 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/repl")
 public class ReplController {
+
+    /** Carries the session id, matching the header /api/solve already uses. */
+    static final String SESSION_HEADER = "X-Frees-Session";
 
     private final SolveContextCache cache;
     private final ReplEvaluator evaluator;
@@ -75,10 +78,21 @@ public class ReplController {
         return ResponseEntity.ok().build();
     }
 
-    /** Variable names currently in the workspace (plus REPL-defined), for tab-completion. */
+    /**
+     * Variable names currently in the workspace (plus REPL-defined), for
+     * tab-completion.
+     *
+     * <p>The session id arrives in the {@code X-Frees-Session} header — the
+     * same header {@code /api/solve} already uses — and NOT as a query
+     * parameter. With no authentication the id is the only thing standing
+     * between a caller and someone else's solved workspace, and query strings
+     * are written to nginx access logs, the hosting platform's HTTP logs and
+     * tracing spans, and are sent onward in {@code Referer}. A header keeps it
+     * out of all of those.
+     */
     @GetMapping("/variables")
     public ResponseEntity<List<String>> variables(
-            @RequestParam(name = "sessionId", required = false) String sessionId) {
+            @RequestHeader(name = SESSION_HEADER, required = false) String sessionId) {
         SolveContextCache.Session session = cache.peek(sessionId);
         return ResponseEntity.ok(session == null ? List.of() : session.completionNames());
     }
