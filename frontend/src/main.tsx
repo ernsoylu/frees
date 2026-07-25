@@ -1,9 +1,11 @@
 import React, { Suspense, lazy } from 'react'
 import ReactDOM from 'react-dom/client'
 import '@mantine/core/styles.css'
+import '@mantine/notifications/styles.css'
 import '@mantine/spotlight/styles.css'
 import 'katex/dist/katex.min.css'
 import { Center, createTheme, Loader, MantineProvider } from '@mantine/core'
+import { Notifications } from '@mantine/notifications'
 import ErrorBoundary from './ErrorBoundary'
 import './index.css'
 
@@ -40,6 +42,7 @@ const isHelpPage = globalThis.location.pathname === '/help'
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <MantineProvider theme={theme} defaultColorScheme="dark">
+      <Notifications position="top-right" />
       <ErrorBoundary>
         <Suspense
           fallback={
