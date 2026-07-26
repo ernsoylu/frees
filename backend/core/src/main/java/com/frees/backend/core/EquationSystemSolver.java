@@ -1264,7 +1264,7 @@ public class EquationSystemSolver {
      * conjugate pairs, so the mirror branch is the natural alternative when
      * a guess sits on the wrong side of the phase plane.
      */
-    private record GuessTransform(double zeroOffset, double scale, boolean conjugate) {}
+    private record GuessTransform(double zeroOffset, double scale, boolean conjugate, boolean jitter) {}
 
     private static final List<GuessTransform> GUESS_TRANSFORMS = buildGuessTransforms();
 
@@ -1273,8 +1273,18 @@ public class EquationSystemSolver {
         for (boolean conjugate : new boolean[] {false, true}) {
             for (double scale : new double[] {1.0, 1.0e-2, 1.0e-4, 1.0e2, 1.0e4}) {
                 for (double zeroOffset : new double[] {1.0, -1.0}) {
-                    transforms.add(new GuessTransform(zeroOffset, scale, conjugate));
+                    transforms.add(new GuessTransform(zeroOffset, scale, conjugate, false));
                 }
+            }
+        }
+        // Symmetry-breaking variants last: a system symmetric under a variable
+        // exchange (x <-> y) traps every symmetric iteration on the invariant
+        // manifold (identical Jacobian columns there), and the uniform
+        // transforms above preserve that symmetry. Staggering each variable by
+        // its position in the block is deterministic and leaves the manifold.
+        for (double scale : new double[] {1.0, 1.0e-2, 1.0e2}) {
+            for (double zeroOffset : new double[] {1.0, -1.0}) {
+                transforms.add(new GuessTransform(zeroOffset, scale, false, true));
             }
         }
         return transforms;
@@ -1297,12 +1307,16 @@ public class EquationSystemSolver {
                                        Map<String, Double> values,
                                        Map<String, VariableSpec> specs,
                                        Map<String, Double> warmStart) {
+        int position = 0;
         for (String v : block.variables()) {
             VariableSpec spec = specs.get(v);
             double base = initialGuess(v, specs, warmStart);
             double guess = base == 0.0 ? transform.zeroOffset() : base * transform.scale();
             if (transform.conjugate() && v.endsWith("_i")) {
                 guess = -guess;
+            }
+            if (transform.jitter()) {
+                guess *= 1.0 + 0.07 * ++position;
             }
             if (spec != null) {
                 guess = Math.clamp(guess, spec.lower(), spec.upper());
