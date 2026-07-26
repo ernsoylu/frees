@@ -1,6 +1,7 @@
-import { Accordion, Alert, Badge, Group, Table, Text } from '@mantine/core'
+import { useState } from 'react'
+import { Accordion, Alert, Badge, Group, Progress, Select, Table, Text } from '@mantine/core'
 import { IconAlertTriangle } from '@tabler/icons-react'
-import type { SolveResponse } from './api'
+import type { SolveResponse, VariableUncertaintyResult } from './api'
 
 /** Compact numeric format for residuals: plain in the readable range,
  *  exponential outside it. */
@@ -12,6 +13,45 @@ function formatResidual(v: number): string {
 }
 
 const TOP_RESIDUALS = 12
+
+/** Tornado view: for the selected uncertain variable, each source's signed
+ *  contribution as a ranked bar (the RSS of the bars is the variable's
+ *  propagated uncertainty). Own component so the selection hook stays below
+ *  the parent's early returns. */
+function UncertaintyBreakdown({ breakdown }: Readonly<{ breakdown: VariableUncertaintyResult[] }>) {
+  const [selected, setSelected] = useState<string | null>(null)
+  const effective = breakdown.find((b) => b.variable === selected) ?? breakdown[0]
+  const maxAbs = Math.max(...effective.sources.map((s) => Math.abs(s.value)), Number.MIN_VALUE)
+  return (
+    <>
+      <Group gap="xs" mb={6} wrap="nowrap">
+        <Select
+          size="xs"
+          data={breakdown.map((b) => b.variable)}
+          value={effective.variable}
+          onChange={setSelected}
+          allowDeselect={false}
+          style={{ flex: '0 0 180px' }}
+          aria-label="Uncertain variable"
+        />
+        <Text size="xs" c="dimmed" truncate>
+          σ = {formatResidual(effective.total)} — per-source contributions, RSS-combined
+        </Text>
+      </Group>
+      {effective.sources.map((s) => (
+        <Group key={s.source} gap="xs" wrap="nowrap" mb={2}>
+          <Text size="xs" ff="monospace" style={{ flex: '0 0 140px' }} truncate>
+            {s.source}
+          </Text>
+          <Progress value={(Math.abs(s.value) / maxAbs) * 100} color="teal" size="sm" style={{ flex: 1 }} />
+          <Text size="xs" ff="monospace" style={{ flex: '0 0 84px', textAlign: 'right' }}>
+            {formatResidual(s.value)}
+          </Text>
+        </Group>
+      ))}
+    </>
+  )
+}
 
 interface Props {
   response: SolveResponse | null
@@ -29,7 +69,8 @@ export default function SolveDiagnostics({ response }: Readonly<Props>) {
   const stats = response.stats
   const residuals = response.residuals ?? []
   const blocks = response.blocks ?? []
-  if (!stats && residuals.length === 0 && blocks.length === 0) return null
+  const breakdown = response.uncertaintyBreakdown ?? []
+  if (!stats && residuals.length === 0 && blocks.length === 0 && breakdown.length === 0) return null
 
   const failed = !response.success
   const failedIndex = response.failedBlockIndex ?? null
@@ -122,6 +163,23 @@ export default function SolveDiagnostics({ response }: Readonly<Props>) {
           )}
         </Accordion.Panel>
       </Accordion.Item>
+      {breakdown.length > 0 && (
+        <Accordion.Item value="uncertainty">
+          <Accordion.Control>
+            <Group gap="xs" wrap="nowrap">
+              <Text size="sm" fw={600}>
+                Uncertainty
+              </Text>
+              <Text size="xs" c="dimmed" truncate>
+                {breakdown.length} variable{breakdown.length === 1 ? '' : 's'} — source breakdown
+              </Text>
+            </Group>
+          </Accordion.Control>
+          <Accordion.Panel>
+            <UncertaintyBreakdown breakdown={breakdown} />
+          </Accordion.Panel>
+        </Accordion.Item>
+      )}
     </Accordion>
   )
 }

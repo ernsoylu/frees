@@ -123,7 +123,10 @@ public class SolveController {
                                 List<SolveDtos.ComponentDto> components,
                                 // Index of the Tarjan block whose solve gave up, or
                                 // null when the failure carries no block information.
-                                Integer failedBlockIndex) {
+                                Integer failedBlockIndex,
+                                // Tornado breakdown: per uncertain variable, the ranked
+                                // per-source contributions its uncertainty RSS-combines.
+                                List<SolveDtos.VariableUncertaintyDto> uncertaintyBreakdown) {
 
         static SolveResponse failure(String error) {
             return failure(error, null);
@@ -132,7 +135,8 @@ public class SolveController {
         static SolveResponse failure(String error, Integer errorLine) {
             return new SolveResponse(false, List.of(), List.of(), List.of(), null,
                     List.of(), List.of(), error, List.of(), List.of(), List.of(),
-                    List.of(), errorLine, List.of(), List.of(), List.of(), List.of(), null);
+                    List.of(), errorLine, List.of(), List.of(), List.of(), List.of(), null,
+                    List.of());
         }
     }
 
@@ -289,7 +293,27 @@ public class SolveController {
                 odeTablesOf(result.odeTables(), unitsByLower),
                 result.residueExpansions(),
                 ComponentMetadata.build(cleanText, variableDtos),
-                null);
+                null,
+                uncertaintyBreakdownOf(result));
+    }
+
+    /** Tornado breakdown DTOs: per dependent variable (display-named, internal
+     *  temps dropped), its propagated sigma and each source's signed
+     *  contribution, largest first; variables ranked by sigma. */
+    private List<SolveDtos.VariableUncertaintyDto> uncertaintyBreakdownOf(EquationSystemSolver.Result result) {
+        Map<String, String> names = result.displayNames();
+        return result.uncertaintyContributions().entrySet().stream()
+                .filter(e -> !isInternalTemp(e.getKey()))
+                .map(e -> new SolveDtos.VariableUncertaintyDto(
+                        names.getOrDefault(e.getKey(), e.getKey()),
+                        result.uncertainties().getOrDefault(e.getKey(), 0.0),
+                        e.getValue().stream()
+                                .limit(16)
+                                .map(c -> new SolveDtos.UncertaintyContributionDto(
+                                        names.getOrDefault(c.source(), c.source()), c.value()))
+                                .toList()))
+                .sorted((a, b) -> Double.compare(b.total(), a.total()))
+                .toList();
     }
 
     /**
@@ -335,7 +359,8 @@ public class SolveController {
                 List.of(),
                 List.of(),
                 List.of(),
-                state != null ? state.failedBlockIndex() : null);
+                state != null ? state.failedBlockIndex() : null,
+                List.of());
     }
 
     /** Quick synchronous syntax check used by the asynchronous path to reject

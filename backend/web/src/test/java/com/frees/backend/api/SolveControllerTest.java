@@ -56,6 +56,19 @@ class SolveControllerTest {
     }
 
     @Test
+    void solveShipsUncertaintyBreakdown() throws Exception {
+        mockMvc.perform(post("/api/solve")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"text\": \"x = 3\\ny = 4\\nUncertaintyOf(x) = 0.1\\nUncertaintyOf(y) = 0.2\\nf = x * y\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.uncertaintyBreakdown[0].variable").value("f"))
+                .andExpect(jsonPath("$.uncertaintyBreakdown[0].total").value(
+                        org.hamcrest.Matchers.closeTo(0.7211103, 1e-4)))
+                .andExpect(jsonPath("$.uncertaintyBreakdown[0].sources[0].source").value("y"))
+                .andExpect(jsonPath("$.uncertaintyBreakdown[0].sources[1].source").value("x"));
+    }
+
+    @Test
     void failedSolveShipsDiagnosticsEnvelope() throws Exception {
         // x+y pinned to two different values cannot converge; the 422 envelope
         // must carry the block structure, the residuals at the failure point

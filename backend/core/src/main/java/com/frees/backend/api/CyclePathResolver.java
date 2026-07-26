@@ -189,7 +189,9 @@ public class CyclePathResolver {
                 resolvedSolutions,
                 mutableDisplayNames,
                 result.uncertainties(),
-                result.odeTables()
+                result.odeTables(),
+                result.residueExpansions(),
+                result.uncertaintyContributions()
         );
     }
 
