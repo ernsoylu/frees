@@ -479,6 +479,14 @@ public class SolveController {
     @Value("${frees.solver.max-table-seconds:120}")
     private long maxTableSeconds;
 
+    /** One chunk of a chunked table run: the sliced request plus its position. */
+    public record TableChunkRequest(SolveTableRequest request, int chunkIndex, int chunkCount) {}
+
+    /** Rows per chunk when a large accessor-free table fans out across the
+     *  compute workers; a table at or under one chunk stays a single task. */
+    @Value("${frees.solver.table-chunk-size:250}")
+    private int tableChunkSize;
+
     @PostMapping("/solve/table")
     public ResponseEntity<?> solveTable(@RequestBody SolveTableRequest request) {
         if (request.text() == null || request.text().isBlank()) {
@@ -498,10 +506,72 @@ public class SolveController {
             } catch (EquationParser.ParseException e) {
                 return ResponseEntity.badRequest().build();
             }
+            // Large accessor-free tables fan out as row chunks across the
+            // compute workers; accessor tables keep their table-wide
+            // fixed-point semantics and stay one serial task.
+            List<Map<String, Double>> rows = request.table().rows();
+            if (rows.size() > tableChunkSize && !mentionsParametricAccessor(request.text())) {
+                return ResponseEntity.accepted().body(dispatchChunked(request, rows));
+            }
             JobTicket ticket = dispatcher.dispatch(ComputeTask.SOLVE_TABLE, null, request);
             return ResponseEntity.accepted().body(ticket);
         }
         return ResponseEntity.ok(computeSolveTable(request));
+    }
+
+    private JobTicket dispatchChunked(SolveTableRequest request, List<Map<String, Double>> rows) {
+        String jobId = java.util.UUID.randomUUID().toString();
+        int count = (rows.size() + tableChunkSize - 1) / tableChunkSize;
+        dispatcher.beginChunked(jobId, count);
+        for (int i = 0; i < count; i++) {
+            List<Map<String, Double>> slice = List.copyOf(rows.subList(i * tableChunkSize,
+                    Math.min(rows.size(), (i + 1) * tableChunkSize)));
+            SolveTableRequest chunkRequest = new SolveTableRequest(request.text(),
+                    request.stopCriteria(), request.variableInfo(), request.displayUnitSystem(),
+                    new TableDto(request.table().variables(), slice), request.functionTables());
+            dispatcher.publishChunk(jobId, new TableChunkRequest(chunkRequest, i, count));
+        }
+        return JobTicket.pending(jobId);
+    }
+
+    /**
+     * Reassembles per-chunk responses (in chunk order) into one table
+     * response: rows concatenate, counters sum, the elapsed time is the
+     * slowest chunk (the parallel wall clock), and the variable list comes
+     * from the first chunk (identical across chunks by construction).
+     */
+    public static SolveTableResponse aggregateChunks(List<SolveTableResponse> chunks) {
+        List<TableRowResult> results = new ArrayList<>();
+        int runs = 0;
+        int solved = 0;
+        int failed = 0;
+        int iterations = 0;
+        int equations = 0;
+        int unknowns = 0;
+        long elapsed = 0;
+        double maxResidual = 0.0;
+        List<SolveDtos.VariableDto> variables = List.of();
+        for (SolveTableResponse chunk : chunks) {
+            results.addAll(chunk.results());
+            TableStatsDto s = chunk.stats();
+            if (s != null) {
+                runs += s.runs();
+                solved += s.solved();
+                failed += s.failed();
+                iterations += s.iterations();
+                equations = s.equations();
+                unknowns = s.unknowns();
+                elapsed = Math.max(elapsed, s.elapsedMillis());
+                maxResidual = Math.max(maxResidual, s.maxResidual());
+            }
+            if (variables.isEmpty()) {
+                variables = chunk.variables();
+            }
+        }
+        return new SolveTableResponse(results,
+                new TableStatsDto(runs, solved, failed, equations, unknowns, iterations,
+                        elapsed, maxResidual),
+                variables);
     }
 
     /**

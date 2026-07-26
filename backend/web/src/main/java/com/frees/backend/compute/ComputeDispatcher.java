@@ -45,6 +45,34 @@ public class ComputeDispatcher {
      *                  results are cached against it for the REPL
      * @param request the original request DTO; serialised to JSON for the worker
      */
+    /** Marks {@code parentJobId} as awaiting {@code chunkCount} chunks. */
+    public void beginChunked(String parentJobId, int chunkCount) {
+        jobStore.savePendingChunked(parentJobId, chunkCount);
+    }
+
+    /**
+     * Publishes one chunk of a chunked table job under the PARENT's jobId —
+     * chunks have no job records of their own; the parent aggregates. A
+     * publish failure fails the parent so the poller gets a terminal state.
+     */
+    public void publishChunk(String parentJobId, Object chunkRequest) {
+        String json;
+        try {
+            json = objectMapper.writeValueAsString(chunkRequest);
+        } catch (JsonProcessingException e) {
+            log.error("Failed to serialise table chunk for job {}", parentJobId, e);
+            jobStore.saveFailed(parentJobId, "Failed to serialise chunk: " + e.getMessage());
+            return;
+        }
+        try {
+            rabbitTemplate.convertAndSend(ComputeTask.QUEUE,
+                    new ComputeTask(parentJobId, ComputeTask.SOLVE_TABLE_CHUNK, null, json));
+        } catch (RuntimeException e) {
+            log.error("Failed to publish table chunk for job {}", parentJobId, e);
+            jobStore.saveFailed(parentJobId, "Failed to enqueue chunk: " + e.getMessage());
+        }
+    }
+
     public JobTicket dispatch(String taskType, String sessionId, Object request) {
         String jobId = UUID.randomUUID().toString();
         // WARMUP is a fire-and-forget primer that just opens the lazily-established

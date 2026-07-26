@@ -15,6 +15,7 @@ public record ComputeTask(String jobId,
 
     public static final String SOLVE = "SOLVE";
     public static final String SOLVE_TABLE = "SOLVE_TABLE";
+    public static final String SOLVE_TABLE_CHUNK = "SOLVE_TABLE_CHUNK";
     public static final String MONTE_CARLO = "MONTE_CARLO";
     public static final String PARAM_FIT = "PARAM_FIT";
     public static final String OPTIMIZE = "OPTIMIZE";
