@@ -106,6 +106,7 @@ import { group } from './workspaceData'
 // The Digitizer tab is a large, self-contained editor that most
 // sessions never open, so they are code-split and only fetched when their tab
 // is first shown (wrapped in <Suspense> at their render sites below).
+const SchematicTab = lazy(() => import('./schematic/SchematicTab'))
 const DigitizerTab = lazy(() =>
   import('./DigitizerTab').then((m) => ({ default: m.DigitizerTab })),
 )
@@ -2076,6 +2077,18 @@ export default function App() {
         </Suspense>
       </div>
     ),
+    schematic: (
+      <div style={{ height: '100%', minHeight: 0 }}>
+        <Suspense fallback={lazyTabFallback}>
+          <SchematicTab
+            checkResult={checkResult}
+            components={result?.components}
+            text={textRef.current}
+            onRevealLine={goToLine}
+          />
+        </Suspense>
+      </div>
+    ),
     inspector: (() => {
       const fw = focusedWindow
       const bodyStyle: React.CSSProperties = { flex: 1, minHeight: 0, overflow: 'auto', padding: 10 }
@@ -2353,6 +2366,7 @@ export default function App() {
     table: 'Tables',
     plots: 'Plots',
     digitizer: 'Digitizer',
+    schematic: 'Schematic',
     workspace: 'Variable Explorer',
     terminal: 'Terminal',
     states: 'Fluid States',
