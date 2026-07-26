@@ -17,6 +17,7 @@ import {
 } from '@mantine/core'
 import {
   IconAdjustments,
+  IconChartHistogram,
   IconBrush,
   IconChartGridDots,
   IconChartLine,
@@ -134,6 +135,7 @@ interface RailProps {
   onMinMax: () => void
   onCurveFit: () => void
   onPidTuner: () => void
+  onMonteCarlo: () => void
   onPreferences: () => void
   onAbout: () => void
 }
@@ -829,6 +831,7 @@ interface TopBarProps {
   onMinMax: () => void
   onCurveFit: () => void
   onPidTuner: () => void
+  onMonteCarlo: () => void
 }
 
 function solveTooltipFor(canSolve: boolean, isTable: boolean): string {
@@ -985,6 +988,9 @@ export function TopBar(props: Readonly<TopBarProps>) {
             </Menu.Item>
             <Menu.Item leftSection={<IconAdjustments size={14} />} onClick={props.onPidTuner}>
               PID Tuner
+            </Menu.Item>
+            <Menu.Item leftSection={<IconChartHistogram size={14} />} onClick={props.onMonteCarlo}>
+              Monte Carlo Uncertainty
             </Menu.Item>
             <Menu.Divider />
             <Menu.Label>Auxiliary panels</Menu.Label>

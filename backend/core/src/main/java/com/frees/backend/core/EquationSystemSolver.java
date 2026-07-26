@@ -651,6 +651,15 @@ public class EquationSystemSolver {
     public Result solvePermissive(String source, SolverSettings settings,
                                   Map<String, VariableSpec> specs,
                                   Map<String, ProcDef> extraDefs) {
+        return solvePermissive(source, settings, specs, extraDefs, null);
+    }
+
+    /** Permissive solve seeded from a previous solution (Monte Carlo resamples,
+     *  repeated sweeps): warm-start values win over spec guesses where present. */
+    public Result solvePermissive(String source, SolverSettings settings,
+                                  Map<String, VariableSpec> specs,
+                                  Map<String, ProcDef> extraDefs,
+                                  Map<String, Double> warmStart) {
         long startNanos = System.nanoTime();
         long deadlineNanos = startNanos + (long) (settings.elapsedTimeSeconds() * 1.0e9);
         EquationParser.ParseResult parsed =
@@ -662,7 +671,8 @@ public class EquationSystemSolver {
         if (settings.complexMode()) {
             equations = com.frees.backend.parser.ComplexExpansion.expand(equations, parsed.displayNames());
         }
-        InnerSolve solved = solveEquationListPermissive(equations, settings, specs, parsed.defs(), deadlineNanos);
+        InnerSolve solved = solveEquationListPermissive(equations, settings, specs, parsed.defs(),
+                deadlineNanos, warmStart);
         return buildResult(equations, solved.blocks(), List.of(solved.values()),
                 solved.iterations(), startNanos, parsed, Map.of());
     }
@@ -671,19 +681,22 @@ public class EquationSystemSolver {
                                                    SolverSettings settings,
                                                    Map<String, VariableSpec> specs,
                                                    Map<String, ProcDef> defs,
-                                                   long deadlineNanos) {
+                                                   long deadlineNanos,
+                                                   Map<String, Double> warmStart) {
         TreeSet<String> allVars = collectVariables(equations);
         Map<String, VariableSpec> expandedSpecs = new HashMap<>(expandSpecs(allVars, specs, settings.complexMode()));
         seedPropertyArgumentGuesses(equations, expandedSpecs);
-        checkAndAdjustGuesses(equations, defs, expandedSpecs, null);
+        Map<String, Double> mutableWarmStart = warmStart == null ? null : new HashMap<>(warmStart);
+        checkAndAdjustGuesses(equations, defs, expandedSpecs, mutableWarmStart);
         Map<String, Double> values = new HashMap<>();
         for (String name : allVars) {
-            values.put(name, initialGuess(name, expandedSpecs, null));
+            values.put(name, initialGuess(name, expandedSpecs, mutableWarmStart));
         }
         NewtonSolver newtonSolver = new NewtonSolver(settings, defs);
         NewtonSolver retrySolver = new NewtonSolver(retrySettings(settings), defs);
         NewtonSolver polisher = new NewtonSolver(polishSettings(settings), defs);
-        SolveConfig config = new SolveConfig(deadlineNanos, expandedSpecs, null, newtonSolver, retrySolver, polisher, defs);
+        SolveConfig config = new SolveConfig(deadlineNanos, expandedSpecs, mutableWarmStart,
+                newtonSolver, retrySolver, polisher, defs);
         List<Block> blocks = blocker.blockPermissive(equations);
         int totalIterations = 0;
         Set<Integer> skipIndices = new HashSet<>();

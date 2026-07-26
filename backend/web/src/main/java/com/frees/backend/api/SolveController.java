@@ -594,6 +594,142 @@ public class SolveController {
             Map<String, ProcDef> functionDefs
     ) {}
 
+    // ── Monte Carlo uncertainty ─────────────────────────────────────────────
+
+    public record MonteCarloRequest(
+            String text,
+            SolverApiSupport.StopCriteriaDto stopCriteria,
+            List<SolverApiSupport.VariableInfoDto> variableInfo,
+            String displayUnitSystem,
+            List<SolveDtos.FunctionTableDto> functionTables,
+            Integer samples,
+            Long seed
+    ) {}
+
+    public record McVariableDto(String variable, double mean, double sigma,
+                                double p5, double p50, double p95, double firstOrderSigma) {}
+
+    public record MonteCarloResponse(
+            List<McVariableDto> stats,
+            List<TableRowResult> samples,
+            List<String> sources,
+            int requestedSamples,
+            int failedSamples,
+            boolean truncated
+    ) {}
+
+    /** Sample-count and wall-clock budgets, same reasoning as the table run:
+     *  the per-solve cap times N is unbounded without them. */
+    @Value("${frees.solver.max-mc-samples:1000}")
+    private int maxMcSamples;
+
+    @Value("${frees.solver.max-mc-seconds:120}")
+    private long maxMcSeconds;
+
+    @PostMapping("/solve/montecarlo")
+    public ResponseEntity<Object> monteCarlo(@RequestBody MonteCarloRequest request) {
+        if (request.text() == null || request.text().isBlank()) {
+            return ResponseEntity.badRequest().build();
+        }
+        int n = request.samples() != null ? request.samples() : 200;
+        // Reject before enqueueing, so an oversized run never reaches a worker.
+        if (n < 2 || n > maxMcSamples) {
+            return ResponseEntity.unprocessableEntity()
+                    .body(Map.of("error", badSampleCountMessage(n)));
+        }
+        if (dispatcher != null) {
+            try {
+                solver.parse(request.text());
+            } catch (EquationParser.ParseException e) {
+                return ResponseEntity.badRequest().build();
+            }
+            JobTicket ticket = dispatcher.dispatch(ComputeTask.MONTE_CARLO, null, request);
+            return ResponseEntity.accepted().body(ticket);
+        }
+        return ResponseEntity.ok(computeMonteCarlo(request));
+    }
+
+    /**
+     * Runs the Monte Carlo sampling end-to-end and returns the response DTO.
+     * Used by the synchronous path and the asynchronous compute worker. The
+     * sampling loop truncates itself at the wall-clock budget (an early stop
+     * shrinks the sample count without biasing the statistics), so unlike the
+     * table run there is no mid-flight abort.
+     */
+    public MonteCarloResponse computeMonteCarlo(MonteCarloRequest request) {
+        int n = request.samples() != null ? request.samples() : 200;
+        // Re-checked here, not just at the endpoint: this is also the compute
+        // worker's entry point, and it deserialises the request off the queue.
+        if (n < 2 || n > maxMcSamples) {
+            throw new IllegalStateException(badSampleCountMessage(n));
+        }
+        long seed = request.seed() != null ? request.seed() : 42L;
+        SolverSettings settings = request.stopCriteria() != null
+                ? request.stopCriteria().toSettings()
+                : cappedDefaults();
+        Map<String, VariableSpec> specs = specsOf(request.variableInfo());
+        Map<String, ProcDef> functionDefs = SolveDtos.functionDefsOf(request.functionTables());
+        long deadlineNanos = System.nanoTime() + maxMcSeconds * 1_000_000_000L;
+
+        MonteCarlo.Outcome outcome = MonteCarlo.run(solver, request.text(), settings, specs,
+                functionDefs, n, seed, deadlineNanos);
+
+        Map<String, String> names = solver.parse(request.text()).displayNames();
+        Map<String, String> unitsByLower =
+                unitsByLowerName(request.text(), request.variableInfo(), solver);
+        UnitRegistry.UnitSystem system = unitSystem(request.displayUnitSystem());
+        Map<String, String> explicitUnits = unitsByVariable(request.variableInfo());
+        java.util.function.ToDoubleBiFunction<String, Double> disp = (name, v) ->
+                toDisplay(name, v, unitsByLower.getOrDefault(name.toLowerCase(), ""),
+                        system, explicitUnits).value();
+
+        List<McVariableDto> stats = outcome.stats().stream()
+                .filter(s -> !isInternalTemp(s.variable()))
+                .map(s -> {
+                    double mean = disp.applyAsDouble(s.variable(), s.mean());
+                    // Sigmas are differences: offset units (degC) scale them by
+                    // the factor alone, so convert as a delta about the mean.
+                    double sigma = disp.applyAsDouble(s.variable(), s.mean() + s.sigma()) - mean;
+                    double firstOrder = disp.applyAsDouble(s.variable(), s.mean() + s.firstOrderSigma()) - mean;
+                    return new McVariableDto(
+                            names.getOrDefault(s.variable(), s.variable()),
+                            mean, sigma,
+                            disp.applyAsDouble(s.variable(), s.p5()),
+                            disp.applyAsDouble(s.variable(), s.p50()),
+                            disp.applyAsDouble(s.variable(), s.p95()),
+                            firstOrder);
+                })
+                .sorted((a, b) -> Double.compare(Math.abs(b.sigma()), Math.abs(a.sigma())))
+                .toList();
+
+        List<TableRowResult> sampleRows = outcome.samples().stream()
+                .map(s -> {
+                    if (!s.success()) {
+                        return new TableRowResult(false, Map.of(), s.error());
+                    }
+                    Map<String, Double> row = new HashMap<>();
+                    for (Map.Entry<String, Double> e : s.values().entrySet()) {
+                        if (!isInternalTemp(e.getKey())) {
+                            row.put(names.getOrDefault(e.getKey(), e.getKey()),
+                                    disp.applyAsDouble(e.getKey(), e.getValue()));
+                        }
+                    }
+                    return new TableRowResult(true, row, null);
+                })
+                .toList();
+
+        List<String> sources = outcome.sources().stream()
+                .map(s -> names.getOrDefault(s, s))
+                .toList();
+        return new MonteCarloResponse(stats, sampleRows, sources, n,
+                outcome.failedSamples(), outcome.truncated());
+    }
+
+    private String badSampleCountMessage(int n) {
+        return "Monte Carlo sample count must be between 2 and " + maxMcSamples
+                + " (got " + n + "). Adjust the sample count.";
+    }
+
     /** Solves every parametric row independently (the common, accessor-free case). */
     private List<RowOutcome> solveTableRows(List<Map<String, Double>> rows, TableRowContext context,
                                             TableDeadline deadline) {
