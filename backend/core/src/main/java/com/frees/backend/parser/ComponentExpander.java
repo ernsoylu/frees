@@ -410,16 +410,6 @@ public final class ComponentExpander {
         return streamFluid;
     }
 
-    /**
-     * SI units of each stream's <em>canonical</em> stored members, keyed by the
-     * flat solver-variable name ({@code s2$p}, {@code s2$h}, {@code s2$mdot}).
-     * These members are the solver's own unknowns — unlike derived properties
-     * (`s2.T`), nothing ever grounds their units, so without this map they show
-     * up dimensionless even though the stream's physical domain fixes them. The
-     * unit is chosen by the stream's domain (the through-variable wins, per
-     * {@link #nodeDomain}), so a moist-air stream's {@code w} is a humidity ratio
-     * (dimensionless) while a mechanical stream's {@code w} is an angular speed.
-     */
     /** One connection-topology edge for the schematic payload: the node's
      *  domain (lowercase) and its endpoints as {@code instance.port} refs. */
     public record Connection(String domain, List<String> endpoints) {}
@@ -433,26 +423,42 @@ public final class ComponentExpander {
      * disagree with the solve.
      */
     public List<Connection> connections() {
+        List<Connection> out = new ArrayList<>(explicitConnections());
+        out.addAll(sharedStreamJunctions());
+        return out;
+    }
+
+    /** {@code connect(...)} declarations, endpoints kept as written. */
+    private List<Connection> explicitConnections() {
         List<Connection> out = new ArrayList<>();
         for (ConnectDecl c : connects) {
             List<String> refs = c.ports();
-            if (refs.size() < 2) {
-                continue; // expansion already rejected these with a real error
+            List<String> streams = resolvedStreams(c);
+            // Fewer than two resolved streams means the expansion already
+            // rejected this declaration with a real error; nothing to draw.
+            if (streams.size() >= 2) {
+                out.add(new Connection(domainName(streams), List.copyOf(refs)));
             }
-            List<String> sts = new ArrayList<>(refs.size());
-            for (String ref : refs) {
-                try {
-                    sts.add(streamOf(ref, c));
-                } catch (RuntimeException e) {
-                    // an unresolved endpoint already failed the expansion
-                }
-            }
-            if (sts.size() < 2) {
-                continue;
-            }
-            out.add(new Connection(nodeDomain(sts).name().toLowerCase(java.util.Locale.ROOT),
-                    List.copyOf(refs)));
         }
+        return out;
+    }
+
+    /** The streams a connect's endpoints name, skipping unresolvable ones. */
+    private List<String> resolvedStreams(ConnectDecl c) {
+        List<String> streams = new ArrayList<>(c.ports().size());
+        for (String ref : c.ports()) {
+            try {
+                streams.add(streamOf(ref, c));
+            } catch (RuntimeException e) {
+                // an unresolved endpoint already failed the expansion
+            }
+        }
+        return streams;
+    }
+
+    /** Ports of different instances naming one stream — the terse connection
+     *  style — reported as the {@code instance.port} pairs they join. */
+    private List<Connection> sharedStreamJunctions() {
         Map<String, List<String>> byStream = new LinkedHashMap<>();
         for (ResolvedInstance ri : instances) {
             for (Map.Entry<String, String> e : ri.portToStream().entrySet()) {
@@ -460,16 +466,29 @@ public final class ComponentExpander {
                         .add(ri.inst().name() + "." + e.getKey());
             }
         }
+        List<Connection> out = new ArrayList<>();
         for (Map.Entry<String, List<String>> e : byStream.entrySet()) {
             if (e.getValue().size() >= 2) {
-                out.add(new Connection(
-                        nodeDomain(List.of(e.getKey())).name().toLowerCase(java.util.Locale.ROOT),
-                        List.copyOf(e.getValue())));
+                out.add(new Connection(domainName(List.of(e.getKey())), List.copyOf(e.getValue())));
             }
         }
         return out;
     }
 
+    private String domainName(List<String> streams) {
+        return nodeDomain(streams).name().toLowerCase(java.util.Locale.ROOT);
+    }
+
+    /**
+     * SI units of each stream's <em>canonical</em> stored members, keyed by the
+     * flat solver-variable name ({@code s2$p}, {@code s2$h}, {@code s2$mdot}).
+     * These members are the solver's own unknowns — unlike derived properties
+     * (`s2.T`), nothing ever grounds their units, so without this map they show
+     * up dimensionless even though the stream's physical domain fixes them. The
+     * unit is chosen by the stream's domain (the through-variable wins, per
+     * {@link #nodeDomain}), so a moist-air stream's {@code w} is a humidity ratio
+     * (dimensionless) while a mechanical stream's {@code w} is an angular speed.
+     */
     public Map<String, String> memberUnits() {
         Map<String, String> out = new LinkedHashMap<>();
         for (Map.Entry<String, java.util.Set<String>> e : streamMembers.entrySet()) {
