@@ -1,6 +1,7 @@
 import { ChangeEvent, lazy, startTransition, Suspense, useCallback, useEffect, useMemo, useState, useRef, type ReactNode } from 'react'
 import {
   Alert,
+  Anchor,
   Badge,
   Button,
   Center,
@@ -151,6 +152,7 @@ const ReplTerminal = lazy(() => import('./ReplTerminal'))
 const MobileLayout = lazy(() => import('./MobileLayout'))
 import { DOCS_TOPICS } from './docsTopics'
 const ShortcutsModal = lazy(() => import('./ShortcutsModal'))
+const GettingStartedModal = lazy(() => import('./GettingStartedModal'))
 import { DEFAULT_EXAMPLE_TEXT } from './defaultExample'
 import type { Example } from './examples'
 import type { EquationEditorHandle } from './EquationEditor'
@@ -180,6 +182,7 @@ import {
 const STOP_CRITERIA_KEY = 'frees.stopCriteria'
 const UNIT_SYSTEM_KEY = 'frees.unitSystem'
 const FIRST_RUN_KEY = 'frees.firstRunDismissed'
+const GETTING_STARTED_KEY = 'frees.gettingStartedSeen'
 
 function loadUnitSystem(): UnitSystem {
   const raw = localStorage.getItem(UNIT_SYSTEM_KEY)
@@ -379,6 +382,23 @@ export default function App() {
   const dismissFirstRun = useCallback(() => {
     setShowFirstRun(false)
     localStorage.setItem(FIRST_RUN_KEY, 'true')
+  }, [])
+
+  // The app opens straight into the workspace (a deliberate decision — no
+  // landing page), so this modal is its welcome mat: auto-opened once per
+  // browser on desktop. Share-link visits skip it (the visitor came for a
+  // document, not a tour), and isMobile is undefined until the media query
+  // resolves, so wait for an explicit false.
+  const [showGettingStarted, setShowGettingStarted] = useState(false)
+  useEffect(() => {
+    if (isMobile === false && sharedBoot === null
+        && localStorage.getItem(GETTING_STARTED_KEY) !== 'true') {
+      setShowGettingStarted(true)
+    }
+  }, [isMobile, sharedBoot])
+  const closeGettingStarted = useCallback(() => {
+    localStorage.setItem(GETTING_STARTED_KEY, 'true')
+    setShowGettingStarted(false)
   }, [])
   // Seed from a loaded project's configured drafts so buildVariableInfo() carries
   // their units (display conversion, dimensional grounding) on the very first solve
@@ -1855,6 +1875,7 @@ export default function App() {
         { id: 'proj-examples', label: 'Open Example…', description: 'Load a ready-to-solve worked example', leftSection: <IconLayoutGrid size={18} />, onClick: () => setShowExamples(true) },
         { id: 'proj-share', label: 'Copy Share Link', description: 'Self-contained URL carrying this document', leftSection: <IconLink size={18} />, onClick: handleShareLink },
         { id: 'proj-report', label: 'Print Report…', description: 'Printable calculation report of the last solve (print to PDF)', leftSection: <IconPrinter size={18} />, onClick: handlePrintReport },
+        { id: 'help-getting-started', label: 'Getting Started…', description: 'What frees is, and four one-click ways in', leftSection: <IconHelp size={18} />, onClick: () => setShowGettingStarted(true) },
         { id: 'proj-component', label: 'Component Wizard', description: 'Browse the component library and insert a configured component', leftSection: <IconLayoutGrid size={18} />, onClick: () => setShowComponentWizard(true) },
         { id: 'proj-new', label: 'New Project', leftSection: <IconFilePlus size={18} />, onClick: handleNewProject },
         { id: 'proj-open', label: 'Open Project…', leftSection: <IconFolderOpen size={18} />, onClick: handleOpenProject },
@@ -1954,7 +1975,10 @@ export default function App() {
               Write equations and notes on the left — they can be
               entered in any order. Click <strong>Check</strong> (F4) to
               validate, then <strong>Solve</strong> (F2). Solve also runs
-              Check for you automatically.
+              Check for you automatically.{' '}
+              <Anchor size="xs" component="button" type="button" onClick={() => setShowGettingStarted(true)}>
+                Getting started guide
+              </Anchor>
             </Text>
           </Alert>
         )}
@@ -2716,6 +2740,15 @@ export default function App() {
       </Suspense>
 
       <ShortcutsModal opened={showShortcuts} onClose={() => setShowShortcuts(false)} />
+
+      <GettingStartedModal
+        opened={showGettingStarted}
+        onClose={closeGettingStarted}
+        onSolveExample={() => {
+          void checkThenSolve()
+        }}
+        onOpenExamples={() => setShowExamples(true)}
+      />
 
       <Spotlight
         actions={spotlightActions}
