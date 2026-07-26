@@ -38,6 +38,10 @@ dependencies {
     // trace-context propagation (TraceContextInjector / ComputeTaskListener)
     // uses. Replaces the former community opentelemetry-spring-boot-starter.
     implementation 'org.springframework.boot:spring-boot-starter-opentelemetry'
+    // OpenAPI 3 spec generated from the controllers at /api/openapi (path set
+    // in application.properties so the frontend nginx /api proxy carries it).
+    // Spec-only — no Swagger UI webjar surface.
+    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-api:3.0.3'
 
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     // Boot 4 split the web-MVC test slice (MockMvc / @AutoConfigureMockMvc) out
