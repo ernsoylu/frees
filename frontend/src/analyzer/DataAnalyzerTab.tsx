@@ -35,6 +35,7 @@ import {
 } from '@mantine/core'
 import {
   IconAlertTriangle,
+  IconArrowsDiff,
   IconChartDots,
   IconChartHistogram,
   IconChevronLeft,
@@ -80,6 +81,7 @@ import StatisticsInstrument from './instruments/StatisticsInstrument'
 import EventListInstrument from './instruments/EventListInstrument'
 import ScatterInstrument from './instruments/ScatterInstrument'
 import HistogramInstrument from './instruments/HistogramInstrument'
+import CompareInstrument from './instruments/CompareInstrument'
 import { signalColor } from './palette'
 import {
   newStrip,
@@ -116,7 +118,7 @@ function stripWeight(strip: AnalyzerStrip): number {
 // snap mode, selected strip, and the active instrument tab.
 // ---------------------------------------------------------------------------
 
-type Instrument = 'scope' | 'table' | 'stats' | 'events' | 'scatter' | 'histogram'
+type Instrument = 'scope' | 'table' | 'stats' | 'events' | 'scatter' | 'histogram' | 'compare'
 
 interface ViewState {
   /** null = the full recording. Shared by every strip (linked time axes). */
@@ -1205,6 +1207,9 @@ export default function DataAnalyzerTab({
             <Tabs.Tab value="histogram" leftSection={<IconChartHistogram size={14} />}>
               Histogram
             </Tabs.Tab>
+            <Tabs.Tab value="compare" leftSection={<IconArrowsDiff size={14} />}>
+              Compare
+            </Tabs.Tab>
           </Tabs.List>
           <Group gap="xs" wrap="nowrap">
             <Button
@@ -1442,6 +1447,16 @@ export default function DataAnalyzerTab({
 
         <Tabs.Panel value="histogram" style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }} pt={6}>
           <HistogramInstrument
+            signals={allSignals}
+            offsets={offsets}
+            xRange={view.xRange}
+            cursors={cursors}
+            storeVersion={storeVersion}
+          />
+        </Tabs.Panel>
+
+        <Tabs.Panel value="compare" style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }} pt={6}>
+          <CompareInstrument
             signals={allSignals}
             offsets={offsets}
             xRange={view.xRange}
