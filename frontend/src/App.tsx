@@ -295,6 +295,13 @@ export default function App() {
   // transition, keeping the full App re-render off the typing critical path.
   // Event-time readers (solve/check/save) must use this ref, not `text`.
   const textRef = useRef(text)
+  // Live-lint plumbing: debounce timer + a ref to the latest idle checker
+  // (assigned each render, next to onCheck) so the timer never runs stale.
+  const idleCheckTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const idleCheckRef = useRef<() => void>(() => {})
+  useEffect(() => () => {
+    if (idleCheckTimer.current) clearTimeout(idleCheckTimer.current)
+  }, [])
 
   // Share-by-URL: compress the current document into a self-contained link
   // and put it on the clipboard. Refuses documents whose link would be too
@@ -990,6 +997,8 @@ export default function App() {
     if (result) setResult(null)
     if (lastSolvedWithFillMissing) setLastSolvedWithFillMissing(false)
     invalidateTable()
+    if (idleCheckTimer.current) clearTimeout(idleCheckTimer.current)
+    idleCheckTimer.current = setTimeout(() => idleCheckRef.current(), 700)
   }
 
   // Load a curated example into the editor, replacing the current document and
@@ -1145,6 +1154,16 @@ export default function App() {
     } finally {
       setChecking(false)
     }
+  }
+
+  // Live lint: run Check automatically once typing pauses, so broken lines are
+  // marked (all of them — the multi-error lint) without pressing F4. The timer
+  // fires through a ref because its closure would otherwise go stale across
+  // renders; anything already in flight skips the tick rather than queueing.
+  idleCheckRef.current = () => {
+    if (checking || solving || solvingTableId) return
+    if (!textRef.current.trim()) return
+    void onCheck()
   }
 
   function invalidateTable() {
