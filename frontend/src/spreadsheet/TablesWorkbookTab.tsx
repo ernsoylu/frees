@@ -74,6 +74,7 @@ import {
   TABLE_MAX_ROWS,
 } from './tableBinding'
 import { colName, cssToStyleData, sheetsToWorkbookData, type StoredSheet } from './univerAdapter'
+import { downloadValuesAsCsv } from './csv'
 
 /** A1 ref for 0-based coordinates (style lookup on the mutation path). */
 function a1Ref(r: number, c: number): string {
@@ -586,27 +587,7 @@ export default function TablesWorkbookTab({
   const handleExportCsv = () => {
     const fws = apiRef.current?.getActiveWorkbook()?.getActiveSheet()
     if (!fws) return
-    const values = fws.getDataRange().getValues()
-    const csvStr = values
-      .map((row) =>
-        row
-          .map((cell) => {
-            let val = String(cell ?? '').replaceAll('"', '""')
-            if (val.includes(',') || val.includes('"') || val.includes('\n')) val = `"${val}"`
-            return val
-          })
-          .join(','),
-      )
-      .join('\n')
-    const blob = new Blob([csvStr], { type: 'text/csv' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `${active?.name || 'table'}.csv`
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
+    downloadValuesAsCsv(fws.getDataRange().getValues(), `${active?.name || 'table'}.csv`)
   }
 
   const activeFn: FunctionTableSpec | null = active?.kind === 'function' ? active : null
