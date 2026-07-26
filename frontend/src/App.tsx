@@ -40,9 +40,11 @@ import {
   IconWaveSine,
   IconGrid4x4,
   IconLink,
+  IconPrinter,
 } from '@tabler/icons-react'
 import { notifications } from '@mantine/notifications'
 import { buildShareUrl, clearShareHash, extractSharedText } from './share'
+import { openPrintReport } from './report'
 import {
   check,
   CheckResponse,
@@ -325,6 +327,18 @@ export default function App() {
   const [checkResult, setCheckResult] = useState<CheckResponse | null>(null)
   const [checking, setChecking] = useState(false)
   const [result, setResult] = useState<SolveResponse | null>(null)
+  // Printable calculation report (browser print-to-PDF): the last successful
+  // solve plus the document that produced it, in a self-contained new window.
+  const handlePrintReport = useCallback(() => {
+    if (!result?.success) return
+    if (!openPrintReport(projectName, textRef.current, result)) {
+      notifications.show({
+        color: 'yellow',
+        title: 'Report window blocked',
+        message: 'Allow pop-ups for this site to open the printable report.',
+      })
+    }
+  }, [result, projectName])
   // Stable id for this document's solve session: tags solves so their result is
   // cached server-side for the REPL/Workspace, and bottom-terminal visibility.
   const [sessionId] = useState<string>(() => crypto.randomUUID())
@@ -1840,6 +1854,7 @@ export default function App() {
       actions: [
         { id: 'proj-examples', label: 'Open Example…', description: 'Load a ready-to-solve worked example', leftSection: <IconLayoutGrid size={18} />, onClick: () => setShowExamples(true) },
         { id: 'proj-share', label: 'Copy Share Link', description: 'Self-contained URL carrying this document', leftSection: <IconLink size={18} />, onClick: handleShareLink },
+        { id: 'proj-report', label: 'Print Report…', description: 'Printable calculation report of the last solve (print to PDF)', leftSection: <IconPrinter size={18} />, onClick: handlePrintReport },
         { id: 'proj-component', label: 'Component Wizard', description: 'Browse the component library and insert a configured component', leftSection: <IconLayoutGrid size={18} />, onClick: () => setShowComponentWizard(true) },
         { id: 'proj-new', label: 'New Project', leftSection: <IconFilePlus size={18} />, onClick: handleNewProject },
         { id: 'proj-open', label: 'Open Project…', leftSection: <IconFolderOpen size={18} />, onClick: handleOpenProject },
@@ -2624,6 +2639,8 @@ export default function App() {
           onInsertComponent={() => setShowComponentWizard(true)}
           onOpenExamples={() => setShowExamples(true)}
           onShareLink={handleShareLink}
+          onPrintReport={handlePrintReport}
+          canPrintReport={result?.success === true}
           onOpenInspector={() => dockRef.current?.open('inspector')}
           onOpenWorkspace={() => dockRef.current?.open('workspace')}
           onOpenTerminal={() => dockRef.current?.open('terminal')}

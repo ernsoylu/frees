@@ -51,6 +51,7 @@ import {
   IconWaveSine,
   IconGrid4x4,
   IconLink,
+  IconPrinter,
 } from '@tabler/icons-react'
 import { spotlight } from '@mantine/spotlight'
 import { useState } from 'react'
@@ -814,6 +815,10 @@ interface TopBarProps {
   onOpenExamples: () => void
   /** File menu: copy a self-contained #share= link carrying the document. */
   onShareLink: () => void
+  /** File menu: open the printable calculation report (browser print-to-PDF). */
+  onPrintReport: () => void
+  /** Whether a successful solve exists for the report to print. */
+  canPrintReport: boolean
   /** Tools menu: open the auxiliary Inspector edge panel. */
   onOpenInspector: () => void
   /** Tools menu: open the Variable Explorer and the REPL Terminal dock windows. */
@@ -883,6 +888,9 @@ export function TopBar(props: Readonly<TopBarProps>) {
             </Menu.Item>
             <Menu.Item leftSection={<IconLink size={14} />} onClick={props.onShareLink}>
               Copy Share Link
+            </Menu.Item>
+            <Menu.Item leftSection={<IconPrinter size={14} />} onClick={props.onPrintReport} disabled={!props.canPrintReport}>
+              Print Report…
             </Menu.Item>
             <Menu.Divider />
             <Menu.Item leftSection={<IconDeviceFloppy size={14} />} onClick={props.onSaveProject}>
