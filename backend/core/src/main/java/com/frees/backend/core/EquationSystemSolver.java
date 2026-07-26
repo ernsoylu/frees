@@ -51,6 +51,12 @@ public class EquationSystemSolver {
                            List<EquationResidual> residuals,
                            double maxResidual) {}
 
+    /** One uncertainty source's first-order contribution to a dependent
+     *  variable: the signed dy from propagating that source alone. The RSS of
+     *  a variable's contributions is its propagated uncertainty — ranking
+     *  them by magnitude is exactly a tornado view. */
+    public record UncertaintyContribution(String source, double value) {}
+
     /**
      * variables/residuals describe the first solution (single-solve returns
      * exactly one); solutions lists every distinct solution found.
@@ -65,7 +71,21 @@ public class EquationSystemSolver {
                          Map<String, String> displayNames,
                          Map<String, Double> uncertainties,
                          List<com.frees.backend.core.ode.OdeTableResult> odeTables,
-                         List<com.frees.backend.api.SolveDtos.ResidueExpansionDto> residueExpansions) {
+                         List<com.frees.backend.api.SolveDtos.ResidueExpansionDto> residueExpansions,
+                         Map<String, List<UncertaintyContribution>> uncertaintyContributions) {
+
+        public Result(Map<String, Double> variables,
+                      List<Block> blocks,
+                      List<EquationResidual> residuals,
+                      Stats stats,
+                      List<Solution> solutions,
+                      Map<String, String> displayNames,
+                      Map<String, Double> uncertainties,
+                      List<com.frees.backend.core.ode.OdeTableResult> odeTables,
+                      List<com.frees.backend.api.SolveDtos.ResidueExpansionDto> residueExpansions) {
+            this(variables, blocks, residuals, stats, solutions, displayNames, uncertainties,
+                    odeTables, residueExpansions, Map.of());
+        }
 
         public Result(Map<String, Double> variables,
                       List<Block> blocks,
@@ -76,7 +96,7 @@ public class EquationSystemSolver {
                       Map<String, Double> uncertainties,
                       List<com.frees.backend.core.ode.OdeTableResult> odeTables) {
             this(variables, blocks, residuals, stats, solutions, displayNames, uncertainties,
-                    odeTables, List.of());
+                    odeTables, List.of(), Map.of());
         }
 
         public Result(Map<String, Double> variables,
@@ -309,17 +329,18 @@ public class EquationSystemSolver {
                 parsed.defs(), deadlineNanos, null);
         Map<String, VariableSpec> mutableSpecs = new HashMap<>(specs);
         applyUncertaintySpecs(ext.uncertaintyExprs(), solved.values(), mutableSpecs, parsed.defs());
-        Map<String, Double> uncertainties = propagateUncertainty(equations, solved.values(), mutableSpecs, parsed.defs());
+        UncPropagation unc = propagateUncertainty(equations, solved.values(), mutableSpecs, parsed.defs());
         if (mentionsUncertaintyOf(equations)) {
-            UncertaintyPass pass = resolveUncertaintySecondPass(equations, solved, uncertainties,
+            UncertaintyPass pass = resolveUncertaintySecondPass(equations, solved, unc.uncertainties(),
                     ext.uncertaintyExprs(), mutableSpecs, parsed, settings, deadlineNanos);
             solved = pass.solved();
-            uncertainties = pass.uncertainties();
+            unc = pass.propagation();
         }
         List<com.frees.backend.core.ode.OdeTableResult> odeTables =
                 solveDynamicSystems(parsed, solved.values(), settings, specs, deadlineNanos);
         return buildResult(equations, solved.blocks(), List.of(solved.values()),
-                solved.iterations(), startNanos, parsed, uncertainties, odeTables);
+                solved.iterations(), startNanos, parsed, unc.uncertainties(), odeTables,
+                unc.contributions());
         } catch (SolverException ex) {
             throw enrichWithPartialResult(ex, equations, parsed, startNanos);
         } finally {
@@ -403,7 +424,7 @@ public class EquationSystemSolver {
         }
     }
 
-    private record UncertaintyPass(InnerSolve solved, Map<String, Double> uncertainties) {}
+    private record UncertaintyPass(InnerSolve solved, UncPropagation propagation) {}
 
     /** Second solve pass when active equations query {@code UncertaintyOf(X)}: feed
      *  the first-pass uncertainties back in, re-solve, then re-propagate. */
@@ -415,9 +436,9 @@ public class EquationSystemSolver {
         InnerSolve resolved = solveEquationList(equations, settings, mutableSpecs,
                 parsed.defs(), deadlineNanos, solved.values());
         applyUncertaintySpecs(uncertaintyExprs, resolved.values(), mutableSpecs, parsed.defs());
-        Map<String, Double> newUncertainties = propagateUncertainty(equations, resolved.values(), mutableSpecs, parsed.defs());
-        injectUncertaintyValues(resolved.values(), newUncertainties);
-        return new UncertaintyPass(resolved, newUncertainties);
+        UncPropagation newPropagation = propagateUncertainty(equations, resolved.values(), mutableSpecs, parsed.defs());
+        injectUncertaintyValues(resolved.values(), newPropagation.uncertainties());
+        return new UncertaintyPass(resolved, newPropagation);
     }
 
     /**
@@ -1422,17 +1443,18 @@ public class EquationSystemSolver {
                 parsed.defs(), deadlineNanos, null);
         Map<String, VariableSpec> mutableSpecs = new HashMap<>(specs);
         applyUncertaintySpecs(uncertaintyExprs, solved.values(), mutableSpecs, parsed.defs());
-        Map<String, Double> uncertainties = propagateUncertainty(finalEquations, solved.values(), mutableSpecs, parsed.defs());
+        UncPropagation unc = propagateUncertainty(finalEquations, solved.values(), mutableSpecs, parsed.defs());
         if (mentionsUncertaintyOf(finalEquations)) {
-            UncertaintyPass pass = resolveUncertaintySecondPass(finalEquations, solved, uncertainties,
+            UncertaintyPass pass = resolveUncertaintySecondPass(finalEquations, solved, unc.uncertainties(),
                     uncertaintyExprs, mutableSpecs, parsed, settings, deadlineNanos);
             solved = pass.solved();
-            uncertainties = pass.uncertainties();
+            unc = pass.propagation();
         }
         List<com.frees.backend.core.ode.OdeTableResult> odeTables =
                 solveDynamicSystems(parsed, solved.values(), settings, specs, deadlineNanos);
         return buildResult(finalEquations, solved.blocks(), List.of(solved.values()),
-                state.iterations + solved.iterations(), startNanos, parsed, uncertainties, odeTables);
+                state.iterations + solved.iterations(), startNanos, parsed, unc.uncertainties(),
+                odeTables, unc.contributions());
     }
 
     /** Lowers one integral into the final equation set: a variable-limit integral
@@ -1768,7 +1790,7 @@ public class EquationSystemSolver {
                                EquationParser.ParseResult parsed,
                                Map<String, Double> uncertainties) {
         return buildResult(equations, blocks, solutionMaps, totalIterations, startNanos,
-                parsed, uncertainties, List.of());
+                parsed, uncertainties, List.of(), Map.of());
     }
 
     private Result buildResult(List<Equation> equations, List<Block> blocks,
@@ -1777,6 +1799,17 @@ public class EquationSystemSolver {
                                EquationParser.ParseResult parsed,
                                Map<String, Double> uncertainties,
                                List<com.frees.backend.core.ode.OdeTableResult> odeTables) {
+        return buildResult(equations, blocks, solutionMaps, totalIterations, startNanos,
+                parsed, uncertainties, odeTables, Map.of());
+    }
+
+    private Result buildResult(List<Equation> equations, List<Block> blocks,
+                               List<Map<String, Double>> solutionMaps,
+                               int totalIterations, long startNanos,
+                               EquationParser.ParseResult parsed,
+                               Map<String, Double> uncertainties,
+                               List<com.frees.backend.core.ode.OdeTableResult> odeTables,
+                               Map<String, List<UncertaintyContribution>> uncertaintyContributions) {
         Map<String, String> displayNames = parsed.displayNames();
         Map<String, ProcDef> defs = parsed.defs();
         TreeSet<String> allVars = collectVariables(equations);
@@ -1841,7 +1874,7 @@ public class EquationSystemSolver {
         }
 
         return new Result(first.variables(), blocks, first.residuals(), stats, solutions,
-                displayNames, uncertainties, odeTables, residueExpansions);
+                displayNames, uncertainties, odeTables, residueExpansions, uncertaintyContributions);
     }
 
     private Map<String, VariableSpec> expandSpecs(TreeSet<String> allVars,
@@ -2031,14 +2064,19 @@ public class EquationSystemSolver {
             }
         }
     }
-    public Map<String, Double> propagateUncertainty(List<Equation> equations,
-                                                    Map<String, Double> values,
-                                                    Map<String, VariableSpec> specs,
-                                                    Map<String, ProcDef> defs) {
+    /** Propagated uncertainties plus, per dependent variable, the signed
+     *  contribution of each source (the tornado breakdown). */
+    public record UncPropagation(Map<String, Double> uncertainties,
+                                 Map<String, List<UncertaintyContribution>> contributions) {}
+
+    public UncPropagation propagateUncertainty(List<Equation> equations,
+                                               Map<String, Double> values,
+                                               Map<String, VariableSpec> specs,
+                                               Map<String, ProcDef> defs) {
         List<String> varList = new ArrayList<>(collectVariables(equations));
         UncPartition part = partitionVariables(varList, specs);
         if (part.uncVars().isEmpty()) {
-            return part.uncertainties();
+            return new UncPropagation(part.uncertainties(), Map.of());
         }
         double[][] jacobian = computeNumericalJacobian(equations, values, defs, varList,
                 equations.size(), varList.size());
@@ -2119,8 +2157,9 @@ public class EquationSystemSolver {
     }
 
     /** Solves J_y·dy = −J_x·u for each uncertainty source via SVD and combines the
-     *  dependent-variable contributions in root-sum-square. */
-    private Map<String, Double> solveRssUncertainties(double[][] jacobian, List<String> varList,
+     *  dependent-variable contributions in root-sum-square, keeping the
+     *  per-source contribution vectors for the tornado breakdown. */
+    private UncPropagation solveRssUncertainties(double[][] jacobian, List<String> varList,
             UncPartition part, Map<String, VariableSpec> specs) {
         List<String> uncVars = part.uncVars();
         List<String> depVars = part.depVars();
@@ -2136,7 +2175,7 @@ public class EquationSystemSolver {
         List<Integer> nonZeroRows = selectNonZeroRows(jy, m, q);
         if (nonZeroRows.isEmpty()) {
             setSourceUncertainties(uncertainties, uncVars, specs);
-            return uncertainties;
+            return new UncPropagation(uncertainties, Map.of());
         }
 
         int mPrime = nonZeroRows.size();
@@ -2148,12 +2187,29 @@ public class EquationSystemSolver {
             System.arraycopy(jx[i], 0, jxPrime[k], 0, p);
         }
 
-        double[] sumSq = computeDependentVariances(jyPrime, jxPrime, uncVars, specs, q, p, mPrime);
+        DependentVariances variances =
+                computeDependentVariances(jyPrime, jxPrime, uncVars, specs, q, p, mPrime);
+        Map<String, List<UncertaintyContribution>> contributions = new HashMap<>();
         for (int j = 0; j < q; j++) {
-            uncertainties.put(depVars.get(j), Math.sqrt(sumSq[j]));
+            double sigma = Math.sqrt(variances.sumSq()[j]);
+            uncertainties.put(depVars.get(j), sigma);
+            if (sigma <= 0.0) {
+                continue;
+            }
+            List<UncertaintyContribution> perSource = new ArrayList<>();
+            for (int i = 0; i < p; i++) {
+                double dy = variances.perSource()[j][i];
+                if (dy != 0.0 && Double.isFinite(dy)) {
+                    perSource.add(new UncertaintyContribution(uncVars.get(i), dy));
+                }
+            }
+            if (!perSource.isEmpty()) {
+                perSource.sort((a, b) -> Double.compare(Math.abs(b.value()), Math.abs(a.value())));
+                contributions.put(depVars.get(j), perSource);
+            }
         }
         setSourceUncertainties(uncertainties, uncVars, specs);
-        return uncertainties;
+        return new UncPropagation(uncertainties, contributions);
     }
 
     /** Splits the full Jacobian into dependent-variable (Jy) and uncertainty-source (Jx) columns. */
@@ -2196,12 +2252,16 @@ public class EquationSystemSolver {
         return nonZeroRows;
     }
 
-    /** Per-dependent-variable variance summed over each uncertainty source's propagated effect. */
-    private double[] computeDependentVariances(double[][] jyPrime, double[][] jxPrime,
+    /** Per-dependent-variable variances plus the signed per-source dy vectors
+     *  ({@code perSource[depVar][source]}) the RSS folds together. */
+    private record DependentVariances(double[] sumSq, double[][] perSource) {}
+
+    private DependentVariances computeDependentVariances(double[][] jyPrime, double[][] jxPrime,
             List<String> uncVars, Map<String, VariableSpec> specs, int q, int p, int mPrime) {
         DecompositionSolver solver =
                 new SingularValueDecomposition(new Array2DRowRealMatrix(jyPrime, false)).getSolver();
         double[] sumSq = new double[q];
+        double[][] perSource = new double[q][p];
         for (int i = 0; i < p; i++) {
             double u = specs.get(uncVars.get(i)).uncertainty();
             double[] b = new double[mPrime];
@@ -2212,12 +2272,13 @@ public class EquationSystemSolver {
                 double[] dy = solver.solve(new ArrayRealVector(b, false)).toArray();
                 for (int j = 0; j < q; j++) {
                     sumSq[j] += dy[j] * dy[j];
+                    perSource[j][i] = dy[j];
                 }
             } catch (Exception ignored) {
                 // Keep contributions as 0
             }
         }
-        return sumSq;
+        return new DependentVariances(sumSq, perSource);
     }
 
     private void setSourceUncertainties(Map<String, Double> uncertainties, List<String> uncVars,

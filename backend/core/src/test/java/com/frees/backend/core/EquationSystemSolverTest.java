@@ -484,6 +484,28 @@ class EquationSystemSolverTest {
     }
 
     @Test
+    void uncertaintyContributionsCarryPerSourceBreakdown() {
+        // f = x*y with x = 3±0.1, y = 4±0.2: y's source propagates as x·0.2 = 0.6
+        // and x's as y·0.1 = 0.4, RSS 0.7211. The breakdown must ship both,
+        // ranked by magnitude — the data a tornado chart plots.
+        EquationSystemSolver.Result result = solver.solve(
+                "x = 3\n" +
+                "y = 4\n" +
+                "UncertaintyOf(x) = 0.1\n" +
+                "UncertaintyOf(y) = 0.2\n" +
+                "f = x * y");
+
+        var contributions = result.uncertaintyContributions().get("f");
+        assertNotNull(contributions);
+        assertEquals(2, contributions.size());
+        assertEquals("y", contributions.get(0).source());
+        assertEquals(0.6, Math.abs(contributions.get(0).value()), 1e-6);
+        assertEquals("x", contributions.get(1).source());
+        assertEquals(0.4, Math.abs(contributions.get(1).value()), 1e-6);
+        assertEquals(0.7211103, result.uncertainties().get("f"), 1e-4);
+    }
+
+    @Test
     void failedSolveCarriesBlockDiagnostics() {
         // An inconsistent pair cannot converge: the thrown SolverException must
         // carry the failing block index and a partial Result with per-equation

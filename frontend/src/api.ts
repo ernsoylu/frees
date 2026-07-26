@@ -59,6 +59,19 @@ export interface SolutionResult {
   maxResidual: number
 }
 
+/** One uncertainty source's signed contribution to a variable (tornado bar). */
+export interface UncertaintyContributionResult {
+  source: string
+  value: number
+}
+
+/** Tornado breakdown for one variable: propagated sigma + ranked sources. */
+export interface VariableUncertaintyResult {
+  variable: string
+  total: number
+  sources: UncertaintyContributionResult[]
+}
+
 export interface SolveResponse {
   success: boolean
   variables: VariableResult[]
@@ -85,6 +98,8 @@ export interface SolveResponse {
   components?: ComponentResult[]
   /** Index of the Tarjan block whose solve gave up (failure diagnostics), or null. */
   failedBlockIndex?: number | null
+  /** Tornado breakdown: per uncertain variable, the ranked per-source contributions. */
+  uncertaintyBreakdown?: VariableUncertaintyResult[]
 }
 
 /** One parameter binding on a component instance (`UA=UA_chl_r`, `SH=5`, `fluid$=R1234yf`). */
@@ -448,6 +463,7 @@ function mapSolveData(data: any): SolveResponse {
     components: data.components ?? [],
     errorLine: data.errorLine ?? null,
     failedBlockIndex: data.failedBlockIndex ?? null,
+    uncertaintyBreakdown: data.uncertaintyBreakdown ?? [],
   }
 }
 

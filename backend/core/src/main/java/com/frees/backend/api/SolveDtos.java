@@ -52,6 +52,15 @@ public final class SolveDtos {
 
     public record ResidualDto(String equation, double value) {}
 
+    /** One uncertainty source's signed first-order contribution to a variable
+     *  (one bar of its tornado). */
+    public record UncertaintyContributionDto(String source, double value) {}
+
+    /** Tornado breakdown for one variable: its propagated uncertainty and the
+     *  per-source contributions it RSS-combines, largest magnitude first. */
+    public record VariableUncertaintyDto(String variable, double total,
+                                         java.util.List<UncertaintyContributionDto> sources) {}
+
     public record StatsDto(int equations,
                            int unknowns,
                            int blocks,
