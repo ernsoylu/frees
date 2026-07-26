@@ -128,6 +128,47 @@ The order above is by value; these waves respect effort and dependencies without
 - **Wave D — the strategic project:** 9 (rendered schematic) → 1 (schematic editor) → 14 (sliders) → 17 (dashboards, also wants 13).
 - **Anytime:** 10 (parallel tables), 13 (in-text guesses), 16 (content waves).
 
+### Wave D, split: non-UI first (done), UI second
+
+Wave D's items each have a backend/data half and a rendering half. The
+non-UI halves shipped first because they are independently useful, testable
+without a browser, and they de-risk the UI work by fixing the contracts it
+draws against:
+
+- **Shipped (non-UI):** item 13's `GUESS` directive (in-text guesses/bounds),
+  item 9's connection-topology payload (`connections[{domain, endpoints}]` on
+  the check response), item 10's chunked table fan-out.
+- **Remaining (UI), in order:**
+  1. **Schematic renderer (item 9's UI half).** A read-only dock window that
+     lays out the network from the shipped topology payload and renders it as
+     SVG: instances as nodes (type + name), connections as domain-colored
+     edges, click-an-instance to reveal its declaration in the editor, export
+     like a plot. Redraws from **check**, so it tracks the text without a
+     solve. Layout is layered/orthogonal; a small hand-rolled layered
+     algorithm avoids adding a graph-layout dependency to a bundle that
+     already code-splits its heavy libraries — revisit only if hierarchical
+     sub-networks need it.
+  2. **Slider strip (item 14).** Pin variables from the Variable Explorer to a
+     strip; drag re-solves through the existing override path (the mechanism
+     REPL assignments and the runnable docs already use), debounced during
+     drag, committed on release. Bounds come from `GUESS`/Variable
+     Information, else ±50 %.
+  3. **`GUESS` round-trip in the Variable Information modal (item 13's UI
+     half).** The modal becomes a view/editor of the same state the text
+     carries: values entered there can be written back into the document as
+     `GUESS` lines, so the modal and the text stop being two sources of truth.
+  4. **Schematic editor (item 1).** Placement, wiring and parameter editing on
+     top of (1)'s layout and port geometry, emitting ordinary
+     `COMPONENT`/`connect` text through the Component Wizard's insertion path.
+     The canvas stays a projection — text remains the source of truth, and
+     Check is the round-trip validator.
+  5. **Dashboards (item 17).** Composes the slider loop, the annotated inputs
+     and the renderer; last on purpose.
+
+The first three are each self-contained and shippable on their own; item 1 is
+the large one and should not start until (1) has proven the layout and port
+geometry against real networks.
+
 ---
 
 ## Deferred (Value < 6 — recorded, not planned)
