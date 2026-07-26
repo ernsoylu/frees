@@ -420,6 +420,56 @@ public final class ComponentExpander {
      * {@link #nodeDomain}), so a moist-air stream's {@code w} is a humidity ratio
      * (dimensionless) while a mechanical stream's {@code w} is an angular speed.
      */
+    /** One connection-topology edge for the schematic payload: the node's
+     *  domain (lowercase) and its endpoints as {@code instance.port} refs. */
+    public record Connection(String domain, List<String> endpoints) {}
+
+    /**
+     * The document's connection topology — the data layer of the rendered
+     * schematic. Explicit {@code connect(...)} nodes keep their endpoints as
+     * written; shared-stream junctions (two instance ports naming one stream)
+     * are reported as {@code instance.port} pairs. Domains reuse the node
+     * classification the expander already applies, so the payload can never
+     * disagree with the solve.
+     */
+    public List<Connection> connections() {
+        List<Connection> out = new ArrayList<>();
+        for (ConnectDecl c : connects) {
+            List<String> refs = c.ports();
+            if (refs.size() < 2) {
+                continue; // expansion already rejected these with a real error
+            }
+            List<String> sts = new ArrayList<>(refs.size());
+            for (String ref : refs) {
+                try {
+                    sts.add(streamOf(ref, c));
+                } catch (RuntimeException e) {
+                    // an unresolved endpoint already failed the expansion
+                }
+            }
+            if (sts.size() < 2) {
+                continue;
+            }
+            out.add(new Connection(nodeDomain(sts).name().toLowerCase(java.util.Locale.ROOT),
+                    List.copyOf(refs)));
+        }
+        Map<String, List<String>> byStream = new LinkedHashMap<>();
+        for (ResolvedInstance ri : instances) {
+            for (Map.Entry<String, String> e : ri.portToStream().entrySet()) {
+                byStream.computeIfAbsent(e.getValue(), k -> new ArrayList<>())
+                        .add(ri.inst().name() + "." + e.getKey());
+            }
+        }
+        for (Map.Entry<String, List<String>> e : byStream.entrySet()) {
+            if (e.getValue().size() >= 2) {
+                out.add(new Connection(
+                        nodeDomain(List.of(e.getKey())).name().toLowerCase(java.util.Locale.ROOT),
+                        List.copyOf(e.getValue())));
+            }
+        }
+        return out;
+    }
+
     public Map<String, String> memberUnits() {
         Map<String, String> out = new LinkedHashMap<>();
         for (Map.Entry<String, java.util.Set<String>> e : streamMembers.entrySet()) {

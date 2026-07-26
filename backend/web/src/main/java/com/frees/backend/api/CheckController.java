@@ -65,7 +65,25 @@ public class CheckController {
                                 // Every syntax error the parse collected (ANTLR
                                 // recovers per line), so the editor marks them all —
                                 // errorLine/message keep pointing at the first.
-                                List<SolveDtos.SyntaxErrorDto> errors) {
+                                List<SolveDtos.SyntaxErrorDto> errors,
+                                // Connection topology of the component network
+                                // (domain + instance.port endpoints per node) —
+                                // the rendered schematic's data layer.
+                                List<SolveDtos.ConnectionDto> connections) {
+
+        /** Backward-compatible constructor for callers that predate connections. */
+        public CheckResponse(boolean solvable, int equations, int unknowns,
+                             List<String> variables, List<String> unitWarnings,
+                             Map<String, String> inferredUnits, String message,
+                             List<SolveDtos.FunctionTableDto> codeTables,
+                             List<SolveDtos.ParametricTableDto> parametricTables,
+                             List<SolveDtos.PlotDefDto> definedPlots, Integer errorLine,
+                             List<SolveDtos.StateTableDto> stateTableDefs,
+                             List<SolveDtos.SyntaxErrorDto> errors) {
+            this(solvable, equations, unknowns, variables, unitWarnings, inferredUnits,
+                    message, codeTables, parametricTables, definedPlots, errorLine,
+                    stateTableDefs, errors, List.of());
+        }
 
         /** Backward-compatible constructor for callers that predate the error list. */
         public CheckResponse(boolean solvable, int equations, int unknowns,
@@ -140,7 +158,9 @@ public class CheckController {
                     parametricTablesOf(parsed.parametricTables()),
                     plotsOf(parsed.plots()),
                     null,
-                    stateTablesOf(parsed.stateTables())));
+                    stateTablesOf(parsed.stateTables()),
+                    List.of(),
+                    SolveDtos.connectionsOf(parsed)));
         } catch (EquationParser.ParseException e) {
             String firstError = e.getMessage().lines().findFirst().orElse(e.getMessage());
             List<SolveDtos.SyntaxErrorDto> errors = syntaxErrorDtos(e);
