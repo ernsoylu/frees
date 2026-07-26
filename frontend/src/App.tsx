@@ -39,7 +39,10 @@ import {
   IconVariable,
   IconWaveSine,
   IconGrid4x4,
+  IconLink,
 } from '@tabler/icons-react'
+import { notifications } from '@mantine/notifications'
+import { buildShareUrl, clearShareHash, extractSharedText } from './share'
 import {
   check,
   CheckResponse,
@@ -252,21 +255,73 @@ export default function App() {
   // keys when no unified project exists (one-time migration). Child-owned slices
   // (digitizer, custom components) self-restore from their own keys, so they are
   // intentionally not written back here on reload.
+  // A #share= link carries a whole document in the URL fragment (share.ts).
+  // Opening one replaces the workspace — the same semantics as loading an
+  // example — so when an autosaved project exists the user must confirm.
+  // The hash is stripped immediately either way: a reload must return to the
+  // user's own work, not re-import the link.
+  const sharedBootRef = useRef<string | null | undefined>(undefined)
+  if (sharedBootRef.current === undefined) {
+    const shared = extractSharedText(globalThis.location.hash)
+    if (shared === null) {
+      sharedBootRef.current = null
+    } else {
+      clearShareHash()
+      const saved = loadProjectLocal()
+      const accept = saved?.text == null || saved.text === shared
+        || globalThis.confirm('Open the shared document from this link? It replaces your current autosaved workspace.')
+      sharedBootRef.current = accept ? shared : null
+    }
+  }
+  const sharedBoot = sharedBootRef.current
+
   const bootRef = useRef<FreesProject | null | undefined>(undefined)
-  if (bootRef.current === undefined) bootRef.current = loadProjectLocal()
+  if (bootRef.current === undefined) bootRef.current = sharedBoot !== null ? null : loadProjectLocal()
   const boot = bootRef.current
 
   const [projectName, setProjectName] = useState('untitled')
   const [workspaceEpoch, setWorkspaceEpoch] = useState(0)
   const projectFileRef = useRef<HTMLInputElement>(null)
 
-  const [text, setText] = useState(boot?.text ?? EXAMPLE)
+  const [text, setText] = useState(sharedBoot ?? boot?.text ?? EXAMPLE)
   // Always-current editor document. The editor is uncontrolled after mount, so
   // every keystroke lands here synchronously while the `text` state above (which
   // drives autosave/dirty-tracking/modals) trails behind in a low-priority
   // transition, keeping the full App re-render off the typing critical path.
   // Event-time readers (solve/check/save) must use this ref, not `text`.
   const textRef = useRef(text)
+
+  // Share-by-URL: compress the current document into a self-contained link
+  // and put it on the clipboard. Refuses documents whose link would be too
+  // long to survive chat apps and proxies (share.ts sets the ceiling).
+  const handleShareLink = useCallback(() => {
+    const url = buildShareUrl(textRef.current)
+    if (url === null) {
+      notifications.show({
+        color: 'yellow',
+        title: 'Document too large to share by URL',
+        message: 'The compressed link would be too long to travel reliably — save the .frees file and send that instead.',
+      })
+      return
+    }
+    navigator.clipboard.writeText(url).then(
+      () => notifications.show({
+        color: 'teal',
+        title: 'Share link copied',
+        message: 'Anyone opening it gets this exact document. Nothing is stored on a server.',
+      }),
+      () => { globalThis.prompt('Copy the share link:', url) },
+    )
+  }, [])
+  useEffect(() => {
+    if (sharedBoot !== null) {
+      notifications.show({
+        color: 'teal',
+        title: 'Opened shared document',
+        message: 'Loaded from the link — nothing was stored on a server.',
+      })
+    }
+  }, [sharedBoot])
   const [checkResult, setCheckResult] = useState<CheckResponse | null>(null)
   const [checking, setChecking] = useState(false)
   const [result, setResult] = useState<SolveResponse | null>(null)
@@ -1784,6 +1839,7 @@ export default function App() {
       group: 'Project',
       actions: [
         { id: 'proj-examples', label: 'Open Example…', description: 'Load a ready-to-solve worked example', leftSection: <IconLayoutGrid size={18} />, onClick: () => setShowExamples(true) },
+        { id: 'proj-share', label: 'Copy Share Link', description: 'Self-contained URL carrying this document', leftSection: <IconLink size={18} />, onClick: handleShareLink },
         { id: 'proj-component', label: 'Component Wizard', description: 'Browse the component library and insert a configured component', leftSection: <IconLayoutGrid size={18} />, onClick: () => setShowComponentWizard(true) },
         { id: 'proj-new', label: 'New Project', leftSection: <IconFilePlus size={18} />, onClick: handleNewProject },
         { id: 'proj-open', label: 'Open Project…', leftSection: <IconFolderOpen size={18} />, onClick: handleOpenProject },
@@ -2566,6 +2622,7 @@ export default function App() {
           onInsertFunction={insertFunction}
           onInsertComponent={() => setShowComponentWizard(true)}
           onOpenExamples={() => setShowExamples(true)}
+          onShareLink={handleShareLink}
           onOpenInspector={() => dockRef.current?.open('inspector')}
           onOpenWorkspace={() => dockRef.current?.open('workspace')}
           onOpenTerminal={() => dockRef.current?.open('terminal')}

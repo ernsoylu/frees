@@ -50,6 +50,7 @@ import {
   IconVariable,
   IconWaveSine,
   IconGrid4x4,
+  IconLink,
 } from '@tabler/icons-react'
 import { spotlight } from '@mantine/spotlight'
 import { useState } from 'react'
@@ -811,6 +812,8 @@ interface TopBarProps {
   onInsertFunction: (snippet: string) => void
   onInsertComponent: () => void
   onOpenExamples: () => void
+  /** File menu: copy a self-contained #share= link carrying the document. */
+  onShareLink: () => void
   /** Tools menu: open the auxiliary Inspector edge panel. */
   onOpenInspector: () => void
   /** Tools menu: open the Variable Explorer and the REPL Terminal dock windows. */
@@ -877,6 +880,9 @@ export function TopBar(props: Readonly<TopBarProps>) {
             </Menu.Item>
             <Menu.Item leftSection={<IconLayoutGrid size={14} />} onClick={props.onOpenExamples}>
               Open Example…
+            </Menu.Item>
+            <Menu.Item leftSection={<IconLink size={14} />} onClick={props.onShareLink}>
+              Copy Share Link
             </Menu.Item>
             <Menu.Divider />
             <Menu.Item leftSection={<IconDeviceFloppy size={14} />} onClick={props.onSaveProject}>
