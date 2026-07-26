@@ -12,6 +12,7 @@ import com.frees.backend.compute.JobTicket;
 import com.frees.backend.parser.EquationParser;
 import com.frees.backend.units.UnitRegistry;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -441,5 +442,158 @@ public class OptimizeController {
                 result.iterations(),
                 residuals,
                 fittedVals);
+    }
+
+    // ── Parameter estimation against measured data (roadmap item 15) ─────────
+
+    public record ParameterFitRequest(
+            String text,
+            SolverApiSupport.StopCriteriaDto stopCriteria,
+            List<SolverApiSupport.VariableInfoDto> variableInfo,
+            List<SolveDtos.FunctionTableDto> functionTables,
+            List<String> parameters,
+            List<Double> initial,
+            List<Double> lower,
+            List<Double> upper,
+            String odeBlock,
+            String column,
+            List<Double> measuredT,
+            List<Double> measuredV,
+            Integer maxEvaluations) {}
+
+    public record ParameterFitResponse(
+            boolean success,
+            String error,
+            List<String> parameterNames,
+            List<Double> fittedValues,
+            double rmse,
+            double initialRmse,
+            int evaluations,
+            boolean truncated,
+            List<Double> fittedT,
+            List<Double> fittedV) {
+
+        static ParameterFitResponse failure(String error) {
+            return new ParameterFitResponse(false, error, List.of(), List.of(),
+                    0.0, 0.0, 0, false, List.of(), List.of());
+        }
+    }
+
+    /** Evaluation-count and series-size budgets: each evaluation is a full
+     *  (typically transient) solve, so the product must stay bounded. */
+    @Value("${frees.solver.max-fit-evaluations:300}")
+    private int maxFitEvaluations;
+
+    @Value("${frees.solver.max-fit-seconds:120}")
+    private long maxFitSeconds;
+
+    private static final int MAX_FIT_SAMPLES = 200_000;
+
+    private ResponseEntity<ParameterFitResponse> validateParameterFit(ParameterFitRequest r) {
+        if (r.text() == null || r.text().isBlank()) {
+            return ResponseEntity.badRequest()
+                    .body(ParameterFitResponse.failure("The model document is required."));
+        }
+        if (r.parameters() == null || r.parameters().isEmpty()
+                || r.initial() == null || r.lower() == null || r.upper() == null
+                || r.initial().size() != r.parameters().size()
+                || r.lower().size() != r.parameters().size()
+                || r.upper().size() != r.parameters().size()) {
+            return ResponseEntity.badRequest().body(ParameterFitResponse.failure(
+                    "Each parameter needs an initial value and lower/upper bounds."));
+        }
+        if (r.odeBlock() == null || r.odeBlock().isBlank()
+                || r.column() == null || r.column().isBlank()) {
+            return ResponseEntity.badRequest().body(ParameterFitResponse.failure(
+                    "Pick the DYNAMIC block and the column to fit against."));
+        }
+        if (r.measuredT() == null || r.measuredV() == null
+                || r.measuredT().size() != r.measuredV().size() || r.measuredT().size() < 2) {
+            return ResponseEntity.badRequest().body(ParameterFitResponse.failure(
+                    "The measured series needs at least two (t, y) samples of equal length."));
+        }
+        if (r.measuredT().size() > MAX_FIT_SAMPLES) {
+            return ResponseEntity.unprocessableEntity().body(ParameterFitResponse.failure(
+                    "The measured series has too many samples (" + r.measuredT().size()
+                            + "; limit " + MAX_FIT_SAMPLES + "). Decimate it first."));
+        }
+        return null;
+    }
+
+    /** Lives under /api/measurements so an inline measured series shares the
+     *  raised request-body cap of the measurement upload routes. */
+    @PostMapping("/measurements/parameter-fit")
+    public ResponseEntity<?> parameterFit(@RequestBody ParameterFitRequest request) {
+        ResponseEntity<ParameterFitResponse> validationError = validateParameterFit(request);
+        if (validationError != null) {
+            return validationError;
+        }
+        if (dispatcher != null) {
+            JobTicket ticket = dispatcher.dispatch(ComputeTask.PARAM_FIT, null, request);
+            return ResponseEntity.accepted().body(ticket);
+        }
+        try {
+            return ResponseEntity.ok(computeParameterFit(request));
+        } catch (EquationParser.ParseException e) {
+            String firstError = e.getMessage().lines().findFirst().orElse(e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body(ParameterFitResponse.failure(SYNTAX_ERROR_PREFIX + firstError));
+        } catch (SolverException e) {
+            return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
+                    .body(ParameterFitResponse.failure(e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
+                    .body(ParameterFitResponse.failure("Parameter fit failed: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Runs the fit end-to-end and returns the response DTO. Used by the
+     * synchronous path and the asynchronous compute worker (which re-enters
+     * here after deserialising off the queue, hence the re-applied budgets).
+     */
+    public ParameterFitResponse computeParameterFit(ParameterFitRequest request) {
+        int evals = request.maxEvaluations() != null
+                ? Math.min(Math.max(request.maxEvaluations(), 10), maxFitEvaluations)
+                : Math.min(150, maxFitEvaluations);
+        if (request.measuredT().size() > MAX_FIT_SAMPLES) {
+            throw new IllegalStateException("The measured series has too many samples.");
+        }
+        SolverSettings settings = request.stopCriteria() != null
+                ? request.stopCriteria().toSettings()
+                : SolverApiSupport.cappedDefaults();
+        long deadlineNanos = System.nanoTime() + maxFitSeconds * 1_000_000_000L;
+
+        ParameterFit.Outcome out = ParameterFit.run(
+                solver, request.text(), settings,
+                SolverApiSupport.specsOf(request.variableInfo()),
+                SolveDtos.functionDefsOf(request.functionTables()),
+                request.parameters(),
+                unbox(request.initial()), unbox(request.lower()), unbox(request.upper()),
+                request.odeBlock(), request.column(),
+                unbox(request.measuredT()), unbox(request.measuredV()),
+                evals, deadlineNanos);
+
+        return new ParameterFitResponse(true, null,
+                out.parameters(), box(out.fitted()),
+                out.rmse(), out.initialRmse(), out.evaluations(), out.truncated(),
+                box(out.fittedSeries().t()), box(out.fittedSeries().v()));
+    }
+
+    private static double[] unbox(List<Double> values) {
+        double[] out = new double[values.size()];
+        for (int i = 0; i < values.size(); i++) {
+            Double v = values.get(i);
+            out[i] = v == null ? Double.NaN : v;
+        }
+        return out;
+    }
+
+    private static List<Double> box(double[] values) {
+        List<Double> out = new ArrayList<>(values.length);
+        for (double v : values) {
+            out.add(v);
+        }
+        return out;
     }
 }
