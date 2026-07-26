@@ -70,6 +70,20 @@ public final class PropertyFunctions {
             Map.entry("r404a", "R404A"),
             Map.entry("r407c", "R407C"),
             Map.entry("r410a", "R410A"),
+            // Low-GWP replacement blends (predefined CoolProp mixtures — the
+            // registry needs the exact-case name, so the lowercased document
+            // spelling must be restored here). Availability depends on the
+            // CoolProp build; absent ones fail with its own fluid-not-found.
+            Map.entry("r448a", "R448A"),
+            Map.entry("r449a", "R449A"),
+            Map.entry("r452a", "R452A"),
+            Map.entry("r452b", "R452B"),
+            Map.entry("r454a", "R454A"),
+            Map.entry("r454b", "R454B"),
+            Map.entry("r454c", "R454C"),
+            Map.entry("r455a", "R455A"),
+            Map.entry("r513a", "R513A"),
+            Map.entry("r515b", "R515B"),
             Map.entry("r1234yf", "R1234yf"),
             Map.entry("r1234ze", "R1234ze(E)"),
             Map.entry("ammonia", "Ammonia"),

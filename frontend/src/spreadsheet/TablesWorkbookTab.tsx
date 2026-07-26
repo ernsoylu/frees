@@ -48,6 +48,7 @@ import {
 import {
   IconArrowsSort,
   IconChartGridDots,
+  IconDownload,
   IconPlus,
   IconSparkles,
   IconTable,
@@ -580,6 +581,34 @@ export default function TablesWorkbookTab({
   // ---------------------------------------------------------------------------
   // Toolbar actions (schema lives here, not in cells — contract a)
 
+  /** Downloads the active sheet as CSV — the direct export the two-step
+   *  detour through a Spreadsheet used to be needed for. */
+  const handleExportCsv = () => {
+    const fws = apiRef.current?.getActiveWorkbook()?.getActiveSheet()
+    if (!fws) return
+    const values = fws.getDataRange().getValues()
+    const csvStr = values
+      .map((row) =>
+        row
+          .map((cell) => {
+            let val = String(cell ?? '').replaceAll('"', '""')
+            if (val.includes(',') || val.includes('"') || val.includes('\n')) val = `"${val}"`
+            return val
+          })
+          .join(','),
+      )
+      .join('\n')
+    const blob = new Blob([csvStr], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${active?.name || 'table'}.csv`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }
+
   const activeFn: FunctionTableSpec | null = active?.kind === 'function' ? active : null
   const activeParam: ParamTableSpec | null = active?.kind === 'parametric' ? active : null
 
@@ -654,6 +683,11 @@ export default function TablesWorkbookTab({
           <Text size="xs" fw={700} c="dimmed">
             Tables
           </Text>
+          <Tooltip label="Export the active table as CSV">
+            <ActionIcon size="sm" variant="light" aria-label="Export active table as CSV" onClick={handleExportCsv} disabled={!active}>
+              <IconDownload size={14} />
+            </ActionIcon>
+          </Tooltip>
           <Menu position="bottom-start" shadow="md">
             <Menu.Target>
               <ActionIcon size="sm" variant="light" aria-label="Add table">
