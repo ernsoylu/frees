@@ -339,8 +339,7 @@ public class EquationSystemSolver {
         List<com.frees.backend.core.ode.OdeTableResult> odeTables =
                 solveDynamicSystems(parsed, solved.values(), settings, specs, deadlineNanos);
         return buildResult(equations, solved.blocks(), List.of(solved.values()),
-                solved.iterations(), startNanos, parsed, unc.uncertainties(), odeTables,
-                unc.contributions());
+                solved.iterations(), startNanos, parsed, unc, odeTables);
         } catch (SolverException ex) {
             throw enrichWithPartialResult(ex, equations, parsed, startNanos);
         } finally {
@@ -1453,8 +1452,7 @@ public class EquationSystemSolver {
         List<com.frees.backend.core.ode.OdeTableResult> odeTables =
                 solveDynamicSystems(parsed, solved.values(), settings, specs, deadlineNanos);
         return buildResult(finalEquations, solved.blocks(), List.of(solved.values()),
-                state.iterations + solved.iterations(), startNanos, parsed, unc.uncertainties(),
-                odeTables, unc.contributions());
+                state.iterations + solved.iterations(), startNanos, parsed, unc, odeTables);
     }
 
     /** Lowers one integral into the final equation set: a variable-limit integral
@@ -1790,7 +1788,7 @@ public class EquationSystemSolver {
                                EquationParser.ParseResult parsed,
                                Map<String, Double> uncertainties) {
         return buildResult(equations, blocks, solutionMaps, totalIterations, startNanos,
-                parsed, uncertainties, List.of(), Map.of());
+                parsed, new UncPropagation(uncertainties, Map.of()), List.of());
     }
 
     private Result buildResult(List<Equation> equations, List<Block> blocks,
@@ -1800,16 +1798,15 @@ public class EquationSystemSolver {
                                Map<String, Double> uncertainties,
                                List<com.frees.backend.core.ode.OdeTableResult> odeTables) {
         return buildResult(equations, blocks, solutionMaps, totalIterations, startNanos,
-                parsed, uncertainties, odeTables, Map.of());
+                parsed, new UncPropagation(uncertainties, Map.of()), odeTables);
     }
 
     private Result buildResult(List<Equation> equations, List<Block> blocks,
                                List<Map<String, Double>> solutionMaps,
                                int totalIterations, long startNanos,
                                EquationParser.ParseResult parsed,
-                               Map<String, Double> uncertainties,
-                               List<com.frees.backend.core.ode.OdeTableResult> odeTables,
-                               Map<String, List<UncertaintyContribution>> uncertaintyContributions) {
+                               UncPropagation unc,
+                               List<com.frees.backend.core.ode.OdeTableResult> odeTables) {
         Map<String, String> displayNames = parsed.displayNames();
         Map<String, ProcDef> defs = parsed.defs();
         TreeSet<String> allVars = collectVariables(equations);
@@ -1874,7 +1871,7 @@ public class EquationSystemSolver {
         }
 
         return new Result(first.variables(), blocks, first.residuals(), stats, solutions,
-                displayNames, uncertainties, odeTables, residueExpansions, uncertaintyContributions);
+                displayNames, unc.uncertainties(), odeTables, residueExpansions, unc.contributions());
     }
 
     private Map<String, VariableSpec> expandSpecs(TreeSet<String> allVars,
@@ -2191,14 +2188,14 @@ public class EquationSystemSolver {
                 computeDependentVariances(jyPrime, jxPrime, uncVars, specs, q, p, mPrime);
         Map<String, List<UncertaintyContribution>> contributions = new HashMap<>();
         for (int j = 0; j < q; j++) {
-            double sigma = Math.sqrt(variances.sumSq()[j]);
+            double sigma = Math.sqrt(variances.sumSq[j]);
             uncertainties.put(depVars.get(j), sigma);
             if (sigma <= 0.0) {
                 continue;
             }
             List<UncertaintyContribution> perSource = new ArrayList<>();
             for (int i = 0; i < p; i++) {
-                double dy = variances.perSource()[j][i];
+                double dy = variances.perSource[j][i];
                 if (dy != 0.0 && Double.isFinite(dy)) {
                     perSource.add(new UncertaintyContribution(uncVars.get(i), dy));
                 }
@@ -2253,8 +2250,19 @@ public class EquationSystemSolver {
     }
 
     /** Per-dependent-variable variances plus the signed per-source dy vectors
-     *  ({@code perSource[depVar][source]}) the RSS folds together. */
-    private record DependentVariances(double[] sumSq, double[][] perSource) {}
+     *  ({@code perSource[depVar][source]}) the RSS folds together. A plain
+     *  carrier class, not a record: it holds arrays, and record value
+     *  semantics (equals/hashCode over array identity) are a contract this
+     *  single-use internal result never needs. */
+    private static final class DependentVariances {
+        final double[] sumSq;
+        final double[][] perSource;
+
+        DependentVariances(double[] sumSq, double[][] perSource) {
+            this.sumSq = sumSq;
+            this.perSource = perSource;
+        }
+    }
 
     private DependentVariances computeDependentVariances(double[][] jyPrime, double[][] jxPrime,
             List<String> uncVars, Map<String, VariableSpec> specs, int q, int p, int mPrime) {

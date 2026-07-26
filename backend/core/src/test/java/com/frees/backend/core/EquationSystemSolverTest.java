@@ -488,12 +488,12 @@ class EquationSystemSolverTest {
         // f = x*y with x = 3±0.1, y = 4±0.2: y's source propagates as x·0.2 = 0.6
         // and x's as y·0.1 = 0.4, RSS 0.7211. The breakdown must ship both,
         // ranked by magnitude — the data a tornado chart plots.
-        EquationSystemSolver.Result result = solver.solve(
-                "x = 3\n" +
-                "y = 4\n" +
-                "UncertaintyOf(x) = 0.1\n" +
-                "UncertaintyOf(y) = 0.2\n" +
-                "f = x * y");
+        EquationSystemSolver.Result result = solver.solve("""
+                x = 3
+                y = 4
+                UncertaintyOf(x) = 0.1
+                UncertaintyOf(y) = 0.2
+                f = x * y""");
 
         var contributions = result.uncertaintyContributions().get("f");
         assertNotNull(contributions);
