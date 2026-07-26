@@ -10,6 +10,7 @@ import { colName, extractSheets, sheetsToWorkbookData, type FWorkbookLike, type 
 import { Button, Group, Modal, TextInput, Switch, Text, Select, Tooltip, useComputedColorScheme } from '@mantine/core'
 import { IconTablePlus, IconLink, IconDownload } from '@tabler/icons-react'
 import { newParamRow, ParamTableSpec } from '../tables'
+import { downloadValuesAsCsv } from './csv'
 
 interface Props {
   singleSpreadsheetId: string
@@ -255,27 +256,7 @@ export default function SpreadsheetTab({ singleSpreadsheetId, spreadsheets, onSp
   const handleExportCSV = () => {
     const fws = apiRef.current?.getActiveWorkbook()?.getActiveSheet()
     if (!fws) return
-    const values = fws.getDataRange().getValues()
-    const csvStr = values
-      .map((row) =>
-        row
-          .map((cell) => {
-            let val = String(cell ?? '').replaceAll('"', '""')
-            if (val.includes(',') || val.includes('"') || val.includes('\n')) val = `"${val}"`
-            return val
-          })
-          .join(',')
-      )
-      .join('\n')
-    const blob = new Blob([csvStr], { type: 'text/csv' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `${spec.name || 'spreadsheet'}.csv`
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
+    downloadValuesAsCsv(fws.getDataRange().getValues(), `${spec.name || 'spreadsheet'}.csv`)
   }
 
   return (

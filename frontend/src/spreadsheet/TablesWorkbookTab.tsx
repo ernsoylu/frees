@@ -48,6 +48,7 @@ import {
 import {
   IconArrowsSort,
   IconChartGridDots,
+  IconDownload,
   IconPlus,
   IconSparkles,
   IconTable,
@@ -73,6 +74,7 @@ import {
   TABLE_MAX_ROWS,
 } from './tableBinding'
 import { colName, cssToStyleData, sheetsToWorkbookData, type StoredSheet } from './univerAdapter'
+import { downloadValuesAsCsv } from './csv'
 
 /** A1 ref for 0-based coordinates (style lookup on the mutation path). */
 function a1Ref(r: number, c: number): string {
@@ -580,6 +582,14 @@ export default function TablesWorkbookTab({
   // ---------------------------------------------------------------------------
   // Toolbar actions (schema lives here, not in cells — contract a)
 
+  /** Downloads the active sheet as CSV — the direct export the two-step
+   *  detour through a Spreadsheet used to be needed for. */
+  const handleExportCsv = () => {
+    const fws = apiRef.current?.getActiveWorkbook()?.getActiveSheet()
+    if (!fws) return
+    downloadValuesAsCsv(fws.getDataRange().getValues(), `${active?.name || 'table'}.csv`)
+  }
+
   const activeFn: FunctionTableSpec | null = active?.kind === 'function' ? active : null
   const activeParam: ParamTableSpec | null = active?.kind === 'parametric' ? active : null
 
@@ -654,6 +664,11 @@ export default function TablesWorkbookTab({
           <Text size="xs" fw={700} c="dimmed">
             Tables
           </Text>
+          <Tooltip label="Export the active table as CSV">
+            <ActionIcon size="sm" variant="light" aria-label="Export active table as CSV" onClick={handleExportCsv} disabled={!active}>
+              <IconDownload size={14} />
+            </ActionIcon>
+          </Tooltip>
           <Menu position="bottom-start" shadow="md">
             <Menu.Target>
               <ActionIcon size="sm" variant="light" aria-label="Add table">

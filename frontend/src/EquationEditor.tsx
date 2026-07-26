@@ -9,6 +9,7 @@ import { HighlightStyle, StreamLanguage, StringStream, syntaxHighlighting } from
 import { CompletionContext, CompletionResult } from '@codemirror/autocomplete'
 import { tags } from '@lezer/highlight'
 import { catalogFunctionNames } from './functionCatalog'
+import { COMPONENT_NAMES } from './componentNames'
 
 // Imperative handle the parent uses to drive the editor (insert at caret, jump
 // to a line) without reaching into the DOM, mirroring the old textareaRef ops.
@@ -38,6 +39,17 @@ const KEYWORDS = new Set([
 // typing `CALL lq` completes `lqr`.
 const FUNCTION_NAMES = [...catalogFunctionNames()]
 const FUNCTION_SET = new Set(FUNCTION_NAMES.map((n) => n.toLowerCase()))
+
+// Component types from the generated names companion (never the full catalog —
+// that would drag every parameter table and markdown body into this chunk).
+// Completing `Resis` yields `Resistor ` ready for the instance name, with the
+// one-line summary as the popup info.
+const COMPONENT_COMPLETIONS = COMPONENT_NAMES.map((c) => ({
+  label: c.name,
+  type: 'class',
+  apply: `${c.name} `,
+  info: c.summary || undefined,
+}))
 
 interface StreamState {
   inComment: boolean
@@ -252,6 +264,7 @@ function makeCompletionSource(
     const options = [
       ...functions.map((name) => ({ label: name, type: 'function', apply: `${name}(` })),
       ...variables.map((name) => ({ label: name, type: 'variable' })),
+      ...COMPONENT_COMPLETIONS,
     ]
     return { from: word.from, options }
   }
