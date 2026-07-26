@@ -156,6 +156,7 @@ public class ComputeTaskListener {
                         });
                 case ComputeTask.SOLVE_TABLE -> handle(task, "Solve-table", SolveController.SolveTableRequest.class,
                         solveController::computeSolveTable);
+                case ComputeTask.SOLVE_TABLE_CHUNK -> handleTableChunk(task);
                 case ComputeTask.MONTE_CARLO -> handle(task, "Monte-Carlo", SolveController.MonteCarloRequest.class,
                         solveController::computeMonteCarlo);
                 case ComputeTask.OPTIMIZE -> handle(task, "Optimize", OptimizeController.OptimizeRequest.class,
@@ -202,6 +203,34 @@ public class ComputeTaskListener {
     @FunctionalInterface
     private interface SolverCall<Q, R> {
         R apply(Q request) throws Exception;
+    }
+
+    /**
+     * One chunk of a chunked table run: compute the slice, record its result,
+     * and let whichever chunk lands last assemble the parent's completed
+     * response. A failing chunk fails the PARENT job; the terminal-state
+     * guard in the store keeps later siblings from resurrecting it.
+     */
+    private void handleTableChunk(ComputeTask task) {
+        try {
+            SolveController.TableChunkRequest chunk = objectMapper.readValue(
+                    task.requestJson(), SolveController.TableChunkRequest.class);
+            SolveController.SolveTableResponse response =
+                    solveController.computeSolveTable(chunk.request());
+            java.util.List<String> all = jobStore.saveChunkResult(
+                    task.jobId(), chunk.chunkIndex(), response);
+            if (!all.isEmpty()) {
+                java.util.List<SolveController.SolveTableResponse> parts =
+                        new java.util.ArrayList<>(all.size());
+                for (String json : all) {
+                    parts.add(objectMapper.readValue(json, SolveController.SolveTableResponse.class));
+                }
+                jobStore.saveCompleted(task.jobId(), SolveController.aggregateChunks(parts));
+            }
+        } catch (Exception e) {
+            log.warn("Table chunk failed for job {}: {}", task.jobId(), e.getMessage());
+            jobStore.saveFailed(task.jobId(), errorMessage(e));
+        }
     }
 
     private static String errorMessage(Throwable e) {
