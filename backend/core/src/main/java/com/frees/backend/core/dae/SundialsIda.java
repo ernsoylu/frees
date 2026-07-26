@@ -94,6 +94,13 @@ public final class SundialsIda {
         // depends on the dense libs but not the optional KLU ones.
         int IDASetJacFn(Pointer idaMem, IdaLsJacFn jac);
 
+        // --- generic SUNLinearSolver dispatch (re-exported by the IDA shared
+        // object itself, so these resolve through the same handle) — used by
+        // the steady sparse path for standalone KLU solves outside IDA. ---
+        int SUNLinSolInitialize(Pointer s);
+        int SUNLinSolSetup(Pointer s, Pointer a);
+        int SUNLinSolSolve(Pointer s, Pointer a, Pointer x, Pointer b, double tol);
+
         // --- IDA core ---
         Pointer IDACreate(Pointer sunctx);
         int IDAInit(Pointer idaMem, IdaResFn res, double t0, Pointer yy0, Pointer yp0);

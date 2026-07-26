@@ -40,6 +40,10 @@ public class NewtonSolver {
     private static final int CREEP_WINDOW = 10;
     /** An iteration is "creeping" when it reduces the norm by less than this. */
     private static final double CREEP_REDUCTION = 1.0e-3;
+    /** Above this many unknowns a block uses the sparse machinery: a colored
+     * finite-difference Jacobian (#colors residual sweeps instead of n) and,
+     * when the native toolchain is present, a KLU sparse linear solve. */
+    private static final int SPARSE_THRESHOLD = 50;
 
     private final SolverSettings settings;
     private final Map<String, ProcDef> defs;
@@ -61,6 +65,16 @@ public class NewtonSolver {
     public int solveBlock(Block block, Map<String, Double> values, long deadlineNanos,
                           Map<String, VariableSpec> specs) {
         IterationContext ctx = new IterationContext(block, values, specs);
+        try (com.frees.backend.core.dae.SparseSteadyKlu klu =
+                     ctx.vars.size() > SPARSE_THRESHOLD
+                             ? com.frees.backend.core.dae.SparseSteadyKlu.create(ctx.varToEquations)
+                             : null) {
+            return solveBlockIterate(ctx, klu, block, values, deadlineNanos);
+        }
+    }
+
+    private int solveBlockIterate(IterationContext ctx, com.frees.backend.core.dae.SparseSteadyKlu klu,
+                                  Block block, Map<String, Double> values, long deadlineNanos) {
         double[] x = new double[ctx.vars.size()];
         for (int i = 0; i < ctx.vars.size(); i++) {
             x[i] = values.get(ctx.vars.get(i));
@@ -110,7 +124,9 @@ public class NewtonSolver {
                 creep = candidateNorm > norm * (1.0 - CREEP_REDUCTION) ? creep + 1 : 0;
                 damped = true;
             } else {
-                double[] step = solveLinear(jacobian, residual);
+                double[] step = klu != null
+                        ? solveLinearSparse(ctx, klu, jacobian, residual)
+                        : solveLinear(jacobian, residual);
                 LineSearchResult searchResult = backtrackLineSearch(ctx, x, step, norm);
                 candidate = searchResult.candidate;
                 candidateResidual = searchResult.candidateResidual;
@@ -301,6 +317,9 @@ public class NewtonSolver {
 
     private double[][] numericalJacobian(IterationContext ctx, double[] x, double[] baseResidual) {
         int n = ctx.vars.size();
+        if (n > SPARSE_THRESHOLD) {
+            return numericalJacobianColored(ctx, x, baseResidual);
+        }
         double[][] jacobian = new double[n][n];
         double[] perturbed = x.clone();
         for (int j = 0; j < n; j++) {
@@ -309,6 +328,119 @@ public class NewtonSolver {
         // Restore the unperturbed values.
         writeBack(ctx.vars, x, ctx.values);
         return jacobian;
+    }
+
+    /**
+     * Colored finite-difference Jacobian for large sparse blocks: columns whose
+     * equations never overlap share a color and are perturbed together, so the
+     * whole matrix needs one residual sweep per color instead of one per
+     * variable — the dominant cost in property-laden networks, where each sweep
+     * evaluates every fluid-property call in the block. Columns whose batched
+     * estimate comes back non-finite are redone with the careful per-column
+     * path (range-aware, direction-switching), so cliff robustness is kept
+     * where it matters.
+     */
+    private double[][] numericalJacobianColored(IterationContext ctx, double[] x, double[] baseResidual) {
+        int n = ctx.vars.size();
+        double[][] jacobian = new double[n][n];
+        int[] color = ctx.columnColors();
+        int colors = 0;
+        for (int c : color) {
+            colors = Math.max(colors, c + 1);
+        }
+        double[] probe = new double[n];
+        double[] actual = new double[n];
+        List<Integer> redo = new java.util.ArrayList<>();
+        for (int c = 0; c < colors; c++) {
+            System.arraycopy(x, 0, probe, 0, n);
+            java.util.Arrays.fill(actual, 0.0);
+            boolean any = false;
+            for (int j = 0; j < n; j++) {
+                if (color[j] != c || ctx.varToEquations.get(j).isEmpty()) {
+                    continue;
+                }
+                double h = JACOBIAN_EPS * Math.max(Math.abs(x[j]), 1.0);
+                double p = Math.clamp(x[j] + h, ctx.lo[j], ctx.hi[j]);
+                if (p == x[j]) {
+                    p = Math.clamp(x[j] - h, ctx.lo[j], ctx.hi[j]); // pinned high — probe backward
+                }
+                if (p == x[j]) {
+                    continue; // pinned both ways; column stays 0
+                }
+                probe[j] = p;
+                actual[j] = p - x[j];
+                any = true;
+            }
+            if (!any) {
+                continue;
+            }
+            double[] r = residuals(ctx.equations, ctx.vars, probe, ctx.values);
+            for (int j = 0; j < n; j++) {
+                if (color[j] != c || actual[j] == 0.0) {
+                    continue;
+                }
+                boolean clean = true;
+                for (int i : ctx.varToEquations.get(j)) {
+                    double v = (r[i] - baseResidual[i]) / actual[j];
+                    if (!Double.isFinite(v)) {
+                        clean = false;
+                        break;
+                    }
+                    jacobian[i][j] = v;
+                }
+                if (!clean) {
+                    redo.add(j);
+                }
+            }
+        }
+        double[] perturbed = x.clone();
+        for (int j : redo) {
+            computeJacobianColumn(ctx, x, baseResidual, jacobian, perturbed, j);
+        }
+        writeBack(ctx.vars, x, ctx.values);
+        return jacobian;
+    }
+
+    /**
+     * Sparse linear stage for large blocks: same column equilibration as the
+     * dense path, values packed in the block's fixed CSC pattern, solved by
+     * KLU. Any non-finite entry or native-side refusal (singular pattern,
+     * failed factorization) falls back to the dense LU/SVD path, which keeps
+     * the rank-deficiency behavior identical to small blocks.
+     */
+    private double[] solveLinearSparse(IterationContext ctx, com.frees.backend.core.dae.SparseSteadyKlu klu,
+                                       double[][] jacobian, double[] residual) {
+        int n = ctx.vars.size();
+        double[] d = new double[n];
+        for (int j = 0; j < n; j++) {
+            double c = 0.0;
+            for (int i : ctx.varToEquations.get(j)) {
+                double v = jacobian[i][j];
+                c += v * v;
+            }
+            c = Math.sqrt(c);
+            d[j] = (c > 0.0 && Double.isFinite(c)) ? 1.0 / c : 1.0;
+        }
+        double[] packed = new double[klu.nonzeros()];
+        int pos = 0;
+        for (int j = 0; j < n; j++) {
+            for (int i : ctx.varToEquations.get(j)) {
+                double v = jacobian[i][j] * d[j];
+                if (!Double.isFinite(v)) {
+                    return solveLinear(jacobian, residual);
+                }
+                packed[pos++] = v;
+            }
+        }
+        double[] y = klu.solve(packed, residual);
+        if (y == null) {
+            return solveLinear(jacobian, residual);
+        }
+        double[] step = new double[n];
+        for (int j = 0; j < n; j++) {
+            step[j] = d[j] * y[j];
+        }
+        return step;
     }
 
     /**
@@ -500,6 +632,8 @@ public class NewtonSolver {
         final double[] lo;
         final double[] hi;
         final List<List<Integer>> varToEquations;
+        private final List<java.util.Set<String>> eqVars;
+        private int[] columnColors;
 
         IterationContext(Block block, Map<String, Double> values, Map<String, VariableSpec> specs) {
             this.blockIndex = block.index();
@@ -517,7 +651,7 @@ public class NewtonSolver {
 
             // Precompute sparse dependency matrix to avoid O(N^2) evaluations
             varToEquations = new java.util.ArrayList<>(n);
-            List<java.util.Set<String>> eqVars = new java.util.ArrayList<>(equations.size());
+            eqVars = new java.util.ArrayList<>(equations.size());
             for (Equation eq : equations) {
                 eqVars.add(eq.variables());
             }
@@ -531,6 +665,32 @@ public class NewtonSolver {
                 }
                 varToEquations.add(deps);
             }
+        }
+
+        /** Distance-1 coloring of the columns (computed once per block): columns
+         *  sharing a color touch disjoint equation sets, so one perturbed
+         *  residual sweep fills all of them. */
+        int[] columnColors() {
+            if (columnColors == null) {
+                int n = vars.size();
+                int[][] sparsityRows = new int[equations.size()][];
+                Map<String, Integer> index = java.util.HashMap.newHashMap(n);
+                for (int j = 0; j < n; j++) {
+                    index.put(vars.get(j), j);
+                }
+                for (int i = 0; i < equations.size(); i++) {
+                    java.util.TreeSet<Integer> cols = new java.util.TreeSet<>();
+                    for (String v : eqVars.get(i)) {
+                        Integer c = index.get(v);
+                        if (c != null) {
+                            cols.add(c);
+                        }
+                    }
+                    sparsityRows[i] = cols.stream().mapToInt(Integer::intValue).toArray();
+                }
+                columnColors = com.frees.backend.core.dae.DaeJacobian.colorColumns(sparsityRows, n);
+            }
+            return columnColors;
         }
     }
 
