@@ -219,7 +219,7 @@ public class ComputeTaskListener {
                     solveController.computeSolveTable(chunk.request());
             java.util.List<String> all = jobStore.saveChunkResult(
                     task.jobId(), chunk.chunkIndex(), response);
-            if (all != null) {
+            if (!all.isEmpty()) {
                 java.util.List<SolveController.SolveTableResponse> parts =
                         new java.util.ArrayList<>(all.size());
                 for (String json : all) {

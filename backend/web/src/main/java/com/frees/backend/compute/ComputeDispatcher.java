@@ -36,15 +36,6 @@ public class ComputeDispatcher {
         this.objectMapper = objectMapper;
     }
 
-    /**
-     * Enqueues a compute job and returns its ticket.
-     *
-     * @param taskType one of {@link ComputeTask#SOLVE}/
-     *                 {@link ComputeTask#OPTIMIZE}/{@link ComputeTask#CURVE_FIT}
-     * @param sessionId the request's session id (may be {@code null}); solve
-     *                  results are cached against it for the REPL
-     * @param request the original request DTO; serialised to JSON for the worker
-     */
     /** Marks {@code parentJobId} as awaiting {@code chunkCount} chunks. */
     public void beginChunked(String parentJobId, int chunkCount) {
         jobStore.savePendingChunked(parentJobId, chunkCount);
@@ -73,6 +64,15 @@ public class ComputeDispatcher {
         }
     }
 
+    /**
+     * Enqueues a compute job and returns its ticket.
+     *
+     * @param taskType one of {@link ComputeTask#SOLVE}/
+     *                 {@link ComputeTask#OPTIMIZE}/{@link ComputeTask#CURVE_FIT}
+     * @param sessionId the request's session id (may be {@code null}); solve
+     *                  results are cached against it for the REPL
+     * @param request the original request DTO; serialised to JSON for the worker
+     */
     public JobTicket dispatch(String taskType, String sessionId, Object request) {
         String jobId = UUID.randomUUID().toString();
         // WARMUP is a fire-and-forget primer that just opens the lazily-established
