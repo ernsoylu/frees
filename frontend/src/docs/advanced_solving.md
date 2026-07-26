@@ -125,7 +125,7 @@ The fastest way to localize a failure is to *not* type the whole model and hit S
 - Press **F4 (Check)** after each addition so the degrees of freedom stay balanced as you grow the model.
 
 ## Read the residuals and blocking order
-frees groups the equations into strongly-connected **blocks** (Tarjan) and solves them in order. When a solve fails, the error message tells you *which block* stalled and the **residual** — the difference between the two sides of each equation. The block that fails to converge, and the equation with the largest residual, is where to look first.
+frees groups the equations into strongly-connected **blocks** (Tarjan) and solves them in order. When a solve fails, the error message names *which block* stalled and its **residual**, and the **Diagnostics** section at the top of the Variable Explorer opens with the full picture: every equation's residual — the difference between its two sides — evaluated at the exact point the solver gave up, sorted by magnitude, with the failing block highlighted. The block that fails to converge, and the equation with the largest residual, is where to look first.
 
 ## Seed a guess for nonlinear blocks
 Newton iterates from the guess in **Variable Info** (`Ctrl + I`); a guess near the expected magnitude is often the difference between converging and diverging. For a tightly coupled nonlinear block (radiation, simultaneous property inversions), bootstrap it with a **temporary equation**:

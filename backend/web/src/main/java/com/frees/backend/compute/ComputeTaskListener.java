@@ -142,7 +142,18 @@ public class ComputeTaskListener {
         try {
             switch (task.taskType()) {
                 case ComputeTask.SOLVE -> handle(task, "Solve", SolveController.SolveRequest.class,
-                        req -> solveController.computeSolve(req, task.sessionId()));
+                        req -> {
+                            try {
+                                return solveController.computeSolve(req, task.sessionId());
+                            } catch (com.frees.backend.core.SolverException e) {
+                                // A solver failure is a completed computation whose
+                                // answer is diagnostics: store the same envelope the
+                                // sync path returns (blocks, residuals at failure,
+                                // failing block index) so the client renders one
+                                // failure shape. Infrastructure errors still FAIL.
+                                return solveController.solverFailureResponse(e);
+                            }
+                        });
                 case ComputeTask.SOLVE_TABLE -> handle(task, "Solve-table", SolveController.SolveTableRequest.class,
                         solveController::computeSolveTable);
                 case ComputeTask.OPTIMIZE -> handle(task, "Optimize", OptimizeController.OptimizeRequest.class,

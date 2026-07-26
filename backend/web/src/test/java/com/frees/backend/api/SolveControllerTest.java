@@ -56,6 +56,23 @@ class SolveControllerTest {
     }
 
     @Test
+    void failedSolveShipsDiagnosticsEnvelope() throws Exception {
+        // x+y pinned to two different values cannot converge; the 422 envelope
+        // must carry the block structure, the residuals at the failure point
+        // and the failing block index — not just a one-line message.
+        mockMvc.perform(post("/api/solve")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"text\": \"x + y = 10\\nx + y = 12\\nz = 5\"}"))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.error").value(org.hamcrest.Matchers.containsString("block")))
+                .andExpect(jsonPath("$.failedBlockIndex").value(0))
+                .andExpect(jsonPath("$.blocks.length()").value(org.hamcrest.Matchers.greaterThanOrEqualTo(1)))
+                .andExpect(jsonPath("$.residuals.length()").value(org.hamcrest.Matchers.greaterThanOrEqualTo(2)))
+                .andExpect(jsonPath("$.stats.maxResidual").value(org.hamcrest.Matchers.greaterThan(0.1)));
+    }
+
+    @Test
     void solveEchoesCodeDefinedTables() throws Exception {
         // A TABLE block in the editor text is callable and echoed back so the
         // frontend can show it in the Tables window.

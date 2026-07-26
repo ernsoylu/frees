@@ -83,6 +83,8 @@ export interface SolveResponse {
   odeTables?: OdeTableDto[]
   /** Per-instance component metadata (type + parameter bindings) for the datasheet view. */
   components?: ComponentResult[]
+  /** Index of the Tarjan block whose solve gave up (failure diagnostics), or null. */
+  failedBlockIndex?: number | null
 }
 
 /** One parameter binding on a component instance (`UA=UA_chl_r`, `SH=5`, `fluid$=R1234yf`). */
@@ -444,6 +446,8 @@ function mapSolveData(data: any): SolveResponse {
     stateTableDefs: data.stateTableDefs ?? [],
     odeTables: data.odeTables ?? [],
     components: data.components ?? [],
+    errorLine: data.errorLine ?? null,
+    failedBlockIndex: data.failedBlockIndex ?? null,
   }
 }
 
@@ -490,7 +494,19 @@ export async function solve(
   try {
     const response = await fetch(`${API_BASE}/api/solve`, init)
     if (!response.ok) {
-      return { ...SOLVE_FAILURE, error: await extractErrorMessage(response, `Server error (${response.status})`) }
+      // A 422 solver failure still carries the full diagnostics envelope
+      // (blocks, residuals at the failure point, failing block index) — parse
+      // it so the Diagnostics panel gets the story, and fall back to the
+      // plain error string for bodies that are not a SolveResponse.
+      try {
+        const body = await response.json()
+        if (typeof body?.success === 'boolean') {
+          return mapSolveData(body)
+        }
+        return { ...SOLVE_FAILURE, error: body?.error ?? `Server error (${response.status})` }
+      } catch {
+        return { ...SOLVE_FAILURE, error: `Server error (${response.status})` }
+      }
     }
     const data = await response.json()
     return mapSolveData(data)

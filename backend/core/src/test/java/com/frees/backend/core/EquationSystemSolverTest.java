@@ -7,6 +7,7 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -480,6 +481,26 @@ class EquationSystemSolverTest {
         EquationSystemSolver.Result result = solver.solve(doc.toString());
 
         assertEquals(2.0, result.variables().get("x"), 1e-6);
+    }
+
+    @Test
+    void failedSolveCarriesBlockDiagnostics() {
+        // An inconsistent pair cannot converge: the thrown SolverException must
+        // carry the failing block index and a partial Result with per-equation
+        // residuals at the point of failure, so callers can ship diagnostics
+        // instead of a one-line message.
+        SolverException e = assertThrows(SolverException.class, () -> solver.solve(
+                "x + y = 10\n" +
+                "x + y = 12\n" +
+                "z = 5"));
+
+        assertNotNull(e.failureState());
+        assertEquals(0, e.failureState().failedBlockIndex());
+        EquationSystemSolver.Result partial = e.partialResult();
+        assertNotNull(partial);
+        assertEquals(3, partial.residuals().size());
+        assertFalse(partial.blocks().isEmpty());
+        assertTrue(partial.stats().maxResidual() > 0.1);
     }
 
     @Test
