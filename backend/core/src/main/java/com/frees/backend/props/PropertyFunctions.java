@@ -400,6 +400,14 @@ public final class PropertyFunctions {
         String fluid = resolveFluid(parts[2]);
         Input first = toInput(parts[3], values.get(0), output);
         Input second = toInput(parts[4], values.get(1), output);
+        // Hot flash path: (P,h) lookups on tabulated outputs are served by a
+        // validated bicubic table (lock-free) when the point is inside the
+        // table's box; everything else stays on the direct native call.
+        Double tabulated = PhTableRegistry.lookup(outputKey, first.key(), first.value(),
+                second.key(), second.value(), fluid);
+        if (tabulated != null) {
+            return VOLUME.equals(output) ? 1.0 / tabulated : tabulated;
+        }
         double raw = LENIENT.get()
                 ? guardedPropsSI(outputKey, first, second, fluid)
                 : CoolProp.propsSI(outputKey, first.key(), first.value(),

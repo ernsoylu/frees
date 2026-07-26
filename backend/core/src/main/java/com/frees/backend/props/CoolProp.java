@@ -32,6 +32,8 @@ public final class CoolProp {
     private static final Lib LIB = load();
 
     private record CacheKey(String output, String name1, double prop1, String name2, double prop2, String fluid) {}
+    private record HaCacheKey(String output, String name1, double prop1, String name2, double prop2,
+                              String name3, double prop3) {}
     private static final int MAX_CACHE_SIZE = 20000;
     private static final java.util.Map<CacheKey, Double> PROPS_CACHE = new java.util.LinkedHashMap<>(16, 0.75f, true) {
         @Override
@@ -39,6 +41,22 @@ public final class CoolProp {
             return size() > MAX_CACHE_SIZE;
         }
     };
+    private static final java.util.Map<HaCacheKey, Double> HA_CACHE = new java.util.LinkedHashMap<>(16, 0.75f, true) {
+        @Override
+        protected boolean removeEldestEntry(java.util.Map.Entry<HaCacheKey, Double> eldest) {
+            return size() > MAX_CACHE_SIZE;
+        }
+    };
+
+    /**
+     * Two separate monitors instead of one class-wide {@code synchronized}:
+     * CACHE_LOCK guards the two LRU maps (fast, in-memory), NATIVE_LOCK
+     * serializes the native high-level calls (CoolProp's HL interface is the
+     * only thing that actually needs serialization). A cache hit no longer
+     * waits behind another thread's in-flight native flash.
+     */
+    private static final Object CACHE_LOCK = new Object();
+    private static final Object NATIVE_LOCK = new Object();
 
     private CoolProp() {}
 
@@ -66,70 +84,117 @@ public final class CoolProp {
      * (Data Analyzer Phase 4) — skip the global-lock native call entirely.
      * Failures are not cached so the error string stays fresh.
      */
-    public static synchronized double propsSI(String output, String name1, double prop1,
-                                              String name2, double prop2, String fluid) {
+    public static double propsSI(String output, String name1, double prop1,
+                                 String name2, double prop2, String fluid) {
         requireLibrary();
         CacheKey key = new CacheKey(output, name1, prop1, name2, prop2, fluid);
-        Double cached = PROPS_CACHE.get(key);
-        if (cached != null && !cached.isNaN()) {
-            return cached;
+        synchronized (CACHE_LOCK) {
+            Double cached = PROPS_CACHE.get(key);
+            if (cached != null && !cached.isNaN()) {
+                return cached;
+            }
         }
-        double value = LIB.PropsSI(output, name1, prop1, name2, prop2, fluid);
-        if (!Double.isFinite(value) || Math.abs(value) > FAILURE_THRESHOLD) {
-            throw new PropertyEvaluationException("CoolProp: " + lastError());
+        double value;
+        synchronized (NATIVE_LOCK) {
+            value = LIB.PropsSI(output, name1, prop1, name2, prop2, fluid);
+            if (!Double.isFinite(value) || Math.abs(value) > FAILURE_THRESHOLD) {
+                // The error string is global native state — read it under the
+                // same lock as the call that produced it.
+                throw new PropertyEvaluationException("CoolProp: " + lastError());
+            }
         }
-        PROPS_CACHE.put(key, value);
+        synchronized (CACHE_LOCK) {
+            PROPS_CACHE.put(key, value);
+        }
         return value;
     }
 
     /** PropsSI returning NaN instead of throwing; for diagram curve sweeps. */
-    public static synchronized double propsSIOrNaN(String output, String name1, double prop1,
-                                                   String name2, double prop2, String fluid) {
+    public static double propsSIOrNaN(String output, String name1, double prop1,
+                                      String name2, double prop2, String fluid) {
         if (LIB == null) {
             return Double.NaN;
         }
         CacheKey key = new CacheKey(output, name1, prop1, name2, prop2, fluid);
-        Double cached = PROPS_CACHE.get(key);
-        if (cached != null) {
-            return cached;
+        synchronized (CACHE_LOCK) {
+            Double cached = PROPS_CACHE.get(key);
+            if (cached != null) {
+                return cached;
+            }
         }
-        double value = LIB.PropsSI(output, name1, prop1, name2, prop2, fluid);
+        double value;
+        synchronized (NATIVE_LOCK) {
+            value = LIB.PropsSI(output, name1, prop1, name2, prop2, fluid);
+        }
         double result = Math.abs(value) > FAILURE_THRESHOLD ? Double.NaN : value;
-        PROPS_CACHE.put(key, result);
+        synchronized (CACHE_LOCK) {
+            PROPS_CACHE.put(key, result);
+        }
         return result;
     }
 
     /** Trivial (state-independent) fluid constants, e.g. Tcrit, pcrit, Ttriple. */
-    public static synchronized double props1SI(String fluid, String output) {
+    public static double props1SI(String fluid, String output) {
         requireLibrary();
-        double value = LIB.Props1SI(fluid, output);
-        if (!Double.isFinite(value) || Math.abs(value) > FAILURE_THRESHOLD) {
-            throw new PropertyEvaluationException("CoolProp: " + lastError());
+        synchronized (NATIVE_LOCK) {
+            double value = LIB.Props1SI(fluid, output);
+            if (!Double.isFinite(value) || Math.abs(value) > FAILURE_THRESHOLD) {
+                throw new PropertyEvaluationException("CoolProp: " + lastError());
+            }
+            return value;
         }
-        return value;
     }
 
-    /** Humid air properties (HAPropsSI), all SI; requires three input pairs. */
-    public static synchronized double haPropsSI(String output, String name1, double prop1,
-                                                String name2, double prop2,
-                                                String name3, double prop3) {
+    /** Humid air properties (HAPropsSI), all SI; requires three input pairs.
+     *  Successes go through their own LRU — psychrometric sweeps and coil
+     *  iterations repeat states heavily, and this call was uncached before. */
+    public static double haPropsSI(String output, String name1, double prop1,
+                                   String name2, double prop2,
+                                   String name3, double prop3) {
         requireLibrary();
-        double value = LIB.HAPropsSI(output, name1, prop1, name2, prop2, name3, prop3);
-        if (!Double.isFinite(value) || Math.abs(value) > FAILURE_THRESHOLD) {
-            throw new PropertyEvaluationException("CoolProp: " + lastError());
+        HaCacheKey key = new HaCacheKey(output, name1, prop1, name2, prop2, name3, prop3);
+        synchronized (CACHE_LOCK) {
+            Double cached = HA_CACHE.get(key);
+            if (cached != null && !cached.isNaN()) {
+                return cached;
+            }
+        }
+        double value;
+        synchronized (NATIVE_LOCK) {
+            value = LIB.HAPropsSI(output, name1, prop1, name2, prop2, name3, prop3);
+            if (!Double.isFinite(value) || Math.abs(value) > FAILURE_THRESHOLD) {
+                throw new PropertyEvaluationException("CoolProp: " + lastError());
+            }
+        }
+        synchronized (CACHE_LOCK) {
+            HA_CACHE.put(key, value);
         }
         return value;
     }
 
     /** HAPropsSI returning NaN instead of throwing; for chart curve sweeps. */
-    public static synchronized double haPropsSIOrNaN(String output, String name1, double prop1,
-                                                     String name2, double prop2,
-                                                     String name3, double prop3) {
+    public static double haPropsSIOrNaN(String output, String name1, double prop1,
+                                        String name2, double prop2,
+                                        String name3, double prop3) {
         if (LIB == null) {
             return Double.NaN;
         }
-        double value = LIB.HAPropsSI(output, name1, prop1, name2, prop2, name3, prop3);
-        return Math.abs(value) > FAILURE_THRESHOLD ? Double.NaN : value;
+        HaCacheKey key = new HaCacheKey(output, name1, prop1, name2, prop2, name3, prop3);
+        synchronized (CACHE_LOCK) {
+            Double cached = HA_CACHE.get(key);
+            if (cached != null) {
+                return cached;
+            }
+        }
+        double value;
+        synchronized (NATIVE_LOCK) {
+            value = LIB.HAPropsSI(output, name1, prop1, name2, prop2, name3, prop3);
+        }
+        double result = Math.abs(value) > FAILURE_THRESHOLD ? Double.NaN : value;
+        synchronized (CACHE_LOCK) {
+            HA_CACHE.put(key, result);
+        }
+        return result;
     }
 
     private static void requireLibrary() {
