@@ -18,6 +18,7 @@ import { useMediaQuery } from '@mantine/hooks'
 import { Spotlight, SpotlightActionGroupData } from '@mantine/spotlight'
 import {
   IconChartGridDots,
+  IconSitemap,
   IconChartLine,
   IconChecks,
   IconCode,
@@ -1494,10 +1495,14 @@ export default function App() {
   }
 
 
-  // Jump the editor to a 1-based line (selecting it) — used to reach the line a
-  // syntax error points at. Ensures the editor is visible first.
+  // Jump the editor to a 1-based line (selecting it) — the error Alert's "Go to
+  // line" and the schematic's click-to-reveal. Opening the dock panel is what
+  // actually makes the jump visible: setting the rail tab alone leaves the
+  // editor behind whichever window is focused (or closed entirely), so the
+  // selection would land somewhere the user cannot see.
   const goToLine = useCallback((lineNo: number) => {
     setActiveTab('equations')
+    dockRef.current?.open('equations')
     setTimeout(() => editorRef.current?.goToLine(lineNo), 50)
   }, [])
 
@@ -1564,7 +1569,7 @@ export default function App() {
   // restored from a saved layout. Without this they'd render as blank panels.
   useEffect(() => {
     const valid = new Set<string>([
-      'equations', 'table', 'plots', 'digitizer', 'workspace', 'terminal', 'states', 'inspector',
+      'equations', 'table', 'plots', 'digitizer', 'schematic', 'workspace', 'terminal', 'states', 'inspector',
       TABLES_WORKBOOK_WINDOW_ID,
       ...mergedPlots.map((p) => `plot:${p.id}`),
       // Hosted tables (function + GUI parametric) live as sheets in the
@@ -1864,6 +1869,7 @@ export default function App() {
           else dockRef.current?.open('states')
         } },
         { id: 'view-digitizer', label: 'Graph Digitizer', leftSection: <IconChartGridDots size={18} />, onClick: () => dockRef.current?.open('digitizer') },
+        { id: 'view-schematic', label: 'Schematic', description: 'Auto-rendered component network', leftSection: <IconSitemap size={18} />, onClick: () => dockRef.current?.open('schematic') },
         { id: 'view-whiteboard', label: 'Whiteboard', description: 'Open the latest whiteboard (or create one)', leftSection: <IconBrush size={18} />, onClick: openLatestOrNewWhiteboard },
         { id: 'view-spreadsheet', label: 'Spreadsheet', description: 'Open the latest spreadsheet (or create one)', leftSection: <IconGrid4x4 size={18} />, onClick: openLatestOrNewSpreadsheet },
         { id: 'view-analyzer', label: 'Data Analyzer', description: 'Open the latest analyzer (or create one)', leftSection: <IconWaveSine size={18} />, onClick: openLatestOrNewAnalyzer },
