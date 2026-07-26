@@ -210,7 +210,36 @@ public class EquationSystemSolver {
         return new EquationParser.ParseResult(
                 parsed.equations(), parsed.displayNames(), merged,
                 parsed.parametricTables(), parsed.plots(), parsed.stateTables(),
-                parsed.dynamicSystems());
+                parsed.dynamicSystems(), parsed.linearizeSystems(),
+                parsed.componentMemberUnits(), parsed.guessDirectives());
+    }
+
+    /**
+     * In-text GUESS directives merged over the caller's specs — text wins, so
+     * a shared document solves identically for its recipient. Absent parts
+     * fall back to the modal-entered spec; a stale modal guess landing outside
+     * text bounds is clamped into them (the bounds win); modal uncertainties
+     * are preserved untouched.
+     */
+    private static Map<String, VariableSpec> withTextGuesses(EquationParser.ParseResult parsed,
+                                                             Map<String, VariableSpec> specs) {
+        if (parsed.guessDirectives().isEmpty()) {
+            return specs;
+        }
+        Map<String, VariableSpec> merged = new HashMap<>(specs);
+        for (com.frees.backend.ast.GuessDirective g : parsed.guessDirectives()) {
+            VariableSpec base = merged.get(g.name());
+            double lo = g.lower() != null ? g.lower()
+                    : base != null ? base.lower() : Double.NEGATIVE_INFINITY;
+            double hi = g.upper() != null ? g.upper()
+                    : base != null ? base.upper() : Double.POSITIVE_INFINITY;
+            double guess = g.guess() != null ? g.guess()
+                    : base != null ? base.guess() : VariableSpec.DEFAULT_GUESS;
+            VariableSpec spec = new VariableSpec(g.name(), Math.clamp(guess, lo, hi), lo, hi,
+                    base != null ? base.uncertainty() : 0.0);
+            merged.put(spec.name(), spec);
+        }
+        return merged;
     }
 
     /** Imaginary literals are meaningless in real mode; fail with guidance. */
@@ -282,6 +311,7 @@ public class EquationSystemSolver {
         long deadlineNanos = startNanos + (long) (settings.elapsedTimeSeconds() * 1.0e9);
         EquationParser.ParseResult parsed =
                 withExtraDefs(parser.parseResult(source), extraDefs);
+        specs = withTextGuesses(parsed, specs);
         requireComplexModeForImaginaryLiterals(parsed.equations(), settings.complexMode());
         List<Equation> equations = IntegralSolver.hoistNested(parsed.equations());
         ExtractedUncertainties ext = extractUncertaintyEquations(equations);
@@ -664,6 +694,7 @@ public class EquationSystemSolver {
         long deadlineNanos = startNanos + (long) (settings.elapsedTimeSeconds() * 1.0e9);
         EquationParser.ParseResult parsed =
                 withExtraDefs(parser.parseResult(source), extraDefs);
+        specs = withTextGuesses(parsed, specs);
         requireComplexModeForImaginaryLiterals(parsed.equations(), settings.complexMode());
         List<Equation> equations = IntegralSolver.hoistNested(parsed.equations());
         ExtractedUncertainties ext = extractUncertaintyEquations(equations);
@@ -1779,6 +1810,7 @@ public class EquationSystemSolver {
         long deadlineNanos = startNanos + (long) (settings.elapsedTimeSeconds() * 1.0e9);
         EquationParser.ParseResult parsed =
                 withExtraDefs(parser.parseResult(source), extraDefs);
+        specs = withTextGuesses(parsed, specs);
         List<Equation> equations = parsed.equations();
         ExtractedUncertainties ext = extractUncertaintyEquations(equations);
         equations = ext.activeEquations();
