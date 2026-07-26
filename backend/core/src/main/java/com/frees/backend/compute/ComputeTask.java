@@ -15,6 +15,7 @@ public record ComputeTask(String jobId,
 
     public static final String SOLVE = "SOLVE";
     public static final String SOLVE_TABLE = "SOLVE_TABLE";
+    public static final String MONTE_CARLO = "MONTE_CARLO";
     public static final String OPTIMIZE = "OPTIMIZE";
     public static final String OPTIMIZE_MULTI = "OPTIMIZE_MULTI";
     public static final String CURVE_FIT = "CURVE_FIT";

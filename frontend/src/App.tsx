@@ -55,6 +55,7 @@ import {
   solve,
   replClear,
   solveTable,
+  runMonteCarlo,
   SolveResponse,
   StopCriteria,
   UnitSystem,
@@ -134,6 +135,7 @@ const ComponentWizardModal = lazy(() => import('./ComponentWizardModal'))
 const MinMaxModal = lazy(() => import('./MinMaxModal'))
 const CurveFitModal = lazy(() => import('./CurveFitModal'))
 const PidTunerModal = lazy(() => import('./PidTunerModal'))
+const MonteCarloModal = lazy(() => import('./MonteCarloModal'))
 type PidType = 'p' | 'pi' | 'pid'
 const PlotConfigModal = lazy(() => import('./plots/PlotConfigModal'))
 
@@ -416,6 +418,7 @@ export default function App() {
   )
   const [showVariableInfo, setShowVariableInfo] = useState(false)
   const [showMinMax, setShowMinMax] = useState(false)
+  const [showMonteCarlo, setShowMonteCarlo] = useState(false)
   const [showCurveFit, setShowCurveFit] = useState(false)
   const computedScheme = useComputedColorScheme('dark')
   // PID Tuner: null = closed; the object carries what to tune. `instanceName`
@@ -2638,6 +2641,7 @@ export default function App() {
         onMinMax={() => setShowMinMax(true)}
         onCurveFit={() => setShowCurveFit(true)}
           onPidTuner={() => setPidTuner({})}
+          onMonteCarlo={() => setShowMonteCarlo(true)}
         onPreferences={() => setShowPreferences(true)}
         onAbout={() => setShowAbout(true)}
       />
@@ -2692,6 +2696,7 @@ export default function App() {
           onMinMax={() => setShowMinMax(true)}
           onCurveFit={() => setShowCurveFit(true)}
           onPidTuner={() => setPidTuner({})}
+          onMonteCarlo={() => setShowMonteCarlo(true)}
         />
         <input
           ref={projectFileRef}
@@ -2957,6 +2962,25 @@ export default function App() {
         </Suspense>
       )}
 
+      {showMonteCarlo && (
+        <Suspense fallback={null}>
+          <MonteCarloModal
+            opened
+            onClose={() => setShowMonteCarlo(false)}
+            onRun={(samples, seed) =>
+              runMonteCarlo(
+                effectiveText(),
+                { ...stopCriteria, complexMode },
+                buildVariableInfo(),
+                unitSystem,
+                functionTableDtos(),
+                samples,
+                seed,
+              )
+            }
+          />
+        </Suspense>
+      )}
 
       {newPlotKind && (
         <Suspense fallback={null}>

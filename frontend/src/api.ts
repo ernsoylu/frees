@@ -308,7 +308,8 @@ async function pollJob(jobId: string, timeoutMs = 120_000): Promise<JobState> {
  *  @param endpoint the POST URL (e.g. "/api/solve")
  *  @param init the fetch init (method/body/headers) for the submit POST
  */
-export async function runCompute(endpoint: string, init: RequestInit): Promise<ComputeOutcome> {
+export async function runCompute(endpoint: string, init: RequestInit,
+                                 timeoutMs = 120_000): Promise<ComputeOutcome> {
   let response: Response
   try {
     response = await fetch(`${API_BASE}${endpoint}`, init)
@@ -334,7 +335,7 @@ export async function runCompute(endpoint: string, init: RequestInit): Promise<C
       return { kind: 'failed', error: 'Job submission did not return a jobId' }
     }
     try {
-      const state = await pollJob(jobId)
+      const state = await pollJob(jobId, timeoutMs)
       if (state.status === 'COMPLETED') {
         return { kind: 'completed', result: state.result }
       }
@@ -1028,6 +1029,81 @@ export async function solveTable(
   } catch (e) {
     throw e instanceof Error ? e : new Error(String(e))
   }
+}
+
+// ---------------------------------------------------------------------------
+// Monte Carlo uncertainty — POST /api/solve/montecarlo
+// ---------------------------------------------------------------------------
+
+/** Aggregate statistics for one variable across the Monte Carlo samples. */
+export interface McVariableStat {
+  variable: string
+  mean: number
+  sigma: number
+  p5: number
+  p50: number
+  p95: number
+  firstOrderSigma: number
+}
+
+export interface MonteCarloResult {
+  stats: McVariableStat[]
+  samples: { success: boolean; values: Record<string, number>; error: string | null }[]
+  sources: string[]
+  requestedSamples: number
+  failedSamples: number
+  truncated: boolean
+}
+
+function mapMonteCarloData(data: any): MonteCarloResult {
+  return {
+    stats: data?.stats ?? [],
+    samples: data?.samples ?? [],
+    sources: data?.sources ?? [],
+    requestedSamples: data?.requestedSamples ?? 0,
+    failedSamples: data?.failedSamples ?? 0,
+    truncated: Boolean(data?.truncated),
+  }
+}
+
+export async function runMonteCarlo(
+  text: string,
+  stopCriteria: StopCriteria,
+  variableInfo: VariableInfo[],
+  displayUnitSystem: UnitSystem,
+  functionTables: FunctionTableDto[],
+  samples: number,
+  seed: number,
+): Promise<MonteCarloResult> {
+  const init: RequestInit = {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      text,
+      stopCriteria,
+      variableInfo,
+      displayUnitSystem,
+      functionTables,
+      samples,
+      seed,
+    }),
+  }
+
+  if (ASYNC_API) {
+    // N solves can exceed the default polling window — allow the full
+    // server-side budget plus slack before declaring the job lost.
+    const outcome = await runCompute('/api/solve/montecarlo', init, 300_000)
+    if (outcome.kind === 'completed') {
+      return mapMonteCarloData(outcome.result)
+    }
+    throw new Error(outcome.error)
+  }
+
+  const response = await fetch(`${API_BASE}/api/solve/montecarlo`, init)
+  if (!response.ok) {
+    throw new Error(await extractErrorMessage(response, `Monte Carlo failed with status ${response.status}`))
+  }
+  return mapMonteCarloData(await response.json())
 }
 
 // ---------------------------------------------------------------------------

@@ -156,6 +156,8 @@ public class ComputeTaskListener {
                         });
                 case ComputeTask.SOLVE_TABLE -> handle(task, "Solve-table", SolveController.SolveTableRequest.class,
                         solveController::computeSolveTable);
+                case ComputeTask.MONTE_CARLO -> handle(task, "Monte-Carlo", SolveController.MonteCarloRequest.class,
+                        solveController::computeMonteCarlo);
                 case ComputeTask.OPTIMIZE -> handle(task, "Optimize", OptimizeController.OptimizeRequest.class,
                         optimizeController::computeOptimize);
                 case ComputeTask.OPTIMIZE_MULTI -> handle(task, "Multi-objective", OptimizeController.MultiObjectiveRequest.class,
