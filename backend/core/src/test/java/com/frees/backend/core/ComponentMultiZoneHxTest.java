@@ -35,7 +35,32 @@ class ComponentMultiZoneHxTest {
                 c1.h = h_cold_in
                 c1.mdot = 0.5
                 """;
-        Map<String, Double> v = solver.solve(src).variables();
+        // Cold-start seeding for the coupled two-cell block (16 unknowns that
+        // otherwise start at the 1.0 default): junction enthalpies in-band with
+        // bounds so the line-search clamp keeps every property iterate
+        // evaluable, capacity rates near mdot*cp with a positive floor so the
+        // effectiveness guard's Cr stays in [0,1], temperatures inside the
+        // water table, and effectiveness inside its own range — the
+        // explicit-feed-seeding pattern for discretized-HX cold starts.
+        Map<String, VariableSpec> seeds = new java.util.HashMap<>();
+        for (String h : new String[]{"hx.c1$hot_out$h", "hx.c2$hot_in$h"}) {
+            seeds.put(h, new VariableSpec(h, 250e3, 1e3, 1.5e6));
+        }
+        for (String h : new String[]{"hx.c2$cold_out$h", "hx.c1$cold_in$h"}) {
+            seeds.put(h, new VariableSpec(h, 120e3, 1e3, 1.5e6));
+        }
+        for (String c : new String[]{"hx.c1$c_c", "hx.c2$c_h", "hx.c1$cmin", "hx.c1$cmax", "hx.c2$cmin", "hx.c2$cmax"}) {
+            seeds.put(c, new VariableSpec(c, 2093, 1.0, 1e6));
+        }
+        for (String eps : new String[]{"hx.c1$eps", "hx.c2$eps"}) {
+            seeds.put(eps, new VariableSpec(eps, 0.4, 0.0, 1.0));
+        }
+        seeds.put("hx.c2$th", new VariableSpec("hx.c2$th", 340, 274, 393));
+        seeds.put("hx.c1$tc", new VariableSpec("hx.c1$tc", 300, 274, 393));
+        for (String q : new String[]{"hx.c1$q", "hx.c2$q"}) {
+            seeds.put(q, new VariableSpec(q, 5e4, -1e7, 1e7));
+        }
+        Map<String, Double> v = solver.solve(src, SolverSettings.DEFAULTS, seeds).variables();
         double qHot = 0.5 * (v.get("h1.h") - v.get("h2.h"));
         double qCold = 0.5 * (v.get("c2.h") - v.get("c1.h"));
         assertEquals(qHot, qCold, 1.0);                       // energy balance across the HX
