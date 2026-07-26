@@ -52,6 +52,10 @@ public final class SolveDtos {
 
     public record ResidualDto(String equation, double value) {}
 
+    /** One syntax error with its 1-based editor position, so the lint gutter
+     *  can mark every broken line rather than only the first. */
+    public record SyntaxErrorDto(int line, int column, String message) {}
+
     /** One uncertainty source's signed first-order contribution to a variable
      *  (one bar of its tornado). */
     public record UncertaintyContributionDto(String source, double value) {}

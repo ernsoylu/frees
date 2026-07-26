@@ -120,6 +120,24 @@ class SolveControllerTest {
     }
 
     @Test
+    void checkReportsEverySyntaxError() throws Exception {
+        // Two broken lines around a healthy one: the response must carry BOTH
+        // structured errors (line + column) so the editor marks them all, while
+        // message/errorLine keep pointing at the first for compatibility.
+        mockMvc.perform(post("/api/check")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"text\": \"x = 1 +\\ny = 2 +\\nz = 3\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errorLine").value(1))
+                .andExpect(jsonPath("$.errors.length()").value(2))
+                .andExpect(jsonPath("$.errors[0].line").value(1))
+                .andExpect(jsonPath("$.errors[0].column").value(7))
+                .andExpect(jsonPath("$.errors[1].line").value(2))
+                .andExpect(jsonPath("$.message").value(
+                        org.hamcrest.Matchers.containsString("+1 more")));
+    }
+
+    @Test
     void checkEchoesCodeDefinedTables() throws Exception {
         String text = "TABLE htc(re : t = 100, 200)\\n  0   0   0\\n  10  10  30\\nEND\\nU = htc(5, 150)";
         mockMvc.perform(post("/api/check")

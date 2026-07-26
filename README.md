@@ -33,7 +33,7 @@ The application operates on a **Decoupled Asynchronous Client-Server model**.
 
 The frontend offers a **Check** action (`POST /api/check`) that runs before solving is allowed:
 
-1. **Syntax check** — the backend parses the equations; on failure it reports the first syntax error found (solving halts at the first error).
+1. **Syntax check** — the backend parses the equations; on failure it reports **every** syntax error it collected (the parser recovers per statement), each with its line and column, and the editor marks them all.
 2. **Degrees of freedom** — on success it reports *"No syntax errors were detected. There are X equations and Y variables."* If counts differ it reports *"There are X equations and Y variables. The problem is underspecified/overspecified and cannot be solved."*
 3. **Structural independence** — a complete equation↔variable bipartite matching must exist; otherwise the system is reported as structurally singular.
 

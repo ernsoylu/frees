@@ -210,9 +210,16 @@ function makeFreesTheme(dark: boolean) {
   )
 }
 
-// State-managed decoration that paints the line a syntax error points at. The
-// parent pushes the line number via the setErrorLine effect.
-const setErrorLine = StateEffect.define<number | null>()
+/** One syntax error the check surfaced, with its 1-based editor position. */
+export interface EditorSyntaxError {
+  line: number
+  column: number
+  message: string
+}
+
+// State-managed decorations that tint every line a syntax error points at.
+// The parent pushes the line numbers via the setErrorLines effect.
+const setErrorLines = StateEffect.define<number[]>()
 const errorLineDecoration = Decoration.line({ class: 'cm-errorLine' })
 
 const errorLineField = StateField.define<DecorationSet>({
@@ -220,14 +227,11 @@ const errorLineField = StateField.define<DecorationSet>({
   update(value, tr) {
     value = value.map(tr.changes)
     for (const effect of tr.effects) {
-      if (effect.is(setErrorLine)) {
-        const line = effect.value
-        if (line == null || line < 1 || line > tr.state.doc.lines) {
-          value = Decoration.none
-        } else {
-          const target = tr.state.doc.line(line)
-          value = Decoration.set([errorLineDecoration.range(target.from)])
-        }
+      if (effect.is(setErrorLines)) {
+        const lines = [...new Set(effect.value)]
+          .filter((line) => line >= 1 && line <= tr.state.doc.lines)
+          .sort((a, b) => a - b)
+        value = Decoration.set(lines.map((line) => errorLineDecoration.range(tr.state.doc.line(line).from)))
       }
     }
     return value
@@ -235,22 +239,33 @@ const errorLineField = StateField.define<DecorationSet>({
   provide: (field) => EditorView.decorations.from(field),
 })
 
-// Paint the reported error as both the full-line tint (errorLineField) and a
-// lint diagnostic spanning the line — squiggle, gutter marker, and a hover
-// tooltip carrying the actual message instead of just "syntax error".
-function applyErrorMark(view: EditorView, errorLine: number | null, errorMessage?: string | null) {
-  const valid = errorLine != null && errorLine >= 1 && errorLine <= view.state.doc.lines
-  view.dispatch({ effects: setErrorLine.of(valid ? errorLine : null) })
-  const diagnostics: Diagnostic[] = []
-  if (valid) {
-    const target = view.state.doc.line(errorLine)
-    diagnostics.push({
-      from: target.from,
-      to: target.to,
-      severity: 'error',
-      message: errorMessage?.trim() || `Syntax error on line ${errorLine}`,
+// Paint every reported error as a full-line tint (errorLineField) plus a lint
+// diagnostic — squiggle, gutter marker, and a hover tooltip carrying each
+// error's own message. The single errorLine/errorMessage pair remains the
+// fallback for callers (Solve failures) that only know one position.
+function applyErrorMarks(view: EditorView, errorList: readonly EditorSyntaxError[] | null | undefined,
+                         errorLine: number | null, errorMessage?: string | null) {
+  const entries: EditorSyntaxError[] = errorList?.length
+    ? [...errorList]
+    : errorLine != null
+      ? [{ line: errorLine, column: 0, message: errorMessage?.trim() || `Syntax error on line ${errorLine}` }]
+      : []
+  const valid = entries.filter((e) => e.line >= 1 && e.line <= view.state.doc.lines)
+  view.dispatch({ effects: setErrorLines.of(valid.map((e) => e.line)) })
+  const diagnostics: Diagnostic[] = valid
+    .sort((a, b) => a.line - b.line || a.column - b.column)
+    .map((e) => {
+      const target = view.state.doc.line(e.line)
+      // Start the squiggle at the reported column when we have one (clamped
+      // inside the line); the tint still covers the whole line.
+      const from = e.column > 0 ? Math.min(target.from + e.column - 1, Math.max(target.to - 1, target.from)) : target.from
+      return {
+        from,
+        to: target.to,
+        severity: 'error' as const,
+        message: e.message?.trim() || `Syntax error on line ${e.line}`,
+      }
     })
-  }
   view.dispatch(setDiagnostics(view.state, diagnostics))
 }
 
@@ -280,6 +295,10 @@ interface Props {
   errorLine: number | null
   /** Message for the error on `errorLine`, surfaced as the lint hover tooltip. */
   errorMessage?: string | null
+  /** Every syntax error from the last Check — when present, all of them are
+   *  marked (tint + squiggle + per-error tooltip) and errorLine/errorMessage
+   *  serve only as the fallback for single-position failures. */
+  errorList?: readonly EditorSyntaxError[] | null
   placeholder?: string
 }
 
@@ -309,7 +328,7 @@ const f1ContextualHelp = keymap.of([
 ])
 
 function EquationEditorInner(
-  { initialDoc, onChange, variables, errorLine, errorMessage, placeholder }: Readonly<Props>,
+  { initialDoc, onChange, variables, errorLine, errorMessage, errorList, placeholder }: Readonly<Props>,
   ref: React.Ref<EquationEditorHandle>,
 ) {
   const cmRef = useRef<ReactCodeMirrorRef>(null)
@@ -347,8 +366,8 @@ function EquationEditorInner(
   // (and once on mount, after onCreateEditor has captured the view).
   useEffect(() => {
     const view = viewRef.current
-    if (view) applyErrorMark(view, errorLine, errorMessage)
-  }, [errorLine, errorMessage])
+    if (view) applyErrorMarks(view, errorList, errorLine, errorMessage)
+  }, [errorLine, errorMessage, errorList])
 
   useImperativeHandle(
     ref,
@@ -429,7 +448,7 @@ function EquationEditorInner(
       basicSetup={{ foldGutter: false, highlightActiveLine: true, bracketMatching: true }}
       onCreateEditor={(view) => {
         viewRef.current = view
-        applyErrorMark(view, errorLine, errorMessage)
+        applyErrorMarks(view, errorList, errorLine, errorMessage)
       }}
     />
   )
