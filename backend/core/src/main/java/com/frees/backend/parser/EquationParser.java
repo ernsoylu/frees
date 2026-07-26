@@ -175,7 +175,21 @@ public final class EquationParser {
             List<com.frees.backend.ast.LinearizeSystem> linearizeSystems,
             /** SI units of component stream members (s2$p → "Pa", …), grounded so
              *  port-member variables aren't dimensionless; empty for non-component docs. */
-            java.util.Map<String, String> componentMemberUnits) {
+            java.util.Map<String, String> componentMemberUnits,
+            /** In-text GUESS directives; merged over caller specs at solve entry. */
+            List<com.frees.backend.ast.GuessDirective> guessDirectives) {
+
+        public ParseResult(List<Equation> equations, java.util.Map<String, String> displayNames,
+                           java.util.Map<String, ProcDef> defs,
+                           List<com.frees.backend.ast.ParametricTable> parametricTables,
+                           List<com.frees.backend.ast.PlotDef> plots,
+                           List<com.frees.backend.ast.StateTableDef> stateTables,
+                           List<com.frees.backend.ast.DynamicSystem> dynamicSystems,
+                           List<com.frees.backend.ast.LinearizeSystem> linearizeSystems,
+                           java.util.Map<String, String> componentMemberUnits) {
+            this(equations, displayNames, defs, parametricTables, plots, stateTables, dynamicSystems,
+                    linearizeSystems, componentMemberUnits, List.of());
+        }
 
         public ParseResult(List<Equation> equations, java.util.Map<String, String> displayNames,
                            java.util.Map<String, ProcDef> defs,
@@ -185,7 +199,7 @@ public final class EquationParser {
                            List<com.frees.backend.ast.DynamicSystem> dynamicSystems,
                            List<com.frees.backend.ast.LinearizeSystem> linearizeSystems) {
             this(equations, displayNames, defs, parametricTables, plots, stateTables, dynamicSystems,
-                    linearizeSystems, Map.of());
+                    linearizeSystems, Map.of(), List.of());
         }
 
         public ParseResult(List<Equation> equations, java.util.Map<String, String> displayNames,
@@ -195,7 +209,7 @@ public final class EquationParser {
                            List<com.frees.backend.ast.StateTableDef> stateTables,
                            List<com.frees.backend.ast.DynamicSystem> dynamicSystems) {
             this(equations, displayNames, defs, parametricTables, plots, stateTables, dynamicSystems,
-                    List.of(), Map.of());
+                    List.of(), Map.of(), List.of());
         }
 
         public ParseResult(List<Equation> equations, java.util.Map<String, String> displayNames,
@@ -203,14 +217,16 @@ public final class EquationParser {
                            List<com.frees.backend.ast.ParametricTable> parametricTables,
                            List<com.frees.backend.ast.PlotDef> plots,
                            List<com.frees.backend.ast.StateTableDef> stateTables) {
-            this(equations, displayNames, defs, parametricTables, plots, stateTables, List.of(), List.of(), Map.of());
+            this(equations, displayNames, defs, parametricTables, plots, stateTables, List.of(),
+                    List.of(), Map.of(), List.of());
         }
 
         public ParseResult(List<Equation> equations, java.util.Map<String, String> displayNames,
                            java.util.Map<String, ProcDef> defs,
                            List<com.frees.backend.ast.ParametricTable> parametricTables,
                            List<com.frees.backend.ast.PlotDef> plots) {
-            this(equations, displayNames, defs, parametricTables, plots, List.of(), List.of(), List.of(), Map.of());
+            this(equations, displayNames, defs, parametricTables, plots, List.of(), List.of(),
+                    List.of(), Map.of(), List.of());
         }
 
         public ParseResult(List<Equation> equations, java.util.Map<String, String> displayNames,
@@ -305,7 +321,8 @@ public final class EquationParser {
 
         return new ParseResult(equations, displayNames, defs, programResult.parametricTables(),
                 programResult.plots(), programResult.stateTables(), dynamicSystems,
-                programResult.linearizeSystems(), components.memberUnits());
+                programResult.linearizeSystems(), components.memberUnits(),
+                programResult.guessDirectives());
     }
 
     /**

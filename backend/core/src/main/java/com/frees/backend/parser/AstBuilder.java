@@ -36,7 +36,8 @@ public class AstBuilder extends FreesBaseVisitor<Expr> {
             List<com.frees.backend.ast.ComponentDef> componentDefs,
             List<com.frees.backend.ast.ComponentInst> componentInsts,
             List<com.frees.backend.ast.ConnectDecl> connects,
-            List<com.frees.backend.ast.LinearizeSystem> linearizeSystems) {}
+            List<com.frees.backend.ast.LinearizeSystem> linearizeSystems,
+            List<com.frees.backend.ast.GuessDirective> guessDirectives) {}
 
     public ProgramResult buildProgram(FreesParser.ProgramContext ctx) {
         List<Statement> statements = new ArrayList<>();
@@ -48,6 +49,7 @@ public class AstBuilder extends FreesBaseVisitor<Expr> {
         List<com.frees.backend.ast.ComponentDef> componentDefs = new ArrayList<>();
         List<com.frees.backend.ast.ComponentInst> componentInsts = new ArrayList<>();
         List<com.frees.backend.ast.ConnectDecl> connects = new ArrayList<>();
+        List<com.frees.backend.ast.GuessDirective> guessDirectives = new ArrayList<>();
         List<com.frees.backend.ast.LinearizeSystem> linearizeSystems = new ArrayList<>();
 
         if (ctx.topLevel() != null) {
@@ -80,13 +82,49 @@ public class AstBuilder extends FreesBaseVisitor<Expr> {
                     componentInsts.add(buildComponentInst(tl.componentInst()));
                 } else if (tl.connectStmt() != null) {
                     connects.add(buildConnect(tl.connectStmt()));
+                } else if (tl.guessDirective() != null) {
+                    guessDirectives.add(buildGuessDirective(tl.guessDirective()));
                 } else if (tl.statement() != null) {
                     statements.add(buildStatement(tl.statement()));
                 }
             }
         }
         return new ProgramResult(statements, defs, parametricTables, plots, stateTables,
-                dynamicSystems, componentDefs, componentInsts, connects, linearizeSystems);
+                dynamicSystems, componentDefs, componentInsts, connects, linearizeSystems,
+                guessDirectives);
+    }
+
+    /** GUESS x = 2 [0, 10] — the guess and/or bounds must both make sense, and
+     *  a bare directive that declares neither is rejected outright. */
+    private com.frees.backend.ast.GuessDirective buildGuessDirective(FreesParser.GuessDirectiveContext ctx) {
+        String name = ctx.IDENT().getText().toLowerCase();
+        Double guess = null;
+        Double lower = null;
+        Double upper = null;
+        List<FreesParser.SignedNumberContext> nums = ctx.signedNumber();
+        int idx = 0;
+        if (ctx.EQ() != null) {
+            guess = signedNumberValue(nums.get(idx++));
+        }
+        if (ctx.LBRACKET() != null) {
+            lower = signedNumberValue(nums.get(idx));
+            upper = signedNumberValue(nums.get(idx + 1));
+            if (lower >= upper) {
+                throw new EquationParser.ParseException(
+                        "GUESS " + name + ": the lower bound must be below the upper bound.");
+            }
+        }
+        if (guess == null && lower == null) {
+            throw new EquationParser.ParseException(
+                    "GUESS " + name + ": declare a guess (GUESS " + name
+                            + " = 2), bounds (GUESS " + name + " [0, 10]), or both.");
+        }
+        if (guess != null && lower != null && (guess < lower || guess > upper)) {
+            throw new EquationParser.ParseException(
+                    "GUESS " + name + ": the guess " + guess + " lies outside ["
+                            + lower + ", " + upper + "].");
+        }
+        return new com.frees.backend.ast.GuessDirective(name, guess, lower, upper);
     }
 
     /**
