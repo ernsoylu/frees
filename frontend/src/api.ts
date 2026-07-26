@@ -850,6 +850,96 @@ export async function curveFit(params: CurveFitParams): Promise<CurveFitResponse
   }
 }
 
+// ---------------------------------------------------------------------------
+// Parameter estimation — POST /api/measurements/parameter-fit
+// ---------------------------------------------------------------------------
+
+export interface ParameterFitParams {
+  text: string
+  stopCriteria: StopCriteria
+  variableInfo: VariableInfo[]
+  functionTables: FunctionTableDto[]
+  parameters: string[]
+  initial: number[]
+  lower: number[]
+  upper: number[]
+  odeBlock: string
+  column: string
+  measuredT: number[]
+  measuredV: number[]
+  maxEvaluations?: number
+}
+
+export interface ParameterFitResult {
+  success: boolean
+  error: string | null
+  parameterNames: string[]
+  fittedValues: number[]
+  rmse: number
+  initialRmse: number
+  evaluations: number
+  truncated: boolean
+  fittedT: number[]
+  fittedV: number[]
+}
+
+const PARAMETER_FIT_FAILURE: ParameterFitResult = {
+  success: false,
+  error: null,
+  parameterNames: [],
+  fittedValues: [],
+  rmse: 0,
+  initialRmse: 0,
+  evaluations: 0,
+  truncated: false,
+  fittedT: [],
+  fittedV: [],
+}
+
+function mapParameterFitData(data: any): ParameterFitResult {
+  return {
+    success: Boolean(data?.success),
+    error: data?.error ?? null,
+    parameterNames: data?.parameterNames ?? [],
+    fittedValues: data?.fittedValues ?? [],
+    rmse: data?.rmse ?? 0,
+    initialRmse: data?.initialRmse ?? 0,
+    evaluations: data?.evaluations ?? 0,
+    truncated: Boolean(data?.truncated),
+    fittedT: data?.fittedT ?? [],
+    fittedV: data?.fittedV ?? [],
+  }
+}
+
+export async function parameterFit(params: ParameterFitParams): Promise<ParameterFitResult> {
+  const init: RequestInit = {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(params),
+  }
+  if (ASYNC_API) {
+    // Every evaluation is a full (typically transient) solve — allow the
+    // server-side budget plus slack before declaring the job lost.
+    const outcome = await runCompute('/api/measurements/parameter-fit', init, 300_000)
+    if (outcome.kind === 'completed') {
+      return mapParameterFitData(outcome.result)
+    }
+    return { ...PARAMETER_FIT_FAILURE, error: outcome.error }
+  }
+  try {
+    const response = await fetch(`${API_BASE}/api/measurements/parameter-fit`, init)
+    if (!response.ok) {
+      return {
+        ...PARAMETER_FIT_FAILURE,
+        error: await extractErrorMessage(response, `Parameter fit failed with status ${response.status}`),
+      }
+    }
+    return mapParameterFitData(await response.json())
+  } catch (e) {
+    return { ...PARAMETER_FIT_FAILURE, error: `Could not reach the solver backend: ${String(e)}` }
+  }
+}
+
 export interface DiagramCurve {
   family: string
   label: string

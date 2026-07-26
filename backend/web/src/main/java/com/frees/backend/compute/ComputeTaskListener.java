@@ -164,6 +164,8 @@ public class ComputeTaskListener {
                         optimizeController::computeOptimizeMulti);
                 case ComputeTask.CURVE_FIT -> handle(task, "Curve-fit", OptimizeController.CurveFitRequest.class,
                         optimizeController::computeCurveFit);
+                case ComputeTask.PARAM_FIT -> handle(task, "Parameter-fit", OptimizeController.ParameterFitRequest.class,
+                        optimizeController::computeParameterFit);
                 case ComputeTask.CALC -> handle(task, "Calc-signal",
                         com.frees.backend.api.MeasurementCalcController.CalcRequest.class,
                         calcController::computeCalc);
