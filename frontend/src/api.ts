@@ -129,6 +129,9 @@ export interface CheckResponse {
   message: string
   /** 1-based editor line a syntax error points at, or null for whole-system errors. */
   errorLine?: number | null
+  /** Every syntax error the parse collected (line/column 1-based), so the
+   *  editor can mark them all — errorLine keeps pointing at the first. */
+  errors?: { line: number; column: number; message: string }[]
   /** Function tables parsed from TABLE ... END blocks in the editor text. */
   codeTables?: FunctionTableDto[]
   /** Parametric run-tables parsed from PARAMETRIC ... END blocks. */
@@ -401,6 +404,7 @@ export async function check(
           body ||
           `Server error (${response.status})`,
         errorLine: data?.errorLine ?? null,
+        errors: data?.errors ?? [],
       }
     }
     const data = await response.json()
@@ -413,6 +417,7 @@ export async function check(
       inferredUnits: data.inferredUnits ?? {},
       message: data.message ?? '',
       errorLine: data.errorLine ?? null,
+      errors: data.errors ?? [],
       codeTables: data.codeTables ?? [],
       parametricTables: data.parametricTables ?? [],
       definedPlots: data.definedPlots ?? [],

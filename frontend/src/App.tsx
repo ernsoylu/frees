@@ -1994,6 +1994,7 @@ export default function App() {
               variables={variables}
               errorLine={errorLine}
               errorMessage={result?.error ?? checkResult?.message ?? null}
+              errorList={checkResult?.errors ?? null}
               placeholder={'Enter equations and notes, e.g.\n{ Rankine Cycle }\nT1 = 100 [C]\nP1 = 250 [kPa]'}
             />
           </Suspense>

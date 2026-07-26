@@ -127,20 +127,39 @@ public final class EquationParser {
         };
     }
 
+    /** One syntax error with its editor position (1-based line and column). */
+    public record SyntaxError(int line, int column, String message) {}
+
     public static class ParseException extends RuntimeException {
+        /** Every syntax error the parse collected (ANTLR recovers per line, so
+         *  a document with three broken lines yields three entries). Empty for
+         *  semantic ParseExceptions thrown outside the lexer/parser. */
+        private final transient List<SyntaxError> syntaxErrors;
+
         public ParseException(String message) {
+            this(message, List.of());
+        }
+
+        public ParseException(String message, List<SyntaxError> syntaxErrors) {
             super(message);
+            this.syntaxErrors = List.copyOf(syntaxErrors);
+        }
+
+        public List<SyntaxError> syntaxErrors() {
+            return syntaxErrors;
         }
     }
 
     static class CollectingErrorListener extends BaseErrorListener {
         final List<String> errors = new ArrayList<>();
+        final List<SyntaxError> structured = new ArrayList<>();
 
         @Override
         public void syntaxError(Recognizer<?, ?> recognizer, Object offendingSymbol,
                                 int line, int charPositionInLine, String msg,
                                 RecognitionException e) {
             errors.add("line " + line + ":" + (charPositionInLine + 1) + " " + msg);
+            structured.add(new SyntaxError(line, charPositionInLine + 1, msg));
         }
     }
 
@@ -224,7 +243,8 @@ public final class EquationParser {
 
         FreesParser.ProgramContext program = parser.program();
         if (!errorListener.errors.isEmpty()) {
-            throw new ParseException(String.join("\n", errorListener.errors));
+            throw new ParseException(String.join("\n", errorListener.errors),
+                    errorListener.structured);
         }
 
         AstBuilder builder = new AstBuilder();

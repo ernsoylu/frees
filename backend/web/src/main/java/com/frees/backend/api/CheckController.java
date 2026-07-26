@@ -61,7 +61,24 @@ public class CheckController {
                                 // 1-based editor line a syntax error points at, or
                                 // null for whole-system errors (no single line).
                                 Integer errorLine,
-                                List<SolveDtos.StateTableDto> stateTableDefs) {
+                                List<SolveDtos.StateTableDto> stateTableDefs,
+                                // Every syntax error the parse collected (ANTLR
+                                // recovers per line), so the editor marks them all —
+                                // errorLine/message keep pointing at the first.
+                                List<SolveDtos.SyntaxErrorDto> errors) {
+
+        /** Backward-compatible constructor for callers that predate the error list. */
+        public CheckResponse(boolean solvable, int equations, int unknowns,
+                             List<String> variables, List<String> unitWarnings,
+                             Map<String, String> inferredUnits, String message,
+                             List<SolveDtos.FunctionTableDto> codeTables,
+                             List<SolveDtos.ParametricTableDto> parametricTables,
+                             List<SolveDtos.PlotDefDto> definedPlots, Integer errorLine,
+                             List<SolveDtos.StateTableDto> stateTableDefs) {
+            this(solvable, equations, unknowns, variables, unitWarnings, inferredUnits,
+                    message, codeTables,
+                    parametricTables, definedPlots, errorLine, stateTableDefs, List.of());
+        }
 
         /** Backward-compatible constructor for callers that predate state tables. */
         public CheckResponse(boolean solvable, int equations, int unknowns,
@@ -72,7 +89,7 @@ public class CheckController {
                              List<SolveDtos.PlotDefDto> definedPlots, Integer errorLine) {
             this(solvable, equations, unknowns, variables, unitWarnings, inferredUnits,
                     message, codeTables,
-                    parametricTables, definedPlots, errorLine, List.of());
+                    parametricTables, definedPlots, errorLine, List.of(), List.of());
         }
 
         /** Backward-compatible constructor for the common no-error-line case. */
@@ -84,7 +101,7 @@ public class CheckController {
                              List<SolveDtos.PlotDefDto> definedPlots) {
             this(solvable, equations, unknowns, variables, unitWarnings, inferredUnits,
                     message, codeTables,
-                    parametricTables, definedPlots, null, List.of());
+                    parametricTables, definedPlots, null, List.of(), List.of());
         }
     }
 
@@ -126,10 +143,14 @@ public class CheckController {
                     stateTablesOf(parsed.stateTables())));
         } catch (EquationParser.ParseException e) {
             String firstError = e.getMessage().lines().findFirst().orElse(e.getMessage());
+            List<SolveDtos.SyntaxErrorDto> errors = syntaxErrorDtos(e);
+            String suffix = errors.size() > 1
+                    ? " (+" + (errors.size() - 1) + " more — all marked in the editor)"
+                    : "";
             return ResponseEntity.badRequest().body(new CheckResponse(
                     false, 0, 0, List.of(), List.of(), Map.of(),
-                    SYNTAX_ERROR_PREFIX + firstError, List.of(), List.of(), List.of(),
-                    parseErrorLine(e.getMessage())));
+                    SYNTAX_ERROR_PREFIX + firstError + suffix, List.of(), List.of(), List.of(),
+                    parseErrorLine(e.getMessage()), List.of(), errors));
         } catch (Exception e) {
             log.error("Unexpected error while checking equations", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -137,5 +158,22 @@ public class CheckController {
                             false, 0, 0, List.of(), List.of(), Map.of(),
                             e.getMessage() != null ? e.getMessage() : e.toString(), List.of(), List.of(), List.of()));
         }
+    }
+
+    /** Structured syntax errors for the editor: the first error per line,
+     *  capped, so a recovery cascade can never flood the lint gutter. */
+    private static List<SolveDtos.SyntaxErrorDto> syntaxErrorDtos(EquationParser.ParseException e) {
+        List<SolveDtos.SyntaxErrorDto> out = new java.util.ArrayList<>();
+        java.util.Set<Integer> seenLines = new java.util.HashSet<>();
+        for (EquationParser.SyntaxError err : e.syntaxErrors()) {
+            if (!seenLines.add(err.line())) {
+                continue;
+            }
+            out.add(new SolveDtos.SyntaxErrorDto(err.line(), err.column(), err.message()));
+            if (out.size() >= 8) {
+                break;
+            }
+        }
+        return out;
     }
 }
