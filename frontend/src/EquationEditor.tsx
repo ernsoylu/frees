@@ -1,14 +1,14 @@
 import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react'
 import { useComputedColorScheme } from '@mantine/core'
 import CodeMirror, { ReactCodeMirrorRef } from '@uiw/react-codemirror'
-import { Decoration, DecorationSet, EditorView, keymap } from '@codemirror/view'
+import { Decoration, DecorationSet, EditorView, keymap, showTooltip, Tooltip } from '@codemirror/view'
 import { Diagnostic, lintGutter, setDiagnostics } from '@codemirror/lint'
 import { REFERENCE_SLUGS } from './docsTopics'
 import { Extension, StateEffect, StateField } from '@codemirror/state'
 import { HighlightStyle, StreamLanguage, StringStream, syntaxHighlighting } from '@codemirror/language'
 import { CompletionContext, CompletionResult } from '@codemirror/autocomplete'
 import { tags } from '@lezer/highlight'
-import { catalogFunctionNames } from './functionCatalog'
+import { catalogFunctionNames, FUNCTION_CATEGORIES } from './functionCatalog'
 import { COMPONENT_NAMES } from './componentNames'
 
 // Imperative handle the parent uses to drive the editor (insert at caret, jump
@@ -50,6 +50,122 @@ const COMPONENT_COMPLETIONS = COMPONENT_NAMES.map((c) => ({
   apply: `${c.name} `,
   info: c.summary || undefined,
 }))
+
+// ---------------------------------------------------------------------------
+// Signature help: a tooltip above the caret showing the call's usage line with
+// the active argument bold, for every catalog function and component type.
+
+interface SignatureInfo {
+  usage: string
+  detail?: string
+}
+
+/** name (lowercased) → usage line, from the function catalog (keyed the same
+ *  way catalogFunctionNames derives names) and the component names companion. */
+const SIGNATURES: Map<string, SignatureInfo> = (() => {
+  const map = new Map<string, SignatureInfo>()
+  for (const category of FUNCTION_CATEGORIES) {
+    for (const item of category.items) {
+      const call = /^CALL\s+([A-Za-z_][A-Za-z0-9_]*)/.exec(item.snippet)
+      const name = call ? call[1] : /^([A-Za-z_][A-Za-z0-9_]*\$?)/.exec(item.snippet)?.[1]
+      if (name && item.usage && !map.has(name.toLowerCase())) {
+        map.set(name.toLowerCase(), { usage: item.usage, detail: item.description })
+      }
+    }
+  }
+  for (const c of COMPONENT_NAMES) {
+    map.set(c.name.toLowerCase(), { usage: c.signature, detail: c.summary })
+  }
+  return map
+})()
+
+/** The call the caret sits inside on its line: callee name + 0-based active
+ *  argument index (top-level commas between the unbalanced '(' and the caret). */
+function activeCallAt(doc: string, caret: number, lineFrom: number): { name: string; argIndex: number } | null {
+  const text = doc.slice(lineFrom, caret)
+  let depth = 0
+  let argIndex = 0
+  for (let i = text.length - 1; i >= 0; i--) {
+    const ch = text[i]
+    if (ch === ')') depth++
+    else if (ch === '(') {
+      if (depth === 0) {
+        const head = /([A-Za-z_][A-Za-z0-9_]*\$?)\s*$/.exec(text.slice(0, i))
+        return head ? { name: head[1], argIndex } : null
+      }
+      depth--
+    } else if (ch === ',' && depth === 0) argIndex++
+    else if (ch === '{' || ch === '}') return null // inside/near a comment: stay quiet
+  }
+  return null
+}
+
+/** DOM for the tooltip: usage line with the active argument bold (when the
+ *  usage's parenthesis list parses), plus a dimmed one-line detail. */
+function renderSignature(sig: SignatureInfo, argIndex: number): HTMLElement {
+  const root = document.createElement('div')
+  root.className = 'cm-signature-help'
+  const line = document.createElement('div')
+  const open = sig.usage.indexOf('(')
+  const close = sig.usage.lastIndexOf(')')
+  if (open >= 0 && close > open) {
+    line.appendChild(document.createTextNode(sig.usage.slice(0, open + 1)))
+    // Split the argument list on top-level commas only (CALL usages carry
+    // an output section after ':' — bolding stays within the input args).
+    const inner = sig.usage.slice(open + 1, close)
+    const parts: string[] = []
+    let depth = 0
+    let start = 0
+    for (let i = 0; i < inner.length; i++) {
+      const ch = inner[i]
+      if (ch === '(' || ch === '[') depth++
+      else if (ch === ')' || ch === ']') depth--
+      else if (ch === ',' && depth === 0) {
+        parts.push(inner.slice(start, i))
+        start = i + 1
+      }
+    }
+    parts.push(inner.slice(start))
+    parts.forEach((part, i) => {
+      if (i > 0) line.appendChild(document.createTextNode(','))
+      const span = document.createElement(i === argIndex ? 'b' : 'span')
+      span.textContent = part
+      line.appendChild(span)
+    })
+    line.appendChild(document.createTextNode(sig.usage.slice(close)))
+  } else {
+    line.textContent = sig.usage
+  }
+  root.appendChild(line)
+  if (sig.detail) {
+    const detail = document.createElement('div')
+    detail.className = 'cm-signature-detail'
+    detail.textContent = sig.detail
+    root.appendChild(detail)
+  }
+  return root
+}
+
+const signatureField = StateField.define<Tooltip | null>({
+  create: () => null,
+  update(value, tr) {
+    if (!tr.docChanged && !tr.selection) return value
+    const state = tr.state
+    const caret = state.selection.main.head
+    if (!state.selection.main.empty) return null
+    const line = state.doc.lineAt(caret)
+    const call = activeCallAt(state.sliceDoc(line.from, caret), caret - line.from, 0)
+    if (!call) return null
+    const sig = SIGNATURES.get(call.name.toLowerCase())
+    if (!sig) return null
+    return {
+      pos: caret,
+      above: true,
+      create: () => ({ dom: renderSignature(sig, call.argIndex) }),
+    }
+  },
+  provide: (field) => showTooltip.from(field),
+})
 
 interface StreamState {
   inComment: boolean
@@ -204,6 +320,19 @@ function makeFreesTheme(dark: boolean) {
         fontSize: 'var(--mantine-font-size-xs)',
       },
       '.cm-diagnostic-error': { borderLeft: '3px solid var(--mantine-color-red-6)' },
+      '.cm-signature-help': {
+        padding: '4px 8px',
+        maxWidth: '480px',
+        fontFamily: 'var(--mantine-font-family-monospace)',
+        fontSize: 'var(--mantine-font-size-xs)',
+      },
+      '.cm-signature-detail': {
+        marginTop: '2px',
+        fontFamily: 'var(--mantine-font-family)',
+        color: dark ? 'var(--mantine-color-dark-2)' : 'var(--mantine-color-gray-6)',
+        maxWidth: '460px',
+        whiteSpace: 'normal',
+      },
       '&.cm-focused': { outline: 'none' },
     },
     { dark },
@@ -356,6 +485,7 @@ function EquationEditorInner(
       syntaxHighlighting(isDark ? freesHighlightDark : freesHighlightLight),
       makeFreesTheme(isDark),
       errorLineField,
+      signatureField,
       lintGutter(),
       f1ContextualHelp,
     ],
