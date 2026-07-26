@@ -29,7 +29,9 @@ class BlendAliasTest {
     Stream<DynamicTest> lowercaseSpellingReachesTheBlend() {
         return BLENDS.stream().map(fluid -> DynamicTest.dynamicTest(fluid, () -> {
             assumeTrue(CoolProp.isAvailable(), "CoolProp not available");
-            assumeTrue(coolPropHas(fluid), "CoolProp build lacks the " + fluid + " mixture");
+            // The registry keys these blends as "<NAME>.mix" — probe that form,
+            // since the bare name only searches the pure-fluid library.
+            assumeTrue(coolPropHas(fluid + ".mix"), "CoolProp build lacks the " + fluid + " mixture");
             EquationSystemSolver.Result result = solver.solve(
                     "t_sat = Temperature(" + fluid.toLowerCase(Locale.ROOT) + ", P=400000, x=0)");
             double t = result.variables().get("t_sat");
