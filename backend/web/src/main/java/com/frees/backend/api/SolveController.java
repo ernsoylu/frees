@@ -120,7 +120,10 @@ public class SolveController {
                                 List<SolveDtos.ResidueExpansionDto> residueExpansions,
                                 // Per-component-instance identity + parameter bindings,
                                 // for the Variable Explorer's component datasheet view.
-                                List<SolveDtos.ComponentDto> components) {
+                                List<SolveDtos.ComponentDto> components,
+                                // Index of the Tarjan block whose solve gave up, or
+                                // null when the failure carries no block information.
+                                Integer failedBlockIndex) {
 
         static SolveResponse failure(String error) {
             return failure(error, null);
@@ -129,7 +132,7 @@ public class SolveController {
         static SolveResponse failure(String error, Integer errorLine) {
             return new SolveResponse(false, List.of(), List.of(), List.of(), null,
                     List.of(), List.of(), error, List.of(), List.of(), List.of(),
-                    List.of(), errorLine, List.of(), List.of(), List.of(), List.of());
+                    List.of(), errorLine, List.of(), List.of(), List.of(), List.of(), null);
         }
     }
 
@@ -181,7 +184,7 @@ public class SolveController {
             // can be called there.
             cacheDefsOnly(sessionId, request);
             return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
-                    .body(SolveResponse.failure(e.getMessage()));
+                    .body(solverFailureResponse(e));
         } catch (Exception e) {
             log.error("Unexpected error while solving equations", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -285,7 +288,54 @@ public class SolveController {
                 stateTablesOf(parsed.stateTables()),
                 odeTablesOf(result.odeTables(), unitsByLower),
                 result.residueExpansions(),
-                ComponentMetadata.build(cleanText, variableDtos));
+                ComponentMetadata.build(cleanText, variableDtos),
+                null);
+    }
+
+    /**
+     * Failure envelope for a solver exception: the bare message when nothing
+     * more is known, or — when the solver attached its failure state — the
+     * block structure, every finite residual at the point of failure, partial
+     * stats and the failing block index, so the client renders diagnostics
+     * instead of a one-liner. Shared by the sync 422 path and the async
+     * compute worker so both produce one failure shape.
+     */
+    public SolveResponse solverFailureResponse(SolverException e) {
+        EquationSystemSolver.Result partial = e.partialResult();
+        if (partial == null) {
+            return SolveResponse.failure(e.getMessage());
+        }
+        SolverException.FailureState state = e.failureState();
+        return new SolveResponse(
+                false,
+                List.of(),
+                partial.blocks().stream()
+                        .map(b -> toBlockDto(b, partial.displayNames()))
+                        .toList(),
+                partial.residuals().stream()
+                        .filter(r -> Double.isFinite(r.residual()))
+                        .map(r -> new SolveDtos.ResidualDto(r.equation(), r.residual()))
+                        .toList(),
+                new SolveDtos.StatsDto(
+                        partial.stats().equationCount(),
+                        partial.stats().unknownCount(),
+                        partial.stats().blockCount(),
+                        partial.stats().iterations(),
+                        partial.stats().elapsedMillis(),
+                        partial.stats().maxResidual()),
+                List.of(),
+                List.of(),
+                e.getMessage(),
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of(),
+                null,
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of(),
+                state != null ? state.failedBlockIndex() : null);
     }
 
     /** Quick synchronous syntax check used by the asynchronous path to reject

@@ -320,11 +320,56 @@ public class EquationSystemSolver {
                 solveDynamicSystems(parsed, solved.values(), settings, specs, deadlineNanos);
         return buildResult(equations, solved.blocks(), List.of(solved.values()),
                 solved.iterations(), startNanos, parsed, uncertainties, odeTables);
+        } catch (SolverException ex) {
+            throw enrichWithPartialResult(ex, equations, parsed, startNanos);
         } finally {
             if (odeAccessors) {
                 com.frees.backend.core.ode.DynamicAccessorContext.clear();
             }
         }
+    }
+
+    /**
+     * Attaches a partial {@link Result} to a solver failure that carries a
+     * block-loop {@link SolverException.FailureState}: the block structure,
+     * every equation's residual evaluated at the iterate the solve stalled on
+     * (NaN where an unsolved upstream block leaves nothing to evaluate), and
+     * partial stats. Failures without a failure state (structural rejections,
+     * pre-solve errors) pass through unchanged.
+     */
+    private SolverException enrichWithPartialResult(SolverException ex, List<Equation> equations,
+                                                    EquationParser.ParseResult parsed, long startNanos) {
+        SolverException.FailureState state = ex.failureState();
+        if (state == null || ex.partialResult() != null) {
+            return ex;
+        }
+        List<EquationResidual> residuals = new ArrayList<>();
+        double maxResidual = 0.0;
+        for (Equation eq : equations) {
+            double residual;
+            try {
+                residual = Evaluator.eval(eq.lhs(), state.values(), parsed.defs())
+                        - Evaluator.eval(eq.rhs(), state.values(), parsed.defs());
+            } catch (RuntimeException notEvaluable) {
+                residual = Double.NaN;
+            }
+            residuals.add(new EquationResidual(eq.sourceText(), residual));
+            if (Double.isFinite(residual)) {
+                maxResidual = Math.max(maxResidual, Math.abs(residual));
+            }
+        }
+        TreeSet<String> allVars = collectVariables(equations);
+        int surfacedVars = surfacedVarCount(allVars);
+        Stats stats = new Stats(
+                equations.size() - (allVars.size() - surfacedVars),
+                surfacedVars,
+                state.blocks().size(),
+                state.iterations(),
+                (System.nanoTime() - startNanos) / 1_000_000,
+                maxResidual);
+        Result partial = new Result(Map.of(), state.blocks(), residuals, stats,
+                List.of(), parsed.displayNames(), Map.of(), List.of(), List.of());
+        return ex.withPartialResult(partial);
     }
 
     /** Evaluates each {@code UncertaintyOf(X) = expr} at the solved state and pins
@@ -949,7 +994,15 @@ public class EquationSystemSolver {
         Set<Integer> skipIndices = new HashSet<>();
         for (int bi = 0; bi < blocks.size(); bi++) {
             if (skipIndices.contains(bi)) continue;
-            totalIterations += solveBlockWithFallback(bi, blocks, values, config, skipIndices);
+            try {
+                totalIterations += solveBlockWithFallback(bi, blocks, values, config, skipIndices);
+            } catch (SolverException ex) {
+                // Attach which block gave up and the iterate it stalled at, so
+                // the outer solve can turn this into diagnostics instead of a
+                // bare message (the loop has no parse-time context to do it).
+                throw ex.withFailureState(new SolverException.FailureState(
+                        blocks, new HashMap<>(values), bi, totalIterations));
+            }
         }
         return new InnerSolve(values, blocks, totalIterations);
     }

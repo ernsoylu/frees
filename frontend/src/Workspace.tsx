@@ -22,7 +22,8 @@ import {
   IconVariable,
 } from '@tabler/icons-react'
 import { Button } from '@mantine/core'
-import { ComponentParamResult, ComponentResult, VariableResult } from './api'
+import { ComponentParamResult, ComponentResult, SolveResponse, VariableResult } from './api'
+import SolveDiagnostics from './SolveDiagnostics'
 import { formatValue } from './format'
 
 /**
@@ -375,9 +376,12 @@ interface Props {
   onExportSpreadsheet?: (vars: VariableResult[]) => void
   /** Opens the PID Tuner for a selected SigPID component instance. */
   onTunePid?: (c: ComponentGroup) => void
+  /** Last solve response — feeds the Diagnostics section (stats, blocks,
+   *  residuals; opens itself when the solve failed). */
+  diagnostics?: SolveResponse | null
 }
 
-export default function Workspace({ variables, replNames, components: instances, onEdit, onExportSpreadsheet, onTunePid }: Readonly<Props>) {
+export default function Workspace({ variables, replNames, components: instances, onEdit, onExportSpreadsheet, onTunePid, diagnostics }: Readonly<Props>) {
   const [query, setQuery] = useState('')
   // The input stays urgent (every keystroke paints immediately); the heavy
   // filter + regroup below trails behind at transition priority, so typing in
@@ -416,6 +420,7 @@ export default function Workspace({ variables, replNames, components: instances,
         backgroundColor: 'light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8))',
       }}
     >
+      <SolveDiagnostics response={diagnostics ?? null} />
       {/* Wrap (not nowrap) so in a narrow dock/edge panel the filter + Edit drop
           below the title instead of squeezing it into a clipped two-line wrap. */}
       <Group justify="space-between" mb="sm" gap="xs" wrap="wrap">

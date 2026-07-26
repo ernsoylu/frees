@@ -2225,6 +2225,7 @@ export default function App() {
             variables={workspaceVariables}
             replNames={replNames}
             components={result?.components}
+            diagnostics={result}
             onEdit={() => setShowVariableInfo(true)}
             onExportSpreadsheet={exportToSpreadsheet}
             onTunePid={openPidTunerFor}
