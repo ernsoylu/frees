@@ -136,6 +136,7 @@ const MinMaxModal = lazy(() => import('./MinMaxModal'))
 const CurveFitModal = lazy(() => import('./CurveFitModal'))
 const PidTunerModal = lazy(() => import('./PidTunerModal'))
 const MonteCarloModal = lazy(() => import('./MonteCarloModal'))
+const ParameterFitModal = lazy(() => import('./ParameterFitModal'))
 type PidType = 'p' | 'pi' | 'pid'
 const PlotConfigModal = lazy(() => import('./plots/PlotConfigModal'))
 
@@ -419,6 +420,7 @@ export default function App() {
   const [showVariableInfo, setShowVariableInfo] = useState(false)
   const [showMinMax, setShowMinMax] = useState(false)
   const [showMonteCarlo, setShowMonteCarlo] = useState(false)
+  const [showParameterFit, setShowParameterFit] = useState(false)
   const [showCurveFit, setShowCurveFit] = useState(false)
   const computedScheme = useComputedColorScheme('dark')
   // PID Tuner: null = closed; the object carries what to tune. `instanceName`
@@ -2642,6 +2644,7 @@ export default function App() {
         onCurveFit={() => setShowCurveFit(true)}
           onPidTuner={() => setPidTuner({})}
           onMonteCarlo={() => setShowMonteCarlo(true)}
+          onParameterFit={() => setShowParameterFit(true)}
         onPreferences={() => setShowPreferences(true)}
         onAbout={() => setShowAbout(true)}
       />
@@ -2697,6 +2700,7 @@ export default function App() {
           onCurveFit={() => setShowCurveFit(true)}
           onPidTuner={() => setPidTuner({})}
           onMonteCarlo={() => setShowMonteCarlo(true)}
+          onParameterFit={() => setShowParameterFit(true)}
         />
         <input
           ref={projectFileRef}
@@ -2978,6 +2982,22 @@ export default function App() {
                 seed,
               )
             }
+          />
+        </Suspense>
+      )}
+
+      {showParameterFit && (
+        <Suspense fallback={null}>
+          <ParameterFitModal
+            opened
+            onClose={() => setShowParameterFit(false)}
+            text={effectiveText()}
+            stopCriteria={{ ...stopCriteria, complexMode }}
+            variableInfo={buildVariableInfo()}
+            functionTables={functionTableDtos()}
+            analyzers={analyzers}
+            tables={tables}
+            onApply={(next) => applyText(next)}
           />
         </Suspense>
       )}

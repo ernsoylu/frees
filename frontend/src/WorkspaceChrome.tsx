@@ -18,6 +18,7 @@ import {
 import {
   IconAdjustments,
   IconChartHistogram,
+  IconCrosshair,
   IconBrush,
   IconChartGridDots,
   IconChartLine,
@@ -136,6 +137,7 @@ interface RailProps {
   onCurveFit: () => void
   onPidTuner: () => void
   onMonteCarlo: () => void
+  onParameterFit: () => void
   onPreferences: () => void
   onAbout: () => void
 }
@@ -832,6 +834,7 @@ interface TopBarProps {
   onCurveFit: () => void
   onPidTuner: () => void
   onMonteCarlo: () => void
+  onParameterFit: () => void
 }
 
 function solveTooltipFor(canSolve: boolean, isTable: boolean): string {
@@ -991,6 +994,9 @@ export function TopBar(props: Readonly<TopBarProps>) {
             </Menu.Item>
             <Menu.Item leftSection={<IconChartHistogram size={14} />} onClick={props.onMonteCarlo}>
               Monte Carlo Uncertainty
+            </Menu.Item>
+            <Menu.Item leftSection={<IconCrosshair size={14} />} onClick={props.onParameterFit}>
+              Parameter Estimation
             </Menu.Item>
             <Menu.Divider />
             <Menu.Label>Auxiliary panels</Menu.Label>
