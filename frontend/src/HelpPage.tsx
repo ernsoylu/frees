@@ -2672,6 +2672,7 @@ const CATEGORIES: NavCategory[] = [
       { id: 'gs-repl', label: '5. Ask Questions: the REPL', blurb: 'Query the solved session, calculate with units, and call the CAS.', keywords: ['repl', 'terminal', 'console', 'workspace', 'query', 'interactive'] },
       { id: 'gs-components', label: '6. Wire Components', blurb: 'Instantiate and connect library components into a solved network.', keywords: ['components', 'connect', 'network', 'system', 'pipe', 'acausal'] },
       { id: 'gs-next', label: '7. Where to Go Next', blurb: 'A guided map of the rest of the documentation.', keywords: ['next steps', 'learn', 'map', 'where to go'] },
+      { id: 'verification', label: 'Verification Suite', blurb: 'CI-enforced problems with independently derived expected values.', keywords: ['verification', 'validation', 'accuracy', 'trust', 'correctness', 'benchmark', 'ci'] },
     ]
   },
   {
