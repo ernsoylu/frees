@@ -63,6 +63,7 @@ import {
   VariableInfo,
   VariableResult,
 } from './api'
+import { findPin, pinnableParameters, sliderOverrideEquation, sliderRange, type PinnedSlider } from './sliders'
 const PreferencesModal = lazy(() => import('./PreferencesModal'))
 const AboutModal = lazy(() => import('./AboutModal'))
 import VariableInfoModal, {
@@ -138,6 +139,7 @@ const MinMaxModal = lazy(() => import('./MinMaxModal'))
 const CurveFitModal = lazy(() => import('./CurveFitModal'))
 const PidTunerModal = lazy(() => import('./PidTunerModal'))
 const MonteCarloModal = lazy(() => import('./MonteCarloModal'))
+const SliderStrip = lazy(() => import('./SliderStrip'))
 const ParameterFitModal = lazy(() => import('./ParameterFitModal'))
 type PidType = 'p' | 'pi' | 'pid'
 const PlotConfigModal = lazy(() => import('./plots/PlotConfigModal'))
@@ -361,6 +363,21 @@ export default function App() {
   // overlaid on the solved variables so the Variable Explorer / Solution reflect
   // them. Cleared on every solve (the backend resets its session overlay too).
   const [replVars, setReplVars] = useState<Record<string, VariableResult>>({})
+
+  // Parameters pinned to the slider strip. They ride the same override path as
+  // REPL assignments and are appended AFTER them, so the backend's
+  // last-wins collapse by name lets a dragged slider beat a stale REPL value.
+  const [pinnedSliders, setPinnedSliders] = useState<PinnedSlider[]>(() => boot?.sliders ?? [])
+  const sliderTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const sliderSolveRef = useRef<() => void>(() => {})
+  // A release that lands while a solve is in flight must not be dropped: the
+  // app's policy elsewhere is "skip rather than queue", which is right for a
+  // lint tick (another keystroke follows) but wrong here — the displayed
+  // solution would stop matching the handle. Remember it and drain on idle.
+  const sliderPendingRef = useRef(false)
+  useEffect(() => () => {
+    if (sliderTimer.current) clearTimeout(sliderTimer.current)
+  }, [])
   const [solving, setSolving] = useState(false)
   const [findAll, setFindAll] = useState(false)
   const [complexMode, setComplexMode] = useState(false)
@@ -620,11 +637,12 @@ export default function App() {
       whiteboards,
       spreadsheets,
       analyzers,
+      sliders: pinnedSliders,
     }),
     // `text` stays a dependency so the autosave effect keyed on this callback
     // still refreshes when the (deferred) editor document state lands.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [text, varDrafts, stopCriteria, unitSystem, fillMissing, stateUnitIds, tables, plots, whiteboards, spreadsheets, analyzers],
+    [text, varDrafts, stopCriteria, unitSystem, fillMissing, stateUnitIds, tables, plots, whiteboards, spreadsheets, analyzers, pinnedSliders],
   )
 
   // Debounced autosave of the entire workspace to a single localStorage key,
@@ -641,6 +659,15 @@ export default function App() {
   useEffect(() => {
     if (!solving) setFillMissingFor(null)
   }, [solving])
+
+  // Drain a slider re-solve that the in-flight guard blocked. Without this a
+  // handle released mid-solve leaves the solution showing the previous value.
+  useEffect(() => {
+    if (!solving && !checking && sliderPendingRef.current) {
+      sliderPendingRef.current = false
+      sliderSolveRef.current()
+    }
+  }, [solving, checking])
 
   // Phase 3.3 Auto-Sync Mode: Sync result bindings back to spreadsheets if autoSync is enabled
   useEffect(() => {
@@ -1125,7 +1152,7 @@ export default function App() {
         buildVariableInfo(),
         complexMode,
         functionTableDtos(),
-        Object.values(replVars).map(replOverrideEquation),
+        solveOverrides(),
       )
       setCheckResult(response)
       setTables((all) => mergeCodeTables(all, response.codeTables, response.parametricTables))
@@ -1171,6 +1198,72 @@ export default function App() {
     if (checking || solving || solvingTableId) return
     if (!textRef.current.trim()) return
     void onCheck()
+  }
+
+  // Every solve/check override, REPL first then sliders: the backend collapses
+  // the list by variable name keeping the last, so a pinned slider wins.
+  // Only variables the document assigns a literal may be pinned: an override
+  // replaces any line assigning the name, so offering a computed variable
+  // would let a drag silently delete the equation defining it.
+  const pinnableNames = useMemo(
+    () => pinnableParameters(textRef.current),
+    // Recomputed when a check/solve lands, which is also when the variable
+    // list the affordance decorates is refreshed.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [checkResult, result],
+  )
+
+  const pinnedSliderNames = useMemo(
+    () => new Set(pinnedSliders.map((p) => p.name.toLowerCase())),
+    [pinnedSliders],
+  )
+
+  const solveOverrides = () => [
+    ...Object.values(replVars).map(replOverrideEquation),
+    // Only pins that are STILL literal parameters are applied. A document edit
+    // can turn a pinned name into a computed variable, and an override on one
+    // of those replaces the equation defining it — so a stale pin goes inert
+    // rather than silently deleting physics.
+    ...pinnedSliders
+      .filter((p) => pinnableNames.has(p.name.toLowerCase()))
+      .map(sliderOverrideEquation),
+  ]
+
+  // Re-solve for the current slider values, honouring the in-flight guard.
+  sliderSolveRef.current = () => {
+    if (!solvable) return
+    if (solving || checking) {
+      sliderPendingRef.current = true
+      return
+    }
+    void onSolve()
+  }
+
+  function scheduleSliderSolve(delayMs: number) {
+    if (sliderTimer.current) clearTimeout(sliderTimer.current)
+    sliderTimer.current = setTimeout(() => sliderSolveRef.current(), delayMs)
+  }
+
+  function setSliderValue(name: string, value: number, commit: boolean) {
+    setPinnedSliders((prev) => prev.map((p) => (p.name === name ? { ...p, value } : p)))
+    // Dragging re-solves on a short debounce so the solution tracks the handle;
+    // the release commits promptly. Both go through the timer, so a fast drag
+    // collapses into one solve rather than a queue of them.
+    scheduleSliderSolve(commit ? 30 : 220)
+  }
+
+  function pinSlider(v: VariableResult) {
+    setPinnedSliders((prev) => {
+      if (findPin(prev, v.name)) return prev
+      const draft = varDrafts[v.name]
+        ?? varDrafts[Object.keys(varDrafts).find((k) => k.toLowerCase() === v.name.toLowerCase()) ?? '']
+      const { min, max } = sliderRange(v.value, parseBound(draft?.lower ?? ''), parseBound(draft?.upper ?? ''))
+      return [...prev, { name: v.name, value: v.value, units: v.units, min, max }]
+    })
+  }
+
+  function unpinSlider(name: string) {
+    setPinnedSliders((prev) => prev.filter((p) => p.name !== name))
   }
 
   function invalidateTable() {
@@ -1354,7 +1447,7 @@ export default function App() {
         sessionId,
         // REPL-defined/changed variables take priority over the editor until the
         // user runs `clear` in the terminal.
-        Object.values(replVars).map(replOverrideEquation),
+        solveOverrides(),
       )
       setResult(response)
       // REPL overrides persist across solves (the terminal keeps priority over the
@@ -2312,6 +2405,23 @@ export default function App() {
             onEdit={() => setShowVariableInfo(true)}
             onExportSpreadsheet={exportToSpreadsheet}
             onTunePid={openPidTunerFor}
+            pinnedNames={pinnedSliderNames}
+            pinnableNames={pinnableNames}
+            onPin={pinSlider}
+            sliderStrip={
+              pinnedSliders.length > 0 ? (
+                <Suspense fallback={null}>
+                  <SliderStrip
+                    pins={pinnedSliders}
+                    inertNames={pinnedSliders.filter((p) => !pinnableNames.has(p.name.toLowerCase())).map((p) => p.name)}
+                    onChange={(name, v) => setSliderValue(name, v, false)}
+                    onCommit={(name, v) => setSliderValue(name, v, true)}
+                    onUnpin={unpinSlider}
+                    solving={solving}
+                  />
+                </Suspense>
+              ) : null
+            }
           />
         </Suspense>
       </div>

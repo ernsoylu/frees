@@ -13,6 +13,7 @@ import {
 } from '@mantine/core'
 import {
   IconAdjustments,
+  IconAdjustmentsHorizontal,
   IconChevronRight,
   IconComponents,
   IconFileExport,
@@ -39,6 +40,7 @@ import { group, ArrayGroup } from './workspaceData'
 // Beyond these sizes the Mantine tables (one DOM node per cell) are replaced by
 // lazy-loaded virtualized canvas grids, so render cost stops scaling with the
 // solved system. Below them the richer DOM tables (badges, hover) are kept.
+const EMPTY_NAMES: Set<string> = new Set()
 const VIRTUALIZE_SCALARS_AT = 200
 const VIRTUALIZE_CELLS_AT = 400
 const ScalarGrid = lazy(() => import('./WorkspaceGrids').then((m) => ({ default: m.ScalarGrid })))
@@ -119,7 +121,13 @@ function uncertaintyText(v: VariableResult): string {
   return v.uncertainty != null && v.uncertainty !== 0 ? `± ${formatValue(v.uncertainty)}` : ''
 }
 
-function ScalarTable({ scalars, replNames }: Readonly<{ scalars: VariableResult[]; replNames: Set<string> }>) {
+function ScalarTable({ scalars, replNames, pinnedNames, pinnableNames, onPin }: Readonly<{
+  scalars: VariableResult[]
+  replNames: Set<string>
+  pinnedNames: Set<string>
+  pinnableNames: Set<string>
+  onPin?: (v: VariableResult) => void
+}>) {
   return (
     // The variable names + 5 columns have an intrinsic min-width that exceeds a
     // narrow dock/edge panel; scroll horizontally inside the panel rather than
@@ -143,6 +151,26 @@ function ScalarTable({ scalars, replNames }: Readonly<{ scalars: VariableResult[
           <Table.Tr key={v.name}>
             <Table.Td style={{ textTransform: 'none' }}>
               <Group gap={6} wrap="nowrap">
+                {onPin && pinnableNames.has(v.name.toLowerCase()) && (
+                  <Tooltip
+                    label={
+                      pinnedNames.has(v.name.toLowerCase())
+                        ? `${v.name} is pinned to a slider`
+                        : `Pin ${v.name} to a slider`
+                    }
+                  >
+                    <ActionIcon
+                      size="xs"
+                      variant="subtle"
+                      color={pinnedNames.has(v.name.toLowerCase()) ? 'teal' : 'gray'}
+                      aria-label={`Pin ${v.name} to a slider`}
+                      disabled={pinnedNames.has(v.name.toLowerCase())}
+                      onClick={() => onPin(v)}
+                    >
+                      <IconAdjustmentsHorizontal size={13} />
+                    </ActionIcon>
+                  </Tooltip>
+                )}
                 {v.name}
                 {replNames.has(v.name.toLowerCase()) && (
                   <Badge variant="light" color="teal" size="xs" title="Defined in the terminal">repl</Badge>
@@ -379,9 +407,17 @@ interface Props {
   /** Last solve response — feeds the Diagnostics section (stats, blocks,
    *  residuals; opens itself when the solve failed). */
   diagnostics?: SolveResponse | null
+  /** Lowercased names already pinned to the slider strip. */
+  pinnedNames?: Set<string>
+  /** Lowercased names the document assigns a literal — only these are pinnable. */
+  pinnableNames?: Set<string>
+  /** Pin a variable to the slider strip (absent = the affordance is hidden). */
+  onPin?: (v: VariableResult) => void
+  /** The slider strip itself, rendered above the variable list. */
+  sliderStrip?: React.ReactNode
 }
 
-export default function Workspace({ variables, replNames, components: instances, onEdit, onExportSpreadsheet, onTunePid, diagnostics }: Readonly<Props>) {
+export default function Workspace({ variables, replNames, components: instances, onEdit, onExportSpreadsheet, onTunePid, diagnostics, pinnedNames, pinnableNames, onPin, sliderStrip }: Readonly<Props>) {
   const [query, setQuery] = useState('')
   // The input stays urgent (every keystroke paints immediately); the heavy
   // filter + regroup below trails behind at transition priority, so typing in
@@ -470,13 +506,14 @@ export default function Workspace({ variables, replNames, components: instances,
         </Text>
       ) : (
         <Stack gap="md">
+          {sliderStrip}
           {plain.length > 0 &&
             (plain.length > VIRTUALIZE_SCALARS_AT ? (
               <Suspense fallback={gridFallback}>
                 <ScalarGrid scalars={plain} replNames={repl} />
               </Suspense>
             ) : (
-              <ScalarTable scalars={plain} replNames={repl} />
+              <ScalarTable scalars={plain} replNames={repl} pinnedNames={pinnedNames ?? EMPTY_NAMES} pinnableNames={pinnableNames ?? EMPTY_NAMES} onPin={onPin} />
             ))}
           {components.length > 0 && (
             <Stack gap="xs">
