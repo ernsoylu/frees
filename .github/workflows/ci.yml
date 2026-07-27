@@ -70,10 +70,15 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Set up Node 20
+      - name: Set up Node 24
+        # Was Node 20, which went EOL in April 2026 and is below the `>=22` floor
+        # that @testing-library/jest-dom 7 and rollup-plugin-visualizer 7 declare.
+        # 24 is the active LTS. The suite also passes on 26 (the Dockerfile build
+        # stage) — see the Web Storage shim in src/test/setup.ts, which is what
+        # makes that true — but CI tracks LTS rather than the current line.
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: '20'
+          node-version: '24'
           cache: npm
           cache-dependency-path: frontend/package-lock.json
 

@@ -35,6 +35,14 @@ updates:
       # a deliberate Vite 8 migration, not via a routine bump (PR #52).
       - dependency-name: "@vitejs/plugin-react"
         update-types: ["version-update:semver-major"]
+      # typescript-eslint hard-throws on any TypeScript major >= 7 ("does not
+      # support TS 7.0", typescript-eslint/dist/index.js), so a routine TS 7
+      # bump takes `npm run lint` down with it — and `npm run build` runs
+      # `tsc -b`, so TS 7 (the native/Go rewrite) is a deliberate migration to
+      # schedule, not a weekly bump. Lift this once typescript-eslint ships TS 7
+      # support: https://github.com/typescript-eslint/typescript-eslint/issues/10940
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
 
   # Docker base images (the SUNDIALS/MPI base-pin foot-gun lives here — keep an
   # eye on Temurin base bumps).
