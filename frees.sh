@@ -63,7 +63,11 @@ preflight_macos_docker
 
 # Stamp the frontend build with the current commit so the About dialog can show
 # (and link to) the exact revision it was built from. See CLAUDE.md "Build stamping".
-export VITE_COMMIT_HASH="$(git rev-parse --short HEAD 2>/dev/null || echo dev)"
+# Assigned before `export` so the command substitution's exit status isn't masked
+# by export's own (shellcheck SC2155); the `|| echo dev` fallback makes it moot,
+# but the split keeps this script clean at shellcheck's default severity.
+VITE_COMMIT_HASH="$(git rev-parse --short HEAD 2>/dev/null || echo dev)"
+export VITE_COMMIT_HASH
 
 usage() {
     echo "Usage: $0 {start|stop|restart|status|logs|build|rebuild}"
