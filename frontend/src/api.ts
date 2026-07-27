@@ -149,6 +149,17 @@ export interface CheckResponse {
 export interface ConnectionDto {
   domain: string
   endpoints: string[]
+  /** Fluid connector type (`liquid`, `twophase`, `gas`, `oil`, `moistair`,
+   *  `fluid`); null outside the fluid domain. Distinguishes circuits the
+   *  bond-graph domain lumps together — a coolant loop and a refrigerant loop
+   *  are both `domain: 'fluid'`. */
+  connector?: string | null
+  /** The CoolProp working fluid this node carries, when the model named one. */
+  fluid?: string | null
+  /** Per endpoint (aligned by index), the display prefix its member variables
+   *  use — `chlr.in` for a connect-wired free port, `s2` for a shared-name
+   *  stream. Lets the schematic show an endpoint's solved state. */
+  streams?: string[]
 }
 
 /** A fluid state table parsed from a STATE TABLE name(...) ... END block: the

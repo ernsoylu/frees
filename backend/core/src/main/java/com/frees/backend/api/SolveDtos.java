@@ -106,15 +106,30 @@ public final class SolveDtos {
      * attribute map the frontend maps onto its PlotSpec. */
     public record PlotDefDto(String name, Map<String, List<String>> attributes) {}
 
-    /** One connection-topology node: its physical domain (lowercase) and the
-     *  {@code instance.port} endpoints it joins — the rendered schematic's
-     *  data layer, straight from the expander's own classification. */
-    public record ConnectionDto(String domain, List<String> endpoints) {}
+    /**
+     * One connection-topology node — the rendered schematic's data layer,
+     * straight from the expander's own classification.
+     *
+     * @param domain    physical (bond-graph) domain, lowercase
+     * @param endpoints the {@code instance.port} refs this node joins
+     * @param connector fluid connector type ({@code liquid}, {@code twophase},
+     *                  {@code gas}, {@code oil}, {@code moistair}, {@code fluid});
+     *                  null outside the fluid domain. Distinguishes circuits the
+     *                  coarse domain lumps together — a coolant loop and a
+     *                  refrigerant loop are both {@code domain=fluid}.
+     * @param fluid     the CoolProp working fluid the node carries, when known
+     * @param streams   per endpoint, the display prefix its member variables use
+     *                  ({@code CHLR.in}, {@code s2}), so the drawing can look up
+     *                  solved values at each endpoint
+     */
+    public record ConnectionDto(String domain, List<String> endpoints, String connector,
+                                String fluid, List<String> streams) {}
 
     public static List<ConnectionDto> connectionsOf(
             com.frees.backend.parser.EquationParser.ParseResult parsed) {
         return parsed.componentConnections().stream()
-                .map(c -> new ConnectionDto(c.domain(), c.endpoints()))
+                .map(c -> new ConnectionDto(c.domain(), c.endpoints(), c.connector(),
+                        c.fluid(), c.streams()))
                 .toList();
     }
 
