@@ -1,0 +1,89 @@
+- generic [ref=e1]:
+  - generic [ref=e5]:
+    - generic [ref=e6]:
+      - generic [ref=e7]:
+        - button "Expand sidebar" [ref=e9] [cursor=pointer]
+        - button "Editor" [ref=e15] [cursor=pointer]
+        - generic [ref=e21]:
+          - button "Tables windows" [ref=e22] [cursor=pointer]
+          - generic: "1"
+        - button "Plots windows" [ref=e27] [cursor=pointer]
+        - button "Graph Digitizer — extract curves from chart images" [ref=e32] [cursor=pointer]
+        - button "Whiteboard windows" [ref=e40] [cursor=pointer]
+        - button "Spreadsheet windows" [ref=e48] [cursor=pointer]
+        - button "Analyzer windows" [ref=e52] [cursor=pointer]
+        - button "Terminal — REPL evaluated against the workspace" [ref=e57] [cursor=pointer]
+      - generic [ref=e62]:
+        - button "Window layout presets" [ref=e63] [cursor=pointer]
+        - button "Min/Max (optimization)" [ref=e71] [cursor=pointer]
+        - button "Curve Fit (least squares)" [ref=e80] [cursor=pointer]
+        - button "PID Tuner (auto-tune P/PI/PID gains)" [ref=e87] [cursor=pointer]
+        - button "Preferences" [ref=e94] [cursor=pointer]
+        - button "About" [ref=e100] [cursor=pointer]
+        - button "Switch to light mode" [ref=e106] [cursor=pointer]
+        - link "Help" [ref=e112] [cursor=pointer]:
+          - /url: /help
+    - generic [ref=e117]:
+      - generic [ref=e118]:
+        - generic [ref=e119]:
+          - heading "frees" [level=3] [ref=e120]
+          - button "File" [ref=e121] [cursor=pointer]
+          - button "Functions" [ref=e131] [cursor=pointer]
+          - button "Tools" [ref=e142] [cursor=pointer]
+          - button "Open command palette" [ref=e153] [cursor=pointer]
+          - button "Rename project (currently Damped Oscillator (table).frees)" [ref=e687] [cursor=pointer]:
+            - paragraph [ref=e159]: Damped Oscillator (table).frees
+          - paragraph [ref=e163]: free solver
+        - generic [ref=e164]:
+          - button "Status details" [ref=e832] [cursor=pointer]:
+            - generic [ref=e833]: Table check OK
+          - button "Check" [ref=e166] [cursor=pointer]
+          - group [ref=e173]:
+            - button "Solve" [ref=e174] [cursor=pointer]
+            - button "Solve options" [expanded] [ref=e180] [cursor=pointer]
+      - generic [ref=e192]:
+        - generic [ref=e199]:
+          - region "vibration" [ref=e835]:
+            - tablist [ref=e696]:
+              - tab "Editor" [ref=e836] [cursor=pointer]
+              - tab "vibration Close" [selected] [ref=e837] [cursor=pointer]:
+                - generic [ref=e839]:
+                  - generic [ref=e842]: vibration
+                  - button "Close" [ref=e843]
+            - tabpanel "vibration Close" [ref=e847]:
+              - generic [ref=e851]:
+                - generic [ref=e852]:
+                  - paragraph [ref=e853]: Defined in code (PARAMETRIC … END) — virtualized read-only grid. Run it with Solve Table.
+                  - button "Editable copy" [ref=e854] [cursor=pointer]
+                  - button "Open in Spreadsheet" [ref=e857] [cursor=pointer]
+                - generic [ref=e861]:
+                  - button "Plot curve" [disabled] [ref=e862]
+                  - paragraph [ref=e868]: Select one or more columns (click a header, Ctrl/Cmd-click to add) to plot them vs t.
+          - status [ref=e278]: vibration opened
+          - alert [ref=e279]
+        - region "Variable Explorer" [ref=e281]:
+          - tablist [ref=e284]:
+            - tab "Inspector" [ref=e765] [cursor=pointer]
+            - tab "Variable Explorer Close" [selected] [ref=e772] [cursor=pointer]:
+              - generic [ref=e774]:
+                - generic [ref=e778]: Variable Explorer
+                - button "Close" [ref=e779]
+          - tabpanel "Variable Explorer Close" [ref=e783]:
+            - generic [ref=e787]:
+              - generic [ref=e788]:
+                - paragraph [ref=e794]: Variable Explorer
+                - generic [ref=e795]:
+                  - textbox "Filter workspace variables" [ref=e802]:
+                    - /placeholder: Filter variables…
+                  - button "Edit" [ref=e803] [cursor=pointer]
+              - paragraph [ref=e810]: Solve the document to populate the workspace. Variables, arrays and matrices from the last solve appear here with their value, type, unit and uncertainty.
+  - generic:
+    - tooltip "Solve every table run (F2)"
+    - menu "Solve options" [ref=e882]:
+      - generic [ref=e883]:
+        - generic [ref=e885]:
+          - checkbox "Find all solutions" [ref=e887]
+          - generic [ref=e888]: Find all solutions
+        - generic [ref=e891]:
+          - checkbox "Complex mode" [ref=e893]
+          - generic [ref=e894]: Complex mode

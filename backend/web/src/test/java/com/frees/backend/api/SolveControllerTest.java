@@ -56,6 +56,36 @@ class SolveControllerTest {
     }
 
     @Test
+    void solveShipsUncertaintyBreakdown() throws Exception {
+        mockMvc.perform(post("/api/solve")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"text\": \"x = 3\\ny = 4\\nUncertaintyOf(x) = 0.1\\nUncertaintyOf(y) = 0.2\\nf = x * y\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.uncertaintyBreakdown[0].variable").value("f"))
+                .andExpect(jsonPath("$.uncertaintyBreakdown[0].total").value(
+                        org.hamcrest.Matchers.closeTo(0.7211103, 1e-4)))
+                .andExpect(jsonPath("$.uncertaintyBreakdown[0].sources[0].source").value("y"))
+                .andExpect(jsonPath("$.uncertaintyBreakdown[0].sources[1].source").value("x"));
+    }
+
+    @Test
+    void failedSolveShipsDiagnosticsEnvelope() throws Exception {
+        // x+y pinned to two different values cannot converge; the 422 envelope
+        // must carry the block structure, the residuals at the failure point
+        // and the failing block index — not just a one-line message.
+        mockMvc.perform(post("/api/solve")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"text\": \"x + y = 10\\nx + y = 12\\nz = 5\"}"))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.error").value(org.hamcrest.Matchers.containsString("block")))
+                .andExpect(jsonPath("$.failedBlockIndex").value(0))
+                .andExpect(jsonPath("$.blocks.length()").value(org.hamcrest.Matchers.greaterThanOrEqualTo(1)))
+                .andExpect(jsonPath("$.residuals.length()").value(org.hamcrest.Matchers.greaterThanOrEqualTo(2)))
+                .andExpect(jsonPath("$.stats.maxResidual").value(org.hamcrest.Matchers.greaterThan(0.1)));
+    }
+
+    @Test
     void solveEchoesCodeDefinedTables() throws Exception {
         // A TABLE block in the editor text is callable and echoed back so the
         // frontend can show it in the Tables window.
@@ -87,6 +117,24 @@ class SolveControllerTest {
                                         org.hamcrest.Matchers.containsString("inverse_temp")))))
                 .andExpect(jsonPath("$.variables[*].name",
                         org.hamcrest.Matchers.hasItem("x[1]")));
+    }
+
+    @Test
+    void checkReportsEverySyntaxError() throws Exception {
+        // Two broken lines around a healthy one: the response must carry BOTH
+        // structured errors (line + column) so the editor marks them all, while
+        // message/errorLine keep pointing at the first for compatibility.
+        mockMvc.perform(post("/api/check")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"text\": \"x = 1 +\\ny = 2 +\\nz = 3\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errorLine").value(1))
+                .andExpect(jsonPath("$.errors.length()").value(2))
+                .andExpect(jsonPath("$.errors[0].line").value(1))
+                .andExpect(jsonPath("$.errors[0].column").value(7))
+                .andExpect(jsonPath("$.errors[1].line").value(2))
+                .andExpect(jsonPath("$.message").value(
+                        org.hamcrest.Matchers.containsString("+1 more")));
     }
 
     @Test

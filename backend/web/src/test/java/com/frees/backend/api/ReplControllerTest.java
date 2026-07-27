@@ -43,15 +43,14 @@ class ReplControllerTest {
                 .andExpect(jsonPath("$.value").value(1200.0));
     }
 
+    /** GET /api/repl/variables is gone: nothing called it, and it let anyone
+     *  holding a session id read that workspace's variable names. */
     @Test
-    void exposesWorkspaceVariablesForTabCompletion() throws Exception {
-        solve("alpha = 1\\nbeta = alpha + 1");
-
+    void theVariablesEndpointNoLongerExists() throws Exception {
+        mockMvc.perform(get("/api/repl/variables").header("X-Frees-Session", SESSION))
+                .andExpect(status().isNotFound());
         mockMvc.perform(get("/api/repl/variables").param("sessionId", SESSION))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$").isArray())
-                .andExpect(jsonPath("$[?(@ == 'alpha')]").exists())
-                .andExpect(jsonPath("$[?(@ == 'beta')]").exists());
+                .andExpect(status().isNotFound());
     }
 
     @Test

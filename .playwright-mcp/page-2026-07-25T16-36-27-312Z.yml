@@ -1,0 +1,108 @@
+- generic [ref=e5]:
+  - generic [ref=e6]:
+    - generic [ref=e7]:
+      - button "Expand sidebar" [ref=e9] [cursor=pointer]
+      - button "Editor" [ref=e15] [cursor=pointer]
+      - button "Tables windows" [ref=e22] [cursor=pointer]
+      - button "Plots windows" [ref=e27] [cursor=pointer]
+      - button "Graph Digitizer — extract curves from chart images" [ref=e32] [cursor=pointer]
+      - button "Whiteboard windows" [ref=e40] [cursor=pointer]
+      - button "Spreadsheet windows" [ref=e48] [cursor=pointer]
+      - button "Analyzer windows" [ref=e52] [cursor=pointer]
+      - button "Terminal — REPL evaluated against the workspace" [ref=e57] [cursor=pointer]
+    - generic [ref=e62]:
+      - button "Window layout presets" [ref=e63] [cursor=pointer]
+      - button "Min/Max (optimization)" [ref=e71] [cursor=pointer]
+      - button "Curve Fit (least squares)" [ref=e80] [cursor=pointer]
+      - button "PID Tuner (auto-tune P/PI/PID gains)" [ref=e87] [cursor=pointer]
+      - button "Preferences" [ref=e94] [cursor=pointer]
+      - button "About" [ref=e100] [cursor=pointer]
+      - button "Switch to light mode" [ref=e106] [cursor=pointer]
+      - link "Help" [ref=e112] [cursor=pointer]:
+        - /url: /help
+  - generic [ref=e117]:
+    - generic [ref=e118]:
+      - generic [ref=e119]:
+        - heading "frees" [level=3] [ref=e120]
+        - button "File" [ref=e121] [cursor=pointer]
+        - button "Functions" [ref=e131] [cursor=pointer]
+        - button "Tools" [ref=e142] [cursor=pointer]
+        - button "Open command palette" [ref=e153] [cursor=pointer]
+        - button "Rename project (currently Damped Oscillator (table).frees)" [ref=e687] [cursor=pointer]:
+          - paragraph [ref=e159]: Damped Oscillator (table).frees
+        - paragraph [ref=e163]: free solver
+      - generic [ref=e164]:
+        - paragraph [ref=e165]: Check (F4) · Solve (F2)
+        - button "Check" [ref=e166] [cursor=pointer]
+        - group [ref=e173]:
+          - button "Solve" [ref=e174] [cursor=pointer]
+          - button "Solve options" [ref=e180] [cursor=pointer]
+    - generic [ref=e192]:
+      - generic [ref=e199]:
+        - region "Editor" [ref=e693]:
+          - tablist [ref=e696]:
+            - tab "Editor Close" [selected] [ref=e697] [cursor=pointer]:
+              - generic [ref=e699]:
+                - generic [ref=e704]: Editor
+                - button "Close" [ref=e705]
+          - tabpanel "Editor Close" [ref=e710]:
+            - generic [ref=e717]:
+              - generic [ref=e719]:
+                - generic [ref=e720]: "1"
+                - generic [ref=e721]: "2"
+                - generic [ref=e722]: "3"
+                - generic [ref=e723]: "4"
+                - generic [ref=e724]: "5"
+                - generic [ref=e725]: "6"
+                - generic [ref=e726]: "7"
+                - generic [ref=e727]: "8"
+                - generic [ref=e728]: "9"
+                - generic [ref=e729]: "10"
+                - generic [ref=e730]: "11"
+                - generic [ref=e731]: "12"
+                - generic [ref=e732]: "13"
+                - generic [ref=e733]: "14"
+                - generic [ref=e734]: "15"
+                - generic [ref=e735]: "16"
+                - generic [ref=e736]: "17"
+                - generic [ref=e737]: "18"
+                - generic [ref=e738]: "19"
+                - generic [ref=e739]: "20"
+                - generic [ref=e740]: "21"
+              - textbox [ref=e743]:
+                - generic [ref=e744]: // Damped Harmonic Oscillator (parametric time sweep)
+                - generic [ref=e745]: "{ Free vibration of a mass-spring-damper, released from x0 at rest,"
+                - generic [ref=e746]: "sampled in time. PARAMETRIC table: open the Tables tab and click"
+                - generic [ref=e747]: "\"Solve Table\" (not the main Solve). Then chart x vs time, adding"
+                - generic [ref=e748]: "env and -env to see the decay envelope. }"
+                - generic [ref=e749]: "m = 2 [kg] { mass }"
+                - generic [ref=e750]: "k = 50 [N/m] { stiffness }"
+                - generic [ref=e751]: "c = 4 [N-s/m] { damping }"
+                - generic [ref=e752]: "x0 = 0.1 [m] { initial displacement }"
+                - generic [ref=e754]: "wn = sqrt(k/m) { natural frequency }"
+                - generic [ref=e755]: "zeta = c / (2*sqrt(k*m)) { damping ratio (underdamped < 1) }"
+                - generic [ref=e756]: "wd = wn*sqrt(1 - zeta^2) { damped frequency }"
+                - generic [ref=e758]: time = t * 1 [s]
+                - generic [ref=e759]: "env = x0*exp(-zeta*wn*time) { decay envelope }"
+                - generic [ref=e760]: x = env * (cos(wd*time) + (zeta*wn/wd)*sin(wd*time))
+                - generic [ref=e762]: PARAMETRIC vibration (t, time, x, env)
+                - generic [ref=e763]: t = 0:0.05:6
+                - generic [ref=e764]: END
+        - status [ref=e278]: Variable Explorer opened
+        - alert [ref=e279]
+      - region "Variable Explorer" [ref=e281]:
+        - tablist [ref=e284]:
+          - tab "Inspector" [ref=e765] [cursor=pointer]
+          - tab "Variable Explorer Close" [selected] [ref=e772] [cursor=pointer]:
+            - generic [ref=e774]:
+              - generic [ref=e778]: Variable Explorer
+              - button "Close" [ref=e779]
+        - tabpanel "Variable Explorer Close" [ref=e783]:
+          - generic [ref=e787]:
+            - generic [ref=e788]:
+              - paragraph [ref=e794]: Variable Explorer
+              - generic [ref=e795]:
+                - textbox "Filter workspace variables" [ref=e802]:
+                  - /placeholder: Filter variables…
+                - button "Edit" [ref=e803] [cursor=pointer]
+            - paragraph [ref=e810]: Solve the document to populate the workspace. Variables, arrays and matrices from the last solve appear here with their value, type, unit and uncertainty.

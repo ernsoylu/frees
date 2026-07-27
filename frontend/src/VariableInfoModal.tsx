@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import {
+  Badge,
   Button,
   Code,
   Group,
@@ -7,7 +8,9 @@ import {
   Table,
   Text,
   TextInput,
+  Tooltip,
 } from '@mantine/core'
+import { readGuessDirectives, writeGuessDirectives } from './guessDirectives'
 
 export interface VariableDraft {
   guess: string
@@ -49,6 +52,11 @@ interface Props {
   solvedValues: Record<string, number>
   onSave: (drafts: Record<string, VariableDraft>) => void
   onClose: () => void
+  /** The document, so the window can show what the text already declares. */
+  documentText?: string
+  /** Write the entered guesses/bounds back into the document as GUESS lines
+   *  (absent = the affordance is hidden). */
+  onWriteToDocument?: (nextText: string) => void
 }
 
 /** Mirrors the Options > Variable Information window. */
@@ -112,11 +120,30 @@ function processDraft(name: string, draft: VariableDraft): { error: string } | {
   }
 }
 
-export default function VariableInfoModal({ variables, drafts, solvedValues, onSave, onClose }: Readonly<Props>) {
+export default function VariableInfoModal({ variables, drafts, solvedValues, onSave, onClose, documentText, onWriteToDocument }: Readonly<Props>) {
+  // Names the document itself declares with a GUESS line. The solver treats
+  // the text as authoritative (it merges GUESS over these values, text
+  // winning), so the window must say which rows the document already owns.
+  const directives = readGuessDirectives(documentText ?? '')
+  const inText = new Set(directives.map((d) => d.name.toLowerCase()))
   const [local, setLocal] = useState<Record<string, VariableDraft>>(() => {
+    const byName = new Map(directives.map((d) => [d.name.toLowerCase(), d]))
     const initial: Record<string, VariableDraft> = {}
     for (const name of variables) {
-      initial[name] = drafts[name] ?? { ...DEFAULT_DRAFT }
+      const draft = drafts[name] ?? { ...DEFAULT_DRAFT }
+      // Show what the document declares, since that is what the solver will
+      // actually use: the window is a view of the same state, not a rival
+      // one. A value typed here still overrides the field until it is
+      // written back (or the text wins again at solve time).
+      const directive = byName.get(name.toLowerCase())
+      initial[name] = directive
+        ? {
+            ...draft,
+            guess: directive.guess !== null ? String(directive.guess) : draft.guess,
+            lower: directive.lower !== null ? String(directive.lower) : draft.lower,
+            upper: directive.upper !== null ? String(directive.upper) : draft.upper,
+          }
+        : draft
     }
     return initial
   })
@@ -138,6 +165,38 @@ export default function VariableInfoModal({ variables, drafts, solvedValues, onS
     }
     setLocal(reset)
     setError(null)
+  }
+
+  /**
+   * Push the entered guesses and bounds into the document as GUESS lines.
+   * Validation runs first, so the document never receives a value the window
+   * itself would reject; a variable with neither a guess nor a complete pair
+   * of finite bounds contributes nothing (and clears any line it had).
+   */
+  function writeToDocument() {
+    if (!onWriteToDocument || documentText === undefined) {
+      return
+    }
+    const entries: { name: string; guess: number | null; lower: number | null; upper: number | null }[] = []
+    for (const name of variables) {
+      const result = processDraft(name, local[name])
+      if ('error' in result) {
+        setError(result.error)
+        return
+      }
+      const draft = result.saved
+      const guess = draft.guess.trim() === '' ? null : Number(draft.guess)
+      const lower = parseBound(draft.lower)
+      const upper = parseBound(draft.upper)
+      entries.push({
+        name,
+        guess: guess !== null && Number.isFinite(guess) ? guess : null,
+        lower: typeof lower === 'number' ? lower : null,
+        upper: typeof upper === 'number' ? upper : null,
+      })
+    }
+    onWriteToDocument(writeGuessDirectives(documentText, entries))
+    onClose()
   }
 
   function save() {
@@ -185,7 +244,14 @@ export default function VariableInfoModal({ variables, drafts, solvedValues, onS
             {variables.map((name) => (
               <Table.Tr key={name}>
                 <Table.Td ff="monospace" c="teal.4">
-                  {name}
+                  <Group gap={6} wrap="nowrap">
+                    {name}
+                    {inText.has(name.toLowerCase()) && (
+                      <Tooltip label="Declared by a GUESS line in the document, which wins over this window">
+                        <Badge size="xs" variant="light" color="blue">text</Badge>
+                      </Tooltip>
+                    )}
+                  </Group>
                 </Table.Td>
                 {(['guess', 'lower', 'upper', 'units', 'uncertainty', 'relativeUncertainty'] as const).map((field) => (
                   <Table.Td key={field}>
@@ -214,9 +280,18 @@ export default function VariableInfoModal({ variables, drafts, solvedValues, onS
       )}
 
       <Group justify="space-between" mt="lg">
-        <Button variant="subtle" onClick={restoreDefaults}>
-          Restore Defaults
-        </Button>
+        <Group gap="xs">
+          <Button variant="subtle" onClick={restoreDefaults}>
+            Restore Defaults
+          </Button>
+          {onWriteToDocument && documentText !== undefined && (
+            <Tooltip label="Write these guesses and bounds into the document as GUESS lines, so they travel with the file">
+              <Button variant="subtle" onClick={writeToDocument} disabled={variables.length === 0}>
+                Write to document
+              </Button>
+            </Tooltip>
+          )}
+        </Group>
         <Group gap="xs">
           <Button variant="default" onClick={onClose}>
             Cancel

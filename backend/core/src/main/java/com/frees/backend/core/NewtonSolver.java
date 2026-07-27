@@ -19,7 +19,9 @@ import java.util.Map;
 /**
  * Newton's method with a numerical Jacobian and step-halving, applied to one
  * block of simultaneous equations. Values of variables solved by earlier
- * blocks are passed in and held fixed.
+ * blocks are passed in and held fixed. When neither the full nor any halved
+ * Newton step descends, a damped (Levenberg-Marquardt) rescue takes over
+ * before the block is declared stalled.
  *
  * Stopping follows the Stop Criteria: iterations stop successfully when
  * every relative residual (|lhs-rhs| / |lhs|) is below the tolerance or when
@@ -30,6 +32,18 @@ public class NewtonSolver {
 
     private static final int MAX_HALVINGS = 25;
     private static final double JACOBIAN_EPS = Math.sqrt(Math.ulp(1.0));
+    /** First damping tried when the undamped Newton step cannot descend. */
+    private static final double LM_LAMBDA_MIN = 1.0e-3;
+    /** Damping ceiling: beyond this the damped step is a vanishing nudge. */
+    private static final double LM_LAMBDA_MAX = 1.0e12;
+    /** Consecutive near-flat damped iterations before the mode gives up. */
+    private static final int CREEP_WINDOW = 10;
+    /** An iteration is "creeping" when it reduces the norm by less than this. */
+    private static final double CREEP_REDUCTION = 1.0e-3;
+    /** Above this many unknowns a block uses the sparse machinery: a colored
+     * finite-difference Jacobian (#colors residual sweeps instead of n) and,
+     * when the native toolchain is present, a KLU sparse linear solve. */
+    private static final int SPARSE_THRESHOLD = 50;
 
     private final SolverSettings settings;
     private final Map<String, ProcDef> defs;
@@ -51,6 +65,16 @@ public class NewtonSolver {
     public int solveBlock(Block block, Map<String, Double> values, long deadlineNanos,
                           Map<String, VariableSpec> specs) {
         IterationContext ctx = new IterationContext(block, values, specs);
+        try (com.frees.backend.core.dae.SparseSteadyKlu klu =
+                     ctx.vars.size() > SPARSE_THRESHOLD
+                             ? com.frees.backend.core.dae.SparseSteadyKlu.create(ctx.varToEquations)
+                             : null) {
+            return solveBlockIterate(ctx, klu, block, values, deadlineNanos);
+        }
+    }
+
+    private int solveBlockIterate(IterationContext ctx, com.frees.backend.core.dae.SparseSteadyKlu klu,
+                                  Block block, Map<String, Double> values, long deadlineNanos) {
         double[] x = new double[ctx.vars.size()];
         for (int i = 0; i < ctx.vars.size(); i++) {
             x[i] = values.get(ctx.vars.get(i));
@@ -58,6 +82,8 @@ public class NewtonSolver {
 
         double[] residual = residuals(ctx.equations, ctx.vars, x, values);
         double norm = norm(residual);
+        double lambda = 0.0; // damping carried between iterations; 0 = pure Newton
+        int creep = 0;       // consecutive damped iterations with near-flat progress
 
         for (int iteration = 0; iteration < settings.maxIterations(); iteration++) {
             if (withinResidualTolerance(ctx.equations, ctx.vars, x, residual, values)) {
@@ -71,15 +97,58 @@ public class NewtonSolver {
             }
 
             double[][] jacobian = computeJacobian(ctx, x, residual);
-            double[] step = solveLinear(jacobian, residual);
 
-            LineSearchResult searchResult = backtrackLineSearch(ctx, x, step, norm);
-            double[] candidate = searchResult.candidate;
-            double[] candidateResidual = searchResult.candidateResidual;
-            double candidateNorm = searchResult.candidateNorm;
+            boolean damped = false;
+            double[] candidate;
+            double[] candidateResidual;
+            double candidateNorm;
+            if (lambda > 0.0) {
+                // Damped mode: keep taking damped steps, relaxing the damping
+                // while they descend (the rescue escalates it again on its own
+                // when the relaxed value fails). Once the damping bottoms out,
+                // hand the iteration back to pure Newton. Grinding out only
+                // micro-descents means the iterate sits at a local minimum of
+                // the residual norm — no damping escapes that, so stop early
+                // and let the retry ladder restart from different guesses.
+                if (creep >= CREEP_WINDOW) {
+                    return acceptStalledOrThrow(ctx, x, residual, values, block, iteration, norm);
+                }
+                DampedStep rescue = dampedRescue(ctx, jacobian, x, residual, norm, lambda / 3.0, 1.0);
+                if (rescue == null) {
+                    return acceptStalledOrThrow(ctx, x, residual, values, block, iteration, norm);
+                }
+                candidate = rescue.candidate;
+                candidateResidual = rescue.candidateResidual;
+                candidateNorm = rescue.candidateNorm;
+                lambda = rescue.lambda <= LM_LAMBDA_MIN ? 0.0 : rescue.lambda;
+                creep = candidateNorm > norm * (1.0 - CREEP_REDUCTION) ? creep + 1 : 0;
+                damped = true;
+            } else {
+                double[] step = klu != null
+                        ? solveLinearSparse(ctx, klu, jacobian, residual)
+                        : solveLinear(jacobian, residual);
+                LineSearchResult searchResult = backtrackLineSearch(ctx, x, step, norm);
+                candidate = searchResult.candidate;
+                candidateResidual = searchResult.candidateResidual;
+                candidateNorm = searchResult.candidateNorm;
 
-            if (!Double.isFinite(candidateNorm) || candidateNorm >= norm) {
-                return acceptStalledOrThrow(ctx, x, residual, values, block, iteration, norm);
+                if (!Double.isFinite(candidateNorm) || candidateNorm >= norm) {
+                    // The full and every halved Newton step fail to descend —
+                    // the point where this solver used to give up. Everything
+                    // the damped mode does from here on can only improve on
+                    // the stall the undamped iteration already reached; a
+                    // descending undamped iteration is never interfered with.
+                    DampedStep rescue = dampedRescue(ctx, jacobian, x, residual, norm, 0.0, 1.0);
+                    if (rescue == null) {
+                        return acceptStalledOrThrow(ctx, x, residual, values, block, iteration, norm);
+                    }
+                    candidate = rescue.candidate;
+                    candidateResidual = rescue.candidateResidual;
+                    candidateNorm = rescue.candidateNorm;
+                    lambda = rescue.lambda;
+                    creep = 0;
+                    damped = true;
+                }
             }
 
             double maxChange = 0.0;
@@ -90,8 +159,10 @@ public class NewtonSolver {
             residual = candidateResidual;
             norm = candidateNorm;
 
-            // stop criterion: change in variables below threshold.
-            if (maxChange < settings.changeInVariables()) {
+            // stop criterion: change in variables below threshold. A damped
+            // step is deliberately short, so its size says nothing about
+            // convergence — only an undamped step may trigger this stop.
+            if (!damped && maxChange < settings.changeInVariables()) {
                 return handleConvergenceOrPinning(ctx, x, residual, iteration);
             }
         }
@@ -246,6 +317,9 @@ public class NewtonSolver {
 
     private double[][] numericalJacobian(IterationContext ctx, double[] x, double[] baseResidual) {
         int n = ctx.vars.size();
+        if (n > SPARSE_THRESHOLD) {
+            return numericalJacobianColored(ctx, x, baseResidual);
+        }
         double[][] jacobian = new double[n][n];
         double[] perturbed = x.clone();
         for (int j = 0; j < n; j++) {
@@ -254,6 +328,119 @@ public class NewtonSolver {
         // Restore the unperturbed values.
         writeBack(ctx.vars, x, ctx.values);
         return jacobian;
+    }
+
+    /**
+     * Colored finite-difference Jacobian for large sparse blocks: columns whose
+     * equations never overlap share a color and are perturbed together, so the
+     * whole matrix needs one residual sweep per color instead of one per
+     * variable — the dominant cost in property-laden networks, where each sweep
+     * evaluates every fluid-property call in the block. Columns whose batched
+     * estimate comes back non-finite are redone with the careful per-column
+     * path (range-aware, direction-switching), so cliff robustness is kept
+     * where it matters.
+     */
+    private double[][] numericalJacobianColored(IterationContext ctx, double[] x, double[] baseResidual) {
+        int n = ctx.vars.size();
+        double[][] jacobian = new double[n][n];
+        int[] color = ctx.columnColors();
+        int colors = 0;
+        for (int c : color) {
+            colors = Math.max(colors, c + 1);
+        }
+        double[] probe = new double[n];
+        double[] actual = new double[n];
+        List<Integer> redo = new java.util.ArrayList<>();
+        for (int c = 0; c < colors; c++) {
+            System.arraycopy(x, 0, probe, 0, n);
+            java.util.Arrays.fill(actual, 0.0);
+            boolean any = false;
+            for (int j = 0; j < n; j++) {
+                if (color[j] != c || ctx.varToEquations.get(j).isEmpty()) {
+                    continue;
+                }
+                double h = JACOBIAN_EPS * Math.max(Math.abs(x[j]), 1.0);
+                double p = Math.clamp(x[j] + h, ctx.lo[j], ctx.hi[j]);
+                if (p == x[j]) {
+                    p = Math.clamp(x[j] - h, ctx.lo[j], ctx.hi[j]); // pinned high — probe backward
+                }
+                if (p == x[j]) {
+                    continue; // pinned both ways; column stays 0
+                }
+                probe[j] = p;
+                actual[j] = p - x[j];
+                any = true;
+            }
+            if (!any) {
+                continue;
+            }
+            double[] r = residuals(ctx.equations, ctx.vars, probe, ctx.values);
+            for (int j = 0; j < n; j++) {
+                if (color[j] != c || actual[j] == 0.0) {
+                    continue;
+                }
+                boolean clean = true;
+                for (int i : ctx.varToEquations.get(j)) {
+                    double v = (r[i] - baseResidual[i]) / actual[j];
+                    if (!Double.isFinite(v)) {
+                        clean = false;
+                        break;
+                    }
+                    jacobian[i][j] = v;
+                }
+                if (!clean) {
+                    redo.add(j);
+                }
+            }
+        }
+        double[] perturbed = x.clone();
+        for (int j : redo) {
+            computeJacobianColumn(ctx, x, baseResidual, jacobian, perturbed, j);
+        }
+        writeBack(ctx.vars, x, ctx.values);
+        return jacobian;
+    }
+
+    /**
+     * Sparse linear stage for large blocks: same column equilibration as the
+     * dense path, values packed in the block's fixed CSC pattern, solved by
+     * KLU. Any non-finite entry or native-side refusal (singular pattern,
+     * failed factorization) falls back to the dense LU/SVD path, which keeps
+     * the rank-deficiency behavior identical to small blocks.
+     */
+    private double[] solveLinearSparse(IterationContext ctx, com.frees.backend.core.dae.SparseSteadyKlu klu,
+                                       double[][] jacobian, double[] residual) {
+        int n = ctx.vars.size();
+        double[] d = new double[n];
+        for (int j = 0; j < n; j++) {
+            double c = 0.0;
+            for (int i : ctx.varToEquations.get(j)) {
+                double v = jacobian[i][j];
+                c += v * v;
+            }
+            c = Math.sqrt(c);
+            d[j] = (c > 0.0 && Double.isFinite(c)) ? 1.0 / c : 1.0;
+        }
+        double[] packed = new double[klu.nonzeros()];
+        int pos = 0;
+        for (int j = 0; j < n; j++) {
+            for (int i : ctx.varToEquations.get(j)) {
+                double v = jacobian[i][j] * d[j];
+                if (!Double.isFinite(v)) {
+                    return solveLinear(jacobian, residual);
+                }
+                packed[pos++] = v;
+            }
+        }
+        double[] y = klu.solve(packed, residual);
+        if (y == null) {
+            return solveLinear(jacobian, residual);
+        }
+        double[] step = new double[n];
+        for (int j = 0; j < n; j++) {
+            step[j] = d[j] * y[j];
+        }
+        return step;
     }
 
     /**
@@ -445,6 +632,8 @@ public class NewtonSolver {
         final double[] lo;
         final double[] hi;
         final List<List<Integer>> varToEquations;
+        private final List<java.util.Set<String>> eqVars;
+        private int[] columnColors;
 
         IterationContext(Block block, Map<String, Double> values, Map<String, VariableSpec> specs) {
             this.blockIndex = block.index();
@@ -462,7 +651,7 @@ public class NewtonSolver {
 
             // Precompute sparse dependency matrix to avoid O(N^2) evaluations
             varToEquations = new java.util.ArrayList<>(n);
-            List<java.util.Set<String>> eqVars = new java.util.ArrayList<>(equations.size());
+            eqVars = new java.util.ArrayList<>(equations.size());
             for (Equation eq : equations) {
                 eqVars.add(eq.variables());
             }
@@ -477,6 +666,32 @@ public class NewtonSolver {
                 varToEquations.add(deps);
             }
         }
+
+        /** Distance-1 coloring of the columns (computed once per block): columns
+         *  sharing a color touch disjoint equation sets, so one perturbed
+         *  residual sweep fills all of them. */
+        int[] columnColors() {
+            if (columnColors == null) {
+                int n = vars.size();
+                int[][] sparsityRows = new int[equations.size()][];
+                Map<String, Integer> index = java.util.HashMap.newHashMap(n);
+                for (int j = 0; j < n; j++) {
+                    index.put(vars.get(j), j);
+                }
+                for (int i = 0; i < equations.size(); i++) {
+                    java.util.TreeSet<Integer> cols = new java.util.TreeSet<>();
+                    for (String v : eqVars.get(i)) {
+                        Integer c = index.get(v);
+                        if (c != null) {
+                            cols.add(c);
+                        }
+                    }
+                    sparsityRows[i] = cols.stream().mapToInt(Integer::intValue).toArray();
+                }
+                columnColors = com.frees.backend.core.dae.DaeJacobian.colorColumns(sparsityRows, n);
+            }
+            return columnColors;
+        }
     }
 
     private static class LineSearchResult {
@@ -489,6 +704,110 @@ public class NewtonSolver {
             this.candidateResidual = candidateResidual;
             this.candidateNorm = candidateNorm;
         }
+    }
+
+    /** An accepted damped step and the damping value that produced it. */
+    private static final class DampedStep {
+        final double[] candidate;
+        final double[] candidateResidual;
+        final double candidateNorm;
+        final double lambda;
+
+        DampedStep(double[] candidate, double[] candidateResidual, double candidateNorm, double lambda) {
+            this.candidate = candidate;
+            this.candidateResidual = candidateResidual;
+            this.candidateNorm = candidateNorm;
+            this.lambda = lambda;
+        }
+    }
+
+    /**
+     * Damped-step rescue (Levenberg-Marquardt): when the pure Newton direction
+     * cannot descend — a near-singular or badly scaled Jacobian, or a step that
+     * overshoots past the property surface's valid region — solve the damped
+     * normal equations (JᵀJ + λ·diag(JᵀJ))·δ = Jᵀr instead, escalating λ until
+     * a norm-reducing candidate appears. Small λ recovers the Newton step;
+     * large λ yields a short, per-variable-scaled descent step that stays
+     * inside the valid region. Diagonal scaling makes the damping invariant to
+     * variable units, the same job the column equilibration does for the
+     * undamped path. A candidate is accepted when its norm drops below
+     * {@code acceptFactor * norm} (1.0 = any descent, for stalls; smaller
+     * demands a decisive improvement, for creep escapes). Returns {@code null}
+     * when no damping achieves that — the caller then reports the stall
+     * exactly as before this rescue existed.
+     */
+    private DampedStep dampedRescue(IterationContext ctx, double[][] jacobian,
+                                    double[] x, double[] residual, double norm,
+                                    double previousLambda, double acceptFactor) {
+        int n = x.length;
+        double[][] jtj = new double[n][n];
+        double[] jtr = new double[n];
+        boolean anyRow = false;
+        for (int i = 0; i < n; i++) {
+            // Rows stuck in an invalid region (NaN residual or derivative)
+            // carry no direction — leave them out of the normal equations.
+            if (!Double.isFinite(residual[i]) || !finiteRow(jacobian[i])) {
+                continue;
+            }
+            anyRow = true;
+            double[] row = jacobian[i];
+            for (int j = 0; j < n; j++) {
+                jtr[j] += row[j] * residual[i];
+                for (int k = 0; k < n; k++) {
+                    jtj[j][k] += row[j] * row[k];
+                }
+            }
+        }
+        double maxDiag = 0.0;
+        for (int j = 0; j < n; j++) {
+            maxDiag = Math.max(maxDiag, jtj[j][j]);
+        }
+        if (!anyRow || maxDiag <= 0.0 || !Double.isFinite(maxDiag)) {
+            return null; // no usable curvature information at this point
+        }
+        double diagFloor = 1.0e-12 * maxDiag; // keeps zero columns damped too
+
+        for (double lam = Math.max(LM_LAMBDA_MIN, previousLambda); lam <= LM_LAMBDA_MAX; lam *= 10.0) {
+            double[][] damped = new double[n][n];
+            for (int j = 0; j < n; j++) {
+                System.arraycopy(jtj[j], 0, damped[j], 0, n);
+                damped[j][j] += lam * Math.max(jtj[j][j], diagFloor);
+            }
+            double[] delta;
+            try {
+                delta = new LUDecomposition(new Array2DRowRealMatrix(damped, false))
+                        .getSolver().solve(new ArrayRealVector(jtr, false)).toArray();
+            } catch (SingularMatrixException e) {
+                continue; // more damping regularizes further
+            }
+            double[] candidate = new double[n];
+            boolean moved = false;
+            for (int i = 0; i < n; i++) {
+                candidate[i] = Math.clamp(x[i] - delta[i], ctx.lo[i], ctx.hi[i]);
+                moved |= candidate[i] != x[i];
+            }
+            if (!moved) {
+                return null; // pinned at bounds: shorter steps cannot unpin
+            }
+            double[] candidateResidual = residuals(ctx.equations, ctx.vars, candidate, ctx.values);
+            double candidateNorm = norm(candidateResidual);
+            // A finite norm beats a non-finite one: a damped step that walks
+            // the iterate back onto the valid property surface is progress.
+            if (Double.isFinite(candidateNorm)
+                    && (!Double.isFinite(norm) || candidateNorm < norm * acceptFactor)) {
+                return new DampedStep(candidate, candidateResidual, candidateNorm, lam);
+            }
+        }
+        return null;
+    }
+
+    private static boolean finiteRow(double[] row) {
+        for (double v : row) {
+            if (!Double.isFinite(v)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private LineSearchResult backtrackLineSearch(IterationContext ctx, double[] x, double[] step, double norm) {

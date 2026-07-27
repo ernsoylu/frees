@@ -16,6 +16,7 @@ import com.frees.backend.units.UnitRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -119,7 +120,13 @@ public class SolveController {
                                 List<SolveDtos.ResidueExpansionDto> residueExpansions,
                                 // Per-component-instance identity + parameter bindings,
                                 // for the Variable Explorer's component datasheet view.
-                                List<SolveDtos.ComponentDto> components) {
+                                List<SolveDtos.ComponentDto> components,
+                                // Index of the Tarjan block whose solve gave up, or
+                                // null when the failure carries no block information.
+                                Integer failedBlockIndex,
+                                // Tornado breakdown: per uncertain variable, the ranked
+                                // per-source contributions its uncertainty RSS-combines.
+                                List<SolveDtos.VariableUncertaintyDto> uncertaintyBreakdown) {
 
         static SolveResponse failure(String error) {
             return failure(error, null);
@@ -128,7 +135,8 @@ public class SolveController {
         static SolveResponse failure(String error, Integer errorLine) {
             return new SolveResponse(false, List.of(), List.of(), List.of(), null,
                     List.of(), List.of(), error, List.of(), List.of(), List.of(),
-                    List.of(), errorLine, List.of(), List.of(), List.of(), List.of());
+                    List.of(), errorLine, List.of(), List.of(), List.of(), List.of(), null,
+                    List.of());
         }
     }
 
@@ -180,7 +188,7 @@ public class SolveController {
             // can be called there.
             cacheDefsOnly(sessionId, request);
             return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
-                    .body(SolveResponse.failure(e.getMessage()));
+                    .body(solverFailureResponse(e));
         } catch (Exception e) {
             log.error("Unexpected error while solving equations", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -284,7 +292,75 @@ public class SolveController {
                 stateTablesOf(parsed.stateTables()),
                 odeTablesOf(result.odeTables(), unitsByLower),
                 result.residueExpansions(),
-                ComponentMetadata.build(cleanText, variableDtos));
+                ComponentMetadata.build(cleanText, variableDtos),
+                null,
+                uncertaintyBreakdownOf(result));
+    }
+
+    /** Tornado breakdown DTOs: per dependent variable (display-named, internal
+     *  temps dropped), its propagated sigma and each source's signed
+     *  contribution, largest first; variables ranked by sigma. */
+    private List<SolveDtos.VariableUncertaintyDto> uncertaintyBreakdownOf(EquationSystemSolver.Result result) {
+        Map<String, String> names = result.displayNames();
+        return result.uncertaintyContributions().entrySet().stream()
+                .filter(e -> !isInternalTemp(e.getKey()))
+                .map(e -> new SolveDtos.VariableUncertaintyDto(
+                        names.getOrDefault(e.getKey(), e.getKey()),
+                        result.uncertainties().getOrDefault(e.getKey(), 0.0),
+                        e.getValue().stream()
+                                .limit(16)
+                                .map(c -> new SolveDtos.UncertaintyContributionDto(
+                                        names.getOrDefault(c.source(), c.source()), c.value()))
+                                .toList()))
+                .sorted((a, b) -> Double.compare(b.total(), a.total()))
+                .toList();
+    }
+
+    /**
+     * Failure envelope for a solver exception: the bare message when nothing
+     * more is known, or — when the solver attached its failure state — the
+     * block structure, every finite residual at the point of failure, partial
+     * stats and the failing block index, so the client renders diagnostics
+     * instead of a one-liner. Shared by the sync 422 path and the async
+     * compute worker so both produce one failure shape.
+     */
+    public SolveResponse solverFailureResponse(SolverException e) {
+        EquationSystemSolver.Result partial = e.partialResult();
+        if (partial == null) {
+            return SolveResponse.failure(e.getMessage());
+        }
+        SolverException.FailureState state = e.failureState();
+        return new SolveResponse(
+                false,
+                List.of(),
+                partial.blocks().stream()
+                        .map(b -> toBlockDto(b, partial.displayNames()))
+                        .toList(),
+                partial.residuals().stream()
+                        .filter(r -> Double.isFinite(r.residual()))
+                        .map(r -> new SolveDtos.ResidualDto(r.equation(), r.residual()))
+                        .toList(),
+                new SolveDtos.StatsDto(
+                        partial.stats().equationCount(),
+                        partial.stats().unknownCount(),
+                        partial.stats().blockCount(),
+                        partial.stats().iterations(),
+                        partial.stats().elapsedMillis(),
+                        partial.stats().maxResidual()),
+                List.of(),
+                List.of(),
+                e.getMessage(),
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of(),
+                null,
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of(),
+                state != null ? state.failedBlockIndex() : null,
+                List.of());
     }
 
     /** Quick synchronous syntax check used by the asynchronous path to reject
@@ -383,6 +459,34 @@ public class SolveController {
             List<SolveDtos.VariableDto> variables
     ) {}
 
+    /**
+     * Largest parametric table a single request may run, and the wall-clock
+     * budget for the whole run.
+     *
+     * <p>The solver's {@code MAX_ELAPSED_SECONDS_CAP} is a PER-SOLVE cap, and a
+     * table performs one solve per row — times up to {@link #MAX_PARAMETRIC_PASSES}
+     * when accessors are present. Nothing bounded the product, so a single
+     * request could occupy a compute worker for far longer than the per-solve
+     * cap suggests, and three of them could hold the whole tier until the
+     * broker's consumer timeout eventually tore the connections down. The row
+     * count bounds the work admitted; the deadline bounds it in time even when
+     * individual rows turn out to be slow. Both are overridable per deployment
+     * via {@code frees.solver.max-table-rows} / {@code -seconds}.
+     */
+    @Value("${frees.solver.max-table-rows:5000}")
+    private int maxTableRows;
+
+    @Value("${frees.solver.max-table-seconds:120}")
+    private long maxTableSeconds;
+
+    /** One chunk of a chunked table run: the sliced request plus its position. */
+    public record TableChunkRequest(SolveTableRequest request, int chunkIndex, int chunkCount) {}
+
+    /** Rows per chunk when a large accessor-free table fans out across the
+     *  compute workers; a table at or under one chunk stays a single task. */
+    @Value("${frees.solver.table-chunk-size:250}")
+    private int tableChunkSize;
+
     @PostMapping("/solve/table")
     public ResponseEntity<?> solveTable(@RequestBody SolveTableRequest request) {
         if (request.text() == null || request.text().isBlank()) {
@@ -391,16 +495,83 @@ public class SolveController {
         if (request.table() == null || request.table().rows() == null) {
             return ResponseEntity.badRequest().build();
         }
+        // Reject before enqueueing, so an oversized run never reaches a worker.
+        if (request.table().rows().size() > maxTableRows) {
+            return ResponseEntity.unprocessableEntity().body(Map.of("error", tooManyRowsMessage(
+                    request.table().rows().size())));
+        }
         if (dispatcher != null) {
             try {
                 solver.parse(request.text());
             } catch (EquationParser.ParseException e) {
                 return ResponseEntity.badRequest().build();
             }
+            // Large accessor-free tables fan out as row chunks across the
+            // compute workers; accessor tables keep their table-wide
+            // fixed-point semantics and stay one serial task.
+            List<Map<String, Double>> rows = request.table().rows();
+            if (rows.size() > tableChunkSize && !mentionsParametricAccessor(request.text())) {
+                return ResponseEntity.accepted().body(dispatchChunked(request, rows));
+            }
             JobTicket ticket = dispatcher.dispatch(ComputeTask.SOLVE_TABLE, null, request);
             return ResponseEntity.accepted().body(ticket);
         }
         return ResponseEntity.ok(computeSolveTable(request));
+    }
+
+    private JobTicket dispatchChunked(SolveTableRequest request, List<Map<String, Double>> rows) {
+        String jobId = java.util.UUID.randomUUID().toString();
+        int count = (rows.size() + tableChunkSize - 1) / tableChunkSize;
+        dispatcher.beginChunked(jobId, count);
+        for (int i = 0; i < count; i++) {
+            List<Map<String, Double>> slice = List.copyOf(rows.subList(i * tableChunkSize,
+                    Math.min(rows.size(), (i + 1) * tableChunkSize)));
+            SolveTableRequest chunkRequest = new SolveTableRequest(request.text(),
+                    request.stopCriteria(), request.variableInfo(), request.displayUnitSystem(),
+                    new TableDto(request.table().variables(), slice), request.functionTables());
+            dispatcher.publishChunk(jobId, new TableChunkRequest(chunkRequest, i, count));
+        }
+        return JobTicket.pending(jobId);
+    }
+
+    /**
+     * Reassembles per-chunk responses (in chunk order) into one table
+     * response: rows concatenate, counters sum, the elapsed time is the
+     * slowest chunk (the parallel wall clock), and the variable list comes
+     * from the first chunk (identical across chunks by construction).
+     */
+    public static SolveTableResponse aggregateChunks(List<SolveTableResponse> chunks) {
+        List<TableRowResult> results = new ArrayList<>();
+        int runs = 0;
+        int solved = 0;
+        int failed = 0;
+        int iterations = 0;
+        int equations = 0;
+        int unknowns = 0;
+        long elapsed = 0;
+        double maxResidual = 0.0;
+        List<SolveDtos.VariableDto> variables = List.of();
+        for (SolveTableResponse chunk : chunks) {
+            results.addAll(chunk.results());
+            TableStatsDto s = chunk.stats();
+            if (s != null) {
+                runs += s.runs();
+                solved += s.solved();
+                failed += s.failed();
+                iterations += s.iterations();
+                equations = s.equations();
+                unknowns = s.unknowns();
+                elapsed = Math.max(elapsed, s.elapsedMillis());
+                maxResidual = Math.max(maxResidual, s.maxResidual());
+            }
+            if (variables.isEmpty()) {
+                variables = chunk.variables();
+            }
+        }
+        return new SolveTableResponse(results,
+                new TableStatsDto(runs, solved, failed, equations, unknowns, iterations,
+                        elapsed, maxResidual),
+                variables);
     }
 
     /**
@@ -409,6 +580,14 @@ public class SolveController {
      */
     public SolveTableResponse computeSolveTable(SolveTableRequest request) {
         String cleanText = request.text();
+
+        // Re-checked here, not just at the endpoint: this is also the compute
+        // worker's entry point, and it deserialises the request off the queue.
+        List<Map<String, Double>> requestedRows = request.table().rows();
+        if (requestedRows != null && requestedRows.size() > maxTableRows) {
+            throw new IllegalStateException(tooManyRowsMessage(requestedRows.size()));
+        }
+        TableDeadline deadline = new TableDeadline(System.nanoTime(), maxTableSeconds);
 
         SolverSettings settings = request.stopCriteria() != null
                 ? request.stopCriteria().toSettings()
@@ -436,8 +615,8 @@ public class SolveController {
         List<String> varOrder = request.table().variables() != null
                 ? request.table().variables() : List.of();
         List<RowOutcome> outcomes = mentionsParametricAccessor(cleanText)
-                ? solveTableWithAccessors(rows, varOrder, context)
-                : solveTableRows(rows, context);
+                ? solveTableWithAccessors(rows, varOrder, context, deadline)
+                : solveTableRows(rows, context, deadline);
 
         List<TableRowResult> results = new ArrayList<>();
         for (RowOutcome outcome : outcomes) {
@@ -485,13 +664,178 @@ public class SolveController {
             Map<String, ProcDef> functionDefs
     ) {}
 
+    // ── Monte Carlo uncertainty ─────────────────────────────────────────────
+
+    public record MonteCarloRequest(
+            String text,
+            SolverApiSupport.StopCriteriaDto stopCriteria,
+            List<SolverApiSupport.VariableInfoDto> variableInfo,
+            String displayUnitSystem,
+            List<SolveDtos.FunctionTableDto> functionTables,
+            Integer samples,
+            Long seed
+    ) {}
+
+    public record McVariableDto(String variable, double mean, double sigma,
+                                double p5, double p50, double p95, double firstOrderSigma) {}
+
+    public record MonteCarloResponse(
+            List<McVariableDto> stats,
+            List<TableRowResult> samples,
+            List<String> sources,
+            int requestedSamples,
+            int failedSamples,
+            boolean truncated
+    ) {}
+
+    /** Sample-count and wall-clock budgets, same reasoning as the table run:
+     *  the per-solve cap times N is unbounded without them. */
+    @Value("${frees.solver.max-mc-samples:1000}")
+    private int maxMcSamples;
+
+    @Value("${frees.solver.max-mc-seconds:120}")
+    private long maxMcSeconds;
+
+    @PostMapping("/solve/montecarlo")
+    public ResponseEntity<Object> monteCarlo(@RequestBody MonteCarloRequest request) {
+        if (request.text() == null || request.text().isBlank()) {
+            return ResponseEntity.badRequest().build();
+        }
+        int n = request.samples() != null ? request.samples() : 200;
+        // Reject before enqueueing, so an oversized run never reaches a worker.
+        if (n < 2 || n > maxMcSamples) {
+            return ResponseEntity.unprocessableEntity()
+                    .body(Map.of("error", badSampleCountMessage(n)));
+        }
+        if (dispatcher != null) {
+            try {
+                solver.parse(request.text());
+            } catch (EquationParser.ParseException e) {
+                return ResponseEntity.badRequest().build();
+            }
+            JobTicket ticket = dispatcher.dispatch(ComputeTask.MONTE_CARLO, null, request);
+            return ResponseEntity.accepted().body(ticket);
+        }
+        return ResponseEntity.ok(computeMonteCarlo(request));
+    }
+
+    /**
+     * Runs the Monte Carlo sampling end-to-end and returns the response DTO.
+     * Used by the synchronous path and the asynchronous compute worker. The
+     * sampling loop truncates itself at the wall-clock budget (an early stop
+     * shrinks the sample count without biasing the statistics), so unlike the
+     * table run there is no mid-flight abort.
+     */
+    public MonteCarloResponse computeMonteCarlo(MonteCarloRequest request) {
+        int n = request.samples() != null ? request.samples() : 200;
+        // Re-checked here, not just at the endpoint: this is also the compute
+        // worker's entry point, and it deserialises the request off the queue.
+        if (n < 2 || n > maxMcSamples) {
+            throw new IllegalStateException(badSampleCountMessage(n));
+        }
+        long seed = request.seed() != null ? request.seed() : 42L;
+        SolverSettings settings = request.stopCriteria() != null
+                ? request.stopCriteria().toSettings()
+                : cappedDefaults();
+        Map<String, VariableSpec> specs = specsOf(request.variableInfo());
+        Map<String, ProcDef> functionDefs = SolveDtos.functionDefsOf(request.functionTables());
+        long deadlineNanos = System.nanoTime() + maxMcSeconds * 1_000_000_000L;
+
+        MonteCarlo.Outcome outcome = MonteCarlo.run(solver, request.text(), settings, specs,
+                functionDefs, n, seed, deadlineNanos);
+
+        Map<String, String> names = solver.parse(request.text()).displayNames();
+        Map<String, String> unitsByLower =
+                unitsByLowerName(request.text(), request.variableInfo(), solver);
+        UnitRegistry.UnitSystem system = unitSystem(request.displayUnitSystem());
+        Map<String, String> explicitUnits = unitsByVariable(request.variableInfo());
+        java.util.function.ToDoubleBiFunction<String, Double> disp = (name, v) ->
+                toDisplay(name, v, unitsByLower.getOrDefault(name.toLowerCase(), ""),
+                        system, explicitUnits).value();
+
+        List<McVariableDto> stats = outcome.stats().stream()
+                .filter(s -> !isInternalTemp(s.variable()))
+                .map(s -> {
+                    double mean = disp.applyAsDouble(s.variable(), s.mean());
+                    // Sigmas are differences: offset units (degC) scale them by
+                    // the factor alone, so convert as a delta about the mean.
+                    double sigma = disp.applyAsDouble(s.variable(), s.mean() + s.sigma()) - mean;
+                    double firstOrder = disp.applyAsDouble(s.variable(), s.mean() + s.firstOrderSigma()) - mean;
+                    return new McVariableDto(
+                            names.getOrDefault(s.variable(), s.variable()),
+                            mean, sigma,
+                            disp.applyAsDouble(s.variable(), s.p5()),
+                            disp.applyAsDouble(s.variable(), s.p50()),
+                            disp.applyAsDouble(s.variable(), s.p95()),
+                            firstOrder);
+                })
+                .sorted((a, b) -> Double.compare(Math.abs(b.sigma()), Math.abs(a.sigma())))
+                .toList();
+
+        List<TableRowResult> sampleRows = outcome.samples().stream()
+                .map(s -> {
+                    if (!s.success()) {
+                        return new TableRowResult(false, Map.of(), s.error());
+                    }
+                    Map<String, Double> row = new HashMap<>();
+                    for (Map.Entry<String, Double> e : s.values().entrySet()) {
+                        if (!isInternalTemp(e.getKey())) {
+                            row.put(names.getOrDefault(e.getKey(), e.getKey()),
+                                    disp.applyAsDouble(e.getKey(), e.getValue()));
+                        }
+                    }
+                    return new TableRowResult(true, row, null);
+                })
+                .toList();
+
+        List<String> sources = outcome.sources().stream()
+                .map(s -> names.getOrDefault(s, s))
+                .toList();
+        return new MonteCarloResponse(stats, sampleRows, sources, n,
+                outcome.failedSamples(), outcome.truncated());
+    }
+
+    private String badSampleCountMessage(int n) {
+        return "Monte Carlo sample count must be between 2 and " + maxMcSamples
+                + " (got " + n + "). Adjust the sample count.";
+    }
+
     /** Solves every parametric row independently (the common, accessor-free case). */
-    private List<RowOutcome> solveTableRows(List<Map<String, Double>> rows, TableRowContext context) {
+    private List<RowOutcome> solveTableRows(List<Map<String, Double>> rows, TableRowContext context,
+                                            TableDeadline deadline) {
         List<RowOutcome> outcomes = new ArrayList<>();
         for (Map<String, Double> row : rows) {
+            deadline.check();
             outcomes.add(solveTableRow(row, context));
         }
         return outcomes;
+    }
+
+    private String tooManyRowsMessage(int rows) {
+        return "The parametric table has too many rows (" + rows + "; limit "
+                + maxTableRows + "). Reduce the run count.";
+    }
+
+    /**
+     * Wall-clock budget for one whole table run, checked between rows and
+     * between fixed-point passes.
+     *
+     * <p>Cooperative rather than a cancelling timeout on purpose: the row loop
+     * returns control between solves, so checking here reliably stops the work,
+     * whereas interrupting a solve mid-flight would leave a thread running
+     * inside solver/native code with no guarantee it notices — which is how a
+     * worker ends up pinned even after its job is declared dead.
+     */
+    private record TableDeadline(long startNanos, long budgetSeconds) {
+        void check() {
+            long elapsed = (System.nanoTime() - startNanos) / 1_000_000_000L;
+            if (elapsed >= budgetSeconds) {
+                throw new IllegalStateException(
+                        "The parametric run exceeded its " + budgetSeconds
+                        + "-second budget and was stopped. Reduce the number of runs, or "
+                        + "tighten the stop criteria so each run converges faster.");
+            }
+        }
     }
 
     /** Maximum table-wide fixed-point passes when accessors are present. */
@@ -506,12 +850,16 @@ public class SolveController {
      * columns stop changing.
      */
     private List<RowOutcome> solveTableWithAccessors(List<Map<String, Double>> rows,
-                                                     List<String> varOrder, TableRowContext context) {
+                                                     List<String> varOrder, TableRowContext context,
+                                                     TableDeadline deadline) {
         Map<String, double[]> columns = new HashMap<>();
         List<RowOutcome> outcomes = new ArrayList<>();
         for (int pass = 0; pass < MAX_PARAMETRIC_PASSES; pass++) {
             outcomes = new ArrayList<>();
             for (int i = 0; i < rows.size(); i++) {
+                // This is the worst multiplier in the request: every row is
+                // re-solved on every pass, so the budget is checked per row.
+                deadline.check();
                 ParametricAccessorContext.install(i + 1, rows.size(), columns, varOrder);
                 try {
                     outcomes.add(solveTableRow(rows.get(i), context));

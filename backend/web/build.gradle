@@ -4,6 +4,14 @@ plugins {
     id 'io.spring.dependency-management' version '1.1.7'
 }
 
+// Override the netty version Spring Boot's BOM manages. 4.2.15.Final ships a
+// Bzip2Decoder whose RLE state machine can spin forever (CVE-2026-59901),
+// stalling an event-loop thread. Netty arrives transitively (Lettuce/Redis and
+// the AMQP client), so the BOM's version is what governs it and this property
+// is the supported way to move it ahead of a Boot release. Drop this once the
+// managed version reaches 4.2.16.Final on its own.
+ext['netty.version'] = '4.2.16.Final'
+
 // frees-web: the Spring Boot server (REST API, async RabbitMQ task dispatch,
 // Redis job store). Contains no computational logic of its own — it wraps
 // frees-core, translating HTTP/async requests into calls against it.
@@ -18,7 +26,7 @@ dependencies {
     // legacy Jackson 2 (com.fasterxml.jackson) databind module transitively —
     // this module needs it explicitly for JacksonConfig's Jackson 2 ObjectMapper
     // bean (Redis/RabbitMQ payload serialization; see JacksonConfig javadoc).
-    implementation 'com.fasterxml.jackson.core:jackson-databind:2.22.0'
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.22.1'
 
     // Asynchronous Compute Architecture
     implementation 'org.springframework.boot:spring-boot-starter-amqp'
@@ -30,6 +38,10 @@ dependencies {
     // trace-context propagation (TraceContextInjector / ComputeTaskListener)
     // uses. Replaces the former community opentelemetry-spring-boot-starter.
     implementation 'org.springframework.boot:spring-boot-starter-opentelemetry'
+    // OpenAPI 3 spec generated from the controllers at /api/openapi (path set
+    // in application.properties so the frontend nginx /api proxy carries it).
+    // Spec-only — no Swagger UI webjar surface.
+    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-api:3.0.3'
 
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     // Boot 4 split the web-MVC test slice (MockMvc / @AutoConfigureMockMvc) out

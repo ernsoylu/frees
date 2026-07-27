@@ -6,11 +6,16 @@ services:
   otel-collector:
     image: otel/opentelemetry-collector-contrib:0.110.0
     container_name: frees-otel-collector
+    restart: unless-stopped
     command: ["--config=/etc/otelcol/config.yaml"]
     volumes:
       - ./observability/otel-collector-config.yaml:/etc/otelcol/config.yaml:ro
+    # Loopback-only. Every service that exports traces reaches the collector
+    # over the compose network by name (otel-collector:4317); this host mapping
+    # exists solely so you can point a local tool at it. Published on 0.0.0.0 it
+    # would let anyone on the LAN inject arbitrary spans.
     ports:
-      - "4317:4317"   # OTLP gRPC
+      - "127.0.0.1:4317:4317"   # OTLP gRPC
     depends_on:
       jaeger:
         condition: service_started
@@ -18,16 +23,27 @@ services:
   jaeger:
     image: jaegertracing/all-in-one:1.62.0
     container_name: frees-jaeger
+    restart: unless-stopped
     environment:
       - COLLECTOR_OTLP_ENABLED=true
+    # Loopback-only: the Jaeger UI has NO authentication, and every trace it
+    # holds carries request URIs — including /api/repl/variables?sessionId=...,
+    # which is the only thing protecting a user's solved workspace — plus the
+    # full internal service topology.
     ports:
-      - "16686:16686" # Jaeger UI
+      - "127.0.0.1:16686:16686" # Jaeger UI
 
   redis:
     image: redis:7-alpine
     container_name: frees-redis
+    restart: unless-stopped
+    # Loopback-only: no password is configured, so the only thing keeping a LAN
+    # neighbour out of the job store and REPL session cache is Redis's
+    # protected-mode default — which silently stops applying the moment a
+    # password or a bind directive is added. The app reaches Redis over the
+    # compose network, so nothing needs this published.
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -37,9 +53,14 @@ services:
   rabbitmq:
     image: rabbitmq:3-management-alpine
     container_name: frees-rabbitmq
+    restart: unless-stopped
+    # Loopback-only: the management UI on 15672 is a login page for a broker
+    # still using the default guest credentials (remote guest login is refused
+    # by RabbitMQ's loopback-user default, but there is no reason to offer the
+    # surface), and 5672 is the task queue itself.
     ports:
-      - "5672:5672"
-      - "15672:15672"
+      - "127.0.0.1:5672:5672"
+      - "127.0.0.1:15672:15672"
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
       interval: 5s
@@ -49,6 +70,7 @@ services:
   api-node:
     build: ./backend
     container_name: frees-api-node
+    restart: unless-stopped
     environment:
       - SPRING_PROFILES_ACTIVE=api
       - SPRING_RABBITMQ_HOST=rabbitmq
@@ -86,6 +108,12 @@ services:
     build: ./backend
     deploy:
       replicas: 3
+    # A solve that exhausts the JVM heap kills the worker process; without a
+    # restart policy that permanently shrinks the compute tier until a manual
+    # `frees.sh start`. Restarting is safe: the poison-message guard
+    # (frees.compute.drop-redelivered) fails the offending job on redelivery
+    # instead of letting it crash-loop the fresh worker.
+    restart: unless-stopped
     environment:
       - SPRING_PROFILES_ACTIVE=compute
       - SPRING_RABBITMQ_HOST=rabbitmq
@@ -113,6 +141,7 @@ services:
   mdf-sidecar:
     build: ./mdf-sidecar
     container_name: frees-mdf-sidecar
+    restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8090/health')\" || exit 1"]
       interval: 10s
@@ -131,9 +160,27 @@ services:
     environment:
       BUILD_COMMIT: ${VITE_COMMIT_HASH:-}
       BACKEND_HOST: api-node
+      # Which upstream hops may set the client-address header, and which header
+      # carries it (see docker-entrypoint.d/10-real-ip.sh). Empty by default:
+      # with a docker-published port the peer is always the bridge gateway, so
+      # trusting it would let any client forge its own address. Set these ONLY
+      # from what the edge measurably does — the address it reaches nginx from,
+      # and the header it actually sets. Behind Cloudflare that is
+      # "100.64.0.0/10" + "CF-Connecting-IP" (X-Forwarded-For is replaced by
+      # Cloudflare and carries no client address); a plain tunnel appends
+      # X-Forwarded-For normally and needs only its own range.
+      TRUSTED_PROXY_CIDRS: ${TRUSTED_PROXY_CIDRS:-}
+      TRUSTED_PROXY_HEADER: ${TRUSTED_PROXY_HEADER:-}
     container_name: frees-frontend
+    restart: unless-stopped
+    # The ONLY port meant to carry traffic — and the only one whose bind address
+    # is configurable, because the right answer differs per deployment. Defaults
+    # to loopback (a personal machine, where http://localhost:5173 is all you
+    # need). A homelab fronted by a tunnel whose agent runs off-host needs it
+    # reachable: set FREES_FRONTEND_BIND=0.0.0.0 — but only once the tunnel, not
+    # the LAN, is what reaches it.
     ports:
-      - "5173:8080"
+      - "${FREES_FRONTEND_BIND:-127.0.0.1}:5173:8080"
     depends_on:
       api-node:
         condition: service_healthy

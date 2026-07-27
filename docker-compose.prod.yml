@@ -6,11 +6,14 @@ services:
   otel-collector:
     image: otel/opentelemetry-collector-contrib:0.110.0
     container_name: frees-otel-collector
+    restart: unless-stopped
     command: ["--config=/etc/otelcol/config.yaml"]
     volumes:
       - ./observability/otel-collector-config.yaml:/etc/otelcol/config.yaml:ro
     ports:
-      - "4317:4317"   # OTLP gRPC
+    # Loopback-only: services reach the collector over the compose network by
+    # name; published on 0.0.0.0 anyone on the LAN could inject spans.
+      - "127.0.0.1:4317:4317"   # OTLP gRPC
     depends_on:
       jaeger:
         condition: service_started
@@ -18,16 +21,22 @@ services:
   jaeger:
     image: jaegertracing/all-in-one:1.62.0
     container_name: frees-jaeger
+    restart: unless-stopped
     environment:
       - COLLECTOR_OTLP_ENABLED=true
     ports:
-      - "16686:16686" # Jaeger UI
+    # Loopback-only: the Jaeger UI is UNAUTHENTICATED and its traces carry
+    # request URIs (incl. ?sessionId=...) and the full service topology.
+      - "127.0.0.1:16686:16686" # Jaeger UI
 
   redis:
     image: redis:7-alpine
     container_name: frees-redis
+    restart: unless-stopped
     ports:
-      - "6379:6379"
+    # Loopback-only: no password; protected-mode is the sole barrier, and it
+    # stops applying as soon as a password or bind directive is added.
+      - "127.0.0.1:6379:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -37,9 +46,12 @@ services:
   rabbitmq:
     image: rabbitmq:3-management-alpine
     container_name: frees-rabbitmq
+    restart: unless-stopped
     ports:
-      - "5672:5672"
-      - "15672:15672"
+    # Loopback-only: management UI on default guest credentials, and the task
+    # queue itself on 5672.
+      - "127.0.0.1:5672:5672"
+      - "127.0.0.1:15672:15672"
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
       interval: 5s
@@ -49,6 +61,7 @@ services:
   api-node:
     image: ghcr.io/ernsoylu/frees-backend:latest
     container_name: frees-api-node
+    restart: unless-stopped
     environment:
       - SPRING_PROFILES_ACTIVE=api
       - SPRING_RABBITMQ_HOST=rabbitmq
@@ -83,6 +96,11 @@ services:
     image: ghcr.io/ernsoylu/frees-backend:latest
     deploy:
       replicas: 3
+    # A solve that exhausts the JVM heap kills the worker process; without a
+    # restart policy that permanently shrinks the compute tier. Restarting is
+    # safe: the poison-message guard (frees.compute.drop-redelivered) fails the
+    # offending job on redelivery instead of crash-looping the fresh worker.
+    restart: unless-stopped
     environment:
       - SPRING_PROFILES_ACTIVE=compute
       - SPRING_RABBITMQ_HOST=rabbitmq
@@ -110,9 +128,19 @@ services:
     environment:
       BUILD_COMMIT: latest
       BACKEND_HOST: api-node
+      # Upstream hops allowed to set the client-address header, and which header
+      # carries it (docker-entrypoint.d/10-real-ip.sh). Empty by default; set
+      # only from what the edge measurably does. Behind Cloudflare that is
+      # "100.64.0.0/10" + "CF-Connecting-IP".
+      TRUSTED_PROXY_CIDRS: ${TRUSTED_PROXY_CIDRS:-}
+      TRUSTED_PROXY_HEADER: ${TRUSTED_PROXY_HEADER:-}
     container_name: frees-frontend
+    restart: unless-stopped
     ports:
-      - "5173:8080"
+    # The only port meant to carry traffic, and the only configurable bind.
+    # Defaults to loopback; set FREES_FRONTEND_BIND=0.0.0.0 when a tunnel
+    # agent running off-host is what needs to reach it.
+      - "${FREES_FRONTEND_BIND:-127.0.0.1}:5173:8080"
     depends_on:
       api-node:
         condition: service_healthy

@@ -142,15 +142,31 @@ public class ComputeTaskListener {
         try {
             switch (task.taskType()) {
                 case ComputeTask.SOLVE -> handle(task, "Solve", SolveController.SolveRequest.class,
-                        req -> solveController.computeSolve(req, task.sessionId()));
+                        req -> {
+                            try {
+                                return solveController.computeSolve(req, task.sessionId());
+                            } catch (com.frees.backend.core.SolverException e) {
+                                // A solver failure is a completed computation whose
+                                // answer is diagnostics: store the same envelope the
+                                // sync path returns (blocks, residuals at failure,
+                                // failing block index) so the client renders one
+                                // failure shape. Infrastructure errors still FAIL.
+                                return solveController.solverFailureResponse(e);
+                            }
+                        });
                 case ComputeTask.SOLVE_TABLE -> handle(task, "Solve-table", SolveController.SolveTableRequest.class,
                         solveController::computeSolveTable);
+                case ComputeTask.SOLVE_TABLE_CHUNK -> handleTableChunk(task);
+                case ComputeTask.MONTE_CARLO -> handle(task, "Monte-Carlo", SolveController.MonteCarloRequest.class,
+                        solveController::computeMonteCarlo);
                 case ComputeTask.OPTIMIZE -> handle(task, "Optimize", OptimizeController.OptimizeRequest.class,
                         optimizeController::computeOptimize);
                 case ComputeTask.OPTIMIZE_MULTI -> handle(task, "Multi-objective", OptimizeController.MultiObjectiveRequest.class,
                         optimizeController::computeOptimizeMulti);
                 case ComputeTask.CURVE_FIT -> handle(task, "Curve-fit", OptimizeController.CurveFitRequest.class,
                         optimizeController::computeCurveFit);
+                case ComputeTask.PARAM_FIT -> handle(task, "Parameter-fit", OptimizeController.ParameterFitRequest.class,
+                        optimizeController::computeParameterFit);
                 case ComputeTask.CALC -> handle(task, "Calc-signal",
                         com.frees.backend.api.MeasurementCalcController.CalcRequest.class,
                         calcController::computeCalc);
@@ -187,6 +203,34 @@ public class ComputeTaskListener {
     @FunctionalInterface
     private interface SolverCall<Q, R> {
         R apply(Q request) throws Exception;
+    }
+
+    /**
+     * One chunk of a chunked table run: compute the slice, record its result,
+     * and let whichever chunk lands last assemble the parent's completed
+     * response. A failing chunk fails the PARENT job; the terminal-state
+     * guard in the store keeps later siblings from resurrecting it.
+     */
+    private void handleTableChunk(ComputeTask task) {
+        try {
+            SolveController.TableChunkRequest chunk = objectMapper.readValue(
+                    task.requestJson(), SolveController.TableChunkRequest.class);
+            SolveController.SolveTableResponse response =
+                    solveController.computeSolveTable(chunk.request());
+            java.util.List<String> all = jobStore.saveChunkResult(
+                    task.jobId(), chunk.chunkIndex(), response);
+            if (!all.isEmpty()) {
+                java.util.List<SolveController.SolveTableResponse> parts =
+                        new java.util.ArrayList<>(all.size());
+                for (String json : all) {
+                    parts.add(objectMapper.readValue(json, SolveController.SolveTableResponse.class));
+                }
+                jobStore.saveCompleted(task.jobId(), SolveController.aggregateChunks(parts));
+            }
+        } catch (Exception e) {
+            log.warn("Table chunk failed for job {}: {}", task.jobId(), e.getMessage());
+            jobStore.saveFailed(task.jobId(), errorMessage(e));
+        }
     }
 
     private static String errorMessage(Throwable e) {

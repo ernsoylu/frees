@@ -21,6 +21,7 @@ topLevel
     | componentDef
     | componentInst
     | connectStmt
+    | guessDirective
     | statement
     ;
 
@@ -271,6 +272,14 @@ componentInst
 //   still works for series chains).
 connectStmt
     : CONNECT LPAREN connectPort (COMMA connectPort)* RPAREN
+    ;
+
+// ── GUESS directive (in-text guess/bounds; they travel with the document) ─────
+//   GUESS x = 2          initial guess
+//   GUESS x = 2 [0, 10]  guess + bounds
+//   GUESS x [0, 10]      bounds only
+guessDirective
+    : GUESS IDENT (EQ signedNumber)? (LBRACKET signedNumber COMMA signedNumber RBRACKET)?
     ;
 
 connectPort
@@ -549,6 +558,7 @@ TABLE     : [tT][aA][bB][lL][eE] ;
 PARAMETRIC : [pP][aA][rR][aA][mM][eE][tT][rR][iI][cC] ;
 PLOT      : [pP][lL][oO][tT] ;
 DYNAMIC   : [dD][yY][nN][aA][mM][iI][cC] ;
+GUESS     : [gG][uU][eE][sS][sS] ;
 LINEARIZE : [lL][iI][nN][eE][aA][rR][iI][zZ][eE] ;
 INPUT     : [iI][nN][pP][uU][tT] ;
 OUTPUT    : [oO][uU][tT][pP][uU][tT] ;

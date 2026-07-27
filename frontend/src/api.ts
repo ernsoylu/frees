@@ -59,6 +59,19 @@ export interface SolutionResult {
   maxResidual: number
 }
 
+/** One uncertainty source's signed contribution to a variable (tornado bar). */
+export interface UncertaintyContributionResult {
+  source: string
+  value: number
+}
+
+/** Tornado breakdown for one variable: propagated sigma + ranked sources. */
+export interface VariableUncertaintyResult {
+  variable: string
+  total: number
+  sources: UncertaintyContributionResult[]
+}
+
 export interface SolveResponse {
   success: boolean
   variables: VariableResult[]
@@ -83,6 +96,10 @@ export interface SolveResponse {
   odeTables?: OdeTableDto[]
   /** Per-instance component metadata (type + parameter bindings) for the datasheet view. */
   components?: ComponentResult[]
+  /** Index of the Tarjan block whose solve gave up (failure diagnostics), or null. */
+  failedBlockIndex?: number | null
+  /** Tornado breakdown: per uncertain variable, the ranked per-source contributions. */
+  uncertaintyBreakdown?: VariableUncertaintyResult[]
 }
 
 /** One parameter binding on a component instance (`UA=UA_chl_r`, `SH=5`, `fluid$=R1234yf`). */
@@ -112,6 +129,9 @@ export interface CheckResponse {
   message: string
   /** 1-based editor line a syntax error points at, or null for whole-system errors. */
   errorLine?: number | null
+  /** Every syntax error the parse collected (line/column 1-based), so the
+   *  editor can mark them all — errorLine keeps pointing at the first. */
+  errors?: { line: number; column: number; message: string }[]
   /** Function tables parsed from TABLE ... END blocks in the editor text. */
   codeTables?: FunctionTableDto[]
   /** Parametric run-tables parsed from PARAMETRIC ... END blocks. */
@@ -120,6 +140,26 @@ export interface CheckResponse {
   definedPlots?: PlotDefDto[]
   /** Fluid state tables declared with STATE TABLE ... END blocks. */
   stateTableDefs?: StateTableDto[]
+  /** Connection topology of the component network (domain + instance.port
+   *  endpoints per node) — the rendered schematic's data layer. */
+  connections?: ConnectionDto[]
+}
+
+/** One connection-topology node of the component network. */
+export interface ConnectionDto {
+  domain: string
+  endpoints: string[]
+  /** Fluid connector type (`liquid`, `twophase`, `gas`, `oil`, `moistair`,
+   *  `fluid`); null outside the fluid domain. Distinguishes circuits the
+   *  bond-graph domain lumps together — a coolant loop and a refrigerant loop
+   *  are both `domain: 'fluid'`. */
+  connector?: string | null
+  /** The CoolProp working fluid this node carries, when the model named one. */
+  fluid?: string | null
+  /** Per endpoint (aligned by index), the display prefix its member variables
+   *  use — `chlr.in` for a connect-wired free port, `s2` for a shared-name
+   *  stream. Lets the schematic show an endpoint's solved state. */
+  streams?: string[]
 }
 
 /** A fluid state table parsed from a STATE TABLE name(...) ... END block: the
@@ -288,7 +328,8 @@ async function pollJob(jobId: string, timeoutMs = 120_000): Promise<JobState> {
  *  @param endpoint the POST URL (e.g. "/api/solve")
  *  @param init the fetch init (method/body/headers) for the submit POST
  */
-export async function runCompute(endpoint: string, init: RequestInit): Promise<ComputeOutcome> {
+export async function runCompute(endpoint: string, init: RequestInit,
+                                 timeoutMs = 120_000): Promise<ComputeOutcome> {
   let response: Response
   try {
     response = await fetch(`${API_BASE}${endpoint}`, init)
@@ -314,7 +355,7 @@ export async function runCompute(endpoint: string, init: RequestInit): Promise<C
       return { kind: 'failed', error: 'Job submission did not return a jobId' }
     }
     try {
-      const state = await pollJob(jobId)
+      const state = await pollJob(jobId, timeoutMs)
       if (state.status === 'COMPLETED') {
         return { kind: 'completed', result: state.result }
       }
@@ -384,6 +425,7 @@ export async function check(
           body ||
           `Server error (${response.status})`,
         errorLine: data?.errorLine ?? null,
+        errors: data?.errors ?? [],
       }
     }
     const data = await response.json()
@@ -396,10 +438,12 @@ export async function check(
       inferredUnits: data.inferredUnits ?? {},
       message: data.message ?? '',
       errorLine: data.errorLine ?? null,
+      errors: data.errors ?? [],
       codeTables: data.codeTables ?? [],
       parametricTables: data.parametricTables ?? [],
       definedPlots: data.definedPlots ?? [],
       stateTableDefs: data.stateTableDefs ?? [],
+      connections: data.connections ?? [],
     }
   } catch (e) {
     return {
@@ -444,6 +488,9 @@ function mapSolveData(data: any): SolveResponse {
     stateTableDefs: data.stateTableDefs ?? [],
     odeTables: data.odeTables ?? [],
     components: data.components ?? [],
+    errorLine: data.errorLine ?? null,
+    failedBlockIndex: data.failedBlockIndex ?? null,
+    uncertaintyBreakdown: data.uncertaintyBreakdown ?? [],
   }
 }
 
@@ -490,7 +537,19 @@ export async function solve(
   try {
     const response = await fetch(`${API_BASE}/api/solve`, init)
     if (!response.ok) {
-      return { ...SOLVE_FAILURE, error: await extractErrorMessage(response, `Server error (${response.status})`) }
+      // A 422 solver failure still carries the full diagnostics envelope
+      // (blocks, residuals at the failure point, failing block index) — parse
+      // it so the Diagnostics panel gets the story, and fall back to the
+      // plain error string for bodies that are not a SolveResponse.
+      try {
+        const body = await response.json()
+        if (typeof body?.success === 'boolean') {
+          return mapSolveData(body)
+        }
+        return { ...SOLVE_FAILURE, error: body?.error ?? `Server error (${response.status})` }
+      } catch {
+        return { ...SOLVE_FAILURE, error: `Server error (${response.status})` }
+      }
     }
     const data = await response.json()
     return mapSolveData(data)
@@ -812,6 +871,96 @@ export async function curveFit(params: CurveFitParams): Promise<CurveFitResponse
   }
 }
 
+// ---------------------------------------------------------------------------
+// Parameter estimation — POST /api/measurements/parameter-fit
+// ---------------------------------------------------------------------------
+
+export interface ParameterFitParams {
+  text: string
+  stopCriteria: StopCriteria
+  variableInfo: VariableInfo[]
+  functionTables: FunctionTableDto[]
+  parameters: string[]
+  initial: number[]
+  lower: number[]
+  upper: number[]
+  odeBlock: string
+  column: string
+  measuredT: number[]
+  measuredV: number[]
+  maxEvaluations?: number
+}
+
+export interface ParameterFitResult {
+  success: boolean
+  error: string | null
+  parameterNames: string[]
+  fittedValues: number[]
+  rmse: number
+  initialRmse: number
+  evaluations: number
+  truncated: boolean
+  fittedT: number[]
+  fittedV: number[]
+}
+
+const PARAMETER_FIT_FAILURE: ParameterFitResult = {
+  success: false,
+  error: null,
+  parameterNames: [],
+  fittedValues: [],
+  rmse: 0,
+  initialRmse: 0,
+  evaluations: 0,
+  truncated: false,
+  fittedT: [],
+  fittedV: [],
+}
+
+function mapParameterFitData(data: any): ParameterFitResult {
+  return {
+    success: Boolean(data?.success),
+    error: data?.error ?? null,
+    parameterNames: data?.parameterNames ?? [],
+    fittedValues: data?.fittedValues ?? [],
+    rmse: data?.rmse ?? 0,
+    initialRmse: data?.initialRmse ?? 0,
+    evaluations: data?.evaluations ?? 0,
+    truncated: Boolean(data?.truncated),
+    fittedT: data?.fittedT ?? [],
+    fittedV: data?.fittedV ?? [],
+  }
+}
+
+export async function parameterFit(params: ParameterFitParams): Promise<ParameterFitResult> {
+  const init: RequestInit = {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(params),
+  }
+  if (ASYNC_API) {
+    // Every evaluation is a full (typically transient) solve — allow the
+    // server-side budget plus slack before declaring the job lost.
+    const outcome = await runCompute('/api/measurements/parameter-fit', init, 300_000)
+    if (outcome.kind === 'completed') {
+      return mapParameterFitData(outcome.result)
+    }
+    return { ...PARAMETER_FIT_FAILURE, error: outcome.error }
+  }
+  try {
+    const response = await fetch(`${API_BASE}/api/measurements/parameter-fit`, init)
+    if (!response.ok) {
+      return {
+        ...PARAMETER_FIT_FAILURE,
+        error: await extractErrorMessage(response, `Parameter fit failed with status ${response.status}`),
+      }
+    }
+    return mapParameterFitData(await response.json())
+  } catch (e) {
+    return { ...PARAMETER_FIT_FAILURE, error: `Could not reach the solver backend: ${String(e)}` }
+  }
+}
+
 export interface DiagramCurve {
   family: string
   label: string
@@ -991,6 +1140,81 @@ export async function solveTable(
   } catch (e) {
     throw e instanceof Error ? e : new Error(String(e))
   }
+}
+
+// ---------------------------------------------------------------------------
+// Monte Carlo uncertainty — POST /api/solve/montecarlo
+// ---------------------------------------------------------------------------
+
+/** Aggregate statistics for one variable across the Monte Carlo samples. */
+export interface McVariableStat {
+  variable: string
+  mean: number
+  sigma: number
+  p5: number
+  p50: number
+  p95: number
+  firstOrderSigma: number
+}
+
+export interface MonteCarloResult {
+  stats: McVariableStat[]
+  samples: { success: boolean; values: Record<string, number>; error: string | null }[]
+  sources: string[]
+  requestedSamples: number
+  failedSamples: number
+  truncated: boolean
+}
+
+function mapMonteCarloData(data: any): MonteCarloResult {
+  return {
+    stats: data?.stats ?? [],
+    samples: data?.samples ?? [],
+    sources: data?.sources ?? [],
+    requestedSamples: data?.requestedSamples ?? 0,
+    failedSamples: data?.failedSamples ?? 0,
+    truncated: Boolean(data?.truncated),
+  }
+}
+
+export async function runMonteCarlo(
+  text: string,
+  stopCriteria: StopCriteria,
+  variableInfo: VariableInfo[],
+  displayUnitSystem: UnitSystem,
+  functionTables: FunctionTableDto[],
+  samples: number,
+  seed: number,
+): Promise<MonteCarloResult> {
+  const init: RequestInit = {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      text,
+      stopCriteria,
+      variableInfo,
+      displayUnitSystem,
+      functionTables,
+      samples,
+      seed,
+    }),
+  }
+
+  if (ASYNC_API) {
+    // N solves can exceed the default polling window — allow the full
+    // server-side budget plus slack before declaring the job lost.
+    const outcome = await runCompute('/api/solve/montecarlo', init, 300_000)
+    if (outcome.kind === 'completed') {
+      return mapMonteCarloData(outcome.result)
+    }
+    throw new Error(outcome.error)
+  }
+
+  const response = await fetch(`${API_BASE}/api/solve/montecarlo`, init)
+  if (!response.ok) {
+    throw new Error(await extractErrorMessage(response, `Monte Carlo failed with status ${response.status}`))
+  }
+  return mapMonteCarloData(await response.json())
 }
 
 // ---------------------------------------------------------------------------

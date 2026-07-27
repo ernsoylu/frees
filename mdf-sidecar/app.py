@@ -30,15 +30,56 @@ from fastapi.responses import JSONResponse, Response
 
 app = FastAPI(title="frees-mdf-sidecar")
 
+# Largest upload accepted, mirroring the Java tier's own cap. Enforced here too
+# because the body is read fully into memory before asammdf sees it, and this
+# service runs a single uvicorn worker: one oversized request is enough to take
+# it out for everyone.
+MAX_BODY_BYTES = 210 * 1024 * 1024
+
+# Largest channel this service will materialise, as a sample count. The upload
+# cap does NOT bound this: the DZ blocks that are the whole reason this sidecar
+# exists are DEFLATE/ZSTD/LZ4 compressed, so a file well inside the size limit
+# can expand to many gigabytes of samples. Each sample becomes two float64s
+# (time + value) in the response, so 50M samples is ~800 MB — already generous
+# for a recording, and refused before anything is allocated rather than after
+# the process has been OOM-killed.
+MAX_CHANNEL_SAMPLES = 50_000_000
+
 
 def _typed_error(status: int, message: str) -> JSONResponse:
     return JSONResponse(status_code=status, content={"error": message})
+
+
+async def _read_capped(request: Request) -> bytes:
+    """Read the body, aborting as soon as it exceeds the cap.
+
+    Streamed rather than ``await request.body()`` so an oversized upload is
+    dropped while it arrives instead of being buffered in full first — a
+    declared Content-Length is only a hint, and the point is to never hold the
+    oversized payload at all.
+    """
+    chunks: list[bytes] = []
+    total = 0
+    async for chunk in request.stream():
+        total += len(chunk)
+        if total > MAX_BODY_BYTES:
+            raise _TooLarge()
+        chunks.append(chunk)
+    return b"".join(chunks)
+
+
+class _TooLarge(Exception):
+    """Upload exceeded MAX_BODY_BYTES."""
 
 
 def _open(body: bytes) -> MDF:
     if len(body) < 8 or not body.startswith(b"MDF"):
         raise MdfException("Not an MDF file: missing the MDF ID block.")
     return MDF(io.BytesIO(body))
+
+
+def _too_large_response() -> JSONResponse:
+    return _typed_error(413, f"Upload exceeds the {MAX_BODY_BYTES}-byte limit.")
 
 
 def _kind(samples_dtype) -> str:
@@ -54,7 +95,10 @@ def health() -> dict:
 
 @app.post("/parse-metadata")
 async def parse_metadata(request: Request):
-    body = await request.body()
+    try:
+        body = await _read_capped(request)
+    except _TooLarge:
+        return _too_large_response()
     try:
         mdf = _open(body)
         groups = []
@@ -93,14 +137,37 @@ async def parse_metadata(request: Request):
 
 @app.post("/extract-channel")
 async def extract_channel(request: Request, group: int = Query(0), channel: str = Query(...)):
-    body = await request.body()
+    try:
+        body = await _read_capped(request)
+    except _TooLarge:
+        return _too_large_response()
     try:
         mdf = _open(body)
+        # Refuse before materialising: cycles_nr comes from the channel group's
+        # header, so an over-large channel is rejected without ever decompressing
+        # its data blocks. Checking after mdf.get() would be too late — that call
+        # is what allocates the arrays this guard exists to prevent.
+        try:
+            declared = int(mdf.groups[group].channel_group.cycles_nr)
+        except (IndexError, AttributeError, TypeError, ValueError):
+            declared = 0
+        if declared > MAX_CHANNEL_SAMPLES:
+            return _typed_error(
+                422,
+                f'Channel "{channel}" declares {declared} samples, over the '
+                f"{MAX_CHANNEL_SAMPLES} limit. Export a shorter time range.",
+            )
         try:
             signal = mdf.get(channel, group=group)
         except MdfException as e:
             return _typed_error(
                 422, f'Channel "{channel}" not found in group {group}: {e}'
+            )
+        if len(signal.timestamps) > MAX_CHANNEL_SAMPLES:
+            return _typed_error(
+                422,
+                f'Channel "{channel}" has {len(signal.timestamps)} samples, over '
+                f"the {MAX_CHANNEL_SAMPLES} limit. Export a shorter time range.",
             )
         times = np.ascontiguousarray(signal.timestamps, dtype="<f8")
         values = np.ascontiguousarray(signal.samples, dtype="<f8")

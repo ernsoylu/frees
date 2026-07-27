@@ -52,6 +52,19 @@ public final class SolveDtos {
 
     public record ResidualDto(String equation, double value) {}
 
+    /** One syntax error with its 1-based editor position, so the lint gutter
+     *  can mark every broken line rather than only the first. */
+    public record SyntaxErrorDto(int line, int column, String message) {}
+
+    /** One uncertainty source's signed first-order contribution to a variable
+     *  (one bar of its tornado). */
+    public record UncertaintyContributionDto(String source, double value) {}
+
+    /** Tornado breakdown for one variable: its propagated uncertainty and the
+     *  per-source contributions it RSS-combines, largest magnitude first. */
+    public record VariableUncertaintyDto(String variable, double total,
+                                         java.util.List<UncertaintyContributionDto> sources) {}
+
     public record StatsDto(int equations,
                            int unknowns,
                            int blocks,
@@ -92,6 +105,33 @@ public final class SolveDtos {
     /** A plot parsed from a PLOT 'name' ... END block: the name and a raw
      * attribute map the frontend maps onto its PlotSpec. */
     public record PlotDefDto(String name, Map<String, List<String>> attributes) {}
+
+    /**
+     * One connection-topology node — the rendered schematic's data layer,
+     * straight from the expander's own classification.
+     *
+     * @param domain    physical (bond-graph) domain, lowercase
+     * @param endpoints the {@code instance.port} refs this node joins
+     * @param connector fluid connector type ({@code liquid}, {@code twophase},
+     *                  {@code gas}, {@code oil}, {@code moistair}, {@code fluid});
+     *                  null outside the fluid domain. Distinguishes circuits the
+     *                  coarse domain lumps together — a coolant loop and a
+     *                  refrigerant loop are both {@code domain=fluid}.
+     * @param fluid     the CoolProp working fluid the node carries, when known
+     * @param streams   per endpoint, the display prefix its member variables use
+     *                  ({@code CHLR.in}, {@code s2}), so the drawing can look up
+     *                  solved values at each endpoint
+     */
+    public record ConnectionDto(String domain, List<String> endpoints, String connector,
+                                String fluid, List<String> streams) {}
+
+    public static List<ConnectionDto> connectionsOf(
+            com.frees.backend.parser.EquationParser.ParseResult parsed) {
+        return parsed.componentConnections().stream()
+                .map(c -> new ConnectionDto(c.domain(), c.endpoints(), c.connector(),
+                        c.fluid(), c.streams()))
+                .toList();
+    }
 
     /** A fluid state table parsed from a STATE TABLE ... END block: its name,
      * the declared state-point variables, and the fluid every state uses. */

@@ -19,7 +19,10 @@ dependencies {
     // matheclipse-core transitively pulls jackson-databind 2.15.3, which has HIGH
     // CVEs (CVE-2026-54512, CVE-2026-54513, PolymorphicTypeValidator bypasses).
     // Pin to the patched version explicitly (matches web/build.gradle).
-    implementation 'com.fasterxml.jackson.core:jackson-databind:2.22.0'
+    // 2.22.1 also carries the jackson-core fix for GHSA-r7wm-3cxj-wff9 (async
+    // parser maxNumberLength bypass); jackson-core rides in transitively, so the
+    // databind pin is what governs its version here.
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.22.1'
     // Symja (matheclipse): pure-Java computer algebra system powering the CAS
     // directives (factor/expand/simplify; later solve/integrate).
     implementation 'org.matheclipse:matheclipse-core:3.2.0'
@@ -29,7 +32,7 @@ dependencies {
     // the spike support matrix lives in Mf4SpikeTest + todo.md.
     implementation 'de.richardliebscher.mdf4j:mdf4j:0.2.0'
 
-    testImplementation 'org.junit.jupiter:junit-jupiter:6.1.1'
+    testImplementation 'org.junit.jupiter:junit-jupiter:6.1.2'
     testRuntimeOnly 'org.slf4j:slf4j-simple:2.0.18'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }

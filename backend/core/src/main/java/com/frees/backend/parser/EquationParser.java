@@ -16,6 +16,7 @@ import com.frees.backend.cas.CasIdentity;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -70,9 +71,23 @@ public final class EquationParser {
     /** Largest span a single FOR loop or array range (1:N) may expand to, and
      * the backstop on the total number of equations a program may generate.
      * These bound parse-time expansion so a tiny input (e.g. FOR i = 1 TO 1e9)
-     * cannot exhaust memory/CPU — a denial-of-service guard. */
+     * cannot exhaust memory/CPU — a denial-of-service guard.
+     *
+     * <p>The equation budget matters most: expansion runs SYNCHRONOUSLY on the
+     * API node's request thread (CheckController, and SolveController's
+     * pre-dispatch validateSyntax), so it is charged to an unauthenticated
+     * caller. The budget is therefore effectively a per-request memory cap.
+     * Measured over the full check pipeline (parse + check + deriveUnits +
+     * inferUnits + checkUnits): at 25 000 a worst-case request costs ~48 MB and
+     * ~0.9 s, versus ~1.6 GB and ~8.2 s at the former 500 000 — the latter
+     * enough to OOM the container from a 35-byte request body.
+     * Real documents are far below this (the largest in the repo's own
+     * examples and docs is a 400-element array); a self-hosted deployment with
+     * a genuinely larger model can raise it with
+     * {@code -Dfrees.parser.max-generated-equations=N}. */
     static final int MAX_RANGE_SPAN = 1_000_000;
-    static final int MAX_GENERATED_EQUATIONS = 500_000;
+    static final int MAX_GENERATED_EQUATIONS =
+            Integer.getInteger("frees.parser.max-generated-equations", 25_000);
 
     // Internal sentinel op chars for array-language-style element-wise operators. They
     // only ever exist on a raw Expr inside matrix compilation; compileMatrixExpr
@@ -112,20 +127,39 @@ public final class EquationParser {
         };
     }
 
+    /** One syntax error with its editor position (1-based line and column). */
+    public record SyntaxError(int line, int column, String message) {}
+
     public static class ParseException extends RuntimeException {
+        /** Every syntax error the parse collected (ANTLR recovers per line, so
+         *  a document with three broken lines yields three entries). Empty for
+         *  semantic ParseExceptions thrown outside the lexer/parser. */
+        private final transient List<SyntaxError> syntaxErrors;
+
         public ParseException(String message) {
+            this(message, List.of());
+        }
+
+        public ParseException(String message, List<SyntaxError> syntaxErrors) {
             super(message);
+            this.syntaxErrors = List.copyOf(syntaxErrors);
+        }
+
+        public List<SyntaxError> syntaxErrors() {
+            return syntaxErrors;
         }
     }
 
     static class CollectingErrorListener extends BaseErrorListener {
         final List<String> errors = new ArrayList<>();
+        final List<SyntaxError> structured = new ArrayList<>();
 
         @Override
         public void syntaxError(Recognizer<?, ?> recognizer, Object offendingSymbol,
                                 int line, int charPositionInLine, String msg,
                                 RecognitionException e) {
             errors.add("line " + line + ":" + (charPositionInLine + 1) + " " + msg);
+            structured.add(new SyntaxError(line, charPositionInLine + 1, msg));
         }
     }
 
@@ -141,7 +175,37 @@ public final class EquationParser {
             List<com.frees.backend.ast.LinearizeSystem> linearizeSystems,
             /** SI units of component stream members (s2$p → "Pa", …), grounded so
              *  port-member variables aren't dimensionless; empty for non-component docs. */
-            java.util.Map<String, String> componentMemberUnits) {
+            java.util.Map<String, String> componentMemberUnits,
+            /** In-text GUESS directives; merged over caller specs at solve entry. */
+            List<com.frees.backend.ast.GuessDirective> guessDirectives,
+            /** Connection topology (domain + instance.port endpoints per node) —
+             *  the rendered schematic's data layer; empty for non-component docs. */
+            List<com.frees.backend.parser.ComponentExpander.Connection> componentConnections) {
+
+        public ParseResult(List<Equation> equations, java.util.Map<String, String> displayNames,
+                           java.util.Map<String, ProcDef> defs,
+                           List<com.frees.backend.ast.ParametricTable> parametricTables,
+                           List<com.frees.backend.ast.PlotDef> plots,
+                           List<com.frees.backend.ast.StateTableDef> stateTables,
+                           List<com.frees.backend.ast.DynamicSystem> dynamicSystems,
+                           List<com.frees.backend.ast.LinearizeSystem> linearizeSystems,
+                           java.util.Map<String, String> componentMemberUnits,
+                           List<com.frees.backend.ast.GuessDirective> guessDirectives) {
+            this(equations, displayNames, defs, parametricTables, plots, stateTables, dynamicSystems,
+                    linearizeSystems, componentMemberUnits, guessDirectives, List.of());
+        }
+
+        public ParseResult(List<Equation> equations, java.util.Map<String, String> displayNames,
+                           java.util.Map<String, ProcDef> defs,
+                           List<com.frees.backend.ast.ParametricTable> parametricTables,
+                           List<com.frees.backend.ast.PlotDef> plots,
+                           List<com.frees.backend.ast.StateTableDef> stateTables,
+                           List<com.frees.backend.ast.DynamicSystem> dynamicSystems,
+                           List<com.frees.backend.ast.LinearizeSystem> linearizeSystems,
+                           java.util.Map<String, String> componentMemberUnits) {
+            this(equations, displayNames, defs, parametricTables, plots, stateTables, dynamicSystems,
+                    linearizeSystems, componentMemberUnits, List.of(), List.of());
+        }
 
         public ParseResult(List<Equation> equations, java.util.Map<String, String> displayNames,
                            java.util.Map<String, ProcDef> defs,
@@ -151,7 +215,7 @@ public final class EquationParser {
                            List<com.frees.backend.ast.DynamicSystem> dynamicSystems,
                            List<com.frees.backend.ast.LinearizeSystem> linearizeSystems) {
             this(equations, displayNames, defs, parametricTables, plots, stateTables, dynamicSystems,
-                    linearizeSystems, Map.of());
+                    linearizeSystems, Map.of(), List.of(), List.of());
         }
 
         public ParseResult(List<Equation> equations, java.util.Map<String, String> displayNames,
@@ -161,7 +225,7 @@ public final class EquationParser {
                            List<com.frees.backend.ast.StateTableDef> stateTables,
                            List<com.frees.backend.ast.DynamicSystem> dynamicSystems) {
             this(equations, displayNames, defs, parametricTables, plots, stateTables, dynamicSystems,
-                    List.of(), Map.of());
+                    List.of(), Map.of(), List.of(), List.of());
         }
 
         public ParseResult(List<Equation> equations, java.util.Map<String, String> displayNames,
@@ -169,14 +233,16 @@ public final class EquationParser {
                            List<com.frees.backend.ast.ParametricTable> parametricTables,
                            List<com.frees.backend.ast.PlotDef> plots,
                            List<com.frees.backend.ast.StateTableDef> stateTables) {
-            this(equations, displayNames, defs, parametricTables, plots, stateTables, List.of(), List.of(), Map.of());
+            this(equations, displayNames, defs, parametricTables, plots, stateTables, List.of(),
+                    List.of(), Map.of(), List.of(), List.of());
         }
 
         public ParseResult(List<Equation> equations, java.util.Map<String, String> displayNames,
                            java.util.Map<String, ProcDef> defs,
                            List<com.frees.backend.ast.ParametricTable> parametricTables,
                            List<com.frees.backend.ast.PlotDef> plots) {
-            this(equations, displayNames, defs, parametricTables, plots, List.of(), List.of(), List.of(), Map.of());
+            this(equations, displayNames, defs, parametricTables, plots, List.of(), List.of(),
+                    List.of(), Map.of(), List.of(), List.of());
         }
 
         public ParseResult(List<Equation> equations, java.util.Map<String, String> displayNames,
@@ -209,7 +275,8 @@ public final class EquationParser {
 
         FreesParser.ProgramContext program = parser.program();
         if (!errorListener.errors.isEmpty()) {
-            throw new ParseException(String.join("\n", errorListener.errors));
+            throw new ParseException(String.join("\n", errorListener.errors),
+                    errorListener.structured);
         }
 
         AstBuilder builder = new AstBuilder();
@@ -260,7 +327,7 @@ public final class EquationParser {
         // Counter for module instance namespacing
         AtomicInteger moduleCounter = new AtomicInteger(0);
 
-        List<Equation> equations = new ArrayList<>(componentEquations);
+        List<Equation> equations = new BoundedEquationList(componentEquations);
         Set<String> symbolicVars = collectSymbolic(statements);
         flatten(statements, new HashMap<>(), constants, displayNames, equations, defs, moduleCounter, symbolicVars);
 
@@ -270,7 +337,8 @@ public final class EquationParser {
 
         return new ParseResult(equations, displayNames, defs, programResult.parametricTables(),
                 programResult.plots(), programResult.stateTables(), dynamicSystems,
-                programResult.linearizeSystems(), components.memberUnits());
+                programResult.linearizeSystems(), components.memberUnits(),
+                programResult.guessDirectives(), components.connections());
     }
 
     /**
@@ -621,8 +689,51 @@ public final class EquationParser {
      * may not generate more than {@link #MAX_GENERATED_EQUATIONS} equations. */
     private static void checkEquationBudget(List<Equation> out) {
         if (out.size() > MAX_GENERATED_EQUATIONS) {
-            throw new ParseException("Too many equations generated (over "
-                    + MAX_GENERATED_EQUATIONS + "). Reduce loop or array sizes.");
+            throw new ParseException(TOO_MANY_EQUATIONS);
+        }
+    }
+
+    static final String TOO_MANY_EQUATIONS = "Too many equations generated (over "
+            + MAX_GENERATED_EQUATIONS + "). Reduce loop or array sizes.";
+
+    /**
+     * The equation accumulator, self-limiting at {@link #MAX_GENERATED_EQUATIONS}.
+     *
+     * <p>The budget is enforced here rather than at each call site because
+     * equations are appended from ~30 places (element-wise array equations,
+     * matrix/vector expansion, eigen/LU/SolveLinear emission, …) and only the
+     * FOR-loop path used to check it. That left the array path unbounded: an
+     * {@code x[1:1000000] = 1} body — 17 bytes — produced a million equations,
+     * sailing past the stated 500 000 cap because nothing on that path ever
+     * called {@link #checkEquationBudget}. Enforcing in {@code add} makes the
+     * cap hold for every current and future emission site by construction.
+     */
+    private static final class BoundedEquationList extends ArrayList<Equation> {
+        private static final long serialVersionUID = 1L;
+
+        BoundedEquationList(Collection<? extends Equation> initial) {
+            super(initial);
+            check();
+        }
+
+        @Override
+        public boolean add(Equation equation) {
+            check();
+            return super.add(equation);
+        }
+
+        @Override
+        public boolean addAll(Collection<? extends Equation> more) {
+            if (size() + more.size() > MAX_GENERATED_EQUATIONS) {
+                throw new ParseException(TOO_MANY_EQUATIONS);
+            }
+            return super.addAll(more);
+        }
+
+        private void check() {
+            if (size() >= MAX_GENERATED_EQUATIONS) {
+                throw new ParseException(TOO_MANY_EQUATIONS);
+            }
         }
     }
 
@@ -902,12 +1013,26 @@ public final class EquationParser {
         return sumAbs;
     }
 
+    /** Largest matrix expanded by the closed-form cofactor sum. The expansion
+     *  builds O(n!) AST nodes re-evaluated on every residual pass — a few rows
+     *  beyond this it exhausts a worker's heap — so larger matrices become a
+     *  runtime det$<n> LU intrinsic instead (numeric, so blocks containing it
+     *  fall back to finite-difference Jacobians). */
+    private static final int DET_CLOSED_FORM_MAX = 3;
+
     private Expr matrixDeterminant(List<Expr> args, FlattenContext ctx) {
         MatrixInfo m = parseMatrixInfo(args.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
         if (m.rows != m.cols) {
             throw new ParseException("Determinant requires a square matrix.");
         }
-        return expandDeterminant(m.elements);
+        if (m.rows <= DET_CLOSED_FORM_MAX) {
+            return expandDeterminant(m.elements);
+        }
+        List<Expr> entries = new ArrayList<>(m.rows * m.rows);
+        for (Expr[] row : m.elements) {
+            entries.addAll(Arrays.asList(row));
+        }
+        return new Expr.Call("det$" + m.rows, entries);
     }
 
     /** Trace: sum of the diagonal entries of a square matrix. */
@@ -1045,7 +1170,13 @@ public final class EquationParser {
         }
         try {
             switch (name) {
-                case "eigenvalues" -> setVec(outputs, 0, inMatRows(inputs, 0, ctx));
+                case "eigenvalues" -> {
+                    int n = inMatRows(inputs, 0, ctx);
+                    setVec(outputs, 0, n);
+                    if (outputs.size() == 2) {
+                        setVec(outputs, 1, n);
+                    }
+                }
                 case "eigen" -> {
                     int n = inMatRows(inputs, 0, ctx);
                     setVec(outputs, 0, n);
@@ -1491,11 +1622,15 @@ public final class EquationParser {
 
     private void flattenEigen(String defName, List<Expr> inputs, List<Expr> outputs, String sourceText, FlattenContext ctx) {
         boolean wantVectors = defName.equals("eigen");
-        int expectedOutputs = wantVectors ? 2 : 1;
-        if (inputs.size() != 1 || outputs.size() != expectedOutputs) {
+        // Eigenvalues also accepts a two-output (re, im) form so non-symmetric
+        // matrices with complex spectra stay expressible in the real-valued
+        // equation language (mirroring how FFT carries complex data).
+        boolean complexPair = !wantVectors && outputs.size() == 2;
+        boolean outputCountOk = wantVectors ? outputs.size() == 2 : outputs.size() == 1 || outputs.size() == 2;
+        if (inputs.size() != 1 || !outputCountOk) {
             throw new ParseException(wantVectors
                     ? "Eigen expects 1 input matrix and 2 outputs (eigenvalue vector, eigenvector matrix), e.g. CALL Eigen(A[1:3,1:3] : lambda[1:3], V[1:3,1:3])"
-                    : "Eigenvalues expects 1 input matrix and 1 output vector, e.g. CALL Eigenvalues(A[1:3,1:3] : lambda[1:3])");
+                    : "Eigenvalues expects 1 input matrix and 1 output vector (real spectra) or 2 output vectors (real and imaginary parts), e.g. CALL Eigenvalues(A[1:3,1:3] : lambda[1:3]) or CALL Eigenvalues(A[1:2,1:2] : re[1:2], im[1:2])");
         }
         MatrixInfo a = parseMatrixInfo(inputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
         VectorInfo lambda = parseVectorInfo(outputs.get(0), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
@@ -1507,9 +1642,20 @@ public final class EquationParser {
         for (int i = 0; i < n; i++) {
             entries.addAll(Arrays.asList(a.elements[i]));
         }
+        String realPrefix = complexPair ? "eigen$re$" : "eigen$val$";
         for (int k = 0; k < n; k++) {
             ctx.out().add(new Equation(lambda.elements[k],
-                    new Expr.Call("eigen$val$" + k + "$" + n, entries), sourceText));
+                    new Expr.Call(realPrefix + k + "$" + n, entries), sourceText));
+        }
+        if (complexPair) {
+            VectorInfo imag = parseVectorInfo(outputs.get(1), ctx.loopVars(), ctx.constants(), ctx.displayNames(), ctx.defs());
+            if (imag.size != n) {
+                throw new ParseException("Eigenvalues requires the imaginary-part vector to match the matrix size.");
+            }
+            for (int k = 0; k < n; k++) {
+                ctx.out().add(new Equation(imag.elements[k],
+                        new Expr.Call("eigen$im$" + k + "$" + n, entries), sourceText));
+            }
         }
         if (wantVectors) {
             emitEigenvectors(outputs, n, entries, sourceText, ctx);
@@ -2317,6 +2463,8 @@ public final class EquationParser {
         return sub;
     }
 
+    /** Closed-form cofactor expansion — only for n <= {@link #DET_CLOSED_FORM_MAX}
+     *  (O(n!) growth); larger matrices route through the det$ LU intrinsic. */
     private Expr expandDeterminant(Expr[][] mat) {
         int n = mat.length;
         if (n == 1) {

@@ -1,6 +1,7 @@
 import { ChangeEvent, lazy, startTransition, Suspense, useCallback, useEffect, useMemo, useState, useRef, type ReactNode } from 'react'
 import {
   Alert,
+  Anchor,
   Badge,
   Button,
   Center,
@@ -17,6 +18,7 @@ import { useMediaQuery } from '@mantine/hooks'
 import { Spotlight, SpotlightActionGroupData } from '@mantine/spotlight'
 import {
   IconChartGridDots,
+  IconSitemap,
   IconChartLine,
   IconChecks,
   IconCode,
@@ -39,7 +41,12 @@ import {
   IconVariable,
   IconWaveSine,
   IconGrid4x4,
+  IconLink,
+  IconPrinter,
 } from '@tabler/icons-react'
+import { notifications } from '@mantine/notifications'
+import { buildShareUrl, clearShareHash, extractSharedText } from './share'
+import { openPrintReport } from './report'
 import {
   check,
   CheckResponse,
@@ -49,12 +56,14 @@ import {
   solve,
   replClear,
   solveTable,
+  runMonteCarlo,
   SolveResponse,
   StopCriteria,
   UnitSystem,
   VariableInfo,
   VariableResult,
 } from './api'
+import { findPin, pinnableParameters, sliderOverrideEquation, sliderRange, type PinnedSlider } from './sliders'
 const PreferencesModal = lazy(() => import('./PreferencesModal'))
 const AboutModal = lazy(() => import('./AboutModal'))
 import VariableInfoModal, {
@@ -99,6 +108,8 @@ import { group } from './workspaceData'
 // The Digitizer tab is a large, self-contained editor that most
 // sessions never open, so they are code-split and only fetched when their tab
 // is first shown (wrapped in <Suspense> at their render sites below).
+const SchematicTab = lazy(() => import('./schematic/SchematicTab'))
+import type { SchematicOffsets } from './schematic/layout'
 const DigitizerTab = lazy(() =>
   import('./DigitizerTab').then((m) => ({ default: m.DigitizerTab })),
 )
@@ -128,6 +139,9 @@ const ComponentWizardModal = lazy(() => import('./ComponentWizardModal'))
 const MinMaxModal = lazy(() => import('./MinMaxModal'))
 const CurveFitModal = lazy(() => import('./CurveFitModal'))
 const PidTunerModal = lazy(() => import('./PidTunerModal'))
+const MonteCarloModal = lazy(() => import('./MonteCarloModal'))
+const SliderStrip = lazy(() => import('./SliderStrip'))
+const ParameterFitModal = lazy(() => import('./ParameterFitModal'))
 type PidType = 'p' | 'pi' | 'pid'
 const PlotConfigModal = lazy(() => import('./plots/PlotConfigModal'))
 
@@ -146,6 +160,7 @@ const ReplTerminal = lazy(() => import('./ReplTerminal'))
 const MobileLayout = lazy(() => import('./MobileLayout'))
 import { DOCS_TOPICS } from './docsTopics'
 const ShortcutsModal = lazy(() => import('./ShortcutsModal'))
+const GettingStartedModal = lazy(() => import('./GettingStartedModal'))
 import { DEFAULT_EXAMPLE_TEXT } from './defaultExample'
 import type { Example } from './examples'
 import type { EquationEditorHandle } from './EquationEditor'
@@ -175,6 +190,7 @@ import {
 const STOP_CRITERIA_KEY = 'frees.stopCriteria'
 const UNIT_SYSTEM_KEY = 'frees.unitSystem'
 const FIRST_RUN_KEY = 'frees.firstRunDismissed'
+const GETTING_STARTED_KEY = 'frees.gettingStartedSeen'
 
 function loadUnitSystem(): UnitSystem {
   const raw = localStorage.getItem(UNIT_SYSTEM_KEY)
@@ -252,24 +268,95 @@ export default function App() {
   // keys when no unified project exists (one-time migration). Child-owned slices
   // (digitizer, custom components) self-restore from their own keys, so they are
   // intentionally not written back here on reload.
+  // A #share= link carries a whole document in the URL fragment (share.ts).
+  // Opening one replaces the workspace — the same semantics as loading an
+  // example — so when an autosaved project exists the user must confirm.
+  // The hash is stripped immediately either way: a reload must return to the
+  // user's own work, not re-import the link.
+  const sharedBootRef = useRef<string | null | undefined>(undefined)
+  if (sharedBootRef.current === undefined) {
+    const shared = extractSharedText(globalThis.location.hash)
+    if (shared === null) {
+      sharedBootRef.current = null
+    } else {
+      clearShareHash()
+      const saved = loadProjectLocal()
+      const accept = saved?.text == null || saved.text === shared
+        || globalThis.confirm('Open the shared document from this link? It replaces your current autosaved workspace.')
+      sharedBootRef.current = accept ? shared : null
+    }
+  }
+  const sharedBoot = sharedBootRef.current
+
   const bootRef = useRef<FreesProject | null | undefined>(undefined)
-  if (bootRef.current === undefined) bootRef.current = loadProjectLocal()
+  if (bootRef.current === undefined) bootRef.current = sharedBoot !== null ? null : loadProjectLocal()
   const boot = bootRef.current
 
   const [projectName, setProjectName] = useState('untitled')
   const [workspaceEpoch, setWorkspaceEpoch] = useState(0)
   const projectFileRef = useRef<HTMLInputElement>(null)
 
-  const [text, setText] = useState(boot?.text ?? EXAMPLE)
+  const [text, setText] = useState(sharedBoot ?? boot?.text ?? EXAMPLE)
   // Always-current editor document. The editor is uncontrolled after mount, so
   // every keystroke lands here synchronously while the `text` state above (which
   // drives autosave/dirty-tracking/modals) trails behind in a low-priority
   // transition, keeping the full App re-render off the typing critical path.
   // Event-time readers (solve/check/save) must use this ref, not `text`.
   const textRef = useRef(text)
+  // Live-lint plumbing: debounce timer + a ref to the latest idle checker
+  // (assigned each render, next to onCheck) so the timer never runs stale.
+  const idleCheckTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const idleCheckRef = useRef<() => void>(() => {})
+  useEffect(() => () => {
+    if (idleCheckTimer.current) clearTimeout(idleCheckTimer.current)
+  }, [])
+
+  // Share-by-URL: compress the current document into a self-contained link
+  // and put it on the clipboard. Refuses documents whose link would be too
+  // long to survive chat apps and proxies (share.ts sets the ceiling).
+  const handleShareLink = useCallback(() => {
+    const url = buildShareUrl(textRef.current)
+    if (url === null) {
+      notifications.show({
+        color: 'yellow',
+        title: 'Document too large to share by URL',
+        message: 'The compressed link would be too long to travel reliably — save the .frees file and send that instead.',
+      })
+      return
+    }
+    navigator.clipboard.writeText(url).then(
+      () => notifications.show({
+        color: 'teal',
+        title: 'Share link copied',
+        message: 'Anyone opening it gets this exact document. Nothing is stored on a server.',
+      }),
+      () => { globalThis.prompt('Copy the share link:', url) },
+    )
+  }, [])
+  useEffect(() => {
+    if (sharedBoot !== null) {
+      notifications.show({
+        color: 'teal',
+        title: 'Opened shared document',
+        message: 'Loaded from the link — nothing was stored on a server.',
+      })
+    }
+  }, [sharedBoot])
   const [checkResult, setCheckResult] = useState<CheckResponse | null>(null)
   const [checking, setChecking] = useState(false)
   const [result, setResult] = useState<SolveResponse | null>(null)
+  // Printable calculation report (browser print-to-PDF): the last successful
+  // solve plus the document that produced it, in a self-contained new window.
+  const handlePrintReport = useCallback(() => {
+    if (!result?.success) return
+    if (!openPrintReport(projectName, textRef.current, result)) {
+      notifications.show({
+        color: 'yellow',
+        title: 'Report window blocked',
+        message: 'Allow pop-ups for this site to open the printable report.',
+      })
+    }
+  }, [result, projectName])
   // Stable id for this document's solve session: tags solves so their result is
   // cached server-side for the REPL/Workspace, and bottom-terminal visibility.
   const [sessionId] = useState<string>(() => crypto.randomUUID())
@@ -277,6 +364,21 @@ export default function App() {
   // overlaid on the solved variables so the Variable Explorer / Solution reflect
   // them. Cleared on every solve (the backend resets its session overlay too).
   const [replVars, setReplVars] = useState<Record<string, VariableResult>>({})
+
+  // Parameters pinned to the slider strip. They ride the same override path as
+  // REPL assignments and are appended AFTER them, so the backend's
+  // last-wins collapse by name lets a dragged slider beat a stale REPL value.
+  const [pinnedSliders, setPinnedSliders] = useState<PinnedSlider[]>(() => boot?.sliders ?? [])
+  const sliderTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const sliderSolveRef = useRef<() => void>(() => {})
+  // A release that lands while a solve is in flight must not be dropped: the
+  // app's policy elsewhere is "skip rather than queue", which is right for a
+  // lint tick (another keystroke follows) but wrong here — the displayed
+  // solution would stop matching the handle. Remember it and drain on idle.
+  const sliderPendingRef = useRef(false)
+  useEffect(() => () => {
+    if (sliderTimer.current) clearTimeout(sliderTimer.current)
+  }, [])
   const [solving, setSolving] = useState(false)
   const [findAll, setFindAll] = useState(false)
   const [complexMode, setComplexMode] = useState(false)
@@ -311,6 +413,23 @@ export default function App() {
     setShowFirstRun(false)
     localStorage.setItem(FIRST_RUN_KEY, 'true')
   }, [])
+
+  // The app opens straight into the workspace (a deliberate decision — no
+  // landing page), so this modal is its welcome mat: auto-opened once per
+  // browser on desktop. Share-link visits skip it (the visitor came for a
+  // document, not a tour), and isMobile is undefined until the media query
+  // resolves, so wait for an explicit false.
+  const [showGettingStarted, setShowGettingStarted] = useState(false)
+  useEffect(() => {
+    if (isMobile === false && sharedBoot === null
+        && localStorage.getItem(GETTING_STARTED_KEY) !== 'true') {
+      setShowGettingStarted(true)
+    }
+  }, [isMobile, sharedBoot])
+  const closeGettingStarted = useCallback(() => {
+    localStorage.setItem(GETTING_STARTED_KEY, 'true')
+    setShowGettingStarted(false)
+  }, [])
   // Seed from a loaded project's configured drafts so buildVariableInfo() carries
   // their units (display conversion, dimensional grounding) on the very first solve
   // after load — Check/Solve then replaces this with the authoritative variable list.
@@ -320,6 +439,8 @@ export default function App() {
   )
   const [showVariableInfo, setShowVariableInfo] = useState(false)
   const [showMinMax, setShowMinMax] = useState(false)
+  const [showMonteCarlo, setShowMonteCarlo] = useState(false)
+  const [showParameterFit, setShowParameterFit] = useState(false)
   const [showCurveFit, setShowCurveFit] = useState(false)
   const computedScheme = useComputedColorScheme('dark')
   // PID Tuner: null = closed; the object carries what to tune. `instanceName`
@@ -356,6 +477,13 @@ export default function App() {
   }, [])
   // Component Browser/Wizard: append the generated `Type NAME(...)` block on its
   // own line in the equations editor (same path as bound-cell statements).
+  // Wiring emits a statement while the user stays on the schematic, so unlike
+  // the wizard's insertion this must NOT pull focus to the editor. The live
+  // lint re-checks shortly after, which is what redraws the canvas.
+  const emitFromSchematic = useCallback((statement: string) => {
+    editorRef.current?.insertStatement(statement)
+  }, [])
+
   const insertComponentBlock = useCallback((block: string) => {
     setActiveTab('equations')
     setTimeout(() => editorRef.current?.insertStatement(block), 50)
@@ -459,6 +587,12 @@ export default function App() {
   // ("template mode", §2.5b); samples live in the module-level ChannelStore
   // and are re-picked on load via each window's "Locate file…" banner.
   const [analyzers, setAnalyzers] = useState<AnalyzerSpec[]>(() => boot?.analyzers ?? [])
+  // Blocks the user has dragged on the rendered schematic, as offsets from the
+  // auto-layout. The drawing itself is always derived from the document, so
+  // this is the only part of it that has to be saved.
+  const [schematicOffsets, setSchematicOffsets] = useState<SchematicOffsets>(
+    () => boot?.schematic ?? {},
+  )
   // One-line self-dismissing notice (e.g. "N analyzer window(s) awaiting
   // measurement files" after a project load).
   const [loadNotice, setLoadNotice] = useState<string | null>(null)
@@ -517,11 +651,13 @@ export default function App() {
       whiteboards,
       spreadsheets,
       analyzers,
+      sliders: pinnedSliders,
+      schematic: schematicOffsets,
     }),
     // `text` stays a dependency so the autosave effect keyed on this callback
     // still refreshes when the (deferred) editor document state lands.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [text, varDrafts, stopCriteria, unitSystem, fillMissing, stateUnitIds, tables, plots, whiteboards, spreadsheets, analyzers],
+    [text, varDrafts, stopCriteria, unitSystem, fillMissing, stateUnitIds, tables, plots, whiteboards, spreadsheets, analyzers, pinnedSliders, schematicOffsets],
   )
 
   // Debounced autosave of the entire workspace to a single localStorage key,
@@ -538,6 +674,15 @@ export default function App() {
   useEffect(() => {
     if (!solving) setFillMissingFor(null)
   }, [solving])
+
+  // Drain a slider re-solve that the in-flight guard blocked. Without this a
+  // handle released mid-solve leaves the solution showing the previous value.
+  useEffect(() => {
+    if (!solving && !checking && sliderPendingRef.current) {
+      sliderPendingRef.current = false
+      sliderSolveRef.current()
+    }
+  }, [solving, checking])
 
   // Phase 3.3 Auto-Sync Mode: Sync result bindings back to spreadsheets if autoSync is enabled
   useEffect(() => {
@@ -610,7 +755,7 @@ export default function App() {
     }
     isDirtyRef.current = true
 
-  }, [text, tables, plots, whiteboards, spreadsheets, analyzers, varDrafts])
+  }, [text, tables, plots, whiteboards, spreadsheets, analyzers, varDrafts, schematicOffsets])
 
   // Apply an opened/loaded project to every workspace slice. Child-owned slices
   // are written back to their caches and the relevant tabs are remounted (epoch
@@ -633,6 +778,7 @@ export default function App() {
     // banner. Clear any stale samples from a previous project first.
     channelStore.clear()
     setAnalyzers(p.analyzers ?? [])
+    setSchematicOffsets(p.schematic ?? {})
     const awaiting = (p.analyzers ?? []).filter((a) => a.files.length > 0).length
     const notices: string[] = []
     if (awaiting > 0) {
@@ -775,6 +921,7 @@ export default function App() {
     setWhiteboards([])
     setSpreadsheets([])
     setAnalyzers([])
+    setSchematicOffsets({})
     channelStore.clear()
     setResult(null)
     setCheckResult(null)
@@ -901,6 +1048,8 @@ export default function App() {
     if (result) setResult(null)
     if (lastSolvedWithFillMissing) setLastSolvedWithFillMissing(false)
     invalidateTable()
+    if (idleCheckTimer.current) clearTimeout(idleCheckTimer.current)
+    idleCheckTimer.current = setTimeout(() => idleCheckRef.current(), 700)
   }
 
   // Load a curated example into the editor, replacing the current document and
@@ -934,6 +1083,7 @@ export default function App() {
     setWhiteboards([])
     setSpreadsheets([])
     setAnalyzers([])
+    setSchematicOffsets({})
     channelStore.clear()
     setResult(null)
     setCheckResult(null)
@@ -1020,7 +1170,7 @@ export default function App() {
         buildVariableInfo(),
         complexMode,
         functionTableDtos(),
-        Object.values(replVars).map(replOverrideEquation),
+        solveOverrides(),
       )
       setCheckResult(response)
       setTables((all) => mergeCodeTables(all, response.codeTables, response.parametricTables))
@@ -1056,6 +1206,82 @@ export default function App() {
     } finally {
       setChecking(false)
     }
+  }
+
+  // Live lint: run Check automatically once typing pauses, so broken lines are
+  // marked (all of them — the multi-error lint) without pressing F4. The timer
+  // fires through a ref because its closure would otherwise go stale across
+  // renders; anything already in flight skips the tick rather than queueing.
+  idleCheckRef.current = () => {
+    if (checking || solving || solvingTableId) return
+    if (!textRef.current.trim()) return
+    void onCheck()
+  }
+
+  // Every solve/check override, REPL first then sliders: the backend collapses
+  // the list by variable name keeping the last, so a pinned slider wins.
+  // Only variables the document assigns a literal may be pinned: an override
+  // replaces any line assigning the name, so offering a computed variable
+  // would let a drag silently delete the equation defining it.
+  const pinnableNames = useMemo(
+    () => pinnableParameters(textRef.current),
+    // Recomputed when a check/solve lands, which is also when the variable
+    // list the affordance decorates is refreshed.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [checkResult, result],
+  )
+
+  const pinnedSliderNames = useMemo(
+    () => new Set(pinnedSliders.map((p) => p.name.toLowerCase())),
+    [pinnedSliders],
+  )
+
+  const solveOverrides = () => [
+    ...Object.values(replVars).map(replOverrideEquation),
+    // Only pins that are STILL literal parameters are applied. A document edit
+    // can turn a pinned name into a computed variable, and an override on one
+    // of those replaces the equation defining it — so a stale pin goes inert
+    // rather than silently deleting physics.
+    ...pinnedSliders
+      .filter((p) => pinnableNames.has(p.name.toLowerCase()))
+      .map(sliderOverrideEquation),
+  ]
+
+  // Re-solve for the current slider values, honouring the in-flight guard.
+  sliderSolveRef.current = () => {
+    if (!solvable) return
+    if (solving || checking) {
+      sliderPendingRef.current = true
+      return
+    }
+    void onSolve()
+  }
+
+  function scheduleSliderSolve(delayMs: number) {
+    if (sliderTimer.current) clearTimeout(sliderTimer.current)
+    sliderTimer.current = setTimeout(() => sliderSolveRef.current(), delayMs)
+  }
+
+  function setSliderValue(name: string, value: number, commit: boolean) {
+    setPinnedSliders((prev) => prev.map((p) => (p.name === name ? { ...p, value } : p)))
+    // Dragging re-solves on a short debounce so the solution tracks the handle;
+    // the release commits promptly. Both go through the timer, so a fast drag
+    // collapses into one solve rather than a queue of them.
+    scheduleSliderSolve(commit ? 30 : 220)
+  }
+
+  function pinSlider(v: VariableResult) {
+    setPinnedSliders((prev) => {
+      if (findPin(prev, v.name)) return prev
+      const draft = varDrafts[v.name]
+        ?? varDrafts[Object.keys(varDrafts).find((k) => k.toLowerCase() === v.name.toLowerCase()) ?? '']
+      const { min, max } = sliderRange(v.value, parseBound(draft?.lower ?? ''), parseBound(draft?.upper ?? ''))
+      return [...prev, { name: v.name, value: v.value, units: v.units, min, max }]
+    })
+  }
+
+  function unpinSlider(name: string) {
+    setPinnedSliders((prev) => prev.filter((p) => p.name !== name))
   }
 
   function invalidateTable() {
@@ -1239,7 +1465,7 @@ export default function App() {
         sessionId,
         // REPL-defined/changed variables take priority over the editor until the
         // user runs `clear` in the terminal.
-        Object.values(replVars).map(replOverrideEquation),
+        solveOverrides(),
       )
       setResult(response)
       // REPL overrides persist across solves (the terminal keeps priority over the
@@ -1380,10 +1606,14 @@ export default function App() {
   }
 
 
-  // Jump the editor to a 1-based line (selecting it) — used to reach the line a
-  // syntax error points at. Ensures the editor is visible first.
+  // Jump the editor to a 1-based line (selecting it) — the error Alert's "Go to
+  // line" and the schematic's click-to-reveal. Opening the dock panel is what
+  // actually makes the jump visible: setting the rail tab alone leaves the
+  // editor behind whichever window is focused (or closed entirely), so the
+  // selection would land somewhere the user cannot see.
   const goToLine = useCallback((lineNo: number) => {
     setActiveTab('equations')
+    dockRef.current?.open('equations')
     setTimeout(() => editorRef.current?.goToLine(lineNo), 50)
   }, [])
 
@@ -1450,7 +1680,7 @@ export default function App() {
   // restored from a saved layout. Without this they'd render as blank panels.
   useEffect(() => {
     const valid = new Set<string>([
-      'equations', 'table', 'plots', 'digitizer', 'workspace', 'terminal', 'states', 'inspector',
+      'equations', 'table', 'plots', 'digitizer', 'schematic', 'workspace', 'terminal', 'states', 'inspector',
       TABLES_WORKBOOK_WINDOW_ID,
       ...mergedPlots.map((p) => `plot:${p.id}`),
       // Hosted tables (function + GUI parametric) live as sheets in the
@@ -1750,6 +1980,7 @@ export default function App() {
           else dockRef.current?.open('states')
         } },
         { id: 'view-digitizer', label: 'Graph Digitizer', leftSection: <IconChartGridDots size={18} />, onClick: () => dockRef.current?.open('digitizer') },
+        { id: 'view-schematic', label: 'Schematic', description: 'Auto-rendered component network', leftSection: <IconSitemap size={18} />, onClick: () => dockRef.current?.open('schematic') },
         { id: 'view-whiteboard', label: 'Whiteboard', description: 'Open the latest whiteboard (or create one)', leftSection: <IconBrush size={18} />, onClick: openLatestOrNewWhiteboard },
         { id: 'view-spreadsheet', label: 'Spreadsheet', description: 'Open the latest spreadsheet (or create one)', leftSection: <IconGrid4x4 size={18} />, onClick: openLatestOrNewSpreadsheet },
         { id: 'view-analyzer', label: 'Data Analyzer', description: 'Open the latest analyzer (or create one)', leftSection: <IconWaveSine size={18} />, onClick: openLatestOrNewAnalyzer },
@@ -1784,6 +2015,9 @@ export default function App() {
       group: 'Project',
       actions: [
         { id: 'proj-examples', label: 'Open Example…', description: 'Load a ready-to-solve worked example', leftSection: <IconLayoutGrid size={18} />, onClick: () => setShowExamples(true) },
+        { id: 'proj-share', label: 'Copy Share Link', description: 'Self-contained URL carrying this document', leftSection: <IconLink size={18} />, onClick: handleShareLink },
+        { id: 'proj-report', label: 'Print Report…', description: 'Printable calculation report of the last solve (print to PDF)', leftSection: <IconPrinter size={18} />, onClick: handlePrintReport },
+        { id: 'help-getting-started', label: 'Getting Started…', description: 'What frees is, and four one-click ways in', leftSection: <IconHelp size={18} />, onClick: () => setShowGettingStarted(true) },
         { id: 'proj-component', label: 'Component Wizard', description: 'Browse the component library and insert a configured component', leftSection: <IconLayoutGrid size={18} />, onClick: () => setShowComponentWizard(true) },
         { id: 'proj-new', label: 'New Project', leftSection: <IconFilePlus size={18} />, onClick: handleNewProject },
         { id: 'proj-open', label: 'Open Project…', leftSection: <IconFolderOpen size={18} />, onClick: handleOpenProject },
@@ -1880,10 +2114,13 @@ export default function App() {
         {showFirstRun && (
           <Alert color="teal" variant="light" p="xs" mb={6} withCloseButton onClose={dismissFirstRun} title="Welcome to frees">
             <Text size="xs">
-              Write equations and markdown notes on the left — they can be
+              Write equations and notes on the left — they can be
               entered in any order. Click <strong>Check</strong> (F4) to
               validate, then <strong>Solve</strong> (F2). Solve also runs
-              Check for you automatically.
+              Check for you automatically.{' '}
+              <Anchor size="xs" component="button" type="button" onClick={() => setShowGettingStarted(true)}>
+                Getting started guide
+              </Anchor>
             </Text>
           </Alert>
         )}
@@ -1923,7 +2160,8 @@ export default function App() {
               variables={variables}
               errorLine={errorLine}
               errorMessage={result?.error ?? checkResult?.message ?? null}
-              placeholder={'Enter equations and markdown notes, e.g.\n# Rankine Cycle\nT1 = 100 [C]\nP1 = 250 [kPa]'}
+              errorList={checkResult?.errors ?? null}
+              placeholder={'Enter equations and notes, e.g.\n{ Rankine Cycle }\nT1 = 100 [C]\nP1 = 250 [kPa]'}
             />
           </Suspense>
         </div>
@@ -1953,6 +2191,23 @@ export default function App() {
       <div style={{ height: '100%', minHeight: 0 }}>
         <Suspense fallback={lazyTabFallback}>
           <DigitizerTab key={`digitizer-${workspaceEpoch}`} onSendToFunctionTable={sendDigitizedToFunctionTable} />
+        </Suspense>
+      </div>
+    ),
+    schematic: (
+      <div style={{ height: '100%', minHeight: 0 }}>
+        <Suspense fallback={lazyTabFallback}>
+          <SchematicTab
+            key={`schematic-${workspaceEpoch}`}
+            checkResult={checkResult}
+            components={result?.components}
+            variables={result?.variables}
+            text={textRef.current}
+            onRevealLine={goToLine}
+            onEmitStatement={emitFromSchematic}
+            offsets={schematicOffsets}
+            onOffsetsChange={setSchematicOffsets}
+          />
         </Suspense>
       </div>
     ),
@@ -2169,9 +2424,27 @@ export default function App() {
             variables={workspaceVariables}
             replNames={replNames}
             components={result?.components}
+            diagnostics={result}
             onEdit={() => setShowVariableInfo(true)}
             onExportSpreadsheet={exportToSpreadsheet}
             onTunePid={openPidTunerFor}
+            pinnedNames={pinnedSliderNames}
+            pinnableNames={pinnableNames}
+            onPin={pinSlider}
+            sliderStrip={
+              pinnedSliders.length > 0 ? (
+                <Suspense fallback={null}>
+                  <SliderStrip
+                    pins={pinnedSliders}
+                    inertNames={pinnedSliders.filter((p) => !pinnableNames.has(p.name.toLowerCase())).map((p) => p.name)}
+                    onChange={(name, v) => setSliderValue(name, v, false)}
+                    onCommit={(name, v) => setSliderValue(name, v, true)}
+                    onUnpin={unpinSlider}
+                    solving={solving}
+                  />
+                </Suspense>
+              ) : null
+            }
           />
         </Suspense>
       </div>
@@ -2232,6 +2505,7 @@ export default function App() {
     table: 'Tables',
     plots: 'Plots',
     digitizer: 'Digitizer',
+    schematic: 'Schematic',
     workspace: 'Variable Explorer',
     terminal: 'Terminal',
     states: 'Fluid States',
@@ -2522,6 +2796,8 @@ export default function App() {
         onMinMax={() => setShowMinMax(true)}
         onCurveFit={() => setShowCurveFit(true)}
           onPidTuner={() => setPidTuner({})}
+          onMonteCarlo={() => setShowMonteCarlo(true)}
+          onParameterFit={() => setShowParameterFit(true)}
         onPreferences={() => setShowPreferences(true)}
         onAbout={() => setShowAbout(true)}
       />
@@ -2566,6 +2842,9 @@ export default function App() {
           onInsertFunction={insertFunction}
           onInsertComponent={() => setShowComponentWizard(true)}
           onOpenExamples={() => setShowExamples(true)}
+          onShareLink={handleShareLink}
+          onPrintReport={handlePrintReport}
+          canPrintReport={result?.success === true}
           onOpenInspector={() => dockRef.current?.open('inspector')}
           onOpenWorkspace={() => dockRef.current?.open('workspace')}
           onOpenTerminal={() => dockRef.current?.open('terminal')}
@@ -2573,6 +2852,8 @@ export default function App() {
           onMinMax={() => setShowMinMax(true)}
           onCurveFit={() => setShowCurveFit(true)}
           onPidTuner={() => setPidTuner({})}
+          onMonteCarlo={() => setShowMonteCarlo(true)}
+          onParameterFit={() => setShowParameterFit(true)}
         />
         <input
           ref={projectFileRef}
@@ -2640,6 +2921,15 @@ export default function App() {
       </Suspense>
 
       <ShortcutsModal opened={showShortcuts} onClose={() => setShowShortcuts(false)} />
+
+      <GettingStartedModal
+        opened={showGettingStarted}
+        onClose={closeGettingStarted}
+        onSolveExample={() => {
+          void checkThenSolve()
+        }}
+        onOpenExamples={() => setShowExamples(true)}
+      />
 
       <Spotlight
         actions={spotlightActions}
@@ -2770,6 +3060,11 @@ export default function App() {
             setShowVariableInfo(false)
           }}
           onClose={() => setShowVariableInfo(false)}
+          documentText={textRef.current}
+          onWriteToDocument={(next) => {
+            applyText(next)
+            setShowVariableInfo(false)
+          }}
         />
       )}
 
@@ -2829,6 +3124,41 @@ export default function App() {
         </Suspense>
       )}
 
+      {showMonteCarlo && (
+        <Suspense fallback={null}>
+          <MonteCarloModal
+            opened
+            onClose={() => setShowMonteCarlo(false)}
+            onRun={(samples, seed) =>
+              runMonteCarlo(
+                effectiveText(),
+                { ...stopCriteria, complexMode },
+                buildVariableInfo(),
+                unitSystem,
+                functionTableDtos(),
+                samples,
+                seed,
+              )
+            }
+          />
+        </Suspense>
+      )}
+
+      {showParameterFit && (
+        <Suspense fallback={null}>
+          <ParameterFitModal
+            opened
+            onClose={() => setShowParameterFit(false)}
+            text={effectiveText()}
+            stopCriteria={{ ...stopCriteria, complexMode }}
+            variableInfo={buildVariableInfo()}
+            functionTables={functionTableDtos()}
+            analyzers={analyzers}
+            tables={tables}
+            onApply={(next) => applyText(next)}
+          />
+        </Suspense>
+      )}
 
       {newPlotKind && (
         <Suspense fallback={null}>

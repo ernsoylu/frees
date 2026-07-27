@@ -411,6 +411,159 @@ public final class ComponentExpander {
     }
 
     /**
+     * One connection-topology edge for the schematic payload.
+     *
+     * <p>{@code domain} is the bond-graph domain (fluid/heat/electrical/…) and
+     * {@code endpoints} the {@code instance.port} refs the node joins. The
+     * remaining fields are what a *drawn* schematic needs and the coarse domain
+     * cannot supply:
+     * <ul>
+     *   <li>{@code connector} — the fluid connector type ({@code liquid},
+     *       {@code twophase}, {@code gas}, {@code oil}, {@code moistair},
+     *       {@code fluid}); null outside the fluid domain. A coolant line and a
+     *       refrigerant line are both {@code domain=fluid}, so without this the
+     *       renderer cannot tell two circuits apart.</li>
+     *   <li>{@code fluid} — the CoolProp fluid the node carries (EG50, R1234yf,
+     *       …), so each working fluid can get its own line style.</li>
+     *   <li>{@code streams} — per endpoint, the display prefix its member
+     *       variables use ({@code CHLR.in} for a connect-wired free port,
+     *       {@code s2} for a shared-name stream), so the renderer can look up
+     *       solved values for an endpoint without re-deriving the binding.</li>
+     * </ul>
+     */
+    public record Connection(String domain, List<String> endpoints, String connector,
+                             String fluid, List<String> streams) {
+        /** Topology only — for callers and tests that predate the drawing data. */
+        public Connection(String domain, List<String> endpoints) {
+            this(domain, endpoints, null, null, List.of());
+        }
+    }
+
+    /**
+     * The document's connection topology — the data layer of the rendered
+     * schematic. Explicit {@code connect(...)} nodes keep their endpoints as
+     * written; shared-stream junctions (two instance ports naming one stream)
+     * are reported as {@code instance.port} pairs. Domains reuse the node
+     * classification the expander already applies, so the payload can never
+     * disagree with the solve.
+     */
+    public List<Connection> connections() {
+        List<Connection> out = new ArrayList<>(explicitConnections());
+        out.addAll(sharedStreamJunctions());
+        return out;
+    }
+
+    /** {@code connect(...)} declarations, endpoints kept as written. */
+    private List<Connection> explicitConnections() {
+        List<Connection> out = new ArrayList<>();
+        for (ConnectDecl c : connects) {
+            List<String> refs = c.ports();
+            List<String> streams = resolvedStreams(c);
+            // Fewer than two resolved streams means the expansion already
+            // rejected this declaration with a real error; nothing to draw.
+            if (streams.size() >= 2) {
+                out.add(new Connection(domainName(streams), List.copyOf(refs),
+                        connectorOf(streams), fluidOf(streams), endpointStreams(c)));
+            }
+        }
+        return out;
+    }
+
+    /** Per endpoint of a {@code connect}, the display prefix its member variables
+     *  use — aligned with {@link ConnectDecl#ports()} so index i describes
+     *  endpoint i. An endpoint the expansion could not resolve keeps its written
+     *  ref, which is the best available guess and never a wrong lookup key. */
+    private List<String> endpointStreams(ConnectDecl c) {
+        List<String> out = new ArrayList<>(c.ports().size());
+        for (String ref : c.ports()) {
+            try {
+                out.add(displayStream(streamOf(ref, c)));
+            } catch (RuntimeException e) {
+                out.add(ref);   // already reported as a real expansion error
+            }
+        }
+        return out;
+    }
+
+    /** A stream's display prefix: the {@code inst.port} spelling for a synthetic
+     *  free-port stream, otherwise the stream name as the document wrote it. */
+    private String displayStream(String stream) {
+        return streamDisplay.getOrDefault(stream, stream);
+    }
+
+    /** The fluid connector type of a fluid node ({@code liquid}, {@code twophase},
+     *  {@code gas}, …); null outside the fluid domain, where the concept does not
+     *  apply. This is what separates a coolant line from a refrigerant line —
+     *  both are {@code domain=fluid}. */
+    private String connectorOf(List<String> streams) {
+        return nodeDomain(streams) == Domain.FLUID ? nodeFluidType(streams) : null;
+    }
+
+    /**
+     * The working fluid a node carries, from its first stream that has one.
+     *
+     * <p>Only a fluid node has one. {@link #buildStreamFluidMap} tags <em>every</em>
+     * port of a fluid-bearing component — a wall port included, since it cannot know
+     * which ports are thermal — so a heat node between a coolant HX and a thermal mass
+     * would otherwise report itself as carrying the coolant. It does not: it carries
+     * heat.
+     */
+    private String fluidOf(List<String> streams) {
+        if (nodeDomain(streams) != Domain.FLUID) {
+            return null;
+        }
+        for (String st : streams) {
+            String f = streamFluid.get(st);
+            if (f != null) {
+                return f;
+            }
+        }
+        return null;
+    }
+
+    /** The streams a connect's endpoints name, skipping unresolvable ones. */
+    private List<String> resolvedStreams(ConnectDecl c) {
+        List<String> streams = new ArrayList<>(c.ports().size());
+        for (String ref : c.ports()) {
+            try {
+                streams.add(streamOf(ref, c));
+            } catch (RuntimeException e) {
+                // an unresolved endpoint already failed the expansion
+            }
+        }
+        return streams;
+    }
+
+    /** Ports of different instances naming one stream — the terse connection
+     *  style — reported as the {@code instance.port} pairs they join. */
+    private List<Connection> sharedStreamJunctions() {
+        Map<String, List<String>> byStream = new LinkedHashMap<>();
+        for (ResolvedInstance ri : instances) {
+            for (Map.Entry<String, String> e : ri.portToStream().entrySet()) {
+                byStream.computeIfAbsent(e.getValue(), k -> new ArrayList<>())
+                        .add(ri.inst().name() + "." + e.getKey());
+            }
+        }
+        List<Connection> out = new ArrayList<>();
+        for (Map.Entry<String, List<String>> e : byStream.entrySet()) {
+            if (e.getValue().size() >= 2) {
+                List<String> streams = List.of(e.getKey());
+                // One shared stream names every endpoint's variables, so the
+                // display prefix repeats across the node.
+                String display = displayStream(e.getKey());
+                out.add(new Connection(domainName(streams), List.copyOf(e.getValue()),
+                        connectorOf(streams), fluidOf(streams),
+                        e.getValue().stream().map(x -> display).toList()));
+            }
+        }
+        return out;
+    }
+
+    private String domainName(List<String> streams) {
+        return nodeDomain(streams).name().toLowerCase(java.util.Locale.ROOT);
+    }
+
+    /**
      * SI units of each stream's <em>canonical</em> stored members, keyed by the
      * flat solver-variable name ({@code s2$p}, {@code s2$h}, {@code s2$mdot}).
      * These members are the solver's own unknowns — unlike derived properties

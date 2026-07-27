@@ -42,10 +42,17 @@ COPY --from=build /app/dist /usr/share/nginx/html
 # script and CLAUDE.md "Build stamping"). build-info.js must be writable by the
 # unprivileged runtime user; it starts empty so local builds fall back cleanly.
 COPY docker-entrypoint.d/40-build-info.sh /docker-entrypoint.d/40-build-info.sh
+# real_ip trust list, generated at start from TRUSTED_PROXY_CIDRS (empty when
+# unset — see the script). Must exist even when empty because the nginx config
+# includes it unconditionally, and must be writable by the runtime user.
+COPY docker-entrypoint.d/10-real-ip.sh /docker-entrypoint.d/10-real-ip.sh
 USER root
-RUN chmod +x /docker-entrypoint.d/40-build-info.sh \
+RUN chmod +x /docker-entrypoint.d/40-build-info.sh /docker-entrypoint.d/10-real-ip.sh \
     && : > /usr/share/nginx/html/build-info.js \
     && chown 101:101 /usr/share/nginx/html/build-info.js \
-    && chmod 644 /usr/share/nginx/html/build-info.js
+    && chmod 644 /usr/share/nginx/html/build-info.js \
+    && : > /etc/nginx/real-ip.conf \
+    && chown 101:101 /etc/nginx/real-ip.conf \
+    && chmod 644 /etc/nginx/real-ip.conf
 USER 101
 EXPOSE 8080

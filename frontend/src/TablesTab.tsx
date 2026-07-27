@@ -85,6 +85,7 @@ export default function TablesTab(props: Readonly<Props>) {
         <DataGridReadOnly
           vars={active.vars}
           rows={active.rows}
+          results={active.results}
           varDrafts={props.varDrafts}
           columnUnits={active.columnUnits}
           onPlotColumns={props.onPlotColumns}

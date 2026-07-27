@@ -17,8 +17,11 @@ import {
 } from '@mantine/core'
 import {
   IconAdjustments,
+  IconChartHistogram,
+  IconCrosshair,
   IconBrush,
   IconChartGridDots,
+  IconSitemap,
   IconChartLine,
   IconChecks,
   IconChevronDown,
@@ -50,6 +53,8 @@ import {
   IconVariable,
   IconWaveSine,
   IconGrid4x4,
+  IconLink,
+  IconPrinter,
 } from '@tabler/icons-react'
 import { spotlight } from '@mantine/spotlight'
 import { useState } from 'react'
@@ -73,6 +78,12 @@ const VIEWS = [
     label: 'Digitizer',
     tip: 'Graph Digitizer — extract curves from chart images',
     icon: IconChartGridDots,
+  },
+  {
+    value: 'schematic',
+    label: 'Schematic',
+    tip: 'Schematic — auto-rendered component network',
+    icon: IconSitemap,
   },
   { value: 'whiteboard', label: 'Whiteboard', tip: 'Whiteboard — Excalidraw freehand sketch canvas', icon: IconBrush },
   { value: 'spreadsheet', label: 'Spreadsheet', tip: 'Spreadsheet — formula-capable workbook', icon: IconGrid4x4 },
@@ -132,6 +143,8 @@ interface RailProps {
   onMinMax: () => void
   onCurveFit: () => void
   onPidTuner: () => void
+  onMonteCarlo: () => void
+  onParameterFit: () => void
   onPreferences: () => void
   onAbout: () => void
 }
@@ -811,6 +824,12 @@ interface TopBarProps {
   onInsertFunction: (snippet: string) => void
   onInsertComponent: () => void
   onOpenExamples: () => void
+  /** File menu: copy a self-contained #share= link carrying the document. */
+  onShareLink: () => void
+  /** File menu: open the printable calculation report (browser print-to-PDF). */
+  onPrintReport: () => void
+  /** Whether a successful solve exists for the report to print. */
+  canPrintReport: boolean
   /** Tools menu: open the auxiliary Inspector edge panel. */
   onOpenInspector: () => void
   /** Tools menu: open the Variable Explorer and the REPL Terminal dock windows. */
@@ -821,6 +840,8 @@ interface TopBarProps {
   onMinMax: () => void
   onCurveFit: () => void
   onPidTuner: () => void
+  onMonteCarlo: () => void
+  onParameterFit: () => void
 }
 
 function solveTooltipFor(canSolve: boolean, isTable: boolean): string {
@@ -877,6 +898,12 @@ export function TopBar(props: Readonly<TopBarProps>) {
             </Menu.Item>
             <Menu.Item leftSection={<IconLayoutGrid size={14} />} onClick={props.onOpenExamples}>
               Open Example…
+            </Menu.Item>
+            <Menu.Item leftSection={<IconLink size={14} />} onClick={props.onShareLink}>
+              Copy Share Link
+            </Menu.Item>
+            <Menu.Item leftSection={<IconPrinter size={14} />} onClick={props.onPrintReport} disabled={!props.canPrintReport}>
+              Print Report…
             </Menu.Item>
             <Menu.Divider />
             <Menu.Item leftSection={<IconDeviceFloppy size={14} />} onClick={props.onSaveProject}>
@@ -971,6 +998,12 @@ export function TopBar(props: Readonly<TopBarProps>) {
             </Menu.Item>
             <Menu.Item leftSection={<IconAdjustments size={14} />} onClick={props.onPidTuner}>
               PID Tuner
+            </Menu.Item>
+            <Menu.Item leftSection={<IconChartHistogram size={14} />} onClick={props.onMonteCarlo}>
+              Monte Carlo Uncertainty
+            </Menu.Item>
+            <Menu.Item leftSection={<IconCrosshair size={14} />} onClick={props.onParameterFit}>
+              Parameter Estimation
             </Menu.Item>
             <Menu.Divider />
             <Menu.Label>Auxiliary panels</Menu.Label>

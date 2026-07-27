@@ -70,6 +70,20 @@ public final class PropertyFunctions {
             Map.entry("r404a", "R404A"),
             Map.entry("r407c", "R407C"),
             Map.entry("r410a", "R410A"),
+            // Low-GWP replacement blends. Unlike the legacy blends above, these
+            // are keyed as "<NAME>.mix" in the predefined-mixture registry (the
+            // bare name only searches the pure-fluid library and fails), so the
+            // lowercased document spelling maps to the exact-case .mix key.
+            Map.entry("r448a", "R448A.mix"),
+            Map.entry("r449a", "R449A.mix"),
+            Map.entry("r452a", "R452A.mix"),
+            Map.entry("r452b", "R452B.mix"),
+            Map.entry("r454a", "R454A.mix"),
+            Map.entry("r454b", "R454B.mix"),
+            Map.entry("r454c", "R454C.mix"),
+            Map.entry("r455a", "R455A.mix"),
+            Map.entry("r513a", "R513A.mix"),
+            Map.entry("r515b", "R515B.mix"),
             Map.entry("r1234yf", "R1234yf"),
             Map.entry("r1234ze", "R1234ze(E)"),
             Map.entry("ammonia", "Ammonia"),
@@ -386,6 +400,14 @@ public final class PropertyFunctions {
         String fluid = resolveFluid(parts[2]);
         Input first = toInput(parts[3], values.get(0), output);
         Input second = toInput(parts[4], values.get(1), output);
+        // Hot flash path: (P,h) lookups on tabulated outputs are served by a
+        // validated bicubic table (lock-free) when the point is inside the
+        // table's box; everything else stays on the direct native call.
+        Double tabulated = PhTableRegistry.lookup(outputKey, first.key(), first.value(),
+                second.key(), second.value(), fluid);
+        if (tabulated != null) {
+            return VOLUME.equals(output) ? 1.0 / tabulated : tabulated;
+        }
         double raw = LENIENT.get()
                 ? guardedPropsSI(outputKey, first, second, fluid)
                 : CoolProp.propsSI(outputKey, first.key(), first.value(),

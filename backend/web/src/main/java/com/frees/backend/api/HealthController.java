@@ -8,6 +8,8 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.util.List;
 import java.util.Map;
 
@@ -21,8 +23,11 @@ import java.util.Map;
  *
  * <p>Returns 200 when the system is UP or DEGRADED and 503 when a critical
  * dependency is DOWN, so uptime monitors flag outages while the overall status
- * is readable either way. Exempt from the API rate limiter (see
- * {@code RequestGuardFilter}) so dashboards can poll it freely.
+ * is readable either way. It carries its own generous rate limit rather than
+ * the general one (see {@code RequestGuardFilter}) and the report is cached
+ * briefly ({@code SystemHealthService}), so dashboards can poll freely without
+ * the endpoint becoming a way to drive unmetered Redis/broker/HTTP fan-out.
+ * {@code /api/health/live} is the fully exempt liveness probe.
  *
  * <p><b>Topology-detail gating.</b> The per-service breakdown (service names,
  * roles, replica counts, queue depth, dependency latency) is reconnaissance-
@@ -61,13 +66,24 @@ public class HealthController {
     }
 
     /** True when topology detail may be disclosed: either no token is configured
-     *  (unguarded, for local/dev use) or the request presents the matching token. */
+     *  (unguarded, for local/dev use) or the request presents the matching token.
+     *
+     *  <p>Compared with {@link MessageDigest#isEqual} rather than
+     *  {@link String#equals}, which returns as soon as two bytes differ and so
+     *  leaks how much of a guess was correct. Remote timing analysis over HTTP
+     *  is not a practical way to recover a 64-hex token, but a constant-time
+     *  comparison costs nothing and removes the question. */
     private boolean detailAllowed(HttpServletRequest request) {
         if (detailToken.isEmpty()) {
             return true;
         }
         String presented = request.getHeader(HEALTH_TOKEN_HEADER);
-        return presented != null && detailToken.equals(presented.trim());
+        if (presented == null) {
+            return false;
+        }
+        return MessageDigest.isEqual(
+                detailToken.getBytes(StandardCharsets.UTF_8),
+                presented.trim().getBytes(StandardCharsets.UTF_8));
     }
 
     /** Strips the per-service breakdown, keeping only the overall status. */

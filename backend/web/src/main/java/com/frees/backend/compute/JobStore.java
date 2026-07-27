@@ -40,6 +40,51 @@ public class JobStore {
         put(JobState.failed(jobId, error != null ? error : "Job failed"));
     }
 
+    /** Marks a parent table job as awaiting {@code chunkCount} chunk results. */
+    public void savePendingChunked(String jobId, int chunkCount) {
+        savePending(jobId);
+        redis.opsForValue().set(key(jobId) + ":chunks", Integer.toString(chunkCount),
+                java.time.Duration.ofSeconds(TTL_SECONDS));
+    }
+
+    /**
+     * Records one chunk's result and returns every chunk's JSON in chunk order
+     * once ALL chunks have reported — exactly one caller (whichever lands
+     * last) gets the full list and assembles the parent; everyone else gets
+     * an empty list. Write-then-count: the payload is stored before the
+     * shared counter moves, so the assembling caller always reads complete
+     * data. A parent already in a terminal state (a sibling chunk failed) is
+     * never resurrected: the assembly probe re-checks it and stands down.
+     */
+    public java.util.List<String> saveChunkResult(String jobId, int chunkIndex, Object result) {
+        try {
+            String json = objectMapper.writeValueAsString(result);
+            redis.opsForValue().set(key(jobId) + ":chunk:" + chunkIndex, json,
+                    java.time.Duration.ofSeconds(TTL_SECONDS));
+            Long done = redis.opsForValue().increment(key(jobId) + ":chunks-done");
+            String countStr = redis.opsForValue().get(key(jobId) + ":chunks");
+            if (countStr == null || done == null || done < Long.parseLong(countStr)) {
+                return java.util.List.of();
+            }
+            JobState current = get(jobId);
+            if (current == null || !"PENDING".equals(current.status())) {
+                return java.util.List.of(); // a sibling failed the parent — stand down
+            }
+            int count = Integer.parseInt(countStr);
+            java.util.List<String> all = new java.util.ArrayList<>(count);
+            for (int i = 0; i < count; i++) {
+                String chunk = redis.opsForValue().get(key(jobId) + ":chunk:" + i);
+                if (chunk == null) {
+                    return java.util.List.of(); // expired — the parent will time out
+                }
+                all.add(chunk);
+            }
+            return all;
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to persist chunk state to Redis", e);
+        }
+    }
+
     /** The current state of {@code jobId}, or {@code null} if no such job exists. */
     public JobState get(String jobId) {
         String json = redis.opsForValue().get(key(jobId));

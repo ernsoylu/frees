@@ -12,6 +12,11 @@ import com.frees.backend.core.dae.DaeResidual;
 import com.frees.backend.core.dae.DaeRootFn;
 import com.frees.backend.core.dae.IdaDaeSolver;
 import com.frees.backend.core.dae.SundialsIda;
+import org.jgrapht.Graph;
+import org.jgrapht.alg.interfaces.MatchingAlgorithm;
+import org.jgrapht.alg.matching.HopcroftKarpMaximumCardinalityBipartiteMatching;
+import org.jgrapht.graph.DefaultEdge;
+import org.jgrapht.graph.SimpleGraph;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -519,6 +524,17 @@ public final class DynamicSolver {
                 }
                 rows.add(rowOf(tout, step.y()));
             }
+        } catch (IllegalStateException integrationFailed) {
+            // The native integrator reports failures as bare flag codes; keep
+            // them, but wrap into the solver's own exception type so the API
+            // returns a diagnosable failure instead of an internal error.
+            throw new SolverException("DYNAMIC " + system.name()
+                    + ": transient integration failed (" + integrationFailed.getMessage()
+                    + "). The usual causes: initial values that violate the algebraic "
+                    + "constraints, a step across a property-surface boundary, or an "
+                    + "algebraic coupling the structural checks cannot see. Adjust the "
+                    + "initials, or run a built-in method (ode23s) to surface the "
+                    + "per-step algebraic diagnosis.");
         }
         return new OdeTableResult(system.name(), columns, rows, hits, o.method(), false, o.tf());
     }
@@ -658,6 +674,98 @@ public final class DynamicSolver {
         }
         registerImplicitAuxiliaries();
         validateReferences();
+        checkStructuralIndex();
+    }
+
+    /**
+     * Structural index check. An index-1 DAE pairs every algebraic (non-der)
+     * equation with an algebraic unknown it can determine; the integrators
+     * here solve exactly that class. A constraint written directly between
+     * differentiated states — a rigid coupling like {@code w1 = w2} between
+     * two inertias, or an incompressible loop closure — leaves no algebraic
+     * unknown to pair with, makes the model index-2 or higher, and used to
+     * surface as an unexplained integrator failure at initialization. Detect
+     * it by maximum bipartite matching of the algebraic equations against the
+     * algebraic variables and name the culprits instead.
+     *
+     * <p>Runs only when the assembly is square (otherwise the count
+     * diagnostic in {@link #assembleDae} tells the better story) and flags
+     * only unmatched constraints that involve states.
+     */
+    private void checkStructuralIndex() {
+        if (algebraicTemplate.size() != states.size() + auxNames.size()) {
+            return;
+        }
+        List<Equation> algebraic = new ArrayList<>();
+        for (Equation eq : algebraicTemplate) {
+            if (eq.variables().stream().noneMatch(v -> v.startsWith("der$"))) {
+                algebraic.add(eq);
+            }
+        }
+        if (algebraic.isEmpty()) {
+            return;
+        }
+
+        Graph<String, DefaultEdge> graph = new SimpleGraph<>(DefaultEdge.class);
+        java.util.Set<String> eqNodes = new java.util.LinkedHashSet<>();
+        java.util.Set<String> varNodes = new java.util.LinkedHashSet<>();
+        for (int i = 0; i < algebraic.size(); i++) {
+            String node = "eq:" + i;
+            eqNodes.add(node);
+            graph.addVertex(node);
+        }
+        for (String aux : auxNames) {
+            String node = "var:" + aux;
+            varNodes.add(node);
+            graph.addVertex(node);
+        }
+        for (int i = 0; i < algebraic.size(); i++) {
+            for (String v : algebraic.get(i).variables()) {
+                if (auxNames.contains(v)) {
+                    graph.addEdge("eq:" + i, "var:" + v);
+                }
+            }
+        }
+        MatchingAlgorithm.Matching<String, DefaultEdge> matching =
+                new HopcroftKarpMaximumCardinalityBipartiteMatching<>(graph, eqNodes, varNodes)
+                        .getMatching();
+        java.util.Set<Integer> matched = new java.util.HashSet<>();
+        for (DefaultEdge edge : matching.getEdges()) {
+            String source = graph.getEdgeSource(edge);
+            String target = graph.getEdgeTarget(edge);
+            String eqNode = source.startsWith("eq:") ? source : target;
+            matched.add(Integer.parseInt(eqNode.substring(3)));
+        }
+
+        List<String> culprits = new ArrayList<>();
+        for (int i = 0; i < algebraic.size() && culprits.size() < 4; i++) {
+            if (matched.contains(i)) {
+                continue;
+            }
+            Equation eq = algebraic.get(i);
+            List<String> coupledStates = new ArrayList<>();
+            for (String v : eq.variables()) {
+                if (states.contains(v)) {
+                    coupledStates.add(v);
+                }
+            }
+            if (coupledStates.isEmpty()) {
+                continue; // no state involved — the count diagnostics own it
+            }
+            culprits.add("\"" + eq.sourceText() + "\" (couples " + display(coupledStates) + ")");
+        }
+        if (culprits.isEmpty()) {
+            return;
+        }
+        throw new SolverException("DYNAMIC " + system.name()
+                + ": the model is structurally index-2 or higher — "
+                + (culprits.size() == 1 ? "an algebraic constraint relates"
+                        : culprits.size() + " algebraic constraints relate")
+                + " differentiated states with no algebraic unknown left to determine: "
+                + String.join("; ", culprits)
+                + ". The integrators here solve index-1 systems: differentiate the "
+                + "constraint, put a compliance/storage element between the coupled "
+                + "states, or eliminate one state by substitution.");
     }
 
     /**
