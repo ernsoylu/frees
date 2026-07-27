@@ -14,6 +14,7 @@ import type { TableSpec } from './tables'
 import type { PlotSpec } from './plots/types'
 import type { WhiteboardSpec } from './whiteboard/types'
 import type { SpreadsheetSpec } from './spreadsheet/types'
+import type { PinnedSlider } from './sliders'
 import type { AnalyzerSpec } from './analyzer/types'
 
 // v2 (Data Analyzer Phase 2): + `analyzers` slice — layout, signal
@@ -42,6 +43,8 @@ export interface ProjectSlices {
   whiteboards: WhiteboardSpec[]
   spreadsheets: SpreadsheetSpec[]
   analyzers: AnalyzerSpec[]
+  /** Parameters pinned to the workspace slider strip. */
+  sliders?: PinnedSlider[]
 }
 
 export interface FreesProject extends ProjectSlices {
@@ -140,6 +143,7 @@ function sanitizeProject(project: FreesProject): FreesProject | null {
     whiteboards: Array.isArray(project.whiteboards) ? plainJson(project.whiteboards) : [],
     spreadsheets: Array.isArray(project.spreadsheets) ? plainJson(project.spreadsheets) : [],
     analyzers: Array.isArray(project.analyzers) ? plainJson(project.analyzers) : [],
+    sliders: Array.isArray(project.sliders) ? plainJson(project.sliders) : [],
     digitizer: plainJson(project.digitizer),
     dockLayout: plainJson(project.dockLayout),
   }
@@ -184,6 +188,7 @@ function migrate(p: FreesProject): FreesProject {
     whiteboards: p.whiteboards ?? [],
     spreadsheets: p.spreadsheets ?? [],
     analyzers: p.analyzers ?? [],
+    sliders: p.sliders ?? [],
     digitizer: p.digitizer ?? null,
     dockLayout: p.dockLayout ?? null,
   }
