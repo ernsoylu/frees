@@ -104,32 +104,56 @@ The **Whiteboard** is a pure freehand sketching surface — hand-drawn shapes, t
 
 The application can be deployed locally using Docker or pushed to Railway for a public hosting environment.
 
-### Local Deployment (frees.sh & Docker Compose)
+### Quick start — run frees locally (no clone needed)
 
-You can build and deploy the stack locally from source using the helper script:
+If you just want to *use* frees, you need Docker and one command:
 
 ```bash
-./frees.sh start    # build and start both servers in Docker
+curl -fsSL https://raw.githubusercontent.com/ernsoylu/frees/main/install.sh | sh
 ```
 
-Alternatively, you can run the pre-built Docker images directly from GitHub Container Registry (GHCR) using our production compose file:
+That downloads a single compose file into `~/.frees`, pulls the published images from GHCR, and starts the stack. When it finishes, open <http://localhost:5173>, **Check** your equations, then **Solve**.
+
+Prefer to read before you run? The script installs nothing outside its own directory and needs no root — inspect it first with `curl -fsSL .../install.sh | less`, or skip it entirely and drive the compose file yourself:
+
 ```bash
-docker-compose -f docker-compose.prod.yml up -d
+curl -fsSL https://raw.githubusercontent.com/ernsoylu/frees/main/docker-compose.local.yml -o docker-compose.local.yml
+docker compose -f docker-compose.local.yml up -d
 ```
 
-Open <http://localhost:5173>, **Check** your equations, then **Solve**.
+The installer leaves a small launcher behind:
 
 ```bash
+~/.frees/frees start | stop | restart | status | logs | update
+```
+
+Images are published on every push to `main`, tagged `latest` and with the commit sha. Pin an exact build with `FREES_VERSION`:
+
+```bash
+FREES_VERSION=<commit-sha> ~/.frees/frees update
+```
+
+Uninstall completely with `~/.frees/frees stop && rm -rf ~/.frees`.
+
+> The local stack deliberately omits the OpenTelemetry collector and Jaeger that `docker-compose.prod.yml` runs: they exist to debug a deployment, and the Jaeger UI is unauthenticated. Tracing is disabled at the SDK rather than left pointing at a collector that isn't there.
+
+### Local Deployment from source (frees.sh & Docker Compose)
+
+To build the stack from a checkout instead:
+
+```bash
+./frees.sh start    # build and start the full stack in Docker
 ./frees.sh stop     # stop everything
 ```
 
 #### Docker Containers
 
-Both servers run as Docker containers orchestrated by Docker Compose and managed via `./frees.sh`:
+The services run as Docker containers orchestrated by Docker Compose and managed via `./frees.sh`:
 
-- **backend** — multi-stage image: `eclipse-temurin:21-jdk` runs the Gradle wrapper `bootJar` (a multi-module build — `core`, the pure computation engine, and `web`, the Spring Boot server that depends on it), runtime is `eclipse-temurin:21-jre`. Exposes 8080 with a TCP healthcheck.
-- **frontend** — multi-stage image: `node:20-alpine` runs the Vite production build, runtime is `nginx:alpine` serving the bundle on port 5173 (host) and reverse-proxying `/api/` to the `backend` service. Starts only after the backend is healthy.
-- **Lifecycle** — `./frees.sh start|stop|restart|status|logs|build`; no host processes to find or kill.
+- **backend** — multi-stage image: `eclipse-temurin:25-jdk-noble` runs the Gradle wrapper `bootJar` (a multi-module build — `core`, the pure computation engine, and `web`, the Spring Boot server that depends on it), runtime is `eclipse-temurin:25-jre-noble`. Exposes 8080 with a TCP healthcheck. The base tag is **pinned to `noble` on purpose** — a floating tag drifts to a distro whose SUNDIALS links MPI, which aborts the JVM on the first transient solve.
+- **frontend** — multi-stage image: `node:26-alpine` runs the Vite production build, runtime is `nginxinc/nginx-unprivileged:alpine` serving the bundle (container port 8080, published as 5173) and reverse-proxying `/api/` to the backend. Starts only after the backend is healthy.
+- **mdf-sidecar** — `python:3.12-slim` running asammdf behind a small REST API; reads the DZ-compressed `.mf4` files the in-process parser cannot.
+- **Lifecycle** — `./frees.sh start|stop|restart|status|logs|build|rebuild`; no host processes to find or kill.
 
 ---
 

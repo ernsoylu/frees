@@ -162,7 +162,9 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      # frees.sh is the only supported way to run the stack, and the two
+      # frees.sh is the only supported way to run the stack from a checkout;
+      # install.sh is what end users pipe into `sh` (so it must stay POSIX —
+      # shellcheck reads its `#!/bin/sh` shebang and enforces that); and the two
       # docker-entrypoint.d scripts are deployment-critical: 10-real-ip.sh
       # generates the nginx real_ip trust list (get it wrong and client-IP
       # rate limiting silently breaks) and 40-build-info.sh stamps the commit
@@ -173,6 +175,7 @@ jobs:
           docker run --rm -v "${{ github.workspace }}:/mnt:ro" -w /mnt \
             koalaman/shellcheck:stable \
             frees.sh \
+            install.sh \
             frontend/docker-entrypoint.d/10-real-ip.sh \
             frontend/docker-entrypoint.d/40-build-info.sh
 
@@ -220,6 +223,13 @@ jobs:
             VITE_COMMIT_HASH=${{ github.event.pull_request.head.sha }}
           cache-from: type=gha,scope=frontend
 
+      - name: Build MDF sidecar image
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+        with:
+          context: mdf-sidecar
+          push: false
+          cache-from: type=gha,scope=mdf-sidecar
+
   docker-publish:
     name: Build and push Docker images
     runs-on: ubuntu-latest
@@ -265,3 +275,18 @@ jobs:
             ghcr.io/${{ github.repository_owner }}/frees-frontend:${{ github.sha }}
           cache-from: type=gha,scope=frontend
           cache-to: type=gha,scope=frontend,mode=max
+
+      # Required by docker-compose.local.yml, which the one-line installer
+      # downloads: without this image published, api-node's
+      # FREES_MEASUREMENTS_SIDECAR_URL points at a service that can never start
+      # and the analyzer silently loses its DZ-compressed .mf4 fallback rung.
+      - name: Build and push MDF sidecar image
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+        with:
+          context: mdf-sidecar
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/frees-mdf-sidecar:latest
+            ghcr.io/${{ github.repository_owner }}/frees-mdf-sidecar:${{ github.sha }}
+          cache-from: type=gha,scope=mdf-sidecar
+          cache-to: type=gha,scope=mdf-sidecar,mode=max
