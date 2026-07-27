@@ -34,3 +34,29 @@ export function declarationLine(text: string, instance: string): number | null {
   }
   return null
 }
+
+/**
+ * Instance name → component type, read straight from the document.
+ *
+ * The solve response also carries this, but only after a network solves —
+ * and a network being wired is exactly one that does not yet solve. The text
+ * is the source of truth and is always available, so wiring reads from it.
+ */
+export function instanceTypes(text: string): Map<string, string> {
+  const out = new Map<string, string>()
+  if (!text) {
+    return out
+  }
+  for (const rawLine of text.split('\n')) {
+    const line = rawLine.replace(/\{[^}]*\}/g, '').trim()
+    if (line.startsWith('//') || /^(connect|component|function|procedure|module|table|parametric|dynamic|linearize|plot|state)\b/i.test(line)) {
+      continue
+    }
+    // `Type Name(...)` — two identifiers then an open paren.
+    const m = /^([A-Za-z_]\w*)\s+([A-Za-z_]\w*)\s*\(/.exec(line)
+    if (m) {
+      out.set(m[2].toLowerCase(), m[1])
+    }
+  }
+  return out
+}
