@@ -3037,6 +3037,11 @@ export default function App() {
             setShowVariableInfo(false)
           }}
           onClose={() => setShowVariableInfo(false)}
+          documentText={textRef.current}
+          onWriteToDocument={(next) => {
+            applyText(next)
+            setShowVariableInfo(false)
+          }}
         />
       )}
 
