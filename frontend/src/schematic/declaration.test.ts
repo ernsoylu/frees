@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { declarationLine } from './declaration'
+import { declarationLine, instanceTypes } from './declaration'
 
 const DOC = `// A two-loop network
 Pump P1(eta=0.7)
@@ -35,5 +35,29 @@ describe('declarationLine', () => {
 
   it('does not treat a name that merely prefixes another as a match', () => {
     expect(declarationLine('Pump P10(eta=0.7)', 'P1')).toBeNull()
+  })
+})
+
+describe('instanceTypes', () => {
+  it('reads instance declarations from the document', () => {
+    const types = instanceTypes('LiquidSource SRC(fluid$=Water)\nLiquidPump PMP(eta=0.7)\n')
+    expect(types.get('src')).toBe('LiquidSource')
+    expect(types.get('pmp')).toBe('LiquidPump')
+  })
+
+  it('ignores connects, blocks and comments', () => {
+    const types = instanceTypes([
+      '// Pump P1(eta=0.7)',
+      'connect(SRC.out, PMP.in)',
+      'FUNCTION f(x)',
+      'TABLE t(x)',
+      'DYNAMIC d(t = 0 .. 1)',
+      'Pump P1(eta=0.7)',
+    ].join('\n'))
+    expect([...types.keys()]).toEqual(['p1'])
+  })
+
+  it('is empty for a component-free document', () => {
+    expect(instanceTypes('x = 2\ny = x + 1').size).toBe(0)
   })
 })

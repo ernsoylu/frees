@@ -2,9 +2,10 @@ import { useMemo, useRef, useState } from 'react'
 import { ActionIcon, Badge, Group, Stack, Text, Tooltip } from '@mantine/core'
 import { IconDownload, IconZoomIn, IconZoomOut, IconZoomReset } from '@tabler/icons-react'
 import type { CheckResponse, ComponentResult } from '../api'
-import { declarationLine } from './declaration'
+import { declarationLine, instanceTypes } from './declaration'
 import { domainColor, legendDomains } from './palette'
-import { layoutSchematic, type SchematicEdge, type SchematicNode } from './layout'
+import { layoutSchematic, portAnchors, type SchematicEdge, type SchematicNode } from './layout'
+import { COMPONENT_CATALOG } from '../componentCatalog'
 
 const ZOOM_STEPS = [0.5, 0.65, 0.8, 1, 1.25, 1.5, 2]
 
@@ -19,6 +20,9 @@ interface Props {
   text: string
   /** Reveal a 1-based line in the editor. */
   onRevealLine: (line: number) => void
+  /** Append a statement to the document (wiring emits `connect(...)` lines).
+   *  Absent = the canvas stays read-only. */
+  onEmitStatement?: (statement: string) => void
 }
 
 /**
@@ -27,10 +31,13 @@ interface Props {
  * instance reveals its declaration in the editor. Everything is drawn from
  * the check payload, so the drawing follows the text as it is checked.
  */
-export default function SchematicTab({ checkResult, components, text, onRevealLine }: Readonly<Props>) {
+export default function SchematicTab({ checkResult, components, text, onRevealLine, onEmitStatement }: Readonly<Props>) {
   const svgRef = useRef<SVGSVGElement>(null)
   const [zoomIndex, setZoomIndex] = useState(3)
   const [hovered, setHovered] = useState<string | null>(null)
+  // The first port of a wire being drawn; the second click completes it.
+  const [pendingPort, setPendingPort] = useState<{ instance: string; port: string } | null>(null)
+  const [wireNote, setWireNote] = useState<string | null>(null)
   const zoom = ZOOM_STEPS[zoomIndex]
 
   const connections = useMemo(() => checkResult?.connections ?? [], [checkResult])
@@ -43,7 +50,58 @@ export default function SchematicTab({ checkResult, components, text, onRevealLi
     return map
   }, [components])
 
-  const layout = useMemo(() => layoutSchematic(connections, labels), [connections, labels])
+  const declaredInstances = useMemo(() => [...instanceTypes(text).keys()], [text])
+  // The document wires components but the payload carries no topology: the
+  // check did not get far enough to expand the network. Say so, rather than
+  // showing a silently edgeless canvas right after the user wired something.
+  const topologyStale = useMemo(
+    () => connections.length === 0 && /^\s*connect\s*\(/im.test(text),
+    [connections, text],
+  )
+  const layout = useMemo(
+    () => layoutSchematic(connections, labels, declaredInstances),
+    [connections, labels, declaredInstances],
+  )
+
+  // Each instance's declared ports, looked up by its component type. Only
+  // available once a solve has told us the types — wiring is therefore an
+  // affordance of a solved network, not a bare check.
+  const portsByInstance = useMemo(() => {
+    const byType = new Map(COMPONENT_CATALOG.map((c) => [c.type.toLowerCase(), c.ports]))
+    const out = new Map<string, string[]>()
+    // Types come from the DOCUMENT, not the solve response: a network being
+    // wired is precisely one that does not solve yet, so reading types from a
+    // solve would withdraw the affordance exactly when it is needed.
+    for (const [instance, type] of instanceTypes(text)) {
+      const ports = byType.get(type.toLowerCase())
+      if (ports && ports.length > 0) {
+        out.set(instance, ports)
+      }
+    }
+    return out
+  }, [text])
+
+  const clickPort = (instance: string, port: string, label: string) => {
+    if (!onEmitStatement) {
+      return
+    }
+    setWireNote(null)
+    if (!pendingPort) {
+      setPendingPort({ instance, port })
+      return
+    }
+    if (pendingPort.instance === instance) {
+      // A component wired to itself is never what the user meant, and the
+      // expander would reject it anyway.
+      setWireNote('Pick a port on a different component.')
+      setPendingPort(null)
+      return
+    }
+    const fromLabel = layout.nodes.find((n) => n.id === pendingPort.instance)?.label ?? pendingPort.instance
+    onEmitStatement(`connect(${fromLabel}.${pendingPort.port}, ${label}.${port})`)
+    setPendingPort(null)
+    setWireNote(`Wired ${fromLabel}.${pendingPort.port} → ${label}.${port}`)
+  }
 
   const domains = useMemo(
     () => legendDomains(connections.map((c) => c.domain)),
@@ -77,7 +135,7 @@ export default function SchematicTab({ checkResult, components, text, onRevealLi
     URL.revokeObjectURL(url)
   }
 
-  if (connections.length === 0) {
+  if (connections.length === 0 && declaredInstances.length === 0) {
     return (
       <Stack gap="xs" p="md" align="center" justify="center" h="100%">
         <Text size="sm" c="dimmed" ta="center" maw={430}>
@@ -111,6 +169,21 @@ export default function SchematicTab({ checkResult, components, text, onRevealLi
         <Badge size="xs" variant="light" color="gray">
           {layout.nodes.filter((n) => n.kind === 'instance').length} components
         </Badge>
+        {onEmitStatement && pendingPort && (
+          <Badge size="xs" variant="filled" color="teal">
+            wiring from {pendingPort.instance}.{pendingPort.port} — pick a second port
+          </Badge>
+        )}
+        {onEmitStatement && !pendingPort && wireNote && (
+          <Text size="xs" c="dimmed">
+            {wireNote}
+          </Text>
+        )}
+        {topologyStale && (
+          <Text size="xs" c="orange">
+            connections not shown — the document has errors; fix them and Check
+          </Text>
+        )}
         <Group gap={2} ml="auto">
           <Tooltip label="Zoom out">
             <ActionIcon
@@ -220,6 +293,43 @@ export default function SchematicTab({ checkResult, components, text, onRevealLi
               ),
             )}
           </g>
+          {onEmitStatement && (
+            <g>
+              {layout.nodes.flatMap((n) =>
+                portAnchors(n, portsByInstance.get(n.id) ?? []).map((a) => {
+                  const armed =
+                    pendingPort?.instance === n.id && pendingPort?.port === a.port
+                  return (
+                    <g
+                      key={`${n.id}.${a.port}`}
+                      onClick={() => clickPort(n.id, a.port, n.label)}
+                      style={{ cursor: 'crosshair' }}
+                    >
+                      <title>{`${n.label}.${a.port} — click to ${pendingPort ? 'complete' : 'start'} a connection`}</title>
+                      <circle
+                        cx={a.x}
+                        cy={a.y}
+                        r={armed ? 5.5 : 3.5}
+                        fill={armed ? '#12b886' : '#495057'}
+                        stroke={armed ? '#12b886' : '#868e96'}
+                        strokeWidth={1}
+                      />
+                      <text
+                        x={a.side === 'left' ? a.x - 6 : a.x + 6}
+                        y={a.y + 3}
+                        textAnchor={a.side === 'left' ? 'end' : 'start'}
+                        fontSize={9}
+                        fill="#909296"
+                      >
+                        {a.port}
+                      </text>
+                    </g>
+                  )
+                }),
+              )}
+            </g>
+          )}
+
         </svg>
       </div>
     </Stack>
