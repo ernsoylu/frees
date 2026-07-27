@@ -144,6 +144,7 @@ public class CheckController {
             Map<String, String> inferredUnits =
                     new HashMap<>(solver.deriveUnits(parsed, effective));
             inferredUnits.putAll(solver.inferUnits(parsed));
+            addComponentMemberUnits(parsed, inferredUnits);
             List<String> unitWarnings = solver.checkUnits(parsed, effective);
 
             return ResponseEntity.ok(new CheckResponse(
@@ -178,6 +179,33 @@ public class CheckController {
                             false, 0, 0, List.of(), List.of(), Map.of(),
                             e.getMessage() != null ? e.getMessage() : e.toString(), List.of(), List.of(), List.of()));
         }
+    }
+
+    /**
+     * Adds the component stream members' domain-derived units to the reported
+     * map, keyed by the display name the rest of the payload uses.
+     *
+     * <p>A port member ({@code BCP.in.P}, {@code BCP.in.mdot}) is one of the
+     * solver's own unknowns, so nothing in the document derives its unit and
+     * neither {@code deriveUnits} nor {@code inferUnits} produces one — the
+     * member's physical domain is the only thing that fixes it. The expander
+     * knows that and already grounds the unit checker with it; this hands the
+     * same knowledge to the client, so port members stop reporting as
+     * dimensionless in the Variable Explorer and on the schematic.
+     *
+     * <p>Anything already in the map was declared or derived and keeps its
+     * unit — this only fills gaps.
+     */
+    private static void addComponentMemberUnits(EquationParser.ParseResult parsed,
+                                                Map<String, String> inferredUnits) {
+        Map<String, String> displayByFlat = new HashMap<>();
+        parsed.displayNames().forEach((flat, display) ->
+                displayByFlat.put(flat.toLowerCase(java.util.Locale.ROOT), display));
+        parsed.componentMemberUnits().forEach((flat, unit) -> {
+            String key = flat.toLowerCase(java.util.Locale.ROOT);
+            String display = displayByFlat.getOrDefault(key, key);
+            inferredUnits.putIfAbsent(display.toLowerCase(java.util.Locale.ROOT), unit);
+        });
     }
 
     /** Structured syntax errors for the editor: the first error per line,

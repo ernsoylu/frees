@@ -109,6 +109,7 @@ import { group } from './workspaceData'
 // sessions never open, so they are code-split and only fetched when their tab
 // is first shown (wrapped in <Suspense> at their render sites below).
 const SchematicTab = lazy(() => import('./schematic/SchematicTab'))
+import type { SchematicOffsets } from './schematic/layout'
 const DigitizerTab = lazy(() =>
   import('./DigitizerTab').then((m) => ({ default: m.DigitizerTab })),
 )
@@ -586,6 +587,12 @@ export default function App() {
   // ("template mode", §2.5b); samples live in the module-level ChannelStore
   // and are re-picked on load via each window's "Locate file…" banner.
   const [analyzers, setAnalyzers] = useState<AnalyzerSpec[]>(() => boot?.analyzers ?? [])
+  // Blocks the user has dragged on the rendered schematic, as offsets from the
+  // auto-layout. The drawing itself is always derived from the document, so
+  // this is the only part of it that has to be saved.
+  const [schematicOffsets, setSchematicOffsets] = useState<SchematicOffsets>(
+    () => boot?.schematic ?? {},
+  )
   // One-line self-dismissing notice (e.g. "N analyzer window(s) awaiting
   // measurement files" after a project load).
   const [loadNotice, setLoadNotice] = useState<string | null>(null)
@@ -645,11 +652,12 @@ export default function App() {
       spreadsheets,
       analyzers,
       sliders: pinnedSliders,
+      schematic: schematicOffsets,
     }),
     // `text` stays a dependency so the autosave effect keyed on this callback
     // still refreshes when the (deferred) editor document state lands.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [text, varDrafts, stopCriteria, unitSystem, fillMissing, stateUnitIds, tables, plots, whiteboards, spreadsheets, analyzers, pinnedSliders],
+    [text, varDrafts, stopCriteria, unitSystem, fillMissing, stateUnitIds, tables, plots, whiteboards, spreadsheets, analyzers, pinnedSliders, schematicOffsets],
   )
 
   // Debounced autosave of the entire workspace to a single localStorage key,
@@ -747,7 +755,7 @@ export default function App() {
     }
     isDirtyRef.current = true
 
-  }, [text, tables, plots, whiteboards, spreadsheets, analyzers, varDrafts])
+  }, [text, tables, plots, whiteboards, spreadsheets, analyzers, varDrafts, schematicOffsets])
 
   // Apply an opened/loaded project to every workspace slice. Child-owned slices
   // are written back to their caches and the relevant tabs are remounted (epoch
@@ -770,6 +778,7 @@ export default function App() {
     // banner. Clear any stale samples from a previous project first.
     channelStore.clear()
     setAnalyzers(p.analyzers ?? [])
+    setSchematicOffsets(p.schematic ?? {})
     const awaiting = (p.analyzers ?? []).filter((a) => a.files.length > 0).length
     const notices: string[] = []
     if (awaiting > 0) {
@@ -912,6 +921,7 @@ export default function App() {
     setWhiteboards([])
     setSpreadsheets([])
     setAnalyzers([])
+    setSchematicOffsets({})
     channelStore.clear()
     setResult(null)
     setCheckResult(null)
@@ -1073,6 +1083,7 @@ export default function App() {
     setWhiteboards([])
     setSpreadsheets([])
     setAnalyzers([])
+    setSchematicOffsets({})
     channelStore.clear()
     setResult(null)
     setCheckResult(null)
@@ -2187,11 +2198,15 @@ export default function App() {
       <div style={{ height: '100%', minHeight: 0 }}>
         <Suspense fallback={lazyTabFallback}>
           <SchematicTab
+            key={`schematic-${workspaceEpoch}`}
             checkResult={checkResult}
             components={result?.components}
+            variables={result?.variables}
             text={textRef.current}
             onRevealLine={goToLine}
             onEmitStatement={emitFromSchematic}
+            offsets={schematicOffsets}
+            onOffsetsChange={setSchematicOffsets}
           />
         </Suspense>
       </div>

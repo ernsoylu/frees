@@ -82,7 +82,94 @@ RET.in.P = 100000 [Pa]      { fix the return pressure }
 
 Source/sink components (`Source`, `PressureSource`, `MoistAirSource`, `VoltageSource`, `ThermalSource`, …) are pre-packaged boundary conditions; a bare equation on a port member does the same job when no component fits.
 
-[Related: comp-first-network, comp-domains, comp-troubleshooting]
+[Related: comp-first-network, comp-domains, comp-schematic, comp-troubleshooting]
+
+[Topic: comp-schematic]
+# Reading the Schematic
+
+The **Schematic** window draws the network your document describes — open it from the left rail, or from the command palette (Ctrl+K → "Schematic"). It is generated from the text on every **Check**, so it is never out of date and there is nothing to lay out by hand. Everything below is derived; the drawing is a view of the model, not a second copy of it.
+
+It is the fastest way to answer "did I wire that the way I meant to?", because a mis-wired network usually *looks* wrong long before it solves wrong.
+
+## Circuits are drawn apart
+
+Each **working fluid gets its own colour and its own framed band.** This matters more than it sounds: the bond-graph domain calls a coolant loop and a refrigerant loop the same thing — both are `fluid` — so a drawing coloured by domain paints two independent circuits identically and they read as one tangle. frees separates them by *connector type* and *fluid*, so an EG50 coolant loop and an R1234yf refrigerant loop land in bands labelled `EG50 · LIQUID` and `R1234YF · TWO-PHASE`.
+
+| Line | Meaning |
+|---|---|
+| blue | liquid (coolant, water/glycol) |
+| violet | two-phase (refrigerant) |
+| teal | generic thermofluid / steam |
+| orange | pneumatic (`gas`) |
+| amber | hydraulic (`oil`) |
+| pale cyan | humid air (`moistair`) |
+| red | heat |
+| yellow | electrical |
+| lime | mechanical (rotational and translational) |
+| dashed cyan | signal — a causal control value, not a physical flow |
+
+Two different fluids on the same connector type (two coolant loops, say) take different shades of the same hue, so they stay distinguishable while still reading as "both coolant". The legend above the canvas names every line in the drawing.
+
+A **coupling band** — heat, signal, mechanical — is placed next to the circuit it links to most. In the common shape of two loops bridged by a heat exchanger, that puts the thermal band *between* them, so the couplings are short instead of crossing an unrelated circuit.
+
+## Flow sets the left-to-right order
+
+A component network is acausal — you may write the equations in any order — but the *port names* are not. A `connect` from an `out` port to an `in` port says the first feeds the second, so each circuit is laid out source → … → sink. A closed loop is drawn as a chain with its closing edge running back, which is how it would be drawn by hand.
+
+## Every block says what it is
+
+Blocks carry the symbol of their function, so the topology is legible before you read a single label:
+
+| Symbol | Component kind |
+|---|---|
+| circle with impeller | pump, fan, blower |
+| converging trapezoid | compressor |
+| diverging trapezoid | turbine, expander |
+| bow-tie | valve, orifice, throttle |
+| crossed box | heat exchanger, coil, radiator |
+| capacitor plates | storage — thermal mass, tank, accumulator, battery |
+| diamond | junction — mixer, splitter, manifold |
+| dashed border + chevron | **boundary condition** — a source or a sink |
+| ladder | ground (fixed potential) |
+
+Boundaries are drawn dashed on purpose: they are where your model *stops*, and seeing them makes an accidentally open circuit obvious.
+
+## The numbers
+
+After a solve, each block prints its most telling result — a heat exchanger's duty, a machine's power, otherwise the flow through it. **Hover** a block for the rest:
+
+- **Ports** — the state at each wired port (`P`, `T`, `ṁ`, `h`, and the domain's own members: `Q̇` for heat, `V`/`I` for electrical, and so on), in SI with units.
+- **Results** — the block's named outputs, the same `CHLR.Q` / `CMP.W` you can reference in equations.
+- **Parameters** — what the block was built with, **and where the value came from**. A document that sizes a heat exchanger from correlations and geometry injects the answer as a parameter, so the card shows `ua  576.79 W/K  (UA_chl_r)` — the number *and* the variable, so you can trace it back to the correlation that produced it.
+
+Click a block to pin the card and jump to the line that declares it in the editor.
+
+## Moving things around
+
+| Action | Result |
+|---|---|
+| drag a block | move it; wires re-route live |
+| drag the background | pan |
+| Ctrl/⌘ + scroll | zoom |
+| **Fit to window** | frame the whole network |
+| **Reset layout** | discard your arrangement, return to the automatic one |
+| **Export SVG** | the whole drawing as a vector file, ready to paste into a report |
+
+The automatic layout keeps the network framed until you first zoom, pan or drag — after that it leaves the view alone.
+
+**Your arrangement is saved with the project.** Positions are stored as offsets from the automatic layout rather than as fixed coordinates, so when you add a component upstream everything shifts with it instead of being stranded. Positions for components you delete are dropped; positions for components that survive an edit are kept.
+
+## Wiring by clicking
+
+Click a **port dot** on one block, then a port dot on another, and frees appends the matching `connect` statement to your document. Port dots are coloured by the line they carry, so an inlet already on the coolant circuit shows blue — a quick check that you are about to join what you think you are.
+
+## What it will not do
+
+- It draws the network the **Check** understood. If the document has errors, the canvas says so rather than showing a stale or half-drawn network.
+- Wires are routed orthogonally but do not steer around blocks, so a dense network will have lines crossing boxes.
+- Grouping is automatic, by circuit. There is no manual "group these into a subsystem" — for real hierarchy, use a hierarchical `COMPONENT` (see *Writing Your Own Component*).
+
+[Related: comp-connections, comp-domains, comp-cycle-plots, comp-troubleshooting]
 
 [Topic: comp-domains]
 # Domains & Fluid Families
