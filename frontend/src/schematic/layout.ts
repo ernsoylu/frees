@@ -77,15 +77,16 @@ function nodeWidth(label: string, type?: string): number {
   return Math.max(NODE_MIN_W, Math.round(longest * CHAR_W) + NODE_PAD)
 }
 
-/**
- * Builds the placed graph. `labels` maps a lowercase instance name to its
- * written spelling and component type (from a solve, when one has run);
- * absent entries fall back to the lowercase name with no type.
- */
-export function layoutSchematic(
+/** Nodes, edges and the adjacency the layering walks — the graph half of the
+ *  layout, split out so each half stays readable on its own. */
+function buildGraph(
   connections: readonly Connection[],
-  labels: ReadonlyMap<string, { label: string; type?: string }> = new Map(),
-): SchematicLayout {
+  labels: ReadonlyMap<string, { label: string; type?: string }>,
+): {
+  nodes: Map<string, SchematicNode>
+  edges: SchematicEdge[]
+  adjacency: Map<string, Set<string>>
+} {
   const nodes = new Map<string, SchematicNode>()
   const edges: SchematicEdge[] = []
   const adjacency = new Map<string, Set<string>>()
@@ -116,30 +117,14 @@ export function layoutSchematic(
 
   connections.forEach((conn, index) => {
     const ends = conn.endpoints.map(splitEndpoint)
-    // An endpoint whose instance repeats within one connection (a component
-    // wired to itself) still deserves both attachments, so nodes are keyed by
-    // instance but edges keep their own port pair.
     ends.forEach((e) => touch(e.instance, 'instance'))
     if (ends.length === 2) {
-      const [a, b] = ends
-      if (a.instance === b.instance) {
-        return // a self-loop carries no layout information; the ports show in the node
-      }
-      edges.push({
-        id: `c${index}`,
-        domain: conn.domain,
-        from: a.instance,
-        to: b.instance,
-        fromPort: a.port,
-        toPort: b.port,
-        path: '',
-      })
-      link(a.instance, b.instance)
+      addPairEdge(ends[0], ends[1], conn, index, edges, link)
       return
     }
     // A junction (3+ endpoints, or a degenerate 1-endpoint node) becomes its
     // own small node so the star reads as one shared node rather than a
-    // clique of edges that implies pairwise connections.
+    // clique of edges that would imply pairwise connections.
     const junctionId = `$node${index}`
     touch(junctionId, 'junction')
     ends.forEach((e, k) => {
@@ -154,6 +139,45 @@ export function layoutSchematic(
       link(junctionId, e.instance)
     })
   })
+
+  return { nodes, edges, adjacency }
+}
+
+/** A two-endpoint connection. A component wired to itself carries no layout
+ *  information, so it contributes a node but no edge. */
+function addPairEdge(
+  a: Endpoint,
+  b: Endpoint,
+  conn: Connection,
+  index: number,
+  edges: SchematicEdge[],
+  link: (x: string, y: string) => void,
+): void {
+  if (a.instance === b.instance) {
+    return
+  }
+  edges.push({
+    id: `c${index}`,
+    domain: conn.domain,
+    from: a.instance,
+    to: b.instance,
+    fromPort: a.port,
+    toPort: b.port,
+    path: '',
+  })
+  link(a.instance, b.instance)
+}
+
+/**
+ * Builds the placed graph. `labels` maps a lowercase instance name to its
+ * written spelling and component type (from a solve, when one has run);
+ * absent entries fall back to the lowercase name with no type.
+ */
+export function layoutSchematic(
+  connections: readonly Connection[],
+  labels: ReadonlyMap<string, { label: string; type?: string }> = new Map(),
+): SchematicLayout {
+  const { nodes, edges, adjacency } = buildGraph(connections, labels)
 
   // Declaration order = first appearance among the endpoints; it breaks every
   // tie below so the layout is stable for a given document.
@@ -225,7 +249,7 @@ function bfsLayers(
     layers.push(frontier)
     const next: string[] = []
     for (const id of frontier) {
-      for (const neighbour of [...(adjacency.get(id) ?? [])].sort()) {
+      for (const neighbour of [...(adjacency.get(id) ?? [])].sort((a, b) => a.localeCompare(b))) {
         if (!placed.has(neighbour)) {
           placed.add(neighbour)
           next.push(neighbour)

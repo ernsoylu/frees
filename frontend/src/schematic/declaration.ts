@@ -16,8 +16,8 @@ export function declarationLine(text: string, instance: string): number | null {
   if (!text || !instance) {
     return null
   }
-  const escaped = instance.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-  const declaration = new RegExp(`^\\s*[A-Za-z_][\\w$]*\\s+${escaped}\\s*\\(`, 'i')
+  const escaped = instance.replace(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`)
+  const declaration = new RegExp(String.raw`^\s*[A-Za-z_][\w$]*\s+` + escaped + String.raw`\s*\(`, 'i')
   const lines = text.split('\n')
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i]

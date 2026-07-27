@@ -4,7 +4,7 @@ import { IconDownload, IconZoomIn, IconZoomOut, IconZoomReset } from '@tabler/ic
 import type { CheckResponse, ComponentResult } from '../api'
 import { declarationLine } from './declaration'
 import { domainColor, legendDomains } from './palette'
-import { layoutSchematic, type SchematicNode } from './layout'
+import { layoutSchematic, type SchematicEdge, type SchematicNode } from './layout'
 
 const ZOOM_STEPS = [0.5, 0.65, 0.8, 1, 1.25, 1.5, 2]
 
@@ -167,11 +167,7 @@ export default function SchematicTab({ checkResult, components, text, onRevealLi
                   strokeWidth={lit ? 2.6 : 1.6}
                   strokeOpacity={hovered !== null && !lit ? 0.35 : 0.9}
                 >
-                  <title>
-                    {`${e.fromPort ? `${e.from}.${e.fromPort}` : e.from} → ${
-                      e.toPort ? `${e.to}.${e.toPort}` : e.to
-                    }  (${e.domain})`}
-                  </title>
+                  <title>{edgeTitle(e)}</title>
                 </path>
               )
             })}
@@ -228,4 +224,11 @@ export default function SchematicTab({ checkResult, components, text, onRevealLi
       </div>
     </Stack>
   )
+}
+
+/** "a.out → b.in  (fluid)" — the hover description of one connection. */
+function edgeTitle(e: SchematicEdge): string {
+  const from = e.fromPort ? `${e.from}.${e.fromPort}` : e.from
+  const to = e.toPort ? `${e.to}.${e.toPort}` : e.to
+  return `${from} → ${to}  (${e.domain})`
 }
