@@ -211,7 +211,8 @@ public class EquationSystemSolver {
                 parsed.equations(), parsed.displayNames(), merged,
                 parsed.parametricTables(), parsed.plots(), parsed.stateTables(),
                 parsed.dynamicSystems(), parsed.linearizeSystems(),
-                parsed.componentMemberUnits(), parsed.guessDirectives());
+                parsed.componentMemberUnits(), parsed.guessDirectives(),
+                parsed.componentConnections());
     }
 
     /**

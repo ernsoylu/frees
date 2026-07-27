@@ -410,6 +410,75 @@ public final class ComponentExpander {
         return streamFluid;
     }
 
+    /** One connection-topology edge for the schematic payload: the node's
+     *  domain (lowercase) and its endpoints as {@code instance.port} refs. */
+    public record Connection(String domain, List<String> endpoints) {}
+
+    /**
+     * The document's connection topology — the data layer of the rendered
+     * schematic. Explicit {@code connect(...)} nodes keep their endpoints as
+     * written; shared-stream junctions (two instance ports naming one stream)
+     * are reported as {@code instance.port} pairs. Domains reuse the node
+     * classification the expander already applies, so the payload can never
+     * disagree with the solve.
+     */
+    public List<Connection> connections() {
+        List<Connection> out = new ArrayList<>(explicitConnections());
+        out.addAll(sharedStreamJunctions());
+        return out;
+    }
+
+    /** {@code connect(...)} declarations, endpoints kept as written. */
+    private List<Connection> explicitConnections() {
+        List<Connection> out = new ArrayList<>();
+        for (ConnectDecl c : connects) {
+            List<String> refs = c.ports();
+            List<String> streams = resolvedStreams(c);
+            // Fewer than two resolved streams means the expansion already
+            // rejected this declaration with a real error; nothing to draw.
+            if (streams.size() >= 2) {
+                out.add(new Connection(domainName(streams), List.copyOf(refs)));
+            }
+        }
+        return out;
+    }
+
+    /** The streams a connect's endpoints name, skipping unresolvable ones. */
+    private List<String> resolvedStreams(ConnectDecl c) {
+        List<String> streams = new ArrayList<>(c.ports().size());
+        for (String ref : c.ports()) {
+            try {
+                streams.add(streamOf(ref, c));
+            } catch (RuntimeException e) {
+                // an unresolved endpoint already failed the expansion
+            }
+        }
+        return streams;
+    }
+
+    /** Ports of different instances naming one stream — the terse connection
+     *  style — reported as the {@code instance.port} pairs they join. */
+    private List<Connection> sharedStreamJunctions() {
+        Map<String, List<String>> byStream = new LinkedHashMap<>();
+        for (ResolvedInstance ri : instances) {
+            for (Map.Entry<String, String> e : ri.portToStream().entrySet()) {
+                byStream.computeIfAbsent(e.getValue(), k -> new ArrayList<>())
+                        .add(ri.inst().name() + "." + e.getKey());
+            }
+        }
+        List<Connection> out = new ArrayList<>();
+        for (Map.Entry<String, List<String>> e : byStream.entrySet()) {
+            if (e.getValue().size() >= 2) {
+                out.add(new Connection(domainName(List.of(e.getKey())), List.copyOf(e.getValue())));
+            }
+        }
+        return out;
+    }
+
+    private String domainName(List<String> streams) {
+        return nodeDomain(streams).name().toLowerCase(java.util.Locale.ROOT);
+    }
+
     /**
      * SI units of each stream's <em>canonical</em> stored members, keyed by the
      * flat solver-variable name ({@code s2$p}, {@code s2$h}, {@code s2$mdot}).

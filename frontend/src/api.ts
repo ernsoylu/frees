@@ -140,6 +140,15 @@ export interface CheckResponse {
   definedPlots?: PlotDefDto[]
   /** Fluid state tables declared with STATE TABLE ... END blocks. */
   stateTableDefs?: StateTableDto[]
+  /** Connection topology of the component network (domain + instance.port
+   *  endpoints per node) — the rendered schematic's data layer. */
+  connections?: ConnectionDto[]
+}
+
+/** One connection-topology node of the component network. */
+export interface ConnectionDto {
+  domain: string
+  endpoints: string[]
 }
 
 /** A fluid state table parsed from a STATE TABLE name(...) ... END block: the
@@ -423,6 +432,7 @@ export async function check(
       parametricTables: data.parametricTables ?? [],
       definedPlots: data.definedPlots ?? [],
       stateTableDefs: data.stateTableDefs ?? [],
+      connections: data.connections ?? [],
     }
   } catch (e) {
     return {

@@ -106,6 +106,18 @@ public final class SolveDtos {
      * attribute map the frontend maps onto its PlotSpec. */
     public record PlotDefDto(String name, Map<String, List<String>> attributes) {}
 
+    /** One connection-topology node: its physical domain (lowercase) and the
+     *  {@code instance.port} endpoints it joins — the rendered schematic's
+     *  data layer, straight from the expander's own classification. */
+    public record ConnectionDto(String domain, List<String> endpoints) {}
+
+    public static List<ConnectionDto> connectionsOf(
+            com.frees.backend.parser.EquationParser.ParseResult parsed) {
+        return parsed.componentConnections().stream()
+                .map(c -> new ConnectionDto(c.domain(), c.endpoints()))
+                .toList();
+    }
+
     /** A fluid state table parsed from a STATE TABLE ... END block: its name,
      * the declared state-point variables, and the fluid every state uses. */
     public record StateTableDto(String name, List<String> variables, String fluid) {}
