@@ -38,6 +38,16 @@ The frontend bundle is stamped with the git commit it was built from, surfaced i
 
 **Rule:** keep this chain intact — any change to how the frontend is built or served (Dockerfile, `docker-entrypoint.d`, `index.html`, compose, `frees.sh`, or the env-var names) must preserve the commit stamp so the About dialog always reflects the running revision.
 
+### One-line install (`curl … | sh`)
+
+End users run frees without cloning: `install.sh` at the repo root fetches **`docker-compose.local.yml`** into `~/.frees`, pulls the GHCR images, and writes a `frees start|stop|restart|status|logs|update` launcher. `docker-publish` publishes **three** images on every push to main (`frees-backend`, `frees-frontend`, `frees-mdf-sidecar`), each tagged `latest` and `<sha>`; `FREES_VERSION` pins any of them.
+
+**Two invariants:**
+- **`docker-compose.local.yml` must stay self-contained** — every service pulls a published image, and nothing is bind-mounted. Adding a `build:` or a `volumes:` entry pointing at a repo path breaks the installer for everyone without a clone. (This is why the local stack drops the otel-collector and Jaeger that `docker-compose.prod.yml` runs: the collector needs a mounted config, and the Jaeger UI is unauthenticated. Tracing is off via `OTEL_SDK_DISABLED`.)
+- **Every image the compose file references must be published by `docker-publish`.** `mdf-sidecar` was missing from it originally, so `FREES_MEASUREMENTS_SIDECAR_URL` pointed at a service that could never start and the analyzer lost its compressed-`.mf4` fallback rung.
+
+`install.sh` is POSIX `sh` (it is piped into `sh`, so no bashisms) and wraps everything in `main()` called on the last line, so a truncated download cannot execute a partial command. It is covered by the `shellcheck` CI job.
+
 **Tests and local development** (run on the host, not in Docker):
 
 ```bash
