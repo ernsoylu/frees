@@ -4,7 +4,20 @@ WORKDIR /app
 # .npmrc carries `legacy-peer-deps=true` (glide-data-grid's React-18 peer ceiling
 # vs the project's React 19); npm ci must see it or the install fails.
 COPY package.json package-lock.json .npmrc ./
-RUN npm ci --ignore-scripts
+# npm's default retry budget (2 retries, short timeouts) doesn't ride out a flaky
+# connection from inside the build container (seen as ECONNRESET / "network
+# aborted" on macOS Docker backends). Raise npm's own retries and wrap the
+# install in a shell-level retry loop as a backstop. `npm config set` writes the
+# user config (~/.npmrc), so the project .npmrc copied above still applies.
+RUN npm config set fetch-retries 5 \
+    && npm config set fetch-retry-mintimeout 20000 \
+    && npm config set fetch-retry-maxtimeout 120000 \
+    && for attempt in 1 2 3; do \
+           npm ci --ignore-scripts && break; \
+           echo "npm ci failed (attempt $attempt/3)"; \
+           [ "$attempt" = 3 ] && exit 1; \
+           sleep 5; \
+       done
 COPY tsconfig.json vite.config.ts postcss.config.cjs index.html ./
 COPY src ./src
 # scripts/compile-docs.js regenerates src/docsCatalog.ts from src/docs/*.md as
