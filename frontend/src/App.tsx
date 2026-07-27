@@ -459,6 +459,13 @@ export default function App() {
   }, [])
   // Component Browser/Wizard: append the generated `Type NAME(...)` block on its
   // own line in the equations editor (same path as bound-cell statements).
+  // Wiring emits a statement while the user stays on the schematic, so unlike
+  // the wizard's insertion this must NOT pull focus to the editor. The live
+  // lint re-checks shortly after, which is what redraws the canvas.
+  const emitFromSchematic = useCallback((statement: string) => {
+    editorRef.current?.insertStatement(statement)
+  }, [])
+
   const insertComponentBlock = useCallback((block: string) => {
     setActiveTab('equations')
     setTimeout(() => editorRef.current?.insertStatement(block), 50)
@@ -2091,6 +2098,7 @@ export default function App() {
             components={result?.components}
             text={textRef.current}
             onRevealLine={goToLine}
+            onEmitStatement={emitFromSchematic}
           />
         </Suspense>
       </div>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { layoutSchematic, type Connection, type SchematicNode } from './layout'
+import { layoutSchematic, portAnchors, type Connection, type SchematicNode } from './layout'
 
 const conn = (domain: string, ...endpoints: string[]): Connection => ({ domain, endpoints })
 
@@ -113,5 +113,65 @@ describe('layoutSchematic', () => {
       expect(e.path.length).toBeGreaterThan(0)
       expect(e.path).not.toMatch(/NaN/)
     }
+  })
+})
+
+describe('portAnchors', () => {
+  const node = { id: 'p', label: 'P', kind: 'instance' as const, x: 100, y: 50, w: 120, h: 46 }
+
+  it('puts inlets left and outlets right', () => {
+    const anchors = portAnchors(node, ['in', 'out'])
+    const inlet = anchors.find((a) => a.port === 'in')
+    const outlet = anchors.find((a) => a.port === 'out')
+    expect(inlet).toMatchObject({ side: 'left', x: 100 })
+    expect(outlet).toMatchObject({ side: 'right', x: 220 })
+    // Both sit on the node's vertical span.
+    for (const a of anchors) {
+      expect(a.y).toBeGreaterThan(node.y)
+      expect(a.y).toBeLessThan(node.y + node.h)
+    }
+  })
+
+  it('reads compound port names', () => {
+    const anchors = portAnchors(node, ['ref_in', 'ref_out', 'cool_in', 'cool_out'])
+    expect(anchors.filter((a) => a.side === 'left').map((a) => a.port)).toEqual(['ref_in', 'cool_in'])
+    expect(anchors.filter((a) => a.side === 'right').map((a) => a.port)).toEqual(['ref_out', 'cool_out'])
+  })
+
+  it('spaces several ports down an edge without collisions', () => {
+    const anchors = portAnchors(node, ['a_in', 'b_in', 'c_in'])
+    const ys = anchors.map((a) => a.y)
+    expect(new Set(ys).size).toBe(3)
+    expect([...ys].sort((x, y) => x - y)).toEqual(ys)
+  })
+
+  it('splits ports that name neither side, deterministically', () => {
+    const anchors = portAnchors(node, ['p', 'g', 'wall'])
+    expect(anchors).toHaveLength(3)
+    expect(anchors.filter((a) => a.side === 'left').length).toBeGreaterThan(0)
+    expect(anchors.filter((a) => a.side === 'right').length).toBeGreaterThan(0)
+    // Same input, same placement.
+    expect(portAnchors(node, ['p', 'g', 'wall'])).toEqual(anchors)
+  })
+
+  it('gives junctions and portless nodes nothing', () => {
+    expect(portAnchors({ ...node, kind: 'junction' }, ['in'])).toEqual([])
+    expect(portAnchors(node, [])).toEqual([])
+  })
+})
+
+describe('unwired instances', () => {
+  it('places a declared component that has no connections yet', () => {
+    const out = layoutSchematic([conn('fluid', 'src.out', 'pmp.in')], new Map(), ['src', 'pmp', 'snk'])
+    expect(out.nodes.map((n) => n.id).sort()).toEqual(['pmp', 'snk', 'src'])
+    // The unwired one is placed, just without edges.
+    const snk = out.nodes.find((n) => n.id === 'snk')
+    expect(snk).toBeDefined()
+    expect(out.edges.some((e) => e.from === 'snk' || e.to === 'snk')).toBe(false)
+  })
+
+  it('does not duplicate an instance that is already wired', () => {
+    const out = layoutSchematic([conn('fluid', 'a.out', 'b.in')], new Map(), ['a', 'b'])
+    expect(out.nodes.filter((n) => n.kind === 'instance')).toHaveLength(2)
   })
 })

@@ -82,6 +82,7 @@ function nodeWidth(label: string, type?: string): number {
 function buildGraph(
   connections: readonly Connection[],
   labels: ReadonlyMap<string, { label: string; type?: string }>,
+  instances: readonly string[] = [],
 ): {
   nodes: Map<string, SchematicNode>
   edges: SchematicEdge[]
@@ -140,6 +141,12 @@ function buildGraph(
     })
   })
 
+  // Declared but unwired instances still get a node, so the canvas shows the
+  // whole network — including the parts the user is about to connect.
+  for (const instance of instances) {
+    touch(instance.toLowerCase(), 'instance')
+  }
+
   return { nodes, edges, adjacency }
 }
 
@@ -176,8 +183,11 @@ function addPairEdge(
 export function layoutSchematic(
   connections: readonly Connection[],
   labels: ReadonlyMap<string, { label: string; type?: string }> = new Map(),
+  /** Every declared instance, so components that are not wired yet still
+   *  appear — you cannot wire a component you cannot see. */
+  instances: readonly string[] = [],
 ): SchematicLayout {
-  const { nodes, edges, adjacency } = buildGraph(connections, labels)
+  const { nodes, edges, adjacency } = buildGraph(connections, labels, instances)
 
   // Declaration order = first appearance among the endpoints; it breaks every
   // tie below so the layout is stable for a given document.
@@ -354,4 +364,51 @@ function routeEdge(a: SchematicNode, b: SchematicNode): string {
 
 function round(v: number): number {
   return Math.round(v * 10) / 10
+}
+
+/** A port anchor on a node's perimeter, for drawing and hit-testing. */
+export interface PortAnchor {
+  /** Port member name as the component declares it (`in`, `ref_out`, …). */
+  port: string
+  x: number
+  y: number
+  side: 'left' | 'right'
+}
+
+/**
+ * Where a node's ports attach. Inlet-ish ports go on the left edge and
+ * outlet-ish on the right, which is how a schematic reads; anything whose
+ * name says neither is split evenly between the sides so it still lands
+ * somewhere deterministic. Ports are spaced down each edge in declaration
+ * order — the order the component's own signature uses.
+ */
+export function portAnchors(node: SchematicNode, ports: readonly string[]): PortAnchor[] {
+  if (node.kind !== 'instance' || ports.length === 0) {
+    return []
+  }
+  const left: string[] = []
+  const right: string[] = []
+  const undecided: string[] = []
+  for (const p of ports) {
+    const name = p.toLowerCase()
+    if (/(^|_)in(_|$)|inlet|_in\b|^in$/.test(name)) {
+      left.push(p)
+    } else if (/(^|_)out(_|$)|outlet|_out\b|^out$/.test(name)) {
+      right.push(p)
+    } else {
+      undecided.push(p)
+    }
+  }
+  undecided.forEach((p, i) => (i % 2 === 0 ? left : right).push(p))
+
+  const place = (names: string[], side: 'left' | 'right'): PortAnchor[] =>
+    names.map((port, i) => ({
+      port,
+      side,
+      x: side === 'left' ? node.x : node.x + node.w,
+      // Evenly spaced down the edge, inset from the corners.
+      y: node.y + (node.h * (i + 1)) / (names.length + 1),
+    }))
+
+  return [...place(left, 'left'), ...place(right, 'right')]
 }
