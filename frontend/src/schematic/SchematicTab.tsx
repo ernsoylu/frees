@@ -614,7 +614,7 @@ function NodeBlock({
         height={node.h}
         rx={node.terminal ? 3 : 7}
         fill={active ? '#2b3138' : '#25292e'}
-        stroke={active ? '#12b886' : node.terminal ? '#6c757d' : '#4a4f55'}
+        stroke={active ? '#12b886' : borderOf(node)}
         strokeWidth={active ? 2 : 1.2}
         strokeDasharray={node.terminal ? '4 2' : undefined}
       />
@@ -637,7 +637,7 @@ function NodeBlock({
       </text>
       {badge && (
         <text x={GLYPH + 12} y={44} fontSize={10.5} fontWeight={600} fill="#63e6be">
-          {`${badge.label} = ${formatCompact(badge.value)}${badge.units ? ` ${badge.units}` : ''}`}
+          {badgeText(badge)}
         </text>
       )}
       {node.ports.map((p) => {
@@ -855,9 +855,33 @@ function useDragging(
 
 /** "a.out → b.in  (EG50 · liquid)" — the hover description of one connection. */
 function edgeTitle(e: SchematicEdge): string {
-  const from = e.fromPort ? `${e.from}.${e.fromPort}` : e.from
-  const to = e.toPort ? `${e.to}.${e.toPort}` : e.to
-  const what = e.fluid ? `${e.fluid}${e.connector ? ` · ${e.connector}` : ''}` : e.domain
-  return `${from} → ${to}  (${what})`
+  const from = endpointName(e.from, e.fromPort)
+  const to = endpointName(e.to, e.toPort)
+  return `${from} → ${to}  (${lineDescription(e)})`
+}
+
+function endpointName(instance: string, port?: string): string {
+  return port ? `${instance}.${port}` : instance
+}
+
+/** What flows in a line: its fluid qualified by connector type, or — outside
+ *  the fluid domain, where neither exists — the domain itself. */
+function lineDescription(e: SchematicEdge): string {
+  if (!e.fluid) {
+    return e.domain
+  }
+  return e.connector ? `${e.fluid} · ${e.connector}` : e.fluid
+}
+
+/** Terminals (sources, sinks, grounds) get a lighter outline to go with their
+ *  dashed border — they bound the model rather than being part of it. */
+function borderOf(node: SchematicNode): string {
+  return node.terminal ? '#6c757d' : '#4a4f55'
+}
+
+/** "q = 6444.3 W" — the one number printed on a block. */
+function badgeText(badge: { label: string; value: number; units: string }): string {
+  const unit = badge.units ? ` ${badge.units}` : ''
+  return `${badge.label} = ${formatCompact(badge.value)}${unit}`
 }
 

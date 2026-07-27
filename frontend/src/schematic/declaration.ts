@@ -130,7 +130,7 @@ export function declaredInstances(
 export function declaredComponentTypes(text: string): Set<string> {
   const out = new Set<string>()
   for (const line of stripComments(text).split('\n')) {
-    const m = /^\s*(?:component|subsystem)\s+([A-Za-z_]\w*)/i.exec(line)
+    const m = /^\s*(?:component|subsystem)\s+([a-z_]\w*)/i.exec(line)
     if (m) {
       out.add(m[1].toLowerCase())
     }

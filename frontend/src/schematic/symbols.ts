@@ -38,6 +38,35 @@ export interface Symbolism {
   terminal: boolean
 }
 
+/** A rule matching any of a list of substrings, case-insensitively. Built from
+ *  a word list rather than written as one long alternation so the categories
+ *  stay readable and extending one is a list edit, not a regex edit. */
+function anyOf(...words: string[]): RegExp {
+  return new RegExp(words.join('|'), 'i')
+}
+
+/** Components with two media across a wall. */
+const EXCHANGER_WORDS = [
+  'hx', 'heatexchanger', 'exchanger', 'evaporator', 'condenser', 'radiator', 'coil',
+  'chiller', 'intercooler', 'recuperator', 'regenerator', 'coldplate', 'economizer',
+  'coolingtower', 'heatpipe', 'conduction', 'convection', 'radiation', 'wallrc',
+  'contactresistance', 'peltier', 'multizonewall',
+]
+
+/** Capacitance: anything that stores mass, heat, charge or momentum. */
+const STORE_WORDS = [
+  'mass', 'tank', 'accumulator', 'volume', 'capacitor', 'inertia', 'battery',
+  'storage', 'reservoir', 'pcm', 'inductor', 'spring', 'zone', 'cabin',
+]
+
+/** Electro-mechanical and chemical transducers. */
+const MACHINE_WORDS = [
+  'motor', 'engine', 'generator', 'alternator', 'fuelcell', 'stack', 'electrolyzer',
+  'converter', 'charger', 'inverter', 'resistor', 'diode', 'clutch', 'brake', 'gear',
+  'transmission', 'differential', 'torqueconverter', 'beltdrive', 'planetary',
+  'actuator', 'cylinder',
+]
+
 /** Ordered rules — first match wins, so put the specific before the generic. */
 const RULES: { re: RegExp; shape: Shape }[] = [
   // Boundaries first: `PneumaticSupply` is a source, not a pneumatic device.
@@ -62,25 +91,16 @@ const RULES: { re: RegExp; shape: Shape }[] = [
   { re: /(valve|orifice|throttle|txv|damper|restrict|nozzle|ejector)/i, shape: 'valve' },
 
   // Heat exchange — anything with two media across a wall.
-  {
-    re: /(hx|heatexchanger|exchanger|evaporator|condenser|radiator|coil|chiller|intercooler|recuperator|regenerator|coldplate|economizer|coolingtower|heatpipe|conduction|convection|radiation|wallrc|contactresistance|peltier|multizonewall)/i,
-    shape: 'exchanger',
-  },
+  { re: anyOf(...EXCHANGER_WORDS), shape: 'exchanger' },
 
   // Capacitance / storage.
-  {
-    re: /(mass|tank|accumulator|volume|capacitor|inertia|battery|storage|reservoir|pcm|inductor|spring|zone|cabin)/i,
-    shape: 'store',
-  },
+  { re: anyOf(...STORE_WORDS), shape: 'store' },
 
   // Junctions.
   { re: /(mixer|splitter|junction|manifold|tee|collect|divider|mixingbox|recirc)/i, shape: 'junction' },
 
   // Electro-mechanical / chemical transducers.
-  {
-    re: /(motor|engine|generator|alternator|fuelcell|stack|electrolyzer|converter|charger|inverter|resistor|diode|clutch|brake|gear|transmission|differential|torqueconverter|beltdrive|planetary|actuator|cylinder)/i,
-    shape: 'machine',
-  },
+  { re: anyOf(...MACHINE_WORDS), shape: 'machine' },
 ]
 
 const CACHE = new Map<string, Symbolism>()

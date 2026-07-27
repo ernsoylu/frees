@@ -352,11 +352,11 @@ function assignGroups(g: BuiltGraph): Map<string, string> {
   const group = new Map<string, string>()
   const score = new Map<string, number>()
 
-  const lineOrder = [...g.byLine.keys()].sort((a, b) => {
-    const fa = a.startsWith('fluid:') ? 0 : 1
-    const fb = b.startsWith('fluid:') ? 0 : 1
-    return fa - fb || a.localeCompare(b)
-  })
+  // Fluid lines are claimed first, so a node they contain keeps its fluid band
+  // when a coupling line later reaches for it.
+  const lineOrder = [...g.byLine.keys()].sort(
+    (a, b) => rankBand(a) - rankBand(b) || a.localeCompare(b),
+  )
 
   for (const line of lineOrder) {
     const adjacency = g.byLine.get(line)
@@ -369,26 +369,8 @@ function assignGroups(g: BuiltGraph): Map<string, string> {
     // heat by connectivity yields one band per mass. All of a coupling line's
     // nodes therefore share one band.
     const split = line.startsWith('fluid:')
-    const seen = new Set<string>()
-    let component = 0
-    for (const start of [...adjacency.keys()].sort((a, b) => a.localeCompare(b))) {
-      if (seen.has(start)) {
-        continue
-      }
-      const members: string[] = []
-      const stack = [start]
-      seen.add(start)
-      while (stack.length > 0) {
-        const id = stack.pop() as string
-        members.push(id)
-        for (const n of adjacency.get(id) ?? []) {
-          if (!seen.has(n)) {
-            seen.add(n)
-            stack.push(n)
-          }
-        }
-      }
-      const groupId = `${line}#${split ? component++ : 0}`
+    connectedComponents(adjacency).forEach((members, index) => {
+      const groupId = `${line}#${split ? index : 0}`
       for (const id of members) {
         // Links within this circuit; fluid outranks a coupling domain.
         const links = (adjacency.get(id)?.size ?? 0) + (split ? 100 : 0)
@@ -397,7 +379,7 @@ function assignGroups(g: BuiltGraph): Map<string, string> {
           group.set(id, groupId)
         }
       }
-    }
+    })
   }
 
   // Anything the topology never touched (declared but unwired) gets its own band.
@@ -407,6 +389,34 @@ function assignGroups(g: BuiltGraph): Map<string, string> {
     }
   }
   return group
+}
+
+/** Connected components of one line's adjacency, each a list of node ids.
+ *  Roots are visited in name order so the same document always yields the same
+ *  components in the same order. */
+function connectedComponents(adjacency: ReadonlyMap<string, Set<string>>): string[][] {
+  const seen = new Set<string>()
+  const out: string[][] = []
+  for (const start of [...adjacency.keys()].sort((a, b) => a.localeCompare(b))) {
+    if (seen.has(start)) {
+      continue
+    }
+    const members: string[] = []
+    const stack = [start]
+    seen.add(start)
+    while (stack.length > 0) {
+      const id = stack.pop() as string
+      members.push(id)
+      for (const n of adjacency.get(id) ?? []) {
+        if (!seen.has(n)) {
+          seen.add(n)
+          stack.push(n)
+        }
+      }
+    }
+    out.push(members)
+  }
+  return out
 }
 
 /**
@@ -419,11 +429,21 @@ function assignGroups(g: BuiltGraph): Map<string, string> {
  */
 function layerCircuit(members: readonly string[], flow: ReadonlyMap<string, Set<string>>): string[][] {
   const inSet = new Set(members)
+  const depth = longestPathDepths(members, inSet, flow)
+  placeCycleRemnants(members, depth, flow)
+  return bucketByDepth(members, depth)
+}
+
+/** Kahn's algorithm over the flow edges inside one circuit, recording each
+ *  node's longest distance from a source. Nodes left in a cycle get no depth
+ *  and are handled separately. */
+function longestPathDepths(
+  members: readonly string[],
+  inSet: ReadonlySet<string>,
+  flow: ReadonlyMap<string, Set<string>>,
+): Map<string, number> {
   const depth = new Map<string, number>()
-  const indegree = new Map<string, number>()
-  for (const id of members) {
-    indegree.set(id, 0)
-  }
+  const indegree = new Map<string, number>(members.map((id) => [id, 0]))
   for (const id of members) {
     for (const next of flow.get(id) ?? []) {
       if (inSet.has(next)) {
@@ -431,25 +451,33 @@ function layerCircuit(members: readonly string[], flow: ReadonlyMap<string, Set<
       }
     }
   }
-  // Kahn's algorithm; whatever remains is in a cycle and is appended after.
-  const queue = members.filter((id) => (indegree.get(id) ?? 0) === 0).sort((a, b) => a.localeCompare(b))
+  const queue = members.filter((id) => indegree.get(id) === 0).sort((a, b) => a.localeCompare(b))
   for (const id of queue) {
     depth.set(id, 0)
   }
-  for (let head = 0; head < queue.length; head++) {
-    const id = queue[head]
-    for (const next of [...(flow.get(id) ?? [])].sort((a, b) => a.localeCompare(b))) {
-      if (!inSet.has(next)) {
-        continue
-      }
+  // The queue grows as nodes are freed; iterating it picks those up in turn.
+  for (const id of queue) {
+    const downstream = [...(flow.get(id) ?? [])].filter((n) => inSet.has(n)).sort((a, b) => a.localeCompare(b))
+    for (const next of downstream) {
       depth.set(next, Math.max(depth.get(next) ?? 0, (depth.get(id) ?? 0) + 1))
       indegree.set(next, (indegree.get(next) ?? 0) - 1)
-      if ((indegree.get(next) ?? 0) === 0) {
+      if (indegree.get(next) === 0) {
         queue.push(next)
       }
     }
   }
-  // Cycle remnants: place each one layer past its deepest placed feeder.
+  return depth
+}
+
+/** A genuinely closed loop has no source to start from, so the topological
+ *  walk never reaches it. Each remaining node is placed one layer past its
+ *  deepest feeder that WAS placed — the loop then reads as a chain with its
+ *  closing edge drawn back, exactly as it is drawn by hand. */
+function placeCycleRemnants(
+  members: readonly string[],
+  depth: Map<string, number>,
+  flow: ReadonlyMap<string, Set<string>>,
+): void {
   for (const id of members) {
     if (depth.has(id)) {
       continue
@@ -462,7 +490,10 @@ function layerCircuit(members: readonly string[], flow: ReadonlyMap<string, Set<
     }
     depth.set(id, d)
   }
+}
 
+/** Depth map → dense layer lists, one column per depth. */
+function bucketByDepth(members: readonly string[], depth: ReadonlyMap<string, number>): string[][] {
   const layers: string[][] = []
   for (const id of members) {
     const d = depth.get(id) ?? 0
@@ -548,31 +579,41 @@ function orderBands(
 
   const out = [...fluid]
   for (const band of coupling) {
-    const links = new Map<string, number>()
-    for (const e of g.edges) {
-      // Count each edge that leaves this band for a fluid one.
-      for (const [inside, outside] of [
-        [e.from, e.to],
-        [e.to, e.from],
-      ]) {
-        if (bandOf.get(inside) === band) {
-          const other = bandOf.get(outside)
-          if (other && other.startsWith('fluid:')) {
-            links.set(other, (links.get(other) ?? 0) + 1)
-          }
-        }
-      }
-    }
-    let best: string | undefined
-    for (const [target, count] of links) {
-      if (best === undefined || count > (links.get(best) ?? 0)) {
-        best = target
-      }
-    }
+    const best = mostLinkedFluidBand(band, bandOf, g)
     const at = best === undefined ? out.length : out.indexOf(best) + 1
     out.splice(at, 0, band)
   }
   return [...out, ...unwired]
+}
+
+/** The fluid band a coupling band has the most edges into, if any. */
+function mostLinkedFluidBand(
+  band: string,
+  bandOf: ReadonlyMap<string, string>,
+  g: BuiltGraph,
+): string | undefined {
+  const links = new Map<string, number>()
+  const note = (inside: string, outside: string) => {
+    if (bandOf.get(inside) !== band) {
+      return
+    }
+    const other = bandOf.get(outside)
+    if (other?.startsWith('fluid:')) {
+      links.set(other, (links.get(other) ?? 0) + 1)
+    }
+  }
+  for (const e of g.edges) {
+    // Either end may be the one inside this band.
+    note(e.from, e.to)
+    note(e.to, e.from)
+  }
+  let best: string | undefined
+  for (const [target, count] of links) {
+    if (best === undefined || count > (links.get(best) ?? 0)) {
+      best = target
+    }
+  }
+  return best
 }
 
 /**
@@ -589,39 +630,37 @@ function orderBands(
  * internal neighbours and falls through to the normal layered placement, where
  * its structure is what matters. Returns null in that case.
  */
-function placeCouplingRow(
+/** Each node's neighbours WITHIN the band, or null if any node has more than
+ *  one — the signal that this is a real network rather than a set of pendants. */
+function internalNeighbours(
   ids: readonly string[],
-  g: BuiltGraph,
-  line: string,
-  originX: number,
-  originY: number,
-): { w: number; h: number } | null {
-  if (ids.length < 2) {
-    return null
-  }
-  const inside = new Set(ids)
-  const adjacency = g.byLine.get(line)
-  const internal = new Map<string, string[]>()
+  inside: ReadonlySet<string>,
+  adjacency: ReadonlyMap<string, Set<string>> | undefined,
+): Map<string, string[]> | null {
+  const out = new Map<string, string[]>()
   for (const id of ids) {
     const kin = [...(adjacency?.get(id) ?? [])].filter((n) => inside.has(n))
     if (kin.length > 1) {
-      return null // real internal structure — layer it instead
+      return null
     }
-    internal.set(id, kin)
+    out.set(id, kin)
   }
+  return out
+}
 
-  // Target x = the middle of this node's partners in the bands already placed.
+/** For each node, the mean centre of its partners OUTSIDE the band — i.e. the
+ *  x it wants to sit at. Nodes with no outside partner are simply absent. */
+function partnerPositions(
+  ids: readonly string[],
+  inside: ReadonlySet<string>,
+  g: BuiltGraph,
+): Map<string, number> {
   const target = new Map<string, number>()
   for (const id of ids) {
     let sum = 0
     let count = 0
     for (const e of g.edges) {
-      let other: string | null = null
-      if (e.from === id) {
-        other = e.to
-      } else if (e.to === id) {
-        other = e.from
-      }
+      const other = edgePartner(e, id)
       if (other === null || inside.has(other)) {
         continue
       }
@@ -635,6 +674,35 @@ function placeCouplingRow(
       target.set(id, sum / count)
     }
   }
+  return target
+}
+
+/** The other end of an edge from `id`'s point of view, or null if `id` is not
+ *  on it. */
+function edgePartner(e: SchematicEdge, id: string): string | null {
+  if (e.from === id) {
+    return e.to
+  }
+  return e.to === id ? e.from : null
+}
+
+function placeCouplingRow(
+  ids: readonly string[],
+  g: BuiltGraph,
+  line: string,
+  originX: number,
+  originY: number,
+): { w: number; h: number } | null {
+  if (ids.length < 2) {
+    return null
+  }
+  const inside = new Set(ids)
+  const internal = internalNeighbours(ids, inside, g.byLine.get(line))
+  if (internal === null) {
+    return null // real internal structure — layer it instead
+  }
+
+  const target = partnerPositions(ids, inside, g)
   // A node whose only link is inside the band (an ambient source feeding a
   // junction) follows that neighbour rather than being exiled to the end.
   for (const id of ids) {
@@ -705,24 +773,34 @@ function anchorPorts(node: SchematicNode, declared: readonly string[], used: Rea
   const names = declared.length > 0 ? declared : [...used.keys()]
   for (const port of names) {
     const hit = used.get(port)
-    const side: PortSide = hit ? hit.side : (isOutlet(port) ? 'right' : 'left')
-    sides[side].push({ port, lineId: hit?.lineId })
+    const unwiredSide: PortSide = isOutlet(port) ? 'right' : 'left'
+    sides[hit?.side ?? unwiredSide].push({ port, lineId: hit?.lineId })
   }
   const out: PortAnchor[] = []
   for (const side of ['left', 'right', 'top', 'bottom'] as PortSide[]) {
     const list = sides[side]
     list.forEach((p, i) => {
+      // Evenly spaced along the face, inset from the corners.
       const t = (i + 1) / (list.length + 1)
-      out.push({
-        port: p.port,
-        side,
-        lineId: p.lineId,
-        dx: side === 'left' ? 0 : side === 'right' ? node.w : node.w * t,
-        dy: side === 'top' ? 0 : side === 'bottom' ? node.h : node.h * t,
-      })
+      out.push({ port: p.port, side, lineId: p.lineId, ...faceOffset(side, node, t) })
     })
   }
   return out
+}
+
+/** Where along a node's face a port sits: pinned to the edge on the axis the
+ *  face fixes, spread by `t` along the other. */
+function faceOffset(side: PortSide, node: SchematicNode, t: number): { dx: number; dy: number } {
+  switch (side) {
+    case 'left':
+      return { dx: 0, dy: node.h * t }
+    case 'right':
+      return { dx: node.w, dy: node.h * t }
+    case 'top':
+      return { dx: node.w * t, dy: 0 }
+    default:
+      return { dx: node.w * t, dy: node.h }
+  }
 }
 
 /**
@@ -754,16 +832,40 @@ export function layoutSchematic(
   }
 
   const groupIds = orderBands([...members.keys()], members, g)
+  const sizes = placeBandsHorizontally(groupIds, members, order, g)
+  const { groups, height, width } = stackBands(groupIds, members, sizes, g, groupLabel)
 
-  // Horizontal placement runs FLUID BANDS FIRST, whatever order the bands are
-  // stacked in: a coupling band positions each pendant under the block it
-  // couples to, so every fluid band has to have an x by then. Vertical
-  // placement is a second pass over the display order.
+  for (const node of g.nodes.values()) {
+    node.ports = anchorPorts(node, ports.get(node.id) ?? [], g.portUse.get(node.id) ?? new Map())
+  }
+
+  return {
+    nodes: [...g.nodes.values()],
+    edges: g.edges,
+    groups,
+    lines: [...g.lines.values()],
+    width,
+    height,
+  }
+}
+
+/**
+ * Lays out each band's contents left to right, FLUID BANDS FIRST whatever
+ * order the bands are stacked in: a coupling band positions each pendant under
+ * the block it couples to, so every fluid band must already have an x by then.
+ * Vertical placement is a separate pass. Returns each band's size.
+ */
+function placeBandsHorizontally(
+  groupIds: readonly string[],
+  members: ReadonlyMap<string, string[]>,
+  order: ReadonlyMap<string, number>,
+  g: BuiltGraph,
+): Map<string, { w: number; h: number }> {
   const sizes = new Map<string, { w: number; h: number }>()
   const originX = MARGIN + GROUP_PAD
   for (const groupId of [...groupIds].sort((a, b) => rankBand(a) - rankBand(b))) {
     const ids = (members.get(groupId) ?? []).sort((a, b) => (order.get(a) ?? 0) - (order.get(b) ?? 0))
-    const line = groupId.slice(0, groupId.lastIndexOf('#'))
+    const line = lineOfBand(groupId)
     // A band of pendant couplings is aligned to its partners; anything with
     // real structure of its own is layered.
     let size = placeCouplingRow(ids, g, line, originX, 0)
@@ -780,14 +882,26 @@ export function layoutSchematic(
       }
     }
   }
+  return sizes
+}
 
+/** Stacks the bands in display order, shifting each band's nodes down onto it,
+ *  and builds the frames. Every frame spans the drawing so the bands read as
+ *  bands rather than as boxes of differing width. */
+function stackBands(
+  groupIds: readonly string[],
+  members: ReadonlyMap<string, string[]>,
+  sizes: ReadonlyMap<string, { w: number; h: number }>,
+  g: BuiltGraph,
+  groupLabel: (line: LineKey, index: number) => string,
+): { groups: SchematicGroup[]; width: number; height: number } {
   const groups: SchematicGroup[] = []
   let cursorY = MARGIN
   let maxX = 0
 
   for (const groupId of groupIds) {
     const size = sizes.get(groupId) ?? { w: 0, h: 0 }
-    const line = groupId.slice(0, groupId.lastIndexOf('#'))
+    const line = lineOfBand(groupId)
     const originY = cursorY + GROUP_TITLE + GROUP_PAD / 2
     for (const id of members.get(groupId) ?? []) {
       const n = g.nodes.get(id)
@@ -799,7 +913,7 @@ export function layoutSchematic(
     groups.push({
       id: groupId,
       lineId: line,
-      label: key ? groupLabel(key, Number(groupId.slice(groupId.lastIndexOf('#') + 1))) : 'unwired',
+      label: key ? groupLabel(key, indexOfBand(groupId)) : 'unwired',
       x: MARGIN,
       y: cursorY,
       w: size.w + GROUP_PAD * 2,
@@ -809,23 +923,23 @@ export function layoutSchematic(
     cursorY += size.h + GROUP_TITLE + GROUP_PAD * 1.5 + GROUP_GAP
   }
 
-  // Every group frame spans the drawing, so the bands read as bands.
   for (const group of groups) {
     group.w = maxX - MARGIN
   }
-
-  for (const node of g.nodes.values()) {
-    node.ports = anchorPorts(node, ports.get(node.id) ?? [], g.portUse.get(node.id) ?? new Map())
-  }
-
   return {
-    nodes: [...g.nodes.values()],
-    edges: g.edges,
     groups,
-    lines: [...g.lines.values()],
     width: Math.max(maxX + MARGIN, MARGIN * 2),
     height: Math.max(cursorY - GROUP_GAP + MARGIN, MARGIN * 2),
   }
+}
+
+/** A band id is `<lineId>#<index>`; these split it back apart. */
+function lineOfBand(groupId: string): string {
+  return groupId.slice(0, groupId.lastIndexOf('#'))
+}
+
+function indexOfBand(groupId: string): number {
+  return Number(groupId.slice(groupId.lastIndexOf('#') + 1))
 }
 
 /** Absolute position of a port anchor, given the node's live position. */

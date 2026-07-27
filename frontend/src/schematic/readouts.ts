@@ -13,7 +13,7 @@
 //      transfer coefficients a document computes outside the component and
 //      injects, which are otherwise invisible on the drawing.
 
-import type { ComponentResult, VariableResult } from '../api'
+import type { ComponentParamResult, ComponentResult, VariableResult } from '../api'
 import type { SchematicEdge, SchematicNode } from './layout'
 
 export interface Reading {
@@ -121,36 +121,60 @@ function portReadings(
   edges: readonly SchematicEdge[],
   values: ReadonlyMap<string, VariableResult>,
 ): PortReading[] {
-  // A port can appear on several edges (a junction node); any of them names the
-  // same stream, so the first is enough.
-  const prefixes = new Map<string, { stream: string; domain: string; lineId: string }>()
-  for (const e of edges) {
-    if (e.from === node.id && e.fromPort && e.fromStream && !prefixes.has(e.fromPort)) {
-      prefixes.set(e.fromPort, { stream: e.fromStream, domain: e.domain, lineId: e.lineId })
-    }
-    if (e.to === node.id && e.toPort && e.toStream && !prefixes.has(e.toPort)) {
-      prefixes.set(e.toPort, { stream: e.toStream, domain: e.domain, lineId: e.lineId })
-    }
-  }
-
+  const prefixes = streamPrefixes(node, edges)
   const out: PortReading[] = []
   for (const anchor of node.ports) {
     const hit = prefixes.get(anchor.port)
     if (!hit) {
       continue
     }
-    const readings: Reading[] = []
-    for (const [member, label] of MEMBERS[hit.domain.toLowerCase()] ?? MEMBERS.fluid) {
-      const v = values.get(`${hit.stream}.${member}`.toLowerCase())
-      if (v && Number.isFinite(v.value)) {
-        readings.push({ label, value: v.value, units: v.units })
-      }
-    }
+    const readings = membersOf(hit.stream, hit.domain, values)
     if (readings.length > 0) {
       out.push({ port: anchor.port, lineId: hit.lineId, readings })
     }
   }
   return out
+}
+
+/** Each of a block's wired ports → the stream naming its variables, with the
+ *  domain that decides which members to report. A port can appear on several
+ *  edges (at a junction); they all name the same stream, so the first wins. */
+function streamPrefixes(
+  node: SchematicNode,
+  edges: readonly SchematicEdge[],
+): Map<string, { stream: string; domain: string; lineId: string }> {
+  const out = new Map<string, { stream: string; domain: string; lineId: string }>()
+  const note = (port: string | undefined, stream: string | undefined, e: SchematicEdge) => {
+    if (port && stream && !out.has(port)) {
+      out.set(port, { stream, domain: e.domain, lineId: e.lineId })
+    }
+  }
+  for (const e of edges) {
+    if (e.from === node.id) {
+      note(e.fromPort, e.fromStream, e)
+    }
+    if (e.to === node.id) {
+      note(e.toPort, e.toStream, e)
+    }
+  }
+  return out
+}
+
+/** The members of one stream that the solve actually produced, in reading
+ *  order for its domain. */
+function membersOf(
+  stream: string,
+  domain: string,
+  values: ReadonlyMap<string, VariableResult>,
+): Reading[] {
+  const readings: Reading[] = []
+  for (const [member, label] of MEMBERS[domain.toLowerCase()] ?? MEMBERS.fluid) {
+    const v = values.get(`${stream}.${member}`.toLowerCase())
+    if (v && Number.isFinite(v.value)) {
+      readings.push({ label, value: v.value, units: v.units })
+    }
+  }
+  return readings
 }
 
 /**
@@ -195,16 +219,24 @@ function paramReadings(
   if (!hit) {
     return []
   }
-  return hit.params.map((p) => {
-    const resolved =
-      p.value !== null && p.value !== undefined && Number.isFinite(p.value)
-        ? `${formatCompact(p.value)}${p.units ? ` ${p.units}` : ''}`
-        : p.ref
-    // Show the binding too when it was a named variable, so `UA=UA_chl_r`
-    // still points back at the correlation that produced it.
-    const named = /^[A-Za-z_]\w*$/.test(p.ref) && resolved !== p.ref
-    return { name: p.name, text: named ? `${resolved}  (${p.ref})` : resolved }
-  })
+  return hit.params.map((p) => ({ name: p.name, text: parameterText(p) }))
+}
+
+/** One parameter as "<value> <unit>  (<source variable>)" — the source shown
+ *  only when the binding was a named variable, so `UA=UA_chl_r` still points
+ *  back at the correlation that produced it. */
+function parameterText(p: ComponentParamResult): string {
+  const resolved = describeParamValue(p)
+  const named = /^[a-z_]\w*$/i.test(p.ref) && resolved !== p.ref
+  return named ? `${resolved}  (${p.ref})` : resolved
+}
+
+function describeParamValue(p: ComponentParamResult): string {
+  if (p.value === null || p.value === undefined || !Number.isFinite(p.value)) {
+    return p.ref
+  }
+  const unit = p.units ? ` ${p.units}` : ''
+  return formatCompact(p.value) + unit
 }
 
 /** Compact fixed/exponential rendering — a hover card has no room for 8 digits. */
@@ -229,12 +261,13 @@ export function formatCompact(value: number): string {
  */
 export function badgeFor(node: SchematicNode, readout: NodeReadout): Reading | null {
   const byName = (re: RegExp) => readout.outputs.find((o) => re.test(o.label))
-  const preferred =
-    node.shape === 'exchanger'
-      ? byName(/^q/i)
-      : node.shape === 'compressor' || node.shape === 'pump' || node.shape === 'machine'
-        ? byName(/^(w|p)$/i) ?? byName(/^(power|w)/i)
-        : null
+  // An exchanger is defined by its duty, a machine by its power.
+  let preferred: Reading | undefined
+  if (node.shape === 'exchanger') {
+    preferred = byName(/^q/i)
+  } else if (node.shape === 'compressor' || node.shape === 'pump' || node.shape === 'machine') {
+    preferred = byName(/^[wp]$/i) ?? byName(/^(power|w)/i)
+  }
   if (preferred) {
     return preferred
   }
