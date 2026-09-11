@@ -1,0 +1,13 @@
+trace = [1, 3, 2, 6, 4, 9, 5, 12]
+CALL Detrend(trace : detrended)
+CALL Detrend(trace, 'constant' : centered)
+CALL Smooth(trace, 3 : smoothed)
+CALL Window(detrended[1:8], 'hann' : tapered)
+centered_mean = sum(centered[1:8])/8
+residual_mean = sum(detrended[1:8])/8
+left_edge = smoothed[1]
+{ CHECK centered_mean 0 1e-9 }
+{ CHECK residual_mean 0 1e-9 }
+{ CHECK left_edge 2 1e-9 }
+{ CHECK tapered[1] 0 1e-9 }
+{ CHECK tapered[8] 0 1e-9 }

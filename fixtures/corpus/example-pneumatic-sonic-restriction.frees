@@ -1,0 +1,9 @@
+PneumaticSupply supply(fluid$=Air, P=700000, T=293.15)
+PneumaticOrifice restriction(fluid$=Air, C=1e-8, b=0.35)
+PneumaticAtmosphere atmosphere(P=100000)
+connect(supply.out, restriction.in)
+connect(restriction.out, atmosphere.port)
+pressure_ratio = restriction.out.P / restriction.in.P
+mass_flow = restriction.in.mdot
+{ CHECK pressure_ratio 0.142857142857143 1e-9 }
+{ CHECK mass_flow 0.008295 1e-7 }

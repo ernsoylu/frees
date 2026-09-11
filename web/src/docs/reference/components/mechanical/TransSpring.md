@@ -3,7 +3,7 @@ name: TransSpring
 category: Component (mechanical)
 summary: Acausal mechanical-domain component TransSpring with ports a, b.
 related: []
-examples: []
+examples: [pneumatic-spring-actuator, hydraulic-spring-actuator, damped-actuator-motion]
 tags: [transspring, component, mechanical, acausal]
 references: []
 generated: true

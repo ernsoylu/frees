@@ -3,7 +3,7 @@ name: FFT
 category: Stats
 summary: Discrete Fourier transform of a complex sequence, any length.
 related: [IFFT, Convolve, Welch, Window, XCorr]
-examples: []
+examples: [vibration-tone-spectrum]
 tags: [fft, dft, fourier, spectrum, frequency, transform, signal]
 ---
 

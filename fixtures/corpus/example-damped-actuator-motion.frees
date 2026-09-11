@@ -1,0 +1,11 @@
+ForceSource drive(F=35.48)
+TransMass moving(m=0.1, v0=0)
+TransSpring spring(k=1330, x0=0)
+TransDamper damper(c=23.0651251893416)
+TransGround ground()
+connect(drive.a, moving.port, spring.a, damper.a)
+connect(drive.b, spring.b, damper.b, ground.port)
+DYNAMIC motion(method=ode45, time=0..0.2, points=101)
+END
+final_stroke = FinalValue('spring.x')
+{ CHECK final_stroke 0.0266766917 1e-6 }

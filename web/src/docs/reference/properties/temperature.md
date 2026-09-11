@@ -3,7 +3,7 @@ name: temperature
 category: Fluid Properties
 summary: Fluid property: temperature from the real-fluid property backend.
 related: []
-examples: [pressure-cooker]
+examples: [pressure-cooker, uncertain-tank-inventory]
 tags: [temperature, property, fluid, coolprop]
 references: []
 ---

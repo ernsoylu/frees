@@ -3,7 +3,7 @@ name: TorqueSource
 category: Component (mechanical)
 summary: A prescribed torque.
 related: []
-examples: []
+examples: [reduction-gear-viscous-load]
 tags: [torquesource, component, mechanical, acausal]
 ---
 

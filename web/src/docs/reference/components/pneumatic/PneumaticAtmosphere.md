@@ -3,7 +3,7 @@ name: PneumaticAtmosphere
 category: Component (pneumatic)
 summary: An atmospheric (ambient-pressure) pneumatic boundary.
 related: []
-examples: []
+examples: [pneumatic-sonic-restriction]
 tags: [pneumaticatmosphere, component, pneumatic, acausal]
 references:
   - "ISO 6358 — Pneumatic fluid power: flow-rate characteristics"

@@ -3,7 +3,7 @@ name: ThermalMass
 category: Component (heat)
 summary: A lumped thermal capacitance, C dT/dt = Q̇.
 related: []
-examples: [pressure-cooker]
+examples: [pressure-cooker, pi-temperature-regulation]
 tags: [thermalmass, component, heat, acausal]
 ---
 

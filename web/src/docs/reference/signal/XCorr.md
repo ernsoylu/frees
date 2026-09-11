@@ -3,7 +3,7 @@ name: XCorr
 category: Stats
 summary: Full linear cross-correlation of two series, zero lag at the centre.
 related: [Convolve, FiltFilt, Welch, Smooth]
-examples: []
+examples: [transport-delay-peak-detection]
 tags: [xcorr, cross-correlation, autocorrelation, lag, delay, alignment, signal]
 ---
 

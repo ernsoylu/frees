@@ -1,0 +1,10 @@
+pressure = 934000
+volume = 0.010
+temperature = 295.45
+mass = pressure*volume/(208.1*temperature)
+UncertaintyOf(pressure) = 22000
+UncertaintyOf(volume) = 0.0004
+UncertaintyOf(temperature) = 1.2
+mass_sigma = UncertaintyOf(mass)
+{ CHECK mass 0.151911552344956 1e-9 }
+{ CHECK mass_sigma 0.00707868056268796 1e-8 }

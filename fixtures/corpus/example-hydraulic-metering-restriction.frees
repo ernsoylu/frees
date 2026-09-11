@@ -1,0 +1,11 @@
+HydraulicSupply supply(P=1100000)
+HydraulicOrifice restriction(CdA=1e-5, rho=850)
+HydraulicTank tank(P=100000)
+connect(supply.out, restriction.in)
+connect(restriction.out, tank.port)
+mass_flow = restriction.in.mdot
+volume_flow = mass_flow / 850
+hydraulic_power = 1000000 * volume_flow
+GUESS restriction.in.mdot = 0.4
+{ CHECK mass_flow 0.412310562561766 1e-7 }
+{ CHECK hydraulic_power 485.071250072666 1e-3 }

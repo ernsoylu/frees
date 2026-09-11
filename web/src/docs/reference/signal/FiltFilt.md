@@ -3,7 +3,7 @@ name: FiltFilt
 category: Stats
 summary: Zero-phase filtering — forward then backward, so the phase shifts cancel.
 related: [Filter, Smooth, XCorr, Welch]
-examples: []
+examples: [causal-zero-phase-filter]
 tags: [filtfilt, zero phase, forward backward, filter, signal, sensor]
 ---
 

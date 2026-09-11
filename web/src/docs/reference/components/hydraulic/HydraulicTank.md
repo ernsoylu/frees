@@ -3,7 +3,7 @@ name: HydraulicTank
 category: Component (hydraulic)
 summary: A hydraulic reservoir at (near) atmospheric pressure.
 related: []
-examples: []
+examples: [hydraulic-metering-restriction]
 tags: [hydraulictank, component, hydraulic, acausal]
 ---
 

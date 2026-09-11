@@ -3,7 +3,7 @@ name: ThermalSource
 category: Component (heat)
 summary: A prescribed-temperature boundary.
 related: []
-examples: [ev-thermal-management]
+examples: [ev-thermal-management, pi-temperature-regulation, glazed-opening-heat-loss]
 tags: [thermalsource, component, heat, acausal]
 ---
 

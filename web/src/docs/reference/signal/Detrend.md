@@ -3,7 +3,7 @@ name: Detrend
 category: Stats
 summary: Removes a least-squares straight line (or just the mean) from a measured series.
 related: [Smooth, Window, Welch, FFT]
-examples: []
+examples: [sensor-detrend-smooth-window]
 tags: [detrend, trend, drift, baseline, signal, sensor]
 ---
 

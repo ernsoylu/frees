@@ -3,7 +3,7 @@ name: Welch
 category: Stats
 summary: Averaged-periodogram power spectral density, one-sided and in x²/Hz.
 related: [FFT, Window, Detrend, XCorr]
-examples: []
+examples: [vibration-tone-spectrum]
 tags: [welch, psd, spectrum, power spectral density, periodogram, vibration, noise]
 ---
 

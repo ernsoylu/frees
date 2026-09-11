@@ -3,7 +3,7 @@ name: PneumaticOrifice
 category: Component (pneumatic)
 summary: A pneumatic orifice metering flow by ISO 6358 (sonic conductance).
 related: []
-examples: []
+examples: [pneumatic-sonic-restriction]
 tags: [pneumaticorifice, component, pneumatic, acausal]
 references:
   - "ISO 6358 — Pneumatic fluid power: flow-rate characteristics"

@@ -3,7 +3,7 @@ name: Conduction
 category: Component (heat)
 summary: A conductive thermal resistance (Fourier), Q̇ = (T1 − T2)/R.
 related: []
-examples: [heat-conduction, transient-heat-rod, heisler-transient, material-conduction]
+examples: [heat-conduction, transient-heat-rod, heisler-transient, material-conduction, pi-temperature-regulation, glazed-opening-heat-loss]
 tags: [conduction, component, heat, acausal]
 ---
 

@@ -3,7 +3,7 @@ name: PIThermostat
 category: Component (control)
 summary: A proportional–integral thermostat controller driving an actuator to a setpoint.
 related: []
-examples: []
+examples: [pi-temperature-regulation]
 tags: [pithermostat, component, control, acausal]
 ---
 

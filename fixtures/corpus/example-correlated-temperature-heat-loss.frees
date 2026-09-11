@@ -1,0 +1,9 @@
+inside_temp = 293.15
+outside_temp = 273.15
+heat_loss = 10*(inside_temp-outside_temp)
+UncertaintyOf(inside_temp) = 0.2
+UncertaintyOf(outside_temp) = 0.3
+Correlation(inside_temp, outside_temp) = 0.5
+heat_sigma = UncertaintyOf(heat_loss)
+{ CHECK heat_loss 200 1e-8 }
+{ CHECK heat_sigma 2.64575131106459 1e-7 }

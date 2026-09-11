@@ -3,7 +3,7 @@ name: HydraulicCylinder
 category: Component (hydraulic)
 summary: A hydraulic actuator converting flow/pressure to motion/force.
 related: []
-examples: []
+examples: [hydraulic-spring-actuator]
 tags: [hydrauliccylinder, component, hydraulic, acausal]
 ---
 

@@ -1,0 +1,11 @@
+late = [0, 0, 1, 2, 1, 0, 0]
+early = [0, 1, 2, 1, 0, 0, 0]
+CALL XCorr(late, early : correlation)
+peak_position = peakindex(1, 0, 0, correlation[1:13])
+lag_samples = peak_position - 7
+delay_seconds = 0.1*lag_samples
+pulses = [0, 3, 0, 0, 5, 0, 0, 2, 0]
+count = peakcount(0, 0, pulses)
+{ CHECK lag_samples 1 1e-9 }
+{ CHECK delay_seconds 0.1 1e-9 }
+{ CHECK count 3 1e-9 }

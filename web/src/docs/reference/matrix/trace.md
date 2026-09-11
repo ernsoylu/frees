@@ -3,7 +3,7 @@ name: trace
 category: Matrix
 summary: Matrix trace
 related: []
-examples: []
+examples: [sensor-detrend-smooth-window]
 tags: [trace, matrix]
 ---
 
