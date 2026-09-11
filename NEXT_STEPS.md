@@ -553,85 +553,46 @@ engine-available, browser-pending. Teaching a dialog workflow that does not exis
 class of defect as the onboarding contradictions in the baseline audit, and it is the one the
 audit says is currently being introduced rather than fixed.
 
-### Phase 4.7b-7 — Replace the 'CALL' tag with MATLAB-style function syntax
+### Phase 4.7b-7 — Unified language and MATLAB-style calls
 
-The language currently has two call surfaces:
+Detailed design and source investigation:
+[**A simpler, unified language for frees**](reports/SIMPLIFIED_SYNTAX_PROPOSAL.md).
+This proposal supersedes the earlier CALL-only migration: the target includes declarations,
+control flow, components, tables, simulations, events, analysis commands and presentation.
 
-- scalar and single-result functions are used as expressions, for example
-  'y = sqrt(x)';
-- multi-result procedures use a separate statement form, for example
-  'CALL Detrend(trace : detrended)' or
-  'CALL FFT(signal, imaginary : spectrum_real, spectrum_imag)'.
+The proposed endpoint is one `function` declaration and ordinary `f(...)` calls, including
+single and bracketed outputs. Remove `CALL`, `MODULE`, `PROCEDURE`, `COMPONENT` and the old
+domain block grammars from normal execution after a versioned compatibility migration.
+Domain operations such as `connect(...)`, `simulate(...)`, `sweep(...)` and `plot(...)` become
+registered calls with explicit capabilities, rather than new reserved keywords.
 
-This split is an unnecessary language distinction. The final language target is MATLAB-style
-function syntax for every callable: make every registered callable usable as an expression and
-let its registry entry define the complete signature:
+No user-selected equation/procedure mode is proposed. Keep numerical `=` as an equation and
+`:=` as an ordered calculation, with precise local binding rules; do not guess semantics from
+whether an input happens to be known. Preserve global inverse solving, typed port conservation,
+ODE/DAE behavior, units, output shapes and explicit analysis dependencies.
 
-    detrended = Detrend(trace)
-    centered = Detrend(trace, 'constant')
-    smoothed = Smooth(trace, 3)
-    [spectrum_real, spectrum_imag] = FFT(signal, imaginary)
-    [pressure, temperature] = valve_model(flow, setpoint)
-    [estimate, residual] = fit_measurements(x, y)
+The investigation confirms that `[a,b] = f(x)` and multi-output function headers already exist.
+The missing work is complete call resolution, scalar output headers, unified declaration
+semantics and the surrounding language/runtime integration. A syntax alias alone cannot make
+all existing call paths accept arrays, metadata or analysis results.
 
-The resolver must use one metadata path for built-in intrinsics, matrix and signal functions,
-control procedures, property functions, tables, and user FUNCTION definitions. Each callable
-entry must expose its required and optional inputs, accepted types, output count, output names
-where applicable, and output shape rules. Arity and type errors must be reported at the call site
-before solving. Dynamic-size outputs may continue to use declared shapes such as 'Q[1:n,1:n]'
-when the input determines their dimensions.
+Implementation sequence (all pending; the report defines each stage's scope and exit checks):
 
-This includes current MODULE and PROCEDURE invocations. Their definitions may keep their
-declaration keywords and existing input/output declarations:
+- [ ] U0: Freeze the language contract and complete the callable/legacy grammar inventory.
+- [ ] U1: Complete scalar/nested/multiple-output call resolution using existing lowering.
+- [ ] U2: Unify function declarations with lexical scope and explicit migration diagnostics.
+- [ ] U3: Support mixed equations/calculations and simplified, bounded control flow.
+- [ ] U4: Add named arguments, typed values and unambiguous MATLAB-style array indexing.
+- [ ] U5: Migrate physical component definitions, ports, parameters and variants.
+- [ ] U6: Expose models, simulations, events, tables, sweeps and views through ordinary calls.
+- [ ] U7: Complete advanced analysis and symbolic interface parity.
+- [ ] U8: Migrate product examples, library definitions, documentation and saved projects.
+- [ ] U9: Remove legacy grammar after conversion and parity are demonstrated.
 
-    MODULE valve_model(flow, setpoint : pressure, temperature)
-      pressure = flow * 2
-      temperature = 300 + setpoint
-    END
-
-    PROCEDURE fit_measurements(x, y : estimate, residual)
-      estimate := sum(y) / sum(x)
-      residual := y[1] - estimate * x[1]
-    END
-
-Their callers use ordinary MATLAB-style assignment:
-
-    [pressure, temperature] = valve_model(flow, setpoint)
-    [estimate, residual] = fit_measurements(x, y)
-
-The declaration keywords remain because they define the callable's semantics and body. The
-invocation keyword is what disappears. A single-output MODULE or PROCEDURE uses ordinary
-assignment; a multi-output call requires bracketed assignment. Output order follows the
-declaration and registry metadata, and a module's namespacing and a procedure's solver
-equations must remain unchanged by the syntax migration.
-
-Implement this as a compatibility migration:
-
-1. Add expression calls with one output for every callable that can return one value or array.
-2. Add multiple assignment for procedures with more than one output, using a bracketed left-hand
-   side. Preserve output ordering from the registry.
-3. Route both the new syntax and the existing 'CALL f(inputs : outputs)' syntax through the same
-   resolver and expansion code. Keep 'CALL' only as deprecated compatibility syntax while all
-   product documents and fixtures migrate.
-4. Update the parser, matrix/procedure flatteners, result naming, diagnostics, editor examples,
-   reference signatures, and generated function manifest together. Do not maintain a second
-   hand-written list of functions that support the new syntax.
-5. Migrate all tracked 'CALL' examples and fixtures to the expression form, then remove the
-   legacy grammar and diagnostics after the repository contains no 'CALL' statements outside
-   migration tests and the compatibility release window has ended.
-
-Acceptance criteria:
-
-- every callable registry entry is reachable through the unified expression resolver;
-- one-result calls work inside larger equations, for example 'z = abs(sin(x))';
-- multiple assignment preserves output order and declared shapes;
-- missing, extra, or invalid arguments produce the same precise diagnostics in both syntax forms;
-- user-defined functions and tables follow the same call rules as built-ins;
-- existing documents remain valid during the compatibility window;
-- 'CALL' is removed from the production grammar, documentation, examples, and fixtures when the
-  migration is complete;
-- parser, evaluator, WASM, parity, fuzz, and documentation checks cover both single- and
-  multiple-output calls.
+Each stage gets a PR, validation and merge before dependent work proceeds. Add cumulative work
+budgets when touching the shared evaluator/expander: the reported reduction fuzz timeout is
+not resolved merely because a later random smoke run passes. The report records the current
+limit and requires a deterministic regression check as part of that implementation.
 
 ### Correctness rules for every example added in 4.7b-2 through 4.7b-5
 

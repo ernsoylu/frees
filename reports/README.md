@@ -1,12 +1,13 @@
-# Audit reports
+# Reports and proposals
 
-Three documents are tracked here:
+The following documents are tracked here:
 
 | File | What it is |
 |---|---|
 | `REPORT.md` | The 11 September 2026 documentation and usability audit, at `8f744dd` |
 | `documentation-audit/REPORT.md` | The 10 September baseline audit it updates, preserved with its original findings |
 | `MISSING_EXAMPLES.md` | Nineteen worked engineering examples with complete inputs and expected results, written to close the gaps the audits measured |
+| [SIMPLIFIED_SYNTAX_PROPOSAL.md](SIMPLIFIED_SYNTAX_PROPOSAL.md) | Source investigation and proposed unified language, including all keywords, solver semantics, examples and a staged migration plan |
 
 `MISSING_EXAMPLES.md` is the one a later phase consumes: roadmap phase 4.7b-2 is
 entirely about converting its examples into gallery models with `CHECK`
@@ -14,7 +15,7 @@ assertions and reference-page bindings. See `NEXT_STEPS.md` §2c.
 
 ## The evidence data is not tracked
 
-Each report cites evidence files beside it — `coverage-summary.json`,
+The audit reports cite evidence files beside them — `coverage-summary.json`,
 `symbol-coverage.csv`, `examples.csv`, `run-candidates.json`, and the
 `measure.cjs` / `run-checks.py` / `check-manifest.py` harnesses that produced
 them. **Those links do not resolve in this repository.** They were committed
