@@ -50,17 +50,31 @@ function findLocal(text: string, typeName: string): LocalComponent | undefined {
 /** User `COMPONENT` / `SUBSYSTEM` blocks: ports from the header, params from PARAM. */
 export function localComponentNames(text: string): LocalComponent[] {
   const out: LocalComponent[] = []
-  const re = /^\s*(?:COMPONENT|SUBSYSTEM)\s+(\w+)\s*\(([^)]*)\)/gim
+  const re =
+    /^\s*(?:(?:COMPONENT|SUBSYSTEM)\s+(\w+)\s*\(([^)]*)\)|function\s*\[([^\]]*)\]\s*=\s*(\w+)\s*\(([^)]*)\))/gim
   let m: RegExpExecArray | null
   while ((m = re.exec(text)) !== null) {
+    const name = m[1] ?? m[4]
+    const headerPorts = m[2] ?? m[3] ?? ''
+    const headerParams = m[5] ?? ''
+    if (!name) continue
     const after = text.slice(m.index + m[0].length)
     const end = after.search(/^\s*END\b/im)
     const params: string[] = []
-    for (const line of (end >= 0 ? after.slice(0, end) : after).split('\n')) {
+    const body = end >= 0 ? after.slice(0, end) : after
+    for (const line of body.split('\n')) {
       const param = /^\s*PARAM\s+(.+)$/i.exec(line)
       if (param) params.push(...paramNames(param[1]))
     }
-    out.push({ name: m[1], ports: paramNames(m[2]), params })
+    if (headerParams) params.push(...paramNames(headerParams))
+    const ports = paramNames(headerPorts)
+    for (const line of body.split('\n')) {
+      const port = /^\s*port\s*\(\s*([A-Za-z_][\w$]*)/i.exec(line)
+      if (port && !ports.some((value) => value.toLowerCase() === port[1].toLowerCase())) {
+        ports.push(port[1])
+      }
+    }
+    out.push({ name, ports, params })
   }
   return out
 }

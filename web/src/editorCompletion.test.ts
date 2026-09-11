@@ -17,6 +17,13 @@ Pipe LINE(fluid$=Water, L=1, D=0.05, rough=1e-4)
 Heater H1(fluid$=Water, Q=1000)
 `
 
+const UNIFIED_DOC =
+  'function [in, out] = Heater(r=2)\n' +
+  '  port(in)\n' +
+  '  port(out)\n' +
+  '  out.P = in.P - r * in.mdot\n' +
+  'end\n'
+
 describe('completionsForPrefix', () => {
   it('completes ports after an instance dot', () => {
     const items = completionsForPrefix(DOC, 'LINE.')
@@ -46,6 +53,15 @@ describe('completionsForPrefix', () => {
     expect(localSignature(DOC, 'Heater')).toMatchObject({
       usage: 'Heater Instance(in, out, fluid$=, Q=)',
       detail: 'Local component definition',
+    })
+  })
+
+  it('discovers unified component functions and their ports', () => {
+    expect(localComponentNames(UNIFIED_DOC)).toEqual([
+      { name: 'Heater', ports: ['in', 'out'], params: ['r'] },
+    ])
+    expect(localSignature(UNIFIED_DOC, 'Heater')).toMatchObject({
+      usage: 'Heater Instance(in, out, r=)',
     })
   })
 })
