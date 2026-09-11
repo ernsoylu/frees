@@ -204,14 +204,14 @@ Focus: Implement the comprehensive language unification detailed in [`reports/SI
     - [x] Signal-processing gallery models use canonical expression and bracketed output calls.
     - [x] Gallery component examples use unified `function [ports] = ...` declarations.
   - [x] Syntax highlighting includes canonical control flow, initial-condition, run, port, and check vocabulary.
-- [ ] **3.10 Stage U9: Legacy Grammar Removal & Deprecation**
+- [x] **3.10 Stage U9: Legacy Grammar Removal & Deprecation**
   - Conclude the versioned compatibility transition.
   - [x] Restrict legacy grammar (`CALL`, `MODULE`, `PROCEDURE`, `COMPONENT`) to explicit migration/import converters.
   - [x] Version-2 documents reject all four legacy declaration forms with the migration diagnostic.
   - [x] The migration converter is the explicit import path for supported legacy forms and refuses ambiguous module/component rewrites.
   - [x] The editor no longer highlights legacy declaration keywords as normal version-2 language keywords.
     - [x] Legacy declaration templates were removed from the editor's function catalog; canonical function templates are offered instead.
-  - Strip obsolete keywords and grammar paths from the production parser and compiler, locking in a compact, unified language core.
+  - [x] Strip obsolete keywords and grammar paths from the production parser and compiler, locking in a compact, unified language core.
 
 ---
 
