@@ -190,6 +190,7 @@ Focus: Implement the comprehensive language unification detailed in [`reports/SI
   - [x] Autocomplete and local signatures recognize unified component function headers and port(...) declarations.
   - [x] Signature help recognizes canonical scalar and multi-output function declarations.
   - [x] Control-system Help snippets use canonical bracketed output assignments for migrated CALL examples.
+  - [x] Signal-processing gallery models use canonical expression and bracketed output calls.
   - [x] Syntax highlighting includes canonical control flow, initial-condition, run, port, and check vocabulary.
 - [ ] **3.10 Stage U9: Legacy Grammar Removal & Deprecation**
   - Conclude the versioned compatibility transition.

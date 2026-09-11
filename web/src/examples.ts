@@ -1499,28 +1499,28 @@ q_positive = 0.5 * (1 + tanh(FinalValue('ch.ev.q')))`,
    "title": "Remove drift and smooth a sampled sensor trace",
     "description": "Solve (F2). Remove drift and smooth a sampled sensor trace",
     "category": "Signal Processing",
-    "text": "trace = [1, 3, 2, 6, 4, 9, 5, 12]\nCALL Detrend(trace : detrended)\nCALL Detrend(trace, 'constant' : centered)\nCALL Smooth(trace, 3 : smoothed)\nCALL Window(detrended[1:8], 'hann' : tapered)\ncentered_mean = sum(centered[1:8])/8\nresidual_mean = sum(detrended[1:8])/8\nleft_edge = smoothed[1]\n{ CHECK centered_mean 0 1e-9 }\n{ CHECK residual_mean 0 1e-9 }\n{ CHECK left_edge 2 1e-9 }\n{ CHECK tapered[1] 0 1e-9 }\n{ CHECK tapered[8] 0 1e-9 }"
+    "text": "trace = [1, 3, 2, 6, 4, 9, 5, 12]\ndetrended = Detrend(trace)\ncentered = Detrend(trace, 'constant')\nsmoothed = Smooth(trace, 3)\ntapered = Window(detrended[1:8], 'hann')\ncentered_mean = sum(centered[1:8])/8\nresidual_mean = sum(detrended[1:8])/8\nleft_edge = smoothed[1]\n{ CHECK centered_mean 0 1e-9 }\n{ CHECK residual_mean 0 1e-9 }\n{ CHECK left_edge 2 1e-9 }\n{ CHECK tapered[1] 0 1e-9 }\n{ CHECK tapered[8] 0 1e-9 }"
   },
 {
    id: 'vibration-tone-spectrum',
    "title": "Recover a vibration tone and check spectral power",
     "description": "Solve (F2), then plot the spectrum. Recover a vibration tone and check spectral power",
     "category": "Signal Processing",
-    "text": "signal = [0,1,1.4142135623730951,1,0,-1,-1.4142135623730951,-1,0,1,1.4142135623730951,1,0,-1,-1.4142135623730951,-1,0,1,1.4142135623730951,1,0,-1,-1.4142135623730951,-1,0,1,1.4142135623730951,1,0,-1,-1.4142135623730951,-1]\nimaginary = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]\nCALL FFT(signal, imaginary : spectrum_real, spectrum_imag)\nCALL IFFT(spectrum_real[1:32], spectrum_imag[1:32] : recovered, recovered_imag)\nCALL Welch(signal, 32, 16 : frequency, psd)\npower = sum(psd[1:9])*(frequency[2]-frequency[1])\nreconstruction_error = recovered[3]-signal[3]\ntone_peak = peakindex(1, 0, 0, psd[1:9])\nPLOT 'Vibration power spectrum'\n kind = xy\n x = frequency\n y = psd\n xlabel = 'Frequency [Hz]'\n ylabel = 'Power density [amplitude squared per Hz]'\nEND\n{ CHECK frequency[3] 4 1e-9 }\n{ CHECK tone_peak 3 1e-9 }\n{ CHECK power 1 0.01 }\n{ CHECK reconstruction_error 0 1e-9 }"
+    "text": "signal = [0,1,1.4142135623730951,1,0,-1,-1.4142135623730951,-1,0,1,1.4142135623730951,1,0,-1,-1.4142135623730951,-1,0,1,1.4142135623730951,1,0,-1,-1.4142135623730951,-1,0,1,1.4142135623730951,1,0,-1,-1.4142135623730951,-1]\nimaginary = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]\n[spectrum_real, spectrum_imag] = FFT(signal, imaginary)\n[recovered, recovered_imag] = IFFT(spectrum_real[1:32], spectrum_imag[1:32])\n[frequency, psd] = Welch(signal, 32, 16)\npower = sum(psd[1:9])*(frequency[2]-frequency[1])\nreconstruction_error = recovered[3]-signal[3]\ntone_peak = peakindex(1, 0, 0, psd[1:9])\nPLOT 'Vibration power spectrum'\n kind = xy\n x = frequency\n y = psd\n xlabel = 'Frequency [Hz]'\n ylabel = 'Power density [amplitude squared per Hz]'\nEND\n{ CHECK frequency[3] 4 1e-9 }\n{ CHECK tone_peak 3 1e-9 }\n{ CHECK power 1 0.01 }\n{ CHECK reconstruction_error 0 1e-9 }"
   },
 {
    id: 'causal-zero-phase-filter',
    "title": "Causal filtering, zero-phase filtering and convolution",
     "description": "Solve (F2). Causal filtering, zero-phase filtering and convolution",
     "category": "Signal Processing",
-    "text": "samples = [0, 0, 0, 1, 0, 0, 0]\nb = [0.5, 0.5]\na = [1]\nCALL Filter(b, a, samples : causal)\nCALL FiltFilt(b, a, samples : zero_phase)\nCALL Convolve(samples, b : full_response)\nsymmetry_error = zero_phase[3]-zero_phase[5]\n{ CHECK causal[4] 0.5 1e-9 }\n{ CHECK causal[5] 0.5 1e-9 }\n{ CHECK full_response[8] 0 1e-9 }\n{ CHECK symmetry_error 0 1e-9 }"
+    "text": "samples = [0, 0, 0, 1, 0, 0, 0]\nb = [0.5, 0.5]\na = [1]\ncausal = Filter(b, a, samples)\nzero_phase = FiltFilt(b, a, samples)\nfull_response = Convolve(samples, b)\nsymmetry_error = zero_phase[3]-zero_phase[5]\n{ CHECK causal[4] 0.5 1e-9 }\n{ CHECK causal[5] 0.5 1e-9 }\n{ CHECK full_response[8] 0 1e-9 }\n{ CHECK symmetry_error 0 1e-9 }"
   },
 {
    id: 'transport-delay-peak-detection',
    "title": "Measure transport delay and detect peaks",
     "description": "Solve (F2). Measure transport delay and detect peaks",
     "category": "Signal Processing",
-    "text": "late = [0, 0, 1, 2, 1, 0, 0]\nearly = [0, 1, 2, 1, 0, 0, 0]\nCALL XCorr(late, early : correlation)\npeak_position = peakindex(1, 0, 0, correlation[1:13])\nlag_samples = peak_position - 7\ndelay_seconds = 0.1*lag_samples\npulses = [0, 3, 0, 0, 5, 0, 0, 2, 0]\ncount = peakcount(0, 0, pulses)\n{ CHECK lag_samples 1 1e-9 }\n{ CHECK delay_seconds 0.1 1e-9 }\n{ CHECK count 3 1e-9 }"
+    "text": "late = [0, 0, 1, 2, 1, 0, 0]\nearly = [0, 1, 2, 1, 0, 0, 0]\ncorrelation = XCorr(late, early)\npeak_position = peakindex(1, 0, 0, correlation[1:13])\nlag_samples = peak_position - 7\ndelay_seconds = 0.1*lag_samples\npulses = [0, 3, 0, 0, 5, 0, 0, 2, 0]\ncount = peakcount(0, 0, pulses)\n{ CHECK lag_samples 1 1e-9 }\n{ CHECK delay_seconds 0.1 1e-9 }\n{ CHECK count 3 1e-9 }"
   },
 {
    id: 'correlated-temperature-heat-loss',
