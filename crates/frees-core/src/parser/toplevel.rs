@@ -1416,6 +1416,7 @@ impl<'a> Parser<'a> {
             match self.c.peek() {
                 TokenKind::Event => events.push(self.dynamic_event()?),
                 TokenKind::For => for_blocks.push(self.for_block()?),
+                _ if self.at_initial_call() => initials.push(self.initial_call()?),
                 // `# DynItemInit` sits *before* `# DynItemEq` in the grammar, so
                 // ANTLR prefers it whenever `IDENT [idx]? ( num ) =` matches.
                 // `at_dynamic_init` is that same decision made with lookahead.
@@ -1445,6 +1446,26 @@ impl<'a> Parser<'a> {
             initials,
             events,
             source_text: self.tokens_text_since(start_pos),
+        })
+    }
+
+    fn at_initial_call(&self) -> bool {
+        matches!(self.c.peek(), TokenKind::Ident(name) if name.eq_ignore_ascii_case("initial"))
+            && matches!(self.c.peek_at(1), TokenKind::LParen)
+    }
+
+    /// `initial(state, value)` — canonical initial condition syntax.
+    fn initial_call(&mut self) -> Result<InitialCondition> {
+        self.c.expect_ident()?;
+        self.c.expect(&TokenKind::LParen)?;
+        let state = self.c.expect_ident()?.to_ascii_lowercase();
+        self.c.expect(&TokenKind::Comma)?;
+        let value = self.expr()?;
+        self.c.expect(&TokenKind::RParen)?;
+        Ok(InitialCondition {
+            state,
+            indices: Vec::new(),
+            value,
         })
     }
 
@@ -3974,6 +3995,14 @@ END
         // unlike a top-level statement's verbatim source slice.
         assert_eq!(d.body_equations[0].source_text, "der(T)=-k*T");
         assert!(matches!(d.for_blocks[0], Statement::For { .. }));
+    }
+
+    #[test]
+    fn canonical_initial_call_enters_the_dynamic_initial_conditions() {
+        let d = dyn_of("DYNAMIC d(t = 0 .. 1)\n  der(x) = 1\n  initial(x, 0)\nEND");
+        assert_eq!(d.initials.len(), 1);
+        assert_eq!(d.initials[0].state, "x");
+        assert_eq!(d.initials[0].value, Expr::num(0.0));
     }
 
     #[test]
