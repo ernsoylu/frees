@@ -34,7 +34,9 @@ fn matlab_not_equal_is_accepted_alongside_legacy_not_equal() {
 
 #[test]
 fn version_two_documents_reject_legacy_declarations() {
-    let error =
-        parse_document("// frees-language: 2\nMODULE old(x : y)\n  y = x\nEND").unwrap_err();
-    assert!(error.to_string().contains("FREES-MIG-001"));
+    for keyword in ["CALL", "MODULE", "PROCEDURE", "COMPONENT"] {
+        let source = format!("// frees-language: 2\n{keyword} old(x : y)\n  y = x\nEND");
+        let error = parse_document(&source).unwrap_err();
+        assert!(error.to_string().contains("FREES-MIG-001"), "{keyword}");
+    }
 }

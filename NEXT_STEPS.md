@@ -177,6 +177,7 @@ Focus: Implement the comprehensive language unification detailed in [`reports/SI
 - [ ] **3.10 Stage U9: Legacy Grammar Removal & Deprecation**
   - Conclude the versioned compatibility transition.
   - Restrict legacy grammar (`CALL`, `MODULE`, `PROCEDURE`, `COMPONENT`) to explicit migration/import converters.
+    - [x] Version-2 documents reject all four legacy declaration forms with the migration diagnostic.
   - Strip obsolete keywords and grammar paths from the production parser and compiler, locking in a compact, unified language core.
 
 ---
