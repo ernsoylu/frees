@@ -169,6 +169,7 @@ Focus: Implement the comprehensive language unification detailed in [`reports/SI
   - Unify port declarations, parameter defaults, constitutive equations, and acausal connection statements (`connect(node_a, node_b)`).
     - [x] Canonical `require(...)` calls parse as ordinary expressions for selected component branches.
     - [x] Lower canonical `port(...)` and `connect(...)` statements into component ports and connection declarations.
+    - [x] Lower canonical nested component instances into hierarchical component definitions.
     - [x] Preserve defaults declared in unified component function parameters through component expansion.
     - [x] Lower canonical `variant name require(...)` blocks into the existing construction-time variant model.
   - Verify that physical conservation (Kirchhoff current/pressure laws), state storage, and structural variants produce identical topological networks and numerical solutions.
