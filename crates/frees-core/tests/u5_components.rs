@@ -35,6 +35,7 @@ fn unified_component_definition_expands_in_an_instance() {
            port(out)\n\
            out.P = in.P - r * in.mdot\n\
            out.mdot = in.mdot\n\
+           connect(in, out)\n\
          end\n\
          resistor R(s1, s2)\n\
          s1.P = 10\n\
