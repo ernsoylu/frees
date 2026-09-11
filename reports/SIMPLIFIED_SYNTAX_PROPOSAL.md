@@ -395,9 +395,19 @@ function [p, n] = resistor(resistance)
     p.i + n.i = 0
 end
 
+function [p, n] = voltage_source(voltage)
+    p = port('electrical')
+    n = port('electrical')
+
+    p.v - n.v = voltage
+    p.i + n.i = 0
+end
+
 function current = circuit(source_voltage, resistance)
     [p, n] = resistor(resistance)
-    p.v - n.v = source_voltage
+    [supply_p, supply_n] = voltage_source(source_voltage)
+    connect(supply_p, p)
+    connect(supply_n, n)
     ground(n)
     current = p.i
 end
@@ -493,6 +503,12 @@ by this report.
 chooses the analysis. A plain steady solve of a model containing derivatives must require
 an explicit steady policy, e.g. `solve(plant, steady=true)`, which sets derivatives to zero.
 It must not silently ignore time dependence or treat an initial value as a steady boundary.
+
+For explicit time-dependent forcing, `time()` reads the owning simulation's independent
+variable through a declared context capability. It does not capture an arbitrary caller
+variable. A steady analysis of time-dependent forcing must supply an explicit evaluation
+time. Legacy initial-condition timestamps must match the selected start time or produce a
+migration diagnostic; do not silently move an initial condition to another instant.
 
 Reuse the current explicit/stiff integration and IDA/DAE paths. Preserve consistent
 initialization, state/algebraic partitioning, tolerances, sample grids, progress, cancellation,
