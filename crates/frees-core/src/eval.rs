@@ -2198,6 +2198,18 @@ fn eval_call<'a>(function: &str, args: &'a [Expr], env: &'a Env<'a>) -> Result<f
             }
             return crate::procedures::call_function(def, &values, defs, &env.to_scope());
         }
+        if defs.procedure(function).is_some() {
+            let mut values = Vec::with_capacity(args.len());
+            for arg in args {
+                values.push(eval_in(arg, env)?);
+            }
+            return crate::procedures::call_proc_output(
+                &crate::procedures::proc_output_name(function, 0),
+                &values,
+                defs,
+                &env.to_scope(),
+            );
+        }
     }
 
     let Some(intrinsic) = lookup_intrinsic(function) else {
@@ -7350,6 +7362,7 @@ mod tests {
         // never "unknown function" (which would mean dispatch failed).
         let def = FunctionDef {
             name: "double".into(),
+            output: None,
             params: vec!["x".into()],
             body: vec![ProcStatement::Assign {
                 var_name: "double".into(),

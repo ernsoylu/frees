@@ -661,7 +661,15 @@ impl<'a> Parser<'a> {
             None
         };
 
-        let name = self.c.expect_ident()?.to_ascii_lowercase();
+        let first_name = self.c.expect_ident()?.to_ascii_lowercase();
+        let (output, name) = if outputs.is_none() && self.c.eat(&TokenKind::Eq) {
+            (
+                Some(first_name),
+                self.c.expect_ident()?.to_ascii_lowercase(),
+            )
+        } else {
+            (None, first_name)
+        };
         self.c.expect(&TokenKind::LParen)?;
         let (params, param_units) = self.param_list()?;
         self.c.expect(&TokenKind::RParen)?;
@@ -680,6 +688,7 @@ impl<'a> Parser<'a> {
             }),
             None => ParsedDef::Function(FunctionDef {
                 name,
+                output,
                 params,
                 body,
                 output_unit,

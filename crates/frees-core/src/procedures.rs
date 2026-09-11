@@ -127,11 +127,12 @@ pub fn call_function(
         locals.insert(param.clone(), *value);
     }
     execute_body(&def.body, &mut locals, defs)?;
-    match locals.get(&def.name) {
+    let output = def.output.as_deref().unwrap_or(&def.name);
+    match locals.get(output) {
         Some(value) => Ok(*value),
         None => Err(FreesError::evaluation(format!(
             "FUNCTION {} never assigned a return value ('{} := ...' missing)",
-            def.name, def.name
+            def.name, output
         ))),
     }
 }

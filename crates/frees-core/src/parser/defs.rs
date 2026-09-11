@@ -55,6 +55,8 @@ pub enum ProcStatement {
 pub struct FunctionDef {
     /// Lowercase canonical name.
     pub name: String,
+    /// Explicit scalar output name from `function y = name(...)`.
+    pub output: Option<String>,
     /// Parameter names, lowercase, declaration order.
     pub params: Vec<String>,
     pub body: Vec<ProcStatement>,
