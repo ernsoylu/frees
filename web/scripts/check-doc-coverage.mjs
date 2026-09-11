@@ -83,22 +83,25 @@ for (const n of EXTRA_CALLABLES) callable.add(n);
 // is right.
 const NOTATION = new Set(['num', 'den', 'tname', 'name']);
 
-// Example ids in the verified libraries. There are two catalogues — the
-// picker's EXAMPLES and Help's CYCLE_EXAMPLES — and a page may legitimately
-// bind into either, so both are indexed here. Checking only examples.ts made a
-// binding into the Help catalogue indistinguishable from a typo.
+// Example ids in the verified library.
 //
-// Ids must also be unique ACROSS both. Help resolves a binding with .find(),
-// so a repeated id silently makes one of the two documents unreachable:
-// 'rankine-cycle' named both the ideal cycle and the one with component
-// efficiencies, and every page binding it got the first.
+// EXAMPLES only, deliberately. Help's other catalogue, CYCLE_EXAMPLES, keys its
+// entries on `value` rather than `id`, and HelpPage resolves a binding with
+// `EXAMPLES.find((e) => e.id === exId)` — so a page binding a CYCLE_EXAMPLES
+// entry renders "Missing example" at runtime no matter what this gate says.
+// Accepting those ids here would license exactly the broken binding the gate
+// exists to catch. The two catalogues are unified for SEARCH, in
+// searchIndex.ts, which is where the split actually hurt discovery.
+//
+// Ids must be unique. Help resolves with .find(), so a repeated id silently
+// makes one of the two documents unreachable: 'rankine-cycle' named both the
+// ideal cycle and the one with component efficiencies, and every page binding
+// it got the first.
 const exampleIds = new Set();
 const duplicateIds = [];
-for (const file of ['examples.ts', 'helpExamples.ts']) {
-  for (const m of read(path.join(SRC, file)).matchAll(/^\s+id:\s*'([^']+)'/gm)) {
-    if (exampleIds.has(m[1])) duplicateIds.push(`${m[1]} (second definition in ${file})`);
-    exampleIds.add(m[1]);
-  }
+for (const m of read(path.join(SRC, 'examples.ts')).matchAll(/^\s+id:\s*'([^']+)'/gm)) {
+  if (exampleIds.has(m[1])) duplicateIds.push(m[1]);
+  exampleIds.add(m[1]);
 }
 
 // Walk authored reference pages.
@@ -148,16 +151,14 @@ const pageSlugs = new Set(pages.map((p) => p.name.toLowerCase()));
 
 const errors = [];
 for (const id of duplicateIds) {
-  errors.push(`duplicate example id "${id}" — bindings resolve to the first match only`);
+  errors.push(`duplicate example id "${id}" in examples.ts — bindings resolve to the first match only`);
 }
 for (const pg of pages) {
   if (!pg.guide && !symbols.has(pg.name.toLowerCase())) {
     errors.push(`${pg.file}: documents "${pg.name}" which is not a known backend symbol`);
   }
   for (const id of pg.examples) {
-    if (!exampleIds.has(id)) {
-      errors.push(`${pg.file}: binds example "${id}" which is in neither examples.ts nor helpExamples.ts`);
-    }
+    if (!exampleIds.has(id)) errors.push(`${pg.file}: binds example "${id}" which is not in examples.ts`);
   }
   for (const rel of pg.related) {
     if (!pageSlugs.has(rel.toLowerCase())) {

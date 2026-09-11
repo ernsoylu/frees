@@ -169,8 +169,13 @@ function buildIndex(): IndexEntry[] {
   // only the first left every Help model undiscoverable by search while Help
   // rendered it on the page, which is the two catalogues splitting discovery
   // rather than sharing it.
-  const exText = [...EXAMPLES, ...CYCLE_EXAMPLES]
-    .map(e => `${e.title} ${e.description} ${e.category}`).join('\n').toLowerCase();
+  // The two catalogues do not share a shape: EXAMPLES carries `category`,
+  // CYCLE_EXAMPLES carries `note`. Map each with its own fields rather than
+  // spreading them into one list.
+  const exText = [
+    ...EXAMPLES.map(e => `${e.title} ${e.description} ${e.category}`),
+    ...CYCLE_EXAMPLES.map(e => `${e.title} ${e.description} ${e.note}`),
+  ].join('\n').toLowerCase();
   entries.push({
     id: 'examples',
     label: 'Engineering Examples Library',
