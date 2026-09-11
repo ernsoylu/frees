@@ -553,6 +553,47 @@ engine-available, browser-pending. Teaching a dialog workflow that does not exis
 class of defect as the onboarding contradictions in the baseline audit, and it is the one the
 audit says is currently being introduced rather than fixed.
 
+### Phase 4.7b-7 — Unified language and MATLAB-style calls
+
+Detailed design and source investigation:
+[**A simpler, unified language for frees**](reports/SIMPLIFIED_SYNTAX_PROPOSAL.md).
+This proposal supersedes the earlier CALL-only migration: the target includes declarations,
+control flow, components, tables, simulations, events, analysis commands and presentation.
+
+The proposed endpoint is one `function` declaration and ordinary `f(...)` calls, including
+single and bracketed outputs. Remove `CALL`, `MODULE`, `PROCEDURE`, `COMPONENT` and the old
+domain block grammars from normal execution after a versioned compatibility migration.
+Domain operations such as `connect(...)`, `simulate(...)`, `sweep(...)` and `plot(...)` become
+registered calls with explicit capabilities, rather than new reserved keywords.
+
+No user-selected equation/procedure mode is proposed. Keep numerical `=` as an equation and
+`:=` as an ordered calculation, with precise local binding rules; do not guess semantics from
+whether an input happens to be known. Preserve global inverse solving, typed port conservation,
+ODE/DAE behavior, units, output shapes and explicit analysis dependencies.
+
+The investigation confirms that `[a,b] = f(x)` and multi-output function headers already exist.
+The missing work is complete call resolution, scalar output headers, unified declaration
+semantics and the surrounding language/runtime integration. A syntax alias alone cannot make
+all existing call paths accept arrays, metadata or analysis results.
+
+Implementation sequence (all pending; the report defines each stage's scope and exit checks):
+
+- [ ] U0: Freeze the language contract and complete the callable/legacy grammar inventory.
+- [ ] U1: Complete scalar/nested/multiple-output call resolution using existing lowering.
+- [ ] U2: Unify function declarations with lexical scope and explicit migration diagnostics.
+- [ ] U3: Support mixed equations/calculations and simplified, bounded control flow.
+- [ ] U4: Add named arguments, typed values and unambiguous MATLAB-style array indexing.
+- [ ] U5: Migrate physical component definitions, ports, parameters and variants.
+- [ ] U6: Expose models, simulations, events, tables, sweeps and views through ordinary calls.
+- [ ] U7: Complete advanced analysis and symbolic interface parity.
+- [ ] U8: Migrate product examples, library definitions, documentation and saved projects.
+- [ ] U9: Remove legacy grammar after conversion and parity are demonstrated.
+
+Each stage gets a PR, validation and merge before dependent work proceeds. Add cumulative work
+budgets when touching the shared evaluator/expander: the reported reduction fuzz timeout is
+not resolved merely because a later random smoke run passes. The report records the current
+limit and requires a deterministic regression check as part of that implementation.
+
 ### Correctness rules for every example added in 4.7b-2 through 4.7b-5
 
 1. **Complete document.** It solves from a clean editor with no prior state. Fragments stay
