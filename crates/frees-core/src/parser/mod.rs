@@ -161,6 +161,22 @@ impl<'a> Cursor<'a> {
         }
     }
 
+    pub fn seed_array_names(&mut self) {
+        for window in self.tokens.windows(3) {
+            let TokenKind::Ident(name) = &window[0].kind else {
+                continue;
+            };
+            if window[1].kind != TokenKind::Eq {
+                continue;
+            }
+            if matches!(window[2].kind, TokenKind::LBracket)
+                || matches!(&window[2].kind, TokenKind::Ident(value) if value.eq_ignore_ascii_case("range"))
+            {
+                self.record_array_name(name);
+            }
+        }
+    }
+
     /// `displayNames.putIfAbsent(name.toLowerCase(), name)` — the Java
     /// `AstBuilder` registration. Call it only where the Java visitor builds an
     /// `Expr.Var` / `Expr.ArrayAccess` from a user identifier.

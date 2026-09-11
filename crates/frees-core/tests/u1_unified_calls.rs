@@ -97,6 +97,16 @@ fn known_array_bindings_use_parenthesized_one_based_indexing() {
 }
 
 #[test]
+fn array_binding_resolution_is_independent_of_statement_order() {
+    let solution = solve(
+        "answer = values(2)\nvalues = [10, 20, 30]",
+        &SolverSettings::default(),
+    )
+    .unwrap();
+    assert_eq!(solution.values["answer"], 20.0);
+}
+
+#[test]
 fn intrinsic_calls_accept_named_arguments() {
     let solution = solve("answer = sqrt(x=9)", &SolverSettings::default()).unwrap();
     assert_eq!(solution.values["answer"], 3.0);

@@ -204,8 +204,10 @@ fn parse_token_stream<'a>(
     tokens: &'a [Token],
     expr_fn: ExprFn,
 ) -> Result<Document> {
+    let mut cursor = Cursor::new(tokens, source);
+    cursor.seed_array_names();
     let mut parser = Parser {
-        c: Cursor::new(tokens, source),
+        c: cursor,
         tokens,
         expr_fn,
         sinks: 0,
