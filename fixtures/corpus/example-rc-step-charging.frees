@@ -1,0 +1,17 @@
+// B16: 10 V step, 1 kOhm and 1 uF. tau = 1 ms.
+// EXPECT tau = 0.001 tol 1e-12
+// EXPECT v_2ms = 8.64664716763387 tol 1e-7
+// EXPECT i_2ms = 0.00135335283236613 tol 1e-9
+VoltageSource VS(E=10)
+Resistor R(R=1000)
+Capacitor CAP(C=1e-6, V0=0)
+Ground G()
+connect(VS.p, R.a)
+connect(R.b, CAP.p)
+connect(CAP.n, VS.n, G.port)
+DYNAMIC charge(method=ode45, time=0..0.005, points=101)
+END
+tau = 1000 * 1e-6
+v_2ms = ODEValue('cap.vc', 0.002)
+i_2ms = (10 - v_2ms) / 1000
+

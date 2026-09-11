@@ -3,7 +3,7 @@ name: Resistor
 category: Component (electrical)
 summary: An Ohmic resistor, V = R·I.
 related: []
-examples: []
+examples: [rc-step-charging, series-rlc-resonance, resistor-bridge-equivalent, resistor-bridge-parametric]
 tags: [resistor, component, electrical, acausal]
 ---
 

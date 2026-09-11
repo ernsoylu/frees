@@ -1,0 +1,18 @@
+// B30: sweep the bridge diagonal resistor.
+// EXPECT R_eq = 20.9459459459459 tol 1e-9
+VoltageSource VS(E=1)
+Resistor R1(R=10)
+Resistor R2(R=20)
+Resistor R3(R=30)
+Resistor R4(R=40)
+r5 = 50
+Resistor R5(R=r5)
+Ground G()
+connect(VS.p, R1.a, R3.a)
+connect(R1.b, R2.a, R5.a)
+connect(R3.b, R4.a, R5.b)
+connect(R2.b, R4.b, VS.n, G.port)
+R_eq = 1 / (-VS.p.I)
+PARAMETRIC bridge (r5, R_eq)
+  r5 = 10:10:50
+END

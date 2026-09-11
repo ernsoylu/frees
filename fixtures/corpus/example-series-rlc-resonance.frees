@@ -1,0 +1,17 @@
+// B17: series RLC resonance and damping.
+// EXPECT omega_n = 7071.06781186548 tol 1e-7
+// EXPECT zeta = 0.0707106781186548 tol 1e-9
+VoltageSource VS(E=1)
+Inductor L1(L=0.001, I0=0)
+Resistor R1(R=1)
+Capacitor C1(C=20e-6, V0=0)
+Ground G()
+connect(VS.p, L1.p)
+connect(L1.n, R1.a)
+connect(R1.b, C1.p)
+connect(C1.n, VS.n, G.port)
+DYNAMIC ring(method=ode45, time=0..0.01, points=201)
+END
+omega_n = 1 / sqrt(0.001 * 20e-6)
+zeta = 1 / (2 * sqrt(0.001 / 20e-6))
+
