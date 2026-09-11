@@ -40,16 +40,16 @@ fn canonical_function_reports_an_ignored_equation() {
 }
 
 #[test]
-fn canonical_function_rejects_mixed_equations_and_calculations_until_versioned() {
+fn canonical_function_versions_mixed_equations_and_calculations_in_order() {
     let doc = parse_document("function y = mixed(x)\n  x = 1\n  y := x\nend").unwrap();
-    let error = frees_core::procedures::call_function(
+    let value = frees_core::procedures::call_function(
         doc.defs.function("mixed").unwrap(),
         &[7.0],
         &doc.defs,
         &frees_core::eval::Scope::default(),
     )
-    .unwrap_err();
-    assert!(error.to_string().contains("FREES-MIG-003"));
+    .unwrap();
+    assert_eq!(value, 1.0);
 }
 
 #[test]

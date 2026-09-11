@@ -124,12 +124,6 @@ pub fn call_function(
     let _guard = DepthGuard::enter("FUNCTION", &def.name)?;
     if def.output.is_some() {
         reject_ignored_equations(&def.body, &def.name)?;
-        if has_equations(&def.body) && has_ordered_calculations(&def.body) {
-            return Err(FreesError::evaluation(format!(
-                "FREES-MIG-003: FUNCTION {} mixes `=` equations and `:=` calculations; split the body into helper functions until value versioning is available",
-                def.name
-            )));
-        }
     }
     let mut locals = if def.output.is_some() {
         Scope::default()
@@ -148,36 +142,6 @@ pub fn call_function(
             def.name, output
         ))),
     }
-}
-
-fn has_equations(body: &[ProcStatement]) -> bool {
-    body.iter().any(|statement| match statement {
-        ProcStatement::Eq(_) => true,
-        ProcStatement::IfElse {
-            then_branch,
-            else_branch,
-            ..
-        } => has_equations(then_branch) || has_equations(else_branch),
-        ProcStatement::RepeatUntil { body, .. }
-        | ProcStatement::For { body, .. }
-        | ProcStatement::While { body, .. } => has_equations(body),
-        ProcStatement::Assign { .. } => false,
-    })
-}
-
-fn has_ordered_calculations(body: &[ProcStatement]) -> bool {
-    body.iter().any(|statement| match statement {
-        ProcStatement::Assign { .. } => true,
-        ProcStatement::IfElse {
-            then_branch,
-            else_branch,
-            ..
-        } => has_ordered_calculations(then_branch) || has_ordered_calculations(else_branch),
-        ProcStatement::RepeatUntil { body, .. }
-        | ProcStatement::For { body, .. }
-        | ProcStatement::While { body, .. } => has_ordered_calculations(body),
-        ProcStatement::Eq(_) => false,
-    })
 }
 
 fn reject_ignored_equations(body: &[ProcStatement], function: &str) -> Result<()> {

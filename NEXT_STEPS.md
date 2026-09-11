@@ -149,12 +149,15 @@ Focus: Implement the comprehensive language unification detailed in [`reports/SI
   - Implement definite assignment and variable versioning to support mixed equation and calculation bodies:
     - Numerical `=` declares mathematical equations (participating in global nonlinear/ODE solve).
     - `:=` performs explicit ordered calculations and accumulator updates.
+    - [x] Canonical function bodies execute variable assignments and calculations in source order, with later reads observing the latest value.
   - [x] Introduce clean colon-based range loops (`for i = 1:n`) with explicit step support and bounded iteration ceilings.
   - Enforce static checks ensuring that runtime control flow does not alter the structural topological graph of nonlinear equations during Newton iterations.
+    - [x] Structural equation preparation remains value independent and is cached across Newton iterations.
 - [ ] **3.5 Stage U4: Value Syntax, Array Indexing & Named Arguments**
   - Unambiguously resolve array indexing versus function calls: support parenthesized indexing `a(i)` alongside `a[i]` with 1-based indexing checks and index-zero diagnostics.
     - [x] Resolve parenthesized indexing for array bindings introduced by array literals and `range(...)`, using the existing one-based index evaluator.
   - Implement named argument support (`func(x, tolerance = 1e-6, method = 'bdf')`) across intrinsics and user functions.
+    - [x] Bind named arguments for intrinsic, user-function, and procedure calls with duplicate, unknown, missing, and ordering diagnostics.
   - Add typed value checking for non-numeric types (strings, symbols, options) and clean syntax for initial conditions.
 - [ ] **3.6 Stage U5: Physical Component & Connection Unification**
   - Migrate physical component definitions from legacy `COMPONENT ... END` blocks to unified component declarations.
