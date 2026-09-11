@@ -42,6 +42,7 @@ const KEYWORDS = new Set([
   'SYMBOLIC',
   'COMPONENT', 'PARAM', 'VARIANT', 'REQUIRE', 'CONNECT', 'LINEARIZE', 'GUESS',
   'INPUT', 'OUTPUT',
+  'INITIAL', 'SIMULATE', 'SWEEP', 'PORT',
 ])
 
 // Built-in function names from the Functions-menu catalog (callee of each CALL
