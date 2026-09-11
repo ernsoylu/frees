@@ -151,6 +151,7 @@ Focus: Implement the comprehensive language unification detailed in [`reports/SI
     - `:=` performs explicit ordered calculations and accumulator updates.
     - [x] Canonical function bodies execute variable assignments and calculations in source order, with later reads observing the latest value.
   - [x] Introduce clean colon-based range loops (`for i = 1:n`) with explicit step support and bounded iteration ceilings.
+    - [x] Canonical two-bound colon ranges default to `+1`; descending ranges require an explicit negative step.
   - Enforce static checks ensuring that runtime control flow does not alter the structural topological graph of nonlinear equations during Newton iterations.
     - [x] Structural equation preparation remains value independent and is cached across Newton iterations.
 - [ ] **3.5 Stage U4: Value Syntax, Array Indexing & Named Arguments**
