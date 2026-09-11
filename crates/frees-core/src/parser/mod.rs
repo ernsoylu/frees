@@ -29,7 +29,7 @@ use crate::token::{Token, TokenKind};
 
 pub use expr::{parse_bool_expr, parse_expr};
 pub use migrate::migrate_legacy_source;
-pub use toplevel::parse_document;
+pub use toplevel::{parse_document, parse_legacy_document};
 
 /// An in-text `GUESS` directive: the initial guess and/or bounds that travel
 /// with the document. Port of `ast/GuessDirective.java`.

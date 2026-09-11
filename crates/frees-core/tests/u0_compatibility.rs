@@ -2,11 +2,11 @@
 //! or diagnose during migration.
 
 use frees_core::eval::Scope;
-use frees_core::parser::parse_document;
+use frees_core::parser::{parse_document, parse_legacy_document};
 use frees_core::procedures::{call_function, call_proc_output};
 
 fn function_value(source: &str, name: &str, args: &[f64], scope: &Scope) -> f64 {
-    let doc = parse_document(source).expect("legacy compatibility fixture parses");
+    let doc = parse_legacy_document(source).expect("legacy compatibility fixture parses");
     call_function(
         doc.defs.function(name).expect("fixture function exists"),
         args,
@@ -46,7 +46,7 @@ fn equation_without_a_variable_side_is_ignored_in_legacy_function() {
 #[test]
 fn each_legacy_procedure_output_reexecutes_the_body_and_selects_its_slot() {
     let source = "PROCEDURE split(a : low, high)\n  low := a - 1\n  high := a + 1\nEND";
-    let doc = parse_document(source).expect("legacy procedure parses");
+    let doc = parse_legacy_document(source).expect("legacy procedure parses");
     let scope = Scope::default();
     assert_eq!(
         call_proc_output("proc$split$0", &[10.0], &doc.defs, &scope).unwrap(),
@@ -56,4 +56,14 @@ fn each_legacy_procedure_output_reexecutes_the_body_and_selects_its_slot() {
         call_proc_output("proc$split$1", &[10.0], &doc.defs, &scope).unwrap(),
         11.0
     );
+}
+
+#[test]
+fn canonical_parser_requires_the_explicit_legacy_import_boundary() {
+    let source = "PROCEDURE split(a : low)\n  low := a\nEND";
+    assert!(parse_document(source)
+        .unwrap_err()
+        .to_string()
+        .contains("FREES-MIG-001"));
+    assert!(parse_legacy_document(source).is_ok());
 }

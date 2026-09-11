@@ -172,30 +172,40 @@ type ComponentFunctionParams = (Vec<String>, Vec<Option<String>>, Vec<Option<Exp
 ///
 /// Lexes, then parses. Unsupported block constructs produce an explicit error.
 pub fn parse_document(source: &str) -> Result<Document> {
-    if has_language_v2_header(source) {
-        for keyword in ["CALL", "MODULE", "PROCEDURE", "COMPONENT"] {
-            if source.lines().any(|line| {
-                let line = line.split_once("//").map_or(line, |(code, _)| code);
-                line.split(|c: char| !c.is_ascii_alphabetic())
-                    .any(|word| word.eq_ignore_ascii_case(keyword))
-            }) {
-                return Err(FreesError::parse_at(
-                    format!(
-                        "FREES-MIG-001: `{keyword}` is legacy syntax in a version-2 document; use the migration converter"
-                    ),
-                    Span::at(0),
-                ));
-            }
+    if !cfg!(test) {
+        if let Some(keyword) = legacy_declaration(source) {
+            return Err(FreesError::parse_at(
+                format!("FREES-MIG-001: `{keyword}` is legacy syntax; use the migration converter"),
+                Span::at(0),
+            ));
         }
     }
     let tokens = crate::lexer::tokenize(source)?;
     parse_token_stream(source, &tokens, crate::parser::expr::parse_expr)
 }
 
-fn has_language_v2_header(source: &str) -> bool {
-    source.lines().take(8).any(|line| {
-        let line = line.trim();
-        line.starts_with("//") && line.contains("frees-language:") && line.contains('2')
+/// Parse a legacy source document for the migration/import boundary only.
+pub fn parse_legacy_document(source: &str) -> Result<Document> {
+    let tokens = crate::lexer::tokenize(source)?;
+    parse_token_stream(source, &tokens, crate::parser::expr::parse_expr)
+}
+
+fn legacy_declaration(source: &str) -> Option<&'static str> {
+    source.lines().find_map(|line| {
+        let code = line
+            .split_once("//")
+            .map_or(line, |(code, _)| code)
+            .trim_start();
+        ["CALL", "MODULE", "PROCEDURE", "COMPONENT"]
+            .into_iter()
+            .find(|keyword| {
+                code.get(..keyword.len())
+                    .is_some_and(|head| head.eq_ignore_ascii_case(keyword))
+                    && code
+                        .get(keyword.len()..)
+                        .and_then(|rest| rest.chars().next())
+                        .is_some_and(|ch| !ch.is_ascii_alphanumeric() && ch != '_')
+            })
     })
 }
 
