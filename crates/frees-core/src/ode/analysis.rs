@@ -259,6 +259,7 @@ mod tests {
             vec![Statement::For {
                 var_name: "i".into(),
                 start: Expr::num(1.0),
+                step: None,
                 end: Expr::var("n"),
                 body: vec![Statement::Eq(eq(
                     Expr::call(
@@ -294,10 +295,12 @@ mod tests {
             vec![Statement::For {
                 var_name: "i".into(),
                 start: Expr::num(1.0),
+                step: None,
                 end: Expr::num(2.0),
                 body: vec![Statement::For {
                     var_name: "J".into(),
                     start: Expr::num(1.0),
+                    step: None,
                     end: Expr::num(2.0),
                     body: vec![Statement::Eq(eq(
                         Expr::var("q"),

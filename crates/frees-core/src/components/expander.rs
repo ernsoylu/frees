@@ -3842,6 +3842,7 @@ mod tests {
         let stmts = vec![Statement::For {
             var_name: "i".into(),
             start: expr("1"),
+            step: None,
             end: expr("2"),
             body: vec![Statement::Eq(eq("y = A.in.P"))],
         }];
