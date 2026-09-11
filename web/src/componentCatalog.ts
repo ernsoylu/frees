@@ -720,7 +720,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
       { name: `mu`, isString: false, isSelector: false, isMap: false, unit: `Pa-s`, description: `Dynamic viscosity [Pa·s].`, required: true, values: [], variants: [], defaultValue: `` },
       { name: `L`, isString: false, isSelector: false, isMap: false, unit: `m`, description: `Length [m].`, required: true, values: [], variants: [], defaultValue: `` },
       { name: `D`, isString: false, isSelector: false, isMap: false, unit: `m`, description: `Diameter [m].`, required: true, values: [], variants: [], defaultValue: `` },
-      { name: `rough`, isString: false, isSelector: false, isMap: false, unit: ``, description: `Relative wall roughness.`, required: true, values: [], variants: [], defaultValue: `` }
+      { name: `rough`, isString: false, isSelector: false, isMap: false, unit: `m`, description: `Absolute wall roughness [m].`, required: true, values: [], variants: [], defaultValue: `` }
     ],
     variants: [],
   },
@@ -849,7 +849,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
       { name: `fluid$`, isString: true, isSelector: false, isMap: false, unit: ``, description: `Fluid name (e.g. Water, R134a, Air).`, required: true, values: [], variants: [], defaultValue: `` },
       { name: `L`, isString: false, isSelector: false, isMap: false, unit: `m`, description: `Length [m].`, required: true, values: [], variants: [], defaultValue: `` },
       { name: `D`, isString: false, isSelector: false, isMap: false, unit: `m`, description: `Diameter [m].`, required: true, values: [], variants: [], defaultValue: `` },
-      { name: `rough`, isString: false, isSelector: false, isMap: false, unit: ``, description: `Relative wall roughness.`, required: true, values: [], variants: [], defaultValue: `` }
+      { name: `rough`, isString: false, isSelector: false, isMap: false, unit: `m`, description: `Absolute wall roughness [m].`, required: true, values: [], variants: [], defaultValue: `` }
     ],
     variants: [],
   },
@@ -1715,7 +1715,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
       { name: `fluid$`, isString: true, isSelector: false, isMap: false, unit: ``, description: `Fluid name (e.g. Water, R134a, Air).`, required: true, values: [], variants: [], defaultValue: `` },
       { name: `L`, isString: false, isSelector: false, isMap: false, unit: `m`, description: `Length [m].`, required: true, values: [], variants: [], defaultValue: `` },
       { name: `D`, isString: false, isSelector: false, isMap: false, unit: `m`, description: `Diameter [m].`, required: true, values: [], variants: [], defaultValue: `` },
-      { name: `rough`, isString: false, isSelector: false, isMap: false, unit: ``, description: `Relative wall roughness.`, required: true, values: [], variants: [], defaultValue: `` },
+      { name: `rough`, isString: false, isSelector: false, isMap: false, unit: `m`, description: `Absolute wall roughness [m].`, required: true, values: [], variants: [], defaultValue: `` },
       { name: `domain$`, isString: true, isSelector: false, isMap: false, unit: ``, description: `Connector fluid family — one of \`fluid\`, \`gas\`, \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`.`, required: false, values: [], variants: [], defaultValue: `liquid` }
     ],
     variants: [],
@@ -4163,7 +4163,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
       { name: `fluid$`, isString: true, isSelector: false, isMap: false, unit: ``, description: `Fluid name (e.g. Water, R134a, Air).`, required: true, values: [], variants: [], defaultValue: `` },
       { name: `L`, isString: false, isSelector: false, isMap: false, unit: `m`, description: `Length [m].`, required: true, values: [], variants: [], defaultValue: `` },
       { name: `D`, isString: false, isSelector: false, isMap: false, unit: `m`, description: `Diameter [m].`, required: true, values: [], variants: [], defaultValue: `` },
-      { name: `rough`, isString: false, isSelector: false, isMap: false, unit: ``, description: `Relative wall roughness.`, required: true, values: [], variants: [], defaultValue: `` },
+      { name: `rough`, isString: false, isSelector: false, isMap: false, unit: `m`, description: `Absolute wall roughness [m].`, required: true, values: [], variants: [], defaultValue: `` },
       { name: `x`, isString: false, isSelector: false, isMap: false, unit: ``, description: `Vapor quality / fraction (0–1).`, required: true, values: [], variants: [], defaultValue: `` },
       { name: `rho_l`, isString: false, isSelector: false, isMap: false, unit: `kg/m^3`, description: `Liquid density [kg/m³].`, required: true, values: [], variants: [], defaultValue: `` },
       { name: `rho_g`, isString: false, isSelector: false, isMap: false, unit: `kg/m^3`, description: `Vapor density [kg/m³].`, required: true, values: [], variants: [], defaultValue: `` },

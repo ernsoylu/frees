@@ -31,7 +31,7 @@ export default function GettingStartedModal({ opened, onClose, onSolveExample, o
     {
       icon: <IconPlayerPlayFilled size={18} />,
       title: 'Solve the loaded example',
-      body: 'A complete EV thermal-management system is already in the editor — two coupled coolant loops, real fluids, sized heat exchangers. Watch it solve.',
+      body: 'A fluid flow and nonlinear pipe calculation is already in the editor — unit conversion, sequential evaluation, and simultaneous Newton solving. Watch it solve.',
       action: 'Solve it',
       onClick: () => {
         onClose()

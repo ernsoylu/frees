@@ -22,6 +22,7 @@ vi.mock('./wasm/engineClient', () => ({
   wasmParameterFit: vi.fn(),
   wasmPidTune: vi.fn(),
   wasmExtractPlant: vi.fn(),
+  wasmSensitivity: vi.fn(),
   // api.ts imports these too (the REPL seam); unused here but a mocked module
   // must declare every export its importer names.
   wasmReplEvaluate: vi.fn(),
@@ -29,9 +30,9 @@ vi.mock('./wasm/engineClient', () => ({
   wasmStop: vi.fn(),
 }))
 
-import { check, curveFit, optimize, runMonteCarlo, solve, solveTable, DEFAULT_STOP_CRITERIA } from './api'
+import { check, curveFit, optimize, parameterFit, runMonteCarlo, runSensitivity, solve, solveTable, DEFAULT_STOP_CRITERIA } from './api'
 import { mergeCodeTables } from './tables'
-import { wasmCheck, wasmCurveFit, wasmMonteCarlo, wasmOptimize, wasmSolve, wasmSolveTable } from './wasm/engineClient'
+import { wasmCheck, wasmCurveFit, wasmMonteCarlo, wasmOptimize, wasmParameterFit, wasmSensitivity, wasmSolve, wasmSolveTable } from './wasm/engineClient'
 
 const solveMock = vi.mocked(wasmSolve)
 const checkMock = vi.mocked(wasmCheck)
@@ -336,15 +337,15 @@ describe('runMonteCarlo (wasm engine)', () => {
 
   it('round-trips the MonteCarloResult the modal renders', async () => {
     mcMock.mockResolvedValueOnce(MONTE_CARLO_OK)
-    const r = await runMonteCarlo(
-      'x = 2\ny = 3 * x\n',
-      DEFAULT_STOP_CRITERIA,
-      [{ name: 'x', guess: 2, lower: null, upper: null, units: null, uncertainty: 0.1 }],
-      'SI',
-      [],
-      2,
-      42,
-    )
+    const r = await runMonteCarlo({
+      text: 'x = 2\ny = 3 * x\n',
+      stopCriteria: DEFAULT_STOP_CRITERIA,
+      variableInfo: [{ name: 'x', guess: 2, lower: null, upper: null, units: null, uncertainty: 0.1 }],
+      displayUnitSystem: 'SI',
+      functionTables: [],
+      samples: 2,
+      seed: 42,
+    })
     expect(r.stats.map((s) => s.variable)).toEqual(['y', 'x'])
     expect(r.sources).toEqual(['x'])
     expect(r.requestedSamples).toBe(2)
@@ -359,7 +360,15 @@ describe('runMonteCarlo (wasm engine)', () => {
   it('rejects with the boundary error so the modal catch shows it', async () => {
     mcMock.mockResolvedValueOnce(MONTE_CARLO_CAP)
     await expect(
-      runMonteCarlo('x = 2\n', DEFAULT_STOP_CRITERIA, [], 'SI', [], 1001, 42),
+      runMonteCarlo({
+        text: 'x = 2\n',
+        stopCriteria: DEFAULT_STOP_CRITERIA,
+        variableInfo: [],
+        displayUnitSystem: 'SI',
+        functionTables: [],
+        samples: 1001,
+        seed: 42,
+      }),
     ).rejects.toThrow(/between 2 and 1000/)
   })
 })
@@ -405,3 +414,153 @@ it('keeps worker Stop distinct from numerical row failures', async () => {
   expect(response.results[0]).toMatchObject({ success: false, status: 'cancelled', values: {} })
   expect(response.results[0].error).toContain('completion is unknown')
 })
+
+describe('runSensitivity (wasm engine)', () => {
+  it('round-trips Sobol sensitivity analysis and diagnostics', async () => {
+    vi.mocked(wasmSensitivity).mockResolvedValueOnce(
+      JSON.stringify({
+        method: 'sobol',
+        sources: ['k'],
+        outputs: [
+          {
+            variable: 'y',
+            variance: 0.25,
+            indices: [
+              {
+                source: 'k',
+                firstOrder: 0.85,
+                total: 0.95,
+                firstOrderStdError: 0.02,
+                totalStdError: 0.03,
+              },
+            ],
+          },
+        ],
+        diagnostics: {
+          design: 'sobol',
+          evaluations: 300,
+          droppedRows: 0,
+          usedRows: 300,
+          complete: true,
+        },
+      }),
+    )
+
+    const result = await runSensitivity({
+      text: 'y = k * 2\n',
+      method: 'sobol',
+      samples: 100,
+      design: 'sobol',
+      seed: 42,
+    })
+
+    expect(result.method).toBe('sobol')
+    expect(result.outputs[0]?.indices?.[0]?.firstOrder).toBe(0.85)
+    expect(result.diagnostics?.evaluations).toBe(300)
+
+    const [src, reqStr] = vi.mocked(wasmSensitivity).mock.calls[0]
+    expect(src).toBe('y = k * 2\n')
+    const req = JSON.parse(reqStr)
+    expect(req.method).toBe('sobol')
+    expect(req.samples).toBe(100)
+    expect(req.design).toBe('sobol')
+  })
+
+  it('round-trips Morris elementary effects screening', async () => {
+    vi.mocked(wasmSensitivity).mockResolvedValueOnce(
+      JSON.stringify({
+        method: 'morris',
+        sources: ['k'],
+        outputs: [
+          {
+            variable: 'y',
+            variance: 0.1,
+            effects: [
+              {
+                source: 'k',
+                mu: 1.2,
+                muStar: 1.2,
+                sigma: 0.05,
+                samples: 10,
+              },
+            ],
+          },
+        ],
+        diagnostics: {
+          design: 'morris',
+          evaluations: 20,
+          droppedRows: 0,
+          usedRows: 20,
+          complete: true,
+        },
+      }),
+    )
+
+    const result = await runSensitivity({
+      text: 'y = k * 2\n',
+      method: 'morris',
+      trajectories: 10,
+      levels: 4,
+      seed: 42,
+    })
+
+    expect(result.method).toBe('morris')
+    expect(result.outputs[0]?.effects?.[0]?.muStar).toBe(1.2)
+  })
+})
+
+describe('parameterFit robust losses & diagnostics (wasm engine)', () => {
+  it('passes robust loss and returns parameter diagnostics', async () => {
+    vi.mocked(wasmParameterFit).mockResolvedValueOnce(
+      JSON.stringify({
+        success: true,
+        error: null,
+        parameterNames: ['k'],
+        fittedValues: [0.05],
+        rmse: 0.001,
+        initialRmse: 0.1,
+        evaluations: 25,
+        truncated: false,
+        fittedT: [0, 1],
+        fittedV: [10, 5],
+        parameterStdErrors: [0.0002],
+        parameterCovariance: [[0.00004]],
+        residualDof: 8,
+        rank: 1,
+        conditionNumber: 1.05,
+        reducedChiSquare: 0.98,
+        chiSquare: 7.84,
+        atBound: [false],
+      }),
+    )
+
+    const result = await parameterFit({
+      text: 'k = 0.05\n',
+      stopCriteria: DEFAULT_STOP_CRITERIA,
+      variableInfo: [],
+      functionTables: [],
+      parameters: ['k'],
+      initial: [0.01],
+      lower: [0.001],
+      upper: [1.0],
+      odeBlock: 'cooling',
+      column: 'temp',
+      measuredT: [0, 1],
+      measuredV: [10, 5],
+      loss: 'soft_l1',
+      fScale: 1.5,
+    })
+
+    expect(result.success).toBe(true)
+    expect(result.reducedChiSquare).toBe(0.98)
+    expect(result.rank).toBe(1)
+    expect(result.parameterStdErrors).toEqual([0.0002])
+    expect(result.atBound).toEqual([false])
+
+    const [reqStr] = vi.mocked(wasmParameterFit).mock.calls[0]
+    const req = JSON.parse(reqStr)
+    expect(req.loss).toBe('soft_l1')
+    expect(req.fScale).toBe(1.5)
+  })
+})
+

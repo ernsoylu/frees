@@ -1,20 +1,24 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 
-vi.mock('./wasm/engineClient', () => ({
-  wasmSolve: vi.fn(),
-  wasmCheck: vi.fn(),
-  wasmSolveTable: vi.fn(),
-  wasmMonteCarlo: vi.fn(),
-  wasmOptimize: vi.fn(),
-  wasmOptimizeMulti: vi.fn(),
-  wasmCurveFit: vi.fn(),
-  wasmParameterFit: vi.fn(),
-  wasmPidTune: vi.fn(),
-  wasmExtractPlant: vi.fn(),
-  wasmReplEvaluate: vi.fn(),
-  wasmReplClear: vi.fn(),
-  wasmStop: vi.fn(),
-}))
+vi.mock('./wasm/engineClient', () => {
+  const exports = [
+    'wasmSolve',
+    'wasmCheck',
+    'wasmSolveTable',
+    'wasmMonteCarlo',
+    'wasmOptimize',
+    'wasmOptimizeMulti',
+    'wasmCurveFit',
+    'wasmParameterFit',
+    'wasmPidTune',
+    'wasmExtractPlant',
+    'wasmSensitivity',
+    'wasmReplEvaluate',
+    'wasmReplClear',
+    'wasmStop',
+  ]
+  return Object.fromEntries(exports.map((fn) => [fn, vi.fn()]))
+})
 
 import { stopSolve } from './api'
 import { wasmStop } from './wasm/engineClient'

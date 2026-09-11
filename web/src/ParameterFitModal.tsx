@@ -1,9 +1,11 @@
 import { useMemo, useState } from 'react'
 import {
   Alert,
+  Badge,
   Button,
   Group,
   Modal,
+  ScrollArea,
   Select,
   Stack,
   Table,
@@ -119,6 +121,8 @@ export default function ParameterFitModal({
   const [targetSel, setTargetSel] = useState<string | null>(null)
   const [paramText, setParamText] = useState('')
   const [bounds, setBounds] = useState<Record<string, Bounds>>({})
+  const [loss, setLoss] = useState<'linear' | 'soft_l1' | 'huber' | 'cauchy'>('linear')
+  const [fScale, setFScale] = useState('1.0')
   const [running, setRunning] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [result, setResult] = useState<ParameterFitResult | null>(null)
@@ -166,6 +170,7 @@ export default function ParameterFitModal({
     const [odeBlock, column] = targetSel.split('|')
     setRunning(true)
     try {
+      const fScaleNum = loss !== 'linear' && fScale.trim() !== '' ? Number(fScale) : undefined
       const r = await parameterFit({
         text,
         stopCriteria,
@@ -179,6 +184,8 @@ export default function ParameterFitModal({
         column,
         measuredT: raw.t,
         measuredV: raw.v,
+        loss: loss !== 'linear' ? loss : undefined,
+        fScale: Number.isFinite(fScaleNum) ? fScaleNum : undefined,
       })
       if (r.success) setResult(r)
       else setError(r.error ?? 'Parameter fit failed.')
@@ -255,6 +262,27 @@ export default function ParameterFitModal({
             </Table.Tbody>
           </Table>
         )}
+        <Group grow align="end">
+          <Select
+            label="Loss function"
+            data={[
+              { value: 'linear', label: 'Linear (Standard least squares)' },
+              { value: 'soft_l1', label: 'Soft L1 (Smooth outlier downweighting)' },
+              { value: 'huber', label: 'Huber (Linear past threshold)' },
+              { value: 'cauchy', label: 'Cauchy (Aggressive outlier rejection)' },
+            ]}
+            value={loss}
+            onChange={(val) => setLoss((val as 'linear' | 'soft_l1' | 'huber' | 'cauchy') ?? 'linear')}
+          />
+          {loss !== 'linear' && (
+            <TextInput
+              label="Loss scale (f_scale)"
+              placeholder="1.0"
+              value={fScale}
+              onChange={(e) => setFScale(e.currentTarget.value)}
+            />
+          )}
+        </Group>
         <Group>
           <Button onClick={run} loading={running}>
             Fit
@@ -272,18 +300,114 @@ export default function ParameterFitModal({
               {result.evaluations} evaluations
               {result.truncated ? ' (stopped at the time budget)' : ''}.
             </Text>
-            <Table withTableBorder maw={420} fz="sm">
+            <Group gap="xs" wrap="wrap">
+              {result.reducedChiSquare != null && (
+                <Badge color="gray" variant="outline">
+                  Reduced χ²: {formatValue(result.reducedChiSquare)}
+                </Badge>
+              )}
+              {result.chiSquare != null && (
+                <Badge color="gray" variant="outline">
+                  χ²: {formatValue(result.chiSquare)}
+                </Badge>
+              )}
+              {result.residualDof != null && (
+                <Badge color="gray" variant="outline">
+                  DoF: {result.residualDof}
+                </Badge>
+              )}
+              {result.rank != null && (
+                <Badge color="gray" variant="outline">
+                  Rank: {result.rank}
+                </Badge>
+              )}
+              {result.conditionNumber != null && (
+                <Badge color="gray" variant="outline">
+                  Cond #: {formatValue(result.conditionNumber)}
+                </Badge>
+              )}
+              {result.unidentifiable && (
+                <Badge color="red" variant="filled">
+                  Unidentifiable
+                </Badge>
+              )}
+              {result.atBound?.some(Boolean) && (
+                <Badge color="yellow" variant="filled">
+                  At Parameter Bound
+                </Badge>
+              )}
+            </Group>
+            <Table withTableBorder fz="sm">
+              <Table.Thead>
+                <Table.Tr>
+                  <Table.Th>Parameter</Table.Th>
+                  <Table.Th ta="right">Fitted Value</Table.Th>
+                  <Table.Th ta="right">Std Error</Table.Th>
+                  <Table.Th ta="center">Status</Table.Th>
+                </Table.Tr>
+              </Table.Thead>
               <Table.Tbody>
                 {result.parameterNames.map((name, i) => (
                   <Table.Tr key={name}>
                     <Table.Td ff="monospace">{name}</Table.Td>
-                    <Table.Td ta="right" ff="monospace">
+                    <Table.Td ta="right" ff="monospace" fw={600}>
                       {formatValue(result.fittedValues[i])}
+                    </Table.Td>
+                    <Table.Td ta="right" ff="monospace" c="dimmed">
+                      {result.parameterStdErrors?.[i] != null
+                        ? `± ${formatValue(result.parameterStdErrors[i]!)}`
+                        : '—'}
+                    </Table.Td>
+                    <Table.Td ta="center">
+                      {result.atBound?.[i] ? (
+                        <Badge color="yellow" size="xs" variant="light">
+                          at bound
+                        </Badge>
+                      ) : (
+                        <Badge color="green" size="xs" variant="subtle">
+                          ok
+                        </Badge>
+                      )}
                     </Table.Td>
                   </Table.Tr>
                 ))}
               </Table.Tbody>
             </Table>
+            {result.parameterCovariance && result.parameterCovariance.length > 0 && (
+              <Stack gap={4}>
+                <Text size="xs" fw={600} c="dimmed">
+                  Parameter Covariance Matrix
+                </Text>
+                <ScrollArea mah={180}>
+                  <Table withTableBorder fz="xs">
+                    <Table.Thead>
+                      <Table.Tr>
+                        <Table.Th />
+                        {result.parameterNames.map((name) => (
+                          <Table.Th key={name} ta="right" ff="monospace">
+                            {name}
+                          </Table.Th>
+                        ))}
+                      </Table.Tr>
+                    </Table.Thead>
+                    <Table.Tbody>
+                      {result.parameterNames.map((rowName, rIdx) => (
+                        <Table.Tr key={rowName}>
+                          <Table.Td ff="monospace" fw={500}>
+                            {rowName}
+                          </Table.Td>
+                          {result.parameterCovariance![rIdx]?.map((val, cIdx) => (
+                            <Table.Td key={`${rowName}-${result.parameterNames[cIdx]}`} ta="right" ff="monospace">
+                              {val != null ? formatValue(val) : '—'}
+                            </Table.Td>
+                          ))}
+                        </Table.Tr>
+                      ))}
+                    </Table.Tbody>
+                  </Table>
+                </ScrollArea>
+              </Stack>
+            )}
             <Group>
               <Button
                 variant="light"

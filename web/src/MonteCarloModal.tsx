@@ -6,13 +6,14 @@ import {
   Modal,
   NumberInput,
   ScrollArea,
+  Select,
   Stack,
   Table,
   Text,
 } from '@mantine/core'
 import type { PlotlyFigure } from 'plotly.js/lib/core'
 import PlotlyChart from './plots/PlotlyChart'
-import type { MonteCarloResult } from './api'
+import type { MonteCarloDesign, MonteCarloResult } from './api'
 
 function fmt(v: number): string {
   if (!Number.isFinite(v)) return '—'
@@ -21,7 +22,7 @@ function fmt(v: number): string {
 }
 
 /**
- * Monte Carlo uncertainty: run configuration (sample count, seed), the
+ * Monte Carlo uncertainty: run configuration (sample count, seed, design), the
  * per-variable statistics against the first-order sigmas, and a histogram of
  * the selected variable's sampled distribution.
  */
@@ -32,10 +33,11 @@ export default function MonteCarloModal({
 }: Readonly<{
   opened: boolean
   onClose: () => void
-  onRun: (samples: number, seed: number) => Promise<MonteCarloResult>
+  onRun: (samples: number, seed: number, design: MonteCarloDesign) => Promise<MonteCarloResult>
 }>) {
   const [samples, setSamples] = useState<number>(200)
   const [seed, setSeed] = useState<number>(42)
+  const [design, setDesign] = useState<MonteCarloDesign>('iid')
   const [running, setRunning] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [result, setResult] = useState<MonteCarloResult | null>(null)
@@ -44,7 +46,7 @@ export default function MonteCarloModal({
   const run = () => {
     setRunning(true)
     setError(null)
-    onRun(samples, seed)
+    onRun(samples, seed, design)
       .then((r) => {
         setResult(r)
         setSelected((prev) =>
@@ -92,6 +94,18 @@ export default function MonteCarloModal({
           of the first-order propagation shown in the Solution window.
         </Text>
         <Group align="end" gap="sm">
+          <Select
+            label="Design"
+            data={[
+              { value: 'iid', label: 'I.I.D. Random' },
+              { value: 'lhs', label: 'Latin Hypercube (LHS)' },
+              { value: 'sobol', label: "Sobol' Sequence" },
+            ]}
+            value={design}
+            onChange={(v) => setDesign((v as 'iid' | 'lhs' | 'sobol') ?? 'iid')}
+            w={180}
+            allowDeselect={false}
+          />
           <NumberInput
             label="Samples"
             value={samples}
@@ -99,14 +113,14 @@ export default function MonteCarloModal({
             min={20}
             max={1000}
             step={50}
-            w={120}
+            w={110}
           />
           <NumberInput
             label="Seed"
             value={seed}
             onChange={(v) => setSeed(typeof v === 'number' ? v : 42)}
             min={0}
-            w={120}
+            w={90}
           />
           <Button onClick={run} loading={running}>
             Run
@@ -125,6 +139,12 @@ export default function MonteCarloModal({
               {result.truncated ? ' — stopped at the time budget' : ''}. Sources:{' '}
               {result.sources.join(', ')}.
             </Text>
+            {result.diagnostics && (
+              <Text size="xs" c="dimmed">
+                Design: <b>{result.diagnostics.design.toUpperCase()}</b> ({result.diagnostics.completed}/{result.diagnostics.requested} rows).
+                {!result.diagnostics.iidStandardErrorApplies && ' Standard errors reflect stratified sample spread, not i.i.d. σ/√n.'}
+              </Text>
+            )}
             <ScrollArea.Autosize mah={260}>
               <Table striped highlightOnHover withTableBorder fz="sm">
                 <Table.Thead>

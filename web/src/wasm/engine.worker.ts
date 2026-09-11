@@ -44,6 +44,7 @@ import init, {
   optimize_multi,
   parameter_fit,
   pid_tune,
+  sensitivity,
   solve_zerocopy,
   solve_table_zerocopy,
   version,
@@ -55,6 +56,7 @@ export interface EngineRequest {
     | 'solve'
     | 'solveTable'
     | 'monteCarlo'
+    | 'sensitivity'
     | 'optimize'
     | 'optimizeMulti'
     | 'curveFit'
@@ -155,6 +157,9 @@ const handle = async (event: MessageEvent<EngineRequest>) => {
       }
       case 'monteCarlo':
         result = monte_carlo(args[0] ?? '', args[1] ?? '')
+        break
+      case 'sensitivity':
+        result = sensitivity(args[0] ?? '', args[1] ?? '')
         break
       case 'optimize':
         result = optimize(args[0] ?? '', args[1] ?? '')

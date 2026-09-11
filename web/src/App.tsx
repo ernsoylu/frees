@@ -58,6 +58,7 @@ import {
   replClear,
   solveTable,
   runMonteCarlo,
+  runSensitivity,
   extractPlant,
   SolveResponse,
   StopCriteria,
@@ -129,6 +130,7 @@ const ComponentWizardModal = lazy(() => import('./ComponentWizardModal'))
 const SliderStrip = lazy(() => import('./SliderStrip'))
 const PlotConfigModal = lazy(() => import('./plots/PlotConfigModal'))
 const MonteCarloModal = lazy(() => import('./MonteCarloModal'))
+const SensitivityModal = lazy(() => import('./SensitivityModal'))
 const MinMaxModal = lazy(() => import('./MinMaxModal'))
 const CurveFitModal = lazy(() => import('./CurveFitModal'))
 const ParameterFitModal = lazy(() => import('./ParameterFitModal'))
@@ -603,6 +605,7 @@ export default function App() {
   )
   const [showVariableInfo, setShowVariableInfo] = useState(false)
   const [showMonteCarlo, setShowMonteCarlo] = useState(false)
+  const [showSensitivity, setShowSensitivity] = useState(false)
   const [showMinMax, setShowMinMax] = useState(false)
   const [showCurveFit, setShowCurveFit] = useState(false)
   const [showParameterFit, setShowParameterFit] = useState(false)
@@ -3125,6 +3128,7 @@ export default function App() {
           onOpenTerminal={() => dockRef.current?.open('terminal')}
           onVariableInfo={() => setShowVariableInfo(true)}
           onMonteCarlo={() => setShowMonteCarlo(true)}
+          onSensitivity={() => setShowSensitivity(true)}
           onMinMax={() => setShowMinMax(true)}
           onCurveFit={() => setShowCurveFit(true)}
           onParameterFit={() => setShowParameterFit(true)}
@@ -3251,16 +3255,36 @@ export default function App() {
           <MonteCarloModal
             opened
             onClose={() => setShowMonteCarlo(false)}
-            onRun={(samples, seed) =>
-              runMonteCarlo(
-                effectiveText(),
-                { ...stopCriteria, complexMode },
-                buildVariableInfo(),
-                unitSystem,
-                functionTableDtos(),
+            onRun={(samples, seed, design) =>
+              runMonteCarlo({
+                text: effectiveText(),
+                stopCriteria: { ...stopCriteria, complexMode },
+                variableInfo: buildVariableInfo(),
+                displayUnitSystem: unitSystem,
+                functionTables: functionTableDtos(),
                 samples,
                 seed,
-              )
+                design,
+              })
+            }
+          />
+        </Suspense>
+      )}
+
+      {showSensitivity && (
+        <Suspense fallback={null}>
+          <SensitivityModal
+            opened
+            onClose={() => setShowSensitivity(false)}
+            onRun={(params) =>
+              runSensitivity({
+                text: effectiveText(),
+                ...params,
+                stopCriteria: { ...stopCriteria, complexMode },
+                variableInfo: buildVariableInfo(),
+                displayUnitSystem: unitSystem,
+                functionTables: functionTableDtos(),
+              })
             }
           />
         </Suspense>

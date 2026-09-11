@@ -22,9 +22,8 @@ export const DEFAULT_EXAMPLE_TEXT = `// Welcome to frees — running natively in
 
   Also in-browser: COMPONENT / connect models, DYNAMIC (ODE) blocks,
   real-fluid properties, TABLE / PARAMETRIC / PLOT / STATE blocks, SYMBOLIC
-  math, arrays, and the CAS REPL. Not wired yet: the optimizer, curve-fit
-  and Monte Carlo tools. Anything unported reports an explicit error
-  instead of solving. }
+  math, arrays, the CAS REPL, optimization, curve-fit, parameter estimation,
+  and Monte Carlo uncertainty tools. }
 
 { ---- Inputs with unit-annotated literals (converted to SI at parse time) ---- }
 P_in   = 350 [kPa]        { feed pressure }

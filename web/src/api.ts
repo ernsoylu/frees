@@ -21,6 +21,7 @@ import {
   wasmParameterFit,
   wasmPidTune,
   wasmExtractPlant,
+  wasmSensitivity,
   wasmSolveTable,
 } from './wasm/engineClient'
 export type { ProgressListener } from './wasm/engineClient'
@@ -695,6 +696,9 @@ export interface ParameterFitParams {
   measuredT: number[]
   measuredV: number[]
   maxEvaluations?: number
+  sigma?: number[]
+  loss?: 'linear' | 'soft_l1' | 'huber' | 'cauchy'
+  fScale?: number
 }
 
 export interface ParameterFitResult {
@@ -708,6 +712,15 @@ export interface ParameterFitResult {
   truncated: boolean
   fittedT: number[]
   fittedV: number[]
+  parameterStdErrors?: (number | null)[]
+  parameterCovariance?: (number | null)[][]
+  residualDof?: number
+  rank?: number
+  conditionNumber?: number | null
+  unidentifiable?: boolean
+  reducedChiSquare?: number | null
+  chiSquare?: number | null
+  atBound?: boolean[]
 }
 
 const PARAMETER_FIT_FAILURE: ParameterFitResult = {
@@ -1031,6 +1044,11 @@ export async function solveTable(
 // ---------------------------------------------------------------------------
 
 /** Aggregate statistics for one variable across the Monte Carlo samples. */
+export interface McQuantile {
+  q: number
+  value: number
+}
+
 export interface McVariableStat {
   variable: string
   mean: number
@@ -1039,6 +1057,16 @@ export interface McVariableStat {
   p50: number
   p95: number
   firstOrderSigma: number
+  quantiles?: McQuantile[]
+}
+
+export interface MonteCarloDiagnostics {
+  design: string
+  requested: number
+  completed: number
+  failed: number
+  designComplete: boolean
+  iidStandardErrorApplies: boolean
 }
 
 export interface MonteCarloResult {
@@ -1048,6 +1076,21 @@ export interface MonteCarloResult {
   requestedSamples: number
   failedSamples: number
   truncated: boolean
+  diagnostics?: MonteCarloDiagnostics
+}
+
+export type MonteCarloDesign = 'iid' | 'lhs' | 'sobol'
+
+export interface MonteCarloParams {
+  text: string
+  stopCriteria: StopCriteria
+  variableInfo: VariableInfo[]
+  displayUnitSystem: UnitSystem
+  functionTables: FunctionTableDto[]
+  samples: number
+  seed: number
+  design?: MonteCarloDesign
+  quantiles?: number[]
 }
 
 /** `POST /api/solve/montecarlo` — served by the wasm `monte_carlo` export
@@ -1055,26 +1098,85 @@ export interface MonteCarloResult {
  *  the MonteCarloModal's catch shows the message via setError, which is why
  *  this keeps the throwing contract (unlike solveTable, whose caller renders
  *  rows either way). */
-export async function runMonteCarlo(
-  text: string,
-  stopCriteria: StopCriteria,
-  variableInfo: VariableInfo[],
-  displayUnitSystem: UnitSystem,
-  functionTables: FunctionTableDto[],
-  samples: number,
-  seed: number,
-): Promise<MonteCarloResult> {
+export async function runMonteCarlo(params: MonteCarloParams): Promise<MonteCarloResult> {
+  const { text, ...rest } = params
   const request = JSON.stringify({
-    stopCriteria,
-    variableInfo,
-    displayUnitSystem,
-    functionTables,
-    samples,
-    seed,
+    ...rest,
+    ...(rest.design ? { design: rest.design } : {}),
+    ...(rest.quantiles && rest.quantiles.length > 0 ? { quantiles: rest.quantiles } : {}),
   })
   const parsed = JSON.parse(await wasmMonteCarlo(text, request)) as MonteCarloResult & {
     error?: string
   }
+  if (parsed.error) {
+    throw new Error(parsed.error)
+  }
+  return parsed
+}
+
+// ---------------------------------------------------------------------------
+// Global sensitivity analysis — POST /api/solve/sensitivity
+// ---------------------------------------------------------------------------
+
+export interface SensitivitySobolIndex {
+  source: string
+  firstOrder: number | null
+  total: number | null
+  firstOrderStdError: number | null
+  totalStdError: number | null
+}
+
+export interface SensitivityMorrisEffect {
+  source: string
+  mu: number | null
+  muStar: number | null
+  sigma: number | null
+  samples: number
+}
+
+export interface SensitivityOutput {
+  variable: string
+  variance?: number
+  indices?: SensitivitySobolIndex[]
+  effects?: SensitivityMorrisEffect[]
+}
+
+export interface SensitivityDiagnostics {
+  design: string
+  evaluations: number
+  droppedRows: number
+  usedRows: number
+  complete: boolean
+}
+
+export interface SensitivityResult {
+  method: 'sobol' | 'morris'
+  sources: string[]
+  outputs: SensitivityOutput[]
+  diagnostics?: SensitivityDiagnostics
+  error?: string
+}
+
+export interface SensitivityParams {
+  text: string
+  stopCriteria?: StopCriteria
+  variableInfo?: VariableInfo[]
+  displayUnitSystem?: UnitSystem
+  functionTables?: FunctionTableDto[]
+  method?: 'sobol' | 'morris'
+  samples?: number
+  trajectories?: number
+  levels?: number
+  design?: 'sobol' | 'lhs' | 'random'
+  bootstrap?: number
+  seed?: number
+}
+
+/** `POST /api/solve/sensitivity` — served by wasm `sensitivity`. */
+export async function runSensitivity(params: SensitivityParams): Promise<SensitivityResult> {
+  const { text, ...rest } = params
+  const raw = await wasmSensitivity(text, JSON.stringify(rest))
+  const parsed = JSON.parse(raw) as SensitivityResult
   if (parsed.error) {
     throw new Error(parsed.error)
   }

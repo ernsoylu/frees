@@ -33,7 +33,7 @@ Duct inst(rho, mu, L, D, rough)
 | `mu` | Number | Dynamic viscosity [Pa·s]. |
 | `L` | Number | Length [m]. |
 | `D` | Number | Diameter [m]. |
-| `rough` | Number | Relative wall roughness. |
+| `rough` | Number | Absolute wall roughness [m]. |
 
 ## Constitutive Equations
 

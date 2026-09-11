@@ -788,6 +788,7 @@ interface TopBarProps {
    *  surfaces wired (Monte Carlo in Wave B2; Min/Max, Curve Fit and
    *  Parameter Estimation in Wave B3). */
   onMonteCarlo: () => void
+  onSensitivity: () => void
   onMinMax: () => void
   onCurveFit: () => void
   onParameterFit: () => void
@@ -975,6 +976,9 @@ export function TopBar(props: Readonly<TopBarProps>) {
             </Menu.Item>
             <Menu.Item leftSection={<IconChartHistogram size={14} />} onClick={props.onMonteCarlo}>
               Monte Carlo Uncertainty
+            </Menu.Item>
+            <Menu.Item leftSection={<IconChartGridDots size={14} />} onClick={props.onSensitivity}>
+              Global Sensitivity
             </Menu.Item>
             <Menu.Item leftSection={<IconAdjustments size={14} />} onClick={props.onPidTuner}>
               PID Tuner

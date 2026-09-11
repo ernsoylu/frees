@@ -90,15 +90,17 @@ Equations are declarative and order-independent, variable names are case-insensi
 The workspace requires a stable Rust toolchain (managed via `rustup` and configured in `rust-toolchain.toml`).
 
 ```bash
-# Solve an equation system via stdin
+# Solve an equation system via stdin (emits structured JSON on stdout)
 printf 'x + y = 10\nx * y = 21\n' | cargo run -qp frees-cli -- solve
 
-# Check model solvability and degrees of freedom
+# Check model solvability and degrees of freedom without solving
 cargo run -qp frees-cli -- check path/to/model.frees
 
-# Execute solve with detailed JSON output
-cargo run -qp frees-cli -- solve --json path/to/model.frees
+# Solve a model file with custom options via --request JSON
+cargo run -qp frees-cli -- solve --request '{"stopCriteria":{"maxIterations":200}}' path/to/model.frees
 ```
+
+Exit codes: `0` on successful solve/check, `1` when the model is rejected or fails to converge (with JSON error on stdout), and `2` for syntax or I/O errors.
 
 ### 2. Browser Web Application
 

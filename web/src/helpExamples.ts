@@ -484,6 +484,7 @@ P0 = 1000 [kPa]
 T0 = 600 [K]
 A_ratio = 4.0        { Ae/A* }
 { Area-Mach relation, supersonic root (guess Me = 2.9) }
+GUESS Me = 2.9
 A_ratio = (1/Me)*((2/(g+1))*(1+(g-1)/2*Me^2))^((g+1)/(2*(g-1)))
 { Isentropic exit before the shock }
 Pe = P0*(1+(g-1)/2*Me^2)^(-g/(g-1))
@@ -1274,8 +1275,8 @@ PLOT 'Ramp Response'
   kind = xy
   x = t
   y = y
-  xlabel = Time [s]
-  ylabel = Output
+  xlabel = 'Time [s]'
+  ylabel = 'Output'
 END`,
   },
   {
