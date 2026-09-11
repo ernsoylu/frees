@@ -1,4 +1,6 @@
+use frees_core::lexer::tokenize;
 use frees_core::parser::parse_document;
+use frees_core::token::TokenKind;
 use frees_core::{solve, SolverSettings};
 
 #[test]
@@ -22,4 +24,10 @@ fn a_range_pointing_away_from_its_bound_is_empty() {
     let source = "function total(n)\n  total := 0\n  for i = 5:1:n\n    total := total + i\n  end\nend\nanswer = total(1)";
     let solution = solve(source, &SolverSettings::default()).unwrap();
     assert_eq!(solution.values["answer"], 0.0);
+}
+
+#[test]
+fn matlab_not_equal_is_accepted_alongside_legacy_not_equal() {
+    let tokens = tokenize("x = 1 ~= 2").unwrap();
+    assert!(tokens.iter().any(|token| token.kind == TokenKind::Ne));
 }
