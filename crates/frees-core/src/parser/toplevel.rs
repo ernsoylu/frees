@@ -2126,6 +2126,20 @@ impl<'a> Parser<'a> {
                 let value = self.expr()?;
                 Ok(ProcStatement::Assign { var_name, value })
             }
+            TokenKind::Call => {
+                self.c.advance();
+                let name = self.c.expect_ident()?.to_ascii_lowercase();
+                Err(FreesError::parse_at(
+                    format!(
+                        "CALL is not supported inside a FOR loop within a PROCEDURE or FUNCTION (offending call: '{name}')."
+                    ),
+                    self.c.span(),
+                ))
+            }
+            TokenKind::Symbolic => Err(FreesError::parse_at(
+                "SYMBOLIC declarations are not allowed inside a PROCEDURE or FUNCTION.",
+                self.c.span(),
+            )),
             _ => {
                 // `equation : expr EQ expr` — an intermediate relation.
                 let start_pos = self.c.pos();
@@ -3122,6 +3136,7 @@ mod tests {
             Statement::For {
                 var_name,
                 start,
+                step: _step,
                 end,
                 body,
             } => {
