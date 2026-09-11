@@ -19,7 +19,7 @@
 
 use frees_core::ast::{BinOp, Equation, Expr, Statement};
 use frees_core::lexer::tokenize;
-use frees_core::parser::{parse_document, Document};
+use frees_core::parser::{parse_legacy_document as parse_document, Document};
 use frees_core::token::TokenKind;
 
 // ── helpers ─────────────────────────────────────────────────────────────────

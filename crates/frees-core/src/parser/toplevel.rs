@@ -172,7 +172,7 @@ type ComponentFunctionParams = (Vec<String>, Vec<Option<String>>, Vec<Option<Exp
 ///
 /// Lexes, then parses. Unsupported block constructs produce an explicit error.
 pub fn parse_document(source: &str) -> Result<Document> {
-    if has_language_v2_header(source) {
+    if !crate::parser::legacy_import_enabled() {
         if let Some(keyword) = legacy_declaration(source) {
             return Err(FreesError::parse_at(
                 format!("FREES-MIG-001: `{keyword}` is legacy syntax; use the migration converter"),
@@ -188,13 +188,6 @@ pub fn parse_document(source: &str) -> Result<Document> {
 pub fn parse_legacy_document(source: &str) -> Result<Document> {
     let tokens = crate::lexer::tokenize(source)?;
     parse_token_stream(source, &tokens, crate::parser::expr::parse_expr)
-}
-
-fn has_language_v2_header(source: &str) -> bool {
-    source.lines().take(8).any(|line| {
-        let line = line.trim();
-        line.starts_with("//") && line.contains("frees-language:") && line.contains('2')
-    })
 }
 
 fn legacy_declaration(source: &str) -> Option<&'static str> {
@@ -4382,11 +4375,11 @@ END
     // procedural bodies lean on `boolExpr` and the full expression grammar.
 
     fn ok_real(src: &str) -> Document {
-        parse_document(src).unwrap_or_else(|e| panic!("expected `{src}` to parse, got {e}"))
+        parse_legacy_document(src).unwrap_or_else(|e| panic!("expected `{src}` to parse, got {e}"))
     }
 
     fn err_real(src: &str) -> String {
-        match parse_document(src) {
+        match parse_legacy_document(src) {
             Ok(doc) => panic!("expected `{src}` to fail, got {doc:?}"),
             Err(e) => e.to_string(),
         }
@@ -5075,7 +5068,7 @@ END
     /// second, and the port keeps that distinction.
     #[test]
     fn the_separator_before_end_follows_each_rule_exactly() {
-        assert!(parse_document("COMPONENT P(a)\n  a.T = 1 END").is_ok());
+        assert!(parse_legacy_document("COMPONENT P(a)\n  a.T = 1 END").is_ok());
         let message = err_real("COMPONENT P(a)\n  VARIANT v\n    a.T = 1 END\nEND");
         assert!(
             message.contains("after a VARIANT equation"),

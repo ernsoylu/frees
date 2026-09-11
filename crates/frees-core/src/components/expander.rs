@@ -4505,8 +4505,8 @@ mod tests {
     }
 
     fn parse_expand_solve_using(source: &str, builtins: &[ComponentDef]) -> BTreeMap<String, f64> {
-        let mut doc =
-            crate::parser::parse_document(source).unwrap_or_else(|e| panic!("parse failed: {e}"));
+        let mut doc = crate::parser::parse_legacy_document(source)
+            .unwrap_or_else(|e| panic!("parse failed: {e}"));
         let components = std::mem::take(&mut doc.components);
         let statements = std::mem::take(&mut doc.statements);
         let mut display: BTreeMap<String, String> = std::mem::take(&mut doc.display_names);
@@ -4956,8 +4956,8 @@ mod tests {
 
     /// The rejections, checked on the oracle's own source text end to end.
     fn parse_expand_err(source: &str) -> String {
-        let mut doc =
-            crate::parser::parse_document(source).unwrap_or_else(|e| panic!("parse failed: {e}"));
+        let mut doc = crate::parser::parse_legacy_document(source)
+            .unwrap_or_else(|e| panic!("parse failed: {e}"));
         let components = std::mem::take(&mut doc.components);
         let statements = std::mem::take(&mut doc.statements);
         let mut display: BTreeMap<String, String> = std::mem::take(&mut doc.display_names);

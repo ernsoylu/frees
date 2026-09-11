@@ -11,7 +11,8 @@ use std::collections::BTreeMap;
 
 use frees_core::diag::Severity;
 use frees_core::{
-    check, check_with, solve, solve_with, FreesError, Solution, SolverSettings, VariableOverride,
+    check_legacy as check, check_with, solve_legacy as solve, solve_with, FreesError, Solution,
+    SolverSettings, VariableOverride,
 };
 
 // ---------------------------------------------------------------------------

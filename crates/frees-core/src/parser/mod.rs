@@ -31,6 +31,40 @@ pub use expr::{parse_bool_expr, parse_expr};
 pub use migrate::migrate_legacy_source;
 pub use toplevel::{parse_document, parse_legacy_document};
 
+use std::cell::Cell;
+
+thread_local! {
+    static LEGACY_IMPORT: Cell<bool> = const { Cell::new(false) };
+}
+
+/// Run one explicit compatibility import/solve operation with legacy parsing enabled.
+pub(crate) fn with_legacy_import<T>(f: impl FnOnce() -> T) -> T {
+    LEGACY_IMPORT.with(|enabled| {
+        struct Restore<'a> {
+            enabled: &'a Cell<bool>,
+            previous: bool,
+        }
+
+        impl Drop for Restore<'_> {
+            fn drop(&mut self) {
+                self.enabled.set(self.previous);
+            }
+        }
+
+        let restore = Restore {
+            previous: enabled.replace(true),
+            enabled,
+        };
+        let result = f();
+        drop(restore);
+        result
+    })
+}
+
+pub(crate) fn legacy_import_enabled() -> bool {
+    LEGACY_IMPORT.with(Cell::get)
+}
+
 /// An in-text `GUESS` directive: the initial guess and/or bounds that travel
 /// with the document. Port of `ast/GuessDirective.java`.
 #[derive(Debug, Clone, PartialEq)]

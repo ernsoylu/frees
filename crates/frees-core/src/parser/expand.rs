@@ -4007,7 +4007,7 @@ fn log_range(var: &str, start: f64, count_raw: f64, stop: f64) -> Result<Vec<f64
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::parser::parse_document;
+    use crate::parser::parse_legacy_document as parse_document;
 
     fn expand(source: &str) -> Vec<Equation> {
         expand_document(&parse_document(source).expect("parse")).expect("expand")

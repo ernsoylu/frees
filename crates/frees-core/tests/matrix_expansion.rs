@@ -20,7 +20,7 @@ use std::path::{Path, PathBuf};
 use frees_core::ast::Equation;
 use frees_core::eval;
 use frees_core::parser::expand::{expand_document, is_internal_temp};
-use frees_core::parser::parse_document;
+use frees_core::parser::parse_legacy_document as parse_document;
 use frees_core::procedures::flatten_calls;
 
 fn corpus_dir() -> PathBuf {

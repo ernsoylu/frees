@@ -4,6 +4,7 @@
 use frees_core::eval::Scope;
 use frees_core::parser::{parse_document, parse_legacy_document};
 use frees_core::procedures::{call_function, call_proc_output};
+use frees_core::solve;
 
 fn function_value(source: &str, name: &str, args: &[f64], scope: &Scope) -> f64 {
     let doc = parse_legacy_document(source).expect("legacy compatibility fixture parses");
@@ -61,10 +62,11 @@ fn each_legacy_procedure_output_reexecutes_the_body_and_selects_its_slot() {
 #[test]
 fn canonical_parser_requires_the_explicit_legacy_import_boundary() {
     let source = "PROCEDURE split(a : low)\n  low := a\nEND";
-    let versioned = format!("// frees-language: 2\n{source}");
-    assert!(parse_document(&versioned)
+    assert!(parse_document(source)
         .unwrap_err()
         .to_string()
         .contains("FREES-MIG-001"));
     assert!(parse_legacy_document(source).is_ok());
+    let error = solve("CALL split(1 : result)", &Default::default()).unwrap_err();
+    assert!(error.to_string_message().contains("FREES-MIG-001"));
 }

@@ -457,7 +457,7 @@ mod tests {
     /// fixtures through the real front end rather than hand-assembling ASTs, for
     /// the same reason the library itself is text.
     fn defs_of(text: &str) -> Vec<ComponentDef> {
-        parse_document(text)
+        crate::parser::parse_legacy_document(text)
             .unwrap_or_else(|error| panic!("test fixture failed to parse: {error}"))
             .components
             .defs

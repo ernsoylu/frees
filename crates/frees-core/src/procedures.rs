@@ -1161,7 +1161,7 @@ pub(crate) fn namespace_expr(expr: &Expr, ns: &str) -> Expr {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::parser::parse_document;
+    use crate::parser::parse_legacy_document as parse_document;
 
     fn defs_of(source: &str) -> Definitions {
         parse_document(source)

@@ -7889,7 +7889,7 @@ mod tests {
 
     /// Evaluate with a document's definitions in context.
     fn ev_in_doc(source: &str, e: &Expr) -> Result<f64> {
-        let doc = crate::parser::parse_document(source)
+        let doc = crate::parser::parse_legacy_document(source)
             .unwrap_or_else(|err| panic!("parse failed: {err}"));
         eval_with(e, &Scope::default(), EvalContext::with_defs(&doc.defs))
     }
@@ -7906,7 +7906,7 @@ mod tests {
 
     #[test]
     fn proc_synthetic_evaluates_its_inputs_in_the_callers_scope() {
-        let doc = crate::parser::parse_document(SWAP_DOC).unwrap();
+        let doc = crate::parser::parse_legacy_document(SWAP_DOC).unwrap();
         let scope = scope(&[("q", 5.0)]);
         let e = Expr::call(
             "proc$p$0",

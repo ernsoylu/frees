@@ -10,7 +10,7 @@
 
 use frees_core::ast::{Expr, Statement};
 use frees_core::eval::Scope;
-use frees_core::parser::parse_document;
+use frees_core::parser::parse_legacy_document as parse_document;
 use frees_core::procedures::{call_function, call_proc_output, flatten_calls};
 
 fn function_value(source: &str, name: &str, args: &[f64]) -> f64 {
@@ -403,7 +403,7 @@ fn omitted_trailing_call_output_never_surfaces_in_the_solution() {
 y = [2.1, 3.9, 6.2]
 CALL LinFit(x, y : m, b)
 ";
-    let solution = frees_core::solve(source, &frees_core::SolverSettings::default())
+    let solution = frees_core::solve_legacy(source, &frees_core::SolverSettings::default())
         .expect("LinFit with an omitted trailing output solves");
 
     for name in solution.values.keys() {
@@ -435,7 +435,7 @@ fn check_reports_the_surfaced_equation_variable_balance() {
 y = [2.1, 3.9, 6.2]
 CALL LinFit(x, y : m, b)
 ";
-    let report = frees_core::check(source).expect("check succeeds");
+    let report = frees_core::check_legacy(source).expect("check succeeds");
     assert!(report.solvable, "{}", report.message);
     assert_eq!(report.equation_count, report.unknown_count);
     assert_eq!(report.unknown_count, 8);
