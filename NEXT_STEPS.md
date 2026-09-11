@@ -180,7 +180,7 @@ Focus: Implement the comprehensive language unification detailed in [`reports/SI
 - [ ] **3.8 Stage U7: Cross-Interface Analysis Parity**
   - Align analysis execution schemas (optimization, fitting, sensitivity, uncertainty propagation, Monte Carlo) across CLI, WASM Web Worker, and UI dialogs.
     - [x] Expose the existing sensitivity endpoint through the WASM facade and route all existing analysis endpoints through a shared CLI dispatcher.
-  - Enable scripts to invoke sensitivity, calibration, and sweep routines programmatically using the unified syntax.
+  - [x] Enable scripts to invoke sensitivity, calibration, and sweep routines programmatically through the shared `frees-cli analyze OP --request ...` facade.
 - [ ] **3.9 Stage U8: Product-Wide Migration**
   - Convert all standard library definitions ([`components/library-data/`](file:///home/eren/homecloud/dev/frees-wasm/components/library-data)), gallery models ([`web/src/examples.ts`](file:///home/eren/homecloud/dev/frees-wasm/web/src/examples.ts)), Help models, and test fixtures to the unified syntax.
   - Update editor language tooling: syntax highlighters ([`web/src/EquationEditor.tsx`](file:///home/eren/homecloud/dev/frees-wasm/web/src/EquationEditor.tsx)), autocompletion ([`web/src/editorCompletion.ts`](file:///home/eren/homecloud/dev/frees-wasm/web/src/editorCompletion.ts)), signature tooltips ([`web/src/signatureHelp.ts`](file:///home/eren/homecloud/dev/frees-wasm/web/src/signatureHelp.ts)), and LaTeX renderer.
@@ -191,8 +191,9 @@ Focus: Implement the comprehensive language unification detailed in [`reports/SI
 - [ ] **3.10 Stage U9: Legacy Grammar Removal & Deprecation**
   - Conclude the versioned compatibility transition.
   - Restrict legacy grammar (`CALL`, `MODULE`, `PROCEDURE`, `COMPONENT`) to explicit migration/import converters.
-    - [x] Version-2 documents reject all four legacy declaration forms with the migration diagnostic.
-    - [x] The migration converter is the explicit import path for supported legacy forms and refuses ambiguous module/component rewrites.
+  - [x] Version-2 documents reject all four legacy declaration forms with the migration diagnostic.
+  - [x] The migration converter is the explicit import path for supported legacy forms and refuses ambiguous module/component rewrites.
+  - [x] The editor no longer highlights legacy declaration keywords as normal version-2 language keywords.
   - Strip obsolete keywords and grammar paths from the production parser and compiler, locking in a compact, unified language core.
 
 ---

@@ -266,6 +266,13 @@ frees-cli solve --request '{"findAllSolutions": true}' model.frees
 
 # Pipe document from stdin
 cat model.frees | frees-cli solve
+
+# Invoke the shared analysis facade from a script
+frees-cli analyze sensitivity model.frees --request '{"parameters":["x"],"samples":64}'
+frees-cli analyze parameter-fit --request request.json
+
+# Convert supported legacy syntax to a version-2 document
+frees-cli migrate legacy.frees > model-v2.frees
 \`\`\`
 
 ## JSON Request & Response Envelope
