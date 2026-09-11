@@ -223,6 +223,7 @@ function authoredPages() {
 
 const EVAL_RS = path.join(WASM_REPO, 'crates/frees-core/src/eval.rs');
 const PROCEDURES_RS = path.join(WASM_REPO, 'crates/frees-core/src/procedures.rs');
+const EXPAND_RS = path.join(WASM_REPO, 'crates/frees-core/src/parser/expand.rs');
 
 /** Every name in `eval::INTRINSICS`, lowercase, sorted. */
 function rustIntrinsics() {
@@ -244,6 +245,24 @@ function rustCallTargets() {
   const names = new Set();
   for (const m of block[1].matchAll(/"([^"]+)"/g)) names.add(m[1].toLowerCase());
   return [...names].sort();
+}
+
+/**
+ * Every name in `parser::expand::MATRIX_FUNCTIONS`, lowercase, sorted.
+ *
+ * Matrix-routed names never reach the scalar `eval::INTRINSICS` switch, so the
+ * merge above cannot see them and the family was sourced entirely from the
+ * curated `helpReference.MATRIX_FUNCTIONS` — i.e. cached, and listed in
+ * `staleFamilies`. Four of them (`scal`, `ger`, `copy`, `identity`) were
+ * instead hand-carried in `check-doc-coverage.mjs`'s EXTRA_CALLABLES so the
+ * guide linter would accept them. Reading the Rust list is the same mechanism
+ * as the other two registries and retires that half of the allowlist.
+ */
+function rustMatrixFunctions() {
+  if (!fs.existsSync(EXPAND_RS)) return [];
+  const block = read(EXPAND_RS).match(/const MATRIX_FUNCTIONS: \[&str; \d+\] = \[([\s\S]*?)\n\];/);
+  if (!block) return [];
+  return [...new Set([...block[1].matchAll(/"([^"]+)"/g)].map((m) => m[1].toLowerCase()))].sort();
 }
 
 /**
@@ -300,8 +319,32 @@ function mergeRustRegistries(manifest) {
     });
   }
 
+  // Dedupe against EVERY family, not just the matrix one: `transpose` and `inv`
+  // are carried as registry functions as well as matrix-routed names, and
+  // adding a second entry for them would double-count a symbol the coverage
+  // map already resolves by slug.
+  manifest.matrixFunctions = manifest.matrixFunctions || [];
+  const matrixNames = new Set([
+    ...manifest.matrixFunctions.map((f) => f.name.toLowerCase()),
+    ...manifest.functions.map((f) => f.name.toLowerCase()),
+    ...manifest.functions.flatMap((f) => (f.aliases || []).map((a) => a.toLowerCase())),
+  ]);
+  report.matrixAdded = [];
+  for (const name of rustMatrixFunctions()) {
+    if (matrixNames.has(name)) continue;
+    report.matrixAdded.push(name);
+    manifest.matrixFunctions.push({
+      name,
+      signature: `${name}(…)`,
+      description: '',
+      source: 'rust',
+      documented: pages.has(name),
+    });
+  }
+
   manifest.functions.sort((a, b) => a.name.localeCompare(b.name));
   manifest.callProcedures.sort((a, b) => a.name.localeCompare(b.name));
+  manifest.matrixFunctions.sort((a, b) => a.name.localeCompare(b.name));
   return report;
 }
 
@@ -319,16 +362,40 @@ function reportMerge(report, reference) {
         `procedures::EXPANDED_CALL_TARGETS: ${report.callsAdded.join(', ')}`,
     );
   }
+  if (report.matrixAdded?.length) {
+    console.warn(
+      `build-doc-manifest: ${report.matrixAdded.length} matrix function(s) added from ` +
+        `parser::expand::MATRIX_FUNCTIONS: ${report.matrixAdded.join(', ')}`,
+    );
+  }
 }
 
-function writeManifest(manifest) {
-  // The Java repo is present, so every family above is live — but the port has
-// its own dispatch table, and this is the one place the two can be compared.
-const mergeReport = mergeRustRegistries(manifest);
-manifest.derivedFrom = 'java+rust';
-recountCoverage(manifest);
+/**
+ * The single reconcile-then-stamp step both branches must go through.
+ *
+ * It used to live inside `writeManifest()`, which only the no-reference branch
+ * ever called: the reference branch built its manifest, wrote it inline, and
+ * then referenced `mergeReport` from a scope it was never in — so a checkout
+ * WITH the reference repo wrote an unreconciled manifest and died on
+ * `ReferenceError` immediately afterwards. The merge result now belongs to the
+ * caller, and neither branch can write without passing through here.
+ */
+function finalize(manifest, reference) {
+  const report = mergeRustRegistries(manifest);
+  // Provenance names the branch actually taken. Stamping 'java+rust'
+  // unconditionally claimed a Java reference read that never happened.
+  manifest.derivedFrom = reference ? 'java+rust' : 'rust';
+  recountCoverage(manifest);
+  return report;
+}
 
-fs.mkdirSync(REF_DIR, { recursive: true });
+// Write only when something OTHER than the date changed. `npm run check-docs`
+// regenerates this file every time it runs, and `generatedAt` alone would dirty
+// a committed 106 KB artifact on every run — noise that trains people to
+// `git checkout` the manifest, which is how a real drift would get discarded
+// with it. A date bump is not news; a registry change is.
+function writeManifest(manifest) {
+  fs.mkdirSync(REF_DIR, { recursive: true });
   const rendered = JSON.stringify(manifest, null, 2) + '\n';
   const stripDate = (s) => s.replace(/^\s*"generatedAt":.*$/m, '');
   const previous = fs.existsSync(OUT) ? read(OUT) : null;
@@ -353,9 +420,20 @@ function recountCoverage(manifest) {
   for (const c of manifest.components || []) note(c.name, pages.has(c.name.toLowerCase()));
   for (const f of manifest.materials?.functions || []) note(f, pages.has(String(f).toLowerCase()));
   for (const r of manifest.replCasOps || []) note(r, pages.has(String(r).toLowerCase()));
-  manifest.coverage.documentableSurfaceTotal = all.size;
-  manifest.coverage.components = (manifest.components || []).length;
-  manifest.coverage.documented = [...all.values()].filter(Boolean).length;
+  // Every count comes off the FINAL arrays. `registeredFunctions` and
+  // `callProcedures` used to be left at whatever the pre-merge build set, so a
+  // manifest holding 326 functions and 63 CALL targets reported 276 and 44.
+  const cov = manifest.coverage;
+  cov.documentableSurfaceTotal = all.size;
+  cov.registeredFunctions = (manifest.functions || []).length;
+  cov.matrixFunctions = (manifest.matrixFunctions || []).length;
+  cov.components = (manifest.components || []).length;
+  cov.propertyFunctions = (manifest.propertyFunctions || []).length;
+  cov.callProcedures = (manifest.callProcedures || []).length;
+  cov.materialFunctions = (manifest.materials?.functions || []).length;
+  cov.replCasOps = (manifest.replCasOps || []).length;
+  cov.dispatchOnlyNeedingRegistry = (manifest.dispatchOnly || []).length;
+  cov.documented = [...all.values()].filter(Boolean).length;
 }
 
 /** No Java sibling: keep committed function families, refresh components from this library. */
@@ -385,16 +463,15 @@ function refreshComponentsOnly() {
     );
     process.exit(1);
   }
-  const report = mergeRustRegistries(manifest);
   manifest.note =
     "GENERATED by scripts/build-doc-manifest.mjs. Function and CALL families are " +
     "reconciled against the Rust registries (eval::INTRINSICS, " +
-    "procedures::EXPANDED_CALL_TARGETS); the remaining families are the last " +
+    "procedures::EXPANDED_CALL_TARGETS, parser::expand::MATRIX_FUNCTIONS); " +
+    "the remaining families are the last " +
     "generation from the Java reference repo. Do not edit by hand.";
-  manifest.derivedFrom = 'rust';
   // Named so a reader knows exactly which counts are live and which are cached.
-  manifest.staleFamilies = ['matrixFunctions', 'propertyFunctions', 'materials', 'replCasOps'];
-  recountCoverage(manifest);
+  manifest.staleFamilies = ['propertyFunctions', 'materials', 'replCasOps'];
+  const report = finalize(manifest, false);
   writeManifest(manifest);
   reportMerge(report, false);
   const cov = manifest.coverage;
@@ -508,26 +585,18 @@ const manifest = {
   replCasOps: repl,
 };
 
-fs.mkdirSync(REF_DIR, { recursive: true });
-
-// Write only when something OTHER than the date changed. `npm run check-docs`
-// regenerates this file every time it runs, and `generatedAt` alone would dirty
-// a committed 106 KB artifact on every run — noise that trains people to
-// `git checkout` the manifest, which is how a real drift would get discarded
-// with it. A date bump is not news; a registry change is.
-const rendered = JSON.stringify(manifest, null, 2) + '\n';
-const stripDate = (s) => s.replace(/^\s*"generatedAt":.*$/m, '');
-const previous = fs.existsSync(OUT) ? read(OUT) : null;
-if (previous !== null && stripDate(previous) === stripDate(rendered)) {
-  console.log('doc-manifest: unchanged against the backend registries — not rewritten.');
-} else {
-  fs.writeFileSync(OUT, rendered);
-}
-
+// The Java repo is present, so every family above is live — but the port has
+// its own dispatch table, and this is the one place the two can be compared.
+const mergeReport = finalize(manifest, true);
+writeManifest(manifest);
 reportMerge(mergeReport, true);
+
+// Report the POST-merge counts. The local `functions`/`callProcedures` arrays
+// above are the pre-merge build; anything the Rust registries added is in
+// `manifest.coverage` and nowhere else.
 const cov = manifest.coverage;
 console.log(`doc-manifest: ${cov.documentableSurfaceTotal} documentable symbols ` +
-  `(${cov.documented} documented) — ${functions.length} functions, ${matrixFunctions.length} matrix fns, ` +
-  `${components.length} components, ${propertyFunctions.length} property fns, ${callProcedures.length} CALL procs, ` +
-  `${materials.functions.length} material fns, ${repl.length} CAS ops; ` +
-  `${dispatchOnly.length} dispatch-only gaps → ${path.relative(WASM_REPO, OUT)}`);
+  `(${cov.documented} documented) — ${cov.registeredFunctions} functions, ${cov.matrixFunctions} matrix fns, ` +
+  `${cov.components} components, ${cov.propertyFunctions} property fns, ${cov.callProcedures} CALL procs, ` +
+  `${cov.materialFunctions} material fns, ${cov.replCasOps} CAS ops; ` +
+  `${cov.dispatchOnlyNeedingRegistry} dispatch-only gaps → ${path.relative(WASM_REPO, OUT)}`);

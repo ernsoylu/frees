@@ -1150,9 +1150,14 @@ PARAMETRIC drive (t, v, P)
 END`,
   },
   {
-    id: 'rankine-cycle',
-    title: 'Rankine Cycle',
-    description: 'Steam power cycle efficiency with real-water properties.',
+    // Distinct from 'rankine-cycle' above, which is the IDEAL cycle. This one
+    // carries turbine and pump isentropic efficiencies, so it is a different
+    // teaching model and needs a different identity — the two shared an id,
+    // and Help resolves bindings with .find(), so this document was
+    // unreachable through every page that bound "rankine-cycle".
+    id: 'rankine-cycle-efficiencies',
+    title: 'Rankine Cycle (with component efficiencies)',
+    description: 'Steam power cycle with turbine and pump isentropic efficiencies.',
     category: 'Thermodynamics',
     featured: true,
     text: `// Ideal Rankine Cycle
