@@ -2041,7 +2041,12 @@ fn expand_component_layer(
         // parse of the builtin library — and only when a dotted name actually
         // appears, so the corpus's scalar documents still pay nothing.
         if mentions_dotted_var(&doc.statements, &doc.dynamics) {
-            let statements = std::mem::take(&mut doc.statements);
+            let statements = std::mem::take(&mut doc.statements)
+                .into_iter()
+                .filter(|statement| {
+                    !crate::parser::toplevel::is_registered_call_statement(statement)
+                })
+                .collect();
             let mut dynamics = std::mem::take(&mut doc.dynamics);
             let mut display_names = std::mem::take(&mut doc.display_names);
             let mut expander = crate::components::expander::ComponentExpander::new(
@@ -2060,7 +2065,12 @@ fn expand_component_layer(
     }
 
     let components = std::mem::take(&mut doc.components);
-    let statements = std::mem::take(&mut doc.statements);
+        let statements = std::mem::take(&mut doc.statements)
+            .into_iter()
+            .filter(|statement| {
+                !crate::parser::toplevel::is_registered_call_statement(statement)
+            })
+            .collect();
     let mut dynamics = std::mem::take(&mut doc.dynamics);
     let mut display_names = std::mem::take(&mut doc.display_names);
 

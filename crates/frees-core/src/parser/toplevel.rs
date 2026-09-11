@@ -2792,6 +2792,10 @@ impl<'a> Parser<'a> {
     }
 }
 
+pub(crate) fn is_registered_call_statement(statement: &Statement) -> bool {
+    registered_call(statement).is_some()
+}
+
 fn registered_call(statement: &Statement) -> Option<crate::parser::RegisteredCall> {
     let Statement::Eq(crate::ast::Equation {
         lhs: Expr::Var(binding),

@@ -25,3 +25,15 @@ fn reserved_domain_names_accept_expression_call_syntax() {
     assert_eq!(doc.registered_calls[0].binding, "answer");
     assert_eq!(doc.registered_calls[0].operation, "plot");
 }
+
+#[test]
+fn registered_calls_do_not_enter_the_numeric_equation_system() {
+    let solution = frees_core::solve(
+        "x = 1\nrun = plot(x)",
+        &frees_core::SolverSettings::default(),
+    )
+    .expect("registered presentation calls are run metadata");
+    assert_eq!(solution.values["x"], 1.0);
+    assert!(!solution.values.contains_key("run"));
+    assert_eq!(solution.registered_calls[0].binding, "run");
+}

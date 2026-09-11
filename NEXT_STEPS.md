@@ -179,7 +179,8 @@ Focus: Implement the comprehensive language unification detailed in [`reports/SI
   - Replace ad-hoc keyword blocks with registered domain function calls: `simulate(...)`, `sweep(...)`, `plot(...)`, `table(...)`, `linearize(...)`.
     - [x] Domain calls `simulate(...)`, `sweep(...)`, `plot(...)`, `table(...)`, and `linearize(...)` parse in ordinary expression position.
   - [x] Reserved `state_table(...)` parses in ordinary expression position.
-  - Maintain explicit run ownership, result bindings, and feedback paths without separate grammar modes.
+  - [x] Maintain explicit run ownership, result bindings, and feedback paths without separate grammar modes.
+    - [x] Registered run bindings are removed from numeric equation solving while remaining available in ordered result metadata.
   - [x] Top-level registered calls retain their operation, owning binding, and argument expressions in source order.
     - [x] Registered call ownership is forwarded through core solve/check results and emitted by the CLI and WASM facade.
 - [x] **3.8 Stage U7: Cross-Interface Analysis Parity**
