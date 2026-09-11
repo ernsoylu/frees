@@ -569,6 +569,8 @@ let its registry entry define the complete signature:
     centered = Detrend(trace, 'constant')
     smoothed = Smooth(trace, 3)
     [spectrum_real, spectrum_imag] = FFT(signal, imaginary)
+    [pressure, temperature] = valve_model(flow, setpoint)
+    [estimate, residual] = fit_measurements(x, y)
 
 The resolver must use one metadata path for built-in intrinsics, matrix and signal functions,
 control procedures, property functions, tables, and user FUNCTION definitions. Each callable
@@ -576,6 +578,30 @@ entry must expose its required and optional inputs, accepted types, output count
 where applicable, and output shape rules. Arity and type errors must be reported at the call site
 before solving. Dynamic-size outputs may continue to use declared shapes such as 'Q[1:n,1:n]'
 when the input determines their dimensions.
+
+This includes current MODULE and PROCEDURE invocations. Their definitions may keep their
+declaration keywords and existing input/output declarations:
+
+    MODULE valve_model(flow, setpoint : pressure, temperature)
+      pressure = flow * 2
+      temperature = 300 + setpoint
+    END
+
+    PROCEDURE fit_measurements(x, y : estimate, residual)
+      estimate := sum(y) / sum(x)
+      residual := y[1] - estimate * x[1]
+    END
+
+Their callers use ordinary MATLAB-style assignment:
+
+    [pressure, temperature] = valve_model(flow, setpoint)
+    [estimate, residual] = fit_measurements(x, y)
+
+The declaration keywords remain because they define the callable's semantics and body. The
+invocation keyword is what disappears. A single-output MODULE or PROCEDURE uses ordinary
+assignment; a multi-output call requires bracketed assignment. Output order follows the
+declaration and registry metadata, and a module's namespacing and a procedure's solver
+equations must remain unchanged by the syntax migration.
 
 Implement this as a compatibility migration:
 
