@@ -170,6 +170,7 @@ Focus: Implement the comprehensive language unification detailed in [`reports/SI
     - [x] Preserve defaults declared in unified component function parameters through component expansion.
     - [x] Lower canonical `variant name require(...)` blocks into the existing construction-time variant model.
   - Verify that physical conservation (Kirchhoff current/pressure laws), state storage, and structural variants produce identical topological networks and numerical solutions.
+    - [x] Lowered unified definitions reuse the existing component expander's conservation and topology path; pressure/flow expansion and variant parsing are covered by U5 tests.
 - [ ] **3.7 Stage U6: Analysis, Simulation & Presentation as Registered Calls**
   - Replace ad-hoc keyword blocks with registered domain function calls: `simulate(...)`, `sweep(...)`, `plot(...)`, `table(...)`, `linearize(...)`.
     - [x] Reserved `plot(...)`, `table(...)`, and `linearize(...)` names parse in ordinary expression position.
