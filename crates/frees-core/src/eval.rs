@@ -2218,6 +2218,7 @@ fn eval_call<'a>(function: &str, args: &'a [Expr], env: &'a Env<'a>) -> Result<f
         });
     };
 
+    let args = resolve_intrinsic_args(function, args)?;
     if !intrinsic.arity.accepts(args.len()) {
         return Err(FreesError::evaluation(format!(
             "{function} expects {}, got {}",
@@ -2227,15 +2228,86 @@ fn eval_call<'a>(function: &str, args: &'a [Expr], env: &'a Env<'a>) -> Result<f
     }
 
     match intrinsic.body {
-        Body::Lazy(f) => f(function, args, env),
+        Body::Lazy(f) => f(function, &args, env),
         Body::Strict(f) => {
             let mut values = Vec::with_capacity(args.len());
-            for arg in args {
+            for arg in &args {
                 values.push(eval_in(arg, env)?);
             }
             f(function, &values)
         }
     }
+}
+
+fn resolve_intrinsic_args<'a>(function: &str, args: &'a [Expr]) -> Result<Vec<Expr>> {
+    let mut out: Vec<Option<Expr>> = vec![None; args.len()];
+    let mut named = false;
+    let mut next = 0;
+    for arg in args {
+        let Some((name, value)) = named_arg(arg) else {
+            if named {
+                return Err(FreesError::evaluation(format!(
+                    "{function}: positional arguments must precede named arguments"
+                )));
+            }
+            if next >= out.len() {
+                return Err(FreesError::evaluation(format!(
+                    "{function}: too many arguments"
+                )));
+            }
+            out[next] = Some(arg.clone());
+            next += 1;
+            continue;
+        };
+        named = true;
+        let index = intrinsic_argument_index(function, name, args.len()).ok_or_else(|| {
+            FreesError::evaluation(format!("{function}: unknown named argument '{name}'"))
+        })?;
+        if index >= out.len() || out[index].is_some() {
+            return Err(FreesError::evaluation(format!(
+                "{function}: argument '{name}' was provided more than once"
+            )));
+        }
+        out[index] = Some(value.clone());
+    }
+    out.into_iter()
+        .enumerate()
+        .map(|(index, arg)| {
+            arg.ok_or_else(|| {
+                FreesError::evaluation(format!(
+                    "{function}: missing argument at position {}",
+                    index + 1
+                ))
+            })
+        })
+        .collect()
+}
+
+fn named_arg(arg: &Expr) -> Option<(&str, &Expr)> {
+    let Expr::Call { function, args } = arg else {
+        return None;
+    };
+    function
+        .strip_prefix("__named_arg$")
+        .and_then(|name| args.first().map(|value| (name, value)))
+}
+
+fn intrinsic_argument_index(function: &str, name: &str, count: usize) -> Option<usize> {
+    let name = name.to_ascii_lowercase();
+    if let Some(index) = name
+        .strip_prefix("arg")
+        .and_then(|n| n.parse::<usize>().ok())
+        .and_then(|n| n.checked_sub(1))
+    {
+        return (index < count).then_some(index);
+    }
+    let aliases = match function {
+        "if" => &["condition", "then", "else"][..],
+        "min" | "max" => &["a", "b", "c", "d"][..],
+        _ if count == 1 => &["x", "value", "input"][..],
+        _ => &["x", "y", "z", "a", "b", "c"][..],
+    };
+    aliases.iter().position(|alias| *alias == name)
 }
 
 fn resolve_call_args<'a>(

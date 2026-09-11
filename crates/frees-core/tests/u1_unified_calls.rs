@@ -85,3 +85,9 @@ fn known_array_bindings_use_parenthesized_one_based_indexing() {
     .unwrap();
     assert_eq!(solution.values["answer"], 20.0);
 }
+
+#[test]
+fn intrinsic_calls_accept_named_arguments() {
+    let solution = solve("answer = sqrt(x=9)", &SolverSettings::default()).unwrap();
+    assert_eq!(solution.values["answer"], 3.0);
+}

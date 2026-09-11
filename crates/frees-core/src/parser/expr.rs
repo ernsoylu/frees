@@ -532,7 +532,7 @@ fn parse_atom(c: &mut Cursor<'_>) -> Result<Expr> {
             c.expect(&TokenKind::LParen)?;
             let args = parse_arg_list(c)?;
             c.expect(&TokenKind::RParen)?;
-            Ok(Expr::call("if", positional_only(args, "if")?))
+            Ok(Expr::call("if", encode_call_args(args)))
         }
         TokenKind::Ident(name) => match c.peek_at(1) {
             TokenKind::LParen if c.is_array_name(&name) => parse_paren_array_atom(c, name),
@@ -931,14 +931,16 @@ fn parse_call_atom(c: &mut Cursor<'_>, name: String) -> Result<Expr> {
         }
         return call;
     }
-    let values = args
-        .into_iter()
+    Ok(Expr::call(&name, encode_call_args(args)))
+}
+
+fn encode_call_args(args: Vec<Arg>) -> Vec<Expr> {
+    args.into_iter()
         .map(|arg| match arg.name {
             Some(name) => Expr::call(format!("__named_arg${name}"), vec![arg.value]),
             None => arg.value,
         })
-        .collect();
-    Ok(Expr::call(&name, values))
+        .collect()
 }
 
 fn is_property_function(name: &str) -> bool {
@@ -976,23 +978,6 @@ fn is_property_function(name: &str) -> bool {
             | "e_"
             | "nu_"
     )
-}
-
-/// `positionalExprs` — named arguments are only legal in property calls.
-fn positional_only(args: Vec<Arg>, function: &str) -> Result<Vec<Expr>> {
-    let mut out = Vec::with_capacity(args.len());
-    for arg in args {
-        if arg.name.is_some() {
-            return Err(FreesError::parse_at(
-                format!(
-                    "Named arguments (name=value) are only valid in fluid property functions: {function}"
-                ),
-                arg.span,
-            ));
-        }
-        out.push(arg.value);
-    }
-    Ok(out)
 }
 
 /// Fluid property call: `Enthalpy(R134a, T=T1, x=1)`.
@@ -2183,11 +2168,17 @@ mod tests {
     }
 
     #[test]
-    fn named_arguments_are_rejected_by_the_if_intrinsic() {
-        let message = err("If(x=1, 2, 3)");
-        assert!(
-            message.contains("only valid in fluid property functions: if"),
-            "{message}"
+    fn named_arguments_are_supported_by_the_if_intrinsic() {
+        assert_eq!(
+            ok("If(condition=1, arg2=2, arg3=3)"),
+            Expr::call(
+                "if",
+                vec![
+                    Expr::call("__named_arg$condition", vec![num(1.0)]),
+                    Expr::call("__named_arg$arg2", vec![num(2.0)]),
+                    Expr::call("__named_arg$arg3", vec![num(3.0)]),
+                ]
+            )
         );
     }
 
