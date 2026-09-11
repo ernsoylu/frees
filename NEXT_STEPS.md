@@ -259,6 +259,321 @@ Verification at the same commit: `cargo test --workspace` 3,333 passing; `cargo 
 
 ---
 
+## 2c. Example-Coverage Programme — Phase 4.7b Expanded (2026-09-11)
+
+Section 2b left 4.7b as one line: "52 symbols still have no page … then the cross-library
+reference fixtures and the four worked examples." The documentation audit at
+`reports/REPORT.md` measured what that line is actually hiding. This section is the phased
+plan for closing it.
+
+### Measured starting point
+
+| Measure | Value | Source |
+|---|---:|---|
+| Catalogued documentable symbols | 719 → **723** | `reports/latest-change/coverage-summary.json` |
+| Symbols with a reference page | 667 (92.8% → **92.3%**) | `npm run check-docs` |
+| Symbols with **no** page | 52 → **56** | `symbol-coverage.csv` |
+| Page tiers | 167 rich / 354 reference / 146 stub | same |
+| Symbols demonstrated by a **complete, runnable document** | 140 (19.5%) | same |
+| Symbols demonstrated only by a fragment | 208 (28.9%) | same |
+| Components with a complete-document example | 40 / 312 (12.8%) | same |
+| Complete-document candidates in the product | 150 | `run-candidates.json` |
+
+Components with no complete-document example, by domain — this is the queue the example
+waves work through:
+
+| Domain | Uncovered | Domain | Uncovered |
+|---|---:|---|---:|
+| twophase | 38 | electrical | 26 |
+| moistair | 32 | hydraulic | 23 |
+| signal | 31 | pneumatic | 18 |
+| mechanical | 27 | powertrain | 18 |
+| fluid | 26 | liquid | 15 |
+| heat | 13 | ac | 4 |
+| control | 1 | | |
+
+The denominator moved during 4.7b-1: the builder now reads a third Rust registry, adding
+`copy`, `ger`, `identity` and `scal` to the documentable surface. Four more missing pages is
+the honest number, not a regression — the same correction, one registry later, that took the
+reported figure off its stale 100%.
+
+**92.3% page presence is not 92.3% executable teaching coverage.** The two numbers must keep
+being reported separately; conflating them is what produced that stale 100%.
+
+### Why this is not simply "write more examples"
+
+The gate that would keep new examples honest is broken in three independent places. Adding
+content before repairing it just grows the unverified surface.
+
+1. **The manifest generator crashes on its reference-present branch.**
+   `web/scripts/build-doc-manifest.mjs:323` declares `mergeReport` inside `writeManifest()`;
+   line 527 calls `reportMerge(mergeReport, true)` outside that scope. The branch writes its
+   manifest *first*, then throws `ReferenceError`, and it never calls `mergeRustRegistries()` —
+   so a checkout with a readable reference tree both fails `check-docs` and can leave an
+   unreconciled inventory behind.
+2. **`check-docs` is not in CI.** `ci.yml` contains zero references to `check-doc*`. The gate
+   only runs when someone remembers to run it.
+3. **The snippet gate is dead code.** `web/scripts/check-doc-snippets.mjs` posts to
+   `http://localhost:8080` — an architecture this project removed. It is in no npm script and
+   no workflow. Every ```run fence in `web/src/docs/*.md` is therefore ungraded.
+
+Additionally, `manifest.derivedFrom` is unconditionally overwritten to `'java+rust'` at line
+328 even when the no-reference branch set `'rust'` at line 394, and `recountCoverage()` leaves
+`registeredFunctions` at 276 / `callProcedures` at 44 while the arrays hold 326 / 63.
+
+---
+
+### Phase 4.7b-1 — Repair the gate ✅ **done 2026-09-11**
+
+1. Route both generator branches through one reconcile-then-write sequence, with the merge
+   result in the caller's scope. Add a test that runs generation with and without a reference
+   tree and asserts Rust-only symbols survive both.
+2. Derive `derivedFrom` from the branch actually taken; derive `registeredFunctions` and
+   `callProcedures` from the final arrays inside `recountCoverage()`.
+3. Add `npm run check-docs` to `ci.yml` as a required job.
+4. Replace `check-doc-snippets.mjs` with `web/scripts/check-doc-examples.mjs` running against
+   the compiled module at `web/src/wasm/pkg/`, not an HTTP backend. Promote the ad-hoc runner
+   at the end of `reports/MISSING_EXAMPLES.md` into that script: it already executes ```frees
+   blocks through `engine.solve`, asserts `{ CHECK name value tolerance }` markers, and drives
+   `monte_carlo` / `parameter_fit` / `sensitivity` from ```json blocks. Wire it into CI beside
+   `check-docs`.
+5. Make example identity enforceable: uniqueness check over gallery IDs (`rankine-cycle` is
+   duplicated at `examples.ts:179` and `:1153`, and Help resolves bindings with `.find()`), and
+   index `CYCLE_EXAMPLES` in the same search path as `EXAMPLES` so the two catalogues stop
+   splitting discovery.
+6. Shrink the hand-maintained `EXTRA_CALLABLES` allowlist in `check-doc-coverage.mjs` now that
+   the builder reads the Rust registries. It carries its own `TODO`; it is the same blindness
+   as the manifest fallback, one file over.
+
+**Outcome.** All six landed. What the work turned up beyond what the audit had measured:
+
+- **The reference branch was worse than reported.** It did not merely crash after writing an
+  unreconciled manifest — it never called `writeManifest()` at all, and never called
+  `recountCoverage()` either. It built a manifest, wrote it with its own inline copy of the
+  write logic, and then read `mergeReport` from a scope it was never declared in. Both branches
+  now pass through one `finalize()` that merges, stamps provenance and recounts, then through
+  one `writeManifest()`.
+- **`registeredFunctions` 276 → 326, `callProcedures` 44 → 63, `derivedFrom` `java+rust` →
+  `rust`** on this checkout. Every family count now comes off the final arrays.
+- **`scripts/build-doc-manifest.test.mjs`** covers both branches. Its assertion is the one that
+  matters: every name in `eval::INTRINSICS` reaches the manifest, by either branch. Verified to
+  fail against the pre-fix builder — `ReferenceError: mergeReport is not defined` on the
+  reference branch, `expected 'java+rust' to be 'rust'` on the other. `vitest.config.ts` now
+  includes `scripts/**/*.test.mjs`, so it rides the existing CI test step.
+- **A third Rust registry.** `EXTRA_CALLABLES` was hand-carrying `scal`, `ger`, `copy` and
+  `identity` because the matrix family was sourced entirely from the curated frontend list and
+  was therefore permanently cached. The builder now reads
+  `parser::expand::MATRIX_FUNCTIONS` the same way it reads the other two, and
+  `matrixFunctions` has left `staleFamilies`. The allowlist went **25 names → 12**.
+- **The allowlist was hiding a live drift.** `fluids_materials.md` documented
+  `IsIdealGas(Fluid)`. The engine answers `unknown function: isidealgas` — confirmed through
+  `frees-cli`, and `is_ideal_gas` is an internal Rust helper, not a callable. `isidealgas` sat
+  in `EXTRA_CALLABLES` under a comment claiming every entry was "verified present in the
+  backend", which is precisely why the gate never fired. The bullet is gone from the guide.
+  Three more entries — `delta`, `movavg`, `delay` — named a Java-era evaluator no Rust crate
+  defines and no guide mentions.
+- **`rankine-cycle` named two different models** — the ideal cycle at `examples.ts:179` and one
+  with turbine and pump isentropic efficiencies at `:1153`. Help resolves bindings with
+  `.find()`, so the second was unreachable through every page that bound the id. It is now
+  `rankine-cycle-efficiencies`; the five pages binding `rankine-cycle` keep resolving to the
+  model they always got. The gate now fails on a duplicate id across **both** catalogues, and
+  indexes both, so a binding into the Help catalogue is no longer indistinguishable from a typo.
+- **17 `run` fences had never been executed.** `check-doc-examples.mjs` runs all of them
+  through the compiled wasm module — the same one the browser loads — and all 17 pass. Two
+  carry `vary=`; those are parametric documents, underspecified by their swept column on
+  purpose, and are graded for structure rather than convergence. The assertion path is verified
+  to fail on a wrong `CHECK` value.
+- **`check-doc-snippets.mjs` is deleted.** It targeted `http://localhost:8080`.
+
+**Verification at this commit:** `npm run check-docs` green at 667/723; `npm run check-examples`
+17/17 through the compiled module; `vitest` 56 files / 624 tests; `npm run lint` 0 errors.
+
+**Still open from this phase:** the runner executes 0 numerical assertions, because no product
+document carries a `CHECK` marker yet. It is a gate waiting for content — which is 4.7b-2.
+Shrinking `EXTRA_CALLABLES` below 12 means teaching the builder to read `props/propfun.rs`'s
+output table; the remaining entries are genuinely unenumerated, not oversights.
+
+### Phase 4.7b-2 — Land the drafted example set (≈1 week)
+
+`reports/MISSING_EXAMPLES.md` already holds 19 verified worked examples — 15 equation models
+plus 4 analysis requests, 55 numerical assertions, validated through the compiled module on
+2026-09-11. They are sitting in a report instead of in the product. Move them:
+
+- One gallery entry each, stable kebab-case ID, category, and the execution mode stated in the
+  entry (Solve / Solve Table / DYNAMIC).
+- `examples: [id]` frontmatter bindings on every reference page for a symbol the model
+  actually instantiates — **direct use, not thematic association**. The `Pump` page currently
+  binds models that never instantiate `Pump`; do not repeat that.
+- The 12 signal pages added in #23 all carry `examples: []`. Example 10 (tone recovery and
+  spectral power) and 11 (causal / zero-phase filtering) bind `Welch`, `FFT`, `Window`,
+  `Detrend`, `Filter`, `FiltFilt`, `XCorr`, `Smooth`. `Welch.md:40` assumes a 4,096-sample tone
+  that its own block never creates — the bound model must generate its input.
+- Freeze each equation model as a fixture under `fixtures/corpus/` so the parity replay and the
+  WASM shard replay both carry it.
+
+**Done when:** complete-document coverage is re-measured by `measure.cjs` and has moved off
+140, and no bound page cites a model that does not instantiate its symbol.
+
+### Phase 4.7b-3 — Close the 56 missing reference pages (≈1 week, parallel with 4.7b-2)
+
+47 built-in functions, 4 CALL procedures, 1 both, plus the four matrix-routed names 4.7b-1
+surfaced — `copy`, `ger`, `identity`, `scal`. The full list:
+
+`anova1_df_between`, `anova1_df_within`, `anova1_f`, `anova1_pval`, `betainc`,
+`bootstrap_ci_hi`, `bootstrap_ci_lo`, `chi2gof_df`, `chi2gof_pval`, `chi2gof_stat`,
+`ci_mean_hi`, `ci_mean_lo`, `corrcoef`, `cov`, `cube`, `fcdf`, `finv`, `fpdf`, `hypot`, `int`,
+`interp2`, `kurtosis`, `linfit`, `log`, `mad`, `pearson`, `permtest_pval`, `permtest_stat`,
+`pi`, `polyfit`, `ramp`, `rem`, `singularvalues`, `skewness`, `spearman`, `sqr`, `ss2tfij`,
+`tcdf`, `tinv`, `tpdf`, `trimmedmean`, `ttest1_df`, `ttest1_pval`, `ttest1_stat`, `ttest2_df`,
+`ttest2_pval`, `ttest2_stat`, `ttest_paired_df`, `ttest_paired_pval`, `ttest_paired_stat`,
+`wmean`, `wvar`, and `copy`, `ger`, `identity`, `scal`.
+
+Note `log`, `pi`, `int`, `rem`, `cube`, `sqr`, `hypot`, `ramp` are not statistics — they are
+ordinary built-ins that were never catalogued. Their absence is evidence the inventory was
+never complete, and they are the cheapest pages in the list.
+
+Pair this with the cross-library reference fixtures already scoped in 4.7: versions and seeds
+recorded, generated offline, replayed without Python. The regression examples in 4.7b-4 double
+as the worked demonstrations for `linfit`, `polyfit`, `pearson`, `corrcoef` and `cov`, so
+sequence 4.7b-3 and the regression group of 4.7b-4 together.
+
+### Phase 4.7b-4 — Example wave B: the uncovered component domains (2–3 weeks)
+
+Thirty candidate problems have been drawn from the curated `Frees` reference bank. Every one
+carries complete inputs and a unique numeric answer, so each converts directly into a
+complete-document gallery model with `CHECK` assertions. They are grouped to attack the
+uncovered-component queue above.
+
+**Rule for all of them: the bank's answer is a cross-check, not the golden value.** Several
+use hand-calculation shortcuts (volumetric-flow mixing approximations, chart-read enthalpies,
+rounded property values) that the engine's Helmholtz properties will not reproduce to the
+digit. Re-derive each expected value against the engine, record the tolerance, and state any
+adaptation in the model's own comment — the same discipline `reports/MISSING_EXAMPLES.md`
+already applies.
+
+| # | Problem | Given → asked | Components exercised |
+|---|---|---|---|
+| B1 | Spring-loaded diaphragm actuator, orifice-fed | A=1774 mm², m=0.1 kg, k=1.33 N/mm, V₀=15,000 mm³, δP₀=20 kPa → z=26.68 mm, δP₁=20.0 kPa | `PneumaticSupply`, `PneumaticOrifice`, `PneumaticActuator` (dynamic fill — supersedes the static adaptation in example 1) |
+| B2 | Pneumatic piston force balance | D=25 mm, rod 12 mm, P₁=7.0 barA, P₂=1.013 barA → F=293.88 N | double-acting cylinder, rod-area asymmetry |
+| B3 | Three-accumulator equalization | P=15/10/1 barA, V=20/20/100 L, orifices 500/20 mm² → P_final=4.29 barA isothermal | pneumatic volumes + restrictions, transient |
+| B4 | Vertical spring-loaded hydraulic cylinder | m=3.2 kg, A=35 cm², F_spring=150 N, P_atm=95 kPa → P=146.97 kPa | `HydraulicCylinder`, gravity + spring load |
+| B5 | Sharp-edged hydraulic orifice | d=3 mm, C_d=0.61, ρ=860, ΔP=40 bar → Q=4.16e-4 m³/s (24.97 L/min) | `HydraulicOrifice` in L/min engineering units |
+| B6 | Tank draining through a bottom orifice | D=3.0 m, H₀=2.75 m, d_o=3 cm, C=0.55 → t=12,306 s | `HydraulicTank`, DYNAMIC, level-dependent flow |
+| B7 | Gear train with impedance reflection | N₁=25, N₂=50, T₁=10 N·m, K₂=4 N·m/rad, J₁=1 kg·m² → GR=2, K_e=1.0, T₂=20 N·m | `Gear`, `RotationalSpring`, inertia reflection |
+| B8 | Vehicle acceleration with rotating inertia | 2165 kg, 4×22.9 kg wheels r=0.33 m, T_e=325 N·m, i_g=4.28, η=0.85, C_d=0.38, A=1.86 m², f_r=0.02 → a=1.203 m/s² | powertrain chain, equivalent mass |
+| B9 | Belt friction lifting a load | W=50 lbf, f=0.30, θ=π → P=128.3 lbf | capstan/belt component; also a unit-system example |
+| B10 | Second-order step-response metrics | T(s)=121/(s²+11s+121) → ω_n=11, ζ=0.5, t_p=0.330 s, %OS=16.3%, t_s=0.727 s | control transfer-function path, `ss2tfij` |
+| B11 | PI tuning for zero overshoot | G_p=800/(s²+101s+100), K_p=0.48, z_c=0.10 → %OS=0, e_ss=0 | `PIThermostat`/generic PI, DYNAMIC |
+| B12 | First-order motor speed step | G=1000/(0.00992s+1) → τ=9.92 ms, 63.2% at τ | first-order lag, `ODEValue`, `TimeAt` |
+| B13 | Adiabatic mixing of two air streams | 1000 L/s @ 38 °C DB/24 °C WB + 500 L/s @ 16 °C DB/10 °C WB → t₃=30.67 °C, h₃=57.77 kJ/kg, W₃=0.01053 | moist-air mixing junction, `HAPropsSI` |
+| B14 | Cooling and dehumidification coil | 1.5 kg/s, 28 °C/50% → 13 °C/90% → Q_tot=30.30 kW, Q_sens=22.64 kW, Q_lat=7.66 kW, SHR=0.747, condensate 0.0051 kg/s | cooling coil, condensate port, SHR |
+| B15 | Preheat coil + steam humidifier | 235 lbm/min, 40 °F/36 °F WB → 90 °F/40% RH, steam h_g=1156.9 Btu/lbm → 125.8 lbm/hr steam, 112,518 Btu/hr | heater + humidifier chain, IP units |
+| B16 | RC step charging | 10 V, 1 kΩ, 1 µF → τ=1.0 ms, v_C(2 ms)=8.65 V, i=1.35 mA | `Resistor`, `Capacitor`, `VoltageSource`, DYNAMIC |
+| B17 | Series RLC resonance and damping | L=1 mH, C=20 µF, R=1 Ω → ω_n=7071.1 rad/s, ζ=0.0707 | `Inductor` + the above; underdamped ringing |
+| B18 | Resistor bridge equivalent resistance | 10/20/30/40/50 Ω → R_eq=16.13 Ω | pure-algebraic electrical network, no sources |
+| B19 | Cross-flow heat exchanger, ε-NTU | UA=200×5, hot 90 °C 3 kg/s c_p=2100, cold 20 °C 2 kg/s c_p=1009 → C_r=0.3203, NTU=0.4955, ε=0.388, q=54.81 kW, 47.16/81.30 °C | `HeatExchanger` effectiveness path |
+| B20 | Annular fin efficiency and heat loss | D_o=2.5 cm, r_o=2.25 cm, t=1 mm, 100 fins/m, k=160, h=200, 170→30 °C → mL=0.50, η_f=0.90, η′=0.924, Q=7503 W/m | fin/extended-surface conduction |
+| B21 | Shell-and-tube LMTD rating | q=150.75 kW, U=400, 100→60 °C / 20→50 °C, d_o=0.02667 m, L=2 m → ΔT_lm=44.82 °C, F=0.975, A=8.624 m², 52 tubes | LMTD + correction factor, sizing back-solve |
+| B22 | Ideal-gas mass uncertainty (RSS) | T=295.45±1.2 K, P=934±22 kPa, V=10±0.4 L, R=208.1 → m=0.1519 kg, u=0.007078 kg (±4.66%), volume contributes 73.7% | `DistributionOf`, first-order propagation, contribution ranking |
+| B23 | Multivariable deflection propagation | y=FL⁴/8EI; F=750±30, L=9.0±0.03, E=7.5e9±5e7, I=5e-4±5e-6 → y=0.1640 m, Δy=±0.01148 m (±7.0%) | Taylor propagation against Monte Carlo, same model |
+| B24 | Linear least squares with diagnostics | 7 points → a₁=0.8597, a₀=−0.0102, S_y/x=0.638, r=0.936 | `linfit`, `pearson`, `corrcoef` — pairs with 4.7b-3 |
+| B25 | Quadratic regression | 6 points → 2.4786 + 2.3593x + 1.8607x² | `polyfit`, covariance/standard errors from 4.2 |
+| B26 | Power-law via log linearization | 5 points → y = 0.5·x^1.75 | transform-then-fit, and why the residual weighting changes |
+| B27 | Stiffness/damping sensitivity grid | k,b ∈ [1..6], 36 runs → ∂x/∂b ≈ 0 at k=50, −0.045 at k=1 | PARAMETRIC sweep + `TableAvg`-family accessors, worker pool |
+| B28 | Normalized drive-cycle energy sensitivity | E₀=4.25 MJ, m=1200 kg, A_fC_d=0.60 m², c_r=0.010 → S_m=0.62, S_Cd=0.26, S_cr=0.12 | normalized indices vs. Sobol' indices on one model |
+| B29 | Feedback steady-state error sensitivity | e=ab/(ab+K), a=100, b=1, K=10 → e=0.09091, e(300)=0.03226, S=0.0909 | analytic sensitivity cross-checking the Morris screen |
+| B30 | Bridge/network parametric study | B18 swept over R₅ | the minimal "sweep a solved network" teaching model |
+
+Sequencing inside the wave, cheapest-first and highest-gap-first: **electrical (B16–B18, B30)
+→ hydraulic/pneumatic (B1–B6) → mechanical/powertrain (B7–B9) → control (B10–B12) → heat
+(B19–B21) → moist air (B13–B15) → uncertainty/fitting/sensitivity (B22–B29)**.
+
+Skipped deliberately: the bank also offers a quantum positional-uncertainty comparison. It is
+a fine uncertainty illustration and a poor fit for an engineering systems gallery.
+
+### Phase 4.7b-5 — Example wave C: the domains wave B does not reach (scope, then schedule)
+
+`twophase` (38), `fluid` (26) and `liquid` (15) are the three largest uncovered domains and are
+not addressed by wave B — 79 components, more than every other uncovered domain combined
+outside moist air and signal. They need their own problem set: refrigeration and Rankine cycle
+states, expansion devices, evaporator/condenser pairings, pipe networks with fittings, pump
+curves, and liquid loops with accumulators.
+
+Wave C is also where **P0 #5 gets its demonstration**: the `Pipe` reference says `rough` is
+relative roughness while both its displayed equation and `library-data/fluid.frees:67` pass
+`rough / D` to the friction factor, which means absolute roughness in metres. Fix the contract,
+then prove it with a known pipe pressure drop — otherwise users divide by diameter twice and
+the documentation cannot tell them they did.
+
+Do not start wave C until wave B has landed and been measured. Scope it from the same bank
+once the wave-B conversion rate (bank problem → runnable model) is known rather than estimated.
+
+### Phase 4.7b-6 — Browser interface parity for the analysis examples (2 weeks)
+
+Examples B22–B29 and examples 16–19 of `reports/MISSING_EXAMPLES.md` teach capabilities the
+README advertises and the browser cannot reach:
+
+- `crates/frees/src/analysis.rs:828` exposes a sensitivity endpoint. There is no sensitivity
+  import or dispatch in `web/src/wasm/engine.worker.ts` and no method in `web/src/api.ts`.
+- The Monte Carlo request at `web/src/api.ts:1067` sends samples and seed, but no `design` and
+  no `quantiles` — the Latin-hypercube and Sobol' designs from 4.6 are unreachable.
+- `ParameterFitParams` / `ParameterFitResult` at `web/src/api.ts:684` omit the weighting and
+  loss inputs and the covariance / standard-error / rank diagnostics added in the 4.2
+  remainder.
+
+Until the route exists, **label these by interface in the README and the reference pages**:
+engine-available, browser-pending. Teaching a dialog workflow that does not exist is the same
+class of defect as the onboarding contradictions in the baseline audit, and it is the one the
+audit says is currently being introduced rather than fixed.
+
+### Correctness rules for every example added in 4.7b-2 through 4.7b-5
+
+1. **Complete document.** It solves from a clean editor with no prior state. Fragments stay
+   fragments and are counted separately; they do not move the complete-document number.
+2. **Assertions, not prose.** Every stated expected value is a `CHECK` marker the example
+   runner executes. A number in prose with no assertion behind it is a future regression.
+3. **Tolerances are chosen, not defaulted.** Spectral and property-dependent results use a
+   tolerance with a stated reason — `Welch`'s mean removal changes integrated power, and an
+   exact-equality expectation on a tone is wrong on principle, not just in practice.
+4. **Adaptations are declared in the model.** If friction, preload, chamber filling or a valve
+   restriction is neglected, the comment says so and says what the result therefore is not.
+5. **Bindings prove use.** A page binds a model only when the model instantiates that symbol.
+6. **Frozen as a fixture.** Golden outputs are never edited to accommodate a code change; a
+   discrepancy is investigated down to the algorithm.
+
+### Exit criteria
+
+| Measure | Now | After 4.7b-3 | After 4.7b-4 |
+|---|---:|---:|---:|
+| Symbols with a reference page | 667 / 723 | **723 / 723** | 723 / 723 |
+| Complete-document symbol coverage | 140 (19.5%) | ~150 | **≥ 240 (33%)** |
+| Components with a complete-document example | 40 / 312 | 40 / 312 | **≥ 110 / 312 (35%)** |
+| Uncovered domains with zero examples | 6 | 6 | **0 outside twophase/fluid/liquid** |
+| Example assertions executed in CI | 0 | 55 | **≥ 150** |
+| `check-docs` + example runner in `ci.yml` | ✅ **done** | yes | yes |
+| Guide `run` fences executed in CI | ✅ **17/17** | 17/17 | 17/17 |
+
+Re-measure with the committed scripts, not by hand:
+
+```sh
+node reports/latest-change/measure.cjs
+cd web && npm run check-docs && npm run check-examples
+```
+
+`measure.cjs` still reports the 719-symbol denominator it was written against; re-run it
+against the regenerated manifest before quoting a coverage delta.
+
+### Ordering against the rest of section 2b
+
+4.7b-1 is **done**, which unblocks everything below it. 4.7b-2 and 4.7b-3
+run in parallel and finish the item section 2b already ranked first. 4.7b-6 should land before
+or with **4.4 (measurement table operations)** — both are the same frontend push that turns
+Phase-4 engine work into something reachable from the UI, and 4.4's grouped summaries and
+rolling statistics are what examples B24–B30 will want to display. 4.7b-4 and 4.7b-5 run
+alongside 3.4 and do not contend with it. None of this depends on 2.5, 3.3 or 3.5.
+
+---
+
 ## 3. Long-Term Research, Strategic & Optional Candidates
 
 The following former Phase 3 items are deferred, unscheduled, and excluded from development until explicitly reactivated:
