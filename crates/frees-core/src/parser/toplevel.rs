@@ -2113,8 +2113,10 @@ impl<'a> Parser<'a> {
             // meaning. Mirrored by `to_proc_statement`.
             TokenKind::For => {
                 let header = self.c.span();
-                let statement = self.for_block()?;
-                to_proc_statement(statement, header)
+                self.enter_block(header)?;
+                let result = self.proc_for_statement(header);
+                self.block_depth -= 1;
+                result
             }
             // `assignment : IDENT ASSIGN expr` — two tokens of lookahead
             // separate it from an equation.
@@ -2137,6 +2139,34 @@ impl<'a> Parser<'a> {
                 )))
             }
         }
+    }
+
+    fn proc_for_statement(&mut self, header: Span) -> Result<ProcStatement> {
+        self.c.expect(&TokenKind::For)?;
+        let var_name = self.c.expect_ident()?.to_ascii_lowercase();
+        self.c.expect(&TokenKind::Eq)?;
+        let start = self.expr()?;
+        let (step, end) = if self.c.eat(&TokenKind::To) {
+            (None, self.expr()?)
+        } else {
+            self.c.expect(&TokenKind::Colon)?;
+            let middle = self.expr()?;
+            if self.c.eat(&TokenKind::Colon) {
+                (Some(middle), self.expr()?)
+            } else {
+                (None, middle)
+            }
+        };
+        self.require_sep("after the FOR header")?;
+        let body = self.proc_body(header, "FOR", &[TokenKind::End])?;
+        self.c.expect(&TokenKind::End)?;
+        Ok(ProcStatement::For {
+            var_name,
+            start,
+            step,
+            end,
+            body,
+        })
     }
 
     /// `ifStatement : IF boolExpr THEN sep procBody (ELSE sep procBody)? END`
@@ -2608,47 +2638,6 @@ fn record_def(defs: &mut Definitions, def: ParsedDef) {
         ParsedDef::Procedure(d) => defs.procedures.push(d),
         ParsedDef::Module(d) => defs.modules.push(d),
         ParsedDef::Table(d) => defs.tables.push(d),
-    }
-}
-
-/// Convert a top-level [`Statement`] parsed inside a `FOR` body within a
-/// procedural body into the equivalent [`ProcStatement`]. Port of
-/// `AstBuilder.toProcStatement`: equations and nested `FOR` loops convert
-/// recursively; constructs with no procedural meaning are rejected with the
-/// Java messages rather than silently dropped.
-fn to_proc_statement(statement: Statement, span: Span) -> Result<ProcStatement> {
-    match statement {
-        Statement::Eq(eq) => Ok(ProcStatement::Eq(eq)),
-        Statement::For {
-            var_name,
-            start,
-            step,
-            end,
-            body,
-        } => {
-            let mut converted = Vec::with_capacity(body.len());
-            for inner in body {
-                converted.push(to_proc_statement(inner, span)?);
-            }
-            Ok(ProcStatement::For {
-                var_name,
-                start,
-                step,
-                end,
-                body: converted,
-            })
-        }
-        Statement::CallProc { name, .. } => Err(FreesError::parse_at(
-            format!(
-                "CALL is not supported inside a FOR loop within a PROCEDURE or \
-                 FUNCTION (offending call: '{name}')."
-            ),
-            span,
-        )),
-        Statement::Symbolic(_) => Err(FreesError::parse_at(
-            "SYMBOLIC declarations are not allowed inside a PROCEDURE or FUNCTION.",
-            span,
-        )),
     }
 }
 
