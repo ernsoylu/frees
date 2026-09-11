@@ -29,6 +29,27 @@ function fmt(v: number | null | undefined): string {
   return a !== 0 && (a < 1e-3 || a >= 1e5) ? v.toExponential(3) : v.toPrecision(5)
 }
 
+function buildSensitivityFigure(
+  title: string,
+  yAxisTitle: string,
+  data: PlotlyFigure['data'],
+): PlotlyFigure {
+  return {
+    data,
+    layout: {
+      barmode: 'group',
+      margin: { l: 50, r: 20, t: 30, b: 60 },
+      title: { text: title },
+      xaxis: { title: { text: 'Parameter' }, tickangle: -25 },
+      yaxis: { title: { text: yAxisTitle }, rangemode: 'tozero' },
+      paper_bgcolor: 'rgba(0,0,0,0)',
+      plot_bgcolor: 'rgba(0,0,0,0)',
+      font: { color: 'var(--mantine-color-text)' },
+      legend: { orientation: 'h', y: 1.15, x: 0.5, xanchor: 'center' },
+    },
+  } as unknown as PlotlyFigure
+}
+
 /**
  * Global Sensitivity Analysis Modal:
  * Supports Sobol variance decomposition (first-order S1 and total-order ST indices)
@@ -116,8 +137,10 @@ export default function SensitivityModal({
       const hasS1Err = s1Err.some((e) => typeof e === 'number' && e > 0)
       const hasSTErr = sTErr.some((e) => typeof e === 'number' && e > 0)
 
-      return {
-        data: [
+      return buildSensitivityFigure(
+        `Sobol Sensitivity: ${currentOutput.variable}`,
+        'Variance Share (Index)',
+        [
           {
             name: 'First-Order (S₁)',
             type: 'bar',
@@ -152,19 +175,8 @@ export default function SensitivityModal({
                 }
               : {}),
           },
-        ],
-        layout: {
-          barmode: 'group',
-          margin: { l: 50, r: 20, t: 30, b: 60 },
-          title: { text: `Sobol Sensitivity: ${currentOutput.variable}` },
-          xaxis: { title: { text: 'Parameter' }, tickangle: -25 },
-          yaxis: { title: { text: 'Variance Share (Index)' }, rangemode: 'tozero' },
-          paper_bgcolor: 'rgba(0,0,0,0)',
-          plot_bgcolor: 'rgba(0,0,0,0)',
-          font: { color: 'var(--mantine-color-text)' },
-          legend: { orientation: 'h', y: 1.15, x: 0.5, xanchor: 'center' },
-        },
-      } as unknown as PlotlyFigure
+        ] as unknown as PlotlyFigure['data'],
+      )
     }
 
     if (result.method === 'morris' && sortedMorrisEffects.length > 0) {
@@ -172,8 +184,10 @@ export default function SensitivityModal({
       const muStar = sortedMorrisEffects.map((e) => e.muStar ?? 0)
       const sigma = sortedMorrisEffects.map((e) => e.sigma ?? 0)
 
-      return {
-        data: [
+      return buildSensitivityFigure(
+        `Morris Screening: ${currentOutput.variable}`,
+        'Elementary Effect',
+        [
           {
             name: 'Absolute Mean (μ*)',
             type: 'bar',
@@ -188,19 +202,8 @@ export default function SensitivityModal({
             y: sigma,
             marker: { color: '#f76707' },
           },
-        ],
-        layout: {
-          barmode: 'group',
-          margin: { l: 50, r: 20, t: 30, b: 60 },
-          title: { text: `Morris Screening: ${currentOutput.variable}` },
-          xaxis: { title: { text: 'Parameter' }, tickangle: -25 },
-          yaxis: { title: { text: 'Elementary Effect' }, rangemode: 'tozero' },
-          paper_bgcolor: 'rgba(0,0,0,0)',
-          plot_bgcolor: 'rgba(0,0,0,0)',
-          font: { color: 'var(--mantine-color-text)' },
-          legend: { orientation: 'h', y: 1.15, x: 0.5, xanchor: 'center' },
-        },
-      } as unknown as PlotlyFigure
+        ] as unknown as PlotlyFigure['data'],
+      )
     }
 
     return null
