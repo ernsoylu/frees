@@ -53,6 +53,13 @@ fn canonical_function_versions_mixed_equations_and_calculations_in_order() {
 }
 
 #[test]
+fn canonical_equation_functions_work_in_forward_and_inverse_direction() {
+    let source = "function current = ohm(voltage, resistance)\n  voltage = current * resistance\nend\nvoltage = 20\ncurrent = ohm(voltage, 10)";
+    let solution = solve(source, &SolverSettings::default()).unwrap();
+    assert!((solution.values["current"] - 2.0).abs() < 1e-8);
+}
+
+#[test]
 fn canonical_functions_require_definite_assignment_after_branches() {
     let doc = parse_document(
         "function y = branch(x)\n  if x > 0 then\n    temp := 1\n  end\n  y := temp\nend",

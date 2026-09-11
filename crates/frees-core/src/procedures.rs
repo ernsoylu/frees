@@ -125,8 +125,10 @@ pub fn call_function(
     if def.output.is_some() {
         reject_ignored_equations(&def.body, &def.name)?;
         validate_structural_control_flow(&def.body, &def.name, false)?;
-        let mut assigned: HashSet<String> = def.params.iter().cloned().collect();
-        validate_definite_assignment(&def.body, &mut assigned)?;
+        if !has_relational_output(&def.body, def.output.as_deref().unwrap_or(&def.name)) {
+            let mut assigned: HashSet<String> = def.params.iter().cloned().collect();
+            validate_definite_assignment(&def.body, &mut assigned)?;
+        }
     }
     let mut locals = if def.output.is_some() {
         Scope::default()
@@ -136,15 +138,80 @@ pub fn call_function(
     for (param, value) in def.params.iter().zip(args) {
         locals.insert(param.clone(), *value);
     }
-    execute_body(&def.body, &mut locals, defs)?;
     let output = def.output.as_deref().unwrap_or(&def.name);
+    if has_relational_output(&def.body, output) {
+        for statement in &def.body {
+            if !matches!(statement, ProcStatement::Eq(_)) {
+                execute_one(statement, &mut locals, defs)?;
+            }
+        }
+    } else {
+        execute_body(&def.body, &mut locals, defs)?;
+    }
     match locals.get(output) {
         Some(value) => Ok(*value),
-        None => Err(FreesError::evaluation(format!(
-            "FUNCTION {} never assigned a return value ('{} := ...' missing)",
-            def.name, output
-        ))),
+        None => solve_relational_output(&def.body, output, &mut locals, defs)
+            .ok_or_else(|| FreesError::evaluation(format!(
+                "FUNCTION {} never assigned a return value ('{} := ...' missing)",
+                def.name, output
+            ))),
     }
+}
+
+fn has_relational_output(body: &[ProcStatement], output: &str) -> bool {
+    body.iter().any(|statement| {
+        matches!(statement, ProcStatement::Eq(equation)
+            if (equation.lhs.variables().contains(output)
+                || equation.rhs.variables().contains(output))
+                && !matches!(equation.lhs, Expr::Var(ref name) if name == output)
+                && !matches!(equation.rhs, Expr::Var(ref name) if name == output))
+    })
+}
+
+/// Solve the single local equation that defines a declarative function's
+/// output. This is intentionally a small Newton loop: the surrounding solver
+/// still owns caller variables, while this local relation supplies one scalar
+/// result for the expression call.
+fn solve_relational_output(
+    body: &[ProcStatement],
+    output: &str,
+    locals: &mut Scope,
+    defs: &Definitions,
+) -> Option<f64> {
+    let equation = body.iter().find_map(|statement| match statement {
+        ProcStatement::Eq(equation)
+            if equation.lhs.variables().contains(output)
+                || equation.rhs.variables().contains(output) =>
+        {
+            Some(equation)
+        }
+        _ => None,
+    })?;
+    let mut value = 0.0;
+    for _ in 0..32 {
+        locals.insert(output.to_string(), value);
+        let residual = eval_proc_expr(&equation.lhs, locals, defs).ok()?
+            - eval_proc_expr(&equation.rhs, locals, defs).ok()?;
+        if residual.abs() <= 1e-10 {
+            return Some(value);
+        }
+        let delta = 1e-7_f64.max(value.abs() * 1e-7);
+        locals.insert(output.to_string(), value + delta);
+        let shifted = eval_proc_expr(&equation.lhs, locals, defs).ok()?
+            - eval_proc_expr(&equation.rhs, locals, defs).ok()?;
+        let slope = (shifted - residual) / delta;
+        if !slope.is_finite() || slope.abs() < 1e-14 {
+            return None;
+        }
+        value -= residual / slope;
+        if !value.is_finite() {
+            return None;
+        }
+    }
+    locals.insert(output.to_string(), value);
+    let residual = eval_proc_expr(&equation.lhs, locals, defs).ok()?
+        - eval_proc_expr(&equation.rhs, locals, defs).ok()?;
+    (residual.abs() <= 1e-8).then_some(value)
 }
 
 fn validate_structural_control_flow(

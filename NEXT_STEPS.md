@@ -142,7 +142,8 @@ Focus: Implement the comprehensive language unification detailed in [`reports/SI
   - [x] Allow single-result procedures to be called as standard expressions (`y = proc(x)`) lowering through single-result expression sinks, eliminating the artificial requirement for bracket assignment.
   - [x] Unify signature resolution so that built-ins, tables, procedures, and user functions share identical dispatch, named-argument binding, and arity diagnostics across native and WASM builds.
 - [ ] **3.3 Stage U2: Unified Function Declarations & Lexical Scoping**
-  - Unify `function` declarations: lower declarative equation functions through the module expansion path and ordered algorithmic functions through the procedure execution path.
+  - [x] Unify `function` declarations: lower declarative equation functions through the module expansion path and ordered algorithmic functions through the procedure execution path.
+    - [x] Declarative scalar output functions solve their local relation in both forward and inverse caller equations; ordered bodies retain procedure execution.
   - [x] Introduce strict lexical scoping for canonical user functions, preserving legacy dynamic scope during migration.
   - [x] Detect and flag equations inside canonical function bodies that lack variable sides (which legacy procedures silently ignored) rather than silently discarding them.
 - [ ] **3.4 Stage U3: Mixed Operations & Bounded Control Flow**
