@@ -260,7 +260,11 @@ impl<'a> Parser<'a> {
     fn top_level(&mut self, doc: &mut Document) -> Result<()> {
         match self.c.peek() {
             TokenKind::Guess => {
-                let directive = self.guess_directive()?;
+                let directive = if matches!(self.c.peek_at(1), TokenKind::LParen) {
+                    self.guess_call()?
+                } else {
+                    self.guess_directive()?
+                };
                 doc.guesses.push(directive);
             }
             TokenKind::Component => {
@@ -657,6 +661,55 @@ impl<'a> Parser<'a> {
             }
         }
 
+        Ok(GuessDirective {
+            name,
+            guess,
+            lower,
+            upper,
+        })
+    }
+
+    /// `guess(name, value, lower=..., upper=...)` — canonical solver seed syntax.
+    fn guess_call(&mut self) -> Result<GuessDirective> {
+        let start_pos = self.c.pos();
+        self.c.expect(&TokenKind::Guess)?;
+        self.c.expect(&TokenKind::LParen)?;
+        let name = self.guess_name()?;
+        self.c.expect(&TokenKind::Comma)?;
+        let guess_value = self.signed_number()?;
+        let guess = Some(guess_value);
+        let mut lower = None;
+        let mut upper = None;
+        while self.c.eat(&TokenKind::Comma) {
+            let key = self.c.expect_ident()?.to_ascii_lowercase();
+            self.c.expect(&TokenKind::Eq)?;
+            let value = self.signed_number()?;
+            match key.as_str() {
+                "lower" => lower = Some(value),
+                "upper" => upper = Some(value),
+                _ => {
+                    return Err(FreesError::parse_at(
+                        format!("guess({name}, ...): unknown option '{key}'"),
+                        self.span_since(start_pos),
+                    ));
+                }
+            }
+        }
+        self.c.expect(&TokenKind::RParen)?;
+        if let (Some(lo), Some(hi)) = (lower, upper) {
+            if lo >= hi {
+                return Err(FreesError::parse_at(
+                    format!("guess({name}, ...): lower must be below upper"),
+                    self.span_since(start_pos),
+                ));
+            }
+            if guess_value < lo || guess_value > hi {
+                return Err(FreesError::parse_at(
+                    format!("guess({name}, ...): value lies outside [{lo}, {hi}]"),
+                    self.span_since(start_pos),
+                ));
+            }
+        }
         Ok(GuessDirective {
             name,
             guess,

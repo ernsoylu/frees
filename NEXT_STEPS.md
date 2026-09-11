@@ -160,6 +160,7 @@ Focus: Implement the comprehensive language unification detailed in [`reports/SI
     - [x] Bind named arguments for intrinsic, user-function, and procedure calls with duplicate, unknown, missing, and ordering diagnostics.
   - Add typed value checking for non-numeric types (strings, symbols, options) and clean syntax for initial conditions.
     - [x] Parse canonical `initial(state, value)` calls in dynamic functions and route them through the existing initial-condition validation.
+    - [x] Parse canonical `guess(name, value, lower=..., upper=...)` solver seed calls with bound validation.
 - [ ] **3.6 Stage U5: Physical Component & Connection Unification**
   - Migrate physical component definitions from legacy `COMPONENT ... END` blocks to unified component declarations.
   - Unify port declarations, parameter defaults, constitutive equations, and acausal connection statements (`connect(node_a, node_b)`).

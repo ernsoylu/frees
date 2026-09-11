@@ -12,7 +12,7 @@ fn reserved_domain_names_accept_expression_call_syntax() {
             other => panic!("expected equation, got {other:?}"),
         })
         .collect::<Vec<_>>();
-    assert!(matches!(&*calls[0], Expr::Call { function, .. } if function == "plot"));
-    assert!(matches!(&*calls[1], Expr::Call { function, .. } if function == "table"));
-    assert!(matches!(&*calls[2], Expr::Call { function, .. } if function == "linearize"));
+    assert!(matches!(calls[0], Expr::Call { function, .. } if function == "plot"));
+    assert!(matches!(calls[1], Expr::Call { function, .. } if function == "table"));
+    assert!(matches!(calls[2], Expr::Call { function, .. } if function == "linearize"));
 }

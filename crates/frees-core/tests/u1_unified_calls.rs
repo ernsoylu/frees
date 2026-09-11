@@ -101,3 +101,12 @@ fn intrinsic_calls_accept_named_arguments() {
     let solution = solve("answer = sqrt(x=9)", &SolverSettings::default()).unwrap();
     assert_eq!(solution.values["answer"], 3.0);
 }
+
+#[test]
+fn canonical_guess_call_preserves_seed_and_bounds() {
+    let doc = parse_document("guess(x, 2, lower=0, upper=4)\ny = x").unwrap();
+    assert_eq!(doc.guesses[0].name, "x");
+    assert_eq!(doc.guesses[0].guess, Some(2.0));
+    assert_eq!(doc.guesses[0].lower, Some(0.0));
+    assert_eq!(doc.guesses[0].upper, Some(4.0));
+}
