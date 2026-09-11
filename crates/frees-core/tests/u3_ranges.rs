@@ -31,3 +31,10 @@ fn matlab_not_equal_is_accepted_alongside_legacy_not_equal() {
     let tokens = tokenize("x = 1 ~= 2").unwrap();
     assert!(tokens.iter().any(|token| token.kind == TokenKind::Ne));
 }
+
+#[test]
+fn version_two_documents_reject_legacy_declarations() {
+    let error =
+        parse_document("// frees-language: 2\nMODULE old(x : y)\n  y = x\nEND").unwrap_err();
+    assert!(error.to_string().contains("FREES-MIG-001"));
+}

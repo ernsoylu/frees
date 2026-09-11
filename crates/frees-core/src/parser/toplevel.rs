@@ -171,8 +171,31 @@ type ExprFn = fn(&mut Cursor<'_>) -> Result<Expr>;
 ///
 /// Lexes, then parses. Unsupported block constructs produce an explicit error.
 pub fn parse_document(source: &str) -> Result<Document> {
+    if has_language_v2_header(source) {
+        for keyword in ["CALL", "MODULE", "PROCEDURE", "COMPONENT"] {
+            if source.lines().any(|line| {
+                let line = line.split_once("//").map_or(line, |(code, _)| code);
+                line.split(|c: char| !c.is_ascii_alphabetic())
+                    .any(|word| word.eq_ignore_ascii_case(keyword))
+            }) {
+                return Err(FreesError::parse_at(
+                    format!(
+                        "FREES-MIG-001: `{keyword}` is legacy syntax in a version-2 document; use the migration converter"
+                    ),
+                    Span::at(0),
+                ));
+            }
+        }
+    }
     let tokens = crate::lexer::tokenize(source)?;
     parse_token_stream(source, &tokens, crate::parser::expr::parse_expr)
+}
+
+fn has_language_v2_header(source: &str) -> bool {
+    source.lines().take(8).any(|line| {
+        let line = line.trim();
+        line.starts_with("//") && line.contains("frees-language:") && line.contains('2')
+    })
 }
 
 /// The whole of [`parse_document`] minus the lexing step.
