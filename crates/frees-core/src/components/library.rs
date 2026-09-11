@@ -463,7 +463,8 @@ mod tests {
             .defs
     }
 
-    /// Counts `COMPONENT` block headers with the engine's **own lexer** — no
+    /// Counts legacy `COMPONENT` and canonical component `FUNCTION` headers
+    /// with the engine's **own lexer** — no
     /// second front end, and the three comment forms (`//`, `{…}`, `"…"`) are
     /// skipped for free, so the word "component" in prose never counts. This is
     /// what makes the count assertion independent of the parser: if the grammar
@@ -473,7 +474,7 @@ mod tests {
         tokenize(text)
             .expect("a built-in component file must lex")
             .iter()
-            .filter(|token| token.kind == TokenKind::Component)
+            .filter(|token| matches!(token.kind, TokenKind::Component | TokenKind::Function))
             .count()
     }
 

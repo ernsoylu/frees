@@ -1412,11 +1412,11 @@ connect(CH.cool_out, PLATE.in)
 connect(PLATE.out, CSNK.in)
 connect(PLATE.wall, BP.heat, TB.port)
 
-COMPONENT PHSupply(out)
-  PARAM P, h, domain$ = twophase
+function [out] = PHSupply(P, h, domain$ = twophase)
+  port(out)
   out.P = P
   out.h = h
-END
+end
 hliq = Enthalpy(R134a, P=1200000, x=0)
 PHSupply             RSRC(P=1200000, h=hliq)
 EXVCmd               EXV(fluid$=R134a, CdA_max=2e-7)

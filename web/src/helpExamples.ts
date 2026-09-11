@@ -1125,7 +1125,7 @@ tf([3], [1, 2, 5, 0]) = K1/s + (K2*s + K3)/(s^2 + 2*s + 5)`,
   {
     value: "tf-to-ss",
     title: "Control Systems: Transfer Function to State Space",
-    description: "ss/tf models are plain array and matrix variables — a transfer function is its num/den coefficient arrays (descending powers). CALL tf2ss returns a controllable-canonical realization (A, B, C, D); any phase-variable form is a similarity transform of it.",
+    description: "ss/tf models are plain array and matrix variables — a transfer function is its num/den coefficient arrays (descending powers). tf2ss returns a controllable-canonical realization (A, B, C, D); any phase-variable form is a similarity transform of it.",
     note: "(s²+7s+2)/(s³+9s²+26s+24) realizes as A = [[−9,−26,−24],[1,0,0],[0,1,0]], B = [1,0,0], C = [1,7,2], D = 0. Converting it straight back with ss2tf recovers the original coefficients exactly.",
     code: `{ Transfer function -> state space (controllable canonical form) }
 num = [0, 1, 7, 2]
@@ -1135,7 +1135,7 @@ den = [1, 9, 26, 24]
   {
     value: "ss-to-tf",
     title: "Control Systems: State Space to Transfer Function",
-    description: "The inverse conversion: build the A, B, C, D matrices entry by entry, then CALL ss2tf for the equivalent transfer-function coefficient arrays. The solver registers the output array shapes so num and den are usable downstream as bare names.",
+    description: "The inverse conversion: build the A, B, C, D matrices entry by entry, then call ss2tf for the equivalent transfer-function coefficient arrays. The solver registers the output array shapes so num and den are usable downstream as bare names.",
     note: "The phase-variable system below converts to T(s) = 10(s²+3s+2)/(s³+3s²+2s+1), i.e. num = [0, 10, 30, 20] and den = [1, 3, 2, 1].",
     code: `{ State space -> transfer function }
 A[1,1]=0; A[1,2]=1; A[1,3]=0

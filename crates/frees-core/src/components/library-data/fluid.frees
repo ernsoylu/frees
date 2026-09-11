@@ -1,24 +1,28 @@
-COMPONENT Pump(in, out)
-  PARAM eta, fluid$
+// frees-language: 2
+function [in, out] = Pump(eta, fluid$)
+port(in)
+port(out)
   v        = Volume(fluid$, P=in.P, h=in.h)
   out.mdot = in.mdot
   out.h    = in.h + v * (out.P - in.P) / eta
   W        = in.mdot * (out.h - in.h)
-END
+end
 
-COMPONENT Turbine(in, out)
-  PARAM eta, fluid$
+function [in, out] = Turbine(eta, fluid$)
+port(in)
+port(out)
   s_in     = Entropy(fluid$, P=in.P, h=in.h)
   h_s      = Enthalpy(fluid$, P=out.P, s=s_in)
   out.mdot = in.mdot
   out.h    = in.h - eta * (in.h - h_s)
   W        = in.mdot * (in.h - out.h)
-END
+end
 
 // Compressor fidelity ladder: fixed isentropic efficiency → RPM/volumetric
 // sizing → 2-D efficiency map η(PR, rpm) on a curve-family TABLE.
-COMPONENT Compressor(in, out)
-  PARAM eta, fluid$, eta_v, disp, rpm, map_eta$, model$ = isentropic
+function [in, out] = Compressor(eta, fluid$, eta_v, disp, rpm, map_eta$, model$ = isentropic)
+port(in)
+port(out)
   s_in     = Entropy(fluid$, P=in.P, h=in.h)
   h_s      = Enthalpy(fluid$, P=out.P, s=s_in)
   out.mdot = in.mdot
@@ -36,27 +40,34 @@ COMPONENT Compressor(in, out)
     eta_m = map_eta$(PRr, rpm)
     out.h = in.h + (h_s - in.h) / eta_m
   END
-END
+end
 
-COMPONENT Boiler(in, out)
+function [in, out] = Boiler()
+port(in)
+port(out)
   out.mdot = in.mdot
   out.P    = in.P
   Q        = in.mdot * (out.h - in.h)
-END
+end
 
-COMPONENT Condenser(in, out)
+function [in, out] = Condenser()
+port(in)
+port(out)
   out.mdot = in.mdot
   out.P    = in.P
   Q        = in.mdot * (in.h - out.h)
-END
+end
 
-COMPONENT Throttle(in, out)
+function [in, out] = Throttle()
+port(in)
+port(out)
   out.mdot = in.mdot
   out.h    = in.h
-END
+end
 
-COMPONENT Pipe(in, out)
-  PARAM fluid$, L, D, rough
+function [in, out] = Pipe(fluid$, L, D, rough)
+port(in)
+port(out)
   out.mdot = in.mdot
   out.h    = in.h
   rho      = Density(fluid$, P=in.P, h=in.h)
@@ -66,60 +77,66 @@ COMPONENT Pipe(in, out)
   Re_d     = reynolds(rho, V, D, mu)
   f        = friction_factor(Re_d, rough / D)
   out.P    = in.P - f * (L / D) * rho * V^2 / 2
-END
+end
 
-COMPONENT Fan(in, out)
-  PARAM fluid$, dP0, Q0, eta
+function [in, out] = Fan(fluid$, dP0, Q0, eta)
+port(in)
+port(out)
   rho      = Density(fluid$, P=in.P, h=in.h)
   Q        = in.mdot / rho
   dP       = dP0 * (1 - (Q / Q0)^2)
   out.mdot = in.mdot
   out.P    = in.P + dP
   out.h    = in.h + dP / (rho * eta)
-END
+end
 
-COMPONENT Duct(in, out)
-  PARAM rho, mu, L, D, rough
+function [in, out] = Duct(rho, mu, L, D, rough)
+port(in)
+port(out)
   out.mdot = in.mdot
   A        = pi# / 4 * D^2
   V        = in.mdot / (rho * A)
   Re_d     = reynolds(rho, V, D, mu)
   f        = friction_factor(Re_d, rough / D)
   out.P    = in.P - f * (L / D) * rho * V^2 / 2
-END
+end
 
-COMPONENT FanCurve(in, out)
-  PARAM rho, dP0, Q0
+function [in, out] = FanCurve(rho, dP0, Q0)
+port(in)
+port(out)
   Q        = in.mdot / rho
   dP       = dP0 * (1 - (Q / Q0)^2)
   out.mdot = in.mdot
   out.P    = in.P + dP
-END
+end
 
 // Fan driven by a tabulated pressure-rise curve. `map$` names a TABLE/FUNCTION
 // declared in the document: dP = map$(Q), Q the volumetric flow [m^3/s].
-COMPONENT FanMap(in, out)
-  PARAM rho, map$
+function [in, out] = FanMap(rho, map$)
+port(in)
+port(out)
   Q        = in.mdot / rho
   dP       = map$(Q)
   out.mdot = in.mdot
   out.P    = in.P + dP
-END
+end
 
 // Pump driven by a tabulated head curve. `map$` names a TABLE/FUNCTION giving
 // head [m] vs volumetric flow [m^3/s]; the pressure rise is rho*g*head.
-COMPONENT PumpMap(in, out)
-  PARAM rho, map$
+function [in, out] = PumpMap(rho, map$)
+port(in)
+port(out)
   Q        = in.mdot / rho
   head     = map$(Q)
   out.mdot = in.mdot
   out.P    = in.P + rho * 9.80665 * head
-END
+end
 
 // Compressor whose isentropic efficiency comes from a tabulated map. `map_eta$`
 // names a TABLE/FUNCTION giving eta vs pressure ratio (out.P/in.P).
-COMPONENT CompressorMap(in, out)
-  PARAM fluid$, map_eta$, map_mdot$, domain$ = fluid, model$ = eta
+function [in, out] = CompressorMap(fluid$, map_eta$, map_mdot$, domain$ = fluid, model$ = eta)
+port(in)
+port(out)
   s_in     = Entropy(fluid$, P=in.P, h=in.h)
   h_s      = Enthalpy(fluid$, P=out.P, s=s_in)
   PR       = out.P / in.P
@@ -132,24 +149,33 @@ COMPONENT CompressorMap(in, out)
   VARIANT flow REQUIRE map_mdot$
     in.mdot = map_mdot$(PR)
   END
-END
+end
 
-COMPONENT Splitter(in, out1, out2)
+function [in, out1, out2] = Splitter()
+port(in)
+port(out1)
+port(out2)
   out1.P   = in.P
   out2.P   = in.P
   out1.h   = in.h
   out2.h   = in.h
   in.mdot  = out1.mdot + out2.mdot
-END
+end
 
-COMPONENT Mixer(in1, in2, out)
+function [in1, in2, out] = Mixer()
+port(in1)
+port(in2)
+port(out)
   out.P    = in1.P
   out.mdot = in1.mdot + in2.mdot
   out.mdot * out.h = in1.mdot * in1.h + in2.mdot * in2.h
-END
+end
 
-COMPONENT HeatExchanger(hot_in, hot_out, cold_in, cold_out)
-  PARAM UA, hot$, cold$, arr$
+function [hot_in, hot_out, cold_in, cold_out] = HeatExchanger(UA, hot$, cold$, arr$)
+port(hot_in)
+port(hot_out)
+port(cold_in)
+port(cold_out)
   hot_out.mdot  = hot_in.mdot
   hot_out.P     = hot_in.P
   cold_out.mdot = cold_in.mdot
@@ -164,23 +190,25 @@ COMPONENT HeatExchanger(hot_in, hot_out, cold_in, cold_out)
   Q    = eps * Cmin * (Th - Tc)
   hot_out.h  = hot_in.h  - Q / hot_in.mdot
   cold_out.h = cold_in.h + Q / cold_in.mdot
-END
+end
 
-COMPONENT Source(out)
-  PARAM fluid$, mdot, P, T
+function [out] = Source(fluid$, mdot, P, T)
+port(out)
   out.mdot = mdot
   out.P    = P
   out.h    = Enthalpy(fluid$, P=P, T=T)
-END
+end
 
-COMPONENT Sink(in)
+function [in] = Sink()
+port(in)
   mdot = in.mdot
   P    = in.P
   h    = in.h
-END
+end
 
-COMPONENT Nozzle(in, out)
-  PARAM k, R, A_throat, A_exit, P_amb, T0
+function [in, out] = Nozzle(k, R, A_throat, A_exit, P_amb, T0)
+port(in)
+port(out)
   out.mdot = in.mdot
   M_exit   = mach_A_Astar(A_exit / A_throat, k, 'supersonic')
   out.P    = in.P / P0_P(M_exit, k)
@@ -188,21 +216,23 @@ COMPONENT Nozzle(in, out)
   V_exit   = M_exit * sqrt(k * R * T_exit)
   out.h    = in.h - V_exit^2 / 2
   thrust   = in.mdot * V_exit + (out.P - P_amb) * A_exit
-END
+end
 
-COMPONENT Accumulator(in, out)
-  PARAM C, P0
+function [in, out] = Accumulator(C, P0)
+port(in)
+port(out)
   out.P       = in.P
   out.h       = in.h
   der(in.P)   = (in.mdot - out.mdot) / C
   init(in.P)  = P0
-END
+end
 
 // Valve with an installed-characteristic ladder: fixed Cv (the original law) →
 // linear opening u·Cv → equal-percentage Cv·R^(u−1) (rangeability R), the two
 // standard trims.
-COMPONENT Valve(in, out)
-  PARAM Cv, rho, u, R, model$ = fixed
+function [in, out] = Valve(Cv, rho, u, R, model$ = fixed)
+port(in)
+port(out)
   out.mdot = in.mdot
   out.h    = in.h
   VARIANT fixed REQUIRE Cv
@@ -215,10 +245,13 @@ COMPONENT Valve(in, out)
     Cveff = Cv * R^(u - 1)
     in.mdot * abs(in.mdot) = Cveff^2 * rho * (in.P - out.P)
   END
-END
+end
 
-COMPONENT TwoZoneHX(hot_in, hot_out, cold_in, cold_out)
-  PARAM UA, hot$, cold$, arr$
+function [hot_in, hot_out, cold_in, cold_out] = TwoZoneHX(UA, hot$, cold$, arr$)
+port(hot_in)
+port(hot_out)
+port(cold_in)
+port(cold_out)
   HeatExchanger C1(UA=UA/2, hot$=hot$, cold$=cold$, arr$=arr$)
   HeatExchanger C2(UA=UA/2, hot$=hot$, cold$=cold$, arr$=arr$)
   connect(hot_in, C1.hot_in)
@@ -227,10 +260,13 @@ COMPONENT TwoZoneHX(hot_in, hot_out, cold_in, cold_out)
   connect(cold_in, C2.cold_in)
   connect(C2.cold_out, C1.cold_in)
   connect(C1.cold_out, cold_out)
-END
+end
 
-COMPONENT Turbocharger(t_in, t_out, c_in, c_out)
-  PARAM cp, eta_t, eta_c, gam
+function [t_in, t_out, c_in, c_out] = Turbocharger(cp, eta_t, eta_c, gam)
+port(t_in)
+port(t_out)
+port(c_in)
+port(c_out)
   PRt        = t_in.P / t_out.P
   t_out.T    = t_in.T * (1 - eta_t * (1 - PRt^((1 - gam) / gam)))
   t_out.mdot = t_in.mdot
@@ -240,28 +276,33 @@ COMPONENT Turbocharger(t_in, t_out, c_in, c_out)
   c_out.mdot = c_in.mdot
   Wc         = c_in.mdot * cp * (c_out.T - c_in.T)
   Wt         = Wc
-END
+end
 
-COMPONENT ExpansionValve(in, out)
-  PARAM CdA, rho_in
+function [in, out] = ExpansionValve(CdA, rho_in)
+port(in)
+port(out)
   out.mdot = in.mdot
   out.h    = in.h
   in.mdot * abs(in.mdot) = CdA^2 * 2 * rho_in * (in.P - out.P)
-END
+end
 
-COMPONENT FlowSensor(in, out)
+function [in, out] = FlowSensor()
+port(in)
+port(out)
   out.mdot  = in.mdot
   out.P     = in.P
   out.h     = in.h
   mdot_meas = in.mdot
-END
+end
 
 // ── Gas / aero breadth (Wave 6) ────────────────────────────────────────────
 
 // Heated duct: single-stream ε-NTU heat pickup from a wall node
 // (ε = 1 − e^(−UA/ṁcp)), the exact single-stream limit.
-COMPONENT HeatedDuct(in, out, wall)
-  PARAM fluid$, UA
+function [in, out, wall] = HeatedDuct(fluid$, UA)
+port(in)
+port(out)
+port(wall)
   out.mdot  = in.mdot
   out.P     = in.P
   T_in      = Temperature(fluid$, P=in.P, h=in.h)
@@ -270,12 +311,15 @@ COMPONENT HeatedDuct(in, out, wall)
   Q         = epsd * in.mdot * cp_d * (wall.T - T_in)
   out.h     = in.h + Q / in.mdot
   wall.Qdot = Q
-END
+end
 
 // Effectiveness-rated regenerator/recuperator: Q = ε·Cmin·(Th − Tc) with ε
 // given directly (rate it from the ε-NTU functions for a geometry design).
-COMPONENT Regenerator(hot_in, hot_out, cold_in, cold_out)
-  PARAM hot$, cold$, eps
+function [hot_in, hot_out, cold_in, cold_out] = Regenerator(hot$, cold$, eps)
+port(hot_in)
+port(hot_out)
+port(cold_in)
+port(cold_out)
   hot_out.mdot  = hot_in.mdot
   hot_out.P     = hot_in.P
   cold_out.mdot = cold_in.mdot
@@ -287,36 +331,38 @@ COMPONENT Regenerator(hot_in, hot_out, cold_in, cold_out)
   Q    = eps * min(C_h, C_c) * (Th - Tc)
   hot_out.h  = hot_in.h  - Q / hot_in.mdot
   cold_out.h = cold_in.h + Q / cold_in.mdot
-END
+end
 
 // Combustor: fuel mass addition with combustion efficiency on the lower
 // heating value and a rated pressure loss.
-COMPONENT Combustor(in, out)
-  PARAM mdot_f, LHV, eta_b, dP
+function [in, out] = Combustor(mdot_f, LHV, eta_b, dP)
+port(in)
+port(out)
   out.mdot = in.mdot + mdot_f
   out.P    = in.P - dP
   out.mdot * out.h = in.mdot * in.h + eta_b * mdot_f * LHV
-END
+end
 
 // ISA atmosphere boundary: the 1976 standard atmosphere state at altitude,
 // as a flow source (use with ram/propulsion models).
-COMPONENT AtmosphereSource(out)
-  PARAM alt, mdot
+function [out] = AtmosphereSource(alt, mdot)
+port(out)
   out.mdot = mdot
   out.P    = isa_P(alt)
   out.h    = Enthalpy(Air, P=isa_P(alt), T=isa_T(alt))
-END
+end
 
 // Propeller (actuator-line map form): thrust Ct(J)·ρn²D⁴ and shaft power
 // Cp(J)·ρn³D⁵ from advance-ratio maps J = v/(nD) — bridges the shaft to the
 // vehicle's translational port.
-COMPONENT Propeller(shaft, veh)
-  PARAM Dp, rhoA, ct$, cpw$, epsn
+function [shaft, veh] = Propeller(Dp, rhoA, ct$, cpw$, epsn)
+port(shaft)
+port(veh)
   n         = shaft.w / (2 * pi#)
   J         = veh.vel / (n * Dp + epsn)
   veh.f     = -(ct$(J) * rhoA * n^2 * Dp^4)
   shaft.tau = cpw$(J) * rhoA * n^2 * Dp^5 / (2 * pi#)
-END
+end
 
 
 // ── Multi-species gas rider (E3) + Wave 10 ──────────────────────────────────
@@ -325,8 +371,9 @@ END
 // stream into the E3 species riders — CO2/H2O produced and O2 consumed by
 // stoichiometry per kg of fuel; N2 passes as the balance. Energy as in
 // Combustor (eta_b * LHV heat release).
-COMPONENT CombustorSpecies(in, out)
-  PARAM mdot_f, LHV, eta_b, dP, xC, yH, domain$ = gas
+function [in, out] = CombustorSpecies(mdot_f, LHV, eta_b, dP, xC, yH, domain$ = gas)
+port(in)
+port(out)
   mfuel    = 12 * xC + yH
   mCO2     = mdot_f * 44 * xC / mfuel
   mH2O     = mdot_f * 9 * yH / mfuel
@@ -338,4 +385,4 @@ COMPONENT CombustorSpecies(in, out)
   out.mdot * out.yh2o = in.mdot * in.yh2o + mH2O
   out.mdot * out.yo2  = in.mdot * in.yo2  - mO2
   out.mdot * out.yn2  = in.mdot * in.yn2
-END
+end
