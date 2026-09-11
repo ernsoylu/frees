@@ -286,7 +286,10 @@ impl<'a> Parser<'a> {
             }
             TokenKind::Function => {
                 let def = self.function_def()?;
-                record_def(&mut doc.defs, def);
+                match def {
+                    ParsedDef::Component(component) => doc.components.defs.push(component),
+                    other => record_def(&mut doc.defs, other),
+                }
             }
             TokenKind::Procedure => {
                 let def = self.procedure_def()?;
@@ -772,6 +775,51 @@ impl<'a> Parser<'a> {
         self.require_sep("after the FUNCTION header")?;
         let body = self.proc_body(header, "FUNCTION", &[TokenKind::End])?;
         self.c.expect(&TokenKind::End)?;
+
+        if let Some(outputs) = outputs.as_ref() {
+            if body
+                .iter()
+                .any(|statement| matches!(statement, ProcStatement::Port { .. }))
+            {
+                let mut ports = Vec::new();
+                let mut connects = Vec::new();
+                let mut equations = Vec::new();
+                for statement in body {
+                    match statement {
+                        ProcStatement::Port { name } => ports.push(name),
+                        ProcStatement::Connect { ports } => connects.push(ConnectDecl {
+                            ports,
+                            source_text: "connect(...)".to_string(),
+                        }),
+                        ProcStatement::Eq(equation) => equations.push(equation),
+                        other => {
+                            return Err(FreesError::parse_at(
+                            format!(
+                                "canonical component {name} only accepts port, connect, and equation statements; found {other:?}"
+                            ),
+                            header,
+                        ));
+                        }
+                    }
+                }
+                if ports.is_empty() {
+                    ports.extend(outputs.iter().cloned());
+                }
+                let params = params
+                    .into_iter()
+                    .map(|name| Param::new(name, None))
+                    .collect();
+                return Ok(ParsedDef::Component(ComponentDef::new(
+                    name,
+                    ports,
+                    params,
+                    equations,
+                    Vec::new(),
+                    Vec::new(),
+                    connects,
+                )));
+            }
+        }
 
         Ok(match outputs {
             // `FUNCTION [a, b] = f(x)` → ProcedureDef (AstBuilder parity).
@@ -2210,6 +2258,13 @@ impl<'a> Parser<'a> {
     ///                | whileStatement | assignment | equation`
     fn proc_statement(&mut self) -> Result<ProcStatement> {
         match self.c.peek() {
+            TokenKind::Connect => self.canonical_connect_statement(),
+            TokenKind::Ident(name)
+                if name.eq_ignore_ascii_case("port")
+                    && matches!(self.c.peek_at(1), TokenKind::LParen) =>
+            {
+                self.canonical_port_statement()
+            }
             TokenKind::If => self.if_statement(),
             TokenKind::Repeat => self.repeat_statement(),
             TokenKind::While => self.while_statement(),
@@ -2259,6 +2314,30 @@ impl<'a> Parser<'a> {
                 )))
             }
         }
+    }
+
+    fn canonical_port_statement(&mut self) -> Result<ProcStatement> {
+        self.c.expect_ident()?;
+        self.c.expect(&TokenKind::LParen)?;
+        let name = self.c.expect_ident()?.to_ascii_lowercase();
+        while self.c.eat(&TokenKind::Comma) {
+            self.c.expect_ident()?;
+            self.c.expect(&TokenKind::Eq)?;
+            let _ = self.expr()?;
+        }
+        self.c.expect(&TokenKind::RParen)?;
+        Ok(ProcStatement::Port { name })
+    }
+
+    fn canonical_connect_statement(&mut self) -> Result<ProcStatement> {
+        self.c.expect(&TokenKind::Connect)?;
+        self.c.expect(&TokenKind::LParen)?;
+        let mut ports = vec![self.connect_port()?];
+        while self.c.eat(&TokenKind::Comma) {
+            ports.push(self.connect_port()?);
+        }
+        self.c.expect(&TokenKind::RParen)?;
+        Ok(ProcStatement::Connect { ports })
     }
 
     fn proc_for_statement(&mut self, header: Span) -> Result<ProcStatement> {
@@ -2734,6 +2813,7 @@ fn has_state_number(name: &str) -> bool {
 enum ParsedDef {
     Function(FunctionDef),
     Procedure(ProcedureDef),
+    Component(ComponentDef),
     Module(ModuleDef),
     Table(FunctionTableDef),
 }
@@ -2746,6 +2826,7 @@ fn record_def(defs: &mut Definitions, def: ParsedDef) {
     let name = match &def {
         ParsedDef::Function(d) => d.name.clone(),
         ParsedDef::Procedure(d) => d.name.clone(),
+        ParsedDef::Component(d) => d.name.clone(),
         ParsedDef::Module(d) => d.name.clone(),
         ParsedDef::Table(d) => d.name.clone(),
     };
@@ -2756,6 +2837,7 @@ fn record_def(defs: &mut Definitions, def: ParsedDef) {
     match def {
         ParsedDef::Function(d) => defs.functions.push(d),
         ParsedDef::Procedure(d) => defs.procedures.push(d),
+        ParsedDef::Component(_) => unreachable!("components are stored on Document"),
         ParsedDef::Module(d) => defs.modules.push(d),
         ParsedDef::Table(d) => defs.tables.push(d),
     }

@@ -48,6 +48,10 @@ pub enum ProcStatement {
         condition: Expr,
         body: Vec<ProcStatement>,
     },
+    /// Canonical component port declaration inside a unified function.
+    Port { name: String },
+    /// Canonical component connection inside a unified function.
+    Connect { ports: Vec<String> },
 }
 
 /// `FUNCTION name(params) … END` — returns a single value assigned to the

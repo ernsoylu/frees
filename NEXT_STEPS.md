@@ -163,8 +163,10 @@ Focus: Implement the comprehensive language unification detailed in [`reports/SI
     - [x] Parse canonical `guess(name, value, lower=..., upper=...)` solver seed calls with bound validation.
 - [ ] **3.6 Stage U5: Physical Component & Connection Unification**
   - Migrate physical component definitions from legacy `COMPONENT ... END` blocks to unified component declarations.
+    - [x] Lower `function [ports] = name(parameters)` declarations containing `port(...)` into the existing component definition pipeline.
   - Unify port declarations, parameter defaults, constitutive equations, and acausal connection statements (`connect(node_a, node_b)`).
     - [x] Canonical `require(...)` calls parse as ordinary expressions for selected component branches.
+    - [x] Lower canonical `port(...)` and `connect(...)` statements into component ports and connection declarations.
   - Verify that physical conservation (Kirchhoff current/pressure laws), state storage, and structural variants produce identical topological networks and numerical solutions.
 - [ ] **3.7 Stage U6: Analysis, Simulation & Presentation as Registered Calls**
   - Replace ad-hoc keyword blocks with registered domain function calls: `simulate(...)`, `sweep(...)`, `plot(...)`, `table(...)`, `linearize(...)`.

@@ -165,7 +165,10 @@ fn reject_ignored_equations(body: &[ProcStatement], function: &str) -> Result<()
             ProcStatement::RepeatUntil { body, .. }
             | ProcStatement::For { body, .. }
             | ProcStatement::While { body, .. } => reject_ignored_equations(body, function)?,
-            ProcStatement::Assign { .. } | ProcStatement::Eq(_) => {}
+            ProcStatement::Assign { .. }
+            | ProcStatement::Eq(_)
+            | ProcStatement::Port { .. }
+            | ProcStatement::Connect { .. } => {}
         }
     }
     Ok(())
@@ -382,6 +385,12 @@ fn execute_one(statement: &ProcStatement, locals: &mut Scope, defs: &Definitions
                     )));
                 }
             }
+        }
+
+        ProcStatement::Port { .. } | ProcStatement::Connect { .. } => {
+            return Err(FreesError::evaluation(
+                "component declarations cannot execute as scalar procedures",
+            ));
         }
     }
     Ok(())
