@@ -37,10 +37,10 @@ export interface EquationEditorHandle {
 // frees keywords (block/control-flow) highlighted distinctly from functions.
 const KEYWORDS = new Set([
   'FOR', 'TO', 'STEP', 'WHILE', 'DO', 'REPEAT', 'UNTIL', 'IF', 'THEN', 'ELSE',
-  'END', 'FUNCTION', 'PROCEDURE', 'MODULE', 'CALL', 'PARAMETRIC', 'TABLE',
+  'END', 'FUNCTION',
   'PLOT', 'DUPLICATE', 'AND', 'OR', 'NOT', 'DYNAMIC', 'STATE', 'EVENT',
   'SYMBOLIC',
-  'COMPONENT', 'PARAM', 'VARIANT', 'REQUIRE', 'CONNECT', 'LINEARIZE', 'GUESS',
+  'PARAM', 'VARIANT', 'REQUIRE', 'CONNECT', 'LINEARIZE', 'GUESS',
   'INPUT', 'OUTPUT',
   'INITIAL', 'SIMULATE', 'SWEEP', 'PORT',
 ])
