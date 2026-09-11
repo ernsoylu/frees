@@ -551,6 +551,60 @@ engine-available, browser-pending. Teaching a dialog workflow that does not exis
 class of defect as the onboarding contradictions in the baseline audit, and it is the one the
 audit says is currently being introduced rather than fixed.
 
+### Phase 4.7b-7 — Replace the 'CALL' tag with MATLAB-style function syntax
+
+The language currently has two call surfaces:
+
+- scalar and single-result functions are used as expressions, for example
+  'y = sqrt(x)';
+- multi-result procedures use a separate statement form, for example
+  'CALL Detrend(trace : detrended)' or
+  'CALL FFT(signal, imaginary : spectrum_real, spectrum_imag)'.
+
+This split is an unnecessary language distinction. The final language target is MATLAB-style
+function syntax for every callable: make every registered callable usable as an expression and
+let its registry entry define the complete signature:
+
+    detrended = Detrend(trace)
+    centered = Detrend(trace, 'constant')
+    smoothed = Smooth(trace, 3)
+    [spectrum_real, spectrum_imag] = FFT(signal, imaginary)
+
+The resolver must use one metadata path for built-in intrinsics, matrix and signal functions,
+control procedures, property functions, tables, and user FUNCTION definitions. Each callable
+entry must expose its required and optional inputs, accepted types, output count, output names
+where applicable, and output shape rules. Arity and type errors must be reported at the call site
+before solving. Dynamic-size outputs may continue to use declared shapes such as 'Q[1:n,1:n]'
+when the input determines their dimensions.
+
+Implement this as a compatibility migration:
+
+1. Add expression calls with one output for every callable that can return one value or array.
+2. Add multiple assignment for procedures with more than one output, using a bracketed left-hand
+   side. Preserve output ordering from the registry.
+3. Route both the new syntax and the existing 'CALL f(inputs : outputs)' syntax through the same
+   resolver and expansion code. Keep 'CALL' only as deprecated compatibility syntax while all
+   product documents and fixtures migrate.
+4. Update the parser, matrix/procedure flatteners, result naming, diagnostics, editor examples,
+   reference signatures, and generated function manifest together. Do not maintain a second
+   hand-written list of functions that support the new syntax.
+5. Migrate all tracked 'CALL' examples and fixtures to the expression form, then remove the
+   legacy grammar and diagnostics after the repository contains no 'CALL' statements outside
+   migration tests and the compatibility release window has ended.
+
+Acceptance criteria:
+
+- every callable registry entry is reachable through the unified expression resolver;
+- one-result calls work inside larger equations, for example 'z = abs(sin(x))';
+- multiple assignment preserves output order and declared shapes;
+- missing, extra, or invalid arguments produce the same precise diagnostics in both syntax forms;
+- user-defined functions and tables follow the same call rules as built-ins;
+- existing documents remain valid during the compatibility window;
+- 'CALL' is removed from the production grammar, documentation, examples, and fixtures when the
+  migration is complete;
+- parser, evaluator, WASM, parity, fuzz, and documentation checks cover both single- and
+  multiple-output calls.
+
 ### Correctness rules for every example added in 4.7b-2 through 4.7b-5
 
 1. **Complete document.** It solves from a clean editor with no prior state. Fragments stay
