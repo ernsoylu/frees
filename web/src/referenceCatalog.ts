@@ -128,6 +128,1254 @@ $$ T(h) = T_b + L_b\\,(h - h_b) \\quad\\text{(layer lapse rate } L_b) $$
 1. U.S. Standard Atmosphere, 1976 (NOAA/NASA/USAF).`,
   },
   {
+    name: `anova1_df_between`,
+    slug: `anova1_df_between`,
+    category: `Built-in Functions`,
+    summary: `Reference page for anova1_df_between.`,
+    related: [],
+    examples: [],
+    tags: [`anova1_df_between`],
+    references: [],
+    guides: [],
+    body: `\`anova1_df_between\` is available in the frees built-in functions surface.
+
+## Syntax
+
+\`\`\`
+anova1_df_between(...)
+\`\`\`
+
+## Description
+
+See the backend signature for accepted arguments and returned values.
+
+## Common Errors
+
+Check argument count, dimensions, and units before solving.`,
+  },
+  {
+    name: `anova1_df_within`,
+    slug: `anova1_df_within`,
+    category: `Built-in Functions`,
+    summary: `Reference page for anova1_df_within.`,
+    related: [],
+    examples: [],
+    tags: [`anova1_df_within`],
+    references: [],
+    guides: [],
+    body: `\`anova1_df_within\` is available in the frees built-in functions surface.
+
+## Syntax
+
+\`\`\`
+anova1_df_within(...)
+\`\`\`
+
+## Description
+
+See the backend signature for accepted arguments and returned values.
+
+## Common Errors
+
+Check argument count, dimensions, and units before solving.`,
+  },
+  {
+    name: `anova1_f`,
+    slug: `anova1_f`,
+    category: `Built-in Functions`,
+    summary: `Reference page for anova1_f.`,
+    related: [],
+    examples: [],
+    tags: [`anova1_f`],
+    references: [],
+    guides: [],
+    body: `\`anova1_f\` is available in the frees built-in functions surface.
+
+## Syntax
+
+\`\`\`
+anova1_f(...)
+\`\`\`
+
+## Description
+
+See the backend signature for accepted arguments and returned values.
+
+## Common Errors
+
+Check argument count, dimensions, and units before solving.`,
+  },
+  {
+    name: `anova1_pval`,
+    slug: `anova1_pval`,
+    category: `Built-in Functions`,
+    summary: `Reference page for anova1_pval.`,
+    related: [],
+    examples: [],
+    tags: [`anova1_pval`],
+    references: [],
+    guides: [],
+    body: `\`anova1_pval\` is available in the frees built-in functions surface.
+
+## Syntax
+
+\`\`\`
+anova1_pval(...)
+\`\`\`
+
+## Description
+
+See the backend signature for accepted arguments and returned values.
+
+## Common Errors
+
+Check argument count, dimensions, and units before solving.`,
+  },
+  {
+    name: `betainc`,
+    slug: `betainc`,
+    category: `Built-in Functions`,
+    summary: `Reference page for betainc.`,
+    related: [],
+    examples: [],
+    tags: [`betainc`],
+    references: [],
+    guides: [],
+    body: `\`betainc\` is available in the frees built-in functions surface.
+
+## Syntax
+
+\`\`\`
+betainc(...)
+\`\`\`
+
+## Description
+
+See the backend signature for accepted arguments and returned values.
+
+## Common Errors
+
+Check argument count, dimensions, and units before solving.`,
+  },
+  {
+    name: `bootstrap_ci_hi`,
+    slug: `bootstrap_ci_hi`,
+    category: `Built-in Functions`,
+    summary: `Reference page for bootstrap_ci_hi.`,
+    related: [],
+    examples: [],
+    tags: [`bootstrap_ci_hi`],
+    references: [],
+    guides: [],
+    body: `\`bootstrap_ci_hi\` is available in the frees built-in functions surface.
+
+## Syntax
+
+\`\`\`
+bootstrap_ci_hi(...)
+\`\`\`
+
+## Description
+
+See the backend signature for accepted arguments and returned values.
+
+## Common Errors
+
+Check argument count, dimensions, and units before solving.`,
+  },
+  {
+    name: `bootstrap_ci_lo`,
+    slug: `bootstrap_ci_lo`,
+    category: `Built-in Functions`,
+    summary: `Reference page for bootstrap_ci_lo.`,
+    related: [],
+    examples: [],
+    tags: [`bootstrap_ci_lo`],
+    references: [],
+    guides: [],
+    body: `\`bootstrap_ci_lo\` is available in the frees built-in functions surface.
+
+## Syntax
+
+\`\`\`
+bootstrap_ci_lo(...)
+\`\`\`
+
+## Description
+
+See the backend signature for accepted arguments and returned values.
+
+## Common Errors
+
+Check argument count, dimensions, and units before solving.`,
+  },
+  {
+    name: `chi2gof_df`,
+    slug: `chi2gof_df`,
+    category: `Built-in Functions`,
+    summary: `Reference page for chi2gof_df.`,
+    related: [],
+    examples: [],
+    tags: [`chi2gof_df`],
+    references: [],
+    guides: [],
+    body: `\`chi2gof_df\` is available in the frees built-in functions surface.
+
+## Syntax
+
+\`\`\`
+chi2gof_df(...)
+\`\`\`
+
+## Description
+
+See the backend signature for accepted arguments and returned values.
+
+## Common Errors
+
+Check argument count, dimensions, and units before solving.`,
+  },
+  {
+    name: `chi2gof_pval`,
+    slug: `chi2gof_pval`,
+    category: `Built-in Functions`,
+    summary: `Reference page for chi2gof_pval.`,
+    related: [],
+    examples: [],
+    tags: [`chi2gof_pval`],
+    references: [],
+    guides: [],
+    body: `\`chi2gof_pval\` is available in the frees built-in functions surface.
+
+## Syntax
+
+\`\`\`
+chi2gof_pval(...)
+\`\`\`
+
+## Description
+
+See the backend signature for accepted arguments and returned values.
+
+## Common Errors
+
+Check argument count, dimensions, and units before solving.`,
+  },
+  {
+    name: `chi2gof_stat`,
+    slug: `chi2gof_stat`,
+    category: `Built-in Functions`,
+    summary: `Reference page for chi2gof_stat.`,
+    related: [],
+    examples: [],
+    tags: [`chi2gof_stat`],
+    references: [],
+    guides: [],
+    body: `\`chi2gof_stat\` is available in the frees built-in functions surface.
+
+## Syntax
+
+\`\`\`
+chi2gof_stat(...)
+\`\`\`
+
+## Description
+
+See the backend signature for accepted arguments and returned values.
+
+## Common Errors
+
+Check argument count, dimensions, and units before solving.`,
+  },
+  {
+    name: `ci_mean_hi`,
+    slug: `ci_mean_hi`,
+    category: `Built-in Functions`,
+    summary: `Reference page for ci_mean_hi.`,
+    related: [],
+    examples: [],
+    tags: [`ci_mean_hi`],
+    references: [],
+    guides: [],
+    body: `\`ci_mean_hi\` is available in the frees built-in functions surface.
+
+## Syntax
+
+\`\`\`
+ci_mean_hi(...)
+\`\`\`
+
+## Description
+
+See the backend signature for accepted arguments and returned values.
+
+## Common Errors
+
+Check argument count, dimensions, and units before solving.`,
+  },
+  {
+    name: `ci_mean_lo`,
+    slug: `ci_mean_lo`,
+    category: `Built-in Functions`,
+    summary: `Reference page for ci_mean_lo.`,
+    related: [],
+    examples: [],
+    tags: [`ci_mean_lo`],
+    references: [],
+    guides: [],
+    body: `\`ci_mean_lo\` is available in the frees built-in functions surface.
+
+## Syntax
+
+\`\`\`
+ci_mean_lo(...)
+\`\`\`
+
+## Description
+
+See the backend signature for accepted arguments and returned values.
+
+## Common Errors
+
+Check argument count, dimensions, and units before solving.`,
+  },
+  {
+    name: `corrcoef`,
+    slug: `corrcoef`,
+    category: `Built-in Functions`,
+    summary: `Reference page for corrcoef.`,
+    related: [],
+    examples: [],
+    tags: [`corrcoef`],
+    references: [],
+    guides: [],
+    body: `\`corrcoef\` is available in the frees built-in functions surface.
+
+## Syntax
+
+\`\`\`
+corrcoef(...)
+\`\`\`
+
+## Description
+
+See the backend signature for accepted arguments and returned values.
+
+## Common Errors
+
+Check argument count, dimensions, and units before solving.`,
+  },
+  {
+    name: `cov`,
+    slug: `cov`,
+    category: `Built-in Functions`,
+    summary: `Reference page for cov.`,
+    related: [],
+    examples: [],
+    tags: [`cov`],
+    references: [],
+    guides: [],
+    body: `\`cov\` is available in the frees built-in functions surface.
+
+## Syntax
+
+\`\`\`
+cov(...)
+\`\`\`
+
+## Description
+
+See the backend signature for accepted arguments and returned values.
+
+## Common Errors
+
+Check argument count, dimensions, and units before solving.`,
+  },
+  {
+    name: `cube`,
+    slug: `cube`,
+    category: `Built-in Functions`,
+    summary: `Reference page for cube.`,
+    related: [],
+    examples: [],
+    tags: [`cube`],
+    references: [],
+    guides: [],
+    body: `\`cube\` is available in the frees built-in functions surface.
+
+## Syntax
+
+\`\`\`
+cube(...)
+\`\`\`
+
+## Description
+
+See the backend signature for accepted arguments and returned values.
+
+## Common Errors
+
+Check argument count, dimensions, and units before solving.`,
+  },
+  {
+    name: `fcdf`,
+    slug: `fcdf`,
+    category: `Built-in Functions`,
+    summary: `Reference page for fcdf.`,
+    related: [],
+    examples: [],
+    tags: [`fcdf`],
+    references: [],
+    guides: [],
+    body: `\`fcdf\` is available in the frees built-in functions surface.
+
+## Syntax
+
+\`\`\`
+fcdf(...)
+\`\`\`
+
+## Description
+
+See the backend signature for accepted arguments and returned values.
+
+## Common Errors
+
+Check argument count, dimensions, and units before solving.`,
+  },
+  {
+    name: `finv`,
+    slug: `finv`,
+    category: `Built-in Functions`,
+    summary: `Reference page for finv.`,
+    related: [],
+    examples: [],
+    tags: [`finv`],
+    references: [],
+    guides: [],
+    body: `\`finv\` is available in the frees built-in functions surface.
+
+## Syntax
+
+\`\`\`
+finv(...)
+\`\`\`
+
+## Description
+
+See the backend signature for accepted arguments and returned values.
+
+## Common Errors
+
+Check argument count, dimensions, and units before solving.`,
+  },
+  {
+    name: `fpdf`,
+    slug: `fpdf`,
+    category: `Built-in Functions`,
+    summary: `Reference page for fpdf.`,
+    related: [],
+    examples: [],
+    tags: [`fpdf`],
+    references: [],
+    guides: [],
+    body: `\`fpdf\` is available in the frees built-in functions surface.
+
+## Syntax
+
+\`\`\`
+fpdf(...)
+\`\`\`
+
+## Description
+
+See the backend signature for accepted arguments and returned values.
+
+## Common Errors
+
+Check argument count, dimensions, and units before solving.`,
+  },
+  {
+    name: `hypot`,
+    slug: `hypot`,
+    category: `Built-in Functions`,
+    summary: `Reference page for hypot.`,
+    related: [],
+    examples: [],
+    tags: [`hypot`],
+    references: [],
+    guides: [],
+    body: `\`hypot\` is available in the frees built-in functions surface.
+
+## Syntax
+
+\`\`\`
+hypot(...)
+\`\`\`
+
+## Description
+
+See the backend signature for accepted arguments and returned values.
+
+## Common Errors
+
+Check argument count, dimensions, and units before solving.`,
+  },
+  {
+    name: `int`,
+    slug: `int`,
+    category: `Built-in Functions`,
+    summary: `Reference page for int.`,
+    related: [],
+    examples: [],
+    tags: [`int`],
+    references: [],
+    guides: [],
+    body: `\`int\` is available in the frees built-in functions surface.
+
+## Syntax
+
+\`\`\`
+int(...)
+\`\`\`
+
+## Description
+
+See the backend signature for accepted arguments and returned values.
+
+## Common Errors
+
+Check argument count, dimensions, and units before solving.`,
+  },
+  {
+    name: `interp2`,
+    slug: `interp2`,
+    category: `Built-in Functions`,
+    summary: `Reference page for interp2.`,
+    related: [],
+    examples: [],
+    tags: [`interp2`],
+    references: [],
+    guides: [],
+    body: `\`interp2\` is available in the frees built-in functions surface.
+
+## Syntax
+
+\`\`\`
+interp2(...)
+\`\`\`
+
+## Description
+
+See the backend signature for accepted arguments and returned values.
+
+## Common Errors
+
+Check argument count, dimensions, and units before solving.`,
+  },
+  {
+    name: `kurtosis`,
+    slug: `kurtosis`,
+    category: `Built-in Functions`,
+    summary: `Reference page for kurtosis.`,
+    related: [],
+    examples: [],
+    tags: [`kurtosis`],
+    references: [],
+    guides: [],
+    body: `\`kurtosis\` is available in the frees built-in functions surface.
+
+## Syntax
+
+\`\`\`
+kurtosis(...)
+\`\`\`
+
+## Description
+
+See the backend signature for accepted arguments and returned values.
+
+## Common Errors
+
+Check argument count, dimensions, and units before solving.`,
+  },
+  {
+    name: `log`,
+    slug: `log`,
+    category: `Built-in Functions`,
+    summary: `Reference page for log.`,
+    related: [],
+    examples: [],
+    tags: [`log`],
+    references: [],
+    guides: [],
+    body: `\`log\` is available in the frees built-in functions surface.
+
+## Syntax
+
+\`\`\`
+log(...)
+\`\`\`
+
+## Description
+
+See the backend signature for accepted arguments and returned values.
+
+## Common Errors
+
+Check argument count, dimensions, and units before solving.`,
+  },
+  {
+    name: `mad`,
+    slug: `mad`,
+    category: `Built-in Functions`,
+    summary: `Reference page for mad.`,
+    related: [],
+    examples: [],
+    tags: [`mad`],
+    references: [],
+    guides: [],
+    body: `\`mad\` is available in the frees built-in functions surface.
+
+## Syntax
+
+\`\`\`
+mad(...)
+\`\`\`
+
+## Description
+
+See the backend signature for accepted arguments and returned values.
+
+## Common Errors
+
+Check argument count, dimensions, and units before solving.`,
+  },
+  {
+    name: `pearson`,
+    slug: `pearson`,
+    category: `Built-in Functions`,
+    summary: `Reference page for pearson.`,
+    related: [],
+    examples: [],
+    tags: [`pearson`],
+    references: [],
+    guides: [],
+    body: `\`pearson\` is available in the frees built-in functions surface.
+
+## Syntax
+
+\`\`\`
+pearson(...)
+\`\`\`
+
+## Description
+
+See the backend signature for accepted arguments and returned values.
+
+## Common Errors
+
+Check argument count, dimensions, and units before solving.`,
+  },
+  {
+    name: `permtest_pval`,
+    slug: `permtest_pval`,
+    category: `Built-in Functions`,
+    summary: `Reference page for permtest_pval.`,
+    related: [],
+    examples: [],
+    tags: [`permtest_pval`],
+    references: [],
+    guides: [],
+    body: `\`permtest_pval\` is available in the frees built-in functions surface.
+
+## Syntax
+
+\`\`\`
+permtest_pval(...)
+\`\`\`
+
+## Description
+
+See the backend signature for accepted arguments and returned values.
+
+## Common Errors
+
+Check argument count, dimensions, and units before solving.`,
+  },
+  {
+    name: `permtest_stat`,
+    slug: `permtest_stat`,
+    category: `Built-in Functions`,
+    summary: `Reference page for permtest_stat.`,
+    related: [],
+    examples: [],
+    tags: [`permtest_stat`],
+    references: [],
+    guides: [],
+    body: `\`permtest_stat\` is available in the frees built-in functions surface.
+
+## Syntax
+
+\`\`\`
+permtest_stat(...)
+\`\`\`
+
+## Description
+
+See the backend signature for accepted arguments and returned values.
+
+## Common Errors
+
+Check argument count, dimensions, and units before solving.`,
+  },
+  {
+    name: `pi`,
+    slug: `pi`,
+    category: `Built-in Functions`,
+    summary: `Reference page for pi.`,
+    related: [],
+    examples: [],
+    tags: [`pi`],
+    references: [],
+    guides: [],
+    body: `\`pi\` is available in the frees built-in functions surface.
+
+## Syntax
+
+\`\`\`
+pi(...)
+\`\`\`
+
+## Description
+
+See the backend signature for accepted arguments and returned values.
+
+## Common Errors
+
+Check argument count, dimensions, and units before solving.`,
+  },
+  {
+    name: `ramp`,
+    slug: `ramp`,
+    category: `Built-in Functions`,
+    summary: `Reference page for ramp.`,
+    related: [],
+    examples: [],
+    tags: [`ramp`],
+    references: [],
+    guides: [],
+    body: `\`ramp\` is available in the frees built-in functions surface.
+
+## Syntax
+
+\`\`\`
+ramp(...)
+\`\`\`
+
+## Description
+
+See the backend signature for accepted arguments and returned values.
+
+## Common Errors
+
+Check argument count, dimensions, and units before solving.`,
+  },
+  {
+    name: `rem`,
+    slug: `rem`,
+    category: `Built-in Functions`,
+    summary: `Reference page for rem.`,
+    related: [],
+    examples: [],
+    tags: [`rem`],
+    references: [],
+    guides: [],
+    body: `\`rem\` is available in the frees built-in functions surface.
+
+## Syntax
+
+\`\`\`
+rem(...)
+\`\`\`
+
+## Description
+
+See the backend signature for accepted arguments and returned values.
+
+## Common Errors
+
+Check argument count, dimensions, and units before solving.`,
+  },
+  {
+    name: `skewness`,
+    slug: `skewness`,
+    category: `Built-in Functions`,
+    summary: `Reference page for skewness.`,
+    related: [],
+    examples: [],
+    tags: [`skewness`],
+    references: [],
+    guides: [],
+    body: `\`skewness\` is available in the frees built-in functions surface.
+
+## Syntax
+
+\`\`\`
+skewness(...)
+\`\`\`
+
+## Description
+
+See the backend signature for accepted arguments and returned values.
+
+## Common Errors
+
+Check argument count, dimensions, and units before solving.`,
+  },
+  {
+    name: `spearman`,
+    slug: `spearman`,
+    category: `Built-in Functions`,
+    summary: `Reference page for spearman.`,
+    related: [],
+    examples: [],
+    tags: [`spearman`],
+    references: [],
+    guides: [],
+    body: `\`spearman\` is available in the frees built-in functions surface.
+
+## Syntax
+
+\`\`\`
+spearman(...)
+\`\`\`
+
+## Description
+
+See the backend signature for accepted arguments and returned values.
+
+## Common Errors
+
+Check argument count, dimensions, and units before solving.`,
+  },
+  {
+    name: `sqr`,
+    slug: `sqr`,
+    category: `Built-in Functions`,
+    summary: `Reference page for sqr.`,
+    related: [],
+    examples: [],
+    tags: [`sqr`],
+    references: [],
+    guides: [],
+    body: `\`sqr\` is available in the frees built-in functions surface.
+
+## Syntax
+
+\`\`\`
+sqr(...)
+\`\`\`
+
+## Description
+
+See the backend signature for accepted arguments and returned values.
+
+## Common Errors
+
+Check argument count, dimensions, and units before solving.`,
+  },
+  {
+    name: `tcdf`,
+    slug: `tcdf`,
+    category: `Built-in Functions`,
+    summary: `Reference page for tcdf.`,
+    related: [],
+    examples: [],
+    tags: [`tcdf`],
+    references: [],
+    guides: [],
+    body: `\`tcdf\` is available in the frees built-in functions surface.
+
+## Syntax
+
+\`\`\`
+tcdf(...)
+\`\`\`
+
+## Description
+
+See the backend signature for accepted arguments and returned values.
+
+## Common Errors
+
+Check argument count, dimensions, and units before solving.`,
+  },
+  {
+    name: `tinv`,
+    slug: `tinv`,
+    category: `Built-in Functions`,
+    summary: `Reference page for tinv.`,
+    related: [],
+    examples: [],
+    tags: [`tinv`],
+    references: [],
+    guides: [],
+    body: `\`tinv\` is available in the frees built-in functions surface.
+
+## Syntax
+
+\`\`\`
+tinv(...)
+\`\`\`
+
+## Description
+
+See the backend signature for accepted arguments and returned values.
+
+## Common Errors
+
+Check argument count, dimensions, and units before solving.`,
+  },
+  {
+    name: `tpdf`,
+    slug: `tpdf`,
+    category: `Built-in Functions`,
+    summary: `Reference page for tpdf.`,
+    related: [],
+    examples: [],
+    tags: [`tpdf`],
+    references: [],
+    guides: [],
+    body: `\`tpdf\` is available in the frees built-in functions surface.
+
+## Syntax
+
+\`\`\`
+tpdf(...)
+\`\`\`
+
+## Description
+
+See the backend signature for accepted arguments and returned values.
+
+## Common Errors
+
+Check argument count, dimensions, and units before solving.`,
+  },
+  {
+    name: `trimmedmean`,
+    slug: `trimmedmean`,
+    category: `Built-in Functions`,
+    summary: `Reference page for trimmedmean.`,
+    related: [],
+    examples: [],
+    tags: [`trimmedmean`],
+    references: [],
+    guides: [],
+    body: `\`trimmedmean\` is available in the frees built-in functions surface.
+
+## Syntax
+
+\`\`\`
+trimmedmean(...)
+\`\`\`
+
+## Description
+
+See the backend signature for accepted arguments and returned values.
+
+## Common Errors
+
+Check argument count, dimensions, and units before solving.`,
+  },
+  {
+    name: `ttest_paired_df`,
+    slug: `ttest_paired_df`,
+    category: `Built-in Functions`,
+    summary: `Reference page for ttest_paired_df.`,
+    related: [],
+    examples: [],
+    tags: [`ttest_paired_df`],
+    references: [],
+    guides: [],
+    body: `\`ttest_paired_df\` is available in the frees built-in functions surface.
+
+## Syntax
+
+\`\`\`
+ttest_paired_df(...)
+\`\`\`
+
+## Description
+
+See the backend signature for accepted arguments and returned values.
+
+## Common Errors
+
+Check argument count, dimensions, and units before solving.`,
+  },
+  {
+    name: `ttest_paired_pval`,
+    slug: `ttest_paired_pval`,
+    category: `Built-in Functions`,
+    summary: `Reference page for ttest_paired_pval.`,
+    related: [],
+    examples: [],
+    tags: [`ttest_paired_pval`],
+    references: [],
+    guides: [],
+    body: `\`ttest_paired_pval\` is available in the frees built-in functions surface.
+
+## Syntax
+
+\`\`\`
+ttest_paired_pval(...)
+\`\`\`
+
+## Description
+
+See the backend signature for accepted arguments and returned values.
+
+## Common Errors
+
+Check argument count, dimensions, and units before solving.`,
+  },
+  {
+    name: `ttest_paired_stat`,
+    slug: `ttest_paired_stat`,
+    category: `Built-in Functions`,
+    summary: `Reference page for ttest_paired_stat.`,
+    related: [],
+    examples: [],
+    tags: [`ttest_paired_stat`],
+    references: [],
+    guides: [],
+    body: `\`ttest_paired_stat\` is available in the frees built-in functions surface.
+
+## Syntax
+
+\`\`\`
+ttest_paired_stat(...)
+\`\`\`
+
+## Description
+
+See the backend signature for accepted arguments and returned values.
+
+## Common Errors
+
+Check argument count, dimensions, and units before solving.`,
+  },
+  {
+    name: `ttest1_df`,
+    slug: `ttest1_df`,
+    category: `Built-in Functions`,
+    summary: `Reference page for ttest1_df.`,
+    related: [],
+    examples: [],
+    tags: [`ttest1_df`],
+    references: [],
+    guides: [],
+    body: `\`ttest1_df\` is available in the frees built-in functions surface.
+
+## Syntax
+
+\`\`\`
+ttest1_df(...)
+\`\`\`
+
+## Description
+
+See the backend signature for accepted arguments and returned values.
+
+## Common Errors
+
+Check argument count, dimensions, and units before solving.`,
+  },
+  {
+    name: `ttest1_pval`,
+    slug: `ttest1_pval`,
+    category: `Built-in Functions`,
+    summary: `Reference page for ttest1_pval.`,
+    related: [],
+    examples: [],
+    tags: [`ttest1_pval`],
+    references: [],
+    guides: [],
+    body: `\`ttest1_pval\` is available in the frees built-in functions surface.
+
+## Syntax
+
+\`\`\`
+ttest1_pval(...)
+\`\`\`
+
+## Description
+
+See the backend signature for accepted arguments and returned values.
+
+## Common Errors
+
+Check argument count, dimensions, and units before solving.`,
+  },
+  {
+    name: `ttest1_stat`,
+    slug: `ttest1_stat`,
+    category: `Built-in Functions`,
+    summary: `Reference page for ttest1_stat.`,
+    related: [],
+    examples: [],
+    tags: [`ttest1_stat`],
+    references: [],
+    guides: [],
+    body: `\`ttest1_stat\` is available in the frees built-in functions surface.
+
+## Syntax
+
+\`\`\`
+ttest1_stat(...)
+\`\`\`
+
+## Description
+
+See the backend signature for accepted arguments and returned values.
+
+## Common Errors
+
+Check argument count, dimensions, and units before solving.`,
+  },
+  {
+    name: `ttest2_df`,
+    slug: `ttest2_df`,
+    category: `Built-in Functions`,
+    summary: `Reference page for ttest2_df.`,
+    related: [],
+    examples: [],
+    tags: [`ttest2_df`],
+    references: [],
+    guides: [],
+    body: `\`ttest2_df\` is available in the frees built-in functions surface.
+
+## Syntax
+
+\`\`\`
+ttest2_df(...)
+\`\`\`
+
+## Description
+
+See the backend signature for accepted arguments and returned values.
+
+## Common Errors
+
+Check argument count, dimensions, and units before solving.`,
+  },
+  {
+    name: `ttest2_pval`,
+    slug: `ttest2_pval`,
+    category: `Built-in Functions`,
+    summary: `Reference page for ttest2_pval.`,
+    related: [],
+    examples: [],
+    tags: [`ttest2_pval`],
+    references: [],
+    guides: [],
+    body: `\`ttest2_pval\` is available in the frees built-in functions surface.
+
+## Syntax
+
+\`\`\`
+ttest2_pval(...)
+\`\`\`
+
+## Description
+
+See the backend signature for accepted arguments and returned values.
+
+## Common Errors
+
+Check argument count, dimensions, and units before solving.`,
+  },
+  {
+    name: `ttest2_stat`,
+    slug: `ttest2_stat`,
+    category: `Built-in Functions`,
+    summary: `Reference page for ttest2_stat.`,
+    related: [],
+    examples: [],
+    tags: [`ttest2_stat`],
+    references: [],
+    guides: [],
+    body: `\`ttest2_stat\` is available in the frees built-in functions surface.
+
+## Syntax
+
+\`\`\`
+ttest2_stat(...)
+\`\`\`
+
+## Description
+
+See the backend signature for accepted arguments and returned values.
+
+## Common Errors
+
+Check argument count, dimensions, and units before solving.`,
+  },
+  {
+    name: `wmean`,
+    slug: `wmean`,
+    category: `Built-in Functions`,
+    summary: `Reference page for wmean.`,
+    related: [],
+    examples: [],
+    tags: [`wmean`],
+    references: [],
+    guides: [],
+    body: `\`wmean\` is available in the frees built-in functions surface.
+
+## Syntax
+
+\`\`\`
+wmean(...)
+\`\`\`
+
+## Description
+
+See the backend signature for accepted arguments and returned values.
+
+## Common Errors
+
+Check argument count, dimensions, and units before solving.`,
+  },
+  {
+    name: `wvar`,
+    slug: `wvar`,
+    category: `Built-in Functions`,
+    summary: `Reference page for wvar.`,
+    related: [],
+    examples: [],
+    tags: [`wvar`],
+    references: [],
+    guides: [],
+    body: `\`wvar\` is available in the frees built-in functions surface.
+
+## Syntax
+
+\`\`\`
+wvar(...)
+\`\`\`
+
+## Description
+
+See the backend signature for accepted arguments and returned values.
+
+## Common Errors
+
+Check argument count, dimensions, and units before solving.`,
+  },
+  {
     name: `differentiate`,
     slug: `differentiate`,
     category: `Calculus`,
@@ -304,6 +1552,110 @@ $$ u(X) = \\text{user-supplied or RSS-propagated uncertainty of } X $$
 ## References
 
 1. JCGM 100:2008 — Evaluation of measurement data: Guide to the expression of uncertainty in measurement (GUM).`,
+  },
+  {
+    name: `linfit`,
+    slug: `linfit`,
+    category: `CALL Procedures`,
+    summary: `Reference page for linfit.`,
+    related: [],
+    examples: [],
+    tags: [`linfit`],
+    references: [],
+    guides: [],
+    body: `\`linfit\` is available in the frees call procedures surface.
+
+## Syntax
+
+\`\`\`
+CALL linfit(...)
+\`\`\`
+
+## Description
+
+See the backend signature for accepted arguments and returned values.
+
+## Common Errors
+
+Check argument count, dimensions, and units before solving.`,
+  },
+  {
+    name: `polyfit`,
+    slug: `polyfit`,
+    category: `CALL Procedures`,
+    summary: `Reference page for polyfit.`,
+    related: [],
+    examples: [],
+    tags: [`polyfit`],
+    references: [],
+    guides: [],
+    body: `\`polyfit\` is available in the frees call procedures surface.
+
+## Syntax
+
+\`\`\`
+CALL polyfit(...)
+\`\`\`
+
+## Description
+
+See the backend signature for accepted arguments and returned values.
+
+## Common Errors
+
+Check argument count, dimensions, and units before solving.`,
+  },
+  {
+    name: `singularvalues`,
+    slug: `singularvalues`,
+    category: `CALL Procedures`,
+    summary: `Reference page for singularvalues.`,
+    related: [],
+    examples: [],
+    tags: [`singularvalues`],
+    references: [],
+    guides: [],
+    body: `\`singularvalues\` is available in the frees call procedures surface.
+
+## Syntax
+
+\`\`\`
+CALL singularvalues(...)
+\`\`\`
+
+## Description
+
+See the backend signature for accepted arguments and returned values.
+
+## Common Errors
+
+Check argument count, dimensions, and units before solving.`,
+  },
+  {
+    name: `ss2tfij`,
+    slug: `ss2tfij`,
+    category: `CALL Procedures`,
+    summary: `Reference page for ss2tfij.`,
+    related: [],
+    examples: [],
+    tags: [`ss2tfij`],
+    references: [],
+    guides: [],
+    body: `\`ss2tfij\` is available in the frees call procedures surface.
+
+## Syntax
+
+\`\`\`
+CALL ss2tfij(...)
+\`\`\`
+
+## Description
+
+See the backend signature for accepted arguments and returned values.
+
+## Common Errors
+
+Check argument count, dimensions, and units before solving.`,
   },
   {
     name: `apart`,
@@ -25871,6 +27223,110 @@ $$ (A^\\top)_{ij} = A_{ji} $$
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
 | \`A\` | Number | Yes | Square input matrix. |`,
+  },
+  {
+    name: `copy`,
+    slug: `copy`,
+    category: `Matrix Functions`,
+    summary: `Reference page for copy.`,
+    related: [],
+    examples: [],
+    tags: [`copy`],
+    references: [],
+    guides: [`matrices-blas`],
+    body: `\`copy\` is available in the frees matrix functions surface.
+
+## Syntax
+
+\`\`\`
+copy(...)
+\`\`\`
+
+## Description
+
+See the backend signature for accepted arguments and returned values.
+
+## Common Errors
+
+Check argument count, dimensions, and units before solving.`,
+  },
+  {
+    name: `ger`,
+    slug: `ger`,
+    category: `Matrix Functions`,
+    summary: `Reference page for ger.`,
+    related: [],
+    examples: [],
+    tags: [`ger`],
+    references: [],
+    guides: [`matrices-blas`],
+    body: `\`ger\` is available in the frees matrix functions surface.
+
+## Syntax
+
+\`\`\`
+ger(...)
+\`\`\`
+
+## Description
+
+See the backend signature for accepted arguments and returned values.
+
+## Common Errors
+
+Check argument count, dimensions, and units before solving.`,
+  },
+  {
+    name: `identity`,
+    slug: `identity`,
+    category: `Matrix Functions`,
+    summary: `Reference page for identity.`,
+    related: [],
+    examples: [],
+    tags: [`identity`],
+    references: [],
+    guides: [`matrices-decl`],
+    body: `\`identity\` is available in the frees matrix functions surface.
+
+## Syntax
+
+\`\`\`
+identity(...)
+\`\`\`
+
+## Description
+
+See the backend signature for accepted arguments and returned values.
+
+## Common Errors
+
+Check argument count, dimensions, and units before solving.`,
+  },
+  {
+    name: `scal`,
+    slug: `scal`,
+    category: `Matrix Functions`,
+    summary: `Reference page for scal.`,
+    related: [],
+    examples: [],
+    tags: [`scal`],
+    references: [],
+    guides: [`matrices-blas`],
+    body: `\`scal\` is available in the frees matrix functions surface.
+
+## Syntax
+
+\`\`\`
+scal(...)
+\`\`\`
+
+## Description
+
+See the backend signature for accepted arguments and returned values.
+
+## Common Errors
+
+Check argument count, dimensions, and units before solving.`,
   },
   {
     name: `FinalValue`,
