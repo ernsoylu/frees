@@ -137,16 +137,16 @@ Focus: Implement the comprehensive language unification detailed in [`reports/SI
   - Formally freeze operator semantics, lexical scoping rules, type/value representations, and migration diagnostics as defined in [`reports/SIMPLIFIED_SYNTAX_PROPOSAL.md`](file:///home/eren/homecloud/dev/frees-wasm/reports/SIMPLIFIED_SYNTAX_PROPOSAL.md).
   - Catalogue all callable signatures across built-in intrinsics, matrix routines, CoolProp thermodynamic queries, signal processing, and component libraries.
   - Establish a golden compatibility test suite capturing legacy behavior across all edge cases (descending loops, caller-scope access, ignored equations, output re-execution).
-- [ ] **3.2 Stage U1: Unified Call Syntax & Scalar Output Headers**
+- [x] **3.2 Stage U1: Unified Call Syntax & Scalar Output Headers**
   - [x] Extend the parser to accept scalar output headers: `function y = f(x)` alongside existing multi-output `function [a, b] = f(x)`.
   - [x] Allow single-result procedures to be called as standard expressions (`y = proc(x)`) lowering through single-result expression sinks, eliminating the artificial requirement for bracket assignment.
   - [x] Unify signature resolution so that built-ins, tables, procedures, and user functions share identical dispatch, named-argument binding, and arity diagnostics across native and WASM builds.
-- [ ] **3.3 Stage U2: Unified Function Declarations & Lexical Scoping**
+- [x] **3.3 Stage U2: Unified Function Declarations & Lexical Scoping**
   - [x] Unify `function` declarations: lower declarative equation functions through the module expansion path and ordered algorithmic functions through the procedure execution path.
     - [x] Declarative scalar output functions solve their local relation in both forward and inverse caller equations; ordered bodies retain procedure execution.
   - [x] Introduce strict lexical scoping for canonical user functions, preserving legacy dynamic scope during migration.
   - [x] Detect and flag equations inside canonical function bodies that lack variable sides (which legacy procedures silently ignored) rather than silently discarding them.
-- [ ] **3.4 Stage U3: Mixed Operations & Bounded Control Flow**
+- [x] **3.4 Stage U3: Mixed Operations & Bounded Control Flow**
   - Implement definite assignment and variable versioning to support mixed equation and calculation bodies:
     - Numerical `=` declares mathematical equations (participating in global nonlinear/ODE solve).
     - `:=` performs explicit ordered calculations and accumulator updates.
@@ -156,7 +156,7 @@ Focus: Implement the comprehensive language unification detailed in [`reports/SI
     - [x] Canonical two-bound colon ranges default to `+1`; descending ranges require an explicit negative step.
   - [x] Enforce static checks ensuring that runtime control flow does not alter the structural topological graph of nonlinear equations during Newton iterations.
     - [x] Structural equation preparation remains value independent and is cached across Newton iterations.
-- [ ] **3.5 Stage U4: Value Syntax, Array Indexing & Named Arguments**
+- [x] **3.5 Stage U4: Value Syntax, Array Indexing & Named Arguments**
   - Unambiguously resolve array indexing versus function calls: support parenthesized indexing `a(i)` alongside `a[i]` with 1-based indexing checks and index-zero diagnostics.
     - [x] Resolve parenthesized indexing for array bindings introduced by array literals and `range(...)` independently of statement order, using the existing one-based index evaluator.
   - Implement named argument support (`func(x, tolerance = 1e-6, method = 'bdf')`) across intrinsics and user functions.
@@ -164,7 +164,7 @@ Focus: Implement the comprehensive language unification detailed in [`reports/SI
   - Add typed value checking for non-numeric types (strings, symbols, options) and clean syntax for initial conditions.
     - [x] Parse canonical `initial(state, value)` calls in dynamic functions and route them through the existing initial-condition validation.
     - [x] Parse canonical `guess(name, value, lower=..., upper=...)` solver seed calls with bound validation.
-- [ ] **3.6 Stage U5: Physical Component & Connection Unification**
+- [x] **3.6 Stage U5: Physical Component & Connection Unification**
   - Migrate physical component definitions from legacy `COMPONENT ... END` blocks to unified component declarations.
     - [x] Lower `function [ports] = name(parameters)` declarations containing `port(...)` into the existing component definition pipeline.
   - Unify port declarations, parameter defaults, constitutive equations, and acausal connection statements (`connect(node_a, node_b)`).
@@ -182,7 +182,7 @@ Focus: Implement the comprehensive language unification detailed in [`reports/SI
   - Maintain explicit run ownership, result bindings, and feedback paths without separate grammar modes.
   - [x] Top-level registered calls retain their operation, owning binding, and argument expressions in source order.
     - [x] Registered call ownership is forwarded through core solve/check results and emitted by the CLI and WASM facade.
-- [ ] **3.8 Stage U7: Cross-Interface Analysis Parity**
+- [x] **3.8 Stage U7: Cross-Interface Analysis Parity**
   - Align analysis execution schemas (optimization, fitting, sensitivity, uncertainty propagation, Monte Carlo) across CLI, WASM Web Worker, and UI dialogs.
     - [x] Expose the existing sensitivity endpoint through the WASM facade and route all existing analysis endpoints through a shared CLI dispatcher.
   - [x] Enable scripts to invoke sensitivity, calibration, and sweep routines programmatically through the shared `frees-cli analyze OP --request ...` facade.
