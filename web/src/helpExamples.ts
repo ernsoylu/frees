@@ -1130,7 +1130,7 @@ tf([3], [1, 2, 5, 0]) = K1/s + (K2*s + K3)/(s^2 + 2*s + 5)`,
     code: `{ Transfer function -> state space (controllable canonical form) }
 num = [0, 1, 7, 2]
 den = [1, 9, 26, 24]
-CALL tf2ss(num[1:4], den[1:4] : A[1:3,1:3], B[1:3], C[1:3], D)`,
+[A, B, C, D] = tf2ss(num[1:4], den[1:4])`,
   },
   {
     value: "ss-to-tf",
@@ -1144,7 +1144,7 @@ A[3,1]=-1; A[3,2]=-2; A[3,3]=-3
 B[1]=10; B[2]=0; B[3]=0
 C[1]=1; C[2]=0; C[3]=0
 D=0
-CALL ss2tf(A[1:3,1:3], B[1:3], C[1:3], D : num[1:4], den[1:4])`,
+[num, den] = ss2tf(A[1:3,1:3], B[1:3], C[1:3], D)`,
   },
   {
     value: "first-order-poles-zeros",
@@ -1155,8 +1155,8 @@ CALL ss2tf(A[1:3,1:3], B[1:3], C[1:3], D : num[1:4], den[1:4])`,
 num = [1, 2]
 den = [1, 5]
 [pr, pi] = pole(num[1:2], den[1:2])
-CALL zero(num[1:2], den[1:2] : zr[1:1], zi[1:1])
-CALL tf2zp(num[1:2], den[1:2] : zzr[1:1], zzi[1:1], ppr[1:1], ppi[1:1], k)`,
+[zr, zi] = zero(num[1:2], den[1:2])
+[zzr, zzi, ppr, ppi, k] = tf2zp(num[1:2], den[1:2])`,
   },
   {
     value: "underdamped-poles",
@@ -1166,7 +1166,7 @@ CALL tf2zp(num[1:2], den[1:2] : zzr[1:1], zzi[1:1], ppr[1:1], ppi[1:1], k)`,
     code: `{ Complex poles of an underdamped second-order system }
 num = [0, 0, 200]
 den = [1, 10, 200]
-CALL pole(num[1:3], den[1:3] : pr[1:2], pi[1:2])`,
+[pr, pi] = pole(num[1:3], den[1:3])`,
   },
   {
     value: "thirdorder-poles-zeros",
@@ -1178,7 +1178,7 @@ CALL pole(num[1:3], den[1:3] : pr[1:2], pi[1:2])`,
 num = [0, 0, 1, 2]
 den = [1, 5, 8, 6]
 [pr, pi] = pole(num[1:4], den[1:4])
-CALL zero(num[1:4], den[1:4] : zr[1:1], zi[1:1])`,
+[zr, zi] = zero(num[1:4], den[1:4])`,
   },
   {
     value: "zpk-feedback",
@@ -1195,7 +1195,7 @@ k = 1
 numH = [1]
 denH = [1]
 [numT, denT] = feedback(numG[1:3], denG[1:3], numH[1:1], denH[1:1])
-CALL pole(numT[1:3], denT[1:3] : tpr[1:2], tpi[1:2])`,
+[tpr, tpi] = pole(numT[1:3], denT[1:3])`,
   },
   {
     value: "parallel-interconnect",
@@ -1210,7 +1210,7 @@ d2 = [1, 4]
 [n12, d12] = parallel(n1[1:2], d1[1:2], n2[1:2], d2[1:2])
 n3 = [0, 1]
 d3 = [1, 8]
-CALL parallel(n12[1:3], d12[1:3], n3[1:2], d3[1:2] : nsum[1:4], dsum[1:4])`,
+[nsum, dsum] = parallel(n12[1:3], d12[1:3], n3[1:2], d3[1:2])`,
   },
   {
     value: "second-order-step",
@@ -1385,7 +1385,7 @@ wc = 5 [rad/s]
 num_c = [Kd, Kp, Ki]
 den_c = [0, 1, 0]
 [num_ol, den_ol] = series(num_c[1:3], den_c[1:3], num[1:4], den[1:4])
-CALL margin(num_ol[1:6], den_ol[1:6] : gm, pm, w_cg, w_cp)`,
+[gm, pm, w_cg, w_cp] = margin(num_ol[1:6], den_ol[1:6])`,
   },
   {
     value: "pole-placement",
@@ -1405,7 +1405,7 @@ des_pi = [2, -2, 0]
 Acl[1,1]=A[1,1]-B[1]*K[1]; Acl[1,2]=A[1,2]-B[1]*K[2]; Acl[1,3]=A[1,3]-B[1]*K[3]
 Acl[2,1]=A[2,1]-B[2]*K[1]; Acl[2,2]=A[2,2]-B[2]*K[2]; Acl[2,3]=A[2,3]-B[2]*K[3]
 Acl[3,1]=A[3,1]-B[3]*K[1]; Acl[3,2]=A[3,2]-B[3]*K[2]; Acl[3,3]=A[3,3]-B[3]*K[3]
-CALL pole(Acl[1:3,1:3] : ppr[1:3], ppi[1:3])`,
+[ppr, ppi] = pole(Acl[1:3,1:3])`,
   },
   {
     value: "lqr-regulator",
@@ -1426,7 +1426,7 @@ R = 1
 Acl[1,1]=A[1,1]-B[1]*K[1]; Acl[1,2]=A[1,2]-B[1]*K[2]; Acl[1,3]=A[1,3]-B[1]*K[3]
 Acl[2,1]=A[2,1]-B[2]*K[1]; Acl[2,2]=A[2,2]-B[2]*K[2]; Acl[2,3]=A[2,3]-B[2]*K[3]
 Acl[3,1]=A[3,1]-B[3]*K[1]; Acl[3,2]=A[3,2]-B[3]*K[2]; Acl[3,3]=A[3,3]-B[3]*K[3]
-CALL pole(Acl[1:3,1:3] : ppr[1:3], ppi[1:3])`,
+[ppr, ppi] = pole(Acl[1:3,1:3])`,
   },
   {
     value: "control-analysis-report",
@@ -1449,7 +1449,7 @@ den = [1, 4, 29, 50]
 { 2. Poles, zeros and stability margins — all three poles lie in the left
   half-plane, so the open-loop plant is stable. }
 [pr, pi] = pole(num[1:4], den[1:4])
-CALL zero(num[1:4], den[1:4] : zr[1:1], zi[1:1])
+[zr, zi] = zero(num[1:4], den[1:4])
 [gm, pm, w_cg, w_cp] = margin(num[1:4], den[1:4])
 
 { 3. Frequency response — sweep 50 logarithmically spaced frequencies, then
