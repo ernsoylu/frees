@@ -1,4 +1,4 @@
-use frees_core::parse_document;
+use frees_core::{parse_document, solve, SolverSettings};
 
 #[test]
 fn unified_component_function_lowers_into_component_definitions() {
@@ -19,4 +19,27 @@ fn unified_component_function_lowers_into_component_definitions() {
     assert_eq!(component.params[0].name, "r");
     assert_eq!(component.body.len(), 2);
     assert_eq!(component.sub_connects[0].ports, ["in", "out"]);
+}
+
+#[test]
+fn unified_component_definition_expands_in_an_instance() {
+    let solution = solve(
+        "function [in, out] = resistor(r)\n\
+           port(in)\n\
+           port(out)\n\
+           out.P = in.P - r * in.mdot\n\
+           out.mdot = in.mdot\n\
+         end\n\
+         resistor R(s1, s2, r=2)\n\
+         s1.P = 10\n\
+         s1.mdot = 1",
+        &SolverSettings::default(),
+    )
+    .unwrap();
+    assert_eq!(
+        solution.values.get("s2$p"),
+        Some(&8.0),
+        "{:?}",
+        solution.values
+    );
 }
