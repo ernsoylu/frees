@@ -376,7 +376,7 @@ impl<'a> Parser<'a> {
             if self.c.eat(&TokenKind::Colon) {
                 (Some(middle), self.expr()?)
             } else {
-                (None, middle)
+                (Some(Expr::num(1.0)), middle)
             }
         };
         self.require_sep("after the FOR header")?;
@@ -2432,7 +2432,7 @@ impl<'a> Parser<'a> {
             if self.c.eat(&TokenKind::Colon) {
                 (Some(middle), self.expr()?)
             } else {
-                (None, middle)
+                (Some(Expr::num(1.0)), middle)
             }
         };
         self.require_sep("after the FOR header")?;
