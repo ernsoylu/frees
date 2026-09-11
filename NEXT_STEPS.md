@@ -186,6 +186,7 @@ Focus: Implement the comprehensive language unification detailed in [`reports/SI
   - [x] Enable scripts to invoke sensitivity, calibration, and sweep routines programmatically through the shared `frees-cli analyze OP --request ...` facade.
 - [ ] **3.9 Stage U8: Product-Wide Migration**
   - Convert all standard library definitions ([`components/library-data/`](file:///home/eren/homecloud/dev/frees-wasm/components/library-data)), gallery models ([`web/src/examples.ts`](file:///home/eren/homecloud/dev/frees-wasm/web/src/examples.ts)), Help models, and test fixtures to the unified syntax.
+    - [x] All 13 standard component-library files and the migrated gallery/Help snippets use version-2 component and call syntax; legacy compatibility fixtures remain isolated as migration evidence.
   - Update editor language tooling: syntax highlighters ([`web/src/EquationEditor.tsx`](file:///home/eren/homecloud/dev/frees-wasm/web/src/EquationEditor.tsx)), autocompletion ([`web/src/editorCompletion.ts`](file:///home/eren/homecloud/dev/frees-wasm/web/src/editorCompletion.ts)), signature tooltips ([`web/src/signatureHelp.ts`](file:///home/eren/homecloud/dev/frees-wasm/web/src/signatureHelp.ts)), and LaTeX renderer.
   - Provide an automatic project migration tool for legacy projects, embedding a version header (`// frees-language: 2`).
     - [x] Add `frees-cli migrate` for unambiguous function, procedure, call, guess, and simple component rewrites, with explicit refusal for model-specific blocks.
