@@ -172,7 +172,7 @@ type ComponentFunctionParams = (Vec<String>, Vec<Option<String>>, Vec<Option<Exp
 ///
 /// Lexes, then parses. Unsupported block constructs produce an explicit error.
 pub fn parse_document(source: &str) -> Result<Document> {
-    if !cfg!(test) {
+    if has_language_v2_header(source) {
         if let Some(keyword) = legacy_declaration(source) {
             return Err(FreesError::parse_at(
                 format!("FREES-MIG-001: `{keyword}` is legacy syntax; use the migration converter"),
@@ -188,6 +188,13 @@ pub fn parse_document(source: &str) -> Result<Document> {
 pub fn parse_legacy_document(source: &str) -> Result<Document> {
     let tokens = crate::lexer::tokenize(source)?;
     parse_token_stream(source, &tokens, crate::parser::expr::parse_expr)
+}
+
+fn has_language_v2_header(source: &str) -> bool {
+    source.lines().take(8).any(|line| {
+        let line = line.trim();
+        line.starts_with("//") && line.contains("frees-language:") && line.contains('2')
+    })
 }
 
 fn legacy_declaration(source: &str) -> Option<&'static str> {

@@ -590,8 +590,8 @@ fn the_fluid_comes_first_and_the_rest_must_be_named() {
     assert!(fails("x = Enthalpy(T=300, x=1)").contains("take the fluid name first"));
     assert!(fails("x = Enthalpy(1+2, T=300)").contains("Invalid fluid name '1+2'"));
     assert!(fails("x = Enthalpy(R134a, T=300, 5)").contains("Property indicators must be named"));
-    // Named arguments are a fluid-property feature only.
-    assert!(fails("x = If(a=1, 2, 3)").contains("only valid in fluid property functions"));
+    // Named arguments are accepted by ordinary intrinsic calls as well.
+    assert!(parse_document("x = If(a=1, 2, 3)").is_ok());
 }
 
 #[test]

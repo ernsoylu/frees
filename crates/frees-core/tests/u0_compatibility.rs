@@ -61,7 +61,8 @@ fn each_legacy_procedure_output_reexecutes_the_body_and_selects_its_slot() {
 #[test]
 fn canonical_parser_requires_the_explicit_legacy_import_boundary() {
     let source = "PROCEDURE split(a : low)\n  low := a\nEND";
-    assert!(parse_document(source)
+    let versioned = format!("// frees-language: 2\n{source}");
+    assert!(parse_document(&versioned)
         .unwrap_err()
         .to_string()
         .contains("FREES-MIG-001"));
