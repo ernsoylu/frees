@@ -10,6 +10,7 @@
 //! frees-cli solve [FILE]     solve a document; JSON on stdout
 //! frees-cli check [FILE]     structural check only; JSON on stdout
 //! frees-cli migrate [FILE]   convert unambiguous legacy syntax to version 2
+//! frees-cli analyze OP ...   run a registered analysis operation
 //! frees-cli version          engine version
 //! ```
 //!
@@ -35,6 +36,8 @@ USAGE:
     frees-cli solve [FILE]    Solve a document and print the variables as JSON
     frees-cli check [FILE]    Check syntax and structural solvability only
     frees-cli migrate [FILE]  Convert unambiguous legacy syntax to version 2
+    frees-cli analyze OP [FILE] --request JSON_OR_FILE
+                              Run sensitivity, fitting, optimization, or sweep
     frees-cli version         Print the engine version
 
 Reads stdin when FILE is omitted or is `-`.
@@ -100,6 +103,21 @@ fn run() -> Result<ExitCode, String> {
             print!("{migrated}");
             Ok(ExitCode::SUCCESS)
         }
+        "analyze" => {
+            let operation = args
+                .get(1)
+                .ok_or_else(|| "`analyze` needs an operation name".to_string())?;
+            let (path, _settings, request) = parse_solve_args(&args[2..])?;
+            let request = request.ok_or_else(|| "`analyze` requires --request".to_string())?;
+            let source = read_source(path)?;
+            let response = analyze(operation, &source, &request)?;
+            let value: Value = serde_json::from_str(&response)
+                .map_err(|error| format!("analysis returned invalid JSON: {error}"))?;
+            let ok = value
+                .get("error")
+                .is_none_or(|error| error.is_null() || error.as_str() == Some(""));
+            Ok(emit((value, ok)))
+        }
         other => Err(format!("unknown command `{other}`. Try `frees-cli help`.")),
     }
 }
@@ -111,6 +129,21 @@ fn run() -> Result<ExitCode, String> {
 /// `(payload, ok)` — the JSON to print and whether the engine accepted the
 /// document.
 type Outcome = (Value, bool);
+
+fn analyze(operation: &str, source: &str, request: &str) -> Result<String, String> {
+    match operation.to_ascii_lowercase().as_str() {
+        "solve-table" | "sweep" => Ok(frees::solve_table(source, request)),
+        "monte-carlo" | "montecarlo" => Ok(frees::monte_carlo(source, request)),
+        "sensitivity" => Ok(frees::sensitivity(source, request)),
+        "optimize" => Ok(frees::optimize(source, request)),
+        "optimize-multi" | "optimize_multi" => Ok(frees::optimize_multi(source, request)),
+        "curve-fit" | "curve_fit" => Ok(frees::curve_fit(request)),
+        "parameter-fit" | "parameter_fit" => Ok(frees::parameter_fit(request)),
+        "pid-tune" | "pid_tune" => Ok(frees::pid_tune(request)),
+        "extract-plant" | "extract_plant" => Ok(frees::extract_plant(request)),
+        other => Err(format!("unknown analysis operation `{other}`")),
+    }
+}
 
 fn solve_json(source: &str, settings: &SolverSettings) -> Outcome {
     match engine::solve(source, settings) {

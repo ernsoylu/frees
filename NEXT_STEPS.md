@@ -179,6 +179,7 @@ Focus: Implement the comprehensive language unification detailed in [`reports/SI
   - Maintain explicit run ownership, result bindings, and feedback paths without separate grammar modes.
 - [ ] **3.8 Stage U7: Cross-Interface Analysis Parity**
   - Align analysis execution schemas (optimization, fitting, sensitivity, uncertainty propagation, Monte Carlo) across CLI, WASM Web Worker, and UI dialogs.
+    - [x] Expose the existing sensitivity endpoint through the WASM facade and route all existing analysis endpoints through a shared CLI dispatcher.
   - Enable scripts to invoke sensitivity, calibration, and sweep routines programmatically using the unified syntax.
 - [ ] **3.9 Stage U8: Product-Wide Migration**
   - Convert all standard library definitions ([`components/library-data/`](file:///home/eren/homecloud/dev/frees-wasm/components/library-data)), gallery models ([`web/src/examples.ts`](file:///home/eren/homecloud/dev/frees-wasm/web/src/examples.ts)), Help models, and test fixtures to the unified syntax.

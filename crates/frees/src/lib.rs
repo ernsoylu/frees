@@ -46,7 +46,7 @@ mod repl;
 // fit (/api/measurements/parameter-fit).
 pub use analysis::{
     curve_fit, extract_plant, monte_carlo, optimize, optimize_multi, parameter_fit, pid_tune,
-    solve_table, solve_table_zerocopy,
+    sensitivity, solve_table, solve_table_zerocopy,
 };
 
 /// Install the panic hook so a wasm trap arrives in the console as a readable
