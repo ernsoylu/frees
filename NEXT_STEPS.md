@@ -190,6 +190,7 @@ Focus: Implement the comprehensive language unification detailed in [`reports/SI
   - Provide an automatic project migration tool for legacy projects, embedding a version header (`// frees-language: 2`).
     - [x] Add `frees-cli migrate` for unambiguous function, procedure, call, guess, and simple component rewrites, with explicit refusal for model-specific blocks.
     - [x] Component migration preserves canonical `VARIANT ... END` bodies and nested component instances.
+    - [x] Legacy CALL output shape annotations are normalized to canonical bare bindings during migration.
   - [x] Autocomplete and local signatures recognize unified component function headers and port(...) declarations.
   - [x] Signature help recognizes canonical scalar and multi-output function declarations.
   - [x] Control-system Help snippets use canonical bracketed output assignments for migrated CALL examples.

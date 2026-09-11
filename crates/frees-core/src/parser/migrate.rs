@@ -216,16 +216,47 @@ fn convert_call(line: &str, line_number: usize) -> Result<String> {
     if outputs.is_empty() {
         return Err(migration_error(line_number, "CALL needs an output list"));
     }
-    let destination = if outputs.contains(',') {
-        format!("[{}]", outputs.to_ascii_lowercase())
+    let outputs = split_top_level_outputs(outputs)
+        .into_iter()
+        .map(canonical_output_name)
+        .collect::<Vec<_>>();
+    let destination = if outputs.len() > 1 {
+        format!("[{}]", outputs.join(", "))
     } else {
-        outputs.to_ascii_lowercase()
+        outputs[0].clone()
     };
     Ok(format!(
         "{destination} = {}({})",
         rest[..open].trim().to_ascii_lowercase(),
         inputs.trim()
     ))
+}
+
+fn canonical_output_name(output: &str) -> String {
+    output
+        .trim()
+        .split_once('[')
+        .map_or(output.trim(), |(name, _)| name.trim())
+        .to_ascii_lowercase()
+}
+
+fn split_top_level_outputs(outputs: &str) -> Vec<&str> {
+    let mut result = Vec::new();
+    let mut start = 0;
+    let mut depth: usize = 0;
+    for (index, byte) in outputs.bytes().enumerate() {
+        match byte {
+            b'[' => depth += 1,
+            b']' => depth = depth.saturating_sub(1),
+            b',' if depth == 0 => {
+                result.push(&outputs[start..index]);
+                start = index + 1;
+            }
+            _ => {}
+        }
+    }
+    result.push(&outputs[start..]);
+    result
 }
 
 fn convert_guess(line: &str, line_number: usize) -> Result<String> {
@@ -305,5 +336,12 @@ mod tests {
     fn reports_the_source_line_for_unmigratable_syntax() {
         let error = migrate_legacy_source("x = 1\nCALL broken").unwrap_err();
         assert!(error.to_string().contains("migration line 2"));
+    }
+
+    #[test]
+    fn strips_legacy_output_shape_annotations() {
+        let migrated =
+            migrate_legacy_source("CALL tf2ss(num, den : A[1:3,1:3], B[1:3], C, D)").unwrap();
+        assert!(migrated.contains("[a, b, c, d] = tf2ss(num, den)"));
     }
 }
