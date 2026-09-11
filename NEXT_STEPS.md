@@ -418,7 +418,7 @@ document carries a `CHECK` marker yet. It is a gate waiting for content — whic
 Shrinking `EXTRA_CALLABLES` below 12 means teaching the builder to read `props/propfun.rs`'s
 output table; the remaining entries are genuinely unenumerated, not oversights.
 
-### Phase 4.7b-2 — Land the drafted example set (≈1 week)
+### Phase 4.7b-2 — Land the drafted example set ✅ **done 2026-09-11**
 
 `reports/MISSING_EXAMPLES.md` already holds 19 verified worked examples — 15 equation models
 plus 4 analysis requests, 55 numerical assertions, validated through the compiled module on
@@ -439,7 +439,7 @@ plus 4 analysis requests, 55 numerical assertions, validated through the compile
 **Done when:** complete-document coverage is re-measured by the audit harness and has moved off
 140, and no bound page cites a model that does not instantiate its symbol.
 
-### Phase 4.7b-3 — Close the 56 missing reference pages (≈1 week, parallel with 4.7b-2)
+### Phase 4.7b-3 — Close the 56 missing reference pages ✅ **done 2026-09-11**
 
 47 built-in functions, 4 CALL procedures, 1 both, plus the four matrix-routed names 4.7b-1
 surfaced — `copy`, `ger`, `identity`, `scal`. The full list:
@@ -463,6 +463,8 @@ as the worked demonstrations for `linfit`, `polyfit`, `pearson`, `corrcoef` and 
 sequence 4.7b-3 and the regression group of 4.7b-4 together.
 
 ### Phase 4.7b-4 — Example wave B: the uncovered component domains (2–3 weeks)
+
+Progress: electrical tranche B16–B18 and B30 landed in PR #28; the remaining B1–B15 and B19–B29 candidates remain open.
 
 Thirty candidate problems have been drawn from the curated `Frees` reference bank. Every one
 carries complete inputs and a unique numeric answer, so each converts directly into a
