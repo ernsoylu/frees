@@ -166,6 +166,7 @@ const MAX_BLOCK_DEPTH: u32 = 64;
 /// exercised on its own. Production always passes
 /// [`crate::parser::expr::parse_expr`].
 type ExprFn = fn(&mut Cursor<'_>) -> Result<Expr>;
+type ComponentFunctionParams = (Vec<String>, Vec<Option<String>>, Vec<Option<Expr>>);
 
 /// Parse a whole document from source text.
 ///
@@ -769,7 +770,13 @@ impl<'a> Parser<'a> {
             (None, first_name)
         };
         self.c.expect(&TokenKind::LParen)?;
-        let (params, param_units) = self.param_list()?;
+        let (params, param_units, param_defaults) = if outputs.is_some() {
+            self.component_function_params()?
+        } else {
+            let (params, units) = self.param_list()?;
+            let defaults = vec![None; params.len()];
+            (params, units, defaults)
+        };
         self.c.expect(&TokenKind::RParen)?;
         let output_unit = si_unit_of(parse_unit_annotation(&mut self.c)?);
         self.require_sep("after the FUNCTION header")?;
@@ -807,7 +814,8 @@ impl<'a> Parser<'a> {
                 }
                 let params = params
                     .into_iter()
-                    .map(|name| Param::new(name, None))
+                    .zip(param_defaults)
+                    .map(|(name, default)| Param::new(name, default))
                     .collect();
                 return Ok(ParsedDef::Component(ComponentDef::new(
                     name,
@@ -1039,6 +1047,28 @@ impl<'a> Parser<'a> {
         let (names, units) = self.param_list_verbatim()?;
         let names = names.iter().map(|n| n.to_ascii_lowercase()).collect();
         Ok((names, units))
+    }
+
+    fn component_function_params(&mut self) -> Result<ComponentFunctionParams> {
+        let mut names = Vec::new();
+        let mut units = Vec::new();
+        let mut defaults = Vec::new();
+        if matches!(self.c.peek(), TokenKind::RParen) {
+            return Ok((names, units, defaults));
+        }
+        loop {
+            names.push(self.c.expect_ident()?.to_ascii_lowercase());
+            units.push(si_unit_of(parse_unit_annotation(&mut self.c)?));
+            defaults.push(if self.c.eat(&TokenKind::Eq) {
+                Some(self.expr()?)
+            } else {
+                None
+            });
+            if !self.c.eat(&TokenKind::Comma) {
+                break;
+            }
+        }
+        Ok((names, units, defaults))
     }
 
     /// `paramList`, keeping every name in the case the user wrote it.
