@@ -337,15 +337,15 @@ describe('runMonteCarlo (wasm engine)', () => {
 
   it('round-trips the MonteCarloResult the modal renders', async () => {
     mcMock.mockResolvedValueOnce(MONTE_CARLO_OK)
-    const r = await runMonteCarlo(
-      'x = 2\ny = 3 * x\n',
-      DEFAULT_STOP_CRITERIA,
-      [{ name: 'x', guess: 2, lower: null, upper: null, units: null, uncertainty: 0.1 }],
-      'SI',
-      [],
-      2,
-      42,
-    )
+    const r = await runMonteCarlo({
+      text: 'x = 2\ny = 3 * x\n',
+      stopCriteria: DEFAULT_STOP_CRITERIA,
+      variableInfo: [{ name: 'x', guess: 2, lower: null, upper: null, units: null, uncertainty: 0.1 }],
+      displayUnitSystem: 'SI',
+      functionTables: [],
+      samples: 2,
+      seed: 42,
+    })
     expect(r.stats.map((s) => s.variable)).toEqual(['y', 'x'])
     expect(r.sources).toEqual(['x'])
     expect(r.requestedSamples).toBe(2)
@@ -360,7 +360,15 @@ describe('runMonteCarlo (wasm engine)', () => {
   it('rejects with the boundary error so the modal catch shows it', async () => {
     mcMock.mockResolvedValueOnce(MONTE_CARLO_CAP)
     await expect(
-      runMonteCarlo('x = 2\n', DEFAULT_STOP_CRITERIA, [], 'SI', [], 1001, 42),
+      runMonteCarlo({
+        text: 'x = 2\n',
+        stopCriteria: DEFAULT_STOP_CRITERIA,
+        variableInfo: [],
+        displayUnitSystem: 'SI',
+        functionTables: [],
+        samples: 1001,
+        seed: 42,
+      }),
     ).rejects.toThrow(/between 2 and 1000/)
   })
 })

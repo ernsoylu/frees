@@ -1079,31 +1079,31 @@ export interface MonteCarloResult {
   diagnostics?: MonteCarloDiagnostics
 }
 
+export type MonteCarloDesign = 'iid' | 'lhs' | 'sobol'
+
+export interface MonteCarloParams {
+  text: string
+  stopCriteria: StopCriteria
+  variableInfo: VariableInfo[]
+  displayUnitSystem: UnitSystem
+  functionTables: FunctionTableDto[]
+  samples: number
+  seed: number
+  design?: MonteCarloDesign
+  quantiles?: number[]
+}
+
 /** `POST /api/solve/montecarlo` — served by the wasm `monte_carlo` export
  *  (Wave B2). Rejects on a refused request or an infrastructure failure —
  *  the MonteCarloModal's catch shows the message via setError, which is why
  *  this keeps the throwing contract (unlike solveTable, whose caller renders
  *  rows either way). */
-export async function runMonteCarlo(
-  text: string,
-  stopCriteria: StopCriteria,
-  variableInfo: VariableInfo[],
-  displayUnitSystem: UnitSystem,
-  functionTables: FunctionTableDto[],
-  samples: number,
-  seed: number,
-  design?: 'iid' | 'lhs' | 'sobol',
-  quantiles?: number[],
-): Promise<MonteCarloResult> {
+export async function runMonteCarlo(params: MonteCarloParams): Promise<MonteCarloResult> {
+  const { text, ...rest } = params
   const request = JSON.stringify({
-    stopCriteria,
-    variableInfo,
-    displayUnitSystem,
-    functionTables,
-    samples,
-    seed,
-    ...(design ? { design } : {}),
-    ...(quantiles && quantiles.length > 0 ? { quantiles } : {}),
+    ...rest,
+    ...(rest.design ? { design: rest.design } : {}),
+    ...(rest.quantiles && rest.quantiles.length > 0 ? { quantiles: rest.quantiles } : {}),
   })
   const parsed = JSON.parse(await wasmMonteCarlo(text, request)) as MonteCarloResult & {
     error?: string
@@ -1150,7 +1150,7 @@ export interface SensitivityDiagnostics {
 }
 
 export interface SensitivityResult {
-  method: 'sobol' | 'morris' | string
+  method: 'sobol' | 'morris'
   sources: string[]
   outputs: SensitivityOutput[]
   diagnostics?: SensitivityDiagnostics

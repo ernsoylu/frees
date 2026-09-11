@@ -13,7 +13,7 @@ import {
 } from '@mantine/core'
 import type { PlotlyFigure } from 'plotly.js/lib/core'
 import PlotlyChart from './plots/PlotlyChart'
-import type { MonteCarloResult } from './api'
+import type { MonteCarloDesign, MonteCarloResult } from './api'
 
 function fmt(v: number): string {
   if (!Number.isFinite(v)) return '—'
@@ -33,11 +33,11 @@ export default function MonteCarloModal({
 }: Readonly<{
   opened: boolean
   onClose: () => void
-  onRun: (samples: number, seed: number, design: 'iid' | 'lhs' | 'sobol') => Promise<MonteCarloResult>
+  onRun: (samples: number, seed: number, design: MonteCarloDesign) => Promise<MonteCarloResult>
 }>) {
   const [samples, setSamples] = useState<number>(200)
   const [seed, setSeed] = useState<number>(42)
-  const [design, setDesign] = useState<'iid' | 'lhs' | 'sobol'>('iid')
+  const [design, setDesign] = useState<MonteCarloDesign>('iid')
   const [running, setRunning] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [result, setResult] = useState<MonteCarloResult | null>(null)

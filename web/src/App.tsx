@@ -3256,16 +3256,16 @@ export default function App() {
             opened
             onClose={() => setShowMonteCarlo(false)}
             onRun={(samples, seed, design) =>
-              runMonteCarlo(
-                effectiveText(),
-                { ...stopCriteria, complexMode },
-                buildVariableInfo(),
-                unitSystem,
-                functionTableDtos(),
+              runMonteCarlo({
+                text: effectiveText(),
+                stopCriteria: { ...stopCriteria, complexMode },
+                variableInfo: buildVariableInfo(),
+                displayUnitSystem: unitSystem,
+                functionTables: functionTableDtos(),
                 samples,
                 seed,
                 design,
-              )
+              })
             }
           />
         </Suspense>

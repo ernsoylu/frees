@@ -397,7 +397,7 @@ export default function ParameterFitModal({
                             {rowName}
                           </Table.Td>
                           {result.parameterCovariance![rIdx]?.map((val, cIdx) => (
-                            <Table.Td key={cIdx} ta="right" ff="monospace">
+                            <Table.Td key={`${rowName}-${result.parameterNames[cIdx]}`} ta="right" ff="monospace">
                               {val != null ? formatValue(val) : '—'}
                             </Table.Td>
                           ))}
