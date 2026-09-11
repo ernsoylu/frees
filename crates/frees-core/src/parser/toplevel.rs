@@ -784,14 +784,20 @@ impl<'a> Parser<'a> {
         self.c.expect(&TokenKind::End)?;
 
         if let Some(outputs) = outputs.as_ref() {
-            if body
-                .iter()
-                .any(|statement| matches!(statement, ProcStatement::Port { .. }))
-            {
+            if body.iter().any(|statement| {
+                matches!(
+                    statement,
+                    ProcStatement::Port { .. }
+                        | ProcStatement::Connect { .. }
+                        | ProcStatement::Instance { .. }
+                        | ProcStatement::Variant { .. }
+                )
+            }) {
                 let mut ports = Vec::new();
                 let mut connects = Vec::new();
                 let mut variants = Vec::new();
                 let mut equations = Vec::new();
+                let mut sub_instances = Vec::new();
                 for statement in body {
                     match statement {
                         ProcStatement::Port { name } => ports.push(name),
@@ -808,6 +814,7 @@ impl<'a> Parser<'a> {
                             require,
                             body,
                         }),
+                        ProcStatement::Instance { instance } => sub_instances.push(instance),
                         ProcStatement::Eq(equation) => equations.push(equation),
                         other => {
                             return Err(FreesError::parse_at(
@@ -833,7 +840,7 @@ impl<'a> Parser<'a> {
                     params,
                     equations,
                     variants,
-                    Vec::new(),
+                    sub_instances,
                     connects,
                 )));
             }
@@ -2300,6 +2307,9 @@ impl<'a> Parser<'a> {
         match self.c.peek() {
             TokenKind::Connect => self.canonical_connect_statement(),
             TokenKind::Variant => self.canonical_variant_statement(),
+            TokenKind::Ident(_) if self.at_component_inst() => Ok(ProcStatement::Instance {
+                instance: self.component_inst()?,
+            }),
             TokenKind::Ident(name)
                 if name.eq_ignore_ascii_case("port")
                     && matches!(self.c.peek_at(1), TokenKind::LParen) =>

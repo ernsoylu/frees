@@ -50,3 +50,25 @@ fn unified_component_definition_expands_in_an_instance() {
         solution.values
     );
 }
+
+#[test]
+fn unified_components_can_contain_nested_instances() {
+    let doc = parse_document(
+        "function [in, out] = inner(r=2)\n\
+           port(in)\n\
+           port(out)\n\
+           out.P = in.P - r * in.mdot\n\
+           out.mdot = in.mdot\n\
+         end\n\
+         function [in, out] = outer(r=2)\n\
+           port(in)\n\
+           port(out)\n\
+           inner child(in, out, r=r)\n\
+         end",
+    )
+    .unwrap();
+    let outer = &doc.components.defs[1];
+    assert_eq!(outer.sub_instances.len(), 1);
+    assert_eq!(outer.sub_instances[0].type_name, "inner");
+    assert_eq!(outer.sub_instances[0].port_args, ["in", "out"]);
+}

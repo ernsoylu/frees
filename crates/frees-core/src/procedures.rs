@@ -208,6 +208,7 @@ fn validate_definite_assignment(
             }
             ProcStatement::Port { .. }
             | ProcStatement::Connect { .. }
+            | ProcStatement::Instance { .. }
             | ProcStatement::Variant { .. } => {}
         }
     }
@@ -249,8 +250,9 @@ fn reject_ignored_equations(body: &[ProcStatement], function: &str) -> Result<()
             ProcStatement::Assign { .. }
             | ProcStatement::Eq(_)
             | ProcStatement::Port { .. }
-            | ProcStatement::Connect { .. } => {}
-            ProcStatement::Variant { .. } => {}
+            | ProcStatement::Connect { .. }
+            | ProcStatement::Instance { .. }
+            | ProcStatement::Variant { .. } => {}
         }
     }
     Ok(())
@@ -471,6 +473,7 @@ fn execute_one(statement: &ProcStatement, locals: &mut Scope, defs: &Definitions
 
         ProcStatement::Port { .. }
         | ProcStatement::Connect { .. }
+        | ProcStatement::Instance { .. }
         | ProcStatement::Variant { .. } => {
             return Err(FreesError::evaluation(
                 "component declarations cannot execute as scalar procedures",

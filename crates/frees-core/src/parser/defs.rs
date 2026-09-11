@@ -13,6 +13,7 @@
 //! grow an extra field here.
 
 use crate::ast::{Equation, Expr, Statement};
+use crate::components::def::ComponentInst;
 
 /// A statement inside a `FUNCTION` or `PROCEDURE` body. Unlike top-level
 /// [`Statement`]s, these execute **sequentially**, not as equations.
@@ -52,6 +53,8 @@ pub enum ProcStatement {
     Port { name: String },
     /// Canonical component connection inside a unified function.
     Connect { ports: Vec<String> },
+    /// Canonical nested component instance inside a unified component.
+    Instance { instance: ComponentInst },
     /// Canonical construction-time component variant.
     Variant {
         name: String,

@@ -4,8 +4,8 @@ use crate::diag::{FreesError, Result, Span};
 
 /// Convert legacy forms that have an unambiguous canonical equivalent.
 ///
-/// Module blocks and component blocks with variants or nested instances are
-/// deliberately refused: those semantics need a model-specific conversion.
+/// Module blocks and nested component declaration blocks are deliberately
+/// refused: those semantics need a model-specific conversion.
 pub fn migrate_legacy_source(source: &str) -> Result<String> {
     if source
         .lines()
@@ -96,6 +96,15 @@ fn convert_simple_component(lines: &[&str], start: usize) -> Result<(String, usi
                 format!("function [{ports}] = {name}({})", params.join(", "))
             };
             let mut converted = signature;
+            for port in ports
+                .split(',')
+                .map(str::trim)
+                .filter(|port| !port.is_empty())
+            {
+                converted.push_str("\nport(");
+                converted.push_str(port);
+                converted.push(')');
+            }
             for line in body {
                 converted.push('\n');
                 converted.push_str(&line);
@@ -116,10 +125,7 @@ fn convert_simple_component(lines: &[&str], start: usize) -> Result<(String, usi
                 ));
             }
             params.push(declaration.to_string());
-        } else if starts_keyword(trimmed, "COMPONENT")
-            || starts_keyword(trimmed, "SUBSYSTEM")
-            || is_nested_component_instance(trimmed)
-        {
+        } else if starts_keyword(trimmed, "COMPONENT") || starts_keyword(trimmed, "SUBSYSTEM") {
             return Err(migration_error(
                 index,
                 "COMPONENT contains a variant or nested instance and requires a model-specific conversion",
@@ -133,18 +139,6 @@ fn convert_simple_component(lines: &[&str], start: usize) -> Result<(String, usi
         start,
         "unterminated COMPONENT block: expected `END`",
     ))
-}
-
-fn is_nested_component_instance(line: &str) -> bool {
-    let mut words = line.split_whitespace();
-    let Some(_) = words.next() else { return false };
-    let Some(second) = words.next() else {
-        return false;
-    };
-    second
-        .split('(')
-        .next()
-        .is_some_and(|name| line.contains(&format!("{name}(")))
 }
 
 fn starts_keyword(line: &str, keyword: &str) -> bool {
@@ -264,6 +258,7 @@ fn migration_error(line: usize, message: &str) -> FreesError {
 #[cfg(test)]
 mod tests {
     use super::migrate_legacy_source;
+    use crate::parser::parse_document;
 
     #[test]
     fn converts_unambiguous_legacy_forms_and_adds_version_header() {
@@ -282,8 +277,11 @@ mod tests {
             "COMPONENT Pump(in, out)\n  PARAM eta = 0.8\n  out.P = in.P / eta\nEND",
         )
         .unwrap();
-        assert!(migrated.contains("function [in, out] = Pump(eta = 0.8)"));
+        assert!(migrated.contains("function [in, out] = Pump(eta = 0.8)\nport(in)\nport(out)"));
         assert!(migrated.contains("out.P = in.P / eta"));
+        let doc = parse_document(&migrated).unwrap();
+        assert_eq!(doc.components.defs.len(), 1);
+        assert_eq!(doc.components.defs[0].params[0].name, "eta");
     }
 
     #[test]
@@ -292,15 +290,15 @@ mod tests {
             "COMPONENT Pump(in, out)\n  PARAM eta\n  VARIANT basic REQUIRE eta\n    out.P = in.P / eta\n  END\nEND",
         )
         .unwrap();
-        assert!(migrated.contains("function [in, out] = Pump(eta)"));
+        assert!(migrated.contains("function [in, out] = Pump(eta)\nport(in)\nport(out)"));
         assert!(migrated.contains("VARIANT basic REQUIRE eta"));
     }
 
     #[test]
-    fn refuses_ambiguous_component_blocks() {
-        let error =
-            migrate_legacy_source("COMPONENT Pump(in, out)\n  Valve v(in, out)\nEND").unwrap_err();
-        assert!(error.to_string().contains("model-specific conversion"));
+    fn preserves_nested_component_instances() {
+        let migrated =
+            migrate_legacy_source("COMPONENT Pump(in, out)\n  Valve v(in, out)\nEND").unwrap();
+        assert!(migrated.contains("Valve v(in, out)"));
     }
 
     #[test]
