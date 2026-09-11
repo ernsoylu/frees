@@ -186,9 +186,16 @@ pub(crate) fn function_table_defs_of(
             continue;
         }
         convert_gui_curves_to_si(&mut curves, table);
+        let arg_names = table.arg_names.clone().unwrap_or_else(|| {
+            if curves.iter().any(|curve| curve.param.is_some()) {
+                vec!["x".into(), "param".into()]
+            } else {
+                vec!["x".into()]
+            }
+        });
         let def = frees_core::parser::defs::FunctionTableDef {
             name: name.clone(),
-            arg_names: table.arg_names.clone().unwrap_or_default(),
+            arg_names,
             x_log: table.x_log == Some(true),
             y_log: table.y_log == Some(true),
             curves,
