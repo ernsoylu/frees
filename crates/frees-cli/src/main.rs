@@ -550,12 +550,12 @@ mod tests {
     #[test]
     fn a_component_definition_with_no_instance_has_nothing_to_solve() {
         // Phase 6 removed the capability gate that used to refuse this as a
-        // ParseException. A `COMPONENT` template that is never instantiated
+        // ParseException. A component template that is never instantiated
         // contributes no equations, so the document is empty and the *solver*
         // says so. Verified against the oracle, message included: Java answers
         // `SolverException: "No equations to solve."` for this exact source.
         let (payload, ok) = solve_json(
-            "COMPONENT p(a)\n  a.T = 1\nEND\n",
+            "function [a] = p()\n  port(a)\n  a.T = 1\nend\n",
             &SolverSettings::default(),
         );
         assert!(!ok);
