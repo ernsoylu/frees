@@ -60,7 +60,9 @@ pub use engine::{
     PartialDiagnostics, PreparedDocument, Solution, SolveFailure, SolveStats, SyntaxErrorInfo,
     VariableOverride,
 };
-pub use parser::{migrate_legacy_source, parse_document, Document, GuessDirective};
+pub use parser::{
+    migrate_legacy_source, parse_document, parse_legacy_document, Document, GuessDirective,
+};
 pub use solver::{Block, BlockingReport, NewtonReport, SolverSettings};
 pub use token::{Token, TokenKind};
 

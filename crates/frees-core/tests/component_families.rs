@@ -32,7 +32,7 @@ use frees_core::ast::Expr;
 use frees_core::components::def::{ComponentInst, Components, ParamOverrides};
 use frees_core::components::expander::ComponentExpander;
 use frees_core::components::library::{self, COMPONENT_COUNT, FILES};
-use frees_core::{solve, SolverSettings};
+use frees_core::{parse_legacy_document, solve, SolverSettings};
 
 fn corpus_dir() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/corpus")
@@ -92,7 +92,7 @@ fn every_domain_family_has_a_solving_fixture() {
 /// Every component type a document reaches, including the ones a hierarchical
 /// built-in instantiates inside its own body.
 fn types_used(source: &str) -> BTreeSet<String> {
-    let doc = frees_core::parser::parse_document(source).expect("fixture parses");
+    let doc = parse_legacy_document(source).expect("legacy fixture parses");
     let library = library::builtins().expect("library parses");
     let mut seen: BTreeSet<String> = BTreeSet::new();
     let mut stack: Vec<String> = doc
