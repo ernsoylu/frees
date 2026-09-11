@@ -8629,7 +8629,12 @@ mod tests {
         let s = eval(
             &Expr::call(
                 "sum",
-                vec![Expr::Var("i".into()), n(1.0), n(100.0), Expr::Var("i".into())],
+                vec![
+                    Expr::Var("i".into()),
+                    n(1.0),
+                    n(100.0),
+                    Expr::Var("i".into()),
+                ],
             ),
             &Scope::default(),
         )
@@ -8640,25 +8645,38 @@ mod tests {
         let err_span = eval(
             &Expr::call(
                 "sum",
-                vec![Expr::Var("i".into()), n(1.0), n(2_000_000.0), Expr::Var("i".into())],
+                vec![
+                    Expr::Var("i".into()),
+                    n(1.0),
+                    n(2_000_000.0),
+                    Expr::Var("i".into()),
+                ],
             ),
             &Scope::default(),
         )
         .unwrap_err();
-        assert!(err_span.to_string_message().contains("exceeds the 1000000 limit"));
+        assert!(err_span
+            .to_string_message()
+            .contains("exceeds the 1000000 limit"));
 
         // Exhausting the cumulative budget returns an explicit error:
         CUMULATIVE_WORK_BUDGET.with(|b| b.set(10));
         let err_budget = eval(
             &Expr::call(
                 "sum",
-                vec![Expr::Var("i".into()), n(1.0), n(20.0), Expr::Var("i".into())],
+                vec![
+                    Expr::Var("i".into()),
+                    n(1.0),
+                    n(20.0),
+                    Expr::Var("i".into()),
+                ],
             ),
             &Scope::default(),
         )
         .unwrap_err();
-        assert!(err_budget.to_string_message().contains("budget of 2000000 operations exceeded"));
+        assert!(err_budget
+            .to_string_message()
+            .contains("budget of 2000000 operations exceeded"));
         reset_work_budget();
     }
 }
-
