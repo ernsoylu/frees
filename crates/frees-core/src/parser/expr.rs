@@ -534,6 +534,9 @@ fn parse_atom(c: &mut Cursor<'_>) -> Result<Expr> {
             c.expect(&TokenKind::RParen)?;
             Ok(Expr::call("if", encode_call_args(args)))
         }
+        TokenKind::Plot => parse_call_atom(c, "plot".to_string()),
+        TokenKind::Table => parse_call_atom(c, "table".to_string()),
+        TokenKind::Linearize => parse_call_atom(c, "linearize".to_string()),
         TokenKind::Ident(name) => match c.peek_at(1) {
             TokenKind::LParen if c.is_array_name(&name) => parse_paren_array_atom(c, name),
             TokenKind::LParen => parse_call_atom(c, name),
