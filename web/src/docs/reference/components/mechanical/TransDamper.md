@@ -3,7 +3,7 @@ name: TransDamper
 category: Component (mechanical)
 summary: A translational viscous damper, F = c·v.
 related: []
-examples: []
+examples: [damped-actuator-motion]
 tags: [transdamper, component, mechanical, acausal]
 ---
 

@@ -3,7 +3,7 @@ name: TransMass
 category: Component (mechanical)
 summary: A translational mass, F = m dv/dt.
 related: []
-examples: []
+examples: [damped-actuator-motion]
 tags: [transmass, component, mechanical, acausal]
 ---
 

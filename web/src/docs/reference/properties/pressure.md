@@ -3,7 +3,7 @@ name: pressure
 category: Fluid Properties
 summary: Fluid property: pressure from the real-fluid property backend.
 related: []
-examples: []
+examples: [uncertain-tank-inventory]
 tags: [pressure, property, fluid, coolprop]
 references: []
 ---

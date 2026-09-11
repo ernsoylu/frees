@@ -1,0 +1,11 @@
+samples = [0, 0, 0, 1, 0, 0, 0]
+b = [0.5, 0.5]
+a = [1]
+CALL Filter(b, a, samples : causal)
+CALL FiltFilt(b, a, samples : zero_phase)
+CALL Convolve(samples, b : full_response)
+symmetry_error = zero_phase[3]-zero_phase[5]
+{ CHECK causal[4] 0.5 1e-9 }
+{ CHECK causal[5] 0.5 1e-9 }
+{ CHECK full_response[8] 0 1e-9 }
+{ CHECK symmetry_error 0 1e-9 }

@@ -3,7 +3,7 @@ name: Filter
 category: Stats
 summary: Causal IIR/FIR filtering by the difference equation, starting from rest.
 related: [FiltFilt, Smooth, Window, Convolve]
-examples: []
+examples: [causal-zero-phase-filter]
 tags: [filter, iir, fir, lowpass, difference equation, signal]
 ---
 

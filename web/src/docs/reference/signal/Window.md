@@ -3,7 +3,7 @@ name: Window
 category: Stats
 summary: Multiplies a series by a symmetric taper (Hann, Hamming, Blackman, Bartlett or rectangular).
 related: [FFT, Welch, Detrend, Smooth]
-examples: []
+examples: [sensor-detrend-smooth-window]
 tags: [window, taper, hann, hamming, blackman, bartlett, leakage, spectrum]
 ---
 

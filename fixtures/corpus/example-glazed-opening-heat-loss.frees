@@ -1,0 +1,14 @@
+ThermalSource inside(T=293.15)
+Convection inner_film(htc=8, area=0.9)
+Conduction glass(k=0.81, area=0.9, L=0.003)
+Convection outer_film(htc=25, area=0.9)
+ThermalSource outside(T=273.15)
+connect(inside.port, inner_film.a)
+connect(inner_film.b, glass.a)
+connect(glass.b, outer_film.a)
+connect(outer_film.b, outside.port)
+heat_loss = glass.Q
+resistance = 1/(8*0.9) + 0.003/(0.81*0.9) + 1/(25*0.9)
+expected_heat = 20/resistance
+balance_error = heat_loss - expected_heat
+{ CHECK balance_error 0 1e-7 }

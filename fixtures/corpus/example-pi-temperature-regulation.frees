@@ -1,0 +1,12 @@
+PIThermostat controller(Kp=100, Ki=0.5, Tref=350)
+ThermalMass body(C=5000, T0=300)
+Conduction wall(k=2, area=1, L=0.1)
+ThermalSource ambient(T=300)
+connect(controller.port, body.port, wall.a)
+connect(wall.b, ambient.port)
+DYNAMIC heating(method=ode45, time=0..2000, points=201)
+END
+final_temperature = FinalValue('body.port.t')
+final_heat = -FinalValue('controller.port.qdot')
+{ CHECK final_temperature 350 0.02 }
+{ CHECK final_heat 1000 0.5 }

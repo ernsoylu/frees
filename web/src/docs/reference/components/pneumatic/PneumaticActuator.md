@@ -3,7 +3,7 @@ name: PneumaticActuator
 category: Component (pneumatic)
 summary: A pneumatic cylinder/actuator converting pressure to force.
 related: []
-examples: []
+examples: [pneumatic-spring-actuator]
 tags: [pneumaticactuator, component, pneumatic, acausal]
 references:
   - "ISO 6358 — Pneumatic fluid power: flow-rate characteristics"

@@ -3,7 +3,7 @@ name: RotationalDamper
 category: Component (mechanical)
 summary: A rotational viscous damper, τ = c·ω.
 related: []
-examples: []
+examples: [reduction-gear-viscous-load]
 tags: [rotationaldamper, component, mechanical, acausal]
 ---
 

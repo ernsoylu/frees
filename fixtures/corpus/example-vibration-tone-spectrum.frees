@@ -1,0 +1,19 @@
+signal = [0,1,1.4142135623730951,1,0,-1,-1.4142135623730951,-1,0,1,1.4142135623730951,1,0,-1,-1.4142135623730951,-1,0,1,1.4142135623730951,1,0,-1,-1.4142135623730951,-1,0,1,1.4142135623730951,1,0,-1,-1.4142135623730951,-1]
+imaginary = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+CALL FFT(signal, imaginary : spectrum_real, spectrum_imag)
+CALL IFFT(spectrum_real[1:32], spectrum_imag[1:32] : recovered, recovered_imag)
+CALL Welch(signal, 32, 16 : frequency, psd)
+power = sum(psd[1:9])*(frequency[2]-frequency[1])
+reconstruction_error = recovered[3]-signal[3]
+tone_peak = peakindex(1, 0, 0, psd[1:9])
+PLOT 'Vibration power spectrum'
+ kind = xy
+ x = frequency
+ y = psd
+ xlabel = 'Frequency [Hz]'
+ ylabel = 'Power density [amplitude squared per Hz]'
+END
+{ CHECK frequency[3] 4 1e-9 }
+{ CHECK tone_peak 3 1e-9 }
+{ CHECK power 1 0.01 }
+{ CHECK reconstruction_error 0 1e-9 }

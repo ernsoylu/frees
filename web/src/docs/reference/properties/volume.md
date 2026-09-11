@@ -3,7 +3,7 @@ name: volume
 category: Fluid Properties
 summary: Fluid property: volume from the real-fluid property backend.
 related: []
-examples: [rankine-cycle, thermo-compliance, rankine-cycle, engine-cycle-wiebe]
+examples: [rankine-cycle, thermo-compliance, rankine-cycle, engine-cycle-wiebe, uncertain-tank-inventory]
 tags: [volume, property, fluid, coolprop]
 references: []
 ---

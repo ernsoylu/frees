@@ -1,0 +1,13 @@
+TorqueSource drive(T=12)
+Gear gear(ratio=3)
+RotationalDamper load(c=0.6)
+MechGround ground()
+connect(drive.a, gear.in)
+connect(gear.out, load.a)
+connect(drive.b, load.b, ground.port)
+input_speed = gear.in.w
+output_speed = gear.out.w
+load_power = load.a.tau * load.a.w
+{ CHECK input_speed 180 1e-6 }
+{ CHECK output_speed 60 1e-6 }
+{ CHECK load_power 2160 1e-4 }

@@ -3,7 +3,7 @@ name: Convolve
 category: Stats
 summary: Linear convolution of two sequences, m + n − 1 long.
 related: [XCorr, Filter, FFT, Smooth]
-examples: []
+examples: [causal-zero-phase-filter]
 tags: [convolve, convolution, impulse response, fir, kernel, signal]
 ---
 

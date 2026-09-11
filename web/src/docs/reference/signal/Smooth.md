@@ -3,7 +3,7 @@ name: Smooth
 category: Stats
 summary: Centred moving average over an odd window, with honest ends.
 related: [Detrend, Filter, FiltFilt, Window]
-examples: []
+examples: [sensor-detrend-smooth-window]
 tags: [smooth, moving average, filter, noise, signal, sensor]
 ---
 

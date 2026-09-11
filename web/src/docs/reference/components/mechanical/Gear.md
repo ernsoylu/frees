@@ -3,7 +3,7 @@ name: Gear
 category: Component (mechanical)
 summary: A gear pair imposing a fixed speed/torque ratio between two shafts.
 related: []
-examples: []
+examples: [reduction-gear-viscous-load]
 tags: [gear, component, mechanical, acausal]
 ---
 

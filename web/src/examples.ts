@@ -1379,7 +1379,7 @@ T_flame = AdiabaticFlameTemp('CH4', phi, T_react)
 AFR_st  = StoichAFR('CH4') { stoichiometric air-fuel ratio (mass basis) }
 LHV     = HeatingValue('CH4', 'LHV')`,
   },
-{
+  {
     id: 'ev-battery-cooling-pid',
     title: 'EV Battery Cooling with Closed-Loop EXV Control',
     description: 'Five domains in one transient solve: pack discharge (electrical) heats the cell thermal state, a coolant loop carries it to an R134a chiller, and a reverse-acting PID on a signal wire modulates the electronic expansion valve to hold the pack at 303 K. Solve (F2).',
@@ -1438,6 +1438,111 @@ END
 t_bat      = FinalValue('bp.t')
 q_positive = 0.5 * (1 + tanh(FinalValue('ch.ev.q')))`,
   },
+  {
+   id: 'pneumatic-spring-actuator',
+   "title": "Spring-return pneumatic actuator",
+    "description": "Solve (F2). Spring-return pneumatic actuator",
+    "category": "Pneumatics",
+    "text": "PneumaticSupply supply(fluid$=Air, P=120000, T=293.15)\nPneumaticActuator actuator(fluid$=Air, area=0.001774, Patm=100000)\nTransSpring spring(k=1330, x0=0)\nTransGround ground()\nconnect(supply.out, actuator.in)\nconnect(actuator.rod, spring.a)\nconnect(spring.b, ground.port)\nstroke = spring.x\nforce = -actuator.rod.f\n{ CHECK stroke 0.0266766917293233 1e-8 }\n{ CHECK force 35.48 1e-6 }"
+  },
+{
+   id: 'hydraulic-spring-actuator',
+   "title": "Hydraulic actuator holding a spring load",
+    "description": "Solve (F2). Hydraulic actuator holding a spring load",
+    "category": "Hydraulics",
+    "text": "HydraulicSupply supply(P=1100000)\nHydraulicCylinder cylinder(rho=850, beta=1.5e9, V0=0.0001, area=0.001, Patm=100000, P0=1100000)\nTransSpring spring(k=50000, x0=0.02)\nTransGround ground()\nconnect(supply.out, cylinder.in)\nconnect(cylinder.rod, spring.a)\nconnect(spring.b, ground.port)\nload = -cylinder.rod.f\nstroke = spring.x\n{ CHECK load 1000 1e-6 }\n{ CHECK stroke 0.02 1e-8 }"
+  },
+{
+   id: 'hydraulic-metering-restriction',
+   "title": "Oil flow through a metering restriction",
+    "description": "Solve (F2). Oil flow through a metering restriction",
+    "category": "Hydraulics",
+    "text": "HydraulicSupply supply(P=1100000)\nHydraulicOrifice restriction(CdA=1e-5, rho=850)\nHydraulicTank tank(P=100000)\nconnect(supply.out, restriction.in)\nconnect(restriction.out, tank.port)\nmass_flow = restriction.in.mdot\nvolume_flow = mass_flow / 850\nhydraulic_power = 1000000 * volume_flow\nGUESS restriction.in.mdot = 0.4\n{ CHECK mass_flow 0.412310562561766 1e-7 }\n{ CHECK hydraulic_power 485.071250072666 1e-3 }"
+  },
+{
+   id: 'pneumatic-sonic-restriction',
+   "title": "Air supply through a sonic restriction",
+    "description": "Solve (F2). Air supply through a sonic restriction",
+    "category": "Pneumatics",
+    "text": "PneumaticSupply supply(fluid$=Air, P=700000, T=293.15)\nPneumaticOrifice restriction(fluid$=Air, C=1e-8, b=0.35)\nPneumaticAtmosphere atmosphere(P=100000)\nconnect(supply.out, restriction.in)\nconnect(restriction.out, atmosphere.port)\npressure_ratio = restriction.out.P / restriction.in.P\nmass_flow = restriction.in.mdot\n{ CHECK pressure_ratio 0.142857142857143 1e-9 }\n{ CHECK mass_flow 0.008295 1e-7 }"
+  },
+{
+   id: 'damped-actuator-motion',
+   "title": "Damped actuator motion",
+    "description": "Solve (F2), then inspect the dynamic table. Damped actuator motion",
+    "category": "Mechanical",
+    "text": "ForceSource drive(F=35.48)\nTransMass moving(m=0.1, v0=0)\nTransSpring spring(k=1330, x0=0)\nTransDamper damper(c=23.0651251893416)\nTransGround ground()\nconnect(drive.a, moving.port, spring.a, damper.a)\nconnect(drive.b, spring.b, damper.b, ground.port)\nDYNAMIC motion(method=ode45, time=0..0.2, points=101)\nEND\nfinal_stroke = FinalValue('spring.x')\n{ CHECK final_stroke 0.0266766917 1e-6 }"
+  },
+{
+   id: 'reduction-gear-viscous-load',
+   "title": "Reduction gear driving a viscous load",
+    "description": "Solve (F2). Reduction gear driving a viscous load",
+    "category": "Mechanical",
+    "text": "TorqueSource drive(T=12)\nGear gear(ratio=3)\nRotationalDamper load(c=0.6)\nMechGround ground()\nconnect(drive.a, gear.in)\nconnect(gear.out, load.a)\nconnect(drive.b, load.b, ground.port)\ninput_speed = gear.in.w\noutput_speed = gear.out.w\nload_power = load.a.tau * load.a.w\n{ CHECK input_speed 180 1e-6 }\n{ CHECK output_speed 60 1e-6 }\n{ CHECK load_power 2160 1e-4 }"
+  },
+{
+   id: 'pi-temperature-regulation',
+   "title": "PI temperature regulation of a thermal mass",
+    "description": "Solve (F2), then inspect the dynamic table. PI temperature regulation of a thermal mass",
+    "category": "Thermal",
+    "text": "PIThermostat controller(Kp=100, Ki=0.5, Tref=350)\nThermalMass body(C=5000, T0=300)\nConduction wall(k=2, area=1, L=0.1)\nThermalSource ambient(T=300)\nconnect(controller.port, body.port, wall.a)\nconnect(wall.b, ambient.port)\nDYNAMIC heating(method=ode45, time=0..2000, points=201)\nEND\nfinal_temperature = FinalValue('body.port.t')\nfinal_heat = -FinalValue('controller.port.qdot')\n{ CHECK final_temperature 350 0.02 }\n{ CHECK final_heat 1000 0.5 }"
+  },
+{
+   id: 'glazed-opening-heat-loss',
+   "title": "Heat loss through a glazed opening",
+    "description": "Solve (F2). Heat loss through a glazed opening",
+    "category": "Thermal",
+    "text": "ThermalSource inside(T=293.15)\nConvection inner_film(htc=8, area=0.9)\nConduction glass(k=0.81, area=0.9, L=0.003)\nConvection outer_film(htc=25, area=0.9)\nThermalSource outside(T=273.15)\nconnect(inside.port, inner_film.a)\nconnect(inner_film.b, glass.a)\nconnect(glass.b, outer_film.a)\nconnect(outer_film.b, outside.port)\nheat_loss = glass.Q\nresistance = 1/(8*0.9) + 0.003/(0.81*0.9) + 1/(25*0.9)\nexpected_heat = 20/resistance\nbalance_error = heat_loss - expected_heat\n{ CHECK balance_error 0 1e-7 }"
+  },
+{
+   id: 'sensor-detrend-smooth-window',
+   "title": "Remove drift and smooth a sampled sensor trace",
+    "description": "Solve (F2). Remove drift and smooth a sampled sensor trace",
+    "category": "Signal Processing",
+    "text": "trace = [1, 3, 2, 6, 4, 9, 5, 12]\nCALL Detrend(trace : detrended)\nCALL Detrend(trace, 'constant' : centered)\nCALL Smooth(trace, 3 : smoothed)\nCALL Window(detrended[1:8], 'hann' : tapered)\ncentered_mean = sum(centered[1:8])/8\nresidual_mean = sum(detrended[1:8])/8\nleft_edge = smoothed[1]\n{ CHECK centered_mean 0 1e-9 }\n{ CHECK residual_mean 0 1e-9 }\n{ CHECK left_edge 2 1e-9 }\n{ CHECK tapered[1] 0 1e-9 }\n{ CHECK tapered[8] 0 1e-9 }"
+  },
+{
+   id: 'vibration-tone-spectrum',
+   "title": "Recover a vibration tone and check spectral power",
+    "description": "Solve (F2), then plot the spectrum. Recover a vibration tone and check spectral power",
+    "category": "Signal Processing",
+    "text": "signal = [0,1,1.4142135623730951,1,0,-1,-1.4142135623730951,-1,0,1,1.4142135623730951,1,0,-1,-1.4142135623730951,-1,0,1,1.4142135623730951,1,0,-1,-1.4142135623730951,-1,0,1,1.4142135623730951,1,0,-1,-1.4142135623730951,-1]\nimaginary = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]\nCALL FFT(signal, imaginary : spectrum_real, spectrum_imag)\nCALL IFFT(spectrum_real[1:32], spectrum_imag[1:32] : recovered, recovered_imag)\nCALL Welch(signal, 32, 16 : frequency, psd)\npower = sum(psd[1:9])*(frequency[2]-frequency[1])\nreconstruction_error = recovered[3]-signal[3]\ntone_peak = peakindex(1, 0, 0, psd[1:9])\nPLOT 'Vibration power spectrum'\n kind = xy\n x = frequency\n y = psd\n xlabel = 'Frequency [Hz]'\n ylabel = 'Power density [amplitude squared per Hz]'\nEND\n{ CHECK frequency[3] 4 1e-9 }\n{ CHECK tone_peak 3 1e-9 }\n{ CHECK power 1 0.01 }\n{ CHECK reconstruction_error 0 1e-9 }"
+  },
+{
+   id: 'causal-zero-phase-filter',
+   "title": "Causal filtering, zero-phase filtering and convolution",
+    "description": "Solve (F2). Causal filtering, zero-phase filtering and convolution",
+    "category": "Signal Processing",
+    "text": "samples = [0, 0, 0, 1, 0, 0, 0]\nb = [0.5, 0.5]\na = [1]\nCALL Filter(b, a, samples : causal)\nCALL FiltFilt(b, a, samples : zero_phase)\nCALL Convolve(samples, b : full_response)\nsymmetry_error = zero_phase[3]-zero_phase[5]\n{ CHECK causal[4] 0.5 1e-9 }\n{ CHECK causal[5] 0.5 1e-9 }\n{ CHECK full_response[8] 0 1e-9 }\n{ CHECK symmetry_error 0 1e-9 }"
+  },
+{
+   id: 'transport-delay-peak-detection',
+   "title": "Measure transport delay and detect peaks",
+    "description": "Solve (F2). Measure transport delay and detect peaks",
+    "category": "Signal Processing",
+    "text": "late = [0, 0, 1, 2, 1, 0, 0]\nearly = [0, 1, 2, 1, 0, 0, 0]\nCALL XCorr(late, early : correlation)\npeak_position = peakindex(1, 0, 0, correlation[1:13])\nlag_samples = peak_position - 7\ndelay_seconds = 0.1*lag_samples\npulses = [0, 3, 0, 0, 5, 0, 0, 2, 0]\ncount = peakcount(0, 0, pulses)\n{ CHECK lag_samples 1 1e-9 }\n{ CHECK delay_seconds 0.1 1e-9 }\n{ CHECK count 3 1e-9 }"
+  },
+{
+   id: 'correlated-temperature-heat-loss',
+   "title": "Correlated temperature measurements in heat-loss estimation",
+    "description": "Solve (F2). Correlated temperature measurements in heat-loss estimation",
+    "category": "Uncertainty",
+    "text": "inside_temp = 293.15\noutside_temp = 273.15\nheat_loss = 10*(inside_temp-outside_temp)\nUncertaintyOf(inside_temp) = 0.2\nUncertaintyOf(outside_temp) = 0.3\nCorrelation(inside_temp, outside_temp) = 0.5\nheat_sigma = UncertaintyOf(heat_loss)\n{ CHECK heat_loss 200 1e-8 }\n{ CHECK heat_sigma 2.64575131106459 1e-7 }"
+  },
+{
+   id: 'uniform-area-tolerance',
+   "title": "Uniform dimensional tolerance and propagated spread",
+    "description": "Solve (F2). Uniform dimensional tolerance and propagated spread",
+    "category": "Uncertainty",
+    "text": "area = 0.001774\nforce = 20000*area\nDistributionOf(area) = Uniform(0.0015966, 0.0019514)\nforce_sigma = UncertaintyOf(force)\n{ CHECK force 35.48 1e-8 }\n{ CHECK force_sigma 2.048438755 1e-7 }"
+  },
+{
+   id: 'uncertain-tank-inventory',
+   "title": "Tank inventory from uncertain measurements",
+    "description": "Solve (F2). Tank inventory from uncertain measurements",
+    "category": "Uncertainty",
+    "text": "pressure = 934000\nvolume = 0.010\ntemperature = 295.45\nmass = pressure*volume/(208.1*temperature)\nUncertaintyOf(pressure) = 22000\nUncertaintyOf(volume) = 0.0004\nUncertaintyOf(temperature) = 1.2\nmass_sigma = UncertaintyOf(mass)\n{ CHECK mass 0.151911552344956 1e-9 }\n{ CHECK mass_sigma 0.00707868056268796 1e-8 }"
+  }
 ]
 
 /** The document new/blank workspaces start from. */

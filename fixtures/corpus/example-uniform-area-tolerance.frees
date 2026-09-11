@@ -1,0 +1,6 @@
+area = 0.001774
+force = 20000*area
+DistributionOf(area) = Uniform(0.0015966, 0.0019514)
+force_sigma = UncertaintyOf(force)
+{ CHECK force 35.48 1e-8 }
+{ CHECK force_sigma 2.048438755 1e-7 }

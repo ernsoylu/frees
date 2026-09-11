@@ -3,7 +3,7 @@ name: uncertaintyof
 category: Calculus
 summary: Propagated uncertainty of X (resolved in a second solve pass)
 related: []
-examples: []
+examples: [correlated-temperature-heat-loss, uncertain-tank-inventory]
 tags: [uncertaintyof, calculus]
 references:
   - "JCGM 100:2008 (GUM)"

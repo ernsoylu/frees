@@ -3,7 +3,7 @@ name: Convection
 category: Component (heat)
 summary: A convective link (Newton’s law of cooling), Q̇ = h·A·ΔT.
 related: []
-examples: [pressure-cooker]
+examples: [pressure-cooker, glazed-opening-heat-loss]
 tags: [convection, component, heat, acausal]
 ---
 

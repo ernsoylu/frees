@@ -1,0 +1,11 @@
+HydraulicSupply supply(P=1100000)
+HydraulicCylinder cylinder(rho=850, beta=1.5e9, V0=0.0001, area=0.001, Patm=100000, P0=1100000)
+TransSpring spring(k=50000, x0=0.02)
+TransGround ground()
+connect(supply.out, cylinder.in)
+connect(cylinder.rod, spring.a)
+connect(spring.b, ground.port)
+load = -cylinder.rod.f
+stroke = spring.x
+{ CHECK load 1000 1e-6 }
+{ CHECK stroke 0.02 1e-8 }

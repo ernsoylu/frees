@@ -1,0 +1,11 @@
+PneumaticSupply supply(fluid$=Air, P=120000, T=293.15)
+PneumaticActuator actuator(fluid$=Air, area=0.001774, Patm=100000)
+TransSpring spring(k=1330, x0=0)
+TransGround ground()
+connect(supply.out, actuator.in)
+connect(actuator.rod, spring.a)
+connect(spring.b, ground.port)
+stroke = spring.x
+force = -actuator.rod.f
+{ CHECK stroke 0.0266766917293233 1e-8 }
+{ CHECK force 35.48 1e-6 }

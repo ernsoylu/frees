@@ -3,7 +3,7 @@ name: IFFT
 category: Stats
 summary: Inverse discrete Fourier transform, including the 1/n normalization.
 related: [FFT, Convolve, Welch, Window]
-examples: []
+examples: [vibration-tone-spectrum]
 tags: [ifft, inverse fft, fourier, transform, signal]
 ---
 

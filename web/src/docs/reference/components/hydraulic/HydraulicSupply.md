@@ -3,7 +3,7 @@ name: HydraulicSupply
 category: Component (hydraulic)
 summary: A hydraulic pressure supply.
 related: []
-examples: []
+examples: [hydraulic-spring-actuator, hydraulic-metering-restriction]
 tags: [hydraulicsupply, component, hydraulic, acausal]
 ---
 
