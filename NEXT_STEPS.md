@@ -187,6 +187,7 @@ Focus: Implement the comprehensive language unification detailed in [`reports/SI
   - Update editor language tooling: syntax highlighters ([`web/src/EquationEditor.tsx`](file:///home/eren/homecloud/dev/frees-wasm/web/src/EquationEditor.tsx)), autocompletion ([`web/src/editorCompletion.ts`](file:///home/eren/homecloud/dev/frees-wasm/web/src/editorCompletion.ts)), signature tooltips ([`web/src/signatureHelp.ts`](file:///home/eren/homecloud/dev/frees-wasm/web/src/signatureHelp.ts)), and LaTeX renderer.
   - Provide an automatic project migration tool for legacy projects, embedding a version header (`// frees-language: 2`).
     - [x] Add `frees-cli migrate` for unambiguous function, procedure, call, guess, and simple component rewrites, with explicit refusal for model-specific blocks.
+    - [x] Component migration preserves canonical `VARIANT ... END` bodies and rejects nested component instances.
   - [x] Autocomplete and local signatures recognize unified component function headers and port(...) declarations.
   - [x] Signature help recognizes canonical scalar and multi-output function declarations.
   - [x] Control-system Help snippets use canonical bracketed output assignments for migrated CALL examples.

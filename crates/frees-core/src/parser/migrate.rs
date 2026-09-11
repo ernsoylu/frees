@@ -78,11 +78,18 @@ fn convert_simple_component(lines: &[&str], start: usize) -> Result<(String, usi
 
     let mut params = Vec::new();
     let mut body: Vec<String> = Vec::new();
+    let mut nested_blocks = 0usize;
     let mut index = start + 1;
     while index < lines.len() {
         let line = lines[index];
         let trimmed = line.trim();
         if starts_keyword(trimmed, "END") {
+            if nested_blocks > 0 {
+                body.push(line.trim_end().to_string());
+                nested_blocks -= 1;
+                index += 1;
+                continue;
+            }
             let signature = if params.is_empty() {
                 format!("function [{ports}] = {name}()")
             } else {
@@ -97,17 +104,10 @@ fn convert_simple_component(lines: &[&str], start: usize) -> Result<(String, usi
             converted.push_str("end");
             return Ok((converted, index + 1));
         }
-        if starts_keyword(trimmed, "VARIANT")
-            || starts_keyword(trimmed, "COMPONENT")
-            || starts_keyword(trimmed, "SUBSYSTEM")
-            || is_nested_component_instance(trimmed)
-        {
-            return Err(migration_error(
-                index,
-                "COMPONENT contains a variant or nested instance and requires a model-specific conversion",
-            ));
-        }
-        if starts_keyword(trimmed, "PARAM") {
+        if starts_keyword(trimmed, "VARIANT") {
+            nested_blocks += 1;
+            body.push(line.trim_end().to_string());
+        } else if starts_keyword(trimmed, "PARAM") {
             let declaration = trimmed["PARAM".len()..].trim();
             if declaration.is_empty() {
                 return Err(migration_error(
@@ -116,6 +116,14 @@ fn convert_simple_component(lines: &[&str], start: usize) -> Result<(String, usi
                 ));
             }
             params.push(declaration.to_string());
+        } else if starts_keyword(trimmed, "COMPONENT")
+            || starts_keyword(trimmed, "SUBSYSTEM")
+            || is_nested_component_instance(trimmed)
+        {
+            return Err(migration_error(
+                index,
+                "COMPONENT contains a variant or nested instance and requires a model-specific conversion",
+            ));
         } else {
             body.push(line.trim_end().to_string());
         }
@@ -133,7 +141,10 @@ fn is_nested_component_instance(line: &str) -> bool {
     let Some(second) = words.next() else {
         return false;
     };
-    second.ends_with('(') || line.contains(&format!("{second}("))
+    second
+        .split('(')
+        .next()
+        .is_some_and(|name| line.contains(&format!("{name}(")))
 }
 
 fn starts_keyword(line: &str, keyword: &str) -> bool {
@@ -276,11 +287,19 @@ mod tests {
     }
 
     #[test]
-    fn refuses_ambiguous_component_blocks() {
-        let error = migrate_legacy_source(
-            "COMPONENT Pump(in, out)\n  VARIANT basic\n    out.P = in.P\n  END\nEND",
+    fn preserves_component_variants_in_the_unified_form() {
+        let migrated = migrate_legacy_source(
+            "COMPONENT Pump(in, out)\n  PARAM eta\n  VARIANT basic REQUIRE eta\n    out.P = in.P / eta\n  END\nEND",
         )
-        .unwrap_err();
+        .unwrap();
+        assert!(migrated.contains("function [in, out] = Pump(eta)"));
+        assert!(migrated.contains("VARIANT basic REQUIRE eta"));
+    }
+
+    #[test]
+    fn refuses_ambiguous_component_blocks() {
+        let error =
+            migrate_legacy_source("COMPONENT Pump(in, out)\n  Valve v(in, out)\nEND").unwrap_err();
         assert!(error.to_string().contains("model-specific conversion"));
     }
 
