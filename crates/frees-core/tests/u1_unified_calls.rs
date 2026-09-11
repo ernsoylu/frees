@@ -69,6 +69,13 @@ fn canonical_functions_require_definite_assignment_after_branches() {
 }
 
 #[test]
+fn canonical_functions_reject_structural_equations_inside_control_flow() {
+    let source = "function y = branch(x)\n  if x > 0 then\n    z = x\n  end\n  y := x\nend\nanswer = branch(1)";
+    let error = solve(source, &SolverSettings::default()).unwrap_err().to_string();
+    assert!(error.contains("FREES-MIG-005"), "{error}");
+}
+
+#[test]
 fn single_result_procedure_is_a_scalar_expression_call() {
     let solution = solve(
         "PROCEDURE increment(a : result)\n  result := a + 1\nEND\ny = increment(4)",

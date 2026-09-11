@@ -124,6 +124,7 @@ pub fn call_function(
     let _guard = DepthGuard::enter("FUNCTION", &def.name)?;
     if def.output.is_some() {
         reject_ignored_equations(&def.body, &def.name)?;
+        validate_structural_control_flow(&def.body, &def.name, false)?;
         let mut assigned: HashSet<String> = def.params.iter().cloned().collect();
         validate_definite_assignment(&def.body, &mut assigned)?;
     }
@@ -144,6 +145,42 @@ pub fn call_function(
             def.name, output
         ))),
     }
+}
+
+fn validate_structural_control_flow(
+    body: &[ProcStatement],
+    function: &str,
+    in_control_flow: bool,
+) -> Result<()> {
+    for statement in body {
+        match statement {
+            ProcStatement::Eq(_) if in_control_flow => {
+                return Err(FreesError::evaluation(format!(
+                    "FREES-MIG-005: FUNCTION {function} contains a structural equation inside runtime control flow; use `:=` for an ordered calculation"
+                )));
+            }
+            ProcStatement::IfElse {
+                then_branch,
+                else_branch,
+                ..
+            } => {
+                validate_structural_control_flow(then_branch, function, true)?;
+                validate_structural_control_flow(else_branch, function, true)?;
+            }
+            ProcStatement::RepeatUntil { body, .. }
+            | ProcStatement::For { body, .. }
+            | ProcStatement::While { body, .. } => {
+                validate_structural_control_flow(body, function, true)?;
+            }
+            ProcStatement::Assign { .. }
+            | ProcStatement::Eq(_)
+            | ProcStatement::Port { .. }
+            | ProcStatement::Connect { .. }
+            | ProcStatement::Instance { .. }
+            | ProcStatement::Variant { .. } => {}
+        }
+    }
+    Ok(())
 }
 
 fn validate_definite_assignment(

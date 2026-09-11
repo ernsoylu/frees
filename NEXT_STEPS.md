@@ -153,7 +153,7 @@ Focus: Implement the comprehensive language unification detailed in [`reports/SI
     - [x] Canonical function bodies validate definite assignment across branches before execution.
   - [x] Introduce clean colon-based range loops (`for i = 1:n`) with explicit step support and bounded iteration ceilings.
     - [x] Canonical two-bound colon ranges default to `+1`; descending ranges require an explicit negative step.
-  - Enforce static checks ensuring that runtime control flow does not alter the structural topological graph of nonlinear equations during Newton iterations.
+  - [x] Enforce static checks ensuring that runtime control flow does not alter the structural topological graph of nonlinear equations during Newton iterations.
     - [x] Structural equation preparation remains value independent and is cached across Newton iterations.
 - [ ] **3.5 Stage U4: Value Syntax, Array Indexing & Named Arguments**
   - Unambiguously resolve array indexing versus function calls: support parenthesized indexing `a(i)` alongside `a[i]` with 1-based indexing checks and index-zero diagnostics.
