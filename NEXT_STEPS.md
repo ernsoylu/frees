@@ -150,6 +150,7 @@ Focus: Implement the comprehensive language unification detailed in [`reports/SI
     - Numerical `=` declares mathematical equations (participating in global nonlinear/ODE solve).
     - `:=` performs explicit ordered calculations and accumulator updates.
     - [x] Canonical function bodies execute variable assignments and calculations in source order, with later reads observing the latest value.
+    - [x] Canonical function bodies validate definite assignment across branches before execution.
   - [x] Introduce clean colon-based range loops (`for i = 1:n`) with explicit step support and bounded iteration ceilings.
     - [x] Canonical two-bound colon ranges default to `+1`; descending ranges require an explicit negative step.
   - Enforce static checks ensuring that runtime control flow does not alter the structural topological graph of nonlinear equations during Newton iterations.

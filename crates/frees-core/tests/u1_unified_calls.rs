@@ -53,6 +53,22 @@ fn canonical_function_versions_mixed_equations_and_calculations_in_order() {
 }
 
 #[test]
+fn canonical_functions_require_definite_assignment_after_branches() {
+    let doc = parse_document(
+        "function y = branch(x)\n  if x > 0 then\n    temp := 1\n  end\n  y := temp\nend",
+    )
+    .unwrap();
+    let error = frees_core::procedures::call_function(
+        doc.defs.function("branch").unwrap(),
+        &[1.0],
+        &doc.defs,
+        &frees_core::eval::Scope::default(),
+    )
+    .unwrap_err();
+    assert!(error.to_string().contains("variable has no value: temp"));
+}
+
+#[test]
 fn single_result_procedure_is_a_scalar_expression_call() {
     let solution = solve(
         "PROCEDURE increment(a : result)\n  result := a + 1\nEND\ny = increment(4)",

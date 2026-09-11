@@ -42,7 +42,7 @@
 //!   with a diagnostic instead. **Deviation**, documented here.
 
 use std::cell::Cell;
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, HashMap, HashSet};
 
 use crate::ast::{Equation, Expr, Statement};
 use crate::diag::{FreesError, Result};
@@ -124,6 +124,8 @@ pub fn call_function(
     let _guard = DepthGuard::enter("FUNCTION", &def.name)?;
     if def.output.is_some() {
         reject_ignored_equations(&def.body, &def.name)?;
+        let mut assigned: HashSet<String> = def.params.iter().cloned().collect();
+        validate_definite_assignment(&def.body, &mut assigned)?;
     }
     let mut locals = if def.output.is_some() {
         Scope::default()
@@ -142,6 +144,85 @@ pub fn call_function(
             def.name, output
         ))),
     }
+}
+
+fn validate_definite_assignment(
+    body: &[ProcStatement],
+    assigned: &mut HashSet<String>,
+) -> Result<()> {
+    for statement in body {
+        match statement {
+            ProcStatement::Assign { var_name, value } => {
+                validate_expression(value, assigned)?;
+                assigned.insert(var_name.clone());
+            }
+            ProcStatement::Eq(Equation { lhs, rhs, .. }) => {
+                if let Expr::Var(name) = lhs {
+                    validate_expression(rhs, assigned)?;
+                    assigned.insert(name.clone());
+                } else if let Expr::Var(name) = rhs {
+                    validate_expression(lhs, assigned)?;
+                    assigned.insert(name.clone());
+                } else {
+                    validate_expression(lhs, assigned)?;
+                    validate_expression(rhs, assigned)?;
+                }
+            }
+            ProcStatement::IfElse {
+                condition,
+                then_branch,
+                else_branch,
+            } => {
+                validate_expression(condition, assigned)?;
+                let mut then_assigned = assigned.clone();
+                let mut else_assigned = assigned.clone();
+                validate_definite_assignment(then_branch, &mut then_assigned)?;
+                validate_definite_assignment(else_branch, &mut else_assigned)?;
+                assigned
+                    .retain(|name| then_assigned.contains(name) && else_assigned.contains(name));
+            }
+            ProcStatement::RepeatUntil { body, condition } => {
+                validate_definite_assignment(body, assigned)?;
+                validate_expression(condition, assigned)?;
+            }
+            ProcStatement::For {
+                start,
+                step,
+                end,
+                var_name,
+                body,
+            } => {
+                validate_expression(start, assigned)?;
+                if let Some(step) = step {
+                    validate_expression(step, assigned)?;
+                }
+                validate_expression(end, assigned)?;
+                let mut loop_assigned = assigned.clone();
+                loop_assigned.insert(var_name.clone());
+                validate_definite_assignment(body, &mut loop_assigned)?;
+            }
+            ProcStatement::While { condition, body } => {
+                validate_expression(condition, assigned)?;
+                let mut loop_assigned = assigned.clone();
+                validate_definite_assignment(body, &mut loop_assigned)?;
+            }
+            ProcStatement::Port { .. }
+            | ProcStatement::Connect { .. }
+            | ProcStatement::Variant { .. } => {}
+        }
+    }
+    Ok(())
+}
+
+fn validate_expression(expr: &Expr, assigned: &HashSet<String>) -> Result<()> {
+    for name in expr.variables() {
+        if !assigned.contains(&name) && crate::eval::lookup_constant(&name).is_none() {
+            return Err(FreesError::evaluation(format!(
+                "variable has no value: {name}"
+            )));
+        }
+    }
+    Ok(())
 }
 
 fn reject_ignored_equations(body: &[ProcStatement], function: &str) -> Result<()> {
