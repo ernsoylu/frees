@@ -790,6 +790,7 @@ impl<'a> Parser<'a> {
             {
                 let mut ports = Vec::new();
                 let mut connects = Vec::new();
+                let mut variants = Vec::new();
                 let mut equations = Vec::new();
                 for statement in body {
                     match statement {
@@ -797,6 +798,15 @@ impl<'a> Parser<'a> {
                         ProcStatement::Connect { ports } => connects.push(ConnectDecl {
                             ports,
                             source_text: "connect(...)".to_string(),
+                        }),
+                        ProcStatement::Variant {
+                            name,
+                            require,
+                            body,
+                        } => variants.push(Variant {
+                            name,
+                            require,
+                            body,
                         }),
                         ProcStatement::Eq(equation) => equations.push(equation),
                         other => {
@@ -822,7 +832,7 @@ impl<'a> Parser<'a> {
                     ports,
                     params,
                     equations,
-                    Vec::new(),
+                    variants,
                     Vec::new(),
                     connects,
                 )));
@@ -2289,6 +2299,7 @@ impl<'a> Parser<'a> {
     fn proc_statement(&mut self) -> Result<ProcStatement> {
         match self.c.peek() {
             TokenKind::Connect => self.canonical_connect_statement(),
+            TokenKind::Variant => self.canonical_variant_statement(),
             TokenKind::Ident(name)
                 if name.eq_ignore_ascii_case("port")
                     && matches!(self.c.peek_at(1), TokenKind::LParen) =>
@@ -2368,6 +2379,44 @@ impl<'a> Parser<'a> {
         }
         self.c.expect(&TokenKind::RParen)?;
         Ok(ProcStatement::Connect { ports })
+    }
+
+    fn canonical_variant_statement(&mut self) -> Result<ProcStatement> {
+        self.c.expect(&TokenKind::Variant)?;
+        let name = self.c.expect_ident()?.to_ascii_lowercase();
+        let mut require = Vec::new();
+        if self.c.eat(&TokenKind::Require) {
+            let parenthesized = self.c.eat(&TokenKind::LParen);
+            require.push(self.c.expect_ident()?.to_ascii_lowercase());
+            while self.c.eat(&TokenKind::Comma) {
+                require.push(self.c.expect_ident()?.to_ascii_lowercase());
+            }
+            if parenthesized {
+                self.c.expect(&TokenKind::RParen)?;
+            }
+        }
+        self.require_sep("after the VARIANT header")?;
+        let mut body = Vec::new();
+        loop {
+            self.c.skip_separators();
+            if matches!(self.c.peek(), TokenKind::End) {
+                break;
+            }
+            if self.c.is_eof() {
+                return Err(FreesError::parse_at(
+                    format!("unterminated VARIANT {name} block"),
+                    self.c.span(),
+                ));
+            }
+            body.push(self.bare_equation()?);
+            self.require_item_end()?;
+        }
+        self.c.expect(&TokenKind::End)?;
+        Ok(ProcStatement::Variant {
+            name,
+            require,
+            body,
+        })
     }
 
     fn proc_for_statement(&mut self, header: Span) -> Result<ProcStatement> {

@@ -169,6 +169,7 @@ fn reject_ignored_equations(body: &[ProcStatement], function: &str) -> Result<()
             | ProcStatement::Eq(_)
             | ProcStatement::Port { .. }
             | ProcStatement::Connect { .. } => {}
+            ProcStatement::Variant { .. } => {}
         }
     }
     Ok(())
@@ -387,7 +388,9 @@ fn execute_one(statement: &ProcStatement, locals: &mut Scope, defs: &Definitions
             }
         }
 
-        ProcStatement::Port { .. } | ProcStatement::Connect { .. } => {
+        ProcStatement::Port { .. }
+        | ProcStatement::Connect { .. }
+        | ProcStatement::Variant { .. } => {
             return Err(FreesError::evaluation(
                 "component declarations cannot execute as scalar procedures",
             ));

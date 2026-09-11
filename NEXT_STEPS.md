@@ -168,6 +168,7 @@ Focus: Implement the comprehensive language unification detailed in [`reports/SI
     - [x] Canonical `require(...)` calls parse as ordinary expressions for selected component branches.
     - [x] Lower canonical `port(...)` and `connect(...)` statements into component ports and connection declarations.
     - [x] Preserve defaults declared in unified component function parameters through component expansion.
+    - [x] Lower canonical `variant name require(...)` blocks into the existing construction-time variant model.
   - Verify that physical conservation (Kirchhoff current/pressure laws), state storage, and structural variants produce identical topological networks and numerical solutions.
 - [ ] **3.7 Stage U6: Analysis, Simulation & Presentation as Registered Calls**
   - Replace ad-hoc keyword blocks with registered domain function calls: `simulate(...)`, `sweep(...)`, `plot(...)`, `table(...)`, `linearize(...)`.

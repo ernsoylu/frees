@@ -52,6 +52,12 @@ pub enum ProcStatement {
     Port { name: String },
     /// Canonical component connection inside a unified function.
     Connect { ports: Vec<String> },
+    /// Canonical construction-time component variant.
+    Variant {
+        name: String,
+        require: Vec<String>,
+        body: Vec<Equation>,
+    },
 }
 
 /// `FUNCTION name(params) … END` — returns a single value assigned to the

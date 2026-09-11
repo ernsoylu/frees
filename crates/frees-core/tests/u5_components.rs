@@ -8,6 +8,9 @@ fn unified_component_function_lowers_into_component_definitions() {
            port(out)\n\
            out.P = in.P - r * in.mdot\n\
            out.mdot = in.mdot\n\
+           variant nominal require(r)\n\
+           out.P = in.P - r * in.mdot\n\
+           end\n\
            connect(in, out)\n\
          end",
     )
@@ -18,6 +21,8 @@ fn unified_component_function_lowers_into_component_definitions() {
     assert_eq!(component.ports, ["in", "out"]);
     assert_eq!(component.params[0].name, "r");
     assert!(component.params[0].default_value.is_some());
+    assert_eq!(component.variants[0].name, "nominal");
+    assert_eq!(component.variants[0].require, ["r"]);
     assert_eq!(component.body.len(), 2);
     assert_eq!(component.sub_connects[0].ports, ["in", "out"]);
 }
