@@ -268,16 +268,21 @@ plan for closing it.
 
 ### Measured starting point
 
+Measured at `8f744dd` by the audit's own harness. The narrative documents are tracked at
+`reports/REPORT.md`, `reports/MISSING_EXAMPLES.md` and `reports/documentation-audit/REPORT.md`;
+the evidence data those reports cite — the per-symbol CSVs, the coverage JSON and the
+`measure.cjs` harness — is **not** in the repository. See the note below the table.
+
 | Measure | Value | Source |
 |---|---:|---|
-| Catalogued documentable symbols | 719 → **723** | `reports/latest-change/coverage-summary.json` |
+| Catalogued documentable symbols | 719 → **723** | audit harness |
 | Symbols with a reference page | 667 (92.8% → **92.3%**) | `npm run check-docs` |
-| Symbols with **no** page | 52 → **56** | `symbol-coverage.csv` |
+| Symbols with **no** page | 52 → **56** | `npm run check-docs` |
 | Page tiers | 167 rich / 354 reference / 146 stub | same |
 | Symbols demonstrated by a **complete, runnable document** | 140 (19.5%) | same |
 | Symbols demonstrated only by a fragment | 208 (28.9%) | same |
 | Components with a complete-document example | 40 / 312 (12.8%) | same |
-| Complete-document candidates in the product | 150 | `run-candidates.json` |
+| Complete-document candidates in the product | 150 | audit harness |
 
 Components with no complete-document example, by domain — this is the queue the example
 waves work through:
@@ -291,6 +296,15 @@ waves work through:
 | fluid | 26 | liquid | 15 |
 | heat | 13 | ac | 4 |
 | control | 1 | | |
+
+**Where the evidence lives.** The audit's measurement scripts and their CSV/JSON output are
+kept out of the repository, and `.gitignore` enforces it. SonarCloud analyses this project
+with Automatic Analysis, whose exclusions are configured in the project settings UI rather
+than in `sonar-project.properties` — so an evidence tree committed here fails the quality gate
+on its own measurement scripts and on the duplication between two snapshots of the same audit,
+and nothing in this repository can exempt it. The reports keep their reproduction instructions;
+re-run the harness locally to regenerate the data. The numbers above are reproducible from
+`npm run check-docs` alone.
 
 The denominator moved during 4.7b-1: the builder now reads a third Rust registry, adding
 `copy`, `ger`, `identity` and `scal` to the documentable surface. Four more missing pages is
@@ -388,6 +402,17 @@ Additionally, `manifest.derivedFrom` is unconditionally overwritten to `'java+ru
 **Verification at this commit:** `npm run check-docs` green at 667/723; `npm run check-examples`
 17/17 through the compiled module; `vitest` 56 files / 624 tests; `npm run lint` 0 errors.
 
+**Found while getting this through CI, not yet fixed — `sonar-project.properties` is not a
+control surface.** SonarCloud analyses this project with Automatic Analysis; there is no
+scanner step in `.github/workflows/`, and the authoritative exclusions live in the SonarCloud
+project settings UI. The two have drifted: the settings API reports `sonar.exclusions` without
+`web/bench/**`, `web/node_modules/**`, `components/library-data/**` or `props/data/**`, all
+four of which the repository file lists. The file reads as authoritative, is written as though
+it were, and changing it changes nothing. A warning header now says so. The real fix is a
+decision: either add a `sonarqube-scan-action` step with a `SONAR_TOKEN` and turn Automatic
+Analysis off, making this file authoritative, or delete it and keep the exclusions in the UI
+alone. Leaving a convincing file that controls nothing is the worse of the three.
+
 **Still open from this phase:** the runner executes 0 numerical assertions, because no product
 document carries a `CHECK` marker yet. It is a gate waiting for content — which is 4.7b-2.
 Shrinking `EXTRA_CALLABLES` below 12 means teaching the builder to read `props/propfun.rs`'s
@@ -411,7 +436,7 @@ plus 4 analysis requests, 55 numerical assertions, validated through the compile
 - Freeze each equation model as a fixture under `fixtures/corpus/` so the parity replay and the
   WASM shard replay both carry it.
 
-**Done when:** complete-document coverage is re-measured by `measure.cjs` and has moved off
+**Done when:** complete-document coverage is re-measured by the audit harness and has moved off
 140, and no bound page cites a model that does not instantiate its symbol.
 
 ### Phase 4.7b-3 — Close the 56 missing reference pages (≈1 week, parallel with 4.7b-2)
@@ -556,12 +581,13 @@ audit says is currently being introduced rather than fixed.
 Re-measure with the committed scripts, not by hand:
 
 ```sh
-node reports/latest-change/measure.cjs
 cd web && npm run check-docs && npm run check-examples
 ```
 
-`measure.cjs` still reports the 719-symbol denominator it was written against; re-run it
-against the regenerated manifest before quoting a coverage delta.
+Page presence and the family counts come from `check-docs`. Complete-document incidence needs
+the audit harness, which is not tracked — run it from a local copy, and note it reports the
+719-symbol denominator it was written against, so regenerate the manifest before quoting a
+coverage delta.
 
 ### Ordering against the rest of section 2b
 

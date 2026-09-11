@@ -1,7 +1,0 @@
-{
-  "id": "gallery:ev-battery-cooling-pid",
-  "budgetSeconds": 60,
-  "elapsedSeconds": 19.77,
-  "success": true,
-  "error": null
-}
