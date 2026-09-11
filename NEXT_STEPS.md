@@ -133,7 +133,7 @@ Focus: Expand table data wrangling and plotting workflows (Phase 4.4 from earlie
 
 Focus: Implement the comprehensive language unification detailed in [`reports/SIMPLIFIED_SYNTAX_PROPOSAL.md`](file:///home/eren/homecloud/dev/frees-wasm/reports/SIMPLIFIED_SYNTAX_PROPOSAL.md). Unify equations and procedural algorithms under one `function` declaration, single/bracketed call syntax, explicit operators (`=` for equations, `:=` for ordered calculations, `==` for comparisons), and replace disparate block keywords (`CALL`, `MODULE`, `PROCEDURE`, `COMPONENT`) with registered domain calls.
 
-- [ ] **3.1 Stage U0: Language Contract, Callable Inventory & Migration Semantics**
+- [x] **3.1 Stage U0: Language Contract, Callable Inventory & Migration Semantics**
   - Formally freeze operator semantics, lexical scoping rules, type/value representations, and migration diagnostics as defined in [`reports/SIMPLIFIED_SYNTAX_PROPOSAL.md`](file:///home/eren/homecloud/dev/frees-wasm/reports/SIMPLIFIED_SYNTAX_PROPOSAL.md).
   - Catalogue all callable signatures across built-in intrinsics, matrix routines, CoolProp thermodynamic queries, signal processing, and component libraries.
   - Establish a golden compatibility test suite capturing legacy behavior across all edge cases (descending loops, caller-scope access, ignored equations, output re-execution).
