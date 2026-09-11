@@ -17,11 +17,11 @@ declare module 'plotly.js/lib/core' {
   }
 
   export interface PlotlyTrace {
-    type: 'scatter' | 'bar' | 'pie' | 'histogram' | 'mesh3d' | 'scatter3d'
+    type: 'scatter' | 'bar' | 'pie' | 'histogram' | 'mesh3d' | 'scatter3d' | 'box'
     mode?: string
     name: string
-    x?: (number | null)[] | string[]
-    y?: (number | null)[] | string[]
+    x?: (number | string | null)[]
+    y?: (number | string | null)[]
     z?: (number | null)[]
     error_y?: Record<string, unknown>
     labels?: string[]
@@ -29,6 +29,8 @@ declare module 'plotly.js/lib/core' {
     intensity?: (number | null)[]
     colorscale?: string
     opacity?: number
+    fill?: string
+    fillcolor?: string
     line?: PlotlyLineStyle
     marker?: PlotlyMarkerStyle
     text?: string[]
@@ -42,6 +44,9 @@ declare module 'plotly.js/lib/core' {
     nbinsx?: number
     uid?: string
     customdata?: (string | number)[]
+    boxpoints?: 'all' | 'outliers' | 'suspectedoutliers' | false | string
+    jitter?: number
+    pointpos?: number
   }
 
   export interface PlotlyAxisLayout {
@@ -62,6 +67,7 @@ declare module 'plotly.js/lib/core' {
     dtick?: number
     overlaying?: string
     side?: 'left' | 'right' | 'top' | 'bottom'
+    rangemode?: 'normal' | 'tozero' | 'nonnegative'
   }
 
   export interface PlotlyLayout {
@@ -82,6 +88,7 @@ declare module 'plotly.js/lib/core' {
       bgcolor?: string
     }
     barmode?: 'group' | 'stack' | 'overlay' | 'relative'
+    boxmode?: 'group' | 'overlay'
     scene?: {
       xaxis?: PlotlyAxisLayout
       yaxis?: PlotlyAxisLayout

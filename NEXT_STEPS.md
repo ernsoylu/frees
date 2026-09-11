@@ -117,12 +117,12 @@ Focus: Expose recently implemented Rust analysis capabilities to the web applica
 
 Focus: Expand table data wrangling and plotting workflows (Phase 4.4 from earlier planning, reinforced by table and plot engine reviews) so that experimental data feeds seamlessly into physical calibration, regression, and visualization.
 
-- [ ] **2.1 Practical Measurement Table Operations**
+- [x] **2.1 Practical Measurement Table Operations**
   - **Data Wrangling Kernels**: Implement row filtering (predicate expressions), selected-column mathematical transforms, grouped summaries (group-by with aggregation), and rolling statistics (moving mean, standard deviation, median) within the Tables tab.
   - **Table Joins & Temporal Alignment**: Add join operations by key column or timestamp, supporting exact matching and linear interpolation for mismatched time grids.
   - **Data Provenance & Policy Controls**: Provide explicit handling for missing values (`NaN`), rejected rows, duplicate keys, and out-of-bounds extrapolation. Ensure unit metadata and column descriptions are preserved across transforms.
   - **Direct Pipeline Feed**: Allow derived and filtered tables to be selected as data sources for curve fitting, dynamic parameter calibration, and parametric sweep comparisons without manual CSV re-export.
-- [ ] **2.2 Advanced Scientific Plot Overlays & Interaction**
+- [x] **2.2 Advanced Scientific Plot Overlays & Interaction**
   - **Statistical Plot Types**: Integrate Box Plots and Empirical Cumulative Distribution Functions (ECDFs) into the Plot tab using the existing Plotly.js engine.
   - **Uncertainty & Fit Overlays**: Plot fitted curve overlays with translucent confidence ribbons ($95\%$ mean confidence band) and prediction ribbons (prediction intervals accounting for measurement variance) directly atop scatter data points.
   - **Binding Correctness & Missing Data**: Fix plot-to-table binding identity so switching active tables does not inadvertently scramble plot definitions; properly break line segments across missing (`NaN`) samples rather than drawing erroneous bridging lines.

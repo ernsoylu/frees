@@ -387,8 +387,15 @@ export function buildFigure(spec: PlotSpec, inputs: FigureInputs): PlotlyFigure 
     return buildPsychroFigure(psychart, spec.psychro, spec.format, overlayStates(spec.psychro.stateTable), theme, undefined, revision)
   }
   if (spec.kind === 'xy' && !spec.source) return null
-  if (spec.kind === 'xy' && (spec.xy.xVar || spec.xy.chartType === 'histogram') && spec.xy.yVars.length > 0 && (spec.xy.chartType !== 'surface3d' || spec.xy.zVar)) {
-    return buildXyFigureFromSpec(spec, inputs, spec.xy.chartType === 'histogram' ? '' : spec.xy.xVar!, revision)
+  const isNoXNeeded =
+    spec.xy.chartType === 'histogram' || spec.xy.chartType === 'box' || spec.xy.chartType === 'ecdf'
+  if (
+    spec.kind === 'xy' &&
+    (spec.xy.xVar || isNoXNeeded) &&
+    spec.xy.yVars.length > 0 &&
+    (spec.xy.chartType !== 'surface3d' || spec.xy.zVar)
+  ) {
+    return buildXyFigureFromSpec(spec, inputs, isNoXNeeded ? spec.xy.xVar || '' : spec.xy.xVar!, revision)
   }
   if (spec.kind === 'bode' && spec.control.omega && spec.control.mag && spec.control.phase) {
     const omega = getArrayValues(variables, spec.control.omega)
@@ -446,6 +453,26 @@ function buildXyFigureFromSpec(spec: PlotSpec, inputs: FigureInputs, xVar: strin
         ? buildArrayXYSeries(variables, xVar, spec.xy.y2Vars, 'y2')
         : buildXYSeries(tableRows, outcomes, xVar, spec.xy.y2Vars, null, null, 'y2')),
     )
+  }
+  if (spec.xy.ribbonLowerVar && (spec.xy.chartType === 'line' || spec.xy.chartType === 'scatter')) {
+    const lowerSeries = useArrays
+      ? buildArrayXYSeries(variables, xVar, [spec.xy.ribbonLowerVar], 'y')
+      : buildXYSeries(tableRows, outcomes, xVar, [spec.xy.ribbonLowerVar])
+    if (lowerSeries[0]) {
+      lowerSeries[0].isRibbonLower = true
+      lowerSeries[0].name = `${spec.xy.ribbonLowerVar}_lower`
+      series.push(lowerSeries[0])
+    }
+  }
+  if (spec.xy.ribbonUpperVar && (spec.xy.chartType === 'line' || spec.xy.chartType === 'scatter')) {
+    const upperSeries = useArrays
+      ? buildArrayXYSeries(variables, xVar, [spec.xy.ribbonUpperVar], 'y')
+      : buildXYSeries(tableRows, outcomes, xVar, [spec.xy.ribbonUpperVar])
+    if (upperSeries[0]) {
+      upperSeries[0].isRibbonUpper = true
+      upperSeries[0].name = `${spec.xy.ribbonUpperVar}_upper`
+      series.push(upperSeries[0])
+    }
   }
   // Append each axis variable's unit (from the solved variables — same unit a
   // table column displays) to the default axis labels, unless disabled.

@@ -23,6 +23,20 @@ export function newParamRow(): ParamRow {
 // (e.g. T = 100, 200, ...).
 // ---------------------------------------------------------------------------
 
+export interface TableOperationProvenance {
+  operation: 'filter' | 'transform' | 'groupby' | 'rolling' | 'join'
+  sourceTableIds: string[]
+  sourceTableNames: string[]
+  timestamp: number
+  description: string
+  sourceRowCount: number
+  resultRowCount: number
+  rejectedRowCount?: number
+  duplicateKeyCount?: number
+  extrapolatedCount?: number
+  details?: Record<string, unknown>
+}
+
 export interface ParamTableSpec {
   id: string
   kind: 'parametric'
@@ -48,6 +62,8 @@ export interface ParamTableSpec {
   /** Per-column SI units (column name → unit), for read-only code/ODE tables
    * whose columns are not solved scalars: used for grid headers and plot axes. */
   columnUnits?: Record<string, string>
+  /** Data provenance metadata recording operation, source tables, and row policies. */
+  provenance?: TableOperationProvenance
 }
 
 interface CurveRow {
