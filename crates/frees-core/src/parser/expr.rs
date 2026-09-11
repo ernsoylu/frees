@@ -868,7 +868,7 @@ fn parse_call_atom(c: &mut Cursor<'_>, name: String) -> Result<Expr> {
     let args = parse_arg_list(c)?;
     c.expect(&TokenKind::RParen)?;
 
-    if args.iter().any(|a| a.name.is_some()) {
+    if args.iter().any(|a| a.name.is_some()) && is_property_function(&name) {
         // A property call consumes only its first (positional) argument as a
         // token; the indicator values stay real expressions.
         let token = args.first().map(|a| unquote(&a.raw).to_string());
@@ -915,10 +915,56 @@ fn parse_call_atom(c: &mut Cursor<'_>, name: String) -> Result<Expr> {
         }
         return call;
     }
-    Ok(Expr::call(
-        &name,
-        args.into_iter().map(|a| a.value).collect(),
-    ))
+    let has_named = args.iter().any(|a| a.name.is_some());
+    let values = args
+        .into_iter()
+        .map(|arg| match arg.name {
+            Some(name) => Expr::call(format!("__named_arg${name}"), vec![arg.value]),
+            None => arg.value,
+        })
+        .collect();
+    if has_named {
+        Ok(Expr::call(&name, values))
+    } else {
+        Ok(Expr::call(&name, values))
+    }
+}
+
+fn is_property_function(name: &str) -> bool {
+    matches!(
+        name.to_ascii_lowercase().as_str(),
+        "enthalpy"
+            | "entropy"
+            | "temperature"
+            | "pressure"
+            | "density"
+            | "volume"
+            | "intenergy"
+            | "quality"
+            | "cp"
+            | "specheat"
+            | "cv"
+            | "viscosity"
+            | "conductivity"
+            | "soundspeed"
+            | "compressibility"
+            | "compressibilityfactor"
+            | "prandtl"
+            | "volexpcoef"
+            | "gibbs"
+            | "molarmass"
+            | "heatingvalue"
+            | "stoichafr"
+            | "t_crit"
+            | "p_crit"
+            | "t_triple"
+            | "v_crit"
+            | "k_"
+            | "rho_"
+            | "c_"
+            | "e_"
+            | "nu_"
+    )
 }
 
 /// `positionalExprs` — named arguments are only legal in property calls.

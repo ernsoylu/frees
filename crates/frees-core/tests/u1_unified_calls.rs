@@ -61,3 +61,17 @@ fn single_result_procedure_is_a_scalar_expression_call() {
     .unwrap();
     assert_eq!(solution.values["y"], 5.0);
 }
+
+#[test]
+fn user_calls_accept_named_arguments_and_reject_duplicates() {
+    let source = "function y = subtract(a, b)\n  y := a - b\nend\nanswer = subtract(b=2, a=7)";
+    let solution = solve(source, &SolverSettings::default()).unwrap();
+    assert_eq!(solution.values["answer"], 5.0);
+
+    let error = solve(
+        "function y = subtract(a, b)\n  y := a - b\nend\nanswer = subtract(a=7, a=2, b=1)",
+        &SolverSettings::default(),
+    )
+    .unwrap_err();
+    assert!(error.error.to_string().contains("provided more than once"));
+}

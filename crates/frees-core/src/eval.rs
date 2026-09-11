@@ -2192,17 +2192,11 @@ fn eval_call<'a>(function: &str, args: &'a [Expr], env: &'a Env<'a>) -> Result<f
             return eval_table_def_call(table, args, env);
         }
         if let Some(def) = defs.function(function) {
-            let mut values = Vec::with_capacity(args.len());
-            for arg in args {
-                values.push(eval_in(arg, env)?);
-            }
+            let values = resolve_call_args(function, args, &def.params, env)?;
             return crate::procedures::call_function(def, &values, defs, &env.to_scope());
         }
-        if defs.procedure(function).is_some() {
-            let mut values = Vec::with_capacity(args.len());
-            for arg in args {
-                values.push(eval_in(arg, env)?);
-            }
+        if let Some(def) = defs.procedure(function) {
+            let values = resolve_call_args(function, args, &def.inputs, env)?;
             return crate::procedures::call_proc_output(
                 &crate::procedures::proc_output_name(function, 0),
                 &values,
@@ -2242,6 +2236,69 @@ fn eval_call<'a>(function: &str, args: &'a [Expr], env: &'a Env<'a>) -> Result<f
             f(function, &values)
         }
     }
+}
+
+fn resolve_call_args<'a>(
+    function: &str,
+    args: &'a [Expr],
+    params: &[String],
+    env: &'a Env<'a>,
+) -> Result<Vec<f64>> {
+    let mut values = vec![None; params.len()];
+    let mut next = 0;
+    let mut named = false;
+    for arg in args {
+        let (name, value) = match arg {
+            Expr::Call { function, args } if function.starts_with("__named_arg$") => {
+                let name = function.trim_start_matches("__named_arg$");
+                let value = args.first().ok_or_else(|| {
+                    FreesError::evaluation(format!("{function}: named argument has no value"))
+                })?;
+                (Some(name), value)
+            }
+            other => (None, other),
+        };
+        let index = if let Some(name) = name {
+            named = true;
+            params
+                .iter()
+                .position(|param| param == name)
+                .ok_or_else(|| {
+                    FreesError::evaluation(format!("{function}: unknown named argument '{name}'"))
+                })?
+        } else {
+            if named {
+                return Err(FreesError::evaluation(format!(
+                    "{function}: positional arguments must precede named arguments"
+                )));
+            }
+            let index = next;
+            next += 1;
+            index
+        };
+        if index >= params.len() {
+            return Err(FreesError::evaluation(format!(
+                "{function} expects {} argument(s), got {}",
+                params.len(),
+                args.len()
+            )));
+        }
+        if values[index].is_some() {
+            return Err(FreesError::evaluation(format!(
+                "{function}: argument '{}' was provided more than once",
+                params[index]
+            )));
+        }
+        values[index] = Some(eval_in(value, env)?);
+    }
+    if values.iter().any(Option::is_none) {
+        return Err(FreesError::evaluation(format!(
+            "{function} expects {} argument(s), got {}",
+            params.len(),
+            args.len()
+        )));
+    }
+    Ok(values.into_iter().map(Option::unwrap).collect())
 }
 
 // ---------------------------------------------------------------------------
