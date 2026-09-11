@@ -3,7 +3,7 @@ name: VoltageSource
 category: Component (electrical)
 summary: An ideal voltage source.
 related: []
-examples: [pressure-cooker]
+examples: [pressure-cooker, rc-step-charging, series-rlc-resonance, resistor-bridge-equivalent, resistor-bridge-parametric]
 tags: [voltagesource, component, electrical, acausal]
 ---
 

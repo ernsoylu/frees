@@ -3,7 +3,7 @@ name: Inductor
 category: Component (electrical)
 summary: An inductor storing magnetic energy, with V = L di/dt.
 related: []
-examples: []
+examples: [series-rlc-resonance]
 tags: [inductor, component, electrical, acausal]
 ---
 

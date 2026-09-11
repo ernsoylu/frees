@@ -3,7 +3,7 @@ name: Capacitor
 category: Component (electrical)
 summary: A capacitor storing charge, with i = C dV/dt.
 related: []
-examples: []
+examples: [rc-step-charging, series-rlc-resonance]
 tags: [capacitor, component, electrical, acausal]
 ---
 

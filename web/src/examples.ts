@@ -1536,12 +1536,97 @@ q_positive = 0.5 * (1 + tanh(FinalValue('ch.ev.q')))`,
     "category": "Uncertainty",
     "text": "area = 0.001774\nforce = 20000*area\nDistributionOf(area) = Uniform(0.0015966, 0.0019514)\nforce_sigma = UncertaintyOf(force)\n{ CHECK force 35.48 1e-8 }\n{ CHECK force_sigma 2.048438755 1e-7 }"
   },
-{
+  {
    id: 'uncertain-tank-inventory',
    "title": "Tank inventory from uncertain measurements",
     "description": "Solve (F2). Tank inventory from uncertain measurements",
     "category": "Uncertainty",
     "text": "pressure = 934000\nvolume = 0.010\ntemperature = 295.45\nmass = pressure*volume/(208.1*temperature)\nUncertaintyOf(pressure) = 22000\nUncertaintyOf(volume) = 0.0004\nUncertaintyOf(temperature) = 1.2\nmass_sigma = UncertaintyOf(mass)\n{ CHECK mass 0.151911552344956 1e-9 }\n{ CHECK mass_sigma 0.00707868056268796 1e-8 }"
+  }
+  ,{
+    id: 'rc-step-charging',
+    title: 'RC step charging',
+    description: 'Solve (F2), then inspect the dynamic table. A 10 V step charges a 1 µF capacitor through 1 kΩ.',
+    category: 'Electrical',
+    text: `VoltageSource VS(E=10)
+Resistor R(R=1000)
+Capacitor CAP(C=1e-6, V0=0)
+Ground G()
+connect(VS.p, R.a)
+connect(R.b, CAP.p)
+connect(CAP.n, VS.n, G.port)
+DYNAMIC charge(method=ode45, time=0..0.005, points=101)
+END
+tau = 1000 * 1e-6
+v_2ms = ODEValue('cap.vc', 0.002)
+i_2ms = (10 - v_2ms) / 1000
+{ CHECK tau 0.001 1e-12 }
+{ CHECK v_2ms 8.64664716763387 1e-7 }
+{ CHECK i_2ms 0.00135335283236613 1e-9 }`,
+  },
+  {
+    id: 'series-rlc-resonance',
+    title: 'Series RLC resonance and damping',
+    description: 'Solve (F2), then inspect the dynamic table for underdamped ringing in a series RLC circuit.',
+    category: 'Electrical',
+    text: `VoltageSource VS(E=1)
+Inductor L1(L=0.001, I0=0)
+Resistor R1(R=1)
+Capacitor C1(C=20e-6, V0=0)
+Ground G()
+connect(VS.p, L1.p)
+connect(L1.n, R1.a)
+connect(R1.b, C1.p)
+connect(C1.n, VS.n, G.port)
+DYNAMIC ring(method=ode45, time=0..0.01, points=201)
+END
+omega_n = 1 / sqrt(0.001 * 20e-6)
+zeta = 1 / (2 * sqrt(0.001 / 20e-6))
+{ CHECK omega_n 7071.06781186548 1e-7 }
+{ CHECK zeta 0.0707106781186548 1e-9 }`,
+  },
+  {
+    id: 'resistor-bridge-equivalent',
+    title: 'Resistor bridge equivalent resistance',
+    description: 'Solve (F2). Reduce a five-resistor bridge to its equivalent resistance.',
+    category: 'Electrical',
+    text: `VoltageSource VS(E=1)
+Resistor R1(R=10)
+Resistor R2(R=20)
+Resistor R3(R=30)
+Resistor R4(R=40)
+Resistor R5(R=50)
+Ground G()
+connect(VS.p, R1.a, R3.a)
+connect(R1.b, R2.a, R5.a)
+connect(R3.b, R4.a, R5.b)
+connect(R2.b, R4.b, VS.n, G.port)
+current = -VS.p.I
+R_eq = 1 / current
+{ CHECK R_eq 20.9459459459459 1e-9 }`,
+  },
+  {
+    id: 'resistor-bridge-parametric',
+    title: 'Bridge network parametric study',
+    description: 'Solve Table to sweep the bridge diagonal resistor and compare equivalent resistance.',
+    category: 'Electrical',
+    text: `VoltageSource VS(E=1)
+Resistor R1(R=10)
+Resistor R2(R=20)
+Resistor R3(R=30)
+Resistor R4(R=40)
+r5 = 50
+Resistor R5(R=r5)
+Ground G()
+connect(VS.p, R1.a, R3.a)
+connect(R1.b, R2.a, R5.a)
+connect(R3.b, R4.a, R5.b)
+connect(R2.b, R4.b, VS.n, G.port)
+R_eq = 1 / (-VS.p.I)
+PARAMETRIC bridge (r5, R_eq)
+  r5 = 10:10:50
+END
+{ CHECK R_eq 20.9459459459459 1e-9 }`,
   }
 ]
 
