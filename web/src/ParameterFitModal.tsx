@@ -13,8 +13,9 @@ import {
   TextInput,
 } from '@mantine/core'
 import { parameterFit, type ParameterFitResult, type StopCriteria, type VariableInfo, type FunctionTableDto } from './api'
-import type { FunctionTableSpec, TableSpec } from './tables'
+import type { TableSpec } from './tables'
 import { formatValue } from './format'
+import { getRowNumericValue } from './tablesGrid/tableOperations'
 
 interface Bounds {
   initial: string
@@ -41,18 +42,34 @@ export function applyFittedParameters(text: string, names: string[], values: num
   return out
 }
 
-/** The (t, v) pairs of a 1-D function table, in row order. Non-numeric rows
- *  are dropped — the Import CSV… path already skipped them, but a hand-edited
- *  table can carry blanks. */
-function measuredSeries(spec: FunctionTableSpec): { t: number[]; v: number[] } {
+/** The (t, v) pairs of a measured table (1-D function table or 2+ column parametric table),
+ *  in row order. Non-numeric rows are dropped. */
+export function extractMeasuredSeries(
+  table: TableSpec,
+  tCol?: string,
+  vCol?: string,
+): { t: number[]; v: number[] } {
   const t: number[] = []
   const v: number[] = []
-  for (const row of spec.rows) {
-    const x = Number(row.x)
-    const y = Number(row.ys[0])
-    if (!Number.isFinite(x) || !Number.isFinite(y)) continue
-    t.push(x)
-    v.push(y)
+  if (table.kind === 'function') {
+    for (const row of table.rows) {
+      const x = Number(row.x)
+      const y = Number(row.ys[0])
+      if (!Number.isFinite(x) || !Number.isFinite(y)) continue
+      t.push(x)
+      v.push(y)
+    }
+  } else if (table.kind === 'parametric') {
+    const colT = tCol || table.vars[0]
+    const colV = vCol || table.vars[1] || table.vars[0]
+    for (let i = 0; i < table.rows.length; i++) {
+      const x = getRowNumericValue(table, i, colT)
+      const y = getRowNumericValue(table, i, colV)
+      if (x !== null && y !== null && Number.isFinite(x) && Number.isFinite(y)) {
+        t.push(x)
+        v.push(y)
+      }
+    }
   }
   return { t, v }
 }
@@ -85,23 +102,23 @@ export default function ParameterFitModal({
   tables: TableSpec[]
   onApply: (nextText: string) => void
 }>) {
-  // Measured source: every single-curve function table (imported from a CSV,
-  // digitized, swept, or typed). A curve family has no single y per x, so it
-  // cannot be a measured trace.
-  const measuredTables = useMemo(
+  // Measured source: single-curve function tables OR multi-column parametric tables (e.g. from wrangling or imports)
+  const eligibleTables = useMemo(
     () =>
-      tables.filter(
-        (t): t is FunctionTableSpec => t.kind === 'function' && t.columns.length === 1,
-      ),
+      tables.filter((t) => {
+        if (t.kind === 'function') return t.columns.length === 1
+        if (t.kind === 'parametric') return t.vars.length >= 2
+        return false
+      }),
     [tables],
   )
   const measuredOptions = useMemo(
     () =>
-      measuredTables.map((t) => ({
+      eligibleTables.map((t) => ({
         value: t.id,
-        label: `${t.name} (${t.rows.length} point${t.rows.length === 1 ? '' : 's'})`,
+        label: `${t.name} (${t.kind === 'function' ? '1D Function' : 'Table'}, ${t.rows.length} rows)`,
       })),
-    [measuredTables],
+    [eligibleTables],
   )
 
   // Fit target: any solved DYNAMIC table column (time column excluded).
@@ -118,6 +135,23 @@ export default function ParameterFitModal({
   }, [tables])
 
   const [measSel, setMeasSel] = useState<string | null>(null)
+  const selectedTable = useMemo(
+    () => eligibleTables.find((t) => t.id === measSel),
+    [eligibleTables, measSel],
+  )
+  const [timeCol, setTimeCol] = useState<string>('')
+  const [valCol, setValCol] = useState<string>('')
+
+  const effectiveTimeCol =
+    timeCol && selectedTable?.kind === 'parametric' && selectedTable.vars.includes(timeCol)
+      ? timeCol
+      : (selectedTable?.kind === 'parametric' ? selectedTable.vars[0] : '')
+
+  const effectiveValCol =
+    valCol && selectedTable?.kind === 'parametric' && selectedTable.vars.includes(valCol)
+      ? valCol
+      : (selectedTable?.kind === 'parametric' ? (selectedTable.vars[1] ?? selectedTable.vars[0]) : '')
+
   const [targetSel, setTargetSel] = useState<string | null>(null)
   const [paramText, setParamText] = useState('')
   const [bounds, setBounds] = useState<Record<string, Bounds>>({})
@@ -161,10 +195,10 @@ export default function ParameterFitModal({
       lower.push(lo)
       upper.push(hi)
     }
-    const measured = measuredTables.find((t) => t.id === measSel)
-    const raw = measured ? measuredSeries(measured) : null
+    const measured = eligibleTables.find((t) => t.id === measSel)
+    const raw = measured ? extractMeasuredSeries(measured, effectiveTimeCol, effectiveValCol) : null
     if (!raw || raw.t.length === 0) {
-      setError('The measured function table has no numeric points.')
+      setError('The selected measured table has no valid numeric (t, v) points.')
       return
     }
     const [odeBlock, column] = targetSel.split('|')
@@ -202,20 +236,20 @@ export default function ParameterFitModal({
         <Text size="sm" c="dimmed">
           Fits the chosen document parameters so a DYNAMIC column matches a measured series —
           each trial re-solves the model and the residuals are reduced on the measured raster.
-          The measured side is a single-curve function table: import one from a .csv in the
-          Tables window (Import CSV…).
+          The measured side can be a 1D function table (from CSV/digitized) or any 2+ column
+          measurement table (from wrangling/parametric runs).
         </Text>
         <Group grow>
           <Select
-            label="Measured series (function table)"
+            label="Measured series (function or parametric table)"
             searchable
             data={measuredOptions}
             value={measSel}
             onChange={setMeasSel}
             placeholder={
               measuredOptions.length === 0
-                ? 'Import a CSV as a function table first'
-                : 'Pick a function table'
+                ? 'Import a CSV or create a table first'
+                : 'Pick a table'
             }
           />
           <Select
@@ -227,6 +261,30 @@ export default function ParameterFitModal({
             placeholder={targetOptions.length === 0 ? 'Solve a DYNAMIC document first' : 'Pick a column'}
           />
         </Group>
+        {selectedTable?.kind === 'parametric' && (
+          <Group grow>
+            <Select
+              label="Time / Independent Column (t)"
+              size="xs"
+              data={selectedTable.vars.map((v) => ({
+                value: v,
+                label: selectedTable.columnUnits?.[v] ? `${v} [${selectedTable.columnUnits[v]}]` : v,
+              }))}
+              value={effectiveTimeCol}
+              onChange={(val) => val && setTimeCol(val)}
+            />
+            <Select
+              label="Measurement / Dependent Column (v)"
+              size="xs"
+              data={selectedTable.vars.map((v) => ({
+                value: v,
+                label: selectedTable.columnUnits?.[v] ? `${v} [${selectedTable.columnUnits[v]}]` : v,
+              }))}
+              value={effectiveValCol}
+              onChange={(val) => val && setValCol(val)}
+            />
+          </Group>
+        )}
         <TextInput
           label="Parameters to fit (comma-separated document assignments)"
           placeholder="k, ua, x0"

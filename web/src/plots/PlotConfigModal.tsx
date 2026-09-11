@@ -56,10 +56,12 @@ interface Props {
 
 const CHART_TYPE_OPTIONS = [
   { value: 'line', label: 'Line chart' },
+  { value: 'scatter', label: 'Scatter (points / bubble)' },
   { value: 'bar', label: 'Bar chart' },
+  { value: 'box', label: 'Box plot' },
+  { value: 'ecdf', label: 'Empirical CDF (ECDF)' },
   { value: 'pie', label: 'Pie chart' },
   { value: 'histogram', label: 'Histogram' },
-  { value: 'scatter', label: 'Scatter (bubble)' },
   { value: 'surface3d', label: 'Triangulated 3D mesh' },
 ]
 
@@ -86,21 +88,33 @@ function XYSection({
           data={CHART_TYPE_OPTIONS}
           value={chartType}
           onChange={(val) => {
+            const nextType = (val as ChartType) ?? 'line'
             onChange({
               ...config,
-              chartType: (val as ChartType) ?? 'line',
-              zVar: val === 'surface3d' ? config.zVar : null,
-              sizeVar: val === 'scatter' ? config.sizeVar : null,
+              chartType: nextType,
+              zVar: nextType === 'surface3d' ? config.zVar : null,
+              sizeVar: nextType === 'scatter' ? config.sizeVar : null,
+              ribbonLowerVar: nextType === 'line' || nextType === 'scatter' ? config.ribbonLowerVar : undefined,
+              ribbonUpperVar: nextType === 'line' || nextType === 'scatter' ? config.ribbonUpperVar : undefined,
             })
           }}
         />
         <Select
-          label={chartType === 'histogram' ? 'Variable (uses Y-axis)' : 'X-axis variable'}
+          label={
+            chartType === 'histogram'
+              ? 'Variable (uses Y-axis)'
+              : chartType === 'box'
+                ? 'Category / Grouping variable (optional)'
+                : chartType === 'ecdf'
+                  ? 'Sample variable (uses Y or X)'
+                  : 'X-axis variable'
+          }
           size="xs"
           data={varOpts}
           value={config.xVar}
           onChange={(xVar) => onChange({ ...config, xVar })}
           searchable
+          clearable={chartType === 'box' || chartType === 'ecdf'}
           disabled={chartType === 'histogram'}
         />
       </Group>
@@ -147,6 +161,34 @@ function XYSection({
           searchable
           clearable
         />
+      )}
+      {(chartType === 'line' || chartType === 'scatter') && (
+        <Group grow>
+          <Select
+            label="Confidence Ribbon: Lower Bound (optional)"
+            size="xs"
+            placeholder="e.g. y_lower or ci_lo"
+            data={varOpts}
+            value={config.ribbonLowerVar ?? null}
+            onChange={(ribbonLowerVar) =>
+              onChange({ ...config, ribbonLowerVar: ribbonLowerVar || undefined })
+            }
+            searchable
+            clearable
+          />
+          <Select
+            label="Confidence Ribbon: Upper Bound (optional)"
+            size="xs"
+            placeholder="e.g. y_upper or ci_hi"
+            data={varOpts}
+            value={config.ribbonUpperVar ?? null}
+            onChange={(ribbonUpperVar) =>
+              onChange({ ...config, ribbonUpperVar: ribbonUpperVar || undefined })
+            }
+            searchable
+            clearable
+          />
+        </Group>
       )}
     </Stack>
   )

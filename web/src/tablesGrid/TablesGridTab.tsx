@@ -78,6 +78,7 @@ import { downloadValuesAsCsv } from './csv'
 import { applyFunctionSpecs } from './composeTables'
 import CreateFunctionModal from './CreateFunctionModal'
 import ImportCsvModal from './ImportCsvModal'
+import TableOperationsModal from './TableOperationsModal'
 import {
   appendRow,
   applyCellEdit,
@@ -201,6 +202,8 @@ export default function TablesGridTab({
   const [createFnFor, setCreateFnFor] = useState<string | null>(null)
   // CSV → Function (D11): the Data Analyzer's CSV import, relocated here.
   const [importCsvOpen, setImportCsvOpen] = useState(false)
+  // Table Operations (Phase 2): filter, transform, aggregate, rolling stats, joins
+  const [operationsModalOpen, setOperationsModalOpen] = useState(false)
 
   // The synchronous view of the table list. Grid commits update it in the
   // same tick (before React re-renders), which is what lets
@@ -738,6 +741,10 @@ export default function TablesGridTab({
                 <Menu.Item leftSection={<IconFileTypeCsv size={14} />} onClick={() => setImportCsvOpen(true)}>
                   Import CSV… — a Function Table from measured data
                 </Menu.Item>
+                <Menu.Divider />
+                <Menu.Item leftSection={<IconMathFunction size={14} />} onClick={() => setOperationsModalOpen(true)}>
+                  Table Operations… — filter, transform, aggregate, roll, join
+                </Menu.Item>
               </Menu.Dropdown>
             </Menu>
           </Group>
@@ -850,6 +857,10 @@ export default function TablesGridTab({
                 <Menu.Divider />
                 <Menu.Item leftSection={<IconFileTypeCsv size={14} />} onClick={() => setImportCsvOpen(true)}>
                   Import CSV…
+                </Menu.Item>
+                <Menu.Divider />
+                <Menu.Item leftSection={<IconMathFunction size={14} />} onClick={() => setOperationsModalOpen(true)}>
+                  Table Operations…
                 </Menu.Item>
               </Menu.Dropdown>
             </Menu>
@@ -1094,6 +1105,18 @@ export default function TablesGridTab({
                     Fill missing
                   </Button>
                 </Tooltip>
+                <Tooltip label="Perform data wrangling: filter rows, transform columns, group summaries, rolling statistics, or table joins">
+                  <Button
+                    size="compact-xs"
+                    variant="light"
+                    color="indigo"
+                    mb={4}
+                    leftSection={<IconMathFunction size={13} />}
+                    onClick={() => setOperationsModalOpen(true)}
+                  >
+                    Wrangle / Operations…
+                  </Button>
+                </Tooltip>
               </>
             )}
             <Text size="xs" c="dimmed" mb={6}>
@@ -1182,6 +1205,17 @@ export default function TablesGridTab({
                 </Button>
               </Tooltip>
             )}
+            <Tooltip label="Perform data wrangling: filter rows, transform columns, group summaries, rolling statistics, or table joins">
+              <Button
+                size="xs"
+                variant="light"
+                color="indigo"
+                leftSection={<IconMathFunction size={13} />}
+                onClick={() => setOperationsModalOpen(true)}
+              >
+                Wrangle / Operations…
+              </Button>
+            </Tooltip>
             {activeParam.results.length > 0 && (
               <Button
                 size="xs"
@@ -1341,6 +1375,19 @@ export default function TablesGridTab({
           tables={tables}
           onCreate={(spec) => handleCreateFunctions([spec])}
           onClose={() => setImportCsvOpen(false)}
+        />
+      )}
+
+      {operationsModalOpen && (
+        <TableOperationsModal
+          opened={operationsModalOpen}
+          tables={tables}
+          activeTableId={activeTableId}
+          onClose={() => setOperationsModalOpen(false)}
+          onAddTable={(newTable) => {
+            onTablesChange((prev) => [...prev, newTable])
+            onActiveTableIdChange(newTable.id)
+          }}
         />
       )}
     </Group>

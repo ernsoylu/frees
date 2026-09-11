@@ -98,10 +98,10 @@ function curveTrace(
  * Reduction is only applied to monotonic series; unordered scatter or cyclic
  * paths (phase diagrams, hysteresis, loops) must never be reduced.
  */
-export function isMonotonicX(x: readonly (number | null)[]): boolean {
+export function isMonotonicX(x: readonly (number | string | null)[]): boolean {
   let prev: number | null = null
   for (const v of x) {
-    if (v === null || Number.isNaN(v)) continue
+    if (typeof v !== 'number' || Number.isNaN(v)) continue
     if (prev !== null && v < prev) return false
     prev = v
   }
@@ -133,13 +133,13 @@ function findBucketExtrema(
 }
 
 function decimateSegment(
-  x: readonly (number | null)[],
+  x: readonly (number | string | null)[],
   y: readonly (number | null)[],
   sampleIds: readonly (string | undefined)[] | undefined,
   segStart: number,
   segEnd: number,
   segBudget: number,
-  outX: (number | null)[],
+  outX: (number | string | null)[],
   outY: (number | null)[],
   outIds?: (string | undefined)[],
 ) {
@@ -177,16 +177,16 @@ function decimateSegment(
  * gaps (null values), while drastically reducing SVG path complexity.
  */
 export function decimateMonotonicSeries(
-  x: readonly (number | null)[],
+  x: readonly (number | string | null)[],
   y: readonly (number | null)[],
   sampleIds?: readonly (string | undefined)[],
   maxPoints = 2000,
-): { x: (number | null)[]; y: (number | null)[]; sampleIds?: (string | undefined)[] } {
+): { x: (number | string | null)[]; y: (number | null)[]; sampleIds?: (string | undefined)[] } {
   if (x.length <= maxPoints || !isMonotonicX(x)) {
     return { x: [...x], y: [...y], sampleIds: sampleIds ? [...sampleIds] : undefined }
   }
 
-  const outX: (number | null)[] = []
+  const outX: (number | string | null)[] = []
   const outY: (number | null)[] = []
   const outIds: (string | undefined)[] | undefined = sampleIds ? [] : undefined
 
@@ -571,12 +571,14 @@ export function buildPsychroFigure(
 export interface XYSeries {
   sampleIds?: string[]
   name: string
-  x: number[]
+  x: (number | string | null)[]
   y: number[]
   z?: number[]
   size?: number[]
   /** Which Y axis the series belongs to; 'y2' is the secondary right axis. */
   axis?: 'y' | 'y2'
+  isRibbonLower?: boolean
+  isRibbonUpper?: boolean
 }
 
 /**
@@ -614,6 +616,34 @@ function scaleSizes(values: number[]): number[] {
   return values.map((v) => 8 + ((v - min) / (max - min)) * 32)
 }
 
+function makeRibbonTrace(s: XYSeries): PlotlyTrace | null {
+  if (s.isRibbonLower) {
+    return {
+      type: 'scatter',
+      mode: 'lines',
+      line: { width: 0 },
+      x: s.x,
+      y: s.y,
+      showlegend: false,
+      hoverinfo: 'skip',
+    } as PlotlyTrace
+  }
+  if (s.isRibbonUpper) {
+    return {
+      type: 'scatter',
+      mode: 'lines',
+      line: { width: 0 },
+      fill: 'tonexty',
+      fillcolor: 'rgba(51, 154, 240, 0.2)',
+      name: `${displayVar(s.name)} (CI Ribbon)`,
+      x: s.x,
+      y: s.y,
+      hoverinfo: 'x+y',
+    } as PlotlyTrace
+  }
+  return null
+}
+
 export function buildXYFigure(
   series: XYSeries[],
   format: PlotFormat,
@@ -625,12 +655,21 @@ export function buildXYFigure(
 ): PlotlyFigure {
   const chartType = config?.chartType || 'line'
   const traces: PlotlyTrace[] = []
+  const ribbonSeries = series.filter((s) => s.isRibbonLower || s.isRibbonUpper)
+  const dataSeries = series.filter((s) => !s.isRibbonLower && !s.isRibbonUpper)
+  series = [...ribbonSeries, ...dataSeries]
+
+  const isSpecial = chartType === 'histogram' || chartType === 'box' || chartType === 'ecdf'
+  const isXValid = (xVal: unknown) =>
+    typeof xVal === 'number'
+      ? Number.isFinite(xVal)
+      : xVal !== null && xVal !== undefined && String(xVal).trim() !== ''
   const counts = series.map((s) => {
-    const valid = s.y.filter((y, i) => Number.isFinite(y) && (chartType === 'histogram' || Number.isFinite(s.x[i]))).length
+    const valid = s.y.filter((y, i) => Number.isFinite(y) && (isSpecial || isXValid(s.x[i]))).length
     return `${displayVar(s.name)}: ${valid} valid / ${s.y.length - valid} skipped`
   })
   if (chartType !== 'line') series = series.map((s) => {
-    const indices = s.y.flatMap((y, i) => Number.isFinite(y) && (chartType === 'histogram' || Number.isFinite(s.x[i])) ? [i] : [])
+    const indices = s.y.flatMap((y, i) => Number.isFinite(y) && (isSpecial || isXValid(s.x[i])) ? [i] : [])
     return { ...s, x: indices.map((i) => s.x[i]), y: indices.map((i) => s.y[i]), z: s.z && indices.map((i) => s.z![i]), size: s.size && indices.map((i) => s.size![i]), sampleIds: s.sampleIds && indices.map((i) => s.sampleIds![i]) }
   })
 
@@ -659,6 +698,43 @@ export function buildXYFigure(
         ...(color ? { marker: { color } } : {}),
       })
     })
+  } else if (chartType === 'box') {
+    series.forEach((s) => {
+      const color = format.lineColors?.[s.name]
+      const hasX = s.x && s.x.length > 0 && s.x.some((v) => v !== null && v !== undefined && String(v).trim() !== '')
+      traces.push({
+        type: 'box',
+        name: displayVar(s.name),
+        uid: s.name,
+        y: s.y,
+        ...(hasX ? { x: s.x } : {}),
+        boxpoints: 'outliers',
+        jitter: 0.3,
+        pointpos: -1.8,
+        ...(color ? { marker: { color }, line: { color } } : {}),
+        ...(s.axis === 'y2' ? { yaxis: 'y2' } : {}),
+      } as PlotlyTrace)
+    })
+  } else if (chartType === 'ecdf') {
+    series.forEach((s) => {
+      const color = format.lineColors?.[s.name]
+      const sortedY = s.y.filter((v): v is number => typeof v === 'number' && Number.isFinite(v)).sort((a, b) => a - b)
+      const n = sortedY.length
+      if (n > 0) {
+        const ecdfX = sortedY
+        const ecdfY = sortedY.map((_, i) => (i + 1) / n)
+        traces.push({
+          type: 'scatter',
+          mode: 'lines',
+          line: { shape: 'hv', ...(color ? { color } : {}) },
+          name: displayVar(s.name),
+          uid: s.name,
+          x: ecdfX,
+          y: ecdfY,
+          ...(s.axis === 'y2' ? { yaxis: 'y2' } : {}),
+        } as PlotlyTrace)
+      }
+    })
   } else if (chartType === 'bar') {
     series.forEach((s) => {
       const color = format.lineColors?.[s.name]
@@ -674,6 +750,11 @@ export function buildXYFigure(
     })
   } else if (chartType === 'scatter') {
     series.forEach((s) => {
+      const ribbonTrace = makeRibbonTrace(s)
+      if (ribbonTrace) {
+        traces.push(ribbonTrace)
+        return
+      }
       const markerSize = s.size && s.size.length > 0 ? scaleSizes(s.size) : 10
       const style = format.traceStyles?.[s.name]
       const color = format.lineColors?.[s.name]
@@ -694,8 +775,17 @@ export function buildXYFigure(
     })
   } else if (chartType === 'surface3d') {
     series.forEach((s) => {
-      if (s.z && s.z.length >= 3 && s.x.some((x, i) =>
-        i > 1 && (s.x[1] - s.x[0]) * (s.y[i] - s.y[0]) !== (s.y[1] - s.y[0]) * (x - s.x[0]))) {
+      const x0 = Number(s.x[0])
+      const x1 = Number(s.x[1])
+      if (
+        s.z &&
+        s.z.length >= 3 &&
+        s.x.some(
+          (x, i) =>
+            i > 1 &&
+            (x1 - x0) * (s.y[i] - s.y[0]) !== (s.y[1] - s.y[0]) * (Number(x) - x0),
+        )
+      ) {
         traces.push({
           type: 'mesh3d',
           name: displayVar(s.name),
@@ -712,6 +802,11 @@ export function buildXYFigure(
   } else {
     // Default: 'line'
     series.forEach((s) => {
+      const ribbonTrace = makeRibbonTrace(s)
+      if (ribbonTrace) {
+        traces.push(ribbonTrace)
+        return
+      }
       const style = format.traceStyles?.[s.name]
       const isDense = s.x.length > 300
       const hasExplicitMarker = Boolean(style?.markerSymbol)
@@ -737,15 +832,41 @@ export function buildXYFigure(
     })
   }
 
+  let effXLabel = format.xLabel || xLabel
+  let effYLabel = format.yLabel || yLabel
+  let effXLog = format.xLog ?? false
+  let effYLog = format.yLog ?? false
+
+  if (chartType === 'histogram') {
+    effXLabel = 'Value'
+    effYLabel = 'Frequency'
+    effXLog = false
+    effYLog = false
+  } else if (chartType === 'ecdf') {
+    effXLabel = format.xLabel || (config?.xVar ? displayVar(config.xVar) : 'Value')
+    effYLabel = format.yLabel || 'Cumulative Probability P(X ≤ x)'
+    effXLog = format.xLog ?? false
+    effYLog = false
+  } else if (chartType === 'box') {
+    effXLabel = format.xLabel || (config?.xVar ? displayVar(config.xVar) : 'Category')
+    effYLabel = format.yLabel || yLabel
+  }
+
   const layout = baseLayout(
     format,
-    chartType === 'histogram' ? 'Value' : (format.xLabel || xLabel),
-    chartType === 'histogram' ? 'Frequency' : (format.yLabel || yLabel),
-    chartType === 'histogram' ? false : (format.xLog ?? false),
-    chartType === 'histogram' ? false : (format.yLog ?? false),
+    effXLabel,
+    effYLabel,
+    effXLog,
+    effYLog,
     theme,
     revision,
   )
+  if (chartType === 'ecdf' && layout.yaxis) {
+    layout.yaxis.rangemode = 'tozero'
+  }
+  if (chartType === 'box') {
+    layout.boxmode = 'group'
+  }
 
   if (chartType !== 'line') layout.annotations = [{ text: counts.join('; '), xref: 'paper', yref: 'paper', x: 0, y: 1.08, showarrow: false }]
 

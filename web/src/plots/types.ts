@@ -74,7 +74,7 @@ export interface ReferenceAnnotation {
   dash?: 'solid' | 'dash' | 'dot' | 'dashdot'
 }
 
-export type ChartType = 'line' | 'bar' | 'pie' | 'histogram' | 'scatter' | 'surface3d'
+export type ChartType = 'line' | 'bar' | 'pie' | 'histogram' | 'scatter' | 'surface3d' | 'box' | 'ecdf'
 
 export interface XYConfig {
   xVar: string | null
@@ -84,6 +84,9 @@ export interface XYConfig {
   chartType?: ChartType
   zVar?: string | null
   sizeVar?: string | null
+  /** Upper and lower bound variables for translucent confidence/prediction ribbons. */
+  ribbonUpperVar?: string | null
+  ribbonLowerVar?: string | null
 }
 
 export interface PropertyConfig {
