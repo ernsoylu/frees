@@ -4,9 +4,8 @@ use crate::diag::{FreesError, Result, Span};
 
 /// Convert legacy forms that have an unambiguous canonical equivalent.
 ///
-/// Module and component blocks are deliberately refused: their equation and
-/// port semantics need a model-specific conversion and must not be rewritten
-/// into a subtly different function.
+/// Module blocks and component blocks with variants or nested instances are
+/// deliberately refused: those semantics need a model-specific conversion.
 pub fn migrate_legacy_source(source: &str) -> Result<String> {
     if source
         .lines()
@@ -17,18 +16,25 @@ pub fn migrate_legacy_source(source: &str) -> Result<String> {
     }
 
     let mut output = String::from("// frees-language: 2\n");
-    for (line_number, line) in source.lines().enumerate() {
+    let lines: Vec<&str> = source.lines().collect();
+    let mut index = 0;
+    while index < lines.len() {
+        let line_number = index;
+        let line = lines[index];
         let trimmed = line.trim_start();
         let indent = &line[..line.len() - trimmed.len()];
+        if starts_keyword(trimmed, "COMPONENT") {
+            let (converted, next) = convert_simple_component(&lines, index)?;
+            output.push_str(indent);
+            output.push_str(&converted);
+            output.push('\n');
+            index = next;
+            continue;
+        }
         let converted = if starts_keyword(trimmed, "MODULE") {
             return Err(migration_error(
                 line_number,
                 "MODULE blocks require a model-specific conversion",
-            ));
-        } else if starts_keyword(trimmed, "COMPONENT") {
-            return Err(migration_error(
-                line_number,
-                "COMPONENT blocks require a port-specific conversion",
             ));
         } else if starts_keyword(trimmed, "FUNCTION") {
             convert_function(trimmed, line_number).map(|value| format!("{indent}{value}"))
@@ -43,11 +49,91 @@ pub fn migrate_legacy_source(source: &str) -> Result<String> {
         }?;
         output.push_str(&converted);
         output.push('\n');
+        index += 1;
     }
     if !source.ends_with('\n') {
         output.pop();
     }
     Ok(output)
+}
+
+fn convert_simple_component(lines: &[&str], start: usize) -> Result<(String, usize)> {
+    let header = lines[start].trim_start();
+    let rest = header["COMPONENT".len()..].trim();
+    let open = rest
+        .find('(')
+        .ok_or_else(|| migration_error(start, "COMPONENT header needs a port list"))?;
+    let close = rest
+        .rfind(')')
+        .filter(|close| *close > open)
+        .ok_or_else(|| migration_error(start, "COMPONENT header is malformed"))?;
+    let name = rest[..open].trim();
+    let ports = rest[open + 1..close].trim();
+    if name.is_empty() || ports.is_empty() {
+        return Err(migration_error(
+            start,
+            "COMPONENT header needs a name and at least one port",
+        ));
+    }
+
+    let mut params = Vec::new();
+    let mut body: Vec<String> = Vec::new();
+    let mut index = start + 1;
+    while index < lines.len() {
+        let line = lines[index];
+        let trimmed = line.trim();
+        if starts_keyword(trimmed, "END") {
+            let signature = if params.is_empty() {
+                format!("function [{ports}] = {name}()")
+            } else {
+                format!("function [{ports}] = {name}({})", params.join(", "))
+            };
+            let mut converted = signature;
+            for line in body {
+                converted.push('\n');
+                converted.push_str(&line);
+            }
+            converted.push('\n');
+            converted.push_str("end");
+            return Ok((converted, index + 1));
+        }
+        if starts_keyword(trimmed, "VARIANT")
+            || starts_keyword(trimmed, "COMPONENT")
+            || starts_keyword(trimmed, "SUBSYSTEM")
+            || is_nested_component_instance(trimmed)
+        {
+            return Err(migration_error(
+                index,
+                "COMPONENT contains a variant or nested instance and requires a model-specific conversion",
+            ));
+        }
+        if starts_keyword(trimmed, "PARAM") {
+            let declaration = trimmed["PARAM".len()..].trim();
+            if declaration.is_empty() {
+                return Err(migration_error(
+                    index,
+                    "COMPONENT PARAM needs a declaration",
+                ));
+            }
+            params.push(declaration.to_string());
+        } else {
+            body.push(line.trim_end().to_string());
+        }
+        index += 1;
+    }
+    Err(migration_error(
+        start,
+        "unterminated COMPONENT block: expected `END`",
+    ))
+}
+
+fn is_nested_component_instance(line: &str) -> bool {
+    let mut words = line.split_whitespace();
+    let Some(_) = words.next() else { return false };
+    let Some(second) = words.next() else {
+        return false;
+    };
+    second.ends_with('(') || line.contains(&format!("{second}("))
 }
 
 fn starts_keyword(line: &str, keyword: &str) -> bool {
@@ -180,9 +266,22 @@ mod tests {
     }
 
     #[test]
-    fn refuses_ambiguous_model_blocks() {
-        let error = migrate_legacy_source("COMPONENT Pump(in, out)\nEND").unwrap_err();
-        assert!(error.to_string().contains("port-specific conversion"));
+    fn converts_simple_component_blocks() {
+        let migrated = migrate_legacy_source(
+            "COMPONENT Pump(in, out)\n  PARAM eta = 0.8\n  out.P = in.P / eta\nEND",
+        )
+        .unwrap();
+        assert!(migrated.contains("function [in, out] = Pump(eta = 0.8)"));
+        assert!(migrated.contains("out.P = in.P / eta"));
+    }
+
+    #[test]
+    fn refuses_ambiguous_component_blocks() {
+        let error = migrate_legacy_source(
+            "COMPONENT Pump(in, out)\n  VARIANT basic\n    out.P = in.P\n  END\nEND",
+        )
+        .unwrap_err();
+        assert!(error.to_string().contains("model-specific conversion"));
     }
 
     #[test]
