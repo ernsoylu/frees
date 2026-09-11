@@ -47,6 +47,19 @@ function findLocal(text: string, typeName: string): LocalComponent | undefined {
   return localComponentNames(text).find((c) => c.name.toLowerCase() === typeName.toLowerCase())
 }
 
+function localFunctionSignature(
+  text: string,
+  name: string,
+): { usage: string; detail: string } | null {
+  const re = /^\s*function\s+(?:\[[^\]]+\]|[A-Za-z_][\w$]*)\s*=\s*([A-Za-z_][\w$]*)\s*\(([^)]*)\)/gim
+  for (const match of text.matchAll(re)) {
+    if (match[1].toLowerCase() === name.toLowerCase()) {
+      return { usage: `${match[1]}(${match[2].trim()})`, detail: 'Local function definition' }
+    }
+  }
+  return null
+}
+
 /** User `COMPONENT` / `SUBSYSTEM` blocks: ports from the header, params from PARAM. */
 export function localComponentNames(text: string): LocalComponent[] {
   const out: LocalComponent[] = []
@@ -84,11 +97,13 @@ export function localSignature(
   typeName: string,
 ): { usage: string; detail: string } | null {
   const local = findLocal(text, typeName)
-  if (!local) return null
-  return {
-    usage: `${local.name} Instance(${[...local.ports, ...local.params.map((p) => `${p}=`)].join(', ')})`,
-    detail: 'Local component definition',
+  if (local) {
+    return {
+      usage: `${local.name} Instance(${[...local.ports, ...local.params.map((p) => `${p}=`)].join(', ')})`,
+      detail: 'Local component definition',
+    }
   }
+  return localFunctionSignature(text, typeName)
 }
 
 function catalogArgs(typeName: string): { ports: string[]; params: string[] } | null {

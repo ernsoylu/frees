@@ -64,4 +64,11 @@ describe('completionsForPrefix', () => {
       usage: 'Heater Instance(in, out, r=)',
     })
   })
+
+  it('describes canonical scalar function signatures', () => {
+    expect(localSignature('function y = twice(x, scale=2)\n  y := scale*x\nend', 'twice')).toEqual({
+      usage: 'twice(x, scale=2)',
+      detail: 'Local function definition',
+    })
+  })
 })
