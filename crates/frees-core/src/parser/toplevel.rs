@@ -321,7 +321,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    /// `forBlock : FOR IDENT EQ expr TO expr sep statementList sep? END`
+    /// `forBlock : FOR IDENT EQ expr (COLON expr (COLON expr)? | TO expr) ...`
     fn for_block(&mut self) -> Result<Statement> {
         let header = self.c.span();
         self.enter_block(header)?;
@@ -335,8 +335,17 @@ impl<'a> Parser<'a> {
         let var_name = self.c.expect_ident()?.to_ascii_lowercase();
         self.c.expect(&TokenKind::Eq)?;
         let start = self.expr()?;
-        self.c.expect(&TokenKind::To)?;
-        let end = self.expr()?;
+        let (step, end) = if self.c.eat(&TokenKind::To) {
+            (None, self.expr()?)
+        } else {
+            self.c.expect(&TokenKind::Colon)?;
+            let middle = self.expr()?;
+            if self.c.eat(&TokenKind::Colon) {
+                (Some(middle), self.expr()?)
+            } else {
+                (None, middle)
+            }
+        };
         self.require_sep("after the FOR header")?;
 
         // `statementList sep? END`
@@ -346,6 +355,7 @@ impl<'a> Parser<'a> {
         Ok(Statement::For {
             var_name,
             start,
+            step,
             end,
             body,
         })
@@ -2612,6 +2622,7 @@ fn to_proc_statement(statement: Statement, span: Span) -> Result<ProcStatement> 
         Statement::For {
             var_name,
             start,
+            step,
             end,
             body,
         } => {
@@ -2622,6 +2633,7 @@ fn to_proc_statement(statement: Statement, span: Span) -> Result<ProcStatement> 
             Ok(ProcStatement::For {
                 var_name,
                 start,
+                step,
                 end,
                 body: converted,
             })

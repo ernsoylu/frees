@@ -35,10 +35,11 @@ pub enum ProcStatement {
     },
     /// An equation used inside a body for intermediate relations.
     Eq(Equation),
-    /// `FOR var = start TO end … END`.
+    /// `FOR var = start[:step]:end … END`.
     For {
         var_name: String,
         start: Expr,
+        step: Option<Expr>,
         end: Expr,
         body: Vec<ProcStatement>,
     },

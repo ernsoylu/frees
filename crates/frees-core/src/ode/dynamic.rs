@@ -1320,6 +1320,7 @@ impl<'a> DynamicSolver<'a> {
         let Statement::For {
             var_name,
             start,
+            step,
             end,
             body,
         } = block
@@ -1328,7 +1329,27 @@ impl<'a> DynamicSolver<'a> {
         };
         let lo = java_round(self.eval_index(start, loop_vars)?);
         let hi = java_round(self.eval_index(end, loop_vars)?);
-        let step: i64 = if lo <= hi { 1 } else { -1 };
+        let step: i64 = match step {
+            None => {
+                if lo <= hi {
+                    1
+                } else {
+                    -1
+                }
+            }
+            Some(expr) => {
+                let value = self.eval_index(expr, loop_vars)?;
+                if !value.is_finite() || value == 0.0 || value.fract() != 0.0 {
+                    return Err(FreesError::solver(
+                        "FOR range step must be a finite nonzero integer",
+                    ));
+                }
+                value as i64
+            }
+        };
+        if (step > 0 && lo > hi) || (step < 0 && lo < hi) {
+            return Ok(());
+        }
         let mut i = lo;
         while if lo <= hi { i <= hi } else { i >= hi } {
             let mut lv = loop_vars.clone();

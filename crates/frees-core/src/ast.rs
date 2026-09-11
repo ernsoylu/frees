@@ -323,10 +323,11 @@ impl Equation {
 #[derive(Debug, Clone, PartialEq)]
 pub enum Statement {
     Eq(Equation),
-    /// `FOR i = start TO end … END`
+    /// `FOR i = start[:step]:end … END`
     For {
         var_name: String,
         start: Expr,
+        step: Option<Expr>,
         end: Expr,
         body: Vec<Statement>,
     },

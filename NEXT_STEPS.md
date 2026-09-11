@@ -138,18 +138,18 @@ Focus: Implement the comprehensive language unification detailed in [`reports/SI
   - Catalogue all callable signatures across built-in intrinsics, matrix routines, CoolProp thermodynamic queries, signal processing, and component libraries.
   - Establish a golden compatibility test suite capturing legacy behavior across all edge cases (descending loops, caller-scope access, ignored equations, output re-execution).
 - [ ] **3.2 Stage U1: Unified Call Syntax & Scalar Output Headers**
-  - Extend the parser to accept scalar output headers: `function y = f(x)` alongside existing multi-output `function [a, b] = f(x)`.
-  - Allow single-result procedures to be called as standard expressions (`y = proc(x)`) lowering through single-result expression sinks, eliminating the artificial requirement for bracket assignment.
+  - [x] Extend the parser to accept scalar output headers: `function y = f(x)` alongside existing multi-output `function [a, b] = f(x)`.
+  - [x] Allow single-result procedures to be called as standard expressions (`y = proc(x)`) lowering through single-result expression sinks, eliminating the artificial requirement for bracket assignment.
   - Unify signature resolution so that built-ins, modules, procedures, and user functions share identical dispatch, argument type checking, and arity diagnostics across native and WASM builds.
 - [ ] **3.3 Stage U2: Unified Function Declarations & Lexical Scoping**
   - Unify `function` declarations: lower declarative equation functions through the module expansion path and ordered algorithmic functions through the procedure execution path.
-  - Introduce strict lexical scoping for user functions, eliminating implicit inheritance of caller-scope variables; emit actionable migration diagnostics for captured names.
-  - Detect and flag equations inside procedural bodies that lack variable sides (which legacy procedures silently ignored) rather than silently discarding them.
+  - [x] Introduce strict lexical scoping for canonical user functions, preserving legacy dynamic scope during migration.
+  - [x] Detect and flag equations inside canonical function bodies that lack variable sides (which legacy procedures silently ignored) rather than silently discarding them.
 - [ ] **3.4 Stage U3: Mixed Operations & Bounded Control Flow**
   - Implement definite assignment and variable versioning to support mixed equation and calculation bodies:
     - Numerical `=` declares mathematical equations (participating in global nonlinear/ODE solve).
     - `:=` performs explicit ordered calculations and accumulator updates.
-  - Introduce clean colon-based range loops (`for i = 1:n`) with explicit step support and bounded iteration ceilings.
+  - [x] Introduce clean colon-based range loops (`for i = 1:n`) with explicit step support and bounded iteration ceilings.
   - Enforce static checks ensuring that runtime control flow does not alter the structural topological graph of nonlinear equations during Newton iterations.
 - [ ] **3.5 Stage U4: Value Syntax, Array Indexing & Named Arguments**
   - Unambiguously resolve array indexing versus function calls: support parenthesized indexing `a(i)` alongside `a[i]` with 1-based indexing checks and index-zero diagnostics.

@@ -609,6 +609,7 @@ impl<'d, 'n> ComponentExpander<'d, 'n> {
             Statement::For {
                 var_name,
                 start,
+                step,
                 end,
                 body,
             } => {
@@ -619,6 +620,9 @@ impl<'d, 'n> ComponentExpander<'d, 'n> {
                 Ok(Statement::For {
                     var_name,
                     start: self.net.rewrite_top(&start, self.display_names)?,
+                    step: step
+                        .map(|expr| self.net.rewrite_top(&expr, self.display_names))
+                        .transpose()?,
                     end: self.net.rewrite_top(&end, self.display_names)?,
                     body: rewritten,
                 })
