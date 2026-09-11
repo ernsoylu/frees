@@ -9,6 +9,7 @@
 //! ```text
 //! frees-cli solve [FILE]     solve a document; JSON on stdout
 //! frees-cli check [FILE]     structural check only; JSON on stdout
+//! frees-cli migrate [FILE]   convert unambiguous legacy syntax to version 2
 //! frees-cli version          engine version
 //! ```
 //!
@@ -33,6 +34,7 @@ frees-cli — headless frees engine
 USAGE:
     frees-cli solve [FILE]    Solve a document and print the variables as JSON
     frees-cli check [FILE]    Check syntax and structural solvability only
+    frees-cli migrate [FILE]  Convert unambiguous legacy syntax to version 2
     frees-cli version         Print the engine version
 
 Reads stdin when FILE is omitted or is `-`.
@@ -89,6 +91,14 @@ fn run() -> Result<ExitCode, String> {
             let path = parse_path_only(&args[1..], "check")?;
             let source = read_source(path)?;
             Ok(emit(check_json(&source)))
+        }
+        "migrate" => {
+            let path = parse_path_only(&args[1..], "migrate")?;
+            let source = read_source(path)?;
+            let migrated =
+                frees_core::migrate_legacy_source(&source).map_err(|error| error.to_string())?;
+            print!("{migrated}");
+            Ok(ExitCode::SUCCESS)
         }
         other => Err(format!("unknown command `{other}`. Try `frees-cli help`.")),
     }

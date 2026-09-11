@@ -181,10 +181,12 @@ Focus: Implement the comprehensive language unification detailed in [`reports/SI
   - Convert all standard library definitions ([`components/library-data/`](file:///home/eren/homecloud/dev/frees-wasm/components/library-data)), gallery models ([`web/src/examples.ts`](file:///home/eren/homecloud/dev/frees-wasm/web/src/examples.ts)), Help models, and test fixtures to the unified syntax.
   - Update editor language tooling: syntax highlighters ([`web/src/EquationEditor.tsx`](file:///home/eren/homecloud/dev/frees-wasm/web/src/EquationEditor.tsx)), autocompletion ([`web/src/editorCompletion.ts`](file:///home/eren/homecloud/dev/frees-wasm/web/src/editorCompletion.ts)), signature tooltips ([`web/src/signatureHelp.ts`](file:///home/eren/homecloud/dev/frees-wasm/web/src/signatureHelp.ts)), and LaTeX renderer.
   - Provide an automatic project migration tool for legacy projects, embedding a version header (`// frees-language: 2`).
+    - [x] Add `frees-cli migrate` for unambiguous function, procedure, call, and guess rewrites, with explicit refusal for model-specific blocks.
 - [ ] **3.10 Stage U9: Legacy Grammar Removal & Deprecation**
   - Conclude the versioned compatibility transition.
   - Restrict legacy grammar (`CALL`, `MODULE`, `PROCEDURE`, `COMPONENT`) to explicit migration/import converters.
     - [x] Version-2 documents reject all four legacy declaration forms with the migration diagnostic.
+    - [x] The migration converter is the explicit import path for supported legacy forms and refuses ambiguous module/component rewrites.
   - Strip obsolete keywords and grammar paths from the production parser and compiler, locking in a compact, unified language core.
 
 ---

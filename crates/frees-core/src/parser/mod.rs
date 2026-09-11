@@ -17,6 +17,7 @@ pub mod defs;
 pub mod expand;
 pub mod expr;
 pub mod latex;
+pub mod migrate;
 pub mod string_variables;
 pub mod toplevel;
 
@@ -27,6 +28,7 @@ use crate::diag::{Diagnostic, FreesError, Result, Span};
 use crate::token::{Token, TokenKind};
 
 pub use expr::{parse_bool_expr, parse_expr};
+pub use migrate::migrate_legacy_source;
 pub use toplevel::parse_document;
 
 /// An in-text `GUESS` directive: the initial guess and/or bounds that travel
