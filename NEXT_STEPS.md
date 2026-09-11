@@ -164,6 +164,7 @@ Focus: Implement the comprehensive language unification detailed in [`reports/SI
 - [ ] **3.6 Stage U5: Physical Component & Connection Unification**
   - Migrate physical component definitions from legacy `COMPONENT ... END` blocks to unified component declarations.
   - Unify port declarations, parameter defaults, constitutive equations, and acausal connection statements (`connect(node_a, node_b)`).
+    - [x] Canonical `require(...)` calls parse as ordinary expressions for selected component branches.
   - Verify that physical conservation (Kirchhoff current/pressure laws), state storage, and structural variants produce identical topological networks and numerical solutions.
 - [ ] **3.7 Stage U6: Analysis, Simulation & Presentation as Registered Calls**
   - Replace ad-hoc keyword blocks with registered domain function calls: `simulate(...)`, `sweep(...)`, `plot(...)`, `table(...)`, `linearize(...)`.

@@ -538,6 +538,7 @@ fn parse_atom(c: &mut Cursor<'_>) -> Result<Expr> {
         TokenKind::Table => parse_call_atom(c, "table".to_string()),
         TokenKind::StateTable => parse_call_atom(c, "state_table".to_string()),
         TokenKind::Linearize => parse_call_atom(c, "linearize".to_string()),
+        TokenKind::Require => parse_call_atom(c, "require".to_string()),
         TokenKind::Ident(name) => match c.peek_at(1) {
             TokenKind::LParen if c.is_array_name(&name) => parse_paren_array_atom(c, name),
             TokenKind::LParen => parse_call_atom(c, name),
