@@ -84,6 +84,16 @@ fn known_array_bindings_use_parenthesized_one_based_indexing() {
     )
     .unwrap();
     assert_eq!(solution.values["answer"], 20.0);
+
+    let error = solve(
+        "values = [10, 20, 30]\nanswer = values(0)",
+        &SolverSettings::default(),
+    )
+    .unwrap_err();
+    assert!(
+        format!("{:?}", error.error).contains("array indices are one-based"),
+        "{error:?}"
+    );
 }
 
 #[test]

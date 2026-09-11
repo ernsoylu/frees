@@ -651,14 +651,30 @@ fn parse_paren_array_atom(c: &mut Cursor<'_>, name: String) -> Result<Expr> {
 /// `arrayIndex : expr (COLON expr)?` — the colon form is an index range.
 fn parse_array_index(c: &mut Cursor<'_>) -> Result<Expr> {
     let start = parse_expr(c)?;
+    if is_zero_index(&start) {
+        return Err(FreesError::parse_at(
+            "array indices are one-based; index 0 is invalid".to_string(),
+            c.span(),
+        ));
+    }
     if c.eat(&TokenKind::Colon) {
         let end = parse_expr(c)?;
+        if is_zero_index(&end) {
+            return Err(FreesError::parse_at(
+                "array indices are one-based; index 0 is invalid".to_string(),
+                c.span(),
+            ));
+        }
         return Ok(Expr::Range {
             start: Box::new(start),
             end: Box::new(end),
         });
     }
     Ok(start)
+}
+
+fn is_zero_index(expr: &Expr) -> bool {
+    matches!(expr, Expr::Num { value, .. } if *value == 0.0)
 }
 
 /// `LBRACKET matrixRow (SEMI matrixRow)* RBRACKET unit?`
