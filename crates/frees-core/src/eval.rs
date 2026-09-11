@@ -2384,17 +2384,9 @@ fn eval_table_def_call<'a>(
     args: &'a [Expr],
     env: &'a Env<'a>,
 ) -> Result<f64> {
-    if args.is_empty() || args.len() > 2 {
-        let n = &table.name;
-        return Err(FreesError::evaluation(format!(
-            "Function table '{n}' expects {n}(x) or {n}(x, param)."
-        )));
-    }
-    let x = eval_in(&args[0], env)?;
-    let param = match args.get(1) {
-        Some(expr) => Some(eval_in(expr, env)?),
-        None => None,
-    };
+    let values = resolve_call_args(&table.name, args, &table.arg_names, env)?;
+    let x = values[0];
+    let param = values.get(1).copied();
     crate::curvetable::lookup(table, x, param)
 }
 
@@ -7469,7 +7461,27 @@ mod tests {
         let msg = eval_ctx(&e, &Scope::default(), &defs)
             .unwrap_err()
             .to_string();
-        assert!(msg.contains("expects curve(x) or curve(x, param)"), "{msg}");
+        assert!(msg.contains("curve expects 1 argument(s), got 3"), "{msg}");
+    }
+
+    #[test]
+    fn function_tables_share_named_argument_resolution_with_user_calls() {
+        let table = FunctionTableDef {
+            name: "curve".into(),
+            arg_names: vec!["x".into()],
+            x_log: false,
+            y_log: false,
+            curves: vec![Curve {
+                param: None,
+                xs: vec![0.0, 1.0],
+                ys: vec![0.0, 10.0],
+            }],
+            output_unit: None,
+            arg_units: None,
+        };
+        let defs = defs_with_table(table);
+        let e = Expr::call("curve", vec![Expr::call("__named_arg$x", vec![n(0.5)])]);
+        assert_eq!(eval_ctx(&e, &Scope::default(), &defs).unwrap(), 5.0);
     }
 
     #[test]
