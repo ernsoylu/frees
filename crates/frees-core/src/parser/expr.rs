@@ -905,7 +905,12 @@ fn parse_call_atom(c: &mut Cursor<'_>, name: String) -> Result<Expr> {
     let args = parse_arg_list(c)?;
     c.expect(&TokenKind::RParen)?;
 
-    if args.iter().any(|a| a.name.is_some()) && is_property_function(&name) {
+    let property_shape = args.iter().any(|a| a.name.is_some())
+        && (is_property_function(&name)
+            || args
+                .first()
+                .is_some_and(|arg| arg.name.is_none() && is_fluid_name(unquote(&arg.raw))));
+    if property_shape {
         // A property call consumes only its first (positional) argument as a
         // token; the indicator values stay real expressions.
         let token = args.first().map(|a| unquote(&a.raw).to_string());
