@@ -31,13 +31,13 @@ pub fn migrate_legacy_source(source: &str) -> Result<String> {
                 "COMPONENT blocks require a port-specific conversion",
             ));
         } else if starts_keyword(trimmed, "FUNCTION") {
-            convert_function(trimmed).map(|value| format!("{indent}{value}"))
+            convert_function(trimmed, line_number).map(|value| format!("{indent}{value}"))
         } else if starts_keyword(trimmed, "PROCEDURE") {
-            convert_procedure(trimmed).map(|value| format!("{indent}{value}"))
+            convert_procedure(trimmed, line_number).map(|value| format!("{indent}{value}"))
         } else if starts_keyword(trimmed, "CALL") {
-            convert_call(trimmed).map(|value| format!("{indent}{value}"))
+            convert_call(trimmed, line_number).map(|value| format!("{indent}{value}"))
         } else if starts_keyword(trimmed, "GUESS") {
-            convert_guess(trimmed).map(|value| format!("{indent}{value}"))
+            convert_guess(trimmed, line_number).map(|value| format!("{indent}{value}"))
         } else {
             Ok(line.to_string())
         }?;
@@ -59,17 +59,17 @@ fn starts_keyword(line: &str, keyword: &str) -> bool {
             .is_none_or(|byte| byte.is_ascii_whitespace())
 }
 
-fn convert_function(line: &str) -> Result<String> {
+fn convert_function(line: &str, line_number: usize) -> Result<String> {
     let rest = line["FUNCTION".len()..].trim();
     if rest.starts_with('[') {
         return Ok(format!("function {}", rest.to_ascii_lowercase()));
     }
     let open = rest
         .find('(')
-        .ok_or_else(|| migration_error(0, "FUNCTION header needs an argument list"))?;
+        .ok_or_else(|| migration_error(line_number, "FUNCTION header needs an argument list"))?;
     let name = rest[..open].trim();
     if name.is_empty() || !rest.ends_with(')') {
-        return Err(migration_error(0, "FUNCTION header is malformed"));
+        return Err(migration_error(line_number, "FUNCTION header is malformed"));
     }
     Ok(format!(
         "function {} = {}",
@@ -78,22 +78,25 @@ fn convert_function(line: &str) -> Result<String> {
     ))
 }
 
-fn convert_procedure(line: &str) -> Result<String> {
+fn convert_procedure(line: &str, line_number: usize) -> Result<String> {
     let rest = line["PROCEDURE".len()..].trim();
     let open = rest
         .find('(')
-        .ok_or_else(|| migration_error(0, "PROCEDURE header needs an argument list"))?;
+        .ok_or_else(|| migration_error(line_number, "PROCEDURE header needs an argument list"))?;
     let close = rest
         .rfind(')')
-        .ok_or_else(|| migration_error(0, "PROCEDURE header is malformed"))?;
+        .ok_or_else(|| migration_error(line_number, "PROCEDURE header is malformed"))?;
     let name = rest[..open].trim();
     let signature = &rest[open + 1..close];
-    let (inputs, outputs) = signature
-        .split_once(':')
-        .ok_or_else(|| migration_error(0, "PROCEDURE header needs input and output lists"))?;
+    let (inputs, outputs) = signature.split_once(':').ok_or_else(|| {
+        migration_error(line_number, "PROCEDURE header needs input and output lists")
+    })?;
     let outputs = outputs.trim();
     if outputs.is_empty() {
-        return Err(migration_error(0, "PROCEDURE header needs an output"));
+        return Err(migration_error(
+            line_number,
+            "PROCEDURE header needs an output",
+        ));
     }
     let output = if outputs.contains(',') {
         format!("[{}]", outputs.to_ascii_lowercase())
@@ -107,20 +110,20 @@ fn convert_procedure(line: &str) -> Result<String> {
     ))
 }
 
-fn convert_call(line: &str) -> Result<String> {
+fn convert_call(line: &str, line_number: usize) -> Result<String> {
     let rest = line["CALL".len()..].trim();
     let open = rest
         .find('(')
-        .ok_or_else(|| migration_error(0, "CALL needs an argument list"))?;
+        .ok_or_else(|| migration_error(line_number, "CALL needs an argument list"))?;
     let close = rest
         .rfind(')')
-        .ok_or_else(|| migration_error(0, "CALL is malformed"))?;
+        .ok_or_else(|| migration_error(line_number, "CALL is malformed"))?;
     let (inputs, outputs) = rest[open + 1..close]
         .split_once(':')
-        .ok_or_else(|| migration_error(0, "CALL needs an output list"))?;
+        .ok_or_else(|| migration_error(line_number, "CALL needs an output list"))?;
     let outputs = outputs.trim();
     if outputs.is_empty() {
-        return Err(migration_error(0, "CALL needs an output list"));
+        return Err(migration_error(line_number, "CALL needs an output list"));
     }
     let destination = if outputs.contains(',') {
         format!("[{}]", outputs.to_ascii_lowercase())
@@ -134,20 +137,20 @@ fn convert_call(line: &str) -> Result<String> {
     ))
 }
 
-fn convert_guess(line: &str) -> Result<String> {
+fn convert_guess(line: &str, line_number: usize) -> Result<String> {
     let rest = line["GUESS".len()..].trim();
     let (name, value) = rest
         .split_once('=')
-        .ok_or_else(|| migration_error(0, "GUESS needs a value"))?;
+        .ok_or_else(|| migration_error(line_number, "GUESS needs a value"))?;
     let (value, bounds) = match value.trim().split_once('[') {
         Some((value, bounds)) => (value.trim(), Some(bounds.trim_end_matches(']').trim())),
         None => (value.trim(), None),
     };
     let mut result = format!("guess({}, {}", name.trim().to_ascii_lowercase(), value);
     if let Some(bounds) = bounds {
-        let (lower, upper) = bounds
-            .split_once(',')
-            .ok_or_else(|| migration_error(0, "GUESS bounds need lower and upper values"))?;
+        let (lower, upper) = bounds.split_once(',').ok_or_else(|| {
+            migration_error(line_number, "GUESS bounds need lower and upper values")
+        })?;
         result.push_str(&format!(", lower={}, upper={}", lower.trim(), upper.trim()));
     }
     result.push(')');
@@ -180,5 +183,11 @@ mod tests {
     fn refuses_ambiguous_model_blocks() {
         let error = migrate_legacy_source("COMPONENT Pump(in, out)\nEND").unwrap_err();
         assert!(error.to_string().contains("port-specific conversion"));
+    }
+
+    #[test]
+    fn reports_the_source_line_for_unmigratable_syntax() {
+        let error = migrate_legacy_source("x = 1\nCALL broken").unwrap_err();
+        assert!(error.to_string().contains("migration line 2"));
     }
 }
