@@ -150,6 +150,8 @@ pub struct SolveStats {
 /// A completed steady solve.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Solution {
+    /// Registered analysis calls with their owning result bindings, in source order.
+    pub registered_calls: Vec<crate::parser::RegisteredCall>,
     /// Every **unknown** in the system with its solved value, keyed by the
     /// lowercase canonical name (frees identifiers are case-insensitive).
     ///
@@ -344,6 +346,8 @@ pub struct SyntaxErrorInfo {
 /// the HTTP DTO.
 #[derive(Debug, Clone, PartialEq)]
 pub struct CheckReport {
+    /// Registered analysis calls with their owning result bindings, in source order.
+    pub registered_calls: Vec<crate::parser::RegisteredCall>,
     /// True when the system is structurally solvable: zero degrees of freedom
     /// and a complete equation↔variable matching.
     pub solvable: bool,
@@ -1809,6 +1813,7 @@ pub fn check_with_tables_complex(
             let (_, knowns) = builtin_constants(&equations);
             let variables = unknowns(&equations, &knowns);
             return Ok(CheckReport {
+                registered_calls: doc.registered_calls.clone(),
                 solvable: false,
                 equation_count: equations.len(),
                 unknown_count: variables.len(),
@@ -1839,6 +1844,7 @@ pub fn check_with_tables_complex(
             .map(|ds| ds.body_equations.len() + ds.initials.len())
             .sum();
         return Ok(CheckReport {
+            registered_calls: doc.registered_calls.clone(),
             solvable: true,
             equation_count: dyn_eqs,
             unknown_count: dyn_eqs,
@@ -1898,6 +1904,7 @@ pub fn check_with_tables_complex(
     }
 
     let base = CheckReport {
+        registered_calls: doc.registered_calls.clone(),
         solvable: false,
         equation_count: surfaced_eqs,
         unknown_count: surfaced_vars,
@@ -2716,6 +2723,7 @@ fn syntax_failure_report(source: &str, err: &FreesError) -> CheckReport {
     }
 
     CheckReport {
+        registered_calls: Vec::new(),
         solvable: false,
         equation_count: 0,
         unknown_count: 0,

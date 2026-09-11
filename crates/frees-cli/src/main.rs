@@ -249,6 +249,14 @@ fn solution_value(solution: &Solution) -> Value {
         },
         "iterations": solution.iterations,
         "diagnostics": diagnostics_value(&solution.diagnostics),
+        "registered_calls": solution
+            .registered_calls
+            .iter()
+            .map(|call| json!({
+                "binding": call.binding,
+                "operation": call.operation,
+            }))
+            .collect::<Vec<_>>(),
         // The golden dumper's `ode_tables` shape, key for key, so a suspected
         // transient divergence can be diffed straight against a fixture.
         "ode_tables": solution
@@ -290,6 +298,14 @@ fn check_value(report: &CheckReport) -> Value {
         "error_line": report.error_line,
         "errors": errors,
         "diagnostics": diagnostics_value(&report.diagnostics),
+        "registered_calls": report
+            .registered_calls
+            .iter()
+            .map(|call| json!({
+                "binding": call.binding,
+                "operation": call.operation,
+            }))
+            .collect::<Vec<_>>(),
     })
 }
 

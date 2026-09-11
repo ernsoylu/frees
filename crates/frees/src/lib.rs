@@ -1028,6 +1028,14 @@ fn solve_success(
             // through `plotDefToSpec`, so this is what makes a declared plot
             // render.
             "definedPlots": plot_defs(&solution.plots),
+            "registeredCalls": solution
+                .registered_calls
+                .iter()
+                .map(|call| json!({
+                    "binding": call.binding,
+                    "operation": call.operation,
+                }))
+                .collect::<Vec<_>>(),
             "connections": connection_defs(&solution.component_connections),
             // Tornado breakdown: per dependent variable, its propagated sigma and
             // each source's signed contribution, largest sigma first — the Java
@@ -1343,6 +1351,14 @@ fn check_response(report: &CheckReport) -> String {
         // what lets the Plots tab populate before the first solve —
         // `App.tsx`'s `result?.definedPlots ?? checkResult?.definedPlots`.
         "definedPlots": plot_defs(&report.plots),
+        "registeredCalls": report
+            .registered_calls
+            .iter()
+            .map(|call| json!({
+                "binding": call.binding,
+                "operation": call.operation,
+            }))
+            .collect::<Vec<_>>(),
         "connections": connection_defs(&report.connections),
         "instances": report
             .instances
