@@ -189,6 +189,7 @@ Focus: Implement the comprehensive language unification detailed in [`reports/SI
 - [ ] **3.9 Stage U8: Product-Wide Migration**
   - Convert all standard library definitions ([`components/library-data/`](file:///home/eren/homecloud/dev/frees-wasm/components/library-data)), gallery models ([`web/src/examples.ts`](file:///home/eren/homecloud/dev/frees-wasm/web/src/examples.ts)), Help models, and test fixtures to the unified syntax.
     - [x] All 13 standard component-library files and the migrated gallery/Help snippets use version-2 component and call syntax; legacy compatibility fixtures remain isolated as migration evidence.
+    - [x] Function catalog templates and documentation examples use canonical function declarations and expression/bracketed call syntax.
   - Update editor language tooling: syntax highlighters ([`web/src/EquationEditor.tsx`](file:///home/eren/homecloud/dev/frees-wasm/web/src/EquationEditor.tsx)), autocompletion ([`web/src/editorCompletion.ts`](file:///home/eren/homecloud/dev/frees-wasm/web/src/editorCompletion.ts)), signature tooltips ([`web/src/signatureHelp.ts`](file:///home/eren/homecloud/dev/frees-wasm/web/src/signatureHelp.ts)), and LaTeX renderer.
     - [x] Function catalog insertion snippets and usage examples use canonical expression and bracketed output calls.
   - Provide an automatic project migration tool for legacy projects, embedding a version header (`// frees-language: 2`).
