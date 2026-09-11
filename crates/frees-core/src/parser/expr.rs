@@ -915,7 +915,6 @@ fn parse_call_atom(c: &mut Cursor<'_>, name: String) -> Result<Expr> {
         }
         return call;
     }
-    let has_named = args.iter().any(|a| a.name.is_some());
     let values = args
         .into_iter()
         .map(|arg| match arg.name {
@@ -923,11 +922,7 @@ fn parse_call_atom(c: &mut Cursor<'_>, name: String) -> Result<Expr> {
             None => arg.value,
         })
         .collect();
-    if has_named {
-        Ok(Expr::call(&name, values))
-    } else {
-        Ok(Expr::call(&name, values))
-    }
+    Ok(Expr::call(&name, values))
 }
 
 fn is_property_function(name: &str) -> bool {
