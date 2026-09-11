@@ -177,8 +177,9 @@ Focus: Implement the comprehensive language unification detailed in [`reports/SI
 - [ ] **3.7 Stage U6: Analysis, Simulation & Presentation as Registered Calls**
   - Replace ad-hoc keyword blocks with registered domain function calls: `simulate(...)`, `sweep(...)`, `plot(...)`, `table(...)`, `linearize(...)`.
     - [x] Domain calls `simulate(...)`, `sweep(...)`, `plot(...)`, `table(...)`, and `linearize(...)` parse in ordinary expression position.
-    - [x] Reserved `state_table(...)` parses in ordinary expression position.
+  - [x] Reserved `state_table(...)` parses in ordinary expression position.
   - Maintain explicit run ownership, result bindings, and feedback paths without separate grammar modes.
+    - [x] Top-level registered calls retain their operation, owning binding, and argument expressions in source order.
 - [ ] **3.8 Stage U7: Cross-Interface Analysis Parity**
   - Align analysis execution schemas (optimization, fitting, sensitivity, uncertainty propagation, Monte Carlo) across CLI, WASM Web Worker, and UI dialogs.
     - [x] Expose the existing sensitivity endpoint through the WASM facade and route all existing analysis endpoints through a shared CLI dispatcher.

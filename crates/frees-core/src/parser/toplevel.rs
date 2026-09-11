@@ -326,6 +326,9 @@ impl<'a> Parser<'a> {
             }
             _ => {
                 let statement = self.statement()?;
+                if let Some(call) = registered_call(&statement) {
+                    doc.registered_calls.push(call);
+                }
                 doc.statements.push(statement);
             }
         }
@@ -2787,6 +2790,26 @@ impl<'a> Parser<'a> {
         }
         matches!(self.c.peek_at(i + 1), TokenKind::Colon)
     }
+}
+
+fn registered_call(statement: &Statement) -> Option<crate::parser::RegisteredCall> {
+    let Statement::Eq(crate::ast::Equation {
+        lhs: Expr::Var(binding),
+        rhs: Expr::Call { function, args },
+        ..
+    }) = statement
+    else {
+        return None;
+    };
+    matches!(
+        function.as_str(),
+        "simulate" | "sweep" | "plot" | "table" | "state_table" | "linearize"
+    )
+    .then(|| crate::parser::RegisteredCall {
+        binding: binding.clone(),
+        operation: function.clone(),
+        args: args.clone(),
+    })
 }
 
 // ── free helpers ────────────────────────────────────────────────────────────

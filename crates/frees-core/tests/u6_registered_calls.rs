@@ -21,4 +21,7 @@ fn reserved_domain_names_accept_expression_call_syntax() {
     assert!(matches!(calls[4], Expr::Call { function, .. } if function == "sweep"));
     assert!(matches!(calls[5], Expr::Call { function, .. } if function == "simulate"));
     assert!(matches!(calls[6], Expr::Call { function, .. } if function == "require"));
+    assert_eq!(doc.registered_calls.len(), 6);
+    assert_eq!(doc.registered_calls[0].binding, "answer");
+    assert_eq!(doc.registered_calls[0].operation, "plot");
 }

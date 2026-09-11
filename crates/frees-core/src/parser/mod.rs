@@ -23,7 +23,7 @@ pub mod toplevel;
 
 use std::collections::BTreeMap;
 
-use crate::ast::Statement;
+use crate::ast::{Expr, Statement};
 use crate::diag::{Diagnostic, FreesError, Result, Span};
 use crate::token::{Token, TokenKind};
 
@@ -42,6 +42,16 @@ pub struct GuessDirective {
     pub upper: Option<f64>,
 }
 
+/// A top-level registered domain call and the scalar binding that owns its
+/// result. Drivers can preserve run ownership without putting these values
+/// into the numeric equation system.
+#[derive(Debug, Clone, PartialEq)]
+pub struct RegisteredCall {
+    pub binding: String,
+    pub operation: String,
+    pub args: Vec<Expr>,
+}
+
 /// A parsed document.
 ///
 /// Every block construct the grammar admits now has a home. `FUNCTION`,
@@ -56,6 +66,8 @@ pub struct GuessDirective {
 pub struct Document {
     pub statements: Vec<Statement>,
     pub guesses: Vec<GuessDirective>,
+    /// Top-level registered calls, in source order.
+    pub registered_calls: Vec<RegisteredCall>,
     pub diagnostics: Vec<Diagnostic>,
     /// `FUNCTION` / `PROCEDURE` / `MODULE` / `TABLE` definitions, in
     /// declaration order.
