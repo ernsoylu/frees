@@ -2239,7 +2239,7 @@ fn eval_call<'a>(function: &str, args: &'a [Expr], env: &'a Env<'a>) -> Result<f
     }
 }
 
-fn resolve_intrinsic_args<'a>(function: &str, args: &'a [Expr]) -> Result<Vec<Expr>> {
+fn resolve_intrinsic_args(function: &str, args: &[Expr]) -> Result<Vec<Expr>> {
     let mut out: Vec<Option<Expr>> = vec![None; args.len()];
     let mut named = false;
     let mut next = 0;
