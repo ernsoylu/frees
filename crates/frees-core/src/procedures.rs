@@ -122,7 +122,14 @@ pub fn call_function(
         )));
     }
     let _guard = DepthGuard::enter("FUNCTION", &def.name)?;
-    let mut locals = caller_scope.clone();
+    if def.output.is_some() {
+        reject_ignored_equations(&def.body, &def.name)?;
+    }
+    let mut locals = if def.output.is_some() {
+        Scope::default()
+    } else {
+        caller_scope.clone()
+    };
     for (param, value) in def.params.iter().zip(args) {
         locals.insert(param.clone(), *value);
     }
@@ -135,6 +142,33 @@ pub fn call_function(
             def.name, output
         ))),
     }
+}
+
+fn reject_ignored_equations(body: &[ProcStatement], function: &str) -> Result<()> {
+    for statement in body {
+        match statement {
+            ProcStatement::Eq(Equation { lhs, rhs, .. })
+                if !matches!(lhs, Expr::Var(_)) && !matches!(rhs, Expr::Var(_)) =>
+            {
+                return Err(FreesError::evaluation(format!(
+                    "FREES-MIG-004: FUNCTION {function} contains an equation with no variable side; use `:=` for an ordered calculation"
+                )));
+            }
+            ProcStatement::IfElse {
+                then_branch,
+                else_branch,
+                ..
+            } => {
+                reject_ignored_equations(then_branch, function)?;
+                reject_ignored_equations(else_branch, function)?;
+            }
+            ProcStatement::RepeatUntil { body, .. }
+            | ProcStatement::For { body, .. }
+            | ProcStatement::While { body, .. } => reject_ignored_equations(body, function)?,
+            ProcStatement::Assign { .. } | ProcStatement::Eq(_) => {}
+        }
+    }
+    Ok(())
 }
 
 /// Execute a `PROCEDURE` body and return its output variables as a
