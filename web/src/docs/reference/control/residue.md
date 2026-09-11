@@ -17,7 +17,7 @@ maps to a time-domain mode.
 ## Syntax
 
 ```
-CALL residue(num, den : rr, ri, pr, pi, k)
+[rr, ri, pr, pi, k] = residue(num, den)
 [rr, ri, pr, pi, k] = residue(num, den)
 ```
 

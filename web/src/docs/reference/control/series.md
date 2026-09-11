@@ -16,7 +16,7 @@ Returns the **series (cascade) connection** of two transfer functions —
 ## Syntax
 
 ```
-CALL series(num1, den1, num2, den2 : num, den)
+[num, den] = series(num1, den1, num2, den2)
 [num, den] = series(num1, den1, num2, den2)
 ```
 

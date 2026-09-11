@@ -17,7 +17,7 @@ balanced forms.
 ## Syntax
 
 ```
-CALL ss2ss(A, B, C, D, P : An, Bn, Cn, Dn)
+[An, Bn, Cn, Dn] = ss2ss(A, B, C, D, P)
 [An, Bn, Cn, Dn] = ss2ss(A, B, C, D, P)
 ```
 

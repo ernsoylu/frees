@@ -16,7 +16,7 @@ states and effort.
 ## Syntax
 
 ```
-CALL dlqr(A, B, Q, R : K)
+[K] = dlqr(A, B, Q, R)
 K = dlqr(A, B, Q, R)
 ```
 

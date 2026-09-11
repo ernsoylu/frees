@@ -14,7 +14,7 @@ tags: [singularvalues]
 ## Syntax
 
 ```
-CALL singularvalues(...)
+singularvalues(...)
 ```
 
 ## Description

@@ -14,7 +14,7 @@ Takes a spectrum back to the time domain.
 ## Syntax
 
 ```
-CALL IFFT(re, im : outRe, outIm)
+[outRe, outIm] = IFFT(re, im)
 ```
 
 ## Description
@@ -36,7 +36,7 @@ $$ x_j = \frac{1}{n}\sum_{k=0}^{n-1} X_k\, e^{+2\pi \mathrm{i} jk/n} $$
 ```
 re = [1, 1]
 im = [0, 0]
-CALL IFFT(re, im : gr, gi)
+[gr, gi] = IFFT(re, im)
 ```
 
 **Expected:** `gr = 1, 0` and `gi = 0, 0`.
@@ -46,8 +46,8 @@ CALL IFFT(re, im : gr, gi)
 ```
 x  = [3, -1, 0.5, 2.25, -7]
 im = [0, 0, 0, 0, 0]
-CALL FFT(x, im : fr, fi)
-CALL IFFT(fr, fi : br, bi)
+[fr, fi] = FFT(x, im)
+[br, bi] = IFFT(fr, fi)
 ```
 
 **Expected:** `br` reproduces `x` and `bi` is zero to rounding.

@@ -16,7 +16,7 @@ same input whose outputs are summed.
 ## Syntax
 
 ```
-CALL parallel(num1, den1, num2, den2 : num, den)
+[num, den] = parallel(num1, den1, num2, den2)
 [num, den] = parallel(num1, den1, num2, den2)
 ```
 

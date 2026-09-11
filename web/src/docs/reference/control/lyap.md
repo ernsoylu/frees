@@ -16,7 +16,7 @@ controllability/observability Gramians.
 ## Syntax
 
 ```
-CALL lyap(A, Q : X)
+[X] = lyap(A, Q)
 X = lyap(A, Q)
 ```
 

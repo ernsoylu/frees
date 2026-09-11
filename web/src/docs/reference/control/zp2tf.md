@@ -16,7 +16,7 @@ and gain `k` — into a transfer function `num/den`. It is the inverse of
 ## Syntax
 
 ```
-CALL zp2tf(zr, zi, pr, pi, k : num, den)
+[num, den] = zp2tf(zr, zi, pr, pi, k)
 [num, den] = zp2tf(zr, zi, pr, pi, k)
 ```
 

@@ -313,16 +313,17 @@ Variants of your own components use the `VARIANT ... REQUIRE ... END` construct 
 [Topic: comp-authoring]
 # Writing Your Own Component
 
-When the library lacks a device — or you want your own correlation inside one — define a component in the document with `COMPONENT ... END`. The header parentheses declare the **ports** (in the order positional binding will use); `PARAM` lines declare parameters; everything else is acausal equations over port members, locals, and outputs.
+When the library lacks a device — or you want your own correlation inside one — define a component with `function [ports] = name(parameters)`. Add `port(...)` lines for its ports; the remaining lines are acausal equations over port members, locals, and outputs.
 
 ```run
-COMPONENT Heater(in, out)
-  PARAM fluid$, Q
+function [in, out] = Heater(fluid$=Water, Q=50000 [W])
+  port(in)
+  port(out)
   out.mdot = in.mdot
   out.P    = in.P
   out.h    = in.h + Q / in.mdot
   T_out    = Temperature(fluid$, P=out.P, h=out.h)   { named output }
-END
+end
 
 Source SUP(fluid$=Water, mdot=0.5 [kg/s], P=200000 [Pa], T=290 [K])
 Heater H1(fluid$=Water, Q=50000 [W])
@@ -336,8 +337,8 @@ T_supply = H1.T_out          { read the named output }
 The rules:
 
 - **Ports** carry whatever members your equations reference. Use `(P, mdot, h)` members and the port is a fluid port; use `(T, Qdot)` and it is a heat port — domain inference is automatic (see *Domains & Fluid Families*). A port referenced only as `port.sig` becomes a causal **signal** port: one writer, any readers — use one for every command input rather than pinning a component's internals from outside.
-- **Parameters** — a trailing `$` marks a string parameter (`fluid$` is special: it names the stream's fluid for property calls and per-port fluid inference). `PARAM x = value` gives *your* component a default; the standard library deliberately never uses them.
-- **Locals and outputs** — any bare name in the body is instance-private (auto-namespaced, like `MODULE` locals). Reading it from outside as `inst.name` makes it a named output.
+- **Parameters** — a trailing `$` marks a string parameter (`fluid$` is special: it names the stream's fluid for property calls and per-port fluid inference). Defaults live directly in the function header.
+- **Locals and outputs** — any bare name in the body is instance-private (auto-namespaced). Reading it from outside as `inst.name` makes it a named output.
 - **Fluid family** — a component for a non-default family opts in with `PARAM domain$ = gas` (or `oil`, `moistair`, `liquid`, `twophase`), so the connector guard protects your lines too.
 - **Composition** — a component body may instantiate other components and `connect` them: build a subsystem once, stamp it many times.
 - **Time** — a body may reference the reserved global `time` (never namespaced) to build time-driven behavior; the `DYNAMIC` integrators pin it, and a steady document sets `time = 0` explicitly.
@@ -350,8 +351,9 @@ The rules:
 Split fidelity levels with `VARIANT` blocks. Equations outside any variant are shared; each variant adds its own, and `REQUIRE` names the parameters it validates:
 
 ```
-COMPONENT MyFan(in, out)
-  PARAM fluid$, model$ = simple
+function [in, out] = MyFan(fluid$=Air, model$=simple)
+  port(in)
+  port(out)
   out.mdot = in.mdot                  { shared by every variant }
   VARIANT simple
     out.P = in.P + 250
@@ -359,7 +361,7 @@ COMPONENT MyFan(in, out)
   VARIANT curve REQUIRE dP0, kQ
     out.P = in.P + dP0 - kQ * in.mdot^2
   END
-END
+end
 ```
 
 `MyFan F1(fluid$=Air, model$=curve, dP0=300, kQ=1.5e4)` selects and validates the `curve` body.
@@ -427,9 +429,9 @@ END
 The result is an ordinary set of matrices, so the whole control toolbox applies directly:
 
 ```
-CALL ss2tf(A, B, C, D : num, den)          { transfer function of the plant }
-CALL bode(num, den, omega : mag, phase)    { frequency response }
-CALL lqr(A, B, Q_w, R_w : K)               { optimal state feedback }
+[num, den] = ss2tf(A, B, C, D)          { transfer function of the plant }
+[mag, phase] = bode(num, den, omega)    { frequency response }
+[K] = lqr(A, B, Q_w, R_w)               { optimal state feedback }
 ```
 
 Close the loop back in the time domain with controller components (`PIThermostat` and friends) inside the same `DYNAMIC` network — design in the frequency domain, verify in the transient, all in one document.

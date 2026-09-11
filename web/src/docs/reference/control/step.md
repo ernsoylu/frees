@@ -16,7 +16,7 @@ time — directly from the time-domain response.
 ## Syntax
 
 ```
-CALL step(num, den, t : y)
+[y] = step(num, den, t)
 y = step(num, den, t)
 ```
 

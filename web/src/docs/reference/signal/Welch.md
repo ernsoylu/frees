@@ -14,7 +14,7 @@ Estimates where a signal's power sits in frequency. A single `FFT` of a noisy re
 ## Syntax
 
 ```
-CALL Welch(x, fs, nperseg : f, pxx)
+[f, pxx] = Welch(x, fs, nperseg)
 ```
 
 ## Description
@@ -41,7 +41,7 @@ $$ P^{(i)}_k = \frac{2}{f_s \sum_j w_j^2}\left| \sum_{j=0}^{L-1} (x^{(i)}_j - \b
 
 ```
 { 4096 samples of a 1 Vrms 50 Hz tone at fs = 1 kHz in x[1..4096] }
-CALL Welch(x, 1000, 256 : f, pxx)
+[f, pxx] = Welch(x, 1000, 256)
 ```
 
 **Expected:** the largest `pxx` sits in the bin nearest 50 Hz, and `sum(pxx)·(f[2] − f[1])` is 1 — the mean square of a 1 Vrms tone.

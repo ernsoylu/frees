@@ -16,7 +16,7 @@ forcing (ramps, pulses, measured signals) rather than the canned step/impulse.
 ## Syntax
 
 ```
-CALL lsim(num, den, u, t : y)
+[y] = lsim(num, den, u, t)
 y = lsim(num, den, u, t)
 ```
 

@@ -17,7 +17,7 @@ controller on a digital (sampled) platform.
 ## Syntax
 
 ```
-CALL c2d(num, den, Ts, 'zoh' : numz, denz)
+[numz, denz] = c2d(num, den, Ts, 'zoh')
 [numz, denz] = c2d(num, den, Ts, 'tustin')
 ```
 

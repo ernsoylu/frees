@@ -124,7 +124,7 @@ After a solve, the **REPL terminal** (a dockable console window) holds the whole
 Three things make it more than a calculator:
 
 - **Implicit solve** — type an equation with one unknown and the REPL solves it on the spot.
-- **The CALL library** — eigenvalues, Bode data, partial fractions: `CALL bode(num, den, omega : mag, phase)` works interactively, with output sizes inferred for you.
+- **The CALL library** — eigenvalues, Bode data, partial fractions: `[mag, phase] = bode(num, den, omega)` works interactively, with output sizes inferred for you.
 - **Symbolic CAS** — `Factor(x^2 - 1)`, `Apart(...)`, `Laplace(...)` return transformed expressions (REPL-only).
 
 The full command set is on the *REPL Terminal & Workspace* page. One step left: components.
@@ -218,10 +218,10 @@ Inverse(A)   Transpose(A)   Dot(u, v)
 ## The CALL library (auto-sized outputs)
 The full `CALL` procedure library (eigenvalues, control-systems analysis, partial fractions, decompositions) runs in the REPL. **Output lengths are sized automatically from the inputs**, so bare output names work — no `[1:n]` annotation:
 ```
-CALL Eigenvalues(A : lambda)            { lambda = [2 3] }
-CALL Routh(den : nRHP, stable)
-CALL residue(num, den : rr, ri, pr, pi, k)
-CALL Bode(num, den, omega : mag, phase)
+[lambda] = Eigenvalues(A)            { lambda = [2 3] }
+[nRHP, stable] = Routh(den)
+[rr, ri, pr, pi, k] = residue(num, den)
+[mag, phase] = Bode(num, den, omega)
 ```
 Only genuinely value-dependent counts take an explicit size: the finite-zero counts of `zero`/`tf2zp` (e.g. `zr[1:2]`), and the root-locus sweep resolution of `rlocus` (defaults to 100 points). This auto-sizing applies in the editor document too.
 

@@ -17,7 +17,7 @@ reduction (`balreal`).
 ## Syntax
 
 ```
-CALL gram(A, M, 'c' : W)
+[W] = gram(A, M, 'c')
 W = gram(A, M, 'o')
 ```
 

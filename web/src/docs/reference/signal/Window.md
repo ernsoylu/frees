@@ -14,7 +14,7 @@ Tapers a finite record to zero at both ends before a transform, so the discontin
 ## Syntax
 
 ```
-CALL Window(x, 'hann' : y)
+[y] = Window(x, 'hann')
 ```
 
 ## Description
@@ -43,8 +43,8 @@ and $y_j = w_j x_j$.
 ```
 x  = [1, 2, 3, 4, 5, 6, 7, 8]
 im = [0, 0, 0, 0, 0, 0, 0, 0]
-CALL Window(x, 'hann' : xw)
-CALL FFT(xw, im : re, imf)
+[xw] = Window(x, 'hann')
+[re, imf] = FFT(xw, im)
 ```
 
 **Expected:** `xw[1] = 0` and `xw[8] = 0` — a symmetric Hann closes on zero at both ends.

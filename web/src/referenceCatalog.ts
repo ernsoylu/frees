@@ -1568,7 +1568,7 @@ $$ u(X) = \\text{user-supplied or RSS-propagated uncertainty of } X $$
 ## Syntax
 
 \`\`\`
-CALL linfit(...)
+linfit(...)
 \`\`\`
 
 ## Description
@@ -1594,7 +1594,7 @@ Check argument count, dimensions, and units before solving.`,
 ## Syntax
 
 \`\`\`
-CALL polyfit(...)
+polyfit(...)
 \`\`\`
 
 ## Description
@@ -1620,7 +1620,7 @@ Check argument count, dimensions, and units before solving.`,
 ## Syntax
 
 \`\`\`
-CALL singularvalues(...)
+singularvalues(...)
 \`\`\`
 
 ## Description
@@ -1646,7 +1646,7 @@ Check argument count, dimensions, and units before solving.`,
 ## Syntax
 
 \`\`\`
-CALL ss2tfij(...)
+ss2tfij(...)
 \`\`\`
 
 ## Description
@@ -18345,7 +18345,7 @@ locations \`pr ± j·pi\`. It is the explicit closed-form counterpart of
 ## Syntax
 
 \`\`\`
-CALL acker(A, B, pr, pi : K)
+[K] = acker(A, B, pr, pi)
 K = acker(A, B, pr, pi)
 \`\`\`
 
@@ -18409,7 +18409,7 @@ Hankel values can then be truncated for model reduction.
 ## Syntax
 
 \`\`\`
-CALL balreal(A, B, C : Ab, Bb, Cb)
+[Ab, Bb, Cb] = balreal(A, B, C)
 [Ab, Bb, Cb] = balreal(A, B, C)
 \`\`\`
 
@@ -18477,7 +18477,7 @@ bandwidth, resonance, roll-off, and the stability margins.
 ## Syntax
 
 \`\`\`
-CALL bode(num, den, omega : mag, phase)
+[mag, phase] = bode(num, den, omega)
 [mag, phase] = bode(num, den, omega)
 \`\`\`
 
@@ -18544,7 +18544,7 @@ controller on a digital (sampled) platform.
 ## Syntax
 
 \`\`\`
-CALL c2d(num, den, Ts, 'zoh' : numz, denz)
+[numz, denz] = c2d(num, den, Ts, 'zoh')
 [numz, denz] = c2d(num, den, Ts, 'tustin')
 \`\`\`
 
@@ -18615,7 +18615,7 @@ is possible — iff \`Co\` has full rank.
 ## Syntax
 
 \`\`\`
-CALL ctrb(A, B : Co)
+[Co] = ctrb(A, B)
 Co = ctrb(A, B)
 \`\`\`
 
@@ -18665,7 +18665,7 @@ using the requested method (\`'tustin'\` bilinear or \`'zoh'\`).
 ## Syntax
 
 \`\`\`
-CALL d2c(numz, denz, Ts, 'tustin' : num, den)
+[num, den] = d2c(numz, denz, Ts, 'tustin')
 [num, den] = d2c(numz, denz, Ts, 'zoh')
 \`\`\`
 
@@ -18727,7 +18727,7 @@ gain from this \`X\`.
 ## Syntax
 
 \`\`\`
-CALL dare(A, B, Q, R : X)
+[X] = dare(A, B, Q, R)
 X = dare(A, B, Q, R)
 \`\`\`
 
@@ -18784,7 +18784,7 @@ states and effort.
 ## Syntax
 
 \`\`\`
-CALL dlqr(A, B, Q, R : K)
+[K] = dlqr(A, B, Q, R)
 K = dlqr(A, B, Q, R)
 \`\`\`
 
@@ -18843,7 +18843,7 @@ the discrete system \`A\` is Schur-stable (all eigenvalues inside the unit circl
 ## Syntax
 
 \`\`\`
-CALL dlyap(A, Q : X)
+[X] = dlyap(A, Q)
 X = dlyap(A, Q)
 \`\`\`
 
@@ -18900,7 +18900,7 @@ inputs.
 ## Syntax
 
 \`\`\`
-CALL errorconst(num, den : Kp, Kv, Ka)
+[Kp, Kv, Ka] = errorconst(num, den)
 [Kp, Kv, Ka] = errorconst(num, den)
 \`\`\`
 
@@ -18953,7 +18953,7 @@ with steady-state errors \`e_step = 1/(1+Kp)\`, \`e_ramp = 1/Kv\`, \`e_parabola 
 ## Syntax
 
 \`\`\`
-CALL feedback(num1, den1, num2, den2 : num, den)
+[num, den] = feedback(num1, den1, num2, den2)
 [num, den] = feedback(num1, den1, num2, den2)
 \`\`\`
 
@@ -19022,7 +19022,7 @@ reduction (\`balreal\`).
 ## Syntax
 
 \`\`\`
-CALL gram(A, M, 'c' : W)
+[W] = gram(A, M, 'c')
 W = gram(A, M, 'o')
 \`\`\`
 
@@ -19089,7 +19089,7 @@ response.
 ## Syntax
 
 \`\`\`
-CALL impulse(num, den, t : y)
+[y] = impulse(num, den, t)
 y = impulse(num, den, t)
 \`\`\`
 
@@ -19151,7 +19151,7 @@ noisy measurements with minimum error variance.
 ## Syntax
 
 \`\`\`
-CALL lqe(A, G, C, Q, R : L)
+[L] = lqe(A, G, C, Q, R)
 L = lqe(A, G, C, Q, R)
 \`\`\`
 
@@ -19217,7 +19217,7 @@ states and the effort. Use it for systematic multi-state feedback design.
 ## Syntax
 
 \`\`\`
-CALL lqr(A, B, Q, R : K)
+[K] = lqr(A, B, Q, R)
 K = lqr(A, B, Q, R)
 \`\`\`
 
@@ -19286,7 +19286,7 @@ forcing (ramps, pulses, measured signals) rather than the canned step/impulse.
 ## Syntax
 
 \`\`\`
-CALL lsim(num, den, u, t : y)
+[y] = lsim(num, den, u, t)
 y = lsim(num, den, u, t)
 \`\`\`
 
@@ -19348,7 +19348,7 @@ controllability/observability Gramians.
 ## Syntax
 
 \`\`\`
-CALL lyap(A, Q : X)
+[X] = lyap(A, Q)
 X = lyap(A, Q)
 \`\`\`
 
@@ -19404,7 +19404,7 @@ the classical frequency-domain measures of relative stability for the closed loo
 ## Syntax
 
 \`\`\`
-CALL margin(num, den : gm, pm, w_cg, w_cp)
+[gm, pm, w_cg, w_cp] = margin(num, den)
 [gm, pm, w_cg, w_cp] = margin(num, den)
 \`\`\`
 
@@ -19477,7 +19477,7 @@ input-output gain.
 ## Syntax
 
 \`\`\`
-CALL mason(G, source, sink : T)
+[T] = mason(G, source, sink)
 T = mason(G, source, sink)
 \`\`\`
 
@@ -19530,7 +19530,7 @@ Nichols chart, it reads off closed-loop gain and stability margins in one view.
 ## Syntax
 
 \`\`\`
-CALL nichols(num, den, omega : mag, phase)
+[mag, phase] = nichols(num, den, omega)
 [mag, phase] = nichols(num, den, omega)
 \`\`\`
 
@@ -19597,7 +19597,7 @@ Plotting \`im\` against \`re\` and applying the Nyquist criterion (encirclements
 ## Syntax
 
 \`\`\`
-CALL nyquist(num, den, omega : re, im)
+[re, im] = nyquist(num, den, omega)
 [re, im] = nyquist(num, den, omega)
 \`\`\`
 
@@ -19663,7 +19663,7 @@ arbitrary speed exists — iff \`Ob\` has full rank.
 ## Syntax
 
 \`\`\`
-CALL obsv(A, C : Ob)
+[Ob] = obsv(A, C)
 Ob = obsv(A, C)
 \`\`\`
 
@@ -19713,7 +19713,7 @@ transfer function so the loop can be analyzed and designed with standard tools.
 ## Syntax
 
 \`\`\`
-CALL pade(Td, order : num, den)
+[num, den] = pade(Td, order)
 [num, den] = pade(Td, order)
 \`\`\`
 
@@ -19764,7 +19764,7 @@ same input whose outputs are summed.
 ## Syntax
 
 \`\`\`
-CALL parallel(num1, den1, num2, den2 : num, den)
+[num, den] = parallel(num1, den1, num2, den2)
 [num, den] = parallel(num1, den1, num2, den2)
 \`\`\`
 
@@ -19811,7 +19811,7 @@ for a quick, systematic classical controller without manual loop shaping.
 ## Syntax
 
 \`\`\`
-CALL pidtune(num, den, 'PID', wc : Kp, Ki, Kd)
+[Kp, Ki, Kd] = pidtune(num, den, 'PID', wc)
 [Kp, Ki, Kd] = pidtune(num, den, 'PID', wc)
 \`\`\`
 
@@ -19881,7 +19881,7 @@ The control law \`u = −Kx\` makes \`eig(A − BK)\` equal the requested poles.
 ## Syntax
 
 \`\`\`
-CALL place(A, B, pr, pi : K)
+[K] = place(A, B, pr, pi)
 K = place(A, B, pr, pi)
 \`\`\`
 
@@ -19947,7 +19947,7 @@ has a negative real part.
 ## Syntax
 
 \`\`\`
-CALL pole(num, den : pr, pi)
+[pr, pi] = pole(num, den)
 [pr, pi] = pole(num, den)
 \`\`\`
 
@@ -20017,7 +20017,7 @@ maps to a time-domain mode.
 ## Syntax
 
 \`\`\`
-CALL residue(num, den : rr, ri, pr, pi, k)
+[rr, ri, pr, pi, k] = residue(num, den)
 [rr, ri, pr, pi, k] = residue(num, den)
 \`\`\`
 
@@ -20084,7 +20084,7 @@ gain that places the dominant poles for a target damping or settling time.
 ## Syntax
 
 \`\`\`
-CALL rlocus(num, den : K, cpr, cpi)
+[K, cpr, cpi] = rlocus(num, den)
 [K, cpr, cpi] = rlocus(num, den)
 \`\`\`
 
@@ -20151,7 +20151,7 @@ It decides stability without computing the roots — useful for symbolic gain ra
 ## Syntax
 
 \`\`\`
-CALL routh(den : nRHP, stable)
+[nRHP, stable] = routh(den)
 [nRHP, stable] = routh(den)
 \`\`\`
 
@@ -20215,7 +20215,7 @@ $$ \\text{all first-column entries} > 0 \\quad\\Longleftrightarrow\\quad n_{RHP}
 ## Syntax
 
 \`\`\`
-CALL series(num1, den1, num2, den2 : num, den)
+[num, den] = series(num1, den1, num2, den2)
 [num, den] = series(num1, den1, num2, den2)
 \`\`\`
 
@@ -20331,7 +20331,7 @@ balanced forms.
 ## Syntax
 
 \`\`\`
-CALL ss2ss(A, B, C, D, P : An, Bn, Cn, Dn)
+[An, Bn, Cn, Dn] = ss2ss(A, B, C, D, P)
 [An, Bn, Cn, Dn] = ss2ss(A, B, C, D, P)
 \`\`\`
 
@@ -20387,7 +20387,7 @@ state model to the frequency-domain form needed for classical loop design.
 ## Syntax
 
 \`\`\`
-CALL ss2tf(A, B, C, D : num, den)
+[num, den] = ss2tf(A, B, C, D)
 [num, den] = ss2tf(A, B, C, D)
 \`\`\`
 
@@ -20456,7 +20456,7 @@ time — directly from the time-domain response.
 ## Syntax
 
 \`\`\`
-CALL step(num, den, t : y)
+[y] = step(num, den, t)
 y = step(num, den, t)
 \`\`\`
 
@@ -20523,7 +20523,7 @@ steady-state value within a few seconds.
 ## Syntax
 
 \`\`\`
-CALL stepinfo(t, y : Tr, Tp, Ts, OS)
+[Tr, Tp, Ts, OS] = stepinfo(t, y)
 [Tr, Tp, Ts, OS] = stepinfo(t, y)
 \`\`\`
 
@@ -20639,7 +20639,7 @@ LQR/LQE) design.
 ## Syntax
 
 \`\`\`
-CALL tf2ss(num, den : A, B, C, D)
+[A, B, C, D] = tf2ss(num, den)
 [A, B, C, D] = tf2ss(num, den)
 \`\`\`
 
@@ -20705,7 +20705,7 @@ rational system, the inverse of \`zp2tf\`.
 ## Syntax
 
 \`\`\`
-CALL tf2zp(num, den : zr, zi, pr, pi, k)
+[zr, zi, pr, pi, k] = tf2zp(num, den)
 [zr, zi, pr, pi, k] = tf2zp(num, den)
 \`\`\`
 
@@ -20757,7 +20757,7 @@ signals non-minimum-phase behavior.
 ## Syntax
 
 \`\`\`
-CALL zero(num, den : zr, zi)
+[zr, zi] = zero(num, den)
 [zr, zi] = zero(num, den)
 \`\`\`
 
@@ -20820,7 +20820,7 @@ and gain \`k\` — into a transfer function \`num/den\`. It is the inverse of
 ## Syntax
 
 \`\`\`
-CALL zp2tf(zr, zi, pr, pi, k : num, den)
+[num, den] = zp2tf(zr, zi, pr, pi, k)
 [num, den] = zp2tf(zr, zi, pr, pi, k)
 \`\`\`
 
@@ -24151,12 +24151,13 @@ Inside a component, a \`map$\`-style string parameter works directly — this is
 feedforward/cam idiom the function exists for:
 
 \`\`\`
-COMPONENT CamFollower(shaft, rod)
-  PARAM prof$
+function [shaft, rod] = CamFollower(prof$)
+  port(shaft)
+  port(rod)
   lift    = prof$(theta)
   rod.vel = dtable(prof$, theta) * shaft.w   { chain rule: dl/dθ · dθ/dt }
   ...
-END
+end
 \`\`\`
 
 ## Description
@@ -26711,7 +26712,7 @@ directions; the eigenvalues their rates/frequencies.
 ## Syntax
 
 \`\`\`
-CALL Eigen(A : lambda, V)
+[lambda, V] = Eigen(A)
 [lambda, V] = Eigen(A)
 \`\`\`
 
@@ -26725,7 +26726,7 @@ where \`Λ = diag(λ_i)\` and the columns of \`V\` are the eigenvectors.
 
 Eigen supports **real spectra only** (symmetric matrices always qualify) and
 stops with an error on complex eigenvalues; for a complex spectrum use
-\`CALL Eigenvalues(A : re, im)\`, which returns real/imaginary part vectors.
+\`[re, im] = Eigenvalues(A)\`, which returns real/imaginary part vectors.
 
 ## Examples
 
@@ -26763,8 +26764,8 @@ left half-plane; discrete: inside the unit circle) and modal frequencies.
 ## Syntax
 
 \`\`\`
-CALL Eigenvalues(A : lambda)
-CALL Eigenvalues(A : re, im)
+[lambda] = Eigenvalues(A)
+[re, im] = Eigenvalues(A)
 lambda = Eigenvalues(A)
 \`\`\`
 
@@ -26850,7 +26851,7 @@ and vehicle/spacecraft kinematics.
 ## Syntax
 
 \`\`\`
-CALL EulerRotate(phi, theta, psi : R)
+[R] = EulerRotate(phi, theta, psi)
 R = EulerRotate(phi, theta, psi)
 \`\`\`
 
@@ -26939,7 +26940,7 @@ workhorse factorization behind linear solves and determinants.
 ## Syntax
 
 \`\`\`
-CALL LUDecompose(A : L, U)
+[L, U] = LUDecompose(A)
 [L, U] = LUDecompose(A)
 \`\`\`
 
@@ -29769,7 +29770,7 @@ $$ F(x; k) = \\frac{\\gamma(k/2,\\ x/2)}{\\Gamma(k/2)} \\quad\\text{(chi-square 
 ## Syntax
 
 \`\`\`
-CALL Convolve(a, b : c)
+[c] = Convolve(a, b)
 \`\`\`
 
 ## Description
@@ -29793,7 +29794,7 @@ $$ c_k = \\sum_{i} a_i\\, b_{k-i}, \\qquad k = 0,\\ \\dots,\\ m+n-2 $$
 \`\`\`
 a = [1, 2, 3]
 b = [4, 5]
-CALL Convolve(a, b : c)
+[c] = Convolve(a, b)
 \`\`\`
 
 **Expected:** \`c = 4, 13, 22, 15\`.
@@ -29803,7 +29804,7 @@ CALL Convolve(a, b : c)
 \`\`\`
 a = [1]
 b = [7, -2, 0.5]
-CALL Convolve(a, b : c)
+[c] = Convolve(a, b)
 \`\`\`
 
 **Expected:** \`c = 7, -2, 0.5\`.
@@ -29843,9 +29844,9 @@ CALL Convolve(a, b : c)
 ## Syntax
 
 \`\`\`
-CALL Detrend(y : yd)
-CALL Detrend(y, 'linear' : yd)
-CALL Detrend(y, 'constant' : yd)
+[yd] = Detrend(y)
+[yd] = Detrend(y, 'linear')
+[yd] = Detrend(y, 'constant')
 \`\`\`
 
 ## Description
@@ -29870,7 +29871,7 @@ $$ m = \\frac{\\sum_{j} (j - \\bar t)(y_j - \\bar y)}{\\sum_{j} (j - \\bar t)^2}
 
 \`\`\`
 T = [20.1, 20.4, 20.6, 21.0, 21.2, 21.5, 21.7, 22.0]
-CALL Detrend(T : ripple)
+[ripple] = Detrend(T)
 peaks = peakcount(0, 0, ripple)
 \`\`\`
 
@@ -29880,7 +29881,7 @@ The ~0.27 K per sample warming trend is removed; what is left is the measurement
 
 \`\`\`
 T = [20.1, 20.4, 20.6, 21.0]
-CALL Detrend(T, 'constant' : centred)
+[centred] = Detrend(T, 'constant')
 \`\`\`
 
 **Expected:** the mean of \`centred\` is 0 and the sample-to-sample slope is unchanged.
@@ -29920,7 +29921,7 @@ CALL Detrend(T, 'constant' : centred)
 ## Syntax
 
 \`\`\`
-CALL FFT(re, im : outRe, outIm)
+[outRe, outIm] = FFT(re, im)
 \`\`\`
 
 ## Description
@@ -29946,7 +29947,7 @@ $$ X_k = \\sum_{j=0}^{n-1} x_j\\, e^{-2\\pi \\mathrm{i} jk/n} $$
 \`\`\`
 re = [1, 0, 0, 0]
 im = [0, 0, 0, 0]
-CALL FFT(re, im : fr, fi)
+[fr, fi] = FFT(re, im)
 \`\`\`
 
 **Expected:** \`fr = 1, 1, 1, 1\` and \`fi = 0, 0, 0, 0\`.
@@ -29956,7 +29957,7 @@ CALL FFT(re, im : fr, fi)
 \`\`\`
 re = [1, 2, 3, 4]
 im = [0, 0, 0, 0]
-CALL FFT(re, im : outRe, outIm)
+[outRe, outIm] = FFT(re, im)
 \`\`\`
 
 **Expected:** \`outRe[1] = 10\`, the sum of the samples — bin 0 is always the DC total.
@@ -29997,7 +29998,7 @@ CALL FFT(re, im : outRe, outIm)
 ## Syntax
 
 \`\`\`
-CALL Filter(b, a, x : y)
+[y] = Filter(b, a, x)
 \`\`\`
 
 ## Description
@@ -30026,7 +30027,7 @@ $$ y_j = \\frac{1}{a_1}\\left( \\sum_{i=0}^{n_b-1} b_{i+1}\\,x_{j-i} \\;-\\; \\s
 x = [1, 3, 2, 6, 4, 9, 5, 12]
 b = [0.5, 0.5]
 a = [1]
-CALL Filter(b, a, x : y)
+[y] = Filter(b, a, x)
 \`\`\`
 
 **Expected:** \`y[1] = 0.5\` (the start-up transient — there is no \`x[0]\`), then \`y[2] = 2\`, \`y[3] = 2.5\`.
@@ -30037,7 +30038,7 @@ CALL Filter(b, a, x : y)
 x = [1, 0, 0, 0, 0, 0]
 b = [1]
 a = [1, -0.5]
-CALL Filter(b, a, x : y)
+[y] = Filter(b, a, x)
 \`\`\`
 
 **Expected:** the impulse response \`1, 0.5, 0.25, 0.125, …\`.
@@ -30078,7 +30079,7 @@ CALL Filter(b, a, x : y)
 ## Syntax
 
 \`\`\`
-CALL FiltFilt(b, a, x : y)
+[y] = FiltFilt(b, a, x)
 \`\`\`
 
 ## Description
@@ -30110,7 +30111,7 @@ $$ y = R\\,H\\,R\\,H\\,x \\quad\\Longrightarrow\\quad Y(\\omega) = |H(\\omega)|^
 x = [4, 4, 4, 4, 4, 4, 4, 4]
 b = [0.2, 0.2, 0.2, 0.2, 0.2]
 a = [1]
-CALL FiltFilt(b, a, x : y)
+[y] = FiltFilt(b, a, x)
 \`\`\`
 
 **Expected:** every \`y[j] = 4\`. A zero-padded implementation would sag at both ends instead.
@@ -30121,7 +30122,7 @@ CALL FiltFilt(b, a, x : y)
 x = [0, 0, 0, 1, 0, 0, 0]
 b = [0.25, 0.5, 0.25]
 a = [1]
-CALL FiltFilt(b, a, x : y)
+[y] = FiltFilt(b, a, x)
 \`\`\`
 
 **Expected:** \`y\` is symmetric about its centre — the property a single causal pass does not have.
@@ -30161,7 +30162,7 @@ CALL FiltFilt(b, a, x : y)
 ## Syntax
 
 \`\`\`
-CALL IFFT(re, im : outRe, outIm)
+[outRe, outIm] = IFFT(re, im)
 \`\`\`
 
 ## Description
@@ -30183,7 +30184,7 @@ $$ x_j = \\frac{1}{n}\\sum_{k=0}^{n-1} X_k\\, e^{+2\\pi \\mathrm{i} jk/n} $$
 \`\`\`
 re = [1, 1]
 im = [0, 0]
-CALL IFFT(re, im : gr, gi)
+[gr, gi] = IFFT(re, im)
 \`\`\`
 
 **Expected:** \`gr = 1, 0\` and \`gi = 0, 0\`.
@@ -30193,8 +30194,8 @@ CALL IFFT(re, im : gr, gi)
 \`\`\`
 x  = [3, -1, 0.5, 2.25, -7]
 im = [0, 0, 0, 0, 0]
-CALL FFT(x, im : fr, fi)
-CALL IFFT(fr, fi : br, bi)
+[fr, fi] = FFT(x, im)
+[br, bi] = IFFT(fr, fi)
 \`\`\`
 
 **Expected:** \`br\` reproduces \`x\` and \`bi\` is zero to rounding.
@@ -30934,7 +30935,7 @@ $$ m = \\frac{\\sum (x_i-\\bar x)(y_i-\\bar y)}{\\sum (x_i-\\bar x)^2} \\quad\\t
 ## Syntax
 
 \`\`\`
-CALL Smooth(x, k : y)
+[y] = Smooth(x, k)
 \`\`\`
 
 ## Description
@@ -30957,7 +30958,7 @@ $$ y_j = \\frac{1}{|W_j|}\\sum_{i \\in W_j} x_i, \\qquad W_j = \\{\\,i : |i - j|
 
 \`\`\`
 p = [1, 3, 2, 6, 4, 9, 5, 12]
-CALL Smooth(p, 3 : ps)
+[ps] = Smooth(p, 3)
 \`\`\`
 
 **Expected:** \`ps[1] = 2\` (the mean of the two samples that exist), \`ps[3] = 11/3\`, \`ps[8] = 8.5\`.
@@ -31096,7 +31097,7 @@ $$ s^2 = \\frac{1}{n-1}\\sum_{i=1}^{n}(x_i - \\bar x)^2 $$
 ## Syntax
 
 \`\`\`
-CALL Welch(x, fs, nperseg : f, pxx)
+[f, pxx] = Welch(x, fs, nperseg)
 \`\`\`
 
 ## Description
@@ -31123,7 +31124,7 @@ $$ P^{(i)}_k = \\frac{2}{f_s \\sum_j w_j^2}\\left| \\sum_{j=0}^{L-1} (x^{(i)}_j 
 
 \`\`\`
 { 4096 samples of a 1 Vrms 50 Hz tone at fs = 1 kHz in x[1..4096] }
-CALL Welch(x, 1000, 256 : f, pxx)
+[f, pxx] = Welch(x, 1000, 256)
 \`\`\`
 
 **Expected:** the largest \`pxx\` sits in the bin nearest 50 Hz, and \`sum(pxx)·(f[2] − f[1])\` is 1 — the mean square of a 1 Vrms tone.
@@ -31168,7 +31169,7 @@ CALL Welch(x, 1000, 256 : f, pxx)
 ## Syntax
 
 \`\`\`
-CALL Window(x, 'hann' : y)
+[y] = Window(x, 'hann')
 \`\`\`
 
 ## Description
@@ -31197,8 +31198,8 @@ and $y_j = w_j x_j$.
 \`\`\`
 x  = [1, 2, 3, 4, 5, 6, 7, 8]
 im = [0, 0, 0, 0, 0, 0, 0, 0]
-CALL Window(x, 'hann' : xw)
-CALL FFT(xw, im : re, imf)
+[xw] = Window(x, 'hann')
+[re, imf] = FFT(xw, im)
 \`\`\`
 
 **Expected:** \`xw[1] = 0\` and \`xw[8] = 0\` — a symmetric Hann closes on zero at both ends.
@@ -31238,7 +31239,7 @@ CALL FFT(xw, im : re, imf)
 ## Syntax
 
 \`\`\`
-CALL XCorr(a, b : c)
+[c] = XCorr(a, b)
 \`\`\`
 
 ## Description
@@ -31264,7 +31265,7 @@ which is the convolution of \`a\` with \`b\` reversed.
 \`\`\`
 a = [0, 0, 1, 2, 1, 0, 0]
 b = [0, 1, 2, 1, 0, 0, 0]
-CALL XCorr(a, b : c)
+[c] = XCorr(a, b)
 \`\`\`
 
 **Expected:** the peak lands one element right of the centre — \`a\` leads \`b\` by one sample.
@@ -31273,7 +31274,7 @@ CALL XCorr(a, b : c)
 
 \`\`\`
 x = [1, 3, 2, 6, 4, 9, 5, 12]
-CALL XCorr(x, x : r)
+[r] = XCorr(x, x)
 \`\`\`
 
 **Expected:** \`r[8]\` (the centre of 15) is \`Σ xᵢ² = 316\`, and \`r\` is symmetric about it.

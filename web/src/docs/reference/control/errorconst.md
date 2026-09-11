@@ -17,7 +17,7 @@ inputs.
 ## Syntax
 
 ```
-CALL errorconst(num, den : Kp, Kv, Ka)
+[Kp, Kv, Ka] = errorconst(num, den)
 [Kp, Kv, Ka] = errorconst(num, den)
 ```
 

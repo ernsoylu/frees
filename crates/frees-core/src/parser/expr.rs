@@ -986,6 +986,13 @@ fn is_property_function(name: &str) -> bool {
             | "prandtl"
             | "volexpcoef"
             | "gibbs"
+            | "humrat"
+            | "relhum"
+            | "wetbulb"
+            | "dewpoint"
+            | "p_sat"
+            | "t_sat"
+            | "surfacetension"
             | "molarmass"
             | "heatingvalue"
             | "stoichafr"
@@ -2139,6 +2146,18 @@ mod tests {
         assert_eq!(
             ok("Enthalpy(R134a, T=T1, x=1)"),
             Expr::call("prop$enthalpy$r134a$t$x", vec![var("t1"), num(1.0)])
+        );
+    }
+
+    #[test]
+    fn saturation_calls_hide_the_fluid_from_the_variable_set() {
+        assert_eq!(
+            ok("P_sat(R134a, T=T1)"),
+            Expr::call("prop$p_sat$r134a$t", vec![var("t1")])
+        );
+        assert_eq!(
+            ok("P_sat(R134a, T=T1)").variables(),
+            ["t1".to_string()].into()
         );
     }
 

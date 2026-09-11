@@ -16,7 +16,7 @@ The control law `u = −Kx` makes `eig(A − BK)` equal the requested poles.
 ## Syntax
 
 ```
-CALL place(A, B, pr, pi : K)
+[K] = place(A, B, pr, pi)
 K = place(A, B, pr, pi)
 ```
 

@@ -16,7 +16,7 @@ arbitrary speed exists — iff `Ob` has full rank.
 ## Syntax
 
 ```
-CALL obsv(A, C : Ob)
+[Ob] = obsv(A, C)
 Ob = obsv(A, C)
 ```
 

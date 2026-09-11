@@ -55,7 +55,7 @@ num = [1]
 den = [m, c, k]
 omega[1:400] = linspace(0.5, 100, 400)
 
-CALL bode(num, den, omega : mag, phase)
+[mag, phase] = bode(num, den, omega)
 
 PLOT 'MSD Bode'
   kind = bode
@@ -98,7 +98,7 @@ E_final = FinalValue('energy')
 num = [1]
 den = [m, c, k]
 omega[1:400] = linspace(0.5, 100, 400)
-CALL bode(num, den, omega : mag, phase)
+[mag, phase] = bode(num, den, omega)
 
 PLOT 'MSD Bode'
   kind = bode
@@ -110,7 +110,7 @@ END
 
 ## Go further
 
-- Step and impulse responses: `CALL step(num, den, t : y)` on a time vector, plotted with the `xy` kind.
+- Step and impulse responses: `[y] = step(num, den, t)` on a time vector, plotted with the `xy` kind.
 - Build the same oscillator from mechanical components (`TransMass`, a spring, a damper) and extract its state space with `LINEARIZE` — see *From Plant to Controller*.
 - Close the loop: pick gains with `pidtune` or `lqr` and verify with `pole` and `margin`.
 
@@ -276,7 +276,7 @@ $$ H(s) = \frac{1}{L C\,s^2 + R C\,s + 1} $$
 num = [1]
 den = [L * C, R * C, 1]
 omega[1:400] = linspace(100, 30000, 400)
-CALL bode(num, den, omega : mag, phase)
+[mag, phase] = bode(num, den, omega)
 
 PLOT 'RLC Low-Pass Bode'
   kind = bode
@@ -313,7 +313,7 @@ gain  = V_out / V_s
 num = [1]
 den = [L * C, R * C, 1]
 omega[1:400] = linspace(100, 30000, 400)
-CALL bode(num, den, omega : mag, phase)
+[mag, phase] = bode(num, den, omega)
 
 PLOT 'RLC Low-Pass Bode'
   kind = bode

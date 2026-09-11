@@ -17,7 +17,7 @@ response.
 ## Syntax
 
 ```
-CALL impulse(num, den, t : y)
+[y] = impulse(num, den, t)
 y = impulse(num, den, t)
 ```
 

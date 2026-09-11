@@ -14,7 +14,7 @@ Runs a signal through a digital filter defined by its numerator and denominator 
 ## Syntax
 
 ```
-CALL Filter(b, a, x : y)
+[y] = Filter(b, a, x)
 ```
 
 ## Description
@@ -43,7 +43,7 @@ $$ y_j = \frac{1}{a_1}\left( \sum_{i=0}^{n_b-1} b_{i+1}\,x_{j-i} \;-\; \sum_{i=1
 x = [1, 3, 2, 6, 4, 9, 5, 12]
 b = [0.5, 0.5]
 a = [1]
-CALL Filter(b, a, x : y)
+[y] = Filter(b, a, x)
 ```
 
 **Expected:** `y[1] = 0.5` (the start-up transient — there is no `x[0]`), then `y[2] = 2`, `y[3] = 2.5`.
@@ -54,7 +54,7 @@ CALL Filter(b, a, x : y)
 x = [1, 0, 0, 0, 0, 0]
 b = [1]
 a = [1, -0.5]
-CALL Filter(b, a, x : y)
+[y] = Filter(b, a, x)
 ```
 
 **Expected:** the impulse response `1, 0.5, 0.25, 0.125, …`.

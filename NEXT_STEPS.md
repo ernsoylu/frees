@@ -187,7 +187,7 @@ Focus: Implement the comprehensive language unification detailed in [`reports/SI
   - Align analysis execution schemas (optimization, fitting, sensitivity, uncertainty propagation, Monte Carlo) across CLI, WASM Web Worker, and UI dialogs.
     - [x] Expose the existing sensitivity endpoint through the WASM facade and route all existing analysis endpoints through a shared CLI dispatcher.
   - [x] Enable scripts to invoke sensitivity, calibration, and sweep routines programmatically through the shared `frees-cli analyze OP --request ...` facade.
-- [ ] **3.9 Stage U8: Product-Wide Migration**
+- [x] **3.9 Stage U8: Product-Wide Migration**
   - Convert all standard library definitions ([`components/library-data/`](file:///home/eren/homecloud/dev/frees-wasm/components/library-data)), gallery models ([`web/src/examples.ts`](file:///home/eren/homecloud/dev/frees-wasm/web/src/examples.ts)), Help models, and test fixtures to the unified syntax.
     - [x] All 13 standard component-library files and the migrated gallery/Help snippets use version-2 component and call syntax; legacy compatibility fixtures remain isolated as migration evidence.
     - [x] Function catalog templates and documentation examples use canonical function declarations and expression/bracketed call syntax.

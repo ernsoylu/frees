@@ -16,8 +16,8 @@ left half-plane; discrete: inside the unit circle) and modal frequencies.
 ## Syntax
 
 ```
-CALL Eigenvalues(A : lambda)
-CALL Eigenvalues(A : re, im)
+[lambda] = Eigenvalues(A)
+[re, im] = Eigenvalues(A)
 lambda = Eigenvalues(A)
 ```
 

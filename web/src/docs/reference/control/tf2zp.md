@@ -16,7 +16,7 @@ rational system, the inverse of `zp2tf`.
 ## Syntax
 
 ```
-CALL tf2zp(num, den : zr, zi, pr, pi, k)
+[zr, zi, pr, pi, k] = tf2zp(num, den)
 [zr, zi, pr, pi, k] = tf2zp(num, den)
 ```
 

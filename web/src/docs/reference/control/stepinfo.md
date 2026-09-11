@@ -16,7 +16,7 @@ Returns the **transient performance metrics** of a step response sampled as
 ## Syntax
 
 ```
-CALL stepinfo(t, y : Tr, Tp, Ts, OS)
+[Tr, Tp, Ts, OS] = stepinfo(t, y)
 [Tr, Tp, Ts, OS] = stepinfo(t, y)
 ```
 

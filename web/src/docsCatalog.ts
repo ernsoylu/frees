@@ -266,13 +266,6 @@ frees-cli solve --request '{"findAllSolutions": true}' model.frees
 
 # Pipe document from stdin
 cat model.frees | frees-cli solve
-
-# Invoke the shared analysis facade from a script
-frees-cli analyze sensitivity model.frees --request '{"parameters":["x"],"samples":64}'
-frees-cli analyze parameter-fit --request request.json
-
-# Convert supported legacy syntax to a version-2 document
-frees-cli migrate legacy.frees > model-v2.frees
 \`\`\`
 
 ## JSON Request & Response Envelope
@@ -659,7 +652,7 @@ Variants of your own components use the \`VARIANT ... REQUIRE ... END\` construc
 [Related: comp-authoring, comp-library, comp-wizard]`,
   "comp-authoring": `# Writing Your Own Component
 
-When the library lacks a device — or you want your own correlation inside one — define a component with a unified \`function [ports] = name(parameters)\` declaration. Add \`port(...)\` lines for its ports; the remaining lines are acausal equations over port members, locals, and outputs.
+When the library lacks a device — or you want your own correlation inside one — define a component with \`function [ports] = name(parameters)\`. Add \`port(...)\` lines for its ports; the remaining lines are acausal equations over port members, locals, and outputs.
 
 \`\`\`run
 function [in, out] = Heater(fluid$=Water, Q=50000 [W])
@@ -1890,15 +1883,15 @@ x[1:3] = SolveLinear(A[1:3,1:3], b[1:3])
   "tools-overview": `These are the tools around the editor that make modeling faster: a dockable **REPL** console that evaluates expressions against the last solved session (with the full \`CALL\` library and symbolic CAS), the **keyboard shortcuts** for Solve/Check, the **Markdown report** system that weaves live values and plots into a formatted document, and the **Graph Digitizer & Curve Fit** tools that turn a chart image or a table into a fitted equation.`,
   "functions": `# Custom Functions & Procedures
 
-Most of your model is declarative — equations in any order, solved simultaneously. \`FUNCTION\` and \`PROCEDURE\` are for the parts that need **sequential, imperative** logic (loops, conditionals, step-by-step algorithms). Inside them you use \`:=\` for assignment, just like Python or other array languages.
+Most of your model is declarative — equations in any order, solved simultaneously. \`FUNCTION\` is for the parts that need **sequential, imperative** logic (loops, conditionals, step-by-step algorithms). Inside it you use \`:=\` for assignment, just like Python or other array languages.
 
 ## Functions
 A \`FUNCTION\` returns one or more values. Assign the return value(s) with \`:=\`.
 - **Single output** — assign the function's own name:
 \`\`\`
-FUNCTION poly_fit(x)
-  poly_fit := 0.5 * x^2 + 2 * x + 1
-END
+function y = poly_fit(x)
+  y := 0.5 * x^2 + 2 * x + 1
+end
 
 y = poly_fit(3)          { y = 9.5 }
 \`\`\`

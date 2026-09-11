@@ -38,7 +38,7 @@ When you don't want to write the decomposition template by hand — or the poles
 ```
 num = [1, 3]          # s + 3
 den = [1, 3, 2]       # s^2 + 3s + 2
-CALL residue(num[1:2], den[1:3] : r_r[1:2], r_i[1:2], p_r[1:2], p_i[1:2], k)
+[r_r, r_i, p_r, p_i, k] = residue(num[1:2], den[1:3])
 ```
 This yields poles `p = -2, -1` with residues `r = -1, 2` (and `k = 0`), so the inverse Laplace transform is `y(t) = r_r[1]*exp(p_r[1]*t) + r_r[2]*exp(p_r[2]*t)`. Residues and poles are complex (real/imag pairs) and sorted together, so `r_r[i]`/`r_i[i]` always pairs with `p_r[i]`/`p_i[i]`. A bi-proper `num/den` (equal degree) puts its constant term in `k`.
 
@@ -46,7 +46,7 @@ This yields poles `p = -2, -1` with residues `r = -1, 2` (and `k = 0`), so the i
 ```
 num = [1]
 den = [1, 2, 1, 0]   # 1 / (s (s+1)^2)
-CALL residue(num[1:1], den[1:4] : r_r[1:3], r_i[1:3], p_r[1:3], p_i[1:3], ord[1:3], k)
+[r_r, r_i, p_r, p_i, ord, k] = residue(num[1:1], den[1:4])
 ```
 gives `1/s - 1/(s+1) - 1/(s+1)^2`, i.e. the terms `(p=-1, ord=1, r=-1)`, `(p=-1, ord=2, r=-1)`, `(p=0, ord=1, r=1)`. The time-domain term for order `k` is `r · t^(k-1)/(k-1)! · exp(p·t)`. The 5-output form raises an error if the system has repeated poles, since they cannot be disambiguated without `ord`.
 
@@ -88,12 +88,12 @@ Use `CALL` dispatches to convert between representations. The solver automatical
 
 ## Multi-Output Functions (array-language-style)
 
-Every multi-output `CALL` function below also has a **destructuring** form — the same syntax array languages use. Write the outputs in brackets on the left and call the function on the right; it is exactly equivalent to the `CALL name(inputs : outputs)` form, with output sizes still inferred:
+Every multi-output `CALL` function below also has a **destructuring** form — the same syntax array languages use. Write the outputs in brackets on the left and call the function on the right; it is exactly equivalent to the `[outputs] = name(inputs)` form, with output sizes still inferred:
 
 ```
 { These two lines are identical }
 [A, B, C, D] = tf2ss(num, den)
-CALL tf2ss(num, den : A, B, C, D)
+[A, B, C, D] = tf2ss(num, den)
 ```
 
 **Discard outputs with `~`.** Use a tilde in any slot you don't need — that output is computed but never assigned to a variable, so it never appears in the Solution window:
@@ -113,22 +113,22 @@ Both `~` and trailing omission work in the `CALL … : …` colon form too. The 
 
 ### 1. State Space to Transfer Function: ss2tf
 ```
-CALL ss2tf(A, B, C, D : num[1:3], den[1:3])
+[num, den] = ss2tf(A, B, C, D)
 ```
 
 ### 2. Transfer Function to State Space: tf2ss
 ```
-CALL tf2ss(num, den : A[1:2,1:2], B[1:2], C[1:2], D)
+[A, B, C, D] = tf2ss(num, den)
 ```
 
 ### 3. Zero-Pole-Gain to Transfer Function: zp2tf
 ```
-CALL zp2tf(zr, zi, pr, pi, k : num[1:3], den[1:3])
+[num, den] = zp2tf(zr, zi, pr, pi, k)
 ```
 
 ### 4. Transfer Function to Zero-Pole-Gain: tf2zp
 ```
-CALL tf2zp(num, den : zr[1:1], zi[1:1], pr[1:2], pi[1:2], k)
+[zr, zi, pr, pi, k] = tf2zp(num, den)
 ```
 
 ## Model Interconnection
@@ -141,30 +141,30 @@ For two systems $G_1(s)$ (of order $n_1$) and $G_2(s)$ (of order $n_2$), the con
 Connects $G_1(s)$ and $G_2(s)$ in series: $G(s) = G_1(s) \cdot G_2(s)$.
 ```
 # Transfer Function series:
-CALL series(num1, den1, num2, den2 : num[1:3], den[1:3])
+[num, den] = series(num1, den1, num2, den2)
 
 # State Space series:
-CALL series(A1, B1, C1, D1, A2, B2, C2, D2 : A[1:3,1:3], B[1:3], C[1:3], D)
+[A, B, C, D] = series(A1, B1, C1, D1, A2, B2, C2, D2)
 ```
 
 ### 2. Parallel Connection: parallel
 Connects $G_1(s)$ and $G_2(s)$ in parallel: $G(s) = G_1(s) + G_2(s)$.
 ```
 # Transfer Function parallel:
-CALL parallel(num1, den1, num2, den2 : num[1:3], den[1:3])
+[num, den] = parallel(num1, den1, num2, den2)
 
 # State Space parallel:
-CALL parallel(A1, B1, C1, D1, A2, B2, C2, D2 : A[1:3,1:3], B[1:3], C[1:3], D)
+[A, B, C, D] = parallel(A1, B1, C1, D1, A2, B2, C2, D2)
 ```
 
 ### 3. Feedback Connection: feedback
 Connects $G_1(s)$ (forward path) and $G_2(s)$ (feedback path) in a closed loop.
 ```
 # Transfer Function feedback:
-CALL feedback(num1, den1, num2, den2, sign : num[1:3], den[1:3])
+[num, den] = feedback(num1, den1, num2, den2, sign)
 
 # State Space feedback:
-CALL feedback(A1, B1, C1, D1, A2, B2, C2, D2, sign : A[1:3,1:3], B[1:3], C[1:3], D)
+[A, B, C, D] = feedback(A1, B1, C1, D1, A2, B2, C2, D2, sign)
 ```
 - `sign` is optional and defaults to `1.0` (negative feedback, i.e., $T(s) = \frac{G_1}{1 + G_1 G_2}$). Use `-1.0` for positive feedback.
 
@@ -173,7 +173,7 @@ CALL feedback(A1, B1, C1, D1, A2, B2, C2, D2, sign : A[1:3,1:3], B[1:3], C[1:3],
 ### 1. Padé Approximation: pade
 Generates the numerator and denominator polynomials of a Padé rational approximation of a dead time delay $T_d$ of a given `order`. For a Padé approximation of order $m$, the output polynomials have $m+1$ coefficients (descending powers of $s$).
 ```
-CALL pade(Td, order : num_delay[1:3], den_delay[1:3])
+[num_delay, den_delay] = pade(Td, order)
 ```
 
 ## State-Space Analysis & Transformations
@@ -183,25 +183,25 @@ Use the following dispatches to compute controllability and observability, verif
 ### 1. Controllability Matrix: ctrb
 Computes the controllability matrix $C_{trb} = [B, A B, A^2 B, \ldots, A^{n-1} B]$ for state-space matrices A ($n \times n$) and B ($n \times 1$).
 ```
-CALL ctrb(A, B : Co[1:3,1:3])
+[Co] = ctrb(A, B)
 ```
 
 ### 2. Observability Matrix: obsv
 Computes the observability matrix $O_{bsv} = [C; C A; C A^2; \ldots; C A^{n-1}]$ for state-space matrices A ($n \times n$) and C ($1 \times n$).
 ```
-CALL obsv(A, C : Ob[1:3,1:3])
+[Ob] = obsv(A, C)
 ```
 
 ### 3. Matrix Rank: rank
 Computes the numerical rank of a matrix $M$ using Singular Value Decomposition (SVD) tolerance comparisons.
 ```
-CALL rank(M : r)
+[r] = rank(M)
 ```
 
 ### 4. Similarity Transformation: ss2ss
 Applies similarity transformation matrix $P$ to a state-space system (A, B, C, D) such that $x = P z$, yielding transformed matrices $A_n = P^{-1} A P, B_n = P^{-1} B, C_n = C P, D_n = D$.
 ```
-CALL ss2ss(A, B, C, D, P : An[1:3,1:3], Bn[1:3], Cn[1:3], Dn)
+[An, Bn, Cn, Dn] = ss2ss(A, B, C, D, P)
 ```
 
 ## Frequency Analysis & Poles/Zeros
@@ -211,47 +211,47 @@ Use the following `CALL` dispatches to analyze system poles, zeros, Bode/Nyquist
 ### 1. Poles: pole
 Computes system poles (real part `pr`, imaginary part `pi`) for a transfer function or a state-space matrix `A`.
 ```
-CALL pole(num, den : pr[1:2], pi[1:2])
+[pr, pi] = pole(num, den)
 # OR
-CALL pole(A : pr[1:2], pi[1:2])
+[pr, pi] = pole(A)
 ```
 
 ### 2. Zeros: zero
 Computes system zeros (real part `zr`, imaginary part `zi`) for a transfer function or a state-space system `(A, B, C, D)`.
 ```
-CALL zero(num, den : zr[1:1], zi[1:1])
+[zr, zi] = zero(num, den)
 # OR
-CALL zero(A, B, C, D : zr[1:1], zi[1:1])
+[zr, zi] = zero(A, B, C, D)
 ```
 
 ### 3. Bode Frequency Response: bode
 Computes magnitude (in dB) and unwrapped phase (in degrees) at a vector of frequencies `omega`.
 ```
-CALL bode(num, den, omega : mag[1:50], phase[1:50])
+[mag, phase] = bode(num, den, omega)
 # OR
-CALL bode(A, B, C, D, omega : mag[1:50], phase[1:50])
+[mag, phase] = bode(A, B, C, D, omega)
 ```
 
 ### 4. Nyquist Frequency Response: nyquist
 Computes real and imaginary parts at a vector of frequencies `omega`.
 ```
-CALL nyquist(num, den, omega : real[1:50], imag[1:50])
+[real, imag] = nyquist(num, den, omega)
 # OR
-CALL nyquist(A, B, C, D, omega : real[1:50], imag[1:50])
+[real, imag] = nyquist(A, B, C, D, omega)
 ```
 
 ### 5. Gain and Phase Margins: margin
 Computes gain margin `gm` (in dB), phase margin `pm` (in degrees), gain crossover frequency `w_cg`, and phase crossover frequency `w_cp`.
 ```
-CALL margin(num, den : gm, pm, w_cg, w_cp)
+[gm, pm, w_cg, w_cp] = margin(num, den)
 # OR
-CALL margin(A, B, C, D : gm, pm, w_cg, w_cp)
+[gm, pm, w_cg, w_cp] = margin(A, B, C, D)
 ```
 
 ### 6. Root Locus Trajectories: rlocus
 Computes closed-loop s-plane poles over a swept range of $M$ gain values `K`. Outputs are the gain values `K` (length `M`), and the closed-loop pole real parts `cpr` and imaginary parts `cpi` (matrices of size `M x N` where `N` is the order of the open-loop denominator).
 ```
-CALL rlocus(num, den : K[1:100], cpr[1:100, 1:4], cpi[1:100, 1:4])
+[K, cpr, cpi] = rlocus(num, den)
 ```
 To plot the root locus s-plane trajectories along with open-loop poles and zeros, use the `rootlocus` plot kind:
 ```
@@ -268,16 +268,16 @@ END
 Runs the Routh-Hurwitz test on a characteristic polynomial `den` (descending powers) and reports `nRHP`, the number of closed-loop poles in the right half-plane (sign changes in the first column of the Routh array), and `stable` (`1` when `nRHP = 0`, else `0`). The two textbook special cases are handled automatically: a zero in the first column is resolved with the epsilon method, and an entire row of zeros is replaced by the derivative of the auxiliary polynomial.
 ```
 den = [1, 1, 2, 8]
-CALL routh(den[1:4] : nRHP, stable)   # nRHP = 2, stable = 0
+[nRHP, stable] = routh(den[1:4])   # nRHP = 2, stable = 0
 ```
 To find the range of a free gain `K` for stability, sweep `K` over a `PARAMETRIC` table and read where `nRHP` drops to `0`.
 
 ### 8. Nichols Chart Data: nichols
 Computes the open-loop magnitude (dB) and unwrapped phase (deg) at a vector of frequencies `omega` — the same data as `bode`, arranged for a Nichols chart.
 ```
-CALL nichols(num, den, omega : mag[1:50], phase[1:50])
+[mag, phase] = nichols(num, den, omega)
 # OR
-CALL nichols(A, B, C, D, omega : mag[1:50], phase[1:50])
+[mag, phase] = nichols(A, B, C, D, omega)
 ```
 Plot the result with the dedicated **`nichols`** plot kind, which draws the locus on the standard Nichols grid (constant closed-loop magnitude *M* and phase *N* contours) with the −1 critical point marked:
 ```
@@ -293,14 +293,14 @@ Computes the steady-state (static) error constants for an open-loop `G(s) = num/
 ```
 num = [0, 0, 20]
 den = [1, 6, 5]            # type 0 system
-CALL errorconst(num[1:3], den[1:3] : Kp, Kv, Ka)   # Kp = 4, Kv = 0, Ka = 0
+[Kp, Kv, Ka] = errorconst(num[1:3], den[1:3])   # Kp = 4, Kv = 0, Ka = 0
 ```
 
 ### 10. Signal-Flow Graphs: mason
 Computes the overall transmittance of a scalar signal-flow graph by **Mason's gain formula**. `G` is a square node-gain matrix where `G[i,j]` is the branch gain from node `i` to node `j` (`0` means no branch); `source` and `sink` are 1-based node numbers. The solver enumerates the forward paths and loops, builds the graph determinant from the non-touching loop combinations, and returns `T = Y(sink)/X(source)`.
 ```
 G = [0, 2, 0; 0, 0, 3; 0, 0.5, 0]   # 1->2 (2), 2->3 (3), feedback 3->2 (0.5)
-CALL mason(G[1:3,1:3], 1, 3 : T)    # T = 6/(1 - 1.5) = -12
+[T] = mason(G[1:3,1:3], 1, 3)    # T = 6/(1 - 1.5) = -12
 ```
 For transfer-function-valued block diagrams, use the `series`/`parallel`/`feedback` interconnection functions instead, which carry full `num/den` polynomials.
 
@@ -314,13 +314,13 @@ Discretizes `num/den` at sample time `Ts`. The method is a quoted `'tustin'` (bi
 num = [0, 2]
 den = [1, 2]
 Ts = 0.1
-CALL c2d(num[1:2], den[1:2], Ts, 'zoh' : numz[1:2], denz[1:2])
+[numz, denz] = c2d(num[1:2], den[1:2], Ts, 'zoh')
 ```
 
 ### 2. Discrete to Continuous: d2c
 Inverts the bilinear mapping back to continuous time using the inverse Tustin transform (`'tustin'`).
 ```
-CALL d2c(numz[1:2], denz[1:2], Ts, 'tustin' : num[1:2], den[1:2])
+[num, den] = d2c(numz[1:2], denz[1:2], Ts, 'tustin')
 ```
 
 ## Time-Domain Responses
@@ -330,31 +330,31 @@ Time responses are integrated through the same tested ODE solver used by `DYNAMI
 ### 1. Step Response: step
 Unit step response `y(t)` (input `u(t) = 1`, zero initial state).
 ```
-CALL step(num, den, t : y[1:N])
+[y] = step(num, den, t)
 # OR
-CALL step(A, B, C, D, t : y[1:N])
+[y] = step(A, B, C, D, t)
 ```
 
 ### 2. Impulse Response: impulse
 Impulse response `y(t) = C e^{At} B` (the direct-feedthrough delta term from a non-zero `D` is omitted, as it cannot be represented on a sampled grid).
 ```
-CALL impulse(num, den, t : y[1:N])
+[y] = impulse(num, den, t)
 # OR
-CALL impulse(A, B, C, D, t : y[1:N])
+[y] = impulse(A, B, C, D, t)
 ```
 
 ### 3. Forced Response: lsim
 Response to an arbitrary input signal `u`, linearly interpolated between samples. The input `u` and time `t` must have the same length `N`.
 ```
-CALL lsim(num, den, u, t : y[1:N])
+[y] = lsim(num, den, u, t)
 # OR
-CALL lsim(A, B, C, D, u, t : y[1:N])
+[y] = lsim(A, B, C, D, u, t)
 ```
 
 ### 4. Transient Response Metrics: stepinfo
 Extracts transient response metrics (Rise Time `Tr` from 10% to 90%, Peak Time `Tp`, Settling Time `Ts` using the 2% criterion, and Percent Overshoot `OS`) from numerical step response outputs `y` at time points `t`.
 ```
-CALL stepinfo(t, y : Tr, Tp, Ts, OS)
+[Tr, Tp, Ts, OS] = stepinfo(t, y)
 ```
 
 ## Controller Design
@@ -364,19 +364,19 @@ State-feedback and PID design solvers. Numeric methods (Riccati / eigenvalues) k
 ### 1. LQR Optimal Gain: lqr
 Continuous-time linear-quadratic regulator. Returns the optimal state-feedback gain `K` that minimizes `∫ (x'Qx + u'Ru) dt`, computed by solving the algebraic Riccati equation via the matrix sign function of the Hamiltonian. Single-input form: `A` and `Q` are `n×n`, `B` is an `n`-vector, `R` is a scalar, and `K` is an `n`-vector. The closed-loop `A - B K` is stable.
 ```
-CALL lqr(A, B, Q, R : K[1:n])
+[K] = lqr(A, B, Q, R)
 ```
 
 ### 2. Pole Placement: place
 SISO pole placement by Ackermann's formula. Returns the gain `K` that relocates the poles of `A - B K` to the requested locations, supplied as real/imaginary arrays `pr`, `pi` (each length `n`, complex poles in conjugate pairs).
 ```
-CALL place(A, B, pr, pi : K[1:n])
+[K] = place(A, B, pr, pi)
 ```
 
 ### 3. PID Auto-Tuning: pidtune
 Loop-shaping tuning of a P/PI/PID controller for a SISO plant `num/den`. The controller is designed so the open loop crosses over (gain = 1) at frequency `wc` with a 60° phase-margin target (a common default). The type is a quoted `'P'`, `'PI'`, or `'PID'`; unused gains are returned as `0`. A pure `P` controller only sets the crossover — it cannot reshape phase.
 ```
-CALL pidtune(num, den, 'PID', wc : Kp, Ki, Kd)
+[Kp, Ki, Kd] = pidtune(num, den, 'PID', wc)
 ```
 
 [Related: matrices-sys, plot-code, dynamic-ode]

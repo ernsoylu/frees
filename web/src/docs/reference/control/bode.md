@@ -16,7 +16,7 @@ bandwidth, resonance, roll-off, and the stability margins.
 ## Syntax
 
 ```
-CALL bode(num, den, omega : mag, phase)
+[mag, phase] = bode(num, den, omega)
 [mag, phase] = bode(num, den, omega)
 ```
 

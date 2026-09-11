@@ -16,7 +16,7 @@ transfer function so the loop can be analyzed and designed with standard tools.
 ## Syntax
 
 ```
-CALL pade(Td, order : num, den)
+[num, den] = pade(Td, order)
 [num, den] = pade(Td, order)
 ```
 

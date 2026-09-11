@@ -16,7 +16,7 @@ Nichols chart, it reads off closed-loop gain and stability margins in one view.
 ## Syntax
 
 ```
-CALL nichols(num, den, omega : mag, phase)
+[mag, phase] = nichols(num, den, omega)
 [mag, phase] = nichols(num, den, omega)
 ```
 
