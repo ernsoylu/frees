@@ -9,7 +9,10 @@ export default defineConfig({
     environment: 'jsdom',
     globals: false,
     setupFiles: ['./src/test/setup.ts'],
-    include: ['src/**/*.{test,spec}.{ts,tsx}'],
+    // scripts/ carries the documentation-gate tests. They spawn the generator
+    // as a subprocess in a temp tree, so they need no DOM — but running them
+    // here is what puts the gate in CI without a second workflow step.
+    include: ['src/**/*.{test,spec}.{ts,tsx}', 'scripts/**/*.{test,spec}.mjs'],
     css: false,
   },
 })

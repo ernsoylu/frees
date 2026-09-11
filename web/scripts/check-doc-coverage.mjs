@@ -45,19 +45,34 @@ for (const d of manifest.dispatchOnly || []) {
   callable.add(d.name.toLowerCase());
   for (const a of d.aliases || []) callable.add(a.toLowerCase());
 }
-// Real backend callables the manifest does not yet enumerate: unit helpers,
-// the der() dynamic operator, property-output functions (P_sat/T_sat/MolarMass/…),
-// chemistry/EOS outputs, and the low-level BLAS primitives. All verified present
-// in the backend. TODO: fold these into build-doc-manifest.mjs so this list shrinks.
+// Real engine callables the manifest does not yet enumerate: unit helpers, the
+// der() dynamic operator, and the property-output functions routed by
+// props/propfun.rs rather than the function registry.
+//
+// This list was 25 names carrying a TODO to fold itself into the manifest. It
+// is 12 because the builder now reads parser::expand::MATRIX_FUNCTIONS
+// alongside eval::INTRINSICS and procedures::EXPANDED_CALL_TARGETS, which
+// retired the matrix/BLAS half (scal, ger, copy, identity, gemv, gemm, axpy)
+// and the two stagnation functions.
+//
+// Three entries — delta, movavg, delay — described a Java-era Data Analyzer
+// evaluator. No Rust crate defines them and no guide mentions them; they were
+// permitting names that do not exist.
+//
+// A fourth, isidealgas, was permitting `IsIdealGas(Fluid)` in
+// fluids_materials.md. The engine answers `unknown function: isidealgas`. That
+// is the exact drift this gate exists to catch, and the allowlist was the
+// reason it never fired — the bullet has been removed from the guide.
+//
+// What is left is genuinely unenumerated. Shrinking it further means teaching
+// the builder to read props/propfun.rs's output table the same way.
 const EXTRA_CALLABLES = [
-  'convert', 'converttemp', 'der', 'identity',
+  'convert', 'converttemp', 'der',
   'p_sat', 't_sat', 'molarmass', 'heatingvalue', 'stoichafr', 'surfacetension',
-  'isidealgas', 'phase$', 'stagnationtemp', 'stagnationpres',
-  'scal', 'asum', 'nrm2', 'copy', 'ger', 'gemv', 'gemm', 'axpy',
-  // Data Analyzer calculated-signal time operators: handled by
-  // TimeSeriesEvaluator (core measurement package), not the function
-  // registry — real, documented, callable in calc formulas only.
-  'delta', 'movavg', 'delay',
+  'phase$',
+  // Scalar-valued matrix routings: aliases inside expand.rs's match arms, not
+  // rows of the MATRIX_FUNCTIONS table the builder reads.
+  'asum', 'nrm2',
 ];
 for (const n of EXTRA_CALLABLES) callable.add(n);
 // Bare math notation that reads like a call in inline code (`num(s)/den(s)`, a
@@ -69,9 +84,25 @@ for (const n of EXTRA_CALLABLES) callable.add(n);
 const NOTATION = new Set(['num', 'den', 'tname', 'name']);
 
 // Example ids in the verified library.
-const exampleIds = new Set(
-  [...read(path.join(SRC, 'examples.ts')).matchAll(/id:\s*'([^']+)'/g)].map((m) => m[1]),
-);
+//
+// EXAMPLES only, deliberately. Help's other catalogue, CYCLE_EXAMPLES, keys its
+// entries on `value` rather than `id`, and HelpPage resolves a binding with
+// `EXAMPLES.find((e) => e.id === exId)` — so a page binding a CYCLE_EXAMPLES
+// entry renders "Missing example" at runtime no matter what this gate says.
+// Accepting those ids here would license exactly the broken binding the gate
+// exists to catch. The two catalogues are unified for SEARCH, in
+// searchIndex.ts, which is where the split actually hurt discovery.
+//
+// Ids must be unique. Help resolves with .find(), so a repeated id silently
+// makes one of the two documents unreachable: 'rankine-cycle' named both the
+// ideal cycle and the one with component efficiencies, and every page binding
+// it got the first.
+const exampleIds = new Set();
+const duplicateIds = [];
+for (const m of read(path.join(SRC, 'examples.ts')).matchAll(/^\s+id:\s*'([^']+)'/gm)) {
+  if (exampleIds.has(m[1])) duplicateIds.push(m[1]);
+  exampleIds.add(m[1]);
+}
 
 // Walk authored reference pages.
 const pages = [];
@@ -119,6 +150,9 @@ if (fs.existsSync(REF_DIR)) walk(REF_DIR);
 const pageSlugs = new Set(pages.map((p) => p.name.toLowerCase()));
 
 const errors = [];
+for (const id of duplicateIds) {
+  errors.push(`duplicate example id "${id}" in examples.ts — bindings resolve to the first match only`);
+}
 for (const pg of pages) {
   if (!pg.guide && !symbols.has(pg.name.toLowerCase())) {
     errors.push(`${pg.file}: documents "${pg.name}" which is not a known backend symbol`);

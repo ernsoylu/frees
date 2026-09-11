@@ -960,7 +960,6 @@ Every function takes the fluid name first, then coordinates:
 - **\`MolarMass(Fluid)\`** — molar mass (kg/mol) of real fluids, ideal-gas species, or arbitrary formulas (\`C8H18\`, \`Ca(OH)2\`).
 - **\`HeatingValue(Fuel, 'LHV'|'HHV')\`** — lower or higher heating value (J/kg).
 - **\`StoichAFR(Fuel)\`** — stoichiometric air-fuel ratio (mass basis).
-- **\`IsIdealGas(Fluid)\`** — \`1\` if treated as ideal, else \`0\`.
 - **\`Phase$(Fluid, T=t, P=p)\`** — phase string: \`'liquid'\`, \`'gas'\`, \`'twophase'\`, \`'supercritical'\`.
 - **\`P_crit\` / \`T_crit\` / \`v_crit\` / \`T_triple\`** — critical and triple-point constants.
 - **\`CompressibilityFactor(Fluid, T=t, P=p)\`** — $Z = Pv/(RT)$.

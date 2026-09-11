@@ -366,11 +366,29 @@ jobs:
         working-directory: web
         run: npm ci --ignore-scripts
 
+      # The documentation gate. It regenerates the manifest from the Rust
+      # registries and fails on an orphan page, a dangling cross-link, a
+      # duplicate example id, or a guide teaching a function the engine does
+      # not dispatch. It existed before this step and ran nowhere: `ci.yml` had
+      # no reference to check-doc* at all, so the only thing enforcing it was
+      # someone remembering to type it.
+      - name: Documentation coverage gate
+        working-directory: web
+        run: npm run check-docs
+
       - name: Frontend tests
         working-directory: web
         # --no-install: fail rather than fetch a package at run time.
         # The version comes from the lockfile npm ci just installed.
         run: npx --no-install vitest run
+
+      # Every ```run fence in the guides, executed through the wasm module built
+      # above — plus the { CHECK name value tolerance } assertions on any
+      # example that carries them. Its predecessor posted to a localhost:8080
+      # backend that has not existed since the engine moved into WebAssembly.
+      - name: Runnable documentation gate
+        working-directory: web
+        run: npm run check-examples
 
       - name: WASM perturbation detection gate
         run: |

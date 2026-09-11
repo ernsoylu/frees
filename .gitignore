@@ -28,3 +28,16 @@ web/public/build-info.js
 
 # Local scratch files and helper scripts
 /scratch/
+
+# Audit evidence: the measurement harnesses and the CSV/JSON they emit. The
+# audit's narrative documents (reports/*.md) ARE tracked; the raw evidence is
+# not. SonarCloud analyses this repository with Automatic Analysis, whose
+# exclusions live in the project settings UI and not in sonar-project.properties
+# — so an evidence tree committed here fails the quality gate on its own
+# measurement scripts and on the duplication between two snapshots of the same
+# audit, and nothing in the repo can exempt it. Regenerate with measure.cjs.
+reports/**/*.csv
+reports/**/*.json
+reports/**/*.cjs
+reports/**/*.py
+reports/**/*.txt

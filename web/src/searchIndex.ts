@@ -12,6 +12,7 @@
 
 import { DOCS_CATALOG } from './docsCatalog';
 import { EXAMPLES } from './examples';
+import { CYCLE_EXAMPLES } from './helpExamples';
 import { REFERENCE_PAGES } from './referenceCatalog';
 import {
   MATH_FUNCTIONS,
@@ -164,7 +165,17 @@ function buildIndex(): IndexEntry[] {
   }
 
   // 3. Examples library — index titles + descriptions so domain searches land there.
-  const exText = EXAMPLES.map(e => `${e.title} ${e.description} ${e.category}`).join('\n').toLowerCase();
+  // BOTH catalogues: the picker's EXAMPLES and Help's CYCLE_EXAMPLES. Indexing
+  // only the first left every Help model undiscoverable by search while Help
+  // rendered it on the page, which is the two catalogues splitting discovery
+  // rather than sharing it.
+  // The two catalogues do not share a shape: EXAMPLES carries `category`,
+  // CYCLE_EXAMPLES carries `note`. Map each with its own fields rather than
+  // spreading them into one list.
+  const exText = [
+    ...EXAMPLES.map(e => `${e.title} ${e.description} ${e.category}`),
+    ...CYCLE_EXAMPLES.map(e => `${e.title} ${e.description} ${e.note}`),
+  ].join('\n').toLowerCase();
   entries.push({
     id: 'examples',
     label: 'Engineering Examples Library',
