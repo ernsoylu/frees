@@ -20,9 +20,10 @@ declare module 'plotly.js/lib/core' {
     type: 'scatter' | 'bar' | 'pie' | 'histogram' | 'mesh3d' | 'scatter3d'
     mode?: string
     name: string
-    x?: (number | null)[]
-    y?: (number | null)[]
+    x?: (number | null)[] | string[]
+    y?: (number | null)[] | string[]
     z?: (number | null)[]
+    error_y?: Record<string, unknown>
     labels?: string[]
     values?: number[]
     intensity?: (number | null)[]

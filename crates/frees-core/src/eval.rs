@@ -2985,10 +2985,41 @@ fn eval_if<'a>(name: &str, args: &'a [Expr], env: &'a Env<'a>) -> Result<f64> {
     }
 }
 
-/// Iterations a bounded `sum`/`product` may run before it is treated as a
-/// runaway. The Java engine has no cap; in a browser an unbounded loop is a
-/// hang, so this port refuses instead.
-const MAX_REDUCTION_ITERATIONS: i64 = 1 << 24;
+/// Maximum iterations a single bounded `sum`/`product` may declare before it is
+/// treated as a runaway. The Java engine had no cap; in a browser an unbounded
+/// loop is a hang, so this port refuses instead (capped at 1_000_000).
+pub const MAX_REDUCTION_ITERATIONS: i64 = 1_000_000;
+
+/// Cumulative evaluation/expansion work budget across reductions and nested loops.
+/// Protects against nested iterations (e.g. sum within sum) hanging the Web Worker or CLI.
+pub const MAX_CUMULATIVE_WORK_BUDGET: u64 = 2_000_000;
+
+std::thread_local! {
+    static CUMULATIVE_WORK_BUDGET: std::cell::Cell<u64> = const { std::cell::Cell::new(MAX_CUMULATIVE_WORK_BUDGET) };
+}
+
+/// Reset the cumulative evaluation work budget to its maximum limit.
+pub fn reset_work_budget() {
+    CUMULATIVE_WORK_BUDGET.with(|b| b.set(MAX_CUMULATIVE_WORK_BUDGET));
+}
+
+/// Consume work budget operations. Returns a domain error if the budget is exhausted.
+pub fn consume_work_budget(name: &str, count: u64) -> Result<()> {
+    CUMULATIVE_WORK_BUDGET.with(|b| {
+        let current = b.get();
+        if count > current {
+            b.set(0);
+            return Err(domain(
+                name,
+                format_args!(
+                    "cumulative evaluation budget of {MAX_CUMULATIVE_WORK_BUDGET} operations exceeded"
+                ),
+            ));
+        }
+        b.set(current - count);
+        Ok(())
+    })
+}
 
 /// `sum(v, lo, hi, body)` / `product(v, lo, hi, body)` bind `v` over `body`;
 /// every other shape is a plain reduction over the argument list. This mirrors
@@ -3015,6 +3046,7 @@ fn eval_reduction<'a>(
             let mut acc = identity;
             let mut i = lo;
             loop {
+                consume_work_budget(name, 1)?;
                 let inner = Env::Bind {
                     name: index.as_str(),
                     value: i as f64,
@@ -3031,6 +3063,7 @@ fn eval_reduction<'a>(
     }
     let mut acc = identity;
     for arg in args {
+        consume_work_budget(name, 1)?;
         acc = combine(acc, eval_in(arg, env)?);
     }
     Ok(acc)
@@ -8588,4 +8621,44 @@ mod tests {
         );
         assert!(err(&e).contains("detaches"));
     }
+
+    #[test]
+    fn cumulative_work_budget_guards_runaways() {
+        reset_work_budget();
+        // A single bounded sum within limits succeeds:
+        let s = eval(
+            &Expr::call(
+                "sum",
+                vec![Expr::Var("i".into()), n(1.0), n(100.0), Expr::Var("i".into())],
+            ),
+            &Scope::default(),
+        )
+        .unwrap();
+        assert_eq!(s, 5050.0);
+
+        // A sum declaring > MAX_REDUCTION_ITERATIONS is rejected immediately:
+        let err_span = eval(
+            &Expr::call(
+                "sum",
+                vec![Expr::Var("i".into()), n(1.0), n(2_000_000.0), Expr::Var("i".into())],
+            ),
+            &Scope::default(),
+        )
+        .unwrap_err();
+        assert!(err_span.to_string_message().contains("exceeds the 1000000 limit"));
+
+        // Exhausting the cumulative budget returns an explicit error:
+        CUMULATIVE_WORK_BUDGET.with(|b| b.set(10));
+        let err_budget = eval(
+            &Expr::call(
+                "sum",
+                vec![Expr::Var("i".into()), n(1.0), n(20.0), Expr::Var("i".into())],
+            ),
+            &Scope::default(),
+        )
+        .unwrap_err();
+        assert!(err_budget.to_string_message().contains("budget of 2000000 operations exceeded"));
+        reset_work_budget();
+    }
 }
+

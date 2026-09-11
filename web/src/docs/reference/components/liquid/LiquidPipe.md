@@ -32,7 +32,7 @@ LiquidPipe inst(fluid$, L, D, rough, domain$)
 | `fluid$` | String | Fluid name (e.g. Water, R134a, Air). |
 | `L` | Number | Length [m]. |
 | `D` | Number | Diameter [m]. |
-| `rough` | Number | Relative wall roughness. |
+| `rough` | Number | Absolute wall roughness [m]. |
 | `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
 
 ## Constitutive Equations

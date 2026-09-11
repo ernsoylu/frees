@@ -572,6 +572,7 @@ pub fn solve_with_parametric_tables(
     parametric: Option<&crate::analysis::parametric::ParametricAccessors>,
     extra_tables: &[crate::parser::defs::FunctionTableDef],
 ) -> std::result::Result<Solution, SolveFailure> {
+    crate::eval::reset_work_budget();
     let mut prepared = PreparedDocument::new(source, settings, overrides, extra_tables)?;
     prepared.solve_with_pins(&[], parametric)
 }

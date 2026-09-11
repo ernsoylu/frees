@@ -505,6 +505,14 @@ export async function wasmMonteCarlo(
   return (await call('monteCarlo', [source, requestJson])).result
 }
 
+/** Runs global sensitivity analysis (Sobol/Morris) in the engine worker; resolves to raw JSON. */
+export async function wasmSensitivity(
+  source: string,
+  requestJson: string,
+): Promise<string> {
+  return (await call('sensitivity', [source, requestJson])).result
+}
+
 /** The four OptimizeController surfaces; raw JSON strings out. */
 export async function wasmOptimize(source: string, requestJson: string): Promise<string> {
   return (await call('optimize', [source, requestJson])).result
