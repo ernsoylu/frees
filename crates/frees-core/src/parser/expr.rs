@@ -535,6 +535,7 @@ fn parse_atom(c: &mut Cursor<'_>) -> Result<Expr> {
             Ok(Expr::call("if", positional_only(args, "if")?))
         }
         TokenKind::Ident(name) => match c.peek_at(1) {
+            TokenKind::LParen if c.is_array_name(&name) => parse_paren_array_atom(c, name),
             TokenKind::LParen => parse_call_atom(c, name),
             TokenKind::Dot => parse_member_atom(c, name),
             TokenKind::LBracket => parse_array_atom(c, name),
@@ -626,6 +627,21 @@ fn parse_array_atom(c: &mut Cursor<'_>, name: String) -> Result<Expr> {
         indices.push(parse_array_index(c)?);
     }
     c.expect(&TokenKind::RBracket)?;
+    Ok(Expr::ArrayAccess {
+        name: name.to_ascii_lowercase(),
+        indices,
+    })
+}
+
+fn parse_paren_array_atom(c: &mut Cursor<'_>, name: String) -> Result<Expr> {
+    c.advance();
+    c.record_display_name(&name);
+    c.expect(&TokenKind::LParen)?;
+    let mut indices = vec![parse_array_index(c)?];
+    while c.eat(&TokenKind::Comma) {
+        indices.push(parse_array_index(c)?);
+    }
+    c.expect(&TokenKind::RParen)?;
     Ok(Expr::ArrayAccess {
         name: name.to_ascii_lowercase(),
         indices,

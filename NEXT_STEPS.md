@@ -153,6 +153,7 @@ Focus: Implement the comprehensive language unification detailed in [`reports/SI
   - Enforce static checks ensuring that runtime control flow does not alter the structural topological graph of nonlinear equations during Newton iterations.
 - [ ] **3.5 Stage U4: Value Syntax, Array Indexing & Named Arguments**
   - Unambiguously resolve array indexing versus function calls: support parenthesized indexing `a(i)` alongside `a[i]` with 1-based indexing checks and index-zero diagnostics.
+    - [x] Resolve parenthesized indexing for array bindings introduced by array literals and `range(...)`, using the existing one-based index evaluator.
   - Implement named argument support (`func(x, tolerance = 1e-6, method = 'bdf')`) across intrinsics and user functions.
   - Add typed value checking for non-numeric types (strings, symbols, options) and clean syntax for initial conditions.
 - [ ] **3.6 Stage U5: Physical Component & Connection Unification**

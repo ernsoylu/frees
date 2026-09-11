@@ -146,6 +146,7 @@ pub struct Cursor<'a> {
     /// introduce this spelling?" without cloning the map — see
     /// [`Cursor::display_name_mark`].
     inserted_order: Vec<String>,
+    array_names: std::collections::BTreeSet<String>,
 }
 
 impl<'a> Cursor<'a> {
@@ -156,6 +157,7 @@ impl<'a> Cursor<'a> {
             source,
             display_names: BTreeMap::new(),
             inserted_order: Vec::new(),
+            array_names: std::collections::BTreeSet::new(),
         }
     }
 
@@ -175,6 +177,14 @@ impl<'a> Cursor<'a> {
             slot.insert(original.to_string());
             self.inserted_order.push(key);
         }
+    }
+
+    pub fn record_array_name(&mut self, name: &str) {
+        self.array_names.insert(name.to_ascii_lowercase());
+    }
+
+    pub fn is_array_name(&self, name: &str) -> bool {
+        self.array_names.contains(&name.to_ascii_lowercase())
     }
 
     /// A mark in the registration log, for [`Cursor::forget_display_name_if_new`].

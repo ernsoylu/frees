@@ -591,6 +591,13 @@ impl<'a> Parser<'a> {
         let lhs = self.expr()?;
         self.c.expect(&TokenKind::Eq)?;
         let rhs = self.expr()?;
+        let rhs_is_array = matches!(&rhs, Expr::ArrayLiteral(_))
+            || matches!(&rhs, Expr::Call { function, .. } if function == "range");
+        if matches!(lhs, Expr::Var(_)) && rhs_is_array {
+            if let Expr::Var(name) = &lhs {
+                self.c.record_array_name(name);
+            }
+        }
         Ok(Equation::new(lhs, rhs, self.text_since(start_pos)))
     }
 

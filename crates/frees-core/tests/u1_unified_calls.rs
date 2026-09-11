@@ -75,3 +75,13 @@ fn user_calls_accept_named_arguments_and_reject_duplicates() {
     .unwrap_err();
     assert!(error.error.to_string().contains("provided more than once"));
 }
+
+#[test]
+fn known_array_bindings_use_parenthesized_one_based_indexing() {
+    let solution = solve(
+        "values = [10, 20, 30]\nanswer = values(2)",
+        &SolverSettings::default(),
+    )
+    .unwrap();
+    assert_eq!(solution.values["answer"], 20.0);
+}
