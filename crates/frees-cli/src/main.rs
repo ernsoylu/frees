@@ -459,6 +459,19 @@ mod tests {
     }
 
     #[test]
+    fn analyze_dispatches_curve_fit_through_the_shared_facade() {
+        let response = analyze(
+            "curve-fit",
+            "",
+            r#"{"model":"y = a*x+b","xVariable":"x","yVariable":"y","parameters":["a","b"],"xData":[0,1,2],"yData":[1,3,5]}"#,
+        )
+        .unwrap();
+        let value: Value = serde_json::from_str(&response).unwrap();
+        assert_eq!(value["success"], true, "{value}");
+        assert_eq!(value["parameterNames"], json!(["a", "b"]));
+    }
+
+    #[test]
     fn solve_emits_variables_blocks_and_iterations() {
         let (payload, ok) = solve_json("a = 2\nb = a * 3\n", &SolverSettings::default());
         assert!(ok);
