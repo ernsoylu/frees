@@ -191,7 +191,7 @@ Focus: Implement the comprehensive language unification detailed in [`reports/SI
     - [x] All 13 standard component-library files and the migrated gallery/Help snippets use version-2 component and call syntax; legacy compatibility fixtures remain isolated as migration evidence.
     - [x] Function catalog templates and documentation examples use canonical function declarations and expression/bracketed call syntax.
     - [x] The documentation example runner executes the migrated runnable blocks, including canonical component definitions and calls.
-  - Update editor language tooling: syntax highlighters ([`web/src/EquationEditor.tsx`](file:///home/eren/homecloud/dev/frees-wasm/web/src/EquationEditor.tsx)), autocompletion ([`web/src/editorCompletion.ts`](file:///home/eren/homecloud/dev/frees-wasm/web/src/editorCompletion.ts)), signature tooltips ([`web/src/signatureHelp.ts`](file:///home/eren/homecloud/dev/frees-wasm/web/src/signatureHelp.ts)), and LaTeX renderer.
+  - [x] Update editor language tooling: syntax highlighters ([`web/src/EquationEditor.tsx`](file:///home/eren/homecloud/dev/frees-wasm/web/src/EquationEditor.tsx)), autocompletion ([`web/src/editorCompletion.ts`](file:///home/eren/homecloud/dev/frees-wasm/web/src/editorCompletion.ts)), signature tooltips ([`web/src/signatureHelp.ts`](file:///home/eren/homecloud/dev/frees-wasm/web/src/signatureHelp.ts)), and LaTeX renderer.
     - [x] Function catalog insertion snippets and usage examples use canonical expression and bracketed output calls.
   - Provide an automatic project migration tool for legacy projects, embedding a version header (`// frees-language: 2`).
     - [x] Add `frees-cli migrate` for unambiguous function, procedure, call, guess, and simple component rewrites, with explicit refusal for model-specific blocks.
@@ -209,6 +209,7 @@ Focus: Implement the comprehensive language unification detailed in [`reports/SI
   - [x] Version-2 documents reject all four legacy declaration forms with the migration diagnostic.
   - [x] The migration converter is the explicit import path for supported legacy forms and refuses ambiguous module/component rewrites.
   - [x] The editor no longer highlights legacy declaration keywords as normal version-2 language keywords.
+    - [x] Legacy declaration templates were removed from the editor's function catalog; canonical function templates are offered instead.
   - Strip obsolete keywords and grammar paths from the production parser and compiler, locking in a compact, unified language core.
 
 ---
