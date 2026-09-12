@@ -34,9 +34,10 @@
 # CLAUDE.md), so nothing at build time reads fixtures/.
 /fixtures/
 
-# Java oracle tooling (needs a JDK and the ../frEES checkout — can never run on
-# Vercel) and the local static-serve helper. tools/vercel-build.sh itself must
-# stay in the upload: ignore the directory's contents, then negate the script.
+# Developer-only tooling: the CoolProp humid-air reference dumper and the local
+# static-serve helper, neither of which can or should run on Vercel.
+# tools/vercel-build.sh itself must stay in the upload: ignore the directory's
+# contents, then negate the script.
 /tools/*
 !/tools/vercel-build.sh
 

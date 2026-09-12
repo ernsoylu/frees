@@ -1,21 +1,34 @@
 // Build the documentation manifest — the machine-readable inventory of every
-// documentable symbol in frees, reconciled directly against the backend so the
-// reference docs cannot silently drift from the implementation.
+// documentable symbol in frees, reconciled directly against the shipping Rust
+// engine so the reference docs cannot silently drift from the implementation.
 //
-// Sources of truth (read live, never hand-copied):
-//   1. parser/FunctionRegistry.java   — structured {name, signature, desc, category}
-//   2. ast/Evaluator.java             — scalar built-in dispatch (`case "..."`)
-//   3. ast/ControlSystemsEvaluator.java — control-systems dispatch
-//   4. api/ReplEvaluator.java         — REPL-only CAS ops
-//   5. src/docs/reference/**/*.md     — authored pages (frontmatter `name:`)
+// Sources of truth, all inside THIS repository and all read live:
+//   1. crates/frees-core/src/eval.rs           — eval::INTRINSICS
+//   2. crates/frees-core/src/procedures.rs     — procedures::EXPANDED_CALL_TARGETS
+//   3. crates/frees-core/src/parser/expand.rs  — parser::expand::MATRIX_FUNCTIONS
+//   4. crates/frees-core/src/props/propfun.rs  — OUTPUTS / HA_OUTPUTS
+//   5. crates/frees-core/src/props/solids.rs   — MATERIALS
+//   6. crates/frees/src/repl.rs                — CAS_NAMES
+//   7. components/library-data/*.frees         — the component library
+//   8. src/helpReference.ts                    — CALL + matrix signatures/descriptions
+//   9. src/docs/reference/**/*.md              — authored pages (frontmatter `name:`)
+//
+// This script used to read the Java reference repo (`../frees`) as its primary
+// registry and fall back to a cached manifest when the sibling was absent —
+// which it is on every normal checkout. That fallback is how 73 live intrinsics
+// stayed undocumented while the gate reported 655/655. The Java dependency is
+// now gone entirely: rustprop and the Rust registries are the implementation,
+// so they are also the inventory.
+//
+// Authored prose (a function's signature, description and category) still comes
+// from the committed manifest — it is hand-written documentation, not something
+// any registry can regenerate. What the Rust tables decide is MEMBERSHIP: which
+// symbols exist. A name in the engine and not in the manifest is added and
+// reported; that is the drift this exists to surface.
 //
 // Output: src/docs/reference/function-manifest.json
-//   - `functions`: every registered function with its info + whether a page exists
-//   - `dispatchOnly`: names dispatched by the backend but absent from the registry
-//     (these need a FunctionRegistry entry before they can be documented cleanly)
-//   - `coverage`: counts to drive the Phase-0 coverage gate
 //
-// Run: node scripts/build-doc-manifest.mjs   (also wired into compile-docs later)
+// Run: node scripts/build-doc-manifest.mjs
 
 import fs from 'fs';
 import path from 'path';
@@ -25,128 +38,17 @@ import { parseLibrary } from './parse-library.mjs';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const WASM_REPO = path.resolve(__dirname, '../..');
 
-// The Java sources this script reads live in the READ-ONLY REFERENCE REPO, a
-// sibling of this one — not inside it. This file was vendored from the frEES
-// frontend, where `backend/` sat beside `frontend/`, and it kept resolving
-// `../..`; in this repo that is a `backend/` directory that has never existed,
-// so `npm run check-docs` died on ENOENT before it could check anything.
-//
-// Resolution mirrors `tools/frees-home.sh`, which is the one place that
-// decision is made for the Rust-side oracle tools: `$FREES_HOME` wins, then the
-// sibling under either spelling the directory has worn.
-function findReferenceRepo() {
-  const candidates = process.env.FREES_HOME
-    ? [process.env.FREES_HOME]
-    : [path.join(WASM_REPO, '../frees'), path.join(WASM_REPO, '../frEES')];
-  return candidates.find((c) =>
-    fs.existsSync(path.join(c, 'backend/core/src/main/java/com/frees/backend')),
-  );
-}
-
 const REF_DIR = path.join(__dirname, '../src/docs/reference');
 const OUT = path.join(REF_DIR, 'function-manifest.json');
 
-const REFERENCE = findReferenceRepo();
-
-// Post core/web split: pure computation (parser/ast/props/...) lives in core,
-// the Spring web layer (controllers, ReplEvaluator — which needs the Redis-backed
-// session cache) lives in web.
-const BK = REFERENCE
-  ? path.join(REFERENCE, 'backend/core/src/main/java/com/frees/backend')
-  : '';
-const BK_WEB = REFERENCE
-  ? path.join(REFERENCE, 'backend/web/src/main/java/com/frees/backend')
-  : '';
-
 const read = (p) => fs.readFileSync(p, 'utf-8');
-
-// ── 1. Parse FunctionRegistry.java (the structured registry) ─────────────────
-function parseRegistry() {
-  const src = read(path.join(BK, 'parser/FunctionRegistry.java'));
-  const re = /new FunctionInfo\(\s*"((?:[^"\\]|\\.)*)"\s*,\s*"((?:[^"\\]|\\.)*)"\s*,\s*"((?:[^"\\]|\\.)*)"\s*,\s*"((?:[^"\\]|\\.)*)"\s*\)/g;
-  const out = [];
-  let m;
-  while ((m = re.exec(src)) !== null) {
-    out.push({
-      name: m[1],
-      signature: m[2].replace(/\\"/g, '"'),
-      description: m[3].replace(/\\"/g, '"'),
-      category: m[4],
-    });
-  }
-  return out;
-}
-
-// ── 2. Dispatch arms from an evaluator's switch ──────────────────────────────
-// Returns one entry per `case ... ->` arm: the list of labels that share it.
-// Labels sharing an arm are ALIASES of one function (e.g. case "t0_t","isen_t0_t").
-function dispatchArms(rel, base = BK) {
-  const src = read(path.join(base, rel));
-  // Case labels may be string literals or named `static final String` constants
-  // (Sonar S1192 pushes repeated dispatch names into constants); resolve the
-  // constants to their values. Identifiers that don't resolve (e.g. enum
-  // labels in unrelated switches) are dropped.
-  const consts = new Map();
-  const constRe = /static\s+final\s+String\s+([A-Z][A-Z0-9_]*)\s*=\s*"((?:[^"\\]|\\.)*)"/g;
-  let c;
-  while ((c = constRe.exec(src)) !== null) consts.set(c[1], c[2]);
-  const arms = [];
-  const label = '(?:"(?:[^"\\\\]|\\\\.)*"|[A-Z][A-Z0-9_]*)';
-  const caseRe = new RegExp(`case\\s+(${label}(?:\\s*,\\s*${label})*)\\s*->`, 'g');
-  let m;
-  while ((m = caseRe.exec(src)) !== null) {
-    const labels = (m[1].match(/"(?:[^"\\]|\\.)*"|[A-Z][A-Z0-9_]*/g) || [])
-      .map((l) => (l.startsWith('"') ? l.slice(1, -1) : consts.get(l)))
-      .filter(Boolean)
-      .map((l) => l.toLowerCase());
-    if (labels.length) arms.push(labels);
-  }
-  return arms;
-}
-
-// Operators / relational / logical tokens that share the switch but are not
-// user-facing functions — excluded from the documentable surface.
-const NON_FUNCTION_TOKENS = new Set([
-  '<', '<=', '<>', '=', '>', '>=', '+', '-', '*', '/', '^',
-  'and', 'or', 'not', 'xor',
-]);
-
-// ── 3. Name-set-routed families the Evaluator switch does NOT carry as cases ──
+// ── 1. Name-set-routed families (not scalar intrinsics) ─────────────────────
 
 // Components: every `COMPONENT <Name>` in THIS port's embedded library.
 function parseComponents() {
   return parseLibrary()
     .map((c) => ({ name: c.name, domain: c.domain }))
     .sort((a, b) => a.name.localeCompare(b.name));
-}
-
-// Fluid + humid-air property functions: the OUTPUTS / HA_OUTPUTS map keys.
-function parsePropertyFunctions() {
-  const src = read(path.join(BK, 'props/PropertyFunctions.java'));
-  const block = (startKey) => {
-    const i = src.indexOf(startKey);
-    const seg = src.slice(i, src.indexOf(');', i));
-    const keys = new Set();
-    const re = /Map\.entry\(\s*(?:"([^"]+)"|VOLUME|DMASS)\s*,/g;
-    let m;
-    while ((m = re.exec(seg)) !== null) keys.add(m[1] || 'volume'); // VOLUME constant = "volume"
-    return [...keys];
-  };
-  return {
-    fluid: block('OUTPUTS = Map.ofEntries').sort(),
-    humidAir: block('HA_OUTPUTS = Map.ofEntries').sort(),
-  };
-}
-
-// Solid-material functions and the supported material database keys.
-function parseMaterials() {
-  const src = read(path.join(BK, 'props/SolidProperties.java'));
-  const seg = src.slice(0, src.indexOf(');'));
-  const mats = [...seg.matchAll(/Map\.entry\("([^"]+)"\s*,\s*new Material/g)].map((m) => m[1]);
-  return {
-    functions: ['k_', 'c_', 'rho_', 'E_', 'nu_'], // conductivity, cp, density, Young's modulus, Poisson
-    materials: [...new Set(mats)].sort(),
-  };
 }
 
 // CALL procedures: no clean backend name-set; sourced from the curated frontend
@@ -187,9 +89,14 @@ function parseMatrixFunctions() {
   return out;
 }
 
-// ── 4. Authored reference pages (frontmatter name:) ──────────────────────────
+// ── 2. Authored reference pages (frontmatter name:) ──────────────────────────
+//
+// A Map of lowercase slug -> the page's own casing, not a Set: `.has()` reads
+// the same at every call site, and `.get()` recovers the spelling a reader
+// sees. The Rust tables are lowercase (`e_`), but the accessor is documented
+// and written `E_` — membership comes from the engine, casing from the page.
 function authoredPages() {
-  const names = new Set();
+  const names = new Map();
   if (!fs.existsSync(REF_DIR)) return names;
   const walk = (dir) => {
     for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -198,7 +105,7 @@ function authoredPages() {
       else if (e.name.endsWith('.md') && !e.name.startsWith('_')) {
         const fm = read(p).match(/^---\n([\s\S]*?)\n---/);
         const nm = fm && fm[1].match(/^name:\s*(.+)$/m);
-        if (nm) names.add(nm[1].trim().toLowerCase());
+        if (nm) names.set(nm[1].trim().toLowerCase(), nm[1].trim());
       }
     }
   };
@@ -206,24 +113,37 @@ function authoredPages() {
   return names;
 }
 
-// ── The Rust registries (this port's own truth) ──────────────────────────────
+// ── 3. The Rust registries (the engine's own truth) ─────────────────────────
 //
-// The Java sources above are the *reference* implementation. They are also, on
-// a normal checkout, absent — and until Phase 4.7 this script silently reused
-// whatever function list happened to be committed when someone last had the
-// sibling repo. That is how 73 live intrinsics ended up undocumented while
-// `npm run check-docs` reported 655/655.
+// Every static name table the engine dispatches through, read straight out of
+// the Rust source. Not out of a compiled binary: a build step that needed the
+// engine built would not run in the same place this one does.
 //
-// So the documentable surface is now reconciled against the **shipping engine**
-// too, whether or not the Java repo is present: `eval::INTRINSICS` is a static
-// table of `strict!("name", …)` / `lazy!("name", …)` rows, and the CALL targets
-// are a static list in `procedures.rs`. Both are read straight out of the Rust
-// source, because a build step that needs the engine compiled would not run in
-// the same place this one does.
+// These decide MEMBERSHIP. Whatever prose the committed manifest carries for a
+// symbol is kept; whatever the engine has and the manifest does not is added
+// and reported.
 
 const EVAL_RS = path.join(WASM_REPO, 'crates/frees-core/src/eval.rs');
 const PROCEDURES_RS = path.join(WASM_REPO, 'crates/frees-core/src/procedures.rs');
 const EXPAND_RS = path.join(WASM_REPO, 'crates/frees-core/src/parser/expand.rs');
+const PROPFUN_RS = path.join(WASM_REPO, 'crates/frees-core/src/props/propfun.rs');
+const SOLIDS_RS = path.join(WASM_REPO, 'crates/frees-core/src/props/solids.rs');
+const REPL_RS = path.join(WASM_REPO, 'crates/frees/src/repl.rs');
+
+/** The `("name", …)` heads of a `const NAME: &[(&str, &str)] = &[ … ];` table. */
+function rustPairTable(src, name) {
+  const block = src.match(new RegExp(`const ${name}: &\\[\\(&str, &str\\)\\] = &\\[([\\s\\S]*?)\\n\\];`));
+  if (!block) return [];
+  const out = new Set();
+  for (const m of block[1].matchAll(/\(\s*(?:"([^"]+)"|([A-Z_][A-Z0-9_]*))\s*,/g)) {
+    // A bare constant as the key: `(VOLUME, "V")`. Resolve it from its own
+    // `const VOLUME: &str = "volume";` declaration rather than assuming.
+    if (m[1]) { out.add(m[1].toLowerCase()); continue; }
+    const lit = src.match(new RegExp(`const ${m[2]}: &str = "([^"]+)";`));
+    if (lit) out.add(lit[1].toLowerCase());
+  }
+  return [...out].sort();
+}
 
 /** Every name in `eval::INTRINSICS`, lowercase, sorted. */
 function rustIntrinsics() {
@@ -266,14 +186,54 @@ function rustMatrixFunctions() {
 }
 
 /**
- * Fold the Rust registries into a manifest built from (or cached from) the Java
- * side, and report what only one of them knows about.
+ * Fluid and humid-air property functions: the `OUTPUTS` / `HA_OUTPUTS` keys.
  *
- * A **union**, deliberately, not a replacement. Dropping a name the Java
- * registry has would orphan its authored page and fail the coverage gate for a
+ * Was parsed from the Java `props/PropertyFunctions.java`. rustprop carries the
+ * same two tables, so this is the same list from the implementation that now
+ * actually answers the call.
+ */
+function rustPropertyFunctions() {
+  if (!fs.existsSync(PROPFUN_RS)) return { fluid: [], humidAir: [] };
+  const src = read(PROPFUN_RS);
+  return {
+    fluid: rustPairTable(src, 'OUTPUTS'),
+    humidAir: rustPairTable(src, 'HA_OUTPUTS'),
+  };
+}
+
+/** Solid-material accessors and the material database keys, from `solids.rs`. */
+function rustMaterials() {
+  if (!fs.existsSync(SOLIDS_RS)) return { functions: [], materials: [] };
+  const src = read(SOLIDS_RS);
+  const block = src.match(/const MATERIALS: &\[\(&str, Material\)\] = &\[([\s\S]*?)\n\];/);
+  const materials = block
+    ? [...new Set([...block[1].matchAll(/\(\s*\n?\s*"([^"]+)"/g)].map((m) => m[1]))].sort()
+    : [];
+  // The accessor suffixes `lookup()` matches, in its own declared order.
+  const accessors = src.match(/\[((?:\s*"[a-z_]+",?)+)\]/);
+  const functions = accessors
+    ? [...accessors[1].matchAll(/"([^"]+)"/g)].map((m) => m[1])
+    : [];
+  return { functions, materials };
+}
+
+/** The REPL-only CAS spellings, from `repl.rs::CAS_NAMES`. */
+function rustReplCasOps() {
+  if (!fs.existsSync(REPL_RS)) return [];
+  const block = read(REPL_RS).match(/const CAS_NAMES: \[&str; \d+\] = \[([\s\S]*?)\n\];/);
+  if (!block) return [];
+  return [...new Set([...block[1].matchAll(/"([^"]+)"/g)].map((m) => m[1].toLowerCase()))].sort();
+}
+
+/**
+ * Fold the Rust registries into the committed manifest and report what only
+ * one of them knows about.
+ *
+ * A **union**, deliberately, not a replacement. Dropping a name the manifest
+ * carries would orphan its authored page and fail the coverage gate for a
  * reason that has nothing to do with the engine; adding a name the Rust table
- * has is exactly the drift this exists to surface. Rust-only entries carry
- * `source: "rust"` so a reader can see which half they came from.
+ * has is exactly the drift this exists to surface. Entries the registries
+ * introduced carry `source: "rust"` so a reader can see where they came from.
  */
 function mergeRustRegistries(manifest) {
   const pages = authoredPages();
@@ -348,11 +308,11 @@ function mergeRustRegistries(manifest) {
   return report;
 }
 
-function reportMerge(report, reference) {
+function reportMerge(report) {
   if (report.functionsAdded.length) {
     console.warn(
       `build-doc-manifest: ${report.functionsAdded.length} intrinsic(s) live in ` +
-        `eval::INTRINSICS but not in the ${reference ? 'Java registry' : 'committed manifest'}: ` +
+        `eval::INTRINSICS but not in the committed manifest: ` +
         report.functionsAdded.join(', '),
     );
   }
@@ -370,21 +330,10 @@ function reportMerge(report, reference) {
   }
 }
 
-/**
- * The single reconcile-then-stamp step both branches must go through.
- *
- * It used to live inside `writeManifest()`, which only the no-reference branch
- * ever called: the reference branch built its manifest, wrote it inline, and
- * then referenced `mergeReport` from a scope it was never in — so a checkout
- * WITH the reference repo wrote an unreconciled manifest and died on
- * `ReferenceError` immediately afterwards. The merge result now belongs to the
- * caller, and neither branch can write without passing through here.
- */
-function finalize(manifest, reference) {
+/** Reconcile against the Rust registries, stamp provenance, recount. */
+function finalize(manifest) {
   const report = mergeRustRegistries(manifest);
-  // Provenance names the branch actually taken. Stamping 'java+rust'
-  // unconditionally claimed a Java reference read that never happened.
-  manifest.derivedFrom = reference ? 'java+rust' : 'rust';
+  manifest.derivedFrom = 'rust';
   recountCoverage(manifest);
   return report;
 }
@@ -436,167 +385,67 @@ function recountCoverage(manifest) {
   cov.documented = [...all.values()].filter(Boolean).length;
 }
 
-/** No Java sibling: keep committed function families, refresh components from this library. */
-function refreshComponentsOnly() {
-  if (!fs.existsSync(OUT)) {
-    console.warn(
-      'build-doc-manifest: reference repo not found and no committed function-manifest.json.',
-    );
-    process.exit(0);
-  }
-  const manifest = JSON.parse(read(OUT));
-  const pages = authoredPages();
-  manifest.components = parseComponents().map((c) => ({
-    ...c,
-    documented: pages.has(c.name.toLowerCase()),
-  }));
-  // Without the Java repo the Rust registries are the ONLY live source of truth
-  // for the function surface. If they cannot be read there is nothing left
-  // reconciling the manifest against the shipping engine, and a coverage number
-  // computed from a cached list is a claim this script has no basis for — so it
-  // fails rather than printing one.
-  if (!rustIntrinsics().length) {
-    console.error(
-      `build-doc-manifest: no Java reference repo AND eval::INTRINSICS could not be read ` +
-        `from ${path.relative(WASM_REPO, EVAL_RS)}. Refusing to report coverage from a ` +
-        `cached list — there would be nothing checking it against the engine.`,
-    );
-    process.exit(1);
-  }
-  manifest.note =
-    "GENERATED by scripts/build-doc-manifest.mjs. Function and CALL families are " +
-    "reconciled against the Rust registries (eval::INTRINSICS, " +
-    "procedures::EXPANDED_CALL_TARGETS, parser::expand::MATRIX_FUNCTIONS); " +
-    "the remaining families are the last " +
-    "generation from the Java reference repo. Do not edit by hand.";
-  // Named so a reader knows exactly which counts are live and which are cached.
-  manifest.staleFamilies = ['propertyFunctions', 'materials', 'replCasOps'];
-  const report = finalize(manifest, false);
-  writeManifest(manifest);
-  reportMerge(report, false);
-  const cov = manifest.coverage;
-  console.log(
-    `doc-manifest: no Java reference repo — functions and CALL targets reconciled against ` +
-      `the Rust registries, ${cov.components} components refreshed from this port's library ` +
-      `(${cov.documentableSurfaceTotal} documentable, ${cov.documented} documented). ` +
-      `Cached from the last Java generation: ${manifest.staleFamilies.join(', ')} → ` +
-      `${path.relative(WASM_REPO, OUT)}`,
+// ── 4. Build ────────────────────────────────────────────────────────────────
+//
+// One path. The committed manifest supplies authored prose for the symbols it
+// already knows; every family's membership is re-derived here.
+
+if (!fs.existsSync(OUT)) {
+  console.error(`build-doc-manifest: no committed manifest at ${path.relative(WASM_REPO, OUT)}.`);
+  process.exit(1);
+}
+
+// The Rust registries are the only source of truth for the function surface. If
+// they cannot be read there is nothing reconciling the manifest against the
+// shipping engine, and a coverage number computed from a cached list is a claim
+// this script has no basis for — so it fails rather than printing one.
+if (!rustIntrinsics().length) {
+  console.error(
+    `build-doc-manifest: eval::INTRINSICS could not be read from ` +
+      `${path.relative(WASM_REPO, EVAL_RS)}. Refusing to report coverage from a cached ` +
+      `list — there would be nothing checking it against the engine.`,
   );
+  process.exit(1);
 }
 
-if (!REFERENCE) {
-  console.warn(
-    'build-doc-manifest: reference repo not found (set $FREES_HOME, or put it ' +
-      'beside this one as ../frees). Refreshing component inventory from this ' +
-      'port\'s library; other families stay as last generated.',
-  );
-  refreshComponentsOnly();
-  process.exit(0);
-}
-
-// ── Build ────────────────────────────────────────────────────────────────────
-const registry = parseRegistry();
-const registered = new Set(registry.map((f) => f.name.toLowerCase()));
-
-// Only Evaluator.java carries the scalar built-in dispatch. ControlSystemsEvaluator's
-// `case` labels are output-member selectors (gm/pm/tr/ts/Kp…) that pick an element of a
-// multi-output result array — not functions — so it is deliberately NOT a dispatch source.
-const arms = dispatchArms('ast/Evaluator.java')
-  .map((labels) => labels.filter((l) => !NON_FUNCTION_TOKENS.has(l)))
-  .filter((labels) => labels.length);
-
-// Map each registered function to the aliases it picks up from its dispatch arm.
-const aliasesFor = {};
-for (const labels of arms) {
-  const canon = labels.find((l) => registered.has(l));
-  if (canon) {
-    const al = labels.filter((l) => l !== canon);
-    if (al.length) aliasesFor[canon] = [...new Set([...(aliasesFor[canon] || []), ...al])];
-  }
-}
-
+const manifest = JSON.parse(read(OUT));
 const pages = authoredPages();
-const functions = registry.map((f) => ({
-  ...f,
-  aliases: aliasesFor[f.name.toLowerCase()] || [],
-  documented: pages.has(f.name.toLowerCase()),
+
+manifest.components = parseComponents().map((c) => ({
+  ...c,
+  documented: pages.has(c.name.toLowerCase()),
 }));
 
-// Genuinely missing functions: dispatch arms where NO label is in the registry.
-// One entry per arm (canonical = first label, plus its aliases).
-const dispatchOnly = arms
-  .filter((labels) => !labels.some((l) => registered.has(l)))
-  .map((labels) => ({ name: labels[0], aliases: labels.slice(1) }))
-  .sort((a, b) => a.name.localeCompare(b.name));
-
-const repl = [...new Set(dispatchArms('api/ReplEvaluator.java', BK_WEB).flat())]
-  .filter((n) => !NON_FUNCTION_TOKENS.has(n)).sort();
-
-// Name-set-routed families (not in the Evaluator switch).
-const components = parseComponents().map((c) => ({ ...c, documented: pages.has(c.name.toLowerCase()) }));
-const props = parsePropertyFunctions();
-const propertyFunctions = [
+const props = rustPropertyFunctions();
+manifest.propertyFunctions = [
   ...props.fluid.map((n) => ({ name: n, kind: 'fluid', documented: pages.has(n) })),
   ...props.humidAir.map((n) => ({ name: n, kind: 'humid-air', documented: pages.has(n) })),
 ];
-const materials = parseMaterials();
-const callProcedures = parseCallProcedures().map((p) => ({ ...p, documented: pages.has(p.name.toLowerCase()) }));
-const matrixFunctions = parseMatrixFunctions().map((p) => ({ ...p, documented: pages.has(p.name.toLowerCase()) }));
+manifest.materials = rustMaterials();
+// Membership from `solids.rs`, spelling from the authored page (`E_`, not `e_`).
+manifest.materials.functions = manifest.materials.functions.map((f) => pages.get(f) || f);
+manifest.replCasOps = rustReplCasOps();
 
-// Unique documentable symbols across all families (a few control names appear in
-// both FunctionRegistry's Control category and callProcedures — count them once).
-const allSymbols = new Map(); // slug -> documented
-const note1 = (name, documented) => {
-  const k = name.toLowerCase();
-  allSymbols.set(k, (allSymbols.get(k) || false) || documented);
-};
-functions.forEach((f) => note1(f.name, f.documented));
-matrixFunctions.forEach((f) => note1(f.name, f.documented));
-callProcedures.forEach((p) => note1(p.name, p.documented));
-propertyFunctions.forEach((p) => note1(p.name, p.documented));
-components.forEach((c) => note1(c.name, c.documented));
-materials.functions.forEach((f) => note1(f, pages.has(f.toLowerCase())));
-repl.forEach((r) => note1(r, pages.has(r.toLowerCase())));
-const surfaceTotal = allSymbols.size;
-const documentedTotal = [...allSymbols.values()].filter(Boolean).length;
+manifest.note =
+  'GENERATED by scripts/build-doc-manifest.mjs. Every family is reconciled against ' +
+  'the Rust registries (eval::INTRINSICS, procedures::EXPANDED_CALL_TARGETS, ' +
+  'parser::expand::MATRIX_FUNCTIONS, props::propfun, props::solids, repl::CAS_NAMES) ' +
+  'and this repo\'s component library. Signatures and descriptions are authored ' +
+  'prose, kept as committed. Do not edit by hand.';
+// Nothing is cached-membership any more. The field stays, empty, because
+// `check-doc-coverage.mjs` and the manifest's readers both look for it.
+manifest.staleFamilies = [];
 
-const manifest = {
-  generatedAt: new Date().toISOString().slice(0, 10),
-  note: 'GENERATED by scripts/build-doc-manifest.mjs from the backend registries + std-lib. Do not edit by hand.',
-  coverage: {
-    documentableSurfaceTotal: surfaceTotal,
-    registeredFunctions: functions.length,
-    matrixFunctions: matrixFunctions.length,
-    components: components.length,
-    propertyFunctions: propertyFunctions.length,
-    callProcedures: callProcedures.length,
-    materialFunctions: materials.functions.length,
-    replCasOps: repl.length,
-    documented: documentedTotal,
-    dispatchOnlyNeedingRegistry: dispatchOnly.length,
-  },
-  functions,
-  dispatchOnly,
-  matrixFunctions,
-  callProcedures,
-  propertyFunctions,
-  materials,
-  components,
-  replCasOps: repl,
-};
-
-// The Java repo is present, so every family above is live — but the port has
-// its own dispatch table, and this is the one place the two can be compared.
-const mergeReport = finalize(manifest, true);
+const mergeReport = finalize(manifest);
 writeManifest(manifest);
-reportMerge(mergeReport, true);
+reportMerge(mergeReport);
 
-// Report the POST-merge counts. The local `functions`/`callProcedures` arrays
-// above are the pre-merge build; anything the Rust registries added is in
-// `manifest.coverage` and nowhere else.
 const cov = manifest.coverage;
-console.log(`doc-manifest: ${cov.documentableSurfaceTotal} documentable symbols ` +
-  `(${cov.documented} documented) — ${cov.registeredFunctions} functions, ${cov.matrixFunctions} matrix fns, ` +
-  `${cov.components} components, ${cov.propertyFunctions} property fns, ${cov.callProcedures} CALL procs, ` +
-  `${cov.materialFunctions} material fns, ${cov.replCasOps} CAS ops; ` +
-  `${cov.dispatchOnlyNeedingRegistry} dispatch-only gaps → ${path.relative(WASM_REPO, OUT)}`);
+console.log(
+  `doc-manifest: ${cov.documentableSurfaceTotal} documentable symbols ` +
+    `(${cov.documented} documented) — ${cov.registeredFunctions} functions, ` +
+    `${cov.matrixFunctions} matrix fns, ${cov.components} components, ` +
+    `${cov.propertyFunctions} property fns, ${cov.callProcedures} CALL procs, ` +
+    `${cov.materialFunctions} material fns, ${cov.replCasOps} CAS ops → ` +
+    `${path.relative(WASM_REPO, OUT)}`,
+);

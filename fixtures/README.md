@@ -2,6 +2,34 @@
 
 This directory contains the frozen regression test corpus, reference golden solutions, and numerical tolerance definitions for `frees`.
 
+## Provenance: where these numbers came from
+
+Every golden in `corpus/`/`golden/`, the property grids in `proptables/` and
+`auxtables/`, and the 912 psychrometric points in `humidair/reference.json`
+were produced by an **external oracle** — the Java `frees` engine linked
+against CoolProp 8.0.0 — and frozen here. They are not `rustprop` output, which
+is exactly why they can grade it.
+
+That oracle and its generators (`tools/golden-dumper`, `tools/table-gen`,
+`tools/aux-gen`, `tools/dae-probe`, `tools/harvest-java-tests`) were **removed
+on 2026-09-12**: `rustprop` is the implementation now, nothing in the build,
+the test suite, or CI reads the Java repo, and a checkout of it had not existed
+on a developer machine for some time.
+
+Roughly 60 doc comments under `crates/` still cite those tool paths as the
+source of a hardcoded expected value. Those statements remain accurate — they
+record how a literal was obtained, and deleting the tool does not change that —
+but the paths no longer resolve. Read them as history, not as instructions.
+
+**The consequence to know about:** new property fixtures can no longer be
+minted against an independent oracle. Values generated from `rustprop` give
+regression detection (they catch unintended change) but not validation (they
+cannot catch a bug that was there all along). For a genuinely new property
+surface — an unbacked `.mix` blend, a fluid outside the linked set — grade
+against CoolProp directly (`pip install CoolProp`, as
+`tools/humidair-ref/gen.py` now does) or against published EoS reference
+values, and record which in the fixture.
+
 ---
 
 ## 1. Directory Structure

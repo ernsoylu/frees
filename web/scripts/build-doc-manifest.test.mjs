@@ -1,17 +1,13 @@
-// Both generator branches must reconcile against the Rust registries and write.
+// The generator must reconcile every family against the Rust registries.
 //
-// This exists because they did not. The reference-present branch built its
-// manifest, wrote it inline without ever calling `mergeRustRegistries()`, and
-// then read `mergeReport` from a scope it was never declared in — so a checkout
-// WITH the reference repo exited 1 on `ReferenceError: mergeReport is not
-// defined`, after the unreconciled file was already on disk. Nothing caught it
-// because nothing in CI ran the generator at all, and no developer machine has
-// the reference repo.
+// This exists because it did not. The builder read the Java reference repo as
+// its primary registry and fell back to a cached manifest when the sibling was
+// absent — which it is on every normal checkout. That fallback is how 73 live
+// intrinsics stayed undocumented while the gate reported full coverage.
 //
-// The invariant under test is the one the coverage gate depends on: **every
-// name in `eval::INTRINSICS` reaches the manifest**, by either branch. That is
-// what stops 73 live intrinsics from going undocumented while the gate reports
-// full coverage.
+// The Java branch is gone. What replaces these tests' original subject is a
+// stronger invariant: **every name the Rust tables carry reaches the manifest**,
+// and no family is served from a cached list any more.
 
 import { describe, it, expect } from 'vitest'
 import { execFileSync } from 'node:child_process'
@@ -24,6 +20,16 @@ const HERE = path.dirname(fileURLToPath(import.meta.url))
 const WEB = path.resolve(HERE, '..')
 const REPO = path.resolve(WEB, '..')
 
+// Every Rust source the generator reads, and the component library.
+const RUST_SOURCES = [
+  'crates/frees-core/src/eval.rs',
+  'crates/frees-core/src/procedures.rs',
+  'crates/frees-core/src/parser/expand.rs',
+  'crates/frees-core/src/props/propfun.rs',
+  'crates/frees-core/src/props/solids.rs',
+  'crates/frees/src/repl.rs',
+]
+
 /** The names `rustIntrinsics()` in the generator reads, read the same way. */
 function intrinsicNames() {
   const src = fs.readFileSync(path.join(REPO, 'crates/frees-core/src/eval.rs'), 'utf-8')
@@ -33,13 +39,11 @@ function intrinsicNames() {
 /**
  * Run the generator in a throwaway copy of the tree.
  *
- * `reference: true` plants the directory layout `findReferenceRepo()` probes
- * for, with EMPTY Java files. That is deliberate, and stronger than plausible
- * fakes: an empty registry parses to zero functions, so every function left in
- * the manifest must have arrived through the Rust merge. If the merge is
- * skipped — the original defect — the assertion below has nothing to find.
+ * `edit` receives the temp root before the run, so a test can perturb a Rust
+ * source and assert the change reaches the manifest — the drift the cached
+ * families could not surface.
  */
-function generate({ reference }) {
+function generate({ edit } = {}) {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'doc-manifest-'))
   try {
     const root = path.join(tmp, 'port')
@@ -50,35 +54,15 @@ function generate({ reference }) {
     ]) {
       fs.cpSync(path.join(REPO, rel), path.join(root, rel), { recursive: true })
     }
-    for (const rel of [
-      'web/src/helpReference.ts',
-      'crates/frees-core/src/eval.rs',
-      'crates/frees-core/src/procedures.rs',
-    ]) {
+    for (const rel of ['web/src/helpReference.ts', ...RUST_SOURCES]) {
       fs.mkdirSync(path.dirname(path.join(root, rel)), { recursive: true })
       fs.copyFileSync(path.join(REPO, rel), path.join(root, rel))
     }
 
-    const home = path.join(tmp, 'reference')
-    if (reference) {
-      const files = [
-        ['core', 'parser/FunctionRegistry.java'],
-        ['core', 'ast/Evaluator.java'],
-        ['core', 'props/PropertyFunctions.java'],
-        ['core', 'props/SolidProperties.java'],
-        ['web', 'api/ReplEvaluator.java'],
-      ]
-      for (const [layer, file] of files) {
-        const p = path.join(home, `backend/${layer}/src/main/java/com/frees/backend`, file)
-        fs.mkdirSync(path.dirname(p), { recursive: true })
-        fs.writeFileSync(p, '// Minimal input exercising branch control flow.\n')
-      }
-    }
+    edit?.(root)
 
     const stdout = execFileSync('node', ['web/scripts/build-doc-manifest.mjs'], {
       cwd: root,
-      // An absent FREES_HOME must not fall through to a real sibling checkout.
-      env: { ...process.env, FREES_HOME: reference ? home : path.join(tmp, 'absent') },
       encoding: 'utf-8',
       stdio: ['ignore', 'pipe', 'pipe'],
     })
@@ -102,42 +86,85 @@ function manifestNames(manifest) {
   return names
 }
 
+const patch = (root, rel, from, to) => {
+  const p = path.join(root, rel)
+  const src = fs.readFileSync(p, 'utf-8')
+  if (!src.includes(from)) throw new Error(`fixture anchor missing in ${rel}: ${from}`)
+  fs.writeFileSync(p, src.replace(from, to))
+}
+
 describe('build-doc-manifest', () => {
-  it('reconciles against eval::INTRINSICS without a reference repo', () => {
-    const { manifest } = generate({ reference: false })
+  it('reconciles against eval::INTRINSICS', () => {
+    const { manifest } = generate()
     const names = manifestNames(manifest)
     expect(intrinsicNames().filter((n) => !names.has(n))).toEqual([])
     expect(manifest.derivedFrom).toBe('rust')
   })
 
-  // The branch that used to throw. It must exit 0 (execFileSync throws on a
-  // non-zero exit, so reaching the assertions is itself the crash regression
-  // test) and must reconcile, not just write.
-  it('reconciles against eval::INTRINSICS with a reference repo present', () => {
-    const { manifest } = generate({ reference: true })
-    const names = manifestNames(manifest)
-    expect(intrinsicNames().filter((n) => !names.has(n))).toEqual([])
-    expect(manifest.derivedFrom).toBe('java+rust')
+  // The three families that used to be served from the last Java generation.
+  // An empty `staleFamilies` is the claim; these assert it is earned.
+  it('serves no family from a cached list', () => {
+    expect(generate().manifest.staleFamilies).toEqual([])
   })
 
-  // Provenance names the branch taken. It used to be stamped 'java+rust'
-  // unconditionally inside the writer, claiming a Java read that never happened.
-  it('does not claim a Java read it did not perform', () => {
-    expect(generate({ reference: false }).manifest.derivedFrom).not.toBe('java+rust')
+  it('takes property functions from props::propfun', () => {
+    const { manifest } = generate({
+      edit: (root) =>
+        patch(
+          root,
+          'crates/frees-core/src/props/propfun.rs',
+          '("gibbs", "Gmass"),\n];',
+          '("gibbs", "Gmass"),\n    ("fictional", "Nope"),\n];',
+        ),
+    })
+    expect(manifest.propertyFunctions.map((p) => p.name)).toContain('fictional')
+  })
+
+  it('takes solid materials from props::solids', () => {
+    const { manifest } = generate({
+      edit: (root) =>
+        patch(
+          root,
+          'crates/frees-core/src/props/solids.rs',
+          '("brass", m(110.0, 8530.0, 380.0, Some(100e9), Some(0.34))),',
+          '("brass", m(110.0, 8530.0, 380.0, Some(100e9), Some(0.34))),\n    ("unobtainium", m(1.0, 1.0, 1.0, None, None)),',
+        ),
+    })
+    expect(manifest.materials.materials).toContain('unobtainium')
+  })
+
+  it('takes CAS ops from repl::CAS_NAMES', () => {
+    const { manifest } = generate({
+      edit: (root) =>
+        patch(root, 'crates/frees/src/repl.rs', '    "integrate",\n];', '    "integrate",\n    "residue",\n];'),
+    })
+    expect(manifest.replCasOps).toContain('residue')
+  })
+
+  // Membership is the engine's; the spelling a reader sees is the page's. The
+  // Rust table says `e_`; `materials/E_.md` says `E_`, and that is what ships.
+  it('keeps the authored casing of material accessors', () => {
+    expect(generate().manifest.materials.functions).toContain('E_')
+  })
+
+  // Without the Rust registries there is nothing checking the manifest against
+  // the engine, so a coverage number would be a claim with no basis.
+  it('refuses to report coverage when eval::INTRINSICS cannot be read', () => {
+    expect(() =>
+      generate({ edit: (root) => fs.rmSync(path.join(root, 'crates/frees-core/src/eval.rs')) }),
+    ).toThrow()
   })
 
   // The reported family counts used to be whatever the pre-merge build set:
   // 276 functions and 44 CALL procedures against arrays holding 326 and 63.
   it('reports family counts that match the final arrays', () => {
-    for (const reference of [false, true]) {
-      const { manifest: m } = generate({ reference })
-      expect(m.coverage.registeredFunctions).toBe(m.functions.length)
-      expect(m.coverage.callProcedures).toBe(m.callProcedures.length)
-      expect(m.coverage.matrixFunctions).toBe(m.matrixFunctions.length)
-      expect(m.coverage.components).toBe(m.components.length)
-      expect(m.coverage.propertyFunctions).toBe(m.propertyFunctions.length)
-      expect(m.coverage.replCasOps).toBe(m.replCasOps.length)
-      expect(m.coverage.materialFunctions).toBe(m.materials.functions.length)
-    }
+    const { manifest: m } = generate()
+    expect(m.coverage.registeredFunctions).toBe(m.functions.length)
+    expect(m.coverage.callProcedures).toBe(m.callProcedures.length)
+    expect(m.coverage.matrixFunctions).toBe(m.matrixFunctions.length)
+    expect(m.coverage.components).toBe(m.components.length)
+    expect(m.coverage.propertyFunctions).toBe(m.propertyFunctions.length)
+    expect(m.coverage.replCasOps).toBe(m.replCasOps.length)
+    expect(m.coverage.materialFunctions).toBe(m.materials.functions.length)
   })
 })

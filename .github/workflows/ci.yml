@@ -461,9 +461,9 @@ jobs:
   parity:
     name: parity corpus ${{ matrix.shard }}/4
     runs-on: ubuntu-latest
-    # The golden fixtures are generated from the Java engine, which is not
-    # available in CI (it needs ../frEES and its Gradle cache). Fixtures are
-    # committed, so CI replays them without regenerating.
+    # The golden fixtures were generated from the Java+CoolProp oracle, which
+    # was removed on 2026-09-12 (see fixtures/README.md "Provenance"). They are
+    # committed and frozen, so CI replays them; nothing here regenerates.
     #
     # 2026-08-25, Wave Q2: SHARDED. This is the longest gate in the workflow and
     # it grows with the corpus — 983 fixtures / ~145 s (release, dev box) two

@@ -8,29 +8,48 @@ humid-air backend at CoolProp accuracy (measured: an ideal-gas ASHRAE model is
 2.4e-4 off on `(T,W)` and 2.7e-3 off on `(T,R)`, the latter because converting
 relative humidity needs the enhancement factor `f(T,P)`, not bare `p_ws`).
 Implementing ASHRAE RP-1485 is only safe if every step can be graded, and CI
-has no `libCoolProp`. So the truth is recorded here once, from the same
-vendored library the golden-dumper uses, and the Rust tests grade against it.
+has no `libCoolProp`. So the truth is recorded here once and the Rust tests
+grade `rustprop` against it — the last independent check on the psychrometrics,
+which is why this generator outlived the Java oracle tools it shipped beside.
 
-This mirrors `tools/table-gen` / `tools/aux-gen`: generated artefact, version
-stamped, regenerated deliberately rather than on every build.
+Generated artefact: version stamped, regenerated deliberately, never on build.
 
+    pip install CoolProp
     python3 tools/humidair-ref/gen.py > fixtures/humidair/reference.json
+
+Any CoolProp 8.x shared library works; point `$COOLPROP_LIBRARY` at one to use
+a specific build instead of the wheel's.
 """
-import ctypes, json, sys, pathlib
+import ctypes, json, os, sys, pathlib
 
-# The reference repo is a *sibling* of this one, in either spelling — the rule
-# tools/frees-home.sh already encodes. parents[2] is this repo's root, so the
-# sibling is one level above that.
-_SIBLINGS = pathlib.Path(__file__).resolve().parents[2].parent
-SO = next(
-    (p for p in (_SIBLINGS / s / "backend/core/native/libCoolProp.so"
-                 for s in ("frees", "frEES")) if p.exists()),
-    None,
-)
-if SO is None:
-    sys.exit(f"libCoolProp.so not found beside this repo (looked in {_SIBLINGS}/frees|frEES)")
+def _library():
+    """`$COOLPROP_LIBRARY`, else the installed CoolProp wheel's bundled .so.
 
-lib = ctypes.CDLL(str(SO))
+    This used to resolve only `../frees/backend/core/native/libCoolProp.so` in
+    the Java reference repo, which no longer exists. CoolProp itself is the
+    dependency here, not that checkout.
+    """
+    override = os.environ.get("COOLPROP_LIBRARY")
+    if override:
+        if not pathlib.Path(override).exists():
+            sys.exit(f"$COOLPROP_LIBRARY does not exist: {override}")
+        return override
+    try:
+        import CoolProp
+    except ImportError:
+        sys.exit("no CoolProp: `pip install CoolProp`, or set $COOLPROP_LIBRARY to a libCoolProp.so")
+    root = pathlib.Path(CoolProp.__file__).parent
+    for pattern in ("libCoolProp*.so", "*.so", "*.dylib", "*.dll"):
+        for cand in sorted(root.glob(pattern)) + sorted(root.glob(f"**/{pattern}")):
+            try:
+                return str(cand) if ctypes.CDLL(str(cand)) else str(cand)
+            except OSError:
+                continue
+    sys.exit(f"CoolProp is installed at {root} but no loadable shared library was found in it")
+
+
+SO = _library()
+lib = ctypes.CDLL(SO)
 lib.HAPropsSI.restype = ctypes.c_double
 lib.HAPropsSI.argtypes = [ctypes.c_char_p] + [ctypes.c_char_p, ctypes.c_double] * 3
 lib.PropsSI.restype = ctypes.c_double
