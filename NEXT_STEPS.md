@@ -234,6 +234,8 @@ Focus: Address large-scale system scalability, resolve structural thermodynamic 
       - Signed: 2026-09-12 — dense fallback remains the singular or unsupported-pattern escape path.
   - Signed: 2026-09-12 — Phase 4.1 sparse ordering and factorization seam complete.
 - [ ] **4.2 Pre-Expansion Lazy Chunk Seam for Thermodynamic Data**
+  - [x] CI now reports the measured WASM headroom and warns when it reaches the 200 KiB lazy-chunk trigger.
+    - Signed: 2026-09-12 — the actual fetch seam remains deferred while current headroom is above the trigger.
   - Implement dynamic, asynchronous fetching for property tables and component libraries via [`props/tables.rs::install_from_bytes`](file:///home/eren/homecloud/dev/frees-wasm/props/tables.rs).
   - Establish a pre-solve document scan to fetch required fluid tables on first reference before the solver worker executes.
   - **Trigger Condition**: Headroom below 200 KiB against the 5,120 KiB WASM ceiling, or before requesting any future budget increase. (Current headroom: 1,232 KiB; 3,888 KiB raw).
