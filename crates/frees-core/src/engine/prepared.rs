@@ -110,9 +110,7 @@ impl PreparedDocument {
         // Pipeline stages 2–4
         let statements = std::mem::take(&mut doc.statements)
             .into_iter()
-            .filter(|statement| {
-                !crate::parser::toplevel::is_registered_call_statement(statement)
-            })
+            .filter(|statement| !crate::parser::toplevel::is_registered_call_statement(statement))
             .collect();
         let mut parsed_names = std::mem::take(&mut doc.display_names);
         let (flattened, module_count) =

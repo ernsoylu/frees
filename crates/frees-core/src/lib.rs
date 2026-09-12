@@ -57,9 +57,9 @@ pub use engine::{
     check, check_legacy, check_with, check_with_tables, check_with_tables_complex, solve,
     solve_all, solve_all_with, solve_all_with_tables, solve_legacy,
     solve_legacy_with_parametric_tables, solve_legacy_with_tables, solve_with,
-    solve_with_parametric, solve_with_parametric_tables, solve_with_tables,
-    CheckReport, EquationResidual, PartialDiagnostics, PreparedDocument, Solution, SolveFailure,
-    SolveStats, SyntaxErrorInfo, VariableOverride,
+    solve_with_parametric, solve_with_parametric_tables, solve_with_tables, CheckReport,
+    EquationResidual, PartialDiagnostics, PreparedDocument, Solution, SolveFailure, SolveStats,
+    SyntaxErrorInfo, VariableOverride,
 };
 pub use parser::{
     migrate_legacy_source, parse_document, parse_legacy_document, Document, GuessDirective,

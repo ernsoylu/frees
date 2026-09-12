@@ -150,11 +150,12 @@ pub fn call_function(
     }
     match locals.get(output) {
         Some(value) => Ok(*value),
-        None => solve_relational_output(&def.body, output, &mut locals, defs)
-            .ok_or_else(|| FreesError::evaluation(format!(
+        None => solve_relational_output(&def.body, output, &mut locals, defs).ok_or_else(|| {
+            FreesError::evaluation(format!(
                 "FUNCTION {} never assigned a return value ('{} := ...' missing)",
                 def.name, output
-            ))),
+            ))
+        }),
     }
 }
 

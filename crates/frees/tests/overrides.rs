@@ -203,7 +203,10 @@ fn overriding_a_function_body_name_does_not_break_the_function() {
     assert_eq!(value_of(&clean, "q"), 10.0, "{clean}");
 
     let v = solve_with(source, &["b = 7"]);
-    assert_eq!(v["success"], true, "the function local stayed isolated: {v}");
+    assert_eq!(
+        v["success"], true,
+        "the function local stayed isolated: {v}"
+    );
     assert_eq!(value_of(&v, "q"), 10.0, "{v}");
 }
 
