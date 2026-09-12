@@ -103,6 +103,9 @@ connect(R2.b, V1.n, G1.port)
       await page.keyboard.press('Escape')
       await expect(shortcutsDialog).toBeHidden({ timeout: 5000 })
     }
+    // A solve can leave a transient results portal above the editor even when
+    // the shortcuts dialog did not open; always return focus to the document.
+    await page.keyboard.press('Escape')
 
     // Verify editor is visible and retains focus/interaction
     const editor = page.locator('.cm-content')
