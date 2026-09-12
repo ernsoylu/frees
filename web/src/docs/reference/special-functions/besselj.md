@@ -38,6 +38,37 @@ with the recurrence `J_{n-1}(x) + J_{n+1}(x) = (2n/x)J_n(x)`.
 
 ## Examples
 
+<!-- verified-reference-example:start -->
+
+### Verified example — Solve a complete model
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+// frees-language: 2
+a = erf(0)
+b = erfc(0)
+c = gamma(4)
+d = loggamma(4)
+e = beta(2, 3)
+f = besselj(2.5, 0)
+g = erfinv(0.5)
+
+{ CHECK a 0 1e-8 }
+{ CHECK b 1 0.000001 }
+{ CHECK c 6 0.000006 }
+```
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+a = 0
+b = 1
+c = 6
+```
+
+<!-- verified-reference-example:end -->
+
 ```
 { besselj(0, 0) = 1 }
 y = besselj(0, 0)

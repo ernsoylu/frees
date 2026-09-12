@@ -32,6 +32,26 @@ $$ y = \begin{cases} lt & a < b \\ eq & a = b \\ gt & a > b \end{cases} $$
 
 ## Examples
 
+<!-- verified-reference-example:start -->
+
+### Verified example — Evaluate a scalar engineering calculation
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+result = if(290, 300, 1, 0, -1)
+
+{ CHECK result 1 0.000001 }
+```
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+result = 1
+```
+
+<!-- verified-reference-example:end -->
+
 ### Example 1 — Phase switch in a rocket trajectory
 
 [Run: sounding-rocket-trajectory]

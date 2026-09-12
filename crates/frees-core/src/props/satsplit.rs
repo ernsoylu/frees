@@ -183,7 +183,7 @@ pub const GENERATED_LIQUID_NORMALIZED: u8 = 0x02;
 /// thinnest sliver, which sits at low pressure, so at high pressure the
 /// rectangle covers a small fraction of the liquid that exists — the reference
 /// does not care because it falls through to a native CoolProp call, and this
-/// port cannot. Decision D1 (`docs/decisions/0001-property-backend.md`) measured
+/// port cannot. Decision D1 (`ARCHITECTURE_AND_REQUIREMENTS.md#11-retained-architectural-decisions`) measured
 /// the consequence: `rankine-cycle`'s 8 MPa pump-exit state is sixteen times
 /// outside the absolute rectangle.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

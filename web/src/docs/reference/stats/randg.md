@@ -26,6 +26,28 @@ Gaussian (normal) random number
 
 $$ X \sim \mathcal{N}(\mu, \sigma^2) $$
 
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Generate a reproducible measurement sample
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+result = randg(20, 0.5, 42)
+
+{ CHECK result 20.57095266 0.000020570952657736525 }
+```
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+result = 20.57095266
+```
+
+<!-- verified-reference-example:end -->
+
 ## Input Arguments
 
 | Argument | Type | Required | Description |

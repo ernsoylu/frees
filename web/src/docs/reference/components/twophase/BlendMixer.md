@@ -35,9 +35,44 @@ BlendMixer inst(domain$)
 
 Instantiating the component expands these acausal equations (over its port members and parameters) into scalar equations solved by the standard Newton/Tarjan pipeline:
 
+$$
+\begin{aligned}
+out.p &= in1.p \\
+out.mdot &= in1.mdot + in2.mdot \\
+out.mdot\cdot out.h &= in1.mdot\cdot in1.h + in2.mdot\cdot in2.h \\
+out.mdot\cdot out.z &= in1.mdot\cdot in1.z + in2.mdot\cdot in2.z
+\end{aligned}
+$$
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Solve a complete model
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+// frees-language: 2
+BlendSource S1(fluid$=R134a, mdot=0.01, P=400000, x=0.3, z=0.2)
+BlendSource S2(fluid$=R134a, mdot=0.03, P=400000, x=0.3, z=0.6)
+BlendMixer  MIX()
+BlendSink   SNK()
+connect(S1.out, MIX.in1)
+connect(S2.out, MIX.in2)
+connect(MIX.out, SNK.in)
+
+{ CHECK mix.in1.h 269593.5997 0.2695935997420933 }
+{ CHECK mix.in1.mdot 0.01 1e-8 }
+{ CHECK mix.in1.p 400000 0.39999999999999997 }
 ```
-out.P    = in1.P
-out.mdot = in1.mdot + in2.mdot
-out.mdot * out.h = in1.mdot * in1.h + in2.mdot * in2.h
-out.mdot * out.z = in1.mdot * in1.z + in2.mdot * in2.z
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+mix.in1.h = 269593.5997
+mix.in1.mdot = 0.01
+mix.in1.p = 400000
 ```
+
+<!-- verified-reference-example:end -->

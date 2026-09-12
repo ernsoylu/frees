@@ -38,8 +38,45 @@ ZoneCO2 inst(Vz, c_amb, gen_occ, c0)
 
 The acausal equations this component expands into (over its port members and parameters):
 
+$$
+\begin{aligned}
+\text{der}\left(c\right) &= \frac{vent.sig\cdot \left(c_{amb} - c\right) + occ.sig\cdot gen_{occ}}{vz} \\
+\text{init}\left(c\right) &= c0 \\
+out.sig &= c
+\end{aligned}
+$$
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Solve a complete model
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+// frees-language: 2
+// ZoneCO2 steady: der(c) -> 0 gives c = c_amb + occ*gen_occ/vent
+// = 400 + 2*5/0.025 = 800 ppm (two occupants, 25 L/s of outdoor air).
+// EXPECT c_z = 800 tol 1e-6
+SigConstant VENT(k = 0.025)
+SigConstant OCC(k = 2)
+ZoneCO2     Z(Vz = 75, c_amb = 400, gen_occ = 5, c0 = 400)
+connect(VENT.out, Z.vent)
+connect(OCC.out, Z.occ)
+c_z = Z.out.sig
+
+{ CHECK c_z 800 0.0007999999999999999 }
+{ CHECK occ.out.sig 2 0.000002 }
+{ CHECK vent.out.sig 0.025 2.5e-8 }
 ```
-der(c)  = (vent.sig * (c_amb - c) + occ.sig * gen_occ) / Vz
-init(c) = c0
-out.sig = c
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+c_z = 800
+occ.out.sig = 2
+vent.out.sig = 0.025
 ```
+
+<!-- verified-reference-example:end -->

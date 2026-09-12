@@ -47,3 +47,52 @@ a reheat stage keeps the exit quality acceptable.
 
 A connected plant chains `Pump` → `Boiler` → `Turbine`
 → `Condenser` on a single `fluid$` stream.
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Rankine Cycle
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+// Rankine Cycle (Steam)
+{ Ideal steam Rankine cycle using real-water properties. }
+P_boiler = 8000 [kPa]
+P_cond = 10 [kPa]
+
+{ State 1: saturated liquid leaving the condenser }
+h1 = Enthalpy(Water, P=P_cond, x=0)
+v1 = Volume(Water, P=P_cond, x=0)
+
+{ Pump (state 1 -> 2) }
+w_pump = v1 * (P_boiler - P_cond)
+h2 = h1 + w_pump
+
+{ State 3: boiler exit (superheated) }
+h3 = Enthalpy(Water, P=P_boiler, T=480 [C])
+s3 = Entropy(Water, P=P_boiler, T=480 [C])
+
+{ State 4: turbine exit (isentropic, s4 = s3) }
+h4 = Enthalpy(Water, P=P_cond, s=s3)
+
+{ Performance }
+q_in = h3 - h2
+w_turb = h3 - h4
+eta_th = (w_turb - w_pump) / q_in
+
+{ CHECK eta_th 0.3911971621 3.911971620899029e-7 }
+{ CHECK h1 191805.9446 0.1918059445588841 }
+{ CHECK h2 199878.011 0.19987801103599243 }
+```
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+eta_th = 0.3911971621
+h1 = 191805.9446 [J/kg]
+h2 = 199878.011 [J/kg]
+```
+
+<!-- verified-reference-example:end -->

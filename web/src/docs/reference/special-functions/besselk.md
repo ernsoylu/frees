@@ -39,6 +39,26 @@ $$ x^2 y'' + x y' - (x^2 + n^2)y = 0, \qquad K_n(x) = \frac{\pi}{2}\frac{I_{-n}(
 
 ## Examples
 
+<!-- verified-reference-example:start -->
+
+### Verified example — Evaluate a first-order radial mode
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+result = besselk(1, 2)
+
+{ CHECK result 1.624838884 0.0000016248388844172295 }
+```
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+result = 1.624838884
+```
+
+<!-- verified-reference-example:end -->
+
 ```
 { K_0(x) -> inf as x -> 0; decays for large x }
 y = besselk(0, 1)

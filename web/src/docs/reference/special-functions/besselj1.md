@@ -25,6 +25,26 @@ $$ J_1(x) = \sum_{k=0}^{\infty}\frac{(-1)^k}{k!\,(k+1)!}\left(\frac{x}{2}\right)
 
 ## Examples
 
+<!-- verified-reference-example:start -->
+
+### Verified example — Evaluate a radial-mode special function
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+result = besselj1(1)
+
+{ CHECK result 0.4400505857 4.400505856771301e-7 }
+```
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+result = 0.4400505857
+```
+
+<!-- verified-reference-example:end -->
+
 ```
 { besselj1(0) = 0 }
 y = besselj1(0)

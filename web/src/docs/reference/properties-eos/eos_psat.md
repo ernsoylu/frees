@@ -42,6 +42,35 @@ pressure is iterated until $\varphi^L = \varphi^V$.
 
 ## Examples
 
+<!-- verified-reference-example:start -->
+
+### Verified example — Solve a complete model
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+// frees-language: 2
+T = 320
+P = 4e6
+Z = eos_z('co2', 'PR', T, P, 'vapor')
+rho = eos_density('co2', 'PR', T, P, 'vapor')
+Psat = eos_psat('propane', 'PR', 300)
+
+{ CHECK P 4000000 4 }
+{ CHECK Psat 997556.2469 0.9975562469315402 }
+{ CHECK rho 81.80716323 0.00008180716323211284 }
+```
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+P = 4000000
+Psat = 997556.2469 [Pa]
+rho = 81.80716323 [kg/m^3]
+```
+
+<!-- verified-reference-example:end -->
+
 ### Example 1 — CO₂ vapor pressure at 300 K
 
 [Run: cubic-eos-properties]

@@ -87,7 +87,7 @@ Dedicated routines for linear systems, decompositions, and structural analysis.
 - **`Eigenvalues(A)`** — eigenvalues of a square matrix.
 - **`Eigen(A)`** — eigenvalues and eigenvectors.
 - **`LUDecompose(A)`** — LU decomposition.
-- **`EulerRotate(phi, theta, psi : R)`** — $3 \times 3$ rotation matrix from Euler angles (rad, ZYX), inside a `CALL`.
+- **`[R] = EulerRotate(phi, theta, psi)`** — $3 \times 3$ rotation matrix from Euler angles (rad, ZYX).
 
 > **Control systems:** state-space models build directly on these matrix variables. LTI conversions (`tf2ss`, `ss2tf`), interconnection (`series`, `parallel`, `feedback`), analysis (`pole`, `zero`, `bode`, `nyquist`, `margin`, `step`, `impulse`, `lsim`), and controller design (`lqr`, `place`, `pidtune`) are documented under *Control Systems & Symbolic CAS*.
 

@@ -36,19 +36,54 @@ HeatPipeWrapAround inst(eff, domain$)
 
 The acausal equations this component expands into (over its port members and parameters):
 
-```
-pre_out.mdot = pre_in.mdot
-re_out.mdot  = re_in.mdot
-pre_out.P    = pre_in.P
-re_out.P     = re_in.P
-pre_out.W    = pre_in.W
-re_out.W     = re_in.W
-T_p_in    = Temperature(AirH2O, h=pre_in.h, P=pre_in.P, W=pre_in.W)
-T_r_in    = Temperature(AirH2O, h=re_in.h, P=re_in.P, W=re_in.W)
-T_p_out   = T_p_in - eff * (T_p_in - T_r_in)
-pre_out.h = Enthalpy(AirH2O, T=T_p_out, P=pre_in.P, W=pre_out.W)
-Q         = pre_in.mdot * (pre_in.h - pre_out.h)
-re_out.h  = re_in.h + Q / re_in.mdot
-T_r_out   = Temperature(AirH2O, h=re_out.h, P=re_in.P, W=re_out.W)
+$$
+\begin{aligned}
+pre_{out.mdot} &= pre_{in.mdot} \\
+re_{out.mdot} &= re_{in.mdot} \\
+pre_{out.p} &= pre_{in.p} \\
+re_{out.p} &= re_{in.p} \\
+pre_{out.w} &= pre_{in.w} \\
+re_{out.w} &= re_{in.w} \\
+t_{p_in} &= \text{Temperature}\left(\mathrm{airh2o}, h=pre_{in.h}, p=pre_{in.p}, w=pre_{in.w}\right) \\
+t_{r_in} &= \text{Temperature}\left(\mathrm{airh2o}, h=re_{in.h}, p=re_{in.p}, w=re_{in.w}\right) \\
+t_{p_out} &= t_{p_in} - eff\cdot \left(t_{p_in} - t_{r_in}\right) \\
+pre_{out.h} &= \text{Enthalpy}\left(\mathrm{airh2o}, t=t_{p_out}, p=pre_{in.p}, w=pre_{out.w}\right) \\
+q &= pre_{in.mdot}\cdot \left(pre_{in.h} - pre_{out.h}\right) \\
+re_{out.h} &= re_{in.h} + \frac{q}{re_{in.mdot}} \\
+t_{r_out} &= \text{Temperature}\left(\mathrm{airh2o}, h=re_{out.h}, p=re_{in.p}, w=re_{out.w}\right)
+\end{aligned}
+$$
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Rate an HVAC component at specified inlet conditions
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+HeatPipeWrapAround C(eff=0.5)
+C.pre_in.mdot = 1 [kg/s]
+C.pre_in.P = 101325 [Pa]
+C.pre_in.W = 0.012
+C.pre_in.h = Enthalpy(AirH2O, T=303.15, P=101325, W=0.012)
+C.re_in.mdot = 1 [kg/s]
+C.re_in.P = 101325 [Pa]
+C.re_in.W = 0.008
+C.re_in.h = Enthalpy(AirH2O, T=293.15, P=101325, W=0.008)
+
+{ CHECK c.pre_in.h 60848.84667 0.06084884666848224 }
+{ CHECK c.pre_out.h 55703.69817 0.0557036981702449 }
+{ CHECK c.pre_out.mdot 1 0.000001 }
 ```
 
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+c.pre_in.h = 60848.84667
+c.pre_out.h = 55703.69817
+c.pre_out.mdot = 1
+```
+
+<!-- verified-reference-example:end -->

@@ -38,6 +38,26 @@ $$ x^2 y'' + x y' + (x^2 - n^2)y = 0, \qquad Y_n(x) = \frac{J_n(x)\cos(n\pi) - J
 
 ## Examples
 
+<!-- verified-reference-example:start -->
+
+### Verified example — Evaluate a first-order radial mode
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+result = bessely(1, 2)
+
+{ CHECK result -1.650682613 0.0000016506826133039475 }
+```
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+result = -1.650682613
+```
+
+<!-- verified-reference-example:end -->
+
 ```
 { Y_0(x) -> -inf as x -> 0; finite for x > 0 }
 y = bessely(0, 1)

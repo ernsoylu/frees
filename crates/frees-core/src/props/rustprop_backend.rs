@@ -1,5 +1,5 @@
 //! [`RustpropBackend`] — the accuracy path of decision D8
-//! (`docs/decisions/0008-coolprop-wasm.md`), served by **rustprop**, the
+//! (`ARCHITECTURE_AND_REQUIREMENTS.md#11-retained-architectural-decisions`), served by **rustprop**, the
 //! pure-Rust CoolProp 8 port, as a direct cargo dependency rather than an
 //! emscripten `coolprop.wasm` blob.
 //!
@@ -184,7 +184,7 @@ impl RealFluid for RustpropBackend {
     /// (measured at 1 bar: `q` from ~1e-4 to ~0.01 raises "unable to bracket
     /// the (p,X) solution … the derivative path is not ported"). That is a
     /// rustprop gap, recorded in the second Wave-3 amendment to
-    /// `docs/decisions/0009-rustprop-backend.md`. It does not make `Air`
+    /// `ARCHITECTURE_AND_REQUIREMENTS.md#11-retained-architectural-decisions`. It does not make `Air`
     /// unserved — a fluid whose every state failed would not belong here, and
     /// this is a sliver at 79 K.
     ///

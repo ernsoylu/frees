@@ -29,6 +29,40 @@ SigTime inst(param = value, ...)
 
 The acausal equations this component expands into (over its port members and parameters):
 
+$$
+\begin{aligned}
+out.sig &= time
+\end{aligned}
+$$
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Solve a complete model
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+// frees-language: 2
+// SigTime: the clock source read at a pinned steady instant (time is an
+// ordinary global in a steady solve).
+// EXPECT y = 2.5 tol 1e-12
+SigTime CLK()
+time = 2.5
+y = CLK.out.sig
+
+{ CHECK clk.out.sig 2.5 0.0000024999999999999998 }
+{ CHECK y 2.5 0.0000024999999999999998 }
+{ CHECK time 2.5 0.0000024999999999999998 }
 ```
-out.sig = time
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+clk.out.sig = 2.5
+y = 2.5
+time = 2.5
 ```
+
+<!-- verified-reference-example:end -->

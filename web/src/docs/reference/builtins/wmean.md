@@ -25,3 +25,24 @@ See the backend signature for accepted arguments and returned values.
 
 Check argument count, dimensions, and units before solving.
 
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Average weighted temperature readings
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+result = wmean([1, 2, 1], [18, 20, 22])
+
+{ CHECK result 20 0.000019999999999999998 }
+```
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+result = 20
+```
+
+<!-- verified-reference-example:end -->

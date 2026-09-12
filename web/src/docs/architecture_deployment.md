@@ -8,7 +8,7 @@ frees runs **entirely in your browser tab** via WebAssembly, with a background W
 1. **Editor → Web Worker.** Pressing Solve (F2) packages your document text, stop criteria, and variable info into a message dispatched to a dedicated background Web Worker (`worker.ts`).
 2. **Validate & Prepare.** The Web Worker parses the document using the Rust-based parser. If syntax errors or structural mismatches exist, a diagnostic envelope returns immediately without blocking.
 3. **Compute.** The Web Worker executes the full engine pipeline in WebAssembly:
-   - Expand component networks, matrix literals, and CALL procedures.
+   - Expand component networks, matrix literals, and multi-output functions.
    - Run dimensional unit consistency analysis.
    - Perform Dulmage–Mendelsohn / Tarjan decomposition into lower triangular blocks.
    - Solve each block using Newton–Raphson, with interval scanning and multi-start root-finding when "Find all solutions" is enabled.

@@ -66,7 +66,7 @@ function markdownFiles(dir) {
   return out
 }
 
-const ANALYSIS = new Set(['monte_carlo', 'parameter_fit', 'sensitivity'])
+const ANALYSIS = new Set(['monte_carlo', 'parameter_fit', 'sensitivity', 'solve_table', 'repl_evaluate'])
 
 const CHECK_MARKER = /\{\s*CHECK\s+(\S+)\s+(\S+)\s+(\S+)\s*\}/g
 
@@ -102,6 +102,7 @@ function fences(file) {
 
 const cases = []
 for (const file of markdownFiles(DOCS)) {
+  const before = cases.length
   const rel = path.relative(path.join(HERE, '..'), file)
   for (const f of fences(file)) {
     const checks = [...f.code.matchAll(CHECK_MARKER)].map((m) => ({
@@ -124,16 +125,23 @@ for (const file of markdownFiles(DOCS)) {
     }
     // A ```frees fence with no assertions is an illustrative excerpt, not a
     // complete document — grading it would fail on deliberate fragments.
-    if (f.lang === 'frees' && !checks.length) continue
+    const expectedError = f.opts.startsWith('error=') ? JSON.parse(f.opts.slice(6)) : null
+    const request = f.opts.startsWith('request=') ? JSON.parse(f.opts.slice(8)) : {}
+    if (f.lang === 'frees' && !checks.length && !expectedError) continue
     cases.push({
       kind: 'document',
       label,
       code: f.code,
       checks,
+      expectedError,
+      request,
       // `vary=` marks the swept column of a parametric study: the document is
       // underspecified on purpose and is solved from the Tables tab.
       parametric: /\bvary=/.test(f.opts),
     })
+  }
+  if (file.startsWith(path.join(DOCS, 'reference') + path.sep) && /^name:/m.test(fs.readFileSync(file, 'utf8')) && cases.length === before) {
+    throw new Error(`${rel}: every reference page must include an executable, asserted example`)
   }
 }
 
@@ -143,14 +151,21 @@ const failures = []
 let assertions = 0
 
 function near(actual, expected, tolerance, what) {
-  assertions++
   if (!Number.isFinite(actual) || Math.abs(actual - expected) > tolerance) {
     throw new Error(`${what}: got ${actual}, expected ${expected} ± ${tolerance}`)
   }
+  assertions++
 }
 
 function runDocument(c) {
-  const chk = JSON.parse(engine.check(c.code, '{}'))
+  const payload = JSON.stringify(c.request)
+  if (c.expectedError) {
+    const result = JSON.parse(engine.solve(c.code, payload))
+    if (result.success || !result.error?.includes(c.expectedError)) throw new Error(`Expected diagnostic: ${c.expectedError}; got ${result.error}`)
+    assertions++
+    return 'expected runtime diagnostic'
+  }
+  const chk = JSON.parse(engine.check(c.code, payload))
   if (chk.errors?.length) throw new Error(`check: ${chk.errors.join('; ')}`)
   if (c.parametric) {
     // Structure only. `solvable` is false by design here — the swept column is
@@ -161,7 +176,7 @@ function runDocument(c) {
   }
   if (!chk.solvable) throw new Error(`check: not solvable — ${chk.message}`)
 
-  const sol = JSON.parse(engine.solve(c.code, '{}'))
+  const sol = JSON.parse(engine.solve(c.code, payload))
   if (!sol.success) throw new Error(`solve: ${sol.error || 'did not succeed'}`)
 
   // Solver variables are case-insensitive by name; display casing is preserved,
@@ -177,6 +192,14 @@ function runDocument(c) {
 }
 
 function runAnalysis(c) {
+  if (c.operation === 'repl_evaluate') {
+    const setup = JSON.parse(engine.solve(c.text, '{}'))
+    if (!setup.success) throw new Error(setup.error)
+    const result = JSON.parse(engine.repl_evaluate(JSON.stringify({ expression: c.expression })))
+    if (!result.success || result.text !== c.expectedText) throw new Error(`REPL: ${result.error || result.text}; expected ${c.expectedText}`)
+    assertions++
+    return 'REPL, exact output verified'
+  }
   const payload = JSON.stringify(c.request)
   const raw = c.operation === 'parameter_fit'
     ? engine.parameter_fit(payload)
@@ -184,6 +207,7 @@ function runAnalysis(c) {
   const result = JSON.parse(raw)
   if (result.error) throw new Error(`${c.operation}: ${result.error}`)
   if (result.success === false) throw new Error(`${c.operation}: did not succeed`)
+  if (c.operation === 'solve_table' && (!result.stats?.converged || !result.results?.every(row => row.success))) throw new Error('Table did not converge')
   // A truncated or incomplete design still returns numbers; asserting on them
   // would grade a partial run as a passing one.
   if (result.truncated === true) throw new Error(`${c.operation}: result truncated`)
@@ -214,6 +238,6 @@ for (const c of cases) {
 
 console.log(
   `\ndoc-examples: ${cases.length - failures.length}/${cases.length} blocks executed through the ` +
-    `compiled module; ${assertions} numerical assertion(s) passed.`,
+    `compiled module; ${assertions} assertion(s) passed.`,
 )
 if (failures.length) process.exit(1)

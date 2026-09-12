@@ -25,6 +25,26 @@ $$ J_0(x) = \sum_{k=0}^{\infty}\frac{(-1)^k}{(k!)^2}\left(\frac{x}{2}\right)^{2k
 
 ## Examples
 
+<!-- verified-reference-example:start -->
+
+### Verified example — Evaluate a radial-mode special function
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+result = besselj0(1)
+
+{ CHECK result 0.7651976838 7.651976837548592e-7 }
+```
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+result = 0.7651976838
+```
+
+<!-- verified-reference-example:end -->
+
 ```
 { besselj0(0) = 1 }
 y = besselj0(0)

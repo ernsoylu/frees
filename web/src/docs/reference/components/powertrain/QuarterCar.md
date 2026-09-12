@@ -49,3 +49,42 @@ connect(MS.port, KS.a, CS.a)
 connect(KS.b, CS.b, MU.port, KT.a)
 connect(KT.b, road)
 ```
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Solve a complete model
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+// frees-language: 2
+// Quarter-car suspension (hierarchical: 2 masses, 2 springs, 1 damper) shaken
+// by a 1 Hz sinusoidal road velocity of 0.1 m/s amplitude for 2 s — the
+// sprung mass responds through the ks/cs corner while the tire spring kt
+// carries the road input.
+function [port] = RoadShaker(amp, w)
+port(port)
+  port.vel = amp * sin(w * time)
+end
+RoadShaker ROAD(amp=0.1, w=6.2832)
+QuarterCar QC(ms=300, mu=40, ks=20000, cs=1500, kt=180000)
+connect(ROAD.port, QC.road)
+DYNAMIC shake(method = ode23s, time = 0 .. 2, points = 21)
+END
+v_sprung = FinalValue('qc.ms.port.vel')
+x_susp   = FinalValue('qc.ks.x')
+
+{ CHECK v_sprung -0.09300435353 9.300435352730223e-8 }
+{ CHECK x_susp -0.01049521754 1.0495217540763767e-8 }
+```
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+v_sprung = -0.09300435353
+x_susp = -0.01049521754
+```
+
+<!-- verified-reference-example:end -->

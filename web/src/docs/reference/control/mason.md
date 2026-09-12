@@ -35,6 +35,35 @@ loop gains `L_i`, and `Δ_k` is `Δ` with the paths touching `P_k` removed.
 
 ## Examples
 
+<!-- verified-reference-example:start -->
+
+### Verified example — Solve a complete model
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+// frees-language: 2
+{ Mason's gain formula over a 3-node signal-flow graph. }
+G[1,1] = 0; G[1,2] = 2; G[1,3] = 0
+G[2,1] = 0; G[2,2] = 0; G[2,3] = 3
+G[3,1] = 0; G[3,2] = 0; G[3,3] = 0
+[T] = mason(G, 1, 3)
+
+{ CHECK t 6 0.000006 }
+{ CHECK G[1,1] 0 1e-8 }
+{ CHECK G[1,2] 2 0.000002 }
+```
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+t = 6
+G[1,1] = 0
+G[1,2] = 2
+```
+
+<!-- verified-reference-example:end -->
+
 ```
 { T = mason(G, source, sink) for a signal-flow graph G }
 ```

@@ -11,10 +11,9 @@
 //!   and need nothing at runtime.
 //! * **Real-fluid properties** — everything the Java reaches through CoolProp's
 //!   four-function façade (`PropsSI`, `Props1SI`, `HAPropsSI`,
-//!   `get_global_param_string`). CoolProp is C++ and cannot be ported, so the
-//!   browser build resolves these from **precomputed tables** generated offline
-//!   by the native library (decision D1, `docs/decisions/`), with the tabulated
-//!   error bounded and documented rather than hidden.
+//!   `get_global_param_string`). The default on native and WASM is **rustprop**,
+//!   the pure-Rust CoolProp implementation. Runtime tables are optional overlays,
+//!   not linked data; see ARCHITECTURE_AND_REQUIREMENTS.md, retained decisions.
 
 pub mod atmosphere;
 pub mod auxtable;

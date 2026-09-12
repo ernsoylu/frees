@@ -35,6 +35,41 @@ TwoPhaseCap inst(domain$)
 
 Instantiating the component expands these acausal equations (over its port members and parameters) into scalar equations solved by the standard Newton/Tarjan pipeline:
 
+$$
+\begin{aligned}
+in.mdot &= 0
+\end{aligned}
+$$
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Solve a complete model
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+// frees-language: 2
+// TwoPhaseCap: dead-end cap on a pressure reservoir — zero through-flow.
+TwoPhasePressureSource PS(fluid$ = R134a, P = 500000, x = 0.2)
+TwoPhaseCap            CAP()
+connect(PS.out, CAP.in)
+m_dead = CAP.in.mdot
+p_dead = CAP.in.P
+h_dead = CAP.in.h
+
+{ CHECK cap.in.h 258695.6082 0.2586956081583675 }
+{ CHECK cap.in.mdot 0 1e-8 }
+{ CHECK cap.in.p 500000 0.5 }
 ```
-in.mdot = 0
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+cap.in.h = 258695.6082
+cap.in.mdot = 0
+cap.in.p = 500000
 ```
+
+<!-- verified-reference-example:end -->

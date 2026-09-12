@@ -36,14 +36,43 @@ Pump inst(eta, fluid$)
 
 Instantiating the component expands these acausal equations (over its port members and parameters) into scalar equations solved by the standard Newton/Tarjan pipeline:
 
-```
-v        = Volume(fluid$, P=in.P, h=in.h)
-out.mdot = in.mdot
-out.h    = in.h + v * (out.P - in.P) / eta
-W        = in.mdot * (out.h - in.h)
-```
+$$
+\begin{aligned}
+v &= \text{Volume}\left(\mathrm{fluid}, =in.p, p=in.h\right) \\
+out.mdot &= in.mdot \\
+out.h &= in.h + \frac{v\cdot \left(out.p - in.p\right)}{eta} \\
+w &= in.mdot\cdot \left(out.h - in.h\right)
+\end{aligned}
+$$
 
 ## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Solve a complete model
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+// frees-language: 2
+function [in, out] = pump()
+port(in)
+port(out)
+  out.P = in.P * 2
+end
+
+P_in = 1 [bar]
+
+{ CHECK P_in 100000 0.09999999999999999 }
+```
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+P_in = 100000 [Pa]
+```
+
+<!-- verified-reference-example:end -->
 
 Instantiated in the verified example below:
 

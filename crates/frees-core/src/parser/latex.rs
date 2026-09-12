@@ -119,8 +119,30 @@ pub(crate) fn expr_to_latex_named(e: &Expr, display_names: &HashMap<String, Stri
         }
 
         Expr::BinOp { op, left, right } => {
-            let l = expr_to_latex_named(left, display_names);
-            let r = expr_to_latex_named(right, display_names);
+            let mut l = expr_to_latex_named(left, display_names);
+            let mut r = expr_to_latex_named(right, display_names);
+            let additive = |expr: &Expr| {
+                matches!(
+                    expr,
+                    Expr::BinOp {
+                        op: BinOp::Add | BinOp::Sub,
+                        ..
+                    }
+                )
+            };
+            if matches!(
+                op,
+                BinOp::Mul | BinOp::ElemMul | BinOp::LeftDiv | BinOp::ElemLeftDiv | BinOp::ElemDiv
+            ) {
+                if additive(left) {
+                    l = format!("\\left({l}{RIGHT_PAREN}");
+                }
+                if additive(right) {
+                    r = format!("\\left({r}{RIGHT_PAREN}");
+                }
+            } else if matches!(op, BinOp::Sub) && additive(right) {
+                r = format!("\\left({r}{RIGHT_PAREN}");
+            }
             match op {
                 BinOp::Add => format!("{l} + {r}"),
                 BinOp::Sub => format!("{l} - {r}"),
@@ -786,6 +808,18 @@ mod tests {
         assert_eq!(case(BinOp::ElemDiv), "x\\oslash y");
         assert_eq!(case(BinOp::ElemLeftDiv), "x\\setminus y");
         assert_eq!(case(BinOp::ElemPow), "x\\uparrow y");
+    }
+
+    #[test]
+    fn preserves_grouping_in_formulas() {
+        for (source, expected) in [
+            ("a * (b - c)", "a\\cdot \\left(b - c\\right)"),
+            ("a - (b + c)", "a - \\left(b + c\\right)"),
+            ("(a + b) * c", "\\left(a + b\\right)\\cdot c"),
+        ] {
+            let expr = crate::cas::engine::parse_expression(source).unwrap();
+            assert_eq!(expr_to_latex(&expr), expected);
+        }
     }
 
     // Java: testToLatexCalls

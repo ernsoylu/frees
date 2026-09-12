@@ -37,9 +37,47 @@ Supercapacitor inst(C, R_esr, V0)
 
 The acausal equations this component expands into (over its port members and parameters):
 
+$$
+\begin{aligned}
+\text{der}\left(vc\right) &= \frac{p.i}{c} \\
+\text{init}\left(vc\right) &= v0 \\
+p.v - n.v &= vc + r_{esr}\cdot p.i \\
+p.i + n.i &= 0
+\end{aligned}
+$$
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Solve a complete model
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+// frees-language: 2
+// Supercapacitor steady across an ideal 2.5 V source: der(Vc) -> 0 forces
+// p.I = 0, so the ESR drops nothing and Vc sits at the source voltage.
+// EXPECT vc = 2.5 tol 1e-9
+Supercapacitor SC(C = 100, R_esr = 0.01, V0 = 0)
+VoltageSource  SRC(E = 2.5)
+Ground         G()
+connect(SRC.p, SC.p)
+connect(SC.n, SRC.n, G.port)
+vc = SC.Vc
+i = SC.p.I
+
+{ CHECK g.port.i 0 1e-8 }
+{ CHECK g.port.v 0 1e-8 }
+{ CHECK i 0 1e-8 }
 ```
-der(Vc)   = p.I / C
-init(Vc)  = V0
-p.V - n.V = Vc + R_esr * p.I
-p.I + n.I = 0
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+g.port.i = 0
+g.port.v = 0
+i = 0 [A]
 ```
+
+<!-- verified-reference-example:end -->

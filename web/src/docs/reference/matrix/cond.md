@@ -36,6 +36,36 @@ where the `σ` are the singular values of `A`.
 
 ## Examples
 
+<!-- verified-reference-example:start -->
+
+### Verified example — Solve a complete model
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+// frees-language: 2
+TwoPhaseEnthalpySource SRC(mdot=0.02, h=435000)
+TwoPhaseCondenserUA COND(fluid$=R134a, UA=400, T_amb=305, V=0.002)
+TwoPhaseSink SNK()
+connect(SRC.out, COND.in)
+connect(COND.out, SNK.in)
+COND.m = 1.200000
+
+{ CHECK cond.in.h 435000 0.435 }
+{ CHECK cond.in.mdot 0.02 2e-8 }
+{ CHECK cond.in.p 1040885.197 1.0408851966633037 }
+```
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+cond.in.h = 435000
+cond.in.mdot = 0.02
+cond.in.p = 1040885.197
+```
+
+<!-- verified-reference-example:end -->
+
 ### Example 1 — Conditioning check in a coupled solve
 
 [Run: ev-thermal-management]

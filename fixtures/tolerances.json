@@ -4,7 +4,7 @@
     "here is compared at the default 1e-9 relative / 1e-12 absolute.",
     "",
     "This file exists for exactly one reason, and it is not convenience.",
-    "docs/decisions/0001-property-backend.md chose precomputed (P,h) tables as",
+    "ARCHITECTURE_AND_REQUIREMENTS.md#11-retained-architectural-decisions chose precomputed (P,h) tables as",
     "this build's real-fluid property source, and measured their error against",
     "native CoolProp at 1e-7..1e-4 relative. No table-backed engine can pass a",
     "1e-9 gate on a document that calls a real-fluid property function -- the",

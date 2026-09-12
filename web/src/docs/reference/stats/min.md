@@ -30,6 +30,31 @@ $$ y = \min(a_1, a_2, \dots, a_n) $$
 
 ## Examples
 
+<!-- verified-reference-example:start -->
+
+### Verified example — Solve a complete model
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+// frees-language: 2
+{ min/max with several arguments. }
+a = max(1, 7, 3)
+b = min(4, 2, 9)
+
+{ CHECK a 7 0.000007 }
+{ CHECK b 2 0.000002 }
+```
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+a = 7
+b = 2
+```
+
+<!-- verified-reference-example:end -->
+
 ### Example 1 — Minimum capacity rate of a heat exchanger
 
 [Run: hx-effectiveness-ntu]

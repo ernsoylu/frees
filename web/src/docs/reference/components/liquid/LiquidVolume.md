@@ -37,8 +37,45 @@ LiquidVolume inst(C, P0, domain$)
 
 Instantiating the component expands these acausal equations (over its port members and parameters) into scalar equations solved by the standard Newton/Tarjan pipeline:
 
+$$
+\begin{aligned}
+out.h &= in.h \\
+\text{der}\left(in.p\right) &= \frac{in.mdot - out.mdot}{c} \\
+\text{init}\left(in.p\right) &= p0
+\end{aligned}
+$$
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Solve a complete model
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+// frees-language: 2
+// LiquidVolume with no DYNAMIC block: der(in.P) takes the steady branch,
+// recovering in.mdot = out.mdot through the compliance node.
+LiquidSource LS(l1, fluid$ = Water, mdot = 0.5, P = 250000, T = 300)
+LiquidVolume LV(l1, l2, C = 1e-8, P0 = 250000)
+LiquidSink   SK(l2)
+
+l2.P  = 250000
+m_out = SK.mdot
+h_out = SK.h
+
+{ CHECK h_out 112791.7811 0.11279178109461951 }
+{ CHECK l1.h 112791.7811 0.11279178109461951 }
+{ CHECK l1.mdot 0.5 5e-7 }
 ```
-out.h       = in.h
-der(in.P)   = (in.mdot - out.mdot) / C
-init(in.P)  = P0
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+h_out = 112791.7811 [J/kg]
+l1.h = 112791.7811
+l1.mdot = 0.5
 ```
+
+<!-- verified-reference-example:end -->

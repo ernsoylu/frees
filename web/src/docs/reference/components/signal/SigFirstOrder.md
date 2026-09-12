@@ -36,8 +36,42 @@ SigFirstOrder inst(tau, y0)
 
 The acausal equations this component expands into (over its port members and parameters):
 
+$$
+\begin{aligned}
+\text{der}\left(y\right) &= \frac{in.sig - y}{tau} \\
+\text{init}\left(y\right) &= y0 \\
+out.sig &= y
+\end{aligned}
+$$
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Solve a complete model
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+// frees-language: 2
+// SigFirstOrder steady: der -> 0 pins the lag state onto its input (DC gain 1).
+// EXPECT y = 3 tol 1e-9
+SigConstant   U(k = 3)
+SigFirstOrder F1(tau = 0.5, y0 = 0)
+connect(U.out, F1.in)
+y = F1.out.sig
+
+{ CHECK f1.in.sig 3 0.000003 }
+{ CHECK f1.out.sig 3 0.000003 }
+{ CHECK f1.y 3 0.000003 }
 ```
-der(y)  = (in.sig - y) / tau
-init(y) = y0
-out.sig = y
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+f1.in.sig = 3
+f1.out.sig = 3
+f1.y = 3
 ```
+
+<!-- verified-reference-example:end -->

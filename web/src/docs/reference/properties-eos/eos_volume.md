@@ -36,6 +36,39 @@ requested phase.
 
 ## Examples
 
+<!-- verified-reference-example:start -->
+
+### Verified example — Solve a complete model
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+// frees-language: 2
+// Real-Gas Properties from a Cubic EOS (Peng-Robinson)
+{ A CoolProp-independent SRK/PR backend. CO2 at 6 MPa, 320 K. }
+T = 320 [K]
+P = 6000000 [Pa]
+Z = eos_z('co2', 'PR', T, P, 'vapor')          { compressibility factor }
+rho = eos_density('co2', 'PR', T, P, 'vapor')
+v = eos_volume('co2', 'PR', T, P, 'vapor')
+h = eos_enthalpy('co2', 'PR', T, P, 'vapor')
+Psat_300 = eos_psat('co2', 'PR', 300)          { saturation pressure at 300 K }
+
+{ CHECK h -45003.83282 0.045003832815580305 }
+{ CHECK Psat_300 6726910.383 6.726910382654169 }
+{ CHECK rho 142.7964971 0.00014279649707052498 }
+```
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+h = -45003.83282 [J/kg]
+Psat_300 = 6726910.383 [Pa]
+rho = 142.7964971 [kg/m^3]
+```
+
+<!-- verified-reference-example:end -->
+
 ### Example 1 — CO₂ specific volume
 
 [Run: cubic-eos-properties]

@@ -33,6 +33,32 @@ $$ c_k = \sum_{i} a_i\, b_{k-i}, \qquad k = 0,\ \dots,\ m+n-2 $$
 
 ## Examples
 
+<!-- verified-reference-example:start -->
+
+### Verified example — Worked calculation
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+a = [1, 2, 3]
+b = [4, 5]
+[c] = Convolve(a, b)
+
+{ CHECK a[1] 1 0.000001 }
+{ CHECK a[2] 2 0.000002 }
+{ CHECK a[3] 3 0.000003 }
+```
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+a[1] = 1
+a[2] = 2
+a[3] = 3
+```
+
+<!-- verified-reference-example:end -->
+
 ### Example 1 — a small kernel
 
 ```

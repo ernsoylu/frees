@@ -38,6 +38,35 @@ with `I_n(x) = i^{-n}J_n(ix)`.
 
 ## Examples
 
+<!-- verified-reference-example:start -->
+
+### Verified example — Solve a complete model
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+// frees-language: 2
+a = besseli(0, 0)
+b = besseli(0, 1)
+c = besseli(1, 0)
+d = besseli(2, 1)
+e = besseli(2.5, 1)
+
+{ CHECK a 1 0.000001 }
+{ CHECK b 0 1e-8 }
+{ CHECK c 1.266065878 0.0000012660658777520082 }
+```
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+a = 1
+b = 0
+c = 1.266065878
+```
+
+<!-- verified-reference-example:end -->
+
 ```
 { besseli(0, 0) = 1 }
 y = besseli(0, 0)

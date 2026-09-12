@@ -35,6 +35,34 @@ $$ \text{mag}(\omega) = 20\log_{10}\big|G(j\omega)\big| \quad[\text{dB}], \qquad
 
 ## Examples
 
+<!-- verified-reference-example:start -->
+
+### Verified example — Solve a complete model
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+// frees-language: 2
+num = [0, 1]
+den = [1, 1]
+omega = [1, 10, 100]
+[mag, phase] = bode(num, den, omega)
+
+{ CHECK den[1] 1 0.000001 }
+{ CHECK den[2] 1 0.000001 }
+{ CHECK mag[1] -3.010299957 0.0000030102999566398115 }
+```
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+den[1] = 1
+den[2] = 1
+mag[1] = -3.010299957
+```
+
+<!-- verified-reference-example:end -->
+
 ### Example 1 — Bode response of a second-order plant
 
 50 log-spaced frequencies over `G(s) = (s + 2)/(s² + 4s + 25)`:

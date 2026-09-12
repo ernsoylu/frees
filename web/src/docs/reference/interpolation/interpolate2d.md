@@ -36,6 +36,31 @@ $$ z = (1-t_x)(1-t_y)z_{i,j} + t_x(1-t_y)z_{i+1,j} + (1-t_x)t_y\,z_{i,j+1} + t_x
 
 ## Examples
 
+<!-- verified-reference-example:start -->
+
+### Verified example — Solve a complete model
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+// frees-language: 2
+TABLE htc(re : t = 100, 200)
+  0    0    0
+  10   10   30
+END
+U = Interpolate2D('htc', 5, 150)
+
+{ CHECK U 10 0.000009999999999999999 }
+```
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+U = 10
+```
+
+<!-- verified-reference-example:end -->
+
 ### Example 1 — Engine efficiency from a 2-D map
 
 [Run: engine-map-2d]

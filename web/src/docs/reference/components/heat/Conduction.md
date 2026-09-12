@@ -37,13 +37,44 @@ Conduction inst(k, area, L)
 
 Instantiating the component expands these acausal equations (over its port members and parameters) into scalar equations solved by the standard Newton/Tarjan pipeline:
 
-```
-Q      = k * area / L * (a.T - b.T)
-a.Qdot = Q
-b.Qdot = -Q
-```
+$$
+\begin{aligned}
+q &= \frac{k\cdot area}{l}\cdot \left(a.t - b.t\right) \\
+a.qdot &= q \\
+b.qdot &= -q
+\end{aligned}
+$$
 
 ## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Solve a complete model
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+// frees-language: 2
+ThermalSource SH(T=400)
+Conduction   WALL(k=50, area=0.1, L=0.02)
+ThermalSource SC(T=300)
+connect(SH.port, WALL.a)
+connect(WALL.b, SC.port)
+
+{ CHECK sc.port.qdot 25000 0.024999999999999998 }
+{ CHECK sc.port.t 300 0.0003 }
+{ CHECK sh.port.qdot -25000 0.024999999999999998 }
+```
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+sc.port.qdot = 25000
+sc.port.t = 300
+sh.port.qdot = -25000
+```
+
+<!-- verified-reference-example:end -->
 
 Instantiated in the verified example below:
 

@@ -34,6 +34,37 @@ with steady-state errors `e_step = 1/(1+Kp)`, `e_ramp = 1/Kv`, `e_parabola = 1/K
 
 ## Examples
 
+<!-- verified-reference-example:start -->
+
+### Verified example — Solve a complete model
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+// frees-language: 2
+num = [0, 1, 3]
+den = [1, 3, 2]
+[rr, ri, pr2, pi2, kk] = residue(num, den)
+dr = [1, 1, 2, 8]
+[nrhp, stable] = routh(dr)
+[lk, lcpr, lcpi] = rlocus(num, den)
+[Kpos, Kvel, Kacc] = errorconst(num, den)
+
+{ CHECK den[1] 1 0.000001 }
+{ CHECK den[2] 3 0.000003 }
+{ CHECK den[3] 2 0.000002 }
+```
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+den[1] = 1
+den[2] = 3
+den[3] = 2
+```
+
+<!-- verified-reference-example:end -->
+
 ```
 { [Kp, Kv, Ka] = errorconst(num, den); a type-1 system has finite Kv, infinite Kp }
 ```

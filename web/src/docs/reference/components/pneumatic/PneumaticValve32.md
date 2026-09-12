@@ -38,14 +38,57 @@ PneumaticValve32 inst(fluid$, C, b, domain$)
 
 The acausal equations this component expands into (over its port members and parameters):
 
+$$
+\begin{aligned}
+t_{s} &= \text{Temperature}\left(\mathrm{fluid}, =sup_{in.p}, p=sup_{in.h}\right) \\
+t_{w} &= \text{Temperature}\left(\mathrm{fluid}, =work.p, p=work.h\right) \\
+m_{in} &= \text{iso6358}\left(u.sig\cdot c, b, sup_{in.p}, t_{s}, work.p\right) \\
+m_{out} &= \text{iso6358}\left(\left(1 - u.sig\right)\cdot c, b, work.p, t_{w}, exh_{out.p}\right) \\
+sup_{in.mdot} &= m_{in} \\
+work.mdot &= m_{in} - m_{out} \\
+exh_{out.mdot} &= m_{out} \\
+work.h &= sup_{in.h} \\
+exh_{out.h} &= work.h
+\end{aligned}
+$$
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Solve a complete model
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+// frees-language: 2
+// 3/2 directional valve at u = 0.6 metering into a 4 bar work reservoir:
+// supply->work carries 0.6 C of ISO 6358 flow, work->exhaust bleeds 0.4 C,
+// and the work port delivers the net (m_in - m_out) at the reservoir pressure.
+SigConstant         CMD(k=0.6)
+PneumaticSupply     SUP(fluid$=Air, P=700000, T=300)
+PneumaticValve32    V32(fluid$=Air, C=1e-8, b=0.3)
+PneumaticAtmosphere WRK(P=400000)
+PneumaticAtmosphere ATM(P=100000)
+connect(SUP.out, V32.sup_in)
+connect(V32.work, WRK.port)
+connect(V32.exh_out, ATM.port)
+connect(CMD.out, V32.u)
+m_sup  = V32.sup_in.mdot
+m_net  = V32.work.mdot
+m_exh  = V32.exh_out.mdot
+
+{ CHECK atm.port.h 424949.9736 0.424949973620621 }
+{ CHECK atm.port.mdot 0.001876312644 1e-8 }
+{ CHECK atm.port.p 100000 0.09999999999999999 }
 ```
-T_s          = Temperature(fluid$, P=sup_in.P, h=sup_in.h)
-T_w          = Temperature(fluid$, P=work.P, h=work.h)
-m_in         = iso6358(u.sig * C, b, sup_in.P, T_s, work.P)
-m_out        = iso6358((1 - u.sig) * C, b, work.P, T_w, exh_out.P)
-sup_in.mdot  = m_in
-work.mdot    = m_in - m_out
-exh_out.mdot = m_out
-work.h       = sup_in.h
-exh_out.h    = work.h
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+atm.port.h = 424949.9736
+atm.port.mdot = 0.001876312644
+atm.port.p = 100000
 ```
+
+<!-- verified-reference-example:end -->

@@ -41,14 +41,16 @@ SigPID inst(Kp, Ki, Kd, tau, i0, d0, model$)
 
 The acausal equations this component expands into (over its port members and parameters):
 
-```
-e        = sp.sig - pv.sig
-der(df)  = (e - df) / tau
-init(df) = d0
-dterm    = (e - df) / tau
-init(ie) = i0
-u_raw    = Kp * e + Ki * ie + Kd * dterm
-```
+$$
+\begin{aligned}
+e &= sp.sig - pv.sig \\
+\text{der}\left(df\right) &= \frac{e - df}{tau} \\
+\text{init}\left(df\right) &= d0 \\
+dterm &= \frac{e - df}{tau} \\
+\text{init}\left(ie\right) &= i0 \\
+u_{raw} &= kp\cdot e + ki\cdot ie + kd\cdot dterm
+\end{aligned}
+$$
 
 ## Model Variants
 
@@ -56,14 +58,46 @@ Selected via the `model$` parameter; each adds its own equations (and `REQUIRE`d
 
 ### `basic`
 
-```
-der(ie) = e
-out.sig = u_raw
-```
+$$
+\begin{aligned}
+\text{der}\left(ie\right) &= e \\
+out.sig &= u_{raw}
+\end{aligned}
+$$
 
 ### `clamped` — requires `umin`, `umax`, `Taw`
 
+$$
+\begin{aligned}
+out.sig &= \text{min}\left(\text{max}\left(u_{raw}, umin\right), umax\right) \\
+\text{der}\left(ie\right) &= e + \frac{out.sig - u_{raw}}{taw}
+\end{aligned}
+$$
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Integrate a fixed tracking error with a PI controller
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+SigPID C(Kp=2, Ki=1, Kd=0, tau=0.1, i0=0, d0=0)
+C.sp.sig = 1
+C.pv.sig = 0
+DYNAMIC response(method=ode45, time=0..2, points=5)
+END
+
+{ CHECK c.pv.sig 0 1e-8 }
+{ CHECK c.sp.sig 1 0.000001 }
 ```
-out.sig = min(max(u_raw, umin), umax)
-der(ie) = e + (out.sig - u_raw) / Taw
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+c.pv.sig = 0
+c.sp.sig = 1
 ```
+
+<!-- verified-reference-example:end -->

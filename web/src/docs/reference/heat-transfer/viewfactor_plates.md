@@ -34,6 +34,37 @@ $$ F_{1\to 2} = \frac{2}{\pi x y}\left\{ \ln\!\left[\frac{(1+x^2)(1+y^2)}{1+x^2+
 
 ## Examples
 
+<!-- verified-reference-example:start -->
+
+### Verified example — Solve a complete model
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+// frees-language: 2
+// Radiation View Factors
+{ Analytic (Howell-catalog) diffuse view factors — no chart lookup
+  needed. Each returns the dimensionless fraction of radiation that
+  leaves surface 1 and reaches surface 2. }
+F_perp = viewfactor_perp(1 [m], 1 [m], 1 [m])       { perpendicular plates sharing an edge }
+F_par  = viewfactor_plates(2 [m], 2 [m], 1 [m])     { aligned parallel rectangles }
+F_disk = viewfactor_disks(0.5 [m], 1 [m], 0.4 [m])  { coaxial parallel disks }
+
+{ CHECK F_disk 0.8319356147 8.319356147247143e-7 }
+{ CHECK F_par 0.4152532836 4.152532835771469e-7 }
+{ CHECK F_perp 0.2000437761 2.0004377607540316e-7 }
+```
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+F_disk = 0.8319356147
+F_par = 0.4152532836
+F_perp = 0.2000437761
+```
+
+<!-- verified-reference-example:end -->
+
 ### Example 1 — Aligned parallel rectangles
 
 [Run: radiation-view-factors]

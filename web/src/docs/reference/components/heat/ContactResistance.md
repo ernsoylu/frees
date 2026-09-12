@@ -35,8 +35,41 @@ ContactResistance inst(Rth)
 
 Instantiating the component expands these acausal equations (over its port members and parameters) into scalar equations solved by the standard Newton/Tarjan pipeline:
 
+$$
+\begin{aligned}
+q &= \frac{a.t - b.t}{rth} \\
+a.qdot &= q \\
+b.qdot &= -q
+\end{aligned}
+$$
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Solve a complete model
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+// frees-language: 2
+ThermalSource HOT(T=400)
+ContactResistance CR(Rth=0.05)
+ThermalSource COLD(T=300)
+connect(HOT.port, CR.a)
+connect(CR.b, COLD.port)
+
+{ CHECK cold.port.qdot 2000 0.002 }
+{ CHECK cold.port.t 300 0.0003 }
+{ CHECK cr.a.qdot 2000 0.002 }
 ```
-Q      = (a.T - b.T) / Rth
-a.Qdot = Q
-b.Qdot = -Q
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+cold.port.qdot = 2000
+cold.port.t = 300
+cr.a.qdot = 2000
 ```
+
+<!-- verified-reference-example:end -->

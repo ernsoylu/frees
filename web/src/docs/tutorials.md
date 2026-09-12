@@ -3,7 +3,7 @@
 
 **The problem.** A 2 kg carriage on a spring (k = 800 N/m) with a viscous damper (c = 8 N·s/m) is released 5 cm from equilibrium. How does it ring down — and what does it look like as a plant, in the frequency domain?
 
-**What you'll use:** `DYNAMIC` integration, ODE trajectory accessors, transfer functions, `CALL bode`, and `PLOT`. Build it in stages and solve after each one — that habit (from *Debugging a Solve*) pins any mistake to the lines you just added.
+**What you'll use:** `DYNAMIC` integration, ODE trajectory accessors, transfer functions, `bode`, and `PLOT`. Build it in stages and solve after each one — that habit (from *Debugging a Solve*) pins any mistake to the lines you just added.
 
 ## Stage 1 — the parameters, and what to expect
 
@@ -231,7 +231,7 @@ Q_coil_lat = COIL.Q_lat
 
 **The problem.** A series RLC circuit (R = 220 Ω, L = 0.1 H, C = 1 µF) driven by a 5 V source, with the output taken across the capacitor, is a second-order low-pass filter. What does it pass, what does it reject, and how peaked is it?
 
-**What you'll use:** phasor (impedance) analysis with plain algebra, then the transfer-function route with `CALL bode` — the same circuit two ways, so you can check one against the other.
+**What you'll use:** phasor (impedance) analysis with plain algebra, then the transfer-function route with `bode` — the same circuit two ways, so you can check one against the other.
 
 ## Stage 1 — the numbers that shape the response
 

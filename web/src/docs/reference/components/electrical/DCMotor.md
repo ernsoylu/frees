@@ -37,8 +37,47 @@ DCMotor inst(Kt, Ke, R)
 
 Instantiating the component expands these acausal equations (over its port members and parameters) into scalar equations solved by the standard Newton/Tarjan pipeline:
 
+$$
+\begin{aligned}
+p.v - n.v &= r\cdot p.i + ke\cdot shaft.w \\
+p.i + n.i &= 0 \\
+shaft.tau &= -kt\cdot p.i
+\end{aligned}
+$$
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Solve a complete model
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+// frees-language: 2
+BatteryThermal   B(Voc=48, R0=0.1)
+DCMotor          MOT(Kt=0.5, Ke=0.5, R=1)
+RotationalDamper LOAD(c=0.1)
+Ground           G()
+MechGround       MG()
+ThermalSource    COOL(T=300)
+connect(B.p, MOT.p)
+connect(B.n, MOT.n, G.port)
+connect(MOT.shaft, LOAD.a)
+connect(LOAD.b, MG.port)
+connect(B.heat, COOL.port)
+
+{ CHECK b.heat.qdot -17.77777778 0.00001777777777777778 }
+{ CHECK b.heat.t 300 0.0003 }
+{ CHECK b.n.i 13.33333333 0.000013333333333333333 }
 ```
-p.V - n.V  = R * p.I + Ke * shaft.w
-p.I + n.I  = 0
-shaft.tau  = -Kt * p.I
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+b.heat.qdot = -17.77777778
+b.heat.t = 300
+b.n.i = 13.33333333
 ```
+
+<!-- verified-reference-example:end -->
