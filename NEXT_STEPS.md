@@ -242,6 +242,8 @@ Focus: Address large-scale system scalability, resolve structural thermodynamic 
 - [ ] **4.3 Custom Component Authoring & Advanced Schematic Routing**
   - **Canvas Encapsulation**: Provide a visual canvas interaction in [`web/src/schematic/`](file:///home/eren/homecloud/dev/frees-wasm/web/src/schematic) allowing users to select a group of connected components and encapsulate them into a reusable custom component block with exposed external ports.
   - **Orthogonal Wire Routing**: Replace simple direct connections in [`web/src/schematic/layout.ts`](file:///home/eren/homecloud/dev/frees-wasm/web/src/schematic/layout.ts) with an obstacle-avoiding orthogonal wire router that neatly navigates around existing component blocks.
+    - [x] Live node obstacles now select a clear orthogonal routing lane, with a schematic regression test.
+      - Signed: 2026-09-12 — routing keeps the existing port-facing stubs and falls back to the original lane when no candidate is clear.
 - [ ] **4.4 R15 Usability Pilot Validation**
   - Execute the structured R15 usability pilot with 5 engineering participants according to [`R15_PILOT.md`](file:///home/eren/homecloud/dev/frees-wasm/R15_PILOT.md).
   - Test core engineering tasks: scalar solve within 5 minutes, component chain within 10 minutes, and missing boundary diagnostic recovery within 3 minutes.

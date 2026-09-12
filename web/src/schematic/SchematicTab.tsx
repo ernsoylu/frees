@@ -629,7 +629,7 @@ export default function SchematicTab({
               return (
                 <path
                   key={e.id}
-                  d={routeEdge(a, b, e.fromPort, e.toPort)}
+                  d={routeEdge(a, b, e.fromPort, e.toPort, layout.nodes)}
                   fill="none"
                   stroke={style.color}
                   strokeWidth={lit ? style.width + 1.2 : style.width}
@@ -1120,4 +1120,3 @@ function badgeText(badge: { label: string; value: number; units: string }): stri
   const unit = badge.units ? ` ${badge.units}` : ''
   return `${badge.label} = ${formatCompact(badge.value)}${unit}`
 }
-
