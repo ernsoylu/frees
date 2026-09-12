@@ -239,7 +239,7 @@ Focus: Address large-scale system scalability, resolve structural thermodynamic 
   - Implement dynamic, asynchronous fetching for property tables and component libraries via [`props/tables.rs::install_from_bytes`](file:///home/eren/homecloud/dev/frees-wasm/props/tables.rs).
   - Establish a pre-solve document scan to fetch required fluid tables on first reference before the solver worker executes.
   - **Trigger Condition**: Headroom below 200 KiB against the 5,120 KiB WASM ceiling, or before requesting any future budget increase. (Current headroom: 1,232 KiB; 3,888 KiB raw).
-- [ ] **4.3 Custom Component Authoring & Advanced Schematic Routing**
+- [x] **4.3 Custom Component Authoring & Advanced Schematic Routing**
   - **Canvas Encapsulation**: Provide a visual canvas interaction in [`web/src/schematic/`](file:///home/eren/homecloud/dev/frees-wasm/web/src/schematic) allowing users to select a group of connected components and encapsulate them into a reusable custom component block with exposed external ports.
     - [x] Shift-click selects components; Encapsulate emits a canonical reusable component block with internal and exposed connections.
       - Signed: 2026-09-12 — the generated block is inserted through the existing editor path and rejects empty or invalid selections.
@@ -248,6 +248,7 @@ Focus: Address large-scale system scalability, resolve structural thermodynamic 
   - **Orthogonal Wire Routing**: Replace simple direct connections in [`web/src/schematic/layout.ts`](file:///home/eren/homecloud/dev/frees-wasm/web/src/schematic/layout.ts) with an obstacle-avoiding orthogonal wire router that neatly navigates around existing component blocks.
     - [x] Live node obstacles now select a clear orthogonal routing lane, with a schematic regression test.
       - Signed: 2026-09-12 — routing keeps the existing port-facing stubs and falls back to the original lane when no candidate is clear.
+  - Signed: 2026-09-12 — Phase 4.3 canvas authoring and obstacle-aware routing complete.
 - [ ] **4.4 R15 Usability Pilot Validation**
   - Execute the structured R15 usability pilot with 5 engineering participants according to [`R15_PILOT.md`](file:///home/eren/homecloud/dev/frees-wasm/R15_PILOT.md).
   - Test core engineering tasks: scalar solve within 5 minutes, component chain within 10 minutes, and missing boundary diagnostic recovery within 3 minutes.
