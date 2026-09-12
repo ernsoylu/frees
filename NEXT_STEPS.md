@@ -233,12 +233,15 @@ Focus: Address large-scale system scalability, resolve structural thermodynamic 
     - [x] Retain the existing dependency-free Gilbert–Peierls kernel; no external sparse crate improves the current WASM size and portability constraints.
       - Signed: 2026-09-12 — dense fallback remains the singular or unsupported-pattern escape path.
   - Signed: 2026-09-12 — Phase 4.1 sparse ordering and factorization seam complete.
-- [ ] **4.2 Pre-Expansion Lazy Chunk Seam for Thermodynamic Data**
+- [x] **4.2 Pre-Expansion Lazy Chunk Seam for Thermodynamic Data**
   - [x] CI now reports the measured WASM headroom and warns when it reaches the 200 KiB lazy-chunk trigger.
-    - Signed: 2026-09-12 — the actual fetch seam remains deferred while current headroom is above the trigger.
-  - Implement dynamic, asynchronous fetching for property tables and component libraries via [`props/tables.rs::install_from_bytes`](file:///home/eren/homecloud/dev/frees-wasm/props/tables.rs).
-  - Establish a pre-solve document scan to fetch required fluid tables on first reference before the solver worker executes.
+    - Signed: 2026-09-12 — headroom remains above the trigger; the seam is opt-in and does not add bytes to the default bundle.
+  - [x] Implement dynamic, asynchronous fetching for property tables and component libraries via [`props/tables.rs::install_from_bytes`](file:///home/eren/homecloud/dev/frees-wasm/crates/frees-core/src/props/tables.rs).
+    - Signed: 2026-09-12 — fetched tables layer over Rustprop and fetched component definitions are prepended before evaluation; both resources are cached per worker.
+  - [x] Establish a pre-solve document scan to fetch required fluid tables on first reference before the solver worker executes.
+    - Signed: 2026-09-12 — the worker awaits the configured resource fetch before `solve`, `solveTable`, or `check`; deployments opt in with `__freesPropertyTableBaseUrl` and `__freesComponentLibraryBaseUrl`.
   - **Trigger Condition**: Headroom below 200 KiB against the 5,120 KiB WASM ceiling, or before requesting any future budget increase. (Current headroom: 1,232 KiB; 3,888 KiB raw).
+  - Signed: 2026-09-12 — Phase 4.2 lazy resource loading is complete.
 - [x] **4.3 Custom Component Authoring & Advanced Schematic Routing**
   - **Canvas Encapsulation**: Provide a visual canvas interaction in [`web/src/schematic/`](file:///home/eren/homecloud/dev/frees-wasm/web/src/schematic) allowing users to select a group of connected components and encapsulate them into a reusable custom component block with exposed external ports.
     - [x] Shift-click selects components; Encapsulate emits a canonical reusable component block with internal and exposed connections.

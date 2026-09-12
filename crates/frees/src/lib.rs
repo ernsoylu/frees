@@ -74,6 +74,16 @@ pub fn version() -> String {
     frees_core::VERSION.to_string()
 }
 
+/// Install one fetched `FRPHTAB1` property table without replacing the
+/// built-in Rustprop backend.
+#[wasm_bindgen]
+pub fn install_property_table(bytes: &[u8]) -> String {
+    match frees_core::props::tables::install_from_bytes(bytes) {
+        Ok(fluids) => json!({"fluids": fluids}).to_string(),
+        Err(error) => json!({"error": error.to_string_message()}).to_string(),
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Request DTOs — the subset of the Java SolveRequest this port consumes
 // ---------------------------------------------------------------------------
