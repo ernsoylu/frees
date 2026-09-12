@@ -221,6 +221,8 @@ Focus: Address large-scale system scalability, resolve structural thermodynamic 
 
 - [ ] **4.1 Sparse Matrix Factorization & Graph Reordering**
   - Lift and extend the internal COLAMD-lite ordering from [`crates/frees-core/src/dae/colamd.rs`](file:///home/eren/homecloud/dev/frees-wasm/crates/frees-core/src/dae/colamd.rs) to serve the general equation solver.
+    - [x] Apply the cached supercolumn ordering to large fixed-pattern sparse Newton systems.
+      - Signed: 2026-09-12 — the sparse workspace fingerprints CSC structure and reuses its deterministic ordering across iterations.
   - Implement full Approximate Minimum Degree (AMD) and Column Approximate Minimum Degree (COLAMD) permutations with supercolumn absorption.
   - Implement sparsity pattern caching across Newton-Raphson iterations to avoid repeated symbolic factorization when solving large systems (>5,000 equations).
   - Evaluate integration of pure-Rust sparse factorization kernels (`faer` / `sprs`) against dense fallbacks.

@@ -60,6 +60,10 @@
 
 use crate::dae::assembly::{DaeAssembly, DaeResidual, DaeRootFn};
 use crate::dae::colamd;
+
+/// Keep natural ordering for ordinary models; large fixed-pattern systems use
+/// the cached fill-reducing order.
+const ORDERING_THRESHOLD: usize = 5_000;
 use crate::dae::jacobian;
 use crate::diag::{FreesError, Result};
 
@@ -285,11 +289,9 @@ impl SparseCsc {
 /// reordering and AMD fill-reducing permutation — which affect speed and fill,
 /// never the answer.
 ///
-/// **Crossover.** Fill is not reduced at factor time. [`colamd::order`] is
-/// implemented and unit-tested; applying it as `A P` moved an IDA golden
-/// (see [`SparseLuWorkspace::from_matrix`]). For the C-R-C networks this path
-/// exists for (banded, one storage state per cell) the natural ordering is
-/// already near-optimal.
+/// **Crossover.** Small C-R-C networks retain natural ordering for numerical
+/// compatibility; large fixed-pattern systems use the cached supercolumn
+/// permutation from [`SparseLuWorkspace::from_matrix`].
 /// Reusable, zero-allocation scratch workspace for sparse LU factorization and triangular solves.
 #[derive(Debug, Clone, Default)]
 pub struct SparseLuWorkspace {
@@ -302,6 +304,7 @@ pub struct SparseLuWorkspace {
     solve_x: Vec<f64>,
     /// Column AMD: new column `k` is original column `col_perm[k]`.
     col_perm: Vec<usize>,
+    pattern_key: Option<u64>,
 }
 
 impl SparseLuWorkspace {
@@ -315,16 +318,16 @@ impl SparseLuWorkspace {
             order: Vec::with_capacity(n),
             solve_x: vec![0.0; n],
             col_perm: colamd::identity(n),
+            pattern_key: None,
         }
     }
 
-    /// Workspace sized to `a`. Column AMD ([`colamd::order`]) is computed and
-    /// tested, but **not** applied here: permuting `A` before Gilbert–Peierls
-    /// moved `steady-by-integration-chiller-bridge` off its 2.5e-9 IDA
-    /// tolerance (~5e-9 on enthalpy). Natural ordering stays until that
-    /// trajectory is re-graded on purpose.
+    /// Workspace sized to `a`. The fixed CSC pattern is fingerprinted once;
+    /// large systems reuse their supercolumn order on every Newton iteration.
     pub fn from_matrix(a: &SparseCsc) -> Self {
-        Self::new(a.n)
+        let mut workspace = Self::new(a.n);
+        workspace.prepare_ordering(a);
+        workspace
     }
 
     pub fn resize(&mut self, n: usize) {
@@ -334,8 +337,32 @@ impl SparseLuWorkspace {
             self.mark.resize(n, 0);
             self.solve_x.resize(n, 0.0);
             self.col_perm = colamd::identity(n);
+            self.pattern_key = None;
         }
     }
+
+    fn prepare_ordering(&mut self, a: &SparseCsc) {
+        let key = pattern_fingerprint(a);
+        if self.pattern_key == Some(key) {
+            return;
+        }
+        self.col_perm = if a.n >= ORDERING_THRESHOLD {
+            colamd::order_with_supercolumns(a.n, &a.col_ptr, &a.row_idx)
+        } else {
+            colamd::identity(a.n)
+        };
+        self.pattern_key = Some(key);
+    }
+}
+
+fn pattern_fingerprint(a: &SparseCsc) -> u64 {
+    // FNV-1a is sufficient here: this is a cache key, not a security hash.
+    let mut hash = 0xcbf29ce484222325u64;
+    for value in a.col_ptr.iter().chain(&a.row_idx) {
+        hash ^= *value as u64;
+        hash = hash.wrapping_mul(0x100000001b3);
+    }
+    hash
 }
 
 struct SparseLu {
@@ -364,9 +391,7 @@ impl SparseLu {
     fn factor_with(a: &SparseCsc, work: &mut SparseLuWorkspace) -> Option<SparseLu> {
         let n = a.n;
         work.resize(n);
-        if work.col_perm.len() != n {
-            work.col_perm = colamd::identity(n);
-        }
+        work.prepare_ordering(a);
         let col_perm = work.col_perm.clone();
         let SparseLuWorkspace {
             x,
