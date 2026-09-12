@@ -280,11 +280,17 @@ pub fn install_builtin() -> Result<Vec<String>> {
 pub fn install_from_bytes(bytes: &[u8]) -> Result<Vec<String>> {
     let incoming = SaturationSplitTable::decode_generated(bytes)?;
     let mut tables = builtin_tables()?;
-    tables.retain(|t| !t.fluid().eq_ignore_ascii_case(incoming.fluid()));
+    tables.retain(|table| !table.fluid().eq_ignore_ascii_case(incoming.fluid()));
     tables.push(incoming);
     let backend = TableBackend::with_aux(tables, builtin_aux()?);
+    let fallback = propfun::backend();
     let fluids = backend.all_served();
-    propfun::install(Arc::new(backend));
+    match fallback {
+        Some(previous) => {
+            propfun::install(Arc::new(propfun::LayeredBackend::new(backend, previous)))
+        }
+        None => propfun::install(Arc::new(backend)),
+    };
     Ok(fluids)
 }
 

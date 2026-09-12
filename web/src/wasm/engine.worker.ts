@@ -45,10 +45,48 @@ import init, {
   parameter_fit,
   pid_tune,
   sensitivity,
+  install_property_table,
   solve_zerocopy,
   solve_table_zerocopy,
   version,
 } from './pkg/frees.js'
+
+const resourceConfig = globalThis as unknown as {
+  __freesPropertyTableBaseUrl?: string
+  __freesComponentLibraryBaseUrl?: string
+}
+const fetchedTables = new Map<string, Promise<void>>()
+const fetchedComponents = new Map<string, Promise<string | null>>()
+
+async function prepareSource(source: string): Promise<string> {
+  let prepared = source
+  const tableBase = resourceConfig.__freesPropertyTableBaseUrl
+  const fluid = source.match(/\b(?:Water|Steam|R\d{2,4}[A-Za-z]*|Ammonia|Nitrogen|Oxygen|CarbonDioxide|Methane|Propane)\b/i)?.[0]
+  if (tableBase && fluid) {
+    const key = fluid.toLowerCase()
+    if (!fetchedTables.has(key)) {
+      fetchedTables.set(key, fetch(new URL(`${key}.phtab`, tableBase).href).then(async response => {
+        if (!response.ok) throw new Error(`property table fetch failed for ${fluid}: HTTP ${response.status}`)
+        const result = JSON.parse(install_property_table(new Uint8Array(await response.arrayBuffer()))) as { error?: string }
+        if (result.error) throw new Error(result.error)
+      }))
+    }
+    await fetchedTables.get(key)
+  }
+
+  const componentBase = resourceConfig.__freesComponentLibraryBaseUrl
+  if (componentBase) {
+    const names = [...source.matchAll(/\b([A-Z][A-Za-z0-9_]*)\s+[A-Za-z_]\w*\s*\(/g)].map(match => match[1])
+    for (const name of [...new Set(names)]) {
+      if (!fetchedComponents.has(name)) {
+        fetchedComponents.set(name, fetch(new URL(`${name}.frees`, componentBase).href).then(async response => response.ok ? response.text() : null))
+      }
+      const library = await fetchedComponents.get(name)
+      if (library && !prepared.includes(library)) prepared = `${library}\n${prepared}`
+    }
+  }
+  return prepared
+}
 
 export interface EngineRequest {
   id: number
@@ -129,6 +167,10 @@ const handle = async (event: MessageEvent<EngineRequest>) => {
     let matrix: Float64Array | null = null
     let odeBuffers: Float64Array[] | null = null
     const transferables: Transferable[] = []
+
+    if (method === 'solve' || method === 'solveTable' || method === 'check') {
+      args[0] = await prepareSource(args[0] ?? '')
+    }
 
     switch (method) {
       case 'solve': {

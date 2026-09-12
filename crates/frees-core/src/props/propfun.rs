@@ -350,6 +350,72 @@ pub fn backend_description() -> String {
     }
 }
 
+/// A runtime table overlay that preserves the installed backend for states the
+/// fetched table does not cover.
+pub struct LayeredBackend {
+    overlay: TableBackend,
+    fallback: Arc<dyn RealFluid>,
+}
+
+impl LayeredBackend {
+    pub fn new(overlay: TableBackend, fallback: Arc<dyn RealFluid>) -> Self {
+        Self { overlay, fallback }
+    }
+}
+
+impl RealFluid for LayeredBackend {
+    fn props_si(
+        &self,
+        output: &str,
+        name1: &str,
+        value1: f64,
+        name2: &str,
+        value2: f64,
+        fluid: &str,
+    ) -> Result<f64> {
+        self.overlay
+            .props_si(output, name1, value1, name2, value2, fluid)
+            .or_else(|_| {
+                self.fallback
+                    .props_si(output, name1, value1, name2, value2, fluid)
+            })
+    }
+
+    fn props1_si(&self, fluid: &str, param: &str) -> Result<f64> {
+        self.overlay
+            .props1_si(fluid, param)
+            .or_else(|_| self.fallback.props1_si(fluid, param))
+    }
+
+    fn ha_props_si(
+        &self,
+        output: &str,
+        name1: &str,
+        value1: f64,
+        name2: &str,
+        value2: f64,
+        name3: &str,
+        value3: f64,
+    ) -> Result<f64> {
+        self.fallback
+            .ha_props_si(output, name1, value1, name2, value2, name3, value3)
+    }
+
+    fn served_fluids(&self) -> Option<Vec<String>> {
+        let mut fluids = self.fallback.served_fluids().unwrap_or_default();
+        for name in self.overlay.fluids() {
+            if !fluids.iter().any(|f| f.eq_ignore_ascii_case(name)) {
+                fluids.push(name.to_string());
+            }
+        }
+        Some(fluids)
+    }
+
+    fn describe(&self) -> String {
+        format!("fetched tables over {}", self.fallback.describe())
+    }
+}
+
 // ---------------------------------------------------------------------------
 // The property caches — `CoolProp.PROPS_CACHE` and `CoolProp.HA_CACHE`
 // ---------------------------------------------------------------------------
