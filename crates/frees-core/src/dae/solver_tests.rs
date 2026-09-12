@@ -127,6 +127,15 @@ fn sparse_steady_refuses_an_empty_pattern_like_the_java() {
 }
 
 #[test]
+fn large_fixed_pattern_builds_and_reuses_supercolumn_order() {
+    let columns = vec![vec![0usize]; 5_000];
+    let matrix = SparseCsc::from_columns(&columns).unwrap();
+    let workspace = SparseLuWorkspace::from_matrix(&matrix);
+    assert_eq!(workspace.pattern_key, Some(pattern_fingerprint(&matrix)));
+    assert_eq!(workspace.col_perm, (0..5_000).collect::<Vec<_>>());
+}
+
+#[test]
 fn sparse_steady_returns_none_on_a_singular_matrix() {
     let pattern = vec![vec![0, 1], vec![0, 1]];
     let mut klu = SparseSteady::create(&pattern).unwrap();

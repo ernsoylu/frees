@@ -219,18 +219,31 @@ Focus: Implement the comprehensive language unification detailed in [`reports/SI
 
 Focus: Address large-scale system scalability, resolve structural thermodynamic data debt, implement advanced schematic layout features, and execute formal human usability validation.
 
-- [ ] **4.1 Sparse Matrix Factorization & Graph Reordering**
+- [x] **4.1 Sparse Matrix Factorization & Graph Reordering**
   - Lift and extend the internal COLAMD-lite ordering from [`crates/frees-core/src/dae/colamd.rs`](file:///home/eren/homecloud/dev/frees-wasm/crates/frees-core/src/dae/colamd.rs) to serve the general equation solver.
+    - [x] Apply the cached supercolumn ordering to large fixed-pattern sparse Newton systems.
+      - Signed: 2026-09-12 — the sparse workspace fingerprints CSC structure and reuses its deterministic ordering across iterations.
   - Implement full Approximate Minimum Degree (AMD) and Column Approximate Minimum Degree (COLAMD) permutations with supercolumn absorption.
+    - [x] Deterministic AMD, COLAMD, and identical-pattern supercolumn absorption are implemented and unit-tested.
+      - Signed: 2026-09-12 — ordering ties are stable by original index and malformed patterns fall back to identity.
   - Implement sparsity pattern caching across Newton-Raphson iterations to avoid repeated symbolic factorization when solving large systems (>5,000 equations).
+    - [x] CSC structure fingerprints cache the fill-reducing ordering across repeated sparse Newton factorizations.
+      - Signed: 2026-09-12 — numeric LU values are still refactored each iteration so pivoting and solver stability remain unchanged.
   - Evaluate integration of pure-Rust sparse factorization kernels (`faer` / `sprs`) against dense fallbacks.
+    - [x] Retain the existing dependency-free Gilbert–Peierls kernel; no external sparse crate improves the current WASM size and portability constraints.
+      - Signed: 2026-09-12 — dense fallback remains the singular or unsupported-pattern escape path.
+  - Signed: 2026-09-12 — Phase 4.1 sparse ordering and factorization seam complete.
 - [ ] **4.2 Pre-Expansion Lazy Chunk Seam for Thermodynamic Data**
+  - [x] CI now reports the measured WASM headroom and warns when it reaches the 200 KiB lazy-chunk trigger.
+    - Signed: 2026-09-12 — the actual fetch seam remains deferred while current headroom is above the trigger.
   - Implement dynamic, asynchronous fetching for property tables and component libraries via [`props/tables.rs::install_from_bytes`](file:///home/eren/homecloud/dev/frees-wasm/props/tables.rs).
   - Establish a pre-solve document scan to fetch required fluid tables on first reference before the solver worker executes.
   - **Trigger Condition**: Headroom below 200 KiB against the 5,120 KiB WASM ceiling, or before requesting any future budget increase. (Current headroom: 1,232 KiB; 3,888 KiB raw).
 - [ ] **4.3 Custom Component Authoring & Advanced Schematic Routing**
   - **Canvas Encapsulation**: Provide a visual canvas interaction in [`web/src/schematic/`](file:///home/eren/homecloud/dev/frees-wasm/web/src/schematic) allowing users to select a group of connected components and encapsulate them into a reusable custom component block with exposed external ports.
   - **Orthogonal Wire Routing**: Replace simple direct connections in [`web/src/schematic/layout.ts`](file:///home/eren/homecloud/dev/frees-wasm/web/src/schematic/layout.ts) with an obstacle-avoiding orthogonal wire router that neatly navigates around existing component blocks.
+    - [x] Live node obstacles now select a clear orthogonal routing lane, with a schematic regression test.
+      - Signed: 2026-09-12 — routing keeps the existing port-facing stubs and falls back to the original lane when no candidate is clear.
 - [ ] **4.4 R15 Usability Pilot Validation**
   - Execute the structured R15 usability pilot with 5 engineering participants according to [`R15_PILOT.md`](file:///home/eren/homecloud/dev/frees-wasm/R15_PILOT.md).
   - Test core engineering tasks: scalar solve within 5 minutes, component chain within 10 minutes, and missing boundary diagnostic recovery within 3 minutes.

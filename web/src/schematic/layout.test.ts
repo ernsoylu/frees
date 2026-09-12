@@ -355,6 +355,13 @@ describe('routeEdge', () => {
     expect(path).not.toMatch(/NaN/)
     expect(path).not.toEqual(routeEdge(node('a'), node('b'), 'out', 'in'))
   })
+
+  it('moves the shared lane around an intervening block', () => {
+    const blocker = { ...node('a'), id: 'blocker', x: 150, y: node('a').y, w: 104 }
+    const path = routeEdge(node('a'), node('b'), 'out', 'in', [blocker])
+    expect(path).toContain('V')
+    expect(path).toMatch(/M [\d.-]+ [\d.-]+/)
+  })
 })
 
 describe('unwired instances', () => {

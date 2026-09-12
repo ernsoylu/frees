@@ -143,6 +143,7 @@ env:
   # `R454B` both come back "key not found in JSONFluidLibrary". Enabling the
   # feature links bytes nothing can reach. That gap needs upstream support.
   WASM_BUDGET_KB: 5120
+  WASM_LAZY_CHUNK_TRIGGER_KB: 200
 
 jobs:
   fuzz:
@@ -294,6 +295,7 @@ jobs:
           kb=$(( bytes / 1024 ))
           gz=$(gzip -c "$wasm" | wc -c)
           gzkb=$(( gz / 1024 ))
+          headroom=$(( WASM_BUDGET_KB - kb ))
           echo "wasm: ${kb} KiB raw, ${gzkb} KiB gzipped (budget ${WASM_BUDGET_KB} KiB raw)"
           echo "### Bundle size" >> "$GITHUB_STEP_SUMMARY"
           echo "| metric | value |" >> "$GITHUB_STEP_SUMMARY"
@@ -301,10 +303,15 @@ jobs:
           echo "| raw | ${kb} KiB |" >> "$GITHUB_STEP_SUMMARY"
           echo "| gzipped | ${gzkb} KiB |" >> "$GITHUB_STEP_SUMMARY"
           echo "| budget (raw) | ${WASM_BUDGET_KB} KiB |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| headroom | ${headroom} KiB |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| lazy chunk trigger | ${WASM_LAZY_CHUNK_TRIGGER_KB} KiB |" >> "$GITHUB_STEP_SUMMARY"
           if (( kb > WASM_BUDGET_KB )); then
             echo "::error::wasm bundle ${kb} KiB exceeds the ${WASM_BUDGET_KB} KiB budget"
             echo "Raise WASM_BUDGET_KB deliberately, with a reason — do not bump it to go green."
             exit 1
+          fi
+          if (( headroom <= WASM_LAZY_CHUNK_TRIGGER_KB )); then
+            echo "::warning::WASM headroom is ${headroom} KiB; implement the Phase 4.2 lazy chunk seam before adding more linked property data"
           fi
 
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

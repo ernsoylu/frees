@@ -961,6 +961,7 @@ export function routeEdge(
   b: SchematicNode,
   fromPort?: string,
   toPort?: string,
+  obstacles: readonly SchematicNode[] = [],
 ): string {
   const p = anchorAt(a, fromPort)
   const q = anchorAt(b, toPort)
@@ -972,11 +973,53 @@ export function routeEdge(
   // horizontal lane; flow routes through a shared vertical one.
   const vertical = p.side === 'top' || p.side === 'bottom' || q.side === 'top' || q.side === 'bottom'
   if (vertical) {
-    const midY = round((p1.y + q1.y) / 2)
+    const midY = routeLane('y', p1, q1, a, b, obstacles)
     return `M ${round(p.x)} ${round(p.y)} L ${round(p1.x)} ${round(p1.y)} V ${midY} H ${round(q1.x)} V ${round(q1.y)} L ${round(q.x)} ${round(q.y)}`
   }
-  const midX = round((p1.x + q1.x) / 2)
+  const midX = routeLane('x', p1, q1, a, b, obstacles)
   return `M ${round(p.x)} ${round(p.y)} L ${round(p1.x)} ${round(p1.y)} H ${midX} V ${round(q1.y)} H ${round(q1.x)} L ${round(q.x)} ${round(q.y)}`
+}
+
+function routeLane(
+  axis: 'x' | 'y',
+  p1: { x: number; y: number },
+  q1: { x: number; y: number },
+  a: SchematicNode,
+  b: SchematicNode,
+  obstacles: readonly SchematicNode[],
+): string {
+  const primary = axis === 'x' ? (p1.x + q1.x) / 2 : (p1.y + q1.y) / 2
+  const candidates = [
+    primary,
+    axis === 'x' ? a.x - 30 : a.y - 30,
+    axis === 'x' ? a.x + a.w + 30 : a.y + a.h + 30,
+    axis === 'x' ? b.x - 30 : b.y - 30,
+    axis === 'x' ? b.x + b.w + 30 : b.y + b.h + 30,
+  ]
+  const others = obstacles.filter((n) => n.id !== a.id && n.id !== b.id)
+  return round(candidates.find((lane) => laneClear(axis, lane, p1, q1, others)) ?? primary).toString()
+}
+
+function laneClear(
+  axis: 'x' | 'y',
+  lane: number,
+  p: { x: number; y: number },
+  q: { x: number; y: number },
+  obstacles: readonly SchematicNode[],
+): boolean {
+  const vertical = axis === 'x'
+  const min = vertical ? Math.min(p.y, q.y) : Math.min(p.x, q.x)
+  const max = vertical ? Math.max(p.y, q.y) : Math.max(p.x, q.x)
+  return obstacles.every((n) => {
+    const left = n.x - 8
+    const right = n.x + n.w + 8
+    const top = n.y - 8
+    const bottom = n.y + n.h + 8
+    if (vertical) {
+      return lane < left || lane > right || max < top || min > bottom
+    }
+    return lane < top || lane > bottom || max < left || min > right
+  })
 }
 
 function stubOut(p: { x: number; y: number; side: PortSide }, d: number): { x: number; y: number } {
