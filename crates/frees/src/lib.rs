@@ -587,6 +587,15 @@ fn solve_internal(
     request_json: &str,
     zero_copy_ode: bool,
 ) -> (String, Vec<Vec<f64>>) {
+    solve_internal_mode(source, request_json, zero_copy_ode, false)
+}
+
+fn solve_internal_mode(
+    source: &str,
+    request_json: &str,
+    zero_copy_ode: bool,
+    legacy: bool,
+) -> (String, Vec<Vec<f64>>) {
     let request = match parse_request(request_json) {
         Ok(request) => request,
         // A malformed request never reached the engine, so the failure carries
@@ -623,9 +632,18 @@ fn solve_internal(
 
     let started = now_ms();
     let solve_outcome = if request.find_all_solutions == Some(true) {
-        frees_core::solve_all_with_tables(source, &settings, &overrides, &extra_tables)
+        if legacy {
+            frees_core::solve_all_legacy_with_tables(source, &settings, &overrides, &extra_tables)
+        } else {
+            frees_core::solve_all_with_tables(source, &settings, &overrides, &extra_tables)
+        }
     } else {
-        frees_core::solve_with_tables(source, &settings, &overrides, &extra_tables).map(|s| vec![s])
+        if legacy {
+            frees_core::solve_legacy_with_tables(source, &settings, &overrides, &extra_tables)
+        } else {
+            frees_core::solve_with_tables(source, &settings, &overrides, &extra_tables)
+        }
+        .map(|s| vec![s])
     };
 
     match solve_outcome {
@@ -691,6 +709,12 @@ fn solve_internal(
 #[wasm_bindgen]
 pub fn solve(source: &str, request_json: &str) -> String {
     solve_internal(source, request_json, false).0
+}
+
+/// Compatibility solve boundary for the golden corpus and explicit migration tools.
+#[wasm_bindgen]
+pub fn solve_legacy(source: &str, request_json: &str) -> String {
+    solve_internal_mode(source, request_json, false, true).0
 }
 
 /// Typed solve boundary: copy once into JS-owned arrays for transfer across workers.

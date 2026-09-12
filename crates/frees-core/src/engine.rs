@@ -581,6 +581,18 @@ pub fn solve_legacy_with_parametric_tables(
     })
 }
 
+/// Explicit compatibility entry point for legacy multiple-solution solving.
+pub fn solve_all_legacy_with_tables(
+    source: &str,
+    settings: &SolverSettings,
+    overrides: &[VariableOverride],
+    extra_tables: &[crate::parser::defs::FunctionTableDef],
+) -> std::result::Result<Vec<Solution>, SolveFailure> {
+    crate::parser::with_legacy_import(|| {
+        solve_all_with_tables(source, settings, overrides, extra_tables)
+    })
+}
+
 /// Explicit compatibility entry point for checking an unconverted legacy document.
 pub fn check_legacy(source: &str) -> Result<CheckReport> {
     crate::parser::with_legacy_import(|| check(source))
