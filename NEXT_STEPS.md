@@ -250,6 +250,8 @@ Focus: Address large-scale system scalability, resolve structural thermodynamic 
       - Signed: 2026-09-12 — routing keeps the existing port-facing stubs and falls back to the original lane when no candidate is clear.
   - Signed: 2026-09-12 — Phase 4.3 canvas authoring and obstacle-aware routing complete.
 - [ ] **4.4 R15 Usability Pilot Validation**
+  - [x] Pilot cards, answer key, results table, acceptance thresholds, and current build commit are pinned in [`R15_PILOT.md`](file:///home/eren/homecloud/dev/frees-wasm/R15_PILOT.md).
+    - Signed: 2026-09-12 — ready for five human sessions; no participant outcomes are fabricated.
   - Execute the structured R15 usability pilot with 5 engineering participants according to [`R15_PILOT.md`](file:///home/eren/homecloud/dev/frees-wasm/R15_PILOT.md).
   - Test core engineering tasks: scalar solve within 5 minutes, component chain within 10 minutes, and missing boundary diagnostic recovery within 3 minutes.
   - Record qualitative feedback, assistance requirements, and task completion times to guide workbench UX improvements.
