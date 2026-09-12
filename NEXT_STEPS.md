@@ -224,6 +224,8 @@ Focus: Address large-scale system scalability, resolve structural thermodynamic 
     - [x] Apply the cached supercolumn ordering to large fixed-pattern sparse Newton systems.
       - Signed: 2026-09-12 — the sparse workspace fingerprints CSC structure and reuses its deterministic ordering across iterations.
   - Implement full Approximate Minimum Degree (AMD) and Column Approximate Minimum Degree (COLAMD) permutations with supercolumn absorption.
+    - [x] Deterministic AMD, COLAMD, and identical-pattern supercolumn absorption are implemented and unit-tested.
+      - Signed: 2026-09-12 — ordering ties are stable by original index and malformed patterns fall back to identity.
   - Implement sparsity pattern caching across Newton-Raphson iterations to avoid repeated symbolic factorization when solving large systems (>5,000 equations).
   - Evaluate integration of pure-Rust sparse factorization kernels (`faer` / `sprs`) against dense fallbacks.
 - [ ] **4.2 Pre-Expansion Lazy Chunk Seam for Thermodynamic Data**
