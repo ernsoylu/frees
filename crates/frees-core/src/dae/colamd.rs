@@ -157,6 +157,101 @@ pub fn order(n: usize, col_ptr: &[usize], row_idx: &[usize]) -> Vec<usize> {
     perm
 }
 
+/// Symmetric approximate minimum degree ordering for a graph.
+///
+/// `adjacency[v]` lists the vertices connected to `v`; malformed and
+/// out-of-range neighbours are ignored. The returned permutation lists the
+/// original vertex eliminated at each step. This is the ordering used for a
+/// symmetric pattern such as `AᵀA` before a sparse factorization.
+#[allow(dead_code)]
+pub fn amd_order(adjacency: &[Vec<usize>]) -> Vec<usize> {
+    let n = adjacency.len();
+    if n == 0 {
+        return Vec::new();
+    }
+    let mut adj = vec![Vec::new(); n];
+    for (v, neighbours) in adjacency.iter().enumerate() {
+        for &u in neighbours {
+            if u < n && u != v {
+                adj[v].push(u);
+                adj[u].push(v);
+            }
+        }
+    }
+    for neighbours in &mut adj {
+        neighbours.sort_unstable();
+        neighbours.dedup();
+    }
+
+    let mut live = vec![true; n];
+    let mut permutation = Vec::with_capacity(n);
+    for _ in 0..n {
+        let next = (0..n)
+            .filter(|&v| live[v])
+            .min_by_key(|&v| (adj[v].iter().filter(|&&u| live[u]).count(), v))
+            .expect("a live vertex exists");
+        let neighbours: Vec<_> = adj[next].iter().copied().filter(|&v| live[v]).collect();
+        live[next] = false;
+        permutation.push(next);
+
+        for &v in &neighbours {
+            adj[v].retain(|&u| live[u] && u != next);
+            for &u in &neighbours {
+                if u != v && live[u] && !adj[v].contains(&u) {
+                    adj[v].push(u);
+                }
+            }
+            adj[v].sort_unstable();
+        }
+    }
+    permutation
+}
+
+/// COLAMD ordering with identical-column supercolumn absorption.
+///
+/// Columns with the same row pattern are eliminated as one supercolumn. The
+/// supercolumn's degree is the union of its neighbours; ties preserve the
+/// first original column, and each absorbed column is emitted in input order.
+#[allow(dead_code)]
+pub fn order_with_supercolumns(n: usize, col_ptr: &[usize], row_idx: &[usize]) -> Vec<usize> {
+    if n == 0 || col_ptr.len() != n + 1 || row_idx.len() < col_ptr[n] {
+        return identity(n);
+    }
+    let mut groups: Vec<(Vec<usize>, Vec<usize>)> = Vec::new();
+    for c in 0..n {
+        let mut pattern: Vec<_> = col_ptr[c..=c + 1]
+            .windows(2)
+            .flat_map(|w| row_idx[w[0]..w[1]].iter().copied().filter(|&r| r < n))
+            .collect();
+        pattern.sort_unstable();
+        pattern.dedup();
+        if let Some((_, columns)) = groups.iter_mut().find(|(rows, _)| *rows == pattern) {
+            columns.push(c);
+        } else {
+            groups.push((pattern, vec![c]));
+        }
+    }
+
+    let mut adjacency = vec![Vec::new(); groups.len()];
+    for i in 0..groups.len() {
+        for j in i + 1..groups.len() {
+            if groups[i]
+                .0
+                .iter()
+                .any(|row| groups[j].0.binary_search(row).is_ok())
+            {
+                adjacency[i].push(j);
+                adjacency[j].push(i);
+            }
+        }
+    }
+    let group_order = amd_order(&adjacency);
+    group_order
+        .into_iter()
+        .flat_map(|group| groups[group].1.iter().copied())
+        .collect()
+}
+
 fn next_stamp(mark: &mut [usize], stamp: usize) -> usize {
     let next = stamp.wrapping_add(1);
     if next == 0 {
@@ -264,5 +359,21 @@ mod tests {
         }
         let perm = order(n, &col_ptr, &row_idx);
         assert!(is_perm(&perm, n), "{perm:?}");
+    }
+
+    #[test]
+    fn amd_eliminates_a_leaf_before_the_hub() {
+        let order = amd_order(&[vec![2], vec![2], vec![0, 1]]);
+        assert_eq!(order, vec![0, 1, 2]);
+    }
+
+    #[test]
+    fn supercolumns_stay_together_and_cover_every_column() {
+        let col_ptr = [0, 2, 4, 5];
+        let row_idx = [0, 2, 0, 2, 1];
+        let permutation = order_with_supercolumns(3, &col_ptr, &row_idx);
+        assert_eq!(permutation.len(), 3);
+        assert_eq!(permutation[0..2], [0, 1]);
+        assert!(is_perm(&permutation, 3));
     }
 }
