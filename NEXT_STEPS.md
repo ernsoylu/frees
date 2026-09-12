@@ -219,7 +219,7 @@ Focus: Implement the comprehensive language unification detailed in [`reports/SI
 
 Focus: Address large-scale system scalability, resolve structural thermodynamic data debt, implement advanced schematic layout features, and execute formal human usability validation.
 
-- [ ] **4.1 Sparse Matrix Factorization & Graph Reordering**
+- [x] **4.1 Sparse Matrix Factorization & Graph Reordering**
   - Lift and extend the internal COLAMD-lite ordering from [`crates/frees-core/src/dae/colamd.rs`](file:///home/eren/homecloud/dev/frees-wasm/crates/frees-core/src/dae/colamd.rs) to serve the general equation solver.
     - [x] Apply the cached supercolumn ordering to large fixed-pattern sparse Newton systems.
       - Signed: 2026-09-12 — the sparse workspace fingerprints CSC structure and reuses its deterministic ordering across iterations.
@@ -227,7 +227,12 @@ Focus: Address large-scale system scalability, resolve structural thermodynamic 
     - [x] Deterministic AMD, COLAMD, and identical-pattern supercolumn absorption are implemented and unit-tested.
       - Signed: 2026-09-12 — ordering ties are stable by original index and malformed patterns fall back to identity.
   - Implement sparsity pattern caching across Newton-Raphson iterations to avoid repeated symbolic factorization when solving large systems (>5,000 equations).
+    - [x] CSC structure fingerprints cache the fill-reducing ordering across repeated sparse Newton factorizations.
+      - Signed: 2026-09-12 — numeric LU values are still refactored each iteration so pivoting and solver stability remain unchanged.
   - Evaluate integration of pure-Rust sparse factorization kernels (`faer` / `sprs`) against dense fallbacks.
+    - [x] Retain the existing dependency-free Gilbert–Peierls kernel; no external sparse crate improves the current WASM size and portability constraints.
+      - Signed: 2026-09-12 — dense fallback remains the singular or unsupported-pattern escape path.
+  - Signed: 2026-09-12 — Phase 4.1 sparse ordering and factorization seam complete.
 - [ ] **4.2 Pre-Expansion Lazy Chunk Seam for Thermodynamic Data**
   - Implement dynamic, asynchronous fetching for property tables and component libraries via [`props/tables.rs::install_from_bytes`](file:///home/eren/homecloud/dev/frees-wasm/props/tables.rs).
   - Establish a pre-solve document scan to fetch required fluid tables on first reference before the solver worker executes.
