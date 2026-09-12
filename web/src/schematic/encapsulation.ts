@@ -16,6 +16,29 @@ export function encapsulateSelection(input: EncapsulationInput): string {
   if (selected.length === 0) throw new Error('Select at least one component')
 
   const selectedIds = new Set(selected.map((n) => n.id))
+  const reachable = new Set<string>([selected[0].id])
+  while (true) {
+    const before = reachable.size
+    for (const edge of input.edges) {
+      if (selectedIds.has(edge.from) && selectedIds.has(edge.to) &&
+          (reachable.has(edge.from) || reachable.has(edge.to))) {
+        reachable.add(edge.from)
+        reachable.add(edge.to)
+      }
+    }
+    if (reachable.size === before) break
+  }
+  if (reachable.size !== selected.length) throw new Error('Selection must be one connected group')
+  for (const edge of input.edges) {
+    const fromInside = selectedIds.has(edge.from)
+    const toInside = selectedIds.has(edge.to)
+    if (fromInside !== toInside && (!edge.fromPort || !edge.toPort)) {
+      throw new Error('Selection includes a junction without explicit ports')
+    }
+    if (fromInside && toInside && (!edge.fromPort || !edge.toPort)) {
+      throw new Error('Selection includes an edge without explicit ports')
+    }
+  }
   const boundary = input.edges.flatMap((edge) => {
     const fromInside = selectedIds.has(edge.from)
     const toInside = selectedIds.has(edge.to)
