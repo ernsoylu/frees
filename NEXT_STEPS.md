@@ -72,6 +72,7 @@ These items expand user-facing documentation, written tutorials, and reference e
 - **Deferred — Standalone Simulation Code Export (Python & C++)**: AST visitor exporting solved equation models to standalone Python scripts (SciPy `fsolve`/`solve_ivp`) or header-only C++ numerical code.
 - **Deferred — Crates.io Publishing for Dependencies & Core Engine**: Publish `rustprop`, `frees-core`, and `frees-cli` to crates.io once API contracts and upstream dependencies stabilize.
 - **Deferred — SharedArrayBuffer Multi-Threading**: Research cross-origin isolation (`COOP`/`COEP`) headers for zero-copy multi-threaded sweeps, with seamless fallback for standard static hosting environments.
+- **Deferred — Native Desktop & iOS Packaging (Tauri v2)**: Package the workbench as installable desktop and iOS applications running the solver as native Rust rather than WASM. Scoped in [§3.4](#34-deferred--native-desktop--ios-packaging-tauri-v2); no build has been produced or measured.
 - **Deferred — Neural & Domain-Bounded Surrogate Property Models**: Train bounded surrogate evaluators for fast property estimation during Newton line-search steps, with exact Helmholtz verification at convergence.
 - **Deferred — Standards Interoperability (FMI / FMU 2.0/3.0)**: Package dynamic systems as Functional Mock-up Units for co-simulation in industrial engineering workflows.
 - **Deferred — Accessibility & Touch Ergonomics**: Full WCAG 2.1 AA compliance, enhanced screen reader announcements, and tactile multi-touch canvas navigation.
@@ -91,6 +92,60 @@ coverage percentages as active work.
 - **Plot review follow-up:** source/run binding and missing-data line breaks were delivered in the completed visualization milestone. Recheck histogram required channels, array Z/size alignment, domain-specific request gating, code-owned edit behavior, log/unit handling, view persistence, export fidelity and render failure recovery against current integration tests before opening new fixes.
 - **Cross-layer acceptance:** add focused existing Vitest/Playwright scenarios for edit → solve → plot → export → reopen, including non-SI values, missing samples, failed rows, stale requests, keyboard interaction and narrow viewports. Measure cold/warm median and p95 on fixed datasets/devices; old review targets and jsdom timings are not measured browser guarantees. Prefer existing grids, plotting code and test tools over new abstractions.
 - **Scientific validation and usability:** keep cross-library oracle fixtures and the five-person R15 pilot separate from example execution. Neither passing examples nor static coverage establishes estimator parity or human task completion. STFT/resampling and a larger public book/gallery remain proposals unless separately implemented and verified.
+
+### 3.4 Deferred — Native Desktop & iOS Packaging (Tauri v2)
+
+Proposal only. **No Tauri project exists in the tree and no desktop or iOS build
+has ever been produced or measured**; every figure below is a code reading, not a
+benchmark. Grep for `tauri|electron|capacitor` currently returns only the
+physics components named `Capacitor` and `Electrolyzer`.
+
+**Goal.** Installable desktop apps (Linux/macOS/Windows) and later an iOS app
+from the existing tree, with the solver running as **native Rust inside the app
+binary** rather than as WASM in a Web Worker. The browser build keeps the WASM
+path unchanged; the two must agree numerically.
+
+**Why the port is cheap.** Three properties already hold:
+
+- **No cross-origin isolation.** D3 and [`nginx.conf.template`](file:///home/eren/homecloud/dev/frees-wasm/web/nginx.conf.template) rule out `COOP`/`COEP`, and `SharedArrayBuffer` appears nowhere in `web/src`. The largest webview hazard does not apply.
+- **No network.** [`api.ts`](file:///home/eren/homecloud/dev/frees-wasm/web/src/api.ts) states that nothing in the module reaches the network; the only `fetch` calls are WASM init and the dormant lazy-resource seam of Phase 4.2.
+- **The engine boundary is already a string protocol.** [`crates/frees/src/lib.rs`](file:///home/eren/homecloud/dev/frees-wasm/crates/frees/src/lib.rs) exposes `solve`, `solve_table`, `check`, `monte_carlo` and the analysis entry points as `&str → String`, and [`frees-cli`](file:///home/eren/homecloud/dev/frees-wasm/crates/frees-cli/src/main.rs) already calls them natively. A native backend is a dispatch `match` over functions the parity corpus already replays, not new engine code.
+
+**Single dispatch seam.** `call(method, args, onProgress, workerIndex)` in
+[`engineClient.ts`](file:///home/eren/homecloud/dev/frees-wasm/web/src/wasm/engineClient.ts) is the sole funnel for all engine methods, and
+[`engine.worker.ts`](file:///home/eren/homecloud/dev/frees-wasm/web/src/wasm/engine.worker.ts) is the only module importing `wasm/pkg`. The backend swap is one
+branch in that function.
+
+**Thread affinity is a hard constraint, not a preference.** Three pieces of
+engine state are `thread_local!`: the REPL `Session` ([`repl.rs`](file:///home/eren/homecloud/dev/frees-wasm/crates/frees/src/repl.rs)), the
+progress sink ([`progress.rs`](file:///home/eren/homecloud/dev/frees-wasm/crates/frees-core/src/progress.rs), whose `Sink` is `Box<dyn Fn(f64)>` and
+therefore not `Send`), and the cancel/wall-clock predicate
+([`ode/deadline.rs`](file:///home/eren/homecloud/dev/frees-wasm/crates/frees-core/src/ode/deadline.rs)). A Tokio blocking pool would scatter consecutive
+REPL calls across threads and lose the session, so the native side must mirror
+the existing pool: one dedicated `std::thread` per worker index, index 0
+REPL-affine.
+
+#### Phased outline
+
+1. **Shell.** New top-level `src-tauri/` (`Cargo.toml`, `tauri.conf.json`, `build.rs`, `src/`, `icons/`), **excluded from the root workspace** via `exclude = ["src-tauri"]` — otherwise `cargo clippy --workspace --target wasm32-unknown-unknown` (a standing gate in §4) would try to build Tauri for `wasm32` and fail. CSP must retain `'wasm-unsafe-eval'` in `script-src`, as [`security-headers.conf`](file:///home/eren/homecloud/dev/frees-wasm/web/security-headers.conf) already does.
+2. **Frontend build variant.** A `tauri` mode in [`vite.config.ts`](file:///home/eren/homecloud/dev/frees-wasm/web/vite.config.ts) that skips `pwaPlugin()` and `buildInfoPlugin()` (both exist for the nginx/Vercel deployment), sets `base: './'` and a separate `outDir`, and leaves `manualChunks` and the KaTeX font stripper untouched. `web/.npmrc`'s `legacy-peer-deps=true` must survive any scaffolding, since Glide Data Grid peer-caps at React 18. Path-based `/help` routing in `main.tsx` and the root-absolute icon hrefs in `index.html` need relative or hash forms.
+3. **Native engine backend.** A per-worker-index engine thread plus `engine_call` / `engine_stop` / `engine_retire_extra` commands, with `tauri::ipc::Channel<f64>` replacing `globalThis.__freesOnProgress`. First cut returns the plain JSON envelopes (`frees::solve`, `frees::solve_table` — the CLI's path); the `*_zerocopy` variants return `JsValue` and are WASM-only.
+4. **Native file I/O.** One `saveBlob` helper replacing the six hand-rolled anchor-download copies (`project.ts` ×2, `tablesGrid/csv.ts`, `plots/exportPlot.ts`, `schematic/SchematicTab.tsx`, `DigitizerTab.tsx`) — a net deletion in the browser build too. [`saveTarget.ts`](file:///home/eren/homecloud/dev/frees-wasm/web/src/saveTarget.ts) already models the save destination as a closed set and is the seam for a native destination. `openPrintReport` in [`report.ts`](file:///home/eren/homecloud/dev/frees-wasm/web/src/report.ts) uses `window.open` + `print()` and has no webview-portable equivalent; it is the highest-friction single item.
+5. **Release.** A `build-tauri` matrix job in [`release.yml`](file:///home/eren/homecloud/dev/frees-wasm/.github/workflows/release.yml) mirroring [`tools/vercel-build.sh`](file:///home/eren/homecloud/dev/frees-wasm/tools/vercel-build.sh)'s two-stage build. Code signing and notarization are explicitly out of scope for a first cut.
+6. **iOS.** Requires macOS, Xcode and an Apple Developer account; cannot be produced or verified on the current Linux development machine. [`MobileLayout.tsx`](file:///home/eren/homecloud/dev/frees-wasm/web/src/MobileLayout.tsx) and the `viewport-fit=cover` / `apple-mobile-web-app-capable` tags in `index.html` are a genuine head start, so the work is re-tuning rather than a new shell.
+
+#### Known ceilings to accept or revisit
+
+- **JSON envelopes, not binary IPC.** `WorkerResult.matrix` / `odeBuffers` stay null on the native path; `hydrateRowValues` no-ops because the envelope already carries the values. Upgrade to `tauri::ipc::Response` with a length-prefixed `f64` blob only if serialization is measured to dominate.
+- **Stop cancels transients only.** `wasmStop()` terminates workers; a running native solve cannot be killed. `deadline::install` gives cooperative cancellation inside ODE integration and sweep loops, not inside a blocking algebraic Newton solve.
+- **`localStorage` quota is unchanged.** [`projectStore.ts`](file:///home/eren/homecloud/dev/frees-wasm/web/src/projectStore.ts) already flags the ~5 MB ceiling as a pain point, and a Tauri webview does not lift it. A native filesystem store is a separate, genuine win.
+- **Relation to SharedArrayBuffer multi-threading (§3.2).** A native desktop engine obtains real parallelism without cross-origin isolation, which narrows that item to the browser deployment only. It does not close it.
+
+#### Acceptance criteria
+
+- Every gate in §4 stays green **unchanged**, including `cargo clippy --workspace --target wasm32-unknown-unknown`, `cargo test --release --test parity`, `npm test`, `npm run lint` and a `web/dist` production build that still emits the PWA assets.
+- Native and WASM backends agree on the golden corpus. The parity replay already exercises the native `frees` rlib that the Tauri commands would dispatch to; what is **not** covered is the dispatch layer itself, which needs its own test over every method name, plus a frontend test of the native response mapping.
+- Manual smoke in a running desktop window, none of which is implied by the automated gates: a solve matching the browser result; a sweep whose progress bar advances (proves the progress channel); Stop during a transient; two consecutive REPL commands where the second sees the first's bindings (proves thread affinity); CSV, plot and project export; project reopen; the print report.
 
 ---
 
