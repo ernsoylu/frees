@@ -38,23 +38,58 @@ TwoPhaseFlowRes inst(fluid$, L, D, domain$)
 
 Instantiating the component expands these acausal equations (over its port members and parameters) into scalar equations solved by the standard Newton/Tarjan pipeline:
 
+$$
+\begin{aligned}
+out.mdot &= in.mdot \\
+out.h &= in.h \\
+hf &= \text{Enthalpy}\left(\mathrm{fluid}, =in.p, p=0\right) \\
+hg &= \text{Enthalpy}\left(\mathrm{fluid}, =in.p, p=1\right) \\
+x &= \frac{in.h - hf}{hg - hf} \\
+rho_{l} &= \text{Density}\left(\mathrm{fluid}, =in.p, p=0\right) \\
+rho_{g} &= \text{Density}\left(\mathrm{fluid}, =in.p, p=1\right) \\
+mu_{l} &= \text{Viscosity}\left(\mathrm{fluid}, =in.p, p=0\right) \\
+mu_{g} &= \text{Viscosity}\left(\mathrm{fluid}, =in.p, p=1\right) \\
+sigma &= \text{Surfacetension}\left(\mathrm{fluid}, =in.p\right) \\
+a &= \frac{3.141592653589793}{4}\cdot d^{2} \\
+g &= \frac{in.mdot}{a} \\
+v_{lo} &= \frac{g}{rho_{l}} \\
+re_{lo} &= \text{reynolds}\left(rho_{l}, v_{lo}, d, mu_{l}\right) \\
+f_{lo} &= \text{friction\_factor}\left(re_{lo}, 0\right) \\
+dp_{lo} &= \frac{f_{lo}\cdot \frac{l}{d}\cdot rho_{l}\cdot v_{lo}^{2}}{2} \\
+phi2 &= \text{friedel\_phi2}\left(x, rho_{l}, rho_{g}, mu_{l}, mu_{g}, g, d, sigma\right) \\
+out.p &= in.p - phi2\cdot dp_{lo}
+\end{aligned}
+$$
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Solve a complete model
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+// frees-language: 2
+TwoPhaseSource SRC(fluid$=R134a, mdot=0.02, P=500000, x=0.3)
+TwoPhaseFlowRes LINE(fluid$=R134a, L=2, D=0.008)
+TwoPhaseSensor SEN(fluid$=R134a)
+TwoPhaseSink SNK()
+connect(SRC.out, LINE.in)
+connect(LINE.out, SEN.in)
+connect(SEN.out, SNK.in)
+
+{ CHECK line.a 0.00005026548246 1e-8 }
+{ CHECK line.dp_lo 446.8552766 0.0004468552765849463 }
+{ CHECK line.f_lo 0.02801750717 2.8017507165035196e-8 }
 ```
-out.mdot = in.mdot
-out.h    = in.h
-hf       = Enthalpy(fluid$, P=in.P, x=0)
-hg       = Enthalpy(fluid$, P=in.P, x=1)
-x        = (in.h - hf) / (hg - hf)
-rho_l    = Density(fluid$, P=in.P, x=0)
-rho_g    = Density(fluid$, P=in.P, x=1)
-mu_l     = Viscosity(fluid$, P=in.P, x=0)
-mu_g     = Viscosity(fluid$, P=in.P, x=1)
-sigma    = SurfaceTension(fluid$, P=in.P)
-A        = pi# / 4 * D^2
-G        = in.mdot / A
-V_lo     = G / rho_l
-Re_lo    = reynolds(rho_l, V_lo, D, mu_l)
-f_lo     = friction_factor(Re_lo, 0)
-dP_lo    = f_lo * (L / D) * rho_l * V_lo^2 / 2
-phi2     = friedel_phi2(x, rho_l, rho_g, mu_l, mu_g, G, D, sigma)
-out.P    = in.P - phi2 * dP_lo
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+line.a = 0.00005026548246
+line.dp_lo = 446.8552766
+line.f_lo = 0.02801750717
 ```
+
+<!-- verified-reference-example:end -->

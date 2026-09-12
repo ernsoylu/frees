@@ -26,6 +26,28 @@ Least-squares linear-fit intercept
 
 $$ b = \bar y - m\,\bar x $$
 
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Find a sensor calibration offset
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+result = intercept([0, 1, 2], [2, 5, 8])
+
+{ CHECK result 2 0.000002 }
+```
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+result = 2
+```
+
+<!-- verified-reference-example:end -->
+
 ## Input Arguments
 
 | Argument | Type | Required | Description |

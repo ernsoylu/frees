@@ -41,6 +41,36 @@ $$ G(z) = G(s)\Big|_{\,s = \frac{2}{T_s}\frac{z-1}{z+1}} $$
 
 ## Examples
 
+<!-- verified-reference-example:start -->
+
+### Verified example — Solve a complete model
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+// frees-language: 2
+num = [1]
+den = [1, 2, 1]
+Ts = 0.1
+[nd, dd] = c2d(num, den, Ts)
+[nc, dc] = d2c(nd, dd, Ts)
+[np, dp] = pade(0.2, 2)
+
+{ CHECK dc[1] 1 0.000001 }
+{ CHECK dc[2] 2 0.0000019999999999999995 }
+{ CHECK dc[3] 1 9.999999999999762e-7 }
+```
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+dc[1] = 1
+dc[2] = 2
+dc[3] = 1
+```
+
+<!-- verified-reference-example:end -->
+
 ### Example 1 — Discretize a controller
 
 [Run: digital-control-c2d]

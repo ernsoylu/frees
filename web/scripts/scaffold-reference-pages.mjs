@@ -139,14 +139,14 @@ for (const f of [...manifest.functions, ...manifest.matrixFunctions]) {
   made++;
 }
 
-// 2. CALL procedures
+// 2. Multi-output functions
 for (const p of manifest.callProcedures) {
   if (done(p.name)) continue;
   const { inputs, outputs } = parseSig(p.signature);
   emit('control', {
     name: p.name, category: 'Control Systems', summary: esc(p.description),
     examples: boundExamples(p.name), tags: tagsFrom(p.name, 'control'),
-    body: pageBody({ name: p.name, summary: esc(p.description), syntax: p.signature, description: esc(p.description) + ' Invoked as a `CALL` with the listed inputs and outputs.', inputs, outputs, references: refsFor('Control Systems') }),
+    body: pageBody({ name: p.name, summary: esc(p.description), syntax: p.signature, description: esc(p.description) + ' Use `[outputs] = name(inputs)` with the listed inputs and outputs.', inputs, outputs, references: refsFor('Control Systems') }),
   });
   made++;
 }

@@ -27,6 +27,28 @@ Root mean square
 
 $$ x_{\text{rms}} = \sqrt{\frac{1}{n}\sum_{i=1}^{n} x_i^2} $$
 
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Evaluate a scalar engineering calculation
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+result = rms(-2, 2, -2, 2)
+
+{ CHECK result 2 0.000002 }
+```
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+result = 2
+```
+
+<!-- verified-reference-example:end -->
+
 ## Input Arguments
 
 | Argument | Type | Required | Description |

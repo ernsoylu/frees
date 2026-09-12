@@ -272,7 +272,7 @@ function mergeRustRegistries(manifest) {
     report.callsAdded.push(name);
     manifest.callProcedures.push({
       name,
-      signature: `CALL ${name}(…)`,
+      signature: `[outputs] = ${name}(…)`,
       description: '',
       source: 'rust',
       documented: pages.has(name),
@@ -333,6 +333,14 @@ function reportMerge(report) {
 /** Reconcile against the Rust registries, stamp provenance, recount. */
 function finalize(manifest) {
   const report = mergeRustRegistries(manifest);
+  // Cached prose must not reintroduce the legacy input/output colon syntax.
+  for (const entry of [...manifest.functions, ...manifest.callProcedures, ...manifest.matrixFunctions]) {
+    const legacy = entry.signature?.match(/^(?:CALL\s+)?(\w+)\((.*) : (.*)\)$/);
+    if (legacy) entry.signature = `[${legacy[3]}] = ${legacy[1]}(${legacy[2]})`;
+    else if (entry.signature?.startsWith('CALL ')) {
+      entry.signature = `[outputs] = ${entry.signature.slice(5)}`;
+    }
+  }
   manifest.derivedFrom = 'rust';
   recountCoverage(manifest);
   return report;
@@ -445,7 +453,7 @@ console.log(
   `doc-manifest: ${cov.documentableSurfaceTotal} documentable symbols ` +
     `(${cov.documented} documented) — ${cov.registeredFunctions} functions, ` +
     `${cov.matrixFunctions} matrix fns, ${cov.components} components, ` +
-    `${cov.propertyFunctions} property fns, ${cov.callProcedures} CALL procs, ` +
+    `${cov.propertyFunctions} property fns, ${cov.callProcedures} multi-output fns, ` +
     `${cov.materialFunctions} material fns, ${cov.replCasOps} CAS ops → ` +
     `${path.relative(WASM_REPO, OUT)}`,
 );

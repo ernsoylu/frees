@@ -7,7 +7,7 @@
 # is the point: this container is a convenience, not a requirement.
 #
 # Deliberately absent: Cross-Origin-Opener-Policy / Cross-Origin-Embedder-
-# Policy. D3 (docs/decisions/0003-threading-model.md) rules out requiring
+# Policy. D3 (ARCHITECTURE_AND_REQUIREMENTS.md#11-retained-architectural-decisions) rules out requiring
 # them; the PWA and worker pool run without cross-origin isolation.
 
 server {

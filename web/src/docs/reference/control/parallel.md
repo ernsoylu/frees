@@ -28,6 +28,35 @@ $$ G(s) = G_1(s) + G_2(s) = \frac{\text{num}_1\,\text{den}_2 + \text{num}_2\,\te
 
 ## Examples
 
+<!-- verified-reference-example:start -->
+
+### Verified example — Solve a complete model
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+// frees-language: 2
+num1 = [0, 1]
+den1 = [1, 1]
+num2 = [0, 2]
+den2 = [1, 3]
+[num_out, den_out] = parallel(num1, den1, num2, den2)
+
+{ CHECK den1[1] 1 0.000001 }
+{ CHECK den1[2] 1 0.000001 }
+{ CHECK den2[1] 1 0.000001 }
+```
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+den1[1] = 1
+den1[2] = 1
+den2[1] = 1
+```
+
+<!-- verified-reference-example:end -->
+
 ```
 { [num, den] = parallel(num1, den1, num2, den2) }
 ```

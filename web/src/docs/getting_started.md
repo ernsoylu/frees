@@ -123,8 +123,8 @@ After a solve, the **REPL terminal** (a dockable console window) holds the whole
 
 Three things make it more than a calculator:
 
-- **Implicit solve** — type an equation with one unknown and the REPL solves it on the spot.
-- **The CALL library** — eigenvalues, Bode data, partial fractions: `[mag, phase] = bode(num, den, omega)` works interactively, with output sizes inferred for you.
+- **Workspace queries** — inspect a solved scalar and use it in a new expression.
+- **Scalar assignments** — define a value for subsequent expressions or override a document variable before solving again.
 - **Symbolic CAS** — `Factor(x^2 - 1)`, `Apart(...)`, `Laplace(...)` return transformed expressions (REPL-only).
 
 The full command set is on the *REPL Terminal & Workspace* page. One step left: components.
@@ -180,7 +180,11 @@ Three short journeys — a scalar with units, a component chain, and a map or tr
 [Topic: repl]
 # REPL Terminal & Workspace
 
-The **REPL terminal** is a dockable, interactive console — move and dock it anywhere like the editor. It evaluates **one line at a time** against the current **workspace** (every variable from the last solve, plus anything you define in the REPL). It's a line-oriented math REPL, not a shell: use it as a unit-aware calculator, to inspect solved values, to try `CALL` routines, and to run symbolic CAS transforms. **Up/Down** recall history; **Tab** completes variable, function, and command names.
+The **REPL terminal** is a dockable, interactive console. After solving a document,
+use it to evaluate scalar expressions, inspect solved variables, assign scalar
+values, and run symbolic CAS transforms. **Up/Down** recall history; **Tab**
+completes variable, function, and command names. Multi-output calls belong in
+the editor document.
 
 ## Meta-commands
 These drive the app instead of evaluating an expression:
@@ -205,9 +209,13 @@ Enthalpy('Water', t=400, p=1e5)    { J/kg }
 ## Variables: query, assign, solve
 - **Query** a workspace value (shown with units and uncertainty): `T_1` → `300 [K]`.
 - **Assign** a REPL variable (persists for the session, visible to later lines and a subsequent `solve`): `x = 42 [m/s]`.
-- **Implicit single-unknown solve** — give an equation with exactly one unknown and frees solves it: `P = 50000 * volume` → `volume = 5 [m^3]`.
+- **Solve equations in the document** — the browser REPL does not implicitly solve an equation for an unknown.
 
 ## Matrices, vectors, ranges
+
+Declare arrays and perform matrix operations in the editor document. The browser
+REPL does not accept matrix/vector literals or range-vector construction.
+
 ```
 A = [2 0; 0 3]          { = [2 0; 0 3] }
 [1:2:7]                 { = [1 3 5 7] }
@@ -215,18 +223,22 @@ A * A                   { matrix product -> ans[i,j] }
 Inverse(A)   Transpose(A)   Dot(u, v)
 ```
 
-## The CALL library (auto-sized outputs)
-The full `CALL` procedure library (eigenvalues, control-systems analysis, partial fractions, decompositions) runs in the REPL. **Output lengths are sized automatically from the inputs**, so bare output names work — no `[1:n]` annotation:
+## Multi-output functions (auto-sized outputs)
+Use multi-output functions in the editor document. **Output lengths are sized
+automatically from the inputs** for fixed-shape operations:
 ```
 [lambda] = Eigenvalues(A)            { lambda = [2 3] }
 [nRHP, stable] = Routh(den)
 [rr, ri, pr, pi, k] = residue(num, den)
 [mag, phase] = Bode(num, den, omega)
 ```
-Only genuinely value-dependent counts take an explicit size: the finite-zero counts of `zero`/`tf2zp` (e.g. `zr[1:2]`), and the root-locus sweep resolution of `rlocus` (defaults to 100 points). This auto-sizing applies in the editor document too.
+Value-dependent counts need explicit sizing: for example, the finite-zero counts
+of `zero`/`tf2zp` and a requested `rlocus` sweep length. See each reference page.
 
 ## Symbolic CAS (REPL only)
-The REPL exposes the embedded **Symja** computer-algebra engine as functions that return a transformed expression as text. Free variables stay symbolic, so no solved context is needed:
+The REPL uses the native Rust CAS implementation to return transformed expressions
+as text. Solve a document first to establish the session, even for symbolic work.
+Free variables in CAS expressions remain symbolic.
 
 | Function | Example → result |
 | --- | --- |
@@ -242,10 +254,10 @@ The REPL exposes the embedded **Symja** computer-algebra engine as functions tha
 | `Laplace(f, t, s)` | Laplace transform |
 | `InverseLaplace(F, s, t)` | `InverseLaplace(1/(s+2), s, t)` → `E^(-2*t)` |
 
-When the CAS can't find a closed form, the REPL reports *"no closed form found"* rather than echoing the call. These symbolic functions are **REPL-only**; in the editor, symbolic work uses `SYMBOLIC` identities and `CALL residue` (see *Control Systems & Symbolic CAS*).
+When the CAS can't find a closed form, the REPL reports *"no closed form found"* rather than echoing the call. These symbolic functions are **REPL-only**; in the editor, symbolic work uses `SYMBOLIC` identities and `residue` (see *Control Systems & Symbolic CAS*).
 
 ## What the REPL does not do
-The REPL evaluates a single expression per line, so multi-line block constructs are editor-only: `FUNCTION`/`PROCEDURE`/`MODULE` definitions, `DYNAMIC` ODE systems, `TABLE` blocks, `IF`/`FOR` control flow, and the `SYMBOLIC`/`SOLVE BLOCK` directives. You can *call* a function or read `ODEValue`/`Interpolate`/table accessors that a prior solve produced — you just can't *define* the block from the REPL.
+The REPL evaluates a single expression per line, so multi-line block constructs are editor-only: `function` definitions, `DYNAMIC` ODE systems, `TABLE` blocks, `IF`/`FOR` control flow, and the `SYMBOLIC`/`SOLVE BLOCK` directives. You can *call* a function or read `ODEValue`/`Interpolate`/table accessors that a prior solve produced — you just can't *define* the block from the REPL.
 
 [Related: shortcuts, symbolic-cas, matrices-sys]
 

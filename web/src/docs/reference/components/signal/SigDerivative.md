@@ -36,8 +36,43 @@ SigDerivative inst(tau, y0)
 
 The acausal equations this component expands into (over its port members and parameters):
 
+$$
+\begin{aligned}
+\text{der}\left(y\right) &= \frac{in.sig - y}{tau} \\
+\text{init}\left(y\right) &= y0 \\
+out.sig &= \frac{in.sig - y}{tau}
+\end{aligned}
+$$
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Solve a complete model
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+// frees-language: 2
+// SigDerivative steady: the filter state settles on the constant input, so the
+// realizable derivative reads exactly zero.
+// EXPECT yd = 0 tol 1e-9
+SigConstant   U(k = 4)
+SigDerivative DV(tau = 0.1, y0 = 0)
+connect(U.out, DV.in)
+yd = DV.out.sig
+
+{ CHECK dv.in.sig 4 0.000004 }
+{ CHECK dv.out.sig 0 1e-8 }
+{ CHECK dv.y 4 0.000004 }
 ```
-der(y)  = (in.sig - y) / tau
-init(y) = y0
-out.sig = (in.sig - y) / tau
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+dv.in.sig = 4
+dv.out.sig = 0
+dv.y = 4
 ```
+
+<!-- verified-reference-example:end -->

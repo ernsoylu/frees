@@ -81,6 +81,36 @@ $$ \varepsilon = 1 - e^{-NTU} $$
 
 ## Examples
 
+<!-- verified-reference-example:start -->
+
+### Verified example — Solve a complete model
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+// frees-language: 2
+Cr = 0.5
+NTU = 1
+eps = hx_effectiveness('counterflow', NTU, Cr)
+hx_effectiveness('counterflow', NTU_req, Cr) = 0.75
+dTlm = LMTD(50, 20)
+Q = 1200 * dTlm
+
+{ CHECK dTlm 32.74070004 0.000032740700038118736 }
+{ CHECK eps 0.5647334016 5.647334016064161e-7 }
+{ CHECK NTU_req 1.832581464 0.0000018325814637483104 }
+```
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+dTlm = 32.74070004
+eps = 0.5647334016
+NTU_req = 1.832581464
+```
+
+<!-- verified-reference-example:end -->
+
 ### Example 1 — Counterflow water-to-water exchanger (rating)
 
 A counterflow exchanger with `UA = 12 kW/K` heats 1.5 kg/s of water against 2.0 kg/s of

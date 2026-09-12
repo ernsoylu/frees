@@ -25,3 +25,24 @@ See the backend signature for accepted arguments and returned values.
 
 Check argument count, dimensions, and units before solving.
 
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Find a variance-ratio critical value
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+result = finv(0.95, 4, 10)
+
+{ CHECK result 3.478049691 0.0000034780496907652303 }
+```
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+result = 3.478049691
+```
+
+<!-- verified-reference-example:end -->

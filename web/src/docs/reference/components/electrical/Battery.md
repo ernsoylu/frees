@@ -36,8 +36,41 @@ Battery inst(Voc, R0)
 
 Instantiating the component expands these acausal equations (over its port members and parameters) into scalar equations solved by the standard Newton/Tarjan pipeline:
 
+$$
+\begin{aligned}
+p.v - n.v &= voc + r0\cdot p.i \\
+p.i + n.i &= 0 \\
+w &= \left(p.v - n.v\right)\cdot \left(0 - p.i\right)
+\end{aligned}
+$$
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Solve a complete model
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+// frees-language: 2
+Battery  B(Voc=12, R0=0.1)
+Resistor RL(R=2.0)
+Ground   G()
+connect(B.p, RL.a)
+connect(B.n, RL.b, G.port)
+
+{ CHECK b.n.i 5.714285714 0.0000057142857142857145 }
+{ CHECK b.n.v 0 1e-8 }
+{ CHECK b.p.i -5.714285714 0.0000057142857142857145 }
 ```
-p.V - n.V = Voc + R0 * p.I
-p.I + n.I = 0
-W = (p.V - n.V) * (0 - p.I)
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+b.n.i = 5.714285714
+b.n.v = 0
+b.p.i = -5.714285714
 ```
+
+<!-- verified-reference-example:end -->

@@ -21,10 +21,35 @@ y = besselk0(x)
 
 ## Mathematical Formulation
 
-`K_0` is the decaying order-0 solution of the modified Bessel equation, with
-`K_0(x) ~ √(π/2x)·e^{−x}` for large `x`.
+$K_0$ is the decaying order-zero solution of the modified Bessel equation:
+
+$$
+x^2 y'' + x y' - x^2 y = 0,
+\qquad K_0(x) \sim \sqrt{\frac{\pi}{2x}}\,e^{-x}
+\quad (x \to +\infty).
+$$
 
 ## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Evaluate a radial-mode special function
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+result = besselk0(1)
+
+{ CHECK result 0.4210244211 4.2102442108341797e-7 }
+```
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+result = 0.4210244211
+```
+
+<!-- verified-reference-example:end -->
 
 ```
 { decays for large x }

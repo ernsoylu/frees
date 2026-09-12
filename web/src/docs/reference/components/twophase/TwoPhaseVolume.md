@@ -39,17 +39,55 @@ TwoPhaseVolume inst(fluid$, V, C, P0, domain$)
 
 Instantiating the component expands these acausal equations (over its port members and parameters) into scalar equations solved by the standard Newton/Tarjan pipeline:
 
+$$
+\begin{aligned}
+out.p &= in.p \\
+out.h &= in.h \\
+\text{der}\left(in.p\right) &= \frac{in.mdot - out.mdot}{c} \\
+\text{init}\left(in.p\right) &= p0 \\
+hf &= \text{Enthalpy}\left(\mathrm{fluid}, =in.p, p=0\right) \\
+hg &= \text{Enthalpy}\left(\mathrm{fluid}, =in.p, p=1\right) \\
+x &= \frac{in.h - hf}{hg - hf} \\
+rho_{l} &= \text{Density}\left(\mathrm{fluid}, =in.p, p=0\right) \\
+rho_{g} &= \text{Density}\left(\mathrm{fluid}, =in.p, p=1\right) \\
+alpha &= \text{void\_zivi}\left(x, rho_{l}, rho_{g}\right) \\
+rho_{mix} &= alpha\cdot rho_{g} + \left(1 - alpha\right)\cdot rho_{l} \\
+m &= v\cdot rho_{mix}
+\end{aligned}
+$$
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Solve a complete model
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+// frees-language: 2
+// TwoPhaseVolume: adiabatic capacitive C-node in its steady limit (no DYNAMIC
+// block, so der(P) = 0 forces in.mdot = out.mdot); reports the void-weighted
+// charge of 2 L of R134a at x = 0.5.
+TwoPhaseSource SRC(fluid$ = R134a, mdot = 0.04, P = 400000, x = 0.5)
+TwoPhaseVolume VOL(fluid$ = R134a, V = 0.002, C = 1e-7, P0 = 400000)
+TwoPhaseSink   SNK()
+connect(SRC.out, VOL.in)
+connect(VOL.out, SNK.in)
+m_charge = VOL.m
+a_void   = VOL.alpha
+
+{ CHECK a_void 0.9416100293 9.416100293291574e-7 }
+{ CHECK m_charge 0.1844629667 1.8446296666302913e-7 }
+{ CHECK snk.h 307915.2602 0.30791526023384824 }
 ```
-out.P       = in.P
-out.h       = in.h
-der(in.P)   = (in.mdot - out.mdot) / C
-init(in.P)  = P0
-hf          = Enthalpy(fluid$, P=in.P, x=0)
-hg          = Enthalpy(fluid$, P=in.P, x=1)
-x           = (in.h - hf) / (hg - hf)
-rho_l       = Density(fluid$, P=in.P, x=0)
-rho_g       = Density(fluid$, P=in.P, x=1)
-alpha       = void_zivi(x, rho_l, rho_g)
-rho_mix     = alpha * rho_g + (1 - alpha) * rho_l
-m           = V * rho_mix
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+a_void = 0.9416100293
+m_charge = 0.1844629667 [kg/m^3]
+snk.h = 307915.2602
 ```
+
+<!-- verified-reference-example:end -->

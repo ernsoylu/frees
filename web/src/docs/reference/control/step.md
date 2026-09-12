@@ -37,6 +37,33 @@ the peak overshoot is $M_p = \exp\!\big(-\pi\zeta/\sqrt{1-\zeta^2}\big)$.
 
 ## Examples
 
+<!-- verified-reference-example:start -->
+
+### Verified example — Solve a complete model
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+// frees-language: 2
+num = [1]
+den = [1, 1]
+[y, t] = step(num, den)
+
+{ CHECK den[1] 1 0.000001 }
+{ CHECK den[2] 1 0.000001 }
+{ CHECK num[1] 1 0.000001 }
+```
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+den[1] = 1
+den[2] = 1
+num[1] = 1
+```
+
+<!-- verified-reference-example:end -->
+
 ### Example 1 — Step response of an underdamped plant
 
 `G(s) = (s + 2)/(s² + 4s + 25)`, integrated over 4 s:

@@ -49,7 +49,7 @@
 //!
 //! # Threading: the shape is the point (decision D3)
 //!
-//! `docs/decisions/0003-threading-model.md` chose a pool of independent workers
+//! `ARCHITECTURE_AND_REQUIREMENTS.md#11-retained-architectural-decisions` chose a pool of independent workers
 //! over shared memory, and named parametric sweeps as the case that pays for it.
 //! Nothing here spawns, locks or shares: a run is described by a
 //! [`RowJob`] — an owned source string and a run index — and answered by a

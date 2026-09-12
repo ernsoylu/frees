@@ -25,3 +25,24 @@ See the backend signature for accepted arguments and returned values.
 
 Check argument count, dimensions, and units before solving.
 
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Evaluate a Student-t tail threshold
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+result = tcdf(2, 9)
+
+{ CHECK result 0.9617235881 9.617235881146496e-7 }
+```
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+result = 0.9617235881
+```
+
+<!-- verified-reference-example:end -->

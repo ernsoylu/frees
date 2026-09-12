@@ -37,6 +37,42 @@ $$ A P + P A^\top - P C^\top R^{-1} C P + G Q G^\top = 0 $$
 
 ## Examples
 
+<!-- verified-reference-example:start -->
+
+### Verified example — Solve a complete model
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+// frees-language: 2
+A[1,1] = 0; A[1,2] = 1
+A[2,1] = -2; A[2,2] = -3
+G[1,1] = 1; G[2,1] = 0
+C[1,1] = 1; C[1,2] = 0
+Qn[1,1] = 1
+Rn[1,1] = 0.1
+[L] = lqe(A, G, C, Qn, Rn)
+np = [1]
+dp = [1, 1, 0]
+wc = 1
+[Kp, Ki, Kd] = pidtune(np, dp, 'PID', wc)
+[Kp2, Ki2, Kd2] = pidtune(np, dp, 'PI', wc)
+
+{ CHECK dp[1] 1 0.000001 }
+{ CHECK dp[2] 1 0.000001 }
+{ CHECK dp[3] 0 1e-8 }
+```
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+dp[1] = 1
+dp[2] = 1
+dp[3] = 0
+```
+
+<!-- verified-reference-example:end -->
+
 ### Example 1 — Estimator gain for a plant
 
 [Run: estimator-gramian-balreal]

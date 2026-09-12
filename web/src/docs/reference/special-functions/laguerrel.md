@@ -35,6 +35,26 @@ with orthogonality $\int_0^\infty L_m L_n\,e^{-x}\,dx = \delta_{mn}$.
 
 ## Examples
 
+<!-- verified-reference-example:start -->
+
+### Verified example — Evaluate a third-order approximation basis
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+result = laguerrel(3, 0.5)
+
+{ CHECK result -0.1458333333 1.4583333333333335e-7 }
+```
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+result = -0.1458333333
+```
+
+<!-- verified-reference-example:end -->
+
 ```
 { L_1(x) = 1 - x; laguerrel(1, 0) = 1 }
 y = laguerrel(1, 0)

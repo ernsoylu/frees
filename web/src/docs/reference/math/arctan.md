@@ -27,6 +27,28 @@ Inverse tangent [rad] (alias of atan)
 
 $$ y = \arctan(x), \qquad \tan(y) = x $$
 
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Evaluate a scalar engineering calculation
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+result = arctan(1)
+
+{ CHECK result 0.7853981634 7.853981633974482e-7 }
+```
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+result = 0.7853981634
+```
+
+<!-- verified-reference-example:end -->
+
 ## Input Arguments
 
 | Argument | Type | Required | Description |

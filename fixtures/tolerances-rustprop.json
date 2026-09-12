@@ -1,7 +1,7 @@
 {
   "_README": [
     "Per-fixture numeric tolerances for tests/parity.rs WHEN THE PROPERTY BACKEND",
-    "IS RUSTPROP -- decision D9, docs/decisions/0009-rustprop-backend.md. The",
+    "IS RUSTPROP -- decision D9, ARCHITECTURE_AND_REQUIREMENTS.md#11-retained-architectural-decisions. The",
     "sibling file tolerances.json grades the (P,h) TableBackend; the harness reads",
     "exactly one of the two, selected by the same `rustprop-backend` cfg that",
     "decides which backend install_builtin_once installs. Every fixture not named",

@@ -49,3 +49,48 @@ two-phase component library: `TwoPhaseCompressor` →
 `TwoPhaseCondenser` → `TwoPhaseExpansionValve`
 → `TwoPhaseEvaporator`, closed into a loop (see the
 *EV Thermal-Management System* guide for a full coupled example).
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Refrigeration Cycle
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+// Vapor-Compression Refrigeration (R134a)
+{ Ideal VCR cycle. Real-refrigerant properties, computed in the browser. }
+T_evap = 263.15 [K]      { -10 C }
+T_cond = 313.15 [K]      { 40 C }
+eta_comp = 0.80
+
+P1 = P_sat(R134a, T=T_evap)
+h1 = Enthalpy(R134a, T=T_evap, x=1)  { saturated vapor leaving evaporator }
+s1 = Entropy(R134a, T=T_evap, x=1)
+
+P2 = P_sat(R134a, T=T_cond)
+h2s = Enthalpy(R134a, P=P2, s=s1)
+h2 = h1 + (h2s - h1) / eta_comp
+
+h3 = Enthalpy(R134a, P=P2, x=0)      { saturated liquid leaving condenser }
+h4 = h3                              { throttle is isenthalpic }
+
+q_L = h1 - h4            { refrigeration effect }
+w_c = h2 - h1
+COP = q_L / w_c
+
+{ CHECK COP 3.223576735 0.000003223576734898331 }
+{ CHECK h1 392664.9136 0.39266491356786404 }
+{ CHECK h2 434933.3874 0.43493338744515575 }
+```
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+COP = 3.223576735
+h1 = 392664.9136 [J/kg]
+h2 = 434933.3874 [J/kg]
+```
+
+<!-- verified-reference-example:end -->

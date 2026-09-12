@@ -28,6 +28,36 @@ $$ G(s) = k\,\frac{\prod_i (s - z_i)}{\prod_j (s - p_j)} = \frac{\text{num}(s)}{
 
 ## Examples
 
+<!-- verified-reference-example:start -->
+
+### Verified example — Solve a complete model
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+// frees-language: 2
+zr = [-3.0]
+zi = [0.0]
+pr = [-1.0, -2.0]
+pi = [0.0, 0.0]
+k = 2.0
+[num, den] = zp2tf(zr, zi, pr, pi, k)
+
+{ CHECK den[1] 1 0.000001 }
+{ CHECK den[2] 3 0.000003 }
+{ CHECK den[3] 2 0.000002 }
+```
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+den[1] = 1
+den[2] = 3
+den[3] = 2
+```
+
+<!-- verified-reference-example:end -->
+
 ```
 { [num, den] = zp2tf(zr, zi, pr, pi, k) }
 ```

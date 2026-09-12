@@ -48,3 +48,41 @@ connect(cold_in, C2.cold_in)
 connect(C2.cold_out, C1.cold_in)
 connect(C1.cold_out, cold_out)
 ```
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Solve a complete model
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+// frees-language: 2
+// TwoZoneHX: the hierarchical two-cell counterflow exchanger (two nested
+// HeatExchangers at UA/2 each, counter-plumbed). Air on both sides — the
+// wide (P,h) surface keeps the 49-equation inner block Newton-stable.
+Source    HS(h1, fluid$ = Air, mdot = 0.4, P = 110000, T = 450)
+Source    CS(c1, fluid$ = Air, mdot = 0.5, P = 200000, T = 300)
+TwoZoneHX HX(h1, h2, c1, c2, UA = 300, hot$ = Air, cold$ = Air, arr$ = counterflow)
+Sink      SKH(h2)
+Sink      SKC(c2)
+
+th_out = SKH.h
+tc_out = SKC.h
+q_hot  = 0.4 * (h1.h - h2.h)
+
+{ CHECK c1.h 426074.4802 0.4260744801707202 }
+{ CHECK c1.mdot 0.5 5e-7 }
+{ CHECK c1.p 200000 0.19999999999999998 }
+```
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+c1.h = 426074.4802
+c1.mdot = 0.5
+c1.p = 200000
+```
+
+<!-- verified-reference-example:end -->

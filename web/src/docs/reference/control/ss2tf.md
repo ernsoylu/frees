@@ -36,6 +36,35 @@ The denominator is the characteristic polynomial `den(s) = det(sI − A)`.
 
 ## Examples
 
+<!-- verified-reference-example:start -->
+
+### Verified example — Solve a complete model
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+// frees-language: 2
+A = [0, 1; -2, -3]
+B = [0; 1]
+C = [1, 0]
+D = [0]
+[num, den] = ss2tf(A, B, C, D)
+
+{ CHECK den[1] 1 0.000001 }
+{ CHECK den[2] 3 0.000003 }
+{ CHECK den[3] 2 0.000002 }
+```
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+den[1] = 1
+den[2] = 3
+den[3] = 2
+```
+
+<!-- verified-reference-example:end -->
+
 ### Example 1 — Car velocity model
 
 A 1000 kg car with viscous drag, output = velocity, converted to a transfer

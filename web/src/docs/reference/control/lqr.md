@@ -39,6 +39,37 @@ $$ A^\top P + P A - P B R^{-1} B^\top P + Q = 0 $$
 
 ## Examples
 
+<!-- verified-reference-example:start -->
+
+### Verified example — Solve a complete model
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+// frees-language: 2
+A[1,1] = 0.0; A[1,2] = 1.0
+A[2,1] = 0.0; A[2,2] = -3.0
+B[1] = 1.0; B[2] = 0.0
+Q[1,1] = 1.0; Q[1,2] = 0.0
+Q[2,1] = 0.0; Q[2,2] = 1.0
+R = 1
+[K] = lqr(A, B, Q, R)
+
+{ CHECK A[1,1] 0 1e-8 }
+{ CHECK A[1,2] 1 0.000001 }
+{ CHECK A[2,1] 0 1e-8 }
+```
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+A[1,1] = 0
+A[1,2] = 1
+A[2,1] = 0
+```
+
+<!-- verified-reference-example:end -->
+
 ### Example 1 — LQR gain for a plant
 
 [Run: controller-design-lqr-pid]

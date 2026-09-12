@@ -34,7 +34,7 @@
     },
     {
       "name": "acker",
-      "signature": "acker(A, B, pr, pi : K)",
+      "signature": "[K] = acker(A, B, pr, pi)",
       "description": "Pole placement via Ackermann's formula",
       "category": "Control",
       "aliases": [],
@@ -215,7 +215,7 @@
     },
     {
       "name": "balreal",
-      "signature": "balreal(A, B, C : Ab, Bb, Cb)",
+      "signature": "[Ab, Bb, Cb] = balreal(A, B, C)",
       "description": "Internally-balanced realization",
       "category": "Control",
       "aliases": [],
@@ -424,7 +424,7 @@
     },
     {
       "name": "bode",
-      "signature": "bode(num, den, w : mag, phase)",
+      "signature": "[mag, phase] = bode(num, den, w)",
       "description": "Bode frequency response",
       "category": "Control",
       "aliases": [],
@@ -450,7 +450,7 @@
     },
     {
       "name": "c2d",
-      "signature": "c2d(num, den, Ts : num_d, den_d)",
+      "signature": "[num_d, den_d] = c2d(num, den, Ts)",
       "description": "Continuous to discrete conversion",
       "category": "Control",
       "aliases": [],
@@ -541,7 +541,7 @@
     },
     {
       "name": "cholesky",
-      "signature": "cholesky(A : L)",
+      "signature": "[L] = cholesky(A)",
       "description": "Cholesky decomposition",
       "category": "Matrix",
       "aliases": [],
@@ -625,7 +625,7 @@
     },
     {
       "name": "ctrb",
-      "signature": "ctrb(A, B : Co)",
+      "signature": "[Co] = ctrb(A, B)",
       "description": "Controllability matrix",
       "category": "Control",
       "aliases": [],
@@ -642,7 +642,7 @@
     },
     {
       "name": "d2c",
-      "signature": "d2c(num, den, Ts : num_c, den_c)",
+      "signature": "[num_c, den_c] = d2c(num, den, Ts)",
       "description": "Discrete to continuous conversion",
       "category": "Control",
       "aliases": [],
@@ -650,7 +650,7 @@
     },
     {
       "name": "dare",
-      "signature": "dare(A, B, Q, R : X)",
+      "signature": "[X] = dare(A, B, Q, R)",
       "description": "Discrete algebraic Riccati equation",
       "category": "Control",
       "aliases": [],
@@ -684,7 +684,7 @@
     },
     {
       "name": "dlqr",
-      "signature": "dlqr(A, B, Q, R : K)",
+      "signature": "[K] = dlqr(A, B, Q, R)",
       "description": "Linear quadratic regulator (discrete)",
       "category": "Control",
       "aliases": [],
@@ -692,7 +692,7 @@
     },
     {
       "name": "dlyap",
-      "signature": "dlyap(A, Q : X)",
+      "signature": "[X] = dlyap(A, Q)",
       "description": "Discrete Lyapunov equation",
       "category": "Control",
       "aliases": [],
@@ -937,7 +937,7 @@
     },
     {
       "name": "feedback",
-      "signature": "feedback(sys1, sys2, [sign] : sys)",
+      "signature": "[sys] = feedback(sys1, sys2, [sign])",
       "description": "Feedback connection",
       "category": "Control",
       "aliases": [],
@@ -1029,7 +1029,7 @@
     },
     {
       "name": "gram",
-      "signature": "gram(A, M, type$ : W)",
+      "signature": "[W] = gram(A, M, type$)",
       "description": "Controllability ('c') / observability ('o') gramian",
       "category": "Control",
       "aliases": [],
@@ -1192,7 +1192,7 @@
     },
     {
       "name": "impulse",
-      "signature": "impulse(num, den, t : y, t_out)",
+      "signature": "[y, t_out] = impulse(num, den, t)",
       "description": "Impulse response",
       "category": "Control",
       "aliases": [],
@@ -1428,7 +1428,7 @@
     },
     {
       "name": "lqe",
-      "signature": "lqe(A, G, C, Q, R : L)",
+      "signature": "[L] = lqe(A, G, C, Q, R)",
       "description": "Kalman estimator (LQE) gain",
       "category": "Control",
       "aliases": [],
@@ -1436,7 +1436,7 @@
     },
     {
       "name": "lqr",
-      "signature": "lqr(A, B, Q, R : K)",
+      "signature": "[K] = lqr(A, B, Q, R)",
       "description": "Linear quadratic regulator (continuous)",
       "category": "Control",
       "aliases": [],
@@ -1444,7 +1444,7 @@
     },
     {
       "name": "lsim",
-      "signature": "lsim(num, den, u, t : y, t_out)",
+      "signature": "[y, t_out] = lsim(num, den, u, t)",
       "description": "Linear simulation",
       "category": "Control",
       "aliases": [],
@@ -1452,7 +1452,7 @@
     },
     {
       "name": "lyap",
-      "signature": "lyap(A, Q : X)",
+      "signature": "[X] = lyap(A, Q)",
       "description": "Continuous Lyapunov equation",
       "category": "Control",
       "aliases": [],
@@ -1511,7 +1511,7 @@
     },
     {
       "name": "margin",
-      "signature": "margin(num, den : gm, pm, wcg, wcp)",
+      "signature": "[gm, pm, wcg, wcp] = margin(num, den)",
       "description": "Gain and phase margins",
       "category": "Control",
       "aliases": [],
@@ -1657,7 +1657,7 @@
     },
     {
       "name": "nichols",
-      "signature": "nichols(num, den, w : mag, phase)",
+      "signature": "[mag, phase] = nichols(num, den, w)",
       "description": "Nichols frequency response",
       "category": "Control",
       "aliases": [],
@@ -1817,7 +1817,7 @@
     },
     {
       "name": "nyquist",
-      "signature": "nyquist(num, den, w : re, im)",
+      "signature": "[re, im] = nyquist(num, den, w)",
       "description": "Nyquist frequency response",
       "category": "Control",
       "aliases": [],
@@ -1825,7 +1825,7 @@
     },
     {
       "name": "obsv",
-      "signature": "obsv(A, C : Ob)",
+      "signature": "[Ob] = obsv(A, C)",
       "description": "Observability matrix",
       "category": "Control",
       "aliases": [],
@@ -1917,7 +1917,7 @@
     },
     {
       "name": "pade",
-      "signature": "pade(Td, order : num, den)",
+      "signature": "[num, den] = pade(Td, order)",
       "description": "Pade approximation of time delay",
       "category": "Control",
       "aliases": [],
@@ -1925,7 +1925,7 @@
     },
     {
       "name": "parallel",
-      "signature": "parallel(sys1, sys2 : sys)",
+      "signature": "[sys] = parallel(sys1, sys2)",
       "description": "Parallel connection",
       "category": "Control",
       "aliases": [],
@@ -1995,7 +1995,7 @@
     },
     {
       "name": "pidtune",
-      "signature": "pidtune(num, den, type : Kp, Ki, Kd)",
+      "signature": "[Kp, Ki, Kd] = pidtune(num, den, type)",
       "description": "PID tuning",
       "category": "Control",
       "aliases": [],
@@ -2003,7 +2003,7 @@
     },
     {
       "name": "place",
-      "signature": "place(A, B, pr, pi : K)",
+      "signature": "[K] = place(A, B, pr, pi)",
       "description": "Pole placement (Ackermann)",
       "category": "Control",
       "aliases": [],
@@ -2037,7 +2037,7 @@
     },
     {
       "name": "qr",
-      "signature": "qr(A : Q, R)",
+      "signature": "[Q, R] = qr(A)",
       "description": "QR decomposition",
       "category": "Matrix",
       "aliases": [],
@@ -2163,7 +2163,7 @@
     },
     {
       "name": "rlocus",
-      "signature": "rlocus(num, den, K : r, r_img)",
+      "signature": "[r, r_img] = rlocus(num, den, K)",
       "description": "Root locus",
       "category": "Control",
       "aliases": [],
@@ -2187,7 +2187,7 @@
     },
     {
       "name": "routh",
-      "signature": "routh(den : R)",
+      "signature": "[R] = routh(den)",
       "description": "Routh-Hurwitz array",
       "category": "Control",
       "aliases": [],
@@ -2195,7 +2195,7 @@
     },
     {
       "name": "series",
-      "signature": "series(sys1, sys2 : sys)",
+      "signature": "[sys] = series(sys1, sys2)",
       "description": "Series connection",
       "category": "Control",
       "aliases": [],
@@ -2278,7 +2278,7 @@
     },
     {
       "name": "ss2tf",
-      "signature": "ss2tf(A, B, C, D : num, den)",
+      "signature": "[num, den] = ss2tf(A, B, C, D)",
       "description": "State-space to transfer function",
       "category": "Control",
       "aliases": [],
@@ -2313,7 +2313,7 @@
     },
     {
       "name": "step",
-      "signature": "step(num, den, t : y, t_out)",
+      "signature": "[y, t_out] = step(num, den, t)",
       "description": "Step response",
       "category": "Control",
       "aliases": [],
@@ -2321,7 +2321,7 @@
     },
     {
       "name": "stepinfo",
-      "signature": "stepinfo(num, den : tr, ts, tp, os, peak, final)",
+      "signature": "[tr, ts, tp, os, peak, final] = stepinfo(num, den)",
       "description": "Step response characteristics",
       "category": "Control",
       "aliases": [],
@@ -2361,7 +2361,7 @@
     },
     {
       "name": "svd",
-      "signature": "svd(A : U, S, V)",
+      "signature": "[U, S, V] = svd(A)",
       "description": "Singular value decomposition",
       "category": "Matrix",
       "aliases": [],
@@ -2478,7 +2478,7 @@
     },
     {
       "name": "tf2ss",
-      "signature": "tf2ss(num, den : A, B, C, D)",
+      "signature": "[A, B, C, D] = tf2ss(num, den)",
       "description": "Transfer function to state-space",
       "category": "Control",
       "aliases": [],
@@ -2869,40 +2869,40 @@
       "name": "acker",
       "category": "Design",
       "description": "Pole placement (Ackermann's formula)",
-      "signature": "CALL acker(A, B, pr, pi : K)",
+      "signature": "[K] = acker(A, B, pr, pi)",
       "documented": true
     },
     {
       "name": "balreal",
       "category": "Design",
       "description": "Balanced realization (model reduction)",
-      "signature": "CALL balreal(A, B, C : Ab, Bb, Cb)",
+      "signature": "[Ab, Bb, Cb] = balreal(A, B, C)",
       "documented": true
     },
     {
       "name": "bode",
       "category": "Analysis",
       "description": "Bode magnitude (dB) & phase (deg)",
-      "signature": "CALL bode(num, den, omega : mag, phase)",
+      "signature": "[mag, phase] = bode(num, den, omega)",
       "documented": true
     },
     {
       "name": "c2d",
       "category": "Digital",
       "description": "Continuous → discrete (Tustin/ZOH)",
-      "signature": "CALL c2d(num, den, Ts, 'zoh' : numz, denz)",
+      "signature": "[numz, denz] = c2d(num, den, Ts, 'zoh')",
       "documented": true
     },
     {
       "name": "cholesky",
-      "signature": "CALL cholesky(…)",
+      "signature": "[outputs] = cholesky(…)",
       "description": "",
       "source": "rust",
       "documented": true
     },
     {
       "name": "convolve",
-      "signature": "CALL convolve(…)",
+      "signature": "[outputs] = convolve(…)",
       "description": "",
       "source": "rust",
       "documented": false
@@ -2911,26 +2911,26 @@
       "name": "ctrb",
       "category": "Analysis",
       "description": "Controllability matrix",
-      "signature": "CALL ctrb(A, B : Co)",
+      "signature": "[Co] = ctrb(A, B)",
       "documented": true
     },
     {
       "name": "d2c",
       "category": "Digital",
       "description": "Discrete → continuous (Tustin)",
-      "signature": "CALL d2c(numz, denz, Ts, 'tustin' : num, den)",
+      "signature": "[num, den] = d2c(numz, denz, Ts, 'tustin')",
       "documented": true
     },
     {
       "name": "dare",
       "category": "Linear",
       "description": "Discrete algebraic Riccati solution",
-      "signature": "CALL dare(A, B, Q, R : X)",
+      "signature": "[X] = dare(A, B, Q, R)",
       "documented": true
     },
     {
       "name": "detrend",
-      "signature": "CALL detrend(…)",
+      "signature": "[outputs] = detrend(…)",
       "description": "",
       "source": "rust",
       "documented": false
@@ -2939,68 +2939,68 @@
       "name": "dlqr",
       "category": "Design",
       "description": "Discrete-time LQR gain (DARE)",
-      "signature": "CALL dlqr(A, B, Q, R : K)",
+      "signature": "[K] = dlqr(A, B, Q, R)",
       "documented": true
     },
     {
       "name": "dlyap",
       "category": "Linear",
       "description": "Discrete Lyapunov (Stein) solve A·X·A'−X+Q=0",
-      "signature": "CALL dlyap(A, Q : X)",
+      "signature": "[X] = dlyap(A, Q)",
       "documented": true
     },
     {
       "name": "Eigen",
       "category": "Linear",
       "description": "Eigenvalues & eigenvectors",
-      "signature": "CALL Eigen(A : lambda, V)",
+      "signature": "[lambda, V] = Eigen(A)",
       "documented": true
     },
     {
       "name": "Eigenvalues",
       "category": "Linear",
       "description": "Matrix eigenvalues",
-      "signature": "CALL Eigenvalues(A : lambda)",
+      "signature": "[lambda] = Eigenvalues(A)",
       "documented": true
     },
     {
       "name": "errorconst",
       "category": "Analysis",
       "description": "Static error constants Kp, Kv, Ka",
-      "signature": "CALL errorconst(num, den : Kp, Kv, Ka)",
+      "signature": "[Kp, Kv, Ka] = errorconst(num, den)",
       "documented": true
     },
     {
       "name": "EulerRotate",
       "category": "Linear",
       "description": "3×3 rotation from Euler angles",
-      "signature": "CALL EulerRotate(phi, theta, psi : R)",
+      "signature": "[R] = EulerRotate(phi, theta, psi)",
       "documented": true
     },
     {
       "name": "feedback",
       "category": "Model",
       "description": "Close a loop (T = G1/(1+G1·G2))",
-      "signature": "CALL feedback(num1,den1,num2,den2 : num,den)",
+      "signature": "[num,den] = feedback(num1,den1,num2,den2)",
       "documented": true
     },
     {
       "name": "fft",
-      "signature": "CALL fft(…)",
+      "signature": "[outputs] = fft(…)",
       "description": "",
       "source": "rust",
       "documented": false
     },
     {
       "name": "filter",
-      "signature": "CALL filter(…)",
+      "signature": "[outputs] = filter(…)",
       "description": "",
       "source": "rust",
       "documented": false
     },
     {
       "name": "filtfilt",
-      "signature": "CALL filtfilt(…)",
+      "signature": "[outputs] = filtfilt(…)",
       "description": "",
       "source": "rust",
       "documented": false
@@ -3009,12 +3009,12 @@
       "name": "gram",
       "category": "Analysis",
       "description": "Controllability ('c') / observability ('o') gramian",
-      "signature": "CALL gram(A, M, 'c' : W)",
+      "signature": "[W] = gram(A, M, 'c')",
       "documented": true
     },
     {
       "name": "ifft",
-      "signature": "CALL ifft(…)",
+      "signature": "[outputs] = ifft(…)",
       "description": "",
       "source": "rust",
       "documented": false
@@ -3023,19 +3023,19 @@
       "name": "impulse",
       "category": "Analysis",
       "description": "Impulse response",
-      "signature": "CALL impulse(num, den, t : y)",
+      "signature": "[y] = impulse(num, den, t)",
       "documented": true
     },
     {
       "name": "interp2",
-      "signature": "CALL interp2(…)",
+      "signature": "[outputs] = interp2(…)",
       "description": "",
       "source": "rust",
       "documented": false
     },
     {
       "name": "linfit",
-      "signature": "CALL linfit(…)",
+      "signature": "[outputs] = linfit(…)",
       "description": "",
       "source": "rust",
       "documented": false
@@ -3044,54 +3044,54 @@
       "name": "lqe",
       "category": "Design",
       "description": "Kalman estimator (LQE) gain",
-      "signature": "CALL lqe(A, G, C, Q, R : L)",
+      "signature": "[L] = lqe(A, G, C, Q, R)",
       "documented": true
     },
     {
       "name": "lqr",
       "category": "Design",
       "description": "LQR optimal state-feedback gain",
-      "signature": "CALL lqr(A, B, Q, R : K)",
+      "signature": "[K] = lqr(A, B, Q, R)",
       "documented": true
     },
     {
       "name": "lsim",
       "category": "Analysis",
       "description": "Response to arbitrary input u(t)",
-      "signature": "CALL lsim(num, den, u, t : y)",
+      "signature": "[y] = lsim(num, den, u, t)",
       "documented": true
     },
     {
       "name": "LUDecompose",
       "category": "Linear",
       "description": "LU decomposition",
-      "signature": "CALL LUDecompose(A : L, U)",
+      "signature": "[L, U] = LUDecompose(A)",
       "documented": true
     },
     {
       "name": "lyap",
       "category": "Linear",
       "description": "Continuous Lyapunov solve A·X+X·A'+Q=0",
-      "signature": "CALL lyap(A, Q : X)",
+      "signature": "[X] = lyap(A, Q)",
       "documented": true
     },
     {
       "name": "margin",
       "category": "Analysis",
       "description": "Gain & phase margins + crossovers",
-      "signature": "CALL margin(num, den : gm, pm, w_cg, w_cp)",
+      "signature": "[gm, pm, w_cg, w_cp] = margin(num, den)",
       "documented": true
     },
     {
       "name": "mason",
       "category": "Analysis",
       "description": "Mason's gain formula for a graph",
-      "signature": "CALL mason(G, source, sink : T)",
+      "signature": "[T] = mason(G, source, sink)",
       "documented": true
     },
     {
       "name": "matexp",
-      "signature": "CALL matexp(…)",
+      "signature": "[outputs] = matexp(…)",
       "description": "",
       "source": "rust",
       "documented": true
@@ -3100,68 +3100,68 @@
       "name": "nichols",
       "category": "Analysis",
       "description": "Nichols magnitude/phase",
-      "signature": "CALL nichols(num, den, omega : mag, phase)",
+      "signature": "[mag, phase] = nichols(num, den, omega)",
       "documented": true
     },
     {
       "name": "nyquist",
       "category": "Analysis",
       "description": "Nyquist real/imaginary parts",
-      "signature": "CALL nyquist(num, den, omega : re, im)",
+      "signature": "[re, im] = nyquist(num, den, omega)",
       "documented": true
     },
     {
       "name": "obsv",
       "category": "Analysis",
       "description": "Observability matrix",
-      "signature": "CALL obsv(A, C : Ob)",
+      "signature": "[Ob] = obsv(A, C)",
       "documented": true
     },
     {
       "name": "pade",
       "category": "Model",
       "description": "Padé approximation of a dead time",
-      "signature": "CALL pade(Td, order : num, den)",
+      "signature": "[num, den] = pade(Td, order)",
       "documented": true
     },
     {
       "name": "parallel",
       "category": "Model",
       "description": "Parallel sum (G = G1 + G2)",
-      "signature": "CALL parallel(num1,den1,num2,den2 : num,den)",
+      "signature": "[num,den] = parallel(num1,den1,num2,den2)",
       "documented": true
     },
     {
       "name": "pidtune",
       "category": "Design",
       "description": "PID auto-tune by loop shaping",
-      "signature": "CALL pidtune(num, den, 'PID', wc : Kp, Ki, Kd)",
+      "signature": "[Kp, Ki, Kd] = pidtune(num, den, 'PID', wc)",
       "documented": true
     },
     {
       "name": "place",
       "category": "Design",
       "description": "Pole placement (Ackermann)",
-      "signature": "CALL place(A, B, pr, pi : K)",
+      "signature": "[K] = place(A, B, pr, pi)",
       "documented": true
     },
     {
       "name": "pole",
       "category": "Analysis",
       "description": "System poles",
-      "signature": "CALL pole(num, den : pr, pi)",
+      "signature": "[pr, pi] = pole(num, den)",
       "documented": true
     },
     {
       "name": "polyfit",
-      "signature": "CALL polyfit(…)",
+      "signature": "[outputs] = polyfit(…)",
       "description": "",
       "source": "rust",
       "documented": false
     },
     {
       "name": "qr",
-      "signature": "CALL qr(…)",
+      "signature": "[outputs] = qr(…)",
       "description": "",
       "source": "rust",
       "documented": true
@@ -3170,47 +3170,47 @@
       "name": "rank",
       "category": "Analysis",
       "description": "Numerical matrix rank (SVD)",
-      "signature": "CALL rank(M : r)",
+      "signature": "[r] = rank(M)",
       "documented": true
     },
     {
       "name": "residue",
       "category": "Linear",
       "description": "Partial-fraction residues & poles",
-      "signature": "CALL residue(num, den : rr, ri, pr, pi, k)",
+      "signature": "[rr, ri, pr, pi, k] = residue(num, den)",
       "documented": true
     },
     {
       "name": "rlocus",
       "category": "Analysis",
       "description": "Root-locus trajectories over K",
-      "signature": "CALL rlocus(num, den : K, cpr, cpi)",
+      "signature": "[K, cpr, cpi] = rlocus(num, den)",
       "documented": true
     },
     {
       "name": "routh",
       "category": "Analysis",
       "description": "Routh-Hurwitz: # RHP poles",
-      "signature": "CALL routh(den : nRHP, stable)",
+      "signature": "[nRHP, stable] = routh(den)",
       "documented": true
     },
     {
       "name": "series",
       "category": "Model",
       "description": "Cascade two systems (G = G1·G2)",
-      "signature": "CALL series(num1,den1,num2,den2 : num,den)",
+      "signature": "[num,den] = series(num1,den1,num2,den2)",
       "documented": true
     },
     {
       "name": "singularvalues",
-      "signature": "CALL singularvalues(…)",
+      "signature": "[outputs] = singularvalues(…)",
       "description": "",
       "source": "rust",
       "documented": false
     },
     {
       "name": "smooth",
-      "signature": "CALL smooth(…)",
+      "signature": "[outputs] = smooth(…)",
       "description": "",
       "source": "rust",
       "documented": false
@@ -3219,19 +3219,19 @@
       "name": "ss2ss",
       "category": "Model",
       "description": "Similarity transform x = P·z",
-      "signature": "CALL ss2ss(A,B,C,D,P : An,Bn,Cn,Dn)",
+      "signature": "[An,Bn,Cn,Dn] = ss2ss(A,B,C,D,P)",
       "documented": true
     },
     {
       "name": "ss2tf",
       "category": "Model",
       "description": "State space → transfer function",
-      "signature": "CALL ss2tf(A, B, C, D : num, den)",
+      "signature": "[num, den] = ss2tf(A, B, C, D)",
       "documented": true
     },
     {
       "name": "ss2tfij",
-      "signature": "CALL ss2tfij(…)",
+      "signature": "[outputs] = ss2tfij(…)",
       "description": "",
       "source": "rust",
       "documented": false
@@ -3240,19 +3240,19 @@
       "name": "step",
       "category": "Analysis",
       "description": "Unit step response",
-      "signature": "CALL step(num, den, t : y)",
+      "signature": "[y] = step(num, den, t)",
       "documented": true
     },
     {
       "name": "stepinfo",
       "category": "Analysis",
       "description": "Step metrics (Tr, Tp, Ts, OS)",
-      "signature": "CALL stepinfo(t, y : Tr, Tp, Ts, OS)",
+      "signature": "[Tr, Tp, Ts, OS] = stepinfo(t, y)",
       "documented": true
     },
     {
       "name": "svd",
-      "signature": "CALL svd(…)",
+      "signature": "[outputs] = svd(…)",
       "description": "",
       "source": "rust",
       "documented": true
@@ -3261,33 +3261,33 @@
       "name": "tf2ss",
       "category": "Model",
       "description": "Transfer function → state space",
-      "signature": "CALL tf2ss(num, den : A, B, C, D)",
+      "signature": "[A, B, C, D] = tf2ss(num, den)",
       "documented": true
     },
     {
       "name": "tf2zp",
       "category": "Model",
       "description": "Transfer function → zero-pole-gain",
-      "signature": "CALL tf2zp(num, den : zr, zi, pr, pi, k)",
+      "signature": "[zr, zi, pr, pi, k] = tf2zp(num, den)",
       "documented": true
     },
     {
       "name": "welch",
-      "signature": "CALL welch(…)",
+      "signature": "[outputs] = welch(…)",
       "description": "",
       "source": "rust",
       "documented": false
     },
     {
       "name": "window",
-      "signature": "CALL window(…)",
+      "signature": "[outputs] = window(…)",
       "description": "",
       "source": "rust",
       "documented": false
     },
     {
       "name": "xcorr",
-      "signature": "CALL xcorr(…)",
+      "signature": "[outputs] = xcorr(…)",
       "description": "",
       "source": "rust",
       "documented": false
@@ -3296,14 +3296,14 @@
       "name": "zero",
       "category": "Analysis",
       "description": "System zeros",
-      "signature": "CALL zero(num, den : zr, zi)",
+      "signature": "[zr, zi] = zero(num, den)",
       "documented": true
     },
     {
       "name": "zp2tf",
       "category": "Model",
       "description": "Zero-pole-gain → transfer function",
-      "signature": "CALL zp2tf(zr, zi, pr, pi, k : num, den)",
+      "signature": "[num, den] = zp2tf(zr, zi, pr, pi, k)",
       "documented": true
     }
   ],

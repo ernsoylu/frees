@@ -38,6 +38,26 @@ with orthogonality $\int_{-1}^{1} P_m P_n\,dx = \tfrac{2}{2n+1}\delta_{mn}$.
 
 ## Examples
 
+<!-- verified-reference-example:start -->
+
+### Verified example — Evaluate a third-order approximation basis
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+result = legendrep(3, 0.5)
+
+{ CHECK result -0.4375 4.375e-7 }
+```
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+result = -0.4375
+```
+
+<!-- verified-reference-example:end -->
+
 ```
 { P_2(x) = (3x^2 - 1)/2; legendrep(2, 1) = 1 }
 y = legendrep(2, 1)

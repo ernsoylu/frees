@@ -39,6 +39,31 @@ then greedily thinned by descending $x_j$ under the separation constraint.
 
 ## Examples
 
+<!-- verified-reference-example:start -->
+
+### Verified example — Worked calculation
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+x = [1, 3, 2, 6, 4, 9, 5, 12]
+n = peakcount(0, 0, x)
+
+{ CHECK n 3 0.000003 }
+{ CHECK x[1] 1 0.000001 }
+{ CHECK x[2] 3 0.000003 }
+```
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+n = 3
+x[1] = 1
+x[2] = 3
+```
+
+<!-- verified-reference-example:end -->
+
 ### Example 1 — counting cycles
 
 ```

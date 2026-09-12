@@ -33,6 +33,26 @@ $$ T_n(\cos\theta) = \cos(n\theta), \qquad T_{n+1}(x) = 2x\,T_n(x) - T_{n-1}(x) 
 
 ## Examples
 
+<!-- verified-reference-example:start -->
+
+### Verified example — Evaluate a third-order approximation basis
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+result = chebyshevt(3, 0.5)
+
+{ CHECK result -1 0.000001 }
+```
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+result = -1
+```
+
+<!-- verified-reference-example:end -->
+
 ```
 { T_2(x) = 2x^2 - 1; chebyshevt(2, 1) = 1 }
 y = chebyshevt(2, 1)

@@ -35,6 +35,26 @@ with orthogonality $\int_{-\infty}^{\infty} H_m H_n\,e^{-x^2}\,dx = 2^n n!\sqrt{
 
 ## Examples
 
+<!-- verified-reference-example:start -->
+
+### Verified example — Evaluate a third-order approximation basis
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+result = hermiteh(3, 0.5)
+
+{ CHECK result -5 0.0000049999999999999996 }
+```
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+result = -5
+```
+
+<!-- verified-reference-example:end -->
+
 ```
 { H_2(x) = 4x^2 - 2; hermiteh(2, 1) = 2 }
 y = hermiteh(2, 1)

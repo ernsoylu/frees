@@ -730,12 +730,12 @@ export default function App() {
   const [plotSeed, setPlotSeed] = useState<{ xVar: string; yVars: string[]; tableId?: string } | null>(null)
   // D10: the spreadsheet feature is removed. A loaded project's spreadsheets
   // array is carried INERT — held here, written back on save, never shown and
-  // never destroyed (docs/decisions/0010-remove-spreadsheet.md, compatibility
+  // never destroyed (ARCHITECTURE_AND_REQUIREMENTS.md#11-retained-architectural-decisions, compatibility
   // policy). A one-time notice tells the user the data is preserved.
   const spreadsheetsRef = useRef<SpreadsheetSpec[]>(boot?.spreadsheets ?? [])
   // D11: the Data Analyzer is removed, and its `analyzers` slice is carried
   // the same inert way — held here, written back on save, never shown and
-  // never destroyed (docs/decisions/0011-remove-analyzer.md, compatibility
+  // never destroyed (ARCHITECTURE_AND_REQUIREMENTS.md#11-retained-architectural-decisions, compatibility
   // policy). A one-time notice tells the user the data is preserved.
   const analyzersRef = useRef<AnalyzerSpec[]>(boot?.analyzers ?? [])
   // Blocks the user has dragged on the rendered schematic, as offsets from the

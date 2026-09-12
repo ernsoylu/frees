@@ -40,6 +40,29 @@ $$ \frac{dy}{d\,\text{var}} = \text{expr}(y, \text{var}), \qquad y = \int_{\text
 
 ## Examples
 
+<!-- verified-reference-example:start -->
+
+### Verified example — Solve a complete model
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+// frees-language: 2
+F = Integral(t, t, 0, 1)
+
+{ CHECK F 0.5 4.999999999999601e-7 }
+{ CHECK t 1 0.000001 }
+```
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+F = 0.5
+t = 1
+```
+
+<!-- verified-reference-example:end -->
+
 ### Example 1 — Draining-tank ODE via the self-reference pattern
 
 [Run: tank-draining]

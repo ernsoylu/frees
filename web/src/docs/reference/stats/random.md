@@ -27,6 +27,28 @@ Uniform random number in [a, b]
 
 $$ X \sim \mathcal{U}(a, b), \qquad X = a + (b-a)\,U,\ \ U\in[0,1) $$
 
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Generate a reproducible measurement sample
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+result = random(0, 1, 42)
+
+{ CHECK result 0.72756368 7.27563680032868e-7 }
+```
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+result = 0.72756368
+```
+
+<!-- verified-reference-example:end -->
+
 ## Input Arguments
 
 | Argument | Type | Required | Description |

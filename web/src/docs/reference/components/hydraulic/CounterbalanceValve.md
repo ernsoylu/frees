@@ -40,10 +40,49 @@ CounterbalanceValve inst(CdA_max, rho, P_set, R_p, eps_o, domain$)
 
 The acausal equations this component expands into (over its port members and parameters):
 
+$$
+\begin{aligned}
+x_{o} &= 0.5\,\left(1 + \tanh\left(\frac{in.p + r_{p}\cdot pilot.p - p_{set}}{eps_{o}}\right)\right) \\
+out.mdot &= in.mdot \\
+out.h &= in.h \\
+pilot.mdot &= 0 \\
+in.mdot\cdot \left|in.mdot\right| &= \left(x_{o}\cdot cda_{max}\right)^{2}\cdot 2\cdot rho\cdot \left(in.p - out.p\right)
+\end{aligned}
+$$
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Solve a complete model
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+// frees-language: 2
+// CounterbalanceValve exactly at its threshold: in.P + R_p*pilot.P = P_set
+// opens the sigmoid to precisely one half. Steady.
+// EXPECT x_o = 0.5 tol 1e-9
+
+CounterbalanceValve CB(c1, c2, cp1, CdA_max=3e-6, rho=870, P_set=3e6, R_p=3, eps_o=5e4)
+c1.P  = 1.5e6
+c1.h  = 0
+c2.P  = 1e5
+cp1.P = 0.5e6
+cp1.h = 0
+x_o = CB.x_o
+
+{ CHECK c1.mdot 0.07403377608 7.403377607551841e-8 }
+{ CHECK c1.p 1500000 1.5 }
+{ CHECK c2.h 0 1e-8 }
 ```
-x_o      = 0.5 * (1 + tanh((in.P + R_p * pilot.P - P_set) / eps_o))
-out.mdot = in.mdot
-out.h    = in.h
-pilot.mdot = 0
-in.mdot * abs(in.mdot) = (x_o * CdA_max)^2 * 2 * rho * (in.P - out.P)
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+c1.mdot = 0.07403377608
+c1.p = 1500000
+c2.h = 0
 ```
+
+<!-- verified-reference-example:end -->

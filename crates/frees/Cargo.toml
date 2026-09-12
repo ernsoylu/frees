@@ -10,7 +10,7 @@ description = "wasm-bindgen boundary and Web Worker protocol for the frees engin
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-# Decision D9 (`docs/decisions/0009-rustprop-backend.md`): the browser bundle
+# Decision D9 (`ARCHITECTURE_AND_REQUIREMENTS.md#11-retained-architectural-decisions`): the browser bundle
 # ships rustprop as its ONLY in-bundle property backend. Since D12 that is also
 # frees-core's default, so this names the feature rather than opting out of a
 # default set that no longer carries anything else. Spelled as a path rather

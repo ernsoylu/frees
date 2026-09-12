@@ -37,8 +37,47 @@ HydraulicValveCmd inst(CdA_max, rho, domain$)
 
 The acausal equations this component expands into (over its port members and parameters):
 
+$$
+\begin{aligned}
+out.mdot &= in.mdot \\
+out.h &= in.h \\
+in.mdot\cdot \left|in.mdot\right| &= \left(u.sig\cdot cda_{max}\right)^{2}\cdot 2\cdot rho\cdot \left(in.p - out.p\right)
+\end{aligned}
+$$
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Solve a complete model
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+// frees-language: 2
+// Signal-commanded proportional valve at 70% spool: square-law flow through
+// u.sig * CdA_max between a 100 bar supply and a 1 bar tank.
+// mdot = 0.7*3e-5 * sqrt(2*870*9.9e6) = 2.7566 kg/s.
+SigConstant      CMD(k=0.7)
+HydraulicSupply  SUP(P=10000000)
+HydraulicValveCmd VLV(CdA_max=3e-5, rho=870)
+HydraulicTank    TNK(P=100000)
+connect(SUP.out, VLV.in)
+connect(VLV.out, TNK.port)
+connect(CMD.out, VLV.u)
+q_v = VLV.in.mdot
+
+{ CHECK cmd.out.sig 0.7 7e-7 }
+{ CHECK q_v 2.756205 0.0000027562049996326472 }
+{ CHECK sup.out.h 0 1e-8 }
 ```
-out.mdot = in.mdot
-out.h    = in.h
-in.mdot * abs(in.mdot) = (u.sig * CdA_max)^2 * 2 * rho * (in.P - out.P)
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+cmd.out.sig = 0.7
+q_v = 2.756205 [kg/s]
+sup.out.h = 0
 ```
+
+<!-- verified-reference-example:end -->

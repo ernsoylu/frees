@@ -29,9 +29,30 @@ bands, ±kσ coverage. Pass a very large/small bound to get a one-sided tail.
 
 $$ \Pr(x_1 \le X \le x_2) = \tfrac{1}{2}\left[\operatorname{erf}\!\left(\frac{x_2-\mu}{\sigma\sqrt{2}}\right) - \operatorname{erf}\!\left(\frac{x_1-\mu}{\sigma\sqrt{2}}\right)\right] $$
 
-> **Method:** direct evaluation via the error function (Apache Commons Math `Erf.erf`).
+> **Method:** direct evaluation via the error function (the Rust backend error-function routine).
 
 ## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Solve a complete model
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+// frees-language: 2
+prob = Probability(75, 85, 80, 5)   { 0.6827 — within ±1σ of N(80, 5) }
+
+{ CHECK prob 0.6826894921 6.826894921370859e-7 }
+```
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+prob = 0.6826894921
+```
+
+<!-- verified-reference-example:end -->
 
 ### Example 1 — Coverage within ±1σ
 

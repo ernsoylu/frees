@@ -38,14 +38,49 @@ DesiccantWheel inst(eff_L, W_eq, f_carry, domain$)
 
 The acausal equations this component expands into (over its port members and parameters):
 
-```
-proc_out.mdot = proc_in.mdot
-reg_out.mdot  = reg_in.mdot
-proc_out.P    = proc_in.P
-reg_out.P     = reg_in.P
-proc_out.W    = proc_in.W - eff_L * (proc_in.W - W_eq)
-proc_out.h    = proc_in.h + f_carry * (reg_in.h - proc_in.h)
-reg_out.W     = reg_in.W + (proc_in.mdot / reg_in.mdot) * (proc_in.W - proc_out.W)
-reg_out.h     = reg_in.h - (proc_in.mdot / reg_in.mdot) * (proc_out.h - proc_in.h)
+$$
+\begin{aligned}
+proc_{out.mdot} &= proc_{in.mdot} \\
+reg_{out.mdot} &= reg_{in.mdot} \\
+proc_{out.p} &= proc_{in.p} \\
+reg_{out.p} &= reg_{in.p} \\
+proc_{out.w} &= proc_{in.w} - eff_{l}\cdot \left(proc_{in.w} - w_{eq}\right) \\
+proc_{out.h} &= proc_{in.h} + f_{carry}\cdot \left(reg_{in.h} - proc_{in.h}\right) \\
+reg_{out.w} &= reg_{in.w} + \frac{proc_{in.mdot}}{reg_{in.mdot}}\cdot \left(proc_{in.w} - proc_{out.w}\right) \\
+reg_{out.h} &= reg_{in.h} - \frac{proc_{in.mdot}}{reg_{in.mdot}}\cdot \left(proc_{out.h} - proc_{in.h}\right)
+\end{aligned}
+$$
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Rate an HVAC component at specified inlet conditions
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+DesiccantWheel C(eff_L=0.6, W_eq=0.005, f_carry=0.05)
+C.proc_in.mdot = 1 [kg/s]
+C.proc_in.P = 101325 [Pa]
+C.proc_in.W = 0.012
+C.proc_in.h = Enthalpy(AirH2O, T=303.15, P=101325, W=0.012)
+C.reg_in.mdot = 1 [kg/s]
+C.reg_in.P = 101325 [Pa]
+C.reg_in.W = 0.008
+C.reg_in.h = Enthalpy(AirH2O, T=353.15, P=101325, W=0.008)
+
+{ CHECK c.proc_in.h 60848.84667 0.06084884666848224 }
+{ CHECK c.proc_out.h 62894.93076 0.06289493076038198 }
+{ CHECK c.proc_out.mdot 1 0.000001 }
 ```
 
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+c.proc_in.h = 60848.84667
+c.proc_out.h = 62894.93076
+c.proc_out.mdot = 1
+```
+
+<!-- verified-reference-example:end -->

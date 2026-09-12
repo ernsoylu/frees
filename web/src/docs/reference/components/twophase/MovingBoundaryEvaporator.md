@@ -41,20 +41,55 @@ MovingBoundaryEvaporator inst(fluid$, U_tp, U_sh, D, L, eps_zone, domain$)
 
 Instantiating the component expands these acausal equations (over its port members and parameters) into scalar equations solved by the standard Newton/Tarjan pipeline:
 
+$$
+\begin{aligned}
+out.mdot &= in.mdot \\
+out.p &= in.p \\
+tsat &= \text{T\_sat}\left(\mathrm{fluid}, =in.p\right) \\
+hg &= \text{Enthalpy}\left(\mathrm{fluid}, =in.p, p=1\right) \\
+l_{need} &= \frac{in.mdot\cdot \left(hg - in.h\right)}{u_{tp}\cdot 3.141592653589793\cdot d\cdot \left(wall.t - tsat\right)} \\
+l_{tp} &= 0.5\,\left(l_{need} + l - \sqrt{\left(l_{need} - l\right)^{2} + eps_{zone}^{2}}\right) \\
+q_{tp} &= u_{tp}\cdot 3.141592653589793\cdot d\cdot l_{tp}\cdot \left(wall.t - tsat\right) \\
+l_{sh} &= l - l_{tp} \\
+r_{sh} &= \text{zone\_ramp}\left(l_{sh}, eps_{zone}\right) \\
+t_{out} &= \text{Temperature}\left(\mathrm{fluid}, =out.p, p=out.h\right) \\
+q_{sh} &= u_{sh}\cdot 3.141592653589793\cdot d\cdot l_{sh}\cdot \left(wall.t - 0.5\,\left(tsat + t_{out}\right)\right)\cdot r_{sh} \\
+out.h &= in.h + \frac{q_{tp} + q_{sh}}{in.mdot} \\
+q &= q_{tp} + q_{sh} \\
+wall.qdot &= q \\
+sh &= t_{out} - tsat
+\end{aligned}
+$$
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Solve a complete model
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+// frees-language: 2
+MovingBoundaryEvaporator EV(fluid$=R134a, U_tp=2000, U_sh=200, D=0.01, L=5, eps_zone=0.01)
+TwoPhaseSource SRC(fluid$=R134a, mdot=0.02, P=350000, x=0.25)
+TwoPhaseSink SNK()
+ThermalSource WALL(T=292)
+connect(SRC.out, EV.in)
+connect(EV.out, SNK.in)
+connect(EV.wall, WALL.port)
+
+{ CHECK ev.hg 401508.3388 0.4015083387584498 }
+{ CHECK ev.in.h 255469.7741 0.2554697741338869 }
+{ CHECK ev.in.mdot 0.02 2e-8 }
 ```
-out.mdot  = in.mdot
-out.P     = in.P
-Tsat      = T_sat(fluid$, P=in.P)
-hg        = Enthalpy(fluid$, P=in.P, x=1)
-L_need    = in.mdot * (hg - in.h) / (U_tp * pi# * D * (wall.T - Tsat))
-L_tp      = 0.5 * (L_need + L - sqrt((L_need - L)^2 + eps_zone^2))
-Q_tp      = U_tp * pi# * D * L_tp * (wall.T - Tsat)
-L_sh      = L - L_tp
-r_sh      = zone_ramp(L_sh, eps_zone)
-T_out     = Temperature(fluid$, P=out.P, h=out.h)
-Q_sh      = U_sh * pi# * D * L_sh * (wall.T - 0.5 * (Tsat + T_out)) * r_sh
-out.h     = in.h + (Q_tp + Q_sh) / in.mdot
-Q         = Q_tp + Q_sh
-wall.Qdot = Q
-SH        = T_out - Tsat
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+ev.hg = 401508.3388
+ev.in.h = 255469.7741
+ev.in.mdot = 0.02
 ```
+
+<!-- verified-reference-example:end -->

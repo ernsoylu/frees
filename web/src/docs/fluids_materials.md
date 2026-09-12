@@ -9,6 +9,13 @@ frees ships a high-precision fluid-properties database. **Every property functio
 3. **Aqueous glycols** — incompressible coolants written as base + mass percent: `EG50` (50% ethylene glycol), `PG30` (30% propylene glycol). Queries need Temperature (`T`) and Pressure (`P`).
 
 ## Specifying a state
+
+Native and browser builds use rustprop by default. Linked property-table artifacts
+are no longer part of either build. For saturation, use pressure or temperature
+with `x=0` (liquid) or `x=1` (vapour); pressure and temperature at saturation do
+not determine the vapour fraction. `Quality` returns `-1` for a single-phase
+state, not an extrapolated fraction or a value to clamp to the interval 0–1.
+
 Pass the fluid name first, then **two** named coordinates. The recognized coordinate keys are `T` (temperature), `P` (pressure), `h` (enthalpy), `s` (entropy), `v` (specific volume), `x` (quality: 0 saturated liquid, 1 saturated vapour), `u` (internal energy), `D` (density).
 
 ```

@@ -21,9 +21,9 @@ Runs a signal through a digital filter defined by its numerator and denominator 
 
 Implements
 
-```
-a[1]·y[j] = b[1]·x[j] + b[2]·x[j-1] + … − a[2]·y[j-1] − a[3]·y[j-2] − …
-```
+$$
+a_1 y_j = b_1 x_j + b_2 x_{j-1} + \cdots - a_2 y_{j-1} - a_3 y_{j-2} - \cdots
+$$
 
 as a transposed direct-form II, so only `max(len(a), len(b)) − 1` state values are carried regardless of order. Pass `a = [1]` for a pure FIR filter.
 
@@ -36,6 +36,33 @@ $$ y_j = \frac{1}{a_1}\left( \sum_{i=0}^{n_b-1} b_{i+1}\,x_{j-i} \;-\; \sum_{i=1
 > **Method:** transposed direct-form II, coefficients normalized by `a[1]` once up front.
 
 ## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Worked calculation
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+x = [1, 3, 2, 6, 4, 9, 5, 12]
+b = [0.5, 0.5]
+a = [1]
+[y] = Filter(b, a, x)
+
+{ CHECK a[1] 1 0.000001 }
+{ CHECK b[1] 0.5 5e-7 }
+{ CHECK b[2] 0.5 5e-7 }
+```
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+a[1] = 1
+b[1] = 0.5
+b[2] = 0.5
+```
+
+<!-- verified-reference-example:end -->
 
 ### Example 1 — a two-tap moving average as an FIR filter
 

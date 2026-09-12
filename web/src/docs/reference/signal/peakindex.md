@@ -26,6 +26,35 @@ Returns the 1-based position, within the series, of the `k`-th peak in ascending
 
 ## Examples
 
+<!-- verified-reference-example:start -->
+
+### Verified example — Worked calculation
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+x  = [1, 3, 2, 6, 4, 9, 5, 12]
+n  = peakcount(0, 0, x)
+p1 = peakindex(1, 0, 0, x)
+p2 = peakindex(2, 0, 0, x)
+p3 = peakindex(3, 0, 0, x)
+p4 = peakindex(4, 0, 0, x)
+
+{ CHECK n 3 0.000003 }
+{ CHECK p1 2 0.000002 }
+{ CHECK p2 4 0.000004 }
+```
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+n = 3
+p1 = 2
+p2 = 4
+```
+
+<!-- verified-reference-example:end -->
+
 ### Example 1 — walking the peaks of a trace
 
 ```

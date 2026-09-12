@@ -1,11 +1,14 @@
 [Topic: functions]
-# Custom Functions & Procedures
+# Custom Functions
 
-Most of your model is declarative — equations in any order, solved simultaneously. `FUNCTION` is for the parts that need **sequential, imperative** logic (loops, conditionals, step-by-step algorithms). Inside it you use `:=` for assignment, just like Python or other array languages.
+Use `function` for reusable calculations. An equation body uses `=` and is solved
+declaratively; an ordered body uses `:=` for sequential assignments. The examples
+below use ordered bodies. Do not mix these two body styles without checking the
+current language restrictions.
 
 ## Functions
 A `FUNCTION` returns one or more values. Assign the return value(s) with `:=`.
-- **Single output** — assign the function's own name:
+- **Single output** — assign the output declared in the header:
 ```
 function y = poly_fit(x)
   y := 0.5 * x^2 + 2 * x + 1
@@ -44,7 +47,7 @@ Sequential structures work inside function bodies (not in the declarative top le
 - **While:** `WHILE condition DO ... END`
 - **Repeat:** `REPEAT ... UNTIL condition`
 
-> **Declarative vs. imperative:** the top-level solver reorders your equations freely, so `x = y + 2` and `y = x - 2` are equivalent there. Inside a `FUNCTION`/`PROCEDURE`, order matters and `:=` is a one-way assignment — read it left-to-right like a normal program.
+> **Declarative vs. imperative:** the top-level solver reorders your equations freely, so `x = y + 2` and `y = x - 2` are equivalent there. Inside an ordered function, order matters and `:=` is a one-way assignment — read it left-to-right like a normal program.
 
 [Related: modules, symbolic-cas, arrays]
 

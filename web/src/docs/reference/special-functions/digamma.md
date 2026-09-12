@@ -40,6 +40,26 @@ where `γ` is the Euler–Mascheroni constant.
 
 ## Examples
 
+<!-- verified-reference-example:start -->
+
+### Verified example — Evaluate a gamma-distribution derivative
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+result = digamma(3)
+
+{ CHECK result 0.9227843322 9.227843322079324e-7 }
+```
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+result = 0.9227843322
+```
+
+<!-- verified-reference-example:end -->
+
 ```
 { psi(1) = -gamma (Euler-Mascheroni) ~ -0.5772 }
 y = digamma(1)

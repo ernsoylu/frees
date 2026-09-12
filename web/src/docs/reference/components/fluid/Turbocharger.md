@@ -38,14 +38,50 @@ Turbocharger inst(cp, eta_t, eta_c, gam)
 
 Instantiating the component expands these acausal equations (over its port members and parameters) into scalar equations solved by the standard Newton/Tarjan pipeline:
 
+$$
+\begin{aligned}
+prt &= \frac{t_{in.p}}{t_{out.p}} \\
+t_{out.t} &= t_{in.t}\cdot \left(1 - eta_{t}\cdot \left(1 - prt^{\frac{1 - gam}{gam}}\right)\right) \\
+t_{out.mdot} &= t_{in.mdot} \\
+wt &= t_{in.mdot}\cdot cp\cdot \left(t_{in.t} - t_{out.t}\right) \\
+prc &= \frac{c_{out.p}}{c_{in.p}} \\
+c_{out.t} &= c_{in.t}\cdot \left(1 + \frac{prc^{\frac{gam - 1}{gam}} - 1}{eta_{c}}\right) \\
+c_{out.mdot} &= c_{in.mdot} \\
+wc &= c_{in.mdot}\cdot cp\cdot \left(c_{out.t} - c_{in.t}\right) \\
+wt &= wc
+\end{aligned}
+$$
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Solve a complete model
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+// frees-language: 2
+Turbocharger TC(t1, t2, c1, c2, cp=1005, eta_t=0.8, eta_c=0.78, gam=1.4)
+t1.T = 900
+t1.P = 200000
+t1.mdot = 0.1
+t2.P = 100000
+c1.T = 300
+c1.P = 100000
+c1.mdot = 0.1
+
+{ CHECK c2.mdot 0.1 1e-7 }
+{ CHECK c2.p 275867.4952 0.2758674952151855 }
+{ CHECK c2.t 429.3585437 0.0004293585436745006 }
 ```
-PRt        = t_in.P / t_out.P
-t_out.T    = t_in.T * (1 - eta_t * (1 - PRt^((1 - gam) / gam)))
-t_out.mdot = t_in.mdot
-Wt         = t_in.mdot * cp * (t_in.T - t_out.T)
-PRc        = c_out.P / c_in.P
-c_out.T    = c_in.T * (1 + (PRc^((gam - 1) / gam) - 1) / eta_c)
-c_out.mdot = c_in.mdot
-Wc         = c_in.mdot * cp * (c_out.T - c_in.T)
-Wt         = Wc
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+c2.mdot = 0.1
+c2.p = 275867.4952
+c2.t = 429.3585437
 ```
+
+<!-- verified-reference-example:end -->

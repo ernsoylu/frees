@@ -30,6 +30,30 @@ $$ y = \sqrt{x} = x^{1/2}, \qquad x \ge 0 $$
 
 ## Examples
 
+<!-- verified-reference-example:start -->
+
+### Verified example — Solve a complete model
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+// frees-language: 2
+big   = 2e6 - 1e12 * small
+small = 1e-6 * sqrt(big / 1e6)
+
+{ CHECK big 1000000 1 }
+{ CHECK small 0.000001 1e-8 }
+```
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+big = 1000000
+small = 0.000001
+```
+
+<!-- verified-reference-example:end -->
+
 ### Example 1 — Discharge velocity in a draining tank
 
 [Run: tank-draining]

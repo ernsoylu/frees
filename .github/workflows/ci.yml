@@ -51,7 +51,7 @@ env:
   # (meval -> nom 1.2.4) left with it. 92.2% of the ceiling, 240 KiB headroom.
   # The two structural debts above remain the real levers.
   #
-  # 2026-08-17, decision D9 (docs/decisions/0009-rustprop-backend.md): DEBT (1)
+  # 2026-08-17, decision D9 (ARCHITECTURE_AND_REQUIREMENTS.md#11-retained-architectural-decisions): DEBT (1)
   # IS PAID. 2700.3 KiB raw / 1109.5 KiB gzipped — 87.9% of the ceiling and
   # 371.7 KiB of headroom, from 3042.3 / 1597.7 at 99.0% and 29.7 KiB. The wasm
   # ships rustprop as its only in-bundle property backend and the linked
@@ -74,7 +74,7 @@ env:
   # makes the data section unreachable and LTO drops it. Debt (2) still untouched
   # and still unneeded.
   #
-  # 2026-09-12, decision D12 (docs/decisions/0012-retire-linked-tables.md): the
+  # 2026-09-12, decision D12 (ARCHITECTURE_AND_REQUIREMENTS.md#11-retained-architectural-decisions): the
   # `linked-tables` feature and the nine artifacts are GONE, not just off. The
   # 2026-08-19 finding above is why the bundle barely moves — LTO was already
   # dropping the unreachable data section, so what actually leaves is the
@@ -190,12 +190,12 @@ jobs:
         with:
           command: check
           arguments: --config deny.toml
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-        with:
-          node-version-file: web/.nvmrc
-      - name: Frontend npm audit
-        working-directory: web
-        run: npm audit --omit=dev || true
+      # There WAS an `npm audit --omit=dev || true` step here, with the
+      # setup-node it needed. It is gone: `|| true` means it could not fail, so
+      # it gated nothing and only printed into the log of a job nobody opens
+      # when it is green. cargo-deny above is the gate this job's name is about.
+      # If a frontend advisory gate is wanted, it is one line and it must be
+      # able to fail: `npm audit --omit=dev --audit-level=high`.
 
   native:
     name: native tests (${{ matrix.os }})

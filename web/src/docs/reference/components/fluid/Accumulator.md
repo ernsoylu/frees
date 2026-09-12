@@ -36,9 +36,46 @@ Accumulator inst(C, P0)
 
 Instantiating the component expands these acausal equations (over its port members and parameters) into scalar equations solved by the standard Newton/Tarjan pipeline:
 
+$$
+\begin{aligned}
+out.p &= in.p \\
+out.h &= in.h \\
+\text{der}\left(in.p\right) &= \frac{in.mdot - out.mdot}{c} \\
+\text{init}\left(in.p\right) &= p0
+\end{aligned}
+$$
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Solve a complete model
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+// frees-language: 2
+// Accumulator with no DYNAMIC block: der(in.P) takes the steady branch,
+// which recovers in.mdot = out.mdot; the node passes P and h through.
+Accumulator AC(a1, a2, C = 1e-6, P0 = 300000)
+
+a1.P    = 300000
+a1.h    = 120000
+a1.mdot = 0.25
+p_out   = a2.P
+m_out   = a2.mdot
+
+{ CHECK a2.h 120000 0.12 }
+{ CHECK a2.mdot 0.25 2.5e-7 }
+{ CHECK a2.p 300000 0.3 }
 ```
-out.P       = in.P
-out.h       = in.h
-der(in.P)   = (in.mdot - out.mdot) / C
-init(in.P)  = P0
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+a2.h = 120000
+a2.mdot = 0.25
+a2.p = 300000
 ```
+
+<!-- verified-reference-example:end -->

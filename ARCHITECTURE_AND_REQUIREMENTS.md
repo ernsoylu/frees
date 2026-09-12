@@ -84,9 +84,9 @@ The `frees` modeling language is a declarative, acausal engineering language des
 
 ### Top-Level Blocks
 
-1. **`COMPONENT` / `MODULE`**: Reusable acausal physical devices with typed ports (`flow` and `potential` variables) and internal equations.
-2. **`FUNCTION`**: Procedural single-output computational routines supporting imperative control flow (`if`, `for`, `repeat`).
-3. **`PROCEDURE`**: Multi-output procedural blocks returning multiple calculated values.
+1. **`function`**: Reusable equation models and ordered algorithms, with scalar or bracketed outputs. Equations use `=`; ordered calculations use `:=`.
+2. **Typed-port functions**: Acausal devices use `function [ports] = name(params)` with `port`, `connect`, `require`, and `variant` lowering.
+3. **Unified calls**: Use `value = name(inputs)` or `[outputs] = name(inputs)`. Legacy `CALL`, `MODULE`, `PROCEDURE`, and `COMPONENT` declarations are confined to the explicit import converter (`frees-cli migrate`), not normal execution.
 4. **`TABLE`**: 1D and 2D lookup data grids callable from within algebraic equations via interpolation functions.
 5. **`PARAMETRIC`**: Parametric sweep specifications defining independent variables, ranges, and recorded outputs.
 6. **`DYNAMIC`**: Dynamic system definitions specifying differential state variables (`der(x)` or `x'`), time intervals, integrator options, and event conditions.
@@ -187,14 +187,14 @@ Thermodynamic calculations are powered by `rustprop`, a pure-Rust implementation
    - High-accuracy fundamental equations of state explicit in reduced Helmholtz energy $\alpha(\delta, \tau) = \alpha^0(\delta, \tau) + \alpha^r(\delta, \tau)$ where $\delta = \rho/\rho_c$ and $\tau = T_c/T$.
    - Evaluates all thermodynamic properties (pressure, density, enthalpy, entropy, internal energy, specific heat capacities $c_p$, $c_v$, sound speed, Joule-Thomson coefficient) via exact partial derivatives of $\alpha$.
 2. **Supported Fluid Classes**:
-   - Standard pure fluids: `Water`, `R134a`, `R1234yf`, `CO2`, `Ammonia`, `Methane`, `Nitrogen`, `Oxygen`, `Air`, `Helium`, `Hydrogen`, `Propane`, `Isobutane`, and 120+ additional fluids.
+   - The shipped build links 26 real fluids, including `Water`, `R134a`, `R1234yf`, `CO2`, `Ammonia`, `Air`, and `Hydrogen`. The backend's `served_fluids` list controls the diagram picker; the upstream library's larger catalogue is not a claim of shipped coverage. Ten named `.mix` refrigerant blends remain unbacked pending mixture routing.
    - Saturated liquid and vapor states, saturation curves, and two-phase mixture properties parameterized by vapor quality $Q \in [0, 1]$.
    - Incompressible fluids and aqueous mixtures (`INCOMP::MEG[x]`, `INCOMP::MPG[x]` aqueous ethylene/propylene glycol) with exact concentration node mapping.
 3. **Psychrometrics & Moist Air (`HAPropsSI`)**:
    - Real-gas moist air calculations based on ASHRAE RP-1485 formulations.
    - Properties: dry-bulb temperature, wet-bulb temperature, dew-point temperature, relative humidity, humidity ratio, moist air enthalpy, entropy, specific volume.
-4. **Auxiliary Property Grids (`FRAUX1`)**:
-   - Tabular evaluation grids for fast transport property evaluation (viscosity, thermal conductivity) and domain regions outside saturation domes.
+4. **Runtime Property Tables**:
+   - No property grids are linked into the engine. `rustprop-backend` is the default on native and WASM targets; `FRPHTAB1` decoding and `install_from_bytes` remain as an optional runtime overlay. `FRAUX1` artifacts remain decoder test inputs, not the shipped property backend.
 
 ---
 
@@ -254,8 +254,8 @@ To maintain an MIT-compatible license and eliminate heavy third-party CAS depend
 ### Storage Hierarchy (`projectStore.ts`)
 
 1. **Active Working Memory**: React state and Web Worker memory represent the live editing session.
-2. **Autosave Mirror**: Debounced background writes persist active document changes to IndexedDB every 500 ms.
-3. **Multi-Project Library**: IndexedDB stores user projects with UUID keys, project metadata, timestamps, table workbooks, and schematic layouts.
+2. **Autosave Mirror**: `localStorage` remains the synchronous boot cache; debounced IndexedDB writes provide the durable mirror. A strictly newer mirror can be offered for recovery if the boot-cache write failed. Persisted input goes through the shared normalization boundary.
+3. **Multi-Project Library**: IndexedDB stores projects keyed by display name, not UUID. Same-name saves have overwrite semantics; revision checks protect against multi-tab conflicts. IndexedDB was chosen for transactional JSON records without an OPFS dependency.
 4. **File Import / Export**: Native `.frees` and `.json` project file downloads and uploads via HTML5 File API.
 
 ---
@@ -266,7 +266,7 @@ To maintain an MIT-compatible license and eliminate heavy third-party CAS depend
 
 | Metric | Specification Target | Current Status |
 |---|---|---|
-| **Raw WASM Size** | $\le 4,096\text{ KiB}$ | ~3,283 KiB (~1,344 KiB gzipped) |
+| **Raw WASM Size** | $\le 5,120\text{ KiB}$ | CI is authoritative; 3,981.7 KiB raw / 1,791.0 KiB gzipped measured 12 September 2026 |
 | **Engine Cold Boot** | $\le 250\text{ ms}$ | $\approx 120\text{ ms}$ |
 | **Linear Memory Baseline** | $\le 64\text{ MiB}$ initial | $\approx 32\text{ MiB}$ |
 | **Peak Linear Memory** | $\le 256\text{ MiB}$ during complex sweeps | Verified within budget |
@@ -287,3 +287,138 @@ To maintain an MIT-compatible license and eliminate heavy third-party CAS depend
 - **Supported Modern Browsers**: Chrome $\ge 115$, Firefox $\ge 115$, Safari $\ge 16.4$, Edge $\ge 115$.
 - **Required Web APIs**: WebAssembly, Web Workers, IndexedDB, Canvas 2D, ES2022 JavaScript.
 - **Node.js Environment (Development & CI)**: Node 22 (LTS) required for test runner compatibility.
+
+## 11. Retained Architectural Decisions
+
+These are the enduring constraints consolidated from decisions D1–D12. Old
+measurements and superseded implementation plans are historical evidence, not
+instructions to restore removed features.
+
+### Execution and hosting
+
+- **D2:** target `wasm32-unknown-unknown` with `wasm-bindgen`/`wasm-pack`, not Emscripten. Keep the native core independently testable and the WASM bridge thin.
+- **D3:** each worker owns an independent, single-threaded engine instance. Message-passing parallelism avoids requiring `SharedArrayBuffer`, COOP, or COEP headers and preserves ordinary static hosting. Reconsider shared memory only after representative measurements show a benefit that warrants those hosting constraints.
+- Fetch optional property/component resources before synchronous model preparation; do not attempt an asynchronous network request inside a Newton residual. The existing opt-in worker seams do not by themselves remove code or data from the default bundle.
+
+### Property backend and numerical provenance
+
+- **D1/D7 → D8/D9 → D12:** phase-split interpolation and auxiliary grids were replaced by pure-Rust CoolProp algorithms for accuracy and coverage. Neither a C++/Emscripten module nor a Java/Symja service is required. Do not restore `linked-tables`, the byte packer, or duplicate linked artifacts.
+- The default backend is rustprop on every target. Without its feature, the library must compile but property calls must report the missing backend honestly. Single-phase quality is $Q=-1$, not an extrapolated vapour fraction.
+- `install_from_bytes` currently decodes `FRPHTAB1` and layers it over the installed backend. It does not install `FRAUX1` transport grids. Preserve this seam and the `fixtures/proptables` / `fixtures/auxtables` decoder inputs; removing documentation is not permission to remove numerical fixtures.
+- Historical table error reached approximately $2.1\times10^{-4}$; an idealized humid-air shortcut did not meet the CoolProp oracle. Preserve the real-fluid/psychrometric reference equations and grade the shipped backend rather than loosening global tolerances to accommodate a shortcut.
+- Historical liquid tables needed normalized depth $\eta=(h_f(P)-h)/(h_f(P)-h_{cold}(P))$: a single absolute-depth bound excluded high-pressure states. Both artifact coordinate modes remain in the decoder for compatibility.
+- The adapter must reject non-finite inputs and outputs and survive invalid Newton trial states. Warm-start acceleration is a performance layer, not authority to change thermodynamic results; the Air warm shortcut was retired when its benefit became negligible.
+- `served_fluids` advertises diagram support, not unconditional success at every state. Report unsupported states and mixture routes explicitly. Current investigation items belong in `NEXT_STEPS.md`.
+- Frozen Java/CoolProp outputs remain provenance. Grade current results with `fixtures/tolerances-rustprop.json`; retain the old table tolerance file as historical data, not a second production configuration. Per-fixture relaxations require a measured explanation, and unused relaxations must fail validation.
+
+### Removed features and file compatibility
+
+- **D5:** expose a browser action only when its worker/engine path works. This is not a permanent ban on analysis dialogs that have since been implemented. PDF/EPS server transcoding remains removed; use client-side SVG/PNG or browser printing. WebGL content in SVG need not be fully vector.
+- **D6/D11:** MDF4 and the Data Analyzer/measurement engine were deliberately removed. Measured data enters locally through CSV → Tables → callable lookup functions; do not restore the old analyzer stack through a frontend resync.
+- **D10:** Tables uses the existing Glide grid, not a general spreadsheet engine. Free-form spreadsheets and `ssheet()` are removed. Preserve legacy spreadsheet cell data and analyzer payloads inert on project load/save, with a notice; never silently discard user data or guess a conversion.
+- Keep the persisted `table:univer-workbook` dock identifier for layout compatibility. Legacy formula text remains read-only with a conversion hint; it must not attach to a different row after edits. Workbook flush must remain synchronous so a just-entered value reaches the next solve.
+- For injected lookup definitions, document definitions win on the solve/check path; request tables win in the REPL's cached definitions. Do not advertise a GUI table as overriding a same-named document definition everywhere.
+
+### Table and plot integrity
+
+Retained requirements from the September table/plot reviews:
+
+- Keep full-precision numeric values and unit metadata separate from display formatting. Conversion, export and interpolation must use raw values; invalid cells, log domains, duplicates and failed rows require explicit policies, not silent filtering.
+- Table-wide accessor convergence is distinct from individual row success. Preserve stable run identity, partial-result status and revision ownership through edits, cancellation, undo, plotting and export. View sorting must not silently reorder a solver's physical data.
+- Bind plots to an explicit source and run/revision. Preserve missing-data gaps, array index alignment and units; request only the applicable diagram family. Code-owned plots must not offer edits that will be discarded on the next solve.
+- Sampling reduction is a presentation decision unless a numerical error policy is explicitly accepted. Preserve raw export data, spikes, gaps and events. Benchmarks need fixed data/device/build conditions and cold/warm median and p95 measurements; historic proposed latency targets are not product guarantees.
+- Test the complete UI → worker → engine → persistence path. Isolated DTO or renderer tests cannot establish end-to-end correctness. Provide keyboard operation and accessible data alternatives for charts and virtualized grids.
+
+## 12. Language Compatibility Contract
+
+Retained from the U0 contract frozen on 11 September 2026. These semantics are
+the compatibility requirements behind the completed U0–U9 migration, not a
+claim that every historical spelling or planned callable shape is supported.
+The current parser, registries and checked web reference remain authoritative
+for executable syntax; legacy input requires explicit conversion.
+
+### Statements and operators
+
+- `=` is a numerical equation. It contributes a relation to the model and is
+  independent of source order.
+- `:=` is an ordered calculation. It creates a local value version and reads
+  the latest preceding version.
+- `==`, `~=`, `<`, `<=`, `>`, and `>=` are comparisons. `&&`, `||`, and `~`
+  are boolean operators with short-circuit behavior.
+- Newlines and semicolons separate statements. `end` closes every block.
+- Canonical control flow is `if`, `else`, `for`, `while`, and `break`.
+  Construction-time control flow may select equations; ordered control flow
+  may not change the model graph during residual evaluation.
+
+Ranges are inclusive and use `start:stop` or `start:step:stop`. The default
+step is `1`; a range whose step points away from its stop is empty. Zero,
+non-finite, and fractional steps are errors. Equation-generating bounds must
+be known while the graph is built. Ordered loops have a finite work budget.
+
+### Functions and scope
+
+The canonical declaration is `function output = name(inputs) ... end`.
+Multiple outputs use `[a, b]`. Calls use `name(arguments, option=value)`;
+positional arguments precede named arguments. Unknown, repeated, or duplicated
+arguments are errors, and omitted arguments use only declared defaults.
+
+Functions are lexically scoped. Formal inputs and explicitly passed values are
+available in the body; caller locals are not captured. A legacy function that
+reads a caller name must be migrated by adding that name as an input, and the
+adapter must report the source name and declaration location.
+
+An equation-only function lowers to the equation/module path. A calculation-
+only function lowers to the ordered procedure path. Mixed bodies are accepted
+only after definite assignment and value-version checks are available; until
+then they produce a migration diagnostic rather than inferred behavior.
+
+Each output is evaluated once per logical call. Discarded outputs remain part
+of the internal call when required by its equations. Recursive calls require a
+bounded base case and a construction/evaluation limit.
+
+### Values and names
+
+Identifiers remain case-insensitive and are stored canonically in lowercase.
+Single-quoted strings, numeric arrays, units such as `10 [Ohm]`, named function
+references (`@name`), ports, models, and analysis results are distinct values.
+Nonnumeric values do not become scalar equations. Numeric arrays use one-based
+indexing; canonical access is `a(i)` and ranges such as `a(1:n)`. Index zero,
+fractional indices, and shape mismatches are errors. Legacy `a[i]` is accepted
+only by the migration adapter.
+
+`initial(x, value)` declares an initial condition. `guess(x, value, ...)`
+provides a solver seed or bounds and never pins a variable. SI conversion and
+the distinction between absolute temperatures and temperature differences are
+preserved.
+
+### Callable contract
+
+Every callable has one registered signature containing required and optional
+arguments, accepted value types, output order/types/shapes, evaluation mode,
+valid contexts, work-budget cost, and determinism. Resolution happens before
+Newton for fixed arity, shape, and type errors. Value-dependent domain errors
+remain evaluation errors so solver backtracking can handle them.
+
+Lazy calls receive unevaluated arguments where needed (`if`, reductions,
+`guess`, `connect`, and analysis/presentation calls). `plot`, `table`,
+`simulate`, `sweep`, `linearize`, and related domain calls construct or execute
+explicit jobs; they are not scalar residual intrinsics.
+
+### Migration diagnostics
+
+Diagnostics are stable by category and include source location:
+
+| Code | Meaning |
+| --- | --- |
+| `FREES-MIG-001` | legacy declaration or call syntax |
+| `FREES-MIG-002` | implicit caller-scope capture |
+| `FREES-MIG-003` | mixed body needs explicit `:=` versioning |
+| `FREES-MIG-004` | legacy equation silently ignored in a procedure |
+| `FREES-MIG-005` | legacy descending or unbounded range |
+| `FREES-MIG-006` | array indexing syntax or invalid index |
+| `FREES-MIG-007` | unknown, repeated, or ambiguous named argument |
+| `FREES-MIG-008` | unsupported recursive or graph-changing evaluation |
+
+The legacy adapter may preserve behavior, but it must not silently reinterpret
+a construct whose equation/ordered meaning changes. Native and WASM builds
+share these categories and the same callable resolution rules.

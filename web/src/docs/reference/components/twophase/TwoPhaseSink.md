@@ -35,13 +35,44 @@ TwoPhaseSink inst(domain$)
 
 Instantiating the component expands these acausal equations (over its port members and parameters) into scalar equations solved by the standard Newton/Tarjan pipeline:
 
-```
-mdot = in.mdot
-P    = in.P
-h    = in.h
-```
+$$
+\begin{aligned}
+mdot &= in.mdot \\
+p &= in.p \\
+h &= in.h
+\end{aligned}
+$$
 
 ## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Solve a complete model
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+// frees-language: 2
+TwoPhaseSource SRC(fluid$=R134a, mdot=0.02, P=500000, x=0.5)
+TwoPhaseInventory INV(fluid$=R134a, V=0.001)
+TwoPhaseSink SNK()
+connect(SRC.out, INV.in)
+connect(INV.out, SNK.in)
+
+{ CHECK inv.alpha 0.9322346308 9.322346307575955e-7 }
+{ CHECK inv.hf 221501.6737 0.2215016736533679 }
+{ CHECK inv.hg 407471.3462 0.4074713461783659 }
+```
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+inv.alpha = 0.9322346308
+inv.hf = 221501.6737
+inv.hg = 407471.3462
+```
+
+<!-- verified-reference-example:end -->
 
 Instantiated in the verified example below:
 

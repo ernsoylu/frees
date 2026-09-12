@@ -38,9 +38,48 @@ PneumaticServoValveCmd inst(fluid$, Cmax, b, domain$)
 
 The acausal equations this component expands into (over its port members and parameters):
 
+$$
+\begin{aligned}
+out.h &= in.h \\
+t_{in} &= \text{Temperature}\left(\mathrm{fluid}, =in.p, p=in.h\right) \\
+in.mdot &= \text{iso6358}\left(u.sig\cdot cmax, b, in.p, t_{in}, out.p\right) \\
+out.mdot &= in.mdot
+\end{aligned}
+$$
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Solve a complete model
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+// frees-language: 2
+// Signal-commanded pneumatic servo valve at 60% spool: ISO 6358 flow with the
+// sonic conductance scaled to 0.6 * Cmax, blowing 7 bar supply down to
+// atmosphere (choked: P_atm/P_sup = 0.143 < b = 0.3).
+SigConstant           CMD(k=0.6)
+PneumaticSupply       SUP(fluid$=Air, P=700000, T=300)
+PneumaticServoValveCmd SVC(fluid$=Air, Cmax=1e-8, b=0.3)
+PneumaticAtmosphere   ATM(P=100000)
+connect(SUP.out, SVC.in)
+connect(SVC.out, ATM.port)
+connect(CMD.out, SVC.u)
+m_valve = SVC.in.mdot
+
+{ CHECK atm.port.h 424949.9736 0.424949973620621 }
+{ CHECK atm.port.mdot 0.004919851141 1e-8 }
+{ CHECK atm.port.p 100000 0.09999999999999999 }
 ```
-out.h    = in.h
-T_in     = Temperature(fluid$, P=in.P, h=in.h)
-in.mdot  = iso6358(u.sig * Cmax, b, in.P, T_in, out.P)
-out.mdot = in.mdot
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+atm.port.h = 424949.9736
+atm.port.mdot = 0.004919851141
+atm.port.p = 100000
 ```
+
+<!-- verified-reference-example:end -->

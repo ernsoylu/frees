@@ -39,6 +39,39 @@ $$ \text{cylinder: } \frac{Q}{Q_0} = 1 - \frac{2\theta_0^*}{\lambda_1}J_1(\lambd
 
 ## Examples
 
+<!-- verified-reference-example:start -->
+
+### Verified example — Solve a complete model
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+// frees-language: 2
+h = 100 [W/m^2-K]
+k = 0.6 [W/m-K]
+alpha = 0.15e-6 [m^2/s]
+L = 0.02 [m]
+t = 600 [s]
+Bi = h * L / k
+Fo = alpha * t / L^2
+theta_c = heisler_temp('wall', Bi, Fo, 0)
+Q_ratio = heisler_q('wall', Bi, Fo)
+
+{ CHECK alpha 1.5e-7 1e-8 }
+{ CHECK Bi 3.333333333 0.0000033333333333333333 }
+{ CHECK Fo 0.225 2.2499999999999996e-7 }
+```
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+alpha = 1.5e-7 [m^2/s]
+Bi = 3.333333333
+Fo = 0.225
+```
+
+<!-- verified-reference-example:end -->
+
 ### Example 1 — Heat removed from a cooling plate
 
 [Run: heisler-transient]

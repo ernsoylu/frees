@@ -26,6 +26,26 @@ the second independent order-0 solution of Bessel's equation.
 
 ## Examples
 
+<!-- verified-reference-example:start -->
+
+### Verified example — Evaluate a radial-mode special function
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+result = bessely0(1)
+
+{ CHECK result 0.0882569714 8.825697139770806e-8 }
+```
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+result = 0.0882569714
+```
+
+<!-- verified-reference-example:end -->
+
 ```
 { finite for x > 0 }
 y = bessely0(1)

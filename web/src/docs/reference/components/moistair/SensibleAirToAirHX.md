@@ -38,21 +38,56 @@ SensibleAirToAirHX inst(eff, eatr, oacf, domain$)
 
 The acausal equations this component expands into (over its port members and parameters):
 
-```
-sup_out.mdot = sup_in.mdot / oacf
-exh_out.mdot = exh_in.mdot + (sup_in.mdot - sup_out.mdot)
-sup_out.P    = sup_in.P
-exh_out.P    = exh_in.P
-T_s_in  = Temperature(AirH2O, h=sup_in.h, P=sup_in.P, W=sup_in.W)
-T_e_in  = Temperature(AirH2O, h=exh_in.h, P=exh_in.P, W=exh_in.W)
-C_s     = sup_in.mdot * Cp(AirH2O, T=T_s_in, P=sup_in.P, W=sup_in.W)
-C_e     = exh_in.mdot * Cp(AirH2O, T=T_e_in, P=exh_in.P, W=exh_in.W)
-Q       = eff * min(C_s, C_e) * (T_e_in - T_s_in)
-T_s_out = T_s_in + Q / C_s
-sup_out.W = sup_in.W + eatr * (exh_in.W - sup_in.W)
-sup_out.h = Enthalpy(AirH2O, T=T_s_out, P=sup_in.P, W=sup_out.W)
-exh_out.mdot * exh_out.W = exh_in.mdot * exh_in.W + sup_in.mdot * sup_in.W - sup_out.mdot * sup_out.W
-exh_out.mdot * exh_out.h = exh_in.mdot * exh_in.h + sup_in.mdot * sup_in.h - sup_out.mdot * sup_out.h
-T_e_out = Temperature(AirH2O, h=exh_out.h, P=exh_in.P, W=exh_out.W)
+$$
+\begin{aligned}
+sup_{out.mdot} &= \frac{sup_{in.mdot}}{oacf} \\
+exh_{out.mdot} &= exh_{in.mdot} + sup_{in.mdot} - sup_{out.mdot} \\
+sup_{out.p} &= sup_{in.p} \\
+exh_{out.p} &= exh_{in.p} \\
+t_{s_in} &= \text{Temperature}\left(\mathrm{airh2o}, h=sup_{in.h}, p=sup_{in.p}, w=sup_{in.w}\right) \\
+t_{e_in} &= \text{Temperature}\left(\mathrm{airh2o}, h=exh_{in.h}, p=exh_{in.p}, w=exh_{in.w}\right) \\
+c_{s} &= sup_{in.mdot}\cdot \text{Cp}\left(\mathrm{airh2o}, t=t_{s_in}, p=sup_{in.p}, w=sup_{in.w}\right) \\
+c_{e} &= exh_{in.mdot}\cdot \text{Cp}\left(\mathrm{airh2o}, t=t_{e_in}, p=exh_{in.p}, w=exh_{in.w}\right) \\
+q &= eff\cdot \text{min}\left(c_{s}, c_{e}\right)\cdot \left(t_{e_in} - t_{s_in}\right) \\
+t_{s_out} &= t_{s_in} + \frac{q}{c_{s}} \\
+sup_{out.w} &= sup_{in.w} + eatr\cdot \left(exh_{in.w} - sup_{in.w}\right) \\
+sup_{out.h} &= \text{Enthalpy}\left(\mathrm{airh2o}, t=t_{s_out}, p=sup_{in.p}, w=sup_{out.w}\right) \\
+exh_{out.mdot}\cdot exh_{out.w} &= exh_{in.mdot}\cdot exh_{in.w} + sup_{in.mdot}\cdot sup_{in.w} - sup_{out.mdot}\cdot sup_{out.w} \\
+exh_{out.mdot}\cdot exh_{out.h} &= exh_{in.mdot}\cdot exh_{in.h} + sup_{in.mdot}\cdot sup_{in.h} - sup_{out.mdot}\cdot sup_{out.h} \\
+t_{e_out} &= \text{Temperature}\left(\mathrm{airh2o}, h=exh_{out.h}, p=exh_{in.p}, w=exh_{out.w}\right)
+\end{aligned}
+$$
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Rate an HVAC component at specified inlet conditions
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+SensibleAirToAirHX C(eff=0.7, eatr=0.02, oacf=1)
+C.sup_in.mdot = 1 [kg/s]
+C.sup_in.P = 101325 [Pa]
+C.sup_in.W = 0.012
+C.sup_in.h = Enthalpy(AirH2O, T=303.15, P=101325, W=0.012)
+C.exh_in.mdot = 1 [kg/s]
+C.exh_in.P = 101325 [Pa]
+C.exh_in.W = 0.008
+C.exh_in.h = Enthalpy(AirH2O, T=293.15, P=101325, W=0.008)
+
+{ CHECK c.c_e 1021.191586 0.0010211915856509167 }
+{ CHECK c.c_s 1029.115337 0.0010291153365230218 }
+{ CHECK c.exh_in.h 40414.42776 0.04041442776219719 }
 ```
 
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+c.c_e = 1021.191586
+c.c_s = 1029.115337
+c.exh_in.h = 40414.42776
+```
+
+<!-- verified-reference-example:end -->

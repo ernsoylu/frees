@@ -37,6 +37,34 @@ $$ \text{FinalValue}('col') = \text{col}(t_N) $$
 
 ## Examples
 
+<!-- verified-reference-example:start -->
+
+### Verified example — Solve a complete model
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+// frees-language: 2
+DYNAMIC cooling (time = 0 .. 100, points = 101, rtol = 1e-8)
+  der(T) = -0.01 * (T - 25)
+  T(0) = 95
+END
+T_final = FinalValue('T')
+T_peak  = MaxValue('T')
+
+{ CHECK T_final 50.75156088 0.00005075156088200163 }
+{ CHECK T_peak 95 0.00009499999999999999 }
+```
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+T_final = 50.75156088
+T_peak = 95
+```
+
+<!-- verified-reference-example:end -->
+
 ### Example 1 — Final temperature of a cooling transient
 
 [Run: newton-cooling-transient]

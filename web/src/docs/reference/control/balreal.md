@@ -39,6 +39,42 @@ where the `σ_i` are the Hankel singular values.
 
 ## Examples
 
+<!-- verified-reference-example:start -->
+
+### Verified example — Solve a complete model
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+// frees-language: 2
+A[1,1] = 0; A[1,2] = 1
+A[2,1] = -2; A[2,2] = -3
+B[1,1] = 0; B[2,1] = 1
+C[1,1] = 1; C[1,2] = 0
+G[1,1] = 1; G[1,2] = 0
+G[2,1] = 0; G[2,2] = 1
+Qn[1,1] = 1; Qn[1,2] = 0
+Qn[2,1] = 0; Qn[2,2] = 1
+Rn = 0.1
+[L] = lqe(A, G, C, Qn, Rn)
+[Wc] = gram(A, B, 'c')
+[Ab, Bb, Cb] = balreal(A, B, C)
+
+{ CHECK ab[1,1] -0.4085896873 4.0858968733650153e-7 }
+{ CHECK ab[1,2] -0.9701425001 9.70142500145332e-7 }
+{ CHECK ab[2,1] 0.9701425001 9.701425001453318e-7 }
+```
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+ab[1,1] = -0.4085896873
+ab[1,2] = -0.9701425001
+ab[2,1] = 0.9701425001
+```
+
+<!-- verified-reference-example:end -->
+
 ### Example 1 — Balanced realization of a plant
 
 [Run: estimator-gramian-balreal]

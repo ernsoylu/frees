@@ -37,9 +37,42 @@ PIThermostat inst(Kp, Ki, Tref)
 
 Instantiating the component expands these acausal equations (over its port members and parameters) into scalar equations solved by the standard Newton/Tarjan pipeline:
 
+$$
+\begin{aligned}
+err &= tref - port.t \\
+\text{der}\left(integ\right) &= err \\
+\text{init}\left(integ\right) &= 0 \\
+port.qdot &= -\left(kp\cdot err + ki\cdot integ\right)
+\end{aligned}
+$$
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Solve a complete model
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+// frees-language: 2
+PIThermostat  TC(Kp=100, Ki=0.5, Tref=350)
+ThermalMass   M(C=5000, T0=300)
+Conduction    wall(k=2, area=1, L=0.1)
+ThermalSource amb(T=300)
+connect(TC.port, M.port, wall.a)
+connect(wall.b, amb.port)
+DYNAMIC loop(time = 0 .. 1200, points = 120)
+END
+Tf = FinalValue('m.port.t')
+
+{ CHECK Tf 350.0082225 0.00035000822246831803 }
 ```
-err         = Tref - port.T
-der(integ)  = err
-init(integ) = 0
-port.Qdot   = -(Kp * err + Ki * integ)
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+Tf = 350.0082225
 ```
+
+<!-- verified-reference-example:end -->

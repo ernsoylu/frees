@@ -29,6 +29,45 @@ SigAbs inst(param = value, ...)
 
 The acausal equations this component expands into (over its port members and parameters):
 
+$$
+\begin{aligned}
+out.sig &= \left|in.sig\right|
+\end{aligned}
+$$
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Solve a complete model
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+// frees-language: 2
+// A signal node with one driver and three readers: signal is a broadcast
+// domain, so every member takes the same value and there is no flow sum.
+SigConstant K1(k = 2.5)
+SigGain     G1(k = 4)
+SigGain     G2(k = 10)
+SigAbs      A1()
+connect(K1.out, G1.in, G2.in, A1.in)
+g1 = G1.out.sig
+g2 = G2.out.sig
+a1 = A1.out.sig
+s  = K1.out.sig
+
+{ CHECK a1 2.5 0.0000024999999999999998 }
+{ CHECK a1.in.sig 2.5 0.0000024999999999999998 }
+{ CHECK a1.out.sig 2.5 0.0000024999999999999998 }
 ```
-out.sig = abs(in.sig)
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+a1 = 2.5
+a1.in.sig = 2.5
+a1.out.sig = 2.5
 ```
+
+<!-- verified-reference-example:end -->

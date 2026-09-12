@@ -38,6 +38,30 @@ $$ F_{1\to 2} = \frac{1}{\pi W}\Bigg( W\tan^{-1}\frac{1}{W} + H\tan^{-1}\frac{1}
 
 ## Examples
 
+<!-- verified-reference-example:start -->
+
+### Verified example — Solve a complete model
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+// frees-language: 2
+F_12 = viewfactor_perp(1 [m], 1 [m], 1 [m])   { ~0.2000 }
+F_21 = viewfactor_disks(1 [m], 0.5 [m], 0.4 [m])
+
+{ CHECK F_12 0.2000437761 2.0004377607540316e-7 }
+{ CHECK F_21 0.2079839037 2.0798390368117859e-7 }
+```
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+F_12 = 0.2000437761
+F_21 = 0.2079839037
+```
+
+<!-- verified-reference-example:end -->
+
 ### Example 1 — Perpendicular rectangles sharing an edge
 
 [Run: radiation-view-factors]

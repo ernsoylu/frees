@@ -34,6 +34,43 @@ $$ y(t) = \int_0^t g(t-\tau)\,u(\tau)\,d\tau, \qquad g(t) = \mathcal{L}^{-1}\{G(
 
 ## Examples
 
+<!-- verified-reference-example:start -->
+
+### Verified example — Solve a complete model
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+// frees-language: 2
+num = [0, 0, 1]
+den = [1, 0.6, 1]
+tv = [0, 0.5, 1, 1.5, 2, 3, 5, 8, 12]
+[ys] = step(num, den, tv)
+[yi] = impulse(num, den, tv)
+uu = [0, 1, 1, 1, 1, 1, 1, 1, 1]
+[yl] = lsim(num, den, uu, tv)
+[Tr, Tp, Ts2, OS] = stepinfo(tv, ys)
+om = [0.1, 0.5, 1, 2, 5, 10]
+[mg, ph] = bode(num, den, om)
+[re, im] = nyquist(num, den, om)
+[nmg, nph] = nichols(num, den, om)
+[gm, pm, wg, wp] = margin(num, den)
+
+{ CHECK den[1] 1 0.000001 }
+{ CHECK den[2] 0.6 6e-7 }
+{ CHECK den[3] 1 0.000001 }
+```
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+den[1] = 1
+den[2] = 0.6
+den[3] = 1
+```
+
+<!-- verified-reference-example:end -->
+
 ### Example 1 — Response to a custom input
 
 [Run: step-impulse-response]

@@ -23,7 +23,7 @@ Guidelines and reference architecture for AI coding assistants and developers wo
 - **Dynamic Systems**: Adaptive Dormand-Prince Runge-Kutta (`ode45`), 5th-order Radau IIA (`radau5`/`radauiia`), and variable-coefficient DAE BDF/IDA with zero-crossing event root-finding.
 - **Properties**: Pure-Rust CoolProp 8.0.0 implementation (`rustprop`) for high-accuracy Helmholtz equations of state, cubic EoS, incompressibles, and psychrometrics (`HAPropsSI`). 26 real fluids are linked and served on the diagram picker — every pure fluid the alias table names. The ten `.mix` refrigerant blends remain unbacked pending mixture routing upstream. **rustprop is the property backend on every target** (decision D12): the precomputed `(P,h)`/`FRAUX1` tables D1 and D7 introduced are gone, and `props/tables.rs` retains only the `install_from_bytes` runtime fetch seam. Do not reintroduce a linked table path.
 - **Component Library**: 295+ standard acausal components spanning fluid networks, thermal systems, moist air HVAC, mechanics, and electrical circuits.
-- **Experimental Data & Statistics** (`crates/frees-core/src/analysis/`): weighted/bounded/robust curve fitting and dynamic calibration with SVD parameter covariance; correlated and non-Gaussian input uncertainty declared in the document as `Correlation(A, B) = ρ` and `DistributionOf(X) = Uniform(…)`; truncated inverse-CDF sampling; seeded Latin-hypercube and scrambled Sobol designs; Sobol' and Morris global sensitivity. `signal.rs` carries an `O(n log n)` transform (radix-2 + Bluestein, any length) and the sensor kernels behind `CALL Detrend/Smooth/Window/Filter/FiltFilt/XCorr/Welch`.
+- **Experimental Data & Statistics** (`crates/frees-core/src/analysis/`): weighted/bounded/robust curve fitting and dynamic calibration with SVD parameter covariance; correlated and non-Gaussian input uncertainty declared in the document as `Correlation(A, B) = ρ` and `DistributionOf(X) = Uniform(…)`; truncated inverse-CDF sampling; seeded Latin-hypercube and scrambled Sobol designs; Sobol' and Morris global sensitivity. `signal.rs` carries an `O(n log n)` transform (radix-2 + Bluestein, any length) and the sensor kernels behind the `Detrend`, `Smooth`, `Window`, `Filter`, `FiltFilt`, `XCorr`, and `Welch` multi-output functions.
 - **Worker Pool**: Up to 4 Web Workers executing independent parametric sweep chunks in parallel with weighted progress, preserving deterministic row ordering.
 - **WASM Bundle Budget**: Strictly gated at $\le 5,120\text{ KiB}$ raw (measured 2026-09-12 after D12: 3,981.7 KiB raw / 1,791.0 KiB gzipped, 1,138.3 KiB headroom). Raised from 4,096 on 2026-09-10, owner-authorized, to link every fluid the alias table names; the `ci.yml` header carries the full ledger and records that the lazy-chunk pay-down is now overdue.
 - **Test Suite Health**:
@@ -42,7 +42,8 @@ Guidelines and reference architecture for AI coding assistants and developers wo
 frees-wasm/
 ├── Cargo.toml                    # Root workspace configuration & compiler profiles
 ├── rust-toolchain.toml           # Pinned stable Rust toolchain & wasm32 target
-├── docs/decisions/               # Numbered architecture decision records (D1-D12)
+├── ARCHITECTURE_AND_REQUIREMENTS.md # Architecture, language contract, retained decisions
+├── NEXT_STEPS.md                 # Milestones, unresolved work, acceptance gates
 ├── crates/
 │   ├── frees-core/               # Pure Rust numerical engine (solvers, AST, DAE, ODE, CAS, props)
 │   ├── frees/                    # WASM boundary crate (`wasm-bindgen` JSON bridge)
@@ -144,3 +145,66 @@ npm run build
 4. **Symbol Case-Insensitivity**: Variable and function lookup in the solver is case-insensitive, but user-defined casing must be preserved in display maps.
 5. **Frozen Fixtures**: Golden fixtures in `fixtures/corpus` and `fixtures/golden` represent verified reference behavior. Never alter golden outputs merely to accommodate a code change; investigate any discrepancy down to the numerical algorithm.
 6. **Lazy UI Evaluation**: Do not evaluate expensive or validating operations (such as table DTO extraction `toFunctionTableDtos()`) during React rendering; defer evaluation to user action callbacks within structured error handlers.
+
+## Documentation Ownership and Verification
+
+Keep enduring engineering information in the three top-level documents linked
+by `README.md`, not in separate report/decision folders:
+
+- `ARCHITECTURE_AND_REQUIREMENTS.md`: architecture, language contract, compatibility constraints and the retained rationale of D1–D12.
+- `CLAUDE.md`: development instructions, authoritative source locations and maintenance rules.
+- `NEXT_STEPS.md`: signed milestones, unresolved findings and acceptance criteria. Label historical findings that have not been reverified; do not turn an old review into a claim that a bug remains open.
+
+User guides and per-symbol reference pages live only in `web/src/docs/`.
+Generated Help catalogs are build outputs, not independently authored sources.
+Do not recreate a single-file reference or audit archive in the repository.
+Keep essential findings here; Git history retains committed historical narratives.
+
+### Callable sources of truth
+
+| Family | Authoritative implementation |
+| --- | --- |
+| Scalar, lazy, statistics, special functions | `crates/frees-core/src/eval.rs` — `INTRINSICS` |
+| Matrix expansion | `crates/frees-core/src/parser/expand.rs` — `MATRIX_FUNCTIONS` and shape handlers |
+| Multi-output dispatch | `crates/frees-core/src/procedures.rs` — `EXPANDED_CALL_TARGETS`; expansion handlers in `parser/expand.rs` |
+| Control systems | `crates/frees-core/src/control/flatten.rs` — `CALL_NAMES` |
+| Properties and materials | `crates/frees-core/src/props/propfun.rs` and `props/solids.rs` |
+| Analysis jobs | `crates/frees-core/src/analysis/` and `crates/frees/src/analysis.rs` |
+| User declarations | `crates/frees-core/src/parser/defs.rs` — `Definitions`, with resolution and lowering in `parser/` |
+| Components and ports | `crates/frees-core/src/components/def.rs` and `components/library-data/` |
+| REPL/CAS | `crates/frees/src/repl.rs` — `CAS_NAMES` and context restrictions |
+
+Names such as `callProcedures` and `EXPANDED_CALL_TARGETS` are internal compatibility
+identifiers, not a public `CALL` syntax. Trace argument order, defaults, accepted
+types, output shapes, units, evaluation context, determinism and work budgets to
+these implementations. Do not invent missing signatures from a page's presence
+in the manifest. REPL examples require a solved document first and must respect
+the REPL's scalar/CAS restrictions.
+
+### Reference-page gates
+
+Every reference needs a realistic, complete example and verified expected output.
+Use `{ CHECK variable expected tolerance }` comments in `frees` fences; supported
+JSON requests cover table and analysis workflows and exact REPL results. A known
+unsupported invocation needs an asserted diagnostic and a working alternative.
+Gallery links supplement rather than replace the example. Mathematical
+formulations use LaTeX; executable syntax and connection topology remain code.
+
+```sh
+cd web
+nvm use                 # selects web/.nvmrc; verify the active shell, not only installation
+npm run check-docs      # Rust registry coverage, references, and KaTeX display parsing
+npm run check-examples  # runs examples through src/wasm/pkg, including page-level coverage
+npm run compile-docs    # refreshes in-app Help
+```
+
+If engine code changes, rebuild the WASM module before treating the example
+runner as evidence of that change. For new constitutive listings, run
+`node web/scripts/format-doc-equations.mjs` from the root; it reuses the Rust
+expression renderer. Keep `cargo test -p frees-core parser::latex --lib` green.
+For documentation-only changes, distinguish the existing binary's numerical
+verification from a fresh engine build.
+
+Audit evidence belongs outside the repository when it is temporary. Do not claim
+that deleted or untracked measurement harnesses are reproducible project tools.
+Use the maintained commands above and record the tested revision and scope.

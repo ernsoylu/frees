@@ -34,6 +34,33 @@ $$ \frac{P_0}{P} = \left(1 + \frac{k-1}{2}\,M^2\right)^{\!k/(k-1)} $$
 
 ## Examples
 
+<!-- verified-reference-example:start -->
+
+### Verified example — Solve a complete model
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+// frees-language: 2
+k = 1.4
+ratio = P0_P(2.0, k)
+P0_P(M, k) = 4.0
+
+{ CHECK M 1.558836568 0.0000015588365679841947 }
+{ CHECK ratio 7.824449067 0.000007824449066867263 }
+{ CHECK k 1.4 0.0000014 }
+```
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+M = 1.558836568
+ratio = 7.824449067
+k = 1.4
+```
+
+<!-- verified-reference-example:end -->
+
 ### Example 1 — Static pressure upstream of a nozzle shock
 
 The supersonic static pressure at the shock station: `P1 = P0 / P0_P(M1, k)`.

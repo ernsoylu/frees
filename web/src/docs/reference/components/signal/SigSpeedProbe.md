@@ -29,7 +29,43 @@ SigSpeedProbe inst(param = value, ...)
 
 The acausal equations this component expands into (over its port members and parameters):
 
+$$
+\begin{aligned}
+shaft.tau &= 0 \\
+out.sig &= shaft.w
+\end{aligned}
+$$
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Solve a complete model
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+// frees-language: 2
+// SigSpeedProbe: torque-free shaft-speed pickup on a node driven at 7 rad/s.
+// EXPECT y = 7 tol 1e-9
+SpeedSource   SS(w = 7)
+MechGround    G1()
+SigSpeedProbe PR()
+connect(SS.a, PR.shaft)
+connect(SS.b, G1.port)
+y = PR.out.sig
+
+{ CHECK g1.port.tau 0 1e-8 }
+{ CHECK g1.port.w 0 1e-8 }
+{ CHECK pr.out.sig 7 0.000007 }
 ```
-shaft.tau = 0
-out.sig   = shaft.w
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+g1.port.tau = 0
+g1.port.w = 0
+pr.out.sig = 7
 ```
+
+<!-- verified-reference-example:end -->

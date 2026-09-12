@@ -31,6 +31,33 @@ $$ x_j = \frac{1}{n}\sum_{k=0}^{n-1} X_k\, e^{+2\pi \mathrm{i} jk/n} $$
 
 ## Examples
 
+<!-- verified-reference-example:start -->
+
+### Verified example — Solve a complete model
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+// frees-language: 2
+xr = [10, -2, -2, -2]
+xi = [0, 2, 0, -2]
+[yr, yi] = ifft(xr, xi)
+
+{ CHECK xi[1] 0 1e-8 }
+{ CHECK xi[2] 2 0.000002 }
+{ CHECK xi[3] 0 1e-8 }
+```
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+xi[1] = 0
+xi[2] = 2
+xi[3] = 0
+```
+
+<!-- verified-reference-example:end -->
+
 ### Example 1 — a flat spectrum inverts to an impulse
 
 ```

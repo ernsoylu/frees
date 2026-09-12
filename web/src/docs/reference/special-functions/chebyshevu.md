@@ -34,6 +34,26 @@ $$ U_n(\cos\theta) = \frac{\sin((n+1)\theta)}{\sin\theta}, \qquad U_{n+1}(x) = 2
 
 ## Examples
 
+<!-- verified-reference-example:start -->
+
+### Verified example — Evaluate a third-order approximation basis
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+result = chebyshevu(3, 0.5)
+
+{ CHECK result -1 0.000001 }
+```
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+result = -1
+```
+
+<!-- verified-reference-example:end -->
+
 ```
 { U_1(x) = 2x; chebyshevu(1, 1) = 2 }
 y = chebyshevu(1, 1)

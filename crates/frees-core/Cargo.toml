@@ -45,7 +45,7 @@ rustprop-data = { git = "https://github.com/ernsoylu/RustProp", tag = "v0.1.0", 
     # after verifying full states rather than assuming them: CO2 is on
     # `served_fluids` now, at a measured +142 bytes raw / +39 gzipped — which is
     # what "the data was already linked" looks like. See the Wave C1 amendment
-    # to docs/decisions/0009-rustprop-backend.md.
+    # to ARCHITECTURE_AND_REQUIREMENTS.md#11-retained-architectural-decisions.
     "carbondioxide",
     # 2026-09-09: the four fluids Phase 3.3 was holding back for a budget that
     # never came under pressure. CO2 cost +25.5 KiB raw, and the module sits

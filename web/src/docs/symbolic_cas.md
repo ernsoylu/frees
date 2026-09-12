@@ -1,9 +1,9 @@
 [Topic: symbolic-cas]
 # Control Systems & Symbolic CAS
 
-frees brings control-toolbox-style workflows in as native, order-independent equations: LTI modeling and conversions, system interconnection, poles/zeros and stability margins, Bode/Nyquist frequency response, step/impulse/forced time response, and state-feedback/PID controller design. Underneath, two engines meet at the `num`/`den` coefficient arrays — an embedded **Symja** computer-algebra system (CAS) for symbolic work, and Apache Commons Math for numeric analysis (companion-matrix eigenvalues, Riccati via the matrix sign function) that stays robust on high-order, floating-point systems.
+frees provides LTI model conversions, system interconnection, stability analysis, frequency and time responses, and controller design. Symbolic operations use the Rust CAS implementation in frees-core; numerical analysis uses its control and linear-algebra kernels.
 
-This page starts with the symbolic CAS layer (symbolic identities and Laplace partial fractions), then covers the LTI model representations and every control-systems `CALL` function.
+This page starts with the symbolic CAS layer (symbolic identities and Laplace partial fractions), then covers the LTI model representations and every control-systems function.
 
 ## Symbolic identities
 
@@ -82,13 +82,18 @@ frees represents LTI systems using standard array/matrix variables rather than i
 
 ## Model Conversions
 
-Use `CALL` dispatches to convert between representations. The solver automatically registers output shapes so variables can be used as bare names downstream.
+Use multi-output functions to convert between representations. The solver automatically registers output shapes so variables can be used as bare names downstream.
 
-> **Output sizes are inferred.** You may write `CALL` outputs as **bare names** — frees sizes each output array from the inputs (e.g. `num`/`den` get length `n+1`, a Bode `mag` matches `omega`). Explicit slices like `num[1:3]` still work and are shown in the examples for clarity. Only value-dependent counts need an explicit size: the finite-zero counts of `zero`/`tf2zp` (e.g. `zr[1:2]`) and the `rlocus` sweep length. The same control-systems `CALL` functions, and the symbolic transforms below, are also available in the **REPL terminal** (see *REPL Terminal & Workspace*), where `Factor`, `Expand`, `Apart`, `Laplace`, `InverseLaplace`, `Diff` and `Integrate` run interactively.
+> **Output sizes are inferred.** Write function outputs as **bare names** where
+> their shapes follow from the inputs. Value-dependent sizes, such as finite-zero
+> counts and a requested root-locus sweep length, require explicit sizing; see the
+> function reference. Run control-system multi-output calls in the editor. The
+> **REPL terminal** supports symbolic transforms such as `Factor`, `Expand`,
+> `Apart`, `Laplace`, `InverseLaplace`, `Diff` and `Integrate` after a document solve.
 
 ## Multi-Output Functions (array-language-style)
 
-Every multi-output `CALL` function below also has a **destructuring** form — the same syntax array languages use. Write the outputs in brackets on the left and call the function on the right; it is exactly equivalent to the `[outputs] = name(inputs)` form, with output sizes still inferred:
+Call multi-output functions using **destructuring**: write the outputs in brackets on the left and the function call on the right. Output sizes are inferred:
 
 ```
 { These two lines are identical }
@@ -109,7 +114,7 @@ Every multi-output `CALL` function below also has a **destructuring** form — t
 [A, B] = tf2ss(num, den)   { state and input matrices only — C, D dropped }
 ```
 
-Both `~` and trailing omission work in the `CALL … : …` colon form too. The discarded values are still solved internally (so the result is identical), they are just hidden from the results. This destructuring form works for user-defined multi-output `FUNCTION`s as well — see *Custom Functions & Procedures*.
+The discarded values are still solved internally (so the result is identical), they are just hidden from the results. This destructuring form works for user-defined multi-output `FUNCTION`s as well — see *Custom Functions & Procedures*.
 
 ### 1. State Space to Transfer Function: ss2tf
 ```
@@ -133,7 +138,7 @@ Both `~` and trailing omission work in the `CALL … : …` colon form too. The 
 
 ## Model Interconnection
 
-Use `CALL` dispatches to connect multiple systems in series, parallel, or feedback. Systems can be represented either as transfer functions (numerator and denominator arrays) or as state-space systems (matrices A, B, C, D).
+Use multi-output functions to connect multiple systems in series, parallel, or feedback. Systems can be represented either as transfer functions (numerator and denominator arrays) or as state-space systems (matrices A, B, C, D).
 
 For two systems $G_1(s)$ (of order $n_1$) and $G_2(s)$ (of order $n_2$), the connected system has order $n_1 + n_2$.
 
@@ -206,7 +211,7 @@ Applies similarity transformation matrix $P$ to a state-space system (A, B, C, D
 
 ## Frequency Analysis & Poles/Zeros
 
-Use the following `CALL` dispatches to analyze system poles, zeros, Bode/Nyquist responses, and gain/phase margins.
+Use the following multi-output functions to analyze system poles, zeros, Bode/Nyquist responses, and gain/phase margins.
 
 ### 1. Poles: pole
 Computes system poles (real part `pr`, imaginary part `pi`) for a transfer function or a state-space matrix `A`.

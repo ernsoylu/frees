@@ -45,19 +45,21 @@ BatteryCellMap inst(ocv$, dudt$, R0ref, Tref, Ea, Q0, C_th, SOC0, T0, k_age, mod
 
 The acausal equations this component expands into (over its port members and parameters):
 
-```
-I         = -p.I
-R0        = R0ref * exp((Ea / 8.314) * (1 / T - 1 / Tref))
-Voc       = ocv$(SOC)
-p.V - n.V = Voc - R0 * I
-p.I + n.I = 0
-der(SOC)  = -I / (3600 * Qcap)
-init(SOC) = SOC0
-Qgen      = R0 * I^2 - I * T * dudt$(SOC)
-heat.T    = T
-der(T)    = (Qgen + heat.Qdot) / C_th
-init(T)   = T0
-```
+$$
+\begin{aligned}
+i &= -p.i \\
+r0 &= r0ref\cdot e^{\frac{ea}{8.314}\cdot \left(\frac{1}{t} - \frac{1}{tref}\right)} \\
+voc &= \text{ocv\$}\left(soc\right) \\
+p.v - n.v &= voc - r0\cdot i \\
+p.i + n.i &= 0 \\
+\text{der}\left(soc\right) &= \frac{-i}{3600\,qcap} \\
+\text{init}\left(soc\right) &= soc0 \\
+qgen &= r0\cdot i^{2} - i\cdot t\cdot \text{dudt\$}\left(soc\right) \\
+heat.t &= t \\
+\text{der}\left(t\right) &= \frac{qgen + heat.qdot}{c_{th}} \\
+\text{init}\left(t\right) &= t0
+\end{aligned}
+$$
 
 ## Model Variants
 
@@ -65,14 +67,65 @@ Selected via the `model$` parameter; each adds its own equations (and `REQUIRE`d
 
 ### `static`
 
-```
-Qcap = Q0
-```
+$$
+\begin{aligned}
+qcap &= q0
+\end{aligned}
+$$
 
 ### `aging` — requires `k_age`
 
+$$
+\begin{aligned}
+\text{der}\left(ah\right) &= \frac{\left|i\right|}{3600} \\
+\text{init}\left(ah\right) &= 0 \\
+qcap &= q0\cdot \left(1 - k_{age}\cdot ah\right)
+\end{aligned}
+$$
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Simulate a component transient and inspect its final state
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+// BatteryCellMap (static variant): OCV(SOC) and dU/dT maps, Arrhenius R0,
+// a 2 A discharge for 10 s from SOC0 = 0.8, heat convected to 298 K ambient.
+// SOC and T are states, so the document is a short transient.
+TABLE ocv(soc)
+  0     3.0
+  0.5   3.6
+  1     4.1
+END
+TABLE dudt(soc)
+  0    -0.0001
+  1     0.0001
+END
+BatteryCellMap B(ocv$ = ocv, dudt$ = dudt, R0ref = 0.01, Tref = 298, Ea = 20000, Q0 = 5, C_th = 50, SOC0 = 0.8, T0 = 298)
+CurrentSource  CS(I = -2)
+Ground         G()
+Convection     CV(htc = 5, area = 0.1)
+ThermalSource  AMB(T = 298)
+connect(B.p, CS.p)
+connect(CS.n, B.n, G.port)
+connect(B.heat, CV.a)
+connect(CV.b, AMB.port)
+
+DYNAMIC discharge (method = ode45, time = 0 .. 10, points = 6)
+END
+
+final_state = FinalValue('b$soc')
+
+{ CHECK final_state 0.7988888889 7.988888888888927e-7 }
 ```
-der(Ah)  = abs(I) / 3600
-init(Ah) = 0
-Qcap     = Q0 * (1 - k_age * Ah)
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+final_state = 0.7988888889
 ```
+
+<!-- verified-reference-example:end -->

@@ -86,6 +86,16 @@ function manifestNames(manifest) {
   return names
 }
 
+it('publishes current multi-output syntax without legacy CALL signatures', () => {
+  const { manifest } = generate()
+  const entries = [...manifest.functions, ...manifest.callProcedures, ...manifest.matrixFunctions]
+  for (const entry of entries) {
+    expect(entry.signature || '').not.toMatch(/^CALL\s|\s:\s/)
+  }
+  expect(manifest.callProcedures.find(p => p.name === 'tf2ss').signature)
+    .toBe('[A, B, C, D] = tf2ss(num, den)')
+})
+
 const patch = (root, rel, from, to) => {
   const p = path.join(root, rel)
   const src = fs.readFileSync(p, 'utf-8')

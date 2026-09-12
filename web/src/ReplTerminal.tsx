@@ -216,7 +216,7 @@ Variable Queries & Assignments:
   = x = 42 [m/s]
 
 Not available in the browser REPL (each refuses with a message naming itself):
-  CALL lines (e.g. CALL Eigenvalues(A : lambda)) — use a CALL in the document
+  multi-output calls — put [re, im] = Eigenvalues(A) in the document and solve
   matrix/vector literals and range vectors ([1 2 3], 1:2:10)
   implicit single-unknown solves (P = 50000 * volume) — solve via the document
 

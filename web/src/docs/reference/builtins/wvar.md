@@ -25,3 +25,24 @@ See the backend signature for accepted arguments and returned values.
 
 Check argument count, dimensions, and units before solving.
 
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Estimate weighted measurement variance
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+result = wvar([1, 2, 1], [18, 20, 22])
+
+{ CHECK result 3.2 0.0000032 }
+```
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+result = 3.2
+```
+
+<!-- verified-reference-example:end -->

@@ -26,7 +26,7 @@ What it does and when to use it (1–3 short paragraphs). Lead with behavior, no
 
 ## Mathematical Formulation
 
-State the governing equation(s) in KaTeX. Then one line on
+State the governing equation(s) in LaTeX rendered by KaTeX, never a code fence. Then one line on
 the numerical method the backend actually uses.
 
 $$ y = f(x) $$
@@ -36,6 +36,10 @@ $$ y = f(x) $$
 ## Examples
 
 ### Example 1 — <basic, with engineering context>
+
+Include a complete copy-pasteable model, all input values, and
+`{ CHECK output expected tolerance }` comments inside a `frees` code fence.
+Verify it with `npm run check-examples`. A gallery link can supplement it:
 
 [Run: example-id-1]
 
