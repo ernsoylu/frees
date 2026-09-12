@@ -31,4 +31,10 @@ describe('encapsulateSelection', () => {
       'Select at least one component',
     )
   })
+
+  it('rejects disconnected selections', () => {
+    expect(() => encapsulateSelection({
+      name: 'Loop', selected: new Set(['a', 'b']), nodes: [node('a'), node('b')], edges: [], source: 'Pipe a()\nPipe b()',
+    })).toThrow('one connected group')
+  })
 })
