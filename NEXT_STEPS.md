@@ -241,6 +241,8 @@ Focus: Address large-scale system scalability, resolve structural thermodynamic 
   - **Trigger Condition**: Headroom below 200 KiB against the 5,120 KiB WASM ceiling, or before requesting any future budget increase. (Current headroom: 1,232 KiB; 3,888 KiB raw).
 - [ ] **4.3 Custom Component Authoring & Advanced Schematic Routing**
   - **Canvas Encapsulation**: Provide a visual canvas interaction in [`web/src/schematic/`](file:///home/eren/homecloud/dev/frees-wasm/web/src/schematic) allowing users to select a group of connected components and encapsulate them into a reusable custom component block with exposed external ports.
+    - [x] Shift-click selects components; Encapsulate emits a canonical reusable component block with internal and exposed connections.
+      - Signed: 2026-09-12 — the generated block is inserted through the existing editor path and rejects empty or invalid selections.
   - **Orthogonal Wire Routing**: Replace simple direct connections in [`web/src/schematic/layout.ts`](file:///home/eren/homecloud/dev/frees-wasm/web/src/schematic/layout.ts) with an obstacle-avoiding orthogonal wire router that neatly navigates around existing component blocks.
     - [x] Live node obstacles now select a clear orthogonal routing lane, with a schematic regression test.
       - Signed: 2026-09-12 — routing keeps the existing port-facing stubs and falls back to the original lane when no candidate is clear.

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { ActionIcon, Badge, Button, Group, Paper, Select, Stack, Text, Tooltip } from '@mantine/core'
+import { ActionIcon, Badge, Button, Group, Paper, Select, Stack, Text, TextInput, Tooltip } from '@mantine/core'
 import {
   IconArrowsMaximize,
   IconDownload,
@@ -23,6 +23,7 @@ import {
   type SchematicOffsets,
 } from './layout'
 import { glyphFilled, glyphPath, SHAPE_LABELS } from './symbols'
+import { encapsulateSelection } from './encapsulation'
 import { badgeFor, formatCompact, indexVariables, readoutFor, type NodeReadout } from './readouts'
 import { COMPONENT_CATALOG } from '../componentCatalog'
 import {
@@ -52,6 +53,7 @@ interface Props {
   /** Append a statement to the document (wiring emits `connect(...)` lines).
    *  Absent = the canvas stays read-only. */
   onEmitStatement?: (statement: string) => void
+  onInsertBlock?: (block: string) => void
   /** Where the user has dragged each block, owned by the workspace so it rides
    *  the project file — the drawing is regenerated from the document on every
    *  check, so these offsets are the only part of it worth saving. */
@@ -77,6 +79,7 @@ export default function SchematicTab({
   text,
   onRevealLine,
   onEmitStatement,
+  onInsertBlock,
   offsets: savedOffsets,
   onOffsetsChange,
   highlightIds = [],
@@ -103,6 +106,8 @@ export default function SchematicTab({
   const [wireNote, setWireNote] = useState<string | null>(null)
   const [selectFrom, setSelectFrom] = useState<string | null>(null)
   const [selectTo, setSelectTo] = useState<string | null>(null)
+  const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [componentName, setComponentName] = useState('CustomComponent')
   const lastEmitted = useRef<{ a: string; b: string } | null>(null)
 
   const connections = useMemo(() => checkResult?.connections ?? [], [checkResult])
@@ -522,6 +527,19 @@ export default function SchematicTab({
             </Button>
           </Group>
         )}
+        {onInsertBlock && selected.size > 0 && (
+          <Group gap={4} wrap="nowrap">
+            <TextInput size="xs" value={componentName} onChange={(e) => setComponentName(e.currentTarget.value)} w={150} aria-label="Custom component name" />
+            <Button size="compact-xs" onClick={() => {
+              try {
+                onInsertBlock(encapsulateSelection({ name: componentName, selected, nodes: layout.nodes, edges: layout.edges, source: text }))
+                setSelected(new Set())
+              } catch (error) {
+                setWireNote(error instanceof Error ? error.message : String(error))
+              }
+            }}>Encapsulate</Button>
+          </Group>
+        )}
         <Group gap={2} ml="auto">
           <Tooltip label="Zoom out">
             <ActionIcon size="sm" variant="subtle" aria-label="Zoom out" onClick={() => {
@@ -666,13 +684,22 @@ export default function SchematicTab({
                   styleOf={styleOf}
                   wiring={Boolean(onEmitStatement)}
                   pendingPort={pendingPort}
-                  highlighted={highlightIds.includes(n.id)}
+                  highlighted={highlightIds.includes(n.id) || selected.has(n.id)}
                   onPointerDown={(e) => {
                     takeControl()
                     drag.startNode(e, n.id)
                   }}
-                  onClick={() => {
+                  onClick={(shiftKey) => {
                     if (drag.moved()) {
+                      return
+                    }
+                    if (shiftKey) {
+                      setSelected((current) => {
+                        const next = new Set(current)
+                        if (next.has(n.id)) next.delete(n.id)
+                        else next.add(n.id)
+                        return next
+                      })
                       return
                     }
                     setPinned((p) => (p === n.id ? null : n.id))
@@ -746,7 +773,7 @@ interface BlockProps {
   pendingPort: { instance: string; port: string } | null
   highlighted?: boolean
   onPointerDown: (e: React.PointerEvent) => void
-  onClick: () => void
+  onClick: (shiftKey?: boolean) => void
   onEnter: () => void
   onLeave: () => void
   onPort: (port: string) => void
@@ -774,7 +801,7 @@ function NodeBlock({
   const activate = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault()
-      onClick()
+      onClick(false)
     }
   }
   return (
@@ -782,7 +809,7 @@ function NodeBlock({
       transform={`translate(${node.x}, ${node.y})`}
       opacity={dimmed && !highlighted ? 0.45 : 1}
       onPointerDown={onPointerDown}
-      onClick={onClick}
+      onClick={(e) => onClick(e.shiftKey)}
       onMouseEnter={onEnter}
       onMouseLeave={onLeave}
       onKeyDown={activate}
