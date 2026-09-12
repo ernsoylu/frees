@@ -777,6 +777,18 @@ fn material_lookups_outside_their_table_are_refused_by_name() {
     assert!(err.to_lowercase().contains("vibranium"), "{err}");
 }
 
+/// The generated `FRPHTAB1` artifacts, read from `fixtures/`.
+///
+/// D12 stopped linking these into the binary; they remain the only real bytes
+/// the decoder can be tested against, so the byte-level tests read them from
+/// the fixture tree instead of from `props::tables`.
+fn fixture(rel: &str) -> Vec<u8> {
+    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../fixtures")
+        .join(rel);
+    std::fs::read(&path).unwrap_or_else(|e| panic!("fixture {}: {e}", path.display()))
+}
+
 // ── the generated tables, at the byte level ─────────────────────────────────
 
 /// The `FRPHTAB1` reader against corrupted artifacts.
@@ -786,7 +798,7 @@ fn material_lookups_outside_their_table_are_refused_by_name() {
 /// `props::tables::install_from_bytes`. Every corruption must be a `Result`.
 #[test]
 fn a_corrupted_property_table_is_refused_at_every_byte_position() {
-    let good = &frees_core::props::tables::water_phtab().expect("water unpacks")[..];
+    let good = &fixture("proptables/water.phtab")[..];
     assert!(SaturationSplitTable::decode_generated(good).is_ok());
 
     // Every truncation length on a log scale, plus the exact header boundaries.
@@ -847,8 +859,8 @@ fn a_corrupted_property_table_is_refused_at_every_byte_position() {
 #[test]
 fn table_lookups_exactly_on_and_just_outside_every_grid_edge_are_bounded() {
     for bytes in [
-        frees_core::props::tables::water_phtab().unwrap(),
-        frees_core::props::tables::r134a_phtab().unwrap(),
+        fixture("proptables/water.phtab"),
+        fixture("proptables/r134a.phtab"),
     ] {
         let t = SaturationSplitTable::decode_generated(&bytes).unwrap();
         let mut probes: Vec<(f64, f64)> = Vec::new();

@@ -54,9 +54,9 @@ pub use analysis::{
 /// backend so the very first `fluids()` call already sees it.
 ///
 /// Which backend that is is decision D9
-/// (`docs/decisions/0009-rustprop-backend.md`): **rustprop**, and in this bundle
-/// only rustprop — the crate turns `frees-core`'s `linked-tables` feature off,
-/// so the `(P,h)` artifacts are not in the module at all.
+/// (`docs/decisions/0009-rustprop-backend.md`), completed by D12
+/// (`docs/decisions/0012-retire-linked-tables.md`): **rustprop**, and only
+/// rustprop. The `(P,h)` artifacts are no longer linked into any build.
 ///
 /// `frees_core` also installs it lazily from `solve`/`check`, so the module is
 /// correct without this; doing it at start-up keeps the one-off cost off the

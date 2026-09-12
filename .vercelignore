@@ -29,9 +29,9 @@
 /web/tsconfig.tsbuildinfo
 /web/stats.html
 
-# Parity corpus + golden fixtures (~9 MB) — test-only. The property tables the
-# engine embeds are copies under crates/frees-core/src/props/data/ (see
-# CLAUDE.md), so nothing at build time reads fixtures/.
+# Parity corpus + golden fixtures (~9 MB) — test-only. Since D12 the engine
+# embeds no property tables at all (rustprop computes them), so nothing at
+# build time reads fixtures/.
 /fixtures/
 
 # Developer-only tooling: the CoolProp humid-air reference dumper and the local

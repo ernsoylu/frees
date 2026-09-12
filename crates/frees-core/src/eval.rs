@@ -7016,7 +7016,7 @@ mod tests {
         // With the tables this build links, the same call answers — within the
         // error D1 measured. Oracle (CoolProp 8.0.0, tools/golden-dumper):
         // Enthalpy(Water, T=300 [K], P=101325 [Pa]) = 112654.89965464505.
-        crate::props::propfun::test_with_builtin_tables(|| {
+        crate::props::propfun::test_with_rustprop(|| {
             let h = ev(&Expr::call(
                 "prop$enthalpy$water$t$p",
                 vec![n(300.0), n(101325.0)],
@@ -7111,29 +7111,22 @@ mod tests {
             )
         };
 
-        // A (P,h) split table stores no transport, so it must decline — and name
-        // the fluid while doing it. Pinned to that backend rather than left to
-        // the global slot: D9 put one in there that *can* serve this call, so the
-        // ambient installation no longer decides the same way, and which test
-        // ran first is not a premise an assertion may rest on.
-        let message = crate::props::propfun::test_with_builtin_tables(|| {
-            match eval(&htc(), &Scope::default()) {
-                Ok(v) => panic!("expected the table backend to decline, got {v}"),
+        // With no backend at all the correlation must still dispatch and fail at
+        // the missing property, naming the fluid — not refuse the function.
+        crate::props::propfun::test_without_backend(|| {
+            let message = match eval(&htc(), &Scope::default()) {
+                Ok(v) => panic!("expected a decline with no backend installed, got {v}"),
                 Err(e) => e.to_string(),
-            }
+            };
+            assert!(message.contains("Water"), "{message}");
+            assert!(!message.contains("not yet supported"), "{message}");
         });
-        assert!(message.contains("Water"), "{message}");
-        assert!(
-            // a backend that declines the input pair / a (P,h) table asked for a
-            // transport property it does not store.
-            message.contains("not tabulated") || message.contains("needs a full property backend"),
-            "{message}"
-        );
-        assert!(!message.contains("not yet supported"), "{message}");
 
-        // The other half of D9: the accuracy path is precisely what stops this
-        // correlation being unreachable, so under rustprop the same call has to
-        // answer with a physical film coefficient.
+        // The accuracy path is precisely what stops this correlation being
+        // unreachable, so under rustprop the same call has to answer with a
+        // physical film coefficient. (The pre-D12 half of this test pinned the
+        // (P,h) TableBackend declining it for want of transport data; that
+        // backend is no longer installable, so there is nothing left to assert.)
         #[cfg(feature = "rustprop-backend")]
         {
             let h = crate::props::propfun::test_with_rustprop(|| {

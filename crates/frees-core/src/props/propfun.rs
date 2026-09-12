@@ -722,9 +722,8 @@ pub fn clear_cache() {
 fn no_backend(what: &str) -> FreesError {
     FreesError::property(format!(
         "{what} needs a real-fluid property backend and none is installed. \
-         Build with the `rustprop-backend` feature (what ships), or \
-         `linked-tables` for the D1 (P,h) tables; see \
-         docs/decisions/0009-rustprop-backend.md."
+         Build with the `rustprop-backend` feature, which is on by default; \
+         see docs/decisions/0012-retire-linked-tables.md."
     ))
 }
 
@@ -2068,8 +2067,8 @@ pub(crate) fn test_swap_guard() -> std::sync::MutexGuard<'static, ()> {
 /// Runs `body` with **no** property backend installed, restoring whatever was
 /// there before.
 ///
-/// Since [`crate::props::tables::install_builtin_once`] installs the linked
-/// tables from the public entry points, "nothing installed" is no longer the
+/// Since [`crate::props::tables::install_builtin_once`] installs rustprop from
+/// the public entry points, "nothing installed" is no longer the
 /// resting state of a test binary — any test that asserts the honest
 /// no-backend diagnostic has to ask for it, and hold the swap lock while it
 /// does.
@@ -2084,33 +2083,12 @@ pub(crate) fn test_without_backend<T>(body: impl FnOnce() -> T) -> T {
     out
 }
 
-/// Runs `body` with the linked tables installed, restoring whatever was there
-/// before.
-#[cfg(test)]
-pub(crate) fn test_with_builtin_tables<T>(body: impl FnOnce() -> T) -> T {
-    let _guard = test_swap_guard();
-    let previous = backend();
-    crate::props::tables::install_builtin().expect("linked tables must decode");
-    let out = body();
-    match previous {
-        Some(p) => {
-            install(p);
-        }
-        None => {
-            uninstall();
-        }
-    }
-    out
-}
-
 /// Runs `body` with **rustprop** installed, restoring whatever was there
-/// before — the D9 counterpart of [`test_with_builtin_tables`].
+/// before.
 ///
-/// Both exist for the same reason: a test that cares which backend answered
-/// must say so. Since D9 the two disagree about what is *serveable* (rustprop
-/// answers transport at `(P,T)`, a `(P,h)` table does not), so leaving the
-/// question to whatever the global slot happens to hold makes the assertion
-/// depend on test order.
+/// A test that cares which backend answered must say so rather than leave the
+/// question to whatever the global slot happens to hold, which would make the
+/// assertion depend on test order.
 #[cfg(all(test, feature = "rustprop-backend"))]
 pub(crate) fn test_with_rustprop<T>(body: impl FnOnce() -> T) -> T {
     let _guard = test_swap_guard();
@@ -2158,63 +2136,6 @@ mod tests {
             "INCOMP::MEG[NaN]",
         ] {
             assert_eq!(incomp_parts(not_one), None, "{not_one}");
-        }
-    }
-
-    /// The aux grids answer the calls the `(P,h)` table declines, and decline
-    /// the ones nothing can answer. Values are CoolProp 8.0.0 ground truth.
-    #[test]
-    fn the_aux_grids_serve_what_the_split_table_cannot() {
-        let _guard = test_swap_guard();
-        let previous = backend();
-        crate::props::tables::install_builtin().expect("install");
-
-        // Glycol: no dome, so the split geometry never applies to it.
-        let h = evaluate("prop$enthalpy$eg50$p$t", &[200_000.0, 305.0]).unwrap();
-        assert!((h - 39_687.033).abs() / 39_687.033 < 1e-3, "h = {h}");
-        let mu = evaluate("prop$viscosity$eg50$p$t", &[200_000.0, 305.0]).unwrap();
-        assert!(
-            (mu - 0.002_592_678_9).abs() / 0.002_592_678_9 < 5e-3,
-            "mu = {mu}"
-        );
-        // Round-trips through the (P,h) inverse the wall-HX components use.
-        let t = evaluate("prop$temperature$eg50$p$h", &[200_000.0, h]).unwrap();
-        assert!((t - 305.0).abs() < 1e-6, "T = {t}");
-
-        // Transport on the dome — the whole reason htc_evap was blocked.
-        let mu = evaluate("prop$viscosity$r134a$p$x", &[350_000.0, 0.0]).unwrap();
-        assert!(mu > 0.0 && mu < 1e-2, "mu_f(R134a) = {mu}");
-        // Air transport, for htc_extair.
-        let k = evaluate("prop$conductivity$air$p$t", &[101_325.0, 313.0]).unwrap();
-        assert!((k - 0.027).abs() < 0.003, "k_air = {k}");
-
-        // Inside the dome transport is not one number, and says so by name
-        // rather than through the split table's "not a tabulated output".
-        let err = evaluate("prop$viscosity$r134a$p$x", &[350_000.0, 0.5])
-            .unwrap_err()
-            .to_string_message();
-        assert!(err.contains("saturation line"), "{err}");
-
-        // Air has a transport grid but no state table, and the diagnostic must
-        // not claim air is untabulated while listing it among the served.
-        let err = evaluate("prop$enthalpy$air$p$t", &[101_325.0, 300.0])
-            .unwrap_err()
-            .to_string_message();
-        assert!(err.contains("no (P,h) state table"), "{err}");
-
-        // A concentration CoolProp does not model is declined, not extrapolated.
-        let err = evaluate("prop$enthalpy$eg90$p$t", &[200_000.0, 305.0])
-            .unwrap_err()
-            .to_string_message();
-        assert!(!err.is_empty(), "{err}");
-
-        match previous {
-            Some(p) => {
-                install(p);
-            }
-            None => {
-                uninstall();
-            }
         }
     }
 
@@ -2814,7 +2735,7 @@ mod tests {
     #[test]
     fn a_generated_table_answers_only_the_constants_it_actually_carries() {
         let table = crate::props::satsplit::SaturationSplitTable::decode_generated(
-            &crate::props::tables::water_phtab().unwrap(),
+            &crate::props::tables::fixture("proptables/water.phtab"),
         )
         .unwrap();
         let backend = TableBackend::new(vec![table]);

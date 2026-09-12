@@ -14,11 +14,6 @@ num-integer = { workspace = true }
 num-rational = { workspace = true }
 num-traits = { workspace = true }
 serde = { workspace = true, optional = true }
-# Inflate only — see build.rs and props/tables.rs. The compressor half of the
-# crate is unreachable from the library and LTO drops it; what is linked is the
-# ~19 KB inflate core, against ~329 KB saved off the data section.
-miniz_oxide = { workspace = true }
-
 # The accuracy path (decision D8): rustprop, the pure-Rust CoolProp 8 port, as
 # a direct cargo dependency. Its engines and per-fluid data are opt-in Cargo
 # features, so this build links exactly the fluids frees serves — nothing
@@ -110,26 +105,18 @@ rustprop-data = { git = "https://github.com/ernsoylu/RustProp", tag = "v0.1.0", 
 # has zero external dependencies like every other shipped rustprop crate.
 rustprop-core = { git = "https://github.com/ernsoylu/RustProp", tag = "v0.1.0", optional = true }
 
-# The same crate on the other side of the pipe: build.rs does the deflating.
-# Build dependencies are host-only and never reach the wasm module.
-[build-dependencies]
-miniz_oxide = { workspace = true }
-
 [features]
-# `linked-tables` is on by default, so a native build, `frees-cli` and the whole
-# test suite keep the D1 artifacts and behave exactly as they always did.
-# `frees` is the one crate that sets `default-features = false` — see D9.
-default = ["linked-tables"]
+# rustprop is the property backend everywhere — decision D12, which retires the
+# `linked-tables` artifacts D1/D7 introduced. It is on by default so that
+# `cargo build -p frees-core` has a backend at all; `frees` names it explicitly
+# because that crate also sets `default-features = false`.
+default = ["rustprop-backend"]
 serde = ["dep:serde"]
 
-# The ~678 KiB of packed (P,h)/FRAUX1 grids under `src/props/data`, as linked
-# bytes (`props/tables.rs::packed`, `build.rs`). OFF leaves the readers and the
-# `install_from_bytes` fetch seam compiled and removes only the *bytes* —
-# decision D9, `docs/decisions/0009-rustprop-backend.md`.
-linked-tables = []
-
-# Install rustprop as the process's RealFluid backend (D9). OFF is byte-for-byte
-# the pre-D9 engine: `install_builtin_once` installs the (P,h) TableBackend.
+# Install rustprop as the process's RealFluid backend. With it OFF the engine
+# has no real-fluid source and property calls return the honest no-backend
+# diagnostic — that configuration exists only so the library is proven to
+# compile without the optional dependency.
 rustprop-backend = ["dep:rustprop", "dep:rustprop-data", "dep:rustprop-core"]
 
 [dev-dependencies]
