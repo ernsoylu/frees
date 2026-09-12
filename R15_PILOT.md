@@ -68,7 +68,7 @@ silencing a diagnostic.
 
 ## Results and acceptance
 
-Build commit: `4addfb8` (main, 2026-09-12). Session dates: pending. Facilitator: pending.
+Build commit: `3d602d8` (main, 2026-09-12). Session dates: pending. Facilitator: pending.
 
 | Participant | Experience / browser / device | Scalar seconds / outcome | Chain seconds / outcome | Recovery seconds / outcome | Hints, confidence and observations |
 | --- | --- | --- | --- | --- | --- |
