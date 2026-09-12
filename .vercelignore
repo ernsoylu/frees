@@ -29,14 +29,15 @@
 /web/tsconfig.tsbuildinfo
 /web/stats.html
 
-# Parity corpus + golden fixtures (~9 MB) — test-only. The property tables the
-# engine embeds are copies under crates/frees-core/src/props/data/ (see
-# CLAUDE.md), so nothing at build time reads fixtures/.
+# Parity corpus + golden fixtures (~9 MB) — test-only. Since D12 the engine
+# embeds no property tables at all (rustprop computes them), so nothing at
+# build time reads fixtures/.
 /fixtures/
 
-# Java oracle tooling (needs a JDK and the ../frEES checkout — can never run on
-# Vercel) and the local static-serve helper. tools/vercel-build.sh itself must
-# stay in the upload: ignore the directory's contents, then negate the script.
+# Developer-only tooling: the CoolProp humid-air reference dumper and the local
+# static-serve helper, neither of which can or should run on Vercel.
+# tools/vercel-build.sh itself must stay in the upload: ignore the directory's
+# contents, then negate the script.
 /tools/*
 !/tools/vercel-build.sh
 

@@ -407,7 +407,7 @@ mod tests {
 
     #[test]
     fn the_linked_grids_decode_at_the_geometry_aux_gen_chose() {
-        let meg = AuxTable::decode(&tables::meg_fraux().unwrap()).expect("meg decodes");
+        let meg = AuxTable::decode(&tables::fixture("auxtables/meg.fraux")).expect("meg decodes");
         assert_eq!(meg.name(), "INCOMP::MEG");
         assert_eq!(meg.kind(), AuxKind::Incompressible);
         // Every concentration the language can spell is a node, not an
@@ -431,11 +431,12 @@ mod tests {
             assert!(meg.output(want).is_some(), "{want}");
         }
 
-        let air = AuxTable::decode(&tables::air_fraux().unwrap()).expect("air decodes");
+        let air = AuxTable::decode(&tables::fixture("auxtables/air.fraux")).expect("air decodes");
         assert_eq!(air.kind(), AuxKind::PressureTemperature);
         assert!(air.band_at(12.0).is_none(), "air is not ragged");
 
-        let sat = AuxTable::decode(&tables::r134a_sat_fraux().unwrap()).expect("r134a sat decodes");
+        let sat = AuxTable::decode(&tables::fixture("auxtables/r134a-sat.fraux"))
+            .expect("r134a sat decodes");
         assert_eq!(sat.kind(), AuxKind::SaturationLine);
     }
 
@@ -445,7 +446,7 @@ mod tests {
     /// is what `htc_1phase` amplifies hardest.
     #[test]
     fn the_tau_axis_is_non_uniform_and_denser_at_the_cold_end() {
-        let meg = AuxTable::decode(&tables::meg_fraux().unwrap()).unwrap();
+        let meg = AuxTable::decode(&tables::fixture("auxtables/meg.fraux")).unwrap();
         assert_eq!(meg.axis2[0], 0.0);
         assert!((meg.axis2[meg.axis2.len() - 1] - 1.0).abs() < 1e-6);
         let first = meg.axis2[1] - meg.axis2[0];
@@ -462,7 +463,7 @@ mod tests {
     /// reached from inside a Newton residual.
     #[test]
     fn a_query_outside_the_grid_is_declined_not_extrapolated() {
-        let meg = AuxTable::decode(&tables::meg_fraux().unwrap()).unwrap();
+        let meg = AuxTable::decode(&tables::fixture("auxtables/meg.fraux")).unwrap();
         let d = meg.output("Dmass").unwrap();
         assert!(meg.value(d, 0.5, 0.5).is_some());
         assert!(meg.value(d, 0.5, 1.5).is_none(), "tau above the band");
@@ -487,17 +488,17 @@ mod tests {
         ] {
             assert!(AuxTable::decode(bad).is_err(), "{bad:?}");
         }
-        let meg = tables::meg_fraux().unwrap();
+        let meg = tables::fixture("auxtables/meg.fraux");
         let truncated = &meg[..meg.len() / 2];
         let err = AuxTable::decode(truncated).unwrap_err().to_string_message();
         assert!(err.contains("declares"), "{err}");
 
-        let mut flipped = tables::meg_fraux().unwrap();
+        let mut flipped = tables::fixture("auxtables/meg.fraux");
         flipped[10] = 7; // elem_kind
         let err = AuxTable::decode(&flipped).unwrap_err().to_string_message();
         assert!(err.contains("elem_kind"), "{err}");
 
-        let mut flipped = tables::meg_fraux().unwrap();
+        let mut flipped = tables::fixture("auxtables/meg.fraux");
         flipped[12] = 9; // kind
         let err = AuxTable::decode(&flipped).unwrap_err().to_string_message();
         assert!(err.contains("kind"), "{err}");
@@ -505,7 +506,7 @@ mod tests {
         // A header whose declared grid overflows the address space must come
         // back as an error, not a panic. `usize` is 32 bits on wasm32, so this
         // is reachable there with values a `u32` field can hold.
-        let mut huge = tables::meg_fraux().unwrap();
+        let mut huge = tables::fixture("auxtables/meg.fraux");
         huge[16..20].copy_from_slice(&u32::MAX.to_le_bytes()); // n1
         huge[20..24].copy_from_slice(&u32::MAX.to_le_bytes()); // n2
         let err = AuxTable::decode(&huge).unwrap_err().to_string_message();

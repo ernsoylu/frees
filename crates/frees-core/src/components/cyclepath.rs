@@ -1063,8 +1063,8 @@ mod tests {
             .collect()
     }
 
-    fn with_tables<T>(body: impl FnOnce() -> T) -> T {
-        crate::props::propfun::test_with_builtin_tables(body)
+    fn with_rustprop<T>(body: impl FnOnce() -> T) -> T {
+        crate::props::propfun::test_with_rustprop(body)
     }
 
     // ── siUnitForStateVariable ───────────────────────────────────────────────
@@ -1298,7 +1298,7 @@ mod tests {
     /// with the Java engine's own numbers for water at 400 K / 1 atm.
     #[test]
     fn back_fills_the_properties_of_a_numbered_state() {
-        with_tables(|| {
+        with_rustprop(|| {
             let mut v = vars(&[("T1", 400.0), ("P1", 101_325.0)]);
             let mut names = BTreeMap::new();
             let added =
@@ -1331,29 +1331,27 @@ mod tests {
     /// A single-phase state still gets a quality written, because the flash
     /// returns a finite number and the Java stores every finite result.
     ///
-    /// **The number itself is a backend divergence, not a logic one.** CoolProp
-    /// answers `Q = -1` ("this state is not in the dome"); the `(P,h)` split
-    /// table has no such sentinel and reports the linear extrapolation
-    /// `(h-hf)/(hg-hf)` — 1.024 for this state. Filtering it here would be a
-    /// silent deviation from the ported logic, so it is recorded instead.
+    /// The number is CoolProp's `Q = -1` sentinel — "this state is not in the
+    /// dome". **This changed with D12.** The `(P,h)` split table had no such
+    /// sentinel and reported the linear extrapolation `(h-hf)/(hg-hf)`, 1.024
+    /// for this state, which this test used to pin as a recorded backend
+    /// divergence. rustprop *is* CoolProp, so the divergence is gone and the
+    /// engine now answers what the golden oracle always did.
     #[test]
-    fn single_phase_quality_is_the_backends_answer_not_coolprops() {
-        with_tables(|| {
+    fn single_phase_quality_is_coolprops_out_of_dome_sentinel() {
+        with_rustprop(|| {
             let mut v = vars(&[("T1", 400.0), ("P1", 101_325.0)]);
             let mut names = BTreeMap::new();
             resolve_missing_properties(&mut v, &mut names, "", None, &[]);
             let x = v["x1"];
-            assert!(
-                x > 1.0 && x < 1.1,
-                "extrapolated superheated quality, got {x}"
-            );
+            assert!((x - -1.0).abs() < 1e-12, "out-of-dome sentinel, got {x}");
         });
     }
 
     /// Port of `CyclePathResolverTest.underscoreStyleStatesKeepTheirNamingInWriteBack`.
     #[test]
     fn underscore_style_states_keep_their_naming_in_write_back() {
-        with_tables(|| {
+        with_rustprop(|| {
             let mut v = vars(&[("T_1", 500.0), ("P_1", 200_000.0)]);
             let mut names = BTreeMap::new();
             resolve_missing_properties(&mut v, &mut names, "T_1 = 500\nP_1 = 200000", None, &[]);
@@ -1365,7 +1363,7 @@ mod tests {
     /// Port of `CyclePathResolverTest.targetVariablesRestrictWhichPropertiesAreAdded`.
     #[test]
     fn target_variables_restrict_which_properties_are_added() {
-        with_tables(|| {
+        with_rustprop(|| {
             let mut v = vars(&[("T1", 400.0), ("P1", 101_325.0)]);
             let mut names = BTreeMap::new();
             let targets = ["h1".to_string()];
@@ -1389,7 +1387,7 @@ mod tests {
     /// Port of `CyclePathResolverTest.stateTableBlocksResolveTaggedStatesWithTheirOwnFluid`.
     #[test]
     fn state_table_blocks_resolve_tagged_states_with_their_own_fluid() {
-        with_tables(|| {
+        with_rustprop(|| {
             let mut v = vars(&[("Tw1", 400.0), ("Pw1", 101_325.0)]);
             let mut names = BTreeMap::new();
             let tables = [StateTableSpec {
@@ -1413,7 +1411,7 @@ mod tests {
     /// A second block with its own fluid must not collide with the first.
     #[test]
     fn each_state_table_block_flashes_with_its_own_fluid() {
-        with_tables(|| {
+        with_rustprop(|| {
             let mut v = vars(&[
                 ("Pw_1", 101_325.0),
                 ("Tw_1", 400.0),
@@ -1449,7 +1447,7 @@ mod tests {
     /// added names are the Java's, for the same document.
     #[test]
     fn bracket_style_states_write_back_under_brackets() {
-        with_tables(|| {
+        with_rustprop(|| {
             let mut v = vars(&[("T[1]", 400.0), ("P[1]", 101_325.0)]);
             let mut names = BTreeMap::new();
             let mut added = resolve_missing_properties(&mut v, &mut names, "T[1] = 400", None, &[]);
@@ -1467,7 +1465,7 @@ mod tests {
     /// exactly these five names for exactly this reason.
     #[test]
     fn underscore_heavy_names_group_but_write_back_in_the_first_seen_style() {
-        with_tables(|| {
+        with_rustprop(|| {
             let mut v = vars(&[("r_ho1", 0.5), ("t__1", 400.0), ("p1", 101_325.0)]);
             let mut names = BTreeMap::new();
             let mut added = resolve_missing_properties(&mut v, &mut names, "", None, &[]);
@@ -1483,7 +1481,7 @@ mod tests {
     /// Port of `CyclePathResolverTest.passesThroughWhenNoStatePairIsComplete`.
     #[test]
     fn passes_through_when_no_state_pair_is_complete() {
-        with_tables(|| {
+        with_rustprop(|| {
             let mut v = vars(&[("T1", 400.0), ("zeta", 2.0)]);
             let mut names = BTreeMap::new();
             let added = resolve_missing_properties(&mut v, &mut names, "T1 = 400", None, &[]);
@@ -1506,7 +1504,7 @@ mod tests {
 
     #[test]
     fn a_known_property_is_never_recomputed() {
-        with_tables(|| {
+        with_rustprop(|| {
             // h1 is already solved; the fill must leave the solver's value alone.
             let mut v = vars(&[("P1", 101_325.0), ("h1", 2.7e6), ("T1", 400.0)]);
             let mut names = BTreeMap::new();
@@ -1527,7 +1525,7 @@ mod tests {
     /// Port of `CyclePathResolverTest.fewerThanTwoStatesProducesNoPath`.
     #[test]
     fn fewer_than_two_states_produces_no_path() {
-        with_tables(|| {
+        with_rustprop(|| {
             let v = vars(&[("P1", 101_325.0), ("s1", 1000.0)]);
             assert!(generate_cycle_path(&v, "Water").is_empty());
         });
@@ -1536,7 +1534,7 @@ mod tests {
     /// Port of `CyclePathResolverTest.equalPressuresInterpolateAnIsobar`.
     #[test]
     fn equal_pressures_interpolate_an_isobar() {
-        with_tables(|| {
+        with_rustprop(|| {
             let v = vars(&[
                 ("P1", 101_325.0),
                 ("s1", 1000.0),
@@ -1569,7 +1567,7 @@ mod tests {
     /// Port of `CyclePathResolverTest.equalEntropiesInterpolateAnIsentrope`.
     #[test]
     fn equal_entropies_interpolate_an_isentrope() {
-        with_tables(|| {
+        with_rustprop(|| {
             let v = vars(&[
                 ("P1", 101_325.0),
                 ("s1", 6000.0),
@@ -1595,7 +1593,7 @@ mod tests {
     /// Port of `CyclePathResolverTest.equalEnthalpiesInterpolateAnIsenthalp`.
     #[test]
     fn equal_enthalpies_interpolate_an_isenthalp() {
-        with_tables(|| {
+        with_rustprop(|| {
             let v = vars(&[
                 ("P1", 1_000_000.0),
                 ("h1", 2_800_000.0),
@@ -1620,7 +1618,7 @@ mod tests {
     /// isotherm; only P/h/v are missing from the point.
     #[test]
     fn equal_temperatures_interpolate_an_isotherm() {
-        with_tables(|| {
+        with_rustprop(|| {
             let v = vars(&[("T1", 450.0), ("s1", 2000.0), ("T2", 450.0), ("s2", 5000.0)]);
             let path = generate_cycle_path(&v, "Water");
             assert_eq!(path.len(), 61);
@@ -1636,7 +1634,7 @@ mod tests {
     /// Port of `CyclePathResolverTest.equalSpecificVolumesInterpolateAnIsochor`.
     #[test]
     fn equal_specific_volumes_interpolate_an_isochor() {
-        with_tables(|| {
+        with_rustprop(|| {
             let v = vars(&[("T1", 420.0), ("v1", 0.5), ("T2", 520.0), ("v2", 0.5)]);
             let path = generate_cycle_path(&v, "Water");
             assert_eq!(path.len(), 61);
@@ -1653,7 +1651,7 @@ mod tests {
     /// Port of `CyclePathResolverTest.unrelatedStatesFallBackToLinearInterpolation`.
     #[test]
     fn unrelated_states_fall_back_to_linear_interpolation() {
-        with_tables(|| {
+        with_rustprop(|| {
             let v = vars(&[
                 ("T1", 300.0),
                 ("h1", 100_000.0),
@@ -1677,7 +1675,7 @@ mod tests {
     /// Port of `CyclePathResolverTest.nonStateVariablesAreIgnoredWhenGrouping`.
     #[test]
     fn only_one_real_state_produces_no_path() {
-        with_tables(|| {
+        with_rustprop(|| {
             let v = vars(&[
                 ("zeta1", 5.0),
                 ("eta", 0.8),
@@ -1692,7 +1690,7 @@ mod tests {
     /// with the streams' solved values standing in for the expander.
     #[test]
     fn component_rankine_streams_produce_a_cycle_path() {
-        with_tables(|| {
+        with_rustprop(|| {
             let v = vars(&[
                 ("s1.P", 10_000.0),
                 ("s1.h", 191_812.0),
@@ -1731,7 +1729,7 @@ mod tests {
     /// the lowest.
     #[test]
     fn the_path_closes_back_to_the_first_state() {
-        with_tables(|| {
+        with_rustprop(|| {
             let v = vars(&[
                 ("P1", 101_325.0),
                 ("s1", 1000.0),

@@ -13,261 +13,47 @@ The project provides an end-to-end client-side WebAssembly modeling platform wit
 - **WebAssembly Bridge & Worker Pool ([`frees`](file:///home/eren/homecloud/dev/frees-wasm/crates/frees), [`engineClient.ts`](file:///home/eren/homecloud/dev/frees-wasm/web/src/engineClient.ts))**: Zero-copy structured typed array boundary hosting a pool of up to 4 Web Workers with dynamic concurrency clamping, request correlation, weighted sweep progress, and deterministic row re-assembly.
 - **Interactive Workbench ([`web`](file:///home/eren/homecloud/dev/frees-wasm/web))**: React 19 / TypeScript application featuring Glide Data Grid virtualized tables, Plotly.js scientific plotting with thermodynamic diagram overlays, CodeMirror/Monaco editor support, shareable URL links (`#share=<lz-string>`), and offline PWA caching via IndexedDB.
 - **Experimental Data & Statistics ([`analysis/`](file:///home/eren/homecloud/dev/frees-wasm/crates/frees-core/src/analysis))**: Descriptive and inferential statistics (43 intrinsics including Student-t, Welch t-test, ANOVA, bootstrap, permutation tests), weighted/bounded/robust curve fitting and dynamic parameter calibration with parameter covariance, correlated and non-Gaussian input uncertainty ([`Correlation(A, B)`](file:///home/eren/homecloud/dev/frees-wasm/crates/frees-core/src/analysis/uncertainty.rs) / [`DistributionOf(X)`](file:///home/eren/homecloud/dev/frees-wasm/crates/frees-core/src/analysis/distributions.rs)), truncated inverse-CDF sampling, seeded Latin-hypercube and scrambled Sobol designs, Sobol' variance decomposition and Morris screening, and $O(n \log n)$ arbitrary-length transforms with sensor kernels ([`Detrend`](file:///home/eren/homecloud/dev/frees-wasm/crates/frees-core/src/signal.rs), [`Smooth`](file:///home/eren/homecloud/dev/frees-wasm/crates/frees-core/src/signal.rs), [`Window`](file:///home/eren/homecloud/dev/frees-wasm/crates/frees-core/src/signal.rs), [`Filter`](file:///home/eren/homecloud/dev/frees-wasm/crates/frees-core/src/signal.rs), [`FiltFilt`](file:///home/eren/homecloud/dev/frees-wasm/crates/frees-core/src/signal.rs), [`XCorr`](file:///home/eren/homecloud/dev/frees-wasm/crates/frees-core/src/signal.rs), [`Welch`](file:///home/eren/homecloud/dev/frees-wasm/crates/frees-core/src/signal.rs), peak detection).
-- **Strict Quality Gates**: 1,308 golden regression fixtures passing with zero regressions, four-shard compiled WASM golden-corpus replay in CI, 56 frontend Vitest test suites (624 tests) passing, clean clippy `-D warnings` on native and `wasm32-unknown-unknown`, automated documentation and example validation in CI, and the WASM bundle strictly gated under the 5,120 KiB ceiling (~3,888 KiB raw, leaving 1,232 KiB headroom).
+- **Strict Quality Gates**: 1,308 golden regression fixtures passing with zero regressions, four-shard compiled WASM golden-corpus replay in CI, 59 frontend Vitest test suites (655 tests) passing, clean clippy `-D warnings` on native and `wasm32-unknown-unknown`, automated documentation and example validation in CI, and the WASM bundle strictly gated under the 5,120 KiB ceiling (3,981.7 KiB raw / 1,791.0 KiB gzipped, leaving 1,138.3 KiB headroom, measured 2026-09-12).
+
 
 ### Summary of Completed Engineering Milestones
 
-The following earlier milestones have been fully implemented, verified, and integrated into `main`:
+The following milestones are fully implemented, verified, and integrated into `main`.
 
-1. **Phase 1: Operational Wins & Governance**
-   - Node 22 pinned in [`web/package.json`](file:///home/eren/homecloud/dev/frees-wasm/web/package.json) and `.nvmrc`.
-   - Automated supply-chain hardening (`cargo audit`, `cargo deny`, `npm audit`) and formal [`SECURITY.md`](file:///home/eren/homecloud/dev/frees-wasm/SECURITY.md).
-   - Release engineering automated via Release-Please with tag `v0.1.0` and multi-platform binary assets.
-   - Standing offline ("no-network") Playwright test suite blocking regressions in browser caching.
-   - Formal [`CONTRIBUTING.md`](file:///home/eren/homecloud/dev/frees-wasm/CONTRIBUTING.md) and issue templates.
-2. **Phase 2: Robustness, Performance & Verification**
-   - Zero-copy typed array WASM boundary via `js_sys::Float64Array` and transferable `ArrayBuffer` views.
-   - Parser and expression fuzz testing via `cargo-fuzz` / `libFuzzer` in [`fuzz/`](file:///home/eren/homecloud/dev/frees-wasm/fuzz).
-   - Cross-platform CI matrix with macOS runner and multi-browser Playwright matrix (Chromium, Firefox, WebKit).
-   - Interactive Pareto point-click inspection and document operating-point loading in [`web/src/MinMaxModal.tsx`](file:///home/eren/homecloud/dev/frees-wasm/web/src/MinMaxModal.tsx).
-3. **Phase 4 (Core Numerics): Statistical Analysis & Signal Kernels**
-   - Statistical foundations and inference intrinsics in [`crates/frees-core/src/descriptive.rs`](file:///home/eren/homecloud/dev/frees-wasm/crates/frees-core/src/descriptive.rs) (4.1).
-   - Weighted and bounded fitting with parameter covariance SVD in [`analysis/curvefit.rs`](file:///home/eren/homecloud/dev/frees-wasm/crates/frees-core/src/analysis/curvefit.rs) and dynamic calibration in [`paramfit.rs`](file:///home/eren/homecloud/dev/frees-wasm/crates/frees-core/src/analysis/paramfit.rs) (4.2).
-   - Correlated inputs and non-Gaussian uncertainty distributions with truncated inverse-CDF sampling (4.3).
-   - Sensor signal processing kernels and $O(n \log n)$ Bluestein/Cooley-Tukey FFT/IFFT (4.5).
-   - QMC sampling (Latin-hypercube, Sobol) and global sensitivity (Sobol indices, Morris screening) (4.6).
-4. **Documentation & Example Verification Infrastructure**
-   - Documentation gate repaired to reconcile against live Rust registries ([`eval::INTRINSICS`](file:///home/eren/homecloud/dev/frees-wasm/crates/frees-core/src/eval.rs), [`EXPANDED_CALL_TARGETS`](file:///home/eren/homecloud/dev/frees-wasm/crates/frees-core/src/procedures.rs), [`MATRIX_FUNCTIONS`](file:///home/eren/homecloud/dev/frees-wasm/crates/frees-core/src/parser/expand.rs)); provenance fixed; tests added (Phase 4.7b-1, PR #24).
-   - Automated example runner ([`web/scripts/check-doc-examples.mjs`](file:///home/eren/homecloud/dev/frees-wasm/web/scripts/check-doc-examples.mjs)) executing fences against compiled WASM with numerical `{ CHECK ... }` assertions wired into CI (PR #24).
-   - 19 verified worked engineering models landed into gallery with numerical assertions and reference bindings (Phase 4.7b-2, PR #25).
-   - 56 missing reference pages authored and catalogued, bringing reference presence to 723 symbols (Phase 4.7b-3, PR #26).
-   - Electrical component domain coverage wave B models landed with `CHECK` assertions (PR #28).
+1. **Phase 1: Operational Wins & Governance** — Node 22 pinned; supply-chain hardening (`cargo audit`, `cargo deny`, `npm audit`) and [`SECURITY.md`](file:///home/eren/homecloud/dev/frees-wasm/SECURITY.md); Release-Please automation with multi-platform binaries; standing offline Playwright suite; [`CONTRIBUTING.md`](file:///home/eren/homecloud/dev/frees-wasm/CONTRIBUTING.md) and issue templates.
+2. **Phase 2: Robustness, Performance & Verification** — zero-copy `js_sys::Float64Array` WASM boundary; parser/expression fuzzing in [`fuzz/`](file:///home/eren/homecloud/dev/frees-wasm/fuzz); cross-platform CI matrix with macOS and Chromium/Firefox/WebKit Playwright; Pareto point-click inspection in [`MinMaxModal.tsx`](file:///home/eren/homecloud/dev/frees-wasm/web/src/MinMaxModal.tsx).
+3. **Phase 4 (Core Numerics): Statistical Analysis & Signal Kernels** — inference intrinsics in [`descriptive.rs`](file:///home/eren/homecloud/dev/frees-wasm/crates/frees-core/src/descriptive.rs) (4.1); weighted/bounded fitting with SVD covariance in [`curvefit.rs`](file:///home/eren/homecloud/dev/frees-wasm/crates/frees-core/src/analysis/curvefit.rs) and calibration in [`paramfit.rs`](file:///home/eren/homecloud/dev/frees-wasm/crates/frees-core/src/analysis/paramfit.rs) (4.2); correlated and non-Gaussian uncertainty with truncated inverse-CDF sampling (4.3); sensor kernels and $O(n \log n)$ Bluestein/Cooley-Tukey transforms (4.5); LHS/Sobol designs with Sobol' and Morris sensitivity (4.6).
+4. **Documentation & Example Verification Infrastructure** — documentation gate reconciled against the live Rust registries (PR #24); example runner [`check-doc-examples.mjs`](file:///home/eren/homecloud/dev/frees-wasm/web/scripts/check-doc-examples.mjs) executing `{ CHECK ... }` fences in CI (PR #24); 19 worked engineering models landed (PR #25); 56 reference pages authored to 723 catalogued symbols (PR #26); electrical component wave B (PR #28).
+5. **Browser Analysis Parity, Usability & Evaluator Guard** — sensitivity/QMC/fitting endpoints wired through [`engine.worker.ts`](file:///home/eren/homecloud/dev/frees-wasm/web/src/wasm/engine.worker.ts) and [`api.ts`](file:///home/eren/homecloud/dev/frees-wasm/web/src/api.ts) with dialogs for Sobol/Morris, LHS/Sobol designs and empirical quantiles, and fit diagnostics (σ, robust loss, covariance, rank, `atBound`); P0 model and contract repairs (pipe roughness units, `cd-nozzle-shock` guess, `forced-response-lsim` labels, CLI `--json` removal, onboarding alignment); cumulative evaluator work budget replacing unbounded loop ceilings in [`eval.rs`](file:///home/eren/homecloud/dev/frees-wasm/crates/frees-core/src/eval.rs).
+6. **Measurement Table Operations & Scientific Visualization** — row filtering, column transforms, group-by, rolling statistics, key/timestamp joins with interpolation, `NaN`/duplicate/extrapolation policy and unit-metadata preservation, and derived tables feeding fitting, calibration and sweeps directly; box plots, ECDFs, confidence and prediction ribbons, plot-to-table binding identity, and `NaN` line breaks.
+7. **Unified Language Architecture (Stages U0–U9)** — operator semantics, scoping and callable inventory frozen in [`docs/language-contract-v2.md`](file:///home/eren/homecloud/dev/frees-wasm/docs/language-contract-v2.md) and [`docs/callable-inventory.md`](file:///home/eren/homecloud/dev/frees-wasm/docs/callable-inventory.md); scalar output headers and unified expression-position dispatch; declarative and ordered `function` bodies with lexical scoping, definite assignment and colon-range loops; parenthesized indexing, named arguments, `initial(...)` and `guess(...)`; components as `function [ports] = name(params)` with `port`/`connect`/`require`/`variant` lowering; `simulate`/`sweep`/`plot`/`table`/`linearize`/`state_table` as registered calls with run ownership; analysis parity across CLI, WASM and UI via `frees-cli analyze OP --request`; product-wide migration of the standard library, gallery, Help and editor tooling plus `frees-cli migrate`; legacy `CALL`/`MODULE`/`PROCEDURE`/`COMPONENT` grammar removed from the production parser and confined to the import converter.
+8. **Phase 4.1 Sparse Matrix Factorization & Graph Reordering** — deterministic AMD/COLAMD with supercolumn absorption lifted out of [`dae/colamd.rs`](file:///home/eren/homecloud/dev/frees-wasm/crates/frees-core/src/dae/colamd.rs) to serve the general solver; CSC structure fingerprints cache the fill-reducing ordering across Newton iterations while numeric LU is refactored each iteration; the dependency-free Gilbert–Peierls kernel was retained over `faer`/`sprs` on WASM size and portability grounds. Signed: 2026-09-12.
+9. **Phase 4.2 Pre-Expansion Lazy Chunk Seam** — asynchronous property-table and component-library fetching via [`props/tables.rs::install_from_bytes`](file:///home/eren/homecloud/dev/frees-wasm/crates/frees-core/src/props/tables.rs), a pre-solve document scan that awaits required resources before `solve`/`solveTable`/`check`, per-worker caching, and CI headroom reporting that warns at the 200 KiB trigger. Opt-in via `__freesPropertyTableBaseUrl` / `__freesComponentLibraryBaseUrl`; adds no bytes to the default bundle. Signed: 2026-09-12.
+10. **Phase 4.3 Custom Component Authoring & Advanced Schematic Routing** — shift-click selection and Encapsulate emitting a canonical reusable component block with validated connected selections, and an obstacle-avoiding orthogonal router in [`schematic/layout.ts`](file:///home/eren/homecloud/dev/frees-wasm/web/src/schematic/layout.ts) with a regression test and fallback to the original lane. Signed: 2026-09-12.
 
 ---
 
-## 2. Phased Implementation Plan
+## 2. Active Roadmap
 
-The current active roadmap addresses actionable findings from the latest reports in [`reports/`](file:///home/eren/homecloud/dev/frees-wasm/reports): the usability audit ([`reports/REPORT.md`](file:///home/eren/homecloud/dev/frees-wasm/reports/REPORT.md)), the language unification proposal ([`reports/SIMPLIFIED_SYNTAX_PROPOSAL.md`](file:///home/eren/homecloud/dev/frees-wasm/reports/SIMPLIFIED_SYNTAX_PROPOSAL.md)), and foundational table/plot reviews.
+One milestone remains open. Everything else in the phased plan is signed off above; the deferred tracks in §3 are the next candidates once it closes.
 
-```mermaid
-graph TD
-    subgraph "Phase 1: Browser Analysis Parity, Usability & Evaluator Guard (Weeks 1–2)"
-        P1_Ana["1.1 Analysis Browser Parity (Sensitivity / QMC / Fit)"]
-        P1_P0["1.2 P0 Usability & Model Repairs (Pipe / CLI / Help)"]
-        P1_Guard["1.3 Evaluator Work Budget & Safety Ceilings"]
-    end
+### Phase 4.4 R15 Usability Pilot Validation
 
-    subgraph "Phase 2: Measurement Table Operations & Plot Overlays (Weeks 3–5)"
-        P2_Tab["2.1 Measurement Table Operations (Filter / Transform / Join)"]
-        P2_Plot["2.2 Scientific Plot Overlays (BoxPlot / ECDF / Ribbons)"]
-    end
-
-    subgraph "Phase 3: Unified Language Architecture (Months 2–4)"
-        P3_U0["3.1 U0: Grammar Contract & Inventory"]
-        P3_U1["3.2 U1: Call Syntax & Scalar Headers"]
-        P3_U2["3.3 U2: Function Declarations & Scope"]
-        P3_U3["3.4 U3: Mixed Ops & Bounded Control Flow"]
-        P3_U4["3.5 U4: Value Syntax, Arrays & Named Args"]
-        P3_U5["3.6 U5: Physical Component Unification"]
-        P3_U6["3.7 U6: Analysis/Simulation Registered Calls"]
-        P3_U7["3.8 U7: Cross-Interface Parity"]
-        P3_U8["3.9 U8: Full Product Migration"]
-        P3_U9["3.10 U9: Legacy Grammar Removal"]
-    end
-
-    subgraph "Phase 4: Numerical Engine Scaling & Structural Hardening (Months 4–6)"
-        P4_Sparse["4.1 Sparse Solvers & COLAMD General Lifting"]
-        P4_Chunk["4.2 Pre-Expansion Lazy Chunk Seam (Headroom < 200 KiB)"]
-        P4_Custom["4.3 Custom Component Authoring & Orthogonal Routing"]
-        P4_Pilot["4.4 R15 Usability Pilot Validation"]
-    end
-
-    P1_Ana --> P2_Tab
-    P1_Guard --> P3_U0
-    P2_Tab --> P2_Plot
-    P2_Plot --> P3_U6
-    P3_U0 --> P3_U1 --> P3_U2 --> P3_U3 --> P3_U4 --> P3_U5 --> P3_U6 --> P3_U7 --> P3_U8 --> P3_U9
-    P3_U3 --> P4_Sparse
-    P4_Pilot --> P4_Custom
-```
-
----
-
-### Phase 1: Browser Analysis Parity, Usability & Evaluator Guard (Target: Weeks 1–2)
-
-Focus: Expose recently implemented Rust analysis capabilities to the web application, repair high-priority onboarding and documentation defects identified in the audits ([`reports/REPORT.md`](file:///home/eren/homecloud/dev/frees-wasm/reports/REPORT.md)), and protect the engine against runaway nested evaluator work.
-
-- [x] **1.1 Browser UI & Worker Parity for Scientific Analysis**
-  - **Global Sensitivity Endpoint**: Wire the WASM sensitivity endpoint in [`crates/frees/src/analysis.rs`](file:///home/eren/homecloud/dev/frees-wasm/crates/frees/src/analysis.rs) into [`web/src/wasm/engine.worker.ts`](file:///home/eren/homecloud/dev/frees-wasm/web/src/wasm/engine.worker.ts) and [`web/src/api.ts`](file:///home/eren/homecloud/dev/frees-wasm/web/src/api.ts). Add a user-facing sensitivity dialog allowing selection of parameters, sample size, and method (Sobol / Morris), rendering $S_1$, $S_T$, and screening rankings.
-  - **Stratified & QMC Monte Carlo Options**: Extend `MonteCarloParams` in [`web/src/api.ts`](file:///home/eren/homecloud/dev/frees-wasm/web/src/api.ts) to send `design` (`"iid"`, `"lhs"`, `"sobol"`) and requested output `quantiles`. Expose these controls in `MonteCarloModal.tsx` and display empirical quantiles and standard error validity flags (`iidStandardErrorApplies`).
-  - **Parameter Fitting Diagnostics & Weighting UI**: Update `ParameterFitParams` and `ParameterFitResult` in [`web/src/api.ts`](file:///home/eren/homecloud/dev/frees-wasm/web/src/api.ts) to support measurement standard deviation (`sigma`), robust loss selection (`loss`, `fScale`), and receive parameter standard errors, covariance matrices, residual DOF, rank, condition number, and `atBound` flags. Display these diagnostics in the parameter calibration dialog.
-- [x] **1.2 High-Priority Usability, Contract & Model Repairs**
-  - **Pipe Roughness Specification**: Resolve the contract contradiction identified in the audit: [`components/library-data/fluid.frees:67`](file:///home/eren/homecloud/dev/frees-wasm/components/library-data/fluid.frees) and the `Pipe` reference pass `rough / D` to the friction factor, which means absolute roughness in metres, whereas documentation text claimed relative roughness. Update the documentation, add unit checking `[m]`, and create a validated pipe pressure drop test model.
-  - **Help Models Repair**: Fix [`cd-nozzle-shock`](file:///home/eren/homecloud/dev/frees-wasm/web/src/helpExamples.ts) by adding explicit `GUESS Me = 2.9` to prevent division-by-zero, and fix [`forced-response-lsim`](file:///home/eren/homecloud/dev/frees-wasm/web/src/helpExamples.ts) by properly quoting plot labels (`'Time [s]'`, `'Output'`).
-  - **CLI Quick-Start Correction**: Update `README.md` and CLI guides to remove references to the obsolete `--json` flag (CLI emits structured JSON by default), documenting `--request`, batch solving via stdin/files, solver options, and process exit codes.
-  - **Onboarding Alignment**: Synchronize [`web/src/GettingStartedModal.tsx`](file:///home/eren/homecloud/dev/frees-wasm/web/src/GettingStartedModal.tsx) and [`web/src/defaultExample.ts`](file:///home/eren/homecloud/dev/frees-wasm/web/src/defaultExample.ts) so the modal accurately describes the loaded introductory model and removes stale warnings claiming optimization, fitting, and Monte Carlo are un-wired.
-- [x] **1.3 Cumulative Evaluator Work-Budget & Execution Guard**
-  - Implement a shared, decrementing evaluation and expansion budget across reductions, nested user calls, ordered loops, array generation, and numerical probing in [`crates/frees-core/src/eval.rs`](file:///home/eren/homecloud/dev/frees-wasm/crates/frees-core/src/eval.rs).
-  - Replace unbounded loop limits (such as the $2^{24}$ limit in `eval_reduction`) with a deterministic cumulative budget that prevents nested workloads and fuzz artifacts from hanging the Web Worker or CLI process.
-  - Provide clean, structured timeout/budget exhaustion errors crossing the WASM boundary, preserving solver domain-error backtracking during Newton iterations.
-
----
-
-### Phase 2: Measurement Table Operations & Scientific Visualization (Target: Weeks 3–5)
-
-Focus: Expand table data wrangling and plotting workflows (Phase 4.4 from earlier planning, reinforced by table and plot engine reviews) so that experimental data feeds seamlessly into physical calibration, regression, and visualization.
-
-- [x] **2.1 Practical Measurement Table Operations**
-  - **Data Wrangling Kernels**: Implement row filtering (predicate expressions), selected-column mathematical transforms, grouped summaries (group-by with aggregation), and rolling statistics (moving mean, standard deviation, median) within the Tables tab.
-  - **Table Joins & Temporal Alignment**: Add join operations by key column or timestamp, supporting exact matching and linear interpolation for mismatched time grids.
-  - **Data Provenance & Policy Controls**: Provide explicit handling for missing values (`NaN`), rejected rows, duplicate keys, and out-of-bounds extrapolation. Ensure unit metadata and column descriptions are preserved across transforms.
-  - **Direct Pipeline Feed**: Allow derived and filtered tables to be selected as data sources for curve fitting, dynamic parameter calibration, and parametric sweep comparisons without manual CSV re-export.
-- [x] **2.2 Advanced Scientific Plot Overlays & Interaction**
-  - **Statistical Plot Types**: Integrate Box Plots and Empirical Cumulative Distribution Functions (ECDFs) into the Plot tab using the existing Plotly.js engine.
-  - **Uncertainty & Fit Overlays**: Plot fitted curve overlays with translucent confidence ribbons ($95\%$ mean confidence band) and prediction ribbons (prediction intervals accounting for measurement variance) directly atop scatter data points.
-  - **Binding Correctness & Missing Data**: Fix plot-to-table binding identity so switching active tables does not inadvertently scramble plot definitions; properly break line segments across missing (`NaN`) samples rather than drawing erroneous bridging lines.
-
----
-
-### Phase 3: Unified Language Architecture (Target: Months 2–4)
-
-Focus: Implement the comprehensive language unification detailed in [`reports/SIMPLIFIED_SYNTAX_PROPOSAL.md`](file:///home/eren/homecloud/dev/frees-wasm/reports/SIMPLIFIED_SYNTAX_PROPOSAL.md). Unify equations and procedural algorithms under one `function` declaration, single/bracketed call syntax, explicit operators (`=` for equations, `:=` for ordered calculations, `==` for comparisons), and replace disparate block keywords (`CALL`, `MODULE`, `PROCEDURE`, `COMPONENT`) with registered domain calls.
-
-- [x] **3.1 Stage U0: Language Contract, Callable Inventory & Migration Semantics**
-  - Formally freeze operator semantics, lexical scoping rules, type/value representations, and migration diagnostics as defined in [`reports/SIMPLIFIED_SYNTAX_PROPOSAL.md`](file:///home/eren/homecloud/dev/frees-wasm/reports/SIMPLIFIED_SYNTAX_PROPOSAL.md).
-  - Catalogue all callable signatures across built-in intrinsics, matrix routines, CoolProp thermodynamic queries, signal processing, and component libraries.
-  - Establish a golden compatibility test suite capturing legacy behavior across all edge cases (descending loops, caller-scope access, ignored equations, output re-execution).
-- [x] **3.2 Stage U1: Unified Call Syntax & Scalar Output Headers**
-  - [x] Extend the parser to accept scalar output headers: `function y = f(x)` alongside existing multi-output `function [a, b] = f(x)`.
-  - [x] Allow single-result procedures to be called as standard expressions (`y = proc(x)`) lowering through single-result expression sinks, eliminating the artificial requirement for bracket assignment.
-  - [x] Unify signature resolution so that built-ins, tables, procedures, and user functions share identical dispatch, named-argument binding, and arity diagnostics across native and WASM builds.
-- [x] **3.3 Stage U2: Unified Function Declarations & Lexical Scoping**
-  - [x] Unify `function` declarations: lower declarative equation functions through the module expansion path and ordered algorithmic functions through the procedure execution path.
-    - [x] Declarative scalar output functions solve their local relation in both forward and inverse caller equations; ordered bodies retain procedure execution.
-  - [x] Introduce strict lexical scoping for canonical user functions, preserving legacy dynamic scope during migration.
-  - [x] Detect and flag equations inside canonical function bodies that lack variable sides (which legacy procedures silently ignored) rather than silently discarding them.
-- [x] **3.4 Stage U3: Mixed Operations & Bounded Control Flow**
-  - Implement definite assignment and variable versioning to support mixed equation and calculation bodies:
-    - Numerical `=` declares mathematical equations (participating in global nonlinear/ODE solve).
-    - `:=` performs explicit ordered calculations and accumulator updates.
-    - [x] Canonical function bodies execute variable assignments and calculations in source order, with later reads observing the latest value.
-    - [x] Canonical function bodies validate definite assignment across branches before execution.
-  - [x] Introduce clean colon-based range loops (`for i = 1:n`) with explicit step support and bounded iteration ceilings.
-    - [x] Canonical two-bound colon ranges default to `+1`; descending ranges require an explicit negative step.
-  - [x] Enforce static checks ensuring that runtime control flow does not alter the structural topological graph of nonlinear equations during Newton iterations.
-    - [x] Structural equation preparation remains value independent and is cached across Newton iterations.
-- [x] **3.5 Stage U4: Value Syntax, Array Indexing & Named Arguments**
-  - Unambiguously resolve array indexing versus function calls: support parenthesized indexing `a(i)` alongside `a[i]` with 1-based indexing checks and index-zero diagnostics.
-    - [x] Resolve parenthesized indexing for array bindings introduced by array literals and `range(...)` independently of statement order, using the existing one-based index evaluator.
-  - Implement named argument support (`func(x, tolerance = 1e-6, method = 'bdf')`) across intrinsics and user functions.
-    - [x] Bind named arguments for intrinsic, user-function, and procedure calls with duplicate, unknown, missing, and ordering diagnostics.
-  - Add typed value checking for non-numeric types (strings, symbols, options) and clean syntax for initial conditions.
-    - [x] Parse canonical `initial(state, value)` calls in dynamic functions and route them through the existing initial-condition validation.
-    - [x] Parse canonical `guess(name, value, lower=..., upper=...)` solver seed calls with bound validation.
-- [x] **3.6 Stage U5: Physical Component & Connection Unification**
-  - Migrate physical component definitions from legacy `COMPONENT ... END` blocks to unified component declarations.
-    - [x] Lower `function [ports] = name(parameters)` declarations containing `port(...)` into the existing component definition pipeline.
-  - Unify port declarations, parameter defaults, constitutive equations, and acausal connection statements (`connect(node_a, node_b)`).
-    - [x] Canonical `require(...)` calls parse as ordinary expressions for selected component branches.
-    - [x] Lower canonical `port(...)` and `connect(...)` statements into component ports and connection declarations.
-    - [x] Lower canonical nested component instances into hierarchical component definitions.
-    - [x] Preserve defaults declared in unified component function parameters through component expansion.
-    - [x] Lower canonical `variant name require(...)` blocks into the existing construction-time variant model.
-  - Verify that physical conservation (Kirchhoff current/pressure laws), state storage, and structural variants produce identical topological networks and numerical solutions.
-    - [x] Lowered unified definitions reuse the existing component expander's conservation and topology path; pressure/flow expansion and variant parsing are covered by U5 tests.
-- [x] **3.7 Stage U6: Analysis, Simulation & Presentation as Registered Calls**
-  - Replace ad-hoc keyword blocks with registered domain function calls: `simulate(...)`, `sweep(...)`, `plot(...)`, `table(...)`, `linearize(...)`.
-    - [x] Domain calls `simulate(...)`, `sweep(...)`, `plot(...)`, `table(...)`, and `linearize(...)` parse in ordinary expression position.
-  - [x] Reserved `state_table(...)` parses in ordinary expression position.
-  - [x] Maintain explicit run ownership, result bindings, and feedback paths without separate grammar modes.
-    - [x] Registered run bindings are removed from numeric equation solving while remaining available in ordered result metadata.
-  - [x] Top-level registered calls retain their operation, owning binding, and argument expressions in source order.
-    - [x] Registered call ownership is forwarded through core solve/check results and emitted by the CLI and WASM facade.
-- [x] **3.8 Stage U7: Cross-Interface Analysis Parity**
-  - Align analysis execution schemas (optimization, fitting, sensitivity, uncertainty propagation, Monte Carlo) across CLI, WASM Web Worker, and UI dialogs.
-    - [x] Expose the existing sensitivity endpoint through the WASM facade and route all existing analysis endpoints through a shared CLI dispatcher.
-  - [x] Enable scripts to invoke sensitivity, calibration, and sweep routines programmatically through the shared `frees-cli analyze OP --request ...` facade.
-- [x] **3.9 Stage U8: Product-Wide Migration**
-  - Convert all standard library definitions ([`components/library-data/`](file:///home/eren/homecloud/dev/frees-wasm/components/library-data)), gallery models ([`web/src/examples.ts`](file:///home/eren/homecloud/dev/frees-wasm/web/src/examples.ts)), Help models, and test fixtures to the unified syntax.
-    - [x] All 13 standard component-library files and the migrated gallery/Help snippets use version-2 component and call syntax; legacy compatibility fixtures remain isolated as migration evidence.
-    - [x] Function catalog templates and documentation examples use canonical function declarations and expression/bracketed call syntax.
-    - [x] The documentation example runner executes the migrated runnable blocks, including canonical component definitions and calls.
-  - [x] Update editor language tooling: syntax highlighters ([`web/src/EquationEditor.tsx`](file:///home/eren/homecloud/dev/frees-wasm/web/src/EquationEditor.tsx)), autocompletion ([`web/src/editorCompletion.ts`](file:///home/eren/homecloud/dev/frees-wasm/web/src/editorCompletion.ts)), signature tooltips ([`web/src/signatureHelp.ts`](file:///home/eren/homecloud/dev/frees-wasm/web/src/signatureHelp.ts)), and LaTeX renderer.
-    - [x] Function catalog insertion snippets and usage examples use canonical expression and bracketed output calls.
-  - Provide an automatic project migration tool for legacy projects, embedding a version header (`// frees-language: 2`).
-    - [x] Add `frees-cli migrate` for unambiguous function, procedure, call, guess, and simple component rewrites, with explicit refusal for model-specific blocks.
-    - [x] Component migration preserves canonical `VARIANT ... END` bodies and nested component instances.
-    - [x] Legacy CALL output shape annotations are normalized to canonical bare bindings during migration.
-  - [x] Autocomplete and local signatures recognize unified component function headers and port(...) declarations.
-  - [x] Signature help recognizes canonical scalar and multi-output function declarations.
-  - [x] Control-system Help snippets use canonical bracketed output assignments for migrated CALL examples.
-    - [x] Signal-processing gallery models use canonical expression and bracketed output calls.
-    - [x] Gallery component examples use unified `function [ports] = ...` declarations.
-  - [x] Syntax highlighting includes canonical control flow, initial-condition, run, port, and check vocabulary.
-- [x] **3.10 Stage U9: Legacy Grammar Removal & Deprecation**
-  - Conclude the versioned compatibility transition.
-  - [x] Restrict legacy grammar (`CALL`, `MODULE`, `PROCEDURE`, `COMPONENT`) to explicit migration/import converters.
-  - [x] Version-2 documents reject all four legacy declaration forms with the migration diagnostic.
-  - [x] The migration converter is the explicit import path for supported legacy forms and refuses ambiguous module/component rewrites.
-  - [x] The editor no longer highlights legacy declaration keywords as normal version-2 language keywords.
-    - [x] Legacy declaration templates were removed from the editor's function catalog; canonical function templates are offered instead.
-  - [x] Strip obsolete keywords and grammar paths from the production parser and compiler, locking in a compact, unified language core.
-
----
-
-### Phase 4: Numerical Engine Scaling & Structural Hardening (Target: Months 4–6)
-
-Focus: Address large-scale system scalability, resolve structural thermodynamic data debt, implement advanced schematic layout features, and execute formal human usability validation.
-
-- [x] **4.1 Sparse Matrix Factorization & Graph Reordering**
-  - Lift and extend the internal COLAMD-lite ordering from [`crates/frees-core/src/dae/colamd.rs`](file:///home/eren/homecloud/dev/frees-wasm/crates/frees-core/src/dae/colamd.rs) to serve the general equation solver.
-    - [x] Apply the cached supercolumn ordering to large fixed-pattern sparse Newton systems.
-      - Signed: 2026-09-12 — the sparse workspace fingerprints CSC structure and reuses its deterministic ordering across iterations.
-  - Implement full Approximate Minimum Degree (AMD) and Column Approximate Minimum Degree (COLAMD) permutations with supercolumn absorption.
-    - [x] Deterministic AMD, COLAMD, and identical-pattern supercolumn absorption are implemented and unit-tested.
-      - Signed: 2026-09-12 — ordering ties are stable by original index and malformed patterns fall back to identity.
-  - Implement sparsity pattern caching across Newton-Raphson iterations to avoid repeated symbolic factorization when solving large systems (>5,000 equations).
-    - [x] CSC structure fingerprints cache the fill-reducing ordering across repeated sparse Newton factorizations.
-      - Signed: 2026-09-12 — numeric LU values are still refactored each iteration so pivoting and solver stability remain unchanged.
-  - Evaluate integration of pure-Rust sparse factorization kernels (`faer` / `sprs`) against dense fallbacks.
-    - [x] Retain the existing dependency-free Gilbert–Peierls kernel; no external sparse crate improves the current WASM size and portability constraints.
-      - Signed: 2026-09-12 — dense fallback remains the singular or unsupported-pattern escape path.
-  - Signed: 2026-09-12 — Phase 4.1 sparse ordering and factorization seam complete.
-- [x] **4.2 Pre-Expansion Lazy Chunk Seam for Thermodynamic Data**
-  - [x] CI now reports the measured WASM headroom and warns when it reaches the 200 KiB lazy-chunk trigger.
-    - Signed: 2026-09-12 — headroom remains above the trigger; the seam is opt-in and does not add bytes to the default bundle.
-  - [x] Implement dynamic, asynchronous fetching for property tables and component libraries via [`props/tables.rs::install_from_bytes`](file:///home/eren/homecloud/dev/frees-wasm/crates/frees-core/src/props/tables.rs).
-    - Signed: 2026-09-12 — fetched tables layer over Rustprop and fetched component definitions are prepended before evaluation; both resources are cached per worker.
-  - [x] Establish a pre-solve document scan to fetch required fluid tables on first reference before the solver worker executes.
-    - Signed: 2026-09-12 — the worker awaits the configured resource fetch before `solve`, `solveTable`, or `check`; deployments opt in with `__freesPropertyTableBaseUrl` and `__freesComponentLibraryBaseUrl`.
-  - **Trigger Condition**: Headroom below 200 KiB against the 5,120 KiB WASM ceiling, or before requesting any future budget increase. (Current headroom: 1,232 KiB; 3,888 KiB raw).
-  - Signed: 2026-09-12 — Phase 4.2 lazy resource loading is complete.
-- [x] **4.3 Custom Component Authoring & Advanced Schematic Routing**
-  - **Canvas Encapsulation**: Provide a visual canvas interaction in [`web/src/schematic/`](file:///home/eren/homecloud/dev/frees-wasm/web/src/schematic) allowing users to select a group of connected components and encapsulate them into a reusable custom component block with exposed external ports.
-    - [x] Shift-click selects components; Encapsulate emits a canonical reusable component block with internal and exposed connections.
-      - Signed: 2026-09-12 — the generated block is inserted through the existing editor path and rejects empty or invalid selections.
-    - [x] Encapsulation validates connected selections and rejects junction or edge connections without explicit ports.
-      - Signed: 2026-09-12 — ambiguous multiway topology cannot be emitted as a misleading reusable component.
-  - **Orthogonal Wire Routing**: Replace simple direct connections in [`web/src/schematic/layout.ts`](file:///home/eren/homecloud/dev/frees-wasm/web/src/schematic/layout.ts) with an obstacle-avoiding orthogonal wire router that neatly navigates around existing component blocks.
-    - [x] Live node obstacles now select a clear orthogonal routing lane, with a schematic regression test.
-      - Signed: 2026-09-12 — routing keeps the existing port-facing stubs and falls back to the original lane when no candidate is clear.
-  - Signed: 2026-09-12 — Phase 4.3 canvas authoring and obstacle-aware routing complete.
-- [ ] **4.4 R15 Usability Pilot Validation**
-  - [x] Pilot cards, answer key, results table, acceptance thresholds, and current build commit are pinned in [`R15_PILOT.md`](file:///home/eren/homecloud/dev/frees-wasm/R15_PILOT.md).
-    - Signed: 2026-09-12 — ready for five human sessions; no participant outcomes are fabricated.
-  - Execute the structured R15 usability pilot with 5 engineering participants according to [`R15_PILOT.md`](file:///home/eren/homecloud/dev/frees-wasm/R15_PILOT.md).
-  - Test core engineering tasks: scalar solve within 5 minutes, component chain within 10 minutes, and missing boundary diagnostic recovery within 3 minutes.
-  - Record qualitative feedback, assistance requirements, and task completion times to guide workbench UX improvements.
+- [x] Pilot cards, answer key, results table, acceptance thresholds, and the pinned build commit are recorded in [`R15_PILOT.md`](file:///home/eren/homecloud/dev/frees-wasm/R15_PILOT.md).
+  - Signed: 2026-09-12 — ready for five human sessions; no participant outcomes are fabricated.
+- [ ] Execute the structured pilot with 5 engineering participants per [`R15_PILOT.md`](file:///home/eren/homecloud/dev/frees-wasm/R15_PILOT.md).
+- [ ] Test the core tasks: scalar solve within 5 minutes, component chain within 10 minutes, missing-boundary diagnostic recovery within 3 minutes.
+- [ ] Record completion times, assistance requirements, and qualitative feedback to guide workbench UX improvements.
 
 ---
 
 ## 3. Deferred & Long-Term Candidates
 
-To ensure engineering resources remain focused on engine reliability, analysis parity, and the unified language architecture, the following documentation and research tracks are explicitly deferred to this section.
+With the phased plan closed out, the following documentation and research tracks are the explicitly deferred backlog.
 
 ### 3.1 Deferred Documentation & Example Programmes
 
-These items expand user-facing documentation, written tutorials, and reference examples once language unification and UI analysis features stabilize:
+These items expand user-facing documentation, written tutorials, and reference examples:
 
 - **Deferred — D.1 Component Domain Example Wave B (Remaining Tranches B1–B15, B19–B29)**:
   - Curated engineering problems from the reference bank covering pneumatic (B1–B3), hydraulic (B4–B6), mechanical/powertrain (B7–B9), control (B10–B12), moist air (B13–B15), heat transfer (B19–B21), and uncertainty/sensitivity (B22–B29).
@@ -334,7 +120,7 @@ npm run build
 ```
 
 - **Node 22 Toolchain Requirement**: Pinned in `web/.nvmrc` and enforced via `web/package.json`.
-- **Bundle Budget Ceiling**: The compiled WebAssembly engine (`frees.wasm`) must strictly remain $\le 5,120	ext{ KiB}$ raw (measured at ~3,888 KiB). Any PR exceeding this budget fails CI automatically. Raising this ceiling requires completing the lazy-chunk split (Phase 4.2).
+- **Bundle Budget Ceiling**: The compiled WebAssembly engine (`frees.wasm`) must strictly remain $\le 5,120\text{ KiB}$ raw (measured at 3,981.7 KiB on 2026-09-12). Any PR exceeding this budget fails CI automatically. The lazy-chunk seam (Phase 4.2) is in place; CI warns when headroom reaches the 200 KiB trigger.
 - **Executable Documentation**: All guide code fences and gallery models with `CHECK` markers must solve and assert expected values through [`web/scripts/check-doc-examples.mjs`](file:///home/eren/homecloud/dev/frees-wasm/web/scripts/check-doc-examples.mjs) during CI.
 
 ### 3. Language Migration Acceptance Matrix
