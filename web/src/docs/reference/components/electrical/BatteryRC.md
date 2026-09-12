@@ -39,9 +39,42 @@ BatteryRC inst(Voc, R0, R1, C1, Vrc0)
 
 Instantiating the component expands these acausal equations (over its port members and parameters) into scalar equations solved by the standard Newton/Tarjan pipeline:
 
+$$
+\begin{aligned}
+p.v - n.v &= voc + r0\cdot p.i - vrc \\
+\text{der}\left(vrc\right) &= \frac{-p.i}{c1} - \frac{vrc}{r1\cdot c1} \\
+\text{init}\left(vrc\right) &= vrc0 \\
+p.i + n.i &= 0
+\end{aligned}
+$$
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Solve a complete model
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+// frees-language: 2
+BatteryRC B(Voc=48, R0=0.1, R1=0.2, C1=1000, Vrc0=0)
+Resistor  RL(R=4.7)
+Ground    G()
+connect(B.p, RL.a)
+connect(B.n, RL.b, G.port)
+
+{ CHECK b.n.i 9.6 0.0000096 }
+{ CHECK b.n.v 0 1e-8 }
+{ CHECK b.p.i -9.6 0.0000096 }
 ```
-p.V - n.V = Voc + R0 * p.I - Vrc
-der(Vrc)  = -p.I / C1 - Vrc / (R1 * C1)
-init(Vrc) = Vrc0
-p.I + n.I = 0
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+b.n.i = 9.6
+b.n.v = 0
+b.p.i = -9.6
 ```
+
+<!-- verified-reference-example:end -->

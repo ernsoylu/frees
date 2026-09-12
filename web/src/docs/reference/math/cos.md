@@ -29,6 +29,26 @@ $$ y = \cos(x), \qquad x \text{ in radians} $$
 
 ## Examples
 
+<!-- verified-reference-example:start -->
+
+### Verified example — Resolve a vector along a 60 degree direction
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+result = cos(pi#/3)
+
+{ CHECK result 0.5 5.000000000000001e-7 }
+```
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+result = 0.5
+```
+
+<!-- verified-reference-example:end -->
+
 ### Example 1 — Launch-angle component of velocity
 
 [Run: projectile-motion]

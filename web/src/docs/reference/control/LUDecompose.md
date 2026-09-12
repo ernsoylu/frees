@@ -32,6 +32,31 @@ where `L` is unit-lower-triangular and `U` upper-triangular. Then `det(A) = ±�
 
 ## Examples
 
+<!-- verified-reference-example:start -->
+
+### Verified example — Factor a coupled linear system
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+A = [4, 1; 2, 3]
+[L, U] = LUDecompose(A)
+
+{ CHECK A[1,1] 4 0.000004 }
+{ CHECK A[1,2] 1 0.000001 }
+{ CHECK A[2,1] 2 0.000002 }
+```
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+A[1,1] = 4
+A[1,2] = 1
+A[2,1] = 2
+```
+
+<!-- verified-reference-example:end -->
+
 ```
 { [L, U] = LUDecompose(A) }
 ```

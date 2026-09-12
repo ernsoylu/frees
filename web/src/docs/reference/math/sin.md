@@ -30,6 +30,26 @@ $$ y = \sin(x), \qquad x \text{ in radians} $$
 
 ## Examples
 
+<!-- verified-reference-example:start -->
+
+### Verified example — Resolve a vector along a 30 degree direction
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+result = sin(pi#/6)
+
+{ CHECK result 0.5 4.999999999999999e-7 }
+```
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+result = 0.5
+```
+
+<!-- verified-reference-example:end -->
+
 ### Example 1 — Launch-angle component of velocity
 
 [Run: projectile-motion]

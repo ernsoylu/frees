@@ -25,3 +25,24 @@ See the backend signature for accepted arguments and returned values.
 
 Check argument count, dimensions, and units before solving.
 
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Compare sensor readings with a nominal value
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+result = ttest1_df(10, [9, 10, 11, 12, 10])
+
+{ CHECK result 4 0.000004 }
+```
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+result = 4
+```
+
+<!-- verified-reference-example:end -->

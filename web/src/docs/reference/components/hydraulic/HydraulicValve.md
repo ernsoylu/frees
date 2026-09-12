@@ -38,8 +38,39 @@ HydraulicValve inst(CdA_max, rho, u, domain$)
 
 Instantiating the component expands these acausal equations (over its port members and parameters) into scalar equations solved by the standard Newton/Tarjan pipeline:
 
+$$
+\begin{aligned}
+out.mdot &= in.mdot \\
+out.h &= in.h \\
+in.mdot\cdot \left|in.mdot\right| &= \left(u\cdot cda_{max}\right)^{2}\cdot 2\cdot rho\cdot \left(in.p - out.p\right)
+\end{aligned}
+$$
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Calculate oil flow through a half-open valve
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+HydraulicValve C(CdA_max=0.00001, rho=850, u=0.5)
+C.in.P = 1000000
+C.out.P = 100000
+C.in.h = 0
+
+{ CHECK c.in.mdot 0.1955760722 1.9557607215607945e-7 }
+{ CHECK c.out.h 0 1e-8 }
+{ CHECK c.out.mdot 0.1955760722 1.9557607215607945e-7 }
 ```
-out.mdot = in.mdot
-out.h    = in.h
-in.mdot * abs(in.mdot) = (u * CdA_max)^2 * 2 * rho * (in.P - out.P)
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+c.in.mdot = 0.1955760722
+c.out.h = 0
+c.out.mdot = 0.1955760722
 ```
+
+<!-- verified-reference-example:end -->

@@ -36,15 +36,17 @@ CompressorMap inst(fluid$, map_eta$, model$)
 
 Instantiating the component expands these acausal equations (over its port members and parameters) into scalar equations solved by the standard Newton/Tarjan pipeline:
 
-```
-s_in     = Entropy(fluid$, P=in.P, h=in.h)
-h_s      = Enthalpy(fluid$, P=out.P, s=s_in)
-PR       = out.P / in.P
-eta      = map_eta$(PR)
-out.mdot = in.mdot
-out.h    = in.h + (h_s - in.h) / eta
-W        = in.mdot * (out.h - in.h)
-```
+$$
+\begin{aligned}
+s_{in} &= \text{Entropy}\left(\mathrm{fluid}, =in.p, p=in.h\right) \\
+h_{s} &= \text{Enthalpy}\left(\mathrm{fluid}, =out.p, p=s_{in}\right) \\
+pr &= \frac{out.p}{in.p} \\
+eta &= \text{map\_eta\$}\left(pr\right) \\
+out.mdot &= in.mdot \\
+out.h &= in.h + \frac{h_{s} - in.h}{eta} \\
+w &= in.mdot\cdot \left(out.h - in.h\right)
+\end{aligned}
+$$
 
 ## Model Variants
 
@@ -56,10 +58,52 @@ _No additional equations (uses the shared body; the through-flow is imposed by t
 
 ### `flow` — requires `map_mdot$`
 
-```
-in.mdot = map_mdot$(PR)
-```
+$$
+\begin{aligned}
+in.mdot &= \text{map\_mdot\$}\left(pr\right)
+\end{aligned}
+$$
 
 The flow rung makes the machine a true flow-determining (R) element — the mass
 flow comes from the pressure-ratio characteristic, so a supply → compressor →
 volume chain is well-posed on every integrator.
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Solve a complete model
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+// frees-language: 2
+// CompressorMap, default `eta` variant: isentropic efficiency off a 1-D map
+// vs pressure ratio. PR = 2.5 interpolates eta = 0.76 between the rows.
+TABLE etamap(pr)
+  1    0.82
+  4    0.70
+END
+
+Source        SRC(a1, fluid$ = Air, mdot = 0.15, P = 100000, T = 300)
+CompressorMap CM(a1, a2, fluid$ = Air, map_eta$ = etamap)
+Sink          SK(a2)
+
+a2.P     = 250000
+w_c      = CM.W
+eta_used = CM.eta
+
+{ CHECK a1.h 426300.7759 0.42630077587390564 }
+{ CHECK a1.mdot 0.15 1.5e-7 }
+{ CHECK a1.p 100000 0.09999999999999999 }
+```
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+a1.h = 426300.7759
+a1.mdot = 0.15
+a1.p = 100000
+```
+
+<!-- verified-reference-example:end -->

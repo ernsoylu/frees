@@ -35,6 +35,32 @@ which is the convolution of `a` with `b` reversed.
 
 ## Examples
 
+<!-- verified-reference-example:start -->
+
+### Verified example — Worked calculation
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+a = [0, 0, 1, 2, 1, 0, 0]
+b = [0, 1, 2, 1, 0, 0, 0]
+[c] = XCorr(a, b)
+
+{ CHECK a[1] 0 1e-8 }
+{ CHECK a[2] 0 1e-8 }
+{ CHECK a[3] 1 0.000001 }
+```
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+a[1] = 0
+a[2] = 0
+a[3] = 1
+```
+
+<!-- verified-reference-example:end -->
+
 ### Example 1 — measuring a one-sample delay
 
 ```

@@ -53,3 +53,44 @@ connect(EL.heat, HX.wall)
 connect(cool_in, HX.in)
 connect(HX.out, cool_out)
 ```
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Solve a complete model
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+// frees-language: 2
+// ElectrolyzerThermal: the wave3 10-cell electrolyzer clamped to a 19.84 V
+// bus (V_cell ~ 1.984 -> i ~ 2000 A/m2, ~20 A, ~100 W of heat), the jacket
+// heat carried away by a 0.05 kg/s water loop at 325 K through a UA = 200
+// wall.
+ElectrolyzerThermal EL(ncells = 10, area = 0.01, i0 = 10, Rohm = 1e-4, E0 = 1.48, alpha = 0.5, Eth = 1.48, T = 333, fluid$ = Water, UA = 200)
+VoltageSource BUS(E = 19.84)
+Ground        G()
+LiquidSource  SRC(fluid$ = Water, mdot = 0.05, P = 150000, T = 325)
+LiquidSink    SNK()
+connect(EL.p, BUS.p)
+connect(BUS.n, EL.n, G.port)
+connect(SRC.out, EL.cool_in)
+connect(EL.cool_out, SNK.in)
+i_stack = EL.p.I
+h_out = SNK.h
+
+{ CHECK bus.n.i -19.97290086 0.00001997290085607633 }
+{ CHECK bus.n.v 0 1e-8 }
+{ CHECK bus.p.i 19.97290086 0.00001997290085607633 }
+```
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+bus.n.i = -19.97290086
+bus.n.v = 0
+bus.p.i = 19.97290086
+```
+
+<!-- verified-reference-example:end -->

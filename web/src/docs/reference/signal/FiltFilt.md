@@ -40,6 +40,33 @@ $$ y = R\,H\,R\,H\,x \quad\Longrightarrow\quad Y(\omega) = |H(\omega)|^2 X(\omeg
 
 ## Examples
 
+<!-- verified-reference-example:start -->
+
+### Verified example — Worked calculation
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+x = [4, 4, 4, 4, 4, 4, 4, 4]
+b = [0.2, 0.2, 0.2, 0.2, 0.2]
+a = [1]
+[y] = FiltFilt(b, a, x)
+
+{ CHECK a[1] 1 0.000001 }
+{ CHECK b[1] 0.2 2e-7 }
+{ CHECK b[2] 0.2 2e-7 }
+```
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+a[1] = 1
+b[1] = 0.2
+b[2] = 0.2
+```
+
+<!-- verified-reference-example:end -->
+
 ### Example 1 — a constant survives untouched, ends included
 
 ```

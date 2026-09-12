@@ -25,3 +25,24 @@ See the backend signature for accepted arguments and returned values.
 
 Check argument count, dimensions, and units before solving.
 
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Bootstrap a mean with a reproducible seed
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+result = bootstrap_ci_hi(0.95, 200, 42, [19, 20, 21, 22, 20])
+
+{ CHECK result 21.4 0.0000214 }
+```
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+result = 21.4
+```
+
+<!-- verified-reference-example:end -->

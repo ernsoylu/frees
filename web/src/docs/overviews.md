@@ -5,7 +5,7 @@ The frees language is small and declarative: equations are constraints, names ar
 frees uses an array-language-style syntax for matrices and vectors. Declare a shape with a slice suffix, then add, multiply, transpose, or solve linear systems with the standard operators. For heavy numerics there are low-level OpenBLAS primitives and higher-level decompositions (LU, eigenvalues). Transfer-function coefficient arrays for control work are just vectors — see *Dynamic Systems & Control*.
 
 [Topic: prog-overview]
-When a model repeats or grows, factor it out. `FUNCTION` and `PROCEDURE` blocks add reusable, imperative-bodied routines; `MODULE` encapsulates a whole equation subsystem you can instantiate many times. `TABLE` blocks hold tabulated data callable like a function, and the lookup/interpolation and parametric-table accessors read that data back into a solve.
+Use `function output = name(inputs)` or `function [outputs] = name(inputs)` for reusable definitions. Equation bodies use `=`; ordered bodies use `:=`. Port-bearing functions model connectable subsystems. `TABLE` blocks provide callable tabulated data.
 
 [Topic: fluids-overview]
 frees ships high-precision property data so you never hand-look-up a state. Real fluids (water, refrigerants, ammonia, …) are computed in the browser by rustprop, a pure-Rust port of CoolProp 8.0.0; ideal-gas species use NASA polynomials; `AirH2O` handles humid air from three coordinates; and a built-in database carries bulk properties for common solids. Every property function returns SI base units. Group a circuit's state points with a `STATE TABLE` to isolate fluids and overlay cycles on property charts.
@@ -23,4 +23,7 @@ Model whole systems, not just equations: instantiate parameterized **components*
 frees is a client–server system you can run anywhere Docker runs. These pages explain the asynchronous compute model (API → queue → compute workers → job store) and why it makes solves robust and scalable, document the REST API so scripts can drive frees directly, and walk through both deployment paths: local Docker via `frees.sh`, and Railway (or any container platform) with the hard-won production configuration already baked in.
 
 [Topic: tools-overview]
-These are the tools around the editor that make modeling faster: a dockable **REPL** console that evaluates expressions against the last solved session (with the full `CALL` library and symbolic CAS), the **keyboard shortcuts** for Solve/Check, the **Markdown report** system that weaves live values and plots into a formatted document, and the **Graph Digitizer & Curve Fit** tools that turn a chart image or a table into a fitted equation.
+These are the tools around the editor: a dockable **REPL** for scalar expressions
+and symbolic CAS after a solve, **keyboard shortcuts** for Solve/Check, a
+**Markdown report** system for live values and plots, and **Graph Digitizer &
+Curve Fit** tools for extracting data and fitting equations.

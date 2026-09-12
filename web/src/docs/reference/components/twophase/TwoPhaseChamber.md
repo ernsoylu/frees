@@ -41,16 +41,57 @@ TwoPhaseChamber inst(fluid$, V, C, UA, P0, h0, domain$)
 
 Instantiating the component expands these acausal equations (over its port members and parameters) into scalar equations solved by the standard Newton/Tarjan pipeline:
 
+$$
+\begin{aligned}
+\text{der}\left(in.p\right) &= \frac{in.mdot - out.mdot}{c} \\
+\text{init}\left(in.p\right) &= p0 \\
+rho &= \text{Density}\left(\mathrm{fluid}, =in.p, p=hcv\right) \\
+q &= ua\cdot \left(wall.t - tcv\right) \\
+\text{der}\left(hcv\right) &= \frac{in.mdot\cdot \left(in.h - hcv\right) + q}{rho\cdot v} \\
+\text{init}\left(hcv\right) &= h0 \\
+out.p &= in.p \\
+out.h &= hcv \\
+tcv &= \text{Temperature}\left(\mathrm{fluid}, =in.p, p=hcv\right) \\
+wall.qdot &= q \\
+m &= rho\cdot v
+\end{aligned}
+$$
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Solve a complete model
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+// frees-language: 2
+// TwoPhaseChamber: heated capacitive control volume in its steady limit —
+// der(P)=0 gives mass balance, der(hcv)=0 gives the energy balance
+// hcv = h_in + UA*(Twall - Tcv)/mdot, an evaporating chamber at 350 kPa.
+TwoPhaseSourcePH SRC(mdot = 0.02, P = 350000, h = 280000)
+TwoPhaseChamber  CH(fluid$ = R134a, V = 0.003, C = 1e-7, UA = 50, P0 = 350000, h0 = 320000)
+ThermalSource    WALL(T = 300)
+TwoPhaseSink     SNK()
+connect(SRC.out, CH.in)
+connect(CH.wall, WALL.port)
+connect(CH.out, SNK.in)
+q     = CH.Q
+h_out = SNK.h
+t_cv  = CH.Tcv
+
+{ CHECK ch.hcv 334554.8197 0.33455481970517337 }
+{ CHECK ch.in.h 280000 0.27999999999999997 }
+{ CHECK ch.in.mdot 0.02 2e-8 }
 ```
-der(in.P)  = (in.mdot - out.mdot) / C
-init(in.P) = P0
-rho        = Density(fluid$, P=in.P, h=hcv)
-Q          = UA * (wall.T - Tcv)
-der(hcv)   = (in.mdot * (in.h - hcv) + Q) / (rho * V)
-init(hcv)  = h0
-out.P     = in.P
-out.h     = hcv
-Tcv       = Temperature(fluid$, P=in.P, h=hcv)
-wall.Qdot = Q
-m         = rho * V
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+ch.hcv = 334554.8197
+ch.in.h = 280000
+ch.in.mdot = 0.02
 ```
+
+<!-- verified-reference-example:end -->

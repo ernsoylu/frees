@@ -38,6 +38,41 @@ $$ K = \begin{bmatrix} 0 & \cdots & 0 & 1 \end{bmatrix}\,\mathcal{C}^{-1}\,\Phi(
 
 ## Examples
 
+<!-- verified-reference-example:start -->
+
+### Verified example — Solve a complete model
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+// frees-language: 2
+{ Pole placement two ways on the same plant. }
+A[1,1] = 0; A[1,2] = 1
+A[2,1] = -2; A[2,2] = -3
+B[1] = 0; B[2] = 1
+pd_r = [-4, -5]
+pd_i = [0, 0]
+[Kp] = place(A, B, pd_r, pd_i)
+[Ka] = acker(A, B, pd_r, pd_i)
+Acl[1,1] = A[1,1]-B[1]*Kp[1]; Acl[1,2] = A[1,2]-B[1]*Kp[2]
+Acl[2,1] = A[2,1]-B[2]*Kp[1]; Acl[2,2] = A[2,2]-B[2]*Kp[2]
+[cr, ci] = pole(Acl)
+
+{ CHECK Acl[1,1] 0 1e-8 }
+{ CHECK Acl[1,2] 1 0.000001 }
+{ CHECK Acl[2,1] -20 0.000019999999999999998 }
+```
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+Acl[1,1] = 0
+Acl[1,2] = 1
+Acl[2,1] = -20
+```
+
+<!-- verified-reference-example:end -->
+
 ```
 { K = acker(A, B, [-2,-2], [1,-1]) for a single-input controllable plant }
 ```

@@ -35,6 +35,30 @@ with `m ≤ n` for a proper system.
 
 ## Examples
 
+<!-- verified-reference-example:start -->
+
+### Verified example — Solve a complete model
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+// frees-language: 2
+SYMBOLIC s
+tf([1, 3], [1, 3, 2]) = A/(s+1) + B/(s+2)
+
+{ CHECK A 2 0.000002 }
+{ CHECK B -1 0.000001 }
+```
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+A = 2
+B = -1
+```
+
+<!-- verified-reference-example:end -->
+
 ### Example 1 — Transfer function for a partial-fraction expansion
 
 [Run: partial-fractions]

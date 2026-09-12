@@ -49,3 +49,39 @@ connect(in, HX.in)
 connect(HX.out, out)
 connect(HX.wall, ICE.port)
 ```
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Solve a complete model
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+// frees-language: 2
+// IceStorageBrine (hierarchical: LiquidWallHX + PCMMass) on an EG50 brine
+// loop near the melt band. With no DYNAMIC block the PCM state takes the
+// steady branch (Qdot = 0), so the pack floats at the brine temperature.
+LiquidSource   LS(b1, fluid$ = EG50, mdot = 0.4, P = 200000, T = 278)
+IceStorageBrine IST(b1, b2, fluid$ = EG50, UA = 400, m = 500, cp_p = 2100, L = 334000, Tm = 273.15, dTm = 2, T0 = 273)
+LiquidSink     SK(b2)
+
+h_out = SK.h
+p_out = SK.P
+m_out = SK.mdot
+
+{ CHECK b1.h -49478.83625 0.04947883624675133 }
+{ CHECK b1.mdot 0.4 4e-7 }
+{ CHECK b1.p 200000 0.19999999999999998 }
+```
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+b1.h = -49478.83625
+b1.mdot = 0.4
+b1.p = 200000
+```
+
+<!-- verified-reference-example:end -->

@@ -36,7 +36,45 @@ TransMass inst(m, v0)
 
 Instantiating the component expands these acausal equations (over its port members and parameters) into scalar equations solved by the standard Newton/Tarjan pipeline:
 
+$$
+\begin{aligned}
+\text{der}\left(port.vel\right) &= \frac{port.f}{m} \\
+\text{init}\left(port.vel\right) &= v0
+\end{aligned}
+$$
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Solve a complete model
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+// frees-language: 2
+ForceSource FS(F=10)
+TransMass   M(m=2, v0=0)
+TransDamper D(c=0.5)
+TransGround GS()
+TransGround GD()
+connect(FS.a, M.port, D.a)
+connect(FS.b, GS.port)
+connect(D.b, GD.port)
+DYNAMIC accel(method = ode45, time = 0 .. 40, points = 100)
+END
+v_final = FinalValue('m.port.vel')
+v_start = MinValue('m.port.vel')
+
+{ CHECK v_final 19.999092 0.000019999092001375135 }
+{ CHECK v_start 0 1e-8 }
 ```
-der(port.vel)  = port.f / m
-init(port.vel) = v0
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+v_final = 19.999092
+v_start = 0
 ```
+
+<!-- verified-reference-example:end -->

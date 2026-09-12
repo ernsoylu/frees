@@ -39,10 +39,49 @@ HydraulicPump inst(disp, rho, eta_v, eta_m, domain$)
 
 Instantiating the component expands these acausal equations (over its port members and parameters) into scalar equations solved by the standard Newton/Tarjan pipeline:
 
+$$
+\begin{aligned}
+n_{rev} &= \frac{shaft.w}{2\,3.141592653589793} \\
+out.mdot &= rho\cdot disp\cdot n_{rev}\cdot eta_{v} \\
+in.mdot &= out.mdot \\
+out.h &= in.h \\
+shaft.tau &= \frac{-\frac{disp\cdot \left(out.p - in.p\right)}{2\,3.141592653589793}}{eta_{m}}
+\end{aligned}
+$$
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Solve a complete model
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+// frees-language: 2
+HydraulicSupply  SUC(P=0)
+SpeedSource      SS(w=100)
+MechGround       G()
+HydraulicPump    PMP(disp=1e-5, rho=850, eta_v=0.95, eta_m=0.9)
+HydraulicOrifice ORI(CdA=1e-5, rho=850)
+HydraulicTank    DIS(P=0)
+connect(SUC.out, PMP.in)
+connect(SS.a, PMP.shaft)
+connect(SS.b, G.port)
+connect(PMP.out, ORI.in)
+connect(ORI.out, DIS.port)
+
+{ CHECK dis.port.h 0 1e-8 }
+{ CHECK dis.port.mdot 0.1285176165 1.2851761654670547e-7 }
+{ CHECK dis.port.p 0 1e-8 }
 ```
-n_rev     = shaft.w / (2 * pi#)
-out.mdot  = rho * disp * n_rev * eta_v
-in.mdot   = out.mdot
-out.h     = in.h
-shaft.tau = -(disp * (out.P - in.P) / (2 * pi#)) / eta_m
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+dis.port.h = 0
+dis.port.mdot = 0.1285176165
+dis.port.p = 0
 ```
+
+<!-- verified-reference-example:end -->

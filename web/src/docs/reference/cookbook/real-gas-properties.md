@@ -41,3 +41,37 @@ saturation pressure is the `P` at which the liquid and vapor fugacities match.
 **What it tells you:** for CO₂ near its critical region (320 K, 6 MPa), `Z ≈ 0.7`
 (strong real-gas deviation) and a density far above the ideal-gas estimate;
 `eos_psat('co2','PR',300) ≈ 6.7 MPa` matches the known vapor pressure.
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Cubic-EOS Real-Gas Properties
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+// Real-Gas Properties from a Cubic EOS (Peng-Robinson)
+{ An SRK/PR cubic EOS that needs no real-fluid backend. CO2 at 6 MPa, 320 K. }
+T = 320 [K]
+P = 6000000 [Pa]
+Z = eos_z('co2', 'PR', T, P, 'vapor')          { compressibility factor }
+rho = eos_density('co2', 'PR', T, P, 'vapor')
+v = eos_volume('co2', 'PR', T, P, 'vapor')
+h = eos_enthalpy('co2', 'PR', T, P, 'vapor')
+Psat_300 = eos_psat('co2', 'PR', 300)          { saturation pressure at 300 K }
+
+{ CHECK h -45003.83282 0.045003832815580305 }
+{ CHECK Psat_300 6726910.383 6.726910382654169 }
+{ CHECK rho 142.7964971 0.00014279649707052498 }
+```
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+h = -45003.83282 [J/kg]
+Psat_300 = 6726910.383 [Pa]
+rho = 142.7964971 [kg/m^3]
+```
+
+<!-- verified-reference-example:end -->

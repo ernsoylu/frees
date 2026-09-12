@@ -40,17 +40,47 @@ Nozzle inst(k, R, A_throat, A_exit, P_amb, T0)
 
 Instantiating the component expands these acausal equations (over its port members and parameters) into scalar equations solved by the standard Newton/Tarjan pipeline:
 
-```
-out.mdot = in.mdot
-M_exit   = mach_A_Astar(A_exit / A_throat, k, 'supersonic')
-out.P    = in.P / P0_P(M_exit, k)
-T_exit   = T0 / T0_T(M_exit, k)
-V_exit   = M_exit * sqrt(k * R * T_exit)
-out.h    = in.h - V_exit^2 / 2
-thrust   = in.mdot * V_exit + (out.P - P_amb) * A_exit
-```
+$$
+\begin{aligned}
+out.mdot &= in.mdot \\
+m_{exit} &= \text{mach\_a\_astar}\left(\frac{a_{exit}}{a_{throat}}, k, \text{'supersonic'}\right) \\
+out.p &= \frac{in.p}{\text{p0\_p}\left(m_{exit}, k\right)} \\
+t_{exit} &= \frac{t0}{\text{t0\_t}\left(m_{exit}, k\right)} \\
+v_{exit} &= m_{exit}\cdot \sqrt{k\cdot r\cdot t_{exit}} \\
+out.h &= in.h - \frac{v_{exit}^{2}}{2} \\
+thrust &= in.mdot\cdot v_{exit} + \left(out.p - p_{amb}\right)\cdot a_{exit}
+\end{aligned}
+$$
 
 ## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Solve a complete model
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+// frees-language: 2
+Nozzle N(s_in, s_out, k=1.4, R=287, A_throat=0.01, A_exit=0.04, P_amb=0, T0=500)
+s_in.P    = 1000000
+s_in.mdot = 2
+s_in.h    = 300000
+
+{ CHECK n.m_exit 2.940179169 0.00000294017916931255 }
+{ CHECK n.t_exit 183.2219478 0.0001832219477957242 }
+{ CHECK n.thrust 2786.981066 0.0027869810659831803 }
+```
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+n.m_exit = 2.940179169
+n.t_exit = 183.2219478
+n.thrust = 2786.981066
+```
+
+<!-- verified-reference-example:end -->
 
 Instantiated in the verified example below:
 

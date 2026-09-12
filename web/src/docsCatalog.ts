@@ -226,7 +226,7 @@ frees runs **entirely in your browser tab** via WebAssembly, with a background W
 1. **Editor → Web Worker.** Pressing Solve (F2) packages your document text, stop criteria, and variable info into a message dispatched to a dedicated background Web Worker (\`worker.ts\`).
 2. **Validate & Prepare.** The Web Worker parses the document using the Rust-based parser. If syntax errors or structural mismatches exist, a diagnostic envelope returns immediately without blocking.
 3. **Compute.** The Web Worker executes the full engine pipeline in WebAssembly:
-   - Expand component networks, matrix literals, and CALL procedures.
+   - Expand component networks, matrix literals, and multi-output functions.
    - Run dimensional unit consistency analysis.
    - Perform Dulmage–Mendelsohn / Tarjan decomposition into lower triangular blocks.
    - Solve each block using Newton–Raphson, with interval scanning and multi-start root-finding when "Find all solutions" is enabled.
@@ -918,6 +918,13 @@ frees ships a high-precision fluid-properties database. **Every property functio
 3. **Aqueous glycols** — incompressible coolants written as base + mass percent: \`EG50\` (50% ethylene glycol), \`PG30\` (30% propylene glycol). Queries need Temperature (\`T\`) and Pressure (\`P\`).
 
 ## Specifying a state
+
+Native and browser builds use rustprop by default. Linked property-table artifacts
+are no longer part of either build. For saturation, use pressure or temperature
+with \`x=0\` (liquid) or \`x=1\` (vapour); pressure and temperature at saturation do
+not determine the vapour fraction. \`Quality\` returns \`-1\` for a single-phase
+state, not an extrapolated fraction or a value to clamp to the interval 0–1.
+
 Pass the fluid name first, then **two** named coordinates. The recognized coordinate keys are \`T\` (temperature), \`P\` (pressure), \`h\` (enthalpy), \`s\` (entropy), \`v\` (specific volume), \`x\` (quality: 0 saturated liquid, 1 saturated vapour), \`u\` (internal energy), \`D\` (density).
 
 \`\`\`
@@ -1231,8 +1238,8 @@ After a solve, the **REPL terminal** (a dockable console window) holds the whole
 
 Three things make it more than a calculator:
 
-- **Implicit solve** — type an equation with one unknown and the REPL solves it on the spot.
-- **The CALL library** — eigenvalues, Bode data, partial fractions: \`[mag, phase] = bode(num, den, omega)\` works interactively, with output sizes inferred for you.
+- **Workspace queries** — inspect a solved scalar and use it in a new expression.
+- **Scalar assignments** — define a value for subsequent expressions or override a document variable before solving again.
 - **Symbolic CAS** — \`Factor(x^2 - 1)\`, \`Apart(...)\`, \`Laplace(...)\` return transformed expressions (REPL-only).
 
 The full command set is on the *REPL Terminal & Workspace* page. One step left: components.
@@ -1282,7 +1289,11 @@ Three short journeys — a scalar with units, a component chain, and a map or tr
 [Related: journey-scalar, journey-chain, journey-upgrade, lang-overview, fluids-overview, components-overview, examples]`,
   "repl": `# REPL Terminal & Workspace
 
-The **REPL terminal** is a dockable, interactive console — move and dock it anywhere like the editor. It evaluates **one line at a time** against the current **workspace** (every variable from the last solve, plus anything you define in the REPL). It's a line-oriented math REPL, not a shell: use it as a unit-aware calculator, to inspect solved values, to try \`CALL\` routines, and to run symbolic CAS transforms. **Up/Down** recall history; **Tab** completes variable, function, and command names.
+The **REPL terminal** is a dockable, interactive console. After solving a document,
+use it to evaluate scalar expressions, inspect solved variables, assign scalar
+values, and run symbolic CAS transforms. **Up/Down** recall history; **Tab**
+completes variable, function, and command names. Multi-output calls belong in
+the editor document.
 
 ## Meta-commands
 These drive the app instead of evaluating an expression:
@@ -1307,9 +1318,13 @@ Enthalpy('Water', t=400, p=1e5)    { J/kg }
 ## Variables: query, assign, solve
 - **Query** a workspace value (shown with units and uncertainty): \`T_1\` → \`300 [K]\`.
 - **Assign** a REPL variable (persists for the session, visible to later lines and a subsequent \`solve\`): \`x = 42 [m/s]\`.
-- **Implicit single-unknown solve** — give an equation with exactly one unknown and frees solves it: \`P = 50000 * volume\` → \`volume = 5 [m^3]\`.
+- **Solve equations in the document** — the browser REPL does not implicitly solve an equation for an unknown.
 
 ## Matrices, vectors, ranges
+
+Declare arrays and perform matrix operations in the editor document. The browser
+REPL does not accept matrix/vector literals or range-vector construction.
+
 \`\`\`
 A = [2 0; 0 3]          { = [2 0; 0 3] }
 [1:2:7]                 { = [1 3 5 7] }
@@ -1317,18 +1332,22 @@ A * A                   { matrix product -> ans[i,j] }
 Inverse(A)   Transpose(A)   Dot(u, v)
 \`\`\`
 
-## The CALL library (auto-sized outputs)
-The full \`CALL\` procedure library (eigenvalues, control-systems analysis, partial fractions, decompositions) runs in the REPL. **Output lengths are sized automatically from the inputs**, so bare output names work — no \`[1:n]\` annotation:
+## Multi-output functions (auto-sized outputs)
+Use multi-output functions in the editor document. **Output lengths are sized
+automatically from the inputs** for fixed-shape operations:
 \`\`\`
 [lambda] = Eigenvalues(A)            { lambda = [2 3] }
 [nRHP, stable] = Routh(den)
 [rr, ri, pr, pi, k] = residue(num, den)
 [mag, phase] = Bode(num, den, omega)
 \`\`\`
-Only genuinely value-dependent counts take an explicit size: the finite-zero counts of \`zero\`/\`tf2zp\` (e.g. \`zr[1:2]\`), and the root-locus sweep resolution of \`rlocus\` (defaults to 100 points). This auto-sizing applies in the editor document too.
+Value-dependent counts need explicit sizing: for example, the finite-zero counts
+of \`zero\`/\`tf2zp\` and a requested \`rlocus\` sweep length. See each reference page.
 
 ## Symbolic CAS (REPL only)
-The REPL exposes the embedded **Symja** computer-algebra engine as functions that return a transformed expression as text. Free variables stay symbolic, so no solved context is needed:
+The REPL uses the native Rust CAS implementation to return transformed expressions
+as text. Solve a document first to establish the session, even for symbolic work.
+Free variables in CAS expressions remain symbolic.
 
 | Function | Example → result |
 | --- | --- |
@@ -1344,10 +1363,10 @@ The REPL exposes the embedded **Symja** computer-algebra engine as functions tha
 | \`Laplace(f, t, s)\` | Laplace transform |
 | \`InverseLaplace(F, s, t)\` | \`InverseLaplace(1/(s+2), s, t)\` → \`E^(-2*t)\` |
 
-When the CAS can't find a closed form, the REPL reports *"no closed form found"* rather than echoing the call. These symbolic functions are **REPL-only**; in the editor, symbolic work uses \`SYMBOLIC\` identities and \`CALL residue\` (see *Control Systems & Symbolic CAS*).
+When the CAS can't find a closed form, the REPL reports *"no closed form found"* rather than echoing the call. These symbolic functions are **REPL-only**; in the editor, symbolic work uses \`SYMBOLIC\` identities and \`residue\` (see *Control Systems & Symbolic CAS*).
 
 ## What the REPL does not do
-The REPL evaluates a single expression per line, so multi-line block constructs are editor-only: \`FUNCTION\`/\`PROCEDURE\`/\`MODULE\` definitions, \`DYNAMIC\` ODE systems, \`TABLE\` blocks, \`IF\`/\`FOR\` control flow, and the \`SYMBOLIC\`/\`SOLVE BLOCK\` directives. You can *call* a function or read \`ODEValue\`/\`Interpolate\`/table accessors that a prior solve produced — you just can't *define* the block from the REPL.
+The REPL evaluates a single expression per line, so multi-line block constructs are editor-only: \`function\` definitions, \`DYNAMIC\` ODE systems, \`TABLE\` blocks, \`IF\`/\`FOR\` control flow, and the \`SYMBOLIC\`/\`SOLVE BLOCK\` directives. You can *call* a function or read \`ODEValue\`/\`Interpolate\`/table accessors that a prior solve produced — you just can't *define* the block from the REPL.
 
 [Related: shortcuts, symbolic-cas, matrices-sys]`,
   "shortcuts": `# Keyboard Shortcuts
@@ -1860,7 +1879,7 @@ Dedicated routines for linear systems, decompositions, and structural analysis.
 - **\`Eigenvalues(A)\`** — eigenvalues of a square matrix.
 - **\`Eigen(A)\`** — eigenvalues and eigenvectors.
 - **\`LUDecompose(A)\`** — LU decomposition.
-- **\`EulerRotate(phi, theta, psi : R)\`** — $3 \\times 3$ rotation matrix from Euler angles (rad, ZYX), inside a \`CALL\`.
+- **\`[R] = EulerRotate(phi, theta, psi)\`** — $3 \\times 3$ rotation matrix from Euler angles (rad, ZYX).
 
 > **Control systems:** state-space models build directly on these matrix variables. LTI conversions (\`tf2ss\`, \`ss2tf\`), interconnection (\`series\`, \`parallel\`, \`feedback\`), analysis (\`pole\`, \`zero\`, \`bode\`, \`nyquist\`, \`margin\`, \`step\`, \`impulse\`, \`lsim\`), and controller design (\`lqr\`, \`place\`, \`pidtune\`) are documented under *Control Systems & Symbolic CAS*.
 
@@ -1874,20 +1893,26 @@ x[1:3] = SolveLinear(A[1:3,1:3], b[1:3])
 [Related: matrices-decl, symbolic-cas, ref-index]`,
   "lang-overview": `The frees language is small and declarative: equations are constraints, names are case-insensitive, and everything is computed in SI. These pages cover the grammar and the everyday building blocks — variables and the guesses that make nonlinear solves converge, units, arrays, complex numbers, strings, and the differentiable math functions. Start with *Equation Syntax & Rules* if you are new; the function pages list the most-used calls and link to the per-symbol Reference for full signatures.`,
   "matrix-overview": `frees uses an array-language-style syntax for matrices and vectors. Declare a shape with a slice suffix, then add, multiply, transpose, or solve linear systems with the standard operators. For heavy numerics there are low-level OpenBLAS primitives and higher-level decompositions (LU, eigenvalues). Transfer-function coefficient arrays for control work are just vectors — see *Dynamic Systems & Control*.`,
-  "prog-overview": `When a model repeats or grows, factor it out. \`FUNCTION\` and \`PROCEDURE\` blocks add reusable, imperative-bodied routines; \`MODULE\` encapsulates a whole equation subsystem you can instantiate many times. \`TABLE\` blocks hold tabulated data callable like a function, and the lookup/interpolation and parametric-table accessors read that data back into a solve.`,
+  "prog-overview": `Use \`function output = name(inputs)\` or \`function [outputs] = name(inputs)\` for reusable definitions. Equation bodies use \`=\`; ordered bodies use \`:=\`. Port-bearing functions model connectable subsystems. \`TABLE\` blocks provide callable tabulated data.`,
   "fluids-overview": `frees ships high-precision property data so you never hand-look-up a state. Real fluids (water, refrigerants, ammonia, …) are computed in the browser by rustprop, a pure-Rust port of CoolProp 8.0.0; ideal-gas species use NASA polynomials; \`AirH2O\` handles humid air from three coordinates; and a built-in database carries bulk properties for common solids. Every property function returns SI base units. Group a circuit's state points with a \`STATE TABLE\` to isolate fluids and overlay cycles on property charts.`,
   "solving-overview": `How frees actually solves — and what to do when it doesn't. These pages explain the pipeline (Tarjan blocking, then Newton's method per block), the guesses and bounds that make nonlinear systems converge, and a methodical debugging workflow for solves that stall. The same solved state powers two system-level analyses: first-order **uncertainty propagation** (\`val ± unc\` on every result) and **optimization** — parametric sweeps, single-objective search, and NSGA-II Pareto fronts.`,
   "dynamics-overview": `Models that move. A \`DYNAMIC\` block integrates coupled, stiff, even event-driven ODE/DAE systems in time; \`LINEARIZE\` extracts state-space matrices about an operating point; and the control suite takes it from there — transfer functions, frequency response (Bode, Nyquist), pole placement, LQR, and PID tuning, with figures declared in code via \`PLOT\`. The symbolic CAS pages cover the Laplace-domain algebra that backs the control work.`,
   "components-overview": `Model whole systems, not just equations: instantiate parameterized **components** (pumps, pipes, heat exchangers, resistors, gears, cooling coils, signal blocks — ~295 shipped), connect their ports, and frees expands the network into ordinary scalar equations for the same solver. The modeling is **acausal** (no inputs or outputs — fix any consistent boundary values), spans five physical domains plus a causal **signal** domain for command wires and six fluid families with strict cross-wiring guards, selects physics fidelity per component with \`model$\` variants, and turns the *same wiring* into a steady operating point or a transient. Start with *Your First Component Network*.`,
   "deploy-overview": `frees is a client–server system you can run anywhere Docker runs. These pages explain the asynchronous compute model (API → queue → compute workers → job store) and why it makes solves robust and scalable, document the REST API so scripts can drive frees directly, and walk through both deployment paths: local Docker via \`frees.sh\`, and Railway (or any container platform) with the hard-won production configuration already baked in.`,
-  "tools-overview": `These are the tools around the editor that make modeling faster: a dockable **REPL** console that evaluates expressions against the last solved session (with the full \`CALL\` library and symbolic CAS), the **keyboard shortcuts** for Solve/Check, the **Markdown report** system that weaves live values and plots into a formatted document, and the **Graph Digitizer & Curve Fit** tools that turn a chart image or a table into a fitted equation.`,
-  "functions": `# Custom Functions & Procedures
+  "tools-overview": `These are the tools around the editor: a dockable **REPL** for scalar expressions
+and symbolic CAS after a solve, **keyboard shortcuts** for Solve/Check, a
+**Markdown report** system for live values and plots, and **Graph Digitizer &
+Curve Fit** tools for extracting data and fitting equations.`,
+  "functions": `# Custom Functions
 
-Most of your model is declarative — equations in any order, solved simultaneously. \`FUNCTION\` is for the parts that need **sequential, imperative** logic (loops, conditionals, step-by-step algorithms). Inside it you use \`:=\` for assignment, just like Python or other array languages.
+Use \`function\` for reusable calculations. An equation body uses \`=\` and is solved
+declaratively; an ordered body uses \`:=\` for sequential assignments. The examples
+below use ordered bodies. Do not mix these two body styles without checking the
+current language restrictions.
 
 ## Functions
 A \`FUNCTION\` returns one or more values. Assign the return value(s) with \`:=\`.
-- **Single output** — assign the function's own name:
+- **Single output** — assign the output declared in the header:
 \`\`\`
 function y = poly_fit(x)
   y := 0.5 * x^2 + 2 * x + 1
@@ -1926,7 +1951,7 @@ Sequential structures work inside function bodies (not in the declarative top le
 - **While:** \`WHILE condition DO ... END\`
 - **Repeat:** \`REPEAT ... UNTIL condition\`
 
-> **Declarative vs. imperative:** the top-level solver reorders your equations freely, so \`x = y + 2\` and \`y = x - 2\` are equivalent there. Inside a \`FUNCTION\`/\`PROCEDURE\`, order matters and \`:=\` is a one-way assignment — read it left-to-right like a normal program.
+> **Declarative vs. imperative:** the top-level solver reorders your equations freely, so \`x = y + 2\` and \`y = x - 2\` are equivalent there. Inside an ordered function, order matters and \`:=\` is a one-way assignment — read it left-to-right like a normal program.
 
 [Related: modules, symbolic-cas, arrays]`,
   "tables-code": `# Custom Tables (TABLE)
@@ -2049,9 +2074,9 @@ Both calls use the *same* function — frees figures out which variable is unkno
 [Related: functions, prog-overview, arrays]`,
   "symbolic-cas": `# Control Systems & Symbolic CAS
 
-frees brings control-toolbox-style workflows in as native, order-independent equations: LTI modeling and conversions, system interconnection, poles/zeros and stability margins, Bode/Nyquist frequency response, step/impulse/forced time response, and state-feedback/PID controller design. Underneath, two engines meet at the \`num\`/\`den\` coefficient arrays — an embedded **Symja** computer-algebra system (CAS) for symbolic work, and Apache Commons Math for numeric analysis (companion-matrix eigenvalues, Riccati via the matrix sign function) that stays robust on high-order, floating-point systems.
+frees provides LTI model conversions, system interconnection, stability analysis, frequency and time responses, and controller design. Symbolic operations use the Rust CAS implementation in frees-core; numerical analysis uses its control and linear-algebra kernels.
 
-This page starts with the symbolic CAS layer (symbolic identities and Laplace partial fractions), then covers the LTI model representations and every control-systems \`CALL\` function.
+This page starts with the symbolic CAS layer (symbolic identities and Laplace partial fractions), then covers the LTI model representations and every control-systems function.
 
 ## Symbolic identities
 
@@ -2130,13 +2155,18 @@ frees represents LTI systems using standard array/matrix variables rather than i
 
 ## Model Conversions
 
-Use \`CALL\` dispatches to convert between representations. The solver automatically registers output shapes so variables can be used as bare names downstream.
+Use multi-output functions to convert between representations. The solver automatically registers output shapes so variables can be used as bare names downstream.
 
-> **Output sizes are inferred.** You may write \`CALL\` outputs as **bare names** — frees sizes each output array from the inputs (e.g. \`num\`/\`den\` get length \`n+1\`, a Bode \`mag\` matches \`omega\`). Explicit slices like \`num[1:3]\` still work and are shown in the examples for clarity. Only value-dependent counts need an explicit size: the finite-zero counts of \`zero\`/\`tf2zp\` (e.g. \`zr[1:2]\`) and the \`rlocus\` sweep length. The same control-systems \`CALL\` functions, and the symbolic transforms below, are also available in the **REPL terminal** (see *REPL Terminal & Workspace*), where \`Factor\`, \`Expand\`, \`Apart\`, \`Laplace\`, \`InverseLaplace\`, \`Diff\` and \`Integrate\` run interactively.
+> **Output sizes are inferred.** Write function outputs as **bare names** where
+> their shapes follow from the inputs. Value-dependent sizes, such as finite-zero
+> counts and a requested root-locus sweep length, require explicit sizing; see the
+> function reference. Run control-system multi-output calls in the editor. The
+> **REPL terminal** supports symbolic transforms such as \`Factor\`, \`Expand\`,
+> \`Apart\`, \`Laplace\`, \`InverseLaplace\`, \`Diff\` and \`Integrate\` after a document solve.
 
 ## Multi-Output Functions (array-language-style)
 
-Every multi-output \`CALL\` function below also has a **destructuring** form — the same syntax array languages use. Write the outputs in brackets on the left and call the function on the right; it is exactly equivalent to the \`[outputs] = name(inputs)\` form, with output sizes still inferred:
+Call multi-output functions using **destructuring**: write the outputs in brackets on the left and the function call on the right. Output sizes are inferred:
 
 \`\`\`
 { These two lines are identical }
@@ -2157,7 +2187,7 @@ Every multi-output \`CALL\` function below also has a **destructuring** form —
 [A, B] = tf2ss(num, den)   { state and input matrices only — C, D dropped }
 \`\`\`
 
-Both \`~\` and trailing omission work in the \`CALL … : …\` colon form too. The discarded values are still solved internally (so the result is identical), they are just hidden from the results. This destructuring form works for user-defined multi-output \`FUNCTION\`s as well — see *Custom Functions & Procedures*.
+The discarded values are still solved internally (so the result is identical), they are just hidden from the results. This destructuring form works for user-defined multi-output \`FUNCTION\`s as well — see *Custom Functions & Procedures*.
 
 ### 1. State Space to Transfer Function: ss2tf
 \`\`\`
@@ -2181,7 +2211,7 @@ Both \`~\` and trailing omission work in the \`CALL … : …\` colon form too. 
 
 ## Model Interconnection
 
-Use \`CALL\` dispatches to connect multiple systems in series, parallel, or feedback. Systems can be represented either as transfer functions (numerator and denominator arrays) or as state-space systems (matrices A, B, C, D).
+Use multi-output functions to connect multiple systems in series, parallel, or feedback. Systems can be represented either as transfer functions (numerator and denominator arrays) or as state-space systems (matrices A, B, C, D).
 
 For two systems $G_1(s)$ (of order $n_1$) and $G_2(s)$ (of order $n_2$), the connected system has order $n_1 + n_2$.
 
@@ -2254,7 +2284,7 @@ Applies similarity transformation matrix $P$ to a state-space system (A, B, C, D
 
 ## Frequency Analysis & Poles/Zeros
 
-Use the following \`CALL\` dispatches to analyze system poles, zeros, Bode/Nyquist responses, and gain/phase margins.
+Use the following multi-output functions to analyze system poles, zeros, Bode/Nyquist responses, and gain/phase margins.
 
 ### 1. Poles: pole
 Computes system poles (real part \`pr\`, imaginary part \`pi\`) for a transfer function or a state-space matrix \`A\`.
@@ -2432,7 +2462,7 @@ Loop-shaping tuning of a P/PI/PID controller for a SISO plant \`num/den\`. The c
 
 **The problem.** A 2 kg carriage on a spring (k = 800 N/m) with a viscous damper (c = 8 N·s/m) is released 5 cm from equilibrium. How does it ring down — and what does it look like as a plant, in the frequency domain?
 
-**What you'll use:** \`DYNAMIC\` integration, ODE trajectory accessors, transfer functions, \`CALL bode\`, and \`PLOT\`. Build it in stages and solve after each one — that habit (from *Debugging a Solve*) pins any mistake to the lines you just added.
+**What you'll use:** \`DYNAMIC\` integration, ODE trajectory accessors, transfer functions, \`bode\`, and \`PLOT\`. Build it in stages and solve after each one — that habit (from *Debugging a Solve*) pins any mistake to the lines you just added.
 
 ## Stage 1 — the parameters, and what to expect
 
@@ -2656,7 +2686,7 @@ Q_coil_lat = COIL.Q_lat
 
 **The problem.** A series RLC circuit (R = 220 Ω, L = 0.1 H, C = 1 µF) driven by a 5 V source, with the output taken across the capacitor, is a second-order low-pass filter. What does it pass, what does it reject, and how peaked is it?
 
-**What you'll use:** phasor (impedance) analysis with plain algebra, then the transfer-function route with \`CALL bode\` — the same circuit two ways, so you can check one against the other.
+**What you'll use:** phasor (impedance) analysis with plain algebra, then the transfer-function route with \`bode\` — the same circuit two ways, so you can check one against the other.
 
 ## Stage 1 — the numbers that shape the response
 

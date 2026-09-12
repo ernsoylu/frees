@@ -45,3 +45,38 @@ TransGround G()
 connect(rod, M.port, S.a)
 connect(S.b, G.port)
 ```
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Solve a complete model
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+// frees-language: 2
+// CamFollower steady: a 50 N preload on the rod node compresses the internal
+// 5000 N/m return spring by 0.01 m; mass and node settle at zero velocity.
+// EXPECT v_rod = 0 tol 1e-9
+ForceSource FS(F = 50)
+TransGround G()
+CamFollower CF(m = 2, kspring = 5000, x0 = 0, v0 = 0)
+connect(FS.a, CF.rod)
+connect(FS.b, G.port)
+v_rod = CF.rod.vel
+
+{ CHECK cf.rod.f 50 0.000049999999999999996 }
+{ CHECK cf.rod.vel 0 1e-8 }
+{ CHECK cf.g.port.f -50 0.000049999999999999996 }
+```
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+cf.rod.f = 50
+cf.rod.vel = 0
+cf.g.port.f = -50
+```
+
+<!-- verified-reference-example:end -->

@@ -37,6 +37,31 @@ $$ P^{(i)}_k = \frac{2}{f_s \sum_j w_j^2}\left| \sum_{j=0}^{L-1} (x^{(i)}_j - \b
 
 ## Examples
 
+<!-- verified-reference-example:start -->
+
+### Verified example — Process a short sampled measurement record
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+x = [1, 3, 2, 6, 4, 9, 5, 12]
+[f, pxx] = welch(x, 8, 4)
+
+{ CHECK pxx[1] 0.04166666667 4.166666666666671e-8 }
+{ CHECK pxx[2] 0.8645833333 8.645833333333332e-7 }
+{ CHECK pxx[3] 1.354166667 0.0000013541666666666665 }
+```
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+pxx[1] = 0.04166666667
+pxx[2] = 0.8645833333
+pxx[3] = 1.354166667
+```
+
+<!-- verified-reference-example:end -->
+
 ### Example 1 — locating a tone and checking its power
 
 ```

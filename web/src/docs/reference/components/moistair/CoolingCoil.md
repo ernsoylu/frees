@@ -36,11 +36,45 @@ CoolingCoil inst(Tout, domain$)
 
 Instantiating the component expands these acausal equations (over its port members and parameters) into scalar equations solved by the standard Newton/Tarjan pipeline:
 
+$$
+\begin{aligned}
+out.mdot &= in.mdot \\
+out.p &= in.p \\
+out.w &= \text{Humrat}\left(\mathrm{airh2o}, t=tout, p=in.p, r=1\right) \\
+out.h &= \text{Enthalpy}\left(\mathrm{airh2o}, t=tout, p=in.p, w=out.w\right) \\
+q &= in.mdot\cdot \left(in.h - out.h\right) \\
+q_{lat} &= in.mdot\cdot 2501000\cdot \left(in.w - out.w\right)
+\end{aligned}
+$$
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Solve a complete model
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+// frees-language: 2
+MoistAirSource SRC(P=101325, T=303.15, W=0.012, mdot=1)
+CoolingCoil    CC(Tout=283.15)
+MoistAirSink   SNK()
+connect(SRC.out, CC.in)
+connect(CC.out, SNK.in)
+T_out = Temperature(AirH2O, H=CC.out.h, P=101325, W=CC.out.W)
+
+{ CHECK cc.in.h 60848.84667 0.06084884666848224 }
+{ CHECK cc.in.mdot 1 0.000001 }
+{ CHECK cc.in.p 101325 0.101325 }
 ```
-out.mdot = in.mdot
-out.P    = in.P
-out.W    = HumRat(AirH2O, T=Tout, P=in.P, R=1)
-out.h    = Enthalpy(AirH2O, T=Tout, P=in.P, W=out.W)
-Q        = in.mdot * (in.h - out.h)
-Q_lat    = in.mdot * 2.501e6 * (in.W - out.W)
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+cc.in.h = 60848.84667
+cc.in.mdot = 1
+cc.in.p = 101325
 ```
+
+<!-- verified-reference-example:end -->

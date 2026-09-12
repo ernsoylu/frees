@@ -36,6 +36,34 @@ $$ \text{ODEValue}('col', t) = \text{col}(t_i) + \big(\text{col}(t_{i+1}) - \tex
 
 ## Examples
 
+<!-- verified-reference-example:start -->
+
+### Verified example — Solve a complete model
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+// frees-language: 2
+DYNAMIC ramp (t = 0 .. 10, points = 101)
+  der(y) = 1
+  y(0) = 0
+END
+t7 = TimeAt('y', 7)
+y3 = ODEValue('y', 3)
+
+{ CHECK t7 7 0.000006999999999999998 }
+{ CHECK y3 3 0.0000030000000000000005 }
+```
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+t7 = 7
+y3 = 3
+```
+
+<!-- verified-reference-example:end -->
+
 ### Example 1 — Sample a transient at a chosen instant
 
 [Run: damped-oscillator-ode]

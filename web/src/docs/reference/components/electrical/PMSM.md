@@ -37,9 +37,46 @@ PMSM inst(Rs, lambda_pm, poles)
 
 Instantiating the component expands these acausal equations (over its port members and parameters) into scalar equations solved by the standard Newton/Tarjan pipeline:
 
+$$
+\begin{aligned}
+kt &= 1.5\,poles\cdot lambda_{pm} \\
+p.v - n.v &= rs\cdot p.i + kt\cdot shaft.w \\
+p.i + n.i &= 0 \\
+shaft.tau &= -kt\cdot p.i
+\end{aligned}
+$$
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Solve a complete model
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+// frees-language: 2
+VoltageSource    VS(E=48)
+PMSM             M(Rs=0.5, lambda_pm=0.1, poles=4)
+RotationalDamper LOAD(c=0.05)
+Ground           G()
+MechGround       MG()
+connect(VS.p, M.p)
+connect(VS.n, M.n, G.port)
+connect(M.shaft, LOAD.a)
+connect(LOAD.b, MG.port)
+
+{ CHECK g.port.i 0 1e-8 }
+{ CHECK g.port.v 0 1e-8 }
+{ CHECK load.a.tau 3.74025974 0.00000374025974025974 }
 ```
-Kt        = 1.5 * poles * lambda_pm
-p.V - n.V = Rs * p.I + Kt * shaft.w
-p.I + n.I = 0
-shaft.tau = -Kt * p.I
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+g.port.i = 0
+g.port.v = 0
+load.a.tau = 3.74025974
 ```
+
+<!-- verified-reference-example:end -->

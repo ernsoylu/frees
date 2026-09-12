@@ -1,7 +1,7 @@
 ---
 name: apart
 category: CAS (REPL)
-summary: Symbolic apart (REPL-only Symja CAS operation).
+summary: Symbolic apart (REPL-only Rust CAS operation).
 related: []
 examples: []
 tags: [apart, cas, symbolic, repl]
@@ -10,7 +10,7 @@ references: []
 
 # apart
 
-Symbolic computer-algebra operation **apart**, available in the REPL terminal (Symja backend).
+Symbolic computer-algebra operation **apart**, available in the REPL terminal (Rust CAS backend; solve a document first).
 
 > Real-fluid/material/symbolic operation — see the inputs and references below.
 
@@ -23,6 +23,31 @@ apart(expr)
 ## Description
 
 A REPL-only symbolic transform — it operates on an algebraic expression rather than a solved numeric value, so it is not available in the editor document body.
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Transform an engineering expression in the REPL
+
+Solve the setup document in the editor, then enter the expression in the REPL. This JSON request records both steps for automated verification.
+
+```json
+{
+  "operation": "repl_evaluate",
+  "text": "setup = 1",
+  "expression": "apart((s+3)/(s^2+3*s+2),s)",
+  "expectedText": "2/(1+s)-1/(2+s)"
+}
+```
+
+Expected REPL output:
+
+```text
+2/(1+s)-1/(2+s)
+```
+
+<!-- verified-reference-example:end -->
 
 ## Input Arguments
 

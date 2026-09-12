@@ -37,13 +37,57 @@ EnthalpyWheel inst(eff_h, eff_w, domain$)
 
 The acausal equations this component expands into (over its port members and parameters):
 
+$$
+\begin{aligned}
+sup_{out.mdot} &= sup_{in.mdot} \\
+exh_{out.mdot} &= exh_{in.mdot} \\
+sup_{out.p} &= sup_{in.p} \\
+exh_{out.p} &= exh_{in.p} \\
+sup_{out.w} &= sup_{in.w} + eff_{w}\cdot \left(exh_{in.w} - sup_{in.w}\right) \\
+sup_{out.h} &= sup_{in.h} + eff_{h}\cdot \left(exh_{in.h} - sup_{in.h}\right) \\
+exh_{out.w} &= exh_{in.w} - \frac{sup_{in.mdot}}{exh_{in.mdot}}\cdot \left(sup_{out.w} - sup_{in.w}\right) \\
+exh_{out.h} &= exh_{in.h} - \frac{sup_{in.mdot}}{exh_{in.mdot}}\cdot \left(sup_{out.h} - sup_{in.h}\right)
+\end{aligned}
+$$
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Solve a complete model
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+// frees-language: 2
+// Rotary enthalpy wheel in summer recovery: hot humid outdoor supply
+// (305.15 K, W = 0.016) exchanges with cool dry building exhaust (297.15 K,
+// W = 0.009) at eff_h = 0.75, eff_w = 0.7. Balanced 1 kg/s streams; moisture
+// and energy close exactly on the dry-air basis.
+MoistAirSource OA(P=101325, T=305.15, W=0.016, mdot=1)
+MoistAirSource EX(P=101325, T=297.15, W=0.009, mdot=1)
+EnthalpyWheel  WHL(eff_h=0.75, eff_w=0.7)
+MoistAirSink   SUP()
+MoistAirSink   REJ()
+connect(OA.out, WHL.sup_in)
+connect(WHL.sup_out, SUP.in)
+connect(EX.out, WHL.exh_in)
+connect(WHL.exh_out, REJ.in)
+w_sup = SUP.W
+h_sup = SUP.h
+w_bal = 1 * (0.016 - SUP.W) - 1 * (REJ.W - 0.009)
+
+{ CHECK ex.out.h 47043.47222 0.04704347221948946 }
+{ CHECK ex.out.mdot 1 0.000001 }
+{ CHECK ex.out.p 101325 0.101325 }
 ```
-sup_out.mdot = sup_in.mdot
-exh_out.mdot = exh_in.mdot
-sup_out.P    = sup_in.P
-exh_out.P    = exh_in.P
-sup_out.W    = sup_in.W + eff_w * (exh_in.W - sup_in.W)
-sup_out.h    = sup_in.h + eff_h * (exh_in.h - sup_in.h)
-exh_out.W    = exh_in.W - (sup_in.mdot / exh_in.mdot) * (sup_out.W - sup_in.W)
-exh_out.h    = exh_in.h - (sup_in.mdot / exh_in.mdot) * (sup_out.h - sup_in.h)
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+ex.out.h = 47043.47222
+ex.out.mdot = 1
+ex.out.p = 101325
 ```
+
+<!-- verified-reference-example:end -->

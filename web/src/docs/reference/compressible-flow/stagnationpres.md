@@ -32,6 +32,38 @@ $$ P_0 = P\left(\frac{T_0}{T}\right)^{\!k/(k-1)} $$
 
 ## Examples
 
+<!-- verified-reference-example:start -->
+
+### Verified example — Solve a complete model
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+// frees-language: 2
+T = 300 [K]
+V = 200 [m/s]
+cp = 1005 [J/kg-K]
+T0 = stagnationTemp(T, V, cp)
+
+P = 100000 [Pa]
+k = 1.4
+P0 = stagnationPres(P, T, T0, k)
+
+{ CHECK P0 125206.7702 0.12520677019884116 }
+{ CHECK T0 319.9004975 0.0003199004975124378 }
+{ CHECK cp 1005 0.001005 }
+```
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+P0 = 125206.7702 [Pa]
+T0 = 319.9004975 [K]
+cp = 1005 [J/kg-K]
+```
+
+<!-- verified-reference-example:end -->
+
 ### Example 1 — Total pressure of a flow
 
 [Run: thermo-compliance]

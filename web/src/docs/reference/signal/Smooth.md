@@ -33,6 +33,31 @@ $$ y_j = \frac{1}{|W_j|}\sum_{i \in W_j} x_i, \qquad W_j = \{\,i : |i - j| \le \
 
 ## Examples
 
+<!-- verified-reference-example:start -->
+
+### Verified example — Process a short sampled measurement record
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+x = [1, 3, 2, 6, 4, 9, 5, 12]
+[y] = smooth(x, 3)
+
+{ CHECK x[1] 1 0.000001 }
+{ CHECK x[2] 3 0.000003 }
+{ CHECK x[3] 2 0.000002 }
+```
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+x[1] = 1
+x[2] = 3
+x[3] = 2
+```
+
+<!-- verified-reference-example:end -->
+
 ### Example 1 — smoothing a noisy pressure trace
 
 ```

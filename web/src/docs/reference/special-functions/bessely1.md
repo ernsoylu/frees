@@ -20,10 +20,33 @@ y = bessely1(x)
 
 ## Mathematical Formulation
 
-`Y_1` is the second independent order-1 solution of Bessel's equation,
-with `Y_0'(x) = −Y_1(x)`.
+$Y_1$ is the second independent order-one solution of Bessel's equation:
+
+$$
+x^2 y'' + x y' + (x^2-1)y = 0,\qquad Y_0'(x) = -Y_1(x).
+$$
 
 ## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Evaluate a radial-mode special function
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+result = bessely1(1)
+
+{ CHECK result -0.781212821 7.812128209531196e-7 }
+```
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+result = -0.781212821
+```
+
+<!-- verified-reference-example:end -->
 
 ```
 { finite for x > 0 }

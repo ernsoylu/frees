@@ -30,6 +30,29 @@ $$ y = \ln(x) = \log_e(x), \qquad x > 0 $$
 
 ## Examples
 
+<!-- verified-reference-example:start -->
+
+### Verified example — Solve a complete model
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+// frees-language: 2
+{ A residual whose iterate can wander into ln's forbidden domain. }
+guess(z, 0.5)
+ln(z) = -1
+
+{ CHECK z 0.3678794412 3.678794411714423e-7 }
+```
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+z = 0.3678794412
+```
+
+<!-- verified-reference-example:end -->
+
 ### Example 1 — Rocket equation mass ratio
 
 [Run: karman-rocket]

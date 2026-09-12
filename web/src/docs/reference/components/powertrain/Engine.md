@@ -37,11 +37,40 @@ Engine inst(Tmax, throttle, bf)
 
 Instantiating the component expands these acausal equations (over its port members and parameters) into scalar equations solved by the standard Newton/Tarjan pipeline:
 
-```
-shaft.tau = -(throttle * Tmax - bf * shaft.w)
-```
+$$
+\begin{aligned}
+shaft.tau &= -\left(throttle\cdot tmax - bf\cdot shaft.w\right)
+\end{aligned}
+$$
 
 ## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Solve a complete model
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+// frees-language: 2
+Engine   ENG(Tmax=200, throttle=0.5, bf=0.1)
+RoadLoad RL(Crr=10, Caero=0.01)
+connect(ENG.shaft, RL.shaft)
+
+{ CHECK eng.shaft.tau -91 0.00009099999999999999 }
+{ CHECK eng.shaft.w 90 0.00008999999999999999 }
+{ CHECK rl.shaft.tau 91 0.00009099999999999999 }
+```
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+eng.shaft.tau = -91
+eng.shaft.w = 90
+rl.shaft.tau = 91
+```
+
+<!-- verified-reference-example:end -->
 
 Instantiated in the verified example below:
 

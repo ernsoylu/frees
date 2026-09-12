@@ -38,10 +38,45 @@ SigSecondOrder inst(wn, zeta, y0, v0)
 
 The acausal equations this component expands into (over its port members and parameters):
 
+$$
+\begin{aligned}
+\text{der}\left(y\right) &= v \\
+\text{init}\left(y\right) &= y0 \\
+\text{der}\left(v\right) &= wn^{2}\cdot \left(in.sig - y\right) - 2\,zeta\cdot wn\cdot v \\
+\text{init}\left(v\right) &= v0 \\
+out.sig &= y
+\end{aligned}
+$$
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Solve a complete model
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+// frees-language: 2
+// SigSecondOrder steady: der(y) -> 0 gives v = 0, der(v) -> 0 gives y = in
+// (unit DC gain of the tracking filter).
+// EXPECT y = 1.5 tol 1e-9
+SigConstant    U(k = 1.5)
+SigSecondOrder SO(wn = 4, zeta = 0.7, y0 = 0, v0 = 0)
+connect(U.out, SO.in)
+y = SO.out.sig
+
+{ CHECK so.in.sig 1.5 0.0000015 }
+{ CHECK so.out.sig 1.5 0.0000015 }
+{ CHECK so.v 0 1e-8 }
 ```
-der(y)  = v
-init(y) = y0
-der(v)  = wn^2 * (in.sig - y) - 2 * zeta * wn * v
-init(v) = v0
-out.sig = y
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+so.in.sig = 1.5
+so.out.sig = 1.5
+so.v = 0
 ```
+
+<!-- verified-reference-example:end -->

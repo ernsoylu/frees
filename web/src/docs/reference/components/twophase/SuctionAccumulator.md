@@ -37,12 +37,48 @@ SuctionAccumulator inst(fluid$, m0, domain$)
 
 The acausal equations this component expands into (over its port members and parameters):
 
+$$
+\begin{aligned}
+out.p &= in.p \\
+hf &= \text{Enthalpy}\left(\mathrm{fluid}, =in.p, p=0\right) \\
+hg &= \text{Enthalpy}\left(\mathrm{fluid}, =in.p, p=1\right) \\
+out.h &= hg \\
+\text{der}\left(m\right) &= in.mdot - out.mdot \\
+\text{init}\left(m\right) &= m0 \\
+hf\cdot \left(in.mdot - out.mdot\right) &= in.mdot\cdot in.h - out.mdot\cdot hg
+\end{aligned}
+$$
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Simulate a component transient and inspect its final state
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+// SuctionAccumulator: a wet suction stream (x = 0.95) feeds the accumulator,
+// which delivers saturated vapor and traps the liquid carryover — the stored
+// mass m grows at mdot*(1 - x_in) = 2.5 g/s over the 60 s run.
+TwoPhaseSource     SRC(fluid$ = R134a, mdot = 0.05, P = 350000, x = 0.95)
+SuctionAccumulator ACC(fluid$ = R134a, m0 = 0.5)
+TwoPhaseSink       SNK()
+connect(SRC.out, ACC.in)
+connect(ACC.out, SNK.in)
+
+DYNAMIC fill (method = ida, time = 0 .. 60, points = 61, rtol = 1e-6, atol = 1e-8)
+END
+
+final_state = FinalValue('acc$m')
+
+{ CHECK final_state 0.65 6.499999999999998e-7 }
 ```
-out.P   = in.P
-hf      = Enthalpy(fluid$, P=in.P, x=0)
-hg      = Enthalpy(fluid$, P=in.P, x=1)
-out.h   = hg
-der(m)  = in.mdot - out.mdot
-init(m) = m0
-hf * (in.mdot - out.mdot) = in.mdot * in.h - out.mdot * hg
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+final_state = 0.65
 ```
+
+<!-- verified-reference-example:end -->

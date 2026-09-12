@@ -40,3 +40,57 @@ with `feedback`.
 **What it tells you:** the PID gains and the LQR gain, plus where each places the
 closed-loop poles. Increasing `Q/R` (or `ωc`) gives a faster, more aggressive
 response; both should land the dominant poles in the left half-plane.
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Controller Design (LQR & PID)
+
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
+
+```frees
+// Controller Design: LQR + PID
+
+{ ---- LQR state feedback for a double integrator (unit mass) ---- }
+{ x1' = x2 , x2' = u  ->  A = [0 1; 0 0],  B = [0; 1] }
+A[1,1] = 0; A[1,2] = 1
+A[2,1] = 0; A[2,2] = 0
+B[1] = 0; B[2] = 1
+
+{ State weight Q and input weight R }
+Q[1,1] = 1; Q[1,2] = 0
+Q[2,1] = 0; Q[2,2] = 1
+R = 1
+
+{ Optimal gain K minimizing the quadratic cost }
+[K] = lqr(A, B, Q, R)
+
+{ Closed-loop matrix Acl = A - B K, then verify the poles are stable }
+Acl[1,1] = A[1,1] - B[1]*K[1]
+Acl[1,2] = A[1,2] - B[1]*K[2]
+Acl[2,1] = A[2,1] - B[2]*K[1]
+Acl[2,2] = A[2,2] - B[2]*K[2]
+[pcl_r, pcl_i] = pole(Acl)
+
+{ ---- PID auto-tuning for plant G(s) = 1 / (s^2 + s) ---- }
+{ Target gain crossover at wc with a 60 deg phase margin }
+num = [1]
+den = [1, 1, 0]
+wc = 1 [rad/s]
+[Kp, Ki, Kd] = pidtune(num, den, 'PID', wc)
+
+{ CHECK Acl[1,1] 0 1e-8 }
+{ CHECK Acl[1,2] 1 0.000001 }
+{ CHECK Acl[2,1] -1 0.000001 }
+```
+
+Expected output (selected solution values; numerical rounding may vary):
+
+```text
+Acl[1,1] = 0
+Acl[1,2] = 1
+Acl[2,1] = -1
+```
+
+<!-- verified-reference-example:end -->
