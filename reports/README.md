@@ -9,9 +9,9 @@ The following documents are tracked here:
 | `MISSING_EXAMPLES.md` | Nineteen worked engineering examples with complete inputs and expected results, written to close the gaps the audits measured |
 | [SIMPLIFIED_SYNTAX_PROPOSAL.md](SIMPLIFIED_SYNTAX_PROPOSAL.md) | Source investigation and proposed unified language, including all keywords, solver semantics, examples and a staged migration plan |
 
-`MISSING_EXAMPLES.md` is the one a later phase consumes: roadmap phase 4.7b-2 is
-entirely about converting its examples into gallery models with `CHECK`
-assertions and reference-page bindings. See `NEXT_STEPS.md` §2c.
+`MISSING_EXAMPLES.md` was consumed by roadmap phase 4.7b-2 (PR #25), which
+converted its examples into gallery models with `CHECK` assertions and
+reference-page bindings. See `NEXT_STEPS.md` §1.
 
 ## The evidence data is not tracked
 

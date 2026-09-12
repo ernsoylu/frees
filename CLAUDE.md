@@ -29,10 +29,10 @@ Guidelines and reference architecture for AI coding assistants and developers wo
 - **Test Suite Health**:
   - `cargo test --workspace -- --skip golden_corpus_parity`: 3,323 tests pass across all workspace crates.
   - `cargo test --release --test parity`: 1,308/1,308 golden fixtures passing.
-  - `vitest run` (Node 22): 55 test files, 620 tests passing.
+  - `vitest run` (Node 22): 59 test files, 655 tests passing.
   - `cargo clippy`: 0 warnings with `-D warnings` on native and `wasm32-unknown-unknown`.
   - `npm run lint`: 0 errors.
-  - `npm run check-docs`: 667/719 documentable symbols have a reference page. The builder reconciles the function and CALL families against the Rust registries (`eval::INTRINSICS`, `procedures::EXPANDED_CALL_TARGETS`) and **exits non-zero** rather than reporting coverage from a cached list — the 100% it used to print without the Java sibling repo was stale, not earned.
+  - `npm run check-docs`: 723/723 documentable symbols have a reference page. The builder reconciles the function and CALL families against the Rust registries (`eval::INTRINSICS`, `procedures::EXPANDED_CALL_TARGETS`) and **exits non-zero** rather than reporting coverage from a cached list — the 100% it used to print without the Java sibling repo was stale, not earned.
 
 ---
 
