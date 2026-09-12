@@ -17,7 +17,7 @@ has a negative real part.
 ## Syntax
 
 ```
-CALL pole(num, den : pr, pi)
+[pr, pi] = pole(num, den)
 [pr, pi] = pole(num, den)
 ```
 

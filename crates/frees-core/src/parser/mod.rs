@@ -17,17 +17,53 @@ pub mod defs;
 pub mod expand;
 pub mod expr;
 pub mod latex;
+pub mod migrate;
 pub mod string_variables;
 pub mod toplevel;
 
 use std::collections::BTreeMap;
 
-use crate::ast::Statement;
+use crate::ast::{Expr, Statement};
 use crate::diag::{Diagnostic, FreesError, Result, Span};
 use crate::token::{Token, TokenKind};
 
 pub use expr::{parse_bool_expr, parse_expr};
-pub use toplevel::parse_document;
+pub use migrate::migrate_legacy_source;
+pub use toplevel::{parse_document, parse_legacy_document};
+
+use std::cell::Cell;
+
+thread_local! {
+    static LEGACY_IMPORT: Cell<bool> = const { Cell::new(false) };
+}
+
+/// Run one explicit compatibility import/solve operation with legacy parsing enabled.
+pub(crate) fn with_legacy_import<T>(f: impl FnOnce() -> T) -> T {
+    LEGACY_IMPORT.with(|enabled| {
+        struct Restore<'a> {
+            enabled: &'a Cell<bool>,
+            previous: bool,
+        }
+
+        impl Drop for Restore<'_> {
+            fn drop(&mut self) {
+                self.enabled.set(self.previous);
+            }
+        }
+
+        let restore = Restore {
+            previous: enabled.replace(true),
+            enabled,
+        };
+        let result = f();
+        drop(restore);
+        result
+    })
+}
+
+pub(crate) fn legacy_import_enabled() -> bool {
+    LEGACY_IMPORT.with(Cell::get)
+}
 
 /// An in-text `GUESS` directive: the initial guess and/or bounds that travel
 /// with the document. Port of `ast/GuessDirective.java`.
@@ -38,6 +74,16 @@ pub struct GuessDirective {
     pub guess: Option<f64>,
     pub lower: Option<f64>,
     pub upper: Option<f64>,
+}
+
+/// A top-level registered domain call and the scalar binding that owns its
+/// result. Drivers can preserve run ownership without putting these values
+/// into the numeric equation system.
+#[derive(Debug, Clone, PartialEq)]
+pub struct RegisteredCall {
+    pub binding: String,
+    pub operation: String,
+    pub args: Vec<Expr>,
 }
 
 /// A parsed document.
@@ -54,6 +100,8 @@ pub struct GuessDirective {
 pub struct Document {
     pub statements: Vec<Statement>,
     pub guesses: Vec<GuessDirective>,
+    /// Top-level registered calls, in source order.
+    pub registered_calls: Vec<RegisteredCall>,
     pub diagnostics: Vec<Diagnostic>,
     /// `FUNCTION` / `PROCEDURE` / `MODULE` / `TABLE` definitions, in
     /// declaration order.
@@ -146,6 +194,7 @@ pub struct Cursor<'a> {
     /// introduce this spelling?" without cloning the map — see
     /// [`Cursor::display_name_mark`].
     inserted_order: Vec<String>,
+    array_names: std::collections::BTreeSet<String>,
 }
 
 impl<'a> Cursor<'a> {
@@ -156,6 +205,23 @@ impl<'a> Cursor<'a> {
             source,
             display_names: BTreeMap::new(),
             inserted_order: Vec::new(),
+            array_names: std::collections::BTreeSet::new(),
+        }
+    }
+
+    pub fn seed_array_names(&mut self) {
+        for window in self.tokens.windows(3) {
+            let TokenKind::Ident(name) = &window[0].kind else {
+                continue;
+            };
+            if window[1].kind != TokenKind::Eq {
+                continue;
+            }
+            if matches!(window[2].kind, TokenKind::LBracket)
+                || matches!(&window[2].kind, TokenKind::Ident(value) if value.eq_ignore_ascii_case("range"))
+            {
+                self.record_array_name(name);
+            }
         }
     }
 
@@ -175,6 +241,14 @@ impl<'a> Cursor<'a> {
             slot.insert(original.to_string());
             self.inserted_order.push(key);
         }
+    }
+
+    pub fn record_array_name(&mut self, name: &str) {
+        self.array_names.insert(name.to_ascii_lowercase());
+    }
+
+    pub fn is_array_name(&self, name: &str) -> bool {
+        self.array_names.contains(&name.to_ascii_lowercase())
     }
 
     /// A mark in the registration log, for [`Cursor::forget_display_name_if_new`].

@@ -16,7 +16,7 @@ the discrete system `A` is Schur-stable (all eigenvalues inside the unit circle)
 ## Syntax
 
 ```
-CALL dlyap(A, Q : X)
+[X] = dlyap(A, Q)
 X = dlyap(A, Q)
 ```
 

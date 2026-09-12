@@ -81,7 +81,7 @@ for (const n of EXTRA_CALLABLES) callable.add(n);
 // destructuring FORM, and a metasyntactic placeholder is not a missing
 // function. It is listed here rather than fixed in the prose because the prose
 // is right.
-const NOTATION = new Set(['num', 'den', 'tname', 'name']);
+const NOTATION = new Set(['num', 'den', 'tname', 'name', 'port']);
 
 // Example ids in the verified library.
 //

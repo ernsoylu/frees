@@ -16,7 +16,7 @@ gain from this `X`.
 ## Syntax
 
 ```
-CALL dare(A, B, Q, R : X)
+[X] = dare(A, B, Q, R)
 X = dare(A, B, Q, R)
 ```
 

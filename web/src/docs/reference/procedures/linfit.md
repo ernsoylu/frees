@@ -14,7 +14,7 @@ tags: [linfit]
 ## Syntax
 
 ```
-CALL linfit(...)
+linfit(...)
 ```
 
 ## Description

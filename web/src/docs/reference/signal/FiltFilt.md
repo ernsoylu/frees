@@ -14,7 +14,7 @@ Filters a recorded signal without shifting it in time. Use it whenever the timin
 ## Syntax
 
 ```
-CALL FiltFilt(b, a, x : y)
+[y] = FiltFilt(b, a, x)
 ```
 
 ## Description
@@ -46,7 +46,7 @@ $$ y = R\,H\,R\,H\,x \quad\Longrightarrow\quad Y(\omega) = |H(\omega)|^2 X(\omeg
 x = [4, 4, 4, 4, 4, 4, 4, 4]
 b = [0.2, 0.2, 0.2, 0.2, 0.2]
 a = [1]
-CALL FiltFilt(b, a, x : y)
+[y] = FiltFilt(b, a, x)
 ```
 
 **Expected:** every `y[j] = 4`. A zero-padded implementation would sag at both ends instead.
@@ -57,7 +57,7 @@ CALL FiltFilt(b, a, x : y)
 x = [0, 0, 0, 1, 0, 0, 0]
 b = [0.25, 0.5, 0.25]
 a = [1]
-CALL FiltFilt(b, a, x : y)
+[y] = FiltFilt(b, a, x)
 ```
 
 **Expected:** `y` is symmetric about its centre — the property a single causal pass does not have.

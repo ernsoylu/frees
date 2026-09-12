@@ -166,13 +166,47 @@ const MAX_BLOCK_DEPTH: u32 = 64;
 /// exercised on its own. Production always passes
 /// [`crate::parser::expr::parse_expr`].
 type ExprFn = fn(&mut Cursor<'_>) -> Result<Expr>;
+type ComponentFunctionParams = (Vec<String>, Vec<Option<String>>, Vec<Option<Expr>>);
 
 /// Parse a whole document from source text.
 ///
 /// Lexes, then parses. Unsupported block constructs produce an explicit error.
 pub fn parse_document(source: &str) -> Result<Document> {
+    if !crate::parser::legacy_import_enabled() {
+        if let Some(keyword) = legacy_declaration(source) {
+            return Err(FreesError::parse_at(
+                format!("FREES-MIG-001: `{keyword}` is legacy syntax; use the migration converter"),
+                Span::at(0),
+            ));
+        }
+    }
     let tokens = crate::lexer::tokenize(source)?;
     parse_token_stream(source, &tokens, crate::parser::expr::parse_expr)
+}
+
+/// Parse a legacy source document for the migration/import boundary only.
+pub fn parse_legacy_document(source: &str) -> Result<Document> {
+    let tokens = crate::lexer::tokenize(source)?;
+    parse_token_stream(source, &tokens, crate::parser::expr::parse_expr)
+}
+
+fn legacy_declaration(source: &str) -> Option<&'static str> {
+    source.lines().find_map(|line| {
+        let code = line
+            .split_once("//")
+            .map_or(line, |(code, _)| code)
+            .trim_start();
+        ["CALL", "MODULE", "PROCEDURE", "COMPONENT"]
+            .into_iter()
+            .find(|keyword| {
+                code.get(..keyword.len())
+                    .is_some_and(|head| head.eq_ignore_ascii_case(keyword))
+                    && code
+                        .get(keyword.len()..)
+                        .and_then(|rest| rest.chars().next())
+                        .is_some_and(|ch| !ch.is_ascii_alphanumeric() && ch != '_')
+            })
+    })
 }
 
 /// The whole of [`parse_document`] minus the lexing step.
@@ -181,8 +215,10 @@ fn parse_token_stream<'a>(
     tokens: &'a [Token],
     expr_fn: ExprFn,
 ) -> Result<Document> {
+    let mut cursor = Cursor::new(tokens, source);
+    cursor.seed_array_names();
     let mut parser = Parser {
-        c: Cursor::new(tokens, source),
+        c: cursor,
         tokens,
         expr_fn,
         sinks: 0,
@@ -237,7 +273,11 @@ impl<'a> Parser<'a> {
     fn top_level(&mut self, doc: &mut Document) -> Result<()> {
         match self.c.peek() {
             TokenKind::Guess => {
-                let directive = self.guess_directive()?;
+                let directive = if matches!(self.c.peek_at(1), TokenKind::LParen) {
+                    self.guess_call()?
+                } else {
+                    self.guess_directive()?
+                };
                 doc.guesses.push(directive);
             }
             TokenKind::Component => {
@@ -257,7 +297,10 @@ impl<'a> Parser<'a> {
             }
             TokenKind::Function => {
                 let def = self.function_def()?;
-                record_def(&mut doc.defs, def);
+                match def {
+                    ParsedDef::Component(component) => doc.components.defs.push(component),
+                    other => record_def(&mut doc.defs, other),
+                }
             }
             TokenKind::Procedure => {
                 let def = self.procedure_def()?;
@@ -293,6 +336,9 @@ impl<'a> Parser<'a> {
             }
             _ => {
                 let statement = self.statement()?;
+                if let Some(call) = registered_call(&statement) {
+                    doc.registered_calls.push(call);
+                }
                 doc.statements.push(statement);
             }
         }
@@ -321,7 +367,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    /// `forBlock : FOR IDENT EQ expr TO expr sep statementList sep? END`
+    /// `forBlock : FOR IDENT EQ expr (COLON expr (COLON expr)? | TO expr) ...`
     fn for_block(&mut self) -> Result<Statement> {
         let header = self.c.span();
         self.enter_block(header)?;
@@ -335,8 +381,17 @@ impl<'a> Parser<'a> {
         let var_name = self.c.expect_ident()?.to_ascii_lowercase();
         self.c.expect(&TokenKind::Eq)?;
         let start = self.expr()?;
-        self.c.expect(&TokenKind::To)?;
-        let end = self.expr()?;
+        let (step, end) = if self.c.eat(&TokenKind::To) {
+            (None, self.expr()?)
+        } else {
+            self.c.expect(&TokenKind::Colon)?;
+            let middle = self.expr()?;
+            if self.c.eat(&TokenKind::Colon) {
+                (Some(middle), self.expr()?)
+            } else {
+                (Some(Expr::num(1.0)), middle)
+            }
+        };
         self.require_sep("after the FOR header")?;
 
         // `statementList sep? END`
@@ -346,6 +401,7 @@ impl<'a> Parser<'a> {
         Ok(Statement::For {
             var_name,
             start,
+            step,
             end,
             body,
         })
@@ -558,6 +614,13 @@ impl<'a> Parser<'a> {
         let lhs = self.expr()?;
         self.c.expect(&TokenKind::Eq)?;
         let rhs = self.expr()?;
+        let rhs_is_array = matches!(&rhs, Expr::ArrayLiteral(_))
+            || matches!(&rhs, Expr::Call { function, .. } if function == "range");
+        if matches!(lhs, Expr::Var(_)) && rhs_is_array {
+            if let Expr::Var(name) = &lhs {
+                self.c.record_array_name(name);
+            }
+        }
         Ok(Equation::new(lhs, rhs, self.text_since(start_pos)))
     }
 
@@ -625,6 +688,55 @@ impl<'a> Parser<'a> {
         })
     }
 
+    /// `guess(name, value, lower=..., upper=...)` — canonical solver seed syntax.
+    fn guess_call(&mut self) -> Result<GuessDirective> {
+        let start_pos = self.c.pos();
+        self.c.expect(&TokenKind::Guess)?;
+        self.c.expect(&TokenKind::LParen)?;
+        let name = self.guess_name()?;
+        self.c.expect(&TokenKind::Comma)?;
+        let guess_value = self.signed_number()?;
+        let guess = Some(guess_value);
+        let mut lower = None;
+        let mut upper = None;
+        while self.c.eat(&TokenKind::Comma) {
+            let key = self.c.expect_ident()?.to_ascii_lowercase();
+            self.c.expect(&TokenKind::Eq)?;
+            let value = self.signed_number()?;
+            match key.as_str() {
+                "lower" => lower = Some(value),
+                "upper" => upper = Some(value),
+                _ => {
+                    return Err(FreesError::parse_at(
+                        format!("guess({name}, ...): unknown option '{key}'"),
+                        self.span_since(start_pos),
+                    ));
+                }
+            }
+        }
+        self.c.expect(&TokenKind::RParen)?;
+        if let (Some(lo), Some(hi)) = (lower, upper) {
+            if lo >= hi {
+                return Err(FreesError::parse_at(
+                    format!("guess({name}, ...): lower must be below upper"),
+                    self.span_since(start_pos),
+                ));
+            }
+            if guess_value < lo || guess_value > hi {
+                return Err(FreesError::parse_at(
+                    format!("guess({name}, ...): value lies outside [{lo}, {hi}]"),
+                    self.span_since(start_pos),
+                ));
+            }
+        }
+        Ok(GuessDirective {
+            name,
+            guess,
+            lower,
+            upper,
+        })
+    }
+
     /// `IDENT (DOT IDENT)*`, lowercased, kept dotted so a later pass can map
     /// `hx.in.p` onto the expanded `hx$in$p` without exposing mangled names.
     fn guess_name(&mut self) -> Result<String> {
@@ -661,14 +773,91 @@ impl<'a> Parser<'a> {
             None
         };
 
-        let name = self.c.expect_ident()?.to_ascii_lowercase();
+        let first_name = self.c.expect_ident()?.to_ascii_lowercase();
+        let (output, name) = if outputs.is_none() && self.c.eat(&TokenKind::Eq) {
+            (
+                Some(first_name),
+                self.c.expect_ident()?.to_ascii_lowercase(),
+            )
+        } else {
+            (None, first_name)
+        };
         self.c.expect(&TokenKind::LParen)?;
-        let (params, param_units) = self.param_list()?;
+        let (params, param_units, param_defaults) = if outputs.is_some() {
+            self.component_function_params()?
+        } else {
+            let (params, units) = self.param_list()?;
+            let defaults = vec![None; params.len()];
+            (params, units, defaults)
+        };
         self.c.expect(&TokenKind::RParen)?;
         let output_unit = si_unit_of(parse_unit_annotation(&mut self.c)?);
         self.require_sep("after the FUNCTION header")?;
         let body = self.proc_body(header, "FUNCTION", &[TokenKind::End])?;
         self.c.expect(&TokenKind::End)?;
+
+        if let Some(outputs) = outputs.as_ref() {
+            if body.iter().any(|statement| {
+                matches!(
+                    statement,
+                    ProcStatement::Port { .. }
+                        | ProcStatement::Connect { .. }
+                        | ProcStatement::Instance { .. }
+                        | ProcStatement::Variant { .. }
+                )
+            }) {
+                let mut ports = Vec::new();
+                let mut connects = Vec::new();
+                let mut variants = Vec::new();
+                let mut equations = Vec::new();
+                let mut sub_instances = Vec::new();
+                for statement in body {
+                    match statement {
+                        ProcStatement::Port { name } => ports.push(name),
+                        ProcStatement::Connect { ports } => connects.push(ConnectDecl {
+                            ports,
+                            source_text: "connect(...)".to_string(),
+                        }),
+                        ProcStatement::Variant {
+                            name,
+                            require,
+                            body,
+                        } => variants.push(Variant {
+                            name,
+                            require,
+                            body,
+                        }),
+                        ProcStatement::Instance { instance } => sub_instances.push(instance),
+                        ProcStatement::Eq(equation) => equations.push(equation),
+                        other => {
+                            return Err(FreesError::parse_at(
+                            format!(
+                                "canonical component {name} only accepts port, connect, and equation statements; found {other:?}"
+                            ),
+                            header,
+                        ));
+                        }
+                    }
+                }
+                if ports.is_empty() {
+                    ports.extend(outputs.iter().cloned());
+                }
+                let params = params
+                    .into_iter()
+                    .zip(param_defaults)
+                    .map(|(name, default)| Param::new(name, default))
+                    .collect();
+                return Ok(ParsedDef::Component(ComponentDef::new(
+                    name,
+                    ports,
+                    params,
+                    equations,
+                    variants,
+                    sub_instances,
+                    connects,
+                )));
+            }
+        }
 
         Ok(match outputs {
             // `FUNCTION [a, b] = f(x)` → ProcedureDef (AstBuilder parity).
@@ -680,6 +869,7 @@ impl<'a> Parser<'a> {
             }),
             None => ParsedDef::Function(FunctionDef {
                 name,
+                output,
                 params,
                 body,
                 output_unit,
@@ -887,6 +1077,28 @@ impl<'a> Parser<'a> {
         let (names, units) = self.param_list_verbatim()?;
         let names = names.iter().map(|n| n.to_ascii_lowercase()).collect();
         Ok((names, units))
+    }
+
+    fn component_function_params(&mut self) -> Result<ComponentFunctionParams> {
+        let mut names = Vec::new();
+        let mut units = Vec::new();
+        let mut defaults = Vec::new();
+        if matches!(self.c.peek(), TokenKind::RParen) {
+            return Ok((names, units, defaults));
+        }
+        loop {
+            names.push(self.c.expect_ident()?.to_ascii_lowercase());
+            units.push(si_unit_of(parse_unit_annotation(&mut self.c)?));
+            defaults.push(if self.c.eat(&TokenKind::Eq) {
+                Some(self.expr()?)
+            } else {
+                None
+            });
+            if !self.c.eat(&TokenKind::Comma) {
+                break;
+            }
+        }
+        Ok((names, units, defaults))
     }
 
     /// `paramList`, keeping every name in the case the user wrote it.
@@ -1367,6 +1579,7 @@ impl<'a> Parser<'a> {
             match self.c.peek() {
                 TokenKind::Event => events.push(self.dynamic_event()?),
                 TokenKind::For => for_blocks.push(self.for_block()?),
+                _ if self.at_initial_call() => initials.push(self.initial_call()?),
                 // `# DynItemInit` sits *before* `# DynItemEq` in the grammar, so
                 // ANTLR prefers it whenever `IDENT [idx]? ( num ) =` matches.
                 // `at_dynamic_init` is that same decision made with lookahead.
@@ -1396,6 +1609,26 @@ impl<'a> Parser<'a> {
             initials,
             events,
             source_text: self.tokens_text_since(start_pos),
+        })
+    }
+
+    fn at_initial_call(&self) -> bool {
+        matches!(self.c.peek(), TokenKind::Ident(name) if name.eq_ignore_ascii_case("initial"))
+            && matches!(self.c.peek_at(1), TokenKind::LParen)
+    }
+
+    /// `initial(state, value)` — canonical initial condition syntax.
+    fn initial_call(&mut self) -> Result<InitialCondition> {
+        self.c.expect_ident()?;
+        self.c.expect(&TokenKind::LParen)?;
+        let state = self.c.expect_ident()?.to_ascii_lowercase();
+        self.c.expect(&TokenKind::Comma)?;
+        let value = self.expr()?;
+        self.c.expect(&TokenKind::RParen)?;
+        Ok(InitialCondition {
+            state,
+            indices: Vec::new(),
+            value,
         })
     }
 
@@ -2085,6 +2318,17 @@ impl<'a> Parser<'a> {
     ///                | whileStatement | assignment | equation`
     fn proc_statement(&mut self) -> Result<ProcStatement> {
         match self.c.peek() {
+            TokenKind::Connect => self.canonical_connect_statement(),
+            TokenKind::Variant => self.canonical_variant_statement(),
+            TokenKind::Ident(_) if self.at_component_inst() => Ok(ProcStatement::Instance {
+                instance: self.component_inst()?,
+            }),
+            TokenKind::Ident(name)
+                if name.eq_ignore_ascii_case("port")
+                    && matches!(self.c.peek_at(1), TokenKind::LParen) =>
+            {
+                self.canonical_port_statement()
+            }
             TokenKind::If => self.if_statement(),
             TokenKind::Repeat => self.repeat_statement(),
             TokenKind::While => self.while_statement(),
@@ -2094,8 +2338,10 @@ impl<'a> Parser<'a> {
             // meaning. Mirrored by `to_proc_statement`.
             TokenKind::For => {
                 let header = self.c.span();
-                let statement = self.for_block()?;
-                to_proc_statement(statement, header)
+                self.enter_block(header)?;
+                let result = self.proc_for_statement(header);
+                self.block_depth -= 1;
+                result
             }
             // `assignment : IDENT ASSIGN expr` — two tokens of lookahead
             // separate it from an equation.
@@ -2105,6 +2351,20 @@ impl<'a> Parser<'a> {
                 let value = self.expr()?;
                 Ok(ProcStatement::Assign { var_name, value })
             }
+            TokenKind::Call => {
+                self.c.advance();
+                let name = self.c.expect_ident()?.to_ascii_lowercase();
+                Err(FreesError::parse_at(
+                    format!(
+                        "CALL is not supported inside a FOR loop within a PROCEDURE or FUNCTION (offending call: '{name}')."
+                    ),
+                    self.c.span(),
+                ))
+            }
+            TokenKind::Symbolic => Err(FreesError::parse_at(
+                "SYMBOLIC declarations are not allowed inside a PROCEDURE or FUNCTION.",
+                self.c.span(),
+            )),
             _ => {
                 // `equation : expr EQ expr` — an intermediate relation.
                 let start_pos = self.c.pos();
@@ -2118,6 +2378,96 @@ impl<'a> Parser<'a> {
                 )))
             }
         }
+    }
+
+    fn canonical_port_statement(&mut self) -> Result<ProcStatement> {
+        self.c.expect_ident()?;
+        self.c.expect(&TokenKind::LParen)?;
+        let name = self.c.expect_ident()?.to_ascii_lowercase();
+        while self.c.eat(&TokenKind::Comma) {
+            self.c.expect_ident()?;
+            self.c.expect(&TokenKind::Eq)?;
+            let _ = self.expr()?;
+        }
+        self.c.expect(&TokenKind::RParen)?;
+        Ok(ProcStatement::Port { name })
+    }
+
+    fn canonical_connect_statement(&mut self) -> Result<ProcStatement> {
+        self.c.expect(&TokenKind::Connect)?;
+        self.c.expect(&TokenKind::LParen)?;
+        let mut ports = vec![self.connect_port()?];
+        while self.c.eat(&TokenKind::Comma) {
+            ports.push(self.connect_port()?);
+        }
+        self.c.expect(&TokenKind::RParen)?;
+        Ok(ProcStatement::Connect { ports })
+    }
+
+    fn canonical_variant_statement(&mut self) -> Result<ProcStatement> {
+        self.c.expect(&TokenKind::Variant)?;
+        let name = self.c.expect_ident()?.to_ascii_lowercase();
+        let mut require = Vec::new();
+        if self.c.eat(&TokenKind::Require) {
+            let parenthesized = self.c.eat(&TokenKind::LParen);
+            require.push(self.c.expect_ident()?.to_ascii_lowercase());
+            while self.c.eat(&TokenKind::Comma) {
+                require.push(self.c.expect_ident()?.to_ascii_lowercase());
+            }
+            if parenthesized {
+                self.c.expect(&TokenKind::RParen)?;
+            }
+        }
+        self.require_sep("after the VARIANT header")?;
+        let mut body = Vec::new();
+        loop {
+            self.c.skip_separators();
+            if matches!(self.c.peek(), TokenKind::End) {
+                break;
+            }
+            if self.c.is_eof() {
+                return Err(FreesError::parse_at(
+                    format!("unterminated VARIANT {name} block"),
+                    self.c.span(),
+                ));
+            }
+            body.push(self.bare_equation()?);
+            self.require_item_end()?;
+        }
+        self.c.expect(&TokenKind::End)?;
+        Ok(ProcStatement::Variant {
+            name,
+            require,
+            body,
+        })
+    }
+
+    fn proc_for_statement(&mut self, header: Span) -> Result<ProcStatement> {
+        self.c.expect(&TokenKind::For)?;
+        let var_name = self.c.expect_ident()?.to_ascii_lowercase();
+        self.c.expect(&TokenKind::Eq)?;
+        let start = self.expr()?;
+        let (step, end) = if self.c.eat(&TokenKind::To) {
+            (None, self.expr()?)
+        } else {
+            self.c.expect(&TokenKind::Colon)?;
+            let middle = self.expr()?;
+            if self.c.eat(&TokenKind::Colon) {
+                (Some(middle), self.expr()?)
+            } else {
+                (Some(Expr::num(1.0)), middle)
+            }
+        };
+        self.require_sep("after the FOR header")?;
+        let body = self.proc_body(header, "FOR", &[TokenKind::End])?;
+        self.c.expect(&TokenKind::End)?;
+        Ok(ProcStatement::For {
+            var_name,
+            start,
+            step,
+            end,
+            body,
+        })
     }
 
     /// `ifStatement : IF boolExpr THEN sep procBody (ELSE sep procBody)? END`
@@ -2452,6 +2802,30 @@ impl<'a> Parser<'a> {
     }
 }
 
+pub(crate) fn is_registered_call_statement(statement: &Statement) -> bool {
+    registered_call(statement).is_some()
+}
+
+fn registered_call(statement: &Statement) -> Option<crate::parser::RegisteredCall> {
+    let Statement::Eq(crate::ast::Equation {
+        lhs: Expr::Var(binding),
+        rhs: Expr::Call { function, args },
+        ..
+    }) = statement
+    else {
+        return None;
+    };
+    matches!(
+        function.as_str(),
+        "simulate" | "sweep" | "plot" | "table" | "state_table" | "linearize"
+    )
+    .then(|| crate::parser::RegisteredCall {
+        binding: binding.clone(),
+        operation: function.clone(),
+        args: args.clone(),
+    })
+}
+
 // ── free helpers ────────────────────────────────────────────────────────────
 
 /// The block constructs `topLevel` admits that this pass does not implement,
@@ -2565,6 +2939,7 @@ fn has_state_number(name: &str) -> bool {
 enum ParsedDef {
     Function(FunctionDef),
     Procedure(ProcedureDef),
+    Component(ComponentDef),
     Module(ModuleDef),
     Table(FunctionTableDef),
 }
@@ -2577,6 +2952,7 @@ fn record_def(defs: &mut Definitions, def: ParsedDef) {
     let name = match &def {
         ParsedDef::Function(d) => d.name.clone(),
         ParsedDef::Procedure(d) => d.name.clone(),
+        ParsedDef::Component(d) => d.name.clone(),
         ParsedDef::Module(d) => d.name.clone(),
         ParsedDef::Table(d) => d.name.clone(),
     };
@@ -2587,47 +2963,9 @@ fn record_def(defs: &mut Definitions, def: ParsedDef) {
     match def {
         ParsedDef::Function(d) => defs.functions.push(d),
         ParsedDef::Procedure(d) => defs.procedures.push(d),
+        ParsedDef::Component(_) => unreachable!("components are stored on Document"),
         ParsedDef::Module(d) => defs.modules.push(d),
         ParsedDef::Table(d) => defs.tables.push(d),
-    }
-}
-
-/// Convert a top-level [`Statement`] parsed inside a `FOR` body within a
-/// procedural body into the equivalent [`ProcStatement`]. Port of
-/// `AstBuilder.toProcStatement`: equations and nested `FOR` loops convert
-/// recursively; constructs with no procedural meaning are rejected with the
-/// Java messages rather than silently dropped.
-fn to_proc_statement(statement: Statement, span: Span) -> Result<ProcStatement> {
-    match statement {
-        Statement::Eq(eq) => Ok(ProcStatement::Eq(eq)),
-        Statement::For {
-            var_name,
-            start,
-            end,
-            body,
-        } => {
-            let mut converted = Vec::with_capacity(body.len());
-            for inner in body {
-                converted.push(to_proc_statement(inner, span)?);
-            }
-            Ok(ProcStatement::For {
-                var_name,
-                start,
-                end,
-                body: converted,
-            })
-        }
-        Statement::CallProc { name, .. } => Err(FreesError::parse_at(
-            format!(
-                "CALL is not supported inside a FOR loop within a PROCEDURE or \
-                 FUNCTION (offending call: '{name}')."
-            ),
-            span,
-        )),
-        Statement::Symbolic(_) => Err(FreesError::parse_at(
-            "SYMBOLIC declarations are not allowed inside a PROCEDURE or FUNCTION.",
-            span,
-        )),
     }
 }
 
@@ -3112,6 +3450,7 @@ mod tests {
             Statement::For {
                 var_name,
                 start,
+                step: _step,
                 end,
                 body,
             } => {
@@ -3922,6 +4261,14 @@ END
     }
 
     #[test]
+    fn canonical_initial_call_enters_the_dynamic_initial_conditions() {
+        let d = dyn_of("DYNAMIC d(t = 0 .. 1)\n  der(x) = 1\n  initial(x, 0)\nEND");
+        assert_eq!(d.initials.len(), 1);
+        assert_eq!(d.initials[0].state, "x");
+        assert_eq!(d.initials[0].value, Expr::num(0.0));
+    }
+
+    #[test]
     fn an_array_initial_condition_keeps_its_subscripts() {
         let d = dyn_of("DYNAMIC d(t = 0 .. 1)\n  T[1](0) = 300\n  T[2:5](0) = 290\nEND");
         assert_eq!(d.initials.len(), 2);
@@ -4028,11 +4375,11 @@ END
     // procedural bodies lean on `boolExpr` and the full expression grammar.
 
     fn ok_real(src: &str) -> Document {
-        parse_document(src).unwrap_or_else(|e| panic!("expected `{src}` to parse, got {e}"))
+        parse_legacy_document(src).unwrap_or_else(|e| panic!("expected `{src}` to parse, got {e}"))
     }
 
     fn err_real(src: &str) -> String {
-        match parse_document(src) {
+        match parse_legacy_document(src) {
             Ok(doc) => panic!("expected `{src}` to fail, got {doc:?}"),
             Err(e) => e.to_string(),
         }
@@ -4721,7 +5068,7 @@ END
     /// second, and the port keeps that distinction.
     #[test]
     fn the_separator_before_end_follows_each_rule_exactly() {
-        assert!(parse_document("COMPONENT P(a)\n  a.T = 1 END").is_ok());
+        assert!(parse_legacy_document("COMPONENT P(a)\n  a.T = 1 END").is_ok());
         let message = err_real("COMPONENT P(a)\n  VARIANT v\n    a.T = 1 END\nEND");
         assert!(
             message.contains("after a VARIANT equation"),

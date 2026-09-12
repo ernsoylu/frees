@@ -194,23 +194,20 @@ fn a_function_body_assignment_is_left_alone() {
     assert_eq!(value_of(&v, "y"), 10.0, "{v}");
 }
 
-/// A `MODULE` body *does* assign with `=`, and the substitution cannot see
-/// that the line is block-local: overriding a body name deletes the module's
-/// own equation. The engine reports that as an ordinary document failure, and
-/// the UI already keeps a user out of it — `pinnableParameters` (`App.tsx`)
-/// offers a slider only for names the document assigns a *literal*, which a
-/// body equation is not. Pinned here so a future widening of that rule has to
-/// come past this test.
+/// Canonical function locals are isolated from document overrides.
 #[test]
-fn overriding_a_module_body_name_breaks_the_module_as_data() {
-    let source = "MODULE Doubler(a : b)\n  b = 2 * a\nEND\n\nCALL Doubler(5 : q)\n";
+fn overriding_a_function_body_name_does_not_break_the_function() {
+    let source = "function b = Doubler(a)\n  b := 2 * a\nend\n\nq = Doubler(5)\n";
     let clean = solve_with(source, &[]);
     assert_eq!(clean["success"], true, "{clean}");
     assert_eq!(value_of(&clean, "q"), 10.0, "{clean}");
 
     let v = solve_with(source, &["b = 7"]);
-    assert_eq!(v["success"], false, "the module lost its body: {v}");
-    assert!(v["error"].is_string(), "{v}");
+    assert_eq!(
+        v["success"], true,
+        "the function local stayed isolated: {v}"
+    );
+    assert_eq!(value_of(&v, "q"), 10.0, "{v}");
 }
 
 /// The one comment form the textual substitution *can* damage: a `{ … }`

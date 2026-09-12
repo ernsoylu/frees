@@ -14,7 +14,7 @@ Finds how far one signal leads or lags another — the transport delay between t
 ## Syntax
 
 ```
-CALL XCorr(a, b : c)
+[c] = XCorr(a, b)
 ```
 
 ## Description
@@ -40,7 +40,7 @@ which is the convolution of `a` with `b` reversed.
 ```
 a = [0, 0, 1, 2, 1, 0, 0]
 b = [0, 1, 2, 1, 0, 0, 0]
-CALL XCorr(a, b : c)
+[c] = XCorr(a, b)
 ```
 
 **Expected:** the peak lands one element right of the centre — `a` leads `b` by one sample.
@@ -49,7 +49,7 @@ CALL XCorr(a, b : c)
 
 ```
 x = [1, 3, 2, 6, 4, 9, 5, 12]
-CALL XCorr(x, x : r)
+[r] = XCorr(x, x)
 ```
 
 **Expected:** `r[8]` (the centre of 15) is `Σ xᵢ² = 316`, and `r` is symmetric about it.

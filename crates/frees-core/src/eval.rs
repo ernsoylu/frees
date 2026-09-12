@@ -2192,11 +2192,17 @@ fn eval_call<'a>(function: &str, args: &'a [Expr], env: &'a Env<'a>) -> Result<f
             return eval_table_def_call(table, args, env);
         }
         if let Some(def) = defs.function(function) {
-            let mut values = Vec::with_capacity(args.len());
-            for arg in args {
-                values.push(eval_in(arg, env)?);
-            }
+            let values = resolve_call_args(function, args, &def.params, env)?;
             return crate::procedures::call_function(def, &values, defs, &env.to_scope());
+        }
+        if let Some(def) = defs.procedure(function) {
+            let values = resolve_call_args(function, args, &def.inputs, env)?;
+            return crate::procedures::call_proc_output(
+                &crate::procedures::proc_output_name(function, 0),
+                &values,
+                defs,
+                &env.to_scope(),
+            );
         }
     }
 
@@ -2212,6 +2218,7 @@ fn eval_call<'a>(function: &str, args: &'a [Expr], env: &'a Env<'a>) -> Result<f
         });
     };
 
+    let args = resolve_intrinsic_args(function, args)?;
     if !intrinsic.arity.accepts(args.len()) {
         return Err(FreesError::evaluation(format!(
             "{function} expects {}, got {}",
@@ -2221,15 +2228,149 @@ fn eval_call<'a>(function: &str, args: &'a [Expr], env: &'a Env<'a>) -> Result<f
     }
 
     match intrinsic.body {
-        Body::Lazy(f) => f(function, args, env),
+        Body::Lazy(f) => f(function, &args, env),
         Body::Strict(f) => {
             let mut values = Vec::with_capacity(args.len());
-            for arg in args {
+            for arg in &args {
                 values.push(eval_in(arg, env)?);
             }
             f(function, &values)
         }
     }
+}
+
+fn resolve_intrinsic_args(function: &str, args: &[Expr]) -> Result<Vec<Expr>> {
+    let mut out: Vec<Option<Expr>> = vec![None; args.len()];
+    let mut named = false;
+    let mut next = 0;
+    for arg in args {
+        let Some((name, value)) = named_arg(arg) else {
+            if named {
+                return Err(FreesError::evaluation(format!(
+                    "{function}: positional arguments must precede named arguments"
+                )));
+            }
+            if next >= out.len() {
+                return Err(FreesError::evaluation(format!(
+                    "{function}: too many arguments"
+                )));
+            }
+            out[next] = Some(arg.clone());
+            next += 1;
+            continue;
+        };
+        named = true;
+        let index = intrinsic_argument_index(function, name, args.len()).ok_or_else(|| {
+            FreesError::evaluation(format!("{function}: unknown named argument '{name}'"))
+        })?;
+        if index >= out.len() || out[index].is_some() {
+            return Err(FreesError::evaluation(format!(
+                "{function}: argument '{name}' was provided more than once"
+            )));
+        }
+        out[index] = Some(value.clone());
+    }
+    out.into_iter()
+        .enumerate()
+        .map(|(index, arg)| {
+            arg.ok_or_else(|| {
+                FreesError::evaluation(format!(
+                    "{function}: missing argument at position {}",
+                    index + 1
+                ))
+            })
+        })
+        .collect()
+}
+
+fn named_arg(arg: &Expr) -> Option<(&str, &Expr)> {
+    let Expr::Call { function, args } = arg else {
+        return None;
+    };
+    function
+        .strip_prefix("__named_arg$")
+        .and_then(|name| args.first().map(|value| (name, value)))
+}
+
+fn intrinsic_argument_index(function: &str, name: &str, count: usize) -> Option<usize> {
+    let name = name.to_ascii_lowercase();
+    if let Some(index) = name
+        .strip_prefix("arg")
+        .and_then(|n| n.parse::<usize>().ok())
+        .and_then(|n| n.checked_sub(1))
+    {
+        return (index < count).then_some(index);
+    }
+    let aliases = match function {
+        "if" => &["condition", "then", "else"][..],
+        "min" | "max" => &["a", "b", "c", "d"][..],
+        _ if count == 1 => &["x", "value", "input"][..],
+        _ => &["x", "y", "z", "a", "b", "c"][..],
+    };
+    aliases.iter().position(|alias| *alias == name)
+}
+
+fn resolve_call_args<'a>(
+    function: &str,
+    args: &'a [Expr],
+    params: &[String],
+    env: &'a Env<'a>,
+) -> Result<Vec<f64>> {
+    let mut values = vec![None; params.len()];
+    let mut next = 0;
+    let mut named = false;
+    for arg in args {
+        let (name, value) = match arg {
+            Expr::Call { function, args } if function.starts_with("__named_arg$") => {
+                let name = function.trim_start_matches("__named_arg$");
+                let value = args.first().ok_or_else(|| {
+                    FreesError::evaluation(format!("{function}: named argument has no value"))
+                })?;
+                (Some(name), value)
+            }
+            other => (None, other),
+        };
+        let index = if let Some(name) = name {
+            named = true;
+            params
+                .iter()
+                .position(|param| param == name)
+                .ok_or_else(|| {
+                    FreesError::evaluation(format!("{function}: unknown named argument '{name}'"))
+                })?
+        } else {
+            if named {
+                return Err(FreesError::evaluation(format!(
+                    "{function}: positional arguments must precede named arguments"
+                )));
+            }
+            let index = next;
+            next += 1;
+            index
+        };
+        if index >= params.len() {
+            return Err(FreesError::evaluation(format!(
+                "{function} expects {} argument(s), got {}",
+                params.len(),
+                args.len()
+            )));
+        }
+        if values[index].is_some() {
+            return Err(FreesError::evaluation(format!(
+                "{function}: argument '{}' was provided more than once",
+                params[index]
+            )));
+        }
+        values[index] = Some(eval_in(value, env)?);
+    }
+    if values.iter().any(Option::is_none) {
+        return Err(FreesError::evaluation(format!(
+            "{function} expects {} argument(s), got {}",
+            params.len(),
+            args.len()
+        )));
+    }
+    Ok(values.into_iter().map(Option::unwrap).collect())
 }
 
 // ---------------------------------------------------------------------------
@@ -2243,17 +2384,9 @@ fn eval_table_def_call<'a>(
     args: &'a [Expr],
     env: &'a Env<'a>,
 ) -> Result<f64> {
-    if args.is_empty() || args.len() > 2 {
-        let n = &table.name;
-        return Err(FreesError::evaluation(format!(
-            "Function table '{n}' expects {n}(x) or {n}(x, param)."
-        )));
-    }
-    let x = eval_in(&args[0], env)?;
-    let param = match args.get(1) {
-        Some(expr) => Some(eval_in(expr, env)?),
-        None => None,
-    };
+    let values = resolve_call_args(&table.name, args, &table.arg_names, env)?;
+    let x = values[0];
+    let param = values.get(1).copied();
     crate::curvetable::lookup(table, x, param)
 }
 
@@ -7328,7 +7461,27 @@ mod tests {
         let msg = eval_ctx(&e, &Scope::default(), &defs)
             .unwrap_err()
             .to_string();
-        assert!(msg.contains("expects curve(x) or curve(x, param)"), "{msg}");
+        assert!(msg.contains("curve expects 1 argument(s), got 3"), "{msg}");
+    }
+
+    #[test]
+    fn function_tables_share_named_argument_resolution_with_user_calls() {
+        let table = FunctionTableDef {
+            name: "curve".into(),
+            arg_names: vec!["x".into()],
+            x_log: false,
+            y_log: false,
+            curves: vec![Curve {
+                param: None,
+                xs: vec![0.0, 1.0],
+                ys: vec![0.0, 10.0],
+            }],
+            output_unit: None,
+            arg_units: None,
+        };
+        let defs = defs_with_table(table);
+        let e = Expr::call("curve", vec![Expr::call("__named_arg$x", vec![n(0.5)])]);
+        assert_eq!(eval_ctx(&e, &Scope::default(), &defs).unwrap(), 5.0);
     }
 
     #[test]
@@ -7350,6 +7503,7 @@ mod tests {
         // never "unknown function" (which would mean dispatch failed).
         let def = FunctionDef {
             name: "double".into(),
+            output: None,
             params: vec!["x".into()],
             body: vec![ProcStatement::Assign {
                 var_name: "double".into(),
@@ -7735,7 +7889,7 @@ mod tests {
 
     /// Evaluate with a document's definitions in context.
     fn ev_in_doc(source: &str, e: &Expr) -> Result<f64> {
-        let doc = crate::parser::parse_document(source)
+        let doc = crate::parser::parse_legacy_document(source)
             .unwrap_or_else(|err| panic!("parse failed: {err}"));
         eval_with(e, &Scope::default(), EvalContext::with_defs(&doc.defs))
     }
@@ -7752,7 +7906,7 @@ mod tests {
 
     #[test]
     fn proc_synthetic_evaluates_its_inputs_in_the_callers_scope() {
-        let doc = crate::parser::parse_document(SWAP_DOC).unwrap();
+        let doc = crate::parser::parse_legacy_document(SWAP_DOC).unwrap();
         let scope = scope(&[("q", 5.0)]);
         let e = Expr::call(
             "proc$p$0",

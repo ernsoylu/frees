@@ -8,7 +8,7 @@
 //! expand → block → Newton, with residuals evaluated through
 //! `eval_with`/`EvalContext`.
 
-use frees_core::{solve, FreesError, Solution, SolverSettings};
+use frees_core::{solve_legacy as solve, FreesError, Solution, SolverSettings};
 
 fn solved(source: &str) -> Solution {
     solve(source, &SolverSettings::default())

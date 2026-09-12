@@ -17,7 +17,7 @@ noisy measurements with minimum error variance.
 ## Syntax
 
 ```
-CALL lqe(A, G, C, Q, R : L)
+[L] = lqe(A, G, C, Q, R)
 L = lqe(A, G, C, Q, R)
 ```
 

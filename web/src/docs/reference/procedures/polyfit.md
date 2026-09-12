@@ -14,7 +14,7 @@ tags: [polyfit]
 ## Syntax
 
 ```
-CALL polyfit(...)
+polyfit(...)
 ```
 
 ## Description

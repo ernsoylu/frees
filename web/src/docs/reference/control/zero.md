@@ -17,7 +17,7 @@ signals non-minimum-phase behavior.
 ## Syntax
 
 ```
-CALL zero(num, den : zr, zi)
+[zr, zi] = zero(num, den)
 [zr, zi] = zero(num, den)
 ```
 

@@ -652,16 +652,17 @@ Variants of your own components use the \`VARIANT ... REQUIRE ... END\` construc
 [Related: comp-authoring, comp-library, comp-wizard]`,
   "comp-authoring": `# Writing Your Own Component
 
-When the library lacks a device — or you want your own correlation inside one — define a component in the document with \`COMPONENT ... END\`. The header parentheses declare the **ports** (in the order positional binding will use); \`PARAM\` lines declare parameters; everything else is acausal equations over port members, locals, and outputs.
+When the library lacks a device — or you want your own correlation inside one — define a component with \`function [ports] = name(parameters)\`. Add \`port(...)\` lines for its ports; the remaining lines are acausal equations over port members, locals, and outputs.
 
 \`\`\`run
-COMPONENT Heater(in, out)
-  PARAM fluid$, Q
+function [in, out] = Heater(fluid$=Water, Q=50000 [W])
+  port(in)
+  port(out)
   out.mdot = in.mdot
   out.P    = in.P
   out.h    = in.h + Q / in.mdot
   T_out    = Temperature(fluid$, P=out.P, h=out.h)   { named output }
-END
+end
 
 Source SUP(fluid$=Water, mdot=0.5 [kg/s], P=200000 [Pa], T=290 [K])
 Heater H1(fluid$=Water, Q=50000 [W])
@@ -675,8 +676,8 @@ T_supply = H1.T_out          { read the named output }
 The rules:
 
 - **Ports** carry whatever members your equations reference. Use \`(P, mdot, h)\` members and the port is a fluid port; use \`(T, Qdot)\` and it is a heat port — domain inference is automatic (see *Domains & Fluid Families*). A port referenced only as \`port.sig\` becomes a causal **signal** port: one writer, any readers — use one for every command input rather than pinning a component's internals from outside.
-- **Parameters** — a trailing \`$\` marks a string parameter (\`fluid$\` is special: it names the stream's fluid for property calls and per-port fluid inference). \`PARAM x = value\` gives *your* component a default; the standard library deliberately never uses them.
-- **Locals and outputs** — any bare name in the body is instance-private (auto-namespaced, like \`MODULE\` locals). Reading it from outside as \`inst.name\` makes it a named output.
+- **Parameters** — a trailing \`$\` marks a string parameter (\`fluid$\` is special: it names the stream's fluid for property calls and per-port fluid inference). Defaults live directly in the function header.
+- **Locals and outputs** — any bare name in the body is instance-private (auto-namespaced). Reading it from outside as \`inst.name\` makes it a named output.
 - **Fluid family** — a component for a non-default family opts in with \`PARAM domain$ = gas\` (or \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`), so the connector guard protects your lines too.
 - **Composition** — a component body may instantiate other components and \`connect\` them: build a subsystem once, stamp it many times.
 - **Time** — a body may reference the reserved global \`time\` (never namespaced) to build time-driven behavior; the \`DYNAMIC\` integrators pin it, and a steady document sets \`time = 0\` explicitly.
@@ -689,8 +690,9 @@ The rules:
 Split fidelity levels with \`VARIANT\` blocks. Equations outside any variant are shared; each variant adds its own, and \`REQUIRE\` names the parameters it validates:
 
 \`\`\`
-COMPONENT MyFan(in, out)
-  PARAM fluid$, model$ = simple
+function [in, out] = MyFan(fluid$=Air, model$=simple)
+  port(in)
+  port(out)
   out.mdot = in.mdot                  { shared by every variant }
   VARIANT simple
     out.P = in.P + 250
@@ -698,7 +700,7 @@ COMPONENT MyFan(in, out)
   VARIANT curve REQUIRE dP0, kQ
     out.P = in.P + dP0 - kQ * in.mdot^2
   END
-END
+end
 \`\`\`
 
 \`MyFan F1(fluid$=Air, model$=curve, dP0=300, kQ=1.5e4)\` selects and validates the \`curve\` body.
@@ -762,9 +764,9 @@ END
 The result is an ordinary set of matrices, so the whole control toolbox applies directly:
 
 \`\`\`
-CALL ss2tf(A, B, C, D : num, den)          { transfer function of the plant }
-CALL bode(num, den, omega : mag, phase)    { frequency response }
-CALL lqr(A, B, Q_w, R_w : K)               { optimal state feedback }
+[num, den] = ss2tf(A, B, C, D)          { transfer function of the plant }
+[mag, phase] = bode(num, den, omega)    { frequency response }
+[K] = lqr(A, B, Q_w, R_w)               { optimal state feedback }
 \`\`\`
 
 Close the loop back in the time domain with controller components (\`PIThermostat\` and friends) inside the same \`DYNAMIC\` network — design in the frequency domain, verify in the transient, all in one document.
@@ -1230,7 +1232,7 @@ After a solve, the **REPL terminal** (a dockable console window) holds the whole
 Three things make it more than a calculator:
 
 - **Implicit solve** — type an equation with one unknown and the REPL solves it on the spot.
-- **The CALL library** — eigenvalues, Bode data, partial fractions: \`CALL bode(num, den, omega : mag, phase)\` works interactively, with output sizes inferred for you.
+- **The CALL library** — eigenvalues, Bode data, partial fractions: \`[mag, phase] = bode(num, den, omega)\` works interactively, with output sizes inferred for you.
 - **Symbolic CAS** — \`Factor(x^2 - 1)\`, \`Apart(...)\`, \`Laplace(...)\` return transformed expressions (REPL-only).
 
 The full command set is on the *REPL Terminal & Workspace* page. One step left: components.
@@ -1318,10 +1320,10 @@ Inverse(A)   Transpose(A)   Dot(u, v)
 ## The CALL library (auto-sized outputs)
 The full \`CALL\` procedure library (eigenvalues, control-systems analysis, partial fractions, decompositions) runs in the REPL. **Output lengths are sized automatically from the inputs**, so bare output names work — no \`[1:n]\` annotation:
 \`\`\`
-CALL Eigenvalues(A : lambda)            { lambda = [2 3] }
-CALL Routh(den : nRHP, stable)
-CALL residue(num, den : rr, ri, pr, pi, k)
-CALL Bode(num, den, omega : mag, phase)
+[lambda] = Eigenvalues(A)            { lambda = [2 3] }
+[nRHP, stable] = Routh(den)
+[rr, ri, pr, pi, k] = residue(num, den)
+[mag, phase] = Bode(num, den, omega)
 \`\`\`
 Only genuinely value-dependent counts take an explicit size: the finite-zero counts of \`zero\`/\`tf2zp\` (e.g. \`zr[1:2]\`), and the root-locus sweep resolution of \`rlocus\` (defaults to 100 points). This auto-sizing applies in the editor document too.
 
@@ -1881,15 +1883,15 @@ x[1:3] = SolveLinear(A[1:3,1:3], b[1:3])
   "tools-overview": `These are the tools around the editor that make modeling faster: a dockable **REPL** console that evaluates expressions against the last solved session (with the full \`CALL\` library and symbolic CAS), the **keyboard shortcuts** for Solve/Check, the **Markdown report** system that weaves live values and plots into a formatted document, and the **Graph Digitizer & Curve Fit** tools that turn a chart image or a table into a fitted equation.`,
   "functions": `# Custom Functions & Procedures
 
-Most of your model is declarative — equations in any order, solved simultaneously. \`FUNCTION\` and \`PROCEDURE\` are for the parts that need **sequential, imperative** logic (loops, conditionals, step-by-step algorithms). Inside them you use \`:=\` for assignment, just like Python or other array languages.
+Most of your model is declarative — equations in any order, solved simultaneously. \`FUNCTION\` is for the parts that need **sequential, imperative** logic (loops, conditionals, step-by-step algorithms). Inside it you use \`:=\` for assignment, just like Python or other array languages.
 
 ## Functions
 A \`FUNCTION\` returns one or more values. Assign the return value(s) with \`:=\`.
 - **Single output** — assign the function's own name:
 \`\`\`
-FUNCTION poly_fit(x)
-  poly_fit := 0.5 * x^2 + 2 * x + 1
-END
+function y = poly_fit(x)
+  y := 0.5 * x^2 + 2 * x + 1
+end
 
 y = poly_fit(3)          { y = 9.5 }
 \`\`\`
@@ -1906,20 +1908,20 @@ Discard an output you don't need with \`~\`, or simply leave off trailing output
 \`\`\`
 [quotient, ~] = DivMod(17, 5)   { quotient only }
 \`\`\`
-The same \`[ … ] = name( … )\` destructuring works for built-in multi-output \`CALL\` functions too — e.g. \`[A, B, C, D] = tf2ss(num, den)\`. See *Control Systems & Symbolic CAS → Multi-Output Functions*.
+The same \`[ … ] = name( … )\` destructuring works for built-in multi-output functions too — e.g. \`[A, B, C, D] = tf2ss(num, den)\`. See *Control Systems & Symbolic CAS → Multi-Output Functions*.
 
-## Procedures
-A \`PROCEDURE\` is the same idea with inputs and outputs separated by a colon. Call it with \`CALL\`:
+## Ordered functions
+An ordered function uses \`:=\` for sequential assignments and declares its output in the header:
 \`\`\`
-PROCEDURE heat_transfer(T1, T2 : Q_dot)
+function Q_dot = heat_transfer(T1, T2)
   Q_dot := 0.8 * 12 * (T1 - T2) / 0.25
-END
+end
 
-CALL heat_transfer(100, 20 : heat_loss)
+heat_loss = heat_transfer(100, 20)
 \`\`\`
 
-## Control flow inside functions & procedures
-Sequential structures work inside function/procedure bodies (not in the declarative top level):
+## Control flow inside functions
+Sequential structures work inside function bodies (not in the declarative top level):
 - **Conditional:** \`IF condition THEN ... ELSE ... END\`
 - **While:** \`WHILE condition DO ... END\`
 - **Repeat:** \`REPEAT ... UNTIL condition\`
@@ -2022,27 +2024,27 @@ current_index = TableRun#()
 \`\`\`
 
 [Related: optimization, lookup-tables, plot-code]`,
-  "modules": `# Modular Submodels (MODULE)
+  "modules": `# Modular Submodels (Equation Functions)
 
-A \`MODULE\` is a reusable **declarative** sub-system — a named bag of equations solved simultaneously with the rest of your model. Unlike a \`FUNCTION\`, a module's equations can be solved in **either direction**: a variable you pass in as an output one call can be passed in as an input the next.
+A function with equations is a reusable **declarative** sub-system — a named bag of equations solved simultaneously with the rest of your model. Its equations can be solved in **either direction**: a variable you pass in as an output one call can be passed in as an input the next.
 
 ## Why use a module?
-- Encapsulate a recurring sub-model (a heat exchanger, a pipe segment, a pump) once and \`CALL\` it many times.
+- Encapsulate a recurring sub-model (a heat exchanger, a pipe segment, a pump) once and call it many times.
 - Reuse the same equations whether you're sizing (unknown is an output) or rating (unknown is an input).
 
 ## Example
 \`\`\`
-MODULE pipe_flow(D, Q : dP)
+function dP = pipe_flow(D, Q)
   V  = Q / (pi# / 4 * D^2)
   dP = 0.02 * (100 / D) * (1000 * V^2 / 2)
-END
+end
 
-CALL pipe_flow(D1, Q1 : dP1)     { rating:  find dP1 from D1, Q1 }
-CALL pipe_flow(D2, Q2 : dP2)     { sizing:  find Q2  from D2, dP2 }
+[dP1] = pipe_flow(D1, Q1)     { rating:  find dP1 from D1, Q1 }
+[dP2] = pipe_flow(D2, Q2)     { sizing:  find Q2  from D2, dP2 }
 \`\`\`
-Both calls use the *same* module — frees figures out which variable is unknown in each.
+Both calls use the *same* function — frees figures out which variable is unknown in each.
 
-> **Module vs. function:** a \`MODULE\` is essentially a multi-output \`FUNCTION\` whose body is **equations** (\`=\`, solved in any direction) instead of sequential assignments (\`:=\`, one-way). The bracket call form works here too: \`[dP1] = pipe_flow(D1, Q1)\`.
+> **Equation vs. ordered function:** an equation function uses \`=\` for relations solved in any direction; an ordered function uses \`:=\` for one-way calculations.
 
 [Related: functions, prog-overview, arrays]`,
   "symbolic-cas": `# Control Systems & Symbolic CAS
@@ -2084,7 +2086,7 @@ When you don't want to write the decomposition template by hand — or the poles
 \`\`\`
 num = [1, 3]          # s + 3
 den = [1, 3, 2]       # s^2 + 3s + 2
-CALL residue(num[1:2], den[1:3] : r_r[1:2], r_i[1:2], p_r[1:2], p_i[1:2], k)
+[r_r, r_i, p_r, p_i, k] = residue(num[1:2], den[1:3])
 \`\`\`
 This yields poles \`p = -2, -1\` with residues \`r = -1, 2\` (and \`k = 0\`), so the inverse Laplace transform is \`y(t) = r_r[1]*exp(p_r[1]*t) + r_r[2]*exp(p_r[2]*t)\`. Residues and poles are complex (real/imag pairs) and sorted together, so \`r_r[i]\`/\`r_i[i]\` always pairs with \`p_r[i]\`/\`p_i[i]\`. A bi-proper \`num/den\` (equal degree) puts its constant term in \`k\`.
 
@@ -2092,7 +2094,7 @@ This yields poles \`p = -2, -1\` with residues \`r = -1, 2\` (and \`k = 0\`), so
 \`\`\`
 num = [1]
 den = [1, 2, 1, 0]   # 1 / (s (s+1)^2)
-CALL residue(num[1:1], den[1:4] : r_r[1:3], r_i[1:3], p_r[1:3], p_i[1:3], ord[1:3], k)
+[r_r, r_i, p_r, p_i, ord, k] = residue(num[1:1], den[1:4])
 \`\`\`
 gives \`1/s - 1/(s+1) - 1/(s+1)^2\`, i.e. the terms \`(p=-1, ord=1, r=-1)\`, \`(p=-1, ord=2, r=-1)\`, \`(p=0, ord=1, r=1)\`. The time-domain term for order \`k\` is \`r · t^(k-1)/(k-1)! · exp(p·t)\`. The 5-output form raises an error if the system has repeated poles, since they cannot be disambiguated without \`ord\`.
 
@@ -2134,12 +2136,12 @@ Use \`CALL\` dispatches to convert between representations. The solver automatic
 
 ## Multi-Output Functions (array-language-style)
 
-Every multi-output \`CALL\` function below also has a **destructuring** form — the same syntax array languages use. Write the outputs in brackets on the left and call the function on the right; it is exactly equivalent to the \`CALL name(inputs : outputs)\` form, with output sizes still inferred:
+Every multi-output \`CALL\` function below also has a **destructuring** form — the same syntax array languages use. Write the outputs in brackets on the left and call the function on the right; it is exactly equivalent to the \`[outputs] = name(inputs)\` form, with output sizes still inferred:
 
 \`\`\`
 { These two lines are identical }
 [A, B, C, D] = tf2ss(num, den)
-CALL tf2ss(num, den : A, B, C, D)
+[A, B, C, D] = tf2ss(num, den)
 \`\`\`
 
 **Discard outputs with \`~\`.** Use a tilde in any slot you don't need — that output is computed but never assigned to a variable, so it never appears in the Solution window:
@@ -2159,22 +2161,22 @@ Both \`~\` and trailing omission work in the \`CALL … : …\` colon form too. 
 
 ### 1. State Space to Transfer Function: ss2tf
 \`\`\`
-CALL ss2tf(A, B, C, D : num[1:3], den[1:3])
+[num, den] = ss2tf(A, B, C, D)
 \`\`\`
 
 ### 2. Transfer Function to State Space: tf2ss
 \`\`\`
-CALL tf2ss(num, den : A[1:2,1:2], B[1:2], C[1:2], D)
+[A, B, C, D] = tf2ss(num, den)
 \`\`\`
 
 ### 3. Zero-Pole-Gain to Transfer Function: zp2tf
 \`\`\`
-CALL zp2tf(zr, zi, pr, pi, k : num[1:3], den[1:3])
+[num, den] = zp2tf(zr, zi, pr, pi, k)
 \`\`\`
 
 ### 4. Transfer Function to Zero-Pole-Gain: tf2zp
 \`\`\`
-CALL tf2zp(num, den : zr[1:1], zi[1:1], pr[1:2], pi[1:2], k)
+[zr, zi, pr, pi, k] = tf2zp(num, den)
 \`\`\`
 
 ## Model Interconnection
@@ -2187,30 +2189,30 @@ For two systems $G_1(s)$ (of order $n_1$) and $G_2(s)$ (of order $n_2$), the con
 Connects $G_1(s)$ and $G_2(s)$ in series: $G(s) = G_1(s) \\cdot G_2(s)$.
 \`\`\`
 # Transfer Function series:
-CALL series(num1, den1, num2, den2 : num[1:3], den[1:3])
+[num, den] = series(num1, den1, num2, den2)
 
 # State Space series:
-CALL series(A1, B1, C1, D1, A2, B2, C2, D2 : A[1:3,1:3], B[1:3], C[1:3], D)
+[A, B, C, D] = series(A1, B1, C1, D1, A2, B2, C2, D2)
 \`\`\`
 
 ### 2. Parallel Connection: parallel
 Connects $G_1(s)$ and $G_2(s)$ in parallel: $G(s) = G_1(s) + G_2(s)$.
 \`\`\`
 # Transfer Function parallel:
-CALL parallel(num1, den1, num2, den2 : num[1:3], den[1:3])
+[num, den] = parallel(num1, den1, num2, den2)
 
 # State Space parallel:
-CALL parallel(A1, B1, C1, D1, A2, B2, C2, D2 : A[1:3,1:3], B[1:3], C[1:3], D)
+[A, B, C, D] = parallel(A1, B1, C1, D1, A2, B2, C2, D2)
 \`\`\`
 
 ### 3. Feedback Connection: feedback
 Connects $G_1(s)$ (forward path) and $G_2(s)$ (feedback path) in a closed loop.
 \`\`\`
 # Transfer Function feedback:
-CALL feedback(num1, den1, num2, den2, sign : num[1:3], den[1:3])
+[num, den] = feedback(num1, den1, num2, den2, sign)
 
 # State Space feedback:
-CALL feedback(A1, B1, C1, D1, A2, B2, C2, D2, sign : A[1:3,1:3], B[1:3], C[1:3], D)
+[A, B, C, D] = feedback(A1, B1, C1, D1, A2, B2, C2, D2, sign)
 \`\`\`
 - \`sign\` is optional and defaults to \`1.0\` (negative feedback, i.e., $T(s) = \\frac{G_1}{1 + G_1 G_2}$). Use \`-1.0\` for positive feedback.
 
@@ -2219,7 +2221,7 @@ CALL feedback(A1, B1, C1, D1, A2, B2, C2, D2, sign : A[1:3,1:3], B[1:3], C[1:3],
 ### 1. Padé Approximation: pade
 Generates the numerator and denominator polynomials of a Padé rational approximation of a dead time delay $T_d$ of a given \`order\`. For a Padé approximation of order $m$, the output polynomials have $m+1$ coefficients (descending powers of $s$).
 \`\`\`
-CALL pade(Td, order : num_delay[1:3], den_delay[1:3])
+[num_delay, den_delay] = pade(Td, order)
 \`\`\`
 
 ## State-Space Analysis & Transformations
@@ -2229,25 +2231,25 @@ Use the following dispatches to compute controllability and observability, verif
 ### 1. Controllability Matrix: ctrb
 Computes the controllability matrix $C_{trb} = [B, A B, A^2 B, \\ldots, A^{n-1} B]$ for state-space matrices A ($n \\times n$) and B ($n \\times 1$).
 \`\`\`
-CALL ctrb(A, B : Co[1:3,1:3])
+[Co] = ctrb(A, B)
 \`\`\`
 
 ### 2. Observability Matrix: obsv
 Computes the observability matrix $O_{bsv} = [C; C A; C A^2; \\ldots; C A^{n-1}]$ for state-space matrices A ($n \\times n$) and C ($1 \\times n$).
 \`\`\`
-CALL obsv(A, C : Ob[1:3,1:3])
+[Ob] = obsv(A, C)
 \`\`\`
 
 ### 3. Matrix Rank: rank
 Computes the numerical rank of a matrix $M$ using Singular Value Decomposition (SVD) tolerance comparisons.
 \`\`\`
-CALL rank(M : r)
+[r] = rank(M)
 \`\`\`
 
 ### 4. Similarity Transformation: ss2ss
 Applies similarity transformation matrix $P$ to a state-space system (A, B, C, D) such that $x = P z$, yielding transformed matrices $A_n = P^{-1} A P, B_n = P^{-1} B, C_n = C P, D_n = D$.
 \`\`\`
-CALL ss2ss(A, B, C, D, P : An[1:3,1:3], Bn[1:3], Cn[1:3], Dn)
+[An, Bn, Cn, Dn] = ss2ss(A, B, C, D, P)
 \`\`\`
 
 ## Frequency Analysis & Poles/Zeros
@@ -2257,47 +2259,47 @@ Use the following \`CALL\` dispatches to analyze system poles, zeros, Bode/Nyqui
 ### 1. Poles: pole
 Computes system poles (real part \`pr\`, imaginary part \`pi\`) for a transfer function or a state-space matrix \`A\`.
 \`\`\`
-CALL pole(num, den : pr[1:2], pi[1:2])
+[pr, pi] = pole(num, den)
 # OR
-CALL pole(A : pr[1:2], pi[1:2])
+[pr, pi] = pole(A)
 \`\`\`
 
 ### 2. Zeros: zero
 Computes system zeros (real part \`zr\`, imaginary part \`zi\`) for a transfer function or a state-space system \`(A, B, C, D)\`.
 \`\`\`
-CALL zero(num, den : zr[1:1], zi[1:1])
+[zr, zi] = zero(num, den)
 # OR
-CALL zero(A, B, C, D : zr[1:1], zi[1:1])
+[zr, zi] = zero(A, B, C, D)
 \`\`\`
 
 ### 3. Bode Frequency Response: bode
 Computes magnitude (in dB) and unwrapped phase (in degrees) at a vector of frequencies \`omega\`.
 \`\`\`
-CALL bode(num, den, omega : mag[1:50], phase[1:50])
+[mag, phase] = bode(num, den, omega)
 # OR
-CALL bode(A, B, C, D, omega : mag[1:50], phase[1:50])
+[mag, phase] = bode(A, B, C, D, omega)
 \`\`\`
 
 ### 4. Nyquist Frequency Response: nyquist
 Computes real and imaginary parts at a vector of frequencies \`omega\`.
 \`\`\`
-CALL nyquist(num, den, omega : real[1:50], imag[1:50])
+[real, imag] = nyquist(num, den, omega)
 # OR
-CALL nyquist(A, B, C, D, omega : real[1:50], imag[1:50])
+[real, imag] = nyquist(A, B, C, D, omega)
 \`\`\`
 
 ### 5. Gain and Phase Margins: margin
 Computes gain margin \`gm\` (in dB), phase margin \`pm\` (in degrees), gain crossover frequency \`w_cg\`, and phase crossover frequency \`w_cp\`.
 \`\`\`
-CALL margin(num, den : gm, pm, w_cg, w_cp)
+[gm, pm, w_cg, w_cp] = margin(num, den)
 # OR
-CALL margin(A, B, C, D : gm, pm, w_cg, w_cp)
+[gm, pm, w_cg, w_cp] = margin(A, B, C, D)
 \`\`\`
 
 ### 6. Root Locus Trajectories: rlocus
 Computes closed-loop s-plane poles over a swept range of $M$ gain values \`K\`. Outputs are the gain values \`K\` (length \`M\`), and the closed-loop pole real parts \`cpr\` and imaginary parts \`cpi\` (matrices of size \`M x N\` where \`N\` is the order of the open-loop denominator).
 \`\`\`
-CALL rlocus(num, den : K[1:100], cpr[1:100, 1:4], cpi[1:100, 1:4])
+[K, cpr, cpi] = rlocus(num, den)
 \`\`\`
 To plot the root locus s-plane trajectories along with open-loop poles and zeros, use the \`rootlocus\` plot kind:
 \`\`\`
@@ -2314,16 +2316,16 @@ END
 Runs the Routh-Hurwitz test on a characteristic polynomial \`den\` (descending powers) and reports \`nRHP\`, the number of closed-loop poles in the right half-plane (sign changes in the first column of the Routh array), and \`stable\` (\`1\` when \`nRHP = 0\`, else \`0\`). The two textbook special cases are handled automatically: a zero in the first column is resolved with the epsilon method, and an entire row of zeros is replaced by the derivative of the auxiliary polynomial.
 \`\`\`
 den = [1, 1, 2, 8]
-CALL routh(den[1:4] : nRHP, stable)   # nRHP = 2, stable = 0
+[nRHP, stable] = routh(den[1:4])   # nRHP = 2, stable = 0
 \`\`\`
 To find the range of a free gain \`K\` for stability, sweep \`K\` over a \`PARAMETRIC\` table and read where \`nRHP\` drops to \`0\`.
 
 ### 8. Nichols Chart Data: nichols
 Computes the open-loop magnitude (dB) and unwrapped phase (deg) at a vector of frequencies \`omega\` — the same data as \`bode\`, arranged for a Nichols chart.
 \`\`\`
-CALL nichols(num, den, omega : mag[1:50], phase[1:50])
+[mag, phase] = nichols(num, den, omega)
 # OR
-CALL nichols(A, B, C, D, omega : mag[1:50], phase[1:50])
+[mag, phase] = nichols(A, B, C, D, omega)
 \`\`\`
 Plot the result with the dedicated **\`nichols\`** plot kind, which draws the locus on the standard Nichols grid (constant closed-loop magnitude *M* and phase *N* contours) with the −1 critical point marked:
 \`\`\`
@@ -2339,14 +2341,14 @@ Computes the steady-state (static) error constants for an open-loop \`G(s) = num
 \`\`\`
 num = [0, 0, 20]
 den = [1, 6, 5]            # type 0 system
-CALL errorconst(num[1:3], den[1:3] : Kp, Kv, Ka)   # Kp = 4, Kv = 0, Ka = 0
+[Kp, Kv, Ka] = errorconst(num[1:3], den[1:3])   # Kp = 4, Kv = 0, Ka = 0
 \`\`\`
 
 ### 10. Signal-Flow Graphs: mason
 Computes the overall transmittance of a scalar signal-flow graph by **Mason's gain formula**. \`G\` is a square node-gain matrix where \`G[i,j]\` is the branch gain from node \`i\` to node \`j\` (\`0\` means no branch); \`source\` and \`sink\` are 1-based node numbers. The solver enumerates the forward paths and loops, builds the graph determinant from the non-touching loop combinations, and returns \`T = Y(sink)/X(source)\`.
 \`\`\`
 G = [0, 2, 0; 0, 0, 3; 0, 0.5, 0]   # 1->2 (2), 2->3 (3), feedback 3->2 (0.5)
-CALL mason(G[1:3,1:3], 1, 3 : T)    # T = 6/(1 - 1.5) = -12
+[T] = mason(G[1:3,1:3], 1, 3)    # T = 6/(1 - 1.5) = -12
 \`\`\`
 For transfer-function-valued block diagrams, use the \`series\`/\`parallel\`/\`feedback\` interconnection functions instead, which carry full \`num/den\` polynomials.
 
@@ -2360,13 +2362,13 @@ Discretizes \`num/den\` at sample time \`Ts\`. The method is a quoted \`'tustin'
 num = [0, 2]
 den = [1, 2]
 Ts = 0.1
-CALL c2d(num[1:2], den[1:2], Ts, 'zoh' : numz[1:2], denz[1:2])
+[numz, denz] = c2d(num[1:2], den[1:2], Ts, 'zoh')
 \`\`\`
 
 ### 2. Discrete to Continuous: d2c
 Inverts the bilinear mapping back to continuous time using the inverse Tustin transform (\`'tustin'\`).
 \`\`\`
-CALL d2c(numz[1:2], denz[1:2], Ts, 'tustin' : num[1:2], den[1:2])
+[num, den] = d2c(numz[1:2], denz[1:2], Ts, 'tustin')
 \`\`\`
 
 ## Time-Domain Responses
@@ -2376,31 +2378,31 @@ Time responses are integrated through the same tested ODE solver used by \`DYNAM
 ### 1. Step Response: step
 Unit step response \`y(t)\` (input \`u(t) = 1\`, zero initial state).
 \`\`\`
-CALL step(num, den, t : y[1:N])
+[y] = step(num, den, t)
 # OR
-CALL step(A, B, C, D, t : y[1:N])
+[y] = step(A, B, C, D, t)
 \`\`\`
 
 ### 2. Impulse Response: impulse
 Impulse response \`y(t) = C e^{At} B\` (the direct-feedthrough delta term from a non-zero \`D\` is omitted, as it cannot be represented on a sampled grid).
 \`\`\`
-CALL impulse(num, den, t : y[1:N])
+[y] = impulse(num, den, t)
 # OR
-CALL impulse(A, B, C, D, t : y[1:N])
+[y] = impulse(A, B, C, D, t)
 \`\`\`
 
 ### 3. Forced Response: lsim
 Response to an arbitrary input signal \`u\`, linearly interpolated between samples. The input \`u\` and time \`t\` must have the same length \`N\`.
 \`\`\`
-CALL lsim(num, den, u, t : y[1:N])
+[y] = lsim(num, den, u, t)
 # OR
-CALL lsim(A, B, C, D, u, t : y[1:N])
+[y] = lsim(A, B, C, D, u, t)
 \`\`\`
 
 ### 4. Transient Response Metrics: stepinfo
 Extracts transient response metrics (Rise Time \`Tr\` from 10% to 90%, Peak Time \`Tp\`, Settling Time \`Ts\` using the 2% criterion, and Percent Overshoot \`OS\`) from numerical step response outputs \`y\` at time points \`t\`.
 \`\`\`
-CALL stepinfo(t, y : Tr, Tp, Ts, OS)
+[Tr, Tp, Ts, OS] = stepinfo(t, y)
 \`\`\`
 
 ## Controller Design
@@ -2410,19 +2412,19 @@ State-feedback and PID design solvers. Numeric methods (Riccati / eigenvalues) k
 ### 1. LQR Optimal Gain: lqr
 Continuous-time linear-quadratic regulator. Returns the optimal state-feedback gain \`K\` that minimizes \`∫ (x'Qx + u'Ru) dt\`, computed by solving the algebraic Riccati equation via the matrix sign function of the Hamiltonian. Single-input form: \`A\` and \`Q\` are \`n×n\`, \`B\` is an \`n\`-vector, \`R\` is a scalar, and \`K\` is an \`n\`-vector. The closed-loop \`A - B K\` is stable.
 \`\`\`
-CALL lqr(A, B, Q, R : K[1:n])
+[K] = lqr(A, B, Q, R)
 \`\`\`
 
 ### 2. Pole Placement: place
 SISO pole placement by Ackermann's formula. Returns the gain \`K\` that relocates the poles of \`A - B K\` to the requested locations, supplied as real/imaginary arrays \`pr\`, \`pi\` (each length \`n\`, complex poles in conjugate pairs).
 \`\`\`
-CALL place(A, B, pr, pi : K[1:n])
+[K] = place(A, B, pr, pi)
 \`\`\`
 
 ### 3. PID Auto-Tuning: pidtune
 Loop-shaping tuning of a P/PI/PID controller for a SISO plant \`num/den\`. The controller is designed so the open loop crosses over (gain = 1) at frequency \`wc\` with a 60° phase-margin target (a common default). The type is a quoted \`'P'\`, \`'PI'\`, or \`'PID'\`; unused gains are returned as \`0\`. A pure \`P\` controller only sets the crossover — it cannot reshape phase.
 \`\`\`
-CALL pidtune(num, den, 'PID', wc : Kp, Ki, Kd)
+[Kp, Ki, Kd] = pidtune(num, den, 'PID', wc)
 \`\`\`
 
 [Related: matrices-sys, plot-code, dynamic-ode]`,
@@ -2482,7 +2484,7 @@ num = [1]
 den = [m, c, k]
 omega[1:400] = linspace(0.5, 100, 400)
 
-CALL bode(num, den, omega : mag, phase)
+[mag, phase] = bode(num, den, omega)
 
 PLOT 'MSD Bode'
   kind = bode
@@ -2525,7 +2527,7 @@ E_final = FinalValue('energy')
 num = [1]
 den = [m, c, k]
 omega[1:400] = linspace(0.5, 100, 400)
-CALL bode(num, den, omega : mag, phase)
+[mag, phase] = bode(num, den, omega)
 
 PLOT 'MSD Bode'
   kind = bode
@@ -2537,7 +2539,7 @@ END
 
 ## Go further
 
-- Step and impulse responses: \`CALL step(num, den, t : y)\` on a time vector, plotted with the \`xy\` kind.
+- Step and impulse responses: \`[y] = step(num, den, t)\` on a time vector, plotted with the \`xy\` kind.
 - Build the same oscillator from mechanical components (\`TransMass\`, a spring, a damper) and extract its state space with \`LINEARIZE\` — see *From Plant to Controller*.
 - Close the loop: pick gains with \`pidtune\` or \`lqr\` and verify with \`pole\` and \`margin\`.
 
@@ -2699,7 +2701,7 @@ $$ H(s) = \\frac{1}{L C\\,s^2 + R C\\,s + 1} $$
 num = [1]
 den = [L * C, R * C, 1]
 omega[1:400] = linspace(100, 30000, 400)
-CALL bode(num, den, omega : mag, phase)
+[mag, phase] = bode(num, den, omega)
 
 PLOT 'RLC Low-Pass Bode'
   kind = bode
@@ -2736,7 +2738,7 @@ gain  = V_out / V_s
 num = [1]
 den = [L * C, R * C, 1]
 omega[1:400] = linspace(100, 30000, 400)
-CALL bode(num, den, omega : mag, phase)
+[mag, phase] = bode(num, den, omega)
 
 PLOT 'RLC Low-Pass Bode'
   kind = bode

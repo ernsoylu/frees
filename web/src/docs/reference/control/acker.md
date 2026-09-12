@@ -17,7 +17,7 @@ locations `pr ± j·pi`. It is the explicit closed-form counterpart of
 ## Syntax
 
 ```
-CALL acker(A, B, pr, pi : K)
+[K] = acker(A, B, pr, pi)
 K = acker(A, B, pr, pi)
 ```
 

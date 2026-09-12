@@ -9,6 +9,8 @@
 //! ```text
 //! frees-cli solve [FILE]     solve a document; JSON on stdout
 //! frees-cli check [FILE]     structural check only; JSON on stdout
+//! frees-cli migrate [FILE]   convert unambiguous legacy syntax to version 2
+//! frees-cli analyze OP ...   run a registered analysis operation
 //! frees-cli version          engine version
 //! ```
 //!
@@ -33,6 +35,9 @@ frees-cli — headless frees engine
 USAGE:
     frees-cli solve [FILE]    Solve a document and print the variables as JSON
     frees-cli check [FILE]    Check syntax and structural solvability only
+    frees-cli migrate [FILE]  Convert unambiguous legacy syntax to version 2
+    frees-cli analyze OP [FILE] --request JSON_OR_FILE
+                              Run sensitivity, fitting, optimization, or sweep
     frees-cli version         Print the engine version
 
 Reads stdin when FILE is omitted or is `-`.
@@ -90,6 +95,29 @@ fn run() -> Result<ExitCode, String> {
             let source = read_source(path)?;
             Ok(emit(check_json(&source)))
         }
+        "migrate" => {
+            let path = parse_path_only(&args[1..], "migrate")?;
+            let source = read_source(path)?;
+            let migrated =
+                frees_core::migrate_legacy_source(&source).map_err(|error| error.to_string())?;
+            print!("{migrated}");
+            Ok(ExitCode::SUCCESS)
+        }
+        "analyze" => {
+            let operation = args
+                .get(1)
+                .ok_or_else(|| "`analyze` needs an operation name".to_string())?;
+            let (path, _settings, request) = parse_solve_args(&args[2..])?;
+            let request = request.ok_or_else(|| "`analyze` requires --request".to_string())?;
+            let source = read_source(path)?;
+            let response = analyze(operation, &source, &request)?;
+            let value: Value = serde_json::from_str(&response)
+                .map_err(|error| format!("analysis returned invalid JSON: {error}"))?;
+            let ok = value
+                .get("error")
+                .is_none_or(|error| error.is_null() || error.as_str() == Some(""));
+            Ok(emit((value, ok)))
+        }
         other => Err(format!("unknown command `{other}`. Try `frees-cli help`.")),
     }
 }
@@ -101,6 +129,21 @@ fn run() -> Result<ExitCode, String> {
 /// `(payload, ok)` — the JSON to print and whether the engine accepted the
 /// document.
 type Outcome = (Value, bool);
+
+fn analyze(operation: &str, source: &str, request: &str) -> Result<String, String> {
+    match operation.to_ascii_lowercase().as_str() {
+        "solve-table" | "sweep" => Ok(frees::solve_table(source, request)),
+        "monte-carlo" | "montecarlo" => Ok(frees::monte_carlo(source, request)),
+        "sensitivity" => Ok(frees::sensitivity(source, request)),
+        "optimize" => Ok(frees::optimize(source, request)),
+        "optimize-multi" | "optimize_multi" => Ok(frees::optimize_multi(source, request)),
+        "curve-fit" | "curve_fit" => Ok(frees::curve_fit(request)),
+        "parameter-fit" | "parameter_fit" => Ok(frees::parameter_fit(request)),
+        "pid-tune" | "pid_tune" => Ok(frees::pid_tune(request)),
+        "extract-plant" | "extract_plant" => Ok(frees::extract_plant(request)),
+        other => Err(format!("unknown analysis operation `{other}`")),
+    }
+}
 
 fn solve_json(source: &str, settings: &SolverSettings) -> Outcome {
     match engine::solve(source, settings) {
@@ -206,6 +249,14 @@ fn solution_value(solution: &Solution) -> Value {
         },
         "iterations": solution.iterations,
         "diagnostics": diagnostics_value(&solution.diagnostics),
+        "registered_calls": solution
+            .registered_calls
+            .iter()
+            .map(|call| json!({
+                "binding": call.binding,
+                "operation": call.operation,
+            }))
+            .collect::<Vec<_>>(),
         // The golden dumper's `ode_tables` shape, key for key, so a suspected
         // transient divergence can be diffed straight against a fixture.
         "ode_tables": solution
@@ -247,6 +298,14 @@ fn check_value(report: &CheckReport) -> Value {
         "error_line": report.error_line,
         "errors": errors,
         "diagnostics": diagnostics_value(&report.diagnostics),
+        "registered_calls": report
+            .registered_calls
+            .iter()
+            .map(|call| json!({
+                "binding": call.binding,
+                "operation": call.operation,
+            }))
+            .collect::<Vec<_>>(),
     })
 }
 
@@ -416,6 +475,19 @@ mod tests {
     }
 
     #[test]
+    fn analyze_dispatches_curve_fit_through_the_shared_facade() {
+        let response = analyze(
+            "curve-fit",
+            "",
+            r#"{"model":"y = a*x+b","xVariable":"x","yVariable":"y","parameters":["a","b"],"xData":[0,1,2],"yData":[1,3,5]}"#,
+        )
+        .unwrap();
+        let value: Value = serde_json::from_str(&response).unwrap();
+        assert_eq!(value["success"], true, "{value}");
+        assert_eq!(value["parameterNames"], json!(["a", "b"]));
+    }
+
+    #[test]
     fn solve_emits_variables_blocks_and_iterations() {
         let (payload, ok) = solve_json("a = 2\nb = a * 3\n", &SolverSettings::default());
         assert!(ok);
@@ -478,12 +550,12 @@ mod tests {
     #[test]
     fn a_component_definition_with_no_instance_has_nothing_to_solve() {
         // Phase 6 removed the capability gate that used to refuse this as a
-        // ParseException. A `COMPONENT` template that is never instantiated
+        // ParseException. A component template that is never instantiated
         // contributes no equations, so the document is empty and the *solver*
         // says so. Verified against the oracle, message included: Java answers
         // `SolverException: "No equations to solve."` for this exact source.
         let (payload, ok) = solve_json(
-            "COMPONENT p(a)\n  a.T = 1\nEND\n",
+            "function [a] = p()\n  port(a)\n  a.T = 1\nend\n",
             &SolverSettings::default(),
         );
         assert!(!ok);

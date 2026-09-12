@@ -14,7 +14,7 @@ Applies an impulse response to a signal, or combines two kernels into one.
 ## Syntax
 
 ```
-CALL Convolve(a, b : c)
+[c] = Convolve(a, b)
 ```
 
 ## Description
@@ -38,7 +38,7 @@ $$ c_k = \sum_{i} a_i\, b_{k-i}, \qquad k = 0,\ \dots,\ m+n-2 $$
 ```
 a = [1, 2, 3]
 b = [4, 5]
-CALL Convolve(a, b : c)
+[c] = Convolve(a, b)
 ```
 
 **Expected:** `c = 4, 13, 22, 15`.
@@ -48,7 +48,7 @@ CALL Convolve(a, b : c)
 ```
 a = [1]
 b = [7, -2, 0.5]
-CALL Convolve(a, b : c)
+[c] = Convolve(a, b)
 ```
 
 **Expected:** `c = 7, -2, 0.5`.

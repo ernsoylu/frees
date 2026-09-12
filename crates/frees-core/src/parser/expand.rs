@@ -365,9 +365,10 @@ impl Flattener<'_> {
                 Statement::For {
                     var_name,
                     start,
+                    step,
                     end,
                     body,
-                } => self.flatten_for(var_name, start, end, body, loop_vars)?,
+                } => self.flatten_for(var_name, start, step.as_ref(), end, body, loop_vars)?,
                 Statement::Eq(eq) => {
                     self.flatten_eq(&eq.lhs, &eq.rhs, &eq.source_text, loop_vars, &mut shapes)?
                 }
@@ -475,6 +476,7 @@ impl Flattener<'_> {
         &mut self,
         var_name: &str,
         start: &Expr,
+        step: Option<&Expr>,
         end: &Expr,
         body: &[Statement],
         loop_vars: &Scope,
@@ -490,7 +492,25 @@ impl Flattener<'_> {
                  Reduce the loop bounds."
             )));
         }
-        let step: i64 = if start_int <= end_int { 1 } else { -1 };
+        let step: i64 = match step {
+            None => {
+                if start_int <= end_int {
+                    1
+                } else {
+                    -1
+                }
+            }
+            Some(expr) => {
+                let value = self.eval_index_expr(&self.expand_expr(expr, loop_vars)?, loop_vars)?;
+                if !value.is_finite() || value == 0.0 || value.fract() != 0.0 {
+                    return Err(parse_err("FOR range step must be a finite nonzero integer"));
+                }
+                value as i64
+            }
+        };
+        if (step > 0 && start_int > end_int) || (step < 0 && start_int < end_int) {
+            return Ok(());
+        }
         let var_name = var_name.to_ascii_lowercase();
         let mut i = start_int;
         loop {
@@ -3987,7 +4007,7 @@ fn log_range(var: &str, start: f64, count_raw: f64, stop: f64) -> Result<Vec<f64
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::parser::parse_document;
+    use crate::parser::parse_legacy_document as parse_document;
 
     fn expand(source: &str) -> Vec<Equation> {
         expand_document(&parse_document(source).expect("parse")).expect("expand")

@@ -17,7 +17,7 @@ Plotting `im` against `re` and applying the Nyquist criterion (encirclements of 
 ## Syntax
 
 ```
-CALL nyquist(num, den, omega : re, im)
+[re, im] = nyquist(num, den, omega)
 [re, im] = nyquist(num, den, omega)
 ```
 

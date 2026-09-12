@@ -24,12 +24,13 @@ Inside a component, a `map$`-style string parameter works directly — this is t
 feedforward/cam idiom the function exists for:
 
 ```
-COMPONENT CamFollower(shaft, rod)
-  PARAM prof$
+function [shaft, rod] = CamFollower(prof$)
+  port(shaft)
+  port(rod)
   lift    = prof$(theta)
   rod.vel = dtable(prof$, theta) * shaft.w   { chain rule: dl/dθ · dθ/dt }
   ...
-END
+end
 ```
 
 ## Description

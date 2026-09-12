@@ -14,9 +14,9 @@ Removes the slow drift from a measured series so the fluctuation you actually ca
 ## Syntax
 
 ```
-CALL Detrend(y : yd)
-CALL Detrend(y, 'linear' : yd)
-CALL Detrend(y, 'constant' : yd)
+[yd] = Detrend(y)
+[yd] = Detrend(y, 'linear')
+[yd] = Detrend(y, 'constant')
 ```
 
 ## Description
@@ -41,7 +41,7 @@ $$ m = \frac{\sum_{j} (j - \bar t)(y_j - \bar y)}{\sum_{j} (j - \bar t)^2}, \qqu
 
 ```
 T = [20.1, 20.4, 20.6, 21.0, 21.2, 21.5, 21.7, 22.0]
-CALL Detrend(T : ripple)
+[ripple] = Detrend(T)
 peaks = peakcount(0, 0, ripple)
 ```
 
@@ -51,7 +51,7 @@ The ~0.27 K per sample warming trend is removed; what is left is the measurement
 
 ```
 T = [20.1, 20.4, 20.6, 21.0]
-CALL Detrend(T, 'constant' : centred)
+[centred] = Detrend(T, 'constant')
 ```
 
 **Expected:** the mean of `centred` is 0 and the sample-to-sample slope is unchanged.

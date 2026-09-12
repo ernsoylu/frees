@@ -47,20 +47,47 @@ function findLocal(text: string, typeName: string): LocalComponent | undefined {
   return localComponentNames(text).find((c) => c.name.toLowerCase() === typeName.toLowerCase())
 }
 
+function localFunctionSignature(
+  text: string,
+  name: string,
+): { usage: string; detail: string } | null {
+  const re = /^\s*function\s+(?:\[[^\]]+\]|[A-Za-z_][\w$]*)\s*=\s*([A-Za-z_][\w$]*)\s*\(([^)]*)\)/gim
+  for (const match of text.matchAll(re)) {
+    if (match[1].toLowerCase() === name.toLowerCase()) {
+      return { usage: `${match[1]}(${match[2].trim()})`, detail: 'Local function definition' }
+    }
+  }
+  return null
+}
+
 /** User `COMPONENT` / `SUBSYSTEM` blocks: ports from the header, params from PARAM. */
 export function localComponentNames(text: string): LocalComponent[] {
   const out: LocalComponent[] = []
-  const re = /^\s*(?:COMPONENT|SUBSYSTEM)\s+(\w+)\s*\(([^)]*)\)/gim
+  const re =
+    /^\s*(?:(?:COMPONENT|SUBSYSTEM)\s+(\w+)\s*\(([^)]*)\)|function\s*\[([^\]]*)\]\s*=\s*(\w+)\s*\(([^)]*)\))/gim
   let m: RegExpExecArray | null
   while ((m = re.exec(text)) !== null) {
+    const name = m[1] ?? m[4]
+    const headerPorts = m[2] ?? m[3] ?? ''
+    const headerParams = m[5] ?? ''
+    if (!name) continue
     const after = text.slice(m.index + m[0].length)
     const end = after.search(/^\s*END\b/im)
     const params: string[] = []
-    for (const line of (end >= 0 ? after.slice(0, end) : after).split('\n')) {
+    const body = end >= 0 ? after.slice(0, end) : after
+    for (const line of body.split('\n')) {
       const param = /^\s*PARAM\s+(.+)$/i.exec(line)
       if (param) params.push(...paramNames(param[1]))
     }
-    out.push({ name: m[1], ports: paramNames(m[2]), params })
+    if (headerParams) params.push(...paramNames(headerParams))
+    const ports = paramNames(headerPorts)
+    for (const line of body.split('\n')) {
+      const port = /^\s*port\s*\(\s*([A-Za-z_][\w$]*)/i.exec(line)
+      if (port && !ports.some((value) => value.toLowerCase() === port[1].toLowerCase())) {
+        ports.push(port[1])
+      }
+    }
+    out.push({ name, ports, params })
   }
   return out
 }
@@ -70,11 +97,13 @@ export function localSignature(
   typeName: string,
 ): { usage: string; detail: string } | null {
   const local = findLocal(text, typeName)
-  if (!local) return null
-  return {
-    usage: `${local.name} Instance(${[...local.ports, ...local.params.map((p) => `${p}=`)].join(', ')})`,
-    detail: 'Local component definition',
+  if (local) {
+    return {
+      usage: `${local.name} Instance(${[...local.ports, ...local.params.map((p) => `${p}=`)].join(', ')})`,
+      detail: 'Local component definition',
+    }
   }
+  return localFunctionSignature(text, typeName)
 }
 
 function catalogArgs(typeName: string): { ports: string[]; params: string[] } | null {

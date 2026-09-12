@@ -133,46 +133,85 @@ Focus: Expand table data wrangling and plotting workflows (Phase 4.4 from earlie
 
 Focus: Implement the comprehensive language unification detailed in [`reports/SIMPLIFIED_SYNTAX_PROPOSAL.md`](file:///home/eren/homecloud/dev/frees-wasm/reports/SIMPLIFIED_SYNTAX_PROPOSAL.md). Unify equations and procedural algorithms under one `function` declaration, single/bracketed call syntax, explicit operators (`=` for equations, `:=` for ordered calculations, `==` for comparisons), and replace disparate block keywords (`CALL`, `MODULE`, `PROCEDURE`, `COMPONENT`) with registered domain calls.
 
-- [ ] **3.1 Stage U0: Language Contract, Callable Inventory & Migration Semantics**
+- [x] **3.1 Stage U0: Language Contract, Callable Inventory & Migration Semantics**
   - Formally freeze operator semantics, lexical scoping rules, type/value representations, and migration diagnostics as defined in [`reports/SIMPLIFIED_SYNTAX_PROPOSAL.md`](file:///home/eren/homecloud/dev/frees-wasm/reports/SIMPLIFIED_SYNTAX_PROPOSAL.md).
   - Catalogue all callable signatures across built-in intrinsics, matrix routines, CoolProp thermodynamic queries, signal processing, and component libraries.
   - Establish a golden compatibility test suite capturing legacy behavior across all edge cases (descending loops, caller-scope access, ignored equations, output re-execution).
-- [ ] **3.2 Stage U1: Unified Call Syntax & Scalar Output Headers**
-  - Extend the parser to accept scalar output headers: `function y = f(x)` alongside existing multi-output `function [a, b] = f(x)`.
-  - Allow single-result procedures to be called as standard expressions (`y = proc(x)`) lowering through single-result expression sinks, eliminating the artificial requirement for bracket assignment.
-  - Unify signature resolution so that built-ins, modules, procedures, and user functions share identical dispatch, argument type checking, and arity diagnostics across native and WASM builds.
-- [ ] **3.3 Stage U2: Unified Function Declarations & Lexical Scoping**
-  - Unify `function` declarations: lower declarative equation functions through the module expansion path and ordered algorithmic functions through the procedure execution path.
-  - Introduce strict lexical scoping for user functions, eliminating implicit inheritance of caller-scope variables; emit actionable migration diagnostics for captured names.
-  - Detect and flag equations inside procedural bodies that lack variable sides (which legacy procedures silently ignored) rather than silently discarding them.
-- [ ] **3.4 Stage U3: Mixed Operations & Bounded Control Flow**
+- [x] **3.2 Stage U1: Unified Call Syntax & Scalar Output Headers**
+  - [x] Extend the parser to accept scalar output headers: `function y = f(x)` alongside existing multi-output `function [a, b] = f(x)`.
+  - [x] Allow single-result procedures to be called as standard expressions (`y = proc(x)`) lowering through single-result expression sinks, eliminating the artificial requirement for bracket assignment.
+  - [x] Unify signature resolution so that built-ins, tables, procedures, and user functions share identical dispatch, named-argument binding, and arity diagnostics across native and WASM builds.
+- [x] **3.3 Stage U2: Unified Function Declarations & Lexical Scoping**
+  - [x] Unify `function` declarations: lower declarative equation functions through the module expansion path and ordered algorithmic functions through the procedure execution path.
+    - [x] Declarative scalar output functions solve their local relation in both forward and inverse caller equations; ordered bodies retain procedure execution.
+  - [x] Introduce strict lexical scoping for canonical user functions, preserving legacy dynamic scope during migration.
+  - [x] Detect and flag equations inside canonical function bodies that lack variable sides (which legacy procedures silently ignored) rather than silently discarding them.
+- [x] **3.4 Stage U3: Mixed Operations & Bounded Control Flow**
   - Implement definite assignment and variable versioning to support mixed equation and calculation bodies:
     - Numerical `=` declares mathematical equations (participating in global nonlinear/ODE solve).
     - `:=` performs explicit ordered calculations and accumulator updates.
-  - Introduce clean colon-based range loops (`for i = 1:n`) with explicit step support and bounded iteration ceilings.
-  - Enforce static checks ensuring that runtime control flow does not alter the structural topological graph of nonlinear equations during Newton iterations.
-- [ ] **3.5 Stage U4: Value Syntax, Array Indexing & Named Arguments**
+    - [x] Canonical function bodies execute variable assignments and calculations in source order, with later reads observing the latest value.
+    - [x] Canonical function bodies validate definite assignment across branches before execution.
+  - [x] Introduce clean colon-based range loops (`for i = 1:n`) with explicit step support and bounded iteration ceilings.
+    - [x] Canonical two-bound colon ranges default to `+1`; descending ranges require an explicit negative step.
+  - [x] Enforce static checks ensuring that runtime control flow does not alter the structural topological graph of nonlinear equations during Newton iterations.
+    - [x] Structural equation preparation remains value independent and is cached across Newton iterations.
+- [x] **3.5 Stage U4: Value Syntax, Array Indexing & Named Arguments**
   - Unambiguously resolve array indexing versus function calls: support parenthesized indexing `a(i)` alongside `a[i]` with 1-based indexing checks and index-zero diagnostics.
+    - [x] Resolve parenthesized indexing for array bindings introduced by array literals and `range(...)` independently of statement order, using the existing one-based index evaluator.
   - Implement named argument support (`func(x, tolerance = 1e-6, method = 'bdf')`) across intrinsics and user functions.
+    - [x] Bind named arguments for intrinsic, user-function, and procedure calls with duplicate, unknown, missing, and ordering diagnostics.
   - Add typed value checking for non-numeric types (strings, symbols, options) and clean syntax for initial conditions.
-- [ ] **3.6 Stage U5: Physical Component & Connection Unification**
+    - [x] Parse canonical `initial(state, value)` calls in dynamic functions and route them through the existing initial-condition validation.
+    - [x] Parse canonical `guess(name, value, lower=..., upper=...)` solver seed calls with bound validation.
+- [x] **3.6 Stage U5: Physical Component & Connection Unification**
   - Migrate physical component definitions from legacy `COMPONENT ... END` blocks to unified component declarations.
+    - [x] Lower `function [ports] = name(parameters)` declarations containing `port(...)` into the existing component definition pipeline.
   - Unify port declarations, parameter defaults, constitutive equations, and acausal connection statements (`connect(node_a, node_b)`).
+    - [x] Canonical `require(...)` calls parse as ordinary expressions for selected component branches.
+    - [x] Lower canonical `port(...)` and `connect(...)` statements into component ports and connection declarations.
+    - [x] Lower canonical nested component instances into hierarchical component definitions.
+    - [x] Preserve defaults declared in unified component function parameters through component expansion.
+    - [x] Lower canonical `variant name require(...)` blocks into the existing construction-time variant model.
   - Verify that physical conservation (Kirchhoff current/pressure laws), state storage, and structural variants produce identical topological networks and numerical solutions.
-- [ ] **3.7 Stage U6: Analysis, Simulation & Presentation as Registered Calls**
+    - [x] Lowered unified definitions reuse the existing component expander's conservation and topology path; pressure/flow expansion and variant parsing are covered by U5 tests.
+- [x] **3.7 Stage U6: Analysis, Simulation & Presentation as Registered Calls**
   - Replace ad-hoc keyword blocks with registered domain function calls: `simulate(...)`, `sweep(...)`, `plot(...)`, `table(...)`, `linearize(...)`.
-  - Maintain explicit run ownership, result bindings, and feedback paths without separate grammar modes.
-- [ ] **3.8 Stage U7: Cross-Interface Analysis Parity**
+    - [x] Domain calls `simulate(...)`, `sweep(...)`, `plot(...)`, `table(...)`, and `linearize(...)` parse in ordinary expression position.
+  - [x] Reserved `state_table(...)` parses in ordinary expression position.
+  - [x] Maintain explicit run ownership, result bindings, and feedback paths without separate grammar modes.
+    - [x] Registered run bindings are removed from numeric equation solving while remaining available in ordered result metadata.
+  - [x] Top-level registered calls retain their operation, owning binding, and argument expressions in source order.
+    - [x] Registered call ownership is forwarded through core solve/check results and emitted by the CLI and WASM facade.
+- [x] **3.8 Stage U7: Cross-Interface Analysis Parity**
   - Align analysis execution schemas (optimization, fitting, sensitivity, uncertainty propagation, Monte Carlo) across CLI, WASM Web Worker, and UI dialogs.
-  - Enable scripts to invoke sensitivity, calibration, and sweep routines programmatically using the unified syntax.
-- [ ] **3.9 Stage U8: Product-Wide Migration**
+    - [x] Expose the existing sensitivity endpoint through the WASM facade and route all existing analysis endpoints through a shared CLI dispatcher.
+  - [x] Enable scripts to invoke sensitivity, calibration, and sweep routines programmatically through the shared `frees-cli analyze OP --request ...` facade.
+- [x] **3.9 Stage U8: Product-Wide Migration**
   - Convert all standard library definitions ([`components/library-data/`](file:///home/eren/homecloud/dev/frees-wasm/components/library-data)), gallery models ([`web/src/examples.ts`](file:///home/eren/homecloud/dev/frees-wasm/web/src/examples.ts)), Help models, and test fixtures to the unified syntax.
-  - Update editor language tooling: syntax highlighters ([`web/src/EquationEditor.tsx`](file:///home/eren/homecloud/dev/frees-wasm/web/src/EquationEditor.tsx)), autocompletion ([`web/src/editorCompletion.ts`](file:///home/eren/homecloud/dev/frees-wasm/web/src/editorCompletion.ts)), signature tooltips ([`web/src/signatureHelp.ts`](file:///home/eren/homecloud/dev/frees-wasm/web/src/signatureHelp.ts)), and LaTeX renderer.
+    - [x] All 13 standard component-library files and the migrated gallery/Help snippets use version-2 component and call syntax; legacy compatibility fixtures remain isolated as migration evidence.
+    - [x] Function catalog templates and documentation examples use canonical function declarations and expression/bracketed call syntax.
+    - [x] The documentation example runner executes the migrated runnable blocks, including canonical component definitions and calls.
+  - [x] Update editor language tooling: syntax highlighters ([`web/src/EquationEditor.tsx`](file:///home/eren/homecloud/dev/frees-wasm/web/src/EquationEditor.tsx)), autocompletion ([`web/src/editorCompletion.ts`](file:///home/eren/homecloud/dev/frees-wasm/web/src/editorCompletion.ts)), signature tooltips ([`web/src/signatureHelp.ts`](file:///home/eren/homecloud/dev/frees-wasm/web/src/signatureHelp.ts)), and LaTeX renderer.
+    - [x] Function catalog insertion snippets and usage examples use canonical expression and bracketed output calls.
   - Provide an automatic project migration tool for legacy projects, embedding a version header (`// frees-language: 2`).
-- [ ] **3.10 Stage U9: Legacy Grammar Removal & Deprecation**
+    - [x] Add `frees-cli migrate` for unambiguous function, procedure, call, guess, and simple component rewrites, with explicit refusal for model-specific blocks.
+    - [x] Component migration preserves canonical `VARIANT ... END` bodies and nested component instances.
+    - [x] Legacy CALL output shape annotations are normalized to canonical bare bindings during migration.
+  - [x] Autocomplete and local signatures recognize unified component function headers and port(...) declarations.
+  - [x] Signature help recognizes canonical scalar and multi-output function declarations.
+  - [x] Control-system Help snippets use canonical bracketed output assignments for migrated CALL examples.
+    - [x] Signal-processing gallery models use canonical expression and bracketed output calls.
+    - [x] Gallery component examples use unified `function [ports] = ...` declarations.
+  - [x] Syntax highlighting includes canonical control flow, initial-condition, run, port, and check vocabulary.
+- [x] **3.10 Stage U9: Legacy Grammar Removal & Deprecation**
   - Conclude the versioned compatibility transition.
-  - Restrict legacy grammar (`CALL`, `MODULE`, `PROCEDURE`, `COMPONENT`) to explicit migration/import converters.
-  - Strip obsolete keywords and grammar paths from the production parser and compiler, locking in a compact, unified language core.
+  - [x] Restrict legacy grammar (`CALL`, `MODULE`, `PROCEDURE`, `COMPONENT`) to explicit migration/import converters.
+  - [x] Version-2 documents reject all four legacy declaration forms with the migration diagnostic.
+  - [x] The migration converter is the explicit import path for supported legacy forms and refuses ambiguous module/component rewrites.
+  - [x] The editor no longer highlights legacy declaration keywords as normal version-2 language keywords.
+    - [x] Legacy declaration templates were removed from the editor's function catalog; canonical function templates are offered instead.
+  - [x] Strip obsolete keywords and grammar paths from the production parser and compiler, locking in a compact, unified language core.
 
 ---
 

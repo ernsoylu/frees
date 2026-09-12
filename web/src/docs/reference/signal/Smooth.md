@@ -14,7 +14,7 @@ A centred moving average — the first thing to reach for when a sensor trace is
 ## Syntax
 
 ```
-CALL Smooth(x, k : y)
+[y] = Smooth(x, k)
 ```
 
 ## Description
@@ -37,7 +37,7 @@ $$ y_j = \frac{1}{|W_j|}\sum_{i \in W_j} x_i, \qquad W_j = \{\,i : |i - j| \le \
 
 ```
 p = [1, 3, 2, 6, 4, 9, 5, 12]
-CALL Smooth(p, 3 : ps)
+[ps] = Smooth(p, 3)
 ```
 
 **Expected:** `ps[1] = 2` (the mean of the two samples that exist), `ps[3] = 11/3`, `ps[8] = 8.5`.

@@ -66,7 +66,7 @@ export const DOCS_TOPICS: { id: string; label: string }[] = [
   { id: `tables-code`, label: `Custom Tables (TABLE)` },
   { id: `lookup-tables`, label: `Lookup Tables & Interpolation` },
   { id: `table-accessors`, label: `Table Accessors & Aggregates` },
-  { id: `modules`, label: `Modular Submodels (MODULE)` },
+  { id: `modules`, label: `Modular Submodels (Equation Functions)` },
   { id: `symbolic-cas`, label: `Control Systems & Symbolic CAS` },
   { id: `tut-msd`, label: `Tutorial: Mass–Spring–Damper, from Time Domain to Bode Plot` },
   { id: `tut-coil`, label: `Tutorial: Psychrometric Analysis of an AC Cooling Coil` },

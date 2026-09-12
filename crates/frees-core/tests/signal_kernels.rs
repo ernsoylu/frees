@@ -7,20 +7,20 @@
 //! These have no Java oracle (the Java `SignalProcessing` stops at the DFT), so
 //! the expected numbers are hand-derived, not harvested.
 
-use frees_core::engine::solve_with_parametric_tables;
+use frees_core::engine::solve_legacy_with_parametric_tables;
 use frees_core::solver::SolverSettings;
 use std::collections::BTreeMap;
 
 fn solve(document: &str) -> BTreeMap<String, f64> {
     let settings = SolverSettings::default();
-    let outcome = solve_with_parametric_tables(document, &settings, &[], None, &[])
+    let outcome = solve_legacy_with_parametric_tables(document, &settings, &[], None, &[])
         .unwrap_or_else(|e| panic!("solve failed: {e}\n---\n{document}"));
     outcome.values.into_iter().collect()
 }
 
 fn error(document: &str) -> String {
     let settings = SolverSettings::default();
-    solve_with_parametric_tables(document, &settings, &[], None, &[])
+    solve_legacy_with_parametric_tables(document, &settings, &[], None, &[])
         .expect_err("expected this document to be refused")
         .to_string()
 }

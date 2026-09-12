@@ -46,7 +46,7 @@ mod repl;
 // fit (/api/measurements/parameter-fit).
 pub use analysis::{
     curve_fit, extract_plant, monte_carlo, optimize, optimize_multi, parameter_fit, pid_tune,
-    solve_table, solve_table_zerocopy,
+    sensitivity, solve_table, solve_table_zerocopy,
 };
 
 /// Install the panic hook so a wasm trap arrives in the console as a readable
@@ -186,9 +186,16 @@ pub(crate) fn function_table_defs_of(
             continue;
         }
         convert_gui_curves_to_si(&mut curves, table);
+        let arg_names = table.arg_names.clone().unwrap_or_else(|| {
+            if curves.iter().any(|curve| curve.param.is_some()) {
+                vec!["x".into(), "param".into()]
+            } else {
+                vec!["x".into()]
+            }
+        });
         let def = frees_core::parser::defs::FunctionTableDef {
             name: name.clone(),
-            arg_names: table.arg_names.clone().unwrap_or_default(),
+            arg_names,
             x_log: table.x_log == Some(true),
             y_log: table.y_log == Some(true),
             curves,
@@ -580,6 +587,15 @@ fn solve_internal(
     request_json: &str,
     zero_copy_ode: bool,
 ) -> (String, Vec<Vec<f64>>) {
+    solve_internal_mode(source, request_json, zero_copy_ode, false)
+}
+
+fn solve_internal_mode(
+    source: &str,
+    request_json: &str,
+    zero_copy_ode: bool,
+    legacy: bool,
+) -> (String, Vec<Vec<f64>>) {
     let request = match parse_request(request_json) {
         Ok(request) => request,
         // A malformed request never reached the engine, so the failure carries
@@ -616,9 +632,18 @@ fn solve_internal(
 
     let started = now_ms();
     let solve_outcome = if request.find_all_solutions == Some(true) {
-        frees_core::solve_all_with_tables(source, &settings, &overrides, &extra_tables)
+        if legacy {
+            frees_core::solve_all_legacy_with_tables(source, &settings, &overrides, &extra_tables)
+        } else {
+            frees_core::solve_all_with_tables(source, &settings, &overrides, &extra_tables)
+        }
     } else {
-        frees_core::solve_with_tables(source, &settings, &overrides, &extra_tables).map(|s| vec![s])
+        if legacy {
+            frees_core::solve_legacy_with_tables(source, &settings, &overrides, &extra_tables)
+        } else {
+            frees_core::solve_with_tables(source, &settings, &overrides, &extra_tables)
+        }
+        .map(|s| vec![s])
     };
 
     match solve_outcome {
@@ -684,6 +709,12 @@ fn solve_internal(
 #[wasm_bindgen]
 pub fn solve(source: &str, request_json: &str) -> String {
     solve_internal(source, request_json, false).0
+}
+
+/// Compatibility solve boundary for the golden corpus and explicit migration tools.
+#[wasm_bindgen]
+pub fn solve_legacy(source: &str, request_json: &str) -> String {
+    solve_internal_mode(source, request_json, false, true).0
 }
 
 /// Typed solve boundary: copy once into JS-owned arrays for transfer across workers.
@@ -1028,6 +1059,14 @@ fn solve_success(
             // through `plotDefToSpec`, so this is what makes a declared plot
             // render.
             "definedPlots": plot_defs(&solution.plots),
+            "registeredCalls": solution
+                .registered_calls
+                .iter()
+                .map(|call| json!({
+                    "binding": call.binding,
+                    "operation": call.operation,
+                }))
+                .collect::<Vec<_>>(),
             "connections": connection_defs(&solution.component_connections),
             // Tornado breakdown: per dependent variable, its propagated sigma and
             // each source's signed contribution, largest sigma first — the Java
@@ -1343,6 +1382,14 @@ fn check_response(report: &CheckReport) -> String {
         // what lets the Plots tab populate before the first solve —
         // `App.tsx`'s `result?.definedPlots ?? checkResult?.definedPlots`.
         "definedPlots": plot_defs(&report.plots),
+        "registeredCalls": report
+            .registered_calls
+            .iter()
+            .map(|call| json!({
+                "binding": call.binding,
+                "operation": call.operation,
+            }))
+            .collect::<Vec<_>>(),
         "connections": connection_defs(&report.connections),
         "instances": report
             .instances

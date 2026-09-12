@@ -16,7 +16,7 @@ states and the effort. Use it for systematic multi-state feedback design.
 ## Syntax
 
 ```
-CALL lqr(A, B, Q, R : K)
+[K] = lqr(A, B, Q, R)
 K = lqr(A, B, Q, R)
 ```
 

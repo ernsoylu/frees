@@ -108,7 +108,10 @@ impl PreparedDocument {
         let mut components = expand_component_layer(&mut doc, &mut diagnostics)?;
 
         // Pipeline stages 2–4
-        let statements = std::mem::take(&mut doc.statements);
+        let statements = std::mem::take(&mut doc.statements)
+            .into_iter()
+            .filter(|statement| !crate::parser::toplevel::is_registered_call_statement(statement))
+            .collect();
         let mut parsed_names = std::mem::take(&mut doc.display_names);
         let (flattened, module_count) =
             flatten_calls_counted(statements, &doc.defs, &mut parsed_names)?;
@@ -363,6 +366,7 @@ impl PreparedDocument {
                 None,
             )?;
             return Ok(Solution {
+                registered_calls: self.doc.registered_calls.clone(),
                 values: BTreeMap::new(),
                 display_names: complete_display_names(
                     &self.doc.display_names,
@@ -607,6 +611,7 @@ impl PreparedDocument {
             solve_dynamic_systems(doc, &scope_mut, settings, &prep.specs, base_ctx, bridge)?;
 
         Ok(Solution {
+            registered_calls: doc.registered_calls.clone(),
             values: solved,
             display_names: prep.display_names.clone(),
             blocks: prep.report.blocks.clone(),

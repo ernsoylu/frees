@@ -14,7 +14,7 @@ tags: [ss2tfij]
 ## Syntax
 
 ```
-CALL ss2tfij(...)
+ss2tfij(...)
 ```
 
 ## Description

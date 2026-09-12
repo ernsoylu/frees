@@ -17,7 +17,7 @@ LQR/LQE) design.
 ## Syntax
 
 ```
-CALL tf2ss(num, den : A, B, C, D)
+[A, B, C, D] = tf2ss(num, den)
 [A, B, C, D] = tf2ss(num, den)
 ```
 

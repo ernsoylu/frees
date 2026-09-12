@@ -13,6 +13,7 @@
 //! grow an extra field here.
 
 use crate::ast::{Equation, Expr, Statement};
+use crate::components::def::ComponentInst;
 
 /// A statement inside a `FUNCTION` or `PROCEDURE` body. Unlike top-level
 /// [`Statement`]s, these execute **sequentially**, not as equations.
@@ -35,10 +36,11 @@ pub enum ProcStatement {
     },
     /// An equation used inside a body for intermediate relations.
     Eq(Equation),
-    /// `FOR var = start TO end … END`.
+    /// `FOR var = start[:step]:end … END`.
     For {
         var_name: String,
         start: Expr,
+        step: Option<Expr>,
         end: Expr,
         body: Vec<ProcStatement>,
     },
@@ -46,6 +48,18 @@ pub enum ProcStatement {
     While {
         condition: Expr,
         body: Vec<ProcStatement>,
+    },
+    /// Canonical component port declaration inside a unified function.
+    Port { name: String },
+    /// Canonical component connection inside a unified function.
+    Connect { ports: Vec<String> },
+    /// Canonical nested component instance inside a unified component.
+    Instance { instance: ComponentInst },
+    /// Canonical construction-time component variant.
+    Variant {
+        name: String,
+        require: Vec<String>,
+        body: Vec<Equation>,
     },
 }
 
@@ -55,6 +69,8 @@ pub enum ProcStatement {
 pub struct FunctionDef {
     /// Lowercase canonical name.
     pub name: String,
+    /// Explicit scalar output name from `function y = name(...)`.
+    pub output: Option<String>,
     /// Parameter names, lowercase, declaration order.
     pub params: Vec<String>,
     pub body: Vec<ProcStatement>,

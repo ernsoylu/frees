@@ -16,7 +16,7 @@ is possible — iff `Co` has full rank.
 ## Syntax
 
 ```
-CALL ctrb(A, B : Co)
+[Co] = ctrb(A, B)
 Co = ctrb(A, B)
 ```
 

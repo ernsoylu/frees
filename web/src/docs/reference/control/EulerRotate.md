@@ -16,7 +16,7 @@ and vehicle/spacecraft kinematics.
 ## Syntax
 
 ```
-CALL EulerRotate(phi, theta, psi : R)
+[R] = EulerRotate(phi, theta, psi)
 R = EulerRotate(phi, theta, psi)
 ```
 

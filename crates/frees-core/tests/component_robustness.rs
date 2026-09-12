@@ -35,7 +35,10 @@
 use std::collections::BTreeMap;
 use std::time::{Duration, Instant};
 
-use frees_core::{check, parse_document, solve, SolverSettings};
+use frees_core::{
+    check_legacy as check, parse_legacy_document as parse_document, solve_legacy as solve,
+    SolverSettings,
+};
 
 // ── helpers ─────────────────────────────────────────────────────────────────
 

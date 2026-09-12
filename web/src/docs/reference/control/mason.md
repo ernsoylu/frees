@@ -17,7 +17,7 @@ input-output gain.
 ## Syntax
 
 ```
-CALL mason(G, source, sink : T)
+[T] = mason(G, source, sink)
 T = mason(G, source, sink)
 ```
 

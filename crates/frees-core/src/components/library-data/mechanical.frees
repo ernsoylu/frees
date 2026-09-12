@@ -1,168 +1,192 @@
-COMPONENT TorqueSource(a, b)
-  PARAM T
+// frees-language: 2
+function [a, b] = TorqueSource(T)
+port(a)
+port(b)
   a.tau = -T
   a.tau + b.tau = 0
-END
+end
 
-COMPONENT SpeedSource(a, b)
-  PARAM w
+function [a, b] = SpeedSource(w)
+port(a)
+port(b)
   a.w - b.w = w
   a.tau + b.tau = 0
-END
+end
 
-COMPONENT RotationalDamper(a, b)
-  PARAM c
+function [a, b] = RotationalDamper(c)
+port(a)
+port(b)
   a.tau = c * (a.w - b.w)
   a.tau + b.tau = 0
-END
+end
 
-COMPONENT MechGround(port)
+function [port] = MechGround()
+port(port)
   port.w = 0
-END
+end
 
-COMPONENT Gear(in, out)
-  PARAM ratio
+function [in, out] = Gear(ratio)
+port(in)
+port(out)
   in.w    = ratio * out.w
   out.tau = -ratio * in.tau
-END
+end
 
-COMPONENT Inertia(port)
-  PARAM J, w0
+function [port] = Inertia(J, w0)
+port(port)
   der(port.w)  = port.tau / J
   init(port.w) = w0
-END
+end
 
-COMPONENT Friction(a, b)
-  PARAM Fc, Fs, vs, bv, eps
+function [a, b] = Friction(Fc, Fs, vs, bv, eps)
+port(a)
+port(b)
   dw    = a.w - b.w
   a.tau = (Fc + (Fs - Fc) * exp(-(dw / vs)^2)) * tanh(dw / eps) + bv * dw
   a.tau + b.tau = 0
-END
+end
 
-COMPONENT Planetary(sun, ring, carrier)
-  PARAM g
+function [sun, ring, carrier] = Planetary(g)
+port(sun)
+port(ring)
+port(carrier)
   sun.w + g * ring.w = (1 + g) * carrier.w
   ring.tau           = g * sun.tau
   sun.tau + ring.tau + carrier.tau = 0
-END
+end
 
-COMPONENT Clutch(a, b)
-  PARAM Tmax, eng, eps
+function [a, b] = Clutch(Tmax, eng, eps)
+port(a)
+port(b)
   dw    = a.w - b.w
   a.tau = eng * Tmax * tanh(dw / eps)
   a.tau + b.tau = 0
-END
+end
 
-COMPONENT RotationalSpring(a, b)
-  PARAM k, theta0
+function [a, b] = RotationalSpring(k, theta0)
+port(a)
+port(b)
   der(theta)  = a.w - b.w
   init(theta) = theta0
   a.tau       = k * theta
   a.tau + b.tau = 0
-END
+end
 
-COMPONENT ForceSource(a, b)
-  PARAM F
+function [a, b] = ForceSource(F)
+port(a)
+port(b)
   a.f = -F
   a.f + b.f = 0
-END
+end
 
-COMPONENT TransDamper(a, b)
-  PARAM c
+function [a, b] = TransDamper(c)
+port(a)
+port(b)
   a.f = c * (a.vel - b.vel)
   a.f + b.f = 0
-END
+end
 
-COMPONENT TransGround(port)
+function [port] = TransGround()
+port(port)
   port.vel = 0
-END
+end
 
-COMPONENT TransMass(port)
-  PARAM m, v0
+function [port] = TransMass(m, v0)
+port(port)
   der(port.vel)  = port.f / m
   init(port.vel) = v0
-END
+end
 
 // Signal-commanded clutch: engagement fraction from a signal port `u`
 // (u.sig ∈ [0,1]) instead of a fixed `eng` parameter — launch/shift schedules.
-COMPONENT ClutchCmd(a, b, u)
-  PARAM Tmax, eps
+function [a, b, u] = ClutchCmd(Tmax, eps)
+port(a)
+port(b)
+port(u)
   dw    = a.w - b.w
   a.tau = u.sig * Tmax * tanh(dw / eps)
   a.tau + b.tau = 0
-END
+end
 
 // ── 1-D mechanics breadth (Wave 4) ─────────────────────────────────────────
 
 // Torsional backlash: a torsional spring dead over ±half of relative wind-up
 // (the C¹ two-hinge deadband, width eps) — gear lash, spline play.
-COMPONENT TorsionalBacklash(a, b)
-  PARAM k, half, eps, theta0
+function [a, b] = TorsionalBacklash(k, half, eps, theta0)
+port(a)
+port(b)
   der(th)  = a.w - b.w
   init(th) = theta0
   up       = th - half
   dn       = th + half
   a.tau    = k * (0.5 * (up + sqrt(up^2 + eps^2)) + 0.5 * (dn - sqrt(dn^2 + eps^2)))
   a.tau + b.tau = 0
-END
+end
 
 // Translational end stop at x = gap: spring-damper contact engaged smoothly
 // beyond the gap (penetration hinge + tanh-gated damping).
-COMPONENT EndStop(port)
-  PARAM gap, k, c, eps, x0
+function [port] = EndStop(gap, k, c, eps, x0)
+port(port)
   der(x)  = port.vel
   init(x) = x0
   pen     = 0.5 * ((x - gap) + sqrt((x - gap)^2 + eps^2))
   port.f  = k * pen + c * port.vel * 0.5 * (1 + tanh((x - gap) / eps))
-END
+end
 
 // Translational spring (the missing twin of TransDamper/TransMass).
-COMPONENT TransSpring(a, b)
-  PARAM k, x0
+function [a, b] = TransSpring(k, x0)
+port(a)
+port(b)
   der(x)  = a.vel - b.vel
   init(x) = x0
   a.f     = k * x
   a.f + b.f = 0
-END
+end
 
 // Ideal power-conserving screw drive: lead [m/rev] couples rotation to
 // translation (τ·ω + F·v = 0).
-COMPONENT ScrewDrive(shaft, rod)
-  PARAM lead
+function [shaft, rod] = ScrewDrive(lead)
+port(shaft)
+port(rod)
   rod.vel   = lead / (2 * pi#) * shaft.w
   shaft.tau = -(lead / (2 * pi#)) * rod.f
-END
+end
 
 // Ideal rack and pinion of pitch radius r.
-COMPONENT RackPinion(shaft, rod)
-  PARAM r
+function [shaft, rod] = RackPinion(r)
+port(shaft)
+port(rod)
   rod.vel   = r * shaft.w
   shaft.tau = -r * rod.f
-END
+end
 
 // Ideal lever (translational ratio).
-COMPONENT Lever(a, b)
-  PARAM ratio
+function [a, b] = Lever(ratio)
+port(a)
+port(b)
   a.vel = ratio * b.vel
   b.f   = -ratio * a.f
-END
+end
 
 // Belt/chain drive: speed ratio with a torque-transfer efficiency
 // (Transmission's translational-free cousin, named for the application).
-COMPONENT BeltDrive(a, b)
-  PARAM ratio, eta
+function [a, b] = BeltDrive(ratio, eta)
+port(a)
+port(b)
   a.w   = ratio * b.w
   b.tau = -ratio * eta * a.tau
-END
+end
 
 // Commanded friction brake: clamp fraction from the signal port u scales the
 // capacity, tanh-smooth through zero slip. Ground b for a chassis brake.
-COMPONENT Brake(a, b, u)
-  PARAM Tmax, eps
+function [a, b, u] = Brake(Tmax, eps)
+port(a)
+port(b)
+port(u)
   dw    = a.w - b.w
   a.tau = u.sig * Tmax * tanh(dw / eps)
   a.tau + b.tau = 0
-END
+end
 
 
 // ── Complete vehicle & powertrain depth (Wave 7) ────────────────────────────
@@ -170,42 +194,46 @@ END
 // One-way clutch (freewheel/overrunning sprag): transmits a stiff viscous
 // torque only while the driver overruns the driven side (dw > 0) — the C1
 // smooth-max hinge of width eps; free in the reverse direction.
-COMPONENT Freewheel(a, b)
-  PARAM k, eps
+function [a, b] = Freewheel(k, eps)
+port(a)
+port(b)
   dw    = a.w - b.w
   a.tau = k * 0.5 * (dw + sqrt(dw^2 + eps^2))
   a.tau + b.tau = 0
-END
+end
 
 // Cam: rotational-to-translational profile drive. The lift slope dl/dtheta
 // comes analytically from the profile table (dtable), so follower velocity is
 // exact and the reaction torque conserves power (tau*w = f*v virtual work).
-COMPONENT Cam(shaft, rod)
-  PARAM prof$, theta0
+function [shaft, rod] = Cam(prof$, theta0)
+port(shaft)
+port(rod)
   der(theta)  = shaft.w
   init(theta) = theta0
   slope     = dtable(prof$, theta)
   lift      = prof$(theta)
   rod.vel   = slope * shaft.w
   shaft.tau = slope * rod.f
-END
+end
 
 // Spring-loaded cam follower: mass held on the profile by a preloaded return
 // spring to ground — pair with Cam for valvetrain/profile-driven kinematics.
-COMPONENT CamFollower(rod)
-  PARAM m, kspring, x0, v0
+function [rod] = CamFollower(m, kspring, x0, v0)
+port(rod)
   TransMass   M(m=m, v0=v0)
   TransSpring S(k=kspring, x0=x0)
   TransGround G()
   connect(rod, M.port, S.a)
   connect(S.b, G.port)
-END
+end
 
 // Commanded friction brake with rotor thermal state and temperature fade:
 // friction power heats the rotor mass (convecting hA to ambient) and the
 // available torque derates through a C1 sigmoid above T_fade (fade studies).
-COMPONENT WheelBrakeThermal(a, b, u)
-  PARAM Tmax, eps, C, hA, T_amb, T_fade, k_fade, eps_f, T0
+function [a, b, u] = WheelBrakeThermal(Tmax, eps, C, hA, T_amb, T_fade, k_fade, eps_f, T0)
+port(a)
+port(b)
+port(u)
   fade  = 1 - k_fade * 0.5 * (1 + tanh((Tr - T_fade) / eps_f))
   dw    = a.w - b.w
   tau_b = fade * u.sig * Tmax * tanh(dw / eps)
@@ -214,4 +242,4 @@ COMPONENT WheelBrakeThermal(a, b, u)
   Pf       = tau_b * dw
   der(Tr)  = (Pf - hA * (Tr - T_amb)) / C
   init(Tr) = T0
-END
+end

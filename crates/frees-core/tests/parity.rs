@@ -401,7 +401,9 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use frees_core::{solve_with_tables, FreesError, SolverSettings, VariableOverride};
+use frees_core::{
+    solve_legacy_with_tables as solve_with_tables, FreesError, SolverSettings, VariableOverride,
+};
 
 const REL_TOL: f64 = 1e-9;
 const ABS_TOL: f64 = 1e-12;

@@ -1,15 +1,15 @@
 [Topic: functions]
 # Custom Functions & Procedures
 
-Most of your model is declarative — equations in any order, solved simultaneously. `FUNCTION` and `PROCEDURE` are for the parts that need **sequential, imperative** logic (loops, conditionals, step-by-step algorithms). Inside them you use `:=` for assignment, just like Python or other array languages.
+Most of your model is declarative — equations in any order, solved simultaneously. `FUNCTION` is for the parts that need **sequential, imperative** logic (loops, conditionals, step-by-step algorithms). Inside it you use `:=` for assignment, just like Python or other array languages.
 
 ## Functions
 A `FUNCTION` returns one or more values. Assign the return value(s) with `:=`.
 - **Single output** — assign the function's own name:
 ```
-FUNCTION poly_fit(x)
-  poly_fit := 0.5 * x^2 + 2 * x + 1
-END
+function y = poly_fit(x)
+  y := 0.5 * x^2 + 2 * x + 1
+end
 
 y = poly_fit(3)          { y = 9.5 }
 ```
@@ -26,20 +26,20 @@ Discard an output you don't need with `~`, or simply leave off trailing outputs:
 ```
 [quotient, ~] = DivMod(17, 5)   { quotient only }
 ```
-The same `[ … ] = name( … )` destructuring works for built-in multi-output `CALL` functions too — e.g. `[A, B, C, D] = tf2ss(num, den)`. See *Control Systems & Symbolic CAS → Multi-Output Functions*.
+The same `[ … ] = name( … )` destructuring works for built-in multi-output functions too — e.g. `[A, B, C, D] = tf2ss(num, den)`. See *Control Systems & Symbolic CAS → Multi-Output Functions*.
 
-## Procedures
-A `PROCEDURE` is the same idea with inputs and outputs separated by a colon. Call it with `CALL`:
+## Ordered functions
+An ordered function uses `:=` for sequential assignments and declares its output in the header:
 ```
-PROCEDURE heat_transfer(T1, T2 : Q_dot)
+function Q_dot = heat_transfer(T1, T2)
   Q_dot := 0.8 * 12 * (T1 - T2) / 0.25
-END
+end
 
-CALL heat_transfer(100, 20 : heat_loss)
+heat_loss = heat_transfer(100, 20)
 ```
 
-## Control flow inside functions & procedures
-Sequential structures work inside function/procedure bodies (not in the declarative top level):
+## Control flow inside functions
+Sequential structures work inside function bodies (not in the declarative top level):
 - **Conditional:** `IF condition THEN ... ELSE ... END`
 - **While:** `WHILE condition DO ... END`
 - **Repeat:** `REPEAT ... UNTIL condition`
@@ -150,26 +150,26 @@ current_index = TableRun#()
 [Related: optimization, lookup-tables, plot-code]
 
 [Topic: modules]
-# Modular Submodels (MODULE)
+# Modular Submodels (Equation Functions)
 
-A `MODULE` is a reusable **declarative** sub-system — a named bag of equations solved simultaneously with the rest of your model. Unlike a `FUNCTION`, a module's equations can be solved in **either direction**: a variable you pass in as an output one call can be passed in as an input the next.
+A function with equations is a reusable **declarative** sub-system — a named bag of equations solved simultaneously with the rest of your model. Its equations can be solved in **either direction**: a variable you pass in as an output one call can be passed in as an input the next.
 
 ## Why use a module?
-- Encapsulate a recurring sub-model (a heat exchanger, a pipe segment, a pump) once and `CALL` it many times.
+- Encapsulate a recurring sub-model (a heat exchanger, a pipe segment, a pump) once and call it many times.
 - Reuse the same equations whether you're sizing (unknown is an output) or rating (unknown is an input).
 
 ## Example
 ```
-MODULE pipe_flow(D, Q : dP)
+function dP = pipe_flow(D, Q)
   V  = Q / (pi# / 4 * D^2)
   dP = 0.02 * (100 / D) * (1000 * V^2 / 2)
-END
+end
 
-CALL pipe_flow(D1, Q1 : dP1)     { rating:  find dP1 from D1, Q1 }
-CALL pipe_flow(D2, Q2 : dP2)     { sizing:  find Q2  from D2, dP2 }
+[dP1] = pipe_flow(D1, Q1)     { rating:  find dP1 from D1, Q1 }
+[dP2] = pipe_flow(D2, Q2)     { sizing:  find Q2  from D2, dP2 }
 ```
-Both calls use the *same* module — frees figures out which variable is unknown in each.
+Both calls use the *same* function — frees figures out which variable is unknown in each.
 
-> **Module vs. function:** a `MODULE` is essentially a multi-output `FUNCTION` whose body is **equations** (`=`, solved in any direction) instead of sequential assignments (`:=`, one-way). The bracket call form works here too: `[dP1] = pipe_flow(D1, Q1)`.
+> **Equation vs. ordered function:** an equation function uses `=` for relations solved in any direction; an ordered function uses `:=` for one-way calculations.
 
 [Related: functions, prog-overview, arrays]

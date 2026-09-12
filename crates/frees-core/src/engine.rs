@@ -150,6 +150,8 @@ pub struct SolveStats {
 /// A completed steady solve.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Solution {
+    /// Registered analysis calls with their owning result bindings, in source order.
+    pub registered_calls: Vec<crate::parser::RegisteredCall>,
     /// Every **unknown** in the system with its solved value, keyed by the
     /// lowercase canonical name (frees identifiers are case-insensitive).
     ///
@@ -344,6 +346,8 @@ pub struct SyntaxErrorInfo {
 /// the HTTP DTO.
 #[derive(Debug, Clone, PartialEq)]
 pub struct CheckReport {
+    /// Registered analysis calls with their owning result bindings, in source order.
+    pub registered_calls: Vec<crate::parser::RegisteredCall>,
     /// True when the system is structurally solvable: zero degrees of freedom
     /// and a complete equation↔variable matching.
     pub solvable: bool,
@@ -542,6 +546,56 @@ pub fn solve_with_tables(
     extra_tables: &[crate::parser::defs::FunctionTableDef],
 ) -> std::result::Result<Solution, SolveFailure> {
     solve_with_parametric_tables(source, settings, overrides, None, extra_tables)
+}
+
+/// Explicit compatibility entry point for importing and solving an unconverted legacy document.
+pub fn solve_legacy(
+    source: &str,
+    settings: &SolverSettings,
+) -> std::result::Result<Solution, SolveFailure> {
+    crate::parser::with_legacy_import(|| solve(source, settings))
+}
+
+/// Explicit compatibility entry point for solving a legacy document with request tables.
+pub fn solve_legacy_with_tables(
+    source: &str,
+    settings: &SolverSettings,
+    overrides: &[VariableOverride],
+    extra_tables: &[crate::parser::defs::FunctionTableDef],
+) -> std::result::Result<Solution, SolveFailure> {
+    crate::parser::with_legacy_import(|| {
+        solve_with_tables(source, settings, overrides, extra_tables)
+    })
+}
+
+/// Explicit compatibility entry point for legacy parametric solving.
+pub fn solve_legacy_with_parametric_tables(
+    source: &str,
+    settings: &SolverSettings,
+    overrides: &[VariableOverride],
+    parametric: Option<&crate::analysis::parametric::ParametricAccessors>,
+    extra_tables: &[crate::parser::defs::FunctionTableDef],
+) -> std::result::Result<Solution, SolveFailure> {
+    crate::parser::with_legacy_import(|| {
+        solve_with_parametric_tables(source, settings, overrides, parametric, extra_tables)
+    })
+}
+
+/// Explicit compatibility entry point for legacy multiple-solution solving.
+pub fn solve_all_legacy_with_tables(
+    source: &str,
+    settings: &SolverSettings,
+    overrides: &[VariableOverride],
+    extra_tables: &[crate::parser::defs::FunctionTableDef],
+) -> std::result::Result<Vec<Solution>, SolveFailure> {
+    crate::parser::with_legacy_import(|| {
+        solve_all_with_tables(source, settings, overrides, extra_tables)
+    })
+}
+
+/// Explicit compatibility entry point for checking an unconverted legacy document.
+pub fn check_legacy(source: &str) -> Result<CheckReport> {
+    crate::parser::with_legacy_import(|| check(source))
 }
 
 /// [`solve_with`] with the parametric-accessor channel installed — the
@@ -1809,6 +1863,7 @@ pub fn check_with_tables_complex(
             let (_, knowns) = builtin_constants(&equations);
             let variables = unknowns(&equations, &knowns);
             return Ok(CheckReport {
+                registered_calls: doc.registered_calls.clone(),
                 solvable: false,
                 equation_count: equations.len(),
                 unknown_count: variables.len(),
@@ -1839,6 +1894,7 @@ pub fn check_with_tables_complex(
             .map(|ds| ds.body_equations.len() + ds.initials.len())
             .sum();
         return Ok(CheckReport {
+            registered_calls: doc.registered_calls.clone(),
             solvable: true,
             equation_count: dyn_eqs,
             unknown_count: dyn_eqs,
@@ -1898,6 +1954,7 @@ pub fn check_with_tables_complex(
     }
 
     let base = CheckReport {
+        registered_calls: doc.registered_calls.clone(),
         solvable: false,
         equation_count: surfaced_eqs,
         unknown_count: surfaced_vars,
@@ -2034,7 +2091,12 @@ fn expand_component_layer(
         // parse of the builtin library — and only when a dotted name actually
         // appears, so the corpus's scalar documents still pay nothing.
         if mentions_dotted_var(&doc.statements, &doc.dynamics) {
-            let statements = std::mem::take(&mut doc.statements);
+            let statements = std::mem::take(&mut doc.statements)
+                .into_iter()
+                .filter(|statement| {
+                    !crate::parser::toplevel::is_registered_call_statement(statement)
+                })
+                .collect();
             let mut dynamics = std::mem::take(&mut doc.dynamics);
             let mut display_names = std::mem::take(&mut doc.display_names);
             let mut expander = crate::components::expander::ComponentExpander::new(
@@ -2053,7 +2115,10 @@ fn expand_component_layer(
     }
 
     let components = std::mem::take(&mut doc.components);
-    let statements = std::mem::take(&mut doc.statements);
+    let statements = std::mem::take(&mut doc.statements)
+        .into_iter()
+        .filter(|statement| !crate::parser::toplevel::is_registered_call_statement(statement))
+        .collect();
     let mut dynamics = std::mem::take(&mut doc.dynamics);
     let mut display_names = std::mem::take(&mut doc.display_names);
 
@@ -2716,6 +2781,7 @@ fn syntax_failure_report(source: &str, err: &FreesError) -> CheckReport {
     }
 
     CheckReport {
+        registered_calls: Vec::new(),
         solvable: false,
         equation_count: 0,
         unknown_count: 0,
@@ -5149,7 +5215,7 @@ mod tests {
 
     #[test]
     fn a_dotted_guess_maps_onto_the_expanded_member() {
-        let report = check(
+        let report = check_legacy(
             "\
 Resistor R1(R=10)
 VoltageSource V1(E=12)
@@ -5180,7 +5246,7 @@ GUESS R1.a.V = 12
 
     #[test]
     fn local_component_shadowing_is_an_advisory() {
-        let report = check(
+        let report = check_legacy(
             "\
 COMPONENT Pipe(in, out)
   out.mdot = in.mdot
@@ -5233,7 +5299,7 @@ END
     #[test]
     fn a_self_instantiating_component_does_not_overflow_check() {
         // Identities walk before expansion; a cycle must not abort the process.
-        let report = check(
+        let report = check_legacy(
             "\
 COMPONENT SelfLoop(a, b)
   SelfLoop again(a, b)
@@ -5261,7 +5327,7 @@ connect(SUP.out, A.in)
 connect(A.out, B.in)
 connect(B.out, RET.in)
 ";
-        let report = check(source).expect("check");
+        let report = check_legacy(source).expect("check");
         let a = report
             .instances
             .iter()
@@ -5291,7 +5357,7 @@ connect(V1.p, R1.a)
 connect(R1.b, V1.n, G1.port)
 GUESS R1.a.V [0, 1]
 ";
-        let report = check(source).expect("check");
+        let report = check_legacy(source).expect("check");
         assert!(
             !report
                 .diagnostics
@@ -5300,8 +5366,8 @@ GUESS R1.a.V [0, 1]
             "got {:?}",
             report.diagnostics
         );
-        let bounded = solve(source, &SolverSettings::default());
-        let free = solve(
+        let bounded = solve_legacy(source, &SolverSettings::default());
+        let free = solve_legacy(
             "\
 Resistor R1(R=10)
 VoltageSource V1(E=12)
@@ -5330,7 +5396,7 @@ connect(R1.b, V1.n, G1.port)
 
     #[test]
     fn check_reports_connection_topology() {
-        let report = check(
+        let report = check_legacy(
             "\
 Source SUP(fluid$=Water, mdot=1, P=2e5, T=300)
 Pipe LINE(fluid$=Water, L=10, D=0.05, rough=1e-4)
@@ -5353,7 +5419,7 @@ connect(LINE.out, RET.in)
 
     #[test]
     fn check_advises_on_an_inactive_variant_parameter() {
-        let report = check(
+        let report = check_legacy(
             "\
 COMPONENT C(in, out)
   PARAM model$ = a, r, q
@@ -5497,7 +5563,7 @@ C X(s1, s2, r=2, q=3)
 
     #[test]
     fn an_unsupported_block_is_refused_by_name() {
-        let err = solve(
+        let err = solve_legacy(
             "DYNAMIC d(method = ode45)\n  der = 1\nEND\n",
             &SolverSettings::default(),
         )
@@ -5536,7 +5602,7 @@ C X(s1, s2, r=2, q=3)
     fn the_three_component_forms_answer_like_the_reference_engine() {
         // A template nobody instantiates contributes nothing, so the document is
         // empty — a *solver* verdict, not a parse one.
-        let err = solve(
+        let err = solve_legacy(
             "COMPONENT pump(in, out)\n  out.P = in.P\nEND\n",
             &SolverSettings::default(),
         )
@@ -5546,7 +5612,7 @@ C X(s1, s2, r=2, q=3)
 
         // An instantiation missing a required parameter is refused by name at
         // expansion time — the library ships no defaults for physical inputs.
-        let err = solve("Pump P1(s1, s2)\nx = 1\n", &SolverSettings::default()).unwrap_err();
+        let err = solve_legacy("Pump P1(s1, s2)\nx = 1\n", &SolverSettings::default()).unwrap_err();
         assert!(matches!(err.error, FreesError::Parse { .. }), "{err:?}");
         assert_eq!(
             err.to_string_message(),
@@ -5556,7 +5622,8 @@ C X(s1, s2, r=2, q=3)
 
         // A `connect` naming something that is neither an instance port nor a
         // stream is refused, quoting the declaration.
-        let err = solve("connect(a.out, b.in)\nx = 1\n", &SolverSettings::default()).unwrap_err();
+        let err =
+            solve_legacy("connect(a.out, b.in)\nx = 1\n", &SolverSettings::default()).unwrap_err();
         assert!(matches!(err.error, FreesError::Parse { .. }), "{err:?}");
         assert!(
             err.to_string_message().starts_with(
@@ -5800,7 +5867,8 @@ C X(s1, s2, r=2, q=3)
         // The refusal comes from the `flatten_calls` pipeline stage: a CALL
         // to an unknown name is an error naming it (the Java flattenCallProc
         // behaviour), never a silently dropped statement.
-        let err = solve("CALL mix(1, 2 : y)\nx = 1\n", &SolverSettings::default()).unwrap_err();
+        let err =
+            solve_legacy("CALL mix(1, 2 : y)\nx = 1\n", &SolverSettings::default()).unwrap_err();
         let message = err.to_string_message();
         assert!(message.contains("mix"), "{message}");
     }

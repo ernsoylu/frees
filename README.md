@@ -98,9 +98,16 @@ cargo run -qp frees-cli -- check path/to/model.frees
 
 # Solve a model file with custom options via --request JSON
 cargo run -qp frees-cli -- solve --request '{"stopCriteria":{"maxIterations":200}}' path/to/model.frees
+
+# Run a registered analysis through the shared facade
+cargo run -qp frees-cli -- analyze sensitivity path/to/model.frees --request '{"parameters":["x"],"samples":64}'
+cargo run -qp frees-cli -- analyze curve-fit --request '{"model":"y = a*x+b","xVariable":"x","yVariable":"y","parameters":["a","b"],"xData":[0,1],"yData":[1,3]}'
+
+# Convert supported legacy syntax before importing a project
+cargo run -qp frees-cli -- migrate path/to/legacy.frees > path/to/model-v2.frees
 ```
 
-Exit codes: `0` on successful solve/check, `1` when the model is rejected or fails to converge (with JSON error on stdout), and `2` for syntax or I/O errors.
+Exit codes: `0` on success, `1` when the engine rejects a model or analysis request, and `2` for usage or I/O errors. Analysis requests use `--request` and emit JSON by default.
 
 ### 2. Browser Web Application
 

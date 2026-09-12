@@ -16,7 +16,7 @@ using the requested method (`'tustin'` bilinear or `'zoh'`).
 ## Syntax
 
 ```
-CALL d2c(numz, denz, Ts, 'tustin' : num, den)
+[num, den] = d2c(numz, denz, Ts, 'tustin')
 [num, den] = d2c(numz, denz, Ts, 'zoh')
 ```
 

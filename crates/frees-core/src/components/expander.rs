@@ -609,6 +609,7 @@ impl<'d, 'n> ComponentExpander<'d, 'n> {
             Statement::For {
                 var_name,
                 start,
+                step,
                 end,
                 body,
             } => {
@@ -619,6 +620,9 @@ impl<'d, 'n> ComponentExpander<'d, 'n> {
                 Ok(Statement::For {
                     var_name,
                     start: self.net.rewrite_top(&start, self.display_names)?,
+                    step: step
+                        .map(|expr| self.net.rewrite_top(&expr, self.display_names))
+                        .transpose()?,
                     end: self.net.rewrite_top(&end, self.display_names)?,
                     body: rewritten,
                 })
@@ -3838,6 +3842,7 @@ mod tests {
         let stmts = vec![Statement::For {
             var_name: "i".into(),
             start: expr("1"),
+            step: None,
             end: expr("2"),
             body: vec![Statement::Eq(eq("y = A.in.P"))],
         }];
@@ -4500,8 +4505,8 @@ mod tests {
     }
 
     fn parse_expand_solve_using(source: &str, builtins: &[ComponentDef]) -> BTreeMap<String, f64> {
-        let mut doc =
-            crate::parser::parse_document(source).unwrap_or_else(|e| panic!("parse failed: {e}"));
+        let mut doc = crate::parser::parse_legacy_document(source)
+            .unwrap_or_else(|e| panic!("parse failed: {e}"));
         let components = std::mem::take(&mut doc.components);
         let statements = std::mem::take(&mut doc.statements);
         let mut display: BTreeMap<String, String> = std::mem::take(&mut doc.display_names);
@@ -4951,8 +4956,8 @@ mod tests {
 
     /// The rejections, checked on the oracle's own source text end to end.
     fn parse_expand_err(source: &str) -> String {
-        let mut doc =
-            crate::parser::parse_document(source).unwrap_or_else(|e| panic!("parse failed: {e}"));
+        let mut doc = crate::parser::parse_legacy_document(source)
+            .unwrap_or_else(|e| panic!("parse failed: {e}"));
         let components = std::mem::take(&mut doc.components);
         let statements = std::mem::take(&mut doc.statements);
         let mut display: BTreeMap<String, String> = std::mem::take(&mut doc.display_names);

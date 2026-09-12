@@ -16,7 +16,7 @@ gain that places the dominant poles for a target damping or settling time.
 ## Syntax
 
 ```
-CALL rlocus(num, den : K, cpr, cpi)
+[K, cpr, cpi] = rlocus(num, den)
 [K, cpr, cpi] = rlocus(num, den)
 ```
 

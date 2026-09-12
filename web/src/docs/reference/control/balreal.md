@@ -17,7 +17,7 @@ Hankel values can then be truncated for model reduction.
 ## Syntax
 
 ```
-CALL balreal(A, B, C : Ab, Bb, Cb)
+[Ab, Bb, Cb] = balreal(A, B, C)
 [Ab, Bb, Cb] = balreal(A, B, C)
 ```
 

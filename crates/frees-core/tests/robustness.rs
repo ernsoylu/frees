@@ -31,7 +31,10 @@
 use frees_core::diag::Severity;
 use frees_core::parser::expr::MAX_EXPR_DEPTH;
 use frees_core::units::registry::UnitRegistry;
-use frees_core::{check, parse_document, solve, FreesError, SolverSettings};
+use frees_core::{
+    check_legacy as check, parse_legacy_document as parse_document, solve_legacy as solve,
+    FreesError, SolverSettings,
+};
 
 // ── helpers ─────────────────────────────────────────────────────────────────
 

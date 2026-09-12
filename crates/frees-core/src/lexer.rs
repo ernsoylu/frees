@@ -373,7 +373,10 @@ impl<'a> Lexer<'a> {
             b'/' => (TokenKind::Div, 1),
             b'^' => (TokenKind::Caret, 1),
             b'\\' => (TokenKind::Backslash, 1),
-            b'~' => (TokenKind::Tilde, 1),
+            b'~' => match self.peek(1) {
+                Some(b'=') => (TokenKind::Ne, 2),
+                _ => (TokenKind::Tilde, 1),
+            },
             b'|' => (TokenKind::Pipe, 1),
             b':' => match self.peek(1) {
                 Some(b'=') => (TokenKind::Assign, 2),

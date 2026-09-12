@@ -986,7 +986,7 @@ fn ss2tf_refuses_a_state_matrix_above_the_ceiling() {
     let mut doc = String::new();
     doc.push_str("FOR i = 1 TO 65\n  FOR j = 1 TO 65\n    A[i,j] = 0\n  END\nEND\n");
     doc.push_str("FOR i = 1 TO 65\n  B[i] = 0\n  C[i] = 0\nEND\nD = 0\n");
-    doc.push_str("CALL ss2tf(A[1:65,1:65], B[1:65], C[1:65], D : num[1:66], den[1:66])\n");
+    doc.push_str("[num, den] = ss2tf(A[1:65,1:65], B[1:65], C[1:65], D)\n");
     let message = solve_refused(&doc);
     assert!(
         message.contains("ss2tf: the state matrix has too many states (65; limit 64)"),
@@ -996,7 +996,7 @@ fn ss2tf_refuses_a_state_matrix_above_the_ceiling() {
     let mut small = String::new();
     small.push_str("A[1,1] = 0\nA[1,2] = 1\nA[2,1] = -2\nA[2,2] = -3\n");
     small.push_str("B[1] = 0\nB[2] = 1\nC[1] = 1\nC[2] = 0\nD = 0\n");
-    small.push_str("CALL ss2tf(A[1:2,1:2], B[1:2], C[1:2], D : num[1:3], den[1:3])\n");
+    small.push_str("[num, den] = ss2tf(A[1:2,1:2], B[1:2], C[1:2], D)\n");
     let solution = frees_core::solve(&small, &Default::default()).expect("2-state ss2tf solves");
     assert!(close(solution.values["den[1]"], 1.0));
     assert!(close(solution.values["den[2]"], 3.0));

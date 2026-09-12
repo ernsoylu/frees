@@ -16,7 +16,7 @@ It decides stability without computing the roots — useful for symbolic gain ra
 ## Syntax
 
 ```
-CALL routh(den : nRHP, stable)
+[nRHP, stable] = routh(den)
 [nRHP, stable] = routh(den)
 ```
 

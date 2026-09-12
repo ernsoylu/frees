@@ -40,11 +40,17 @@ export function parseLibraryFile(text, domain) {
   const lines = text.split('\n');
   const components = [];
   for (let i = 0; i < lines.length; i++) {
-    const head = lines[i].match(/^\s*COMPONENT\s+(\w+)\s*(?:\(([^)]*)\))?/);
-    if (!head) continue;
-    const name = head[1];
-    const ports = (head[2] || '').split(',').map((s) => s.trim()).filter(Boolean);
-    const params = [];
+    const legacyHead = lines[i].match(/^\s*COMPONENT\s+(\w+)\s*(?:\(([^)]*)\))?/i);
+    const canonicalHead = lines[i].match(
+      /^\s*function\s+\[([^\]]*)\]\s*=\s*(\w+)\s*\(([^)]*)\)/i,
+    );
+    if (!legacyHead && !canonicalHead) continue;
+    const name = legacyHead ? legacyHead[1] : canonicalHead[2];
+    const portText = legacyHead ? legacyHead[2] : canonicalHead[1];
+    const ports = (portText || '').split(',').map((s) => s.trim()).filter(Boolean);
+    const params = canonicalHead
+      ? (canonicalHead[3] || '').split(',').map(parseParamPiece).filter(Boolean)
+      : [];
     const variants = [];
     const shared = [];
     let cur = null;
@@ -58,6 +64,7 @@ export function parseLibraryFile(text, domain) {
         cur = null;
         continue;
       }
+      if (canonicalHead && /^port\s*\(/i.test(l)) continue;
       const vm = l.match(/^VARIANT\s+(\w+)(?:\s+REQUIRE\s+(.+))?/i);
       if (vm) {
         depth += 1;

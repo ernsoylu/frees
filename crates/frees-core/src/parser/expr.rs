@@ -532,9 +532,15 @@ fn parse_atom(c: &mut Cursor<'_>) -> Result<Expr> {
             c.expect(&TokenKind::LParen)?;
             let args = parse_arg_list(c)?;
             c.expect(&TokenKind::RParen)?;
-            Ok(Expr::call("if", positional_only(args, "if")?))
+            Ok(Expr::call("if", encode_call_args(args)))
         }
+        TokenKind::Plot => parse_call_atom(c, "plot".to_string()),
+        TokenKind::Table => parse_call_atom(c, "table".to_string()),
+        TokenKind::StateTable => parse_call_atom(c, "state_table".to_string()),
+        TokenKind::Linearize => parse_call_atom(c, "linearize".to_string()),
+        TokenKind::Require => parse_call_atom(c, "require".to_string()),
         TokenKind::Ident(name) => match c.peek_at(1) {
+            TokenKind::LParen if c.is_array_name(&name) => parse_paren_array_atom(c, name),
             TokenKind::LParen => parse_call_atom(c, name),
             TokenKind::Dot => parse_member_atom(c, name),
             TokenKind::LBracket => parse_array_atom(c, name),
@@ -632,17 +638,48 @@ fn parse_array_atom(c: &mut Cursor<'_>, name: String) -> Result<Expr> {
     })
 }
 
+fn parse_paren_array_atom(c: &mut Cursor<'_>, name: String) -> Result<Expr> {
+    c.advance();
+    c.record_display_name(&name);
+    c.expect(&TokenKind::LParen)?;
+    let mut indices = vec![parse_array_index(c)?];
+    while c.eat(&TokenKind::Comma) {
+        indices.push(parse_array_index(c)?);
+    }
+    c.expect(&TokenKind::RParen)?;
+    Ok(Expr::ArrayAccess {
+        name: name.to_ascii_lowercase(),
+        indices,
+    })
+}
+
 /// `arrayIndex : expr (COLON expr)?` — the colon form is an index range.
 fn parse_array_index(c: &mut Cursor<'_>) -> Result<Expr> {
     let start = parse_expr(c)?;
+    if is_zero_index(&start) {
+        return Err(FreesError::parse_at(
+            "array indices are one-based; index 0 is invalid".to_string(),
+            c.span(),
+        ));
+    }
     if c.eat(&TokenKind::Colon) {
         let end = parse_expr(c)?;
+        if is_zero_index(&end) {
+            return Err(FreesError::parse_at(
+                "array indices are one-based; index 0 is invalid".to_string(),
+                c.span(),
+            ));
+        }
         return Ok(Expr::Range {
             start: Box::new(start),
             end: Box::new(end),
         });
     }
     Ok(start)
+}
+
+fn is_zero_index(expr: &Expr) -> bool {
+    matches!(expr, Expr::Num { value, .. } if *value == 0.0)
 }
 
 /// `LBRACKET matrixRow (SEMI matrixRow)* RBRACKET unit?`
@@ -868,7 +905,12 @@ fn parse_call_atom(c: &mut Cursor<'_>, name: String) -> Result<Expr> {
     let args = parse_arg_list(c)?;
     c.expect(&TokenKind::RParen)?;
 
-    if args.iter().any(|a| a.name.is_some()) {
+    let property_shape = args.iter().any(|a| a.name.is_some())
+        && (is_property_function(&name)
+            || args
+                .first()
+                .is_some_and(|arg| arg.name.is_none() && is_fluid_name(unquote(&arg.raw))));
+    if property_shape {
         // A property call consumes only its first (positional) argument as a
         // token; the indicator values stay real expressions.
         let token = args.first().map(|a| unquote(&a.raw).to_string());
@@ -915,27 +957,60 @@ fn parse_call_atom(c: &mut Cursor<'_>, name: String) -> Result<Expr> {
         }
         return call;
     }
-    Ok(Expr::call(
-        &name,
-        args.into_iter().map(|a| a.value).collect(),
-    ))
+    Ok(Expr::call(&name, encode_call_args(args)))
 }
 
-/// `positionalExprs` — named arguments are only legal in property calls.
-fn positional_only(args: Vec<Arg>, function: &str) -> Result<Vec<Expr>> {
-    let mut out = Vec::with_capacity(args.len());
-    for arg in args {
-        if arg.name.is_some() {
-            return Err(FreesError::parse_at(
-                format!(
-                    "Named arguments (name=value) are only valid in fluid property functions: {function}"
-                ),
-                arg.span,
-            ));
-        }
-        out.push(arg.value);
-    }
-    Ok(out)
+fn encode_call_args(args: Vec<Arg>) -> Vec<Expr> {
+    args.into_iter()
+        .map(|arg| match arg.name {
+            Some(name) => Expr::call(format!("__named_arg${name}"), vec![arg.value]),
+            None => arg.value,
+        })
+        .collect()
+}
+
+fn is_property_function(name: &str) -> bool {
+    matches!(
+        name.to_ascii_lowercase().as_str(),
+        "enthalpy"
+            | "entropy"
+            | "temperature"
+            | "pressure"
+            | "density"
+            | "volume"
+            | "intenergy"
+            | "quality"
+            | "cp"
+            | "specheat"
+            | "cv"
+            | "viscosity"
+            | "conductivity"
+            | "soundspeed"
+            | "compressibility"
+            | "compressibilityfactor"
+            | "prandtl"
+            | "volexpcoef"
+            | "gibbs"
+            | "humrat"
+            | "relhum"
+            | "wetbulb"
+            | "dewpoint"
+            | "p_sat"
+            | "t_sat"
+            | "surfacetension"
+            | "molarmass"
+            | "heatingvalue"
+            | "stoichafr"
+            | "t_crit"
+            | "p_crit"
+            | "t_triple"
+            | "v_crit"
+            | "k_"
+            | "rho_"
+            | "c_"
+            | "e_"
+            | "nu_"
+    )
 }
 
 /// Fluid property call: `Enthalpy(R134a, T=T1, x=1)`.
@@ -2080,6 +2155,18 @@ mod tests {
     }
 
     #[test]
+    fn saturation_calls_hide_the_fluid_from_the_variable_set() {
+        assert_eq!(
+            ok("P_sat(R134a, T=T1)"),
+            Expr::call("prop$p_sat$r134a$t", vec![var("t1")])
+        );
+        assert_eq!(
+            ok("P_sat(R134a, T=T1)").variables(),
+            ["t1".to_string()].into()
+        );
+    }
+
+    #[test]
     fn a_property_call_hides_the_fluid_from_the_variable_set() {
         let vars: Vec<_> = ok("Enthalpy(R134a, T=T1, x=1)")
             .variables()
@@ -2126,11 +2213,17 @@ mod tests {
     }
 
     #[test]
-    fn named_arguments_are_rejected_by_the_if_intrinsic() {
-        let message = err("If(x=1, 2, 3)");
-        assert!(
-            message.contains("only valid in fluid property functions: if"),
-            "{message}"
+    fn named_arguments_are_supported_by_the_if_intrinsic() {
+        assert_eq!(
+            ok("If(condition=1, arg2=2, arg3=3)"),
+            Expr::call(
+                "if",
+                vec![
+                    Expr::call("__named_arg$condition", vec![num(1.0)]),
+                    Expr::call("__named_arg$arg2", vec![num(2.0)]),
+                    Expr::call("__named_arg$arg3", vec![num(3.0)]),
+                ]
+            )
         );
     }
 

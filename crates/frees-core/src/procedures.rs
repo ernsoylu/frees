@@ -42,7 +42,7 @@
 //!   with a diagnostic instead. **Deviation**, documented here.
 
 use std::cell::Cell;
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, HashMap, HashSet};
 
 use crate::ast::{Equation, Expr, Statement};
 use crate::diag::{FreesError, Result};
@@ -122,18 +122,245 @@ pub fn call_function(
         )));
     }
     let _guard = DepthGuard::enter("FUNCTION", &def.name)?;
-    let mut locals = caller_scope.clone();
+    if def.output.is_some() {
+        reject_ignored_equations(&def.body, &def.name)?;
+        validate_structural_control_flow(&def.body, &def.name, false)?;
+        if !has_relational_output(&def.body, def.output.as_deref().unwrap_or(&def.name)) {
+            let mut assigned: HashSet<String> = def.params.iter().cloned().collect();
+            validate_definite_assignment(&def.body, &mut assigned)?;
+        }
+    }
+    let mut locals = if def.output.is_some() {
+        Scope::default()
+    } else {
+        caller_scope.clone()
+    };
     for (param, value) in def.params.iter().zip(args) {
         locals.insert(param.clone(), *value);
     }
-    execute_body(&def.body, &mut locals, defs)?;
-    match locals.get(&def.name) {
-        Some(value) => Ok(*value),
-        None => Err(FreesError::evaluation(format!(
-            "FUNCTION {} never assigned a return value ('{} := ...' missing)",
-            def.name, def.name
-        ))),
+    let output = def.output.as_deref().unwrap_or(&def.name);
+    if has_relational_output(&def.body, output) {
+        for statement in &def.body {
+            if !matches!(statement, ProcStatement::Eq(_)) {
+                execute_one(statement, &mut locals, defs)?;
+            }
+        }
+    } else {
+        execute_body(&def.body, &mut locals, defs)?;
     }
+    match locals.get(output) {
+        Some(value) => Ok(*value),
+        None => solve_relational_output(&def.body, output, &mut locals, defs).ok_or_else(|| {
+            FreesError::evaluation(format!(
+                "FUNCTION {} never assigned a return value ('{} := ...' missing)",
+                def.name, output
+            ))
+        }),
+    }
+}
+
+fn has_relational_output(body: &[ProcStatement], output: &str) -> bool {
+    body.iter().any(|statement| {
+        matches!(statement, ProcStatement::Eq(equation)
+            if (equation.lhs.variables().contains(output)
+                || equation.rhs.variables().contains(output))
+                && !matches!(equation.lhs, Expr::Var(ref name) if name == output)
+                && !matches!(equation.rhs, Expr::Var(ref name) if name == output))
+    })
+}
+
+/// Solve the single local equation that defines a declarative function's
+/// output. This is intentionally a small Newton loop: the surrounding solver
+/// still owns caller variables, while this local relation supplies one scalar
+/// result for the expression call.
+fn solve_relational_output(
+    body: &[ProcStatement],
+    output: &str,
+    locals: &mut Scope,
+    defs: &Definitions,
+) -> Option<f64> {
+    let equation = body.iter().find_map(|statement| match statement {
+        ProcStatement::Eq(equation)
+            if equation.lhs.variables().contains(output)
+                || equation.rhs.variables().contains(output) =>
+        {
+            Some(equation)
+        }
+        _ => None,
+    })?;
+    let mut value = 0.0;
+    for _ in 0..32 {
+        locals.insert(output.to_string(), value);
+        let residual = eval_proc_expr(&equation.lhs, locals, defs).ok()?
+            - eval_proc_expr(&equation.rhs, locals, defs).ok()?;
+        if residual.abs() <= 1e-10 {
+            return Some(value);
+        }
+        let delta = 1e-7_f64.max(value.abs() * 1e-7);
+        locals.insert(output.to_string(), value + delta);
+        let shifted = eval_proc_expr(&equation.lhs, locals, defs).ok()?
+            - eval_proc_expr(&equation.rhs, locals, defs).ok()?;
+        let slope = (shifted - residual) / delta;
+        if !slope.is_finite() || slope.abs() < 1e-14 {
+            return None;
+        }
+        value -= residual / slope;
+        if !value.is_finite() {
+            return None;
+        }
+    }
+    locals.insert(output.to_string(), value);
+    let residual = eval_proc_expr(&equation.lhs, locals, defs).ok()?
+        - eval_proc_expr(&equation.rhs, locals, defs).ok()?;
+    (residual.abs() <= 1e-8).then_some(value)
+}
+
+fn validate_structural_control_flow(
+    body: &[ProcStatement],
+    function: &str,
+    in_control_flow: bool,
+) -> Result<()> {
+    for statement in body {
+        match statement {
+            ProcStatement::Eq(_) if in_control_flow => {
+                return Err(FreesError::evaluation(format!(
+                    "FREES-MIG-005: FUNCTION {function} contains a structural equation inside runtime control flow; use `:=` for an ordered calculation"
+                )));
+            }
+            ProcStatement::IfElse {
+                then_branch,
+                else_branch,
+                ..
+            } => {
+                validate_structural_control_flow(then_branch, function, true)?;
+                validate_structural_control_flow(else_branch, function, true)?;
+            }
+            ProcStatement::RepeatUntil { body, .. }
+            | ProcStatement::For { body, .. }
+            | ProcStatement::While { body, .. } => {
+                validate_structural_control_flow(body, function, true)?;
+            }
+            ProcStatement::Assign { .. }
+            | ProcStatement::Eq(_)
+            | ProcStatement::Port { .. }
+            | ProcStatement::Connect { .. }
+            | ProcStatement::Instance { .. }
+            | ProcStatement::Variant { .. } => {}
+        }
+    }
+    Ok(())
+}
+
+fn validate_definite_assignment(
+    body: &[ProcStatement],
+    assigned: &mut HashSet<String>,
+) -> Result<()> {
+    for statement in body {
+        match statement {
+            ProcStatement::Assign { var_name, value } => {
+                validate_expression(value, assigned)?;
+                assigned.insert(var_name.clone());
+            }
+            ProcStatement::Eq(Equation { lhs, rhs, .. }) => {
+                if let Expr::Var(name) = lhs {
+                    validate_expression(rhs, assigned)?;
+                    assigned.insert(name.clone());
+                } else if let Expr::Var(name) = rhs {
+                    validate_expression(lhs, assigned)?;
+                    assigned.insert(name.clone());
+                } else {
+                    validate_expression(lhs, assigned)?;
+                    validate_expression(rhs, assigned)?;
+                }
+            }
+            ProcStatement::IfElse {
+                condition,
+                then_branch,
+                else_branch,
+            } => {
+                validate_expression(condition, assigned)?;
+                let mut then_assigned = assigned.clone();
+                let mut else_assigned = assigned.clone();
+                validate_definite_assignment(then_branch, &mut then_assigned)?;
+                validate_definite_assignment(else_branch, &mut else_assigned)?;
+                assigned
+                    .retain(|name| then_assigned.contains(name) && else_assigned.contains(name));
+            }
+            ProcStatement::RepeatUntil { body, condition } => {
+                validate_definite_assignment(body, assigned)?;
+                validate_expression(condition, assigned)?;
+            }
+            ProcStatement::For {
+                start,
+                step,
+                end,
+                var_name,
+                body,
+            } => {
+                validate_expression(start, assigned)?;
+                if let Some(step) = step {
+                    validate_expression(step, assigned)?;
+                }
+                validate_expression(end, assigned)?;
+                let mut loop_assigned = assigned.clone();
+                loop_assigned.insert(var_name.clone());
+                validate_definite_assignment(body, &mut loop_assigned)?;
+            }
+            ProcStatement::While { condition, body } => {
+                validate_expression(condition, assigned)?;
+                let mut loop_assigned = assigned.clone();
+                validate_definite_assignment(body, &mut loop_assigned)?;
+            }
+            ProcStatement::Port { .. }
+            | ProcStatement::Connect { .. }
+            | ProcStatement::Instance { .. }
+            | ProcStatement::Variant { .. } => {}
+        }
+    }
+    Ok(())
+}
+
+fn validate_expression(expr: &Expr, assigned: &HashSet<String>) -> Result<()> {
+    for name in expr.variables() {
+        if !assigned.contains(&name) && crate::eval::lookup_constant(&name).is_none() {
+            return Err(FreesError::evaluation(format!(
+                "variable has no value: {name}"
+            )));
+        }
+    }
+    Ok(())
+}
+
+fn reject_ignored_equations(body: &[ProcStatement], function: &str) -> Result<()> {
+    for statement in body {
+        match statement {
+            ProcStatement::Eq(Equation { lhs, rhs, .. })
+                if !matches!(lhs, Expr::Var(_)) && !matches!(rhs, Expr::Var(_)) =>
+            {
+                return Err(FreesError::evaluation(format!(
+                    "FREES-MIG-004: FUNCTION {function} contains an equation with no variable side; use `:=` for an ordered calculation"
+                )));
+            }
+            ProcStatement::IfElse {
+                then_branch,
+                else_branch,
+                ..
+            } => {
+                reject_ignored_equations(then_branch, function)?;
+                reject_ignored_equations(else_branch, function)?;
+            }
+            ProcStatement::RepeatUntil { body, .. }
+            | ProcStatement::For { body, .. }
+            | ProcStatement::While { body, .. } => reject_ignored_equations(body, function)?,
+            ProcStatement::Assign { .. }
+            | ProcStatement::Eq(_)
+            | ProcStatement::Port { .. }
+            | ProcStatement::Connect { .. }
+            | ProcStatement::Instance { .. }
+            | ProcStatement::Variant { .. } => {}
+        }
+    }
+    Ok(())
 }
 
 /// Execute a `PROCEDURE` body and return its output variables as a
@@ -286,6 +513,7 @@ fn execute_one(statement: &ProcStatement, locals: &mut Scope, defs: &Definitions
         ProcStatement::For {
             var_name,
             start,
+            step,
             end,
             body,
         } => {
@@ -294,7 +522,27 @@ fn execute_one(statement: &ProcStatement, locals: &mut Scope, defs: &Definitions
             // `(int) Math.round(...)`: floor(x + 0.5); NaN → 0, ±inf saturate.
             let start_int = libm::floor(start_val + 0.5) as i64;
             let end_int = libm::floor(end_val + 0.5) as i64;
-            let step: i64 = if start_int <= end_int { 1 } else { -1 };
+            let step: i64 = match step {
+                None => {
+                    if start_int <= end_int {
+                        1
+                    } else {
+                        -1
+                    }
+                }
+                Some(expr) => {
+                    let value = eval_proc_expr(expr, locals, defs)?;
+                    if !value.is_finite() || value == 0.0 || value.fract() != 0.0 {
+                        return Err(FreesError::evaluation(
+                            "FOR range step must be a finite nonzero integer",
+                        ));
+                    }
+                    value as i64
+                }
+            };
+            if (step > 0 && start_int > end_int) || (step < 0 && start_int < end_int) {
+                return Ok(());
+            }
             // i128 keeps `end + step` from overflowing at the i64 rim.
             let sentinel = end_int as i128 + step as i128;
             let mut i = start_int as i128;
@@ -326,6 +574,15 @@ fn execute_one(statement: &ProcStatement, locals: &mut Scope, defs: &Definitions
                     )));
                 }
             }
+        }
+
+        ProcStatement::Port { .. }
+        | ProcStatement::Connect { .. }
+        | ProcStatement::Instance { .. }
+        | ProcStatement::Variant { .. } => {
+            return Err(FreesError::evaluation(
+                "component declarations cannot execute as scalar procedures",
+            ));
         }
     }
     Ok(())
@@ -628,6 +885,7 @@ fn flatten_statement(
         Statement::For {
             var_name,
             start,
+            step,
             end,
             body,
         } => {
@@ -638,6 +896,7 @@ fn flatten_statement(
             out.push(Statement::For {
                 var_name,
                 start,
+                step,
                 end,
                 body: inner,
             });
@@ -903,7 +1162,7 @@ pub(crate) fn namespace_expr(expr: &Expr, ns: &str) -> Expr {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::parser::parse_document;
+    use crate::parser::parse_legacy_document as parse_document;
 
     fn defs_of(source: &str) -> Definitions {
         parse_document(source)

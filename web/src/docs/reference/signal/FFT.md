@@ -14,7 +14,7 @@ Transforms a sampled signal into its frequency content.
 ## Syntax
 
 ```
-CALL FFT(re, im : outRe, outIm)
+[outRe, outIm] = FFT(re, im)
 ```
 
 ## Description
@@ -40,7 +40,7 @@ $$ X_k = \sum_{j=0}^{n-1} x_j\, e^{-2\pi \mathrm{i} jk/n} $$
 ```
 re = [1, 0, 0, 0]
 im = [0, 0, 0, 0]
-CALL FFT(re, im : fr, fi)
+[fr, fi] = FFT(re, im)
 ```
 
 **Expected:** `fr = 1, 1, 1, 1` and `fi = 0, 0, 0, 0`.
@@ -50,7 +50,7 @@ CALL FFT(re, im : fr, fi)
 ```
 re = [1, 2, 3, 4]
 im = [0, 0, 0, 0]
-CALL FFT(re, im : outRe, outIm)
+[outRe, outIm] = FFT(re, im)
 ```
 
 **Expected:** `outRe[1] = 10`, the sum of the samples — bin 0 is always the DC total.
