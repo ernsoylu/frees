@@ -5,7 +5,7 @@
 import { readFileSync, readdirSync } from 'node:fs'
 import { resolve, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { initSync, solveLegacy } from '../src/wasm/pkg/frees.js'
+import { initSync, solve_legacy } from '../src/wasm/pkg/frees.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const ROOT = resolve(__dirname, '../..')
@@ -184,7 +184,7 @@ async function main() {
 
     let out
     try {
-      out = JSON.parse(solveLegacy(fixture.source, JSON.stringify(req)))
+      out = JSON.parse(solve_legacy(fixture.source, JSON.stringify(req)))
     } catch (e) {
       failures.push({ fixture: stem, detail: `WASM trap/panic: ${e.message}` })
       continue
