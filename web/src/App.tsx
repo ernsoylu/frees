@@ -2666,6 +2666,7 @@ export default function App() {
             text={textRef.current}
             onRevealLine={goToLine}
             onEmitStatement={emitFromSchematic}
+            onInsertBlock={insertComponentBlock}
             offsets={schematicOffsets}
             onOffsetsChange={setSchematicOffsets}
             highlightIds={instancesInDiagnosis(checkResult?.message ?? '')}
