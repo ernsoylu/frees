@@ -218,6 +218,8 @@ pub fn order_with_supercolumns(n: usize, col_ptr: &[usize], row_idx: &[usize]) -
         return identity(n);
     }
     let mut groups: Vec<(Vec<usize>, Vec<usize>)> = Vec::new();
+    let mut group_by_pattern: std::collections::HashMap<Vec<usize>, usize> =
+        std::collections::HashMap::new();
     for c in 0..n {
         let mut pattern: Vec<_> = col_ptr[c..=c + 1]
             .windows(2)
@@ -225,23 +227,29 @@ pub fn order_with_supercolumns(n: usize, col_ptr: &[usize], row_idx: &[usize]) -
             .collect();
         pattern.sort_unstable();
         pattern.dedup();
-        if let Some((_, columns)) = groups.iter_mut().find(|(rows, _)| *rows == pattern) {
-            columns.push(c);
+        if let Some(&group) = group_by_pattern.get(&pattern) {
+            groups[group].1.push(c);
         } else {
+            let group = groups.len();
+            group_by_pattern.insert(pattern.clone(), group);
             groups.push((pattern, vec![c]));
         }
     }
 
     let mut adjacency = vec![Vec::new(); groups.len()];
-    for i in 0..groups.len() {
-        for j in i + 1..groups.len() {
-            if groups[i]
-                .0
-                .iter()
-                .any(|row| groups[j].0.binary_search(row).is_ok())
-            {
-                adjacency[i].push(j);
-                adjacency[j].push(i);
+    let mut row_groups = vec![Vec::new(); n];
+    for (group, (rows, _)) in groups.iter().enumerate() {
+        for &row in rows {
+            row_groups[row].push(group);
+        }
+    }
+    for groups_in_row in row_groups {
+        for i in 0..groups_in_row.len() {
+            for j in i + 1..groups_in_row.len() {
+                let left = groups_in_row[i];
+                let right = groups_in_row[j];
+                adjacency[left].push(right);
+                adjacency[right].push(left);
             }
         }
     }
