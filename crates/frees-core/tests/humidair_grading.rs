@@ -1,6 +1,6 @@
 //! Grading the rustprop-backed humid-air path against CoolProp 8.0.0.
 //!
-//! Decision D8 (`docs/decisions/0008-coolprop-wasm.md`) recorded
+//! Decision D8 (`ARCHITECTURE_AND_REQUIREMENTS.md#11-retained-architectural-decisions`) recorded
 //! `fixtures/humidair/reference.json` — 912 near-ambient HVAC points dumped
 //! from the vendored `libCoolProp` 8.0.0 — for exactly this purpose, and said
 //! what it expected of whatever backend eventually landed: *"it grades a

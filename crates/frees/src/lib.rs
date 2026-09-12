@@ -53,10 +53,9 @@ pub use analysis::{
 /// Rust backtrace instead of `unreachable executed`, and install the property
 /// backend so the very first `fluids()` call already sees it.
 ///
-/// Which backend that is is decision D9
-/// (`docs/decisions/0009-rustprop-backend.md`), completed by D12
-/// (`docs/decisions/0012-retire-linked-tables.md`): **rustprop**, and only
-/// rustprop. The `(P,h)` artifacts are no longer linked into any build.
+/// Which backend that is is decision D9, completed by D12: **rustprop**, and
+/// only rustprop. The `(P,h)` artifacts are no longer linked into any build.
+/// Both are retained in `ARCHITECTURE_AND_REQUIREMENTS.md`, section 11.
 ///
 /// `frees_core` also installs it lazily from `solve`/`check`, so the module is
 /// correct without this; doing it at start-up keeps the one-off cost off the

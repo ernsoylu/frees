@@ -723,7 +723,7 @@ fn no_backend(what: &str) -> FreesError {
     FreesError::property(format!(
         "{what} needs a real-fluid property backend and none is installed. \
          Build with the `rustprop-backend` feature, which is on by default; \
-         see docs/decisions/0012-retire-linked-tables.md."
+         see ARCHITECTURE_AND_REQUIREMENTS.md#11-retained-architectural-decisions."
     ))
 }
 

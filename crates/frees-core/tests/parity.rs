@@ -483,7 +483,7 @@ Run the gate with the backend the corpus was promoted against:
     cargo test -p frees-core --features rustprop-backend --test parity
 
 The first is what CI runs: frees requires the feature, and resolver-v2 \
-unifies it onto frees-core. See docs/decisions/0009-rustprop-backend.md and \
+unifies it onto frees-core. See ARCHITECTURE_AND_REQUIREMENTS.md#11-retained-architectural-decisions and \
 fixtures/README.md.";
 
 /// The two variables that split the corpus across processes. See "Sharding" in

@@ -55,7 +55,7 @@
 //! declined at the door in [`try_props_si`], before either counter moves, and
 //! its `(P,Hmass)`/`(P,Smass)` call reaches `rustprop::props_si` untouched.
 //!
-//! That was not always so; see D6 in `docs/decisions/0009-rustprop-backend.md`.
+//! That was not always so; see D6 in `ARCHITECTURE_AND_REQUIREMENTS.md#11-retained-architectural-decisions`.
 //! Until Wave-2 the adapter served Air itself, because rustprop had no
 //! pseudo-pure `(P,X)` flash at all and the adapter's machinery *is* a sequence
 //! of `(T,p)` solves. Wave-2 R6/R7 ported upstream's pseudo-pure `HSU_P` and
@@ -633,7 +633,7 @@ pub(crate) fn try_props_si(
     // rustprop's own pseudo-pure `HSU_P` flash serves the pair directly and
     // costs about what a warm solve does, and there is no superancillary here
     // to prove a root stable with. Declined before either counter moves — see
-    // the module docs, and D6 in `docs/decisions/0009-rustprop-backend.md`.
+    // the module docs, and D6 in `ARCHITECTURE_AND_REQUIREMENTS.md#11-retained-architectural-decisions`.
     if !is_pure(&flash) {
         return None;
     }
