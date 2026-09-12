@@ -1,6 +1,6 @@
 # R15 usability pilot
 
-Status: **not executed**. Five engineering participants are required to close
+Status: **ready to execute**. Five engineering participants are required to close
 NEXT_STEPS.md Phase 2.5. Automated browser journeys verify functionality, but
 do not establish human task completion times or discoverability.
 
@@ -68,7 +68,7 @@ silencing a diagnostic.
 
 ## Results and acceptance
 
-Build commit: pending. Session dates: pending. Facilitator: pending.
+Build commit: `4addfb8` (main, 2026-09-12). Session dates: pending. Facilitator: pending.
 
 | Participant | Experience / browser / device | Scalar seconds / outcome | Chain seconds / outcome | Recovery seconds / outcome | Hints, confidence and observations |
 | --- | --- | --- | --- | --- | --- |
