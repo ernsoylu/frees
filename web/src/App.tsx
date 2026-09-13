@@ -714,7 +714,13 @@ export default function App() {
   }
   function flushTableEdits() {
     flushSync(() => {
-      if (document.activeElement instanceof HTMLElement) document.activeElement.blur()
+      // Blurring is how an in-progress grid cell or input edit gets committed
+      // before a check/solve reads it. The equation editor has nothing pending —
+      // its keystrokes are already in the document — so blurring it would only
+      // throw the caret out of the text the caller is about to check, which the
+      // 700 ms live lint would then do on every typing pause.
+      const active = document.activeElement
+      if (active instanceof HTMLElement && !active.closest('.cm-editor')) active.blur()
     })
     flushTablesWorkbook()
   }
@@ -2270,17 +2276,26 @@ export default function App() {
     }
   }, [solutions.length, selectedSolutionIndex])
 
+  // The banners above the editor report a Check or Solve the user asked for.
+  // The idle live-lint is deliberately excluded: its findings are about the
+  // half-typed line under the cursor, and opening a banner for them reflows the
+  // document mid-keystroke. The lint still marks the line in the editor gutter
+  // and colours the status pill, which cost no layout.
+  const bannerCheck = checkWasLint ? null : checkResult
+
   // Unit-consistency warnings from the latest Solve (preferred) or Check, shown
   // as a dismissible banner above the editor. Re-shown whenever the set changes.
-  const unitWarnings = result?.unitWarnings ?? (checkWasLint ? [] : checkResult?.unitWarnings ?? [])
+  const unitWarnings = result?.unitWarnings ?? bannerCheck?.unitWarnings ?? []
   const warningsKey = unitWarnings.join('|')
   useEffect(() => {
     setDismissedWarnings(false)
   }, [warningsKey])
 
   // 1-based editor line a syntax error points at (from Solve, then Check), used
-  // to mark the gutter and offer a jump-to-line action.
+  // to mark the gutter. `bannerErrorLine` is the subset that also opens the
+  // banner with its jump-to-line action.
   const errorLine = result?.errorLine ?? checkResult?.errorLine ?? null
+  const bannerErrorLine = result?.errorLine ?? bannerCheck?.errorLine ?? null
 
   // Plots declared in the editor text with PLOT ... END blocks, regenerated on
   // every solve/check. Merged with GUI plots for display and [Graph] resolution
@@ -2564,7 +2579,7 @@ export default function App() {
   const panelContent: Record<string, ReactNode> = {
     equations: (
       <div style={editorPanelPad}>
-        {errorLine != null && (
+        {bannerErrorLine != null && (
           <Alert color="red" variant="light" p="xs" mb={6} title="Syntax error">
             <Group justify="space-between" wrap="nowrap" gap="xs">
               <Text size="xs">Syntax error on line {errorLine}.</Text>
