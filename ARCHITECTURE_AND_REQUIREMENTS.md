@@ -386,6 +386,19 @@ indexing; canonical access is `a(i)` and ranges such as `a(1:n)`. Index zero,
 fractional indices, and shape mismatches are errors. Legacy `a[i]` is accepted
 only by the migration adapter.
 
+Money is the eighth base dimension (`crates/frees-core/src/units/currency.rs`),
+with USD as its base unit and every ISO currency code a unit of it, so `[TRY]`
+converts to `[EUR]` through the same registry path as `[kPa]` to `[psi]` and
+`price [USD] + mass [kg]` stays a dimensional error. Currency codes resolve
+after the engineering table, so a code that collides with a unit (`CUP`) keeps
+the unit's meaning. Rates are not constants: the engine ships a dated fallback
+table and accepts a live USD-based feed through `install_rates_json`, which the
+browser worker installs from a free public exchange endpoint the first time a
+document mentions a currency. That is the one outbound fetch in the product
+besides the optional property/component resource seams, it needs no backend of
+ours, and it degrades to the built-in table offline — a document mixing
+currencies therefore reproduces only against the rate set it was solved with.
+
 `initial(x, value)` declares an initial condition. `guess(x, value, ...)`
 provides a solver seed or bounds and never pins a variable. SI conversion and
 the distinction between absolute temperatures and temperature differences are

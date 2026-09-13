@@ -571,6 +571,11 @@ export default function App() {
   // Stores the action to run once the save-check dialog is resolved.
   const pendingActionRef = useRef<(() => void) | null>(null)
   const [dismissedWarnings, setDismissedWarnings] = useState(false)
+  // Whether the current check came from the idle live-lint rather than from
+  // Check/Solve. Lint warnings still reach the status pill, but they must not
+  // open the banner above the editor: that reflows the document mid-keystroke,
+  // usually to complain about the half-typed line under the cursor.
+  const [checkWasLint, setCheckWasLint] = useState(false)
   const [showFirstRun, setShowFirstRun] = useState(
     () => localStorage.getItem(FIRST_RUN_KEY) !== 'true',
   )
@@ -1605,7 +1610,7 @@ export default function App() {
     return textRef.current
   }
 
-  async function onCheck(): Promise<CheckResponse | null> {
+  async function onCheck(fromLint = false): Promise<CheckResponse | null> {
     if (checking) return null
     flushTableEdits()
     const requestRevision = modelRevisionRef.current.startCheck()
@@ -1631,6 +1636,7 @@ export default function App() {
         return null
       }
       setCheckResult(response)
+      setCheckWasLint(fromLint)
       writeTables((all) =>
         mergeCodeTables(all, response.codeTables, response.parametricTables).map((t) => {
           if (t.kind !== 'parametric' || t.source === 'code') return t
@@ -1677,6 +1683,7 @@ export default function App() {
         message: LOCAL_ENGINE_FAILURE,
       }
       setCheckResult(errorResponse)
+      setCheckWasLint(fromLint)
       return errorResponse
     } finally {
       setChecking(false)
@@ -1690,7 +1697,7 @@ export default function App() {
   idleCheckRef.current = () => {
     if (checking || solving || solvingTableId) return
     if (!textRef.current.trim()) return
-    void onCheck()
+    void onCheck(true)
   }
 
   // Every solve/check override, REPL first then sliders: the backend collapses
@@ -2265,7 +2272,7 @@ export default function App() {
 
   // Unit-consistency warnings from the latest Solve (preferred) or Check, shown
   // as a dismissible banner above the editor. Re-shown whenever the set changes.
-  const unitWarnings = result?.unitWarnings ?? checkResult?.unitWarnings ?? []
+  const unitWarnings = result?.unitWarnings ?? (checkWasLint ? [] : checkResult?.unitWarnings ?? [])
   const warningsKey = unitWarnings.join('|')
   useEffect(() => {
     setDismissedWarnings(false)

@@ -45,6 +45,7 @@ import init, {
   parameter_fit,
   pid_tune,
   sensitivity,
+  install_currency_rates,
   install_property_table,
   solve_zerocopy,
   solve_table_zerocopy,
@@ -58,8 +59,33 @@ const resourceConfig = globalThis as unknown as {
 const fetchedTables = new Map<string, Promise<void>>()
 const fetchedComponents = new Map<string, Promise<string | null>>()
 
+// Currency units ([USD], [EUR], [TRY], …) are only as good as their rates, so
+// the first document that mentions one pulls today's USD-based table from a
+// free feed. Fetched once per worker; a failure (offline, blocked) leaves the
+// engine on its dated built-in fallback rather than failing the solve.
+const CURRENCY_UNIT = /\[[^\]]*\b(?:USD|EUR|GBP|CHF|JPY|TRY|RUB|CNY|CAD|AUD|NZD|SEK|NOK|DKK|PLN|CZK|HUF|RON|BGN|ISK|INR|BRL|MXN|ZAR|KRW|SGD|HKD|TWD|THB|MYR|IDR|PHP|VND|AED|SAR|QAR|KWD|BHD|OMR|JOD|ILS|EGP|MAD|NGN|UAH|PKR|BDT|ARS|CLP|COP|PEN)\b[^\]]*\]/i
+const RATE_FEEDS = ['https://open.er-api.com/v6/latest/USD', 'https://api.frankfurter.dev/v1/latest?base=USD']
+let ratesReady: Promise<void> | null = null
+
+function fetchCurrencyRates(): Promise<void> {
+  ratesReady ??= (async () => {
+    for (const feed of RATE_FEEDS) {
+      try {
+        const response = await fetch(feed)
+        if (!response.ok) continue
+        const outcome = JSON.parse(install_currency_rates(await response.text())) as { error?: string }
+        if (!outcome.error) return
+      } catch {
+        // Try the next feed, then give up and keep the built-in rates.
+      }
+    }
+  })()
+  return ratesReady
+}
+
 async function prepareSource(source: string): Promise<string> {
   let prepared = source
+  if (CURRENCY_UNIT.test(source)) await fetchCurrencyRates()
   const tableBase = resourceConfig.__freesPropertyTableBaseUrl
   const fluid = source.match(/\b(?:Water|Steam|R\d{2,4}[A-Za-z]*|Ammonia|Nitrogen|Oxygen|CarbonDioxide|Methane|Propane)\b/i)?.[0]
   if (tableBase && fluid) {

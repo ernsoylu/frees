@@ -83,6 +83,17 @@ pub fn install_property_table(bytes: &[u8]) -> String {
     }
 }
 
+/// Install a USD-based exchange-rate feed so currency units (`[EUR]`, `[TRY]`,
+/// …) convert at today's rates instead of the dated offline fallback. Takes the
+/// response body of a free rates endpoint verbatim.
+#[wasm_bindgen]
+pub fn install_currency_rates(json: &str) -> String {
+    match frees_core::units::install_rates_json(json) {
+        Ok(count) => json!({ "rates": count }).to_string(),
+        Err(error) => json!({ "error": error }).to_string(),
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Request DTOs — the subset of the Java SolveRequest this port consumes
 // ---------------------------------------------------------------------------
