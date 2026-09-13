@@ -35,7 +35,7 @@ The following milestones are fully implemented, verified, and integrated into `m
 
 ## 2. Active Roadmap
 
-One milestone remains open. Everything else in the phased plan is signed off above; the deferred tracks in §3 are the next candidates once it closes.
+Two milestones are open. Everything else in the phased plan is signed off above; the deferred tracks in §3 are the next candidates once they close.
 
 ### Phase 4.4 R15 Usability Pilot Validation
 
@@ -44,6 +44,20 @@ One milestone remains open. Everything else in the phased plan is signed off abo
 - [ ] Execute the structured pilot with 5 engineering participants per [`R15_PILOT.md`](file:///home/eren/homecloud/dev/frees-wasm/R15_PILOT.md).
 - [ ] Test the core tasks: scalar solve within 5 minutes, component chain within 10 minutes, missing-boundary diagnostic recovery within 3 minutes.
 - [ ] Record completion times, assistance requirements, and qualitative feedback to guide workbench UX improvements.
+
+### Phase 4.5 Retained Review Triage Follow-up
+
+The eight §3.3 leads were rechecked against `b2ab4b1` on 2026-09-13; the verdicts
+and their evidence are recorded in [§3.3](#33-retained-review-triage-record-2026-09-13).
+Three were stale or not findings and were retired. What survived is below.
+Nothing here is a new review; each item is a lead that still reproduces.
+
+- [ ] **Callable limitations — reproduced verbatim.** `eig` and `eigvec` sit in `UNPORTED` ([`eval.rs`](file:///home/eren/homecloud/dev/frees-wasm/crates/frees-core/src/eval.rs)) and `EulerRotate` in `UNPORTED_CALL_INTRINSICS` ([`parser/expand.rs`](file:///home/eren/homecloud/dev/frees-wasm/crates/frees-core/src/parser/expand.rs)); `ss2ss` fails output-shape handling with *"Matrix must have exactly 2 dimensions: bn"* and `tf2zp` with *"Expected vector array access"*. Port the four names (the `eigen`/`eigenvalues` implementations in [`linalg.rs`](file:///home/eren/homecloud/dev/frees-wasm/crates/frees-core/src/linalg.rs) are the existing working path), add native and WASM regressions, then remove the limitation banners from the four reference pages — the pages' asserted diagnostics must be replaced by checked results in the same change.
+- [ ] **`.mix` refrigerant blends — reproduced.** `Enthalpy(R454B, T=300, P=500000)` still fails with a NaN residual. Ten blends are named by the alias table and none is backed; needs upstream mixture routing, so this gates on `rustprop` rather than on this repository.
+- [ ] **Optional resource seam — genuine coverage gap.** [`props/tables.rs`](file:///home/eren/homecloud/dev/frees-wasm/crates/frees-core/src/props/tables.rs) tests only a single-fluid install (`install_from_bytes_serves_the_fetched_fluid`) and hostile-byte refusal. The multi-resource lifecycle, cache behaviour and numeric coverage the old note asks for are untested. Add the tests before anything depends on production lazy resources; the seam itself works and the old replacement-only warning stays retired.
+- [ ] **Accessor sweeps and global nonconvergence — no coverage found.** A keyword sweep of all 659 frontend test titles returned zero matches for this behaviour, the only sub-item of the table checklist with none. Confirm it by reading the sweep path before writing a test; a title sweep proves absence of a *name*, not of the behaviour.
+- [ ] **Table and plot checklists — audit per item, do not re-review.** The remaining sub-items map onto existing suites ([`tables.precision.test.ts`](file:///home/eren/homecloud/dev/frees-wasm/web/src/tables.precision.test.ts), [`tableValidation.test.ts`](file:///home/eren/homecloud/dev/frees-wasm/web/src/tableValidation.test.ts), [`tableGridModel.test.ts`](file:///home/eren/homecloud/dev/frees-wasm/web/src/tablesGrid/tableGridModel.test.ts), the nine `plots/` suites; render-failure recovery is covered by *"renders error boundary with Retry button on render failure"*). Walk the two checklists one item at a time against those files and open fixes only where a hole is real. Keyword matching established plausibility, not coverage.
+- [ ] **Cross-layer acceptance — still absent.** The suite has three Phase 9 journeys plus two offline specs; none is the `edit → solve → plot → export → reopen` chain. [`playwright.bench.config.ts`](file:///home/eren/homecloud/dev/frees-wasm/web/playwright.bench.config.ts) is a reusable browser harness but times the raw engine `solve`, not the UI, so the cold/warm median and p95 this item asks for have never been measured at UI level. Extend the journeys and the bench config rather than adding a third harness.
 
 ---
 
@@ -77,21 +91,25 @@ These items expand user-facing documentation, written tutorials, and reference e
 - **Deferred — Standards Interoperability (FMI / FMU 2.0/3.0)**: Package dynamic systems as Functional Mock-up Units for co-simulation in industrial engineering workflows.
 - **Deferred — Accessibility & Touch Ergonomics**: Full WCAG 2.1 AA compliance, enhanced screen reader announcements, and tactile multi-touch canvas navigation.
 
-### 3.3 Retained Review Findings and Follow-up
+### 3.3 Retained Review Triage Record (2026-09-13)
 
-The September table/plot reviews and documentation audits are consolidated here.
-Historical observations are leads to recheck, not proof that the current tree
-still has the same defects. Do not restore already-completed milestones or old
-coverage percentages as active work.
+The September table/plot reviews and documentation audits were consolidated here
+as leads to recheck. They were rechecked against `b2ab4b1` on 2026-09-13. What
+still reproduces moved to [Phase 4.5](#phase-45-retained-review-triage-follow-up);
+this section is now the record of that triage, not a work list. Do not restore
+already-completed milestones or old coverage percentages as active work.
 
-- **Reference coverage closed, depth still open (12 September 2026):** all 723 language-symbol pages and nine cookbook guides have checked examples. The existing WASM module passed 761 blocks / 1,945 assertions; 669 display formulas parsed, 26 targeted frontend tests and 25 LaTeX-renderer tests passed. This does not validate every signature, scientific formula, browser interaction or older supplementary snippet. Continue source-backed argument and example review; extra domain waves are enrichment, not missing-page repair.
-- **Verified callable limitations:** `eig` and `eigvec` aliases and `EulerRotate` are unavailable; `ss2ss` and `tf2zp` reject the documented invocation during output-shape handling. Their reference pages show checked diagnostics and working alternatives. Implementation requires separate fixes plus native/WASM regressions before the warnings can be removed.
-- **Property coverage:** named `.mix` refrigerants need upstream mixture routing. A historical Air flash refusal near the bubble side at 1–7 bar was recorded for quality around $10^{-4}$–$10^{-2}$; recheck it against the installed rustprop revision before deciding whether upstream work remains. Ordinary single-phase Air support is not evidence that every two-phase state works.
-- **Optional resource seam:** `install_from_bytes` accepts `FRPHTAB1`, not `FRAUX1`. It now layers over the installed backend, so the old report's replacement-only warning is stale. Validate multi-resource lifecycle, cache behavior and numeric coverage before relying on production lazy resources. The seam is implemented; actual default-bundle splitting remains a distinct, deferred optimization subject to CI headroom.
-- **Table review follow-up:** verify precision survives lookup/trajectory conversion; accessor sweeps report global nonconvergence; edits invalidate in-flight results; undo/bulk edits preserve unrelated data and input/output roles; invalid log interpolation and duplicate X/header policies are explicit; formula text stays attached to its data; invalid cells and units survive validation/composition without silent loss; failed/cancelled rows retain actionable status and stable export identity.
-- **Plot review follow-up:** source/run binding and missing-data line breaks were delivered in the completed visualization milestone. Recheck histogram required channels, array Z/size alignment, domain-specific request gating, code-owned edit behavior, log/unit handling, view persistence, export fidelity and render failure recovery against current integration tests before opening new fixes.
-- **Cross-layer acceptance:** add focused existing Vitest/Playwright scenarios for edit → solve → plot → export → reopen, including non-SI values, missing samples, failed rows, stale requests, keyboard interaction and narrow viewports. Measure cold/warm median and p95 on fixed datasets/devices; old review targets and jsdom timings are not measured browser guarantees. Prefer existing grids, plotting code and test tools over new abstractions.
-- **Scientific validation and usability:** keep cross-library oracle fixtures and the five-person R15 pilot separate from example execution. Neither passing examples nor static coverage establishes estimator parity or human task completion. STFT/resampling and a larger public book/gallery remain proposals unless separately implemented and verified.
+| Lead | Verdict | Evidence |
+| --- | --- | --- |
+| Reference coverage depth | **Retired as a finding** | The measurable half is a standing CI gate — `npm run check-docs` and `npm run check-examples` run in [`ci.yml`](file:///home/eren/homecloud/dev/frees-wasm/.github/workflows/ci.yml) and were green on the `b2ab4b1` merge. The open-ended half ("continue source-backed argument and example review") has no done condition and belongs with the §3.1 documentation programmes. |
+| Verified callable limitations | **Reproduced** | `eig`, `eigvec`, `EulerRotate`, `ss2ss`, `tf2zp` each run through `frees-cli solve`; every diagnostic matched its reference page verbatim. → Phase 4.5 |
+| Property coverage — Air flash near bubble, 1–7 bar, $x \approx 10^{-4}$–$10^{-2}$ | **Stale — does not reproduce** | All four corner points solve finite and monotone in both $P$ and $x$ against the installed `rustprop` revision (1 bar: −203.1 and 1 825.8 J/kg; 7 bar: 44 343.2 and 46 035.5 J/kg). The historical refusal is gone; the old note asked for exactly this recheck. |
+| Property coverage — `.mix` blends | **Reproduced** | `Enthalpy(R454B, T=300, P=500000)` fails with a NaN residual. → Phase 4.5 |
+| Optional resource seam | **Reproduced as a coverage gap** | The seam works and layers correctly; the multi-resource lifecycle, cache and numeric-coverage tests the note asks for do not exist. → Phase 4.5 |
+| Table review follow-up | **One confirmed hole, rest unaudited** | Accessor-sweep global nonconvergence matched zero of 659 test titles; the other sub-items map onto existing suites. → Phase 4.5 |
+| Plot review follow-up | **No hole found, unaudited** | Render-failure recovery, histogram channels, code-owned plots and export all have tests. Needs a per-item audit, not a re-review. → Phase 4.5 |
+| Cross-layer acceptance | **Reproduced** | Three Phase 9 journeys and two offline specs; no `edit → solve → plot → export → reopen` chain, and no UI-level p95 measurement. → Phase 4.5 |
+| Scientific validation and usability | **Retired — not a finding** | A governance rule, not work: oracle fixtures and the R15 pilot stay separate from example execution, and neither passing examples nor static coverage establishes estimator parity or human task completion. It guards §2's R15 pilot and §3.1's D.4 and is recorded there. |
 
 ### 3.4 Deferred — Native Desktop & iOS Packaging (Tauri v2)
 
