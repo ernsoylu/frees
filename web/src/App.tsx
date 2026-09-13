@@ -2582,9 +2582,9 @@ export default function App() {
         {bannerErrorLine != null && (
           <Alert color="red" variant="light" p="xs" mb={6} title="Syntax error">
             <Group justify="space-between" wrap="nowrap" gap="xs">
-              <Text size="xs">Syntax error on line {errorLine}.</Text>
-              <Button size="compact-xs" variant="light" color="red" onClick={() => goToLine(errorLine)}>
-                Go to line {errorLine}
+              <Text size="xs">Syntax error on line {bannerErrorLine}.</Text>
+              <Button size="compact-xs" variant="light" color="red" onClick={() => goToLine(bannerErrorLine)}>
+                Go to line {bannerErrorLine}
               </Button>
             </Group>
           </Alert>
