@@ -22,6 +22,7 @@
 //! ([`OffsetQuantity`]).
 
 use crate::diag::{FreesError, Result};
+use crate::units::currency;
 use crate::units::quantity::{Dims, OffsetQuantity, Quantity, BASE_SYMBOLS, DIMENSIONS};
 
 /// Tolerance for comparing dimension exponents, matching the Java `1e-9`.
@@ -526,6 +527,11 @@ impl UnitRegistry {
                 dimension: UnitRegistry::si_name(dims),
                 si_factor: *factor,
             })
+            .chain(currency::known_codes().into_iter().map(|code| UnitInfo {
+                si_factor: currency::usd_per(&code).unwrap_or(1.0),
+                dimension: UnitRegistry::si_name(&currency::CURRENCY),
+                symbol: code,
+            }))
             .collect();
         out.sort_by(|a, b| {
             a.dimension
@@ -587,6 +593,11 @@ fn lookup(name: &str) -> Result<Quantity> {
     let lower = name.to_lowercase();
     if let Some((_, factor, dims)) = UNITS.iter().find(|(n, _, _)| *n == lower) {
         return Ok(Quantity::new(*factor, *dims));
+    }
+    // Currencies resolve last, so an ISO code that collides with an engineering
+    // unit (`CUP`, the Cuban peso, against the cup of volume) stays the unit.
+    if let Some(usd) = currency::usd_per(name) {
+        return Ok(Quantity::new(usd, currency::CURRENCY));
     }
     Err(FreesError::UnknownUnit {
         unit: name.to_string(),
@@ -1314,7 +1325,10 @@ mod tests {
     fn all_units_is_a_large_table_without_duplicates() {
         let units = UnitRegistry::all_units();
         assert!(units.len() > 130, "only {} units", units.len());
-        assert_eq!(units.len(), UNITS.len() + CASE_SENSITIVE_UNITS.len());
+        assert_eq!(
+            units.len(),
+            UNITS.len() + CASE_SENSITIVE_UNITS.len() + currency::known_codes().len()
+        );
 
         let mut seen = std::collections::HashSet::new();
         for info in &units {

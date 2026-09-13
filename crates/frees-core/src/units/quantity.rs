@@ -1,12 +1,13 @@
-//! Physical quantities over the seven SI base dimensions.
+//! Physical quantities over the seven SI base dimensions plus currency.
 //!
 //! Port of `../frEES/backend/core/src/main/java/com/frees/backend/units/Quantity.java`.
 
-/// Number of SI base dimensions.
-pub const DIMENSIONS: usize = 7;
+/// Number of base dimensions: the seven SI ones plus money, whose base unit
+/// is USD (see [`crate::units::currency`]).
+pub const DIMENSIONS: usize = 8;
 
-/// Base dimension order: `[kg, m, s, K, mol, A, cd]`.
-pub const BASE_SYMBOLS: [&str; DIMENSIONS] = ["kg", "m", "s", "K", "mol", "A", "cd"];
+/// Base dimension order: `[kg, m, s, K, mol, A, cd, USD]`.
+pub const BASE_SYMBOLS: [&str; DIMENSIONS] = ["kg", "m", "s", "K", "mol", "A", "cd", "USD"];
 
 /// Dimension exponents, indexed as [`BASE_SYMBOLS`].
 pub type Dims = [f64; DIMENSIONS];
@@ -15,7 +16,7 @@ pub type Dims = [f64; DIMENSIONS];
 const DIM_EPS: f64 = 1e-9;
 
 /// A physical quantity: a multiplicative factor to SI plus exponents over the
-/// seven SI base dimensions.
+/// base dimensions.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Quantity {
     pub factor: f64,
@@ -159,7 +160,7 @@ mod tests {
     use super::*;
 
     fn dims(kg: f64, m: f64, s: f64) -> Dims {
-        [kg, m, s, 0.0, 0.0, 0.0, 0.0]
+        [kg, m, s, 0.0, 0.0, 0.0, 0.0, 0.0]
     }
 
     #[test]
@@ -172,7 +173,7 @@ mod tests {
     fn multiply_adds_exponents_and_divide_subtracts() {
         // Pa = kg m^-1 s^-2 ; m^3 → Pa*m^3 = kg m^2 s^-2 (an energy)
         let pa = Quantity::new(1.0, dims(1.0, -1.0, -2.0));
-        let m3 = Quantity::new(1.0, [0.0, 3.0, 0.0, 0.0, 0.0, 0.0, 0.0]);
+        let m3 = Quantity::new(1.0, [0.0, 3.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]);
         let energy = pa.multiply(&m3);
         assert_eq!(energy.dims[0], 1.0);
         assert_eq!(energy.dims[1], 2.0);
@@ -184,7 +185,7 @@ mod tests {
 
     #[test]
     fn pow_scales_exponents_and_factor() {
-        let km = Quantity::new(1000.0, [0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0]);
+        let km = Quantity::new(1000.0, [0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]);
         let km2 = km.powf(2.0);
         assert_eq!(km2.factor, 1_000_000.0);
         assert_eq!(km2.dims[1], 2.0);
@@ -202,7 +203,7 @@ mod tests {
     #[test]
     fn celsius_round_trips_through_si() {
         // C → K is value + 273.15
-        let celsius = OffsetQuantity::new(1.0, 273.15, [0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0]);
+        let celsius = OffsetQuantity::new(1.0, 273.15, [0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0]);
         assert!((celsius.to_si(25.0) - 298.15).abs() < 1e-12);
         assert!((celsius.from_si(298.15) - 25.0).abs() < 1e-12);
     }
@@ -213,7 +214,7 @@ mod tests {
         let f = OffsetQuantity::new(
             5.0 / 9.0,
             459.67 * 5.0 / 9.0,
-            [0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0],
         );
         assert!((f.to_si(32.0) - 273.15).abs() < 1e-9);
         assert!((f.to_si(212.0) - 373.15).abs() < 1e-9);

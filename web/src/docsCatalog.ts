@@ -1727,6 +1727,34 @@ P_kPa = P * Convert(Pa, kPa)  { converts SI Pa to kPa: 689.5 kPa }
 ## Absolute temperatures versus differences
 \`T = 25 [C]\` is an **absolute** temperature (stored as 298.15 K). A *difference* such as a 10 °C rise is 10 K — annotate it \`[deltaC]\` / \`[deltaK]\`, or write the kelvin difference directly. \`Convert(C, K)\` is the wrong tool for either: it has no offset, so it cannot turn 25 °C into 298.15 K, and it is unnecessary for a difference that is already 10 K.
 
+## Currency units
+Money is a dimension of its own, with USD as its base unit, so ISO currency codes
+work exactly like engineering units — \`[USD]\`, \`[EUR]\`, \`[GBP]\`, \`[TRY]\`, \`[JPY]\`,
+\`[RUB]\`, \`[CHF]\` and the other major convertibles:
+\`\`\`
+{ Investment calculator }
+Unit_Price = 0.7478 [USD]
+min_order = 500
+total = Unit_Price * min_order
+total_eur = total * Convert(USD, EUR)
+budget = 400 [EUR]
+margin = budget - total_eur
+\`\`\`
+Compound units read as usual — one bracket, one unit expression — so a specific
+cost is \`[USD/kg]\`, a rate is \`[EUR/m^2]\` or \`[GBP/h]\`, and \`[TRY/kW-h]\` is an
+energy tariff. Adding a price to a mass is still a dimensional error:
+\`\`\`
+c_mass = 12.5 [USD/kg]
+m = 200 [kg]
+cost = c_mass * m        { 2500 USD }
+c_area = 40 [EUR/m^2]    { stored as 43.2 USD/m^2 }
+\`\`\`
+
+Exchange rates are not physical constants. In the browser, the first document
+that mentions a currency fetches the day's USD-based rates from a free exchange
+feed; offline runs and the CLI fall back to a dated built-in table, so a document
+that mixes currencies only reproduces against the rates it was solved with.
+
 [Component: UnitsReference]
 
 [Related: syntax, variables, ref-units]`,
