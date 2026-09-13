@@ -63,7 +63,21 @@ const fetchedComponents = new Map<string, Promise<string | null>>()
 // the first document that mentions one pulls today's USD-based table from a
 // free feed. Fetched once per worker; a failure (offline, blocked) leaves the
 // engine on its dated built-in fallback rather than failing the solve.
-const CURRENCY_UNIT = /\[[^\]]*\b(?:USD|EUR|GBP|CHF|JPY|TRY|RUB|CNY|CAD|AUD|NZD|SEK|NOK|DKK|PLN|CZK|HUF|RON|BGN|ISK|INR|BRL|MXN|ZAR|KRW|SGD|HKD|TWD|THB|MYR|IDR|PHP|VND|AED|SAR|QAR|KWD|BHD|OMR|JOD|ILS|EGP|MAD|NGN|UAH|PKR|BDT|ARS|CLP|COP|PEN)\b[^\]]*\]/i
+const CURRENCY_CODES = new Set(
+  ('USD EUR GBP CHF JPY TRY RUB CNY CAD AUD NZD SEK NOK DKK PLN CZK HUF RON BGN ISK INR BRL MXN ZAR KRW ' +
+    'SGD HKD TWD THB MYR IDR PHP VND AED SAR QAR KWD BHD OMR JOD ILS EGP MAD NGN UAH PKR BDT ARS CLP COP PEN').split(' '),
+)
+
+/** Whether any `[...]` unit in the document names a currency. */
+function mentionsCurrency(source: string): boolean {
+  for (const [, unit] of source.matchAll(/\[([^\]]*)\]/g)) {
+    for (const token of unit.split(/[^A-Za-z]+/)) {
+      if (CURRENCY_CODES.has(token.toUpperCase())) return true
+    }
+  }
+  return false
+}
+
 const RATE_FEEDS = ['https://open.er-api.com/v6/latest/USD', 'https://api.frankfurter.dev/v1/latest?base=USD']
 let ratesReady: Promise<void> | null = null
 
@@ -85,7 +99,7 @@ function fetchCurrencyRates(): Promise<void> {
 
 async function prepareSource(source: string): Promise<string> {
   let prepared = source
-  if (CURRENCY_UNIT.test(source)) await fetchCurrencyRates()
+  if (mentionsCurrency(source)) await fetchCurrencyRates()
   const tableBase = resourceConfig.__freesPropertyTableBaseUrl
   const fluid = source.match(/\b(?:Water|Steam|R\d{2,4}[A-Za-z]*|Ammonia|Nitrogen|Oxygen|CarbonDioxide|Methane|Propane)\b/i)?.[0]
   if (tableBase && fluid) {
