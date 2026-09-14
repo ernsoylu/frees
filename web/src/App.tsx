@@ -67,7 +67,7 @@ import {
   VariableResult,
 } from './api'
 import { ModelRevisionTracker } from './modelRevision'
-import { findPin, pinnableParameters, sliderOverrideEquation, sliderRange, type PinnedSlider } from './sliders'
+import { findPin, pinnableParameters, sliderOverrideEquation, sliderRange, withSliderBounds, type PinnedSlider } from './sliders'
 const PreferencesModal = lazy(() => import('./PreferencesModal'))
 const AboutModal = lazy(() => import('./AboutModal'))
 import VariableInfoModal, {
@@ -514,6 +514,10 @@ export default function App() {
   // REPL assignments and are appended AFTER them, so the backend's
   // last-wins collapse by name lets a dragged slider beat a stale REPL value.
   const [pinnedSliders, setPinnedSliders] = useState<PinnedSlider[]>(() => boot?.sliders ?? [])
+  // A handle moved since the last solve landed: the results on screen describe
+  // the previous values until one does, which is worth saying out loud because
+  // a blocked or failing solve leaves that gap open indefinitely.
+  const [slidersStale, setSlidersStale] = useState(false)
   const sliderTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const sliderSolveRef = useRef<() => void>(() => {})
   // A release that lands while a solve is in flight must not be dropped: the
@@ -854,6 +858,12 @@ export default function App() {
     if (!solving) setFillMissingFor(null)
   }, [solving])
 
+  // A landed solve is what makes the strip's handles describe the results
+  // again; until one does, the strip says so.
+  useEffect(() => {
+    if (result) setSlidersStale(false)
+  }, [result])
+
   // Drain a slider re-solve that the in-flight guard blocked. Without this a
   // handle released mid-solve leaves the solution showing the previous value.
   useEffect(() => {
@@ -873,7 +883,7 @@ export default function App() {
     }
     isDirtyRef.current = true
 
-  }, [text, tables, plots, varDrafts, schematicOffsets])
+  }, [text, tables, plots, varDrafts, pinnedSliders, schematicOffsets])
 
   // Apply an opened/loaded project to every workspace slice. Child-owned slices
   // are written back to their caches and the relevant tabs are remounted (epoch
@@ -898,6 +908,7 @@ export default function App() {
     // nothing.
     spreadsheetsRef.current = p.spreadsheets ?? []
     analyzersRef.current = p.analyzers ?? []
+    setPinnedSliders(p.sliders ?? [])
     setSchematicOffsets(p.schematic ?? {})
     // D10/D11 compatibility notices: the spreadsheet and Data Analyzer
     // features are removed, but the data in the file is preserved (inert),
@@ -1752,6 +1763,7 @@ export default function App() {
 
   function setSliderValue(name: string, value: number, commit: boolean) {
     modelRevisionRef.current.bump()
+    setSlidersStale(true)
     setPinnedSliders((prev) => prev.map((p) => (p.name === name ? { ...p, value } : p)))
     // Dragging re-solves on a short debounce so the solution tracks the handle;
     // the release commits promptly. Both go through the timer, so a fast drag
@@ -2821,6 +2833,7 @@ export default function App() {
                     onCommit={(name, v) => setSliderValue(name, v, true)}
                     onUnpin={unpinSlider}
                     solving={solving}
+                    stale={slidersStale}
                   />
                 </Suspense>
               ) : null
@@ -3503,6 +3516,7 @@ export default function App() {
             return [...variables, ...replScalarNames]
           })()}
           drafts={varDrafts}
+          sliders={pinnedSliders}
           solvedValues={(() => {
             const solvedValues: Record<string, number> = {}
             if (result && result.variables) {
@@ -3515,8 +3529,23 @@ export default function App() {
             }
             return solvedValues
           })()}
-          onSave={(drafts) => {
+          onSave={(drafts, sliderBounds) => {
             setVarDrafts(drafts)
+            // A re-ranged slider keeps its handle inside the new track, and the
+            // solution follows it, so narrowing a range can't strand the model
+            // on a value the slider can no longer reach.
+            setPinnedSliders((prev) => {
+              const next = prev.map((p) => {
+                const range = sliderBounds[p.name.toLowerCase()]
+                return range ? withSliderBounds(p, range.min, range.max) : p
+              })
+              if (next.some((p, i) => p.value !== prev[i].value)) {
+                modelRevisionRef.current.bump()
+                setSlidersStale(true)
+                scheduleSliderSolve(30)
+              }
+              return next
+            })
             setShowVariableInfo(false)
           }}
           onClose={() => setShowVariableInfo(false)}

@@ -11,6 +11,7 @@ import {
   Tooltip,
 } from '@mantine/core'
 import { readGuessDirectives, writeGuessDirectives } from './guessDirectives'
+import { parseSliderBounds, type PinnedSlider } from './sliders'
 
 export interface VariableDraft {
   guess: string
@@ -50,7 +51,14 @@ interface Props {
   variables: string[]
   drafts: Record<string, VariableDraft>
   solvedValues: Record<string, number>
-  onSave: (drafts: Record<string, VariableDraft>) => void
+  /** Sliders currently on screen. Only these variables have an editable
+   *  slider range — a range for a variable with no slider would describe
+   *  nothing. */
+  sliders?: readonly PinnedSlider[]
+  onSave: (
+    drafts: Record<string, VariableDraft>,
+    sliderBounds: Record<string, { min: number; max: number }>,
+  ) => void
   onClose: () => void
   /** The document, so the window can show what the text already declares. */
   documentText?: string
@@ -120,7 +128,8 @@ function processDraft(name: string, draft: VariableDraft): { error: string } | {
   }
 }
 
-export default function VariableInfoModal({ variables, drafts, solvedValues, onSave, onClose, documentText, onWriteToDocument }: Readonly<Props>) {
+export default function VariableInfoModal({ variables, drafts, solvedValues, sliders, onSave, onClose, documentText, onWriteToDocument }: Readonly<Props>) {
+  const pins = new Map((sliders ?? []).map((p) => [p.name.toLowerCase(), p]))
   // Names the document itself declares with a GUESS line. The solver treats
   // the text as authoritative (it merges GUESS over these values, text
   // winning), so the window must say which rows the document already owns.
@@ -147,7 +156,22 @@ export default function VariableInfoModal({ variables, drafts, solvedValues, onS
     }
     return initial
   })
+  // Slider track ends, as text, keyed by lowercased name (the same
+  // case-insensitive key the solver and `findPin` use).
+  const [bounds, setBounds] = useState<Record<string, { min: string; max: string }>>(() => {
+    const initial: Record<string, { min: string; max: string }> = {}
+    for (const pin of sliders ?? []) {
+      initial[pin.name.toLowerCase()] = { min: String(pin.min), max: String(pin.max) }
+    }
+    return initial
+  })
   const [error, setError] = useState<string | null>(null)
+
+  function setBound(name: string, end: 'min' | 'max', value: string) {
+    const key = name.toLowerCase()
+    setBounds((b) => ({ ...b, [key]: { ...(b[key] ?? { min: '', max: '' }), [end]: value } }))
+    setError(null)
+  }
 
   function setField(name: string, field: keyof VariableDraft, value: string) {
     setLocal((d) => {
@@ -209,7 +233,17 @@ export default function VariableInfoModal({ variables, drafts, solvedValues, onS
       }
       saved[name] = result.saved
     }
-    onSave(saved)
+    const sliderBounds: Record<string, { min: number; max: number }> = {}
+    for (const [key, pin] of pins) {
+      const entry = bounds[key] ?? { min: String(pin.min), max: String(pin.max) }
+      const range = parseSliderBounds(entry.min, entry.max)
+      if (!range) {
+        setError(`Slider range for ${pin.name} needs two numbers with the maximum above the minimum.`)
+        return
+      }
+      sliderBounds[key] = range
+    }
+    onSave(saved, sliderBounds)
   }
 
   return (
@@ -238,6 +272,8 @@ export default function VariableInfoModal({ variables, drafts, solvedValues, onS
               <Table.Th>Units</Table.Th>
               <Table.Th>Uncertainty (Abs)</Table.Th>
               <Table.Th>Uncertainty (Rel %)</Table.Th>
+              <Table.Th>Slider Min</Table.Th>
+              <Table.Th>Slider Max</Table.Th>
             </Table.Tr>
           </Table.Thead>
           <Table.Tbody>
@@ -267,6 +303,24 @@ export default function VariableInfoModal({ variables, drafts, solvedValues, onS
                     />
                   </Table.Td>
                 ))}
+                {(['min', 'max'] as const).map((end) => {
+                  const pin = pins.get(name.toLowerCase())
+                  return (
+                    <Table.Td key={end}>
+                      <Tooltip label={pin ? `Slider ${end} for ${name}` : 'Pin this variable to a slider to set its range'}>
+                        <TextInput
+                          size="xs"
+                          disabled={!pin}
+                          value={bounds[name.toLowerCase()]?.[end] ?? ''}
+                          placeholder={pin ? undefined : 'no slider'}
+                          onChange={(e) => setBound(name, end, e.currentTarget.value)}
+                          spellCheck={false}
+                          styles={{ input: { fontFamily: 'var(--mantine-font-family-monospace)' } }}
+                        />
+                      </Tooltip>
+                    </Table.Td>
+                  )
+                })}
               </Table.Tr>
             ))}
           </Table.Tbody>

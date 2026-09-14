@@ -103,3 +103,21 @@ export function pinnableParameters(text: string): Set<string> {
   }
   return names
 }
+
+/**
+ * Slider bounds as typed in the Variable Information window. Returns null when
+ * the pair is not a usable track — a non-number, or ends that do not ascend —
+ * so the caller can refuse the save instead of shipping a dead slider.
+ */
+export function parseSliderBounds(minText: string, maxText: string): { min: number; max: number } | null {
+  const min = Number(minText.trim())
+  const max = Number(maxText.trim())
+  if (minText.trim() === '' || maxText.trim() === '') return null
+  if (!Number.isFinite(min) || !Number.isFinite(max) || max <= min) return null
+  return { min, max }
+}
+
+/** A pin re-ranged to the given track, with its value pulled back inside it. */
+export function withSliderBounds(pin: PinnedSlider, min: number, max: number): PinnedSlider {
+  return { ...pin, min, max, value: Math.min(max, Math.max(min, pin.value)) }
+}

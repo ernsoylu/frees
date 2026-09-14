@@ -1,5 +1,5 @@
-import { ActionIcon, Group, Paper, Slider, Stack, Text, Tooltip } from '@mantine/core'
-import { IconX } from '@tabler/icons-react'
+import { ActionIcon, Alert, Group, Paper, Slider, Stack, Text, Tooltip } from '@mantine/core'
+import { IconAlertTriangle, IconX } from '@tabler/icons-react'
 import { formatValue } from './format'
 import { sliderStep, type PinnedSlider } from './sliders'
 
@@ -12,6 +12,9 @@ interface Props {
   onUnpin: (name: string) => void
   /** True while a solve is in flight, so the strip can say so. */
   solving?: boolean
+  /** A slider moved (or was re-ranged) since the last solve landed, so what
+   *  the rest of the workspace shows no longer matches these handles. */
+  stale?: boolean
   /** Pins whose variable is no longer a literal parameter in the document —
    *  shown, but not applied, so an edit can never make a slider destructive. */
   inertNames?: string[]
@@ -22,7 +25,7 @@ interface Props {
  * through the same override path REPL assignments use, so the solution (and
  * every plot and table drawn from it) follows the handle.
  */
-export default function SliderStrip({ pins, onChange, onCommit, onUnpin, solving, inertNames }: Readonly<Props>) {
+export default function SliderStrip({ pins, onChange, onCommit, onUnpin, solving, stale, inertNames }: Readonly<Props>) {
   const inert = new Set((inertNames ?? []).map((n) => n.toLowerCase()))
   if (pins.length === 0) {
     return null
@@ -39,6 +42,18 @@ export default function SliderStrip({ pins, onChange, onCommit, onUnpin, solving
           </Text>
         )}
       </Group>
+      {stale && !solving && (
+        <Alert
+          color="yellow"
+          variant="light"
+          icon={<IconAlertTriangle size={14} />}
+          p="xs"
+          mb={8}
+          styles={{ message: { fontSize: 'var(--mantine-font-size-xs)' } }}
+        >
+          Slider values changed — solve again to update the results.
+        </Alert>
+      )}
       <Stack gap={10}>
         {pins.map((pin) => {
           const isInert = inert.has(pin.name.toLowerCase())
