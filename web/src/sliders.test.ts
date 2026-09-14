@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { findPin, pinnableParameters, sliderOverrideEquation, sliderRange, sliderStep, type PinnedSlider } from './sliders'
+import { findPin, parseSliderBounds, pinnableParameters, sliderOverrideEquation, sliderRange, sliderStep, withSliderBounds, type PinnedSlider } from './sliders'
 
 describe('sliderRange', () => {
   it('uses declared bounds when they bracket the value', () => {
@@ -112,5 +112,31 @@ describe('pinnableParameters', () => {
 
   it('is empty for an empty document', () => {
     expect(pinnableParameters('').size).toBe(0)
+  })
+})
+
+describe('parseSliderBounds', () => {
+  it('accepts an ascending pair of numbers', () => {
+    expect(parseSliderBounds('10', '20')).toEqual({ min: 10, max: 20 })
+  })
+
+  it('rejects blanks, non-numbers and non-ascending ends', () => {
+    expect(parseSliderBounds('', '20')).toBeNull()
+    expect(parseSliderBounds('abc', '20')).toBeNull()
+    expect(parseSliderBounds('20', '20')).toBeNull()
+    expect(parseSliderBounds('30', '20')).toBeNull()
+  })
+})
+
+describe('withSliderBounds', () => {
+  const pin = { name: 'p', value: 250, units: 'kPa', min: 100, max: 400 }
+
+  it('pulls a value outside the new track back inside it', () => {
+    expect(withSliderBounds(pin, 0, 100).value).toBe(100)
+    expect(withSliderBounds(pin, 300, 500).value).toBe(300)
+  })
+
+  it('leaves a value already inside the track alone', () => {
+    expect(withSliderBounds(pin, 200, 300)).toEqual({ ...pin, min: 200, max: 300 })
   })
 })
