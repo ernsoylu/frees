@@ -47,7 +47,7 @@ import {
   IconWorld,
 } from '@tabler/icons-react'
 import { notifications } from '@mantine/notifications'
-import { buildRawDocumentUrl, buildShareUrl, clearRawDocumentUrl, clearShareHash, extractSharedText, fetchRawDocument } from './share'
+import { buildShareUrl, clearRawDocumentUrl, clearShareHash, deriveProjectTitle, extractSharedText, fetchRawDocument } from './share'
 import { openPrintReport } from './report'
 import {
   check,
@@ -122,6 +122,7 @@ const DigitizerTab = lazy(() =>
 const TablesWorkbookTab = lazy(() => import('./tablesGrid/TablesGridTab'))
 // Lazy: pulls the full 58 KB example catalog only when the picker opens.
 const ExamplesModal = lazy(() => import('./ExamplesModal'))
+const OpenUrlModal = lazy(() => import('./OpenUrlModal'))
 
 // The Plot tab (and its Plotly figure builders) plus the optimization and
 // plot-config modals are also code-split: the Plotly figure machinery is large
@@ -455,7 +456,7 @@ export default function App() {
   }, [])
 
   const handleOpenUrl = useCallback(() => {
-    globalThis.open(buildRawDocumentUrl(), '_blank')
+    setShowOpenUrl(true)
   }, [])
   // Strip the share fragment once the navigation has committed, so a refresh
   // returns to the user's own autosaved work instead of re-importing the link.
@@ -643,6 +644,7 @@ export default function App() {
   } | null>(null)
   const [showAbout, setShowAbout] = useState(false)
   const [showExamples, setShowExamples] = useState(false)
+  const [showOpenUrl, setShowOpenUrl] = useState(false)
   const [showComponentWizard, setShowComponentWizard] = useState(false)
   const [showShortcuts, setShowShortcuts] = useState(false)
   const [activeTab, setActiveTab] = useState<string>('equations')
@@ -1644,6 +1646,24 @@ export default function App() {
     guardedAction(() => actuallyLoadExample(example))
   }
 
+  function handleOpenUrlSuccess(url: string, loadedText: string) {
+    guardedAction(() => {
+      const title = deriveProjectTitle(url, loadedText)
+      actuallyLoadExample({
+        id: 'url-document',
+        title,
+        description: `Loaded from ${url}`,
+        category: 'Remote',
+        text: loadedText,
+      })
+      notifications.show({
+        color: 'teal',
+        title: 'Opened document from URL',
+        message: `Loaded “${title}”.`,
+      })
+    })
+  }
+
   // "Open in Editor" handoff from the /help docs: the Help page parks a runnable
   // snippet in localStorage and opens this route; consume it exactly once on
   // mount. Stale keys (> 5 min) are dropped — they are leftovers, not intent.
@@ -2553,7 +2573,7 @@ export default function App() {
       group: 'Project',
       actions: [
         { id: 'proj-examples', label: 'Open Example…', description: 'Load a ready-to-solve worked example', leftSection: <IconLayoutGrid size={18} />, onClick: () => setShowExamples(true) },
-        { id: 'proj-url', label: 'Open URL', description: 'Open a hosted equation document via URL parameter', leftSection: <IconWorld size={18} />, onClick: handleOpenUrl },
+        { id: 'proj-url', label: 'Open URL…', description: 'Load an equation document from a raw text URL', leftSection: <IconWorld size={18} />, onClick: handleOpenUrl },
         { id: 'proj-share', label: 'Copy Share Link', description: 'Self-contained URL carrying this document', leftSection: <IconLink size={18} />, onClick: handleShareLink },
         { id: 'proj-report', label: 'Print Report…', description: 'Printable calculation report of the last solve (print to PDF)', leftSection: <IconPrinter size={18} />, onClick: handlePrintReport },
         { id: 'help-getting-started', label: 'Getting Started…', description: 'What frees is, and four one-click ways in', leftSection: <IconHelp size={18} />, onClick: () => setShowGettingStarted(true) },
@@ -3386,6 +3406,16 @@ export default function App() {
             opened={showExamples}
             onClose={() => setShowExamples(false)}
             onSelect={loadExample}
+          />
+        </Suspense>
+      )}
+
+      {showOpenUrl && (
+        <Suspense fallback={null}>
+          <OpenUrlModal
+            opened={showOpenUrl}
+            onClose={() => setShowOpenUrl(false)}
+            onSuccess={handleOpenUrlSuccess}
           />
         </Suspense>
       )}

@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { afterEach, expect, it, vi } from 'vitest'
-import { buildRawDocumentUrl, fetchRawDocument } from './share'
+import { buildRawDocumentUrl, deriveProjectTitle, fetchRawDocument, normalizeRawDocumentUrl } from './share'
 
 const source = 'https://example.com/raw?file=model&version=2'
 afterEach(() => vi.unstubAllGlobals())
@@ -49,4 +49,18 @@ it('passes cancellation through to the request', async () => {
 it('builds a raw document url with url encoding for the default host and source', () => {
   expect(buildRawDocumentUrl()).toBe('https://frees.softncon.com/?url=https%3A%2F%2Fpw.pee.pw%2Fr%2FHh0WCdP')
   expect(buildRawDocumentUrl('https://pw.pee.pw/r/Hh0WCdP')).toBe('https://frees.softncon.com/?url=https%3A%2F%2Fpw.pee.pw%2Fr%2FHh0WCdP')
+})
+
+it('normalizes raw document URLs, unwrapping embedded ?url= parameters', () => {
+  expect(normalizeRawDocumentUrl('https://pw.pee.pw/r/Hh0WCdP')).toBe('https://pw.pee.pw/r/Hh0WCdP')
+  expect(normalizeRawDocumentUrl('https://frees.softncon.com/?url=https%3A%2F%2Fpw.pee.pw%2Fr%2FHh0WCdP')).toBe('https://pw.pee.pw/r/Hh0WCdP')
+  expect(normalizeRawDocumentUrl('  https://frees.softncon.com/?url=https://pw.pee.pw/r/Hh0WCdP  ')).toBe('https://pw.pee.pw/r/Hh0WCdP')
+})
+
+it('derives readable project titles from equation comments or URL segments', () => {
+  expect(
+    deriveProjectTitle('https://pw.pee.pw/r/Hh0WCdP', '// Damped Harmonic Oscillator (parametric time sweep)\nm=1'),
+  ).toBe('Damped Harmonic Oscillator (parametric time sweep)')
+  expect(deriveProjectTitle('https://example.com/models/heat_exchanger.frees', 'x = 1')).toBe('heat_exchanger')
+  expect(deriveProjectTitle('https://example.com/r/xyz', 'x = 1')).toBe('xyz')
 })

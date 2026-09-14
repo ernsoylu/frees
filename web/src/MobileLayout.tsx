@@ -312,7 +312,7 @@ export default function MobileLayout({
                   leftSection={<IconWorld size={14} />}
                   onClick={onOpenUrl}
                 >
-                  Open URL
+                  Open URL…
                 </Menu.Item>
                 <Menu.Item
                   leftSection={<IconDeviceFloppy size={14} />}
