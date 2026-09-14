@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { afterEach, expect, it, vi } from 'vitest'
-import { fetchRawDocument } from './share'
+import { buildRawDocumentUrl, fetchRawDocument } from './share'
 
 const source = 'https://example.com/raw?file=model&version=2'
 afterEach(() => vi.unstubAllGlobals())
@@ -44,4 +44,9 @@ it('passes cancellation through to the request', async () => {
     options.signal.throwIfAborted()
   }))
   await expect(fetchRawDocument(source, controller.signal)).rejects.toMatchObject({ name: 'AbortError' })
+})
+
+it('builds a raw document url with url encoding for the default host and source', () => {
+  expect(buildRawDocumentUrl()).toBe('https://frees.softncon.com/?url=https%3A%2F%2Fpw.pee.pw%2Fr%2FHh0WCdP')
+  expect(buildRawDocumentUrl('https://pw.pee.pw/r/Hh0WCdP')).toBe('https://frees.softncon.com/?url=https%3A%2F%2Fpw.pee.pw%2Fr%2FHh0WCdP')
 })

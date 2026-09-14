@@ -60,6 +60,19 @@ export function clearRawDocumentUrl(): void {
   globalThis.history.replaceState(null, '', url.pathname + url.search + url.hash)
 }
 
+export const DEFAULT_RAW_DOCUMENT_SOURCE = 'https://pw.pee.pw/r/Hh0WCdP'
+export const DEFAULT_RAW_DOCUMENT_HOST = 'https://frees.softncon.com/'
+
+/** Builds a URL with the given raw document source encoded into the `url` query parameter. */
+export function buildRawDocumentUrl(
+  source: string = DEFAULT_RAW_DOCUMENT_SOURCE,
+  host: string = DEFAULT_RAW_DOCUMENT_HOST,
+): string {
+  const url = new URL(host)
+  url.searchParams.set('url', source)
+  return url.href
+}
+
 /** Ceiling for the emitted URL. Modern browsers handle far longer URLs, but
  *  chat apps, terminals and older proxies start mangling somewhere in the tens
  *  of thousands of characters — past this, refuse rather than emit a link

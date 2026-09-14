@@ -1,9 +1,20 @@
 import { describe, expect, it } from 'vitest'
-import { buildShareUrl, clearRawDocumentUrl, extractSharedText, MAX_SHARE_URL_CHARS } from './share'
+import {
+  buildRawDocumentUrl,
+  buildShareUrl,
+  clearRawDocumentUrl,
+  extractSharedText,
+  MAX_SHARE_URL_CHARS,
+} from './share'
 
 const BASE = 'https://frees.example/'
 
 describe('share-by-URL', () => {
+  it('builds a raw document url with url encoding', () => {
+    expect(buildRawDocumentUrl()).toBe('https://frees.softncon.com/?url=https%3A%2F%2Fpw.pee.pw%2Fr%2FHh0WCdP')
+    expect(buildRawDocumentUrl('https://example.com/test.frees', 'https://example.com/')).toBe('https://example.com/?url=https%3A%2F%2Fexample.com%2Ftest.frees')
+  })
+
   it('consumes the raw URL without losing other query parameters or the fragment', () => {
     const previous = location.href
     try {
