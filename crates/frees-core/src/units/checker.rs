@@ -694,7 +694,7 @@ impl Checker {
             return Dim::of(Quantity::dimensionless(1.0));
         }
         match function {
-            "abs" | "real" | "imag" => self.dim_of_first(args),
+            "abs" | "real" | "imag" | "uncertaintyof" => self.dim_of_first(args),
             // ArrayElmt returns one element, so it carries the array's units.
             "arrayelmt" => self.dim_of_first(args),
             // Radiation view factors take length arguments and return a
@@ -1209,6 +1209,16 @@ mod tests {
         let report = check_units(&eqs("y = abs(x)"), &units(&[("x", "m")]));
         assert!(report.warnings.is_empty(), "{:?}", report.warnings);
         assert_eq!(report.inferred.get("y").map(String::as_str), Some("m"));
+    }
+
+    #[test]
+    fn uncertainty_carries_the_measured_quantity_units() {
+        let report = check_units(
+            &eqs("q = 10 [W/K] * (293.15 [K] - 273.15 [K])\nsigma = UncertaintyOf(q)"),
+            &no_units(),
+        );
+        assert!(report.warnings.is_empty(), "{:?}", report.warnings);
+        assert_eq!(report.inferred.get("sigma").map(String::as_str), Some("W"));
     }
 
     #[test]

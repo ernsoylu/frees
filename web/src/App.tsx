@@ -2,7 +2,7 @@ import { tableInputIssues } from './tableValidation'
 import { resolvePlotSource } from './plots/sources'
 import { flushSync } from 'react-dom'
 import { helpUrl } from './helpUrl'
-import { ChangeEvent, lazy, startTransition, Suspense, useCallback, useEffect, useMemo, useState, useRef, type ReactNode } from 'react'
+import { ChangeEvent, lazy, startTransition, Suspense, useCallback, useEffect, useEffectEvent, useMemo, useState, useRef, type ReactNode } from 'react'
 import {
   Alert,
   Anchor,
@@ -46,7 +46,7 @@ import {
   IconDatabase,
 } from '@tabler/icons-react'
 import { notifications } from '@mantine/notifications'
-import { buildShareUrl, clearShareHash, extractSharedText } from './share'
+import { buildShareUrl, clearRawDocumentUrl, clearShareHash, extractSharedText, fetchRawDocument } from './share'
 import { openPrintReport } from './report'
 import {
   check,
@@ -339,6 +339,9 @@ const SHARED_BOOT: { text: string; conflicts: boolean } | null = (() => {
   return { text: shared, conflicts: saved?.text != null && saved.text !== shared }
 })()
 
+// Capture before effects consume the URL; valid #share= links take precedence.
+const RAW_DOCUMENT_URL = new URLSearchParams(globalThis.location.search).get('url')
+
 export default function App() {
   const isMobile = useMediaQuery('(max-width: 768px)')
 
@@ -454,7 +457,10 @@ export default function App() {
   // Runs whether or not the document was accepted — declining still means the
   // link has been dealt with.
   useEffect(() => {
-    if (SHARED_BOOT !== null) clearShareHash()
+    if (SHARED_BOOT !== null) {
+      clearShareHash()
+      if (RAW_DOCUMENT_URL !== null) clearRawDocumentUrl()
+    }
   }, [])
 
   // A share link opened while the app is *already* running changes only the
@@ -596,7 +602,7 @@ export default function App() {
   // resolves, so wait for an explicit false.
   const [showGettingStarted, setShowGettingStarted] = useState(false)
   useEffect(() => {
-    if (isMobile === false && sharedBoot === null
+    if (isMobile === false && sharedBoot === null && RAW_DOCUMENT_URL === null
         && localStorage.getItem(GETTING_STARTED_KEY) !== 'true') {
       setShowGettingStarted(true)
     }
@@ -1587,6 +1593,46 @@ export default function App() {
     setWorkspaceEpoch((e) => e + 1)
     requestAnimationFrame(() => dockRef.current?.reset())
   }
+
+  function openSharedDocument(text: string) {
+    actuallyLoadExample({
+      id: 'shared-link', title: 'Shared document',
+      description: 'Opened from a link', category: 'Shared', text,
+    })
+    notifications.show({ color: 'teal', title: 'Opened shared document', message: 'Loaded from the link.' })
+  }
+
+  const receiveRawDocument = useEffectEvent((loaded: string, initialText: string, initialEpoch: number) => {
+    if (loaded === textRef.current) return
+    // Include edits and project switches made while the download was pending.
+    if (boot !== null || textRef.current !== initialText || workspaceEpoch !== initialEpoch) {
+      setShareOffer(loaded)
+    } else {
+      openSharedDocument(loaded)
+    }
+  })
+
+  useEffect(() => {
+    if (RAW_DOCUMENT_URL === null || SHARED_BOOT !== null) return
+    clearRawDocumentUrl()
+    const controller = new AbortController()
+    const initialText = textRef.current
+    const initialEpoch = workspaceEpoch
+    notifications.show({ id: 'raw-document', title: 'Opening raw document', message: 'Downloading the file…', loading: true, autoClose: false })
+    void fetchRawDocument(RAW_DOCUMENT_URL, controller.signal).then(loaded => {
+      if (!controller.signal.aborted) receiveRawDocument(loaded, initialText, initialEpoch)
+    }).catch((error: unknown) => {
+      if (!controller.signal.aborted) notifications.show({
+        color: 'red', title: 'Could not open raw document', autoClose: false,
+        message: error instanceof Error ? error.message : String(error),
+      })
+    }).finally(() => {
+      if (!controller.signal.aborted) notifications.hide('raw-document')
+    })
+    return () => { controller.abort(); notifications.hide('raw-document') }
+    // The URL is a boot request; edits must not restart its download.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   function loadExample(example: Example) {
     setShowExamples(false)
@@ -3423,21 +3469,7 @@ export default function App() {
           const text = shareOffer
           setShareOffer(null)
           if (text === null) return
-          // Same path an example takes — the share semantics the boot comment
-          // promises ("replaces the workspace ... the same as loading an
-          // example") are then true by construction rather than by duplication.
-          actuallyLoadExample({
-            id: 'shared-link',
-            title: 'Shared document',
-            description: 'Opened from a share link',
-            category: 'Shared',
-            text,
-          })
-          notifications.show({
-            color: 'teal',
-            title: 'Opened shared document',
-            message: 'Loaded from the link — nothing was stored on a server.',
-          })
+          openSharedDocument(text)
         }}
       />
 
