@@ -73,6 +73,44 @@ export function buildRawDocumentUrl(
   return url.href
 }
 
+/** Normalizes raw document URL inputs, extracting the raw target if wrapped in a frees ?url= parameter. */
+export function normalizeRawDocumentUrl(input: string): string {
+  const trimmed = input.trim()
+  try {
+    const url = new URL(trimmed)
+    const param = url.searchParams.get('url')
+    if (param) return param.trim()
+  } catch {
+    // Return as-is; fetchRawDocument handles syntax validation.
+  }
+  return trimmed
+}
+
+/** Derives a readable project title from the raw document source URL and optional equation text. */
+export function deriveProjectTitle(source: string, text?: string): string {
+  if (text) {
+    const firstLine = text.split('\n').find((l) => l.trim().length > 0)?.trim()
+    if (firstLine && firstLine.startsWith('//')) {
+      const candidate = firstLine.slice(2).trim()
+      if (candidate.length > 0 && candidate.length <= 60 && !/[{}=]/.test(candidate)) {
+        return candidate
+      }
+    }
+  }
+  try {
+    const parsed = new URL(source)
+    const segments = parsed.pathname.split('/').filter(Boolean)
+    const last = segments[segments.length - 1]
+    if (last) {
+      const clean = last.replace(/\.(frees|txt|eqs)$/i, '')
+      if (clean.length > 0 && clean.length <= 60) return clean
+    }
+  } catch {
+    // Fallback below.
+  }
+  return 'Remote Document'
+}
+
 /** Ceiling for the emitted URL. Modern browsers handle far longer URLs, but
  *  chat apps, terminals and older proxies start mangling somewhere in the tens
  *  of thousands of characters — past this, refuse rather than emit a link

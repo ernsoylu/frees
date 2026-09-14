@@ -867,7 +867,7 @@ export function TopBar(props: Readonly<TopBarProps>) {
               Open Example…
             </Menu.Item>
             <Menu.Item leftSection={<IconWorld size={14} />} onClick={props.onOpenUrl}>
-              Open URL
+              Open URL…
             </Menu.Item>
             <Menu.Item leftSection={<IconLink size={14} />} onClick={props.onShareLink}>
               Copy Share Link
