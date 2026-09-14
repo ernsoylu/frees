@@ -56,6 +56,7 @@ import {
   IconLink,
   IconPrinter,
   IconFileExport,
+  IconWorld,
 } from '@tabler/icons-react'
 import { spotlight } from '@mantine/spotlight'
 import { useState } from 'react'
@@ -771,6 +772,8 @@ interface TopBarProps {
   onInsertFunction: (snippet: string) => void
   onInsertComponent: () => void
   onOpenExamples: () => void
+  /** File menu: open a remote document via URL parameter. */
+  onOpenUrl: () => void
   /** File menu: copy a self-contained #share= link carrying the document. */
   onShareLink: () => void
   /** File menu: open the printable calculation report (browser print-to-PDF). */
@@ -862,6 +865,9 @@ export function TopBar(props: Readonly<TopBarProps>) {
             </Menu.Item>
             <Menu.Item leftSection={<IconLayoutGrid size={14} />} onClick={props.onOpenExamples}>
               Open Example…
+            </Menu.Item>
+            <Menu.Item leftSection={<IconWorld size={14} />} onClick={props.onOpenUrl}>
+              Open URL
             </Menu.Item>
             <Menu.Item leftSection={<IconLink size={14} />} onClick={props.onShareLink}>
               Copy Share Link

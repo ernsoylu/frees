@@ -15,7 +15,8 @@ import {
   IconFilePlus,
   IconHelp,
   IconBook,
-  IconTargetArrow
+  IconTargetArrow,
+  IconWorld,
 } from '@tabler/icons-react'
 import { TableSpec } from './tables'
 import { TABLES_WORKBOOK_WINDOW_ID } from './tablesGrid/tablesWorkbookBridge'
@@ -117,6 +118,7 @@ interface MobileLayoutProps {
   onPreferences: () => void
   onRenameProject: () => void
   onOpenExamples: () => void
+  onOpenUrl: () => void
 }
 
 export default function MobileLayout({
@@ -143,6 +145,7 @@ export default function MobileLayout({
   onPreferences,
   onRenameProject,
   onOpenExamples,
+  onOpenUrl,
 }: MobileLayoutProps) {
   const [activeTab, setActiveTab] = useState<'equations' | 'workspace' | 'plots' | 'table' | 'terminal'>(
     'equations',
@@ -304,6 +307,12 @@ export default function MobileLayout({
                   onClick={onOpenLibrary}
                 >
                   Browser Projects
+                </Menu.Item>
+                <Menu.Item
+                  leftSection={<IconWorld size={14} />}
+                  onClick={onOpenUrl}
+                >
+                  Open URL
                 </Menu.Item>
                 <Menu.Item
                   leftSection={<IconDeviceFloppy size={14} />}

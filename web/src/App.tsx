@@ -44,9 +44,10 @@ import {
   IconLink,
   IconPrinter,
   IconDatabase,
+  IconWorld,
 } from '@tabler/icons-react'
 import { notifications } from '@mantine/notifications'
-import { buildShareUrl, clearRawDocumentUrl, clearShareHash, extractSharedText, fetchRawDocument } from './share'
+import { buildRawDocumentUrl, buildShareUrl, clearRawDocumentUrl, clearShareHash, extractSharedText, fetchRawDocument } from './share'
 import { openPrintReport } from './report'
 import {
   check,
@@ -451,6 +452,10 @@ export default function App() {
       }),
       () => { globalThis.prompt('Copy the share link:', url) },
     )
+  }, [])
+
+  const handleOpenUrl = useCallback(() => {
+    globalThis.open(buildRawDocumentUrl(), '_blank')
   }, [])
   // Strip the share fragment once the navigation has committed, so a refresh
   // returns to the user's own autosaved work instead of re-importing the link.
@@ -2548,6 +2553,7 @@ export default function App() {
       group: 'Project',
       actions: [
         { id: 'proj-examples', label: 'Open Example…', description: 'Load a ready-to-solve worked example', leftSection: <IconLayoutGrid size={18} />, onClick: () => setShowExamples(true) },
+        { id: 'proj-url', label: 'Open URL', description: 'Open a hosted equation document via URL parameter', leftSection: <IconWorld size={18} />, onClick: handleOpenUrl },
         { id: 'proj-share', label: 'Copy Share Link', description: 'Self-contained URL carrying this document', leftSection: <IconLink size={18} />, onClick: handleShareLink },
         { id: 'proj-report', label: 'Print Report…', description: 'Printable calculation report of the last solve (print to PDF)', leftSection: <IconPrinter size={18} />, onClick: handlePrintReport },
         { id: 'help-getting-started', label: 'Getting Started…', description: 'What frees is, and four one-click ways in', leftSection: <IconHelp size={18} />, onClick: () => setShowGettingStarted(true) },
@@ -3106,6 +3112,7 @@ export default function App() {
             onPreferences={() => setShowPreferences(true)}
             onRenameProject={handleRenameProject}
             onOpenExamples={() => setShowExamples(true)}
+            onOpenUrl={handleOpenUrl}
           />
         </Suspense>
       ) : (
@@ -3202,6 +3209,7 @@ export default function App() {
           onInsertFunction={insertFunction}
           onInsertComponent={() => setShowComponentWizard(true)}
           onOpenExamples={() => setShowExamples(true)}
+          onOpenUrl={handleOpenUrl}
           onShareLink={handleShareLink}
           onPrintReport={handlePrintReport}
           canPrintReport={result?.success === true}
