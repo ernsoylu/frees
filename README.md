@@ -11,6 +11,13 @@ Q_dot = m_dot * (h_out - h_in)
 
 Equations are declarative and order-independent, variable names are case-insensitive, quantities solve in SI units with parse-time unit conversions, and systems are blocked and solved using exact symbolic derivatives.
 
+Open a hosted equation document with `https://<frees-host>/?url=<encoded-raw-url>`.
+For example, append `?url=https%3A%2F%2Fpw.pee.pw%2Fr%2FHh0WCdP` to your frees address.
+The source must be an HTTPS raw text URL whose host permits browser cross-origin access (CORS).
+Downloads are limited to 2 MB and 20 seconds; existing work is preserved until you accept the replacement.
+The `url` parameter is consumed after opening, so refreshing restores your workspace.
+If both are supplied, an existing `#share=` document takes precedence over `?url=`.
+
 ---
 
 ## Core Capabilities

@@ -1,9 +1,20 @@
 import { describe, expect, it } from 'vitest'
-import { buildShareUrl, extractSharedText, MAX_SHARE_URL_CHARS } from './share'
+import { buildShareUrl, clearRawDocumentUrl, extractSharedText, MAX_SHARE_URL_CHARS } from './share'
 
 const BASE = 'https://frees.example/'
 
 describe('share-by-URL', () => {
+  it('consumes the raw URL without losing other query parameters or the fragment', () => {
+    const previous = location.href
+    try {
+      history.replaceState(null, '', '/?url=https%3A%2F%2Fexample.com%2Fraw%3Fa%3D1%26b%3D2&theme=dark#refpage:lqr')
+      clearRawDocumentUrl()
+      expect(location.search).toBe('?theme=dark')
+      expect(location.hash).toBe('#refpage:lqr')
+    } finally {
+      history.replaceState(null, '', previous)
+    }
+  })
   it('round-trips a document through the fragment', () => {
     const doc = 'x^2 + y^3 = 77\nx / y = 1.23456\n{ a comment with ünïcödé and [units] }'
     const url = buildShareUrl(doc, BASE)

@@ -69,14 +69,14 @@ export const EXAMPLES: Example[] = [
     (4) vapour fraction   (cook.x_cv)  - the cooker stays almost all liquid. }
 
 { ---- Electrical heater: 220 V across a 32.27 ohm element = 1.5 kW ---- }
-VoltageSource   SUP(E=220)
-HeatingResistor HTR(R=32.2667)
+VoltageSource   SUP(E=220 [V])
+HeatingResistor HTR(R=32.2667 [ohm])
 Ground          GND()
-I_heater = 220 / 32.2667                 { heater current by Ohm's law, A }
+I_heater = 220 [V] / 32.2667 [ohm]                 { heater current by Ohm's law, A }
 
 { ---- Steel body heated by the element, passing heat to the water ---- }
-ThermalMass STEEL(C=750, T0=293.15)      { 750 J/K steel thermal mass }
-Convection  S2W(htc=333.33, area=1)      { steel -> water link, 333 W/K }
+ThermalMass STEEL(C=750 [J/K], T0=293.15 [K])      { 750 J/K steel thermal mass }
+Convection  S2W(htc=333.33 [W/m^2-K], area=1 [m^2])      { steel -> water link, 333 W/K }
 
 { ---- Rigid 5 L two-phase water vessel + lifting relief valve to air ---- }
 BoilingVessel   COOK(fluid$=Water, V=0.005, m0=2.994, T0=293.15)
@@ -468,19 +468,19 @@ m_oxidizer = OF * m_fuel`,
   Note: temperature is named T, which is case-insensitively the same as a time
   variable t — so this block names time "time" in the header. }
 
-k     = 0.012     { cooling rate constant [1/s] }
-T_inf = 22        { ambient temperature }
+k     = 0.012 [1/s] { cooling rate constant [1/s] }
+T_inf = 22 [C]    { ambient temperature }
 
 DYNAMIC cooling (method = ode45, time = 0 .. 300, points = 200, rtol = 1e-8)
   der(T) = -k * (T - T_inf)      { Newton's law of cooling }
-  T(0)   = 90                    { initial temperature }
+  T(0)   = 90 [C]                { initial temperature }
   rate   = -der(T)               { algebraic auxiliary -> an output column }
 END
 
 { Read transient results back into the analytic solution }
-T_final = FinalValue('T')        { temperature at the end of the run }
-T_peak  = MaxValue('T')          { hottest point (here, the start) }
-t_half  = TimeAt('T', 56)        { time to reach 56 degrees }`,
+T_final = FinalValue('T') * 1 [K]        { temperature at the end of the run }
+T_peak  = MaxValue('T') * 1 [K]          { hottest point (here, the start) }
+t_half  = TimeAt('T', 56 [C]) * 1 [s]        { time to reach 56 degrees }`,
   },
   {
     id: 'transient-heat-rod',
@@ -495,12 +495,12 @@ t_half  = TimeAt('T', 56)        { time to reach 56 degrees }`,
   the rod heat up toward the linear steady profile. }
 
 N = 6
-L = 1
+L = 1 [m]
 dx = L / (N - 1)
-alpha = 0.05       { thermal diffusivity }
-T_left  = 100      { boundary node 1 }
-T_right = 0        { boundary node N }
-T_init  = 0        { interior starts cold }
+alpha = 0.05 [m^2/s] { thermal diffusivity }
+T_left  = 100 [C]  { boundary node 1 }
+T_right = 0 [C]    { boundary node N }
+T_init  = 0 [C]    { interior starts cold }
 
 DYNAMIC rod (method = ode23s, t = 0 .. 300, points = 150, rtol = 1e-6)
   FOR i = 2 TO N-1
@@ -514,8 +514,8 @@ DYNAMIC rod (method = ode23s, t = 0 .. 300, points = 150, rtol = 1e-6)
   T[5](0) = T_init
 END
 
-{ Steady-state check (linear profile T[i] = 100 (N-i)/(N-1)) }
-T_mid_final = FinalValue('t[4]')`,
+{ Steady-state check: T[i] = 273.15 + 100 (N-i)/(N-1), in kelvin }
+T_mid_final = FinalValue('t[4]') * 1 [K]`,
   },
   {
     id: 'damped-oscillator-ode',
@@ -529,21 +529,21 @@ T_mid_final = FinalValue('t[4]')`,
   single-state Integral() lacks. Plot x vs time, or v vs x (phase portrait),
   from the ODE Table in the Plots window. }
 
-m = 1.0       { mass }
-k = 20.0      { spring constant }
-c = 0.5       { damping coefficient }
+m = 1.0 [kg]  { mass }
+k = 20.0 [N/m] { spring constant }
+c = 0.5 [N-s/m] { damping coefficient }
 
 DYNAMIC oscillator (method = ode45, t = 0 .. 20, points = 400, rtol = 1e-9)
   der(x) = v
   der(v) = -(c/m) * v - (k/m) * x
   energy = 0.5 * m * v*v + 0.5 * k * x*x   { total mechanical energy (decays) }
-  x(0) = 1.0
-  v(0) = 0.0
+  x(0) = 1.0 [m]
+  v(0) = 0.0 [m/s]
 END
 
 { Transient read-backs }
-x_settled = FinalValue('x')        { residual displacement at t = 20 }
-E0        = ODEValue('energy', 0)  { initial energy }`,
+x_settled = FinalValue('x') * 1 [m]        { residual displacement at t = 20 }
+E0        = ODEValue('energy', 0) * 1 [J]  { initial energy }`,
   },
   {
     id: 'sounding-rocket-trajectory',
@@ -563,15 +563,15 @@ E0        = ODEValue('energy', 0)  { initial energy }`,
   [5, 55], add the equation  MaxValue('h') = h_target  and let frees solve for
   the burn time that reaches 100 km. }
 
-g0     = 9.81
-m0     = 600        { lift-off mass }
-mdot   = 9          { propellant mass flow during burn }
-F0     = 28000      { motor thrust }
+g0     = 9.81 [m/s^2]
+m0     = 600 [kg]   { lift-off mass }
+mdot   = 9 [kg/s]   { propellant mass flow during burn }
+F0     = 28000 [N]  { motor thrust }
 Cd     = 0.3        { drag coefficient }
-A      = 0.03       { reference area }
-rho0   = 1.225      { sea-level air density }
-Hscale = 8000       { atmospheric scale height }
-t_burn = 27         { motor burn time }
+A      = 0.03 [m^2] { reference area }
+rho0   = 1.225 [kg/m^3] { sea-level air density }
+Hscale = 8000 [m]   { atmospheric scale height }
+t_burn = 27 [s]     { motor burn time }
 
 DYNAMIC ascent (method = ode45, time = 0 .. 600, points = 500, rtol = 1e-7, atol = 1e-3)
   thrust = If(time, t_burn, F0, F0, 0)         { thrust on until burnout }
@@ -581,16 +581,16 @@ DYNAMIC ascent (method = ode45, time = 0 .. 600, points = 500, rtol = 1e-7, atol
   der(h) = v
   der(v) = (thrust - drag - m * g0) / m
   der(m) = -mflow
-  h(0) = 0
-  v(0) = 0
+  h(0) = 0 [m]
+  v(0) = 0 [m/s]
   m(0) = m0
   EVENT apogee: v = 0 | falling -> stop        { stop at the top of the arc }
 END
 
 { Read the trajectory back into the analytic solution }
-apogee_km = MaxValue('h') / 1000     { peak altitude reached }
-v_burnout = ODEValue('v', t_burn)    { speed at burnout }
-m_final   = FinalValue('m')          { burnout / coasting mass }`,
+apogee = MaxValue('h') * 1 [m]     { peak altitude reached }
+v_burnout = ODEValue('v', t_burn) * 1 [m/s]    { speed at burnout }
+m_final   = FinalValue('m') * 1 [kg]          { burnout / coasting mass }`,
   },
   {
     id: 'partial-fractions',
@@ -1362,7 +1362,7 @@ DYNAMIC engine (method = ode45, t = 0 .. 360, points = 361, rtol = 1e-8)
   p(0)     = p_ivc
 END
 
-p_max = MaxValue('p')      { peak cylinder pressure }`,
+p_max = MaxValue('p') * 1 [Pa]      { peak cylinder pressure }`,
   },
   {
     id: 'adiabatic-flame-temp',
@@ -1435,7 +1435,7 @@ connect(SP.out, PID.pv)
 connect(PID.out, EXV.u)
 DYNAMIC cool(method = ode23s, time = 0 .. 4000, points = 400)
 END
-t_bat      = FinalValue('bp.t')
+t_bat      = FinalValue('bp.t') * 1 [K]
 q_positive = 0.5 * (1 + tanh(FinalValue('ch.ev.q')))`,
   },
   {
@@ -1443,56 +1443,56 @@ q_positive = 0.5 * (1 + tanh(FinalValue('ch.ev.q')))`,
    "title": "Spring-return pneumatic actuator",
     "description": "Solve (F2). Spring-return pneumatic actuator",
     "category": "Pneumatics",
-    "text": "PneumaticSupply supply(fluid$=Air, P=120000, T=293.15)\nPneumaticActuator actuator(fluid$=Air, area=0.001774, Patm=100000)\nTransSpring spring(k=1330, x0=0)\nTransGround ground()\nconnect(supply.out, actuator.in)\nconnect(actuator.rod, spring.a)\nconnect(spring.b, ground.port)\nstroke = spring.x\nforce = -actuator.rod.f\n{ CHECK stroke 0.0266766917293233 1e-8 }\n{ CHECK force 35.48 1e-6 }"
+    "text": "PneumaticSupply supply(fluid$=Air, P=120000 [Pa], T=293.15 [K])\nPneumaticActuator actuator(fluid$=Air, area=0.001774 [m^2], Patm=100000 [Pa])\nTransSpring spring(k=1330 [N/m], x0=0 [m])\nTransGround ground()\nconnect(supply.out, actuator.in)\nconnect(actuator.rod, spring.a)\nconnect(spring.b, ground.port)\nstroke = spring.x\nforce = -actuator.rod.f\n{ CHECK stroke 0.0266766917293233 1e-8 }\n{ CHECK force 35.48 1e-6 }"
   },
 {
    id: 'hydraulic-spring-actuator',
    "title": "Hydraulic actuator holding a spring load",
     "description": "Solve (F2). Hydraulic actuator holding a spring load",
     "category": "Hydraulics",
-    "text": "HydraulicSupply supply(P=1100000)\nHydraulicCylinder cylinder(rho=850, beta=1.5e9, V0=0.0001, area=0.001, Patm=100000, P0=1100000)\nTransSpring spring(k=50000, x0=0.02)\nTransGround ground()\nconnect(supply.out, cylinder.in)\nconnect(cylinder.rod, spring.a)\nconnect(spring.b, ground.port)\nload = -cylinder.rod.f\nstroke = spring.x\n{ CHECK load 1000 1e-6 }\n{ CHECK stroke 0.02 1e-8 }"
+    "text": "HydraulicSupply supply(P=1100000 [Pa])\nHydraulicCylinder cylinder(rho=850 [kg/m^3], beta=1.5e9 [Pa], V0=0.0001 [m^3], area=0.001 [m^2], Patm=100000 [Pa], P0=1100000 [Pa])\nTransSpring spring(k=50000 [N/m], x0=0.02 [m])\nTransGround ground()\nconnect(supply.out, cylinder.in)\nconnect(cylinder.rod, spring.a)\nconnect(spring.b, ground.port)\nload = -cylinder.rod.f\nstroke = spring.x\n{ CHECK load 1000 1e-6 }\n{ CHECK stroke 0.02 1e-8 }"
   },
 {
    id: 'hydraulic-metering-restriction',
    "title": "Oil flow through a metering restriction",
     "description": "Solve (F2). Oil flow through a metering restriction",
     "category": "Hydraulics",
-    "text": "HydraulicSupply supply(P=1100000)\nHydraulicOrifice restriction(CdA=1e-5, rho=850)\nHydraulicTank tank(P=100000)\nconnect(supply.out, restriction.in)\nconnect(restriction.out, tank.port)\nmass_flow = restriction.in.mdot\nvolume_flow = mass_flow / 850\nhydraulic_power = 1000000 * volume_flow\nGUESS restriction.in.mdot = 0.4\n{ CHECK mass_flow 0.412310562561766 1e-7 }\n{ CHECK hydraulic_power 485.071250072666 1e-3 }"
+    "text": "HydraulicSupply supply(P=1100000 [Pa])\nHydraulicOrifice restriction(CdA=1e-5 [m^2], rho=850 [kg/m^3])\nHydraulicTank tank(P=100000 [Pa])\nconnect(supply.out, restriction.in)\nconnect(restriction.out, tank.port)\nmass_flow = restriction.in.mdot\nvolume_flow = mass_flow / 850 [kg/m^3]\nhydraulic_power = 1000000 [Pa] * volume_flow\nGUESS restriction.in.mdot = 0.4\n{ CHECK mass_flow 0.412310562561766 1e-7 }\n{ CHECK hydraulic_power 485.071250072666 1e-3 }"
   },
 {
    id: 'pneumatic-sonic-restriction',
    "title": "Air supply through a sonic restriction",
     "description": "Solve (F2). Air supply through a sonic restriction",
     "category": "Pneumatics",
-    "text": "PneumaticSupply supply(fluid$=Air, P=700000, T=293.15)\nPneumaticOrifice restriction(fluid$=Air, C=1e-8, b=0.35)\nPneumaticAtmosphere atmosphere(P=100000)\nconnect(supply.out, restriction.in)\nconnect(restriction.out, atmosphere.port)\npressure_ratio = restriction.out.P / restriction.in.P\nmass_flow = restriction.in.mdot\n{ CHECK pressure_ratio 0.142857142857143 1e-9 }\n{ CHECK mass_flow 0.008295 1e-7 }"
+    "text": "PneumaticSupply supply(fluid$=Air, P=700000 [Pa], T=293.15 [K])\nPneumaticOrifice restriction(fluid$=Air, C=1e-8, b=0.35)\nPneumaticAtmosphere atmosphere(P=100000 [Pa])\nconnect(supply.out, restriction.in)\nconnect(restriction.out, atmosphere.port)\npressure_ratio = restriction.out.P / restriction.in.P\nmass_flow = restriction.in.mdot\n{ CHECK pressure_ratio 0.142857142857143 1e-9 }\n{ CHECK mass_flow 0.008295 1e-7 }"
   },
 {
    id: 'damped-actuator-motion',
    "title": "Damped actuator motion",
     "description": "Solve (F2), then inspect the dynamic table. Damped actuator motion",
     "category": "Mechanical",
-    "text": "ForceSource drive(F=35.48)\nTransMass moving(m=0.1, v0=0)\nTransSpring spring(k=1330, x0=0)\nTransDamper damper(c=23.0651251893416)\nTransGround ground()\nconnect(drive.a, moving.port, spring.a, damper.a)\nconnect(drive.b, spring.b, damper.b, ground.port)\nDYNAMIC motion(method=ode45, time=0..0.2, points=101)\nEND\nfinal_stroke = FinalValue('spring.x')\n{ CHECK final_stroke 0.0266766917 1e-6 }"
+    "text": "ForceSource drive(F=35.48 [N])\nTransMass moving(m=0.1 [kg], v0=0 [m/s])\nTransSpring spring(k=1330 [N/m], x0=0 [m])\nTransDamper damper(c=23.0651251893416 [N-s/m])\nTransGround ground()\nconnect(drive.a, moving.port, spring.a, damper.a)\nconnect(drive.b, spring.b, damper.b, ground.port)\nDYNAMIC motion(method=ode45, time=0..0.2, points=101)\nEND\nfinal_stroke = FinalValue('spring.x') * 1 [m]\n{ CHECK final_stroke 0.0266766917 1e-6 }"
   },
 {
    id: 'reduction-gear-viscous-load',
    "title": "Reduction gear driving a viscous load",
     "description": "Solve (F2). Reduction gear driving a viscous load",
     "category": "Mechanical",
-    "text": "TorqueSource drive(T=12)\nGear gear(ratio=3)\nRotationalDamper load(c=0.6)\nMechGround ground()\nconnect(drive.a, gear.in)\nconnect(gear.out, load.a)\nconnect(drive.b, load.b, ground.port)\ninput_speed = gear.in.w\noutput_speed = gear.out.w\nload_power = load.a.tau * load.a.w\n{ CHECK input_speed 180 1e-6 }\n{ CHECK output_speed 60 1e-6 }\n{ CHECK load_power 2160 1e-4 }"
+    "text": "TorqueSource drive(T=12 [N-m])\nGear gear(ratio=3)\nRotationalDamper load(c=0.6 [N-m-s])\nMechGround ground()\nconnect(drive.a, gear.in)\nconnect(gear.out, load.a)\nconnect(drive.b, load.b, ground.port)\ninput_speed = gear.in.w\noutput_speed = gear.out.w\nload_power = load.a.tau * load.a.w\n{ CHECK input_speed 180 1e-6 }\n{ CHECK output_speed 60 1e-6 }\n{ CHECK load_power 2160 1e-4 }"
   },
 {
    id: 'pi-temperature-regulation',
    "title": "PI temperature regulation of a thermal mass",
     "description": "Solve (F2), then inspect the dynamic table. PI temperature regulation of a thermal mass",
     "category": "Thermal",
-    "text": "PIThermostat controller(Kp=100, Ki=0.5, Tref=350)\nThermalMass body(C=5000, T0=300)\nConduction wall(k=2, area=1, L=0.1)\nThermalSource ambient(T=300)\nconnect(controller.port, body.port, wall.a)\nconnect(wall.b, ambient.port)\nDYNAMIC heating(method=ode45, time=0..2000, points=201)\nEND\nfinal_temperature = FinalValue('body.port.t')\nfinal_heat = -FinalValue('controller.port.qdot')\n{ CHECK final_temperature 350 0.02 }\n{ CHECK final_heat 1000 0.5 }"
+    "text": "PIThermostat controller(Kp=100 [W/K], Ki=0.5 [W/K-s], Tref=350 [K])\nThermalMass body(C=5000 [J/K], T0=300 [K])\nConduction wall(k=2 [W/m-K], area=1 [m^2], L=0.1 [m])\nThermalSource ambient(T=300 [K])\nconnect(controller.port, body.port, wall.a)\nconnect(wall.b, ambient.port)\nDYNAMIC heating(method=ode45, time=0..2000, points=201)\nEND\nfinal_temperature = FinalValue('body.port.t') * 1 [K]\nfinal_heat = -FinalValue('controller.port.qdot') * 1 [W]\n{ CHECK final_temperature 350 0.02 }\n{ CHECK final_heat 1000 0.5 }"
   },
 {
    id: 'glazed-opening-heat-loss',
    "title": "Heat loss through a glazed opening",
     "description": "Solve (F2). Heat loss through a glazed opening",
     "category": "Thermal",
-    "text": "ThermalSource inside(T=293.15)\nConvection inner_film(htc=8, area=0.9)\nConduction glass(k=0.81, area=0.9, L=0.003)\nConvection outer_film(htc=25, area=0.9)\nThermalSource outside(T=273.15)\nconnect(inside.port, inner_film.a)\nconnect(inner_film.b, glass.a)\nconnect(glass.b, outer_film.a)\nconnect(outer_film.b, outside.port)\nheat_loss = glass.Q\nresistance = 1/(8*0.9) + 0.003/(0.81*0.9) + 1/(25*0.9)\nexpected_heat = 20/resistance\nbalance_error = heat_loss - expected_heat\n{ CHECK balance_error 0 1e-7 }"
+    "text": "ThermalSource inside(T=293.15 [K])\nConvection inner_film(htc=8 [W/m^2-K], area=0.9 [m^2])\nConduction glass(k=0.81 [W/m-K], area=0.9 [m^2], L=0.003 [m])\nConvection outer_film(htc=25 [W/m^2-K], area=0.9 [m^2])\nThermalSource outside(T=273.15 [K])\nconnect(inside.port, inner_film.a)\nconnect(inner_film.b, glass.a)\nconnect(glass.b, outer_film.a)\nconnect(outer_film.b, outside.port)\nheat_loss = glass.Q\nresistance = 1/(8 [W/m^2-K]*0.9 [m^2]) + 0.003 [m]/(0.81 [W/m-K]*0.9 [m^2]) + 1/(25 [W/m^2-K]*0.9 [m^2])\nexpected_heat = 20 [K]/resistance\nbalance_error = heat_loss - expected_heat\n{ CHECK balance_error 0 1e-7 }"
   },
 {
    id: 'sensor-detrend-smooth-window',
@@ -1520,46 +1520,46 @@ q_positive = 0.5 * (1 + tanh(FinalValue('ch.ev.q')))`,
    "title": "Measure transport delay and detect peaks",
     "description": "Solve (F2). Measure transport delay and detect peaks",
     "category": "Signal Processing",
-    "text": "late = [0, 0, 1, 2, 1, 0, 0]\nearly = [0, 1, 2, 1, 0, 0, 0]\ncorrelation = XCorr(late, early)\npeak_position = peakindex(1, 0, 0, correlation[1:13])\nlag_samples = peak_position - 7\ndelay_seconds = 0.1*lag_samples\npulses = [0, 3, 0, 0, 5, 0, 0, 2, 0]\ncount = peakcount(0, 0, pulses)\n{ CHECK lag_samples 1 1e-9 }\n{ CHECK delay_seconds 0.1 1e-9 }\n{ CHECK count 3 1e-9 }"
+    "text": "late = [0, 0, 1, 2, 1, 0, 0]\nearly = [0, 1, 2, 1, 0, 0, 0]\n[correlation] = XCorr(late, early)\npeak_position = peakindex(1, 0, 0, correlation[1:13])\nlag_samples = peak_position - 7\ndelay_seconds = 0.1 [s]*lag_samples\npulses = [0, 3, 0, 0, 5, 0, 0, 2, 0]\ncount = peakcount(0, 0, pulses)\n{ CHECK lag_samples 1 1e-9 }\n{ CHECK delay_seconds 0.1 1e-9 }\n{ CHECK count 3 1e-9 }"
   },
 {
    id: 'correlated-temperature-heat-loss',
    "title": "Correlated temperature measurements in heat-loss estimation",
     "description": "Solve (F2). Correlated temperature measurements in heat-loss estimation",
     "category": "Uncertainty",
-    "text": "inside_temp = 293.15\noutside_temp = 273.15\nheat_loss = 10*(inside_temp-outside_temp)\nUncertaintyOf(inside_temp) = 0.2\nUncertaintyOf(outside_temp) = 0.3\nCorrelation(inside_temp, outside_temp) = 0.5\nheat_sigma = UncertaintyOf(heat_loss)\n{ CHECK heat_loss 200 1e-8 }\n{ CHECK heat_sigma 2.64575131106459 1e-7 }"
+    "text": "inside_temp = 293.15 [K]\noutside_temp = 273.15 [K]\nheat_loss = 10 [W/K]*(inside_temp-outside_temp)\nUncertaintyOf(inside_temp) = 0.2\nUncertaintyOf(outside_temp) = 0.3\nCorrelation(inside_temp, outside_temp) = 0.5\nheat_sigma = UncertaintyOf(heat_loss)\n{ CHECK heat_loss 200 1e-8 }\n{ CHECK heat_sigma 2.64575131106459 1e-7 }"
   },
 {
    id: 'uniform-area-tolerance',
    "title": "Uniform dimensional tolerance and propagated spread",
     "description": "Solve (F2). Uniform dimensional tolerance and propagated spread",
     "category": "Uncertainty",
-    "text": "area = 0.001774\nforce = 20000*area\nDistributionOf(area) = Uniform(0.0015966, 0.0019514)\nforce_sigma = UncertaintyOf(force)\n{ CHECK force 35.48 1e-8 }\n{ CHECK force_sigma 2.048438755 1e-7 }"
+    "text": "area = 0.001774 [m^2]\nforce = 20000 [Pa]*area\nDistributionOf(area) = Uniform(0.0015966, 0.0019514)\nforce_sigma = UncertaintyOf(force)\n{ CHECK force 35.48 1e-8 }\n{ CHECK force_sigma 2.048438755 1e-7 }"
   },
   {
    id: 'uncertain-tank-inventory',
    "title": "Tank inventory from uncertain measurements",
     "description": "Solve (F2). Tank inventory from uncertain measurements",
     "category": "Uncertainty",
-    "text": "pressure = 934000\nvolume = 0.010\ntemperature = 295.45\nmass = pressure*volume/(208.1*temperature)\nUncertaintyOf(pressure) = 22000\nUncertaintyOf(volume) = 0.0004\nUncertaintyOf(temperature) = 1.2\nmass_sigma = UncertaintyOf(mass)\n{ CHECK mass 0.151911552344956 1e-9 }\n{ CHECK mass_sigma 0.00707868056268796 1e-8 }"
+    "text": "pressure = 934000 [Pa]\nvolume = 0.010 [m^3]\ntemperature = 295.45 [K]\nmass = pressure*volume/(208.1 [J/kg-K]*temperature)\nUncertaintyOf(pressure) = 22000\nUncertaintyOf(volume) = 0.0004\nUncertaintyOf(temperature) = 1.2\nmass_sigma = UncertaintyOf(mass)\n{ CHECK mass 0.151911552344956 1e-9 }\n{ CHECK mass_sigma 0.00707868056268796 1e-8 }"
   }
   ,{
     id: 'rc-step-charging',
     title: 'RC step charging',
     description: 'Solve (F2), then inspect the dynamic table. A 10 V step charges a 1 µF capacitor through 1 kΩ.',
     category: 'Electrical',
-    text: `VoltageSource VS(E=10)
-Resistor R(R=1000)
-Capacitor CAP(C=1e-6, V0=0)
+    text: `VoltageSource VS(E=10 [V])
+Resistor R(R=1000 [ohm])
+Capacitor CAP(C=1e-6 [farad], V0=0 [V])
 Ground G()
 connect(VS.p, R.a)
 connect(R.b, CAP.p)
 connect(CAP.n, VS.n, G.port)
 DYNAMIC charge(method=ode45, time=0..0.005, points=101)
 END
-tau = 1000 * 1e-6
-v_2ms = ODEValue('cap.vc', 0.002)
-i_2ms = (10 - v_2ms) / 1000
+tau = 1000 [ohm] * 1e-6 [farad]
+v_2ms = ODEValue('cap.vc', 0.002) * 1 [V]
+i_2ms = (10 [V] - v_2ms) / 1000 [ohm]
 { CHECK tau 0.001 1e-12 }
 { CHECK v_2ms 8.64664716763387 1e-7 }
 { CHECK i_2ms 0.00135335283236613 1e-9 }`,
@@ -1569,10 +1569,10 @@ i_2ms = (10 - v_2ms) / 1000
     title: 'Series RLC resonance and damping',
     description: 'Solve (F2), then inspect the dynamic table for underdamped ringing in a series RLC circuit.',
     category: 'Electrical',
-    text: `VoltageSource VS(E=1)
-Inductor L1(L=0.001, I0=0)
-Resistor R1(R=1)
-Capacitor C1(C=20e-6, V0=0)
+    text: `VoltageSource VS(E=1 [V])
+Inductor L1(L=0.001 [H], I0=0 [A])
+Resistor R1(R=1 [ohm])
+Capacitor C1(C=20e-6 [farad], V0=0 [V])
 Ground G()
 connect(VS.p, L1.p)
 connect(L1.n, R1.a)
@@ -1580,8 +1580,8 @@ connect(R1.b, C1.p)
 connect(C1.n, VS.n, G.port)
 DYNAMIC ring(method=ode45, time=0..0.01, points=201)
 END
-omega_n = 1 / sqrt(0.001 * 20e-6)
-zeta = 1 / (2 * sqrt(0.001 / 20e-6))
+omega_n = 1 / sqrt(0.001 [H] * 20e-6 [farad]) { angular frequency, rad/s }
+zeta = 1 [ohm] / (2 * sqrt(0.001 [H] / 20e-6 [farad]))
 { CHECK omega_n 7071.06781186548 1e-7 }
 { CHECK zeta 0.0707106781186548 1e-9 }`,
   },
@@ -1590,19 +1590,19 @@ zeta = 1 / (2 * sqrt(0.001 / 20e-6))
     title: 'Resistor bridge equivalent resistance',
     description: 'Solve (F2). Reduce a five-resistor bridge to its equivalent resistance.',
     category: 'Electrical',
-    text: `VoltageSource VS(E=1)
-Resistor R1(R=10)
-Resistor R2(R=20)
-Resistor R3(R=30)
-Resistor R4(R=40)
-Resistor R5(R=50)
+    text: `VoltageSource VS(E=1 [V])
+Resistor R1(R=10 [ohm])
+Resistor R2(R=20 [ohm])
+Resistor R3(R=30 [ohm])
+Resistor R4(R=40 [ohm])
+Resistor R5(R=50 [ohm])
 Ground G()
 connect(VS.p, R1.a, R3.a)
 connect(R1.b, R2.a, R5.a)
 connect(R3.b, R4.a, R5.b)
 connect(R2.b, R4.b, VS.n, G.port)
 current = -VS.p.I
-R_eq = 1 / current
+R_eq = 1 [V] / current
 { CHECK R_eq 20.9459459459459 1e-9 }`,
   },
   {
@@ -1610,19 +1610,19 @@ R_eq = 1 / current
     title: 'Bridge network parametric study',
     description: 'Solve Table to sweep the bridge diagonal resistor and compare equivalent resistance.',
     category: 'Electrical',
-    text: `VoltageSource VS(E=1)
-Resistor R1(R=10)
-Resistor R2(R=20)
-Resistor R3(R=30)
-Resistor R4(R=40)
-r5 = 50
+    text: `VoltageSource VS(E=1 [V])
+Resistor R1(R=10 [ohm])
+Resistor R2(R=20 [ohm])
+Resistor R3(R=30 [ohm])
+Resistor R4(R=40 [ohm])
+r5 = 50 [ohm]
 Resistor R5(R=r5)
 Ground G()
 connect(VS.p, R1.a, R3.a)
 connect(R1.b, R2.a, R5.a)
 connect(R3.b, R4.a, R5.b)
 connect(R2.b, R4.b, VS.n, G.port)
-R_eq = 1 / (-VS.p.I)
+R_eq = 1 [V] / (-VS.p.I)
 PARAMETRIC bridge (r5, R_eq)
   r5 = 10:10:50
 END

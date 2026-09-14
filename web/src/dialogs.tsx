@@ -113,8 +113,7 @@ export function SharedLinkModal({
     <Modal opened={opened} onClose={onCancel} title="Open shared document" centered>
       <Stack gap="md">
         <Text size="sm">
-          This link carries a complete document. Opening it replaces your current autosaved
-          workspace — the same as loading an example. Nothing was sent to a server.
+          Opening this document replaces your current workspace — the same as loading an example.
         </Text>
         <Group justify="flex-end" gap="xs">
           <Button variant="default" size="xs" onClick={onCancel}>
