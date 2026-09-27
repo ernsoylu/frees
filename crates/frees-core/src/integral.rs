@@ -55,7 +55,7 @@ use std::collections::{BTreeSet, HashMap, HashSet};
 
 use crate::ast::{Equation, Expr};
 use crate::diag::{FreesError, Result};
-use crate::eval::{eval_with, EvalContext, Scope};
+use crate::eval::{eval_in, eval_with, Env, EvalContext, Scope};
 use crate::parser::defs::Definitions;
 
 /// The lowercase call name the parser produces for `Integral(...)`.
@@ -717,26 +717,34 @@ pub fn integral_with(
     var: &str,
     a: f64,
     b: f64,
-    _step: Option<f64>,
+    step: Option<f64>,
     scope: &Scope,
     ctx: EvalContext<'_>,
+) -> Result<f64> {
+    integral_in(integrand, var, a, b, step, &Env::Doc { scope, ctx })
+}
+
+/// [`integral_with`] over the caller's [`Env`] — the evaluator's entry point.
+pub(crate) fn integral_in(
+    integrand: &Expr,
+    var: &str,
+    a: f64,
+    b: f64,
+    _step: Option<f64>,
+    env: &Env<'_>,
 ) -> Result<f64> {
     if a == b {
         return Ok(0.0);
     }
-    // The Java mutates the caller's `values` map and restores the binding in a
-    // `finally`; an owned copy is the same thing without the restore hazard.
-    let mut values = scope.clone();
     let var = var.to_ascii_lowercase();
-    let fa = bind_and_eval(integrand, &var, a, &mut values, ctx)?;
-    let fm = bind_and_eval(integrand, &var, (a + b) / 2.0, &mut values, ctx)?;
-    let fb = bind_and_eval(integrand, &var, b, &mut values, ctx)?;
+    let fa = bind_and_eval(integrand, &var, a, env)?;
+    let fm = bind_and_eval(integrand, &var, (a + b) / 2.0, env)?;
+    let fb = bind_and_eval(integrand, &var, b, env)?;
     let whole = (b - a) / 6.0 * (fa + 4.0 * fm + fb);
     adaptive_simpson(
         integrand,
         &var,
-        &mut values,
-        ctx,
+        env,
         Panel { a, b, fa, fm, fb },
         whole,
         SIMPSON_MAX_DEPTH,
@@ -755,23 +763,26 @@ struct Panel {
 }
 
 /// `SimpsonContext.evalAt`: bind the integration variable, evaluate.
-fn bind_and_eval(
-    integrand: &Expr,
-    var: &str,
-    t: f64,
-    values: &mut Scope,
-    ctx: EvalContext<'_>,
-) -> Result<f64> {
-    values.insert(var.to_string(), t);
-    eval_with(integrand, values, ctx)
+///
+/// The Java mutates the caller's `values` map and restores the binding in a
+/// `finally`; a shadowing [`Env::Bind`] is the same lookup without the restore
+/// hazard or a copy of every caller variable per quadrature call.
+fn bind_and_eval(integrand: &Expr, var: &str, t: f64, env: &Env<'_>) -> Result<f64> {
+    eval_in(
+        integrand,
+        &Env::Bind {
+            name: var,
+            value: t,
+            parent: env,
+        },
+    )
 }
 
 /// `SimpsonContext.adaptiveSimpson`.
 fn adaptive_simpson(
     integrand: &Expr,
     var: &str,
-    values: &mut Scope,
-    ctx: EvalContext<'_>,
+    env: &Env<'_>,
     panel: Panel,
     whole: f64,
     depth: u32,
@@ -780,8 +791,8 @@ fn adaptive_simpson(
     let m = (a + b) / 2.0;
     let lm = (a + m) / 2.0;
     let rm = (m + b) / 2.0;
-    let flm = bind_and_eval(integrand, var, lm, values, ctx)?;
-    let frm = bind_and_eval(integrand, var, rm, values, ctx)?;
+    let flm = bind_and_eval(integrand, var, lm, env)?;
+    let frm = bind_and_eval(integrand, var, rm, env)?;
     let left = (m - a) / 6.0 * (fa + 4.0 * flm + fm);
     let right = (b - m) / 6.0 * (fm + 4.0 * frm + fb);
     let halves = left + right;
@@ -792,8 +803,7 @@ fn adaptive_simpson(
     let lower_half = adaptive_simpson(
         integrand,
         var,
-        values,
-        ctx,
+        env,
         Panel {
             a,
             b: m,
@@ -807,8 +817,7 @@ fn adaptive_simpson(
     let upper_half = adaptive_simpson(
         integrand,
         var,
-        values,
-        ctx,
+        env,
         Panel {
             a: m,
             b,
@@ -874,6 +883,19 @@ pub fn gauss_integral_with(
     scope: &Scope,
     ctx: EvalContext<'_>,
 ) -> Result<f64> {
+    gauss_integral_in(integrand, var, a, b, points, &Env::Doc { scope, ctx })
+}
+
+/// [`gauss_integral_with`] over the caller's [`Env`] — the evaluator's entry
+/// point.
+pub(crate) fn gauss_integral_in(
+    integrand: &Expr,
+    var: &str,
+    a: f64,
+    b: f64,
+    points: Option<usize>,
+    env: &Env<'_>,
+) -> Result<f64> {
     if a == b {
         return Ok(0.0);
     }
@@ -888,25 +910,24 @@ pub fn gauss_integral_with(
     }
     let n = points.unwrap_or(GAUSS_DEFAULT_POINTS).clamp(2, 64);
     let (nodes, weights) = legendre_rule(n);
-    let mut values = scope.clone();
     let var = var.to_ascii_lowercase();
 
-    let stage = |panels: usize, values: &mut Scope| -> Result<f64> {
+    let stage = |panels: usize| -> Result<f64> {
         let step = (b - a) / panels as f64;
         let mut sum = 0.0;
         for i in 0..panels {
             let lo = a + i as f64 * step;
             let hi = lo + step;
-            sum += gauss_panel(&nodes, &weights, lo, hi, integrand, &var, values, ctx)?;
+            sum += gauss_panel(&nodes, &weights, lo, hi, integrand, &var, env)?;
         }
         Ok(sum)
     };
 
-    let mut old = stage(1, &mut values)?;
+    let mut old = stage(1)?;
     let mut panels = 2usize;
     let mut iterations = 0usize;
     loop {
-        let current = stage(panels, &mut values)?;
+        let current = stage(panels)?;
         let delta = (current - old).abs();
         let limit = GAUSS_ABS_ACCURACY.max(GAUSS_REL_ACCURACY * (old.abs() + current.abs()) * 0.5);
         if iterations + 1 >= GAUSS_MIN_ITERATIONS && delta <= limit {
@@ -928,7 +949,6 @@ pub fn gauss_integral_with(
 /// One Legendre panel over `[lo, hi]`: the `[-1, 1]` rule affinely transformed
 /// (Apache `GaussIntegratorFactory.transform`) and summed with Kahan
 /// compensation (`GaussIntegrator.integrate`).
-#[allow(clippy::too_many_arguments)]
 fn gauss_panel(
     nodes: &[f64],
     weights: &[f64],
@@ -936,8 +956,7 @@ fn gauss_panel(
     hi: f64,
     integrand: &Expr,
     var: &str,
-    values: &mut Scope,
-    ctx: EvalContext<'_>,
+    env: &Env<'_>,
 ) -> Result<f64> {
     let scale = (hi - lo) / 2.0;
     let shift = lo + scale;
@@ -946,7 +965,7 @@ fn gauss_panel(
     for (node, weight) in nodes.iter().zip(weights) {
         let x = node * scale + shift;
         let w = weight * scale;
-        let y = w * bind_and_eval(integrand, var, x, values, ctx)? - c;
+        let y = w * bind_and_eval(integrand, var, x, env)? - c;
         let t = s + y;
         c = (t - s) - y;
         s = t;
