@@ -1,6 +1,6 @@
 # Security Policy
 
-`frees` provides client-side, zero-backend physical systems simulation and modeling. Because models, proprietary formulas, experimental datasets, and simulations execute entirely within the user's browser or local CLI environment without telemetry or external API calls, safeguarding the execution environment and client-side boundary is paramount.
+`frees` provides client-side, zero-backend physical systems simulation and modeling. Because models, proprietary formulas, experimental datasets, and simulations execute entirely within the user's browser or local CLI environment without telemetry, and model text is never uploaded (the only outbound requests are a public exchange-rate feed fetched when a document uses currency units, and raw-document downloads the user initiates via `?url=` or Open URL), safeguarding the execution environment and client-side boundary is paramount.
 
 ---
 

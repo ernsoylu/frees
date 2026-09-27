@@ -62,7 +62,7 @@ panic = "abort"
 
 # Dedicated speed-oriented profiles (Phase 5).
 # Native benchmarking and compute-heavy native runs use opt-level = 3
-# without compromising the WASM bundle size constraint (< 4 MiB), which builds
+# without compromising the WASM bundle size constraint (≤ 5,120 KiB, gated in ci.yml), which builds
 # with [profile.release] (opt-level = "s").
 [profile.bench]
 opt-level = 3
